@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview - Selective Liquid Glass + Floating Nav</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="modern-ui-layer.css">
+<style>
+  body { max-width: 420px; margin: 0 auto; }
+  .preview-theme-switcher { position: sticky; top: 0; z-index: 500; display: flex; gap: 6px; overflow-x: auto; padding: 8px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+  .preview-theme-btn { flex-shrink: 0; padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-size: 11px; font-weight: 600; cursor: pointer; }
+  .preview-theme-btn.active { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+  .preview-note { padding: 10px 16px; font-size: 11px; color: var(--text3); }
+  .preview-spacer { height: 900px; }
+</style>
+</head>
+<body data-theme="stone">
+
+<div class="preview-theme-switcher" id="themeSwitcher"></div>
+
+<header class="header" id="mainHeader">
+  <div>
+    <div style="font-size:12px;color:var(--text2)">Halo, Galih</div>
+    <div style="font-size:16px;font-weight:600;color:var(--text)">Ringkasan hari ini</div>
+  </div>
+</header>
+
+<div style="padding:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+  <div class="card" style="margin-bottom:0;">
+    <div style="font-size:12px;color:var(--text2)">Saldo</div>
+    <div style="font-size:18px;font-weight:700;color:var(--text)">Rp 4,2jt</div>
+  </div>
+  <div class="card" style="margin-bottom:0;">
+    <div style="font-size:12px;color:var(--text2)">Servis motor</div>
+    <div style="font-size:18px;font-weight:700;color:var(--text)">12 hari lagi</div>
+  </div>
+
+  <div style="grid-column:1/3;">
+    <div class="shop-product-card stock-ok" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface2);border-radius:var(--r-lg);position:relative;margin-bottom:8px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Lumpang 20cm</div>
+        <div style="font-size:11px;color:var(--text2)">Rp 85.000</div>
+      </div>
+      <span class="shop-stock-pill ok">Stok aman</span>
+    </div>
+    <div class="shop-product-card stock-low" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface2);border-radius:var(--r-lg);position:relative;margin-bottom:8px;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Cobek 19cm</div>
+        <div style="font-size:11px;color:var(--text2)">Rp 65.000</div>
+      </div>
+      <span class="shop-stock-pill low">Perlu restock</span>
+    </div>
+    <div class="shop-product-card stock-mid" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface2);border-radius:var(--r-lg);position:relative;">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">Lumpang 25cm</div>
+        <div style="font-size:11px;color:var(--text2)">Rp 110.000</div>
+      </div>
+      <span class="shop-stock-pill mid">Tipis</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="preview-note">Scroll ke bawah untuk lihat floating nav auto-hide (nav-scroll.js), lalu scroll ke atas untuk memunculkannya lagi. Ganti tema di atas untuk cek kontras badge stok & glass header/nav di ke-10 tema.</p>
+<div class="preview-spacer"></div>
+
+<nav class="nav" id="mainNav" aria-label="Navigasi utama">
+  <button class="nav-item active" aria-current="page">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    Beranda<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" aria-current="false">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Uang<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" aria-current="false">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+    Shop<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" aria-current="false">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+    Aset<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" aria-current="false">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 17h14M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0zm14 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0zM5 17V9l2-5h10l2 5v8M5 9h14"/></svg>
+    Mobil<div class="nav-dot"></div>
+  </button>
+  <button class="nav-item" aria-current="false">
+    <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L3 7v2h18V7zM4 11v8M8 11v8M12 11v8M16 11v8M20 11v8M2 21h20"/></svg>
+    Pajak<div class="nav-dot"></div>
+  </button>
+</nav>
+
+<script src="nav-scroll.js"></script>
+<script>
+  var themes = ["dark","ocean","light","stone","slate","mono","sand","ink","sage","fresh"];
+  var wrap = document.getElementById("themeSwitcher");
+  themes.forEach(function(t){
+    var b = document.createElement("button");
+    b.className = "preview-theme-btn" + (t === "stone" ? " active" : "");
+    b.textContent = t;
+    b.onclick = function(){
+      document.body.setAttribute("data-theme", t);
+      wrap.querySelectorAll(".preview-theme-btn").forEach(function(el){ el.classList.remove("active"); });
+      b.classList.add("active");
+    };
+    wrap.appendChild(b);
+  });
+</script>
+</body>
+</html>
