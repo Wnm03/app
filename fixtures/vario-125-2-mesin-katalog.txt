@@ -1,0 +1,2584 @@
+Katalog Suku Cadang Honda Vario Techno 125 -2
+Kategori Mesin (E-Series) — Kode Part, Nama Part, dan Harga
+Sumber: hondacengkareng.com/catalogs/katalog-honda-vario-techno-125-2
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-2 Cylinder Head Cover
+
+12310KZR701
+
+COVER COMP., HEAD
+
+Rp 87.000
+
+E-2 Cylinder Head Cover
+
+12391KZR600
+
+GASKET, CYLINDER HEAD COVER
+
+Rp 55.000
+
+E-2 Cylinder Head Cover
+
+90463ML7000
+
+WASHER SEALING 6.5MM
+
+Rp 5.000
+
+E-2 Cylinder Head Cover
+
+957010601400
+
+BOLT FLANGE 6X14
+
+Rp 1.500
+
+E-2 Cylinder Head Cover
+
+957010602200
+
+BOLT FLANGE 6X22
+
+Rp 1.500
+
+E-2 Cylinder Head Cover
+
+957010602207
+
+BOLT FLANGE 6X22
+
+Rp 9.000
+
+E-3 Cylinder Head
+
+1220BKZR600
+
+Head Assy Cylinder
+
+Rp 572.000
+
+E-3 Cylinder Head
+
+1220BK60B00
+
+Head Assy Cylinder
+
+Rp 599.000
+
+E-3 Cylinder Head
+
+12204KWNP00
+
+GUIDE,VALVE (OSZ)
+
+Rp 184.000
+
+E-3 Cylinder Head
+
+12251KZR601
+
+GASKET, CYLINDER HEAD
+
+Rp 24.000
+
+E-3 Cylinder Head
+
+12252KWN900
+
+GASKET,CYLINDER HEAD(OVER SIZ)
+
+Rp 151.000
+
+E-3 Cylinder Head
+
+17111KZR600
+
+PIPE INLET
+
+(tidak ada harga)
+
+E-3 Cylinder Head
+
+17119KWN900
+
+INSULATOR,INLET PIPE
+
+Rp 24.000
+
+E-3 Cylinder Head
+
+17533KZR600
+
+STAY COMP., FUEL HOSE CLAMPER
+
+Rp 12.000
+
+E-3 Cylinder Head
+
+31926KRM841
+
+SPARK PLUG CPR9EA9 (NGK)
+
+Rp 23.000
+
+E-3 Cylinder Head
+
+31926KYT901
+
+SPARK PLUG U27EPR-9 (DS)
+
+Rp 23.000
+
+E-3 Cylinder Head
+
+36532KZR601
+
+SENSOR, OXYGEN
+
+Rp 310.000
+
+E-3 Cylinder Head
+
+36533KZR601
+
+CORD COMP OXYGEN SENS
+
+Rp 324.000
+
+E-3 Cylinder Head
+
+37870KZR601
+
+SENSOR ASSY., WATER TEMP
+
+Rp 79.500
+
+E-3 Cylinder Head
+
+90004KGF910
+
+BOLT, STUD, 7X17
+
+Rp 2.500
+
+E-3 Cylinder Head
+
+90483KWN900
+
+WASHER,8MM
+
+Rp 12.000
+
+E-3 Cylinder Head
+
+91301KRJ901
+
+O-RING,29X2
+
+Rp 5.000
+
+E-3 Cylinder Head
+
+91307PLC004
+
+O-RING, 9.5X1.9
+
+Rp 28.500
+
+E-3 Cylinder Head
+
+934040601200
+
+BOLT WASHER 6X12
+
+Rp 4.500
+
+E-3 Cylinder Head
+
+9403008280
+
+NUT HEX 8MM
+
+Rp 5.000
+
+E-3 Cylinder Head
+
+9430110160
+
+DOWEL,PIN,10X16
+
+Rp 24.000
+
+E-3 Cylinder Head
+
+957010601400
+
+BOLT FLANGE 6X14
+
+Rp 1.500
+
+E-3 Cylinder Head
+
+957010604000
+
+BOLT FLANGE 6X40
+
+Rp 1.500
+
+E-3 Cylinder Head
+
+957010609500
+
+BOLT FLANGE 6X95
+
+Rp 5.000
+
+E-3 Cylinder Head
+
+17111KZR650
+
+PIPE INLET
+
+Rp 135.500
+
+E-3 Cylinder Head
+
+17533KZR650
+
+STAY COMP., FUEL HOSE CLAMPER
+
+Rp 9.500
+
+E-4 Camshaft/Valve
+
+12209GB4681
+
+SEAL,VALVE STEM
+
+Rp 6.000
+
+E-4 Camshaft/Valve
+
+12209GB4682
+
+SEAL,VALVE STEM
+
+Rp 6.000
+
+E-4 Camshaft/Valve
+
+14100KZR600
+
+CAMSHAFT COMP.
+
+Rp 308.500
+
+E-4 Camshaft/Valve
+
+14321KWN900
+
+SPROCKET, CAM (34T)
+
+Rp 31.000
+
+E-4 Camshaft/Valve
+
+14430KZR600
+
+ARM COMP,IN VALVE ROCKER
+
+Rp 87.500
+
+E-4 Camshaft/Valve
+
+14440KZR600
+
+ARM COMP,EX VALVE ROCKER
+
+Rp 92.500
+
+E-4 Camshaft/Valve
+
+14451KZR600
+
+SHAFT, ROCKER ARM
+
+Rp 8.500
+
+E-4 Camshaft/Valve
+
+14711KWN900
+
+VALVE, INLET
+
+Rp 46.000
+
+E-4 Camshaft/Valve
+
+14721KWN901
+
+VALVE, INLET
+
+Rp 48.500
+
+E-4 Camshaft/Valve
+
+14721KWN900
+
+Valve Exhaust
+
+Rp 102.000
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-4 Camshaft/Valve
+
+14751KZR601
+
+SPRING, VALVE
+
+Rp 7.500
+
+E-4 Camshaft/Valve
+
+14771KWN900
+
+RETAINER,VALVE SPRING
+
+Rp 16.000
+
+E-4 Camshaft/Valve
+
+14771KWN901
+
+RETAINER,VALVE SPRING
+
+Rp 11.000
+
+E-4 Camshaft/Valve
+
+14775KZR600
+
+SEAT, VALVE SPRING
+
+Rp 7.000
+
+E-4 Camshaft/Valve
+
+14781MA6000
+
+COTTER,VALVE
+
+Rp 36.000
+
+E-4 Camshaft/Valve
+
+90002KWB600
+
+BOLT FLANGE 5X12
+
+Rp 1.500
+
+E-4 Camshaft/Valve
+
+90012KWB600
+
+SCREW,TAPPET ADJUSTING
+
+Rp 13.000
+
+E-4 Camshaft/Valve
+
+90083KVB900
+
+BOLT SOCKET KNOCK 5MM
+
+Rp 1.500
+
+E-4 Camshaft/Valve
+
+90206001000
+
+NUT,TAPPET ADJUST
+
+Rp 25.500
+
+E-5 Cam Chain/Tensioner
+
+14401KSS931
+
+Chain Camp 92L FS
+
+Rp 188.000
+
+E-5 Cam Chain/Tensioner
+
+14510KZR600
+
+TENSIONER ASSY., CAM CHAIN
+
+Rp 22.500
+
+E-5 Cam Chain/Tensioner
+
+14520K25901
+
+LIFTER ASSY TENSIONER
+
+Rp 62.500
+
+E-5 Cam Chain/Tensioner
+
+14520K40F01
+
+LIFTER ASSY TENSIONER
+
+Rp 72.000
+
+E-5 Cam Chain/Tensioner
+
+14531KZR600
+
+PIVOT, CAM CHAIN TENSIONER
+
+Rp 4.500
+
+E-5 Cam Chain/Tensioner
+
+14560KZR600
+
+GASKET, TENSIONER LIFTER
+
+Rp 2.000
+
+E-5 Cam Chain/Tensioner
+
+14560KCW851
+
+GASKET, TENSIONER LIFTER
+
+Rp 6.100
+
+E-5 Cam Chain/Tensioner
+
+14611KWN900
+
+GUIDE,CAM CHAIN
+
+Rp 7.500
+
+E-5 Cam Chain/Tensioner
+
+90005KY7000
+
+SCREW PAN 6X6
+
+Rp 12.000
+
+E-5 Cam Chain/Tensioner
+
+91306MG3000
+
+O RING 1.5 X 9.5
+
+Rp 1.000
+
+E-5 Cam Chain/Tensioner
+
+957010602200
+
+BOLT FLANGE 6X22
+
+Rp 1.500
+
+E-5 Cam Chain/Tensioner
+
+957010602207
+
+BOLT FLANGE 6X22
+
+Rp 9.000
+
+E-6 Cylinder
+
+1210AKZR600
+
+CYLINDER COMP
+
+Rp 324.500
+
+E-6 Cylinder
+
+12191KZR600
+
+GASKET CYLINDER
+
+Rp 13.500
+
+E-6 Cylinder
+
+30515KZR600
+
+STAY COMP., IGNITION COIL
+
+Rp 11.000
+
+E-6 Cylinder
+
+90463ML7000
+
+WASHER SEALING 6.5MM
+
+Rp 5.000
+
+E-6 Cylinder
+
+9430110160
+
+DOWEL,PIN,10X16
+
+Rp 24.000
+
+E-6 Cylinder
+
+957010601400
+
+BOLT FLANGE 6X14
+
+Rp 1.500
+
+E-10 A.C.G Starter
+
+31210KZR601
+
+FLYWHEEL COMP
+
+Rp 337.500
+
+E-10 A.C.G Starter
+
+31220KZR601
+
+STATOR COMP
+
+Rp 950.000
+
+E-10 A.C.G Starter
+
+90001KWR000
+
+BOLT, SOCKET, 6X18
+
+Rp 1.500
+
+E-10 A.C.G Starter
+
+90439KWZ900
+
+WASHER 12X24X2.3
+
+Rp 8.000
+
+E-10 A.C.G Starter
+
+9405012000
+
+NUT,FLANGE 12MM
+
+Rp 29.000
+
+E-10 A.C.G Starter
+
+967000602500
+
+SOCKET BOLT 6X25
+
+Rp 10.000
+
+E-11 Oil Pump
+
+15010KWN900
+
+OIL PUMP SET
+
+Rp 34.500
+
+E-11 Oil Pump
+
+15133KWN900
+
+GEAR,OIL PUMP DRIVEN
+
+Rp 59.000
+
+E-11 Oil Pump
+
+90003KWN900
+
+BOLT,SPL 6X23.5
+
+Rp 12.500
+
+E-11 Oil Pump
+
+9430108100
+
+PIN DOWEL 8X10
+
+Rp 2.000
+
+E-13 Left Side Cover
+
+11341KZR600
+
+COVER,L SIDE
+
+Rp 580.500
+
+E-13 Left Side Cover
+
+11342KZR600
+
+PLATE, L. COVER
+
+Rp 10.500
+
+E-13 Left Side Cover
+
+11395KZR600
+
+GASKET, L. COVER
+
+Rp 31.500
+
+E-13 Left Side Cover
+
+19641KZR600
+
+DUCT, L. COVER
+
+Rp 15.500
+
+E-13 Left Side Cover
+
+19642KZR600
+
+CAP, L. COVER
+
+Rp 24.000
+
+E-13 Left Side Cover
+
+19748KZR600
+
+SEAL, DUCT
+
+Rp 2.000
+
+E-13 Left Side Cover
+
+19749KVY900
+
+SEAL L COVER DUCT
+
+Rp 1.500
+
+E-13 Left Side Cover
+
+90001KWR000
+
+BOLT, SOCKET, 6X18
+
+Rp 1.500
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-13 Left Side Cover
+
+90652KVB900
+
+CIRCLIP IN.32
+
+Rp 3.000
+
+E-13 Left Side Cover
+
+91010K1AN80
+
+Brg Comp Drive Shaft
+
+Rp 49.000
+
+E-13 Left Side Cover
+
+91005KVBN50
+
+Brg Comp Drive Shaft
+
+Rp 39.900
+
+E-13 Left Side Cover
+
+91211PE9003
+
+OIL SEAL, 16X26X6
+
+Rp 7.000
+
+E-13 Left Side Cover
+
+91212K44V01
+
+OIL SEAL, 16X26X6
+
+Rp 7.500
+
+E-13 Left Side Cover
+
+9390334120
+
+SCREW TAPPING 4X8
+
+Rp 1.500
+
+E-13 Left Side Cover
+
+9390334320
+
+SCREW TAPPING 4X12
+
+Rp 3.500
+
+E-13 Left Side Cover
+
+9430108140
+
+PIN DOWEL 8X14
+
+Rp 1.500
+
+E-13 Left Side Cover
+
+960010602800
+
+BOLT FLANGE 6X28
+
+Rp 7.000
+
+E-13 Left Side Cover
+
+960010604000
+
+BOLT FLANGE 6X40
+
+Rp 7.000
+
+E-13 Left Side Cover
+
+960010606500
+
+BOLT FLANGE 6X65
+
+Rp 8.000
+
+E-14 Radiator
+
+12206KZR600
+
+Joint Comp Water Hose
+
+Rp 27.500
+
+E-14 Radiator
+
+12206K97N00
+
+Joint Comp Water Hose
+
+Rp 43.500
+
+E-14 Radiator
+
+12207KWN900
+
+O-RING,15.4X2
+
+Rp 5.000
+
+E-14 Radiator
+
+19037KVB902
+
+CAP COMP.RAD
+
+Rp 135.500
+
+E-14 Radiator
+
+19037KVB901
+
+CAP COMP.RAD
+
+Rp 49.000
+
+E-14 Radiator
+
+19046KVB902
+
+LABEL,RAD CAP
+
+Rp 22.000
+
+E-14 Radiator
+
+19100KZR600
+
+RADIATOR ASSY.
+
+Rp 462.000
+
+E-14 Radiator
+
+19100KZR602
+
+RADIATOR ASSY.
+
+Rp 388.000
+
+E-14 Radiator
+
+19109GET003
+
+SEAL RING,DRAIN
+
+Rp 3.500
+
+E-14 Radiator
+
+19150KZR600
+
+COVER COMP., RADIATOR
+
+Rp 24.000
+
+E-14 Radiator
+
+19332KWN900
+
+TUBE,AIR BREATHER
+
+Rp 16.000
+
+E-14 Radiator
+
+19416KEY900
+
+COLLAR
+
+Rp 2.000
+
+E-14 Radiator
+
+1950BKZR600
+
+HOSE A,WATER ASSY
+
+Rp 21.000
+
+E-14 Radiator
+
+1950AKZR600
+
+HOSE B,WATER ASSY
+
+Rp 25.000
+
+E-14 Radiator
+
+1950DKZR600
+
+HOSE,BYPASS ASSY
+
+Rp 15.500
+
+E-14 Radiator
+
+19510KZR601
+
+FAN COMP COOLING
+
+Rp 16.500
+
+E-14 Radiator
+
+84601HA7670
+
+NUT FENDER SET
+
+Rp 13.000
+
+E-14 Radiator
+
+90004GHB660
+
+BOLT,FLANGE,NSHF,6X22
+
+Rp 12.500
+
+E-14 Radiator
+
+90103GET003
+
+BOLT DRAIN SEAL RING
+
+Rp 27.000
+
+E-14 Radiator
+
+90678MR1690
+
+CLIP A1 HOSE
+
+Rp 7.500
+
+E-14 Radiator
+
+90701KWN901
+
+CLAMP,24MM WATER HOSE
+
+Rp 14.500
+
+E-14 Radiator
+
+90701MF5003
+
+CLAMP WATER HOSE 21 MM
+
+Rp 4.500
+
+E-14 Radiator
+
+934010602508
+
+BOLT-WASHER, 6X25
+
+Rp 3.500
+
+E-14 Radiator
+
+950024105008
+
+CLIP,TUBE,10.5MM
+
+Rp 10.000
+
+E-14 Radiator
+
+957010601600
+
+BOLT FLANGE 6X16
+
+Rp 5.000
+
+E-14 Radiator
+
+960010601607
+
+BOLT,FLANGE,6X16
+
+Rp 7.000
+
+E-16 Drive Face
+
+22132KWN900
+
+PIECE,SLIDE
+
+Rp 11.500
+
+E-16 Drive Face
+
+22011KWN900
+
+PIECE,SLIDE SET
+
+Rp 28.000
+
+E-16 Drive Face
+
+22102KZR600
+
+FACE, DRIVE
+
+Rp 55.000
+
+E-16 Drive Face
+
+22105KWN900
+
+Boss Drive Face
+
+Rp 46.500
+
+E-16 Drive Face
+
+22109KZL840
+
+RATCHET STARTER
+
+Rp 35.500
+
+E-16 Drive Face
+
+22110KZR600
+
+FACE COMP., MOVABLE DRIVE
+
+Rp 84.500
+
+E-16 Drive Face
+
+2212AKWN640
+
+ROLLER SET, WEIGHT
+
+Rp 62.000
+
+E-16 Drive Face
+
+22123KWN900
+
+ROLLER SET, WEIGHT
+
+Rp 78.000
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-16 Drive Face
+
+2212AK36T00
+
+ROLLER SET, WEIGHT
+
+Rp 62.000
+
+E-16 Drive Face
+
+22131KWN900
+
+PLATE,RAMP
+
+Rp 89.000
+
+E-16 Drive Face
+
+28223KZL840
+
+SPRING KICK DRIVEN GEAR
+
+Rp 3.000
+
+E-16 Drive Face
+
+28230KZR600
+
+GEAR COMP., KICK DRIVEN(7T)
+
+Rp 61.000
+
+E-16 Drive Face
+
+28250KZR600
+
+SPINDLE COMP., KICK STARTER
+
+Rp 98.500
+
+E-16 Drive Face
+
+28253KVB900
+
+BUSH, KICK SPINDLE
+
+Rp 6.000
+
+E-16 Drive Face
+
+28255GS6000
+
+COLLAR KICK BOSS
+
+Rp 1.500
+
+E-16 Drive Face
+
+28281KZLC00
+
+SPRING, KICK RETURN
+
+Rp 10.000
+
+E-16 Drive Face
+
+90412KZL840
+
+WASHER THRUST 10MM
+
+Rp 2.000
+
+E-16 Drive Face
+
+90426KVB900
+
+WASHER SPECIAL 14MM
+
+Rp 5.500
+
+E-16 Drive Face
+
+90439443740
+
+WASHER 16X22
+
+Rp 1.500
+
+E-16 Drive Face
+
+9403014200
+
+NUT HEX 14MM
+
+Rp 3.500
+
+E-16 Drive Face
+
+9451116000
+
+CIRCLIP EXT 16MM
+
+Rp 1.500
+
+E-17 Driven Face
+
+22100KWN901
+
+OUTER COMP CLUTCH
+
+Rp 125.000
+
+E-17 Driven Face
+
+22100KWN900
+
+OUTER COMP CLUTCH
+
+Rp 130.000
+
+E-17 Driven Face
+
+22350KVB900
+
+PLATE COMP DRIVE
+
+Rp 32.500
+
+E-17 Driven Face
+
+22361KVB900
+
+PLATE CLUTCH SIDE
+
+Rp 9.500
+
+E-17 Driven Face
+
+22401KGF912
+
+SPRING, CLUTCH
+
+Rp 11.000
+
+E-17 Driven Face
+
+22535KWN901
+
+WEIGHT SET, CLUTCH
+
+Rp 159.500
+
+E-17 Driven Face
+
+22535GGC900
+
+WEIGHT SET, CLUTCH
+
+Rp 175.500
+
+E-17 Driven Face
+
+22804148000
+
+RUBBER CLUTCH DUMPER
+
+Rp 5.500
+
+E-17 Driven Face
+
+22804GB2880
+
+RUBBER CLUTCH DUMPER
+
+Rp 6.500
+
+E-17 Driven Face
+
+23100KZR601
+
+BELT, DRIVE
+
+Rp 181.000
+
+E-17 Driven Face
+
+23205KWN641
+
+FACE SET DRIVEN
+
+Rp 187.500
+
+E-17 Driven Face
+
+23224KZR600
+
+FACE SET, MOVABLE DRIVEN
+
+Rp 155.000
+
+E-17 Driven Face
+
+23225KSY900
+
+PIN ROLLER GUIDE
+
+Rp 9.000
+
+E-17 Driven Face
+
+23226KVB900
+
+ROLLER GUIDE
+
+Rp 7.500
+
+E-17 Driven Face
+
+23233KZR600
+
+SPRING, DRIVEN FACE
+
+Rp 45.000
+
+E-17 Driven Face
+
+23237KWN901
+
+COLLAR, SEAL
+
+Rp 37.000
+
+E-17 Driven Face
+
+23238KZR600
+
+COLLAR, SPRING
+
+Rp 13.500
+
+E-17 Driven Face
+
+90202KN7670
+
+NUT SPECIAL 30MM
+
+Rp 15.000
+
+E-17 Driven Face
+
+90441GY6940
+
+WASHER 12.2X29X2.5
+
+Rp 8.500
+
+E-17 Driven Face
+
+90605166720
+
+CIRCLIP 7MM
+
+Rp 13.500
+
+E-17 Driven Face
+
+91109KVY901
+
+BRG NEEDLE 20X29X18
+
+Rp 48.500
+
+E-17 Driven Face
+
+91001KCW003
+
+Bearing Needle 20X29X18
+
+Rp 33.500
+
+E-17 Driven Face
+
+91109GGCG01
+
+Bearing Needle 20x29X18
+
+Rp 35.000
+
+E-17 Driven Face
+
+91109K2SN01
+
+Bearing Needle 20x29X18
+
+Rp 26.000
+
+E-17 Driven Face
+
+91002GA7701
+
+BEARING RAD BALL 6902U
+
+Rp 27.000
+
+E-17 Driven Face
+
+91002GA7702
+
+BEARING RAD BALL 6902U
+
+Rp 24.500
+
+E-17 Driven Face
+
+91009KVY961
+
+BRG BALL RADIAL 6902U
+
+Rp 31.500
+
+E-17 Driven Face
+
+91211KN7671
+
+SEAL DRIVEN FACE 34X41X4
+
+Rp 12.000
+
+E-17 Driven Face
+
+91351642000
+
+O-RING PINION CAP
+
+Rp 6.500
+
+E-17 Driven Face
+
+91351GR1000
+
+O-RING 38.5X2
+
+Rp 4.500
+
+E-17 Driven Face
+
+9403012200
+
+NUT HEX 12MM
+
+Rp 2.500
+
+E-17 Driven Face
+
+23100KZRBA0
+
+Van Belt Set
+
+Rp 231.500
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-17-10 Transmission
+
+11204KGF900
+
+SLEEVE RR BRAKE CAM
+
+Rp 10.500
+
+E-17-10 Transmission
+
+11211KZR600
+
+TUBE, MISSION BREATHER
+
+Rp 4.500
+
+E-17-10 Transmission
+
+2120AKZR601
+
+CASE COMP,MISSION
+
+Rp 574.500
+
+E-17-10 Transmission
+
+2120BKZR600
+
+CASE COMP,MISSION
+
+Rp 252.500
+
+E-17-10 Transmission
+
+21395KZR600
+
+GASKET, TRANSMISSION CASE
+
+Rp 8.500
+
+E-17-10 Transmission
+
+23411KZR600
+
+DRIVESHAFT(17T)
+
+Rp 184.000
+
+E-17-10 Transmission
+
+23421KZR600
+
+COUNTERSHAFT(13T)
+
+Rp 108.500
+
+E-17-10 Transmission
+
+23422KWN900
+
+GEAR,COUNTER
+
+Rp 112.000
+
+E-17-10 Transmission
+
+23430KZR600
+
+GEAR COMP., FINAL(44T)
+
+Rp 345.000
+
+E-17-10 Transmission
+
+90495MN5000
+
+WASHER,SEALING 8MM
+
+Rp 13.000
+
+E-17-10 Transmission
+
+91004KZR601
+
+BRG,BALL RADIAL 6202
+
+Rp 49.000
+
+E-17-10 Transmission
+
+91004KZR602
+
+BEARING RADIAL BALL 6202
+
+Rp 30.000
+
+E-17-10 Transmission
+
+91004K56N01
+
+BEARING RADIAL BALL 6202
+
+Rp 30.000
+
+E-17-10 Transmission
+
+91006KZR601
+
+BEARING RADIAL BALL 6201
+
+Rp 43.000
+
+E-17-10 Transmission
+
+91006KZR602
+
+BEARING RADIAL BALL 6201
+
+Rp 23.000
+
+E-17-10 Transmission
+
+HB6201
+
+BEARING RADIAL BALL 6201
+
+Rp 20.200
+
+E-17-10 Transmission
+
+LF6201
+
+BEARING RADIAL BALL 6201
+
+Rp 23.100
+
+E-17-10 Transmission
+
+91009KWN902
+
+BRG,BALL RADIAL 6205
+
+Rp 28.500
+
+E-17-10 Transmission
+
+91001KZLA01
+
+BRG,BALL RADIAL 6205
+
+Rp 54.900
+
+E-17-10 Transmission
+
+91006KAB004
+
+BEARING, RADIAL BALL, LBL
+
+Rp 79.000
+
+E-17-10 Transmission
+
+91009K2SN01
+
+BRG,BALL RADIAL 6205
+
+Rp 33.500
+
+E-17-10 Transmission
+
+91201434003
+
+OIL SEAL 14X20X3.2
+
+Rp 3.000
+
+E-17-10 Transmission
+
+91204KWN901
+
+Oil Seal 34 X 52 X 7
+
+Rp 7.500
+
+E-17-10 Transmission
+
+9430110120
+
+PIN DOWEL 10X12
+
+Rp 12.000
+
+E-17-10 Transmission
+
+9500250000
+
+CLIP,TUBE 5.0 MM
+
+Rp 5.000
+
+E-17-10 Transmission
+
+957010804500
+
+BOLT FLANGE 8X45
+
+Rp 3.500
+
+E-17-10 Transmission
+
+957010805500
+
+BOLT,FLANGE,8X55
+
+Rp 10.200
+
+E-19-10 Right Crank Case
+Cover
+
+1110BKZR600
+
+CRANK CASE COMP, RIGHT
+
+Rp 564.500
+
+E-19-10 Right Crank Case
+Cover
+
+11103KVB930
+
+RUB.BUSH,ENG.HANGER
+
+Rp 19.000
+
+E-19-10 Right Crank Case
+Cover
+
+11114KWN900
+
+PLUG,BRG PUSH
+
+Rp 22.000
+
+E-19-10 Right Crank Case
+Cover
+
+11116KZR600
+
+SPRING, BEARING PUSH
+
+Rp 2.500
+
+E-19-10 Right Crank Case
+Cover
+
+11117KWN901
+
+PLATE,BRG PUSH
+
+Rp 12.000
+
+E-19-10 Right Crank Case
+Cover
+
+11205GBC300
+
+BUSH M STAND
+
+Rp 7.500
+
+E-19-10 Right Crank Case
+Cover
+
+11361KWN901
+
+BASE, STATOR
+
+Rp 144.000
+
+E-19-10 Right Crank Case
+Cover
+
+11363KWN900
+
+GASKET,STATOR BASE
+
+Rp 8.500
+
+E-19-10 Right Crank Case
+Cover
+
+15651KZR600
+
+GAUGE, OIL LEVEL
+
+Rp 12.000
+
+E-19-10 Right Crank Case
+Cover
+
+32961KWN900
+
+CLAMP,ACG CORD
+
+Rp 12.000
+
+E-19-10 Right Crank Case
+Cover
+
+32962KZR600
+
+STAY, ENGINE HARNESS
+
+Rp 5.500
+
+E-19-10 Right Crank Case
+Cover
+
+90031KWN900
+
+BOLT A STUD 8X2005
+
+Rp 19.000
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-19-10 Right Crank Case
+Cover
+
+90036KZR600
+
+BOLT, RADIATOR DISTANCE
+
+Rp 10.000
+
+E-19-10 Right Crank Case
+Cover
+
+90131883000
+
+BOLT DRAIN PLUG 12X15
+
+Rp 3.500
+
+E-19-10 Right Crank Case
+Cover
+
+90702KWN900
+
+DOWEL PIN,SPL 6.3X10X30
+
+Rp 5.000
+
+E-19-10 Right Crank Case
+Cover
+
+91201KWN902
+
+OIL SEAL, 20 8X32X6
+
+Rp 9.500
+
+E-19-10 Right Crank Case
+Cover
+
+91201K35J01
+
+OIL SEAL, 20 8X32X6
+
+Rp 34.000
+
+E-19-10 Right Crank Case
+Cover
+
+91307035000
+
+O-RING, 18X3
+
+Rp 1.600
+
+E-19-10 Right Crank Case
+Cover
+
+9410912000
+
+WASHER, DRAIN PLUG, 12MM
+
+Rp 1.500
+
+E-19-10 Right Crank Case
+Cover
+
+9430108100
+
+PIN DOWEL 8X10
+
+Rp 2.000
+
+E-19-10 Right Crank Case
+Cover
+
+957010601400
+
+BOLT FLANGE 6X14
+
+Rp 1.500
+
+E-19-10 Right Crank Case
+Cover
+
+957010602500
+
+BOLT FLANGE 6X25
+
+Rp 6.000
+
+E-19-10 Right Crank Case
+Cover
+
+957010606500
+
+BOLT FLANGE 6X65
+
+Rp 2.500
+
+E-19-10 Right Crank Case
+Cover
+
+957010608000
+
+BOLT FLANGE 6X80
+
+Rp 2.500
+
+E-20 CrankShaft/Piston
+
+13000K60B00
+
+CRANKSHAFT ASSY
+
+Rp 584.000
+
+E-20 CrankShaft/Piston
+
+13011KZR600
+
+RING SET, PISTON (STD)
+
+Rp 61.000
+
+E-20 CrankShaft/Piston
+
+13021KWN900
+
+RING SET,PISTON OS 0.25
+
+Rp 232.000
+
+E-20 CrankShaft/Piston
+
+13021KZR600
+
+RING SET, PISTON (0,25)
+
+Rp 61.000
+
+E-20 CrankShaft/Piston
+
+13031KWN900
+
+RING SET,PISTON OS 0.50
+
+Rp 232.000
+
+E-20 CrankShaft/Piston
+
+13031KZR600
+
+RING SET, PISTON (0,50)
+
+Rp 61.000
+
+E-20 CrankShaft/Piston
+
+13041KWN900
+
+RING SET,PISTON OS 0.75
+
+Rp 201.000
+
+E-20 CrankShaft/Piston
+
+13041KZR600
+
+RING SET, PISTON (0,75)
+
+Rp 61.000
+
+E-20 CrankShaft/Piston
+
+13051KWN900
+
+RING SET,PISTON OS 1.00
+
+Rp 232.000
+
+E-20 CrankShaft/Piston
+
+13051KZR600
+
+RING SET, PISTON (1,00)
+
+Rp 61.000
+
+E-20 CrankShaft/Piston
+
+13101KWN902
+
+PISTON (STD)
+
+Rp 72.000
+
+E-20 CrankShaft/Piston
+
+13102KWN903
+
+PISTON (0,25)
+
+Rp 72.000
+
+E-20 CrankShaft/Piston
+
+13103KWN903
+
+PISTON (0,50)
+
+Rp 72.000
+
+E-20 CrankShaft/Piston
+
+13104KWN903
+
+PISTON (0,75)
+
+Rp 72.000
+
+E-20 CrankShaft/Piston
+
+13105KWN903
+
+PISTON (1,00)
+
+Rp 72.000
+
+E-20 CrankShaft/Piston
+
+13111KWN900
+
+PIN PISTON
+
+Rp 10.000
+
+E-20 CrankShaft/Piston
+
+13115GN5911
+
+Clip Piston Pin 13MM
+
+Rp 1.000
+
+E-20 CrankShaft/Piston
+
+13115GN5910
+
+Clip Piston Pin 13MM
+
+Rp 1.500
+
+E-20 CrankShaft/Piston
+
+90741003010
+
+KEYWOODRUFF 4MM
+
+Rp 20.000
+
+E-20 CrankShaft/Piston
+
+06381KZR600
+
+Rod Kit Connecting
+
+Rp 158.500
+
+E-20 CrankShaft/Piston
+
+131A1KWN902
+
+PISTON KIT (STD)
+
+Rp 136.000
+
+E-20 CrankShaft/Piston
+
+131A2KWN902
+
+PISTON KIT (0,25)
+
+Rp 136.000
+
+E-20 CrankShaft/Piston
+
+131A3KWN902
+
+PISTON KIT (0,50)
+
+Rp 136.000
+
+E-20 CrankShaft/Piston
+
+131A4KWN902
+
+PISTON KIT (0,75)
+
+Rp 136.000
+
+E-20 CrankShaft/Piston
+
+131A5KWN902
+
+PISTON KIT (1,00)
+
+Rp 136.000
+
+E-19-20 Left CrankCase
+
+11103KVB930
+
+RUB.BUSH,ENG.HANGER
+
+Rp 19.000
+
+E-19-20 Left CrankCase
+
+11103K0JN21
+
+RUB.BUSH,ENG.HANGER
+
+Rp 18.500
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-19-20 Left CrankCase
+
+11103K0JN00
+
+RUB.BUSH,ENG.HANGER
+
+Rp 18.000
+
+E-19-20 Left CrankCase
+
+11200KZR601
+
+CRANKCASE COMP LEFT
+
+(tidak ada harga)
+
+E-19-20 Left CrankCase
+
+11203KVB901
+
+UNDER RUBBER BUSH REAR
+
+Rp 13.500
+
+E-19-20 Left CrankCase
+
+11203K35J01
+
+UNDER RUBBER BUSH REAR
+
+Rp 15.500
+
+E-19-20 Left CrankCase
+
+11205GBC300
+
+BUSH M STAND
+
+Rp 7.500
+
+E-19-20 Left CrankCase
+
+11343KVG900
+
+TUBE,DRAIN
+
+Rp 2.500
+
+E-19-20 Left CrankCase
+
+12361035000
+
+CAP TAPPET
+
+Rp 10.500
+
+E-19-20 Left CrankCase
+
+15421107000
+
+SCREEN OIL FILTER
+
+Rp 37.500
+
+E-19-20 Left CrankCase
+
+15421KPL900
+
+SCREEN,OIL FILTER
+
+Rp 136.000
+
+E-19-20 Left CrankCase
+
+15426KVB900
+
+SPRING OIL FILTER SCREEN
+
+Rp 2.500
+
+E-19-20 Left CrankCase
+
+3211AKZR600
+
+PROTR,SP SENSOR ASSY
+
+Rp 18.500
+
+E-19-20 Left CrankCase
+
+32113KWN901
+
+GROMMET,SP SENSOR PROTR
+
+Rp 1.500
+
+E-19-20 Left CrankCase
+
+37700MJED01
+
+SENSOR ASSY,SPEED
+
+Rp 185.000
+
+E-19-20 Left CrankCase
+
+37700HP5601
+
+SENSOR ASSY,SPEED
+
+Rp 778.000
+
+E-19-20 Left CrankCase
+
+90001KWR000
+
+BOLT, SOCKET, 6X18
+
+Rp 1.500
+
+E-19-20 Left CrankCase
+
+90032KWN901
+
+BOLT,B STUD 8X206
+
+Rp 11.000
+
+E-19-20 Left CrankCase
+
+90495MN5000
+
+WASHER,SEALING 8MM
+
+Rp 13.000
+
+E-19-20 Left CrankCase
+
+91002KWN901
+
+BRG,BALL RADIAL 6207 SPL
+
+Rp 352.000
+
+E-19-20 Left CrankCase
+
+91002KZLA01
+
+BRG,BALL RADIAL 6207 SPL
+
+Rp 67.600
+
+E-19-20 Left CrankCase
+
+91002K46N21
+
+BRG,BALL RADIAL 6207 SPL
+
+Rp 68.100
+
+E-19-20 Left CrankCase
+
+91002K44V01
+
+BRG,BALL RADIAL 6207 SPL
+
+Rp 70.500
+
+E-19-20 Left CrankCase
+
+91002KZR602
+
+Bearing Radial Ball Special
+
+Rp 130.000
+
+E-19-20 Left CrankCase
+
+91003KZR601
+
+BRG,BALL RADIAL 6204
+
+Rp 35.000
+
+E-19-20 Left CrankCase
+
+91003KZR602
+
+BEARING RADIAL BALL 6204
+
+Rp 58.000
+
+E-19-20 Left CrankCase
+
+91005KZR601
+
+BEARING RADIAL BALL 6301
+
+Rp 54.000
+
+E-19-20 Left CrankCase
+
+91005KZR602
+
+BEARING RADIAL BALL 6301
+
+Rp 28.000
+
+E-19-20 Left CrankCase
+
+91008KZR601
+
+BEARING RADIAL BALL 6302
+
+Rp 68.000
+
+E-19-20 Left CrankCase
+
+91008KZR602
+
+BEARING RADIAL BALL 6302
+
+Rp 38.000
+
+E-19-20 Left CrankCase
+
+91202K97T01
+
+Oil Seal 26x45x6
+
+Rp 8.500
+
+E-19-20 Left CrankCase
+
+91202KWN901
+
+Oil Seal, 26X45X6
+
+Rp 10.500
+
+E-19-20 Left CrankCase
+
+91302001020
+
+O-RING 30.8 MM
+
+Rp 2.000
+
+E-19-20 Left CrankCase
+
+91303KF0003
+
+O-RING,14.8X2.4
+
+Rp 7.500
+
+E-19-20 Left CrankCase
+
+9500280000
+
+Clip Tube C12
+
+Rp 1.000
+
+E-19-20 Left CrankCase
+
+957010601600
+
+BOLT FLANGE 6X16
+
+Rp 5.000
+
+E-19-20 Left CrankCase
+
+957010801600
+
+BOLT, FLANGE 8X16
+
+Rp 1.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16016KVBS51
+
+SCREW SET
+
+Rp 64.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16016K03H11
+
+SCREW SET
+
+Rp 13.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16075KZR601
+
+O-RING THROTTLE BODY
+
+Rp 1.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16081KPH701
+
+SCREW, TORX, 5X8.7
+
+Rp 13.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16081KYJ902
+
+SCREW, TORX, 5X8.7
+
+Rp 3.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16169KZR601
+
+STAY WIRE
+
+Rp 11.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+16400KZR601
+
+THROTTLE BODY ASSY
+
+Rp 1.014.500
+
+Kategori
+
+Kode Part
+
+Nama Part
+
+Harga
+
+E-22 Throttle Body/Fuel
+Injector
+
+16410KZRB21
+
+BODY SET
+
+Rp 564.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16410KZR601
+
+BODY SET
+
+Rp 314.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16450KZR601
+
+INJECTOR ASSY FUEL
+
+Rp 210.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16472KPCD51
+
+RING, SEAL
+
+Rp 12.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16480KVBS51
+
+SOLENOID SET
+
+Rp 147.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+16485KVBS51
+
+SEAT SET
+
+Rp 58.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+17565KZR600
+
+JOINT COMP INJECTOR
+
+Rp 63.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+91301GGLJ02
+
+O-RING, 6.3X2.2
+
+Rp 3.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+938920501218
+
+SCREW WASHER 5X12
+
+Rp 3.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+957010602200
+
+BOLT FLANGE 6X22
+
+Rp 1.500
+
+E-22 Throttle Body/Fuel
+Injector
+
+960010602500
+
+BOLT FLANGE 6X25
+
+Rp 9.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+17565KZR650
+
+JOINT COMP INJECTOR
+
+Rp 59.000
+
+E-22 Throttle Body/Fuel
+Injector
+
+90004GHB660
+
+BOLT,FLANGE,NSHF,6X22
+
+Rp 12.500
+
+
