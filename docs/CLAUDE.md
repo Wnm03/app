@@ -10549,3 +10549,267 @@ diregenerasi.
 
 `kw_release_sesi310_scanner-session-self-healing-guard_v880.zip` — dibuat &
 dikirim ke user.
+
+# Sesi 323 (2026-07-30) — Cicilan/tagihan sudah dibayar periode ini ikut tab Lunas + navigasi ‹bulan› di Daftar Transaksi
+
+## Konteks
+
+Laporan user (bahasa santai): pastikan cicilan & "bayar bulan depan" (bayar
+di muka sebelum jatuh tempo) yang sudah dibayar sesuai tanggal ikut masuk
+ke tab "✅ Lunas" (fitur split tab Bayar/Lunas dari Sesi 322), dan tambah
+filter navigasi bulan (‹›, klik kiri mundur/klik kanan maju — sama seperti
+pola yang sudah ada) di kartu "📋 Semua Transaksi" (Daftar Transaksi, tab
+Kelola). Diklarifikasi via 3 pertanyaan ke user sebelum coding (channel
+chat) karena permintaan aslinya ambigu:
+1. Entri "sudah dibayar" tetap tampil di KEDUA tab (Bayar & Lunas)
+   selama tagihannya sendiri masih aktif (belum lunas total) — bukan
+   dipindah penuh.
+2. "Bayar bulan depan" = bayar di muka sebelum tanggal jatuh tempo.
+3. Filter bulan Daftar Transaksi = navigasi ‹› per bulan (bukan dropdown).
+
+## Perubahan
+
+- **`modules/finance/tagihan-kalender.js`**: fungsi baru
+  `getBillPaidThisPeriodInfo(b)` — cek histori pembayaran TERBARU
+  (`D.transactions` dgn `billLinkId===b.id`) dicocokkan ke PERIODE
+  SEKARANG (bulan/tahun/minggu berjalan sesuai `b.freq`), BUKAN ke
+  `b.nextDue` (karena `nextDue` sudah kadung dimajukan oleh
+  `markBillPaid()`) — supaya pembayaran di muka ("bayar bulan depan")
+  tetap terdeteksi sbg "sudah dibayar periode ini". Selalu `null` utk
+  `freq==='sekali'` (begitu dibayar langsung pindah ke `D.billsArchive`,
+  tidak pernah nyangkut di `D.bills` lagi).
+- **`modules/shared/modules-render.js`** (`renderBillList()`): tagihan
+  aktif yang lolos `getBillPaidThisPeriodInfo()` ditambahkan sbg ENTRI
+  KEDUA (duplikat, `_paidPeriodOnly:true`, `_lunas:true`) khusus tampil
+  di tab Lunas — entri ASLI-nya (`_lunas:false`) TETAP ada & tetap tampil
+  normal di tab Bayar (0 perubahan ke tab Bayar). `renderBillItemHtml()`:
+  badge/label/tombol aksi dibedakan utk `_paidPeriodOnly` (badge "✅
+  Dibayar" bukan "✅ Lunas", tombol aksi tetap versi AKTIF —
+  `markBillPaid` diganti `openBillHistory`+Edit — supaya tidak salah
+  rute ke logic arsip yg akan gagal cari record di `D.billsArchive`).
+  Variabel `isArchived` (`b._lunas&&!b._paidPeriodOnly`) menggantikan
+  semua pengecekan `b._lunas` polos yg sebelumnya berarti "arsip
+  permanen" (opacity kartu, progress cicilan, anomaly badge, tombol
+  aksi) — 0 perubahan perilaku utk entri arsip asli.
+  `renderKeuangan()`: tambah sinkron `#txListMonthLabel` (guard elemen)
+  bareng `#monthLabel` yang sudah ada.
+- **`modules/finance/tx-list-cashflow.js`**: fungsi baru
+  `changeTxListMonth(dir)` — reuse `curMonth`/`curYear` yang SAMA
+  dgn `changeMonth()` (month-nav Ringkasan, 1 sumber kebenaran periode
+  bulan berjalan), paksa `txListPeriode='bulan'` + sinkron chip aktif,
+  lalu `resetTxPageAndRender()`.
+- **`index.html`** (`app_production.html` ikut disalin build.js): tambah
+  blok `.month-nav` (‹ `#txListMonthLabel` ›, `data-action="changeTxListMonth"`)
+  di kartu "📋 Semua Transaksi", + `id="txListPeriodeChipBulan"` di chip
+  "Bulan Ini" (dipakai `changeTxListMonth` utk sinkron status aktif).
+
+## Test
+
+7 test baru `tests/bill-paid-this-period.test.js` (`getBillPaidThisPeriodInfo`
+— cicilan bulanan baru dibayar, bayar di muka/bulan depan, belum pernah
+dibayar, dibayar bulan lalu, freq sekali selalu null, transaksi billLinkId
+lain diabaikan, freq tahunan/mingguan). `renderBillList()`/
+`renderBillItemHtml()`/`changeTxListMonth()` sengaja TIDAK dites di sini
+(baca/tulis DOM langsung, di luar batasan `loadSource.js`) — cukup
+diverifikasi lewat baca-ulang kode + regression suite penuh.
+
+`node --test tests/*.test.js` -> **1767/1767 pass, 0 fail** (naik dari
+1760, 2x — sebelum & sesudah build, 0 regresi).
+
+## Build
+
+`node scripts/build.js s322-lunas-paidperiod-txlist-monthnav` -> sukses,
+3 lint-guard bawaan lolos, kedua bundle lolos `node --check`, versi naik
+892→893, `index.html`/`app_production.html` identik, `FILE-MAP.md`
+diregenerasi.
+
+## ZIP
+
+`kw_release_sesi323_lunas-paidperiod-txlist-monthnav_v893.zip` — dibuat &
+dikirim ke user.
+
+## Perlu QA manual
+
+- Cek visual tab Lunas: cicilan yang baru dibayar bulan ini muncul di
+  tab Lunas (badge "✅ Dibayar") SEKALIGUS tetap muncul di tab Bayar
+  dgn jatuh tempo bulan depan.
+- Cek tombol di kartu "✅ Dibayar" (tab Lunas): 📋 Riwayat + ✏️ Edit + ⋮
+  harus jalan normal (bukan rute arsip).
+- Cek navigasi ‹› di kartu Daftar Transaksi: klik kiri/kanan pindah bulan
+  & otomatis switch chip ke "Bulan Ini".
+
+# Sesi 324 (2026-07-30) — Badge "Sudah dibayar bulan ini" di kartu tab Bayar
+
+## Konteks
+Lanjutan ringkas Sesi 323 (rekomendasi yang dipilih user dari 3 opsi):
+cicilan/tagihan yang sudah dibayar periode ini kini juga dapat badge kecil
+`✅ Sudah dibayar bulan ini` LANGSUNG di kartunya di tab Bayar (tanpa perlu
+pindah ke tab Lunas) — reuse `getBillPaidThisPeriodInfo()` dari Sesi 323,
+0 fungsi baru.
+
+## Perubahan
+`modules/shared/modules-render.js` (`renderBillItemHtml()`): chip baru
+`paidThisPeriodChip`, muncul hanya utk entri AKTIF asli (bukan
+`_paidPeriodOnly`/arsip), ditambahkan ke baris chip nama kartu.
+
+## Test
+0 test baru (reuse `getBillPaidThisPeriodInfo()` yg sudah dites Sesi 323;
+perubahan murni template HTML, DOM). `node --test tests/*.test.js` ->
+**1767/1767 pass** (2x, 0 regresi).
+
+## Build
+`node scripts/build.js s323-badge-paid-thismonth-bayar-tab` -> sukses,
+`?v=894`, `index.html`/`app_production.html` identik.
+
+## ZIP
+`kw_release_sesi324_badge-paid-thismonth-bayar-tab_v894.zip` — dibuat &
+dikirim ke user.
+
+# Sesi 325 (2026-07-30) — Navigasi ‹bulan› di filter lanjutan Tagihan (konsistensi dgn Daftar Transaksi)
+
+## Konteks
+Lanjutan ringkas Sesi 323/324 (opsi #2 dari rekomendasi): dropdown Bulan/
+Tahun di filter lanjutan Tagihan (billFilterBulan/billFilterTahun) TETAP
+ada (tidak dihapus, tetap bisa reset ke "Semua Bulan"/"Semua Tahun"),
+ditambah shortcut navigasi ‹› di atasnya biar polanya konsisten dgn
+Daftar Transaksi (klik kiri mundur/kanan maju 1 bulan).
+
+## Perubahan
+- **`modules/finance/tagihan-kalender.js`**: fungsi baru
+  `navBillFilterMonth(dir)` — reuse `applyBillFilter()` yg sudah ada
+  (nulis ke 2 dropdown lalu panggil fungsi itu). `populateBillFilterOptions()`:
+  fix kecil — tahun yg SEDANG dipilih (`prevT`) sekarang ikut dipertahankan
+  di opsi `<select>` walau belum ada tagihan tercatat di tahun itu (dulu
+  langsung ke-reset ke "Semua Tahun" tiap render kalau tahun tsb belum
+  py data — bug laten yg baru kelihatan skrg krn nav bisa geser ke
+  tahun kosong).
+- **`index.html`**: tambah blok `.month-nav` (‹ label statis › ) di
+  filter lanjutan Tagihan, `data-action="navBillFilterMonth"`.
+
+## Test
+0 test baru (fungsi baru + fix murni baca/tulis DOM — di luar batasan
+`loadSource.js`, verifikasi manual). `node --test tests/*.test.js` ->
+**1767/1767 pass** (2x, 0 regresi — jumlah test TIDAK berubah dari Sesi
+324 karena tidak ada test baru).
+
+## Build
+`node scripts/build.js s324-navbillfiltermonth-tagihan` -> sukses,
+`?v=895`, `index.html`/`app_production.html` identik.
+
+## ZIP
+`kw_release_sesi325_navbillfiltermonth-tagihan_v895.zip` — dibuat &
+dikirim ke user.
+
+## Perlu QA manual
+Nav ‹› di filter lanjutan Tagihan: geser ke bulan/tahun yg belum ada
+tagihan (mis. tahun depan) -> pastikan TIDAK ke-reset ke "Semua Tahun"
+saat list dirender ulang.
+
+# Sesi 326 (2026-07-30) — Fix kecil: badge anomaly ikut tampil di kartu "sudah dibayar" (audit konsistensi _lunas)
+
+## Konteks
+Audit ringkas pasca Sesi 323-325: grep semua pemakaian `_lunas` di
+codebase utk pastikan tidak ada pengecekan lain yang masih menganggap
+`b._lunas===true` = "arsip permanen" sejak `_paidPeriodOnly` ditambahkan
+Sesi 323. Ketemu 1 titik lolos: badge anomaly (getBillAnomalyInfo) di
+`renderBillItemHtml()` masih pakai `b._lunas` polos, jadi kartu
+"✅ Dibayar" (tab Lunas, sebenarnya masih aktif) ikut menyembunyikan
+badge anomaly-nya padahal seharusnya boleh tampil (beda dari entri
+arsip asli yang memang tidak relevan lagi).
+
+## Perubahan
+`modules/shared/modules-render.js` (`renderBillItemHtml()`): `anomaly`
+sekarang pakai `isArchived` (bukan `b._lunas` polos) — konsisten dgn
+`statusBadge`/`actionBtns`/opacity kartu yang sudah pakai `isArchived`
+sejak Sesi 323.
+
+## Test
+`node --test tests/*.test.js` -> **1767/1767 pass** (2x, 0 regresi,
+jumlah test tidak berubah — perubahan murni template DOM).
+
+## Build
+`node scripts/build.js s325-fix-anomaly-badge-paidperiod` -> sukses,
+`?v=896`, `index.html`/`app_production.html` identik.
+
+## ZIP
+`kw_release_sesi326_fix-anomaly-badge-paidperiod_v896.zip` — dibuat &
+dikirim ke user.
+
+# Sesi 344 (2026-07-30) — Audit inventory-transfer/pengiriman/kategori: konfirmasi item #1-4 sudah selesai + 2 rule AI baru
+
+## Konteks
+Audit `AUDIT-DESAIN-inventory-transfer-pengiriman-kategori.md` (item #1
+Buat Transfer, #2 Inventory Movement, #3 Rencana Pengiriman kapasitas
+motor, #4 Kategori drilldown) dicek ulang terhadap kode rilis v915:
+**semua 4 item ternyata sudah diimplementasikan** (item #2 pakai
+`manualLocation` gabungan Opsi A+B, item #4 pakai `toggleKategoriDetail`
+— beda nama fungsi dari draft desain tapi setara). Tidak ada perubahan
+kode utk item #1-4 sesi ini.
+
+## Perubahan
+Tambah 2 rule `AIDecision` baru (generic engine, `ai-decision-engine.js`,
+sudah ada — 0 mesin baru), pola sama persis rule domain lain yg sudah
+terdaftar:
+- **`vehicle-capacity-missing`** (`modules/vehicle/sparepart-servis.js`,
+  `registerVehicleAIRules()`): warning kalau kendaraan dipakai di
+  `D.deliveryPlans` tapi `capacityKg`/`capacityM3` (field yg sudah ada
+  sejak audit #3) masih kosong.
+- **`product-weight-missing`** (`modules/shop/cobek-pricing.js`,
+  `registerDeliveryAIRules()`): info kalau produk dipakai di
+  `D.inventoryTransfers`/`D.deliveryPlans` tapi `beratPerUnit` (field
+  yg sudah ada) masih kosong.
+
+Keduanya murni baca `D` langsung, 0 field/index baru, 0 rumus baru
+(reuse persis field yg sudah ada dari audit sebelumnya).
+
+## Test
+0 test baru — konsisten dgn pola rule domain lain di codebase ini
+(`vehicle-service-overdue`, `delivery-low-stock`, dst juga tidak punya
+test per-rule tersendiri; hanya mesin generik `AIDecision` yg dites di
+`tests/ai-decision-engine-s286.test.js`). `node --test tests/*.test.js`
+-> **1870/1870 pass** (2x, 0 regresi).
+
+## Build
+`node scripts/build.js s344-ai-rules-kapasitas-motor-berat-produk` ->
+sukses, `?v=918`, `index.html`/`app_production.html` identik.
+
+## ZIP
+`kw_release_sesi344_ai-rules-kapasitas-motor-berat-produk_v918.zip` —
+dibuat & dikirim ke user.
+
+## Perlu QA manual
+Cek AI Daily Briefing/`AIRecommendCard` muncul: (1) kendaraan tanpa
+kapasitas dipakai di Rencana Pengiriman, (2) produk tanpa berat dipakai
+di Buat Transfer/Rencana Pengiriman.
+
+# Sesi 344b (2026-07-30) — Badge berat/kapasitas belum diisi langsung di kartu (bukan cuma AI Briefing)
+
+## Konteks
+Lanjutan Sesi 344 (2 rule AI baru). Rule AI cuma muncul di AI Briefing
+dgn cooldown 72 jam — bisa kelewat kalau briefing tidak dibuka. Tambah
+badge langsung di kartu, reuse PERSIS kondisi kedua rule (0 rumus baru).
+
+## Perubahan
+- **`modules/shop/cobek-etalase.js`** (`renderList()`): tag baru
+  "⚠️ Berat belum diisi" di kartu produk Etalase — tampil kalau produk
+  dipakai di `D.inventoryTransfers`/`D.deliveryPlans` tapi `beratPerUnit`
+  kosong (kondisi sama persis rule `product-weight-missing`).
+- **`modules/vehicle/vehicle-core.js`** (`vehMetaText()`): tag baru
+  "⚠️ Kapasitas belum diisi" di kartu Kelola Kendaraan — tampil kalau
+  kendaraan dipakai di `D.deliveryPlans` tapi `capacityKg`/`capacityM3`
+  kosong (kondisi sama persis rule `vehicle-capacity-missing`).
+
+Keduanya murni template render (0 field/index baru, 0 D.write).
+
+## Test
+0 test baru (murni template DOM, di luar cakupan `loadSource.js` —
+konsisten pola badge lain di codebase ini, mis. `stockCls`/`stockLbl`).
+`node --test tests/*.test.js` -> **1870/1870 pass** (2x, 0 regresi).
+
+## Build
+`node scripts/build.js s344b-badge-berat-kapasitas-kartu` -> sukses,
+`?v=919`, `index.html`/`app_production.html` identik.
+
+## ZIP
+`kw_release_sesi344b_badge-berat-kapasitas-kartu_v919.zip` — dibuat &
+dikirim ke user.

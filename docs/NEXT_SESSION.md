@@ -1,5 +1,86 @@
 # NEXT_SESSION.md — Target sesi berikutnya (update setiap sesi)
 
+> **Catatan Sync (Sesi 323 — Cicilan/tagihan sudah dibayar periode ini ikut
+> tab Lunas + navigasi ‹bulan› di Daftar Transaksi, build
+> `s322-lunas-paidperiod-txlist-monthnav`, `?v=893`):** Lihat
+> `docs/CLAUDE.md` § "Sesi 323" utk detail lengkap. Ringkas: (1)
+> `getBillPaidThisPeriodInfo()` baru (`tagihan-kalender.js`) + entri
+> duplikat `_paidPeriodOnly` di `renderBillList()` supaya cicilan/tagihan
+> yg sudah dibayar bulan ini (termasuk bayar di muka/"bulan depan") ikut
+> tampil di tab Lunas TANPA hilang dari tab Bayar; (2) `changeTxListMonth()`
+> baru (`tx-list-cashflow.js`) + blok `.month-nav` baru di kartu "📋 Semua
+> Transaksi" (index.html) utk navigasi ‹›  per bulan, reuse `curMonth`/
+> `curYear` yg sama dgn month-nav Ringkasan. Test baru
+> `tests/bill-paid-this-period.test.js` (7 test). Regression **1767/1767
+> PASS** (naik dari 1760, 2x, 0 regresi).
+>
+> **Perlu QA manual** (lihat checklist di `docs/CLAUDE.md` § Sesi 323): tab
+> Lunas menampilkan cicilan yg baru dibayar SEKALIGUS tetap di tab Bayar,
+> tombol aksi kartu "✅ Dibayar" jalan normal (bukan rute arsip), navigasi
+> ‹› di Daftar Transaksi pindah bulan & auto-switch chip.
+>
+> **Target sesi berikutnya**: TBD — tanya user setelah QA manual di atas
+> dikonfirmasi.
+
+
+> **Catatan Sync (Sesi 320 — Fix nominal Scan Universal Akun kebaca "1"
+> doang, laporan user via 2 screenshot SeaBank, build
+> `s320-fix-parsebankscreen-nominal-terpecah`, `?v=889`):** Root cause:
+> `parseBankScreen()` (`modules/shared/scan-ocr.js`) regex nominal cuma
+> menangkap digit CONTIGUOUS, berhenti di whitespace pertama — angka
+> saldo font besar/bold di screenshot asli bikin Tesseract pecah "148.602"
+> jadi beberapa potongan terpisah whitespace ("1" lalu "48.602"), regex
+> lama cuma dapat potongan pertama ("1"). Fix: regex sekarang boleh
+> menangkap sampai 3 potongan digit tambahan yang HANYA dipisah whitespace
+> (berhenti kalau diselingi teks/huruf lain, jadi tidak melahap nominal
+> baris lain di bawahnya), whitespace dibuang sebelum `normalizeOcrNumber()`.
+> 0 perubahan kontrak fungsi. Test baru `tests/scan-ocr-bank.test.js` (7
+> test — fungsi ini belum pernah punya test file sendiri sebelumnya).
+> Regression **1760/1760 PASS** (naik dari 1753, 2x, 0 regresi).
+>
+> **Perlu QA manual** (scan ulang screenshot SeaBank yang sama/serupa dari
+> laporan user) utk konfirmasi nominal sekarang kebaca 148602 dgn benar —
+> root cause berbasis analisis kode+regex terhadap teks OCR yang
+> direkonstruksi dari gejala, bukan hasil OCR asli device user (Tesseract
+> tidak dijalankan sungguhan di sesi ini).
+>
+> **Target sesi berikutnya**: TBD — tanya user setelah QA manual di atas.
+> Catatan tambahan kalau relevan nanti: `parseWalletScreen()`/
+> `parseBibitScreen()`/`parseJagoPocketScreen()` (jenis layar lain,
+> `scan-ocr.js`) punya risiko OCR-pecah-angka yang SAMA persis (font besar
+> serupa) tapi BELUM disentuh sesi ini (scope sengaja dibatasi ke laporan
+> user: layar bank/SeaBank saja) — kalau user melapor gejala serupa di
+> layar wallet/Bibit/Jago, pola fix yang sama (regex multi-potongan +
+> strip whitespace) kemungkinan besar bisa direuse.
+
+> **Catatan Sync (Sesi 319 — Fix race condition scan Sparepart dari Galeri,
+> laporan user via video: scan diam-diam gagal 0 toast setelah pilih foto
+> galeri, build `s319-fix-race-scanner-gallery-focus`, `?v=888`):**
+> Root cause: `sparepartScannerPickImageFile()` (`modules/vehicle/
+> sparepart-scanner.js`) fallback `window` event `'focus'` (utk browser tanpa
+> event `'cancel'`) resolve `null` setelah 300ms — di sebagian device Android
+> `focus` balik LEBIH DULU drpd `change` selesai (foto besar/URI `content://`),
+> jadi foto yang sudah dipilih user DIABAIKAN (guard `settled`). Fix: delay
+> 300ms→800ms + cek ulang `inp.files` langsung sbg fallback sebelum menyerah
+> ke `null`. 0 perubahan API publik, fix ini otomatis berlaku juga ke
+> `sparepart-ocr.js` (reuse fungsi yang sama). Tidak ada test baru (butuh
+> timing event browser asli, di luar cakupan harness `loadSource.js` —
+> dicatat eksplisit di komentar helper itu, pola sama `pickImageFile`/
+> `decodeFromFile` yang dari awal tidak dites lewat harness ini). Regression
+> **1753/1753 PASS** (2x, sebelum & sesudah build, 0 regresi).
+>
+> **Perlu QA manual di device Android asli** (foto besar dari galeri) utk
+> konfirmasi gejala di video (scanner "diam saja" pasca pilih foto) sudah
+> tidak muncul lagi — root cause ini adalah dugaan berbasis analisis kode &
+> race-condition timing yang masuk akal, bukan hasil reproduksi langsung di
+> harness test (harness tidak bisa mensimulasikan timing event browser
+> asli).
+>
+> **Target sesi berikutnya**: TBD — tanya user setelah QA manual di atas
+> dikonfirmasi (kalau gejala masih muncul, kemungkinan root cause lain perlu
+> digali, mis. `ocrRecognize()`/`decodeFromFile()` sendiri yang gagal senyap,
+> bukan cuma `pickImageFile()`).
+
 > **Catatan Sync (Sesi 10 — Reroute ImportKatalog.commit() ke
 > commitShopRows(), lanjutan opsional di luar
 > DESIGN_torsi-vehicle-selector_shop-import-export-2.md yang SUDAH SELESAI
