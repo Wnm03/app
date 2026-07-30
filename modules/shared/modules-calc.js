@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s273-fix-vehicle-scanner-camera-hang';
+const MODULE_CALC_VERSION='s280-fix-cicilan-paymethod-revert-tunai';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){

@@ -91,7 +91,17 @@ return _sha256Fallback(data);
 // PERNAH ditulis ke localStorage/IndexedDB. Otomatis hilang kalau tab ditutup/di-reload (PIN harus
 // dimasukkan ulang lewat checkPin() lain kali, yang mengisi ulang variabel ini).
 let _sessionRawPin=null;
-function showPinScreen(){document.getElementById('onboard').style.display='none';const ps=document.getElementById('pinScreen');ps.classList.remove('u-dnone');ps.style.display='flex';pinBuffer='';const t=document.getElementById('pinScreenTitle');if(t)t.textContent='🏠 Keluarga '+(D.profile.nama||'W');updatePinLockUI();}
+// FIX (S275 -- lanjutan bug "PIN muncul 2x"): guard idempoten. Sebelumnya fungsi ini bisa
+// dipanggil lebih dari sekali dalam SATU pemuatan halaman yang sama (mis. init() sempat
+// terpanggil ulang oleh kode lain, atau race apa pun yang memicu init() dua kali) -- tiap
+// panggilan mereset pinBuffer & re-render UI PIN dari awal, yang secara visual terlihat seperti
+// "PIN tampil dobel" walau sebenarnya masih di pemuatan halaman yang sama (bukan reload browser).
+// window.__kwPinScreenShown menandai screen ini SUDAH ditampilkan utk pemuatan halaman ini;
+// panggilan kedua & seterusnya diabaikan (early return) selama pemuatan halaman belum berganti.
+function showPinScreen(){
+if(window.__kwPinScreenShown)return;
+window.__kwPinScreenShown=true;
+document.getElementById('onboard').style.display='none';const ps=document.getElementById('pinScreen');ps.classList.remove('u-dnone');ps.style.display='flex';pinBuffer='';const t=document.getElementById('pinScreenTitle');if(t)t.textContent='🏠 Keluarga '+(D.profile.nama||'W');updatePinLockUI();}
 // LOCKOUT PERCOBAAN PIN (perbaikan keamanan 2026-07-10): sebelumnya tidak ada batas percobaan salah
 // sama sekali -- PIN 4 digit bisa dicoba berkali-kali tanpa jeda lewat keypad di layar. Sekarang
 // setelah PIN_MAX_ATTEMPTS kali salah BERTURUT-TURUT, keypad dikunci sementara dgn durasi yg makin

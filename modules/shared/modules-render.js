@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s273-fix-vehicle-scanner-camera-hang';
+const MODULE_RENDER_VERSION='s280-fix-cicilan-paymethod-revert-tunai';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -336,7 +336,15 @@ return true;
 // "aktif"/"lunas" sekarang jadi 2 tampilan UTAMA lewat tab Bayar/Lunas (bukan lagi filter
 // tambahan) -- jadi cuma kategori/bulan/tahun, atau memilih "Semua Status" lewat dropdown
 // lanjutan, yang dianggap "sedang memfilter" (S322).
-const isFiltering=billFilterStatus==='all'||billFilterKategori!=='all'||billFilterBulan!=='all'||billFilterTahun!=='all';
+// FIX (user report + Screenshot 2026-07-30): geser ‹bulan› di nav besar (changeBillStatMonth)
+// dulu selalu bikin isFiltering true (karena reuse billFilterBulan/billFilterTahun yg sama
+// dgn dropdown Filter lanjutan), jadi bulan kosong nyasar ke pesan "cocok dgn filter" + tombol
+// "Reset Filter" -- padahal user cuma browsing bulan, sama seperti Daftar Transaksi biasa yang
+// TIDAK menghitung navigasi bulan sbg "filter" (lihat hasFilter/kf di renderKeuangan()). Sekarang
+// billFilterBulan/Tahun cuma dihitung sbg filter aktif kalau BUKAN hasil browsing nav besar
+// (billStatNavActive, lihat komentar di tagihan-kalender.js) -- kategori & pilihan "Semua Status"
+// eksplisit via dropdown tetap dihitung filter seperti biasa.
+const isFiltering=billFilterStatus==='all'||billFilterKategori!=='all'||(!billStatNavActive&&(billFilterBulan!=='all'||billFilterTahun!=='all'));
 const countEl=document.getElementById('billFilterCount');
 const resetBtn=document.getElementById('billFilterResetBtn');
 if(countEl)countEl.textContent=isFiltering?`Menampilkan ${combined.length} dari ${totalCount} tagihan`:'';
@@ -345,7 +353,10 @@ const filterToggleBtn=document.getElementById('billFilterToggleBtn');
 if(filterToggleBtn)filterToggleBtn.innerHTML=isFiltering?'🔍 Filter •':'🔍 Filter';
 if(!combined.length){
 const resetHtml=isFiltering?'<button class="btn btn-ghost btn-sm u-mt10" data-action="resetBillFilter">↺ Reset Filter</button>':'';
-const msg=isFiltering?'Tidak ada tagihan yang cocok dengan filter':'Belum ada tagihan terjadwal';
+// Kalau kosong gara2 browsing bulan lewat nav besar (bukan filter eksplisit), pesan ikut sebut
+// bulan yg lagi dibuka -- konsisten dgn "Belum ada transaksi di periode ini" di Daftar Transaksi.
+const navBrowsing=!isFiltering&&billStatNavActive&&billStatMonth!==null;
+const msg=isFiltering?'Tidak ada tagihan yang cocok dengan filter':(navBrowsing?`Belum ada tagihan${billFilterStatus==='lunas'?' lunas':''} di ${MONTHS_FULL[billStatMonth]} ${billStatYear}`:'Belum ada tagihan terjadwal');
 targets.forEach(el=>el.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">${msg}</div>${resetHtml}</div>`);
 updateBillStatGrid('keuBill');
 return;
