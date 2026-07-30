@@ -23,14 +23,23 @@ sel.innerHTML='';
 }
 function openBillModal(editId){
 billEditId=editId!==undefined?editId:null;
+billEditFromArchive=false;
 if(billEditId!==null){
-const b=D.bills.find(x=>x.id===billEditId);
-if(b&&b.kind==='cicilan'){
-toast('💳 Cicilan diedit lewat transaksi terkait — buka 📋 Riwayat Pembayaran');
-openBillHistory(billEditId);
-return;
+// BUGFIX (tombol Edit tagihan LUNAS error "Terjadi error saat memproses tombol"):
+// tagihan yang sudah lunas/selesai dipindah dari D.bills ke D.billsArchive oleh
+// markBillPaid()/refreshBillEverywhere(), jadi D.bills.find() di sini SELALU
+// undefined utk tagihan lunas -> b.name di bawah throw TypeError sinkron ->
+// ketangkep catch generik di features-helpers-global-security.js yg cuma
+// nunjukin toast "Terjadi error..." tanpa detail. Sekarang fallback cari di
+// D.billsArchive & tandai billEditFromArchive supaya _saveBillInner() tahu
+// harus nulis balik ke array yang benar (lihat komentar di sana).
+let b=D.bills.find(x=>x.id===billEditId);
+if(!b){
+b=(D.billsArchive||[]).find(x=>x.id===billEditId);
+if(b)billEditFromArchive=true;
 }
-if(b&&b.kind==='utang'&&b.debtId){
+if(!b){toast('⚠️ Tagihan tidak ditemukan (mungkin sudah dihapus)');return;}
+if(b.kind==='utang'&&b.debtId&&!billEditFromArchive){
 toast('📕 Cicilan utang ini disinkron dari Buku Utang — edit di sana');
 goToList('debtList',null);
 return;
@@ -40,8 +49,8 @@ const cats=getCatsByType('expense');
 document.getElementById('billCat').innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.name)}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
 document.getElementById('billAcc').innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 if(billEditId!==null){
-const b=D.bills.find(x=>x.id===billEditId);
-document.getElementById('billModalTitle').textContent='Edit Tagihan';
+const b=billEditFromArchive?(D.billsArchive||[]).find(x=>x.id===billEditId):D.bills.find(x=>x.id===billEditId);
+document.getElementById('billModalTitle').textContent=billEditFromArchive?'✏️ Edit Tagihan (Lunas)':'Edit Tagihan';
 document.getElementById('billName').value=b.name;
 document.getElementById('billAmt').value=b.shared?b.totalAmount:b.amount;
 document.getElementById('billDue').value=b.nextDue;
@@ -54,6 +63,10 @@ document.getElementById('billNote').value=b.note||'';
 setBillType(b.kind);
 document.getElementById('billShared').checked=!!b.shared;
 document.getElementById('billSharedPct').value=b.sharedPct||50;
+const otherNameEl=document.getElementById('billSharedOtherName');
+if(otherNameEl)otherNameEl.value=b.sharedOtherName||'';
+const autoPiutangEl=document.getElementById('billSharedAutoPiutang');
+if(autoPiutangEl)autoPiutangEl.checked=!!b.sharedAutoPiutang;
 toggleBillSharedFields();
 } else {
 document.getElementById('billModalTitle').textContent='Tambah Tagihan/Langganan';
@@ -68,6 +81,10 @@ document.getElementById('billNote').value='';
 setBillType('tagihan');
 document.getElementById('billShared').checked=false;
 document.getElementById('billSharedPct').value=50;
+const otherNameEl2=document.getElementById('billSharedOtherName');
+if(otherNameEl2)otherNameEl2.value='';
+const autoPiutangEl2=document.getElementById('billSharedAutoPiutang');
+if(autoPiutangEl2)autoPiutangEl2.checked=false;
 toggleBillSharedFields();
 }
 openModal('billModal');
@@ -96,6 +113,8 @@ if(!name||!rawAmt||!due){toast('⚠️ Lengkapi nama, jumlah, dan tanggal');retu
 const shared=document.getElementById('billShared').checked;
 const sharedPct=shared?Math.min(99,Math.max(1,parseFloat(document.getElementById('billSharedPct').value)||50)):null;
 const amt=shared?Math.round(rawAmt*sharedPct/100):rawAmt;
+const sharedOtherNameEl=document.getElementById('billSharedOtherName');
+const sharedAutoPiutangEl=document.getElementById('billSharedAutoPiutang');
 const data={
 name,amount:amt,nextDue:due,
 freq:document.getElementById('billFreq').value,
@@ -106,11 +125,22 @@ note:document.getElementById('billNote').value,
 kind:curBillType,
 shared:shared,
 sharedPct:shared?sharedPct:null,
-totalAmount:shared?rawAmt:null
+totalAmount:shared?rawAmt:null,
+sharedOtherName:shared&&sharedOtherNameEl?sharedOtherNameEl.value.trim():'',
+sharedAutoPiutang:!!(shared&&sharedAutoPiutangEl&&sharedAutoPiutangEl.checked)
 };
 if(billEditId!==null){
+// BUGFIX: tagihan lunas (di D.billsArchive) HARUS ditulis balik ke array
+// yang sama tempat dia ditemukan (lihat openBillModal) — bukan D.bills,
+// supaya tidak menduplikasi record atau menghidupkan-kembali tagihan yang
+// sudah lunas jadi aktif lagi tanpa disengaja.
+if(billEditFromArchive){
+const idx=(D.billsArchive||[]).findIndex(b=>b.id===billEditId);
+if(idx>-1)D.billsArchive[idx]={...D.billsArchive[idx],...data};
+} else {
 const idx=D.bills.findIndex(b=>b.id===billEditId);
 D.bills[idx]={...D.bills[idx],...data};
+}
 } else {
 D.bills.push({id:uid(),...data});
 }
@@ -233,7 +263,14 @@ if(!b)return;
 const label=b.kind==='cicilan'&&b.sisaTenor!=null?` (cicilan ke-${(b.tenor||0)-(b.sisaTenor||0)+1} dari ${b.tenor||'?'}x)`:'';
 const sharedLabel=b.shared?` (porsi kamu ${b.sharedPct}% dari total ${fmtFull(b.totalAmount)})`:'';
 if(!await askConfirm(`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(b.amount)}?`,{danger:false,okText:'Ya, Bayar',icon:'💸'}))return;
-D.transactions.push({id:uid(),type:'expense',amount:b.amount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:'Bayar: '+b.name,date:new Date().toISOString().split('T')[0],payMethod:b.kind,billLinkId:b.id});
+const _payTxId=uid();
+D.transactions.push({id:_payTxId,type:'expense',amount:b.amount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:'Bayar: '+b.name,date:new Date().toISOString().split('T')[0],payMethod:b.kind,billLinkId:b.id});
+// Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
+// piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
+// SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
+// (tagihan/langganan/cicilan/utang) & tetap jalan meski bill ini langsung
+// lunas/diarsip setelah ini.
+if(typeof maybeCreateSharedPiutangFromBill==='function')maybeCreateSharedPiutangFromBill(b,_payTxId);
 if(b.kind==='utang'&&b.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,b.debtId));
 if(dbt){
@@ -275,12 +312,79 @@ if(b.kind==='utang'){renderDebtList();renderKekayaanBersih();hitungZakatMaal();}
 const sisaMsg=b.sisaTenor!=null?` Sisa ${b.sisaTenor}x lagi.`:'';
 toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
 }
+// getBillPaidThisPeriodInfo(b) — cek apakah tagihan AKTIF (masih di D.bills, BUKAN
+// D.billsArchive) ini SUDAH dibayar utk periode berjalan (cicilan bulan ini, langganan
+// minggu/tahun ini, dst), meski tagihannya sendiri masih aktif (sisa tenor>0/masih
+// berulang) -- dipakai renderBillList() (lanjutan S322 split tab Bayar/Lunas) supaya
+// cicilan & tagihan yang sudah dibayar (baik pas tanggal MAUPUN dibayar lebih awal/di
+// muka utk periode berikutnya, mis. "bayar bulan depan") ikut MUNCUL juga di tab
+// "✅ Lunas" (sbg riwayat "sudah dibayar periode ini"), TANPA menghilangkannya dari tab
+// "💳 Bayar" (karena tagihannya sendiri masih aktif -- beda dari D.billsArchive yang
+// memang sudah 100% selesai/tidak berulang lagi). Deteksi berbasis histori pembayaran
+// (D.transactions dgn billLinkId===b.id) yg TERBARU, dicocokkan ke periode SEKARANG
+// (bukan ke b.nextDue, karena nextDue sudah kadung dimajukan oleh markBillPaid()).
+// Sengaja TIDAK berlaku utk freq 'sekali' (begitu dibayar langsung pindah ke
+// D.billsArchive lewat markBillPaid(), tidak pernah nyangkut di D.bills lagi).
+function getBillPaidThisPeriodInfo(b){
+if(!b||!b.id||b.freq==='sekali')return null;
+const history=(D.transactions||[]).filter(t=>t.billLinkId===b.id&&t.date).map(t=>({t,d:new Date(t.date)})).filter(x=>!isNaN(x.d.getTime())).sort((a,c)=>c.d-a.d);
+if(!history.length)return null;
+const{t,d}=history[0];
+const now=new Date();
+let samePeriod=false;
+if(b.freq==='bulanan')samePeriod=d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
+else if(b.freq==='tahunan')samePeriod=d.getFullYear()===now.getFullYear();
+else if(b.freq==='mingguan'){
+const start=new Date(now);start.setDate(now.getDate()-now.getDay());start.setHours(0,0,0,0);
+const end=new Date(start);end.setDate(start.getDate()+6);end.setHours(23,59,59,999);
+samePeriod=d>=start&&d<=end;
+}
+return samePeriod?{tx:t,date:d}:null;
+}
+// navBillFilterMonth(dir) — navigasi ‹bulan sebelumnya/berikutnya› utk filter lanjutan
+// Tagihan (billFilterBulan+billFilterTahun), konsisten dgn pola changeTxListMonth() di
+// Daftar Transaksi. Dropdown "Semua Bulan"/"Semua Tahun" TETAP ada (tidak dihapus) --
+// nav ini murni shortcut yang menulis ke 2 dropdown itu lalu reuse applyBillFilter() yang
+// sudah ada, supaya user tetap bisa reset ke "Semua" lewat dropdown kalau perlu.
+function navBillFilterMonth(dir){
+const elB=document.getElementById('billFilterBulan'), elT=document.getElementById('billFilterTahun');
+if(!elB||!elT)return;
+const now=new Date();
+let m=billFilterBulan==='all'?now.getMonth():parseInt(billFilterBulan);
+let y=billFilterTahun==='all'?now.getFullYear():parseInt(billFilterTahun);
+m+=dir;
+if(m>11){m=0;y++;}
+if(m<0){m=11;y--;}
+elB.value=String(m);
+if(![...elT.options].some(o=>o.value===String(y))){
+const opt=document.createElement('option');opt.value=String(y);opt.textContent=String(y);elT.appendChild(opt);
+}
+elT.value=String(y);
+applyBillFilter();
+}
 function openBillArchive(){
 renderBillArchive();
 openModal('billArchiveModal');
 }
 /* moved to modules-render.js: renderBillArchive */
-let billFilterStatus='all', billFilterKategori='all', billFilterBulan='all', billFilterTahun='all';
+// setBillListTab(tab) — tab "💳 Bayar" / "✅ Lunas" di atas list Tagihan (S322). Dulu tagihan
+// aktif & lunas dicampur jadi 1 list panjang (cuma dibedakan opacity+badge), susah ditelusuri
+// & jadi salah satu sumber bug tombol Edit lunas error (lihat catatan di openBillModal). Tab ini
+// murni UI convenience di atas filter status yg SUDAH ADA (billFilterStatus) — jadi tetap
+// kompatibel dgn dropdown Filter lanjutan (kategori/bulan/tahun) yg sudah ada.
+function setBillListTab(tab){
+billListTab=tab;
+const btnBayar=document.getElementById('billTabBayarBtn'), btnLunas=document.getElementById('billTabLunasBtn');
+if(btnBayar)btnBayar.className='type-btn'+(tab==='aktif'?' at':'');
+if(btnLunas)btnLunas.className='type-btn'+(tab==='lunas'?' ai':'');
+billFilterStatus=tab;
+const elS=document.getElementById('billFilterStatus');
+if(elS)elS.value=tab;
+renderBillList();
+}
+// Default 'aktif' (bukan 'all') supaya konsisten dgn tab "💳 Bayar" yang aktif duluan saat
+// halaman pertama dibuka (lihat setBillListTab & sinkronisasi UI tab di renderBillList).
+let billFilterStatus='aktif', billFilterKategori='all', billFilterBulan='all', billFilterTahun='all';
 function toggleBillFilterPanel(){
 const panel=document.getElementById('billFilterPanel');
 if(!panel)return;
@@ -296,16 +400,26 @@ if(elS)billFilterStatus=elS.value;
 if(elK)billFilterKategori=elK.value;
 if(elB)billFilterBulan=elB.value;
 if(elT)billFilterTahun=elT.value;
+// Sinkronkan tombol tab Bayar/Lunas kalau user ubah lewat dropdown Filter lanjutan (mis. pilih
+// "Semua Status") -- keduanya jadi non-aktif secara visual kalau statusnya bukan aktif/lunas.
+billListTab=billFilterStatus;
+const btnBayar=document.getElementById('billTabBayarBtn'), btnLunas=document.getElementById('billTabLunasBtn');
+if(btnBayar)btnBayar.className='type-btn'+(billFilterStatus==='aktif'?' at':'');
+if(btnLunas)btnLunas.className='type-btn'+(billFilterStatus==='lunas'?' ai':'');
 renderBillList();
 }
 function resetBillFilter(){
-billFilterStatus='all';billFilterKategori='all';billFilterBulan='all';billFilterTahun='all';
+billFilterStatus='aktif';billFilterKategori='all';billFilterBulan='all';billFilterTahun='all';
+billListTab='aktif';
 const elS=document.getElementById('billFilterStatus'), elK=document.getElementById('billFilterKategori'),
 elB=document.getElementById('billFilterBulan'), elT=document.getElementById('billFilterTahun');
-if(elS)elS.value='all';
+if(elS)elS.value='aktif';
 if(elK)elK.value='all';
 if(elB)elB.value='all';
 if(elT)elT.value='all';
+const btnBayar=document.getElementById('billTabBayarBtn'), btnLunas=document.getElementById('billTabLunasBtn');
+if(btnBayar)btnBayar.className='type-btn at';
+if(btnLunas)btnLunas.className='type-btn';
 renderBillList();
 }
 function populateBillFilterOptions(){
@@ -317,8 +431,8 @@ const prevK=elK.value;
 elK.innerHTML='<option value="all">Semua Kategori</option>'+kategoris.map(k=>`<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
 elK.value=kategoris.includes(prevK)?prevK:'all';
 billFilterKategori=elK.value;
-const tahuns=[...new Set(all.map(b=>{const d=new Date(b.kind==='cicilan'&&b.completedAt?b.completedAt:b.nextDue);return isNaN(d)?null:d.getFullYear();}).filter(Boolean))].sort((a,b)=>b-a);
 const prevT=elT.value;
+const tahuns=[...new Set([...all.map(b=>{const d=new Date(b.kind==='cicilan'&&b.completedAt?b.completedAt:b.nextDue);return isNaN(d)?null:d.getFullYear();}),prevT!=='all'&&!isNaN(parseInt(prevT))?parseInt(prevT):null].filter(Boolean))].sort((a,b)=>b-a);
 elT.innerHTML='<option value="all">Semua Tahun</option>'+tahuns.map(t=>`<option value="${t}">${t}</option>`).join('');
 elT.value=tahuns.map(String).includes(prevT)?prevT:'all';
 billFilterTahun=elT.value;
@@ -435,7 +549,26 @@ if(billStatMonth===null){const now=new Date();billStatMonth=now.getMonth();billS
 billStatMonth+=dir;
 if(billStatMonth<0){billStatMonth=11;billStatYear--;}
 else if(billStatMonth>11){billStatMonth=0;billStatYear++;}
-updateBillStatGrid('keuBill');
+// BUGFIX: dulu nav ‹›/"Juni 2026" ini cuma update kartu ringkasan (updateBillStatGrid),
+// TIDAK ikut menyaring daftar tagihan di bawahnya -- soalnya renderBillList() nyaring
+// berdasarkan billFilterBulan/billFilterTahun (state punya dropdown Filter lanjutan yg
+// TERPISAH), bukan billStatMonth/billStatYear di sini. Akibatnya geser bulan bikin label
+// & pill "Bulan Ini"/"Sisa Cicilan" benar pindah bulan, tapi list kartu tagihan di bawah
+// tetap nampilin SEMUA tagihan lintas bulan (bug screenshot). Sekarang disamakan: geser
+// bulan di nav ini juga ikut set billFilterBulan/billFilterTahun (+ sinkron dropdown-nya,
+// reuse pola dari navBillFilterMonth()) lalu panggil renderBillList() (yg juga otomatis
+// updateBillStatGrid() ulang di akhir) supaya list & ringkasan selalu bulan yg sama.
+billFilterBulan=String(billStatMonth);
+billFilterTahun=String(billStatYear);
+const elB=document.getElementById('billFilterBulan'), elT=document.getElementById('billFilterTahun');
+if(elB)elB.value=String(billStatMonth);
+if(elT){
+if(![...elT.options].some(o=>o.value===String(billStatYear))){
+const opt=document.createElement('option');opt.value=String(billStatYear);opt.textContent=String(billStatYear);elT.appendChild(opt);
+}
+elT.value=String(billStatYear);
+}
+renderBillList();
 }
 function updateBillStatGrid(prefix){
 if(billStatMonth===null){const now=new Date();billStatMonth=now.getMonth();billStatYear=now.getFullYear();}
