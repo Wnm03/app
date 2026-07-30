@@ -2,10 +2,38 @@
 // Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, filter-laporan.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
+// BUGFIX (s294, catatan tertunda dari FIX-v953-s293): openBillModal() manggil
+// setBillType(b.kind) pas edit tagihan cicilan/utang yang sudah diarsipkan
+// (billEditFromArchive) supaya curBillType kebentuk benar -- tapi toggle di
+// modal ini cuma py 2 opsi (Tagihan/Langganan), TIDAK ADA indikator visual
+// utk cicilan/utang. Klik salah satu tombol itu (kelihatan valid krn tidak
+// ada yg nyala "active") diam-diam ganti curBillType jadi 'tagihan'/
+// 'langganan' -> _saveBillInner() nyimpen kind yg salah ke record arsip.
+// Fungsi murni ini nentuin kapan toggle harus dikunci -- dipisah dari
+// setBillType() (yang baca/tulis DOM) supaya bisa dites tanpa DOM, pola sama
+// fungsi murni lain (lihat tests/helpers/loadSource.js).
+function isBillTypeLocked(kind){
+return kind==='cicilan'||kind==='utang';
+}
 function setBillType(t){
 curBillType=t;
-document.getElementById('billBtnTagihan').className='type-btn'+(t==='tagihan'?' at':'');
-document.getElementById('billBtnLangganan').className='type-btn'+(t==='langganan'?' ai':'');
+const locked=isBillTypeLocked(t);
+const btnTagihan=document.getElementById('billBtnTagihan');
+const btnLangganan=document.getElementById('billBtnLangganan');
+btnTagihan.className='type-btn'+(t==='tagihan'?' at':'');
+btnLangganan.className='type-btn'+(t==='langganan'?' ai':'');
+// Kunci toggle (disabled -> klik tidak akan trigger data-action sama sekali)
+// supaya kind cicilan/utang tidak bisa ke-timpa diam-diam lewat form generik
+// ini. Satu-satunya jalur setBillType() dipanggil dgn 'cicilan'/'utang'
+// adalah openBillModal() saat billEditFromArchive, jadi aman dikunci total
+// tanpa mengganggu alur tambah/edit tagihan & langganan biasa.
+btnTagihan.disabled=locked;
+btnLangganan.disabled=locked;
+const hintEl=document.getElementById('billTypeLockedHint');
+if(hintEl){
+hintEl.style.display=locked?'block':'none';
+hintEl.textContent=locked?`🔒 Jenis "${t==='cicilan'?'Cicilan':'Utang'}" tidak bisa diubah lewat form ini — toggle di atas dinonaktifkan supaya tidak salah tap & kind tercatat diam-diam berubah.`:'';
+}
 }
 function updateBillSubCatOptions(){
 const catName=document.getElementById('billCat').value;
@@ -59,14 +87,23 @@ return;
 // beda kelengkapan utk data yang sama. Cicilan yang sudah LUNAS/diarsip (billEditFromArchive)
 // TETAP lewat modal generik di bawah (sama seperti tagihan/langganan lain yang sudah
 // diarsip -- cuma untuk koreksi nama/catatan, bukan lanjut nyicil).
-if(b.kind==='cicilan'&&!billEditFromArchive){
+// Fix ringkas: redirect ini diperluas dari KHUSUS 'cicilan' menjadi 'cicilan'/'langganan'/
+// 'tagihan' — sebelumnya ✏️ Edit utk langganan & tagihan selalu buka modal generik
+// (nama/jumlah/freq/jatuh tempo TEMPLATE), bukan transaksi pembayaran terakhirnya (beda
+// perlakuan dari cicilan tanpa alasan kuat). Tagihan/langganan yang BELUM PERNAH dibayar
+// (belum ada transaksi tertaut sama sekali, wajar krn bill baru dibuat) tetap fallback ke
+// modal generik di bawah — TIDAK dianggap error seperti cicilan (cicilan selalu punya
+// transaksi awal begitu dibuat, jadi kosongnya linkedTxIds utk cicilan memang anomali).
+if((b.kind==='cicilan'||b.kind==='langganan'||b.kind==='tagihan')&&!billEditFromArchive){
 const linkedTxIds=D.transactions.filter(t=>t.billLinkId===b.id).map(t=>t.id);
 if(linkedTxIds.length){
 editTx(Math.max(...linkedTxIds));
 return;
 }
+if(b.kind==='cicilan'){
 toast('⚠️ Riwayat pembayaran cicilan ini tidak ditemukan, tidak bisa dibuka edit lengkapnya');
 return;
+}
 }
 }
 const cats=getCatsByType('expense');
@@ -222,6 +259,18 @@ document.getElementById('bhJumlah').value=t.amount;
 document.getElementById('bhCatatan').value=t.note||'';
 openModal('billHistoryEditModal');
 }
+// isLatestBillPaymentTx(billId,txId) — cek apakah txId adalah transaksi TERBARU di
+// antara semua riwayat pembayaran (D.transactions dgn billLinkId===billId). Dipakai
+// saveBillHistoryEdit() & deleteBillHistoryTx() (fix s288) supaya sync completedAt/
+// sisaTenor/nextDue cuma jalan kalau yg diedit/dihapus itu pembayaran TERAKHIR —
+// bukan sembarang transaksi historis yg kebetulan punya billLinkId sama. Pola
+// perbandingan pakai id (uid()=timestamp monotonic, lihat features-helpers-global-
+// security.js), sama seperti isLatestInstallment di transaksi.js — bukan pakai
+// tanggal, karena tanggal justru field yang lagi diedit/tidak bisa diandalkan.
+function isLatestBillPaymentTx(billId,txId){
+const ids=D.transactions.filter(t=>t.billLinkId===billId).map(t=>t.id);
+return!ids.length||txId>=Math.max(...ids);
+}
 function saveBillHistoryEdit(){
 if(!curBillHistoryEditTxId)return;
 const t=D.transactions.find(x=>x.id===curBillHistoryEditTxId);
@@ -234,19 +283,47 @@ if(!jumlah||jumlah<=0){toast('⚠️ Jumlah harus lebih dari 0');return;}
 t.date=tanggal;
 t.amount=jumlah;
 t.note=catatan;
+// sync completedAt arsip tagihan ke tanggal baru (Sesi 287, fix s288: tambah cek
+// isLatestBillPaymentTx) — kalau transaksi ini pembayaran yg mengarsipkan tagihan
+// (lunas), completedAt arsip harus ikut berubah pas tanggal riwayatnya diedit, biar
+// konsisten dgn Riwayat Tagihan Lunas. TAPI cuma kalau transaksi yg diedit ini
+// pembayaran TERAKHIR (lihat isLatestBillPaymentTx) — sebelumnya (s287) sync ini
+// jalan utk transaksi MANAPUN yg billLinkId-nya cocok, jadi kalau user edit tanggal
+// cicilan ke-3 dari 12 (bukan yg terakhir) pada cicilan yg sudah lunas, completedAt
+// arsip malah ikut salah berubah ke tanggal cicilan ke-3, bukan tanggal pelunasan
+// yang sebenarnya (cicilan ke-12).
+if(t.billLinkId&&isLatestBillPaymentTx(t.billLinkId,t.id)){
+const archB=(D.billsArchive||[]).find(b=>b.id===t.billLinkId);
+if(archB&&archB.completedAt)archB.completedAt=tanggal;
+}
 save();
 closeModal('billHistoryEditModal');
-renderDashboard();renderKeuangan();renderBillHistory();
+renderDashboard();renderKeuangan();renderBillHistory();renderBillArchive();
 toast('✅ Riwayat pembayaran diperbarui');
 }
-async function deleteBillHistoryTx(){
-if(!curBillHistoryEditTxId)return;
-const t=D.transactions.find(x=>x.id===curBillHistoryEditTxId);
-if(!t)return;
-if(!await askConfirm('Hapus riwayat pembayaran ini? Kalau ini cicilan, sisa tenor & jatuh tempo tagihan akan dikembalikan.'))return;
-let linkedBill=t.billLinkId?D.bills.find(b=>b.id===t.billLinkId):null;
+// revertBillFromDeletedTx(t) — SSOT (audit sesi 291, "sync 2 arah Cicilan/Tagihan vs
+// Transaksi"): logic pengembalian sisaTenor/nextDue/saldo utang/reaktivasi arsip saat
+// SATU transaksi pembayaran bill (billLinkId) dihapus. Sebelumnya logic ini cuma ada
+// INLINE di deleteBillHistoryTx() (hapus lewat modal 📋 Riwayat Pembayaran) -- kalau
+// transaksi yg sama dihapus lewat delTx() (tombol 🗑 di List Transaksi biasa), bill
+// terkait TIDAK ikut disinkron sama sekali (sisaTenor/nextDue basi, tagihan yg sudah
+// lunas & masuk arsip tidak diaktifkan lagi, saldo utang tidak dikembalikan). Diextract
+// jadi satu fungsi supaya kedua jalur hapus (deleteBillHistoryTx & delTx) pakai SATU
+// sumber kebenaran yang sama persis -- bukan logic baru, isi identik dgn punya
+// deleteBillHistoryTx sebelum fix ini (termasuk cek isLatestBillPaymentTx dari fix s288).
+// Tambahan baru (sesi ini): bersihkan D.piutang yang autoTxId-nya nunjuk ke transaksi
+// yg dihapus (dibuat oleh maybeCreateSharedPiutangFromBill() saat bayar cicilan/tagihan
+// "Ditanggung Bersama") -- sebelumnya piutang otomatis ini jadi orphan (nyangkut permanen
+// ikut kehitung di Kekayaan Bersih) tiap kali transaksi sumbernya dihapus, dari jalur
+// manapun (bug lama, tidak ada hubungan dgn deleteBillHistoryTx/delTx spesifik).
+// Return: {linkedBill, isLatest, restoredFromArchive, removedPiutang} -- dipakai caller
+// buat susun pesan toast yang sesuai (masing2 delTx/deleteBillHistoryTx punya toast beda).
+function revertBillFromDeletedTx(t){
+if(!t||!t.billLinkId)return{linkedBill:null,isLatest:false,restoredFromArchive:false,removedPiutang:false};
+const isLatest=isLatestBillPaymentTx(t.billLinkId,t.id);
+let linkedBill=D.bills.find(b=>b.id===t.billLinkId);
 let restoredFromArchive=false;
-if(!linkedBill&&t.billLinkId){
+if(!linkedBill&&isLatest){
 const archIdx=(D.billsArchive||[]).findIndex(b=>b.id===t.billLinkId);
 if(archIdx>-1){
 linkedBill=D.billsArchive[archIdx];
@@ -256,13 +333,13 @@ D.bills.push(linkedBill);
 restoredFromArchive=true;
 }
 }
-if(linkedBill&&linkedBill.kind==='cicilan'&&linkedBill.sisaTenor!=null){
+if(linkedBill&&isLatest){
+if(linkedBill.kind==='cicilan'&&linkedBill.sisaTenor!=null){
 linkedBill.sisaTenor+=1;
 const d=new Date(linkedBill.nextDue);
 d.setMonth(d.getMonth()-1);
 linkedBill.nextDue=d.toISOString().split('T')[0];
-}
-if(linkedBill&&linkedBill.kind==='utang'&&linkedBill.debtId){
+} else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
 if(dbt){
 dbt.nilai=(dbt.nilai||0)+t.amount;
@@ -271,24 +348,98 @@ if(dbt.lunas){dbt.lunas=false;dbt.billId=linkedBill.id;}
 const d=new Date(linkedBill.nextDue);
 d.setMonth(d.getMonth()-1);
 linkedBill.nextDue=d.toISOString().split('T')[0];
+} else if((linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq){
+const d=new Date(linkedBill.nextDue);
+if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);
+else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);
+else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);
+linkedBill.nextDue=d.toISOString().split('T')[0];
 }
+}
+const beforePiutang=D.piutang?D.piutang.length:0;
+if(D.piutang&&D.piutang.length)D.piutang=D.piutang.filter(p=>p.autoTxId!==t.id);
+const removedPiutang=!!(D.piutang&&D.piutang.length<beforePiutang);
+return{linkedBill,isLatest,restoredFromArchive,removedPiutang};
+}
+async function deleteBillHistoryTx(){
+if(!curBillHistoryEditTxId)return;
+const t=D.transactions.find(x=>x.id===curBillHistoryEditTxId);
+if(!t)return;
+if(!await askConfirm('Hapus riwayat pembayaran ini? Kalau ini pembayaran TERAKHIR, sisa tenor/jatuh tempo tagihan akan dikembalikan.'))return;
+// isLatest (fix s288) — sisaTenor/nextDue/reaktivasi arsip HANYA boleh dikembalikan
+// kalau transaksi yg dihapus ini pembayaran TERAKHIR utk bill terkait. Sebelumnya
+// (s287 ke bawah) semua efek ini jalan utk transaksi MANAPUN yg billLinkId-nya cocok:
+// hapus riwayat pembayaran cicilan yg LAMA (bukan terakhir) tetap salah memundurkan
+// jadwal, dan hapus riwayat pembayaran lama pada cicilan yg SUDAH lunas/diarsip malah
+// ikut mereaktivasi tagihan dari arsip walau bill itu memang sudah selesai.
+// (logic dipindah ke revertBillFromDeletedTx() -- lihat komentar di sana)
+const{linkedBill,isLatest,restoredFromArchive}=revertBillFromDeletedTx(t);
 D.transactions=D.transactions.filter(x=>x.id!==curBillHistoryEditTxId);
 curBillHistoryEditTxId=null;
 save();
 closeModal('billHistoryEditModal');
 renderDashboard();renderKeuangan();renderBillList();renderSettings();checkBills();renderBillHistory();renderBillArchive();
 renderDebtList();renderKekayaanBersih();hitungZakatMaal();
-const msg=restoredFromArchive?', tagihan diaktifkan lagi (belum lunas)':(linkedBill&&linkedBill.kind==='cicilan'?', sisa tenor dikembalikan':'');
+if(typeof Piutang!=='undefined')Piutang.renderList();
+const msg=restoredFromArchive?', tagihan diaktifkan lagi (belum lunas)':(linkedBill&&isLatest&&linkedBill.kind==='cicilan'?', sisa tenor dikembalikan':(linkedBill&&isLatest&&(linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq?', jatuh tempo dikembalikan':''));
 toast('🗑 Riwayat pembayaran dihapus'+msg);
 }
-async function markBillPaid(id){
+// markBillPaid(id, advance) — param `advance` (dipakai tombol "📅 Bayar Bulan Depan", user
+// request Sesi 273) menandai bahwa user bayar SEKARANG tapi UNTUK periode berikutnya (sebelum
+// jatuh tempo aslinya) -- transaksi dicatat dengan tanggal = b.nextDue (bukan hari ini), supaya
+// getBillPaidThisPeriodInfo() (di bawah) tetap mendeteksinya jatuh di periode yang benar walau
+// dibayar lebih awal. Sisa logic (advance tenor/nextDue, arsip, dst) TETAP SAMA persis seperti
+// bayar biasa -- cuma tanggal transaksi & teks konfirmasi/toast yang beda.
+async function markBillPaid(id,advance){
 const b=D.bills.find(x=>x.id===id);
 if(!b)return;
+// Guard dobel-bayar (Sesi 292, fix laporan user) -- getBillPaidThisPeriodInfo() sudah ADA
+// sejak S322 (dipakai murni utk badge visual "✅ Sudah dibayar bulan ini" di renderBillItemHtml/
+// applyBillFilter), tapi TIDAK pernah dipanggil di sini, jadi tombol ✅ Bayar di kartu bisa
+// ditekan berkali-kali di periode yang sama -> sisaTenor kepotong 2x, nextDue maju 2x, 2
+// transaksi pengeluaran tercatat utk 1 periode. Dipasang di SINI (bukan cuma di
+// renderBillItemHtml) supaya menutup SEMUA entry point ke markBillPaid sekaligus (SSOT),
+// termasuk kalau nanti ada entry point lain selain tombol kartu. Dipanggil TANPA
+// targetBulan/targetTahun (pakai default bulan/tahun AKTUAL skrg) krn ini soal "mau bayar
+// SEKARANG", bukan soal filter/browsing bulan lain di UI. Kalau user tetap pilih lanjut,
+// alur di bawah jalan seperti biasa (tidak ada logic baru selain guard konfirmasi ini).
+const alreadyPaidInfo=getBillPaidThisPeriodInfo(b);
+if(alreadyPaidInfo){
+const paidDateLabel=alreadyPaidInfo.date.toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+if(!await askConfirm(`"${escapeHtml(b.name)}" sudah dibayar utk periode ini (${paidDateLabel}). Tetap bayar lagi?`,{danger:true,okText:'Ya, Bayar Lagi',icon:'⚠️'}))return;
+}
 const label=b.kind==='cicilan'&&b.sisaTenor!=null?` (cicilan ke-${(b.tenor||0)-(b.sisaTenor||0)+1} dari ${b.tenor||'?'}x)`:'';
 const sharedLabel=b.shared?` (porsi kamu ${b.sharedPct}% dari total ${fmtFull(b.totalAmount)})`:'';
-if(!await askConfirm(`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(b.amount)}?`,{danger:false,okText:'Ya, Bayar',icon:'💸'}))return;
+// payDate — SATU sumber tanggal (Sesi 284 fix) dipakai konsisten utk transaksi pembayaran
+// INI & completedAt kalau bill langsung diarsipkan LUNAS di bawah (utang lunas/cicilan
+// tenor habis/tagihan sekali selesai).
+// Fix ringkas (permintaan user): "Bayar Bulan Depan" (advance) TETAP terkunci ke jatuh
+// tempo (b.nextDue) — TIDAK ada field tanggal pembayaran terpisah, sesuai maksud fitur
+// "bayar di muka utk periode berikutnya" (Sesi 273/284, lihat komentar di atas). Untuk
+// bayar BIASA (bukan advance), sekarang ada field "Tanggal Pembayaran" (editable, default
+// hari ini) lewat showPromptModal — berlaku utk SEMUA kind (tagihan/cicilan/langganan/
+// utang), sebelumnya selalu dipaksa new Date() tanpa bisa dikoreksi.
+let payDate;
+if(advance){
+const confirmMsg=`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(b.amount)} UNTUK BULAN DEPAN (di muka, sebelum jatuh tempo ${b.nextDue})?`;
+if(!await askConfirm(confirmMsg,{danger:false,okText:'Ya, Bayar Duluan',icon:'📅'}))return;
+payDate=b.nextDue;
+} else {
+const todayStr=new Date().toISOString().split('T')[0];
+const val=await showPromptModal({
+title:'Tanggal Pembayaran',
+message:`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(b.amount)}?`,
+inputType:'date',
+defaultValue:todayStr,
+okText:'Ya, Bayar',
+icon:'💸',
+validate:v=>v?null:'Tanggal wajib diisi'
+});
+if(!val)return;
+payDate=val;
+}
 const _payTxId=uid();
-D.transactions.push({id:_payTxId,type:'expense',amount:b.amount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:'Bayar: '+b.name,date:new Date().toISOString().split('T')[0],payMethod:b.kind,billLinkId:b.id});
+D.transactions.push({id:_payTxId,type:'expense',amount:b.amount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
@@ -302,7 +453,7 @@ dbt.nilai=Math.max(0,(dbt.nilai||0)-b.amount);
 if(dbt.nilai<=0){
 dbt.lunas=true;dbt.billId=null;
 if(!D.billsArchive)D.billsArchive=[];
-D.billsArchive.push({...b,completedAt:new Date().toISOString().split('T')[0]});
+D.billsArchive.push({...b,completedAt:payDate});
 D.bills=D.bills.filter(x=>x.id!==id);
 save();refreshBillEverywhere();renderDebtList();renderKekayaanBersih();hitungZakatMaal();
 toast('🎉 Utang '+dbt.name+' LUNAS!');return;
@@ -313,7 +464,7 @@ if(b.kind==='cicilan'&&b.sisaTenor!=null){
 b.sisaTenor-=1;
 if(b.sisaTenor<=0){
 if(!D.billsArchive)D.billsArchive=[];
-D.billsArchive.push({...b,completedAt:new Date().toISOString().split('T')[0]});
+D.billsArchive.push({...b,completedAt:payDate});
 D.bills=D.bills.filter(x=>x.id!==id);
 save();refreshBillEverywhere();
 toast('🎉 Cicilan '+b.name+' LUNAS!');return;
@@ -325,7 +476,7 @@ else if(b.freq==='mingguan')d.setDate(d.getDate()+7);
 else if(b.freq==='tahunan')d.setFullYear(d.getFullYear()+1);
 else{
 if(!D.billsArchive)D.billsArchive=[];
-D.billsArchive.push({...b,completedAt:new Date().toISOString().split('T')[0]});
+D.billsArchive.push({...b,completedAt:payDate});
 D.bills=D.bills.filter(x=>x.id!==id);
 save();refreshBillEverywhere();
 toast('✅ Tagihan selesai & tercatat');return;
@@ -349,16 +500,26 @@ toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
 // (bukan ke b.nextDue, karena nextDue sudah kadung dimajukan oleh markBillPaid()).
 // Sengaja TIDAK berlaku utk freq 'sekali' (begitu dibayar langsung pindah ke
 // D.billsArchive lewat markBillPaid(), tidak pernah nyangkut di D.bills lagi).
-function getBillPaidThisPeriodInfo(b){
+function getBillPaidThisPeriodInfo(b,targetBulan,targetTahun){
 if(!b||!b.id||b.freq==='sekali')return null;
 const history=(D.transactions||[]).filter(t=>t.billLinkId===b.id&&t.date).map(t=>({t,d:new Date(t.date)})).filter(x=>!isNaN(x.d.getTime())).sort((a,c)=>c.d-a.d);
 if(!history.length)return null;
 const{t,d}=history[0];
+// targetBulan/targetTahun datang dari billFilterBulan/billFilterTahun (dropdown filter
+// lanjutan Tagihan) -- kalau 'all'/tidak dikirim, fallback ke bulan/tahun AKTUAL (now),
+// supaya perilaku default (tanpa filter) tetap sama seperti sebelumnya. FIX: sebelumnya
+// selalu dibandingkan ke new Date() aktual, jadi saat user browsing bulan lain lewat
+// filter/nav (‹ Juli 2026 ›), status "sudah dibayar periode ini" salah dibandingkan ke
+// bulan berjalan asli, bukan bulan yg sedang dilihat.
 const now=new Date();
+const refMonth=(targetBulan===undefined||targetBulan===null||targetBulan==='all')?now.getMonth():parseInt(targetBulan);
+const refYear=(targetTahun===undefined||targetTahun===null||targetTahun==='all')?now.getFullYear():parseInt(targetTahun);
 let samePeriod=false;
-if(b.freq==='bulanan')samePeriod=d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
-else if(b.freq==='tahunan')samePeriod=d.getFullYear()===now.getFullYear();
+if(b.freq==='bulanan')samePeriod=d.getMonth()===refMonth&&d.getFullYear()===refYear;
+else if(b.freq==='tahunan')samePeriod=d.getFullYear()===refYear;
 else if(b.freq==='mingguan'){
+// Mingguan tetap dibandingkan ke minggu berjalan SEKARANG (bukan refMonth/refYear) --
+// filter lanjutan Tagihan cuma granular bulan/tahun, tidak ada konsep "minggu yg dipilih".
 const start=new Date(now);start.setDate(now.getDate()-now.getDay());start.setHours(0,0,0,0);
 const end=new Date(start);end.setDate(start.getDate()+6);end.setHours(23,59,59,999);
 samePeriod=d>=start&&d<=end;
@@ -424,6 +585,9 @@ if(elS)billFilterStatus=elS.value;
 if(elK)billFilterKategori=elK.value;
 if(elB)billFilterBulan=elB.value;
 if(elT)billFilterTahun=elT.value;
+// Aksi filter eksplisit (dropdown/nav dalam panel Filter) -- bukan lagi sekadar browsing lewat
+// nav besar ‹bulan› di atas, lihat komentar billStatNavActive.
+billStatNavActive=false;
 // Sinkronkan tombol tab Bayar/Lunas kalau user ubah lewat dropdown Filter lanjutan (mis. pilih
 // "Semua Status") -- keduanya jadi non-aktif secara visual kalau statusnya bukan aktif/lunas.
 billListTab=billFilterStatus;
@@ -434,7 +598,7 @@ renderBillList();
 }
 function resetBillFilter(){
 billFilterStatus='aktif';billFilterKategori='all';billFilterBulan='all';billFilterTahun='all';
-billListTab='aktif';
+billListTab='aktif';billStatNavActive=false;
 const elS=document.getElementById('billFilterStatus'), elK=document.getElementById('billFilterKategori'),
 elB=document.getElementById('billFilterBulan'), elT=document.getElementById('billFilterTahun');
 if(elS)elS.value='aktif';
@@ -472,11 +636,20 @@ function openBillActionsMenu(id,lunas){
 const b=lunas?(D.billsArchive||[]).find(x=>x.id===id):D.bills.find(x=>x.id===id);
 if(!b)return;
 document.getElementById('billActionsTitle').textContent=`🔔 ${b.name}`;
+// paidThisPeriod (fix ringkas) — kalau bill AKTIF ini sudah dibayar utk periode
+// berjalan (lihat getBillPaidThisPeriodInfo/_paidPeriodOnly di renderBillItemHtml),
+// baris "📅 Bayar Bulan Depan" disembunyikan juga dari menu ⋮ ini. Sebelumnya cuma
+// tombol ✅ utama di kartu yg diganti jadi 📋 -- menu ⋮ TETAP menampilkan opsi ini
+// tanpa guard, jadi bisa dipakai bayar 2x utk periode yang sama (sisaTenor kepotong
+// 2x, nextDue maju 2x) — berlaku sama utk cicilan/tagihan/langganan.
+const paidThisPeriod=!lunas&&getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun);
+const payAdvanceRow=paidThisPeriod?'':`<div class="bill-action-row" data-action="billActionPayAdvance" data-args="[${id}]"><span class="bar-icon u-cacc4">📅</span> Bayar Bulan Depan</div>
+     `;
 const rows=lunas?
     `<div class="bill-action-row" data-action="billActionEdit" data-args="[${id}]"><span class="bar-icon u-cacc">✏️</span> Edit</div>
      <div class="bill-action-row danger" data-action="billActionDeleteArchive" data-args="[${id}]"><span class="bar-icon">🗑</span> Hapus dari Arsip</div>`
     :
-    `<div class="bill-action-row" data-action="billActionShareWA" data-args="[${id}]"><span class="bar-icon" style="color:#25D366">💬</span> Kirim ke WhatsApp</div>
+    `${payAdvanceRow}<div class="bill-action-row" data-action="billActionShareWA" data-args="[${id}]"><span class="bar-icon" style="color:#25D366">💬</span> Kirim ke WhatsApp</div>
      <div class="bill-action-row" data-action="billActionHistory" data-args="[${id}]"><span class="bar-icon u-cacc3">📋</span> Riwayat Pembayaran</div>
      <div class="bill-action-row danger" data-action="billActionDelete" data-args="[${id}]"><span class="bar-icon">🗑</span> Hapus</div>`;
 document.getElementById('billActionsList').innerHTML=rows;
@@ -484,6 +657,17 @@ openQS('qsBillActions');
 }
 let billCalYear=null, billCalMonth=null, billCalSelectedDate=null;
 let billStatMonth=null, billStatYear=null;
+// billStatNavActive — FIX (user report: geser ‹Agustus 2026› di kartu Tagihan bikin list kosong
+// nyasar ke pesan "Tidak ada tagihan yang cocok dengan filter" + tombol "Reset Filter", padahal
+// user cuma jalan-jalan lihat bulan lain, bukan pasang filter (beda dari Daftar Transaksi biasa
+// yang navigasi bulannya TIDAK dihitung sbg "filter" -- lihat kf/hasFilter di renderKeuangan()).
+// Akar masalah: changeBillStatMonth() (nav besar di atas) reuse billFilterBulan/billFilterTahun
+// yang SAMA dipakai dropdown "Filter lanjutan" (utk sinkron list+ringkasan, lihat komentar di
+// changeBillStatMonth), jadi isFiltering ikut true walau bukan aksi filter eksplisit. Flag ini
+// menandai kapan billFilterBulan/Tahun diisi lewat nav besar (browsing biasa) vs lewat aksi
+// filter eksplisit (dropdown/nav DALAM panel Filter, applyBillFilter()) -- isFiltering di
+// renderBillList() cuma hitung billFilterBulan/Tahun kalau BUKAN dari nav besar ini.
+let billStatNavActive=false;
 const BILLCAL_MAX_ITER=600;
 function getBillOccurrencesInRange(b,rangeStart,rangeEnd){
 const occurrences=[];
@@ -609,6 +793,8 @@ else if(billStatMonth>11){billStatMonth=0;billStatYear++;}
 // updateBillStatGrid() ulang di akhir) supaya list & ringkasan selalu bulan yg sama.
 billFilterBulan=String(billStatMonth);
 billFilterTahun=String(billStatYear);
+// Ini browsing lewat nav besar, BUKAN aksi filter eksplisit -- lihat komentar billStatNavActive.
+billStatNavActive=true;
 const elB=document.getElementById('billFilterBulan'), elT=document.getElementById('billFilterTahun');
 if(elB)elB.value=String(billStatMonth);
 if(elT){
