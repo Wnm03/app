@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-07-30T08:28:27.128Z
-Total file source: 278 · Total identifier global: 1919
+Terakhir digenerate: 2026-07-30T09:23:26.021Z
+Total file source: 278 · Total identifier global: 1921
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -98,7 +98,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 75 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 76 | `modules/vehicle/vehicle-core.js` | 742 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 77 | `modules/vehicle/vehicle-catalog.js` | 612 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
-| 78 | `modules/vehicle/vehicle-scanner.js` | 491 | Scan Barcode/QR/DataMatrix untuk Vehicle Catalog (lanjutan dari ACR-001/Tahap 2 — lihat komentar handleScan() di vehicle-catalog.js: "itu butuh keputusan produk terpisah: pilih library, izin kamera, dsb — di luar … |
+| 78 | `modules/vehicle/vehicle-scanner.js` | 531 | Scan Barcode/QR/DataMatrix untuk Vehicle Catalog (lanjutan dari ACR-001/Tahap 2 — lihat komentar handleScan() di vehicle-catalog.js: "itu butuh keputusan produk terpisah: pilih library, izin kamera, dsb — di luar … |
 | 79 | `modules/vehicle/vehicle-catalog-ui.js` | 542 | UI dasar Vehicle Catalog (Katalog Suku Cadang), lanjutan ringkas Tahap 2 ACR-001. Scan (vehicle-scanner.js) & storage/CRUD (vehicle-catalog.js) SUDAH ADA dari sesi sebelumnya — sesi ini isinya HANYA lapisan UI, scope … |
 | 80 | `modules/vehicle/sparepart-scanner.js` | 640 | Scanner Sparepart (Tahap 7B-1 Fondasi + Tahap 7B-2 Kamera Real-Time) CAKUPAN TAHAP 7B-1 (fondasi, disepakati eksplisit — RULE #1: 100% reuse, TIDAK ada formula/skema baru, UI presenter layer saja): - Adapter "gallery": … |
 | 81 | `modules/vehicle/sparepart-scanner-ui.js` | 94 | UI tipis Scanner Sparepart (Tahap 7B-1 Fondasi + Tahap 7B-2 Kamera Real-Time), tombol "📷 Scan" (kamera) & "🖼️ Scan dari Galeri" di catalogModal (modules/shared/modals.js) yang SUDAH ADA (VehicleCatalogUI/catalogModal, … |
@@ -2108,6 +2108,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `VEHICLE_IMPORT_STITCH_MAX_LOOKAHEAD` | `modules/vehicle/vehicle-catalog-import.js` |
 | `VEHICLE_IMPORT_TITLE_LINE_RE` | `modules/vehicle/vehicle-catalog-import.js` |
 | `VEHICLE_INSIGHT_NAV_TARGETS` | `modules/vehicle/vehicle-insight-presenter.js` |
+| `VEHICLE_SCANNER_CAMERA_INIT_TIMEOUT_MS` | `modules/vehicle/vehicle-scanner.js` |
 | `VEHICLE_SCANNER_DEBOUNCE_MS` | `modules/vehicle/vehicle-scanner.js` |
 | `VEHICLE_SCANNER_LIB_URL` | `modules/vehicle/vehicle-scanner.js` |
 | `VEHICLE_WEB_IMPORT_CODE_RE` | `modules/vehicle/vehicle-catalog-web-import.js` |
@@ -2205,6 +2206,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `vehicleScannerShouldDebounce` | `modules/vehicle/vehicle-scanner.js` |
 | `vehicleScannerStopMediaStream` | `modules/vehicle/vehicle-scanner.js` |
 | `vehicleScannerTeardown` | `modules/vehicle/vehicle-scanner.js` |
+| `vehicleScannerWithCameraTimeout` | `modules/vehicle/vehicle-scanner.js` |
 | `VehicleServiceTrendSummary` | `modules/vehicle/vehicle-service-trend.js` |
 | `VehicleTaxDocumentAutomation` | `modules/vehicle/vehicle-tax-document-automation.js` |
 | `VehicleTrendAPI` | `modules/vehicle/vehicle-trend-api.js` |
