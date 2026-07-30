@@ -386,6 +386,29 @@ _txPayMethodTouchedByUser=false;
 document.getElementById('txModalTitle').textContent='Edit Transaksi';
 document.getElementById('txDelBtn').style.display='flex';
 resetPayMethodLock();
+// BUGFIX (bug: "field Cicilan/Langganan kebawa dari transaksi lain saat Edit"): dulu
+// editTx() cuma isi ulang field panel Cicilan/Langganan (Nama/Total/Tenor/Bunga/dst)
+// KALAU transaksi ini punya bill aktif (linkedBill, lihat di bawah). Transaksi yang
+// TIDAK punya bill aktif (mis. cicilan tenor terakhir yang billLinkId-nya sudah null,
+// atau transaksi tunai biasa) tidak pernah kena reset -- jadi field2 itu masih nyimpen
+// sisa isian dari transaksi CICILAN LAIN yang sebelumnya sempat dibuka Edit di sesi yang
+// sama, lalu nongol lagi (data SALAH/nyasar) begitu user tap chip Cicilan di transaksi
+// ini. Fix: samakan dengan openTxModal() -- reset semua field panel Cicilan/Langganan ke
+// kosong/default di awal editTx(), SEBELUM cek linkedBill di bawah (yang nanti akan
+// isi ulang field2 ini dgn data yang BENAR kalau transaksi ini memang punya bill aktif).
+cicilanLastInput='total';
+['txCicilanNama','txCicilanTotal','txCicilanPerBulan','txCicilanBunga','txLanggananNama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+document.getElementById('txCicilanTenor').value='6';
+document.getElementById('txCicilanShared').checked=false;
+const txCicilanIsKprResetEl=document.getElementById('txCicilanIsKpr');if(txCicilanIsKprResetEl)txCicilanIsKprResetEl.checked=false;
+document.getElementById('txCicilanSharedPct').value=50;
+document.getElementById('txCicilanSharedNominal').value='';
+const txCicilanSharedOtherNameResetEl=document.getElementById('txCicilanSharedOtherName');if(txCicilanSharedOtherNameResetEl)txCicilanSharedOtherNameResetEl.value='';
+const txCicilanSharedAutoPiutangResetEl=document.getElementById('txCicilanSharedAutoPiutang');if(txCicilanSharedAutoPiutangResetEl)txCicilanSharedAutoPiutangResetEl.checked=false;
+cicilanSharedLastInput='pct';
+document.getElementById('txCicilanSharedWrap').style.display='none';
+const prevMineRowResetEl=document.getElementById('prevMineRow'); if(prevMineRowResetEl)prevMineRowResetEl.style.display='none';
+document.getElementById('txCicilanPreview').style.display='none';
 const scanInsightElEdit=document.getElementById('txScanInsight'); if(scanInsightElEdit){scanInsightElEdit.style.display='none';scanInsightElEdit.innerHTML='';}
 if(typeof AutoKat!=='undefined'){AutoKat.hideSuggest();AutoKat._lastNoteQueried='';}
 populateAccFilters();
