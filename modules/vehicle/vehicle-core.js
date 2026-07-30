@@ -44,16 +44,31 @@ let vehEditIdx=null;
 // dipisah 2 field. Listrik: tidak ada oli mesin sama sekali, field interval KM diganti Kapasitas
 // Baterai (kWh) — dipakai kartu Vehicle Intelligence/estimasi jarak tempuh, bukan reminder ganti oli.
 const VEH_JENIS_DEFAULT_INTERVAL={motor:3000,mobil:5000};
+// _vehCapacityFieldsHtml(v) — 2 field opsional "Kapasitas Angkut Maksimal (kg)"
+// & "Kapasitas Volume Box/Bagasi (m³)", khusus kendaraan operasional Shop
+// (jenis motor/mobil, TIDAK wajib diisi). Dipakai TripEngine.vehicleCapacity()
+// (cobek-pricing.js) via DeliveryPlanUI.calc() (delivery-plan-ui.js) — lihat
+// AUDIT-DESAIN-inventory-transfer-pengiriman-kategori.md #3. Disimpan sbg
+// v.capacityKg/v.capacityM3, TIDAK menyentuh field BBM (fuel-tank-profile.js,
+// kapasitas liter) yang sudah ada — 2 hal yang beda.
+function _vehCapacityFieldsHtml(v){
+v=v||{};
+return '<div class="u-grid2"><div class="fg u-mb0"><label class="fl">Kapasitas Angkut Maks (kg, opsional)</label><input type="number" step="0.1" class="fi" id="vehCapacityKg" placeholder="cth. 100" inputmode="decimal" value="'+(v.capacityKg||'')+'"></div>'
++'<div class="fg u-mb0"><label class="fl">Kapasitas Volume Box (m³, opsional)</label><input type="number" step="0.001" class="fi" id="vehCapacityM3" placeholder="cth. 0.05" inputmode="decimal" value="'+(v.capacityM3||'')+'"></div></div>'
++'<div style="font-size:11px;color:var(--text2);margin:-6px 0 12px;line-height:1.5">Dipakai fitur 🚚 Rencana Pengiriman utk cek muatan (AMAN/HAMPIR OVERLOAD/OVERLOAD) — kosongkan kalau kendaraan ini bukan utk operasional Shop.</div>';
+}
 function vehJenisFieldsHtml(jenis,v){
 v=v||{};
 if(jenis==='mobil'){
 return '<div class="fg"><label class="fl">Interval Servis Oli Mesin (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="5000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>'
-+'<div class="fg"><label class="fl">Interval Servis Oli Transmisi (KM)</label><input type="number" class="fi" id="vehOliTransInterval" placeholder="20000" inputmode="numeric" value="'+(v.oliTransmisiIntervalKm||'')+'"></div>';
++'<div class="fg"><label class="fl">Interval Servis Oli Transmisi (KM)</label><input type="number" class="fi" id="vehOliTransInterval" placeholder="20000" inputmode="numeric" value="'+(v.oliTransmisiIntervalKm||'')+'"></div>'
++_vehCapacityFieldsHtml(v);
 }
 if(jenis==='listrik'){
 return '<div class="fg"><label class="fl">Kapasitas Baterai (kWh)</label><input type="number" step="0.1" class="fi" id="vehBatteryCapacity" placeholder="5.5" inputmode="decimal" value="'+(v.batteryCapacityKwh||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kendaraan listrik tidak ganti oli, jadi tidak ada interval servis KM — kapasitas baterai dipakai buat estimasi jarak tempuh & pengingat servis berkala lain (rem/ban/aki).</div></div>';
 }
-return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>';
+return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>'
++_vehCapacityFieldsHtml(v);
 }
 function onVehJenisChange(){
 const jenisEl=document.getElementById('vehJenis');
@@ -121,6 +136,14 @@ if(!name){toast('⚠️ Isi nama kendaraan');return;}
 const ownRawV=document.getElementById('vehOwnership')?.value;
 const ownership=(typeof OwnershipEngine!=='undefined'&&OwnershipEngine.isValidType(ownRawV))?OwnershipEngine.normalize(ownRawV):(typeof OwnershipEngine!=='undefined'?OwnershipEngine.DEFAULT:'SELF');
 let interval,oliTrans=null,batteryCapacity=null;
+// Kapasitas angkut (kg/m3) — cuma ada di DOM utk jenis motor/mobil (lihat
+// _vehCapacityFieldsHtml() di atas), TIDAK ADA utk listrik. Opsional: kosong
+// -> null (dihapus dari record), diisi -> disimpan v.capacityKg/v.capacityM3
+// dipakai TripEngine.vehicleCapacity() (audit #3).
+const capKgEl=document.getElementById('vehCapacityKg');
+const capM3El=document.getElementById('vehCapacityM3');
+const capacityKg=capKgEl?(parseFloat(capKgEl.value)||null):null;
+const capacityM3=capM3El?(parseFloat(capM3El.value)||null):null;
 if(jenis==='listrik'){
 const batEl=document.getElementById('vehBatteryCapacity');
 batteryCapacity=batEl?(parseFloat(batEl.value)||null):null;
@@ -139,6 +162,8 @@ if(!v){vehEditIdx=null;return;}
 v.name=name;v.emoji=emoji;v.jenis=jenis;v.serviceIntervalKm=interval;v.ownership=ownership;
 if(jenis==='mobil'&&oliTrans)v.oliTransmisiIntervalKm=oliTrans;else delete v.oliTransmisiIntervalKm;
 if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else delete v.batteryCapacityKwh;
+if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
+if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
 vehEditIdx=null;
 save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
@@ -149,6 +174,8 @@ const newId='veh_'+Date.now();
 const newVeh={id:newId,name,emoji,jenis,serviceIntervalKm:interval,intervalOverrides:{},ownership};
 if(jenis==='mobil'&&oliTrans)newVeh.oliTransmisiIntervalKm=oliTrans;
 if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
+if(capacityKg)newVeh.capacityKg=capacityKg;
+if(capacityM3)newVeh.capacityM3=capacityM3;
 D.vehicles.push(newVeh);
 if(!isNaN(kmAwal)&&kmAwal>0){
 D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
@@ -170,15 +197,21 @@ const jenis=v.jenis||'motor';
 const ownResolved=(typeof OwnershipEngine!=='undefined')?OwnershipEngine.resolve(v):null;
 const ownText=ownResolved?(' <span class="acc-chip">'+escapeHtml(OwnershipEngine.label(ownResolved.type))+'</span>'):'';
 const ownDetail=ownResolved?('<div class="u-fs10 u-t2">Ownership<br>'+escapeHtml(ownResolved.type)+'</div>'):'';
+// capTag — reuse persis kondisi rule AI 'vehicle-capacity-missing'
+// (sparepart-servis.js): kendaraan dipakai di Rencana Pengiriman tapi
+// capacityKg/capacityM3 kosong. Tampil di kartu Kelola Kendaraan supaya
+// kelihatan tanpa nunggu AI Briefing (cooldown 72 jam bisa kelewat).
+const usedInDelivery=typeof D!=='undefined'&&(D.deliveryPlans||[]).some(p=>p.vehicleId===v.id);
+const capTag=(usedInDelivery&&!v.capacityKg&&!v.capacityM3)?' <span class="acc-chip" style="color:var(--warning,#c77700)">⚠️ Kapasitas belum diisi</span>':'';
 if(jenis==='mobil'){
 const mesin=(v.serviceIntervalKm||5000).toLocaleString('id-ID');
 const trans=v.oliTransmisiIntervalKm?(v.oliTransmisiIntervalKm.toLocaleString('id-ID')+' km'):'belum diisi';
-return 'Oli mesin: '+mesin+' km · Oli transmisi: '+trans+ownText+ownDetail;
+return 'Oli mesin: '+mesin+' km · Oli transmisi: '+trans+ownText+capTag+ownDetail;
 }
 if(jenis==='listrik'){
-return (v.batteryCapacityKwh?('Kapasitas baterai: '+v.batteryCapacityKwh+' kWh'):'Kapasitas baterai belum diisi')+ownText+ownDetail;
+return (v.batteryCapacityKwh?('Kapasitas baterai: '+v.batteryCapacityKwh+' kWh'):'Kapasitas baterai belum diisi')+ownText+capTag+ownDetail;
 }
-return 'Interval servis: '+(v.serviceIntervalKm||3000).toLocaleString('id-ID')+' km'+ownText+ownDetail;
+return 'Interval servis: '+(v.serviceIntervalKm||3000).toLocaleString('id-ID')+' km'+ownText+capTag+ownDetail;
 }
 function populateKmVehicleSelect(){
 const sel=document.getElementById('kmVehicle');
@@ -396,17 +429,39 @@ let editSimId=null;
 // tombol "🔍 Cek Update via AI" di tab Pajak & Zakat (RefAI) tanpa perlu edit source code.
 function simTarifKey(jenis){ return 'simTarif'+String(jenis||'').replace('SIM ','').replace(/\s+/g,''); }
 const SIM_MASA_BERLAKU_TAHUN=5; // semua jenis SIM di Indonesia berlaku 5 tahun
+// Field tambahan per Jenis SIM (lanjutan pola KW-164/165 — vehJenisFieldsHtml() di file ini &
+// WorthIt.catFieldsHtml() di modules/finance/worthit.js). SIM B1/B2 (mobil besar/kendaraan berat)
+// wajib Uji KIR berkala, jadi dikasih pengingat tanggal. SIM C/C1/C2 dibedakan dari kapasitas CC
+// motor, jadi dikasih field CC kendaraan buat bantu validasi kesesuaian kelas SIM. SIM A/D tidak
+// butuh field tambahan apa-apa (sama pola dgn Kas Bebas di akun.js / Motor di vehicle-core.js).
+// PURE (tidak sentuh DOM) — gampang dites, sama pola vehJenisFieldsHtml().
+function simJenisFieldsHtml(jenis,s){
+s=s||{};
+if(jenis==='SIM B1'||jenis==='SIM B2'){
+return '<div class="fg"><label class="fl">Tanggal Uji KIR Berikutnya (opsional)</label><input type="date" class="fi" id="simKirTgl" value="'+(s.kirTanggal||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kendaraan angkutan barang/penumpang (truk/bus) wajib Uji KIR berkala — dicatat di sini biar kelihatan bareng masa berlaku SIM.</div></div>';
+}
+if(jenis==='SIM C'||jenis==='SIM C1'||jenis==='SIM C2'){
+return '<div class="fg"><label class="fl">Kapasitas CC Motor (opsional)</label><input type="number" class="fi" id="simMotorCc" placeholder="150" inputmode="numeric" value="'+(s.motorCc||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px">Buat bantu cek kesesuaian kelas SIM: C (≤250cc), C1 (250–500cc), C2 (&gt;500cc).</div></div>';
+}
+return '';
+}
 function onSimJenisChange(){
 const jenisEl=document.getElementById('simJenis');
 const biayaEl=document.getElementById('simBiaya');
 const tglEl=document.getElementById('simTglAkhir');
+const wrap=document.getElementById('simJenisFieldsWrap');
 if(!jenisEl)return;
-const def=D.pajakZakat&&D.pajakZakat[simTarifKey(jenisEl.value)];
+const jenis=jenisEl.value;
+const def=D.pajakZakat&&D.pajakZakat[simTarifKey(jenis)];
 // Jangan timpa kalau field sudah diisi manual (baik pas edit maupun user sudah ngetik) — autofill cuma buat bantu titik awal.
 if(def&&biayaEl&&!biayaEl.value.trim())biayaEl.value=def;
 if(tglEl&&!tglEl.value){
 const d=new Date();d.setFullYear(d.getFullYear()+SIM_MASA_BERLAKU_TAHUN);
 tglEl.value=d.toISOString().split('T')[0];
+}
+if(wrap){
+const editing=(typeof editSimId!=='undefined'&&editSimId)?D.simList.find(x=>sameId(x.id,editSimId)):null;
+wrap.innerHTML=simJenisFieldsHtml(jenis,editing);
 }
 }
 function openSimModal(id){
@@ -417,6 +472,8 @@ document.getElementById('simNama').value=s?s.nama:'';
 document.getElementById('simJenis').value=s?s.jenis:'SIM C';
 document.getElementById('simTglAkhir').value=s?(s.tglAkhir||''):'';
 document.getElementById('simBiaya').value=s?(s.biaya||''):'';
+const simWrap=document.getElementById('simJenisFieldsWrap');
+if(simWrap)simWrap.innerHTML=simJenisFieldsHtml(s?s.jenis:'SIM C',s);
 if(!s)onSimJenisChange(); // SIM baru: bantu isi default masa berlaku (+5 tahun) & estimasi biaya
 renderSimLinkStatus();
 openModal('simModal');
@@ -449,11 +506,17 @@ const tglAkhir=document.getElementById('simTglAkhir').value;
 const biaya=parsePzNum(document.getElementById('simBiaya').value);
 if(!nama){toast('⚠️ Nama pemilik wajib diisi');return;}
 if(!tglAkhir){toast('⚠️ Tanggal berlaku sampai wajib diisi');return;}
+// Field per-jenis (KIR utk B1/B2, CC motor utk C/C1/C2) — id-nya cuma ada di DOM kalau jenisnya
+// cocok (lihat simJenisFieldsHtml()), jadi dibaca via getElementById guard, bukan required.
+const kirEl=document.getElementById('simKirTgl');
+const ccEl=document.getElementById('simMotorCc');
+const kirTanggal=kirEl?kirEl.value:'';
+const motorCc=ccEl?(parseFloat(ccEl.value)||null):null;
 if(editSimId){
 const s=D.simList.find(x=>sameId(x.id,editSimId));
-Object.assign(s,{nama,jenis,tglAkhir,biaya});
+Object.assign(s,{nama,jenis,tglAkhir,biaya,kirTanggal,motorCc});
 } else {
-D.simList.push({id:uid(),nama,jenis,tglAkhir,biaya});
+D.simList.push({id:uid(),nama,jenis,tglAkhir,biaya,kirTanggal,motorCc});
 }
 save();
 closeModal('simModal');
