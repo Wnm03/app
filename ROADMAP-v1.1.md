@@ -14,10 +14,17 @@ sengaja dibatasi hanya CSS/HTML/Markdown tanpa menyentuh JS.
 
 Isu yang berdampak langsung ke pengalaman pengguna atau aksesibilitas.
 
-1. **🟡 Perbaiki kontras `--text3` di 10 tema warna** (accessibility,
-   WCAG AA). Saat ini 2.45–3.8:1 terhadap `--bg`/`--surface2` di tema
-   yang diuji, target ≥4.5:1 untuk teks normal. Butuh review visual
-   per tema agar tetap harmonis dengan palet masing-masing.
+1. ~~🟡 Perbaiki kontras `--text3` di 10 tema warna~~ **✅ Selesai
+   (Sesi 336)** — audit ulang `styles.css` (parsing token langsung +
+   hitung ulang WCAG relative luminance untuk seluruh 10 tema: `dark`,
+   `ocean`, `light`, `stone`, `slate`, `mono`, `sand`, `ink`, `sage`,
+   `fresh`) menemukan `--text3` **sudah** ≥4.5:1 terhadap `--bg` *dan*
+   `--surface2` di semua tema (rentang aktual 4.50–5.78:1) — nilai
+   warnanya sudah benar sejak sebelum sesi ini, catatan "belum
+   diperbaiki" di sini basi. Ditambahkan `tests/theme-text3-contrast.test.js`
+   (22 test baru) sebagai guard permanen agar regresi ke depan (tema
+   baru dengan `--text3` gelap, atau `--text3` lama diubah lagi)
+   ketahuan otomatis. Tidak ada perubahan nilai warna.
    *Sumber: `KNOWN-ISSUES.md` §1.1.*
 
 2. ~~🔴 Exit/closing animation untuk overlay & bottom sheet.~~ **✅
@@ -30,13 +37,18 @@ Isu yang berdampak langsung ke pengalaman pengguna atau aksesibilitas.
    *Sumber: `KNOWN-ISSUES.md` §5.1.*
 
 3. ~~🔴 Ganti emoji `icon:` di `dashboard-hub-registry.js` (FEATURE_REGISTRY)
-   dengan SVG konsisten.~~ **✅ Selesai** — `feature-icons.js`
-   (`FeatureIcons.render()`) memetakan tiap emoji `icon:` ke markup SVG
-   inline bergaya sama dengan ikon lain di app (`stroke="currentColor"`,
-   `viewBox 0 0 24 24`), dipasang di `dashboard-hub.js`,
-   `dashboard-hub-search.js`, `dashboard-hub-favorit-view.js`. Emoji
-   lain di luar FEATURE_REGISTRY (widget AI/LifeOS Areas) sengaja tidak
-   disentuh — di luar scope §4.1.
+   dengan SVG konsisten.~~ **✅ Selesai penuh (Sesi 337)** —
+   `feature-icons.js` (`FeatureIcons.render()`) memetakan tiap emoji
+   `icon:` ke markup SVG inline bergaya sama dengan ikon lain di app
+   (`stroke="currentColor"`, `viewBox 0 0 24 24`), dipasang di
+   `dashboard-hub.js`, `dashboard-hub-search.js`,
+   `dashboard-hub-favorit-view.js`, `lifeos/ui/areas.js` (Sesi 281).
+   **Sesi 337**: widget AI (`FeatureInsightUI.renderInto()`,
+   `modules/ai/feature-insights.js`) menyusul — layout flex icon+text
+   baru (`.fi-insight-row`) dipakai krn pola beda dari tile ikon
+   (emoji tadinya inline di tengah baris teks, bukan tile berdiri
+   sendiri). `DanaDaruratAI.renderDash()` (beda modul) tidak termasuk
+   scope §4.1.
    *Sumber: `KNOWN-ISSUES.md` §4.1.*
 
 ---
@@ -131,9 +143,9 @@ Nice-to-have, dampak kecil terhadap pengguna akhir.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | Kontras `--text3` 🟡 | ⏳ Belum — butuh review visual per tema |
+| 1 | Kontras `--text3` 🟡 | ✅ Selesai (Sesi 336) — sudah WCAG AA, test guard ditambah |
 | 2 | Exit animation overlay/sheet 🔴 | ✅ Selesai (Tahap 10) |
-| 3 | Icon SVG FEATURE_REGISTRY 🔴 | ✅ Selesai |
+| 3 | Icon SVG FEATURE_REGISTRY 🔴 | ✅ Selesai penuh (Sesi 337, termasuk widget AI) |
 | 4 | Border-radius → token 🟢 | ✅ Selesai |
 | 5 | Box-shadow → token 🟢 | ✅ Selesai |
 | 6 | Konsolidasi durasi transition 🟢 | ⏳ Belum — bukan value-preserving, butuh review visual |

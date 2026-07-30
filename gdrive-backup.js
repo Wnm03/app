@@ -214,6 +214,11 @@ headers:{'Authorization':'Bearer '+gdriveAccessToken,'Content-Type':'application
 body:content,
 keepalive:useKeepalive
 });
+// FIX: kalau file backup lama sudah dihapus manual dr Drive (404), fileId
+// basi di D.googleDrive.fileId dulu TIDAK PERNAH direset -> setiap upload
+// berikutnya SELALU gagal 404 lagi (stuck permanen). Reset dulu di sini
+// supaya jalur "else" di bawah (create file baru) yang jalan pada retry.
+if(res.status===404){ D.googleDrive.fileId=null; gdriveThrowForFailedRes(res); }
 if(!res.ok) gdriveThrowForFailedRes(res);
 D.googleDrive.fileId=fileId;
 } else {
@@ -270,6 +275,10 @@ fileId=data.files[0].id;
 const fileRes=await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,{
 headers:{'Authorization':'Bearer '+gdriveAccessToken}
 });
+// FIX: sama seperti upload — fileId basi (file sudah dihapus manual dr
+// Drive) dulu bikin restore SELALU gagal 404 tanpa pernah reset, walau
+// nama filenya masih ada versi lain hasil pencarian ulang by-name.
+if(fileRes.status===404){ D.googleDrive.fileId=null; }
 if(!fileRes.ok) gdriveThrowForFailedRes(fileRes);
 const imp=await fileRes.json();
 const confirmed=await askConfirm('Data yang ada di HP ini sekarang akan digabung/ditimpa dengan data dari Drive. Lanjutkan?',{title:'Restore dari Google Drive',danger:false,okText:'Ya, Restore',icon:'☁️'});

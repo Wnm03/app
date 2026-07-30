@@ -1,3 +1,539 @@
+# Changelog — Sesi 337 (lanjutan): Ikon SVG Widget AI Insight (KNOWN-ISSUES.md §4.1)
+
+## Konteks
+Item "risiko rendah, siap dikerjakan" — ternyata setelah dicek ulang,
+dokumentasi eksplisit mencatat item ini BUTUH keputusan desain
+(`KNOWN-ISSUES.md` §4.1, catatan Sesi 281): emoji di widget AI Insight
+(`feature-insights.js`) inline di tengah baris teks, bukan tile ikon
+berdiri sendiri seperti pola `FeatureIcons.render()` yang sudah ada di
+Dashboard Hub/LifeOS Areas — makanya sengaja dikecualikan dari scope
+sebelumnya.
+
+## Keputusan desain yang diambil
+Layout **flex icon+text** (bukan `vertical-align` inline dalam 1 baris
+teks) — SVG (14px) jadi elemen flex terpisah dari teks, supaya tetap
+sejajar rapi di baris pertama walau `x.text` panjang & wrap ke beberapa
+baris (pendekatan vertical-align murni akan meleset saat teks wrap).
+Reversibel kalau tidak sesuai selera — cuma 2 class CSS baru + 1 fungsi
+JS yang diubah.
+
+## Perubahan
+- `modules/ai/feature-insights.js` — `FeatureInsightUI.renderInto()`
+  (1 titik render terpusat, dipakai KeuanganInsight, PajakInsight,
+  PiutangUtangInsight, SewaKiosRenovInsight, ShopInsight, MobilInsight,
+  EduFundInsight sekaligus): emoji `${x.icon} ${x.text}` inline diganti
+  `<span class="fi-insight-icon">${FeatureIcons.render(x.icon,{size:14})}</span><span>${x.text}</span>`
+  dibungkus `.fi-insight-row` (flex). Fallback emoji polos tetap ada
+  via guard `typeof FeatureIcons` (pola sama seperti pemanggil lain).
+- `styles.css` — 3 baris CSS baru (`.fi-insight-row`,
+  `.fi-insight-icon`, `.fi-insight-icon svg`).
+
+## Tidak diubah
+`DanaDaruratAI.renderDash()` (widget "🤖 Rekomendasi Dana Darurat" di
+Dashboard) — modul berbeda, di luar scope §4.1 yang eksplisit menyebut
+"widget AI (feature-insights.js)". `FeatureIcons._MAP` — tidak ada
+mapping SVG baru ditambah (emoji yang dipakai widget ini sudah lama
+terpetakan).
+
+## Hasil test
+```
+node scripts/build.js   # v911, sintaks valid
+node --test tests/*.test.js
+# tests 1821 / pass 1821 / fail 0  (tidak ada regresi)
+```
+Catatan: `renderInto()` DOM-heavy (baca `document.getElementById`),
+di luar cakupan `node --test` otomatis — sama seperti catatan sesi
+sebelumnya untuk `renderLaporan()`/`Order.renderTab()`.
+
+---
+
+# Changelog — Sesi 337: Konsistensi Badge/Progress-Bar ke Dashboard Shop
+
+## Konteks
+Lanjutan perluasan pola badge peringatan + progress bar (Dashboard Hub →
+Laporan Keuangan, sesi sebelumnya) ke **dashboard Shop** (tab Laporan
+Shop, `Order.renderTab()` di `cobek-order.js`) — item terakhir yang
+disebut eksplisit di catatan audit sebelumnya.
+
+## Penyesuaian pola
+Shop tidak punya pasangan "Masuk vs Keluar" yang persis sama seperti
+Keuangan — yang ada Omzet (pendapatan) & Untung (profit). Dipetakan
+setara: **Modal** (= Omzet − Untung, identitas yang sudah berlaku dari
+cara `t.profit` dihitung, bukan rumus baru) berperan seperti
+"Keluar"/merah, **Untung** berperan seperti "Bersih positif"/hijau.
+Badge peringatan dipasang saat Untung < 0 (rugi), bukan saat Omzet
+rendah — konsisten dgn makna "peringatan" di 2 halaman sebelumnya
+(kondisi merugikan, bukan cuma angka kecil).
+
+## Perubahan
+- `index.html` / `app_production.html` (via build) —
+  - Kartu "Untung" (`#lapUntungBox`) dapat badge tersembunyi
+    `#lapUntungBadge` ("⚠️ Rugi"), REUSE `.dashhub-analytics-badge`.
+  - Progress bar `#lapOmzetBar` (Modal vs Untung, REUSE
+    `.dashhub-analytics-bar`/`-inc`/`-exp`) ditambah di bawah grid2
+    Untung/Margin.
+- `modules/shop/cobek-order.js` — `Order.renderTab()`: ~12 baris
+  tambahan, 0 kalkulasi baru (reuse `omzet`/`untung` yang sudah
+  dihitung), toggle badge + `stat-box--warn` saat rugi, isi lebar bar
+  saat Omzet>0 DAN Untung≥0 (bar disembunyikan saat rugi — badge sudah
+  cukup jadi penanda, persentase Modal/Untung tidak relevan
+  ditampilkan sbg proporsi saat Modal>Omzet).
+
+## Tidak diubah
+Kalkulasi `omzet`/`untung`/`margin`, filter ownership SELF-only,
+Top Produk/Top Pelanggan, Business Engine/Delivery summary di bawahnya.
+
+## Catatan test
+`Order.renderTab()` DOM-heavy, sama seperti `renderLaporan()` (Keuangan)
+— di luar cakupan `node --test` otomatis (lihat catatan sesi
+sebelumnya). Diverifikasi manual: `node scripts/build.js` lolos cek
+sintaks (v910), 1821/1821 test lain tetap PASS.
+
+---
+
+# Changelog — Sesi 336 (lanjutan 2): Konsistensi Badge/Progress-Bar ke Laporan Keuangan
+
+## Konteks
+Lanjutan audit tampilan Dashboard Hub: pola badge peringatan "⚠️ Kurang"
++ progress bar Masuk-vs-Keluar yang baru dipasang di Dashboard Hub
+(`DashboardHubAnalytics.render()`) diterapkan ke halaman lain yang juga
+punya pemasukan/pengeluaran, dimulai dari **Laporan Keuangan**
+(`#laporanTab-ringkasan`), supaya bahasa visualnya seragam se-app — bukan
+cuma di 1 halaman. (Dashboard Shop belum disentuh, menyusul kalau
+diminta.)
+
+## Perubahan
+- `index.html` / `app_production.html` (via build) —
+  - Kartu "💰 Bersih" (`#lapNetBox`) dapat badge tersembunyi
+    `#lapNetBadge`, REUSE PENUH class `.dashhub-analytics-badge` yang
+    sudah ada dari Dashboard Hub (0 CSS baru untuk badge).
+  - Progress bar `#lapIncExpBar` ditambah di bawah grid3 Masuk/Keluar/
+    Bersih, REUSE PENUH class `.dashhub-analytics-bar`/`-inc`/`-exp`.
+- `modules/shared/modules-render.js` — `renderLaporan()`: 8 baris
+  tambahan, 0 kalkulasi baru (reuse `inc`/`exp`/`net` yang sudah
+  dihitung di fungsi yang sama), cuma toggle class `stat-box--warn` +
+  visibilitas badge saat `net<0`, dan isi lebar 2 batang progress bar
+  sesuai proporsi `inc`/`exp` (disembunyikan kalau `inc+exp<=0`).
+- `styles.css` — 1 class baru `.stat-box--warn` (token identik
+  `.dashhub-analytics-card--warn`: `--accent2-soft`/`--accent2`),
+  karena struktur `.stat-box` beda dari `.dashhub-analytics-card`
+  sehingga tidak bisa reuse class kartu itu langsung, tapi nilainya
+  sengaja disamakan persis.
+
+## Tidak diubah
+Kalkulasi `inc`/`exp`/`net`, urutan/filter transaksi, `#lapAccList`,
+`AsetKeluarga`/`DanaKelolaanPresenter`, dashboard Shop (menyusul).
+
+## Catatan test
+`renderLaporan()` baca/tulis `document.getElementById` langsung — sesuai
+batasan `tests/helpers/loadSource.js` (stub DOM permisif, bukan jsdom
+penuh), fungsi ini di luar cakupan `node --test` otomatis, sama seperti
+fungsi DOM-heavy lain di app (lihat catatan di `tests/vehicle-jenis.test.js`).
+Diverifikasi manual: `node scripts/build.js` lolos cek sintaks, dan
+1821/1821 test lain tetap PASS (tidak ada regresi ke kode yang sudah
+ditest).
+
+---
+
+# Changelog — Sesi 336 (lanjutan): Audit & Test Guard Kontras `--text3`
+
+## Konteks
+Item roadmap prioritas tertinggi (`ROADMAP-v1.1.md` §High Priority #1 /
+`KNOWN-ISSUES.md` §1.1): kontras token `--text3` di 10 tema warna,
+sebelumnya berstatus "belum diperbaiki" dgn klaim rasio 2.45–3.8:1.
+
+## Temuan
+Audit ulang (parsing token `--bg`/`--surface2`/`--text3` langsung dari
+`styles.css` per blok `[data-theme]` + hitung ulang rasio kontras WCAG
+relative luminance) menunjukkan **seluruh 10 tema SUDAH memenuhi WCAG AA
+(≥4.5:1)** terhadap `--bg` maupun `--surface2` — rentang aktual
+4.50:1–5.78:1. Tidak ada perubahan nilai warna yang diperlukan. Dokumen
+`THEME-CONTRAST-FIX.md` versi sebelumnya ternyata basi (mendeskripsikan
+fix yang tidak pernah benar-benar diterapkan) — diarsip ke `.bak` dan
+ditulis ulang.
+
+## Perubahan
+- `tests/theme-text3-contrast.test.js` **(baru)** — 22 test: kontras
+  `--text3` vs `--bg` & vs `--surface2` per tema (WCAG AA ≥4.5:1) +
+  guard token `--text2`/`--accent` tetap ada. Parsing langsung dari
+  `styles.css`, bukan hardcode independen — jadi otomatis ikut jika ada
+  tema baru ditambah nanti.
+- `ROADMAP-v1.1.md`, `KNOWN-ISSUES.md` — status item diperbarui jadi
+  ✅ Selesai, dengan angka rasio aktual.
+- `THEME-CONTRAST-FIX.md` — ditulis ulang agar sesuai kode; versi lama
+  diarsip sbg `THEME-CONTRAST-FIX.md.bak`.
+
+## Tidak diubah
+`styles.css` (0 baris), markup/JS halaman manapun, business logic.
+
+## Hasil test
+```
+node --test tests/*.test.js
+# tests 1821  (baseline 1799 + 22 baru)
+# pass 1821 / fail 0
+```
+
+---
+
+# Changelog — Sesi 336: Audit Tampilan Dashboard Hub (dari mockup SEBELUM/SESUDAH user) — search ke atas, badge peringatan, progress bar
+
+## Konteks
+User memberi 1 gambar mockup "SARAN PERBAIKAN TAMPILAN" (SEBELUM/SESUDAH)
+utk halaman ringkasan Keluarga (= Dashboard Hub, `#page-dashboard-hub`):
+hierarki info lebih jelas, warna/kontras positif-negatif, kartu ringkas,
+peringatan lebih jelas, navigasi/pencarian lebih cepat diakses, tampilan
+modern & konsisten. Diimplementasikan bagian yang MURNI presentasi (0
+rumus/engine baru, sesuai IMPLEMENTATION_POLICY.md) — perubahan semantik
+(mis. mengganti metrik "Saldo Semua Akun" di Hero Card jadi "Saldo Bersih"
+bulanan) SENGAJA tidak disentuh krn itu 2 metrik berbeda, bukan cuma
+kosmetik — butuh keputusan produk terpisah kalau memang diinginkan.
+
+## Perubahan
+- `index.html` / `app_production.html` — search bar (`#dashHubSearchInput`)
+  dipindah dari bawah kartu Ownership Summary ke PALING ATAS halaman
+  (tepat di bawah judul "🧭 Dashboard Hub"), sesuai saran "pencarian
+  diletakkan di atas untuk akses cepat". Murni pindah posisi DOM
+  (cut-paste blok yang sama persis) — id/atribut/handler
+  `DashboardHubSearch.render()` TIDAK diubah, section yang dikelola
+  `DashboardHub.setSectionTab()` (dashHubSummaryGrid/dashHubAnalyticsRow/dst)
+  tidak tersentuh.
+- `modules/dashboard-hub/dashboard-hub.js` — `DashboardHubAnalytics.render()`:
+  2 tambahan presentasi, reuse penuh `incPct`/`expPct`/`netNegatif` yang
+  sudah dihitung di fungsi yang sama (0 kalkulasi baru):
+  - Badge kecil "⚠️ Kurang" di pojok kartu "Saldo Bersih" saat bulan
+    berjalan minus (sebelumnya cuma beda warna latar + baris saran di
+    bawah, sekarang ditambah penanda tegas biar cepat ketangkap mata).
+  - Progress bar 2 warna (hijau/merah) di bawah kartu "Pemasukan vs
+    Pengeluaran", lebar tiap segmen = persentase yang sudah ditampilkan
+    sbg teks "49% : 51%" — representasi visual, bukan cuma angka.
+- `styles.css` — class baru murni CSS (`.dashhub-analytics-label-row`,
+  `.dashhub-analytics-badge`, `.dashhub-analytics-bar*`), semua token warna
+  reuse `--accent2`/`--accent3` yang sudah dipakai `.green`/`.red` di file
+  yang sama — 0 warna/token baru.
+
+## Tidak dikerjakan (butuh keputusan produk, bukan cuma kosmetik)
+- Mengganti angka utama Hero Card ("Saldo Semua Akun") jadi "Saldo Bersih"
+  bulan berjalan seperti di mockup — 2 metrik ini beda makna (saldo semua
+  akun vs net bulan ini), keliru kalau ditukar diam-diam tanpa keputusan
+  eksplisit.
+- Ownership Summary jadi baris berikon chevron ">" navigasi ke halaman lain
+  — saat ini baris itu tidak actionable (hanya "Lihat semua kategori" yang
+  toggle expand), menambah chevron tanpa aksi nyata akan menyesatkan.
+
+## Test
+`tests/dashboard-hub-analytics-badge-bar-s336.test.js` (BARU, 5 test):
+badge muncul saat Saldo Bersih negatif, badge TIDAK muncul saat positif,
+lebar progress bar sesuai persentase, bar tidak dirender saat total 0,
+search bar muncul sebelum Hero Card di `index.html`. Total suite
+**1799/1799 PASS** (naik dari 1794).
+
+## Build
+`node scripts/build.js s336-dashboard-hub-ui-audit-search-badge-bar`
+dijalankan, versi naik ke `?v=908`.
+
+---
+
+# Changelog — Sesi 331f: Tombol "🗑 Hapus Semua" di Stok Sparepart (di-scope ke hasil tampil, bukan pola S331b lama)
+
+## Konteks
+Rekomendasi lanjutan audit S331 (sesi 331e): Stok Sparepart belum punya
+tombol hapus massal sama sekali (hanya hapus 1 per baris via `delStock()`)
+— beda dari Katalog Suku Cadang yang pernah kena bug "Hapus Semua
+menghapus SEMUA kendaraan" (S331b) sebelum diperbaiki. Karena belum ada
+tombolnya, tidak ada regresi untuk diperbaiki di sini — tombol BARU ini
+langsung dibuat dengan scoping yang benar sejak awal (pola SAMA PERSIS
+`VehicleCatalogUI.removeAllConfirm()`, S331b), supaya tidak lahir dengan
+bug yang sama.
+
+## Perubahan
+- `modules/vehicle/sparepart-servis.js` — `Sparepart.removeAllStockConfirm()`
+  baru: cakupan hapus di-scope ke item yang SEDANG TAMPIL di `#stockList`
+  saja (reuse filter persis `renderStockList()` — `isPartForVehicle()` utk
+  kendaraan aktif + `_stockSearchQuery` utk pencarian aktif), bukan
+  `D.partsStock` mentah. Kalau tidak ada kendaraan aktif & tidak sedang
+  mencari, cakupannya "semua stok" (perilaku default, sama seperti
+  `delStock()` yang sudah ada). Pesan konfirmasi & toast menyebut cakupan
+  (nama kendaraan / kata kunci pencarian) saat di-scope, pola sama S331b.
+- `index.html` / `app_production.html` — tombol "🗑 Hapus Semua" ditambah
+  di bawah "+ Tambah Stok Sparepart" di panel Stok Sparepart, wired ke
+  `Sparepart.removeAllStockConfirm()`.
+
+## Tidak dikerjakan (perlu review terpisah)
+`KNOWN-ISSUES.md` masih mencatat beberapa isu CSS/kontras 🟡 lintas tema —
+sengaja tidak digarap sesi ini (butuh review visual, bukan perubahan cepat).
+
+## Test
+`tests/sparepart-stock-removeall-scope-s331f.test.js` (BARU, 5 test):
+hapus di-scope ke kendaraan aktif (stok universal/tanpa `catalogId` ikut,
+stok kendaraan lain TIDAK), di-scope ke hasil pencarian aktif, tanpa
+kendaraan aktif/pencarian tetap hapus semua (default), dibatalkan
+(`askConfirm=false`) tidak menghapus apa pun, list kosong tidak minta
+konfirmasi. Total suite **1794/1794 PASS** (naik dari 1789).
+
+## Build
+`node scripts/build.js s331f-stok-sparepart-hapus-semua-scoped` dijalankan,
+versi naik ke `?v=907`.
+
+---
+
+# Changelog — Sesi 331e: Export CSV Kategori Sparepart (pasangan Import S331d)
+
+## Konteks
+Rekomendasi lanjutan dari sesi S331d: import CSV Kategori Sparepart sudah
+ada, tapi belum ada cara export-nya — padahal pola round-trip (Export →
+edit massal di Excel/Sheets → Import lagi) sudah jadi kebiasaan di Shop
+(Etalase). Ditambahkan supaya Kelola Kategori Sparepart punya kemampuan
+setara.
+
+## Perubahan
+- `modules/vehicle/sparepart-servis.js` — `Sparepart.exportCategoryCSV()`
+  baru: passthrough murni `D.sparepartCats` ke CSV dengan header SAMA
+  PERSIS yang dibaca `parseCategoryCSV()` (`nama,kode,interval_km,
+  tampil_reminder`), download lewat Blob+anchor (pola sama
+  `ShopDataIO.exportShopJSON()`). 0 rumus baru, tidak memanggil `save()`.
+  Wrapper `exportSparepartCategoryCSV()` (toast jumlah kategori
+  ter-export / pesan kalau kosong).
+- `index.html` / `app_production.html` — tombol "📤 Export CSV (Kategori)"
+  ditambah tepat di bawah "📊 Import CSV (Kategori)" di panel Kelola
+  Kategori Sparepart.
+
+## Test
+Ditambahkan ke `tests/sparepart-stocksearch-categorycsv-s331d.test.js`
+(+2 test, total file jadi 12): export menghasilkan CSV benar (header,
+baris kosong utk interval 0, escaping) & anchor.click() terpanggil tanpa
+memicu `save()`; round-trip Export→Parse→Commit tidak kehilangan data.
+Total suite **1789/1789 PASS** (naik dari 1787).
+
+## Build
+`node scripts/build.js` dijalankan ulang, versi naik ke `?v=905`.
+
+---
+
+# Changelog — Sesi 331d: Search di Stok Sparepart + Import CSV Kategori Sparepart
+
+## Konteks
+Lanjutan audit S331 — 2 dari 5 saran ditindaklanjuti sesi ini: (2) Stok
+Sparepart belum punya pencarian sendiri (beda dari search Katalog Suku
+Cadang yang sudah ada), dan (4) Kelola Kategori Sparepart belum punya
+jalur impor massal (CSV) seperti yang sudah ada di Shop (Etalase).
+
+## Perubahan
+- `modules/vehicle/sparepart-servis.js`:
+  - `Sparepart._stockSearchQuery` + `Sparepart.onStockSearchInput(value)` —
+    filter `renderStockList()` by nama/kode/nama kategori/catatan, pola SAMA
+    PERSIS search Katalog Suku Cadang (`vehicle-catalog-ui.js`), termasuk
+    empty-state khusus "Tidak ada stok sparepart yang cocok..." saat
+    pencarian tidak menemukan hasil.
+  - `Sparepart.parseCategoryCSV(text)` / `Sparepart.commitCategoryCSV(rows)`
+    — parser + committer CSV utk Kelola Kategori Sparepart, reuse pola
+    persis `ShopDataIO.parseShopCSV()`/`commitShopRows()`
+    (`shop-data-io-api.js`): match-by-name (case-insensitive), partial
+    update (field kosong di CSV tidak menimpa data lama). Header CSV:
+    `nama,kode,interval_km,tampil_reminder` (kolom "nama" wajib, sisanya
+    opsional & urutan bebas).
+  - `SparepartCsvImport` (presenter baru) + wrapper
+    `openSparepartCsvImportModal()`/`onSparepartCsvImportFileChange()`/
+    `commitSparepartCsvImport()`, pola SAMA PERSIS `ShopCsvImport`.
+- `modules/shared/modals.js` — modal baru `sparepartCsvImportModal`
+  (adaptasi persis `shopCsvImportModal`, teks & id disesuaikan), ditambah
+  di `MODAL_HTML[72]` (indeks-indeks sesudahnya di `index.html` &
+  `app_production.html` digeser +1 secara otomatis).
+- `index.html` / `app_production.html`:
+  - Input pencarian `#stockSearchInput` ditambah di atas list Stok
+    Sparepart.
+  - Tombol "📊 Import CSV (Kategori)" ditambah di panel Kelola Kategori
+    Sparepart, wired ke `openSparepartCsvImportModal()`.
+
+## Test
+`tests/sparepart-stocksearch-categorycsv-s331d.test.js` (BARU, 10 test):
+filter search by nama/kode/kategori, empty-state pencarian, 0 regresi saat
+search kosong, parse CSV (header lengkap & tanpa kolom nama), commit CSV
+(kategori baru, update partial match-by-name case-insensitive, baris tanpa
+nama diabaikan). Total suite **1787/1787 PASS** (naik dari 1777).
+
+## Build
+`node scripts/build.js` dijalankan ulang, versi naik ke `?v=904`.
+
+---
+
+# Changelog — Sesi 331c: Tombol "Pilih Semua/Kosongkan" di vehicle picker Import Katalog
+
+## Konteks
+Lanjutan audit S331 — saran #3: part umum/universal sering cocok ke BANYAK
+kendaraan sekaligus, tapi checklist kendaraan di vehicle picker (Import
+Katalog PDF & Import dari URL Web) harus dicentang satu-satu.
+
+## Perubahan
+- `modules/vehicle/vehicle-catalog-import-ui.js` &
+  `modules/vehicle/vehicle-catalog-web-import-ui.js` — fungsi baru
+  `selectAllVehicles()`/`clearVehicles()` per file: toggle `checked` pada
+  SEMUA checkbox `.vehCatImportVehChk`/`.vehCatWebImportVehChk` yang SUDAH
+  ADA di picker masing-masing. Murni toggle DOM, 0 perubahan ke
+  `readSelectedVehicleIds()`/`commitRows()`/state lain.
+- `modules/shared/modals.js` — 2 tombol ("☑️ Pilih Semua" / "✕ Kosongkan")
+  ditambah di atas tiap picker (`vehCatImportVehiclePicker` &
+  `vehCatWebImportVehiclePicker`), wired ke fungsi di atas via
+  `data-action`.
+
+## Test
+`tests/vehicle-catalog-import-picker-selectall-s331b.test.js` (BARU, 2
+test — 1 per picker). Total suite **1777/1777 PASS** (naik dari 1775).
+
+## Build
+`node scripts/build.js` dijalankan ulang, versi naik ke `?v=903`.
+
+---
+
+# Changelog — Sesi 331b: Fix "🗑 Hapus Semua" Katalog Suku Cadang menghapus SEMUA kendaraan, bukan cuma yang aktif
+
+## Konteks
+Audit lanjutan dari S331 (`import-vehicle-picker-category-search`) — salah
+satu dari 5 saran ditindaklanjuti sesi ini: laporan bahwa tombol "🗑 Hapus
+Semua" di modal Katalog Suku Cadang menghapus **seluruh** part di katalog
+(lintas kendaraan), padahal list yang tampil di layar sudah difilter ke
+kendaraan aktif (`curVehicleId`) + pencarian aktif.
+
+## Root cause
+`VehicleCatalogUI.removeAllConfirm()` (`modules/vehicle/vehicle-catalog-ui.js`)
+panggil `VehicleCatalog.getAll()` (SEMUA item, tanpa filter) lalu
+`VehicleCatalog.removeAll()` — sedangkan `catalogUiRenderList()` yang
+menampilkan list sudah lebih dulu difilter via `VehicleCatalog.filterForVehicle(allItems, curVehicleId)` + `_catSearchQuery`. Tombolnya bertuliskan
+"Hapus Semua" tapi cakupannya tidak match dgn apa yang user LIHAT di layar.
+
+## Perubahan
+- `modules/vehicle/vehicle-catalog-ui.js` — `catalogUiRemoveAllConfirm()`:
+  di-scope ke item yang SEDANG TAMPIL saja (reuse filter yang persis sama
+  dgn `catalogUiRenderList()` — vehicle aktif + pencarian aktif), lalu
+  hapus lewat `VehicleCatalog.removeMany(ids)` (bukan `removeAll()` lagi).
+  Kalau tidak ada kendaraan aktif & tidak sedang mencari, cakupannya tetap
+  "semua part" seperti perilaku lama (0 regresi utk kasus itu). Pesan
+  konfirmasi & toast disesuaikan supaya jelas menyebut cakupannya (nama
+  kendaraan / kata kunci pencarian) saat di-scope. Label tombol toolbar
+  juga menampilkan nama kendaraan aktif saat relevan, mis. "🗑 Hapus Semua
+  (Vario 125)". `VehicleCatalog.removeAll()` (vehicle-catalog.js) tetap
+  ada apa adanya (tidak dihapus, tidak dipakai lagi jalur ini saja).
+
+## Test
+`tests/vehicle-catalog-ui-removeall-scope-s331.test.js` (BARU, 3 test):
+hapus di-scope ke kendaraan aktif (part universal ikut, part kendaraan
+lain TIDAK), tanpa kendaraan aktif/pencarian tetap hapus semua (perilaku
+lama, 0 regresi), dan dibatalkan (askConfirm=false) tidak menghapus apa
+pun. Total suite **1775/1775 PASS** (naik dari 1772).
+
+## Build
+`node scripts/build.js` dijalankan ulang, versi naik ke `?v=902`.
+
+---
+
+# Changelog — Sesi 320: Fix nominal Scan Universal Akun kebaca "1" doang (laporan user, screenshot SeaBank "Total Saldo Rp 148.602")
+
+## Konteks
+Laporan user (2 screenshot): scan layar SeaBank ("Total Saldo Rp 148.602")
+lewat "Scan Universal Akun" — nama pemilik rekening terbaca benar ("Wisnu
+Nur Muhamad"), confidence 100%, TAPI nominal cuma kebaca **"1"**, bukan
+148602.
+
+## Root cause
+`parseBankScreen()` (`modules/shared/scan-ocr.js`) ambil nominal lewat
+regex `total\s*saldo[^\d]{0,20}(\d[\d.,]*)` — grup capture cuma menangkap
+digit yang CONTIGUOUS (tanpa spasi/newline di tengahnya), berhenti di
+whitespace pertama. Angka saldo di screenshot asli dirender dalam font
+BESAR/BOLD — di font semacam ini Tesseract kerap salah menyimpulkan jarak
+antar-karakter sbg batas kata/baris, jadi teks OCR "148.602" pecah jadi
+beberapa potongan terpisah whitespace (mis. "1" lalu "48.602" di "baris"
+lain). Regex lama menangkap potongan pertama ("1") lalu berhenti di situ
+— whitespace itu SALAH ditafsir sbg akhir angka, padahal masih 1 angka
+yang sama.
+
+## Perubahan
+- `modules/shared/scan-ocr.js` — `parseBankScreen()`: regex nominal
+  (baik jalur utama `total saldo` maupun fallback `saldo` polos) sekarang
+  boleh menangkap SAMPAI 3 potongan digit tambahan yang HANYA dipisah
+  whitespace (bukan huruf/kata lain) setelah potongan pertama — kalau
+  ternyata TIDAK ada teks lain nyempil di antaranya (mis. nama fitur lain
+  spt "Tabungan"), rangkaian digit itu dianggap 1 angka yang sama & pecah
+  akibat OCR, bukan 2 angka berbeda. Seluruh whitespace di dalam hasil
+  match dibuang sebelum dikirim ke `normalizeOcrNumber()`, supaya
+  potongan-potongan itu tersambung jadi 1 angka utuh. Kalau OCR kebetulan
+  TIDAK memecah angkanya (kasus umum), 0 perilaku berubah (potongan
+  tambahan ini opsional, `{0,3}`, tidak match kalau tidak dibutuhkan).
+  0 perubahan kontrak fungsi (tetap `{nama, nominal, confidence}`).
+
+## Test
+`tests/scan-ocr-bank.test.js` (BARU, 7 test — `parseBankScreen()` belum
+pernah punya test file sendiri sebelum sesi ini): kasus normal (angka
+utuh), nominal terpecah 2 potongan dipisah spasi (reproduksi laporan
+user), terpecah dipisah newline, terpecah 3 potongan, potongan berhenti
+kalau diselingi teks non-digit (tidak melahap nominal baris lain di
+bawahnya spt kartu "Tabungan"), fallback "Saldo" polos, teks kosong/tidak
+dikenali.
+
+`node --test tests/*.test.js` → **1760/1760 PASS, 0 fail** (naik dari
+1753, +7 test baru, 0 regresi — 2x, sebelum & sesudah build).
+
+## Build
+`node scripts/build.js s320-fix-parsebankscreen-nominal-terpecah` →
+sukses, `?v=889`, `index.html` & `app_production.html` identik.
+
+## ZIP
+`kw_release_sesi320_scan-universal-nominal-terpecah-fix_v889.zip`.
+
+---
+
+# Changelog — Sesi 319: Fix race condition scan Sparepart dari Galeri (foto dipilih tapi scan diam-diam gagal)
+
+## Konteks
+Laporan user (video layar): buka scanner Katalog Suku Cadang, kamera live
+terbuka, pindah ke galeri (Android photo picker), pilih 1 foto — kembali ke
+app **tidak ada hasil scan & tidak ada toast error sama sekali**, seperti
+scanner tidak merespon.
+
+## Root cause
+`sparepartScannerPickImageFile()` (`modules/vehicle/sparepart-scanner.js`,
+dipakai adapter gallery scan barcode DAN dipakai ulang `sparepart-ocr.js`
+utk scan OCR dari galeri) punya 2 jalur resolve Promise: `inp.onchange`
+(file terpilih) & fallback `window` event `'focus'` (untuk browser yang
+tidak kirim event `'cancel'` saat dialog dibatalkan) yang sebelumnya
+langsung `finish(null)` setelah delay 300ms. Di sebagian perangkat Android,
+`focus` balik ke window LEBIH DULU daripada `change` pada `<input>`
+selesai (foto besar / URI `content://` butuh waktu resolusi tambahan) —
+300ms sering tidak cukup. Karena `finish()` di-guard `settled`, begitu
+fallback ini keburu `resolve(null)` duluan, event `change` yang menyusul
+telat DIABAIKAN — foto yang sudah dipilih user hilang, scan gagal 100%
+senyap (0 toast, 0 indikasi error).
+
+## Perubahan
+- `modules/vehicle/sparepart-scanner.js` — `sparepartScannerPickImageFile()`:
+  delay fallback `onFocus` diperpanjang 300ms → 800ms, DAN sebelum
+  menyerah ke `null`, cek ulang `inp.files` langsung sbg fallback sumber
+  kebenaran (kalau file ternyata sudah terisi di elemen input walau event
+  `change` belum/telat terpanggil, file itu tetap dipakai). 0 perubahan API
+  publik (`SparepartScanner.pickImageFile`), 0 perubahan alur `onchange`/
+  `oncancel` yang sudah benar.
+- Fix ini otomatis berlaku juga untuk `sparepart-ocr.js` (`sparepartOcrPickImageFile()`
+  reuse penuh `SparepartScanner.pickImageFile()`).
+
+## Test
+Tidak ada test baru — perilaku ini bergantung pada TIMING event browser
+asli (`focus`/`change` pada `<input type=file>` sungguhan), di luar
+cakupan `tests/helpers/loadSource.js` (sandbox `vm` node yang `setTimeout`-
+nya no-op & `document`/`window` cuma stub permisif, dicatat eksplisit di
+komentar helper itu — sama seperti `pickImageFile`/`decodeFromFile` yang
+dari awal memang tidak dites lewat harness ini, lihat catatan kepala
+`tests/sparepart-scanner.test.js`). Verifikasi: `node --test tests/*.test.js`
+→ **1753/1753 PASS, 0 fail** (2x — sebelum & sesudah build, 0 regresi).
+Disarankan QA manual di device Android asli (foto besar dari galeri) utk
+konfirmasi gejala video sudah tidak muncul lagi.
+
+## Build
+`node scripts/build.js s319-fix-race-scanner-gallery-focus` → sukses,
+`?v=888`, `index.html` & `app_production.html` identik.
+
+## ZIP
+`kw_release_sesi319_scanner-gallery-focus-race-fix_v888.zip`.
+
+---
+
 # Changelog — Sesi 11: Bugfix cakupan sweep modal (self-test)
 
 ## Bug yang diperbaiki

@@ -1976,6 +1976,7 @@ let _lazyLoadFailNote='';
 try{ if(typeof ensureRenov==='function') await ensureRenov(); }catch(e){ _lazyLoadFailNote+=' | modules/home/renovasi.js gagal dimuat: '+(e&&e.message||e); }
 try{ if(typeof ensureSewaKios==='function') await ensureSewaKios(); }catch(e){ _lazyLoadFailNote+=' | modules/business/sewakios.js gagal dimuat: '+(e&&e.message||e); }
 const results=[];
+const fnNames=computeModalSweepFnNames();
 for(const fn of fnNames){
 const guessId=fn.replace(/^open/,'');
 const id=guessId.charAt(0).toLowerCase()+guessId.slice(1);
@@ -2093,6 +2094,11 @@ toast('⚠️ Tes diagnostik otomatis: '+data.failCount+' dari '+data.total+' ga
 }catch(e){ console.warn('Auto self-test gagal jalan:',e); }
 }
 async function init(){
+// FIX (2026-07-30): tandai boot sudah mulai SEBELUM apa pun lain -- dibaca oleh guard
+// controllerchange di index.html/app_production.html supaya reload anti-flash SW tidak
+// menembak lagi begitu init() (dan showPinScreen()) sudah jalan. Lihat komentar lengkap
+// di blok controllerchange index.html soal bug "PIN muncul 2x".
+window.__kwBooted=true;
 await load();
 if(typeof AIService!=='undefined'&&typeof AIService.wireEvents==='function'){
 try{AIService.wireEvents();}catch(e){console.warn('[AIService] wireEvents gagal:',e);}

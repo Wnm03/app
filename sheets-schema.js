@@ -215,7 +215,11 @@ else item[f.key]=String(raw);
 return item;
 }
 function sheetsSaveSpreadsheetId(){
-let v=document.getElementById('gsSpreadsheetId').value.trim();
+// GUARD: dulu langsung akses .value tanpa cek elemen ada, bisa throw kalau
+// input #gsSpreadsheetId belum ter-render di DOM saat fungsi ini dipanggil.
+const inputEl=document.getElementById('gsSpreadsheetId');
+if(!inputEl)return;
+let v=inputEl.value.trim();
 const m=v.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
 if(m) v=m[1];
 D.googleSheets.spreadsheetId=v;

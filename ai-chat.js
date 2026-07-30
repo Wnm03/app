@@ -590,6 +590,29 @@ const cur=AIRecommendCard.dismissedIds();
 if(!cur.includes(id))cur.push(id);
 try{localStorage.setItem(AIRecommendCard.DISMISS_LS_KEY,JSON.stringify(cur.slice(-40)));}catch(e){}
 },
+// runAction(type,id) — Sesi 344b (audit gap #1): dulu 'actions' cuma teks
+// ('Isi Kapasitas Angkut Maks di Kelola Kendaraan' dst) — recommendationId/
+// actionTargets ADA di engine tapi belum pernah dipakai buat navigasi nyata.
+// Pilot 2 rule dulu (product-weight-missing/vehicle-capacity-missing) sebelum
+// dipakai rule lain: cari index item by id (bukan simpan index langsung, krn
+// index bisa berubah kalau ada CRUD lain di antara decide() & tap tombol),
+// baru panggil modal yg SUDAH ADA (Etalase.openModal/editVehicle) — 0 modal/
+// route baru. Guard: kalau item sudah kehapus sebelum tombol ditap, toast
+// info alih-alih error diam-diam/crash.
+runAction(type,id){
+if(type==='product'){
+const idx=(D.products||[]).findIndex(p=>p.id===id);
+if(idx<0){toast('⚠️ Produk ini sudah tidak ada');return;}
+if(typeof Etalase!=='undefined')Etalase.openModal(idx);
+return;
+}
+if(type==='vehicle'){
+const idx=(D.vehicles||[]).findIndex(v=>v.id===id);
+if(idx<0){toast('⚠️ Kendaraan ini sudah tidak ada');return;}
+if(typeof editVehicle==='function')editVehicle(idx);
+return;
+}
+},
 // act(id, ruleId, outcome) — dipanggil tombol Terima/Abaikan. recordOutcome() SELALU dipanggil
 // dulu (persist ke AIStore.learningData) baru SETELAH itu disembunyikan dari kartu (dismiss),
 // supaya kalau recordOutcome() gagal (mis. ruleId kosong/tidak valid), kartu TETAP tampil —
@@ -660,9 +683,23 @@ if(s&&((s.accepted||0)+(s.rejected||0)+(s.ignored||0))>0)statsByRuleId[r.ruleId]
 body.innerHTML=`<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🤖 Rekomendasi AI</div>`
 +top.map(r=>{
 const s=statsByRuleId[r.ruleId];
+// actionsHtml — Sesi 344b: 'actions' (label saran, sudah ada sejak dulu di
+// formatRecommendation) sebelumnya TIDAK PERNAH dirender sama sekali di kartu
+// ini. Sekarang ditampilkan: kalau ada actionTargets[i] yg dikenal (type
+// 'product'/'vehicle') jadi TOMBOL yg beneran buka modal terkait
+// (AIRecommendCard.runAction), sisanya (rule lama tanpa actionTargets) tetap
+// tampil sbg teks saran biasa (bukan tombol, krn belum ada target navigasi).
+const actionsHtml=(Array.isArray(r.actions)&&r.actions.length)?'<div class="u-flex u-gap6 u-mb6" style="flex-wrap:wrap">'+r.actions.map((label,i)=>{
+const target=Array.isArray(r.actionTargets)?r.actionTargets[i]:null;
+if(target&&(target.type==='product'||target.type==='vehicle')){
+return `<button class="btn btn-ghost btn-sm" data-action="AIRecommendCard.runAction" data-args="${escapeHtml(JSON.stringify([target.type,target.id]))}">🔧 ${escapeHtml(label)}</button>`;
+}
+return `<span class="u-fs11 u-t2" style="padding:4px 0">💡 ${escapeHtml(label)}</span>`;
+}).join('')+'</div>':'';
 return `
       <div class="u-mb8" style="border-left:3px solid var(--accent);padding-left:8px">
         <div class="u-fs12 u-lh15 u-mb6">${escapeHtml(r.title||'')} — ${escapeHtml(r.reason||'')}</div>
+        ${actionsHtml}
         ${s?`<div class="u-fs10 u-t2 u-mb6">📊 ✓ Terima ${s.accepted||0} · ✗ Tolak ${s.rejected||0} · Abaikan ${s.ignored||0}</div>`:''}
         <div class="u-flex u-gap8">
           <button class="btn btn-primary btn-sm u-flex1" data-action="AIRecommendCard.act" data-args="${escapeHtml(JSON.stringify([r.id,r.ruleId,'accepted']))}">✓ Terima</button>

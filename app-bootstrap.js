@@ -32,7 +32,7 @@ Aset,LifeBalance,Piutang,Debt,DebtStrategy,Kekayaan,AlokasiAset,PBB,
 // SELURUH Object.assign ini gagal, termasuk modul lain di daftar yang sama).
 // Ketiganya sekarang mendaftarkan diri sendiri ke window di akhir
 // modules/home/renovasi.js begitu file itu selesai dimuat.
-IDBStore,LinkTx,Bill,AIWidget,EduFund,PriceReko,OngkirCalc,PriceRekoWidget,StockRekoWidget,Refleksi,Kasir,Advisor,FinCoach,GoldImport,GoldZakat,AIRecommendCard,AIDailyBriefingCard,AISimulateWidget,AIScenarioWidget,AIHealthCheckWidget,BillMultiScan,UniversalScan
+IDBStore,LinkTx,Bill,AIWidget,EduFund,PriceReko,OngkirCalc,PriceRekoWidget,StockRekoWidget,WeightBulkWidget,Refleksi,Kasir,Advisor,FinCoach,GoldImport,GoldZakat,AIRecommendCard,AIDailyBriefingCard,AISimulateWidget,AIScenarioWidget,AIHealthCheckWidget,BillMultiScan,UniversalScan
 });
 // BUGFIX (audit klik "0 reaksi"): init() adalah `async function` -- try/catch sinkron di
 // sekeliling panggilan biasa `init()` TIDAK menangkap error yang terjadi DI DALAM init()

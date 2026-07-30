@@ -14,19 +14,20 @@ Setiap isu ditandai kategori risiko perbaikannya:
 
 ## 1. Accessibility
 
-### 1.1 Kontras warna `--text3` di bawah standar WCAG AA 🟡
-Diukur pada 4 tema sampel (dark, light, ocean, mono) memakai formula
-relative luminance resmi WCAG: rasio kontras `--text3` terhadap
-`--bg`/`--surface2` berkisar **2.45–3.8:1**, di bawah ambang AA untuk
-teks normal (4.5:1). Masih di atas 3:1 (ambang teks besar) di sebagian
-tema, tapi `--text3` sering dipakai untuk teks kecil (caption, label
-sekunder pada `.nav-item`, dll.), sehingga berisiko sulit dibaca bagi
-pengguna low-vision.
+### 1.1 ✅ SELESAI (Sesi 336) — Kontras warna `--text3` 🟡
+Audit ulang Sesi 336 (parsing token `--bg`/`--surface2`/`--text3`
+langsung dari `styles.css` untuk seluruh 10 tema + hitung ulang rasio
+kontras memakai formula relative luminance resmi WCAG) menemukan
+`--text3` **sudah** ≥4.5:1 terhadap `--bg` *dan* `--surface2` di semua
+tema (rentang aktual 4.50–5.78:1) — dokumen ini basi, catatan
+"2.45–3.8:1, di bawah ambang AA" di bawah tidak lagi sesuai kode.
+Ditambahkan `tests/theme-text3-contrast.test.js` sebagai guard
+permanen. Lihat `ROADMAP-v1.1.md` §1 untuk detail.
 
-**Kenapa belum diperbaiki**: menaikkan luminance `--text3` berarti
-mengubah nilai warna di 10 blok tema sekaligus — butuh review visual
-per tema untuk memastikan tetap harmonis dengan palet masing-masing,
-di luar scope "tanpa redesign" Tahap 8.
+*(Catatan historis, tidak lagi berlaku: sampel awal 4 tema (dark,
+light, ocean, mono) sempat terukur di bawah ambang AA sebelum nilai
+`--text3` di `styles.css` diperbaiki di sesi yang tidak terdokumentasi
+dengan benar — kemungkinan bersamaan dengan revisi tema lain.)*
 
 ### 1.2 ✅ SELESAI (Sprint 2 Tahap 13) — Touch target sekunder di bawah rekomendasi 44×44px 🟢
 Diverifikasi ulang (Sesi 279): `styles.css` sudah punya `.chip-btn{padding:
@@ -127,7 +128,7 @@ untuk detail perubahan asli.
 
 ## 4. Icon
 
-### 4.1 Emoji sebagai data `icon:` di JavaScript 🔴 SEBAGIAN SELESAI (Sesi 281)
+### 4.1 ✅ SELESAI (Sesi 337) — Emoji sebagai data `icon:` di JavaScript 🔴
 `dashboard-hub-registry.js` (FEATURE_REGISTRY) dan beberapa file lain
 menyimpan ikon fitur sebagai emoji literal di field data `icon:`,
 bukan SVG konsisten seperti ikon lain di aplikasi.
@@ -157,6 +158,21 @@ terpisah soal bagaimana SVG inline diselaraskan dgn teks.
 Sisa emoji `icon:` di luar 2 titik ini (AI widget, tempat lain yang
 belum diaudit) masih terbuka — dicatat sbg kandidat lanjutan, bukan
 ditebak sesi ini.
+
+**Sesi 337**: widget AI (`FeatureInsightUI.renderInto()`,
+`modules/ai/feature-insights.js` — dipakai oleh KeuanganInsight,
+PajakInsight, PiutangUtangInsight, SewaKiosRenovInsight, ShopInsight,
+MobilInsight, EduFundInsight sekaligus, 1 titik render terpusat)
+diselesaikan. Keputusan desain yang diambil: layout **flex icon+text**
+(class baru `.fi-insight-row`/`.fi-insight-icon`, `styles.css`),
+BUKAN vertical-align inline dalam 1 baris teks — supaya SVG (14px,
+`FeatureIcons.render()`) tetap sejajar rapi di baris pertama walau
+teks `x.text` panjang & wrap ke beberapa baris. Fallback emoji polos
+tetap ada lewat guard `typeof FeatureIcons` (pola sama seperti
+pemanggil `FeatureIcons.render()` lain di app). `DanaDaruratAI.
+renderDash()` (widget "🤖 Rekomendasi Dana Darurat" di Dashboard) TIDAK
+disentuh — modul berbeda, di luar cakupan §4.1 yang eksplisit menyebut
+"widget AI (feature-insights.js)".
 
 ---
 
@@ -193,8 +209,8 @@ dgn `:active`-nya sendiri, bukan pola baru).
 | Kategori risiko | Jumlah | Selesai/Sebagian |
 |---|---|---|
 | 🟢 CSS-only, risiko rendah | 6 | 6 (1.2, 2.1\*, 2.2, 2.4\*, 3.1, 5.3) — \*sebagian (subset match-persis saja, lihat detail per-item) |
-| 🟡 Token warna, risiko sedang | 1 | 0 |
-| 🔴 Butuh JavaScript | 3 | 2\\* (4.1 sebagian, 5.2) — \\*4.1 hanya LifeOS Areas, AI widget & lainnya masih terbuka |
+| 🟡 Token warna, risiko sedang | 1 | 1 (1.1, ✅ Sesi 336) |
+| 🔴 Butuh JavaScript | 3 | 3 (4.1 selesai penuh Sesi 337, 5.2) |
 
 Status terkini & rencana sisa item: lihat `ROADMAP-v1.1.md`.
 

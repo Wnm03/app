@@ -80,9 +80,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=887">
-<link rel="stylesheet" href="modern-ui-layer.css?v=887">
-<script src="nav-scroll.js?v=887" defer></script>
+<link rel="stylesheet" href="styles.css?v=923">
+<link rel="stylesheet" href="modern-ui-layer.css?v=923">
+<script src="nav-scroll.js?v=923" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -148,17 +148,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=887');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=923');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=887');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=923');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=887');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=923');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -223,20 +223,32 @@ window.__showRuntimeErrorBanner(msg);
    (skipWaiting/clients.claim ga instan ganti controller tab yg lagi aktif),
    jadi HTML lama sempat ke-paint dulu sebelum JS baru koreksi tampilan
    (nyebabin "flash" onboard->pin atau sebaliknya). Reload sekali otomatis
-   begitu controller SW berganti, guard sessionStorage biar ga infinite loop. */
+   begitu controller SW berganti, guard sessionStorage biar ga infinite loop.
+   FIX (2026-07-30): guard TAMBAHAN window.__kwBooted -- sebelumnya listener ini
+   reload TANPA syarat kapan pun controllerchange nyala, termasuk SETELAH init()
+   sempat jalan & showPinScreen() sudah tampil (controllerchange SW baru aktif/
+   claim client-nya sering baru nyala beberapa saat SETELAH init() selesai, bukan
+   cuma sebelum paint pertama). Efeknya: user sudah lihat/mulai ketik PIN, tiba-tiba
+   ke-reload paksa -> app boot ulang dari nol -> layar PIN "muncul 2x" + reload
+   bundle besar bikin serasa "loading lama". Guard ini di-set oleh init()
+   (self-test.js) PERSIS begitu init() mulai jalan -- kalau boot sudah lewat
+   titik itu, reload anti-flash ini dilewati (tujuan awalnya cuma menghindari
+   flash SEBELUM boot, bukan menginterupsi sesi yang sudah berjalan). Update SW
+   berikutnya tetap otomatis kepakai di sesi/reload berikutnya seperti biasa. */
 (function(){
 try{
 if(!('serviceWorker' in navigator))return;
 navigator.serviceWorker.addEventListener('controllerchange',function(){
 if(sessionStorage.getItem('kw_sw_reloaded')==='1')return;
+if(window.__kwBooted)return;
 sessionStorage.setItem('kw_sw_reloaded','1');
 window.location.reload();
 });
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=887" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=887" defer></script>
+<script src="app-bundle-a.min.js?v=923" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=923" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -309,6 +321,7 @@ window.location.reload();
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["utangpiutang", "$el"]'>🤝 Piutang &amp; Utang</button>
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["asetproyek", "$el"]'>🏠 Aset &amp; Proyek</button>
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["laporan", "$el"]'>📊 Laporan</button>
+    <button class="cn-tab" data-action="setKeuanganTab" data-args='["akun", "$el"]'>🏦 Akun</button>
   </div>
 
   <!-- Finance 2.0 Sprint 2 Tahap 1: FAB tambah transaksi cepat.
@@ -409,10 +422,15 @@ window.location.reload();
   <div class="card">
     <div class="card-title">📋 Semua Transaksi <span class="u-flex u-gap6 u-aic"><button class="card-setting-btn" id="kfToggleBtn" data-action="toggleKeuFilter">🔍 Filter</button><button class="card-setting-btn" data-action="openQS" data-args='["qsKeuangan"]'>⚙️ Atur</button><span class="card-collapse-toggle" id="keuAllTxCard-chev" data-action="toggleCardCollapse" data-args='["keuAllTxCard","$event"]' aria-label="Buka/tutup bagian">▾</span></span></div>
     <div class="card-collapse-body" id="keuAllTxCard-cbody">
+    <div class="month-nav u-mb10">
+      <button class="month-nav-btn" data-action="changeTxListMonth" data-args='[-1]' aria-label="Bulan sebelumnya">‹</button>
+      <div class="month-nav-label" id="txListMonthLabel"></div>
+      <button class="month-nav-btn" data-action="changeTxListMonth" data-args='[1]' aria-label="Bulan berikutnya">›</button>
+    </div>
     <div class="filter-scroll u-mb10" id="txListPeriodeChips">
       <button class="chip-btn" data-action="setTxListPeriode" data-args='["hari", "$el"]'>Hari Ini</button>
       <button class="chip-btn" data-action="setTxListPeriode" data-args='["minggu", "$el"]'>Minggu Ini</button>
-      <button class="chip-btn active" data-action="setTxListPeriode" data-args='["bulan", "$el"]'>Bulan Ini</button>
+      <button class="chip-btn active" id="txListPeriodeChipBulan" data-action="setTxListPeriode" data-args='["bulan", "$el"]'>Bulan Ini</button>
       <button class="chip-btn" data-action="setTxListPeriode" data-args='["tahun", "$el"]'>Tahun Ini</button>
       <button class="chip-btn" data-action="setTxListPeriode" data-args='["selamanya", "$el"]'>Selamanya</button>
       <button class="chip-btn" data-action="setTxListPeriode" data-args='["custom", "$el"]'>Custom</button>
@@ -501,6 +519,12 @@ window.location.reload();
       </span>
     </div>
     <div class="card-collapse-body" id="keuBillCard-cbody">
+    <!-- S322: split tab Bayar (tagihan aktif/belum dibayar) & Lunas (sudah dibayar, dikelompokkan
+         per bulan di renderBillList/modules-render.js) -- dulu keduanya dicampur jadi 1 list. -->
+    <div class="type-toggle u-mb8">
+      <button class="type-btn at" id="billTabBayarBtn" data-action="setBillListTab" data-args='["aktif"]'>💳 Bayar</button>
+      <button class="type-btn" id="billTabLunasBtn" data-action="setBillListTab" data-args='["lunas"]'>✅ Lunas</button>
+    </div>
     <div class="month-nav u-mb8">
       <button class="month-nav-btn" data-action="changeBillStatMonth" data-args='[-1]' aria-label="Sebelumnya">‹</button>
       <div class="month-nav-label" id="keuBillMonthLabel">-</div>
@@ -521,6 +545,11 @@ window.location.reload();
         <select class="fs" id="billFilterKategori" onchange="applyBillFilter()">
           <option value="all">Semua Kategori</option>
         </select>
+        <div class="month-nav u-mb0" style="grid-column:1/-1">
+          <button class="month-nav-btn" data-action="navBillFilterMonth" data-args='[-1]' aria-label="Bulan sebelumnya">‹</button>
+          <div class="month-nav-label">Geser Bulan/Tahun Filter</div>
+          <button class="month-nav-btn" data-action="navBillFilterMonth" data-args='[1]' aria-label="Bulan berikutnya">›</button>
+        </div>
         <select class="fs" id="billFilterBulan" onchange="applyBillFilter()">
           <option value="all">Semua Bulan</option>
           <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
@@ -1006,8 +1035,18 @@ window.location.reload();
   <div class="grid3 u-mb8">
     <div class="stat-box clickable u-tac" style="padding:12px 8px" data-action="showFilteredTx" data-args='["laporan", "income", "\ud83d\udc9a Masuk"]'><div class="stat-val green u-fs14" id="lapIn">Rp 0</div><div class="stat-label">Masuk</div></div>
     <div class="stat-box clickable u-tac" style="padding:12px 8px" data-action="showFilteredTx" data-args='["laporan", "expense", "\ud83d\udd34 Keluar"]'><div class="stat-val red u-fs14" id="lapOut">Rp 0</div><div class="stat-label">Keluar</div></div>
-    <div class="stat-box clickable u-tac" style="padding:12px 8px" data-action="showFilteredTx" data-args='["laporan", "all", "\ud83d\udcb0 Bersih"]'><div class="stat-val purple u-fs14" id="lapNet">Rp 0</div><div class="stat-label">Bersih</div></div>
+    <!-- S336 (konsistensi pola Dashboard Hub): id wrapper "lapNetBox" +
+         badge "lapNetBadge" ditambahkan supaya renderLaporan() bisa toggle
+         varian --warn & badge "⚠️ Kurang" saat Bersih < 0, REUSE class CSS
+         yang sudah ada dari Dashboard Hub (.dashhub-analytics-badge),
+         bukan class baru — biar bahasa visualnya sama persis. -->
+    <div class="stat-box clickable u-tac" id="lapNetBox" style="padding:12px 8px;position:relative" data-action="showFilteredTx" data-args='["laporan", "all", "\ud83d\udcb0 Bersih"]'><span class="dashhub-analytics-badge u-dnone" id="lapNetBadge" style="position:absolute;top:6px;right:6px">⚠️ Kurang</span><div class="stat-val purple u-fs14" id="lapNet">Rp 0</div><div class="stat-label">Bersih</div></div>
   </div>
+  <!-- S336: progress bar Masuk vs Keluar, REUSE PENUH class
+       .dashhub-analytics-bar/-inc/-exp (Dashboard Hub, styles.css) — 0 CSS
+       baru, disembunyikan (u-dnone) kalau belum ada transaksi (total=0),
+       lebar tiap batang diisi renderLaporan() (modules-render.js). -->
+  <div class="dashhub-analytics-bar u-dnone u-mb8" id="lapIncExpBar"><div class="dashhub-analytics-bar-inc" id="lapIncExpBarInc" style="width:0%"></div><div class="dashhub-analytics-bar-exp" id="lapIncExpBarExp" style="width:0%"></div></div>
   <div class="card u-mb12">
     <div class="card-title">📊 Grafik 6 Bulan <span class="card-collapse-toggle" id="lapGrafikCard-chev" data-action="toggleCardCollapse" data-args='["lapGrafikCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
     <div class="card-collapse-body" id="lapGrafikCard-cbody">
@@ -1058,6 +1097,33 @@ window.location.reload();
   </div>
   </div>
   <!-- /TRANSAKSI & EXPORT -->
+  </div>
+
+  <!-- AKUN -->
+  <div id="keuanganTab-akun" class="u-dnone">
+  <!-- AKUN / METODE PEMBAYARAN -->
+  <div class="card">
+    <div class="card-title">🏦 Akun & Metode Pembayaran</div>
+    <div id="accGridTotalWrap" style="display:flex;justify-content:space-between;align-items:center;background:var(--surface3);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+      <div><div style="font-size:13px;font-weight:600">Total Saldo Akun</div><div class="u-fs12t2" id="accGridTotalSub">— akun dihitung</div></div>
+      <div class="stat-val" id="accGridTotal" style="font-size:17px">Rp 0</div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label class="fl">Filter Kepemilikan</label>
+      <select class="fs" id="accOwnFilter" onchange="renderAccGrid()">
+        <option value="ALL">Semua</option>
+        <option value="SELF">SELF</option>
+        <option value="INVESTOR">INVESTOR</option>
+        <option value="CUSTOMER">CUSTOMER</option>
+        <option value="FAMILY">FAMILY</option>
+        <option value="THIRD_PARTY">THIRD_PARTY</option>
+      </select>
+    </div>
+    <div class="acc-grid" id="accGrid"></div>
+    <button class="btn btn-primary btn-full btn-sm" data-action="openAccModal" aria-label="Edit/Buka">+ Tambah Akun</button>
+  </div>
+
+  </div>
+  <!-- /AKUN -->
   </div>
 </div>
 
@@ -1237,6 +1303,14 @@ window.location.reload();
         <div id="stockRekoWidgetList"></div>
       </div>
     </div>
+    <div class="card" id="weightBulkWidgetCard" style="display:none">
+      <div class="card-title">⚖️ Isi Berat Massal <span class="card-collapse-toggle" id="weightBulkWidgetCard-chev" data-action="toggleCardCollapse" data-args='["weightBulkWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
+      <div class="card-collapse-body" id="weightBulkWidgetCard-cbody">
+        <div class="u-fs12 u-t2 u-mb8">Produk yang berat per unit-nya belum diisi (Etalase) — isi angkanya per baris (kg) lalu tap ✅ satu-satu, atau isi beberapa baris sekaligus lalu tap "Simpan Semua" di bawah. Boleh dicicil, tidak perlu isi semuanya sekaligus.</div>
+        <button class="btn btn-primary btn-full btn-sm u-mb8" id="weightBulkWidgetApplyAll" data-action="WeightBulkWidget.applyBulk" aria-label="Simpan Semua Berat">⚖️ Simpan Semua yang Sudah Diisi (<span id="weightBulkWidgetCount">0</span> produk)</button>
+        <div id="weightBulkWidgetList"></div>
+      </div>
+    </div>
     <div class="card"><div class="card-title">📦 Etalase Produk</div><div id="productList" class="shop-product-grid"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div></div></div>
     <div class="card">
       <div class="card-title">🏷️ Kategori Produk</div>
@@ -1344,9 +1418,19 @@ window.location.reload();
       <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapOmzet">Rp 0</div><div class="stat-label">Omzet</div></div>
     </div>
     <div class="grid2">
-      <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapUntung">Rp 0</div><div class="stat-label">Untung</div></div>
+      <!-- S337 (konsistensi pola badge/progress-bar Dashboard Hub & Laporan
+           Keuangan): id wrapper "lapUntungBox" + badge "lapUntungBadge",
+           REUSE PENUH class .dashhub-analytics-badge, ditampilkan saat
+           Untung<0 (rugi). -->
+      <div class="stat-box u-tac" id="lapUntungBox" style="position:relative"><span class="dashhub-analytics-badge u-dnone" id="lapUntungBadge" style="position:absolute;top:6px;right:6px">⚠️ Rugi</span><div class="stat-val u-fs14" id="lapUntung">Rp 0</div><div class="stat-label">Untung</div></div>
       <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapMargin">0%</div><div class="stat-label">Margin</div></div>
     </div>
+    <!-- S337: progress bar Modal vs Untung (proporsi dari Omzet), REUSE
+         PENUH class .dashhub-analytics-bar/-inc/-exp — hijau (-inc) =
+         Untung, merah (-exp) = Modal. Disembunyikan kalau Omzet<=0 ATAU
+         Untung<0 (rugi; persentase tidak relevan ditampilkan sbg bar saat
+         itu, badge "Rugi" di atas sudah cukup jadi penanda). -->
+    <div class="dashhub-analytics-bar u-dnone u-mb8" id="lapOmzetBar"><div class="dashhub-analytics-bar-inc" id="lapOmzetBarUntung" style="width:0%"></div><div class="dashhub-analytics-bar-exp" id="lapOmzetBarModal" style="width:0%"></div></div>
 
     <div class="card u-mt12">
       <div class="card-title">📈 Tren Penjualan 6 Bulan</div>
@@ -1820,6 +1904,8 @@ window.location.reload();
         <div class="div"></div>
         <button class="btn btn-primary btn-full btn-sm" data-action="openSparepartModal" aria-label="Edit/Buka">+ Tambah Kategori Sparepart</button>
         <button class="btn btn-ghost btn-full btn-sm u-mt8" data-action="syncSparepartFromCatalog">🔄 Sinkron dari Katalog Suku Cadang</button>
+        <button class="btn btn-ghost btn-full btn-sm u-mt8" data-action="openSparepartCsvImportModal">📊 Import CSV (Kategori)</button>
+        <button class="btn btn-ghost btn-full btn-sm u-mt8" data-action="exportSparepartCategoryCSV">📤 Export CSV (Kategori)</button>
         <div style="font-size:11px;color:var(--text2);margin-top:6px;line-height:1.5">💡 Menarik part yang sudah ditandai kompatibel dengan kendaraan ini di 📦 Katalog Suku Cadang, lalu otomatis buat Kategori &amp; Stok Sparepart-nya. Interval servis diisi dari referensi Torsi (🔩) kalau tersedia — bisa diedit lagi kapan saja.</div>
       </div>
     </details>
@@ -1828,9 +1914,11 @@ window.location.reload();
       <summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">📦 Stok Sparepart</span></summary>
       <div class="summary-body-pad">
         <div class="u-hint10">Kelola stok fisik sparepart di gudang/bengkel. Setiap item bisa dikaitkan ke kategori servis di atas supaya kodenya konsisten. Stok di bawah minimum akan ditandai merah.</div>
+        <div class="fg u-mb10"><input type="text" class="fi" id="stockSearchInput" placeholder="🔍 Cari nama part / kode / kategori / catatan..." autocomplete="off" oninput="Sparepart.onStockSearchInput(this.value)"></div>
         <div id="stockList"></div>
         <div class="div"></div>
         <button class="btn btn-primary btn-full btn-sm" data-action="openStockModal" aria-label="Edit/Buka">+ Tambah Stok Sparepart</button>
+        <button class="btn btn-ghost btn-full btn-sm u-mt8" style="color:var(--accent2)" data-action="Sparepart.removeAllStockConfirm">🗑 Hapus Semua</button>
       </div>
     </details>
     <details class="card u-p0">
@@ -2508,25 +2596,12 @@ window.location.reload();
 <div class="stg-tabpanel u-dnone" id="stgGroup2" data-tab="keuangan">
   <div class="stg-group-body-inner">
 
-  <!-- AKUN / METODE PEMBAYARAN -->
+  <!-- AKUN / METODE PEMBAYARAN: dipindah ke tab 🏦 Akun (page-keuangan) supaya lebih
+       gampang diakses langsung dari Keuangan, bukan terkubur di Pengaturan. -->
   <div class="card">
     <div class="card-title">🏦 Akun & Metode Pembayaran</div>
-    <div id="accGridTotalWrap" style="display:flex;justify-content:space-between;align-items:center;background:var(--surface3);border-radius:12px;padding:12px 14px;margin-bottom:12px">
-      <div><div style="font-size:13px;font-weight:600">Total Saldo Akun</div><div class="u-fs12t2" id="accGridTotalSub">— akun dihitung</div></div>
-      <div class="stat-val" id="accGridTotal" style="font-size:17px">Rp 0</div>
-    </div>
-    <div class="fg" style="margin-bottom:10px"><label class="fl">Filter Kepemilikan</label>
-      <select class="fs" id="accOwnFilter" onchange="renderAccGrid()">
-        <option value="ALL">Semua</option>
-        <option value="SELF">SELF</option>
-        <option value="INVESTOR">INVESTOR</option>
-        <option value="CUSTOMER">CUSTOMER</option>
-        <option value="FAMILY">FAMILY</option>
-        <option value="THIRD_PARTY">THIRD_PARTY</option>
-      </select>
-    </div>
-    <div class="acc-grid" id="accGrid"></div>
-    <button class="btn btn-primary btn-full btn-sm" data-action="openAccModal" aria-label="Edit/Buka">+ Tambah Akun</button>
+    <div class="u-hint10">Kelola daftar akun & saldo sekarang ada langsung di tab Keuangan.</div>
+    <button class="btn btn-ghost btn-full btn-sm" data-action="goToKeuanganAkunTab">🏦 Akun → Keuangan</button>
   </div>
 
   <!-- KATEGORI, IMPORT, SPAREPART: dipindah ke halaman fitur masing-masing biar Pengaturan gak kepanjangan -->
@@ -2974,6 +3049,23 @@ window.location.reload();
     <div class="page-title">🧭 Dashboard Hub</div>
     <button class="qs-btn" data-action="backToSettingsPage" aria-label="Kembali ke Pengaturan">←</button>
   </div>
+  <!-- SEARCH (dipindah ke atas, tepat di bawah judul halaman -- rekomendasi
+       audit tampilan: pencarian di posisi paling atas supaya akses cepat
+       tanpa perlu scroll melewati Hero/Quick Actions/Analytics/Ownership
+       Summary dulu. Markup & id/DashboardHubSearch.render() TIDAK diubah
+       sama sekali, murni dipindah posisinya di DOM -- section
+       dashHubSummaryGrid/dashHubAnalyticsRow/dashHubFavoritSection/dst yang
+       dikelola DashboardHub.setSectionTab() tidak tersentuh krn search wrap
+       ini bukan salah satu dari section tsb. -->
+  <div class="dashhub-search-wrap">
+    <input type="text" class="fi" id="dashHubSearchInput" placeholder="🔍 Cari fitur/menu... (mis. sewa kios, kasir, backup)" oninput="DashboardHubSearch.render(this.value)" aria-label="Cari fitur">
+    <div class="dashhub-search-results u-dnone" id="dashHubSearchResults"></div>
+    <!-- Sesi 159: chip "Jelajahi Semua Fitur" dihapus — 100% redundan dgn
+         tab "Fitur" (sama-sama nuju #dashHubMainGridCard, cuma beda entry
+         point). DashboardHub.openAllFeatures() di JS sengaja TIDAK dihapus
+         (dead code kecil, 0 risiko), cuma pemanggil satu-satunya (tombol
+         ini) yang dicabut. -->
+  </div>
   <!-- HERO CARD (Sprint 1 Tahap 2 — Dashboard 2.0, lihat HERO-CARD.md &
        DASHBOARD-2.0-PLAN.md §11 "Mockup ASCII"). Murni tampilan ringkasan
        dari data yang SUDAH ADA (D.profile.nama, totalSaldoAkun(), transaksi
@@ -3059,15 +3151,6 @@ window.location.reload();
   <div class="card u-mb12" id="dashHubOwnershipSummaryCard">
     <div class="card-title">🏷️ Ownership Summary</div>
     <div id="dashHubOwnershipSummaryList"></div>
-  </div>
-  <div class="dashhub-search-wrap">
-    <input type="text" class="fi" id="dashHubSearchInput" placeholder="🔍 Cari fitur/menu... (mis. sewa kios, kasir, backup)" oninput="DashboardHubSearch.render(this.value)" aria-label="Cari fitur">
-    <div class="dashhub-search-results u-dnone" id="dashHubSearchResults"></div>
-    <!-- Sesi 159: chip "Jelajahi Semua Fitur" dihapus — 100% redundan dgn
-         tab "Fitur" (sama-sama nuju #dashHubMainGridCard, cuma beda entry
-         point). DashboardHub.openAllFeatures() di JS sengaja TIDAK dihapus
-         (dead code kecil, 0 risiko), cuma pemanggil satu-satunya (tombol
-         ini) yang dicabut. -->
   </div>
   <!-- FAVORIT (Tahap 3, ADR-001). Diisi oleh DashboardHubFavoritView.render()
        (dipanggil dari DashboardHub.render() di dashboard-hub.js). Sengaja
@@ -3750,23 +3833,24 @@ window.location.reload();
 <script>document.write(MODAL_HTML[69]);</script><!-- modal:goldZakatModal -->
 <script>document.write(MODAL_HTML[70]);</script><!-- modal:importShopExcelModal -->
 <script>document.write(MODAL_HTML[71]);</script><!-- modal:shopCsvImportModal -->
-<script>document.write(MODAL_HTML[72]);</script><!-- modal:shopPdfImportModal -->
-<script>document.write(MODAL_HTML[73]);</script><!-- modal:shopScanModal -->
-<script>document.write(MODAL_HTML[74]);</script><!-- modal:shopJsonModal -->
-<script>document.write(MODAL_HTML[75]);</script><!-- modal:mergeProductModal -->
-<script>document.write(MODAL_HTML[76]);</script><!-- modal:billMultiScanModal -->
-<script>document.write(MODAL_HTML[77]);</script><!-- modal:universalOcrModal -->
-<script>document.write(MODAL_HTML[78]);</script><!-- modal:fuelBarCorrectionModal -->
-<script>document.write(MODAL_HTML[79]);</script><!-- modal:fuelTankProfileModal -->
-<script>document.write(MODAL_HTML[80]);</script><!-- modal:catalogModal -->
-<script>document.write(MODAL_HTML[81]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[82]);</script><!-- modal:vehCatWebImportModal -->
-<script>document.write(MODAL_HTML[83]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[84]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[85]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[86]);</script><!-- modal:inventoryTransferModal (S244) -->
-<script>document.write(MODAL_HTML[87]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[72]);</script><!-- modal:sparepartCsvImportModal -->
+<script>document.write(MODAL_HTML[73]);</script><!-- modal:shopPdfImportModal -->
+<script>document.write(MODAL_HTML[74]);</script><!-- modal:shopScanModal -->
+<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopJsonModal -->
+<script>document.write(MODAL_HTML[76]);</script><!-- modal:mergeProductModal -->
+<script>document.write(MODAL_HTML[77]);</script><!-- modal:billMultiScanModal -->
+<script>document.write(MODAL_HTML[78]);</script><!-- modal:universalOcrModal -->
+<script>document.write(MODAL_HTML[79]);</script><!-- modal:fuelBarCorrectionModal -->
+<script>document.write(MODAL_HTML[80]);</script><!-- modal:fuelTankProfileModal -->
+<script>document.write(MODAL_HTML[81]);</script><!-- modal:catalogModal -->
+<script>document.write(MODAL_HTML[82]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[83]);</script><!-- modal:vehCatWebImportModal -->
+<script>document.write(MODAL_HTML[84]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[85]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[86]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[87]);</script><!-- modal:inventoryTransferModal (S244) -->
+<script>document.write(MODAL_HTML[88]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
 
-<script src="app-bundle-b.min.js?v=887" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=923" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

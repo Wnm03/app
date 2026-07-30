@@ -161,6 +161,11 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .stat-box { background: var(--surface2); border-radius: var(--r-md); padding: 14px 12px; border: 1px solid var(--border); }
+/* S336: reuse token yang PERSIS sama dgn .dashhub-analytics-card--warn
+   (Dashboard Hub) supaya "bahasa visual" kartu peringatan seragam di
+   seluruh app, bukan cuma di 1 halaman — dipakai di kartu "Bersih" pada
+   Laporan Keuangan (#lapNetBox) saat Bersih<0. */
+.stat-box--warn { background: var(--accent2-soft); border-color: var(--accent2); }
 .stat-box.clickable, .cobek-stat.clickable, .bbm-stat.clickable, .budget-sum-box.clickable, .budget-item.clickable { cursor:pointer; transition:transform var(--dur-base),box-shadow var(--dur-base); }
 .budget-item.clickable:active { transform:scale(0.98); }
 .stat-box.clickable:active, .cobek-stat.clickable:active, .bbm-stat.clickable:active, .budget-sum-box.clickable:active { transform:scale(0.96); }
@@ -298,6 +303,12 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .u-cacc4 { color:var(--accent4); }
 .u-lh14 { line-height:1.4; }
 .u-lh15 { line-height:1.5; }
+/* S337 — FeatureInsightUI.renderInto() (modules/ai/feature-insights.js),
+   ROADMAP-v1.1.md #3 / KNOWN-ISSUES.md §4.1 "widget AI". Flex row supaya
+   ikon SVG 14px tetap sejajar baris pertama walau teks wrap multi-baris. */
+.fi-insight-row { display:flex; align-items:flex-start; gap:6px; }
+.fi-insight-icon { flex-shrink:0; line-height:1; margin-top:1px; }
+.fi-insight-icon svg { display:block; }
 .u-lh16 { line-height:1.6; }
 .u-flex { display:flex; }
 .u-jcb { justify-content:space-between; }
@@ -1070,6 +1081,16 @@ textarea.fi { resize: vertical; min-height: 80px; }
    file ini. Bukan warna/token baru. */
 .dashhub-analytics-card--warn{background:var(--accent2-soft);border-color:var(--accent2);}
 .dashhub-analytics-sub{font-size:var(--fs-label);color:var(--accent2);margin-top:4px;line-height:1.4;}
+/* UX (audit tampilan): badge kecil "⚠️ Kurang" di kartu Saldo Bersih saat
+   negatif + progress bar 2-warna di kartu "Pemasukan vs Pengeluaran" --
+   murni CSS baru, scoped ke class ".dashhub-analytics-badge"/".dashhub-analytics-bar*",
+   semua token (--r-*/--accent2/warna hijau-merah) reuse yang sudah ada di
+   file ini, tidak ada warna/token baru. */
+.dashhub-analytics-label-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.dashhub-analytics-badge{font-size:9.5px;font-weight:700;color:#fff;background:var(--accent2);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;flex-shrink:0;}
+.dashhub-analytics-bar{display:flex;height:6px;border-radius:var(--r-full);overflow:hidden;margin-top:8px;background:var(--surface3);}
+.dashhub-analytics-bar-inc{background:var(--accent3);height:100%;}
+.dashhub-analytics-bar-exp{background:var(--accent2);height:100%;}
 
 /* FINANCE DASHBOARD & AI HOOK FOUNDATION (Sesi 75, Batch 6). Grid kartu di
    dalam #findashWrap, tepat sama pola dgn .dashhub-summary-grid/
