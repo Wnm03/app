@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='fix-onboard-flash-sw-update';
+const MODULE_RENDER_VERSION='s272-fix-edit-cicilan-redirect-to-full-form';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -317,9 +317,20 @@ combined=combined.filter(b=>{
 if(billFilterStatus==='aktif'&&b._lunas)return false;
 if(billFilterStatus==='lunas'&&!b._lunas)return false;
 if(billFilterKategori!=='all'&&b.category!==billFilterKategori)return false;
+// BUGFIX (cicilan/tagihan berulang "hilang" pas geser ‹bulan berikutnya› di kartu Tagihan,
+// Cicilan & Langganan / changeBillStatMonth) — lihat komentar lengkap di
+// getBillActiveDateForFilter() (tagihan-kalender.js). Tagihan yg sudah Lunas/diarsip (_lunas)
+// TETAP exact-match ke tanggal historis asli (completedAt/tanggal bayar beneran) -- itu event
+// yang sudah pasti terjadi, bukan proyeksi.
+if(!b._lunas){
+const eff=getBillActiveDateForFilter(b,billFilterBulan,billFilterTahun,b._dateForFilter);
+if(eff===null)return false;
+b._dateForFilter=eff;
+} else {
 const d=new Date(b._dateForFilter);
 if(billFilterBulan!=='all'&&(isNaN(d)||d.getMonth()!==parseInt(billFilterBulan)))return false;
 if(billFilterTahun!=='all'&&(isNaN(d)||d.getFullYear()!==parseInt(billFilterTahun)))return false;
+}
 return true;
 });
 // "aktif"/"lunas" sekarang jadi 2 tampilan UTAMA lewat tab Bayar/Lunas (bukan lagi filter
