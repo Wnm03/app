@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-07-30T12:08:18.887Z
-Total file source: 278 · Total identifier global: 1926
+Terakhir digenerate: 2026-07-30T23:13:36.747Z
+Total file source: 278 · Total identifier global: 1929
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -82,12 +82,12 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 59 | `modules/finance/tx-transfer.js` | 34 | logika modal "⇄ Transfer Antar Akun" (transferModal). Dipindah ke modules/finance/tx-transfer.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 60 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 61 | `modules/finance/tx-target.js` | 69 | domain "Target Tabungan" (modal tambah target, deteksi Dana Dipindah ke modules/finance/tx-target.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 62 | `modules/finance/tx-list-cashflow.js` | 480 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 62 | `modules/finance/tx-list-cashflow.js` | 507 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 63 | `modules/finance/transaksi.js` | 971 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 64 | `modules/shared/profil-pengaturan.js` | 98 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 65 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 66 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
-| 67 | `modules/finance/tagihan-kalender.js` | 696 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 67 | `modules/finance/tagihan-kalender.js` | 848 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 68 | `modules/shared/backup-restore.js` | 811 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 69 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
 | 70 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
@@ -1202,6 +1202,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `isAccOwnershipSelf` | `modules/finance/akun.js` |
 | `isAssetOwnershipSelf` | `modules/asset/aset.js` |
 | `isBensinSubName` | `modules/finance/transaksi.js` |
+| `isBillTypeLocked` | `modules/finance/tagihan-kalender.js` |
 | `isCobekOwnershipSelf` | `modules/shop/cobek-order.js` |
 | `isDashCardOn` | `modules/shared/modules-render.js` |
 | `isDebtOwnershipSelf` | `modules/finance/piutang-utang.js` |
@@ -1210,6 +1211,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `isHoldingOwnershipSelf` | `modules/asset/investasi.js` |
 | `isiPPhDariTransaksi` | `pajak-aset-ui-wrappers.js` |
 | `isKendaraanCatName` | `modules/finance/transaksi.js` |
+| `isLatestBillPaymentTx` | `modules/finance/tagihan-kalender.js` |
 | `isNoSpendDay` | `pajak-aset-ui-wrappers.js` |
 | `isPiutangOwnershipSelf` | `modules/finance/piutang-utang.js` |
 | `isProductOwnershipSelf` | `modules/shop/cobek-etalase.js` |
@@ -1684,6 +1686,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `RETIRE_NAV_TARGETS` | `modules/finance/retirement-planner-presenter.js` |
 | `RetirementPlannerAPI` | `modules/finance/retirement-planner-api.js` |
 | `RetirementPlannerPresenter` | `modules/finance/retirement-planner-presenter.js` |
+| `revertBillFromDeletedTx` | `modules/finance/tagihan-kalender.js` |
 | `revertStockPurchase` | `modules/finance/tx-stok-sparepart.js` |
 | `REVIEW_OUTPUT_FIELD` | `lifeos/adapters/review-adapter.js` |
 | `REVIEW_SOURCE_BUILDERS` | `lifeos/adapters/review-adapter.js` |
