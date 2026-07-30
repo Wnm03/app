@@ -306,7 +306,7 @@ const today=new Date();today.setHours(0,0,0,0);
 // ada & tetap tampil di tab Bayar seperti biasa (lihat getBillPaidThisPeriodInfo, dipisah
 // dari D.billsArchive/_lunas murni karena tagihannya sendiri masih aktif, belum benar2
 // selesai/tidak berulang lagi).
-const paidPeriodEntries=D.bills.map(b=>({b,info:getBillPaidThisPeriodInfo(b)})).filter(x=>x.info).map(({b,info})=>({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]}));
+const paidPeriodEntries=D.bills.map(b=>({b,info:getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun)})).filter(x=>x.info).map(({b,info})=>({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]}));
 let combined=[
 ...D.bills.map(b=>({...b,_lunas:false,_dateForFilter:b.nextDue})),
 ...(D.billsArchive||[]).map(b=>({...b,_lunas:true,_dateForFilter:b.completedAt||b.nextDue})),
@@ -424,7 +424,7 @@ const isArchived=b._lunas&&!b._paidPeriodOnly;
 // Badge kecil "sudah dibayar bulan ini" KHUSUS kartu di tab Bayar (entri asli, bukan
 // duplikat _paidPeriodOnly) -- supaya user langsung lihat status tanpa perlu pindah ke tab
 // Lunas (lanjutan ringkas dari fitur _paidPeriodOnly di atas).
-const paidThisPeriod=(!isArchived&&!b._paidPeriodOnly)?getBillPaidThisPeriodInfo(b):null;
+const paidThisPeriod=(!isArchived&&!b._paidPeriodOnly)?getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun):null;
 const paidThisPeriodChip=paidThisPeriod?`<span class="acc-chip" style="color:var(--accent3)">✅ Sudah dibayar bulan ini</span>`:'';
 const statusBadge=b._paidPeriodOnly?`<span class="bill-due-badge bill-due-ok">✅ Dibayar</span>`:(b._lunas?`<span class="bill-due-badge bill-due-ok">✅ Lunas</span>`:`<span class="bill-due-badge ${urgClass}">${diff<0?'Lewat':diff===0?'Hari ini':diff+' hari'}</span>`);
 const anomaly=isArchived?null:getBillAnomalyInfo(b.id,b.amount);
