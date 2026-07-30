@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='sesi317-scanner-gallery-guard-fix';
+const MODULE_RENDER_VERSION='s345-fix-pin-double-reload';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -290,11 +290,27 @@ function renderBillList(){
 const targets=['billList','billListKeu'].map(id=>document.getElementById(id)).filter(Boolean);
 if(!targets.length)return;
 populateBillFilterOptions();
+// S322: sinkronkan dropdown status & tombol tab Bayar/Lunas ke state billFilterStatus tiap
+// render (dipanggil dari mana saja: ganti tab, ganti halaman, dsb) supaya UI tidak pernah
+// "nyasar" ke kombinasi kontradiktif (mis. tab Bayar aktif tapi dropdown masih di Lunas).
+const billStatusSelEl=document.getElementById('billFilterStatus');
+if(billStatusSelEl)billStatusSelEl.value=billFilterStatus;
+const billTabBayarEl=document.getElementById('billTabBayarBtn'), billTabLunasEl=document.getElementById('billTabLunasBtn');
+if(billTabBayarEl)billTabBayarEl.className='type-btn'+(billFilterStatus==='aktif'?' at':'');
+if(billTabLunasEl)billTabLunasEl.className='type-btn'+(billFilterStatus==='lunas'?' ai':'');
 const icons={tagihan:'🧾',cicilan:'💳',langganan:'🔁'};
 const today=new Date();today.setHours(0,0,0,0);
+// Lanjutan S322: tagihan/cicilan AKTIF yang sudah dibayar utk periode berjalan (baik pas
+// tanggal maupun dibayar di muka/"bayar bulan depan") ditambahkan SEBAGAI ENTRI KEDUA
+// (duplikat, _paidPeriodOnly:true) khusus tab Lunas -- entri ASLI-nya (_lunas:false) TETAP
+// ada & tetap tampil di tab Bayar seperti biasa (lihat getBillPaidThisPeriodInfo, dipisah
+// dari D.billsArchive/_lunas murni karena tagihannya sendiri masih aktif, belum benar2
+// selesai/tidak berulang lagi).
+const paidPeriodEntries=D.bills.map(b=>({b,info:getBillPaidThisPeriodInfo(b)})).filter(x=>x.info).map(({b,info})=>({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]}));
 let combined=[
 ...D.bills.map(b=>({...b,_lunas:false,_dateForFilter:b.nextDue})),
-...(D.billsArchive||[]).map(b=>({...b,_lunas:true,_dateForFilter:b.completedAt||b.nextDue}))
+...(D.billsArchive||[]).map(b=>({...b,_lunas:true,_dateForFilter:b.completedAt||b.nextDue})),
+...paidPeriodEntries
 ];
 const totalCount=combined.length;
 combined=combined.filter(b=>{
@@ -306,7 +322,10 @@ if(billFilterBulan!=='all'&&(isNaN(d)||d.getMonth()!==parseInt(billFilterBulan))
 if(billFilterTahun!=='all'&&(isNaN(d)||d.getFullYear()!==parseInt(billFilterTahun)))return false;
 return true;
 });
-const isFiltering=billFilterStatus!=='all'||billFilterKategori!=='all'||billFilterBulan!=='all'||billFilterTahun!=='all';
+// "aktif"/"lunas" sekarang jadi 2 tampilan UTAMA lewat tab Bayar/Lunas (bukan lagi filter
+// tambahan) -- jadi cuma kategori/bulan/tahun, atau memilih "Semua Status" lewat dropdown
+// lanjutan, yang dianggap "sedang memfilter" (S322).
+const isFiltering=billFilterStatus==='all'||billFilterKategori!=='all'||billFilterBulan!=='all'||billFilterTahun!=='all';
 const countEl=document.getElementById('billFilterCount');
 const resetBtn=document.getElementById('billFilterResetBtn');
 if(countEl)countEl.textContent=isFiltering?`Menampilkan ${combined.length} dari ${totalCount} tagihan`:'';
@@ -324,7 +343,40 @@ const sorted=combined.sort((a,b)=>{
 if(a._lunas!==b._lunas)return a._lunas?1:-1;
 return new Date(a._dateForFilter)-new Date(b._dateForFilter);
 });
-const html=sorted.map(b=>{
+// S322 split tab Bayar/Lunas: kalau SEMUA item yang lolos filter itu lunas (billListTab==='lunas'
+// atau filter status manual diset 'lunas'), kelompokkan per bulan (terbaru dulu) + subtotal per
+// bulan -- jauh lebih gampang ditelusuri drpd list panjang tak berujung yg cuma diurut per tanggal
+// (ini juga akar dari bug "tombol Edit lunas error", karena sebelumnya lunas & aktif dicampur jadi
+// satu list tanpa pembeda visual selain opacity).
+const allLunas=combined.length>0&&combined.every(b=>b._lunas);
+let html;
+if(allLunas){
+const sortedLunas=[...combined].sort((a,b)=>new Date(b._dateForFilter)-new Date(a._dateForFilter));
+const groups=[];
+let curKey=null,curGroup=null;
+sortedLunas.forEach(b=>{
+const d=new Date(b._dateForFilter);
+const key=isNaN(d)?'Tanggal tidak diketahui':(MONTHS_FULL[d.getMonth()]+' '+d.getFullYear());
+if(key!==curKey){curKey=key;curGroup={label:key,items:[]};groups.push(curGroup);}
+curGroup.items.push(b);
+});
+html=groups.map(g=>{
+const groupTotal=g.items.reduce((s,b)=>s+(b.amount||0),0);
+return `<div class="u-flex u-jcb u-aic u-mt10 u-mb4" style="padding:0 2px">
+      <span class="u-fs12 u-fw700 u-t2" style="text-transform:uppercase;letter-spacing:.5px">${g.label}</span>
+      <span class="u-fs12 u-fw700 u-cacc3">${fmt(groupTotal)}</span>
+    </div>`+g.items.map(b=>renderBillItemHtml(b,today,icons)).join('');
+}).join('');
+} else {
+html=sorted.map(b=>renderBillItemHtml(b,today,icons)).join('');
+}
+targets.forEach(el=>el.innerHTML=html);
+updateBillStatGrid('keuBill');
+}
+// renderBillItemHtml — template 1 kartu tagihan di renderBillList(), dipisah jadi fungsi sendiri
+// (S322) supaya bisa dipakai ulang baik utk list flat (tab Bayar/aktif) maupun list terkelompok
+// per-bulan (tab Lunas) tanpa duplikasi template gede.
+function renderBillItemHtml(b,today,icons){
 const due=new Date(b._dateForFilter);
 const diff=Math.ceil((due-today)/(1000*60*60*24));
 let cicilanBar='';
@@ -343,23 +395,36 @@ cicilanBar=`<div class="u-mt4"><div class="u-flex u-jcb u-fs12 u-t2 u-mb2"><span
 // sisaTenor TETAP pakai .acc-chip abu-abu netral (SUDAH begitu dari awal) — jadi sekarang ada
 // urutan jelas: kategori (netral, kecil) vs urgensi (warna, langsung nangkep tanpa baca teks).
 const urgClass=diff<=3?'bill-due-urgent':(diff<=7?'bill-due-soon':'bill-due-far');
-const statusBadge=b._lunas?`<span class="bill-due-badge bill-due-ok">✅ Lunas</span>`:`<span class="bill-due-badge ${urgClass}">${diff<0?'Lewat':diff===0?'Hari ini':diff+' hari'}</span>`;
-const anomaly=b._lunas?null:getBillAnomalyInfo(b.id,b.amount);
+// _paidPeriodOnly (lanjutan S322): entri duplikat "sudah dibayar periode ini" milik tagihan
+// yang MASIH AKTIF (bukan D.billsArchive) -- badge & label dibedakan dari "Lunas" murni
+// (yang berarti tagihan itu sendiri sudah 100% selesai) supaya tidak menyesatkan user.
+const isArchived=b._lunas&&!b._paidPeriodOnly;
+// Badge kecil "sudah dibayar bulan ini" KHUSUS kartu di tab Bayar (entri asli, bukan
+// duplikat _paidPeriodOnly) -- supaya user langsung lihat status tanpa perlu pindah ke tab
+// Lunas (lanjutan ringkas dari fitur _paidPeriodOnly di atas).
+const paidThisPeriod=(!isArchived&&!b._paidPeriodOnly)?getBillPaidThisPeriodInfo(b):null;
+const paidThisPeriodChip=paidThisPeriod?`<span class="acc-chip" style="color:var(--accent3)">✅ Sudah dibayar bulan ini</span>`:'';
+const statusBadge=b._paidPeriodOnly?`<span class="bill-due-badge bill-due-ok">✅ Dibayar</span>`:(b._lunas?`<span class="bill-due-badge bill-due-ok">✅ Lunas</span>`:`<span class="bill-due-badge ${urgClass}">${diff<0?'Lewat':diff===0?'Hari ini':diff+' hari'}</span>`);
+const anomaly=isArchived?null:getBillAnomalyInfo(b.id,b.amount);
 const anomalyNote=anomaly?`<div class="u-fs11 u-mt2 u-fw700" style="color:var(--accent4)">⚠️ Naik ${anomaly.pctChange}% dari rata-rata ${anomaly.count}x terakhir (${fmt(anomaly.avgPrev)}) — cek lagi sebelum bayar</div>`:'';
 const hasDetail=!!(cicilanBar||anomalyNote);
 const chevron=hasDetail?`<span class="bill-card-chevron" data-stop="1" data-action="toggleBillCardDetail" data-args='["$el"]' title="Detail" aria-label="Tampilkan detail">▾</span>`:'';
-const actionBtns=b._lunas?
+const actionBtns=isArchived?
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,true]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
+(b._paidPeriodOnly?
+`<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
+       <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
+       <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
 `<button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
-       <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`;
-return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" style="flex-direction:column;align-items:stretch;gap:8px;${b._lunas?'opacity:0.75':''}">
+       <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`);
+return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" style="flex-direction:column;align-items:stretch;gap:8px;${isArchived?'opacity:0.75':''}">
       <div class="u-flex u-aic u-gap10">
         <div class="tx-icon u-bgaccsoft">${icons[b.kind]||'🔔'}</div>
         <div class="tx-info">
-          <div class="tx-name">${escapeHtml(b.name)} ${b.category?`<span class="acc-chip">${b.category}</span>`:''} ${b.subcategory?`<span class="acc-chip">${b.subcategory}</span>`:''} ${b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''} ${!b._lunas&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''}</div>
-          <div class="tx-meta">${b._lunas?'Lunas':'Jatuh tempo'} ${due.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})} · ${b.freq}</div>
+          <div class="tx-name">${escapeHtml(b.name)} ${b.category?`<span class="acc-chip">${b.category}</span>`:''} ${b.subcategory?`<span class="acc-chip">${b.subcategory}</span>`:''} ${b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''} ${!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''} ${paidThisPeriodChip}</div>
+          <div class="tx-meta">${b._paidPeriodOnly?'Sudah dibayar':(b._lunas?'Lunas':'Jatuh tempo')} ${due.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})} · ${b.freq}</div>
         </div>
         <div class="u-flex u-fdcol u-gap4" style="align-items:flex-end">
           <div class="tx-amount red">${fmt(b.amount)}</div>
@@ -372,9 +437,6 @@ return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="$
         ${actionBtns}
       </div>
     </div>`;
-}).join('');
-targets.forEach(el=>el.innerHTML=html);
-updateBillStatGrid('keuBill');
 }
 
 function renderDashCashflowForecast(){
@@ -975,6 +1037,13 @@ cardEl.classList.add('u-dnone');cardEl.style.display='none';
 }
 function renderKeuangan(){
 document.getElementById('monthLabel').textContent=MONTHS_FULL[curMonth]+' '+curYear;
+// txListMonthLabel (lanjutan filter bulan Daftar Transaksi) -- label ‹ bulan › terpisah di
+// kartu "📋 Semua Transaksi", disinkronkan bareng monthLabel (Ringkasan) tiap renderKeuangan()
+// jalan karena keduanya baca curMonth/curYear yang sama (lihat changeTxListMonth,
+// tx-list-cashflow.js). Guard elemen: kartu Daftar Transaksi ada di sub-tab kelolaTab-transaksi
+// yang mungkin belum pernah dirender di beberapa test harness/halaman lain.
+const txListMonthLabelEl=document.getElementById('txListMonthLabel');
+if(txListMonthLabelEl)txListMonthLabelEl.textContent=MONTHS_FULL[curMonth]+' '+curYear;
 renderKeuAbsensiGajiCard();
 const txM=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===curMonth&&d.getFullYear()===curYear;});
 const inc=txM.filter(t=>t.type==='income'||t.type==='transfer_in').reduce((s,t)=>s+t.amount,0);
@@ -1111,6 +1180,23 @@ const net=inc-exp;
 document.getElementById('lapIn').textContent=fmt(inc);
 document.getElementById('lapOut').textContent=fmt(exp);
 const nEl=document.getElementById('lapNet');nEl.textContent=(net<0?'-':'')+fmt(Math.abs(net));nEl.className='stat-val '+(net>=0?'green':'red');
+// S336 (konsistensi pola Dashboard Hub — DashboardHubAnalytics.render()):
+// badge "⚠️ Kurang" + varian --warn saat Bersih<0, dan progress bar
+// Masuk-vs-Keluar. 0 kalkulasi baru — reuse penuh inc/exp/net yang sudah
+// dihitung di atas, cuma toggle class/style yang sudah ada di DOM.
+const lapNetBoxEl=document.getElementById('lapNetBox');
+const lapNetBadgeEl=document.getElementById('lapNetBadge');
+if(lapNetBoxEl)lapNetBoxEl.classList.toggle('stat-box--warn',net<0);
+if(lapNetBadgeEl)lapNetBadgeEl.classList.toggle('u-dnone',net>=0);
+const lapBarEl=document.getElementById('lapIncExpBar');
+if(lapBarEl){
+const lapTotal=inc+exp;
+lapBarEl.classList.toggle('u-dnone',lapTotal<=0);
+if(lapTotal>0){
+document.getElementById('lapIncExpBarInc').style.width=Math.round((inc/lapTotal)*100)+'%';
+document.getElementById('lapIncExpBarExp').style.width=Math.round((exp/lapTotal)*100)+'%';
+}
+}
 document.getElementById('lapCount').textContent=txs.length;
 document.getElementById('lapAvg').textContent=txs.length?fmt((inc+exp)/txs.length):'Rp 0';
 document.getElementById('lapTxN').textContent='('+txs.length+')';

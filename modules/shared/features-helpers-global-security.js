@@ -48,8 +48,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 'sesi317-scanner-gallery-guard-fix';
-const PRODUCTION_BUILD_SYNCED_VERSION = 'sesi317-scanner-gallery-guard-fix';
+const APP_BUILD_VERSION = 's345-fix-pin-double-reload';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's345-fix-pin-double-reload';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],
@@ -120,7 +120,7 @@ let cicilanSharedLastInput='pct';
 let cicilanDateLinked=false;
 let curCatFilter='semua', curImportType='cashew';
 let pinBuffer='', catEditIdx=null, curCatModalType='income';
-let curBillType='tagihan', billEditId=null;
+let curBillType='tagihan', billEditId=null, billEditFromArchive=false, billListTab='aktif';
 let subCatParentId=null, subCatParentType=null, subCatEditId=null;
 let txEditId=null, catModalCallback=null, txEditLinkedBillId=null;
 let _txSaving=false;

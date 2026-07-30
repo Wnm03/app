@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='sesi317-scanner-gallery-guard-fix';
+const MODULE_CALC_VERSION='s345-fix-pin-double-reload';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -759,11 +759,17 @@ return;
 }
 const top=insights.slice(0,4);
 const colFor={danger:'var(--accent2)',warning:'var(--accent4)',info:'var(--accent)',good:'var(--accent3)'};
-body.innerHTML=top.map(x=>`
+body.innerHTML=top.map(x=>{
+// S339: konsisten dgn FeatureInsightUI.renderInto() (feature-insights.js) — icon+text
+// dipisah jadi flex row (.fi-insight-row) drpd inline 1 baris teks, biar SVG (via
+// FeatureIcons, kalau sudah dimuat) sejajar rapi meski x.text panjang & wrap.
+const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(x.icon,{size:14}):(x.icon||'');
+return `
       <div class="u-flex u-gap8 u-mb8" style="align-items:flex-start;border-left:3px solid ${colFor[x.level]};padding-left:8px">
-        <div class="u-flex1 u-fs12 u-lh15">${x.icon} ${x.text}${x.action?` <span class="u-cacc u-pointer u-fw700" data-action="showPage" data-args='["${x.action.page}","$nav:${x.action.navIdx}"]'>${escapeHtml(x.action.label)} →</span>`:''}</div>
+        <div class="fi-insight-row u-flex1 u-fs12 u-lh15"><span class="fi-insight-icon">${iconHtml}</span><span>${x.text}${x.action?` <span class="u-cacc u-pointer u-fw700" data-action="showPage" data-args='["${x.action.page}","$nav:${x.action.navIdx}"]'>${escapeHtml(x.action.label)} →</span>`:''}</span></div>
         <span class="u-fs11 u-pointer" style="color:var(--text3)" data-stop="1" data-action="FinCoach.dismiss" data-args="${escapeHtml(JSON.stringify([x.id]))}" title="Sembunyikan" aria-label="Sembunyikan">✕</span>
-      </div>`).join('')
+      </div>`;
+}).join('')
 +(insights.length>top.length?`<div class="u-fs12 u-cacc u-tar u-pointer" data-action="FinCoach.showAll">Lihat semua (${insights.length}) →</div>`:'');
 },
 showAll(){
