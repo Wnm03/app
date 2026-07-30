@@ -298,7 +298,57 @@ const map={tunai:'pmTunai',cicilan:'pmCicilan',langganan:'pmLangganan'};
 if(map[m]) document.getElementById(map[m]).classList.add('active');
 document.getElementById('txCicilanPanel').style.display = m==='cicilan'?'block':'none';
 document.getElementById('txLanggananPanel').style.display = m==='langganan'?'block':'none';
-if(m==='cicilan'){syncCicilanDate('date');syncCicilanPreview();}
+if(m==='cicilan'){syncCicilanDate('date');syncCicilanPreview();updateCicilanTenorUI();}
+}
+// BUGFIX s282 (v941) -- "Kenapa cicilan 1x tidak masuk Tagihan?" + "Kenapa masih ada
+// Jatuh Tempo Pertama padahal cuma 1x bayar?" -- riwayat lama: waktu itu Tenor 1x berarti
+// LUNAS SEKALIGUS lewat transaksi yang sedang diisi (sisaTenor=0, tidak ada entri Tagihan,
+// field Jatuh Tempo disembunyikan krn tidak kepakai). Itu SENGAJA by design saat itu.
+//
+// FIX s284 (v942) -- "Ganti Tenor 1x jadi 'Bayar Bulan Depan'": permintaan user mengubah
+// perilaku itu. Tenor 1x SEKARANG berarti pembayaran DITUNDA ke tanggal Jatuh Tempo (bukan
+// lunas sekarang juga): transaksi ini BELUM tercatat sbg pengeluaran, hanya dijadwalkan sbg
+// entri 🧾 Tagihan (sisaTenor:1) yg jatuh tempo sesuai tanggal & bulan yang diisi di field
+// Jatuh Tempo -- baru benar2 tercatat sbg transaksi begitu ditandai Bayar di Tagihan (reuse
+// penuh markBillPaid() yg sudah ada, lihat tagihan-kalender.js -- TIDAK ada logic baru di
+// sana). Konsekuensinya field Jatuh Tempo SEKARANG JUSTRU wajib tetap tampil & terpakai utk
+// tenor 1x (kebalikan dari fix s282 di atas yang menyembunyikannya) -- lihat _saveTxInner()
+// utk detail perubahan logic simpan.
+function updateCicilanTenorUI(){
+const tenorEl=document.getElementById('txCicilanTenor');
+const dueWrap=document.getElementById('txCicilanDueWrap');
+const tenor1Hint=document.getElementById('txCicilanTenor1Hint');
+const dueLabelEl=document.getElementById('txCicilanDueLabel');
+if(!tenorEl||!dueWrap||!tenor1Hint)return;
+const tenor=parseInt(tenorEl.value)||1;
+const hasActiveBill=!!txEditLinkedBillId;
+dueWrap.style.display='';
+if(tenor===1&&!hasActiveBill){
+tenor1Hint.style.display='block';
+if(dueLabelEl)dueLabelEl.textContent='Jatuh Tempo (Bayar Bulan Depan)';
+}else{
+tenor1Hint.style.display='none';
+if(!hasActiveBill&&dueLabelEl)dueLabelEl.textContent='Jatuh Tempo Pertama';
+}
+}
+// onCicilanTenorSelectChange() (s284) -- dipanggil dari onchange dropdown Tenor
+// (modules/shared/modals.js). Kalau user baru pindah ke Tenor 1x (bayar bulan depan) utk
+// transaksi BARU (bukan sedang edit cicilan lama yg py bill aktif) dan field Jatuh Tempo
+// masih di nilai default (hari ini) atau kosong, otomatis majukan 1 bulan supaya defaultnya
+// benar2 "bulan depan" sesuai nama opsi tenornya -- tetap bisa diedit manual ke tanggal lain.
+function onCicilanTenorSelectChange(){
+const tenorEl=document.getElementById('txCicilanTenor');
+const dueEl=document.getElementById('txCicilanDue');
+if(tenorEl&&dueEl&&parseInt(tenorEl.value)===1&&!txEditLinkedBillId){
+const todayStr=new Date().toISOString().split('T')[0];
+if(!dueEl.value||dueEl.value===todayStr){
+const d=new Date(dueEl.value||todayStr);
+d.setMonth(d.getMonth()+1);
+dueEl.value=d.toISOString().split('T')[0];
+}
+}
+syncCicilanPreview();
+updateCicilanTenorUI();
 }
 // Catatan: fungsi-fungsi cicilan (validateCicilanFields, calcCicilanPerBulanFromTotal,
 // calcCicilanTotalFromPerBulan, syncCicilanPreview, getCicilanSharedMine,
@@ -329,6 +379,7 @@ document.getElementById('txCicilanDueHint').style.display='none';
 document.getElementById('txCicilanHistoryBtn').style.display='none';
 ['txCicilanNama','txCicilanTotal','txCicilanPerBulan','txCicilanBunga','txLanggananNama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
 document.getElementById('txCicilanTenor').value='6';
+updateCicilanTenorUI();
 document.getElementById('txCicilanShared').checked=false;
 const txCicilanIsKprEl=document.getElementById('txCicilanIsKpr');if(txCicilanIsKprEl)txCicilanIsKprEl.checked=false;
 document.getElementById('txCicilanSharedPct').value=50;
@@ -520,6 +571,7 @@ syncCicilanPreview();
 document.getElementById('txCicilanDueLabel').textContent='Jatuh Tempo Berikutnya (Tagihan)';
 document.getElementById('txCicilanDueHint').style.display='block';
 document.getElementById('txCicilanHistoryBtn').style.display='block';
+updateCicilanTenorUI();
 } else {
 document.getElementById('txLanggananNama').value=linkedBill.name;
 document.getElementById('txLanggananFreq').value=linkedBill.freq;
@@ -532,6 +584,7 @@ document.getElementById('txCicilanDue').value=t.date;
 document.getElementById('txCicilanDueLabel').textContent='Jatuh Tempo Pertama';
 document.getElementById('txCicilanDueHint').style.display='none';
 document.getElementById('txCicilanHistoryBtn').style.display='none';
+updateCicilanTenorUI();
 // BUGFIX: transaksi cicilan/langganan yg bill-nya sudah tidak aktif lagi (mis.
 // cicilan tenor terakhir/1x -- billLinkId sengaja null, lihat _saveTxInner())
 // tidak punya bill utk direkonstruksi ke panel Cicilan/Rutin, jadi chip yg
@@ -675,6 +728,17 @@ const cicilanSharedAutoPiutang=!!(cicilanShared&&txCicilanSharedAutoPiutangSaveE
 // (renderBillItemHtml) & dialog markBillPaid() ikut salah nunjukin total harga, bukan total/bulan.
 Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr,sharedOtherName:cicilanSharedOtherName,sharedAutoPiutang:cicilanSharedAutoPiutang});
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
+// FIX s286: sebelum ini, menyalakan Ditanggung Bersama + Catat Otomatis Piutang
+// saat EDIT transaksi cicilan yg sudah ada cuma nyimpen flag ke existingBill --
+// piutang utk PEMBAYARAN yg sedang diedit ini sendiri tidak pernah dibuat, baru
+// mulai muncul di pembayaran BERIKUTNYA (lewat markBillPaid()). Sekarang piutang
+// utk transaksi ini juga langsung dibuat di sini, sama seperti alur cicilan
+// BARU (lihat pemanggilan sejenis di bawah, kasus tenor>=2 saat create). Guard
+// anti-dobel (kalau disimpan ulang) ada DI DALAM maybeCreateSharedPiutangFromBill()
+// sendiri (skip kalau autoTxId ini sudah pernah punya entri Piutang).
+if(typeof maybeCreateSharedPiutangFromBill==='function'){
+maybeCreateSharedPiutangFromBill(existingBill,existingTx.id);
+}
 } else {
 Object.assign(existingTx,{category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 toast('ℹ️ Ini pembayaran cicilan lama — hanya catatan transaksi ini yang diubah. Jadwal cicilan (total/tenor/jatuh tempo) tidak ikut berubah, ubah lewat 📋 Riwayat Pembayaran kalau perlu.');
@@ -711,6 +775,34 @@ const sh=getCicilanSharedMine(perBulan);
 const cicilanShared=sh.shared;
 const cicilanSharedPct=sh.pct;
 const perBulanMine=sh.mine;
+if(tenor===1){
+// FIX s284 -- Tenor 1x = "Bayar Bulan Depan": transaksi BELUM dibayar, dijadwalkan sbg
+// tagihan cicilan (sisaTenor:1) jatuh tempo ke tanggal `due` (field Jatuh Tempo, sudah
+// TIDAK disembunyikan lagi utk tenor 1x -- lihat updateCicilanTenorUI()). TIDAK ada
+// transaksi yang langsung tercatat di sini (beda dari tenor>=2 di bawah yg mencatat
+// pembayaran pertama LANGSUNG) -- transaksi baru tercatat begitu user tandai Bayar lewat
+// 🧾 Tagihan (markBillPaid() di tagihan-kalender.js, yg sudah otomatis: catat expense,
+// kurangi sisaTenor jadi 0, & arsipkan sbg LUNAS -- 100% reuse, TIDAK ada logic baru di
+// sana). applyTxStockFromTx/applyTxShopStockFromTx/WorthIt.applyBuyLink() juga sengaja
+// TIDAK dipanggil di sini (belum ada transaksi nyata utk ditautkan) -- sama seperti alur
+// Tagihan biasa (bukan lewat form Transaksi), efek samping itu baru relevan saat dibayar.
+if(existingTx) D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);
+const billId=uid();
+const txCicilanIsKprNewEl=document.getElementById('txCicilanIsKpr');
+const isKprNew=txCicilanIsKprNewEl?txCicilanIsKprNewEl.checked:false;
+const txCicilanSharedOtherNameNewEl=document.getElementById('txCicilanSharedOtherName');
+const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAutoPiutang');
+const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
+const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
+D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan',sisaTenor:1,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
+txEditId=null;
+rememberLastAccForCat(cat,accId);
+if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
+save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-baru"});
+toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
+return;
+}
 if(existingTx) D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);
 const billId=uid();
 const sisaTenor=tenor-1;

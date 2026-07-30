@@ -16,6 +16,52 @@ function isPiutangOwnershipSelf(p){
 if(typeof OwnershipEngine==='undefined')return true;
 return OwnershipEngine.resolve(p).type==='SELF';
 }
+// maybeCreateSharedPiutangFromBill(b, txId) — Sesi 341 (fitur baru, lihat
+// docs/CLAUDE.md § "Ditanggung Bersama → Piutang"): dipanggil SETIAP KALI
+// tagihan/cicilan/langganan "Ditanggung Bersama" ini dibayar (markBillPaid,
+// tagihan-kalender.js). Field bill: shared (bool), totalAmount (Rp penuh),
+// amount (porsi SAYA yang sudah dicatat sbg expense), sharedOtherName
+// (opsional), sharedAutoPiutang (bool, toggle di modal Edit Tagihan).
+// Kalau aktif, sisa porsi (totalAmount - amount) yang DITALANGI dari kantong
+// sendiri otomatis dicatat sbg 1 entri Piutang baru berstatus belum lunas
+// (bukan mengubah bill/transaksi yg sudah ada) -- supaya kelihatan di 🤝
+// Piutang & bisa ditagih/ditandai lunas terpisah dari alur Tagihan. 0
+// perubahan pada `amount`/`totalAmount` yang sudah ada (murni tambahan).
+// Guard: field baru (shared/sharedAutoPiutang) undefined di semua bill LAMA
+// (dibuat sebelum fitur ini ada) -> otomatis skip, 100% backward compatible.
+// Guard dobel (fix s286): fungsi ini sekarang juga dipanggil dari alur EDIT
+// transaksi cicilan (transaksi.js, cabang isLatestInstallment) supaya piutang
+// utk transaksi yg SEDANG diedit langsung tercatat -- sebelumnya baru muncul
+// di pembayaran BERIKUTNYA. Krn edit yg sama bisa disimpan ulang (mis. user
+// cuma ganti kategori lalu Simpan lagi), tanpa guard ini tiap simpan ulang
+// bakal bikin entri Piutang baru lagi utk txId yg SAMA (dobel/berkali-kali).
+// -> skip kalau txId ini sudah pernah punya entri Piutang otomatis.
+function maybeCreateSharedPiutangFromBill(b,txId){
+if(!b||!b.shared||!b.sharedAutoPiutang)return;
+if(D.piutang&&D.piutang.some(p=>p.autoTxId===txId))return;
+const sisa=Math.round((b.totalAmount||0)-(b.amount||0));
+if(sisa<=0)return;
+if(!D.piutang)D.piutang=[];
+D.piutang.push({
+id:uid(),
+name:b.sharedOtherName?b.sharedOtherName:('Porsi bersama: '+(b.name||'Tagihan')),
+nilai:sisa,
+tanggal:todayStr(),
+jatuhTempo:'',
+catatan:'Otomatis dari pembayaran "'+(b.name||'Tagihan')+'" (Ditanggung Bersama)',
+lunas:false,
+autoBillId:b.id,
+autoTxId:txId
+});
+// Self-contained refresh (bukan cuma save() di caller) -- markBillPaid()
+// punya beberapa titik early-return (utang lunas/cicilan lunas/tagihan
+// sekali-selesai) SEBELUM refreshBillEverywhere() dipanggil di sana, jadi
+// render di sini supaya Piutang & Kekayaan Bersih tetap ikut update di
+// SEMUA jalur, bukan cuma jalur "normal" (dijadwalkan ulang).
+if(typeof Piutang!=='undefined')Piutang.renderList();
+if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+}
 const Piutang={
 editId:null,
 _lunasState:false,
