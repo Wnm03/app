@@ -23,7 +23,20 @@ if(link) link.href=URL.createObjectURL(blob);
 if(('serviceWorker' in navigator) && isHosted){
 if(link){
 }
-navigator.serviceWorker.register('sw.js').catch(()=>{
+// BUGFIX (laporan user: tab lama yang sudah kebuka sebelum deploy baru selalu
+// sempat "flash" ke layar Onboarding sebelum akhirnya dikoreksi ke layar PIN
+// hitam via reload controllerchange yang SUDAH ADA di index.html/
+// app_production.html) — root cause: register() saja TIDAK memaksa browser
+// cek sw.js baru SEKARANG, browser cuma cek sesuai heuristik internalnya
+// (bisa telat sampai beberapa jam/tidak sama sekali di navigasi ini),
+// jadi rantai install->skipWaiting->activate->clients.claim->controllerchange
+// baru mulai belakangan -- itu yang bikin jeda flash terasa lama. reg.update()
+// memaksa cek byte-diff sw.js SEKARANG JUGA (begitu registration resolve),
+// mempercepat rantai itu mulai secepat mungkin. TIDAK mengubah skipWaiting()/
+// clients.claim() yang sudah ada di sw.js, murni memicu pengecekan lebih awal.
+navigator.serviceWorker.register('sw.js').then((reg)=>{
+if(reg&&typeof reg.update==='function'){reg.update().catch(()=>{/* no-op, biarkan jalur normal browser */});}
+}).catch(()=>{
 const swCode=`
         const CACHE='kw-cache-v1';
         self.addEventListener('install',e=>{self.skipWaiting();});

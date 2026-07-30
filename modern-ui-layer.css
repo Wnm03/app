@@ -152,7 +152,23 @@ a:focus-visible {
   .nav.nav-hidden {
     transform: translateY(calc(100% + 24px + env(safe-area-inset-bottom, 0px)));
   }
-  #mainApp,
+  /* FIX (2026-07-30): #mainApp DIHAPUS dari rule ini -- BUKAN redundant text,
+     tapi bug nyata. #mainApp di index.html cuma membungkus #page-keuangan (lihat
+     struktur HTML: tag penutup #mainApp ketutup persis setelah page-keuangan,
+     SEMUA halaman lain -- termasuk #page-dashboard-hub/Beranda yang jadi
+     landing page default -- adalah SIBLING dari #mainApp di #scrollRoot, BUKAN
+     anak di dalamnya). Akibatnya padding-bottom 88px di #mainApp bukan reserve
+     ruang di ujung scroll (tujuan asal rule ini), tapi jadi kotak kosong 88px
+     yang nangkring DI TENGAH alur halaman -- persis di atas judul "Dashboard
+     Hub" -- karena kotak #mainApp sendiri (isinya cuma page-keuangan yang
+     display:none saat Beranda aktif) tetap mempertahankan padding-bottom-nya
+     sendiri walau 0 konten terlihat di dalamnya. User lihat ini sbg "gap
+     kosong aneh" persis di bawah header. #scrollRoot (kontainer scroll yang
+     SEBENARNYA membungkus SEMUA halaman) sudah py padding-bottom sendiri
+     (styles.css baris ~72, 90px, + rule mobile di bawah) yang cukup utk
+     reserve ruang di atas nav bawah utk halaman APAPUN yang sedang aktif --
+     jadi padding #mainApp ini 100% redundan sekaligus jadi sumber bug, aman
+     dihapus tanpa kehilangan proteksi anti-overlap nav. */
   #scrollRoot {
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
