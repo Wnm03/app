@@ -384,6 +384,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
 .type-toggle3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
 .type-btn { padding: 11px 4px; border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'Plus Jakarta Sans', sans-serif; font-size: var(--fs-label); font-weight: 700; cursor: pointer; transition: all var(--dur-moderate); }
+.type-btn:disabled { opacity: .45; cursor: not-allowed; }
 .type-btn:active { transform: scale(0.96); }
 .type-btn.ai { background: var(--accent3-soft); color: var(--accent3); border-color: rgba(77,217,172,0.3); }
 .type-btn.ae { background: var(--accent2-soft); color: var(--accent2); border-color: rgba(240,98,146,0.3); }
