@@ -44,6 +44,30 @@ toast('📕 Cicilan utang ini disinkron dari Buku Utang — edit di sana');
 goToList('debtList',null);
 return;
 }
+// BUGFIX (gap "Edit Tagihan" vs "Detail Cicilan" — field TIDAK sama lengkapnya): bill
+// kind:'cicilan' (aktif, bukan arsip) sebelumnya TIDAK ada redirect di sini sama sekali --
+// beda dari kind:'utang' di atas -- jadi klik kartu/✏️ Edit di list "Tagihan, Cicilan &
+// Langganan" (renderBillItemHtml, data-action="openBillModal" utk SEMUA kind tanpa kecuali)
+// malah membuka modal Tagihan/Langganan GENERIK ini, yang cuma punya field "Jumlah Total per
+// Periode" -- TIDAK PUNYA field Tenor/Total Harga/Cicilan per Bulan/Bunga/KPR sama sekali,
+// jauh lebih tidak lengkap dibanding modal "🗂 Detail Cicilan" (txModal form cicilan,
+// dibuka via editTx() di transaksi.js) yang memang didesain khusus utk cicilan. Sekarang
+// diarahkan ke editor yang BENAR & lengkap: transaksi TERBARU yang tertaut ke bill ini
+// (linkedTxIds, pola sama dgn isLatestInstallment di transaksi.js) dibuka lewat editTx(),
+// yang otomatis mengisi Tenor/Total Harga/Bunga/Ditanggung Bersama/Catat Otomatis sbg
+// Piutang dari data bill (lihat editTx()) -- 1 editor per jenis tagihan, bukan 2 versi
+// beda kelengkapan utk data yang sama. Cicilan yang sudah LUNAS/diarsip (billEditFromArchive)
+// TETAP lewat modal generik di bawah (sama seperti tagihan/langganan lain yang sudah
+// diarsip -- cuma untuk koreksi nama/catatan, bukan lanjut nyicil).
+if(b.kind==='cicilan'&&!billEditFromArchive){
+const linkedTxIds=D.transactions.filter(t=>t.billLinkId===b.id).map(t=>t.id);
+if(linkedTxIds.length){
+editTx(Math.max(...linkedTxIds));
+return;
+}
+toast('⚠️ Riwayat pembayaran cicilan ini tidak ditemukan, tidak bisa dibuka edit lengkapnya');
+return;
+}
 }
 const cats=getCatsByType('expense');
 document.getElementById('billCat').innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.name)}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
@@ -482,6 +506,31 @@ else break;
 d=nd;i++;
 }
 return occurrences;
+}
+// getBillActiveDateForFilter(b, billFilterBulan, billFilterTahun, fallbackDateStr) — dipakai
+// renderBillList() (modules-render.js) utk tagihan/cicilan/langganan AKTIF (bukan arsip/bukan
+// _paidPeriodOnly) saat filter bulan/tahun lanjutan (billFilterBulan/billFilterTahun) dipasang,
+// TERMASUK saat digeser lewat nav ‹bulan› di kartu "Tagihan, Cicilan & Langganan" (lihat
+// changeBillStatMonth). BUGFIX: dulu renderBillList() exact-match b.nextDue (SATU tanggal
+// jatuh-tempo BERIKUTNYA saja) ke bulan/tahun filter -- jadi cicilan/tagihan berulang yang belum
+// dibayar bulan ini (nextDue masih bulan sekarang) LENYAP total begitu user geser filter ke bulan
+// depan, walau harusnya masih berjadwal di sana (laporan bug: "cicilan 3x tidak muncul di bulan
+// depan", "cicilan baru tidak tampil", "ada bulan yang tidak menampilkan transaksi apapun").
+// Sekarang reuse getBillOccurrencesInMonth() (SUDAH ADA, dipakai Kalender Jatuh Tempo -- hormati
+// freq bulanan/mingguan/tahunan & batas sisaTenor cicilan) supaya list & kalender konsisten
+// sesuai jadwal SEHARUSNYA. Return null = sembunyikan (tidak ada proyeksi di periode itu), atau
+// string tanggal ISO occurrence pertama di periode filter (dipakai gantikan _dateForFilter utk
+// urutan/badge "X hari lagi"). Tagihan LUNAS/arsip TIDAK lewat sini (tetap exact-match tanggal
+// historis asli di renderBillList — event yg sudah pasti terjadi, bukan proyeksi).
+function getBillActiveDateForFilter(b,billFilterBulan,billFilterTahun,fallbackDateStr){
+if(billFilterBulan==='all'&&billFilterTahun==='all')return fallbackDateStr;
+const ref=new Date(fallbackDateStr);
+const y=billFilterTahun!=='all'?parseInt(billFilterTahun):ref.getFullYear();
+const m=billFilterBulan!=='all'?parseInt(billFilterBulan):ref.getMonth();
+if(isNaN(y)||isNaN(m))return null;
+const occ=getBillOccurrencesInMonth(b,y,m);
+if(!occ.length)return null;
+return occ[0].toISOString().split('T')[0];
 }
 function cashflowActionSuggestion(deficitAmount,days){
 if(!deficitAmount||deficitAmount<=0)return '';

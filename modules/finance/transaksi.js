@@ -322,6 +322,8 @@ document.getElementById('txCicilanShared').checked=false;
 const txCicilanIsKprEl=document.getElementById('txCicilanIsKpr');if(txCicilanIsKprEl)txCicilanIsKprEl.checked=false;
 document.getElementById('txCicilanSharedPct').value=50;
 document.getElementById('txCicilanSharedNominal').value='';
+const txCicilanSharedOtherNameEl=document.getElementById('txCicilanSharedOtherName');if(txCicilanSharedOtherNameEl)txCicilanSharedOtherNameEl.value='';
+const txCicilanSharedAutoPiutangEl=document.getElementById('txCicilanSharedAutoPiutang');if(txCicilanSharedAutoPiutangEl)txCicilanSharedAutoPiutangEl.checked=false;
 cicilanSharedLastInput='pct';
 document.getElementById('txCicilanSharedWrap').style.display='none';
 const prevMineRowEl=document.getElementById('prevMineRow'); if(prevMineRowEl)prevMineRowEl.style.display='none';
@@ -475,6 +477,8 @@ document.getElementById('txCicilanShared').checked=!!linkedBill.shared;
 const txCicilanIsKprEditEl=document.getElementById('txCicilanIsKpr');if(txCicilanIsKprEditEl)txCicilanIsKprEditEl.checked=!!linkedBill.isKpr;
 document.getElementById('txCicilanSharedPct').value=linkedBill.sharedPct||50;
 document.getElementById('txCicilanSharedNominal').value=linkedBill.shared?linkedBill.amount:'';
+const txCicilanSharedOtherNameEditEl=document.getElementById('txCicilanSharedOtherName');if(txCicilanSharedOtherNameEditEl)txCicilanSharedOtherNameEditEl.value=linkedBill.sharedOtherName||'';
+const txCicilanSharedAutoPiutangEditEl=document.getElementById('txCicilanSharedAutoPiutang');if(txCicilanSharedAutoPiutangEditEl)txCicilanSharedAutoPiutangEditEl.checked=!!linkedBill.sharedAutoPiutang;
 document.getElementById('txCicilanSharedWrap').style.display=linkedBill.shared?'block':'none';
 cicilanSharedLastInput='pct';
 syncCicilanPreview();
@@ -616,7 +620,17 @@ const cicilanSharedPct=sh.pct;
 const perBulanMine=sh.mine;
 const txCicilanIsKprSaveEl=document.getElementById('txCicilanIsKpr');
 const isKpr=txCicilanIsKprSaveEl?txCicilanIsKprSaveEl.checked:false;
-Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?total:null,isKpr});
+const txCicilanSharedOtherNameSaveEl=document.getElementById('txCicilanSharedOtherName');
+const txCicilanSharedAutoPiutangSaveEl=document.getElementById('txCicilanSharedAutoPiutang');
+const cicilanSharedOtherName=cicilanShared&&txCicilanSharedOtherNameSaveEl?txCicilanSharedOtherNameSaveEl.value.trim():'';
+const cicilanSharedAutoPiutang=!!(cicilanShared&&txCicilanSharedAutoPiutangSaveEl&&txCicilanSharedAutoPiutangSaveEl.checked);
+// BUGFIX (sinkron Piutang "Ditanggung Bersama" utk cicilan): totalAmount HARUS jadi total
+// PER PERIODE (perBulan, sama satuan dgn amount/perBulanMine), BUKAN total harga barang
+// (total/totalHarga) -- sebelumnya salah pakai `total` di sini, jadi maybeCreateSharedPiutangFromBill()
+// (piutang-utang.js) menghitung sisa = totalHarga - porsiSebulan (angka jutaan yg salah,
+// harusnya cuma selisih cicilan/bulan spt di modal "Detail Cicilan"), dan badge "👫 X% dari Rp Y"
+// (renderBillItemHtml) & dialog markBillPaid() ikut salah nunjukin total harga, bukan total/bulan.
+Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr,sharedOtherName:cicilanSharedOtherName,sharedAutoPiutang:cicilanSharedAutoPiutang});
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 } else {
 Object.assign(existingTx,{category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
@@ -663,12 +677,27 @@ nextDueDate.setMonth(nextDueDate.getMonth()+1);
 const nextDue=nextDueDate.toISOString().split('T')[0];
 const txCicilanIsKprNewEl=document.getElementById('txCicilanIsKpr');
 const isKprNew=txCicilanIsKprNewEl?txCicilanIsKprNewEl.checked:false;
-D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?total:null,isKpr:isKprNew});
+const txCicilanSharedOtherNameNewEl=document.getElementById('txCicilanSharedOtherName');
+const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAutoPiutang');
+const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
+const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
+// BUGFIX: sama seperti cabang edit di atas -- totalAmount = perBulan (total/periode), bukan total harga.
+D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
 }
 D.transactions.push({id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date});
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
+// Sesi 341 lanjutan (gap txCicilanShared): cicilan pertama kali dibuat lewat form
+// Transaksi INI JUGA merupakan 1x pembayaran nyata (perBulanMine langsung tercatat sbg
+// expense di atas) -- sama seperti markBillPaid() -- jadi kalau shared+autoPiutang aktif,
+// sisa porsi pihak lain juga harus langsung tercatat sbg Piutang, bukan cuma mulai
+// berlaku dari cicilan bulan ke-2 dst (yg baru kepakai via markBillPaid() nanti).
+if(cicilanShared&&cicilanSharedAutoPiutangNew&&typeof maybeCreateSharedPiutangFromBill==='function'){
+// BUGFIX: totalAmount di sini juga harus perBulan (total/periode, sama satuan dgn amount),
+// bukan total harga barang -- lihat komentar BUGFIX di dua Object.assign/D.bills.push di atas.
+maybeCreateSharedPiutangFromBill({shared:true,sharedAutoPiutang:true,totalAmount:perBulan,amount:perBulanMine,name:nama,id:billId},billId+1);
+}
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
