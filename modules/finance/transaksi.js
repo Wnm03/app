@@ -278,7 +278,18 @@ function openReminderModal(){['rTitle','rDesc'].forEach(id=>document.getElementB
 // Catatan: openTransferModal/saveTransfer dipindah ke tx-transfer.js (lihat
 // CLAUDE.md catatan kerja "split transaksi.js") -- tetap fungsi global,
 // tetap dipanggil persis sama dari HTML (modals.js).
-function setPayMethod(m){
+// BUGFIX (bug: "Cara Bayar balik ke Tunai saat edit Cicilan"): setPayMethod() dulu
+// dipanggil sama persis baik oleh tap user di chip Tunai/Cicilan/Rutin, MAUPUN oleh
+// editTx() secara programatik saat modal dibuka (mis. dipaksa 'tunai' krn transaksi
+// cicilan yg sudah tidak py bill aktif -- lihat editTx()). Karena tidak ada pembeda,
+// _saveTxInner() menganggap 'tunai' itu SELALU pilihan sengaja user, lalu menimpa
+// payMethod transaksi asli (yg sebenarnya 'cicilan'/'langganan') jadi 'tunai' permanen
+// walau user cuma edit catatan/nominal tanpa pernah sentuh chip Cara Bayar. Param
+// userInitiated (default true, sesuai pemanggilan dari HTML/tap user) menandai itu;
+// dipanggil dgn `false` dari kode programatik di editTx().
+let _txPayMethodTouchedByUser=false;
+function setPayMethod(m,userInitiated=true){
+if(userInitiated)_txPayMethodTouchedByUser=true;
 curPayMethod=m;
 ['pmTunai','pmCicilan','pmLangganan'].forEach(id=>{
 const el=document.getElementById(id); if(el) el.classList.remove('active');
@@ -332,7 +343,7 @@ document.getElementById('txLanggananDue').value=new Date().toISOString().split('
 document.getElementById('txCicilanPreview').style.display='none';
 populateAccFilters();
 setTxType(type);
-setPayMethod('tunai');
+setPayMethod('tunai',false);
 const stockChk=document.getElementById('txAddStock');
 if(stockChk)stockChk.checked=false;
 ['txStockNewName'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -371,6 +382,7 @@ const t=D.transactions.find(x=>x.id===id);
 if(!t)return;
 if(t.type==='transfer_in'||t.type==='transfer_out'){toast('⚠️ Transfer antar akun tidak bisa diedit di sini. Hapus & buat ulang kalau salah.');return;}
 txEditId=id;
+_txPayMethodTouchedByUser=false;
 document.getElementById('txModalTitle').textContent='Edit Transaksi';
 document.getElementById('txDelBtn').style.display='flex';
 resetPayMethodLock();
@@ -465,7 +477,7 @@ const linkedBill=t.billLinkId?D.bills.find(b=>b.id===t.billLinkId):null;
 cicilanDateLinked=!!(linkedBill&&linkedBill.kind==='cicilan');
 txEditLinkedBillId=linkedBill?linkedBill.id:null;
 if(linkedBill&&(linkedBill.kind==='cicilan'||linkedBill.kind==='langganan')){
-setPayMethod(linkedBill.kind);
+setPayMethod(linkedBill.kind,false);
 if(linkedBill.kind==='cicilan'){
 cicilanLastInput='total';
 document.getElementById('txCicilanNama').value=linkedBill.name;
@@ -497,7 +509,15 @@ document.getElementById('txCicilanDue').value=t.date;
 document.getElementById('txCicilanDueLabel').textContent='Jatuh Tempo Pertama';
 document.getElementById('txCicilanDueHint').style.display='none';
 document.getElementById('txCicilanHistoryBtn').style.display='none';
-setPayMethod('tunai');
+// BUGFIX: transaksi cicilan/langganan yg bill-nya sudah tidak aktif lagi (mis.
+// cicilan tenor terakhir/1x -- billLinkId sengaja null, lihat _saveTxInner())
+// tidak punya bill utk direkonstruksi ke panel Cicilan/Rutin, jadi chip yg
+// ditampilkan tetap 'tunai' (panel cicilan/langganan tidak bisa diisi ulang).
+// Tapi panggilan ini TIDAK dianggap "user memilih Tunai" (userInitiated=false)
+// -- kalau user simpan tanpa sentuh chip Cara Bayar, payMethod ASLI transaksi
+// (cicilan/langganan) tetap dipertahankan di _saveTxInner(), tidak ditimpa
+// jadi 'tunai'.
+setPayMethod('tunai',false);
 }
 openModal('txModal');
 }
@@ -734,7 +754,14 @@ return;
 }
 let savedTxId;
 if(existingTx){
-Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'tunai',note,date});
+// BUGFIX ("Cara Bayar balik ke Tunai saat edit Cicilan"): titik ini SELALU
+// menimpa payMethod jadi 'tunai', termasuk saat chip 'tunai' cuma dipaksa
+// tampil programatik oleh editTx() (transaksi cicilan/langganan yg bill-nya
+// sudah tidak aktif -- lihat komentar BUGFIX di editTx()). Fix: kalau user
+// TIDAK pernah sentuh chip Cara Bayar sendiri selama sesi edit ini, payMethod
+// asli transaksi dipertahankan apa adanya, tidak dipaksa jadi 'tunai'.
+const keepPayMethod=_txPayMethodTouchedByUser?'tunai':(existingTx.payMethod||'tunai');
+Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethod,note,date});
 delete existingTx.billLinkId;
 if(existingTx.servisLinkId&&D.servisLogs){
 const linkedServis=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
