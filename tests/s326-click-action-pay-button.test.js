@@ -20,3 +20,15 @@ test('S326 — kontrak alur bayar: wrapper meneruskan ke markBillPaid(id,false)'
   const m=wrappers.match(/function billActionPayNow\(id\)\{\s*return markBillPaid\(id,false\);\s*\}/);
   assert.ok(m,'wrapper Bayar tidak ditemukan');
 });
+
+
+// S328 regression: existing Tagihan actions must continue using stable native handlers.
+// The S326 wrapper substitution caused runtime clicks to become unavailable when the
+// bundle had not been regenerated. This test locks the source mapping to native handlers.
+test('S328 — Bayar dan Riwayat memakai handler native yang sudah ada', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'modules', 'shared', 'modules-render.js'), 'utf8');
+  assert.match(src, /data-action=["']markBillPaid["']/,
+    'Aksi Bayar harus tetap menuju markBillPaid');
+  assert.match(src, /data-action=["']openBillHistory["']/,
+    'Aksi Riwayat harus tetap menuju openBillHistory');
+});
