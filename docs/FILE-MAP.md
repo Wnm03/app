@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-07-31T05:40:10.860Z
-Total file source: 278 · Total identifier global: 1947
+Terakhir digenerate: 2026-07-31T11:46:44.829Z
+Total file source: 278 · Total identifier global: 1948
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -87,7 +87,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 64 | `modules/shared/profil-pengaturan.js` | 98 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 65 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 66 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
-| 67 | `modules/finance/tagihan-kalender.js` | 1269 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 67 | `modules/finance/tagihan-kalender.js` | 1311 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 68 | `modules/shared/backup-restore.js` | 811 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 69 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
 | 70 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
@@ -575,6 +575,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `API_KEY_PBKDF2_ITER` | `modules/shared/keamanan-pin.js` |
 | `APP_BUILD_VERSION` | `modules/shared/features-helpers-global-security.js` |
 | `applyBillFilter` | `modules/finance/tagihan-kalender.js` |
+| `applyBillPaymentTxSync` | `modules/finance/tagihan-kalender.js` |
 | `applyBundleLinkedStock` | `modules/shop/cobek-tx-cart.js` |
 | `applyCardCollapsePrefs` | `modules/shared/modal-navigasi.js` |
 | `applyDashHubMainGridDefaultCollapse` | `modules/shared/features-helpers-global-security.js` |
@@ -1064,6 +1065,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `getBackupRange` | `modules/shared/backup-restore.js` |
 | `getBillActiveDateForFilter` | `modules/finance/tagihan-kalender.js` |
 | `getBillAnomalyInfo` | `modules/finance/tagihan-kalender.js` |
+| `getBillArchiveEditSource` | `modules/finance/tagihan-kalender.js` |
 | `getBillOccurrencesInMonth` | `modules/finance/tagihan-kalender.js` |
 | `getBillOccurrencesInRange` | `modules/finance/tagihan-kalender.js` |
 | `getBillPaidThisPeriodInfo` | `modules/finance/tagihan-kalender.js` |
@@ -1388,7 +1390,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `openBillCalendar` | `modules/finance/tagihan-kalender.js` |
 | `openBillHistory` | `modules/finance/tagihan-kalender.js` |
 | `openBillModal` | `modules/finance/tagihan-kalender.js` |
-| `openBillPaymentDateEdit` | `modules/finance/tagihan-kalender.js` |
 | `openBudgetModal` | `budget.js` |
 | `openBudgetSettings` | `budget.js` |
 | `openCalc` | `modules/shared/kalkulator-input.js` |

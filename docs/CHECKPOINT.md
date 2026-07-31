@@ -5,6 +5,41 @@ JANGAN audit/implement/test/build ulang bagian yang sudah **Completed**.
 
 ## Current Session
 
+Sesi 323 (2026-07-31) — HOUSEKEEPING (tindak lanjut saran audit Sesi 2,
+`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md`, di luar scope
+bugfix): tambah `docs/architecture/ADR-028.md` (duplikasi `vehicle-
+scanner.js`/`sparepart-scanner.js` sengaja, isolasi risiko antar
+scanner) + lint `lintScannerStructuralDrift()` (`scripts/build.js`) &
+test unit-nya (`tests/scanner-structural-drift.test.js`) yang menjaga
+fungsi lifecycle "kembar" kedua scanner tidak diam-diam divergen.
+SELESAI PENUH. 0 file business logic scanner disentuh. Detail lengkap:
+`CHANGELOG.md` § Sesi 323.
+
+Saran housekeeping lain dari audit yang sama (esbuild — butuh
+`npm install`, tidak bisa dieksekusi di lingkungan tanpa akses
+jaringan; timeout/debounce jadi setting; diagnostik error kamera;
+rename `scanCamera`) BELUM dikerjakan — prioritas sedang/rendah,
+dicatat sbg rekomendasi lanjutan di
+`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md`, bukan bug.
+
+---
+
+Sesi 318 (2026-07-31) — FIX (lanjutan s317, "Sesi B" dari rencana ringkas):
+`_saveBillInner()` utk tagihan LUNAS/arsip (`billEditFromArchive`) sekarang
+commit balik `#billDue`/`#billAmt` yang diedit ke `t.date`/`t.amount`
+transaksi pembayaran terakhirnya, reuse logic sync (completedAt arsip,
+piutang "Ditanggung Bersama", sisa utang) dari `saveBillHistoryEdit()` —
+diextract jadi 1 fungsi shared baru `applyBillPaymentTxSync()`, dipanggil
+dari KEDUA tempat. SELESAI PENUH (bagian tulis). Detail lengkap:
+`FIX-v979-s318-savebillinner-archive-tx-writeback.md`.
+
+Sesi C (hapus tombol "✏️ Ubah Tanggal Bayar"/`openBillPaymentDateEdit()`,
+rapikan `billPaidDateWrap`) & Sesi D (verifikasi `billHistoryEditModal`
+tidak disentuh) BELUM dikerjakan — menyusul sesi berikutnya, lihat
+"Belum terjawab" di `FIX-v979-s318-savebillinner-archive-tx-writeback.md`.
+
+---
+
 Sesi 312 (2026-07-27) — FIX: akun baru dari opsi "➕ Buat Akun Baru dari
 Aset Ini" (`Aset.save()`, blok `accountId==='__new__'`) tidak mewarisi
 `ownership` aset sumbernya — resolusi `ownership` dipindah ke SEBELUM blok
