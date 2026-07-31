@@ -44,6 +44,25 @@ function getLatestBillPaymentTxId(billId,transactions){
 const ids=(transactions||[]).filter(t=>t.billLinkId===billId).map(t=>t.id);
 return ids.length?Math.max(...ids):null;
 }
+// getBillArchiveEditSource(b, transactions) -- (Sesi 317, lanjutan s295)
+// Sumber kebenaran field Tanggal Bayar & Jumlah di billModal utk tagihan
+// yang sudah LUNAS/diarsip HARUS transaksi pembayaran terakhirnya (t.date/
+// t.amount), BUKAN field template lama di record arsip itu sendiri
+// (b.completedAt/b.amount bisa basi -- itu snapshot saat lunas pertama kali,
+// bukan hasil edit terakhir kalau transaksinya pernah diedit lagi lewat
+// jalur lain). Reuse getLatestBillPaymentTxId() (sudah ada, dipakai juga
+// oleh openBillPaymentDateEdit yg lama) utk cari transaksi itu. Kalau
+// belum ada transaksi tertaut sama sekali (mis. data lama/anomali),
+// fallback ke field record arsip spy tidak kosong total. Fungsi murni,
+// tidak sentuh DOM supaya bisa dites langsung.
+function getBillArchiveEditSource(b,transactions){
+const txId=getLatestBillPaymentTxId(b.id,transactions);
+const tx=txId!=null?(transactions||[]).find(t=>t.id===txId):null;
+return {
+date:tx?tx.date:(b.completedAt||''),
+amount:tx?tx.amount:(b.shared?b.totalAmount:b.amount)
+};
+}
 // findFallbackBillPaymentTxId(archivedBill, transactions) -- FIX (laporan user,
 // gap "Transaksi tidak ditemukan"): getLatestBillPaymentTxId() di atas cuma bisa
 // nemuin transaksi lewat billLinkId, yang HANYA diisi oleh markBillPaid() (jalur
@@ -280,15 +299,33 @@ return;
 // (belum ada transaksi tertaut sama sekali, wajar krn bill baru dibuat) tetap fallback ke
 // modal generik di bawah — TIDAK dianggap error seperti cicilan (cicilan selalu punya
 // transaksi awal begitu dibuat, jadi kosongnya linkedTxIds utk cicilan memang anomali).
+// BUGFIX (s324, laporan user -- toast anomali salah tembak ke cicilan "Bayar Bulan Depan"):
+// pengecualian di atas TIDAK berlaku utk cicilan tenor 1x yg dibuat lewat "Bayar Bulan
+// Depan" (txCicilanTenor===1 di transaksi.js) -- alur itu SENGAJA TIDAK membuat transaksi
+// sama sekali saat cicilan dibuat (sisaTenor:1, transaksi baru tercatat nanti begitu
+// ditandai Bayar via markBillPaid()), jadi kosongnya linkedTxIds di sini justru NORMAL,
+// bukan anomali. Sebelumnya ini ikut ketimpa toast error "Riwayat pembayaran cicilan
+// tidak ditemukan" & user tidak bisa edit sama sekali (lihat screenshot: STNK Tahunan,
+// cicilan blm dibayar). Deteksi kasus ini via b.sisaTenor===b.tenor (belum ada satu pun
+// pembayaran ter-link) & fallback ke modal generik di bawah, sama seperti tagihan/
+// langganan yang belum pernah dibayar -- field "Tanggal Bayar"/nextDue di modal generik
+// sudah cukup utk kasus ini (belum ada apa pun utk diedit lewat editTx()).
+const cicilanBelumPernahDibayar=b.kind==='cicilan'&&b.tenor!=null&&b.sisaTenor===b.tenor;
 if((b.kind==='cicilan'||b.kind==='langganan'||b.kind==='tagihan')&&!billEditFromArchive){
 const linkedTxIds=D.transactions.filter(t=>t.billLinkId===b.id).map(t=>t.id);
 if(linkedTxIds.length){
 editTx(Math.max(...linkedTxIds));
 return;
 }
-if(b.kind==='cicilan'){
-toast('⚠️ Riwayat pembayaran cicilan ini tidak ditemukan, tidak bisa dibuka edit lengkapnya');
-return;
+if(b.kind==='cicilan'&&!cicilanBelumPernahDibayar){
+// BUGFIX (s325, audit video 2026-07-31): jangan membuat dead-end hanya karena
+// transaksi pembayaran cicilan tidak lagi memiliki billLinkId. Kondisi ini bisa
+// terjadi pada data lama/migrasi atau transaksi yang dicatat lewat jalur manual.
+// Jika editTx() tidak punya txId, fallback aman adalah membuka editor tagihan
+// generik di bawah ini. Pengguna tetap bisa memperbaiki data tagihan tanpa
+// membuat/mengubah transaksi secara diam-diam. Linking transaksi lama tetap
+// ditangani terpisah oleh BillFallbackScan/self-healing; jangan auto-link di sini.
+// PENTING: sengaja TIDAK return + toast error. Biarkan flow jatuh ke modal generik.
 }
 }
 }
@@ -298,22 +335,27 @@ document.getElementById('billAcc').innerHTML=D.accounts.map(a=>`<option value="$
 if(billEditId!==null){
 const b=billEditFromArchive?(D.billsArchive||[]).find(x=>x.id===billEditId):D.bills.find(x=>x.id===billEditId);
 document.getElementById('billModalTitle').textContent=billEditFromArchive?'✏️ Edit Tagihan (Lunas)':'Edit Tagihan';
+// BUGFIX (s317, lanjutan s295): utk tagihan LUNAS (billEditFromArchive),
+// field Tanggal Bayar & Jumlah SEKARANG diisi dari transaksi pembayaran
+// TERAKHIR (getBillArchiveEditSource -> getLatestBillPaymentTxId), bukan
+// dari b.amount/b.nextDue (template lama yg bisa basi kalau transaksinya
+// pernah diedit lagi lewat jalur lain) -- source of truth-nya transaksi,
+// bukan record arsip. Field due-date lama dipakai ulang label-nya jadi
+// "Tanggal Bayar" & tetap EDITABLE di sini (bukan read-only lagi), 1
+// modal, tidak perlu lompat ke billPaidDateWrap/openBillPaymentDateEdit.
+if(billEditFromArchive){
+const src=getBillArchiveEditSource(b,D.transactions);
+document.getElementById('billName').value=b.name;
+document.getElementById('billAmt').value=src.amount;
+document.getElementById('billDue').value=src.date;
+} else {
 document.getElementById('billName').value=b.name;
 document.getElementById('billAmt').value=b.shared?b.totalAmount:b.amount;
-// BUGFIX (s295): utk tagihan LUNAS (billEditFromArchive), field
-// "Tanggal Jatuh Tempo Berikutnya" disembunyikan total (bukan diisi dari
-// b.nextDue yg sudah tidak relevan) -- diganti ringkasan read-only
-// tanggal bayar ASLI (b.completedAt) + tombol ke jalur edit yg sudah
-// sync 2 arah (openBillPaymentDateEdit -> billHistoryEditModal). Utk
-// tagihan aktif (belum lunas), perilaku lama tetap sama persis.
-const showDue=shouldShowGenericDueField(billEditFromArchive);
-document.getElementById('billDueWrap').style.display=showDue?'block':'none';
-document.getElementById('billPaidDateWrap').classList.toggle('u-dnone',showDue);
-if(showDue){
 document.getElementById('billDue').value=b.nextDue;
-} else {
-document.getElementById('billPaidDateLabel').textContent=b.completedAt?new Date(b.completedAt).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'-';
 }
+const showDue=shouldShowGenericDueField(billEditFromArchive);
+document.getElementById('billDueWrap').style.display='block';
+document.getElementById('billDueLabel')&&(document.getElementById('billDueLabel').textContent=showDue?'Tanggal Jatuh Tempo Berikutnya':'Tanggal Bayar');
 document.getElementById('billFreq').value=b.freq;
 document.getElementById('billCat').value=b.category||'';
 updateBillSubCatOptions();
@@ -331,7 +373,6 @@ toggleBillSharedFields();
 } else {
 document.getElementById('billModalTitle').textContent='Tambah Tagihan/Langganan';
 document.getElementById('billDueWrap').style.display='block';
-document.getElementById('billPaidDateWrap').classList.add('u-dnone');
 document.getElementById('billName').value='';
 document.getElementById('billAmt').value='';
 document.getElementById('billDue').value=new Date().toISOString().split('T')[0];
@@ -370,14 +411,17 @@ function saveBill(){return withSaveGuard('bill','billModal',_saveBillInner);}
 function _saveBillInner(){
 const name=document.getElementById('billName').value.trim();
 const rawAmt=parseFloat(document.getElementById('billAmt').value);
-// BUGFIX (s295): utk tagihan LUNAS (billEditFromArchive), field due-date
-// disembunyikan (lihat openBillModal) -- jangan baca/wajibkan #billDue
-// sama sekali di sini, & jangan ikut tulis nextDue ke record arsip (biar
-// tidak nimpa data dgn nilai basi/kosong). nextDue lama pada record arsip
-// dibiarkan apa adanya -- satu-satunya jalur resmi utk ubah tanggal bayar
-// tetap billHistoryEditModal (sync 2 arah ke completedAt & transaksi).
-const due=billEditFromArchive?null:document.getElementById('billDue').value;
-if(!name||!rawAmt||(!billEditFromArchive&&!due)){toast('⚠️ Lengkapi nama, jumlah, dan tanggal');return;}
+// BUGFIX (s295, lanjutan s317/s318): field #billDue sekarang WAJIB & dibaca utk
+// KEDUA kasus -- utk tagihan aktif artinya "Tanggal Jatuh Tempo Berikutnya"
+// (ditulis ke data.nextDue seperti biasa), utk tagihan LUNAS/arsip
+// (billEditFromArchive) artinya "Tanggal Bayar" (label diganti di openBillModal
+// lewat billDueLabel) -- SUMBER & TUJUANNYA transaksi pembayaran terakhir
+// (getBillArchiveEditSource() saat baca, applyBillPaymentTxSync() saat tulis di
+// bawah), BUKAN nextDue record arsip (makanya data.nextDue tetap TIDAK ditulis
+// utk billEditFromArchive, persis seperti sebelumnya -- field nextDue lama pada
+// record arsip memang sudah tidak dipakai lagi, dibiarkan basi apa adanya).
+const due=document.getElementById('billDue').value;
+if(!name||!rawAmt||!due){toast('⚠️ Lengkapi nama, jumlah, dan tanggal');return;}
 const shared=document.getElementById('billShared').checked;
 const sharedPct=shared?Math.min(99,Math.max(1,parseFloat(document.getElementById('billSharedPct').value)||50)):null;
 const amt=shared?Math.round(rawAmt*sharedPct/100):rawAmt;
@@ -398,6 +442,43 @@ totalAmount:shared?rawAmt:null,
 sharedOtherName:shared&&sharedOtherNameEl?sharedOtherNameEl.value.trim():'',
 sharedAutoPiutang:!!(shared&&sharedAutoPiutangEl&&sharedAutoPiutangEl.checked)
 };
+// paymentTxSync -- (Sesi 318, lanjutan s317) utk billEditFromArchive, commit
+// balik #billDue/#billAmt yang baru diedit ke TRANSAKSI pembayaran terakhirnya
+// (t.date/t.amount), reuse applyBillPaymentTxSync() (SATU sumber kebenaran yang
+// sama dipakai saveBillHistoryEdit() -- lihat komentar lengkap di definisinya)
+// supaya sync completedAt arsip/piutang "Ditanggung Bersama"/sisa utang tetap
+// jalan persis sama dari jalur ini. Cari transaksinya pakai pola SAMA seperti
+// openBillPaymentDateEdit() lama (getLatestBillPaymentTxId, lalu fallback
+// findFallbackBillPaymentTxId() dgn self-healing billLinkId kalau ketemu) --
+// dipertahankan di sini walau openBillPaymentDateEdit() sendiri sudah dihapus,
+// supaya data lama/anomali (belum pernah tertaut billLinkId) tetap bisa
+// disinkronkan, bukan cuma dead-end diam-diam. Kalau transaksinya SAMA SEKALI
+// tidak ketemu (kasus sangat langka), fallback paling akhir: tulis completedAt
+// arsip langsung spy tanggal bayar yang diedit tidak hilang percuma (perilaku
+// lama sebelum ada sync 2 arah ke transaksi).
+let paymentPiutangSynced=false,paymentDebtSynced=false;
+if(billEditFromArchive&&billEditId!==null){
+let txId=getLatestBillPaymentTxId(billEditId,D.transactions);
+if(txId===null){
+const archBForFallback=(D.billsArchive||[]).find(x=>x.id===billEditId);
+const fallbackTxId=findFallbackBillPaymentTxId(archBForFallback,D.transactions);
+if(fallbackTxId!==null){
+const ft=D.transactions.find(x=>x.id===fallbackTxId);
+if(ft){ft.billLinkId=billEditId;txId=fallbackTxId;}
+}
+}
+if(txId!==null){
+const t=D.transactions.find(x=>x.id===txId);
+if(t){
+const sync=applyBillPaymentTxSync(t,due,rawAmt);
+paymentPiutangSynced=sync.piutangSynced;
+paymentDebtSynced=sync.debtSynced;
+}
+} else {
+const archBFallback=(D.billsArchive||[]).find(x=>x.id===billEditId);
+if(archBFallback)archBFallback.completedAt=due;
+}
+}
 if(billEditId!==null){
 // BUGFIX: tagihan lunas (di D.billsArchive) HARUS ditulis balik ke array
 // yang sama tempat dia ditemukan (lihat openBillModal) — bukan D.bills,
@@ -421,43 +502,11 @@ let piutangSynced=0;
 if(billEditId!==null&&shared&&data.sharedAutoPiutang&&typeof syncOutstandingSharedPiutang==='function'){
 piutangSynced=syncOutstandingSharedPiutang(billEditId,rawAmt-amt);
 }
+const anyPiutangSynced=!!piutangSynced||paymentPiutangSynced;
 save();closeModal('billModal');refreshBillEverywhere();
-if(piutangSynced){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
-toast('✅ Tagihan tersimpan'+(piutangSynced?' (piutang terkait ikut disesuaikan)':''));
-}
-// openBillPaymentDateEdit() -- dipanggil dari tombol "✏️ Ubah Tanggal
-// Bayar" di modal ✏️ Edit Tagihan (Lunas). SENGAJA tidak mengedit tanggal
-// apapun di sini -- cuma redirect ke billHistoryEditModal (lewat
-// editBillHistoryTx(), transaksi pembayaran TERAKHIR) yang SUDAH sync 2
-// arah ke completedAt arsip (lihat saveBillHistoryEdit()). Menyatukan ke
-// satu jalur ini mencegah dua sumber kebenaran tanggal bayar yang bisa
-// beda sendiri-sendiri (lihat catatan di openBillModal()/_saveBillInner()).
-function openBillPaymentDateEdit(){
-if(!billEditFromArchive||billEditId===null)return;
-let latestTxId=getLatestBillPaymentTxId(billEditId,D.transactions);
-// FIX (laporan user, gap billLinkId): kalau tidak ketemu lewat billLinkId asli,
-// coba fallback (lihat findFallbackBillPaymentTxId() di atas) sebelum menyerah --
-// kalau ketemu, langsung tautkan (self-healing) supaya sync 2 arah normal
-// berlaku mulai sekarang & tidak dead-end lagi tiap kali fitur ini dibuka.
-if(latestTxId===null){
-const archB=(D.billsArchive||[]).find(x=>x.id===billEditId);
-const fallbackTxId=findFallbackBillPaymentTxId(archB,D.transactions);
-if(fallbackTxId!==null){
-// FIX ringkas (audit s306, saran #3): hitung DULU (sebelum billLinkId
-// ditautkan di bawah, supaya tx yg baru ketemu ini masih ikut terhitung)
-// apakah ada kandidat LAIN yang sama masuk akalnya (nominal+catatan cocok)
-// -- supaya tidak diam-diam salah tautkan tanpa disadari. Tidak mengubah
-// hasil link (tetap yg tanggal paling dekat), murni tambahan info.
-const ambiguous=countFallbackBillPaymentCandidates(archB,D.transactions)>1;
-const t=D.transactions.find(x=>x.id===fallbackTxId);
-if(t){t.billLinkId=billEditId;save();}
-latestTxId=fallbackTxId;
-toast(ambiguous?'🔗 Transaksi pembayaran ditautkan (ditemukan dari tanggal terdekat) — ada transaksi mirip lain, cek lagi kalau salah':'🔗 Transaksi pembayaran ditemukan & otomatis ditautkan');
-}
-}
-if(latestTxId===null){toast('⚠️ Transaksi pembayaran tagihan ini tidak ditemukan');return;}
-closeModal('billModal');
-editBillHistoryTx(latestTxId);
+if(anyPiutangSynced){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
+if(paymentDebtSynced){if(typeof renderDebtList==='function')renderDebtList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
+toast('✅ Tagihan tersimpan'+(anyPiutangSynced?' (piutang terkait ikut disesuaikan)':'')+(paymentDebtSynced?' (sisa utang ikut disesuaikan)':''));
 }
 async function delBill(id){
 const b=D.bills.find(x=>x.id===id);
@@ -555,19 +604,26 @@ function isLatestBillPaymentTx(billId,txId){
 const ids=D.transactions.filter(t=>t.billLinkId===billId).map(t=>t.id);
 return!ids.length||txId>=Math.max(...ids);
 }
-function saveBillHistoryEdit(){
-if(!curBillHistoryEditTxId)return;
-const t=D.transactions.find(x=>x.id===curBillHistoryEditTxId);
-if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
-const tanggal=document.getElementById('bhTanggal').value;
-const jumlah=parseFloat(document.getElementById('bhJumlah').value);
-const catatan=document.getElementById('bhCatatan').value;
-if(!tanggal){toast('⚠️ Tanggal wajib diisi');return;}
-if(!jumlah||jumlah<=0){toast('⚠️ Jumlah harus lebih dari 0');return;}
+// applyBillPaymentTxSync(t, tanggal, jumlah, catatan) -- (Sesi 318, lanjutan s317)
+// SATU sumber kebenaran utk commit tanggal/jumlah baru ke transaksi pembayaran
+// tagihan + 3 sync yang HARUS selalu menyertainya (completedAt arsip, piutang
+// otomatis "Ditanggung Bersama", sisa utang) -- diextract dari isi
+// saveBillHistoryEdit() (jalur 📋 Riwayat Pembayaran, sudah ada sejak s287/s298/
+// s299) supaya _saveBillInner() (jalur ✏️ Edit Tagihan (Lunas) di billModal, s317
+// baru mengisi field dari transaksi, sesi ini baru menulis balik) bisa REUSE
+// logic yang PERSIS sama, bukan implementasi sync kedua yang bisa diam-diam beda
+// sendiri-sendiri (SESSION_RULES.md: "Jangan duplicate function"). `catatan`
+// SENGAJA opsional (undefined = jangan sentuh t.note) -- billHistoryEditModal
+// punya field catatan transaksi (bhCatatan), billModal archive branch TIDAK
+// (field billNote di sana map ke catatan record arsip, bukan catatan transaksi,
+// beda konsep, jangan ketimpa tanpa sengaja). Fungsi murni thd D (baca/tulis
+// D.transactions/D.billsArchive/D.bills/D.debts/D.piutang), tidak sentuh DOM --
+// caller yang urus baca form/save()/closeModal/toast/render.
+function applyBillPaymentTxSync(t,tanggal,jumlah,catatan){
 const oldAmount=t.amount;
 t.date=tanggal;
 t.amount=jumlah;
-t.note=catatan;
+if(catatan!==undefined)t.note=catatan;
 // sync completedAt arsip tagihan ke tanggal baru (Sesi 287, fix s288: tambah cek
 // isLatestBillPaymentTx) — kalau transaksi ini pembayaran yg mengarsipkan tagihan
 // (lunas), completedAt arsip harus ikut berubah pas tanggal riwayatnya diedit, biar
@@ -598,6 +654,20 @@ if(t.billLinkId&&isLatestBillPaymentTx(t.billLinkId,t.id)){
 const linkedBill=(D.bills||[]).find(b=>b.id===t.billLinkId);
 debtSynced=typeof syncDebtBalanceOnPaymentEdit==='function'&&syncDebtBalanceOnPaymentEdit(linkedBill,oldAmount,jumlah);
 }
+return{piutangSynced,debtSynced};
+}
+function saveBillHistoryEdit(){
+if(!curBillHistoryEditTxId)return;
+const t=D.transactions.find(x=>x.id===curBillHistoryEditTxId);
+if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
+const tanggal=document.getElementById('bhTanggal').value;
+const jumlah=parseFloat(document.getElementById('bhJumlah').value);
+const catatan=document.getElementById('bhCatatan').value;
+if(!tanggal){toast('⚠️ Tanggal wajib diisi');return;}
+if(!jumlah||jumlah<=0){toast('⚠️ Jumlah harus lebih dari 0');return;}
+// (Sesi 318: sync completedAt/piutang/utang dipindah ke applyBillPaymentTxSync(),
+// dipakai bareng _saveBillInner() -- lihat komentar di definisinya.)
+const{piutangSynced,debtSynced}=applyBillPaymentTxSync(t,tanggal,jumlah,catatan);
 save();
 closeModal('billHistoryEditModal');
 // BUGFIX (s313, laporan user via video): saveBillHistoryEdit() dulu TIDAK
