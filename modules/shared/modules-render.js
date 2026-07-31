@@ -490,7 +490,7 @@ const actionBtns=isArchived?
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
-`<button class="tx-del" data-stop="1" data-action="billActionPayNow" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
+`<button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`);
 return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" style="flex-direction:column;align-items:stretch;gap:8px;${isArchived?'opacity:0.75':''}">
@@ -621,7 +621,7 @@ document.getElementById('dashBillMiniList').innerHTML=s.nearest.map(({b,diff})=>
       <div class="tx-icon u-bgaccsoft" style="width:32px;height:32px;font-size:15px">${icons[b.kind]||'🔔'}</div>
       <div class="tx-info"><div class="tx-name" style="font-size:var(--fs-body)">${escapeHtml(b.name)}</div><div class="tx-meta">${diff<0?'Lewat '+Math.abs(diff)+' hari':diff===0?'Hari ini':diff+' hari lagi'}</div></div>
       <div class="tx-amount red u-fs13">${fmt(b.amount)}</div>
-      <button class="tx-del" data-stop="1" data-action="billActionPayNow" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
+      <button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
     </div>`).join('');
 }
 
