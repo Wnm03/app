@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-07-31T03:21:36.455Z
-Total file source: 278 · Total identifier global: 1945
+Terakhir digenerate: 2026-07-31T04:16:15.034Z
+Total file source: 278 · Total identifier global: 1947
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -87,7 +87,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 64 | `modules/shared/profil-pengaturan.js` | 98 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 65 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 66 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
-| 67 | `modules/finance/tagihan-kalender.js` | 1200 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 67 | `modules/finance/tagihan-kalender.js` | 1259 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 68 | `modules/shared/backup-restore.js` | 811 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 69 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
 | 70 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
@@ -802,6 +802,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `confirmWeeklyReset` | `modules/business/reset-gaji-mingguan.js` |
 | `copyNavSmokeResults` | `self-test.js` |
 | `copySelfTestResults` | `self-test.js` |
+| `countBillFallbackAmbiguousSkipped` | `modules/finance/tagihan-kalender.js` |
 | `countFallbackBillPaymentCandidates` | `modules/finance/tagihan-kalender.js` |
 | `CrossAIHook` | `modules/cross/cross-ai-hook.js` |
 | `CrossDashboardCard` | `modules/cross/cross-dashboard-card.js` |
@@ -1570,6 +1571,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `Refleksi` | `modules/home/refleksi-selfcare.js` |
 | `REFLEKSI_SELFCARE_ITEMS` | `modules/home/refleksi-selfcare.js` |
 | `refreshBillEverywhere` | `modules/finance/tagihan-kalender.js` |
+| `refreshBillHistoryModalViews` | `modules/finance/tagihan-kalender.js` |
 | `refreshCurrentPage` | `modules/shared/modal-navigasi.js` |
 | `refreshTxCatIfOpen` | `modules/finance/kategori.js` |
 | `registerAssetAIRules` | `modules/asset/aset.js` |
