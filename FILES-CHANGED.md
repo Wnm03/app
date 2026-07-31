@@ -2983,3 +2983,74 @@ node scripts/build.js kw140-fix-dashcard-toggle-inline-style
 # ✓ index.html & app_production.html sudah identik.
 # Versi baru: ?v=565 / kw-cache-v565
 ```
+
+---
+
+# Files Changed — Sesi 322 (Audit Sesi 2: Kamera Barcode, dari AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE.md)
+
+Baseline: `kw_release_v983_s321-modalhtml-index-drift-guard.zip`, 2035/2035
+test PASS.
+
+Total file yang berubah: **0 file kode**. Total file baru: **2**
+(1 test regresi + 1 dokumen audit). File yang berubah krn `node build.js`
+(bump versi rutin, bukan perubahan manual): `app-bundle-a.min.js`,
+`app-bundle-b.min.js`, `index.html`/`app_production.html` (`?v=984`),
+`sw.js` (`CACHE_NAME`), `modules/shared/modals.js`/`modules-render.js`/
+`modules-calc.js`, `chat-action-handlers.js`,
+`modules/shared/features-helpers-global-security.js` (konstanta versi),
+`docs/FILE-MAP.md` (regenerated).
+
+| File | Jenis | Ringkasan |
+|---|---|---|
+| `tests/boot-pin-idempotent.test.js` | Baru | Regresi Sesi 1 (bug PIN 2x) — mengunci guard `window.__kwPinScreenShown` & `window.__kwBooted`/`sessionStorage.kw_sw_reloaded`. 4 test, semua PASS terhadap kode v983 yang sudah ada. |
+| `AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md` | Baru | Hasil audit Sesi 2 (kamera barcode) — pemetaan entry point/lifecycle/guard & tabel verifikasi tiap kriteria selesai Sesi 2. Kesimpulan: tidak ada bug aktif baru, tidak ada patch kode kamera pada sesi ini. |
+
+## Kenapa tidak ada perubahan kode kamera
+
+Audit Sesi 2 menelusuri seluruh entry point kamera live
+(`VehicleScanner.scan()`, `SparepartScanner.scan('camera')`), lifecycle
+owner (`ScannerSession.enter()/exit()/isActive()`), dan seluruh guard
+(busy flag per-scanner, reference counter cross-scanner, debounce, timeout
+`getUserMedia`, self-heal state nyangkut, cleanup
+`visibilitychange`/`freeze`/`resume`/`pagehide`) — SEMUA kriteria selesai
+Sesi 2 pada audit asli sudah terpenuhi oleh implementasi yang sudah ada
+dari sesi-sesi sebelumnya.
+
+# Files Changed — Sesi 323: Housekeeping Pasca-Audit (Lint Drift Struktural Scanner + ADR-028)
+
+Baseline: `kw_release_v984_s322-sesi2-scanner-audit-verified.zip`,
+2039/2039 test PASS. Tindak lanjut saran housekeeping audit Sesi 2
+(`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md`), murni aditif —
+0 file business logic scanner disentuh.
+
+| File | Jenis | Ringkasan |
+|---|---|---|
+| `docs/architecture/ADR-028.md` | **Baru** | ADR resmi: duplikasi `vehicle-scanner.js`/`sparepart-scanner.js` sengaja (isolasi risiko antar scanner), jangan disatukan tanpa diskusi ulang. |
+| `scripts/build.js` | Diubah (+aditif) | Fungsi baru `lintScannerStructuralDrift()` + konstanta `SCANNER_TWIN_FN_SUFFIXES`, dipanggil dari `main()` setelah lint drift MODAL_HTML yang sudah ada. Tidak mengubah lint/logic build yang sudah ada. |
+| `tests/scanner-structural-drift.test.js` | **Baru** | 13 test unit versi `npm test` dari lint di atas. |
+| `CHANGELOG.md` | Diubah | Entry Sesi 323 ditambahkan di paling atas (konvensi newest-first). |
+| `FILES-CHANGED.md` | Diubah | Dokumen ini (aditif, append). |
+| `docs/CHECKPOINT.md` | Diubah | Current Session diperbarui ke Sesi 323. |
+
+## File yang TIDAK berubah (ditegaskan)
+
+- `modules/vehicle/vehicle-scanner.js`, `modules/vehicle/sparepart-scanner.js` — 0 baris disentuh.
+- `modules/shared/scanner-session.js`, `modules/shared/modal-navigasi.js` — tidak disentuh.
+- Seluruh lint lain di `scripts/build.js` (`lintDnoneStyleDisplayMismatch`, `lintUnescapedUserField*`, `lintOcrPrematureTesseractCheck`, `lintModalHtmlIndexDrift`) — tidak diubah.
+- Seluruh 2039 test lama — tidak satu pun diubah, tetap 100% lulus.
+
+## Hasil test
+
+```
+node --test tests/*.test.js
+# tests 2052 / pass 2052 / fail 0
+```
+
+## Build
+
+```
+node scripts/build.js s323-scanner-drift-lint-adr028
+# ✓ Tidak ada drift struktural antara vehicle-scanner.js & sparepart-scanner.js
+# ✓ Sintaks kedua bundle valid (node --check lolos)
+# ✓ index.html & app_production.html sudah identik.
+```

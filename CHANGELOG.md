@@ -1,3 +1,97 @@
+# Changelog — Sesi 323: Housekeeping Pasca-Audit — Lint Drift Struktural Scanner + ADR-028
+
+## Konteks
+Tindak lanjut dari 2 saran housekeeping "murah, manfaat jelas" di
+`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md` (di luar scope
+bugfix, bukan patch — audit Sesi 2 tidak menemukan bug aktif). Saran
+#1 (install esbuild) TIDAK dieksekusi di sini karena `npm install`
+butuh akses jaringan yang tidak tersedia di lingkungan kerja ini —
+`build.js` sudah otomatis pakai esbuild kalau terdeteksi terpasang,
+jadi tinggal `npm install --save-dev esbuild` sekali di lingkungan
+developer (tidak perlu perubahan kode).
+
+## Perubahan
+- **`docs/architecture/ADR-028.md`** (baru) — mendokumentasikan secara
+  formal bahwa duplikasi total `vehicle-scanner.js`/`sparepart-
+  scanner.js` (pola lifecycle kamera: pauseCamera/resumeCamera/
+  attachLifecycle/stopMediaStream/timeout/debounce/dkk) SENGAJA dan
+  BUKAN technical debt — alasan utamanya isolasi risiko antar scanner
+  (2 fitur dgn kematangan/siklus hidup berbeda, tidak boleh berbagi 1
+  titik kegagalan). Sebelumnya reasoning ini hanya ada di komentar
+  kepala file, belum ada satu ADR resmi (seperti ADR-022–ADR-027 yang
+  sudah ada) yang menegaskannya.
+- **`scripts/build.js`** — fungsi baru `lintScannerStructuralDrift()`
+  (pola sama persis `lintModalHtmlIndexDrift()` dari v983/ADR
+  sebelumnya, Sesi 321): membandingkan daftar fungsi "kembar"
+  (`SCANNER_TWIN_FN_SUFFIXES`: WithCameraTimeout/ShouldDebounce/
+  RecordScan/StopMediaStream/PauseCamera/ResumeCamera/AttachLifecycle/
+  DetachLifecycle/ApplyTorchCapability/IsHarmlessDecodeError/
+  BuildOverlay/ErrorMessage) antara `vehicleScanner*()` &
+  `sparepartScanner*()`, memastikan tiap fungsi kembar ADA di kedua
+  file dengan jumlah parameter yang sama. Dipanggil dari `main()`,
+  BERHENTI build kalau ada drift — sama persis pola lint drift lain yg
+  sudah ada. Tidak mengubah logic scanner sama sekali (0 baris
+  `vehicle-scanner.js`/`sparepart-scanner.js` disentuh), murni lint
+  baru.
+- **`tests/scanner-structural-drift.test.js`** (baru) — versi test
+  unit (utk `npm test`) dari lint di atas, 13 test: 2 sanity check
+  parser regex + 1 test per fungsi kembar di `SCANNER_TWIN_FN_SUFFIXES`
+  (12 fungsi). Semua PASS terhadap kode v984 yang sudah ada (tidak ada
+  drift terdeteksi saat ini — lint ini murni pencegahan regresi masa
+  depan).
+
+## Yang TIDAK diubah
+- `modules/vehicle/vehicle-scanner.js`, `modules/vehicle/sparepart-
+  scanner.js` — 0 baris disentuh. Lint baru murni MEMBACA kedua file
+  ini via regex, tidak memodifikasinya.
+- Saran housekeeping #4 (timeout/debounce jadi setting), #5 (diagnostik
+  error kamera), #6 (rename `scanCamera`) — sengaja TIDAK dikerjakan
+  sesi ini (prioritas sedang/rendah, di luar scope "ringan" sesi ini),
+  dicatat sbg rekomendasi lanjutan kalau diperlukan.
+
+## Verifikasi
+```
+node --test tests/*.test.js
+# tests 2052 / pass 2052 / fail 0   (2039 lama + 13 baru)
+
+node scripts/build.js s323-scanner-drift-lint-adr028
+# ✓ Tidak ada drift struktural antara vehicle-scanner.js & sparepart-scanner.js
+# ✓ Sintaks kedua bundle valid (node --check lolos)
+# ✓ index.html & app_production.html sudah identik.
+```
+
+---
+
+# Changelog — Audit Sesi 2 (Kamera Barcode, AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE.md)
+
+## Konteks
+Lanjutan audit 2-sesi bug PIN startup (Sesi 1, sudah stabil di v983) &
+kamera barcode (Sesi 2, sesi ini). Lihat
+`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md` utk laporan lengkap.
+
+## Hasil
+Audit menyeluruh terhadap seluruh entry point kamera live
+(`VehicleScanner.scan()`/`SparepartScanner.scan('camera')`), lifecycle
+owner (`ScannerSession`), & guard yang ada (busy flag, reference counter
+cross-scanner, debounce, timeout `getUserMedia`, self-heal, cleanup
+visibility/pagehide) — **tidak ditemukan bug aktif baru**; semua kriteria
+selesai Sesi 2 pada audit sudah terpenuhi oleh implementasi sesi-sesi
+sebelumnya (PD-007 + Target Implementasi #1-9). Tidak ada perubahan kode
+kamera pada sesi ini.
+
+## Perubahan
+- **`tests/boot-pin-idempotent.test.js`** (baru) — regresi Sesi 1: mengunci
+  guard `window.__kwPinScreenShown` & `window.__kwBooted`/
+  `sessionStorage.kw_sw_reloaded`. 4 test, semua PASS.
+- **`AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md`** (baru) — laporan
+  audit Sesi 2 lengkap dgn tabel pemetaan & verifikasi.
+
+## Verifikasi
+`node --test tests/*.test.js` — 2039/2039 lolos (2035 lama + 4 baru).
+`node scripts/build.js` — lolos normal, versi naik ke v984.
+
+---
+
 # Changelog — Sesi 337 (lanjutan): Ikon SVG Widget AI Insight (KNOWN-ISSUES.md §4.1)
 
 ## Konteks
