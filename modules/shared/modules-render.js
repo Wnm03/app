@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s294-billtype-archive-lock';
+const MODULE_RENDER_VERSION='s303-utang-custom-pay-amount';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -290,6 +290,11 @@ function renderBillList(){
 const targets=['billList','billListKeu'].map(id=>document.getElementById(id)).filter(Boolean);
 if(!targets.length)return;
 populateBillFilterOptions();
+// FIX (user report + Screenshot 2026-07-31): sinkronkan billFilterBulan/Tahun ke bulan berjalan
+// SEBELUM combined difilter di bawah -- lihat komentar lengkap di initBillStatMonthDefault()
+// (tagihan-kalender.js). Tanpa ini, render PERTAMA (belum pernah nav ‹›) menyaring dgn
+// billFilterBulan masih 'all' walau label besar sudah terlanjur bilang bulan sekarang.
+initBillStatMonthDefault();
 // S322: sinkronkan dropdown status & tombol tab Bayar/Lunas ke state billFilterStatus tiap
 // render (dipanggil dari mana saja: ganti tab, ganti halaman, dsb) supaya UI tidak pernah
 // "nyasar" ke kombinasi kontradiktif (mis. tab Bayar aktif tapi dropdown masih di Lunas).
@@ -426,6 +431,15 @@ const isArchived=b._lunas&&!b._paidPeriodOnly;
 // Lunas (lanjutan ringkas dari fitur _paidPeriodOnly di atas).
 const paidThisPeriod=(!isArchived&&!b._paidPeriodOnly)?getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun):null;
 const paidThisPeriodChip=paidThisPeriod?`<span class="acc-chip" style="color:var(--accent3)">✅ Sudah dibayar bulan ini</span>`:'';
+// UX (lanjutan audit user, laporan "chip 🧾 satu arah aja (Piutang->Tagihan)"): kebalikan
+// dari chip "🧾 Tagihan asal" di kartu Piutang (s300) -- kartu Tagihan yang jadi sumber
+// piutang otomatis (b.shared+sharedAutoPiutang) sekarang dapat chip balik "🤝 Piutang
+// terkait" yang buka piutangnya langsung (reuse openPiutangModal). Dibatasi ke b.shared
+// (bukan cuma b.sharedAutoPiutang) supaya piutang LAMA yang sudah terlanjur dibuat tetap
+// tertaut walau togglenya belakangan dimatikan. data-stop="1" wajib (pola sama chip lain
+// di kartu ini) supaya tap chip tidak ikut trigger data-action="openBillModal" milik kartu.
+const autoPiutangId=(b.shared&&typeof getAutoPiutangIdForBill==='function')?getAutoPiutangIdForBill(b.id,D.piutang):null;
+const autoPiutangChip=autoPiutangId?`<span class="acc-chip u-pointer" data-stop="1" data-action="openPiutangModal" data-args="${escapeHtml(JSON.stringify([autoPiutangId]))}" title="Lihat piutang terkait">🤝 Piutang terkait</span>`:'';
 const statusBadge=b._paidPeriodOnly?`<span class="bill-due-badge bill-due-ok">✅ Dibayar</span>`:(b._lunas?`<span class="bill-due-badge bill-due-ok">✅ Lunas</span>`:`<span class="bill-due-badge ${urgClass}">${diff<0?'Lewat':diff===0?'Hari ini':diff+' hari'}</span>`);
 const anomaly=isArchived?null:getBillAnomalyInfo(b.id,b.amount);
 const anomalyNote=anomaly?`<div class="u-fs11 u-mt2 u-fw700" style="color:var(--accent4)">⚠️ Naik ${anomaly.pctChange}% dari rata-rata ${anomaly.count}x terakhir (${fmt(anomaly.avgPrev)}) — cek lagi sebelum bayar</div>`:'';
@@ -445,7 +459,7 @@ return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="$
       <div class="u-flex u-aic u-gap10">
         <div class="tx-icon u-bgaccsoft">${icons[b.kind]||'🔔'}</div>
         <div class="tx-info">
-          <div class="tx-name">${escapeHtml(b.name)} ${b.category?`<span class="acc-chip">${b.category}</span>`:''} ${b.subcategory?`<span class="acc-chip">${b.subcategory}</span>`:''} ${b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''} ${!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''} ${paidThisPeriodChip}</div>
+          <div class="tx-name">${escapeHtml(b.name)} ${b.category?`<span class="acc-chip">${b.category}</span>`:''} ${b.subcategory?`<span class="acc-chip">${b.subcategory}</span>`:''} ${b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''} ${!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''} ${autoPiutangChip} ${paidThisPeriodChip}</div>
           <div class="tx-meta">${b._paidPeriodOnly?'Sudah dibayar':(b._lunas?'Lunas':'Jatuh tempo')} ${due.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})} · ${b.freq}</div>
         </div>
         <div class="u-flex u-fdcol u-gap4" style="align-items:flex-end">
