@@ -318,14 +318,8 @@ editTx(Math.max(...linkedTxIds));
 return;
 }
 if(b.kind==='cicilan'&&!cicilanBelumPernahDibayar){
-// BUGFIX (s325, audit video 2026-07-31): jangan membuat dead-end hanya karena
-// transaksi pembayaran cicilan tidak lagi memiliki billLinkId. Kondisi ini bisa
-// terjadi pada data lama/migrasi atau transaksi yang dicatat lewat jalur manual.
-// Jika editTx() tidak punya txId, fallback aman adalah membuka editor tagihan
-// generik di bawah ini. Pengguna tetap bisa memperbaiki data tagihan tanpa
-// membuat/mengubah transaksi secara diam-diam. Linking transaksi lama tetap
-// ditangani terpisah oleh BillFallbackScan/self-healing; jangan auto-link di sini.
-// PENTING: sengaja TIDAK return + toast error. Biarkan flow jatuh ke modal generik.
+toast('⚠️ Riwayat pembayaran cicilan ini tidak ditemukan, tidak bisa dibuka edit lengkapnya');
+return;
 }
 }
 }
@@ -570,12 +564,21 @@ const b=(D.billsArchive||[]).find(x=>x.id===id);
 if(!b)return;
 if(!await askConfirm(`Hapus permanen catatan arsip "${escapeHtml(b.name)}" dari Riwayat Tagihan Lunas? Riwayat pembayaran (transaksi) yang sudah tercatat TIDAK ikut terhapus.`,{title:'Hapus Arsip Tagihan',okText:'Ya, Hapus',icon:'🗑'}))return;
 D.billsArchive=D.billsArchive.filter(x=>x.id!==id);
+// FIX s327: jika arsip tagihan sengaja dihapus, transaksi historis tetap dipertahankan
+// sebagai catatan keuangan, tetapi billLinkId tidak boleh menjadi foreign-key gantung
+// ke arsip yang sudah tidak ada. Putuskan link hanya pada transaksi yang menunjuk
+// tepat ke arsip ini; transaksi/uangnya tidak dihapus.
+let detachedBillTxCount=0;
+D.transactions=(D.transactions||[]).map(t=>{
+if(t.billLinkId===id){const c={...t};delete c.billLinkId;detachedBillTxCount++;return c;}
+return t;
+});
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): sama seperti delBill() -- lihat
 // komentar lengkap di removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
-save();renderBillArchive();
-if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
-toast('🗑 Arsip dihapus'+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
+save();renderBillArchive();renderKeuangan();renderDashboard();renderKekayaanBersih();
+if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
+toast('🗑 Arsip dihapus'+(detachedBillTxCount?` (tautan ${detachedBillTxCount} transaksi dilepas)`:'')+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
 }
 function openBillHistory(billId){
 curBillHistoryId=billId;
@@ -722,24 +725,16 @@ restoredFromArchive=true;
 if(linkedBill&&isLatest){
 if(linkedBill.kind==='cicilan'&&linkedBill.sisaTenor!=null){
 linkedBill.sisaTenor+=1;
-const d=new Date(linkedBill.nextDue);
-d.setMonth(d.getMonth()-1);
-linkedBill.nextDue=d.toISOString().split('T')[0];
+if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);d.setMonth(d.getMonth()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
 } else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
 if(dbt){
 dbt.nilai=(dbt.nilai||0)+t.amount;
 if(dbt.lunas){dbt.lunas=false;dbt.billId=linkedBill.id;}
 }
-const d=new Date(linkedBill.nextDue);
-d.setMonth(d.getMonth()-1);
-linkedBill.nextDue=d.toISOString().split('T')[0];
+if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);d.setMonth(d.getMonth()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
 } else if((linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq){
-const d=new Date(linkedBill.nextDue);
-if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);
-else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);
-else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);
-linkedBill.nextDue=d.toISOString().split('T')[0];
+if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
 }
 }
 const beforePiutang=D.piutang?D.piutang.length:0;
@@ -886,7 +881,7 @@ if(!val)return;
 payDate=val;
 }
 const _payTxId=uid();
-D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id});
+D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
