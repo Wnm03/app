@@ -132,6 +132,26 @@ result.push({billId:b.id,billName:b.name,txId:txId,txNote:t.note||'',txAmount:t.
 });
 return result;
 }
+// countBillFallbackAmbiguousSkipped(billsArchive, transactions) -- FIX ringan
+// (lanjutan audit s311 scan massal): scanAllBillFallbackCandidates() di atas
+// SKIP diam-diam entri yang ambigu (>1 kandidat) demi keamanan, tapi user
+// yang buka BillFallbackScan tidak tahu ADA BERAPA entri yang di-skip itu --
+// kalau hasil kosong padahal ada beberapa data lama ambigu, user bisa salah
+// kira "sudah semua ter-link" padahal sebagian cuma dilewati diam-diam.
+// Fungsi murni ini hitung entri yang SPESIFIK di-skip krn ambigu (beda dari
+// yang di-skip krn sudah ter-link / krn tidak ada kandidat sama sekali) --
+// dipakai BillFallbackScan.render() utk tampilkan info tambahan "X dilewati
+// krn ambigu, tautkan manual satu-satu" supaya user tahu masih ada PR
+// manual, bukan disangka semuanya sudah beres. Filter PERSIS SAMA dgn
+// scanAllBillFallbackCandidates() supaya angkanya konsisten.
+function countBillFallbackAmbiguousSkipped(billsArchive,transactions){
+let n=0;
+(billsArchive||[]).forEach(function(b){
+if(getLatestBillPaymentTxId(b.id,transactions)!==null)return;
+if(countFallbackBillPaymentCandidates(b,transactions)>1)n++;
+});
+return n;
+}
 // BillFallbackScan -- UI wrapper utk scanAllBillFallbackCandidates() di atas: render
 // preview list dgn checkbox (semua tercentang default), user bisa uncheck yg ragu,
 // baru commit (tulis billLinkId) lewat confirmSelected(). Pola sama LinkTx (preview
@@ -147,12 +167,14 @@ openModal('billFallbackScanModal');
 render(){
 const el=document.getElementById('billFallbackScanBody');
 if(!el)return;
+const skipped=countBillFallbackAmbiguousSkipped(D.billsArchive,D.transactions);
+const skipHint=skipped>0?'<div style="font-size:11.5px;color:var(--text2);background:var(--surface3);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.5">ℹ️ '+skipped+' entri arsip dilewati krn ada &gt;1 kandidat mirip (ambigu) -- tautkan manual satu-satu lewat ✏️ Ubah Tanggal Bayar di tagihan terkait (bukan di sini, demi keamanan).</div>':'';
 if(!this._candidates.length){
-el.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada transaksi lama yang perlu ditautkan -- semua sudah tertaut atau tidak ditemukan kandidat yang aman (ambigu dilewati).</div></div>';
+el.innerHTML=skipHint+'<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada transaksi lama yang perlu ditautkan -- semua sudah tertaut'+(skipped>0?' (lihat info ambigu di atas)':' atau tidak ditemukan kandidat yang aman')+'.</div></div>';
 document.getElementById('billFallbackScanCommitBtn').disabled=true;
 return;
 }
-el.innerHTML=this._candidates.map(function(c,i){
+el.innerHTML=skipHint+this._candidates.map(function(c,i){
 return '<label style="display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">'
 +'<input type="checkbox" checked data-idx="'+i+'" class="billFallbackScanChk" style="width:18px;height:18px;margin-top:2px;accent-color:var(--accent)">'
 +'<div style="flex:1;font-size:12.5px;line-height:1.5">'
@@ -454,6 +476,27 @@ save();refreshBillEverywhere();renderDebtList();
 if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('🗑 Tagihan dihapus'+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
 }
+// refreshBillHistoryModalViews() -- FIX ringkas (s314, lanjutan rekomendasi #1
+// audit s313 "saveBillHistoryEdit() tidak refresh Daftar Tagihan"): root cause
+// bug s313 adalah saveBillHistoryEdit() & deleteBillHistoryTx() -- dua fungsi
+// SEBELAH PERSIS di modal yang sama (billHistoryEditModal) -- masing-masing
+// nulis SENDIRI-SENDIRI daftar pemanggilan render (renderDashboard/
+// renderKeuangan/renderBillList/checkBills/renderBillHistory/renderBillArchive)
+// alih-alih pakai satu sumber kebenaran. Sekali salah satu lupa nambah satu
+// panggilan render pas bikin fitur baru, keduanya diam-diam beda lagi (persis
+// yang kejadian di s313) -- silent, tidak ketauan sampai user lapor screen
+// recording. Fungsi murni ini jadi SATU sumber kebenaran utk 6 render yang
+// SELALU relevan tiap kali data di modal Riwayat Pembayaran berubah (baik
+// diedit maupun dihapus) -- dipanggil dari KEDUA fungsi di bawah, supaya kalau
+// nanti ada render ke-7 yang perlu ditambah, cukup ubah SATU tempat ini, tidak
+// mungkin lagi salah satu fungsi kelewat. renderSettings() SENGAJA tidak
+// dimasukkan sini (tetap dipanggil terpisah cuma di deleteBillHistoryTx) --
+// beda cakupan: hapus riwayat pembayaran levelnya lebih besar (bisa
+// mengembalikan tagihan dari arsip ke aktif / balikin sisa tenor), edit
+// tanggal/jumlah tidak menyentuh apa pun yang tampil di halaman Pengaturan.
+function refreshBillHistoryModalViews(){
+renderDashboard();renderKeuangan();renderBillList();checkBills();renderBillHistory();renderBillArchive();
+}
 function refreshBillEverywhere(){
 renderBillList();
 renderSettings();
@@ -557,7 +600,19 @@ debtSynced=typeof syncDebtBalanceOnPaymentEdit==='function'&&syncDebtBalanceOnPa
 }
 save();
 closeModal('billHistoryEditModal');
-renderDashboard();renderKeuangan();renderBillHistory();renderBillArchive();
+// BUGFIX (s313, laporan user via video): saveBillHistoryEdit() dulu TIDAK
+// memanggil renderBillList()/checkBills() -- beda dari deleteBillHistoryTx()
+// (fungsi sebelah, di modal yang sama) yang SUDAH memanggil keduanya. Efeknya:
+// toast "berhasil" muncul & completedAt/t.date di D sudah benar (save() sudah
+// jalan), tapi kartu di Daftar Tagihan (renderBillList) & badge status jatuh
+// tempo (checkBills) tetap nampilin data LAMA sampai user pindah halaman lalu
+// balik lagi (atau buka ulang transaksinya) -- kelihatan seperti tanggal
+// "tidak otomatis ke-update" padahal datanya sendiri sudah tersimpan benar,
+// cuma tampilan Daftar Tagihan yang basi. Disamakan ke pola deleteBillHistoryTx().
+// (s314: daftar render dipindah ke refreshBillHistoryModalViews() -- satu sumber
+// kebenaran dipakai bareng deleteBillHistoryTx(), supaya kelas bug s313 ini
+// tidak bisa terulang lagi kalau ada render baru yang perlu ditambah nanti.)
+refreshBillHistoryModalViews();
 if(piutangSynced){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 if(debtSynced){if(typeof renderDebtList==='function')renderDebtList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('✅ Riwayat pembayaran diperbarui'+(piutangSynced?' (piutang terkait ikut disesuaikan)':'')+(debtSynced?' (sisa utang ikut disesuaikan)':''));
@@ -639,7 +694,11 @@ D.transactions=D.transactions.filter(x=>x.id!==curBillHistoryEditTxId);
 curBillHistoryEditTxId=null;
 save();
 closeModal('billHistoryEditModal');
-renderDashboard();renderKeuangan();renderBillList();renderSettings();checkBills();renderBillHistory();renderBillArchive();
+// (s314: 6 render inti dipindah ke refreshBillHistoryModalViews(), dipakai bareng
+// saveBillHistoryEdit() -- renderSettings() TETAP dipanggil terpisah di sini saja,
+// lihat komentar di definisi refreshBillHistoryModalViews() kenapa hapus riwayat
+// beda cakupan dari edit riwayat.)
+refreshBillHistoryModalViews();renderSettings();
 renderDebtList();renderKekayaanBersih();hitungZakatMaal();
 if(typeof Piutang!=='undefined')Piutang.renderList();
 const msg=restoredFromArchive?', tagihan diaktifkan lagi (belum lunas)':(linkedBill&&isLatest&&linkedBill.kind==='cicilan'?', sisa tenor dikembalikan':(linkedBill&&isLatest&&(linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq?', jatuh tempo dikembalikan':''));
