@@ -1390,6 +1390,132 @@ function lintOcrPrematureTesseractCheck() {
   return problems;
 }
 
+// 3c. Lint regresi "MODAL_HTML index drift" (dicatat di FIX-v982-s320,
+// housekeeping). index.html menyuntik tiap modal balik ke posisi aslinya
+// lewat `<script>document.write(MODAL_HTML[N]);</script><!-- modal:xxx -->`.
+// Komentar "modal:xxx" itu CUMA dokumentasi utk manusia -- kalau suatu saat
+// ada modal baru disisipkan di TENGAH array MODAL_HTML di modals.js (bukan
+// di akhir), semua index N sesudahnya geser diam-diam & HTML akan
+// nge-render modal yang SALAH di posisi itu tanpa error apa pun. Lint ini
+// load MODAL_HTML sungguhan lewat vm (bukan re-implementasi manual), lalu
+// pastikan id="..." pada elemen overlay di index N benar-benar sama dgn
+// nama modal di komentarnya. Versi test unit (utk `npm test`) ada di
+// tests/modal-html-index-drift.test.js.
+function lintModalHtmlIndexDrift() {
+  const vm = require('vm');
+  const modalsSrc = readFile('modules/shared/modals.js');
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(modalsSrc + '\nthis.__MODAL_HTML__ = MODAL_HTML;', context, { filename: 'modals.js' });
+  const MODAL_HTML = context.__MODAL_HTML__;
+  if (!Array.isArray(MODAL_HTML)) {
+    return ['modules/shared/modals.js — MODAL_HTML tidak ditemukan/bukan array, lint index drift tidak bisa jalan'];
+  }
+
+  const firstOverlayId = (html) => {
+    const m = html.match(/<div\s+class="overlay"\s+id="([a-zA-Z0-9_-]+)"/);
+    return m ? m[1] : null;
+  };
+
+  const writeRe = /document\.write\(MODAL_HTML\[(\d+)\]\);<\/script><!--\s*modal:([a-zA-Z0-9_-]+)/g;
+  const problems = [];
+  for (const file of HTML_FILES) {
+    const content = readFile(file);
+    let entriesFound = 0;
+    let m;
+    writeRe.lastIndex = 0;
+    while ((m = writeRe.exec(content)) !== null) {
+      entriesFound++;
+      const index = Number(m[1]);
+      const commentName = m[2];
+      const html = MODAL_HTML[index];
+      if (html === undefined) {
+        problems.push(`${file} — MODAL_HTML[${index}] di luar jangkauan array (panjang: ${MODAL_HTML.length}), dirujuk sbg "${commentName}"`);
+        continue;
+      }
+      const actual = firstOverlayId(html);
+      if (actual !== commentName) {
+        problems.push(`${file} — MODAL_HTML[${index}] id sungguhan="${actual}" TIDAK COCOK dgn komentar "<!-- modal:${commentName} -->" (kemungkinan index geser krn ada modal baru disisipkan di tengah array)`);
+      }
+    }
+    if (entriesFound < MODAL_HTML.length - 2) {
+      problems.push(`${file} — cuma ${entriesFound} baris document.write(MODAL_HTML[N]) ditemukan, padahal MODAL_HTML punya ${MODAL_HTML.length} elemen (format komentar mungkin berubah, lint ini perlu diupdate)`);
+    }
+  }
+  return problems;
+}
+
+// 3d. Lint regresi "drift struktural Scanner" (housekeeping, dicatat di
+// AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md — saran audit #2,
+// ADR-028). `vehicle-scanner.js` & `sparepart-scanner.js` SENGAJA
+// duplikasi total pola lifecycle kamera (lihat ADR-028 utk alasan
+// isolasi risiko antar scanner) -- tapi itu berarti kalau salah satu
+// file diperbaiki (mis. tambah parameter baru ke pauseCamera() utk fix
+// bug), TIDAK ADA yang otomatis menangkap kalau file satunya lupa
+// disamakan. Lint ini generik: bandingkan DAFTAR nama fungsi "kembar"
+// (nama sama minus prefix VehicleScanner/SparepartScanner) di kedua
+// file + jumlah parameter tiap fungsi kembar itu. Tidak menuntut urutan
+// atau isi function body sama (adapter-only code di sparepart-scanner.js
+// boleh beda), HANYA menjaga agar pasangan fungsi lifecycle inti yang
+// memang harus identik pola-nya tidak diam-diam divergen tanpa sadar.
+const SCANNER_TWIN_FN_SUFFIXES = [
+  'WithCameraTimeout',
+  'ShouldDebounce',
+  'RecordScan',
+  'StopMediaStream',
+  'PauseCamera',
+  'ResumeCamera',
+  'AttachLifecycle',
+  'DetachLifecycle',
+  'ApplyTorchCapability',
+  'IsHarmlessDecodeError',
+  'BuildOverlay',
+  'ErrorMessage',
+];
+function lintScannerStructuralDrift() {
+  const files = {
+    vehicleScanner: 'modules/vehicle/vehicle-scanner.js',
+    sparepartScanner: 'modules/vehicle/sparepart-scanner.js',
+  };
+  const problems = [];
+  const parsed = {};
+
+  for (const [prefix, file] of Object.entries(files)) {
+    const content = readFile(file);
+    const fnRe = new RegExp(`(?:^|\\n)(?:async )?function ${prefix}([A-Za-z]+)\\(([^)]*)\\)`, 'g');
+    const found = {};
+    let m;
+    while ((m = fnRe.exec(content)) !== null) {
+      const suffix = m[1];
+      const params = m[2].trim();
+      const arity = params === '' ? 0 : params.split(',').length;
+      found[suffix] = arity;
+    }
+    parsed[prefix] = { file, found };
+  }
+
+  for (const suffix of SCANNER_TWIN_FN_SUFFIXES) {
+    const a = parsed.vehicleScanner.found[suffix];
+    const b = parsed.sparepartScanner.found[suffix];
+    if (a === undefined && b === undefined) {
+      // Sudah tidak ada di keduanya (mis. dihapus bareng sengaja) -- aman.
+      continue;
+    }
+    if (a === undefined) {
+      problems.push(`vehicleScanner${suffix}() tidak ditemukan di ${parsed.vehicleScanner.file}, padahal sparepartScanner${suffix}() ada di ${parsed.sparepartScanner.file} (arity ${b})`);
+      continue;
+    }
+    if (b === undefined) {
+      problems.push(`sparepartScanner${suffix}() tidak ditemukan di ${parsed.sparepartScanner.file}, padahal vehicleScanner${suffix}() ada di ${parsed.vehicleScanner.file} (arity ${a})`);
+      continue;
+    }
+    if (a !== b) {
+      problems.push(`Jumlah parameter berbeda utk fungsi kembar "${suffix}": vehicleScanner${suffix}(${a} param) vs sparepartScanner${suffix}(${b} param) -- kemungkinan salah satu diubah tanpa menyamakan yang lain`);
+    }
+  }
+  return problems;
+}
+
 // 4. Naikkan ?v=N & CACHE_NAME lewat bump-version.sh yang sudah ada
 function bumpCacheVersion() {
   const out = execSync('bash scripts/bump-version.sh', { cwd: ROOT }).toString();
@@ -1452,6 +1578,37 @@ function main() {
     process.exit(1);
   }
   console.log('✓ Tidak ada regresi pola guard dini Tesseract\n');
+
+  console.log('Mengecek regresi "MODAL_HTML index drift" (document.write(MODAL_HTML[N]) vs isi array sungguhan)...');
+  const modalDriftProblems = lintModalHtmlIndexDrift();
+  if (modalDriftProblems.length) {
+    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${modalDriftProblems.length} drift index MODAL_HTML:\n`);
+    modalDriftProblems.forEach((p) => console.error('  - ' + p));
+    console.error(
+      '\nModal yang SALAH akan ke-render di posisi itu kalau ini dibiarkan. Perbaiki dgn ' +
+      'menyamakan urutan MODAL_HTML di modals.js dgn urutan document.write(MODAL_HTML[N]) ' +
+      'di index.html (atau perbaiki komentar "<!-- modal:xxx -->" kalau memang cuma komentarnya ' +
+      'yang salah), lalu jalankan ulang node build.js.'
+    );
+    process.exit(1);
+  }
+  console.log('✓ Tidak ada drift antara document.write(MODAL_HTML[N]) & isi MODAL_HTML sungguhan\n');
+
+  console.log('Mengecek regresi "drift struktural Scanner" (vehicle-scanner.js vs sparepart-scanner.js)...');
+  const scannerDriftProblems = lintScannerStructuralDrift();
+  if (scannerDriftProblems.length) {
+    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${scannerDriftProblems.length} drift struktural antara vehicle-scanner.js & sparepart-scanner.js:\n`);
+    scannerDriftProblems.forEach((p) => console.error('  - ' + p));
+    console.error(
+      '\nKedua file ini SENGAJA duplikasi total (lihat docs/architecture/ADR-028.md) supaya risiko\n' +
+      'bug di satu scanner terisolasi dari scanner lain — tapi itu berarti fungsi lifecycle "kembar"\n' +
+      '(pauseCamera/resumeCamera/dkk) harus tetap sama pola tanda tangannya di kedua file. Perbaiki\n' +
+      'dengan menyamakan ulang fungsi yang disebut di atas (atau update SCANNER_TWIN_FN_SUFFIXES di\n' +
+      'scripts/build.js kalau memang perubahan itu disengaja & sudah didiskusikan ulang).'
+    );
+    process.exit(1);
+  }
+  console.log('✓ Tidak ada drift struktural antara vehicle-scanner.js & sparepart-scanner.js\n');
 
   // Ambil argumen non-flag pertama sbg explicit version (skip --flag spt --require-minify)
   const explicitVersion = process.argv.slice(2).find((a) => !a.startsWith('--'));
