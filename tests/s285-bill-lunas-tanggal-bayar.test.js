@@ -59,6 +59,7 @@ function loadSandbox(D, { confirmResult = true } = {}) {
     sameId: (a, b) => a === b,
     askConfirm: async () => confirmResult,
     showPromptModal: async (opts) => (opts && opts.defaultValue) || null,
+    parsePzNum: (v) => Number(v) || 0,
     toast: () => {},
     save: () => {},
     refreshBillEverywhere: () => {},
@@ -70,7 +71,12 @@ function loadSandbox(D, { confirmResult = true } = {}) {
   // getBillPaidThisPeriodInfo() -- markBillPaid() sekarang memanggilnya di awal (guard
   // dobel-bayar, Sesi 292), jadi harus ikut di-extract & tersedia di sandbox yang sama
   // (function declaration, otomatis nempel ke context lewat hoisting biasa).
+  // advanceBillNextDue() (s302) -- dependency baru markBillPaid() utk menghitung nextDue,
+  // ikut di-extract dgn pola sama. parsePzNum (s302 lanjutan, item #3) -- dependency baru
+  // khusus jalur kind==='utang' (jumlah bayar custom), di-stub di context di atas (bukan
+  // fungsi murni file ini, cukup Number(v) sederhana utk kebutuhan test).
   const snippet = `${extractFnSource('getBillPaidThisPeriodInfo')}
+${extractFnSource('advanceBillNextDue')}
 ${extractFnSource('markBillPaid')}
 this.markBillPaid = markBillPaid;
 this.getBillPaidThisPeriodInfo = getBillPaidThisPeriodInfo;`;
