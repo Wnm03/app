@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s303-utang-custom-pay-amount';
+const MODULE_RENDER_VERSION='s311-fallback-ambiguity-warning';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -233,17 +233,55 @@ html+=`<div class="cat-group">
 el.innerHTML=html||'<div class="empty"><div class="empty-text">Belum ada kategori</div></div>';
 }
 
+// findFallbackBillPaymentTxIdsForActiveBill(bill, transactions) -- FIX ringkas
+// (audit s306 saran #1, dikerjakan s310): findFallbackBillPaymentTxId()
+// (s304, tagihan-kalender.js) cuma didesain utk tagihan yang SUDAH lunas/
+// diarsip (1 completedAt tunggal -> pilih 1 kandidat tanggal-terdekat).
+// Tagihan AKTIF (belum diarsip) beda -- punya BANYAK periode pembayaran
+// (tiap bulan/minggu), jadi tidak ada "1 completedAt" buat jadi acuan jarak
+// tanggal. Fungsi murni ini pakai strategi lebih sederhana yang cocok utk
+// kasus ini: kembalikan SEMUA transaksi expense yang belum bertaut ke bill
+// manapun, nominal cocok b.amount, & catatan menyebut nama tagihan ini --
+// bukan cuma 1 kandidat. Dipakai renderBillHistory() supaya transaksi lama
+// (dicatat manual sebelum billLinkId ada) tidak hilang diam-diam dari
+// "📋 Riwayat Pembayaran" tagihan aktif (beda dari kasus arsip yang sudah
+// dilaporkan user & diperbaiki s304 lewat toast error -- di sini transaksi
+// cuma hilang tanpa jejak sama sekali, makanya perlu ditangani di titik
+// render, bukan di titik "gagal edit" seperti arsip).
+function findFallbackBillPaymentTxIdsForActiveBill(bill,transactions){
+if(!bill||!bill.name)return[];
+const nameLower=String(bill.name).toLowerCase();
+return (transactions||[]).filter(t=>t.type==='expense'&&!t.billLinkId&&Math.abs((t.amount||0)-(bill.amount||0))<1&&t.note&&String(t.note).toLowerCase().includes(nameLower)).map(t=>t.id);
+}
 function renderBillHistory(){
 if(curBillHistoryId==null)return;
 const modal=document.getElementById('billHistoryModal');
 if(!modal||!modal.classList.contains('open'))return;
-const b=D.bills.find(x=>x.id===curBillHistoryId)||(D.billsArchive||[]).find(x=>x.id===curBillHistoryId);
+const activeBill=D.bills.find(x=>x.id===curBillHistoryId);
+const b=activeBill||(D.billsArchive||[]).find(x=>x.id===curBillHistoryId);
 const subEl=document.getElementById('billHistorySub');
 const listEl=document.getElementById('billHistoryList');
 if(!listEl)return;
+// Self-healing (saran #1 s306, fix s310) -- KHUSUS tagihan AKTIF (billsArchive
+// punya jalur self-heal sendiri lewat findFallbackBillPaymentTxId() di
+// openBillPaymentDateEdit, tidak disentuh di sini). Ditautkan langsung
+// (bukan cuma tampil sekali) supaya jalur sync 2 arah normal berlaku mulai
+// saat itu, pola sama seperti fallback arsip.
+let healedCount=0;
+if(activeBill){
+const fallbackIds=findFallbackBillPaymentTxIdsForActiveBill(activeBill,D.transactions);
+if(fallbackIds.length){
+fallbackIds.forEach(txId=>{
+const t=D.transactions.find(x=>x.id===txId);
+if(t&&!t.billLinkId){t.billLinkId=curBillHistoryId;healedCount++;}
+});
+if(healedCount&&typeof save==='function')save();
+}
+}
 const rows=D.transactions.filter(t=>t.billLinkId===curBillHistoryId).sort((a,b2)=>new Date(b2.date)-new Date(a.date));
-const lunasTag=D.bills.find(x=>x.id===curBillHistoryId)?'':' · ✅ Lunas';
-if(subEl)subEl.textContent=b?`${b.name} · ${rows.length}x pembayaran tercatat${lunasTag}`:`${rows.length}x pembayaran tercatat`;
+const lunasTag=activeBill?'':' · ✅ Lunas';
+const healedTag=healedCount?` · 🔗 ${healedCount} transaksi lama otomatis ditautkan`:'';
+if(subEl)subEl.textContent=b?`${b.name} · ${rows.length}x pembayaran tercatat${lunasTag}${healedTag}`:`${rows.length}x pembayaran tercatat${healedTag}`;
 if(!rows.length){
 listEl.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada riwayat pembayaran</div></div>';
 return;
