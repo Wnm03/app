@@ -40,6 +40,8 @@ onTargetDanaDaruratToggle();
 
 function stopPropOnly(){ /* no-op, dipakai bareng data-stop="1" */ }
 
+function billActionPayAdvance(id){ closeQS('qsBillActions'); markBillPaid(id,true); }
+function billActionPayNow(id){ return markBillPaid(id,false); }
 function billActionShareWA(id){ closeQS('qsBillActions'); shareBillWA(id); }
 function billActionHistory(id){ closeQS('qsBillActions'); openBillHistory(id); }
 function billActionEdit(id){ closeQS('qsBillActions'); openBillModal(id); }
