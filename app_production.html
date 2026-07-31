@@ -80,9 +80,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=963">
-<link rel="stylesheet" href="modern-ui-layer.css?v=963">
-<script src="nav-scroll.js?v=963" defer></script>
+<link rel="stylesheet" href="styles.css?v=971">
+<link rel="stylesheet" href="modern-ui-layer.css?v=971">
+<script src="nav-scroll.js?v=971" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -148,17 +148,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=963');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=971');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=963');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=971');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=963');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=971');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -247,8 +247,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=963" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=963" defer></script>
+<script src="app-bundle-a.min.js?v=971" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=971" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -3780,77 +3780,78 @@ window.location.reload();
 
 <!-- MODAL: RIWAYAT CICILAN/TAGIHAN LUNAS (arsip) -->
 <script>document.write(MODAL_HTML[40]);</script><!-- modal:billArchiveModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[41]);</script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
 
 <!-- MODAL: KENDARAAN -->
-<script>document.write(MODAL_HTML[41]);</script><!-- modal:vehicleModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[42]);</script><!-- modal:vehicleModal externalized to modals.js -->
 
 <!-- MODAL: PAJAK KENDARAAN (STNK Tahunan, 5 Tahunan, Uji Kelayakan) -->
-<script>document.write(MODAL_HTML[42]);</script><!-- modal:vehTaxModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[43]);</script><!-- modal:vehTaxModal externalized to modals.js -->
 
 <!-- MODAL: SIM -->
-<script>document.write(MODAL_HTML[43]);</script><!-- modal:simModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[44]);</script><!-- modal:simModal externalized to modals.js -->
 
 <!-- MODAL: WORTH IT? (Kalkulator Layak Beli - Frugal Living) -->
-<script>document.write(MODAL_HTML[44]);</script><!-- modal:worthItModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[45]);</script><!-- modal:worthItModal externalized to modals.js -->
 
 <!-- MODAL: UPDATE KM -->
-<script>document.write(MODAL_HTML[45]);</script><!-- modal:kmModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[46]);</script><!-- modal:kmModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI SPAREPART -->
-<script>document.write(MODAL_HTML[46]);</script><!-- modal:sparepartModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[47]);</script><!-- modal:sparepartModal externalized to modals.js -->
 
 <!-- MODAL: STOK SPAREPART -->
-<script>document.write(MODAL_HTML[47]);</script><!-- modal:stockModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[48]);</script><!-- modal:stockModal externalized to modals.js -->
 
 <!-- MODAL: BACKUP LANJUTAN -->
-<script>document.write(MODAL_HTML[48]);</script><!-- modal:backupModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[49]);</script><!-- modal:backupModal externalized to modals.js -->
 
 <!-- MODAL: ARSIP DATA LAMA (per tahun) -->
-<script>document.write(MODAL_HTML[49]);</script><!-- modal:archiveModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[50]);</script><!-- modal:archiveModal externalized to modals.js -->
 
 <!-- MODAL: BBM -->
-<script>document.write(MODAL_HTML[50]);</script><!-- modal:bbmModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[51]);</script><!-- modal:bbmModal externalized to modals.js -->
 
 <!-- MODAL: FUEL INTELLIGENCE -->
-<script>document.write(MODAL_HTML[51]);</script><!-- modal:fuelIntelModal -->
-<script>document.write(MODAL_HTML[52]);</script><!-- modal:servisModal -->
-<script>document.write(MODAL_HTML[53]);</script><!-- modal:torsiModal -->
-<script>document.write(MODAL_HTML[54]);</script><!-- modal:filterTxModal -->
-<script>document.write(MODAL_HTML[55]);</script><!-- modal:dataHealthModal -->
-<script>document.write(MODAL_HTML[56]);</script><!-- modal:globalSearchModal -->
-<script>document.write(MODAL_HTML[57]);</script><!-- modal:budgetModal -->
-<script>document.write(MODAL_HTML[58]);</script><!-- modal:fiSettingsModal -->
-<script>document.write(MODAL_HTML[59]);</script><!-- modal:pensiunModal -->
-<script>document.write(MODAL_HTML[60]);</script><!-- modal:confirmModalOverlay -->
-<script>document.write(MODAL_HTML[61]);</script><!-- modal:promptModalOverlay -->
-<script>document.write(MODAL_HTML[62]);</script><!-- modal:choiceModalOverlay -->
-<script>document.write(MODAL_HTML[63]);</script><!-- modal:infoModalOverlay -->
-<script>document.write(MODAL_HTML[64]);</script><!-- modal:pinPromptModalOverlay -->
-<script>document.write(MODAL_HTML[65]);</script><!-- modal:budgetSettingsModal -->
-<script>document.write(MODAL_HTML[66]);</script><!-- modal:refleksiModal -->
-<script>document.write(MODAL_HTML[67]);</script><!-- modal:importKatalogModal -->
-<script>document.write(MODAL_HTML[68]);</script><!-- modal:goldImportModal -->
-<script>document.write(MODAL_HTML[69]);</script><!-- modal:goldZakatModal -->
-<script>document.write(MODAL_HTML[70]);</script><!-- modal:importShopExcelModal -->
-<script>document.write(MODAL_HTML[71]);</script><!-- modal:shopCsvImportModal -->
-<script>document.write(MODAL_HTML[72]);</script><!-- modal:sparepartCsvImportModal -->
-<script>document.write(MODAL_HTML[73]);</script><!-- modal:shopPdfImportModal -->
-<script>document.write(MODAL_HTML[74]);</script><!-- modal:shopScanModal -->
-<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopJsonModal -->
-<script>document.write(MODAL_HTML[76]);</script><!-- modal:mergeProductModal -->
-<script>document.write(MODAL_HTML[77]);</script><!-- modal:billMultiScanModal -->
-<script>document.write(MODAL_HTML[78]);</script><!-- modal:universalOcrModal -->
-<script>document.write(MODAL_HTML[79]);</script><!-- modal:fuelBarCorrectionModal -->
-<script>document.write(MODAL_HTML[80]);</script><!-- modal:fuelTankProfileModal -->
-<script>document.write(MODAL_HTML[81]);</script><!-- modal:catalogModal -->
-<script>document.write(MODAL_HTML[82]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[83]);</script><!-- modal:vehCatWebImportModal -->
-<script>document.write(MODAL_HTML[84]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[85]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[86]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[87]);</script><!-- modal:inventoryTransferModal (S244) -->
-<script>document.write(MODAL_HTML[88]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[52]);</script><!-- modal:fuelIntelModal -->
+<script>document.write(MODAL_HTML[53]);</script><!-- modal:servisModal -->
+<script>document.write(MODAL_HTML[54]);</script><!-- modal:torsiModal -->
+<script>document.write(MODAL_HTML[55]);</script><!-- modal:filterTxModal -->
+<script>document.write(MODAL_HTML[56]);</script><!-- modal:dataHealthModal -->
+<script>document.write(MODAL_HTML[57]);</script><!-- modal:globalSearchModal -->
+<script>document.write(MODAL_HTML[58]);</script><!-- modal:budgetModal -->
+<script>document.write(MODAL_HTML[59]);</script><!-- modal:fiSettingsModal -->
+<script>document.write(MODAL_HTML[60]);</script><!-- modal:pensiunModal -->
+<script>document.write(MODAL_HTML[61]);</script><!-- modal:confirmModalOverlay -->
+<script>document.write(MODAL_HTML[62]);</script><!-- modal:promptModalOverlay -->
+<script>document.write(MODAL_HTML[63]);</script><!-- modal:choiceModalOverlay -->
+<script>document.write(MODAL_HTML[64]);</script><!-- modal:infoModalOverlay -->
+<script>document.write(MODAL_HTML[65]);</script><!-- modal:pinPromptModalOverlay -->
+<script>document.write(MODAL_HTML[66]);</script><!-- modal:budgetSettingsModal -->
+<script>document.write(MODAL_HTML[67]);</script><!-- modal:refleksiModal -->
+<script>document.write(MODAL_HTML[68]);</script><!-- modal:importKatalogModal -->
+<script>document.write(MODAL_HTML[69]);</script><!-- modal:goldImportModal -->
+<script>document.write(MODAL_HTML[70]);</script><!-- modal:goldZakatModal -->
+<script>document.write(MODAL_HTML[71]);</script><!-- modal:importShopExcelModal -->
+<script>document.write(MODAL_HTML[72]);</script><!-- modal:shopCsvImportModal -->
+<script>document.write(MODAL_HTML[73]);</script><!-- modal:sparepartCsvImportModal -->
+<script>document.write(MODAL_HTML[74]);</script><!-- modal:shopPdfImportModal -->
+<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopScanModal -->
+<script>document.write(MODAL_HTML[76]);</script><!-- modal:shopJsonModal -->
+<script>document.write(MODAL_HTML[77]);</script><!-- modal:mergeProductModal -->
+<script>document.write(MODAL_HTML[78]);</script><!-- modal:billMultiScanModal -->
+<script>document.write(MODAL_HTML[79]);</script><!-- modal:universalOcrModal -->
+<script>document.write(MODAL_HTML[80]);</script><!-- modal:fuelBarCorrectionModal -->
+<script>document.write(MODAL_HTML[81]);</script><!-- modal:fuelTankProfileModal -->
+<script>document.write(MODAL_HTML[82]);</script><!-- modal:catalogModal -->
+<script>document.write(MODAL_HTML[83]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[84]);</script><!-- modal:vehCatWebImportModal -->
+<script>document.write(MODAL_HTML[85]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[86]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[87]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[88]);</script><!-- modal:inventoryTransferModal (S244) -->
+<script>document.write(MODAL_HTML[89]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
 
-<script src="app-bundle-b.min.js?v=963" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=971" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
