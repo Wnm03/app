@@ -687,6 +687,63 @@ delete existingTx.cobekLinkId;
 renderProductList();renderShop();renderShopRecent();
 }
 }
+// FIX (audit user, lanjutan sync 2 arah "Ditanggung Bersama" -- kali ini utk Utang, item
+// #4 dari laporan s299): existingBill.kind==='utang' TIDAK PERNAH match curPayMethod di
+// cabang di bawah -- curPayMethod selalu jadi 'tunai' begitu editTx() membuka transaksi
+// bertaut ke bill kind:'utang' (editTx() sengaja cuma setPayMethod(kind) utk 'cicilan'/
+// 'langganan', lihat komentar di editTx()). Sebelum fix ini, transaksi pembayaran utang yang
+// diedit lewat modal Transaksi biasa jatuh ke cabang paling generik (existingTx.billLinkId
+// DIHAPUS diam-diam -- tautan ke tagihan pengingat & Buku Utang putus permanen -- dan sisa
+// utang D.debts[].nilai TIDAK pernah disesuaikan ke jumlah baru). Sekarang: tautan
+// dipertahankan, dan kalau ini pembayaran TERBARU utk bill tsb (pola sama isLatestInstallment
+// yg dipakai cabang cicilan di bawah), sisa utang ikut disesuaikan sebesar selisih jumlah
+// lama vs baru. Kalau bukan pembayaran terbaru, tautan tetap dipertahankan tapi sisa utang
+// TIDAK disentuh (konsisten dgn toast "pembayaran cicilan lama" di cabang cicilan) --
+// koreksi histori lama tetap lewat 📋 Riwayat Pembayaran.
+if(existingBill&&existingBill.kind==='utang'&&existingBill.debtId){
+const linkedTxIds=D.transactions.filter(t=>t.billLinkId===existingBill.id).map(t=>t.id);
+const isLatestInstallment=linkedTxIds.length===0||existingTx.id>=Math.max(...linkedTxIds);
+const oldAmount=existingTx.amount;
+Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note});
+const debtSynced=isLatestInstallment&&typeof syncDebtBalanceOnPaymentEdit==='function'&&syncDebtBalanceOnPaymentEdit(existingBill,oldAmount,amt);
+const debtSyncedMsg=debtSynced?' (sisa utang ikut disesuaikan)':'';
+txEditId=null;
+rememberLastAccForCat(cat,accId);
+if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
+save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();renderDebtList();renderKekayaanBersih();hitungZakatMaal();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"utang"});
+toast(isLatestInstallment?('✅ Pembayaran utang diperbarui'+debtSyncedMsg):'ℹ️ Ini pembayaran utang lama — hanya catatan transaksi ini yang diubah, sisa utang tidak ikut disesuaikan (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
+return;
+}
+// FIX (Sesi 316, laporan user): transaksi pembayaran tagihan kind:'tagihan' (mis. PBB --
+// bukan cicilan/langganan/utang) -- baik masih aktif di D.bills MAUPUN sudah lunas/
+// diarsip di D.billsArchive -- yang diedit lewat modal Transaksi biasa (bukan lewat
+// 📋 Riwayat Pembayaran di tab Tagihan) sebelumnya jatuh ke cabang paling generik di
+// bawah: billLinkId DIHAPUS diam-diam (delete existingTx.billLinkId) & completedAt
+// arsip TIDAK PERNAH disinkron. Akibatnya tautan ke tagihan putus permanen begitu
+// tanggal/jumlah diedit dari sisi Transaksi. Root cause: existingBill (di atas) cuma
+// nyari D.bills (aktif) -- tagihan yang sudah diarsipkan LUNAS tidak pernah ketemu di
+// sana, jadi selalu tembus ke cabang generik apapun kind aslinya. Arah sebaliknya
+// (edit lewat 📋 Riwayat Pembayaran -> tanggal transaksi & completedAt arsip) sudah
+// otomatis sinkron sejak fix s288 (lihat isLatestBillPaymentTx() & saveBillHistoryEdit()
+// di tagihan-kalender.js) -- fix ini menyamakan arah edit dari modal Transaksi biasa
+// supaya konsisten, reuse isLatestBillPaymentTx() yang sama (bukan logic baru).
+const linkedTagihanBill=existingTx&&existingTx.billLinkId?(D.bills.find(b=>b.id===existingTx.billLinkId&&b.kind==='tagihan')||(D.billsArchive||[]).find(b=>b.id===existingTx.billLinkId&&b.kind==='tagihan')):null;
+if(linkedTagihanBill){
+const isLatestTagihan=typeof isLatestBillPaymentTx==='function'?isLatestBillPaymentTx(linkedTagihanBill.id,existingTx.id):true;
+const keepPayMethodTagihan=_txPayMethodTouchedByUser?'tunai':(existingTx.payMethod||'tunai');
+Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethodTagihan,note,date});
+// billLinkId SENGAJA dipertahankan (tidak dihapus) -- beda dari cabang generik di bawah.
+let archiveSynced=false;
+if(isLatestTagihan&&linkedTagihanBill.completedAt){linkedTagihanBill.completedAt=date;archiveSynced=true;}
+txEditId=null;
+rememberLastAccForCat(cat,accId);
+if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
+save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"tagihan"});
+toast(isLatestTagihan?('✅ Pembayaran tagihan diperbarui'+(archiveSynced?' (tanggal arsip ikut disinkron)':'')):'ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang diubah, tanggal arsip tidak ikut berubah (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
+return;
+}
 if(existingBill && curPayMethod===existingBill.kind){
 // BUGFIX: D.bills entry (existingBill) is SHARED oleh SEMUA transaksi pembayaran cicilan/
 // langganan yang sudah tercatat (semuanya punya billLinkId yang sama ke bill ini) — bill
@@ -726,6 +783,7 @@ const cicilanSharedAutoPiutang=!!(cicilanShared&&txCicilanSharedAutoPiutangSaveE
 // (piutang-utang.js) menghitung sisa = totalHarga - porsiSebulan (angka jutaan yg salah,
 // harusnya cuma selisih cicilan/bulan spt di modal "Detail Cicilan"), dan badge "👫 X% dari Rp Y"
 // (renderBillItemHtml) & dialog markBillPaid() ikut salah nunjukin total harga, bukan total/bulan.
+const oldTxAmountForPiutangSync=existingTx.amount;
 Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr,sharedOtherName:cicilanSharedOtherName,sharedAutoPiutang:cicilanSharedAutoPiutang});
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // FIX s286: sebelum ini, menyalakan Ditanggung Bersama + Catat Otomatis Piutang
@@ -736,7 +794,26 @@ Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,ac
 // BARU (lihat pemanggilan sejenis di bawah, kasus tenor>=2 saat create). Guard
 // anti-dobel (kalau disimpan ulang) ada DI DALAM maybeCreateSharedPiutangFromBill()
 // sendiri (skip kalau autoTxId ini sudah pernah punya entri Piutang).
-if(typeof maybeCreateSharedPiutangFromBill==='function'){
+// FIX s299 (gap ke-4, lanjutan audit user s298): kalau piutang otomatis utk
+// transaksi INI sudah ada dari save sebelumnya (skenario: bayar cicilan shared
+// via modal Transaksi biasa dulu -> piutang kebuat -> lalu total/tenor/bunga
+// diedit ULANG lewat modal ini juga, bukan lewat 📋 Riwayat Pembayaran),
+// maybeCreateSharedPiutangFromBill() di atas cuma SKIP (guard anti-dobel) tanpa
+// menyesuaikan nilai piutangnya ke porsi baru -- beda jalur dari saveBillHistoryEdit
+// (tagihan-kalender.js) yg sudah dibenerin di s298. Sekarang: kalau piutangnya
+// sudah ada, panggil syncSharedPiutangOnPaymentEdit() (pola identik dgn
+// saveBillHistoryEdit) supaya sisanya ikut disesuaikan; kalau belum ada, baru
+// panggil maybeCreateSharedPiutangFromBill() spt semula.
+const hasExistingAutoPiutang=D.piutang&&D.piutang.some(p=>p.autoTxId===existingTx.id);
+if(hasExistingAutoPiutang){
+// beda dgn maybeCreateSharedPiutangFromBill(), syncSharedPiutangOnPaymentEdit() TIDAK
+// self-render -- render manual di sini spy Piutang & Kekayaan Bersih ikut update.
+if(typeof syncSharedPiutangOnPaymentEdit==='function'&&syncSharedPiutangOnPaymentEdit(existingTx.id,oldTxAmountForPiutangSync,perBulanMine)){
+if(typeof Piutang!=='undefined')Piutang.renderList();
+if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+}
+} else if(typeof maybeCreateSharedPiutangFromBill==='function'){
 maybeCreateSharedPiutangFromBill(existingBill,existingTx.id);
 }
 } else {
