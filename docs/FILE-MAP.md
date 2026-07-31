@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-07-31T01:41:21.438Z
-Total file source: 278 · Total identifier global: 1939
+Terakhir digenerate: 2026-07-31T03:21:36.455Z
+Total file source: 278 · Total identifier global: 1945
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -21,7 +21,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 
 | # | File | Baris | Ringkasan |
 |---|------|------:|-----------|
-| 1 | `modules/shared/modules-render.js` | 1917 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 1 | `modules/shared/modules-render.js` | 1955 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 2 | `modules/shared/modals.js` | 8 | Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 3 | `modules/shared/modules-calc.js` | 916 | _(tidak ada komentar header)_ |
 | 4 | `modules/shop/cobek-etalase.js` | 604 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -87,7 +87,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 64 | `modules/shared/profil-pengaturan.js` | 98 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 65 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 66 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
-| 67 | `modules/finance/tagihan-kalender.js` | 1037 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 67 | `modules/finance/tagihan-kalender.js` | 1200 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 68 | `modules/shared/backup-restore.js` | 811 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 69 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
 | 70 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
@@ -650,6 +650,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `billActionShareWA` | `modules/shared/action-wrappers.js` |
 | `BILLCAL_MAX_ITER` | `modules/finance/tagihan-kalender.js` |
 | `billCalYear` | `modules/finance/tagihan-kalender.js` |
+| `BillFallbackScan` | `modules/finance/tagihan-kalender.js` |
 | `billFilterStatus` | `modules/finance/tagihan-kalender.js` |
 | `BillMultiScan` | `modules/shared/scan-ocr.js` |
 | `billStatMonth` | `modules/finance/tagihan-kalender.js` |
@@ -801,6 +802,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `confirmWeeklyReset` | `modules/business/reset-gaji-mingguan.js` |
 | `copyNavSmokeResults` | `self-test.js` |
 | `copySelfTestResults` | `self-test.js` |
+| `countFallbackBillPaymentCandidates` | `modules/finance/tagihan-kalender.js` |
 | `CrossAIHook` | `modules/cross/cross-ai-hook.js` |
 | `CrossDashboardCard` | `modules/cross/cross-dashboard-card.js` |
 | `CrossInsightPresenter` | `modules/cross/cross-insight-presenter.js` |
@@ -959,6 +961,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `extractLabeledAmount` | `modules/shared/scan-ocr.js` |
 | `extractOdometerKm` | `modules/shared/scan-ocr.js` |
 | `extractPortfolioFields` | `modules/shared/scan-ocr.js` |
+| `fallbackMatchAmount` | `modules/finance/tagihan-kalender.js` |
 | `FEATURE_REGISTRY` | `modules/dashboard-hub/dashboard-hub-registry.js` |
 | `FeatureIcons` | `modules/shared/feature-icons.js` |
 | `FeatureInsightUI` | `modules/ai/feature-insights.js` |
@@ -987,6 +990,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `FinancialRiskDashboardAPI` | `modules/finance/financial-risk-dashboard-api.js` |
 | `FinancialRiskDashboardPresenter` | `modules/finance/financial-risk-dashboard-presenter.js` |
 | `FinCoach` | `modules/shared/modules-calc.js` |
+| `findFallbackBillPaymentTxId` | `modules/finance/tagihan-kalender.js` |
+| `findFallbackBillPaymentTxIdsForActiveBill` | `modules/shared/modules-render.js` |
 | `findMissingAriaLabels` | `self-test.js` |
 | `findPossibleDuplicateTx` | `modules/shared/scan-ocr.js` |
 | `fiNetAssetFund` | `modules/shared/modules-calc.js` |
@@ -1754,6 +1759,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `saveVehicle` | `modules/vehicle/vehicle-core.js` |
 | `saveVehTax` | `modules/vehicle/vehicle-core.js` |
 | `saveWealthSnapshot` | `pajak-aset-ui-wrappers.js` |
+| `scanAllBillFallbackCandidates` | `modules/finance/tagihan-kalender.js` |
 | `scanAssetPortfolio` | `modules/shared/scan-ocr.js` |
 | `scanBillMultiItems` | `modules/shared/scan-ocr.js` |
 | `scanBuktiTransfer` | `modules/shared/scan-ocr.js` |
