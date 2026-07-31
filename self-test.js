@@ -1742,6 +1742,7 @@ const EXTRA_MODAL_SWEEP_SPECS=[
 {fn:'openCalc',args:[undefined],id:'calcModal',close:()=>closeCalc()},
 {fn:'openBillArchive',args:[],id:'billArchiveModal'},
 {fn:'openBillCalendar',args:[],id:'billCalendarModal'},
+{fn:'openBillFallbackScan',args:[],id:'billFallbackScanModal',close:()=>closeModal('billFallbackScanModal')},
 {fn:'openBillHistory',args:[undefined],id:'billHistoryModal'},
 {fn:'openBudgetSettings',args:[],id:'budgetSettingsModal'},
 {fn:'openCatatan',args:['anak'],id:'catatanModal'},
