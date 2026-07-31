@@ -318,8 +318,7 @@ listEl.innerHTML=rows.map(b=>`<div class="bill-item">
       <div class="tx-meta">Lunas ${b.completedAt?new Date(b.completedAt).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'-'}${b.tenor?` · ${b.tenor}x cicilan`:''}</div>
     </div>
     <div class="u-flex u-fdcol u-gap4 u-ml4">
-      <button class="tx-del u-cacc3" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
-      <button class="tx-del" data-action="delBillArchive" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Hapus dari Arsip" aria-label="Hapus dari Arsip">🗑</button>
+      ${billArchiveActionButtonsHtml(b.id)}
     </div>
   </div>`).join('');
 }
@@ -441,6 +440,19 @@ updateBillStatGrid('keuBill');
 // renderBillItemHtml — template 1 kartu tagihan di renderBillList(), dipisah jadi fungsi sendiri
 // (S322) supaya bisa dipakai ulang baik utk list flat (tab Bayar/aktif) maupun list terkelompok
 // per-bulan (tab Lunas) tanpa duplikasi template gede.
+// billArchiveActionButtonsHtml(id) — SSOT tombol aksi utk tagihan/cicilan yang SUDAH
+// diarsip (lunas). FIX (s325, akar penyebab bug "tombol Edit hilang di billArchiveModal"):
+// sebelumnya HTML tombol ini ditulis manual 2x terpisah (renderBillItemHtml cabang
+// isArchived, DAN renderBillArchive) -- begitu satu diubah (mis. nambah ✏️ Edit) yang
+// satunya lupa ikut diubah, jadi drift diam-diam tanpa error/test yang nangkep. Sekarang
+// SATU fungsi dipakai di KEDUA tempat -- ubah di sini otomatis konsisten di semua lokasi,
+// tidak mungkin lagi drift antar tempat. Test 'bill-archive-actionbtn-parity.test.js'
+// (tests/) juga jaga-jaga ngecek kedua caller benar2 makai fungsi ini, bukan HTML manual.
+function billArchiveActionButtonsHtml(id){
+return`<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
+       <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([id]))}" title="Edit" aria-label="Edit">✏️</button>
+       <button class="tx-del" data-stop="1" data-action="delBillArchive" data-args="${escapeHtml(JSON.stringify([id]))}" title="Hapus dari Arsip" aria-label="Hapus dari Arsip">🗑</button>`;
+}
 function renderBillItemHtml(b,today,icons){
 const due=new Date(b._dateForFilter);
 const diff=Math.ceil((due-today)/(1000*60*60*24));
