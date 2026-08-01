@@ -1,3 +1,250 @@
+# Changelog — Sesi Audit-Docs 1: Implementasi hasil audit Bill/Piutang/Debt ke dokumentasi
+
+## Konteks
+
+User memberikan hasil audit domain Bill/Piutang/Debt (source of truth,
+sudah selesai dilakukan) dan minta diimplementasikan ke dokumentasi
+legacy project (`docs/BUG_REGISTRY.md`, `docs/AUDIT_MATRIX.md`,
+`docs/KNOWN-ISSUES.md`, `TODO.md`, `CHANGELOG-AUDIT.md`) — bukan
+`docs/audit/` (sistem baru dari Sesi Audit-Docs 0). Instruksi eksplisit:
+tidak boleh audit ulang, tidak boleh cari bug baru, tidak boleh ubah
+kesimpulan/severity/klasifikasi, hanya append/update.
+
+## Perubahan
+
+- 6 bug baru dicatat `OPEN` di `docs/BUG_REGISTRY.md` §0a.
+- 5 false positive dicatat di §0b, 2 design decision di §0c.
+- `docs/AUDIT_MATRIX.md` §7 baru: 12 fungsi `AUDITED`, 4 `PENDING AUDIT`.
+- `docs/KNOWN-ISSUES.md` §6 baru: 6 isu belum diperbaiki.
+- `TODO.md`: 6 task baru di paling atas, semua `OPEN`.
+- `CHANGELOG-AUDIT.md` dibuat (file baru).
+
+Detail lengkap: `FILES-CHANGED.md` § Sesi Audit-Docs 1.
+
+## Test
+
+Tidak dijalankan ulang — 0 file `.js` sumber/test disentuh sesi ini.
+
+## Build
+
+Tidak dijalankan — 0 alasan bump `?v=` (dokumentasi murni).
+
+---
+
+# Changelog — Sesi Audit-Docs 0: Sistem dokumentasi audit permanen
+
+## Konteks
+
+User minta ke depan hasil audit tidak hanya ditampilkan di chat, tapi
+disimpan sebagai dokumentasi permanen (`docs/AUDIT_PROGRESS.md`,
+`AUDIT_HISTORY.md`, `BUG_TRACKER.md`, `FALSE_POSITIVE.md`,
+`DESIGN_DECISIONS.md`, `FIX_PLAN.md`, `REGRESSION_TEST_PLAN.md`,
+`AUDIT_SUMMARY.md`, `SESSION_INDEX.md`, `PROJECT_STATE.md`), format delta
+per sesi, supaya sesi baru bisa lanjut audit hanya dari dokumen tanpa baca
+riwayat chat.
+
+## Perubahan
+
+- 10 file dibuat di `docs/audit/` (bukan langsung `docs/`, untuk hindari
+  bentrok nama dengan `docs/PROJECT_STATE.md`/`BUG_REGISTRY.md`/
+  `AUDIT_MATRIX.md`/`CHECKPOINT.md` yang sudah ada dan punya tujuan beda —
+  lihat `docs/audit/DESIGN_DECISIONS.md` § DD-001).
+- Belum ada audit kode baris-per-baris dijalankan — sesi ini murni setup.
+  0 bug, 0 file kode disentuh.
+- Baseline test dicatat di `docs/audit/REGRESSION_TEST_PLAN.md`: `?v=996`,
+  2067/2067 pass (diambil dari riwayat project, bukan dijalankan ulang
+  sesi ini — tidak ada kode berubah).
+
+## Test
+
+Tidak dijalankan ulang — 0 file `.js` sumber/test disentuh sesi ini.
+
+## Build
+
+Tidak dijalankan — 0 alasan bump `?v=` (dokumentasi murni, tidak menyentuh
+bundle/HTML/sw.js).
+
+---
+
+# Changelog — Sesi 332 (lanjutan 3): Fix VEH-001 & VEH-005 dari AUDIT-DEEP modules/vehicle
+
+## Konteks
+
+Menuntaskan 2 temuan terakhir yang tersisa dari
+`AUDIT-DEEP-modules-vehicle-v993-s332.md` §6 — VEH-001 dan VEH-005 — yang
+sengaja ditunda di sesi-sesi sebelumnya karena lebih kompleks (race-condition
+async utk VEH-001, kontrak API lintas fungsi utk VEH-005). VEH-006 tetap
+sengaja tidak di-fix (GIGO by design, sudah didokumentasikan tim di
+`TASK-142`). Dengan sesi ini, **7/7 temuan VEH-001..007 sudah selesai
+ditangani** (6 fix + 1 dikecualikan by design).
+
+## Perubahan
+
+**VEH-001** (`modules/vehicle/vehicle-scanner.js` +
+`modules/vehicle/sparepart-scanner.js`, pola identik di kedua file) — akar
+penyebab: timeout seharusnya HANYA membungkus fase inisialisasi kamera
+(`getUserMedia()`, yang memang bisa menggantung tanpa reject kalau izin
+kamera diam-diam diblok), bukan membungkus keseluruhan lifecycle
+`decodeContinuously()` yang sengaja berjalan terus-menerus selama sesi scan
+aktif. Implementasi lama salah karena menyamakan kedua fase itu jadi satu
+promise yang di-race. Timer `*_CAMERA_INIT_TIMEOUT_MS` (10 detik) sebelumnya
+me-race PROMISE UTUH
+`decodeFromConstraints()`/`decodeFromVideoDevice()` (ZXing). Promise itu
+adalah `decodeContinuously()` — BARU resolve saat `reader.reset()`
+dipanggil (yaitu saat scan berhasil atau scanner ditutup), BUKAN saat kamera
+menyala. Akibatnya scan yang sedang berjalan NORMAL (user butuh >10 detik
+mengarahkan kamera ke barcode) ikut kena timeout & scanner mati sendiri
+padahal kamera tidak bermasalah sama sekali. Fix: `vehicleScannerWithCameraTimeout()`/
+`sparepartScannerWithCameraTimeout()` sekarang terima parameter `video`
+(opsional, param ke-3) — dipasangi listener `loadedmetadata` SEKALI (sinyal
+satu-satunya yang tersedia bahwa stream kamera benar-benar sudah mengalir
+frame, pola yang sama sudah dipakai `applyTorchCapability()`). Begitu sinyal
+itu masuk, timer dibatalkan (`clearTimeout`) — `Promise.race` lanjut
+menunggu promise ZXing tanpa batas waktu artifisial, persis niat semula
+("timeout hanya untuk kamera yang gagal/menggantung init"). Kalau kamera
+memang tidak pernah menyala, perilaku timeout lama (reject dgn toast error)
+tetap terjadi persis seperti sebelumnya — regresi 0. Kedua call site
+(`decodeFromConstraints` + fallback `decodeFromVideoDevice`) di kedua file
+diupdate mengirim `ui.video`. Tes baru: 3 skenario per file (kamera menyala
+sebelum timer tick -> tidak timeout walau promise belum resolve; kamera
+tidak pernah menyala -> tetap timeout; tanpa parameter video -> fallback
+aman, perilaku lama) — `tests/vehicle-scanner.test.js` +
+`tests/sparepart-scanner.test.js`.
+
+**VEH-005** (`modules/vehicle/vehicle-catalog.js`, `vehicleCatalogSearch()`)
+— filter `opts.vehicleId` sebelumnya mensyaratkan `compatibleVehicleIds`
+NON-KOSONG yang match — part universal (`compatibleVehicleIds` kosong/belum
+diisi, mis. part yang baru saja discan & belum ditandai kompatibilitasnya)
+malah TERSINGKIR dari `search({vehicleId})`. Ini beda kontrak dgn
+`filterForVehicle()` (dipakai `VehicleCatalogUI.renderList()` &
+`Servis.populateCatalogPartSelect()`), yang sengaja menganggap part
+semacam itu berlaku utk SEMUA kendaraan. Fix: `vehicleCatalogSearch()`
+sekarang reuse `vehicleCatalogFilterForVehicle()` utk filter `vehicleId`,
+supaya hanya ada SATU definisi "part ini cocok utk kendaraan X" di seluruh
+modul. Dampak saat ini tetap rendah (`search({vehicleId})` belum dipanggil
+di jalur produksi manapun, sesuai catatan audit), tapi menutup kontrak yang
+diam-diam berbeda sebelum ada pemanggil baru yang bergantung padanya. Tes
+baru: 2 skenario (part universal ikut lolos search vehicleId; part khusus
+kendaraan lain tetap tersingkir — pastikan fix tidak melonggarkan filter yg
+sudah benar) — `tests/vehicle-catalog.test.js`.
+
+**VEH-006** — tetap sengaja tidak di-fix (`fuel-gauge-engine.js:71-72` sudah
+eksplisit GIGO by design, `TASK-142`, sudah diketahui tim sebelumnya).
+
+## Test
+
+`node --test tests/*.test.js` -> **2067/2067 pass, 0 fail** (naik dari 2059,
++8 tes baru, 0 regresi).
+
+## Build
+
+`node scripts/build.js s332-fix-veh001-veh005` -> sukses, `?v=996`.
+Peringatan non-fatal (tidak terkait patch ini, sudah ada sebelumnya):
+`docs/AUDIT_MATRIX.md` "Coverage Baseline" selisih 1 file/1 JS dari repo
+sungguhan (629→630 / 475→476) — kandidat update baseline di sesi terpisah,
+bukan hasil perubahan sesi ini (sesi ini 0 file baru, hanya edit file
+existing). 5 file source lewat ambang 1600 baris — sama seperti peringatan
+di sesi-sesi sebelumnya, di luar scope.
+
+---
+
+
+
+## Konteks
+
+Lanjutan sesi sebelumnya (VEH-003/VEH-004 sudah selesai). Mengerjakan 2
+temuan berikutnya dari `AUDIT-DEEP-modules-vehicle-v993-s332.md` §6 —
+VEH-002 dan VEH-007 — dipilih karena scoped ke 1 fungsi/1 file, tidak
+menyentuh race-condition async (beda dgn VEH-001) atau kontrak API lintas
+modul yang lebih luas (VEH-005).
+
+## Perubahan
+
+**VEH-002** (`modules/vehicle/vehicle-catalog-ui.js`) — "☑️ Pilih Semua" di
+Katalog Suku Cadang dulu panggil `VehicleCatalog.getAll()` mentah (ambil
+SEMUA part, termasuk yang sedang disembunyikan filter kendaraan aktif/
+pencarian). Kalau lanjut "🗑 Hapus Terpilih", part di luar layar ikut
+kehapus tanpa kelihatan. Fix: state baru `_catVisibleIds` (diisi ulang tiap
+`catalogUiRenderList()` dari daftar yang BENAR-BENAR sedang tampil),
+`catalogUiSelectAll()` sekarang pakai set ini. Tes baru: 3 skenario
+(filter kendaraan aktif, pencarian aktif, tanpa filter = perilaku lama
+tetap jalan) — `tests/vehicle-catalog-ui-selectall-scope-veh002.test.js`.
+
+**VEH-007** (`modules/shared/backup-restore.js`, `importCarData()`) — merge
+`bbmLogs`/`servisLogs` dari file JSON restore user men-spread objek mentah
+tanpa validasi tipe. Field angka berbentuk string (mis. `"4.5"`) lolos
+filter `liter>0` (JS auto-coerce di operator relasional) tapi rusak jadi
+string-concat begitu masuk `reduce((s,b)=>s+b.liter,0)` di
+`fuel-cost-analytics.js` — silent data corruption, bukan crash. Fix: helper
+baru `_numOrUndef()`/`_sanitizeNumFields()` — koersi `liter`/`cost`/`km`/
+`harga` (bbmLogs) dan `cost`/`km` (servisLogs) jadi `Number` di titik masuk
+restore; nilai yang sama sekali tidak valid (mis. `"abc"`) dibuang
+(`undefined`), bukan tersimpan sbg `NaN`. Tes baru: 2 skenario (string
+angka valid dikoersi + reduce hasilnya benar; string tidak valid dibuang)
+— `tests/backup-restore-regression-s266.test.js`.
+
+**Belum dikerjakan**: VEH-001 (race-condition timeout scanner), VEH-005
+(kontrak `filterForVehicle()` vs `search({vehicleId})`, dampak rendah —
+tidak dipanggil di jalur produksi manapun). VEH-006 sengaja tidak di-fix
+(sudah didokumentasikan tim, GIGO by design).
+
+## Test
+
+`node --test tests/*.test.js` -> **2059/2059 pass, 0 fail** (naik dari 2054,
++5 tes baru, 0 regresi).
+
+## Build
+
+`node scripts/build.js s332-fix-veh002-veh007` -> sukses, `?v=995`.
+
+---
+
+# Changelog — Sesi 332 (lanjutan): Fix VEH-003 & VEH-004 dari AUDIT-DEEP modules/vehicle
+
+## Konteks
+
+Tindak lanjut `AUDIT-DEEP-modules-vehicle-v993-s332.md` §6 (verifikasi
+temuan VEH-001..007). Sesi ini mengerjakan 2 temuan **termudah & paling
+rendah risiko** dulu (self-contained, 1 file, tidak nyentuh alur
+async/timeout/parsing eksternal seperti VEH-001/002/007):
+
+- **VEH-003** — `saveKm()` menerima KM negatif tanpa validasi keras,
+  beda kontrak dengan `commitCurKmEdit()` (`if(!km||km<=0)`).
+- **VEH-004** — Field interval servis (mesin/transmisi) & kapasitas
+  (kg/m³/kWh) menerima angka negatif: tidak ada atribut `min` di HTML,
+  dan `parseFloat(...)||null` di JS meloloskan nilai negatif apa adanya.
+
+VEH-001, VEH-002, VEH-005, VEH-007 **belum dikerjakan** di sesi ini
+(butuh perubahan lebih luas: race-condition promise scanner, filter
+katalog, kontrak search API, tipe data hasil restore backup) — lihat
+audit §5/§6 utk urutan prioritas lanjutan.
+
+## Perubahan (`modules/vehicle/vehicle-core.js`)
+
+- `saveKm()`: `if(!km)` → `if(!km||km<=0)` — sekarang tolak KM negatif
+  persis sama seperti `commitCurKmEdit()`, kontrak konsisten.
+- Tambah helper `_posOrNull(raw)` — balikin `null` utk nilai `<=0`/NaN.
+- `capacityKg`, `capacityM3`, `batteryCapacityKwh`, `oliTransmisiIntervalKm`,
+  `serviceIntervalKm`: parsing diganti ke `_posOrNull()` — nilai negatif
+  sekarang ditolak di JS (bukan cuma dicegah di level HTML `min` yang
+  bisa dilewati).
+- Field HTML `vehCapacityKg`, `vehCapacityM3`, `vehOliTransInterval`,
+  `vehBatteryCapacity`, `vehInterval`: tambah atribut `min="0"`.
+
+0 perubahan pada `modules/shared/*` — murni scoped ke `vehicle-core.js`.
+
+## Test
+
+`node --test tests/*.test.js` -> **2054/2054 pass, 0 fail** (termasuk
+`tests/vehicle-jenis.test.js` 11/11 — test yang paling dekat menyentuh
+`vehJenisFieldsHtml()`/`saveVehicle()` yang diubah).
+
+## Build
+
+`node scripts/build.js s332-fix-veh003-veh004-easy` -> sukses, `?v=994`.
+
+---
+
 # Changelog — Sesi 332: Update Baseline docs/AUDIT_MATRIX.md
 
 ## Konteks
@@ -11919,3 +12166,32 @@ PD-007 sekarang DITEGAKKAN PENUH: Scanner Engine 0% menyentuh modal/toast/
 dashboard, `ScannerSession.enter()`/`exit()` adalah satu-satunya titik
 masuk/keluar Exclusive Scanner Mode, state "scanner aktif" 100% eksplisit
 (bukan lagi disimpulkan dari keberadaan `<video>` di DOM).
+
+## Sesi 333 (2026-08-01) — Fix BUG-014: Budget Recommendation tidak diurutkan berdasarkan prioritas
+
+Perbaikan hasil temuan Sesi Audit-Docs 9 (`docs/BUG_REGISTRY.md` §0,
+Resolved). `modules/finance/budget-recommendation-api.js`:
+`spendingAnalysis().items` sebelumnya mewarisi urutan `D.budgets` apa
+adanya (bukan prioritas), sehingga `budgetSuggestion().suggestions[0]`
+("Rekomendasi Utama" di presenter) & `.find()` elemen `over` pertama
+("Terbesar") bisa keliru menunjuk item yang bukan prioritas/nominal
+tertinggi.
+
+Fix: tambah `_CATEGORY_PRIORITY` (mapping over/near/underused/ok) +
+`_sortBySeverity(items)` (sort di atas COPY array, 0 mutasi) di
+`spendingAnalysis()` — urutkan `items` sebelum `return` berdasarkan
+prioritas kategori lalu besaran dalam kategori yang sama.
+`budgetSuggestion()` tidak diubah (otomatis mewarisi urutan baru).
+`budget-recommendation-presenter.js` tidak disentuh sama sekali — fix
+diselesaikan murni di layer API.
+
+Detail lengkap: `FIX-v997-s333-budget-reco-priority-sort.md`.
+
+```
+node --test tests/*.test.js
+# tests 2074 / pass 2074 / fail 0   (naik dari 2067, +7 test baru,
+# tests/budget-recommendation-severity-sort-s333.test.js, 0 regresi)
+
+node scripts/build.js s333-fix-budget-reco-priority-sort
+# ✅ Build selesai, ?v=997, index.html & app_production.html identik
+```
