@@ -151,10 +151,12 @@ const f=getKeuFilters();
 const n=Object.values(f).filter(v=>v&&v!=='semua').length;
 btn.textContent=n?`🔍 Filter (${n})`:'🔍 Filter';
 }
+const SHOP_TAB_ORDER=['kasir','jual','etalase','produsen','riwayat','pelanggan','laporan','bi'];
+const CN_TAB_ORDER=['insight','bbm','servis','pajak'];
 function goToList(targetId, pageName, navIdx, shopTabName, cnTabName, keuTabName){
 const jump=()=>{
-if(shopTabName){const tabs=document.querySelectorAll('#page-shop .cn-tab');setShopTab(shopTabName,tabs[shopTabName==='etalase'?1:shopTabName==='produsen'?2:shopTabName==='riwayat'?3:shopTabName==='pelanggan'?4:0]);}
-if(cnTabName){const tabs=document.querySelectorAll('#page-carnotes .cn-tab');setCnTab(cnTabName,tabs[cnTabName==='servis'?1:0]);}
+if(shopTabName){const tabs=document.querySelectorAll('#page-shop .cn-tab');const idx=SHOP_TAB_ORDER.indexOf(shopTabName);setShopTab(shopTabName,tabs[idx>=0?idx:0]);}
+if(cnTabName){const tabs=document.querySelectorAll('#page-carnotes .cn-tab');const idx=CN_TAB_ORDER.indexOf(cnTabName);setCnTab(cnTabName,tabs[idx>=0?idx:0]);}
 if(keuTabName&&typeof setKeuanganTab==='function'){
 const tabs=document.querySelectorAll('#page-keuangan .cn-tab');
 const idx=(typeof KEU_TAB_ORDER!=='undefined')?KEU_TAB_ORDER.indexOf(keuTabName):-1;

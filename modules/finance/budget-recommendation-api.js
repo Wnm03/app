@@ -66,16 +66,53 @@ _classify(item) {
   return 'ok';
 },
 
+// _CATEGORY_PRIORITY — urutan prioritas kategori (dipakai _sortBySeverity()
+// di bawah). Nilai lebih kecil = lebih prioritas/mendesak. Murni tabel
+// mapping, bukan rumus.
+_CATEGORY_PRIORITY: { over: 0, near: 1, underused: 2, ok: 3 },
+
+// _sortBySeverity(items) — FIX BUG-014 (docs/BUG_REGISTRY.md §0a-7):
+// urutkan COPY array item (sudah dibubuhi `category` oleh _classify() di
+// spendingAnalysis()) berdasarkan prioritas kategori (over -> near ->
+// underused -> ok), lalu besaran DALAM kategori yang sama — over: selisih
+// `used-limit` menurun (overage terbesar duluan, supaya cocok dgn label
+// "Terbesar" yg dipakai presenter), near: `pct` menurun (paling dekat ke
+// over duluan), underused: `pct` menaik (paling sedikit terpakai duluan,
+// paling banyak sisa yg bisa dialihkan). Field yang dipakai (`category`/
+// `pct`/`used`/`limit`) SUDAH final dari _classify()/budgetSummary() — 0
+// rumus finansial baru, murni `Array.prototype.sort()` presentasional.
+// `.slice()` dulu supaya TIDAK memutasi array asli (aman thd referensi yg
+// mungkin dipegang pemanggil lain).
+_sortBySeverity(items) {
+  const rank = this._CATEGORY_PRIORITY;
+  return items.slice().sort((a, b) => {
+    const ra = rank[a.category] ?? 3;
+    const rb = rank[b.category] ?? 3;
+    if (ra !== rb) return ra - rb;
+    if (a.category === 'over') return (b.used - b.limit) - (a.used - a.limit);
+    if (a.category === 'near') return b.pct - a.pct;
+    if (a.category === 'underused') return a.pct - b.pct;
+    return 0;
+  });
+},
+
 // spendingAnalysis(month?, year?) — Spending Analysis. Reuse
 // FinanceIntelligence.budgetSummary(month, year) apa adanya, ditambah
 // field `category` per item (dari _classify() di atas) & pengelompokan
 // count per kategori (murni .filter().length, 0 agregasi baru selain
-// hitung). `items`/`totalLimit`/`totalUsed`/`totalSisa`/`overallPct`/
-// `overCount` diteruskan APA ADANYA dari budgetSummary().
+// hitung). `totalLimit`/`totalUsed`/`totalSisa`/`overallPct`/`overCount`
+// diteruskan APA ADANYA dari budgetSummary(). `items` DIURUTKAN lewat
+// _sortBySeverity() (FIX BUG-014) — sebelumnya urutan `items` mengikuti
+// apa adanya urutan `D.budgets`, membuat `budgetSuggestion().
+// suggestions[0]` ("Rekomendasi Utama" di presenter) & pencarian
+// "Terbesar" (`.find()` kategori 'over' pertama, `_overCard()` di
+// budget-recommendation-presenter.js) berpotensi keliru menunjuk item yg
+// bukan prioritas/nominal tertinggi.
 spendingAnalysis(month, year) {
   const bs = this._budget(month, year);
   if (!bs.ok) return bs;
-  const items = bs.items.map((it) => ({ ...it, category: this._classify(it) }));
+  const classified = bs.items.map((it) => ({ ...it, category: this._classify(it) }));
+  const items = this._sortBySeverity(classified);
   const countBy = (cat) => items.filter((it) => it.category === cat).length;
   return {
     ok: true,
