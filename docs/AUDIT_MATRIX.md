@@ -204,3 +204,316 @@ findings that are inherently cross-domain.
 - `[VERIFY]` items encountered along the way should be raised to the
   product owner directly rather than assumed.
 
+---
+
+# 7. Function-Level Audit Log — Bill/Piutang/Debt domain (Sesi Audit 2026-08-01)
+
+> Diimplementasikan dari hasil audit eksternal (source of truth). Status
+> `AUDITED` = fungsi sudah diaudit sesi ini (temuan terkait ada di
+> `BUG_REGISTRY.md` §0a/0b/0c). Status `PENDING AUDIT` = belum disentuh.
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| (Piutang module) | `Piutang.save()` | AUDITED | Bug — OPEN | BUG-FIN-001, `BUG_REGISTRY.md` §0a |
+| (Debt module) | `Debt.save()` | AUDITED | Bug — OPEN | BUG-FIN-001, `BUG_REGISTRY.md` §0a |
+| (Bill module) | `_saveBillInner()` | AUDITED | Bug — OPEN | BUG-001, BUG-003, `BUG_REGISTRY.md` §0a |
+| (Bill module) | `applyBillPaymentTxSync()` | AUDITED | Not specified in audit input | No finding recorded against this function in the audit input |
+| (Bill module) | `isLatestBillPaymentTx()` | AUDITED | Not specified in audit input | No finding recorded against this function in the audit input |
+| (Bill module) | `getBillArchiveEditSource()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| (Bill module) | `saveBill()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| (Bill module) | `markBillPaid()` | AUDITED | Bug — OPEN | BUG-004, `BUG_REGISTRY.md` §0a |
+| (Bill module) | `delBill()` | AUDITED | By Design | `BUG_REGISTRY.md` §0c |
+| (Bill module) | `delBillArchive()` | AUDITED | Bug — OPEN | BUG-005, `BUG_REGISTRY.md` §0a |
+| (Piutang module) | `syncOutstandingSharedPiutang()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| (Piutang module) | `maybeCreateSharedPiutangFromBill()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| `modules/finance/piutang-utang.js` | `Debt.syncBill()` | AUDITED | Bug — OPEN | BUG-006, `BUG_REGISTRY.md` §0a-2 |
+| `modules/finance/tagihan-kalender.js` | `getBillPaidThisPeriodInfo()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| `modules/finance/tagihan-kalender.js` | `revertBillFromDeletedTx()` | AUDITED | Bug — OPEN | BUG-007, `BUG_REGISTRY.md` §0a-2 |
+| `modules/finance/tagihan-kalender.js` | `deleteBillHistoryTx()` | AUDITED | No independent finding (inherits BUG-007 via shared `revertBillFromDeletedTx()`) | `BUG_REGISTRY.md` §0a-2 |
+
+**Sesi Audit-Docs 2 (2026-08-01, lanjutan):** ke-4 fungsi di atas yang
+tadinya `PENDING AUDIT` sudah diaudit langsung dari source code (bukan
+input eksternal) — 2 bug baru (BUG-006, BUG-007), 1 false positive
+(`getBillPaidThisPeriodInfo()`), 1 fungsi tanpa temuan independen
+(`deleteBillHistoryTx()`, mewarisi BUG-007 lewat SSOT). Kolom "File" untuk
+baris ini diisi path eksak (hasil verifikasi langsung), berbeda dari
+baris-baris §7 sebelumnya yang cuma diisi nama domain (input audit
+eksternal tidak menyebutkan path). **Semua fungsi di domain
+Bill/Piutang/Debt yang tercantum di §7 sekarang berstatus AUDITED — tidak
+ada lagi PENDING AUDIT tersisa dari daftar awal sesi audit ini.**
+
+**Catatan tambahan:** BUG-002 (mismatch `tx.amount` vs label "Jumlah Total
+per Periode") tidak dikaitkan ke fungsi spesifik pada tabel di atas karena
+input audit tidak menyebutkan nama fungsi/file untuk temuan ini — lihat
+`BUG_REGISTRY.md` §0a untuk detail temuan apa adanya.
+
+**Catatan:** kolom "File" tidak disertakan path eksak di input audit untuk
+sebagian fungsi (hanya nama module/domain) — diisi berdasarkan domain yang
+disebutkan (Piutang/Debt/Bill) tanpa mengasumsikan path file spesifik yang
+tidak ada di input audit. Update ke path file eksak boleh dilakukan sesi
+berikutnya kalau diverifikasi ulang.
+
+---
+
+# 8. Business Logic — Finance/WorthIt (Sesi Audit worthit.js, diimplementasikan Sesi Audit-Docs 3, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/worthit.js` | `WorthIt.catatBeli()` | AUDITED | Bug — OPEN | BUG-008, `BUG_REGISTRY.md` §0a-3 |
+| `modules/finance/worthit.js` | `pendingBuyId` / `openTxModal()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| `modules/finance/worthit.js` | `incomeAvg()` (div-by-zero) | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+
+**Status file:** Seluruh fungsi di `modules/finance/worthit.js` berstatus
+**AUDITED (100%)** per hasil audit sesi terputus sebelumnya — tidak ada
+fungsi tersisa berstatus PENDING AUDIT di file ini. Input audit yang
+diteruskan ke sesi dokumentasi ini hanya merinci 1 bug (BUG-008) dan 2
+false positive di atas; fungsi-fungsi lain di file tersebut tercakup
+dalam status "AUDITED (100%)" tanpa rincian per-fungsi tambahan karena
+tidak disebutkan di ringkasan hasil audit yang diteruskan. Item
+Improvement (gap UX saldo ≤ 0; belum ada test untuk `hitung()` dan
+`computeScore()`) dicatat di `docs/KNOWN-ISSUES.md` §8 dan `TODO.md`,
+bukan sebagai baris matrix tersendiri karena bukan bug/false
+positive/design decision.
+
+---
+
+# 9. Business Logic — Finance/Filter-Laporan (Sesi Audit-Docs 4, audit langsung, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/filter-laporan.js` | `txMatchesFilters(t,f)` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `populateCatFilter()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `onFKatChange()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `resetLaporanFilter()` | AUDITED | No independent finding (ternary redundan, lihat Improvement) | `docs/KNOWN-ISSUES.md` §9 |
+| `modules/finance/filter-laporan.js` | `getLaporanFilters()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `populateKeuFilters()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `onKfKatChange()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `toggleKeuFilter()` | AUDITED | Bug — OPEN | BUG-009, `BUG_REGISTRY.md` §0a-4 |
+| `modules/finance/filter-laporan.js` | `resetKeuFilter()` | AUDITED | No independent finding (ternary redundan, lihat Improvement) | `docs/KNOWN-ISSUES.md` §9 |
+| `modules/finance/filter-laporan.js` | `getKeuFilters()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `txMatchesSearch(t,q)` | AUDITED | No independent finding (scope pencarian terbatas, lihat Improvement) | `docs/KNOWN-ISSUES.md` §9 |
+| `modules/finance/filter-laporan.js` | `loadMoreLapTx()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `resetTxPageAndRender()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `onKfSearchInput()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `loadMoreTx()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `saveKeuFilterPrefs()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `loadKeuFilterPrefsIntoDOM()` | AUDITED | By Design | `BUG_REGISTRY.md` §0c |
+| `modules/finance/filter-laporan.js` | `updateKfBadge()` | AUDITED | No independent finding | — |
+| `modules/finance/filter-laporan.js` | `goToList()` | AUDITED | Bug — OPEN | BUG-011, `BUG_REGISTRY.md` §0a-4 |
+| `modules/finance/filter-laporan.js` | `showFilteredTx()` | AUDITED | Bug — OPEN (BUG-010) + False Positive (2 item, timezone & scope dashboard) | `BUG_REGISTRY.md` §0a-4, §0b |
+
+**Status file:** Seluruh 20 fungsi + 5 state var module-level
+(`txListPage`, `TX_PAGE_SIZE`, `lapTxPage`, `_lapLastFilterSig`,
+`_keuFilterPrefsLoaded`) di `modules/finance/filter-laporan.js` sudah
+`AUDITED (100%)` — tidak ada fungsi tersisa PENDING AUDIT di file ini.
+Audit dilakukan LANGSUNG dari source code (trace caller/callee lintas
+codebase termasuk `index.html`/`app_production.html`, `styles.css`,
+`modules/shop/cobek-io.js`, `modules/vehicle/vehicle-core.js`,
+`modules/finance/pajak-pbb-zakat.js`, `modules/shared/modules-render.js`),
+bukan implementasi input eksternal. 3 bug baru (BUG-009, BUG-010,
+BUG-011), 2 false positive, 1 design decision, 2 improvement (dead
+ternary, scope pencarian) — lihat `docs/BUG_REGISTRY.md` §0a-4/§0b/§0c
+dan `docs/KNOWN-ISSUES.md` §9 untuk detail lengkap.
+
+---
+
+# 10. Business Logic — Finance/FinanceIntelligence (Sesi Audit-Docs 5, implementasi dari sesi terputus, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/finance-intelligence.js` | `healthScore()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| `modules/finance/finance-intelligence.js` | `insights()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
+| `modules/finance/finance-intelligence.js` | `summary()` | AUDITED | No independent finding (test gap) | `docs/KNOWN-ISSUES.md` §10 |
+| `modules/finance/finance-intelligence.js` | `cashflowSummary()` | AUDITED | No independent finding (test gap) | `docs/KNOWN-ISSUES.md` §10 |
+| `modules/finance/finance-intelligence.js` | `_ivxCache` / `_budgetSummaryCache` (cache mechanism) | AUDITED | By Design (scope cache) + Bug — OPEN (invalidation) | BUG-012, `BUG_REGISTRY.md` §0a-5/§0c |
+| `modules/finance/finance-intelligence.js` | `changeMonth()` | AUDITED | Bug — OPEN | BUG-012, `BUG_REGISTRY.md` §0a-5 |
+| `modules/finance/finance-intelligence.js` | `changeTxListMonth()` | AUDITED | Bug — OPEN | BUG-012, `BUG_REGISTRY.md` §0a-5 |
+| `modules/finance/finance-intelligence.js` | `_isTxAccountSelf()` | AUDITED | No independent finding (Improvement — kompleksitas O(transaksi × akun)) | `docs/KNOWN-ISSUES.md` §10 |
+
+**Status file:** Seluruh fungsi di `modules/finance/finance-intelligence.js`
+berstatus **AUDITED (100%)** — tidak ada fungsi tersisa. Hasil audit
+diteruskan dari sesi audit (langsung terhadap source code) yang terputus
+karena limit sebelum sempat didokumentasikan; sesi dokumentasi ini
+(Sesi Audit-Docs 5) TIDAK mengaudit ulang kode, murni mengimplementasikan
+hasil audit yang sudah final sebagai source of truth. 1 bug baru
+(BUG-012), 2 false positive, 1 design decision (scope pemakaian cache),
+1 improvement (`_isTxAccountSelf()` kandidat optimasi Map). Gap test:
+`insights()`, `summary()`, `cashflowSummary()`, dan BUG-012 (cache
+setelah ganti bulan) belum punya test — lihat `docs/KNOWN-ISSUES.md` §10
+dan `TODO.md` § "Finance/FinanceIntelligence — dari Sesi Audit
+finance-intelligence.js".
+
+---
+
+# 11. Business Logic — Finance/FinanceDashboard (Sesi Audit-Docs 6, audit langsung, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/finance-dashboard.js` | `getAIHook()` | AUDITED | No independent finding | Wrapper tipis `FinanceIntelligence.summary()`, kontrak konsisten |
+| `modules/finance/finance-dashboard.js` | `render()` | AUDITED | No independent finding (dampak turunan BUG-012) | `docs/BUG_REGISTRY.md` §0a-5 (cache stale ikut mempengaruhi kartu Arus Kas/Anggaran/Skor Kesehatan) |
+| `modules/finance/finance-dashboard.js` | `_sparepartCards()` | AUDITED | No independent finding (trigger tambahan BUG-011) | `docs/BUG_REGISTRY.md` §0a-4 — caller kedua terverifikasi `goToList(...,'servis')` |
+| `modules/finance/finance-dashboard.js` | `_netWorthCard()` | AUDITED | No independent finding | Reuse SSOT `Kekayaan.currentNetWorth()` (S268), kontrak cocok |
+| `modules/finance/finance-dashboard.js` | `_cashFlowCard(cf)` | AUDITED | No independent finding | Field `cf.currentMonth.net`/`cf.projected` cocok dgn `cashflowSummary()`/`computeCashflowForecast()` |
+| `modules/finance/finance-dashboard.js` | `_budgetCard(bs)` | AUDITED | No independent finding | Field `bs.overallPct`/`overCount`/`totalUsed`/`totalLimit` cocok dgn `budgetSummary()` |
+| `modules/finance/finance-dashboard.js` | `_healthCard(hs)` | AUDITED | False Positive | `docs/BUG_REGISTRY.md` §0b — guard `if(!hs)` dead code tapi aman |
+
+**Status file:** Seluruh 7 fungsi di `modules/finance/finance-dashboard.js`
+berstatus **AUDITED (100%)** — tidak ada fungsi tersisa. Audit dilakukan
+LANGSUNG dari source code (trace caller/callee penuh lintas codebase:
+`modules/shared/modules-render.js` — `renderKeuangan()`/`runDeferredOrNow()`,
+`modules/finance/tx-list-cashflow.js` — `computeCashflowForecast()`/
+`changeMonth()`/`changeTxListMonth()`, `modules/finance/finance-intelligence.js`
+— kontrak `summary()`, `modules/vehicle/sparepart-servis.js` —
+`calcFinanceStats()`, `modules/shared/modules-calc.js` — `Kekayaan.
+currentNetWorth()`, `index.html`/`app_production.html` — `#findashGrid`).
+**0 bug baru ditemukan** — file ini murni presenter tipis, 100% reuse,
+kontrak data dgn seluruh calleenya konsisten. 1 false positive, 1 design
+decision, 0 improvement pada logic file ini sendiri. Gap nyata: 0 test
+eksekusi (loadSource+DOM) untuk 7 fungsi di file ini — 2 test yang ada
+(`cross-module-sync-finalisasi-s201.test.js`,
+`dashboard-networth-ssot-s268.test.js`) murni static regex check thd
+source, bukan uji perilaku — lihat `docs/KNOWN-ISSUES.md` §11 dan
+`TODO.md` § "Finance/FinanceDashboard — dari Sesi Audit
+finance-dashboard.js".
+
+---
+
+# 12. Business Logic — Finance/FinancialHealthScoreAPI (Sesi Audit-Docs 7, audit langsung, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/financial-health-score-api.js` | `_score()` | AUDITED | No independent finding | Satu titik akses ke `FinanceIntelligence.healthScore()`, guard `typeof`+try/catch benar |
+| `modules/finance/financial-health-score-api.js` | `scoreOverview()` | AUDITED | No independent finding | Wrapper tipis `_score()`, kontrak `{ok,score,label,parts}` apa adanya |
+| `modules/finance/financial-health-score-api.js` | `componentBreakdown()` | AUDITED | False Positive | `docs/BUG_REGISTRY.md` §0b — guard `p.weight>0` dead code tapi aman |
+| `modules/finance/financial-health-score-api.js` | `financialHealthRecommendation()` | AUDITED | No independent finding (Improvement — lihat catatan) | `docs/KNOWN-ISSUES.md` §12 |
+| `modules/finance/financial-health-score-api.js` | `summary()` | AUDITED | No independent finding (Improvement — panggilan redundan) | `docs/KNOWN-ISSUES.md` §12 |
+
+**Status file:** Seluruh 5 fungsi di
+`modules/finance/financial-health-score-api.js` berstatus **AUDITED
+(100%)** — tidak ada fungsi tersisa PENDING AUDIT di file ini. Audit
+dilakukan LANGSUNG dari source code (137 baris, baris-per-baris, bukan
+sampling/grep) + trace penuh caller/callee lintas codebase:
+`modules/finance/finance-intelligence.js` — kontrak
+`healthScore()` (`{score,label,parts[]}`, `parts[].weight` hardcode 25,
+`maxScore` tidak pernah 0 karena komponen `savings` selalu didorong
+tanpa guard), `modules/finance/financial-health-score-presenter.js` —
+seluruh 3 `_xxxCard()` + `render()` (konsumen utama, lewat `summary()`),
+`modules/finance/financial-risk-dashboard-api.js` — `_healthRisk()`
+(konsumen kedua, memanggil `financialHealthRecommendation()` langsung,
+bukan lewat `summary()`), `modules/finance/debt-optimizer-api.js` —
+`debtRecommendation()` (pembanding pola "return `out` array kosong kalau
+`!o.ok`", TERVERIFIKASI SAMA, bukan penyimpangan), `tests/
+finance-nav-consistency-s254a.test.js` (satu-satunya test yang menyentuh
+domain ini, seluruhnya me-mock `FinancialHealthScoreAPI` di level
+presenter — 0 test unit langsung utk 5 fungsi file ini sendiri).
+**0 bug baru ditemukan** — file ini murni composition layer tipis, 100%
+reuse `FinanceIntelligence.healthScore()`, kontrak data dgn seluruh
+callee & caller konsisten (dicek baris-per-baris, termasuk perbandingan
+kontrak `financialHealthRecommendation()`/`debtRecommendation()`). 1
+false positive, 0 design decision baru, 2 improvement (redundansi
+pemanggilan `_score()`/`FinanceIntelligence.healthScore()` di
+`summary()`; 0 test unit langsung). Dampak turunan (bukan bug baru):
+`summary()`/`_score()` ikut terdampak **BUG-012** (cache
+`_ivxCache`/`_budgetSummaryCache` stale setelah `changeMonth()`/
+`changeTxListMonth()`, `finance-intelligence.js`) lewat panggilan
+`FinanceIntelligence.healthScore()` — pola turunan sama persis
+`finance-dashboard.js` (§11 di atas) — lihat `docs/KNOWN-ISSUES.md` §12
+dan `TODO.md` § "Finance/FinancialHealthScoreAPI — dari Sesi Audit
+financial-health-score-api.js".
+
+---
+
+# 13. Business Logic — Finance/FinancialRiskDashboardAPI (Sesi Audit-Docs 8, audit langsung, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/financial-risk-dashboard-api.js` | `_debtRisk()` | AUDITED | No independent finding | Reuse `DebtOptimizerAPI.debtRecommendation()` apa adanya, guard+try/catch benar |
+| `modules/finance/financial-risk-dashboard-api.js` | `_healthRisk()` | AUDITED | No independent finding | Reuse `FinancialHealthScoreAPI.financialHealthRecommendation()` apa adanya, guard+try/catch benar |
+| `modules/finance/financial-risk-dashboard-api.js` | `_cashflowBudgetRisk()` | AUDITED | No independent finding | Reuse `FinanceIntelligence.insights()` apa adanya, guard+try/catch benar |
+| `modules/finance/financial-risk-dashboard-api.js` | `_emergencyFundRisk()` | AUDITED | **Bug — OPEN** | **BUG-013**, `docs/BUG_REGISTRY.md` §0a-6 — abaikan `dd.accountId`, baca `dd.saved` mentah (selalu 0 utk target ber-akun) |
+| `modules/finance/financial-risk-dashboard-api.js` | `riskFactors()` | AUDITED | No independent finding (dampak turunan BUG-013) | Menggabungkan hasil ke-4 helper apa adanya — ikut membawa BUG-013 lewat `_emergencyFundRisk()` |
+| `modules/finance/financial-risk-dashboard-api.js` | `riskLevel()` | AUDITED | No independent finding (Improvement — lihat catatan) | `docs/KNOWN-ISSUES.md` §13 — recompute `riskFactors()` independen |
+| `modules/finance/financial-risk-dashboard-api.js` | `summary()` | AUDITED | Design Decision (`ok` selalu `true`) + Improvement (panggilan `riskFactors()` 2x) | `docs/BUG_REGISTRY.md` §0c, `docs/KNOWN-ISSUES.md` §13 |
+
+**Status file:** Seluruh 7 fungsi di `modules/finance/
+financial-risk-dashboard-api.js` berstatus **AUDITED (100%)** — tidak
+ada fungsi tersisa PENDING AUDIT di file ini. Audit dilakukan LANGSUNG
+dari source code (163 baris, baris-per-baris) + trace penuh
+caller/callee lintas codebase: `modules/finance/debt-optimizer-api.js`
+— `debtRecommendation()`, `modules/finance/financial-health-score-api.js`
+— `financialHealthRecommendation()` (termasuk redundansi internalnya,
+lihat §12), `modules/finance/finance-intelligence.js` — `insights()`,
+`modules/finance/tx-target.js` — `saveTarget()`/`onTargetDanaDaruratToggle()`
+(konfirmasi `saved=0` permanen utk target ber-`accountId`),
+`modules/shared/modules-calc.js` — `DanaDaruratAI.currentSaved()`/
+`updateSaved()` (SSOT pola account-aware, DAN konfirmasi `dd.saved`
+sengaja TIDAK ditulis ulang kalau `accountId` ada), `modules/asset/aset.js`
+& `modules/asset/invest-ai-widget.js` (2 konsumen lain `D.targets`
+Dana Darurat yang SUDAH benar pakai pola account-aware, dipakai sbg
+pembanding), `modules/finance/financial-risk-dashboard-presenter.js`
+(satu-satunya caller, 100% konsumsi `summary()` apa adanya, tidak ada
+kompensasi utk bug ini di level presenter), `tests/
+finance-nav-consistency-s254a.test.js` (satu-satunya test yang
+menyentuh domain ini, seluruhnya me-mock `FinancialRiskDashboardAPI` di
+level presenter — 0 test unit langsung utk 7 fungsi file ini sendiri).
+**1 bug baru ditemukan (BUG-013)** — `_emergencyFundRisk()` tidak
+mengikuti pola account-aware Dana Darurat yang sudah established di 4
+lokasi lain di codebase. 0 false positive baru, 1 design decision baru
+(`summary().ok` selalu `true`), 2 improvement (`riskLevel()`/`summary()`
+memanggil `riskFactors()` berulang; 0 test unit langsung) — lihat
+`docs/KNOWN-ISSUES.md` §13 dan `TODO.md` §
+"Finance/FinancialRiskDashboardAPI — dari Sesi Audit
+financial-risk-dashboard-api.js".
+
+---
+
+# 14. Business Logic — Finance/BudgetRecommendationAPI (Sesi Audit-Docs 9, audit langsung, 2026-08-01)
+
+| File | Function | Audit Status | Classification | Notes |
+|---|---|---|---|---|
+| `modules/finance/budget-recommendation-api.js` | `_budget()` | AUDITED | No independent finding | Satu titik akses ke `FinanceIntelligence.budgetSummary()`, guard `typeof`+`{ok:false}` diteruskan apa adanya |
+| `modules/finance/budget-recommendation-api.js` | `_classify()` | AUDITED | False Positive | `docs/BUG_REGISTRY.md` §0b — pembagian `pct` tanpa guard `limit<=0` terlihat rawan tapi aman (pct sudah final dari hulu) |
+| `modules/finance/budget-recommendation-api.js` | `spendingAnalysis()` | AUDITED | **Bug — FIXED (v997/S333)** + False Positive | **BUG-014** (`docs/BUG_REGISTRY.md` §0, resolved — `_sortBySeverity()` ditambahkan, `items` sekarang diurutkan prioritas) + False Positive (spread copy, 0 risiko mutasi cache `FinanceIntelligence`) |
+| `modules/finance/budget-recommendation-api.js` | `budgetSuggestion()` | AUDITED | **Bug — FIXED (v997/S333, dampak turunan)** | **BUG-014** — `suggestions[0]` sekarang benar2 prioritas tertinggi krn mewarisi `sa.items` yang sudah diurutkan `_sortBySeverity()`, 0 perubahan kode di fungsi ini sendiri |
+| `modules/finance/budget-recommendation-api.js` | `budgetInsight()` | AUDITED | No independent finding (dampak turunan BUG-014 tidak berlaku — hanya hitung count per kategori, bukan urutan) | Derivatif murni `spendingAnalysis()`, 3 rule count-based, tidak terpengaruh isu urutan BUG-014 |
+| `modules/finance/budget-recommendation-api.js` | `summary()` | AUDITED | No independent finding (Improvement — lihat catatan) | `docs/KNOWN-ISSUES.md` §14 — `spendingAnalysis()` dipanggil 3x per `summary()` |
+
+**Status file:** Seluruh 6 fungsi di `modules/finance/
+budget-recommendation-api.js` berstatus **AUDITED (100%)** — tidak ada
+fungsi tersisa PENDING AUDIT di file ini. Audit dilakukan LANGSUNG dari
+source code (204 baris, baris-per-baris) + trace penuh caller/callee
+lintas codebase: `modules/finance/finance-intelligence.js` —
+`budgetSummary()` (konfirmasi `items` TIDAK pernah diurutkan, murni
+`D.budgets.map()`), `modules/finance/budget-recommendation-presenter.js`
+(satu-satunya caller, 100% konsumsi `summary()` — `_overCard()`/
+`_underusedCard()`/`_topSuggestionCard()` — TERVERIFIKASI memperlakukan
+posisi array/`.find()` pertama seolah sudah terurut prioritas, sumber
+BUG-014), `modules/finance/financial-goal-api.js` &
+`modules/finance/investment-planner-api.js` (2 komentar referensi,
+TIDAK memanggil `BudgetRecommendationAPI` secara langsung — murni
+catatan dokumentasi lintas-file, dikonfirmasi lewat `grep`),
+`budget.js` (baris 104, pembanding pola `_pct`/`_sisa` yang sudah ada,
+TERVERIFIKASI konsisten dgn kontrak `budgetSummary()`), `tests/
+finance-nav-consistency-s254b.test.js` (satu-satunya test yang
+menyentuh domain ini, me-mock `BudgetRecommendationAPI` di level
+presenter — 0 test unit langsung utk 6 fungsi file ini sendiri).
+**1 bug baru ditemukan (BUG-014)** — `spendingAnalysis()`/
+`budgetSuggestion()` tidak mengurutkan hasil berdasarkan prioritas
+(over/near/underused) atau nominal, padahal presenter mengonsumsi
+posisi pertama array sbg "Rekomendasi Utama"/"Terbesar". **Diperbaiki
+Sesi 333 (v997)** — `_CATEGORY_PRIORITY`/`_sortBySeverity()` ditambahkan
+di `spendingAnalysis()`, `budgetSuggestion()` tidak perlu diubah (ikut
+mewarisi urutan baru), 7 regression test baru
+(`tests/budget-recommendation-severity-sort-s333.test.js`), suite penuh
+2074/2074 pass — lihat `docs/BUG_REGISTRY.md` § 0 (Resolved) &
+`FIX-v997-s333-budget-reco-priority-sort.md`. 2 false positive baru
+(guard `pct` division aman krn sudah final dari hulu; spread copy aman
+dari risiko mutasi cache), 1 design decision baru (ambang klasifikasi
+0.8/0.4 & `suggestedLimit` hanya utk kategori `over`, sudah
+didokumentasikan eksplisit di komentar file), 1 improvement (`summary()`
+memanggil `spendingAnalysis()` 3x secara tidak langsung, MASIH OPEN — 0
+test unit langsung digenapi sesi ini lewat regression test BUG-014,
+tapi cakupan `_budget()`/`_classify()`/`budgetInsight()`/`summary()`
+langsung masih 0) — lihat `docs/KNOWN-ISSUES.md` §14 dan `TODO.md` §
+"Finance/BudgetRecommendationAPI — dari Sesi Audit
+budget-recommendation-api.js".
