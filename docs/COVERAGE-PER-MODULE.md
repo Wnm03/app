@@ -14,30 +14,23 @@
 > utk ditinjau, bukan vonis akhir. Kalau file ini kelihatan tidak sinkron,
 > jalankan ulang generatornya, JANGAN diedit tangan.
 
-Terakhir digenerate: 2026-08-01T08:28:26.925Z
-Total file test (`tests/*.test.js`): 187 · Total module family: 15
+Terakhir digenerate: 2026-08-01T12:08:33.938Z
+Total file test (`tests/*.test.js`): 209 · Total module family: 15
 
 | Module family | File source (.js) | File test yang menyentuh | Status |
 |---|---:|---:|---|
-| `modules/home` | 3 | 0 | ⚠️ 0 test file |
 | `economic-intelligence` | 20 | 1 |  |
 | `modules/self-reward` | 3 | 1 |  |
-| `lifeos` | 29 | 2 |  |
-| `modules/dashboard-hub` | 6 | 3 |  |
+| `lifeos` | 29 | 3 |  |
 | `modules/logistics` | 2 | 3 |  |
 | `modules/cross` | 17 | 4 |  |
-| `modules/business` | 10 | 7 |  |
+| `modules/dashboard-hub` | 6 | 4 |  |
+| `modules/home` | 3 | 4 |  |
+| `modules/business` | 10 | 9 |  |
 | `modules/ai` | 7 | 10 |  |
-| `modules/asset` | 14 | 15 |  |
-| `modules/shop` | 14 | 30 |  |
-| `modules/finance` | 41 | 39 |  |
-| `root` | 19 | 53 |  |
-| `modules/shared` | 29 | 60 |  |
-| `modules/vehicle` | 71 | 62 |  |
-
-## Family tanpa test file yang menyentuhnya langsung (1)
-
-Kandidat prioritas kalau mau menambah test baru — urutan lain sama validnya,
-ini murni titik awal, bukan urutan wajib:
-
-- `modules/home` (3 file source)
+| `modules/asset` | 14 | 18 |  |
+| `modules/shop` | 14 | 32 |  |
+| `modules/finance` | 41 | 50 |  |
+| `modules/shared` | 29 | 62 |  |
+| `root` | 19 | 62 |  |
+| `modules/vehicle` | 71 | 63 |  |

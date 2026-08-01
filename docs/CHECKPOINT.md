@@ -5,6 +5,262 @@ JANGAN audit/implement/test/build ulang bagian yang sudah **Completed**.
 
 ## Current Session
 
+Sesi 348 (2026-08-01) — FIX BUG KRITIS (audit ulang lanjutan Sesi 347,
+1 modul terlewat: AlokasiAset)
+
+**Konteks:** User minta audit ulang apakah masih ada bug serupa (window
+expose). Audit ulang penuh source-tree — kali ini scan otomatis semua
+`const`/`let`/`var X={` top-level yang dipakai lewat `data-action="X.xxx"`
+tapi TANPA `window.X=X` — menemukan **1 modul lagi**: `AlokasiAset` di
+`modules/asset/aset.js`. Terlewat di Sesi 346 karena file itu punya 10 const
+top-level (ALOKASI_PRESETS, AlokasiAset, AssetInsight, Aset, Penyusutan,
+PajakAset, LaporanAset, IDBStore, PORTFOLIO_LABELS, TimelineW) dan audit
+sesi itu cuma menemukan `Aset`, tidak ngecek const lain di file yang sama.
+
+**Root cause SAMA PERSIS** Sesi 345/346/347: 3 tombol chip risiko alokasi
+aset (Konservatif/Moderat/Agresif — `app_production.html`/`index.html`)
+pakai `data-action="AlokasiAset.setRisk"`, di-resolve dispatcher global
+lewat `window['AlokasiAset']['setRisk']`. Tanpa `window.AlokasiAset`,
+ketiga tombol gagal diam-diam.
+
+**Fix**: `if (typeof AlokasiAset !== 'undefined') window.AlokasiAset =
+AlokasiAset;` ditambahkan tepat setelah `}` penutup objek (baris 99).
+0 perubahan logic/routing lain.
+
+**Audit ulang menyeluruh** (termasuk `let`/`var`, bukan cuma `const`, dan
+cek deklarasi ganda di >1 file) tidak menemukan modul lain selain
+`AlokasiAset` — 30 modul Sesi 347 + 14 modul Sesi 345/346 semuanya
+terverifikasi ulang benar via `FILE-MAP.md` (identifier-to-file mapping
+auto-generated).
+
+## Test
+
+`node --test tests/*.test.js` -> **2402/2402 pass, 0 fail** (2399 lama + 3
+baru di `tests/window-expose-audit-s348.test.js`).
+
+## Build
+
+`node scripts/build.js s348-fix-window-expose-audit-alokasiaset` -> sukses,
+`?v=1012`.
+
+## ZIP
+
+`kw_release_v1012_s348-window-expose-audit-alokasiaset.zip` &
+`patch-s348-window-expose-audit-alokasiaset.zip` — dibuat & dikirim ke
+user.
+
+---
+
+## Current Session (sebelumnya)
+
+Sesi 347 (2026-08-01) — FIX BUG KRITIS (lanjutan audit Sesi 346, temuan
+lanjutan window-expose)
+
+**Konteks:** Audit penuh source-tree (bukan cuma log ringkasan) untuk pola
+`const Owner={...}` tanpa `window.Owner=Owner` yang dipakai lewat
+`data-action="Owner.xxx"`. Sesi 345/346 menemukan & memperbaiki 14 modul
+(car-notes.js + 13 modul). Sesi ini menemukan **30 modul tambahan**:
+
+`ai-chat.js` (Advisor, AIRecommendCard, AIStatusCard, AISimulateWidget,
+AIScenarioWidget, AIHealthCheckWidget, AIWidget), `budget.js` (BudgetTabs,
+BudgetReko), `modules/asset/aset-emas-impor.js` (GoldImport, GoldZakat),
+`modules/business/tukang-absensi.js` (Tukang), `modules/dashboard-hub/dashboard-hub.js`
+(DashboardHub), `modules/finance/pajak-pbb-zakat.js` (RefAI),
+`modules/finance/piutang-utang.js` (Bill),
+`modules/finance/tagihan-kalender.js` (BillFallbackScan),
+`modules/shared/modules-calc.js` (DanaDaruratAI, FinCoach),
+`modules/shared/scan-ocr.js` (BillMultiScan, UniversalScan),
+`modules/shop/cobek-pricing.js` (PriceReko, OngkirCalc, PriceRekoWidget,
+StockRekoWidget, WeightBulkWidget), `lifeos/ui/*.js` × 5 (LifeOSHome,
+LifeOSLifeObjects, LifeOSPlugins, LifeOSProjects, LifeOSReview).
+
+**Deviasi:** `DashboardHub` dites di sandbox vm TANPA global `window` sama
+sekali (`tests/dashboard-hub-goto-subtab.test.js`), jadi guard plain
+`if (typeof Owner!=='undefined') window.Owner=Owner;` dari Sesi 345/346
+throw `ReferenceError: window is not defined` di sana. Guard diganti jadi
+`if (typeof window !== 'undefined' && typeof Owner !== 'undefined')` khusus
+utk insersi ini (30 modul), sama presedennya dgn `scanner-session.js` &
+`ai-core.js`.
+
+**Catatan teknis:** `Tukang` butuh `reset-gaji-mingguan.js` (`getWeekRange`)
+dimuat duluan, sama pola dgn `Payroll` di Sesi 346. `RefAI` & `LifeOSReview`
+sempat butuh perbaikan tooling insersi manual (brace-counting naif salah
+hitung gara-gara regex literal berisi backtick literal di `RefAI`, dan
+nested template literal di `LifeOSReview`) — sudah diverifikasi manual titik
+insersinya persis setelah `}` penutup objek masing-masing.
+
+## Test
+
+`node --test tests/*.test.js` -> **2399/2399 pass, 0 fail** (2309 lama + 90
+baru di `tests/window-expose-audit-s347.test.js`, 30 modul × 3 assertion).
+
+## Build
+
+`node scripts/build.js s347-fix-window-expose-audit-30-modules` -> sukses,
+`?v=1011`.
+
+## ZIP
+
+`kw_release_v1011_s347-window-expose-audit-30-modules.zip` &
+`patch-s347-window-expose-audit-30-modules.zip` — dibuat & dikirim ke user.
+
+---
+
+## Current Session (sebelumnya)
+
+Sesi 346 (2026-08-01) — FIX BUG KRITIS (lanjutan audit Sesi 345, temuan
+tambahan yang sengaja tidak disentuh sesi lalu): konfirmasi & perbaiki pola
+bug `const Owner={...}` top-level tanpa `window.Owner=Owner` di **13 modul**
+lain — `Budget` (`budget.js`), `Aset` (`modules/asset/aset.js`), `Kasir`
+(`modules/business/kasir.js`), `Payroll`
+(`modules/business/payroll-absensi.js`), `EduFund`
+(`modules/finance/edukasi-dana.js`), `LinkTx` (`modules/finance/linktx.js`),
+`WorthIt` (`modules/finance/worthit.js`), `LifeBalance`
+(`modules/home/hidup-seimbang.js`), `Refleksi`
+(`modules/home/refleksi-selfcare.js`), `Pensiun`
+(`modules/shared/modules-calc.js`), `Etalase`
+(`modules/shop/cobek-etalase.js`), `Order` (`modules/shop/cobek-order.js`),
+`Sparepart` (`modules/vehicle/sparepart-servis.js`). Akar masalah SAMA
+PERSIS Sesi 345: dispatcher klik global
+(`features-helpers-global-security.js`) selalu resolve
+`data-action="Owner.method"` lewat `window[Owner][method]`, dan `const
+Owner={...}` top-level di script biasa HANYA membuat binding lexical-scope,
+BUKAN properti `window` — jadi SEMUA tombol dengan data-action `Owner.xxx`
+di 13 modul ini gagal diam-diam. **Fix**: tambah `window.Owner = Owner;`
+tepat setelah tiap deklarasi objek selesai, mengikuti pola comment yang
+sama persis dgn Sesi 345. Audit dilakukan lewat pencarian eksplisit
+`^const NAME={` utk tiap nama yg dicurigai + verifikasi `window.NAME=`
+belum ada di file itu — semua 13 dikonfirmasi memang belum ter-ekspos.
+Insersi titik penutup objek dicek brace-counting otomatis (skrip audit
+sekali-pakai) + verifikasi manual `node --check` per file; 1 kasus
+(`Payroll`) sempat salah sasar ke dalam komentar header karena marker
+match ganda — diperbaiki dgn marker yang di-anchor ke awal baris; 1 kasus
+(`Sparepart`) brace-counter gagal cari titik tutup krn objeknya sangat
+panjang & kompleks — titik tutup dikonfirmasi manual via pencarian baris
+`};` top-level tepat sebelum `const SparepartCsvImport={` berikutnya. +39
+test regresi baru (`tests/window-expose-audit-s346.test.js`, 13 modul × 3
+assertion: window.Owner ada, identik dgn binding lexical, method bisa
+di-resolve gaya dispatcher `window['Owner']['method']`). Test 2309/2309
+PASS (2270 lama + 39 baru, 2x — sebelum & sesudah build). Build sukses,
+`?v=1010` (`s346-fix-window-expose-audit-13-modules`).
+
+---
+
+Sesi 345 (2026-08-01) — FIX BUG KRITIS (laporan user: tombol Car Notes tidak
+bereaksi, 0 toast): `car-notes.js` — tiga objek fitur `BBM`, `Servis`, `Torsi`
+dideklarasikan `const` top-level. Di script biasa (bukan module), `const`/
+`let` top-level **tidak otomatis** jadi properti `window`. Dispatcher klik
+global (`features-helpers-global-security.js`) selalu resolve
+`data-action="Owner.method"` lewat `window[Owner][method]` — karena
+`window.BBM`/`window.Servis`/`window.Torsi` tidak pernah ada, SEMUA tombol
+dengan data-action `BBM.xxx`/`Servis.xxx`/`Torsi.xxx` gagal diam-diam (chip
+rekomendasi part di form Servis, semua interaksi modal Kalkulator Torsi:
+pilih kategori, toggle checklist, mode kalkulator, dst). Pola bug identik yang
+sudah pernah terjadi & diperbaiki utk `FuelModal`/`FuelBarCorrection`/
+`FuelTankProfileUI` (lihat komentar `fuel-modal.js`) — kali ini kelewat utk
+BBM/Servis/Torsi. **Fix**: tambah `window.BBM = BBM`, `window.Servis =
+Servis`, `window.Torsi = Torsi` tepat setelah tiap deklarasi objek di
+`car-notes.js`, dengan komentar penjelasan mengikuti pola existing. +3 test
+regresi baru (`tests/car-notes-window-expose-s345.test.js`) yang memuat
+`car-notes.js` ASLI lewat harness vm & memverifikasi `window.BBM/Servis/Torsi`
+ada, identik dgn binding lexical-nya, dan method-nya benar-benar bisa
+di-resolve gaya dispatcher (`window['Owner']['method']`). **Temuan tambahan
+di luar scope sesi ini** (sengaja tidak disentuh, satu fokus per sesi): pola
+`const Owner={...}` tanpa `window.Owner=Owner` kemungkinan juga ada di modul
+lain — `Budget`, `Aset`, `Kasir`, `Payroll`, `EduFund`, `LinkTx`, `WorthIt`,
+`LifeBalance`, `Refleksi`, `Pensiun`, `Etalase`, `Order`, `Sparepart`, dll —
+rekomendasi kuat utk sesi audit terpisah. Test 2270/2270 PASS (2267 lama +
+3 baru, 2x — sebelum & sesudah build). Build sukses, `?v=1009`
+(`s345-fix-carnotes-window-expose-bbm-servis-torsi`).
+
+---
+
+Sesi 344 (2026-08-01) — FIX UX (laporan user via 2 screenshot, tab Lunas &
+Bayar Daftar Tagihan): kartu duplikat "sudah dibayar periode ini"
+(`_paidPeriodOnly`, S322) di tab Lunas terlihat "tombol tidak sesuai" — ✅
+Bayar tidak tampil (SUDAH BENAR by design, mencegah dobel-bayar periode yang
+sama) & ✏️ malah membuka Edit Transaksi, bukan Edit Tagihan (JUGA SUDAH BENAR
+by design — bill masih aktif, `openBillModal()` redirect ke `editTx()` transaksi
+pembayaran periode ini, lihat catatan gap "Edit Tagihan vs Detail Cicilan" yang
+sudah ada). **Root cause sebenarnya**: label tombol ✏️ generik "Edit" tidak
+menjelaskan bahwa hasilnya lompat ke Edit Transaksi, bukan pengaturan tagihan —
+menyesatkan ekspektasi user. **Fix (murni copy/label, 0 perubahan
+routing/logic)**: `renderBillItemHtml()` (`modules/shared/modules-render.js`)
+— title/aria-label tombol ✏️ khusus kartu `_paidPeriodOnly` diganti dari "Edit"
+jadi **"Edit Pembayaran Bulan Ini"**. `openBillModal()`/`editTx()`/tombol ✅
+yang disembunyikan TIDAK disentuh sama sekali (sudah benar, berisiko regresi
+tinggi kalau diubah — banyak bugfix history terkait). 0 test baru diperlukan
+(tidak ada assertion pada title/aria-label lama). Test 2267/2267 PASS (2x —
+sebelum & sesudah build). Build sukses, `?v=1008`
+(`s344-fix-bill-paidperiod-edit-label`).
+
+---
+
+Sesi 343 (2026-08-01) — Tambah test baru `tests/pajak-pbb-zakat-crud.test.js`
+(cakupan `modules/finance/pajak-pbb-zakat.js` — PBB/Zakat/PPh21/PajakUMKM, 375
+baris, sebelumnya 0 test file yang menyentuhnya langsung — lanjutan pola test
+"*-crud.test.js" dari sesi-sesi sebelumnya: linktx-crud, renovasi-modal-crud,
+refleksi-selfcare-crud, edukasi-dana-crud, dst). +22 test baru: `PBB.hitung()`
+(save() ke default vs per-aset, terisolasi benar), `PBB.ikatTagihan()` (create
+tagihan baru vs update tagihan existing by `pbbLink`), `Zakat.hitungPenghasilan()/
+hitungMaal()/hitungFitrah()` (kalkulasi + save()), `Zakat.catatDibayar()` (create
+log+transaksi, guard jumlah 0 & askConfirm ditolak) & `delLog()` (delete, guard
+askConfirm ditolak), `PPh21.getPTKP()/hitungProgresif()` (murni), `PPh21.hitung()/
+isiDariTransaksi()` (save() + DOM), `PajakUMKM.render()` (murni, tanpa save()).
+0 source code diubah — murni test asset baru. Test 2267/2267 PASS (2x — sebelum
+& sesudah build). Build sukses, `?v=1007`
+(`s343-pajak-pbb-zakat-crud-test`).
+
+---
+
+Sesi 332 lanjutan 3 (2026-08-01) — Fix 2 temuan terakhir yang masih tersisa
+dari `AUDIT-DEEP-modules-vehicle-v993-s332.md` §6: **VEH-001**
+(race-condition timeout scanner vs `decodeContinuously()` — akar penyebab:
+timeout seharusnya hanya membungkus fase inisialisasi kamera
+(`getUserMedia()`), bukan keseluruhan lifecycle `decodeContinuously()`;
+timer 10 detik
+di `vehicle-scanner.js` & `sparepart-scanner.js` sekarang dibatalkan begitu
+kamera benar-benar menyala, lewat listener `loadedmetadata` sekali pada
+`video`, bukan lagi me-race seluruh sesi continuous-scan) dan **VEH-005**
+(kontrak `search({vehicleId})` sekarang reuse `filterForVehicle()` di
+`vehicle-catalog.js`, jadi part universal — `compatibleVehicleIds` kosong/
+belum diisi — ikut lolos, konsisten dgn `filterForVehicle()`, bukan
+tersingkir). +8 tes baru (3 di `vehicle-scanner.test.js`, 3 di
+`sparepart-scanner.test.js`, 2 di `vehicle-catalog.test.js`). VEH-006 tetap
+sengaja tidak di-fix (sudah didokumentasikan tim, GIGO by design,
+`TASK-142`). **Semua 7 temuan VEH-001..007 dari audit sekarang selesai
+ditangani** (VEH-006 dikecualikan by design). Test 2067/2067 (naik dari
+2059). Build sukses, `?v=996`. Detail: `CHANGELOG.md` § Sesi 332 (lanjutan
+3).
+
+## Sesi Sebelumnya (lanjutan 2)
+
+Sesi 332 lanjutan 2 (2026-08-01) — Fix 2 temuan berikutnya dari
+`AUDIT-DEEP-modules-vehicle-v993-s332.md` §6: **VEH-002** (`vehicle-catalog-
+ui.js` — "Pilih Semua" sekarang scope ke `_catVisibleIds`, item yg sedang
+tampil setelah filter kendaraan/pencarian, bukan seluruh katalog) dan
+**VEH-007** (`backup-restore.js` `importCarData()` — field angka string dari
+JSON restore user dikoersi ke Number lewat `_numOrUndef()`/
+`_sanitizeNumFields()`, cegah reduce/SUM jadi string-concat). +5 tes baru.
+VEH-001 (race-condition scanner) & VEH-005 (kontrak API, dampak rendah)
+**belum dikerjakan** — lihat audit §5 utk prioritas lanjutan. Test
+2059/2059 (naik dari 2054). Build sukses, `?v=995`. Detail: `CHANGELOG.md`
+§ Sesi 332 (lanjutan 2).
+
+## Sesi Sebelumnya
+
+Sesi 332 lanjutan (2026-08-01) — Fix 2 temuan **termudah** dari
+`AUDIT-DEEP-modules-vehicle-v993-s332.md` §6 (VEH-003, VEH-004), scoped
+ke `modules/vehicle/vehicle-core.js` saja. VEH-003: `saveKm()` sekarang
+tolak KM negatif (`km<=0`), samakan kontrak dgn `commitCurKmEdit()`.
+VEH-004: kapasitas (kg/m³/kWh) & interval servis (mesin/transmisi) kini
+ditolak kalau negatif — helper baru `_posOrNull()` di JS + atribut
+`min="0"` di 5 field HTML. VEH-001/002/005/007 **belum dikerjakan**
+(lebih kompleks — race-condition promise, filter katalog, kontrak API,
+tipe data restore backup), lihat audit §5 utk prioritas lanjutan. Test
+2054/2054 (sebelum & sesudah). Build sukses, `?v=994`. Detail:
+`CHANGELOG.md` § Sesi 332 (lanjutan).
+
 Sesi 332 (2026-08-01) — Update baseline `docs/AUDIT_MATRIX.md` § Coverage
 Baseline (diminta user langsung, bukan tindak lanjut poin audit S324).
 Angka lama (625 total/474 JS/137 MD/"13+" module families) sudah lama
@@ -14,8 +270,6 @@ JS, 140 MD, 12 module families (dihitung eksak, bukan lagi perkiraan).
 0 perubahan kode. Test 2054/2054 (sebelum & sesudah). Build sukses,
 `?v=993` — peringatan drift baseline sekarang hilang dari output build.
 Detail: `CHANGELOG.md` § Sesi 332.
-
-## Sesi Sebelumnya
 
 Sesi 331 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #3 — TERAKHIR
 — dari daftar saran user pasca-audit S324, "coverage per modul"): tambah
