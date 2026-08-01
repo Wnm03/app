@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s348-fix-window-expose-audit-alokasiaset';
+const MODULE_RENDER_VERSION='s353-billarchive-parity-nextdue-snapshot-fix';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -302,6 +302,19 @@ return`<div class="bill-item">
 }).join('');
 }
 
+// s325: HTML tombol arsip (Riwayat/Edit/Hapus) DISATUKAN di sini supaya tidak ada lagi
+// 2 tempat terpisah yang bisa drift (lihat bill-archive-actionbtn-parity.test.js). Semua
+// kind (tagihan/cicilan/langganan) & semua status lunas WAJIB dapat 3 tombol yang sama --
+// termasuk kasus cicilan tenor 1x "Bayar Bulan Depan" yang langsung ke-archive tanpa
+// pernah tampil di list utama (laporan user, lihat CHANGELOG s325).
+function billArchiveActionButtonsHtml(id){
+return`<div class="u-flex u-fdcol u-gap4 u-ml4">
+      <button class="tx-del u-cacc3" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
+      <button class="tx-del u-bgaccsoft u-cacc" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([id]))}" title="Edit" aria-label="Edit">✏️</button>
+      <button class="tx-del" data-action="delBillArchive" data-args="${escapeHtml(JSON.stringify([id]))}" title="Hapus dari Arsip" aria-label="Hapus dari Arsip">🗑</button>
+    </div>`;
+}
+
 function renderBillArchive(){
 const listEl=document.getElementById('billArchiveList');
 if(!listEl)return;
@@ -317,11 +330,7 @@ listEl.innerHTML=rows.map(b=>`<div class="bill-item">
       <div class="tx-name">${escapeHtml(b.name)}</div>
       <div class="tx-meta">Lunas ${b.completedAt?new Date(b.completedAt).toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}):'-'}${b.tenor?` · ${b.tenor}x cicilan`:''}</div>
     </div>
-    <div class="u-flex u-fdcol u-gap4 u-ml4">
-      <button class="tx-del u-cacc3" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
-      <button class="tx-del u-bgaccsoft u-cacc" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
-      <button class="tx-del" data-action="delBillArchive" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Hapus dari Arsip" aria-label="Hapus dari Arsip">🗑</button>
-    </div>
+    ${billArchiveActionButtonsHtml(b.id)}
   </div>`).join('');
 }
 

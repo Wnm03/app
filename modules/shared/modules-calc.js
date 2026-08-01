@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s348-fix-window-expose-audit-alokasiaset';
+const MODULE_CALC_VERSION='s353-billarchive-parity-nextdue-snapshot-fix';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
