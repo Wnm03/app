@@ -1378,8 +1378,28 @@ IDBStore._dbPromise=new Promise((resolve,reject)=>{
 if(!window.indexedDB){reject(new Error('IndexedDB tidak didukung browser ini'));return;}
 let req;
 try{ req=indexedDB.open(IDBStore.DB_NAME,1); }catch(e){reject(e);return;}
+// BUGFIX (audit "tombol Katalog/Import PDF macet, 0 toast", laporan user): dulu tidak
+// ada req.onblocked maupun timeout di sini. indexedDB.open() bisa BLOCKED (mis. tab/
+// koneksi lain masih pegang DB versi lama) -- kalau itu terjadi, onsuccess/onerror
+// TIDAK PERNAH terpanggil, _dbPromise gantung SELAMANYA, dan setiap fitur yang lewat
+// IDBStore (VehicleCatalog/Import PDF Katalog/dll) jadi "tombol mati" tanpa toast
+// (promise yang cuma diam menggantung bukan reject, jadi tidak ketangkep .catch() di
+// dispatcher klik). Fix: (1) log onblocked biar kelihatan di console, (2) timeout 8
+// detik yang reject dgn pesan jelas + reset cache, supaya paling buruk user dapat
+// toast error yang bisa dilaporkan, bukan tombol yang diam mati total.
+let settled=false;
+const timeoutId=setTimeout(()=>{
+if(settled)return;
+settled=true;
+IDBStore._dbPromise=null;
+reject(new Error('Membuka IndexedDB terlalu lama (mungkin diblokir tab/koneksi lain) -- coba tutup tab lain yang membuka aplikasi ini, lalu ulangi.'));
+},8000);
+req.onblocked=()=>{ console.warn('IndexedDB open() diblokir -- kemungkinan ada koneksi lain (tab lain) yang masih terbuka di versi lama.'); };
 req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDBStore.STORE); }catch(e){} };
 req.onsuccess=()=>{
+if(settled)return;
+settled=true;
+clearTimeout(timeoutId);
 const db=req.result;
 // BUGFIX: kalau koneksi ini ditutup (mis. tab lain upgrade versi DB, atau
 // browser menutup koneksi idle) TANPA reset di sini, _dbPromise tetap
@@ -1392,7 +1412,13 @@ db.onversionchange=()=>{ try{db.close();}catch(e){} IDBStore._dbPromise=null; };
 db.onclose=()=>{ IDBStore._dbPromise=null; };
 resolve(db);
 };
-req.onerror=()=>{ IDBStore._dbPromise=null; reject(req.error||new Error('Gagal membuka IndexedDB')); };
+req.onerror=()=>{
+if(settled)return;
+settled=true;
+clearTimeout(timeoutId);
+IDBStore._dbPromise=null;
+reject(req.error||new Error('Gagal membuka IndexedDB'));
+};
 });
 return IDBStore._dbPromise;
 },
