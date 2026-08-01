@@ -81,8 +81,9 @@ const ddPct=Math.min(100,Math.round((ddSaved/dd.amount)*100));
 const ddCol=ddPct>=100?'var(--accent3)':ddPct>=50?'var(--accent4)':'var(--accent2)';
 ddInfo=`<div style="font-size:11px;color:${ddCol};margin-top:4px;font-weight:600">🎯 "${escapeHtml(dd.name)}": ${fmtFull(ddSaved)} / ${fmtFull(dd.amount)} (${ddPct}%)</div>`;
 }
+const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(it.icon,{size:14}):(it.icon||'');
 return `<div style="display:flex;justify-content:space-between;align-items:${ddInfo?'flex-start':'center'};padding:8px 0;border-bottom:1px solid var(--border)">
-          <div><div class="u-fs13 u-fw600">${it.icon} ${escapeHtml(it.name)}</div><div class="u-fs11 u-t2">${it.pct}%</div>${ddInfo}</div>
+          <div><div class="fi-insight-row u-fs13 u-fw600"><span class="fi-insight-icon">${iconHtml}</span><span>${escapeHtml(it.name)}</span></div><div class="u-fs11 u-t2">${it.pct}%</div>${ddInfo}</div>
           <div class="u-fw700 u-fs13" style="white-space:nowrap;padding-left:8px">${fmtFull(nominal)}</div>
         </div>`;
 }).join('')+
@@ -96,6 +97,7 @@ init(suffix){
 AlokasiAset.renderOne(suffix||'');
 }
 };
+if (typeof AlokasiAset !== 'undefined') window.AlokasiAset = AlokasiAset;
 // isAssetOwnershipSelf(a) — helper REUSE dari OwnershipEngine (Sesi 193,
 // Ownership Sync Asset & Investasi). Balikin true kalau kepemilikan EFEKTIF
 // aset ini SELF (termasuk aset lama yg belum punya field `ownership` sama
@@ -378,13 +380,29 @@ const hargaBeli=parseDecStr(document.getElementById('assetHargaBeli').value);
 const jumlahUnit=parseDecStr(document.getElementById('assetJumlahUnit').value);
 const tanggal=document.getElementById('assetTanggal').value||'';
 let accountId=document.getElementById('assetAccId').value||null;
+// Dana Titipan (permintaan user): nominal titipan dijepit ke [0, nilai] -- titipan
+// TIDAK BOLEH lebih besar dari Estimasi Nilai instrumen ini sendiri. Toggle mati =
+// titipanAmount 0 (Aset._syncTitipanDebt() di bawah otomatis lepas tautan utang lama).
+// Dipindah ke SINI (sebelum blok __new__/SYNC AKUN di bawah, bukan sesudahnya
+// seperti semula) supaya akun tertaut bisa langsung pakai ownPortion (lihat bawah).
+const titipanOn=document.getElementById('assetTitipanToggle')?.checked;
+let titipanAmount=titipanOn?parsePzNum(document.getElementById('assetTitipanAmount').value):0;
+if(titipanAmount<0)titipanAmount=0;
+if(titipanAmount>nilai)titipanAmount=nilai;
+// ownPortion (permintaan user): akun tertaut (Akun Transaksi) HARUS nunjukin cuma
+// uang milik sendiri, BUKAN nilai penuh instrumen -- kalau ada Dana Titipan, porsi
+// titipan itu bukan uang yang boleh dipakai bayar/terima transaksi pribadi. nilai
+// aset di Buku Aset TETAP dicatat penuh (variabel `nilai` di atas, tidak disentuh
+// di sini) -- cuma akun tertaut yang disinkron ke porsi sendiri.
+const ownPortion=nilai-titipanAmount;
 // BUGFIX-FEATURE: opsi "__new__" = bukan menautkan ke akun yang SUDAH ADA, tapi
 // bikin akun baru otomatis dari aset ini -- biar akun itu langsung nongol di
 // daftar 🏦 Akun & bisa langsung dipakai buat transaksi (bayar/terima) seperti
-// akun biasa, bukan cuma referensi nilai doang. Saldo awal akun = nilai aset saat
-// ini. Setelah dibuat, id akun baru itu yang dipakai sbg accountId (tetap otomatis
-// dikecualikan dari Total Saldo Akun lewat linkedAssetAccountIds(), sama seperti
-// tautan ke akun lama, supaya nilainya gak dobel dihitung).
+// akun biasa, bukan cuma referensi nilai doang. Saldo awal akun = porsi milik
+// sendiri (nilai aset dikurangi Dana Titipan, kalau ada). Setelah dibuat, id akun
+// baru itu yang dipakai sbg accountId (tetap otomatis dikecualikan dari Total
+// Saldo Akun lewat linkedAssetAccountIds(), sama seperti tautan ke akun lama,
+// supaya nilainya gak dobel dihitung).
 let _createdNewAcc=false;
 // Ownership (S231) — dibaca dari dropdown, divalidasi/dinormalisasi via OwnershipEngine.
 // Dipindah ke SINI (sebelum blok __new__ di bawah, bukan sesudahnya seperti semula)
@@ -395,7 +413,7 @@ let _createdNewAcc=false;
 const ownRawA=document.getElementById('assetOwnership')?.value;
 const ownership=(typeof OwnershipEngine!=='undefined'&&OwnershipEngine.isValidType(ownRawA))?OwnershipEngine.normalize(ownRawA):(typeof OwnershipEngine!=='undefined'?OwnershipEngine.DEFAULT:'SELF');
 if(accountId==='__new__'){
-const newAcc={id:'acc_'+Date.now(),name,emoji:Aset.ICON[jenis]||'📦',baseBalance:nilai,balance:nilai,includeInBalance:true,ownership};
+const newAcc={id:'acc_'+Date.now(),name,emoji:Aset.ICON[jenis]||'📦',baseBalance:ownPortion,balance:ownPortion,includeInBalance:true,ownership};
 D.accounts.push(newAcc);
 accountId=newAcc.id;
 _createdNewAcc=true;
@@ -405,27 +423,24 @@ _createdNewAcc=true;
 // tidak pernah kepropagasi ke akunnya, jadi keduanya cepat divergen. Fix: tiap kali
 // aset disimpan (nilai berubah/tidak) & sudah tertaut ke akun YANG SUDAH ADA
 // (bukan baru dibuat di blok atas, itu sudah otomatis sama), akun itu di-"koreksi"
-// ke nominal = nilai aset SEKARANG, pakai pola txDelta yang SAMA PERSIS dgn
-// _saveAccInner() (akun.js) -- riwayat transaksi akun (kalau ada) TIDAK diubah,
-// cuma baseBalance-nya digeser supaya hasil recalcAccBalance() = nilai aset.
+// ke nominal = ownPortion SEKARANG, pakai pola txDelta yang SAMA PERSIS dgn
+// _saveAccInner() (akun.js) -- riwayat transaksi akun (kalau ada, mis. sudah
+// dipakai bayar/terima) TIDAK diubah, cuma baseBalance-nya digeser supaya hasil
+// recalcAccBalance() = ownPortion. Buku Aset (variabel `nilai`) TIDAK disentuh
+// oleh blok ini sama sekali -- arah sync SATU ARAH dari Aset -> Akun, bukan
+// sebaliknya, jadi nilai di Buku Aset tetap ikut update manual tersendiri,
+// tidak pernah ketarik balik oleh transaksi yang terjadi di akun tertaut.
 if(accountId&&!_createdNewAcc){
 const linkedAcc=D.accounts.find(x=>sameId(x.id,accountId));
 if(linkedAcc){
 const txDelta=recalcAccBalance(linkedAcc.id)-(linkedAcc.baseBalance!==undefined?linkedAcc.baseBalance:(linkedAcc.balance||0));
-linkedAcc.baseBalance=nilai-txDelta;
-linkedAcc.balance=nilai;
+linkedAcc.baseBalance=ownPortion-txDelta;
+linkedAcc.balance=ownPortion;
 }
 }
 const keuntungan=modalInvestasi?(nilai-modalInvestasi):null;
 const keuntunganPct=modalInvestasi?((nilai-modalInvestasi)/modalInvestasi*100):null;
 const extra={modalInvestasi,hargaBeli,jumlahUnit,keuntungan,keuntunganPct};
-// Dana Titipan (permintaan user): nominal titipan dijepit ke [0, nilai] -- titipan
-// TIDAK BOLEH lebih besar dari Estimasi Nilai instrumen ini sendiri. Toggle mati =
-// titipanAmount 0 (Aset._syncTitipanDebt() di bawah otomatis lepas tautan utang lama).
-const titipanOn=document.getElementById('assetTitipanToggle')?.checked;
-let titipanAmount=titipanOn?parsePzNum(document.getElementById('assetTitipanAmount').value):0;
-if(titipanAmount<0)titipanAmount=0;
-if(titipanAmount>nilai)titipanAmount=nilai;
 extra.titipanAmount=titipanAmount;
 extra.titipanOwnerType=titipanAmount>0?(document.getElementById('assetTitipanOwnerType').value||'investor'):'';
 extra.titipanOwnerName=titipanAmount>0?document.getElementById('assetTitipanOwnerName').value.trim():'';
@@ -619,8 +634,9 @@ if(katBox){
 katBox.innerHTML=kategoriRows.map(([jenis,v],i)=>{
 const pct=totalPasar?(v.nilai/totalPasar*100):0;
 const icon=Aset.ICON[jenis]||'📦';
+const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(icon,{size:14}):icon;
 return `<div class="u-mb10">
-      <div class="u-flex u-jcb u-aifs u-gap8 u-fs13 u-mb4"><span class="u-fw600 u-flex1">${icon} ${escapeHtml(jenis)} <span class="u-fs11 u-t2">(${v.count})</span></span><span class="u-fw700 u-tar" style="white-space:nowrap">${fmt(v.nilai)}</span></div>
+      <div class="u-flex u-jcb u-aifs u-gap8 u-fs13 u-mb4"><span class="fi-insight-row u-fw600 u-flex1"><span class="fi-insight-icon">${iconHtml}</span><span>${escapeHtml(jenis)} <span class="u-fs11 u-t2">(${v.count})</span></span></span><span class="u-fw700 u-tar" style="white-space:nowrap">${fmt(v.nilai)}</span></div>
       <div class="budget-bar-track"><div class="budget-bar-fill" style="width:${pct}%;background:${barColors[i%barColors.length]}"></div></div>
       <div class="budget-bar-label"><span>${pct.toFixed(1)}% dari total</span></div>
     </div>`;
@@ -869,6 +885,14 @@ toast('✅ '+valid.length+' aset berhasil di-import'+(skipped?' ('+skipped+' dil
 e.target.value='';
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Aset'][method]. `const Aset = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Aset.xxx" gagal diam-diam.
+if (typeof Aset !== 'undefined') window.Aset = Aset;
 // ================= PENYUSUTAN ASET (bagian ke-11) =================
 // FITUR BARU: Penyusutan (depreciation) — estimasi nilai buku aset yang nilainya
 // MENURUN dari waktu ke waktu (kendaraan, bangunan, peralatan, dst), kebalikan
@@ -1031,6 +1055,7 @@ box.innerHTML=list.map(a=>{
 const aktif=!!(a.penyusutan&&a.penyusutan.aktif);
 const p=a.penyusutan||Penyusutan.DEFAULTS;
 const icon=Aset.ICON[a.jenis]||'📦';
+const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(icon,{size:14}):icon;
 let bodyHtml='';
 if(aktif){
 const hasil=Penyusutan.hitung(a);
@@ -1063,7 +1088,7 @@ bodyHtml=`<div class="fg" style="margin-bottom:8px"><label class="fl">Metode</la
 }
 return `<div class="u-r10 u-mb10" style="border:1px solid var(--border);padding:10px 12px">
       <div class="u-flex u-jcb u-aic u-mb8">
-        <div class="u-fs13 u-fw600">${icon} ${escapeHtml(a.name)}</div>
+        <div class="fi-insight-row u-fs13 u-fw600"><span class="fi-insight-icon">${iconHtml}</span><span>${escapeHtml(a.name)}</span></div>
         <label class="u-fs11 u-flex u-aic" style="gap:4px"><input type="checkbox" ${aktif?'checked':''} onchange="Penyusutan.toggleAktif('${a.id}')"> Aktif</label>
       </div>
       ${bodyHtml}
@@ -1302,7 +1327,10 @@ const data=LaporanAset.build();
 // (1) Daftar Aset
 const daftarEl=document.getElementById('lapAsetDaftar');
 if(daftarEl){
-daftarEl.innerHTML=data.daftarAset.map(a=>`<div class="lap-aset-row u-fs12"><span class="lap-aset-name">${a.icon} ${escapeHtml(a.name)}${a.zakatable?' 🕌':''}</span><span class="lap-aset-val">${fmtFull(a.nilai)}</span></div>`).join('')||'<div class="u-fs12 u-t2">Belum ada aset tercatat</div>';
+daftarEl.innerHTML=data.daftarAset.map(a=>{
+const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(a.icon,{size:14}):(a.icon||'');
+return `<div class="lap-aset-row u-fs12"><span class="lap-aset-name fi-insight-row"><span class="fi-insight-icon">${iconHtml}</span><span>${escapeHtml(a.name)}${a.zakatable?' 🕌':''}</span></span><span class="lap-aset-val">${fmtFull(a.nilai)}</span></div>`;
+}).join('')||'<div class="u-fs12 u-t2">Belum ada aset tercatat</div>';
 }
 // (2) Riwayat Transaksi
 const riwayatEl=document.getElementById('lapAsetRiwayat');
