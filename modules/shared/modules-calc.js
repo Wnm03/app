@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s335-fix-bug011-gotolist-tabindex';
+const MODULE_CALC_VERSION='s348-fix-window-expose-audit-alokasiaset';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -388,6 +388,7 @@ onTargetDanaDaruratToggle();
 if(rec.recommended>0)document.getElementById('tAmt').value=rec.recommended;
 }
 };
+if (typeof DanaDaruratAI !== 'undefined') window.DanaDaruratAI = DanaDaruratAI;
 const Pensiun={
 monthsOfDataAvailable(){ return (typeof FI!=='undefined')?FI.monthsOfDataAvailable():0; },
 avgSurplus(){
@@ -576,6 +577,14 @@ el.innerHTML=`
     `;
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Pensiun'][method]. `const Pensiun = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Pensiun.xxx" gagal diam-diam.
+if (typeof Pensiun !== 'undefined') window.Pensiun = Pensiun;
 // FinCoach — "🩺 AI Financial Coach": insight PROAKTIF, rule-based & INSTAN (bukan panggilan
 // AI/API — jadi TIDAK butuh API key & tidak ada biaya sama sekali), beda dari AIWidget (laporan
 // lengkap 1x jalan, harus tap tombol dulu, WAJIB API key) yang sudah ada di
@@ -778,6 +787,7 @@ if(!insights.length){toast('✅ Tidak ada insight tersisa, semua sudah dicek!');
 showAlertModal(insights.map(x=>x.icon+' '+x.text).join('\n\n'),{title:'🩺 Semua Insight Financial Coach',icon:'🩺'});
 }
 };
+if (typeof FinCoach !== 'undefined') window.FinCoach = FinCoach;
 const Kekayaan={
 // currentNetWorth() — SSOT Net Worth (dipakai AssetPortfolioAPI/Dashboard/
 // wealth snapshot/actualCAGR/dst). Utang dihitung lewat FI.totalDebt()

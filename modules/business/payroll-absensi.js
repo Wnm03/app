@@ -478,6 +478,14 @@ budgetSyncEl.innerHTML=`<div class="u-fs11 u-t2" style="margin-top:8px">🛒 Bud
 if(typeof InsightTargetMingguan!=='undefined')InsightTargetMingguan.render();
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Payroll'][method]. `const Payroll = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Payroll.xxx" gagal diam-diam.
+if (typeof Payroll !== 'undefined') window.Payroll = Payroll;
 function timeToMinutes(t){return Payroll.timeToMinutes(t);}
 function addWorkDay(){return Payroll.addWorkDay();}
 function editWorkDay(id){return Payroll.editWorkDay(id);}

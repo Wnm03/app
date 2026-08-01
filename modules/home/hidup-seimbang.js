@@ -217,3 +217,11 @@ return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">📈</div><div cla
 }).join('');
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['LifeBalance'][method]. `const LifeBalance = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="LifeBalance.xxx" gagal diam-diam.
+if (typeof LifeBalance !== 'undefined') window.LifeBalance = LifeBalance;

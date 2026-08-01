@@ -287,6 +287,7 @@ Aset.renderList();renderKekayaanBersih();hitungZakatMaal();
 toast(`✅ ${count} aset emas berhasil diimpor`);
 }
 };
+if (typeof GoldImport !== 'undefined') window.GoldImport = GoldImport;
 
 const GoldZakat={
 NISAB_GRAM_24K:85, // standar umum: 85 gram emas murni (24K)
@@ -387,6 +388,7 @@ html+=`<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-top:
 box.innerHTML=html;
 }
 };
+if (typeof GoldZakat !== 'undefined') window.GoldZakat = GoldZakat;
 
 // --- wrapper global, dipanggil lewat data-action="..." di modal (pola sama seperti ImportKatalog) ---
 function previewGoldImport(){return GoldImport.preview();}

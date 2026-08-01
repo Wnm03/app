@@ -217,11 +217,17 @@ save();
 LinkTx.lastBatch={ctx:LinkTx.ctx,targetId:LinkTx.targetId,entries,count:entries.length,total:entries.reduce((s,e)=>s+(e.amount||0),0)};
 LinkTx.selected=new Set();
 LinkTx._refreshCtxUI();
-document.getElementById('linkTxFilterBox').style.display='none';
+// GUARD: null-check semua akses DOM di sini (dulu langsung akses tanpa cek,
+// beda pola dgn open() yg sudah defensif — bisa throw kalau modal belum
+// ter-render di DOM saat confirmBulk() dipanggil).
+const filterBox=document.getElementById('linkTxFilterBox');
+if(filterBox)filterBox.style.display='none';
 const box=document.getElementById('linkTxSuccessBox');
-box.style.display='block';
-document.getElementById('linkTxSuccessTitle').textContent=`${entries.length} transaksi berhasil dihubungkan`;
-document.getElementById('linkTxSuccessSub').textContent=`Total ${fmtFull(LinkTx.lastBatch.total)}. Salah pilih? Bisa diurungkan — transaksi ASLI di Keuangan tetap aman, tidak ikut terhapus.`;
+if(box)box.style.display='block';
+const titleEl=document.getElementById('linkTxSuccessTitle');
+if(titleEl)titleEl.textContent=`${entries.length} transaksi berhasil dihubungkan`;
+const subEl=document.getElementById('linkTxSuccessSub');
+if(subEl)subEl.textContent=`Total ${fmtFull(LinkTx.lastBatch.total)}. Salah pilih? Bisa diurungkan — transaksi ASLI di Keuangan tetap aman, tidak ikut terhapus.`;
 toast(`🔗 ${entries.length} transaksi dihubungkan`);
 },
 async undo(){
@@ -235,8 +241,10 @@ LinkTx.ctx=batch.ctx;LinkTx.targetId=batch.targetId;
 LinkTx._refreshCtxUI();
 LinkTx.ctx=savedCtx;LinkTx.targetId=savedTarget;
 LinkTx.lastBatch=null;
-document.getElementById('linkTxSuccessBox').style.display='none';
-document.getElementById('linkTxFilterBox').style.display='block';
+const successBox=document.getElementById('linkTxSuccessBox');
+if(successBox)successBox.style.display='none';
+const filterBox2=document.getElementById('linkTxFilterBox');
+if(filterBox2)filterBox2.style.display='block';
 LinkTx.renderList();
 toast('↺ Link dibatalkan, transaksi asli di Keuangan tetap ada');
 },
@@ -245,3 +253,11 @@ closeModal('linkTxModal');
 LinkTx.lastBatch=null;
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['LinkTx'][method]. `const LinkTx = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="LinkTx.xxx" gagal diam-diam.
+if (typeof LinkTx !== 'undefined') window.LinkTx = LinkTx;

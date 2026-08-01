@@ -303,6 +303,7 @@ closeModal('refAiModal');
 toast(`✅ ${n} nilai referensi diperbarui dari hasil cek AI`);
 }
 };
+if (typeof RefAI !== 'undefined') window.RefAI = RefAI;
 const PajakUMKM={
 render(){
 const elO=document.getElementById('umkmOmzet'), elP=document.getElementById('umkmPajak');

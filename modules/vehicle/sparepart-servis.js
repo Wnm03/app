@@ -389,13 +389,31 @@ el.innerHTML=`<div class="bbm-stat-grid">
 <div class="bbm-stat"><div class="bbm-val u-fs13">${lastPurchaseLbl}</div><div class="bbm-lbl">Pembelian Terakhir</div></div>
 </div>${chartHtml}`;
 },
+_stockSearchQuery:'',
+onStockSearchInput(value){
+Sparepart._stockSearchQuery=String(value||'');
+Sparepart.renderStockList();
+},
 renderStockList(){
 Sparepart.renderDashboard();
 const el=document.getElementById('stockList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const list=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vid));
-if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada stok sparepart untuk kendaraan ini</div></div>';return;}
+let list=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vid));
+const q=Sparepart._stockSearchQuery.trim().toLowerCase();
+if(q){
+list=list.filter(p=>{
+const cat=D.sparepartCats.find(c=>c.id===p.catId);
+const hay=[p.name,p.code,cat?cat.name:'',p.note].filter(Boolean).join(' ').toLowerCase();
+return hay.includes(q);
+});
+}
+if(!list.length){
+el.innerHTML=q
+? '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada stok sparepart yang cocok dengan pencarian "'+escapeHtml(Sparepart._stockSearchQuery.trim())+'"</div></div>'
+: '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada stok sparepart untuk kendaraan ini</div></div>';
+return;
+}
 el.innerHTML=list.map((p)=>{
 const i=D.partsStock.indexOf(p);
 const cat=D.sparepartCats.find(c=>c.id===p.catId);
@@ -496,14 +514,55 @@ async delStock(i){
 if(!await askConfirm('Hapus item stok sparepart ini?'))return;
 D.partsStock.splice(i,1);save();Sparepart.renderStockList();toast('🗑 Dihapus');
 },
+// removeAllStockConfirm() — fitur baru (rekomendasi audit S331, pola SAMA
+// PERSIS fix S331b utk VehicleCatalogUI.removeAllConfirm()/vehicle-catalog-ui.js):
+// dibuat LANGSUNG di-scope ke item yang SEDANG TAMPIL di #stockList (filter
+// kendaraan aktif via isPartForVehicle() + pencarian aktif _stockSearchQuery,
+// REUSE PERSIS logic renderStockList() di atas) -- bukan D.partsStock mentah,
+// supaya tidak kena bug yang sama (tombol "Hapus Semua" dulu di Katalog Suku
+// Cadang menghapus lintas kendaraan padahal user cuma lihat 1 kendaraan).
+// Kalau tidak ada kendaraan aktif & tidak sedang mencari, cakupannya tetap
+// "semua stok" (list == D.partsStock penuh), sama seperti perilaku hapus-1
+// (delStock) yang sudah ada -- tidak ada regresi krn ini fitur baru.
+async removeAllStockConfirm(){
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vehFiltered=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vid));
+const q=Sparepart._stockSearchQuery.trim().toLowerCase();
+const list=q?vehFiltered.filter(p=>{
+const cat=D.sparepartCats.find(c=>c.id===p.catId);
+const hay=[p.name,p.code,cat?cat.name:'',p.note].filter(Boolean).join(' ').toLowerCase();
+return hay.includes(q);
+}):vehFiltered;
+if(!list.length)return;
+const scoped=list.length!==D.partsStock.length;
+const curVeh=(vid&&Array.isArray(D.vehicles))?D.vehicles.find(v=>v.id===vid):null;
+const scopeLabel=q?('yang cocok dgn pencarian "'+Sparepart._stockSearchQuery.trim()+'"'+(curVeh?(' untuk '+curVeh.name):'')):(curVeh?('untuk '+curVeh.name):'');
+const msg=scoped
+?('Hapus '+list.length+' item stok '+scopeLabel+' (yang sedang tampil)? Stok kendaraan/kategori lain yang TIDAK sedang tampil tidak ikut terhapus. Tindakan ini tidak bisa dibatalkan.')
+:('Hapus SEMUA '+list.length+' item stok sparepart? Tindakan ini tidak bisa dibatalkan.');
+const ok=await askConfirm(msg,{icon:'⚠️',title:scoped?'Hapus Stok yang Tampil':'Hapus Semua Stok',okText:scoped?'Ya, Hapus':'Ya, Hapus Semua',danger:true});
+if(!ok)return;
+const removeIds=new Set(list.map(p=>p.id));
+D.partsStock=D.partsStock.filter(p=>!removeIds.has(p.id));
+save();
+toast(scoped?('🗑 '+list.length+' item stok dihapus'):'🗑 Semua stok dihapus');
+Sparepart.renderStockList();
+},
 // syncFromCatalog() — fitur baru (permintaan eksplisit user): tombol
 // "🔄 Sinkron dari Katalog Suku Cadang" di 🔧 Kelola Kategori Sparepart &
 // Interval Servis. BEDA dari syncPartsStockFromCatalog() (tx-stok-sparepart.js,
 // dipakai alur scan di form transaksi Keuangan) dalam 2 hal sesuai keputusan
 // eksplisit user:
-//  1) Filter per KENDARAAN AKTIF ("beda kendaraan beda katalog") — hanya part
-//     Katalog Suku Cadang yang compatibleVehicleIds-nya EKSPLISIT memuat
-//     curVehicleId yang disinkron, bukan semua part tanpa pandang kendaraan.
+//  1) Filter per KENDARAAN AKTIF ("beda kendaraan beda katalog") — part yang
+//     disinkron adalah part yang compatibleVehicleIds-nya memuat curVehicleId,
+//     ATAU part "universal" (compatibleVehicleIds kosong/belum ditandai) —
+//     pakai VehicleCatalog.filterForVehicle() yang SUDAH ADA, SAMA PERSIS
+//     aturan yang dipakai layar Katalog Suku Cadang (VehicleCatalogUI.renderList())
+//     & Servis.populateCatalogPartSelect(). Bugfix (laporan user): sebelumnya
+//     di sini part universal malah DIKECUALIKAN — beda aturan dari layar
+//     Katalog Suku Cadang, jadi part yang kelihatan tersedia utk kendaraan
+//     aktif di sana gagal disinkron di sini krn belum sempat ditandai
+//     compatibleVehicleIds-nya secara eksplisit.
 //  2) intervalKm kategori baru diisi dari referensi TORSI_DB lewat
 //     suggestServiceIntervalKm() yang SUDAH ADA (read-only, sama persis
 //     dipakai tombol "🤖 Saran AI: Interval" di modal Tambah Kategori) —
@@ -522,8 +581,8 @@ if(!curVehicleId){toast('⚠️ Pilih kendaraan dulu di atas');return;}
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
 let items;
 try{ items=await VehicleCatalog.getAll(); }catch(e){ toast('⚠️ Gagal membaca Katalog Suku Cadang');return; }
-const candidates=(items||[]).filter(it=>it&&!it.isDraft&&Array.isArray(it.compatibleVehicleIds)&&it.compatibleVehicleIds.some(id=>String(id)===String(curVehicleId)));
-if(!candidates.length){toast('ℹ️ Belum ada part di Katalog Suku Cadang yang ditandai kompatibel dengan '+(veh?veh.name:'kendaraan ini'));return;}
+const candidates=(items||[]).filter(it=>it&&!it.isDraft&&(!Array.isArray(it.compatibleVehicleIds)||!it.compatibleVehicleIds.length||it.compatibleVehicleIds.some(id=>String(id)===String(curVehicleId))));
+if(!candidates.length){toast('ℹ️ Belum ada part di Katalog Suku Cadang untuk '+(veh?veh.name:'kendaraan ini'));return;}
 const rows=candidates.map(it=>{
 const already=D.partsStock.some(p=>p.catalogId===it.id);
 const reko=already?null:suggestServiceIntervalKm(it.partName||'',curVehicleId);
@@ -559,9 +618,195 @@ Sparepart.renderCatList();
 Sparepart.renderStockList();
 if(typeof renderServisList==='function')renderServisList();
 if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();
+// BUGFIX (laporan user): data sudah benar tersimpan & innerHTML #sparepartCatList/
+// #sparepartDashboard sudah di-update di atas, TAPI di beberapa WebView Android
+// repaint-nya baru kelihatan setelah ada interaksi UI lain (mis. ketik di search
+// Stok Sparepart -- itu yang bikin Stok "muncul" duluan, Kategori/Dashboard masih
+// keliatan kosong krn belum ada interaksi susulan). Paksa reflow manual di sini
+// (baca offsetHeight lalu toggle display) supaya semua 3 bagian langsung
+// kelihatan update tanpa perlu interaksi tambahan dari user.
+['sparepartCatList','sparepartDashboard','stockList'].forEach(id=>{
+const el=document.getElementById(id);
+if(!el)return;
+void el.offsetHeight;
+const prevDisplay=el.style.display;
+el.style.display='none';
+void el.offsetHeight;
+el.style.display=prevDisplay;
+});
 toast('✅ Sinkron selesai: '+addedCat+' kategori baru, '+addedStock+' stok baru');
+},
+// commitCategoryCSV(rows) — CSV import utk Kategori Sparepart (bukan Etalase
+// Shop). Pola SAMA PERSIS ShopDataIO.commitShopRows() (shop-data-io-api.js):
+// match by name (case-insensitive) -> ada = update field yg dikirim saja
+// (partial, field yg tidak dikirim TIDAK ditimpa), belum ada = buat baru
+// dengan shape objek kategori yang sama persis dipakai saveCat() di atas.
+commitCategoryCSV(rows){
+if(!Array.isArray(rows)||!rows.length)return{ok:false,created:0,updated:0,total:0};
+let created=0,updated=0;
+rows.forEach(r=>{
+if(!r||!r.nama)return;
+const nama=String(r.nama).trim();
+if(!nama)return;
+let cat=D.sparepartCats.find(c=>c.name.toLowerCase()===nama.toLowerCase());
+if(cat){
+if(r.kode)cat.code=r.kode;
+if(r.intervalKm!==undefined&&r.intervalKm!==null&&r.intervalKm>0)cat.intervalKm=r.intervalKm;
+if(r.showInReminder!==undefined&&r.showInReminder!==null)cat.showInReminder=r.showInReminder;
+updated++;
+} else {
+const code=r.kode||codeFromName(nama);
+const intervalKm=(r.intervalKm&&r.intervalKm>0)?r.intervalKm:0;
+const showInReminder=(r.showInReminder!==undefined&&r.showInReminder!==null)?r.showInReminder:(intervalKm>0);
+D.sparepartCats.push({id:'sp_'+Date.now()+'_'+created+'_'+updated,name:nama,code,intervalKm,showInReminder});
+created++;
+}
+});
+save();
+return{ok:true,created,updated,total:created+updated};
+},
+// parseCategoryCSV(text) — parser CSV sederhana, pola SAMA PERSIS
+// ShopDataIO.parseShopCSV() (String.split, tanpa dependency papaparse).
+// Header wajib: nama (kolom lain opsional & urutan bebas):
+// nama,kode,interval_km,tampil_reminder
+parseCategoryCSV(text){
+if(!text||!text.trim())return[];
+const lines=text.split(/\r?\n/).filter(l=>l.trim());
+if(lines.length<1)return[];
+const header=lines[0].split(',').map(h=>h.trim().toLowerCase());
+const idx={
+nama:header.indexOf('nama'),
+kode:header.indexOf('kode'),
+intervalKm:header.indexOf('interval_km'),
+showInReminder:header.indexOf('tampil_reminder'),
+};
+if(idx.nama===-1)return[];
+const toInt=(v)=>{const digits=String(v||'').replace(/[^\d]/g,'');return digits?parseInt(digits,10):0;};
+const toBool=(v)=>{
+const s=String(v||'').trim().toLowerCase();
+if(!s)return null;
+return['1','ya','yes','true','y'].includes(s);
+};
+const rows=[];
+for(let i=1;i<lines.length;i++){
+const cols=lines[i].split(',');
+const nama=(cols[idx.nama]||'').trim();
+if(!nama)continue;
+rows.push({
+nama,
+kode:idx.kode>-1?(cols[idx.kode]||'').trim().toUpperCase():'',
+intervalKm:idx.intervalKm>-1?toInt(cols[idx.intervalKm]):0,
+showInReminder:idx.showInReminder>-1?toBool(cols[idx.showInReminder]):null,
+});
+}
+return rows;
+},
+// exportCategoryCSV() — pasangan Export utk parseCategoryCSV()/commitCategoryCSV()
+// di atas, supaya round-trip CSV (Export -> edit di Excel/Sheets -> Import
+// lagi) bisa dipakai sbg cara cepat edit massal Kategori Sparepart. Pola
+// sama persis exportShopJSON() (shop-data-io-api.js): murni passthrough +
+// download, 0 rumus baru. Header kolom SAMA PERSIS yang dibaca parseCategoryCSV().
+exportCategoryCSV(){
+const header='nama,kode,interval_km,tampil_reminder';
+const esc=(v)=>{
+const s=String(v==null?'':v);
+return /[",\n]/.test(s)?('"'+s.replace(/"/g,'""')+'"'):s;
+};
+const lines=[header].concat(D.sparepartCats.map(c=>[
+esc(c.name),
+esc(c.code||''),
+esc(c.intervalKm>0?c.intervalKm:''),
+esc(c.showInReminder===false?'tidak':'ya'),
+].join(',')));
+const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='kategori-sparepart-'+new Date().toISOString().split('T')[0]+'.csv';
+a.click();
+return lines.length-1;
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Sparepart'][method]. `const Sparepart = {...}` di atas HANYA
+// membuat binding lexical-scope (bukan properti window), pola fix sama
+// persis window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,
+// Servis, Torsi di car-notes.js (Sesi 345) — bug yang sama pernah terjadi
+// & diperbaiki di sana. Tanpa baris ini, semua tombol data-action=
+// "Sparepart.xxx" gagal diam-diam.
+if (typeof Sparepart !== 'undefined') window.Sparepart = Sparepart;
+// SparepartCsvImport — presenter/wrapper modal `sparepartCsvImportModal`, pola
+// SAMA PERSIS `ShopCsvImport` (shop-data-io-api.js): pilih file -> baca native
+// File.text() -> parse (Sparepart.parseCategoryCSV) -> preview (badge 🆕 baru
+// / 🔄 update) -> commit lewat Sparepart.commitCategoryCSV().
+const SparepartCsvImport={
+parsedRows:[],
+open(){
+this.parsedRows=[];
+const fileEl=document.getElementById('sparepartCsvImportFile');
+if(fileEl)fileEl.value='';
+const box=document.getElementById('sparepartCsvImportPreview');
+if(box)box.innerHTML='';
+const btn=document.getElementById('sparepartCsvImportCommitBtn');
+if(btn)btn.disabled=true;
+openModal('sparepartCsvImportModal');
+},
+async onFileSelected(evt){
+const file=evt.target.files&&evt.target.files[0];
+const box=document.getElementById('sparepartCsvImportPreview');
+const btn=document.getElementById('sparepartCsvImportCommitBtn');
+if(!file){if(box)box.innerHTML='';if(btn)btn.disabled=true;return;}
+if(box)box.innerHTML='<div class="u-fs12 u-t2">Membaca file...</div>';
+try{
+const text=await file.text();
+this.parsedRows=Sparepart.parseCategoryCSV(text);
+}catch(e){
+toast('⚠️ Gagal membaca file CSV: '+(e&&e.message?e.message:'format tidak dikenali'));
+this.parsedRows=[];
+if(box)box.innerHTML='';
+if(btn)btn.disabled=true;
+return;
+}
+this._renderPreview();
+},
+_renderPreview(){
+const box=document.getElementById('sparepartCsvImportPreview');
+const btn=document.getElementById('sparepartCsvImportCommitBtn');
+if(!box)return;
+if(!this.parsedRows.length){
+box.innerHTML='<div class="u-fs12 u-t2">Tidak ada baris valid terbaca. Pastikan file CSV punya header: nama,kode,interval_km,tampil_reminder (kolom "nama" wajib ada).</div>';
+if(btn)btn.disabled=true;
+return;
+}
+let created=0,updated=0;
+const rowsHtml=this.parsedRows.slice(0,50).map(r=>{
+const exists=D.sparepartCats.find(c=>c.name.toLowerCase()===r.nama.toLowerCase());
+if(exists)updated++;else created++;
+const statusLabel=exists?'🔄 update':'🆕 baru';
+const sub=(r.kode||'-')+(r.intervalKm?' · setiap '+r.intervalKm.toLocaleString('id-ID')+' km':'');
+return `<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${escapeHtml(r.nama)}</span><span style="white-space:nowrap">${escapeHtml(sub)} <span class="u-t2">(${statusLabel})</span></span></div>`;
+}).join('');
+const moreNote=this.parsedRows.length>50?`<div class="u-fs11 u-t2" style="margin-top:6px">+${this.parsedRows.length-50} baris lain tidak ditampilkan di pratinjau (tetap ikut diimpor)</div>`:'';
+box.innerHTML=`<div class="u-fs12 u-t2 u-mb8">${this.parsedRows.length} baris kebaca — ${created} baru, ${updated} update.</div>${rowsHtml}${moreNote}`;
+if(btn)btn.disabled=false;
+},
+commit(){
+if(!this.parsedRows.length){toast('⚠️ Belum ada data yang terbaca dari file');return;}
+const res=Sparepart.commitCategoryCSV(this.parsedRows);
+closeModal('sparepartCsvImportModal');
+Sparepart.renderCatList();
+toast(`✅ Import CSV selesai: ${res.created} kategori baru, ${res.updated} diperbarui`);
+this.parsedRows=[];
+}
+};
+function openSparepartCsvImportModal(){return SparepartCsvImport.open();}
+function onSparepartCsvImportFileChange(evt){return SparepartCsvImport.onFileSelected(evt);}
+function commitSparepartCsvImport(){return SparepartCsvImport.commit();}
+function exportSparepartCategoryCSV(){
+const n=Sparepart.exportCategoryCSV();
+toast(n>0?'📤 '+n+' kategori diexport ke CSV':'⚠️ Belum ada kategori sparepart untuk diexport');
+return n;
+}
 function autoFillSparepartCode(){return Sparepart.autoFillCatCode();}
 function populateSparepartDatalist(){return Sparepart.populateDatalist();}
 /* moved to modules-render.js: renderSparepartCatList */
@@ -1151,6 +1396,35 @@ selisihPer100km:(selisih>=0?'+':'')+fmt(selisih),
 },
 actions:['Cek filter udara & tekanan ban','Jadwalkan servis bila performa terus turun'],
 };
+},
+});
+// _vehicleCapacityMissingCheck() — cek kendaraan yg dipakai operasional Shop
+// (muncul di D.deliveryPlans, audit item #3) tapi capacityKg/capacityM3
+// (vehicle-core.js, field yg sudah ada) masih kosong -> TripEngine.
+// vehicleCapacity() tidak bisa hitung status AMAN/OVERLOAD. Murni baca D
+// langsung, 0 field/index baru.
+function _vehicleCapacityMissingCheck(){
+if(typeof D==='undefined'||!D.vehicles||!D.deliveryPlans)return{trigger:false,missing:[]};
+const usedIds=new Set(D.deliveryPlans.map(p=>p.vehicleId).filter(Boolean));
+const missing=D.vehicles.filter(v=>usedIds.has(v.id)&&!v.capacityKg&&!v.capacityM3);
+return{trigger:missing.length>0,missing};
+}
+AIDecision.rules.register({
+id:'vehicle-capacity-missing',
+category:'vehicle',
+severity:'warning',
+weight:4,
+cooldownHours:72,
+description:'Kendaraan dipakai di Rencana Pengiriman tapi kapasitas angkut (capacityKg/capacityM3, Kelola Kendaraan) belum diisi, jadi cek AMAN/OVERLOAD muatan tidak bisa jalan.',
+condition:()=>_vehicleCapacityMissingCheck().trigger,
+action:()=>{
+const c=_vehicleCapacityMissingCheck();
+const first=c.missing[0];
+const extra=c.missing.length>1?` (+${c.missing.length-1} kendaraan lain)`:'';
+// Sesi 344b — actionTargets: bawa id kendaraan yg missing supaya AIRecommendCard
+// (ai-chat.js) bisa render tombol yg langsung panggil editVehicle(idx), bukan cuma
+// teks 'actions' yg user harus cari sendiri ke Kelola Kendaraan.
+return{message:`Kapasitas angkut "${first.name}" belum diisi, cek muatan di Rencana Pengiriman belum akurat${extra}.`,actions:['Isi Kapasitas Angkut Maks di Kelola Kendaraan'],actionTargets:[{type:'vehicle',id:first.id}]};
 },
 });
 _vehicleAIRulesRegistered=true;

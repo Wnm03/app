@@ -1000,6 +1000,7 @@ if(typeof refreshBillEverywhere==='function')refreshBillEverywhere();
 toast('✅ '+selected.length+' tagihan diimpor dari scan');
 }
 };
+if (typeof BillMultiScan !== 'undefined') window.BillMultiScan = BillMultiScan;
 function scanBillMultiItems(){return BillMultiScan.scan();}
 
 // ==================== UniversalScan (Sesi 125) ====================
@@ -1072,11 +1073,25 @@ return{type,confidence:Math.round(confidence*100)/100,scores};
 }
 // parseBankScreen(text) -- 1 akun: nama pemilik/bank (ditebak dari baris sebelum "No.
 // Rekening") + nominal dari "Total Saldo" (fallback "Saldo" polos).
+//
 function parseBankScreen(text){
 if(!text)return null;
-const mPrimary=text.match(/total\s*saldo[^\d]{0,20}(\d[\d.,]*)/i);
-const m=mPrimary||text.match(/\bsaldo\b[^\d]{0,20}(\d[\d.,]*)/i);
-const nominalRaw=m?normalizeOcrNumber(m[1]):NaN;
+// BUGFIX (laporan user: scan layar SeaBank -- "Total Saldo Rp 148.602" -- nominal
+// kebaca "1" doang, bukan 148602): screenshot asli punya angka saldo dalam FONT BESAR/
+// BOLD; di font semacam ini Tesseract kerap salah menyimpulkan jarak antar-karakter
+// sbg batas kata/baris, jadi "148.602" pecah di teks OCR jadi beberapa potongan
+// terpisah spasi/newline (mis. "1" lalu "48.602" di "baris" lain). Regex LAMA
+// `(\d[\d.,]*)` cuma menangkap potongan pertama yg contiguous ("1") lalu berhenti di
+// whitespace pertama -- SALAH TAFSIR whitespace itu sbg akhir angka, padahal itu
+// masih 1 angka yg sama yg dipecah OCR. Fix: regex sekarang boleh menangkap SAMPAI 3
+// potongan digit tambahan yg HANYA dipisah whitespace (bukan huruf/kata lain) setelah
+// potongan pertama -- lalu semua whitespace di dalam hasil match dibuang SEBELUM
+// dikirim ke normalizeOcrNumber(), supaya potongan2 itu disambung jadi 1 angka utuh
+// lagi. Kalau OCR kebetulan TIDAK memecah angkanya (kasus umum/lama), perilaku 0
+// berubah (potongan tambahan itu opsional, `{0,3}`).
+const mPrimary=text.match(/total\s*saldo[^\d]{0,20}(\d[\d.,]*(?:\s+\d[\d.,]*){0,3})/i);
+const m=mPrimary||text.match(/\bsaldo\b[^\d]{0,20}(\d[\d.,]*(?:\s+\d[\d.,]*){0,3})/i);
+const nominalRaw=m?normalizeOcrNumber(m[1].replace(/\s+/g,'')):NaN;
 const lines=String(text).split('\n').map(l=>l.trim()).filter(Boolean);
 const relIdx=lines.findIndex(l=>/no\.?\s*rekening|nomor\s*rekening/i.test(l));
 let nama=null;
@@ -1598,4 +1613,5 @@ if(last)last.importedCount=selected.length;
 toast('✅ '+selected.length+' akun diimpor dari scan ('+created+' baru, '+updated+' diupdate)');
 }
 };
+if (typeof UniversalScan !== 'undefined') window.UniversalScan = UniversalScan;
 function scanUniversal(){return UniversalScan.scan();}

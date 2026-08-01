@@ -405,15 +405,30 @@ const DashboardHubAnalytics = {
       { label: 'Transaksi Bulan Ini', value: String(count), cls: '' },
       { label: 'Total Pemasukan', value: money(inc), cls: 'green' },
       { label: 'Total Pengeluaran', value: money(exp), cls: 'red' },
-      { label: 'Saldo Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green', warn: netNegatif, sub: netSaran },
-      { label: 'Pemasukan vs Pengeluaran', value: incPct === null ? '—' : (incPct + '% : ' + expPct + '%'), cls: '' },
+      { label: 'Saldo Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green', warn: netNegatif, sub: netSaran, badge: netNegatif ? 'Kurang' : '' },
+      { label: 'Pemasukan vs Pengeluaran', value: incPct === null ? '—' : (incPct + '% : ' + expPct + '%'), cls: '', bar: incPct === null ? null : { incPct, expPct } },
     ];
 
+    // UX (sesi ini, audit tampilan): 2 tambahan MURNI presentasi, 0 rumus baru
+    // (reuse incPct/expPct/netNegatif yang sudah dihitung di atas):
+    // (1) badge kecil "⚠️ Kurang" di pojok kanan-atas kartu Saldo Bersih saat
+    //     negatif, supaya peringatan lebih cepat ketangkap mata (sebelumnya
+    //     cuma beda warna latar --warn + baris saran di bawah, tanpa penanda
+    //     tegas di judul kartu). Pola badge REUSE ".btn-danger"-style pill,
+    //     scoped baru ".dashhub-analytics-badge".
+    // (2) progress bar 2-warna (hijau/merah, lebar sesuai incPct/expPct) di
+    //     bawah kartu "Pemasukan vs Pengeluaran", supaya rasio lebih cepat
+    //     dibaca dibanding cuma teks "49% : 51%". Class baru murni CSS,
+    //     tidak ada kalkulasi tambahan.
     el.innerHTML = cards.map((c) => `
       <div class="dashhub-analytics-card${c.warn ? ' dashhub-analytics-card--warn' : ''}">
-        <div class="dashhub-analytics-label">${escapeHtml(c.label)}</div>
+        <div class="dashhub-analytics-label-row">
+          <div class="dashhub-analytics-label">${escapeHtml(c.label)}</div>
+          ${c.badge ? '<span class="dashhub-analytics-badge">⚠️ ' + escapeHtml(c.badge) + '</span>' : ''}
+        </div>
         <div class="dashhub-analytics-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
         ${c.sub ? '<div class="dashhub-analytics-sub">⚠️ ' + escapeHtml(c.sub) + '</div>' : ''}
+        ${c.bar ? '<div class="dashhub-analytics-bar"><div class="dashhub-analytics-bar-inc" style="width:' + c.bar.incPct + '%"></div><div class="dashhub-analytics-bar-exp" style="width:' + c.bar.expPct + '%"></div></div>' : ''}
       </div>
     `).join('');
   },
@@ -869,3 +884,4 @@ const DashboardHub = {
     console.warn('DashboardHub: featureKey tidak ditemukan di FEATURE_REGISTRY:', key);
   },
 };
+if (typeof window !== 'undefined' && typeof DashboardHub !== 'undefined') window.DashboardHub = DashboardHub;

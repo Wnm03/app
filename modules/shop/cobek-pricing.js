@@ -121,6 +121,7 @@ resellerEl.value=this.roundNice((modal+transport)*(1+resellerMargin/100));
 toast('✅ Harga Jual (& Reseller kalau kosong) terisi dari rekomendasi');
 }
 };
+if (typeof PriceReko !== 'undefined') window.PriceReko = PriceReko;
 // OngkirCalc — kalkulator biaya angkut berdasarkan jarak, dipakai buat isi "Biaya Transport/Unit"
 // di panel PriceReko di atas (kw190-ongkir-jarak). Rute bisnis cobek: [Ambil ke Produsen] -> [Pekalongan]
 // -> lalu opsional [Pekalongan -> Rumah Konsumen] kalau diantar, atau berhenti di Pekalongan kalau
@@ -253,6 +254,7 @@ const kmPerLiterStr=est.kmPerLiter.toFixed(1);
 toast(`✅ Ongkos/km diisi ${fmtFull(rounded)} dari konsumsi ${veh?veh.name:''} (≈${kmPerLiterStr} km/liter, harga BBM ${fmtFull(Math.round(est.avgHarga))}/liter)`,7000);
 }
 };
+if (typeof OngkirCalc !== 'undefined') window.OngkirCalc = OngkirCalc;
 // PriceRekoWidget — widget dashboard "🤖 Rekomendasi Harga Jual AI" di tab Etalase (kartu di atas
 // daftar produk). Beda dari PriceReko di atas (yang manual, per-produk, di dalam productModal):
 // widget ini SCAN OTOMATIS semua produk yang sudah punya Harga Beli & Harga Jual, bandingkan Harga
@@ -409,6 +411,7 @@ Etalase.openModal(idx);
 setTimeout(()=>{const panel=document.getElementById('priceRekoPanel');if(panel&&panel.classList.contains('u-dnone'))PriceReko.toggle();},50);
 }
 };
+if (typeof PriceRekoWidget !== 'undefined') window.PriceRekoWidget = PriceRekoWidget;
 // StockRekoWidget — widget dashboard "📦 Rekomendasi Restock AI" di tab Etalase, di bawah
 // PriceRekoWidget. Sama-sama rule-based & gratis (tanpa panggil AI/web search): hitung kecepatan
 // jual tiap produk dari histori Penjualan Shop (D.cobek, LOOKBACK_DAYS terakhir), lalu bandingkan
@@ -533,6 +536,77 @@ if(typeof BusinessFlowPresenter!=='undefined')BusinessFlowPresenter.renderTab();
 toast(`✅ Stok ${count} produk diperbarui (+${totalQty} unit total)`);
 }
 };
+if (typeof StockRekoWidget !== 'undefined') window.StockRekoWidget = StockRekoWidget;
+
+// WeightBulkWidget — widget dashboard "⚖️ Isi Berat Massal" di tab Etalase, Sesi 344c-lanjutan
+// (item 🟡 "Bulk fill berat produk lama" yg dicatat belum digarap di
+// CLAUDE-SESSION-NOTE-SESI-344C.md). Beda dari rule AI 'product-weight-missing' di bawah
+// (§ registerDeliveryAIRules, cuma menandai produk yg SUDAH dipakai di Inventory
+// Transfer/Rencana Pengiriman): widget ini men-scan SEMUA produk ownership SELF yang
+// beratPerUnit-nya masih kosong apapun status pemakaiannya — supaya "produk lama" yang
+// belum pernah dipakai logistik pun ikut kelihatan & bisa diisi cepat dari 1 tempat, tanpa
+// buka productModal satu-satu. Isi per-baris opsional (bukan wajib semua) — applyBulk() cuma
+// menyimpan baris yang sudah diisi angkanya, sisanya boleh dilanjutkan lain waktu/sesi.
+const WeightBulkWidget={
+// missing() — PURE terhadap D (baca saja, 0 DOM), supaya bisa dites lewat loadSource.js &
+// dipakai render()/applyBulk() sbg SATU sumber kebenaran daftar target (jumlah produk lama
+// yang kena, dicek dulu lewat fungsi ini sebelum tombol "Simpan Semua" ditampilkan).
+missing(){
+const selfFilter=(typeof isProductOwnershipSelf==='function')?isProductOwnershipSelf:(()=>true);
+return(D.products||[]).filter(selfFilter).filter(p=>!p.beratPerUnit);
+},
+render(){
+const card=document.getElementById('weightBulkWidgetCard');
+const list=document.getElementById('weightBulkWidgetList');
+const countEl=document.getElementById('weightBulkWidgetCount');
+if(!card||!list)return;
+const targets=this.missing();
+if(!targets.length){card.style.display='none';list.innerHTML='';return;}
+card.style.display='';
+if(countEl)countEl.textContent=targets.length;
+list.innerHTML=targets.map(p=>`<div class="tx-item">
+        <div class="tx-icon u-bgaccsoft">⚖️</div>
+        <div class="tx-info"><div class="tx-name">${escapeHtml(p.name)}</div>
+          <div class="tx-meta">Berat per unit belum diisi</div>
+        </div>
+        <input type="number" class="fi" style="width:76px;margin-right:6px" min="0" step="0.01" inputmode="decimal" placeholder="kg" id="weightBulkInput_${escapeHtml(p.id)}">
+        <button class="tx-del u-bgaccsoft u-cacc" data-action="WeightBulkWidget.applyOne" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Simpan berat produk ini">✅</button>
+      </div>`).join('');
+},
+// applyOne(productId) — simpan 1 baris (dari kolom input di sampingnya), dipakai kalau user
+// mau isi satu-satu sambil jalan (bukan nunggu semua kolom terisi baru "Simpan Semua").
+applyOne(productId){
+const idx=(D.products||[]).findIndex(p=>p.id===productId);
+if(idx<0)return;
+const inp=document.getElementById('weightBulkInput_'+productId);
+const val=Math.max(0,parseFloat(inp&&inp.value)||0);
+if(!(val>0)){toast('⚠️ Isi dulu angka berat (kg) yang valid');return;}
+D.products[idx].beratPerUnit=val;
+save();this.render();renderProductList();
+toast(`✅ Berat per unit "${D.products[idx].name}" disimpan (${val} kg)`);
+},
+// applyBulk() — simpan SEMUA baris yang kolomnya sudah diisi angka >0 sekaligus (baris yang
+// masih kosong dilewati, TIDAK dianggap error — jumlah produk lama yang kena bisa banyak,
+// user boleh cicil per-batch tanpa harus isi semua dulu baru bisa "Simpan Semua" sekali).
+async applyBulk(){
+const targets=this.missing();
+if(!targets.length){toast('⚠️ Tidak ada produk yang perlu diisi beratnya saat ini');return;}
+const filled=targets.map(p=>{
+const inp=document.getElementById('weightBulkInput_'+p.id);
+const val=Math.max(0,parseFloat(inp&&inp.value)||0);
+return{p,val};
+}).filter(x=>x.val>0);
+if(!filled.length){toast('⚠️ Isi dulu minimal 1 kolom berat sebelum Simpan Semua');return;}
+if(!await askConfirm(`Simpan berat per unit utk ${filled.length} produk yang sudah diisi angkanya?`,{okText:'Ya, Simpan Semua'}))return;
+filled.forEach(({p,val})=>{
+const idx=(D.products||[]).findIndex(x=>x.id===p.id);
+if(idx>=0)D.products[idx].beratPerUnit=val;
+});
+save();this.render();renderProductList();
+toast(`✅ Berat per unit ${filled.length} produk disimpan sekaligus`);
+}
+};
+if (typeof WeightBulkWidget !== 'undefined') window.WeightBulkWidget = WeightBulkWidget;
 
 // ---------------------------------------------------------------------------
 // Smart Delivery Engine, Sesi 4/6: fungsi kalkulasi Shop yang menjembatani
@@ -747,6 +821,38 @@ function registerDeliveryAIRules() {
       const first = c.low[0];
       const extra = c.low.length > 1 ? ` (+${c.low.length - 1} produk lain)` : '';
       return { message: `Stok produk "${first.name}" menipis (${first.stock} pcs)${extra}.` };
+    },
+  });
+  // _productWeightMissingCheck() — produk yg SUDAH dipakai di Inventory
+  // Transfer (D.inventoryTransfers) atau Rencana Pengiriman (D.deliveryPlans)
+  // tapi beratPerUnit (cobek-etalase.js, field yg sudah ada) masih kosong ->
+  // packingCalculator()/vehicleCapacity() cuma hitung dari item lain, total
+  // berat jadi under-estimate. Murni baca D langsung, 0 field/index baru.
+  function _productWeightMissingCheck() {
+    if (typeof D === 'undefined' || !D.products) return { trigger: false, missing: [] };
+    const usedIds = new Set();
+    (D.inventoryTransfers || []).forEach((t) => (t.items || []).forEach((it) => usedIds.add(it.productId)));
+    (D.deliveryPlans || []).forEach((p) => (p.items || []).forEach((it) => usedIds.add(it.productId)));
+    const missing = D.products.filter((p) => usedIds.has(p.id) && !p.beratPerUnit);
+    return { trigger: missing.length > 0, missing };
+  }
+  AIDecision.rules.register({
+    id: 'product-weight-missing',
+    category: 'delivery',
+    severity: 'info',
+    weight: 2,
+    cooldownHours: 72,
+    description: 'Produk sudah dipakai di Inventory Transfer/Rencana Pengiriman tapi beratPerUnit (Etalase) belum diisi, jadi estimasi total berat muatan meleset.',
+    condition: () => _productWeightMissingCheck().trigger,
+    action: () => {
+      const c = _productWeightMissingCheck();
+      const first = c.missing[0];
+      const extra = c.missing.length > 1 ? ` (+${c.missing.length - 1} produk lain)` : '';
+      // Sesi 344b — actionTargets: dulu 'actions' di bawah cuma teks (recommendationId
+      // ADA di engine tapi belum dipakai domain manapun). actionTargets membawa id
+      // produk yg missing supaya AIRecommendCard (ai-chat.js) bisa render tombol yg
+      // langsung panggil Etalase.openModal(idx) alih-alih user cari sendiri ke Etalase.
+      return { message: `Berat per unit "${first.name}" belum diisi, estimasi muatan Rencana Pengiriman jadi kurang akurat${extra}.`, actions: ['Isi Berat per Unit di Etalase produk ini'], actionTargets: [{ type: 'product', id: first.id }] };
     },
   });
   _deliveryAIRulesRegistered = true;

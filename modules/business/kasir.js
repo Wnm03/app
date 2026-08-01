@@ -359,6 +359,14 @@ toast(sisa>0?`✅ Tersimpan — DP ${fmtFull(dpVal)}, sisa ${fmtFull(sisa)} otom
 Kasir.reset();
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Kasir'][method]. `const Kasir = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Kasir.xxx" gagal diam-diam.
+if (typeof Kasir !== 'undefined') window.Kasir = Kasir;
 // Muat preferensi mode tampilan (grid/list) yg tersimpan dari sesi sebelumnya — kw198-kasir-viewtoggle.
 (function(){try{const saved=localStorage.getItem('kw_kasirViewMode');if(saved==='list')Kasir.viewMode='list';}catch(e){/* default 'grid' */}})();
 // kw-kasir-audit-2: wrapper global dipanggil dari onchange di HTML, sama pola persis

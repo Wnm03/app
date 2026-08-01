@@ -38,6 +38,7 @@ return OwnershipEngine.resolve(p).type==='SELF';
 }
 const Etalase={
 editIdx:null,
+expandedKatId:null,
 // pairKey/parseSizeName (kw206-cobek-size-pairing): banyak produk shop dijual "2 ukuran 1 harga"
 // (mis. "Lumpang 20cm" & "lumpang 19cm" sama-sama masuk bracket harga "19-20cm"). Nama produk
 // ditulis bebas per-unit stok (ukuran presisi tiap batu beda-beda), tapi HARGA & rekomendasi
@@ -440,14 +441,29 @@ const el=document.getElementById('cobekKategoriList');
 if(!el)return;
 if(!D.cobekKategori||!D.cobekKategori.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏷️</div><div class="empty-text">Belum ada kategori</div></div>';return;}
 el.innerHTML=D.cobekKategori.map(k=>{
-const n=D.products.filter(p=>p.kategoriId===k.id).length;
-return`<div class="tx-item">
+const prodInKat=D.products.map((p,i)=>({p,i})).filter(x=>x.p.kategoriId===k.id);
+const n=prodInKat.length;
+const expanded=this.expandedKatId===k.id;
+const detailHtml=expanded?`<div class="tx-item-detail" style="padding:0 0 10px 46px">
+        ${n?prodInKat.map(x=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+              <div style="font-size:12.5px;flex:1;min-width:0"><div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(x.p.name)}</div><div style="color:var(--text2);font-size:11px">${x.p.stock} pcs</div></div>
+              <button class="tx-del u-bgaccsoft u-cacc" data-action="openProductModal" data-args="${escapeHtml(JSON.stringify([x.i]))}" aria-label="Edit produk">✏️ Edit</button>
+            </div>`).join(''):'<div style="font-size:12px;color:var(--text2);padding:8px 0;border-top:1px solid var(--border)">Belum ada produk di kategori ini.</div>'}
+      </div>`:'';
+return`<div>
+      <div class="tx-item" data-action="Etalase.toggleKategoriDetail" data-args="${escapeHtml(JSON.stringify([k.id]))}" style="cursor:pointer">
         <div class="tx-icon" style="background:var(--accent2-soft)">🏷️</div>
         <div class="tx-info"><div class="tx-name">${escapeHtml(k.name)}</div><div class="tx-meta">${n} produk</div></div>
         <button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="Etalase.editKategori" data-args="${escapeHtml(JSON.stringify([k.id]))}" aria-label="Edit">✏️</button>
         <button class="tx-del" data-action="Etalase.delKategori" data-args="${escapeHtml(JSON.stringify([k.id]))}" aria-label="Hapus">🗑</button>
+      </div>
+      ${detailHtml}
       </div>`;
 }).join('');
+},
+toggleKategoriDetail(id){
+this.expandedKatId=(this.expandedKatId===id)?null:id;
+this.renderKategoriList();
 },
 renderList(){
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
@@ -468,6 +484,15 @@ const priceBlock=hasDiskon
 :`<div class="shop-price-final">${fmt(p.hargaJual)}</div>`;
 const groupCount=p.priceGroupId?this.groupSiblings(p).length+1:0;
 const groupTag=groupCount?`<span class="shop-tag" style="color:var(--accent);font-weight:700">🔗 Gabungan (${groupCount} produk)</span>`:'';
+// weightMissingTag — reuse persis kondisi rule AI 'product-weight-missing'
+// (cobek-pricing.js): produk dipakai di Transfer/Rencana Pengiriman tapi
+// beratPerUnit kosong. Badge di kartu supaya kelihatan tanpa nunggu AI
+// Briefing (cooldown 72 jam bisa kelewat).
+const usedInLogistics=!p.beratPerUnit&&(
+(D.inventoryTransfers||[]).some(t=>(t.items||[]).some(it=>it.productId===p.id))
+||(D.deliveryPlans||[]).some(dp=>(dp.items||[]).some(it=>it.productId===p.id))
+);
+const weightMissingTag=usedInLogistics?'<span class="shop-tag" style="color:var(--warning,#c77700);font-weight:700">⚠️ Berat belum diisi</span>':'';
 return`<div class="shop-product-card stock-${stockCls}">
         <div class="shop-product-head">
           <div>
@@ -476,6 +501,7 @@ return`<div class="shop-product-card stock-${stockCls}">
               ${kat?`<span class="shop-tag cat">🏷️ ${escapeHtml(kat)}</span>`:''}
               ${prod?`<span class="shop-tag">🏭 ${escapeHtml(prod)}</span>`:''}
               ${groupTag}
+              ${weightMissingTag}
             </div>
           </div>
           <div class="shop-stock-pill ${stockCls}">${p.stock} pcs · ${stockLbl}</div>
@@ -499,6 +525,14 @@ return`<div class="shop-product-card stock-${stockCls}">
 }).join('');
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Etalase'][method]. `const Etalase = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Etalase.xxx" gagal diam-diam.
+if (typeof Etalase !== 'undefined') window.Etalase = Etalase;
 // PriceReko — widget "Rekomendasi Harga Jual" di dalam productModal.
 // Formula: (Harga Beli + Biaya Transport/unit) × (1 + Target Margin%), lalu dibulatkan ke kelipatan rapi.
 // Sumber angka bantu: rata-rata margin produk lain di kategori sama (D.products), rata-rata harga/liter BBM

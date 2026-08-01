@@ -678,3 +678,4 @@ if(a)a.renovItemLinkId=null;
 });
 }
 };
+if (typeof Tukang !== 'undefined') window.Tukang = Tukang;

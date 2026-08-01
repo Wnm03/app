@@ -220,6 +220,7 @@ refreshBillEverywhere();
 toast('🔗 '+count+' transaksi lama berhasil ditautkan');
 }
 };
+if (typeof BillFallbackScan !== 'undefined') window.BillFallbackScan = BillFallbackScan;
 function setBillType(t){
 curBillType=t;
 const locked=isBillTypeLocked(t);
@@ -455,16 +456,31 @@ if(billEditFromArchive&&billEditId!==null){
 let txId=getLatestBillPaymentTxId(billEditId,D.transactions);
 if(txId===null){
 const archBForFallback=(D.billsArchive||[]).find(x=>x.id===billEditId);
+// FIX (BUG-001, sesi 338): kandidat AMBIGU (>1, sama seperti guard di
+// scanAllBillFallbackCandidates()) TIDAK boleh diam-diam di-self-heal --
+// findFallbackBillPaymentTxId() sendiri tidak tahu ada kandidat lain yang
+// sama masuk akalnya, jadi kalau ambigu, SKIP self-heal (txId tetap null,
+// jatuh ke fallback lama: tulis completedAt arsip langsung) bukan menebak
+// salah satu transaksi secara permanen tanpa peringatan ke user.
+if(archBForFallback&&countFallbackBillPaymentCandidates(archBForFallback,D.transactions)<=1){
 const fallbackTxId=findFallbackBillPaymentTxId(archBForFallback,D.transactions);
 if(fallbackTxId!==null){
 const ft=D.transactions.find(x=>x.id===fallbackTxId);
 if(ft){ft.billLinkId=billEditId;txId=fallbackTxId;}
 }
 }
+}
 if(txId!==null){
 const t=D.transactions.find(x=>x.id===txId);
 if(t){
-const sync=applyBillPaymentTxSync(t,due,rawAmt);
+// FIX (BUG-002, sesi 342): kirim `amt` (porsi sendiri, sudah dihitung di atas
+// lewat sharedPct), BUKAN `rawAmt` (nilai mentah field #billAmt, yang utk
+// shared bill berlabel "Jumlah Total per Periode" -- total, bukan porsi).
+// t.amount di ledger transaksi SELALU berarti uang yang benar-benar keluar
+// dari kantong sendiri (pola sama dgn data.amount=amt tepat di atas & di
+// tempat lain se-codebase, mis. transaksi.js amount:perBulanMine) -- sebelum
+// fix ini, rawAmt (total) tertulis langsung ke t.amount, mencemari ledger.
+const sync=applyBillPaymentTxSync(t,due,amt);
 paymentPiutangSynced=sync.piutangSynced;
 paymentDebtSynced=sync.debtSynced;
 }
@@ -492,8 +508,22 @@ D.bills.push({id:uid(),...data});
 // baru) masih shared+sharedAutoPiutang, sesuaikan piutang otomatis yang BELUM lunas ke
 // sisa porsi terbaru -- lihat komentar lengkap di syncOutstandingSharedPiutang()
 // (piutang-utang.js). Piutang yang sudah lunas (histori periode lalu) tidak disentuh.
+// FIX (BUG-003, sesi 339): guard `!billEditFromArchive` ditambahkan -- utk edit tagihan
+// LUNAS/arsip, sync piutang yang presisi PER-TRANSAKSI sudah ditangani di atas lewat
+// applyBillPaymentTxSync()->syncSharedPiutangOnPaymentEdit() (menghitung ulang nilai =
+// nilai_lama+oldAmount-newAmount utk piutang yg autoTxId===txId spesifik). Sebelum fix
+// ini, blok di bawah TETAP jalan juga (tidak ada guard billEditFromArchive) & menimpa
+// ULANG piutang UNLUNAS TERBARU (by autoTxId) utk billId ini dgn angka MENTAH
+// (rawAmt-amt, bukan hasil rekonsiliasi) -- kalau bill ini cicilan shared multi-periode
+// (setiap periode bikin 1 auto-piutang, semua share billId yg sama krn archiving cuma
+// terjadi di periode TERAKHIR), piutang periode TERAKHIR yg baru saja benar disinkron
+// applyBillPaymentTxSync() bisa langsung TERTIMPA nilai salah oleh blok ini (double-sync
+// yg saling menimpa). Blok ini sekarang HANYA relevan utk tagihan AKTIF (non-arsip) --
+// itulah kasus asli fix "sync 2 arah" ini dibuat: user ubah persentase split tagihan yg
+// MASIH BERJALAN, sehingga piutang periode berjalan (belum ada transaksi pembayaran utk
+// dikoreksi lewat applyBillPaymentTxSync) perlu disesuaikan ke ekspektasi split terbaru.
 let piutangSynced=0;
-if(billEditId!==null&&shared&&data.sharedAutoPiutang&&typeof syncOutstandingSharedPiutang==='function'){
+if(!billEditFromArchive&&billEditId!==null&&shared&&data.sharedAutoPiutang&&typeof syncOutstandingSharedPiutang==='function'){
 piutangSynced=syncOutstandingSharedPiutang(billEditId,rawAmt-amt);
 }
 const anyPiutangSynced=!!piutangSynced||paymentPiutangSynced;
@@ -564,21 +594,12 @@ const b=(D.billsArchive||[]).find(x=>x.id===id);
 if(!b)return;
 if(!await askConfirm(`Hapus permanen catatan arsip "${escapeHtml(b.name)}" dari Riwayat Tagihan Lunas? Riwayat pembayaran (transaksi) yang sudah tercatat TIDAK ikut terhapus.`,{title:'Hapus Arsip Tagihan',okText:'Ya, Hapus',icon:'🗑'}))return;
 D.billsArchive=D.billsArchive.filter(x=>x.id!==id);
-// FIX s327: jika arsip tagihan sengaja dihapus, transaksi historis tetap dipertahankan
-// sebagai catatan keuangan, tetapi billLinkId tidak boleh menjadi foreign-key gantung
-// ke arsip yang sudah tidak ada. Putuskan link hanya pada transaksi yang menunjuk
-// tepat ke arsip ini; transaksi/uangnya tidak dihapus.
-let detachedBillTxCount=0;
-D.transactions=(D.transactions||[]).map(t=>{
-if(t.billLinkId===id){const c={...t};delete c.billLinkId;detachedBillTxCount++;return c;}
-return t;
-});
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): sama seperti delBill() -- lihat
 // komentar lengkap di removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
-save();renderBillArchive();renderKeuangan();renderDashboard();renderKekayaanBersih();
-if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
-toast('🗑 Arsip dihapus'+(detachedBillTxCount?` (tautan ${detachedBillTxCount} transaksi dilepas)`:'')+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
+save();refreshBillEverywhere();
+if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
+toast('🗑 Arsip dihapus'+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
 }
 function openBillHistory(billId){
 curBillHistoryId=billId;
@@ -725,16 +746,24 @@ restoredFromArchive=true;
 if(linkedBill&&isLatest){
 if(linkedBill.kind==='cicilan'&&linkedBill.sisaTenor!=null){
 linkedBill.sisaTenor+=1;
-if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);d.setMonth(d.getMonth()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
+const d=new Date(linkedBill.nextDue);
+d.setMonth(d.getMonth()-1);
+linkedBill.nextDue=d.toISOString().split('T')[0];
 } else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
 if(dbt){
 dbt.nilai=(dbt.nilai||0)+t.amount;
 if(dbt.lunas){dbt.lunas=false;dbt.billId=linkedBill.id;}
 }
-if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);d.setMonth(d.getMonth()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
+const d=new Date(linkedBill.nextDue);
+d.setMonth(d.getMonth()-1);
+linkedBill.nextDue=d.toISOString().split('T')[0];
 } else if((linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq){
-if(t.billPrevNextDue){linkedBill.nextDue=t.billPrevNextDue;}else{const d=new Date(linkedBill.nextDue);if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);linkedBill.nextDue=d.toISOString().split('T')[0];}
+const d=new Date(linkedBill.nextDue);
+if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);
+else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);
+else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);
+linkedBill.nextDue=d.toISOString().split('T')[0];
 }
 }
 const beforePiutang=D.piutang?D.piutang.length:0;
@@ -881,7 +910,7 @@ if(!val)return;
 payDate=val;
 }
 const _payTxId=uid();
-D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue});
+D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
@@ -916,7 +945,11 @@ if(b.sisaTenor<=0){
 if(!D.billsArchive)D.billsArchive=[];
 D.billsArchive.push({...b,completedAt:payDate,actualPayAmount:payAmount});
 D.bills=D.bills.filter(x=>x.id!==id);
-save();refreshBillEverywhere();
+// BUGFIX (S334 audit, BUG-018): pembayaran ini SAMA-SAMA membuat transaksi expense
+// yang mempengaruhi totalSaldoAkun()/currentNetWorth() seperti jalur kind==='utang'
+// (yang sudah benar di atas) -- kartu Kekayaan Bersih/Zakat Maal harus ikut refresh
+// di sini juga, bukan cuma nunggu reload halaman.
+save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
 toast('🎉 Cicilan '+b.name+' LUNAS!');return;
 }
 }
@@ -924,13 +957,23 @@ if(b.freq!=='bulanan'&&b.freq!=='mingguan'&&b.freq!=='tahunan'){
 if(!D.billsArchive)D.billsArchive=[];
 D.billsArchive.push({...b,completedAt:payDate,actualPayAmount:payAmount});
 D.bills=D.bills.filter(x=>x.id!==id);
-save();refreshBillEverywhere();
+// BUGFIX (S334 audit, BUG-018): sama seperti di atas -- tagihan "sekali" yang
+// selesai juga membuat transaksi expense riil, kartu Kekayaan Bersih/Zakat Maal
+// harus ikut refresh.
+save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ Tagihan selesai & tercatat');return;
 }
 const d=advanceBillNextDue(b.nextDue,b.freq);
 b.nextDue=d.toISOString().split('T')[0];
 save();refreshBillEverywhere();
-if(b.kind==='utang'){renderDebtList();renderKekayaanBersih();hitungZakatMaal();}
+// BUGFIX (S334 audit, BUG-018): sebelumnya HANYA kind==='utang' yang refresh Kekayaan
+// Bersih/Zakat Maal di jalur "berulang lanjut ke periode berikutnya" ini -- padahal
+// kind lain (tagihan/langganan) yang lanjut JUGA sama-sama membuat transaksi expense
+// (line ~883, selalu tercatat lebih dulu di semua jalur). Refresh sekarang unconditional
+// utk semua kind, bukan cuma utang; renderDebtList() tetap khusus utang (kind lain tidak
+// punya representasi di Buku Utang).
+if(b.kind==='utang')renderDebtList();
+renderKekayaanBersih();hitungZakatMaal();
 const sisaMsg=b.sisaTenor!=null?` Sisa ${b.sisaTenor}x lagi.`:'';
 toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
 }
@@ -1213,11 +1256,24 @@ billCalSelectedDate=dateStr;
 renderBillCalendar();
 }
 /* moved to modules-render.js: renderBillCalendar */
+// BUGFIX (S334 audit, BUG-016): string tanggal polos "YYYY-MM-DD" (mis. b.nextDue) di-parse
+// JS engine sebagai UTC midnight (spesifikasi ISO 8601 date-only), sementara `today` di bawah
+// dihitung `new Date();setHours(0,0,0,0)` (LOCAL midnight) -- basisnya beda, selisihnya konstan
+// sebesar offset timezone user (+7/+8/+9 jam utk WIB/WITA/WIT), cukup mendorong Math.ceil() naik
+// 1 hari (bill jatuh tempo HARI INI tampil sbg "H-1"/besok). Helper ini parse "YYYY-MM-DD" LANGSUNG
+// jadi LOCAL midnight (basis sama persis dgn `today`), tanpa lewat parsing UTC sama sekali.
+function billNextDueLocalMidnight(dateStr){
+if(!dateStr)return new Date(NaN);
+const parts=String(dateStr).split('-');
+if(parts.length!==3)return new Date(dateStr);
+const[y,m,d]=parts.map(Number);
+return new Date(y,m-1,d);
+}
 function getBillStats(month,year){
 const now=new Date(),m=(month!=null?month:now.getMonth()),y=(year!=null?year:now.getFullYear());
 const today=new Date();today.setHours(0,0,0,0);
 const monthTotal=D.bills.reduce((sum,b)=>sum+getBillOccurrencesInMonth(b,y,m).reduce((s2,o)=>s2+(b.amount||0),0),0);
-const withDiff=D.bills.map(b=>({b,diff:Math.ceil((new Date(b.nextDue)-today)/(1000*60*60*24))}));
+const withDiff=D.bills.map(b=>({b,diff:Math.ceil((billNextDueLocalMidnight(b.nextDue)-today)/(1000*60*60*24))}));
 const overdue=withDiff.filter(x=>x.diff<0);
 const soon=withDiff.filter(x=>x.diff>=0&&x.diff<=7);
 const outstanding=D.bills.filter(b=>b.kind==='cicilan'&&b.sisaTenor!=null).reduce((s,b)=>s+b.amount*b.sisaTenor,0);
@@ -1313,7 +1369,9 @@ function checkBills(){
 const banner=document.getElementById('billBanner');
 if(!banner)return;
 const today=new Date();today.setHours(0,0,0,0);
-const soon=D.bills.filter(b=>{const d=new Date(b.nextDue);const diff=Math.ceil((d-today)/(1000*60*60*24));return diff<=3;});
+// BUGFIX (S334 audit, BUG-016): pakai billNextDueLocalMidnight() (bukan `new Date(b.nextDue)`
+// yang di-parse UTC) -- pola sama persis fix getBillStats() di atas.
+const soon=D.bills.filter(b=>{const d=billNextDueLocalMidnight(b.nextDue);const diff=Math.ceil((d-today)/(1000*60*60*24));return diff<=3;});
 if(soon.length){
 banner.classList.remove('hidden');
 document.getElementById('billBannerTitle').textContent=soon.length+' tagihan akan jatuh tempo';

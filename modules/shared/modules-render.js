@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s335-fix-bug011-gotolist-tabindex';
+const MODULE_RENDER_VERSION='s348-fix-window-expose-audit-alokasiaset';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -488,8 +488,17 @@ const actionBtns=isArchived?
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,true]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
 (b._paidPeriodOnly?
+// FIX (laporan user, screenshot tab Lunas — "tombol centang bayar tidak tampil, pencil malah
+// buka Edit Transaksi"): kartu _paidPeriodOnly ini SENGAJA tidak punya tombol ✅ (bayar lagi
+// akan dobel-bayar periode yang sama, lihat catatan getBillPaidThisPeriodInfo di atas), dan
+// ✏️ di sini SUDAH BENAR memanggil openBillModal(b.id) yang lalu redirect ke editTx() (bill
+// ini masih aktif, bukan arsip — lihat catatan gap "Edit Tagihan vs Detail Cicilan" di
+// openBillModal()), yaitu membuka transaksi pembayaran periode INI, bukan pengaturan tagihan
+// umum. Label lama "Edit" generik menyesatkan (kelihatan seperti tombol edit kartu, padahal
+// hasilnya lompat ke modal Edit Transaksi) — diperjelas jadi "Edit Pembayaran Bulan Ini" tanpa
+// mengubah routing/logic apa pun (aman, 0 risiko regresi ke openBillModal/editTx).
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
-       <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
+       <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit Pembayaran Bulan Ini" aria-label="Edit Pembayaran Bulan Ini">✏️</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
 `<button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>

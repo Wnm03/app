@@ -62,6 +62,97 @@ if(typeof Piutang!=='undefined')Piutang.renderList();
 if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
 if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 }
+// removeOrphanedAutoPiutangForBill(billId) — FIX (audit user, sync 2 arah "Ditanggung
+// Bersama"): dulu hapus TAGIHAN itu sendiri (delBill/delBillArchive, tagihan-kalender.js)
+// tidak pernah membersihkan D.piutang yang autoBillId-nya nunjuk ke tagihan tsb -- beda dgn
+// hapus TRANSAKSI pembayarannya (revertBillFromDeletedTx, sudah sync lewat autoTxId). Piutang
+// otomatis jadi orphan permanen, tetap kehitung di Kekayaan Bersih walau sumbernya sudah tidak
+// ada. Reuse pola sama (filter + hitung selisih panjang array) dipisah jadi fungsi sendiri
+// biar dipakai kedua jalur hapus (aktif & arsip) tanpa duplikasi.
+function removeOrphanedAutoPiutangForBill(billId){
+if(!billId||!D.piutang||!D.piutang.length)return false;
+const before=D.piutang.length;
+D.piutang=D.piutang.filter(p=>p.autoBillId!==billId);
+return D.piutang.length<before;
+}
+// syncOutstandingSharedPiutang(billId,newSisa) — FIX (audit user, sync 2 arah "Ditanggung
+// Bersama"): dulu edit tagihan shared (_saveBillInner, koreksi totalAmount/sharedPct) tidak
+// pernah menulis balik ke piutang yang SUDAH terlanjur dibuat dari pembayaran sebelumnya --
+// piutang lama tetap kepatok ke nominal sisa yg salah. Sekarang, kalau tagihan itu masih
+// shared+sharedAutoPiutang setelah diedit, piutang otomatis yang BELUM lunas (masih ditagih,
+// bukan riwayat yg sudah kelar) ikut disesuaikan ke sisa porsi terbaru. Piutang yang SUDAH
+// lunas (histori valid dari periode lalu) sengaja TIDAK disentuh -- itu catatan historis yang
+// sudah selesai, bukan proyeksi yang perlu dikoreksi ke belakang.
+// FIX (lanjutan audit user, gap #2): sebelumnya fungsi ini nge-flatten SEMUA piutang
+// belum-lunas dgn autoBillId yg sama ke nilai baru yg SAMA PERSIS. Kalau langganan/cicilan
+// shared ini nunggak ditagih 2-3 periode sekaligus (ada beberapa piutang belum lunas dgn
+// nilai historis beda-beda per periode), edit tagihan sekarang bakal menyamaratakan
+// semuanya -- menimpa data periode lama yg sebenarnya valid. Sekarang dibatasi ke piutang
+// PERIODE TERBARU saja (autoTxId terbesar di antara yg belum lunas), pola sama seperti
+// isLatestInstallment/isLatestBillPaymentTx yg sudah dipakai di transaksi.js/tagihan-kalender.js.
+function syncOutstandingSharedPiutang(billId,newSisa){
+if(!billId||!D.piutang||!D.piutang.length)return 0;
+const sisa=Math.max(0,Math.round(newSisa||0));
+const outstanding=D.piutang.filter(p=>p.autoBillId===billId&&!p.lunas);
+if(!outstanding.length)return 0;
+const latest=outstanding.reduce((a,b)=>((b.autoTxId||0)>(a.autoTxId||0)?b:a));
+latest.nilai=sisa;
+return 1;
+}
+// getAutoPiutangIdForBill(billId,piutangList) — FIX ringkas (audit lanjutan user, laporan
+// "chip 🧾 satu arah aja (Piutang->Tagihan)"): s300 nambah chip "🧾 Tagihan asal" di kartu
+// Piutang otomatis (p.autoBillId) yang buka balik ke tagihan sumbernya (openBillModal), tapi
+// arah sebaliknya belum ada -- kartu Tagihan yang jadi sumber piutang otomatis
+// (sharedAutoPiutang) tidak punya link cepat ke piutangnya. Fungsi murni ini nentuin SATU
+// piutang mana yang harus ditautkan balik dari sisi Tagihan (dipakai renderBillItemHtml,
+// modules-render.js) -- prioritas ke piutang yang BELUM lunas (masih perlu ditagih, paling
+// actionable buat user), kalau semua entri utk billId ini sudah lunas baru fallback ke entri
+// TERBARU (autoTxId terbesar, pola sama isLatestBillPaymentTx/syncOutstandingSharedPiutang di
+// atas) sbg riwayat. Fungsi murni (tidak baca/tulis D/DOM) supaya bisa dites tanpa DOM.
+function getAutoPiutangIdForBill(billId,piutangList){
+if(!billId||!piutangList||!piutangList.length)return null;
+const matches=piutangList.filter(p=>p.autoBillId===billId);
+if(!matches.length)return null;
+const unlunas=matches.filter(p=>!p.lunas);
+const pool=unlunas.length?unlunas:matches;
+return pool.reduce((a,b)=>((b.autoTxId||0)>(a.autoTxId||0)?b:a)).id;
+}
+// syncSharedPiutangOnPaymentEdit(txId,oldAmount,newAmount) — FIX (lanjutan audit user,
+// sync 2 arah "Ditanggung Bersama"): edit jumlah di 📋 Riwayat Pembayaran
+// (saveBillHistoryEdit, tagihan-kalender.js) mengoreksi porsi SAYA pada 1 transaksi
+// historis (t.amount) -- kalau transaksi itu yang jadi sumber 1 piutang otomatis
+// (autoTxId cocok) & piutang itu belum lunas, sisa piutang disesuaikan supaya TOTAL
+// periode itu (porsi saya + sisa pihak lain) tetap sama seperti semula: total lama =
+// nilai_lama + oldAmount, sisa baru = total lama - newAmount = nilai_lama + oldAmount -
+// newAmount. Piutang yang sudah lunas TIDAK disentuh (histori yang sudah selesai).
+function syncSharedPiutangOnPaymentEdit(txId,oldAmount,newAmount){
+if(!txId||!D.piutang||!D.piutang.length)return false;
+const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
+if(!p)return false;
+p.nilai=Math.max(0,Math.round((p.nilai||0)+(oldAmount||0)-(newAmount||0)));
+return true;
+}
+// syncDebtBalanceOnPaymentEdit(bill,oldAmount,newAmount) — FIX (audit user, item #4 dari
+// laporan s299 -- pola "sync 2 arah" yang sama kayak Piutang di atas, tapi arah Utang):
+// D.debts[].nilai adalah SATU angka sisa yang berkurang tiap kali `bill.kind==='utang'`
+// dibayar (lihat markBillPaid(), tagihan-kalender.js: `dbt.nilai-=b.amount`). Kalau jumlah
+// SATU transaksi pembayaran itu dikoreksi belakangan (lewat 📋 Riwayat Pembayaran ATAU
+// modal Transaksi biasa), sisa utang harus ikut disesuaikan sebesar selisihnya -- kalau
+// tidak, sisa utang jadi basi permanen (tetap mencerminkan jumlah LAMA, bukan yang baru).
+// Beda dari Piutang (s299 gap #2): di sana ada BANYAK entri piutang independen per-periode
+// (perlu dibatasi ke "periode terbaru saja" biar histori lama tidak ketimpa) -- di sini
+// cuma SATU angka running total, jadi selisihnya berlaku langsung tanpa perlu pembatasan
+// itu. Pembatasan "pembayaran TERBARU saja" tetap dipakai oleh caller (isLatestInstallment/
+// isLatestBillPaymentTx) supaya scope fix ini konsisten & konservatif (edit pembayaran lama
+// pada utang yang sudah lunas/diarsip -- kasus langka -- di luar cakupan, caller cukup skip
+// panggil fungsi ini kalau bukan pembayaran terbaru).
+function syncDebtBalanceOnPaymentEdit(bill,oldAmount,newAmount){
+if(!bill||bill.kind!=='utang'||!bill.debtId)return false;
+const dbt=D.debts.find(x=>sameId(x.id,bill.debtId));
+if(!dbt)return false;
+dbt.nilai=Math.max(0,(dbt.nilai||0)+(oldAmount||0)-(newAmount||0));
+return true;
+}
 const Piutang={
 editId:null,
 _lunasState:false,
@@ -90,6 +181,11 @@ save(){
 const name=document.getElementById('piutangName').value.trim();
 if(!name){toast('⚠️ Nama peminjam wajib diisi');return;}
 const nilai=parsePzNum(document.getElementById('piutangNilai').value);
+// FIX (BUG-FIN-001): guard nilai<=0 -- sebelumnya parsePzNum() bisa
+// menghasilkan 0 (kosong/non-digit) atau NEGATIF (input diawali "-") tanpa
+// peringatan, lolos tersimpan & ikut ke Total Piutang/Net Worth. Pola sama
+// persis dgn save() lain se-codebase (mis. tagihan-kalender.js:683).
+if(!nilai||nilai<=0){toast('⚠️ Nilai piutang harus lebih dari 0');return;}
 const tanggal=document.getElementById('piutangTanggal').value||'';
 const jatuhTempo=document.getElementById('piutangJatuhTempo').value||'';
 const catatan=document.getElementById('piutangCatatan').value.trim();
@@ -162,6 +258,14 @@ const od=overdue?Piutang.overdueDays(p):0;
 const metaParts=[];
 if(p.jatuhTempo)metaParts.push(overdue?`⚠️ Telat ${od} hari (jatuh tempo ${p.jatuhTempo})`:'Jatuh tempo '+p.jatuhTempo);
 if(p.catatan)metaParts.push(escapeHtml(p.catatan));
+// UX (non-urgent, laporan audit sync Piutang↔Tagihan): piutang otomatis (autoBillId)
+// sebelumnya cuma bisa dibedain dari yang manual lewat field internal, tidak kelihatan
+// di UI -- gampang salah edit/hapus dikira piutang manual biasa. Tambah chip kecil
+// "🧾 Lihat tagihan asal" yang buka modal tagihan sumbernya langsung (reuse openBillModal,
+// yang sudah handle tagihan yang sudah diarsip/dihapus -- lihat tagihan-kalender.js).
+// data-stop="1" wajib supaya klik chip tidak ikut trigger data-action="openPiutangModal"
+// milik parent tx-item (pola sama dgn tombol 🗑 Hapus di bawah).
+if(p.autoBillId)metaParts.push(`<span class="u-fs10 u-pointer u-r6" style="color:var(--text2);background:var(--bg3);padding:1px 6px;border:1px solid var(--border)" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([p.autoBillId]))}" title="Lihat tagihan asal">🧾 Tagihan asal</span>`);
 const badge=p.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>'
 :(isPrioritas?' <span class="u-fs10 u-r6 u-ml4" style="color:#fff;background:var(--accent2);padding:1px 5px">🔥 Prioritas</span>'
 :(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':''));
@@ -234,6 +338,9 @@ const name=document.getElementById('debtName').value.trim();
 if(!name){toast('⚠️ Nama pemberi pinjaman wajib diisi');return;}
 const jenis=document.getElementById('debtJenis').value||'lainnya';
 const nilai=parsePzNum(document.getElementById('debtNilai').value);
+// FIX (BUG-FIN-001): guard nilai<=0 -- pola sama persis dgn Piutang.save()
+// di atas (lihat komentar di sana).
+if(!nilai||nilai<=0){toast('⚠️ Nilai utang harus lebih dari 0');return;}
 const bunga=parseFloat(document.getElementById('debtBunga').value)||0;
 const cicilanBulanan=parsePzNum(document.getElementById('debtCicilan').value);
 const tanggal=document.getElementById('debtTanggal').value||'';
@@ -507,3 +614,4 @@ if(curBillHistoryId==null){toast('⚠️ Buka dulu Riwayat Pembayaran tagihan ya
 LinkTx.open('bill',curBillHistoryId);
 }
 };
+if (typeof Bill !== 'undefined') window.Bill = Bill;

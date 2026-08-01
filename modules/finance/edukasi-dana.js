@@ -173,3 +173,11 @@ toast('❌ Gagal cek: '+(e.message||String(e)));
 }
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['EduFund'][method]. `const EduFund = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="EduFund.xxx" gagal diam-diam.
+if (typeof EduFund !== 'undefined') window.EduFund = EduFund;

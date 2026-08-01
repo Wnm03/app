@@ -253,3 +253,11 @@ const streak=this.computeStreak();
 el.textContent=streak>0?('🔥 '+streak+' hari'):'';
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Refleksi'][method]. `const Refleksi = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Refleksi.xxx" gagal diam-diam.
+if (typeof Refleksi !== 'undefined') window.Refleksi = Refleksi;

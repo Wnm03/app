@@ -403,6 +403,14 @@ return`<div class="tx-item">
     </div>`;
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Order'][method]. `const Order = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Order.xxx" gagal diam-diam.
+if (typeof Order !== 'undefined') window.Order = Order;
 
 // isCobekOwnershipSelf(t) — helper REUSE dari OwnershipEngine (Sesi 194,
 // Ownership Sync Shop). Balikin true kalau kepemilikan EFEKTIF transaksi
@@ -518,6 +526,24 @@ const elTrip=document.getElementById('lapTrip');if(elTrip)elTrip.textContent=inR
 const elOmzet=document.getElementById('lapOmzet');if(elOmzet)elOmzet.textContent=fmt(omzet);
 const elUntung=document.getElementById('lapUntung');if(elUntung)elUntung.textContent=fmt(untung);
 const elMargin=document.getElementById('lapMargin');if(elMargin)elMargin.textContent=(omzet>0?Math.round((untung/omzet)*100):0)+'%';
+// S337 (konsistensi pola badge/progress-bar Dashboard Hub & Laporan
+// Keuangan): 0 kalkulasi baru — reuse omzet/untung yang sudah dihitung di
+// atas. Modal = omzet-untung (identitas yang sudah berlaku dari cara
+// `untung`/`t.profit` dihitung, bukan rumus baru).
+const elUntungBox=document.getElementById('lapUntungBox');
+const elUntungBadge=document.getElementById('lapUntungBadge');
+if(elUntungBox)elUntungBox.classList.toggle('stat-box--warn',untung<0);
+if(elUntungBadge)elUntungBadge.classList.toggle('u-dnone',untung>=0);
+const elOmzetBar=document.getElementById('lapOmzetBar');
+if(elOmzetBar){
+const modal=omzet-untung;
+const showBar=omzet>0&&untung>=0;
+elOmzetBar.classList.toggle('u-dnone',!showBar);
+if(showBar){
+document.getElementById('lapOmzetBarUntung').style.width=Math.round((untung/omzet)*100)+'%';
+document.getElementById('lapOmzetBarModal').style.width=Math.round((modal/omzet)*100)+'%';
+}
+}
 this.renderGrafik('lapGrafikBars');
 this.renderTopProduk(inRangeSelf);
 this.renderTopPelanggan(inRangeSelf);
