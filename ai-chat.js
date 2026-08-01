@@ -557,6 +557,7 @@ pC.classList.toggle('u-dnone',tab!=='coach');pC.style.display=tab==='coach'?'blo
 pR.classList.toggle('u-dnone',tab!=='report');pR.style.display=tab==='report'?'block':'none';
 }
 };
+if (typeof Advisor !== 'undefined') window.Advisor = Advisor;
 // AIRecommendCard — Sesi 14 (TODO.md #1, wiring recordOutcome() dari 1 titik UI nyata): kartu
 // kecil di dalam "🧭 Penasihat" > tab "🩺 Insight Cepat" (di bawah FinCoach), khusus buat
 // rekomendasi dari AIDecision (mesin Rule/Cross-Module Tahap 4, TERPISAH dari FinCoach yg
@@ -709,6 +710,7 @@ return `
       </div>`;}).join('');
 }
 };
+if (typeof AIRecommendCard !== 'undefined') window.AIRecommendCard = AIRecommendCard;
 // AIDailyBriefingCard — Dashboard/nav wiring dailyBriefing() (TODO.md #2, lanjutan Sesi 15).
 // Kartu kecil di dalam "🧭 Penasihat" > tab "🩺 Insight Cepat", DI BAWAH AIRecommendCard —
 // reuse pola card yang sudah ada di file ini (container khusus, guard typeof, fire-and-forget
@@ -778,6 +780,7 @@ body.innerHTML=`<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🩺 Status AI</di
 +`<div class="u-fs12 u-lh15 u-t2" style="border-left:3px solid var(--accent4);padding-left:8px">${issues.map(i=>escapeHtml(i)).join('<br>')}</div>`;
 }
 };
+if (typeof AIStatusCard !== 'undefined') window.AIStatusCard = AIStatusCard;
 // AISimulateWidget — Service Layer wiring simulate() (Sesi 28 lanjutan, TODO.md #6b/Tahap 2 sisa
 // sub-item). Tombol "🧪 Simulasi Cepat (What-If)" di dalam "🧭 Penasihat" > tab "🔍 Laporan AI",
 // DI BAWAH tombol Buat/Perbarui Analisis & Konsultasi AI — reuse panel & tombol yang sudah ada,
@@ -818,6 +821,7 @@ AISimulateWidget.running=false;
 if(btn){btn.disabled=false;btn.textContent='🧪 Simulasi Cepat (What-If)';}
 }
 };
+if (typeof AISimulateWidget !== 'undefined') window.AISimulateWidget = AISimulateWidget;
 // AIScenarioWidget — UI wiring AIService.simulateScenarios() (Sesi 48, kandidat Batch 2 #1
 // "UI wiring simulateScenarios()", `docs/BATCH_PLAN.md`/`docs/NEXT_SESSION.md`). Tombol "📊
 // Bandingkan Skenario Pengiriman" DI BAWAH tombol AISimulateWidget, tab yang SAMA "🔍 Laporan
@@ -886,6 +890,7 @@ AIScenarioWidget.running=false;
 if(btn){btn.disabled=false;btn.textContent='📊 Bandingkan Skenario Pengiriman';}
 }
 };
+if (typeof AIScenarioWidget !== 'undefined') window.AIScenarioWidget = AIScenarioWidget;
 // AIHealthCheckWidget — Tahap 8 "pusat diagnostik" (Sesi 34, TODO.md #4e lanjutan). Tombol
 // "🩺 Health Check Lengkap" di dalam "🧭 Penasihat" > tab "🔍 Laporan AI", DI BAWAH tombol
 // AISimulateWidget — reuse pola tombol on-demand yang sudah ada (fire-on-click, bukan
@@ -963,6 +968,7 @@ if(issues.length)html+=`<div class="u-fs12 u-lh15 u-t2 u-mt4" style="opacity:.8"
 return html;
 }
 };
+if (typeof AIHealthCheckWidget !== 'undefined') window.AIHealthCheckWidget = AIHealthCheckWidget;
 const AIWidget={
 generating:false,
 buildContext(){
@@ -1148,3 +1154,4 @@ if(input)input.focus();
 },150);
 }
 };
+if (typeof AIWidget !== 'undefined') window.AIWidget = AIWidget;

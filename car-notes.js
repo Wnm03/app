@@ -299,6 +299,13 @@ bbmMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banyak (
 },
 loadMore(){BBM.listPage++;BBM.renderList();}
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['BBM'][method]. `const BBM = {...}` di atas HANYA membuat binding
+// lexical-scope (bukan properti window), pola fix sama persis window.FuelModal
+// di fuel-modal.js (bug yang sama pernah terjadi & diperbaiki di sana).
+// Tanpa baris ini, semua tombol data-action="BBM.xxx" gagal diam-diam.
+if (typeof BBM !== 'undefined') window.BBM = BBM;
 const Servis={
 editId:null,
 listPage:1,
@@ -632,7 +639,13 @@ Servis.applyStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
 return;
 }
 if(catalogLinkedStockId&&!await Servis.applyStockUsage(catalogLinkedStockId,catalogPartQty)){
-if(usedPartId)await Servis.applyStockUsage(usedPartId,usedPartQty);
+// BUGFIX (audit S324): dulu baris di bawah ini malah applyStockUsage() lagi
+// (dobel-potong stok usedPartId yang BARU SAJA sukses dipotong di atas),
+// bukan revertStockUsage() -- dan restore usedPartId LAMA (s.usedPartId)
+// tidak pernah dikembalikan sama sekali di jalur ini walau sudah di-revert
+// duluan di awal fungsi. Fix: revert dulu potongan baru, baru restore yang lama.
+if(usedPartId)Servis.revertStockUsage(usedPartId,usedPartQty);
+Servis.applyStockUsage(s.usedPartId,s.usedPartQty);
 Servis.applyStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
 return;
 }
@@ -653,7 +666,11 @@ return;
 }
 if(usedPartId&&!await Servis.applyStockUsage(usedPartId,usedPartQty))return;
 if(catalogLinkedStockId&&!await Servis.applyStockUsage(catalogLinkedStockId,catalogPartQty)){
-if(usedPartId)await Servis.applyStockUsage(usedPartId,usedPartQty);
+// BUGFIX (audit S324): dulu applyStockUsage() lagi di sini (dobel-potong
+// stok usedPartId yang barusan sukses dipotong 1 baris di atas) padahal
+// seharusnya revertStockUsage() -- catatan servis ini batal disimpan
+// (return di bawah), jadi potongan usedPartId di atas harus dikembalikan.
+if(usedPartId)Servis.revertStockUsage(usedPartId,usedPartQty);
 return;
 }
 const servisId=uid();
@@ -811,6 +828,14 @@ servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banya
 } else servisMoreWrap.style.display='none';
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Servis'][method]. `const Servis = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di fuel-modal.js (bug yang sama pernah terjadi &
+// diperbaiki di sana). Tanpa baris ini, semua tombol data-action="Servis.xxx"
+// (termasuk chip rekomendasi part) gagal diam-diam.
+if (typeof Servis !== 'undefined') window.Servis = Servis;
 const TORSI_STANDARD_CAT={cat:'Standar (Umum)', icon:'🔩', items:[
 {name:'Baut hex 5 mm & mur', ulir:'5 mm', nm:5.2, kgf:0.5},
 {name:'Baut hex 6 mm & mur (termasuk baut flens SH)', ulir:'6 mm', nm:10, kgf:1.0},
@@ -1225,3 +1250,13 @@ return `<div class="trs-part-row" data-action="torsiSelectPartIfAllowed" data-ar
     </div>`;
 }
 };
+
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Torsi'][method]. `const Torsi = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di fuel-modal.js (bug yang sama pernah terjadi &
+// diperbaiki di sana). Tanpa baris ini, semua interaksi modal Kalkulator
+// Torsi (pilih kategori, toggle checklist, mode kalkulator, dst) gagal
+// diam-diam.
+if (typeof Torsi !== 'undefined') window.Torsi = Torsi;

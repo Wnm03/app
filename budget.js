@@ -333,6 +333,14 @@ bar.className='budget-bar-fill '+(pct>=100?'over':pct>=80?'warn':'ok');
 card.classList.remove('u-dnone');card.style.display='block';
 }
 };
+// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
+// features-helpers-global-security.js) bisa menemukan modul ini lewat
+// window['Budget'][method]. `const Budget = {...}` di atas HANYA membuat
+// binding lexical-scope (bukan properti window), pola fix sama persis
+// window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,Servis,Torsi
+// di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
+// sana. Tanpa baris ini, semua tombol data-action="Budget.xxx" gagal diam-diam.
+if (typeof Budget !== 'undefined') window.Budget = Budget;
 // Wrapper global tipis ke Budget.* — digabung dari backup-restore.js (v91),
 // ditaruh persis di sebelah objek Budget yang dibungkusnya. Dipakai HTML data-action & modules-render.js.
 function getBudgetSettings(){return Budget.getSettings();}
@@ -376,6 +384,7 @@ if(addBtn)addBtn.style.display=tab==='list'?'':'none';
 if(tab==='reko'&&typeof BudgetReko!=='undefined')BudgetReko.render();
 }
 };
+if (typeof BudgetTabs !== 'undefined') window.BudgetTabs = BudgetTabs;
 const BudgetReko={
 _lastCats:[],
 getSettings(){
@@ -532,3 +541,4 @@ box.innerHTML=html;
 },
 init(){ BudgetReko.render(); }
 };
+if (typeof BudgetReko !== 'undefined') window.BudgetReko = BudgetReko;
