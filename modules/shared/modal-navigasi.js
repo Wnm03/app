@@ -17,11 +17,35 @@
 // referensi lokal ke file, jadi aman dipindah ke file sendiri.
 // PENTING: file ini HARUS dimuat SETELAH features-helpers-global-security.js (butuh escapeHtml(), dipakai
 // showChoiceModal utk render tombol pilihan).
-let _confirmResolve=null;
+//
+// BUGFIX (audit "tombol Bayar/Riwayat macet, 0 toast", laporan user): kelima dialog custom
+// di bawah (confirm/prompt/choice/alert/pin) dulu masing-masing cuma punya SATU variabel
+// resolver module-scope (mis. `_confirmResolve`). Kalau fungsi show-nya terpanggil 2x
+// sebelum jawaban pertama masuk (mis. double-tap tombol "Bayar" di layar sentuh -- SANGAT
+// umum -- atau 2 alur berbeda yang kebetulan sama-sama minta konfirmasi), panggilan kedua
+// MENIMPA resolver panggilan pertama: Promise pertama jadi orphan, tidak pernah
+// resolve/reject, tidak ada error/toast (dispatcher klik di features-helpers-global-
+// security.js cuma nangkep REJECT, bukan promise yang cuma diam menggantung selamanya).
+// Fix: _queueDialog() di bawah menyimpan SEMUA permintaan (bukan cuma yang terakhir) di
+// antrean per-jenis dialog; permintaan berikutnya BARU ditampilkan setelah yang sebelumnya
+// dijawab, jadi tidak ada satupun Promise yang hilang/orphan. 0 perubahan pada pemanggil
+// (askConfirm()/showPromptModal()/dst tetap 1 pemanggilan = 1 Promise seperti sebelumnya).
+function _queueDialog(store,renderFn){
+return new Promise((resolve)=>{
+store.queue.push({resolve,renderFn});
+if(store.queue.length===1) renderFn();
+});
+}
+function _resolveDialog(store,overlayId,val){
+document.getElementById(overlayId).classList.remove('open');
+const cur=store.queue.shift();
+if(cur)cur.resolve(val);
+if(store.queue.length) setTimeout(()=>store.queue[0].renderFn(),0);
+}
+const _confirmStore={queue:[]};
 function askConfirm(message,opts){
 opts=opts||{};
-return new Promise((resolve)=>{
-_confirmResolve=resolve;
+return _queueDialog(_confirmStore,()=>{
 document.getElementById('confirmModalIcon').textContent=opts.icon||'⚠️';
 document.getElementById('confirmModalTitle').textContent=opts.title||'Konfirmasi';
 document.getElementById('confirmModalMsg').textContent=message;
@@ -33,16 +57,14 @@ document.getElementById('confirmModalOverlay').classList.add('open');
 });
 }
 function _confirmModalAnswer(val){
-document.getElementById('confirmModalOverlay').classList.remove('open');
-if(_confirmResolve){const r=_confirmResolve;_confirmResolve=null;r(val);}
+_resolveDialog(_confirmStore,'confirmModalOverlay',val);
 }
-let _promptModalResolve=null;
+const _promptStore={queue:[]};
 function showPromptModal(opts){
 opts=opts||{};
 const overlay=document.getElementById('promptModalOverlay');
 if(!overlay){ return Promise.resolve(prompt(opts.message||'',opts.defaultValue!=null?String(opts.defaultValue):'')); }
-return new Promise((resolve)=>{
-_promptModalResolve=resolve;
+return _queueDialog(_promptStore,()=>{
 overlay._validateFn=opts.validate||null;
 document.getElementById('promptModalIcon').textContent=opts.icon||'✏️';
 document.getElementById('promptModalTitle').textContent=opts.title||'Isi Data';
@@ -69,14 +91,12 @@ if(overlay._validateFn){
 const err=overlay._validateFn(val);
 if(err){ document.getElementById('promptModalError').textContent=err; return; }
 }
-overlay.classList.remove('open');
-if(_promptModalResolve){const r=_promptModalResolve;_promptModalResolve=null;r(val);}
+_resolveDialog(_promptStore,'promptModalOverlay',val);
 }
 function _promptModalAnswer(val){
-document.getElementById('promptModalOverlay').classList.remove('open');
-if(_promptModalResolve){const r=_promptModalResolve;_promptModalResolve=null;r(val);}
+_resolveDialog(_promptStore,'promptModalOverlay',val);
 }
-let _choiceModalResolve=null;
+const _choiceStore={queue:[]};
 function showChoiceModal(opts){
 opts=opts||{};
 const choices=opts.choices||[];
@@ -88,8 +108,7 @@ if(idxStr===null)return Promise.resolve(null);
 const idx=parseInt(idxStr)-1;
 return Promise.resolve(choices[idx]?idx:null);
 }
-return new Promise((resolve)=>{
-_choiceModalResolve=resolve;
+return _queueDialog(_choiceStore,()=>{
 document.getElementById('choiceModalTitle').textContent=opts.title||'Pilih';
 const msgEl=document.getElementById('choiceModalMsg');
 msgEl.textContent=opts.message||'';
@@ -100,16 +119,14 @@ document.getElementById('choiceModalOverlay').classList.add('open');
 });
 }
 function _choiceModalAnswer(idx){
-document.getElementById('choiceModalOverlay').classList.remove('open');
-if(_choiceModalResolve){const r=_choiceModalResolve;_choiceModalResolve=null;r(idx);}
+_resolveDialog(_choiceStore,'choiceModalOverlay',idx);
 }
-let _infoModalResolve=null;
+const _infoStore={queue:[]};
 function showAlertModal(message,opts){
 opts=opts||{};
 const overlay=document.getElementById('infoModalOverlay');
 if(!overlay){ alert(message); return Promise.resolve(); }
-return new Promise((resolve)=>{
-_infoModalResolve=resolve;
+return _queueDialog(_infoStore,()=>{
 document.getElementById('infoModalIcon').textContent=opts.icon||'⚠️';
 document.getElementById('infoModalTitle').textContent=opts.title||'Perhatian';
 document.getElementById('infoModalMsg').textContent=message;
@@ -118,16 +135,14 @@ overlay.classList.add('open');
 });
 }
 function _infoModalAnswer(){
-document.getElementById('infoModalOverlay').classList.remove('open');
-if(_infoModalResolve){const r=_infoModalResolve;_infoModalResolve=null;r(true);}
+_resolveDialog(_infoStore,'infoModalOverlay',true);
 }
-let _pinPromptResolve=null;
+const _pinPromptStore={queue:[]};
 function showPinPromptModal(opts){
 opts=opts||{};
 const overlay=document.getElementById('pinPromptModalOverlay');
 if(!overlay){ return Promise.resolve(prompt(opts.message||'PIN baru (4 digit):')); }
-return new Promise((resolve)=>{
-_pinPromptResolve=resolve;
+return _queueDialog(_pinPromptStore,()=>{
 document.getElementById('pinPromptModalTitle').textContent=opts.title||'Ganti PIN';
 document.getElementById('pinPromptModalMsg').textContent=opts.message||'Masukkan PIN baru (4 digit angka)';
 const input=document.getElementById('pinPromptInput');
@@ -141,12 +156,10 @@ function _pinPromptSubmit(){
 const input=document.getElementById('pinPromptInput');
 const val=(input.value||'').trim();
 if(val.length!==4){ document.getElementById('pinPromptError').textContent='PIN harus 4 digit angka.'; return; }
-document.getElementById('pinPromptModalOverlay').classList.remove('open');
-if(_pinPromptResolve){const r=_pinPromptResolve;_pinPromptResolve=null;r(val);}
+_resolveDialog(_pinPromptStore,'pinPromptModalOverlay',val);
 }
 function _pinPromptAnswer(val){
-document.getElementById('pinPromptModalOverlay').classList.remove('open');
-if(_pinPromptResolve){const r=_pinPromptResolve;_pinPromptResolve=null;r(val);}
+_resolveDialog(_pinPromptStore,'pinPromptModalOverlay',val);
 }
 function showPage(name,el){
 document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

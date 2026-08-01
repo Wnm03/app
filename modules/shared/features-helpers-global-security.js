@@ -48,8 +48,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's348-fix-window-expose-audit-alokasiaset';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's348-fix-window-expose-audit-alokasiaset';
+const APP_BUILD_VERSION = 's350-fix-dialog-resolver-race-bayar-riwayat';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's350-fix-dialog-resolver-race-bayar-riwayat';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],
@@ -282,12 +282,23 @@ return a;
 // console yang user awam tidak pernah buka -- persis gejala "tombol scan
 // tidak bisa dibuka, tidak ada error, 0 toast". Fix: tangkap Promise hasil
 // fn.apply() (kalau ada) & munculkan toast yang sama seperti error sinkron.
+// BUGFIX (audit "tombol Bayar/Riwayat macet, 0 toast", laporan user): dulu tidak ada
+// guard apa pun terhadap klik ganda (double-tap) pada tombol yang action-nya async
+// (mis. markBillPaid() -> askConfirm()/showPromptModal()). Double-tap memicu fn.apply()
+// DUA KALI hampir bersamaan -> 2 pemanggilan concurrent ke dialog custom yang sama,
+// yang (sebelum fix di modal-navigasi.js) saling menimpa resolver-nya & bikin salah satu
+// nyangkut selamanya tanpa toast. Guard ini SATU baris pertahanan tambahan (independen
+// dari fix antrean di modal-navigasi.js): selagi Promise dari action ini masih pending,
+// klik ulang pada ELEMEN YANG SAMA diabaikan -- bukan didiamkan tanpa jejak (masih bisa
+// diklik lagi normal begitu action pertama selesai/gagal).
+if (el.dataset.pendingAction) return;
 const result = fn.apply(owner, args);
 if (result && typeof result.catch === 'function') {
+el.dataset.pendingAction = '1';
 result.catch((err) => {
 console.error('[data-action] async handler error:', el.dataset.action, err);
 if (typeof toast === 'function') toast('⚠️ Gagal menjalankan "' + el.dataset.action + '": ' + (err && err.message ? err.message : 'error tidak diketahui'), 5000);
-});
+}).finally(() => { delete el.dataset.pendingAction; });
 }
 }
 }catch(err){
