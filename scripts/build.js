@@ -39,6 +39,11 @@
  *      pernah diperbaiki, lalu sempat ke-revert tanpa sengaja lewat
  *      patch dari branch lama — build akan DIHENTIKAN kalau pola ini
  *      muncul lagi. Lihat fungsi lintOcrPrematureTesseractCheck() di bawah.
+ *   8. Lint peringatan "file source kegedean" — file .js sumber (bukan
+ *      bundle/.min.js) yang sudah lewat ambang baris tertentu ditandai
+ *      sbg kandidat dipecah modulnya. Ini CUMA PERINGATAN (build tetap
+ *      lanjut) — sinyal dini spy blast radius edit tidak makin lebar.
+ *      Lihat fungsi lintOversizedSourceFiles() di bawah.
  *
  * Pemakaian:
  *   node build.js                  → auto-increment nomor versi (…-31 → …-32)
@@ -1532,83 +1537,337 @@ function syntaxCheck(file) {
   }
 }
 
-function main() {
-  console.log('Mengecek pola bug "u-dnone (!important) vs style.display"...');
-  const dnoneProblems = lintDnoneStyleDisplayMismatch();
-  if (dnoneProblems.length) {
-    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${dnoneProblems.length} elemen berpotensi "judul tampil, konten permanen kosong":\n`);
-    dnoneProblems.forEach((p) => console.error('  - ' + p));
-    console.error(
+// 3e. Lint non-fatal: cek baris "| Label | Angka |" di dokumen² tertentu vs
+// jumlah file sungguhan di repo. TIDAK menghentikan build (angka baseline
+// wajar berubah tiap sesi nambah file) — cuma WARNING supaya dokumen yang
+// telat diupdate ketahuan sebelum jadi kasus seperti audit pack v987/s325
+// yang ternyata dibuat dari snapshot yang salah (angka baseline meleset
+// dari isi ZIP yang sebenarnya diupload).
+//
+// GENERIK (S328, tindak lanjut poin #2 daftar saran maintainability
+// pasca-audit S324): sebelumnya fungsi ini HARDCODE cuma cek 4 dari 8 baris
+// "Coverage Baseline" di AUDIT_MATRIX.md ("Total files"/"JavaScript"/
+// "Markdown"/"HTML") — 2 baris lain yang SAMA-SAMA angka file count murni
+// ("JSON", "CSS") diam-diam TIDAK PERNAH dicek sejak baseline dibuat,
+// padahal formatnya identik & gampang dihitung. "Tests" & "Module families"
+// sengaja TETAP tidak dicek: "Tests" di tabel ini historically berarti
+// jumlah *kasus* test (bukan jumlah file), sudah dicek terpisah & lebih
+// akurat lewat `node --test` (lihat CHANGELOG), dan "Module families" pakai
+// notasi "13+" (bukan angka pasti) — memaksakan keduanya ke pola file-count
+// generik ini cuma akan menghasilkan sinyal palsu.
+//
+// FILE_COUNT_LINT_LABELS di bawah adalah SATU-SATUNYA tempat yang perlu
+// diedit kalau sesi berikutnya mau menambah baris count baru (mis. ada
+// baseline count lain ditambah ke AUDIT_MATRIX.md atau ke dokumen lain) —
+// tidak perlu tulis fungsi walk-direktori baru per label seperti pola lama.
+const FILE_COUNT_LINT_LABELS = {
+  'Total files': () => true,
+  'JavaScript': (name) => name.endsWith('.js'),
+  'Markdown': (name) => name.endsWith('.md'),
+  'HTML': (name) => name.endsWith('.html'),
+  'JSON': (name) => name.endsWith('.json'),
+  'CSS': (name) => name.endsWith('.css'),
+};
+
+// Dokumen mana saja yang discan utk baris "| Label | Angka |". Generik juga
+// dari sisi dokumen: kalau sesi berikutnya taruh baseline count serupa di
+// dokumen lain (bukan cuma AUDIT_MATRIX.md), cukup tambah path-nya di sini.
+const FILE_COUNT_LINT_DOCS = ['docs/AUDIT_MATRIX.md'];
+
+function lintDocsBaselineCountDrift() {
+  // Satu kali walk seluruh repo, hitung SEMUA label sekaligus per file —
+  // lebih efisien drpd versi lama yang walk ulang direktori per ekstensi,
+  // dan otomatis ikut menghitung label baru yang ditambah ke
+  // FILE_COUNT_LINT_LABELS tanpa perlu sentuh logic walk-nya lagi.
+  const labels = Object.keys(FILE_COUNT_LINT_LABELS);
+  const actual = Object.fromEntries(labels.map((l) => [l, 0]));
+  const walk = (dir) => {
+    for (const name of fs.readdirSync(dir)) {
+      if (name === 'node_modules' || name === '.git' || name === 'backups') continue;
+      const full = path.join(dir, name);
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      for (const label of labels) {
+        if (FILE_COUNT_LINT_LABELS[label](name)) actual[label]++;
+      }
+    }
+  };
+  walk(ROOT);
+
+  const warnings = [];
+  for (const docPath of FILE_COUNT_LINT_DOCS) {
+    if (!fs.existsSync(path.join(ROOT, docPath))) continue;
+    const md = readFile(docPath);
+    for (const label of labels) {
+      const re = new RegExp('\\|\\s*' + label + '\\s*\\|\\s*(\\d+)\\s*\\|');
+      const m = md.match(re);
+      if (!m) continue;
+      const docCount = Number(m[1]);
+      const actualCount = actual[label];
+      if (docCount !== actualCount) {
+        warnings.push(`${docPath} — "${label}": dokumen bilang ${docCount}, repo sungguhan ${actualCount} (selisih ${actualCount - docCount})`);
+      }
+    }
+  }
+  return warnings;
+}
+
+// Ambang baris untuk file source .js (BUKAN bundle/.min.js) sebelum
+// dianggap "kegedean" & jadi kandidat dipecah modulnya. Nomor ini
+// longgar dgn sengaja (file terbesar saat ambang ini dibuat ada di
+// ~2100 baris) — tujuannya cuma menandai file yang TERUS membesar,
+// bukan memaksa refactor mendadak. Kalau sebuah file source memang
+// sengaja besar & sudah didiskusikan, tambahkan nama filenya (relatif
+// ke ROOT, pakai '/') ke OVERSIZED_FILE_ALLOWLIST di bawah supaya
+// tidak terus muncul di setiap build.
+const OVERSIZED_FILE_LINE_THRESHOLD = 1600;
+const OVERSIZED_FILE_ALLOWLIST = [
+  'self-test.js', // kumpulan test lama, bukan kode aplikasi — wajar besar
+];
+
+// 3d. Lint guard "empty catch" (S330, poin #5 dari daftar saran
+// maintainability user pasca-audit S324). Blok catch yang isinya 100%
+// kosong (tanpa kode maupun komentar) menelan error TANPA jejak apa pun —
+// kalau errornya beneran terjadi di produksi, tidak ada cara tahu dari
+// console/log manapun. Lint ini TIDAK melarang menelan error sama sekali
+// (banyak try/catch di codebase ini SENGAJA silent, mis. optional feature
+// detection/localStorage tidak tersedia/dst) — cukup mewajibkan blok catch
+// punya SESUATU di dalamnya: kode (console.warn/fallback/assignment/dst)
+// ATAU minimal komentar yang menjelaskan KENAPA sengaja dikosongkan. Body
+// yang beneran kosong (cuma whitespace) yang ditandai; body berisi
+// komentar SAJA (mis. `catch(e){ /* sengaja diam */ }`) sudah otomatis
+// lolos, tidak perlu penanda suppress terpisah.
+// severity: 'warning' (bukan 'blocking') — di codebase existing ada cukup
+// banyak catch kosong pre-existing (mis. onboarding.js/keamanan-pin.js/
+// debug-console.js dkk), memblokir build sekarang berarti harus
+// membereskan semuanya dulu dalam 1 sesi, di luar scope "guard" (cegah
+// regresi baru) yang diminta poin #5 — pola sama dgn docs-baseline-count-
+// drift (S321) & oversized-source-files (S325) yang juga warning-only
+// saat pertama ditambahkan ke codebase existing.
+function findMatchingBrace(content, openBracePos) {
+  let depth = 0;
+  let quote = null;
+  for (let i = openBracePos; i < content.length; i++) {
+    const c = content[i];
+    if (quote) {
+      if (c === '\\') { i++; continue; }
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
+    if (c === '{') { depth++; continue; }
+    if (c === '}') {
+      depth--;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
+function lintEmptyCatchGuard() {
+  const problems = [];
+  const CATCH_RE = /\bcatch\b\s*(\([^)]*\))?\s*\{/g;
+  for (const f of ALL_SOURCE) {
+    const content = readFile(f);
+    CATCH_RE.lastIndex = 0;
+    let m;
+    while ((m = CATCH_RE.exec(content))) {
+      const openBracePos = m.index + m[0].length - 1;
+      const closeBracePos = findMatchingBrace(content, openBracePos);
+      if (closeBracePos === -1) continue;
+      const body = content.slice(openBracePos + 1, closeBracePos);
+      if (body.trim() !== '') continue; // ada kode dan/atau komentar -> lolos
+      const lineNo = content.slice(0, m.index).split('\n').length;
+      problems.push(`${f}:${lineNo} — catch block kosong total (tanpa kode maupun komentar), error ditelan tanpa jejak`);
+    }
+  }
+  return problems;
+}
+
+function lintOversizedSourceFiles() {
+  const skipDirs = new Set(['node_modules', '.git', 'backups', 'tests']);
+  const results = [];
+
+  const walk = (dir) => {
+    for (const name of fs.readdirSync(dir)) {
+      if (skipDirs.has(name)) continue;
+      const full = path.join(dir, name);
+      const stat = fs.statSync(full);
+      if (stat.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!name.endsWith('.js') || name.endsWith('.min.js')) continue;
+      const relPath = path.relative(ROOT, full).split(path.sep).join('/');
+      if (OVERSIZED_FILE_ALLOWLIST.includes(relPath)) continue;
+      const lineCount = readFile(relPath).split('\n').length;
+      if (lineCount > OVERSIZED_FILE_LINE_THRESHOLD) {
+        results.push({ relPath, lineCount });
+      }
+    }
+  };
+  walk(ROOT);
+
+  return results
+    .sort((a, b) => b.lineCount - a.lineCount)
+    .map((r) => `${r.relPath} — ${r.lineCount} baris (ambang: ${OVERSIZED_FILE_LINE_THRESHOLD})`);
+}
+
+// ============================================================================
+// LINT REGISTRY — SSOT (Single Source of Truth) untuk seluruh operasi lint
+// build-time (S328 poin #4 dari daftar saran maintainability pasca-audit
+// S324). SEBELUM sesi ini, tiap lint punya blok wiring bespoke ~15 baris
+// duplikat di main() (console.log pembuka, cek problems.length, format
+// error/warning, process.exit(1) utk blocking) — nambah lint baru berarti
+// copy-paste blok itu & rawan lupa 1 bagian. Sekarang tiap lint cukup 1
+// entry di array ini (fn murni yang sudah ada, TIDAK diubah) + 1 fungsi
+// generik `runLintRegistry()` yang mengeksekusi & melaporkan semuanya.
+// Urutan array = urutan eksekusi, dipertahankan SAMA PERSIS urutan lama di
+// main() sebelum refactor ini — 0 perubahan perilaku (pesan/exit code/
+// urutan check identik). severity 'blocking' -> process.exit(1) kalau ada
+// problem (5 lint lama yg pakai console.error+exit). severity 'warning' ->
+// console.warn saja, build TETAP LANJUT (2 lint lama yg pakai console.warn).
+// S330 (poin #5, "guard empty-catch") menambah entry ke-8, `empty-catch-
+// guard`, severity 'warning' (banyak catch kosong pre-existing di codebase,
+// lihat komentar di lintEmptyCatchGuard()).
+// ============================================================================
+const LINT_REGISTRY = [
+  {
+    name: 'dnone-style-display-mismatch',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek pola bug "u-dnone (!important) vs style.display"...',
+    successMsg: '✓ Tidak ada elemen u-dnone yang berisiko permanen kosong\n',
+    run: lintDnoneStyleDisplayMismatch,
+    label: (n) => `ditemukan ${n} elemen berpotensi "judul tampil, konten permanen kosong":`,
+    advice:
       '\nPerbaiki dengan menambahkan classList.remove(\'u-dnone\') (atau classList.toggle) ' +
       'sebelum/menyertai baris style.display di atas, lalu jalankan ulang node build.js.\n' +
-      'Referensi kasus asli: card Kebebasan Finansial (dashFiBody) yang judulnya tampil tapi isinya kosong.'
-    );
-    process.exit(1);
-  }
-  console.log('✓ Tidak ada elemen u-dnone yang berisiko permanen kosong\n');
-
-  console.log('Mengecek pola bug "field user dirender tanpa escapeHtml()"...');
-  const escapeProblems = lintUnescapedUserField().concat(lintUnescapedUserFieldConcat());
-  if (escapeProblems.length) {
-    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${escapeProblems.length} interpolasi/concatenation field user yang berpotensi celah HTML/script injection:\n`);
-    escapeProblems.forEach((p) => console.error('  - ' + p));
-    console.error(
+      'Referensi kasus asli: card Kebebasan Finansial (dashFiBody) yang judulnya tampil tapi isinya kosong.',
+  },
+  {
+    name: 'empty-catch-guard',
+    severity: 'warning',
+    checkingMsg: 'Mengecek catch block yang kosong total (menelan error tanpa jejak)...',
+    successMsg: '✓ Tidak ada catch block yang kosong total\n',
+    run: lintEmptyCatchGuard,
+    label: (n) => `${n} catch block kosong total ditemukan (build TETAP LANJUT, ini cuma peringatan):`,
+    advice:
+      '\nCatch yang sengaja diam itu boleh, tapi tambahkan minimal komentar yang menjelaskan\n' +
+      'kenapa (mis. `catch(e){ /* localStorage tidak tersedia, aman diabaikan */ }`), atau\n' +
+      'log seadanya (console.warn/console.debug) supaya kalau errornya tidak terduga masih\n' +
+      'ada jejaknya. Daftar di atas cuma warning (banyak yang pre-existing & sengaja) — perbaiki\n' +
+      'kalau sempat, atau biarkan kalau memang sudah sengaja & masih relevan.\n',
+  },
+  {
+    name: 'unescaped-user-field',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek pola bug "field user dirender tanpa escapeHtml()"...',
+    successMsg: '✓ Tidak ada field user yang dirender tanpa escapeHtml() (template literal maupun concatenation)\n',
+    run: () => lintUnescapedUserField().concat(lintUnescapedUserFieldConcat()),
+    label: (n) => `ditemukan ${n} interpolasi/concatenation field user yang berpotensi celah HTML/script injection:`,
+    advice:
       '\nPerbaiki dengan membungkus pakai escapeHtml(...), misal ${escapeHtml(x.nama)} atau ' +
       "'...'+escapeHtml(x.nama)+'...'.\n" +
       'Kalau setelah dicek field itu TERNYATA bukan data ketikan user (misal label status/enum ' +
       'tetap dari kode), tandai baris itu dgn komentar `// lint-ok-no-escape: <alasan>` supaya ' +
-      'lint ini tidak menghalangi build lagi untuk baris tsb.'
-    );
-    process.exit(1);
-  }
-  console.log('✓ Tidak ada field user yang dirender tanpa escapeHtml() (template literal maupun concatenation)\n');
-
-  console.log('Mengecek regresi pola bug "chicken-egg" OCR (typeof Tesseract===\'undefined\' sbg guard dini)...');
-  const ocrProblems = lintOcrPrematureTesseractCheck();
-  if (ocrProblems.length) {
-    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${ocrProblems.length} baris dengan pola guard dini "typeof Tesseract==='undefined'":\n`);
-    ocrProblems.forEach((p) => console.error('  - ' + p));
-    console.error(
+      'lint ini tidak menghalangi build lagi untuk baris tsb.',
+  },
+  {
+    name: 'ocr-premature-tesseract-check',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek regresi pola bug "chicken-egg" OCR (typeof Tesseract===\'undefined\' sbg guard dini)...',
+    successMsg: '✓ Tidak ada regresi pola guard dini Tesseract\n',
+    run: lintOcrPrematureTesseractCheck,
+    label: (n) => `ditemukan ${n} baris dengan pola guard dini "typeof Tesseract==='undefined'":`,
+    advice:
       '\nPola ini pernah menyebabkan OCR selalu gagal di scan pertama (Tesseract baru terdaftar\n' +
       'sbg global DI DALAM ensureTesseract(), yang dipanggil dari getOcrWorker()/ocrRecognize() —\n' +
       'jadi guard dini ini selalu true & langsung return sebelum sempat jalan). Hapus baris di atas;\n' +
       'biarkan ocrRecognize()/getOcrWorker() yang menangani kegagalan modul lewat scanErrorMessage().\n' +
-      'Lihat komentar BUGFIX di scan-ocr.js untuk detail lengkap.'
-    );
-    process.exit(1);
-  }
-  console.log('✓ Tidak ada regresi pola guard dini Tesseract\n');
-
-  console.log('Mengecek regresi "MODAL_HTML index drift" (document.write(MODAL_HTML[N]) vs isi array sungguhan)...');
-  const modalDriftProblems = lintModalHtmlIndexDrift();
-  if (modalDriftProblems.length) {
-    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${modalDriftProblems.length} drift index MODAL_HTML:\n`);
-    modalDriftProblems.forEach((p) => console.error('  - ' + p));
-    console.error(
+      'Lihat komentar BUGFIX di scan-ocr.js untuk detail lengkap.',
+  },
+  {
+    name: 'modal-html-index-drift',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek regresi "MODAL_HTML index drift" (document.write(MODAL_HTML[N]) vs isi array sungguhan)...',
+    successMsg: '✓ Tidak ada drift antara document.write(MODAL_HTML[N]) & isi MODAL_HTML sungguhan\n',
+    run: lintModalHtmlIndexDrift,
+    label: (n) => `ditemukan ${n} drift index MODAL_HTML:`,
+    advice:
       '\nModal yang SALAH akan ke-render di posisi itu kalau ini dibiarkan. Perbaiki dgn ' +
       'menyamakan urutan MODAL_HTML di modals.js dgn urutan document.write(MODAL_HTML[N]) ' +
       'di index.html (atau perbaiki komentar "<!-- modal:xxx -->" kalau memang cuma komentarnya ' +
-      'yang salah), lalu jalankan ulang node build.js.'
-    );
-    process.exit(1);
-  }
-  console.log('✓ Tidak ada drift antara document.write(MODAL_HTML[N]) & isi MODAL_HTML sungguhan\n');
-
-  console.log('Mengecek regresi "drift struktural Scanner" (vehicle-scanner.js vs sparepart-scanner.js)...');
-  const scannerDriftProblems = lintScannerStructuralDrift();
-  if (scannerDriftProblems.length) {
-    console.error(`\n❌ BUILD DIHENTIKAN — ditemukan ${scannerDriftProblems.length} drift struktural antara vehicle-scanner.js & sparepart-scanner.js:\n`);
-    scannerDriftProblems.forEach((p) => console.error('  - ' + p));
-    console.error(
+      'yang salah), lalu jalankan ulang node build.js.',
+  },
+  {
+    name: 'scanner-structural-drift',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek regresi "drift struktural Scanner" (vehicle-scanner.js vs sparepart-scanner.js)...',
+    successMsg: '✓ Tidak ada drift struktural antara vehicle-scanner.js & sparepart-scanner.js\n',
+    run: lintScannerStructuralDrift,
+    label: (n) => `ditemukan ${n} drift struktural antara vehicle-scanner.js & sparepart-scanner.js:`,
+    advice:
       '\nKedua file ini SENGAJA duplikasi total (lihat docs/architecture/ADR-028.md) supaya risiko\n' +
       'bug di satu scanner terisolasi dari scanner lain — tapi itu berarti fungsi lifecycle "kembar"\n' +
       '(pauseCamera/resumeCamera/dkk) harus tetap sama pola tanda tangannya di kedua file. Perbaiki\n' +
       'dengan menyamakan ulang fungsi yang disebut di atas (atau update SCANNER_TWIN_FN_SUFFIXES di\n' +
-      'scripts/build.js kalau memang perubahan itu disengaja & sudah didiskusikan ulang).'
-    );
-    process.exit(1);
+      'scripts/build.js kalau memang perubahan itu disengaja & sudah didiskusikan ulang).',
+  },
+  {
+    name: 'docs-baseline-count-drift',
+    severity: 'warning',
+    checkingMsg: 'Mengecek "Coverage Baseline" di docs/AUDIT_MATRIX.md vs jumlah file sungguhan...',
+    successMsg: '✓ Angka baseline di docs/AUDIT_MATRIX.md masih sinkron dengan repo\n',
+    run: lintDocsBaselineCountDrift,
+    label: () => 'docs/AUDIT_MATRIX.md kemungkinan sudah usang (build TETAP LANJUT, ini cuma peringatan):',
+    advice: '\nUpdate tabel "Coverage Baseline" di docs/AUDIT_MATRIX.md kalau perubahan ini disengaja.\n',
+  },
+  {
+    name: 'oversized-source-files',
+    severity: 'warning',
+    checkingMsg: `Mengecek file source .js yang sudah lewat ${OVERSIZED_FILE_LINE_THRESHOLD} baris (kandidat dipecah)...`,
+    successMsg: `✓ Tidak ada file source .js yang lewat ${OVERSIZED_FILE_LINE_THRESHOLD} baris\n`,
+    run: lintOversizedSourceFiles,
+    label: (n) => `${n} file source sudah kegedean (build TETAP LANJUT, ini cuma peringatan):`,
+    advice:
+      '\nFile besar = blast radius besar tiap edit. Pertimbangkan dipecah per submodul kalau\n' +
+      'sempat. Kalau memang sengaja besar & sudah didiskusikan, tambahkan ke\n' +
+      'OVERSIZED_FILE_ALLOWLIST di scripts/build.js.\n',
+  },
+];
+
+// Jalankan seluruh LINT_REGISTRY berurutan. 'blocking' -> process.exit(1) &
+// berhenti di lint pertama yang gagal (sama seperti perilaku lama — tiap
+// blok lama juga exit(1) segera, tidak menunggu lint berikutnya). 'warning'
+// -> console.warn, lanjut ke lint berikutnya, build tidak pernah dihentikan
+// oleh severity ini. Sesi berikutnya yang menambah lint baru CUKUP tambah 1
+// entry ke LINT_REGISTRY di atas, TIDAK perlu menulis ulang fungsi ini.
+function runLintRegistry(registry) {
+  for (const lint of registry) {
+    console.log(lint.checkingMsg);
+    const problems = lint.run();
+    if (!problems.length) {
+      console.log(lint.successMsg);
+      continue;
+    }
+    if (lint.severity === 'blocking') {
+      console.error(`\n❌ BUILD DIHENTIKAN — ${lint.label(problems.length)}\n`);
+      problems.forEach((p) => console.error('  - ' + p));
+      console.error(lint.advice);
+      process.exit(1);
+    } else {
+      console.warn(`\n⚠️  ${lint.label(problems.length)}\n`);
+      problems.forEach((w) => console.warn('  - ' + w));
+      console.warn(lint.advice);
+    }
   }
-  console.log('✓ Tidak ada drift struktural antara vehicle-scanner.js & sparepart-scanner.js\n');
+}
+
+function main() {
+  runLintRegistry(LINT_REGISTRY);
 
   // Ambil argumen non-flag pertama sbg explicit version (skip --flag spt --require-minify)
   const explicitVersion = process.argv.slice(2).find((a) => !a.startsWith('--'));
@@ -1696,6 +1955,20 @@ function main() {
     generateFileMap();
   } catch (e) {
     console.log(`\n⚠️  FILE-MAP.md gagal digenerate ulang (non-fatal, build tetap lanjut): ${e.message}`);
+  }
+
+  // Regenerate COVERAGE-PER-MODULE.md tiap build sukses (S331, poin #3 dari
+  // daftar saran maintainability pasca-audit S324, "coverage per modul") —
+  // auto-generate dari source (sama pola dgn FILE-MAP.md) supaya angka per
+  // family tidak pernah basi & tidak butuh baseline manual terpisah yg harus
+  // disinkronkan. Dibungkus try/catch sama spt FILE-MAP.md: gagal generate
+  // dokumentasi bantu ini TIDAK boleh menggagalkan build produksi.
+  try {
+    // eslint-disable-next-line global-require
+    const { main: generateCoveragePerModule } = require('./generate-coverage-per-module');
+    generateCoveragePerModule();
+  } catch (e) {
+    console.log(`\n⚠️  COVERAGE-PER-MODULE.md gagal digenerate ulang (non-fatal, build tetap lanjut): ${e.message}`);
   }
 
   if (!resA.minified) {
