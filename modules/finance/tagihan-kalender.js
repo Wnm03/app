@@ -319,8 +319,13 @@ editTx(Math.max(...linkedTxIds));
 return;
 }
 if(b.kind==='cicilan'&&!cicilanBelumPernahDibayar){
-toast('⚠️ Riwayat pembayaran cicilan ini tidak ditemukan, tidak bisa dibuka edit lengkapnya');
-return;
+// FIX (s325, laporan user): dulu dead-end di toast error + return kalau cicilan
+// yg SUDAH pernah dibayar (bukan kasus belum-pernah-dibayar s324 di atas) tapi
+// linkedTxIds-nya kosong (data lama/transaksi manual tanpa billLinkId ter-link,
+// atau transaksi pembayarannya sudah terhapus terpisah). User jadi TIDAK BISA
+// edit cicilan itu sama sekali. Biarkan flow jatuh ke modal generik di bawah,
+// sama seperti tagihan/langganan yang belum pernah dibayar -- lebih baik user
+// bisa edit field dasar (nama/jumlah/nextDue) drpd dead-end total.
 }
 }
 }
@@ -594,6 +599,12 @@ const b=(D.billsArchive||[]).find(x=>x.id===id);
 if(!b)return;
 if(!await askConfirm(`Hapus permanen catatan arsip "${escapeHtml(b.name)}" dari Riwayat Tagihan Lunas? Riwayat pembayaran (transaksi) yang sudah tercatat TIDAK ikut terhapus.`,{title:'Hapus Arsip Tagihan',okText:'Ya, Hapus',icon:'🗑'}))return;
 D.billsArchive=D.billsArchive.filter(x=>x.id!==id);
+// FIX (audit s327): lepas billLinkId dari transaksi historis yang menunjuk ke arsip yang
+// baru dihapus -- transaksinya sendiri TETAP ada (catatan keuangan sah, sama seperti komentar
+// di atas), tapi billLinkId yang nyangkut ke arsip yang sudah tidak ada jadi dangling reference
+// (mis. openBillHistory()/editBillHistoryTx() bisa nyasar/error kalau nanti dibuka lewat jalur
+// lain yang masih baca billLinkId ini). Transaksi dgn billLinkId ke bill LAIN tidak disentuh.
+(D.transactions||[]).forEach(t=>{if(t.billLinkId===id)delete t.billLinkId;});
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): sama seperti delBill() -- lihat
 // komentar lengkap di removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
@@ -744,26 +755,45 @@ restoredFromArchive=true;
 }
 }
 if(linkedBill&&isLatest){
+// billPrevNextDue (s327): kalau transaksi ini punya snapshot nextDue SEBELUM dibayar
+// (ditulis markBillPaid() sejak s327), pakai itu utk restore EXACT -- ini WAJIB kalau
+// bill sempat nunggak >1 periode (advanceBillNextDue() bisa memajukan nextDue lebih dari
+// 1x dalam satu pembayaran, jadi mundur -1 periode dari nextDue SEKARANG bisa salah/masih
+// nyangkut di masa lalu). Transaksi LAMA (sebelum s327, tidak punya billPrevNextDue) tetap
+// fallback ke logic -1 periode lama supaya data lama tidak rusak/lempar error.
+const hasSnapshot=typeof t.billPrevNextDue==='string'&&t.billPrevNextDue;
 if(linkedBill.kind==='cicilan'&&linkedBill.sisaTenor!=null){
 linkedBill.sisaTenor+=1;
+if(hasSnapshot){
+linkedBill.nextDue=t.billPrevNextDue;
+} else {
 const d=new Date(linkedBill.nextDue);
 d.setMonth(d.getMonth()-1);
 linkedBill.nextDue=d.toISOString().split('T')[0];
+}
 } else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
 if(dbt){
 dbt.nilai=(dbt.nilai||0)+t.amount;
 if(dbt.lunas){dbt.lunas=false;dbt.billId=linkedBill.id;}
 }
+if(hasSnapshot){
+linkedBill.nextDue=t.billPrevNextDue;
+} else {
 const d=new Date(linkedBill.nextDue);
 d.setMonth(d.getMonth()-1);
 linkedBill.nextDue=d.toISOString().split('T')[0];
+}
 } else if((linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq){
+if(hasSnapshot){
+linkedBill.nextDue=t.billPrevNextDue;
+} else {
 const d=new Date(linkedBill.nextDue);
 if(linkedBill.freq==='bulanan')d.setMonth(d.getMonth()-1);
 else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);
 else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);
 linkedBill.nextDue=d.toISOString().split('T')[0];
+}
 }
 }
 const beforePiutang=D.piutang?D.piutang.length:0;
@@ -910,7 +940,12 @@ if(!val)return;
 payDate=val;
 }
 const _payTxId=uid();
-D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id});
+// billPrevNextDue (audit s327): snapshot nextDue SEBELUM dimajukan oleh advanceBillNextDue()/
+// logic kind-specific di bawah -- dipakai revertBillFromDeletedTx() utk mengembalikan nextDue
+// PERSIS ke nilai sebelum pembayaran ini kalau transaksinya dihapus lagi. Sebelumnya revert cuma
+// mundur -1 periode dari nextDue SAAT INI, yang salah kalau bill sempat nunggak >1 periode (nextDue
+// bisa dimajukan lebih dari 1x oleh advanceBillNextDue() dalam satu pembayaran).
+D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
