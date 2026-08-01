@@ -5,6 +5,123 @@ JANGAN audit/implement/test/build ulang bagian yang sudah **Completed**.
 
 ## Current Session
 
+Sesi 332 (2026-08-01) — Update baseline `docs/AUDIT_MATRIX.md` § Coverage
+Baseline (diminta user langsung, bukan tindak lanjut poin audit S324).
+Angka lama (625 total/474 JS/137 MD/"13+" module families) sudah lama
+usang & di-flag non-fatal oleh `lintDocsBaselineCountDrift()` tiap build
+sejak S324/S325. Diganti ke angka sungguhan repo saat ini: 629 total, 475
+JS, 140 MD, 12 module families (dihitung eksak, bukan lagi perkiraan).
+0 perubahan kode. Test 2054/2054 (sebelum & sesudah). Build sukses,
+`?v=993` — peringatan drift baseline sekarang hilang dari output build.
+Detail: `CHANGELOG.md` § Sesi 332.
+
+## Sesi Sebelumnya
+
+Sesi 331 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #3 — TERAKHIR
+— dari daftar saran user pasca-audit S324, "coverage per modul"): tambah
+`scripts/generate-coverage-per-module.js` (auto-generate, pola sama
+`generate-file-map.js`) yang menghasilkan `docs/COVERAGE-PER-MODULE.md` —
+tabel per module family (`modules/<x>`, `economic-intelligence`, `lifeos`,
+`root`): jumlah file source vs jumlah file test yang menyentuhnya
+langsung (structural, bukan code-coverage ter-instrumentasi — batasan ini
+didokumentasikan eksplisit). Dipanggil otomatis di akhir `node build.js`
+sukses (try/catch non-fatal, sama pola FILE-MAP.md). Hasil pertama: 15
+family, cuma 1 (`modules/home`) yang 0 test file menyentuhnya langsung.
+`node --test`: 2054/2054 PASS sebelum & sesudah. SELESAI PENUH. **Ini
+poin TERAKHIR dari 8 poin daftar saran maintainability S324 — semuanya
+sudah dikerjakan.** Ringkasan siapa mengerjakan poin mana: #1 baseline
+auto-generate (sudah ada sebelum S325), #2 lint drift generik (S328), #3
+coverage per modul (S331, sesi ini), #4 SSOT operasi lint (S329), #5
+guard empty-catch (S330), #6 batasi ukuran file (S325), #7 peta
+dependency (S327), #8 convention doc (S326). Detail lengkap:
+`CHANGELOG.md` § Sesi 331.
+
+---
+
+Sesi 330 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #5 dari
+daftar saran user pasca-audit S324, "guard empty-catch"): tambah
+`lintEmptyCatchGuard()` + helper `findMatchingBrace()` (`scripts/build.js`),
+didaftarkan ke `LINT_REGISTRY` (S329) sbg entry ke-8, severity `'warning'`.
+Scan `ALL_SOURCE` cari blok `catch{...}` yang body-nya 100% kosong (tanpa
+kode maupun komentar) — ditemukan 36 pre-existing di 15 file, dibiarkan
+sbg warning (di luar scope "guard" utk membereskan semuanya sekaligus,
+butuh tinjauan kasus per kasus). 0 catch block diubah, 0 fungsi lint lama
+disentuh. `node --test`: 2054/2054 PASS sebelum & sesudah. SELESAI PENUH.
+Poin #3 (coverage per modul) — SATU-SATUNYA sisa dari daftar saran S324 —
+masih BELUM dikerjakan. Detail lengkap: `CHANGELOG.md` § Sesi 330.
+
+---
+
+Sesi 329 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #4 dari
+daftar saran user pasca-audit S324, "SSOT operasi lint"): refactor
+`main()` (`scripts/build.js`) dari 7 blok wiring lint bespoke duplikat
+jadi config-driven — `LINT_REGISTRY` (7 entry: pesan/severity/advice per
+lint) + `runLintRegistry()` (1 loop generik yang menjalankan &
+melaporkan semuanya, blocking -> `process.exit(1)`, warning ->
+`console.warn` build tetap lanjut). Ke-7 fungsi lint itu sendiri
+(`lintDnoneStyleDisplayMismatch()` dkk) 0 baris diubah — cuma dipanggil
+lewat referensi. Output `node scripts/build.js` diverifikasi identik
+sebelum/sesudah refactor (teks pesan & urutan check sama persis). 0
+`docs/AUDIT_MATRIX.md`/file lain disentuh. SELESAI PENUH. Poin #3 & #5
+(coverage per modul, guard empty-catch) masih BELUM dikerjakan. Detail
+lengkap: `CHANGELOG.md` § Sesi 329.
+
+---
+
+Sesi 328 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #2 dari
+daftar saran user pasca-audit S324, "lint drift generik"): refactor
+`lintDocsBaselineCountDrift()` (`scripts/build.js`) dari hardcode 4
+label jadi config-driven (`FILE_COUNT_LINT_LABELS` +
+`FILE_COUNT_LINT_DOCS`), satu kali walk repo, generik terhadap baris
+`| Label | Angka |` apa pun di dokumen target. Menambah cakupan 2 label
+yang sebelumnya diam-diam tidak dicek: `JSON`, `CSS`. 0 baris
+`docs/AUDIT_MATRIX.md` diedit permanen (drift pre-existing "Total
+files"/"Markdown" dari S326/S327 tetap ada sbg warning, di luar scope).
+SELESAI PENUH. Poin #3–5 (coverage per modul, SSOT operasi lint, guard
+empty-catch) masih BELUM dikerjakan. Detail lengkap: `CHANGELOG.md` §
+Sesi 328.
+
+---
+
+Sesi 327 (2026-08-01) — DOKUMENTASI (tindak lanjut poin #7 dari daftar
+saran user pasca-audit S324, "peta ketergantungan ringan"): tambah
+`docs/architecture/DEPENDENCY-MAP.md` — tabel MANUAL (bukan graph
+otomatis — percobaan otomatis di sesi ini terbukti terlalu noisy, 718
+"siklus" mayoritas false-positive, di-revert) untuk 9 identifier/modul
+inti lintas-domain + jumlah pemanggil hasil grep sungguhan. 0 kode
+disentuh (hasil akhir). SELESAI PENUH. Poin #2–5 (lint drift generik,
+coverage per modul, SSOT operasi lint, guard empty-catch) masih BELUM
+dikerjakan — lihat catatan di `CHANGELOG.md` § Sesi 327 kenapa
+pendekatan otomatis untuk hal semacam ini perlu hati-hati di codebase
+script-global ini. Detail lengkap: `CHANGELOG.md` § Sesi 327.
+
+---
+
+Sesi 326 (2026-08-01) — DOKUMENTASI (tindak lanjut poin #8 dari daftar
+saran user pasca-audit S324, "Convention doc untuk pola berulang"): tambah
+`docs/architecture/ADR-029-data-action-convention.md` — dokumentasi murni
+konvensi `data-action`/`data-args` yang sudah dipakai sejak S264 Security
+Hardening. 0 kode disentuh. SELESAI PENUH. Poin #2–5, #7 (lint drift
+generik, coverage per modul, SSOT operasi lint, guard empty-catch, peta
+dependency) masih BELUM dikerjakan. Detail lengkap: `CHANGELOG.md` §
+Sesi 326.
+
+---
+
+Sesi 325 (2026-08-01) — MAINTAINABILITY (tindak lanjut poin #6 dari
+daftar saran user pasca-audit S324, "Batasi ukuran file"): tambah lint
+peringatan `lintOversizedSourceFiles()` di `scripts/build.js` (ambang
+1600 baris, `console.warn` saja — build TETAP LANJUT), + sinkronisasi 2
+angka baseline `docs/AUDIT_MATRIX.md` yang terdeteksi drift saat build
+dijalankan. SELESAI PENUH. Poin #1 dari daftar saran yang sama
+("baseline auto-generate") TERNYATA sudah ada sejak sesi sebelumnya
+lewat `lintDocsBaselineCountDrift()` — tidak dikerjakan ulang. Poin
+#2–5, #7–8 (lint drift generik, coverage per modul, SSOT operasi lint,
+guard empty-catch, peta dependency, convention doc) BELUM dikerjakan.
+Detail lengkap: `CHANGELOG.md` § Sesi 325.
+
+---
+
 Sesi 323 (2026-07-31) — HOUSEKEEPING (tindak lanjut saran audit Sesi 2,
 `AUDIT_BUG_PIN_BARCODE_2_SESI_CLAUDE_SESI2_HASIL.md`, di luar scope
 bugfix): tambah `docs/architecture/ADR-028.md` (duplikasi `vehicle-
