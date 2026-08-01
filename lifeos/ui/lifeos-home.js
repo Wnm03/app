@@ -156,3 +156,4 @@ const LifeOSHome = {
     });
   },
 };
+if (typeof LifeOSHome !== 'undefined') window.LifeOSHome = LifeOSHome;

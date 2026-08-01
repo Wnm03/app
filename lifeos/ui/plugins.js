@@ -79,3 +79,4 @@ const LifeOSPlugins = {
     LifeOSPlugins.render();
   },
 };
+if (typeof LifeOSPlugins !== 'undefined') window.LifeOSPlugins = LifeOSPlugins;

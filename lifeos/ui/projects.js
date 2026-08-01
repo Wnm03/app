@@ -37,3 +37,4 @@ const LifeOSProjects = {
     LifeOSProjects.render();
   },
 };
+if (typeof LifeOSProjects !== 'undefined') window.LifeOSProjects = LifeOSProjects;

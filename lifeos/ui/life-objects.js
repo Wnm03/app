@@ -353,3 +353,4 @@ const LifeOSLifeObjects = {
     if (typeof LifeOSHome !== 'undefined') LifeOSHome.render();
   },
 };
+if (typeof LifeOSLifeObjects !== 'undefined') window.LifeOSLifeObjects = LifeOSLifeObjects;

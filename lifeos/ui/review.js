@@ -29,3 +29,4 @@ const LifeOSReview = {
     LifeOSReview.render();
   },
 };
+if (typeof LifeOSReview !== 'undefined') window.LifeOSReview = LifeOSReview;
