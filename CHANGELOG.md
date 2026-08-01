@@ -1,3 +1,477 @@
+# Changelog — Sesi 332: Update Baseline docs/AUDIT_MATRIX.md
+
+## Konteks
+
+`node scripts/build.js` sudah lama flag (non-fatal, sejak lint
+`lintDocsBaselineCountDrift()` dibuat di S324) bahwa tabel "Coverage
+Baseline" di `docs/AUDIT_MATRIX.md` sudah usang dibanding isi repo
+sungguhan. User minta baseline-nya di-update.
+
+## Perubahan
+
+`docs/AUDIT_MATRIX.md` § Coverage Baseline:
+
+| Metric | Lama | Baru |
+|---|---:|---:|
+| Total files | 625 | 629 |
+| JavaScript | 474 | 475 |
+| Markdown | 137 | 140 |
+| Module families | "13+" (perkiraan) | 12 (eksak, dari isi `modules/*`) |
+| Tests, HTML, JSON, CSS | 181 / 3 / 2 / 2 | tidak berubah |
+
+Angka baru diambil langsung dari logic `FILE_COUNT_LINT_LABELS` di
+`scripts/build.js` (bukan hitung manual terpisah) supaya konsisten dgn apa
+yang di-cek lint tiap build. "Module families" sebelumnya cuma perkiraan
+("13+") — sekarang dihitung eksak dari jumlah direktori langsung di
+`modules/` (`ai`, `asset`, `business`, `cross`, `dashboard-hub`, `finance`,
+`home`, `logistics`, `self-reward`, `shared`, `shop`, `vehicle` = 12).
+
+0 perubahan kode/logic — dokumentasi murni.
+
+## Test
+
+`node --test tests/*.test.js` -> **2054/2054 pass, 0 fail** (sebelum & sesudah).
+
+## Build
+
+`node scripts/build.js s332-update-baseline-audit-matrix` -> sukses, `?v=993`.
+Peringatan `lintDocsBaselineCountDrift()` (AUDIT_MATRIX.md usang) sekarang
+**hilang** dari output build — baseline sudah sinkron dengan repo.
+
+---
+
+# Changelog — Sesi 331: Coverage per Modul — docs/COVERAGE-PER-MODULE.md (poin #3, TERAKHIR)
+
+## Konteks
+Tindak lanjut poin #3 — poin TERAKHIR yang tersisa — dari daftar saran
+maintainability user pasca-audit S324 ("coverage per modul"). Sebelum
+sesi ini, `docs/AUDIT_MATRIX.md` § "Coverage Baseline" cuma punya 1 angka
+`Tests: 181` global — tidak kelihatan family mana yang test-nya numpuk
+dan family mana yang nyaris tidak ada test-nya sama sekali.
+
+## Perubahan
+- **`scripts/generate-coverage-per-module.js`** (baru) — generator
+  auto (pola SAMA PERSIS `generate-file-map.js`, bukan baseline manual
+  yang butuh lint drift terpisah spt "Coverage Baseline" — dipilih supaya
+  angka tidak pernah basi tanpa nambah lint baru):
+  1. Walk seluruh repo (skip `node_modules`/`.git`/`backups`/`tests`/
+     `scripts`/`docs`), kelompokkan tiap file `.js` (bukan `.min.js`) ke
+     "module family" berdasarkan folder tingkat pertama — `modules/<x>`
+     auto-discover (tidak hardcode nama family, family baru otomatis
+     ikut), `economic-intelligence/`/`lifeos/` masing2 family sendiri,
+     file `.js` langsung di root -> family `root`.
+  2. Scan seluruh `tests/*.test.js`, ambil semua string literal path
+     `.js` (mis. dari `loadSource(['modules/finance/x.js'])`), map ke
+     family yang sama, hitung berapa FILE test (bukan jumlah require)
+     yang menyentuh minimal 1 file di family itu.
+  3. Tulis `docs/COVERAGE-PER-MODULE.md` (AUTO-GENERATED): tabel
+     family/jumlah file source/jumlah file test yang menyentuh, terurut
+     dari yang PALING SEDIKIT test dulu, + daftar terpisah family dengan
+     0 test file yang menyentuhnya langsung sbg kandidat prioritas.
+     Cakupan ini SENGAJA structural (bukan code-coverage
+     ter-instrumentasi spt istanbul/c8) — didokumentasikan eksplisit di
+     header file kalau "0 test file" bukan vonis 0% teruji (bisa saja
+     diuji tidak langsung lewat modul lain), sama semangat kehati-hatian
+     dgn pelajaran S327 (percobaan dependency-graph otomatis yg lebih
+     canggih ternyata 718 false-positive, di-revert ke manual) — di sini
+     tetap otomatis tapi metodenya sengaja sederhana & transparan
+     batasannya, bukan berpura-pura presisi.
+  - Hasil pertama: **15 module family**, cuma **1** (`modules/home`, 3
+    file source) yang 0 test file menyentuhnya langsung. 14 family
+    lainnya semua ≥1 test file (`modules/vehicle` tertinggi, 60 test
+    file/71 file source; `modules/logistics`/`modules/self-reward`
+    terendah yang masih >0, 1-3 test file).
+- **`scripts/build.js`** (`main()`, aditif) — panggil
+  `generate-coverage-per-module.js` di akhir build sukses, tepat setelah
+  pemanggilan `generate-file-map.js`, dibungkus try/catch yang sama
+  (gagal generate dokumentasi bantu TIDAK menggagalkan build produksi).
+  0 lint/fungsi lain diubah.
+- Tidak ada file lain yang disentuh.
+
+## Test
+```
+node --check scripts/build.js scripts/generate-coverage-per-module.js
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+node scripts/build.js s331-coverage-per-module
+# ✓ Build selesai, ?v=992, index.html & app_production.html identik
+# ✓ COVERAGE-PER-MODULE.md ditulis (15 family, 1 tanpa test file langsung)
+node --test tests/*.test.js   # setelah build
+# tests 2054 / pass 2054 / fail 0
+```
+(0 test lama diubah, 0 test baru ditambahkan — generator dokumentasi
+build-time murni, pola sama dgn `generate-file-map.js` yang juga tidak
+punya test unit terpisah krn `tests/*.test.js` tidak meng-cover
+`scripts/`.)
+
+## Sisa daftar saran (belum dikerjakan)
+**Tidak ada.** Ini adalah poin TERAKHIR dari 8 poin daftar saran
+maintainability pasca-audit S324 (poin #1–#8 semuanya sudah dikerjakan
+lintas sesi S321/S323/S325–S331 — lihat `docs/CHECKPOINT.md` § Sesi 331
+untuk ringkasan siapa mengerjakan poin mana).
+
+---
+
+# Changelog — Sesi 330: Guard Empty-Catch — lint peringatan catch kosong (poin #5)
+
+## Konteks
+Tindak lanjut poin #5 (terakhir) dari daftar saran maintainability user
+pasca-audit S324 ("guard empty-catch"). Repo ini punya cukup banyak blok
+`catch{}` yang isinya benar-benar kosong — error tertelan tanpa jejak
+apa pun, tidak ada `console.warn`/komentar yang menjelaskan itu sengaja.
+Kalau errornya SEHARUSNYA tidak pernah terjadi (bukan feature-detection
+yang memang boleh diam), tidak ada cara tahu dari log produksi.
+
+## Perubahan
+- **`scripts/build.js`** (aditif, 0 fungsi lint lama diubah) —
+  - `findMatchingBrace(content, openBracePos)` (baru): helper quote-aware
+    (mengabaikan `{`/`}` di dalam string/template literal) yang mencari
+    posisi kurung kurawal tutup yang cocok dengan kurung buka di posisi
+    tertentu. Pola sama dgn `scanConcatExpr()` yang sudah ada (quote-
+    aware char-by-char scan), dipakai ulang gaya yang sama.
+  - `lintEmptyCatchGuard()` (baru): scan `ALL_SOURCE` cari tiap
+    `catch(...) {...}`, pakai `findMatchingBrace()` utk ambil body-nya,
+    tandai kalau body-nya (setelah `.trim()`) 100% kosong — tanpa kode
+    MAUPUN komentar. Body yang ada minimal 1 komentar (mis.
+    `catch(e){ /* sengaja diam, localStorage tidak wajib */ }`) otomatis
+    lolos — tidak perlu penanda suppress terpisah, komentar itu sendiri
+    SUDAH jadi bukti "sengaja", sesuai maksud poin #5 (guard, bukan
+    larangan menelan error).
+  - Didaftarkan ke `LINT_REGISTRY` (infrastruktur S329) sbg entry ke-8,
+    `empty-catch-guard`, **severity `'warning'`** (bukan `'blocking'`) —
+    scan pertama menemukan 36 catch kosong pre-existing tersebar di 15
+    file (`modules-render.js`, `modules-calc.js`, `pajak-pbb-zakat.js`,
+    `aset.js`, `features-helpers-global-security.js`, `error-handler.js`,
+    `keamanan-pin.js`, `refleksi-selfcare.js`, `modal-navigasi.js`,
+    `debug-console.js`, `onboarding.js`, `scan-ocr.js`,
+    `vehicle-scanner.js`, `sparepart-servis.js`, `ai-chat.js`,
+    `gdrive-backup.js`, `self-test.js`) — membereskan semuanya sekaligus
+    di luar scope "guard" (cegah regresi BARU) yang diminta poin #5, dan
+    berisiko salah kategori (sebagian mungkin memang sengaja silent,
+    perlu ditinjau kasus per kasus, bukan tebak massal). Pola sama persis
+    dgn `docs-baseline-count-drift` (S321) & `oversized-source-files`
+    (S325) yang juga warning-only saat pertama ditambahkan ke codebase
+    existing yang sudah ada drift-nya.
+  - 0 dari 36 catch block pre-existing itu diubah sesi ini — murni lint
+    peringatan baru, tidak menyentuh logic apa pun.
+- Tidak ada file lain yang disentuh (di luar hasil otomatis
+  `node scripts/build.js`: bump versi & regenerasi `docs/FILE-MAP.md`).
+
+## Test
+```
+node --check scripts/build.js
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+node scripts/build.js s330-empty-catch-guard
+# ✓ Build selesai, ?v=991, index.html & app_production.html identik
+# ⚠️ 36 catch block kosong total ditemukan (warning, build TETAP LANJUT)
+node --test tests/*.test.js   # setelah build
+# tests 2054 / pass 2054 / fail 0
+```
+(0 test lama diubah, 0 test baru ditambahkan — `lintEmptyCatchGuard()`/
+`findMatchingBrace()` murni wiring build-time `main()` lewat
+`LINT_REGISTRY`, di luar cakupan `tests/*.test.js` yang memang tidak
+meng-cover `scripts/build.js`, sama pola dgn S325/S328/S329.)
+
+## Sisa daftar saran (belum dikerjakan)
+Poin #3 (coverage per modul) — lihat `docs/CHECKPOINT.md` § Sesi 330.
+Ini adalah poin TERAKHIR dari daftar saran S324 selain #3 yang masih
+tersisa (poin #1/#2/#4/#5/#6/#7/#8 semuanya sudah dikerjakan di sesi-
+sesi sebelumnya + sesi ini).
+
+---
+
+# Changelog — Sesi 329: SSOT Operasi Lint — LINT_REGISTRY di build.js (poin #4)
+
+## Konteks
+Tindak lanjut poin #4 dari daftar saran maintainability user pasca-audit
+S324 ("SSOT operasi lint"). Sebelum sesi ini, `main()` (`scripts/build.js`)
+punya 7 blok wiring lint yang bespoke — tiap blok ~10-20 baris duplikat
+pola yang sama (console.log pembuka → jalankan fungsi lint → cek
+`problems.length` → format pesan error/warning → `process.exit(1)` khusus
+utk yang blocking). Menambah lint baru berarti copy-paste salah satu blok
+itu & rawan human error (mis. lupa `process.exit(1)`, atau salah pilih
+`console.error` vs `console.warn` utk severity yang dimaksud) — persis
+kelas masalah yang sama dgn "hardcode per-label" yang baru dibereskan di
+S328 poin #2, tapi levelnya di wiring eksekusi, bukan di isi 1 lint.
+
+## Perubahan
+- **`scripts/build.js`** (aditif + refactor `main()`, 0 fungsi lint yang
+  sudah ada diubah isinya) —
+  - `LINT_REGISTRY` (baru): array 7 entry, 1 per lint yang sudah ada
+    (`dnone-style-display-mismatch`, `unescaped-user-field`,
+    `ocr-premature-tesseract-check`, `modal-html-index-drift`,
+    `scanner-structural-drift`, `docs-baseline-count-drift`,
+    `oversized-source-files`). Tiap entry: `severity` (`'blocking'`/
+    `'warning'`), `checkingMsg`/`successMsg` (teks console yang SAMA
+    PERSIS pesan lama), `run` (referensi fungsi lint yang sudah ada, TIDAK
+    diubah), `label(n)` (teks ringkasan jumlah masalah), `advice` (saran
+    perbaikan). Urutan array = urutan eksekusi lama, dipertahankan persis.
+  - `runLintRegistry(registry)` (baru): loop generik yang menjalankan tiap
+    entry, mencetak `checkingMsg`/`successMsg` kalau bersih, atau format
+    error (+`process.exit(1)`) utk `severity:'blocking'` / warning (build
+    tetap lanjut) utk `severity:'warning'` — 1 fungsi menggantikan 7 blok
+    duplikat.
+  - `main()`: 7 blok lint lama (± 150 baris) diganti 1 baris
+    `runLintRegistry(LINT_REGISTRY);`. Sisa `main()` (version bump,
+    bundling, syntax check, dst) TIDAK disentuh.
+  - Sesi berikutnya yang menambah lint baru sekarang CUKUP menambah 1
+    entry ke `LINT_REGISTRY` (fungsi lint murni tetap ditulis terpisah
+    seperti biasa, cukup didaftarkan di sini) — tidak perlu menulis ulang
+    wiring `process.exit`/`console.error`/`console.warn`.
+  - Diverifikasi MANUAL: output `node scripts/build.js` sebelum & sesudah
+    refactor dibandingkan baris-per-baris utk seluruh 7 pesan lint (teks
+    "Mengecek..."/"✓ ..."/format error-warning) — identik. 2 warning
+    pre-existing (`docs-baseline-count-drift`: "Total files" 625→627,
+    "Markdown" 137→139; `oversized-source-files`: 5 file, termasuk
+    `scripts/build.js` sendiri yang sekarang 1896 baris akibat penambahan
+    `LINT_REGISTRY`/`runLintRegistry()` ini) tetap muncul sbg warning
+    non-fatal — di luar scope sesi ini utk diperbaiki, sama seperti
+    S328/S325.
+- Tidak ada file lain yang disentuh. Ke-7 fungsi lint itu sendiri
+  (`lintDnoneStyleDisplayMismatch()` dkk) **0 baris diubah** — murni
+  dipanggil lewat referensi di `LINT_REGISTRY.run`.
+
+## Test
+```
+node --check scripts/build.js
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+node scripts/build.js s329-lint-registry-ssot
+# ✓ Build selesai, ?v=989, index.html & app_production.html identik
+node --test tests/*.test.js   # setelah build
+# tests 2054 / pass 2054 / fail 0
+```
+(0 test lama diubah, 0 test baru ditambahkan — `runLintRegistry()`/
+`LINT_REGISTRY` murni wiring build-time `main()`, di luar cakupan
+`tests/*.test.js` yang memang tidak meng-cover `scripts/build.js`, sama
+pola dgn S325/S328. Ke-7 fungsi lint sendiri, yang SUDAH punya test
+terpisah — mis. `tests/modal-html-index-drift.test.js`,
+`tests/scanner-structural-drift.test.js` — tetap PASS tanpa perubahan
+krn isinya tidak disentuh.)
+
+## Sisa daftar saran (belum dikerjakan)
+Poin #3 (coverage per modul), #5 (guard empty-catch) — lihat
+`docs/CHECKPOINT.md` § Sesi 329.
+
+---
+
+# Changelog — Sesi 328: Generikkan Lint Drift "Coverage Baseline" (poin #2)
+
+## Konteks
+Tindak lanjut poin #2 dari daftar saran maintainability user pasca-audit
+S324 ("lint drift generik"). `lintDocsBaselineCountDrift()`
+(`scripts/build.js`, ditambah S321-an) sejak awal HARDCODE cuma mengecek
+4 dari 8 baris tabel "Coverage Baseline" di `docs/AUDIT_MATRIX.md`
+("Total files"/"JavaScript"/"Markdown"/"HTML") — dengan masing-masing
+baris punya blok walk-direktori sendiri yang mirip-mirip. 2 baris lain
+yang formatnya PERSIS SAMA (angka file count murni) — "JSON" & "CSS" —
+diam-diam tidak pernah dicek sejak baseline dibuat.
+
+## Perubahan
+- **`scripts/build.js`** (`lintDocsBaselineCountDrift()`, aditif) —
+  refactor jadi config-driven: 2 konstanta baru, `FILE_COUNT_LINT_LABELS`
+  (map label → predikat nama file) dan `FILE_COUNT_LINT_DOCS` (daftar
+  dokumen yang discan). Fungsi sekarang walk repo SATU KALI (bukan per
+  label seperti sebelumnya) lalu cocokkan generik terhadap SEMUA baris
+  `| Label | Angka |` yang ditemukan di dokumen target. Menambah 2 label
+  baru yang tadinya tidak dicek: `JSON`, `CSS`. Sengaja TIDAK menambah
+  "Tests" (berarti jumlah kasus test, bukan file — sudah dicek akurat
+  lewat `node --test`) atau "Module families" (notasi "13+", bukan angka
+  pasti). Sesi berikutnya yang mau menambah baris count baru cukup edit
+  `FILE_COUNT_LINT_LABELS`/`FILE_COUNT_LINT_DOCS`, tidak perlu tulis
+  fungsi walk baru. Perilaku 4 label lama 100% identik (diverifikasi
+  manual: output warning untuk "Total files"/"Markdown" sama persis
+  sebelum & sesudah refactor; "JavaScript"/"HTML" tetap tidak warning,
+  keduanya sudah sinkron). 2 label baru (`JSON`/`CSS`) diverifikasi TIDAK
+  memicu false-positive (baseline dokumen 2/2, repo sungguhan 2/2 —
+  sinkron) dan diverifikasi BISA menangkap drift sungguhan lewat uji coba
+  manual sesaat (ubah sementara `| JSON | 2 |` jadi `| JSON | 5 |`,
+  konfirmasi warning muncul persis seperti diharapkan, lalu dikembalikan
+  ke isi asli sebelum sesi ditutup — 0 perubahan permanen ke
+  `docs/AUDIT_MATRIX.md`).
+- Tidak ada file lain yang disentuh. `docs/AUDIT_MATRIX.md` TIDAK diedit
+  permanen sesi ini — 2 drift pre-existing yang sudah terdeteksi sejak
+  S326/S327 ("Total files" 625→627, "Markdown" 137→139, akibat
+  `DEPENDENCY-MAP.md` & `ADR-029-data-action-convention.md` yang belum
+  disinkronkan ke baseline) tetap muncul sebagai warning non-fatal — di
+  luar scope sesi ini utk diperbaiki (bukan bug, cuma dokumen belum
+  diupdate; keputusan update baseline sebaiknya di sesi terpisah yang
+  juga menghitung ulang "Tests"/"Module families").
+
+## Test
+```
+node --check scripts/build.js
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+```
+(0 test lama diubah, 0 test baru ditambahkan — pola sama dgn S325
+`lintOversizedSourceFiles()`: perubahan murni di lint build-time
+non-fatal, diverifikasi manual lewat eksekusi terisolasi fungsinya, bukan
+lewat `tests/*.test.js` yang memang tidak meng-cover `scripts/build.js`.)
+
+## Sisa daftar saran (belum dikerjakan)
+Poin #3 (coverage per modul), #4 (SSOT operasi lint), #5 (guard
+empty-catch) — lihat `docs/CHECKPOINT.md` § Sesi 328.
+
+---
+
+# Changelog — Sesi 327: DEPENDENCY-MAP.md — Peta Ketergantungan Manual (poin #7)
+
+## Konteks
+Tindak lanjut poin #7 dari daftar saran maintainability user pasca-audit
+S324 ("Satu dokumen peta ketergantungan ringan ... bukan full dependency
+graph otomatis, tapi tabel manual per modul").
+
+Sesi ini SEMPAT mencoba versi otomatis dulu (generalisasi pola
+`tests/cross-module-dependency-graph-s286.test.js` ke seluruh
+`modules/**/*.js`) — dibatalkan karena hasil ujicoba melaporkan 718
+"siklus" yang mayoritas false-positive (nama identifier umum/pendek
+match di banyak file yang sama sekali tidak terhubung). Kembali ke
+permintaan asli user: tabel **manual**.
+
+## Perubahan
+- **`docs/architecture/DEPENDENCY-MAP.md`** (baru) — tabel manual untuk
+  9 identifier/modul inti lintas-domain (`showPage`, `openModal`/
+  `closeModal`, `save`/`saveFlush`, `toast`, `escapeHtml`, `IDBStore`,
+  `OwnershipEngine`, `dashHubNavigateToFeature`,
+  `VehicleCatalog.filterForVehicle`), masing-masing dengan jumlah file
+  pemanggil hasil `grep` sungguhan (bukan tebakan) + catatan kontrak
+  singkat. Termasuk penjelasan eksplisit kenapa versi otomatis tidak
+  dipakai, supaya sesi berikutnya tidak mencoba pendekatan yang sama &
+  menemukan masalah yang sama.
+
+## Test
+```
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+```
+(0 kode disentuh — dokumentasi murni, tidak ada regresi. `scripts/build.js`
+sempat diedit untuk uji coba pendekatan otomatis lalu di-REVERT PENUH ke
+kondisi awal Sesi 326 sebelum sesi ini ditutup — diverifikasi `node --check`
++ `node --test` 2054/2054 setelah revert.)
+
+---
+
+# Changelog — Sesi 326: ADR-029 — Dokumentasi Konvensi `data-action`/`data-args`
+
+## Konteks
+Tindak lanjut poin #8 dari daftar saran maintainability user pasca-audit
+S324 ("Convention doc untuk pola berulang ... supaya kode baru otomatis
+konsisten, bukan reinvent tiap sesi"). Pola `data-action`/`data-args`
+sudah dipakai konsisten sejak S264 Security Hardening (Sesi FAB Sprint 2,
+Dashboard V2 Interactive Cards, dst), tapi belum ada 1 dokumen rujukan
+tunggal — tiap sesi baru harus grep kode lama untuk menemukan polanya.
+
+## Perubahan
+- **`docs/architecture/ADR-029-data-action-convention.md`** (baru) —
+  dokumentasi murni: cara pakai `data-action`/`data-args` (termasuk token
+  spesial `$el`/`$event`/`$nav:N`, atribut `data-stop`, dukungan fungsi
+  `async`), larangan (jangan inline `onclick`, jangan dispatcher baru per
+  modul, jangan `eval`/`new Function()`), dan kapan pakai
+  `action-wrappers.js` untuk fungsi glue kecil. 0 kode diubah — dokumen
+  ini murni MENDOKUMENTASIKAN dispatcher yang sudah ada di
+  `_dataActionClickHandler()` (`features-helpers-global-security.js`),
+  bukan implementasi baru.
+
+## Test
+```
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+```
+(0 kode disentuh — sesi ini murni dokumentasi, tidak ada regresi.)
+
+---
+
+# Changelog — Sesi 325: Lint Peringatan "File Source Kegedean" (tindak lanjut saran maintainability)
+
+## Konteks
+Tindak lanjut satu dari daftar saran maintainability yang diberikan user
+(poin #6, "Batasi ukuran file") setelah audit S324. `modules-render.js`,
+`business-flow-presenter.js`, dkk terus membesar — dibutuhkan sinyal dini
+otomatis di `build.js` supaya pertumbuhan file besar terpantau, tanpa
+memaksa refactor mendadak.
+
+## Perubahan
+- **`scripts/build.js`** (aditif) — fungsi baru `lintOversizedSourceFiles()`
+  + konstanta `OVERSIZED_FILE_LINE_THRESHOLD` (1600 baris) &
+  `OVERSIZED_FILE_ALLOWLIST` (dikecualikan `self-test.js`). Dipanggil dari
+  `main()` setelah lint drift baseline `docs/AUDIT_MATRIX.md` yang sudah
+  ada. Pola sama seperti `lintDocsBaselineCountDrift()` — **PERINGATAN
+  saja, build TETAP LANJUT**, karena tujuannya cuma menandai kandidat
+  refactor, bukan memblokir kerja harian. Tidak ada lint/logic build lain
+  yang diubah.
+- **`docs/AUDIT_MATRIX.md`** — sinkronisasi 2 angka baseline ("Total
+  files" 624→625, "JavaScript" 473→474) yang terdeteksi drift oleh
+  `lintDocsBaselineCountDrift()` saat build dijalankan sesi ini (efek dari
+  1 file baru + 1 baris di `scripts/build.js`).
+
+## Hasil saat build dijalankan (baseline sesi ini)
+5 file source terdeteksi lewat ambang 1600 baris (peringatan, bukan
+kegagalan): `modules/shop/business-flow-presenter.js` (2014),
+`modules/shared/modules-render.js` (1956), `scripts/build.js` (1843,
+akibat penambahan lint ini sendiri), `modules/asset/aset.js` (1756),
+`modules/shared/scan-ocr.js` (1616). Tidak ada tindakan pemecahan file
+yang dilakukan sesi ini — murni instrumentasi/sinyal.
+
+## Test
+```
+node --test tests/*.test.js
+# tests 2054 / pass 2054 / fail 0
+```
+(0 test lama diubah, 0 test baru ditambahkan — perubahan murni di lint
+build-time, tidak ada regresi.)
+
+---
+
+# Changelog — Sesi 324: Bugfix Dobel-Potong Stok Sparepart saat Rollback Servis
+
+## Konteks
+Ditemukan lewat audit umum (permintaan eksplisit user: "audit fitur car
+notes", tanpa gejala spesifik) atas `car-notes.js`, fokus ke
+`Servis._saveInner()`.
+
+## Bug
+Saat menyimpan catatan servis yang memakai KEDUA jenis stok sekaligus
+(Stok Sparepart biasa via `usedPartId` DAN part Vehicle Catalog via
+`catalogPartId`): kalau potongan `usedPartId` sukses tapi potongan stok
+katalog gagal (stok kurang & user menolak konfirmasi "tetap lanjut"),
+kode rollback memanggil `Servis.applyStockUsage(usedPartId,...)` LAGI —
+bukan `Servis.revertStockUsage(usedPartId,...)`. Karena
+`applyStockUsage()` MENGURANGI stok, baris "rollback" ini malah memotong
+stok `usedPartId` untuk KEDUA KALINYA, padahal seluruh penyimpanan
+dibatalkan (`return`, tidak ada `D.servisLogs` baru/terupdate) — stok
+hilang permanen tanpa catatan servis yang menjelaskannya. Bug yang sama
+persis ada di jalur catatan baru maupun jalur edit; jalur edit juga
+tidak pernah me-restore potongan `usedPartId` LAMA yang sudah
+di-revert di awal fungsi untuk kasus kegagalan ini.
+
+## Perubahan
+- **`car-notes.js`** (`Servis._saveInner()`, 2 lokasi: jalur catatan
+  baru & jalur edit) — ganti `applyStockUsage()` yang salah arah jadi
+  `revertStockUsage()` di kedua titik rollback; jalur edit juga
+  ditambah 1 baris untuk me-restore potongan `usedPartId` LAMA yang
+  sempat di-revert di awal fungsi. 0 perubahan pada alur normal
+  (tanpa kegagalan stok) — murni memperbaiki 2 cabang rollback.
+- **`tests/servis-stock-rollback-double-deduct-s324.test.js`** (baru)
+  — 2 test: catatan baru & edit, keduanya memverifikasi stok
+  `usedPartId` kembali ke nilai SEBELUM percobaan simpan (bukan
+  dipotong dobel) saat potongan stok katalog gagal & dibatalkan.
+  Diverifikasi GAGAL terhadap kode lama (v985/s323) sebelum fix
+  ditambahkan, PASS setelah fix.
+
+## Hasil Test
+```
+node --test
+# tests 2056 / pass 2055 / fail 1 (1 gagal = self-test.js, script
+# browser yang ikut ter-glob node --test, pre-existing, tidak terkait
+# perubahan ini — sama persis di baseline v985/s323 sebelum fix)
+```
+Baseline (2054/2055 — 1 gagal pre-existing yang sama) tetap sama; 2
+test baru murni aditif & PASS.
+
+---
+
 # Changelog — Sesi 323: Housekeeping Pasca-Audit — Lint Drift Struktural Scanner + ADR-028
 
 ## Konteks
