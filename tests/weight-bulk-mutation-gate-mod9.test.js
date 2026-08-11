@@ -1,0 +1,160 @@
+'use strict';
+// tests/weight-bulk-mutation-gate-mod9.test.js — Modul 9 (cobek-pricing.js
+// WeightBulkWidget, sesi ini): reroute 2 titik TULIS `beratPerUnit` mentah
+// lewat ProductRepository.updateProduct() (SSOT yang SUDAH ADA sejak Tahap
+// 4, dipakai Etalase.save()).
+//
+// Lanjutan langsung Modul 3-8 — bukan gate BARU (0 method baru di
+// ProductRepository/AttributeStore), melainkan menutup 2 sisa titik yang
+// masih bypass SSOT existing:
+//   1. `WeightBulkWidget.applyOne()`   -> ProductRepository.updateProduct()
+//   2. `WeightBulkWidget.applyBulk()`  -> ProductRepository.updateProduct()
+//
+// Cakupan:
+//   A. Integrasi — 2 call site benar-benar lewat ProductRepository.
+//      updateProduct() & AttributeStore.setAttribute() (di-spy), hasil
+//      akhir D.products identik business logic lama.
+//   B. Fallback — caller lama tetap bekerja tanpa ProductRepository
+//      (guard typeof).
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { loadSource } = require('./helpers/loadSource');
+
+function loadWidget(D, extra = {}) {
+  return loadSource(
+    [
+      'modules/shop/generic/attribute-store.js',
+      'modules/shop/generic/product-repository.js',
+      'modules/shop/cobek-pricing.js',
+    ],
+    {
+      D,
+      document: { getElementById: () => ({}) },
+      toast: () => {},
+      save: () => {},
+      askConfirm: async () => true,
+      escapeHtml: (s) => s,
+      renderProductList: () => {},
+      fmt: (n) => String(n),
+      ...extra,
+    },
+    ['WeightBulkWidget', 'ProductRepository', 'AttributeStore'],
+  );
+}
+
+// === A. Integrasi ===========================================================
+
+test('integrasi: WeightBulkWidget.applyOne() — lewat ProductRepository.updateProduct()/AttributeStore.setAttribute()', () => {
+  const D = { products: [{ id: 'p1', name: 'Cobek A', beratPerUnit: 0 }] };
+  const inputEl = { value: '1.5' };
+  const ctx = loadWidget(D, { document: { getElementById: (id) => (id === 'weightBulkInput_p1' ? inputEl : {}) } });
+  let updateCalls = 0;
+  let attrCalls = 0;
+  const origUpdate = ctx.ProductRepository.updateProduct;
+  ctx.ProductRepository.updateProduct = function (...args) { updateCalls++; return origUpdate.apply(ctx.ProductRepository, args); };
+  const origAttr = ctx.AttributeStore.setAttribute;
+  ctx.AttributeStore.setAttribute = function (...args) { attrCalls++; return origAttr.apply(ctx.AttributeStore, args); };
+  ctx.WeightBulkWidget.render = () => {};
+  ctx.WeightBulkWidget.applyOne('p1');
+  assert.equal(D.products[0].beratPerUnit, 1.5);
+  assert.ok(updateCalls >= 1, 'applyOne harus lewat ProductRepository.updateProduct()');
+  assert.ok(attrCalls >= 1, 'beratPerUnit harus di-route lewat AttributeStore.setAttribute()');
+});
+
+test('integrasi: WeightBulkWidget.applyOne() — produk lain di D.products TIDAK ikut berubah, field lain tetap utuh', () => {
+  const D = {
+    products: [
+      { id: 'p1', name: 'Cobek A', beratPerUnit: 0, stock: 10, hargaJual: 5000 },
+      { id: 'p2', name: 'Cobek B', beratPerUnit: 2 },
+    ],
+  };
+  const inputEl = { value: '3' };
+  const ctx = loadWidget(D, { document: { getElementById: (id) => (id === 'weightBulkInput_p1' ? inputEl : {}) } });
+  ctx.WeightBulkWidget.render = () => {};
+  ctx.WeightBulkWidget.applyOne('p1');
+  assert.equal(D.products[0].beratPerUnit, 3);
+  assert.equal(D.products[0].stock, 10, 'field lain produk yang diedit harus tetap utuh (immutable merge)');
+  assert.equal(D.products[0].hargaJual, 5000);
+  assert.equal(D.products[1].beratPerUnit, 2, 'produk lain tidak boleh ikut berubah');
+});
+
+test('integrasi: WeightBulkWidget.applyOne() — angka tidak valid (0/kosong) tetap ditolak SEBELUM masuk gate (perilaku lama)', () => {
+  const D = { products: [{ id: 'p1', name: 'Cobek A', beratPerUnit: 0 }] };
+  const inputEl = { value: '' };
+  const ctx = loadWidget(D, { document: { getElementById: (id) => (id === 'weightBulkInput_p1' ? inputEl : {}) } });
+  let updateCalls = 0;
+  const origUpdate = ctx.ProductRepository.updateProduct;
+  ctx.ProductRepository.updateProduct = function (...args) { updateCalls++; return origUpdate.apply(ctx.ProductRepository, args); };
+  ctx.WeightBulkWidget.render = () => {};
+  ctx.WeightBulkWidget.applyOne('p1');
+  assert.equal(D.products[0].beratPerUnit, 0, 'tidak berubah karena guard val>0 lama tetap di caller');
+  assert.equal(updateCalls, 0, 'gate tidak boleh dipanggil kalau guard lama sudah menolak lebih dulu');
+});
+
+test('integrasi: WeightBulkWidget.applyBulk() — lewat ProductRepository.updateProduct() utk tiap baris terisi', () => {
+  const D = {
+    products: [
+      { id: 'p1', name: 'Cobek A', beratPerUnit: 0 },
+      { id: 'p2', name: 'Cobek B', beratPerUnit: 0 },
+      { id: 'p3', name: 'Cobek C', beratPerUnit: 0 },
+    ],
+  };
+  const inputs = { weightBulkInput_p1: { value: '1' }, weightBulkInput_p2: { value: '' }, weightBulkInput_p3: { value: '2.5' } };
+  const ctx = loadWidget(D, { document: { getElementById: (id) => inputs[id] || {} } });
+  let updateCalls = 0;
+  const origUpdate = ctx.ProductRepository.updateProduct;
+  ctx.ProductRepository.updateProduct = function (...args) { updateCalls++; return origUpdate.apply(ctx.ProductRepository, args); };
+  ctx.WeightBulkWidget.render = () => {};
+  return ctx.WeightBulkWidget.applyBulk().then(() => {
+    assert.equal(D.products[0].beratPerUnit, 1);
+    assert.equal(D.products[1].beratPerUnit, 0, 'baris kosong dilewati (perilaku lama)');
+    assert.equal(D.products[2].beratPerUnit, 2.5);
+    assert.ok(updateCalls >= 2, 'kedua baris terisi harus lewat ProductRepository.updateProduct()');
+  });
+});
+
+test('integrasi: WeightBulkWidget.applyBulk() — tidak ada baris terisi -> tidak memanggil gate sama sekali', () => {
+  const D = { products: [{ id: 'p1', name: 'Cobek A', beratPerUnit: 0 }] };
+  const ctx = loadWidget(D, { document: { getElementById: () => ({ value: '' }) } });
+  let updateCalls = 0;
+  const origUpdate = ctx.ProductRepository.updateProduct;
+  ctx.ProductRepository.updateProduct = function (...args) { updateCalls++; return origUpdate.apply(ctx.ProductRepository, args); };
+  ctx.WeightBulkWidget.render = () => {};
+  return ctx.WeightBulkWidget.applyBulk().then(() => {
+    assert.equal(updateCalls, 0);
+    assert.equal(D.products[0].beratPerUnit, 0);
+  });
+});
+
+// === B. Fallback (tanpa ProductRepository) ==================================
+
+test('integrasi: WeightBulkWidget.applyOne()/applyBulk() tetap bekerja tanpa ProductRepository (fallback mentah, guard typeof)', () => {
+  const D = {
+    products: [
+      { id: 'p1', name: 'Cobek A', beratPerUnit: 0 },
+      { id: 'p2', name: 'Cobek B', beratPerUnit: 0 },
+    ],
+  };
+  const inputs = { weightBulkInput_p1: { value: '4' }, weightBulkInput_p2: { value: '5' } };
+  const ctx = loadSource(
+    ['modules/shop/cobek-pricing.js'],
+    {
+      D,
+      document: { getElementById: (id) => inputs[id] || {} },
+      toast: () => {},
+      save: () => {},
+      askConfirm: async () => true,
+      escapeHtml: (s) => s,
+      renderProductList: () => {},
+      fmt: (n) => String(n),
+    },
+    ['WeightBulkWidget'],
+  );
+  ctx.WeightBulkWidget.render = () => {};
+  ctx.WeightBulkWidget.applyOne('p1');
+  assert.equal(D.products[0].beratPerUnit, 4);
+  return ctx.WeightBulkWidget.applyBulk().then(() => {
+    assert.equal(D.products[1].beratPerUnit, 5);
+  });
+});
