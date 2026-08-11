@@ -1,0 +1,393 @@
+--- base/kw/modules/shop/generic/category-store.js
++++ release/kw/modules/shop/generic/category-store.js
+@@ -45,4 +45,99 @@
+     const k = this.find(id);
+     return k ? (k.name || '') : '';
+   },
++
++  // === Modul 8 (sesi ini): Category Mutation Gate ===========================
++  // Lanjutan langsung Modul 5-7 (ProductRepository/SupplierStore) — SSOT
++  // yang sama sekarang dibuat utk sisi TULIS Category (`D.cobekKategori`),
++  // yang sebelumnya ditulis mentah tanpa validasi di 3 titik:
++  // `resolveShopKategori()` (cobek-tx-cart.js — find-or-create dipakai jalur
++  // Transaksi & import shop-data-io-api.js/cobek-io.js), `Etalase.
++  // addKategoriManual()` cabang edit (rename in-place), dan `Etalase.
++  // delKategori()` (hapus + sisi-efek clear `kategoriId` produk). SAMA
++  // PRINSIP ProductRepository/SupplierStore: field teks lewat
++  // validateTextValue() — REUSE PERSIS (guard typeof, 0 duplikasi validasi
++  // baru, sama semangat SupplierStore Modul 7).
++
++  // _validateText(value) — delegasi ke ProductRepository.validateTextValue()
++  // (SUDAH ADA) kalau tersedia, SAMA POLA SupplierStore._validateText().
++  // Fallback lokal ATURAN IDENTIK supaya CategoryStore tetap bisa dipakai
++  // berdiri sendiri (mis. di test) kalau ProductRepository belum di-load.
++  _validateText(value) {
++    if (typeof ProductRepository !== 'undefined') return ProductRepository.validateTextValue(value);
++    if (typeof value !== 'string') return { ok: false, reason: `nilai tidak valid (bukan string): ${value}` };
++    const trimmed = value.trim();
++    if (!trimmed) return { ok: false, reason: 'nilai tidak valid (string kosong)' };
++    return { ok: true, value: trimmed };
++  },
++
++  // mutateResolve(categories, name) — GATE utk find-or-create by name,
++  // MENGGANTIKAN `resolveShopKategori()` mentah (cobek-tx-cart.js). PURE
++  // (TIDAK memutasi `categories` input — caller yang push & assign balik,
++  // SAMA POLA mutateCreate() SupplierStore). id pakai generator PERSIS
++  // literal lama (`'ck_'+Date.now()+'_'+uid()`, guard `typeof uid` kalau
++  // helper global itu belum dimuat — fallback Math.random() suffix supaya
++  // id tetap unik, TIDAK pernah dipakai di kode lama tapi jaga-jaga test
++  // berdiri sendiri). Match nama SAMA case-insensitive PERSIS perilaku
++  // lama (`.toLowerCase()`). Return {ok:true, categories, id, created}
++  // (`created` true kalau kategori baru dibuat) atau {ok:false, reason}
++  // (nama tidak valid — TIDAK pernah membuat kategori kosong/sampah).
++  mutateResolve(categories, name) {
++    if (!Array.isArray(categories)) {
++      return { ok: false, reason: 'categories tidak valid — harus berupa array' };
++    }
++    const n = this._validateText(name);
++    if (!n.ok) return n;
++    const existing = categories.find((c) => (c.name || '').toLowerCase() === n.value.toLowerCase());
++    if (existing) return { ok: true, categories, id: existing.id, created: false };
++    const suffix = (typeof uid === 'function') ? uid() : Math.random().toString(36).slice(2);
++    const kat = { id: 'ck_' + Date.now() + '_' + suffix, name: n.value };
++    const next = categories.concat([kat]);
++    return { ok: true, categories: next, id: kat.id, created: true };
++  },
++
++  // mutateRename(category, name) — GATE utk edit nama kategori, IN-PLACE
++  // (impure, SAMA ALASAN SupplierStore.mutateUpdate() — `Etalase.
++  // addKategoriManual()` cabang edit pegang REFERENSI LANGSUNG ke elemen
++  // `D.cobekKategori`, memaksa immutable di sini berarti refactor besar yang
++  // TIDAK diminta sesi ini). Cek bentrok nama (nama dupikat) TETAP di
++  // caller (business logic UX lama, "kategori X sudah ada" — BUKAN validasi
++  // gate ini, sama semangat guard `km<=0` yang tetap di caller utk
++  // SupplierStore.mutateSetRoute()). Fail-safe: nama tidak valid -> category
++  // TIDAK disentuh sama sekali. Return {ok:true, category} atau
++  // {ok:false, reason}.
++  mutateRename(category, name) {
++    if (!category || typeof category !== 'object' || Array.isArray(category)) {
++      return { ok: false, reason: 'Category tidak valid — harus berupa object' };
++    }
++    const n = this._validateText(name);
++    if (!n.ok) return n;
++    category.name = n.value;
++    return { ok: true, category };
++  },
++
++  // mutateDelete(categories, id) — GATE hapus kategori, PURE (balikin ARRAY
++  // BARU hasil filter, TIDAK memutasi `categories` input — SAMA POLA
++  // SupplierStore.mutateDelete(); caller yang assign balik ke
++  // `D.cobekKategori`, SAMA PERSIS pola
++  // `D.cobekKategori=D.cobekKategori.filter(...)` lama di
++  // `Etalase.delKategori()`). CATATAN SCOPE: sisi-efek `Etalase.
++  // delKategori()` yang mengosongkan `p.kategoriId=''` di SEMUA produk
++  // terkait SENGAJA TIDAK dialihkan ke gate ini/ProductRepository — itu
++  // MUTASI PRODUCT (bukan Category), string kosong `''` yang ditulis di
++  // situ juga akan DITOLAK oleh `ProductRepository.mutateSetField()` (yang
++  // mewajibkan teks non-kosong, Modul 5) sehingga memaksanya lewat gate itu
++  // berarti mengubah perilaku (kategoriId TIDAK akan ter-clear lagi) — di
++  // luar instruksi sesi ini ("tidak boleh mengubah business logic"),
++  // dibiarkan raw dgn sengaja, PERSIS pola yang sama didokumentasikan di
++  // SupplierStore.mutateDelete() (Modul 7) utk `p.produsenId=''`. Return
++  // {ok:true, categories} (array baru, id sudah tidak ada) atau
++  // {ok:false, reason} (id tidak valid).
++  mutateDelete(categories, id) {
++    if (!Array.isArray(categories)) {
++      return { ok: false, reason: 'categories tidak valid — harus berupa array' };
++    }
++    const k = this._validateText(id);
++    if (!k.ok) return { ok: false, reason: `id tidak valid: ${k.reason}` };
++    return { ok: true, categories: categories.filter((c) => c.id !== k.value) };
++  },
+ };
+--- base/kw/modules/shop/cobek-tx-cart.js
++++ release/kw/modules/shop/cobek-tx-cart.js
+@@ -10,9 +10,20 @@
+ function onShopCustFieldInput(field){return Pelanggan.onFieldInput(field);}
+ function selectShopCustomer(name,phone,address){return Pelanggan.select(name,phone,address);}
+ 
++// resolveShopKategori(name) — dialihkan lewat CategoryStore.mutateResolve()
++// (Modul 8, kw modules/shop/generic/category-store.js) kalau tersedia, guard
++// `typeof CategoryStore!=='undefined'` + fallback logic lama PERSIS (SAMA
++// pola guard 3 titik yang di-wire Modul 7 di cobek-order.js/cobek-pricing.js)
++// supaya urutan load script yang belum memuat CategoryStore tidak meledak.
+ function resolveShopKategori(name){
+ name=(name||'').trim();
+ if(!name)return '';
++if(typeof CategoryStore!=='undefined'){
++const r=CategoryStore.mutateResolve(D.cobekKategori,name);
++if(!r.ok)return '';
++D.cobekKategori=r.categories;
++return r.id;
++}
+ let cat=D.cobekKategori.find(c=>c.name.toLowerCase()===name.toLowerCase());
+ if(!cat){cat={id:'ck_'+Date.now()+'_'+uid(),name};D.cobekKategori.push(cat);}
+ return cat.id;
+--- base/kw/modules/shop/cobek-etalase.js
++++ release/kw/modules/shop/cobek-etalase.js
+@@ -528,7 +528,14 @@
+ if(!kat){this.cancelEditKategori();return;}
+ const clash=D.cobekKategori.find(c=>c.id!==this.katEditId&&c.name.toLowerCase()===name.toLowerCase());
+ if(clash){toast(`⚠️ Kategori "${name}" sudah ada`);return;}
++// dialihkan lewat CategoryStore.mutateRename() (Modul 8) kalau tersedia,
++// guard + fallback raw PERSIS SAMA pola 3 titik Modul 7.
++if(typeof CategoryStore!=='undefined'){
++const r=CategoryStore.mutateRename(kat,name);
++if(!r.ok){toast('⚠️ Nama kategori tidak valid');return;}
++}else{
+ kat.name=name;
++}
+ this.katEditId=null;
+ save();el.value='';this.renderKategoriList();this.renderList();
+ const btn=document.getElementById('cobekKategoriAddBtn');if(btn)btn.textContent='+ Tambah';
+@@ -548,7 +555,16 @@
+ :`Hapus kategori "${escapeHtml(kat.name)}"?`;
+ if(!await askConfirm(msg,{title:'Hapus Kategori',okText:'Ya, Hapus'}))return;
+ if(this.katEditId===id)this.cancelEditKategori();
++// dialihkan lewat CategoryStore.mutateDelete() (Modul 8) kalau tersedia,
++// guard + fallback raw PERSIS SAMA pola Produsen.delete() Modul 7.
++// p.kategoriId='' TETAP raw dgn sengaja (lihat catatan mutateDelete()
++// CategoryStore — sisi-efek Product, bukan Category, di luar scope gate ini).
++if(typeof CategoryStore!=='undefined'){
++const r=CategoryStore.mutateDelete(D.cobekKategori,id);
++if(r.ok)D.cobekKategori=r.categories;
++}else{
+ D.cobekKategori=D.cobekKategori.filter(c=>c.id!==id);
++}
+ D.products.forEach(p=>{if(p.kategoriId===id)p.kategoriId='';});
+ save();this.renderKategoriList();this.renderList();toast('🗑 Kategori dihapus');
+ },
+--- /dev/null
++++ release/kw/tests/category-mutation-gate-mod8.test.js
+@@ -0,0 +1,231 @@
++'use strict';
++// tests/category-mutation-gate-mod8.test.js — Modul 8 (CategoryStore, sesi
++// ini): Category Mutation Gate.
++//
++// Lanjutan langsung Modul 3-7 (ProductRepository/SupplierStore) — SSOT baru
++// utk sisi TULIS Category (`D.cobekKategori`), menutup 3 titik mutasi mentah:
++//   1. `resolveShopKategori()` (cobek-tx-cart.js)     -> CategoryStore.mutateResolve()
++//   2. `Etalase.addKategoriManual()` cabang edit (cobek-etalase.js)
++//                                                       -> CategoryStore.mutateRename()
++//   3. `Etalase.delKategori()` (cobek-etalase.js)       -> CategoryStore.mutateDelete()
++//
++// Cakupan:
++//   A. Unit — mutateResolve()/mutateRename()/mutateDelete() langsung
++//      (isolasi, cuma category-store.js + reuse validator ProductRepository).
++//   B. Integrasi — 2 call site yang di-wire sesi ini benar-benar lewat gate
++//      & hasil akhir identik business logic lama.
++//   C. Fallback — caller lama tetap bekerja tanpa CategoryStore (guard typeof).
++
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const { loadSource } = require('./helpers/loadSource');
++
++function loadStore() {
++  return loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/category-store.js'],
++    {},
++    ['CategoryStore', 'ProductRepository'],
++  );
++}
++
++// === A. Unit ================================================================
++
++test('CategoryStore.mutateResolve() — nama baru -> kategori dibuat, id ck_ prefix', () => {
++  const { CategoryStore } = loadStore();
++  const r = CategoryStore.mutateResolve([], 'Batu Alam');
++  assert.equal(r.ok, true);
++  assert.equal(r.created, true);
++  assert.equal(r.categories.length, 1);
++  assert.equal(r.categories[0].name, 'Batu Alam');
++  assert.ok(r.id.startsWith('ck_'), 'id harus pakai prefix ck_ (mekanisme lama)');
++});
++
++test('CategoryStore.mutateResolve() — nama sudah ada (case-insensitive) -> reuse, tidak duplikat', () => {
++  const { CategoryStore } = loadStore();
++  const existing = [{ id: 'ck_1', name: 'Batu Alam' }];
++  const r = CategoryStore.mutateResolve(existing, 'batu alam');
++  assert.equal(r.ok, true);
++  assert.equal(r.created, false);
++  assert.equal(r.id, 'ck_1');
++  assert.equal(r.categories, existing, 'array TIDAK boleh diganti kalau tidak ada yang dibuat');
++});
++
++test('CategoryStore.mutateResolve() — input asli TIDAK dimutasi (PURE)', () => {
++  const { CategoryStore } = loadStore();
++  const existing = [{ id: 'ck_1', name: 'Lama' }];
++  const r = CategoryStore.mutateResolve(existing, 'Baru');
++  assert.equal(existing.length, 1, 'array lama tidak boleh berubah panjang');
++  assert.equal(r.categories.length, 2);
++});
++
++test('CategoryStore.mutateResolve() — nama kosong/whitespace/tidak valid ditolak, tidak membuat kategori', () => {
++  const { CategoryStore } = loadStore();
++  assert.equal(CategoryStore.mutateResolve([], '').ok, false);
++  assert.equal(CategoryStore.mutateResolve([], '   ').ok, false);
++  assert.equal(CategoryStore.mutateResolve([], 123).ok, false);
++  assert.equal(CategoryStore.mutateResolve([], undefined).ok, false);
++});
++
++test('CategoryStore.mutateResolve() — categories tidak valid (bukan array) -> ok:false', () => {
++  const { CategoryStore } = loadStore();
++  assert.equal(CategoryStore.mutateResolve(null, 'x').ok, false);
++  assert.equal(CategoryStore.mutateResolve({}, 'x').ok, false);
++});
++
++test('CategoryStore.mutateRename() — nama valid ditulis in-place', () => {
++  const { CategoryStore } = loadStore();
++  const kat = { id: 'ck_1', name: 'Lama' };
++  const r = CategoryStore.mutateRename(kat, 'Baru');
++  assert.equal(r.ok, true);
++  assert.equal(kat.name, 'Baru');
++});
++
++test('CategoryStore.mutateRename() — nama kosong ditolak, category TIDAK berubah sama sekali', () => {
++  const { CategoryStore } = loadStore();
++  const kat = { id: 'ck_1', name: 'Lama' };
++  const r = CategoryStore.mutateRename(kat, '   ');
++  assert.equal(r.ok, false);
++  assert.equal(kat.name, 'Lama');
++});
++
++test('CategoryStore.mutateRename() — category tidak valid (null/array/primitif) -> ok:false', () => {
++  const { CategoryStore } = loadStore();
++  assert.equal(CategoryStore.mutateRename(null, 'x').ok, false);
++  assert.equal(CategoryStore.mutateRename([], 'x').ok, false);
++  assert.equal(CategoryStore.mutateRename('x', 'x').ok, false);
++});
++
++test('CategoryStore.mutateDelete() — hapus by id, balikin array baru (PURE)', () => {
++  const { CategoryStore } = loadStore();
++  const cats = [{ id: 'ck_1', name: 'A' }, { id: 'ck_2', name: 'B' }];
++  const r = CategoryStore.mutateDelete(cats, 'ck_1');
++  assert.equal(r.ok, true);
++  assert.deepEqual(r.categories.map((c) => c.id), ['ck_2']);
++  assert.equal(cats.length, 2, 'array input asli TIDAK boleh dimutasi');
++});
++
++test('CategoryStore.mutateDelete() — id tidak ketemu tetap ok:true, array tidak berubah isi', () => {
++  const { CategoryStore } = loadStore();
++  const cats = [{ id: 'ck_1', name: 'A' }];
++  const r = CategoryStore.mutateDelete(cats, 'ck_ghaib');
++  assert.equal(r.ok, true);
++  assert.equal(r.categories.length, 1);
++});
++
++test('CategoryStore.mutateDelete() — id/categories tidak valid -> ok:false', () => {
++  const { CategoryStore } = loadStore();
++  assert.equal(CategoryStore.mutateDelete(null, 'ck_1').ok, false);
++  assert.equal(CategoryStore.mutateDelete([{ id: 'ck_1' }], '').ok, false);
++  assert.equal(CategoryStore.mutateDelete([{ id: 'ck_1' }], '   ').ok, false);
++});
++
++test('CategoryStore.label()/find()/list() — read path lama tetap utuh (tidak disentuh sesi ini)', () => {
++  const D = { cobekKategori: [{ id: 'ck_1', name: 'Kecil' }] };
++  const ctx = loadSource(['modules/shop/generic/category-store.js'], { D }, ['CategoryStore']);
++  assert.equal(ctx.CategoryStore.list().length, 1);
++  assert.equal(ctx.CategoryStore.label('ck_1'), 'Kecil');
++  assert.equal(ctx.CategoryStore.label('ck_ghaib'), '');
++});
++
++// === B. Integrasi ===========================================================
++
++test('integrasi: cobek-tx-cart.js resolveShopKategori() — lewat CategoryStore.mutateResolve()', () => {
++  const D = { cobekKategori: [] };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/category-store.js', 'modules/shop/cobek-tx-cart.js'],
++    { D, document: { getElementById: () => ({}) } },
++    ['resolveShopKategori', 'CategoryStore'],
++  );
++  let resolveCalls = 0;
++  const orig = ctx.CategoryStore.mutateResolve;
++  ctx.CategoryStore.mutateResolve = function (...args) { resolveCalls++; return orig.apply(ctx.CategoryStore, args); };
++  const id1 = ctx.resolveShopKategori('Sedang');
++  const id2 = ctx.resolveShopKategori('sedang');
++  assert.equal(D.cobekKategori.length, 1, 'kategori sama (case-insensitive) tidak boleh duplikat');
++  assert.equal(id1, id2);
++  assert.ok(resolveCalls >= 2, 'resolveShopKategori harus lewat CategoryStore.mutateResolve()');
++  assert.equal(ctx.resolveShopKategori(''), '', 'string kosong tetap balik "" (perilaku lama)');
++});
++
++test('integrasi: cobek-etalase.js Etalase.addKategoriManual() cabang edit — lewat CategoryStore.mutateRename()', () => {
++  const D = { cobekKategori: [{ id: 'ck_1', name: 'Kecil' }], products: [] };
++  const inputEl = { value: 'Sedang' };
++  const fakeDocument = {
++    getElementById: (id) => {
++      if (id === 'cobekKategoriNewInput') return inputEl;
++      if (id === 'cobekKategoriAddBtn') return { textContent: '' };
++      if (id === 'cobekKategoriCancelBtn') return { style: {} };
++      return { style: {} };
++    },
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/category-store.js', 'modules/shop/cobek-etalase.js'],
++    { D, document: fakeDocument, toast: () => {}, save: () => {}, askConfirm: async () => true, escapeHtml: (s) => s },
++    ['Etalase', 'CategoryStore'],
++  );
++  let renameCalls = 0;
++  const orig = ctx.CategoryStore.mutateRename;
++  ctx.CategoryStore.mutateRename = function (...args) { renameCalls++; return orig.apply(ctx.CategoryStore, args); };
++  ctx.Etalase.katEditId = 'ck_1';
++  ctx.Etalase.renderKategoriList = () => {};
++  ctx.Etalase.renderList = () => {};
++  ctx.Etalase.addKategoriManual();
++  assert.equal(D.cobekKategori[0].name, 'Sedang');
++  assert.ok(renameCalls >= 1, 'rename harus lewat CategoryStore.mutateRename()');
++});
++
++test('integrasi: cobek-etalase.js Etalase.delKategori() — lewat CategoryStore.mutateDelete(), kategoriId produk terkait tetap ter-clear', () => {
++  const D = {
++    cobekKategori: [{ id: 'ck_1', name: 'A' }, { id: 'ck_2', name: 'B' }],
++    products: [{ id: 'p1', kategoriId: 'ck_1' }, { id: 'p2', kategoriId: 'ck_2' }],
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/category-store.js', 'modules/shop/cobek-etalase.js'],
++    { D, document: { getElementById: () => ({ style: {} }) }, toast: () => {}, save: () => {}, askConfirm: async () => true, escapeHtml: (s) => s },
++    ['Etalase', 'CategoryStore'],
++  );
++  let deleteCalls = 0;
++  const orig = ctx.CategoryStore.mutateDelete;
++  ctx.CategoryStore.mutateDelete = function (...args) { deleteCalls++; return orig.apply(ctx.CategoryStore, args); };
++  ctx.Etalase.renderKategoriList = () => {};
++  ctx.Etalase.renderList = () => {};
++  return ctx.Etalase.delKategori('ck_1').then(() => {
++    assert.deepEqual(D.cobekKategori.map((c) => c.id), ['ck_2']);
++    assert.equal(D.products[0].kategoriId, '', 'sisi-efek clear kategoriId produk TETAP jalan (di luar scope gate, sengaja raw)');
++    assert.equal(D.products[1].kategoriId, 'ck_2');
++    assert.ok(deleteCalls >= 1, 'delete harus lewat CategoryStore.mutateDelete()');
++  });
++});
++
++// === C. Fallback (tanpa CategoryStore) =====================================
++
++test('integrasi: seluruh caller lama tetap bekerja tanpa CategoryStore (fallback mentah, guard typeof)', () => {
++  const D = { cobekKategori: [], products: [] };
++  const ctxCart = loadSource(
++    ['modules/shop/cobek-tx-cart.js'],
++    { D, document: { getElementById: () => ({}) }, uid: () => Date.now() },
++    ['resolveShopKategori'],
++  );
++  const id = ctxCart.resolveShopKategori('Tanpa Gate');
++  assert.equal(D.cobekKategori.length, 1);
++  assert.equal(D.cobekKategori[0].id, id);
++
++  const D2 = { cobekKategori: [{ id: 'ck_1', name: 'Lama' }], products: [] };
++  const inputEl = { value: 'Ganti' };
++  const fakeDocument = {
++    getElementById: (id2) => {
++      if (id2 === 'cobekKategoriNewInput') return inputEl;
++      return { style: {} };
++    },
++  };
++  const ctxEtalase = loadSource(
++    ['modules/shop/cobek-etalase.js'],
++    { D: D2, document: fakeDocument, toast: () => {}, save: () => {}, askConfirm: async () => true, escapeHtml: (s) => s },
++    ['Etalase'],
++  );
++  ctxEtalase.Etalase.katEditId = 'ck_1';
++  ctxEtalase.Etalase.renderKategoriList = () => {};
++  ctxEtalase.Etalase.renderList = () => {};
++  ctxEtalase.Etalase.addKategoriManual();
++  assert.equal(D2.cobekKategori[0].name, 'Ganti');
++});

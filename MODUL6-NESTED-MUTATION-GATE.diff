@@ -1,0 +1,158 @@
+--- base/kw/modules/shop/generic/product-repository.js	2026-08-04 04:12:37.000000000 +0000
++++ release/kw/modules/shop/generic/product-repository.js	2026-08-04 04:29:24.680372405 +0000
+@@ -469,4 +469,77 @@
+     product[field] = v.value;
+     return { ok: true, field, value: v.value };
+   },
++
++  // === Modul 6 (sesi ini): Nested Attribute Mutation Gate ===================
++  // Lanjutan langsung Modul 5 — satu-satunya nested object Product yang masih
++  // ditulis mentah: `product.hargaByProdusen[produsenId]` (map harga beli
++  // per-produsen, 3 titik: cobek-order.js Produsen.saveHarga() [set ATAU
++  // delete], cobek-tx-cart.js applyTxShopStockFromTx() [set-only], dan
++  // cobek-etalase.js Etalase.save() [set-only]). Field skalar
++  // `kategoriId`/`produsenId` yang masih bypass Repository di
++  // cobek-tx-cart.js (issue #1 CHANGELOG-MODUL5.md) dialihkan ke
++  // mutateSetField() yang SUDAH ADA (Modul 5) — tidak butuh gate baru, cuma
++  // wiring.
++  //
++  // Desain gate nested BARU (bukan reuse mutateSetField()/mutateSetPrice()
++  // langsung — struktur beda, 1 field = 1 map, bukan 1 field = 1 skalar):
++  //   - key (produsenId) divalidasi lewat validateTextValue() YANG SUDAH ADA
++  //     (reuse persis, 0 duplikasi validasi teks baru).
++  //   - value (harga) divalidasi lewat validatePriceValue() YANG SUDAH ADA
++  //     (reuse persis, 0 duplikasi validasi harga baru) — SAMA aturan dgn
++  //     hargaBeli/hargaJual (finite, diklem >=0).
++  //   - SET & DELETE dipisah jadi 2 method (bukan 1 method dgn flag) supaya
++  //     tiap call site tetap eksplisit soal niatnya (SAMA semangat
++  //     `mutateStockDelta()` vs `mutateSetStock()` — 2 gate beda niat, bukan
++  //     1 gate serba-guna) & cocok dgn 2 pola behavior berbeda yang sudah ada
++  //     di 3 call site (order.js: set ATAU delete tergantung value; tx-cart.js
++  //     & etalase.js: set-only, caller sendiri yang sudah guard `>0` sebelum
++  //     manggil — gate TIDAK mengubah guard itu, cuma menggantikan assignment
++  //     mentah setelahnya).
++  //   - `product.hargaByProdusen` DIBUAT kalau belum ada (SAMA PERSIS pola
++  //     `if(!product.hargaByProdusen)product.hargaByProdusen={}` yang sudah
++  //     ada di ke-3 call site — dipindah ke dalam gate, bukan logic baru).
++  //   - Fail-safe SAMA pola gate lain: value/key tidak valid -> map TIDAK
++  //     disentuh sama sekali (bukan partial write, bukan bikin map kosong
++  //     kalau sebelumnya belum ada & mutasi gagal).
++
++  // mutateSetHargaProdusen(product, produsenId, value) — GATE SET utk nested
++  // map hargaByProdusen. Menggantikan
++  // `product.hargaByProdusen[produsenId]=hargaBeli` mentah (3 titik).
++  // Return {ok:true, produsenId, value} (map SUDAH ditulis) atau
++  // {ok:false, reason} (map TIDAK berubah).
++  mutateSetHargaProdusen(product, produsenId, value) {
++    if (!product || typeof product !== 'object' || Array.isArray(product)) {
++      return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
++    }
++    const k = this.validateTextValue(produsenId);
++    if (!k.ok) return { ok: false, reason: `produsenId tidak valid: ${k.reason}` };
++    const v = this.validatePriceValue(value);
++    if (!v.ok) return v;
++    if (!product.hargaByProdusen || typeof product.hargaByProdusen !== 'object' || Array.isArray(product.hargaByProdusen)) {
++      product.hargaByProdusen = {};
++    }
++    product.hargaByProdusen[k.value] = v.value;
++    return { ok: true, produsenId: k.value, value: v.value };
++  },
++
++  // mutateDeleteHargaProdusen(product, produsenId) — GATE DELETE utk nested
++  // map hargaByProdusen. Menggantikan `delete product.hargaByProdusen[key]`
++  // mentah (cobek-order.js Produsen.saveHarga(), cabang value<=0). Idempotent
++  // — hapus key yang memang tidak ada TETAP ok:true (SAMA perilaku `delete`
++  // JS native, 0 perubahan perilaku).
++  // Return {ok:true, produsenId} (key dihapus/sudah tidak ada) atau
++  // {ok:false, reason} (produk/produsenId tidak valid).
++  mutateDeleteHargaProdusen(product, produsenId) {
++    if (!product || typeof product !== 'object' || Array.isArray(product)) {
++      return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
++    }
++    const k = this.validateTextValue(produsenId);
++    if (!k.ok) return { ok: false, reason: `produsenId tidak valid: ${k.reason}` };
++    if (!product.hargaByProdusen || typeof product.hargaByProdusen !== 'object' || Array.isArray(product.hargaByProdusen)) {
++      product.hargaByProdusen = {};
++    }
++    delete product.hargaByProdusen[k.value];
++    return { ok: true, produsenId: k.value };
++  },
+ };
+--- base/kw/modules/shop/cobek-order.js	2026-08-04 02:38:25.000000000 +0000
++++ release/kw/modules/shop/cobek-order.js	2026-08-04 04:29:32.500368821 +0000
+@@ -113,10 +113,16 @@
+ inputs.forEach(inp=>{
+ const p=D.products.find(x=>x.id===inp.getAttribute('data-prod-id'));
+ if(!p)return;
+-if(!p.hargaByProdusen)p.hargaByProdusen={};
+ const val=parseFloat(inp.value);
+-if(val>0)p.hargaByProdusen[this.hargaEditId]=val;
+-else delete p.hargaByProdusen[this.hargaEditId];
++// Modul 6 — mutasi nested hargaByProdusen dialihkan ke ProductRepository
++// (guard typeof + fallback mentah lama, pola sama persis Modul 3/4/5).
++if(val>0){
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetHargaProdusen(p,this.hargaEditId,val);
++else{if(!p.hargaByProdusen)p.hargaByProdusen={};p.hargaByProdusen[this.hargaEditId]=val;}
++} else {
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateDeleteHargaProdusen(p,this.hargaEditId);
++else{if(!p.hargaByProdusen)p.hargaByProdusen={};delete p.hargaByProdusen[this.hargaEditId];}
++}
+ });
+ save();closeModal('produsenHargaModal');this.renderList();renderProductList();toast('✅ Harga produsen disimpan');
+ }
+--- base/kw/modules/shop/cobek-tx-cart.js	2026-08-04 03:43:38.000000000 +0000
++++ release/kw/modules/shop/cobek-tx-cart.js	2026-08-04 04:30:18.689334871 +0000
+@@ -161,19 +161,33 @@
+ product={id:'prod_'+Date.now()+'_'+uid(),name:it.name,stock:0,hargaBeli:it.hargaBeli,hargaJual:it.hargaJual,hargaReseller:null,diskonPersen:0,kategoriId,produsenId:it.produsenId,hargaByProdusen:{}};
+ D.products.push(product);
+ } else if(kategoriId){
+-product.kategoriId=kategoriId;
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'kategoriId',kategoriId);else product.kategoriId=kategoriId;
+ }
+ } else {
+ product=D.products.find(p=>p.id===it.productId);
+-if(product&&it.kategoriInput) product.kategoriId=resolveShopKategori(it.kategoriInput);
++if(product&&it.kategoriInput){
++const kat=resolveShopKategori(it.kategoriInput);
++// kat bisa '' kalau kategoriInput whitespace-only (resolveShopKategori() balikin
++// '' — lihat definisinya) — perilaku LAMA tetap menimpa kategoriId jadi '' di
++// kasus itu (bukan biarkan value lama), jadi gate (yang menolak string kosong,
++// fail-safe) HANYA dipakai kalau kat valid; kat kosong tetap assignment mentah
++// SAMA PERSIS sebelumnya supaya 0 perubahan perilaku di edge-case ini.
++if(kat){
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'kategoriId',kat);else product.kategoriId=kat;
++} else {
++product.kategoriId=kat;
++}
++}
+ }
+ if(!product)return;
+ if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty);else product.stock=(product.stock||0)+it.qty;
+ if(it.hargaBeli>0){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(product,'hargaBeli',it.hargaBeli);else product.hargaBeli=it.hargaBeli;}
+ if(it.produsenId){
+-product.produsenId=it.produsenId;
+-if(!product.hargaByProdusen)product.hargaByProdusen={};
+-if(it.hargaBeli>0)product.hargaByProdusen[it.produsenId]=it.hargaBeli;
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'produsenId',it.produsenId);else product.produsenId=it.produsenId;
++if(it.hargaBeli>0){
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetHargaProdusen(product,it.produsenId,it.hargaBeli);
++else{if(!product.hargaByProdusen)product.hargaByProdusen={};product.hargaByProdusen[it.produsenId]=it.hargaBeli;}
++}
+ }
+ resultItems.push({productId:product.id,name:product.name,qty:it.qty,hargaBeli:it.hargaBeli,produsenId:it.produsenId||'',kategoriId:product.kategoriId||''});
+ totalBelanja+=it.qty*it.hargaBeli;
+--- base/kw/modules/shop/cobek-etalase.js	2026-08-04 04:13:06.000000000 +0000
++++ release/kw/modules/shop/cobek-etalase.js	2026-08-04 04:29:45.334650835 +0000
+@@ -467,7 +467,11 @@
+ if(!product.hargaByProdusen)product.hargaByProdusen={};
+ if(produsenId){
+ if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'produsenId',produsenId);else product.produsenId=produsenId;
+-if(hargaBeli>0)product.hargaByProdusen[produsenId]=hargaBeli;
++// Modul 6 — mutasi nested hargaByProdusen dialihkan ke ProductRepository.
++if(hargaBeli>0){
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetHargaProdusen(product,produsenId,hargaBeli);
++else product.hargaByProdusen[produsenId]=hargaBeli;
++}
+ }
+ const produsenName=produsenId?(D.produsen.find(pr=>pr.id===produsenId)||{}).name:'';
+ const kategoriLabel=kategoriName?` · kategori ${kategoriName}`:'';

@@ -1,0 +1,56 @@
+# Unified Diff — Modul 10 (Produsen Inline-Create Mutation Gate)
+
+Baseline: kw_release_sesi367_modul9-weight-bulk-mutation-gate_v1064.zip
+
+## Source diubah (logic) — satu-satunya perubahan business-relevant sesi ini
+
+```diff
+--- orig_v1064/kw/modules/shop/cobek-etalase.js	2026-08-04 08:58:44.000000000 +0000
++++ zipbuild/kw/modules/shop/cobek-etalase.js	2026-08-04 09:28:26.222242449 +0000
+@@ -364,7 +364,16 @@
+ if(sel.value==='__new__'){
+ const name=await showPromptModal({title:'Produsen Baru',message:'Nama produsen baru:',icon:'🏭'});
+ if(name&&name.trim()){
+-const np={id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++// Modul 10 — inline "Produsen Baru" dialihkan lewat SupplierStore.mutateCreate()
++// (SSOT Tahap 7, sudah battle-tested di Produsen.save()), guard typeof + fallback
++// raw PERSIS literal lama (id generator SAMA: 'prd_'+Date.now()).
++let np;
++if(typeof SupplierStore!=='undefined'){
++const hasil=SupplierStore.mutateCreate({name:name.trim(),contact:'',note:''});
++np=hasil.ok?hasil.supplier:{id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++}else{
++np={id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++}
+ D.produsen.push(np);
+ save();
+ sel.innerHTML='<option value="">— Tanpa produsen —</option>'+D.produsen.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.name)}</option>`).join('')+'<option value="__new__">➕ Produsen Baru</option>';
+--- orig_v1064/kw/modules/shop/cobek-tx-cart.js	2026-08-04 08:58:29.000000000 +0000
++++ zipbuild/kw/modules/shop/cobek-tx-cart.js	2026-08-04 09:28:26.221646981 +0000
+@@ -81,7 +81,16 @@
+ if(prodSel.value==='__new__'){
+ const name=await showPromptModal({title:'Produsen Baru',message:'Nama produsen baru:',icon:'🏭'});
+ if(name&&name.trim()){
+-const np={id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++// Modul 10 — inline "Produsen Baru" dialihkan lewat SupplierStore.mutateCreate()
++// (SSOT Tahap 7), guard typeof + fallback raw PERSIS literal lama, pola SAMA
++// PERSIS Etalase.onProdusenChange() (cobek-etalase.js).
++let np;
++if(typeof SupplierStore!=='undefined'){
++const hasil=SupplierStore.mutateCreate({name:name.trim(),contact:'',note:''});
++np=hasil.ok?hasil.supplier:{id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++}else{
++np={id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
++}
+ D.produsen.push(np);
+ populateTxShopStockSelect();
+ prodSel.value=np.id;
+```
+
+## Test baru (file utuh, bukan diff — file belum ada di baseline)
+
+Lihat `tests/produsen-inline-create-mutation-gate-mod10.test.js` di FULL RELEASE ZIP.
+
+## File lain yang berubah (otomatis oleh build.js — versioning, bukan edit manual)
+
+Lihat `FILES-CHANGED.md` untuk daftar lengkap + alasan tiap file.

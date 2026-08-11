@@ -1,0 +1,533 @@
+--- a/modules/shop/generic/product-repository.js
++++ b/modules/shop/generic/product-repository.js
+@@ -374,16 +374,99 @@
+   // mempertahankan harga LAMA-nya, bukan berubah jadi NaN/undefined.
+   // Return {ok:true, field, value} (field SUDAH ditulis) atau
+   // {ok:false, reason} (field TIDAK berubah).
++  // Modul 5 (sesi ini): field ketiga `hargaReseller` ditambahkan ke gate yang
++  // sama (bukan gate terpisah — 1 field harga lagi, pola sama persis
++  // hargaBeli/hargaJual) TAPI dengan SATU pengecualian eksplisit: `null`
++  // valid utk `hargaReseller` (artinya "reseller belum diisi", state yang
++  // sudah lama ada di data — lihat default `hargaReseller: null` di
++  // createProduct() atas & titik pembuatan produk baru di cobek-io.js/
++  // shop-data-io-api.js) — beda dari hargaBeli/hargaJual yang TIDAK PERNAH
++  // null (0 dianggap "belum diisi" utk keduanya). Rekomendasi persis dari
++  // known issue Modul 4 (lihat CHANGELOG-MODUL4.md §"Known issue baru").
+   mutateSetPrice(product, field, value) {
+     if (!product || typeof product !== 'object' || Array.isArray(product)) {
+       return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
+     }
+-    if (field !== 'hargaBeli' && field !== 'hargaJual') {
++    if (field !== 'hargaBeli' && field !== 'hargaJual' && field !== 'hargaReseller') {
+       return { ok: false, reason: `field harga tidak didukung gate ini: ${field}` };
+     }
++    if (field === 'hargaReseller' && value === null) {
++      product.hargaReseller = null;
++      return { ok: true, field, value: null };
++    }
+     const v = this.validatePriceValue(value);
+     if (!v.ok) return v;
+     product[field] = v.value;
+     return { ok: true, field, value: v.value };
++  },
++
++  // === Modul 5 (sesi ini): Attribute Mutation Gate =========================
++  // Lanjutan langsung Modul 4 — field lain yang masih ditulis mentah tanpa
++  // validasi di titik yang SAMA PERSIS dgn hargaBeli/hargaJual/hargaReseller
++  // (commitShopRows()/ImportShopExcel.commit()): diskonPersen (numerik,
++  // persen) & kategoriId/produsenId/satuan (id/teks). barcode & "margin"
++  // TIDAK ada sbg field tersimpan di skema produk saat ini (margin dihitung
++  // on-the-fly dari hargaBeli/hargaJual di cobek-io.js, bukan field — 0
++  // titik mutasi utk digate); tidak ada perubahan skema baru sesi ini.
++
++  // validateDiscountValue(value) — validasi bersama utk diskonPersen. Sama
++  // aturan validatePriceValue() (angka finite) DITAMBAH klem atas
++  // (0..100, karena ini persen) selain klem bawah (>=0) yang sudah ada.
++  validateDiscountValue(value) {
++    if (!this._isFiniteNumber(value)) {
++      return { ok: false, reason: `nilai diskon tidak valid (bukan angka/NaN/Infinity): ${value}` };
++    }
++    return { ok: true, value: Math.max(0, Math.min(100, value)) };
++  },
++
++  // mutateSetDiskon(product, value) — GATE utk diskonPersen, pola sama
++  // persis mutateSetStock()/mutateSetPrice(). Menggantikan
++  // `p.diskonPersen=r.diskonPersen` mentah (cobek-io.js) yang sebelumnya 0
++  // validasi (bisa NaN/negatif/>100 kalau kolom import korup).
++  mutateSetDiskon(product, value) {
++    if (!product || typeof product !== 'object' || Array.isArray(product)) {
++      return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
++    }
++    const v = this.validateDiscountValue(value);
++    if (!v.ok) return v;
++    product.diskonPersen = v.value;
++    return { ok: true, field: 'diskonPersen', value: v.value };
++  },
++
++  // validateTextValue(value) — validasi bersama utk field id/teks
++  // (kategoriId/produsenId/satuan). Tolak (ok:false) kalau `value` bukan
++  // string, atau string kosong setelah di-trim (termasuk null/undefined/
++  // NaN/angka — semua ditolak, SAMA prinsip "tolak sebelum ditulis mentah"
++  // dgn validatePriceValue()/validateStockValue()). Hasil DI-TRIM (bukan
++  // klem angka — ini teks) supaya whitespace liar dari import tidak lolos.
++  validateTextValue(value) {
++    if (typeof value !== 'string') {
++      return { ok: false, reason: `nilai tidak valid (bukan string): ${value}` };
++    }
++    const trimmed = value.trim();
++    if (!trimmed) {
++      return { ok: false, reason: 'nilai tidak valid (string kosong)' };
++    }
++    return { ok: true, value: trimmed };
++  },
++
++  // mutateSetField(product, field, value) — GATE utk field id/teks
++  // (kategoriId/produsenId/satuan), 1 gate dipakai ke-3nya (bukan 3 gate
++  // terpisah — hindari duplikasi validasi, sama semangat instruksi sesi
++  // ini) SAMA POLA mutateSetPrice() (field whitelist + fail-safe: field
++  // tidak disentuh sama sekali kalau value tidak valid). Menggantikan
++  // `p.kategoriId=...`/`p.produsenId=...`/`product.satuan=...` mentah yang
++  // sebelumnya ditulis tanpa validasi di shop-data-io-api.js/cobek-io.js.
++  mutateSetField(product, field, value) {
++    if (!product || typeof product !== 'object' || Array.isArray(product)) {
++      return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
++    }
++    if (field !== 'kategoriId' && field !== 'produsenId' && field !== 'satuan') {
++      return { ok: false, reason: `field tidak didukung gate ini: ${field}` };
++    }
++    const v = this.validateTextValue(value);
++    if (!v.ok) return v;
++    product[field] = v.value;
++    return { ok: true, field, value: v.value };
+   },
+ };
+--- a/modules/business/shop-data-io-api.js
++++ b/modules/business/shop-data-io-api.js
+@@ -47,13 +47,22 @@
+           if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetPrice(product, 'hargaJual', r.hargaJual);
+           else product.hargaJual = r.hargaJual;
+         }
+-        if (r.hargaReseller !== undefined && r.hargaReseller !== null) product.hargaReseller = r.hargaReseller;
++        if (r.hargaReseller !== undefined && r.hargaReseller !== null) {
++          if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetPrice(product, 'hargaReseller', r.hargaReseller);
++          else product.hargaReseller = r.hargaReseller;
++        }
+         if (r.stok !== undefined && r.stok !== null) {
+           if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetStock(product, r.stok);
+           else product.stock = r.stok;
+         }
+-        if (r.satuan) product.satuan = r.satuan;
+-        if (kategoriId) product.kategoriId = kategoriId;
++        if (r.satuan) {
++          if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetField(product, 'satuan', r.satuan);
++          else product.satuan = r.satuan;
++        }
++        if (kategoriId) {
++          if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetField(product, 'kategoriId', kategoriId);
++          else product.kategoriId = kategoriId;
++        }
+         updated++;
+       } else {
+         product = {
+--- a/modules/shop/cobek-io.js
++++ b/modules/shop/cobek-io.js
+@@ -543,10 +543,10 @@
+ if(p){
+ if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetStock(p,r.stock);else p.stock=r.stock;
+ if(typeof ProductRepository!=='undefined'){ProductRepository.mutateSetPrice(p,'hargaBeli',r.hargaBeli);ProductRepository.mutateSetPrice(p,'hargaJual',r.hargaJual);}else{p.hargaBeli=r.hargaBeli;p.hargaJual=r.hargaJual;}
+-if(r.hargaReseller!=null)p.hargaReseller=r.hargaReseller;
+-p.diskonPersen=r.diskonPersen;
+-if(kategoriId)p.kategoriId=kategoriId;
+-if(produsenMatch)p.produsenId=produsenMatch.id;
++if(r.hargaReseller!=null){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(p,'hargaReseller',r.hargaReseller);else p.hargaReseller=r.hargaReseller;}
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetDiskon(p,r.diskonPersen);else p.diskonPersen=r.diskonPersen;
++if(kategoriId){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(p,'kategoriId',kategoriId);else p.kategoriId=kategoriId;}
++if(produsenMatch){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(p,'produsenId',produsenMatch.id);else p.produsenId=produsenMatch.id;}
+ updated++;
+ } else {
+ D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
+--- a/modules/shop/cobek-etalase.js
++++ b/modules/shop/cobek-etalase.js
+@@ -466,7 +466,7 @@
+ }
+ if(!product.hargaByProdusen)product.hargaByProdusen={};
+ if(produsenId){
+-product.produsenId=produsenId;
++if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'produsenId',produsenId);else product.produsenId=produsenId;
+ if(hargaBeli>0)product.hargaByProdusen[produsenId]=hargaBeli;
+ }
+ const produsenName=produsenId?(D.produsen.find(pr=>pr.id===produsenId)||{}).name:'';
+--- a/tests/product-repository-price-gate-mod4.test.js
++++ b/tests/product-repository-price-gate-mod4.test.js
+@@ -66,12 +66,15 @@
+   assert.equal(p.hargaBeli, 1000); // tidak berubah, TIDAK jadi undefined
+ });
+ 
+-test('ProductRepository.mutateSetPrice() — field di luar scope (hargaReseller/stock/dll.) ditolak', () => {
++test('ProductRepository.mutateSetPrice() — field di luar scope (mis. stock) ditolak', () => {
++  // Catatan: `hargaReseller` DULU di luar scope gate ini (Modul 4), tapi
++  // sejak Modul 5 (lihat tests/product-repository-attribute-gate-mod5.test.js)
++  // sudah masuk scope mutateSetPrice() sbg field ketiga — assert
++  // penolakannya DIPINDAH ke sana, bukan dihapus, supaya test tetap
++  // merepresentasikan perilaku TERKINI (bukan Modul 4 semata).
+   const { ProductRepository } = loadRepo();
+   const p = { id: 'p1', hargaBeli: 1000, hargaJual: 2000, hargaReseller: null, stock: 5 };
+-  assert.equal(ProductRepository.mutateSetPrice(p, 'hargaReseller', 3000).ok, false);
+   assert.equal(ProductRepository.mutateSetPrice(p, 'stock', 10).ok, false);
+-  assert.equal(p.hargaReseller, null); // tidak tersentuh
+   assert.equal(p.stock, 5); // tidak tersentuh
+ });
+ 
+--- /dev/null
++++ b/tests/product-repository-attribute-gate-mod5.test.js
+@@ -0,0 +1,350 @@
++'use strict';
++// tests/product-repository-attribute-gate-mod5.test.js — Modul 5 (Product
++// Repository, sesi ini): Attribute Mutation Gate.
++//
++// Lanjutan langsung Modul 3 (stock) & Modul 4 (hargaBeli/hargaJual): field
++// terakhir yang masih bypass ProductRepository ditutup sesi ini —
++// hargaReseller (diperluas ke mutateSetPrice() yang sudah ada, dengan
++// penanganan null eksplisit), diskonPersen (gate baru mutateSetDiskon()),
++// kategoriId/produsenId/satuan (1 gate generik mutateSetField()).
++//
++// Cakupan:
++//   A. Unit — validatePriceValue()/mutateSetPrice() (perluasan hargaReseller),
++//      validateDiscountValue()/mutateSetDiskon(), validateTextValue()/
++//      mutateSetField() secara langsung (isolasi, cuma product-repository.js).
++//   B. Integrasi — titik call-site yang di-wire sesi ini
++//      (shop-data-io-api.js commitShopRows(), cobek-io.js
++//      ImportShopExcel.commit(), cobek-etalase.js Etalase.save()) benar-benar
++//      lewat gate & hasil akhir identik business logic lama utk nilai valid,
++//      PLUS menolak nilai korup (NaN/Infinity/string kosong/tipe salah).
++
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const { loadSource } = require('./helpers/loadSource');
++
++function loadRepo() {
++  return loadSource(['modules/shop/generic/product-repository.js'], {}, ['ProductRepository']);
++}
++
++// === A1. Unit: mutateSetPrice() perluasan hargaReseller =====================
++
++test('ProductRepository.mutateSetPrice() — hargaReseller: angka valid diklem >=0, ditulis in-place', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaReseller: null };
++  const r = ProductRepository.mutateSetPrice(p, 'hargaReseller', 15000);
++  assert.equal(r.ok, true); assert.equal(r.value, 15000);
++  assert.equal(p.hargaReseller, 15000);
++});
++
++test('ProductRepository.mutateSetPrice() — hargaReseller: null VALID (artinya "belum diisi"), beda dari hargaBeli/hargaJual', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaReseller: 8000 };
++  const r = ProductRepository.mutateSetPrice(p, 'hargaReseller', null);
++  assert.equal(r.ok, true); assert.equal(r.value, null);
++  assert.equal(p.hargaReseller, null);
++  // kontras: hargaBeli/hargaJual TETAP menolak null (perilaku Modul 4, tidak berubah)
++  const p2 = { id: 'p2', hargaBeli: 1000, hargaJual: 2000 };
++  assert.equal(ProductRepository.mutateSetPrice(p2, 'hargaBeli', null).ok, false);
++  assert.equal(ProductRepository.mutateSetPrice(p2, 'hargaJual', null).ok, false);
++  assert.equal(p2.hargaBeli, 1000);
++  assert.equal(p2.hargaJual, 2000);
++});
++
++test('ProductRepository.mutateSetPrice() — hargaReseller: NaN/Infinity/string/undefined ditolak, field TIDAK disentuh', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaReseller: 7000 };
++  assert.equal(ProductRepository.mutateSetPrice(p, 'hargaReseller', NaN).ok, false);
++  assert.equal(p.hargaReseller, 7000);
++  assert.equal(ProductRepository.mutateSetPrice(p, 'hargaReseller', Infinity).ok, false);
++  assert.equal(p.hargaReseller, 7000);
++  assert.equal(ProductRepository.mutateSetPrice(p, 'hargaReseller', '9000').ok, false);
++  assert.equal(p.hargaReseller, 7000);
++  assert.equal(ProductRepository.mutateSetPrice(p, 'hargaReseller', undefined).ok, false);
++  assert.equal(p.hargaReseller, 7000);
++});
++
++test('ProductRepository.mutateSetPrice() — negatif diklem ke 0 (hargaReseller ikut aturan sama dgn hargaBeli/hargaJual utk angka)', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaReseller: 5000 };
++  const r = ProductRepository.mutateSetPrice(p, 'hargaReseller', -500);
++  assert.equal(r.ok, true); assert.equal(r.value, 0);
++  assert.equal(p.hargaReseller, 0);
++});
++
++// === A2. Unit: validateDiscountValue()/mutateSetDiskon() ====================
++
++test('ProductRepository.validateDiscountValue() — angka valid diklem 0..100', () => {
++  const { ProductRepository } = loadRepo();
++  const r = ProductRepository.validateDiscountValue(25);
++  assert.equal(r.ok, true); assert.equal(r.value, 25);
++  assert.equal(ProductRepository.validateDiscountValue(-10).value, 0); // klem bawah
++  assert.equal(ProductRepository.validateDiscountValue(150).value, 100); // klem atas
++  assert.equal(ProductRepository.validateDiscountValue(0).value, 0);
++  assert.equal(ProductRepository.validateDiscountValue(100).value, 100);
++});
++
++test('ProductRepository.validateDiscountValue() — NaN/Infinity/string/undefined/null -> ok:false', () => {
++  const { ProductRepository } = loadRepo();
++  assert.equal(ProductRepository.validateDiscountValue(NaN).ok, false);
++  assert.equal(ProductRepository.validateDiscountValue(Infinity).ok, false);
++  assert.equal(ProductRepository.validateDiscountValue(-Infinity).ok, false);
++  assert.equal(ProductRepository.validateDiscountValue('10').ok, false);
++  assert.equal(ProductRepository.validateDiscountValue(undefined).ok, false);
++  assert.equal(ProductRepository.validateDiscountValue(null).ok, false);
++});
++
++test('ProductRepository.mutateSetDiskon() — menulis .diskonPersen in-place, fail-safe kalau invalid', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', diskonPersen: 10 };
++  const r1 = ProductRepository.mutateSetDiskon(p, 30);
++  assert.equal(r1.ok, true); assert.equal(p.diskonPersen, 30);
++  const r2 = ProductRepository.mutateSetDiskon(p, NaN);
++  assert.equal(r2.ok, false);
++  assert.equal(p.diskonPersen, 30); // tidak berubah, TIDAK jadi NaN
++});
++
++test('ProductRepository.mutateSetDiskon() — produk tidak valid (null/array/primitif) -> ok:false', () => {
++  const { ProductRepository } = loadRepo();
++  assert.equal(ProductRepository.mutateSetDiskon(null, 10).ok, false);
++  assert.equal(ProductRepository.mutateSetDiskon([], 10).ok, false);
++  assert.equal(ProductRepository.mutateSetDiskon('x', 10).ok, false);
++});
++
++// === A3. Unit: validateTextValue()/mutateSetField() =========================
++
++test('ProductRepository.validateTextValue() — string non-kosong (setelah trim) valid', () => {
++  const { ProductRepository } = loadRepo();
++  const r = ProductRepository.validateTextValue('kat_1');
++  assert.equal(r.ok, true); assert.equal(r.value, 'kat_1');
++  assert.equal(ProductRepository.validateTextValue('  pcs  ').value, 'pcs'); // di-trim
++});
++
++test('ProductRepository.validateTextValue() — kosong/null/undefined/NaN/angka/whitespace-only -> ok:false', () => {
++  const { ProductRepository } = loadRepo();
++  assert.equal(ProductRepository.validateTextValue('').ok, false);
++  assert.equal(ProductRepository.validateTextValue('   ').ok, false);
++  assert.equal(ProductRepository.validateTextValue(null).ok, false);
++  assert.equal(ProductRepository.validateTextValue(undefined).ok, false);
++  assert.equal(ProductRepository.validateTextValue(NaN).ok, false);
++  assert.equal(ProductRepository.validateTextValue(123).ok, false);
++});
++
++test('ProductRepository.mutateSetField() — kategoriId/produsenId/satuan ditulis in-place, 1 gate dipakai ke-3nya', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', kategoriId: '', produsenId: '', satuan: '' };
++  assert.equal(ProductRepository.mutateSetField(p, 'kategoriId', 'kat_baru').ok, true);
++  assert.equal(p.kategoriId, 'kat_baru');
++  assert.equal(ProductRepository.mutateSetField(p, 'produsenId', 'prd_baru').ok, true);
++  assert.equal(p.produsenId, 'prd_baru');
++  assert.equal(ProductRepository.mutateSetField(p, 'satuan', 'pcs').ok, true);
++  assert.equal(p.satuan, 'pcs');
++});
++
++test('ProductRepository.mutateSetField() — value tidak valid: field TIDAK disentuh sama sekali (fail-safe)', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', kategoriId: 'kat_lama' };
++  const r = ProductRepository.mutateSetField(p, 'kategoriId', '');
++  assert.equal(r.ok, false);
++  assert.equal(p.kategoriId, 'kat_lama'); // tidak berubah
++  const r2 = ProductRepository.mutateSetField(p, 'kategoriId', undefined);
++  assert.equal(r2.ok, false);
++  assert.equal(p.kategoriId, 'kat_lama');
++});
++
++test('ProductRepository.mutateSetField() — field di luar whitelist (hargaBeli/stock/dll.) ditolak', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaBeli: 1000 };
++  assert.equal(ProductRepository.mutateSetField(p, 'hargaBeli', 'x').ok, false);
++  assert.equal(p.hargaBeli, 1000);
++});
++
++test('ProductRepository.mutateSetField() — produk tidak valid (null/array/primitif) -> ok:false', () => {
++  const { ProductRepository } = loadRepo();
++  assert.equal(ProductRepository.mutateSetField(null, 'satuan', 'pcs').ok, false);
++  assert.equal(ProductRepository.mutateSetField([], 'satuan', 'pcs').ok, false);
++  assert.equal(ProductRepository.mutateSetField('x', 'satuan', 'pcs').ok, false);
++});
++
++test('update berturut-turut: mutateSetPrice/mutateSetDiskon/mutateSetField beruntun pada produk yang sama tetap konsisten', () => {
++  const { ProductRepository } = loadRepo();
++  const p = { id: 'p1', hargaReseller: null, diskonPersen: 0, kategoriId: '', produsenId: '', satuan: '' };
++  ProductRepository.mutateSetPrice(p, 'hargaReseller', 5000);
++  ProductRepository.mutateSetDiskon(p, 10);
++  ProductRepository.mutateSetField(p, 'kategoriId', 'kat_a');
++  ProductRepository.mutateSetPrice(p, 'hargaReseller', 6000); // update kedua, harus overwrite bersih
++  ProductRepository.mutateSetDiskon(p, NaN); // gagal, tidak boleh ubah nilai sebelumnya
++  ProductRepository.mutateSetField(p, 'produsenId', 'prd_a');
++  assert.equal(p.hargaReseller, 6000);
++  assert.equal(p.diskonPersen, 10); // tetap nilai valid terakhir, NaN tidak masuk
++  assert.equal(p.kategoriId, 'kat_a');
++  assert.equal(p.produsenId, 'prd_a');
++});
++
++// === B. Integrasi ============================================================
++
++test('integrasi: shop-data-io-api.js commitShopRows() SET hargaReseller/satuan/kategoriId lewat gate, hasil sama seperti sebelumnya', () => {
++  const D = {
++    products: [{ id: 'p1', name: 'Cobek Existing', stock: 5, hargaBeli: 1000, hargaJual: 2000, hargaReseller: null, satuan: '', kategoriId: '' }],
++    cobekKategori: [], produsen: [], accounts: [],
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js'],
++    { D, resolveShopKategori: () => 'kat_x', toast: () => {}, save: () => {} },
++    ['ShopDataIO', 'ProductRepository'],
++  );
++  let priceCalls = 0, fieldCalls = 0;
++  const origPrice = ctx.ProductRepository.mutateSetPrice;
++  ctx.ProductRepository.mutateSetPrice = function (...args) { priceCalls++; return origPrice.apply(ctx.ProductRepository, args); };
++  const origField = ctx.ProductRepository.mutateSetField;
++  ctx.ProductRepository.mutateSetField = function (...args) { fieldCalls++; return origField.apply(ctx.ProductRepository, args); };
++
++  const rows = [{ nama: 'Cobek Existing', hargaReseller: 1800, satuan: 'pcs', kategori: 'Cobek' }];
++  const summary = ctx.ShopDataIO.commitShopRows(rows);
++  assert.ok(summary.ok);
++  assert.equal(D.products[0].hargaReseller, 1800);
++  assert.equal(D.products[0].satuan, 'pcs');
++  assert.equal(D.products[0].kategoriId, 'kat_x');
++  assert.ok(priceCalls >= 1, 'hargaReseller harus lewat ProductRepository.mutateSetPrice()');
++  assert.ok(fieldCalls >= 2, 'satuan & kategoriId harus lewat ProductRepository.mutateSetField()');
++});
++
++test('integrasi: shop-data-io-api.js commitShopRows() nilai kosong/undefined TIDAK menimpa data lama (partial-update tetap terjaga)', () => {
++  const D = {
++    products: [{ id: 'p1', name: 'Cobek Existing', stock: 5, hargaBeli: 1000, hargaJual: 2000, hargaReseller: 999, satuan: 'lusin', kategoriId: 'kat_lama' }],
++    cobekKategori: [], produsen: [], accounts: [],
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js'],
++    { D, resolveShopKategori: () => '', toast: () => {}, save: () => {} },
++    ['ShopDataIO'],
++  );
++  const rows = [{ nama: 'Cobek Existing' }]; // tidak kirim hargaReseller/satuan/kategori sama sekali
++  ctx.ShopDataIO.commitShopRows(rows);
++  assert.equal(D.products[0].hargaReseller, 999);
++  assert.equal(D.products[0].satuan, 'lusin');
++  assert.equal(D.products[0].kategoriId, 'kat_lama');
++});
++
++test('integrasi: cobek-io.js ImportShopExcel.commit() SET hargaReseller/diskonPersen/kategoriId/produsenId lewat gate, hasil sama seperti sebelumnya', () => {
++  const D = {
++    products: [{ id: 'p1', name: 'Lumpang 15cm', stock: 2, hargaBeli: 10000, hargaJual: 20000, hargaReseller: null, diskonPersen: 0, kategoriId: '', produsenId: '' }],
++    produsen: [{ id: 'prd1', name: 'Toko Batu' }], cobekKategori: [],
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
++    {
++      D,
++      resolveShopKategori: () => 'kat_y',
++      escapeHtml: (s) => String(s),
++      fmt: (n) => String(n),
++      fmtFull: (n) => String(n),
++      toast: () => {},
++      save: () => {},
++      closeModal: () => {},
++      renderProdusenList: () => {},
++      uid: (() => { let n = 0; return () => 'uid_' + (++n); })(),
++      Etalase: { renderList: () => {}, renderKategoriList: () => {}, renderModalStat: () => {} },
++      PriceRekoWidget: { render: () => {} },
++      StockRekoWidget: { render: () => {} },
++    },
++    ['ImportShopExcel', 'ProductRepository'],
++  );
++  let priceCalls = 0, diskonCalls = 0, fieldCalls = 0;
++  const origPrice = ctx.ProductRepository.mutateSetPrice;
++  ctx.ProductRepository.mutateSetPrice = function (...args) { priceCalls++; return origPrice.apply(ctx.ProductRepository, args); };
++  const origDiskon = ctx.ProductRepository.mutateSetDiskon;
++  ctx.ProductRepository.mutateSetDiskon = function (...args) { diskonCalls++; return origDiskon.apply(ctx.ProductRepository, args); };
++  const origField = ctx.ProductRepository.mutateSetField;
++  ctx.ProductRepository.mutateSetField = function (...args) { fieldCalls++; return origField.apply(ctx.ProductRepository, args); };
++
++  ctx.ImportShopExcel.target = 'produk';
++  ctx.ImportShopExcel.parsedRows = [
++    { name: 'Lumpang 15cm', stock: 6, hargaBeli: 12000, hargaJual: 24000, hargaReseller: 9000, diskonPersen: 15, kategori: 'Lumpang', produsen: 'Toko Batu' },
++  ];
++  ctx.ImportShopExcel.commit();
++  assert.equal(D.products[0].hargaReseller, 9000);
++  assert.equal(D.products[0].diskonPersen, 15);
++  assert.equal(D.products[0].kategoriId, 'kat_y');
++  assert.equal(D.products[0].produsenId, 'prd1');
++  assert.ok(priceCalls >= 1, 'hargaReseller harus lewat mutateSetPrice()');
++  assert.ok(diskonCalls >= 1, 'diskonPersen harus lewat mutateSetDiskon()');
++  assert.ok(fieldCalls >= 2, 'kategoriId & produsenId harus lewat mutateSetField()');
++});
++
++test('integrasi: cobek-io.js ImportShopExcel.commit() menolak diskonPersen korup (NaN), produk existing TIDAK ketimpa nilai rusak', () => {
++  const D = {
++    products: [{ id: 'p1', name: 'Lumpang 15cm', stock: 2, hargaBeli: 10000, hargaJual: 20000, hargaReseller: null, diskonPersen: 5, kategoriId: '', produsenId: '' }],
++    produsen: [], cobekKategori: [],
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
++    {
++      D,
++      resolveShopKategori: () => '',
++      escapeHtml: (s) => String(s),
++      fmt: (n) => String(n),
++      fmtFull: (n) => String(n),
++      toast: () => {},
++      save: () => {},
++      closeModal: () => {},
++      renderProdusenList: () => {},
++      uid: (() => { let n = 0; return () => 'uid_' + (++n); })(),
++      Etalase: { renderList: () => {}, renderKategoriList: () => {}, renderModalStat: () => {} },
++      PriceRekoWidget: { render: () => {} },
++      StockRekoWidget: { render: () => {} },
++    },
++    ['ImportShopExcel'],
++  );
++  ctx.ImportShopExcel.target = 'produk';
++  ctx.ImportShopExcel.parsedRows = [
++    { name: 'Lumpang 15cm', stock: 6, hargaBeli: 12000, hargaJual: 24000, hargaReseller: null, diskonPersen: NaN, kategori: '', produsen: '' },
++  ];
++  ctx.ImportShopExcel.commit();
++  assert.equal(D.products[0].diskonPersen, 5); // tidak berubah, TIDAK jadi NaN
++  assert.equal(D.products[0].hargaBeli, 12000); // field lain (valid) tetap ke-update, gate Modul 4 tidak regresi
++});
++
++test('integrasi: cobek-etalase.js Etalase.save() (edit produk) SET produsenId lewat gate, hasil sama seperti sebelumnya', () => {
++  const D = {
++    products: [{ id: 'p1', name: 'Cobek 20cm', stock: 5, hargaBeli: 10000, hargaJual: 20000, hargaReseller: null, diskonPersen: 0, kategoriId: '', beratPerUnit: 0, panjang: 0, lebar: 0, tinggi: 0, ownership: 'SELF', produsenId: '', hargaByProdusen: {} }],
++    produsen: [{ id: 'prd1', name: 'Toko Batu' }], cobekKategori: [], accounts: [{ id: 'acc1' }],
++  };
++  const fakeDocument = {
++    getElementById(id) {
++      const vals = {
++        pName: { value: 'Cobek 20cm' }, pStock: { value: '5' }, pBeli: { value: '10000' },
++        pJual: { value: '20000' }, pReseller: { value: '' }, pDiskon: { value: '0' },
++        pKategori: { value: '' }, pProdusen: { value: 'prd1' }, pAcc: { value: 'acc1' },
++        pOwnership: { value: 'SELF' },
++        pBeratPerUnit: { value: '0' }, pPanjang: { value: '0' }, pLebar: { value: '0' }, pTinggi: { value: '0' },
++      };
++      return vals[id] || null;
++    },
++  };
++  const ctx = loadSource(
++    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/attribute-store.js', 'modules/shop/cobek-etalase.js'],
++    {
++      D,
++      document: fakeDocument,
++      escapeHtml: (s) => String(s),
++      fmt: (n) => String(n),
++      fmtFull: (n) => String(n),
++      toast: () => {},
++      save: () => {},
++      closeModal: () => {},
++      resolveShopKategori: () => '',
++    },
++    ['ProductRepository', 'Etalase'],
++  );
++  let fieldCalls = 0;
++  const origField = ctx.ProductRepository.mutateSetField;
++  ctx.ProductRepository.mutateSetField = function (...args) { fieldCalls++; return origField.apply(ctx.ProductRepository, args); };
++  ctx.Etalase.editIdx = 0;
++  ctx.Etalase.renderList = () => {};
++  ctx.Etalase.renderModalStat = () => {};
++  if (typeof ctx.Etalase.save === 'function') {
++    try { ctx.Etalase.save(); } catch (e) { /* DOM-heavy render lain di luar scope, cek hasil data saja */ }
++  }
++  assert.equal(D.products[0].produsenId, 'prd1');
++  assert.ok(fieldCalls >= 1, 'Etalase.save() harus lewat ProductRepository.mutateSetField() utk produsenId');
++});

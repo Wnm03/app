@@ -1,0 +1,205 @@
+/* =========================================================================
+   MODERN-UI-LAYER.CSS
+   Lapisan tambahan ringan (murni CSS, ~3KB) di atas styles.css yang sudah
+   ada. TIDAK mengubah 1 baris pun JavaScript/Business Logic, TIDAK menambah
+   dependency/framework baru, TIDAK menimpa nilai token warna (kontras yang
+   sudah diperbaiki di Tahap 9 tetap utuh). Hanya memakai ulang token yang
+   SUDAH ada di styles.css (--shadow-*, --dur-*, --r-*, --accent, --ease-*)
+   untuk beberapa micro-interaction & polish modern:
+     1. Kaca buram (glass blur) pada header & bottom-nav saat discroll
+     2. Elevation & lift halus saat hover/tap pada .card, tombol, nav-item
+     3. Focus ring aksesibel yang lebih jelas (keyboard nav)
+     4. Scrollbar tipis modern (desktop) - tetap none di mobile (unchanged)
+     5. Font smoothing supaya render teks lebih tajam di layar retina
+   Cara pakai di app asli: tambah SATU baris
+     <link rel="stylesheet" href="modern-ui-layer.css">
+   tepat setelah <link rel="stylesheet" href="styles.css?v=337"> di index.html
+   & app_production.html. Tidak perlu rebuild app-bundle-a/b.min.js karena
+   file ini murni CSS terpisah, jadi resiko regresi ke 1228 test JS = nol.
+   ========================================================================= */
+
+/* 1. Font rendering lebih tajam, tanpa biaya performa */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2. Header & bottom-nav: glass blur modern saat konten discroll di baliknya.
+      FIX (audit konsistensi tema): token --surface1 di bawah ini TIDAK ADA
+      di styles.css manapun (cuma ada --surface/--surface2/3/4), jadi fallback
+      var(--bg) selalu diam-diam aktif di ke-10 tema. Ganti ke --header-bg
+      yang memang sudah didefinisikan & di-tuning opacity-nya per tema
+      (0.82-0.92) khusus untuk elemen chrome ini. */
+#mainHeader.header,
+nav.nav#mainNav {
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+  background-color: var(--header-bg);
+}
+
+/* 3. Elevation halus & lift pada card saat hover (desktop) / tap (mobile) */
+.card {
+  will-change: transform;
+}
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated, var(--shadow-card));
+    border-color: var(--accent-soft, var(--border));
+  }
+}
+.card:active {
+  transform: translateY(0) scale(0.995);
+  transition-duration: var(--dur-fast);
+}
+
+/* 4. Tombol: sedikit lift + shadow lembut saat hover, tetap pakai token yg ada */
+@media (hover: hover) {
+  .btn-primary:hover {
+    box-shadow: 0 8px 26px var(--accent-soft);
+    transform: translateY(-1px);
+  }
+  .qs-btn:hover,
+  .btn-ghost:hover {
+    border-color: var(--accent-soft, var(--border2));
+  }
+}
+
+/* 5. Nav item aktif: transisi lebih halus + indikator dot mengembang mulus */
+.nav-item {
+  border-radius: var(--r-md);
+}
+.nav-item.active {
+  text-shadow: 0 0 18px var(--accent-soft, transparent);
+}
+
+/* 6. Focus ring aksesibel & konsisten untuk navigasi keyboard
+      (tidak mengganggu tap mouse/touch, hanya muncul saat :focus-visible) */
+button:focus-visible,
+.nav-item:focus-visible,
+.btn:focus-visible,
+.qs-btn:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* 8. Floating bottom nav (M3 Expressive shape + selective liquid glass).
+      Override posisi .nav dari edge-to-edge (styles.css) jadi mengambang
+      dengan margin, radius besar, dan safe-area untuk PWA standalone.
+      Tidak menyentuh .nav-item/JS sama sekali - murni reposisi container. */
+/* 9. Kontras badge status stok di tema bersurface terang (light, stone, mono,
+      sand, sage, fresh). Audit kontras WCAG AA menemukan teks pill --accentN
+      di atas --accentN-soft hanya 1.5-3.5:1 di 6 tema ini (accent3/accent4
+      terutama). Fix: gelapkan warna teks via color-mix 55% black KHUSUS di
+      badge/status text, background pill tetap sama. Tema dark/ocean/slate/ink
+      TIDAK disentuh - sudah lolos AA (6-9.5:1). */
+:root {
+  --accent2-onlight: color-mix(in srgb, var(--accent2) 55%, black);
+  --accent3-onlight: color-mix(in srgb, var(--accent3) 55%, black);
+  --accent4-onlight: color-mix(in srgb, var(--accent4) 55%, black);
+}
+[data-theme="light"] .shop-stock-pill.ok, [data-theme="light"] .trs-tag-btn.stok-ok,
+[data-theme="stone"] .shop-stock-pill.ok, [data-theme="stone"] .trs-tag-btn.stok-ok,
+[data-theme="mono"] .shop-stock-pill.ok, [data-theme="mono"] .trs-tag-btn.stok-ok,
+[data-theme="sand"] .shop-stock-pill.ok, [data-theme="sand"] .trs-tag-btn.stok-ok,
+[data-theme="sage"] .shop-stock-pill.ok, [data-theme="sage"] .trs-tag-btn.stok-ok,
+[data-theme="fresh"] .shop-stock-pill.ok, [data-theme="fresh"] .trs-tag-btn.stok-ok {
+  color: var(--accent3-onlight);
+}
+[data-theme="light"] .shop-stock-pill.mid,
+[data-theme="stone"] .shop-stock-pill.mid,
+[data-theme="mono"] .shop-stock-pill.mid,
+[data-theme="sand"] .shop-stock-pill.mid,
+[data-theme="sage"] .shop-stock-pill.mid,
+[data-theme="fresh"] .shop-stock-pill.mid,
+[data-theme="light"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="stone"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="mono"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="sand"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="sage"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="fresh"] .kasir-tile.stock-low .kasir-tile-stock {
+  color: var(--accent4-onlight);
+}
+[data-theme="light"] .shop-stock-pill.low, [data-theme="light"] .trs-tag-btn.stok-low,
+[data-theme="stone"] .shop-stock-pill.low, [data-theme="stone"] .trs-tag-btn.stok-low,
+[data-theme="mono"] .shop-stock-pill.low, [data-theme="mono"] .trs-tag-btn.stok-low,
+[data-theme="sand"] .shop-stock-pill.low, [data-theme="sand"] .trs-tag-btn.stok-low,
+[data-theme="sage"] .shop-stock-pill.low, [data-theme="sage"] .trs-tag-btn.stok-low,
+[data-theme="fresh"] .shop-stock-pill.low, [data-theme="fresh"] .trs-tag-btn.stok-low,
+[data-theme="light"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="stone"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="mono"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="sand"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="sage"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="fresh"] .kasir-tile.stock-out .kasir-tile-stock {
+  color: var(--accent2-onlight);
+}
+
+@media (max-width: 899px) {
+  .nav {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: var(--r-2xl, 20px);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-elevated-hi, var(--shadow-panel-down));
+    padding: 6px 4px;
+    transition: transform var(--dur-moderate) var(--ease-standard);
+  }
+  .nav.nav-hidden {
+    transform: translateY(calc(100% + 24px + env(safe-area-inset-bottom, 0px)));
+  }
+  /* FIX (2026-07-30): #mainApp DIHAPUS dari rule ini -- BUKAN redundant text,
+     tapi bug nyata. #mainApp di index.html cuma membungkus #page-keuangan (lihat
+     struktur HTML: tag penutup #mainApp ketutup persis setelah page-keuangan,
+     SEMUA halaman lain -- termasuk #page-dashboard-hub/Beranda yang jadi
+     landing page default -- adalah SIBLING dari #mainApp di #scrollRoot, BUKAN
+     anak di dalamnya). Akibatnya padding-bottom 88px di #mainApp bukan reserve
+     ruang di ujung scroll (tujuan asal rule ini), tapi jadi kotak kosong 88px
+     yang nangkring DI TENGAH alur halaman -- persis di atas judul "Dashboard
+     Hub" -- karena kotak #mainApp sendiri (isinya cuma page-keuangan yang
+     display:none saat Beranda aktif) tetap mempertahankan padding-bottom-nya
+     sendiri walau 0 konten terlihat di dalamnya. User lihat ini sbg "gap
+     kosong aneh" persis di bawah header. #scrollRoot (kontainer scroll yang
+     SEBENARNYA membungkus SEMUA halaman) sudah py padding-bottom sendiri
+     (styles.css baris ~72, 90px, + rule mobile di bawah) yang cukup utk
+     reserve ruang di atas nav bawah utk halaman APAPUN yang sedang aktif --
+     jadi padding #mainApp ini 100% redundan sekaligus jadi sumber bug, aman
+     dihapus tanpa kehilangan proteksi anti-overlap nav. */
+  #scrollRoot {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav { transition: none; }
+  .nav.nav-hidden { transform: none; }
+}
+
+/* 7. Scrollbar tipis modern - hanya berlaku di layar lebar (desktop/tablet),
+      perilaku mobile (hidden) di styles.css tidak disentuh */
+@media (min-width: 900px) {
+  #scrollRoot::-webkit-scrollbar,
+  #mainApp::-webkit-scrollbar {
+    width: 8px;
+  }
+  #scrollRoot::-webkit-scrollbar-thumb,
+  #mainApp::-webkit-scrollbar-thumb {
+    background: var(--border2, rgba(128,128,128,.35));
+    border-radius: var(--r-full);
+  }
+  #scrollRoot::-webkit-scrollbar-track,
+  #mainApp::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* 8. Motion-safety: hormati preferensi pengguna yang mematikan animasi */
+@media (prefers-reduced-motion: reduce) {
+  .card, .btn-primary, .nav-item, .nav-item svg {
+    transition: none !important;
+    transform: none !important;
+  }
+}
