@@ -56,14 +56,23 @@ const r=MultiOwnerEngine.getOwners(a);
 return r&&r.ok&&r.isMultiOwner;
 });
 }
-// populateEntryAssetSelect(selId, curAssetId) — isi <select> pilihan aset
-// multi-owner, dipakai SAMA PERSIS oleh modal Piutang & Utang (1 fungsi,
+// populateEntryAssetSelect(selId, curAssetId, excludeAssetId) — isi <select>
+// pilihan aset multi-owner, dipakai SAMA PERSIS oleh modal Piutang & Utang &
+// (sejak patch akun-majoris-selflink-redundant) modal Transaksi (1 fungsi,
 // tidak diduplikasi). Opsi pertama selalu "Tidak dikaitkan" (assetId kosong
 // -> resolveEntryAssetSelfPorsi() fallback 100, perilaku lama).
-function populateEntryAssetSelect(selId,curAssetId){
+// excludeAssetId (opsional, string/null) — kalau diisi, aset dgn id itu
+// DIBUANG dari daftar pilihan (dipakai transaksi.js utk exclude aset yang
+// accountId-nya SAMA dgn akun/metode yg lagi dipilih di form -- lihat
+// findMultiOwnerAssetForAccount() & komentar updateTxAssetWrapVisibility(),
+// 0 pengaruh ke pemanggil lama piutang/utang yang tidak mengisi parameter
+// ini (default undefined -> filter di-skip, perilaku 100% sama spt
+// sebelumnya).
+function populateEntryAssetSelect(selId,curAssetId,excludeAssetId){
 const sel=document.getElementById(selId);
 if(!sel)return;
-const assets=getMultiOwnerAssets();
+let assets=getMultiOwnerAssets();
+if(excludeAssetId)assets=assets.filter(a=>!sameId(a.id,excludeAssetId));
 sel.innerHTML='<option value="">— Tidak dikaitkan —</option>'+assets.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
 sel.value=(curAssetId&&assets.some(a=>sameId(a.id,curAssetId)))?curAssetId:'';
 }

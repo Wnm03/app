@@ -136,14 +136,34 @@ maybeCreateTitipanTalanganPiutang(tx);
 // piutang-utang.js S394 — 0 duplikasi). Dipanggil dari
 // setTxType()/openTxModal()/editTx() supaya field ke-reset/terisi benar
 // tiap ganti tipe transaksi atau buka modal.
+// PATCH (akun-majoris-selflink-redundant, permintaan user via screenshot):
+// akun/metode yang SUDAH langsung tertaut ke aset multi-owner lewat
+// accountId (findMultiOwnerAssetForAccount() -- SAMA sumber dgn blok
+// "PORSI PEMILIK (AKUN PATUNGAN)", resolveTxOwnerSplitForAccount() di
+// filter-laporan.js) tidak perlu lagi ditawari "Kaitkan ke Aset
+// Multi-Owner" ke ASET ITU JUGA -- akun "Majoris" yg accountId-nya
+// tertaut ke aset "Majoris" bikin dropdown itu auto-terisi "Majoris"
+// (nautkan diri sendiri ke dirinya sendiri), murni duplikasi UI/preview
+// yg membingungkan krn owner & split-nya SAMA PERSIS dgn yg sudah
+// ditampilkan blok "PORSI PEMILIK (AKUN PATUNGAN)" di bawahnya. Aset
+// self-linked ini sekarang DIKECUALIKAN dari pilihan (excludeId), wrap
+// disembunyikan total kalau itu satu-satunya aset multi-owner yang ada
+// (0 aset LAIN yg relevan utk ditautkan manual). Aset multi-owner LAIN
+// (mis. proyek/holding terpisah yg TIDAK jadi akun ini) tetap tampil
+// spt biasa -- 0 regresi utk kasus itu.
 function updateTxAssetWrapVisibility(){
 const wrap=document.getElementById('txAssetWrap');
 if(!wrap)return;
-const show=typeof getMultiOwnerAssets==='function'&&getMultiOwnerAssets().length>0;
+const accId=document.getElementById('txAcc')?document.getElementById('txAcc').value:'';
+const selfLinkedAsset=typeof findMultiOwnerAssetForAccount==='function'?findMultiOwnerAssetForAccount(accId):null;
+const excludeId=selfLinkedAsset?selfLinkedAsset.id:null;
+const allMultiOwnerAssets=typeof getMultiOwnerAssets==='function'?getMultiOwnerAssets():[];
+const otherAssets=excludeId?allMultiOwnerAssets.filter(a=>!sameId(a.id,excludeId)):allMultiOwnerAssets;
+const show=otherAssets.length>0;
 wrap.style.display=show?'block':'none';
 if(show&&typeof populateEntryAssetSelect==='function'){
 const sel=document.getElementById('txAssetId');
-populateEntryAssetSelect('txAssetId',sel?sel.value:'');
+populateEntryAssetSelect('txAssetId',sel?sel.value:'',excludeId);
 }
 updateTxAssetHintText();
 updateTxAssetSplitPreview();
@@ -191,17 +211,13 @@ function onTxAccChange(){
 _txAccManuallySet=true;
 updateTxAssetWrapVisibility();
 updateTxOwnerPorsiOptions();
-if(_txAssetManuallySet)return;
-const accId=document.getElementById('txAcc').value;
-const match=findMultiOwnerAssetForAccount(accId);
-const sel=document.getElementById('txAssetId');
-if(!sel)return;
-if(match){
-const exists=[...sel.options].some(o=>o.value===match.id);
-if(exists)sel.value=match.id;
-} else {
-sel.value='';
-}
+// PATCH (akun-majoris-selflink-redundant): auto-suggest aset multi-owner
+// yg dulu ada di sini DIBUANG -- aset yg accountId-nya cocok dgn akun
+// terpilih SEKARANG SELALU jadi aset self-linked yg sengaja dikecualikan
+// dari dropdown #txAssetId (lihat updateTxAssetWrapVisibility()), jadi 0
+// lagi yg perlu di-auto-suggest ke situ. updateTxAssetWrapVisibility() di
+// atas sudah cukup: repopulate #txAssetId (buang opsi self-link kalau
+// ada) & reset value ke '' kalau pilihan lama sudah tidak valid lagi.
 updateTxAssetSplitPreview();
 }
 // updateTxOwnerPorsiOptions(selectedOwnerId) — permintaan user (audit "Porsi per
