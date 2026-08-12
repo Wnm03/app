@@ -83,9 +83,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1302">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1302">
-<script src="nav-scroll.js?v=1302" defer></script>
+<link rel="stylesheet" href="styles.css?v=1304">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1304">
+<script src="nav-scroll.js?v=1304" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -151,17 +151,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1302');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1304');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1302');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1304');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1302');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1304');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -250,8 +250,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1302" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1302" defer></script>
+<script src="app-bundle-a.min.js?v=1304" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1304" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -3792,194 +3792,194 @@ window.location.reload();
 <script>document.write(MODAL_HTML[6]);</script><!-- modal:transferModal externalized to modals.js -->
 
 <!-- MODAL: AKUN -->
-<script>document.write(MODAL_HTML[7]);</script><!-- modal:accModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[7]);</script><!-- modal:accModal externalized to modals.js --><script>document.write(MODAL_HTML[8]);</script><!-- modal:accountOwnersModal externalized to modals.js -->
 
 <!-- MODAL: ASET (Buku Aset) -->
-<script>document.write(MODAL_HTML[8]);</script><!-- modal:assetModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[9]);</script><!-- modal:assetModal externalized to modals.js -->
 
 <!-- MODAL: QUICK SCAN ASET (⚡ update nilai langsung dari daftar, tanpa buka modal Edit) -->
-<script>document.write(MODAL_HTML[9]);</script><!-- modal:quickScanModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[10]);</script><!-- modal:quickScanModal externalized to modals.js -->
 
 <!-- MODAL: PIUTANG -->
-<script>document.write(MODAL_HTML[10]);</script><!-- modal:piutangModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[11]);</script><!-- modal:piutangModal externalized to modals.js -->
 
 <!-- MODAL: UTANG (BUKU UTANG) -->
-<script>document.write(MODAL_HTML[11]);</script><!-- modal:debtModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[12]);</script><!-- modal:debtModal externalized to modals.js -->
 
 <!-- MODAL: SHOP -->
 <!-- MODAL: PRODUK ETALASE -->
-<script>document.write(MODAL_HTML[12]);</script><!-- modal:productModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[13]);</script><!-- modal:productModal externalized to modals.js -->
 
 <!-- MODAL: PRODUSEN (CRUD) -->
-<script>document.write(MODAL_HTML[13]);</script><!-- modal:produsenModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[14]);</script><!-- modal:produsenModal externalized to modals.js -->
 
 <!-- MODAL: ATUR HARGA PER PRODUSEN -->
-<script>document.write(MODAL_HTML[14]);</script><!-- modal:produsenHargaModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[15]);</script><!-- modal:produsenHargaModal externalized to modals.js -->
 
 <!-- MODAL: TRANSAKSI POS -->
-<script>document.write(MODAL_HTML[15]);</script><!-- modal:orderModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[16]);</script><!-- modal:orderModal externalized to modals.js -->
 
 <!-- MODAL: DETAIL PELANGGAN -->
-<script>document.write(MODAL_HTML[16]);</script><!-- modal:customerDetailModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[17]);</script><!-- modal:customerDetailModal externalized to modals.js -->
 
 <!-- MODAL: TARGET -->
-<script>document.write(MODAL_HTML[17]);</script><!-- modal:targetModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[18]);</script><!-- modal:targetModal externalized to modals.js -->
 
 <!-- MODAL: DANA PENDIDIKAN -->
-<script>document.write(MODAL_HTML[18]);</script><!-- modal:eduFundModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[19]);</script><!-- modal:eduFundModal externalized to modals.js -->
 
 <!-- MODAL: CATATAN -->
-<script>document.write(MODAL_HTML[19]);</script><!-- modal:catatanModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[20]);</script><!-- modal:catatanModal externalized to modals.js -->
 
 <!-- MODAL: REMINDER -->
-<script>document.write(MODAL_HTML[20]);</script><!-- modal:reminderModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[21]);</script><!-- modal:reminderModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI (dengan opsi tambah sebagai subkategori) -->
-<script>document.write(MODAL_HTML[21]);</script><!-- modal:catModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[22]);</script><!-- modal:catModal externalized to modals.js -->
 
 <!-- MODAL: SUBKATEGORI -->
-<script>document.write(MODAL_HTML[22]);</script><!-- modal:subCatModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[23]);</script><!-- modal:subCatModal externalized to modals.js -->
 
 <!-- MODAL: TAGIHAN / CICILAN / LANGGANAN -->
-<script>document.write(MODAL_HTML[23]);</script><!-- modal:billModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[24]);</script><!-- modal:billModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - buat/edit proyek -->
-<script>document.write(MODAL_HTML[24]);</script><!-- modal:renovProjectModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[25]);</script><!-- modal:renovProjectModal externalized to modals.js -->
 
 <!-- MODAL: SEWA KIOS - tambah/edit unit -->
-<script>document.write(MODAL_HTML[25]);</script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[26]);</script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - detail (daftar item biaya + progress) -->
-<script>document.write(MODAL_HTML[26]);</script><!-- modal:renovDetailModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[27]);</script><!-- modal:renovDetailModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - saran AI (kebutuhan, ukuran, keperluan) -->
-<script>document.write(MODAL_HTML[27]);</script><!-- modal:renovAiModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[28]);</script><!-- modal:renovAiModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - form item biaya -->
-<script>document.write(MODAL_HTML[28]);</script><!-- modal:renovItemModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[29]);</script><!-- modal:renovItemModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - hubungkan ke transaksi lama yang sudah ada di Keuangan -->
 <!-- MODAL GENERIK: "Hubungkan Transaksi Lama" -- dipakai bersama oleh Renov (Proyek Renovasi),
      WorthIt (Prioritas Belanja) & Bill (Tagihan/Cicilan). Logikanya ada di const LinkTx={...}.
      z-index:300 supaya selalu tampil DI ATAS modal manapun yg jadi tempat tombol pemicunya
      (renovItemModal, worthItModal, billHistoryModal), terlepas dari urutan DOM. -->
-<script>document.write(MODAL_HTML[29]);</script><!-- modal:linkTxModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[30]);</script><!-- modal:linkTxModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - kalkulator bantu (Upah Tukang/Laden & Material per satuan) -->
 <!-- z-index lebih tinggi dari .overlay biasa (200) supaya tampil DI ATAS renovItemModal, sama seperti pola calcModal -->
-<script>document.write(MODAL_HTML[30]);</script><!-- modal:renovCalcModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[31]);</script><!-- modal:renovCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI TUKANG (BANYAK ORANG) untuk hitung Gaji Harian tukang/laden -->
-<script>document.write(MODAL_HTML[31]);</script><!-- modal:tukangModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[32]);</script><!-- modal:tukangModal externalized to modals.js -->
 
 <!-- MODAL: ABSEN HARIAN TUKANG (jam kerja & jam lembur per hari) -->
-<script>document.write(MODAL_HTML[32]);</script><!-- modal:tkDayModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[33]);</script><!-- modal:tkDayModal externalized to modals.js -->
 
 <!-- MODAL: BORONGAN BARENG (isi 1 nominal, kebagi rata otomatis ke semua tukang yang dicentang, 1 tanggal) -->
-<script>document.write(MODAL_HTML[33]);</script><!-- modal:tkBorSharedModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[34]);</script><!-- modal:tkBorSharedModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR BORONGAN (hitung total dari luas/ukuran × harga per m², mirip kalkulator material) -->
-<script>document.write(MODAL_HTML[34]);</script><!-- modal:tkBorCalcModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[35]);</script><!-- modal:tkBorCalcModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT BORONGAN (rekap semua absensi mode='borongan' per bulan, terpisah dari
      tampilan kotak-hari mingguan yang mencampur borongan dengan absensi jam biasa) -->
-<script>document.write(MODAL_HTML[35]);</script><!-- modal:tkBorHistModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[36]);</script><!-- modal:tkBorHistModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT ABSEN JAM (rekap semua absensi mode='jam' per bulan, terpisah dari borongan) -->
-<script>document.write(MODAL_HTML[36]);</script><!-- modal:tkJamHistModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[37]);</script><!-- modal:tkJamHistModal externalized to modals.js -->
 
 <!-- MODAL: KALENDER TAGIHAN/CICILAN/LANGGANAN -->
-<script>document.write(MODAL_HTML[37]);</script><!-- modal:billCalendarModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[38]);</script><!-- modal:billCalendarModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT PEMBAYARAN TAGIHAN/CICILAN/LANGGANAN -->
-<script>document.write(MODAL_HTML[38]);</script><!-- modal:billHistoryModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[39]);</script><!-- modal:billHistoryModal externalized to modals.js -->
 
 <!-- MODAL: EDIT SATU RIWAYAT PEMBAYARAN -->
-<script>document.write(MODAL_HTML[39]);</script><!-- modal:billHistoryEditModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[40]);</script><!-- modal:billHistoryEditModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT CICILAN/TAGIHAN LUNAS (arsip) -->
-<script>document.write(MODAL_HTML[40]);</script><!-- modal:billArchiveModal externalized to modals.js -->
-<script>document.write(MODAL_HTML[41]);</script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
+<script>document.write(MODAL_HTML[41]);</script><!-- modal:billArchiveModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[42]);</script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
 
 <!-- MODAL: KENDARAAN -->
-<script>document.write(MODAL_HTML[42]);</script><!-- modal:vehicleModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[43]);</script><!-- modal:vehicleModal externalized to modals.js -->
 
 <!-- MODAL: PAJAK KENDARAAN (STNK Tahunan, 5 Tahunan, Uji Kelayakan) -->
-<script>document.write(MODAL_HTML[43]);</script><!-- modal:vehTaxModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[44]);</script><!-- modal:vehTaxModal externalized to modals.js -->
 
 <!-- MODAL: SIM -->
-<script>document.write(MODAL_HTML[44]);</script><!-- modal:simModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[45]);</script><!-- modal:simModal externalized to modals.js -->
 
 <!-- MODAL: WORTH IT? (Kalkulator Layak Beli - Frugal Living) -->
-<script>document.write(MODAL_HTML[45]);</script><!-- modal:worthItModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[46]);</script><!-- modal:worthItModal externalized to modals.js -->
 
 <!-- MODAL: UPDATE KM -->
-<script>document.write(MODAL_HTML[46]);</script><!-- modal:kmModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[47]);</script><!-- modal:kmModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI SPAREPART -->
-<script>document.write(MODAL_HTML[47]);</script><!-- modal:sparepartModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[48]);</script><!-- modal:sparepartModal externalized to modals.js -->
 
 <!-- MODAL: STOK SPAREPART -->
-<script>document.write(MODAL_HTML[48]);</script><!-- modal:stockModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[49]);</script><!-- modal:stockModal externalized to modals.js -->
 
 <!-- MODAL: BACKUP LANJUTAN -->
-<script>document.write(MODAL_HTML[49]);</script><!-- modal:backupModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[50]);</script><!-- modal:backupModal externalized to modals.js -->
 
 <!-- MODAL: ARSIP DATA LAMA (per tahun) -->
-<script>document.write(MODAL_HTML[50]);</script><!-- modal:archiveModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[51]);</script><!-- modal:archiveModal externalized to modals.js -->
 
 <!-- MODAL: BBM -->
-<script>document.write(MODAL_HTML[51]);</script><!-- modal:bbmModal externalized to modals.js -->
+<script>document.write(MODAL_HTML[52]);</script><!-- modal:bbmModal externalized to modals.js -->
 
 <!-- MODAL: FUEL INTELLIGENCE -->
-<script>document.write(MODAL_HTML[52]);</script><!-- modal:fuelIntelModal -->
-<script>document.write(MODAL_HTML[53]);</script><!-- modal:servisModal -->
-<script>document.write(MODAL_HTML[54]);</script><!-- modal:torsiModal -->
-<script>document.write(MODAL_HTML[55]);</script><!-- modal:filterTxModal -->
-<script>document.write(MODAL_HTML[56]);</script><!-- modal:dataHealthModal -->
-<script>document.write(MODAL_HTML[57]);</script><!-- modal:globalSearchModal -->
-<script>document.write(MODAL_HTML[58]);</script><!-- modal:budgetModal -->
-<script>document.write(MODAL_HTML[59]);</script><!-- modal:fiSettingsModal -->
-<script>document.write(MODAL_HTML[60]);</script><!-- modal:pensiunModal -->
-<script>document.write(MODAL_HTML[61]);</script><!-- modal:confirmModalOverlay -->
-<script>document.write(MODAL_HTML[62]);</script><!-- modal:promptModalOverlay -->
-<script>document.write(MODAL_HTML[63]);</script><!-- modal:choiceModalOverlay -->
-<script>document.write(MODAL_HTML[64]);</script><!-- modal:infoModalOverlay -->
-<script>document.write(MODAL_HTML[65]);</script><!-- modal:pinPromptModalOverlay -->
-<script>document.write(MODAL_HTML[66]);</script><!-- modal:budgetSettingsModal -->
-<script>document.write(MODAL_HTML[67]);</script><!-- modal:refleksiModal -->
-<script>document.write(MODAL_HTML[68]);</script><!-- modal:importKatalogModal -->
-<script>document.write(MODAL_HTML[69]);</script><!-- modal:goldImportModal -->
-<script>document.write(MODAL_HTML[70]);</script><!-- modal:goldZakatModal -->
-<script>document.write(MODAL_HTML[71]);</script><!-- modal:importShopExcelModal -->
-<script>document.write(MODAL_HTML[72]);</script><!-- modal:shopCsvImportModal -->
-<script>document.write(MODAL_HTML[73]);</script><!-- modal:sparepartCsvImportModal -->
-<script>document.write(MODAL_HTML[74]);</script><!-- modal:shopPdfImportModal -->
-<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopScanModal -->
-<script>document.write(MODAL_HTML[76]);</script><!-- modal:shopJsonModal -->
-<script>document.write(MODAL_HTML[77]);</script><!-- modal:mergeProductModal -->
-<script>document.write(MODAL_HTML[78]);</script><!-- modal:billMultiScanModal -->
-<script>document.write(MODAL_HTML[79]);</script><!-- modal:universalOcrModal -->
-<script>document.write(MODAL_HTML[80]);</script><!-- modal:fuelBarCorrectionModal -->
-<script>document.write(MODAL_HTML[81]);</script><!-- modal:fuelTankProfileModal -->
-<script>document.write(MODAL_HTML[82]);</script><!-- modal:catalogModal -->
-<script>document.write(MODAL_HTML[83]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[84]);</script><!-- modal:vehCatWebImportModal -->
-<script>document.write(MODAL_HTML[85]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[86]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[87]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[88]);</script><!-- modal:inventoryTransferModal (S244) -->
-<script>document.write(MODAL_HTML[89]);</script><!-- modal:purchaseOrderBatchModal (S381) -->
-<script>document.write(MODAL_HTML[90]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[91]);</script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
-<script>document.write(MODAL_HTML[92]);</script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
-<script>document.write(MODAL_HTML[93]);</script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[94]);</script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[95]);</script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[96]);</script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
-<script>document.write(MODAL_HTML[97]);</script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
-<script>document.write(MODAL_HTML[98]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
+<script>document.write(MODAL_HTML[53]);</script><!-- modal:fuelIntelModal -->
+<script>document.write(MODAL_HTML[54]);</script><!-- modal:servisModal -->
+<script>document.write(MODAL_HTML[55]);</script><!-- modal:torsiModal -->
+<script>document.write(MODAL_HTML[56]);</script><!-- modal:filterTxModal -->
+<script>document.write(MODAL_HTML[57]);</script><!-- modal:dataHealthModal -->
+<script>document.write(MODAL_HTML[58]);</script><!-- modal:globalSearchModal -->
+<script>document.write(MODAL_HTML[59]);</script><!-- modal:budgetModal -->
+<script>document.write(MODAL_HTML[60]);</script><!-- modal:fiSettingsModal -->
+<script>document.write(MODAL_HTML[61]);</script><!-- modal:pensiunModal -->
+<script>document.write(MODAL_HTML[62]);</script><!-- modal:confirmModalOverlay -->
+<script>document.write(MODAL_HTML[63]);</script><!-- modal:promptModalOverlay -->
+<script>document.write(MODAL_HTML[64]);</script><!-- modal:choiceModalOverlay -->
+<script>document.write(MODAL_HTML[65]);</script><!-- modal:infoModalOverlay -->
+<script>document.write(MODAL_HTML[66]);</script><!-- modal:pinPromptModalOverlay -->
+<script>document.write(MODAL_HTML[67]);</script><!-- modal:budgetSettingsModal -->
+<script>document.write(MODAL_HTML[68]);</script><!-- modal:refleksiModal -->
+<script>document.write(MODAL_HTML[69]);</script><!-- modal:importKatalogModal -->
+<script>document.write(MODAL_HTML[70]);</script><!-- modal:goldImportModal -->
+<script>document.write(MODAL_HTML[71]);</script><!-- modal:goldZakatModal -->
+<script>document.write(MODAL_HTML[72]);</script><!-- modal:importShopExcelModal -->
+<script>document.write(MODAL_HTML[73]);</script><!-- modal:shopCsvImportModal -->
+<script>document.write(MODAL_HTML[74]);</script><!-- modal:sparepartCsvImportModal -->
+<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopPdfImportModal -->
+<script>document.write(MODAL_HTML[76]);</script><!-- modal:shopScanModal -->
+<script>document.write(MODAL_HTML[77]);</script><!-- modal:shopJsonModal -->
+<script>document.write(MODAL_HTML[78]);</script><!-- modal:mergeProductModal -->
+<script>document.write(MODAL_HTML[79]);</script><!-- modal:billMultiScanModal -->
+<script>document.write(MODAL_HTML[80]);</script><!-- modal:universalOcrModal -->
+<script>document.write(MODAL_HTML[81]);</script><!-- modal:fuelBarCorrectionModal -->
+<script>document.write(MODAL_HTML[82]);</script><!-- modal:fuelTankProfileModal -->
+<script>document.write(MODAL_HTML[83]);</script><!-- modal:catalogModal -->
+<script>document.write(MODAL_HTML[84]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[85]);</script><!-- modal:vehCatWebImportModal -->
+<script>document.write(MODAL_HTML[86]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[87]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[88]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[89]);</script><!-- modal:inventoryTransferModal (S244) -->
+<script>document.write(MODAL_HTML[90]);</script><!-- modal:purchaseOrderBatchModal (S381) -->
+<script>document.write(MODAL_HTML[91]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script>document.write(MODAL_HTML[92]);</script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
+<script>document.write(MODAL_HTML[93]);</script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
+<script>document.write(MODAL_HTML[94]);</script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
+<script>document.write(MODAL_HTML[95]);</script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
+<script>document.write(MODAL_HTML[96]);</script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
+<script>document.write(MODAL_HTML[97]);</script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
+<script>document.write(MODAL_HTML[98]);</script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
+<script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 
-<script src="app-bundle-b.min.js?v=1302" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1304" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

@@ -42,6 +42,43 @@ issues.push({level:'error',title:'Transaksi dengan tanggal tidak valid',detail:`
 if(t.assetId && !(D.assets||[]).some(a=>sameId(a.id,t.assetId))){
 issues.push({level:'warn',title:'Transaksi tertaut ke Aset Multi-Owner yang sudah dihapus',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) masih menyimpan tautan ke aset multi-owner yang sudah dihapus -- rincian pembagian ke pemilik tidak lagi ditampilkan, cek/lepas tautannya di modal Transaksi.`});
 }
+// PERUBAHAN SESI S574-E (lanjutan S574-A..D, lihat
+// AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §5/§9 Tahap 6): orphan check utk
+// `t.deductionOwnerId` (dipilih via dropdown "Pemilik Sumber Potongan" di
+// modal Transaksi, cuma tampil kalau akun-nya multi-owner -- lihat
+// modules/finance/transaksi.js/akun.js). Field ini murni TAG/metadata
+// (siapa penanggung), TIDAK pernah masuk rumus saldo (recalcAccBalance()
+// tetap 100% dari accountId, agnostik siapa pemiliknya) -- jadi cek ini
+// MURNI BACA, 0 auto-repair/auto-delete, sama disiplin semua cek orphan
+// lain di file ini. Transaksi lama tanpa deductionOwnerId (mayoritas,
+// akun single-owner atau transaksi sebelum fitur ini ada) -> blok ini
+// di-skip sepenuhnya (`if(t.deductionOwnerId)`), TETAP dianggap VALID,
+// bukan error.
+if(t.deductionOwnerId){
+const dOwnerAcc=D.accounts.find(a=>sameId(a.id,t.accountId));
+if(!dOwnerAcc){
+// B. account tidak ditemukan -- t.accountId sendiri sudah ditandai error
+// oleh cek "Transaksi dengan akun tidak valid" di atas; di sini cukup
+// tandai tambahan bahwa tautan Pemilik Sumber Potongan-nya jadi tidak
+// bisa diverifikasi sama sekali (akun sudah tidak ada, owners[]-nya pun
+// ikut hilang).
+issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak bisa diverifikasi (akun tidak valid)',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan, tapi akun transaksi ini sudah dihapus -- tautan pemiliknya tidak lagi bisa dicek. Cek/lepas tautan akun transaksi ini di modal Transaksi.`});
+}else{
+const dOwnerList=dOwnerAcc.owners||[];
+const isOwnerOfThisAcc=dOwnerList.some(o=>sameId(o.ownerId,t.deductionOwnerId));
+if(!isOwnerOfThisAcc){
+// Bedakan C (owner valid tapi di akun LAIN) vs A (owner tidak ditemukan
+// sama sekali di manapun) -- murni untuk pesan yang lebih jelas ke user,
+// 0 perbedaan level/severity/perbaikan otomatis antara keduanya.
+const existsOnOtherAcc=D.accounts.some(a=>!sameId(a.id,dOwnerAcc.id)&&(a.owners||[]).some(o=>sameId(o.ownerId,t.deductionOwnerId)));
+if(existsOnOtherAcc){
+issues.push({level:'warn',title:'Pemilik Sumber Potongan bukan pemilik akun transaksi ini',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan yang valid secara global, tapi bukan salah satu pemilik akun "${escapeHtml(dOwnerAcc.name||dOwnerAcc.id)}" yang dipakai transaksi ini (kemungkinan porsi kepemilikan akun diubah setelah transaksi dibuat). Cek ulang di modal Transaksi.`});
+}else{
+issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak ditemukan',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan yang sudah tidak ada lagi (kemungkinan owner dihapus dari akun "${escapeHtml(dOwnerAcc.name||dOwnerAcc.id)}" setelah transaksi dibuat). Cek ulang di modal Transaksi.`});
+}
+}
+}
+}
 });
 if(dupTxIds.length){
 issues.push({level:'error',title:'ID transaksi duplikat',detail:`${dupTxIds.length} transaksi punya ID yang sama (bisa bikin data ganda/salah hitung). ID: ${[...new Set(dupTxIds)].slice(0,5).join(', ')}${dupTxIds.length>5?'...':''}`});
