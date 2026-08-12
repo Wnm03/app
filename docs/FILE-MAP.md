@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-08-12T05:41:46.818Z
-Total file source: 306 · Total identifier global: 2131
+Terakhir digenerate: 2026-08-12T07:27:14.419Z
+Total file source: 306 · Total identifier global: 2134
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -76,8 +76,8 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 53 | `modules/shared/onboarding.js` | 55 | Domain Onboarding: preview perkiraan kasar gaji/kiriman saat setup awal Dipindah ke modules/shared/onboarding.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 54 | `modules/shared/kalkulator-input.js` | 142 | Kalkulator ekspresi angka: parser aman (safeCalc), popup kalkulator (openCalc/calcPress/dst), Dipindah ke modules/shared/kalkulator-input.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; … |
 | 55 | `modules/shared/scan-ocr.js` | 1677 | Scan struk belanja (OCR): struk belanja, bukti transfer, tanggal dari foto, odometer, portofolio aset, kategori & sparepart otomatis dari struk Dipindah ke modules/shared/scan-ocr.js (Sesi 17-18 restrukturisasi folder — … |
-| 56 | `modules/finance/filter-laporan.js` | 299 | Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx) Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi … |
-| 57 | `modules/finance/akun.js` | 497 | Kelola Akun (Cash/Bank/Ewallet dll): saldo, filter dropdown akun di seluruh app, CRUD akun Dipindah ke modules/finance/akun.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
+| 56 | `modules/finance/filter-laporan.js` | 370 | Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx) Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi … |
+| 57 | `modules/finance/akun.js` | 547 | Kelola Akun (Cash/Bank/Ewallet dll): saldo, filter dropdown akun di seluruh app, CRUD akun Dipindah ke modules/finance/akun.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 58 | `modules/business/gaji-calc.js` | 56 | Kalkulator gaji harian/borongan (Tukang & karyawan lepas), catat sbg pemasukan Dipindah ke modules/business/gaji-calc.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 59 | `modules/finance/cicilan.js` | 114 | logika form Cicilan pada txModal (Tambah/Edit Transaksi Keuangan). Dipindah ke modules/finance/cicilan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 60 | `modules/finance/tx-bbm.js` | 196 | logika panel "Sinkron ke Catatan Mobil (BBM)" pada txModal Dipindah ke modules/finance/tx-bbm.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
@@ -88,7 +88,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 65 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 66 | `modules/finance/tx-target.js` | 69 | domain "Target Tabungan" (modal tambah target, deteksi Dana Dipindah ke modules/finance/tx-target.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 67 | `modules/finance/tx-list-cashflow.js` | 593 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 68 | `modules/finance/transaksi.js` | 1491 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
+| 68 | `modules/finance/transaksi.js` | 1507 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 69 | `modules/shared/profil-pengaturan.js` | 120 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 70 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 71 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
@@ -1143,6 +1143,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `generateVirtualBillItemsForMonth` | `modules/finance/tagihan-kalender.js` |
 | `geolocationAvailable` | `modules/vehicle/ride-gps-recorder.js` |
 | `getAccOwners` | `modules/finance/akun.js` |
+| `getAccOwnersRaw` | `modules/finance/akun.js` |
 | `getAIAssetZakatMinThreshold` | `modules/asset/aset.js` |
 | `getAIDeliveryLowStockThreshold` | `modules/shop/cobek-pricing.js` |
 | `getAIDeliveryThinMarginThreshold` | `modules/shop/cobek-pricing.js` |
@@ -1859,6 +1860,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `resolveLinkedInvestmentAsset` | `modules/asset/investasi.js` |
 | `resolveLinkedVehicleAsset` | `modules/vehicle/vehicle-core.js` |
 | `resolveShopKategori` | `modules/shop/cobek-tx-cart.js` |
+| `resolveTxOwnerAssignment` | `modules/finance/filter-laporan.js` |
 | `resolveTxOwnerSplitForAccount` | `modules/finance/filter-laporan.js` |
 | `resolveTxTitipanOwner` | `modules/finance/transaksi.js` |
 | `resolveVehicleAssetLink` | `modules/vehicle/vehicle-core.js` |
@@ -1967,6 +1969,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `selectBudgetIcon` | `budget.js` |
 | `selectBudgetPeriod` | `budget.js` |
 | `selectFiAssetScope` | `modules/shared/modules-calc.js` |
+| `selectFilterTxOwnerSplit` | `modules/finance/filter-laporan.js` |
 | `selectShopCustomer` | `modules/shop/cobek-tx-cart.js` |
 | `selectSimpleAutocomplete` | `modules/finance/transaksi.js` |
 | `selectStatusKawin` | `modules/shared/profil-pengaturan.js` |

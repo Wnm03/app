@@ -268,3 +268,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm registry, eslint tidak terpasang
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa esbuild, bundle tidak diminify
+
+## 2026-08-12T07:27:28.356Z — versi s576-pemilik-sumber-potongan-visibility
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm/eslint, sesuai konfigurasi environment ini
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak bisa diinstall (tanpa akses jaringan di environment ini), pola sama dgn sesi-sesi sebelumnya
