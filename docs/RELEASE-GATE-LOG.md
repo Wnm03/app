@@ -273,3 +273,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm/eslint, sesuai konfigurasi environment ini
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak bisa diinstall (tanpa akses jaringan di environment ini), pola sama dgn sesi-sesi sebelumnya
+
+## 2026-08-12T09:06:28.564Z — versi s577-res-d-regression-release
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang, sama seperti sesi-sesi sebelumnya (S508-S576). Sesi Res-D HANYA regresi+release: 0 file source produksi diedit sesi ini (semua perubahan produksi sudah selesai di Res-B/Res-C sebelumnya), gate build.js lint internal (escapeHtml, u-dnone, OCR guard, dll) sudah PASS.
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak tersedia di sandbox ini (tanpa akses jaringan), sama seperti build s508-s576 sebelumnya -- bundle unminified tapi valid secara sintaks (node --check lolos)
