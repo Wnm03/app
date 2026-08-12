@@ -278,3 +278,28 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang, sama seperti sesi-sesi sebelumnya (S508-S576). Sesi Res-D HANYA regresi+release: 0 file source produksi diedit sesi ini (semua perubahan produksi sudah selesai di Res-B/Res-C sebelumnya), gate build.js lint internal (escapeHtml, u-dnone, OCR guard, dll) sudah PASS.
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak tersedia di sandbox ini (tanpa akses jaringan), sama seperti build s508-s576 sebelumnya -- bundle unminified tapi valid secara sintaks (node --check lolos)
+
+## 2026-08-12T09:30:19.236Z — versi s578-dl-next-1-owner-resolver-validation-fix
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 registry.npmjs.org), eslint tidak bisa diinstall, konsisten sesi-sesi sebelumnya (S424 dst). Perubahan sesi S578 (DL-Next-1) cuma 1 file source disentuh: modules/finance/transaksi.js (ganti basis validasi guard wajib-pilih dari getAccOwners().isMultiOwner ke resolveOwnerDefaultForAccount().owners.length>1, 0 logic pilihan owner baru) + 1 file test baru. Gaya kode konsisten dgn pola existing di file yang sama (resolveOwnerDefaultForAccount() sudah dipakai persis di updateTxDeductionOwnerVisibility() beberapa baris di atas). 4069/4069 test node --test dijalankan (4060 pass, 9 fail -- ke-9 kegagalan identik pre-existing, 0 terkait perubahan sesi ini), naik dari 4066 baseline (+3 test baru, semua pass).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 saat npm install esbuild), konsisten sesi-sesi sebelumnya. Bundle unminified 100% valid (node --check lolos kedua bundle).
+
+## 2026-08-12T09:39:48.292Z — versi s579-dl-next-6-badge-owner-lookup-fix
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 registry.npmjs.org), eslint tidak bisa diinstall, konsisten sesi-sesi sebelumnya (S424 dst). Perubahan sesi S579 (DL-Next-6) cuma 1 file source disentuh: modules/finance/tx-list-cashflow.js (ganti basis lookup nama owner di badge txHTML() -- resolveOwnerDefaultForAccount() dicoba duluan, getAccOwners()/acc.owners jadi fallback, bukan dihapus) + 1 file test baru. Gaya kode konsisten dgn pola guard typeof existing di file yang sama. 4072/4072 test node --test dijalankan (4063 pass, 9 fail -- ke-9 kegagalan identik pre-existing, 0 terkait perubahan sesi ini), naik dari baseline S578 4069/4060/9 (+3 test baru, semua pass).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 saat npm install esbuild), konsisten sesi-sesi sebelumnya. Bundle unminified 100% valid (node --check lolos kedua bundle).
+
+## 2026-08-12T09:53:04.267Z — versi s580-dl-next-6-badge-owner-lookup-fix
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox Claude (bash_tool) sesi ini network egress DISABLED, eslint tidak pernah terpasang sejak awal proyek (konsisten sesi2 sebelumnya). Perubahan sesi ini (S580/DL-Next-7) hanya 1 file source disentuh (data-health-check.js) + 1 file test baru -- gaya kode konsisten pola existing di file yang sama (guard typeof, pola resolveOwnerDefaultForAccount identik DL-Next-6 di tx-list-cashflow.js), diverifikasi manual, 4068/4077 test pass (9 fail identik pre-existing baseline v1309, 0 regresi baru).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox sama, npm install esbuild gagal (403, tanpa akses jaringan) -- bundle unminified 100% valid (node --check lolos), fungsional identik, cuma ukuran lebih besar, sama seperti override sesi2 sebelumnya (S424 dst).
+
+## 2026-08-12T10:02:56.302Z — versi s581-dl-next-8-datahealth-other-acc-owner-source-fix
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox Claude (bash_tool) sesi ini network egress DISABLED, eslint tidak pernah terpasang sejak awal proyek. Perubahan sesi ini (S581/DL-Next-8) hanya 1 file source disentuh (data-health-check.js) + 1 file test baru -- gaya kode konsisten pola existing di file yang sama (guard typeof, pola resolveOwnerDefaultForAccount identik DL-Next-7), diverifikasi manual, 4072/4081 test pass (9 fail identik pre-existing sejak v1309, 0 regresi baru).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox sama, npm install esbuild gagal (403, tanpa akses jaringan) -- bundle unminified 100% valid (node --check lolos), fungsional identik, sama seperti override sesi2 sebelumnya.
+
+## 2026-08-12T10:52:52.749Z — versi s582-9-preexisting-test-failures-closeout
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan npm, eslint tidak terpasang - konsisten pola S508-S581
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan npm, esbuild tidak terpasang - bundle unminified tapi node --check lolos, konsisten pola S508-S581
