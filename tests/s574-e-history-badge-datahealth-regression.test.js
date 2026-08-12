@@ -124,6 +124,13 @@ function makeTxCtx({ document, D, calls, txEditId = null }) {
         const owners = acc.owners || [];
         return { ok: true, owners, isMultiOwner: owners.length > 1 };
       },
+      // getAccOwnersRaw() -- stub S575 (lihat catatan sama di
+      // s574-d2-deduction-owner-persist-validation.test.js).
+      getAccOwnersRaw: (accId) => {
+        const acc = (D.accounts || []).find((a) => String(a.id) === String(accId));
+        if (!acc || !Array.isArray(acc.owners)) return { ok: true, owners: [] };
+        return { ok: true, owners: acc.owners };
+      },
     },
   );
 }

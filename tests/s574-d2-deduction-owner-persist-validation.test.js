@@ -76,6 +76,14 @@ function makeCtx({ document, D, calls, txEditId = null }) {
         const owners = acc.owners || [];
         return { ok: true, owners, isMultiOwner: owners.length > 1 };
       },
+      // getAccOwnersRaw() -- stub S575, merefleksikan kontrak akun.js
+      // getAccOwnersRaw(): owners[] APA ADANYA (tanpa syarat total 100%),
+      // dipakai KHUSUS oleh updateTxDeductionOwnerVisibility() (S575).
+      getAccOwnersRaw: (accId) => {
+        const acc = (D.accounts || []).find((a) => String(a.id) === String(accId));
+        if (!acc || !Array.isArray(acc.owners)) return { ok: true, owners: [] };
+        return { ok: true, owners: acc.owners };
+      },
     },
   );
 }
