@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s576-pemilik-sumber-potongan-visibility';
+const MODULE_CALC_VERSION='s577-res-d-regression-release';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
