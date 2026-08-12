@@ -34,40 +34,13 @@ if(typeof AutoKat!=='undefined'){AutoKat.hideSuggest();AutoKat._lastNoteQueried=
 updateTxVehiclePanels();
 updateTxAssetWrapVisibility();
 }
-// resolveTxAssetSplit(tx) — Sesi 394 (lanjutan resolveEntryAssetSelfPorsi S394 di
-// piutang-utang.js, & MultiOwnerEngine S390): kalau transaksi Pemasukan ini
-// ditautkan ke aset multi-owner lewat field `assetId` (opsional, pola SAMA
-// dgn Piutang/Utang), balikin RINCIAN pembagian nominal transaksi ke SEMUA
-// pemilik aset itu (100% reuse MultiOwnerEngine.getOwners()+splitByPorsi(),
-// 0 rumus baru) — dipakai badge "👥 N pemilik" & rincian per pemilik di
-// tx-list-cashflow.js, dan live preview di modal Transaksi (modals.js).
-// BEDA sengaja dari resolveEntryAssetSelfPorsi(): fungsi itu cuma balikin
-// porsi % milik SELF (dipakai piutang/utang biar tidak overstated ke
-// Kekayaan Bersih); fungsi ini balikin split ke SEMUA pemilik (dipakai
-// tampilan info) — transaksi Pemasukan itu sendiri tetap tercatat PENUH
-// spt biasa (0 perubahan kalkulasi Kekayaan Bersih), cuma ditambah info
-// visual siapa kebagian berapa.
-// Parameter:
-//   tx (object) — transaksi (butuh field `assetId` & `amount`; bisa objek
-//     transaksi asli dari D.transactions atau objek sementara draft form).
-// Return: {ok:true, asset, splits} — `splits` array {ownerId, ownerName,
-//   porsi, bagian} (bagian = nilai * porsi/100, TIDAK dibulatkan, sama pola
-//   splitByPorsi()). {ok:false, reason} kalau: tx tanpa assetId, aset tidak
-//   ketemu, aset single-owner (0 info baru utk ditampilkan), atau
-//   MultiOwnerEngine belum dimuat — 0 regresi (transaksi tanpa assetId,
-//   mayoritas, tidak pernah masuk sini).
-function resolveTxAssetSplit(tx){
-if(!tx||!tx.assetId)return {ok:false,reason:'Transaksi tidak terkait aset'};
-if(typeof MultiOwnerEngine==='undefined')return {ok:false,reason:'MultiOwnerEngine belum dimuat'};
-const asset=(D.assets||[]).find(a=>sameId(a.id,tx.assetId));
-if(!asset)return {ok:false,reason:'Aset tidak ditemukan'};
-const info=MultiOwnerEngine.getOwners(asset);
-if(!info||!info.ok||!info.isMultiOwner)return {ok:false,reason:'Aset ini bukan aset multi-pemilik'};
-const nilai=typeof tx.amount==='number'&&isFinite(tx.amount)?tx.amount:0;
-const s=MultiOwnerEngine.splitByPorsi(nilai,info.owners);
-if(!s.ok)return {ok:false,reason:s.reason};
-return {ok:true,asset,splits:s.splits};
-}
+// resolveTxAssetSplit() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
+// spesifikasi "relasi murni") — kaitan #txAssetId ke aset multi-owner
+// sekarang HANYA dipakai sbg referensi/pelacakan riwayat, TIDAK lagi
+// menghasilkan split nominal per pemilik (0 preview, 0 badge "N pemilik").
+// tx-list-cashflow.js berhenti menampilkan badge/breakdown itu otomatis
+// lewat guard typeof resolveTxAssetSplit==='function' yang sudah ada di
+// sana -- 0 perlu disentuh terpisah.
 // resolveTxTitipanOwner(ownerId) — Sesi 519 (LANJUTKAN-S519, Design Lock
 // S518). Guard **existing-owner-only** utk `titipanLinkId` transaksi --
 // pola SAMA PERSIS `saveCommitment()`/`recordReturn()`
@@ -166,7 +139,6 @@ const sel=document.getElementById('txAssetId');
 populateEntryAssetSelect('txAssetId',sel?sel.value:'',excludeId);
 }
 updateTxAssetHintText();
-updateTxAssetSplitPreview();
 }
 // updateTxAssetHintText() — (patch s558) sinkronkan copy hint di bawah
 // dropdown #txAssetId (modals.js, elemen #txAssetHint) dgn tipe transaksi
@@ -210,7 +182,6 @@ return getMultiOwnerAssets().find(a=>sameId(a.accountId,accId))||null;
 function onTxAccChange(){
 _txAccManuallySet=true;
 updateTxAssetWrapVisibility();
-updateTxOwnerPorsiOptions();
 // PATCH (akun-majoris-selflink-redundant): auto-suggest aset multi-owner
 // yg dulu ada di sini DIBUANG -- aset yg accountId-nya cocok dgn akun
 // terpilih SEKARANG SELALU jadi aset self-linked yg sengaja dikecualikan
@@ -218,36 +189,15 @@ updateTxOwnerPorsiOptions();
 // lagi yg perlu di-auto-suggest ke situ. updateTxAssetWrapVisibility() di
 // atas sudah cukup: repopulate #txAssetId (buang opsi self-link kalau
 // ada) & reset value ke '' kalau pilihan lama sudah tidak valid lagi.
-updateTxAssetSplitPreview();
+// updateTxOwnerPorsiOptions()/updateTxAssetSplitPreview() DIHAPUS (audit
+// AUDIT-S540/B1-B12-DOUBLECOUNT) — dropdown "Porsi Pemilik (akun
+// patungan)" & live preview split porsi sudah tidak ada di modal ini.
 }
-// updateTxOwnerPorsiOptions(selectedOwnerId) — permintaan user (audit "Porsi per
-// Pemilik bukan patungan"): kalau akun yang dipilih di #txAcc tertaut ke aset
-// multi-owner (SAMA sumber owner dgn resolveTxOwnerSplitForAccount() di
-// filter-laporan.js — 100% reuse, 0 rumus baru), tampilkan dropdown
-// #txOwnerPorsiWrap supaya user bisa PILIH transaksi ini masuk porsi siapa,
-// bukan otomatis dibagi rata/proporsional spt sebelumnya. Kalau akun tidak
-// tertaut ke aset multi-owner, wrap disembunyikan & value dikosongkan (0
-// field tersimpan utk transaksi akun biasa -- 0 regresi).
-// Parameter:
-//   selectedOwnerId (string, opsional) — dipakai editTx() utk pre-select
-//     ownerId yang sudah tersimpan di transaksi (t.ownerPorsiId).
-function updateTxOwnerPorsiOptions(selectedOwnerId){
-const wrap=document.getElementById('txOwnerPorsiWrap');
-const sel=document.getElementById('txOwnerPorsi');
-if(!wrap||!sel)return;
-const accId=document.getElementById('txAcc')?document.getElementById('txAcc').value:'';
-const resolved=typeof resolveTxOwnerSplitForAccount==='function'?resolveTxOwnerSplitForAccount(accId):null;
-if(!resolved||!resolved.owners||resolved.owners.length<2){
-wrap.style.display='none';
-sel.innerHTML='';
-return;
-}
-wrap.style.display='block';
-sel.innerHTML=resolved.owners.map(o=>`<option value="${jsAttrEscape(o.ownerId)}">${escapeHtml(o.ownerName)} (${o.porsi}%)</option>`).join('');
-if(selectedOwnerId&&resolved.owners.some(o=>o.ownerId===selectedOwnerId)){
-sel.value=selectedOwnerId;
-}
-}
+// updateTxOwnerPorsiOptions() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
+// spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
+// (#txOwnerPorsiWrap/#txOwnerPorsi, modals.js) sudah dihapus dari modal;
+// transaksi akun patungan sekarang SELALU tercatat penuh dari #txAcc yang
+// dipilih, 0 lagi pemilihan porsi manual per transaksi.
 // onTxAssetChange() — dipanggil onchange #txAssetId (dropdown aset
 // multi-owner di form transaksi). Selain refresh live preview pembagian,
 // sekarang juga menandai _txAssetManuallySet=true (patch akun-multi-owner-
@@ -256,26 +206,10 @@ sel.value=selectedOwnerId;
 // onTxAccChange() berhenti menimpa pilihan itu di sesi form yang sama.
 function onTxAssetChange(){
 _txAssetManuallySet=true;
-updateTxAssetSplitPreview();
 }
-// updateTxAssetSplitPreview() — live preview "#txAssetSplitPreview"
-// (modals.js): baca #txAssetId + #txAmt (calcPreviewValue(), pola SAMA
-// dgn updateAmtPreview() S18), lalu tampilkan rincian bagian tiap pemilik
-// lewat resolveTxAssetSplit(). Kosongkan preview kalau tidak ada aset
-// dipilih/jumlah masih 0/split gagal (mis. field belum tampil krn bukan
-// Pemasukan, atau aset yg dipilih ternyata single-owner).
-function updateTxAssetSplitPreview(){
-const box=document.getElementById('txAssetSplitPreview');
-if(!box)return;
-const sel=document.getElementById('txAssetId');
-const assetId=sel?sel.value:'';
-if(!assetId){box.textContent='';return;}
-const amtEl=document.getElementById('txAmt');
-const nilai=amtEl&&typeof calcPreviewValue==='function'?calcPreviewValue(amtEl.value):0;
-const r=resolveTxAssetSplit({assetId,amount:nilai});
-if(!r.ok){box.textContent='';return;}
-box.textContent=r.splits.map(s=>s.ownerName+': '+fmt(s.bagian)).join(' · ');
-}
+// updateTxAssetSplitPreview() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT)
+// bersama resolveTxAssetSplit() — 0 lagi live preview split porsi di modal
+// Transaksi; #txAssetSplitPreview sudah dihapus dari modals.js.
 function updateSubCatOptions(){
 updateTxVehiclePanels();
 }
@@ -670,7 +604,6 @@ document.getElementById('txLanggananDue').value=new Date().toISOString().split('
 document.getElementById('txCicilanPreview').style.display='none';
 populateAccFilters();
 const txAssetIdResetEl=document.getElementById('txAssetId');if(txAssetIdResetEl)txAssetIdResetEl.value='';
-updateTxOwnerPorsiOptions();
 setTxType(type);
 setPayMethod('tunai',false);
 const stockChk=document.getElementById('txAddStock');
@@ -757,7 +690,6 @@ document.getElementById('txNote').value=t.note||'';
 document.getElementById('txDate').value=t.date;
 const txAssetIdEditEl=document.getElementById('txAssetId');if(txAssetIdEditEl)txAssetIdEditEl.value=t.assetId||'';
 updateTxAssetWrapVisibility();
-updateTxOwnerPorsiOptions(t.ownerPorsiId||'');
 updateTxVehiclePanels();
 const stockChk=document.getElementById('txAddStock');
 if(stockChk)stockChk.checked=false;
@@ -956,15 +888,13 @@ const accId=document.getElementById('txAcc').value;
 // jadi txAssetIdSaveEl.value otomatis kosong di kasus itu -- 0 regresi.
 const txAssetIdSaveEl=document.getElementById('txAssetId');
 const txAssetIdVal=txAssetIdSaveEl?txAssetIdSaveEl.value:'';
-// txOwnerPorsiVal (permintaan user, audit "Porsi per Pemilik bukan patungan"):
-// dibaca dari #txOwnerPorsi HANYA kalau wrap-nya sedang tampil (akun yang
-// dipilih memang tertaut ke aset multi-owner, lihat updateTxOwnerPorsiOptions())
-// -- wrap tersembunyi berarti akun bukan/tidak lagi multi-owner, jadi field ini
-// SENGAJA dikosongkan (0 ownerPorsiId nyasar dari akun yang sudah diganti ke
-// akun biasa di tengah sesi edit yang sama).
-const txOwnerPorsiWrapEl=document.getElementById('txOwnerPorsiWrap');
-const txOwnerPorsiSaveEl=document.getElementById('txOwnerPorsi');
-const txOwnerPorsiVal=(txOwnerPorsiWrapEl&&txOwnerPorsiWrapEl.style.display!=='none'&&txOwnerPorsiSaveEl)?txOwnerPorsiSaveEl.value:'';
+// txOwnerPorsiVal/#txOwnerPorsiWrap DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
+// spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
+// sudah tidak ada di modal ini. Transaksi LAMA yang masih punya
+// `ownerPorsiId` tersimpan dibiarkan apa adanya (0 di-assign/delete di
+// bawah), supaya laporan "Porsi Pemilik" lama di filter-laporan.js (di
+// luar scope perubahan ini) tetap kompatibel lewat fallback yang sudah
+// ada di sana.
 if(cat==='__add_new_cat__'){toast('⚠️ Pilih atau buat kategori dulu');return;}
 // Panel "🔨 Catat juga ke Proyek Renovasi?" dgn status "🛒 Belum Dibeli" (lihat
 // tx-renov.js): barangnya belum benar-benar dibeli, jadi transaksi Keuangan
@@ -1302,7 +1232,6 @@ const prevTxTitipanLinkId=existingTx.titipanLinkId||null;
 const oldTxAmountForTitipanSync=existingTx.amount;
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethod,note,date});
 if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
-if(txOwnerPorsiVal)existingTx.ownerPorsiId=txOwnerPorsiVal;else delete existingTx.ownerPorsiId;
 delete existingTx.billLinkId;
 if(existingTx.servisLinkId&&D.servisLogs){
 const linkedServis=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
@@ -1356,7 +1285,6 @@ accountId:accId,payMethod:'tunai',
 note:note,date
 };
 if(txAssetIdVal)newTx.assetId=txAssetIdVal;
-if(txOwnerPorsiVal)newTx.ownerPorsiId=txOwnerPorsiVal;
 D.transactions.push(newTx);
 applyTxTitipanLinkageOnSave(newTx,null);
 WorthIt.applyBuyLink(savedTxId);
@@ -1401,13 +1329,10 @@ rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');renderDashboard();renderKeuangan();renderCnTab();
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:savedTxId,category:cat,type:curTxType,amount:amt});
-// Sesi 394: tambah info jumlah pemilik ke toast sukses kalau transaksi ini
-// dikaitkan ke aset multi-owner (reuse resolveTxAssetSplit(), 0 kalkulasi baru).
-let txAssetSplitMsg='';
-if(txAssetIdVal){
-const txAssetSplitInfo=resolveTxAssetSplit({assetId:txAssetIdVal,amount:amt});
-if(txAssetSplitInfo.ok)txAssetSplitMsg=' (dibagi ke '+txAssetSplitInfo.splits.length+' pemilik)';
-}
+// txAssetSplitMsg DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT) — toast
+// sukses tidak lagi menampilkan info "(dibagi ke N pemilik)", karena
+// resolveTxAssetSplit() sudah dihapus (kaitan aset kini relasi murni).
+const txAssetSplitMsg='';
 // (s436): kalau ada pesan Renov (sukses ATAU peringatan "belum pilih
 // proyek"), gabung ke toast final ini alih-alih dua toast terpisah yg saling
 // menimpa (lihat komentar txRenovMsg di atas) -- durasi dipanjangkan jadi
