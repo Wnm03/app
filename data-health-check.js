@@ -11,6 +11,15 @@
 // yang sudah ada). Rekomendasi lain hasil audit (audit 1-per-1 ke-9 file
 // konsumen sync lain sebelum migrasi VehicleCatalog.getAll() penuh) SENGAJA
 // belum dikerjakan sesi ini — di luar cakupan "paling ringan".
+//
+// PERUBAHAN SESI S580 (DL-Next-7, lihat DESIGN-LOCK-DL-NEXT-7-DATA-HEALTH-
+// CHECK-OWNER-SOURCE.md & AUDIT-12-OWNER-RESOLVER-POST-DL-NEXT-6.md): fix
+// false-positive warning "Pemilik Sumber Potongan tidak ditemukan" utk
+// transaksi yang deductionOwnerId-nya valid dari SUMBER ASET tertaut
+// (bukan acc.owners[] akun) -- gap sama persis pola DL-Next-1/DL-Next-6,
+// ditemukan di consumer ke-2 (`data-health-check.js`) yang belum pernah
+// diaudit di rantai Owner Resolver. Detail lihat blok
+// `resolveOwnerDefaultForAccount` di bawah.
 
 function runDataHealthCheck(){
 const issues=[];
@@ -42,6 +51,23 @@ issues.push({level:'error',title:'Transaksi dengan tanggal tidak valid',detail:`
 if(t.assetId && !(D.assets||[]).some(a=>sameId(a.id,t.assetId))){
 issues.push({level:'warn',title:'Transaksi tertaut ke Aset Multi-Owner yang sudah dihapus',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) masih menyimpan tautan ke aset multi-owner yang sudah dihapus -- rincian pembagian ke pemilik tidak lagi ditampilkan, cek/lepas tautannya di modal Transaksi.`});
 }
+// AUDIT sesi ini (menutup gap dari tests/data-health-check-tx-assetid-
+// selflink-s559.test.js, ditulis follow-up patch akun-majoris-selflink-
+// redundant/updateTxAssetWrapVisibility() tapi belum pernah diimplementasi
+// di sini): transaksi LAMA yang kadung tersimpan SEBELUM patch itu bisa
+// masih punya t.assetId yang menunjuk ke aset yang accountId-nya SAMA dgn
+// accountId transaksi itu sendiri (self-link redundan -- akun pembayar
+// sudah otomatis = akun aset, jadi tautan manual ke aset yang sama itu
+// double/tidak perlu). Gap ini TIDAK kena cek orphan di atas (asetnya
+// masih ada, cuma tautannya redundan) -- murni baca, 0 auto-repair, guard
+// `_linkedAsset &&` (skip kalau assetId orphan, sudah ditangani cek di
+// atas) dan `t.accountId &&` (skip kalau transaksi tanpa accountId).
+if(t.assetId){
+const _linkedAsset=(D.assets||[]).find(a=>sameId(a.id,t.assetId));
+if(_linkedAsset&&t.accountId&&sameId(_linkedAsset.accountId,t.accountId)){
+issues.push({level:'warn',title:'Transaksi tertaut ke Aset Multi-Owner yang redundan (menautkan diri sendiri)',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menautkan diri ke aset multi-owner "${escapeHtml(_linkedAsset.name||_linkedAsset.id)}" yang accountId-nya sama dengan akun transaksi ini sendiri -- tautan ini redundan (akun pembayar sudah otomatis jadi akun aset ini, 0 rincian pembagian tambahan yang perlu). Cek/lepas tautannya di modal Transaksi.`});
+}
+}
 // PERUBAHAN SESI S574-E (lanjutan S574-A..D, lihat
 // AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §5/§9 Tahap 6): orphan check utk
 // `t.deductionOwnerId` (dipilih via dropdown "Pemilik Sumber Potongan" di
@@ -64,15 +90,54 @@ if(!dOwnerAcc){
 // ikut hilang).
 issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak bisa diverifikasi (akun tidak valid)',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan, tapi akun transaksi ini sudah dihapus -- tautan pemiliknya tidak lagi bisa dicek. Cek/lepas tautan akun transaksi ini di modal Transaksi.`});
 }else{
-const dOwnerList=dOwnerAcc.owners||[];
+// DL-Next-7 (S580, lihat DESIGN-LOCK-DL-NEXT-7-DATA-HEALTH-CHECK-OWNER-
+// SOURCE.md, lanjutan pola source-mismatch DL-Next-1/DL-Next-6): basis
+// owners diganti dari `dOwnerAcc.owners||[]` (BUTA aset tertaut) ke
+// resolveOwnerDefaultForAccount(t.accountId) -- SUMBER SAMA PERSIS yang
+// dipakai guard _saveTxInner() (S578) & badge riwayat (DL-Next-6). Guard
+// `typeof` dipertahankan: kalau fungsi belum termuat (mis. test harness
+// yang isolasi per-file), fallback ke `dOwnerAcc.owners||[]` lama -- 0
+// perubahan perilaku utk kasus itu, 0 crash. `D` tetap dibaca global
+// (dependency injection di luar cakupan DL-Next-7, lihat Design Lock §1).
+let dOwnerList=dOwnerAcc.owners||[];
+let ownerSource='account';
+if(typeof resolveOwnerDefaultForAccount==='function'){
+const resolved=resolveOwnerDefaultForAccount(t.accountId);
+if(resolved&&resolved.ok&&resolved.owners.length>0){
+dOwnerList=resolved.owners;
+ownerSource=resolved.source;
+}
+}
 const isOwnerOfThisAcc=dOwnerList.some(o=>sameId(o.ownerId,t.deductionOwnerId));
 if(!isOwnerOfThisAcc){
 // Bedakan C (owner valid tapi di akun LAIN) vs A (owner tidak ditemukan
 // sama sekali di manapun) -- murni untuk pesan yang lebih jelas ke user,
 // 0 perbedaan level/severity/perbaikan otomatis antara keduanya.
-const existsOnOtherAcc=D.accounts.some(a=>!sameId(a.id,dOwnerAcc.id)&&(a.owners||[]).some(o=>sameId(o.ownerId,t.deductionOwnerId)));
+//
+// DL-Next-8 (S581, lihat DESIGN-LOCK-DL-NEXT-8-DATA-HEALTH-CHECK-OTHER-
+// ACC-SOURCE.md, lanjutan pola source-mismatch DL-Next-1/6/7): basis per
+// akun lain diganti dari `a.owners||[]` (BUTA aset tertaut akun itu) ke
+// resolveOwnerDefaultForAccount(a.id) -- sumber sama persis yang dipakai
+// cabang utama (DL-Next-7). Guard `typeof` + fallback ke `a.owners||[]`
+// lama dipertahankan (0 crash kalau fungsi belum termuat). Wording pesan
+// kasus C TIDAK berubah (sudah cukup akurat generik).
+const existsOnOtherAcc=D.accounts.some(a=>{
+if(sameId(a.id,dOwnerAcc.id))return false;
+let otherOwners=a.owners||[];
+if(typeof resolveOwnerDefaultForAccount==='function'){
+const r=resolveOwnerDefaultForAccount(a.id);
+if(r&&r.ok&&r.owners.length>0)otherOwners=r.owners;
+}
+return otherOwners.some(o=>sameId(o.ownerId,t.deductionOwnerId));
+});
 if(existsOnOtherAcc){
 issues.push({level:'warn',title:'Pemilik Sumber Potongan bukan pemilik akun transaksi ini',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan yang valid secara global, tapi bukan salah satu pemilik akun "${escapeHtml(dOwnerAcc.name||dOwnerAcc.id)}" yang dipakai transaksi ini (kemungkinan porsi kepemilikan akun diubah setelah transaksi dibuat). Cek ulang di modal Transaksi.`});
+}else if(ownerSource==='asset'){
+// DL-Next-7 pesan BARU: sumbernya aset multi-owner tertaut, BUKAN
+// `acc.owners[]` -- wording lama ("dihapus dari akun X") keliru di sini
+// karena akun ini sendiri memang tidak pernah punya owners[] manual.
+const linkedAsset=(D.assets||[]).find(a=>sameId(a.accountId,dOwnerAcc.id));
+issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak ditemukan',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan yang sudah tidak ada lagi di aset multi-owner tertaut "${escapeHtml((linkedAsset&&(linkedAsset.name||linkedAsset.id))||dOwnerAcc.name||dOwnerAcc.id)}" (kemungkinan porsi kepemilikan aset diubah setelah transaksi dibuat). Cek ulang di modal Transaksi.`});
 }else{
 issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak ditemukan',detail:`"${t.note||t.category||t.id}" (${t.date||'?'}) menyimpan Pemilik Sumber Potongan yang sudah tidak ada lagi (kemungkinan owner dihapus dari akun "${escapeHtml(dOwnerAcc.name||dOwnerAcc.id)}" setelah transaksi dibuat). Cek ulang di modal Transaksi.`});
 }

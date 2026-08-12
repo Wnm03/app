@@ -1,0 +1,3 @@
+REMOVED FILES (delete these from your working tree — no longer present in this patch):
+- tests/s551-investment-owners-nominal-readonly.test.js
+- tests/s574-tx-account-not-owner-no-split.test.js
