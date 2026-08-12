@@ -70,9 +70,35 @@ const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pm
 const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxAssetSplit(t):null;
 const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
 const ownerSplitLine=(assetSplit&&assetSplit.ok)?`<div class="tx-meta">👥 ${assetSplit.splits.map(s=>escapeHtml(s.ownerName)+': '+fmt(s.bagian)).join(' · ')}</div>`:'';
+// S574-E: badge "👤 Ditanggung: <nama owner>" di riwayat -- MURNI PRESENTASI,
+// tidak menghitung/split nominal apa pun (beda domain dari assetSplit di
+// atas, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §2.5/§7 -- assetId tetap
+// relasi riwayat, deductionOwnerId adalah domain akun/pemilik-penanggung yang
+// terpisah). Transaksi lama tanpa t.deductionOwnerId -> baris ini tetap
+// kosong, tampilan tx-item TIDAK berubah sama sekali (backward compatible).
+// Nama owner diresolve dari owners[] akun transaksi ini (reuse
+// getAccOwners() dari akun.js, S574-A -- 0 logic porsi/lookup baru ditulis
+// di sini; guard typeof supaya aman kalau akun.js belum dimuat/urutan
+// build.js berubah, sama pola guard resolveTxAssetSplit di atas).
+let deductionOwnerLine='';
+if(t.deductionOwnerId){
+let ownerName=null;
+if(typeof getAccOwners==='function'){
+const ownRes=getAccOwners(t.accountId);
+if(ownRes&&ownRes.ok){
+const ownerMatch=(ownRes.owners||[]).find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+}
+if(!ownerName&&acc&&Array.isArray(acc.owners)){
+const ownerMatch=acc.owners.find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+if(ownerName)deductionOwnerLine=`<div class="tx-meta">👤 Ditanggung: ${escapeHtml(ownerName)}</div>`;
+}
 return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
     <div class="tx-icon" style="background:${bg}">${icon}</div>
-    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}</div>
+    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
     <div class="u-flex u-aic u-gap6">
       <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
       <button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>

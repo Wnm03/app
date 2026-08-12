@@ -72,6 +72,51 @@ function isAccOwnershipSelf(acc){
 if(typeof OwnershipEngine==='undefined')return true;
 return OwnershipEngine.resolve(acc).type==='SELF';
 }
+// --- S574-A: Data layer "Pemilik Sumber Potongan" (akun multi-owner) --------------------------
+// Scope SESI INI (audit: AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md, Tahap 1 di §9): HANYA data
+// layer akun ikut MultiOwnerEngine (modules/shared/multi-owner-engine.js, S390) via field baru
+// D.accounts[].owners -- 0 UI (accModal/accountOwnersModal), 0 picker transaksi, 0
+// deductionOwnerId, 0 wiring ke transaksi.js/modals.js. Sesuai pola project "1 task = 1 sesi",
+// tahap UI porsi akun (Tahap 2), picker transaksi (Tahap 3), dst SENGAJA ditunda ke sesi terpisah.
+// Reuse PENUH MultiOwnerEngine.getOwners()/setOwners() apa adanya -- 0 logic porsi baru ditulis
+// di sini (persis pola Aset/Investasi, lihat aset.js baris ~453/1353).
+// Backward compat: akun lama tanpa field owners[] TETAP valid -- MultiOwnerEngine.getOwners()
+// sudah toleran (sintesis 1 pemilik dari `ownership`/fallback SELF 100%, lihat multi-owner-
+// engine.js), jadi TIDAK ADA migrasi massal apa pun dijalankan di sini. Formula saldo
+// (recalcAccBalance()) & field `ownership` (OwnershipEngine, S191) juga TIDAK disentuh.
+//
+// getAccOwners(accId) — baca daftar pemilik EFEKTIF sebuah akun (wrapper tipis di atas
+// MultiOwnerEngine.getOwners()).
+// Parameter: accId (string) — id akun (D.accounts[].id).
+// Return: {ok, owners, isSynthesized, isMultiOwner} — lihat kontrak MultiOwnerEngine.getOwners().
+//   Akun tidak ditemukan -> {ok:true, owners:[], isSynthesized:true, isMultiOwner:false} (bukan
+//   error, biar caller tidak perlu cabang khusus utk akun-tidak-ada). Engine belum dimuat (guard
+//   typeof, sama pola isAccOwnershipSelf() di atas) -> fallback sintesis manual 1 pemilik SELF 100%.
+function getAccOwners(accId){
+const acc=D.accounts.find(a=>sameId(a.id,accId));
+if(!acc)return{ok:true,owners:[],isSynthesized:true,isMultiOwner:false};
+if(typeof MultiOwnerEngine==='undefined')return{ok:true,owners:[{ownerId:'SELF',porsi:100,ownerName:'Milik Sendiri',isSelf:true}],isSynthesized:true,isMultiOwner:false};
+return MultiOwnerEngine.getOwners(acc);
+}
+// setAccOwners(accId, owners) — tulis daftar pemilik baru ke sebuah akun (wrapper tipis di atas
+// MultiOwnerEngine.setOwners(), validasi & normalisasi 100% reuse, 0 logic baru). MURNI data-
+// layer: TIDAK memanggil save()/render apa pun di sini (beda dari Aset.saveOwners() yang
+// levelnya UI/modal) -- itu tanggung jawab caller di tahap UI berikutnya (S574 Tahap 2), sesuai
+// scope sesi ini yang cuma data layer.
+// Parameter: accId (string), owners (array) — lihat MultiOwnerEngine.validateOwners().
+// Return: {ok:true, owners} kalau sukses (owners = array ternormalisasi yang baru ditulis ke
+//   D.accounts[].owners, mutasi in-place pada objek akun yang sama). {ok:false, reason} kalau
+//   akun tidak ditemukan, engine belum dimuat, atau owners tidak lolos validasi -- D.accounts
+//   TIDAK diubah sama sekali kalau gagal.
+function setAccOwners(accId,owners){
+const acc=D.accounts.find(a=>sameId(a.id,accId));
+if(!acc)return{ok:false,reason:'Akun tidak ditemukan'};
+if(typeof MultiOwnerEngine==='undefined')return{ok:false,reason:'MultiOwnerEngine belum dimuat'};
+const res=MultiOwnerEngine.setOwners(acc,owners);
+if(!res.ok)return res;
+acc.owners=res.entity.owners;
+return{ok:true,owners:acc.owners};
+}
 function populateAccFilters(){
 const opts=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 const fAcc=document.getElementById('fAcc');
@@ -290,4 +335,162 @@ D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
 (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
 (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
 save();renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();renderDashboard();renderKeuangan();refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
+}
+// --- S574-B: UI "⚖️ Porsi Kepemilikan" pada modal Akun (accountOwnersModal) -------------------
+// Scope sesi ini (lanjutan S574-A, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §9 Tahap 2): HANYA
+// UI pengaturan owners[] akun (tambah/hapus/ubah porsi/simpan), reuse PENUH getAccOwners()/
+// setAccOwners() (S574-A, MultiOwnerEngine) — 0 logic porsi baru. TIDAK ada deductionOwnerId,
+// TIDAK ada picker transaksi, TIDAK menyentuh transaksi.js/formula saldo/ownership existing.
+// Pola UI 100% mirror Aset.openOwnersModal()/_renderOwnersList()/addOwnerRow()/removeOwnerRow()/
+// onOwnerNameInput()/onOwnerPorsiInput()/onOwnerIsSelfToggle()/updateOwnersTotal()/saveOwners()/
+// resetOwners() (aset.js, S392a-d/393) — versi akun SENGAJA lebih sederhana (tanpa kolom Nominal
+// Rp/kuota titipan seperti Aset, karena akun tidak punya field nilai dasar seperti aset) tapi
+// validasi & simpan 100% lewat engine yang sama.
+const AccOwners = {
+_draft: [],
+_accId: null,
+// open() — baca akun yang SEDANG diedit (via editAccIdx, akun.js) & isi draft dari getAccOwners()
+// (S574-A, toleran akun lama tanpa owners[]). Akun belum tersimpan (mode Tambah, editAccIdx===-1)
+// -> tolak & toast, sama pola Aset.addOwnerRow()/saveOwners() (guard "simpan dulu").
+open(){
+if(editAccIdx<0||!D.accounts[editAccIdx]){toast('⚠️ Simpan akun ini dulu sebelum mengatur porsi kepemilikan');return;}
+const acc=D.accounts[editAccIdx];
+AccOwners._accId=acc.id;
+document.getElementById('accountOwnersAccName').textContent='🏦 '+(acc.emoji||'💰')+' '+acc.name;
+const res=getAccOwners(acc.id);
+AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+AccOwners._renderList();
+openModal('accountOwnersModal');
+},
+// _renderList() — render ulang #accountOwnersList dari AccOwners._draft. Dipanggil tiap baris
+// ditambah/dihapus (addRow/removeRow), TIDAK dipanggil tiap karakter diketik (sama disiplin
+// _renderOwnersList() aset.js — supaya fokus/kursor input tidak hilang).
+_renderList(){
+const listBox=document.getElementById('accountOwnersList');
+if(!listBox)return;
+const draft=AccOwners._draft;
+if(!draft.length){
+listBox.innerHTML='<div class="empty"><div class="empty-text">Belum ada pemilik. Tap "➕ Tambah Pemilik" di bawah.</div></div>';
+AccOwners.updateTotal();
+return;
+}
+listBox.innerHTML=draft.map((o,i)=>{
+const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:null;
+return '<div style="margin-bottom:8px">'+
+'<div class="u-flex u-gap8" style="align-items:center;margin-bottom:6px">'+
+'<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" oninput="AccOwners.onNameInput('+i+',this.value)">'+
+'<button type="button" class="btn btn-ghost btn-sm" data-action="AccOwners.removeRow" data-args=\'['+i+']\' aria-label="Hapus pemilik">✕</button>'+
+'</div>'+
+'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="accOwnerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" oninput="AccOwners.onPorsiInput('+i+',this.value)"></div>'+
+'<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
+'<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' onchange="AccOwners.onIsSelfToggle('+i+',this.checked)"> 👤 Ini saya'+
+'</label>'+
+'</div>';
+}).join('');
+AccOwners.updateTotal();
+},
+// updateTotal() — hitung ulang & tampilkan total porsi AccOwners._draft di #accountOwnersTotalBox,
+// warna hijau kalau pas 100% / merah kalau belum (100% reuse MultiOwnerEngine.totalPorsi()/
+// remainingPorsi(), 0 rumus baru — sama persis Aset.updateOwnersTotal()). Tombol Simpan Porsi
+// hanya aktif kalau total PAS 100% (sinkron syarat MultiOwnerEngine.validateOwners()).
+updateTotal(){
+const box=document.getElementById('accountOwnersTotalBox');
+const saveBtn=document.getElementById('accountOwnersSaveBtn');
+if(!box){if(saveBtn)saveBtn.disabled=true;return;}
+const draft=AccOwners._draft;
+if(!draft.length){
+box.textContent='Belum ada pemilik ditambahkan.';
+box.style.color='var(--text2)';
+if(saveBtn)saveBtn.disabled=true;
+return;
+}
+if(typeof MultiOwnerEngine==='undefined'){box.textContent='';box.style.color='';if(saveBtn)saveBtn.disabled=true;return;}
+const total=MultiOwnerEngine.totalPorsi(draft);
+const sisa=MultiOwnerEngine.remainingPorsi(draft);
+const isValid=Math.abs(sisa)<=0.01;
+box.style.color=isValid?'var(--accent3)':'var(--accent2)';
+box.style.fontWeight='700';
+box.textContent=isValid?('✅ Total porsi: '+total+'% (pas 100%)'):('⚠️ Total porsi: '+total+'% ('+(sisa>0?('kurang '+sisa+'%'):('lebih '+Math.abs(sisa)+'%'))+')');
+if(saveBtn)saveBtn.disabled=!isValid;
+},
+// addRow()/removeRow(i) — tambah/hapus 1 baris draft di memori, render ulang list. Murni ubah
+// draft — TIDAK menulis apa pun ke D.accounts sampai save() dipanggil (sama pola Aset).
+addRow(){
+AccOwners._draft.push({ownerId:'',ownerName:'',porsi:0,isSelf:AccOwners._draft.length===0});
+AccOwners._renderList();
+},
+removeRow(i){
+AccOwners._draft.splice(i,1);
+AccOwners._renderList();
+},
+// onNameInput(i,val)/onPorsiInput(i,val)/onIsSelfToggle(i,checked) — tulis ketikan/toggle user ke
+// AccOwners._draft[i]. onPorsiInput() juga panggil updateTotal() supaya indikator realtime (sama
+// pola Aset.onOwnerPorsiInput()); onNameInput() TIDAK render ulang list (jaga fokus input, sama
+// alasan aset.js). onIsSelfToggle() event diskrit, aman render ulang.
+onNameInput(i,val){
+if(!AccOwners._draft[i])return;
+AccOwners._draft[i].ownerName=val;
+},
+onPorsiInput(i,val){
+if(!AccOwners._draft[i])return;
+const n=parseFloat(val);
+AccOwners._draft[i].porsi=isFinite(n)?n:0;
+AccOwners.updateTotal();
+},
+onIsSelfToggle(i,checked){
+if(!AccOwners._draft[i])return;
+AccOwners._draft[i].isSelf=!!checked;
+},
+// save() — tulis AccOwners._draft ke D.accounts[].owners lewat setAccOwners() (S574-A, yang di
+// dalamnya reuse MultiOwnerEngine.setOwners()/validateOwners() — 0 logic validasi baru ditulis di
+// sini). Baris baru (ownerId kosong) non-SELF -> OwnerRegistry.findOrCreate() kalau tersedia
+// (konsisten nama pemilik lintas Aset/Investasi/Akun, S489), fallback uid(). Baris isSelf:true
+// tanpa ownerId -> literal 'SELF' (S547 pattern, sama Aset.saveOwners()) supaya konsisten dgn
+// identitas SELF universal, bukan per-nama seperti OwnerRegistry.
+save(){
+if(typeof MultiOwnerEngine==='undefined'){toast('⚠️ Fitur porsi kepemilikan belum siap dimuat');return;}
+if(!AccOwners._accId){toast('⚠️ Akun tidak ditemukan, coba tutup dan buka lagi');return;}
+const draft=AccOwners._draft;
+if(!draft.length){toast('⚠️ Tambahkan minimal 1 pemilik sebelum menyimpan');return;}
+for(let i=0;i<draft.length;i++){
+if(!draft[i].ownerName||!draft[i].ownerName.trim()){toast('⚠️ Nama pemilik baris ke-'+(i+1)+' wajib diisi');return;}
+}
+let selfIdUsed=draft.some((o)=>o.ownerId&&String(o.ownerId).trim()==='SELF');
+const owners=draft.map((o)=>{
+let ownerId;
+if(o.ownerId&&String(o.ownerId).trim()){
+ownerId=String(o.ownerId).trim();
+}else if(o.isSelf&&!selfIdUsed){
+ownerId='SELF';
+selfIdUsed=true;
+}else if(!o.isSelf&&typeof OwnerRegistry!=='undefined'){
+ownerId=OwnerRegistry.findOrCreate(o.ownerName.trim());
+}else{
+ownerId=String(uid());
+}
+return{ownerId,ownerName:o.ownerName.trim(),porsi:o.porsi,isSelf:!!o.isSelf};
+});
+const res=setAccOwners(AccOwners._accId,owners);
+if(!res.ok){toast('⚠️ '+res.reason);return;}
+save();
+AccOwners._draft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+AccOwners._renderList();
+if(typeof renderAccGrid==='function')renderAccGrid();
+if(typeof renderDashAccList==='function')renderDashAccList();
+if(typeof renderLapAccList==='function')renderLapAccList();
+toast('✅ Porsi kepemilikan akun tersimpan');
+},
+// resetDraft() — buang perubahan draft yang belum disimpan, muat ulang dari data TERSIMPAN di
+// D.accounts (via getAccOwners(), sama logic openOwnersModal()). Dipakai kalau user salah edit &
+// mau mulai ulang tanpa tutup modal.
+resetDraft(){
+if(!AccOwners._accId){return;}
+const res=getAccOwners(AccOwners._accId);
+AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+AccOwners._renderList();
+},
+};
+
+if(typeof window!=='undefined'){
+window.AccOwners=AccOwners;
 }

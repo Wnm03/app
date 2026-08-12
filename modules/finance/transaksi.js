@@ -182,6 +182,7 @@ return getMultiOwnerAssets().find(a=>sameId(a.accountId,accId))||null;
 function onTxAccChange(){
 _txAccManuallySet=true;
 updateTxAssetWrapVisibility();
+updateTxDeductionOwnerVisibility();
 // PATCH (akun-majoris-selflink-redundant): auto-suggest aset multi-owner
 // yg dulu ada di sini DIBUANG -- aset yg accountId-nya cocok dgn akun
 // terpilih SEKARANG SELALU jadi aset self-linked yg sengaja dikecualikan
@@ -192,6 +193,55 @@ updateTxAssetWrapVisibility();
 // updateTxOwnerPorsiOptions()/updateTxAssetSplitPreview() DIHAPUS (audit
 // AUDIT-S540/B1-B12-DOUBLECOUNT) — dropdown "Porsi Pemilik (akun
 // patungan)" & live preview split porsi sudah tidak ada di modal ini.
+}
+// updateTxDeductionOwnerVisibility() — S574-C (lanjutan S574-A/B data
+// layer & UI porsi akun, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md
+// Tahap 3): show/hide + isi ulang picker "Pemilik Sumber Potongan"
+// (#txDeductionOwnerWrap/#txDeductionOwner, modals.js) berdasarkan
+// owners[] akun yang SEDANG dipilih di #txAcc. Reuse PENUH getAccOwners()
+// (S574-A, akun.js -> MultiOwnerEngine.getOwners(), 0 logic porsi baru
+// ditulis di sini) -- picker ini murni assignment biner (pilih 1 owner
+// sbg penanggung penuh transaksi), TIDAK PERNAH menghitung
+// nilai*porsi/100 & TIDAK menyentuh #txAssetId/ownership aset/investasi
+// sama sekali (domain terpisah, lihat audit §2.5/§5).
+// - Akun tanpa owners[] atau owners[] hanya 1 (termasuk SEMUA akun lama,
+//   getAccOwners() sudah toleran/backward-compat) -> wrap disembunyikan,
+//   dropdown dikosongkan, TIDAK wajib pilih apa pun (0 friksi tambahan
+//   dibanding sebelum fitur ini ada -- transaksi lama tetap normal).
+// - Akun dengan >1 owner -> wrap ditampilkan, opsi HANYA berasal dari
+//   owners AKUN INI (bukan aset/investasi/akun lain manapun -- larangan
+//   eksplisit scope sesi ini). Dropdown SELALU direpopulate dari nol tiap
+//   dipanggil (value direset ke '') supaya pilihan owner dari akun
+//   sebelumnya TIDAK pernah terbawa ke akun multi-owner yang baru dipilih
+//   (persyaratan §3: ganti akun multi-owner A -> multi-owner B, owner A
+//   tidak boleh nempel di B).
+// Dipanggil dari onTxAccChange() (mekanisme existing, TIDAK ada
+// listener/mutation-gate baru dibuat) + openTxModal()/editTx() supaya
+// field ini ikut ke-reset/terisi benar tiap buka modal, persis pola
+// updateTxAssetWrapVisibility() di atas.
+// CATATAN SCOPE (S574-C): fungsi ini sendiri HANYA state UI (nilai
+// dropdown), TIDAK menyimpan apa pun ke `existingTx`/`D.transactions`.
+// Persistensi field `deductionOwnerId` (baca nilai dropdown ini +
+// validasi wajib-pilih + tulis ke SEMUA cabang `_saveTxInner()`) sudah
+// diselesaikan di S574-D1 (lihat audit §9 Tahap 4) -- fungsi ini masih
+// TIDAK diubah sesi itu, murni dikonsumsi apa adanya oleh _saveTxInner().
+function updateTxDeductionOwnerVisibility(){
+const wrap=document.getElementById('txDeductionOwnerWrap');
+const sel=document.getElementById('txDeductionOwner');
+if(!wrap||!sel)return;
+const accId=document.getElementById('txAcc')?document.getElementById('txAcc').value:'';
+const res=(accId&&typeof getAccOwners==='function')?getAccOwners(accId):null;
+const isMulti=!!(res&&res.ok&&res.isMultiOwner);
+if(!isMulti){
+wrap.style.display='none';
+sel.innerHTML='';
+sel.value='';
+return;
+}
+wrap.style.display='block';
+const owners=res.owners||[];
+sel.innerHTML='<option value="">— Pilih Pemilik —</option>'+owners.map(o=>'<option value="'+escapeHtml(String(o.ownerId))+'">'+escapeHtml(o.ownerName||String(o.ownerId))+'</option>').join('');
+sel.value='';
 }
 // updateTxOwnerPorsiOptions() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
 // spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
@@ -604,6 +654,7 @@ document.getElementById('txLanggananDue').value=new Date().toISOString().split('
 document.getElementById('txCicilanPreview').style.display='none';
 populateAccFilters();
 const txAssetIdResetEl=document.getElementById('txAssetId');if(txAssetIdResetEl)txAssetIdResetEl.value='';
+updateTxDeductionOwnerVisibility();
 setTxType(type);
 setPayMethod('tunai',false);
 const stockChk=document.getElementById('txAddStock');
@@ -690,6 +741,20 @@ document.getElementById('txNote').value=t.note||'';
 document.getElementById('txDate').value=t.date;
 const txAssetIdEditEl=document.getElementById('txAssetId');if(txAssetIdEditEl)txAssetIdEditEl.value=t.assetId||'';
 updateTxAssetWrapVisibility();
+updateTxDeductionOwnerVisibility();
+// S574-D2 BUGFIX: updateTxDeductionOwnerVisibility() (S574-C) SELALU
+// mereset #txDeductionOwner ke '' saat repopulate opsi (by design, supaya
+// pilihan owner akun SEBELUMNYA tidak pernah terbawa ke akun multi-owner
+// yang baru dipilih -- lihat komentar fungsi itu). Tapi editTx() sendiri
+// tidak pernah membaca balik `t.deductionOwnerId` yang sudah tersimpan ke
+// dropdown ini -- akibatnya membuka Edit transaksi multi-owner lalu
+// simpan TANPA mengganti owner sama sekali akan kena tolak oleh validasi
+// wajib-pilih di _saveTxInner() (S574-D1), padahal owner-nya sudah ada.
+// Fix: prefill dropdown dari nilai tersimpan SETELAH opsi direpopulate,
+// hanya kalau transaksi ini memang punya deductionOwnerId (transaksi
+// lama/akun single-owner -> t.deductionOwnerId kosong -> 0 perubahan).
+const txDeductionOwnerEditEl=document.getElementById('txDeductionOwner');
+if(txDeductionOwnerEditEl&&t.deductionOwnerId)txDeductionOwnerEditEl.value=t.deductionOwnerId;
 updateTxVehiclePanels();
 const stockChk=document.getElementById('txAddStock');
 if(stockChk)stockChk.checked=false;
@@ -888,6 +953,15 @@ const accId=document.getElementById('txAcc').value;
 // jadi txAssetIdSaveEl.value otomatis kosong di kasus itu -- 0 regresi.
 const txAssetIdSaveEl=document.getElementById('txAssetId');
 const txAssetIdVal=txAssetIdSaveEl?txAssetIdSaveEl.value:'';
+// deductionOwnerIdVal — S574-D1 (lanjutan S574-A/B/C, lihat
+// AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md Tahap 4): nilai picker "Pemilik
+// Sumber Potongan" (#txDeductionOwner, show/hide+repopulate sudah
+// ditangani updateTxDeductionOwnerVisibility() -- S574-C, TIDAK disentuh
+// sesi ini). Diambil apa adanya dari dropdown -- akun single-owner (wrap
+// disembunyikan, dropdown dikosongkan oleh S574-C) otomatis menghasilkan
+// string kosong di sini, jadi 0 friksi tambahan utk akun lama/single-owner.
+const txDeductionOwnerSaveEl=document.getElementById('txDeductionOwner');
+const deductionOwnerIdVal=txDeductionOwnerSaveEl?txDeductionOwnerSaveEl.value:'';
 // txOwnerPorsiVal/#txOwnerPorsiWrap DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
 // spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
 // sudah tidak ada di modal ini. Transaksi LAMA yang masih punya
@@ -896,6 +970,18 @@ const txAssetIdVal=txAssetIdSaveEl?txAssetIdSaveEl.value:'';
 // luar scope perubahan ini) tetap kompatibel lewat fallback yang sudah
 // ada di sana.
 if(cat==='__add_new_cat__'){toast('⚠️ Pilih atau buat kategori dulu');return;}
+// VALIDASI S574-D1: akun multi-owner (owners.length>1, reuse getAccOwners()
+// S574-A -> MultiOwnerEngine.getOwners(), 0 logic porsi baru) WAJIB pilih
+// tepat 1 Pemilik Sumber Potongan sebelum transaksi boleh disimpan --
+// berlaku utk CREATE maupun EDIT (accId di atas sudah mewakili akun yang
+// SEDANG dipilih di form, termasuk kalau user baru saja ganti akun).
+// Assignment biner murni (siapa menanggung PENUH), TIDAK pernah split %
+// (lihat §2.4/§5 audit) -- validasi ini juga TIDAK menyentuh saldo/formula.
+const _deductionOwnerAccCheck=(accId&&typeof getAccOwners==='function')?getAccOwners(accId):null;
+if(_deductionOwnerAccCheck&&_deductionOwnerAccCheck.ok&&_deductionOwnerAccCheck.isMultiOwner&&!deductionOwnerIdVal){
+toast('⚠️ Akun ini punya lebih dari 1 pemilik — pilih Pemilik Sumber Potongan dulu');
+return;
+}
 // Panel "🔨 Catat juga ke Proyek Renovasi?" dgn status "🛒 Belum Dibeli" (lihat
 // tx-renov.js): barangnya belum benar-benar dibeli, jadi transaksi Keuangan
 // SENGAJA tidak dicatat -- item renovasi (belum lunas) saja yang dibuat.
@@ -975,6 +1061,9 @@ const linkedTxIds=D.transactions.filter(t=>t.billLinkId===existingBill.id).map(t
 const isLatestInstallment=linkedTxIds.length===0||existingTx.id>=Math.max(...linkedTxIds);
 const oldAmount=existingTx.amount;
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note});
+// S574-D1: persist deductionOwnerId di cabang utang (Object.assign 1/7) --
+// pola sama txAssetIdVal (tag opsional, bukan input kalkulasi saldo).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 const debtSynced=isLatestInstallment&&typeof syncDebtBalanceOnPaymentEdit==='function'&&syncDebtBalanceOnPaymentEdit(existingBill,oldAmount,amt);
 const debtSyncedMsg=debtSynced?' (sisa utang ikut disesuaikan)':'';
 txEditId=null;
@@ -1003,6 +1092,8 @@ if(linkedTagihanBill){
 const isLatestTagihan=typeof isLatestBillPaymentTx==='function'?isLatestBillPaymentTx(linkedTagihanBill.id,existingTx.id):true;
 const keepPayMethodTagihan=_txPayMethodTouchedByUser?'tunai':(existingTx.payMethod||'tunai');
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethodTagihan,note,date});
+// S574-D1: persist deductionOwnerId di cabang tagihan (Object.assign 2/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 // billLinkId SENGAJA dipertahankan (tidak dihapus) -- beda dari cabang generik di bawah.
 let archiveSynced=false;
 if(isLatestTagihan&&linkedTagihanBill.completedAt){linkedTagihanBill.completedAt=date;archiveSynced=true;}
@@ -1056,6 +1147,8 @@ const cicilanSharedAutoPiutang=!!(cicilanShared&&txCicilanSharedAutoPiutangSaveE
 const oldTxAmountForPiutangSync=existingTx.amount;
 Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr,sharedOtherName:cicilanSharedOtherName,sharedAutoPiutang:cicilanSharedAutoPiutang});
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
+// S574-D1: persist deductionOwnerId di cabang cicilan (isLatest, Object.assign 3/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 // FIX s286: sebelum ini, menyalakan Ditanggung Bersama + Catat Otomatis Piutang
 // saat EDIT transaksi cicilan yg sudah ada cuma nyimpen flag ke existingBill --
 // piutang utk PEMBAYARAN yg sedang diedit ini sendiri tidak pernah dibuat, baru
@@ -1088,6 +1181,8 @@ maybeCreateSharedPiutangFromBill(existingBill,existingTx.id);
 }
 } else {
 Object.assign(existingTx,{category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
+// S574-D1: persist deductionOwnerId di cabang cicilan (bukan-latest, Object.assign 4/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 toast('ℹ️ Ini pembayaran cicilan lama — hanya catatan transaksi ini yang diubah. Jadwal cicilan (total/tenor/jatuh tempo) tidak ikut berubah, ubah lewat 📋 Riwayat Pembayaran kalau perlu.');
 }
 } else {
@@ -1097,8 +1192,12 @@ const freq=document.getElementById('txLanggananFreq').value;
 const due=document.getElementById('txLanggananDue').value||date;
 Object.assign(existingBill,{name:nama,amount:amt,freq,nextDue:due,category:cat,accountId:accId,note});
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
+// S574-D1: persist deductionOwnerId di cabang tagihan-lama (isLatest, Object.assign 5/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 } else {
 Object.assign(existingTx,{amount:amt,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
+// S574-D1: persist deductionOwnerId di cabang tagihan-lama (bukan-latest, Object.assign 6/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 toast('ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang diubah, jadwal tagihan tidak ikut berubah.');
 }
 }
@@ -1166,7 +1265,10 @@ const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNe
 // BUGFIX: sama seperti cabang edit di atas -- totalAmount = perBulan (total/periode), bukan total harga.
 D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
 }
-D.transactions.push({id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date});
+const _cicilanNewTx={id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date};
+// S574-D1: persist deductionOwnerId di jalur CREATE cicilan (1/3).
+if(deductionOwnerIdVal)_cicilanNewTx.deductionOwnerId=deductionOwnerIdVal;
+D.transactions.push(_cicilanNewTx);
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -1202,7 +1304,10 @@ const alreadyExists=D.bills.find(b=>b.name===nama&&b.kind==='langganan');
 if(!alreadyExists){
 D.bills.push({id:billId,name:nama,amount:amt,nextDue:dueNext.toISOString().split('T')[0],freq,sisaTenor:null,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'langganan'});
 }
-D.transactions.push({id:billId+1,type:'expense',amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'langganan',note:nama+(note?' - '+note:''),date});
+const _langgananNewTx={id:billId+1,type:'expense',amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'langganan',note:nama+(note?' - '+note:''),date};
+// S574-D1: persist deductionOwnerId di jalur CREATE langganan (2/3).
+if(deductionOwnerIdVal)_langgananNewTx.deductionOwnerId=deductionOwnerIdVal;
+D.transactions.push(_langgananNewTx);
 applyTxStockFromTx(nama,billId+1,date,amt,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -1232,6 +1337,8 @@ const prevTxTitipanLinkId=existingTx.titipanLinkId||null;
 const oldTxAmountForTitipanSync=existingTx.amount;
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethod,note,date});
 if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
+// S574-D1: persist deductionOwnerId di cabang generik (Object.assign 7/7).
+if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 delete existingTx.billLinkId;
 if(existingTx.servisLinkId&&D.servisLogs){
 const linkedServis=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
@@ -1285,6 +1392,10 @@ accountId:accId,payMethod:'tunai',
 note:note,date
 };
 if(txAssetIdVal)newTx.assetId=txAssetIdVal;
+// S574-D1: persist deductionOwnerId di jalur CREATE generik (3/3). Akun
+// single-owner (dropdown kosong) -> deductionOwnerIdVal='' -> field TIDAK
+// diset sama sekali, sesuai pola existing txAssetIdVal di atas.
+if(deductionOwnerIdVal)newTx.deductionOwnerId=deductionOwnerIdVal;
 D.transactions.push(newTx);
 applyTxTitipanLinkageOnSave(newTx,null);
 WorthIt.applyBuyLink(savedTxId);
