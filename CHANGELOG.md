@@ -1,3 +1,33 @@
+# Changelog — Sesi Res-D (Owner Resolver: Regression & Release, v1307)
+
+## Konteks
+Penutup rantai `DESIGN-LOCK-LINKED-ASSET-ACCOUNT-OWNER-DEFAULT.md`:
+Res-A (design lock) → Res-B (`resolveOwnerDefaultForAccount()` +
+`getAccOwnersEffective()`, data-layer) → Res-C (integrasi UI
+`updateTxDeductionOwnerVisibility()`) → **Res-D** (sesi ini): regresi
+penuh & release. 0 file source produksi diedit sesi ini.
+
+## Hasil
+- Full `npm test`: **4066 test, 4057 pass, 9 fail** — identik
+  sebelum/sesudah `node scripts/build.js`. Ke-9 kegagalan diaudit satu
+  per satu: semuanya pre-existing (domain `data-health-check.js` self-link
+  S559, `s551` investment-nominal stale test yang sudah didokumentasikan
+  utk di-retire, `s574` filter-tx-owner-split legacy) — 0 terkait Owner
+  Resolver.
+- Invariant wajib (`recalcAccBalance()`, `DanaTitipanPortfolioAPI.build()`,
+  `titipanCommitments`, pemisahan `deductionOwnerId`/`ownerPorsiId`) — md5
+  identik sebelum/sesudah build, 0 disentuh.
+- Build: `s576-pemilik-sumber-potongan-visibility` → `s577-res-d-regression-release`,
+  v1306 → v1307. `verify-bundle-freshness`/`verify-window-expose` OK.
+  `verify-release-ready` LOLOS (gate lint/minify di-override manual,
+  alasan sandbox tanpa akses jaringan, sama seperti S508–S576).
+- Detail lengkap: `RES-D-IMPLEMENTATION-REPORT.md`, `FILES-CHANGED-RES-D.md`.
+
+## Status
+**RELEASE COMPLETE.**
+
+---
+
 # Changelog — Sesi 516 (BUG-S516-001: Owner Picker Dana Titipan — Fix Escaping ownerId)
 
 ## Konteks
