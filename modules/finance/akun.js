@@ -98,6 +98,34 @@ if(!acc)return{ok:true,owners:[],isSynthesized:true,isMultiOwner:false};
 if(typeof MultiOwnerEngine==='undefined')return{ok:true,owners:[{ownerId:'SELF',porsi:100,ownerName:'Milik Sendiri',isSelf:true}],isSynthesized:true,isMultiOwner:false};
 return MultiOwnerEngine.getOwners(acc);
 }
+// getAccOwnersRaw(accId) — S575: baca `acc.owners[]` APA ADANYA, TANPA syarat
+// total porsi 100% dan TANPA syarat jumlah owner (>1). Beda sengaja dari
+// getAccOwners()/MultiOwnerEngine.getOwners(): fungsi itu membungkus
+// validateOwners() yang mensyaratkan total=100%, dan kalau gagal owners ASLI
+// diganti diam-diam jadi owner sintetis (isSynthesized:true) -- kalau dipakai
+// utk visibility field "Pemilik Sumber Potongan" di Transaksi, syarat 100%
+// itu ikut menempel padahal field itu murni assignment (siapa menanggung),
+// bukan pembagian porsi. Dipakai KHUSUS oleh
+// updateTxDeductionOwnerVisibility() (transaksi.js, S574-C lanjutan S575) --
+// TIDAK dipakai di tempat lain manapun (Buku Aset/Zakat/Kekayaan Bersih/
+// validasi porsi tetap 100% via getAccOwners()/setAccOwners(), tidak disentuh).
+// Parameter: accId (string) — id akun (D.accounts[].id).
+// Return: {ok:true, owners} — owners = baris `acc.owners[]` apa adanya yang
+//   punya `ownerId` (string, non-kosong setelah trim) — SATU-SATUNYA syarat
+//   per-baris, karena field "Pemilik Sumber Potongan" murni assignment
+//   siapa-menanggung, bukan pembagian porsi (`porsi` boleh tidak ada/tidak
+//   valid/total bukan 100%, tidak mempengaruhi visibility maupun opsi
+//   dropdown). Akun tidak ada / acc.owners bukan array / array kosong ->
+//   {ok:true, owners:[]} (0 fallback sintesis SELF -- beda sengaja dari
+//   getAccOwners(), karena tujuan fungsi ini justru mendeteksi apakah
+//   owners ASLI ada, bukan menyamarkannya).
+function getAccOwnersRaw(accId){
+const acc=D.accounts.find(a=>sameId(a.id,accId));
+if(!acc||!Array.isArray(acc.owners))return{ok:true,owners:[]};
+const rows=acc.owners.filter(o=>o&&typeof o.ownerId==='string'&&o.ownerId.trim());
+const owners=rows.map(o=>({ownerId:o.ownerId,porsi:o.porsi,ownerName:typeof o.ownerName==='string'?o.ownerName:o.ownerId}));
+return{ok:true,owners};
+}
 // setAccOwners(accId, owners) — tulis daftar pemilik baru ke sebuah akun (wrapper tipis di atas
 // MultiOwnerEngine.setOwners(), validasi & normalisasi 100% reuse, 0 logic baru). MURNI data-
 // layer: TIDAK memanggil save()/render apa pun di sini (beda dari Aset.saveOwners() yang
@@ -472,6 +500,28 @@ return{ownerId,ownerName:o.ownerName.trim(),porsi:o.porsi,isSelf:!!o.isSelf};
 });
 const res=setAccOwners(AccOwners._accId,owners);
 if(!res.ok){toast('⚠️ '+res.reason);return;}
+// BUGFIX (audit sync arah Akun->Aset, lanjutan patch Aset->Akun sesi sebelumnya):
+// setAccOwners() di atas cuma nulis acc.owners -- aset tertaut (a.accountId ===
+// akun ini) TIDAK ikut ter-update, jadi Buku Aset/Zakat/Kekayaan Bersih (baca
+// a.owners) tetap porsi lama, & bisa KETIMPA BALIK kalau Aset.saveOwners()
+// terpanggil lagi nanti (arah Aset->Akun menimpa acc.owners pakai a.owners basi).
+// Fix: cari LANGSUNG (bukan getMultiOwnerAssets() -- itu memfilter HANYA yang
+// SUDAH isMultiOwner, jadi kelewat kasus 1-owner->multi-owner), skip aset yang
+// tertaut Holding Investasi (a.investmentId -- porsinya didikte Investment.
+// getOwners(), lihat Aset._resolveLinkedInvestment()/_ownersReadOnly, menulis
+// a.owners manual di sini akan konflik). 0 rumus baru -- 100% reuse
+// MultiOwnerEngine.setOwners()/Aset._syncOwnerDebts() persis pola saveOwners().
+const linkedAsset=(D.assets||[]).find(a=>sameId(a.accountId,AccOwners._accId));
+if(linkedAsset&&!(typeof Aset!=='undefined'&&typeof Aset._resolveLinkedInvestment==='function'&&Aset._resolveLinkedInvestment(linkedAsset))){
+const assetRes=MultiOwnerEngine.setOwners(linkedAsset,res.owners);
+if(assetRes.ok){
+Object.assign(linkedAsset,{owners:assetRes.entity.owners});
+if(typeof Aset!=='undefined'&&typeof Aset._syncOwnerDebts==='function')Aset._syncOwnerDebts(linkedAsset);
+if(typeof Aset!=='undefined'&&typeof Aset.renderList==='function')Aset.renderList();
+if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+}
+}
 save();
 AccOwners._draft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
 AccOwners._renderList();

@@ -225,23 +225,39 @@ updateTxDeductionOwnerVisibility();
 // validasi wajib-pilih + tulis ke SEMUA cabang `_saveTxInner()`) sudah
 // diselesaikan di S574-D1 (lihat audit §9 Tahap 4) -- fungsi ini masih
 // TIDAK diubah sesi itu, murni dikonsumsi apa adanya oleh _saveTxInner().
+// updateTxDeductionOwnerVisibility() — REVISI S575 (lanjutan S574-C): syarat
+// tampil sekarang MURNI "akun punya owners[] asli dengan minimal 1 baris
+// valid", dibaca lewat getAccOwnersRaw() (akun.js, S575) -- BUKAN lagi
+// isMultiOwner (owners.length>1) dan BUKAN total porsi 100%, sesuai larangan
+// eksplisit S575 (getAccOwners()/isMultiOwner membungkus syarat 100% yang
+// tidak relevan utk field assignment biner ini, lihat komentar
+// getAccOwnersRaw()). Perilaku baru:
+// - 0 owner asli (termasuk SEMUA akun lama tanpa owners[]) -> wrap
+//   disembunyikan, sama seperti sebelumnya (0 regresi akun lama).
+// - 1 owner -> wrap TETAP ditampilkan, dropdown otomatis terisi ke satu-
+//   satunya owner itu (tidak perlu pilih manual).
+// - 2+ owner -> wrap ditampilkan, dropdown berisi semua opsi, value direset
+//   ke '' (perilaku lama dipertahankan persis: pilihan owner dari akun
+//   sebelumnya TIDAK boleh terbawa ke akun lain).
+// Validasi wajib-pilih saat simpan (_saveTxInner(), masih pakai
+// getAccOwners()/isMultiOwner) SENGAJA TIDAK diubah di sini -- itu domain
+// "aturan validasi porsi kepemilikan" yang di luar scope S575.
 function updateTxDeductionOwnerVisibility(){
 const wrap=document.getElementById('txDeductionOwnerWrap');
 const sel=document.getElementById('txDeductionOwner');
 if(!wrap||!sel)return;
 const accId=document.getElementById('txAcc')?document.getElementById('txAcc').value:'';
-const res=(accId&&typeof getAccOwners==='function')?getAccOwners(accId):null;
-const isMulti=!!(res&&res.ok&&res.isMultiOwner);
-if(!isMulti){
+const res=(accId&&typeof getAccOwnersRaw==='function')?getAccOwnersRaw(accId):null;
+const owners=(res&&res.ok)?(res.owners||[]):[];
+if(owners.length<1){
 wrap.style.display='none';
 sel.innerHTML='';
 sel.value='';
 return;
 }
 wrap.style.display='block';
-const owners=res.owners||[];
 sel.innerHTML='<option value="">— Pilih Pemilik —</option>'+owners.map(o=>'<option value="'+escapeHtml(String(o.ownerId))+'">'+escapeHtml(o.ownerName||String(o.ownerId))+'</option>').join('');
-sel.value='';
+sel.value=owners.length===1?String(owners[0].ownerId):'';
 }
 // updateTxOwnerPorsiOptions() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
 // spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
