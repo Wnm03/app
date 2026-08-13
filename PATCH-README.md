@@ -1,44 +1,54 @@
-# Patch — Sesi 474 (Virtual Bill Item, s468d: buffer/regression final)
-# = kw_patch_virtual-bill-item-tx-list-s468-final.zip (gabungan a+b+c+d)
+# Patch Gabungan — S599 (Ghost Asset di Asset Picker) + Ownership Fix (Hapus Porsi Titipan)
 
-Lihat `CHANGELOG.md` (bagian "Sesi 474", juga 471-473 di atasnya) untuk
-detail lengkap. Fitur "Virtual Bill Item di List Transaksi"
-(`s468-PLAN-virtual-bill-item-tx-list.md`) **SELESAI** — semua Definition
-of Done terpenuhi.
+Gabungan 2 patch independen, TIDAK ada file yang saling tumpang tindih
+antara keduanya, jadi digabung apa adanya tanpa perlu resolve konflik.
+Struktur folder SAMA seperti project asli — tinggal timpa.
 
-## Ringkasan fitur (gabungan s468a+b+c+d)
-- `modules/finance/tagihan-kalender.js` — `generateVirtualBillItemsForMonth(year,month)`
-  murni: exclude bill lunas/arsip, id prefix `vbill_${billId}_${year}${month}`,
-  nominal shared = `b.amount` apa adanya.
-- `modules/finance/tx-list-cashflow.js` — `txHTML()` render kartu virtual
-  (badge "⏳ Terjadwal", klik→`openBillModal`, 0 tombol hapus); `delTx()`
-  guard baris pertama (id virtual → toast, tidak pernah sampai `askConfirm`).
-- `modules/shared/modules-render.js` — `renderKeuangan()` wiring section
-  `#allTxVirtualBills` di atas `#allTx`, **hanya** tampil saat
-  `txListPeriode==='bulan'` & bulan/tahun = aktual sekarang.
-- `index.html`, `app_production.html` — elemen `#allTxVirtualBills` baru.
-- 18 test baru total (`virtual-bill-generator-s468a`,
-  `virtual-bill-txhtml-deltx-guard-s468b`, `virtual-bill-alltx-wiring-s468c`,
-  `virtual-bill-manual-scenario-s468d`).
-- `app-bundle-a.min.js`, `app-bundle-b.min.js`, `sw.js`, `index.html`,
-  `app_production.html` → versi 1196; konstanta versi module disamakan ke
-  `s474-virtual-bill-item-final`.
-- `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md` — regenerasi otomatis.
+Total 3 file berubah/baru dibanding baseline:
+- `modules/finance/dana-titipan-portfolio-render.js` (diubah — dari patch S599)
+- `tests/dana-titipan-asset-picker-ghost-asset-s599.test.js` (baru — dari patch S599)
+- `modules/asset/aset.js` (diubah — dari patch Ownership Fix)
 
-## Verifikasi final (gabungan)
-- `node scripts/build.js s474-virtual-bill-item-final` — lolos, 0 error
-  blocking.
-- `node --test tests/*.test.js` → **3051/3051 lolos, 0 gagal**.
-- `node scripts/verify-window-expose.js` / `verify-bundle-freshness.js` →
-  lolos.
+## Cara pakai
+1. Backup project Anda.
+2. Timpa/tambahkan ketiga file di atas (path sama persis dengan struktur zip ini).
+3. Rebuild bundle: `node scripts/build.js` (atau `npm run build`).
+4. Reload aplikasi (hard refresh).
 
-## Cara apply patch ini
-Timpa (overwrite) file-file di atas ke root project hasil baseline
-`kw_release_v1187_s466-...` (atau lebih baru, mis. bisa langsung dari
-v1187 tanpa perlu patch s471/s472/s473 terpisah — patch ini SUDAH
-gabungan penuh). Kalau sudah pernah apply patch s471/s472/s473 satu-satu,
-patch ini idempotent (hasil akhirnya sama).
+## Ringkasan isi patch 1: S599 — Ghost Asset di Dropdown Pilih Aset
 
-## Status
-Release ini (`kw_release_v1196_s474-virtual-bill-item-final.zip`) siap
-jadi baseline audit/sesi berikutnya.
+Root cause: `DanaTitipanPortfolioPresenter._assetOptionsHtml()` adalah
+satu-satunya titik baca `D.assets` di modul Dana Titipan yang tidak
+menerapkan guard `_migratedToInvestmentId` / `investmentId`, sehingga
+aset yang sudah termigrasi/tertaut ke Holding Investasi tetap muncul
+sebagai opsi di picker "Pilih Aset" walau sudah hilang dari Buku Aset.
+
+Fix: tambah filter `!a._migratedToInvestmentId && !a.investmentId` di
+`_assetOptionsHtml()`, pola sama persis `Aset.totalValue()`.
+
+Verifikasi asal: 4176/4176 test pass.
+
+## Ringkasan isi patch 2: Ownership Fix — Porsi Titipan Tidak Bisa Dihapus & Disimpan
+
+Dua perubahan di `aset.js` (fungsi owners-draft, modal Atur Kepemilikan Aset):
+
+1. `removeOwnerRow(i)` — porsi baris owner yang dihapus sekarang
+   didistribusi ulang ke baris tersisa (presisi 4 desimal), supaya
+   total tetap 100% dan tombol "✅ Simpan Porsi" tidak macet ter-disable.
+2. `saveOwners()` — field titipan legacy (`titipanAmount` /
+   `titipanOwnerType` / `titipanOwnerName`) ikut dikosongkan begitu
+   user simpan `owners[]` eksplisit lewat modal ini, konsisten dengan
+   blok AUTO-MIGRATE di `Aset._saveInner()`.
+
+Verifikasi asal: 4173/4173 test pass.
+
+## Catatan penggabungan
+- Tidak ada overlap file antara kedua patch → digabung tanpa perlu
+  merge manual per baris kode.
+- Setelah ditimpa, disarankan jalankan ulang full suite:
+  `node --test tests/*.test.js` untuk memastikan kombinasi keduanya
+  tetap 0 regresi (masing-masing sudah diverifikasi terpisah, tapi
+  belum pernah dijalankan bersamaan di baseline yang sama).
+- Belum ada entri `CHANGELOG.md` / bump versi `sw.js` untuk salah satu
+  fix ini (sama seperti catatan di patch Ownership Fix asli). Kalau mau
+  saya tambahkan, bilang saja.
