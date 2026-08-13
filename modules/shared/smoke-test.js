@@ -188,8 +188,37 @@
     } catch (e) { /* jangan sampai banner sendiri bikin crash */ }
   }
 
+  // --- 3. Reconciliation check Dana Titipan (Rekomendasi #2, S582) -------
+  // Independen dari fetch source di atas (tidak butuh network) -- jalan
+  // langsung tiap smoke-test aktif di dev mode. Deteksi gap sync
+  // (pola BUG-OWN-002: entry point baru lupa panggil _syncOwnerDebts())
+  // otomatis, bukan lewat audit manual tiap sesi.
+  function runTitipanReconcileCheck() {
+    if (typeof TitipanReconcile === 'undefined') return; // belum dimuat / bundle lama
+    try {
+      var res = TitipanReconcile.check();
+      if (res.ok) {
+        console.log('%c✅ ' + LOG_PREFIX + ' TitipanReconcile OK — Dana Titipan sinkron dgn Buku Utang', 'color:#2ecc71;font-weight:700');
+        return;
+      }
+      console.error(
+        '❌ ' + LOG_PREFIX + ' TitipanReconcile: ditemukan ' +
+        (res.missing.length + res.orphan.length + res.mismatch.length) + ' gap sync Dana Titipan:',
+        res
+      );
+      showBanner(
+        '⚠️ [DEV] TitipanReconcile: ' + res.missing.length + ' hilang, ' +
+        res.orphan.length + ' nyangkut, ' + res.mismatch.length +
+        ' beda nilai — buka console untuk detail.'
+      );
+    } catch (e) {
+      console.warn(LOG_PREFIX + ' TitipanReconcile gagal jalan:', e);
+    }
+  }
+
   function run() {
     var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+    runTitipanReconcileCheck();
     var urls = collectSourceUrls();
 
     fetchAllSources(urls).then(function (src) {

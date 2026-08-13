@@ -93,7 +93,7 @@ const OwnerRegistry = {
     const trimmed = (newName && String(newName).trim()) || '';
     if (!trimmed) return { ok: false, reason: 'Nama baru wajib diisi' };
     entry.name = trimmed;
-    let assets = 0, investments = 0, commitments = 0;
+    let assets = 0, investments = 0, commitments = 0, debts = 0;
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
       (Array.isArray(a && a.owners) ? a.owners : []).forEach((o) => {
         if (o && !o.isSelf && String(o.ownerId) === String(id)) { o.ownerName = trimmed; assets++; }
@@ -107,8 +107,15 @@ const OwnerRegistry = {
     (Array.isArray(D.titipanCommitments) ? D.titipanCommitments : []).forEach((c) => {
       if (c && String(c.ownerId) === String(id)) { c.ownerName = trimmed; commitments++; }
     });
+    // Cermin blok debts di merge() (baris di bawah) — temuan sesi-5:
+    // rename() sebelumnya tidak propagasi ke D.debts[].name, jadi
+    // checkDebtNameStaleness() (titipan-reconcile.js) nyala merah palsu
+    // setiap kali owner registry di-rename tanpa ganti nama debt terkait.
+    (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
+      if (d && String(d.linkedOwnerId) === String(id)) { d.name = trimmed; debts++; }
+    });
     if (typeof save === 'function') save();
-    return { ok: true, assets, investments, commitments };
+    return { ok: true, assets, investments, commitments, debts };
   },
 
   // merge(sourceId, targetId) — R4: gabung 2 entri registry yang ternyata
