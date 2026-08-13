@@ -694,7 +694,34 @@ removeOwnerRow(i){
 // SESI B2a: guard sama alasan addOwnerRow() di atas.
 if(Aset._ownersReadOnly){toast('🔗 Porsi aset ini diatur di Holding Investasi, tidak bisa diedit di sini');return;}
 if(!Array.isArray(Aset._ownersDraft))return;
+const removed=Aset._ownersDraft[i];
 Aset._ownersDraft.splice(i,1);
+// FIX (audit "porsi titipan tidak bisa dihapus & disimpan di tab edit
+// kepemilikan"): SEBELUMNYA baris dihapus dari draft APA ADANYA tanpa
+// redistribusi -- total porsi baris yang TERSISA otomatis jadi <100%
+// (mis. hapus baris titipan 30% saat SELF masih 70% -> total cuma 70%),
+// & updateOwnersTotal() men-disable tombol "✅ Simpan Porsi" sampai total
+// PERSIS 100% lagi (lihat komentar updateOwnersTotal()) -- user yang cuma
+// mau MENGHAPUS 1 baris titipan jadi kelihatan "tidak bisa dihapus &
+// disimpan" krn tombol Simpan macet ter-disable tanpa penjelasan jelas
+// knapa. Fix: bagi RATA porsi baris yang baru dihapus ke SEMUA baris
+// tersisa (baris terakhir dpt sisa pembulatan supaya total PERSIS 100,
+// pola presisi 4 desimal & "sisa ke baris terakhir" SAMA PERSIS
+// _autoDistributeRemaining() di atas -- 0 rumus baru) -- total otomatis
+// balik ke 100% & tombol Simpan langsung aktif, TANPA user harus hitung
+// manual porsi baris yang tersisa satu-satu.
+const removedPorsi=removed&&typeof removed.porsi==='number'&&isFinite(removed.porsi)?removed.porsi:0;
+if(removedPorsi>0&&Aset._ownersDraft.length){
+const n=Aset._ownersDraft.length;
+let acc=0;
+Aset._ownersDraft.forEach((o,k)=>{
+let tambahan;
+if(k===n-1){tambahan=Math.round((removedPorsi-acc)*10000)/10000;}
+else{tambahan=Math.round((removedPorsi/n)*10000)/10000;acc+=tambahan;}
+const cur=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
+o.porsi=Math.round((cur+tambahan)*10000)/10000;
+});
+}
 Aset._renderOwnersList();
 },
 // onOwnerNameInput(i,val) / onOwnerPorsiInput(i,val) -- SESI 392b: tulis perubahan
@@ -1113,6 +1140,29 @@ return{ownerId,ownerName:o.ownerName.trim(),porsi:o.porsi,isSelf:!!o.isSelf};
 const res=MultiOwnerEngine.setOwners(a,owners);
 if(!res.ok){toast('⚠️ '+res.reason);return;}
 Object.assign(a,{owners:res.entity.owners});
+// FIX (audit "porsi titipan tidak bisa dihapus & disimpan di tab edit
+// kepemilikan"): kalau aset ini masih py field dana titipan LEGACY
+// (a.titipanAmount/titipanOwnerType/titipanOwnerName -- disintesis jadi
+// baris pemilik "titipan_..." oleh MultiOwnerEngine._synthesizeFromTitipan()
+// tiap getOwners() dipanggil, SELAMA a.owners belum eksplisit tertulis),
+// field lama itu WAJIB dikosongkan begitu user simpan owners[] eksplisit
+// lewat modal ini -- SAMA PERSIS blok AUTO-MIGRATE di Aset._saveInner()
+// (baris ~1531) yang jalan saat form Aset utama disimpan. SEBELUM fix ini,
+// saveOwners() cuma menulis a.owners TANPA membersihkan field lama:
+// getOwners() sendiri sudah benar (prioritas baca #1 = a.owners, cabang
+// titipan legacy di bawahnya jadi tidak pernah kesentuh lagi), TAPI
+// konsumen lain yang baca a.titipanAmount LANGSUNG (bukan lewat
+// getOwners()) -- mis. titipanMeta di kartu Aset (openActionsMenu(), baris
+// ~1663: `a.titipanAmount>0?('💰 Titipan ...')`) -- tetap menampilkan baris
+// titipan yang SUDAH dihapus user dari modal ini. User mengira porsi
+// titipan "tidak kehapus" padahal cuma badge kartu yang masih baca field
+// legacy basi. Guard `a.titipanAmount>0` -- 0 efek utk aset yang memang
+// tidak pernah pakai jalur titipan legacy (titipanAmount sudah 0/kosong).
+if(a.titipanAmount>0){
+a.titipanAmount=0;
+a.titipanOwnerType='';
+a.titipanOwnerName='';
+}
 // FIX (audit "Nominal tidak bisa diisi manual", laporan user Agustus 2026):
 // kalau user menurunkan nilai dasar lewat Nominal (Rp) selama modal ini
 // terbuka (aset belum py "Estimasi Nilai Saat Ini", lihat
