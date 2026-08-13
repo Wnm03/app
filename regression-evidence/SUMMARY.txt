@@ -1,0 +1,9 @@
+=== Baseline v1313 (before any S583 patch) ===
+# tests 4071
+# pass 4071
+# fail 0
+
+=== After consolidated merge (all S583 sessions applied) ===
+# tests 4135
+# pass 4135
+# fail 0
