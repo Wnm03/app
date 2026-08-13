@@ -49,9 +49,18 @@ return MultiOwnerEngine.selfPorsi(asset);
 // MultiOwnerEngine.getOwners() (isMultiOwner true), dipakai isi pilihan
 // "Kaitkan ke Aset Multi-Owner" di modal Piutang/Utang. Guard typeof
 // MultiOwnerEngine -> array kosong kalau engine belum dimuat.
+// FIX (ghost-asset-migrated-investment): aset lama yang sudah dimigrasi ke
+// Holding Investasi (s476a, migrateAssetInvestmentsToHoldings()) ditandai
+// _migratedToInvestmentId & disembunyikan dari daftar Buku Aset, TAPI masih
+// ikut kefilter isMultiOwner di sini -> muncul dobel di dropdown ("Majoris"
+// x2) padahal recordnya sendiri sudah tidak bisa dibuka/diedit dari UI aset.
+// Filter !a._migratedToInvestmentId di bawah membuang record ghost ini dari
+// SEMUA pemanggil (Piutang, Utang, Transaksi -- 1 fungsi, reuse penuh).
+// 0 pengaruh ke totalValue()/zakat (sudah exclude field ini duluan).
 function getMultiOwnerAssets(){
 if(typeof MultiOwnerEngine==='undefined')return [];
 return (D.assets||[]).filter(a=>{
+if(a._migratedToInvestmentId)return false;
 const r=MultiOwnerEngine.getOwners(a);
 return r&&r.ok&&r.isMultiOwner;
 });
