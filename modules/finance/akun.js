@@ -563,6 +563,15 @@ if(typeof renderLapAccList==='function')renderLapAccList();
 // komentar di sana + PATCH-NOTES.md sesi-12) -- hilang di akun.js sejak
 // sesi-10b karena basis branch beda dgn sesi-9, bukan perubahan disengaja.
 if(typeof TitipanReconcile!=='undefined')TitipanReconcile.warnIfNotOk('AccOwners.save');
+// FIX (audit "3 titik Simpan Porsi tidak me-refresh widget Dana Titipan"):
+// sama alasan Aset.saveOwners()/InvestmentUI.saveOwners() -- porsi titipan pada
+// akun ini (termasuk sync ke aset tertaut di atas) ikut membentuk usedTotal/
+// available di kartu "Dana Kelolaan" & tab "Dana Titipan"
+// (DanaTitipanPortfolioPresenter), tapi jalur ini belum pernah memanggilnya.
+// 0 logic baru, cuma menyamakan pola render()+renderInto() yang sudah baku
+// di modul lain (tx-list-cashflow.js, dana-titipan-portfolio-render.js).
+if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
+if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
 toast('✅ Porsi kepemilikan akun tersimpan');
 },
 // resetDraft() — buang perubahan draft yang belum disimpan, muat ulang dari data TERSIMPAN di
