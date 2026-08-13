@@ -1563,6 +1563,16 @@ renderDashboardBackupReminder();
 {name:'UI: elemen interaktif (data-action) yang cuma berisi ikon/emoji/tanpa teks wajib punya aria-label (aksesibilitas screen reader)', fn:()=>{
 findMissingAriaLabels(document).forEach(msg=>_selfTestAssert(false,msg));
 }},
+// S583 sesi-7: wiring TitipanReconcile.checkAll() (S583 sesi-6) ke Tes
+// Otomatis -- sebelumnya cuma disiapkan sbg 1 titik panggil tunggal, belum
+// benar-benar dipanggil dari mana pun (lihat PATCH-NOTES.md sesi-6, "Belum
+// dikerjakan"). PURE baca-saja (0 mutasi D), guard typeof spy tidak crash
+// kalau titipan-reconcile.js kebetulan belum ke-load duluan.
+{name:'TitipanReconcile.checkAll(): audit sinkron Dana Titipan (Buku Utang vs Aset/Investasi) + konsistensi ownerId + staleness nama pasca-rename, semua 0 gap', fn:()=>{
+if(typeof TitipanReconcile==='undefined')return;
+const r=TitipanReconcile.checkAll();
+_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+')');
+}},
 ];
 }
 async function computeSelfTestResults(){
