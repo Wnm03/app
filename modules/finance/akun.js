@@ -189,6 +189,12 @@ const tAcc=document.getElementById('tAcc');
 if(tAcc){const cur=tAcc.value;tAcc.innerHTML='<option value="">— Tidak terkait akun, isi manual —</option>'+opts;if(cur)tAcc.value=cur;}
 const assetAccId=document.getElementById('assetAccId');
 if(assetAccId){const cur=assetAccId.value;assetAccId.innerHTML='<option value="">— Tidak ditautkan —</option><option value="__new__">➕ Buat Akun Baru dari Aset Ini</option>'+opts;if(cur)assetAccId.value=cur;}
+// investAccId (S601-3, DL-S601-3): dropdown "🔗 Hubungkan ke Akun" di investmentModal
+// (investasi-list-view.js) -- pola SAMA PERSIS assetAccId di atas TAPI tanpa opsi
+// "__new__" (holding tidak punya alur "buat akun baru dari holding ini", beda dari
+// aset yang punya saveAsset() sisi khusus utk itu).
+const investAccId=document.getElementById('investAccId');
+if(investAccId){const cur=investAccId.value;investAccId.innerHTML='<option value="">— Tidak ditautkan —</option>'+opts;if(cur)investAccId.value=cur;}
 populateKeuFilters();
 }
 /* moved to modules-render.js: renderAccGrid */

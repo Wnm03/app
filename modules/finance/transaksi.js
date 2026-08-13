@@ -181,18 +181,51 @@ function findLinkedAssetForAccount(accId){
 if(!accId)return null;
 return (D.assets||[]).find(a=>sameId(a.accountId,accId))||null;
 }
+// findLinkedHoldingForAccount(accId) — S601-3 (DL-S601-3, Temuan #1 AUDIT-
+// S600-HOLDING-GAP-OWNER-DROPDOWNS.md). Varian findLinkedAssetForAccount()
+// TAPI query ke Investment.getHoldings() lewat field baru `h.accountId`
+// (skema, lihat investasi.js addHolding()/updateHolding()) -- pola pencarian
+// direuse 100% (sameId(), fallback null), 0 logic baru selain sumber data.
+// Return: holding pertama (D.investments) yang h.accountId===accId, atau null.
+function findLinkedHoldingForAccount(accId){
+if(!accId||typeof Investment==='undefined')return null;
+return Investment.getHoldings().find(h=>sameId(h.accountId,accId))||null;
+}
 // resolveOwnerDefaultForAccount(accId) — Sesi Res-B (DESIGN-LOCK-LINKED-
 // ASSET-ACCOUNT-OWNER-DEFAULT.md §2.1/§2.2). Owner Resolver: tentukan
 // kandidat default `deductionOwnerId` untuk akun `accId`, TANPA menulis
 // apa pun (read-only, 0 setAccOwners(), 0 mutasi D.assets/D.accounts).
 // Prioritas (berhenti di langkah pertama yang menghasilkan kandidat,
 // TIDAK digabung/dijumlah antar langkah):
+//   0. SESI S601-3 (DL-S601-3, Temuan #1): Holding tertaut LANGSUNG ke akun
+//      (findLinkedHoldingForAccount(), field baru `h.accountId`) -- baca
+//      owners via Investment.getOwners(h) (0 rumus baru, fungsi getOwners()
+//      SUDAH ADA sejak AUD-008/Sesi 462). source:'holding'. Kalau Holding
+//      DAN Aset SAMA-SAMA tertaut ke akun yang sama (konflik), Holding
+//      MENANG -- keputusan Design Lock, karena Holding adalah sumber
+//      kebenaran porsi LIVE (lihat catatan Aset._resolveLinkedInvestmentOwners()
+//      di langkah 1 di bawah -- kalau aset tertaut Holding, porsinya sendiri
+//      sudah delegasi ke Holding juga, jadi konsisten: Holding selalu jadi
+//      SATU sumber kebenaran final ketika keduanya terlibat).
 //   1. Aset tertaut (findLinkedAssetForAccount()) yang punya `a.owners[]`
 //      EKSPLISIT (guard sama persis _asetOwnersForTitipan() di
 //      dana-titipan-aggregation-api.js -- HANYA percaya
 //      MultiOwnerEngine.getOwners(asset) yg !isSynthesized, TIDAK PERNAH
 //      sintesis dari a.ownership -- lihat DESIGN-LOCK-...-DEFAULT.md
 //      §1.11). source:'asset'.
+//      SESI S601-2 (AUDIT-S600-HOLDING-GAP-OWNER-DROPDOWNS.md, Temuan #3):
+//      kalau aset tertaut ITU SENDIRI sudah ditautkan ke Holding Investasi
+//      (`asset.investmentId`), `a.owners[]` mentah BASI -- porsi asli
+//      hidup live di Holding (lihat komentar `Aset._resolveLinkedInvestmentOwners()`
+//      di aset.js, "porsi aset yang tertaut jadi SATU sumber kebenaran di
+//      holding investasi"). Sebelum sesi ini, fungsi ini baca `a.owners`
+//      mentah tanpa cek itu -- BEDA dari `resolveTxOwnerSplitForAccount()`
+//      (filter-laporan.js, Sesi A) yang SUDAH benar cek `investmentId` &
+//      baca live lewat `Aset._resolveLinkedInvestmentOwners()`. Fix: cek
+//      tautan Holding LEBIH DULU (reuse 100% fungsi yang sama, 0 rumus
+//      baru), baru fallback ke `a.owners` mentah kalau aset TIDAK tertaut
+//      Holding (0 regresi kasus lama). source tetap 'asset' di kedua
+//      cabang (keduanya data eksplisit/persisted, 0 beda needsConfirm).
 //   2. getAccOwnersEffective(accId) (akun.js, Sesi Res-B) -- raw owners[]
 //      ATAU sintesis 1-owner-100% dari acc.ownership. source:'account'.
 //   3. Tidak ada kandidat -> owners:[], source:'none'.
@@ -206,8 +239,22 @@ return (D.assets||[]).find(a=>sameId(a.accountId,accId))||null;
 // Return: {ok:true, source, owners, needsConfirm, autoSelectId}.
 function resolveOwnerDefaultForAccount(accId){
 if(!accId||typeof MultiOwnerEngine==='undefined')return{ok:true,source:'none',owners:[],needsConfirm:false,autoSelectId:null};
+const holding=findLinkedHoldingForAccount(accId);
+if(holding&&typeof Investment!=='undefined'){
+const hOwners=Investment.getOwners(holding);
+if(hOwners&&hOwners.length>0){
+return{ok:true,source:'holding',owners:hOwners,needsConfirm:false,autoSelectId:hOwners.length===1?hOwners[0].ownerId:null};
+}
+}
 const asset=findLinkedAssetForAccount(accId);
 if(asset){
+let owners=null;
+if(asset.investmentId&&typeof Aset!=='undefined'&&typeof Aset._resolveLinkedInvestmentOwners==='function'){
+owners=Aset._resolveLinkedInvestmentOwners(asset);
+}
+if(owners&&owners.length>0){
+return{ok:true,source:'asset',owners,needsConfirm:false,autoSelectId:owners.length===1?owners[0].ownerId:null};
+}
 const r=MultiOwnerEngine.getOwners(asset);
 if(r&&r.ok&&!r.isSynthesized&&r.owners.length>0){
 return{ok:true,source:'asset',owners:r.owners,needsConfirm:false,autoSelectId:r.owners.length===1?r.owners[0].ownerId:null};
