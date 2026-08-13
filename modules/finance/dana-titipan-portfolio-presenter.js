@@ -360,6 +360,23 @@ build() {
       const splits = this._assetSplits(a);
       if (!splits) return;
       const { owners, costSplit, valueSplit, gainSplit } = splits;
+      // SESI s591 (fix laporan user: 1 aset — mis. "Majoris" — muncul
+      // 2x/lebih di daftar holding owner yang SAMA, masing2 dgn tombol
+      // "⚖️ Atur Porsi" sendiri). ROOT CAUSE: `owners[]` hasil
+      // `_assetSplits(a)` bisa punya lebih dari 1 baris dgn `ownerId`
+      // YANG SAMA (mis. user tanpa sadar menambah 2 baris pemilik utk
+      // orang yang sama lewat "Atur Porsi Kepemilikan") — sebelum fix
+      // ini, tiap baris `owners[]` langsung push 1 holding TERPISAH,
+      // jadi 1 aset fisik tampil sbg berapa pun baris di UI. FIX:
+      // agregasi dulu per `ownerId` DALAM 1 aset (jumlah porsi/
+      // allocatedPrincipal/currentValue/gain), baru push SATU entry
+      // holding per (aset, ownerId) — total per-owner (`bucket.*`)
+      // TIDAK berubah nilainya (tetap jumlah semua baris asal, cuma
+      // sekarang direpresentasikan 1 baris), murni konsolidasi tampilan.
+      // Tombol "Atur Porsi" per-baris holding sendiri sudah dihapus di
+      // `_holdingRowHtml()` (redundant dgn dropdown "Pilih Aset" + tombol
+      // "⚖️ Atur Porsi Aset" yang sudah ada per kartu owner).
+      const perOwnerAgg = new Map();
       owners.forEach((o, idx) => {
         if (!o || o.isSelf) return;
         if (!(o.porsi > 0)) return;
@@ -368,6 +385,17 @@ build() {
         const allocatedPrincipal = (costSplit[idx] && costSplit[idx].bagian) || 0;
         const currentValue = (valueSplit[idx] && valueSplit[idx].bagian) || 0;
         const gain = (gainSplit[idx] && gainSplit[idx].bagian) || 0;
+        if (!perOwnerAgg.has(ownerId)) {
+          perOwnerAgg.set(ownerId, { ownerId, ownerName, porsi: 0, allocatedPrincipal: 0, currentValue: 0, gain: 0 });
+        }
+        const agg = perOwnerAgg.get(ownerId);
+        agg.porsi += o.porsi;
+        agg.allocatedPrincipal += allocatedPrincipal;
+        agg.currentValue += currentValue;
+        agg.gain += gain;
+      });
+      perOwnerAgg.forEach((agg) => {
+        const { ownerId, ownerName, porsi, allocatedPrincipal, currentValue, gain } = agg;
         if (!ownersMap.has(ownerId)) {
           ownersMap.set(ownerId, { ownerId, ownerName, allocatedPrincipal: 0, currentValue: 0, gain: 0, holdings: [] });
         }
@@ -379,7 +407,7 @@ build() {
           holdingId: a.id,
           name: a.name || 'Aset',
           type: 'aset',
-          ownerPct: o.porsi,
+          ownerPct: porsi,
           allocatedPrincipal,
           currentValue,
           gain,
@@ -1026,13 +1054,23 @@ const DanaTitipanPortfolioPresenter = {
   // baris flat — dipakai ulang persis sama baik di luar maupun di dalam
   // grup kustodian, supaya baris di dalam grup tampil identik dgn baris
   // flat, cuma beda posisi/indentasi lewat markup pembungkus grup).
+  // SESI s591: tombol "⚖️ Atur Porsi" PER-BARIS holding (dulu ada di
+  // sini, khusus baris `hasGainTracking:false`/Aset) DIHAPUS — redundan
+  // dgn dropdown "Pilih Aset" + tombol "⚖️ Atur Porsi Aset" yang SUDAH
+  // ada per kartu owner (lihat `_ownerCardHtml()`/markup sekitar
+  // `titipanAssetPick_${oi}`). 2 kontrol terpisah utk 1 tindakan yang
+  // sama bikin bingung (user report: "kok ada 2 opsi atur porsi").
+  // Sekarang HANYA 1 jalur: pilih aset di dropdown, lalu tap "⚖️ Atur
+  // Porsi Aset" — konsisten dipakai baik utk baris Aset satu maupun
+  // banyak. `hh.linkedAssetId` tetap dipertahankan di `data-linked-
+  // asset-id` (dipakai `onAssetPickChange()` utk highlight baris yang
+  // cocok dgn pilihan dropdown), murni bukan trigger aksi lagi di sini.
   _holdingRowHtml(hh) {
     return `
             <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(hh.linkedAssetId || '')}">
               <span>${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)} <span class="u-t2">(${hh.ownerPct}%)</span></span>
               <span>${hh.hasGainTracking === false ? `
                 <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
-                ${hh.linkedAssetId ? `<button type="button" class="btn btn-ghost btn-sm" data-action="Aset.openOwnersModalById" data-args="${escapeHtml(JSON.stringify([hh.linkedAssetId]))}">⚖️ Atur Porsi</button>` : ''}
               ` : `
                 <span class="u-t2">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
                 &nbsp;<span class="${this._gainCls(hh.gain)}">${hh.gain >= 0 ? '+' : ''}${this._money(hh.gain)}</span>
