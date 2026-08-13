@@ -771,6 +771,16 @@ const DanaTitipanCommitmentUI = {
     }
     const removed = DanaTitipanPortfolioAPI.removeOwnerLinkage(ownerId);
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    // FIX (audit tombol "Lepas Keterikatan"): sama seperti save()/
+    // deleteCommitment() di atas (Sesi 550, FIX-S550-DANA-TITIPAN-TABLIST-
+    // SYNC-COMMITMENT-UI) — tombol ini dirender dgn markup yg SAMA di 2
+    // container (#danaTitipanPortfolioList lama & #danaTitipanTabList
+    // baru/sub-tab Laporan > Dana Titipan). render() di atas cuma
+    // refresh container lama; kalau user klik tombol ini dari
+    // #danaTitipanTabList, tampilan yg sedang dilihat jadi stale sampai
+    // pindah tab. Sync eksplisit, pola PERSIS sama dgn save()/
+    // deleteCommitment(), 0 logic baru.
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     if (typeof toast === 'function') {
       toast(removed ? '🔓 Keterikatan Dana Titipan dilepas' : 'ℹ️ Owner ini belum punya pokok dana titipan tercatat');
     }
@@ -866,6 +876,12 @@ const DanaTitipanReturnUI = {
     }
     if (typeof closeModal === 'function') closeModal('titipanReturnModal');
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    // FIX (audit lanjutan tombol "Lepas Keterikatan" — bug sekelas di
+    // fungsi mutasi lain file ini): sama seperti save()/deleteCommitment()/
+    // removeOwnerLinkage() di atas (Sesi 550 + fix ini) — sync eksplisit
+    // ke #danaTitipanTabList (sub-tab Laporan > Dana Titipan), pola
+    // PERSIS sama, 0 logic baru.
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     if (typeof toast === 'function') toast('✅ Pengembalian dana titipan tercatat');
   },
 
@@ -880,6 +896,9 @@ const DanaTitipanReturnUI = {
     }
     DanaTitipanPortfolioAPI.deleteReturn(id);
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    // FIX (audit lanjutan, bug sekelas — lihat catatan di save() di atas):
+    // sync eksplisit ke #danaTitipanTabList, pola PERSIS sama.
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     if (typeof toast === 'function') toast('🗑️ Riwayat pengembalian dihapus');
   },
 

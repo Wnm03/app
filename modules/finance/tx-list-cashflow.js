@@ -217,6 +217,24 @@ Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(t.id);
 }
+// FIX (audit lanjutan "tablist sync Dana Titipan", bug sekelas ke-5):
+// titipanLinkId adalah SATU-SATUNYA cascade *LinkId di fungsi ini yang
+// TIDAK memanggil render modulnya sendiri (bandingkan cobekLinkId ->
+// renderShop(), servisLinkId -> renderStockList(), renovItemLinkId ->
+// Renov.onLinkedTxDeleted(), dst di atas). Komentar Sesi 519 di atas
+// cuma menjamin KEBENARAN data (`usedTotal`/`available` otomatis benar
+// di render berikutnya) -- bukan REFRESH tampilan. Kalau tx yg dihapus
+// dibuat lewat modal Pengeluaran Dana Titipan (titipan-expense-flow.js,
+// type:'expense'), baris "Estimasi dari Transaksi <Akun>" di kartu owner
+// (_expenseComparisonForOwner(), Sesi C/S597) ikut berubah -- tapi kalau
+// dihapus dari sini (list transaksi umum, bukan tombol khusus Dana
+// Titipan), kartu yg sedang dilihat user (#danaTitipanTabList) tidak
+// ter-refresh sampai pindah tab/reload. Sync eksplisit, pola PERSIS
+// sama dgn cascade lain di atas, 0 logic baru.
+if(t&&t.titipanLinkId){
+if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
+if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+}
 D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
 save();renderDashboard();renderKeuangan();renderCnTab();renderProductList();
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');

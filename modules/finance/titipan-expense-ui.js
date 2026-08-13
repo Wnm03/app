@@ -321,6 +321,14 @@ const TitipanExpenseUI = {
       }
       if (typeof closeModal === 'function') closeModal('titipanExpenseModal');
       if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+      // FIX (audit tombol "Lepas Keterikatan" — bug sekelas ditemukan di
+      // sini juga): pencatatan pengeluaran Dana Titipan mengubah baris
+      // "Estimasi dari Transaksi <Akun>" di kartu owner, tapi container
+      // #danaTitipanTabList (sub-tab Laporan > Dana Titipan) tidak ikut
+      // di-refresh di sini — sync eksplisit, pola PERSIS sama dgn
+      // save()/deleteCommitment()/removeOwnerLinkage() (dana-titipan-
+      // portfolio-render.js).
+      if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
       if (typeof renderKeuangan === 'function') renderKeuangan();
       if (typeof toast === 'function') {
         toast(res.txIds.length > 1
