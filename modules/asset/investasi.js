@@ -152,6 +152,15 @@ const Investment = {
       // resolveInvestmentByAssetId()/resolveLinkedInvestmentAsset() (di bawah) & saling
       // tampilkan warning kepemilikan beda otomatis, tanpa harus buka 2 modal manual.
       assetId: null,
+      // accountId (S601-3, DL-S601-3 — lihat AUDIT-S600-HOLDING-GAP-OWNER-DROPDOWNS.md
+      // Temuan #1): referensi opsional satu arah ke D.accounts[].id, pola TULIS
+      // PERSIS SAMA dengan assetId/custodianId di atas (falsy→null, 0 validasi id
+      // valid, murni pointer). Dipakai findLinkedHoldingForAccount()/
+      // resolveOwnerDefaultForAccount() (transaksi.js) supaya Holding yang
+      // langsung tertaut akun (mis. akun brokerage "Majoris") bisa jadi sumber
+      // resolusi Owner tanpa harus lewat Aset perantara. Default `null` (belum
+      // ditautkan) — holding lama otomatis tidak berubah perilaku (pass-through).
+      accountId: null,
       debtLinkId: null,
       createdAt: Date.now(),
     };
@@ -188,6 +197,9 @@ const Investment = {
     // assetId (S552) -- falsy ('' / null / '__unlinked__') dinormalisasi jadi null (lepas
     // tautan), pola sama persis custodianId di atas & saveVehicle() (S506).
     if (patch.assetId !== undefined) h.assetId = patch.assetId || null;
+    // accountId (S601-3) -- falsy ('' / null / '__unlinked__') dinormalisasi jadi null
+    // (lepas tautan), pola sama persis assetId/custodianId di atas.
+    if (patch.accountId !== undefined) h.accountId = patch.accountId || null;
     Investment._syncTitipanDebt(h);
     _invSave();
     return h;

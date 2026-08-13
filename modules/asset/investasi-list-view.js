@@ -231,6 +231,13 @@ const InvestmentListUI = {
       assetIdEl.value = (h && h.assetId) ? h.assetId : '';
     }
     InvestmentListUI._renderAssetLinkWarning(h);
+    // investAccId (S601-3, DL-S601-3) — dropdown "🔗 Hubungkan ke Akun", pola
+    // TULIS/BACA sama persis investAssetId di atas (populate via
+    // populateAccFilters(), yang juga mengisi opsi ini -- lihat
+    // modules/finance/akun.js). Holding tanpa accountId (h.accountId
+    // null/undefined, termasuk SEMUA holding lama) -> value kosong terpilih.
+    const accIdEl = document.getElementById('investAccId');
+    if (accIdEl) accIdEl.value = (h && h.accountId) ? h.accountId : '';
     // Tombol "⚖️ Atur Porsi Kepemilikan" & "🗑️ Hapus Holding" cuma masuk akal utk holding
     // yang SUDAH tersimpan (butuh id) — disembunyikan di mode Tambah, pola sama persis
     // assetModal (openOwnersModal cuma jalan kalau Aset.editId terisi).
@@ -443,10 +450,15 @@ const InvestmentListUI = {
     // pola SAMA PERSIS custodianId di atas.
     const assetIdEl = document.getElementById('investAssetId');
     const assetId = assetIdEl ? assetIdEl.value : '';
+    // accountId (S601-3) -- dibaca dari dropdown #investAccId, pola SAMA PERSIS
+    // assetId/custodianId di atas (falsy dinormalisasi jadi null lewat
+    // updateHolding()/patch di bawah).
+    const accIdEl = document.getElementById('investAccId');
+    const accountId = accIdEl ? accIdEl.value : '';
     let h;
     try {
       if (InvestmentListUI.editId) {
-        h = Investment.updateHolding(InvestmentListUI.editId, { name, type, currentPrice, notes, purchaseDate, custodianId, assetId });
+        h = Investment.updateHolding(InvestmentListUI.editId, { name, type, currentPrice, notes, purchaseDate, custodianId, assetId, accountId });
       } else {
         h = Investment.addHolding({ name, type, unit, avgPrice, currentPrice: currentPrice || avgPrice, notes, purchaseDate });
       }
@@ -469,6 +481,7 @@ const InvestmentListUI = {
       const patch = {};
       if (custodianId) patch.custodianId = custodianId;
       if (assetId) patch.assetId = assetId;
+      if (accountId) patch.accountId = accountId;
       if (Object.keys(patch).length) Investment.updateHolding(h.id, patch);
     }
     closeModal('investmentModal');
