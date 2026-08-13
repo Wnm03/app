@@ -112,6 +112,8 @@ const GROUP_A = [
   // tx-list-cashflow.js). Prasyarat Tahap 1a (guard typeof di semua titik
   // panggil) sudah beres sebelum ini -- lihat docs/SESI-13-GUARD-RENOV-TYPEOF.md.
   'modules/asset/aset.js',
+  'modules/asset/aset-reports.js',
+  'modules/asset/aset-misc.js',
   'modules/asset/aset-keluarga.js',
   'modules/ai/feature-insights.js',
   'modules/asset/invest-ai-widget.js',
@@ -119,10 +121,10 @@ const GROUP_A = [
   'modules/asset/aset-emas-impor.js',
 
   // modules/aset.js (dependency: PropertyManagementAPI._properti() butuh
-  // `PajakAset`/`Penyusutan`/`Aset`, ketiganya didefinisikan di
-  // modules/asset/aset.js, sudah dimuat lebih dulu di blok ini) — TIDAK
-  // perlu forward-reference, pola sama persis penempatan
-  // asset-portfolio-api.js (S101) relatif ke dependency-nya.
+  // `PajakAset`/`Penyusutan` (modules/asset/aset-reports.js, S589) &
+  // `Aset` (modules/asset/aset.js) — semua sudah dimuat lebih dulu di
+  // blok ini) — TIDAK perlu forward-reference, pola sama persis
+  // penempatan asset-portfolio-api.js (S101) relatif ke dependency-nya.
   'modules/asset/property-management-api.js',
 
   // Presenter Sesi 132 (audit): ditaruh langsung setelah API-nya, pola
@@ -1021,6 +1023,27 @@ const GROUP_B = [
   // pola sama persis property-management-api.js -> -presenter.js.
   'modules/finance/dana-kelolaan.js',
   'modules/finance/dana-kelolaan-presenter.js',
+
+  // titipan-reconcile.js (Rekomendasi #2 audit S582 closeout) — modul audit
+  // PURE/baca-saja, bandingkan "harusnya ada" (a.owners[] via
+  // MultiOwnerEngine, pola sync PERSIS _syncOwnerDebts() di aset.js) vs
+  // "tercatat" (D.debts ber-linkedAssetId/linkedOwnerId). Ditaruh SETELAH
+  // multi-owner-engine.js (dependency wajib lewat guard typeof, sama pola
+  // asset-ownership-split-presenter.js di atas) — 0 mutasi ke D.assets/
+  // D.debts, 0 risiko regresi. Dipanggil dari smoke-test.js (dev mode).
+  'modules/finance/titipan-reconcile.js',
+
+  // titipan-sync.js (S583 sesi-10a/10b, Rekomendasi #1) — TitipanSync.
+  // reconcile(a): gerbang tunggal yang membungkus Aset._syncOwnerDebts(a),
+  // menggantikan 5 call site guard-copy-paste tersebar (aset.js x4,
+  // akun.js x1, lihat PATCH-NOTES sesi-10b). BEDA dependency dari
+  // titipan-reconcile.js di atas: modul ini WAJIB dimuat SETELAH
+  // modules/asset/aset.js (bukan cuma dependency konseptual/guard typeof
+  // biasa) karena reconcile() memanggil Aset._syncOwnerDebts() langsung
+  // dari titik pemanggilnya di aset.js/akun.js sendiri — aset.js/akun.js
+  // sudah dimuat lebih dulu di GROUP_A di atas, jadi urutan ini aman (0
+  // forward-reference).
+  'modules/finance/titipan-sync.js',
 
   // dana-titipan-portfolio-presenter.js (Sesi 484) — proyeksi read-only
   // per-owner/per-holding (pokok teralokasi/nilai sekarang/P&L), 100%
