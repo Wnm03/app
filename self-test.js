@@ -1665,6 +1665,40 @@ toast('📋 Hasil tes disalin');
 toast('⚠️ Gagal menyalin, coba lagi');
 }
 }
+// repairTitipanOrphans() — S595. Tombol EKSPLISIT terpisah dari "▶️ Jalankan
+// Tes" (yang SENGAJA tetap 0-mutasi, lihat hint di bawah kartu Tes Otomatis:
+// "Tidak menambah/mengubah data asli Anda secara permanen"). checkAll()
+// cuma MENDETEKSI gap `orphan` (baris Buku Utang "titipan" yang ownernya
+// sudah tidak ada, lihat komentar TitipanReconcile.repairOrphans() di
+// modules/finance/titipan-reconcile.js) -- tidak ada satu pun titik lain di
+// app yang membersihkannya kalau bukan asetnya sendiri yang kebetulan
+// di-save ulang. Tombol ini yang jadi titik perbaikannya, TAPI harus jelas
+// ini MENGHAPUS baris Buku Utang (mutasi data asli) makanya wajib
+// askConfirm() dulu -- beda kontrak dgn Tes Otomatis di atasnya.
+async function repairTitipanOrphans(){
+if(typeof TitipanReconcile==='undefined'||typeof TitipanReconcile.repairOrphans!=='function'){
+toast('⚠️ Modul TitipanReconcile belum termuat');
+return;
+}
+const pre=TitipanReconcile.check();
+if(pre.ok||!pre.orphan.length){
+toast('✅ Tidak ada gap orphan Dana Titipan yang perlu diperbaiki');
+return;
+}
+const ok=await askConfirm(
+'Ditemukan '+pre.orphan.length+' baris Buku Utang "titipan" yang pemiliknya sudah tidak tercatat lagi (orphan). Baris ini akan DIHAPUS dari Buku Utang (bukan bagian dana Anda sendiri, cuma catatan titipan yang sudah tidak relevan). Lanjutkan?',
+{title:'Perbaiki Gap Dana Titipan',icon:'🔧',okText:'Ya, Hapus Baris Orphan',danger:true}
+);
+if(!ok)return;
+const res=TitipanReconcile.repairOrphans();
+if(res.removed>0){
+save();
+toast('🔧 '+res.removed+' baris orphan Dana Titipan dibersihkan');
+}else{
+toast('✅ Tidak ada baris yang dihapus (gap sudah bersih)');
+}
+if(typeof runSelfTest==='function') runSelfTest();
+}
 // Derive daftar halaman langsung dari DOM (.page[id^="page-"]), bukan list statis --
 // pola yg sama dgn computeModalSweepFnNames() (nyari otomatis semua fungsi openXModal).
 // Kalau nanti nambah <div class="page" id="page-xxx">, halaman itu otomatis ikut kesisir
