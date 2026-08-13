@@ -140,7 +140,17 @@ return ASSET_JENIS_TO_INVESTMENT_TYPE[jenis]||'Lainnya';
 // sesi). Return {migrated,skipped} buat dipakai test/regresi.
 function migrateAssetInvestmentsToHoldings(){
 if(typeof Investment==='undefined'||typeof D==='undefined'||!D.assets)return{migrated:0,skipped:0};
-const candidates=D.assets.filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).map(a=>{
+// FIX (bug: aset tertaut manual ikut ke-migrasi lagi): sebelum fix ini, filter kandidat
+// migrasi cuma exclude `_migratedToInvestmentId`, TIDAK exclude `investmentId` (tautan
+// manual B1 lewat dropdown "🔗 Hubungkan ke Holding Investasi") -- beda dari pola exclude
+// SAMA PERSIS yang sudah dipakai di totalValue() (aset.js), aset-keluarga.js,
+// dana-kelolaan.js, invest-ai-widget.js, property-management-api.js (semua pakai
+// `!a._migratedToInvestmentId` DAN `!a.investmentId` berdampingan). Akibatnya aset yang
+// sudah ditautkan manual ke Holding tetap dianggap kandidat migrasi tiap renderList()
+// jalan -> Holding DUPLIKAT terbuat (ROI +0.0%, avgPrice=currentPrice) & aset itu sendiri
+// baru ditandai `_migratedToInvestmentId` -> hilang dari Buku Aset. Tambah `!a.investmentId`
+// di sini, menyamakan pola exclude yang sudah ada di semua titik lain -- 0 logic lain diubah.
+const candidates=D.assets.filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId).map(a=>{
 let buku=a.modalInvestasi!=null?a.modalInvestasi:(a.hargaBeli!=null&&a.jumlahUnit!=null?a.hargaBeli*a.jumlahUnit:null);
 // FIX (jenis-investasi-tanpa-modal): "Modal Investasi" & "Harga Beli/Unit"
 // di assetModal keduanya (opsional) -- kalau user pilih jenis investasi
