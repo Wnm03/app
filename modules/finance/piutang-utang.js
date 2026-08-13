@@ -588,6 +588,19 @@ if(typeof PiutangUtangInsight!=='undefined')PiutangUtangInsight.render();
 const el=document.getElementById('debtList');
 if(!el)return;
 const list=D.debts||[];
+// S583 sesi-11 (Rekomendasi #4): badge read-only "⚠️ nama belum sinkron" utk
+// baris utang yang linkedOwnerId-nya sudah di-rename lewat OwnerRegistry
+// tapi d.name (snapshot lama) belum ikut ter-update -- reuse PENUH
+// TitipanReconcile.checkDebtNameStaleness() (S583 sesi-5, sudah ada & sudah
+// diaudit sendiri, 0 rumus baru ditulis di sini). Dipanggil 1x DI LUAR
+// map() (bukan per-baris) supaya tidak overhead berulang. PURELY VISUAL --
+// badge ini TIDAK ADA tombol/aksi, TIDAK menulis apa pun ke D; cara
+// perbaikannya tetap sama seperti sebelum sesi ini (re-sync manual lewat
+// edit ulang aset/investasi terkait). typeof-guard supaya halaman/test yang
+// belum load titipan-reconcile.js tidak error (0 regresi).
+const staleDebtIds=(typeof TitipanReconcile!=='undefined')
+?new Set(TitipanReconcile.checkDebtNameStaleness().stale.map(s=>String(s.debtId)))
+:new Set();
 const billCicilan=Debt.billCicilanAktif();
 const billOutstanding=billCicilan.reduce((s,b)=>s+(b.amount||0)*(b.sisaTenor||0),0);
 const billBulanan=billCicilan.reduce((s,b)=>s+(b.amount||0),0);
@@ -614,7 +627,7 @@ if(d.assetId){const _porsi=resolveEntryAssetSelfPorsi(d);if(_porsi<100)metaParts
 // auto-sync dari Investment._syncTitipanDebt()) -- pola identik, cuma
 // sumbernya beda modul (aset vs investasi).
 if(d.linkedAssetId||d.linkedInvestmentId)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
-return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div><button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button></div>`;
+return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div><button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 // KW-170: baris cicilan barang — read-only dari sini (edit/hapus/riwayat
 // pembayaran tetap lewat alur Tagihan yang sudah ada, krn datanya D.bills

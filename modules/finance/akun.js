@@ -136,6 +136,34 @@ return{ok:true,owners};
 //   D.accounts[].owners, mutasi in-place pada objek akun yang sama). {ok:false, reason} kalau
 //   akun tidak ditemukan, engine belum dimuat, atau owners tidak lolos validasi -- D.accounts
 //   TIDAK diubah sama sekali kalau gagal.
+// getAccOwnersEffective(accId) — Sesi Res-B (DESIGN-LOCK-LINKED-ASSET-
+// ACCOUNT-OWNER-DEFAULT.md §3, spesifikasi SyncB dari lock lama DESIGN-
+// LOCK-DEDUCTIONOWNER-VS-OWNERPORSI.md §5, diimplementasikan di sini
+// tanpa modifikasi spesifikasi). Helper ADDITIVE, read-only, TIDAK
+// mengganti kontrak getAccOwners()/getAccOwnersRaw() — keduanya tetap
+// dipakai apa adanya di tempat lain.
+// Prioritas:
+//   1. getAccOwnersRaw(accId) tidak kosong -> kembalikan raw APA ADANYA,
+//      needsConfirm:false (raw SELALU menang, tidak pernah ditimpa).
+//   2. raw kosong DAN acc.ownership (via OwnershipEngine.resolve(),
+//      isDefault:false -- field eksplisit terisi, bukan fallback DEFAULT)
+//      mensintesis TEPAT 1 owner dengan porsi 100% -> kembalikan
+//      sintesis itu, needsConfirm:true.
+//   3. Selain itu (akun tidak ada, raw kosong & ownership belum diisi/
+//      default, atau engine tidak tersedia) -> owners:[].
+// Return: {ok:true, owners, needsConfirm}. TIDAK PERNAH memanggil
+// setAccOwners() atau menulis apa pun ke D.accounts -- murni baca.
+function getAccOwnersEffective(accId){
+const raw=getAccOwnersRaw(accId);
+if(raw.owners.length>0)return{ok:true,owners:raw.owners,needsConfirm:false};
+const acc=D.accounts.find(a=>sameId(a.id,accId));
+if(!acc)return{ok:true,owners:[],needsConfirm:false};
+if(typeof OwnershipEngine==='undefined')return{ok:true,owners:[],needsConfirm:false};
+const r=OwnershipEngine.resolve(acc);
+if(!r||!r.ok||r.isDefault)return{ok:true,owners:[],needsConfirm:false};
+const label=typeof OwnershipEngine.label==='function'?OwnershipEngine.label(r.type):r.type;
+return{ok:true,owners:[{ownerId:r.type,porsi:100,ownerName:label}],needsConfirm:true};
+}
 function setAccOwners(accId,owners){
 const acc=D.accounts.find(a=>sameId(a.id,accId));
 if(!acc)return{ok:false,reason:'Akun tidak ditemukan'};
@@ -516,7 +544,7 @@ if(linkedAsset&&!(typeof Aset!=='undefined'&&typeof Aset._resolveLinkedInvestmen
 const assetRes=MultiOwnerEngine.setOwners(linkedAsset,res.owners);
 if(assetRes.ok){
 Object.assign(linkedAsset,{owners:assetRes.entity.owners});
-if(typeof Aset!=='undefined'&&typeof Aset._syncOwnerDebts==='function')Aset._syncOwnerDebts(linkedAsset);
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcile==='function'){TitipanSync.reconcile(linkedAsset);}else if(typeof Aset!=='undefined'&&typeof Aset._syncOwnerDebts==='function'){Aset._syncOwnerDebts(linkedAsset);}
 if(typeof Aset!=='undefined'&&typeof Aset.renderList==='function')Aset.renderList();
 if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
 if(typeof hitungZakatMaal==='function')hitungZakatMaal();
@@ -528,6 +556,13 @@ AccOwners._renderList();
 if(typeof renderAccGrid==='function')renderAccGrid();
 if(typeof renderDashAccList==='function')renderDashAccList();
 if(typeof renderLapAccList==='function')renderLapAccList();
+// S583 sesi-9 (Rekomendasi #3 enforcement): audit checkAll() SETELAH simpan
+// berhasil -- non-blocking (lihat komentar warnIfNotOk() di titipan-reconcile.js),
+// TIDAK pernah menahan/menolak simpan yang di atas sudah selesai.
+// S583 sesi-12: dipulihkan, sama alasan Aset.saveOwners() di aset.js (lihat
+// komentar di sana + PATCH-NOTES.md sesi-12) -- hilang di akun.js sejak
+// sesi-10b karena basis branch beda dgn sesi-9, bukan perubahan disengaja.
+if(typeof TitipanReconcile!=='undefined')TitipanReconcile.warnIfNotOk('AccOwners.save');
 toast('✅ Porsi kepemilikan akun tersimpan');
 },
 // resetDraft() — buang perubahan draft yang belum disimpan, muat ulang dari data TERSIMPAN di

@@ -70,6 +70,15 @@ const TitipanExpenseUI = {
   // ketik) & konsisten sama pola Aset._ownersDraft.
   _draft: [],
 
+  // _splitMode — 'manual' (DEFAULT, porsi diisi manual per baris — ini
+  // perilaku ORIGINAL sebelum sesi ini, dipertahankan sbg default supaya
+  // TIDAK mengubah behavior lama tanpa aksi eksplisit user) atau 'rata'
+  // (porsi dibagi rata otomatis tiap owner tercentang berubah). Murni
+  // state UI di memori, TIDAK pernah ditulis ke D — reset ke 'manual'
+  // tiap open(). Dropdown pemilihan HANYA muncul kalau >1 owner
+  // tercentang (selaras Design Lock §7 single-owner: porsi tidak relevan).
+  _splitMode: 'manual',
+
   // open() — reset seluruh form + isi daftar owner dari
   // DanaTitipanPortfolioAPI.listExistingOwners() (Design Lock §6: HANYA
   // owner existing, tidak bisa bikin baru di sini). 0 tulis ke D.
@@ -81,6 +90,7 @@ const TitipanExpenseUI = {
     const owners = (typeof DanaTitipanPortfolioAPI.listExistingOwners === 'function')
       ? (DanaTitipanPortfolioAPI.listExistingOwners() || []) : [];
     this._draft = owners.map((o) => ({ ownerId: o.ownerId, ownerName: o.ownerName, selected: false, porsi: null }));
+    this._splitMode = 'manual';
     this._renderOwnersList();
 
     const amtEl = document.getElementById('titipanExpenseAmt');
@@ -115,10 +125,26 @@ const TitipanExpenseUI = {
       return;
     }
     const selectedCount = this._draft.filter((o) => o.selected).length;
-    listBox.innerHTML = this._draft.map((o, i) => {
-      const porsiField = (selectedCount > 1 && o.selected)
-        ? `<input type="number" class="fi" id="titipanExpenseOwnerPorsi${i}" style="width:70px" placeholder="%" inputmode="decimal" value="${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}" oninput="TitipanExpenseUI.onPorsiInput(${i},this.value)">`
-        : '';
+    // splitModeBox — dropdown pilih cara bagi porsi, HANYA muncul kalau
+    // >1 owner tercentang. 'rata' (default) = porsi dihitung otomatis rata
+    // & field porsi jadi read-only (angka ditampilkan sbg teks); 'manual'
+    // = balik ke perilaku lama (field angka bisa diedit bebas per baris).
+    const splitModeBox = (selectedCount > 1)
+      ? `<div style="display:flex;align-items:center;gap:8px;padding:2px 0 10px">
+          <span style="font-size:12px;color:var(--text2)">Bagi porsi:</span>
+          <select class="fs" style="width:auto;padding:6px 10px;font-size:12px" onchange="TitipanExpenseUI.onSplitModeChange(this.value)">
+            <option value="rata"${this._splitMode === 'rata' ? ' selected' : ''}>⚖️ Rata Otomatis</option>
+            <option value="manual"${this._splitMode !== 'rata' ? ' selected' : ''}>✍️ Manual (%)</option>
+          </select>
+        </div>`
+      : '';
+    listBox.innerHTML = splitModeBox + this._draft.map((o, i) => {
+      let porsiField = '';
+      if (selectedCount > 1 && o.selected) {
+        porsiField = (this._splitMode === 'manual')
+          ? `<input type="number" class="fi" id="titipanExpenseOwnerPorsi${i}" style="width:70px" placeholder="%" inputmode="decimal" value="${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}" oninput="TitipanExpenseUI.onPorsiInput(${i},this.value)">`
+          : `<span style="width:70px;text-align:right;font-size:12px;color:var(--text2)">${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}%</span>`;
+      }
       return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
         <input type="checkbox" style="width:16px;height:16px" ${o.selected ? 'checked' : ''} onchange="TitipanExpenseUI.toggleOwner(${i},this.checked)">
         <span style="flex:1;font-size:13px">${escapeHtml(o.ownerName)}</span>
@@ -127,12 +153,47 @@ const TitipanExpenseUI = {
     }).join('');
   },
 
+  // onSplitModeChange(mode) — ganti _splitMode ('rata'/'manual'). Pindah ke
+  // 'rata' langsung menghitung ulang porsi rata utk seluruh owner
+  // tercentang saat ini (menimpa nilai manual sebelumnya, sesuai namanya);
+  // pindah ke 'manual' TIDAK mengubah angka porsi yang sudah ada (biar
+  // user tinggal lanjut edit dari hasil rata terakhir kalau mau).
+  onSplitModeChange(mode) {
+    this._splitMode = (mode === 'manual') ? 'manual' : 'rata';
+    if (this._splitMode === 'rata') this._autoFillEqualPorsi();
+    this._renderOwnersList();
+    this._updateSplitPreview();
+  },
+
+  // _autoFillEqualPorsi() — bagi 100% rata ke seluruh owner tercentang di
+  // _draft (murni in-memory, 0 tulis ke D). Sisa pembulatan (kalau 100/n
+  // tidak bulat 2 desimal) dibebankan ke owner TERAKHIR yang tercentang,
+  // pola sama residual-ke-baris-terakhir yang dipakai
+  // TitipanExpenseFlow.computeSplitRows() -- supaya total SELALU persis
+  // 100 (lolos MultiOwnerEngine.validateOwners(), bukan cuma "mendekati").
+  _autoFillEqualPorsi() {
+    const selected = this._draft.filter((o) => o.selected);
+    const n = selected.length;
+    if (n < 2) return;
+    const base = Math.floor((100 / n) * 100) / 100;
+    let assigned = 0;
+    selected.forEach((o, idx) => {
+      if (idx === n - 1) {
+        o.porsi = Math.round((100 - assigned) * 100) / 100;
+      } else {
+        o.porsi = base;
+        assigned += base;
+      }
+    });
+  },
+
   // toggleOwner(i, checked) — murni ubah draft di memori + render ulang
   // list (supaya kolom porsi muncul/hilang sesuai jumlah tercentang) +
   // update preview split. 0 tulis ke D.
   toggleOwner(i, checked) {
     if (!this._draft[i]) return;
     this._draft[i].selected = !!checked;
+    if (this._splitMode === 'rata') this._autoFillEqualPorsi();
     this._renderOwnersList();
     this._updateSplitPreview();
   },

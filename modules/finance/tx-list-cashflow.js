@@ -76,14 +76,31 @@ const ownerSplitLine=(assetSplit&&assetSplit.ok)?`<div class="tx-meta">👥 ${as
 // relasi riwayat, deductionOwnerId adalah domain akun/pemilik-penanggung yang
 // terpisah). Transaksi lama tanpa t.deductionOwnerId -> baris ini tetap
 // kosong, tampilan tx-item TIDAK berubah sama sekali (backward compatible).
-// Nama owner diresolve dari owners[] akun transaksi ini (reuse
-// getAccOwners() dari akun.js, S574-A -- 0 logic porsi/lookup baru ditulis
-// di sini; guard typeof supaya aman kalau akun.js belum dimuat/urutan
-// build.js berubah, sama pola guard resolveTxAssetSplit di atas).
+//
+// S579 FIX (DL-Next-6, source-mismatch lanjutan DL-Next-1/S578 -- lihat
+// DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
+// AUDIT-8-11-OWNER-RESOLVER-POST-DL-NEXT-1.md §Audit-9): basis lookup nama
+// diganti dari getAccOwners()/acc.owners (KEDUANYA cuma baca
+// acc.owners[]/acc.ownership, buta terhadap aset tertaut) ke
+// resolveOwnerDefaultForAccount(t.accountId) -- SUMBER SAMA PERSIS yang
+// dipakai guard validasi di _saveTxInner() (S578) & UI
+// updateTxDeductionOwnerVisibility() (Res-C). Sebelum fix ini, transaksi
+// yang deductionOwnerId-nya berasal dari source:'asset' (akun tanpa
+// acc.owners[] sendiri, tertaut aset multi-owner) tidak pernah ketemu
+// namanya di sini -> badge kosong walau data tersimpan benar. Guard typeof
+// tetap dipertahankan (aman kalau transaksi.js belum dimuat/urutan
+// build.js berubah, badge cuma tidak tampil, bukan error).
 let deductionOwnerLine='';
 if(t.deductionOwnerId){
 let ownerName=null;
-if(typeof getAccOwners==='function'){
+if(typeof resolveOwnerDefaultForAccount==='function'){
+const resolved=resolveOwnerDefaultForAccount(t.accountId);
+if(resolved&&resolved.ok){
+const ownerMatch=(resolved.owners||[]).find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+}
+if(!ownerName&&typeof getAccOwners==='function'){
 const ownRes=getAccOwners(t.accountId);
 if(ownRes&&ownRes.ok){
 const ownerMatch=(ownRes.owners||[]).find(o=>String(o.ownerId)===String(t.deductionOwnerId));

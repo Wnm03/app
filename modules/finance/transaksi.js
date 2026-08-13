@@ -169,6 +169,58 @@ function findMultiOwnerAssetForAccount(accId){
 if(!accId||typeof getMultiOwnerAssets!=='function')return null;
 return getMultiOwnerAssets().find(a=>sameId(a.accountId,accId))||null;
 }
+// findLinkedAssetForAccount(accId) — Sesi Res-B (DESIGN-LOCK-LINKED-ASSET-
+// ACCOUNT-OWNER-DEFAULT.md), varian findMultiOwnerAssetForAccount() TANPA
+// syarat isMultiOwner -- fungsi itu query lewat getMultiOwnerAssets() jadi
+// HANYA balikin aset yg owners-nya >1 (lihat catatan Sesi Res-A), padahal
+// Owner Resolver §2.1 butuh aset tertaut apa pun yg py `a.owners[]`
+// eksplisit termasuk yg cuma 1 baris. Pola pencarian by `a.accountId`
+// direuse, syarat isMultiOwner dilepas -- 0 logic baru selain itu.
+// Return: aset pertama (D.assets) yang a.accountId===accId, atau null.
+function findLinkedAssetForAccount(accId){
+if(!accId)return null;
+return (D.assets||[]).find(a=>sameId(a.accountId,accId))||null;
+}
+// resolveOwnerDefaultForAccount(accId) — Sesi Res-B (DESIGN-LOCK-LINKED-
+// ASSET-ACCOUNT-OWNER-DEFAULT.md §2.1/§2.2). Owner Resolver: tentukan
+// kandidat default `deductionOwnerId` untuk akun `accId`, TANPA menulis
+// apa pun (read-only, 0 setAccOwners(), 0 mutasi D.assets/D.accounts).
+// Prioritas (berhenti di langkah pertama yang menghasilkan kandidat,
+// TIDAK digabung/dijumlah antar langkah):
+//   1. Aset tertaut (findLinkedAssetForAccount()) yang punya `a.owners[]`
+//      EKSPLISIT (guard sama persis _asetOwnersForTitipan() di
+//      dana-titipan-aggregation-api.js -- HANYA percaya
+//      MultiOwnerEngine.getOwners(asset) yg !isSynthesized, TIDAK PERNAH
+//      sintesis dari a.ownership -- lihat DESIGN-LOCK-...-DEFAULT.md
+//      §1.11). source:'asset'.
+//   2. getAccOwnersEffective(accId) (akun.js, Sesi Res-B) -- raw owners[]
+//      ATAU sintesis 1-owner-100% dari acc.ownership. source:'account'.
+//   3. Tidak ada kandidat -> owners:[], source:'none'.
+// needsConfirm HANYA true kalau source==='account' DAN hasil
+// getAccOwnersEffective() itu sendiri needsConfirm:true (sintesis dari
+// acc.ownership) -- source:'asset' TIDAK PERNAH needsConfirm (owners[]
+// aset sudah eksplisit/persisted, 0 konfirmasi tambahan dibutuhkan,
+// sesuai DESIGN-LOCK-...-DEFAULT.md §4 Res-C).
+// autoSelectId diisi HANYA kalau owners.length===1 (§2.2) -- 2+ owner
+// balik null, TIDAK ADA tie-break otomatis (porsi terbesar/urutan array).
+// Return: {ok:true, source, owners, needsConfirm, autoSelectId}.
+function resolveOwnerDefaultForAccount(accId){
+if(!accId||typeof MultiOwnerEngine==='undefined')return{ok:true,source:'none',owners:[],needsConfirm:false,autoSelectId:null};
+const asset=findLinkedAssetForAccount(accId);
+if(asset){
+const r=MultiOwnerEngine.getOwners(asset);
+if(r&&r.ok&&!r.isSynthesized&&r.owners.length>0){
+return{ok:true,source:'asset',owners:r.owners,needsConfirm:false,autoSelectId:r.owners.length===1?r.owners[0].ownerId:null};
+}
+}
+if(typeof getAccOwnersEffective==='function'){
+const eff=getAccOwnersEffective(accId);
+if(eff&&eff.ok&&eff.owners.length>0){
+return{ok:true,source:'account',owners:eff.owners,needsConfirm:eff.needsConfirm,autoSelectId:eff.owners.length===1?eff.owners[0].ownerId:null};
+}
+}
+return{ok:true,source:'none',owners:[],needsConfirm:false,autoSelectId:null};
+}
 // onTxAccChange() — dipanggil onchange #txAcc (dropdown Akun/Metode,
 // modals.js). Selain menandai _txAccManuallySet=true (perilaku lama, dipakai
 // applyLastAccForCat() supaya tidak menimpa pilihan manual user), sekarang
@@ -242,22 +294,85 @@ updateTxDeductionOwnerVisibility();
 // Validasi wajib-pilih saat simpan (_saveTxInner(), masih pakai
 // getAccOwners()/isMultiOwner) SENGAJA TIDAK diubah di sini -- itu domain
 // "aturan validasi porsi kepemilikan" yang di luar scope S575.
+// updateTxDeductionOwnerVisibility() — REVISI Sesi Res-C (DESIGN-LOCK-
+// LINKED-ASSET-ACCOUNT-OWNER-DEFAULT.md §4): sumber kandidat sekarang
+// resolveOwnerDefaultForAccount() (transaksi.js, Sesi Res-B) -- BUKAN lagi
+// getAccOwnersRaw() langsung. resolveOwnerDefaultForAccount() SENDIRI
+// sudah fallback ke account.owners[]/ownership kalau aset tertaut tidak
+// py owners[] eksplisit (lihat §2.1), jadi 0 perubahan urutan prioritas
+// perlu ditulis ulang di sini -- fungsi ini murni KONSUMEN.
+// Auto-select vs dropdown (§2.2) TIDAK berubah dari pola S575: 1 kandidat
+// -> auto-select, 2+ -> dropdown value direset. 0 kandidat -> wrap
+// disembunyikan (REGRESI WAJIB: identik akun tanpa aset tertaut & tanpa
+// owners[] apa pun, sama seperti S575 test [1/6]).
+// Status "belum dikonfirmasi" + aksi "Jadikan permanen" (elemen
+// #txDeductionOwnerStatus, modals.js) HANYA muncul kalau
+// resolved.source==='account' DAN resolved.needsConfirm===true (owners[]
+// hasil sintesis 1-owner-100% dari acc.ownership, lihat
+// getAccOwnersEffective() akun.js) -- kandidat dari source:'asset' TIDAK
+// PERNAH needsConfirm (owners[] aset sudah eksplisit/persisted, sesuai
+// §4). Fallback defensif: kalau resolveOwnerDefaultForAccount() belum
+// dimuat (guard sama pola existing di file ini), turun ke getAccOwnersRaw()
+// langsung persis perilaku S575 lama -- 0 regresi kalau Res-B belum aktif.
 function updateTxDeductionOwnerVisibility(){
 const wrap=document.getElementById('txDeductionOwnerWrap');
 const sel=document.getElementById('txDeductionOwner');
+const status=document.getElementById('txDeductionOwnerStatus');
 if(!wrap||!sel)return;
 const accId=document.getElementById('txAcc')?document.getElementById('txAcc').value:'';
-const res=(accId&&typeof getAccOwnersRaw==='function')?getAccOwnersRaw(accId):null;
-const owners=(res&&res.ok)?(res.owners||[]):[];
+let owners=[];
+let needsConfirm=false;
+let source='none';
+if(accId&&typeof resolveOwnerDefaultForAccount==='function'){
+const resolved=resolveOwnerDefaultForAccount(accId);
+if(resolved&&resolved.ok){owners=resolved.owners||[];needsConfirm=!!resolved.needsConfirm;source=resolved.source;}
+}else if(accId&&typeof getAccOwnersRaw==='function'){
+const res=getAccOwnersRaw(accId);
+owners=(res&&res.ok)?(res.owners||[]):[];
+}
 if(owners.length<1){
 wrap.style.display='none';
 sel.innerHTML='';
 sel.value='';
+if(status){status.style.display='none';status.innerHTML='';}
 return;
 }
 wrap.style.display='block';
 sel.innerHTML='<option value="">— Pilih Pemilik —</option>'+owners.map(o=>'<option value="'+escapeHtml(String(o.ownerId))+'">'+escapeHtml(o.ownerName||String(o.ownerId))+'</option>').join('');
 sel.value=owners.length===1?String(owners[0].ownerId):'';
+if(status){
+if(source==='account'&&needsConfirm){
+status.style.display='block';
+status.innerHTML='⚠️ Belum dikonfirmasi (dari Kepemilikan akun) — <span style="text-decoration:underline;cursor:pointer" data-action="TxDeductionOwner.makePermanent" data-args=\'["'+jsAttrEscape(accId)+'"]\'>Jadikan permanen</span>';
+}else{
+status.style.display='none';
+status.innerHTML='';
+}
+}
+}
+// TxDeductionOwner — Sesi Res-C (DESIGN-LOCK-LINKED-ASSET-ACCOUNT-OWNER-
+// DEFAULT.md §4). makePermanent() adalah SATU-satunya titik tulis di sesi
+// ini (reuse penuh setAccOwners(), akun.js -- 0 logic tulis baru), dipicu
+// MURNI oleh klik eksplisit user di status "belum dikonfirmasi" (lihat
+// updateTxDeductionOwnerVisibility() di atas). Owner Resolver
+// (resolveOwnerDefaultForAccount()) sendiri TETAP read-only, sesuai §2.3.
+// Guard: hanya jalan kalau source masih 'account' & needsConfirm masih
+// true saat tombol ditekan (re-resolve, bukan percaya state lama) --
+// mencegah double-write kalau user sempat ganti akun di antara render &
+// klik. Re-render field ini via updateTxDeductionOwnerVisibility() setelah
+// sukses supaya status "belum dikonfirmasi" langsung hilang (owners[] akun
+// sekarang eksplisit/persisted, needsConfirm otomatis false).
+var TxDeductionOwner={
+makePermanent:function(accId){
+if(!accId||typeof resolveOwnerDefaultForAccount!=='function'||typeof setAccOwners!=='function')return;
+const resolved=resolveOwnerDefaultForAccount(accId);
+if(!resolved||!resolved.ok||resolved.source!=='account'||!resolved.needsConfirm||!resolved.owners||resolved.owners.length<1)return;
+const res=setAccOwners(accId,resolved.owners);
+if(res&&res.ok)updateTxDeductionOwnerVisibility();
+}
+};
+if(typeof window!=='undefined'){
+window.TxDeductionOwner=TxDeductionOwner;
 }
 // updateTxOwnerPorsiOptions() DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
 // spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
@@ -986,15 +1101,30 @@ const deductionOwnerIdVal=txDeductionOwnerSaveEl?txDeductionOwnerSaveEl.value:''
 // luar scope perubahan ini) tetap kompatibel lewat fallback yang sudah
 // ada di sana.
 if(cat==='__add_new_cat__'){toast('⚠️ Pilih atau buat kategori dulu');return;}
-// VALIDASI S574-D1: akun multi-owner (owners.length>1, reuse getAccOwners()
-// S574-A -> MultiOwnerEngine.getOwners(), 0 logic porsi baru) WAJIB pilih
-// tepat 1 Pemilik Sumber Potongan sebelum transaksi boleh disimpan --
-// berlaku utk CREATE maupun EDIT (accId di atas sudah mewakili akun yang
-// SEDANG dipilih di form, termasuk kalau user baru saja ganti akun).
-// Assignment biner murni (siapa menanggung PENUH), TIDAK pernah split %
-// (lihat §2.4/§5 audit) -- validasi ini juga TIDAK menyentuh saldo/formula.
-const _deductionOwnerAccCheck=(accId&&typeof getAccOwners==='function')?getAccOwners(accId):null;
-if(_deductionOwnerAccCheck&&_deductionOwnerAccCheck.ok&&_deductionOwnerAccCheck.isMultiOwner&&!deductionOwnerIdVal){
+// VALIDASI S574-D1 (basis diganti Sesi S578, DL-Next-1 / Audit-3A --
+// lihat DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
+// AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md §3A): akun multi-owner (2+ kandidat
+// owner) WAJIB pilih tepat 1 Pemilik Sumber Potongan sebelum transaksi
+// boleh disimpan -- berlaku utk CREATE maupun EDIT (accId di atas sudah
+// mewakili akun yang SEDANG dipilih di form, termasuk kalau user baru saja
+// ganti akun). Assignment biner murni (siapa menanggung PENUH), TIDAK
+// pernah split % (lihat §2.4/§5 audit) -- validasi ini juga TIDAK
+// menyentuh saldo/formula.
+//
+// S578 FIX (source-mismatch): basis diganti dari getAccOwners(accId).
+// isMultiOwner (S574-A, HANYA baca acc.owners[]/acc.ownership, BUTA
+// terhadap aset tertaut) ke resolveOwnerDefaultForAccount(accId).owners.
+// length>1 (Sesi Res-B) -- SUMBER SAMA PERSIS yang dipakai UI
+// (updateTxDeductionOwnerVisibility(), Sesi Res-C). Sebelum fix ini, akun
+// yang (a) tertaut aset multi-owner valid via a.accountId TAPI (b) belum
+// pernah punya acc.owners[] sendiri (belum pernah "Jadikan permanen") bisa
+// lolos simpan TANPA deductionOwnerId walau UI-nya sendiri menampilkan
+// dropdown wajib pilih -- kontradiksi UI-vs-validasi, silent. Fix ini
+// MURNI menyamakan sumber kandidat; 0 perubahan aturan pemilihan owner
+// (Design Lock §2.1/§2.2 lama, termasuk "0 tie-break otomatis", tetap
+// utuh sama sekali tidak disentuh).
+const _deductionOwnerResolved=(accId&&typeof resolveOwnerDefaultForAccount==='function')?resolveOwnerDefaultForAccount(accId):null;
+if(_deductionOwnerResolved&&_deductionOwnerResolved.ok&&_deductionOwnerResolved.owners.length>1&&!deductionOwnerIdVal){
 toast('⚠️ Akun ini punya lebih dari 1 pemilik — pilih Pemilik Sumber Potongan dulu');
 return;
 }
