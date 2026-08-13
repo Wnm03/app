@@ -388,3 +388,66 @@ test('checkAll() tidak throw kalau D/registry belum ada sama sekali', () => {
   assert.strictEqual(res.ownerIdConsistency.ok, true);
   assert.strictEqual(res.debtNameStaleness.ok, true);
 });
+
+// --- repairOrphans() (S595) --------------------------------------------
+
+test('repairOrphans() menghapus baris orphan cabang Aset, sisa yang valid tidak tersentuh', () => {
+  const a = { id: 'a10', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [
+      { id: 'd1', nilai: 200000, linkedAssetId: 'a10', linkedOwnerId: 'o_lama' }, // orphan
+      { id: 'd2', nilai: 300000, linkedAssetId: 'a10', linkedOwnerId: 'o1' }, // valid
+    ],
+    ownersByAsset: { a10: [{ ownerId: 'o1', isSelf: false, porsi: 30 }] },
+  });
+  const res = TitipanReconcile.repairOrphans();
+  assert.strictEqual(res.removed, 1);
+  assert.deepStrictEqual(res.keys, ['a10::o_lama']);
+  assert.strictEqual(D.debts.length, 1);
+  assert.strictEqual(D.debts[0].id, 'd2');
+});
+
+test('repairOrphans() menghapus baris orphan cabang Investasi (fallback titipan_investor)', () => {
+  const h = { id: 'h1' };
+  setupGlobals({
+    investments: [h],
+    debts: [{ id: 'd1', nilai: 500000, linkedInvestmentId: 'h1' }], // linkedOwnerId absen -> fallback
+    ownersByHolding: { h1: [] }, // owner sudah dicabut
+    costByHolding: { h1: 500000 },
+  });
+  const res = TitipanReconcile.repairOrphans();
+  assert.strictEqual(res.removed, 1);
+  assert.deepStrictEqual(res.keys, ['inv::h1::titipan_investor']);
+  assert.strictEqual(D.debts.length, 0);
+});
+
+test('repairOrphans() tidak menghapus apa pun kalau tidak ada gap', () => {
+  const a = { id: 'a11', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [{ id: 'd1', nilai: 300000, linkedAssetId: 'a11', linkedOwnerId: 'o1' }],
+    ownersByAsset: { a11: [{ ownerId: 'o1', isSelf: false, porsi: 30 }] },
+  });
+  const res = TitipanReconcile.repairOrphans();
+  assert.strictEqual(res.removed, 0);
+  assert.deepStrictEqual(res.keys, []);
+  assert.strictEqual(D.debts.length, 1);
+});
+
+test('repairOrphans() tidak menyentuh utang biasa (bukan titipan, tanpa linkedAssetId/linkedInvestmentId)', () => {
+  setupGlobals({
+    assets: [],
+    debts: [{ id: 'd1', nilai: 100000, name: 'Utang pribadi' }],
+  });
+  const res = TitipanReconcile.repairOrphans();
+  assert.strictEqual(res.removed, 0);
+  assert.strictEqual(D.debts.length, 1);
+});
+
+test('repairOrphans() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
+  delete global.D;
+  const res = TitipanReconcile.repairOrphans();
+  assert.strictEqual(res.removed, 0);
+  assert.deepStrictEqual(res.keys, []);
+});
