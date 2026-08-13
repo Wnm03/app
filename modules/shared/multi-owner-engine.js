@@ -339,3 +339,77 @@ splitByPorsi(nilai, owners) {
 },
 
 };
+
+// ownerSignature(entity) / ownerMismatch(a, b) -- §D.2 AUDIT-UNIFIED-ASSET-
+// INVESTMENT-FORM.md: ekstraksi logic owner-signature-comparison ke layer
+// shared (BUKAN investasi.js atau data-health-check.js) supaya kedua file
+// itu bisa reuse TANPA saling depend satu sama lain -- aturan eksplisit
+// §D.2 audit: "tidak boleh dikonsolidasikan dengan memindahkan dependency
+// dari satu file ke file lain; logic canonical harus ditempatkan di layer
+// yang memang shared". (Draft sesi sebelumnya sempat mengonsolidasi dengan
+// data-health-check.js langsung memanggil assetInvestmentMismatch() dari
+// investasi.js lewat guard `typeof assetInvestmentMismatch==='function'`
+// -- itu BUKAN konsolidasi, cuma memindahkan duplikasi jadi dependency
+// silent-failure antar 2 file feature yang seharusnya independen. Guard
+// begitu memang tidak crash kalau investasi.js belum dimuat, TAPI kalau
+// data-health-check.js dites terisolasi (lihat tests/data-health-check-
+// asset-investasi-owner-mismatch-s551.test.js, sengaja cuma load
+// ['modules/shared/multi-owner-engine.js','data-health-check.js']),
+// assetInvestmentMismatch selalu undefined -> guard selalu diam -> rule
+// S551 tidak pernah warn -- 3/9 test S551 gagal. Root cause-nya BUKAN
+// duplikasi kodenya, tapi lokasinya: logic canonical harus di layer shared
+// yang SUDAH jadi dependency kedua file (MultiOwnerEngine di file ini),
+// bukan di salah satu file feature.)
+//
+// Sebelumnya ada 2 implementasi paralel: `_aiOwnerSig()` (investasi.js) &
+// `ownerSignature()` lokal (data-health-check.js) -- beda formula (ownerId
+// case-sensitive + prefix 'ID:' vs lowercase tanpa prefix), risiko kalau
+// salah satu diperbaiki (mis. toleransi floating-point porsi) yang lain
+// diam-diam tertinggal. Sekarang investasi.js & data-health-check.js
+// SAMA-SAMA reuse fungsi di bawah ini langsung -- 1 sumber kebenaran, 0
+// saling depend antar file feature (keduanya cuma depend ke layer shared
+// ini, yang memang sudah jadi dependency bersama sejak awal).
+//
+// Ditulis sbg top-level `function` (bukan const arrow) supaya otomatis
+// ter-attach ke context vm test harness (lihat tests/helpers/loadSource.js
+// -- "function"/"var" top-level otomatis jadi properti context, "const"
+// tidak) tanpa perlu expose[] eksplisit, pola sama semua fungsi lain di
+// file ini yang dipakai lintas-file (mis. sameId, escapeHtml).
+//
+// ownerSignature(entity) -- signature string pemilik EFEKTIF entity (lewat
+// MultiOwnerEngine.getOwners(), jadi ikut toleran thd data lama/tersintesis
+// spt legacy titipan 1-owner). "Signature" = daftar {ownerId,porsi}
+// disortir (urutan array di data tidak mempengaruhi perbandingan), ownerId
+// dinormalisasi trim+lowercase, porsi dibulatkan 2 desimal (toleransi
+// floating point, pola sama PORSI_EPSILON di atas). Return '' kalau
+// signature tidak terhitung (entity invalid / MultiOwnerEngine belum
+// dimuat) -- BUKAN null, supaya 2 entity yang sama-sama gagal dihitung
+// dianggap "sama" (tidak mismatch) oleh ownerMismatch(), bukan otomatis
+// mismatch.
+function ownerSignature(entity) {
+  if (typeof MultiOwnerEngine === 'undefined' || typeof MultiOwnerEngine.getOwners !== 'function') return '';
+  const res = MultiOwnerEngine.getOwners(entity);
+  if (!res || !res.ok) return '';
+  return (res.owners || [])
+    .map((o) => ({ id: String((o && o.ownerId) || '').trim().toLowerCase(), porsi: Math.round(((o && o.porsi) || 0) * 100) / 100 }))
+    .sort((x, y) => (x.id < y.id ? -1 : (x.id > y.id ? 1 : 0)))
+    .map((o) => o.id + ':' + o.porsi)
+    .join('|');
+}
+
+// ownerMismatch(a, b) -- true kalau owner signature EFEKTIF a & b BEDA.
+// a/b null/undefined, atau salah satu signature tidak terhitung -> false
+// (TIDAK dianggap mismatch -- pola sama assetInvestmentMismatch() lama di
+// investasi.js). Dipakai baik oleh badge cross-check di investasi.js
+// (investmentCrossCheckWarning()/assetCrossCheckWarning(), lewat
+// assetInvestmentMismatch() yang sekarang jadi thin-wrapper fungsi ini)
+// MAUPUN rule Data Health Check S551 (data-health-check.js, langsung) --
+// 1 titik baca yang sama utk kedua konsumen, TIDAK saling import satu sama
+// lain.
+function ownerMismatch(a, b) {
+  if (!a || !b) return false;
+  const sa = ownerSignature(a);
+  const sb = ownerSignature(b);
+  if (sa === '' || sb === '') return false;
+  return sa !== sb;
+}
