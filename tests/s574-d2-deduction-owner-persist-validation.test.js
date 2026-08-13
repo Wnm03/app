@@ -84,6 +84,25 @@ function makeCtx({ document, D, calls, txEditId = null }) {
         if (!acc || !Array.isArray(acc.owners)) return { ok: true, owners: [] };
         return { ok: true, owners: acc.owners };
       },
+      // MultiOwnerEngine -- stub minimal Sesi Res-C: test ini tidak
+      // pernah punya D.assets yang cocok, jadi resolveOwnerDefaultForAccount()
+      // (Res-B, transaksi.js) TIDAK PERNAH memanggil MultiOwnerEngine.getOwners()
+      // (guard `if(asset)` di resolveOwnerDefaultForAccount selalu false di sini)
+      // -- stub ini murni supaya guard `typeof MultiOwnerEngine==='undefined'`
+      // lolos, biar resolver lanjut ke getAccOwnersEffective()/account.ownership
+      // (langkah 2/3 §2.1), bukan berhenti di source:'none' sebelum sempat
+      // baca account.owners[].
+      MultiOwnerEngine: {},
+      // getAccOwnersEffective() -- stub Sesi Res-B (akun.js): raw owners[]
+      // MENANG selalu (needsConfirm:false), sama kontrak seperti akun.js
+      // asli -- dipakai resolveOwnerDefaultForAccount() langkah 2 (§2.1).
+      getAccOwnersEffective: (accId) => {
+        const acc = (D.accounts || []).find((a) => String(a.id) === String(accId));
+        if (!acc) return { ok: true, owners: [], needsConfirm: false };
+        const owners = acc.owners || [];
+        if (owners.length > 0) return { ok: true, owners, needsConfirm: false };
+        return { ok: true, owners: [], needsConfirm: false };
+      },
     },
   );
 }

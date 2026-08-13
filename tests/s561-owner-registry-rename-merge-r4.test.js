@@ -28,11 +28,29 @@ test('rename() — ganti nama registry + propagasi ke owners[] Aset/Investasi/ti
   assert.equal(res.assets, 1);
   assert.equal(res.investments, 1);
   assert.equal(res.commitments, 1);
+  assert.equal(res.debts, 0, 'tidak ada D.debts di skenario ini');
   assert.equal(D.ownerRegistry[0].name, 'Budi');
   assert.equal(D.assets[0].owners[1].ownerName, 'Budi');
   assert.equal(D.assets[0].owners[0].ownerName, 'Milik Sendiri', 'baris SELF tidak ikut berubah');
   assert.equal(D.investments[0].owners[0].ownerName, 'Budi');
   assert.equal(D.titipanCommitments[0].ownerName, 'Budi');
+});
+
+test('rename() — S583 sesi-8: propagasi juga ke D.debts[].name (cermin blok debts di merge())', () => {
+  const D = {
+    ownerRegistry: [{ id: 'o1', name: 'Bidi' }, { id: 'o2', name: 'Lain' }],
+    debts: [
+      { id: 'd1', linkedAssetId: 'a1', linkedOwnerId: 'o1', name: 'Bidi', nilai: 400 },
+      { id: 'd2', linkedAssetId: 'a2', linkedOwnerId: 'o2', name: 'Lain', nilai: 200 },
+    ],
+  };
+  const ctx = makeCtx(D);
+  const res = ctx.OwnerRegistry.rename('o1', 'Budi');
+  assert.equal(res.ok, true);
+  assert.equal(res.debts, 1);
+  assert.equal(D.debts[0].name, 'Budi');
+  assert.equal(D.debts[0].id, 'd1', 'id debt tidak berubah, histori tetap');
+  assert.equal(D.debts[1].name, 'Lain', 'debt milik owner lain tidak ikut berubah');
 });
 
 test('rename() — id tidak ditemukan -> ok:false, 0 mutasi', () => {

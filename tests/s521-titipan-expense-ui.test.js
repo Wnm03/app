@@ -235,6 +235,96 @@ test('4. toggleOwner(): 2 owner tercentang -> input porsi muncul utk masing2 bar
 });
 
 // ============================================================
+// _splitMode ('rata'/'manual') -- dropdown bagi porsi (baru, lanjutan
+// auto-suggest owner). Default 'manual' (behavior lama dipertahankan
+// persis, test 3 & 4 di atas TIDAK berubah); 'rata' murni opsi tambahan.
+// ============================================================
+
+test('9. onSplitModeChange("rata"): 2 owner tercentang -> porsi otomatis 50/50, field porsi jadi teks (bukan input)', () => {
+  const dom = makeStatefulDom();
+  const ctx = makeCtx(baseD(), dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  ctx.TitipanExpenseUI.toggleOwner(1, true);
+  ctx.TitipanExpenseUI.onSplitModeChange('rata');
+  assert.equal(ctx.TitipanExpenseUI._draft[0].porsi, 50);
+  assert.equal(ctx.TitipanExpenseUI._draft[1].porsi, 50);
+  const html = dom.getElementById('titipanExpenseOwnersList').innerHTML;
+  assert.doesNotMatch(html, /titipanExpenseOwnerPorsi0/);
+  assert.doesNotMatch(html, /titipanExpenseOwnerPorsi1/);
+  assert.match(html, /50%/);
+});
+
+test('10. onSplitModeChange("rata"): 3 owner tercentang -> total porsi tetap persis 100 (residual ke baris terakhir)', () => {
+  const dom = makeStatefulDom();
+  const D = baseD({
+    investments: [{
+      id: 'h1', name: 'BBCA', unit: 1, avgPrice: 1, currentPrice: 1,
+      owners: [
+        { ownerId: 'a', porsi: 34, ownerName: 'Ani', isSelf: false },
+        { ownerId: 'b', porsi: 33, ownerName: 'Budi', isSelf: false },
+        { ownerId: 'c', porsi: 33, ownerName: 'Cici', isSelf: false },
+      ],
+    }],
+  });
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  ctx.TitipanExpenseUI.toggleOwner(1, true);
+  ctx.TitipanExpenseUI.toggleOwner(2, true);
+  ctx.TitipanExpenseUI.onSplitModeChange('rata');
+  const total = ctx.TitipanExpenseUI._draft.reduce((s, o) => s + (o.porsi || 0), 0);
+  assert.equal(Math.round(total * 100) / 100, 100);
+});
+
+test('11. toggleOwner() saat mode "rata": tambah owner ketiga -> porsi otomatis dihitung ulang rata (bukan cuma dipertahankan dari sebelumnya)', () => {
+  const dom = makeStatefulDom();
+  const D = baseD({
+    investments: [{
+      id: 'h1', name: 'BBCA', unit: 1, avgPrice: 1, currentPrice: 1,
+      owners: [
+        { ownerId: 'a', porsi: 34, ownerName: 'Ani', isSelf: false },
+        { ownerId: 'b', porsi: 33, ownerName: 'Budi', isSelf: false },
+        { ownerId: 'c', porsi: 33, ownerName: 'Cici', isSelf: false },
+      ],
+    }],
+  });
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  ctx.TitipanExpenseUI.toggleOwner(1, true);
+  ctx.TitipanExpenseUI.onSplitModeChange('rata');
+  assert.equal(ctx.TitipanExpenseUI._draft[0].porsi, 50);
+  ctx.TitipanExpenseUI.toggleOwner(2, true); // masih mode 'rata' -> harus dihitung ulang jadi ~33.33 tiap owner
+  const total = ctx.TitipanExpenseUI._draft.reduce((s, o) => s + (o.porsi || 0), 0);
+  assert.equal(Math.round(total * 100) / 100, 100);
+  assert.ok(ctx.TitipanExpenseUI._draft[0].porsi < 40, 'porsi owner pertama harus turun setelah owner ke-3 ditambah di mode rata');
+});
+
+test('12. onSplitModeChange("manual") setelah "rata": angka porsi terakhir dipertahankan, field kembali jadi input editable', () => {
+  const dom = makeStatefulDom();
+  const ctx = makeCtx(baseD(), dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  ctx.TitipanExpenseUI.toggleOwner(1, true);
+  ctx.TitipanExpenseUI.onSplitModeChange('rata');
+  ctx.TitipanExpenseUI.onSplitModeChange('manual');
+  assert.equal(ctx.TitipanExpenseUI._draft[0].porsi, 50);
+  const html = dom.getElementById('titipanExpenseOwnersList').innerHTML;
+  assert.match(html, /titipanExpenseOwnerPorsi0/);
+  assert.match(html, /titipanExpenseOwnerPorsi1/);
+});
+
+test('13. dropdown bagi porsi TIDAK muncul kalau cuma 1 owner tercentang', () => {
+  const dom = makeStatefulDom();
+  const ctx = makeCtx(baseD(), dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  const html = dom.getElementById('titipanExpenseOwnersList').innerHTML;
+  assert.doesNotMatch(html, /TitipanExpenseUI\.onSplitModeChange/);
+});
+
+// ============================================================
 // onNoteInput() -- auto-suggest owner dari catatan (baru).
 // ============================================================
 

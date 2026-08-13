@@ -131,6 +131,17 @@ function makeTxCtx({ document, D, calls, txEditId = null }) {
         if (!acc || !Array.isArray(acc.owners)) return { ok: true, owners: [] };
         return { ok: true, owners: acc.owners };
       },
+      // MultiOwnerEngine + getAccOwnersEffective() -- stub Sesi Res-B/Res-C
+      // (lihat catatan sama di s574-d2-deduction-owner-persist-validation.
+      // test.js): tanpa ini resolveOwnerDefaultForAccount() (Res-B) berhenti
+      // di source:'none' sebelum sempat baca account.owners[].
+      MultiOwnerEngine: {},
+      getAccOwnersEffective: (accId) => {
+        const acc = (D.accounts || []).find((a) => String(a.id) === String(accId));
+        if (!acc) return { ok: true, owners: [], needsConfirm: false };
+        const owners = acc.owners || [];
+        return { ok: true, owners, needsConfirm: false };
+      },
     },
   );
 }
