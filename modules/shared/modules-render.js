@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s582-9-preexisting-test-failures-closeout';
+const MODULE_RENDER_VERSION='s584-9-preexisting-test-failures-closeout';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -629,7 +629,8 @@ const cls=['billcal-day'];
 if(dateStr===todayStr)cls.push('today');
 if(hasBill)cls.push('has-bill');
 if(dateStr===billCalSelectedDate)cls.push('selected');
-html+=`<div class="${cls.join(' ')}" data-action="selectBillCalDay" data-args="${escapeHtml(JSON.stringify([dateStr]))}">${day}${hasBill?'<div class="billcal-dot"></div>':''}</div>`;
+const ariaLbl=`Tanggal ${day}${hasBill?', ada tagihan jatuh tempo':''}`;
+html+=`<div class="${cls.join(' ')}" data-action="selectBillCalDay" data-args="${escapeHtml(JSON.stringify([dateStr]))}" aria-label="${escapeHtml(ariaLbl)}">${day}${hasBill?'<div class="billcal-dot"></div>':''}</div>`;
 }
 gridEl.innerHTML=html;
 const selList=billCalSelectedDate?(byDate[billCalSelectedDate]||[]):[];
