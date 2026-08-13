@@ -1,0 +1,49 @@
+PATCH GABUNGAN: s592 + s593 + s593-source-sync
+================================================
+Ini adalah gabungan 3 patch (deduplikasi & flatten) jadi 1 zip siap-pakai
+untuk menimpa file di app-main Anda. Isinya SUDAH final (versi terbaru
+tiap file), tidak perlu apply berurutan lagi.
+
+Urutan asal & cara digabung:
+1. patch-s592-rebuild-plus-2-diagnostik.zip — baseline rebuild bundle.
+2. patch-s593-fix-double-majoris.zip — dikirim sbg folder patch592/
+   berisi versi TERBARU dari SEMUA file yg sama dengan #1 (superset,
+   menggantikan #1 sepenuhnya) + fix double-Majoris di app-bundle-b.min.js
+   + CHANGED-FILES-s593.txt (root cause lengkap ada di file ini,
+   disertakan apa adanya di zip gabungan).
+3. patch-s593-source-sync.zip — file source
+   modules/finance/dana-titipan-portfolio-presenter.js yang tadinya
+   TIDAK ikut di #1/#2 (source repo app-main terpisah dari bundle
+   patch). Ditambahkan ke sini supaya app-main Anda lengkap: source
+   module & bundle SAMA-SAMA sudah punya fix double-Majoris (sudah
+   dicek konsisten — grep groupIndexByName cocok di kedua file).
+
+ISI PATCH GABUNGAN INI (12 file, semua final):
+- app-bundle-a.min.js
+- app-bundle-b.min.js              (fix double-Majoris, v1322)
+- app_production.html              (?v=1322)
+- index.html                       (?v=1322)
+- sw.js                            (CACHE_NAME kw-cache-v1322)
+- self-test.js
+- modules/shared/modules-render.js
+- modules/finance/dana-titipan-portfolio-presenter.js  (source sync,
+  BARU ditambahkan di gabungan ini — cek konsisten dgn bundle di atas)
+- tests/bill-calendar-day-aria-label-s591.test.js
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md
+- CHANGED-FILES-s593.txt           (catatan detail asli sesi s593,
+  root-cause double-Majoris — dipertahankan utk referensi)
+
+CARA PAKAI:
+Timpa (overwrite) file-file di atas ke posisi path yang sama persis di
+repo app-main Anda. Setelah itu jalankan `node scripts/build.js` di
+repo Anda SENDIRI (bukan dari snapshot ini) kalau ingin memverifikasi
+ulang sinkronisasi source<->bundle — TIDAK wajib, karena bundle di
+patch ini sudah versi jadi (v1322) dan source module sudah disamakan
+manual sesi lalu (28/28 test terkait PASS, 0 regresi).
+
+CATATAN: docs/FILE-MAP.md & docs/COVERAGE-PER-MODULE.md di sini masih
+versi dari build s592/s593 (BELUM ikut regenerate stlh source-sync,
+krn source-sync tidak mengubah bundle/versi). Kalau Anda run build.js
+sendiri, kedua file docs ini akan ke-regenerate otomatis — aman
+ditimpa ulang.

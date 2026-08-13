@@ -1919,6 +1919,17 @@ call:()=>{ BBM.openModal(); }},
 call:()=>{ Servis.openModal(); }},
 {label:'Aset.openModal()',id:'assetModal',
 call:()=>{ Aset.openModal(); }},
+// Sesi s591 (lanjutan diagnostik-versi.js): accountOwnersModal ("⚖️ Porsi Kepemilikan Akun",
+// S574-B) ada di halaman (dibuka dari tombol #accOwnersBtn di accModal via AccOwners.open())
+// tapi belum terdaftar di sweep manapun -- terdeteksi "(kelengkapan cakupan) modal belum
+// terdaftar" di Tes Buka/Tutup Modal. AccOwners.open() baca editAccIdx (akun.js) & menolak+toast
+// kalau editAccIdx<0 (mode Tambah, akun belum tersimpan) -- biar representatif dgn pemanggilan
+// asli dari UI (tombol di accModal saat Edit Akun), before/after push+hapus akun dummy ke
+// D.accounts & set+restore editAccIdx, pola sama persis Aset.openOwnersModal() di atas.
+{label:'AccOwners.open()',id:'accountOwnersModal',
+before:()=>{ const backup=editAccIdx; D.accounts.push({id:'__sweep_dummy_acc_owners__',name:'(tes sweep)',jenis:'kas_bebas',emoji:'💵',balance:0}); editAccIdx=D.accounts.length-1; return backup; },
+call:()=>{ AccOwners.open(); },
+after:(backup)=>{ editAccIdx=backup; D.accounts=D.accounts.filter(a=>a.id!=='__sweep_dummy_acc_owners__'); }},
 // Sesi 434: assetOwnersModal ("⚖️ Atur Porsi Kepemilikan", S392a+) ada di
 // halaman tapi belum terdaftar di sweep manapun -- terdeteksi
 // "(kelengkapan cakupan) modal belum terdaftar" di Tes Buka/Tutup Modal.

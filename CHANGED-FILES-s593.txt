@@ -1,0 +1,80 @@
+Sesi s593 — Fix: "🏦 Majoris" tampil 2x sbg 2 grup terpisah di Dana Titipan
+
+LAPORAN USER:
+"Kenapa ada double Majoris, dan di sampingnya masih ada tombol Atur Porsi
+padahal di atas sudah ada dropdown 'atur porsi' (pilih aset)? Sedangkan di
+Buku Aset cuma ada 1 Majoris."
+
+ROOT CAUSE (dibuktikan lewat audit-chain kode, bukan tebakan):
+1. `DanaTitipanPortfolioPresenter._groupHoldingsByCustodian()`
+   (dana-titipan-portfolio-presenter.js) mengelompokkan holding per
+   kustodian dengan mengunci grup memakai `custodianId` MENTAH-MENTAH
+   (`groupIndexById`).
+2. `CustodianRegistry.findOrCreate()` / `.rename()`
+   (custodian-registry.js) SENGAJA TIDAK melakukan dedup/collapse
+   entri kustodian yang kebetulan sama-sama bernama "Majoris" tapi
+   beda `id` — dedup registry itu sendiri memang by `id`, bukan by
+   nama (lihat komentar di file itu, ini keputusan desain lama, bukan
+   bug baru).
+3. Akibatnya: kalau `D.investmentCustodians` punya 2 entri berbeda id
+   yang sama-sama bernama "Majoris" (mis. dibuat di 2 momen input
+   terpisah sebelum user sadar sudah ada), grouping di langkah #1
+   membuat 2 node grup terpisah — makanya "🏦 Majoris" tampil 2x di
+   kartu Dana Titipan, isinya pun terpecah (bukan cuma tampilan
+   kebetulan sama nama).
+4. Buku Aset TIDAK memakai grouping ini sama sekali (dropdown
+   `assetInvestmentId` di assetModal langsung baca nama HOLDING dari
+   `D.investments[]`, bukan grouping by kustodian) — makanya di sana
+   "Majoris" tetap tampil apa adanya (1x per holding), tidak kena efek
+   pemecahan grup ini. Ini menjelaskan kenapa gejalanya HANYA muncul di
+   Dana Titipan/Investasi, bukan di Buku Aset.
+5. Tombol "⚖️ Atur Porsi Aset" di sebelah dropdown "Pilih Aset" BUKAN
+   duplikat bug — itu 1 alur yang disengaja sejak Sesi 531/s591
+   (dropdown pilih instrumen, tombol buka modal porsi utk instrumen
+   yang dipilih). Tapi aria-label dropdown-nya dulu "Pilih Aset UNTUK
+   ATUR PORSI" — bareng label tombol "ATUR PORSI Aset" di sebelahnya,
+   jadi kelihatan/kebaca seperti 2 kontrol "Atur Porsi" yang terpisah.
+   Sudah diringkas jadi 1 kalimat penjelas ("Pilih Aset (lalu tap Atur
+   Porsi Aset di sebelah kanan)") supaya tidak lagi kebaca dobel.
+
+FIX:
+1. `_groupHoldingsByCustodian()` sekarang mengunci grup memakai NAMA
+   kustodian yang dinormalisasi (trim + lowercase) — bukan `custodianId`
+   mentah. Kustodian dengan nama sama (case/spasi apa pun) SELALU
+   digabung jadi 1 grup visual, apa pun `id` aslinya di registry.
+   `CustodianRegistry` sendiri (dedup by-id) TIDAK disentuh/diubah
+   perilakunya — fix murni di layer render/tampilan.
+2. aria-label dropdown `#titipanAssetPick_N` diringkas supaya tidak
+   terbaca sbg kontrol "Atur Porsi" kedua yang terpisah dari tombolnya.
+
+FILE BERUBAH:
+1. app-bundle-b.min.js       — fix #1 & #2 di atas (source module
+                                dana-titipan-portfolio-presenter.js
+                                dibundel di sini)
+2. index.html                — ?v= naik ke 1322
+3. app_production.html       — ?v= naik ke 1322
+4. sw.js                     — CACHE_NAME naik ke kw-cache-v1322
+
+CATATAN UNTUK SESI BERIKUTNYA (belum dikerjakan sesi ini, di luar
+scope laporan bug ini — TIDAK termasuk dalam patch ini):
+- Source module `modules/finance/dana-titipan-portfolio-presenter.js`
+  di repo lengkap (app-main) SUDAH disamakan fix-nya juga (dicek via
+  `node scripts/build.js`, lolos sintaks) — kalau repo sumber Anda
+  belum sinkron dengan `app-bundle-b.min.js` di patch ini, jalankan
+  `node scripts/build.js` di repo Anda sendiri agar source & bundle
+  konsisten.
+- `modules/finance/dana-titipan-portfolio-render.js` (file "pecahan
+  ketiga" dari sesi split R5) TERNYATA TIDAK terdaftar di
+  `scripts/build.js` — jadi tidak pernah ikut ke-bundle & isinya
+  duplikat penuh dari `dana-titipan-portfolio-presenter.js` versi
+  lama (sebelum sesi split itu, presenter.js TIDAK PERNAH dipangkas).
+  0 dampak ke app yang jalan (file ini orphan), tapi berpotensi bikin
+  bingung audit ke depan — disarankan dibersihkan (hapus file ini ATAU
+  selesaikan split-nya) di sesi terpisah, TIDAK digabung ke sini sesuai
+  disiplin "1 task = 1 sesi".
+- Kalau user sudah PERNAH mengalami "double Majoris" ini, kemungkinan
+  ada 2 entri duplikat di `D.investmentCustodians` yang masih
+  tersimpan di data (fix ini hanya menggabungkan TAMPILANNYA, bukan
+  membersihkan data). Boleh dibiarkan (tidak berbahaya, cuma 1 entri
+  "nganggur" di registry) atau dibersihkan manual kalau mau rapi —
+  bukan prasyarat utk fix tampilan ini berfungsi.
