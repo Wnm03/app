@@ -141,7 +141,22 @@ return ASSET_JENIS_TO_INVESTMENT_TYPE[jenis]||'Lainnya';
 function migrateAssetInvestmentsToHoldings(){
 if(typeof Investment==='undefined'||typeof D==='undefined'||!D.assets)return{migrated:0,skipped:0};
 const candidates=D.assets.filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).map(a=>{
-const buku=a.modalInvestasi!=null?a.modalInvestasi:(a.hargaBeli!=null&&a.jumlahUnit!=null?a.hargaBeli*a.jumlahUnit:null);
+let buku=a.modalInvestasi!=null?a.modalInvestasi:(a.hargaBeli!=null&&a.jumlahUnit!=null?a.hargaBeli*a.jumlahUnit:null);
+// FIX (jenis-investasi-tanpa-modal): "Modal Investasi" & "Harga Beli/Unit"
+// di assetModal keduanya (opsional) -- kalau user pilih jenis investasi
+// (Saham/Reksadana/Kripto/Deposito/Investasi/Emas) tapi cuma isi "Estimasi
+// Nilai Saat Ini" (nilai) tanpa isi salah satu dari 2 field opsional itu,
+// buku di atas tetap null selamanya -> aset TIDAK PERNAH lolos candidate,
+// jadi tidak pernah bermigrasi ke Holding & tidak pernah muncul di tab
+// Investasi (silently nyangkut di Buku Aset, terlihat sama seperti aset
+// biasa). Fallback: kalau buku masih null TAPI jenis termasuk kategori
+// investasi yang dikenal (ada di ASSET_JENIS_TO_INVESTMENT_TYPE, sudah
+// didefinisikan di atas) DAN nilai>0, anggap buku=nilai (avgPrice=
+// currentPrice=nilai, untung/rugi awal 0 -- akurat begitu user isi
+// transaksi Beli pertama lewat 💱 Riwayat Transaksi atau edit manual di
+// holding). Aset non-investasi (Tanah/Kendaraan/Rumah/dll, tidak ada di
+// mapping) tidak terpengaruh sama sekali oleh fallback ini.
+if(buku==null&&ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]&&a.nilai>0)buku=a.nilai;
 return{a,buku};
 }).filter(x=>x.buku!=null&&x.buku>0);
 let migrated=0;
