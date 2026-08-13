@@ -1245,6 +1245,15 @@ if(typeof renderDebtList==='function')renderDebtList();
 // berdekatan -- diverifikasi sesi-12 lewat diff eksplisit sesi-9 vs sesi-10b
 // (lihat PATCH-NOTES.md sesi-12), bukan re-derivasi logic baru.
 if(typeof TitipanReconcile!=='undefined')TitipanReconcile.warnIfNotOk('Aset.saveOwners');
+// FIX (audit "3 titik Simpan Porsi tidak me-refresh widget Dana Titipan"):
+// porsi titipan pada aset ini ikut membentuk usedTotal/available yang
+// ditampilkan kartu "Dana Kelolaan" & tab "Dana Titipan" (DanaTitipanPortfolioPresenter),
+// tapi jalur ini belum pernah memanggil render-nya -- beda dari cascade lain
+// (tx-list-cashflow.js baris ~235, dana-titipan-portfolio-render.js) yang sudah
+// konsisten pakai pola render()+renderInto('danaTitipanTabList') ini. 0 logic baru,
+// cuma menyamakan pola sync yang sudah baku di modul lain.
+if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
+if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
 toast('✅ Porsi kepemilikan tersimpan');
 },
 // resetOwners() -- SESI 392d: buang perubahan draft yang belum disimpan, muat ulang

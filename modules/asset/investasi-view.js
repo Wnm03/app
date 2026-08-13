@@ -517,6 +517,14 @@ const InvestmentUI = {
     // berhasil -- non-blocking (lihat komentar warnIfNotOk() di titipan-reconcile.js),
     // TIDAK pernah menahan/menolak simpan yang di atas sudah selesai.
     if (typeof TitipanReconcile !== 'undefined') TitipanReconcile.warnIfNotOk('InvestmentUI.saveOwners');
+    // FIX (audit "3 titik Simpan Porsi tidak me-refresh widget Dana Titipan"):
+    // sama alasan Aset.saveOwners() (aset.js) — porsi titipan holding investasi
+    // ini ikut membentuk usedTotal/available di kartu "Dana Kelolaan" & tab
+    // "Dana Titipan" (DanaTitipanPortfolioPresenter), tapi jalur ini belum pernah
+    // memanggilnya. 0 logic baru, cuma menyamakan pola render()+renderInto()
+    // yang sudah baku di modul lain (tx-list-cashflow.js, dana-titipan-portfolio-render.js).
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     toast('✅ Porsi kepemilikan tersimpan');
   },
 
