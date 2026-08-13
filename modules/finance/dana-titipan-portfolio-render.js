@@ -1,20 +1,17 @@
-// dana-titipan-portfolio-render.js — PECAHAN KETIGA dari
-// `dana-titipan-portfolio-presenter.js` (SESI R5, lihat catatan split
-// lengkap di header `dana-titipan-aggregation-api.js`). Berisi render/UI:
-// `DanaTitipanPortfolioPresenter` (kartu dashboard read-only),
-// `DanaTitipanCommitmentUI` (modal "💰 Pokok Dana Titipan", Sesi 485d +
-// 522), `DanaTitipanReturnUI` (modal "↩️ Catat Pengembalian", Sesi 486).
+// dana-titipan-portfolio-render.js — Dana Titipan: render/UI
+// (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`,
+// `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi
+// dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi C/S597).
 //
-// WAJIB dimuat SETELAH `dana-titipan-aggregation-api.js` DAN
-// `dana-titipan-commitment-return-api.js` — semua panggilan ke API di
-// file ini memakai referensi global penuh (`DanaTitipanPortfolioAPI.
-// build()`/`.saveCommitment()`/`.recordReturn()`/dst, BUKAN `this.`),
-// jadi 0 perubahan diperlukan di file ini akibat split API jadi 2 file
-// — persis sama seperti caller-nya sebelum split (file lama juga sudah
-// memanggil `DanaTitipanPortfolioAPI.xxx` secara fully-qualified, bukan
-// `this.xxx`, karena Presenter/UI selalu objek terpisah dari API sejak
-// awal). 0 rumus/markup diubah — badan tiap fungsi di bawah disalin APA
-// ADANYA dari file lama.
+// SESI R5 — REALISASI (sesi ini). PECAHAN KETIGA dari
+// `dana-titipan-portfolio-presenter.js` (versi produksi s597) — lihat
+// header `dana-titipan-aggregation-api.js` utk latar belakang split
+// lengkap. WAJIB dimuat SETELAH `dana-titipan-aggregation-api.js` DAN
+// `dana-titipan-commitment-return-api.js` di `scripts/build.js` — semua
+// panggilan API di sini sudah fully-qualified `DanaTitipanPortfolioAPI.
+// xxx()`, bukan `this.xxx()`, jadi 0 perubahan diperlukan akibat split.
+// 0 rumus/logic diubah dari versi produksi s597, cuma dipindah apa
+// adanya.
 //
 // DanaTitipanPortfolioPresenter — UI read-only di area Dana Kelolaan yang
 // SUDAH ADA (kartu #danaKelolaanLapCard, tab Laporan Keuangan), container
@@ -26,7 +23,6 @@
 // `renderTitipanDetail()`). TIDAK mengubah modal "Atur Porsi Kepemilikan"
 // (`investasi-view.js`) sama sekali.
 const DanaTitipanPortfolioPresenter = {
-
 
   _money(n) {
     return (typeof fmtFull === 'function') ? fmtFull(n) : ((typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0)));
@@ -78,6 +74,14 @@ const DanaTitipanPortfolioPresenter = {
   // (filter-laporan.js, Sesi A — sumber owners SUDAH anti-basi, prioritas
   // Investment.getOwners() kalau linked) + MultiOwnerEngine.splitByPorsi()
   // -- 0 rumus baru ditulis di sini.
+  //
+  // SESI s597 (audit s595/s596, AUDIT-DANA-TITIPAN-MAJORIS-PORSI-SYNC.md):
+  // fungsi ini SEBELUMNYA ditulis ke `dana-titipan-portfolio-render.js`
+  // (file orphan, tidak pernah dibundle scripts/build.js) — TIDAK PERNAH
+  // sampai ke user meski tes aslinya hijau (menguji file yang salah).
+  // Diporting APA ADANYA ke sini (file produksi satu-satunya) — 0
+  // rumus/logic diubah dari versi orphan, murni pindah lokasi + wiring
+  // markup di renderInto() di bawah.
   //
   // Untuk tiap holding owner ini (o.holdings[], baik domain Aset MAUPUN
   // Investasi yang tertaut balik ke sebuah Aset ber-accountId): resolve
@@ -213,28 +217,46 @@ const DanaTitipanPortfolioPresenter = {
   // `o.holdings` (urutan SUDAH terjaga dari build(), sort by
   // allocatedPrincipal desc — TIDAK diubah di sini) jadi urutan node
   // campuran: baris flat (0 custodian) apa adanya di posisi asalnya, DAN
-  // grup per `custodianId` (SATU grup per kustodian, dibuka pertama kali
-  // kustodian itu muncul, baris berikutnya dgn custodianId sama masuk ke
-  // grup yang SAMA walau tidak berurutan di array asal). Keputusan Design
-  // Lock: holding tanpa custodianId (null/undefined) TETAP FLAT di luar
-  // grup — BUKAN dikumpulkan ke grup "Lainnya" (data lama tidak boleh
-  // tersembunyi di balik grup baru). Murni reshaping array utk render,
-  // 0 agregasi angka baru (pokok/nilai/gain per grup TIDAK dijumlahkan
-  // sesi ini — non-goal, header grup hanya nama + jumlah instrumen).
+  // grup per kustodian (SATU grup per kustodian, dibuka pertama kali
+  // kustodian itu muncul, baris berikutnya dgn kustodian yang SAMA masuk
+  // ke grup yang SAMA walau tidak berurutan di array asal). Keputusan
+  // Design Lock: holding tanpa custodianId (null/undefined) TETAP FLAT
+  // di luar grup — BUKAN dikumpulkan ke grup "Lainnya" (data lama tidak
+  // boleh tersembunyi di balik grup baru). Murni reshaping array utk
+  // render, 0 agregasi angka baru (pokok/nilai/gain per grup TIDAK
+  // dijumlahkan sesi ini — non-goal, header grup hanya nama + jumlah
+  // instrumen).
+  //
+  // FIX s593 (laporan user: "🏦 Majoris" tampil 2x sbg 2 grup terpisah
+  // yang isinya kepisah). ROOT CAUSE: grouping dikunci by `custodianId`
+  // MENTAH-MENTAH, sedangkan `CustodianRegistry.findOrCreate()`/
+  // `rename()` (custodian-registry.js) SENGAJA TIDAK collapse entri
+  // yang kebetulan namanya jadi sama (dedup registry itu sendiri by
+  // `id`, bukan by nama — lihat catatan di file itu). Kalau 2 entri
+  // `D.investmentCustodians` beda `id` tapi sama-sama bernama "Majoris",
+  // sebelumnya kode ini bikin 2 node grup terpisah krn `groupIndexById`
+  // dikunci by `custodianId`. FIX: kunci grouping by NAMA kustodian yang
+  // sudah dinormalisasi (trim + lowercase, pola sama persis dedup-by-
+  // nama `CustodianRegistry.findOrCreate()`) — bukan ganti dedup
+  // registry (itu tetap by-id, TIDAK disentuh), murni di layer render
+  // ini supaya kustodian dgn nama yang sama SELALU digabung jadi 1 grup
+  // visual, apa pun `id` aslinya.
   _groupHoldingsByCustodian(holdings) {
     const nodes = [];
-    const groupIndexById = new Map();
+    const groupIndexByName = new Map();
     (holdings || []).forEach((hh) => {
       const custodianId = this._holdingCustodianId(hh);
       if (!custodianId) {
         nodes.push({ kind: 'flat', holding: hh });
         return;
       }
-      if (!groupIndexById.has(custodianId)) {
-        groupIndexById.set(custodianId, nodes.length);
-        nodes.push({ kind: 'group', custodianId, custodianName: this._custodianName(custodianId), items: [] });
+      const custodianName = this._custodianName(custodianId);
+      const nameKey = String(custodianName).trim().toLowerCase();
+      if (!groupIndexByName.has(nameKey)) {
+        groupIndexByName.set(nameKey, nodes.length);
+        nodes.push({ kind: 'group', custodianId, custodianName, items: [] });
       }
-      nodes[groupIndexById.get(custodianId)].items.push(hh);
+      nodes[groupIndexByName.get(nameKey)].items.push(hh);
     });
     return nodes;
   },
@@ -244,13 +266,23 @@ const DanaTitipanPortfolioPresenter = {
   // baris flat — dipakai ulang persis sama baik di luar maupun di dalam
   // grup kustodian, supaya baris di dalam grup tampil identik dgn baris
   // flat, cuma beda posisi/indentasi lewat markup pembungkus grup).
+  // SESI s591: tombol "⚖️ Atur Porsi" PER-BARIS holding (dulu ada di
+  // sini, khusus baris `hasGainTracking:false`/Aset) DIHAPUS — redundan
+  // dgn dropdown "Pilih Aset" + tombol "⚖️ Atur Porsi Aset" yang SUDAH
+  // ada per kartu owner (lihat `_ownerCardHtml()`/markup sekitar
+  // `titipanAssetPick_${oi}`). 2 kontrol terpisah utk 1 tindakan yang
+  // sama bikin bingung (user report: "kok ada 2 opsi atur porsi").
+  // Sekarang HANYA 1 jalur: pilih aset di dropdown, lalu tap "⚖️ Atur
+  // Porsi Aset" — konsisten dipakai baik utk baris Aset satu maupun
+  // banyak. `hh.linkedAssetId` tetap dipertahankan di `data-linked-
+  // asset-id` (dipakai `onAssetPickChange()` utk highlight baris yang
+  // cocok dgn pilihan dropdown), murni bukan trigger aksi lagi di sini.
   _holdingRowHtml(hh) {
     return `
             <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(hh.linkedAssetId || '')}">
               <span>${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)} <span class="u-t2">(${hh.ownerPct}%)</span></span>
               <span>${hh.hasGainTracking === false ? `
                 <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
-                ${hh.linkedAssetId ? `<button type="button" class="btn btn-ghost btn-sm" data-action="Aset.openOwnersModalById" data-args="${escapeHtml(JSON.stringify([hh.linkedAssetId]))}">⚖️ Atur Porsi</button>` : ''}
               ` : `
                 <span class="u-t2">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
                 &nbsp;<span class="${this._gainCls(hh.gain)}">${hh.gain >= 0 ? '+' : ''}${this._money(hh.gain)}</span>
@@ -526,7 +558,7 @@ const DanaTitipanPortfolioPresenter = {
             <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.removeOwnerLinkage" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">🔓 Lepas Keterikatan Dana Titipan</button>
           </div>
           <div class="u-flex u-gap4 u-mb6 u-ml10 u-fs11">
-            <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset untuk Atur Porsi" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
+            <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
             <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
           </div>
           ${this._returnsHistoryHtml(o.ownerId)}

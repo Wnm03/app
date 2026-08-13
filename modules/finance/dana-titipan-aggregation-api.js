@@ -1,12 +1,16 @@
 // dana-titipan-aggregation-api.js — Dana Titipan dalam Investasi:
 // Portfolio Allocation Projection (Sesi 484 + Sesi 485a-e + Sesi 486 +
-// Sesi 499/B1 + Sesi B2 + Sesi E).
+// Sesi 499/B1 + Sesi B2 + Sesi E + Sesi 554 + Sesi 594).
 //
-// SESI R5 (AUDIT-DANA-TITIPAN-OWNERSHIP-SIMPLIFIKASI.md, Rekomendasi R5):
-// file ini adalah PECAHAN PERTAMA dari
-// `dana-titipan-portfolio-presenter.js` (dulu 1640 baris, 1 file berisi 3
-// concern sekaligus). Split MURNI structural — 0 rumus/logic diubah, 0
-// baris fungsi ditulis ulang, cuma dipindah apa adanya:
+// SESI R5 — REALISASI (sesi ini, menggantikan percobaan split S562-S563
+// yang sempat DIVERGEN dari produksi): file ini adalah PECAHAN PERTAMA
+// dari `dana-titipan-portfolio-presenter.js` (monolit produksi, 1789
+// baris, isi 3 concern sekaligus). Sumber split kali ini adalah versi
+// PRODUKSI TERKINI (s597, sudah termasuk fix S554/S594 doublecount aset
+// bermigrasi + fitur "Estimasi dari Transaksi <Akun>" S597) — BUKAN versi
+// lama S563 yang jadi orphan (ketinggalan fix-fix itu). Split MURNI
+// structural — 0 rumus/logic diubah dari versi produksi s597, cuma
+// dipindah apa adanya:
 //   1. `dana-titipan-aggregation-api.js` (file ini) — bagian `build()`/
 //      helper agregasi (murni hitung, read-only, TIDAK PERNAH menulis ke
 //      `D`). Mendefinisikan `const DanaTitipanPortfolioAPI = {...}`.
@@ -17,15 +21,18 @@
 //      redeclare `const` baru) — jadi WAJIB dimuat SETELAH file ini.
 //   3. `dana-titipan-portfolio-render.js` — render/UI
 //      (`DanaTitipanPortfolioPresenter`/`DanaTitipanCommitmentUI`/
-//      `DanaTitipanReturnUI`). WAJIB dimuat SETELAH file 1 & 2 (dia
-//      panggil `DanaTitipanPortfolioAPI.build()`/`.saveCommitment()`/dst
-//      lewat referensi global, sama seperti sebelum split).
-// Nama file lama (`dana-titipan-portfolio-presenter.js`) SUDAH TIDAK ADA
-// — semua tempat yang dulu memuat 1 file itu (index.html/
-// app_production.html, scripts/build.js, tests/*) diupdate sesi ini utk
-// memuat KETIGA file di atas, urutan tetap (1 lalu 2 lalu 3). Behavior
-// runtime 100% identik (nama global/kontrak fungsi 0 berubah) — ini
-// PURE refactor lokasi kode, bukan perubahan fitur.
+//      `DanaTitipanReturnUI`, termasuk `_expenseComparisonForOwner()`
+//      Sesi C/S597). WAJIB dimuat SETELAH file 1 & 2 (semua panggilan
+//      API di sana sudah fully-qualified `DanaTitipanPortfolioAPI.xxx()`,
+//      0 perubahan diperlukan akibat split).
+//
+// `scripts/build.js` memuat KETIGA file ini berurutan (ganti 1 entry
+// lama `dana-titipan-portfolio-presenter.js`, file itu DIHAPUS sesi ini
+// — lihat FIX-s598-r5-presenter-split-realized.md).
+//
+// dana-titipan-portfolio-presenter.js — Dana Titipan dalam Investasi:
+// Portfolio Allocation Projection (Sesi 484 + Sesi 485a-e + Sesi 486 +
+// Sesi 499/B1 + Sesi B2 + Sesi E).
 //
 // SESI E (PROMPT-SESI-E-ALLOCATEDEXCLUDING-LINTAS-DOMAIN.md — fondasi
 // utk fitur Kuota Dana Titipan di `assetOwnersModal`, sesi UI-nya
@@ -59,13 +66,18 @@
 // RENCANA-SESI-GAP3-TITIPAN-COMMITMENT.md § "Ringkasan Akhir"): tambah
 // `D.titipanReturns[]` — LOG/riwayat pengembalian (BUKAN upsert seperti
 // `titipanCommitments`), lewat `recordReturn()`/`getReturns()`/
-// `deleteReturn()` baru di `DanaTitipanPortfolioAPI` (sekarang di
-// `dana-titipan-commitment-return-api.js`, lihat catatan split di atas).
-// `build()` extend 2 field derived baru per owner: `returnedTotal`
-// (selalu angka, default 0) & `outstandingPrincipal` (null kalau
-// `principalAmount` null, kalau tidak `max(0,
-// principalAmount-returnedTotal)`, tidak pernah negatif) — TIDAK
-// disimpan ke `D` sama sekali.
+// `deleteReturn()` baru di `DanaTitipanPortfolioAPI`. `build()` extend 2
+// field derived baru per owner: `returnedTotal` (selalu angka, default
+// 0) & `outstandingPrincipal` (null kalau `principalAmount` null,
+// kalau tidak `max(0, principalAmount-returnedTotal)`, tidak pernah
+// negatif) — TIDAK disimpan ke `D` sama sekali. UI baru
+// `DanaTitipanReturnUI` (modal `titipanReturnModal`, owner READONLY —
+// beda dari `titipanCommitmentModal` yang dropdown, karena return
+// selalu terikat ke owner kartu yang sedang dibuka) + extend
+// `render()` (baris "Sudah Dikembalikan"/"Pokok Belum Dikembalikan" +
+// riwayat + tombol "↩️ Catat Pengembalian"). 0 sentuhan
+// OwnershipEngine/MultiOwnerEngine/investasi.js/akun.js (HARD RULE sama
+// seperti seluruh Gap #3).
 //
 // SESI 485c (Gap #3 audit, langkah 3/5 dari rencana multi-sesi — lihat
 // RENCANA-SESI-GAP3-TITIPAN-COMMITMENT.md): extend `build()` —
@@ -92,9 +104,7 @@
 // `listExistingOwners()`, TIDAK PERNAH generate identity baru) +
 // `getCommitments()` (getter read-only). Isolasi total dari
 // `D.accounts`/`D.transactions`/`D.investmentTx`/`D.investments`/
-// `D.debts` (lihat test regresi §"tidak mengubah data lain"). (Sekarang
-// ada di `dana-titipan-commitment-return-api.js`, lihat catatan split
-// di atas.)
+// `D.debts` (lihat test regresi §"tidak mengubah data lain").
 //
 // SESI 485a (langkah 1/5): fondasi data model `D.titipanCommitments[]`
 // (init lazy, TIDAK ditulis file ini sesi itu) + `listExistingOwners()`
@@ -136,7 +146,6 @@
 // utk field yang hilang (`h.unit||0` dst), jadi tidak perlu guard
 // tambahan di sini utk itu.
 const DanaTitipanPortfolioAPI = {
-
 
 // _holdingSplits(h) — helper internal: pecah cost/value/gain SATU holding
 // per baris owner (urutan owners[] SAMA PERSIS urutan splitByPorsi() utk
@@ -213,9 +222,30 @@ _asetOwnersForTitipan(a) {
 // Investasi yang sudah dihapus"). Fix ini di `_assetSplits()` (bukan
 // duplikasi di `build()`/`allocatedExcluding()` masing-masing) supaya KEDUA
 // caller otomatis ikut benar, 0 logic ganda.
+// FIX s594 (laporan user: "🏦 Majoris" masih tampil di Dana Titipan
+// walau sudah tidak ada di Buku Aset). ROOT CAUSE: aset yang sudah
+// dipindah OTOMATIS ke Holding Investasi lewat
+// `migrateAssetInvestmentsToHoldings()` (aset-misc.js, s476a) DITANDAI
+// `a._migratedToInvestmentId = holding.id` — flag ADITIF, aset asal
+// TETAP ADA di `D.assets` (bukan dihapus, biar reversible), cuma
+// DISEMBUNYIKAN dari daftar Buku Aset (`Aset.renderList()` filter
+// `!a._migratedToInvestmentId`). `Aset.totalValue()` SUDAH benar
+// exclude aset ber-`_migratedToInvestmentId` (DAN `investmentId`,
+// dua mekanisme tautan berbeda — lihat komentar di atas fungsi ini
+// utk `investmentId`/tautan manual B1). `_assetSplits()` di sini
+// SEBELUMNYA cuma cek `a.investmentId` (tautan manual), TIDAK cek
+// `_migratedToInvestmentId` (tautan migrasi otomatis) — jadi aset
+// yang sudah "pindah" ke Investasi tetap ikut dihitung DUA KALI di
+// Dana Titipan: 1x dari Holding barunya (Investment domain, 📈),
+// 1x LAGI dari aset asal yang sudah non-aktif (Aset domain, 🏦).
+// FIX: tambah guard `_migratedToInvestmentId`, pola SAMA PERSIS
+// `Aset.totalValue()` — 0 rumus baru, murni menyamakan definisi
+// "aset ini masih dihitung di mana" persis seperti guard
+// `investmentId` yang sudah ada.
 _assetSplits(a) {
   if (!a || typeof MultiOwnerEngine === 'undefined') return null;
   if (a.investmentId) return null;
+  if (a._migratedToInvestmentId) return null;
   const owners = this._asetOwnersForTitipan(a);
   if (!Array.isArray(owners) || !owners.length) return null;
   const nilai = (typeof a.nilai === 'number' && isFinite(a.nilai)) ? a.nilai : 0;
@@ -383,6 +413,23 @@ build() {
       const splits = this._assetSplits(a);
       if (!splits) return;
       const { owners, costSplit, valueSplit, gainSplit } = splits;
+      // SESI s591 (fix laporan user: 1 aset — mis. "Majoris" — muncul
+      // 2x/lebih di daftar holding owner yang SAMA, masing2 dgn tombol
+      // "⚖️ Atur Porsi" sendiri). ROOT CAUSE: `owners[]` hasil
+      // `_assetSplits(a)` bisa punya lebih dari 1 baris dgn `ownerId`
+      // YANG SAMA (mis. user tanpa sadar menambah 2 baris pemilik utk
+      // orang yang sama lewat "Atur Porsi Kepemilikan") — sebelum fix
+      // ini, tiap baris `owners[]` langsung push 1 holding TERPISAH,
+      // jadi 1 aset fisik tampil sbg berapa pun baris di UI. FIX:
+      // agregasi dulu per `ownerId` DALAM 1 aset (jumlah porsi/
+      // allocatedPrincipal/currentValue/gain), baru push SATU entry
+      // holding per (aset, ownerId) — total per-owner (`bucket.*`)
+      // TIDAK berubah nilainya (tetap jumlah semua baris asal, cuma
+      // sekarang direpresentasikan 1 baris), murni konsolidasi tampilan.
+      // Tombol "Atur Porsi" per-baris holding sendiri sudah dihapus di
+      // `_holdingRowHtml()` (redundant dgn dropdown "Pilih Aset" + tombol
+      // "⚖️ Atur Porsi Aset" yang sudah ada per kartu owner).
+      const perOwnerAgg = new Map();
       owners.forEach((o, idx) => {
         if (!o || o.isSelf) return;
         if (!(o.porsi > 0)) return;
@@ -391,6 +438,17 @@ build() {
         const allocatedPrincipal = (costSplit[idx] && costSplit[idx].bagian) || 0;
         const currentValue = (valueSplit[idx] && valueSplit[idx].bagian) || 0;
         const gain = (gainSplit[idx] && gainSplit[idx].bagian) || 0;
+        if (!perOwnerAgg.has(ownerId)) {
+          perOwnerAgg.set(ownerId, { ownerId, ownerName, porsi: 0, allocatedPrincipal: 0, currentValue: 0, gain: 0 });
+        }
+        const agg = perOwnerAgg.get(ownerId);
+        agg.porsi += o.porsi;
+        agg.allocatedPrincipal += allocatedPrincipal;
+        agg.currentValue += currentValue;
+        agg.gain += gain;
+      });
+      perOwnerAgg.forEach((agg) => {
+        const { ownerId, ownerName, porsi, allocatedPrincipal, currentValue, gain } = agg;
         if (!ownersMap.has(ownerId)) {
           ownersMap.set(ownerId, { ownerId, ownerName, allocatedPrincipal: 0, currentValue: 0, gain: 0, holdings: [] });
         }
@@ -402,7 +460,7 @@ build() {
           holdingId: a.id,
           name: a.name || 'Aset',
           type: 'aset',
-          ownerPct: o.porsi,
+          ownerPct: porsi,
           allocatedPrincipal,
           currentValue,
           gain,

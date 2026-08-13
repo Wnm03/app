@@ -1,28 +1,15 @@
-// dana-titipan-commitment-return-api.js — PECAHAN KEDUA dari
-// `dana-titipan-portfolio-presenter.js` (SESI R5, lihat catatan split
-// lengkap di header `dana-titipan-aggregation-api.js`). Berisi CRUD
-// `D.titipanCommitments[]`/`D.titipanReturns[]` (Sesi 485b + Sesi 486 +
-// Sesi 522/523-C) yang tadinya jadi bagian objek `DanaTitipanPortfolioAPI`
-// yang SAMA di file lama.
+// dana-titipan-commitment-return-api.js — Dana Titipan: CRUD Commitment
+// (pokok dikomit manual per owner, Sesi 485b/523) + CRUD Return (Sesi 486).
 //
-// PENTING — kontrak split ini (WAJIB dimuat SETELAH
-// `dana-titipan-aggregation-api.js`): file ini TIDAK mendeklarasikan
-// `const DanaTitipanPortfolioAPI` baru (itu akan jadi redeclare — error
-// di browser/vm kalau `dana-titipan-aggregation-api.js` sudah lebih dulu
-// `const`-kan nama yang sama di scope global yang sama). File ini
-// menambah method2 di bawah ke OBJEK `DanaTitipanPortfolioAPI` yang SUDAH
-// ADA lewat `Object.assign()` — hasil akhirnya (dari sudut pandang
-// caller manapun: render/UI, test, modul lain) 100% SAMA seperti waktu
-// semua method ini masih jadi 1 objek literal di file lama; cuma lokasi
-// definisinya yang dipecah jadi 2 file. 0 rumus/validasi diubah — badan
-// tiap fungsi di bawah disalin APA ADANYA dari file lama.
+// SESI R5 — REALISASI (sesi ini). PECAHAN KEDUA dari
+// `dana-titipan-portfolio-presenter.js` (versi produksi s597) — lihat
+// header `dana-titipan-aggregation-api.js` utk latar belakang split
+// lengkap. File ini MENAMBAH method ke object `DanaTitipanPortfolioAPI`
+// yang SUDAH dideklarasikan `dana-titipan-aggregation-api.js` (lewat
+// `Object.assign`, BUKAN redeclare `const` baru) — WAJIB dimuat SETELAH
+// file itu di `scripts/build.js`. 0 rumus/logic diubah dari versi
+// produksi s597, cuma dipindah apa adanya.
 //
-// getCommitments/saveCommitment/deleteCommitment/removeOwnerLinkage
-// (Sesi 485b, 522, 523-C) + getReturns/recordReturn/deleteReturn
-// (Sesi 486) semua HANYA menyentuh `D.titipanCommitments`/
-// `D.titipanReturns` masing2 (+ `save()`) — isolasi total dari
-// `D.accounts`/`D.transactions`/`D.investmentTx`/`D.investments`/
-// `D.debts`, sama seperti didokumentasikan per-fungsi di bawah.
 Object.assign(DanaTitipanPortfolioAPI, {
 
 // getCommitments() — Sesi 485b, getter read-only. Init lazy (pola sama
