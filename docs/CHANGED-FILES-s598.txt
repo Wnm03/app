@@ -1,0 +1,37 @@
+Sesi s598 — Realisasi R5: pecah dana-titipan-portfolio-presenter.js jadi
+3 modul (menggantikan percobaan S562-S563 yang divergen dari produksi).
+
+CATATAN: patch ini dibuat sebagai lanjutan langsung dari 3 patch
+sebelumnya yang harus SUDAH diterapkan lebih dulu ke repo Anda:
+  1. patch-s594-migrated-asset-doublecount.zip
+  2. patch-s596-migrate-titipan-tests-to-production-file.zip
+  3. patch-s597-port-sesi-c-expense-comparison.zip
+(Isi ketiganya SUDAH termasuk/dipakai sebagai dasar split di patch ini —
+lihat FIX-s598-r5-presenter-split-realized.md §"Perubahan" poin 1.)
+
+FILE BARU:
+1. modules/finance/dana-titipan-aggregation-api.js
+2. modules/finance/dana-titipan-commitment-return-api.js
+3. modules/finance/dana-titipan-portfolio-render.js
+
+FILE DIHAPUS (lakukan manual di repo Anda):
+- modules/finance/dana-titipan-portfolio-presenter.js
+
+FILE DIUBAH:
+4. scripts/build.js — entry bundle dana-titipan diganti 1 -> 3 file
+5. modules/shared/modules-render.js — sync MODULE_RENDER_VERSION (fix
+   blocking tak terkait, lihat §5 fix doc)
+6-41. 36 file tests/*.test.js — array `files` dikembalikan ke pola
+   3-file split (4 di antaranya juga fix path readFileSync ke
+   dana-titipan-portfolio-render.js)
+
+FILE DOKUMENTASI:
+- FIX-s598-r5-presenter-split-realized.md (baru)
+
+LANGKAH SETELAH TIMPA FILE:
+1. Hapus modules/finance/dana-titipan-portfolio-presenter.js dari repo
+   Anda (file ini SENGAJA tidak ada di dalam zip patch — penghapusan
+   file tidak bisa dikirim lewat patch tambah/timpa).
+2. node --test tests/*.test.js -> harus 4055 pass (91 fail pre-existing,
+   sama seperti sebelum patch ini, 0 terkait Dana Titipan).
+3. node scripts/build.js -> regenerasi bundle & versi otomatis.

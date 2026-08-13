@@ -1,0 +1,70 @@
+Sesi s597 — Port fitur Sesi C ("Estimasi dari Transaksi <Akun>") dari
+file orphan ke file produksi.
+
+LATAR BELAKANG: sesi s595/s596 menemukan `_expenseComparisonForOwner`
+(fitur "Sesi C", baris pembanding otomatis di kartu owner Dana Titipan
+— "Estimasi dari Transaksi <Akun>" di sebelah "Pokok Dikomit" manual)
+ADA di `dana-titipan-portfolio-render.js` (ORPHAN, tidak terdaftar
+scripts/build.js) tapi TIDAK PERNAH ada di
+`dana-titipan-portfolio-presenter.js` (file produksi satu-satunya).
+Fitur ini tidak pernah sampai ke user meski sesi aslinya kemungkinan
+tercatat selesai (test lama hijau karena menguji file yang salah).
+
+FIX: `_expenseComparisonForOwner(o)` diporting APA ADANYA (0 rumus/
+logic diubah dari versi orphan) ke `DanaTitipanPortfolioPresenter` di
+`dana-titipan-portfolio-presenter.js`, ditaruh setelah `_outstandingCell()`
+(pola SAMA lokasi di file orphan). Markup baris "Estimasi dari
+Transaksi <Akun>" di-wiring ke `renderInto()`, ditaruh PERSIS setelah
+baris "Pokok Dikomit" (SAMA URUTAN dgn file orphan) — 1 baris tambahan
+di grid detail kartu owner. `test.todo()` yang dipasang sesi s596 di
+`tests/sC-titipan-majoris-expense-comparison.test.js` dikembalikan ke
+`test()` biasa.
+
+DEPENDENCY (0 perubahan diperlukan, sudah terpenuhi urutan build.js):
+- `resolveTxOwnerSplitForAccount()` — `modules/finance/filter-laporan.js`,
+  terdaftar build.js baris 236, JAUH sebelum
+  `dana-titipan-portfolio-presenter.js` (baris 1056).
+- `sameId()` — `modules/shared/features-helpers-global-security.js`,
+  fungsi global, sudah dimuat lebih dulu.
+
+VERIFIKASI:
+- `node --check`: lolos.
+- `tests/sC-titipan-majoris-expense-comparison.test.js`: 6/6 PASS
+  (sebelumnya 1 pass + 5 todo).
+- Full run `tests/*titipan*` + s484/s492/s493/s540d/s541/vehicle-s508
+  (407 test): 406 pass, 1 fail (`s461-*`, pre-existing, 0 kaitan Dana
+  Titipan — dikonfirmasi ulang, tidak berubah dari sesi s596).
+- Full suite SELURUH `tests/*.test.js` (4146 test) dijalankan 2x untuk
+  A/B compare: versi presenter.js ORIGINAL (sebelum s594) vs versi
+  patch s597 ini. Hasil: 97 fail -> 91 fail (BERKURANG 6: 1 dari fix
+  s594 + 5 dari porting sesi ini), dan `diff` FILE-LIST kegagalan
+  membuktikan 0 kegagalan BARU muncul — seluruh 91 sisa kegagalan
+  IDENTIK antara kedua run (pre-existing, di luar scope, tidak
+  disentuh sesi manapun s594-s597).
+
+RISIKO: rendah — porting 1:1 dari kode yang sudah pernah ditulis &
+diuji (di file orphan), 0 rumus baru, integrasi murni tambahan baris
+baca-saja di markup (tidak mengubah field/kontrak lain).
+
+DI LUAR SCOPE SESI INI (dicatat, belum dikerjakan):
+1. Hapus 3 file orphan `modules/finance/dana-titipan-aggregation-api.js`
+   / `-commitment-return-api.js` / `-portfolio-render.js` dari
+   `modules/finance/` — BELUM aman, karena file INI sendiri
+   (`dana-titipan-portfolio-presenter.js`) bukan hasil re-split; ke-3
+   orphan itu MASIH representasi "hasil split R5" yang divergen dari
+   file produksi monolitik. Keputusan ke depan (sesi terpisah): apakah
+   split R5 mau benar-benar dijalankan (pisah presenter.js jadi 3 file
+   lagi & update build.js), atau orphan-nya dihapus & split dibatalkan.
+2. `s461-cross-source-titipan-total-regression.test.js` yang gagal —
+   pre-existing, tidak berhubungan dengan Dana Titipan, perlu sesi
+   audit terpisah.
+
+FILE BERUBAH:
+1. modules/finance/dana-titipan-portfolio-presenter.js — tambah method
+   `_expenseComparisonForOwner()` + 1 baris wiring markup di
+   renderInto().
+2. tests/sC-titipan-majoris-expense-comparison.test.js —
+   `test.todo()` dikembalikan ke `test()`, komentar header diupdate.
+
+CATATAN: timpa 2 file di atas ke repo Anda yang sudah sinkron ke
+versi live, lalu jalankan `node scripts/build.js` di sana.

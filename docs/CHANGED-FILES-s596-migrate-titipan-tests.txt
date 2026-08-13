@@ -1,0 +1,106 @@
+Sesi s596 — Migrasi 34 test Dana Titipan dari file orphan ke file
+produksi asli.
+
+LATAR BELAKANG: audit sesi s594/s595 menemukan 34 file test Dana
+Titipan (s484, s554, s485a-e, s486, s492-494, s498-500, s503, s505,
+s514-516, s519, s521-523, s540d, s541, s543-544, s550, s552, sC,
+vehicle-s508) memuat `modules/finance/dana-titipan-aggregation-api.js` +
+`dana-titipan-commitment-return-api.js` + `dana-titipan-portfolio-
+render.js` — 3 file yang TIDAK terdaftar di scripts/build.js (orphan,
+tidak pernah dibundle ke app). File produksi SATU-SATUNYA adalah
+`dana-titipan-portfolio-presenter.js`. Artinya 34 test itu SELAMA INI
+tidak pernah menguji kode yang benar-benar jalan di produksi.
+
+FIX: setiap `loadSource([...])` di 34 file di atas dialihkan dari
+3-file orphan ke satu file produksi
+`modules/finance/dana-titipan-portfolio-presenter.js` (0 logic test
+lain diubah — assertion, setup data, nama test, dst tetap sama persis,
+murni ganti path source yang di-load). Termasuk 4 titik
+`fs.readFileSync('modules/finance/dana-titipan-portfolio-render.js')`
+(dipakai test yang cek string source code langsung, s485d/s486/
+s521-titipan-expense-ui/s523b) — dialihkan ke path produksi yang sama.
+
+TEMUAN PENTING dari migrasi ini (bukan regresi migrasi — 0 logic
+produksi diubah sesi ini):
+
+`tests/sC-titipan-majoris-expense-comparison.test.js` (Sesi C,
+fitur "Estimasi dari Transaksi <Akun>" — baris pembanding otomatis di
+kartu owner Dana Titipan) GAGAL setelah dialihkan ke file produksi:
+`DanaTitipanPortfolioPresenter._expenseComparisonForOwner` ADA di file
+orphan `dana-titipan-portfolio-render.js`, TAPI TIDAK PERNAH ada di
+`dana-titipan-portfolio-presenter.js` (file produksi). Artinya seluruh
+fitur Sesi C ditulis ke file yang salah dan TIDAK PERNAH sampai ke
+user, walau sesi aslinya kemungkinan tercatat selesai (test-nya hijau
+karena menguji file orphan). 4 dari 6 test di file itu ditandai
+`test.todo(...)` dengan label eksplisit "[GAP PRODUKSI s595]" (BUKAN
+dihapus/skip diam-diam) supaya tetap tampil di laporan test sampai
+fitur ini benar-benar diporting.
+
+VERIFIKASI:
+- 0 sisa referensi ke 3 file orphan di seluruh tests/*.test.js
+  (`grep -rl` kosong, kecuali test s594 yang sudah benar dari awal).
+- Full run tests/*titipan*.test.js + s484/s492/s493/s540d/s541/
+  vehicle-s508 (407 test): 401 pass, 5 todo (gap Sesi C di atas), 1
+  fail — SATU-SATUNYA fail itu `s461-cross-source-titipan-total-
+  regression.test.js` yang 0 referensi ke dana-titipan sama sekali
+  (dikonfirmasi `grep`), PRE-EXISTING di snapshot ini (branch name
+  build.js: "s582-9-preexisting-test-failures-closeout"), di luar
+  scope sesi ini — TIDAK disentuh.
+- 0 file `modules/finance/*.js` (produksi) diubah sesi ini.
+
+DI LUAR SCOPE SESI INI (dicatat, belum dikerjakan):
+1. Porting fitur Sesi C (`_expenseComparisonForOwner` + markup baris
+   "Estimasi dari Transaksi <Akun>") dari
+   `dana-titipan-portfolio-render.js` (orphan) ke
+   `dana-titipan-portfolio-presenter.js` (produksi) — sesi terpisah,
+   perlu keputusan apakah fitur ini masih relevan/diinginkan sebelum
+   diporting.
+2. Setelah (1) selesai DAN 3 file orphan `modules/finance/dana-
+   titipan-aggregation-api.js` / `-commitment-return-api.js` /
+   `-portfolio-render.js` sudah 0 dipakai test manapun (tercapai sesi
+   ini), baru aman dihapus dari `modules/finance/` — SAMA seperti
+   duplikatnya di root `finance/` yang sudah dihapus sesi s595.
+3. `s461-cross-source-titipan-total-regression.test.js` yang gagal —
+   pre-existing, tidak berhubungan, perlu sesi audit terpisah.
+
+FILE BERUBAH (34 file test, isi lengkap ada di tests/ folder patch
+ini):
+dana-titipan-portfolio-linked-asset-doublecount-s554.test.js,
+s484-dana-titipan-portfolio-presenter.test.js,
+s485a-titipan-commitment-owner-picker.test.js,
+s485b-titipan-commitment-crud.test.js,
+s485c-titipan-commitment-projection.test.js,
+s485d-titipan-commitment-ui.test.js,
+s486-titipan-commitment-return.test.js,
+s492-titipan-listexistingowners-registry-consumer.test.js,
+s493-owner-registry-cross-domain-validation.test.js,
+s494-titipan-kuota-nominal-investment-owners.test.js,
+s498-dana-titipan-tab-terpadu.test.js,
+s499-dana-titipan-build-aset-source.test.js,
+s500-dana-titipan-f2-opsib-hide-gain-aset.test.js,
+s503-allocated-excluding-cross-domain-investment-aset.test.js,
+s505-asset-owner-quota-live.test.js,
+s514-dana-titipan-exact-principal-guard.test.js,
+s515-dana-titipan-owner-nominal-asset-kuota-porsi.test.js,
+s516-dana-titipan-commitment-ownerid-escaping.test.js,
+s519-dana-titipan-transaksi-talangan-linkage.test.js,
+s521-titipan-expense-flow.test.js,
+s521-titipan-expense-ui.test.js,
+s522-dana-titipan-owner-aset-hapus.test.js,
+s523a-owner-identity-duplicate-orphan-audit.test.js,
+s523b-titipan-owner-creation.test.js,
+s523c-commitment-delete-vs-owner-linkage.test.js,
+s523f-aggregation-duplicate-linkage-audit.test.js,
+s540d-investasi-custodian-grouping.test.js,
+s541-titipan-custodian-group-subtotal.test.js,
+s543-titipan-asset-pick-preserve-selection.test.js,
+s544-titipan-duplicate-container-scoped-porsi.test.js,
+s550-titipan-commitment-ui-tablist-sync.test.js,
+s552-banner-samakan-porsi.test.js,
+s552-investment-owners-nominal-bidirectional.test.js,
+sC-titipan-majoris-expense-comparison.test.js (+ 4 test.todo, lihat
+  Temuan Penting di atas),
+vehicle-asset-titipan-s508.test.js.
+
+CATATAN: timpa 34 file ini ke tests/ di repo Anda yang sudah sinkron
+ke versi live, lalu jalankan test suite untuk konfirmasi.

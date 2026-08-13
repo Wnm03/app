@@ -1,0 +1,74 @@
+Sesi s594 — Fix: "🏦 Majoris" masih tampil di Dana Titipan walau sudah
+tidak ada di Buku Aset
+
+LAPORAN USER:
+"di buku aset sudah tidak ada majoris lalu di mana majoris yg tersisa"
+(setelah menghapus SEMUA entri Majoris di Buku Aset — 0 tersisa —
+Dana Titipan masih menampilkan 1 baris "🏦 Majoris").
+
+AUDIT (dibuktikan lewat kode + diagnostik console user, bukan tebakan):
+Diagnostik console user (`D.assets.filter(...)`) menunjukkan record
+"Majoris" MASIH ADA di `D.assets` (id 1786532977149, owners renov
+84.8781% + mas sihab 15.1219%) meski TIDAK tampil di Buku Aset.
+
+ROOT CAUSE: `Aset.renderList()` (aset.js) menyembunyikan aset yang
+sudah ditandai `a._migratedToInvestmentId` — flag ADITIF yang dipasang
+`migrateAssetInvestmentsToHoldings()` (aset-misc.js, Sesi 476a) saat
+aset otomatis "dipindah" jadi Holding Investasi baru. Aset ASAL TETAP
+ADA di `D.assets` (SENGAJA, bukan dihapus — reversible), cuma
+disembunyikan dari daftar editable Buku Aset (diganti banner "Investasi
+kamu sekarang dikelola di tab Investasi").
+
+`Aset.totalValue()` SUDAH benar mengecualikan aset ber-
+`_migratedToInvestmentId` (DAN `investmentId`, guard beda utk tautan
+manual B1 — Sesi 554). TAPI `_assetSplits()` di
+`dana-titipan-portfolio-presenter.js` (dipakai Dana Titipan) SEBELUM
+fix ini CUMA cek `a.investmentId`, TIDAK cek `_migratedToInvestmentId`
+— jadi aset yang sudah "pindah" ke Investasi tetap dihitung DUA KALI:
+1x dari Holding barunya (Investment domain, ikon 📈), 1x LAGI dari
+aset asal yang sudah non-aktif (Aset domain, ikon 🏦).
+
+FIX:
+`_assetSplits(a)` sekarang JUGA return null kalau
+`a._migratedToInvestmentId` terisi — 1 baris tambahan, pola SAMA
+PERSIS guard `a.investmentId` yang sudah ada, disamakan dgn
+`Aset.totalValue()`. Fix ini otomatis berlaku ke KEDUA caller
+(`build()` dan `allocatedExcluding()`) krn keduanya 100% reuse
+`_assetSplits()` — 0 logic ganda ditulis.
+
+VERIFIKASI:
+- `node --check`: lolos.
+- `node scripts/build.js`: lolos syntax check bundle.
+- Test regresi BARU: tests/dana-titipan-portfolio-migrated-asset-
+  doublecount-s594.test.js (3 skenario: kasus persis laporan user
+  "Majoris" 2-owner, kasus normal 0-regresi, allocatedExcluding()
+  ikut benar) — 3/3 PASS.
+
+TEMUAN SAMPINGAN (DICATAT, TIDAK dikerjakan sesi ini — di luar scope):
+Saat menulis test di atas, ketauan test Dana Titipan LAMA
+(s484/s554/s540d/s541/dst, pola `makeCtx()` yang load
+`dana-titipan-aggregation-api.js` + `dana-titipan-portfolio-render.js`)
+TERNYATA menguji 2 FILE ORPHAN yang TIDAK terdaftar di
+scripts/build.js sama sekali (fork/duplikat lama dari sebelum sesi
+split, masing2 redefine `const DanaTitipanPortfolioAPI`/
+`DanaTitipanPortfolioPresenter` sendiri) — BUKAN
+`dana-titipan-portfolio-presenter.js` yang benar2 dibundle ke app.
+Artinya test lama itu SELAMA INI tidak pernah menguji kode yang
+benar2 jalan di produksi (meski app live tetap benar, krn build.js
+sudah benar dari awal — ini murni gap test, bukan gap produksi).
+Test BARU sesi ini sengaja load `dana-titipan-portfolio-presenter.js`
+langsung supaya benar2 valid. Disarankan sesi terpisah: audit+
+perbaiki SEMUA test Dana Titipan lain ke pola yang sama.
+
+FILE BERUBAH:
+1. modules/finance/dana-titipan-portfolio-presenter.js — fix 1 baris
+   guard `_migratedToInvestmentId` di `_assetSplits()`
+2. tests/dana-titipan-portfolio-migrated-asset-doublecount-s594.test.js
+   — test regresi baru (load file produksi asli, bukan orphan)
+
+CATATAN: app-main.zip yang diaudit adalah snapshot base "s582/s584",
+tertinggal dari bundle live (v1322). Sama seperti patch source-sync
+sebelumnya, saya TIDAK mengirim rebuild bundle dari snapshot ini
+(akan me-regress versi live). Timpa 2 file di atas ke repo Anda
+sendiri (yang sudah sinkron ke v1322+), lalu jalankan
+`node scripts/build.js` di sana.
