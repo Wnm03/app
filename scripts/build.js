@@ -187,6 +187,35 @@ const GROUP_B = [
   // MultiOwnerEngine). TANPA WIRING sesi ini (0 consumer memanggil
   // OwnerRegistry.*), pola sama persis multi-owner-engine.js S390 sendiri.
   'modules/shared/owner-registry.js',
+  // Sesi 564 (R4, AUDIT-DANA-TITIPAN-OWNERSHIP-SIMPLIFIKASI.md, menutup
+  // OWNREG-GATE3-001): 1 layar terpusat Settings -> tab Kepemilikan yang
+  // mewiring OwnerRegistry.rename()/merge() (S561) ke tombol nyata.
+  // Ditaruh TEPAT setelah owner-registry.js (dependency wajib:
+  // OwnerRegistrySettingsUI.render()/renameOwner()/mergeOwner() memanggil
+  // OwnerRegistry.listAll()/rename()/merge() langsung).
+  //
+  // S592 HOUSEKEEPING: baris ini SEBELUMNYA HILANG dari daftar GROUP_B
+  // (gap sejak S564 sendiri) — file .js sumber sudah ada & sudah dites
+  // (tests/s564-owner-registry-settings-ui-r4.test.js) TAPI tidak pernah
+  // ikut ter-bundle lewat build.js; isinya cuma pernah ditempel manual
+  // ke app-bundle-a.min.js hasil build sesi lama tanpa registrasi source
+  // yang benar. Akibatnya `node scripts/build.js` bersih (tanpa ini)
+  // akan diam-diam MENGHAPUS seluruh fitur "Kelola Daftar Pemilik" dari
+  // bundle produksi berikutnya. Ditemukan & ditambal sesi ini (S592)
+  // sebagai bagian dari verifikasi sebelum menambahkan ghost-asset-
+  // cleanup-ui.js di bawah — bukan fitur baru, murni menutup gap
+  // registrasi yang sudah lama ada.
+  'modules/shared/owner-registry-settings-ui.js',
+  // Sesi 592 (lanjutan PATCH-ghost-asset-migrated-investment.md): kartu
+  // "🧹 Bersihkan Aset Ghost (Migrasi)" di Settings -> tab Kepemilikan,
+  // dekat "Kelola Daftar Pemilik" di atas. Ditaruh SETELAH
+  // owner-registry-settings-ui.js (0 dependency KODE ke situ — hanya
+  // berdekatan secara UI/tab yang sama). Dependency KODE sebenarnya:
+  // `Aset.delete()` (modules/asset/aset.js, GROUP_A) — dipanggil lewat
+  // guard typeof, dependency KONSEPTUAL saja krn beda bundle (app-bundle-
+  // a.min.js vs app-bundle-b.min.js), keduanya dimuat sbg <script> global
+  // di index.html jadi late-bound function call ini aman walau beda file.
+  'modules/shared/ghost-asset-cleanup-ui.js',
   // Sesi S540-A (Tahap 1/4, DESIGN-S540-CUSTODIAN-GROUPING.md): Custodian
   // Registry — fondasi `custodianId` untuk instrumen investasi (Dana
   // Titipan holdings), pola identik owner-registry.js di atas (registry
