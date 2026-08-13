@@ -170,13 +170,33 @@ const DanaTitipanPortfolioPresenter = {
   // beda sengaja: 0 filter jenis (dana titipan bisa dialokasikan ke aset
   // jenis apa pun, bukan cuma Kendaraan).
   // Return: string HTML `<option>` (opsi pertama selalu placeholder kosong).
+  //
+  // FIX s599 (laporan user: 2 aset yang sudah "hilang" dari Buku Aset TETAP
+  // muncul di dropdown/picker "Pilih Aset" ini, padahal tidak ada lagi di
+  // Buku Aset maupun di Holding Investasi). ROOT CAUSE: fungsi ini SATU-
+  // SATUNYA titik baca `D.assets` di modul Dana Titipan yang TIDAK menerapkan
+  // guard `_migratedToInvestmentId`/`investmentId` — guard yang sama sudah
+  // dipakai `Aset.renderList()` (aset.js, filter Buku Aset), `Aset.totalValue()`
+  // (aset.js), dan `_assetSplits()` (dana-titipan-aggregation-api.js, fix
+  // s554/s594) untuk definisi "aset ini masih dihitung/tampil di mana" yang
+  // konsisten. Karena luput di sini, aset yang sudah tertaut manual ke
+  // Holding Investasi (`a.investmentId`) ATAU sudah dimigrasi otomatis
+  // (`a._migratedToInvestmentId`, s476a) — keduanya SENGAJA disembunyikan
+  // dari Buku Aset tapi TETAP ADA di `D.assets` agar reversible — tetap
+  // muncul sebagai opsi picker, padahal representasinya yang aktif sudah
+  // pindah ke domain Holding (bukan "dihapus" secara data, tapi dari sudut
+  // pandang user tampak seperti aset hantu/duplikat yang seharusnya sudah
+  // tidak ada). FIX: tambah filter yang SAMA PERSIS dengan
+  // `Aset.totalValue()` — 0 rumus baru, murni menyamakan definisi.
   _assetOptionsHtml() {
     const opts = ['<option value="">— Pilih Aset —</option>'];
     const list = (typeof D !== 'undefined' && Array.isArray(D.assets)) ? D.assets : [];
-    list.forEach((a) => {
-      if (!a || !a.id) return;
-      opts.push('<option value="' + a.id + '">' + escapeHtml(a.name || '?') + '</option>');
-    });
+    list
+      .filter((a) => a && !a._migratedToInvestmentId && !a.investmentId)
+      .forEach((a) => {
+        if (!a || !a.id) return;
+        opts.push('<option value="' + a.id + '">' + escapeHtml(a.name || '?') + '</option>');
+      });
     return opts.join('');
   },
 
