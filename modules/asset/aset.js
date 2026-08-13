@@ -1428,11 +1428,24 @@ const hadTitipanDebt=!!(a&&a.titipanDebtLinkId&&D.debts);
 if(hadTitipanDebt){
 D.debts=D.debts.filter(d=>String(d.id)!==String(a.titipanDebtLinkId));
 }
+// BUGFIX (orphan:2, TitipanReconcile.checkAll()): a.titipanDebtLinkId di atas
+// cuma pointer LEGACY (single-owner, sebelum Sesi B/AUD-008) -- selalu null utk
+// aset yang sudah lewat _syncOwnerDebts() (field itu di-null-kan tiap sync, lihat
+// _syncOwnerDebts()). Sejak Sesi B, tiap owner non-SELF punya entry utang SENDIRI
+// ditandai linkedAssetId di object utangnya sendiri (bisa >1 entry per aset) --
+// hapus aset TIDAK PERNAH membersihkan entry-entry ini, jadi Buku Utang nyangkut
+// (persis kelas bug BUG-OWN-002 yang TitipanReconcile dibuat utk deteksi, kali
+// ini di jalur HAPUS bukan simpan). Fix: bersihkan SEMUA entry linkedAssetId===id,
+// pola sama persis baris D.debts=D.debts.filter(...) di _syncOwnerDebts() (aset.js)
+// -- 0 rumus baru, cuma menyamakan cakupan cleanup dgn cakupan sync yang sudah ada.
+if(D.debts){
+D.debts=D.debts.filter(d=>!sameId(d.linkedAssetId,id));
+}
 D.assets=D.assets.filter(a=>!sameId(a.id,id));
 save();
 if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{deletedId:id});
 Aset.renderList();renderKekayaanBersih();hitungZakatMaal();renderAccGrid();renderDashAccList();renderLapAccList();
-if(hadTitipanDebt&&typeof renderDebtList==='function')renderDebtList();
+if((hadTitipanDebt||(a&&a.owners&&a.owners.length))&&typeof renderDebtList==='function')renderDebtList();
 },
 renderList(){
 const el=document.getElementById('assetList');

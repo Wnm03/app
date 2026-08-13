@@ -270,6 +270,19 @@ const InvestmentListUI = {
     const ok = CustodianRegistry.rename(sel.value, trimmed);
     if (!ok) { if (typeof toast === 'function') toast('⚠️ Kustodian tidak ditemukan'); return; }
     InvestmentListUI._renderCustodianOptions(sel.value);
+    // FIX sD (laporan user: nama kustodian lama "menempel" di tab Dana
+    // Titipan setelah di-rename di sini) — rename hanya mengubah
+    // D.investmentCustodians & re-render dropdown DI DALAM modal ini;
+    // DanaTitipanPortfolioPresenter (tab terpisah, sudah ter-render
+    // duluan dgn nama LAMA) tidak pernah diberi tahu ada perubahan.
+    // Semua mutasi lain yang mempengaruhi kartu Dana Titipan (commitment,
+    // return, expense) SELALU diikuti panggilan render() ini juga (lihat
+    // dana-titipan-portfolio-render.js/titipan-expense-ui.js) — custodian
+    // rename/delete ketinggalan pola yang sama. Guarded typeof, pola sama
+    // persis semua caller lain, 0 perubahan pada CustodianRegistry itu
+    // sendiri.
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     if (typeof toast === 'function') toast('✅ Nama kustodian diubah ke "' + trimmed + '"');
   },
 
@@ -297,6 +310,16 @@ const InvestmentListUI = {
     const ok = CustodianRegistry.remove(removedId);
     if (!ok) { if (typeof toast === 'function') toast('⚠️ Kustodian tidak ditemukan'); return; }
     InvestmentListUI._renderCustodianOptions(null);
+    // FIX sD — sama seperti renameCustodian() di atas: hapus kustodian
+    // TIDAK pernah memberi tahu DanaTitipanPortfolioPresenter, jadi grup
+    // "🏦 <nama kustodian>" di tab Dana Titipan tetap tampak (DOM lama)
+    // walau CustodianRegistry.remove() sudah sukses & holding-nya sudah
+    // fallback ke label generik "Kustodian" secara data (bug laporan
+    // user: "Majoris masih render padahal sudah dihapus"). Render ulang
+    // di sini supaya tab Dana Titipan langsung konsisten dgn data
+    // terbaru begitu modal ditutup, tanpa perlu ganti tab manual dulu.
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     if (typeof toast === 'function') toast('🗑️ Kustodian "' + current + '" dihapus');
   },
 
