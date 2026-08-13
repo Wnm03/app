@@ -303,3 +303,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan npm, eslint tidak terpasang - konsisten pola S508-S581
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan npm, esbuild tidak terpasang - bundle unminified tapi node --check lolos, konsisten pola S508-S581
+
+## 2026-08-13T11:28:37.518Z — versi s592-ghost-asset-cleanup-owner-settings-buildfix
+
+- **lint-unavailable**: override dipakai. Alasan: eslint tidak terpasang di sandbox (tanpa akses npm registry), sama seperti sesi-sesi sebelumnya (S488/S489/dst) -- perubahan direview manual thd konvensi project
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox (tanpa akses jaringan), sama seperti PATCH-README-GABUNGAN.md -- bundle unminified 100% valid, user bisa jalankan npm install --save-dev esbuild + build ulang di environment sendiri utk ukuran kecil
