@@ -1045,22 +1045,29 @@ const GROUP_B = [
   // forward-reference).
   'modules/finance/titipan-sync.js',
 
-  // dana-titipan-portfolio-presenter.js (Sesi 484) — proyeksi read-only
+  // R5 REALISASI (sesi ini, gantikan 1 entry monolit lama
+  // `dana-titipan-portfolio-presenter.js`, 1789 baris, DIHAPUS — lihat
+  // FIX-s598-r5-presenter-split-realized.md) — proyeksi read-only
   // per-owner/per-holding (pokok teralokasi/nilai sekarang/P&L), 100%
   // reuse Investment.getOwners()/holdingCost()/holdingValue()/
   // holdingGainLoss() + MultiOwnerEngine.splitByPorsi() (SEMUA sudah
   // dimuat di atas). Ditaruh setelah dana-kelolaan-presenter.js karena
   // memang tidak bergantung padanya (dependency langsung ke Investment/
   // MultiOwnerEngine saja), tapi secara konsep melengkapi kartu Dana
-  // Kelolaan yang sama.
-  'modules/finance/dana-titipan-portfolio-presenter.js',
+  // Kelolaan yang sama. 3 file WAJIB berurutan persis seperti ini
+  // (file 2 pakai Object.assign ke object file 1; file 3 panggil
+  // DanaTitipanPortfolioAPI.xxx() fully-qualified):
+  'modules/finance/dana-titipan-aggregation-api.js',
+  'modules/finance/dana-titipan-commitment-return-api.js',
+  'modules/finance/dana-titipan-portfolio-render.js',
 
   // titipan-expense-flow.js (Sesi 521-A) — orkestrasi pencatatan
   // pengeluaran Dana Titipan (single & multi-owner), reuse
   // DanaTitipanPortfolioAPI.listExistingOwners()/MultiOwnerEngine.
   // splitByPorsi()/applyTxTitipanLinkageOnSave() (SEMUA sudah dimuat di
-  // atas). Ditaruh langsung setelah dana-titipan-portfolio-presenter.js
-  // karena bergantung pada DanaTitipanPortfolioAPI dari file itu.
+  // atas). Ditaruh langsung setelah split file dana-titipan di atas
+  // karena bergantung pada DanaTitipanPortfolioAPI yang didefinisikan/
+  // dilengkapi di sana.
   'modules/finance/titipan-expense-flow.js',
   // titipan-expense-ui.js (Sesi 521-B2) — controller DOM tipis modal
   // `titipanExpenseModal` (HTML: modules/shared/modals.js, S521-B1).
