@@ -581,6 +581,30 @@ const DanaTitipanPortfolioPresenter = {
         <span class="u-t2">Total Pokok Dikomit</span>
         <span class="u-fw700">${this._money(projection.totals.principalAmountTotal)}</span>
       </div>
+      ${(() => {
+        // SESI S595 (kontrak audit final, lanjutan
+        // AUDIT-DANA-TITIPAN-MAJORIS-PORSI-SYNC.md): baris pembanding
+        // OTOMATIS "Pengeluaran Majoris"/"Sisa Saldo Majoris Belum
+        // Terpotong", tepat di bawah "Total Pokok Dikomit" MANUAL di
+        // atas (0 logic Pokok Dikomit diubah). REUSE 100%
+        // DanaTitipanPortfolioAPI.majorisRenovReconciliation() — 0
+        // rumus ditulis di sini, murni wiring markup. null -> baris
+        // disembunyikan (tidak ada akun tertaut Dana Titipan sama
+        // sekali), pola sama `_expenseComparisonForOwner()`.
+        const majoris = DanaTitipanPortfolioAPI.majorisRenovReconciliation(projection.owners, projection.totals.principalAmountTotal);
+        if (!majoris) return '';
+        return `
+      <div class="u-flex u-jcb u-fs11 u-mt2">
+        <span class="u-t2">Pengeluaran Majoris (dari transaksi Renov)</span>
+        <span class="u-fw700">${this._money(majoris.pengeluaranMajoris)}</span>
+      </div>
+      <div class="u-flex u-jcb u-fs11 u-mt2">
+        <span class="u-t2">Sisa Saldo Majoris Belum Terpotong</span>
+        ${majoris.sisaSaldo < 0
+          ? `<span class="titipan-over-badge red">⚠️ Melebihi pokok ${this._money(majoris.sisaSaldo)}</span>`
+          : `<span class="u-fw700 green">${this._money(majoris.sisaSaldo)}</span>`}
+      </div>`;
+      })()}
       <div class="u-flex u-jcb u-fs11 u-mt2">
         <span class="u-t2">Total Estimasi Belum Teralokasi</span>
         <span class="u-fw700">${this._money(projection.totals.estimatedUnallocatedTotal)}</span>

@@ -589,6 +589,96 @@ build() {
   return { owners, totals };
 },
 
+// _majorisLinkedAccountIds(owners) — SESI S595 (lanjutan
+// AUDIT-DANA-TITIPAN-MAJORIS-PORSI-SYNC.md, kontrak audit final utk baris
+// "Pengeluaran Majoris" di level KARTU/Total — beda scope dari
+// `DanaTitipanPortfolioPresenter._expenseComparisonForOwner()` yang
+// per-owner, Sesi C/S597, dana-titipan-portfolio-render.js).
+//
+// Resolve akun-akun yang tertaut ke SELURUH holding Dana Titipan (union
+// lintas SEMUA owner hasil `build()`, bukan 1 owner). REUSE relasi
+// h.type==='aset'+h.linkedAssetId / h.linkedInvestmentId -> asset.accountId
+// yang SAMA PERSIS dipakai `_expenseComparisonForOwner()` — 0 relasi baru
+// ditulis di sini, murni dikumpulkan lintas semua owner supaya dapat
+// definisi "akun tertaut Majoris" di level kartu. Perbandingan id pakai
+// String() langsung (BUKAN memanggil `sameId()` global) — fungsi ini
+// dipanggil dari `build()`/`majorisRenovReconciliation()` yang harus
+// tetap aman di harness test manapun yang belum tentu meng-inject
+// `sameId` (banyak test lama di suite ini TIDAK menyuntikkan `sameId`),
+// String() equality 100% setara `sameId()` (definisinya sendiri persis
+// `String(a)===String(b)`, lihat features-helpers-global-security.js) —
+// 0 rumus perbandingan baru, cuma tidak bergantung ke global opsional.
+// Dedup by accountId — kalau >1 owner kebetulan terhubung ke akun yang
+// sama, akun itu tetap dihitung SEKALI.
+// Parameter `owners`: array hasil `build().owners` (atau setara).
+// Return: array accountId unik (string-normalized) — [] kalau tidak ada
+// satupun holding yang tertaut ke akun manapun.
+_majorisLinkedAccountIds(owners) {
+  if (typeof D === 'undefined' || !Array.isArray(D.assets)) return [];
+  const seen = new Set();
+  const ids = [];
+  (owners || []).forEach((o) => {
+    (o.holdings || []).forEach((h) => {
+      if (!h) return;
+      let asset = null;
+      if (h.type === 'aset' && h.linkedAssetId) {
+        asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+      } else if (h.linkedInvestmentId) {
+        asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+      }
+      const accountId = asset && asset.accountId;
+      if (!accountId) return;
+      const key = String(accountId);
+      if (seen.has(key)) return;
+      seen.add(key);
+      ids.push(accountId);
+    });
+  });
+  return ids;
+},
+
+// majorisRenovReconciliation(owners, principalAmountTotal) — SESI S595
+// (kontrak audit final): baris pembanding OTOMATIS "Pengeluaran Majoris
+// (dari transaksi Renov)" + "Sisa Saldo Majoris Belum Terpotong" utk
+// kartu Dana Titipan, tepat di bawah "Total Pokok Dikomit" MANUAL (0
+// logic Pokok Dikomit diubah, 0 field manual/cache baru — murni angka
+// live-derived dibandingkan dgn angka manual yang sudah ada).
+//
+// Pengeluaran Majoris = SUM(t.amount) utk t di D.transactions WHERE
+//   t.accountId === salah satu akun tertaut holding Dana Titipan (union
+//   semua owner, lihat `_majorisLinkedAccountIds()` di atas) AND
+//   t.type === 'expense' AND t.renovProjectLinkId truthy (tag scope
+//   "Dana Titipan Renov" YANG SUDAH ADA — diisi transaksi.js saat user
+//   centang "🔨 Catat juga ke Proyek Renovasi?", lihat linktx.js/
+//   tx-renov.js/renovasi.js — 0 field baru).
+// Sisa Saldo Majoris Belum Terpotong = Total Pokok Dikomit (parameter
+//   `principalAmountTotal`, MANUAL, 0 diubah) − Pengeluaran Majoris.
+//   TIDAK di-clamp (boleh negatif — representasi "pengeluaran renov
+//   sudah melebihi pokok yang dikomit").
+//
+// Owner resolution Gap #1 (`_resolveLinkedInvestmentOwners`/
+// `resolveTxOwnerSplitForAccount`) TIDAK disentuh sama sekali — fungsi
+// ini tidak melakukan split per-owner, murni SUM mentah di level akun.
+//
+// Parameter: `owners` (array hasil `build().owners`), `principalAmountTotal`
+//   (angka, biasanya `build().totals.principalAmountTotal`).
+// Return: null kalau tidak ada satupun akun tertaut Dana Titipan (baris
+//   disembunyikan, pola sama `_expenseComparisonForOwner()`) — kalau
+//   tidak, `{pengeluaranMajoris, sisaSaldo}` (keduanya angka, `sisaSaldo`
+//   boleh negatif).
+majorisRenovReconciliation(owners, principalAmountTotal) {
+  if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return null;
+  const accountIds = this._majorisLinkedAccountIds(owners);
+  if (!accountIds.length) return null;
+  const idSet = new Set(accountIds.map((id) => String(id)));
+  const pengeluaranMajoris = D.transactions
+    .filter((t) => t && t.type === 'expense' && t.renovProjectLinkId && idSet.has(String(t.accountId)))
+    .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+  const principal = isFinite(principalAmountTotal) ? Number(principalAmountTotal) : 0;
+  const sisaSaldo = principal - pengeluaranMajoris;
+  return { pengeluaranMajoris, sisaSaldo };
+},
+
 // listExistingOwners() — Sesi 485a (langkah 1/5), diperluas Sesi 492
 // (Gap #2 plan owner-registry, PLAN-owner-registry-multi-session.md,
 // Gate #2 = SENTUH — dikonfirmasi eksplisit sebelum sesi ini mulai).

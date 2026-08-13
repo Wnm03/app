@@ -251,6 +251,56 @@ warnIfNotOk(context) {
   return r;
 },
 
+// repairOrphans() — S595, menutup gap yang ditemukan lewat Tes Otomatis
+// live (checkAll() -> sync.orphan tidak 0) tapi TIDAK ADA satu pun titik di
+// app yang benar-benar membersihkannya di luar saat aset/holding yang
+// BERSANGKUTAN kebetulan di-save ulang (_syncOwnerDebts()/_syncTitipanDebt()
+// hanya membersihkan D.debts milik ASET/HOLDING itu sendiri tiap dipanggil
+// -- lihat komentar di kedua fungsi itu). Kalau owner dicabut/porsi
+// dijadikan 0 lewat jalur lain (mis. aset/holding-nya sendiri lalu dihapus
+// permanen, restore backup lama, atau edit manual data), baris utang
+// "titipan" yang sudah nyangkut (`orphan`, definisi sama persis check()
+// di atas) TIDAK PERNAH ketarik bersih sampai ada yang sadar & save ulang
+// aset/holding yang sudah tidak relevan itu -- gap ini baru KETAHUAN oleh
+// checkAll(), belum ada yang MEMPERBAIKI.
+//
+// BEDA dgn seluruh fungsi lain di modul ini (check()/checkAll()/dst semua
+// PURE baca-saja, 0 mutasi) -- fungsi ini SATU-SATUNYA yang menulis ke D,
+// makanya SENGAJA dipisah bukan bagian dari checkAll()/warnIfNotOk(), dan
+// TIDAK dipanggil otomatis dari mana pun (bukan dari self-test.js/Tes
+// Otomatis -- kartu itu eksplisit bilang "tidak mengubah data asli Anda
+// secara permanen", lihat index.html #diagSelfTest-cbody). Harus dipicu
+// EKSPLISIT oleh user lewat tombol terpisah "🔧 Perbaiki Gap Dana Titipan"
+// (Pengaturan > Diagnostik), yang minta konfirmasi dulu (lihat
+// repairTitipanOrphans() di modules/shared/features-helpers-global-security.js).
+//
+// Aman dihapus (bukan salah tebak): kunci orphan (key sama persis format
+// check()/_actualLinkedDebts()/_actualLinkedInvestmentDebts()) berarti
+// TIDAK ADA owner aktif (porsi>0, bukan SELF) di a.owners[]/h.owners[] yang
+// cocok dgn baris utang itu -- persis kondisi yang bikin _syncOwnerDebts()/
+// _syncTitipanDebt() SENDIRI menghapusnya kalau aset/holding itu di-save
+// ulang (lihat `D.debts=D.debts.filter(...)` di kedua fungsi itu). Fungsi
+// ini cuma menjalankan penghapusan yang SAMA lebih awal/lintas SEMUA
+// aset+holding sekaligus, bukan rumus baru.
+// Return: {removed, keys[]} -- keys = daftar key orphan yang baris
+// utangnya sudah dihapus dari D.debts (kosong kalau memang tidak ada gap).
+repairOrphans() {
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) return { removed: 0, keys: [] };
+  const orphanKeys = new Set(this.check().orphan.map((o) => o.key));
+  if (!orphanKeys.size) return { removed: 0, keys: [] };
+  const before = D.debts.length;
+  D.debts = D.debts.filter((d) => {
+    if (!d) return true;
+    if (d.linkedAssetId != null && d.linkedOwnerId != null && orphanKeys.has(d.linkedAssetId + '::' + d.linkedOwnerId)) return false;
+    if (d.linkedInvestmentId != null) {
+      const ownerId = d.linkedOwnerId || 'titipan_investor';
+      if (orphanKeys.has('inv::' + d.linkedInvestmentId + '::' + ownerId)) return false;
+    }
+    return true;
+  });
+  return { removed: before - D.debts.length, keys: Array.from(orphanKeys) };
+},
+
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TitipanReconcile;
