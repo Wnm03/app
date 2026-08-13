@@ -96,7 +96,19 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
    walau angka z-index-nya lebih kecil dari modal, karena .nav ada DI LUAR #scrollRoot.
    Solusi paling aman tanpa mengubah struktur DOM: sembunyikan nav selama ada modal/sheet
    yang terbuka (ditandai body.has-open-modal, di-toggle dari openModal/closeModal/openQS/closeQS). */
-body.has-open-modal .nav { display: none; }
+/* FIX (S590, laporan user: tombol Hapus di menu aksi aset ketutup nav
+   bawah walau modal SUDAH terbuka): rule display:none di atas TIDAK
+   `!important`, jadi kalah lawan inline style `mn.style.display='flex'`
+   yang di-set showMain() (features-helpers-global-security.js) SEKALI
+   saat app pertama dibuka/PIN benar. Inline style SELALU menang lawan
+   selector class apa pun kecuali diberi !important -- akibatnya sejak
+   showMain() pernah jalan sekali, class body.has-open-modal TIDAK PERNAH
+   benar-benar menyembunyikan nav lagi (class-nya toggle benar, tapi CSS
+   effect-nya kalah), walau _syncNavVisibilityForModals() sudah jalan
+   sempurna. Fix murni CSS: !important di sini, TIDAK menyentuh showMain()
+   / inline style-nya sama sekali (0 risiko ke titik lain yang bergantung
+   ke display:flex awal itu). */
+body.has-open-modal .nav { display: none !important; }
 .nav-item { flex: 1; min-width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 7px 1px; border: none; background: none; color: var(--text3); font-size: var(--fs-caption); font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
 .nav-item.active { color: var(--accent); }
 .nav-item svg { width: 20px; height: 20px; transition: transform var(--dur-moderate); }
