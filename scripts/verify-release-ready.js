@@ -130,6 +130,44 @@ function checkHtmlSync() {
   return { status: prod === expected ? 'synced' : 'drifted' };
 }
 
+// Sesi 575 (cache-bump gate): mencegah pola bug "fix sudah benar di source,
+// tapi browser/Service Worker masih serve app-bundle-a/b.min.js versi LAMA"
+// -- terjadi karena ?v=N di index.html/app_production.html dan CACHE_NAME di
+// sw.js lupa dinaikkan bareng saat bundle berubah (kejadian nyata: semua
+// masih ?v=1314 padahal source sudah difix, lihat PATCH-README-v1316-cache-
+// bump.md). scripts/bump-version.sh SUDAH menaikkan ketiganya sekaligus
+// dengan benar -- gate ini murni jaring pengaman terakhir kalau versi
+// di-bump manual (lupa satu tempat) sebelum ZIP dibuat.
+function checkVersionSync() {
+  const idxPath = path.join(ROOT, 'index.html');
+  const swPath = path.join(ROOT, 'sw.js');
+  if (!fs.existsSync(idxPath) || !fs.existsSync(swPath)) {
+    return { status: 'missing' };
+  }
+  const idx = fs.readFileSync(idxPath, 'utf8');
+  const sw = fs.readFileSync(swPath, 'utf8');
+
+  const htmlVersions = [...idx.matchAll(/\?v=(\d+)/g)].map((m) => m[1]);
+  if (htmlVersions.length === 0) {
+    return { status: 'no-version-found' };
+  }
+  const uniqueHtmlVersions = [...new Set(htmlVersions)];
+
+  const swMatch = sw.match(/CACHE_NAME\s*=\s*'kw-cache-v(\d+)'/);
+  if (!swMatch) {
+    return { status: 'no-version-found' };
+  }
+  const swVersion = swMatch[1];
+
+  if (uniqueHtmlVersions.length > 1) {
+    return { status: 'html-inconsistent', htmlVersions: uniqueHtmlVersions, swVersion };
+  }
+  if (uniqueHtmlVersions[0] !== swVersion) {
+    return { status: 'mismatch', htmlVersions: uniqueHtmlVersions, swVersion };
+  }
+  return { status: 'synced', version: swVersion };
+}
+
 function readAppVersion() {
   const candidates = [
     path.join(ROOT, 'modules/shared/features-helpers-global-security.js'),
@@ -238,6 +276,27 @@ function main() {
     blocking.push('html-sync (app_production.html menyimpang dari index.html)');
   }
 
+  // --- Gate 4: sinkronisasi versi ?v= (index.html) <-> CACHE_NAME (sw.js) ---
+  const versionSync = checkVersionSync();
+  if (versionSync.status === 'synced') {
+    console.log(`✓ GATE version-sync: index.html (?v=${versionSync.version}) & sw.js (CACHE_NAME) sinkron.`);
+  } else if (versionSync.status === 'missing') {
+    console.error('✗ GATE version-sync: index.html atau sw.js tidak ditemukan. TIDAK BISA di-override.');
+    blocking.push('version-sync (file hilang)');
+  } else if (versionSync.status === 'no-version-found') {
+    console.error('✗ GATE version-sync: tidak menemukan pola ?v=N di index.html atau CACHE_NAME di sw.js. TIDAK BISA di-override.');
+    blocking.push('version-sync (pola versi tidak ditemukan)');
+  } else if (versionSync.status === 'html-inconsistent') {
+    console.error(`✗ GATE version-sync: index.html sendiri punya ?v= yang TIDAK seragam (${versionSync.htmlVersions.join(', ')}). TIDAK BISA di-override.`);
+    console.error('    Perbaikan: jalankan "./scripts/bump-version.sh" untuk menyamakan semua ?v= sekaligus.');
+    blocking.push('version-sync (?v= tidak seragam di index.html)');
+  } else {
+    console.error(`✗ GATE version-sync: index.html pakai ?v=${versionSync.htmlVersions[0]} tapi sw.js pakai CACHE_NAME kw-cache-v${versionSync.swVersion} -- TIDAK SINKRON. TIDAK BISA di-override.`);
+    console.error('    Ini persis pola bug lama: browser/Service Worker bisa tetap serve bundle LAMA walau source sudah difix.');
+    console.error('    Perbaikan: jalankan "./scripts/bump-version.sh" (menyamakan ?v= di HTML & CACHE_NAME di sw.js sekaligus).');
+    blocking.push('version-sync (?v= HTML vs CACHE_NAME sw.js tidak sinkron)');
+  }
+
   if (overridden.length) appendAuditLog(overridden);
 
   console.log('');
@@ -253,6 +312,6 @@ function main() {
   }
 }
 
-module.exports = { checkLint, checkMinified, checkHtmlSync, readAppVersion };
+module.exports = { checkLint, checkMinified, checkHtmlSync, checkVersionSync, readAppVersion };
 
 if (require.main === module) main();
