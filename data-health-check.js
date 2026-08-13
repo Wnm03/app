@@ -232,6 +232,32 @@ issues.push({level:'warn',title:'Aset dengan kepemilikan ganda (Kepemilikan + Po
 // ini. Diimplementasikan sekarang, 0 rumus baru (100% reuse
 // MultiOwnerEngine.getOwners(), murni baca, 0 mutasi D.assets/D.investments).
 //
+// PERUBAHAN SESI konsolidasi §D.2 (AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md
+// §D.2): rule ini tadinya punya `ownerSignature()` LOKAL sendiri di file
+// ini, terpisah/paralel dari `_aiOwnerSig()`/`assetInvestmentMismatch()` di
+// modules/asset/investasi.js (dipakai badge cross-check
+// InvestmentListUI/Aset.renderList) — 2 implementasi paralel utk 1 concept
+// yang sama, beda formula, risiko drift kalau salah satu diperbaiki.
+//
+// PENTING (koreksi thd draft sesi sebelumnya): konsolidasi ini SENGAJA
+// TIDAK memanggil `assetInvestmentMismatch()` dari investasi.js secara
+// langsung — itu cuma memindahkan duplikasi jadi dependency antar 2 file
+// FEATURE yang seharusnya independen (data-health-check.js jadi bergantung
+// diam-diam ke investasi.js lewat guard `typeof
+// assetInvestmentMismatch==='function'`). Guard begitu memang tidak
+// crash, tapi begitu file ini dites terisolasi tanpa investasi.js ikut
+// dimuat (lihat tests/data-health-check-asset-investasi-owner-mismatch-
+// s551.test.js — sengaja cuma load ['modules/shared/multi-owner-engine.js',
+// 'data-health-check.js']), `assetInvestmentMismatch` selalu undefined,
+// guard selalu diam, rule S551 tidak pernah warn — persis 3/9 test S551
+// yang gagal. Fix yang benar: logic canonical dipindah ke layer SHARED
+// (`ownerMismatch()` di modules/shared/multi-owner-engine.js — file yang
+// SUDAH jadi dependency langsung file ini lewat MultiOwnerEngine, 0
+// dependency baru), lalu investasi.js & data-health-check.js SAMA-SAMA
+// reuse dari sana tanpa saling depend satu sama lain. Test S551 sengaja
+// DIBIARKAN terisolasi seperti semula (bukan ditambah investasi.js ke
+// daftar load) — isolasi itu justru yang menemukan bug di atas.
+//
 // Deteksi (BUKAN link resmi B1/investmentId — itu kasusnya sudah
 // tertangani cek orphan B6/B7-B8 di atas): instrumen nama sama tercatat
 // SEKALIGUS di Buku Aset & sbg Holding Investasi TANPA ditautkan, dgn
@@ -244,31 +270,19 @@ issues.push({level:'warn',title:'Aset dengan kepemilikan ganda (Kepemilikan + Po
 //
 // Match nama EXACT (trim+lowercase, SENGAJA bukan fuzzy — hindari
 // false-positive, beda dari saran mirip-nama B4 di bawah yang memang
-// fuzzy). "Signature" pemilik = daftar {ownerId,porsi} disortir supaya
-// urutan array tidak mempengaruhi perbandingan; porsi dibulatkan 2
-// desimal (toleransi floating point, pola sama PORSI_EPSILON di
-// multi-owner-engine.js). Guard `typeof MultiOwnerEngine` (pola sama
-// semua guard lain di file ini) — kalau engine belum dimuat, cek diam
-// saja (0 crash, 0 false-positive).
-if(typeof MultiOwnerEngine!=='undefined' && typeof MultiOwnerEngine.getOwners==='function'){
-const ownerSignature=(entity)=>{
-const res=MultiOwnerEngine.getOwners(entity);
-if(!res||!res.ok)return '';
-return (res.owners||[])
-.map(o=>({id:String((o&&o.ownerId)||'').trim().toLowerCase(),porsi:Math.round(((o&&o.porsi)||0)*100)/100}))
-.sort((x,y)=>x.id<y.id?-1:(x.id>y.id?1:0))
-.map(o=>o.id+':'+o.porsi)
-.join('|');
-};
+// fuzzy). Guard `typeof ownerMismatch` (pola sama semua guard lain di
+// file ini) — kalau modules/shared/multi-owner-engine.js belum dimuat sama
+// sekali, cek diam saja (0 crash, 0 false-positive), sama seperti
+// perilaku sebelumnya kalau MultiOwnerEngine belum dimuat.
+if(typeof ownerMismatch==='function'){
 (D.investments||[]).forEach(h=>{
 if(!h||!h.name)return;
 const hName=String(h.name).trim().toLowerCase();
 if(!hName)return;
-const hSig=ownerSignature(h);
 (D.assets||[]).forEach(a=>{
 if(!a||!a.name)return;
 if(String(a.name).trim().toLowerCase()!==hName)return;
-if(ownerSignature(a)===hSig)return;
+if(!ownerMismatch(a,h))return;
 issues.push({level:'warn',title:'Nama sama di Buku Aset & Investasi dgn kepemilikan berbeda',detail:`"${escapeHtml(a.name)}" tercatat DUA KALI dgn nama yang sama -- 1x di Buku Aset, 1x sbg Holding Investasi -- tapi susunan pemiliknya BERBEDA di kedua sisi. Kemungkinan instrumen yang sama tercatat 2x dengan data kepemilikan tidak sinkron (risiko dobel-hitung nilai & porsi dana titipan salah). Cek kedua sisi di modal Aset & modal Investasi -- kalau memang instrumen yang sama, samakan datanya atau tautkan lewat dropdown "🔗 Hubungkan ke Holding Investasi".`,assetId:a.id});
 });
 });

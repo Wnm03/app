@@ -102,7 +102,11 @@ function hitungPPh21(){return PPh21.hitung();}
 /* moved to modules-render.js: renderUMKMPajak */
 function openAssetModal(id){return Aset.openModal(id);}
 function toggleAssetZakatable(){return Aset.toggleZakatable();}
-function saveAsset(){return Aset.save();}
+// saveAsset() -- §H/§I AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md: dialihkan dari Aset.save()
+// ke Aset.saveUnified() (aset.js) supaya tombol "Simpan Aset" di assetModal ikut orkestrasi
+// tipis toggle "📈 Buat Holding Investasi Otomatis" -- untuk aset non-tradable/section
+// tersembunyi, saveUnified() SUDAH delegasi balik 100% ke Aset.save() lama (0 regresi).
+function saveAsset(){return Aset.saveUnified();}
 async function delAsset(id){return Aset.delete(id);}
 /* moved to modules-render.js: renderAssetList */
 function totalAssetValue(){return Aset.totalValue();}
