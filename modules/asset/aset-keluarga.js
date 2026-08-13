@@ -55,7 +55,15 @@ return{inventori,piutang,net:inventori+piutang};
 // helper belum dimuat, anggap semua SELF (tidak exclude apa pun).
 carNotes(){
 const vehicles=(D.vehicles||[]).filter(v=>typeof isVehicleOwnershipSelf!=='function'||isVehicleOwnershipSelf(v.id));
-const assetKendaraan=(D.assets||[]).filter(a=>a.jenis==='Kendaraan');
+// Audit §D.4 (AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md): TAMBAH filter
+// !a.investmentId/!a._migratedToInvestmentId -- pola SAMA PERSIS
+// Aset.totalValue() (aset.js). Kendaraan yang sudah ditautkan ke Holding
+// Investasi nilainya dihitung di sisi Investment, BUKAN di sini lagi --
+// tanpa filter ini, kendaraan ber-investmentId ikut kehitung nilainya
+// di kartu Aset Keluarga (nilaiTercatat) padahal Kekayaan Bersih sudah
+// mengecualikannya (0 dobel-hitung uang, tapi representasi kartu ini
+// jadi tidak sinkron dgn Kekayaan Bersih -- itu temuan §D.4).
+const assetKendaraan=(D.assets||[]).filter(a=>a.jenis==='Kendaraan').filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId);
 const nilaiTercatat=assetKendaraan.reduce((s,a)=>s+(a.nilai||0),0);
 return{jumlahKendaraan:vehicles.length,jumlahAsetKendaraan:assetKendaraan.length,nilaiTercatat};
 },

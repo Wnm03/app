@@ -36,10 +36,20 @@ const InvestAI = {
   // FAMILY, beda dari Aset.totalValue()/investmentPerformance() yang
   // sudah SELF-only. 0 rumus baru — cuma nambah 1 filter di atas filter
   // zakatable yang sudah ada.
+  // Audit §D.4 (AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md): TAMBAH filter
+  // !a.investmentId/!a._migratedToInvestmentId -- pola SAMA PERSIS
+  // Aset.totalValue() (aset.js). Ini satu-satunya choke point yang dipakai
+  // _checkDiversifikasi()/_checkVsPreset(), jadi 1 filter di sini cukup
+  // utk keduanya. Tanpa ini, aset zakatable yg sudah ditautkan ke Holding
+  // Investasi ikut kehitung nilainya di sini (nilai turunan sisi
+  // Investment tidak dibaca), jadi rekomendasi diversifikasi/vs-preset
+  // bisa salah baca komposisi (temuan §D.4).
   _investmentAssets() {
     if (typeof D === 'undefined' || !Array.isArray(D.assets)) return [];
     const selfOnly = typeof isAssetOwnershipSelf === 'function' ? isAssetOwnershipSelf : () => true;
-    return D.assets.filter(selfOnly).filter((a) => a.zakatable);
+    return D.assets.filter(selfOnly).filter((a) => a.zakatable)
+      .filter((a) => !a._migratedToInvestmentId)
+      .filter((a) => !a.investmentId);
   },
 
   // 1) Dana darurat harus lebih dulu beres sebelum alokasi ke instrumen lain.

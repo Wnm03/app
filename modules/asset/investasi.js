@@ -778,25 +778,28 @@ function investmentAssetLinkOptionsHtml(currentAssetId) {
   });
   return opts.join('');
 }
-// _aiOwnerSig(entity) -- signature pemilik efektif via MultiOwnerEngine.getOwners()
-// (0 rumus baru, reuse persis pola data-health-check.js rule S551). null kalau engine
-// belum dimuat/gagal resolve.
+// _aiOwnerSig(entity) / assetInvestmentMismatch(a, h) -- §D.2 AUDIT-UNIFIED-
+// ASSET-INVESTMENT-FORM.md konsolidasi: formula owner-signature-comparison
+// TIDAK lagi ditulis ulang di sini -- keduanya sekarang thin-wrapper ke
+// ownerSignature()/ownerMismatch() di modules/shared/multi-owner-engine.js
+// (layer shared yang SUDAH jadi dependency file ini lewat MultiOwnerEngine,
+// jadi 0 dependency baru ditambahkan). Ini menggantikan implementasi lokal
+// lama yang paralel & beda formula dari data-health-check.js punya sendiri
+// (risiko drift kalau salah satu diperbaiki, yang lain diam-diam
+// tertinggal -- lihat §D.2). Nama fungsi & window-export di bawah TETAP
+// dipertahankan apa adanya supaya investasi-list-view.js, aset.js, & test
+// yang sudah ada (investasi-asset-link-badge-s552.test.js) tidak perlu
+// berubah sama sekali -- murni pemindahan lokasi implementasi, bukan
+// perubahan API publik.
 function _aiOwnerSig(entity) {
-  if (typeof MultiOwnerEngine === 'undefined' || typeof MultiOwnerEngine.getOwners !== 'function') return null;
-  const res = MultiOwnerEngine.getOwners(entity);
-  if (!res || !res.ok) return null;
-  return (res.owners || []).map((o) => (o.isSelf ? 'SELF' : ('ID:' + (o.ownerId || o.ownerName || '?'))) + ':' + (Math.round((o.porsi || 0) * 100) / 100)).sort().join('|');
+  return (typeof ownerSignature === 'function') ? ownerSignature(entity) : '';
 }
 // assetInvestmentMismatch(a, h) -- true kalau owner signature aset & holding BEDA
 // (a/h null atau signature tidak terhitung -> false, tidak dianggap mismatch).
 // Dipakai baik oleh link resmi (assetId) maupun fallback name-match (badge list &
 // data-health-check rule S551) -- 1 titik baca yang sama utk kedua jalur.
 function assetInvestmentMismatch(a, h) {
-  if (!a || !h) return false;
-  const sa = _aiOwnerSig(a);
-  const sh = _aiOwnerSig(h);
-  if (sa === null || sh === null) return false;
-  return sa !== sh;
+  return (typeof ownerMismatch === 'function') ? ownerMismatch(a, h) : false;
 }
 // investmentCrossCheckWarning(h) -- dipakai badge list Investasi
 // (InvestmentListUI._renderList()) & bridge di investmentModal. Prioritas: (1) link

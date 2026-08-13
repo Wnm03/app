@@ -6,6 +6,17 @@
 const Aset={
 editId:null,
 _zakatableState:false,
+// _tradableState / TRADABLE_JENIS / TRADABLE_TYPE_MAP -- §H/§I AUDIT-UNIFIED-ASSET-
+// INVESTMENT-FORM.md (wrapper UI tipis di atas assetModal yang sudah ada, 0 model baru).
+// TRADABLE_JENIS = subset assetJenis (dropdown assetModal SUDAH ADA) yang punya padanan
+// instrumen tradable di sisi Investment -- dipakai _renderTradableSection() utk
+// tampil/sembunyikan section toggle "📈 Buat Holding Investasi Otomatis" & auto-detect
+// default toggle-nya (§H poin 1). TRADABLE_TYPE_MAP memetakan tiap jenis itu ke
+// INVESTMENT_TYPES (investasi.js) yang PALING dekat -- dipakai saveUnified() SAJA saat
+// memanggil Investment.addHolding({type,...}), TIDAK mengubah INVESTMENT_TYPES itu sendiri.
+TRADABLE_JENIS:['Saham','Reksadana','Kripto','Deposito/Investasi'],
+TRADABLE_TYPE_MAP:{'Saham':'Saham','Reksadana':'Reksa Dana','Kripto':'Kripto','Deposito/Investasi':'Deposito'},
+_tradableState:false,
 ICON:{'Tanah':'🏞️','Rumah/Bangunan':'🏠','Kendaraan':'🏍️','Emas/Logam Mulia':'🥇','Deposito/Investasi':'📈','Saham':'📊','Reksadana':'💹','Kripto':'🪙','Lainnya':'📦'},
 // Ringkasan singkat field kategori-spesifik utk baris di daftar Buku Aset
 // (mis. "2022 · 125cc · Pertalite" utk Kendaraan) -- lihat renderJenisFields.
@@ -55,6 +66,7 @@ btn.className='chip-btn'+(Aset._zakatableState?' active':'');
 Aset._renderTitipanSummary(a);
 Aset._renderVehicleLinkAction(a);
 Aset._populateInvestmentLinkSelect(a);
+Aset._renderTradableSection(a);
 Aset._updateOwnersButtonLabel(a);
 Aset.renderJenisFields(a);
 Aset.updateProfitPreview();
@@ -86,6 +98,11 @@ openModal('assetModal');
 //   asset asli (a) supaya field kepril saat Edit Aset.
 onJenisChange(){
 Aset.renderJenisFields(null);
+// §H poin 1: ganti Jenis = kandidat instrumen tradable ikut berubah -- render ulang
+// section toggle dgn a=null (pola sama renderJenisFields(null) di atas: ganti kategori
+// dianggap "seperti aset baru" utk keperluan section ini, TIDAK baca a.investmentId
+// tersimpan lagi krn user mungkin lagi ganti-ganti Jenis sebelum benar-benar Simpan).
+Aset._renderTradableSection(null);
 },
 renderJenisFields(a){
 const jenis=document.getElementById('assetJenis').value;
@@ -187,6 +204,60 @@ const sel=document.getElementById('assetInvestmentId');
 const id=sel?sel.value:'';
 const h=id?(D.investments||[]).find(x=>sameId(x.id,id)):null;
 Aset._applyOwnersButtonLabel(!!h);
+// §H poin 2: link manual (dropdown ini) SELALU jadi override -- begitu user pilih
+// holding yang SUDAH ADA di sini, sembunyikan toggle "Buat Holding Investasi Otomatis"
+// (section tradable) supaya saveUnified() tidak dobel-buat holding baru. Balik pilih
+// "— Tidak ditautkan —" (id kosong) -> section dievaluasi ulang seperti biasa.
+const section=document.getElementById('assetTradableSection');
+if(section){
+if(id)section.classList.add('u-dnone');
+else Aset._renderTradableSection(Aset.editId?D.assets.find(x=>sameId(x.id,Aset.editId)):null);
+}
+},
+// toggleTradable() -- toggle chip "📈 Buat Holding Investasi Otomatis" (assetTradableSection),
+// pola SAMA PERSIS toggleZakatable() di atas -- 0 logic baru, cuma flip _tradableState +
+// refresh label/class tombol.
+toggleTradable(){
+Aset._tradableState=!Aset._tradableState;
+const btn=document.getElementById('assetTradableBtn');
+if(btn){
+btn.textContent=Aset._tradableState?'✓ Aktif':'Nonaktif';
+btn.className='chip-btn'+(Aset._tradableState?' active':'');
+}
+},
+// _renderTradableSection(a) -- §H/§I: dipanggil openModal() (a=aset existing/null utk
+// tambah baru), onJenisChange() (a=null, lihat komentar di atas), & onInvestmentLinkChange()
+// (balik ke "Tidak ditautkan"). PURE render, 0 tulis data -- keputusan
+// tulis/tidak-tulis holding baru ada sepenuhnya di saveUnified() saat Simpan Aset.
+_renderTradableSection(a){
+const section=document.getElementById('assetTradableSection');
+if(!section)return;
+const jenisSel=document.getElementById('assetJenis');
+const jenis=jenisSel?jenisSel.value:'';
+const isTradableJenis=Aset.TRADABLE_JENIS.includes(jenis);
+// auto-hide section kalau sudah tertaut (link manual SELALU jadi override, §H poin 2) --
+// tautan lama (Edit Aset, a.investmentId) di sini; tautan yang baru dipilih user LEWAT
+// dropdown ditangani terpisah di onInvestmentLinkChange() (blm tentu tersimpan ke `a`).
+const alreadyLinked=!!(a&&a.investmentId);
+if(!isTradableJenis||alreadyLinked){
+section.classList.add('u-dnone');
+Aset._tradableState=false;
+return;
+}
+section.classList.remove('u-dnone');
+// auto-detect default toggle dari jenis -- KHUSUS aset baru (a null, termasuk saat
+// onJenisChange() re-render dgn a=null): jenis tradable otomatis default AKTIF, supaya
+// alur "isi Jenis=Saham lalu Simpan" langsung bikin holding tanpa langkah ekstra. Aset
+// existing yang SEDANG di-edit (a terisi, belum tertaut) TIDAK dipaksa nyala ulang tiap
+// modal dibuka -- toggle mengikuti pilihan terakhir user di sesi ini (_tradableState).
+if(!a)Aset._tradableState=true;
+const btn=document.getElementById('assetTradableBtn');
+if(btn){
+btn.textContent=Aset._tradableState?'✓ Aktif':'Nonaktif';
+btn.className='chip-btn'+(Aset._tradableState?' active':'');
+}
+const priceInput=document.getElementById('assetCurrentPrice');
+if(priceInput)priceInput.value='';
 },
 // openOwnersModal(id) -- SESI 392a+392b ("atur porsi kepemilikan majemuk"): baca
 // pemilik aset yang sedang tercatat lewat MultiOwnerEngine.getOwners() (S390, 100%
@@ -1261,6 +1332,58 @@ migrated+=plan.length;
 return{migrated,skipped,conflicts};
 },
 save(){return withSaveGuard('aset','assetModal',Aset._saveInner);},
+// saveUnified() -- §H/§I AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md: orkestrasi TIPIS di atas
+// Aset.save() (_saveInner(), TIDAK diubah selain 1 baris return di atas) & Investment.
+// addHolding()/MultiOwnerEngine.setOwners() (SUDAH ADA, TIDAK diubah). Dipanggil dari
+// data-action="saveAsset" (assetModal, lewat pajak-aset-ui-wrappers.js) MENGGANTIKAN
+// pemanggilan Aset.save() langsung. Kalau section "📈 Buat Holding Investasi Otomatis"
+// sedang disembunyikan (bukan jenis tradable / sudah tertaut manual, lihat
+// _renderTradableSection()) ATAU togglenya nonaktif, perilaku PERSIS SAMA dgn Aset.save()
+// lama (0 regresi utk kasus non-tradable, yang tetap jadi mayoritas alur Buku Aset).
+saveUnified(){
+const section=document.getElementById('assetTradableSection');
+const sectionVisible=!!(section&&!section.classList.contains('u-dnone'));
+const wantAutoHolding=sectionVisible&&Aset._tradableState;
+const priceEl=document.getElementById('assetCurrentPrice');
+const currentPriceRaw=priceEl?priceEl.value:'';
+const currentPrice=currentPriceRaw!==''?parseDecStr(currentPriceRaw):null;
+const savedAsset=Aset.save();
+if(!savedAsset)return savedAsset;// validasi gagal (mis. nama kosong) atau save guard aktif -- _saveInner() sudah toast sendiri, hentikan di sini, 0 side-effect tambahan.
+if(!wantAutoHolding)return savedAsset;
+// Guard ganda thd race/duplikasi: kalau asetnya SUDAH tertaut (a.investmentId, mis. dari
+// link manual yang barusan tersimpan) ATAU module Investment belum dimuat, jangan bikin
+// holding kedua / gagal diam-diam.
+if(savedAsset.investmentId)return savedAsset;
+if(typeof Investment==='undefined'||typeof Investment.addHolding!=='function')return savedAsset;
+const type=Aset.TRADABLE_TYPE_MAP[savedAsset.jenis]||'Lainnya';
+const unit=isFinite(savedAsset.jumlahUnit)&&savedAsset.jumlahUnit>0?savedAsset.jumlahUnit:0;
+const avgPrice=isFinite(savedAsset.hargaBeli)&&savedAsset.hargaBeli>0?savedAsset.hargaBeli:0;
+const holding=Investment.addHolding({
+name:savedAsset.name,
+type,
+unit,
+avgPrice,
+currentPrice:currentPrice!=null?currentPrice:avgPrice,
+notes:'Auto-dibuat dari Buku Aset: '+savedAsset.name,
+zakatable:!!savedAsset.zakatable,
+purchaseDate:savedAsset.tanggal||null,
+});
+// Waris ownership aset -> holding baru (§I) -- 100% reuse Investment.setOwners(), yang di
+// dalamnya delegasi penuh ke MultiOwnerEngine.setOwners() (0 rumus baru ditulis di sini).
+// Kalau aset ini SELF 100% (owners.length<=1 SELF), tidak perlu dipanggil -- addHolding()
+// di atas sudah default SELF 100% (perilaku sama).
+if(typeof MultiOwnerEngine!=='undefined'){
+const ownersRes=MultiOwnerEngine.getOwners(savedAsset);
+if(ownersRes&&ownersRes.ok&&Array.isArray(ownersRes.owners)&&(ownersRes.owners.length>1||!ownersRes.owners[0]?.isSelf)){
+try{Investment.setOwners(holding.id,ownersRes.owners);}catch(e){/* non-fatal: holding tetap tersimpan (default SELF) walau porsi gagal diwariskan */}
+}
+}
+savedAsset.investmentId=holding.id;
+save();
+Aset.renderList();renderKekayaanBersih();hitungZakatMaal();
+toast('✅ Aset tersimpan & Holding Investasi otomatis dibuat');
+return savedAsset;
+},
 _saveInner(){
 const name=document.getElementById('assetName').value.trim();
 if(!name){toast('⚠️ Nama aset wajib diisi');return;}
@@ -1420,6 +1543,11 @@ Aset.renderList();renderKekayaanBersih();hitungZakatMaal();renderAccGrid();rende
 if(typeof renderDebtList==='function')renderDebtList();
 if(typeof populateAccFilters==='function')populateAccFilters();
 toast(_createdNewAcc?'✅ Aset tersimpan & akun baru dibuat':'✅ Aset tersimpan');
+// return savedAsset -- §I: SATU-SATUNYA baris ditambah ke _saveInner() (exception thd
+// "tidak menyentuh isi _saveInner()" -- lihat AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md §I),
+// murni supaya saveUnified() (wrapper tipis di bawah) bisa baca hasil simpan (id/jenis/
+// nilai/dst) tanpa re-query D.assets. 0 perubahan pada logic simpan di atas baris ini.
+return savedAsset;
 },
 async delete(id){
 if(!await askConfirm('Hapus aset ini dari Buku Aset?',{okText:'Ya, Hapus'}))return;
@@ -1485,7 +1613,11 @@ el.innerHTML=migratedBanner+list.map(a=>{
 // closure, jadi TIDAK ada variabel sisa yang dihitung di sini tapi tidak dipakai.
 const jenisChip=`<span class="acc-chip">${escapeHtml(a.jenis)}</span>`;
 const lokasiChip=a.lokasi?` <span class="acc-chip">📍 ${escapeHtml(a.lokasi)}</span>`:'';
-return `<div class="tx-item u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}"><div class="tx-icon u-bgaccsoft">${Aset.ICON[a.jenis]||'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></div><div class="tx-amount">${fmt(a.nilai)}</div><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></div>`;
+// S552 (diaktifkan) — badge cross-check kepemilikan arah balik (Investment.assetId ->
+// Asset), reuse assetCrossCheckWarning() (investasi.js) apa adanya, 0 rumus baru di sini.
+const assetWarn=(typeof assetCrossCheckWarning==='function')?assetCrossCheckWarning(a):null;
+const assetWarnChip=assetWarn?` <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="${escapeHtml(assetWarn)}">⚠️</span>`:'';
+return `<div class="tx-item u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}"><div class="tx-icon u-bgaccsoft">${Aset.ICON[a.jenis]||'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}${assetWarnChip}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></div><div class="tx-amount">${fmt(a.nilai)}</div><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></div>`;
 }).join('');
 Aset.renderDashboard();
 Aset.renderInvestasi();

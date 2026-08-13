@@ -42,7 +42,17 @@ const PropertyManagementAPI = {
     }
     let list;
     try {
-      list = D.assets.filter((a) => PajakAset.JENIS_PROPERTI.includes(a.jenis));
+      // Audit §D.4 (AUDIT-UNIFIED-ASSET-INVESTMENT-FORM.md): TAMBAH filter
+      // !a.investmentId/!a._migratedToInvestmentId -- pola SAMA PERSIS
+      // Aset.totalValue() (aset.js). Properti (Tanah/Rumah) yang sudah
+      // ditautkan ke Holding Investasi nilainya dihitung di sisi
+      // Investment -- tanpa filter ini, propertyList()/portfolioValue()
+      // ikut menampilkan nilai yang seharusnya sudah "pindah" ke sisi
+      // Investment, jadi breakdown portofolio properti tidak sinkron dgn
+      // Kekayaan Bersih (itu temuan §D.4, bukan dobel-hitung uang).
+      list = D.assets.filter((a) => PajakAset.JENIS_PROPERTI.includes(a.jenis))
+        .filter((a) => !a._migratedToInvestmentId)
+        .filter((a) => !a.investmentId);
     } catch (e) {
       return { ok: false, reason: 'filter D.assets gagal dipanggil' };
     }
