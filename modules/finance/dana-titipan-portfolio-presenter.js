@@ -1023,28 +1023,46 @@ const DanaTitipanPortfolioPresenter = {
   // `o.holdings` (urutan SUDAH terjaga dari build(), sort by
   // allocatedPrincipal desc — TIDAK diubah di sini) jadi urutan node
   // campuran: baris flat (0 custodian) apa adanya di posisi asalnya, DAN
-  // grup per `custodianId` (SATU grup per kustodian, dibuka pertama kali
-  // kustodian itu muncul, baris berikutnya dgn custodianId sama masuk ke
-  // grup yang SAMA walau tidak berurutan di array asal). Keputusan Design
-  // Lock: holding tanpa custodianId (null/undefined) TETAP FLAT di luar
-  // grup — BUKAN dikumpulkan ke grup "Lainnya" (data lama tidak boleh
-  // tersembunyi di balik grup baru). Murni reshaping array utk render,
-  // 0 agregasi angka baru (pokok/nilai/gain per grup TIDAK dijumlahkan
-  // sesi ini — non-goal, header grup hanya nama + jumlah instrumen).
+  // grup per kustodian (SATU grup per kustodian, dibuka pertama kali
+  // kustodian itu muncul, baris berikutnya dgn kustodian yang SAMA masuk
+  // ke grup yang SAMA walau tidak berurutan di array asal). Keputusan
+  // Design Lock: holding tanpa custodianId (null/undefined) TETAP FLAT
+  // di luar grup — BUKAN dikumpulkan ke grup "Lainnya" (data lama tidak
+  // boleh tersembunyi di balik grup baru). Murni reshaping array utk
+  // render, 0 agregasi angka baru (pokok/nilai/gain per grup TIDAK
+  // dijumlahkan sesi ini — non-goal, header grup hanya nama + jumlah
+  // instrumen).
+  //
+  // FIX s593 (laporan user: "🏦 Majoris" tampil 2x sbg 2 grup terpisah
+  // yang isinya kepisah). ROOT CAUSE: grouping dikunci by `custodianId`
+  // MENTAH-MENTAH, sedangkan `CustodianRegistry.findOrCreate()`/
+  // `rename()` (custodian-registry.js) SENGAJA TIDAK collapse entri
+  // yang kebetulan namanya jadi sama (dedup registry itu sendiri by
+  // `id`, bukan by nama — lihat catatan di file itu). Kalau 2 entri
+  // `D.investmentCustodians` beda `id` tapi sama-sama bernama "Majoris",
+  // sebelumnya kode ini bikin 2 node grup terpisah krn `groupIndexById`
+  // dikunci by `custodianId`. FIX: kunci grouping by NAMA kustodian yang
+  // sudah dinormalisasi (trim + lowercase, pola sama persis dedup-by-
+  // nama `CustodianRegistry.findOrCreate()`) — bukan ganti dedup
+  // registry (itu tetap by-id, TIDAK disentuh), murni di layer render
+  // ini supaya kustodian dgn nama yang sama SELALU digabung jadi 1 grup
+  // visual, apa pun `id` aslinya.
   _groupHoldingsByCustodian(holdings) {
     const nodes = [];
-    const groupIndexById = new Map();
+    const groupIndexByName = new Map();
     (holdings || []).forEach((hh) => {
       const custodianId = this._holdingCustodianId(hh);
       if (!custodianId) {
         nodes.push({ kind: 'flat', holding: hh });
         return;
       }
-      if (!groupIndexById.has(custodianId)) {
-        groupIndexById.set(custodianId, nodes.length);
-        nodes.push({ kind: 'group', custodianId, custodianName: this._custodianName(custodianId), items: [] });
+      const custodianName = this._custodianName(custodianId);
+      const nameKey = String(custodianName).trim().toLowerCase();
+      if (!groupIndexByName.has(nameKey)) {
+        groupIndexByName.set(nameKey, nodes.length);
+        nodes.push({ kind: 'group', custodianId, custodianName, items: [] });
       }
-      nodes[groupIndexById.get(custodianId)].items.push(hh);
+      nodes[groupIndexByName.get(nameKey)].items.push(hh);
     });
     return nodes;
   },
@@ -1345,7 +1363,7 @@ const DanaTitipanPortfolioPresenter = {
             <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.removeOwnerLinkage" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">🔓 Lepas Keterikatan Dana Titipan</button>
           </div>
           <div class="u-flex u-gap4 u-mb6 u-ml10 u-fs11">
-            <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset untuk Atur Porsi" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
+            <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
             <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
           </div>
           ${this._returnsHistoryHtml(o.ownerId)}
