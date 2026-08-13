@@ -513,6 +513,10 @@ const InvestmentUI = {
     if (typeof hitungZakatMaal === 'function') hitungZakatMaal();
     if (typeof renderDebtList === 'function') renderDebtList();
     if (typeof AIBus !== 'undefined') AIBus.emit('investment.updated', { ownersUpdated: true, holdingId: h.id });
+    // S583 sesi-9 (Rekomendasi #3 enforcement): audit checkAll() SETELAH simpan
+    // berhasil -- non-blocking (lihat komentar warnIfNotOk() di titipan-reconcile.js),
+    // TIDAK pernah menahan/menolak simpan yang di atas sudah selesai.
+    if (typeof TitipanReconcile !== 'undefined') TitipanReconcile.warnIfNotOk('InvestmentUI.saveOwners');
     toast('✅ Porsi kepemilikan tersimpan');
   },
 
