@@ -15,7 +15,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, escapeHtml: (s) => String(s) },
     ['OwnershipEngine', 'MultiOwnerEngine', 'Aset']
   );
@@ -80,7 +80,7 @@ test('Aset.totalValue() — kalau MultiOwnerEngine tidak dimuat, fallback a.nila
     transactions: [],
   };
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, escapeHtml: (s) => String(s) },
     ['OwnershipEngine', 'Aset']
   );

@@ -71,7 +71,7 @@ function makeD() {
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/asset/investasi.js', 'modules/finance/piutang-utang.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js', 'modules/asset/investasi.js', 'modules/finance/piutang-utang.js'],
     {
       D,
       uid: () => 'u' + (D._n = (D._n || 0) + 1),

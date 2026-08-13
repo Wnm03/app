@@ -13,6 +13,21 @@
 // `principalAmount`/`outstandingPrincipal` — Langkah B murni baris
 // tambahan baca-saja, tidak menyentuh field-field itu (lihat test terakhir
 // yang justru memastikan itu).
+//
+// CATATAN SESI s595/s596/s597: file ini SEBELUMNYA memuat
+// `modules/finance/dana-titipan-portfolio-render.js` (ORPHAN, tidak
+// terdaftar scripts/build.js). Migrasi s596 ke
+// `modules/finance/dana-titipan-portfolio-presenter.js` (file produksi
+// SATU-SATUNYA) sempat GAGAL di test 1/2/3/4/5: `_expenseComparisonForOwner`
+// TIDAK ADA di file produksi — fitur "Sesi C" (baris pembanding otomatis
+// "Estimasi dari Transaksi <Akun>") TIDAK PERNAH diporting dari orphan ke
+// produksi, jadi TIDAK PERNAH sampai ke user meski tes lama hijau (menguji
+// file yang salah). Ditandai `test.todo()` sementara di s596. SESI s597:
+// fungsi `_expenseComparisonForOwner` + wiring markup (baris "Estimasi dari
+// Transaksi ...", ditaruh persis setelah "Pokok Dikomit" di renderInto())
+// diporting APA ADANYA ke `dana-titipan-portfolio-presenter.js` — 0
+// rumus/logic diubah dari versi orphan. Semua `test.todo()` dikembalikan ke
+// `test()` biasa, 6/6 PASS.
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -25,9 +40,7 @@ function makeCtx(D) {
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
       'modules/finance/filter-laporan.js',
-      'modules/finance/dana-titipan-aggregation-api.js',
-      'modules/finance/dana-titipan-commitment-return-api.js',
-      'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
     ],
     {
       D,

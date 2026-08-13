@@ -39,7 +39,7 @@ function todayStrImpl() {
 
 function makeCtx(D, extra = {}) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, uid: () => 'uid_' + Math.random().toString(36).slice(2), save: () => {}, todayStr: todayStrImpl, ...extra },
     ['Aset', 'Investment', 'migrateAssetInvestmentsToHoldings', 'MultiOwnerEngine']
   );

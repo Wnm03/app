@@ -16,7 +16,7 @@ const { loadSource } = require('./helpers/loadSource');
 function makeCtx(D) {
   let saveCalls = 0;
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',],
     { D, uid: () => 'u' + (D._n = (D._n || 0) + 1), save: () => { saveCalls++; }, escapeHtml: (s) => String(s), fmt: (n) => String(n), fmtFull: (n) => String(n) },
     ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI'],
   );
@@ -167,7 +167,7 @@ test('13. REGRESI: build() sekarang ikut merefleksikan commitment (Sesi 485c) ta
 
 test('14. guard: saveCommitment()/getCommitments() aman dipanggil tanpa Investment/MultiOwnerEngine dimuat (getCommitments aman, saveCommitment tetap menolak krn owner tak dikenal)', () => {
   const ctx = loadSource(
-    ['modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',],
     { D: { investments: [] } },
     ['DanaTitipanPortfolioAPI'],
   );

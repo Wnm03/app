@@ -120,7 +120,7 @@ function makeCtx(D, { withInvestmentUI = true } = {}) {
   const ctx = loadSource(
     [
       'modules/shared/multi-owner-engine.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
     ],
     globals,
     ['Aset', 'MultiOwnerEngine'],

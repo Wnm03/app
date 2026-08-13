@@ -109,7 +109,7 @@ function makeCtx(D, AIDecision, dom) {
     [
       'modules/shared/multi-owner-engine.js',
       'modules/asset/asset-ownership-split-presenter.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
     ],
     {
       D,

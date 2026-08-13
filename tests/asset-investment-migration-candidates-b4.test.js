@@ -26,7 +26,7 @@ const investmentMock = {
 
 function loadAset(D) {
   return loadSource(
-    ['modules/asset/aset.js'],
+    ['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, Investment: investmentMock, escapeHtml: (s) => String(s), fmtFull: (n) => 'Rp ' + n },
     ['Aset'],
   );
@@ -104,7 +104,7 @@ test('_findInvestmentMigrationCandidates: cocok substring 1 arah (bukan cuma exa
 
 function run(D) {
   const ctx = loadSource(
-    ['modules/asset/aset.js', 'data-health-check.js'],
+    ['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js', 'data-health-check.js'],
     {
       D,
       Investment: investmentMock,

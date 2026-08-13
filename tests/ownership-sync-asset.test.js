@@ -34,7 +34,7 @@ function makeD() {
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, escapeHtml: (s) => String(s) },
     ['OwnershipEngine', 'Aset', 'AssetInsight', 'isAssetOwnershipSelf']
   );
@@ -77,7 +77,7 @@ test('Aset.totalValue() — D.assets ASLI tidak berubah (histori aset non-SELF t
 
 test('Aset.totalValue() — kalau OwnershipEngine tidak dimuat, fallback hitung semua aset (regresi lama tetap jalan)', () => {
   const D = makeD();
-  const ctx = loadSource(['modules/asset/aset.js'], { D, escapeHtml: (s) => String(s) }, ['Aset']);
+  const ctx = loadSource(['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], { D, escapeHtml: (s) => String(s) }, ['Aset']);
   const totalSemua = D.assets.reduce((s, a) => s + a.nilai, 0);
   assert.equal(ctx.Aset.totalValue(), totalSemua);
 });
@@ -117,7 +117,7 @@ test('Aset.renderDashboard() — Dashboard Aset (assetDashboard*) HANYA menghitu
     querySelectorAll() { return []; },
   };
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, document: documentStub, escapeHtml: (s) => String(s), fmt: (n) => 'Rp ' + n, fmtFull: (n) => 'Rp ' + n, fmtFullSigned: (n) => (n >= 0 ? '+' : '') + n },
     ['OwnershipEngine', 'Aset']
   );

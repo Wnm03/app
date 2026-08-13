@@ -101,7 +101,7 @@ function makeOwnerCard({ selectValue, rowAssetId }) {
 function loadPresenter() {
   const calls = [];
   const ctx = loadSource(
-    ['modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',],
     {
       D: {},
       escapeHtml: (s) => String(s),
