@@ -92,10 +92,22 @@ const DanaTitipanPortfolioPresenter = {
   // dihitung ALL-TIME (seluruh `D.transactions`, TIDAK difilter periode --
   // beda dari modal Riwayat yang scope ke filter aktif, karena baris ini
   // representasi "total historis" sepadan `principalAmount` manual yang
-  // juga bukan angka per-periode) lalu displit per porsi, ambil bagian
-  // owner ini. `seenAcc` dedup by accountId (kalau owner ini kebetulan
-  // punya >1 holding yang mengarah ke akun YANG SAMA -- mis. Aset lama +
-  // Holding hasil link -- supaya expense akun itu TIDAK dihitung dobel).
+  // juga bukan angka per-periode). `seenAcc` dedup by accountId (kalau
+  // owner ini kebetulan punya >1 holding yang mengarah ke akun YANG SAMA
+  // -- mis. Aset lama + Holding hasil link -- supaya expense akun itu
+  // TIDAK dihitung dobel).
+  //
+  // FIX SESI S608 (audit user "apakah data dari akun transaksi yg
+  // ditautkan dari dana titipan sync otomatis ke dashboard Dana Titipan"):
+  // SEBELUM sesi ini, bagian owner dihitung PROPORSIONAL lewat
+  // `MultiOwnerEngine.splitByPorsi(pengeluaranTotal, owners)` -- tidak
+  // sinkron dgn kartu "Porsi per Pemilik" di Riwayat Transaksi yang sudah
+  // pakai assignment eksplisit per transaksi (`resolveTxOwnerAssignment()`,
+  // `t.deductionOwnerId`). Sekarang KEDUA tempat REUSE fungsi split yang
+  // SAMA PERSIS -- 0 rumus baru, cuma pemanggilan
+  // `resolveTxOwnerAssignment()` per transaksi lalu filter ke `o.ownerId`,
+  // bukan proporsi lagi (lihat badan fungsi di bawah, & catatan lengkap di
+  // `resolveTxOwnerAssignment()` sendiri, filter-laporan.js).
   //
   // FIX (laporan user Agustus 2026 -- "riwayat transaksi akun cicilan yang
   // ditautkan ke holding tidak terhitung di Dana Titipan" -- lihat catatan
@@ -124,7 +136,7 @@ const DanaTitipanPortfolioPresenter = {
   // unik yang ikut menyumbang, dipakai label baris supaya generik/tidak
   // hardcode "Majoris").
   _expenseComparisonForOwner(o) {
-    if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof MultiOwnerEngine === 'undefined') return null;
+    if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof resolveTxOwnerAssignment !== 'function' || typeof MultiOwnerEngine === 'undefined') return null;
     if (typeof D === 'undefined' || !Array.isArray(D.assets) || !Array.isArray(D.transactions)) return null;
     const seenAcc = new Set();
     let total = 0;
@@ -158,12 +170,33 @@ const DanaTitipanPortfolioPresenter = {
       if (!resolved) return;
       const idx = resolved.owners.findIndex((ow) => ow && ow.ownerId === o.ownerId);
       if (idx < 0) return;
-      const pengeluaranTotal = D.transactions
-        .filter((t) => t && t.type === 'expense' && sameId(t.accountId, accountId))
+      // FIX SESI S608 (audit user "apakah data dari akun transaksi yg
+      // ditautkan dari dana titipan sync otomatis ke dashboard Dana
+      // Titipan" -- lihat catatan lengkap di `resolveTxOwnerAssignment()`,
+      // filter-laporan.js, sesi yg sama). SEBELUM fix ini, baris "Estimasi
+      // dari Transaksi <Akun>" di sini dihitung PROPORSIONAL lewat
+      // `MultiOwnerEngine.splitByPorsi(pengeluaranTotal, resolved.owners)`
+      // -- padahal kartu "Porsi per Pemilik" di Riwayat Transaksi
+      // (`showFilteredTx()`, filter-laporan.js) SUDAH diubah sesi lama
+      // ("Porsi per Pemilik bukan sistem patungan") jadi penjumlahan per
+      // ASSIGNMENT EKSPLISIT tiap transaksi (`resolveTxOwnerAssignment()`,
+      // sekarang baca `t.deductionOwnerId` stlh fix di atas) -- 2 layar yg
+      // SAMA-SAMA merepresentasikan "pengeluaran akun ini per pemilik"
+      // memakai 2 definisi split BERBEDA, jadi angkanya TIDAK PERNAH sama
+      // (mis. transaksi yg deductionOwnerId-nya diarahkan ke pemilik minor
+      // tetap ikut "nyicip" ke pemilik mayoritas di sini lewat splitByPorsi
+      // proporsional, padahal Riwayat Transaksi sudah benar 100% ke
+      // pemilik minor). FIX: ganti ke SATU sumber kebenaran yg sama persis
+      // dgn `showFilteredTx()` -- jumlah transaksi yg `resolveTxOwnerAssignment()`
+      // (REUSE 100%, sudah global lewat filter-laporan.js yg dimuat lebih
+      // dulu di scripts/build.js -- 0 rumus split baru ditulis di sini)
+      // resolve ke `o.ownerId` PERSIS, bukan proporsi porsi kepemilikan
+      // lagi. `MultiOwnerEngine`/`splitByPorsi` TIDAK dipakai lagi di
+      // fungsi ini (baris lama dibuang, bukan cuma tidak dipanggil).
+      const ownerExpenseTotal = D.transactions
+        .filter((t) => t && t.type === 'expense' && sameId(t.accountId, accountId) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
         .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
-      const split = MultiOwnerEngine.splitByPorsi(pengeluaranTotal, resolved.owners);
-      if (!split.ok) return;
-      total += (split.splits[idx] && split.splits[idx].bagian) || 0;
+      total += ownerExpenseTotal;
       accountNames.push(accountLabel || 'Akun');
     });
     if (!accountNames.length) return null;

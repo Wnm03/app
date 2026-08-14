@@ -254,18 +254,44 @@ return{asset:a,owners};
 }
 // resolveTxOwnerAssignment(t, owners) — permintaan user (audit "Porsi per
 // Pemilik bukan sistem patungan, ada field pilihan di transaksi porsi mana
-// yg dipakai"): balikin ownerId yg transaksi `t` ini SENGAJA ditandai
-// (tx.ownerPorsiId, diisi lewat dropdown "Porsi Pemilik" di modal Transaksi
-// -- lihat updateTxOwnerPorsiOptions() di transaksi.js) kalau valid (masih
-// cocok salah satu `owners` akun ini -- guard existing-owner-only, pola sama
-// resolveTxTitipanOwner()/resolveTxOwnerId lain di transaksi.js, supaya
-// ownerId basi/dr akun lain tidak nyasar ke owner yg salah).
-// FALLBACK (transaksi lama sblm field ini ada, ATAU ownerPorsiId basi/tidak
-// valid): owners[0].ownerId -- porsi PERTAMA dijadikan default (keputusan
-// eksplisit user, bukan proporsional spt versi lama).
+// yg dipakai"): balikin ownerId yg transaksi `t` ini SENGAJA ditandai.
+//
+// FIX SESI S608 (audit user "apakah data dari akun transaksi yg ditautkan
+// dari dana titipan sync otomatis ke dashboard Dana Titipan" — laporan:
+// total "Pengeluaran" per pemilik di kartu "Porsi per Pemilik" TIDAK
+// pernah cocok dgn badge "👤 Ditanggung: <owner>" yg tampil di baris
+// transaksinya sendiri). ROOT CAUSE: fungsi ini SEBELUMNYA membaca
+// `t.ownerPorsiId` -- field itu HANYA PERNAH ditulis lewat dropdown
+// "Porsi Pemilik (akun patungan)"/`updateTxOwnerPorsiOptions()`, yg SUDAH
+// DIHAPUS TOTAL sejak AUDIT-S540/B1-B12-DOUBLECOUNT (lihat komentar
+// `onTxAccChange()`, transaksi.js) -- sejak saat itu `t.ownerPorsiId` TIDAK
+// PERNAH ditulis lagi oleh kode manapun (grep whole-repo: 0 write-site),
+// jadi fungsi ini SELALU jatuh ke fallback `owners[0].ownerId` utk SEMUA
+// transaksi, apa pun assignment aslinya. Penanggung transaksi yg
+// SEBENARNYA aktif & tersimpan sekarang adalah `t.deductionOwnerId`
+// (picker "Pemilik Sumber Potongan", S574-C/D1 — persistensi penuh via
+// `_saveTxInner()`, dibaca `tx-list-cashflow.js` utk badge "👤 Ditanggung:
+// <owner>" yg tampil di tiap baris riwayat). Akibatnya kartu "Porsi per
+// Pemilik" (ringkasan) & badge per-baris (detail) BISA MENAMPILKAN OWNER
+// YG BERBEDA utk transaksi yg sama -- dan baris "Estimasi dari Transaksi
+// <Akun>" di dashboard Dana Titipan (`_expenseComparisonForOwner()`,
+// dana-titipan-portfolio-render.js) yg proporsional (splitByPorsi) juga
+// jadi tidak sinkron dgn keduanya (lihat fix terpisah di file itu, sesi
+// yg sama).
+// FIX: baca `t.deductionOwnerId` LEBIH DULU (sumber aktif/live) --
+// `t.ownerPorsiId` dipertahankan sbg fallback kedua murni utk data lama/
+// edge-case (0 salahnya dicek, tidak pernah ada sekarang tapi tidak
+// menutup kemungkinan format lama), baru owners[0].ownerId (transaksi yg
+// belum pernah pilih penanggung eksplisit sama sekali -- porsi PERTAMA
+// dijadikan default, keputusan eksplisit user, bukan proporsional).
+// Guard existing-owner-only dipertahankan apa adanya (ownerId basi/dr akun
+// lain tidak nyasar ke owner yg salah).
 // PURE, 0 side-effect.
 function resolveTxOwnerAssignment(t,owners){
 if(!Array.isArray(owners)||!owners.length)return null;
+if(t&&typeof t.deductionOwnerId==='string'&&t.deductionOwnerId&&owners.some(o=>o.ownerId===t.deductionOwnerId)){
+return t.deductionOwnerId;
+}
 if(t&&typeof t.ownerPorsiId==='string'&&t.ownerPorsiId&&owners.some(o=>o.ownerId===t.ownerPorsiId)){
 return t.ownerPorsiId;
 }
