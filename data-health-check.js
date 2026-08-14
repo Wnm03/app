@@ -376,7 +376,14 @@ const prodIds=new Set(D.products.map(p=>p.id));
 (D.cobek||[]).forEach(c=>{
 (c.items||[]).forEach(it=>{
 if(it.productId && !prodIds.has(it.productId)){
-issues.push({level:'error',title:'Transaksi Shop dengan produk tidak valid',detail:`Transaksi Shop tgl ${c.date||'?'} (pelanggan: ${(c.customer&&c.customer.name)||'-'}) berisi item "${it.name||it.productId}" yang produknya sudah dihapus dari etalase.`});
+// PERUBAHAN SESI INI (rekomendasi perbaikan data-health): tambahkan tombol aksi
+// "Buka/Edit Transaksi Shop" yang reuse Order.openEditModal(id) yang SUDAH ADA
+// (modules/shop/cobek-order.js) -- modal itu sendiri sudah punya tombol
+// 🗑 Hapus Transaksi (Order.deleteFromModal) begitu dibuka dalam mode edit, jadi
+// user bisa langsung hapus/ganti item yang produknya sudah terhapus dari sini,
+// tanpa perlu cari manual transaksinya di tab Shop. 0 perubahan ke cek/level
+// issue lain, 0 auto-repair (user tetap yang memutuskan hapus/edit).
+issues.push({level:'error',title:'Transaksi Shop dengan produk tidak valid',detail:`Transaksi Shop tgl ${c.date||'?'} (pelanggan: ${(c.customer&&c.customer.name)||'-'}) berisi item "${it.name||it.productId}" yang produknya sudah dihapus dari etalase.`,actions:[{label:'🛒 Buka/Edit Transaksi Shop',action:'Order.openEditModal',args:[c.id]}]});
 }
 });
 if(c.accountId && !accIds.has(c.accountId)){
@@ -529,9 +536,17 @@ issues.push({level:'warn',title:'Part katalog terhubung ke lebih dari 1 baris st
 // ini. Murni baca (VehicleCatalog.getStore() + D.partsStock), 0 tulis.
 if(typeof VehicleCatalog!=='undefined' && typeof VehicleCatalog.isLoaded==='function' && VehicleCatalog.isLoaded() && typeof VehicleCatalog.getStore==='function'){
 const catalogIds=new Set((VehicleCatalog.getStore().items||[]).map(it=>it.id));
-(D.partsStock||[]).forEach(p=>{
+// PERUBAHAN SESI INI (rekomendasi perbaikan data-health): tambahkan 2 tombol aksi
+// per item -- "✏️ Buka Stok" (reuse openStockModal(idx) yang SUDAH ADA di
+// modules/vehicle/sparepart-servis.js, index array asli dipakai persis spt
+// tombol ✏️ di baris daftar stok) & "🔓 Lepas Tautan Katalog" (aksi baru
+// DataHealth.unlinkStockCatalog(idx) di bawah -- cukup kosongkan catalogId lalu
+// simpan & refresh list ini, TANPA menghapus data stok itu sendiri). idx dipakai
+// harus index di ARRAY D.partsStock ASLI (bukan index hasil filter), makanya
+// forEach diberi index eksplisit di sini.
+(D.partsStock||[]).forEach((p,idx)=>{
 if(p.catalogId && !catalogIds.has(p.catalogId)){
-issues.push({level:'warn',title:'Stok sparepart tertaut ke part katalog yang sudah dihapus',detail:`"${escapeHtml(p.name)}" masih menyimpan tautan catalogId ke part di Katalog Suku Cadang yang sudah dihapus/tidak ditemukan -- badge "🔗 Katalog"/"📦 Stok" terkait jadi tidak muncul. Data stok sendiri tetap aman, cek/lepas tautannya kalau perlu.`});
+issues.push({level:'warn',title:'Stok sparepart tertaut ke part katalog yang sudah dihapus',detail:`"${escapeHtml(p.name)}" masih menyimpan tautan catalogId ke part di Katalog Suku Cadang yang sudah dihapus/tidak ditemukan -- badge "🔗 Katalog"/"📦 Stok" terkait jadi tidak muncul. Data stok sendiri tetap aman, cek/lepas tautannya kalau perlu.`,actions:[{label:'✏️ Buka Stok',action:'openStockModal',args:[idx]},{label:'🔓 Lepas Tautan Katalog',action:'DataHealth.unlinkStockCatalog',args:[idx]}]});
 }
 });
 }
@@ -627,12 +642,44 @@ summaryEl.innerHTML=`Ditemukan <b>${errCount} error</b> & <b>${warnCount} pering
 // baris list Aset di aset.js, lihat FIX-B11 md) -- 0 dispatcher baru, 0
 // logic buka-modal baru di sini. Issue lain (tanpa assetId) tampilannya
 // tidak berubah sama sekali.
+// PERUBAHAN SESI INI (rekomendasi perbaikan data-health, lihat catatan di 2 cek
+// di atas): render generik tombol `i.actions[]` (kalau ada) di samping tombol
+// "📦 Buka Aset" lama (dipertahankan apa adanya utk issue berbasis assetId).
+// Setiap actions[] item = {label, action, args} -- dipetakan langsung ke
+// data-action/data-args dispatcher yang SUDAH ADA di seluruh app (pola sama
+// persis tombol "📦 Buka Aset" di bawah), jadi 0 dispatcher baru yang perlu
+// didaftarkan secara khusus di sini.
 listEl.innerHTML=issues.map(i=>`<div style="padding:10px;border-radius:10px;margin-bottom:8px;background:${i.level==='error'?'var(--accent2-soft)':'var(--accent4-soft)'}">
       <div style="font-weight:700;font-size:13px;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}">${i.level==='error'?'❌':'⚠️'} ${escapeHtml(i.title)}</div>
       <div class="u-fs12 u-t2 u-mt2">${escapeHtml(i.detail)}</div>
-      ${i.assetId?`<button class="u-fs11 u-r6 u-mt6" style="padding:4px 10px;border:1px solid var(--accent4);background:transparent;color:var(--accent4)" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([i.assetId]))}">📦 Buka Aset</button>`:''}
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+      ${i.assetId?`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid var(--accent4);background:transparent;color:var(--accent4)" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([i.assetId]))}">📦 Buka Aset</button>`:''}
+      ${(i.actions||[]).map(a=>`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid ${i.level==='error'?'var(--accent2)':'var(--accent4)'};background:transparent;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}" data-action="${escapeHtml(a.action)}" data-args="${escapeHtml(JSON.stringify(a.args||[]))}">${escapeHtml(a.label)}</button>`).join('')}
+      </div>
     </div>`).join('');
 }
 openModal('dataHealthModal');
 return issues;
 }
+
+// PERUBAHAN SESI INI (rekomendasi perbaikan data-health): namespace kecil utk
+// aksi cepat yang dipicu langsung dari kartu Hasil Pemindaian Data, tanpa perlu
+// buka modal lain dulu. Saat ini baru berisi 1 aksi (lepas tautan catalogId di
+// Stok Sparepart yang orphan) -- sengaja dibuat sbg objek terpisah (bukan
+// nambah fungsi global baru satu-satu) supaya aksi data-health berikutnya bisa
+// ditambah di sini tanpa mengotori namespace global lain.
+const DataHealth={
+// Lepas tautan p.catalogId (BUKAN hapus stoknya) utk 1 baris D.partsStock,
+// lalu simpan & refresh ulang modal Hasil Pemindaian Data supaya kartu warning
+// terkait langsung hilang. idx = index asli di D.partsStock (lihat cek
+// "Stok sparepart tertaut ke part katalog yang sudah dihapus" di atas).
+unlinkStockCatalog(idx){
+const p=(D.partsStock||[])[idx];
+if(!p){toast('⚠️ Item stok tidak ditemukan (mungkin sudah berubah urutannya, coba pindai ulang).');return;}
+delete p.catalogId;
+if(typeof save==='function')save();
+toast(`🔓 Tautan katalog utk "${p.name}" dilepas`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+if(typeof renderStockList==='function')renderStockList();
+}
+};
