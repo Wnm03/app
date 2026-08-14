@@ -78,6 +78,24 @@ if(accOwnFilterVal&&accOwnFilterVal!=='ALL'&&typeof OwnershipEngine!=='undefined
 const accOwnFiltered=OwnershipEngine.filterByType(accGridList,accOwnFilterVal);
 if(accOwnFiltered.ok)accGridList=accOwnFiltered.items;
 }
+// Gap Badge Titipan (2026-08-14 sesi lanjutan #2, Rekomendasi #3,
+// PATCH-NOTES-akun-dana-titipan-sync.md §5): 100% REUSE
+// TitipanReconcile.checkAccounts() -- 0 logic gap dihitung ulang di sini.
+// Dihitung SEKALI per render (bukan per-kartu) lalu dicocokkan ke tiap akun
+// lewat Set id akun yang punya gap. Murni informasi, 0 mutasi ke D. Guard
+// typeof TitipanReconcile -- kalau file itu belum dimuat di suatu halaman,
+// fallback ke Set kosong (0 badge tampil), tidak error.
+const titipanGapAccIds=(()=>{
+const s=new Set();
+if(typeof TitipanReconcile!=='undefined'&&typeof TitipanReconcile.checkAccounts==='function'){
+const res=TitipanReconcile.checkAccounts();
+// key berbentuk "accId::ownerId" (lihat _expectedFromAccounts()) -- ambil
+// bagian accId saja (split '::' pertama), krn badge di kartu Akun cukup
+// tandai per-akun (bukan per-owner).
+(res&&res.missing||[]).forEach(m=>{ if(m&&m.key!=null)s.add(String(m.key).split('::')[0]); });
+}
+return s;
+})();
 el.innerHTML=accGridList.map((a)=>{
 const i=D.accounts.indexOf(a);
 const bal=recalcAccBalance(a.id);
@@ -158,6 +176,11 @@ const porsiTxt=res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).joi
 return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
 })():'';
 const linkedTxHint=linked?'<div class="u-fs10 u-t2" style="margin-top:2px">📜 Ketuk kartu untuk riwayat transaksi modal</div>':'';
+// titipanGapLine (sesi lanjutan #2, Rekomendasi #3) -- murni informasi, 0
+// tombol/aksi baru, 0 mutasi ke D. Hanya tampil utk akun berdiri-sendiri
+// (bukan `linked` ke Aset -- itu sudah otomatis sync via cabang lain,
+// lihat komentar _expectedFromAccounts()) yang ada di titipanGapAccIds.
+const titipanGapLine=(!linked&&titipanGapAccIds.has(String(a.id)))?'<div class="u-fs11" style="margin-top:2px;color:var(--accent4)">⚠️ Porsi titipan belum sinkron ke Dana Titipan</div>':'';
 return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAccTxHistory" data-args="${escapeHtml(JSON.stringify([a.id]))}">
       <button class="acc-card-edit" data-stop="1" data-action="openAccModal" data-args="${escapeHtml(JSON.stringify([i]))}" title="Edit" aria-label="Edit">✏️</button>
       <button class="acc-card-del" data-stop="1" data-action="delAcc" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
@@ -167,6 +190,7 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       ${invDetailLine}
       ${linkedPorsiLine}
       ${linkedTxHint}
+      ${titipanGapLine}
       <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>
     </div>`;
 }).join('');

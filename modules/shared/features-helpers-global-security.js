@@ -251,6 +251,13 @@ function save(){
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
 // tapi tiap fungsi di dalam burst yang sama tidak hitung ulang dari nol. Lihat akun.js.
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
+// 2026-08-14 sesi lanjutan (Rekomendasi #2, PATCH-NOTES-akun-dana-titipan-sync.md §2):
+// gerbang tunggal utk sinkron Buku Utang akun BERDIRI SENDIRI (bukan tertaut Aset --
+// itu sudah ditangani syncLinkedAssetNilaiFromAkun() di bawah) ke Dana Titipan, nominal
+// = saldo akun saat ini (real-time, keputusan desain eksplisit -- lihat komentar
+// TitipanSync.reconcileAccounts()). Ditaruh SETELAH invalidateAccBalCache() supaya
+// recalcAccBalance() di dalamnya baca saldo TERBARU, bukan cache basi dari siklus lalu.
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function')TitipanSync.reconcileAccounts();
 if(typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun();
 if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
 if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
