@@ -313,3 +313,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry (403), eslint tidak bisa diinstall/dijalankan, konsisten sesi-sesi sebelumnya (S424 dst). Sesi ini (S605/606) HANYA menghapus 2 target orphan (folder finance/ top-level 40 file & modules/shared/akun.js) yang sudah diverifikasi 0 referensi di manapun (source/tests/docs/scripts/build.js) -- 0 baris logic produksi diedit. Perlu dijalankan manual (npm run lint) sebelum deploy sungguhan.
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan), konsisten sesi-sesi sebelumnya. Bundle unminified tapi 100% valid (node --check lolos kedua bundle). Minify bisa dijalankan ulang di environment dgn akses internet sebelum deploy.
+
+## 2026-08-14T04:02:49.089Z — versi s607-owner-registry-mandatory-lookup
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang
