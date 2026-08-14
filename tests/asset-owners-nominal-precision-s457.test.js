@@ -58,7 +58,7 @@ function makeStatefulDom() {
 function makeCtx(D, dom) {
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
     {
       D,
       document: dom,
@@ -73,7 +73,7 @@ function makeCtx(D, dom) {
       fmtFull: (n) => 'Rp ' + Math.round(n || 0),
       todayStr: () => '2026-08-07',
     },
-    ['Aset', 'MultiOwnerEngine'],
+    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry'],
   );
   ctx.Aset.renderList = () => {};
   ctx.toastMessages = toastMessages;

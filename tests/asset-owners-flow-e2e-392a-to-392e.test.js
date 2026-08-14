@@ -108,6 +108,7 @@ function makeCtx(D, AIDecision, dom) {
   const ctx = loadSource(
     [
       'modules/shared/multi-owner-engine.js',
+      'modules/shared/owner-registry.js',
       'modules/asset/asset-ownership-split-presenter.js',
       'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
     ],
@@ -129,7 +130,7 @@ function makeCtx(D, AIDecision, dom) {
       todayStr: () => '2026-08-06',
       parsePzNum: (v) => { const n = parseFloat(v); return isFinite(n) ? n : 0; },
     },
-    ['Aset', 'MultiOwnerEngine', 'AssetOwnershipSplitPresenter', 'registerAssetAIRules'],
+    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry', 'AssetOwnershipSplitPresenter', 'registerAssetAIRules'],
   );
   // renderList()/renderDashboard() penuh butuh banyak DOM/kartu lain di luar
   // cakupan modal porsi kepemilikan (sama seperti test 392e) -- di-no-op-kan

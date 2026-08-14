@@ -50,9 +50,9 @@ test('Aset.saveOwners(): memanggil TitipanReconcile.warnIfNotOk("Aset.saveOwners
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000, owners: [{ ownerId: 'SELF', porsi: 100 }] }], accounts: [], transactions: [], debts: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), TitipanReconcile: { warnIfNotOk: (context) => { calls.push(context); return { ok: true }; } } }),
-    ['Aset', 'MultiOwnerEngine']
+    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry']
   );
   ctx.Aset.renderList = () => {};
   ctx.Aset._ownersModalAsset = D.assets[0];
@@ -79,9 +79,9 @@ test('InvestmentUI.saveOwners(): memanggil TitipanReconcile.warnIfNotOk("Investm
   };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/asset/investasi-view.js'],
+    ['modules/shared/owner-registry.js', 'modules/asset/investasi-view.js'],
     baseGlobals({ D, Investment, toast: (m) => toastMessages.push(m), TitipanReconcile: { warnIfNotOk: (context) => { calls.push(context); return { ok: true }; } } }),
-    ['InvestmentUI']
+    ['InvestmentUI', 'OwnerRegistry']
   );
   ctx.InvestmentUI._ownersModalHolding = holding;
   ctx.InvestmentUI._ownersDraft = [{ ownerId: 'SELF', ownerName: 'Saya', porsi: 70, isSelf: true }, { ownerId: '', ownerName: 'Sinta', porsi: 30, isSelf: false }];
@@ -97,9 +97,9 @@ test('AccOwners.save(): memanggil TitipanReconcile.warnIfNotOk("AccOwners.save")
   const D = { assets: [], accounts: [{ id: 'acc1', name: 'Cash', baseBalance: 100000, includeInBalance: true }], transactions: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), TitipanReconcile: { warnIfNotOk: (context) => { calls.push(context); return { ok: true }; } } }),
-    ['OwnershipEngine', 'MultiOwnerEngine', 'Aset', 'AccOwners', 'getAccOwners', 'setAccOwners']
+    ['OwnershipEngine', 'MultiOwnerEngine', 'OwnerRegistry', 'Aset', 'AccOwners', 'getAccOwners', 'setAccOwners']
   );
   ctx.editAccIdx = 0;
   ctx.AccOwners._accId = 'acc1';

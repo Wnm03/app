@@ -56,6 +56,7 @@ function makeCtx(D, AIDecision) {
   const ctx = loadSource(
     [
       'modules/shared/multi-owner-engine.js',
+      'modules/shared/owner-registry.js',
       'modules/asset/asset-ownership-split-presenter.js',
       'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
     ],
@@ -82,7 +83,7 @@ function makeCtx(D, AIDecision) {
       fmt: (n) => 'Rp ' + Math.round(n || 0).toLocaleString('id-ID'),
       fmtFull: (n) => 'Rp ' + Math.round(n || 0).toLocaleString('id-ID'),
     },
-    ['Aset', 'MultiOwnerEngine', 'AssetOwnershipSplitPresenter', 'registerAssetAIRules'],
+    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry', 'AssetOwnershipSplitPresenter', 'registerAssetAIRules'],
   );
   // saveOwners() (domain logic ditest di sini) memanggil Aset.renderList()
   // di akhir (efek UI, sudah di luar cakupan regression check 392e --
