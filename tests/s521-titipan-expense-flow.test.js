@@ -90,6 +90,11 @@ test('1. single owner: submit() menghasilkan tepat 1 transaksi dgn titipanLinkId
   assert.equal(D.transactions.length, 1);
   assert.equal(D.transactions[0].amount, 100000);
   assert.equal(D.transactions[0].titipanLinkId, 'budi');
+  // FIX (audit "Pemilik Sumber Potongan" tidak sync ke Dana Titipan):
+  // deductionOwnerId harus ikut terisi sama dengan titipanLinkId, bukan
+  // cuma titipanLinkId saja -- ini field yang dibaca dashboard Dana
+  // Titipan (resolveTxOwnerAssignment(), filter-laporan.js).
+  assert.equal(D.transactions[0].deductionOwnerId, 'budi');
   assert.equal(D.transactions[0].type, 'expense');
   assert.equal(ctx._saveCalls(), 1);
 });
@@ -111,6 +116,9 @@ test('2. multi owner: submit() menghasilkan N transaksi terpisah, masing2 1 titi
   assert.deepEqual(linkIds, ['budi', 'cici']);
   // tidak ada 1 transaksi dgn field split/array -- masing2 row scalar
   D.transactions.forEach((t) => { assert.equal(typeof t.titipanLinkId, 'string'); });
+  // deductionOwnerId per baris harus sama dgn titipanLinkId baris itu (1
+  // baris split = 1 owner, konsisten di semua transaksi hasil split).
+  D.transactions.forEach((t) => { assert.equal(t.deductionOwnerId, t.titipanLinkId); });
 });
 
 // ============================================================

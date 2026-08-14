@@ -447,10 +447,40 @@ test('7. save(): single owner -> TitipanExpenseFlow.submit() dipanggil, 1 transa
   assert.equal(D.transactions[0].amount, 100000);
   assert.equal(D.transactions[0].titipanLinkId, 'budi');
   assert.equal(D.transactions[0].accountId, 'acc1');
+  // FIX (audit "Pemilik Sumber Potongan" tidak sync): deductionOwnerId
+  // sekarang WAJIB terisi sama dengan titipanLinkId (1 baris split = 1
+  // owner) supaya badge "Ditanggung"/"Porsi per Pemilik"/"Estimasi dari
+  // Transaksi Akun" di dashboard Dana Titipan (resolveTxOwnerAssignment(),
+  // filter-laporan.js) tidak jatuh ke fallback owner pertama.
+  assert.equal(D.transactions[0].deductionOwnerId, 'budi');
   assert.equal(D.transactions[0].category, 'Beli galon');
   assert.deepEqual(ctx._closeModalCalls, ['titipanExpenseModal']);
   assert.equal(ctx._renderCalls.presenter, 1);
   assert.equal(ctx._renderCalls.keuangan, 1);
+});
+
+test('7b. open(): dropdown #titipanExpenseAcc terisi semua D.accounts & default ke akun pertama', () => {
+  const dom = makeStatefulDom();
+  const D = baseD({ accounts: [{ id: 'acc1', name: 'Cash' }, { id: 'acc2', name: 'Seabank' }] });
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  const accEl = dom.getElementById('titipanExpenseAcc');
+  assert.match(accEl.innerHTML, /value="acc1"/);
+  assert.match(accEl.innerHTML, /value="acc2"/);
+  assert.equal(accEl.value, 'acc1');
+});
+
+test('7c. save(): ganti #titipanExpenseAcc ke akun lain -> transaksi tersimpan pakai akun yang dipilih, BUKAN hardcode akun pertama', async () => {
+  const dom = makeStatefulDom();
+  const D = baseD({ accounts: [{ id: 'acc1', name: 'Cash' }, { id: 'acc2', name: 'Seabank' }] });
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  dom.getElementById('titipanExpenseAmt').value = '100000';
+  dom.getElementById('titipanExpenseAcc').value = 'acc2';
+  await ctx.TitipanExpenseUI.save();
+  assert.equal(D.transactions.length, 1);
+  assert.equal(D.transactions[0].accountId, 'acc2');
 });
 
 test('8. save(): tidak ada owner tercentang -> toast peringatan, TIDAK memanggil submit (0 transaksi)', async () => {
