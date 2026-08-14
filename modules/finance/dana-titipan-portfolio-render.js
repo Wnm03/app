@@ -274,6 +274,22 @@ const DanaTitipanPortfolioPresenter = {
   // pandang user tampak seperti aset hantu/duplikat yang seharusnya sudah
   // tidak ada). FIX: tambah filter yang SAMA PERSIS dengan
   // `Aset.totalValue()` — 0 rumus baru, murni menyamakan definisi.
+  // FIX s608 (laporan user, screenshot dropdown "Pilih Aset" hanya berisi
+  // entri Buku Aset seperti "vario 125 kzr"/"Vario 110" -- Holding
+  // Investasi (mis. "Majoris", "bibit", instrumen milik owner lain di
+  // kartu "Total Teralokasi" di bawahnya) TIDAK PERNAH muncul jadi opsi,
+  // padahal user perlu buka "⚖️ Atur Porsi Aset" utk Holding juga, bukan
+  // cuma Buku Aset). ROOT CAUSE: dropdown ini SELALU murni baca
+  // `D.assets` (lihat komentar s599 di atas) -- `D.investments[]`
+  // (SSOT Holding sejak s476b) tidak pernah diikutkan sama sekali.
+  // FIX (additive, 0 baris lama diubah): opsi Holding ditambahkan
+  // SETELAH opsi Buku Aset, value diberi prefix `h:` (mis. `h:h1`) supaya
+  // `openAssetPorsi()` bisa membedakan routing tanpa nebak/duplikat id
+  // dengan Buku Aset (id Buku Aset & Holding punya ruang id terpisah,
+  // tapi prefix ini jaga-jaga eksplisit + gampang dibaca kode). Ikon 📈
+  // (beda dari 🏦 label Buku Aset di baris holding lain) + nama
+  // custodian (kalau ada) supaya user gampang bedakan holding yang mirip
+  // nama antar institusi. 0 filter jenis, sama prinsip Buku Aset di atas.
   _assetOptionsHtml() {
     const opts = ['<option value="">— Pilih Aset —</option>'];
     const list = (typeof D !== 'undefined' && Array.isArray(D.assets)) ? D.assets : [];
@@ -283,6 +299,12 @@ const DanaTitipanPortfolioPresenter = {
         if (!a || !a.id) return;
         opts.push('<option value="' + a.id + '">' + escapeHtml(a.name || '?') + '</option>');
       });
+    const holdings = (typeof D !== 'undefined' && Array.isArray(D.investments)) ? D.investments : [];
+    holdings.forEach((h) => {
+      if (!h || !h.id) return;
+      const label = '📈 ' + (h.name || '?') + (h.custodian ? ' (' + h.custodian + ')' : '');
+      opts.push('<option value="h:' + h.id + '">' + escapeHtml(label) + '</option>');
+    });
     return opts.join('');
   },
 
@@ -385,7 +407,7 @@ const DanaTitipanPortfolioPresenter = {
   // cocok dgn pilihan dropdown), murni bukan trigger aksi lagi di sini.
   _holdingRowHtml(hh) {
     return `
-            <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(hh.linkedAssetId || '')}">
+            <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(hh.linkedAssetId ? hh.linkedAssetId : (hh.linkedInvestmentId ? 'h:' + hh.linkedInvestmentId : ''))}">
               <span>${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)} <span class="u-t2">(${hh.ownerPct}%)</span></span>
               <span>${hh.hasGainTracking === false ? `
                 <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
@@ -944,6 +966,20 @@ const DanaTitipanCommitmentUI = {
     }
     const assetId = sel ? sel.value : '';
     if (!assetId) { if (typeof toast === 'function') toast('⚠️ Pilih aset dulu'); return; }
+    // FIX s608: opsi Holding Investasi (lihat _assetOptionsHtml()) memakai
+    // value berprefix `h:` -- route ke InvestmentUI.openOwnersModal(id)
+    // (modules/asset/investasi-view.js, sudah ada & dipakai baris
+    // per-institusi di _holdingsListHtml(), 0 fungsi baru di sini), BUKAN
+    // Aset.openOwnersModalById() yang khusus id Buku Aset.
+    if (assetId.indexOf('h:') === 0) {
+      const holdingId = assetId.slice(2);
+      if (typeof InvestmentUI === 'undefined' || typeof InvestmentUI.openOwnersModal !== 'function') {
+        if (typeof toast === 'function') toast('⚠️ Fitur Holding Investasi belum siap dimuat');
+        return;
+      }
+      InvestmentUI.openOwnersModal(holdingId);
+      return;
+    }
     if (typeof Aset === 'undefined' || typeof Aset.openOwnersModalById !== 'function') {
       if (typeof toast === 'function') toast('⚠️ Fitur Buku Aset belum siap dimuat');
       return;
