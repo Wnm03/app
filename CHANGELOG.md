@@ -1,3 +1,47 @@
+# Changelog — Sesi S609 (Dana Titipan: fix modal "Catat Pengeluaran" tidak sync deductionOwnerId & tidak punya field Akun, v1342)
+
+## Laporan user
+Dropdown "Pemilik Sumber Potongan" tidak pernah muncul saat mencatat
+pengeluaran lewat modal "Catat Pengeluaran Dana Titipan", dan transaksi yang
+dicatat lewat modal itu tidak sync ke badge "👤 Ditanggung", kartu "Porsi
+per Pemilik", dan "Estimasi dari Transaksi Akun" di dashboard Dana Titipan.
+
+## Root cause
+Modal Dana Titipan (`TitipanExpenseFlow`/`TitipanExpenseUI`, S521) adalah
+alur transaksi terpisah dari form Transaksi biasa (`txModal`):
+1. Tidak punya field Akun sama sekali — `accountId` di-hardcode ke
+   `D.accounts[0]`, jadi tidak ada `#txAcc`-equivalent yang bisa memicu
+   dropdown "Pemilik Sumber Potongan" (field itu murni milik `txModal`).
+2. Tidak pernah mengisi `deductionOwnerId` — field yang sejak S574/S608
+   dibaca `resolveTxOwnerAssignment()` (filter-laporan.js) sebagai sumber
+   kebenaran badge/kartu/estimasi Dana Titipan di atas. Modal ini hanya
+   menulis `titipanLinkId` (field terpisah, tidak dibaca konsumen tsb),
+   jadi transaksi lewat sini selalu jatuh ke fallback "owner pertama" di
+   semua tampilan yang membaca `deductionOwnerId`.
+
+## Fix (additive, 0 logic lama diubah)
+1. `modules/shared/modals.js` — tambah dropdown "Bayar dari Akun"
+   (`#titipanExpenseAcc`) ke `titipanExpenseModal`.
+2. `modules/finance/titipan-expense-ui.js` — `open()` mengisi & reset
+   dropdown akun ke akun pertama (pola sama `billAcc`,
+   tagihan-kalender.js); `save()` membaca `accountId` dari dropdown itu
+   (fallback ke akun pertama dipertahankan hanya untuk elemen yang belum
+   sempat terisi).
+3. `modules/finance/titipan-expense-flow.js` — `submit()` sekarang juga
+   mengisi `tx.deductionOwnerId = row.ownerId` di tiap transaksi yang
+   dibuat (1 baris split = 1 owner yang sudah tervalidasi lewat
+   `resolveOwner()`/`validate()`, aman diisi langsung tanpa validasi
+   ulang terhadap owners akun).
+4. Test baru/diperluas: `tests/s521-titipan-expense-flow.test.js` (assert
+   `deductionOwnerId` di test 1 & 2, konsisten dgn `titipanLinkId` di tiap
+   baris split) dan `tests/s521-titipan-expense-ui.test.js` (assert
+   `deductionOwnerId` di test 7 + test baru 7b/7c untuk dropdown akun).
+- Version otomatis naik v1341 → **v1342** (`scripts/build.js`).
+- Test: `node --test tests/*.test.js` — **4280/4280 lulus, 0 gagal**.
+- `verify-release-ready.js`: lolos (gate lint/minify di-override manual —
+  sandbox tanpa akses npm/jaringan, eslint & esbuild tidak terpasang;
+  gate html-sync & version-sync lolos bersih).
+
 # Changelog — Sesi S591 (Dana Titipan: dedup holding "Majoris" 2x + tombol Atur Porsi ganda, v1319)
 
 ## Konteks
