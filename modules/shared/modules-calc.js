@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s606-orphan-finance-akun-cleanup';
+const MODULE_CALC_VERSION='s607-owner-registry-mandatory-lookup';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
