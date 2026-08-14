@@ -1,0 +1,58 @@
+CHANGED-FILES-s605-s606 (patch untuk melengkapi app-main__19_.zip)
+
+Konteks: app-main__19_.zip yang diupload ada di v1331 dengan session terbaru
+s601-604 (fitur "Holding Investasi terhubung ke Akun" + fix double-count/
+delete-akun/save-porsi terkait, semuanya di modules/finance/akun.js,
+modules/asset/aset.js, modules/asset/investasi-view.js). TAPI basis file ini
+masih membawa 2 target orphan yang sudah diidentifikasi & dihapus di audit
+sesi lain (CHANGED-FILES-s599.txt) namun belum pernah sampai ke branch ini.
+Sesi ini (S605 audit ulang + S606 build) menerapkan penghapusan yang sama
+di atas basis v1331 + s601-604, TANPA mengubah 1 baris logic produksi s601-604
+manapun.
+
+Removed:
+- finance/ (SELURUH folder top-level, 40 file .js) -- snapshot LAMA dari
+  modules/finance/ dari SEBELUM restrukturisasi folder Sesi 16. Diverifikasi
+  ulang di basis v1331 ini (bukan cuma warisan audit s599): nama file 100%
+  subset dari modules/finance/ (comm -23 kosong), 9 file modules/finance/
+  yang tidak pernah ada di sini tetap sama (titipan-reconcile.js,
+  titipan-sync.js, tx-renov.js, tx-servis.js, tx-stok-sparepart.js,
+  tx-target.js, tx-transfer.js, vehicle-catalog-tx-link.js, worthit.js).
+  finance/akun.js di sini adalah versi PRA-S574 (0 AccOwners/S574-A/B, apalagi
+  0 S601-604 link-holding-ke-akun) -- confirmed stale.
+- modules/shared/akun.js -- duplikat lama dari modules/finance/akun.js
+  (PRA-S574, sama sekali belum punya AccOwners/S574/S601-604), tidak pernah
+  direferensikan di scripts/build.js manapun.
+
+Kenapa aman dihapus:
+- Grep menyeluruh ulang (source .js, tests/*.test.js, docs/*.md, *.txt,
+  *.html, scripts/build.js) utk path persis tiap file -> 0 hasil kode nyata,
+  hanya beberapa penyebutan path di teks/komentar dokumentasi (mis.
+  docs/BUG_REGISTRY.md, PATCH-README-S572.md, tests/s572-*.test.js komentar
+  header) yang murni prosa historis, bukan reference jalur file aktif.
+- scripts/build.js tidak pernah menyebut path ini di manifest manapun.
+
+Verification (dijalankan di basis v1331+s601-604 ini, semua lolos):
+- npm test (node --test tests/*.test.js) -> 4216/4216 pass, SAMA PERSIS
+  sebelum & sesudah hapus (dicek di 2 checkout terpisah) -- bukti 0 test
+  bergantung pada file yang dihapus, termasuk test s601/s602/s603/s604 baru.
+- node scripts/build.js -> sukses, versi naik v1331 -> v1332, build label
+  s606-orphan-finance-akun-cleanup, app-bundle-a/b.min.js ditulis ulang,
+  index.html/app_production.html/sw.js disinkronkan ke ?v=1332.
+- node scripts/verify-window-expose.js -> OK (334 file di-scan, 74 modul
+  data-action semuanya ter-expose).
+- node scripts/verify-bundle-freshness.js -> OK (hash source cocok).
+- node scripts/verify-release-ready.js -> LOLOS (2 gate di-override manual:
+  lint & minify -- keduanya keterbatasan sandbox tanpa akses jaringan, bukan
+  temuan dari perubahan kode sesi ini; alasan override tercatat di
+  docs/RELEASE-GATE-LOG.md).
+- eslint: TIDAK bisa dijalankan di sandbox ini (network mati). MOHON
+  dijalankan manual sebelum deploy: npm run lint
+- esbuild/minify: TIDAK bisa dijalankan di sandbox ini (network mati). MOHON
+  dijalankan manual kalau mau ukuran bundle kecil: npm install --save-dev
+  esbuild && npm run build
+
+Out of scope (tidak disentuh sesi ini):
+- Logic S601-604 (link Holding Investasi <-> Akun, double-count fix, delete-
+  akun fix, save-porsi fix) -- 0 baris diubah, dipertahankan apa adanya.
+- Isi/logic modules/finance/*.js lainnya -- 0 baris diubah.

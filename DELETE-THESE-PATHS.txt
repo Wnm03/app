@@ -1,0 +1,2 @@
+finance/
+modules/shared/akun.js
