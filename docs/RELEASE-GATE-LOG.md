@@ -318,3 +318,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang
+
+## 2026-08-14T04:37:00.345Z — versi s608-owner-registry-mandatory-lookup
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm registry (403), eslint tidak bisa diinstall/dijalankan
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall
