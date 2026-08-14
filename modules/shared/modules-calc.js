@@ -981,3 +981,43 @@ netEl.style.color=netWorth<0?'var(--accent2)':'';
 Kekayaan.renderSnapshots();
 }
 };
+
+// calculateRemainingShare(rows, editedIndex) -- SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat
+// DESIGN-LOCK-autofill-sisa-porsi.md). PURE, 0 DOM -- util bersama dipakai oleh 3 modal porsi
+// kepemilikan (Aset.onOwnerPorsiInput/onOwnerNominalInput di aset.js, InvestmentUI.onOwnerPorsiInput/
+// onOwnerNominalInput di investasi-view.js, AccOwners.onPorsiInput di finance/akun.js) supaya
+// rumusnya SATU tempat (SSOT), bukan disalin 3x.
+//
+// Beda dari Aset._autoDistributeRemaining() (S431/S449, MASIH ADA & TIDAK dihapus -- dipakai
+// terpisah, lihat komentarnya sendiri): fungsi lama itu membagi RATA/proporsional sisa ke SEMUA
+// baris lain. Fungsi ini HANYA mengisi 1 baris target: baris pertama SELAIN `editedIndex` yang
+// porsinya masih kosong/0 DAN belum pernah diketik manual user (`row._touched` falsy) -- pola
+// "isi baris pertama, sisa otomatis ke baris kosong berikutnya" sesuai permintaan user (bukan
+// broadcast ke semua baris, supaya tidak menimpa baris yang sudah sengaja diisi manual).
+//
+// Parameter:
+//   rows (array) -- draft pemilik, tiap elemen minimal punya `porsi` (number) & opsional
+//     `_touched` (boolean, ditulis caller saat user mengetik baris itu).
+//   editedIndex (number) -- index baris yang baru saja diketik user (dikecualikan dari pencarian
+//     target & ikut dihitung ke total "baris lain").
+// Return: {targetIndex, porsi} kalau ada baris kosong yang bisa diisi & sisanya >0, else null
+//   (null -- termasuk kasus <2 baris, tidak ada baris kosong tersisa, atau sisa pas 0/negatif
+//   setelah dijepit -- caller tidak perlu menulis apa pun ke draft/DOM).
+function calculateRemainingShare(rows, editedIndex) {
+  if (!Array.isArray(rows) || rows.length < 2 || !rows[editedIndex]) return null;
+  let targetIndex = -1;
+  for (let k = 0; k < rows.length; k++) {
+    if (k === editedIndex || !rows[k]) continue;
+    const p = typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
+    if (!rows[k]._touched && p <= 0) { targetIndex = k; break; }
+  }
+  if (targetIndex === -1) return null;
+  let totalOther = 0;
+  for (let k = 0; k < rows.length; k++) {
+    if (k === targetIndex || !rows[k]) continue;
+    totalOther += typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
+  }
+  const sisa = Math.round(Math.max(0, 100 - totalOther) * 10000) / 10000;
+  if (sisa <= 0) return null;
+  return { targetIndex, porsi: sisa };
+}
