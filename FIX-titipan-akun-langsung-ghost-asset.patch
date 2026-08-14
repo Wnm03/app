@@ -1,0 +1,493 @@
+--- a/modules/asset/investasi.js	2026-08-13 23:29:09.000000000 +0000
++++ b/modules/asset/investasi.js	2026-08-13 23:58:31.200260712 +0000
+@@ -754,9 +754,28 @@
+ // resolveInvestmentAssetLink(assetId) -- validasi PURE: assetId harus merujuk entry
+ // D.assets yang benar-benar ada, selain itu (kosong/tidak ditemukan) -> null.
+ // Dipanggil SEBELUM disimpan sbg h.assetId (InvestmentListUI.save()).
++// FIX (laporan user Agustus 2026 -- "holding ditautkan ke Buku Aset, tapi di
++// Buku Aset tidak tampil, malah dobel data di dropdown & toast 'Kepemilikan
++// beda' muncul"): sebelum fix ini, fungsi ini balikin Aset apa pun asal
++// id-nya ketemu -- termasuk Aset yang sudah dimigrasi otomatis ke Holding
++// LAIN (`a._migratedToInvestmentId`, s476a) atau ditautkan manual dari sisi
++// Aset ke Holding LAIN (`a.investmentId`, B1). Aset semacam ini SENGAJA
++// disembunyikan dari Buku Aset & representasinya sudah pindah penuh ke
++// holding lain itu (pola SAMA PERSIS guard yang sudah dipakai
++// `Aset.totalValue()`/`_assetSplits()` dana-titipan/dst -- lihat daftar
++// lengkap di komentar `investmentAssetLinkOptionsHtml()` di bawah) --
++// meresolve-nya di sini bikin BADGE (`investmentCrossCheckWarning()`)
++// membandingkan kepemilikan holding INI ke kepemilikan Aset ghost yang
++// SUDAH TIDAK RELEVAN (kepemilikan sesungguhnya sekarang hidup di holding
++// lain), jadi memicu "⚠️ Kepemilikan beda" palsu. Return null (dianggap
++// TIDAK tertaut secara efektif) kalau Aset yang ditemukan adalah ghost
++// semacam ini -- h.assetId sendiri TIDAK diubah/dibersihkan di sini (murni
++// baca, 0 mutasi data existing), cuma tidak lagi dianggap tautan aktif.
+ function resolveInvestmentAssetLink(assetId) {
+   if (!assetId || typeof D === 'undefined') return null;
+-  return (D.assets || []).find((x) => x && sameId(x.id, assetId)) || null;
++  const a = (D.assets || []).find((x) => x && sameId(x.id, assetId)) || null;
++  if (a && (a._migratedToInvestmentId || a.investmentId)) return null;
++  return a;
+ }
+ // resolveLinkedInvestmentAsset(h) -- delegasi tipis, pola sama persis
+ // resolveLinkedVehicleAsset() (vehicle-core.js, S507).
+@@ -779,12 +798,30 @@
+ // aset cuma boleh 1 holding tertaut resmi -- guard sisi UI, data lama yang kebetulan
+ // sudah dobel tetap kebaca apa adanya lewat resolveInvestmentByAssetId(), tidak
+ // dipaksa).
++// FIX (laporan user Agustus 2026 -- "dobel data di dropdown & toast 'Kepemilikan
++// beda'"): tambah guard `_migratedToInvestmentId`/`investmentId`, pola SAMA PERSIS
++// yang SUDAH dipakai belasan titik baca "aset ini masih dihitung/tampil di mana"
++// lain di seluruh app (`Aset.renderList()`/`Aset.totalValue()` di aset.js,
++// `_assetOptionsHtml()`/`_assetSplits()` dana-titipan (s594/s599), `FI.
++// zakatableAssetValue()`, dst -- cari `_migratedToInvestmentId` di codebase utk
++// daftar lengkap). Aset yang sudah dimigrasi otomatis ATAU ditautkan manual ke
++// Holding LAIN representasinya SUDAH PINDAH ke holding itu & SENGAJA disembunyikan
++// dari Buku Aset -- menawarkannya di sini sebagai target link BARU bikin 1
++// instrumen fisik (mis. "Majoris") berakhir "dipegang" oleh 2 holding sekaligus:
++// holding lama (lewat migrasi/tautan asal) DAN holding baru ini (lewat `h.assetId`)
++// -- itulah sumber "Majoris tampil 2x di daftar Investasi" & kepemilikan holding
++// baru dibandingkan ke kepemilikan Aset ghost yang sudah basi (toast mismatch
++// palsu). Pengecualian TETAP berlaku (bukan currentAssetId) supaya data LAMA yang
++// kebetulan sudah tertaut ke ghost seperti ini tetap kebaca/kepilih apa adanya di
++// dropdown (0 hilang mendadak) -- resolveInvestmentAssetLink() di atas yang
++// menangani sisi "dianggap tertaut efektif atau tidak"-nya, bukan di sini.
+ function investmentAssetLinkOptionsHtml(currentAssetId) {
+   const opts = ['<option value="">— Tidak terhubung —</option>'];
+   (D.assets || []).forEach((a) => {
+     if (!a) return;
+     if (!sameId(a.id, currentAssetId)) {
+       if (resolveInvestmentByAssetId(a.id)) return;
++      if (a._migratedToInvestmentId || a.investmentId) return;
+     }
+     opts.push('<option value="' + a.id + '"' + (sameId(a.id, currentAssetId) ? ' selected' : '') + '>' + escapeHtml(a.name || '?') + ' (' + escapeHtml(a.jenis || '?') + ')</option>');
+   });
+--- a/modules/finance/filter-laporan.js	2026-08-13 23:29:09.000000000 +0000
++++ b/modules/finance/filter-laporan.js	2026-08-13 23:57:03.104634988 +0000
+@@ -196,6 +196,21 @@
+ // acceptance criterion P0 "owner source setelah link"). SATU titik baca owner utk transaksi 1
+ // akun, mengunci URUTAN SUMBER supaya porsi TIDAK diam-diam stale setelah Aset di-link ke Holding
+ // Investasi:
++//   0. FIX (laporan user Agustus 2026 -- "riwayat transaksi akun tertaut tidak terhitung di Dana
++//      Titipan" -- lihat AUDIT-S600-HOLDING-GAP-OWNER-DROPDOWNS.md Temuan #1/S601-3): Holding
++//      yang tertaut LANGSUNG ke akun (`findLinkedHoldingForAccount()`, transaksi.js, field
++//      `h.accountId`) DICEK LEBIH DULU, SEBELUM langkah 1 di bawah -- pola SAMA PERSIS urutan
++//      prioritas `resolveOwnerDefaultForAccount()` (transaksi.js, Sesi Res-B: "Holding MENANG
++//      kalau Holding & Aset SAMA-SAMA tertaut ke akun yang sama"). ROOT CAUSE bug ini: fungsi ini
++//      SEBELUMNYA HANYA mencari lewat `D.assets[].accountId` (langkah 1) -- akun yang ditautkan
++//      langsung ke Holding lewat "🔗 Hubungkan ke Akun" (investasi-list-view.js, S601-3) TANPA
++//      ada Aset perantara sama sekali balik `null` di sini, jadi `_expenseComparisonForOwner()`/
++//      `majorisRenovReconciliation()` (dana-titipan-portfolio-render.js/
++//      dana-titipan-aggregation-api.js, konsumen SATU-SATUNYA fungsi ini utk baris "Estimasi dari
++//      Transaksi <Akun>"/"Pengeluaran Majoris") diam-diam skip akun itu -- transaksi cicilan/renov
++//      yang dibayar dari akun tertaut TIDAK PERNAH ikut terhitung ke Dana Titipan walau holding-nya
++//      sendiri sudah type 'titipan'. Investment.getOwners(h) (SUDAH ADA sejak AUD-008/Sesi 462)
++//      dipakai apa adanya -- 0 rumus split baru.
+ //   1. Aset ketemu (D.assets[].accountId===accountId) DAN tertaut ke Holding Investasi
+ //      (a.investmentId, holding masih ada di D.investments) -> BACA LIVE lewat
+ //      Aset._resolveLinkedInvestmentOwners() (SUDAH ADA sejak Sesi B2a/462, reuse
+@@ -208,13 +223,22 @@
+ //      module investasi.js belum dimuat -> fallback MultiOwnerEngine.getOwners(a) (PERSIS
+ //      perilaku showFilteredTx() sebelum sesi ini -- 0 regresi utk akun yang belum pernah
+ //      di-link ke Holding Investasi).
+-// PURE, 0 side-effect, 0 tulis ke D. Balikin null kalau: tidak ada Aset yang match accountId,
+-// ATAU MultiOwnerEngine tidak dimuat. Balikin {asset,owners} kalau ketemu (owners selalu >=1
+-// baris -- baik dari Investment.getOwners() maupun MultiOwnerEngine.getOwners(), keduanya
+-// mensintesis minimal 1 baris SELF 100% kalau tidak ada data owner eksplisit, sama persis
+-// kontrak lama).
++// PURE, 0 side-effect, 0 tulis ke D. Balikin null kalau: tidak ada Holding/Aset yang match
++// accountId, ATAU MultiOwnerEngine tidak dimuat. Balikin {asset,owners} (langkah 1/2, `asset`
++// terisi) ATAU {holding,owners} (langkah 0, `asset` null -- caller yang butuh nama akun/aset utk
++// label tetap fallback ke `holding.name`, lihat `_expenseComparisonForOwner()`) kalau ketemu
++// (owners selalu >=1 baris -- baik dari Investment.getOwners() maupun MultiOwnerEngine.getOwners(),
++// keduanya mensintesis minimal 1 baris SELF 100% kalau tidak ada data owner eksplisit, sama
++// persis kontrak lama).
+ function resolveTxOwnerSplitForAccount(accountId){
+ if(typeof MultiOwnerEngine==='undefined')return null;
++if(typeof findLinkedHoldingForAccount==='function'&&typeof Investment!=='undefined'){
++const linkedHolding=findLinkedHoldingForAccount(accountId);
++if(linkedHolding){
++const hOwners=Investment.getOwners(linkedHolding);
++if(hOwners&&hOwners.length)return{asset:null,holding:linkedHolding,owners:hOwners};
++}
++}
+ const a=(D.assets||[]).find(x=>sameId(x.accountId,accountId));
+ if(!a)return null;
+ let owners=null;
+--- a/modules/finance/dana-titipan-aggregation-api.js	2026-08-13 23:29:09.000000000 +0000
++++ b/modules/finance/dana-titipan-aggregation-api.js	2026-08-13 23:57:56.005999223 +0000
+@@ -610,6 +610,16 @@
+ // 0 rumus perbandingan baru, cuma tidak bergantung ke global opsional.
+ // Dedup by accountId — kalau >1 owner kebetulan terhubung ke akun yang
+ // sama, akun itu tetap dihitung SEKALI.
++//
++// FIX (laporan user Agustus 2026, bug sekelas dgn `resolveTxOwnerSplitForAccount()`
++// di filter-laporan.js -- lihat catatan Temuan #1/S601-3 di file itu): tambah
++// prioritas 0, cek tautan LANGSUNG holding->akun (`h.accountId` di
++// `Investment.getHoldings()`, S601-3) LEBIH DULU via `Investment.getHolding()`
++// — SEBELUM fix ini, holding yang ditautkan langsung ke akun (0 Aset
++// perantara) tidak pernah menyumbang `accountId` ke sini, jadi transaksi
++// "Pengeluaran Majoris"/renov di akun itu diam-diam TIDAK ikut dihitung di
++// baris kartu Dana Titipan. Rute lewat Aset (prioritas 1) tetap PERSIS
++// sama, dipakai kalau holding itu sendiri tidak py `accountId` langsung.
+ // Parameter `owners`: array hasil `build().owners` (atau setara).
+ // Return: array accountId unik (string-normalized) — [] kalau tidak ada
+ // satupun holding yang tertaut ke akun manapun.
+@@ -620,13 +630,20 @@
+   (owners || []).forEach((o) => {
+     (o.holdings || []).forEach((h) => {
+       if (!h) return;
+-      let asset = null;
+-      if (h.type === 'aset' && h.linkedAssetId) {
+-        asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+-      } else if (h.linkedInvestmentId) {
+-        asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
++      let accountId = null;
++      if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
++        const srcHolding = Investment.getHolding(h.linkedInvestmentId);
++        if (srcHolding && srcHolding.accountId) accountId = srcHolding.accountId;
++      }
++      if (!accountId) {
++        let asset = null;
++        if (h.type === 'aset' && h.linkedAssetId) {
++          asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
++        } else if (h.linkedInvestmentId) {
++          asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
++        }
++        accountId = asset && asset.accountId;
+       }
+-      const accountId = asset && asset.accountId;
+       if (!accountId) return;
+       const key = String(accountId);
+       if (seen.has(key)) return;
+--- a/modules/finance/dana-titipan-portfolio-render.js	2026-08-13 23:29:09.000000000 +0000
++++ b/modules/finance/dana-titipan-portfolio-render.js	2026-08-13 23:57:40.325032912 +0000
+@@ -97,6 +97,24 @@
+   // punya >1 holding yang mengarah ke akun YANG SAMA -- mis. Aset lama +
+   // Holding hasil link -- supaya expense akun itu TIDAK dihitung dobel).
+   //
++  // FIX (laporan user Agustus 2026 -- "riwayat transaksi akun cicilan yang
++  // ditautkan ke holding tidak terhitung di Dana Titipan" -- lihat catatan
++  // Temuan #1/S601-3 di `resolveTxOwnerSplitForAccount()`, filter-laporan.js):
++  // SEBELUM fix ini, `accountId` di sini HANYA pernah diisi lewat sebuah
++  // Aset perantara (`h.linkedAssetId`/`h.linkedInvestmentId` -> `asset.
++  // accountId`) -- holding yang ditautkan LANGSUNG ke akun lewat "🔗
++  // Hubungkan ke Akun" (investasi-list-view.js, field `h.accountId`, S601-3)
++  // TANPA Aset sama sekali di antaranya tidak pernah menghasilkan
++  // `accountId` di sini, jadi baris ini diam-diam melewati holding itu
++  // (bukan cuma nilainya 0 -- baris "Estimasi dari Transaksi <Akun>" tidak
++  // muncul sama sekali kalau itu satu-satunya holding owner ini). FIX: cek
++  // tautan LANGSUNG holding->akun LEBIH DULU (`Investment.getHolding(h.
++  // linkedInvestmentId).accountId`, pola prioritas SAMA PERSIS
++  // `resolveOwnerDefaultForAccount()` di transaksi.js -- "Holding MENANG"),
++  // baru fallback ke rute lewat Aset kalau holding itu sendiri tidak
++  // ditautkan akun secara langsung -- 0 regresi utk kasus lama (Aset ber-
++  // accountId, holding TANPA h.accountId sendiri).
++  //
+   // Tidak menyentuh `principalAmount`/`outstandingPrincipal`/
+   // `_principalCell()`/`_outstandingCell()` -- murni baca tambahan.
+   //
+@@ -113,13 +131,27 @@
+     const accountNames = [];
+     (o.holdings || []).forEach((h) => {
+       if (!h) return;
+-      let asset = null;
+-      if (h.type === 'aset' && h.linkedAssetId) {
+-        asset = D.assets.find((a) => a && sameId(a.id, h.linkedAssetId));
+-      } else if (h.linkedInvestmentId) {
+-        asset = D.assets.find((a) => a && sameId(a.investmentId, h.linkedInvestmentId));
++      let accountId = null;
++      let accountLabel = null;
++      // Prioritas 0 (S601-3): holding tertaut LANGSUNG ke akun, 0 Aset perantara.
++      if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
++        const srcHolding = Investment.getHolding(h.linkedInvestmentId);
++        if (srcHolding && srcHolding.accountId) {
++          accountId = srcHolding.accountId;
++          accountLabel = srcHolding.name;
++        }
++      }
++      // Prioritas 1 (rute lama): via Aset perantara -- HANYA dicek kalau prioritas 0 kosong.
++      if (!accountId) {
++        let asset = null;
++        if (h.type === 'aset' && h.linkedAssetId) {
++          asset = D.assets.find((a) => a && sameId(a.id, h.linkedAssetId));
++        } else if (h.linkedInvestmentId) {
++          asset = D.assets.find((a) => a && sameId(a.investmentId, h.linkedInvestmentId));
++        }
++        accountId = asset && asset.accountId;
++        accountLabel = asset && asset.name;
+       }
+-      const accountId = asset && asset.accountId;
+       if (!accountId || seenAcc.has(accountId)) return;
+       seenAcc.add(accountId);
+       const resolved = resolveTxOwnerSplitForAccount(accountId);
+@@ -132,7 +164,7 @@
+       const split = MultiOwnerEngine.splitByPorsi(pengeluaranTotal, resolved.owners);
+       if (!split.ok) return;
+       total += (split.splits[idx] && split.splits[idx].bagian) || 0;
+-      accountNames.push(asset.name || 'Akun');
++      accountNames.push(accountLabel || 'Akun');
+     });
+     if (!accountNames.length) return null;
+     return { total, accountNames };
+--- a/tests/fix-holding-direct-account-titipan-and-ghost-asset-link.test.js	2026-08-13 04:18:23.877938719 +0000
++++ b/tests/fix-holding-direct-account-titipan-and-ghost-asset-link.test.js	2026-08-14 00:01:02.181145900 +0000
+@@ -0,0 +1,259 @@
++'use strict';
++// tests/fix-holding-direct-account-titipan-and-ghost-asset-link.test.js — laporan
++// user Agustus 2026 (screenshot investmentModal "Majoris (Reksadana)"):
++//
++// BUG A — "aset di holding yg diatur porsinya lewat dana titipan dan ditautkan
++// ke akun [lewat 🔗 Hubungkan ke Akun, S601-3], transaksi cicilan/renov di akun
++// itu tidak terhitung di Dana Titipan". ROOT CAUSE: `resolveTxOwnerSplitForAccount()`
++// (filter-laporan.js) & `_expenseComparisonForOwner()`/`_majorisLinkedAccountIds()`
++// (dana-titipan-portfolio-render.js/dana-titipan-aggregation-api.js) HANYA
++// resolve akun tertaut lewat sebuah Aset perantara (`asset.accountId`) — Holding
++// yang ditautkan LANGSUNG ke akun (`h.accountId`, S601-3, TANPA Aset sama
++// sekali) tidak pernah menghasilkan `accountId`, jadi transaksi di akun itu
++// diam-diam TIDAK ikut dihitung.
++//
++// BUG B — "ditautkan ke Buku Aset, di Buku Aset tidak tampil, malah dobel data
++// di dropdown & toast 'Kepemilikan beda'". ROOT CAUSE: `investmentAssetLinkOptionsHtml()`
++// (dropdown "🔗 Hubungkan ke Buku Aset" di investmentModal) & `resolveInvestmentAssetLink()`
++// tidak mengecualikan Aset yang sudah dimigrasi otomatis (`_migratedToInvestmentId`)
++// atau ditautkan manual (`investmentId`) ke Holding LAIN — Aset "ghost" ini sudah
++// disembunyikan dari Buku Aset (by design) tapi TETAP bisa dipilih & ditautkan
++// lagi ke Holding BARU di sini, bikin 1 instrumen fisik tampil di 2 holding
++// sekaligus + kepemilikan holding baru dibandingkan ke kepemilikan Aset ghost yang
++// sudah basi (toast mismatch palsu).
++
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const { loadSource } = require('./helpers/loadSource');
++
++function makeDanaTitipanCtx(D) {
++  return loadSource(
++    [
++      'modules/shared/ownership-engine.js',
++      'modules/shared/multi-owner-engine.js',
++      'modules/asset/investasi.js',
++      'modules/finance/filter-laporan.js',
++      'modules/finance/transaksi.js',
++      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
++    ],
++    {
++      D,
++      document: { getElementById: () => null },
++      uid: () => 'u' + (D._n = (D._n || 0) + 1),
++      save: () => {},
++      toast: () => {},
++      escapeHtml: (s) => String(s),
++      fmt: (n) => String(n),
++      fmtFull: (n) => String(n),
++      sameId: (a, b) => String(a) === String(b),
++      Aset: {
++        _resolveLinkedInvestmentOwners(a) {
++          if (!a || !a.investmentId) return null;
++          const h = (D.investments || []).find((x) => String(x.id) === String(a.investmentId));
++          if (!h) return null;
++          return h.owners || [];
++        },
++      },
++    },
++    ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI', 'DanaTitipanPortfolioPresenter', 'resolveTxOwnerSplitForAccount', 'findLinkedHoldingForAccount', 'sameId'],
++  );
++}
++
++function baseD(extra) {
++  return { investments: [], investmentTx: [], investmentWatchlist: [], debts: [], assets: [], transactions: [], accounts: [], ...extra };
++}
++
++function makeAssetLinkCtx(assets, investments) {
++  const D = { assets: assets || [], investments: investments || [] };
++  return loadSource(
++    ['modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js'],
++    { D, sameId: (a, b) => String(a) === String(b), escapeHtml: (s) => String(s) },
++    [
++      'resolveInvestmentAssetLink',
++      'resolveLinkedInvestmentAsset',
++      'investmentAssetLinkOptionsHtml',
++      'investmentCrossCheckWarning',
++    ]
++  );
++}
++
++// ---------------------------------------------------------------------------
++// BUG A: resolveTxOwnerSplitForAccount() — prioritas 0 Holding tertaut langsung
++// ---------------------------------------------------------------------------
++
++test('A1. resolveTxOwnerSplitForAccount() -- akun tertaut LANGSUNG ke Holding (h.accountId, S601-3, 0 Aset) tetap resolve owners', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', accountId: 'acc1', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const resolved = ctx.resolveTxOwnerSplitForAccount('acc1');
++  assert.ok(resolved);
++  assert.equal(resolved.owners.length, 1);
++  assert.equal(resolved.owners[0].ownerId, 'renov');
++});
++
++test('A2. resolveTxOwnerSplitForAccount() -- Holding & Aset SAMA-SAMA tertaut akun yang sama -> Holding MENANG (konsisten resolveOwnerDefaultForAccount)', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', accountId: 'acc1', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 70, ownerName: 'renov', isSelf: false },
++      { ownerId: 'sihab', porsi: 30, ownerName: 'Mas Sihab', isSelf: false },
++    ] }],
++    assets: [{ id: 'a1', name: 'Majoris (aset lama)', accountId: 'acc1', nilai: 1, owners: [
++      { ownerId: 'lain', porsi: 100, ownerName: 'Orang Lain', isSelf: false },
++    ] }],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const resolved = ctx.resolveTxOwnerSplitForAccount('acc1');
++  assert.ok(resolved);
++  assert.equal(resolved.owners.length, 2);
++  assert.ok(resolved.owners.some((o) => o.ownerId === 'renov'));
++});
++
++test('A3. resolveTxOwnerSplitForAccount() -- 0 regresi: akun HANYA tertaut Aset (rute lama) tetap jalan', () => {
++  const D = baseD({
++    assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const resolved = ctx.resolveTxOwnerSplitForAccount('acc1');
++  assert.ok(resolved);
++  assert.equal(resolved.owners[0].ownerId, 'renov');
++});
++
++// ---------------------------------------------------------------------------
++// BUG A: _expenseComparisonForOwner() -- baris "Estimasi dari Transaksi <Akun>"
++// ---------------------------------------------------------------------------
++
++test('A4. _expenseComparisonForOwner() -- holding titipan tertaut LANGSUNG ke akun (h.accountId), transaksi cicilan/renov ikut terhitung', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', accountId: 'acc1', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++    transactions: [
++      { type: 'expense', accountId: 'acc1', amount: 154280, payMethod: 'cicilan' },
++      { type: 'expense', accountId: 'acc1', amount: 51940, payMethod: 'cicilan' },
++      { type: 'expense', accountId: 'acc-lain', amount: 999999 },
++    ],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const o = { ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] };
++  const cmp = ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(o);
++  assert.ok(cmp, 'baris pembanding TIDAK BOLEH null -- ini persis bug yang dilaporkan user');
++  assert.equal(cmp.total, 154280 + 51940);
++  assert.equal(cmp.accountNames.length, 1);
++  assert.equal(cmp.accountNames[0], 'Majoris');
++});
++
++test('A5. _expenseComparisonForOwner() -- 0 regresi: holding TANPA accountId langsung, tertaut lewat Aset perantara tetap jalan (rute lama)', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++    assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', investmentId: 'h1', nilai: 1000000 }],
++    transactions: [{ type: 'expense', accountId: 'acc1', amount: 200000 }],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const o = { ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] };
++  const cmp = ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(o);
++  assert.ok(cmp);
++  assert.equal(cmp.total, 200000);
++});
++
++test('A6. _majorisLinkedAccountIds() -- akun tertaut LANGSUNG ke Holding ikut masuk union akun (dipakai "Pengeluaran Majoris" level kartu)', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', accountId: 'acc1', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const owners = [{ ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] }];
++  const ids = ctx.DanaTitipanPortfolioAPI._majorisLinkedAccountIds(owners);
++  assert.equal(ids.length, 1);
++  assert.equal(ids[0], 'acc1');
++});
++
++test('A7. majorisRenovReconciliation() -- pengeluaran Renov di akun tertaut langsung ke Holding ikut terhitung end-to-end', () => {
++  const D = baseD({
++    investments: [{ id: 'h1', name: 'Majoris', accountId: 'acc1', unit: 1, avgPrice: 1000000, currentPrice: 1000000, owners: [
++      { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++    ] }],
++    transactions: [
++      { type: 'expense', accountId: 'acc1', amount: 154280, renovProjectLinkId: 'p1' },
++      { type: 'expense', accountId: 'acc1', amount: 51940, renovProjectLinkId: 'p1' },
++    ],
++  });
++  const ctx = makeDanaTitipanCtx(D);
++  const owners = [{ ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] }];
++  const result = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 1000000);
++  assert.ok(result, 'harus mengenali akun tertaut LANGSUNG ke holding, bukan cuma via Aset');
++  assert.equal(result.pengeluaranMajoris, 154280 + 51940);
++  assert.equal(result.sisaSaldo, 1000000 - (154280 + 51940));
++});
++
++// ---------------------------------------------------------------------------
++// BUG B: resolveInvestmentAssetLink() / investmentAssetLinkOptionsHtml() /
++// investmentCrossCheckWarning() -- ghost asset (sudah pindah ke Holding lain)
++// tidak lagi dianggap tautan aktif & tidak lagi ditawarkan sbg opsi baru.
++// ---------------------------------------------------------------------------
++
++test('B1. resolveInvestmentAssetLink() -- Aset yang sudah dimigrasi otomatis (_migratedToInvestmentId ke Holding LAIN) balik null (bukan tautan efektif)', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana', _migratedToInvestmentId: 'h-lama' }];
++  const ctx = makeAssetLinkCtx(assets, []);
++  assert.equal(ctx.resolveInvestmentAssetLink('a1'), null);
++});
++
++test('B2. resolveInvestmentAssetLink() -- Aset yang ditautkan manual (investmentId) ke Holding LAIN balik null juga', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana', investmentId: 'h-lama' }];
++  const ctx = makeAssetLinkCtx(assets, []);
++  assert.equal(ctx.resolveInvestmentAssetLink('a1'), null);
++});
++
++test('B3. resolveInvestmentAssetLink() -- Aset biasa (bukan ghost) tetap resolve normal, 0 regresi', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana' }];
++  const ctx = makeAssetLinkCtx(assets, []);
++  const r = ctx.resolveInvestmentAssetLink('a1');
++  assert.ok(r);
++  assert.equal(r.id, 'a1');
++});
++
++test('B4. investmentAssetLinkOptionsHtml() -- Aset ghost (_migratedToInvestmentId) TIDAK ditawarkan sbg opsi baru', () => {
++  const assets = [
++    { id: 'a1', name: 'Majoris', jenis: 'Reksadana', _migratedToInvestmentId: 'h-lama' },
++    { id: 'a2', name: 'Tanah Bogor', jenis: 'Tanah' },
++  ];
++  const ctx = makeAssetLinkCtx(assets, []);
++  const html = ctx.investmentAssetLinkOptionsHtml('');
++  assert.ok(!html.includes('value="a1"'), 'aset ghost tidak boleh muncul sbg opsi baru');
++  assert.ok(html.includes('value="a2"'));
++});
++
++test('B5. investmentAssetLinkOptionsHtml() -- Aset ghost yang KEBETULAN sudah jadi currentAssetId (data lama) tetap tampil/terpilih (0 hilang mendadak)', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana', _migratedToInvestmentId: 'h-lama' }];
++  const ctx = makeAssetLinkCtx(assets, []);
++  const html = ctx.investmentAssetLinkOptionsHtml('a1');
++  assert.ok(html.includes('value="a1"'));
++  assert.ok(html.includes('selected'));
++});
++
++test('B6. investmentCrossCheckWarning() -- holding titipan ditautkan (h.assetId) ke Aset ghost -> TIDAK muncul toast "Kepemilikan beda" palsu', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana', _migratedToInvestmentId: 'h-lama', owners: [{ ownerId: 'SELF', porsi: 100, ownerName: 'Milik Sendiri', isSelf: true }] }];
++  const investments = [{ id: 'h2', name: 'Majoris', assetId: 'a1', unit: 7574.3814, avgPrice: 1.5, currentPrice: 1.5, fundSource: 'titipan', owners: [
++    { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++  ] }];
++  const ctx = makeAssetLinkCtx(assets, investments);
++  const h = investments[0];
++  assert.equal(ctx.investmentCrossCheckWarning(h), null, 'link ke aset ghost harus dianggap TIDAK tertaut efektif -> 0 badge mismatch palsu');
++});
++
++test('B7. investmentCrossCheckWarning() -- 0 regresi: holding tertaut ke Aset NYATA (bukan ghost) dgn kepemilikan beda TETAP memicu warning', () => {
++  const assets = [{ id: 'a1', name: 'Majoris', jenis: 'Reksadana', owners: [{ ownerId: 'SELF', porsi: 100, ownerName: 'Milik Sendiri', isSelf: true }] }];
++  const investments = [{ id: 'h2', name: 'Majoris', assetId: 'a1', unit: 1, avgPrice: 1, currentPrice: 1, fundSource: 'titipan', owners: [
++    { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
++  ] }];
++  const ctx = makeAssetLinkCtx(assets, investments);
++  const h = investments[0];
++  assert.equal(ctx.investmentCrossCheckWarning(h), '⚠️ Kepemilikan beda dgn Buku Aset yang ditautkan');
++});
