@@ -45,7 +45,12 @@ test('_assetOptionsHtml(): aset ber-_migratedToInvestmentId (pindah otomatis s47
   const ctx = makeCtx(D);
   const html = ctx.DanaTitipanPortfolioPresenter._assetOptionsHtml();
   assert.ok(html.includes('Vario 110'));
-  assert.ok(!html.includes('Majoris'));
+  // s608: "Majoris" sekarang BOLEH muncul TEPAT SEKALI -- sebagai opsi
+  // Holding asli (value="h:h1", lihat _assetOptionsHtml()), BUKAN lagi
+  // sebagai ghost Buku Aset (value="a1", yang harus tetap tersembunyi).
+  assert.ok(!html.includes('value="a1"'));
+  assert.ok(html.includes('value="h:h1"'));
+  assert.equal((html.match(/Majoris/g) || []).length, 1);
 });
 
 test('_assetOptionsHtml(): aset ber-investmentId (tautan manual B1) juga TIDAK ikut jadi opsi', () => {
@@ -60,7 +65,11 @@ test('_assetOptionsHtml(): aset ber-investmentId (tautan manual B1) juga TIDAK i
   const ctx = makeCtx(D);
   const html = ctx.DanaTitipanPortfolioPresenter._assetOptionsHtml();
   assert.ok(html.includes('Cincin Emas'));
-  assert.ok(!html.includes('Sucorinvest'));
+  // s608: sama seperti kasus di atas -- ghost Buku Aset (value="a1")
+  // tetap tersembunyi, tapi Holding aslinya (value="h:h1") sekarang tampil.
+  assert.ok(!html.includes('value="a1"'));
+  assert.ok(html.includes('value="h:h1"'));
+  assert.equal((html.match(/Sucorinvest/g) || []).length, 1);
 });
 
 test('_assetOptionsHtml(): aset normal (0 migrasi, 0 tautan) tetap muncul apa adanya -- 0 regresi kasus normal', () => {
