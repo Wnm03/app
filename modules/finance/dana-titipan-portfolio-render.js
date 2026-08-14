@@ -97,6 +97,24 @@ const DanaTitipanPortfolioPresenter = {
   // punya >1 holding yang mengarah ke akun YANG SAMA -- mis. Aset lama +
   // Holding hasil link -- supaya expense akun itu TIDAK dihitung dobel).
   //
+  // FIX (laporan user Agustus 2026 -- "riwayat transaksi akun cicilan yang
+  // ditautkan ke holding tidak terhitung di Dana Titipan" -- lihat catatan
+  // Temuan #1/S601-3 di `resolveTxOwnerSplitForAccount()`, filter-laporan.js):
+  // SEBELUM fix ini, `accountId` di sini HANYA pernah diisi lewat sebuah
+  // Aset perantara (`h.linkedAssetId`/`h.linkedInvestmentId` -> `asset.
+  // accountId`) -- holding yang ditautkan LANGSUNG ke akun lewat "🔗
+  // Hubungkan ke Akun" (investasi-list-view.js, field `h.accountId`, S601-3)
+  // TANPA Aset sama sekali di antaranya tidak pernah menghasilkan
+  // `accountId` di sini, jadi baris ini diam-diam melewati holding itu
+  // (bukan cuma nilainya 0 -- baris "Estimasi dari Transaksi <Akun>" tidak
+  // muncul sama sekali kalau itu satu-satunya holding owner ini). FIX: cek
+  // tautan LANGSUNG holding->akun LEBIH DULU (`Investment.getHolding(h.
+  // linkedInvestmentId).accountId`, pola prioritas SAMA PERSIS
+  // `resolveOwnerDefaultForAccount()` di transaksi.js -- "Holding MENANG"),
+  // baru fallback ke rute lewat Aset kalau holding itu sendiri tidak
+  // ditautkan akun secara langsung -- 0 regresi utk kasus lama (Aset ber-
+  // accountId, holding TANPA h.accountId sendiri).
+  //
   // Tidak menyentuh `principalAmount`/`outstandingPrincipal`/
   // `_principalCell()`/`_outstandingCell()` -- murni baca tambahan.
   //
@@ -113,13 +131,27 @@ const DanaTitipanPortfolioPresenter = {
     const accountNames = [];
     (o.holdings || []).forEach((h) => {
       if (!h) return;
-      let asset = null;
-      if (h.type === 'aset' && h.linkedAssetId) {
-        asset = D.assets.find((a) => a && sameId(a.id, h.linkedAssetId));
-      } else if (h.linkedInvestmentId) {
-        asset = D.assets.find((a) => a && sameId(a.investmentId, h.linkedInvestmentId));
+      let accountId = null;
+      let accountLabel = null;
+      // Prioritas 0 (S601-3): holding tertaut LANGSUNG ke akun, 0 Aset perantara.
+      if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
+        const srcHolding = Investment.getHolding(h.linkedInvestmentId);
+        if (srcHolding && srcHolding.accountId) {
+          accountId = srcHolding.accountId;
+          accountLabel = srcHolding.name;
+        }
       }
-      const accountId = asset && asset.accountId;
+      // Prioritas 1 (rute lama): via Aset perantara -- HANYA dicek kalau prioritas 0 kosong.
+      if (!accountId) {
+        let asset = null;
+        if (h.type === 'aset' && h.linkedAssetId) {
+          asset = D.assets.find((a) => a && sameId(a.id, h.linkedAssetId));
+        } else if (h.linkedInvestmentId) {
+          asset = D.assets.find((a) => a && sameId(a.investmentId, h.linkedInvestmentId));
+        }
+        accountId = asset && asset.accountId;
+        accountLabel = asset && asset.name;
+      }
       if (!accountId || seenAcc.has(accountId)) return;
       seenAcc.add(accountId);
       const resolved = resolveTxOwnerSplitForAccount(accountId);
@@ -132,7 +164,7 @@ const DanaTitipanPortfolioPresenter = {
       const split = MultiOwnerEngine.splitByPorsi(pengeluaranTotal, resolved.owners);
       if (!split.ok) return;
       total += (split.splits[idx] && split.splits[idx].bagian) || 0;
-      accountNames.push(asset.name || 'Akun');
+      accountNames.push(accountLabel || 'Akun');
     });
     if (!accountNames.length) return null;
     return { total, accountNames };

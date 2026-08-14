@@ -610,6 +610,16 @@ build() {
 // 0 rumus perbandingan baru, cuma tidak bergantung ke global opsional.
 // Dedup by accountId — kalau >1 owner kebetulan terhubung ke akun yang
 // sama, akun itu tetap dihitung SEKALI.
+//
+// FIX (laporan user Agustus 2026, bug sekelas dgn `resolveTxOwnerSplitForAccount()`
+// di filter-laporan.js -- lihat catatan Temuan #1/S601-3 di file itu): tambah
+// prioritas 0, cek tautan LANGSUNG holding->akun (`h.accountId` di
+// `Investment.getHoldings()`, S601-3) LEBIH DULU via `Investment.getHolding()`
+// — SEBELUM fix ini, holding yang ditautkan langsung ke akun (0 Aset
+// perantara) tidak pernah menyumbang `accountId` ke sini, jadi transaksi
+// "Pengeluaran Majoris"/renov di akun itu diam-diam TIDAK ikut dihitung di
+// baris kartu Dana Titipan. Rute lewat Aset (prioritas 1) tetap PERSIS
+// sama, dipakai kalau holding itu sendiri tidak py `accountId` langsung.
 // Parameter `owners`: array hasil `build().owners` (atau setara).
 // Return: array accountId unik (string-normalized) — [] kalau tidak ada
 // satupun holding yang tertaut ke akun manapun.
@@ -620,13 +630,20 @@ _majorisLinkedAccountIds(owners) {
   (owners || []).forEach((o) => {
     (o.holdings || []).forEach((h) => {
       if (!h) return;
-      let asset = null;
-      if (h.type === 'aset' && h.linkedAssetId) {
-        asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
-      } else if (h.linkedInvestmentId) {
-        asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+      let accountId = null;
+      if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
+        const srcHolding = Investment.getHolding(h.linkedInvestmentId);
+        if (srcHolding && srcHolding.accountId) accountId = srcHolding.accountId;
       }
-      const accountId = asset && asset.accountId;
+      if (!accountId) {
+        let asset = null;
+        if (h.type === 'aset' && h.linkedAssetId) {
+          asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+        } else if (h.linkedInvestmentId) {
+          asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+        }
+        accountId = asset && asset.accountId;
+      }
       if (!accountId) return;
       const key = String(accountId);
       if (seen.has(key)) return;

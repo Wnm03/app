@@ -196,6 +196,21 @@ if(btn)btn.classList.add('active');
 // acceptance criterion P0 "owner source setelah link"). SATU titik baca owner utk transaksi 1
 // akun, mengunci URUTAN SUMBER supaya porsi TIDAK diam-diam stale setelah Aset di-link ke Holding
 // Investasi:
+//   0. FIX (laporan user Agustus 2026 -- "riwayat transaksi akun tertaut tidak terhitung di Dana
+//      Titipan" -- lihat AUDIT-S600-HOLDING-GAP-OWNER-DROPDOWNS.md Temuan #1/S601-3): Holding
+//      yang tertaut LANGSUNG ke akun (`findLinkedHoldingForAccount()`, transaksi.js, field
+//      `h.accountId`) DICEK LEBIH DULU, SEBELUM langkah 1 di bawah -- pola SAMA PERSIS urutan
+//      prioritas `resolveOwnerDefaultForAccount()` (transaksi.js, Sesi Res-B: "Holding MENANG
+//      kalau Holding & Aset SAMA-SAMA tertaut ke akun yang sama"). ROOT CAUSE bug ini: fungsi ini
+//      SEBELUMNYA HANYA mencari lewat `D.assets[].accountId` (langkah 1) -- akun yang ditautkan
+//      langsung ke Holding lewat "🔗 Hubungkan ke Akun" (investasi-list-view.js, S601-3) TANPA
+//      ada Aset perantara sama sekali balik `null` di sini, jadi `_expenseComparisonForOwner()`/
+//      `majorisRenovReconciliation()` (dana-titipan-portfolio-render.js/
+//      dana-titipan-aggregation-api.js, konsumen SATU-SATUNYA fungsi ini utk baris "Estimasi dari
+//      Transaksi <Akun>"/"Pengeluaran Majoris") diam-diam skip akun itu -- transaksi cicilan/renov
+//      yang dibayar dari akun tertaut TIDAK PERNAH ikut terhitung ke Dana Titipan walau holding-nya
+//      sendiri sudah type 'titipan'. Investment.getOwners(h) (SUDAH ADA sejak AUD-008/Sesi 462)
+//      dipakai apa adanya -- 0 rumus split baru.
 //   1. Aset ketemu (D.assets[].accountId===accountId) DAN tertaut ke Holding Investasi
 //      (a.investmentId, holding masih ada di D.investments) -> BACA LIVE lewat
 //      Aset._resolveLinkedInvestmentOwners() (SUDAH ADA sejak Sesi B2a/462, reuse
@@ -208,13 +223,22 @@ if(btn)btn.classList.add('active');
 //      module investasi.js belum dimuat -> fallback MultiOwnerEngine.getOwners(a) (PERSIS
 //      perilaku showFilteredTx() sebelum sesi ini -- 0 regresi utk akun yang belum pernah
 //      di-link ke Holding Investasi).
-// PURE, 0 side-effect, 0 tulis ke D. Balikin null kalau: tidak ada Aset yang match accountId,
-// ATAU MultiOwnerEngine tidak dimuat. Balikin {asset,owners} kalau ketemu (owners selalu >=1
-// baris -- baik dari Investment.getOwners() maupun MultiOwnerEngine.getOwners(), keduanya
-// mensintesis minimal 1 baris SELF 100% kalau tidak ada data owner eksplisit, sama persis
-// kontrak lama).
+// PURE, 0 side-effect, 0 tulis ke D. Balikin null kalau: tidak ada Holding/Aset yang match
+// accountId, ATAU MultiOwnerEngine tidak dimuat. Balikin {asset,owners} (langkah 1/2, `asset`
+// terisi) ATAU {holding,owners} (langkah 0, `asset` null -- caller yang butuh nama akun/aset utk
+// label tetap fallback ke `holding.name`, lihat `_expenseComparisonForOwner()`) kalau ketemu
+// (owners selalu >=1 baris -- baik dari Investment.getOwners() maupun MultiOwnerEngine.getOwners(),
+// keduanya mensintesis minimal 1 baris SELF 100% kalau tidak ada data owner eksplisit, sama
+// persis kontrak lama).
 function resolveTxOwnerSplitForAccount(accountId){
 if(typeof MultiOwnerEngine==='undefined')return null;
+if(typeof findLinkedHoldingForAccount==='function'&&typeof Investment!=='undefined'){
+const linkedHolding=findLinkedHoldingForAccount(accountId);
+if(linkedHolding){
+const hOwners=Investment.getOwners(linkedHolding);
+if(hOwners&&hOwners.length)return{asset:null,holding:linkedHolding,owners:hOwners};
+}
+}
 const a=(D.assets||[]).find(x=>sameId(x.accountId,accountId));
 if(!a)return null;
 let owners=null;
