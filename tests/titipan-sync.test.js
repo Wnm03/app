@@ -74,3 +74,158 @@ test('reconcile(a) tidak membaca/menulis field lain di luar apa yang dilakukan _
   assert.strictEqual(JSON.stringify(a), snapshotBefore);
   delete global.Aset;
 });
+
+// --- reconcileAccounts() (Rekomendasi #2, 2026-08-14 sesi lanjutan) ---
+// Mock D/MultiOwnerEngine/recalcAccBalance/uid/todayStr minimal, pola sama
+// tests/titipan-reconcile.test.js.
+function setupAccGlobals({ accounts = [], assets = [], debts = [], ownersByAccount = {}, balanceByAccount = {} }) {
+  global.D = { accounts, assets, debts };
+  global.MultiOwnerEngine = {
+    getOwners(acc) { return { ok: true, owners: ownersByAccount[acc.id] || [] }; },
+  };
+  global.recalcAccBalance = (accId) => (balanceByAccount[accId] || 0);
+  global.uid = (() => { let n = 0; return () => 'uid' + (++n); })();
+  global.todayStr = () => '2026-08-14';
+}
+function cleanupAccGlobals() {
+  delete global.D; delete global.MultiOwnerEngine; delete global.recalcAccBalance; delete global.uid; delete global.todayStr;
+}
+
+test('reconcileAccounts() no-op {synced:0,removed:0} kalau D/D.accounts belum ada', () => {
+  delete global.D;
+  const res = TitipanSync.reconcileAccounts();
+  assert.deepStrictEqual(res, { synced: 0, removed: 0 });
+});
+
+test('reconcileAccounts() no-op kalau recalcAccBalance bukan fungsi', () => {
+  global.D = { accounts: [{ id: 'acc1' }], debts: [] };
+  delete global.recalcAccBalance;
+  const res = TitipanSync.reconcileAccounts();
+  assert.deepStrictEqual(res, { synced: 0, removed: 0 });
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() menulis baris Buku Utang baru utk akun berdiri-sendiri berporsi non-SELF', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    debts: [],
+    ownersByAccount: { acc1: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 25 }] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.synced, 1);
+  assert.strictEqual(res.removed, 0);
+  assert.strictEqual(D.debts.length, 1);
+  const d = D.debts[0];
+  assert.strictEqual(d.linkedAccountId, 'acc1');
+  assert.strictEqual(d.linkedOwnerId, 'o1');
+  assert.strictEqual(d.name, 'Budi');
+  assert.strictEqual(d.nilai, 250000); // 1000000 * 25%
+  assert.strictEqual(d.catatan, 'Dana titipan akun: BRI');
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() nominal ikut saldo akun real-time (bukan snapshot) -- berubah tiap dipanggil ulang', () => {
+  const debts = [];
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    debts,
+    ownersByAccount: { acc1: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 50 }] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  TitipanSync.reconcileAccounts();
+  assert.strictEqual(D.debts[0].nilai, 500000);
+  global.recalcAccBalance = (accId) => (accId === 'acc1' ? 2000000 : 0); // saldo berubah (mis. transaksi baru)
+  TitipanSync.reconcileAccounts();
+  assert.strictEqual(D.debts.length, 1); // update baris yang sama, bukan duplikat
+  assert.strictEqual(D.debts[0].nilai, 1000000);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() melewati akun yang tertaut ke Aset (arah Akun->Aset sudah menangani)', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    assets: [{ id: 'a1', accountId: 'acc1' }],
+    debts: [],
+    ownersByAccount: { acc1: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 25 }] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.synced, 0);
+  assert.strictEqual(D.debts.length, 0);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() menghapus baris ketika akun baru saja ditautkan ke Aset', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    assets: [{ id: 'a1', accountId: 'acc1' }], // sudah tertaut sekarang
+    debts: [{ id: 'd1', nilai: 250000, linkedAccountId: 'acc1', linkedOwnerId: 'o1' }], // sisa dari sesi sebelum ditautkan
+    ownersByAccount: { acc1: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 25 }] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.removed, 1);
+  assert.strictEqual(D.debts.length, 0);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() menghapus baris owner yang dicabut (porsi jadi 0 / baris dihapus)', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    debts: [{ id: 'd1', nilai: 250000, linkedAccountId: 'acc1', linkedOwnerId: 'o1' }],
+    ownersByAccount: { acc1: [] }, // owner sudah dicabut
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.removed, 1);
+  assert.strictEqual(D.debts.length, 0);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() menghapus baris ketika akun dihapus permanen', () => {
+  setupAccGlobals({
+    accounts: [], // akun sudah dihapus
+    debts: [{ id: 'd1', nilai: 250000, linkedAccountId: 'acc1', linkedOwnerId: 'o1' }],
+    balanceByAccount: {},
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.removed, 1);
+  assert.strictEqual(D.debts.length, 0);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() mengabaikan owner SELF & porsi<=0', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'BRI' }],
+    debts: [],
+    ownersByAccount: { acc1: [
+      { ownerId: 'SELF', ownerName: 'Saya', isSelf: true, porsi: 70 },
+      { ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 0 },
+    ] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.synced, 0);
+  assert.strictEqual(D.debts.length, 0);
+  cleanupAccGlobals();
+});
+
+test('reconcileAccounts() 1 akun banyak owner non-SELF -> 1 baris per owner', () => {
+  setupAccGlobals({
+    accounts: [{ id: 'acc1', name: 'Gopay' }],
+    debts: [],
+    ownersByAccount: { acc1: [
+      { ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 20 },
+      { ownerId: 'o2', ownerName: 'Siti', isSelf: false, porsi: 30 },
+    ] },
+    balanceByAccount: { acc1: 1000000 },
+  });
+  const res = TitipanSync.reconcileAccounts();
+  assert.strictEqual(res.synced, 2);
+  assert.strictEqual(D.debts.length, 2);
+  const byOwner = Object.fromEntries(D.debts.map((d) => [d.linkedOwnerId, d.nilai]));
+  assert.strictEqual(byOwner.o1, 200000);
+  assert.strictEqual(byOwner.o2, 300000);
+  cleanupAccGlobals();
+});
