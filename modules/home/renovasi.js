@@ -236,6 +236,7 @@ document.getElementById('renovItemHargaTotalToggle').checked=!!(it&&it.hargaTota
 Renov.toggleHargaTotalFields();
 document.getElementById('renovItemCat').value=it?(it.category||''):'';
 document.getElementById('renovItemAcc').value=it?(it.accountId||D.accounts[0]?.id||''):(D.accounts[0]?.id||'');
+Renov.updateDeductionOwnerVisibility(it?(it.deductionOwnerId||''):'');
 document.getElementById('renovItemTglBayar').value=it?(it.tglBayar||it.paidDate||todayStr()):todayStr();
 document.getElementById('renovItemNote').value=it?(it.note||''):'';
 document.getElementById('renovItemPaidNotice').style.display=(it&&it.paid)?'block':'none';
@@ -255,6 +256,37 @@ calcNoteEl.innerHTML='';
 document.getElementById('renovItemLinkOldWrap').style.display=(it&&it.paid)?'none':'block';
 closeModal('renovDetailModal');
 openModal('renovItemModal');
+},
+// updateDeductionOwnerVisibility(presetOwnerId) — BUGFIX (audit "estimasi belum
+// teralokasi" sesi 3, root cause sinyal 2/2 sesi 2): item Renovasi yang ditandai
+// lunas (togglePaid()) atau ditautkan ke transaksi lama (confirmLinkTx()) TIDAK
+// PERNAH menawarkan pemilihan "Ditanggung: <owner>" untuk akun Dana Titipan
+// multi-owner -- transaksi hasilnya lolos TANPA `deductionOwnerId`, jadi
+// resolveTxOwnerAssignment() (filter-laporan.js) fallback ke owners[0] (owner
+// pertama), bukan owner yang sebenarnya menanggung. Fix: reuse PENUH pola
+// #txDeductionOwner (transaksi.js/modals.js) -- getAccOwnersRaw(accId) (akun.js,
+// 0 rumus baru) sbg sumber owners akun terpilih. 0 owner asli -> wrap
+// disembunyikan (akun lama/single-owner, 0 regresi). >=1 owner -> wrap
+// ditampilkan, dropdown diisi ulang dari nol tiap dipanggil (opsi owner akun
+// sebelumnya TIDAK terbawa), value diisi presetOwnerId kalau valid (mode edit)
+// atau owners[0] kalau cuma 1 owner (auto-select, sama seperti pola S575).
+// Dipanggil dari openItemModal() (isi ulang tiap modal dibuka) + onchange
+// #renovItemAcc (ganti akun -> opsi ikut berubah).
+updateDeductionOwnerVisibility(presetOwnerId){
+const accId=document.getElementById('renovItemAcc').value;
+const wrap=document.getElementById('renovItemDeductionOwnerWrap');
+const sel=document.getElementById('renovItemDeductionOwner');
+if(!wrap||!sel)return;
+const owners=(typeof getAccOwnersRaw==='function'?getAccOwnersRaw(accId):{ok:true,owners:[]}).owners||[];
+if(!owners.length){wrap.style.display='none';sel.innerHTML='';return;}
+wrap.classList.remove('u-dnone');
+wrap.style.display='block';
+sel.innerHTML='<option value="">— Pilih pemilik —</option>'+owners.map(o=>`<option value="${escapeHtml(o.ownerId)}">${escapeHtml(o.ownerName||o.ownerId)}</option>`).join('');
+if(presetOwnerId&&owners.some(o=>o.ownerId===presetOwnerId)){
+sel.value=presetOwnerId;
+} else if(owners.length===1){
+sel.value=owners[0].ownerId;
+}
 },
 toggleHargaTotalFields(){
 const on=document.getElementById('renovItemHargaTotalToggle').checked;
@@ -289,6 +321,9 @@ const category=document.getElementById('renovItemCat').value;
 const accountId=document.getElementById('renovItemAcc').value||D.accounts[0]?.id;
 const tglBayar=document.getElementById('renovItemTglBayar').value||todayStr();
 const note=document.getElementById('renovItemNote').value.trim();
+const deductionOwnerSel=document.getElementById('renovItemDeductionOwner');
+const deductionOwnerWrapEl=document.getElementById('renovItemDeductionOwnerWrap');
+const deductionOwnerId=(deductionOwnerSel&&deductionOwnerWrapEl&&deductionOwnerWrapEl.style.display!=='none')?(deductionOwnerSel.value||''):'';
 let calcDetail=null;
 if(RenovCalc._pendingDetail&&Math.round(RenovCalc._pendingDetail.total)===Math.round(harga)){
 calcDetail=RenovCalc._pendingDetail;
@@ -297,6 +332,7 @@ if(Renov.editItemId){
 const it=p.items.find(x=>sameId(x.id,Renov.editItemId));
 if(it){
 it.name=name;it.ukuran=ukuran;it.harga=harga;it.hargaTotal=hargaTotal;it.category=category;it.accountId=accountId;it.note=note;it.tglBayar=tglBayar;
+if(deductionOwnerId)it.deductionOwnerId=deductionOwnerId;else delete it.deductionOwnerId;
 if(calcDetail){
 if(it.calcDetail&&it.calcDetail.type==='absensi'&&it.calcDetail!==calcDetail){
 Tukang.releaseEntries(it.calcDetail.entryIds);
@@ -306,12 +342,12 @@ if(calcDetail.type==='absensi')Tukang.markUsed(calcDetail.entryIds,it.id);
 }
 if(it.paid&&it.txId){
 const t=D.transactions.find(x=>sameId(x.id,it.txId));
-if(t){Object.assign(t,{amount:harga,category:category||'Renovasi',accountId,date:tglBayar,note:'Renovasi: '+p.name+' - '+name+(note?' ('+note+')':'')});it.paidDate=tglBayar;}
+if(t){Object.assign(t,{amount:harga,category:category||'Renovasi',accountId,date:tglBayar,note:'Renovasi: '+p.name+' - '+name+(note?' ('+note+')':'')});if(deductionOwnerId)t.deductionOwnerId=deductionOwnerId;else delete t.deductionOwnerId;it.paidDate=tglBayar;}
 }
 }
 } else {
 const newId=uid();
-p.items.push({id:newId,name,ukuran,harga,hargaTotal,category,accountId,note,tglBayar,calcDetail,paid:false,txId:null,paidDate:null});
+p.items.push({id:newId,name,ukuran,harga,hargaTotal,category,accountId,note,tglBayar,calcDetail,paid:false,txId:null,paidDate:null,deductionOwnerId:deductionOwnerId||undefined});
 if(calcDetail&&calcDetail.type==='absensi')Tukang.markUsed(calcDetail.entryIds,newId);
 }
 RenovCalc._pendingDetail=null;
@@ -330,7 +366,9 @@ if(!it.paid){
 const tglBayar=it.tglBayar||todayStr();
 if(!await askConfirm(`Tandai "${escapeHtml(it.name)}" lunas sebesar ${fmtFull(it.harga)} pada tanggal ${tglBayar}? Ini akan bikin transaksi pengeluaran NYATA di Keuangan (pengaruh ke saldo akun). Kalau transaksinya sudah ada sebelumnya di Keuangan, batalkan ini dan pakai tombol "🔗 Hubungkan Transaksi Lama" di form edit item supaya tidak dobel.`,{okText:'Ya, Bayar',icon:'💸'}))return;
 const txId=uid();
-D.transactions.push({id:txId,type:'expense',amount:it.harga,category:it.category||'Renovasi',subcategory:'',accountId:it.accountId||D.accounts[0]?.id||'',payMethod:'tunai',note:'Renovasi: '+p.name+' - '+it.name+(it.note?' ('+it.note+')':''),date:tglBayar,renovProjectLinkId:p.id,renovItemLinkId:it.id});
+const newTx={id:txId,type:'expense',amount:it.harga,category:it.category||'Renovasi',subcategory:'',accountId:it.accountId||D.accounts[0]?.id||'',payMethod:'tunai',note:'Renovasi: '+p.name+' - '+it.name+(it.note?' ('+it.note+')':''),date:tglBayar,renovProjectLinkId:p.id,renovItemLinkId:it.id};
+if(it.deductionOwnerId)newTx.deductionOwnerId=it.deductionOwnerId;
+D.transactions.push(newTx);
 it.paid=true;it.txId=txId;it.paidDate=tglBayar;
 save();renderDashboard();renderKeuangan();Renov.render();Renov.renderDetail();
 toast('✅ Item ditandai lunas & transaksi tercatat di Keuangan');
@@ -394,6 +432,8 @@ it.name=nameInput;it.note=noteInput;
 }
 it.harga=t.amount;it.category=t.category;it.accountId=t.accountId;
 it.paid=true;it.txId=t.id;it.paidDate=t.date;it.tglBayar=t.date;
+if(it.deductionOwnerId&&!t.deductionOwnerId)t.deductionOwnerId=it.deductionOwnerId;
+else if(t.deductionOwnerId)it.deductionOwnerId=t.deductionOwnerId;
 t.renovProjectLinkId=p.id;t.renovItemLinkId=it.id;
 Renov.editItemId=null;
 save();closeModal('linkTxModal');closeModal('renovItemModal');
