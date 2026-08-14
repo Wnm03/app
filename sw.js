@@ -2,7 +2,7 @@
 // Strategi: network-first (biar update selalu terambil saat online),
 // fallback ke cache saat offline. Precache file inti saat install.
 
-const CACHE_NAME = 'kw-cache-v1335';
+const CACHE_NAME = 'kw-cache-v1339';
 const PRECACHE_URLS = [
   './index.html',
   './app_production.html',
