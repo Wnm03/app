@@ -395,6 +395,10 @@ const InvestmentUI = {
     if (!Array.isArray(InvestmentUI._ownersDraft) || !InvestmentUI._ownersDraft[i]) return;
     const n = parseFloat(val);
     InvestmentUI._ownersDraft[i].porsi = isFinite(n) ? n : 0;
+    // SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat DESIGN-LOCK-autofill-sisa-porsi.md): tandai
+    // baris ini "ditulis manual" supaya tidak jadi target auto-fill (calculateRemainingShare(),
+    // modules-calc.js) di kemudian hari.
+    InvestmentUI._ownersDraft[i]._touched = true;
     InvestmentUI.updateOwnersTotal();
     // SESI 494 — "Kuota sisa" per owner terpisah dari validasi total-porsi 100% di atas (soft
     // warning, TIDAK menyentuh saveBtn.disabled — lihat _ownerQuotaText()/_updateOwnerQuotaDisplay()).
@@ -404,6 +408,8 @@ const InvestmentUI = {
     // fokus/kursor input porsi yang sedang diketik tidak hilang — pola sama persis
     // Aset.onOwnerPorsiInput().
     InvestmentUI._updateOwnerNominalDisplay(i);
+    // SESI AF1 — auto-fill baris kosong berikutnya dgn sisa porsi (lihat _applyRemainingShare()).
+    InvestmentUI._applyRemainingShare(i);
   },
 
   // onOwnerNominalInput(i,val) — SESI 552. Arah sebaliknya dari onOwnerPorsiInput(): user isi
@@ -423,10 +429,38 @@ const InvestmentUI = {
     const nominal = isFinite(n) ? n : 0;
     const porsi = Math.round((nominal / value * 100) * 10000) / 10000;
     InvestmentUI._ownersDraft[i].porsi = porsi;
+    // SESI AF1: tandai baris ini "ditulis manual" (lihat onOwnerPorsiInput() di atas).
+    InvestmentUI._ownersDraft[i]._touched = true;
     const porsiEl = document.getElementById('investOwnerPorsi' + i);
     if (porsiEl) porsiEl.value = porsi;
     InvestmentUI.updateOwnersTotal();
     InvestmentUI._updateOwnerQuotaDisplay(i);
+    // SESI AF1 — auto-fill baris kosong berikutnya dgn sisa porsi (lihat _applyRemainingShare()).
+    InvestmentUI._applyRemainingShare(i);
+  },
+
+  // _applyRemainingShare(editedIndex) — SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat
+  // DESIGN-LOCK-autofill-sisa-porsi.md). Wrapper DOM+draft di sekitar calculateRemainingShare()
+  // (PURE, modules-calc.js, SSOT dipakai 3 modal: sini, Aset._applyRemainingShare(),
+  // AccOwners.onPorsiInput()) — kalau ada 1 baris kosong yg belum disentuh user, isi porsi &
+  // Nominal (Rp) baris itu (holding investasi SELALU punya nilai>0, beda dari Aset), lalu refresh
+  // total & kuota baris itu. Guard typeof: modules-calc.js selalu dimuat lebih dulu (GROUP_A
+  // awal) jadi seharusnya selalu ada, tapi dijaga tetap aman kalau urutan berubah.
+  _applyRemainingShare(editedIndex) {
+    if (typeof calculateRemainingShare !== 'function') return;
+    const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
+    const result = calculateRemainingShare(draft, editedIndex);
+    if (!result) return;
+    draft[result.targetIndex].porsi = result.porsi;
+    const porsiEl = document.getElementById('investOwnerPorsi' + result.targetIndex);
+    if (porsiEl) porsiEl.value = result.porsi;
+    const value = InvestmentUI._ownersHoldingValue();
+    if (value > 0) {
+      const nomEl = document.getElementById('investOwnerNominal' + result.targetIndex);
+      if (nomEl) nomEl.value = Math.round(value * result.porsi / 100);
+    }
+    InvestmentUI.updateOwnersTotal();
+    InvestmentUI._updateOwnerQuotaDisplay(result.targetIndex);
   },
 
   // onOwnerIsSelfToggle(i,checked) — tandai/lepas baris ke-i draft sbg porsi milik sendiri (dipakai

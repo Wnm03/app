@@ -770,6 +770,9 @@ if(!Array.isArray(Aset._ownersDraft)||!Aset._ownersDraft[i])return;
 const n=parseFloat(val);
 const porsi=isFinite(n)?n:0;
 Aset._ownersDraft[i].porsi=porsi;
+// SESI AF1 (fitur "Auto-fill Sisa Porsi"): tandai baris ini "ditulis manual" supaya tidak
+// jadi target auto-fill di kemudian hari (lihat calculateRemainingShare(), modules-calc.js).
+Aset._ownersDraft[i]._touched=true;
 // SESI 429: sync field Nominal (Rp) baris ini realtime -- ubah value DOM
 // langsung (BUKAN _renderOwnersList ulang), sama disiplin dgn kenapa
 // _renderOwnersList tidak dipanggil tiap ketik (lihat komentar di atasnya):
@@ -784,6 +787,8 @@ Aset.updateOwnersTotal();
 // warning, TIDAK menyentuh saveBtn.disabled -- lihat _ownerQuotaText()/_updateOwnerQuotaDisplay()),
 // mirror PERSIS InvestmentUI.onOwnerPorsiInput() (S494).
 Aset._updateOwnerQuotaDisplay(i);
+// SESI AF1 -- auto-fill baris kosong berikutnya dgn sisa porsi (lihat _applyRemainingShare()).
+Aset._applyRemainingShare(i);
 },
 // onOwnerNominalInput(i,val) -- SESI 429: arah sebaliknya dari
 // onOwnerPorsiInput() -- user isi Nominal (Rp), porsi% baris ini dihitung
@@ -805,6 +810,8 @@ if(!Array.isArray(Aset._ownersDraft)||!Aset._ownersDraft[i])return;
 const nilai=Aset._ownersAssetNilai();
 const n=parseFloat(String(val).replace(/[^0-9.-]/g,''));
 const nominal=isFinite(n)?n:0;
+// SESI AF1: tandai baris ini "ditulis manual" (lihat onOwnerPorsiInput() di atas).
+Aset._ownersDraft[i]._touched=true;
 // FIX (audit "Nominal tidak bisa diisi manual", laporan user Agustus 2026):
 // SEBELUMNYA method ini `return` langsung kalau nilai<=0 (aset belum py
 // "Estimasi Nilai Saat Ini") -- field Nominal dulu memang disabled di
@@ -878,102 +885,48 @@ const porsi=Math.round((nominal/nilai*100)*10000)/10000;
 Aset._ownersDraft[i].porsi=porsi;
 const porsiEl=document.getElementById('ownerPorsi'+i);
 if(porsiEl)porsiEl.value=porsi;
-Aset._autoDistributeRemaining(i);
+// SESI AF1: ganti trigger auto-bagi dari _autoDistributeRemaining() (broadcast rata/proporsional
+// ke SEMUA baris lain, DIHAPUS -- lihat komentar di atas _applyRemainingShare()) ke
+// _applyRemainingShare() (isi HANYA baris kosong berikutnya yang belum disentuh user) --
+// konsisten dgn perilaku onOwnerPorsiInput() & 2 modal lain (Investasi/Akun).
+Aset._applyRemainingShare(i);
 Aset.updateOwnersTotal();
-// SESI 505 -- porsi baris ini berubah (& _autoDistributeRemaining() di atas sudah menyesuaikan
-// porsi baris lain), refresh kuota SEMUA baris (sama alasan cabang nilai<=0 di atas).
+// SESI 505 -- porsi baris ini berubah (& _applyRemainingShare() di atas sudah menyesuaikan
+// baris target kalau ada), refresh kuota SEMUA baris (sama alasan cabang nilai<=0 di atas).
 Aset._ownersDraft.forEach((o,k)=>{ Aset._updateOwnerQuotaDisplay(k); });
 },
-// _autoDistributeRemaining(editedIndex) -- SESI 431: bagi RATA sisa nilai
-// aset ke SEMUA baris pemilik SELAIN `editedIndex` (baris yang baru saja
-// diisi nominalnya oleh user lewat onOwnerNominalInput()), supaya total
-// porsi seluruh pemilik otomatis kembali ke 100% tanpa user hitung manual
-// baris lain satu-satu. Permintaan user: "total aset dikurangi nominal
-// pemilik [yang baru diisi] sampai 0 dibagi semua pemilik [lain]".
-// Rumus (0 rumus baru di luar yang sudah ada -- reuse `nilai`/`porsi` yang
-// sudah dihitung caller):
-//   sisaRp = MAX(0, nilaiAset - nominalBarisEdited)   -- dijepit ke >=0,
-//     "sampai 0" berarti tidak pernah jadi sisa negatif walau baris yang
-//     diedit nominalnya melebihi nilai aset (over-alokasi baris lain jadi
-//     0%, bukan minus, konsisten dgn validateOwner() yang menolak porsi<=0).
-//   bagianRp = sisaRp / jumlahBarisLain   -- dibagi rata, jumlahBarisLain =
-//     draft.length - 1 (SEMUA baris lain, terlepas porsi lama mereka apa).
-//   porsiBarisLain = ROUND((bagianRp/nilaiAset*100) * 100) / 100 -- pola
-//     pembulatan 2 desimal SAMA PERSIS onOwnerNominalInput()/
-//     MultiOwnerEngine.remainingPorsi(), supaya toleransi float konsisten
-//     satu tempat (PORSI_EPSILON di multi-owner-engine.js).
-// Baris terakhir (index tertinggi di antara baris lain) SENGAJA dapat sisa
-// pembulatan (100 - porsi_edited - SUM(porsi baris lain kecuali terakhir))
-// alih-alih porsiBarisLain hasil bagi rata mentah -- supaya total PERSIS
-// 100% (bukan 99.99/100.01 akibat akumulasi pembulatan 2 desimal tiap
-// baris, pola sama dgn kenapa _synthesizeFromTitipan() menghitung
-// selfPorsi sbg SISA, bukan dibagi terpisah -- lihat komentar fungsi itu
-// di multi-owner-engine.js).
-// TIDAK dipanggil dari onOwnerPorsiInput() (SENGAJA) -- trigger auto-bagi
-// cuma dari isi Nominal (Rp), sesuai permintaan eksplisit user ("ketika
-// mengisi nominal"); edit Porsi (%) manual tetap perilaku lama 0 regresi
-// (cuma sync Nominal baris itu sendiri, baris lain TIDAK ikut berubah).
-// Parameter:
-//   editedIndex (number) -- index baris di Aset._ownersDraft yang baru
-//     saja diisi nominalnya (porsi-nya SUDAH ditulis oleh caller sebelum
-//     method ini dipanggil).
-// Return: tidak ada (void) -- method ini menulis LANGSUNG ke
-//   Aset._ownersDraft[*].porsi + DOM #ownerPorsi{i}/#ownerNominal{i} baris
-//   lain (pola sama seperti onOwnerPorsiInput/onOwnerNominalInput sendiri:
-//   ubah DOM langsung, BUKAN _renderOwnersList ulang, supaya fokus/kursor
-//   input yang sedang diketik user tidak hilang).
-// SESI 449 (BUG-OWN-002, audit s448): sebelumnya sisa porsi dibagi RATA
-// (sisaPorsi/otherIdx.length) ke SEMUA baris lain, terlepas dari porsi lama
-// mereka apa. Untuk 2 pemilik ini kebetulan tidak kelihatan (sisa cuma
-// jatuh ke 1 baris = otomatis "benar"), tapi utk 3+ pemilik ini salah:
-// mis. porsi lama A=70%,B=20%,C=10%, user isi Nominal A jadi lebih kecil
-// (porsi A turun ke 40%) -- sisa 60% seharusnya dibagi PROPORSIONAL ke rasio
-// lama B:C (20:10 = 2:1), bukan rata 30%/30%. Fix: bagi proporsional ke
-// porsi LAMA baris lain (draft[k].porsi SEBELUM method ini menimpanya).
-// Fallback ke rata kalau total porsi lama baris lain = 0 (mis. semua baris
-// baru ditambah & belum py porsi sama sekali) -- SAMA PERSIS perilaku lama,
-// jadi 0 regresi utk kasus itu maupun kasus 2-pemilik yang sudah benar.
-_autoDistributeRemaining(editedIndex){
+// _autoDistributeRemaining() (SESI 431/449/457) -- DIHAPUS di sesi AF1 lanjutan (lihat
+// SESI-AF1-SESSION-NOTE.md): sejak _applyRemainingShare() jadi satu-satunya trigger auto-bagi
+// (dipanggil dari onOwnerPorsiInput() & onOwnerNominalInput() di bawah, lihat komentarnya
+// masing2), method ini sudah tidak dipanggil dari mana pun di kode aplikasi (0 caller UI, cuma
+// dipanggil test lama secara langsung) -- dead code. Sesuai rekomendasi eksplisit
+// DESIGN-LOCK-autofill-sisa-porsi.md ("Rekomendasi: ganti total ke util baru supaya 1 sumber
+// logika, hapus _autoDistributeRemaining() duplikat"), method + rumus bagi-proporsionalnya
+// (S449) DIHAPUS -- calculateRemainingShare() (modules-calc.js) sekarang SATU-SATUNYA sumber
+// logika auto-bagi utk ketiga modal (Aset/Investasi/Akun). Test lama yang memanggil method ini
+// langsung (tests/asset-owners-nominal-autodistribute-proportional-s449.test.js) sudah ditulis
+// ulang utk menguji perilaku _applyRemainingShare() yang menggantikannya (isi HANYA baris kosong
+// berikutnya, bukan broadcast proporsional -- lihat Design Lock keputusan #2).
+// _applyRemainingShare(editedIndex) -- SESI AF1 (fitur "Auto-fill Sisa Porsi"). Wrapper DOM+draft
+// di sekitar calculateRemainingShare() (PURE, modules-calc.js, SSOT dipakai 3 modal) -- kalau ada
+// 1 baris kosong yg belum disentuh user, isi porsi & (kalau aset punya nilai>0) Nominal (Rp) baris
+// itu, lalu refresh total & kuota baris itu. Guard typeof: modules-calc.js selalu dimuat lebih
+// dulu (GROUP_A awal) jadi seharusnya selalu ada, tapi dijaga tetap aman kalau urutan berubah.
+_applyRemainingShare(editedIndex){
+if(typeof calculateRemainingShare!=='function')return;
 const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
-if(!draft[editedIndex])return;
+const result=calculateRemainingShare(draft,editedIndex);
+if(!result)return;
+draft[result.targetIndex].porsi=result.porsi;
+const porsiEl=document.getElementById('ownerPorsi'+result.targetIndex);
+if(porsiEl)porsiEl.value=result.porsi;
 const nilai=Aset._ownersAssetNilai();
-if(nilai<=0)return;
-const otherIdx=[];
-for(let k=0;k<draft.length;k++){if(k!==editedIndex)otherIdx.push(k);}
-if(!otherIdx.length)return;
-const editedPorsi=typeof draft[editedIndex].porsi==='number'&&isFinite(draft[editedIndex].porsi)?draft[editedIndex].porsi:0;
-const sisaPorsi=Math.max(0,100-editedPorsi);
-const lastIdx=otherIdx[otherIdx.length-1];
-const oldPorsi={};
-let totalOldPorsi=0;
-otherIdx.forEach((k)=>{
-const p=typeof draft[k].porsi==='number'&&isFinite(draft[k].porsi)?Math.max(0,draft[k].porsi):0;
-oldPorsi[k]=p;
-totalOldPorsi+=p;
-});
-// FIX S457: presisi share dinaikkan dari 2 ke 4 desimal, SAMA PERSIS
-// alasan & pola di onOwnerNominalInput() (lihat komentar panjang di
-// sana) -- baris ini pun jadi input konversi Rp<->% yang ditampilkan di
-// Nominal (Rp) baris lain (baris di bawah, nomEl.value=Math.round(nilai*
-// draft[k].porsi/100)), jadi kalau presisinya tetap 2 desimal di sini,
-// bug rounding-collision yang sama bisa muncul dari jalur auto-bagi ini
-// juga (bukan cuma dari baris yang user ketik manual).
-let usedPorsi=0;
-otherIdx.forEach((k)=>{
-if(k===lastIdx)return;
-const share=totalOldPorsi>0
-?Math.round((sisaPorsi*(oldPorsi[k]/totalOldPorsi))*10000)/10000
-:Math.round((sisaPorsi/otherIdx.length)*10000)/10000;
-draft[k].porsi=share;
-usedPorsi+=share;
-});
-draft[lastIdx].porsi=Math.round((sisaPorsi-usedPorsi)*10000)/10000;
-otherIdx.forEach((k)=>{
-const porsiEl=document.getElementById('ownerPorsi'+k);
-if(porsiEl)porsiEl.value=draft[k].porsi;
-const nomEl=document.getElementById('ownerNominal'+k);
-if(nomEl)nomEl.value=Math.round(nilai*draft[k].porsi/100);
-});
+if(nilai>0){
+const nomEl=document.getElementById('ownerNominal'+result.targetIndex);
+if(nomEl)nomEl.value=Math.round(nilai*result.porsi/100);
+}
+Aset.updateOwnersTotal();
+Aset._updateOwnerQuotaDisplay(result.targetIndex);
 },
 // onOwnerIsSelfToggle(i,checked) -- SESI 393: tandai/lepas baris ke-i draft
 // sebagai porsi milik sendiri (dipakai Zakat Maal/Pajak Aset lewat
