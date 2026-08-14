@@ -754,9 +754,28 @@ const Investment = {
 // resolveInvestmentAssetLink(assetId) -- validasi PURE: assetId harus merujuk entry
 // D.assets yang benar-benar ada, selain itu (kosong/tidak ditemukan) -> null.
 // Dipanggil SEBELUM disimpan sbg h.assetId (InvestmentListUI.save()).
+// FIX (laporan user Agustus 2026 -- "holding ditautkan ke Buku Aset, tapi di
+// Buku Aset tidak tampil, malah dobel data di dropdown & toast 'Kepemilikan
+// beda' muncul"): sebelum fix ini, fungsi ini balikin Aset apa pun asal
+// id-nya ketemu -- termasuk Aset yang sudah dimigrasi otomatis ke Holding
+// LAIN (`a._migratedToInvestmentId`, s476a) atau ditautkan manual dari sisi
+// Aset ke Holding LAIN (`a.investmentId`, B1). Aset semacam ini SENGAJA
+// disembunyikan dari Buku Aset & representasinya sudah pindah penuh ke
+// holding lain itu (pola SAMA PERSIS guard yang sudah dipakai
+// `Aset.totalValue()`/`_assetSplits()` dana-titipan/dst -- lihat daftar
+// lengkap di komentar `investmentAssetLinkOptionsHtml()` di bawah) --
+// meresolve-nya di sini bikin BADGE (`investmentCrossCheckWarning()`)
+// membandingkan kepemilikan holding INI ke kepemilikan Aset ghost yang
+// SUDAH TIDAK RELEVAN (kepemilikan sesungguhnya sekarang hidup di holding
+// lain), jadi memicu "⚠️ Kepemilikan beda" palsu. Return null (dianggap
+// TIDAK tertaut secara efektif) kalau Aset yang ditemukan adalah ghost
+// semacam ini -- h.assetId sendiri TIDAK diubah/dibersihkan di sini (murni
+// baca, 0 mutasi data existing), cuma tidak lagi dianggap tautan aktif.
 function resolveInvestmentAssetLink(assetId) {
   if (!assetId || typeof D === 'undefined') return null;
-  return (D.assets || []).find((x) => x && sameId(x.id, assetId)) || null;
+  const a = (D.assets || []).find((x) => x && sameId(x.id, assetId)) || null;
+  if (a && (a._migratedToInvestmentId || a.investmentId)) return null;
+  return a;
 }
 // resolveLinkedInvestmentAsset(h) -- delegasi tipis, pola sama persis
 // resolveLinkedVehicleAsset() (vehicle-core.js, S507).
@@ -779,12 +798,30 @@ function resolveInvestmentByAssetId(assetId) {
 // aset cuma boleh 1 holding tertaut resmi -- guard sisi UI, data lama yang kebetulan
 // sudah dobel tetap kebaca apa adanya lewat resolveInvestmentByAssetId(), tidak
 // dipaksa).
+// FIX (laporan user Agustus 2026 -- "dobel data di dropdown & toast 'Kepemilikan
+// beda'"): tambah guard `_migratedToInvestmentId`/`investmentId`, pola SAMA PERSIS
+// yang SUDAH dipakai belasan titik baca "aset ini masih dihitung/tampil di mana"
+// lain di seluruh app (`Aset.renderList()`/`Aset.totalValue()` di aset.js,
+// `_assetOptionsHtml()`/`_assetSplits()` dana-titipan (s594/s599), `FI.
+// zakatableAssetValue()`, dst -- cari `_migratedToInvestmentId` di codebase utk
+// daftar lengkap). Aset yang sudah dimigrasi otomatis ATAU ditautkan manual ke
+// Holding LAIN representasinya SUDAH PINDAH ke holding itu & SENGAJA disembunyikan
+// dari Buku Aset -- menawarkannya di sini sebagai target link BARU bikin 1
+// instrumen fisik (mis. "Majoris") berakhir "dipegang" oleh 2 holding sekaligus:
+// holding lama (lewat migrasi/tautan asal) DAN holding baru ini (lewat `h.assetId`)
+// -- itulah sumber "Majoris tampil 2x di daftar Investasi" & kepemilikan holding
+// baru dibandingkan ke kepemilikan Aset ghost yang sudah basi (toast mismatch
+// palsu). Pengecualian TETAP berlaku (bukan currentAssetId) supaya data LAMA yang
+// kebetulan sudah tertaut ke ghost seperti ini tetap kebaca/kepilih apa adanya di
+// dropdown (0 hilang mendadak) -- resolveInvestmentAssetLink() di atas yang
+// menangani sisi "dianggap tertaut efektif atau tidak"-nya, bukan di sini.
 function investmentAssetLinkOptionsHtml(currentAssetId) {
   const opts = ['<option value="">— Tidak terhubung —</option>'];
   (D.assets || []).forEach((a) => {
     if (!a) return;
     if (!sameId(a.id, currentAssetId)) {
       if (resolveInvestmentByAssetId(a.id)) return;
+      if (a._migratedToInvestmentId || a.investmentId) return;
     }
     opts.push('<option value="' + a.id + '"' + (sameId(a.id, currentAssetId) ? ' selected' : '') + '>' + escapeHtml(a.name || '?') + ' (' + escapeHtml(a.jenis || '?') + ')</option>');
   });
