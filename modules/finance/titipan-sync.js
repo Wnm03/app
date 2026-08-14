@@ -84,6 +84,125 @@ reconcile(a) {
   return { ok: true, synced: true };
 },
 
+// reconcileAccounts() — 2026-08-14 sesi lanjutan, Rekomendasi #2 dari
+// PATCH-NOTES-akun-dana-titipan-sync.md §2 (setelah Rec #1 audit-only/
+// checkAccounts() & Rec #3 badge kosmetik selesai sesi-sesi sebelumnya).
+// Menutup gap YANG SAMA yang dideteksi TitipanReconcile.checkAccounts():
+// akun berdiri-sendiri (bukan tertaut Aset) dgn porsi kepemilikan non-SELF
+// (modal "⚖️ Porsi Kepemilikan", akun.js) TIDAK PERNAH bikin baris Buku
+// Utang -- fungsi ini yang PERTAMA KALI benar-benar MENULIS baris itu (Rec
+// #1 cuma mendeteksi, 0 mutasi, lihat header titipan-reconcile.js).
+//
+// Pola tulis 1:1 SAMA PERSIS Aset._syncOwnerDebts(a) (aset.js): 1 entry
+// utang PER OWNER non-SELF, ditandai di baris utangnya sendiri
+// (linkedAccountId+linkedOwnerId, bukan pointer tunggal), owner yang
+// dicabut/porsi->0 -> entry OTOMATIS dihapus, akun yang dihapus permanen ->
+// seluruh entry linkedAccountId-nya ikut dihapus (dibersihkan di akhir,
+// simetris). 0 rumus baru di luar 1 titik: NOMINAL.
+//
+// KEPUTUSAN DESAIN (ditanya eksplisit ke user sebelum implementasi, lihat
+// sesi ini): nominal = recalcAccBalance(acc.id) * porsi/100 -- SALDO AKUN
+// SAAT INI, real-time, BUKAN snapshot statis spt a.nilai (Aset)/holdingCost
+// (Investasi). Ini kebalikan pola Aset/Investasi (PATCH-NOTES §2 Rec #2 asli
+// sempat menyebut ini "risiko sedang-tinggi" justru krn saldo akun berubah
+// tiap transaksi, beda dari nilai Aset yg stabil) -- user secara eksplisit
+// memilih ikut saldo real-time (bukan snapshot dikunci saat porsi diedit).
+// Konsekuensi YANG DISADARI (bukan bug): beda dari _syncOwnerDebts() yang
+// nilainya diam kalau a.nilai tidak diedit, baris "Dana titipan akun" di
+// Buku Utang ini akan NAIK-TURUN otomatis tiap ada transaksi masuk/keluar di
+// akun berdiri-sendiri itu -- sesuai keputusan, bukan efek samping tak
+// disengaja.
+//
+// GERBANG PANGGIL (kenapa "real-time tiap transaksi" TIDAK butuh titik
+// panggil baru di transaksi.js): dipanggil dari save() (features-helpers-
+// global-security.js), gerbang TUNGGAL yang SUDAH terpanggil sesudah SETIAP
+// mutasi transaksi (in/out/transfer) MAUPUN sesudah simpan porsi
+// (AccOwners.save()) -- persis pola syncLinkedAssetNilaiFromAkun() (arah
+// Akun->Aset) yang sudah lebih dulu dipanggil dari titik yang sama. 0 titik
+// baru disentuh di transaksi.js/akun.js sendiri -- exactly alasan modul
+// titipan-sync.js ini dibuat sesi 10a ("satu gerbang wajib" drpd tersebar).
+//
+// Akun TERTAUT ke Aset (a.accountId===acc.id) DILEWATI -- porsinya sudah
+// disinkron ke Aset tertaut lewat reconcile(a)/syncLinkedAssetNilaiFromAkun()
+// (arah Akun->Aset), exclusion SAMA PERSIS TitipanReconcile.
+// _expectedFromAccounts(); kalau ikut dihitung di sini juga, 1 porsi yang
+// sama dobel-tercatat (1x linkedAssetId, 1x linkedAccountId).
+//
+// BEDA dgn reconcile(a) di atas: fungsi ini SATU-SATUNYA di modul ini yang
+// benar-benar MENULIS ke D.debts (reconcile(a) cuma membungkus fungsi tulis
+// milik Aset). Ditaruh di sini (bukan titipan-reconcile.js) krn modul itu
+// sengaja 0-mutasi (lihat header file itu) -- pola sama kenapa
+// repairOrphans() ada di titipan-reconcile.js tapi TIDAK dipanggil dari
+// checkAll()/warnIfNotOk(), hanya dipisah, di sini malah beda modul sekalian
+// supaya audit (baca-saja) & sync (tulis) tetap 2 modul terpisah tegas.
+//
+// Return: {synced, removed} -- jumlah baris utang ditulis/diupdate & jumlah
+// baris dihapus (owner dicabut/akun dihapus/akun baru saja ditautkan ke
+// Aset), {synced:0,removed:0} kalau D/D.accounts/recalcAccBalance belum
+// tersedia (no-op aman, dipanggil dari save() yang jalan di banyak konteks
+// termasuk sebagian test headless).
+reconcileAccounts() {
+  const result = { synced: 0, removed: 0 };
+  if (typeof D === 'undefined' || !Array.isArray(D.debts) || !Array.isArray(D.accounts)) return result;
+  if (typeof recalcAccBalance !== 'function') return result;
+  const assets = Array.isArray(D.assets) ? D.assets : [];
+  const linkedAccountIds = new Set(assets.filter((a) => a && a.accountId != null).map((a) => String(a.accountId)));
+  const touchedAccountIds = new Set();
+  D.accounts.forEach((acc) => {
+    if (!acc || acc.id == null) return;
+    if (linkedAccountIds.has(String(acc.id))) return; // sudah kehitung via Aset tertaut, lihat catatan di atas
+    touchedAccountIds.add(String(acc.id));
+    let owners = [];
+    if (typeof MultiOwnerEngine !== 'undefined' && typeof MultiOwnerEngine.getOwners === 'function') {
+      let res;
+      try { res = MultiOwnerEngine.getOwners(acc); } catch (e) { res = null; }
+      owners = (res && res.ok) ? res.owners : [];
+    }
+    const nonSelfOwners = owners.filter((o) => o && !o.isSelf && o.porsi > 0);
+    const balance = recalcAccBalance(acc.id);
+    const existingLinked = D.debts.filter((d) => d && d.linkedAccountId != null && String(d.linkedAccountId) === String(acc.id));
+    const keepIds = new Set();
+    nonSelfOwners.forEach((o) => {
+      const amount = balance * (o.porsi / 100);
+      const catatan = 'Dana titipan akun: ' + (acc.name || '');
+      let debt = existingLinked.find((d) => String(d.linkedOwnerId) === String(o.ownerId));
+      if (debt) {
+        Object.assign(debt, { name: o.ownerName, nilai: amount, catatan, lunas: amount <= 0 });
+      } else {
+        debt = {
+          id: (typeof uid === 'function' ? uid() : Date.now()),
+          name: o.ownerName,
+          nilai: amount,
+          bunga: 0,
+          cicilanBulanan: 0,
+          tanggal: (typeof todayStr === 'function' ? todayStr() : ''),
+          jatuhTempo: '',
+          catatan,
+          lunas: amount <= 0,
+          linkedAccountId: acc.id,
+          linkedOwnerId: o.ownerId,
+        };
+        D.debts.push(debt);
+      }
+      keepIds.add(String(o.ownerId));
+      result.synced++;
+    });
+    const before = D.debts.length;
+    D.debts = D.debts.filter((d) => !(d && d.linkedAccountId != null && String(d.linkedAccountId) === String(acc.id) && !keepIds.has(String(d.linkedOwnerId))));
+    result.removed += before - D.debts.length;
+  });
+  // Bersihkan baris linkedAccountId "sisa" -- akun yang sudah dihapus
+  // permanen (id-nya tidak ketemu di D.accounts sama sekali) ATAU akun yang
+  // BARU SAJA ditautkan ke Aset (sekarang ada di linkedAccountIds, jadi
+  // dilewati loop di atas & tidak kena touchedAccountIds) -- keduanya harus
+  // dibersihkan di sini krn loop di atas cuma iterasi akun yang masih ada &
+  // masih berdiri-sendiri.
+  const beforeDeleted = D.debts.length;
+  D.debts = D.debts.filter((d) => !(d && d.linkedAccountId != null && !touchedAccountIds.has(String(d.linkedAccountId))));
+  result.removed += beforeDeleted - D.debts.length;
+  return result;
+},
+
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TitipanSync;

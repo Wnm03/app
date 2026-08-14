@@ -195,6 +195,84 @@ checkDebtNameStaleness() {
   return { ok: stale.length === 0, stale };
 },
 
+// _expectedFromAccounts() — CABANG AKUN (audit gap "Akun & Metode Pembayaran"
+// -> Dana Titipan, permintaan user 2026-08-14). Ditemukan lewat baca akun.js
+// (AccOwners.save(), S574/S607): akun BERDIRI SENDIRI (bukan akun tertaut ke
+// Aset lewat a.accountId) yang punya owners[] non-SELF (porsi kepemilikan,
+// diisi lewat modal "⚖️ Porsi Kepemilikan" di kartu Akun) TIDAK PERNAH
+// membuat baris Buku Utang/Dana Titipan apa pun -- beda dgn cabang Aset
+// (_syncOwnerDebts) & Investasi (_syncTitipanDebt) yang keduanya SELALU
+// sync. Akun yang TERTAUT ke Aset (a.accountId===acc.id) SENGAJA dilewati
+// di sini -- porsinya sudah 1:1 disamakan ke Aset tertaut itu sendiri oleh
+// AccOwners.save() (baca komentar "BUGFIX (audit sync arah Akun->Aset)" di
+// akun.js) dan SUDAH kehitung lewat _expectedFromAssets() di atas; kalau
+// akun tertaut ikut dihitung lagi di sini, 1 porsi yang sama akan muncul 2x
+// (double-count palsu, bukan gap nyata).
+//
+// SENGAJA presence-only (out[key]=true, BUKAN nominal Rp seperti cabang
+// Aset/Investasi): saldo akun (recalcAccBalance) berubah tiap transaksi
+// masuk/keluar, beda dgn a.nilai (Aset)/holdingCost (Investasi) yang stabil
+// sampai sengaja diedit -- membandingkan NOMINAL di sini akan menghasilkan
+// "mismatch" palsu tiap kali ada transaksi baru padahal belum tentu itu gap
+// sungguhan. Existensi baris Buku Utang (linkedAccountId+linkedOwnerId) itu
+// sendiri yang jadi pertanyaan cabang ini -- bukan besar nominalnya (itu
+// keputusan desain utk sesi sync nominal terpisah, di luar cakupan audit
+// murni baca-saja ini).
+_expectedFromAccounts() {
+  const out = {};
+  if (typeof D === 'undefined') return out;
+  const accounts = Array.isArray(D.accounts) ? D.accounts : [];
+  const assets = Array.isArray(D.assets) ? D.assets : [];
+  accounts.forEach((acc) => {
+    if (!acc || acc.id == null) return;
+    const linkedAsset = assets.find((a) => a && String(a.accountId) === String(acc.id));
+    if (linkedAsset) return; // sudah kehitung via _expectedFromAssets(), lihat catatan di atas
+    let owners = [];
+    if (typeof MultiOwnerEngine !== 'undefined' && typeof MultiOwnerEngine.getOwners === 'function') {
+      let res;
+      try { res = MultiOwnerEngine.getOwners(acc); } catch (e) { res = null; }
+      owners = (res && res.ok) ? res.owners : [];
+    }
+    owners.filter((o) => o && !o.isSelf && o.porsi > 0).forEach((o) => {
+      out[acc.id + '::' + o.ownerId] = true;
+    });
+  });
+  return out;
+},
+
+// _actualLinkedAccountDebts() — {key: true} dari D.debts yang ber-
+// linkedAccountId. Sejak sesi lanjutan (Rekomendasi #2, TitipanSync.
+// reconcileAccounts()), field ini benar-benar diisi tiap save() -- fungsi
+// ini sendiri 0 diubah (disiapkan sejak awal pola sama _actualLinkedDebts()/
+// _actualLinkedInvestmentDebts() persis supaya "hidup" otomatis begitu sesi
+// sync mulai mengisi linkedAccountId, sesuai rencana awal).
+_actualLinkedAccountDebts() {
+  const out = {};
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) return out;
+  D.debts.filter((d) => d && d.linkedAccountId != null && d.linkedOwnerId != null)
+    .forEach((d) => { out[d.linkedAccountId + '::' + d.linkedOwnerId] = true; });
+  return out;
+},
+
+// checkAccounts() — audit cabang Akun (lihat _expectedFromAccounts() utk
+// latar lengkap). PURE baca-saja, 0 mutasi, 0 rumus baru -- pola SAMA
+// PERSIS check() di atas, versi presence-only (bukan nominal):
+//   missing = akun+owner non-SELF porsi>0 tanpa baris Buku Utang sama
+//             sekali (gap: bagian titipan "tersimpan" di saldo akun tapi
+//             TIDAK PERNAH tercatat di Dana Titipan/Buku Utang)
+//   orphan  = baris Buku Utang ber-linkedAccountId yang ownernya sudah
+//             tidak match owners[] akun manapun (disiapkan simetris,
+//             realistis baru relevan setelah sesi sync ditambahkan)
+// Return: {ok, missing[], orphan[]} -- ok=true kalau keduanya kosong.
+checkAccounts() {
+  const expected = this._expectedFromAccounts();
+  const actual = this._actualLinkedAccountDebts();
+  const missing = [], orphan = [];
+  Object.keys(expected).forEach((key) => { if (!(key in actual)) missing.push({ key }); });
+  Object.keys(actual).forEach((key) => { if (!(key in expected)) orphan.push({ key }); });
+  return { ok: missing.length === 0 && orphan.length === 0, missing, orphan };
+},
+
 // checkAll() — Rekomendasi #2 lanjutan (S583 sesi-6). check()/
 // checkOwnerIdConsistency()/checkDebtNameStaleness() sudah ADA dari sesi
 // sebelumnya, tapi masing-masing masih dipanggil terpisah (belum ada 1
@@ -210,15 +288,32 @@ checkDebtNameStaleness() {
 // hanya kalau ketiga sub-check ok (AND), tiap sub-check tetap menyimpan
 // shape aslinya (tidak diringkas/dibuang) supaya konsumen bisa cek detail
 // per-kategori tanpa panggil ulang fungsi individualnya.
+// PERUBAHAN 2026-08-14 (audit gap Akun->Dana Titipan, lihat
+// _expectedFromAccounts()): tambah `accountSync` sbg sub-check ke-4,
+// pola SAMA PERSIS penambahan `debtNameStaleness` sesi-5->sesi-6 (fungsi
+// audit-nya sudah ada duluan sbg fungsi berdiri sendiri, checkAll() cuma
+// menambahkannya ke agregat). `ok` keseluruhan sekarang AND dari 4
+// sub-check (sebelumnya 3).
+// UPDATE (sesi lanjutan sama hari, Rekomendasi #2 SUDAH DIKERJAKAN):
+// TitipanSync.reconcileAccounts() (titipan-sync.js) sekarang benar-benar
+// mengisi `linkedAccountId` (dipanggil dari save(), gerbang tunggal, tiap
+// transaksi/simpan porsi, nominal = saldo akun real-time) -- gap yang
+// sebelumnya SELALU dilaporkan `missing` utk siapa pun yang punya akun
+// berdiri-sendiri berporsi non-SELF>0 sekarang tertutup begitu save()
+// berikutnya jalan. `_actualLinkedAccountDebts()` di bawah TIDAK diubah
+// (masih baca D.debts apa adanya) -- cukup krn sekarang benar-benar ADA
+// baris ber-linkedAccountId utk dibaca.
 checkAll() {
   const sync = this.check();
   const ownerIdConsistency = this.checkOwnerIdConsistency();
   const debtNameStaleness = this.checkDebtNameStaleness();
+  const accountSync = this.checkAccounts();
   return {
-    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok,
+    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok,
     sync,
     ownerIdConsistency,
     debtNameStaleness,
+    accountSync,
   };
 },
 
