@@ -342,6 +342,106 @@ allocatedExcluding(ownerId, exclusion) {
   return total;
 },
 
+// _linkedExpenseTotalForOwner(o) — SESI PATCH-2026-08-14 (audit user:
+// "kenapa masih ada estimasi belum teralokasi padahal di akun keuangan
+// tertaut pemilik terpotong sudah ada modal pengeluaran total"). ROOT
+// CAUSE ditemukan: `estimatedUnallocated` di `build()` di bawah HANYA
+// mengurangi `principalAmount` dgn `o.allocatedPrincipal` (uang yang
+// sudah masuk ke holding investasi/aset) — TIDAK PERNAH mengurangi uang
+// yang sudah KELUAR sbg pengeluaran biasa (renov, belanja mingguan, dst.)
+// di akun yang tertaut ke holding itu, walau akun itu sendiri (kartu
+// "Porsi per Pemilik" di Riwayat Transaksi) SUDAH menghitung
+// Modal-Pengeluaran=Total yang benar per pemilik. Akibatnya dashboard
+// Dana Titipan menampilkan "Estimasi Belum Teralokasi" > 0 padahal
+// uangnya SUDAH habis dibelanjakan (bukan menganggur/belum dipakai) --
+// nilainya sebelumnya cuma tampil PASIF sbg baris pembanding "Estimasi
+// dari Transaksi <Akun>" (`_expenseComparisonForOwner()`,
+// dana-titipan-portfolio-render.js, Sesi C/S597), tidak pernah jadi INPUT
+// ke perhitungan alokasi.
+//
+// REUSE 100% relasi holding->akun & assignment per-transaksi yang SAMA
+// PERSIS dipakai `_expenseComparisonForOwner()` (holding->akun: prioritas
+// holding langsung lalu fallback Aset perantara, S601-3; assignment:
+// `resolveTxOwnerSplitForAccount()` + `resolveTxOwnerAssignment()` dari
+// filter-laporan.js, S608 -- SATU sumber kebenaran yang sama dgn kartu
+// "Porsi per Pemilik") — 0 rumus split baru ditulis di sini, murni
+// dipindah SATU LEVEL LEBIH AWAL (dari render ke `build()`, file
+// agregasi) supaya angkanya bisa dipakai sbg input `estimatedUnallocated`/
+// `allocationStatus`, bukan cuma baris pembanding pasif.
+// `_expenseComparisonForOwner()` sendiri diubah sesi ini jadi murni
+// membaca `o.linkedExpenseTotal`/`o.linkedExpenseAccountNames` hasil
+// fungsi ini (lihat dana-titipan-portfolio-render.js) — 1 sumber
+// kebenaran, 0 risiko dua angka "pengeluaran akun tertaut" yang beda utk
+// data yang sama.
+//
+// Perbandingan id akun pakai String() langsung (BUKAN `sameId()` global)
+// — pola sama `_majorisLinkedAccountIds()` di file ini: fungsi ini
+// dipanggil dari `build()` yang harus tetap aman di harness test manapun
+// yang belum tentu meng-inject `sameId`.
+//
+// Guard anti-doublecount: transaksi yang SUDAH ditandai `titipanLinkId`
+// (jalur "💸 Catat Pengeluaran Dana Titipan", `TitipanExpenseFlow`, sudah
+// dihitung terpisah ke `usedMap`/`o.usedTotal` di `build()` sejak Sesi
+// 519) DIKECUALIKAN dari sini, supaya 1 transaksi yang sama tidak pernah
+// mengurangi `estimatedUnallocated` dua kali lewat dua jalur pengeluaran
+// yang berbeda.
+//
+// Parameter: `o` — owner bucket (butuh `o.holdings[]` & `o.ownerId`,
+// sudah tersedia di titik pemanggilan `build()` di bawah — holding
+// dirakit LEBIH DULU sebelum forEach owner terakhir).
+// Return: `{total, accountNames}` — `total` angka (SELALU >=0, bukan
+// null) & `accountNames` array nama akun unik yang menyumbang.
+// `{total: 0, accountNames: []}` (BUKAN null) kalau tidak ada satupun
+// holding owner ini yang tertaut ke akun multi-owner — beda kontrak
+// SENGAJA dari `_expenseComparisonForOwner()` (null = "sembunyikan
+// baris") supaya caller `build()` di bawah bisa langsung menjumlahkan
+// `.total` tanpa guard null terpisah.
+_linkedExpenseTotalForOwner(o) {
+  const empty = { total: 0, accountNames: [] };
+  if (!o) return empty;
+  if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof resolveTxOwnerAssignment !== 'function') return empty;
+  if (typeof D === 'undefined' || !Array.isArray(D.assets) || !Array.isArray(D.transactions)) return empty;
+  const seenAcc = new Set();
+  let total = 0;
+  const accountNames = [];
+  (o.holdings || []).forEach((h) => {
+    if (!h) return;
+    let accountId = null;
+    let accountLabel = null;
+    // Prioritas 0 (S601-3): holding tertaut LANGSUNG ke akun, 0 Aset perantara.
+    if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
+      const srcHolding = Investment.getHolding(h.linkedInvestmentId);
+      if (srcHolding && srcHolding.accountId) {
+        accountId = srcHolding.accountId;
+        accountLabel = srcHolding.name;
+      }
+    }
+    // Prioritas 1 (rute lama): via Aset perantara -- HANYA dicek kalau prioritas 0 kosong.
+    if (!accountId) {
+      let asset = null;
+      if (h.type === 'aset' && h.linkedAssetId) {
+        asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+      } else if (h.linkedInvestmentId) {
+        asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+      }
+      accountId = asset && asset.accountId;
+      accountLabel = asset && asset.name;
+    }
+    if (!accountId || seenAcc.has(String(accountId))) return;
+    seenAcc.add(String(accountId));
+    const resolved = resolveTxOwnerSplitForAccount(accountId);
+    if (!resolved) return;
+    const idx = resolved.owners.findIndex((ow) => ow && ow.ownerId === o.ownerId);
+    if (idx < 0) return;
+    const ownerExpenseTotal = D.transactions
+      .filter((t) => t && t.type === 'expense' && !t.titipanLinkId && String(t.accountId) === String(accountId) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
+      .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+    total += ownerExpenseTotal;
+    accountNames.push(accountLabel || 'Akun');
+  });
+  return { total, accountNames };
+},
+
 // build() — projection utama. Grouping per owner NON-SELF lintas SEMUA
 // holding investasi (satu owner bisa tersebar ke banyak instrumen; satu
 // instrumen bisa punya porsi dari beberapa owner — keduanya sudah
@@ -527,17 +627,51 @@ build() {
     o.holdings.sort((x, y) => y.allocatedPrincipal - x.allocatedPrincipal);
     const commit = commitMap.get(o.ownerId);
     const principalAmount = commit ? (isFinite(commit.principalAmount) ? Number(commit.principalAmount) : 0) : null;
+    // SESI 519 — usedTotal SELALU angka (default 0 — "belum ada transaksi
+    // talangan" beda dari "belum ada data pokok"). talanganTotal SUBSET
+    // usedTotal (Hard Invariant #8: HANYA expense dgn titipanTalangan===
+    // true, sudah difilter di talanganMap di atas). Dipindah ke SINI
+    // (sebelumnya di bawah blok estimatedUnallocated) SESI PATCH-2026-08-14
+    // supaya tersedia SEBELUM estimatedUnallocated dihitung (lihat catatan
+    // di bawah) — 0 rumus usedTotal/talanganTotal itu sendiri diubah.
+    const usedTotal = usedMap.get(o.ownerId) || 0;
+    o.usedTotal = usedTotal;
+    o.talanganTotal = talanganMap.get(o.ownerId) || 0;
+    // SESI PATCH-2026-08-14 (audit user, lihat catatan lengkap di
+    // `_linkedExpenseTotalForOwner()` di atas) — pengeluaran akun tertaut
+    // (mis. "Renov"/"Majoris") yang assignment-nya (`deductionOwnerId`)
+    // mengarah ke owner ini, REUSE 100% relasi yang sama dgn
+    // `_expenseComparisonForOwner()` (dana-titipan-portfolio-render.js).
+    const linkedExpense = this._linkedExpenseTotalForOwner(o);
+    o.linkedExpenseTotal = linkedExpense.total;
+    o.linkedExpenseAccountNames = linkedExpense.accountNames;
+
     let estimatedUnallocated = null;
     let overAllocatedAmount = 0;
     let allocationStatus = 'PRINCIPAL_NOT_SET';
     if (principalAmount !== null) {
-      if (o.allocatedPrincipal > principalAmount) {
+      // FIX SESI PATCH-2026-08-14 — SEBELUM fix ini, `spent` di sini HANYA
+      // `o.allocatedPrincipal` (uang yang sudah masuk ke holding investasi/
+      // aset). Root cause bug user: 2 jalur pengeluaran lain --
+      // `usedTotal` (jalur "💸 Catat Pengeluaran Dana Titipan",
+      // `tx.titipanLinkId`, Sesi 519) & `linkedExpenseTotal` (pengeluaran
+      // biasa di akun tertaut yg deductionOwnerId-nya mengarah ke owner
+      // ini, Sesi PATCH-2026-08-14 di atas) -- SUDAH dihitung `build()`
+      // sejak lama/sesi ini, tapi TIDAK PERNAH ikut mengurangi
+      // `principalAmount` di sini, jadi uang yang sebenarnya SUDAH
+      // dibelanjakan (bukan menganggur) tetap dihitung "Belum Teralokasi".
+      // `_linkedExpenseTotalForOwner()` sudah mengecualikan transaksi
+      // ber-`titipanLinkId` (anti-doublecount dgn `usedTotal`), jadi
+      // ketiga komponen `spent` ini SALING EKSKLUSIF (0 transaksi yang
+      // sama terhitung 2x).
+      const spent = o.allocatedPrincipal + usedTotal + o.linkedExpenseTotal;
+      if (spent > principalAmount) {
         allocationStatus = 'OVER_ALLOCATED';
         estimatedUnallocated = 0;
-        overAllocatedAmount = o.allocatedPrincipal - principalAmount;
+        overAllocatedAmount = spent - principalAmount;
       } else {
         allocationStatus = 'OK';
-        estimatedUnallocated = principalAmount - o.allocatedPrincipal;
+        estimatedUnallocated = principalAmount - spent;
       }
     }
     o.principalAmount = principalAmount;
@@ -555,17 +689,13 @@ build() {
     const returnedTotal = returnedMap.get(o.ownerId) || 0;
     o.returnedTotal = returnedTotal;
     o.outstandingPrincipal = (principalAmount !== null) ? Math.max(0, principalAmount - returnedTotal) : null;
-    // SESI 519 — usedTotal SELALU angka (pola sama returnedTotal, default 0
-    // — "belum ada transaksi talangan" beda dari "belum ada data pokok").
-    // talanganTotal SUBSET usedTotal (Hard Invariant #8: HANYA expense
-    // dgn titipanTalangan===true, sudah difilter di talanganMap di atas).
     // available null kalau principalAmount null (konsisten allocationStatus
-    // PRINCIPAL_NOT_SET), kalau tidak max(0, principal-usedTotal-returnedTotal)
-    // (tidak pernah negatif, Design Lock S518 §"dana-titipan-portfolio-presenter.js").
-    const usedTotal = usedMap.get(o.ownerId) || 0;
-    o.usedTotal = usedTotal;
-    o.talanganTotal = talanganMap.get(o.ownerId) || 0;
-    o.available = (principalAmount !== null) ? Math.max(0, principalAmount - usedTotal - returnedTotal) : null;
+    // PRINCIPAL_NOT_SET), kalau tidak max(0, principal-usedTotal-
+    // linkedExpenseTotal-returnedTotal) (tidak pernah negatif, Design Lock
+    // S518 §"dana-titipan-portfolio-presenter.js"). FIX SESI
+    // PATCH-2026-08-14: tambah `linkedExpenseTotal` ke pengurang (pola sama
+    // `estimatedUnallocated` di atas, konsisten definisi "sudah dipakai").
+    o.available = (principalAmount !== null) ? Math.max(0, principalAmount - usedTotal - o.linkedExpenseTotal - returnedTotal) : null;
   });
   owners.sort((a, b) => b.allocatedPrincipal - a.allocatedPrincipal);
 
@@ -582,6 +712,14 @@ build() {
     acc.returnedTotalSum += o.returnedTotal;
     return acc;
   }, {
+    // SESI PATCH-2026-08-14 — SENGAJA TIDAK menambah key baru ke object
+    // totals ini (mis. `linkedExpenseTotalSum`) walau datanya sudah ada
+    // per-owner (`o.linkedExpenseTotal`) -- ada test kontrak
+    // (`tests/s484-dana-titipan-portfolio-presenter.test.js`, "totals
+    // exposes exact keys") yang menegaskan SHAPE object ini stabil. Kalau
+    // suatu saat perlu total lintas-owner utk `linkedExpenseTotal`, hitung
+    // di caller lewat `projection.owners.reduce(...)`, bukan nambah field
+    // di sini (0 kontrak dilanggar).
     allocatedPrincipalTotal: 0, currentValueTotal: 0, gainTotal: 0,
     principalAmountTotal: 0, estimatedUnallocatedTotal: 0, overAllocatedTotal: 0,
     returnedTotalSum: 0, outstandingPrincipalTotal: 0,
@@ -681,8 +819,30 @@ _majorisLinkedAccountIds(owners) {
 //   (angka, biasanya `build().totals.principalAmountTotal`).
 // Return: null kalau tidak ada satupun akun tertaut Dana Titipan (baris
 //   disembunyikan, pola sama `_expenseComparisonForOwner()`) — kalau
-//   tidak, `{pengeluaranMajoris, sisaSaldo}` (keduanya angka, `sisaSaldo`
-//   boleh negatif).
+//   tidak, `{pengeluaranMajoris, sisaSaldo, deductionOwnerTotal, synced}`.
+//   `pengeluaranMajoris`/`sisaSaldo`: 0 berubah dari S595 (kontrak lama
+//   tetap, `sisaSaldo` boleh negatif).
+//
+// SESI PATCH-2026-08-14 (lanjutan, catatan "Temuan tambahan" di
+// AUDIT-estimasi-belum-teralokasi.md — sinyal pengeluaran KETIGA):
+// `pengeluaranMajoris` di atas filter `t.renovProjectLinkId`, SEDANGKAN
+// `o.linkedExpenseTotal` per-owner (`_linkedExpenseTotalForOwner()`,
+// dipakai `estimatedUnallocated`) filter `t.deductionOwnerId` — dua tag
+// scope BERBEDA yang diisi user di alur transaksi berbeda ("🔨 Catat
+// juga ke Proyek Renovasi?" vs "👤 Ditanggung: <owner>"), jadi utk data
+// yang sama kedua angka BISA berbeda (transaksi ditandai satu tag tapi
+// bukan yang lain). TIDAK disatukan jadi 1 rumus (masing-masing tetap
+// scope aslinya, 0 rumus lama diubah, 0 test lama regresi) — sebagai
+// gantinya ditambah `deductionOwnerTotal` (SUM `o.linkedExpenseTotal`
+// milik owner-owner yang holding-nya tertaut ke akun yang SAMA dgn
+// `_majorisLinkedAccountIds()`, angka pembanding apple-to-apple) +
+// `synced` (boolean, `pengeluaranMajoris === deductionOwnerTotal`) supaya
+// UI bisa kasih sinyal kalau 2 tag scope itu tidak konsisten utk data yg
+// sama, tanpa memaksakan salah satu formula "menang". `o.linkedExpenseTotal`
+// dibaca APA ADANYA dari `owners[]` yang diberikan (biasanya hasil
+// `build()`, sudah terisi sejak fix PATCH-2026-08-14 pertama) — default 0
+// kalau owner tsb belum pernah lewat `build()` (mis. test lama yang
+// bikin objek owner manual), jadi 0 crash & 0 regresi kontrak lama.
 majorisRenovReconciliation(owners, principalAmountTotal) {
   if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return null;
   const accountIds = this._majorisLinkedAccountIds(owners);
@@ -693,7 +853,30 @@ majorisRenovReconciliation(owners, principalAmountTotal) {
     .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
   const principal = isFinite(principalAmountTotal) ? Number(principalAmountTotal) : 0;
   const sisaSaldo = principal - pengeluaranMajoris;
-  return { pengeluaranMajoris, sisaSaldo };
+  const deductionOwnerTotal = (owners || []).reduce((sum, o) => {
+    if (!o) return sum;
+    const linked = (o.holdings || []).some((h) => {
+      if (!h) return false;
+      let accountId = null;
+      if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
+        const srcHolding = Investment.getHolding(h.linkedInvestmentId);
+        if (srcHolding && srcHolding.accountId) accountId = srcHolding.accountId;
+      }
+      if (!accountId) {
+        let asset = null;
+        if (h.type === 'aset' && h.linkedAssetId) {
+          asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+        } else if (h.linkedInvestmentId) {
+          asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+        }
+        accountId = asset && asset.accountId;
+      }
+      return accountId && idSet.has(String(accountId));
+    });
+    return linked ? sum + (isFinite(o.linkedExpenseTotal) ? Number(o.linkedExpenseTotal) : 0) : sum;
+  }, 0);
+  const synced = pengeluaranMajoris === deductionOwnerTotal;
+  return { pengeluaranMajoris, sisaSaldo, deductionOwnerTotal, synced };
 },
 
 // listExistingOwners() — Sesi 485a (langkah 1/5), diperluas Sesi 492

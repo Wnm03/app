@@ -135,6 +135,27 @@ const DanaTitipanPortfolioPresenter = {
   // `{total, accountNames}` (`total` angka, `accountNames` array nama akun
   // unik yang ikut menyumbang, dipakai label baris supaya generik/tidak
   // hardcode "Majoris").
+  //
+  // CATATAN SESI PATCH-2026-08-14 (audit user: "Estimasi Belum Teralokasi"
+  // tidak mencerminkan akun tertaut yang modal-pengeluarannya sudah
+  // terpotong): formula fungsi ini DIDUPLIKASI SENGAJA (bukan dipindah) ke
+  // `DanaTitipanPortfolioAPI._linkedExpenseTotalForOwner()`
+  // (dana-titipan-aggregation-api.js, dipanggil dari `build()`) supaya
+  // hasilnya bisa jadi INPUT pengurang `estimatedUnallocated` (sebelumnya
+  // baris "Estimasi dari Transaksi <Akun>" di sini PASIF, tidak pernah
+  // mengurangi apa pun). Fungsi INI (di render) TETAP dipertahankan
+  // menghitung mandiri (bukan dialihkan baca `o.linkedExpenseTotal`) demi
+  // 0 regresi terhadap kontrak test yang sudah ada
+  // (`tests/sC-titipan-majoris-expense-comparison.test.js`, memanggil
+  // fungsi ini langsung dgn `o` buatan tangan tanpa lewat `build()`) — 0
+  // rumus/logic diubah dari versi s608, cuma komentar ini ditambah. Kedua
+  // fungsi 100% sama formulanya (copy identik dari sini ke
+  // `_linkedExpenseTotalForOwner()`, satu-satunya beda kontrak: fungsi di
+  // sini balik `null` utk "sembunyikan baris", punya itu balik
+  // `{total:0, accountNames:[]}` supaya caller `build()` bisa langsung
+  // dijumlah) — kalau salah satu diubah di sesi mendatang, WAJIB ubah
+  // keduanya bersamaan (lihat catatan silang di
+  // `_linkedExpenseTotalForOwner()`).
   _expenseComparisonForOwner(o) {
     if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof resolveTxOwnerAssignment !== 'function' || typeof MultiOwnerEngine === 'undefined') return null;
     if (typeof D === 'undefined' || !Array.isArray(D.assets) || !Array.isArray(D.transactions)) return null;
@@ -688,7 +709,11 @@ const DanaTitipanPortfolioPresenter = {
         ${majoris.sisaSaldo < 0
           ? `<span class="titipan-over-badge red">⚠️ Melebihi pokok ${this._money(majoris.sisaSaldo)}</span>`
           : `<span class="u-fw700 green">${this._money(majoris.sisaSaldo)}</span>`}
-      </div>`;
+      </div>
+      ${majoris.synced ? '' : `
+      <div class="u-flex u-jcb u-fs10 u-mt2 u-t2">
+        <span>⚠️ Beda dgn total "Estimasi dari Transaksi Akun" per pemilik (${this._money(majoris.deductionOwnerTotal)}) — cek tag "Proyek Renovasi" vs "Ditanggung"</span>
+      </div>`}`;
       })()}
       <div class="u-flex u-jcb u-fs11 u-mt2">
         <span class="u-t2">Total Estimasi Belum Teralokasi</span>
