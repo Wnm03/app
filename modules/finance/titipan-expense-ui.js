@@ -26,11 +26,12 @@
 //     ini tidak saling menduplikasi logic, cuma menutup 2 sumber re-entrant
 //     berbeda (klik ganda di DOM vs pemanggilan langsung submit()).
 //
-// Field HTML yang dipakai (SEMUA sudah ada di titipanExpenseModal, S521-B1):
-//   titipanExpenseAmt, titipanExpenseAmtPreview, titipanExpenseOwnersList,
-//   titipanExpenseSplitPreview, titipanExpenseTalangan, titipanExpenseNote,
-//   titipanExpenseDate, titipanExpensePortfolioInfo, titipanExpenseSaveBtn,
-//   titipanExpenseDelBtn.
+// Field HTML yang dipakai (SEMUA sudah ada di titipanExpenseModal, S521-B1
+// kecuali titipanExpenseAcc -- lihat catatan wiring §2 di bawah):
+//   titipanExpenseAmt, titipanExpenseAmtPreview, titipanExpenseAcc,
+//   titipanExpenseOwnersList, titipanExpenseSplitPreview,
+//   titipanExpenseTalangan, titipanExpenseNote, titipanExpenseDate,
+//   titipanExpensePortfolioInfo, titipanExpenseSaveBtn, titipanExpenseDelBtn.
 //
 // Keputusan wiring (didokumentasikan eksplisit, BUKAN scope creep diam2):
 //   1. Field "Kategori / Keterangan" (titipanExpenseNote) dipakai sbg
@@ -40,14 +41,15 @@
 //      kategori/metadata transaksi existing yang sesuai" -- expense biasa
 //      tetap punya field category string, cuma sumbernya di sini 1 field
 //      gabungan, bukan 2 field terpisah).
-//   2. Modal ini TIDAK punya selector Akun (beda dari txModal) -- per
-//      Design Lock §21, tidak ada field D baru yang boleh ditambah di luar
-//      wiring yang disetujui eksplisit di S521; account picker akan
-//      ditambah sesi terpisah kalau dibutuhkan. Sementara itu accountId
-//      default ke akun pertama (`D.accounts[0].id`), pola fallback yang
-//      SAMA PERSIS dipakai di banyak titik lain di app (mis.
-//      `modules/finance/tagihan-kalender.js` baris `accountId:
-//      b.accountId||D.accounts[0]?.id||''`, `pajak-pbb-zakat.js`, dst).
+//   2. REVISI (audit "Pemilik Sumber Potongan" tidak muncul/tidak sync):
+//      modal ini SEKARANG punya selector Akun (`#titipanExpenseAcc`,
+//      modals.js), diisi & direset ke akun pertama tiap open() -- pola
+//      SAMA PERSIS `billAcc` (tagihan-kalender.js). Sebelumnya accountId
+//      selalu hardcode ke `D.accounts[0].id` tanpa field, jadi tidak ada
+//      cara ganti akun & tidak pernah ada `#txAcc`-equivalent buat memicu
+//      dropdown "Pemilik Sumber Potongan" muncul di layar ini -- fallback
+//      ke akun pertama tetap dipertahankan hanya untuk elemen yang belum
+//      sempat terisi (0 regresi kasus lama).
 //   3. `titipanExpenseAmt` (S521-B1) belum py oninput/onblur -- ditambah 1
 //      baris di modals.js sesi ini (oninput=preview jumlah+split,
 //      onblur=evalAmtExpr sama seperti field jumlah lain di app) supaya
@@ -96,6 +98,15 @@ const TitipanExpenseUI = {
     const amtEl = document.getElementById('titipanExpenseAmt');
     if (amtEl) amtEl.value = '';
     if (typeof updateAmtPreview === 'function') updateAmtPreview('titipanExpenseAmt', 'titipanExpenseAmtPreview');
+    // FIX (audit "Pemilik Sumber Potongan" tidak muncul/tidak sync): modal
+    // ini sebelumnya TIDAK punya field Akun sama sekali (accountId hardcode
+    // ke D.accounts[0] di save()) -- sekarang diisi & direset ke akun
+    // pertama tiap open(), pola SAMA PERSIS billAcc (tagihan-kalender.js).
+    const accEl = document.getElementById('titipanExpenseAcc');
+    if (accEl && typeof D !== 'undefined' && D && Array.isArray(D.accounts)) {
+      accEl.innerHTML = D.accounts.map((a) => `<option value="${a.id}">${a.emoji || ''} ${escapeHtml(a.name)}</option>`).join('');
+      accEl.value = D.accounts[0] ? D.accounts[0].id : '';
+    }
     const talanganEl = document.getElementById('titipanExpenseTalangan');
     if (talanganEl) talanganEl.checked = false;
     const noteEl = document.getElementById('titipanExpenseNote');
@@ -302,7 +313,14 @@ const TitipanExpenseUI = {
       const date = dateEl ? dateEl.value : '';
       const talanganEl = document.getElementById('titipanExpenseTalangan');
       const talangan = !!(talanganEl && talanganEl.checked);
-      const accountId = (typeof D !== 'undefined' && D && Array.isArray(D.accounts) && D.accounts[0]) ? D.accounts[0].id : '';
+      // FIX (audit "Pemilik Sumber Potongan"): accountId sekarang dibaca
+      // dari dropdown #titipanExpenseAcc (diisi/direset di open()), bukan
+      // lagi hardcode ke D.accounts[0] -- fallback ke akun pertama TETAP
+      // dipertahankan hanya untuk kasus elemen belum sempat terisi (0
+      // regresi kasus lama).
+      const accEl = document.getElementById('titipanExpenseAcc');
+      const accountId = (accEl && accEl.value)
+        || ((typeof D !== 'undefined' && D && Array.isArray(D.accounts) && D.accounts[0]) ? D.accounts[0].id : '');
 
       const input = {
         nominal,

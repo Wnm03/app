@@ -187,6 +187,17 @@ const TitipanExpenseFlow = {
           note: input.note || '',
           date: input.date,
           titipanLinkId: row.ownerId,
+          // FIX (audit "Pemilik Sumber Potongan" tidak sync ke Dana Titipan):
+          // isi juga `deductionOwnerId` -- field yang sejak S608 dibaca
+          // dashboard Dana Titipan (badge "Ditanggung", kartu "Porsi per
+          // Pemilik", "Estimasi dari Transaksi Akun") via
+          // resolveTxOwnerAssignment() (filter-laporan.js). Modal ini
+          // sebelumnya HANYA mengisi titipanLinkId, jadi transaksi lewat
+          // sini selalu jatuh ke fallback owner pertama di layar2 itu. Di
+          // sini aman diisi langsung dari row.ownerId (1 baris split = 1
+          // owner sudah tervalidasi lewat resolveOwner()/validate() di
+          // atas), TIDAK perlu divalidasi ulang terhadap owners akun.
+          deductionOwnerId: row.ownerId,
         };
         if (talangan) tx.titipanTalangan = true;
         return tx;
