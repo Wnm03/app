@@ -67,7 +67,14 @@ const ShopKatalogDinamisPresenter = {
     const badge = { 'perlu-ganti': ['🔴', 'Perlu Diganti'], 'aman': ['🟢', 'Aman'], 'belum-diketahui': ['⚪', 'Belum Diketahui'] };
     el.innerHTML = res.items.map((it) => {
       const [dot, label] = badge[it.status] || badge['belum-diketahui'];
-      const sub = it.intervalKm ? `Interval ${it.intervalKm.toLocaleString('id-ID')} km` : 'Interval belum diatur';
+      // S/K: tambah label "(khusus)" kalau interval item ini dari override
+      // per-kendaraan (v.intervalOverrides via getEffectiveIntervalKm(),
+      // lihat catatan _effectiveIntervalKm() di shop-katalog-dinamis-api.js)
+      // — konsisten dgn badge yang sama persis di 🔧 Pengingat Servis
+      // (car-notes.js), murni tampilan, 0 logic baru di file ini.
+      const sub = it.intervalKm
+        ? `Interval ${it.intervalKm.toLocaleString('id-ID')} km${it.intervalOverridden ? ' <span class="u-cacc u-fw700">(khusus)</span>' : ''}`
+        : 'Interval belum diatur';
       return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info"><div class="tx-name">${escapeHtml(it.nama)}</div><div class="tx-meta">${sub}${it.kategori ? ' · ' + escapeHtml(it.kategori) : ''}</div></div><div class="tx-amount" style="font-size:11px">${dot} ${label}</div></div>`;
     }).join('');
   },

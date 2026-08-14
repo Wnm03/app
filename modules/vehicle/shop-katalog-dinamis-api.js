@@ -9,7 +9,11 @@
 //    D.partsCatalog / D.servisLogs.
 //  - TIDAK ada rumus interval baru — intervalKm tetap dari
 //    D.sparepartCats (kategori sparepart, sudah ada, lihat
-//    modules/shared/data-default.js DEFAULT_SPAREPARTS).
+//    modules/shared/data-default.js DEFAULT_SPAREPARTS), TERMASUK
+//    override per-kendaraan (v.intervalOverrides, sudah ada sejak
+//    sparepart-servis.js/editVehicleIntervalOverride() — lihat
+//    getEffectiveIntervalKm() di file itu, dipakai APA ADANYA lewat
+//    _effectiveIntervalKm() di bawah, BUKAN rumus baru).
 //  - Guard berlapis (typeof X==='undefined' -> {ok:false,reason}) biar
 //    file ini aman dimuat berdiri sendiri / sebelum data terkait ada.
 //  - Nama koleksi part katalog per-kendaraan belum pasti seragam di
@@ -115,6 +119,24 @@ const ShopKatalogDinamisAPI = {
     return logs[0];
   },
 
+  // _effectiveIntervalKm(vehicleId, kategori) — S/K: view "Katalog
+  // Sparepart per Kendaraan" sebelumnya SELALU pakai kategori.intervalKm
+  // (interval GLOBAL), padahal editVehicleIntervalOverride()
+  // (sparepart-servis.js, dipakai di 🔧 Pengingat Servis) sudah
+  // menyediakan interval KHUSUS per kendaraan (v.intervalOverrides) sejak
+  // sebelum batch ini ditulis — view ini lupa dipakaikan. Fix: reuse
+  // getEffectiveIntervalKm() APA ADANYA (0 rumus baru, sama fungsi persis
+  // yang dipakai Pengingat Servis) kalau tersedia; guard typeof supaya
+  // file ini tetap aman dimuat berdiri sendiri/sebelum sparepart-servis.js
+  // (lihat prinsip "Guard berlapis" di atas) — fallback ke intervalKm
+  // global kalau fungsi itu belum ada di build ini.
+  _effectiveIntervalKm(vehicleId, kategori) {
+    if (typeof getEffectiveIntervalKm === 'function') {
+      return getEffectiveIntervalKm(vehicleId, kategori);
+    }
+    return kategori.intervalKm;
+  },
+
   // katalogUntuk(vehicleId) — INTI fitur: "kendaraan mana -> katalog
   // part item interval mana", dinamis. Guard berlapis; kalau koleksi
   // katalog part belum ada di build ini, balikin {ok:false,reason}
@@ -134,7 +156,8 @@ const ShopKatalogDinamisAPI = {
         const lastKm = last ? (last.km || null) : null;
         const kmSekarang = (veh.kmAwal != null) ? veh.kmAwal : null; // apa adanya, 0 estimasi baru
         const kmSejakServis = (lastKm != null && kmSekarang != null) ? Math.max(0, kmSekarang - lastKm) : null;
-        const intervalKm = kategori ? kategori.intervalKm : null;
+        const intervalKm = kategori ? this._effectiveIntervalKm(vehicleId, kategori) : null;
+        const intervalOverridden = !!(kategori && typeof hasIntervalOverride === 'function' && hasIntervalOverride(vehicleId, kategori));
         const status = (intervalKm && kmSejakServis != null)
           ? (kmSejakServis >= intervalKm ? 'perlu-ganti' : 'aman')
           : 'belum-diketahui';
@@ -144,6 +167,7 @@ const ShopKatalogDinamisAPI = {
           oemCode: p.oemCode || null,
           kategori: kategori ? kategori.name : null,
           intervalKm,
+          intervalOverridden,
           lastServisTanggal: last ? last.tanggal : null,
           lastServisKm: lastKm,
           kmSejakServis,
