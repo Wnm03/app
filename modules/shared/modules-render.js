@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s596-ghost-asset-cleanup-owner-settings-buildfix';
+const MODULE_RENDER_VERSION='s597-ghost-asset-cleanup-owner-settings-buildfix';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -82,7 +82,18 @@ el.innerHTML=accGridList.map((a)=>{
 const i=D.accounts.indexOf(a);
 const bal=recalcAccBalance(a.id);
 const off=a.includeInBalance===false;
-const linked=!off&&isAccLinkedToAsset(a.id);
+// linkedHoldingObj (fix bareng linkedPorsiLine di bawah, skenario "Majoris"): akun
+// yang ditautkan LANGSUNG dari Holding Investasi lewat dropdown "🔗 Hubungkan ke
+// Akun" (investAccId, investasi-list-view.js, S601-3 -- field `h.accountId`) TIDAK
+// pernah kena isAccLinkedToAsset() (fungsi itu HANYA baca D.assets[].accountId,
+// beda sumber data dari D.investments[].accountId). Sebelum fix ini kartu Akun utk
+// jalur Holding-langsung tidak dianggap `linked` sama sekali -- badge/porsi/hint
+// riwayat semuanya 0 tampil, padahal test lama (S566) sudah pakai nama "Majoris"
+// utk skenario Aset tertaut yang MESTINYA konsisten juga utk Holding tertaut
+// langsung. 100% REUSE findLinkedHoldingForAccount() (transaksi.js, S601-3) --
+// guard typeof aman kalau file itu belum dimuat di suatu halaman (0 fungsi baru).
+const linkedHoldingObj=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(a.id):null;
+const linked=!off&&(isAccLinkedToAsset(a.id)||!!linkedHoldingObj);
 const badge=off?' <span class="u-fs12t2">(off)</span>':(linked?' <span class="u-fs12t2">(via Aset)</span>':'');
 let jenisLabel=a.jenis==='dikunci'?'🔒 Dikunci':(a.jenis==='investasi'?'📈 Investasi':'');
 if(a.jenis==='investasi'&&a.platform)jenisLabel+=' · '+a.platform;
@@ -125,7 +136,22 @@ return parts.length?`<div class="u-fs11 u-t2" style="margin-top:2px">${escapeHtm
 // berubah) -- linkedTxHint cuma bikin affordance itu KELIHATAN, bukan bikin
 // aksi baru.
 const linkedAssetObj=linked?(D.assets||[]).find(x=>String(x.accountId)===String(a.id)):null;
-const linkedPorsiLine=(linkedAssetObj&&typeof MultiOwnerEngine!=='undefined')?(()=>{
+// linkedPorsiLine -- FIX (skenario "Majoris", lanjutan komentar linkedHoldingObj di
+// atas): SEBELUM ini baris porsi HANYA baca dari linkedAssetObj (D.assets), jadi
+// akun yang tertaut LANGSUNG ke Holding Investasi (linkedHoldingObj, tanpa Aset
+// perantara) tidak pernah dapat baris porsi sama sekali -- kelihatan "tidak
+// sync" padahal porsinya beneran ada & LIVE di Holding tsb. Prioritas: Holding
+// menang kalau ADA (konsisten dgn resolveOwnerDefaultForAccount() di transaksi.js,
+// "Holding adalah sumber kebenaran porsi LIVE"), baru fallback ke Aset seperti
+// semula -- 100% REUSE Investment.getOwners()/MultiOwnerEngine.getOwners(), 0
+// rumus porsi baru.
+const linkedPorsiLine=(linked&&linkedHoldingObj)?(()=>{
+if(typeof Investment==='undefined')return'';
+const owners=Investment.getOwners(linkedHoldingObj);
+if(!owners||!owners.length)return'';
+const porsiTxt=owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
+})():(linkedAssetObj&&typeof MultiOwnerEngine!=='undefined')?(()=>{
 const res=MultiOwnerEngine.getOwners(linkedAssetObj);
 if(!res||!res.ok||!res.owners.length)return'';
 const porsiTxt=res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
