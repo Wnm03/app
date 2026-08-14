@@ -6,8 +6,21 @@
 // (modules/finance/dana-titipan-portfolio-render.js) — baris pembanding
 // OTOMATIS "Estimasi dari Transaksi <Akun>" di sebelah "Pokok Dikomit"
 // manual. 100% REUSE `resolveTxOwnerSplitForAccount()` (filter-laporan.js,
-// Sesi A) + `MultiOwnerEngine.splitByPorsi()` — 0 rumus baru diuji ulang
-// di sini, cuma kontrak wiring baru ini.
+// Sesi A) + `resolveTxOwnerAssignment()` (filter-laporan.js) — 0 rumus
+// baru diuji ulang di sini, cuma kontrak wiring baru ini.
+//
+// FIX SESI S608 (audit user "apakah data dari akun transaksi yg ditautkan
+// dari dana titipan sync otomatis ke dashboard Dana Titipan"): test 1 di
+// bawah SEBELUMNYA mengasumsikan pembagian PROPORSIONAL
+// (`MultiOwnerEngine.splitByPorsi`) — itu sendiri adalah bug yang membuat
+// baris ini TIDAK sinkron dengan kartu "Porsi per Pemilik" di Riwayat
+// Transaksi (yang sudah pakai assignment eksplisit per transaksi,
+// `t.deductionOwnerId`, sejak sesi lama "Porsi per Pemilik bukan sistem
+// patungan"). Diupdate sesi ini supaya konsisten dengan satu-satunya
+// sumber kebenaran yang benar (explicit per-transaction assignment) —
+// lihat test baru 1b/1c yang secara eksplisit membuktikan fix sync-nya
+// (transaksi yang deductionOwnerId-nya milik owner MINOR tidak lagi
+// "nyicip" ke owner mayoritas lewat proporsi).
 //
 // SENGAJA TIDAK diuji: `_principalCell()`/`_outstandingCell()`/
 // `principalAmount`/`outstandingPrincipal` — Langkah B murni baris
@@ -66,7 +79,7 @@ function makeCtx(D) {
         },
       },
     },
-    ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI', 'DanaTitipanPortfolioPresenter', 'resolveTxOwnerSplitForAccount', 'sameId'],
+    ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI', 'DanaTitipanPortfolioPresenter', 'resolveTxOwnerSplitForAccount', 'resolveTxOwnerAssignment', 'sameId'],
   );
 }
 
@@ -74,13 +87,15 @@ function baseD(extra) {
   return { investments: [], investmentTx: [], investmentWatchlist: [], debts: [], assets: [], transactions: [], accounts: [], ...extra };
 }
 
-test('1. Aset multi-owner tertaut akun, ada expense -> muncul {total,accountNames}', () => {
+test('1. Aset multi-owner tertaut akun, ada expense -> muncul {total,accountNames}, dijumlah per ASSIGNMENT EKSPLISIT (bukan proporsi porsi %)', () => {
   const D = baseD({
     assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000, owners: [
       { ownerId: 'renov', porsi: 84.8781, ownerName: 'renov', isSelf: false },
       { ownerId: 'sihab', porsi: 15.1219, ownerName: 'Mas Sihab', isSelf: false },
     ] }],
     transactions: [
+      // Kedua transaksi TIDAK punya deductionOwnerId eksplisit -> fallback ke
+      // owner PERTAMA (renov), PERSIS pola resolveTxOwnerAssignment() (0 proporsi).
       { type: 'expense', accountId: 'acc1', amount: 100000 },
       { type: 'expense', accountId: 'acc1', amount: 54226 },
       { type: 'income', accountId: 'acc1', amount: 999999 }, // TIDAK ikut dihitung (bukan expense)
@@ -93,7 +108,53 @@ test('1. Aset multi-owner tertaut akun, ada expense -> muncul {total,accountName
   assert.ok(cmp);
   assert.equal(cmp.accountNames.length, 1);
   assert.equal(cmp.accountNames[0], 'Majoris');
-  assert.equal(cmp.total, (100000 + 54226) * 0.848781);
+  // FIX S608: dulu (100000+54226)*0.848781 (proporsional) -- sekarang
+  // fallback owner pertama (renov) dapat 100% dari kedua transaksi (0
+  // deductionOwnerId eksplisit di data ini), bukan porsi 84.8781%.
+  assert.equal(cmp.total, 100000 + 54226);
+});
+
+test('1b. FIX SYNC S608: transaksi dgn deductionOwnerId eksplisit ke owner MINOR -> masuk PENUH ke owner minor, 0 ke owner mayoritas (dulu bocor lewat proporsi splitByPorsi)', () => {
+  const D = baseD({
+    assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000, owners: [
+      { ownerId: 'renov', porsi: 84.8781, ownerName: 'renov', isSelf: false },
+      { ownerId: 'sihab', porsi: 15.1219, ownerName: 'Mas Sihab', isSelf: false },
+    ] }],
+    transactions: [
+      { type: 'expense', accountId: 'acc1', amount: 200000, deductionOwnerId: 'sihab' },
+    ],
+  });
+  const ctx = makeCtx(D);
+  const oRenov = { ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] };
+  const oSihab = { ownerId: 'sihab', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] };
+  const cmpRenov = ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(oRenov);
+  const cmpSihab = ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(oSihab);
+  // SEBELUM fix: renov (porsi 84.8781%) akan tetap kebagian ~169.756 lewat
+  // splitByPorsi walau transaksinya eksplisit ditandai milik sihab.
+  assert.equal(cmpRenov.total, 0, 'renov TIDAK boleh kebagian expense yg eksplisit milik sihab');
+  assert.equal(cmpSihab.total, 200000, 'sihab dapat 100% krn deductionOwnerId eksplisit menunjuk dia');
+});
+
+test('1c. konsistensi lintas-layar: total per-owner di sini HARUS sama dgn resolveTxOwnerAssignment() yg dipakai kartu "Porsi per Pemilik" (Riwayat Transaksi)', () => {
+  const D = baseD({
+    assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000, owners: [
+      { ownerId: 'renov', porsi: 84.8781, ownerName: 'renov', isSelf: false },
+      { ownerId: 'sihab', porsi: 15.1219, ownerName: 'Mas Sihab', isSelf: false },
+    ] }],
+    transactions: [
+      { type: 'expense', accountId: 'acc1', amount: 154280, deductionOwnerId: 'renov' },
+      { type: 'expense', accountId: 'acc1', amount: 51940 },
+      { type: 'expense', accountId: 'acc1', amount: 500000, deductionOwnerId: 'sihab' },
+    ],
+  });
+  const ctx = makeCtx(D);
+  const resolved = ctx.resolveTxOwnerSplitForAccount('acc1');
+  const manual = { renov: 0, sihab: 0 };
+  D.transactions.forEach((t) => { manual[ctx.resolveTxOwnerAssignment(t, resolved.owners)] += t.amount; });
+  const oRenov = { ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] };
+  const oSihab = { ownerId: 'sihab', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] };
+  assert.equal(ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(oRenov).total, manual.renov);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(oSihab).total, manual.sihab);
 });
 
 test('2. owner tidak match porsi akun tsb -> null (row disembunyikan)', () => {
