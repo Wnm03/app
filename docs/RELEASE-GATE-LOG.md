@@ -308,3 +308,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: eslint tidak terpasang di sandbox (tanpa akses npm registry), sama seperti sesi-sesi sebelumnya (S488/S489/dst) -- perubahan direview manual thd konvensi project
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox (tanpa akses jaringan), sama seperti PATCH-README-GABUNGAN.md -- bundle unminified 100% valid, user bisa jalankan npm install --save-dev esbuild + build ulang di environment sendiri utk ukuran kecil
+
+## 2026-08-14T02:58:57.107Z — versi s606-orphan-finance-akun-cleanup
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry (403), eslint tidak bisa diinstall/dijalankan, konsisten sesi-sesi sebelumnya (S424 dst). Sesi ini (S605/606) HANYA menghapus 2 target orphan (folder finance/ top-level 40 file & modules/shared/akun.js) yang sudah diverifikasi 0 referensi di manapun (source/tests/docs/scripts/build.js) -- 0 baris logic produksi diedit. Perlu dijalankan manual (npm run lint) sebelum deploy sungguhan.
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan), konsisten sesi-sesi sebelumnya. Bundle unminified tapi 100% valid (node --check lolos kedua bundle). Minify bisa dijalankan ulang di environment dgn akses internet sebelum deploy.
