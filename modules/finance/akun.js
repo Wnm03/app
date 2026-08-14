@@ -198,8 +198,24 @@ if(investAccId){const cur=investAccId.value;investAccId.innerHTML='<option value
 populateKeuFilters();
 }
 /* moved to modules-render.js: renderAccGrid */
+// linkedAssetAccountIds() — SESI S603 (lanjutan S601-3/S602). Sebelum sesi ini
+// fungsi ini HANYA baca D.assets[].accountId (tautan lewat Buku Aset). Sejak
+// S601-3 nambah dropdown "🔗 Hubungkan ke Akun" di Holding Investasi
+// (investasi-list-view.js, field baru `h.accountId`), akun yang ditautkan
+// LANGSUNG ke Holding (skenario "Majoris", sama nama dipakai S566/S602) TIDAK
+// PERNAH kena exclude di sini -- padahal fungsi ini dipakai totalSaldoAkun()/
+// DanaKelolaan.sumAccounts()/quickToggleInclude()/hint modal Akun, jadi
+// nilainya kehitung 2x di Kekayaan Bersih (S602 sendiri cuma benerin
+// TAMPILAN di renderAccGrid() lewat findLinkedHoldingForAccount() terpisah --
+// fix itu TIDAK menyentuh fungsi ini, jadi hitungan finansialnya masih bug).
+// Fix: union dengan Investment.getHoldings()[].accountId (100% REUSE sumber
+// data S601-3, 0 rumus baru) -- guard typeof Investment sama persis pola
+// DanaKelolaan.sumAccounts()/isAccOwnershipSelf() dkk, supaya modul ini tetap
+// aman kalau investasi.js belum dimuat (headless test/urutan load).
 function linkedAssetAccountIds(){
-return new Set((D.assets||[]).filter(a=>a.accountId).map(a=>String(a.accountId)));
+const assetIds=(D.assets||[]).filter(a=>a.accountId).map(a=>String(a.accountId));
+const holdingIds=(typeof Investment!=='undefined'&&typeof Investment.getHoldings==='function')?Investment.getHoldings().filter(h=>h.accountId).map(h=>String(h.accountId)):[];
+return new Set([...assetIds,...holdingIds]);
 }
 function isAccLinkedToAsset(accId){
 return linkedAssetAccountIds().has(String(accId));
@@ -360,6 +376,17 @@ showFilteredTx('account',undefined,'📜 Riwayat: '+acc.name,acc.id);
 // selalu ada. Ditambah ke deteksi hasLinkedData & migrasi di bawah, pola
 // SAMA PERSIS 5 array yang sudah ada (TIDAK ada logic baru, cuma 2 baris
 // forEach tambahan + 2 syarat .some() tambahan).
+// SESI S604 (audit lanjutan S603, "bug serupa"): titik migrasi di atas MASIH belum
+// tahu soal D.investments[].accountId (dropdown "🔗 Hubungkan ke Akun" di Holding
+// Investasi, S601-3) -- ROOT CAUSE SAMA PERSIS S603 (linkedAssetAccountIds() dulu
+// juga cuma baca D.assets). Sebelum fix ini, hapus akun yang tertaut LANGSUNG ke
+// Holding (skenario "Majoris" tanpa Aset perantara) lolos sebagai "tidak punya data
+// terkait" (hasLinkedData bisa false total kalau tidak ada transaksi/bill/dst lain)
+// -- 0 peringatan ke user, dan D.investments[].accountId JADI DANGLING REFERENCE
+// PERMANEN (menunjuk akun yang sudah dihapus, TIDAK PERNAH dimigrasikan seperti
+// D.assets di baris forEach bawah). Fix: tambah 1 syarat .some() + 1 baris forEach
+// migrasi + linkedHoldingsCount di pesan konfirmasi -- pola SAMA PERSIS
+// linkedAssetsCount/D.assets forEach di atas, 0 logic baru selain sumber data.
 async function delAcc(i){
 if(D.accounts.length<=1){toast('⚠️ Minimal 1 akun harus ada');return;}
 const acc=D.accounts[i];
@@ -371,21 +398,24 @@ const hasLinkedData=D.transactions.some(t=>t.accountId===acc.id)
 ||(D.servisLogs||[]).some(s=>s.accountId===acc.id)
 ||(D.cobek||[]).some(c=>c.accountId===acc.id)
 ||(D.targets||[]).some(t=>t.accountId===acc.id)
-||(D.assets||[]).some(a=>a.accountId===acc.id);
+||(D.assets||[]).some(a=>a.accountId===acc.id)
+||(D.investments||[]).some(h=>h.accountId===acc.id);
 let target=others[0];
 if(hasLinkedData&&others.length>1){
 const choices=others.map(a=>({label:`${a.emoji||'💰'} ${a.name} (saldo ${fmt(recalcAccBalance(a.id))})`}));
 const linkedTargetsCount=(D.targets||[]).filter(t=>t.accountId===acc.id).length;
 const linkedAssetsCount=(D.assets||[]).filter(a=>a.accountId===acc.id).length;
+const linkedHoldingsCount=(D.investments||[]).filter(h=>h.accountId===acc.id).length;
 let extraNote='';
 if(linkedTargetsCount>0)extraNote+=` ${linkedTargetsCount} Target Tabungan`;
 if(linkedAssetsCount>0)extraNote+=`${extraNote?' &':''} ${linkedAssetsCount} Aset`;
+if(linkedHoldingsCount>0)extraNote+=`${extraNote?' &':''} ${linkedHoldingsCount} Holding Investasi`;
 const pickedIdx=await showChoiceModal({title:'Pindahkan Data ke Akun Mana?',icon:'🔀',message:`Akun "${acc.name}" punya transaksi/tagihan/catatan yang terkait${extraNote?' (termasuk'+extraNote+' yang ditautkan)':''}. Pilih akun tujuan buat pindahin datanya sebelum akun ini dihapus:`,choices});
 if(pickedIdx===null||pickedIdx===undefined)return; // dibatalkan, akun TIDAK jadi dihapus
 target=others[pickedIdx];
 }
 const confirmMsg=hasLinkedData
-?`Hapus akun "${acc.name}"? Transaksi, tagihan, catatan BBM/servis, transaksi Shop, Target Tabungan, dan Aset yang terkait akan dipindahkan ke akun "${target.name}".`
+?`Hapus akun "${acc.name}"? Transaksi, tagihan, catatan BBM/servis, transaksi Shop, Target Tabungan, Aset, dan Holding Investasi yang terkait akan dipindahkan ke akun "${target.name}".`
 :`Hapus akun "${acc.name}"? Akun ini tidak punya data transaksi terkait.`;
 if(!await askConfirm(confirmMsg))return;
 D.accounts.splice(i,1);
@@ -395,6 +425,7 @@ D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
 (D.servisLogs||[]).forEach(s=>{if(s.accountId===acc.id)s.accountId=target.id;});
 (D.targets||[]).forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
 (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
+(D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
 (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
 save();renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();renderDashboard();renderKeuangan();refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
 }
@@ -414,9 +445,27 @@ _accId: null,
 // open() — baca akun yang SEDANG diedit (via editAccIdx, akun.js) & isi draft dari getAccOwners()
 // (S574-A, toleran akun lama tanpa owners[]). Akun belum tersimpan (mode Tambah, editAccIdx===-1)
 // -> tolak & toast, sama pola Aset.addOwnerRow()/saveOwners() (guard "simpan dulu").
+// SESI S604 (audit lanjutan S603, "bug serupa"): SEBELUM fix ini, akun yang tertaut LANGSUNG ke
+// Holding Investasi (findLinkedHoldingForAccount(), h.accountId, S601-3) tetap membuka modal ini
+// dalam kondisi FULL EDITABLE, draft dimuat dari acc.owners (mentah/basi) -- BUKAN dari porsi live
+// Holding. User bisa edit & tekan "Simpan Porsi", dapat toast sukses, TAPI perubahannya tidak
+// pernah nyampe ke Investment.setOwners() (save() di bawah cuma sync ke Aset tertaut, tidak
+// pernah ke Holding) -- SEMUA konsumen porsi (renderAccGrid/resolveOwnerDefaultForAccount/
+// resolveTxOwnerSplitForAccount) toh selalu prioritaskan Holding di atas acc.owners, jadi edit
+// user itu lenyap tanpa jejak walau modal bilang "tersimpan". FIX: 100% REUSE pola B2b
+// Aset.openOwnersModal() (aset.js) -- alih navigasi LANGSUNG ke InvestmentUI.openOwnersModal(id),
+// modal accountOwnersModal ini TIDAK dibuka sama sekali utk akun tertaut Holding (user langsung
+// edit di sumber kebenarannya). Guard typeof InvestmentUI: kalau module investasi-view.js belum
+// dimuat, fallback ke toast penjelasan (bukan diam-diam buka modal yang menyesatkan).
 open(){
 if(editAccIdx<0||!D.accounts[editAccIdx]){toast('⚠️ Simpan akun ini dulu sebelum mengatur porsi kepemilikan');return;}
 const acc=D.accounts[editAccIdx];
+const linkedHolding=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(acc.id):null;
+if(linkedHolding){
+if(typeof InvestmentUI!=='undefined'){InvestmentUI.openOwnersModal(linkedHolding.id);return;}
+toast('🔗 Porsi akun ini diatur di Holding Investasi "'+linkedHolding.name+'" -- buka Buku Investasi untuk mengatur porsinya');
+return;
+}
 AccOwners._accId=acc.id;
 document.getElementById('accountOwnersAccName').textContent='🏦 '+(acc.emoji||'💰')+' '+acc.name;
 const res=getAccOwners(acc.id);
@@ -512,6 +561,14 @@ AccOwners._draft[i].isSelf=!!checked;
 save(){
 if(typeof MultiOwnerEngine==='undefined'){toast('⚠️ Fitur porsi kepemilikan belum siap dimuat');return;}
 if(!AccOwners._accId){toast('⚠️ Akun tidak ditemukan, coba tutup dan buka lagi');return;}
+// S604: jaring pengaman kedua -- open() SUDAH mengalihkan akun tertaut Holding ke
+// InvestmentUI.openOwnersModal() di atas & tidak pernah sampai ke titik ini dalam alur normal,
+// tapi dicek ULANG di sini (bukan cuma percaya open()) jaga-jaga _accId berubah status
+// tertaut-Holding SETELAH modal dibuka (mis. user buka 2 tab/flow lain sempat link akun ini ke
+// Holding baru saat modal masih terbuka) -- pola sama "dijaga di sini" pada
+// Aset.addOwnerRow()/removeOwnerRow() (aset.js) yang toh tetap re-check _ownersReadOnly walau
+// UI tombolnya sudah disembunyikan duluan.
+if(typeof findLinkedHoldingForAccount==='function'&&findLinkedHoldingForAccount(AccOwners._accId)){toast('🔗 Porsi akun ini diatur di Holding Investasi, tidak bisa diedit di sini');return;}
 const draft=AccOwners._draft;
 if(!draft.length){toast('⚠️ Tambahkan minimal 1 pemilik sebelum menyimpan');return;}
 for(let i=0;i<draft.length;i++){
