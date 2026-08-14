@@ -1,10 +1,18 @@
 'use strict';
 // tests/asset-owners-nominal-autodistribute-s431.test.js — Sesi 431: saat
 // user isi field "Nominal (Rp)" satu baris pemilik di modal "⚖️ Atur Porsi
-// Kepemilikan", sisa nilai aset (nilaiAset - nominal baris itu, dijepit ke
-// >=0) otomatis dibagi RATA ke SEMUA baris pemilik lain lewat
-// Aset._autoDistributeRemaining() (baru) -- lihat komentar method itu di
-// modules/asset/aset.js utk detail rumus.
+// Kepemilikan", sisa nilai aset otomatis mengalir ke baris pemilik lain.
+//
+// DIPERBARUI di sesi AF1 lanjutan (lihat SESI-AF1-SESSION-NOTE.md &
+// DESIGN-LOCK-autofill-sisa-porsi.md): trigger auto-bagi S431
+// (Aset._autoDistributeRemaining(), broadcast RATA ke SEMUA baris lain)
+// DIHAPUS, diganti Aset._applyRemainingShare() (SSOT calculateRemainingShare()
+// di modules-calc.js) yang HANYA mengisi baris kosong/0 berikutnya yang belum
+// pernah diketik manual user -- utk skenario 2-pemilik di file ini (1 baris
+// "lain" saja) hasilnya identik dgn perilaku lama, jadi assert TIDAK berubah,
+// cuma makeCtx() sekarang WAJIB memuat modules-calc.js (kalau tidak,
+// _applyRemainingShare() diam2 no-op lewat guard typeof-nya & baris lain
+// tidak pernah ter-auto-fill).
 //
 // Pola DOM tiruan STATEFUL & makeCtx/makeD sama persis
 // tests/asset-owners-nominal-sync-s429.test.js (dipersempit ke skenario
@@ -44,7 +52,7 @@ function makeStatefulDom() {
 
 function makeCtx(D, dom) {
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
+    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
     {
       D,
       document: dom,
@@ -59,7 +67,7 @@ function makeCtx(D, dom) {
       fmtFull: (n) => 'Rp ' + Math.round(n || 0),
       todayStr: () => '2026-08-07',
     },
-    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry'],
+    ['Aset', 'MultiOwnerEngine', 'OwnerRegistry', 'calculateRemainingShare'],
   );
   ctx.Aset.renderList = () => {};
   return ctx;
@@ -86,7 +94,7 @@ test('onOwnerNominalInput(): isi nominal 1 baris (2 pemilik) -> sisa otomatis di
   assert.equal(dom.getElementById('ownerNominal1').value, 80000000, 'DOM nominal baris lain harus ikut ter-update (40% x 200jt)');
 });
 
-test('onOwnerNominalInput(): 3 pemilik -> sisa dibagi RATA ke 2 baris lain, total tetap 100%', () => {
+test('onOwnerNominalInput(): 3 pemilik, 2 baris kosong -> HANYA baris kosong berikutnya yang terisi (bukan broadcast rata ke semua), baris kosong SETELAHNYA dibiarkan 0% (AF1, ganti perilaku S431)', () => {
   const D = makeD(300000000); // Rp300jt
   const dom = makeStatefulDom();
   const ctx = makeCtx(D, dom);
@@ -94,12 +102,12 @@ test('onOwnerNominalInput(): 3 pemilik -> sisa dibagi RATA ke 2 baris lain, tota
   ctx.Aset.openOwnersModal();
   ctx.Aset.addOwnerRow();
   ctx.Aset.addOwnerRow();
-  ctx.Aset.onOwnerNominalInput(0, '30000000'); // 10% dari 300jt -> sisa 90% dibagi 2 baris = 45%/45%
+  ctx.Aset.onOwnerNominalInput(0, '30000000'); // 10% dari 300jt -> sisa 90% mengalir ke baris 1 SAJA
   assert.equal(ctx.Aset._ownersDraft[0].porsi, 10);
-  assert.equal(ctx.Aset._ownersDraft[1].porsi, 45);
-  assert.equal(ctx.Aset._ownersDraft[2].porsi, 45);
+  assert.equal(ctx.Aset._ownersDraft[1].porsi, 90, 'baris kosong PERTAMA (index 1) harus dapat SELURUH sisa 90%, bukan dibagi rata 45%/45% (perilaku lama S431 sudah diganti Design Lock AF1 keputusan #2)');
+  assert.equal(ctx.Aset._ownersDraft[2].porsi, 0, 'baris kosong KEDUA (index 2) TIDAK ikut diisi -- hanya baris kosong berikutnya yang jadi target');
   const total = ctx.MultiOwnerEngine.totalPorsi(ctx.Aset._ownersDraft);
-  assert.equal(total, 100, 'total porsi harus PERSIS 100% setelah auto-bagi (bukan 99.99/100.01)');
+  assert.equal(total, 100, 'total porsi harus PERSIS 100% setelah auto-fill baris pertama yang kosong');
 });
 
 test('onOwnerNominalInput(): nominal diisi melebihi nilai aset -> sisa dijepit ke 0 (baris lain jadi 0%, bukan minus)', () => {
@@ -140,7 +148,7 @@ test('onOwnerNominalInput(): hasil auto-bagi tetap tersimpan benar via saveOwner
   );
 });
 
-test('onOwnerPorsiInput(): edit Porsi% manual TIDAK memicu auto-bagi (0 regresi, beda sengaja dari isi Nominal)', () => {
+test('onOwnerPorsiInput(): edit Porsi% manual SEKARANG JUGA memicu auto-fill baris kosong berikutnya (AF1, ganti perilaku S431 -- Design Lock keputusan #1: trigger dari Porsi% DAN Nominal)', () => {
   const D = makeD(200000000);
   const dom = makeStatefulDom();
   const ctx = makeCtx(D, dom);
@@ -148,10 +156,24 @@ test('onOwnerPorsiInput(): edit Porsi% manual TIDAK memicu auto-bagi (0 regresi,
   ctx.Aset.openOwnersModal();
   ctx.Aset.addOwnerRow();
   ctx.Aset.onOwnerPorsiInput(0, '60');
-  assert.equal(ctx.Aset._ownersDraft[1].porsi, 0, 'baris lain tidak boleh ikut berubah saat Porsi% diedit manual (bukan lewat Nominal)');
+  assert.equal(ctx.Aset._ownersDraft[1].porsi, 40, 'baris kosong lain harus otomatis terisi sisa 40% saat Porsi% diedit manual (perilaku lama "tidak memicu" sudah diganti sesi AF1)');
 });
 
-test('_autoDistributeRemaining(): no-op kalau cuma 1 pemilik (tidak ada baris lain utk dibagi)', () => {
+test('onOwnerPorsiInput(): baris yang SUDAH pernah diketik manual (_touched) TIDAK ditimpa oleh auto-fill baris lain', () => {
+  const D = makeD(200000000);
+  const dom = makeStatefulDom();
+  const ctx = makeCtx(D, dom);
+  ctx.Aset.editId = 'a1';
+  ctx.Aset.openOwnersModal();
+  ctx.Aset.addOwnerRow();
+  ctx.Aset.addOwnerRow();
+  ctx.Aset.onOwnerPorsiInput(1, '25'); // baris 1 diketik manual duluan (masih 75% belum teralokasi)
+  ctx.Aset.onOwnerPorsiInput(0, '60'); // baris 0 diedit -> baris 1 sudah _touched & porsi>0, jadi dilewati; baris 2 (kosong) jadi target
+  assert.equal(ctx.Aset._ownersDraft[1].porsi, 25, 'baris yang sudah diketik manual tidak boleh ditimpa auto-fill');
+  assert.equal(ctx.Aset._ownersDraft[2].porsi, 15, 'baris kosong berikutnya (index 2) dapat sisa 100-60-25=15%');
+});
+
+test('_applyRemainingShare() via onOwnerNominalInput(): no-op kalau cuma 1 pemilik (tidak ada baris lain utk diisi)', () => {
   const D = makeD(200000000);
   const dom = makeStatefulDom();
   const ctx = makeCtx(D, dom);
