@@ -476,20 +476,35 @@ const InvestmentUI = {
     // ke-2 dst (kalau ada, sama seperti Aset -- lihat onOwnerIsSelfToggle()
     // di bawah) tetap fallback uid() spt sebelumnya.
     let selfIdUsed = draft.some((o) => o.ownerId && String(o.ownerId).trim() === 'SELF');
-    const owners = draft.map((o) => {
-      let ownerId;
-      if (o.ownerId && String(o.ownerId).trim()) {
-        ownerId = String(o.ownerId).trim();
-      } else if (o.isSelf && !selfIdUsed) {
-        ownerId = 'SELF';
-        selfIdUsed = true;
-      } else if (!o.isSelf && typeof OwnerRegistry !== 'undefined') {
-        ownerId = OwnerRegistry.findOrCreate(o.ownerName.trim());
-      } else {
-        ownerId = String(typeof uid === 'function' ? uid() : Date.now() + Math.random());
-      }
-      return { ownerId, ownerName: o.ownerName.trim(), porsi: o.porsi, isSelf: !!o.isSelf };
-    });
+    // S607 (OwnerRegistry.findOrCreate() wajib, mirror Aset.saveOwners()): baris
+    // pemilik BARU non-SELF WAJIB lolos OwnerRegistry -- OwnerRegistry gagal
+    // load / findOrCreate() bukan function -> saveOwners() FAIL-FAST (toast +
+    // return SEBELUM Investment.setOwners() dipanggil, D.investments TIDAK
+    // disentuh), bukan diam-diam fallback uid() acak spt sebelumnya.
+    // Baris isSelf:true & baris yang ownerId-nya sudah ada TIDAK kena guard ini.
+    let owners;
+    try {
+      owners = draft.map((o) => {
+        let ownerId;
+        if (o.ownerId && String(o.ownerId).trim()) {
+          ownerId = String(o.ownerId).trim();
+        } else if (o.isSelf && !selfIdUsed) {
+          ownerId = 'SELF';
+          selfIdUsed = true;
+        } else if (!o.isSelf) {
+          if (typeof OwnerRegistry === 'undefined' || typeof OwnerRegistry.findOrCreate !== 'function') {
+            throw new Error('S607_OWNER_REGISTRY_UNAVAILABLE');
+          }
+          ownerId = OwnerRegistry.findOrCreate(o.ownerName.trim());
+        } else {
+          ownerId = String(typeof uid === 'function' ? uid() : Date.now() + Math.random());
+        }
+        return { ownerId, ownerName: o.ownerName.trim(), porsi: o.porsi, isSelf: !!o.isSelf };
+      });
+    } catch (e) {
+      if (e && e.message === 'S607_OWNER_REGISTRY_UNAVAILABLE') { toast('⚠️ Fitur pemilik belum siap dimuat, coba lagi'); return; }
+      throw e;
+    }
     let h;
     try {
       h = Investment.setOwners(InvestmentUI._ownersModalHolding.id, owners);

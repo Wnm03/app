@@ -1123,20 +1123,39 @@ if(!draft[i].ownerName||!draft[i].ownerName.trim()){toast('⚠️ Nama pemilik b
 // baris isSelf ke-2 dst yang ownerId-nya masih kosong tetap fallback ke uid()
 // spt sebelumnya (0 perubahan utk kasus itu -- kasus umum tetap 1 baris SELF).
 let selfIdUsed=draft.some((o)=>o.ownerId&&String(o.ownerId).trim()==='SELF');
-const owners=draft.map((o)=>{
+// S607 (OwnerRegistry.findOrCreate() wajib, bukan opsional lagi): baris
+// pemilik BARU non-SELF (belum py ownerId) WAJIB lolos OwnerRegistry --
+// kalau OwnerRegistry gagal load / findOrCreate() bukan function, saveOwners()
+// FAIL-FAST (toast + return SEBELUM MultiOwnerEngine.setOwners() dipanggil,
+// D.assets TIDAK disentuh sama sekali), bukan diam-diam fallback ke uid()
+// acak spt sebelumnya (gap tercatat sejak S583, lihat
+// TitipanReconcile.checkOwnerIdConsistency()). Pola sama persis
+// migrateOwnersToRegistry() (~baris 1365) yang sudah wajib duluan.
+// Baris isSelf:true (SELF) & baris yang ownerId-nya sudah ada TIDAK kena guard
+// ini (tidak lewat findOrCreate() sama sekali) -- 0 perubahan utk kasus itu.
+let owners;
+try{
+owners=draft.map((o)=>{
 let ownerId;
 if(o.ownerId&&String(o.ownerId).trim()){
 ownerId=String(o.ownerId).trim();
 }else if(o.isSelf&&!selfIdUsed){
 ownerId='SELF';
 selfIdUsed=true;
-}else if(!o.isSelf&&typeof OwnerRegistry!=='undefined'){
+}else if(!o.isSelf){
+if(typeof OwnerRegistry==='undefined'||typeof OwnerRegistry.findOrCreate!=='function'){
+throw new Error('S607_OWNER_REGISTRY_UNAVAILABLE');
+}
 ownerId=OwnerRegistry.findOrCreate(o.ownerName.trim());
 }else{
 ownerId=String(uid());
 }
 return{ownerId,ownerName:o.ownerName.trim(),porsi:o.porsi,isSelf:!!o.isSelf};
 });
+}catch(e){
+if(e&&e.message==='S607_OWNER_REGISTRY_UNAVAILABLE'){toast('⚠️ Fitur pemilik belum siap dimuat, coba lagi');return;}
+throw e;
+}
 const res=MultiOwnerEngine.setOwners(a,owners);
 if(!res.ok){toast('⚠️ '+res.reason);return;}
 Object.assign(a,{owners:res.entity.owners});
