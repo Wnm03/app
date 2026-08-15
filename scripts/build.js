@@ -1074,6 +1074,17 @@ const GROUP_B = [
   // forward-reference).
   'modules/finance/titipan-sync.js',
 
+  // === POOL INTEGRATION START (Sesi 6 — MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §15) ===
+  // `dana-titipan-pool-api.js` — object independen (`DanaTitipanPoolAPI`,
+  // §14), 0 dependency ke commitment/aggregation. WAJIB dimuat SEBELUM
+  // `dana-titipan-commitment-return-api.js` karena guard di
+  // `saveCommitment()` (§8) memanggil `DanaTitipanPoolAPI.poolMasukTotal()`/
+  // `.getEntries()` (read-only cross-call) saat file itu dieksekusi.
+  // Rollback: hapus baris ini saja dari registrasi (§22 Rollback Strategy),
+  // tidak ada dependency masuk ke file lain sebelum guard commitment.
+  'modules/finance/dana-titipan-pool-api.js',
+  // === POOL INTEGRATION END ===
+
   // R5 REALISASI (sesi ini, gantikan 1 entry monolit lama
   // `dana-titipan-portfolio-presenter.js`, 1789 baris, DIHAPUS — lihat
   // FIX-s598-r5-presenter-split-realized.md) — proyeksi read-only
@@ -1085,7 +1096,8 @@ const GROUP_B = [
   // MultiOwnerEngine saja), tapi secara konsep melengkapi kartu Dana
   // Kelolaan yang sama. 3 file WAJIB berurutan persis seperti ini
   // (file 2 pakai Object.assign ke object file 1; file 3 panggil
-  // DanaTitipanPortfolioAPI.xxx() fully-qualified):
+  // DanaTitipanPortfolioAPI.xxx() fully-qualified). `dana-titipan-pool-api.js`
+  // di atas WAJIB tetap mendahului trio ini (lihat §15 Master Handoff):
   'modules/finance/dana-titipan-aggregation-api.js',
   'modules/finance/dana-titipan-commitment-return-api.js',
   'modules/finance/dana-titipan-portfolio-render.js',
