@@ -1568,10 +1568,17 @@ findMissingAriaLabels(document).forEach(msg=>_selfTestAssert(false,msg));
 // benar-benar dipanggil dari mana pun (lihat PATCH-NOTES.md sesi-6, "Belum
 // dikerjakan"). PURE baca-saja (0 mutasi D), guard typeof spy tidak crash
 // kalau titipan-reconcile.js kebetulan belum ke-load duluan.
+// Fix (sesi-8): checkAll() sudah nambah sub-check ke-4 `accountSync`
+// (checkAccounts(), lihat titipan-reconcile.js baris ~292) tapi pesan di
+// bawah ini tidak pernah diupdate ikut nyebut accountSync -- kalau gap
+// nyata ada DI accountSync (bukan sync/ownerIdConsistency/debtNameStaleness),
+// r.ok tetap false (assert tetap gagal, benar) tapi pesannya bakal bilang
+// "0 gap" di ketiga sub-check lama itu tanpa penjelasan kenapa r.ok=false
+// -- sekarang accountSync.ok/missing/orphan ikut ditulis di pesan.
 {name:'TitipanReconcile.checkAll(): audit sinkron Dana Titipan (Buku Utang vs Aset/Investasi) + konsistensi ownerId + staleness nama pasca-rename, semua 0 gap', fn:()=>{
 if(typeof TitipanReconcile==='undefined')return;
 const r=TitipanReconcile.checkAll();
-_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+')');
+_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+')');
 }},
 ];
 }
