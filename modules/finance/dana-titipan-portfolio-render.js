@@ -574,6 +574,77 @@ const DanaTitipanPortfolioPresenter = {
     }
   },
 
+  // _poolSummaryHtml() — SESI 4 (UI POOL, MASTER_HANDOFF_DANA_TITIPAN_POOL_
+  // PORSI.md §13.1-13.3, §19). Kartu ringkasan pool, ditaruh PALING ATAS
+  // _renderNow() (sebelum addBtn/expenseBtn) — read-only murni, 0 tulis ke
+  // `D`. Konsumsi `DanaTitipanPoolAPI.status()/poolMasukTotal()/
+  // sisaAlokasi()/overAllocatedAmount()` (Sesi 1/2, sudah lengkap & tested,
+  // TIDAK diubah sesi ini).
+  //
+  // CATATAN AUDIT soal "Sudah Dialokasikan": dipakai `principalAmountTotal`
+  // dari PARAMETER `projection` (hasil `DanaTitipanPortfolioAPI.build()`,
+  // sudah dihitung 1x di `_renderNow()`, sama angka yang dipakai baris
+  // "Total Pokok Dikomit" existing) — BUKAN dihitung ulang manual. Sempat
+  // dicurigai `principalAmountTotal` cuma menjumlah owner yang punya
+  // holding investasi/aset (beda dari definisi MASTER_HANDOFF §6, "SUM
+  // SEMUA `D.titipanCommitments[].principalAmount`"), tapi diverifikasi
+  // ulang lewat test (D1, session04a) `build()` SUDAH union dgn
+  // `D.titipanCommitments[]` sejak Sesi 485c (baris ~604-619 di
+  // dana-titipan-aggregation-api.js, "owner yang sudah komit pokok tapi
+  // BELUM punya holding sama sekali tetap harus muncul di projection") —
+  // jadi `principalAmountTotal` SUDAH persis sesuai §6, 0 gap. Menghitung
+  // ulang secara terpisah di sini hanya akan mendua-sumberkan angka yang
+  // sama tanpa manfaat (melanggar reuse existing source of truth).
+  //
+  // Tombol "Set Saldo Awal Dana Titipan" / "+ Tambah Deposit" (§13.4)
+  // digate `typeof DanaTitipanPoolUI !== 'undefined'` — defensif murni
+  // (jaga-jaga urutan load script), karena `DanaTitipanPoolUI` SUDAH
+  // didefinisikan di file ini (lihat definisi di bawah, akhir file) sejak
+  // Bagian 1 — jadi guard ini praktis selalu true di app nyata. Method
+  // `openSetSaldoAwal()`/`openTambahDeposit()` MASIH STUB (toast "belum
+  // tersedia") sampai Bagian 2 mengisi modal sungguhan — lihat komentar di
+  // definisi `DanaTitipanPoolUI` utk detail.
+  _poolSummaryHtml(principalAmountTotal) {
+    if (typeof DanaTitipanPoolAPI === 'undefined') return '';
+    const status = DanaTitipanPoolAPI.status();
+    const masuk = DanaTitipanPoolAPI.poolMasukTotal();
+    const sudahDialokasikan = Number(principalAmountTotal) || 0;
+    const hasPoolUI = (typeof DanaTitipanPoolUI !== 'undefined');
+    const wrapOpen = '<div class="titipan-pool-summary u-fs11 u-mb8" style="border:1px dashed var(--border,#ddd);border-radius:8px;padding:8px 10px">';
+
+    if (status === 'NOT_MIGRATED') {
+      const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt6" data-action="DanaTitipanPoolUI.openSetSaldoAwal">Set Saldo Awal Dana Titipan</button>' : '';
+      return `${wrapOpen}
+        <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
+        <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">Belum diset</span></div>
+        <div class="u-fs10 u-t2 u-mt4">📋 Status: Data lama / belum dimigrasikan</div>
+        ${btn}
+      </div>`;
+    }
+
+    const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt6" data-action="DanaTitipanPoolUI.openTambahDeposit">+ Tambah Deposit</button>' : '';
+
+    if (status === 'OVER_ALLOCATED') {
+      const lebih = DanaTitipanPoolAPI.overAllocatedAmount();
+      return `${wrapOpen}
+        <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">${this._money(masuk)}</span></div>
+        <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
+        <div class="u-flex u-jcb"><span class="u-t2">🔴 Alokasi melebihi pool</span><span class="titipan-over-badge red">${this._money(lebih)}</span></div>
+        <div class="u-flex u-jcb"><span class="u-t2">Belum Dialokasikan</span><span class="u-fw700">${this._money(0)}</span></div>
+        ${btn}
+      </div>`;
+    }
+
+    // status === 'OK'
+    const sisa = DanaTitipanPoolAPI.sisaAlokasi();
+    return `${wrapOpen}
+      <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">${this._money(masuk)}</span></div>
+      <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
+      <div class="u-flex u-jcb"><span class="u-t2">🟢 Belum Dialokasikan</span><span class="u-fw700 green">${this._money(sisa)}</span></div>
+      ${btn}
+    </div>`;
+  },
+
   // renderInto(containerId) — SESI 498 (Tab "Dana Titipan" Terpadu, Sesi A
   // §2.2 rancangan audit AUDIT-DANA-TITIPAN-TAB-TERPADU.md): generalisasi
   // render() supaya bisa dipasang ke LEBIH dari satu container sekaligus
@@ -675,12 +746,17 @@ const DanaTitipanPortfolioPresenter = {
     // (S521-B2, murni konsumsi TitipanExpenseFlow S521-A). Selalu ditampilkan
     // bareng addBtn (bukan cuma saat owners.length>0), pola sama addBtn.
     const expenseBtn = '<button type="button" class="btn btn-ghost btn-full btn-sm u-mb8" data-action="TitipanExpenseUI.open">💸 Catat Pengeluaran Dana Titipan</button>';
+    // poolSummary — SESI 4 (UI POOL). Ditaruh PALING ATAS, di atas
+    // addBtn/expenseBtn (§13: kartu ringkasan pool tampil sebelum
+    // aksi-aksi lain). Dihitung sekali, dipakai kedua cabang di bawah.
+    const poolSummary = this._poolSummaryHtml(projection.totals.principalAmountTotal);
+
     if (!projection.owners.length) {
-      el.innerHTML = addBtn + expenseBtn + '<div class="u-fs11 u-t2 u-mt6">Belum ada porsi dana titipan yang teralokasi ke holding investasi.</div>';
+      el.innerHTML = poolSummary + addBtn + expenseBtn + '<div class="u-fs11 u-t2 u-mt6">Belum ada porsi dana titipan yang teralokasi ke holding investasi.</div>';
       return;
     }
 
-    el.innerHTML = addBtn + expenseBtn + `
+    el.innerHTML = poolSummary + addBtn + expenseBtn + `
       <div class="u-fs11 u-t2 u-mt10 u-mb4">Dana titipan dalam investasi (per pemilik, teralokasi ke instrumen):</div>
       ${projection.owners.map((o, oi) => `
         <details class="u-mb6${o.allocationStatus === 'OVER_ALLOCATED' ? ' titipan-owner-alert' : ''}" id="titipanOwnerCard_${oi}">
@@ -834,7 +910,64 @@ const DanaTitipanCommitmentUI = {
     DanaTitipanCommitmentUI.editingOwnerId = existing ? ownerId : null;
     const delBtn = document.getElementById('titipanCommitDelBtn');
     if (delBtn && delBtn.style) delBtn.style.display = existing ? '' : 'none';
+    // Sesi 5 ("Isi dari Sisa", MASTER_HANDOFF §11/§13.2/§19): tombol HANYA
+    // muncul saat status pool `OK` DAN sisa>0 (§19 acceptance criteria).
+    // Angka `sisa` dibaca LIVE di sini (saat modal dibuka) — TAPI §11
+    // rule 2 tetap mewajibkan baca ULANG lagi persis di titik klik
+    // (`fillFromRemaining()` di bawah, BUKAN pakai closure/angka dari
+    // sini), krn render bisa stale kalau ada perubahan pool/commitment
+    // di tab lain sebelum user benar-benar klik (skenario K, §18).
+    DanaTitipanCommitmentUI._refreshFillRemainingBtn();
     if (typeof openModal === 'function') openModal('titipanCommitmentModal');
+  },
+
+  // _refreshFillRemainingBtn() — helper internal Sesi 5, dipanggil dari
+  // `open()` (saat modal dibuka) supaya tombol+label langsung sesuai
+  // status pool terkini. Guard `typeof DanaTitipanPoolAPI==='undefined'`
+  // (build.js Sesi 6 belum jalan, lihat catatan di
+  // `DanaTitipanPoolUI.save()`) -> tombol disembunyikan diam-diam (bukan
+  // toast error, krn ini bukan aksi user, cuma render pasif saat buka
+  // modal).
+  _refreshFillRemainingBtn() {
+    const btn = document.getElementById('titipanCommitFillRemainingBtn');
+    if (!btn || !btn.style) return;
+    if (typeof DanaTitipanPoolAPI === 'undefined') { btn.style.display = 'none'; return; }
+    const status = DanaTitipanPoolAPI.status();
+    const sisa = DanaTitipanPoolAPI.sisaAlokasi();
+    if (status === 'OK' && typeof sisa === 'number' && sisa > 0) {
+      const label = document.getElementById('titipanCommitFillRemainingLabel');
+      if (label) label.textContent = 'Isi dari Sisa ' + DanaTitipanPortfolioPresenter._money(sisa);
+      btn.style.display = '';
+    } else {
+      btn.style.display = 'none';
+    }
+  },
+
+  // fillFromRemaining() — Sesi 5 (§11, skenario J/K). WAJIB baca ulang
+  // `DanaTitipanPoolAPI.status()`/`.sisaAlokasi()` LIVE di titik klik ini
+  // (bukan pakai label yang sudah dirender `open()`/nilai closure lain)
+  // — kalau antara modal dibuka & tombol diklik ada perubahan pool/
+  // commitment di tempat lain (skenario K), angka yang dipakai HARUS
+  // yang terbaru. Field `principalAmount` tetap EDITABLE setelah diisi
+  // (§11 rule 4) -- ini cuma isi nilai awal, bukan lock field. Validasi
+  // final tetap di titik save() (§11 rule 5), 0 validasi baru ditulis di
+  // sini.
+  fillFromRemaining() {
+    if (typeof DanaTitipanPoolAPI === 'undefined') { if (typeof toast === 'function') toast('⚠️ Fitur Dana Titipan Pool belum siap dimuat'); return; }
+    const status = DanaTitipanPoolAPI.status();
+    const sisa = DanaTitipanPoolAPI.sisaAlokasi();
+    if (status !== 'OK' || typeof sisa !== 'number' || sisa <= 0) {
+      // Skenario K: data sempat berubah antara modal dibuka & klik
+      // (mis. owner lain baru saja disimpan di tab lain, sisa jadi 0).
+      // Refresh tombol supaya konsisten (auto-sembunyi) + kasih toast
+      // jelas, BUKAN mengisi field dgn angka basi.
+      DanaTitipanCommitmentUI._refreshFillRemainingBtn();
+      if (typeof toast === 'function') toast('⚠️ Sisa dana titipan sudah berubah (mis. baru saja dialokasikan di tempat lain) — silakan isi manual.');
+      return;
+    }
+    const principalEl = document.getElementById('titipanCommitPrincipal');
+    if (principalEl) principalEl.value = sisa;
+    if (typeof updateAmtPreview === 'function') updateAmtPreview('titipanCommitPrincipal', 'titipanCommitPrincipalPreview');
   },
 
   // addNewOwner() — Sesi 523-B (BUG-01). Modal ini sebelumnya HANYA bisa
@@ -1097,7 +1230,124 @@ const DanaTitipanReturnUI = {
 
 };
 
+// DanaTitipanPoolUI — SESI 4 (UI POOL, MASTER_HANDOFF_DANA_TITIPAN_POOL_
+// PORSI.md §13.4), BAGIAN 2/2. Bagian 1 (session-04a) membuat STUB kedua
+// method di bawah (toast "belum tersedia") supaya lint statis
+// `tests/data-action-resolvable-s285.test.js` lolos & tombol tidak dead-
+// click. Bagian 2 ini ISI ULANG badan kedua method dengan modal
+// `titipanPoolModal` sungguhan (§13.4: field nominal/tanggal/catatan,
+// pola persis sama `titipanCommitmentModal` — amt-wrap+fi-calc-only utk
+// nominal, `evalAmtExpr`/`updateAmtPreview`, `openModal`/`closeModal`),
+// submit -> `DanaTitipanPoolAPI.addOpeningBalance()`/`.addDeposit()`
+// (Sesi 1/2, sudah ada & tested, TIDAK diubah di sini).
+//
+// `_mode` menyimpan mode terakhir (`'opening_balance'`|`'deposit'`) yang
+// dipilih lewat `openSetSaldoAwal()`/`openTambahDeposit()` — dibaca ulang
+// oleh `save()` supaya 1 modal fisik (`titipanPoolModal`) bisa dipakai utk
+// 2 aksi berbeda tanpa 2 modal terpisah (pola sama `Bill.setBillType`/
+// `WorthIt.switchTab`, bukan pola baru).
+//
+// [AUDIT PENTING utk Sesi 6/Integration]: `dana-titipan-pool-api.js`
+// (Sesi 1/2) BELUM terdaftar di `scripts/build.js` GROUP_A/GROUP_B — ini
+// SESUAI rencana MASTER_HANDOFF §15/§20 (registrasi build.js adalah scope
+// Sesi 6, BUKAN Bagian 2 ini). Konsekuensinya: sampai Sesi 6 selesai,
+// `DanaTitipanPoolAPI` TIDAK ada di bundle produksi (`app-bundle-*.min.js`)
+// walau modal & wiring di bawah ini sudah lengkap & lolos build lint —
+// `save()` di bawah SUDAH menggate `typeof DanaTitipanPoolAPI === 'undefined'`
+// (pola sama `DanaTitipanCommitmentUI.save()`) supaya kalau modal ini
+// sempat ke-deploy sendirian sebelum Sesi 6, user dapat toast jelas
+// ("fitur belum siap dimuat"), BUKAN error JS mentah/crash. Sesi 6 WAJIB
+// menambah `'modules/finance/dana-titipan-pool-api.js'` ke build.js
+// (sebelum `dana-titipan-commitment-return-api.js`, urutan §15) SEBELUM
+// fitur ini benar-benar bisa dipakai user nyata.
+const DanaTitipanPoolUI = {
+
+  _mode: 'opening_balance',
+
+  // _resetForm() — helper internal, kosongkan field & set tanggal default
+  // hari ini (pola sama `Piutang.openModal()`/`DanaTitipanCommitmentUI.
+  // open()` utk mode "tambah baru" — modal ini TIDAK punya mode edit,
+  // tiap submit = 1 entry pool baru, MASTER_HANDOFF §14 `_addEntry()`
+  // sengaja tidak upsert).
+  _resetForm() {
+    const amtEl = document.getElementById('titipanPoolAmt');
+    if (amtEl) amtEl.value = '';
+    const previewEl = document.getElementById('titipanPoolAmtPreview');
+    if (previewEl) previewEl.textContent = '';
+    const dateEl = document.getElementById('titipanPoolDate');
+    if (dateEl) dateEl.value = (typeof todayStr === 'function') ? todayStr() : '';
+    const notesEl = document.getElementById('titipanPoolNotes');
+    if (notesEl) notesEl.value = '';
+  },
+
+  // openSetSaldoAwal() — Bagian 2. Buka `titipanPoolModal` mode
+  // "opening balance", submit -> `DanaTitipanPoolAPI.addOpeningBalance()`.
+  // Sesuai MASTER_HANDOFF §19 (acceptance criteria), tombol ini HANYA
+  // dirender saat status `NOT_MIGRATED` (lihat `_poolSummaryHtml()`,
+  // Bagian 1, tidak diubah di sini) -- method ini sendiri TIDAK perlu
+  // cek ulang status, cukup buka modal dgn label yang sesuai.
+  openSetSaldoAwal() {
+    DanaTitipanPoolUI._mode = 'opening_balance';
+    const titleEl = document.getElementById('titipanPoolModalTitle');
+    if (titleEl) titleEl.textContent = '💰 Set Saldo Awal Dana Titipan';
+    const hintEl = document.getElementById('titipanPoolModalHint');
+    if (hintEl) hintEl.textContent = 'Catat saldo awal dana titipan yang sudah ada saat ini (baseline pool pertama kali) — dipakai buat validasi supaya total pokok yang dialokasikan ke tiap pemilik tidak melebihi dana yang benar-benar ada. Bukan transaksi keuangan, tidak menyentuh Kas/Akun/Investasi.';
+    DanaTitipanPoolUI._resetForm();
+    if (typeof openModal === 'function') openModal('titipanPoolModal');
+  },
+
+  // openTambahDeposit() — Bagian 2. Buka `titipanPoolModal` mode
+  // "deposit", submit -> `DanaTitipanPoolAPI.addDeposit()`. Dirender saat
+  // status `OK`/`OVER_ALLOCATED` (pool sudah pernah diisi, §19).
+  openTambahDeposit() {
+    DanaTitipanPoolUI._mode = 'deposit';
+    const titleEl = document.getElementById('titipanPoolModalTitle');
+    if (titleEl) titleEl.textContent = '➕ Tambah Deposit Dana Titipan';
+    const hintEl = document.getElementById('titipanPoolModalHint');
+    if (hintEl) hintEl.textContent = 'Catat tambahan dana titipan yang baru masuk (menambah pool yang sudah ada) — dipakai buat validasi supaya total pokok yang dialokasikan ke tiap pemilik tidak melebihi dana yang benar-benar ada. Bukan transaksi keuangan, tidak menyentuh Kas/Akun/Investasi.';
+    DanaTitipanPoolUI._resetForm();
+    if (typeof openModal === 'function') openModal('titipanPoolModal');
+  },
+
+  // save() — baca form, panggil `DanaTitipanPoolAPI.addOpeningBalance()`/
+  // `.addDeposit()` sesuai `_mode` (Sesi 1/2, sudah tested, 0 logic baru
+  // ditulis di sini). API melempar Error kalau validasi gagal (amount
+  // bukan angka >=0, MASTER_HANDOFF §14 `_validateAmount()`), dibungkus
+  // try/catch pola sama `DanaTitipanCommitmentUI.save()`/`InvestmentUI.
+  // saveOwners()`. Setelah sukses: tutup modal, re-render dashboard
+  // Dana Titipan (pola re-render sama persis `DanaTitipanCommitmentUI.
+  // save()` di atas -- `DanaTitipanPortfolioPresenter.render()` +
+  // `renderInto('danaTitipanTabList')`, supaya kartu ringkasan pool baru
+  // ikut ter-refresh di KEDUA container, bukan cuma satu).
+  save() {
+    if (typeof DanaTitipanPoolAPI === 'undefined') {
+      if (typeof toast === 'function') toast('⚠️ Fitur Dana Titipan Pool belum siap dimuat (menunggu registrasi build.js Sesi 6)');
+      return;
+    }
+    const amtEl = document.getElementById('titipanPoolAmt');
+    const amount = amtEl ? amtEl.value : '';
+    const date = (document.getElementById('titipanPoolDate') || {}).value || '';
+    const notes = (document.getElementById('titipanPoolNotes') || {}).value || '';
+    try {
+      if (DanaTitipanPoolUI._mode === 'deposit') {
+        DanaTitipanPoolAPI.addDeposit({ amount, date, notes });
+      } else {
+        DanaTitipanPoolAPI.addOpeningBalance({ amount, date, notes });
+      }
+    } catch (e) {
+      if (typeof toast === 'function') toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal menyimpan dana titipan'));
+      return;
+    }
+    if (typeof closeModal === 'function') closeModal('titipanPoolModal');
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
+    if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+    if (typeof toast === 'function') toast(DanaTitipanPoolUI._mode === 'deposit' ? '✅ Deposit dana titipan tersimpan' : '✅ Saldo awal dana titipan tersimpan');
+  },
+
+};
+
 if (typeof window !== 'undefined') {
   window.DanaTitipanCommitmentUI = DanaTitipanCommitmentUI;
   window.DanaTitipanReturnUI = DanaTitipanReturnUI;
+  window.DanaTitipanPoolUI = DanaTitipanPoolUI;
 }

@@ -59,6 +59,40 @@ saveCommitment(input) {
   if (!isFinite(principalAmount) || principalAmount < 0) {
     throw new Error('Pokok dana titipan harus berupa angka >= 0');
   }
+  // === POOL GUARD START (Sesi 3 — MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI
+  // §8/§9). Cross-call SATU ARAH ke `DanaTitipanPoolAPI` (read-only, §14)
+  // -- file ini TIDAK PERNAH menulis ke `D.titipanPool`. Guard HANYA
+  // aktif kalau pool sudah pernah diisi (`getEntries().length > 0`);
+  // kalau `NOT_MIGRATED` (pool kosong/fitur belum pernah dipakai) -> 0
+  // guard, perilaku existing (sebelum fitur pool ada) tetap jalan apa
+  // adanya, supaya data lama tidak terjebak validasi pool yang belum
+  // diisi (§8 poin 2/4, §12 "tidak ada migrasi implisit").
+  if (typeof DanaTitipanPoolAPI !== 'undefined' && DanaTitipanPoolAPI.getEntries().length > 0) {
+    const existing = (D && Array.isArray(D.titipanCommitments)) ? D.titipanCommitments : [];
+    // Simulasi upsert HIPOTETIS (§9): total baru memakai nilai BARU utk
+    // ownerId ini (GANTI, bukan tambah) -- jumlahkan semua owner LAIN
+    // (skip record ownerId ini kalau sudah ada) + principalAmount baru.
+    // Berlaku sama utk create (owner belum ada di `existing`, jadi murni
+    // owner lain + nilai baru) maupun edit (nilai lama owner ini dibuang,
+    // diganti nilai baru) -- 0 double-count baik di create atau edit.
+    const sudahDialokasikanBaru = existing.reduce((sum, c) => {
+      if (c && c.ownerId === ownerId) return sum;
+      return sum + (Number(c && c.principalAmount) || 0);
+    }, principalAmount);
+    const poolMasukTotal = DanaTitipanPoolAPI.poolMasukTotal();
+    if (sudahDialokasikanBaru > poolMasukTotal) {
+      // "sisa_sebelum_edit_ini" (§8 poin 3) = sisa yang SEDANG berlaku
+      // saat ini (state `D.titipanCommitments` sebelum save ini commit,
+      // belum diubah sama sekali di titik ini) -- BUKAN sisa hipotetis
+      // seolah owner ini dibuang dulu. Pola format ikut §4 (fallback
+      // fmtFull -> fmt -> 'Rp '+round, sama persis
+      // `DanaTitipanPortfolioPresenter._money()`).
+      const sisaSebelumEditIni = DanaTitipanPoolAPI.sisaAlokasi() || 0;
+      const sisaText = (typeof fmtFull === 'function') ? fmtFull(sisaSebelumEditIni) : ((typeof fmt === 'function') ? fmt(sisaSebelumEditIni) : ('Rp ' + Math.round(sisaSebelumEditIni || 0)));
+      throw new Error(`⚠️ Nominal melebihi dana yang tersedia. Sisa dana hanya ${sisaText}.`);
+    }
+  }
+  // === POOL GUARD END ===
   D.titipanCommitments = D.titipanCommitments || [];
   const ownerName = (params.ownerName && String(params.ownerName).trim()) || known.ownerName;
   const now = Date.now();
