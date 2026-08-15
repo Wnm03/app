@@ -497,6 +497,12 @@ const InvestmentUI = {
     InvestmentUI._updateOwnerQuotaDisplay(i);
     // SESI AF1 — auto-fill baris kosong berikutnya dgn sisa porsi (lihat _applyRemainingShare()).
     InvestmentUI._applyRemainingShare(i);
+    // BUGFIX S622 (sama audit dgn Aset.onOwnerNominalInput(), lihat komentar panjangnya di
+    // aset.js): onOwnerPorsiInput() (baris ~472) sudah memanggil _checkRebalanceTrigger()
+    // tiap ketik, cabang Nominal (Rp) ini lupa -- padahal sama-sama bisa mendorong total
+    // >100%. Tanpa baris ini, panel "⚖️ Porsi melebihi 100%" tidak pernah muncul kalau
+    // user mendorong total lewat kolom Nominal, bukan Porsi (%).
+    InvestmentUI._checkRebalanceTrigger(i);
   },
 
   // _applyRemainingShare(editedIndex) — SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat

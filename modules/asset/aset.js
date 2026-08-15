@@ -940,6 +940,21 @@ Aset.updateOwnersTotal();
 // SESI 505 -- porsi baris ini berubah (& _applyRemainingShare() di atas sudah menyesuaikan
 // baris target kalau ada), refresh kuota SEMUA baris (sama alasan cabang nilai<=0 di atas).
 Aset._ownersDraft.forEach((o,k)=>{ Aset._updateOwnerQuotaDisplay(k); });
+// BUGFIX S622 (laporan user, screenshot aset "renov" -- persis skenario yang mendasari
+// fitur Auto-Rebalance ini dibuat, lihat header fitur di atas): onOwnerPorsiInput() SUDAH
+// memanggil _checkRebalanceTrigger() (baris ~837) tiap ketik, TAPI cabang ini
+// (onOwnerNominalInput(), arah Rp->%) LUPA memanggilnya -- padahal keduanya SAMA-SAMA
+// menulis Aset._ownersDraft[i].porsi & bisa SAMA-SAMA mendorong total >100%. Akibatnya:
+// user ketik di kolom Nominal (Rp) baris pemilik baru sampai total >100% (persis kasus
+// nyata: 2 pemilik sudah pas 100%, tambah pemilik ke-3 lewat Nominal) -> tombol "Simpan
+// Porsi" otomatis ter-disable (updateOwnersTotal() di atas) TAPI panel "⚖️ Porsi melebihi
+// 100%" yang seharusnya menawarkan penyesuaian 1-tombol TIDAK PERNAH muncul, krn baris
+// pemicunya cuma ada di onOwnerPorsiInput(). User terjebak: total merah, save mati, tidak
+// ada cara mudah membetulkan selain hitung manual/klik ulang tiap baris ganti ke Porsi (%).
+// Fix: tambah 1 baris pemanggilan yang hilang, pola SAMA PERSIS onOwnerPorsiInput() (0
+// rumus baru, _checkRebalanceTrigger() sendiri sudah PURE & aman dipanggil kapan saja --
+// no-op kalau total<=100).
+Aset._checkRebalanceTrigger(i);
 },
 // _autoDistributeRemaining() (SESI 431/449/457) -- DIHAPUS di sesi AF1 lanjutan (lihat
 // SESI-AF1-SESSION-NOTE.md): sejak _applyRemainingShare() jadi satu-satunya trigger auto-bagi
