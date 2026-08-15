@@ -159,7 +159,19 @@ test('1. [gap-check] titipanReturnModal: semua id yang dipakai DanaTitipanReturn
   const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8');
   const start = presenterSrc.indexOf('const DanaTitipanReturnUI');
   assert.notEqual(start, -1, 'DanaTitipanReturnUI harus ada di presenter file -- nama berubah? update test ini');
-  const uiCode = presenterSrc.slice(start);
+  // FIX (Sesi 4 Bagian 2 / session-04b): slice ini dulu tanpa batas akhir
+  // (sampai EOF) krn `DanaTitipanReturnUI` adalah object UI TERAKHIR di
+  // file saat test ini ditulis (S486). Setelah Sesi 4 menambah
+  // `DanaTitipanPoolUI` di akhir file (Bagian 1: stub, Bagian 2: isi
+  // sungguhan dgn beberapa `getElementById('titipanPoolXxx')`), slice
+  // tanpa batas ini jadi ikut menyapu id-id milik DanaTitipanPoolUI ke
+  // dalam scan "id dipakai DanaTitipanReturnUI" -- false failure (bukan
+  // gap HTML/JS sungguhan di titipanReturnModal). Dibatasi eksplisit ke
+  // marker object berikutnya, pola sama persis
+  // tests/s485d-titipan-commitment-ui.test.js (yang sudah lebih dulu
+  // membatasi slice-nya ke `const DanaTitipanReturnUI` sbg next marker).
+  const nextMarker = presenterSrc.indexOf('const DanaTitipanPoolUI', start);
+  const uiCode = (nextMarker === -1) ? presenterSrc.slice(start) : presenterSrc.slice(start, nextMarker);
   const idsUsed = [...uiCode.matchAll(/getElementById\('([^']+)'\)/g)].map((m) => m[1]);
   assert.ok(idsUsed.length >= 3, 'harus ada minimal beberapa getElementById dipanggil di DanaTitipanReturnUI');
   for (const id of new Set(idsUsed)) {
