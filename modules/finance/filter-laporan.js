@@ -298,11 +298,29 @@ return null;
 // FIX: baca `t.deductionOwnerId` LEBIH DULU (sumber aktif/live) --
 // `t.ownerPorsiId` dipertahankan sbg fallback kedua murni utk data lama/
 // edge-case (0 salahnya dicek, tidak pernah ada sekarang tapi tidak
-// menutup kemungkinan format lama), baru owners[0].ownerId (transaksi yg
-// belum pernah pilih penanggung eksplisit sama sekali -- porsi PERTAMA
-// dijadikan default, keputusan eksplisit user, bukan proporsional).
+// menutup kemungkinan format lama).
 // Guard existing-owner-only dipertahankan apa adanya (ownerId basi/dr akun
 // lain tidak nyasar ke owner yg salah).
+//
+// FIX SESI (laporan user 2026-08-15 -- "BRI"/"Uang motor": transaksi rumah
+// tangga biasa yg dibayar dari akun tsb (Anak·sekolah, Belanja, Pulsa, dst
+// -- TIDAK PERNAH ditandai `deductionOwnerId` scr eksplisit) ikut memotong
+// "Estimasi dari Transaksi <Akun>"/Pokok Dikomit pemilik Dana Titipan,
+// murni krn akun itu 100% owner tunggal). ROOT CAUSE: fallback terakhir di
+// bawah SEBELUMNYA `return owners[0].ownerId` -- transaksi yg TIDAK PERNAH
+// ditandai penanggungnya scr eksplisit tetap otomatis "dianggap" milik
+// owner pertama (utk akun 1-owner, itu artinya SEMUA transaksi otomatis
+// ikut). Ini keliru: porsi kepemilikan AKUN (siapa yg berhak atas saldo)
+// beda konsep dgn assignment PER-TRANSAKSI (pengeluaran ini utk pocket yg
+// mana) -- 1 akun 100% "Uang motor" tidak berarti tiap transaksi yg lewat
+// situ otomatis pengeluaran dana motor.
+// FIX: HAPUS fallback owners[0] -- transaksi tanpa `deductionOwnerId`/
+// `ownerPorsiId` eksplisit yg valid balik `null` (TIDAK diassign ke siapa
+// pun). Konsumen (`_linkedExpenseTotalForOwner()`, kartu "Porsi per
+// Pemilik", badge "👤 Ditanggung") semua membandingkan hasil fungsi ini
+// dgn `=== o.ownerId` -- `null` otomatis tidak pernah match owner manapun,
+// jadi 0 perubahan kontrak caller diperlukan, transaksi tsb murni
+// dikecualikan dari SEMUA total per-pemilik (bukan cuma Dana Titipan).
 // PURE, 0 side-effect.
 function resolveTxOwnerAssignment(t,owners){
 if(!Array.isArray(owners)||!owners.length)return null;
@@ -312,7 +330,7 @@ return t.deductionOwnerId;
 if(t&&typeof t.ownerPorsiId==='string'&&t.ownerPorsiId&&owners.some(o=>o.ownerId===t.ownerPorsiId)){
 return t.ownerPorsiId;
 }
-return owners[0].ownerId;
+return null;
 }
 function showFilteredTx(scope, type, label, accId){
 let txs=[];

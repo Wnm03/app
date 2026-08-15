@@ -386,7 +386,17 @@ return;
 }
 wrap.style.display='block';
 sel.innerHTML='<option value="">— Pilih Pemilik —</option>'+owners.map(o=>'<option value="'+escapeHtml(String(o.ownerId))+'">'+escapeHtml(o.ownerName||String(o.ownerId))+'</option>').join('');
-sel.value=owners.length===1?String(owners[0].ownerId):'';
+// FIX SESI (laporan user 2026-08-15, lanjutan fix resolveTxOwnerAssignment()
+// di filter-laporan.js): SEBELUMNYA akun 1-owner auto-preselect
+// owners[0].ownerId di sini -- jadi setiap transaksi baru pada akun
+// single-owner otomatis tersimpan dgn deductionOwnerId terisi, seolah
+// SEMUA transaksi di akun itu (belanja mingguan, pulsa, dst) memang utk
+// pocket Dana Titipan itu. Field ini SEKARANG murni opsional utk akun
+// single-owner juga (selalu default kosong, sama spt akun multi-owner) --
+// user pilih SADAR hanya utk transaksi yg memang mau ditandai/dipotong ke
+// pocket tsb. 0 perubahan validasi wajib-isi (tetap HANYA wajib kalau
+// owners.length>1, lihat pemanggil _saveTxInner()).
+sel.value='';
 if(status){
 if(source==='account'&&needsConfirm){
 status.style.display='block';
