@@ -1,85 +1,123 @@
-# S621 — Fix: tombol "Perbaiki Gap Dana Titipan" tidak menutup gap `missing`
+# S621 — FIX: Transaksi TANPA akun potongan eksplisit ikut mengurangi Pokok Dikomit Dana Titipan (akun 1-owner)
 
-## Gejala (laporan user)
-Tes Otomatis (Pengaturan > Diagnostik) melaporkan gagal terus-menerus:
+Build version: **v1350** (`s621-titipan-explicit-owner-only`)
 
-```
-TitipanReconcile.checkAll(): audit sinkron Dana Titipan ... — 1 gagal
-TitipanReconcile.checkAll() menemukan gap --
-sync.ok=false (missing:1 orphan:0 mismatch:0),
-ownerIdConsistency.ok=true (divergent:0),
-debtNameStaleness.ok=true (stale:0)
-```
+## Laporan user
+Screenshot dashboard Dana Titipan (owner "Uang motor", Pokok Dikomit
+Rp 12.000.000, akun BRI 100% owner tunggal) + modal "Riwayat: BRI" (14
+transaksi). "Estimasi dari Transaksi BRI" menampilkan Rp 1.923.542 — angka
+itu SUDAH cocok dengan kartu "Porsi per Pemilik" di modal riwayat (jadi
+secara matematis "sinkron"), tapi user menyadari akar masalah yang lebih
+dalam: dari 14 transaksi di akun itu (belanja mingguan, sekolah anak,
+mainan anak, pulsa, tagihan admin, dst), cuma 1 yang benar-benar ditandai
+`deductionOwnerId` (badge "👤 Ditanggung: Uang motor"). 13 sisanya numpang
+lewat akun itu tanpa pernah ditandai — tapi tetap ikut memotong Pokok
+Dikomit pocket "Uang motor".
 
-Tombol "🔧 Perbaiki Gap Dana Titipan" di bawah hasil tes sudah ditekan
-(sesuai hint-nya sendiri: "akan minta konfirmasi dulu & cuma memproses gap
-yang benar-benar ditemukan"), tapi gap yang sama tetap muncul lagi tiap Tes
-Otomatis dijalankan ulang.
+Permintaan eksplisit user: transaksi boleh disimpan TANPA akun potongan
+(0 wajib isi), tapi HANYA yang eksplisit di-set akun potongan yang boleh
+mengurangi Pokok Dikomit.
 
-## Audit
-1. Patch `S620-FIX-titipan-akun-only-owner-MERGED.zip` yang sudah di-upload
-   ke repo **TIDAK relevan** dengan gap di foto. S620 mengerjakan alur
-   "Titipan Akun-Only Owner" (`s620-titipan-account-only-owner-linked-expense`
-   / `sC-titipan-majoris-expense-comparison`) — domain `accountSync`
-   (cabang Akun) di `TitipanReconcile.checkAll()`. Gap di foto ada di
-   `sync` (cabang Aset/Investasi, fungsi `check()`), sub-check yang
-   **berbeda**. Jadi walau S620 sudah ter-upload, gap `sync.missing:1` di
-   foto memang tidak akan pernah ikut hilang — bukan salah upload, patch-nya
-   memang tidak menyentuh bagian itu.
-2. Akar masalah sebenarnya: `repairTitipanOrphans()` (`self-test.js`,
-   dipanggil tombol "🔧 Perbaiki Gap Dana Titipan") **dari S595 cuma pernah
-   memanggil `TitipanReconcile.repairOrphans()`** — fungsi yang namanya
-   sendiri sudah bilang "orphan-only" (lihat komentarnya di
-   `titipan-reconcile.js`). Tapi teks hint di bawah tombol itu (di
-   `app_production.html`/`index.html`) sudah lama menjanjikan tombol ini
-   menutup **dua-duanya**: "membuat baris ... yang belum tercatat (missing),
-   dan/atau menghapus baris ... (orphan)".
-3. Akibatnya: kalau gap yang terdeteksi murni `missing` (seperti kasus
-   nyata di foto — `missing:1 orphan:0`), `repairTitipanOrphans()` versi
-   lama masuk ke cabang paling atas `if(pre.ok||!pre.orphan.length)` dan
-   langsung `toast('✅ Tidak ada gap orphan ...')` **tanpa berbuat apa-apa**.
-   Tombol terlihat sukses (ada toast), tapi baris Buku Utang yang seharusnya
-   dibuat tidak pernah dibuat — gap `missing` bertahan selamanya sampai aset/
-   holding sumbernya kebetulan di-save ulang secara manual.
+## Root cause
+`resolveTxOwnerAssignment(t, owners)` (`filter-laporan.js`) — fungsi satu-
+satunya sumber kebenaran untuk badge "Ditanggung", kartu "Porsi per
+Pemilik", DAN kalkulasi Dana Titipan (`_linkedExpenseTotalForOwner()`) —
+fallback ke `owners[0].ownerId` kalau `t.deductionOwnerId` kosong (S608).
+Untuk akun dengan **1 owner** (spt BRI/"Uang motor", porsi 100%), fallback
+itu berarti **SEMUA transaksi otomatis dianggap milik owner itu**, walau
+user tidak pernah menandainya secara sadar — porsi kepemilikan AKUN (siapa
+berhak atas saldo) tertukar konsepnya dengan assignment PER-TRANSAKSI
+(pengeluaran ini untuk pocket yang mana).
 
-## Perbaikan
-- **`modules/finance/titipan-reconcile.js`**: tambah `TitipanReconcile.repairMissing()`
-  (pola sama `repairOrphans()`, pengecualian yang sama dari modul ini yang
-  sengaja 0-mutasi). Menelusuri tiap key `missing` balik ke Aset/Holding
-  sumbernya, lalu memanggil ulang jalur sync yang **sudah ada**
-  (`TitipanSync.reconcile(a)` cabang Aset, `Investment._syncTitipanDebt(h)`
-  cabang Investasi) — 0 rumus baru, cuma memanggil ulang fungsi sync yang
-  sudah idempotent. Key yang sumbernya sudah tidak ada di data masuk ke
-  `unresolved`, tidak dibuang diam-diam.
-- **`self-test.js`**: `repairTitipanOrphans()` sekarang memanggil **kedua**
-  sisi (`repairMissing()` kalau ada gap missing, `repairOrphans()` kalau ada
-  gap orphan) dalam satu alur konfirmasi, jadi perilakunya akhirnya sesuai
-  dengan teks hint yang sudah lama ada. Nama fungsi & `data-action` di HTML
-  **tidak diganti** (menghindari edit 2 file HTML + bundle tanpa manfaat
-  fungsional).
-- **`tests/titipan-reconcile.test.js`**: 11 test baru untuk `repairMissing()`
-  (cabang Aset via `TitipanSync`, fallback ke `Aset._syncOwnerDebts()`,
-  cabang Investasi, dedup 1 aset dgn >1 owner missing, key sumber hilang ->
-  `unresolved`, no-op kalau tidak ada gap, aman kalau `D` belum ada).
+Kontribusi kedua: `updateTxDeductionOwnerVisibility()` (`transaksi.js`)
+auto-preselect `owners[0].ownerId` di dropdown "Pemilik Sumber Potongan"
+untuk akun 1-owner — jadi field itu secara fungsional tidak pernah kosong
+untuk transaksi BARU pada akun semacam ini, mempertegas asumsi implisit
+yang sama.
 
-## Regresi
-`node --test tests/*.test.js` — **4344/4344 pass**, 0 gagal.
-`node scripts/build.js` — build sukses, versi naik `s620...` → `s621-owner-registry-mandatory-lookup` (`?v=1348` → `?v=1349`).
+## Fix (2 file, scope disepakati eksplisit dengan user: "semua tempat")
+1. **`modules/finance/filter-laporan.js`** — `resolveTxOwnerAssignment()`:
+   fallback `owners[0].ownerId` DIHAPUS TOTAL. Transaksi tanpa
+   `deductionOwnerId`/`ownerPorsiId` eksplisit yang valid sekarang balik
+   `null` (tidak diassign ke siapa pun). Semua konsumen membandingkan hasil
+   fungsi ini dengan `=== o.ownerId`, jadi `null` otomatis tidak pernah
+   match — 0 perubahan kontrak caller diperlukan. Efek otomatis konsisten
+   di: `_linkedExpenseTotalForOwner()` (Dana Titipan), kartu "Porsi per
+   Pemilik" (Riwayat Transaksi akun), dan badge "👤 Ditanggung" per baris.
+2. **`modules/finance/transaksi.js`** — `updateTxDeductionOwnerVisibility()`:
+   auto-preselect untuk akun 1-owner dihapus, sekarang selalu default
+   kosong (`sel.value=''`) sama seperti akun multi-owner — field benar-
+   benar opsional/opt-in, user pilih sadar. Validasi wajib-isi **tidak
+   diubah** (tetap hanya wajib kalau `owners.length>1`) — transaksi tetap
+   bisa disimpan tanpa akun potongan sesuai permintaan user.
 
-## Cara pakai setelah upload
-Buka Pengaturan > Diagnostik > Tes Otomatis, jalankan tes (akan tetap
-menunjukkan gap yang sama, tes itu sendiri 0-mutasi) lalu tekan lagi
-"🔧 Perbaiki Gap Dana Titipan" — sekarang baris `missing` yang dilaporkan
-akan benar-benar dibuat, bukan cuma dicek.
+0 rumus split baru ditulis di kedua file — murni menghapus 1 fallback
+implisit + 1 auto-select implisit.
 
-## File yang diubah
-- `modules/finance/titipan-reconcile.js` (logic baru: `repairMissing()`)
-- `self-test.js` (logic baru: `repairTitipanOrphans()` menangani missing+orphan)
-- `tests/titipan-reconcile.test.js` (11 test baru)
-- `app-bundle-a.min.js`, `app-bundle-b.min.js` (hasil `node scripts/build.js`)
-- `app_production.html`, `index.html`, `sw.js` (bump versi otomatis dari build.js)
-- `chat-action-handlers.js`, `modules/shared/features-helpers-global-security.js`,
-  `modules/shared/modals.js`, `modules/shared/modules-calc.js`,
-  `modules/shared/modules-render.js` (HANYA konstanta versi disamakan oleh
-  build.js, 0 logic berubah)
-- `docs/COVERAGE-PER-MODULE.md`, `docs/FILE-MAP.md` (regenerasi otomatis)
+## Dampak yang disengaja (perlu diketahui user)
+Setelah rilis ini, "Estimasi dari Transaksi <Akun>" untuk owner Dana
+Titipan akun 1-owner akan **turun** (kemungkinan ke Rp 0) untuk transaksi
+lama yang belum pernah ditandai `deductionOwnerId` secara eksplisit —
+sampai user mulai menandai transaksi yang memang dimaksudkan untuk pocket
+tsb lewat dropdown "Pemilik Sumber Potongan" yang sekarang selalu tampil
+kosong (opsional) di form Transaksi.
+
+## Test
+- **Baru:** `tests/patch-2026-08-15-titipan-explicit-owner-only.test.js`
+  (3 test) — reproduksi persis skenario laporan (akun BRI/"Uang motor",
+  14 transaksi rumah tangga tanpa tag vs 1 transaksi eksplisit), kontrak
+  "boleh simpan tanpa akun potongan" (balik `null`, bukan reject/error),
+  dan kontrak "eksplisit tetap terhitung penuh".
+- **Update (14 test, semua di file yang sudah ada)** — mengganti asumsi
+  fallback lama dengan kontrak baru (tambah `deductionOwnerId` eksplisit
+  di data uji, atau assert `Rp0`/`null` untuk kasus tanpa tag):
+  - `tests/fix-holding-direct-account-titipan-and-ghost-asset-link.test.js`
+    (A4, A5)
+  - `tests/res-c-tx-deduction-owner-resolver-integration.test.js` (Res-C
+    2/6)
+  - `tests/s575-tx-deduction-owner-visibility.test.js` (2/6, 4/6, 6/6)
+  - `tests/s567-filtertx-owner-split.test.js` (2 test)
+  - `tests/s569-resolve-tx-owner-split-stale-fix.test.js` (2 test)
+  - `tests/sC-titipan-majoris-expense-comparison.test.js` (test 1, 3, 5)
+- Baseline sebelum fix: 4337/4337 pass (post-S620), 14 gagal setelah
+  fallback dihapus (semuanya menguji perilaku lama yang sengaja diganti).
+- **Full suite sesudah fix: 4340/4340 pass, 0 regresi.**
+
+## Build
+`node scripts/build.js s621-titipan-explicit-owner-only` — versi naik dari
+**1349** (auto-label, dikoreksi) ke **1350**, `app_production.html`/bundle/
+`sw.js` diregenerasi otomatis, versi konstanta disamakan di 5 file source.
+
+⚠️ Release gate (`verify-release-ready.js`) di-override manual untuk 2 gate
+(lint, minify) — eslint & esbuild tidak tersedia di sandbox tanpa akses
+jaringan ini. Sintaks bundle tetap divalidasi via `node --check` (lolos).
+Rekomendasi: jalankan `npm run check` penuh (lint asli + minify asli) di
+mesin dev kamu sebelum upload final kalau memungkinkan.
+
+## Isi ZIP (hanya file yang berubah/baru dari S620)
+- `index.html`, `app_production.html`, `sw.js`
+- `app-bundle-a.min.js`, `app-bundle-b.min.js`
+- `modules/finance/filter-laporan.js` — **fix inti**
+- `modules/finance/transaksi.js` — **fix inti**
+- `modules/shared/modules-render.js`, `modules/shared/modals.js`,
+  `modules/shared/modules-calc.js`,
+  `modules/shared/features-helpers-global-security.js` (version-sync saja)
+- `chat-action-handlers.js` (version-sync saja)
+- `tests/patch-2026-08-15-titipan-explicit-owner-only.test.js` (baru)
+- `tests/fix-holding-direct-account-titipan-and-ghost-asset-link.test.js`,
+  `tests/res-c-tx-deduction-owner-resolver-integration.test.js`,
+  `tests/s575-tx-deduction-owner-visibility.test.js`,
+  `tests/s567-filtertx-owner-split.test.js`,
+  `tests/s569-resolve-tx-owner-split-stale-fix.test.js`,
+  `tests/sC-titipan-majoris-expense-comparison.test.js` (update assertion)
+- `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md`
+- `docs/RELEASE-GATE-LOG.md` (log override lint/minify)
+
+⚠️ Upload SEMUA file di atas (bukan cuma "fix inti") — versi harus tetap
+sinkron di seluruh file sesuai aturan build.
+
+## Sesi berikutnya
+Belum ada tindak lanjut wajib. Kandidat kalau ada laporan serupa: audit
+apakah ada tempat lain yang masih mengandalkan asumsi implisit "akun
+1-owner = semua transaksi otomatis milik owner itu" di luar 3 konsumen
+`resolveTxOwnerAssignment()` yang sudah dicek sesi ini.
