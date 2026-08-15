@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s623-titipan-explicit-owner-only';
+const MODULE_CALC_VERSION='s625-titipan-explicit-owner-only';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
