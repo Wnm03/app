@@ -396,6 +396,89 @@ repairOrphans() {
   return { removed: before - D.debts.length, keys: Array.from(orphanKeys) };
 },
 
+// repairMissing() — S621, menutup gap SEBALIKNYA dari repairOrphans() (S595).
+// LATAR: tombol "🔧 Perbaiki Gap Dana Titipan" (app_production.html/index.html,
+// data-action="repairTitipanOrphans") SUDAH LAMA menjanjikan lewat teks
+// hint-nya kalau tombol itu "membuat baris Buku Utang yang seharusnya ada
+// tapi belum tercatat (missing), dan/atau menghapus baris yang pemiliknya
+// sudah tidak ada (orphan)" -- TAPI implementasinya (repairTitipanOrphans()
+// di self-test.js) SELAMA INI cuma pernah memanggil repairOrphans() (yang
+// namanya sendiri sudah bilang orphan-only, lihat komentar fungsi itu di
+// atas). Kalau check().missing.length>0 TAPI check().orphan.length===0
+// (persis kondisi laporan Tes Otomatis: "sync.ok=false (missing:1 orphan:0
+// mismatch:0)"), repairTitipanOrphans() lama akan masuk ke cabang
+// `if(pre.ok||!pre.orphan.length)` paling atas dan LANGSUNG toast "Tidak ada
+// gap orphan yang perlu diperbaiki" TANPA berbuat apa-apa -- tombol terlihat
+// jalan (ada toast sukses) tapi gap missing yang dilaporkan Tes Otomatis
+// TETAP ADA, muncul lagi identik tiap Tes Otomatis dijalankan ulang. Itu
+// sebabnya laporan tetap menunjukkan gap yang sama walau tombol perbaikan
+// sudah ditekan.
+//
+// FUNGSI INI melengkapi separuh yang hilang itu, pola SAMA PERSIS
+// repairOrphans() (SATU-SATUNYA lagi di modul ini yang menulis ke D, utk
+// alasan yang sama: audit murni baca-saja, mutasi HANYA lewat tombol
+// eksplisit + konfirmasi, lihat self-test.js). BUKAN rumus baru -- tiap key
+// `missing` dari check() (lihat _expectedFromAssets()/_expectedFromInvestments()
+// di atas) ditelusuri balik ke Aset/Holding sumbernya, lalu jalur SINKRON
+// YANG SUDAH ADA (TitipanSync.reconcile(a) utk cabang Aset, sama gerbang yg
+// dipanggil dari Aset.saveOwners(); Investment._syncTitipanDebt(h) utk
+// cabang Investasi) dipanggil ULANG utk aset/holding itu -- fungsi-fungsi
+// itu SUDAH idempotent & SUDAH menulis persis baris yang harusnya ada
+// (itulah kenapa dipakai di sini, bukan menduplikasi konstruksi objek debt
+// yang sudah ada 2 tempat).
+// 1 aset/holding cuma disinkron SEKALI walau punya >1 owner yang sama-sama
+// missing (Set dipakai supaya tidak redundant memanggil reconcile() N kali
+// utk aset yang sama).
+// Key yang assetId/holdingId sumbernya SUDAH TIDAK ADA di D.assets/
+// D.investments (mis. aset sudah dihapus manual TAPI baris "missing" masih
+// kehitung dari cache/snapshot lama) TIDAK bisa diperbaiki di sini -- masuk
+// ke `unresolved` apa adanya, TIDAK di-skip diam-diam, supaya pemanggil bisa
+// melaporkan ke user/console kalau ada gap yang butuh audit manual (bukan
+// auto-repairable).
+// Return: {synced, unresolved} -- synced = jumlah aset/holding yang
+// disinkron ulang (BUKAN jumlah baris debt, krn 1 aset bisa punya >1 owner
+// dibereskan dlm 1 panggilan reconcile()), unresolved = array label
+// ('asset:<id>'/'inv:<id>') utk key yang sumbernya tidak ketemu.
+repairMissing() {
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) return { synced: 0, unresolved: [] };
+  const missing = this.check().missing;
+  if (!missing.length) return { synced: 0, unresolved: [] };
+  const assetIds = new Set();
+  const holdingIds = new Set();
+  missing.forEach((m) => {
+    const key = m.key;
+    if (key.indexOf('inv::') === 0) {
+      const rest = key.slice(5);
+      const idx = rest.lastIndexOf('::');
+      holdingIds.add(idx >= 0 ? rest.slice(0, idx) : rest);
+    } else {
+      const idx = key.lastIndexOf('::');
+      assetIds.add(idx >= 0 ? key.slice(0, idx) : key);
+    }
+  });
+  let synced = 0;
+  const unresolved = [];
+  assetIds.forEach((id) => {
+    const a = (D.assets || []).find((x) => x && String(x.id) === String(id));
+    if (!a) { unresolved.push('asset:' + id); return; }
+    if (typeof TitipanSync !== 'undefined' && typeof TitipanSync.reconcile === 'function') {
+      TitipanSync.reconcile(a);
+    } else if (typeof Aset !== 'undefined' && typeof Aset._syncOwnerDebts === 'function') {
+      Aset._syncOwnerDebts(a);
+    } else { unresolved.push('asset:' + id); return; }
+    synced++;
+  });
+  holdingIds.forEach((id) => {
+    const h = (D.investments || []).find((x) => x && String(x.id) === String(id));
+    if (!h) { unresolved.push('inv:' + id); return; }
+    if (typeof Investment !== 'undefined' && typeof Investment._syncTitipanDebt === 'function') {
+      Investment._syncTitipanDebt(h);
+    } else { unresolved.push('inv:' + id); return; }
+    synced++;
+  });
+  return { synced, unresolved };
+},
+
 };
 
 if (typeof module !== 'undefined' && module.exports) module.exports = TitipanReconcile;
