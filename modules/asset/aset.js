@@ -546,14 +546,21 @@ const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
 const draftNominal=nilai*(porsiNum/100);
 const sisa=principal-excluding-usedTotal-linkedExpenseTotal-draftNominal;
 const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
+const btnIdx=typeof i==='number'?i:(Array.isArray(Aset._ownersDraft)?Aset._ownersDraft.indexOf(o):-1);
+const quotaBtn='<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.applyQuotaToRow" data-args=\'['+btnIdx+']\'>🔄 Isi dari kuota sisa</button>';
 if(sisa<0){
-return '<div class="u-fs11 u-mt2"><span class="u-fw700 red">⚠️ Kuota sisa: '+money(sisa)+' (melebihi pokok dikomit)</span></div>';
+return '<div class="u-fs11 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap"><span class="u-fw700 red">⚠️ Kuota sisa: '+money(sisa)+' (melebihi pokok dikomit)</span>'+quotaBtn+'</div>';
 }
 // SESI AF2: sisipkan tombol "🔄 Isi dari kuota sisa" di samping angka kuota -- pemicu
 // manual applyQuotaToRow() (lihat komentarnya) supaya user bisa isi/timpa ulang Porsi (%)
 // baris ini dari kuota sisa kapan saja, tidak hanya sekali otomatis saat pilih owner.
-return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+
-'<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.applyQuotaToRow" data-args=\'['+(typeof i==='number'?i:(Array.isArray(Aset._ownersDraft)?Aset._ownersDraft.indexOf(o):-1))+']\'>🔄 Isi dari kuota sisa</button></div>';
+// FIX (laporan user "diklik tidak bereaksi"): SEBELUMNYA tombol ini HANYA disisipkan di
+// cabang kuota positif (di bawah) -- baris owner yang kuotanya SUDAH minus (cabang
+// sisa<0 di atas, mis. "mas sihab" di screenshot user) tidak punya tombol sama sekali,
+// jadi klik di teks merahnya wajar tidak bereaksi (tidak ada elemen data-action di sana).
+// Fix: tombol sekarang disisipkan di KEDUA cabang -- applyQuotaToRow() sendiri sudah
+// aman dipanggil kapan saja (cap<=0 -> toast "kuota sudah habis", bukan crash/diam).
+return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+quotaBtn+'</div>';
 },
 // _updateOwnerQuotaDisplay(i) -- SESI 505 (mirror PERSIS InvestmentUI._updateOwnerQuotaDisplay(),
 // S494). Update HANYA elemen #assetOwnerKuota{i} tiap ketik porsi/nominal, TANPA render ulang
@@ -876,6 +883,21 @@ if(!(nilai>0)){if(typeof toast==='function')toast('⚠️ Isi dulu "Estimasi Nil
 const cap=Aset._ownerQuotaPorsiCap(i);
 if(cap===null){if(typeof toast==='function')toast('⚠️ Owner ini belum punya pokok titipan tercatat');return;}
 if(cap<=0){if(typeof toast==='function')toast('⚠️ Kuota sisa owner ini sudah habis / ruang porsi sudah penuh');return;}
+// FIX (laporan user "field Nominal/Porsi tidak bertambah/berkurang stlh klik"): SEBELUM fix
+// ini, toast SELALU bilang "✅ Porsi diisi..." walau `cap` hasil hitung PERSIS SAMA dgn porsi
+// yang sudah ada (kasus wajar: baris itu sudah memakai hampir seluruh kuotanya, sisa cuma
+// beberapa rupiah -- lihat komentar _ownerQuotaPorsiCap() di atas, `cap` = total kuota
+// TERMASUK yang sudah dialokasikan baris ini, bukan cuma sisa mentahnya). Field memang TIDAK
+// berubah scr visual (bukan bug render -- 100% REUSE _renderOwnersList() yang sama dipakai
+// ketik manual), tapi toast sukses yang tetap muncul bikin user kira ada yg tidak beres.
+// Fix: bandingkan cap dgn porsi SEBELUMNYA -- kalau bedanya kurang dari presisi tampilan
+// (0.0001%, sama toleransi pembulatan _ownerQuotaPorsiCap()), kasih toast beda yang jujur
+// menjelaskan kenapa tidak ada perubahan, TIDAK menulis ulang draft/render (0 efek samping).
+const prevPorsi=typeof draft[i].porsi==='number'&&isFinite(draft[i].porsi)?draft[i].porsi:0;
+if(Math.abs(cap-prevPorsi)<0.0001){
+if(typeof toast==='function')toast('ℹ️ Porsi baris ini sudah memakai hampir seluruh kuota titipannya -- sisa yang bisa ditambahkan cuma sedikit sekali, jadi angkanya tidak berubah');
+return;
+}
 draft[i].porsi=cap;
 draft[i]._touched=true;
 draft[i]._autoFilled=true;

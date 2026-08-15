@@ -222,7 +222,82 @@ const InvestmentUI = {
     InvestmentUI._ownersDraft[i].ownerId = val;
     InvestmentUI._ownersDraft[i].ownerName = entry ? entry.name : InvestmentUI._ownersDraft[i].ownerName;
     InvestmentUI._ownersDraft[i]._creatingNew = false;
+    // SESI AF2 (fitur "Auto-fill dari Kuota Sisa Titipan", mirror PERSIS Aset.onOwnerSelectChange()
+    // — lihat komentarnya): owner dipilih & baris masih kosong (porsi<=0, belum _touched) -> isi
+    // otomatis Porsi (%) (& Nominal (Rp) ikut lewat _renderOwnersList) dari sisa kuota titipan
+    // owner tsb, dibatasi supaya tidak mendorong total porsi lewat 100%. Tetap bisa diedit manual.
+    if (!InvestmentUI._ownersDraft[i]._touched) {
+      const curPorsi = typeof InvestmentUI._ownersDraft[i].porsi === 'number' && isFinite(InvestmentUI._ownersDraft[i].porsi) ? InvestmentUI._ownersDraft[i].porsi : 0;
+      if (curPorsi <= 0) {
+        const cap = InvestmentUI._ownerQuotaPorsiCap(i);
+        if (typeof cap === 'number' && cap > 0) {
+          InvestmentUI._ownersDraft[i].porsi = cap;
+          InvestmentUI._ownersDraft[i]._touched = true;
+          InvestmentUI._ownersDraft[i]._autoFilled = true;
+          if (typeof toast === 'function') toast('💡 Porsi diisi otomatis dari sisa kuota titipan (' + cap + '%) — bisa diedit manual');
+        }
+      }
+    }
     InvestmentUI._renderOwnersList();
+  },
+
+  // _ownerQuotaPorsiCap(i) — SESI AF2, mirror PERSIS Aset._ownerQuotaPorsiCap(). Hitung Porsi (%)
+  // maksimum yang aman diisi otomatis utk baris owner ke-i dari sisa kuota titipannya, TANPA
+  // mendorong total porsi lewat 100%. 100% REUSE rumus sisa kuota yang sama persis dgn
+  // _ownerQuotaText() (draftNominal baris ini dianggap 0 krn baris belum diisi), basis Rp dari
+  // _ownersHoldingValue() (Investment.holdingValue(), sama dgn _ownerNominalValue()). Balikin null
+  // kalau tidak berlaku, 0 kalau kuota sisa <=0 atau ruang porsi (100% - baris lain) sudah habis.
+  _ownerQuotaPorsiCap(i) {
+    const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
+    const o = draft[i];
+    if (!o || o.isSelf || !o.ownerId) return null;
+    if (typeof DanaTitipanPortfolioAPI === 'undefined') return null;
+    const commit = DanaTitipanPortfolioAPI.getCommitments().find((c) => c && c.ownerId === o.ownerId);
+    if (!commit || !isFinite(commit.principalAmount)) return null;
+    const value = InvestmentUI._ownersHoldingValue();
+    if (!(value > 0)) return null;
+    const principal = Number(commit.principalAmount);
+    const holding = InvestmentUI._ownersModalHolding;
+    const holdingId = holding ? holding.id : null;
+    const excluding = DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId, holdingId);
+    const projection = (typeof DanaTitipanPortfolioAPI.build === 'function') ? DanaTitipanPortfolioAPI.build() : null;
+    const ownerBucket = (projection && Array.isArray(projection.owners)) ? projection.owners.find((ow) => ow && ow.ownerId === o.ownerId) : null;
+    const usedTotal = ownerBucket ? (ownerBucket.usedTotal || 0) : 0;
+    const linkedExpenseTotal = ownerBucket ? (ownerBucket.linkedExpenseTotal || 0) : 0;
+    const sisaRp = principal - excluding - usedTotal - linkedExpenseTotal;
+    if (!(sisaRp > 0)) return 0;
+    const quotaPorsi = sisaRp / value * 100;
+    const otherTotal = draft.reduce((sum, row, k) => k === i ? sum : sum + (typeof row.porsi === 'number' && isFinite(row.porsi) ? row.porsi : 0), 0);
+    const remainingPorsi = Math.max(0, 100 - otherTotal);
+    const capped = Math.min(quotaPorsi, remainingPorsi);
+    return Math.round(Math.max(0, capped) * 10000) / 10000;
+  },
+
+  // applyQuotaToRow(i) — SESI AF2, mirror PERSIS Aset.applyQuotaToRow(). Tombol manual "🔄 Isi dari
+  // kuota sisa" di baris kuota tiap owner — bisa dipanggil kapan saja utk menimpa ulang porsi baris
+  // ke nilai kuota-sisa terkini, TIDAK dicek _touched/curPorsi<=0 (beda dgn auto-fill pasif di atas).
+  applyQuotaToRow(i) {
+    const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
+    if (!draft[i]) return;
+    const value = InvestmentUI._ownersHoldingValue();
+    if (!(value > 0)) { if (typeof toast === 'function') toast('⚠️ Nilai holding ini belum tersedia, tidak bisa isi otomatis dari kuota'); return; }
+    const cap = InvestmentUI._ownerQuotaPorsiCap(i);
+    if (cap === null) { if (typeof toast === 'function') toast('⚠️ Owner ini belum punya pokok titipan tercatat'); return; }
+    if (cap <= 0) { if (typeof toast === 'function') toast('⚠️ Kuota sisa owner ini sudah habis / ruang porsi sudah penuh'); return; }
+    // FIX (mirror Aset.applyQuotaToRow(), laporan user "field tidak bertambah/berkurang"):
+    // kalau cap hasil hitung praktis SAMA dgn porsi yang sudah ada (baris sudah memakai
+    // hampir seluruh kuotanya), jangan tetap kasih toast sukses yang menyesatkan -- kasih
+    // toast jujur, 0 tulis draft/render.
+    const prevPorsi = typeof draft[i].porsi === 'number' && isFinite(draft[i].porsi) ? draft[i].porsi : 0;
+    if (Math.abs(cap - prevPorsi) < 0.0001) {
+      if (typeof toast === 'function') toast('ℹ️ Porsi baris ini sudah memakai hampir seluruh kuota titipannya -- sisa yang bisa ditambahkan cuma sedikit sekali, jadi angkanya tidak berubah');
+      return;
+    }
+    draft[i].porsi = cap;
+    draft[i]._touched = true;
+    draft[i]._autoFilled = true;
+    InvestmentUI._renderOwnersList();
+    if (typeof toast === 'function') toast('✅ Porsi diisi dari sisa kuota titipan (' + cap + '%)');
   },
 
   // _ownerQuotaText(o) — SESI 494 (Gate 2, PLAN-owner-registry-multi-session.md, dikonfirmasi:
@@ -264,7 +339,7 @@ const InvestmentUI = {
   // TIDAK PERNAH masuk formula ini — HANYA `principalAmount`/`allocatedPrincipal`
   // (lewat `allocatedExcluding()`)/`usedTotal`/`linkedExpenseTotal` yang boleh
   // mempengaruhi "Kuota sisa".
-  _ownerQuotaText(o) {
+  _ownerQuotaText(o, i) {
     if (!o || o.isSelf || !o.ownerId) return '';
     if (typeof DanaTitipanPortfolioAPI === 'undefined') return '';
     const commit = DanaTitipanPortfolioAPI.getCommitments().find((c) => c && c.ownerId === o.ownerId);
@@ -286,10 +361,17 @@ const InvestmentUI = {
     const draftNominal = holdingCost * (porsiNum / 100);
     const sisa = principal - excluding - usedTotal - linkedExpenseTotal - draftNominal;
     const money = (typeof fmtFull === 'function') ? fmtFull : ((typeof fmt === 'function') ? fmt : (n) => 'Rp ' + Math.round(n || 0));
+    const btnIdx = typeof i === 'number' ? i : (Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft.indexOf(o) : -1);
+    const quotaBtn = '<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="InvestmentUI.applyQuotaToRow" data-args=\'[' + btnIdx + ']\'>🔄 Isi dari kuota sisa</button>';
     if (sisa < 0) {
-      return '<div class="u-fs11 u-mt2"><span class="u-fw700 red">⚠️ Kuota sisa: ' + money(sisa) + ' (melebihi pokok dikomit)</span></div>';
+      // FIX (mirror Aset._ownerQuotaText(), laporan user "diklik tidak bereaksi"): tombol
+      // sekarang disisipkan di cabang minus JUGA -- sebelumnya cabang ini tidak punya tombol
+      // sama sekali, jadi klik di teks merahnya wajar tidak bereaksi.
+      return '<div class="u-fs11 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap"><span class="u-fw700 red">⚠️ Kuota sisa: ' + money(sisa) + ' (melebihi pokok dikomit)</span>' + quotaBtn + '</div>';
     }
-    return '<div class="u-fs11 u-t2 u-mt2">💰 Kuota sisa: <span class="u-fw700">' + money(sisa) + '</span></div>';
+    // SESI AF2: sisipkan tombol "🔄 Isi dari kuota sisa" — pemicu manual applyQuotaToRow(),
+    // mirror PERSIS Aset._ownerQuotaText().
+    return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">' + money(sisa) + '</span>' + quotaBtn + '</div>';
   },
 
   // _updateOwnerQuotaDisplay(i) — SESI 494. Update HANYA elemen #investOwnerKuota{i} tiap ketik
@@ -301,7 +383,7 @@ const InvestmentUI = {
     if (!el) return;
     const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
     if (!draft[i]) return;
-    el.innerHTML = InvestmentUI._ownerQuotaText(draft[i]);
+    el.innerHTML = InvestmentUI._ownerQuotaText(draft[i], i);
   },
 
   // _ownersHoldingValue() — SESI 552. Basis Rp tunggal dipakai konversi porsi%<->nominal Rp di
@@ -370,7 +452,7 @@ const InvestmentUI = {
         + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'
         + '<input type="checkbox" style="width:14px;height:14px"' + (o.isSelf ? ' checked' : '') + ' onchange="InvestmentUI.onOwnerIsSelfToggle(' + i + ',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'
         + '</label>'
-        + (o.isSelf ? '' : ('<div id="investOwnerKuota' + i + '">' + InvestmentUI._ownerQuotaText(o) + '</div>'))
+        + (o.isSelf ? '' : ('<div id="investOwnerKuota' + i + '">' + InvestmentUI._ownerQuotaText(o, i) + '</div>'))
         + '</div>';
     }).join('');
     InvestmentUI.updateOwnersTotal();
