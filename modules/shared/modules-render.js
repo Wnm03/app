@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s613-owner-registry-mandatory-lookup';
+const MODULE_RENDER_VERSION='s617-owner-registry-mandatory-lookup';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -77,6 +77,19 @@ let accGridList=D.accounts;
 if(accOwnFilterVal&&accOwnFilterVal!=='ALL'&&typeof OwnershipEngine!=='undefined'){
 const accOwnFiltered=OwnershipEngine.filterByType(accGridList,accOwnFilterVal);
 if(accOwnFiltered.ok)accGridList=accOwnFiltered.items;
+// Filter Kepemilikan "1 SOT" (patch delacc-titipan-debt susulan): filterByType()
+// di atas MURNI baca acc.ownership (badge manual) apa adanya -- 100% REUSE apa
+// adanya (0 logic filter baru di engine generik itu, dipakai domain lain juga,
+// mis. Kendaraan baris ~1542). Fix HANYA di titik pakai akun ini: kalau user
+// pilih filter "SELF" (Milik Sendiri), akun yang porsi REAL-nya non-SELF tapi
+// badge-nya masih DEFAULT (belum diklasifikasi -- lihat resolveAccOwnershipBadgeState()
+// di akun.js & ownBadgeState di bawah) DIKELUARKAN dari hasil filter SELF --
+// menampilkannya sebagai "Milik Sendiri" menyesatkan padahal porsi aslinya
+// bukan 100% milik sendiri. Guard typeof resolveAccOwnershipBadgeState aman
+// kalau akun.js belum dimuat (0 filter berubah, fallback ke perilaku lama).
+if(accOwnFilterVal==='SELF'&&typeof resolveAccOwnershipBadgeState==='function'){
+accGridList=accGridList.filter(a=>!resolveAccOwnershipBadgeState(a.id).mismatch);
+}
 }
 // Gap Badge Titipan (2026-08-14 sesi lanjutan #2, Rekomendasi #3,
 // PATCH-NOTES-akun-dana-titipan-sync.md §5): 100% REUSE
@@ -127,7 +140,19 @@ const jenisBadge=jenisLabel?` <span class="u-fs12t2">${escapeHtml(jenisLabel)}</
 // resolve/hitung ulang yang duplikat. Data lama tanpa field ownership: resolve() fallback
 // ke SELF/DEFAULT (backward compatible, sama seperti S232/S233).
 const ownResolved=(typeof OwnershipEngine!=='undefined')?OwnershipEngine.resolve(a):null;
-const ownText=ownResolved?` <span class="acc-chip">${escapeHtml(OwnershipEngine.label(ownResolved.type))}</span>`:'';
+// badgeState (patch delacc-titipan-debt susulan, "1 SOT badge Kepemilikan &
+// Filter vs porsi Holding/acc.owners") -- 100% REUSE resolveAccOwnershipBadgeState()
+// (akun.js) baru, 0 rumus baru di sini. Kalau porsi REAL akun ini (Holding
+// tertaut/acc.owners eksplisit) non-SELF tapi badge "Kepemilikan" masih DEFAULT
+// (belum pernah diklasifikasi manual) -- badge chip generik "Milik Sendiri" yang
+// SEBELUM ini tampil itu MENYESATKAN (porsi aslinya bukan 100% milik sendiri).
+// Ganti jadi chip peringatan eksplisit (idiom sama titipanGapLine di bawah),
+// TIDAK auto-tebak tipe spesifik (INVESTOR/CUSTOMER/THIRD_PARTY/FAMILY) karena
+// porsi cuma punya nama pemilik, bukan tipe semantik -- keputusan tipe akhir
+// tetap manual lewat dropdown "Kepemilikan" di modal Edit Akun.
+const ownBadgeState=(typeof resolveAccOwnershipBadgeState==='function')?resolveAccOwnershipBadgeState(a.id):null;
+const ownMismatch=!!(ownBadgeState&&ownBadgeState.mismatch);
+const ownText=ownMismatch?' <span class="acc-chip" style="color:var(--accent4)">⚠️ Belum diklasifikasi</span>':(ownResolved?` <span class="acc-chip">${escapeHtml(OwnershipEngine.label(ownResolved.type))}</span>`:'');
 const ownDetail=ownResolved?`<div class="u-fs10 u-t2">Ownership<br>${escapeHtml(ownResolved.type)}</div>`:'';
 // investDetail (S308) -- field DINAMIS hasil scan layar Detail Portofolio Bibit (Modal
 // Investasi/Keuntungan/Harga Beli/Jumlah Unit, lihat UniversalScan.importSelected() di
@@ -175,6 +200,19 @@ if(!res||!res.ok||!res.owners.length)return'';
 const porsiTxt=res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
 return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
 })():'';
+// standalonePorsiLine (patch delacc-titipan-debt susulan) -- SEBELUM ini,
+// akun BERDIRI-SENDIRI (bukan `linked` ke Aset/Holding, mis. porsi diisi lewat
+// modal "⚖️ Atur Porsi Kepemilikan Akun" / AccOwners.save(), akun.js) TIDAK
+// PERNAH dapat baris "👥 Porsi:" sama sekali -- linkedPorsiLine di atas cuma
+// isi utk akun `linked`. Fallback ini 100% REUSE ownBadgeState.owners (sumber
+// 'account' = getAccOwnersRaw(), sudah dihitung di atas utk badge) -- 0 rumus
+// porsi baru, cuma tampilkan apa yang sudah dihitung. Guard `!linkedPorsiLine`
+// jaga 0 duplikasi kalau akun ini ternyata JUGA linked (linkedPorsiLine sudah
+// mengisi lebih dulu, prioritas Holding/Aset tetap menang).
+const standalonePorsiLine=(!linkedPorsiLine&&ownBadgeState&&ownBadgeState.source==='account'&&ownBadgeState.owners.length)?(()=>{
+const porsiTxt=ownBadgeState.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
+})():'';
 const linkedTxHint=linked?'<div class="u-fs10 u-t2" style="margin-top:2px">📜 Ketuk kartu untuk riwayat transaksi modal</div>':'';
 // titipanGapLine (sesi lanjutan #2, Rekomendasi #3) -- murni informasi, 0
 // tombol/aksi baru, 0 mutasi ke D. Hanya tampil utk akun berdiri-sendiri
@@ -189,6 +227,7 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       ${ownDetail}
       ${invDetailLine}
       ${linkedPorsiLine}
+      ${standalonePorsiLine}
       ${linkedTxHint}
       ${titipanGapLine}
       <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>
