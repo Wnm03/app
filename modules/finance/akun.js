@@ -515,6 +515,15 @@ save();renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList
 const AccOwners = {
 _draft: [],
 _accId: null,
+// _rebalancePending -- FITUR "Auto-Rebalance Porsi Pemilik" (Agustus 2026, permintaan user,
+// lanjutan wiring yang sudah dipasang di Aset.openOwnersModal()/aset.js): {editedIndex,method,
+// manualIndex} kalau panel penyesuaian SEDANG tampil, null kalau tidak. 100% REUSE
+// calculateRebalance() (modules-calc.js, SSOT sama yang dipakai Aset) -- 0 rumus baru di sini,
+// method2 di bawah (_checkRebalanceTrigger/_renderRebalancePanel/setRebalanceMethod/
+// setRebalanceManualOwner/applyRebalance/cancelRebalance) murni UI/state, copy pola PERSIS
+// Aset.* (aset.js) dgn id elemen & radio name diganti versi Akun supaya tidak bentrok kalau
+// kedua modal somehow tampil berurutan di DOM yang sama.
+_rebalancePending: null,
 // open() — baca akun yang SEDANG diedit (via editAccIdx, akun.js) & isi draft dari getAccOwners()
 // (S574-A, toleran akun lama tanpa owners[]). Akun belum tersimpan (mode Tambah, editAccIdx===-1)
 // -> tolak & toast, sama pola Aset.addOwnerRow()/saveOwners() (guard "simpan dulu").
@@ -543,8 +552,18 @@ AccOwners._accId=acc.id;
 document.getElementById('accountOwnersAccName').textContent='🏦 '+(acc.emoji||'💰')+' '+acc.name;
 const res=getAccOwners(acc.id);
 AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+AccOwners._rebalancePending=null;
 AccOwners._renderList();
 openModal('accountOwnersModal');
+// MIGRASI data lama (Agustus 2026, sesi lanjutan setelah Aset & Investasi -- lihat komentar
+// identik di aset.js/investasi-view.js): akun yang sudah overflow >100% SEBELUM fitur
+// Auto-Rebalance ini ada tidak akan pernah memicu _checkRebalanceTrigger() lewat ketikan user
+// kalau user tidak menyentuh field porsi sama sekali sesudah buka modal -- panggil manual di
+// sini pakai baris TERAKHIR draft sbg "editedIndex" (hasil kalkulasi tidak bergantung baris
+// mana yang dianggap "diedit" utk kasus migrasi ini) supaya panel penyesuaian otomatis tampil
+// begitu modal dibuka, bukan cuma saat user mulai mengetik. PURE (tidak menulis draft), aman
+// dipanggil di sini.
+AccOwners._checkRebalanceTrigger(AccOwners._draft.length-1);
 },
 // _renderList() — render ulang #accountOwnersList dari AccOwners._draft. Dipanggil tiap baris
 // ditambah/dihapus (addRow/removeRow), TIDAK dipanggil tiap karakter diketik (sama disiplin
@@ -572,6 +591,9 @@ return '<div style="margin-bottom:8px">'+
 '</div>';
 }).join('');
 AccOwners.updateTotal();
+// Panel "⚖️ Porsi melebihi 100%" dirender ulang tiap kali list ini di-render ulang penuh --
+// lihat _renderRebalancePanel() (sama disiplin _renderOwnersList()/aset.js).
+AccOwners._renderRebalancePanel();
 },
 // updateTotal() — hitung ulang & tampilkan total porsi AccOwners._draft di #accountOwnersTotalBox,
 // warna hijau kalau pas 100% / merah kalau belum (100% reuse MultiOwnerEngine.totalPorsi()/
@@ -605,6 +627,10 @@ AccOwners._renderList();
 },
 removeRow(i){
 AccOwners._draft.splice(i,1);
+// Index baris bisa bergeser setelah hapus -- buang panel rebalance yang sedang tampil (kalau
+// ada) sama pola Aset.removeOwnerRow(), _renderList() di bawah akan render ulang panel dari
+// kondisi bersih (_rebalancePending null) via _renderRebalancePanel().
+AccOwners._rebalancePending=null;
 AccOwners._renderList();
 },
 // onNameInput(i,val)/onPorsiInput(i,val)/onIsSelfToggle(i,checked) — tulis ketikan/toggle user ke
@@ -620,6 +646,11 @@ if(!AccOwners._draft[i])return;
 const n=parseFloat(val);
 AccOwners._draft[i].porsi=isFinite(n)?n:0;
 AccOwners.updateTotal();
+// FITUR "Auto-Rebalance Porsi Pemilik" (Agustus 2026): kalau ketikan ini bikin total porsi
+// >100% DAN ada porsi pemilik lain yang bisa dikurangi, tawarkan penyesuaian (proporsional/dari
+// terbesar/manual) lewat panel di bawah list -- TIDAK pernah mengubah porsi pemilik lain diam2,
+// lihat _checkRebalanceTrigger()/_renderRebalancePanel(). Sama persis Aset.onOwnerPorsiInput().
+AccOwners._checkRebalanceTrigger(i);
 },
 onIsSelfToggle(i,checked){
 if(!AccOwners._draft[i])return;
@@ -732,7 +763,171 @@ resetDraft(){
 if(!AccOwners._accId){return;}
 const res=getAccOwners(AccOwners._accId);
 AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+AccOwners._rebalancePending=null;
 AccOwners._renderList();
+// MIGRASI data lama (Agustus 2026) -- sama alasan open() di atas: draft dimuat ulang dari data
+// tersimpan bisa saja masih overflow >100% (data lama), jadi panel penyesuaian perlu dicek
+// ulang di sini juga, bukan cuma saat modal pertama dibuka.
+AccOwners._checkRebalanceTrigger(AccOwners._draft.length-1);
+},
+// ============================================================================
+// FITUR "Auto-Rebalance Porsi Pemilik" (Agustus 2026, permintaan user) -- wiring UI modal
+// Akun (accountOwnersModal), sesi lanjutan setelah domain Aset (aset.js). Rumus murni 100%
+// REUSE calculateRebalance() (modules-calc.js, SSOT yang sama dipakai Aset & disiapkan utk
+// InvestmentUI juga) -- 0 rumus baru ditulis di sini, method2 di bawah PURE UI/state di
+// sekitarnya, copy pola PERSIS Aset._checkRebalanceTrigger()/_renderRebalancePanel()/
+// setRebalanceMethod()/setRebalanceManualOwner()/applyRebalance()/cancelRebalance() (aset.js)
+// dgn penyesuaian: id elemen 'assetOwners*' -> 'accountOwners*', radio name
+// 'assetRebalanceMethod' -> 'accountRebalanceMethod', & TIDAK ada sinkronisasi field Nominal
+// (Rp) (akun tidak punya field nilai dasar seperti aset -- AccOwners._draft cuma
+// {ownerId,ownerName,porsi,isSelf}, tidak ada _touched dipakai di tempat lain sejauh ini tapi
+// tetap di-set konsisten dgn Aset supaya draft shape sama kalau nanti dibutuhkan).
+// ============================================================================
+// _checkRebalanceTrigger(editedIndex) -- dipanggil dari onPorsiInput() tiap ketik. Set/reset
+// AccOwners._rebalancePending berdasarkan kondisi total porsi draft saat ini, TANPA pernah
+// menulis ke draft[].porsi -- murni menentukan APAKAH panel penyesuaian perlu ditampilkan (&
+// utk baris mana), penulisan porsi beneran hanya lewat applyRebalance().
+_checkRebalanceTrigger(editedIndex){
+if(typeof MultiOwnerEngine==='undefined'||typeof calculateRebalance!=='function')return;
+const draft=Array.isArray(AccOwners._draft)?AccOwners._draft:[];
+if(!draft[editedIndex])return;
+const total=MultiOwnerEngine.totalPorsi(draft);
+// Total masih <=100% -- tidak ada yang perlu dikurangi, bersihkan pending kalau ada (mis. user
+// baru saja mengurangi lagi angka yang tadinya bikin overflow).
+if(total<=100.0001){
+if(AccOwners._rebalancePending){AccOwners._rebalancePending=null;AccOwners._renderRebalancePanel();}
+return;
+}
+let oldTotal=0;
+draft.forEach((o,k)=>{if(k===editedIndex||!o)return;oldTotal+=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;});
+// Overflow tapi TIDAK ADA porsi pemilik lain yang bisa dikurangi (mis. cuma 1 baris terisi &
+// user isi angka >100% sendiri) -- bukan kasus rebalance, biarkan updateTotal() (sudah
+// dipanggil sebelum ini) yang tampilkan peringatan "lebih X%".
+if(oldTotal<=0){
+if(AccOwners._rebalancePending){AccOwners._rebalancePending=null;AccOwners._renderRebalancePanel();}
+return;
+}
+if(!AccOwners._rebalancePending||AccOwners._rebalancePending.editedIndex!==editedIndex){
+AccOwners._rebalancePending={editedIndex,method:'proporsional',manualIndex:null};
+}
+AccOwners._renderRebalancePanel();
+},
+// _rebalanceOwnerLabel(draft,i) -- nama tampilan 1 baris pemilik utk preview panel, fallback
+// "Pemilik ke-N" (1-indexed) kalau nama masih kosong (baris baru yang belum diisi nama).
+_rebalanceOwnerLabel(draft,i){
+const nm=draft[i]&&typeof draft[i].ownerName==='string'?draft[i].ownerName.trim():'';
+return nm?nm:('Pemilik ke-'+(i+1));
+},
+// _renderRebalancePanel() -- SATU titik render panel "⚖️ Porsi melebihi 100%" (pilihan metode
+// + preview penyesuaian + tombol Terapkan/Batal), dipasang sbg elemen sibling TEPAT SETELAH
+// #accountOwnersList (dibuat sekali via insertAdjacentElement, dipakai ulang di render
+// berikutnya) supaya tidak perlu mengubah markup modal (modals.js) sama sekali. innerHTML
+// dikosongkan kalau AccOwners._rebalancePending null (tidak ada apa2 utk ditampilkan).
+_renderRebalancePanel(){
+const listBox=document.getElementById('accountOwnersList');
+if(!listBox)return;
+let box=document.getElementById('accountOwnersRebalanceBox');
+if(!box){
+box=document.createElement('div');
+box.id='accountOwnersRebalanceBox';
+listBox.insertAdjacentElement('afterend',box);
+}
+const pending=AccOwners._rebalancePending;
+if(!pending){box.innerHTML='';return;}
+if(typeof calculateRebalance!=='function'){box.innerHTML='';return;}
+const draft=Array.isArray(AccOwners._draft)?AccOwners._draft:[];
+const calc=calculateRebalance(draft,pending.editedIndex,pending.method,pending.manualIndex);
+let body='';
+if(!calc||!calc.ok){
+const errMsg=calc&&calc.error==='manual_owner_insufficient'
+?('Porsi pemilik terpilih tidak cukup (kurang '+calc.shortfall+'%) -- pilih pemilik lain atau ganti metode.')
+:(calc&&calc.error==='manual_owner_not_selected'?'Pilih dulu pemilik yang porsinya mau dikurangi.':'Penyesuaian tidak bisa diterapkan -- coba metode lain.');
+body='<div style="font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:10px;line-height:1.5">⚠️ '+escapeHtml(errMsg)+'</div>';
+}else{
+body='<div style="font-size:12px;line-height:1.6;margin-bottom:10px">'+
+calc.adjustments.map((a)=>{
+const label=AccOwners._rebalanceOwnerLabel(draft,a.index);
+const changed=Math.abs(a.to-a.from)>0.0001;
+return '<div style="display:flex;justify-content:space-between;gap:8px'+(changed?'':';opacity:.6')+'"><span>'+escapeHtml(label)+'</span><span style="font-weight:600">'+a.from+'% → '+a.to+'%</span></div>';
+}).join('')+
+'<div style="display:flex;justify-content:space-between;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);font-weight:700;color:var(--accent3)"><span>Total</span><span>'+calc.totalAfter+'%</span></div>'+
+'</div>';
+}
+const eligibleOthers=draft.map((o,k)=>({o,k})).filter((x)=>x.k!==pending.editedIndex&&x.o&&typeof x.o.porsi==='number'&&x.o.porsi>0);
+const manualSelectHtml=pending.method==='manual'?(
+'<select class="fs u-mb10" onchange="AccOwners.setRebalanceManualOwner(this.value)">'+
+'<option value="">— Pilih pemilik —</option>'+
+eligibleOthers.map((x)=>'<option value="'+x.k+'"'+(pending.manualIndex===x.k?' selected':'')+'>'+escapeHtml(AccOwners._rebalanceOwnerLabel(draft,x.k))+' ('+x.o.porsi+'%)</option>').join('')+
+'</select>'
+):'';
+box.innerHTML=
+'<div style="background:var(--accent2-soft);border:1px solid var(--accent2);border-radius:12px;padding:12px 14px;margin-bottom:10px">'+
+'<div style="font-size:12.5px;font-weight:700;color:var(--accent2);margin-bottom:4px">⚖️ Porsi melebihi 100%</div>'+
+'<div style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:10px">Porsi pemilik lama akan disesuaikan otomatis agar total kembali menjadi 100%.</div>'+
+'<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cara menyesuaikan porsi</div>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Proporsional</label>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Kurangi dari pemilik terbesar</label>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Pilih pemilik manual</label>'+
+manualSelectHtml+
+'<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Penyesuaian porsi</div>'+
+body+
+'<div style="display:flex;gap:8px;margin-top:4px">'+
+'<button type="button" class="btn btn-primary u-flex1" style="padding:11px" data-action="AccOwners.applyRebalance"'+((!calc||!calc.ok)?' disabled':'')+'>✅ Terapkan Penyesuaian</button>'+
+'<button type="button" class="btn btn-ghost u-flex1" style="padding:11px" data-action="AccOwners.cancelRebalance">Batal</button>'+
+'</div>'+
+'</div>';
+},
+// setRebalanceMethod(method) -- ganti metode penyesuaian di panel yang sedang tampil & render
+// ulang preview-nya. Pindah ke 'manual' otomatis pilih kandidat pertama (porsi terbesar dulu,
+// pola sama default "largest") supaya preview langsung ada isinya tanpa user harus pilih dulu
+// (tetap bisa diganti lewat dropdown).
+setRebalanceMethod(method){
+if(!AccOwners._rebalancePending)return;
+AccOwners._rebalancePending.method=method;
+if(method==='manual'&&AccOwners._rebalancePending.manualIndex==null){
+const draft=Array.isArray(AccOwners._draft)?AccOwners._draft:[];
+const editedIndex=AccOwners._rebalancePending.editedIndex;
+let best=-1,bestPorsi=-1;
+draft.forEach((o,k)=>{if(k===editedIndex||!o)return;const p=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;if(p>bestPorsi){bestPorsi=p;best=k;}});
+AccOwners._rebalancePending.manualIndex=best>=0?best:null;
+}
+if(method!=='manual')AccOwners._rebalancePending.manualIndex=null;
+AccOwners._renderRebalancePanel();
+},
+// setRebalanceManualOwner(val) -- dipanggil dari dropdown pemilih pemilik manual.
+setRebalanceManualOwner(val){
+if(!AccOwners._rebalancePending)return;
+const idx=parseInt(val,10);
+AccOwners._rebalancePending.manualIndex=isFinite(idx)?idx:null;
+AccOwners._renderRebalancePanel();
+},
+// applyRebalance() -- tulis hasil calculateRebalance() (metode & pilihan manual yang SEDANG
+// aktif di panel) ke AccOwners._draft, lalu render ulang list PENUH (aman -- ini aksi diskrit
+// dari tap tombol, bukan tiap ketikan, jadi tidak ada masalah fokus/kursor input yang hilang
+// sama seperti addRow/removeRow). Baris yang porsinya berubah ditandai _touched (konsisten shape
+// draft dgn Aset, walau field ini belum dibaca di tempat lain pada AccOwners).
+applyRebalance(){
+const pending=AccOwners._rebalancePending;
+if(!pending)return;
+if(typeof calculateRebalance!=='function'){toast('⚠️ Fitur penyesuaian porsi belum siap dimuat');return;}
+const draft=Array.isArray(AccOwners._draft)?AccOwners._draft:[];
+const calc=calculateRebalance(draft,pending.editedIndex,pending.method,pending.manualIndex);
+if(!calc||!calc.ok){toast('⚠️ Penyesuaian tidak bisa diterapkan, coba metode lain');return;}
+calc.adjustments.forEach((a)=>{
+if(!draft[a.index])return;
+draft[a.index].porsi=a.to;
+draft[a.index]._touched=true;
+});
+AccOwners._rebalancePending=null;
+AccOwners._renderList();
+toast('✅ Porsi pemilik lama disesuaikan otomatis');
+},
+// cancelRebalance() -- tutup panel TANPA mengubah draft sama sekali (porsi yang baru diketik
+// user tetap seperti apa adanya, termasuk kalau totalnya masih >100% -- total box di atas akan
+// terus tampilkan peringatan merah sampai user edit ulang sendiri).
+cancelRebalance(){
+AccOwners._rebalancePending=null;
+AccOwners._renderRebalancePanel();
 },
 };
 
