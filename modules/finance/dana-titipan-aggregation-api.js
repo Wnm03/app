@@ -439,6 +439,34 @@ _linkedExpenseTotalForOwner(o) {
     total += ownerExpenseTotal;
     accountNames.push(accountLabel || 'Akun');
   });
+  // SESI S620 (laporan user -- "Uang motor", owner Dana Titipan yang HANYA
+  // punya Pokok Dikomit ke akun BRI multi-owner, 0 Holding/Aset sama
+  // sekali -- lihat catatan lengkap di `resolveTxOwnerSplitForAccount()`,
+  // filter-laporan.js): loop di atas HANYA menemukan akun lewat `o.holdings[]`
+  // -- owner tanpa holding sama sekali (kasus ini) tidak pernah membuat
+  // loop itu berjalan, jadi akun BRI-nya tidak pernah dicek walau
+  // `resolveTxOwnerSplitForAccount()` (setelah fix sesi ini) sekarang BISA
+  // mengenalinya lewat fallback tier-3 `getAccOwnersEffective()`. FIX: loop
+  // kedua ini scan `D.accounts` LANGSUNG (bukan lewat holdings) -- REUSE
+  // 100% dedup (`seenAcc`, lanjutan set yang sama dari loop pertama supaya
+  // akun yang sudah dihitung lewat holding TIDAK dihitung dobel di sini),
+  // filter expense, & guard anti-doublecount `!t.titipanLinkId` yang SAMA
+  // PERSIS loop pertama -- 0 rumus baru.
+  if (typeof D !== 'undefined' && Array.isArray(D.accounts)) {
+    D.accounts.forEach((acc) => {
+      if (!acc || !acc.id || seenAcc.has(String(acc.id))) return;
+      const resolved = resolveTxOwnerSplitForAccount(acc.id);
+      if (!resolved) return;
+      const idx = resolved.owners.findIndex((ow) => ow && ow.ownerId === o.ownerId);
+      if (idx < 0) return;
+      seenAcc.add(String(acc.id));
+      const ownerExpenseTotal = D.transactions
+        .filter((t) => t && t.type === 'expense' && !t.titipanLinkId && String(t.accountId) === String(acc.id) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
+        .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+      total += ownerExpenseTotal;
+      accountNames.push(acc.name || 'Akun');
+    });
+  }
   return { total, accountNames };
 },
 

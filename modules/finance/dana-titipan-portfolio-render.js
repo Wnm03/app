@@ -220,6 +220,29 @@ const DanaTitipanPortfolioPresenter = {
       total += ownerExpenseTotal;
       accountNames.push(accountLabel || 'Akun');
     });
+    // SESI S620 -- twin fix dari `_linkedExpenseTotalForOwner()`
+    // (dana-titipan-aggregation-api.js, catatan lengkap di sana & di
+    // `resolveTxOwnerSplitForAccount()`, filter-laporan.js), WAJIB diubah
+    // bersamaan per konvensi file ini ("kedua fungsi 100% sama formulanya").
+    // Loop kedua ini scan `D.accounts` langsung utk owner yang 0 holding
+    // sama sekali (mis. "Uang motor") -- REUSE 100% dedup `seenAcc` & pola
+    // filter loop pertama, beda hanya `sameId()` (bukan `String()`) & TANPA
+    // exclude `titipanLinkId`, konsisten kontrak murni-display fungsi ini.
+    if (typeof D !== 'undefined' && Array.isArray(D.accounts)) {
+      D.accounts.forEach((acc) => {
+        if (!acc || !acc.id || seenAcc.has(acc.id)) return;
+        const resolved = resolveTxOwnerSplitForAccount(acc.id);
+        if (!resolved) return;
+        const idx = resolved.owners.findIndex((ow) => ow && ow.ownerId === o.ownerId);
+        if (idx < 0) return;
+        seenAcc.add(acc.id);
+        const ownerExpenseTotal = D.transactions
+          .filter((t) => t && t.type === 'expense' && sameId(t.accountId, acc.id) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
+          .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+        total += ownerExpenseTotal;
+        accountNames.push(acc.name || 'Akun');
+      });
+    }
     if (!accountNames.length) return null;
     return { total, accountNames };
   },

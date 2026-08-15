@@ -230,6 +230,18 @@ if(btn)btn.classList.add('active');
 // (owners selalu >=1 baris -- baik dari Investment.getOwners() maupun MultiOwnerEngine.getOwners(),
 // keduanya mensintesis minimal 1 baris SELF 100% kalau tidak ada data owner eksplisit, sama
 // persis kontrak lama).
+// SESI S620 (laporan user -- "Uang motor" (Dana Titipan, hanya Pokok Dikomit
+// ke akun BRI multi-owner, 0 Holding/Aset sama sekali) tidak pernah kepotong
+// walau `deductionOwnerId` transaksinya sudah benar): fungsi ini SEBELUMNYA
+// HANYA mengenali akun lewat Aset (langkah 1) atau Holding tertaut (langkah
+// 0) -- akun yang owner-nya di-set LANGSUNG di `D.accounts[].owners[]`
+// (dropdown "Porsi Kepemilikan Akun", `AccOwners`/`setAccOwners()`, akun.js)
+// TANPA Aset/Holding perantara sama sekali balik `null` di sini, persis pola
+// gap yang sudah diperbaiki utk `resolveOwnerDefaultForAccount()` (Sesi
+// Res-B, transaksi.js) tapi belum pernah utk fungsi ini. FIX: tambah
+// fallback tier ke-3 (`getAccOwnersEffective()`, akun.js) SEBELUM balik
+// null -- urutan prioritas SAMA PERSIS `resolveOwnerDefaultForAccount()`
+// (Holding menang > Aset > owners akun sendiri). 0 rumus split baru.
 function resolveTxOwnerSplitForAccount(accountId){
 if(typeof MultiOwnerEngine==='undefined')return null;
 if(typeof findLinkedHoldingForAccount==='function'&&typeof Investment!=='undefined'){
@@ -240,7 +252,7 @@ if(hOwners&&hOwners.length)return{asset:null,holding:linkedHolding,owners:hOwner
 }
 }
 const a=(D.assets||[]).find(x=>sameId(x.accountId,accountId));
-if(!a)return null;
+if(a){
 let owners=null;
 if(typeof Aset!=='undefined'&&typeof Aset._resolveLinkedInvestmentOwners==='function'){
 owners=Aset._resolveLinkedInvestmentOwners(a);
@@ -249,8 +261,13 @@ if(!owners||!owners.length){
 const res=MultiOwnerEngine.getOwners(a);
 owners=(res&&res.ok&&res.owners&&res.owners.length)?res.owners:null;
 }
-if(!owners||!owners.length)return null;
-return{asset:a,owners};
+if(owners&&owners.length)return{asset:a,owners};
+}
+if(typeof getAccOwnersEffective==='function'){
+const eff=getAccOwnersEffective(accountId);
+if(eff&&eff.ok&&eff.owners&&eff.owners.length)return{asset:null,holding:null,owners:eff.owners};
+}
+return null;
 }
 // resolveTxOwnerAssignment(t, owners) — permintaan user (audit "Porsi per
 // Pemilik bukan sistem patungan, ada field pilihan di transaksi porsi mana
