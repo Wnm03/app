@@ -1665,37 +1665,70 @@ toast('📋 Hasil tes disalin');
 toast('⚠️ Gagal menyalin, coba lagi');
 }
 }
-// repairTitipanOrphans() — S595. Tombol EKSPLISIT terpisah dari "▶️ Jalankan
-// Tes" (yang SENGAJA tetap 0-mutasi, lihat hint di bawah kartu Tes Otomatis:
-// "Tidak menambah/mengubah data asli Anda secara permanen"). checkAll()
-// cuma MENDETEKSI gap `orphan` (baris Buku Utang "titipan" yang ownernya
-// sudah tidak ada, lihat komentar TitipanReconcile.repairOrphans() di
-// modules/finance/titipan-reconcile.js) -- tidak ada satu pun titik lain di
-// app yang membersihkannya kalau bukan asetnya sendiri yang kebetulan
-// di-save ulang. Tombol ini yang jadi titik perbaikannya, TAPI harus jelas
-// ini MENGHAPUS baris Buku Utang (mutasi data asli) makanya wajib
-// askConfirm() dulu -- beda kontrak dgn Tes Otomatis di atasnya.
+// repairTitipanOrphans() — S595, awalnya cuma cabang `orphan`. Nama fungsi
+// (& data-action="repairTitipanOrphans" di app_production.html/index.html)
+// SENGAJA TIDAK diganti sesi ini -- ganti nama butuh sinkron 2 file HTML +
+// bundle sekaligus tanpa nilai tambah fungsional, risiko typo lebih besar
+// drpd manfaatnya. Tombol EKSPLISIT terpisah dari "▶️ Jalankan Tes" (yang
+// SENGAJA tetap 0-mutasi, lihat hint di bawah kartu Tes Otomatis: "Tidak
+// menambah/mengubah data asli Anda secara permanen").
+//
+// BUGFIX S621 (audit gap "tombol Perbaiki Gap Dana Titipan tidak
+// menghilangkan gap missing"): hint di app_production.html/index.html
+// SUDAH LAMA menjanjikan tombol ini "membuat baris ... yang belum tercatat
+// (missing), dan/atau menghapus baris ... (orphan)" -- TAPI versi fungsi
+// ini SEBELUM S621 cuma pernah memanggil TitipanReconcile.repairOrphans()
+// (orphan-only, lihat komentar fungsi itu). Kalau gap yang terdeteksi murni
+// `missing` (contoh nyata: Tes Otomatis melaporkan "sync.ok=false
+// (missing:1 orphan:0 mismatch:0)"), cabang paling atas
+// `if(pre.ok||!pre.orphan.length)` langsung toast "tidak ada gap orphan"
+// dan RETURN tanpa berbuat apa-apa -- tombol terlihat sukses (ada toast)
+// tapi gap missing yang dilaporkan Tes Otomatis tetap ada & muncul lagi
+// identik tiap Tes Otomatis dijalankan ulang (persis gejala di laporan).
+// Fix: panggil KEDUA sisi (TitipanReconcile.repairMissing() -- baru,
+// S621 -- utk cabang missing; repairOrphans() -- S595, TIDAK diubah -- utk
+// cabang orphan), masing-masing HANYA kalau sisi itu memang punya gap.
+// Keduanya MENGUBAH data (bikin/hapus baris Buku Utang) makanya tetap satu
+// askConfirm() sebelum keduanya, konsisten dgn kontrak lama tombol ini.
 async function repairTitipanOrphans(){
-if(typeof TitipanReconcile==='undefined'||typeof TitipanReconcile.repairOrphans!=='function'){
+if(typeof TitipanReconcile==='undefined'){
 toast('⚠️ Modul TitipanReconcile belum termuat');
 return;
 }
 const pre=TitipanReconcile.check();
-if(pre.ok||!pre.orphan.length){
-toast('✅ Tidak ada gap orphan Dana Titipan yang perlu diperbaiki');
+if(pre.ok){
+toast('✅ Tidak ada gap Dana Titipan yang perlu diperbaiki');
 return;
 }
+const parts=[];
+if(pre.missing.length)parts.push(pre.missing.length+' baris yang seharusnya ada tapi belum tercatat (missing)');
+if(pre.orphan.length)parts.push(pre.orphan.length+' baris yang pemiliknya sudah tidak ada (orphan)');
 const ok=await askConfirm(
-'Ditemukan '+pre.orphan.length+' baris Buku Utang "titipan" yang pemiliknya sudah tidak tercatat lagi (orphan). Baris ini akan DIHAPUS dari Buku Utang (bukan bagian dana Anda sendiri, cuma catatan titipan yang sudah tidak relevan). Lanjutkan?',
-{title:'Perbaiki Gap Dana Titipan',icon:'🔧',okText:'Ya, Hapus Baris Orphan',danger:true}
+'Ditemukan '+parts.join(' & ')+'. Baris "missing" akan DIBUAT/disinkron ulang (disamakan dgn porsi kepemilikan Aset/Investasi saat ini), baris "orphan" akan DIHAPUS dari Buku Utang. Lanjutkan?',
+{title:'Perbaiki Gap Dana Titipan',icon:'🔧',okText:'Ya, Perbaiki',danger:true}
 );
 if(!ok)return;
-const res=TitipanReconcile.repairOrphans();
-if(res.removed>0){
+let synced=0,removed=0,unresolved=[];
+if(pre.missing.length&&typeof TitipanReconcile.repairMissing==='function'){
+const rm=TitipanReconcile.repairMissing();
+synced=rm.synced;
+unresolved=rm.unresolved||[];
+}
+if(pre.orphan.length&&typeof TitipanReconcile.repairOrphans==='function'){
+const ro=TitipanReconcile.repairOrphans();
+removed=ro.removed;
+}
+if(synced>0||removed>0){
 save();
-toast('🔧 '+res.removed+' baris orphan Dana Titipan dibersihkan');
+const msgs=[];
+if(synced>0)msgs.push(synced+' aset/holding disinkron ulang');
+if(removed>0)msgs.push(removed+' baris orphan dibersihkan');
+toast('🔧 '+msgs.join(', '));
 }else{
-toast('✅ Tidak ada baris yang dihapus (gap sudah bersih)');
+toast('✅ Tidak ada baris yang diubah (gap sudah bersih)');
+}
+if(unresolved.length&&typeof console!=='undefined'&&console.warn){
+console.warn('[repairTitipanOrphans] gap "missing" tidak bisa diperbaiki otomatis -- aset/holding sumbernya sudah tidak ada di data:',unresolved);
 }
 if(typeof runSelfTest==='function') runSelfTest();
 }
