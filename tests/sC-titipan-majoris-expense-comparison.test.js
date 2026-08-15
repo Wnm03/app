@@ -96,10 +96,11 @@ test('1. Aset multi-owner tertaut akun, ada expense -> muncul {total,accountName
       { ownerId: 'sihab', porsi: 15.1219, ownerName: 'Mas Sihab', isSelf: false },
     ] }],
     transactions: [
-      // Kedua transaksi TIDAK punya deductionOwnerId eksplisit -> fallback ke
-      // owner PERTAMA (renov), PERSIS pola resolveTxOwnerAssignment() (0 proporsi).
-      { type: 'expense', accountId: 'acc1', amount: 100000 },
-      { type: 'expense', accountId: 'acc1', amount: 54226 },
+      // FIX SESI (laporan user 2026-08-15): deductionOwnerId eksplisit WAJIB
+      // dicantumkan sekarang -- 0 fallback owner pertama lagi (lihat
+      // resolveTxOwnerAssignment(), filter-laporan.js).
+      { type: 'expense', accountId: 'acc1', amount: 100000, deductionOwnerId: 'renov' },
+      { type: 'expense', accountId: 'acc1', amount: 54226, deductionOwnerId: 'renov' },
       { type: 'income', accountId: 'acc1', amount: 999999 }, // TIDAK ikut dihitung (bukan expense)
       { type: 'expense', accountId: 'acc-lain', amount: 500000 }, // TIDAK ikut (akun lain)
     ],
@@ -110,9 +111,10 @@ test('1. Aset multi-owner tertaut akun, ada expense -> muncul {total,accountName
   assert.ok(cmp);
   assert.equal(cmp.accountNames.length, 1);
   assert.equal(cmp.accountNames[0], 'Majoris');
-  // FIX S608: dulu (100000+54226)*0.848781 (proporsional) -- sekarang
-  // fallback owner pertama (renov) dapat 100% dari kedua transaksi (0
-  // deductionOwnerId eksplisit di data ini), bukan porsi 84.8781%.
+  // FIX S608 + FIX SESI 2026-08-15: dulu (100000+54226)*0.848781 (proporsional),
+  // lalu fallback owner pertama -- sekarang HANYA dihitung krn deductionOwnerId
+  // eksplisit menunjuk 'renov' di kedua transaksi (bukan porsi 84.8781%, dan
+  // bukan fallback implisit).
   assert.equal(cmp.total, 100000 + 54226);
 });
 
@@ -177,7 +179,8 @@ test('3. holding investasi tertaut balik ke Aset ber-accountId -> ikut kehitung 
       { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
     ] }],
     assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', investmentId: 'h1', nilai: 1000000 }],
-    transactions: [{ type: 'expense', accountId: 'acc1', amount: 200000 }],
+    // FIX SESI (laporan user 2026-08-15): deductionOwnerId eksplisit wajib.
+    transactions: [{ type: 'expense', accountId: 'acc1', amount: 200000, deductionOwnerId: 'renov' }],
   });
   const ctx = makeCtx(D);
   const o = { ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] };
@@ -200,7 +203,8 @@ test('5. dua holding mengarah ke akun SAMA -> dedup, tidak dihitung dobel', () =
     assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000, owners: [
       { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
     ] }],
-    transactions: [{ type: 'expense', accountId: 'acc1', amount: 100000 }],
+    // FIX SESI (laporan user 2026-08-15): deductionOwnerId eksplisit wajib.
+    transactions: [{ type: 'expense', accountId: 'acc1', amount: 100000, deductionOwnerId: 'renov' }],
   });
   const ctx = makeCtx(D);
   const o = { ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }, { type: 'aset', linkedAssetId: 'a1' }] };

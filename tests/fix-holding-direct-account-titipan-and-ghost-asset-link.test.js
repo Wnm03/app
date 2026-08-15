@@ -133,8 +133,12 @@ test('A4. _expenseComparisonForOwner() -- holding titipan tertaut LANGSUNG ke ak
       { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
     ] }],
     transactions: [
-      { type: 'expense', accountId: 'acc1', amount: 154280, payMethod: 'cicilan' },
-      { type: 'expense', accountId: 'acc1', amount: 51940, payMethod: 'cicilan' },
+      // FIX SESI (laporan user 2026-08-15): deductionOwnerId eksplisit WAJIB
+      // dicantumkan sekarang -- resolveTxOwnerAssignment() tidak lagi
+      // fallback ke owners[0] utk transaksi yg tidak pernah ditandai
+      // penanggungnya (lihat filter-laporan.js).
+      { type: 'expense', accountId: 'acc1', amount: 154280, payMethod: 'cicilan', deductionOwnerId: 'renov' },
+      { type: 'expense', accountId: 'acc1', amount: 51940, payMethod: 'cicilan', deductionOwnerId: 'renov' },
       { type: 'expense', accountId: 'acc-lain', amount: 999999 },
     ],
   });
@@ -153,7 +157,9 @@ test('A5. _expenseComparisonForOwner() -- 0 regresi: holding TANPA accountId lan
       { ownerId: 'renov', porsi: 100, ownerName: 'renov', isSelf: false },
     ] }],
     assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', investmentId: 'h1', nilai: 1000000 }],
-    transactions: [{ type: 'expense', accountId: 'acc1', amount: 200000 }],
+    // FIX SESI (laporan user 2026-08-15): deductionOwnerId eksplisit wajib
+    // dicantumkan sekarang (0 fallback owners[0] lagi).
+    transactions: [{ type: 'expense', accountId: 'acc1', amount: 200000, deductionOwnerId: 'renov' }],
   });
   const ctx = makeDanaTitipanCtx(D);
   const o = { ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] };

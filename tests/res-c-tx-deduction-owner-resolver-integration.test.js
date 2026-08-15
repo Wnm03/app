@@ -56,7 +56,9 @@ test('Res-C [2/6]: akun tanpa owners[] TAPI ada aset tertaut dengan a.owners[] 1
   const ctx = makeCtx({ document: doc, D });
   ctx.updateTxDeductionOwnerVisibility();
   assert.equal(els.txDeductionOwnerWrap.style.display, 'block');
-  assert.equal(els.txDeductionOwner.value, 'budi');
+  // FIX SESI (laporan user 2026-08-15): auto-select dihapus utk akun/aset
+  // 1-owner juga -- field ini sekarang murni opsional (lihat s575 [2/6]).
+  assert.equal(els.txDeductionOwner.value, '');
   assert.match(els.txDeductionOwner.innerHTML, /Budi/);
   assert.equal(els.txDeductionOwnerStatus.style.display, 'none', 'source:asset tidak pernah needsConfirm');
 });

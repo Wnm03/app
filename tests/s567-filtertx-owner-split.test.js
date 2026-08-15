@@ -73,14 +73,15 @@ test('showFilteredTx(scope=account) — akun tertaut aset multi-owner -> tab per
   // Default (belum diklik) -> hanya detail owner PERTAMA (renov) yang tampil
   assert.ok(html.includes('renov (80%)'), 'detail default harus owner pertama (renov)');
   assert.ok(!html.includes('mas sihab (20%)'), 'detail owner kedua TIDAK boleh tampil bersamaan (bukan mode patungan)');
-  // Sesi (audit user "Porsi per Pemilik bukan sistem patungan"): transaksi t1/t2
-  // TIDAK punya ownerPorsiId eksplisit (belum ada field ini saat itu ditulis) --
-  // jadi keduanya fallback ke owner PERTAMA (renov) secara PENUH (bukan proporsi
-  // % lagi). Modal (income) 1.000.000 & Pengeluaran 200.000 semuanya masuk ke
-  // renov, owner kedua (mas sihab) dapat 0.
-  assert.ok(html.includes('Modal Rp1000000'), 'transaksi tanpa ownerPorsiId fallback penuh ke owner pertama (renov)');
-  assert.ok(html.includes('Pengeluaran Rp200000'), 'pengeluaran fallback penuh ke owner pertama (renov)');
-  assert.ok(html.includes('Total Rp800000'), 'total net fallback penuh ke owner pertama (renov)');
+  // FIX SESI (laporan user 2026-08-15, lanjutan S608 -- root cause di
+  // resolveTxOwnerAssignment(), filter-laporan.js): fallback "owner
+  // PERTAMA menang" DIHAPUS. Transaksi t1/t2 TIDAK punya deductionOwnerId/
+  // ownerPorsiId eksplisit -> SEKARANG tidak dihitung ke SIAPA PUN (bukan
+  // cuma tidak ke mas sihab, renov juga TIDAK dapat bagian) -- konsisten
+  // dgn semangat "hanya yang ditandai eksplisit yang dihitung".
+  assert.ok(html.includes('Modal Rp0'), 'transaksi tanpa penanda eksplisit TIDAK dihitung ke owner mana pun (bukan fallback owner pertama lagi)');
+  assert.ok(html.includes('Pengeluaran Rp0'), 'pengeluaran tanpa penanda eksplisit juga tidak dihitung');
+  assert.ok(html.includes('Total Rp0'), 'total net jadi 0 krn belum ada satu pun transaksi yang ditandai eksplisit');
 
   // Data owner kedua tetap TERSEDIA (siap ditampilkan begitu tabnya diklik) lewat
   // window._filterTxOwnerSplitRows, walau tidak dirender bersamaan di HTML awal.
@@ -88,7 +89,7 @@ test('showFilteredTx(scope=account) — akun tertaut aset multi-owner -> tab per
   assert.equal(rows.length, 2, 'data 2 owner harus tersimpan utk dipakai saat tab diklik');
   assert.equal(rows[1].name, 'mas sihab');
   assert.ok(rows[1].detailHtml.includes('mas sihab (20%)'));
-  assert.ok(rows[1].detailHtml.includes('Modal Rp0'), 'owner kedua tidak dapat bagian krn tidak ada tx yang ditandai utk dia');
+  assert.ok(rows[1].detailHtml.includes('Modal Rp0'), 'owner kedua tidak dapat bagian krn tidak ada tx yang ditandai eksplisit utk dia');
 });
 
 test('showFilteredTx(scope=account) — transaksi dgn ownerPorsiId eksplisit -> dihitung ke owner yang DIPILIH, bukan owner pertama/proporsi', () => {
@@ -104,7 +105,9 @@ test('showFilteredTx(scope=account) — transaksi dgn ownerPorsiId eksplisit -> 
   const rows = ctx.window._filterTxOwnerSplitRows;
   // t1 eksplisit ditandai utk 'sihab' -> modal 1.000.000 masuk ke mas sihab, bukan renov
   assert.ok(rows[0].detailHtml.includes('Modal Rp0'), 'renov (owner pertama) tidak dapat modal krn t1 eksplisit milik sihab');
-  assert.ok(rows[0].detailHtml.includes('Pengeluaran Rp200000'), 't2 tanpa ownerPorsiId tetap fallback ke owner pertama (renov)');
+  // FIX SESI (laporan user 2026-08-15): t2 TIDAK punya ownerPorsiId eksplisit ->
+  // 0 fallback ke owner pertama lagi, jadi tidak dihitung ke siapa pun.
+  assert.ok(rows[0].detailHtml.includes('Pengeluaran Rp0'), 't2 tanpa ownerPorsiId eksplisit tidak dihitung ke siapa pun (0 fallback owner pertama)');
   assert.ok(rows[1].detailHtml.includes('Modal Rp1000000'), 'mas sihab dapat modal penuh krn t1 eksplisit ditandai miliknya');
 });
 
@@ -128,7 +131,9 @@ test('showFilteredTx(scope=account) — FIX SYNC S608: transaksi dgn deductionOw
   ctx.showFilteredTx('account', 'all', 'Akun Test', 'acc1');
   const rows = ctx.window._filterTxOwnerSplitRows;
   assert.ok(rows[0].detailHtml.includes('Modal Rp0'), 'renov (owner pertama) tidak dapat modal krn t1 eksplisit milik sihab via deductionOwnerId');
-  assert.ok(rows[0].detailHtml.includes('Pengeluaran Rp200000'), 't2 tanpa deductionOwnerId tetap fallback ke owner pertama (renov)');
+  // FIX SESI (laporan user 2026-08-15): t2 tanpa deductionOwnerId eksplisit ->
+  // 0 fallback ke owner pertama lagi.
+  assert.ok(rows[0].detailHtml.includes('Pengeluaran Rp0'), 't2 tanpa deductionOwnerId eksplisit tidak dihitung ke siapa pun (0 fallback owner pertama)');
   assert.ok(rows[1].detailHtml.includes('Modal Rp1000000'), 'mas sihab dapat modal penuh krn t1 eksplisit ditandai deductionOwnerId miliknya');
 });
 

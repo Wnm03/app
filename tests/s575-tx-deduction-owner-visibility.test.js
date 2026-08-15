@@ -57,7 +57,12 @@ test('S575 [2/6]: akun dengan owners[] TEPAT 1 baris -> field TETAP tampil, auto
   const ctx = makeCtx({ document: doc, D });
   ctx.updateTxDeductionOwnerVisibility();
   assert.equal(els.txDeductionOwnerWrap.style.display, 'block', 'wrap harus tampil walau cuma 1 owner');
-  assert.equal(els.txDeductionOwner.value, 'o1', '1 owner harus otomatis terpilih');
+  // FIX SESI (laporan user 2026-08-15): auto-select DIHAPUS -- field ini
+  // sekarang murni opsional utk akun 1-owner juga, supaya transaksi rumah
+  // tangga biasa yg lewat akun itu TIDAK otomatis ikut ditandai/kepotong
+  // ke pocket Dana Titipan pemilik akun (lihat resolveTxOwnerAssignment(),
+  // filter-laporan.js). User pilih SADAR hanya kalau memang mau menandai.
+  assert.equal(els.txDeductionOwner.value, '', '1 owner TIDAK lagi auto-select -- opsional, harus pilih sadar');
   assert.match(els.txDeductionOwner.innerHTML, /Budi/);
 });
 
@@ -80,7 +85,8 @@ test('S575 [4/6]: owners[] 1 baris TOTAL PORSI BUKAN 100% -> field TETAP tampil 
   const ctx = makeCtx({ document: doc, D });
   ctx.updateTxDeductionOwnerVisibility();
   assert.equal(els.txDeductionOwnerWrap.style.display, 'block', 'total porsi != 100% tidak boleh menyembunyikan field');
-  assert.equal(els.txDeductionOwner.value, 'o1');
+  // FIX SESI (laporan user 2026-08-15): auto-select dihapus, lihat [2/6].
+  assert.equal(els.txDeductionOwner.value, '');
 });
 
 test('S575 [5/6]: owners[] 2 baris TOTAL PORSI BUKAN 100% -> dropdown tetap tampil dgn kedua opsi (bukan fallback sintesis SELF)', () => {
@@ -106,7 +112,8 @@ test('S575 [6/6]: pindah akun 1-owner (A) -> akun 2-owner (B) -> pilihan owner A
   els.txDeductionOwnerWrap = { style: {} };
   const ctx = makeCtx({ document: doc, D });
   ctx.updateTxDeductionOwnerVisibility();
-  assert.equal(els.txDeductionOwner.value, 'oa');
+  // FIX SESI (laporan user 2026-08-15): auto-select dihapus, lihat [2/6].
+  assert.equal(els.txDeductionOwner.value, '');
   els.txAcc.value = 'acc-b';
   ctx.updateTxDeductionOwnerVisibility();
   assert.equal(els.txDeductionOwner.value, '', 'pindah ke akun B (2 owner) tidak boleh mewarisi pilihan owner A');

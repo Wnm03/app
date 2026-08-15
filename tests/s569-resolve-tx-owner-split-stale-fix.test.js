@@ -92,10 +92,11 @@ test('resolveTxOwnerSplitForAccount() — porsi diedit di Holding SETELAH aset l
   assert.equal(els.filterTxOwnerSplit.style.display, 'block');
   // Porsi HARUS 50/50 (dari Holding), BUKAN 80/20 (dari a.owners lama)
   assert.ok(html.includes('renov (50%)'), 'detail owner pertama harus pakai porsi Holding terbaru (50%), bukan a.owners lama (80%)');
-  // Sesi (audit user "Porsi per Pemilik bukan sistem patungan"): amount TIDAK
-  // lagi proporsional ke % (0.5*1000000) -- transaksi tanpa ownerPorsiId
-  // eksplisit fallback PENUH ke owner pertama (renov), 100% dari income.
-  assert.ok(html.includes('Modal Rp1000000'), 'transaksi tanpa ownerPorsiId fallback penuh ke owner pertama (renov)');
+  // FIX SESI (laporan user 2026-08-15): amount TIDAK lagi proporsional ke %
+  // (0.5*1000000), DAN TIDAK lagi fallback penuh ke owner pertama --
+  // transaksi tanpa deductionOwnerId/ownerPorsiId eksplisit sekarang tidak
+  // dihitung ke siapa pun sama sekali.
+  assert.ok(html.includes('Modal Rp0'), 'transaksi tanpa penanda eksplisit tidak dihitung ke owner mana pun');
   const rows = ctx.window._filterTxOwnerSplitRows;
   assert.equal(rows.length, 2);
   assert.ok(rows[1].detailHtml.includes('mas sihab (50%)'), 'owner kedua juga harus 50% (porsi Holding terbaru)');
@@ -115,8 +116,9 @@ test('resolveTxOwnerSplitForAccount() — aset belum linked ke Holding -> fallba
   ctx.showFilteredTx('account', 'all', 'Akun Test', 'acc1');
   const html = els.filterTxOwnerSplit.innerHTML;
   assert.ok(html.includes('renov (80%)'), 'akun belum linked harus tetap pakai a.owners (80%)');
-  // Fallback penuh ke owner pertama (bukan proporsi 80% lagi -- lihat catatan sesi di atas)
-  assert.ok(html.includes('Modal Rp1000000'));
+  // FIX SESI (laporan user 2026-08-15): 0 fallback ke owner pertama lagi
+  // (bukan proporsi 80% juga -- lihat catatan sesi di atas).
+  assert.ok(html.includes('Modal Rp0'));
 });
 
 // ---- Test 3: tautan orphan (holding sudah dihapus) -> fallback ke a.owners, tidak error ----
