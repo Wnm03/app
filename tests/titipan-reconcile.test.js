@@ -451,3 +451,132 @@ test('repairOrphans() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
   assert.strictEqual(res.removed, 0);
   assert.deepStrictEqual(res.keys, []);
 });
+
+// --- repairMissing() (S621) ---------------------------------------------
+// Bugfix: tombol "Perbaiki Gap Dana Titipan" sebelumnya cuma pernah
+// memanggil repairOrphans() (orphan-only) -- kalau gapnya `missing` murni
+// (persis laporan nyata "sync.ok=false (missing:1 orphan:0 mismatch:0)"),
+// tombol itu tidak berbuat apa-apa sama sekali. repairMissing() menutup
+// separuh yang hilang itu dgn menelusuri key `missing` balik ke Aset/Holding
+// sumbernya lalu memanggil ulang jalur sync yang SUDAH ADA (TitipanSync.
+// reconcile()/Aset._syncOwnerDebts() cabang Aset, Investment._syncTitipanDebt()
+// cabang Investasi) -- tes di sini mock fungsi sync itu spy yang benar-benar
+// menulis baris debt (persis efek fungsi asli), supaya tesnya menguji
+// "check() ok=true setelahnya", bukan cuma "fungsi sync dipanggil".
+
+test('repairMissing() cabang Aset: membuat baris yang hilang lewat TitipanSync.reconcile(), check() jadi ok', () => {
+  const a = { id: 'a20', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { a20: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 40 }] },
+  });
+  global.TitipanSync = {
+    reconcile(asset) {
+      D.debts.push({ id: 'd_new', nilai: asset.nilai * 0.4, linkedAssetId: asset.id, linkedOwnerId: 'o1' });
+      return { ok: true, synced: true };
+    },
+  };
+  const pre = TitipanReconcile.check();
+  assert.strictEqual(pre.missing.length, 1);
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 1);
+  assert.deepStrictEqual(res.unresolved, []);
+  assert.strictEqual(TitipanReconcile.check().ok, true);
+  delete global.TitipanSync;
+});
+
+test('repairMissing() cabang Aset: fallback ke Aset._syncOwnerDebts() kalau TitipanSync tidak ada', () => {
+  const a = { id: 'a21', nilai: 500000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { a21: [{ ownerId: 'o1', isSelf: false, porsi: 50 }] },
+  });
+  global.Aset = {
+    _syncOwnerDebts(asset) {
+      D.debts.push({ id: 'd_new2', nilai: asset.nilai * 0.5, linkedAssetId: asset.id, linkedOwnerId: 'o1' });
+    },
+  };
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 1);
+  assert.strictEqual(TitipanReconcile.check().ok, true);
+  delete global.Aset;
+});
+
+test('repairMissing() cabang Investasi: membuat baris yang hilang lewat Investment._syncTitipanDebt()', () => {
+  const h = { id: 'h20' };
+  setupGlobals({
+    investments: [h],
+    debts: [],
+    ownersByHolding: { h20: [{ ownerId: 'o1', isSelf: false, porsi: 25 }] },
+    costByHolding: { h20: 800000 },
+  });
+  global.Investment.getOwners = (hh) => [{ ownerId: 'o1', isSelf: false, porsi: 25 }];
+  global.Investment.holdingCost = (hh) => 800000;
+  global.Investment._syncTitipanDebt = (hh) => {
+    D.debts.push({ id: 'd_new3', nilai: 200000, linkedInvestmentId: hh.id, linkedOwnerId: 'o1' });
+  };
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 1);
+  assert.strictEqual(TitipanReconcile.check().ok, true);
+});
+
+test('repairMissing() 1 aset dgn >1 owner missing cuma disinkron SEKALI (dedup by id)', () => {
+  const a = { id: 'a22', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { a22: [
+      { ownerId: 'o1', isSelf: false, porsi: 20 },
+      { ownerId: 'o2', isSelf: false, porsi: 30 },
+    ] },
+  });
+  let calls = 0;
+  global.TitipanSync = {
+    reconcile(asset) {
+      calls++;
+      D.debts.push({ id: 'd_o1', nilai: 200000, linkedAssetId: asset.id, linkedOwnerId: 'o1' });
+      D.debts.push({ id: 'd_o2', nilai: 300000, linkedAssetId: asset.id, linkedOwnerId: 'o2' });
+    },
+  };
+  assert.strictEqual(TitipanReconcile.check().missing.length, 2);
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(calls, 1);
+  assert.strictEqual(res.synced, 1);
+  assert.strictEqual(TitipanReconcile.check().ok, true);
+  delete global.TitipanSync;
+});
+
+test('repairMissing() key yang sumbernya (aset/holding) sudah tidak ada masuk ke unresolved, tidak dibuang diam-diam', () => {
+  setupGlobals({
+    assets: [],
+    debts: [],
+  });
+  // Simulasikan gap yang sumber asetnya sudah dihapus: mock check() langsung.
+  const orig = TitipanReconcile.check;
+  TitipanReconcile.check = () => ({ ok: false, missing: [{ key: 'a_hilang::o1', expected: 100 }], orphan: [], mismatch: [] });
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 0);
+  assert.deepStrictEqual(res.unresolved, ['asset:a_hilang']);
+  TitipanReconcile.check = orig;
+});
+
+test('repairMissing() tidak melakukan apa pun kalau tidak ada gap missing', () => {
+  const a = { id: 'a23', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [{ id: 'd1', nilai: 300000, linkedAssetId: 'a23', linkedOwnerId: 'o1' }],
+    ownersByAsset: { a23: [{ ownerId: 'o1', isSelf: false, porsi: 30 }] },
+  });
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 0);
+  assert.deepStrictEqual(res.unresolved, []);
+});
+
+test('repairMissing() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
+  delete global.D;
+  const res = TitipanReconcile.repairMissing();
+  assert.strictEqual(res.synced, 0);
+  assert.deepStrictEqual(res.unresolved, []);
+});
