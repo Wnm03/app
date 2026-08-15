@@ -683,3 +683,18 @@ if(typeof runDataHealthCheck==='function')runDataHealthCheck();
 if(typeof renderStockList==='function')renderStockList();
 }
 };
+// BUGFIX (audit "tombol Lepas Tautan Katalog belum berfungsi"): DataHealth
+// didefinisikan sbg `const` top-level TAPI tidak pernah di-window-expose --
+// dispatcher klik global (features-helpers-global-security.js,
+// _dataActionClickHandler()) selalu resolve data-action="X.method" lewat
+// window[X][method], jadi tanpa baris ini window.DataHealth selalu undefined
+// & tombol "🔓 Lepas Tautan Katalog" gagal DIAM-DIAM (toast "Tombol ini
+// belum berfungsi (DataHealth.unlinkStockCatalog)"). Bug class ini sama
+// persis dgn s345/s346/s347/s348 (lihat scripts/verify-window-expose.js) --
+// TAPI lolos dari lint gate otomatis itu karena action-nya ditulis sbg
+// field `action:'DataHealth.unlinkStockCatalog'` di dalam objek `issues`
+// (dirender ke atribut data-action secara DINAMIS saat modal dibangun),
+// bukan literal string `data-action="DataHealth.unlinkStockCatalog"` yang
+// discan lint gate itu -- blind spot scanner statis, bukan gate-nya salah.
+// Pola expose sama persis TitipanReconcile/TitipanSync (lihat modules/finance/).
+if (typeof window !== 'undefined') window.DataHealth = DataHealth;
