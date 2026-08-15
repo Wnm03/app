@@ -14,15 +14,12 @@
 > utk ditinjau, bukan vonis akhir. Kalau file ini kelihatan tidak sinkron,
 > jalankan ulang generatornya, JANGAN diedit tangan.
 
-Terakhir digenerate: 2026-08-14T10:44:28.492Z
-Total file test (`tests/*.test.js`): 395 · Total module family: 19
+Terakhir digenerate: 2026-08-15T00:03:30.027Z
+Total file test (`tests/*.test.js`): 396 · Total module family: 16
 
 | Module family | File source (.js) | File test yang menyentuh | Status |
 |---|---:|---:|---|
-| `modules/features-helpers-global-security.js` | 1 | 0 | ⚠️ 0 test file |
 | `modules/modals.js` | 1 | 0 | ⚠️ 0 test file |
-| `modules/modules-calc.js` | 1 | 0 | ⚠️ 0 test file |
-| `modules/modules-render.js` | 1 | 0 | ⚠️ 0 test file |
 | `economic-intelligence` | 20 | 2 |  |
 | `modules/self-reward` | 3 | 2 |  |
 | `lifeos` | 30 | 4 |  |
@@ -32,19 +29,16 @@ Total file test (`tests/*.test.js`): 395 · Total module family: 19
 | `modules/dashboard-hub` | 6 | 6 |  |
 | `modules/ai` | 7 | 10 |  |
 | `modules/business` | 10 | 14 |  |
-| `modules/shop` | 26 | 62 |  |
+| `modules/shop` | 22 | 62 |  |
 | `root` | 19 | 73 |  |
 | `modules/vehicle` | 80 | 74 |  |
-| `modules/asset` | 21 | 113 |  |
-| `modules/finance` | 50 | 144 |  |
-| `modules/shared` | 35 | 198 |  |
+| `modules/asset` | 21 | 114 |  |
+| `modules/finance` | 49 | 145 |  |
+| `modules/shared` | 34 | 199 |  |
 
-## Family tanpa test file yang menyentuhnya langsung (4)
+## Family tanpa test file yang menyentuhnya langsung (1)
 
 Kandidat prioritas kalau mau menambah test baru — urutan lain sama validnya,
 ini murni titik awal, bukan urutan wajib:
 
-- `modules/features-helpers-global-security.js` (1 file source)
 - `modules/modals.js` (1 file source)
-- `modules/modules-calc.js` (1 file source)
-- `modules/modules-render.js` (1 file source)
