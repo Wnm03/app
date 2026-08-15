@@ -164,6 +164,62 @@ if(!r||!r.ok||r.isDefault)return{ok:true,owners:[],needsConfirm:false};
 const label=typeof OwnershipEngine.label==='function'?OwnershipEngine.label(r.type):r.type;
 return{ok:true,owners:[{ownerId:r.type,porsi:100,ownerName:label}],needsConfirm:true};
 }
+// resolveAccOwnershipBadgeState(accId) — Sesi (patch delacc-titipan-debt susulan
+// "1 SOT badge Kepemilikan & Filter Kepemilikan vs porsi Holding/acc.owners"):
+// badge/chip "Kepemilikan" (acc-chip, OwnershipEngine.resolve()) & dropdown Filter
+// Kepemilikan (renderAccGrid, accOwnFilterVal) SEBELUM patch ini baca field
+// acc.ownership APA ADANYA -- field itu diisi manual lewat dropdown di modal Edit
+// Akun (openAccModal, ownSel), TIDAK PERNAH disentuh oleh AccOwners.save() (porsi
+// standalone, akun.js) maupun oleh Holding tertaut (findLinkedHoldingForAccount(),
+// transaksi.js) -- 2 sumber data independen total, persis pola gap yang sudah
+// berkali-kali diperbaiki di proyek ini utk sumber lain (dropdown Pemilik Sumber
+// Potongan/Ditanggung Oleh) tapi belum pernah utk badge/filter Akun & Metode
+// Pembayaran ini.
+// Fungsi ini MURNI BACA (0 mutasi D.accounts). Prioritas owners real SAMA PERSIS
+// resolveOwnerDefaultForAccount() (transaksi.js): Holding tertaut menang kalau
+// ada, baru fallback ke acc.owners[] eksplisit (getAccOwnersRaw, S575) -- guard
+// typeof findLinkedHoldingForAccount aman kalau transaksi.js belum dimuat.
+// SENGAJA TIDAK auto-assign tipe spesifik (INVESTOR/CUSTOMER/THIRD_PARTY/FAMILY)
+// -- porsi real cuma punya nama pemilik, bukan tipe semantik, jadi kalau owners
+// real non-SELF tapi acc.ownership masih DEFAULT (belum pernah diisi manual)
+// caller cukup TANDAI "belum diklasifikasi" (idiom sama titipanGapLine yang
+// sudah ada di modules-render.js -- warning read-only, bukan auto-tebak diam2).
+// Return: {ok:true, owners, source, isAllSelf, isDefault, mismatch}
+//   owners: pemilik real efektif (Holding > acc.owners eksplisit), [] kalau tidak
+//     ada satupun sumber.
+//   source: 'holding'|'account'|'none'.
+//   isAllSelf: true kalau SEMUA owner di `owners` isSelf/ownerId==='SELF', false
+//     kalau ada 1+ owner non-SELF, null kalau owners kosong (tidak ada info).
+//   isDefault: OwnershipEngine.resolve(acc).isDefault (badge belum pernah diisi
+//     manual). true kalau OwnershipEngine belum dimuat (fallback aman -- sama
+//     pola isAccOwnershipSelf()).
+//   mismatch: true HANYA kalau owners tidak kosong, isAllSelf===false, DAN
+//     isDefault===true.
+// Catatan implementasi: SENGAJA TIDAK memakai getAccOwnersRaw()/sameId() global
+// di sini (beda dari fungsi lain di file ini) -- fungsi ini dipanggil dari
+// renderAccGrid() utk SETIAP kartu akun (bukan cuma alur transaksi/modal yang
+// sudah pasti sameId ter-load), jadi pencarian akun & baca acc.owners[] mentah
+// diinlinekan pakai perbandingan String() langsung (identik perilaku sameId())
+// supaya fungsi ini tetap aman dipanggil di halaman/test manapun tanpa
+// bergantung urutan load features-helpers-global-security.js.
+function resolveAccOwnershipBadgeState(accId){
+const acc=D.accounts.find(a=>a&&String(a.id)===String(accId));
+if(!acc)return{ok:true,owners:[],source:'none',isAllSelf:null,isDefault:true,mismatch:false};
+let owners=[],source='none';
+const holding=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(accId):null;
+if(holding&&typeof Investment!=='undefined'){
+const hOwners=Investment.getOwners(holding);
+if(hOwners&&hOwners.length>0){owners=hOwners;source='holding';}
+}
+if(!owners.length&&Array.isArray(acc.owners)){
+const rawOwners=acc.owners.filter(o=>o&&typeof o.ownerId==='string'&&o.ownerId.trim()).map(o=>({ownerId:o.ownerId,porsi:o.porsi,ownerName:typeof o.ownerName==='string'?o.ownerName:o.ownerId,isSelf:!!o.isSelf}));
+if(rawOwners.length>0){owners=rawOwners;source='account';}
+}
+const isAllSelf=owners.length?owners.every(o=>o.isSelf||String(o.ownerId)==='SELF'):null;
+const isDefault=(typeof OwnershipEngine!=='undefined')?OwnershipEngine.resolve(acc).isDefault:true;
+const mismatch=owners.length>0&&isAllSelf===false&&isDefault===true;
+return{ok:true,owners,source,isAllSelf,isDefault,mismatch};
+}
 function setAccOwners(accId,owners){
 const acc=D.accounts.find(a=>sameId(a.id,accId));
 if(!acc)return{ok:false,reason:'Akun tidak ditemukan'};
@@ -399,7 +455,23 @@ const hasLinkedData=D.transactions.some(t=>t.accountId===acc.id)
 ||(D.cobek||[]).some(c=>c.accountId===acc.id)
 ||(D.targets||[]).some(t=>t.accountId===acc.id)
 ||(D.assets||[]).some(a=>a.accountId===acc.id)
-||(D.investments||[]).some(h=>h.accountId===acc.id);
+||(D.investments||[]).some(h=>h.accountId===acc.id)
+||(D.debts||[]).some(d=>d&&d.linkedAccountId===acc.id);
+// FIX (delacc-linked-titipan-debt-audit): baris Buku Utang "Dana titipan akun"
+// (D.debts[].linkedAccountId, ditulis TitipanSync.reconcileAccounts() -- lihat
+// modules/finance/titipan-sync.js) TIDAK PERNAH dicek/dimigrasikan di sini,
+// pola gap SAMA PERSIS S603/S604 (sumber data baru ditambah, hasLinkedData()
+// lupa diupdate) -- bedanya reconcileAccounts() lebih baru dari fix S604.
+// Baris ini derivatif (recompute dari acc.owners[] tiap save(), lihat
+// reconcileAccounts()), BUKAN data primer spt transaksi/aset -- tidak ada
+// "target" yang masuk akal utk dipindahkan (porsi kepemilikan akun itu
+// sendiri tidak ikut dimigrasikan ke akun lain), jadi TIDAK ditambah ke
+// migrasi accountId di bawah. Cukup dihitung & DIPERINGATKAN eksplisit ke
+// user di confirmMsg -- reconcileAccounts() (dipanggil dari save() di akhir
+// fungsi ini) akan MENGHAPUS baris itu otomatis begitu akun sudah tidak ada
+// di D.accounts (perilaku existing-nya, 0 diubah), tapi sebelumnya user
+// SAMA SEKALI tidak diberi tahu baris Utang itu akan hilang.
+const linkedTitipanDebtCount=(D.debts||[]).filter(d=>d&&d.linkedAccountId===acc.id).length;
 let target=others[0];
 if(hasLinkedData&&others.length>1){
 const choices=others.map(a=>({label:`${a.emoji||'💰'} ${a.name} (saldo ${fmt(recalcAccBalance(a.id))})`}));
@@ -414,9 +486,10 @@ const pickedIdx=await showChoiceModal({title:'Pindahkan Data ke Akun Mana?',icon
 if(pickedIdx===null||pickedIdx===undefined)return; // dibatalkan, akun TIDAK jadi dihapus
 target=others[pickedIdx];
 }
-const confirmMsg=hasLinkedData
+let confirmMsg=hasLinkedData
 ?`Hapus akun "${acc.name}"? Transaksi, tagihan, catatan BBM/servis, transaksi Shop, Target Tabungan, Aset, dan Holding Investasi yang terkait akan dipindahkan ke akun "${target.name}".`
 :`Hapus akun "${acc.name}"? Akun ini tidak punya data transaksi terkait.`;
+if(linkedTitipanDebtCount>0)confirmMsg+=` ⚠️ ${linkedTitipanDebtCount} baris "Dana Titipan Akun" di Buku Utang milik akun ini akan IKUT TERHAPUS (porsi kepemilikannya tidak bisa dipindah ke akun lain secara otomatis).`;
 if(!await askConfirm(confirmMsg))return;
 D.accounts.splice(i,1);
 D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});

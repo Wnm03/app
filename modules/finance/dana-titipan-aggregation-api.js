@@ -646,6 +646,17 @@ build() {
     o.linkedExpenseTotal = linkedExpense.total;
     o.linkedExpenseAccountNames = linkedExpense.accountNames;
 
+    // DL-NEXT-9 REVISI 3 — HARD INVARIANT: `o.gain`/`gainSplit`/`currentValue`
+    // (Untung-Rugi) TIDAK PERNAH masuk formula `estimatedUnallocated`/
+    // `allocationStatus` di bawah ini, PERMANEN terpisah dari kuota Dana
+    // Titipan. HANYA `principalAmount`/`o.allocatedPrincipal` (pokok NOMINAL,
+    // cost-basis)/`usedTotal`/`o.linkedExpenseTotal` yang boleh dibaca formula
+    // ini (lihat DESIGN-LOCK-DL-NEXT-9-OWNER-QUOTA-SISA-SPENT-SYNC-2.md, poin
+    // 1/§"Pemisahan 3 konsep"). Sinyal "teralokasi" = NOMINAL yang benar-benar
+    // ditempatkan lintas holding/aset (bukan biner "ada porsi di 1 instrumen
+    // = seluruh principal habis") — `spent` bisa melebihi `principalAmount`
+    // kapan pun total alokasi+pengeluaran lintas SEMUA instrumen owner ini
+    // melebihi pokok yang dikomit, terdeteksi PENUH lintas holding.
     let estimatedUnallocated = null;
     let overAllocatedAmount = 0;
     let allocationStatus = 'PRINCIPAL_NOT_SET';
