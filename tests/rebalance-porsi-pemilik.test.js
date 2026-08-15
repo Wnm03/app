@@ -167,6 +167,25 @@ test('applyRebalance: menulis hasil calculateRebalance ke draft & menandai _touc
   assert.equal(Aset._ownersDraft[1]._touched, true);
 });
 
+// BUGFIX S622 (laporan user nyata, screenshot modal aset "renov" -- persis skenario yang
+// mendasari Bagian 2 di atas): Aset.onOwnerPorsiInput() sudah memanggil _checkRebalanceTrigger()
+// tiap ketik (dites tidak langsung lewat Bagian 2), TAPI Aset.onOwnerNominalInput() (arah
+// sebaliknya, user ketik Rp bukan %) LUPA memanggilnya -- user yang mendorong total >100% lewat
+// kolom Nominal (Rp) tidak pernah melihat panel rebalance muncul, walau tombol Simpan Porsi sudah
+// ter-disable. makeAsetCtx() TIDAK memuat multi-owner-engine.js (lihat komentar Bagian 2 di atas,
+// _checkRebalanceTrigger jadi no-op aman tanpa engine) -- jadi tes ini pakai SPY pada
+// _checkRebalanceTrigger (bukan menguji efek _rebalancePending-nya, yang sudah dites lengkap lewat
+// jalur onOwnerPorsiInput di tempat lain) supaya tidak perlu menduplikasi setup MultiOwnerEngine.
+test('Aset.onOwnerNominalInput: memicu _checkRebalanceTrigger(i) sama persis onOwnerPorsiInput (BUGFIX S622)', () => {
+  const { Aset } = makeAsetCtx();
+  Aset._ownersModalAsset = { id: 'a1', name: 'Renov', nilai: 10000000 };
+  Aset._ownersDraft = [{ ownerName: 'A', porsi: 84.8901 }, { ownerName: 'B', porsi: 15.1099 }, { ownerName: 'Aku', porsi: 0 }];
+  let calledWith = null;
+  Aset._checkRebalanceTrigger = (i) => { calledWith = i; };
+  Aset.onOwnerNominalInput(2, '57331');
+  assert.equal(calledWith, 2, 'onOwnerNominalInput harus memanggil _checkRebalanceTrigger(i) persis seperti onOwnerPorsiInput');
+});
+
 // ================= Bagian 3: integrasi state AccOwners._checkRebalanceTrigger/apply/cancel =================
 // (finance/akun.js, modal accountOwnersModal) — wiring UI sama persis Bagian 2 di atas, rumus
 // tetap 100% calculateRebalance() SSOT (modules-calc.js), 0 rumus baru.
@@ -350,6 +369,20 @@ test('InvestmentUI.onOwnerPorsiInput: mengetik porsi yang bikin overflow memicu 
   InvestmentUI._ownersDraft = [{ ownerName: 'A', porsi: 71.88 }, { ownerName: 'B', porsi: 28.12 }, { ownerName: 'C', porsi: 0 }];
   InvestmentUI.onOwnerPorsiInput(2, '20');
   assert.ok(InvestmentUI._rebalancePending, 'onOwnerPorsiInput harus memicu panel rebalance saat overflow');
+  assert.equal(InvestmentUI._rebalancePending.editedIndex, 2);
+});
+
+// BUGFIX S622 (sama audit dgn Aset.onOwnerNominalInput() di atas): InvestmentUI juga punya
+// pasangan onOwnerPorsiInput()/onOwnerNominalInput() yang seharusnya SAMA-SAMA memicu
+// _checkRebalanceTrigger() -- makeInvestmentUICtx() SUDAH memuat multi-owner-engine.js jadi tes
+// ini bisa langsung mengecek efek nyatanya (_rebalancePending muncul), bukan cuma spy pemanggilan.
+test('InvestmentUI.onOwnerNominalInput: mengetik nominal yang bikin overflow memicu _checkRebalanceTrigger otomatis (BUGFIX S622)', () => {
+  const { InvestmentUI } = makeInvestmentUICtx();
+  InvestmentUI._ownersModalHolding = { id: 'h1', name: 'Reksadana X' };
+  InvestmentUI._ownersHoldingValue = () => 10000000;
+  InvestmentUI._ownersDraft = [{ ownerName: 'A', porsi: 71.88 }, { ownerName: 'B', porsi: 28.12 }, { ownerName: 'C', porsi: 0 }];
+  InvestmentUI.onOwnerNominalInput(2, '2000000');
+  assert.ok(InvestmentUI._rebalancePending, 'onOwnerNominalInput harus memicu panel rebalance saat overflow, sama seperti onOwnerPorsiInput');
   assert.equal(InvestmentUI._rebalancePending.editedIndex, 2);
 });
 
