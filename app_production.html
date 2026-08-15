@@ -83,9 +83,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1345">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1345">
-<script src="nav-scroll.js?v=1345" defer></script>
+<link rel="stylesheet" href="styles.css?v=1348">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1348">
+<script src="nav-scroll.js?v=1348" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -151,17 +151,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1345');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1348');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1345');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1348');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1345');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1348');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -250,8 +250,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1345" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1345" defer></script>
+<script src="app-bundle-a.min.js?v=1348" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1348" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -2940,8 +2940,8 @@ window.location.reload();
       <div class="u-hint12">Menjalankan pengecekan cepat terhadap fungsi &amp; data aplikasi (format angka, saldo akun, tagihan, cicilan, transfer, backup, penyimpanan, dll). Tidak menambah/mengubah data asli Anda secara permanen — aman dijalankan kapan saja. Otomatis jalan sekali tiap kali ada update aplikasi.</div>
       <div class="u-fs12 u-t2 u-mt10" id="selfTestSummary"></div>
       <div class="u-mt6 result-list-scroll" id="selfTestResults"></div>
-      <button class="btn btn-ghost btn-sm u-flex1 u-mt8" data-action="repairTitipanOrphans">🔧 Perbaiki Gap Dana Titipan (Orphan)</button>
-      <div class="u-fs11 u-ctext3 u-mt4">Beda dari tombol "Jalankan Tes" di atas — ini MENGHAPUS baris Buku Utang "titipan" yang sudah tidak ada pemiliknya (akan minta konfirmasi dulu). Hanya perlu ditekan kalau hasil tes di atas melaporkan "orphan" &gt; 0 pada TitipanReconcile.checkAll().</div>
+      <button class="btn btn-ghost btn-sm u-flex1 u-mt8" data-action="repairTitipanOrphans">🔧 Perbaiki Gap Dana Titipan</button>
+      <div class="u-fs11 u-ctext3 u-mt4">Beda dari tombol "Jalankan Tes" di atas — ini MENGUBAH data: membuat baris Buku Utang "titipan" yang seharusnya ada tapi belum tercatat (missing), dan/atau menghapus baris yang pemiliknya sudah tidak ada (orphan) — akan minta konfirmasi dulu & cuma memproses gap yang benar-benar ditemukan. Hanya perlu ditekan kalau hasil tes di atas melaporkan "missing" atau "orphan" &gt; 0 pada TitipanReconcile.checkAll().</div>
     </div>
   </div>
 
@@ -3988,6 +3988,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[98]);</script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 
-<script src="app-bundle-b.min.js?v=1345" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1348" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
