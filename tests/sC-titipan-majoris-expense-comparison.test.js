@@ -53,6 +53,7 @@ function makeCtx(D) {
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
       'modules/finance/filter-laporan.js',
+      'modules/finance/akun.js',
       'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
     ],
     {
@@ -63,6 +64,7 @@ function makeCtx(D) {
       fmt: (n) => String(n),
       fmtFull: (n) => String(n),
       sameId: (a, b) => String(a) === String(b),
+      invalidateAccBalCache: () => {},
       // Stub minimal Aset._resolveLinkedInvestmentOwners -- cuma baca `h.owners[]`
       // langsung (CATATAN: fungsi ini didefinisikan di realm Node host, BUKAN di dalam
       // vm sandbox, jadi TIDAK BISA memanggil `Investment.getOwners()` sandbox lewat
@@ -79,7 +81,7 @@ function makeCtx(D) {
         },
       },
     },
-    ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI', 'DanaTitipanPortfolioPresenter', 'resolveTxOwnerSplitForAccount', 'resolveTxOwnerAssignment', 'sameId'],
+    ['Investment', 'OwnershipEngine', 'MultiOwnerEngine', 'DanaTitipanPortfolioAPI', 'DanaTitipanPortfolioPresenter', 'resolveTxOwnerSplitForAccount', 'resolveTxOwnerAssignment', 'getAccOwnersEffective', 'sameId'],
   );
 }
 
@@ -213,4 +215,20 @@ test('6. tidak menyentuh _principalCell/_outstandingCell (masih ada & tidak beru
   assert.equal(typeof ctx.DanaTitipanPortfolioPresenter._principalCell, 'function');
   assert.equal(typeof ctx.DanaTitipanPortfolioPresenter._outstandingCell, 'function');
   assert.equal(ctx.DanaTitipanPortfolioPresenter._principalCell({ principalAmount: null }), '<span class="u-t2">Belum dicatat</span>');
+});
+
+test('7. SESI S620 (twin dari s620-titipan-account-only-owner-linked-expense.test.js): owner "Uang motor" 0 holding sama sekali, owners[] LANGSUNG di akun BRI -> baris "Estimasi dari Transaksi <Akun>" tetap muncul & terhitung benar', () => {
+  const D = baseD({
+    accounts: [{ id: 'acc-bri', name: 'BRI', owners: [
+      { ownerId: 'uang-motor', porsi: 100, ownerName: 'Uang motor' },
+    ] }],
+    transactions: [{ type: 'expense', accountId: 'acc-bri', amount: 100000, deductionOwnerId: 'uang-motor' }],
+  });
+  const ctx = makeCtx(D);
+  const o = { ownerId: 'uang-motor', holdings: [] };
+  const cmp = ctx.DanaTitipanPortfolioPresenter._expenseComparisonForOwner(o);
+  assert.ok(cmp, 'baris pembanding tidak boleh lagi disembunyikan utk owner akun-only ini');
+  assert.equal(cmp.total, 100000);
+  assert.equal(cmp.accountNames.length, 1);
+  assert.equal(cmp.accountNames[0], 'BRI');
 });
