@@ -415,7 +415,29 @@ const ownerTxs=sorted.filter(t=>resolveTxOwnerAssignment(t,ownersRes.owners)===o
 const m=ownerTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const e=ownerTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 const t=m-e;
-return{name:o.ownerName,detailHtml:`<div style="margin-top:4px">${escapeHtml(o.ownerName)} (${o.porsi}%): Modal ${fmt(m)} · Pengeluaran ${fmt(e)} · Total ${t<0?'-':''}${fmt(Math.abs(t))}</div>`};
+// Baris tambahan (permintaan user: "tambahkan modal dikomit dan total setelah
+// dikurangi pengeluaran hanya ditampilkan per navigasi pemilik porsi") -- "Modal
+// Dikomit" DI SINI BUKAN `m` di atas (yang murni sum tx.type==='income' akun ini,
+// lihat komentar S568 di atas): ini pokok yang dicatat MANUAL lewat modal "💰 Pokok
+// Dana Titipan" (DanaTitipanPortfolioAPI.getCommitments(), dana-titipan-commitment-
+// return-api.js) -- 2 entitas beda sumber, SENGAJA ditampilkan berdampingan (bukan
+// menggantikan `t`/Total existing) supaya user bisa lihat sendiri kalau ada selisih,
+// pola sama "Pokok Dikomit" vs "Estimasi dari Transaksi <Akun>" di dashboard Dana
+// Titipan (dana-titipan-portfolio-render.js, _expenseComparisonForOwner()). REUSE
+// getCommitments() apa adanya, 0 rumus split baru; sameId() (bukan ===) krn
+// D.titipanCommitments store terpisah dari ownersRes.owners, pola sama alasan
+// resolveTxOwnerSplitForAccount() pakai sameId() utk accountId lintas store.
+let commitHtml='';
+if(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.getCommitments==='function'){
+const commit=DanaTitipanPortfolioAPI.getCommitments().find(c=>sameId(c.ownerId,o.ownerId));
+if(commit&&isFinite(commit.principalAmount)){
+const sisa=commit.principalAmount-e;
+commitHtml=`<div style="margin-top:2px">Modal Dikomit ${fmt(commit.principalAmount)} · Total setelah dikurangi pengeluaran ${sisa<0?'-':''}${fmt(Math.abs(sisa))}</div>`;
+}else{
+commitHtml=`<div style="margin-top:2px">Modal Dikomit <span class="u-t2">Belum dicatat</span></div>`;
+}
+}
+return{name:o.ownerName,detailHtml:`<div style="margin-top:4px">${escapeHtml(o.ownerName)} (${o.porsi}%): Modal ${fmt(m)} · Pengeluaran ${fmt(e)} · Total ${t<0?'-':''}${fmt(Math.abs(t))}</div>${commitHtml}`};
 });
 window._filterTxOwnerSplitRows=rows;
 const tabsHtml=rows.map((r,idx)=>`<button type="button" class="cn-tab${idx===0?' active':''}" data-owner-idx="${idx}" onclick="selectFilterTxOwnerSplit(${idx})" style="flex:none;padding:6px 14px;margin-right:6px">${escapeHtml(r.name)}</button>`).join('');
