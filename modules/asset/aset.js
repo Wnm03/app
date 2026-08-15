@@ -499,6 +499,20 @@ return (a&&typeof a.nilai==='number'&&isFinite(a.nilai)&&a.nilai>0)?a.nilai:0;
 // Owner belum punya record commitment (`getCommitments()` tidak ketemu / principalAmount bukan
 // angka) -> prompt "catat pokok dulu" (BUKAN tampil tanpa batas/diam saja), sama persis
 // InvestmentUI._ownerQuotaText().
+//
+// DL-NEXT-9 REVISI 3 (poin 4, mirror PERSIS InvestmentUI._ownerQuotaText()) -- SEBELUM fix
+// ini, "Kuota sisa" HANYA mengurangi allocatedExcluding()+draftNominal dari principal,
+// mengabaikan usedTotal (jalur "Catat Pengeluaran Dana Titipan", tx.titipanLinkId, Sesi 519)
+// & linkedExpenseTotal (pengeluaran akun tertaut deductionOwnerId, Sesi PATCH-2026-08-14) --
+// dua komponen yang SUDAH jadi bagian formula spent di build()/estimatedUnallocated, sehingga
+// angka bisa tidak sinkron dgn dashboard Dana Titipan (root cause, lihat
+// DESIGN-LOCK-DL-NEXT-9-OWNER-QUOTA-SISA-SPENT-SYNC-2.md). FIX: baca keduanya dari owner
+// bucket DanaTitipanPortfolioAPI.build() (SATU sumber kebenaran sama dgn estimatedUnallocated,
+// 0 rumus baru). Keduanya GLOBAL per-ownerId (bukan per-holding, sudah diverifikasi di
+// build()) -- 0 exclusion tambahan diperlukan (beda dgn allocatedExcluding() yang memang harus
+// exclude instrumen/aset yang sedang dibuka di modal ini).
+//
+// HARD INVARIANT (DL-Next-9): gain/currentValue (Untung-Rugi) TIDAK PERNAH masuk formula ini.
 _ownerQuotaText(o){
 if(!o||o.isSelf||!o.ownerId)return '';
 if(typeof DanaTitipanPortfolioAPI==='undefined')return '';
@@ -509,10 +523,14 @@ return '<div class="u-fs11 u-t2 u-mt2">💰 Kuota titipan: <span class="u-fw700"
 const principal=Number(commit.principalAmount);
 const currentAssetId=Aset._ownersModalAsset?Aset._ownersModalAsset.id:null;
 const excluding=DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId,{assetId:currentAssetId});
+const projection=(typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null;
+const ownerBucket=(projection&&Array.isArray(projection.owners))?projection.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
+const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
+const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
 const nilai=Aset._ownersAssetNilai();
 const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
 const draftNominal=nilai*(porsiNum/100);
-const sisa=principal-excluding-draftNominal;
+const sisa=principal-excluding-usedTotal-linkedExpenseTotal-draftNominal;
 const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
 if(sisa<0){
 return '<div class="u-fs11 u-mt2"><span class="u-fw700 red">⚠️ Kuota sisa: '+money(sisa)+' (melebihi pokok dikomit)</span></div>';

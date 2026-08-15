@@ -223,6 +223,28 @@ const InvestmentUI = {
   //
   // Owner belum punya record commitment (`getCommitments()` tidak ketemu / principalAmount bukan
   // angka) -> Gate 2 #2: prompt "catat pokok dulu" (BUKAN tampil tanpa batas/diam saja).
+  //
+  // DL-NEXT-9 REVISI 3 (poin 4) — SEBELUM fix ini, "Kuota sisa" di modal ini HANYA
+  // mengurangi `allocatedExcluding()` (pokok yang sudah dialokasikan NOMINAL ke
+  // instrumen lain) + `draftNominal` (porsi baris ini yang sedang diketik) dari
+  // `principal`. Itu MENGABAIKAN 2 jalur pengeluaran lain yang SUDAH jadi bagian
+  // formula `spent` di `build()`/`estimatedUnallocated` sejak Sesi 519 & Sesi
+  // PATCH-2026-08-14 — `usedTotal` (jalur "💸 Catat Pengeluaran Dana Titipan",
+  // `tx.titipanLinkId`) & `linkedExpenseTotal` (pengeluaran akun tertaut yang
+  // `deductionOwnerId`-nya mengarah ke owner ini) — sehingga "Kuota sisa" bisa
+  // menunjuk angka yang tidak sinkron dengan dashboard Dana Titipan (root cause,
+  // lihat DESIGN-LOCK-DL-NEXT-9-OWNER-QUOTA-SISA-SPENT-SYNC-2.md). FIX: tambah
+  // kedua komponen itu, dibaca dari owner bucket `DanaTitipanPortfolioAPI.build()`
+  // (SATU sumber kebenaran yang sama dgn `estimatedUnallocated`, 0 rumus baru
+  // ditulis di sini). Keduanya sudah diverifikasi dihitung GLOBAL per-ownerId
+  // (bukan per-holding) di `build()` — jadi 0 exclusion tambahan diperlukan utk
+  // dua komponen ini (beda dgn `allocatedExcluding()` yang memang harus exclude
+  // instrumen yang sedang dibuka di modal ini).
+  //
+  // HARD INVARIANT (DL-Next-9): `o.gain`/`gainSplit`/`currentValue` (Untung-Rugi)
+  // TIDAK PERNAH masuk formula ini — HANYA `principalAmount`/`allocatedPrincipal`
+  // (lewat `allocatedExcluding()`)/`usedTotal`/`linkedExpenseTotal` yang boleh
+  // mempengaruhi "Kuota sisa".
   _ownerQuotaText(o) {
     if (!o || o.isSelf || !o.ownerId) return '';
     if (typeof DanaTitipanPortfolioAPI === 'undefined') return '';
@@ -234,11 +256,16 @@ const InvestmentUI = {
     const holding = InvestmentUI._ownersModalHolding;
     const holdingId = holding ? holding.id : null;
     const excluding = DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId, holdingId);
+    const projection = (typeof DanaTitipanPortfolioAPI.build === 'function') ? DanaTitipanPortfolioAPI.build() : null;
+    const ownerBucket = (projection && Array.isArray(projection.owners))
+      ? projection.owners.find((ow) => ow && ow.ownerId === o.ownerId) : null;
+    const usedTotal = ownerBucket ? (ownerBucket.usedTotal || 0) : 0;
+    const linkedExpenseTotal = ownerBucket ? (ownerBucket.linkedExpenseTotal || 0) : 0;
     const holdingCost = (holding && typeof Investment !== 'undefined' && typeof Investment.holdingCost === 'function')
       ? (Investment.holdingCost(holding) || 0) : 0;
     const porsiNum = typeof o.porsi === 'number' && isFinite(o.porsi) ? o.porsi : 0;
     const draftNominal = holdingCost * (porsiNum / 100);
-    const sisa = principal - excluding - draftNominal;
+    const sisa = principal - excluding - usedTotal - linkedExpenseTotal - draftNominal;
     const money = (typeof fmtFull === 'function') ? fmtFull : ((typeof fmt === 'function') ? fmt : (n) => 'Rp ' + Math.round(n || 0));
     if (sisa < 0) {
       return '<div class="u-fs11 u-mt2"><span class="u-fw700 red">⚠️ Kuota sisa: ' + money(sisa) + ' (melebihi pokok dikomit)</span></div>';
