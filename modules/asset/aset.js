@@ -527,7 +527,7 @@ return (a&&typeof a.nilai==='number'&&isFinite(a.nilai)&&a.nilai>0)?a.nilai:0;
 // exclude instrumen/aset yang sedang dibuka di modal ini).
 //
 // HARD INVARIANT (DL-Next-9): gain/currentValue (Untung-Rugi) TIDAK PERNAH masuk formula ini.
-_ownerQuotaText(o){
+_ownerQuotaText(o,i){
 if(!o||o.isSelf||!o.ownerId)return '';
 if(typeof DanaTitipanPortfolioAPI==='undefined')return '';
 const commit=DanaTitipanPortfolioAPI.getCommitments().find((c)=>c&&c.ownerId===o.ownerId);
@@ -549,7 +549,11 @@ const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt
 if(sisa<0){
 return '<div class="u-fs11 u-mt2"><span class="u-fw700 red">⚠️ Kuota sisa: '+money(sisa)+' (melebihi pokok dikomit)</span></div>';
 }
-return '<div class="u-fs11 u-t2 u-mt2">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span></div>';
+// SESI AF2: sisipkan tombol "🔄 Isi dari kuota sisa" di samping angka kuota -- pemicu
+// manual applyQuotaToRow() (lihat komentarnya) supaya user bisa isi/timpa ulang Porsi (%)
+// baris ini dari kuota sisa kapan saja, tidak hanya sekali otomatis saat pilih owner.
+return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+
+'<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.applyQuotaToRow" data-args=\'['+(typeof i==='number'?i:(Array.isArray(Aset._ownersDraft)?Aset._ownersDraft.indexOf(o):-1))+']\'>🔄 Isi dari kuota sisa</button></div>';
 },
 // _updateOwnerQuotaDisplay(i) -- SESI 505 (mirror PERSIS InvestmentUI._updateOwnerQuotaDisplay(),
 // S494). Update HANYA elemen #assetOwnerKuota{i} tiap ketik porsi/nominal, TANPA render ulang
@@ -560,7 +564,7 @@ const el=document.getElementById('assetOwnerKuota'+i);
 if(!el)return;
 const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
 if(!draft[i])return;
-el.innerHTML=Aset._ownerQuotaText(draft[i]);
+el.innerHTML=Aset._ownerQuotaText(draft[i],i);
 },
 // _renderOwnersList() -- SESI 392b: render ulang #assetOwnersList dari Aset._ownersDraft.
 // Dipanggil tiap ada tambah/hapus baris (addOwnerRow/removeOwnerRow), TIDAK dipanggil tiap
@@ -659,7 +663,7 @@ Aset._ownerNameFieldHtml(o,i)+
 '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
 '<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' onchange="Aset.onOwnerIsSelfToggle('+i+',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'+
 '</label>'+
-(o.isSelf?'':('<div id="assetOwnerKuota'+i+'">'+Aset._ownerQuotaText(o)+'</div>'))+
+(o.isSelf?'':('<div id="assetOwnerKuota'+i+'">'+Aset._ownerQuotaText(o,i)+'</div>'))+
 '</div>';
 }).join('');
 Aset.updateOwnersTotal();
@@ -804,7 +808,79 @@ const entry=registryList.find((r)=>r.id===val);
 Aset._ownersDraft[i].ownerId=val;
 Aset._ownersDraft[i].ownerName=entry?entry.name:Aset._ownersDraft[i].ownerName;
 Aset._ownersDraft[i]._creatingNew=false;
+// SESI AF2 (fitur "Auto-fill dari Kuota Sisa Titipan", permintaan user via screenshot aset
+// "renov"): begitu owner non-SELF dipilih dari dropdown & baris ini MASIH kosong (porsi<=0,
+// belum pernah diketik manual -- _touched falsy), isi otomatis Porsi (%) (& Nominal (Rp) ikut
+// lewat _renderOwnersList di bawah, sama seperti alur manual) dari sisa kuota titipan owner
+// tsb, DIBATASI supaya tidak mendorong total porsi lewat 100% (lihat _ownerQuotaPorsiCap()).
+// Tetap 100% bisa diedit manual setelahnya -- oninput onOwnerPorsiInput()/onOwnerNominalInput()
+// jalan seperti biasa & akan menandai _touched, menimpa nilai auto-fill ini apa adanya.
+if(!Aset._ownersDraft[i]._touched){
+const curPorsi=typeof Aset._ownersDraft[i].porsi==='number'&&isFinite(Aset._ownersDraft[i].porsi)?Aset._ownersDraft[i].porsi:0;
+if(curPorsi<=0){
+const cap=Aset._ownerQuotaPorsiCap(i);
+if(typeof cap==='number'&&cap>0){
+Aset._ownersDraft[i].porsi=cap;
+Aset._ownersDraft[i]._touched=true;
+Aset._ownersDraft[i]._autoFilled=true;
+if(typeof toast==='function')toast('💡 Porsi diisi otomatis dari sisa kuota titipan ('+cap+'%) — bisa diedit manual');
+}
+}
+}
 Aset._renderOwnersList();
+},
+// _ownerQuotaPorsiCap(i) -- SESI AF2: hitung berapa Porsi (%) maksimum yang aman diisi otomatis
+// utk baris owner ke-i, dari sisa kuota titipannya, TANPA mendorong total porsi semua baris
+// lewat 100%. 100% REUSE rumus sisa kuota yang sama persis dgn _ownerQuotaText() (principal -
+// allocatedExcluding - usedTotal - linkedExpenseTotal, draftNominal baris ini dianggap 0 krn
+// baris belum diisi) -- 0 rumus kuota baru. Balikin null kalau tidak berlaku (owner SELF/belum
+// pilih owner/owner belum punya commitment/nilai aset belum diisi), 0 kalau kuota sisa owner
+// itu <=0 atau ruang porsi yang tersisa (100% - total baris LAIN) sudah habis.
+_ownerQuotaPorsiCap(i){
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+const o=draft[i];
+if(!o||o.isSelf||!o.ownerId)return null;
+if(typeof DanaTitipanPortfolioAPI==='undefined')return null;
+const commit=DanaTitipanPortfolioAPI.getCommitments().find((c)=>c&&c.ownerId===o.ownerId);
+if(!commit||!isFinite(commit.principalAmount))return null;
+const nilai=Aset._ownersAssetNilai();
+if(!(nilai>0))return null;
+const principal=Number(commit.principalAmount);
+const currentAssetId=Aset._ownersModalAsset?Aset._ownersModalAsset.id:null;
+const excluding=DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId,{assetId:currentAssetId});
+const projection=(typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null;
+const ownerBucket=(projection&&Array.isArray(projection.owners))?projection.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
+const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
+const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
+const sisaRp=principal-excluding-usedTotal-linkedExpenseTotal;
+if(!(sisaRp>0))return 0;
+const quotaPorsi=sisaRp/nilai*100;
+const otherTotal=draft.reduce((sum,row,k)=>k===i?sum:sum+(typeof row.porsi==='number'&&isFinite(row.porsi)?row.porsi:0),0);
+const remainingPorsi=Math.max(0,100-otherTotal);
+const capped=Math.min(quotaPorsi,remainingPorsi);
+return Math.round(Math.max(0,capped)*10000)/10000;
+},
+// applyQuotaToRow(i) -- SESI AF2: versi "tombol manual" dari auto-fill di atas -- dipanggil dari
+// tombol "🔄 Isi dari kuota sisa" yang muncul di baris kuota tiap owner non-SELF
+// (_ownerQuotaText() diperluas di bawah utk menyisipkan tombol ini). BEDA dgn auto-fill di
+// onOwnerSelectChange() (yang cuma jalan sekali & hanya kalau baris masih kosong), tombol ini
+// bisa dipanggil kapan saja user mau MENIMPA ulang porsi baris ke nilai kuota-sisa terkini
+// (mis. stlh nilai aset baru diisi, atau user sudah sempat ubah manual tapi mau reset ke kuota)
+// -- makanya TIDAK dicek _touched/curPorsi<=0 di sini, beda dgn cabang auto-fill pasif di atas.
+applyQuotaToRow(i){
+if(Aset._ownersReadOnly)return;
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+if(!draft[i])return;
+const nilai=Aset._ownersAssetNilai();
+if(!(nilai>0)){if(typeof toast==='function')toast('⚠️ Isi dulu "Estimasi Nilai Saat Ini" aset ini sebelum bisa isi otomatis dari kuota');return;}
+const cap=Aset._ownerQuotaPorsiCap(i);
+if(cap===null){if(typeof toast==='function')toast('⚠️ Owner ini belum punya pokok titipan tercatat');return;}
+if(cap<=0){if(typeof toast==='function')toast('⚠️ Kuota sisa owner ini sudah habis / ruang porsi sudah penuh');return;}
+draft[i].porsi=cap;
+draft[i]._touched=true;
+draft[i]._autoFilled=true;
+Aset._renderOwnersList();
+if(typeof toast==='function')toast('✅ Porsi diisi dari sisa kuota titipan ('+cap+'%)');
 },
 onOwnerPorsiInput(i,val){
 if(!Array.isArray(Aset._ownersDraft)||!Aset._ownersDraft[i])return;
