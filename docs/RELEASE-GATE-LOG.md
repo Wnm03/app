@@ -323,3 +323,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm registry (403), eslint tidak bisa diinstall/dijalankan
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall
+
+## 2026-08-15T07:24:55.616Z — versi s621-titipan-explicit-owner-only
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox Claude tanpa akses npm registry/jaringan -- eslint tidak bisa diinstall/dijalankan di environment ini
+- **unminified-bundle**: override dipakai. Alasan: Sandbox Claude tanpa akses jaringan -- esbuild tidak bisa diinstall, bundle unminified tapi sintaksnya sudah divalidasi node --check
