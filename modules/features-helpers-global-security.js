@@ -4,7 +4,7 @@
 // data-default.js (v79) — file itu HARUS dimuat SEBELUM file ini karena dibaca langsung di `let D = {...}`.
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 7;
 const DATA_MIGRATIONS=[
 {toVersion:2,desc:'Tambah kategori baku Investasi & Sedekah/Donasi (pengeluaran) utk user lama',migrate(d){
 if(!d.categories||!d.categories.expense)return;
@@ -30,6 +30,19 @@ if(!Array.isArray(d.transactions)||!d.transactions.length)return;
 const liveIds=new Set([...(d.bills||[]),...(d.billsArchive||[])].map(b=>b.id));
 d.transactions.forEach(t=>{ if(t.billLinkId!=null&&!liveIds.has(t.billLinkId)) delete t.billLinkId; });
 }},
+{toVersion:6,desc:'GAP3-AUD-001 (Sesi 545/546, docs/BUG_REGISTRY.md): holding Investasi legacy fundSource==="titipan" yang belum pernah lewat Investment.setOwners() selalu balik ownerId literal "titipan_investor" dari Investment.getOwners() apa pun titipanOwner-nya -- 2 orang beda jadi 1 identitas kalau dibandingkan lintas holding/domain. Investment.migrateLegacyTitipanOwners() (Sesi 545) derive ownerId real per nama lewat OwnerRegistry.findOrCreate() (idempotent, 0 efek kalau dijalankan ulang -- guard di dalam fungsi itu sendiri lewat Array.isArray(h.owners), bukan lewat SCHEMA_VERSION di sini, jadi aman dipanggil lagi manual/lewat restore JSON versi lama). app-bootstrap.js dimuat PALING TERAKHIR (lihat komentar di file itu) jadi Investment/OwnerRegistry sudah pasti terdefinisi saat migrate() ini jalan.',migrate(d){
+if(typeof Investment!=='undefined'&&typeof Investment.migrateLegacyTitipanOwners==='function'){
+Investment.migrateLegacyTitipanOwners();
+}
+}},
+{toVersion:7,desc:'R2 (audit ownership/titipan, lanjutan GAP3-AUD-001): baris a.owners[]/h.owners[] non-SELF yang dibuat SEBELUM assetOwnersModal/investmentOwnersModal disambung ke OwnerRegistry (S490/S491) masih pakai ownerId ad-hoc lama -- 2 aset/holding dgn owner nama sama tidak otomatis ownerId sama. Aset.migrateOwnersToRegistry()/Investment.migrateOwnersToRegistry() derive ownerId kanonik per nama lewat OwnerRegistry.findOrCreate() (idempotent, guard tabrakan internal), relabel D.debts[].linkedOwnerId lebih dulu spy histori/status lunas utang titipan tidak hilang.',migrate(d){
+if(typeof Aset!=='undefined'&&typeof Aset.migrateOwnersToRegistry==='function'){
+Aset.migrateOwnersToRegistry();
+}
+if(typeof Investment!=='undefined'&&typeof Investment.migrateOwnersToRegistry==='function'){
+Investment.migrateOwnersToRegistry();
+}
+}},
 ];
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
@@ -53,8 +66,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's543-titipan-assetpick-dropdown-preserve-selection';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's543-titipan-assetpick-dropdown-preserve-selection';
+const APP_BUILD_VERSION = 's638-keamanan-pin-per-device-salt';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's638-keamanan-pin-per-device-salt';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -130,6 +143,12 @@ let subCatParentId=null, subCatParentType=null, subCatEditId=null;
 let txEditId=null, catModalCallback=null, txEditLinkedBillId=null;
 let _txSaving=false;
 let _txAccManuallySet=false;
+// _txAssetManuallySet — Sesi (patch akun-multi-owner-doublecount-datahealthcheck-restore):
+// sama pola persis dgn _txAccManuallySet -- true kalau user SENGAJA mengubah
+// dropdown #txAssetId sendiri (lewat onTxAssetChange()), supaya auto-select
+// aset dari onTxAccChange() (lihat transaksi.js) TIDAK menimpa pilihan
+// manual user setelah dia ganti sendiri.
+let _txAssetManuallySet=false;
 let _txCatLearnSource=null;
 let _saveGuards={};
 function withSaveGuard(key,modalId,fn){
@@ -232,6 +251,13 @@ function save(){
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
 // tapi tiap fungsi di dalam burst yang sama tidak hitung ulang dari nol. Lihat akun.js.
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
+// 2026-08-14 sesi lanjutan (Rekomendasi #2, PATCH-NOTES-akun-dana-titipan-sync.md §2):
+// gerbang tunggal utk sinkron Buku Utang akun BERDIRI SENDIRI (bukan tertaut Aset --
+// itu sudah ditangani syncLinkedAssetNilaiFromAkun() di bawah) ke Dana Titipan, nominal
+// = saldo akun saat ini (real-time, keputusan desain eksplisit -- lihat komentar
+// TitipanSync.reconcileAccounts()). Ditaruh SETELAH invalidateAccBalCache() supaya
+// recalcAccBalance() di dalamnya baca saldo TERBARU, bukan cache basi dari siklus lalu.
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function')TitipanSync.reconcileAccounts();
 if(typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun();
 if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
 if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();

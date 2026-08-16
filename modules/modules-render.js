@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s543-titipan-assetpick-dropdown-preserve-selection';
+const MODULE_RENDER_VERSION='s638-keamanan-pin-per-device-salt';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -77,12 +77,54 @@ let accGridList=D.accounts;
 if(accOwnFilterVal&&accOwnFilterVal!=='ALL'&&typeof OwnershipEngine!=='undefined'){
 const accOwnFiltered=OwnershipEngine.filterByType(accGridList,accOwnFilterVal);
 if(accOwnFiltered.ok)accGridList=accOwnFiltered.items;
+// Filter Kepemilikan "1 SOT" (patch delacc-titipan-debt susulan): filterByType()
+// di atas MURNI baca acc.ownership (badge manual) apa adanya -- 100% REUSE apa
+// adanya (0 logic filter baru di engine generik itu, dipakai domain lain juga,
+// mis. Kendaraan baris ~1542). Fix HANYA di titik pakai akun ini: kalau user
+// pilih filter "SELF" (Milik Sendiri), akun yang porsi REAL-nya non-SELF tapi
+// badge-nya masih DEFAULT (belum diklasifikasi -- lihat resolveAccOwnershipBadgeState()
+// di akun.js & ownBadgeState di bawah) DIKELUARKAN dari hasil filter SELF --
+// menampilkannya sebagai "Milik Sendiri" menyesatkan padahal porsi aslinya
+// bukan 100% milik sendiri. Guard typeof resolveAccOwnershipBadgeState aman
+// kalau akun.js belum dimuat (0 filter berubah, fallback ke perilaku lama).
+if(accOwnFilterVal==='SELF'&&typeof resolveAccOwnershipBadgeState==='function'){
+accGridList=accGridList.filter(a=>!resolveAccOwnershipBadgeState(a.id).mismatch);
 }
+}
+// Gap Badge Titipan (2026-08-14 sesi lanjutan #2, Rekomendasi #3,
+// PATCH-NOTES-akun-dana-titipan-sync.md §5): 100% REUSE
+// TitipanReconcile.checkAccounts() -- 0 logic gap dihitung ulang di sini.
+// Dihitung SEKALI per render (bukan per-kartu) lalu dicocokkan ke tiap akun
+// lewat Set id akun yang punya gap. Murni informasi, 0 mutasi ke D. Guard
+// typeof TitipanReconcile -- kalau file itu belum dimuat di suatu halaman,
+// fallback ke Set kosong (0 badge tampil), tidak error.
+const titipanGapAccIds=(()=>{
+const s=new Set();
+if(typeof TitipanReconcile!=='undefined'&&typeof TitipanReconcile.checkAccounts==='function'){
+const res=TitipanReconcile.checkAccounts();
+// key berbentuk "accId::ownerId" (lihat _expectedFromAccounts()) -- ambil
+// bagian accId saja (split '::' pertama), krn badge di kartu Akun cukup
+// tandai per-akun (bukan per-owner).
+(res&&res.missing||[]).forEach(m=>{ if(m&&m.key!=null)s.add(String(m.key).split('::')[0]); });
+}
+return s;
+})();
 el.innerHTML=accGridList.map((a)=>{
 const i=D.accounts.indexOf(a);
 const bal=recalcAccBalance(a.id);
 const off=a.includeInBalance===false;
-const linked=!off&&isAccLinkedToAsset(a.id);
+// linkedHoldingObj (fix bareng linkedPorsiLine di bawah, skenario "Majoris"): akun
+// yang ditautkan LANGSUNG dari Holding Investasi lewat dropdown "🔗 Hubungkan ke
+// Akun" (investAccId, investasi-list-view.js, S601-3 -- field `h.accountId`) TIDAK
+// pernah kena isAccLinkedToAsset() (fungsi itu HANYA baca D.assets[].accountId,
+// beda sumber data dari D.investments[].accountId). Sebelum fix ini kartu Akun utk
+// jalur Holding-langsung tidak dianggap `linked` sama sekali -- badge/porsi/hint
+// riwayat semuanya 0 tampil, padahal test lama (S566) sudah pakai nama "Majoris"
+// utk skenario Aset tertaut yang MESTINYA konsisten juga utk Holding tertaut
+// langsung. 100% REUSE findLinkedHoldingForAccount() (transaksi.js, S601-3) --
+// guard typeof aman kalau file itu belum dimuat di suatu halaman (0 fungsi baru).
+const linkedHoldingObj=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(a.id):null;
+const linked=!off&&(isAccLinkedToAsset(a.id)||!!linkedHoldingObj);
 const badge=off?' <span class="u-fs12t2">(off)</span>':(linked?' <span class="u-fs12t2">(via Aset)</span>':'');
 let jenisLabel=a.jenis==='dikunci'?'🔒 Dikunci':(a.jenis==='investasi'?'📈 Investasi':'');
 if(a.jenis==='investasi'&&a.platform)jenisLabel+=' · '+a.platform;
@@ -98,7 +140,19 @@ const jenisBadge=jenisLabel?` <span class="u-fs12t2">${escapeHtml(jenisLabel)}</
 // resolve/hitung ulang yang duplikat. Data lama tanpa field ownership: resolve() fallback
 // ke SELF/DEFAULT (backward compatible, sama seperti S232/S233).
 const ownResolved=(typeof OwnershipEngine!=='undefined')?OwnershipEngine.resolve(a):null;
-const ownText=ownResolved?` <span class="acc-chip">${escapeHtml(OwnershipEngine.label(ownResolved.type))}</span>`:'';
+// badgeState (patch delacc-titipan-debt susulan, "1 SOT badge Kepemilikan &
+// Filter vs porsi Holding/acc.owners") -- 100% REUSE resolveAccOwnershipBadgeState()
+// (akun.js) baru, 0 rumus baru di sini. Kalau porsi REAL akun ini (Holding
+// tertaut/acc.owners eksplisit) non-SELF tapi badge "Kepemilikan" masih DEFAULT
+// (belum pernah diklasifikasi manual) -- badge chip generik "Milik Sendiri" yang
+// SEBELUM ini tampil itu MENYESATKAN (porsi aslinya bukan 100% milik sendiri).
+// Ganti jadi chip peringatan eksplisit (idiom sama titipanGapLine di bawah),
+// TIDAK auto-tebak tipe spesifik (INVESTOR/CUSTOMER/THIRD_PARTY/FAMILY) karena
+// porsi cuma punya nama pemilik, bukan tipe semantik -- keputusan tipe akhir
+// tetap manual lewat dropdown "Kepemilikan" di modal Edit Akun.
+const ownBadgeState=(typeof resolveAccOwnershipBadgeState==='function')?resolveAccOwnershipBadgeState(a.id):null;
+const ownMismatch=!!(ownBadgeState&&ownBadgeState.mismatch);
+const ownText=ownMismatch?' <span class="acc-chip" style="color:var(--accent4)">⚠️ Belum diklasifikasi</span>':(ownResolved?` <span class="acc-chip">${escapeHtml(OwnershipEngine.label(ownResolved.type))}</span>`:'');
 const ownDetail=ownResolved?`<div class="u-fs10 u-t2">Ownership<br>${escapeHtml(ownResolved.type)}</div>`:'';
 // investDetail (S308) -- field DINAMIS hasil scan layar Detail Portofolio Bibit (Modal
 // Investasi/Keuntungan/Harga Beli/Jumlah Unit, lihat UniversalScan.importSelected() di
@@ -113,6 +167,58 @@ if(invD.keuntungan!=null)parts.push((invD.keuntungan<0?'Rugi ':'Untung ')+fmt(Ma
 if(invD.jumlahUnit!=null)parts.push(Number(invD.jumlahUnit).toLocaleString('id-ID')+' unit');
 return parts.length?`<div class="u-fs11 u-t2" style="margin-top:2px">${escapeHtml(parts.join(' · '))}</div>`:'';
 })():'';
+// linkedPorsiLine + linkedTxHint (permintaan user: "perjelas aset yang ditautkan
+// utk akun transaksi agar menampilkan porsi lengkap dgn riwayat transaksi modal
+// total") -- SEBELUM ini, akun berbadge "(via Aset)" cuma nampilin ownText
+// generik (mis. "Investor", 1 tipe) & invDetailLine statis dari a.investDetail
+// (snapshot hasil scan OCR, TIDAK mencerminkan porsi multi-owner Aset yg
+// sebenarnya nautin akun ini). 2 tambahan di bawah PURE UI/read-only, 0 field
+// baru, 0 rumus baru -- 100% REUSE MultiOwnerEngine.getOwners() (sama pola
+// persis linkMultiOwnerWarn di Aset.openActionsMenu()/aset.js) & aksi klik
+// kartu yg SUDAH ADA (data-action="openAccTxHistory" di wrapper div, tidak
+// berubah) -- linkedTxHint cuma bikin affordance itu KELIHATAN, bukan bikin
+// aksi baru.
+const linkedAssetObj=linked?(D.assets||[]).find(x=>String(x.accountId)===String(a.id)):null;
+// linkedPorsiLine -- FIX (skenario "Majoris", lanjutan komentar linkedHoldingObj di
+// atas): SEBELUM ini baris porsi HANYA baca dari linkedAssetObj (D.assets), jadi
+// akun yang tertaut LANGSUNG ke Holding Investasi (linkedHoldingObj, tanpa Aset
+// perantara) tidak pernah dapat baris porsi sama sekali -- kelihatan "tidak
+// sync" padahal porsinya beneran ada & LIVE di Holding tsb. Prioritas: Holding
+// menang kalau ADA (konsisten dgn resolveOwnerDefaultForAccount() di transaksi.js,
+// "Holding adalah sumber kebenaran porsi LIVE"), baru fallback ke Aset seperti
+// semula -- 100% REUSE Investment.getOwners()/MultiOwnerEngine.getOwners(), 0
+// rumus porsi baru.
+const linkedPorsiLine=(linked&&linkedHoldingObj)?(()=>{
+if(typeof Investment==='undefined')return'';
+const owners=Investment.getOwners(linkedHoldingObj);
+if(!owners||!owners.length)return'';
+const porsiTxt=owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
+})():(linkedAssetObj&&typeof MultiOwnerEngine!=='undefined')?(()=>{
+const res=MultiOwnerEngine.getOwners(linkedAssetObj);
+if(!res||!res.ok||!res.owners.length)return'';
+const porsiTxt=res.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
+})():'';
+// standalonePorsiLine (patch delacc-titipan-debt susulan) -- SEBELUM ini,
+// akun BERDIRI-SENDIRI (bukan `linked` ke Aset/Holding, mis. porsi diisi lewat
+// modal "⚖️ Atur Porsi Kepemilikan Akun" / AccOwners.save(), akun.js) TIDAK
+// PERNAH dapat baris "👥 Porsi:" sama sekali -- linkedPorsiLine di atas cuma
+// isi utk akun `linked`. Fallback ini 100% REUSE ownBadgeState.owners (sumber
+// 'account' = getAccOwnersRaw(), sudah dihitung di atas utk badge) -- 0 rumus
+// porsi baru, cuma tampilkan apa yang sudah dihitung. Guard `!linkedPorsiLine`
+// jaga 0 duplikasi kalau akun ini ternyata JUGA linked (linkedPorsiLine sudah
+// mengisi lebih dulu, prioritas Holding/Aset tetap menang).
+const standalonePorsiLine=(!linkedPorsiLine&&ownBadgeState&&ownBadgeState.source==='account'&&ownBadgeState.owners.length)?(()=>{
+const porsiTxt=ownBadgeState.owners.map(o=>`${escapeHtml(o.ownerName)} (${o.porsi}%)`).join(' · ');
+return`<div class="u-fs11 u-t2" style="margin-top:2px">👥 Porsi: ${porsiTxt}</div>`;
+})():'';
+const linkedTxHint=linked?'<div class="u-fs10 u-t2" style="margin-top:2px">📜 Ketuk kartu untuk riwayat transaksi modal</div>':'';
+// titipanGapLine (sesi lanjutan #2, Rekomendasi #3) -- murni informasi, 0
+// tombol/aksi baru, 0 mutasi ke D. Hanya tampil utk akun berdiri-sendiri
+// (bukan `linked` ke Aset -- itu sudah otomatis sync via cabang lain,
+// lihat komentar _expectedFromAccounts()) yang ada di titipanGapAccIds.
+const titipanGapLine=(!linked&&titipanGapAccIds.has(String(a.id)))?'<div class="u-fs11" style="margin-top:2px;color:var(--accent4)">⚠️ Porsi titipan belum sinkron ke Dana Titipan</div>':'';
 return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAccTxHistory" data-args="${escapeHtml(JSON.stringify([a.id]))}">
       <button class="acc-card-edit" data-stop="1" data-action="openAccModal" data-args="${escapeHtml(JSON.stringify([i]))}" title="Edit" aria-label="Edit">✏️</button>
       <button class="acc-card-del" data-stop="1" data-action="delAcc" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
@@ -120,6 +226,10 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       <div class="acc-card-name">${escapeHtml(a.name)}${badge}${jenisBadge}${ownText}</div>
       ${ownDetail}
       ${invDetailLine}
+      ${linkedPorsiLine}
+      ${standalonePorsiLine}
+      ${linkedTxHint}
+      ${titipanGapLine}
       <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>
     </div>`;
 }).join('');
@@ -608,7 +718,8 @@ const cls=['billcal-day'];
 if(dateStr===todayStr)cls.push('today');
 if(hasBill)cls.push('has-bill');
 if(dateStr===billCalSelectedDate)cls.push('selected');
-html+=`<div class="${cls.join(' ')}" data-action="selectBillCalDay" data-args="${escapeHtml(JSON.stringify([dateStr]))}">${day}${hasBill?'<div class="billcal-dot"></div>':''}</div>`;
+const ariaLbl=`Tanggal ${day}${hasBill?', ada tagihan jatuh tempo':''}`;
+html+=`<div class="${cls.join(' ')}" data-action="selectBillCalDay" data-args="${escapeHtml(JSON.stringify([dateStr]))}" aria-label="${escapeHtml(ariaLbl)}">${day}${hasBill?'<div class="billcal-dot"></div>':''}</div>`;
 }
 gridEl.innerHTML=html;
 const selList=billCalSelectedDate?(byDate[billCalSelectedDate]||[]):[];
@@ -1814,6 +1925,7 @@ const aiVehFuelDropEl=document.getElementById('sAIVehicleFuelDrop'); if(aiVehFue
 const aiDelLowStockEl=document.getElementById('sAIDeliveryLowStock'); if(aiDelLowStockEl) aiDelLowStockEl.value=typeof getAIDeliveryLowStockThreshold==='function'?getAIDeliveryLowStockThreshold():2;
 const aiAssetZakatMinEl=document.getElementById('sAIAssetZakatMin'); if(aiAssetZakatMinEl) aiAssetZakatMinEl.value=typeof getAIAssetZakatMinThreshold==='function'?getAIAssetZakatMinThreshold():0;
 const ocrMinConfEl=document.getElementById('sOcrMinConfidence'); if(ocrMinConfEl) ocrMinConfEl.value=typeof getOcrMinConfidence==='function'?getOcrMinConfidence():50;
+if(typeof renderKeamananSettings==='function')renderKeamananSettings();
 const whG=document.getElementById('whGaji'); if(whG) whG.value=D.profile.gajiPokok||65000;
 const whD=document.getElementById('whDate'); if(whD&&!whD.value) whD.value=new Date().toISOString().split('T')[0];
 renderWorkDays();
@@ -1832,6 +1944,18 @@ if(typeof DashboardSettings!=='undefined')DashboardSettings.renderSettingsUI();
 // renderSettings() (tidak boleh menjatuhkan sisa fungsi kalau entah kenapa
 // belum sempat dimuat).
 if(typeof OwnershipSettingsPresenter!=='undefined')OwnershipSettingsPresenter.render();
+// R4 (audit ownership/titipan, menutup OWNREG-GATE3-001): sinkronkan card
+// "Kelola Daftar Pemilik" (#ownerRegistrySettingsList) tiap kali halaman
+// Pengaturan dirender ulang — pola sama persis OwnershipSettingsPresenter
+// di atas. Guard typeof sama alasan yang sama (modul opsional dari sudut
+// pandang renderSettings()).
+if(typeof OwnerRegistrySettingsUI!=='undefined')OwnerRegistrySettingsUI.render();
+// S592 (lanjutan PATCH-ghost-asset-migrated-investment.md): sinkronkan card
+// "Bersihkan Aset Ghost (Migrasi)" (#ghostAssetCleanupList) tiap kali halaman
+// Pengaturan dirender ulang — pola sama persis OwnerRegistrySettingsUI di
+// atas. Guard typeof sama alasan yang sama (modul opsional dari sudut
+// pandang renderSettings()).
+if(typeof GhostAssetCleanupUI!=='undefined')GhostAssetCleanupUI.render();
 // Data Management Core: Backup Health/Backup History (lihat
 // modules/shared/backup-health-presenter.js/backup-history-presenter.js)
 // — guard typeof, pola sama dgn DashboardSettings di atas.

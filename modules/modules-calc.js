@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s543-titipan-assetpick-dropdown-preserve-selection';
+const MODULE_CALC_VERSION='s638-keamanan-pin-per-device-salt';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -10,7 +10,14 @@ if((fi.assetScope||'zakatable')==='semua') return totalAssetValue();
 // exclude aset yang sudah `_migratedToInvestmentId` (dobel-hitung), tambah
 // `Investment.zakatableValue()` supaya holding hasil migrasi tetap ikut
 // scope FI "Hanya Zakatable".
-return (D.assets||[]).filter(a=>a.zakatable&&!a._migratedToInvestmentId).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0)+(typeof Investment!=='undefined'?Investment.zakatableValue():0);
+// Sesi B9: fix gap dicatat di release notes B8 ("Tidak diubah" section) --
+// filter inline di sini (duplikat dari Zakat.hitungMaal(), bukan reuse
+// totalAssetValue()) belum ikut exclude aset yang ditautkan resmi lewat
+// `a.investmentId` (B1) ke holding yang masih ada, jadi masih dobel-hitung
+// (1x di sini via a.nilai, 1x lagi di Investment.zakatableValue()). Fix
+// SAMA PERSIS pola B8: tambah `!a.investmentId` di samping
+// `!a._migratedToInvestmentId`.
+return (D.assets||[]).filter(a=>a.zakatable&&!a._migratedToInvestmentId&&!a.investmentId).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0)+(typeof Investment!=='undefined'?Investment.zakatableValue():0);
 },
 assetFund(){ return totalSaldoAkun()+FI.investmentAssetValue()+totalPiutangValue(); },
 totalDebt(){
@@ -581,8 +588,17 @@ if(!sumberOptions[idx]){toast('⚠️ Pilihan akun tidak valid');return;}
 fromAcc=sumberOptions[idx];
 }
 const date=new Date().toISOString().split('T')[0];
-D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun → ${escapeHtml(toAcc.name)}`,date,accountId:fromAcc.id});
-D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id});
+// S631 (Bug D fix, lihat AUDIT-s630-bugD-transfer-legacy-orphan.md §2.4):
+// jalur ini dulu push transfer_out/transfer_in TANPA transferPairId --
+// satu-satunya jalur CREATE transfer yang belum di-retrofit sejak Sesi 432
+// (bandingkan tx-transfer.js saveTransfer()). Tanpa transferPairId, delTx()
+// (tx-list-cashflow.js) tidak bisa menghapus kedua sisi sekaligus -> orphan
+// permanen begitu salah satu sisi dihapus. Fix: pakai mekanisme pairing
+// canonical yang SAMA PERSIS dgn saveTransfer() (1 uid() dibagi ke kedua
+// baris) -- 0 sistem pairing baru diciptakan di sini.
+const transferPairId=uid();
+D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun → ${escapeHtml(toAcc.name)}`,date,accountId:fromAcc.id,transferPairId});
+D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id,transferPairId});
 if(!p.riwayatKontribusi) p.riwayatKontribusi=[];
 p.riwayatKontribusi.push({id:uid(),date,amount:amt,fromAcc:fromAcc.id});
 save();renderDashboard();renderKeuangan();
@@ -974,3 +990,153 @@ netEl.style.color=netWorth<0?'var(--accent2)':'';
 Kekayaan.renderSnapshots();
 }
 };
+
+// calculateRemainingShare(rows, editedIndex) -- SESI AF1 (fitur "Auto-fill Sisa Porsi", lihat
+// DESIGN-LOCK-autofill-sisa-porsi.md). PURE, 0 DOM -- util bersama dipakai oleh 3 modal porsi
+// kepemilikan (Aset.onOwnerPorsiInput/onOwnerNominalInput di aset.js, InvestmentUI.onOwnerPorsiInput/
+// onOwnerNominalInput di investasi-view.js, AccOwners.onPorsiInput di finance/akun.js) supaya
+// rumusnya SATU tempat (SSOT), bukan disalin 3x.
+//
+// Beda dari Aset._autoDistributeRemaining() (S431/S449, MASIH ADA & TIDAK dihapus -- dipakai
+// terpisah, lihat komentarnya sendiri): fungsi lama itu membagi RATA/proporsional sisa ke SEMUA
+// baris lain. Fungsi ini HANYA mengisi 1 baris target: baris pertama SELAIN `editedIndex` yang
+// porsinya masih kosong/0 DAN belum pernah diketik manual user (`row._touched` falsy) -- pola
+// "isi baris pertama, sisa otomatis ke baris kosong berikutnya" sesuai permintaan user (bukan
+// broadcast ke semua baris, supaya tidak menimpa baris yang sudah sengaja diisi manual).
+//
+// Parameter:
+//   rows (array) -- draft pemilik, tiap elemen minimal punya `porsi` (number) & opsional
+//     `_touched` (boolean, ditulis caller saat user mengetik baris itu).
+//   editedIndex (number) -- index baris yang baru saja diketik user (dikecualikan dari pencarian
+//     target & ikut dihitung ke total "baris lain").
+// Return: {targetIndex, porsi} kalau ada baris kosong yang bisa diisi & sisanya >0, else null
+//   (null -- termasuk kasus <2 baris, tidak ada baris kosong tersisa, atau sisa pas 0/negatif
+//   setelah dijepit -- caller tidak perlu menulis apa pun ke draft/DOM).
+function calculateRemainingShare(rows, editedIndex) {
+  if (!Array.isArray(rows) || rows.length < 2 || !rows[editedIndex]) return null;
+  let targetIndex = -1;
+  for (let k = 0; k < rows.length; k++) {
+    if (k === editedIndex || !rows[k]) continue;
+    const p = typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
+    if (!rows[k]._touched && p <= 0) { targetIndex = k; break; }
+  }
+  if (targetIndex === -1) return null;
+  let totalOther = 0;
+  for (let k = 0; k < rows.length; k++) {
+    if (k === targetIndex || !rows[k]) continue;
+    totalOther += typeof rows[k].porsi === 'number' && isFinite(rows[k].porsi) ? rows[k].porsi : 0;
+  }
+  const sisa = Math.round(Math.max(0, 100 - totalOther) * 10000) / 10000;
+  if (sisa <= 0) return null;
+  return { targetIndex, porsi: sisa };
+}
+
+// calculateRebalance(rows, editedIndex, method, manualIndex) -- FITUR "Auto-Rebalance Porsi
+// Pemilik" (Agustus 2026, permintaan user, screenshot modal "⚖️ Atur Porsi Kepemilikan" aset
+// "renov"): saat pemilik baru ditambah / porsi yang sedang diedit bikin total porsi >100%, fungsi
+// ini menghitung penyesuaian porsi pemilik LAIN supaya total kembali tepat 100%. PURE, 0 DOM --
+// sama pola SSOT dgn calculateRemainingShare() di atas, dipakai apa adanya oleh 3 modal porsi
+// kepemilikan (Aset._renderRebalancePanel()/applyRebalance() di aset.js, AccOwners.* di
+// finance/akun.js, InvestmentUI.* di investasi-view.js) TANPA pernah menulis apa pun ke DOM/draft
+// sendiri -- caller yang menulis hasil `adjustments`, dan hanya saat user menekan tombol
+// "Terapkan" (aturan #6: tidak pernah mengubah porsi pemilik lama diam-diam).
+//
+// Parameter:
+//   rows (array) -- draft pemilik, tiap elemen minimal punya `porsi` (number).
+//   editedIndex (number) -- index baris yang porsinya baru saja diketik/ditambah user (baris ini
+//     TIDAK ikut dikurangi -- ini baris yang memicu overflow; generik, bukan diasumsikan baris
+//     terakhir, supaya bisa dipakai juga saat user mengedit ulang porsi pemilik LAMA, aturan #14).
+//   method ('proporsional'|'largest'|'manual') -- default 'proporsional' kalau tidak dikenali
+//     (aturan #5). 'largest' = seluruh pengurangan diambil dari pemilik dgn porsi terbesar,
+//     cascade ke pemilik berikutnya kalau yang terbesar tidak cukup, TIDAK PERNAH negatif (aturan
+//     #7-8, #10). 'manual' = pengurangan seluruhnya dari 1 pemilik yang dipilih user (aturan #7,
+//     #9).
+//   manualIndex (number|null) -- wajib diisi & valid kalau method==='manual'.
+// Return:
+//   {ok:false, error} kalau tidak valid, TIDAK ADA perubahan apa pun:
+//     'no_reduction_needed' -- total sudah <=100% (caller tidak perlu memicu rebalance sama
+//       sekali), atau tidak ada porsi pemilik lain yang bisa dikurangi (oldTotal<=0 -- cuma 1
+//       baris terisi, bukan kasus rebalance, biarkan validasi total merah existing yang tampil).
+//     'manual_owner_not_selected' -- method 'manual' tapi manualIndex belum dipilih/tidak valid.
+//     'manual_owner_insufficient' -- method 'manual' tapi porsi pemilik terpilih < porsi yang
+//       perlu dikurangi (aturan #11).
+//     'insufficient_total' -- gabungan porsi pemilik lain tidak cukup dikurangi sampai 0 sekalipun
+//       utk menutup overflow (proporsional/largest tidak akan pernah bisa capai total 100 tanpa
+//       bikin salah satu porsi negatif).
+//   {ok:true, adjustments:[{index,from,to}], totalAfter:100} kalau berhasil -- `adjustments`
+//     SELALU mencakup SEMUA baris selain editedIndex (termasuk yang tidak tersentuh, from===to,
+//     supaya caller bisa render preview lengkap "A: 71.88% -> 57.50%" utk semua baris sekaligus),
+//     dibulatkan 4 desimal, dijamin totalAfter tepat 100 (aturan #13 -- residu pembulatan floating
+//     -point ditumpuk ke adjustment TERAKHIR, bukan dibiarkan nyasar 99.99/100.01).
+function calculateRebalance(rows, editedIndex, method, manualIndex) {
+  if (!Array.isArray(rows) || !rows[editedIndex]) return { ok: false, error: 'invalid_input' };
+  const porsiOf = (r) => (typeof r.porsi === 'number' && isFinite(r.porsi) ? r.porsi : 0);
+  const round4 = (n) => Math.round(n * 10000) / 10000;
+  const editedPorsi = porsiOf(rows[editedIndex]);
+
+  const otherIndices = [];
+  let oldTotal = 0;
+  for (let k = 0; k < rows.length; k++) {
+    if (k === editedIndex || !rows[k]) continue;
+    otherIndices.push(k);
+    oldTotal += porsiOf(rows[k]);
+  }
+  const total = editedPorsi + oldTotal;
+  if (total <= 100 || oldTotal <= 0) return { ok: false, error: 'no_reduction_needed' };
+  const reduceNeeded = total - 100; // total yg harus dikurangi dari gabungan pemilik lain
+
+  // finalize(adjustments) -- jepit total tepat 100 (buang residu pembulatan floating-point ke
+  // adjustment TERAKHIR) & pastikan tidak ada porsi negatif (jaga-jaga pembulatan; harusnya sudah
+  // tidak mungkin dari cascade largest/manual di bawah, tapi dicek lagi supaya aman).
+  function finalize(adjustments) {
+    if (!adjustments.length) return { ok: false, error: 'no_reduction_needed' };
+    const sumOthers = adjustments.reduce((s, a) => s + a.to, 0);
+    const residual = round4(100 - editedPorsi - sumOthers);
+    if (residual !== 0) {
+      const last = adjustments[adjustments.length - 1];
+      last.to = round4(last.to + residual);
+    }
+    if (adjustments.some((a) => a.to < 0)) return { ok: false, error: 'insufficient_total' };
+    return { ok: true, adjustments, totalAfter: 100 };
+  }
+
+  const m = method === 'largest' || method === 'manual' ? method : 'proporsional';
+
+  if (m === 'manual') {
+    if (manualIndex === null || manualIndex === undefined || !otherIndices.includes(manualIndex)) {
+      return { ok: false, error: 'manual_owner_not_selected' };
+    }
+    const manualPorsi = porsiOf(rows[manualIndex]);
+    if (manualPorsi < reduceNeeded) return { ok: false, error: 'manual_owner_insufficient' };
+    const adjustments = otherIndices.map((k) => {
+      const from = porsiOf(rows[k]);
+      const to = k === manualIndex ? round4(from - reduceNeeded) : from;
+      return { index: k, from, to };
+    });
+    return finalize(adjustments);
+  }
+
+  if (reduceNeeded > oldTotal) return { ok: false, error: 'insufficient_total' };
+
+  if (m === 'largest') {
+    const order = otherIndices.slice().sort((a, b) => porsiOf(rows[b]) - porsiOf(rows[a]));
+    let remaining = reduceNeeded;
+    const toMap = {};
+    order.forEach((k) => {
+      const from = porsiOf(rows[k]);
+      const take = Math.min(from, remaining);
+      toMap[k] = round4(from - take);
+      remaining = round4(remaining - take);
+    });
+    const adjustments = otherIndices.map((k) => ({ index: k, from: porsiOf(rows[k]), to: toMap[k] }));
+    return finalize(adjustments);
+  }
+
+  // proporsional (default, aturan #5) -- tiap pemilik lain dikurangi sebanding porsinya thd oldTotal
+  const adjustments = otherIndices.map((k) => {
+    const from = porsiOf(rows[k]);
+    const to = round4(from - reduceNeeded * (from / oldTotal));
+    return { index: k, from, to };
+  });
+  return finalize(adjustments);
+}
