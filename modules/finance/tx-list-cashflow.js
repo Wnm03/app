@@ -191,6 +191,27 @@ SewaKios.onLinkedTxDeleted(t);
 if(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length){
 Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
 }
+// FIX (audit s-async-ownership lanjutan): cascade BARU -- sebelumnya
+// `investmentTxLinkId` (dibuat Investment.addTransaction() saat Beli/Jual
+// pakai "Akun Sumber Dana", modules/asset/investasi.js) TIDAK PERNAH dibaca
+// di manapun. Kalau transaksi Keuangan yang ditautkan dihapus dari SINI
+// (Transaksi/Cashflow, bukan dari layar Investasi), tx investasi (D.investmentTx)
+// & holding-nya (unit/avgPrice) tetap seolah pembelian/penjualan itu terjadi --
+// desync permanen antara Akun & Holding Investasi (saldo akun sudah balik,
+// tapi unit investasi tidak). Fix: cascade SAMA PERSIS pola cobekLinkId/
+// servisLinkId di atas -- hapus tx investasi terkait & recomputeHolding()
+// (fungsi yang SUDAH ADA, 0 rumus baru, sumber kebenarannya tetap 100%
+// riwayat D.investmentTx sisa).
+if(t&&t.investmentTxLinkId&&typeof Investment!=='undefined'&&D.investmentTx){
+const linkedInvTx=D.investmentTx.find(it=>it.id===t.investmentTxLinkId);
+if(linkedInvTx){
+D.investmentTx=D.investmentTx.filter(it=>it.id!==t.investmentTxLinkId);
+if(linkedInvTx.type==='beli'||linkedInvTx.type==='jual'){
+Investment.recomputeHolding(linkedInvTx.investmentId);
+}
+toast(`📈 Transaksi investasi terkait ikut dihapus & holding disesuaikan`,2600);
+}
+}
 }
 async function delTx(id){
 // S468b guard (defense in depth, lihat poin bahaya #2 di
