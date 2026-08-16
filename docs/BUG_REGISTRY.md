@@ -435,7 +435,20 @@
   setelah transaksi pembayaran itu dihapus
 - Severity: **P1 High** (kesalahan nominal finansial langsung — saldo
   utang, bukan sekadar data orphan/UI stale)
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli
+  dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-16)
+  krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola
+  penutupan `GAP3-AUD-001`. Fix persis sesuai Recommendation di bawah:
+  `markBillPaid()` (baris ~1001-1014) sekarang menyimpan snapshot
+  `debtNilaiBefore` (`dbt.nilai` SEBELUM clamp) ke transaksi pembayaran;
+  `revertBillFromDeletedTx()` (baris ~812-830) pakai snapshot itu utk set
+  `dbt.nilai` LANGSUNG (bukan `+t.amount`), dgn fallback ke perilaku lama
+  utk transaksi lama (`typeof t.debtNilaiBefore!=='number'`) — backward
+  compatible, 0 migrasi data. Regression test:
+  `tests/bug007-overpayment-revert-debt.test.js` (4/4 pass, termasuk Case
+  C — skenario overpayment persis dari laporan bug ini — & test backward
+  compat transaksi lama). Verifikasi ulang sesi ini: `node --test
+  tests/*.test.js` → 4511/4511 pass.
 - Module: Finance (Bill ↔ Debt)
 - File: `modules/finance/tagihan-kalender.js`
 - Function/component: `revertBillFromDeletedTx(t)` — SSOT dipakai bersama
