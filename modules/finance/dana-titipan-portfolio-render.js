@@ -428,10 +428,27 @@ const DanaTitipanPortfolioPresenter = {
   // banyak. `hh.linkedAssetId` tetap dipertahankan di `data-linked-
   // asset-id` (dipakai `onAssetPickChange()` utk highlight baris yang
   // cocok dgn pilihan dropdown), murni bukan trigger aksi lagi di sini.
+  // SESI 631 (permintaan user: tampilan Dana Titipan "atur porsi aset"
+  // masih 2 langkah — pilih di dropdown "Pilih Aset" lalu tap tombol
+  // "⚖️ Atur Porsi Aset" terpisah — padahal nama instrumennya SUDAH
+  // kelihatan di baris holding ini (mis. "🏦 Majoris (85.043%)").
+  // FIX: nama holding di baris ini SEKARANG jadi tombol yang LANGSUNG
+  // buka modal atur porsi aset yg bersangkutan (delegasi ke
+  // `openAssetPorsiDirect()` baru — 100% reuse routing `openAssetPorsi()`
+  // lama via `_routeAssetPorsi()`, 0 logic CRUD/porsi baru). Dropdown
+  // "Pilih Aset" + tombol "⚖️ Atur Porsi Aset" di kartu owner TIDAK
+  // dihapus (masih perlu utk TAUTKAN ASET BARU yang belum ada baris
+  // holding-nya) — cuma sekarang bukan satu-satunya jalan utk aset yang
+  // SUDAH tertaut. `data-linked-asset-id` tetap dipertahankan apa adanya
+  // (masih dipakai `onAssetPickChange()` utk highlight).
   _holdingRowHtml(hh) {
+    const assetId = hh.linkedAssetId ? hh.linkedAssetId : (hh.linkedInvestmentId ? 'h:' + hh.linkedInvestmentId : '');
+    const nameHtml = assetId
+      ? `<button type="button" class="u-fs11" style="background:none;border:none;padding:0;margin:0;color:inherit;text-decoration:underline dotted;cursor:pointer;font:inherit" data-action="DanaTitipanCommitmentUI.openAssetPorsiDirect" data-args="${escapeHtml(JSON.stringify([assetId]))}" aria-label="Atur porsi aset ${escapeHtml(hh.name)}">${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}</button>`
+      : `${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}`;
     return `
-            <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(hh.linkedAssetId ? hh.linkedAssetId : (hh.linkedInvestmentId ? 'h:' + hh.linkedInvestmentId : ''))}">
-              <span>${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)} <span class="u-t2">(${hh.ownerPct}%)</span></span>
+            <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(assetId)}">
+              <span>${nameHtml} <span class="u-t2">(${hh.ownerPct}%)</span></span>
               <span>${hh.hasGainTracking === false ? `
                 <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
               ` : `
@@ -769,25 +786,52 @@ const DanaTitipanPortfolioPresenter = {
               &nbsp;<span class="u-fw700 ${this._gainCls(o.gain)}">${o.gain >= 0 ? '+' : ''}${this._money(o.gain)}</span>
             </span>
           </summary>
-          <div class="titipan-detail-grid u-fs11 u-mb6" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
-            <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
-            ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
-            <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
-            <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
-            <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
-            <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${o.gain >= 0 ? '+' : ''}${this._money(o.gain)}</span>
-            <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
-            <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
-          </div>
+          <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
+          (Pokok Dikomit/Estimasi Transaksi/Teralokasi/Belum Teralokasi/
+          Nilai Saat Ini/Untung-Rugi/Sudah Dikembalikan/Belum Dikembalikan)
+          dibungkus <details> collapsed-by-default, pola SAMA PERSIS
+          <details> kartu owner & grup kustodian di file ini (0 CSS/JS
+          baru). Ringkasan Pokok→Kini→gain di <summary> kartu owner di
+          atas TETAP selalu kelihatan tanpa expand apa pun — grid ini
+          murni rincian tambahan, bukan info utama. 0 rumus/data diubah,
+          murni markup pembungkus. -->
+          <details class="titipan-detail-toggle u-mb6">
+            <summary class="u-fs11 u-t2 u-pointer">Detail lengkap</summary>
+            <div class="titipan-detail-grid u-fs11 u-mt4" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
+              <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
+              ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
+              <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
+              <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
+              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${o.gain >= 0 ? '+' : ''}${this._money(o.gain)}</span>
+              <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
+              <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
+            </div>
+          </details>
           <div class="btn-row3 u-ml10 u-mb6" style="gap:6px">
             <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">✏️ Atur Pokok Dana Titipan</button>
             <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanReturnUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">↩️ Catat Pengembalian</button>
             <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.removeOwnerLinkage" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">🔓 Lepas Keterikatan Dana Titipan</button>
           </div>
-          <div class="u-flex u-gap4 u-mb6 u-ml10 u-fs11">
-            <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
-            <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
-          </div>
+          <!-- SESI 633 (lanjutan ringan S631/S632): sejak S631 nama
+          holding sudah bisa diklik LANGSUNG utk atur porsi aset yang
+          SUDAH tertaut (lihat _holdingRowHtml -> openAssetPorsiDirect).
+          Dropdown "Pilih Aset" + tombol "Atur Porsi Aset" di bawah ini
+          jadi HANYA perlu utk kasus TAUTKAN ASET BARU (aset yang belum
+          py baris holding) -- pola sama S632 (details collapsed), supaya
+          kartu owner tidak selalu menampilkan kontrol yang jarang dipakai
+          begitu owner sudah py holding. id select/onchange/data-owner-id
+          TIDAK diubah sama sekali (0 breaking change ke
+          onAssetPickChange/openAssetPorsi/test s543/s608 yang cari
+          elemen ini via querySelectorAll/regex, terlepas dari nesting
+          details pembungkusnya). -->
+          <details class="titipan-linkasset-toggle u-mb6 u-ml10 u-fs11">
+            <summary class="u-t2 u-pointer">+ Tautkan Aset Baru</summary>
+            <div class="u-flex u-gap4 u-mt4">
+              <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
+            </div>
+          </details>
           ${this._returnsHistoryHtml(o.ownerId)}
           <div id="titipanHoldingsList_${oi}">
           ${!o.holdings.length ? `
@@ -1122,11 +1166,27 @@ const DanaTitipanCommitmentUI = {
     }
     const assetId = sel ? sel.value : '';
     if (!assetId) { if (typeof toast === 'function') toast('⚠️ Pilih aset dulu'); return; }
-    // FIX s608: opsi Holding Investasi (lihat _assetOptionsHtml()) memakai
-    // value berprefix `h:` -- route ke InvestmentUI.openOwnersModal(id)
-    // (modules/asset/investasi-view.js, sudah ada & dipakai baris
-    // per-institusi di _holdingsListHtml(), 0 fungsi baru di sini), BUKAN
-    // Aset.openOwnersModalById() yang khusus id Buku Aset.
+    this._routeAssetPorsi(assetId);
+  },
+
+  // openAssetPorsiDirect(assetId) — SESI 631. Jalur BARU: dipanggil
+  // langsung dari klik nama instrumen di baris holding (_holdingRowHtml())
+  // — TANPA lewat dropdown "Pilih Aset" dulu, karena assetId-nya SUDAH
+  // pasti (baris ini sendiri representasi aset/holding itu). 100%
+  // delegasi ke `_routeAssetPorsi()` yang sama dipakai `openAssetPorsi()`
+  // (dropdown lama) — 0 logic routing baru, cuma 1 pintu masuk tambahan.
+  openAssetPorsiDirect(assetId) {
+    if (!assetId) { if (typeof toast === 'function') toast('⚠️ Aset tidak ditemukan'); return; }
+    this._routeAssetPorsi(assetId);
+  },
+
+  // _routeAssetPorsi(assetId) — SESI 631: routing asli `openAssetPorsi()`
+  // (s608, opsi Holding prefix `h:` -> InvestmentUI.openOwnersModal(),
+  // opsi Buku Aset -> Aset.openOwnersModalById()) DIEKSTRAK apa adanya
+  // supaya dipakai bareng oleh `openAssetPorsi()` (dropdown) DAN
+  // `openAssetPorsiDirect()` (klik nama baris holding) — 0 perubahan
+  // perilaku routing, murni dedup.
+  _routeAssetPorsi(assetId) {
     if (assetId.indexOf('h:') === 0) {
       const holdingId = assetId.slice(2);
       if (typeof InvestmentUI === 'undefined' || typeof InvestmentUI.openOwnersModal !== 'function') {
