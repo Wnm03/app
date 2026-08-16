@@ -275,7 +275,14 @@ const pz=D.pajakZakat;
 const zpWajib=inc>=pz.nisabPenghasilanBulan;
 const zpJumlah=zpWajib?Math.round(inc*0.025):0;
 const zpInfo=`Zakat Penghasilan bulan ini: pemasukan ${fmtFull(inc)} vs nisab ${fmtFull(pz.nisabPenghasilanBulan)} → ${zpWajib?'✅ WAJIB zakat '+fmtFull(zpJumlah):'⬜ belum wajib (di bawah nisab)'}`;
-const asetZakatable=(D.assets||[]).filter(a=>a.zakatable).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0);
+// FIX (audit s-async-ownership): sebelumnya cuma filter a.zakatable, TANPA
+// exclude aset yg sudah `_migratedToInvestmentId`/`a.investmentId` (pindah ke
+// Investasi) & TANPA tambahan Investment.zakatableValue() -- beda dari formula
+// kanonik Zakat.hitungMaal() (pajak-pbb-zakat.js)/FI.investmentAssetValue()
+// (modules-calc.js), jadi estimasi Zakat Maal di AI Chat bisa dobel-hitung
+// (aset lama + holding barunya) atau meleset dari halaman Zakat asli kalau
+// user sudah migrasi/tautkan aset ke Investasi. Disamakan persis di sini.
+const asetZakatable=(D.assets||[]).filter(a=>a.zakatable&&!a._migratedToInvestmentId&&!a.investmentId).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0)+(typeof Investment!=='undefined'&&typeof Investment.zakatableValue==='function'?Investment.zakatableValue():0);
 const totalHartaZakat=Math.max(0,totalSaldoAkun()+asetZakatable-(pz.utangJT||0)-totalDebtValue()-totalCicilanOutstanding());
 const nisabMaal=85*pz.hargaEmasPerGram;
 const cukupNisabMaal=totalHartaZakat>=nisabMaal;
@@ -1055,9 +1062,18 @@ lifeBalanceInfo=`Skor Hidup Seimbang: ${sc.total}/100 (${sc.level}) — rincian:
 const targetInfo=(D.targets||[]).map(t=>`${escapeHtml(t.name)}: ${t.amount>0?Math.round((t.saved/t.amount)*100)+'%':'-'}`).join(', ')||'Belum ada target tabungan';
 let asetInfo='Belum ada aset tercatat';
 try{
-if((D.assets||[]).length){
+// FIX (audit s-async-ownership): rincian daftar aset sebelumnya baca D.assets
+// MENTAH (semua aset, termasuk milik FAMILY/INVESTOR/CUSTOMER/THIRD_PARTY &
+// nilai penuh tanpa skala porsi patungan) -- tidak sinkron dgn `totalAset`
+// (totalAssetValue(), yang SUDAH self-only+terskala). Sekarang daftar dibatasi
+// aset self-owned yg sama (isAssetOwnershipSelf, + selfOwnedValue utk aset
+// patungan) & exclude aset yg sudah pindah ke Investasi (_migratedToInvestmentId/
+// investmentId) -- filter SAMA PERSIS Aset.totalValue(), 0 rumus baru.
+const selfFilter=typeof isAssetOwnershipSelf==='function'?isAssetOwnershipSelf:()=>true;
+const asetSelf=(D.assets||[]).filter(selfFilter).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId);
+if(asetSelf.length){
 const totalAset=totalAssetValue();
-asetInfo=`Total ${fmtFull(totalAset)} dari ${D.assets.length} aset (${D.assets.map(a=>a.name+' '+fmtFull(a.nilai)).join(', ')})`;
+asetInfo=`Total ${fmtFull(totalAset)} dari ${asetSelf.length} aset (${asetSelf.map(a=>a.name+' '+fmtFull(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0))).join(', ')})`;
 }
 }catch(e){}
 return{m,y,inc,exp,accInfo,netWorth,shopOmzet,shopProfit,shopModalStok,shopOmzetBulan,shopProfitBulan,gajiBulan,whCount:whThisMonth.length,gajiMinggu,whCountMinggu,avgGajiMingguan,gajiMingguanHistCount,fiInfo,debtInfo,billInfo,budgetInfo,lifeBalanceInfo,targetInfo,asetInfo};
