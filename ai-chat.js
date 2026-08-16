@@ -506,8 +506,17 @@ if(provider==='gemini'){
 const geminiContents=messages.map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]}));
 const body={system_instruction:{parts:[{text:systemPrompt}]},contents:geminiContents,generationConfig:{maxOutputTokens:maxTokens}};
 if(useWebSearch)body.tools=[{google_search:{}}];
-const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+// FIX (F6, audit 2026-08): API key Gemini dipindah dari query string (?key=...) ke
+// header x-goog-api-key -- diverifikasi lewat dokumentasi resmi Google (ai.google.dev/
+// api & ai.google.dev/api/generate-content, per Jun 2026): "All requests to the Gemini
+// API must include a x-goog-api-key header with your API key" utk endpoint
+// generateContent non-streaming (persis pola fetch yang dipakai di sini). Query
+// string ?key=... masih didukung utk backward-compat versi lama, TAPI berisiko
+// bocor lewat access log server/proxy/browser history/Referer header -- header
+// custom tidak ikut ke log akses standar & tidak ikut Referer. 0 perubahan behavior
+// lain (endpoint/model/body request sama persis).
+const url='https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const res=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':apiKey},body:JSON.stringify(body)});
 const data=await res.json();
 if(!res.ok)return{ok:false,errMsg:data?.error?.message||`HTTP ${res.status}`,status:res.status};
 const text=(data.candidates?.[0]?.content?.parts||[]).filter(p=>p.text).map(p=>p.text).join('\n').trim();
