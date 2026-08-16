@@ -10,6 +10,19 @@
 // header tukang-absensi.js. Ditempatkan tepat setelah features-tukang-kendaraan-
 // storage.js (sumber pemisahan) & data-archive.js, sebelum features-aiwidget-reminder-gdrive-search.js
 // (yang memanggil getEffectiveIntervalKm() dari file ini).
+// catVisibleForVehicle(cat,vehicleId) — S622 (permintaan user: pengingat servis
+// per part, kategori part & stok sparepart harus punya cakupan SENDIRI-SENDIRI
+// per kendaraan, bukan 1 daftar global yg numpuk sama utk semua kendaraan).
+// cat.vehicleId BARU (opsional, backward compatible): null/undefined = kategori
+// UNIVERSAL (perilaku lama, tetap tampil di semua kendaraan -- supaya kategori
+// lama yg sudah ada tidak tiba-tiba hilang). Kalau diisi salah satu id
+// kendaraan, kategori itu HANYA tampil/dipakai utk kendaraan tsb.
+function catVisibleForVehicle(cat,vehicleId){
+if(!cat)return false;
+if(!cat.vehicleId)return true;
+if(!vehicleId)return true;
+return cat.vehicleId===vehicleId;
+}
 function servisLogMatchesCat(s,cat){
 if(s.categoryId) return s.categoryId===cat.id;
 const cn=cat.name.toLowerCase();
@@ -85,8 +98,13 @@ _catalogNameCache:[],
 // tampilan (backward compatible). Kalau VehicleCatalog belum sempat
 // dimuat sesi ini (isLoaded()===false) atau vehicleId kosong, jangan
 // filter apa pun (fail-open, bukan fail-hidden).
+// S622: cek dulu vehicleId LANGSUNG di stok itu sendiri (field baru, diisi
+// otomatis saat item stok dibuat -- lihat saveStock()) SEBELUM fallback ke
+// heuristik lama lewat catalogId/compatibleVehicleIds di bawah. part.vehicleId
+// kosong (stok lama sebelum field ini ada) tetap fail-open ke heuristik lama.
 isPartForVehicle(part,vehicleId){
 if(!vehicleId||!part)return true;
+if(part.vehicleId)return part.vehicleId===vehicleId;
 if(!part.catalogId)return true;
 if(typeof VehicleCatalog==='undefined'||typeof VehicleCatalog.isLoaded!=='function'||!VehicleCatalog.isLoaded())return true;
 const store=VehicleCatalog.getStore();
@@ -156,16 +174,25 @@ D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&
 (Sparepart._catalogNameCache||[]).forEach(n=>{ if(n&&!names.has(n.toLowerCase()))names.set(n.toLowerCase(),n); });
 return Array.from(names.values());
 },
+// renderCatList() -- S622: skrg CUMA tampilkan kategori milik kendaraan aktif
+// (curVehicleId) + kategori UNIVERSAL (cat.vehicleId kosong), supaya "Kelola
+// Kategori Sparepart" jadi cakupan per-kendaraan juga (sinkron dgn Pengingat
+// Servis di renderReminder() & Stok Sparepart di renderStockList()). Filter
+// pakai findIndex ke D.sparepartCats supaya index utk edit/delete tetap
+// benar ke array ASLI (bukan index dari hasil filter).
 renderCatList(){
 const el=document.getElementById('sparepartCatList');
 if(!el)return;
-if(!D.sparepartCats.length){el.innerHTML='<div class="empty"><div class="empty-text">Belum ada kategori sparepart</div></div>';return;}
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+if(!visible.length){el.innerHTML='<div class="empty"><div class="empty-text">Belum ada kategori sparepart utk kendaraan ini</div></div>';return;}
 // Sesi 295 (permintaan eksplisit user): tiap baris sekarang menunjukkan apakah
 // kategori ini AKTIF tampil di 🔔 Pengingat Servis atau tidak -- baik karena
 // belum diatur intervalnya (intervalKm 0, biasanya hasil scan Katalog Suku
 // Cadang) maupun karena user sengaja menyembunyikannya (showInReminder:false).
 // Tap badge status utk toggle langsung tanpa buka modal edit.
-el.innerHTML=D.sparepartCats.map((c,i)=>{
+el.innerHTML=visible.map((c)=>{
+const i=D.sparepartCats.indexOf(c);
 const noInterval=!(c.intervalKm>0);
 const hidden=c.showInReminder===false;
 const inactive=noInterval||hidden;
@@ -175,7 +202,11 @@ const statusBadge=noInterval
 :(hidden
 ?`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
 :`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)" title="Tap utk sembunyikan dari Pengingat Servis">🔔 Tampil di Pengingat</span>`);
-return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(c.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(c.code||codeFromName(c.name))}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${metaText}</div><div class="u-mt4">${statusBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+const veh=c.vehicleId?D.vehicles.find(v=>v.id===c.vehicleId):null;
+const vehBadge=c.vehicleId
+?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="Kategori khusus kendaraan ini">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name):'🏍️ Kendaraan lain'}</span>`
+:`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Berlaku semua kendaraan">🌐 Semua kendaraan</span>`;
+return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(c.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(c.code||codeFromName(c.name))}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${metaText}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 Sparepart.populateDatalist();
 Sparepart.populateStockCatSelect();
@@ -192,6 +223,24 @@ cat.showInReminder=cat.showInReminder===false?true:false;
 save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },
+// populateVehicleSelect() -- S622: isi dropdown "Berlaku untuk" di modal
+// Kategori Sparepart maupun Stok Sparepart (dipanggil dari 2 tempat, elId
+// beda). Opsi pertama SELALU "🌐 Semua kendaraan" (value kosong = universal,
+// perilaku lama). currentValue dipakai isi ulang saat edit; kalau kosong &
+// mode tambah baru, default ke curVehicleId (kategori/stok baru otomatis
+// scoped ke kendaraan yg lagi aktif -- sesuai permintaan user "tiap kendaraan
+// punya sendiri-sendiri").
+populateVehicleSelect(elId,currentValue,isEdit){
+const sel=document.getElementById(elId);
+if(!sel)return;
+sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
+if(isEdit){
+sel.value=currentValue||'';
+} else {
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:'';
+sel.value=(vid&&D.vehicles.some(v=>v.id===vid))?vid:'';
+}
+},
 openCatModal(idx){
 Sparepart.catEditIdx=(typeof idx==='number')?idx:null;
 const isEdit=Sparepart.catEditIdx!==null;
@@ -203,6 +252,7 @@ codeEl.dataset.manual=isEdit?'1':'0';
 codeEl.oninput=()=>{codeEl.dataset.manual='1';};
 const curCat=isEdit?D.sparepartCats[Sparepart.catEditIdx]:null;
 document.getElementById('sparepartInterval').value=(curCat&&curCat.intervalKm>0)?curCat.intervalKm:'';
+Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
 // Sesi 295: toggle "Tampilkan di Pengingat Servis" -- default AKTIF utk
 // kategori baru (perilaku lama, tidak berubah), ikut nilai tersimpan utk
 // kategori existing (termasuk kategori auto-scan yg default false).
@@ -265,13 +315,18 @@ const clash=matchingVehicleName(name);
 if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis. Isi nama part yang mau diingatkan (mis. Oli Mesin, Ganti Ban, dll).`,4000);return;}
 if(!code) code=codeFromName(name);
 const intervalKm=(interval&&interval>0)?interval:0;
+// S622: vehicleId kosong ('') disimpan sbg null (universal, berlaku semua
+// kendaraan) -- lihat catVisibleForVehicle()/populateVehicleSelect().
+const vehSelEl=document.getElementById('sparepartVehicleId');
+const vehicleId=(vehSelEl&&vehSelEl.value)?vehSelEl.value:null;
 if(Sparepart.catEditIdx!==null){
 D.sparepartCats[Sparepart.catEditIdx].name=name;
 D.sparepartCats[Sparepart.catEditIdx].code=code;
 D.sparepartCats[Sparepart.catEditIdx].intervalKm=intervalKm;
 D.sparepartCats[Sparepart.catEditIdx].showInReminder=wantShow;
+D.sparepartCats[Sparepart.catEditIdx].vehicleId=vehicleId;
 } else {
-D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,showInReminder:wantShow});
+D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,showInReminder:wantShow,vehicleId});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -293,12 +348,19 @@ linkedVeh.forEach(v=>{if(v.intervalOverrides)delete v.intervalOverrides[cat.id];
 D.sparepartCats.splice(i,1);save();Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
 toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
 },
+// populateStockCatSelect() -- S622: dropdown "Kategori" di modal Stok Sparepart
+// skrg cuma nawarin kategori yg RELEVAN ke kendaraan aktif (universal +
+// kategori khusus kendaraan ini), pakai catVisibleForVehicle() yg sama
+// dipakai renderCatList()/renderReminder(), supaya user tidak bisa taut-kan
+// stok kendaraan A ke kategori khusus kendaraan B.
 populateStockCatSelect(){
 const sel=document.getElementById('stockCatId');
 if(!sel)return;
 const cur=sel.value;
-sel.innerHTML='<option value="">Tanpa kategori</option>'+D.sparepartCats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}</option>`).join('');
-if(cur) sel.value=cur;
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const cats=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}</option>`).join('');
+if(cur&&cats.some(c=>c.id===cur)) sel.value=cur;
 },
 autoFillStockCode(){
 const codeEl=document.getElementById('stockCode');
@@ -450,7 +512,13 @@ const meta=[`${p.qty}${p.unit?' '+p.unit:''}`,cat?cat.name:null,p.price?'Rata2 '
 const history=Sparepart.getPartUsageHistory(p.id);
 const historyHtml=history.length?`<div class="u-mt4">${history.map(h=>`<div class="u-pointer" style="padding:6px 0 6px 4px;border-top:1px dashed var(--border)" data-action="Sparepart.openPartHistoryEntry" data-args="${escapeHtml(JSON.stringify([h.servisId,h.vehicleId]))}"><div class="tx-name u-fs12">🗓️ ${escapeHtml(h.item)} <span class="u-fs12t2">— ${escapeHtml(h.vehicleName)}</span></div><div class="tx-meta">${escapeHtml(h.date)}${h.km?' • '+h.km.toLocaleString('id-ID')+' km':''} • ${h.qty}${p.unit?' '+escapeHtml(p.unit):''} dipakai</div></div>`).join('')}</div>`:'';
 const priceHistoryHtml=Sparepart.getPartPriceHistoryHtml(p);
-return `<div class="tx-item"><div class="tx-icon" style="background:${low?'rgba(255,80,80,.15)':'var(--accent-soft)'}">${low?'⚠️':'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(p.code||'-')}</span>${p.catalogId?'<span class="u-fs12 u-fw700 u-r6 u-ml4" style="padding:1px 6px;background:rgba(80,160,255,.15);color:#4a90e2" title="Tautan otomatis dari Katalog Suku Cadang (scan)">🔗 Katalog</span>':''}</div><div class="tx-meta" style="${low?'color:#ff5050;font-weight:700':''}">${escapeHtml(meta)}${low?' • Stok menipis!':''}${p.note?' • '+escapeHtml(p.note):''}</div>${priceHistoryHtml}${historyHtml}</div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openStockModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delStock" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+// S622: badge kecil "khusus kendaraan X" kalau p.vehicleId terisi, supaya
+// kelihatan mana stok yg sudah di-scope ke 1 kendaraan vs yg masih universal
+// (tidak ditampilkan sama sekali kalau universal, biar baris tidak penuh --
+// sudah jelas dari konteks tab kendaraan yg lagi aktif).
+const stockVeh=p.vehicleId?D.vehicles.find(v=>v.id===p.vehicleId):null;
+const stockVehBadge=p.vehicleId?`<span class="u-fs12 u-fw700 u-r6 u-ml4" style="padding:1px 6px;background:var(--accent-soft);color:var(--accent)" title="Stok khusus kendaraan ini">${stockVeh?(stockVeh.emoji||'🏍️')+' '+escapeHtml(stockVeh.name):'🏍️'}</span>`:'';
+return `<div class="tx-item"><div class="tx-icon" style="background:${low?'rgba(255,80,80,.15)':'var(--accent-soft)'}">${low?'⚠️':'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(p.code||'-')}</span>${p.catalogId?'<span class="u-fs12 u-fw700 u-r6 u-ml4" style="padding:1px 6px;background:rgba(80,160,255,.15);color:#4a90e2" title="Tautan otomatis dari Katalog Suku Cadang (scan)">🔗 Katalog</span>':''}${stockVehBadge}</div><div class="tx-meta" style="${low?'color:#ff5050;font-weight:700':''}">${escapeHtml(meta)}${low?' • Stok menipis!':''}${p.note?' • '+escapeHtml(p.note):''}</div>${priceHistoryHtml}${historyHtml}</div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openStockModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delStock" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 },
 getPartUsageHistory(partId){
@@ -497,6 +565,7 @@ document.getElementById('stockUnit').value=isEdit?(p.unit||''):'pcs';
 document.getElementById('stockMin').value=isEdit?(p.minStock||''):'1';
 document.getElementById('stockPrice').value=isEdit?(p.price||''):'';
 document.getElementById('stockNote').value=isEdit?(p.note||''):'';
+Sparepart.populateVehicleSelect('stockVehicleId',isEdit?p.vehicleId:null,isEdit);
 openModal('stockModal');
 },
 saveStock(){
@@ -515,10 +584,14 @@ const prefix=cat?(cat.code||codeFromName(cat.name)):codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 code=prefix+'-'+String(seq).padStart(3,'0');
 }
+// S622: vehicleId kosong ('') disimpan sbg null (universal, tampil di stok
+// semua kendaraan -- perilaku lama tidak berubah, lihat isPartForVehicle()).
+const stockVehSelEl=document.getElementById('stockVehicleId');
+const vehicleId=(stockVehSelEl&&stockVehSelEl.value)?stockVehSelEl.value:null;
 if(Sparepart.stockEditIdx!==null){
-Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note});
+Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId});
 } else {
-const np={id:'st_'+Date.now(),name,catId,code,qty,unit,minStock,price,note};
+const np={id:'st_'+Date.now(),name,catId,code,qty,unit,minStock,price,note,vehicleId};
 D.partsStock.push(np);
 // Tahap 10 (lanjutan Tahap 9, jembatan Vehicle Catalog <-> Stok Sparepart):
 // part baru yang ditambah manual di sini (⚙️ Atur -> Stok Sparepart) JUGA
