@@ -148,6 +148,21 @@ issues.push({level:'warn',title:'Pemilik Sumber Potongan tidak ditemukan',detail
 if(dupTxIds.length){
 issues.push({level:'error',title:'ID transaksi duplikat',detail:`${dupTxIds.length} transaksi punya ID yang sama (bisa bikin data ganda/salah hitung). ID: ${[...new Set(dupTxIds)].slice(0,5).join(', ')}${dupTxIds.length>5?'...':''}`});
 }
+// PERUBAHAN SESI INI (rekomendasi audit fitur Shop): cek ID produk duplikat di
+// D.products, pola sama persis dgn dupTxIds di atas (transaksi). Ini gap yang
+// belum ada sebelumnya -- D.products cuma dicek stok minus & orphan link dari
+// D.cobek, belum pernah dicek ID dobel. Risiko rendah (ProductRepository SSOT
+// sudah guard create via uid()), tapi jalur import (CSV/Excel/JSON) belum tentu
+// selalu lewat SSOT itu -- cek ini murni baca, 0 auto-repair, safety-net kalau
+// ada ID dobel lolos dari jalur manapun.
+const prodIdSeen=new Set();
+const dupProductIds=[];
+(D.products||[]).forEach(p=>{
+if(prodIdSeen.has(p.id))dupProductIds.push(p.id); else prodIdSeen.add(p.id);
+});
+if(dupProductIds.length){
+issues.push({level:'error',title:'ID produk duplikat',detail:`${dupProductIds.length} produk di etalase Shop punya ID yang sama (bisa bikin stok/harga salah hitung). ID: ${[...new Set(dupProductIds)].slice(0,5).join(', ')}${dupProductIds.length>5?'...':''}`});
+}
 D.bills.forEach(b=>{
 if(b.accountId && !accIds.has(b.accountId)){
 issues.push({level:'warn',title:'Tagihan dengan akun tidak valid',detail:`"${escapeHtml(b.name)}" menunjuk ke akun yang sudah dihapus.`});
@@ -370,6 +385,21 @@ issues.push({level:'warn',title:'Catatan servis kehilangan transaksi tertaut',de
 D.products.forEach(p=>{
 if((p.stock||0)<0){
 issues.push({level:'error',title:'Stok produk minus',detail:`"${escapeHtml(p.name)}" stoknya ${p.stock} (minus). Cek riwayat transaksi Shop terkait.`});
+}
+// PERUBAHAN SESI INI (rekomendasi #2 audit fitur Shop): orphan check utk
+// product.kategoriId (-> D.cobekKategori, lihat modules/shop/generic/
+// category-store.js CategoryStore.list()) & product.produsenId (->
+// D.produsen, lihat modules/shop/generic/supplier-store.js
+// SupplierStore.list()) -- 2 gap yang belum pernah dicek di sini,
+// pola sama persis dgn orphan check aset/kendaraan lain di file ini.
+// Murni baca, 0 auto-repair -- badge kategori/produsen produk terkait
+// cukup "hilang diam-diam" di UI kalau master-nya dihapus, sama seperti
+// gap assetId sebelum diaudit.
+if(p.kategoriId && !(D.cobekKategori||[]).some(k=>sameId(k.id,p.kategoriId))){
+issues.push({level:'warn',title:'Produk tertaut ke Kategori Shop yang sudah dihapus',detail:`"${escapeHtml(p.name)}" masih menyimpan tautan kategori yang sudah dihapus dari Master Kategori -- cek/lepas tautannya di modal Produk.`});
+}
+if(p.produsenId && !(D.produsen||[]).some(s=>sameId(s.id,p.produsenId))){
+issues.push({level:'warn',title:'Produk tertaut ke Produsen/Supplier yang sudah dihapus',detail:`"${escapeHtml(p.name)}" masih menyimpan tautan produsen/supplier yang sudah dihapus dari Master Produsen -- cek/lepas tautannya di modal Produk.`});
 }
 });
 const prodIds=new Set(D.products.map(p=>p.id));
