@@ -94,20 +94,17 @@ function makeCtx({ document, assets }) {
 
 // --- 1-2. Wiring statis ---
 
-test('s572 [1/6]: HTML LIVE modules/shared/modals.js #txAcc memanggil onTxAccChange() (bukan langsung _txAccManuallySet=true), & orphan modules/shop/modals.js TIDAK ikut diubah', () => {
+test('s572 [1/6]: HTML LIVE modules/shared/modals.js #txAcc memanggil onTxAccChange() (bukan langsung _txAccManuallySet=true)', () => {
   const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modals.js'), 'utf8');
   assert.match(src, /id=\\"txAcc\\"[^>]*onchange=\\"onTxAccChange\(\)\\"/, 'dropdown #txAcc harus wired ke onTxAccChange()');
   assert.doesNotMatch(src, /id=\\"txAcc\\"[^>]*onchange=\\"_txAccManuallySet=true\\"/, 'wiring lama (stale) tidak boleh tersisa lagi di HTML LIVE');
 
-  // modules/shop/modals.js TIDAK direferensikan scripts/build.js (dead/
-  // orphan, lihat AUDIT-S572-DUPLICATE-SOURCE-STALE-STATE.md) -- perubahan
-  // Sesi ini (penghapusan dropdown porsi) sengaja HANYA menyentuh
-  // modules/shared/modals.js (LIVE). Buktikan file orphan ini masih
-  // memuat wiring `_txAccManuallySet=true` yang LAMA, sebagai bukti
-  // langsung tidak ikut ter-refactor.
-  const shopModals = fs.readFileSync(path.join(ROOT, 'modules/shop/modals.js'), 'utf8');
-  assert.match(shopModals, /id=\\"txAcc\\"[^>]*onchange=\\"_txAccManuallySet=true\\"/,
-    'modules/shop/modals.js (orphan) harus tetap memuat wiring LAMA -- bukti tidak disentuh');
+  // CATATAN (audit fitur Shop, sesi lanjutan): assertion "orphan
+  // modules/shop/modals.js TIDAK ikut diubah" yang dulu ada di sini
+  // sudah TIDAK RELEVAN lagi -- file dead/orphan itu sendiri sudah
+  // dihapus (lihat scripts/remove-shop-dead-files.sh), bukan cuma
+  // "tidak disentuh". 0 referensi build.js sejak awal, jadi
+  // penghapusannya 0 dampak ke wiring LIVE yang diverifikasi di atas.
 });
 
 test('s572 [2/6]: dropdown "Porsi Pemilik (akun patungan)" (#txOwnerPorsiWrap/#txOwnerPorsi) & live preview split (#txAssetSplitPreview) SUDAH DIHAPUS dari HTML LIVE modals.js', () => {
