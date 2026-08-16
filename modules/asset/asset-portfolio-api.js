@@ -93,6 +93,18 @@ const AssetPortfolioAPI = {
   // portfolioComposition() — Asset Portfolio API. Gabungan 3 sumber nilai
   // (cash/asset/investment) APA ADANYA dari helper di atas, ditambah
   // `totalValue` (murni penjumlahan ketiganya, 0 rumus baru).
+  // FIX (audit s-async-ownership): `investment.summary.totalValue` (dari
+  // Investment.portfolioSummary()) CUMA difilter isHoldingOwnershipSelf()
+  // (tipe kepemilikan tunggal) TAPI TIDAK diskalakan per porsi SELF utk
+  // holding patungan (a.owners[] multi-owner) -- beda dari
+  // `Aset.totalValue()` (assetValue di atas, SUDAH diskalakan via
+  // selfOwnedValue()) & dari Net Worth (Kekayaan.currentNetWorth(), pakai
+  // `Investment.selfOwnedTotalValue()` yg SUDAH diskalakan). Akibatnya
+  // kartu Portfolio Composition bisa overstate investmentValue utk holding
+  // patungan dibanding Net Worth. Fix: pakai `Investment.selfOwnedTotalValue()`
+  // (fungsi yg SUDAH ADA & SUDAH benar, 0 rumus baru) sbg sumber
+  // investmentValue di sini, SAMA PERSIS pola yang dipakai modules-calc.js
+  // utk Net Worth -- supaya kartu Portfolio & Net Worth konsisten.
   portfolioComposition() {
     const cash = this._cash();
     if (!cash.ok) return cash;
@@ -102,7 +114,9 @@ const AssetPortfolioAPI = {
     if (!investment.ok) return investment;
     const cashValue = cash.value;
     const assetValue = asset.value;
-    const investmentValue = investment.summary.totalValue || 0;
+    const investmentValue = (typeof Investment !== 'undefined' && typeof Investment.selfOwnedTotalValue === 'function')
+      ? (Investment.selfOwnedTotalValue() || 0)
+      : (investment.summary.totalValue || 0);
     const totalValue = cashValue + assetValue + investmentValue;
     return {
       ok: true,
