@@ -2070,6 +2070,18 @@ call:()=>{ DanaTitipanReturnUI.open(); }},
 // before/after.
 {label:'TitipanExpenseUI.open()',id:'titipanExpenseModal',
 call:()=>{ TitipanExpenseUI.open(); }},
+// S557 (fix): titipanPoolModal ("💰 Set Saldo Awal Dana Titipan" /
+// "➕ Tambah Deposit Dana Titipan", dibuat Sesi 4 §13.4) ada di halaman
+// (didaftarkan di modules/shared/modals.js) tapi belum terdaftar di sweep
+// manapun -- terdeteksi "(kelengkapan cakupan) modal belum terdaftar" di
+// Tes Buka/Tutup Modal. DanaTitipanPoolUI.openSetSaldoAwal() dipanggil
+// TANPA argumen (persis TitipanExpenseUI.open()/DanaTitipanReturnUI.open()
+// di atas) tetap aman: _resetForm() cuma mengosongkan field & set tanggal
+// hari ini, lalu openModal() seperti biasa -- 0 mutasi data (tidak push
+// dummy apa pun ke D), jadi TIDAK perlu before/after seperti spec
+// assetOwnersModal.
+{label:'DanaTitipanPoolUI.openSetSaldoAwal()',id:'titipanPoolModal',
+call:()=>{ DanaTitipanPoolUI.openSetSaldoAwal(); }},
 {label:'Piutang.openModal()',id:'piutangModal',
 call:()=>{ Piutang.openModal(); }},
 {label:'Debt.openModal()',id:'debtModal',
