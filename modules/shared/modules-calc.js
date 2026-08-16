@@ -588,8 +588,17 @@ if(!sumberOptions[idx]){toast('⚠️ Pilihan akun tidak valid');return;}
 fromAcc=sumberOptions[idx];
 }
 const date=new Date().toISOString().split('T')[0];
-D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun → ${escapeHtml(toAcc.name)}`,date,accountId:fromAcc.id});
-D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id});
+// S631 (Bug D fix, lihat AUDIT-s630-bugD-transfer-legacy-orphan.md §2.4):
+// jalur ini dulu push transfer_out/transfer_in TANPA transferPairId --
+// satu-satunya jalur CREATE transfer yang belum di-retrofit sejak Sesi 432
+// (bandingkan tx-transfer.js saveTransfer()). Tanpa transferPairId, delTx()
+// (tx-list-cashflow.js) tidak bisa menghapus kedua sisi sekaligus -> orphan
+// permanen begitu salah satu sisi dihapus. Fix: pakai mekanisme pairing
+// canonical yang SAMA PERSIS dgn saveTransfer() (1 uid() dibagi ke kedua
+// baris) -- 0 sistem pairing baru diciptakan di sini.
+const transferPairId=uid();
+D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun → ${escapeHtml(toAcc.name)}`,date,accountId:fromAcc.id,transferPairId});
+D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id,transferPairId});
 if(!p.riwayatKontribusi) p.riwayatKontribusi=[];
 p.riwayatKontribusi.push({id:uid(),date,amount:amt,fromAcc:fromAcc.id});
 save();renderDashboard();renderKeuangan();
