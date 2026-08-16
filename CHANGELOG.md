@@ -1,3 +1,41 @@
+# Changelog — Sesi S636 (Keamanan PIN: salt hash PIN per-perangkat, v1369)
+
+## Audit
+Bukan laporan bug user — audit keamanan proaktif atas `modules/shared/keamanan-pin.js`.
+
+## Temuan
+Salt yang dipakai `hashPin()` sebelumnya adalah string TETAP
+(`'kwPinSalt_v1:'`) yang sama persis di semua instalasi aplikasi. Karena
+source code app ini terbuka (di-hosting di repo GitHub), salt itu bukan
+rahasia. Efeknya: siapa pun bisa precompute SATU tabel hash untuk 10.000
+kombinasi PIN 4-digit (dengan salt tetap itu) SEKALI SAJA, lalu memakai
+tabel yang sama untuk membalik hash `kw_pin` curian dari instalasi mana pun
+dalam hitungan mikrodetik — salting jadi tidak memberi proteksi tambahan
+sama sekali dibanding hash polos.
+
+## Fix (additive, backward-compatible)
+1. `modules/shared/keamanan-pin.js` — tiap instalasi sekarang generate
+   salt acak 16-byte sendiri (`kw_pin_salt` di localStorage, dibuat sesaat
+   sebelum dipakai pertama kali via `_getOrCreatePinSalt()`), dipakai
+   `hashPin()` untuk semua PIN baru/ganti PIN.
+2. Migrasi otomatis: `checkPin()` sekarang fallback ke skema lama
+   (`hashPinLegacyFixedSalt()`, salt tetap) SATU KALI kalau hash skema baru
+   tidak cocok — kalau cocok, PIN tetap dianggap benar (user TIDAK perlu
+   reset PIN) & hash langsung ditulis ulang pakai skema baru, sehingga
+   instalasi lama otomatis "naik kelas" begitu user login sekali.
+3. `disablePinFlow()` juga menghapus `kw_pin_salt` (kebersihan, konsisten
+   dengan penghapusan `kw_pin` & data terkait lainnya).
+- CATATAN JUJUR: ini tetap bukan pengganti PIN yang lebih panjang/kuat —
+  10.000 kombinasi tetap brute-force-able dalam hitungan detik begitu
+  penyerang tahu salt spesifik korban (yang tersimpan di localStorage yang
+  sama). Perbaikan ini menutup celah "satu tabel pracetak dipakai ulang
+  lintas semua instalasi", bukan brute-force per-korban itu sendiri
+  (sudah dimitigasi terpisah oleh lockout percobaan PIN yang sudah ada).
+- Version otomatis naik v1368 → **v1369** (`scripts/build.js`).
+- Test: `node --test tests/*.test.js` — **4505/4505 lulus, 0 gagal**.
+
+---
+
 # Changelog — Sesi S609 (Dana Titipan: fix modal "Catat Pengeluaran" tidak sync deductionOwnerId & tidak punya field Akun, v1342)
 
 ## Laporan user

@@ -2866,8 +2866,26 @@ window.location.reload();
   <div class="stg-group-body-inner">
 
   <div class="card">
+    <div class="card-title">🔒 PIN &amp; Kunci Otomatis</div>
+    <div class="setting-item" id="stgPinActiveRow"><div><div class="setting-label">Ganti PIN</div><div class="setting-sub">Ubah PIN keamanan 4 digit</div></div><button class="btn btn-sm btn-ghost" data-action="gantiPin">Ganti</button></div>
+    <div class="setting-item u-dnone" id="stgPinInactiveRow"><div><div class="setting-label">Aktifkan PIN</div><div class="setting-sub">Buat PIN 4 digit utk mengunci aplikasi</div></div><button class="btn btn-sm btn-primary" data-action="enablePinFlow">Aktifkan</button></div>
+    <div class="setting-item">
+      <div><div class="setting-label">Nonaktifkan PIN</div><div class="setting-sub">Buka aplikasi tanpa kunci PIN sama sekali</div></div>
+      <label class="tgl-switch"><input type="checkbox" id="stgPinDisableToggle" onchange="onStgPinDisableToggleChange(this)"><span class="tgl-track"></span></label>
+    </div>
+    <div class="setting-item" id="stgPinAutolockRow">
+      <div><div class="setting-label">Kunci Otomatis</div><div class="setting-sub">Minta PIN lagi setelah app di-background</div></div>
+      <select class="fs" id="stgPinAutolockSelect" style="max-width:140px;margin-bottom:0" onchange="setPinAutolock(this.value)">
+        <option value="langsung">Langsung</option>
+        <option value="1m">1 menit</option>
+        <option value="5m">5 menit</option>
+      </select>
+    </div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-top:8px">🔒 Salah PIN 5x berturut-turut akan mengunci keypad sementara — durasi makin lama tiap kali terulang: 30 detik → 1 menit → 2 menit → 5 menit → 10 menit.</div>
+  </div>
+
+  <div class="card">
     <div class="card-title">⚙️ Keamanan & Lainnya</div>
-    <div class="setting-item"><div><div class="setting-label">Ganti PIN</div><div class="setting-sub">Ubah PIN keamanan 4 digit</div></div><button class="btn btn-sm btn-ghost" data-action="gantiPin">Ganti</button></div>
     <div class="setting-item"><div><div class="setting-label">Reset Aplikasi</div><div class="setting-sub">Hapus semua data</div></div><button class="btn btn-sm btn-danger" data-action="resetApp">Reset</button></div>
   </div>
 
@@ -3235,9 +3253,6 @@ window.location.reload();
     </button>
     <button type="button" class="dashhub-qa-btn" data-action="dashHubQaOpenAI" aria-label="Buka AI">
       <span class="dashhub-qa-icon">🤖</span><span class="dashhub-qa-label">AI</span>
-    </button>
-    <button type="button" class="dashhub-qa-btn" data-action="dashHubQaDanaTitipan" aria-label="Dana Titipan">
-      <span class="dashhub-qa-icon">💼</span><span class="dashhub-qa-label">Titipan</span>
     </button>
   </div>
   <!-- SUMMARY CARDS (Sprint 1 Tahap 5 — Dashboard 2.0, lihat DASHBOARD-SUMMARY.md).
