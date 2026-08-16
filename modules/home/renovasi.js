@@ -387,7 +387,24 @@ const it=p.items.find(x=>sameId(x.id,itemId));
 if(!it)return;
 const msg=it.paid?`Hapus item "${escapeHtml(it.name)}"? Transaksi terkait di Keuangan akan ikut dihapus.`:`Hapus item "${escapeHtml(it.name)}"?`;
 if(!await askConfirm(msg))return;
-if(it.paid&&it.txId)D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));
+// BUGFIX (Bug E, s633, lihat AUDIT-s632-bugE-renovasi-delete-cascade.md):
+// sebelum sesi ini, baris di bawah cuma D.transactions=D.transactions.
+// filter(...) langsung -- BYPASS TOTAL cascade delTx() (stok sparepart/
+// servis/BBM linked jadi orphan permanen). Fix: jalankan
+// runTxDeleteCascades() (SSOT sama persis yg dipakai delTx(),
+// tx-list-cashflow.js) DULU selagi transaksinya masih ada di
+// D.transactions (beberapa cascade butuh state tsb), baru filter keluar.
+// skipRenovCascade:true supaya TIDAK memanggil Renov.onLinkedTxDeleted(t)
+// balik ke diri sendiri -- item ini SENDIRI sedang dihapus total
+// (p.items=p.items.filter(...) di bawah), beda dari delTx() yang cuma
+// mereset status lunas item (item tetap ada). Guard typeof: aman kalau
+// urutan build.js berubah/tx-list-cashflow.js belum dimuat -- fallback ke
+// perilaku lama (filter langsung, 0 error) daripada crash.
+if(it.paid&&it.txId){
+const linkedTx=D.transactions.find(x=>sameId(x.id,it.txId));
+if(linkedTx&&typeof runTxDeleteCascades==='function')runTxDeleteCascades(linkedTx,{skipRenovCascade:true});
+D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));
+}
 if(it.calcDetail&&it.calcDetail.type==='absensi')Tukang.releaseEntries(it.calcDetail.entryIds);
 p.items=p.items.filter(x=>!sameId(x.id,itemId));
 save();renderDashboard();renderKeuangan();Renov.render();Renov.renderDetail();
