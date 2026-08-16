@@ -1207,6 +1207,17 @@ if(!ok)return;
 const editingId=txEditId;
 const existingTx=editingId?D.transactions.find(t=>t.id===editingId):null;
 const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===existingTx.billLinkId):null;
+// S629 (Bug B, audit s628 AUDIT-s628-bugB-atomicity-transaksi.md, Strategi A):
+// snapshot+rollback SELURUH D utk jalur CREATE generik (existingTx null,
+// curPayMethod 'tunai'), pola sama persis dgn applyRestoredData()
+// (modules/shared/backup-restore.js) -- `const prevD=JSON.parse(JSON.stringify(D))`.
+// _txCreateSnapshot HANYA diisi di titik SEBELUM D.transactions.push(newTx) pada
+// cabang CREATE generik (else block di bawah) -- cabang EDIT/cicilan/tagihan/
+// langganan/utang TIDAK mengisi variabel ini, jadi kalau exception terjadi di
+// cabang-cabang itu, catch di bawah cuma throw ulang (0 perubahan perilaku,
+// scope sesi ini murni Bug B/CREATE generik, tidak menyentuh Bug A/C/D/E).
+let _txCreateSnapshot=null;
+try{
 if(existingTx&&(existingTx.stockProductId||(existingTx.stockItems&&existingTx.stockItems.length))){
 const stillChecked=document.getElementById('txAddShopStock')&&document.getElementById('txAddShopStock').checked;
 const panelVisible=document.getElementById('txShopStockPanel')&&document.getElementById('txShopStockPanel').style.display!=='none';
@@ -1228,7 +1239,7 @@ if(existingTx&&existingTx.partStockId){
 const stillChecked=document.getElementById('txAddStock')&&document.getElementById('txAddStock').checked;
 const panelVisible=document.getElementById('txStockPanel')&&document.getElementById('txStockPanel').style.display!=='none';
 if(!stillChecked||!panelVisible){
-revertStockPurchase(existingTx.partStockId,existingTx.partStockQty);
+revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id);
 delete existingTx.partStockId;delete existingTx.partStockQty;delete existingTx.partStockUnit;
 renderStockList();
 }
@@ -1599,6 +1610,10 @@ if(txAssetIdVal)newTx.assetId=txAssetIdVal;
 // single-owner (dropdown kosong) -> deductionOwnerIdVal='' -> field TIDAK
 // diset sama sekali, sesuai pola existing txAssetIdVal di atas.
 if(deductionOwnerIdVal)newTx.deductionOwnerId=deductionOwnerIdVal;
+// BEGIN transaction boundary (S629 Bug B): snapshot D SEBELUM mutasi CREATE
+// pertama (push newTx) supaya bisa di-rollback total kalau ADA side-effect
+// sesudahnya (langkah 4-13 audit s628) yang throw.
+_txCreateSnapshot=JSON.stringify(D);
 D.transactions.push(newTx);
 applyTxTitipanLinkageOnSave(newTx,null);
 WorthIt.applyBuyLink(savedTxId);
@@ -1653,6 +1668,27 @@ const txAssetSplitMsg='';
 // 4000ms krn pesan gabungan lebih panjang dari toast biasa (pola sama dgn
 // toast pesan panjang lain, mis. error-handler.js/features-helpers.js).
 toast((existingTx?'✅ Transaksi diperbarui':'✅ Transaksi tersimpan')+txAssetSplitMsg+(txRenovMsg?' — '+txRenovMsg:''),txRenovMsg?4000:2200);
+} catch(_txSaveErr){
+// ERROR path (S629 Bug B): rollback HANYA kalau ini jalur CREATE generik
+// (_txCreateSnapshot terisi di titik BEGIN di atas). Cabang lain (EDIT/
+// cicilan/tagihan/langganan/utang) tidak pernah mengisi snapshot ini, jadi
+// exception di cabang-cabang itu langsung throw ulang tanpa rollback --
+// persis perilaku sebelum s629 (di luar scope Bug B, lihat AUDIT s628).
+if(_txCreateSnapshot){
+try{
+const _restored=JSON.parse(_txCreateSnapshot);
+// Restore IN-PLACE (bukan `D=_restored`) supaya identitas objek D tetap
+// sama -- modul lain yang sudah pegang referensi D tidak "ketinggalan"
+// versi lama (lihat catatan risiko §4 audit s628 ttg reassignment).
+Object.keys(D).forEach(function(_k){delete D[_k];});
+Object.assign(D,_restored);
+}catch(_rollbackErr){
+console.error('S629: rollback snapshot D gagal, state mungkin tidak konsisten:',_rollbackErr);
+}
+toast('⚠️ Gagal menyimpan transaksi, perubahan dibatalkan. Silakan coba lagi.',3000);
+}
+throw _txSaveErr;
+}
 }
 function saveCatatan(){
 const text=document.getElementById('catatanText').value;

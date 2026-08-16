@@ -122,40 +122,32 @@ return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHt
     </div>
   </div>`;
 }
-async function delTx(id){
-// S468b guard (defense in depth, lihat poin bahaya #2 di
-// s468-PLAN-virtual-bill-item-tx-list.md): id item virtual tagihan
-// (prefix 'vbill_', lihat txHTML()) BUKAN transaksi asli -- kalau
-// ke-trigger (mis. race re-render, atau dipanggil langsung bukan lewat
-// tombol yg sudah disembunyikan di txHTML()), JANGAN tampilkan dialog
-// "Hapus transaksi?" yang menyesatkan (tidak ada apa pun yang akan
-// terhapus). Guard di baris PERTAMA, sebelum askConfirm() dipanggil.
-if(String(id).startsWith('vbill_')){toast('Tagihan ini belum dibayar');return;}
-if(!await askConfirm('Hapus transaksi ini?'))return;
-const t=D.transactions.find(x=>x.id===id);
-// SESI 432 (audit fitur Transfer Antar Akun): transfer_out/transfer_in
-// SEKARANG dibuat berpasangan lewat `transferPairId` (baru, lihat
-// tx-transfer.js saveTransfer()) -- sebelum sesi ini, delTx() cuma
-// menghapus 1 baris transaksi yg diklik, jadi kalau salah satu kaki
-// transfer dihapus, kaki satunya jadi ORPHAN (saldo akun tujuan/asal
-// jadi pincang permanen krn transaksi lawan pasangnya masih ada sendirian
-// -- bug yg ditemukan audit, lihat FIX-*-s433-audit-fix-renov-edit-not-saving.md).
-// Fix: kalau transaksi yg dihapus adalah salah satu kaki transfer & PUNYA
-// transferPairId (transfer baru, dibuat setelah sesi ini), pasangannya
-// (transferPairId sama, id beda) ikut dicari & dihapus BARENGAN.
-// Transfer LAMA (dibuat sebelum sesi ini, belum punya field
-// `transferPairId` sama sekali) TIDAK bisa dipasangkan otomatis -- 0 cara
-// aman menebak pasangannya cuma dari amount/date/accountId (bisa salah
-// pasang kalau ada transfer lain dgn nominal/tanggal sama) -- tetap
-// berperilaku SAMA seperti sebelum sesi ini (hapus 1 sisi saja, TIDAK
-// ada regresi utk data lama).
-let pairedTx=null;
-if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&t.transferPairId){
-pairedTx=D.transactions.find(x=>x.id!==id&&x.transferPairId===t.transferPairId);
-}
+// BUGFIX (Bug E, s633, lihat AUDIT-s632-bugE-renovasi-delete-cascade.md):
+// diekstrak APA ADANYA (0 perubahan logika/urutan/pesan toast) dari badan
+// delTx() -- cascade bbmLinkId/partStockId/stockItems/stockProductId/
+// cobekLinkId/servisLinkId/renovItemLinkId/wishlistLinkId/sewaKiosLinkId/
+// tukangPaymentEntryIds SEKARANG jadi SATU SSOT yang dipakai delTx() (jalur
+// List Transaksi) DAN Renov.deleteItem() (jalur hapus item langsung dari UI
+// Renovasi, modules/home/renovasi.js) -- sebelum sesi ini Renov.deleteItem()
+// menghapus transaksi terkait langsung lewat D.transactions=D.transactions.
+// filter(...) TANPA menjalankan cascade ini sama sekali (Bug E: stok
+// sparepart/servis/BBM jadi orphan). titipanLinkId & billLinkId SENGAJA
+// TIDAK diikutkan di sini (tetap inline di delTx()) -- transaksi yang sudah
+// billLinkId/titipan-linked TIDAK BISA dihubungkan ke item Renov lewat
+// LinkTx (lihat LinkTx._getFiltered(), linktx.js), jadi kombinasi itu tidak
+// pernah terjadi utk transaksi renovItemLinkId -- 0 scope creep di luar
+// Bug E.
+// opts.skipRenovCascade: dipakai Renov.deleteItem() supaya TIDAK memanggil
+// Renov.onLinkedTxDeleted(t) balik ke dirinya sendiri -- onLinkedTxDeleted()
+// cuma mereset status lunas item (paid=false/txId=null), yang PERCUMA &
+// berpotensi konflik krn item itu SENDIRI sedang dihapus total oleh
+// pemanggil (p.items=p.items.filter(...) tepat setelah cascade ini
+// selesai) -- lihat komentar di Renov.deleteItem().
+function runTxDeleteCascades(t,opts){
+opts=opts||{};
 if(t&&t.bbmLinkId&&D.bbmLogs)D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
 if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
-revertStockPurchase(t.partStockId,t.partStockQty);
+revertStockPurchase(t.partStockId,t.partStockQty,t.id);
 toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
 renderStockList();
 }
@@ -187,7 +179,7 @@ toast(`🔧 Catatan servis terkait ikut dihapus`,2600);
 D.servisLogs=D.servisLogs.filter(s=>s.id!==t.servisLinkId);
 renderStockList();
 }
-if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'){
+if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'&&!opts.skipRenovCascade){
 Renov.onLinkedTxDeleted(t);
 }
 if(t&&t.wishlistLinkId){
@@ -199,6 +191,53 @@ SewaKios.onLinkedTxDeleted(t);
 if(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length){
 Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
 }
+}
+async function delTx(id){
+// S468b guard (defense in depth, lihat poin bahaya #2 di
+// s468-PLAN-virtual-bill-item-tx-list.md): id item virtual tagihan
+// (prefix 'vbill_', lihat txHTML()) BUKAN transaksi asli -- kalau
+// ke-trigger (mis. race re-render, atau dipanggil langsung bukan lewat
+// tombol yg sudah disembunyikan di txHTML()), JANGAN tampilkan dialog
+// "Hapus transaksi?" yang menyesatkan (tidak ada apa pun yang akan
+// terhapus). Guard di baris PERTAMA, sebelum askConfirm() dipanggil.
+if(String(id).startsWith('vbill_')){toast('Tagihan ini belum dibayar');return;}
+if(!await askConfirm('Hapus transaksi ini?'))return;
+const t=D.transactions.find(x=>x.id===id);
+// SESI 432 (audit fitur Transfer Antar Akun): transfer_out/transfer_in
+// SEKARANG dibuat berpasangan lewat `transferPairId` (baru, lihat
+// tx-transfer.js saveTransfer()) -- sebelum sesi ini, delTx() cuma
+// menghapus 1 baris transaksi yg diklik, jadi kalau salah satu kaki
+// transfer dihapus, kaki satunya jadi ORPHAN (saldo akun tujuan/asal
+// jadi pincang permanen krn transaksi lawan pasangnya masih ada sendirian
+// -- bug yg ditemukan audit, lihat FIX-*-s433-audit-fix-renov-edit-not-saving.md).
+// Fix: kalau transaksi yg dihapus adalah salah satu kaki transfer & PUNYA
+// transferPairId (transfer baru, dibuat setelah sesi ini), pasangannya
+// (transferPairId sama, id beda) ikut dicari & dihapus BARENGAN.
+// Transfer LAMA (dibuat sebelum sesi ini, belum punya field
+// `transferPairId` sama sekali) TIDAK bisa dipasangkan otomatis -- 0 cara
+// aman menebak pasangannya cuma dari amount/date/accountId (bisa salah
+// pasang kalau ada transfer lain dgn nominal/tanggal sama) -- tetap
+// berperilaku SAMA seperti sebelum sesi ini (hapus 1 sisi saja, TIDAK
+// ada regresi utk data lama).
+let pairedTx=null;
+if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&t.transferPairId){
+pairedTx=D.transactions.find(x=>x.id!==id&&x.transferPairId===t.transferPairId);
+}
+// S631 (Bug D fix, lihat AUDIT-s630-bugD-transfer-legacy-orphan.md §5.1
+// Opsi A): transfer LEGACY tanpa transferPairId TIDAK bisa dipasangkan
+// otomatis dgn aman -- heuristic amount+date+accountId TERBUKTI berisiko
+// salah pasang kalau ada >1 transfer lain dgn nominal/tanggal kebetulan
+// sama (lihat regression test 4 s630/s631, guard rail wajib tetap lolos).
+// Daripada menebak & menghapus transaksi lain secara diam-diam, user
+// diberi PERINGATAN eksplisit sebelum lanjut -- supaya sadar bahwa sisi
+// pasangannya TIDAK akan ikut terhapus & tidak bisa dipastikan otomatis.
+// Kalau user membatalkan di sini, TIDAK ADA apa pun yang terhapus (0
+// mutasi D.transactions) -- non-destruktif, keputusan tetap di tangan
+// user, 0 heuristic auto-pairing baru diciptakan.
+if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&!t.transferPairId){
+if(!await askConfirm('⚠️ Ini transfer lama (legacy) tanpa penanda pasangan otomatis. Sisi pasangannya TIDAK akan ikut terhapus dan tidak bisa dipastikan otomatis — cek & sesuaikan akun pasangan secara manual jika perlu. Tetap hapus transaksi ini?'))return;
+}
+runTxDeleteCascades(t);
 // Sesi 519 (LANJUTKAN-S519, Design Lock S518 §7 "tx-list-cashflow.js —
 // DELETE PATH", scope expansion resmi — DELETE cascade Dana Titipan
 // SENGAJA ditaruh di sini, BUKAN transaksi.js, krn delTx() ada di file
@@ -235,10 +274,44 @@ if(t&&t.titipanLinkId){
 if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
 if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
 }
+// BUGFIX (Bug A, audit DELETE transaksi pembayaran): delTx() TIDAK PERNAH
+// memanggil revertBillFromDeletedTx(t) (tagihan-kalender.js) -- beda dari
+// deleteBillHistoryTx() (jalur DELETE lain, modal 📋 Riwayat Pembayaran)
+// yang SUDAH memanggilnya sejak sesi 291 (lihat komentar SSOT di definisi
+// revertBillFromDeletedTx()). Akibatnya hapus transaksi pembayaran
+// Tagihan/Cicilan/Langganan/Utang lewat tombol 🗑 di List Transaksi biasa
+// TIDAK membalikkan sisaTenor/nextDue/reaktivasi arsip/saldo utang/auto-
+// piutang "Ditanggung Bersama" -- data D.bills/D.billsArchive/D.debts/
+// D.piutang jadi basi/nyangkut permanen. Fix: panggil fungsi SSOT yang
+// SAMA PERSIS dipakai deleteBillHistoryTx(), guard typeof (pola sama
+// cascade *LinkId lain di atas -- aman kalau tagihan-kalender.js belum
+// dimuat/urutan build.js berubah). SENGAJA ditaruh SEBELUM baris filter
+// D.transactions di bawah (bukan sesudah) -- revertBillFromDeletedTx()
+// memanggil isLatestBillPaymentTx() yang re-scan D.transactions, harus
+// dijalankan SAAT `t` masih ada di array supaya identik dgn urutan yang
+// sudah terbukti benar di deleteBillHistoryTx() (0 logic baru ditulis di
+// sini, 100% reuse).
+let billRevert=null;
+if(t&&t.billLinkId&&typeof revertBillFromDeletedTx==='function'){
+billRevert=revertBillFromDeletedTx(t);
+if(typeof renderBillList==='function')renderBillList();
+if(typeof checkBills==='function')checkBills();
+if(billRevert&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang'&&typeof renderDebtList==='function')renderDebtList();
+if(billRevert&&(billRevert.isLatest||billRevert.removedPiutang)){
+if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+}
+if(billRevert&&billRevert.removedPiutang&&typeof Piutang!=='undefined')Piutang.renderList();
+}
+let billRevertMsg='';
+if(billRevert&&billRevert.restoredFromArchive)billRevertMsg=' (tagihan diaktifkan lagi)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='cicilan')billRevertMsg=' (sisa tenor dikembalikan)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang')billRevertMsg=' (sisa utang dikembalikan)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
 D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
 save();renderDashboard();renderKeuangan();renderCnTab();renderProductList();
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');
-else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':''))));
+else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
 }
 function changeMonth(dir){
 curMonth+=dir;

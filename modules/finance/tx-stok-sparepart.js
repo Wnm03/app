@@ -9,16 +9,85 @@
 //    onchange="onTxStockItemChange()")
 //  - scan-ocr.js (auto-centang & isi panel stok saat hasil scan struk
 //    terdeteksi sparepart)
-// revertStockPurchase(partId,qty) — Tahap 8B: kebalikan applyStockPurchase(),
-// dipakai saat transaksi Keuangan yang menambah stok Inventaris DIEDIT
-// (checkbox dimatikan/qty diganti) atau DIHAPUS -> qty yg pernah ditambahkan
-// dikurangi lagi (single source of truth = D.partsStock, TIDAK menyentuh
-// harga/priceHistory yg sudah tercatat, sesuai pola revertStockUsage() di
-// car-notes.js utk arah sebaliknya/pemakaian servis).
-function revertStockPurchase(partId,qty){
+// revertStockPurchase(partId,qty,txId) — Tahap 8B, DIPERBAIKI sesi Bug C
+// (audit lanjutan s625): kebalikan applyStockPurchase(), dipakai saat
+// transaksi Keuangan yang menambah stok Inventaris DIEDIT (checkbox
+// dimatikan/qty-harga diganti) atau DIHAPUS.
+//
+// SEBELUM PERBAIKAN: fungsi ini cuma p.qty-=qty, TIDAK PERNAH menyentuh
+// avgPrice/price/priceHistory/txRefs/lastTxId -- akibatnya setiap kali
+// pembelian sparepart di-EDIT/DIHAPUS, avgPrice jadi basi (masih menghitung
+// pembelian yang sudah tidak ada lagi) & priceHistory/txRefs numpuk entry
+// orphan yang txId-nya sudah tidak ada di D.transactions -- ini juga ikut
+// membuat "Total Pembelian Sparepart" (Sparepart.calcFinanceStats(), jumlah
+// SEMUA priceHistory tanpa syarat) jadi lebih besar dari kenyataan.
+//
+// SUMBER KEBENARAN: qty tetap murni akumulatif (dikurangi persis argumen
+// `qty` yg dikirim, TIDAK berubah -- pemakaian stok via revertStockUsage()
+// di car-notes.js sama sekali tidak menyentuh priceHistory jadi aman
+// dicampur). avgPrice TIDAK bisa direkonstruksi total dari nol dari
+// priceHistory saja (ada kemungkinan "stok awal" qty+harga manual yang
+// dibuat sebelum ada pembelian tercatat, tidak pernah masuk priceHistory)
+// -- karena itu applyStockPurchase() di bawah (mulai sesi ini) menyimpan
+// SNAPSHOT `qtyBefore`/`avgPriceBefore` (state PERSIS sebelum pembelian itu
+// diterapkan) di tiap entry priceHistory baru. Revert lalu tinggal: hapus
+// entry priceHistory milik txId ybs, lalu REPLAY MAJU entry-entry
+// SESUDAHNYA (urutan array priceHistory = urutan kejadian pembelian, tidak
+// tergantung urutan pemanggilan revert/reapply) mulai dari snapshot
+// tersebut -- ini merekonstruksi avgPrice yang benar utk kasus edit/delete
+// di transaksi manapun (pembelian pertama/tengah/terakhir), TANPA perlu
+// tahu histori sebelum snapshot (jadi aman walau ada stok awal yang tidak
+// tercatat di priceHistory).
+//
+// Entry priceHistory LAMA (dibuat SEBELUM sesi ini, tidak punya field
+// qtyBefore/avgPriceBefore) SENGAJA tidak dipaksa direcompute -- fallback
+// ke perilaku lama (qty saja, avgPrice/price dibiarkan apa adanya) supaya
+// tidak salah hitung dari data yang tidak lengkap. txId juga tetap
+// dibersihkan dari txRefs/priceHistory di kasus ini (murni cleanup
+// referensi basi, aman dilakukan tanpa syarat).
+//
+// Parameter txId BARU, opsional & ditaruh di akhir (backward-compatible):
+// pemanggil lama yang cuma kirim 2 argumen (partId,qty) tetap berperilaku
+// PERSIS SAMA seperti sebelum sesi ini (qty-only revert, early-return
+// sebelum menyentuh priceHistory/txRefs sama sekali).
+function revertStockPurchase(partId,qty,txId){
 if(!partId||!qty)return;
 const p=D.partsStock.find(x=>x.id===partId);
-if(p)p.qty=Math.max(0,(p.qty||0)-qty);
+if(!p)return;
+p.qty=Math.max(0,(p.qty||0)-qty);
+if(!txId||!Array.isArray(p.priceHistory))return;
+const idx=p.priceHistory.findIndex(h=>h&&h.txId===txId);
+if(idx===-1){
+// tidak ada entry priceHistory yg cocok (mis. sudah pernah direvert, atau
+// data lama sebelum priceHistory ada) -- tetap bersihkan referensi txRefs
+// basi kalau ada, sisanya no-op (tidak menebak-nebak avgPrice).
+if(Array.isArray(p.txRefs))p.txRefs=p.txRefs.filter(id=>id!==txId);
+if(p.lastTxId===txId)p.lastTxId=null;
+return;
+}
+const entry=p.priceHistory[idx];
+const after=p.priceHistory.slice(idx+1);
+p.priceHistory.splice(idx,1);
+if(Array.isArray(p.txRefs))p.txRefs=p.txRefs.filter(id=>id!==txId);
+if(p.lastTxId===txId){
+const last=p.priceHistory[p.priceHistory.length-1];
+p.lastTxId=last?(last.txId||null):null;
+}
+if(typeof entry.qtyBefore==='number'){
+let curQty=entry.qtyBefore;
+let curAvg=(typeof entry.avgPriceBefore==='number'&&entry.avgPriceBefore>0)?entry.avgPriceBefore:null;
+after.forEach(h=>{
+const hq=(h&&typeof h.qty==='number')?h.qty:0;
+const hp=(h&&typeof h.price==='number')?h.price:0;
+const newQty=curQty+hq;
+if(hp>0){
+const prevAvgEff=(typeof curAvg==='number'&&curAvg>0)?curAvg:hp;
+curAvg=newQty>0?(((prevAvgEff*curQty)+(hp*hq))/newQty):hp;
+}
+curQty=newQty;
+});
+if(typeof curAvg==='number'&&curAvg>0){p.avgPrice=curAvg;p.price=curAvg;}
+}
 }
 // applyStockPurchase(p,qty,unitPrice,purchaseDate,txId) — Tahap 8A: satu titik
 // tunggal utk update field pembelian di item D.partsStock (dipanggil dari
@@ -31,19 +100,29 @@ if(p)p.qty=Math.max(0,(p.qty||0)-qty);
 // harga per transaksi), txRefs[]/lastTxId (referensi transaksi Keuangan).
 // unitPrice<=0 (mis. transaksi tanpa jumlah valid) -> qty tetap nambah tapi
 // field harga TIDAK disentuh (menghindari harga 0 mengotori rata-rata).
+// Sesi Bug C (audit lanjutan s625, lihat catatan lengkap di
+// revertStockPurchase() di atas): tiap entry priceHistory SEKARANG juga
+// menyimpan snapshot `qtyBefore`/`avgPriceBefore` -- state PERSIS SEBELUM
+// pembelian ini diterapkan -- supaya revertStockPurchase() bisa
+// merekonstruksi avgPrice dgn benar kalau pembelian ini di-EDIT/DIHAPUS
+// nanti. Field ini MURNI TAMBAHAN (additive, backward-compatible): tidak
+// mengubah SAMA SEKALI rumus qty/avgPrice/price/lastPrice yang sudah ada
+// di bawah, cuma merekam nilai yang sudah dihitung inline sebagai `prevAvg`
+// (skrg `prevAvgEffective`) SEBELUM p.qty/p.avgPrice dimutasi.
 function applyStockPurchase(p,qty,unitPrice,purchaseDate,txId){
 const prevQty=p.qty||0;
+const prevAvgEffective=(typeof p.avgPrice==='number'&&p.avgPrice>0)?p.avgPrice:((p.price>0)?p.price:null);
 p.qty=prevQty+qty;
 if(unitPrice>0){
 p.lastPrice=unitPrice;
-const prevAvg=(typeof p.avgPrice==='number'&&p.avgPrice>0)?p.avgPrice:((p.price>0)?p.price:unitPrice);
+const prevAvg=(typeof prevAvgEffective==='number')?prevAvgEffective:unitPrice;
 const totalQtyForAvg=prevQty+qty;
 p.avgPrice=totalQtyForAvg>0?(((prevAvg*prevQty)+(unitPrice*qty))/totalQtyForAvg):unitPrice;
 p.price=p.avgPrice;
 }
 p.lastPurchaseDate=purchaseDate;
 if(!Array.isArray(p.priceHistory))p.priceHistory=[];
-p.priceHistory.push({date:purchaseDate,qty,price:unitPrice||0,txId:txId||null});
+p.priceHistory.push({date:purchaseDate,qty,price:unitPrice||0,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvgEffective});
 if(txId){
 if(!Array.isArray(p.txRefs))p.txRefs=[];
 if(!p.txRefs.includes(txId))p.txRefs.push(txId);
@@ -232,7 +311,7 @@ const qty=parseFloat(document.getElementById('txStockQty').value)||0;
 const unit=document.getElementById('txStockUnit').value.trim()||'pcs';
 if(qty<=0){toast('⚠️ Jumlah stok yang ditambah harus lebih dari 0');return;}
 if(existingTx&&existingTx.partStockId){
-revertStockPurchase(existingTx.partStockId,existingTx.partStockQty);
+revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id);
 }
 const unitPrice=(priceBasis>0)?(priceBasis/qty):0;
 const purchaseDate=date||new Date().toISOString().split('T')[0];
