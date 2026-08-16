@@ -314,6 +314,91 @@ test('checkDebtNameStaleness() D belum ada -> ok=true, tidak throw', () => {
   assert.deepStrictEqual(res.stale, []);
 });
 
+// --- checkOwnershipDualSource() (S636 Opsi C) ---
+
+function setupOwnershipGlobals({ assets = [], ownersByAsset = {}, resolveType = {} }) {
+  global.D = { assets };
+  global.OwnershipEngine = {
+    resolve(a) { return { type: (resolveType[a.id] !== undefined) ? resolveType[a.id] : 'SELF' }; },
+  };
+  global.MultiOwnerEngine = {
+    getOwners(a) {
+      const entry = ownersByAsset[a.id];
+      if (entry === undefined) return { ok: true, isSynthesized: true, owners: [] };
+      return { ok: true, isSynthesized: false, owners: entry };
+    },
+  };
+}
+
+test('checkOwnershipDualSource() flag aset kasus Majoris: ownership non-SELF + owners[] eksplisit non-SELF', () => {
+  const a = { id: 'majoris', name: 'Majoris', nilai: 11750918 };
+  setupOwnershipGlobals({
+    assets: [a],
+    resolveType: { majoris: 'INVESTOR' },
+    ownersByAsset: {
+      majoris: [
+        { ownerId: 'renov', isSelf: false, porsi: 85.043 },
+        { ownerId: 'mas_sihab', isSelf: false, porsi: 14.467 },
+        { ownerId: 'aku', isSelf: false, porsi: 0.49 },
+      ],
+    },
+  });
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.flagged.length, 1);
+  assert.strictEqual(res.flagged[0].assetId, 'majoris');
+  assert.strictEqual(res.flagged[0].ownType, 'INVESTOR');
+  assert.ok(Math.abs(res.flagged[0].nonSelfPorsi - 100) < 0.001);
+});
+
+test('checkOwnershipDualSource() TIDAK flag: cuma ownership non-SELF, owners[] disintesis (isSynthesized:true)', () => {
+  const a = { id: 'a1', name: 'Aset 1' };
+  setupOwnershipGlobals({ assets: [a], resolveType: { a1: 'INVESTOR' } });
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.flagged, []);
+});
+
+test('checkOwnershipDualSource() TIDAK flag: cuma owners[] eksplisit, ownership SELF', () => {
+  const a = { id: 'a2', name: 'Aset 2' };
+  setupOwnershipGlobals({
+    assets: [a],
+    resolveType: { a2: 'SELF' },
+    ownersByAsset: { a2: [{ ownerId: 'budi', isSelf: false, porsi: 50 }] },
+  });
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.flagged, []);
+});
+
+test('checkOwnershipDualSource() TIDAK flag: owners[] eksplisit tapi semua porsi SELF', () => {
+  const a = { id: 'a3', name: 'Aset 3' };
+  setupOwnershipGlobals({
+    assets: [a],
+    resolveType: { a3: 'FAMILY' },
+    ownersByAsset: { a3: [{ ownerId: 'SELF', isSelf: true, porsi: 100 }] },
+  });
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.flagged, []);
+});
+
+test('checkOwnershipDualSource() aman (0 crash, ok=true) kalau OwnershipEngine/MultiOwnerEngine belum dimuat', () => {
+  delete global.OwnershipEngine;
+  delete global.MultiOwnerEngine;
+  global.D = { assets: [{ id: 'a4', name: 'Aset 4' }] };
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.flagged, []);
+});
+
+test('checkOwnershipDualSource() aman (0 crash, ok=true) kalau D belum ada', () => {
+  delete global.D;
+  const res = TitipanReconcile.checkOwnershipDualSource();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.flagged, []);
+});
+
 // --- checkAll() (S583 sesi-6) ---
 
 test('checkAll() ok=true kalau ketiga sub-check ok', () => {
