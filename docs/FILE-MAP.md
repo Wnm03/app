@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-08-16T07:15:42.811Z
-Total file source: 315 · Total identifier global: 2157
+Terakhir digenerate: 2026-08-16T09:09:34.655Z
+Total file source: 315 · Total identifier global: 2169
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -21,7 +21,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 
 | # | File | Baris | Ringkasan |
 |---|------|------:|-----------|
-| 1 | `modules/shared/modules-render.js` | 2164 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 1 | `modules/shared/modules-render.js` | 2165 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 2 | `modules/shared/modals.js` | 8 | Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 3 | `modules/shared/modules-calc.js` | 1142 | _(tidak ada komentar header)_ |
 | 4 | `modules/shop/cobek-etalase.js` | 876 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -70,7 +70,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 47 | `modules/shared/format-tema.js` | 78 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 48 | `modules/shared/error-handler.js` | 39 | Domain Error Handler Global: tangkap error tak tertangani (uncaught error & Dipindah ke modules/shared/error-handler.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 49 | `modules/shared/helper-teks.js` | 26 | Domain Helper Teks & Kalender: escape karakter HTML berbahaya biar aman Dipindah ke modules/shared/helper-teks.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 50 | `modules/shared/keamanan-pin.js` | 279 | Domain Keamanan: layar PIN (showPinScreen/checkPin/pinPress/pinBack/updatePinDots), Dipindah ke modules/shared/keamanan-pin.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 50 | `modules/shared/keamanan-pin.js` | 457 | Domain Keamanan: layar PIN (showPinScreen/checkPin/pinPress/pinBack/updatePinDots), Dipindah ke modules/shared/keamanan-pin.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 51 | `modules/home/refleksi-selfcare.js` | 264 | Domain Refleksi & Self-Care: Jurnal Syukur, Checklist Self-Care harian Dipindah ke modules/home/refleksi-selfcare.js (Sesi 13 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 52 | `modules/shared/modal-navigasi.js` | 500 | Domain Modal Generik & Navigasi Halaman: modal konfirmasi/prompt/pilihan/info/pin Dipindah ke modules/shared/modal-navigasi.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 53 | `modules/shared/scanner-session.js` | 336 | modules/shared/scanner-session.js — ScannerSession (Tahap 5, docs/ PRODUCT_DECISIONS.md § "Scanner — Exclusive Scanner Mode via ScannerSession (FINAL — Sesi 316, PD-007)"). PD-007 — Scanner WAJIB berjalan lewat … |
@@ -141,7 +141,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 118 | `reminder-notif.js` | 163 | resetApp (reset total data, disatukan di sini krn tidak ada domain lain yang cocok & cuma 1 fungsi kecil), share ke WhatsApp (phoneToWaId/waShareLink/openWaShare), notifikasi browser … |
 | 119 | `laporan-export.js` | 146 | Ekspor Laporan Keuangan ke PDF (exportLaporanPDF) & gambar (exportLaporanImage), plus builder data laporan (buildLaporanExportData: filter periode, total income/expense, breakdown per kategori). Dipisah dari … |
 | 120 | `gdrive-backup.js` | 293 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
-| 121 | `data-health-check.js` | 701 | Cek integritas data lintas-domain (runDataHealthCheck): transaksi dengan akun/tanggal/jumlah tidak valid, ID duplikat, tagihan/aset/BBM dengan tautan akun atau kendaraan yang sudah dihapus, dll. Dipisah dari … |
+| 121 | `data-health-check.js` | 731 | Cek integritas data lintas-domain (runDataHealthCheck): transaksi dengan akun/tanggal/jumlah tidak valid, ID duplikat, tagihan/aset/BBM dengan tautan akun atau kendaraan yang sudah dihapus, dll. Dipisah dari … |
 | 122 | `global-search.js` | 58 | Pencarian DATA milik user lintas halaman (openGlobalSearch/runGlobalSearch), beda tujuan dari Feature Search (dashboard-hub-search.js) yang cari FITUR/MENU. Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi … |
 | 123 | `sheets-schema.js` | 228 | Skema kolom Google Sheets per modul (SHEETS_SCHEMAS/SHEETS_MODULES) & helper konversi item<->baris (sheetsHeaderFor/sheetsItemToCells/sheetsCellsToItem dst), dipakai oleh sheets-sync.js. Dipisah dari … |
 | 124 | `sheets-sync.js` | 239 | Integrasi Google Sheets: koneksi OAuth, sinkronisasi push/pull data D.* ke/dari Google Spreadsheet. Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 1/5 — lihat … |
@@ -326,7 +326,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 303 | `modules/finance/dana-titipan-pool-api.js` | 193 | Dana Titipan: Pool (dana masuk aktual), entitas BARU terpisah dari `D.titipanCommitments[]` (porsi/alokasi per owner, sudah ada). Lihat `MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md` §5 (New Data Model), §14 (API … |
 | 304 | `modules/finance/dana-titipan-aggregation-api.js` | 1041 | Dana Titipan dalam Investasi: Portfolio Allocation Projection (Sesi 484 + Sesi 485a-e + Sesi 486 + Sesi 499/B1 + Sesi B2 + Sesi E + Sesi 554 + Sesi 594). SESI R5 — REALISASI (sesi ini, menggantikan percobaan split … |
 | 305 | `modules/finance/dana-titipan-commitment-return-api.js` | 282 | Dana Titipan: CRUD Commitment (pokok dikomit manual per owner, Sesi 485b/523) + CRUD Return (Sesi 486). SESI R5 — REALISASI (sesi ini). PECAHAN KEDUA dari `dana-titipan-portfolio-presenter.js` (versi produksi s597) — … |
-| 306 | `modules/finance/dana-titipan-portfolio-render.js` | 1414 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
+| 306 | `modules/finance/dana-titipan-portfolio-render.js` | 1431 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
 | 307 | `modules/finance/titipan-expense-flow.js` | 250 | Sesi 521 (S521-A, implementasi Design Lock DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519). Scope: flow pencatatan pengeluaran Dana Titipan (single-owner & multi-owner) yang dipanggil dari modal khusus … |
 | 308 | `modules/finance/titipan-expense-ui.js` | 380 | Sesi 521 (S521-B2, UI ONLY, DESIGN-S520-DANA- TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519 + S521-A/S521-B1). Scope: SATU-SATUNYA hal baru di sesi ini adalah `TitipanExpenseUI` — controller DOM tipis buat modal … |
 | 309 | `modules/vehicle/ride-activity-metrics.js` | 385 | RideActivityMetrics (S522, "Ride Activity Metrics Foundation"). HARD SCOPE sesi ini: PURE deterministic math functions saja — fondasi buat Ride Activity GPS recorder yang akan dibangun sesi-sesi berikutnya (S523+). … |
@@ -406,6 +406,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_deliveryThinMarginCheck` | `modules/shop/cobek-pricing.js` |
 | `_deriveApiKeyCryptoKey` | `modules/shared/keamanan-pin.js` |
 | `_dialogSelfHeal` | `modules/shared/modal-navigasi.js` |
+| `_digestSha256Hex` | `modules/shared/keamanan-pin.js` |
 | `_eieComputeTrend` | `economic-intelligence/adapters/macro-data-adapter.js` |
 | `_eieDebtStats` | `economic-intelligence/adapters/user-finance-adapter.js` |
 | `_eieEmergencyFundMonths` | `economic-intelligence/adapters/user-finance-adapter.js` |
@@ -426,6 +427,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_gdriveFindExistingBackupFileId` | `gdrive-backup.js` |
 | `_gdriveLocalDataLooksEmpty` | `gdrive-backup.js` |
 | `_gdriveSilentReconnectInProgress` | `gdrive-backup.js` |
+| `_getOrCreatePinSalt` | `modules/shared/keamanan-pin.js` |
 | `_getTxByAccIndex` | `modules/finance/akun.js` |
 | `_globalSearchDebounce` | `global-search.js` |
 | `_hondaImportCurrentId` | `modules/vehicle/honda-pdf-import-ui.js` |
@@ -462,6 +464,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_paFmtRp` | `modules/asset/penyusutan-ai-widget.js` |
 | `_pajakZakatRenderedOnce` | `pajak-aset-ui-wrappers.js` |
 | `_pendingChatActions` | `modules/ai/chat-action.js` |
+| `_pinAutolockCheckOnResume` | `modules/shared/keamanan-pin.js` |
 | `_pinLockRemainingMs` | `modules/shared/keamanan-pin.js` |
 | `_pinLockState` | `modules/shared/keamanan-pin.js` |
 | `_pinLockTimer` | `modules/shared/keamanan-pin.js` |
@@ -996,6 +999,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `detectScreenType` | `modules/shared/scan-ocr.js` |
 | `detectScreenTypeScores` | `modules/shared/scan-ocr.js` |
 | `detectScreenTypeWithConfidence` | `modules/shared/scan-ocr.js` |
+| `disablePinFlow` | `modules/shared/keamanan-pin.js` |
 | `dismissBackupReminder` | `modules/shared/modules-render.js` |
 | `downscaleImage` | `modules/shared/scan-ocr.js` |
 | `EARTH_RADIUS_M` | `modules/vehicle/ride-activity-metrics.js` |
@@ -1034,6 +1038,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `EIEStore` | `economic-intelligence/eie-store.js` |
 | `eieToggleWatchlistDetail` | `economic-intelligence/ui/eie-dashboard.js` |
 | `emptyStateMarkup` | `modules/vehicle/ride-map.js` |
+| `enablePinFlow` | `modules/shared/keamanan-pin.js` |
 | `enableSwipeToDismiss` | `modules/shared/modal-navigasi.js` |
 | `encryptApiKeyWithPin` | `modules/shared/keamanan-pin.js` |
 | `ensurePdfJs` | `modules/vehicle/vehicle-catalog-import.js` |
@@ -1202,6 +1207,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `getMultiOwnerAssets` | `modules/finance/piutang-utang.js` |
 | `getOcrMinConfidence` | `modules/shared/scan-ocr.js` |
 | `getOcrWorker` | `modules/shared/scan-ocr.js` |
+| `getPinAutolockOption` | `modules/shared/keamanan-pin.js` |
 | `getProactiveReminders` | `modules/vehicle/vehicle-core.js` |
 | `getPTKP` | `pajak-aset-ui-wrappers.js` |
 | `getRange` | `modules/finance/tx-list-cashflow.js` |
@@ -1246,6 +1252,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `guessWorthItCategory` | `modules/shared/scan-ocr.js` |
 | `handleTxRenovBelumDibeli` | `modules/finance/tx-renov.js` |
 | `hashPin` | `modules/shared/keamanan-pin.js` |
+| `hashPinLegacyFixedSalt` | `modules/shared/keamanan-pin.js` |
 | `hasIntervalOverride` | `modules/vehicle/sparepart-servis.js` |
 | `hasValidAltitude` | `modules/vehicle/ride-activity-metrics.js` |
 | `hasValidCoordinate` | `modules/vehicle/ride-activity-metrics.js` |
@@ -1525,6 +1532,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `onShopCustFieldInput` | `modules/shop/cobek-tx-cart.js` |
 | `onShopJsonImportFileChange` | `modules/business/shop-data-io-api.js` |
 | `onSimJenisChange` | `modules/vehicle/vehicle-core.js` |
+| `onStgPinDisableToggleChange` | `modules/shared/keamanan-pin.js` |
 | `onTargetAccChange` | `modules/finance/tx-target.js` |
 | `onTargetDanaDaruratToggle` | `modules/finance/tx-target.js` |
 | `onTxAccChange` | `modules/finance/transaksi.js` |
@@ -1628,6 +1636,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pickAssetScanCandidate` | `modules/shared/scan-ocr.js` |
 | `pickGeoOptions` | `modules/vehicle/ride-gps-recorder.js` |
 | `pilihAsetPBB` | `pajak-aset-ui-wrappers.js` |
+| `PIN_AUTOLOCK_KEY` | `modules/shared/keamanan-pin.js` |
+| `PIN_AUTOLOCK_OPTIONS` | `modules/shared/keamanan-pin.js` |
 | `PIN_LOCK_DURATIONS_SEC` | `modules/shared/keamanan-pin.js` |
 | `PIN_MAX_ATTEMPTS` | `modules/shared/keamanan-pin.js` |
 | `pinBack` | `modules/shared/keamanan-pin.js` |
@@ -1802,6 +1812,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `renderFiScenarios` | `modules/shared/modules-render.js` |
 | `renderGDriveSettings` | `modules/shared/modules-render.js` |
 | `renderGrafik` | `modules/shared/modules-render.js` |
+| `renderKeamananSettings` | `modules/shared/keamanan-pin.js` |
 | `renderKekayaanBersih` | `modules/shared/modules-render.js` |
 | `renderKeuAbsensiGajiCard` | `modules/shared/modules-render.js` |
 | `renderKeuangan` | `modules/shared/modules-render.js` |
@@ -2045,6 +2056,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `setPajakTab` | `pajak-aset-ui-wrappers.js` |
 | `setPayMethod` | `modules/finance/transaksi.js` |
 | `setPeriode` | `modules/finance/tx-list-cashflow.js` |
+| `setPinAutolock` | `modules/shared/keamanan-pin.js` |
 | `setPjkTab` | `pajak-aset-ui-wrappers.js` |
 | `setSettingsTab` | `modules/shared/pengaturan-search.js` |
 | `setShopPeriode` | `modules/shop/cobek-io.js` |
