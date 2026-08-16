@@ -273,6 +273,97 @@ checkAccounts() {
   return { ok: missing.length === 0 && orphan.length === 0, missing, orphan };
 },
 
+// checkTransactionOwnerRefs() — S635, saran Prioritas #2 dari
+// AUDIT-DATA-HEALTH-BACKUP-2026-08-16.md ("validasi ringan saat porsi
+// kepemilikan sebuah aset diubah — kalau ada transaksi historis yang
+// deductionOwnerId-nya akan jadi orphan gara-gara perubahan itu"). LATAR:
+// audit itu menemukan 8x transaksi (akun "Saldo tagihan") yang
+// `deductionOwnerId`-nya nunjuk 1 dari 3 porsi pemilik aset "Majoris" —
+// tapi porsi aset itu sudah diubah/disusun ulang SETELAH transaksi-transaksi
+// itu dibuat, jadi `ownerId` lama jadi snapshot BASI (tidak match owner mana
+// pun yang valid SEKARANG). Gap ini di luar cakupan check()/checkAccounts()
+// di atas (keduanya audit D.debts, bukan D.transactions[].deductionOwnerId).
+// PURE baca-saja, 0 mutasi, 0 rumus baru — reuse SATU-SATUNYA fungsi yang
+// sudah jadi sumber kebenaran "owner valid saat ini utk akun X"
+// (resolveOwnerDefaultForAccount(accountId), transaksi.js — SAMA PERSIS
+// yang dipakai dropdown "Pemilik Sumber Potongan" & validasi simpan
+// transaksi baru), supaya definisi "valid" di sini 1:1 sama dgn form,
+// bukan re-derivasi logic baru.
+// Transaksi tanpa deductionOwnerId/accountId dilewati (bukan cabang ini).
+// Akun yang resolver-nya balik owners kosong (source:'none', akun biasa
+// non-multi-owner) DILEWATI juga — tidak bisa dipastikan orphan dari sini,
+// hindari false-positive.
+// Guard: kalau resolveOwnerDefaultForAccount() belum dimuat (halaman/harness
+// test tanpa transaksi.js), fungsi ini fallback ok=true diam-diam — pola
+// sama guard checkOwnerIdConsistency() di atas utk MultiOwnerEngine (0
+// regresi utk konsumen yang belum/tidak load transaksi.js).
+// Return: {ok, orphan: [{txId, accountId, deductionOwnerId}]}
+checkTransactionOwnerRefs() {
+  if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return { ok: true, orphan: [] };
+  if (typeof resolveOwnerDefaultForAccount !== 'function') return { ok: true, orphan: [] };
+  const orphan = [];
+  D.transactions.forEach((t) => {
+    if (!t || !t.deductionOwnerId || !t.accountId) return;
+    let resolved;
+    try { resolved = resolveOwnerDefaultForAccount(t.accountId); } catch (e) { resolved = null; }
+    if (!resolved || !resolved.ok || !resolved.owners || !resolved.owners.length) return;
+    const match = resolved.owners.some((o) => o && String(o.ownerId) === String(t.deductionOwnerId));
+    if (!match) orphan.push({ txId: t.id, accountId: t.accountId, deductionOwnerId: t.deductionOwnerId });
+  });
+  return { ok: orphan.length === 0, orphan };
+},
+
+// checkOwnershipDualSource() — S636 Opsi C (AUDIT-S636-MAJORIS-OWNERSHIP-
+// DUAL-SOURCE-KEPUTUSAN.md §3): membawa warning "Aset dengan kepemilikan
+// ganda" yang SUDAH ADA di data-health-check.js (S501, `runDataHealthCheck()`
+// -- lihat komentar "PERUBAHAN SESI 501 (F3...)" di file itu) ke jalur
+// KEDUA yang berjalan OTOMATIS tiap Tes Otomatis/checkAll() (bukan cuma
+// nunggu user buka layar "Cek Kesehatan Data" secara manual) -- pola SAMA
+// PERSIS sub-check lain di modul ini (PURE baca-saja, 0 mutasi, 0 rumus
+// baru, 0 pengganti check S501 yang sudah ada -- itu tetap jalan apa
+// adanya di layarnya sendiri, ini cuma tambahan sinyal di Tes Otomatis).
+//
+// Kondisi flag -- REUSE 100% logic S501 (data-health-check.js baris
+// "PERUBAHAN SESI 501"), bukan rumus baru:
+//   1. `OwnershipEngine.resolve(a).type` bukan 'SELF' (dropdown Kepemilikan
+//      whole-entity non-default, dibaca DanaKelolaan.sumAssets()/
+//      isAssetOwnershipSelf()), DAN
+//   2. `MultiOwnerEngine.getOwners(a)` balik `ok:true, isSynthesized:false`
+//      (owners[] EKSPLISIT ada, bukan hasil sintesis dari `a.ownership` --
+//      kalau isSynthesized:true berarti cuma 1 sumber, tidak ada yang bisa
+//      divergen), DAN
+//   3. ada baris non-SELF berporsi >0 di `owners[]` itu (titipan beneran,
+//      bukan owners[] yang isinya SELF semua/kosong).
+// Kasus Majoris (Reksadana, `a.ownership='INVESTOR'` + `owners[]` 3 orang
+// non-SELF 100%) persis penuhi ketiganya -- lihat §1 dokumen keputusan.
+// Guard ganda `typeof OwnershipEngine`/`typeof MultiOwnerEngine`, pola sama
+// semua guard lain di modul ini -- kalau salah satu belum dimuat, diam
+// (0 false-positive), bukan crash.
+// Return: {ok, flagged: [{assetId, name, ownType, nonSelfPorsi}]} -- ok=true
+// kalau flagged kosong. `nonSelfPorsi` = total persen owners[] non-SELF
+// (dibulatkan apa adanya, sama seperti pesan S501 -- bukan nilai baru).
+checkOwnershipDualSource() {
+  if (typeof D === 'undefined' || typeof OwnershipEngine === 'undefined' ||
+      typeof MultiOwnerEngine === 'undefined' || typeof MultiOwnerEngine.getOwners !== 'function') {
+    return { ok: true, flagged: [] };
+  }
+  const flagged = [];
+  (D.assets || []).forEach((a) => {
+    if (!a) return;
+    const ownType = OwnershipEngine.resolve ? OwnershipEngine.resolve(a).type : 'SELF';
+    if (!ownType || ownType === 'SELF') return;
+    let res;
+    try { res = MultiOwnerEngine.getOwners(a); } catch (e) { res = null; }
+    if (!res || !res.ok || res.isSynthesized) return;
+    const nonSelfPorsi = (res.owners || []).filter((o) => o && !o.isSelf && o.porsi > 0)
+      .reduce((s, o) => s + o.porsi, 0);
+    if (nonSelfPorsi > 0) {
+      flagged.push({ assetId: a.id, name: a.name, ownType, nonSelfPorsi });
+    }
+  });
+  return { ok: flagged.length === 0, flagged };
+},
+
 // checkAll() — Rekomendasi #2 lanjutan (S583 sesi-6). check()/
 // checkOwnerIdConsistency()/checkDebtNameStaleness() sudah ADA dari sesi
 // sebelumnya, tapi masing-masing masih dipanggil terpisah (belum ada 1
@@ -308,12 +399,16 @@ checkAll() {
   const ownerIdConsistency = this.checkOwnerIdConsistency();
   const debtNameStaleness = this.checkDebtNameStaleness();
   const accountSync = this.checkAccounts();
+  const transactionOwnerRefs = this.checkTransactionOwnerRefs();
+  const ownershipDualSource = this.checkOwnershipDualSource();
   return {
-    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok,
+    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok,
     sync,
     ownerIdConsistency,
     debtNameStaleness,
     accountSync,
+    transactionOwnerRefs,
+    ownershipDualSource,
   };
 },
 
