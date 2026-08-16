@@ -182,6 +182,21 @@ function dashHubQaBackupHistory(){
 }
 function dashHubQaFocusSearch(){ document.getElementById('dashHubSearchInput').focus(); }
 function dashHubQaOpenAI(){ showPage('ai'); }
+// dashHubQaDanaTitipan() — mengisi slot ke-5 yang sebelumnya kosong di
+// #dashHubQuickActions (.dashhub-qa-row sudah digrid utk 5 kolom sejak
+// awal, cuma 4 tombol yang dipasang -> ada 1 sela kosong di sisi kanan
+// tombol AI). 0 logic baru: reuse PENUH dashHubNavigateToFeature() +
+// target yang SAMA PERSIS dgn entri 'keu-dana-titipan' di
+// dashboard-hub-registry.js (Keuangan > Laporan > tab Dana Titipan).
+// Fallback ke showPage('keuangan') kalau dashHubNavigateToFeature belum
+// ke-load, pola sama dgn dashHubQaBackupHistory() di atas.
+function dashHubQaDanaTitipan(){
+  if (typeof dashHubNavigateToFeature === 'function') {
+    dashHubNavigateToFeature({ page: 'keuangan', tab: 'laporan', subtab: 'titipan', goTo: 'danaTitipanTabList' });
+  } else {
+    showPage('keuangan');
+  }
+}
 
 function linkTxToggleSelectStop(id){ LinkTx.toggleSelectAndRender(id); }
 
