@@ -795,7 +795,14 @@ const kmPerDay=estimateKmPerDay(curVehicleId);
 // Pengingat dgn "Interval 0 km" & selalu "Lewat" (0-jarakTempuh selalu <=0).
 // Filter: hanya kategori dgn interval valid (>0) DAN belum ditandai
 // disembunyikan manual dari 🔧 Kelola Kategori (lihat renderCatList()).
-const remindableCats=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
+// S622 (permintaan user: pengingat servis per part/kategori/stok sparepart
+// harus sendiri-sendiri per kendaraan): tambah filter catVisibleForVehicle()
+// (modules/vehicle/sparepart-servis.js) -- kategori khusus kendaraan LAIN
+// (cat.vehicleId terisi tapi beda dari curVehicleId) tidak lagi ikut numpuk
+// di kartu Pengingat Servis kendaraan ini. Kategori universal (vehicleId
+// kosong, mayoritas data lama) tetap tampil di semua kendaraan (fail-open,
+// 0 data lama berubah perilaku).
+const remindableCats=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId));
 if(!remindableCats.length){
 const hiddenCount=D.sparepartCats.length-remindableCats.length;
 card.innerHTML='<div class="card-title">🔔 Pengingat Servis</div><div class="empty"><div class="empty-text">'+(hiddenCount?'Belum ada kategori dgn interval servis aktif. '+hiddenCount+' kategori lain disembunyikan/belum diatur intervalnya — atur di 🔧 Kelola Kategori Sparepart.':'Belum ada kategori sparepart. Atur di Pengaturan.')+'</div></div>';
