@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s633-titipan-explicit-owner-only';
+const MODULE_RENDER_VERSION='s636-keamanan-pin-per-device-salt';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1925,6 +1925,7 @@ const aiVehFuelDropEl=document.getElementById('sAIVehicleFuelDrop'); if(aiVehFue
 const aiDelLowStockEl=document.getElementById('sAIDeliveryLowStock'); if(aiDelLowStockEl) aiDelLowStockEl.value=typeof getAIDeliveryLowStockThreshold==='function'?getAIDeliveryLowStockThreshold():2;
 const aiAssetZakatMinEl=document.getElementById('sAIAssetZakatMin'); if(aiAssetZakatMinEl) aiAssetZakatMinEl.value=typeof getAIAssetZakatMinThreshold==='function'?getAIAssetZakatMinThreshold():0;
 const ocrMinConfEl=document.getElementById('sOcrMinConfidence'); if(ocrMinConfEl) ocrMinConfEl.value=typeof getOcrMinConfidence==='function'?getOcrMinConfidence():50;
+if(typeof renderKeamananSettings==='function')renderKeamananSettings();
 const whG=document.getElementById('whGaji'); if(whG) whG.value=D.profile.gajiPokok||65000;
 const whD=document.getElementById('whDate'); if(whD&&!whD.value) whD.value=new Date().toISOString().split('T')[0];
 renderWorkDays();

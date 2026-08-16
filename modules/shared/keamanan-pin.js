@@ -70,8 +70,7 @@ H=[(H[0]+a)>>>0,(H[1]+b)>>>0,(H[2]+c)>>>0,(H[3]+d)>>>0,(H[4]+e)>>>0,(H[5]+f)>>>0
 }
 return H.map(x=>x.toString(16).padStart(8,'0')).join('');
 }
-async function hashPin(pin){
-const data=new TextEncoder().encode('kwPinSalt_v1:'+String(pin));
+async function _digestSha256Hex(data){
 if(typeof crypto!=='undefined'&&crypto.subtle&&crypto.subtle.digest){
 try{
 const buf=await crypto.subtle.digest('SHA-256',data);
@@ -81,6 +80,47 @@ console.warn('crypto.subtle.digest gagal (context tidak secure?), pakai fallback
 }
 }
 return _sha256Fallback(data);
+}
+// SALT PER-PERANGKAT (perbaikan keamanan 2026-08-16): sebelumnya salt hash PIN adalah
+// string TETAP ('kwPinSalt_v1:') yang sama persis di semua instalasi -- dan krn source
+// code app ini terbuka (di-hosting di repo GitHub), salt itu bukan rahasia sama sekali.
+// Efeknya salting jadi percuma: siapa pun bisa precompute SATU tabel hash utk 10.000
+// kombinasi PIN 4-digit (dgn salt tetap itu) SEKALI SAJA, lalu pakai tabel yg sama utk
+// membalik hash `kw_pin` curian dari instalasi MANA PUN dlm hitungan mikrodetik --
+// tanpa perlu brute-force ulang per korban. Sekarang tiap instalasi generate salt acak
+// 16-byte sendiri (kw_pin_salt di localStorage, disimpan sesaat sebelum dipakai pertama
+// kali) sehingga tabel hash pracetak di atas tidak bisa dipakai ulang lintas instalasi --
+// penyerang harus brute-force per korban dari nol. CATATAN JUJUR: ini tetap bukan
+// pengganti PIN yg lebih panjang/kuat -- 10.000 kombinasi tetap brute-force-able dlm
+// hitungan detik begitu penyerang tahu salt spesifik korban (yg tersimpan di localStorage
+// yg sama), sama seperti catatan jujur soal lockout PIN di bawah.
+function _getOrCreatePinSalt(){
+let existing=null;
+try{ existing=localStorage.getItem('kw_pin_salt'); }catch(e){}
+if(existing)return existing;
+let bytes;
+if(typeof crypto!=='undefined'&&crypto.getRandomValues){
+bytes=crypto.getRandomValues(new Uint8Array(16));
+}else{
+bytes=new Uint8Array(16);
+for(let i=0;i<16;i++)bytes[i]=Math.floor(Math.random()*256);
+}
+const salt=Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
+try{ localStorage.setItem('kw_pin_salt',salt); }catch(e){}
+return salt;
+}
+async function hashPin(pin){
+const salt=_getOrCreatePinSalt();
+const data=new TextEncoder().encode('kwPinSalt_v1:'+salt+':'+String(pin));
+return _digestSha256Hex(data);
+}
+// Skema LAMA (salt tetap, sblm perbaikan salt per-perangkat di atas) -- HANYA dipakai
+// sbg fallback verifikasi satu kali di checkPin() utk instalasi yg PIN-nya sudah
+// tersimpan dari sebelum patch ini, supaya user TIDAK perlu reset PIN. Begitu cocok,
+// checkPin() langsung tulis ulang hash pakai skema baru (lihat checkPin()).
+async function hashPinLegacyFixedSalt(pin){
+const data=new TextEncoder().encode('kwPinSalt_v1:'+String(pin));
+return _digestSha256Hex(data);
 }
 // PIN MENTAH SESI (perbaikan keamanan 2026-07-10): dulu kunci enkripsi API key diturunkan dari
 // localStorage.getItem('kw_pin') -- tapi itu HASH PIN yang tersimpan sebagai teks biasa di
@@ -160,8 +200,20 @@ function updatePinDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).cla
 async function checkPin(){
 if(_pinLockRemainingMs()>0){pinBuffer='';updatePinDots();return;}
 const correct=localStorage.getItem('kw_pin');
-const hashedInput=await hashPin(pinBuffer);
-if(hashedInput===correct){
+let hashedInput=await hashPin(pinBuffer);
+let pinMatch=hashedInput===correct;
+// Migrasi salt-per-perangkat (perbaikan keamanan 2026-08-16): kalau tidak cocok dgn
+// skema baru, coba skema lama (salt tetap) sekali -- kalau cocok, PIN tetap dianggap
+// benar (user tidak perlu reset PIN) & hash langsung ditulis ulang pakai skema baru
+// yg sudah pakai salt per-perangkat, supaya instalasi ini otomatis "naik kelas".
+if(!pinMatch){
+const legacyHash=await hashPinLegacyFixedSalt(pinBuffer);
+if(legacyHash===correct){
+pinMatch=true;
+safeSetItem('kw_pin',hashedInput);
+}
+}
+if(pinMatch){
 localStorage.removeItem('kw_pin_fails');localStorage.removeItem('kw_pin_lock_until');localStorage.removeItem('kw_pin_lock_stage');
 _sessionRawPin=pinBuffer;document.getElementById('pinScreen').style.display='none';showMain();loadAndMigrateApiKeyOnUnlock();
 }else{
@@ -200,6 +252,132 @@ safeSetItem(API_KEY_ENC_STORAGE_KEY,JSON.stringify(reEnc));
 }catch(e){ console.warn('Gagal re-enkripsi API key saat ganti PIN:',e); }
 if(safeSetItem('kw_pin',newHashed)){_sessionRawPin=p;toast('✅ PIN diubah');}
 }else if(p)showAlertModal('PIN harus 4 digit angka!',{icon:'🔒',title:'PIN Belum Valid'});
+}
+// ============================================================
+// NONAKTIFKAN PIN & KUNCI OTOMATIS (tab Keamanan → Pengaturan, lihat
+// index.html #stgGroup5 & renderKeamananSettings() di modules-render.js).
+// ------------------------------------------------------------
+// Nonaktifkan PIN: cukup HAPUS kw_pin dari localStorage sepenuhnya --
+// bukan sekadar flag "dinonaktifkan". Ini sengaja dibuat konsisten dgn
+// logic boot yang sudah ada di init() (`const pin=localStorage.getItem(
+// 'kw_pin'); if(pin){showPinScreen();...}`) -- begitu kw_pin tidak ada,
+// boot otomatis langsung ke showMain() tanpa perlu flag/kondisi baru sama
+// sekali di jalur boot. CATATAN JUJUR: API key AI (lihat catatan panjang
+// di encryptApiKeyWithPin di atas) HANYA bisa didekripsi pakai PIN mentah
+// -- begitu PIN dihapus, tidak ada lagi cara aman menyimpan API key
+// terenkripsi, jadi ikut dihapus & user perlu isi ulang kalau mau pakai
+// AI Asisten lagi. Ini didokumentasikan jelas di dialog konfirmasi supaya
+// user tidak kaget.
+async function disablePinFlow(){
+const hasApiKey=!!(D.profile&&D.profile.apiKey);
+const msg='PIN akan dihapus & aplikasi TIDAK akan lagi meminta kunci saat dibuka atau setelah di-background.'
++(hasApiKey?'\n\n⚠️ API key AI yang tersimpan terenkripsi (butuh PIN utk buka) ikut terhapus -- isi ulang lewat Pengaturan → AI Asisten kalau mau pakai lagi.':'')
++'\n\nLanjutkan?';
+const ok=await askConfirm(msg,{title:'Nonaktifkan PIN?',icon:'🔓',okText:'Ya, Nonaktifkan'});
+if(!ok)return;
+localStorage.removeItem('kw_pin');
+localStorage.removeItem('kw_pin_salt');
+localStorage.removeItem('kw_pin_fails');
+localStorage.removeItem('kw_pin_lock_until');
+localStorage.removeItem('kw_pin_lock_stage');
+localStorage.removeItem(API_KEY_ENC_STORAGE_KEY);
+if(D.profile)D.profile.apiKey='';
+_sessionRawPin=null;
+try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){}
+toast('🔓 PIN dinonaktifkan');
+if(typeof renderKeamananSettings==='function')renderKeamananSettings();
+}
+async function enablePinFlow(){
+const p=await showPinPromptModal({title:'Aktifkan PIN',message:'Buat PIN baru (4 digit angka)'});
+if(p&&p.length===4&&!isNaN(p)){
+const hashed=await hashPin(p);
+if(safeSetItem('kw_pin',hashed)){
+_sessionRawPin=p;
+localStorage.removeItem('kw_pin_fails');
+localStorage.removeItem('kw_pin_lock_until');
+localStorage.removeItem('kw_pin_lock_stage');
+if(D.profile&&D.profile.apiKey)persistApiKeyEncrypted();
+toast('🔒 PIN diaktifkan');
+if(typeof renderKeamananSettings==='function')renderKeamananSettings();
+}
+}else if(p)showAlertModal('PIN harus 4 digit angka!',{icon:'🔒',title:'PIN Belum Valid'});
+}
+// Kunci Otomatis: durasi diam (app di-background, lewat visibilitychange)
+// sebelum PIN diminta lagi begitu app dibuka/di-foreground-kan lagi.
+// 'langsung' (0 detik, default -- paling aman) / '1m' / '5m'. CATATAN:
+// ini TIDAK mengubah showPinScreen()/checkPin() yang sudah ada sama
+// sekali -- cuma menambah pemicu BARU utk memanggil showPinScreen() lagi
+// saat resume (guard idempoten window.__kwPinScreenShown SENGAJA di-reset
+// ke false sesaat sebelum showPinScreen() dipanggil ulang, supaya guard
+// "PIN tampil dobel" -- lihat komentar showPinScreen() di atas -- tidak
+// memblokir pemanggilan ulang yang memang disengaja ini).
+const PIN_AUTOLOCK_KEY='kw_pin_autolock';
+const PIN_AUTOLOCK_OPTIONS={langsung:0,'1m':60000,'5m':300000};
+function getPinAutolockOption(){
+const v=localStorage.getItem(PIN_AUTOLOCK_KEY);
+return Object.prototype.hasOwnProperty.call(PIN_AUTOLOCK_OPTIONS,v)?v:'langsung';
+}
+function setPinAutolock(v){
+if(!Object.prototype.hasOwnProperty.call(PIN_AUTOLOCK_OPTIONS,v))return;
+safeSetItem(PIN_AUTOLOCK_KEY,v);
+toast('✅ Kunci otomatis: '+(v==='langsung'?'Langsung':v==='1m'?'1 menit':'5 menit'));
+}
+function _pinAutolockCheckOnResume(){
+const pin=localStorage.getItem('kw_pin');
+if(!pin)return; // PIN nonaktif -- tidak ada yang perlu dikunci ulang
+let bgTs=0;
+try{bgTs=parseInt(sessionStorage.getItem('kw_pin_bg_ts')||'0',10)||0;}catch(e){}
+if(!bgTs)return;
+const elapsed=Date.now()-bgTs;
+const thresholdMs=PIN_AUTOLOCK_OPTIONS[getPinAutolockOption()];
+if(elapsed>=thresholdMs){
+_sessionRawPin=null;
+['mainHeader','mainApp','mainNav'].forEach(id=>{
+const el=document.getElementById(id);
+if(el){ el.style.display='none'; el.classList.add('u-dnone'); }
+});
+window.__kwPinScreenShown=false;
+showPinScreen();
+}
+try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+if(document.visibilityState==='hidden'){
+if(localStorage.getItem('kw_pin')){
+try{sessionStorage.setItem('kw_pin_bg_ts',String(Date.now()));}catch(e){}
+}
+}else if(document.visibilityState==='visible'){
+_pinAutolockCheckOnResume();
+}
+});
+// Handler toggle "Nonaktifkan PIN" di tab Keamanan (index.html #stgPinDisableToggle).
+// Toggle ON = user MINTA PIN dinonaktifkan -> panggil disablePinFlow() (ada
+// konfirmasi). Toggle OFF = user minta PIN diaktifkan lagi -> enablePinFlow()
+// (minta bikin PIN baru). Kalau user membatalkan dialog di tengah jalan,
+// state toggle dikembalikan sesuai kondisi kw_pin yang sebenarnya (bukan
+// dipaksa ikut posisi klik) lewat renderKeamananSettings().
+function onStgPinDisableToggleChange(el){
+if(el.checked){ disablePinFlow().then(()=>{ if(typeof renderKeamananSettings==='function')renderKeamananSettings(); }); }
+else{ enablePinFlow().then(()=>{ if(typeof renderKeamananSettings==='function')renderKeamananSettings(); }); }
+}
+// Sinkronkan tampilan tab Keamanan (baris Ganti/Aktifkan PIN, toggle
+// Nonaktifkan PIN, & pilihan Kunci Otomatis) dgn state PIN yang sebenarnya
+// di localStorage. Dipanggil dari renderSettings() (modules-render.js)
+// tiap kali halaman Pengaturan dibuka/dirender ulang, & juga langsung
+// setelah disablePinFlow()/enablePinFlow() selesai supaya UI selalu akurat
+// tanpa perlu tutup-buka halaman Pengaturan dulu.
+function renderKeamananSettings(){
+const active=!!localStorage.getItem('kw_pin');
+const rowActive=document.getElementById('stgPinActiveRow');
+const rowInactive=document.getElementById('stgPinInactiveRow');
+if(rowActive)rowActive.classList.toggle('u-dnone',!active);
+if(rowInactive)rowInactive.classList.toggle('u-dnone',active);
+const disToggle=document.getElementById('stgPinDisableToggle');
+if(disToggle)disToggle.checked=!active;
+const autolockRow=document.getElementById('stgPinAutolockRow');
+if(autolockRow)autolockRow.style.opacity=active?'':'0.4';
+const autolockSel=document.getElementById('stgPinAutolockSelect');
+if(autolockSel){ autolockSel.value=getPinAutolockOption(); autolockSel.disabled=!active; }
 }
 const API_KEY_ENC_STORAGE_KEY='kw_apikey_enc';
 const API_KEY_PBKDF2_ITER=100000;
