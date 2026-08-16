@@ -1586,16 +1586,29 @@ const r=TitipanReconcile.checkAll();
 // 8x akun "Saldo tagihan" di audit itu), r.ok tetap false (assert tetap
 // gagal, benar) tapi pesan tidak menjelaskan kenapa. Sekarang
 // transactionOwnerRefs.ok/orphan ikut ditulis, pola sama accountSync.
-// Fix (S636 Opsi C): gap yang SAMA PERSIS terulang lagi -- checkAll()
-// sekarang nambah sub-check ke-6 `ownershipDualSource`
-// (checkOwnershipDualSource(), lihat titipan-reconcile.js, AUDIT-S636-
-// MAJORIS-OWNERSHIP-DUAL-SOURCE-KEPUTUSAN.md Opsi C) tapi pesan ini belum
-// ikut diupdate -- kalau gap ada DI ownershipDualSource saja (mis. aset
-// kayak Majoris: dropdown Kepemilikan non-SELF + Porsi Kepemilikan
-// eksplisit non-SELF sekaligus), r.ok tetap false (assert tetap gagal,
-// benar) tapi pesan tidak menjelaskan kenapa. Sekarang
-// ownershipDualSource.ok/flagged ikut ditulis, pola sama accountSync.
-_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+')');
+// Fix (S638 — perbaikan false-positive Tes Otomatis): `ownershipDualSource`
+// (S636 Opsi C) SENGAJA didesain sbg "warning saja" (lihat komentar
+// checkOwnershipDualSource()/checkAll() di titipan-reconcile.js dan
+// warnIfNotOk() -- "SENGAJA non-blocking...supaya user bisa terkunci
+// tidak bisa menyimpan porsi yang justru BENAR"), BUKAN indikator gap/bug
+// data seperti 5 sub-check lain (sync/ownerIdConsistency/debtNameStaleness/
+// accountSync/transactionOwnerRefs -- itu semua nunjuk baris data yang
+// SALAH/basi/orphan, ada tombol "Perbaiki Gap Dana Titipan" utknya).
+// ownershipDualSource=false untuk kasus SAH (mis. aset "Majoris": dropdown
+// Kepemilikan non-SELF + Porsi Kepemilikan eksplisit non-SELF sekaligus,
+// keduanya valid, cuma dobel representasi -- lihat AUDIT-S636-MAJORIS-
+// OWNERSHIP-DUAL-SOURCE-KEPUTUSAN.md) BUKAN bug yang perlu diperbaiki
+// otomatis, jadi Tes Otomatis TIDAK SEHARUSNYA menandainya gagal (sebelum
+// fix ini, 1 tes selalu merah tiap ada aset dual-source yang sah, padahal
+// 0 gap data sungguhan). Sekarang `coreOk` (5 sub-check asli) yang jadi
+// syarat lulus; ownershipDualSource.ok/flagged tetap ditulis di pesan
+// (informasional, pola sama field lain) supaya kalau ownershipDualSource
+// sendirian yang false, pesan tetap menjelaskan kenapa -- HANYA saja tidak
+// lagi menggagalkan tes. checkAll().ok/warnIfNotOk() di titipan-reconcile.js
+// TIDAK diubah (tetap AND dari 6 sub-check, dipakai console.warn saat
+// saveOwners() -- itu memang tempat semestinya sinyal ini muncul).
+const coreOk = r.sync.ok && r.ownerIdConsistency.ok && r.debtNameStaleness.ok && r.accountSync.ok && r.transactionOwnerRefs.ok;
+_selfTestAssert(coreOk,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+', informasional -- tidak menggagalkan tes)');
 }},
 ];
 }
