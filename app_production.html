@@ -83,9 +83,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1367">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1367">
-<script src="nav-scroll.js?v=1367" defer></script>
+<link rel="stylesheet" href="styles.css?v=1369">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1369">
+<script src="nav-scroll.js?v=1369" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -151,17 +151,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1367');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1369');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1367');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1369');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1367');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1369');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -250,8 +250,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1367" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1367" defer></script>
+<script src="app-bundle-a.min.js?v=1369" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1369" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -3239,6 +3239,9 @@ window.location.reload();
     <button type="button" class="dashhub-qa-btn" data-action="dashHubQaOpenAI" aria-label="Buka AI">
       <span class="dashhub-qa-icon">🤖</span><span class="dashhub-qa-label">AI</span>
     </button>
+    <button type="button" class="dashhub-qa-btn" data-action="dashHubQaDanaTitipan" aria-label="Dana Titipan">
+      <span class="dashhub-qa-icon">💼</span><span class="dashhub-qa-label">Titipan</span>
+    </button>
   </div>
   <!-- SUMMARY CARDS (Sprint 1 Tahap 5 — Dashboard 2.0, lihat DASHBOARD-SUMMARY.md).
        Baris kartu ringkas kecil, tepat di bawah Quick Actions. Menampilkan angka
@@ -3989,6 +3992,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1367" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1369" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

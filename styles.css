@@ -1133,6 +1133,13 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .dashhub-analytics-bar{display:flex;height:6px;border-radius:var(--r-full);overflow:hidden;margin-top:8px;background:var(--surface3);}
 .dashhub-analytics-bar-inc{background:var(--accent3);height:100%;}
 .dashhub-analytics-bar-exp{background:var(--accent2);height:100%;}
+/* Varian POSITIF kartu "Saldo Bersih" saat surplus & layak self-reward
+   (SelfReward.evaluate().eligible) -- pola PERSIS sama dgn --warn di atas,
+   cuma reuse token hijau yang SUDAH ADA (--accent3/--accent3-soft), bukan
+   warna/token baru. */
+.dashhub-analytics-card--good{background:var(--accent3-soft);border-color:var(--accent3);}
+.dashhub-analytics-sub--good{color:var(--accent3);}
+.dashhub-analytics-badge--good{background:var(--accent3);}
 
 /* FINANCE DASHBOARD & AI HOOK FOUNDATION (Sesi 75, Batch 6). Grid kartu di
    dalam #findashWrap, tepat sama pola dgn .dashhub-summary-grid/
