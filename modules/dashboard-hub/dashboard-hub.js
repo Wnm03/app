@@ -408,11 +408,32 @@ const DashboardHubAnalytics = {
       ? cashflowActionSuggestion(Math.abs(net), new Date().getDate())
       : '';
 
+    // UX (sesi ini): saat Saldo Bersih POSITIF, kartu tadinya diam saja
+    // (cuma warna hijau) walau modul SelfReward (modules/self-reward/
+    // self-reward-engine.js) SUDAH ADA & bisa menilai apakah kondisi
+    // finansial cukup sehat utk self-reward. 0 rumus baru ditulis di sini —
+    // murni memanggil SelfReward.evaluate() (SUDAH ADA) & menyusun 1 baris
+    // saran singkat, pola PERSIS sama dgn netSaran/cashflowActionSuggestion
+    // di atas. Guard typeof + try/catch supaya dashboard tetap aman kalau
+    // self-reward-engine.js belum di-load (mis. test yang me-load
+    // dashboard-hub.js sendirian) atau evaluate() melempar error tak
+    // terduga — kartu ini TIDAK BOLEH bikin dashboard gagal render.
+    const netPositif = net > 0;
+    let rewardSaran = '';
+    if (netPositif && typeof SelfReward !== 'undefined' && typeof SelfReward.evaluate === 'function') {
+      try {
+        const sr = SelfReward.evaluate();
+        if (sr && sr.eligible && sr.maxReward > 0) {
+          rewardSaran = `🎉 Kondisi keuangan sehat — kamu layak self-reward hingga ${money(sr.maxReward)}. Buka fitur "Self Reward" untuk detail.`;
+        }
+      } catch (e) { /* aman: kartu ringkasan tidak boleh gagal gara-gara fitur opsional */ }
+    }
+
     const cards = [
       { label: 'Transaksi Bulan Ini', value: String(count), cls: '' },
       { label: 'Total Pemasukan', value: money(inc), cls: 'green' },
       { label: 'Total Pengeluaran', value: money(exp), cls: 'red' },
-      { label: 'Saldo Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green', warn: netNegatif, sub: netSaran, badge: netNegatif ? 'Kurang' : '' },
+      { label: 'Saldo Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green', warn: netNegatif, good: !!rewardSaran, sub: netSaran || rewardSaran, badge: netNegatif ? 'Kurang' : (rewardSaran ? 'Layak Reward' : '') },
       { label: 'Pemasukan vs Pengeluaran', value: incPct === null ? '—' : (incPct + '% : ' + expPct + '%'), cls: '', bar: incPct === null ? null : { incPct, expPct } },
     ];
 
@@ -428,13 +449,13 @@ const DashboardHubAnalytics = {
     //     dibaca dibanding cuma teks "49% : 51%". Class baru murni CSS,
     //     tidak ada kalkulasi tambahan.
     el.innerHTML = cards.map((c) => `
-      <div class="dashhub-analytics-card${c.warn ? ' dashhub-analytics-card--warn' : ''}">
+      <div class="dashhub-analytics-card${c.warn ? ' dashhub-analytics-card--warn' : ''}${c.good ? ' dashhub-analytics-card--good' : ''}">
         <div class="dashhub-analytics-label-row">
           <div class="dashhub-analytics-label">${escapeHtml(c.label)}</div>
-          ${c.badge ? '<span class="dashhub-analytics-badge">⚠️ ' + escapeHtml(c.badge) + '</span>' : ''}
+          ${c.badge ? '<span class="dashhub-analytics-badge' + (c.good ? ' dashhub-analytics-badge--good' : '') + '">' + (c.good ? '🎉 ' : '⚠️ ') + escapeHtml(c.badge) + '</span>' : ''}
         </div>
         <div class="dashhub-analytics-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
-        ${c.sub ? '<div class="dashhub-analytics-sub">⚠️ ' + escapeHtml(c.sub) + '</div>' : ''}
+        ${c.sub ? '<div class="dashhub-analytics-sub' + (c.good ? ' dashhub-analytics-sub--good' : '') + '">' + (c.good ? '' : '⚠️ ') + escapeHtml(c.sub) + '</div>' : ''}
         ${c.bar ? '<div class="dashhub-analytics-bar"><div class="dashhub-analytics-bar-inc" style="width:' + c.bar.incPct + '%"></div><div class="dashhub-analytics-bar-exp" style="width:' + c.bar.expPct + '%"></div></div>' : ''}
       </div>
     `).join('');
