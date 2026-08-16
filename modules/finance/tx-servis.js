@@ -50,6 +50,15 @@
 // (usedPartId beda dari hasil auto-link / autoLinkedPartStock jadi false di
 // sana), sinkron dari sisi Transaksi berikutnya TIDAK menimpa pilihan manual
 // itu -- lihat _syncServisUsedPartFromPurchase() di bawah.
+//
+// BUGFIX #2 (audit sesi ini, laporan user lanjutan -- "kategori sparepart
+// jg belum terisi otomatis"): lihat _resolveServisCategoryId() di bawah utk
+// detail lengkap. Ringkas: recordServisLog() sekarang mengisi
+// D.servisLogs[].categoryId (bukan hardcode null lagi) dgn logika match yang
+// SAMA PERSIS dgn Servis._saveInner() (car-notes.js), + fallback ke
+// kategori part yang dibeli/dipakai (D.partsStock[].catId) -- konsisten
+// dgn BUGFIX #1 di atas: SoT (source of truth) kategori & pemakaian stok
+// sekarang sama-sama sinkron dari transaksi yang sama.
 function populateTxServisVehicleSelect(){
 const sel=document.getElementById('txServisVehicle');
 if(!sel)return;
@@ -122,17 +131,50 @@ _servisAutoLinkAdjustStock(purchasedPartId,-purchasedPartQty);
 // sama (lihat catatan bugfix di atas berkas ini), diteruskan ke
 // _syncServisUsedPartFromPurchase() supaya usedPartId/usedPartQty baris ini
 // otomatis tertaut & net efek stoknya benar.
+// _resolveServisCategoryId(item,purchasedPartId) — BUGFIX (audit sesi ini,
+// laporan user lanjutan): recordServisLog() DULU selalu hardcode
+// categoryId:null utk baris D.servisLogs yang dibuat/diupdate dari sisi
+// Transaksi (txServisPanel), TIDAK PERNAH mengisi "Kategori Sparepart" sama
+// sekali -- beda dgn Servis._saveInner() (car-notes.js baris ~625) yang
+// SELALU mencoba mencocokkan `item` ke nama D.sparepartCats
+// (matched=D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase()))
+// tiap kali disimpan. Akibatnya baris Servis yang lahir dari sinkron
+// Transaksi (mis. "beli part sekaligus dipasang", kasus BUGFIX di atas)
+// selamanya "Tanpa Kategori" di tab Servis Car Notes & tidak pernah ikut
+// prediksi/pengingat servis berbasis kategori (predictService() di
+// sparepart-servis.js), walau item-nya sudah jelas cocok nama kategori
+// (mis. item "ban" <-> kategori "Ban") ATAU part yang barusan
+// dibeli/dipakai sudah jelas kategorinya (D.partsStock[].catId).
+// Fix: replikasi match-by-nama YANG SAMA seperti car-notes.js (SoT yang
+// sama, supaya baris Servis yang lahir dari Transaksi & yang lahir dari
+// modal Servis langsung berperilaku identik), dgn fallback TAMBAHAN ke
+// kategori part yang baru dibeli/dipakai (purchasedPartId ->
+// D.partsStock[].catId) kalau item TIDAK cocok nama kategori manapun --
+// ini sinkron langsung dari SoT stok sparepart sesuai laporan user.
+function _resolveServisCategoryId(item,purchasedPartId){
+const name=(item||'').trim().toLowerCase();
+if(name){
+const matched=(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name);
+if(matched)return matched.id;
+}
+if(purchasedPartId){
+const part=(D.partsStock||[]).find(p=>p.id===purchasedPartId);
+if(part&&part.catId)return part.catId;
+}
+return null;
+}
 function recordServisLog(opts){
+const catIdForLog=_resolveServisCategoryId(opts.item,opts.purchasedPartId);
 if(opts.existingServisId){
 const s=(D.servisLogs||[]).find(x=>x.id===opts.existingServisId);
 if(s){
-Object.assign(s,{date:opts.date,item:opts.item,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,vehicleId:opts.vehicleId||s.vehicleId});
+Object.assign(s,{date:opts.date,item:opts.item,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,vehicleId:opts.vehicleId||s.vehicleId,categoryId:catIdForLog||s.categoryId});
 _syncServisUsedPartFromPurchase(s,opts.purchasedPartId,opts.purchasedPartQty);
 return s.id;
 }
 }
 const servisId=uid();
-const log={id:servisId,vehicleId:opts.vehicleId,date:opts.date,item:opts.item,categoryId:null,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,txLinkId:opts.txId,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartOemCode:'',catalogPartLinkedStockId:null,autoLinkedPartStock:false};
+const log={id:servisId,vehicleId:opts.vehicleId,date:opts.date,item:opts.item,categoryId:catIdForLog,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,txLinkId:opts.txId,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartOemCode:'',catalogPartLinkedStockId:null,autoLinkedPartStock:false};
 D.servisLogs.push(log);
 _syncServisUsedPartFromPurchase(log,opts.purchasedPartId,opts.purchasedPartQty);
 return servisId;

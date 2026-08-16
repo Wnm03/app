@@ -947,6 +947,46 @@ updateTxVehiclePanels();
 const stockChk=document.getElementById('txAddStock');
 if(stockChk)stockChk.checked=false;
 toggleTxStockFields();
+// BUGFIX (audit sesi ini, laporan user: "centang sparepart hilang pas
+// dibuka lagi"): dulu stockChk SELALU dipaksa checked=false + dropdown/
+// qty/satuan TIDAK PERNAH diisi ulang dari t.partStockId sama sekali --
+// beda dgn shopChk/renovChkEdit di bawah yang sudah benar (cek dulu apakah
+// tx ini memang ter-link sebelum tentukan status checkbox). Akibatnya
+// PALING PARAH (bukan cuma kosmetik): blok `if(existingTx&&existingTx.
+// partStockId)` di _saveTxInner() (lihat tx-stok-sparepart.js/transaksi.js)
+// membaca checkbox yang terpaksa unchecked ini sbg "user MEMATIKAN
+// centangnya" -> stok yang sudah ditambah otomatis DI-REVERT (qty
+// dikurangi balik) & partStockId DIHAPUS begitu transaksi ini dibuka lewat
+// Edit lalu Simpan -- APAPUN yang diubah (mis. cuma ganti tanggal/
+// catatan), walau user TIDAK PERNAH menyentuh panel Stok Sparepart sama
+// sekali. Fix: samakan pola dgn shopChk/renovChkEdit -- restore
+// checked=true + isi ulang dropdown/qty/satuan dari data tersimpan KALAU
+// transaksi ini memang ter-link ke stok (t.partStockId & baris
+// D.partsStock-nya masih ada, belum dihapus manual dari tab Stok
+// Sparepart).
+const linkedStockPart=(t.partStockId&&D.partsStock)?D.partsStock.find(p=>p.id===t.partStockId):null;
+if(linkedStockPart&&stockChk){
+stockChk.checked=true;
+const stockSelEdit=document.getElementById('txStockItem');
+if(stockSelEdit){
+// Pastikan opsi utk part ini ADA dulu di <select> sebelum di-assign value
+// (kalau select-nya masih berisi opsi dari state form sebelumnya & part
+// ini kebetulan belum ada di antaranya, assignment .value akan silently
+// gagal/reset kosong) -- opsi sementara ini otomatis ditimpa jadi opsi
+// "asli" begitu populateTxStockSelect() (lewat toggleTxStockFields() di
+// bawah) membaca ulang cur=sel.value & merender ulang seluruh dropdown.
+if(stockSelEdit.options&&!Array.from(stockSelEdit.options).some(o=>o.value===linkedStockPart.id)){
+stockSelEdit.insertAdjacentHTML('beforeend',`<option value="${linkedStockPart.id}"></option>`);
+}
+stockSelEdit.value=linkedStockPart.id;
+}
+toggleTxStockFields();
+if(typeof onTxStockItemChange==='function')onTxStockItemChange();
+const stockQtyEditEl=document.getElementById('txStockQty');
+if(stockQtyEditEl)stockQtyEditEl.value=(t.partStockQty!=null)?t.partStockQty:1;
+const stockUnitEditEl=document.getElementById('txStockUnit');
+if(stockUnitEditEl)stockUnitEditEl.value=t.partStockUnit||linkedStockPart.unit||'pcs';
+}
 // BUGFIX (s452): dulu renovChkEdit SELALU dipaksa checked=false di sini tanpa
 // pengecualian -- beda dgn shopChk tepat di bawah (lihat blok hasShopStock)
 // yang memang mengecek dulu apakah transaksi ini punya link stok sebelum
