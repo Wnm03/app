@@ -223,22 +223,28 @@ cat.showInReminder=cat.showInReminder===false?true:false;
 save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },
-// populateVehicleSelect() -- S622: isi dropdown "Berlaku untuk" di modal
-// Kategori Sparepart maupun Stok Sparepart (dipanggil dari 2 tempat, elId
-// beda). Opsi pertama SELALU "🌐 Semua kendaraan" (value kosong = universal,
-// perilaku lama). currentValue dipakai isi ulang saat edit; kalau kosong &
-// mode tambah baru, default ke curVehicleId (kategori/stok baru otomatis
-// scoped ke kendaraan yg lagi aktif -- sesuai permintaan user "tiap kendaraan
-// punya sendiri-sendiri").
+// populateVehicleSelect() -- S622 mengisi dropdown "Berlaku untuk" di modal
+// Kategori Sparepart maupun Stok Sparepart (elId beda2, dipanggil dari 2
+// tempat). S629 (permintaan eksplisit user): dropdown ini DIKUNCI/disabled --
+// SELALU otomatis mengikuti curVehicleId (tab kendaraan yg lagi aktif),
+// baik utk tambah baru MAUPUN edit (termasuk kategori/stok lama yg tadinya
+// "🌐 Semua kendaraan", begitu dibuka & disimpan otomatis pindah scope ke
+// kendaraan tab aktif -- lihat saveCat()/saveStock()). Kalau tidak ada
+// kendaraan aktif (curVehicleId kosong/tidak valid), tetap fallback ke
+// "🌐 Semua kendaraan" (perilaku lama, select tetap dikunci).
 populateVehicleSelect(elId,currentValue,isEdit){
 const sel=document.getElementById(elId);
 if(!sel)return;
 sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
-if(isEdit){
-sel.value=currentValue||'';
-} else {
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:'';
-sel.value=(vid&&D.vehicles.some(v=>v.id===vid))?vid:'';
+const vidValid=vid&&D.vehicles.some(v=>v.id===vid);
+sel.value=vidValid?vid:'';
+sel.disabled=true;
+const hintId=elId==='sparepartVehicleId'?'sparepartVehicleHint':'stockVehicleHint';
+const hintEl=document.getElementById(hintId);
+if(hintEl){
+const veh=vidValid?D.vehicles.find(v=>v.id===vid):null;
+hintEl.textContent=veh?`🔒 Otomatis khusus kendaraan tab aktif: ${veh.emoji||'🏍️'} ${veh.name}`:'🔒 Otomatis "🌐 Semua kendaraan" (tidak ada kendaraan aktif dipilih di tab atas)';
 }
 },
 openCatModal(idx){
@@ -315,10 +321,15 @@ const clash=matchingVehicleName(name);
 if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis. Isi nama part yang mau diingatkan (mis. Oli Mesin, Ganti Ban, dll).`,4000);return;}
 if(!code) code=codeFromName(name);
 const intervalKm=(interval&&interval>0)?interval:0;
-// S622: vehicleId kosong ('') disimpan sbg null (universal, berlaku semua
-// kendaraan) -- lihat catVisibleForVehicle()/populateVehicleSelect().
-const vehSelEl=document.getElementById('sparepartVehicleId');
-const vehicleId=(vehSelEl&&vehSelEl.value)?vehSelEl.value:null;
+// S629: dropdown "Berlaku untuk Kendaraan" dikunci -- vehicleId yg disimpan
+// diambil LANGSUNG dari curVehicleId (kendaraan tab aktif), bukan dari nilai
+// select (disabled select kadang tidak reliable dibaca .value-nya di semua
+// browser/WebView). Kategori baru MAUPUN hasil edit (termasuk yg tadinya
+// universal/"🌐 Semua kendaraan") otomatis pindah scope ke kendaraan tab
+// aktif saat disimpan -- lihat populateVehicleSelect(). Kosong/tidak valid
+// (tidak ada kendaraan aktif) tetap fallback null (universal, perilaku lama).
+const vid622=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vehicleId=(vid622&&D.vehicles.some(v=>v.id===vid622))?vid622:null;
 if(Sparepart.catEditIdx!==null){
 D.sparepartCats[Sparepart.catEditIdx].name=name;
 D.sparepartCats[Sparepart.catEditIdx].code=code;
@@ -584,10 +595,12 @@ const prefix=cat?(cat.code||codeFromName(cat.name)):codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 code=prefix+'-'+String(seq).padStart(3,'0');
 }
-// S622: vehicleId kosong ('') disimpan sbg null (universal, tampil di stok
-// semua kendaraan -- perilaku lama tidak berubah, lihat isPartForVehicle()).
-const stockVehSelEl=document.getElementById('stockVehicleId');
-const vehicleId=(stockVehSelEl&&stockVehSelEl.value)?stockVehSelEl.value:null;
+// S629: dropdown "Berlaku untuk Kendaraan" dikunci -- vehicleId yg disimpan
+// diambil LANGSUNG dari curVehicleId (kendaraan tab aktif), sama pola dgn
+// saveCat() di atas. Stok baru MAUPUN hasil edit (termasuk yg tadinya
+// universal) otomatis pindah scope ke kendaraan tab aktif saat disimpan.
+const vid622s=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vehicleId=(vid622s&&D.vehicles.some(v=>v.id===vid622s))?vid622s:null;
 if(Sparepart.stockEditIdx!==null){
 Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId});
 } else {
