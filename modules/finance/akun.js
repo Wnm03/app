@@ -206,9 +206,16 @@ function resolveAccOwnershipBadgeState(accId){
 const acc=D.accounts.find(a=>a&&String(a.id)===String(accId));
 if(!acc)return{ok:true,owners:[],source:'none',isAllSelf:null,isDefault:true,mismatch:false};
 let owners=[],source='none';
-const holding=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(accId):null;
-if(holding&&typeof Investment!=='undefined'){
-const hOwners=Investment.getOwners(holding);
+// S638 (perbaikan kasus 2+ holding tertaut ke 1 akun yang sama): dulu
+// findLinkedHoldingForAccount() (singular) cuma baca holding PERTAMA --
+// badge/mismatch di kartu Akun keliru merepresentasikan cuma 1 dari N holding
+// yang tertaut. Sekarang pakai findLinkedHoldingsForAccount()+
+// aggregateOwnersAcrossHoldings() (transaksi.js, S638) -- owners gabungan
+// dibobot nilai. holdings.length===1: hasil PERSIS sama seperti sebelum
+// fix ini (0 regresi kasus paling umum, 1 holding per akun).
+const holdings=(typeof findLinkedHoldingsForAccount==='function')?findLinkedHoldingsForAccount(accId):[];
+if(holdings.length&&typeof Investment!=='undefined'){
+const hOwners=(typeof aggregateOwnersAcrossHoldings==='function')?aggregateOwnersAcrossHoldings(holdings):Investment.getOwners(holdings[0]);
 if(hOwners&&hOwners.length>0){owners=hOwners;source='holding';}
 }
 if(!owners.length&&Array.isArray(acc.owners)){
@@ -542,10 +549,26 @@ _rebalancePending: null,
 open(){
 if(editAccIdx<0||!D.accounts[editAccIdx]){toast('⚠️ Simpan akun ini dulu sebelum mengatur porsi kepemilikan');return;}
 const acc=D.accounts[editAccIdx];
-const linkedHolding=(typeof findLinkedHoldingForAccount==='function')?findLinkedHoldingForAccount(acc.id):null;
-if(linkedHolding){
+// S638 (perbaikan kasus 2+ holding tertaut ke 1 akun yang sama): dulu cuma cek
+// findLinkedHoldingForAccount() (singular) lalu langsung buka openOwnersModal()
+// holding PERTAMA -- kalau akun ini ternyata ditautkan 2+ holding, user diam-diam
+// diarahkan ke SATU holding saja (yang mana pun kebetulan pertama di array),
+// padahal porsi gabungan (badge/resolver) sudah menghitung SEMUANYA (lihat
+// aggregateOwnersAcrossHoldings()). Redirect otomatis HANYA aman kalau persis 1
+// holding tertaut (0 ambiguitas, perilaku lama utuh) -- kalau 2+, tidak ada 1
+// tujuan redirect yang benar (edit holding mana dulu?), jadi kasih toast yang
+// sebut SEMUA nama holding-nya supaya user tahu harus buka Buku Investasi &
+// pilih sendiri holding yang mau diedit porsinya.
+const linkedHoldings=(typeof findLinkedHoldingsForAccount==='function')?findLinkedHoldingsForAccount(acc.id):[];
+if(linkedHoldings.length===1){
+const linkedHolding=linkedHoldings[0];
 if(typeof InvestmentUI!=='undefined'){InvestmentUI.openOwnersModal(linkedHolding.id);return;}
 toast('🔗 Porsi akun ini diatur di Holding Investasi "'+linkedHolding.name+'" -- buka Buku Investasi untuk mengatur porsinya');
+return;
+}
+if(linkedHoldings.length>1){
+const names=linkedHoldings.map(h=>'"'+h.name+'"').join(', ');
+toast('🔗 Porsi akun ini gabungan dari '+linkedHoldings.length+' Holding Investasi ('+names+') -- buka Buku Investasi untuk mengatur porsi tiap holding satu per satu');
 return;
 }
 AccOwners._accId=acc.id;

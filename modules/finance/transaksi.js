@@ -191,6 +191,68 @@ function findLinkedHoldingForAccount(accId){
 if(!accId||typeof Investment==='undefined')return null;
 return Investment.getHoldings().find(h=>sameId(h.accountId,accId))||null;
 }
+// findLinkedHoldingsForAccount(accId) — S638, perbaikan kasus 2+ holding
+// berbagi 1 akun yang sama (ditemukan lewat pertanyaan user "3 aset holding
+// ditautkan ke 1 akun metode pembayaran"). Varian PLURAL
+// findLinkedHoldingForAccount() di atas -- balikin SEMUA holding yang
+// h.accountId===accId, bukan cuma yang pertama. findLinkedHoldingForAccount()
+// (singular) TETAP ADA APA ADANYA & TIDAK diubah (dipakai badge/guard UI yang
+// cuma butuh tahu "ada/tidak ada holding tertaut", 0 regresi) -- fungsi baru
+// ini dipakai jalur yang butuh porsi/owners AGREGAT (resolveOwnerDefaultForAccount()
+// di bawah, resolveTxOwnerSplitForAccount() filter-laporan.js, resolveAccOwnershipBadgeState()
+// akun.js), supaya kalau 2+ holding kebetulan nunjuk akun yang sama, TIDAK ADA
+// lagi holding yang "hilang" diam-diam dari perhitungan porsi/owner (root cause
+// sebelum fix ini: singular .find() cuma ambil yang pertama di array
+// D.investments -- urutan array bukan sesuatu yang user kontrol/sadari).
+// Return: array holding (bisa kosong), TIDAK termasuk null filter (aman
+// di-.length/.reduce/.forEach langsung oleh caller).
+function findLinkedHoldingsForAccount(accId){
+if(!accId||typeof Investment==='undefined')return[];
+return Investment.getHoldings().filter(h=>sameId(h.accountId,accId));
+}
+// aggregateOwnersAcrossHoldings(holdings) — S638. Merge owners[] dari N holding
+// (semuanya tertaut ke akun yang sama) jadi 1 daftar owners gabungan, DIBOBOT
+// NILAI tiap holding (Investment.holdingValue(h), fungsi yang SUDAH ADA -- 0
+// rumus nilai baru) relatif ke total nilai SELURUH holding yang ditautkan.
+// Kenapa dibobot nilai (bukan rata-rata porsi mentah/jumlah baris): holding A
+// senilai 90jt porsi Owner X 100%, holding B senilai 10jt (akun SAMA) porsi
+// Owner Y 100% -- kalau dirata-rata mentah (50/50) hasilnya menyesatkan (seolah
+// kontribusi keduanya ke akun itu sama besar), padahal Owner X mewakili 90%
+// NILAI riil yang mengalir ke akun itu. Owner yang sama (ownerId sama) muncul
+// di >1 holding -- porsi kontribusinya DIJUMLAH (bukan ditimpa), supaya total
+// tetap konsisten kalau semua holding sumbernya solid (bisa <100% kalau
+// satu/lebih holding-nya sendiri belum 100% teralokasi -- perilaku sama
+// seperti owners[] tunggal manapun, 0 beda kontrak). Fallback bobot SAMA RATA
+// (1/N) kalau totalValue<=0 (semua holding nilainya 0/minus -- hindari
+// div-by-zero, tetap balikin owners yang masuk akal drpd crash).
+// holdings.length===1: jalur pintas balikin Investment.getOwners(holdings[0])
+// apa adanya (0 pembobotan/pembulatan, identik perilaku lama sebelum fix ini
+// -- 0 regresi kasus paling umum, 1 holding per akun).
+// PURE, 0 mutasi. Return: array {ownerId, porsi, ownerName, isSelf} (porsi
+// terbobot, dibulatkan 2 desimal spy noise floating-point tidak nyeret ke UI).
+function aggregateOwnersAcrossHoldings(holdings){
+if(!holdings||!holdings.length||typeof Investment==='undefined')return[];
+if(holdings.length===1){
+const o=Investment.getOwners(holdings[0]);
+return(o&&o.length)?o:[];
+}
+const totalValue=holdings.reduce((s,h)=>s+Investment.holdingValue(h),0);
+const map=new Map();
+holdings.forEach((h)=>{
+const weight=totalValue>0?(Investment.holdingValue(h)/totalValue):(1/holdings.length);
+const hOwners=Investment.getOwners(h)||[];
+hOwners.forEach((o)=>{
+if(!o||!o.ownerId)return;
+const contrib=(Number(o.porsi)||0)*weight;
+if(map.has(o.ownerId)){
+map.get(o.ownerId).porsi+=contrib;
+}else{
+map.set(o.ownerId,{ownerId:o.ownerId,porsi:contrib,ownerName:o.ownerName||o.ownerId,isSelf:!!o.isSelf});
+}
+});
+});
+return Array.from(map.values()).filter((o)=>o.porsi>0).map((o)=>({...o,porsi:Math.round(o.porsi*100)/100}));
+}
 // resolveOwnerDefaultForAccount(accId) — Sesi Res-B (DESIGN-LOCK-LINKED-
 // ASSET-ACCOUNT-OWNER-DEFAULT.md §2.1/§2.2). Owner Resolver: tentukan
 // kandidat default `deductionOwnerId` untuk akun `accId`, TANPA menulis
@@ -239,9 +301,17 @@ return Investment.getHoldings().find(h=>sameId(h.accountId,accId))||null;
 // Return: {ok:true, source, owners, needsConfirm, autoSelectId}.
 function resolveOwnerDefaultForAccount(accId){
 if(!accId||typeof MultiOwnerEngine==='undefined')return{ok:true,source:'none',owners:[],needsConfirm:false,autoSelectId:null};
-const holding=findLinkedHoldingForAccount(accId);
-if(holding&&typeof Investment!=='undefined'){
-const hOwners=Investment.getOwners(holding);
+// S638: dulu findLinkedHoldingForAccount() (singular, .find()) -- kalau 2+
+// holding kebetulan tertaut ke akun yang sama, holding ke-2/ke-3 dst DIAM-DIAM
+// diabaikan (bukan cuma dari label, dari PORSI/OWNER juga -- deductionOwnerId
+// default yang dihasilkan cuma mewakili 1 holding). Sekarang pakai varian
+// plural + aggregateOwnersAcrossHoldings() (lihat komentar keduanya di atas)
+// supaya owners gabungan (dibobot nilai) yang jadi kandidat, bukan cuma
+// holding pertama di array. holdings.length===1 -- hasil PERSIS sama seperti
+// sebelum fix ini (0 regresi kasus paling umum).
+const holdings=findLinkedHoldingsForAccount(accId);
+if(holdings.length&&typeof Investment!=='undefined'){
+const hOwners=aggregateOwnersAcrossHoldings(holdings);
 if(hOwners&&hOwners.length>0){
 return{ok:true,source:'holding',owners:hOwners,needsConfirm:false,autoSelectId:hOwners.length===1?hOwners[0].ownerId:null};
 }

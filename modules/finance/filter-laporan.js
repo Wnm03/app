@@ -244,11 +244,20 @@ if(btn)btn.classList.add('active');
 // (Holding menang > Aset > owners akun sendiri). 0 rumus split baru.
 function resolveTxOwnerSplitForAccount(accountId){
 if(typeof MultiOwnerEngine==='undefined')return null;
-if(typeof findLinkedHoldingForAccount==='function'&&typeof Investment!=='undefined'){
-const linkedHolding=findLinkedHoldingForAccount(accountId);
-if(linkedHolding){
-const hOwners=Investment.getOwners(linkedHolding);
-if(hOwners&&hOwners.length)return{asset:null,holding:linkedHolding,owners:hOwners};
+// S638 (perbaikan kasus 2+ holding tertaut ke 1 akun yang sama): dulu
+// findLinkedHoldingForAccount() (singular) cuma ambil holding PERTAMA yang
+// cocok -- transaksi di akun yang ditautkan 2+ holding sekaligus keliru
+// dihitung seolah cuma 1 holding yang menyumbang. Sekarang pakai varian
+// plural + aggregateOwnersAcrossHoldings() (transaksi.js, S638) -- owners
+// gabungan dibobot nilai tiap holding. `holding` (tunggal) TETAP diisi
+// holding PERTAMA demi kompatibilitas konsumen lama yang baca `.holding.name`
+// utk label (mis. _expenseComparisonForOwner()) -- field baru `holdings`
+// (array lengkap) ditambahkan utk konsumen yang mau tampilkan semua nama.
+if(typeof findLinkedHoldingsForAccount==='function'&&typeof Investment!=='undefined'){
+const linkedHoldings=findLinkedHoldingsForAccount(accountId);
+if(linkedHoldings.length){
+const hOwners=(typeof aggregateOwnersAcrossHoldings==='function')?aggregateOwnersAcrossHoldings(linkedHoldings):Investment.getOwners(linkedHoldings[0]);
+if(hOwners&&hOwners.length)return{asset:null,holding:linkedHoldings[0],holdings:linkedHoldings,owners:hOwners};
 }
 }
 const a=(D.assets||[]).find(x=>sameId(x.accountId,accountId));
