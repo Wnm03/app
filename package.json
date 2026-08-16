@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "node scripts/build.js",
+    "build:safe": "node scripts/build-with-tests.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "node --test tests/*.test.js",
