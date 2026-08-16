@@ -530,7 +530,14 @@ syncBill(d){
 const shouldHaveBill=!d.lunas&&(d.cicilanBulanan||0)>0;
 let bill=(d.billId?D.bills.find(b=>sameId(b.id,d.billId)):null)||D.bills.find(b=>b.kind==='utang'&&sameId(b.debtId,d.id));
 if(!shouldHaveBill){
-if(bill){D.bills=D.bills.filter(b=>b!==bill);}
+// FIX (BUG-006, audit 2026-08): dulu tagihan auto langsung dihapus tanpa
+// membersihkan piutang auto ("Ditanggung Bersama") yang autoBillId-nya
+// nunjuk ke tagihan ini -- piutang jadi orphan permanen (pola sama persis
+// gap yang sudah diperbaiki utk delBill()/delBillArchive(), lihat komentar
+// removeOrphanedAutoPiutangForBill() di atas). Reuse fungsi yang sama,
+// dipanggil SEBELUM bill dihapus dari D.bills. Piutang manual (autoBillId
+// beda/kosong) tidak tersentuh krn filter di fungsi tsb match persis billId.
+if(bill){removeOrphanedAutoPiutangForBill(bill.id);D.bills=D.bills.filter(b=>b!==bill);}
 d.billId=null;
 return;
 }

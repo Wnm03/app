@@ -812,7 +812,22 @@ linkedBill.nextDue=d.toISOString().split('T')[0];
 } else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
 if(dbt){
+// FIX (BUG-007, audit 2026-08): restore EXACT saldo utang sebelum pembayaran ini
+// lewat snapshot t.debtNilaiBefore (ditulis markBillPaid(), lihat komentar di sana),
+// bukan asal +t.amount. t.amount adalah nominal pembayaran USER-INPUT (payAmount),
+// yang bisa LEBIH BESAR dari sisa saldo utang aktual saat itu (overpayment/pelunasan
+// sekaligus) -- dbt.nilai SAAT dibayar sudah diclamp Math.max(0,...) oleh
+// markBillPaid(), jadi +t.amount mentah bisa membuat saldo utang jadi LEBIH BESAR
+// dari sebelum dibayar (mis. sisa 1.000.000, dibayar 1.500.000 -> clamp ke 0, transaksi
+// dihapus -> +1.500.000 jadi 1.500.000, padahal seharusnya kembali ke 1.000.000).
+// Transaksi LAMA (sebelum fix ini, tidak punya field debtNilaiBefore -- typeof !=
+// 'number') fallback ke logic +t.amount lama supaya data lama tetap bisa direvert
+// tanpa error/perubahan perilaku (backward compatible, tidak ada migration diperlukan).
+if(typeof t.debtNilaiBefore==='number'){
+dbt.nilai=t.debtNilaiBefore;
+} else {
 dbt.nilai=(dbt.nilai||0)+t.amount;
+}
 if(dbt.lunas){dbt.lunas=false;dbt.billId=linkedBill.id;}
 }
 if(hasSnapshot){
@@ -983,7 +998,20 @@ const _payTxId=uid();
 // PERSIS ke nilai sebelum pembayaran ini kalau transaksinya dihapus lagi. Sebelumnya revert cuma
 // mundur -1 periode dari nextDue SAAT INI, yang salah kalau bill sempat nunggak >1 periode (nextDue
 // bisa dimajukan lebih dari 1x oleh advanceBillNextDue() dalam satu pembayaran).
-D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue});
+// debtNilaiBefore (FIX BUG-007, audit 2026-08): snapshot dbt.nilai SEBELUM diclamp/dikurangi
+// payAmount di bawah (khusus kind==='utang') -- dipakai revertBillFromDeletedTx() utk restore
+// EXACT ke nilai ini saat transaksi dihapus, bukan +t.amount mentah (lihat komentar lengkap di
+// revertBillFromDeletedTx()). t.amount == payAmount (nominal input user), yang BISA lebih besar
+// dari sisa saldo utang aktual (pelunasan sekaligus/overpayment) -- dbt.nilai sendiri sudah
+// diclamp Math.max(0,...) sesudahnya, jadi t.amount bukan representasi akurat dari "berapa yang
+// SEBENARNYA berkurang dari saldo utang". Diambil di sini (SEBELUM baris pengurangan) supaya
+// dapat nilai asli, bukan hasil clamp.
+let debtNilaiBefore;
+if(b.kind==='utang'&&b.debtId){
+const _dbtSnap=D.debts.find(x=>sameId(x.id,b.debtId));
+if(_dbtSnap)debtNilaiBefore=_dbtSnap.nilai||0;
+}
+D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
