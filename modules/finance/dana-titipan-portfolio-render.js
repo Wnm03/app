@@ -28,6 +28,23 @@ const DanaTitipanPortfolioPresenter = {
     return (typeof fmtFull === 'function') ? fmtFull(n) : ((typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0)));
   },
 
+  // _gainMoney(n) — SESI 634 (lanjutan audit UI/UX S631-633, temuan baru dari
+  // screenshot user): _money()/fmtFull() SELALU pakai Math.abs() di dalamnya
+  // (lihat modules/shared/format-tema.js) -- jadi utk nilai RUGI (gain < 0),
+  // pola lama `${n>=0?'+':''}${this._money(n)}` menghasilkan teks TANPA tanda
+  // minus sama sekali, cuma dibedakan lewat warna merah (mis. "Rp 13.070"
+  // padahal itu KERUGIAN -13070). Ini bug keterbacaan/aksesibilitas nyata --
+  // user bisa salah baca angka rugi sebagai untung kalau warna kurang
+  // kontras/color-blind/mode grayscale. FIX: reuse `fmtFullSigned()` yang
+  // SUDAH ADA (format-tema.js, cuma belum pernah dipakai di file ini) --
+  // otomatis kasih prefix "-" utk negatif & "+" bisa kita tambah manual utk
+  // positif spy tetap konsisten dgn pola "+Rp 0" yang sudah ada utk gain nol.
+  _gainMoney(n) {
+    n = Number(n || 0);
+    if (typeof fmtFullSigned === 'function') return (n >= 0 ? '+' : '') + fmtFullSigned(n);
+    return (n >= 0 ? '+' : '') + this._money(n);
+  },
+
   _gainCls(n) {
     if (n > 0) return 'green';
     if (n < 0) return 'red';
@@ -453,7 +470,7 @@ const DanaTitipanPortfolioPresenter = {
                 <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
               ` : `
                 <span class="u-t2">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
-                &nbsp;<span class="${this._gainCls(hh.gain)}">${hh.gain >= 0 ? '+' : ''}${this._money(hh.gain)}</span>
+                &nbsp;<span class="${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>
               `}</span>
             </div>
           `;
@@ -499,7 +516,7 @@ const DanaTitipanPortfolioPresenter = {
             <details class="titipan-custodian-group u-ml10 u-mb2">
               <summary class="u-flex u-jcb u-fs11 u-pointer">
                 <span class="u-t2">🏦 ${escapeHtml(node.custodianName)} (${node.items.length})</span>
-                <span class="u-t2">${this._money(sub.allocatedPrincipal)} → ${this._money(sub.currentValue)} <span class="${this._gainCls(sub.gain)}">${sub.gain >= 0 ? '+' : ''}${this._money(sub.gain)}</span></span>
+                <span class="u-t2">${this._money(sub.allocatedPrincipal)} → ${this._money(sub.currentValue)} <span class="${this._gainCls(sub.gain)}">${this._gainMoney(sub.gain)}</span></span>
               </summary>
               ${node.items.map((hh) => this._holdingRowHtml(hh)).join('')}
             </details>
@@ -783,7 +800,7 @@ const DanaTitipanPortfolioPresenter = {
               <span class="u-t2">Pokok</span> <span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
               &nbsp;→&nbsp;
               <span class="u-t2">Kini</span> <span class="u-fw700">${this._money(o.currentValue)}</span>
-              &nbsp;<span class="u-fw700 ${this._gainCls(o.gain)}">${o.gain >= 0 ? '+' : ''}${this._money(o.gain)}</span>
+              &nbsp;<span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
             </span>
           </summary>
           <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
@@ -803,7 +820,7 @@ const DanaTitipanPortfolioPresenter = {
               <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
               <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
               <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
-              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${o.gain >= 0 ? '+' : ''}${this._money(o.gain)}</span>
+              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
               <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
               <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
             </div>
@@ -845,7 +862,7 @@ const DanaTitipanPortfolioPresenter = {
         <span>
           <span class="u-fw700">${this._money(projection.totals.allocatedPrincipalTotal)}</span>
           → <span class="u-fw700">${this._money(projection.totals.currentValueTotal)}</span>
-          &nbsp;<span class="u-fw700 ${this._gainCls(projection.totals.gainTotal)}">${projection.totals.gainTotal >= 0 ? '+' : ''}${this._money(projection.totals.gainTotal)}</span>
+          &nbsp;<span class="u-fw700 ${this._gainCls(projection.totals.gainTotal)}">${this._gainMoney(projection.totals.gainTotal)}</span>
         </span>
       </div>
       <div class="u-flex u-jcb u-fs11 u-mt4">
