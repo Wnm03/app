@@ -500,9 +500,18 @@ issues.push({level:'warn',title:'Piutang tertaut ke aset yang bukan multi-owner'
 }
 }
 });
-(D.partsStock||[]).forEach(p=>{
+// PERUBAHAN SESI INI (audit data-health backup 2026-08-16, temuan prioritas
+// #1): dulu cek ini cuma MELAPORKAN qty minus, tidak ada cara memperbaikinya
+// langsung dari kartu Hasil Pemindaian Data -- user harus buka modal Stok
+// Sparepart lalu edit qty manual. Tambah 1 tombol aksi cepat "0️⃣ Koreksi ke
+// 0" (pola SAMA PERSIS "🔓 Lepas Tautan Katalog" di bawah: DataHealth.<method>
+// (idx) dgn idx = index asli D.partsStock, bukan re-implementasi rumus
+// apa pun, cuma set qty=0 lalu save()+refresh). idx diberi eksplisit di
+// forEach ini (pola sama persis blok catalogId di bawah) supaya index yang
+// dikirim ke aksi selalu index ARRAY ASLI, bukan index hasil filter.
+(D.partsStock||[]).forEach((p,idx)=>{
 if((p.qty||0)<0){
-issues.push({level:'error',title:'Stok sparepart minus',detail:`"${escapeHtml(p.name)}" stoknya ${p.qty} (minus). Cek riwayat pemakaian di catatan servis.`});
+issues.push({level:'error',title:'Stok sparepart minus',detail:`"${escapeHtml(p.name)}" stoknya ${p.qty} (minus). Cek riwayat pemakaian di catatan servis, atau koreksi langsung ke 0 kalau memang tidak ada stok fisik yang tersisa.`,actions:[{label:'✏️ Buka Stok',action:'openStockModal',args:[idx]},{label:'0️⃣ Koreksi ke 0',action:'DataHealth.correctNegativeStock',args:[idx]}]});
 }
 });
 // Cek tambahan (S506 — Vehicle ↔ Asset Identity Link, lihat PROMPT
@@ -709,6 +718,32 @@ if(!p){toast('⚠️ Item stok tidak ditemukan (mungkin sudah berubah urutannya,
 delete p.catalogId;
 if(typeof save==='function')save();
 toast(`🔓 Tautan katalog utk "${p.name}" dilepas`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+if(typeof renderStockList==='function')renderStockList();
+},
+// correctNegativeStock(idx) — PERUBAHAN SESI INI (audit data-health backup
+// 2026-08-16, temuan prioritas #1 "Stok sparepart minus"): tombol koreksi
+// cepat dari kartu Hasil Pemindaian Data, pola SAMA PERSIS
+// unlinkStockCatalog() di atas (idx = index asli D.partsStock, cukup ubah 1
+// field lalu save()+refresh, TIDAK ada rumus baru). Sengaja tanya konfirmasi
+// dulu (askConfirm) karena ini MENGUBAH angka stok, beda dgn
+// unlinkStockCatalog() yang cuma melepas referensi -- dan sengaja HANYA
+// menyentuh field `qty` (set ke 0), tidak menyentuh priceHistory/txRefs/
+// avgPrice supaya riwayat pembelian & harga rata-rata tetap utuh apa adanya,
+// murni koreksi jumlah fisik saat ini (persis kelas aksi "Koreksi Stok"
+// yang sudah ada di modal Produk Shop, cuma versi ringkas utk Stok
+// Sparepart yang belum punya field koreksi terpisah).
+async correctNegativeStock(idx){
+const p=(D.partsStock||[])[idx];
+if(!p){toast('⚠️ Item stok tidak ditemukan (mungkin sudah berubah urutannya, coba pindai ulang).');return;}
+const before=p.qty||0;
+if(typeof askConfirm==='function'){
+const ok=await askConfirm(`Koreksi stok "${p.name}" dari ${before} jadi 0? Riwayat pembelian/pemakaian TIDAK diubah, ini cuma koreksi jumlah fisik saat ini.`,{danger:false,okText:'Ya, Koreksi ke 0'});
+if(!ok)return;
+}
+p.qty=0;
+if(typeof save==='function')save();
+toast(`0️⃣ Stok "${p.name}" dikoreksi dari ${before} jadi 0`);
 if(typeof runDataHealthCheck==='function')runDataHealthCheck();
 if(typeof renderStockList==='function')renderStockList();
 }

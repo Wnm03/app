@@ -1578,7 +1578,24 @@ findMissingAriaLabels(document).forEach(msg=>_selfTestAssert(false,msg));
 {name:'TitipanReconcile.checkAll(): audit sinkron Dana Titipan (Buku Utang vs Aset/Investasi) + konsistensi ownerId + staleness nama pasca-rename, semua 0 gap', fn:()=>{
 if(typeof TitipanReconcile==='undefined')return;
 const r=TitipanReconcile.checkAll();
-_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+')');
+// Fix (S635 lanjutan): pola GAP YANG SAMA PERSIS terulang -- checkAll()
+// sudah nambah sub-check ke-5 `transactionOwnerRefs` (checkTransactionOwnerRefs(),
+// lihat titipan-reconcile.js, saran Prioritas #2 AUDIT-DATA-HEALTH-BACKUP-
+// 2026-08-16.md) tapi pesan ini belum ikut diupdate -- kalau gap ada DI
+// transactionOwnerRefs (transaksi ber-deductionOwnerId basi, mis. kasus
+// 8x akun "Saldo tagihan" di audit itu), r.ok tetap false (assert tetap
+// gagal, benar) tapi pesan tidak menjelaskan kenapa. Sekarang
+// transactionOwnerRefs.ok/orphan ikut ditulis, pola sama accountSync.
+// Fix (S636 Opsi C): gap yang SAMA PERSIS terulang lagi -- checkAll()
+// sekarang nambah sub-check ke-6 `ownershipDualSource`
+// (checkOwnershipDualSource(), lihat titipan-reconcile.js, AUDIT-S636-
+// MAJORIS-OWNERSHIP-DUAL-SOURCE-KEPUTUSAN.md Opsi C) tapi pesan ini belum
+// ikut diupdate -- kalau gap ada DI ownershipDualSource saja (mis. aset
+// kayak Majoris: dropdown Kepemilikan non-SELF + Porsi Kepemilikan
+// eksplisit non-SELF sekaligus), r.ok tetap false (assert tetap gagal,
+// benar) tapi pesan tidak menjelaskan kenapa. Sekarang
+// ownershipDualSource.ok/flagged ikut ditulis, pola sama accountSync.
+_selfTestAssert(r.ok,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+')');
 }},
 ];
 }
