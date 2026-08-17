@@ -86,12 +86,24 @@ if(!el)return;
 if(!D.produsen.length){el.innerHTML='<div class="empty"><div class="empty-icon">🏭</div><div class="empty-text">Belum ada produsen</div></div>';return;}
 el.innerHTML=D.produsen.map(pr=>{
 const products=D.products.filter(p=>p.hargaByProdusen&&p.hargaByProdusen[pr.id]!==undefined);
-const hargaInfo=products.length?products.map(p=>`${escapeHtml(p.name)}: ${fmt(p.hargaByProdusen[pr.id])}`).join(', '):'Belum ada harga produk';
+// AUDIT-UIUX-VISUAL-2026-08 TEMUAN 2: dulu SEMUA harga produk digabung 1
+// string panjang (join(', ')) lalu dirender sbg .tx-meta (teks 1
+// paragraf) — utk produsen dgn 9+ item hasilnya blok teks 6-7 baris tanpa
+// anchor visual. Fix: tampilkan maks 3 item sbg span terpisah (pemisah
+// visual " · ", bukan koma polos di tengah kalimat), sisanya diringkas
+// "+N produk lain" — tap kartu produsen (✏️) sudah membuka
+// produsenModal->openHargaModal() yg PERSIS menampilkan daftar lengkap
+// terstruktur (.fg per baris, pola sudah ada di openHargaModal() di file
+// ini), jadi 0 fungsi baru dibutuhkan utk akses detail penuh.
+const HARGA_PREVIEW_MAX=3;
+const hargaItems=products.map(p=>`<span class="cobek-produsen-harga-item">${escapeHtml(p.name)}: ${fmt(p.hargaByProdusen[pr.id])}</span>`);
+const hargaSisa=hargaItems.length-HARGA_PREVIEW_MAX;
+const hargaInfo=hargaItems.length?hargaItems.slice(0,HARGA_PREVIEW_MAX).join('<span class="u-t2"> · </span>')+(hargaSisa>0?`<span class="u-t2 cobek-produsen-harga-more"> · +${hargaSisa} produk lain</span>`:''):'Belum ada harga produk';
 // kw192-ongkir-produsen-pref: tampilkan rute Etape1 tersimpan (kalau ada) sbg info tambahan
 const ruteInfo=pr.jarakKm>0?`📍 ${pr.jarakKm} km${pr.biayaPerKm>0?' × '+fmt(pr.biayaPerKm)+'/km':''} · `:'';
 return`<div class="tx-item">
         <div class="tx-icon" style="background:var(--accent2-soft)">🏭</div>
-        <div class="tx-info"><div class="tx-name">${escapeHtml(pr.name)}</div><div class="tx-meta">${pr.contact?'📞 '+escapeHtml(pr.contact)+' · ':''}${ruteInfo}${escapeHtml(hargaInfo)}</div></div>
+        <div class="tx-info"><div class="tx-name">${escapeHtml(pr.name)}</div><div class="tx-meta">${pr.contact?'📞 '+escapeHtml(pr.contact)+' · ':''}${ruteInfo}${hargaInfo}</div></div>
         <button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openProdusenModal" data-args="${escapeHtml(JSON.stringify([pr.id]))}" aria-label="Edit/Buka">✏️</button>
         <button class="tx-del" data-action="openProdusenActionsMenu" data-args="${escapeHtml(JSON.stringify([pr.id]))}" aria-label="Aksi lainnya">⋮</button>
       </div>`;
