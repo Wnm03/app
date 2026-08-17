@@ -1326,7 +1326,19 @@ vBillWrapEl.innerHTML=vItems.length?`<div class="u-fw600 u-mb6">⏳ Akan Jatuh T
 vBillWrapEl.innerHTML='';
 }
 }
-document.getElementById('allTx').innerHTML=visible.length?visible.map(txHTML).join(''):`<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">${hasFilter?'Tidak ada transaksi yang cocok dengan filter':'Belum ada transaksi di periode ini'}</div></div>`;
+// S637 (RENCANA-MODERNISASI-UI.md): tema "modern" pakai jalur tabel Ledger
+// Pro (txTableHTML) utk #allTx, kolom saldo berjalan hanya kalau filter
+// Akun sedang pilih 1 akun spesifik (bukan "Semua Akun") -- lihat komentar
+// txTableRowHTML/txTableHTML (tx-list-cashflow.js) utk alasan. 10 tema lama
+// 0 dampak, tetap jalur txHTML() kartu apa adanya.
+const allTxEl=document.getElementById('allTx');
+const allTxEmpty=`<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">${hasFilter?'Tidak ada transaksi yang cocok dengan filter':'Belum ada transaksi di periode ini'}</div></div>`;
+if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
+const singleAccId=(kf.acc&&kf.acc!=='semua')?kf.acc:null;
+allTxEl.innerHTML=visible.length?txTableHTML(visible,singleAccId):allTxEmpty;
+}else{
+allTxEl.innerHTML=visible.length?visible.map(txHTML).join(''):allTxEmpty;
+}
 const moreWrap=document.getElementById('allTxLoadMoreWrap');
 if(moreWrap){
 if(visibleCount<sorted.length){
