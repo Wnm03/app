@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-08-16T17:23:03.133Z
-Total file source: 315 · Total identifier global: 2172
+Terakhir digenerate: 2026-08-17T00:42:17.334Z
+Total file source: 315 · Total identifier global: 2184
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -67,12 +67,12 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 44 | `modules/shared/features-helpers-global-security.js` | 682 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 45 | `modules/shared/action-wrappers.js` | 204 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 46 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
-| 47 | `modules/shared/format-tema.js` | 78 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 47 | `modules/shared/format-tema.js` | 168 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 48 | `modules/shared/error-handler.js` | 39 | Domain Error Handler Global: tangkap error tak tertangani (uncaught error & Dipindah ke modules/shared/error-handler.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 49 | `modules/shared/helper-teks.js` | 26 | Domain Helper Teks & Kalender: escape karakter HTML berbahaya biar aman Dipindah ke modules/shared/helper-teks.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 50 | `modules/shared/keamanan-pin.js` | 457 | Domain Keamanan: layar PIN (showPinScreen/checkPin/pinPress/pinBack/updatePinDots), Dipindah ke modules/shared/keamanan-pin.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 51 | `modules/home/refleksi-selfcare.js` | 264 | Domain Refleksi & Self-Care: Jurnal Syukur, Checklist Self-Care harian Dipindah ke modules/home/refleksi-selfcare.js (Sesi 13 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 52 | `modules/shared/modal-navigasi.js` | 500 | Domain Modal Generik & Navigasi Halaman: modal konfirmasi/prompt/pilihan/info/pin Dipindah ke modules/shared/modal-navigasi.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 52 | `modules/shared/modal-navigasi.js` | 575 | Domain Modal Generik & Navigasi Halaman: modal konfirmasi/prompt/pilihan/info/pin Dipindah ke modules/shared/modal-navigasi.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 53 | `modules/shared/scanner-session.js` | 336 | modules/shared/scanner-session.js — ScannerSession (Tahap 5, docs/ PRODUCT_DECISIONS.md § "Scanner — Exclusive Scanner Mode via ScannerSession (FINAL — Sesi 316, PD-007)"). PD-007 — Scanner WAJIB berjalan lewat … |
 | 54 | `modules/business/reset-gaji-mingguan.js` | 115 | Domain Reset Gaji Mingguan: hitung rentang minggu berjalan (getWeekRange), Dipindah ke modules/business/reset-gaji-mingguan.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 55 | `modules/shared/debug-console.js` | 50 | Domain Debug Console: toggle tombol status (updateDebugConsoleBtn) & aktifkan/matikan Dipindah ke modules/shared/debug-console.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
@@ -92,7 +92,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 69 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 70 | `modules/finance/tx-target.js` | 69 | domain "Target Tabungan" (modal tambah target, deteksi Dana Dipindah ke modules/finance/tx-target.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 71 | `modules/finance/tx-list-cashflow.js` | 722 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 72 | `modules/finance/transaksi.js` | 1840 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
+| 72 | `modules/finance/transaksi.js` | 1863 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 73 | `modules/shared/profil-pengaturan.js` | 120 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 74 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 75 | `modules/ai/kategorisasi-ai.js` | 187 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
@@ -419,6 +419,11 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_financeAIRulesRegistered` | `modules/finance/tx-list-cashflow.js` |
 | `_financeLowBalanceCheck` | `modules/finance/tx-list-cashflow.js` |
 | `_financeOverspendCheck` | `modules/finance/tx-list-cashflow.js` |
+| `_focusTrapActivate` | `modules/shared/modal-navigasi.js` |
+| `_focusTrapDeactivate` | `modules/shared/modal-navigasi.js` |
+| `_focusTrapFocusableEls` | `modules/shared/modal-navigasi.js` |
+| `_focusTrapKeydown` | `modules/shared/modal-navigasi.js` |
+| `_focusTrapStack` | `modules/shared/modal-navigasi.js` |
 | `_formatLockDuration` | `modules/shared/keamanan-pin.js` |
 | `_friendlyErrorNotice` | `modules/shared/error-handler.js` |
 | `_fuzzyAccountMatch` | `modules/shared/scan-ocr.js` |
@@ -532,7 +537,13 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_stgSearchHighlighted` | `modules/shared/pengaturan-search.js` |
 | `_syncNavVisibilityForModals` | `modules/shared/modal-navigasi.js` |
 | `_syncServisUsedPartFromPurchase` | `modules/finance/tx-servis.js` |
+| `_TOAST_GAP_MS` | `modules/shared/format-tema.js` |
+| `_TOAST_QUEUE_MAX` | `modules/shared/format-tema.js` |
+| `_toastGapTimer` | `modules/shared/format-tema.js` |
 | `_toastHideTimer` | `modules/shared/format-tema.js` |
+| `_toastQueue` | `modules/shared/format-tema.js` |
+| `_toastShowing` | `modules/shared/format-tema.js` |
+| `_toastShowNext` | `modules/shared/format-tema.js` |
 | `_totalSaldoCache` | `modules/finance/akun.js` |
 | `_txAccManuallySet` | `modules/shared/features-helpers-global-security.js` |
 | `_txAssetManuallySet` | `modules/shared/features-helpers-global-security.js` |
@@ -2260,6 +2271,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `TitipanReconcile` | `modules/finance/titipan-reconcile.js` |
 | `TitipanSync` | `modules/finance/titipan-sync.js` |
 | `toast` | `modules/shared/format-tema.js` |
+| `toastUndo` | `modules/shared/format-tema.js` |
 | `TODAY_SOURCE_BUILDERS` | `lifeos/adapters/today-adapter.js` |
 | `todayAdapterList` | `lifeos/adapters/today-adapter.js` |
 | `todaySourceBills` | `lifeos/adapters/today-adapter.js` |
