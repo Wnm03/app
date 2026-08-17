@@ -177,4 +177,15 @@ const h=new Date().getHours();
 t=(h>=6&&h<18)?'light':'dark';
 }
 document.body.setAttribute('data-theme',t);
+// BUGFIX (audit delay s-lanjutan): simpan tema efektif yg BARU SAJA diterapkan ke
+// localStorage (bukan D.profile.theme mentah -- utk mode "auto" ini sudah hasil
+// resolve jam HP, jadi cache-nya representatif utk load berikutnya). Dibaca oleh
+// inline script paling atas <body> di index.html/app_production.html SEBELUM
+// init()/load() (baca IndexedDB) selesai, supaya body langsung ke-paint dgn tema
+// yg (hampir pasti) benar sejak awal -- bukan nunggu load selesai baru "dibalik"
+// dari "fresh" (flash tema terang->gelap yg kelihatan spt delay/lag).
+// Guarded try/catch: localStorage bisa gagal (private mode Safari lama, storage
+// penuh, dll) -- kegagalan cache ini TIDAK BOLEH bikin applyEffectiveTheme() ikut
+// gagal (tema tetap harus keterapkan biar app tetap kepakai).
+try{localStorage.setItem('kw_theme_cache',t);}catch(e){}
 }
