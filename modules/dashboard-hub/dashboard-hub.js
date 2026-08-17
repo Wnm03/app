@@ -316,6 +316,54 @@ const DashboardHubHero = {
   },
 };
 
+// ================== TICKER STRIP MODERN (RENCANA-MODERNISASI-UI.md, Sesi
+// s636 — pilot Beranda, tema "modern" s635) ==================
+// DashboardHubTickerModern — MURNI TAMPILAN, tidak ada business logic baru.
+// Reuse persis pola _dashHubSummaryMonthTx()/_dashHubAnalyticsMonthTx() di
+// atas: _dashHubTickerModernMonthTx() SENGAJA menduplikasi pemanggilan
+// _dashHubMonthTxShared() (bukan memanggil Summary/Analytics langsung)
+// supaya keduanya (constraint: tidak diubah) tetap 0 tersentuh oleh
+// tambahan sesi ini — alasan sama persis dgn komentar di atas
+// DashboardHubSummary/DashboardHubAnalytics. Elemen target
+// (#dashHubTickerModern) SELALU di-render apa adanya di sini; visibilitas
+// (hanya tampak di tema "modern") 100% didelegasikan ke CSS
+// (.dashhub-ticker di styles.css), bukan dicek di JS -- pola yang sama
+// dgn cara .dashhub-summary-grid disembunyikan lewat CSS (lihat catatan
+// DASHBOARD-DEDUP.md di index.html), supaya render tetap 1 jalur simpel
+// tanpa percabangan tema di JS. Semua akses ke D/fmt/escapeHtml di-guard
+// pakai typeof check (pola sama dgn presenter lain di file ini) supaya
+// file ini tetap aman dipakai test yang me-load dashboard-hub.js
+// sendirian.
+function _dashHubTickerModernMonthTx() {
+  return _dashHubMonthTxShared();
+}
+
+const DashboardHubTickerModern = {
+  render() {
+    const el = document.getElementById('dashHubTickerModern');
+    if (!el) return;
+
+    const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
+    const esc = (s) => (typeof escapeHtml === 'function') ? escapeHtml(s) : String(s);
+    const { inc, exp, count } = _dashHubTickerModernMonthTx();
+    const net = inc - exp;
+
+    const items = [
+      { label: 'Masuk', value: money(inc), cls: 'green' },
+      { label: 'Keluar', value: money(exp), cls: 'red' },
+      { label: 'Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green' },
+      { label: 'Transaksi', value: String(count), cls: '' },
+    ];
+
+    el.innerHTML = items.map((i) => `
+      <div class="bill-stat-pill">
+        <span class="stat-label">${esc(i.label)}</span>
+        <span class="stat-val${i.cls ? ' ' + i.cls : ''}">${esc(i.value)}</span>
+      </div>
+    `).join('');
+  },
+};
+
 // ================== SUMMARY CARDS (Sprint 1 Tahap 5, lihat DASHBOARD-SUMMARY.md) ==================
 // DashboardHubSummary — MURNI TAMPILAN, tidak ada business logic baru. Baris
 // kartu ringkas kecil tepat di bawah Quick Actions, menampilkan 4 angka yang
@@ -641,6 +689,11 @@ const DashboardHub = {
     // sama dgn LifeOSHome.render()/DashboardHubFavoritView.render() di atas —
     // tidak mengubah baris manapun sebelum ini.
     if (typeof DashboardHubHero !== 'undefined') DashboardHubHero.render();
+    // RENCANA-MODERNISASI-UI s636: tambahan murni, pola sama dgn
+    // DashboardHubHero.render() di atas -- tidak mengubah baris lain.
+    // Visibilitas 100% didelegasikan ke CSS (lihat komentar di atas
+    // DashboardHubTickerModern), jadi dipanggil selalu tanpa cek tema.
+    if (typeof DashboardHubTickerModern !== 'undefined') DashboardHubTickerModern.render();
 
     // Summary Cards (Sprint 1 Tahap 5, lihat DASHBOARD-SUMMARY.md). Tambahan
     // murni, pola sama dgn DashboardHubHero.render() di atas — tidak
