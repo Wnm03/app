@@ -84,11 +84,14 @@ test('assetTableRowHTML() — 0 kolom saldo berjalan (bukan konsep transaksi kro
 
 // --- assetTableHTML() -------------------------------------------------------
 
-test('assetTableHTML() — wrap tabel dgn header Aset/Nilai, reuse class .tx-tbl*', () => {
+test('assetTableHTML() — wrap tabel dgn header Aset/Pemilik/Nilai, reuse class .tx-tbl*', () => {
+  // S644 (lanjutan s639, RENCANA-MODERNISASI-UI.md): kolom "Pemilik"
+  // ditambahkan mengikuti mockup Ledger Pro (lihat assetOwnerCellHtml()) --
+  // header jadi Aset/Pemilik/Nilai/kosong (aksi), bukan Aset/Nilai/kosong lagi.
   const ctx = makeCtx({ assets: [] });
   const html = ctx.assetTableHTML([makeAsset()]);
   assert.match(html, /<div class="tx-tbl-wrap"><table class="tx-tbl">/);
-  assert.match(html, /<th>Aset<\/th><th class="num">Nilai<\/th><th><\/th>/);
+  assert.match(html, /<th>Aset<\/th><th class="num">Pemilik<\/th><th class="num">Nilai<\/th><th><\/th>/);
   assert.match(html, /<tbody>.*<\/tbody>/s);
 });
 
