@@ -156,6 +156,19 @@ D.profile.theme=t; save();
 applyEffectiveTheme();
 document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.t===t));
 toast(t==='auto'?'Tema otomatis aktif 🌗 (ikut jam HP)':'Tema '+t+' aktif ✨');
+// RENCANA-MODERNISASI-UI.md: tema "modern" (s637/s639) punya markup terstruktur
+// (tabel Ledger Pro Uang & list padat Aset) yg di-gate via cek D.profile.theme
+// DI DALAM fungsi render tab masing2 -- bukan lewat CSS murni spt ticker Beranda
+// (s636). setTheme() sebelumnya cuma ganti atribut data-theme (CSS reaktif
+// otomatis), jadi kalau tab Uang/Aset sedang terbuka saat ganti tema, markup lama
+// (kartu) tetap nempel sampai tab itu di-render ulang manual. Trigger re-render
+// eksplisit di sini supaya tampilan struktural ikut berubah seketika, konsisten
+// dgn CSS yang sudah berubah instan. Guarded typeof (pola sama dgn pemanggil lain
+// di file ini) supaya aman dipanggil dari test yang load file ini sendirian atau
+// dari state app dimana tab terkait belum pernah dibuka (elemen belum ada di DOM
+// -- masing2 fungsi sudah early-return kalau elemennya null).
+if(typeof renderKeuangan==='function')renderKeuangan();
+if(typeof Aset!=='undefined'&&Aset&&typeof Aset.renderList==='function')Aset.renderList();
 }
 function applyEffectiveTheme(){
 let t=D.profile.theme||'dark';
