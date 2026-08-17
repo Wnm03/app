@@ -66,6 +66,14 @@ ScannerSession.isActive();
 function _openDialogOverlay(el){
 el.classList.add('open');
 void el.offsetWidth;
+// FIX (audit UI/UX aksesibilitas keyboard, lanjutan sesi focus-trap
+// openModal/closeModal): titik tunggal ini dipakai SEMUA 5 dialog custom
+// (askConfirm/showPromptModal/showChoiceModal/showAlertModal/
+// showPinPromptModal, lihat komentar di atas), jadi cukup 1 pemanggilan
+// di sini utk cover semuanya sekaligus -- reuse penuh
+// _focusTrapActivate() yang sudah ada (dipakai openModal() juga), 0 fungsi
+// baru ditambah.
+_focusTrapActivate(el);
 }
 function _queueDialog(store,renderFn){
 return new Promise((resolve)=>{
@@ -74,7 +82,9 @@ if(store.queue.length===1){ _dialogSelfHeal(); renderFn(); }
 });
 }
 function _resolveDialog(store,overlayId,val){
-document.getElementById(overlayId).classList.remove('open');
+const el=document.getElementById(overlayId);
+el.classList.remove('open');
+_focusTrapDeactivate(el);
 const cur=store.queue.shift();
 if(cur)cur.resolve(val);
 if(store.queue.length) setTimeout(()=>{ _dialogSelfHeal(); store.queue[0].renderFn(); },0);
@@ -260,6 +270,69 @@ function _syncNavVisibilityForModals(){
 const anyOpen=document.querySelector('.overlay.open,.qs-modal-overlay.open,.calc-overlay.open');
 document.body.classList.toggle('has-open-modal',!!anyOpen);
 }
+// FOCUS TRAP (audit UI/UX aksesibilitas keyboard, Agustus 2026): sebelum ini,
+// Tab/Shift+Tab masih bisa "bocor" dari dalam modal ke elemen di belakang
+// overlay (elemen halaman yang tertutup visual tapi tetap ada di DOM & masih
+// fokusable) — menyulitkan pengguna keyboard/screen reader, fokus terasa
+// hilang/lompat tak terduga. Implementasi MINIMAL & additive: TIDAK mengubah
+// alur openModal()/closeModal() yang sudah ada (cuma 1 baris panggilan
+// ditambah di titik yang sudah ada, lihat _focusTrapActivate/_focusTrapDeactivate
+// di bawah), 0 perubahan pada pemanggil openModal/closeModal di file lain.
+// Ditumpuk pakai array (bukan 1 variabel tunggal) supaya modal bertumpuk
+// (lihat komentar `_stacked` di openModal() bawah) tetap benar: Tab dikunci
+// ke modal PALING ATAS saja, & saat modal teratas ditutup, trap otomatis
+// kembali berlaku ke modal di bawahnya kalau masih ada yg terbuka.
+// Cakupan sengaja dibatasi ke openModal()/closeModal() (modal fitur generik)
+// dulu di sesi ini — 5 dialog custom (askConfirm/showPromptModal/
+// showChoiceModal/showAlertModal/showPinPromptModal) yang lewat
+// _queueDialog() BELUM disentuh, supaya perubahan tetap kecil & mudah
+// diverifikasi. Bisa disusulkan sesi terpisah kalau audit ini terbukti aman.
+const _focusTrapStack=[];
+function _focusTrapFocusableEls(container){
+if(!container||typeof container.querySelectorAll!=='function')return [];
+return Array.prototype.slice.call(container.querySelectorAll(
+'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'
+)).filter(function(el){return !!(el.offsetWidth||el.offsetHeight||el.getClientRects().length);});
+}
+function _focusTrapKeydown(e){
+if(e.key!=='Tab')return;
+const top=_focusTrapStack[_focusTrapStack.length-1];
+if(!top)return;
+const focusables=_focusTrapFocusableEls(top.container);
+if(!focusables.length)return;
+const first=focusables[0],last=focusables[focusables.length-1];
+if(e.shiftKey && document.activeElement===first){
+e.preventDefault();last.focus();
+}else if(!e.shiftKey && document.activeElement===last){
+e.preventDefault();first.focus();
+}
+}
+function _focusTrapActivate(container){
+if(!container)return;
+_focusTrapStack.push({container:container,lastFocused:document.activeElement});
+if(_focusTrapStack.length===1){
+document.addEventListener('keydown',_focusTrapKeydown,true);
+}
+const focusables=_focusTrapFocusableEls(container);
+if(focusables.length){
+focusables[0].focus();
+}else if(typeof container.focus==='function'){
+if(typeof container.setAttribute==='function'&&(typeof container.hasAttribute!=='function'||!container.hasAttribute('tabindex')))container.setAttribute('tabindex','-1');
+container.focus();
+}
+}
+function _focusTrapDeactivate(container){
+const idx=_focusTrapStack.map(function(x){return x.container;}).lastIndexOf(container);
+if(idx===-1)return;
+const entry=_focusTrapStack[idx];
+_focusTrapStack.splice(idx,1);
+if(_focusTrapStack.length===0){
+document.removeEventListener('keydown',_focusTrapKeydown,true);
+}
+if(entry.lastFocused && typeof entry.lastFocused.focus==='function' && document.contains(entry.lastFocused)){
+try{entry.lastFocused.focus();}catch(e){}
+}
+}
 function openModal(id){
 const el=document.getElementById(id);
 if(!el){
@@ -322,6 +395,7 @@ el.classList.add('open');
 // (memaksa reflow) yg memang dibutuhkan, bukan nilainya.
 void el.offsetWidth;
 _syncNavVisibilityForModals();
+_focusTrapActivate(el);
 }
 // CARD_COLLAPSE_DEFAULT_CLOSED (Sesi 156b, permintaan eksplisit user):
 // key card yang defaultnya TERTUTUP kalau user belum pernah tap toggle-nya
@@ -375,6 +449,7 @@ WorthIt.pendingBuyId=null;
 }
 if(el.classList.contains('closing'))return;
 el.classList.add('closing');
+_focusTrapDeactivate(el);
 let done=false;
 function finish(){
 if(done)return;

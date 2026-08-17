@@ -59,8 +59,98 @@ function fmtFullSigned(n){n=Number(n||0);return(n<0?'-':'')+'Rp '+Math.round(Mat
 // antara detik 2-4). Sekarang timer sebelumnya di-clearTimeout() dulu tiap
 // toast() dipanggil, jadi durasi SELALU dihitung dari toast yang PALING
 // BARU tampil -- tidak ada lagi timer basi yang nyembunyikan toast baru.
+// SESI TAMBAHAN (audit UI/UX: "toast cuma 1 slot tanpa antrean" -- kalau 2
+// notifikasi trigger berdekatan, mis. simpan lalu langsung ada validasi lain,
+// toast ke-2 LANGSUNG menimpa teks toast ke-1 lewat `t.textContent=msg` di
+// atas sebelum sempat kebaca user, meski fix timer sebelumnya sudah bikin
+// durasinya benar). ROOT CAUSE beda dari bugfix timer di atas: itu benerin
+// KAPAN toast hilang, ini benerin toast KEDUA menimpa TEKS toast pertama
+// secara instan. Fix: `toast()` sekarang taruh pesan ke antrean FIFO dulu
+// (bukan langsung render), 1 elemen `#toast` yang sama dipakai bergantian
+// satu-per-satu -- pesan lama SELALU sempat tampil penuh durasinya sebelum
+// pesan berikutnya muncul. Jeda kecil (`_TOAST_GAP_MS`) antar pesan disamakan
+// dgn `--dur-moderate` (200ms, lihat styles.css `.toast`) supaya transisi
+// fade-out toast lama selesai dulu sebelum fade-in toast baru (kalau
+// langsung ganti teks tanpa jeda, teks berubah di tengah animasi & terasa
+// "patah"). Antrean dibatasi `_TOAST_QUEUE_MAX` (buang yg PALING LAMA
+// mengantre, bukan yg baru) supaya toast lama tidak "membanjiri" & nge-lag
+// notifikasi terbaru kalau ada error beruntun/loop -- prioritas selalu pesan
+// TERBARU + pesan yang SEDANG tampil, bukan histori antrean.
+// API tetap 100% sama: `toast(msg, dur=2200)`, dipanggil sinkron dari 900+
+// titik existing, 0 perubahan signature/return value (tetap `undefined`).
 let _toastHideTimer=null;
-function toast(msg,dur=2200){const t=document.getElementById('toast');if(_toastHideTimer)clearTimeout(_toastHideTimer);t.textContent=msg;t.classList.add('show');_toastHideTimer=setTimeout(()=>{t.classList.remove('show');_toastHideTimer=null;},dur);}
+let _toastGapTimer=null;
+let _toastShowing=false;
+let _toastQueue=[];
+const _TOAST_GAP_MS=200;
+const _TOAST_QUEUE_MAX=4;
+function _toastShowNext(){
+  if(_toastQueue.length===0){_toastShowing=false;return;}
+  _toastShowing=true;
+  const{msg,dur,undoFn}=_toastQueue.shift();
+  const t=document.getElementById('toast');
+  // SESI TAMBAHAN (audit UI/UX: "konfirmasi hapus tanpa undo" -- pola berisiko
+  // utk app finansial, kalau user salah tap data hilang permanen). toastUndo()
+  // di bawah reuse PENUH antrean di atas (0 struct data baru, cuma nambah
+  // field opsional `undoFn`) -- toast() BIASA (900+ pemanggil existing) TIDAK
+  // PERNAH mengisi field ini, jadi tetap 100% `t.textContent=msg` polos spt
+  // sebelumnya, 0 perubahan tampilan/perilaku utk pemanggil lama. Class
+  // `toast--action` cuma ditoggle saat undoFn ADA, jadi CSS existing (`.toast`
+  // biasa) juga tidak berubah utk kasus lama.
+  t.classList.toggle('toast--action',!!undoFn);
+  if(undoFn){
+    t.innerHTML='';
+    const span=document.createElement('span');
+    span.className='toast-msg';
+    span.textContent=msg;
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='toast-undo-btn';
+    btn.textContent='Urungkan';
+    btn.onclick=function(){
+      if(_toastHideTimer){clearTimeout(_toastHideTimer);_toastHideTimer=null;}
+      t.classList.remove('show');
+      try{undoFn();}catch(e){console.error('toastUndo: undoFn error:',e);}
+      _toastGapTimer=setTimeout(()=>{_toastGapTimer=null;_toastShowNext();},_TOAST_GAP_MS);
+    };
+    t.appendChild(span);
+    t.appendChild(btn);
+  } else {
+    t.textContent=msg;
+  }
+  t.classList.add('show');
+  _toastHideTimer=setTimeout(()=>{
+    t.classList.remove('show');
+    _toastHideTimer=null;
+    _toastGapTimer=setTimeout(()=>{_toastGapTimer=null;_toastShowNext();},_TOAST_GAP_MS);
+  },dur);
+}
+function toast(msg,dur=2200){
+  _toastQueue.push({msg,dur});
+  while(_toastQueue.length>_TOAST_QUEUE_MAX)_toastQueue.shift();
+  if(!_toastShowing&&!_toastGapTimer)_toastShowNext();
+}
+// toastUndo(msg,undoFn,dur=5000) — toast dgn tombol "Urungkan". Klik tombol
+// -> jalankan `undoFn()` (caller yang tanggung jawab kembalikan state, mis.
+// splice balik ke index semula) & toast langsung hilang (tidak nunggu durasi
+// penuh). Kalau TIDAK diklik sampai `dur` habis, hapus dianggap final -- 0
+// aksi tambahan diperlukan krn caller SUDAH menghapus datanya SEBELUM manggil
+// toastUndo() (pola "hapus dulu, tawarkan undo sesudah", bukan "tunda hapus
+// sampai timeout" -- lebih aman krn tidak ada state "pending delete" yang
+// bisa lupa di-commit kalau user menutup app sebelum timer selesai).
+// Durasi default 5000ms (lebih lama dari toast() biasa 2200ms) -- user butuh
+// waktu baca PESAN + putuskan mau klik Urungkan atau tidak, bukan cuma baca
+// notifikasi.
+// SENGAJA baru dipakai di 1 tempat (delReminder(), transaksi.js) sbg contoh
+// pola nyata pertama -- delete lain yang py cascade kompleks (mis. delTx(),
+// runTxDeleteCascades()) BELUM diretrofit undo sesi ini (butuh audit
+// terpisah per cascade supaya restore-nya benar2 utuh, bukan cuma splice
+// balik 1 array).
+function toastUndo(msg,undoFn,dur=5000){
+  _toastQueue.push({msg,dur,undoFn});
+  while(_toastQueue.length>_TOAST_QUEUE_MAX)_toastQueue.shift();
+  if(!_toastShowing&&!_toastGapTimer)_toastShowNext();
+}
 function setTheme(t){
 D.profile.theme=t; save();
 applyEffectiveTheme();
