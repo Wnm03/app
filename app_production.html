@@ -83,9 +83,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1378">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1378">
-<script src="nav-scroll.js?v=1378" defer></script>
+<link rel="stylesheet" href="styles.css?v=1379">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1379">
+<script src="nav-scroll.js?v=1379" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -151,17 +151,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1378');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1379');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1378');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1379');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1378');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1379');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -250,33 +250,11 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1378" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1378" defer></script>
+<script src="app-bundle-a.min.js?v=1379" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1379" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
-<script>
-// BUGFIX (audit delay s-lanjutan, video 2026-08-17 15:11): body selalu mulai dgn
-// data-theme="fresh" (statis di HTML, di-paint browser SEBELUM JS jalan). Tema
-// asli user (D.profile.theme, defaultnya 'dark' -- lihat applyEffectiveTheme() di
-// modules/shared/format-tema.js) baru diterapkan SETELAH init()->load() selesai
-// baca IndexedDB, yg makan waktu beberapa detik kalau data sudah besar (ratusan/
-// ribuan transaksi). Efeknya: user MELIHAT tema "fresh" (terang) + saldo Rp0
-// selama proses load, lalu tiba2 "dibalik" ke tema gelap + saldo asli lewat
-// animasi reveal begitu data siap -- kelihatan seperti nge-lag/delay padahal
-// sebenarnya cuma flash tema, bukan lambat beneran.
-// FIX: cache tema TERAKHIR yg berhasil diterapkan ke localStorage (lihat
-// applyEffectiveTheme() -- baris localStorage.setItem('kw_theme_cache', t)),
-// lalu di sini, SEBELUM konten body lain di-parse & di-paint, baca cache itu &
-// langsung set data-theme yg benar. Kalau belum pernah ada cache (install/
-// browser baru), tetap fallback ke "fresh" (bukan diam2 nebak) -- tidak ada
-// regresi utk first-run. Sengaja inline & sinkron (bukan file .js terpisah)
-// supaya benar2 jalan SEBELUM browser sempat paint apa pun di bawah baris ini.
-try{
-var _kwThemeCache=localStorage.getItem('kw_theme_cache');
-if(_kwThemeCache)document.body.setAttribute('data-theme',_kwThemeCache);
-}catch(e){}
-</script>
 
 <!-- ONBOARDING -->
 <!-- BUGFIX: dulu div ini TIDAK punya class u-dnone, jadi selalu kelihatan sebagai kondisi
@@ -3795,20 +3773,15 @@ if(_kwThemeCache)document.body.setAttribute('data-theme',_kwThemeCache);
     <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
     Shop<div class="nav-dot"></div>
   </button>
-  <!-- FIX (audit UI/UX, screenshot 2026-08-17 17:37): tombol FAB "+" per-halaman
-       (.keu-fab, sebelumnya mengambang bebas di kanan-bawah tiap halaman --
-       keuFab/laporanFab/shopFab/shopLaporanFab/carNotesFab) dipindah ke SATU
-       tombol terpusat di TENGAH nav bawah, konsisten di semua halaman (bukan
-       lagi 5 FAB terpisah yang posisinya beda2 & bisa tumpang tindih --
-       lihat #page-shop .keu-fab{bottom:150px} dkk di styles.css). Tombol ini
-       murni SAKLAR (toggle) -- klik cari .keu-fab yg SEDANG kelihatan di
-       halaman aktif (lihat navFabToggle() di action-wrappers.js) & toggle
-       class .open miliknya (fungsi toggle per-FAB lama TIDAK diubah/dihapus,
-       cuma dipicu dari sini juga -- 0 breakage kalau ada kode lain yang masih
-       manggil keuFabToggleMain dkk langsung). Ditaruh sbg child ke-4 dari 7
-       (persis di tengah 6 nav-item asli: Beranda,Uang,Shop | FAB | Aset,
-       Mobil,Pajak) supaya visual "\+"-nya benar2 di tengah nav, bukan cuma di
-       tengah salah satu sisi. -->
+  <!-- FIX: tombol FAB "+" per-halaman (.keu-fab, sebelumnya mengambang bebas
+       di kanan-bawah tiap halaman -- keuFab/laporanFab/shopFab/
+       shopLaporanFab/carNotesFab) dipindah ke SATU tombol terpusat di TENGAH
+       nav bawah, konsisten di semua halaman. Tombol ini murni SAKLAR
+       (toggle) -- klik cari .keu-fab yg SEDANG kelihatan di halaman aktif
+       (lihat navFabToggle() di modules/shared/action-wrappers.js) & toggle
+       class .open miliknya. Ditaruh sbg child ke-4 dari 7 (persis di tengah
+       6 nav-item asli: Beranda,Uang,Shop | FAB | Aset,Mobil,Pajak) supaya
+       visual "+"-nya benar-benar di tengah nav. -->
   <button class="nav-item nav-fab" id="navFabMain" data-action="navFabToggle" data-args='["$el"]' aria-label="Tambah cepat" aria-expanded="false" aria-haspopup="true">
     <span class="nav-fab-icon">＋</span>
   </button>
@@ -4068,6 +4041,6 @@ if(_kwThemeCache)document.body.setAttribute('data-theme',_kwThemeCache);
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1378" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1379" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

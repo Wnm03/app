@@ -132,7 +132,15 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
    / inline style-nya sama sekali (0 risiko ke titik lain yang bergantung
    ke display:flex awal itu). */
 body.has-open-modal .nav { display: none !important; }
-.nav-item { flex: 1; min-width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 7px 1px; border: none; background: none; color: var(--text3); font-size: 12px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
+/* FIX (navbar melebar krn nav-fab ke-7): dulu 6 nav-item x min-width 56px
+   = 336px + padding .nav pas di batas viewport kecil. Sekarang ada +1
+   child (.nav-fab, lihat bawah) sehingga total lebih lebar dari layar &
+   overflow-x:auto .nav diam-diam mengaktifkan scroll horizontal (tab
+   Pajak/FAB bisa ketutup/perlu discroll tanpa indikator). Base min-width
+   diturunkan dari 56px->48px & font dari 12px->11px supaya 6 nav-item +
+   1 nav-fab tetap pas TANPA scroll di lebar layar umum (360-414px),
+   murni pengecilan, 0 perubahan struktur/perilaku. */
+.nav-item { flex: 1; min-width: 48px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 1px; border: none; background: none; color: var(--text3); font-size: 11px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
 /* FIX (audit UI/UX, Agustus 2026): label nav sebelumnya var(--fs-caption)
    = 11px, ambang bawah keterbacaan nyaman utk teks yg dibaca terus-menerus
    sbg navigasi utama (beda dgn caption/badge kecil lain yg cuma sesekali
@@ -141,19 +149,22 @@ body.has-open-modal .nav { display: none !important; }
    .kasir-tile-badge yg beresiko teks kepotong kalau ikut naik; scoping ke
    .nav-item saja menghindari itu). Di layar sangat sempit (<360px, lihat
    media query di bawah) dikembalikan ke 11px supaya tidak menambah resiko
-   overflow di kondisi yg sudah paling ketat. */
-/* FIX (audit UI/UX, Agustus 2026): 6 nav-item x min-width 56px + padding .nav
-   = 340px, MELEBIHI lebar viewport layar sangat kecil (mis. iPhone SE
-   320px) -- .nav punya overflow-x:auto sbg fallback, jadi bukan patah
-   layout, TAPI tab terakhir (Pajak) diam-diam terpotong/perlu discroll
-   horizontal tanpa ada indikator visual bahwa masih ada tab lain, pengguna
-   bisa tidak sadar. Breakpoint 359px dipakai (konsisten dgn breakpoint
-   sempit lain yg sudah ada di file ini, mis. .dashhub-hero-stats) --
-   turunkan min-width & svg supaya 6 item pas tanpa scroll di layar
-   sekecil apa pun, murni pengecilan, 0 perubahan struktur/perilaku. */
+   overflow di kondisi yg sudah paling ketat.
+   (Update: base sekarang sudah 11px sejak fix navbar 7-child di atas,
+   jadi breakpoint sempit di bawah diturunkan lagi ke 10px.) */
+/* FIX (audit UI/UX, Agustus 2026): 7 child (6 nav-item + 1 nav-fab)
+   MELEBIHI lebar viewport layar sangat kecil (mis. iPhone SE 320px) --
+   .nav punya overflow-x:auto sbg fallback, jadi bukan patah layout, TAPI
+   tab terakhir (Pajak) diam-diam terpotong/perlu discroll horizontal
+   tanpa ada indikator visual bahwa masih ada tab lain, pengguna bisa
+   tidak sadar. Breakpoint 359px dipakai (konsisten dgn breakpoint sempit
+   lain yg sudah ada di file ini, mis. .dashhub-hero-stats) -- turunkan
+   min-width & svg lagi, plus nav-fab ikut mengecil (lihat .nav-fab-icon
+   di bawah), supaya 7 child pas tanpa scroll di layar sekecil apa pun,
+   murni pengecilan, 0 perubahan struktur/perilaku. */
 @media (max-width:359px){
-  .nav-item{min-width:44px;padding:7px 0;font-size:11px;}
-  .nav-item svg{width:18px;height:18px;}
+  .nav-item{min-width:40px;padding:6px 0;font-size:10px;}
+  .nav-item svg{width:17px;height:17px;}
 }
 .nav-item.active { color: var(--accent); }
 .nav-item svg { width: 20px; height: 20px; transition: transform var(--dur-moderate); }
@@ -1618,24 +1629,13 @@ textarea.fi { resize: vertical; min-height: 80px; }
    --fs-*/--z-dropdown/--dur-*/--ease-*/--accent/--surface3/--border2).
    Tidak ada selector lama yang diubah nilainya. */
 .keu-fab{position:fixed;left:50%;transform:translateX(-50%);right:auto;bottom:84px;z-index:var(--z-dropdown);display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);}
-/* 2026-07-21 FIX: tombol "+" (.keu-fab-main) TERBUKTI tidak efektif secara
-   UX (user report: harus tap dulu baru muncul Pemasukan/Pengeluaran/Export
-   dst, extra step yang tidak perlu) -- disembunyikan total, & tombol-tombol
-   aksinya (.keu-fab-actions) dibikin SELALU tampil langsung tanpa perlu
-   toggle. Class .open & JS toggle (data-onclick di index.html) SENGAJA
-   dibiarkan apa adanya (tidak dihapus) supaya tidak ada breakage kalau ada
-   kode lain yang masih reference -- cukup di-override di CSS di sini,
-   aditif murni, tidak ada selector lama yang dihapus.  */
-/* FIX (audit UI/UX, screenshot 2026-08-17 17:37): dibalik lagi ke perilaku
-   toggle (kebalikan dari fix 2026-07-21 di atas) -- alasan "+" lama tidak
-   efektif adalah karena POSISINYA (kanan-bawah, gampang tidak sadar), bukan
-   karena konsep toggle-nya. Sekarang trigger toggle-nya dipindah ke tombol
-   terpusat & selalu kelihatan di tengah nav bawah (#navFabMain, lihat
-   navFabToggle() di action-wrappers.js) -- jadi actions boleh disembunyikan
-   default lagi (tidak makan tempat di layar terus-menerus) karena cara
-   membukanya sekarang jauh lebih gampang ditemukan. .keu-fab-main (tombol
-   "+" LAMA per-halaman, kanan-bawah) TETAP disembunyikan (sudah digantikan
-   #navFabMain, bukan dihapus dari DOM -- 0 breakage).*/
+/* FIX (hapus 5x FAB "+" kanan-bawah per-halaman, gabung ke 1 tombol
+   terpusat di TENGAH nav bawah -- #navFabMain, lihat markup di index.html
+   & navFabToggle() di modules/shared/action-wrappers.js). Tombol "+" LAMA
+   per-halaman (.keu-fab-main) tetap disembunyikan (sudah digantikan
+   #navFabMain, bukan dihapus dari DOM -- 0 breakage). Actions (.keu-fab-
+   actions) kembali disembunyikan default & muncul lewat class .open, supaya
+   tidak lagi menumpuk permanen di kanan-bawah tiap halaman. */
 .keu-fab-main{display:none;}
 .keu-fab-main-icon{line-height:1;}
 .keu-fab-actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:var(--sp-3);max-width:min(86vw,360px);max-height:0;opacity:0;pointer-events:none;overflow:hidden;transition:opacity var(--dur-moderate) var(--ease-standard),max-height var(--dur-moderate) var(--ease-standard);}
@@ -1647,14 +1647,18 @@ textarea.fi { resize: vertical; min-height: 80px; }
 /* ===== FAB terpusat di nav bawah (gantikan 5x .keu-fab kanan-bawah lama) =====
    Aditif murni, reuse token yang sudah ada. Tombol "+" dibikin lebih besar &
    "naik" dari garis nav (margin-top negatif + border supaya kelihatan
-   mengambang keluar nav, pola umum bottom-nav-FAB di app mobile). */
-.nav-fab{position:relative;flex:0 0 auto;min-width:52px;}
-.nav-fab-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;border-radius:var(--r-full);background:var(--grad-accent);color:#fff;font-size:24px;line-height:1;box-shadow:var(--shadow-card-hover-dark2);border:3px solid var(--header-bg);transition:transform var(--dur-fast) var(--ease-standard);}
+   mengambang keluar nav, pola umum bottom-nav-FAB di app mobile).
+   FIX (navbar melebar): min-width & ukuran ikon diturunkan supaya 6
+   nav-item + 1 nav-fab tetap pas di lebar layar umum tanpa scroll
+   horizontal (selaras dgn pengecilan .nav-item di atas). */
+.nav-fab{position:relative;flex:0 0 auto;min-width:44px;}
+.nav-fab-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;margin-top:-19px;border-radius:var(--r-full);background:var(--grad-accent);color:#fff;font-size:21px;line-height:1;box-shadow:var(--shadow-card-hover-dark2);border:3px solid var(--header-bg);transition:transform var(--dur-fast) var(--ease-standard);}
 .nav-fab:active .nav-fab-icon{transform:scale(0.9);}
 .nav-fab[aria-expanded="true"] .nav-fab-icon{transform:rotate(45deg);}
 .nav-fab:active[aria-expanded="true"] .nav-fab-icon{transform:rotate(45deg) scale(0.9);}
 @media (max-width:359px){
-  .nav-fab-icon{width:40px;height:40px;margin-top:-20px;font-size:21px;}
+  .nav-fab{min-width:36px;}
+  .nav-fab-icon{width:33px;height:33px;margin-top:-16px;font-size:18px;}
 }
 
 /* ===== Sprint 2 Tahap 2: FAB Shop — reuse penuh .keu-fab* (Finance 2.0),
