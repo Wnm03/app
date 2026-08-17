@@ -284,6 +284,16 @@ details.card[open] summary::after{transform:rotate(180deg)}
    header grup kustodian yang butuh 2 aturan tambahan berikut. */
 [data-theme="modern"] .tx-tbl-name-btn { background: none; border: none; padding: 0; margin: 0; color: inherit; text-decoration: underline dotted; cursor: pointer; font: inherit; text-align: left; }
 .titipan-tbl-group-row td { background: var(--surface2); color: var(--text2); font-size: 10px; }
+/* [data-theme="modern"] Dana Titipan — SESI s645 (lanjutan s642/s644):
+   list ringkasan per-owner ("👤 nama Pokok→Kini") SEKARANG JUGA dibungkus
+   <table class="tx-tbl"> lewat _ownerListHtmlModern()
+   (dana-titipan-portfolio-render.js), 1 <tr><td colspan="3"> per owner
+   (kartu <details> owner TETAP utuh 0 diubah -- tidak dipecah 3 <td>
+   sungguhan krn butuh lebar penuh utk expand/tombol/dropdown/holdings
+   bersarang). Cuma 1 aturan tambahan: <td> pembungkusnya kehilangan
+   padding besar default .tx-tbl td (8px) supaya <details> di dalamnya
+   rapat spt kartu biasa, bukan double-padded. */
+.titipan-tbl-owner-cell { padding: 6px 8px !important; }
 @keyframes flashHi { 0%{box-shadow:0 0 0 3px var(--accent);background:var(--accent-soft);} 100%{box-shadow:0 0 0 0 transparent;} }
 .flash-highlight { animation: flashHi 1.1s ease-out; border-radius:var(--r-lg); }
 .stat-label { font-size:var(--fs-label); color: var(--text2); margin-bottom: 5px; font-weight: 500; }
