@@ -2412,6 +2412,41 @@ if (typeof Aset !== 'undefined') window.Aset = Aset;
 // otomatis kebagian tabular-nums/font-mono lewat aturan [data-theme="modern"]
 // s635 -- 0 aturan font baru. Chip jenis/lokasi & badge Zakat/warning
 // cross-check REUSE PERSIS logic yang sama dgn kartu (bukan rumus baru).
+// assetOwnerCellHtml(a) — S644 (RENCANA-MODERNISASI-UI.md, lanjutan s639):
+// kolom "Pemilik" tabel Aset tema modern (mockup Ledger Pro: "W · 70%",
+// "Sen", "Bersama"). REUSE MultiOwnerEngine.getOwners() 100% apa adanya
+// (0 rumus kepemilikan baru, 0 field baru ditulis ke D.assets) -- murni
+// format ringkas 1 owner/porsi jadi teks pendek utk 1 sel tabel:
+// - MultiOwnerEngine belum dimuat / getOwners() gagal -> '—'
+// - 1 pemilik & isSelf (default utk aset tanpa data owners eksplisit,
+//   lihat getOwners() poin 4) -> 'Saya'
+// - 1 pemilik non-self -> nama disingkat (inisial tiap kata, maks 3
+//   huruf) + porsi% HANYA kalau porsi<100 (porsi 100% sudah jelas dari
+//   sekadar nama, tidak perlu diulang)
+// - >1 pemilik dgn 1 yang dominan (porsi>=60) -> nama dominan (sama
+//   aturan singkat) + porsi%, konsisten kartu Dana Titipan yang juga
+//   pakai ambang 60% utk keputusan tampilan serupa
+// - >1 pemilik, tidak ada yang dominan -> 'Bersama'
+function assetOwnerCellHtml(a){
+if(typeof MultiOwnerEngine==='undefined')return '—';
+const res=MultiOwnerEngine.getOwners(a);
+if(!res||!res.ok||!res.owners||!res.owners.length)return '—';
+const owners=res.owners;
+const shortName=(n)=>{
+const words=String(n||'').trim().split(/\s+/).filter(Boolean);
+if(!words.length)return '?';
+if(words.length===1)return words[0].slice(0,3);
+return words.map((w)=>w[0]).join('').slice(0,3).toUpperCase();
+};
+if(owners.length===1){
+const o=owners[0];
+if(o.isSelf)return 'Saya';
+return escapeHtml(shortName(o.ownerName))+(o.porsi<100?` · ${Math.round(o.porsi)}%`:'');
+}
+const dominant=owners.reduce((max,o)=>((o.porsi||0)>(max?max.porsi:0)?o:max),null);
+if(dominant&&dominant.porsi>=60)return escapeHtml(shortName(dominant.ownerName))+` · ${Math.round(dominant.porsi)}%`;
+return 'Bersama';
+}
 function assetTableRowHTML(a){
 const jenisChip=`<span class="acc-chip">${escapeHtml(a.jenis)}</span>`;
 const lokasiChip=a.lokasi?` <span class="acc-chip">📍 ${escapeHtml(a.lokasi)}</span>`:'';
@@ -2419,10 +2454,11 @@ const assetWarn=(typeof assetCrossCheckWarning==='function')?assetCrossCheckWarn
 const assetWarnChip=assetWarn?` <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="${escapeHtml(assetWarn)}">⚠️</span>`:'';
 return`<tr class="tx-tbl-row u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}">
     <td class="tx-tbl-desc"><div class="tx-name">${Aset.ICON[a.jenis]||'📦'} ${escapeHtml(a.name)}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}${assetWarnChip}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></td>
+    <td class="num u-fs11 u-t2">${assetOwnerCellHtml(a)}</td>
     <td class="tx-amount num">${fmt(a.nilai)}</td>
     <td class="tx-tbl-del"><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></td>
   </tr>`;
 }
 function assetTableHTML(list){
-return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Aset</th><th class="num">Nilai</th><th></th></tr></thead><tbody>${list.map(assetTableRowHTML).join('')}</tbody></table></div>`;
+return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Aset</th><th class="num">Pemilik</th><th class="num">Nilai</th><th></th></tr></thead><tbody>${list.map(assetTableRowHTML).join('')}</tbody></table></div>`;
 }
