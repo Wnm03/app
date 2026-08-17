@@ -122,6 +122,48 @@ return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHt
     </div>
   </div>`;
 }
+// txTableRowHTML/txTableHTML — S637 (RENCANA-MODERNISASI-UI.md, tema
+// "modern"/Ledger Pro). Jalur render BARU, ADDITIF -- txHTML() di atas 0
+// disentuh, tetap dipakai apa adanya utk 10 tema lama. Dipanggil dari
+// renderKeuangan() (modules-render.js) HANYA saat D.profile.theme==='modern',
+// menggantikan visible.map(txHTML) utk container #allTx.
+// Cakupan sesi ini: HANYA tab Uang (#allTx). Riwayat (filterTxList) & Dana
+// Titipan sengaja TIDAK disentuh (rencana bertahap, sesi terpisah).
+// Item virtual tagihan (vbill_*, #allTxVirtualBills) TIDAK lewat sini --
+// tetap dirender via txHTML() apa adanya di jalur terpisah (bukan transaksi
+// riil, tidak boleh ikut hitungan saldo berjalan).
+// Kolom "Saldo" (saldo berjalan) HANYA muncul kalau balMap diisi (dipanggil
+// dgn accId spesifik, bukan "Semua Akun") -- keputusan user: saldo berjalan
+// lintas-akun (gabungan kas+bank+e-wallet dst) tidak bermakna secara
+// finansial, jadi kolom itu sengaja disembunyikan total (bukan ditampilkan
+// "0"/keliru) saat filter Akun = Semua Akun.
+function txTableRowHTML(t,balAfter){
+const cats=getAllCats();
+let icon='💰';
+if(t.type==='transfer_out'||t.type==='transfer_in')icon='⇄';
+else{const cat=cats.find(c=>c.name===t.category);if(cat)icon=cat.emoji;}
+const sign=(t.type==='income'||t.type==='transfer_in')?'+':'-';
+const cls=(t.type==='income'||t.type==='transfer_in')?'green':'red';
+const acc=D.accounts.find(a=>a.id===t.accountId);
+const subText=t.subcategory?(' · '+t.subcategory):'';
+const pmIcons={cicilan:'💳',langganan:'🔁',tagihan:'🧾',utang:'📕',tunai:''};
+const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pmIcons[t.payMethod]||''} ${t.payMethod}</span>`:'';
+const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxAssetSplit(t):null;
+const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
+const saldoCell=(balAfter!==undefined&&balAfter!==null)?`<td class="tx-amount tx-tbl-saldo num">${fmt(balAfter)}</td>`:'';
+return`<tr class="tx-tbl-row u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
+    <td class="tx-tbl-date">${t.date}</td>
+    <td class="tx-tbl-desc"><div class="tx-name">${icon} ${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.note?escapeHtml(t.note)+' · ':''}${acc?`<span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div></td>
+    <td class="tx-amount ${cls} num">${sign}${fmt(t.amount)}</td>
+    ${saldoCell}
+    <td class="tx-tbl-del"><button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button></td>
+  </tr>`;
+}
+function txTableHTML(items,accIdForBalance){
+const balMap=accIdForBalance&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accIdForBalance):null;
+const showSaldo=!!balMap;
+return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Nominal</th>${showSaldo?'<th class="num">Saldo</th>':''}<th></th></tr></thead><tbody>${items.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join('')}</tbody></table></div>`;
+}
 // BUGFIX (Bug E, s633, lihat AUDIT-s632-bugE-renovasi-delete-cascade.md):
 // diekstrak APA ADANYA (0 perubahan logika/urutan/pesan toast) dari badan
 // delTx() -- cascade bbmLinkId/partStockId/stockItems/stockProductId/

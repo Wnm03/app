@@ -53,6 +53,39 @@ if(!_accBalCache)_accBalCache=new Map();
 _accBalCache.set(accId,bal);
 return bal;
 }
+// computeAccRunningBalances(accId) — S637 (RENCANA-MODERNISASI-UI.md, tema
+// "modern"/Ledger Pro, kolom "saldo berjalan" di tabel transaksi #allTx).
+// PURE, read-only, 0 mutasi & 0 cache (dipanggil hanya saat render tabel
+// modern utk 1 akun terpilih, bukan tiap siklus penuh spt recalcAccBalance).
+// Rumus PERSIS SAMA dgn recalcAccBalance() (income+/expense-/transfer_out-/
+// transfer_in+, seed dari acc.baseBalance!==undefined?...:acc.balance||0) --
+// 0 rumus baru, cuma direkam PER LANGKAH (balance-after tiap transaksi)
+// bukan cuma totalnya. List transaksi diurutkan naik berdasar tanggal
+// (stable sort -- transaksi tanggal sama tetap urutan D.transactions asli,
+// konsisten dgn kovensi sort turun di renderKeuangan yg jg stable) supaya
+// akumulasi kronologis benar terlepas dari urutan tampil (visible di
+// renderKeuangan selalu urut turun/terbaru dulu).
+// PENTING: dihitung dari SELURUH riwayat transaksi akun ini (bukan cuma
+// subset yg lolos filter kfTipe/kfKat/kfMethod/search di renderKeuangan) --
+// saldo yg ditampilkan adalah saldo akun SESUNGGUHNYA setelah transaksi itu
+// terjadi (semantik "buku kas" literal), bukan saldo semu dari subset
+// terfilter. Balikin Map<txId, saldoSetelahTx>; accId tidak ditemukan/tanpa
+// transaksi -> Map kosong.
+function computeAccRunningBalances(accId){
+const result=new Map();
+const acc=D.accounts.find(a=>a.id===accId);
+if(!acc)return result;
+let bal=acc.baseBalance!==undefined?acc.baseBalance:(acc.balance||0);
+const list=[...(_getTxByAccIndex().get(accId)||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+list.forEach(t=>{
+if(t.type==='income')bal+=t.amount;
+else if(t.type==='expense')bal-=t.amount;
+else if(t.type==='transfer_out')bal-=t.amount;
+else if(t.type==='transfer_in')bal+=t.amount;
+result.set(t.id,bal);
+});
+return result;
+}
 // isAccOwnershipSelf(acc) — helper REUSE dari OwnershipEngine (Sesi 192, Ownership
 // Sync Akun & Keuangan). Balikin true kalau kepemilikan EFEKTIF akun ini SELF
 // (termasuk akun lama yg belum punya field `ownership` sama sekali — via

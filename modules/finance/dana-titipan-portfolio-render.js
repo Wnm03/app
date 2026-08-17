@@ -467,10 +467,10 @@ const DanaTitipanPortfolioPresenter = {
             <div class="titipan-holding-row u-flex u-jcb u-fs11 u-mb2" data-linked-asset-id="${escapeHtml(assetId)}">
               <span>${nameHtml} <span class="u-t2">(${hh.ownerPct}%)</span></span>
               <span>${hh.hasGainTracking === false ? `
-                <span class="u-t2">Nilai: ${this._money(hh.currentValue)}</span>
+                <span class="u-t2 money">Nilai: ${this._money(hh.currentValue)}</span>
               ` : `
-                <span class="u-t2">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
-                &nbsp;<span class="${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>
+                <span class="u-t2 money">${this._money(hh.allocatedPrincipal)} → ${this._money(hh.currentValue)}</span>
+                &nbsp;<span class="money ${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>
               `}</span>
             </div>
           `;
@@ -516,7 +516,7 @@ const DanaTitipanPortfolioPresenter = {
             <details class="titipan-custodian-group u-ml10 u-mb2">
               <summary class="u-flex u-jcb u-fs11 u-pointer">
                 <span class="u-t2">🏦 ${escapeHtml(node.custodianName)} (${node.items.length})</span>
-                <span class="u-t2">${this._money(sub.allocatedPrincipal)} → ${this._money(sub.currentValue)} <span class="${this._gainCls(sub.gain)}">${this._gainMoney(sub.gain)}</span></span>
+                <span class="u-t2 money">${this._money(sub.allocatedPrincipal)} → ${this._money(sub.currentValue)} <span class="money ${this._gainCls(sub.gain)}">${this._gainMoney(sub.gain)}</span></span>
               </summary>
               ${node.items.map((hh) => this._holdingRowHtml(hh)).join('')}
             </details>
@@ -797,10 +797,10 @@ const DanaTitipanPortfolioPresenter = {
           <summary class="u-flex u-jcb u-fs12 u-pointer titipan-summary-sticky">
             <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
             <span>
-              <span class="u-t2">Pokok</span> <span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Pokok</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
               &nbsp;→&nbsp;
-              <span class="u-t2">Kini</span> <span class="u-fw700">${this._money(o.currentValue)}</span>
-              &nbsp;<span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
+              <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(o.currentValue)}</span>
+              &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
             </span>
           </summary>
           <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
