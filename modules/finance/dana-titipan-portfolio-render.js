@@ -276,6 +276,26 @@ const DanaTitipanPortfolioPresenter = {
     if (typeof DanaTitipanPortfolioAPI === 'undefined') return '';
     const list = DanaTitipanPortfolioAPI.getReturns(ownerId) || [];
     if (!list.length) return '';
+    // S642 (RENCANA-PERLUASAN-LEDGER-PRO-RIWAYAT-TITIPAN.md): tema "modern"
+    // pakai mini-tabel (reuse class .tx-tbl* dari s637, 0 CSS baru) KHUSUS
+    // isi daftar riwayat pengembalian ini -- struktur <details> pembungkus
+    // kartu owner (pemanggil, baris ~852) TIDAK disentuh sama sekali, sesuai
+    // batasan rencana ("perluas isi badan <details>, bukan ganti
+    // struktur-nya"). 10 tema lama tetap jalur div/flex lama apa adanya.
+    if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
+      return `
+          <div class="u-fs11 u-t2 u-ml10 u-mt4">Riwayat pengembalian:</div>
+          <div class="tx-tbl-wrap u-ml10"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Catatan</th><th class="num">Nominal</th><th></th></tr></thead><tbody>
+          ${list.map((r) => `
+            <tr class="tx-tbl-row">
+              <td class="tx-tbl-date">${r.returnDate ? escapeHtml(r.returnDate) : '—'}</td>
+              <td>${r.notes ? escapeHtml(r.notes) : ''}</td>
+              <td class="num tx-amount money">↩️ ${this._money(r.amount)}</td>
+              <td class="tx-tbl-del"><button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${r.id}"]' aria-label="Hapus riwayat pengembalian">🗑️</button></td>
+            </tr>
+          `).join('')}
+          </tbody></table></div>`;
+    }
     return `
           <div class="u-fs11 u-t2 u-ml10 u-mt4">Riwayat pengembalian:</div>
           ${list.map((r) => `

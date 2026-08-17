@@ -459,7 +459,23 @@ ownerSplitEl.style.display=ownerSplitHtml?'block':'none';
 const FTX_PAGE_SIZE=100;
 const visibleCount=Math.min(sorted.length,FTX_PAGE_SIZE);
 const visible=sorted.slice(0,visibleCount);
-document.getElementById('filterTxList').innerHTML=visible.length?visible.map(txHTML).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Tidak ada transaksi</div></div>';
+// S641 (lanjutan RENCANA-PERLUASAN-LEDGER-PRO-RIWAYAT-TITIPAN.md, pola
+// identik s637/modules-render.js): tema "modern" pakai jalur tabel Ledger
+// Pro (txTableHTML, sudah ada sejak s637 di tx-list-cashflow.js) utk
+// #filterTxList. REUSE 100% -- 0 fungsi/CSS baru. Kolom saldo berjalan
+// HANYA valid saat scope==='account' (1 akun spesifik, dipanggil dari
+// Aset.openTxHistory) -- scope lain (dashboard/keuangan/laporan) bisa
+// lintas-akun sehingga "saldo berjalan" tidak bermakna; txTableHTML sudah
+// py param accIdForBalance yg kalau null otomatis sembunyikan kolom Saldo
+// (lihat showSaldo di tx-list-cashflow.js), jadi tinggal pakai
+// `scope==='account'?accId:null` -- 0 percabangan tambahan di sini. 10
+// tema lama 0 dampak, tetap jalur txHTML() kartu apa adanya di else.
+const ftxEmpty='<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Tidak ada transaksi</div></div>';
+if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
+document.getElementById('filterTxList').innerHTML=visible.length?txTableHTML(visible,scope==='account'?accId:null):ftxEmpty;
+}else{
+document.getElementById('filterTxList').innerHTML=visible.length?visible.map(txHTML).join(''):ftxEmpty;
+}
 let ftxMoreWrap=document.getElementById('filterTxLoadMoreWrap');
 if(!ftxMoreWrap){
 ftxMoreWrap=document.createElement('div');
@@ -475,7 +491,18 @@ ftxMoreWrap.querySelector('button').onclick=function(){
 const shown=parseInt(ftxMoreWrap.dataset.shown||String(FTX_PAGE_SIZE),10);
 const nextCount=Math.min(sorted.length,shown+FTX_PAGE_SIZE);
 const nextBatch=sorted.slice(shown,nextCount);
+// S641: batch "muat lebih banyak" ikut jalur yg sama dgn render awal di
+// atas -- tabel modern append <tr> lewat txTableRowHTML per item (bukan
+// txTableHTML penuh, supaya tidak nyisipin <table>/<thead> baru di
+// tengah tbody yang sudah ada), kartu lama append txHTML apa adanya.
+if(D.profile&&D.profile.theme==='modern'&&typeof txTableRowHTML==='function'){
+const balMap=scope==='account'&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accId):null;
+const tbody=document.querySelector('#filterTxList .tx-tbl tbody');
+if(tbody)tbody.insertAdjacentHTML('beforeend',nextBatch.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join(''));
+else document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(txHTML).join(''));
+}else{
 document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(txHTML).join(''));
+}
 ftxMoreWrap.dataset.shown=nextCount;
 if(nextCount>=sorted.length){ftxMoreWrap.style.display='none';}
 else{this.textContent=`⬇️ Tampilkan lebih banyak (${sorted.length-nextCount} lagi)`;}
