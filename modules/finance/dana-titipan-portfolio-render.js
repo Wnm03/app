@@ -617,10 +617,22 @@ const DanaTitipanPortfolioPresenter = {
   // `id="titipanAssetPick_${oi}"`, `data-owner-id`, tombol-tombol
   // data-action, `_returnsHistoryHtml()`, `_holdingsListHtml()`) TETAP
   // SAMA PERSIS di kedua jalur, 0 duplikasi logic.
+  // MOCKUP-ALIGN (audit tampilan, Agustus 2026): kartu owner sebelumnya
+  // <details> polos (0 border/radius) -- jauh dari kartu bulat + avatar
+  // bulat inisial nama yang dipakai kedua mockup (`.owner-tbl`/`.tcard`).
+  // FIX ADDITIF: tambah class `titipan-card titipan-owner-card` (styling
+  // kartu bulat, styles.css) + atribut `data-owner-initial` (huruf
+  // pertama nama, dibaca CSS `content:attr(data-owner-initial)` pada
+  // `.titipan-owner-avatar::before` -- 0 <span> nama baru ditulis supaya
+  // teks "👤 nama" yang sudah dicek test tetap PERSIS 1x, bukan duplikat).
+  // 0 logic/id/data-action lain diubah -- summary sticky, alert class,
+  // Pokok/Kini/gain tetap sama persis.
   _ownerCardHtml(o, oi) {
+    const initial = escapeHtml(String(o.ownerName || '?').trim().charAt(0).toUpperCase() || '?');
     return `
-        <details class="u-mb6${o.allocationStatus === 'OVER_ALLOCATED' ? ' titipan-owner-alert' : ''}" id="titipanOwnerCard_${oi}">
+        <details class="u-mb6 titipan-card titipan-owner-card${o.allocationStatus === 'OVER_ALLOCATED' ? ' titipan-owner-alert' : ''}" id="titipanOwnerCard_${oi}">
           <summary class="u-flex u-jcb u-fs12 u-pointer titipan-summary-sticky">
+            <span class="titipan-owner-avatar" data-owner-initial="${initial}" aria-hidden="true"></span>
             <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
             <span>
               <span class="u-t2">Pokok</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
@@ -833,33 +845,44 @@ const DanaTitipanPortfolioPresenter = {
   // `openSetSaldoAwal()`/`openTambahDeposit()` MASIH STUB (toast "belum
   // tersedia") sampai Bagian 2 mengisi modal sungguhan — lihat komentar di
   // definisi `DanaTitipanPoolUI` utk detail.
+  // MOCKUP-ALIGN (audit tampilan vs mockup-ledgerpro.html/mockup-minimal.html,
+  // Agustus 2026): kartu ringkasan pool sebelumnya berupa kotak dashed polos
+  // (border putus-putus, tanpa hierarki visual) -- jauh dari kartu bulat
+  // (border-radius 14px) & tipografi besar utk angka utama yang dipakai
+  // kedua mockup ("hero" amount + baris sekunder). FIX: markup dibungkus
+  // `.titipan-card` (kartu bulat solid, styles.css) + baris pertama tiap
+  // status ditandai `.titipan-card-hero` (angka besar, pola `.hero-amt`
+  // mockup-minimal) sedangkan baris berikutnya `.titipan-pool-row` (pola
+  // `.bento-card`/`.tick` mockup). 0 teks/label/data-action diubah -- semua
+  // string yang dicek test (👥/💰/📋/🔴/🟢, "Belum diset", "Set Saldo Awal
+  // Dana Titipan", dst) tetap PERSIS sama, murni pembungkus + class baru.
   _poolSummaryHtml(principalAmountTotal) {
     if (typeof DanaTitipanPoolAPI === 'undefined') return '';
     const status = DanaTitipanPoolAPI.status();
     const masuk = DanaTitipanPoolAPI.poolMasukTotal();
     const sudahDialokasikan = Number(principalAmountTotal) || 0;
     const hasPoolUI = (typeof DanaTitipanPoolUI !== 'undefined');
-    const wrapOpen = '<div class="titipan-pool-summary u-fs11 u-mb8" style="border:1px dashed var(--border,#ddd);border-radius:8px;padding:8px 10px">';
+    const wrapOpen = '<div class="titipan-pool-summary titipan-card u-mb8">';
 
     if (status === 'NOT_MIGRATED') {
-      const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt6" data-action="DanaTitipanPoolUI.openSetSaldoAwal">Set Saldo Awal Dana Titipan</button>' : '';
+      const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="DanaTitipanPoolUI.openSetSaldoAwal">Set Saldo Awal Dana Titipan</button>' : '';
       return `${wrapOpen}
-        <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
-        <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">Belum diset</span></div>
+        <div class="titipan-card-hero"><span class="titipan-pool-lbl">👥 Sudah Dialokasikan</span><span class="titipan-pool-amt">${this._money(sudahDialokasikan)}</span></div>
+        <div class="titipan-pool-row"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">Belum diset</span></div>
         <div class="u-fs10 u-t2 u-mt4">📋 Status: Data lama / belum dimigrasikan</div>
         ${btn}
       </div>`;
     }
 
-    const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt6" data-action="DanaTitipanPoolUI.openTambahDeposit">+ Tambah Deposit</button>' : '';
+    const btn = hasPoolUI ? '<button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="DanaTitipanPoolUI.openTambahDeposit">+ Tambah Deposit</button>' : '';
 
     if (status === 'OVER_ALLOCATED') {
       const lebih = DanaTitipanPoolAPI.overAllocatedAmount();
       return `${wrapOpen}
-        <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">${this._money(masuk)}</span></div>
-        <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
-        <div class="u-flex u-jcb"><span class="u-t2">🔴 Alokasi melebihi pool</span><span class="titipan-over-badge red">${this._money(lebih)}</span></div>
-        <div class="u-flex u-jcb"><span class="u-t2">Belum Dialokasikan</span><span class="u-fw700">${this._money(0)}</span></div>
+        <div class="titipan-card-hero"><span class="titipan-pool-lbl">💰 Dana Titipan Masuk</span><span class="titipan-pool-amt">${this._money(masuk)}</span></div>
+        <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
+        <div class="titipan-pool-row"><span class="u-t2">🔴 Alokasi melebihi pool</span><span class="titipan-over-badge red">${this._money(lebih)}</span></div>
+        <div class="titipan-pool-row"><span class="u-t2">Belum Dialokasikan</span><span class="u-fw700">${this._money(0)}</span></div>
         ${btn}
       </div>`;
     }
@@ -867,9 +890,9 @@ const DanaTitipanPortfolioPresenter = {
     // status === 'OK'
     const sisa = DanaTitipanPoolAPI.sisaAlokasi();
     return `${wrapOpen}
-      <div class="u-flex u-jcb"><span class="u-t2">💰 Dana Titipan Masuk</span><span class="u-fw700">${this._money(masuk)}</span></div>
-      <div class="u-flex u-jcb"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
-      <div class="u-flex u-jcb"><span class="u-t2">🟢 Belum Dialokasikan</span><span class="u-fw700 green">${this._money(sisa)}</span></div>
+      <div class="titipan-card-hero"><span class="titipan-pool-lbl">💰 Dana Titipan Masuk</span><span class="titipan-pool-amt">${this._money(masuk)}</span></div>
+      <div class="titipan-pool-row"><span class="u-t2">👥 Sudah Dialokasikan</span><span class="u-fw700">${this._money(sudahDialokasikan)}</span></div>
+      <div class="titipan-pool-row"><span class="u-t2">🟢 Belum Dialokasikan</span><span class="u-fw700 green">${this._money(sisa)}</span></div>
       ${btn}
     </div>`;
   },
@@ -985,17 +1008,36 @@ const DanaTitipanPortfolioPresenter = {
       return;
     }
 
+    // MOCKUP-ALIGN (audit tampilan, Agustus 2026 — screenshot user: layar
+    // Dana Titipan didominasi baris teknis rekonsiliasi/audit — "Pengeluaran
+    // Majoris", "Sisa Saldo Majoris Belum Terpotong", warning "Beda dgn
+    // total Estimasi..." — di ATAS lipatan, padahal kedua mockup
+    // (mockup-ledgerpro.html/mockup-minimal.html) hanya menonjolkan 1 angka
+    // ringkasan per kartu & menyembunyikan rincian di balik expand). FIX
+    // ADDITIF: "Total Teralokasi" (angka paling relevan utk sekali lihat)
+    // TETAP selalu tampil apa adanya, gaya kartu footer (`.titipan-card`
+    // baru) menggantikan border-top dashed lama. Baris-baris audit
+    // berikutnya (Total Pokok Dikomit/rekonsiliasi Majoris/Estimasi Belum
+    // Teralokasi/Kelebihan Alokasi) DIPINDAH APA ADANYA (0 teks/angka/
+    // urutan/kondisi diubah) ke dalam <details class="titipan-detail-toggle
+    // titipan-audit-toggle"> collapsed-by-default, pola SAMA PERSIS
+    // <details class="titipan-detail-toggle"> per-owner (S632) — semua
+    // string yang dicek test (mis. "Total Kelebihan Alokasi",
+    // "Pengeluaran Majoris") tetap ada di innerHTML, cuma disembunyikan
+    // visual sampai user tap "🔍 Rincian Audit & Rekonsiliasi".
     el.innerHTML = poolSummary + addBtn + expenseBtn + `
       <div class="u-fs11 u-t2 u-mt10 u-mb4">Dana titipan dalam investasi (per pemilik, teralokasi ke instrumen):</div>
       ${this._ownerListHtml(projection.owners)}
-      <div class="u-flex u-jcb u-fs12 u-mt6 u-pt6" style="border-top:1px dashed var(--border,#ddd)">
-        <span class="u-fw700">Total Teralokasi</span>
-        <span>
-          <span class="u-fw700">${this._money(projection.totals.allocatedPrincipalTotal)}</span>
-          → <span class="u-fw700">${this._money(projection.totals.currentValueTotal)}</span>
-          &nbsp;<span class="u-fw700 ${this._gainCls(projection.totals.gainTotal)}">${this._gainMoney(projection.totals.gainTotal)}</span>
+      <div class="titipan-card titipan-card-hero u-mt10">
+        <span class="titipan-pool-lbl">Total Teralokasi</span>
+        <span class="titipan-pool-amt">
+          ${this._money(projection.totals.allocatedPrincipalTotal)}
+          → ${this._money(projection.totals.currentValueTotal)}
+          &nbsp;<span class="${this._gainCls(projection.totals.gainTotal)}">${this._gainMoney(projection.totals.gainTotal)}</span>
         </span>
       </div>
+      <details class="titipan-detail-toggle titipan-audit-toggle u-mt6">
+        <summary class="u-fs11 u-t2 u-pointer">🔍 Rincian Audit &amp; Rekonsiliasi</summary>
       <div class="u-flex u-jcb u-fs11 u-mt4">
         <span class="u-t2">Total Pokok Dikomit</span>
         <span class="u-fw700">${this._money(projection.totals.principalAmountTotal)}</span>
@@ -1037,6 +1079,7 @@ const DanaTitipanPortfolioPresenter = {
         <span class="u-t2">Total Kelebihan Alokasi</span>
         <span class="titipan-over-badge red">⚠️ ${this._money(projection.totals.overAllocatedTotal)}</span>
       </div>` : ''}
+      </details>
     `;
     this._restoreAssetPickSelections(el, savedAssetPicks);
   },
