@@ -294,6 +294,58 @@ details.card[open] summary::after{transform:rotate(180deg)}
    padding besar default .tx-tbl td (8px) supaya <details> di dalamnya
    rapat spt kartu biasa, bukan double-padded. */
 .titipan-tbl-owner-cell { padding: 6px 8px !important; }
+
+/* MOCKUP-ALIGN (audit tampilan vs mockup-ledgerpro.html/mockup-minimal.html,
+   Agustus 2026 — laporan user "tampilan masih belum sesuai mockup"). Beda
+   sebelumnya: layar Dana Titipan (dana-titipan-portfolio-render.js) memakai
+   class titipan-pool-summary/titipan-owner-card/titipan-over-badge/dst yang
+   0 CSS-nya sama sekali (murni border dashed inline + flex polos) -- jauh
+   dari kartu bulat + avatar bulat + angka hero yang jadi ciri khas KEDUA
+   mockup. Aturan berikut TIDAK di-gate [data-theme="modern"] (beda dari
+   blok titipan-holding-row/tx-tbl* di atas) supaya style kartu ini jadi
+   default di SEMUA tema (screenshot user memakai tema default/gelap,
+   bukan "modern") -- 0 HTML/JS lain diubah, murni styling utk class yang
+   sudah/baru ditambahkan di dana-titipan-portfolio-render.js. */
+
+.titipan-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; }
+
+/* Kartu ringkasan pool ("👥 Sudah Dialokasikan" dst) & kartu footer "Total
+   Teralokasi" — angka utama jadi besar (pola .hero-amt mockup-minimal),
+   baris sekunder rapi lewat titipan-pool-row (pola .tick mockup-ledgerpro). */
+.titipan-card-hero { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.titipan-pool-lbl { font-size: var(--fs-caption); color: var(--text2); font-weight: 500; }
+.titipan-pool-amt { font-size: 22px; font-weight: 700; letter-spacing: -.3px; font-variant-numeric: tabular-nums; color: var(--text); }
+.titipan-pool-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--border); font-size: var(--fs-label); }
+.titipan-pool-row:first-of-type { border-top: none; }
+
+/* Badge alokasi berlebih ("⚠️ Rp X") — sebelumnya teks polos, sekarang
+   pil merah spt .titipan-over-badge dipakai kedua tempat (pool summary &
+   rincian audit). */
+.titipan-over-badge { background: var(--accent2-soft); border: 1px solid var(--accent2); border-radius: var(--r-pill); padding: 2px 10px; font-weight: 700; font-size: var(--fs-label); white-space: nowrap; }
+
+/* Kartu owner per pemilik — bulat + avatar inisial (pola .owner-tbl/.tcard
+   kedua mockup). <details> summary jadi head kartu, isi (holdings/tombol)
+   jadi body -- struktur <details> lama (id/data-action) 0 diubah. */
+.titipan-owner-card { padding: 0; overflow: hidden; margin-bottom: 8px !important; }
+.titipan-owner-card > summary { padding: 12px 14px; margin: 0; list-style: none; gap: 10px; }
+.titipan-owner-card > summary::-webkit-details-marker { display: none; }
+.titipan-owner-card > summary::after { content: '▸'; color: var(--text2); font-size: 11px; transition: transform var(--dur-base) ease; margin-left: 6px; }
+.titipan-owner-card[open] > summary::after { transform: rotate(90deg); }
+.titipan-owner-card > summary > *:not(.titipan-owner-avatar):not(:last-child) { flex: 1; }
+.titipan-owner-card > *:not(summary) { padding: 0 14px 12px; }
+.titipan-owner-card.titipan-owner-alert { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2-soft); }
+.titipan-owner-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto !important; font-size: 11px; font-weight: 700; color: var(--text2); }
+.titipan-owner-avatar::before { content: attr(data-owner-initial); }
+
+/* Rincian audit/rekonsiliasi (Total Pokok Dikomit/Majoris/Estimasi Belum
+   Teralokasi/Kelebihan Alokasi) — collapsed by default, tipografi muted
+   supaya angka ringkasan ("Total Teralokasi") yang paling relevan tidak
+   tenggelam, pola sama .titipan-detail-toggle per-owner (S632). */
+.titipan-detail-toggle { font-size: var(--fs-label); }
+.titipan-detail-toggle > summary { list-style: none; padding: 4px 0; color: var(--text2); }
+.titipan-detail-toggle > summary::-webkit-details-marker { display: none; }
+.titipan-audit-toggle { border-top: 1px dashed var(--border2); padding-top: 6px; }
+
 @keyframes flashHi { 0%{box-shadow:0 0 0 3px var(--accent);background:var(--accent-soft);} 100%{box-shadow:0 0 0 0 transparent;} }
 .flash-highlight { animation: flashHi 1.1s ease-out; border-radius:var(--r-lg); }
 .stat-label { font-size:var(--fs-label); color: var(--text2); margin-bottom: 5px; font-weight: 500; }
