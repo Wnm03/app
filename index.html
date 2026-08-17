@@ -66,7 +66,7 @@
   header `Content-Security-Policy` di response, bukan cuma meta tag di sini.
 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://open.er-api.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self';">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#08090c">
 <!-- Sprint 2 Tahap 18 -- resource hints ringan (0 byte tambahan setelah
@@ -80,9 +80,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1371">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1371">
-<script src="nav-scroll.js?v=1371" defer></script>
+<link rel="stylesheet" href="styles.css?v=1374">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1374">
+<script src="nav-scroll.js?v=1374" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -148,17 +148,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1371');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1374');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1371');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1374');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1371');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1374');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -247,8 +247,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1371" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1371" defer></script>
+<script src="app-bundle-a.min.js?v=1374" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1374" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -4007,6 +4007,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1371" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1374" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

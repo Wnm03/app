@@ -109,7 +109,29 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
    / inline style-nya sama sekali (0 risiko ke titik lain yang bergantung
    ke display:flex awal itu). */
 body.has-open-modal .nav { display: none !important; }
-.nav-item { flex: 1; min-width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 7px 1px; border: none; background: none; color: var(--text3); font-size: var(--fs-caption); font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
+.nav-item { flex: 1; min-width: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 7px 1px; border: none; background: none; color: var(--text3); font-size: 12px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
+/* FIX (audit UI/UX, Agustus 2026): label nav sebelumnya var(--fs-caption)
+   = 11px, ambang bawah keterbacaan nyaman utk teks yg dibaca terus-menerus
+   sbg navigasi utama (beda dgn caption/badge kecil lain yg cuma sesekali
+   dilihat). Dinaikkan ke 12px FIXED (bukan ubah token --fs-caption global
+   -- token itu dipakai 30+ selector lain, termasuk badge ukuran pas spt
+   .kasir-tile-badge yg beresiko teks kepotong kalau ikut naik; scoping ke
+   .nav-item saja menghindari itu). Di layar sangat sempit (<360px, lihat
+   media query di bawah) dikembalikan ke 11px supaya tidak menambah resiko
+   overflow di kondisi yg sudah paling ketat. */
+/* FIX (audit UI/UX, Agustus 2026): 6 nav-item x min-width 56px + padding .nav
+   = 340px, MELEBIHI lebar viewport layar sangat kecil (mis. iPhone SE
+   320px) -- .nav punya overflow-x:auto sbg fallback, jadi bukan patah
+   layout, TAPI tab terakhir (Pajak) diam-diam terpotong/perlu discroll
+   horizontal tanpa ada indikator visual bahwa masih ada tab lain, pengguna
+   bisa tidak sadar. Breakpoint 359px dipakai (konsisten dgn breakpoint
+   sempit lain yg sudah ada di file ini, mis. .dashhub-hero-stats) --
+   turunkan min-width & svg supaya 6 item pas tanpa scroll di layar
+   sekecil apa pun, murni pengecilan, 0 perubahan struktur/perilaku. */
+@media (max-width:359px){
+  .nav-item{min-width:44px;padding:7px 0;font-size:11px;}
+  .nav-item svg{width:18px;height:18px;}
+}
 .nav-item.active { color: var(--accent); }
 .nav-item svg { width: 20px; height: 20px; transition: transform var(--dur-moderate); }
 .nav-item.active svg { transform: scale(1.1); }
@@ -554,6 +576,19 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .onboard-sub { color: var(--text2); font-size:var(--fs-body-lg); text-align: center; margin-bottom: 28px; }
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translate(-50%, 10px); background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--r-pill); padding: 10px 20px; font-size: var(--fs-body); font-weight: 600; z-index: var(--z-toast); opacity: 0; pointer-events: none; transition: opacity var(--dur-moderate) var(--ease-standard), transform var(--dur-moderate) var(--ease-emphasized); white-space: normal; max-width: 90vw; text-align: center; line-height: 1.4; color: var(--text); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+/* SESI TAMBAHAN (audit UI/UX "konfirmasi hapus tanpa undo") — varian toast dgn
+   tombol "Urungkan" (lihat toastUndo(), format-tema.js). Class `toast--action`
+   cuma ditoggle saat toast PUNYA undoFn — toast() biasa (900+ pemanggil
+   existing, teks polos) tidak pernah kena class ini, jadi style `.toast` di
+   atas 100% tidak berubah utk kasus lama. `pointer-events` di-override jadi
+   `auto` HANYA saat class ini aktif & toast sedang `.show` — toast biasa tetap
+   `pointer-events:none` (tidak menghalangi tap ke elemen di baliknya) persis
+   spt sebelum sesi ini. */
+.toast--action { text-align: left; display: flex; align-items: center; gap: 10px; padding-right: 10px; }
+.toast--action.show { pointer-events: auto; }
+.toast-msg { flex: 1; }
+.toast-undo-btn { flex-shrink: 0; background: transparent; border: 1px solid var(--accent); color: var(--accent); border-radius: var(--r-pill); padding: 5px 14px; font-size: var(--fs-label); font-weight: 700; cursor: pointer; white-space: nowrap; font-family: 'Plus Jakarta Sans', sans-serif; }
+.toast-undo-btn:active { opacity: .65; }
 .tgt-item { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
 .tgt-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .tgt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
