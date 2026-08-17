@@ -277,6 +277,13 @@ details.card[open] summary::after{transform:rotate(180deg)}
    s540-D/s631/s632/s633 disentuh). */
 [data-theme="modern"] .titipan-holding-row { padding: 6px 0; margin-bottom: 0 !important; border-bottom: 1px solid var(--border); }
 [data-theme="modern"] .titipan-holding-row:last-child { border-bottom: none; }
+/* [data-theme="modern"] Dana Titipan — daftar holding per instrumen SEKARANG
+   JUGA reuse .tx-tbl* (S637/s642), lewat _holdingsTableHtmlModern()
+   (dana-titipan-portfolio-render.js). 0 CSS baru (tx-tbl* generik, cukup
+   utk kolom Instrumen/Nilai/Porsi). Hanya nama tombol instrumen & baris
+   header grup kustodian yang butuh 2 aturan tambahan berikut. */
+[data-theme="modern"] .tx-tbl-name-btn { background: none; border: none; padding: 0; margin: 0; color: inherit; text-decoration: underline dotted; cursor: pointer; font: inherit; text-align: left; }
+.titipan-tbl-group-row td { background: var(--surface2); color: var(--text2); font-size: 10px; }
 @keyframes flashHi { 0%{box-shadow:0 0 0 3px var(--accent);background:var(--accent-soft);} 100%{box-shadow:0 0 0 0 transparent;} }
 .flash-highlight { animation: flashHi 1.1s ease-out; border-radius:var(--r-lg); }
 .stat-label { font-size:var(--fs-label); color: var(--text2); margin-bottom: 5px; font-weight: 500; }
