@@ -1935,6 +1935,17 @@ const migratedCount=list.filter(a=>a._migratedToInvestmentId).length;
 list=list.filter(a=>!a._migratedToInvestmentId);
 const migratedBanner=migratedCount?`<div class="tx-item u-pointer" data-action="dashHubNavigateToFeature" data-args='${escapeHtml(JSON.stringify([{page:'aset',tab:'investasi'}]))}'><div class="tx-icon u-bgaccsoft">💹</div><div class="tx-info"><div class="tx-name">Investasi kamu sekarang dikelola di tab Investasi</div><div class="tx-meta">${migratedCount} item dipindah dari Buku Aset</div></div><div class="tx-amount">→</div></div>`:'';
 if(!list.length){el.innerHTML=migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>';Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
+// S639 (RENCANA-MODERNISASI-UI.md): tema "modern" pakai jalur tabel list
+// padat (assetTableHTML, lanjutan pola s637 Ledger Pro/tabel Uang & s638
+// class .money Dana Titipan) utk #assetList, GANTIKAN grid kartu `.tx-item`
+// di bawah. Jalur kartu (list.map(...) di bawah) 0 disentuh -- tetap dipakai
+// apa adanya utk 10 tema lama. 0 kolom saldo berjalan (konsep itu spesifik
+// transaksi kronologis, tidak berlaku utk daftar aset).
+if(D.profile&&D.profile.theme==='modern'&&typeof assetTableHTML==='function'){
+el.innerHTML=migratedBanner+assetTableHTML(list);
+Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();
+return;
+}
 el.innerHTML=migratedBanner+list.map(a=>{
 // S306 UI polish: baris tx-meta sebelumnya menggabung jenis · label/extraLabel · lokasi ·
 // akun tertaut · kepemilikan · dana titipan · %untung jadi 1 kalimat panjang tanpa jarak
@@ -2388,3 +2399,30 @@ e.target.value='';
 // di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
 // sana. Tanpa baris ini, semua tombol data-action="Aset.xxx" gagal diam-diam.
 if (typeof Aset !== 'undefined') window.Aset = Aset;
+// assetTableRowHTML/assetTableHTML — S639 (RENCANA-MODERNISASI-UI.md,
+// lanjutan pola s637 tabel Ledger Pro Uang & s638 class .money Dana
+// Titipan). Jalur render BARU, ADDITIF -- kartu `.tx-item` di
+// Aset.renderList() 0 disentuh, tetap dipakai apa adanya utk 10 tema lama.
+// Dipanggil dari Aset.renderList() HANYA saat D.profile.theme==='modern',
+// menggantikan list.map(...) kartu utk container #assetList. Reuse PENUH
+// class `.tx-tbl*` yang sudah ada sejak s637 (0 CSS baru) -- kolom
+// disesuaikan konten Aset (Aset | Nilai | aksi), TANPA kolom saldo berjalan
+// (konsep itu spesifik transaksi kronologis, tidak berlaku utk daftar aset
+// yang bukan arus kas). Sel Nilai reuse class `.tx-amount` (sudah ada) yang
+// otomatis kebagian tabular-nums/font-mono lewat aturan [data-theme="modern"]
+// s635 -- 0 aturan font baru. Chip jenis/lokasi & badge Zakat/warning
+// cross-check REUSE PERSIS logic yang sama dgn kartu (bukan rumus baru).
+function assetTableRowHTML(a){
+const jenisChip=`<span class="acc-chip">${escapeHtml(a.jenis)}</span>`;
+const lokasiChip=a.lokasi?` <span class="acc-chip">📍 ${escapeHtml(a.lokasi)}</span>`:'';
+const assetWarn=(typeof assetCrossCheckWarning==='function')?assetCrossCheckWarning(a):null;
+const assetWarnChip=assetWarn?` <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="${escapeHtml(assetWarn)}">⚠️</span>`:'';
+return`<tr class="tx-tbl-row u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}">
+    <td class="tx-tbl-desc"><div class="tx-name">${Aset.ICON[a.jenis]||'📦'} ${escapeHtml(a.name)}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}${assetWarnChip}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></td>
+    <td class="tx-amount num">${fmt(a.nilai)}</td>
+    <td class="tx-tbl-del"><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></td>
+  </tr>`;
+}
+function assetTableHTML(list){
+return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Aset</th><th class="num">Nilai</th><th></th></tr></thead><tbody>${list.map(assetTableRowHTML).join('')}</tbody></table></div>`;
+}
