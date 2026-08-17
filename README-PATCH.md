@@ -1,44 +1,58 @@
-# Patch: Hasil Audit Fitur Shop
+# Patch: Fix loading kelip putih→hitam & tabel Dana Titipan tidak rapi
 
-## Isi (3 file: 1 baru, 2 diubah)
+Tanggal: 2026-08-17
+File yang diubah: `styles.css` (HANYA file ini, 2 blok tambahan, tidak ada yang dihapus/diubah selain itu)
 
-1. **`scripts/remove-shop-dead-files.sh`** (BARU) — hapus 9 dead file
-   (~957 KB, terverifikasi 0 referensi path-exact di `scripts/build.js`):
-   - `modules/shop/modals.js`
-   - `modules/shop/modules-render.js`
-   - `modules/shop/modules-calc.js`
-   - `modules/shop/multi-owner-engine.js`
-   - `modules/shop/features-helpers-global-security.js`
-   - `modules/modals.js`
-   - `modules/modules-render.js`
-   - `modules/modules-calc.js`
-   - `finance/tx-cobek.js`
+## Cara pakai
+1. `dana-titipan-loading-fix.patch` — git patch, apply dengan:
+   ```
+   git apply dana-titipan-loading-fix.patch
+   ```
+   atau `patch -p1 < dana-titipan-loading-fix.patch` dari root project.
+2. Atau langsung timpa `styles.css` di folder project dengan file `styles.css`
+   di zip ini (sudah berisi fix + seluruh isi asli, tidak ada yang hilang).
 
-   ⚠️ `modules/shop/business-intelligence-presenter.js` SENGAJA **tidak**
-   masuk daftar — awalnya saya kira dead juga, tapi ternyata di-lazy-load
-   runtime lewat `_loadScriptOnce()` di `app_production.html`. Jangan hapus file itu.
+## Bug #1 — Loading awal kelip putih lalu hitam
+**Root cause:** `.u-dnone { display:none; }` didefinisikan LEBIH AWAL di
+styles.css daripada `.onboard { display:flex; ... }` dan
+`.pin-screen { display:flex; ... }`. Karena spesifisitas CSS-nya sama
+(1 class), aturan yang datang belakangan di file yang menang — jadi
+`display:flex` milik `.onboard`/`.pin-screen` MENGALAHKAN `display:none`
+dari `.u-dnone`, walau elemen `<div id="onboard" class="onboard u-dnone">`
+punya class `u-dnone`. Efeknya: layar Onboarding/PIN (latar terang, sebelum
+tema gelap diterapkan `applyEffectiveTheme()`) sempat ke-paint TERBUKA di
+layar begitu HTML+CSS selesai dimuat, dan baru disembunyikan setelah JS
+(`init()` di app-bundle-b.min.js) selesai jalan beberapa saat kemudian
+(nunggu `await load()` dkk). Itulah kilatan putih→hitam yang terekam di
+video — bukan murni soal bundle JS besar, tapi soal urutan CSS.
 
-2. **`data-health-check.js`** (DIUBAH) — tambah 3 cek baru yang belum ada sebelumnya:
-   - **ID produk duplikat** di `D.products` (pola sama dgn cek ID transaksi duplikat).
-   - **Produk tertaut ke Kategori Shop yang sudah dihapus** (`product.kategoriId` → `D.cobekKategori`).
-   - **Produk tertaut ke Produsen/Supplier yang sudah dihapus** (`product.produsenId` → `D.produsen`).
+**Fix:** tambah aturan spesifisitas lebih tinggi
+`.onboard.u-dnone, .pin-screen.u-dnone { display:none; }` supaya SELALU
+menang berapa pun urutan file-nya. Tidak menyentuh HTML/JS sama sekali,
+dan tidak memakai `!important` blanket di `.u-dnone` (dipakai 150+ tempat
+lain di app) supaya risiko regresi seminimal mungkin.
 
-   Ketiganya murni baca (0 auto-repair), pola identik dengan orphan-check aset/kendaraan yang sudah ada di file ini.
+**Catatan tambahan (tidak diubah di patch ini, hanya observasi):**
+`app-bundle-a.min.js` (~1.3MB) dan `app-bundle-b.min.js` (~3.6MB) dimuat
+lewat `<script src=...>` biasa (bukan `defer`/`async`), dan `index.html`
+memakai `document.write(MODAL_HTML[n])` ~100 kali yang butuh bundle-a
+sudah tereksekusi SINKRON saat parsing HTML. Ini genuinely bikin proses
+loading "berat" (jaringan+parse besar sebelum app interaktif), tapi
+memperbaikinya butuh refactor loading strategy (mis. ganti pola
+`document.write` modal ke lazy-render), bukan patch CSS satu baris —
+di luar scope patch ini supaya tidak berisiko merusak wiring modal yang
+ada.
 
-3. **`tests/s572-tx-acc-change-stale-state.test.js`** (DIUBAH) — 1 subtest
-   lama secara eksplisit menguji ISI file dead `modules/shop/modals.js`
-   (bukti "tidak disentuh"). Karena filenya sekarang dihapus, assertion itu
-   dilepas; assertion utama (wiring LIVE `modules/shared/modals.js`) tetap
-   utuh.
+## Bug #2 — Tabel Dana Titipan (kartu per-pemilik) tidak rapi
+**Root cause:** baris ringkasan owner (`<summary class="u-flex u-jcb ...">`)
+memuat avatar + nama + blok "Pokok Rp X → Kini Rp Y +Rp Z" dalam SATU baris
+flex tanpa `flex-wrap`. Kalau ruang tidak cukup, browser men-shrink blok
+angka (child terakhir) sampai teksnya terpaksa wrap — dan karena tidak ada
+kontrol wrap, ia patah di TENGAH angka/kata ("...→ Kini" lanjut baris baru
+"Rp X +Rp 0"), persis seperti di screenshot (owner "mas sihab").
 
-## Cara pasang
-
-1. Copy `data-health-check.js` & `tests/s572-tx-acc-change-stale-state.test.js` (timpa yang lama).
-2. Copy `scripts/remove-shop-dead-files.sh` ke folder `scripts/`.
-3. Dari root project: `bash scripts/remove-shop-dead-files.sh`
-4. Verifikasi: `npm test` lalu `node scripts/build.js`.
-
-## Sudah diverifikasi di sandbox
-
-- `npm test`: **4489 test, 0 gagal** (sebelum & sesudah patch, termasuk setelah tambahan 2 cek orphan kategori/produsen).
-- `node scripts/build.js`: sukses, versi naik wajar (1364 → 1365), sintaks bundle valid.
+**Fix:** izinkan `<summary>` wrap ke 2 baris — baris atas avatar+nama, baris
+bawah blok Pokok→Kini→± turun penuh 1 baris rata kanan, dengan setiap
+potongan teks (`Pokok`, nominal, `Kini`, nominal, ±) tetap sebagai unit utuh
+yang boleh pindah baris tapi tidak pernah terpotong di tengah. Murni CSS,
+0 teks/angka/struktur HTML/JS diubah.

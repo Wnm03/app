@@ -1,0 +1,59 @@
+diff --git a/styles.css b/styles.css
+index aa20e57..26821e4 100644
+--- a/styles.css
++++ b/styles.css
+@@ -332,6 +332,22 @@ details.card[open] summary::after{transform:rotate(180deg)}
+ .titipan-owner-card > summary::after { content: '▸'; color: var(--text2); font-size: 11px; transition: transform var(--dur-base) ease; margin-left: 6px; }
+ .titipan-owner-card[open] > summary::after { transform: rotate(90deg); }
+ .titipan-owner-card > summary > *:not(.titipan-owner-avatar):not(:last-child) { flex: 1; }
++/* FIX (2026-08-17, laporan user: tabel Dana Titipan tidak rapi -- baris
++   "Pokok Rp X → Kini Rp Y +Rp Z" patah di TENGAH angka, mis. "...→ Kini"
++   lanjut baris baru "Rp X +Rp 0"). ROOT CAUSE: <summary> pakai
++   `.u-flex.u-jcb` (display:flex; justify-content:space-between) tanpa
++   flex-wrap, avatar+nama+blok-angka dipaksa muat 1 baris; begitu ruang
++   kurang (nama panjang / layar sempit), blok angka (child TERAKHIR,
++   0 flex-basis) kena shrink oleh browser sampai teks di dalamnya
++   text-wrap apa adanya -- termasuk di TENGAH "Kini"/nominal, bukan di
++   sela kata. FIX MURNI CSS (0 HTML/JS/teks diubah): izinkan summary wrap
++   ke 2 baris (avatar+nama tetap 1 baris atas; blok Pokok→Kini→± turun
++   jadi baris bawah PENUH, rata kanan) supaya SETIAP potongan teks
++   (span "Pokok"/nominal/"Kini"/nominal/±) tetap utuh sebagai unit yang
++   boleh pindah baris kalau perlu, tidak pernah lagi patah di tengah
++   angka. */
++.titipan-owner-card > summary { flex-wrap: wrap; row-gap: 4px; }
++.titipan-owner-card > summary > *:last-child { flex: 1 1 100%; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: 2px 6px; text-align: right; }
+ .titipan-owner-card > *:not(summary) { padding: 0 14px 12px; }
+ .titipan-owner-card.titipan-owner-alert { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2-soft); }
+ .titipan-owner-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto !important; font-size: 11px; font-weight: 700; color: var(--text2); }
+@@ -475,6 +491,31 @@ details.card[open] summary::after{transform:rotate(180deg)}
+ .u-rel { position:relative; }
+ .u-mt8 { margin-top:8px; }
+ .u-dnone { display:none; }
++/* FIX (2026-08-17, laporan user: loading awal terlihat berat/kelip putih->
++   hitam sebelum layar utama muncul). ROOT CAUSE: `.u-dnone{display:none}`
++   di atas KALAH oleh aturan `display:flex` milik `.onboard` (styles.css,
++   lebih jauh di bawah file ini) & `.pin-screen` (idem) karena spesifisitas
++   CSS keduanya SAMA (1 class) -- pada spesifisitas sama, urutan DEKLARASI
++   di file yang menang, BUKAN urutan class di HTML. `.onboard`/`.pin-screen`
++   didefinisikan SETELAH `.u-dnone` di file ini, jadi `display:flex` mereka
++   menimpa `display:none` di atas walau elemennya punya class "u-dnone" di
++   HTML (lihat <div class="onboard u-dnone" id="onboard"> & <div
++   class="pin-screen u-dnone" id="pinScreen"> di app_production.html/
++   index.html). Akibatnya, SEBELUM JS (init(), app-bundle-b.min.js) sempat
++   jalan & eksplisit set style.display='none', layar Onboarding/PIN
++   ke-paint browser dalam kondisi TERBUKA (bg terang, sebelum tema gelap
++   sempat diterapkan applyEffectiveTheme()) -- inilah kilatan
++   putih-lalu-hitam yang dilaporkan, BUKAN karena bundle JS berat semata.
++   FIX MURNI CSS, 0 markup/JS diubah: naikkan spesifisitas SATU tingkat
++   (2 class digabung) khusus utk kombinasi elemen ini supaya SELALU menang
++   terlepas dari urutan deklarasi manapun -- lebih aman & terlokalisir
++   drpd `!important` blanket di `.u-dnone` (yang dipakai 150+ tempat lain
++   di app ini utk show/hide, lihat audit sebelum patch ini). Semua jalur
++   JS yang MENAMPILKAN elemen ini (init(), showPinScreen(), dst) sudah
++   `classList.remove('u-dnone')` dulu sebelum set style.display -- jadi
++   0 risiko elemen jadi tidak bisa dimunculkan lagi setelah fix ini. */
++.onboard.u-dnone,
++.pin-screen.u-dnone { display: none; }
+ /* ==== Utility classes tambahan (auto-generated dari audit inline style, Jul 2026) ==== */
+ .u-fs10 { font-size:10px; }
+ .u-fs11 { font-size:var(--fs-caption); }
