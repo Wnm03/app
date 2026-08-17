@@ -26,7 +26,7 @@
    variabel + 1 aturan scoped tambahan, 0 markup disentuh; tema lama (10
    blok di atas) 0 dampak. Belum didaftarkan ke pemilihan tema di UI --
    itu scope sesi s636+ sesuai rencana bertahap. */
-[data-theme="modern"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f4f4f5;--surface3:#ececee;--surface4:#e2e2e5;  --accent:#2f6fed;--accent-soft:rgba(47,111,237,0.1);  --accent2:#dc4c4c;--accent2-soft:rgba(220,76,76,0.1);  --accent3:#16a34a;--accent3-soft:rgba(22,163,74,0.1);  --accent4:#d97706;--accent4-soft:rgba(217,119,6,0.1);  --text:#18181b;--text2:#71717a;--text3:#75757c;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(255,255,255,0.92);--shadow-card:0 4px 16px rgba(0,0,0,0.06);
+[data-theme="modern"] {  --bg:#0a0b0d;--surface:#111317;--surface2:#161920;--surface3:#1c202a;--surface4:#242a36;  --accent:#2dd4bf;--accent-soft:rgba(45,212,191,0.12);  --accent2:#f87171;--accent2-soft:rgba(248,113,113,0.12);  --accent3:#34d399;--accent3-soft:rgba(52,211,153,0.12);  --accent4:#d97706;--accent4-soft:rgba(217,119,6,0.12);  --text:#e9ebee;--text2:#82868f;--text3:#54575f;  --border:rgba(255,255,255,0.045);--border2:rgba(255,255,255,0.08);  --header-bg:rgba(10,11,13,0.92);--shadow-card:0 16px 40px rgba(0,0,0,0.5);
 }
 :root {  --z-chrome:100; --z-dropdown:150; --z-overlay:200; --z-overlay-qs:300; --z-overlay-calc:400; --z-security:900; --z-onboard:950; --z-scanner:970; --z-toast:999;  --money-pos:#16a34a;--money-neg:#dc2626;--alert:#ff5050;--alert-soft:rgba(255,80,80,.15);  --sp-1: 4px; --sp-2: 6px; --sp-3: 8px; --sp-4: 10px; --sp-5: 14px;  --sp-6: 16px; --sp-7: 18px; --sp-8: 20px; --sp-9: 24px; --sp-10: 28px; --sp-11: 36px;  --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 16px; --r-xl: 18px;  --r-2xl: 20px; --r-pill: 24px; --r-full: 999px;  --fs-caption: 11px; --fs-label: 12px; --fs-body: 13px; --fs-body-lg: 14px;  --fs-title-sm: 15px; --fs-icon: 16px; --fs-title: 17px; --fs-icon-lg: 18px; --fs-stat: 20px;
   --dur-fast: 100ms; --dur-base: 150ms; --dur-moderate: 200ms; --dur-slow: 250ms; --dur-slower: 300ms;
@@ -263,6 +263,20 @@ details.card[open] summary::after{transform:rotate(180deg)}
    ditambahkan di s635, 0 CSS numeric baru dibutuhkan di sini. */
 .dashhub-ticker { display: none; }
 [data-theme="modern"] .dashhub-ticker { display: flex; }
+/* [data-theme="modern"] ticker — visual restyle only (mockup Ledger Pro:
+   strip dgn pemisah garis vertikal), REUSE markup .bill-stat-pill 100%
+   apa adanya (0 HTML/JS diubah, 0 test s636/s640 disentuh). */
+[data-theme="modern"] .dashhub-ticker.bill-stat-pills { gap: 0; overflow-x: auto; }
+[data-theme="modern"] .bill-stat-pill { background: none; border: none; border-right: 1px solid var(--border); border-radius: 0; padding: 0 14px; flex-direction: column; align-items: flex-start; gap: 2px; }
+[data-theme="modern"] .bill-stat-pill:last-child { border-right: none; }
+[data-theme="modern"] .bill-stat-pill .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); }
+[data-theme="modern"] .bill-stat-pill .stat-val { font-family: var(--font-mono); font-weight: 600; }
+/* [data-theme="modern"] Dana Titipan — restyle .titipan-holding-row jadi
+   baris tabel padat (mockup Ledger Pro .holding-row): divider tipis +
+   padding lebih kecil. REUSE markup apa adanya (0 HTML diubah, 0 test
+   s540-D/s631/s632/s633 disentuh). */
+[data-theme="modern"] .titipan-holding-row { padding: 6px 0; margin-bottom: 0 !important; border-bottom: 1px solid var(--border); }
+[data-theme="modern"] .titipan-holding-row:last-child { border-bottom: none; }
 @keyframes flashHi { 0%{box-shadow:0 0 0 3px var(--accent);background:var(--accent-soft);} 100%{box-shadow:0 0 0 0 transparent;} }
 .flash-highlight { animation: flashHi 1.1s ease-out; border-radius:var(--r-lg); }
 .stat-label { font-size:var(--fs-label); color: var(--text2); margin-bottom: 5px; font-weight: 500; }
