@@ -528,6 +528,15 @@ const DanaTitipanPortfolioPresenter = {
   // ±gain" di summary kartu owner di atasnya (`_gainCls()`/`_money()`
   // dipakai ulang apa adanya, 0 helper format baru).
   _holdingsListHtml(holdings) {
+    // GATE tema "modern" — RENCANA-MODERNISASI-UI.md (mockup Ledger Pro
+    // .owner-tbl/.holding-row), pola SAMA PERSIS txTableHTML()
+    // (tx-list-cashflow.js, tab Uang)/assetTableHTML() (aset.js): jalur
+    // BARU 100% ADDITIF, dipanggil HANYA saat D.profile.theme==='modern'.
+    // Tema lain 0 disentuh — tetap _holdingRowHtml()/<details> grup
+    // kustodian apa adanya di bawah.
+    if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
+      return this._holdingsTableHtmlModern(holdings);
+    }
     const nodes = this._groupHoldingsByCustodian(holdings);
     return nodes.map((node) => {
       if (node.kind === 'flat') return this._holdingRowHtml(node.holding);
@@ -542,6 +551,56 @@ const DanaTitipanPortfolioPresenter = {
             </details>
           `;
     }).join('');
+  },
+
+  // _holdingsTableHtmlModern(holdings) — tema "modern" (mockup Ledger Pro
+  // .owner-tbl/.holding-row: kolom Instrumen / Nilai / Porsi rata kanan
+  // mono). REUSE class .tx-tbl* (S637/s642) & helper format
+  // (_money/_gainCls/_gainMoney) apa adanya — 0 CSS baru, 0 rumus baru,
+  // murni markup tabel pengganti baris flex. Grup kustodian
+  // (_groupHoldingsByCustodian) TETAP dipakai supaya info pengelompokan
+  // tidak hilang, direpresentasikan sbg baris header colspan penuh
+  // (.titipan-tbl-group-row) di dalam tabel yang sama — bukan <details>
+  // terpisah lagi, biar konsisten "tabel padat".
+  _holdingsTableHtmlModern(holdings) {
+    const nodes = this._groupHoldingsByCustodian(holdings);
+    const rows = nodes.map((node) => {
+      if (node.kind === 'flat') return this._holdingRowHtmlModern(node.holding);
+      const sub = this._groupSubtotal(node.items);
+      return `
+            <tr class="titipan-tbl-group-row">
+              <td colspan="3">🏦 ${escapeHtml(node.custodianName)} (${node.items.length}) <span class="money ${this._gainCls(sub.gain)}">${this._money(sub.allocatedPrincipal)} → ${this._money(sub.currentValue)} ${this._gainMoney(sub.gain)}</span></td>
+            </tr>
+            ${node.items.map((hh) => this._holdingRowHtmlModern(hh)).join('')}
+          `;
+    }).join('');
+    return `
+          <div class="tx-tbl-wrap"><table class="tx-tbl">
+            <thead><tr><th>Instrumen</th><th class="num">Nilai</th><th class="num">Porsi</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div>
+        `;
+  },
+
+  // _holdingRowHtmlModern(hh) — 1 baris <tr> tabel modern, padanan
+  // _holdingRowHtml() (flex) di atas. data-linked-asset-id & tombol nama
+  // -> openAssetPorsiDirect() dipertahankan APA ADANYA (0 logic diubah,
+  // murni dibungkus <td> bukan <div>/<span>).
+  _holdingRowHtmlModern(hh) {
+    const assetId = hh.linkedAssetId ? hh.linkedAssetId : (hh.linkedInvestmentId ? 'h:' + hh.linkedInvestmentId : '');
+    const nameHtml = assetId
+      ? `<button type="button" class="tx-tbl-name-btn" data-action="DanaTitipanCommitmentUI.openAssetPorsiDirect" data-args="${escapeHtml(JSON.stringify([assetId]))}" aria-label="Atur porsi aset ${escapeHtml(hh.name)}">${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}</button>`
+      : `${hh.hasGainTracking === false ? '🏦' : '📈'} ${escapeHtml(hh.name)}`;
+    const valCell = hh.hasGainTracking === false
+      ? `<span class="money">${this._money(hh.currentValue)}</span>`
+      : `<span class="money">${this._money(hh.currentValue)}</span> <span class="money ${this._gainCls(hh.gain)}">${this._gainMoney(hh.gain)}</span>`;
+    return `
+            <tr class="tx-tbl-row" data-linked-asset-id="${escapeHtml(assetId)}">
+              <td>${nameHtml}</td>
+              <td class="num">${valCell}</td>
+              <td class="num money">${hh.ownerPct}%</td>
+            </tr>
+          `;
   },
 
   render() {
