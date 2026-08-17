@@ -61,7 +61,7 @@ test('_ownerListHtml() — tema "modern": kartu <details> owner (id, tombol, wir
   const ctx = makeCtx(D);
   const projection = ctx.DanaTitipanPortfolioAPI.build();
   const html = ctx.DanaTitipanPortfolioPresenter._ownerListHtml(projection.owners);
-  assert.match(html, /<details class="u-mb6" id="titipanOwnerCard_0">/);
+  assert.match(html, /<details class="u-mb6 titipan-card titipan-owner-card" id="titipanOwnerCard_0">/);
   assert.match(html, /data-action="DanaTitipanCommitmentUI\.open"/);
   assert.match(html, /id="titipanAssetPick_0"/);
   assert.match(html, /id="titipanHoldingsList_0"/);
@@ -73,7 +73,7 @@ test('_ownerListHtml() — 10 tema lama (theme selain "modern"): tetap flat join
   const projection = ctx.DanaTitipanPortfolioAPI.build();
   const html = ctx.DanaTitipanPortfolioPresenter._ownerListHtml(projection.owners);
   assert.doesNotMatch(html, /<table/);
-  assert.match(html, /<details class="u-mb6" id="titipanOwnerCard_0">/);
+  assert.match(html, /<details class="u-mb6 titipan-card titipan-owner-card" id="titipanOwnerCard_0">/);
 });
 
 test('_ownerListHtml() — profile.theme kosong/undefined: tetap jalur lama (bukan default baru ke modern)', () => {

@@ -32,7 +32,13 @@ test('audit — s642 mini-tabel Dana Titipan tetap gated via D.profile.theme==="
 
 test('audit — s642 struktur <details> kartu owner Dana Titipan (S631-S634) tidak diubah', () => {
   const src = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8');
-  assert.match(src, /<details class="u-mb6\$\{o\.allocationStatus === 'OVER_ALLOCATED' \? ' titipan-owner-alert' : ''\}" id="titipanOwnerCard_\$\{oi\}">/);
+  // MOCKUP-ALIGN (Agustus 2026): class attribute kartu owner diperluas dgn
+  // `titipan-card titipan-owner-card` (kartu bulat + avatar inisial, pola
+  // .owner-tbl/.tcard mockup-ledgerpro.html/mockup-minimal.html) -- id/
+  // data-action/wiring lain di dalam <details> ini TIDAK diubah sama
+  // sekali (0 regresi struktural), assertion diupdate murni utk
+  // mencerminkan class baru yang disengaja.
+  assert.match(src, /<details class="u-mb6 titipan-card titipan-owner-card\$\{o\.allocationStatus === 'OVER_ALLOCATED' \? ' titipan-owner-alert' : ''\}" id="titipanOwnerCard_\$\{oi\}">/);
 });
 
 test('audit — CSS .tx-tbl* dipakai s641/s642 reuse dari s637, 0 class baru di styles.css sejak s637', () => {
