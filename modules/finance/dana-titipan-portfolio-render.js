@@ -607,6 +607,122 @@ const DanaTitipanPortfolioPresenter = {
     this.renderInto('danaTitipanPortfolioList');
   },
 
+  // _ownerCardHtml(o, oi) — SESI s645: markup 1 kartu owner, DIEKSTRAK
+  // apa adanya dari isi `projection.owners.map()` lama di dalam
+  // `_renderNow()` (0 perubahan visual/struktural — byte-identik dgn
+  // sebelum sesi ini). Dipakai ulang oleh KEDUA jalur di `_ownerListHtml()`
+  // di bawah: 10 tema lama (flat, apa adanya) DAN tema "modern" (dibungkus
+  // <tr><td colspan> per owner, lihat `_ownerListHtmlModern()`) — supaya
+  // seluruh wiring di dalamnya (`id="titipanOwnerCard_${oi}"`,
+  // `id="titipanAssetPick_${oi}"`, `data-owner-id`, tombol-tombol
+  // data-action, `_returnsHistoryHtml()`, `_holdingsListHtml()`) TETAP
+  // SAMA PERSIS di kedua jalur, 0 duplikasi logic.
+  _ownerCardHtml(o, oi) {
+    return `
+        <details class="u-mb6${o.allocationStatus === 'OVER_ALLOCATED' ? ' titipan-owner-alert' : ''}" id="titipanOwnerCard_${oi}">
+          <summary class="u-flex u-jcb u-fs12 u-pointer titipan-summary-sticky">
+            <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
+            <span>
+              <span class="u-t2">Pokok</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
+              &nbsp;→&nbsp;
+              <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(o.currentValue)}</span>
+              &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
+            </span>
+          </summary>
+          <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
+          (Pokok Dikomit/Estimasi Transaksi/Teralokasi/Belum Teralokasi/
+          Nilai Saat Ini/Untung-Rugi/Sudah Dikembalikan/Belum Dikembalikan)
+          dibungkus <details> collapsed-by-default, pola SAMA PERSIS
+          <details> kartu owner & grup kustodian di file ini (0 CSS/JS
+          baru). Ringkasan Pokok→Kini→gain di <summary> kartu owner di
+          atas TETAP selalu kelihatan tanpa expand apa pun — grid ini
+          murni rincian tambahan, bukan info utama. 0 rumus/data diubah,
+          murni markup pembungkus. -->
+          <details class="titipan-detail-toggle u-mb6">
+            <summary class="u-fs11 u-t2 u-pointer">Detail lengkap</summary>
+            <div class="titipan-detail-grid u-fs11 u-mt4" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
+              <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
+              ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
+              <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
+              <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
+              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
+              <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
+              <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
+            </div>
+          </details>
+          <div class="btn-row3 u-ml10 u-mb6" style="gap:6px">
+            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">✏️ Atur Pokok Dana Titipan</button>
+            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanReturnUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">↩️ Catat Pengembalian</button>
+            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.removeOwnerLinkage" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">🔓 Lepas Keterikatan Dana Titipan</button>
+          </div>
+          <!-- SESI 633 (lanjutan ringan S631/S632): sejak S631 nama
+          holding sudah bisa diklik LANGSUNG utk atur porsi aset yang
+          SUDAH tertaut (lihat _holdingRowHtml -> openAssetPorsiDirect).
+          Dropdown "Pilih Aset" + tombol "Atur Porsi Aset" di bawah ini
+          jadi HANYA perlu utk kasus TAUTKAN ASET BARU (aset yang belum
+          py baris holding) -- pola sama S632 (details collapsed), supaya
+          kartu owner tidak selalu menampilkan kontrol yang jarang dipakai
+          begitu owner sudah py holding. id select/onchange/data-owner-id
+          TIDAK diubah sama sekali (0 breaking change ke
+          onAssetPickChange/openAssetPorsi/test s543/s608 yang cari
+          elemen ini via querySelectorAll/regex, terlepas dari nesting
+          details pembungkusnya). -->
+          <details class="titipan-linkasset-toggle u-mb6 u-ml10 u-fs11">
+            <summary class="u-t2 u-pointer">+ Tautkan Aset Baru</summary>
+            <div class="u-flex u-gap4 u-mt4">
+              <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
+              <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
+            </div>
+          </details>
+          ${this._returnsHistoryHtml(o.ownerId)}
+          <div id="titipanHoldingsList_${oi}">
+          ${!o.holdings.length ? `
+            <div class="u-fs11 u-t2 u-ml10 titipan-holding-row">Belum ada instrumen terhubung ke owner ini — pilih aset dari dropdown di atas lalu atur porsinya.</div>
+          ` : this._holdingsListHtml(o.holdings)}
+          </div>
+        </details>
+      `;
+  },
+
+  // _ownerListHtml(owners) — SESI s645: GATE tema "modern" (lanjutan
+  // s644, RENCANA-PERLUASAN-LEDGER-PRO-RIWAYAT-TITIPAN.md — laporan user:
+  // baris ringkasan per-owner "👤 nama Pokok→Kini" di ATAS kartu holding
+  // masih flat/div, belum ikut jadi tabel spt mockup Ledger Pro). 10 tema
+  // lama TETAP `_ownerCardHtml()` apa adanya, flat join, 0 perubahan.
+  _ownerListHtml(owners) {
+    if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
+      return this._ownerListHtmlModern(owners);
+    }
+    return owners.map((o, oi) => this._ownerCardHtml(o, oi)).join('');
+  },
+
+  // _ownerListHtmlModern(owners) — tema "modern": bungkus tiap kartu owner
+  // (`_ownerCardHtml()`, 0 diubah sama sekali) dalam <table class="tx-tbl">
+  // (reuse class S637/s642/s644, 0 CSS baru) supaya konsisten "tabel
+  // padat" spt holdings (s644)/returns (s642). Header kolom murni visual
+  // (Pemilik / Pokok → Kini / ±) — TIDAK ada 3 <td> terpisah per baris
+  // krn tiap owner tetap 1 <details> utuh (toggle expand, tombol aksi,
+  // dropdown tautkan aset, holdings bersarang — SEMUA wiring lama ikut
+  // apa adanya) yang butuh lebar penuh; baris ringkasan Pokok→Kini→gain
+  // di dalam <summary> sudah rata kanan via markup lama sendiri, jadi
+  // header di atas cukup jadi acuan visual kolom, bukan alignment persis
+  // per-<td> (beda dari _holdingsTableHtmlModern() yang barisnya flat/
+  // leaf, 0 expand, sehingga BISA 3 <td> sungguhan).
+  _ownerListHtmlModern(owners) {
+    const rows = owners.map((o, oi) => `
+        <tr class="tx-tbl-row titipan-tbl-owner-row">
+          <td colspan="3" class="titipan-tbl-owner-cell">${this._ownerCardHtml(o, oi)}</td>
+        </tr>
+      `).join('');
+    return `
+      <div class="tx-tbl-wrap"><table class="tx-tbl">
+        <thead><tr><th>Pemilik</th><th class="num">Pokok → Kini</th><th class="num">±</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    `;
+  },
+
   // onAssetPickChange(i) — SESI 531 (fix laporan user: dropdown "Pilih
   // Aset" & tombol "⚖️ Atur Porsi" per-institusi di list holding (mis.
   // "🏦 Majoris") adalah 2 kontrol independen — dropdown pilih assetId
@@ -871,71 +987,7 @@ const DanaTitipanPortfolioPresenter = {
 
     el.innerHTML = poolSummary + addBtn + expenseBtn + `
       <div class="u-fs11 u-t2 u-mt10 u-mb4">Dana titipan dalam investasi (per pemilik, teralokasi ke instrumen):</div>
-      ${projection.owners.map((o, oi) => `
-        <details class="u-mb6${o.allocationStatus === 'OVER_ALLOCATED' ? ' titipan-owner-alert' : ''}" id="titipanOwnerCard_${oi}">
-          <summary class="u-flex u-jcb u-fs12 u-pointer titipan-summary-sticky">
-            <span>${o.allocationStatus === 'OVER_ALLOCATED' ? '⚠️ ' : ''}👤 ${escapeHtml(o.ownerName)}</span>
-            <span>
-              <span class="u-t2">Pokok</span> <span class="u-fw700 money">${this._money(o.allocatedPrincipal)}</span>
-              &nbsp;→&nbsp;
-              <span class="u-t2">Kini</span> <span class="u-fw700 money">${this._money(o.currentValue)}</span>
-              &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
-            </span>
-          </summary>
-          <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
-          (Pokok Dikomit/Estimasi Transaksi/Teralokasi/Belum Teralokasi/
-          Nilai Saat Ini/Untung-Rugi/Sudah Dikembalikan/Belum Dikembalikan)
-          dibungkus <details> collapsed-by-default, pola SAMA PERSIS
-          <details> kartu owner & grup kustodian di file ini (0 CSS/JS
-          baru). Ringkasan Pokok→Kini→gain di <summary> kartu owner di
-          atas TETAP selalu kelihatan tanpa expand apa pun — grid ini
-          murni rincian tambahan, bukan info utama. 0 rumus/data diubah,
-          murni markup pembungkus. -->
-          <details class="titipan-detail-toggle u-mb6">
-            <summary class="u-fs11 u-t2 u-pointer">Detail lengkap</summary>
-            <div class="titipan-detail-grid u-fs11 u-mt4" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
-              <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
-              ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
-              <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
-              <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
-              <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
-              <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
-              <span class="u-t2">Sudah Dikembalikan</span><span class="u-fw700">${this._money(o.returnedTotal)}</span>
-              <span class="u-t2">Pokok Belum Dikembalikan</span><span>${this._outstandingCell(o)}</span>
-            </div>
-          </details>
-          <div class="btn-row3 u-ml10 u-mb6" style="gap:6px">
-            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">✏️ Atur Pokok Dana Titipan</button>
-            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanReturnUI.open" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">↩️ Catat Pengembalian</button>
-            <button type="button" class="btn btn-ghost btn-sm" style="padding:7px 4px;font-size:10px;line-height:1.2;gap:2px;white-space:normal;text-align:center" data-action="DanaTitipanCommitmentUI.removeOwnerLinkage" data-args="${escapeHtml(JSON.stringify([o.ownerId]))}">🔓 Lepas Keterikatan Dana Titipan</button>
-          </div>
-          <!-- SESI 633 (lanjutan ringan S631/S632): sejak S631 nama
-          holding sudah bisa diklik LANGSUNG utk atur porsi aset yang
-          SUDAH tertaut (lihat _holdingRowHtml -> openAssetPorsiDirect).
-          Dropdown "Pilih Aset" + tombol "Atur Porsi Aset" di bawah ini
-          jadi HANYA perlu utk kasus TAUTKAN ASET BARU (aset yang belum
-          py baris holding) -- pola sama S632 (details collapsed), supaya
-          kartu owner tidak selalu menampilkan kontrol yang jarang dipakai
-          begitu owner sudah py holding. id select/onchange/data-owner-id
-          TIDAK diubah sama sekali (0 breaking change ke
-          onAssetPickChange/openAssetPorsi/test s543/s608 yang cari
-          elemen ini via querySelectorAll/regex, terlepas dari nesting
-          details pembungkusnya). -->
-          <details class="titipan-linkasset-toggle u-mb6 u-ml10 u-fs11">
-            <summary class="u-t2 u-pointer">+ Tautkan Aset Baru</summary>
-            <div class="u-flex u-gap4 u-mt4">
-              <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
-              <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
-            </div>
-          </details>
-          ${this._returnsHistoryHtml(o.ownerId)}
-          <div id="titipanHoldingsList_${oi}">
-          ${!o.holdings.length ? `
-            <div class="u-fs11 u-t2 u-ml10 titipan-holding-row">Belum ada instrumen terhubung ke owner ini — pilih aset dari dropdown di atas lalu atur porsinya.</div>
-          ` : this._holdingsListHtml(o.holdings)}
-          </div>
-        </details>
-      `).join('')}
+      ${this._ownerListHtml(projection.owners)}
       <div class="u-flex u-jcb u-fs12 u-mt6 u-pt6" style="border-top:1px dashed var(--border,#ddd)">
         <span class="u-fw700">Total Teralokasi</span>
         <span>
