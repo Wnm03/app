@@ -2625,6 +2625,12 @@ window.location.reload();
       <div class="theme-card" data-action="setTheme" data-args='["ink"]' data-t="ink" title="Gelap pekat nyaris hitam — kontras tinggi, aksen putih/abu doang, tanpa nuansa warna lain"><div class="theme-card-preview" style="background:#141414">◼️</div><div class="theme-card-name">Ink</div></div>
       <div class="theme-card" data-action="setTheme" data-args='["sage"]' data-t="sage" title="Terang dengan aksen hijau zaitun pudar, sisanya netral — tenang &amp; segar"><div class="theme-card-preview" style="background:#eef0ea">🌿</div><div class="theme-card-name">Sage</div></div>
       <div class="theme-card" data-action="setTheme" data-args='["auto"]' data-t="auto" title="Ganti otomatis: Light jam 06.00–18.00, Dark di luar jam itu — ikut waktu di HP ini"><div class="theme-card-preview" style="background:linear-gradient(135deg,#1a1a2e 50%,#f0f0f8 50%)">🌗</div><div class="theme-card-name">Otomatis</div></div>
+      <!-- s640 (RENCANA-MODERNISASI-UI.md): pendaftaran tema "modern" ke
+           pemilihan tema, setelah s635-s639 (token, ticker Beranda, tabel
+           Uang, class money Titipan, tabel Aset) diaudit & 4587 test pass.
+           Opsi TAMBAHAN (bukan default) sesuai rencana risiko — 10 tema
+           lama posisinya di atas TIDAK dipindah/diubah urutannya. -->
+      <div class="theme-card" data-action="setTheme" data-args='["modern"]' data-t="modern" title="Terang flat & ringan (Minimal), dgn tabel padat kolom saldo berjalan di Uang/Aset (Ledger Pro) — cocok utk pencatatan detail, tanpa font eksternal"><div class="theme-card-preview" style="background:#fafafa;color:#2f6fed">▤</div><div class="theme-card-name">Modern</div></div>
     </div>
     <div class="u-fs12 u-t2 u-mt8 u-lh15">Mode Otomatis ganti ke tema terang jam 06.00–18.00 dan tema gelap di luar jam itu.</div>
   </div>
@@ -3237,6 +3243,19 @@ window.location.reload();
       </div>
     </div>
   </div>
+  <!-- TICKER STRIP MODERN (RENCANA-MODERNISASI-UI.md, Sesi s636 — pilot
+       Beranda). Additive, di-gate lewat CSS ke [data-theme="modern"]
+       SAJA (lihat .dashhub-ticker di styles.css, s635/s636) -- tema lama
+       (dark/light/dst) 0 dampak, elemen ini selalu display:none di sana.
+       Diisi oleh DashboardHubTickerModern.render() (dashboard-hub.js),
+       yang 100% reuse pola _dashHubMonthTxShared() yang sudah ada (SAMA
+       PERSIS pola DashboardHubSummary/Analytics di bawah) -- 0 rumus
+       baru. Container & item reuse class .bill-stat-pills/.bill-stat-pill
+       yang sudah ada (bukan komponen baru). Tema "modern" ini SENDIRI
+       belum terdaftar di pemilihan tema (lihat catatan s635), jadi
+       section ini praktis tidak terlihat user manapun sampai sesi
+       pendaftaran tema dikerjakan. -->
+  <div class="bill-stat-pills dashhub-ticker" id="dashHubTickerModern"></div>
   <!-- QUICK ACTIONS (Sprint 1 Tahap 3 — Dashboard 2.0, lihat QUICK-ACTIONS.md).
        Baris tombol kartu kecil ala Material 3, tepat di bawah Hero Card. Setiap
        tombol HANYA memanggil fungsi yang SUDAH ADA (openTxModal/openCatatan/
