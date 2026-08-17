@@ -420,9 +420,16 @@ const pz=D.pajakZakat;
 const expectedNisab=85*pz.hargaEmasPerGram;
 _selfTestAssert(parsePzNum(nisabEl.textContent)===expectedNisab,'Nisab zakat maal tertampil harus = 85 × harga emas/gram ('+fmtFull(expectedNisab)+')');
 const saldoAkun=totalSaldoAkun();
-const asetZakatable=(D.assets||[]).filter(a=>a.zakatable).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0);
+// SESI 393/s476a/B8 (pajak-pbb-zakat.js, Zakat.hitungMaal()): asetZakatable sekarang
+// exclude aset yg sudah ditautkan ke Holding Investasi (`_migratedToInvestmentId`/
+// `investmentId`, dihitung lewat Investment.zakatableValue() supaya 0 dobel-hitung),
+// dan utang memprioritaskan FI.totalDebt() (Financial Intelligence, SSOT total utang)
+// kalau tersedia. Formula test SEBELUMNYA ketinggalan dari kode asli -- disamakan di
+// sini persis dgn Zakat.hitungMaal(), bukan mengubah kode asli (kode asli benar/lebih
+// baru, test-nya yang stale).
+const asetZakatable=(D.assets||[]).filter(a=>a.zakatable&&!a._migratedToInvestmentId&&!a.investmentId).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0)+(typeof Investment!=='undefined'?Investment.zakatableValue():0);
 const piutangZakatable=totalPiutangValue();
-const utang=(pz.utangJT||0)+totalDebtValue()+totalCicilanOutstanding();
+const utang=(typeof FI!=='undefined')?FI.totalDebt():((pz.utangJT||0)+totalDebtValue()+totalCicilanOutstanding());
 const expectedHarta=Math.max(0,saldoAkun+asetZakatable+piutangZakatable-utang);
 _selfTestAssert(parsePzNum(hartaEl.textContent)===expectedHarta,'Total harta zakat maal tertampil harus = saldo akun + aset zakatable + piutang zakatable − utang (manual + Buku Utang + cicilan outstanding)');
 }},
