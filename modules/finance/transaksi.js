@@ -1824,7 +1824,30 @@ function toggleMs(i){D.milestones[i]=!D.milestones[i];save();renderMs();}
 /* moved to modules-render.js: renderMs */
 /* moved to modules-render.js: renderTarget */
 /* moved to modules-render.js: renderReminder */
-function delReminder(i){D.reminders.splice(i,1);save();renderSettings();}
+// SESI TAMBAHAN (audit UI/UX "konfirmasi hapus tanpa undo" -- kalau user
+// salah tap, data hilang permanen): delReminder() dipilih sbg contoh
+// PERTAMA pemakaian toastUndo() (format-tema.js) krn hapusnya paling
+// sederhana di seluruh app -- splice 1 index dari 1 array (`D.reminders`),
+// 0 cascade ke modul lain (bandingkan delTx()/tx-list-cashflow.js yang
+// punya banyak cascade *LinkId + transfer pairing -- BELUM diretrofit
+// undo sesi ini, butuh audit terpisah per cascade). Pola: hapus DULU
+// (state akhir langsung benar & tersimpan), baru tawarkan undo -- kalau
+// user klik "Urungkan" di toast dlm 5 detik, item disisipkan balik ke
+// index SEMULA (`splice(i,0,removed)`, bukan cuma `push()` ke akhir array
+// -- urutan reminder lain tetap sama persis spt sebelum dihapus).
+function delReminder(i){
+const removed=D.reminders[i];
+D.reminders.splice(i,1);
+save();
+renderSettings();
+if(removed){
+toastUndo('🗑 Reminder "'+removed.title+'" dihapus',function(){
+D.reminders.splice(i,0,removed);
+save();
+renderSettings();
+});
+}
+}
 
 // --- List Transaksi (kartu tx, hapus tx) & filter periode Keuangan/Laporan
 // + Cashflow Forecast: dipindah ke tx-list-cashflow.js (lihat CLAUDE.md
