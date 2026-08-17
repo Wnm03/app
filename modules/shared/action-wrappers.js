@@ -88,28 +88,63 @@ function torsiCatatServisStop(name){ event.stopPropagation(); Torsi.catatServis(
 function torsiToggleCheckStop(key){ event.stopPropagation(); Torsi.toggleCheck(key); }
 function torsiSelectPartIfAllowed(noTorque, catName, name){ if(!noTorque) Torsi.selectPart(catName, name); }
 
-function keuFabOpenIncome(){ document.getElementById('keuFab').classList.remove('open'); document.getElementById('keuFabMain').setAttribute('aria-expanded','false'); openTxModal('income'); }
-function keuFabOpenExpense(){ document.getElementById('keuFab').classList.remove('open'); document.getElementById('keuFabMain').setAttribute('aria-expanded','false'); openTxModal('expense'); }
+// FIX (audit UI/UX, screenshot 2026-08-17 17:37): 5x FAB per-halaman (keuFab/
+// laporanFab/shopFab/shopLaporanFab/carNotesFab) sebelumnya mengambang bebas
+// sendiri2 di kanan-bawah. Sekarang dipicu bareng dari SATU tombol terpusat
+// di tengah nav bawah (#navFabMain, lihat markup di index.html sebelum
+// nav-item "Aset"). closeAllKeuFabs() = helper bersama supaya SEMUA jalur
+// penutupan (klik salah satu aksi di dalamnya, ATAU toggle tombol nav)
+// selalu menutup SEMUA .keu-fab yang sedang terbuka + sinkronkan balik
+// aria-expanded & rotasi ikon #navFabMain -- tidak ada state nyangkut kalau
+// user buka lewat nav lalu pilih aksi di salah satu fab (mis. tab Laporan yg
+// py 2 fab sekaligus terlihat, keuFab+laporanFab, lihat navFabToggle()).
+function closeAllKeuFabs(){
+  document.querySelectorAll('.keu-fab.open').forEach(f=>f.classList.remove('open'));
+  const navFab=document.getElementById('navFabMain');
+  if(navFab)navFab.setAttribute('aria-expanded','false');
+}
+// navFabToggle() -- toggle SEMUA .keu-fab yg SEDANG kelihatan di halaman/tab
+// aktif secara bersamaan (bukan cuma 1), supaya kasus 1 halaman py >1 FAB
+// aktif bareng (mis. #keuanganTab-laporan: keuFab TETAP tampil + laporanFab
+// tampil tambahan, lihat komentar #keuanganTab-laporan .keu-fab di
+// styles.css) tetap bisa dibuka semua lewat 1 tombol nav, bukan cuma yg
+// pertama ketemu di DOM. Visibility dicek pakai offsetParent!==null (cara
+// standar cek elemen benar2 ter-render, bukan cuma exist di DOM/di-hide via
+// ancestor u-dnone) -- konsisten dgn pola cek visibility lain di codebase.
+function navFabToggle(el){
+  const visibleFabs=Array.from(document.querySelectorAll('.keu-fab')).filter(f=>f.offsetParent!==null);
+  if(!visibleFabs.length){
+    el.setAttribute('aria-expanded','false');
+    if(typeof toast==='function')toast('Tidak ada aksi cepat di halaman ini');
+    return;
+  }
+  const willOpen=!visibleFabs[0].classList.contains('open');
+  visibleFabs.forEach(f=>f.classList.toggle('open',willOpen));
+  el.setAttribute('aria-expanded',willOpen?'true':'false');
+}
+
+function keuFabOpenIncome(){ closeAllKeuFabs(); openTxModal('income'); }
+function keuFabOpenExpense(){ closeAllKeuFabs(); openTxModal('expense'); }
 function keuFabToggleMain(el){ const _o=document.getElementById('keuFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
 function openCatModalQuick(){ openCatModal(undefined, curCatFilter==='income'?'income':'expense'); }
 
 function renovCalcOpenNull(){ RenovCalc.open(null); }
 
-function laporanFabExportPDF(){ document.getElementById('laporanFab').classList.remove('open'); document.getElementById('laporanFabMain').setAttribute('aria-expanded','false'); exportLaporanPDF(); }
-function laporanFabExportCSV(){ document.getElementById('laporanFab').classList.remove('open'); document.getElementById('laporanFabMain').setAttribute('aria-expanded','false'); exportCSV(); }
+function laporanFabExportPDF(){ closeAllKeuFabs(); exportLaporanPDF(); }
+function laporanFabExportCSV(){ closeAllKeuFabs(); exportCSV(); }
 function laporanFabToggleMain(el){ const _o=document.getElementById('laporanFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
-function shopFabOpenOrder(){ document.getElementById('shopFab').classList.remove('open'); document.getElementById('shopFabMain').setAttribute('aria-expanded','false'); openOrderModal(); }
-function shopFabOpenProduct(){ document.getElementById('shopFab').classList.remove('open'); document.getElementById('shopFabMain').setAttribute('aria-expanded','false'); openProductModal(); }
+function shopFabOpenOrder(){ closeAllKeuFabs(); openOrderModal(); }
+function shopFabOpenProduct(){ closeAllKeuFabs(); openProductModal(); }
 function shopFabToggleMain(el){ const _o=document.getElementById('shopFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
-function shopLaporanFabExportXLSX(){ document.getElementById('shopLaporanFab').classList.remove('open'); document.getElementById('shopLaporanFabMain').setAttribute('aria-expanded','false'); exportLaporanShopXLSX(); }
-function shopLaporanFabExportSemua(){ document.getElementById('shopLaporanFab').classList.remove('open'); document.getElementById('shopLaporanFabMain').setAttribute('aria-expanded','false'); exportShopSemuaXLSX(); }
+function shopLaporanFabExportXLSX(){ closeAllKeuFabs(); exportLaporanShopXLSX(); }
+function shopLaporanFabExportSemua(){ closeAllKeuFabs(); exportShopSemuaXLSX(); }
 function shopLaporanFabToggleMain(el){ const _o=document.getElementById('shopLaporanFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
-function carNotesFabOpenBbm(){ document.getElementById('carNotesFab').classList.remove('open'); document.getElementById('carNotesFabMain').setAttribute('aria-expanded','false'); openBbmModal(); }
-function carNotesFabOpenServis(){ document.getElementById('carNotesFab').classList.remove('open'); document.getElementById('carNotesFabMain').setAttribute('aria-expanded','false'); openServisModal(); }
+function carNotesFabOpenBbm(){ closeAllKeuFabs(); openBbmModal(); }
+function carNotesFabOpenServis(){ closeAllKeuFabs(); openServisModal(); }
 function carNotesFabToggleMain(el){ const _o=document.getElementById('carNotesFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
 function clickAssetImportFile(){ document.getElementById('assetImportFile').click(); }
