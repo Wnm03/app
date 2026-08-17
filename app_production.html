@@ -3795,6 +3795,23 @@ if(_kwThemeCache)document.body.setAttribute('data-theme',_kwThemeCache);
     <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
     Shop<div class="nav-dot"></div>
   </button>
+  <!-- FIX (audit UI/UX, screenshot 2026-08-17 17:37): tombol FAB "+" per-halaman
+       (.keu-fab, sebelumnya mengambang bebas di kanan-bawah tiap halaman --
+       keuFab/laporanFab/shopFab/shopLaporanFab/carNotesFab) dipindah ke SATU
+       tombol terpusat di TENGAH nav bawah, konsisten di semua halaman (bukan
+       lagi 5 FAB terpisah yang posisinya beda2 & bisa tumpang tindih --
+       lihat #page-shop .keu-fab{bottom:150px} dkk di styles.css). Tombol ini
+       murni SAKLAR (toggle) -- klik cari .keu-fab yg SEDANG kelihatan di
+       halaman aktif (lihat navFabToggle() di action-wrappers.js) & toggle
+       class .open miliknya (fungsi toggle per-FAB lama TIDAK diubah/dihapus,
+       cuma dipicu dari sini juga -- 0 breakage kalau ada kode lain yang masih
+       manggil keuFabToggleMain dkk langsung). Ditaruh sbg child ke-4 dari 7
+       (persis di tengah 6 nav-item asli: Beranda,Uang,Shop | FAB | Aset,
+       Mobil,Pajak) supaya visual "\+"-nya benar2 di tengah nav, bukan cuma di
+       tengah salah satu sisi. -->
+  <button class="nav-item nav-fab" id="navFabMain" data-action="navFabToggle" data-args='["$el"]' aria-label="Tambah cepat" aria-expanded="false" aria-haspopup="true">
+    <span class="nav-fab-icon">＋</span>
+  </button>
   <button class="nav-item" aria-current="false" data-action="showPage" data-args='["aset", "$el"]' aria-label="Aset">
     <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     Aset<div class="nav-dot"></div>

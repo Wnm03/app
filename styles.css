@@ -1617,7 +1617,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
    Aditif murni, 100% pakai token yang sudah ada (--sp-*/--r-full/--r-lg/
    --fs-*/--z-dropdown/--dur-*/--ease-*/--accent/--surface3/--border2).
    Tidak ada selector lama yang diubah nilainya. */
-.keu-fab{position:fixed;right:var(--sp-9);bottom:84px;z-index:var(--z-dropdown);display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-4);}
+.keu-fab{position:fixed;left:50%;transform:translateX(-50%);right:auto;bottom:84px;z-index:var(--z-dropdown);display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);}
 /* 2026-07-21 FIX: tombol "+" (.keu-fab-main) TERBUKTI tidak efektif secara
    UX (user report: harus tap dulu baru muncul Pemasukan/Pengeluaran/Export
    dst, extra step yang tidak perlu) -- disembunyikan total, & tombol-tombol
@@ -1626,14 +1626,35 @@ textarea.fi { resize: vertical; min-height: 80px; }
    dibiarkan apa adanya (tidak dihapus) supaya tidak ada breakage kalau ada
    kode lain yang masih reference -- cukup di-override di CSS di sini,
    aditif murni, tidak ada selector lama yang dihapus.  */
+/* FIX (audit UI/UX, screenshot 2026-08-17 17:37): dibalik lagi ke perilaku
+   toggle (kebalikan dari fix 2026-07-21 di atas) -- alasan "+" lama tidak
+   efektif adalah karena POSISINYA (kanan-bawah, gampang tidak sadar), bukan
+   karena konsep toggle-nya. Sekarang trigger toggle-nya dipindah ke tombol
+   terpusat & selalu kelihatan di tengah nav bawah (#navFabMain, lihat
+   navFabToggle() di action-wrappers.js) -- jadi actions boleh disembunyikan
+   default lagi (tidak makan tempat di layar terus-menerus) karena cara
+   membukanya sekarang jauh lebih gampang ditemukan. .keu-fab-main (tombol
+   "+" LAMA per-halaman, kanan-bawah) TETAP disembunyikan (sudah digantikan
+   #navFabMain, bukan dihapus dari DOM -- 0 breakage).*/
 .keu-fab-main{display:none;}
 .keu-fab-main-icon{line-height:1;}
-.keu-fab-actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:flex-end;align-items:flex-end;gap:var(--sp-3);max-width:min(86vw,360px);max-height:none;opacity:1;pointer-events:auto;overflow:visible;}
+.keu-fab-actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:var(--sp-3);max-width:min(86vw,360px);max-height:0;opacity:0;pointer-events:none;overflow:hidden;transition:opacity var(--dur-moderate) var(--ease-standard),max-height var(--dur-moderate) var(--ease-standard);}
+.keu-fab.open .keu-fab-actions{max-height:200px;opacity:1;pointer-events:auto;overflow:visible;}
 .keu-fab-action{display:flex;align-items:center;justify-content:center;gap:var(--sp-3);border:1px solid var(--border2);background:var(--surface3);color:var(--text);border-radius:var(--r-pill);padding:var(--sp-3) var(--sp-6);box-shadow:var(--shadow-card-hover-dark2);cursor:pointer;font-size:var(--fs-body);font-weight:600;white-space:nowrap;}
 .keu-fab-action:active{transform:scale(0.95);}
 .keu-fab-action-icon{font-size:var(--fs-icon);}
-@media (min-width:600px){
-  .keu-fab{right:calc(50% - 300px + var(--sp-9));}
+
+/* ===== FAB terpusat di nav bawah (gantikan 5x .keu-fab kanan-bawah lama) =====
+   Aditif murni, reuse token yang sudah ada. Tombol "+" dibikin lebih besar &
+   "naik" dari garis nav (margin-top negatif + border supaya kelihatan
+   mengambang keluar nav, pola umum bottom-nav-FAB di app mobile). */
+.nav-fab{position:relative;flex:0 0 auto;min-width:52px;}
+.nav-fab-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;border-radius:var(--r-full);background:var(--grad-accent);color:#fff;font-size:24px;line-height:1;box-shadow:var(--shadow-card-hover-dark2);border:3px solid var(--header-bg);transition:transform var(--dur-fast) var(--ease-standard);}
+.nav-fab:active .nav-fab-icon{transform:scale(0.9);}
+.nav-fab[aria-expanded="true"] .nav-fab-icon{transform:rotate(45deg);}
+.nav-fab:active[aria-expanded="true"] .nav-fab-icon{transform:rotate(45deg) scale(0.9);}
+@media (max-width:359px){
+  .nav-fab-icon{width:40px;height:40px;margin-top:-20px;font-size:21px;}
 }
 
 /* ===== Sprint 2 Tahap 2: FAB Shop — reuse penuh .keu-fab* (Finance 2.0),
