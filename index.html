@@ -252,6 +252,28 @@ window.location.reload();
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
+<script>
+// BUGFIX (audit delay s-lanjutan, video 2026-08-17 15:11): body selalu mulai dgn
+// data-theme="fresh" (statis di HTML, di-paint browser SEBELUM JS jalan). Tema
+// asli user (D.profile.theme, defaultnya 'dark' -- lihat applyEffectiveTheme() di
+// modules/shared/format-tema.js) baru diterapkan SETELAH init()->load() selesai
+// baca IndexedDB, yg makan waktu beberapa detik kalau data sudah besar (ratusan/
+// ribuan transaksi). Efeknya: user MELIHAT tema "fresh" (terang) + saldo Rp0
+// selama proses load, lalu tiba2 "dibalik" ke tema gelap + saldo asli lewat
+// animasi reveal begitu data siap -- kelihatan seperti nge-lag/delay padahal
+// sebenarnya cuma flash tema, bukan lambat beneran.
+// FIX: cache tema TERAKHIR yg berhasil diterapkan ke localStorage (lihat
+// applyEffectiveTheme() -- baris localStorage.setItem('kw_theme_cache', t)),
+// lalu di sini, SEBELUM konten body lain di-parse & di-paint, baca cache itu &
+// langsung set data-theme yg benar. Kalau belum pernah ada cache (install/
+// browser baru), tetap fallback ke "fresh" (bukan diam2 nebak) -- tidak ada
+// regresi utk first-run. Sengaja inline & sinkron (bukan file .js terpisah)
+// supaya benar2 jalan SEBELUM browser sempat paint apa pun di bawah baris ini.
+try{
+var _kwThemeCache=localStorage.getItem('kw_theme_cache');
+if(_kwThemeCache)document.body.setAttribute('data-theme',_kwThemeCache);
+}catch(e){}
+</script>
 
 <!-- ONBOARDING -->
 <!-- BUGFIX: dulu div ini TIDAK punya class u-dnone, jadi selalu kelihatan sebagai kondisi
