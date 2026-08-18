@@ -1378,8 +1378,19 @@ const DanaTitipanCommitmentUI = {
   // `openAssetPorsiDirect()` (klik nama baris holding) — 0 perubahan
   // perilaku routing, murni dedup.
   _routeAssetPorsi(assetId) {
-    if (assetId.indexOf('h:') === 0) {
-      const holdingId = assetId.slice(2);
+    // FIX (S648, bug report toast "TypeError: assetId.indexOf is not a
+    // function"): openAssetPorsiDirect() (S631, klik nama instrumen di
+    // baris holding) mengoper `hh.linkedAssetId` MENTAH -- nilai itu
+    // berasal dari `D.assets[].id` yang di app ini berupa angka
+    // (uid()-based), bukan string. Jalur dropdown lama (openAssetPorsi(),
+    // baca `<select>.value`) selalu string krn itu memang perilaku native
+    // DOM, jadi bug ini cuma kena jalur klik-nama-langsung. Koersi
+    // String() SEKALI di titik masuk bersama ini (0 perubahan ke 2
+    // caller-nya) supaya kedua jalur konsisten aman utk assetId
+    // angka/string apa pun.
+    const id = String(assetId);
+    if (id.indexOf('h:') === 0) {
+      const holdingId = id.slice(2);
       if (typeof InvestmentUI === 'undefined' || typeof InvestmentUI.openOwnersModal !== 'function') {
         if (typeof toast === 'function') toast('⚠️ Fitur Holding Investasi belum siap dimuat');
         return;
@@ -1391,7 +1402,7 @@ const DanaTitipanCommitmentUI = {
       if (typeof toast === 'function') toast('⚠️ Fitur Buku Aset belum siap dimuat');
       return;
     }
-    Aset.openOwnersModalById(assetId);
+    Aset.openOwnersModalById(id);
   },
 
 };
