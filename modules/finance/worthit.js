@@ -222,11 +222,29 @@ _txCatLearnSource=d.name;
 if(d.method==='cicilan'){
 setPayMethod('cicilan');
 document.getElementById('txCicilanNama').value=d.name;
-document.getElementById('txCicilanTotal').value=String(d.price);
-if(d.cicilanBulan>0)document.getElementById('txCicilanPerBulan').value=String(d.cicilanBulan);
 document.getElementById('txCicilanTenor').value=String(d.tenor||6);
+// FIX (BUG-008, audit 2026-08): DP dibayar TERPISAH di muka (lihat WorthIt.hitung(),
+// uangKeluarSekarang=dp saat method cicilan) -- Total Harga di panel Cicilan modal
+// transaksi HARUS mencerminkan sisa yang benar-benar dibiayai lewat cicilan
+// (price-dp), bukan harga penuh barang, supaya perBulan×tenor tidak ikut menghitung
+// ulang bagian yang sudah dibayar DP di depan (dulu selalu diisi d.price mentah,
+// DP tidak pernah dikurangkan -- "DP belum dipetakan ke transaksi").
+const financed=Math.max(0,d.price-(d.dp||0));
+document.getElementById('txCicilanTotal').value=String(financed);
+if(d.cicilanBulan>0){
+// Kalau cicilan/bulan sudah dihitung PRESISI oleh kalkulator WorthIt (d.cicilanBulan),
+// jadikan itu SUMBER (cicilanLastInput='perbulan') supaya syncCicilanPreview()
+// merekalkulasi Total Harga DARI nilai kalkulator ini -- dulu selalu dipaksa
+// cicilanLastInput='total' lalu syncCicilanPreview('total') balik menghitung ulang
+// perBulan dari Total÷Tenor, MENIMPA cicilanBulan hasil kalkulator dgn nilai yang
+// bisa beda (bug "catatBeli() bisa menimpa cicilan yang sudah dihitung kalkulator").
+document.getElementById('txCicilanPerBulan').value=String(d.cicilanBulan);
+cicilanLastInput='perbulan';
+syncCicilanPreview('perbulan');
+} else {
 cicilanLastInput='total';
 syncCicilanPreview('total');
+}
 toast('✏️ Detail cicilan sudah diisi'+(catGuessed?' (kategori tebakan: '+catGuessed+')':'')+', cek lagi lalu Simpan');
 } else {
 document.getElementById('txAmt').value=String(d.price);
