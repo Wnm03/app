@@ -1,4 +1,32 @@
-# Changelog — Sesi S636 (Keamanan PIN: salt hash PIN per-perangkat, v1369)
+# Changelog — Sesi S648 (Fix bug klik nama holding di Dana Titipan -> TypeError, v1382)
+
+## Bug report
+User lapor via screenshot: klik tombol di kartu owner Dana Titipan
+("mas sihab"/"Aku") memunculkan toast "Terjadi error saat memproses
+tombol. Cek console." Diagnosis awal (audit statis + simulasi Node
+dgn data dummy) tidak berhasil mereproduksi. Dipasang patch DEBUG
+sementara (toast menampilkan pesan+lokasi error asli) — user klik lagi
+tombol yang error, dapat pesan pasti: `TypeError: assetId.indexOf is
+not a function | at Object._routeAssetPorsi`.
+
+## Root cause
+`_routeAssetPorsi(assetId)` (modules/finance/dana-titipan-portfolio-render.js)
+memanggil `assetId.indexOf('h:')` dengan asumsi `assetId` selalu string.
+Jalur klik-nama-langsung `openAssetPorsiDirect()` (Sesi 631) mengoper
+`hh.linkedAssetId` MENTAH dari `D.assets[].id`/`D.investments[].id` —
+id-id itu di app ini berupa ANGKA (`uid()`-based), bukan string. `Number`
+tidak punya method `.indexOf` -> throw. Jalur dropdown lama
+(`openAssetPorsi()`, baca `<select>.value`) tidak kena krn value DOM
+`<select>` selalu string.
+
+## Fix (additive, 1 titik)
+`_routeAssetPorsi()` sekarang koersi `String(assetId)` sekali di titik
+masuk (dipakai kedua caller: `openAssetPorsi()` & `openAssetPorsiDirect()`,
+0 perubahan di caller). 2 test regresi baru (assetId angka murni & assetId
+angka dgn prefix `h:`), 4630/4630 test lulus 0 regresi, build+
+verify-bundle-freshness+verify-window-expose semua OK.
+
+
 
 ## Audit
 Bukan laporan bug user — audit keamanan proaktif atas `modules/shared/keamanan-pin.js`.
