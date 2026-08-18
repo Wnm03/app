@@ -135,3 +135,34 @@ test('6. openAssetPorsi(): jalur dropdown lama TIDAK regresi (reuse _routeAssetP
   ctx.DanaTitipanCommitmentUI.openAssetPorsi(0);
   assert.equal(investCalledWith, 'h1');
 });
+
+// SESI 648 — bug report user (screenshot toast "TypeError:
+// assetId.indexOf is not a function | at Object._routeAssetPorsi"),
+// dikonfirmasi via reproduksi langsung pakai backup asli user: id aset
+// di `D.assets`/`D.investments` di app SUNGGUHAN itu ANGKA (uid()-based,
+// bukan string) -- test 1-6 di atas semuanya pakai id string ('a1'/'h1')
+// jadi tidak ketahuan. `_routeAssetPorsi()` sebelumnya panggil
+// `assetId.indexOf('h:')` tanpa koersi String() dulu -> Number tidak
+// punya method itu -> throw. Fix: String(assetId) SEKALI di
+// `_routeAssetPorsi()` (titik masuk bersama kedua jalur).
+test('7. openAssetPorsiDirect(assetId ANGKA, bukan prefix h:): TIDAK throw, routing ke Aset.openOwnersModalById() dgn id yg sama (regresi bug S648)', () => {
+  const D = baseD([], [{ id: 1786618225764, name: 'Majoris', nilai: 1, owners: [] }]);
+  const dom = makeStatefulDom();
+  let assetCalledWith = null;
+  const ctx = makeCtx(D, dom, {
+    Aset: { openOwnersModalById: (id) => { assetCalledWith = id; } },
+  });
+  assert.doesNotThrow(() => ctx.DanaTitipanCommitmentUI.openAssetPorsiDirect(1786618225764));
+  assert.equal(assetCalledWith, '1786618225764');
+});
+
+test('8. openAssetPorsiDirect(assetId ANGKA dgn holding investasi "h:" + id angka): TIDAK throw, routing ke InvestmentUI.openOwnersModal() (regresi bug S648)', () => {
+  const D = baseD([{ id: 1786153518844, name: 'Schorder', unit: 1, avgPrice: 100, currentPrice: 100, owners: [] }]);
+  const dom = makeStatefulDom();
+  let investCalledWith = null;
+  const ctx = makeCtx(D, dom, {
+    InvestmentUI: { openOwnersModal: (id) => { investCalledWith = id; } },
+  });
+  assert.doesNotThrow(() => ctx.DanaTitipanCommitmentUI.openAssetPorsiDirect('h:' + 1786153518844));
+  assert.equal(investCalledWith, '1786153518844');
+});
