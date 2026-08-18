@@ -66,8 +66,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's648-keamanan-pin-per-device-salt';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's648-keamanan-pin-per-device-salt';
+const APP_BUILD_VERSION = 's649-keamanan-pin-per-device-salt';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's649-keamanan-pin-per-device-salt';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -363,7 +363,18 @@ if (typeof toast === 'function') toast('⚠️ Gagal menjalankan "' + el.dataset
 // sisa proses klik itu tanpa jejak jelas ke user. Sekarang minimal selalu ke-log +
 // dikasih toast, tidak pernah diam total.
 console.error('[data-action] handler error:', err);
+// SESI 649: sambungkan ke toggle "Debug Console" yang SUDAH ADA di
+// Pengaturan (kw_debug_console, lihat modules/shared/debug-console.js) --
+// bukan bikin toggle baru. Kalau lagi aktif, toast langsung kasih pesan+
+// lokasi error persis (tanpa perlu buka console/eruda dulu, berguna di
+// HP saat console susah diakses). Default (toggle mati) tetap toast
+// generik seperti semula -- tidak ganggu pemakaian sehari-hari.
+if(typeof localStorage!=='undefined' && localStorage.getItem('kw_debug_console')==='1'){
+const _loc=err&&err.stack?String(err.stack).split('\n').slice(0,2).join(' | '):((err&&err.message)||String(err));
+if(typeof toast==='function') toast('⚠️ DEBUG: '+_loc,9000);
+}else{
 if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses tombol. Cek console.',4000);
+}
 }
 }
 // BUGFIX (audit klik "0 reaksi"): didaftarkan di CAPTURE phase (argumen ke-3 = true), bukan
