@@ -94,6 +94,43 @@ test('dispatcher toast #2 — fungsi target throw sinkron -> toast "Terjadi erro
   assert.match(toastCalls[0], /Terjadi error saat memproses tombol/);
 });
 
+// SESI 649 — sambungkan toast error ke toggle "Debug Console" yang sudah
+// ada di Pengaturan (kw_debug_console di localStorage, lihat
+// modules/shared/debug-console.js). Lahir dari kasus nyata: bug
+// "assetId.indexOf is not a function" (S648) susah dilacak krn user cuma
+// bisa lihat toast generik di HP, TIDAK ada akses console yang gampang.
+// Sekarang kalau toggle itu aktif, toast langsung kasih pesan+lokasi error
+// persis -- tanpa toggle baru, tanpa UI baru, reuse 100% infra yang ada.
+test('dispatcher toast #2b — toggle Debug Console (kw_debug_console) AKTIF -> toast tampilkan pesan+lokasi error asli, bukan teks generik', () => {
+  const windowObj = {
+    testSyncThrow() { throw new Error('boom sync detail'); },
+  };
+  const fakeLocalStorage = { getItem: (k) => (k === 'kw_debug_console' ? '1' : null) };
+  const { context, toastCalls } = loadSandbox(windowObj);
+  context.localStorage = fakeLocalStorage;
+  const el = makeFakeElement({ action: 'testSyncThrow' });
+  context._dataActionClickHandler({ target: el });
+
+  assert.equal(toastCalls.length, 1, 'toast harus terpanggil tepat 1x');
+  assert.match(toastCalls[0], /DEBUG:/);
+  assert.match(toastCalls[0], /boom sync detail/);
+  assert.doesNotMatch(toastCalls[0], /^⚠️ Terjadi error saat memproses tombol\. Cek console\.$/);
+});
+
+test('dispatcher toast #2c — toggle Debug Console TIDAK ADA di localStorage (belum pernah diaktifkan) -> tetap toast generik', () => {
+  const windowObj = {
+    testSyncThrow() { throw new Error('boom sync'); },
+  };
+  const fakeLocalStorage = { getItem: () => null };
+  const { context, toastCalls } = loadSandbox(windowObj);
+  context.localStorage = fakeLocalStorage;
+  const el = makeFakeElement({ action: 'testSyncThrow' });
+  context._dataActionClickHandler({ target: el });
+
+  assert.equal(toastCalls.length, 1);
+  assert.match(toastCalls[0], /Terjadi error saat memproses tombol/);
+});
+
 test('dispatcher toast #3 — fungsi target async & reject -> toast "Gagal menjalankan ...: <pesan>"', async () => {
   const windowObj = {
     async testAsyncReject() { throw new Error('boom async'); },
