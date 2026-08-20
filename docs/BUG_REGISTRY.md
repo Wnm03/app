@@ -374,7 +374,7 @@
   otomatis "Ditanggung Bersama" jadi orphan permanen
 - Severity: **P2 Medium** (financial reporting — nilai nyangkut permanen
   di Kekayaan Bersih, bukan salah hitung transaksi/uang riil)
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-20, koreksi sesi S657 atas klaim keliru di catatan S656) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/piutang-utang.js` sudah berisi komentar `FIX (BUG-006, audit 2026-08)` di `Debt.syncBill()`. Regression test: `tests/bug006-syncbill-orphan-piutang.test.js` (4 test — utang jadi Lunas, cicilanBulanan dinolkan, tanpa piutang auto terkait, dan shouldHaveBill tetap true — piutang manual/tidak-terkait tidak ikut terhapus di semua skenario), sudah ada di tree sebelum sesi S656 (koreksi: catatan sesi S656 sebelumnya keliru menyatakan "belum ada test khusus"). Full suite tidak berubah sesi ini (docs-only): 4630/4630 pass.
 - Module: Finance (Debt ↔ Bill ↔ Piutang)
 - File: `modules/finance/piutang-utang.js`
 - Function/component: `Debt.syncBill(d)`
@@ -528,7 +528,7 @@ dipakai `delTx()`). Tidak dicatat sebagai bug terpisah, lihat
   dan `txCicilanPerBulan` yang sudah diisi dari kalkulator ditimpa oleh
   `syncCicilanPreview('total')`
 - Severity: **P2 Medium**
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-18) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/worthit.js` sudah berisi komentar `FIX (BUG-008, audit 2026-08)` di `WorthIt.catatBeli()`. Regression test: `tests/s646-worthit-catatbeli-cicilan-dp.test.js` (sesi S646). Full suite verifikasi terakhir: 4675/4675 pass (S655).
 - Module: Finance (WorthIt)
 - File: `modules/finance/worthit.js`
 - Function/component: `WorthIt.catatBeli()`
@@ -575,7 +575,7 @@ dipakai `delTx()`). Tidak dicatat sebagai bug terpisah, lihat
   panel `#keuFilterPanel` (butuh tap kedua) karena state hidden awal
   dibaca lewat inline style, padahal disembunyikan lewat class CSS
 - Severity: **P2 Medium**
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-18) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/filter-laporan.js` sudah berisi komentar `FIX (BUG-009, audit 2026-08)` di `toggleKeuFilter()`. Regression test: `tests/s647-togglekeufilter-class-detect.test.js` (sesi S647). Full suite verifikasi terakhir: 4675/4675 pass (S655).
 - Module: Finance (Keuangan — panel filter)
 - File: `modules/finance/filter-laporan.js`
 - Function/component: `toggleKeuFilter()` (baris 50-57)
@@ -617,7 +617,7 @@ dipakai `delTx()`). Tidak dicatat sebagai bug terpisah, lihat
 - Judul: `showFilteredTx()` scope `'keuangan'` tidak menerapkan filter
   pencarian teks (`kf.search`), tidak konsisten dengan `renderKeuangan()`
 - Severity: **P2 Medium**
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-18) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/filter-laporan.js` sudah berisi komentar `FIX (BUG-010, audit 2026-08)` di `showFilteredTx()` scope `'keuangan'`. Regression test: `tests/s648-showfilteredtx-keuangan-search-scope.test.js` (sesi S648). Full suite verifikasi terakhir: 4675/4675 pass (S655).
 - Module: Finance (Keuangan — modal detail transaksi)
 - File: `modules/finance/filter-laporan.js`
 - Function/component: `showFilteredTx()`, cabang `scope==='keuangan'`
@@ -666,7 +666,7 @@ dipakai `delTx()`). Tidak dicatat sebagai bug terpisah, lihat
 - Judul: Cache `_ivxCache` / `_budgetSummaryCache` menjadi stale setelah
   `changeMonth()` / `changeTxListMonth()`
 - Severity: **P2 Medium**
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-18) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/tx-list-cashflow.js` sudah berisi komentar `FIX (BUG-012, audit 2026-08)` di `changeMonth()`/`changeTxListMonth()`. Regression test: `tests/s649-changemonth-financeintelligence-cache-invalidate.test.js` (sesi S649). Full suite verifikasi terakhir: 4675/4675 pass (S655).
 - Module: Finance (FinanceIntelligence)
 - File: `modules/finance/finance-intelligence.js`
 - Function/component: `FinanceIntelligence` cache (`_ivxCache`,
@@ -700,7 +700,7 @@ dipakai `delTx()`). Tidak dicatat sebagai bug terpisah, lihat
   `dd.accountId` — Risk Factor Dana Darurat permanen salah utk target
   yang tertaut ke akun
 - Severity: **P2 Medium**
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-08-18) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-007/GAP3-AUD-001. `modules/finance/financial-risk-dashboard-api.js` sudah berisi komentar `FIX (BUG-013, audit 2026-08)` di `_emergencyFundRisk()`. Regression test: `tests/s650-emergencyfundrisk-realtime-balance.test.js` (sesi S650). Full suite verifikasi terakhir: 4675/4675 pass (S655).
 - Module: Finance (FinancialRiskDashboardAPI ↔ Target/Dana Darurat)
 - File: `modules/finance/financial-risk-dashboard-api.js`
 - Function/component: `_emergencyFundRisk()`
