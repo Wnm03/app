@@ -2,6 +2,64 @@
 
 Prioritas tertinggi PALING ATAS. Satu item = target 1 sesi.
 
+> **Update Sesi S655 (2026-08-20)**: housekeeping kecil (rekomendasi
+> S654) — cleanup 1 baris catatan `FinancialRiskDashboardAPI` yang
+> masih ✅ SEBAGIAN padahal coverage-nya sudah lengkap (dikonfirmasi
+> ulang: `tests/financial-risk-dashboard-api.test.js` cover 6/7 fungsi,
+> `tests/s650-emergencyfundrisk-realtime-balance.test.js` cover sisanya).
+> Diringkas jadi ✅ DONE dengan referensi kedua file test. **0 file kode
+> disentuh, 0 test baru** — murni rapikan dokumentasi. Dengan ini **Blok
+> F (gap test coverage) selesai** untuk seluruh 5 modul yang layak
+> ditest lewat harness `loadSource.js` (FinancialHealthScoreAPI/
+> FinancialRiskDashboardAPI/BudgetRecommendationAPI/FinanceDashboard/
+> filter-laporan.js).
+
+> **Update Sesi S654 (2026-08-20)**: lanjutan Blok F. Item
+> `filter-laporan.js` ditandai selesai sebagian, `tests/
+> s654-filter-laporan-tx-match.test.js` baru (11 test) — cover
+> `txMatchesFilters()`/`txMatchesSearch()` (PURE, sebelumnya cuma
+> di-mock di `tests/virtual-bill-alltx-wiring-s468c.test.js`, tidak
+> pernah dijalankan langsung). Dites terhadap 2 versi source: baseline
+> `app-main` yang di-upload (belum termasuk merge S646-S651) DAN versi
+> kumulatif hasil merge manual patch S647+S648 (BUG-009/BUG-010) —
+> lolos di keduanya, krn kedua fix itu tidak menyentuh
+> `txMatchesFilters()`/`txMatchesSearch()`. `goToList()` sengaja
+> diskip (DOM-heavy, di luar cakupan harness).
+
+> **Update Sesi S653 (2026-08-20)**: lanjutan Blok F (gap test coverage,
+> `RENCANA-IMPLEMENTASI-S646-S664.md`). Item `BudgetRecommendationAPI`
+> (`_budget()`/`_classify()`/`budgetInsight()`/`summary()` — bagian yang
+> BELUM tersentuh `tests/budget-recommendation-severity-sort-s333.test.js`,
+> yang cuma cover sorting/BUG-014) ditandai DONE, `tests/
+> s653-budget-recommendation-api.test.js` baru (19 test). Full suite tetap
+> hijau (4664/4664).
+
+> **Update Sesi S652 (2026-08-20)**: lanjutan `RENCANA-IMPLEMENTASI-
+> S646-S664.md`. Blok E (Data Health, backup 2026-08-16) dicek dulu ke
+> source sebelum eksekusi (pola audit S646/487) — ternyata SEMUA warning
+> di blok itu berasal dari cek yang MEMANG didesain "murni baca, 0
+> auto-repair" (lihat komentar S574-E/DL-Next-7 di `data-health-check.js`:
+> field `deductionOwnerId` cuma tag/metadata, tidak pernah masuk rumus
+> saldo, jadi sengaja tidak ada auto-fix) — perbaikannya adalah edit data
+> transaksi manual lewat modal Transaksi di app yang jalan (data user
+> nyata, bukan sesuatu yang bisa di-patch lewat source code), di luar
+> cakupan sesi patch-only ini. Diskip ke Blok F (gap test coverage) —
+> item `FinanceDashboard` (Improvement, tanpa nomor bug: test eksekusi
+> via loadSource) ditandai selesai sebagian, `tests/s652-finance-
+> dashboard.test.js` baru. Catatan lain di Blok F (FinancialHealthScoreAPI/
+> FinancialRiskDashboardAPI/BudgetRecommendationAPI/filter-laporan.js)
+> juga sudah stale sebagian (test langsung sudah ada utk 2 modul pertama)
+> — cleanup penuh di luar cakupan sesi ini, dicatat sbg rekomendasi sesi
+> berikutnya.
+
+> **Update Sesi S651 (2026-08-20)**: stale-doc cleanup (pola sama Sesi
+> 487). BUG-006/007/008/009/010/011/012/013 semuanya sudah DONE (BUG-007/
+> 006/011 ternyata sudah lama fix di source, tidak pernah disinkron ke
+> sini — dikonfirmasi audit sesi S646; BUG-008/009/010/012/013 fix di
+> sesi S646–S650). Tabel-tabel di bawah diupdate menandai status DONE +
+> referensi sesi/test masing-masing. Tidak ada perubahan logic/behavior
+> sesi ini — murni sinkronisasi dokumentasi ke source.
+
 ## Bill/Piutang/Debt — dari Sesi Audit 2026-08-01
 
 Diimplementasikan dari hasil audit eksternal (`docs/BUG_REGISTRY.md` §0a).
@@ -32,8 +90,8 @@ lihat `docs/AUDIT_MATRIX.md` §7. Task baru dari hasil audit ini:
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| P1 High | `revertBillFromDeletedTx()`: simpan nilai saldo utang SEBELUM clamp (mis. field `debtNilaiBefore` di transaksi/arsip tagihan) & pakai nilai itu saat revert, bukan `+t.amount` mentah — cegah saldo utang salah lebih besar setelah transaksi pembayaran-lunas-sekaligus (overpay) dihapus | BUG-007 | Unassigned | OPEN |
-| P2 Medium | `Debt.syncBill()`: panggil `removeOrphanedAutoPiutangForBill(bill.id)` sebelum hapus tagihan auto (pola sama `delBill()`) — cegah piutang "Ditanggung Bersama" jadi orphan permanen saat utang ditandai Lunas/cicilan dinolkan | BUG-006 | Unassigned | OPEN |
+| P1 High | `revertBillFromDeletedTx()`: simpan nilai saldo utang SEBELUM clamp (mis. field `debtNilaiBefore` di transaksi/arsip tagihan) & pakai nilai itu saat revert, bukan `+t.amount` mentah — cegah saldo utang salah lebih besar setelah transaksi pembayaran-lunas-sekaligus (overpay) dihapus | BUG-007 | Unassigned | ✅ DONE (sudah di source sebelum audit S646 — komentar `FIX (BUG-007, audit 2026-08)` di `tagihan-kalender.js`) |
+| P2 Medium | `Debt.syncBill()`: panggil `removeOrphanedAutoPiutangForBill(bill.id)` sebelum hapus tagihan auto (pola sama `delBill()`) — cegah piutang "Ditanggung Bersama" jadi orphan permanen saat utang ditandai Lunas/cicilan dinolkan | BUG-006 | Unassigned | ✅ DONE (sudah di source sebelum audit S646 — komentar `FIX (BUG-006, audit 2026-08)` di `piutang-utang.js`) |
 | Low (setelah fix di atas) | Tambah regression test skenario overpayment utang di `tests/s291-delTx-bill-sync.test.js` | BUG-007 | Unassigned | OPEN |
 | Low (setelah fix di atas) | Tambah regression test `Debt.syncBill()` + piutang orphan (analog test `removeOrphanedAutoPiutangForBill` yang sudah ada utk `delBill()`) | BUG-006 | Unassigned | OPEN |
 
@@ -45,7 +103,7 @@ Belum ada satu pun yang dikerjakan sesi ini — murni pencatatan.
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| P2 Medium | `WorthIt.catatBeli()`: jangan timpa `txCicilanPerBulan` dengan `syncCicilanPreview('total')` saat `d.cicilanBulan>0` sudah diisi dari kalkulator; petakan DP (`d.dp`) ke field/efek transaksi yang sesuai | BUG-008 | Unassigned | OPEN |
+| P2 Medium | `WorthIt.catatBeli()`: jangan timpa `txCicilanPerBulan` dengan `syncCicilanPreview('total')` saat `d.cicilanBulan>0` sudah diisi dari kalkulator; petakan DP (`d.dp`) ke field/efek transaksi yang sesuai | BUG-008 | Unassigned | ✅ DONE (sesi S646 — `modules/finance/worthit.js` + `tests/s646-worthit-catatbeli-cicilan-dp.test.js`) |
 | Low | Perbaiki gap UX saat saldo ≤ 0 di kalkulator Worth It | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
 | Low | Tambah test untuk `WorthIt.hitung()` dan `WorthIt.computeScore()` | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
 
@@ -57,11 +115,11 @@ satu pun yang dikerjakan sesi ini — murni pencatatan.
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| P2 Medium | `toggleKeuFilter()`: deteksi state hidden panel lewat `panel.classList.contains('u-dnone')` (atau `getComputedStyle`), bukan `panel.style.display`, supaya tap pertama langsung membuka panel | BUG-009 | Unassigned | OPEN |
-| P2 Medium | `showFilteredTx()` scope `'keuangan'`: tambahkan `&&txMatchesSearch(t,kf.search)` ke filter, pola sama `renderKeuangan()` | BUG-010 | Unassigned | OPEN |
-| P2 Medium | `goToList()`: ganti hardcode ternary index tab `shopTabName`/`cnTabName` dengan pola `indexOf()` (array urutan tab), sama seperti `keuTabName`/`KEU_TAB_ORDER` yang sudah benar di fungsi yang sama | BUG-011 | Unassigned | OPEN |
+| P2 Medium | `toggleKeuFilter()`: deteksi state hidden panel lewat `panel.classList.contains('u-dnone')` (atau `getComputedStyle`), bukan `panel.style.display`, supaya tap pertama langsung membuka panel | BUG-009 | Unassigned | ✅ DONE (sesi S647 — `modules/finance/filter-laporan.js` + `tests/s647-togglekeufilter-class-detect.test.js`) |
+| P2 Medium | `showFilteredTx()` scope `'keuangan'`: tambahkan `&&txMatchesSearch(t,kf.search)` ke filter, pola sama `renderKeuangan()` | BUG-010 | Unassigned | ✅ DONE (sesi S648 — `modules/finance/filter-laporan.js` + `tests/s648-showfilteredtx-keuangan-search-scope.test.js`) |
+| P2 Medium | `goToList()`: ganti hardcode ternary index tab `shopTabName`/`cnTabName` dengan pola `indexOf()` (array urutan tab), sama seperti `keuTabName`/`KEU_TAB_ORDER` yang sudah benar di fungsi yang sama | BUG-011 | Unassigned | ✅ DONE (sudah di source sebelum audit S646 — `goToList()` sudah pakai `SHOP_TAB_ORDER.indexOf()`/`CN_TAB_ORDER.indexOf()`, tidak ada ternary hardcode lagi) |
 | Low | Sederhanakan ternary redundan `el.value=x?'semua':'semua'` di `resetLaporanFilter()`/`resetKeuFilter()` jadi `el.value='semua'` | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
-| Low | Tambah test unit untuk `filter-laporan.js` (0 test langsung saat ini) — minimal `txMatchesFilters()`, `toggleKeuFilter()`, `showFilteredTx()`, `goToList()` | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
+| Low | Tambah test unit untuk `filter-laporan.js` (0 test langsung saat ini) — minimal `txMatchesFilters()`, `toggleKeuFilter()`, `showFilteredTx()`, `goToList()` | (Improvement, tanpa nomor bug) | Unassigned | ✅ SEBAGIAN (sesi S654, `tests/s654-filter-laporan-tx-match.test.js` — cover `txMatchesFilters()`/`txMatchesSearch()`, keduanya PURE & sebelumnya cuma di-mock, tidak pernah dijalankan langsung. `toggleKeuFilter()`/`showFilteredTx()` sudah ada regression test dari fix BUG-009/BUG-010 di atas. `goToList()` SENGAJA tidak dites — baca/tulis DOM berat lewat `querySelectorAll`/`showPage`/`setShopTab` dst, di luar cakupan harness `loadSource.js`, sama alasan `render()` FinanceDashboard di-skip sesi S652) |
 
 ## Finance/FinanceIntelligence — dari Sesi Audit finance-intelligence.js
 
@@ -71,10 +129,10 @@ Diimplementasikan dari hasil audit `modules/finance/finance-intelligence.js`
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| P2 Medium | `changeMonth()` / `changeTxListMonth()`: panggil `FinanceIntelligence.invalidateCache()` setelah bulan aktif berubah, supaya `_ivxCache`/`_budgetSummaryCache` tidak stale | BUG-012 | Unassigned | OPEN |
+| P2 Medium | `changeMonth()` / `changeTxListMonth()`: panggil `FinanceIntelligence.invalidateCache()` setelah bulan aktif berubah, supaya `_ivxCache`/`_budgetSummaryCache` tidak stale | BUG-012 | Unassigned | ✅ DONE (sesi S649 — `modules/finance/tx-list-cashflow.js` + `tests/s649-changemonth-financeintelligence-cache-invalidate.test.js`) |
 | Low | Optimasi `_isTxAccountSelf()` dari O(transaksi × akun) memakai `Map` | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
 | Low | Tambah test untuk `insights()`, `summary()`, `cashflowSummary()` | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
-| Low (setelah fix BUG-012) | Tambah regression test cache stale setelah ganti bulan (`changeMonth()`/`changeTxListMonth()`) | BUG-012 | Unassigned | OPEN |
+| Low (setelah fix BUG-012) | Tambah regression test cache stale setelah ganti bulan (`changeMonth()`/`changeTxListMonth()`) | BUG-012 | Unassigned | ✅ DONE (sesi S649, digabung dalam 1 sesi yang sama dgn fix — lihat `tests/s649-changemonth-financeintelligence-cache-invalidate.test.js`) |
 
 ## Finance/FinanceDashboard — dari Sesi Audit finance-dashboard.js
 
@@ -85,7 +143,7 @@ coverage, belum ada satu pun yang dikerjakan sesi ini.
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| Low | Tambah test eksekusi (loadSource+DOM) untuk `FinanceDashboard.getAIHook()`, `render()`, `_netWorthCard()`, `_cashFlowCard()`, `_budgetCard()`, `_healthCard()`, `_sparepartCards()` — saat ini 0 test perilaku nyata, hanya 2 static regex check | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
+| Low | Tambah test eksekusi (loadSource+DOM) untuk `FinanceDashboard.getAIHook()`, `render()`, `_netWorthCard()`, `_cashFlowCard()`, `_budgetCard()`, `_healthCard()`, `_sparepartCards()` — saat ini 0 test perilaku nyata, hanya 2 static regex check | (Improvement, tanpa nomor bug) | Unassigned | ✅ SEBAGIAN (sesi S652, `tests/s652-finance-dashboard.test.js` — cover `getAIHook()`/`_netWorthCard()`/`_cashFlowCard()`/`_budgetCard()`/`_healthCard()`/`_sparepartCards()` lewat loadSource harness. `render()` SENGAJA tidak dites, baca/tulis DOM lewat `getElementById` — di luar cakupan harness `loadSource.js` per catatan di file itu sendiri, tetap ranah smoke-test.js/manual QA) |
 
 ## Finance/FinancialHealthScoreAPI — dari Sesi Audit financial-health-score-api.js
 
@@ -112,10 +170,10 @@ baru ditemukan — belum ada satu pun yang dikerjakan sesi ini.
 
 | Priority | Task | Related Bug | Owner | Status |
 |---|---|---|---|---|
-| P2 Medium | `_emergencyFundRisk()`: ganti seluruh pemakaian `dd.saved` mentah dengan `(dd.accountId && typeof recalcAccBalance==='function') ? recalcAccBalance(dd.accountId) : (dd.saved||0)` — pola sama `DanaDaruratAI.currentSaved()`/`invest-ai-widget.js._checkDanaDarurat()` — supaya Risk Factor Dana Darurat mencerminkan saldo akun tertaut yang sebenarnya | BUG-013 | Unassigned | OPEN |
+| P2 Medium | `_emergencyFundRisk()`: ganti seluruh pemakaian `dd.saved` mentah dengan `(dd.accountId && typeof recalcAccBalance==='function') ? recalcAccBalance(dd.accountId) : (dd.saved||0)` — pola sama `DanaDaruratAI.currentSaved()`/`invest-ai-widget.js._checkDanaDarurat()` — supaya Risk Factor Dana Darurat mencerminkan saldo akun tertaut yang sebenarnya | BUG-013 | Unassigned | ✅ DONE (sesi S650 — `modules/finance/financial-risk-dashboard-api.js` + `tests/s650-emergencyfundrisk-realtime-balance.test.js`) |
 | Low | `riskLevel()`/`summary()`: hindari pemanggilan `riskFactors()` berulang (2x per `summary()`) — hitung sekali, oper hasilnya sbg parameter (pola sama saran perf `FinancialHealthScoreAPI.summary()`) | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
-| Low | Tambah test unit langsung untuk `_debtRisk()`, `_healthRisk()`, `_cashflowBudgetRisk()`, `_emergencyFundRisk()`, `riskFactors()`, `riskLevel()`, `summary()` — saat ini 0 test langsung, hanya `finance-nav-consistency-s254a.test.js` yang me-mock `FinancialRiskDashboardAPI` di level presenter | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
-| Low (setelah fix BUG-013) | Tambah regression test skenario Target Dana Darurat ber-`accountId` yang saldo akunnya sudah mencapai target — pastikan risk factor `emergency_fund` hilang dari `riskFactors()` | BUG-013 | Unassigned | OPEN |
+| Low | Tambah test unit langsung untuk `_debtRisk()`, `_healthRisk()`, `_cashflowBudgetRisk()`, `_emergencyFundRisk()`, `riskFactors()`, `riskLevel()`, `summary()` — saat ini 0 test langsung, hanya `finance-nav-consistency-s254a.test.js` yang me-mock `FinancialRiskDashboardAPI` di level presenter | (Improvement, tanpa nomor bug) | Unassigned | ✅ DONE — `tests/financial-risk-dashboard-api.test.js` cover `_debtRisk()`/`_healthRisk()`/`_cashflowBudgetRisk()`/`riskFactors()`/`riskLevel()`/`summary()`, `tests/s650-emergencyfundrisk-realtime-balance.test.js` (sesi S650) cover `_emergencyFundRisk()` |
+| Low (setelah fix BUG-013) | Tambah regression test skenario Target Dana Darurat ber-`accountId` yang saldo akunnya sudah mencapai target — pastikan risk factor `emergency_fund` hilang dari `riskFactors()` | BUG-013 | Unassigned | ✅ DONE (sesi S650, digabung dalam 1 sesi yang sama dgn fix) |
 
 ---
 
@@ -132,7 +190,7 @@ budget-recommendation-api.js` (100% fungsi, Sesi Audit-Docs 9 — lihat
 | P2 Medium | ~~`spendingAnalysis()`/`budgetSuggestion()`: urutkan `items`/`suggestions` berdasarkan prioritas kategori (over → near → underused) lalu besaran~~ — **SELESAI Sesi 333**: `_CATEGORY_PRIORITY`/`_sortBySeverity()` ditambahkan di `spendingAnalysis()` | BUG-014 | Unassigned | **DONE (v997/S333)** |
 | Low (setelah fix BUG-014) | ~~Tambah regression test skenario `D.budgets` berurutan [underused-first, over-second]~~ — **SELESAI Sesi 333**: `tests/budget-recommendation-severity-sort-s333.test.js` (7 test) | BUG-014 | Unassigned | **DONE (v997/S333)** |
 | Low | `summary()`: hindari pemanggilan `spendingAnalysis()` berulang 3x (1x langsung + 1x di dalam `budgetSuggestion()` + 1x di dalam `budgetInsight()`) — hitung sekali, oper hasilnya sbg parameter (pola sama saran perf `FinancialHealthScoreAPI.summary()`/`FinancialRiskDashboardAPI.summary()`) | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
-| Low | Tambah test unit langsung untuk `_budget()`, `_classify()`, `budgetInsight()`, `summary()` — `spendingAnalysis()`/`budgetSuggestion()` sudah tercakup lewat regression test BUG-014, sisanya masih 0 test langsung; satu-satunya test lain (`finance-nav-consistency-s254b.test.js`) me-mock `BudgetRecommendationAPI` di level presenter | (Improvement, tanpa nomor bug) | Unassigned | OPEN |
+| Low | Tambah test unit langsung untuk `_budget()`, `_classify()`, `budgetInsight()`, `summary()` — `spendingAnalysis()`/`budgetSuggestion()` sudah tercakup lewat regression test BUG-014, sisanya masih 0 test langsung; satu-satunya test lain (`finance-nav-consistency-s254b.test.js`) me-mock `BudgetRecommendationAPI` di level presenter | (Improvement, tanpa nomor bug) | Unassigned | ✅ DONE (sesi S653, `tests/s653-budget-recommendation-api.test.js` — cover `_budget()`/`_classify()`/`budgetInsight()`/`summary()`, plus isi `message`/`suggestedLimit` per kategori `budgetSuggestion()` yang belum disentuh test s333) |
 
 ---
 

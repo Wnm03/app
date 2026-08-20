@@ -1,54 +1,37 @@
-# Patch Gabungan — S599 (Ghost Asset di Asset Picker) + Ownership Fix (Hapus Porsi Titipan)
+# PATCH-README — Merged S646–S657
 
-Gabungan 2 patch independen, TIDAK ada file yang saling tumpang tindih
-antara keduanya, jadi digabung apa adanya tanpa perlu resolve konflik.
-Struktur folder SAMA seperti project asli — tinggal timpa.
+Gabungan 12 patch sesi (S646, S647, S648, S649, S650, S651, S652, S653, S654,
+S655, S656, S657) menjadi satu file patch. Setiap file yang berubah lebih
+dari sekali diambil dari sesi **paling akhir** (fix kumulatif — sesi
+berikutnya membangun di atas sesi sebelumnya, dikonfirmasi via diff, bukan
+menimpa/menghapus fix lama). File yang unik per sesi disertakan apa adanya.
 
-Total 3 file berubah/baru dibanding baseline:
-- `modules/finance/dana-titipan-portfolio-render.js` (diubah — dari patch S599)
-- `tests/dana-titipan-asset-picker-ghost-asset-s599.test.js` (baru — dari patch S599)
-- `modules/asset/aset.js` (diubah — dari patch Ownership Fix)
+## Resolusi file yang overlap antar sesi
 
-## Cara pakai
-1. Backup project Anda.
-2. Timpa/tambahkan ketiga file di atas (path sama persis dengan struktur zip ini).
-3. Rebuild bundle: `node scripts/build.js` (atau `npm run build`).
-4. Reload aplikasi (hard refresh).
+| File | Sesi yang menyentuh | Diambil dari | Alasan |
+|---|---|---|---|
+| `modules/finance/filter-laporan.js` | S647, S648 | **S648** | S648 menambahkan fix BUG-010 (`txMatchesSearch`) di atas fix BUG-009 milik S647 — diverifikasi via `diff`, tidak ada baris S647 yang hilang. |
+| `TODO.md` | S651, S652, S653, S654, S655 | **S655** | Update dokumentasi kumulatif tiap sesi; S655 adalah revisi terakhir & mencakup seluruh catatan sesi sebelumnya. |
+| `docs/BUG_REGISTRY.md` | S656, S657 | **S657** | S657 adalah koreksi eksplisit atas klaim yang keliru di catatan S656 (soal status test regresi BUG-006). |
 
-## Ringkasan isi patch 1: S599 — Ghost Asset di Dropdown Pilih Aset
+## File unik (tidak overlap, diambil langsung)
 
-Root cause: `DanaTitipanPortfolioPresenter._assetOptionsHtml()` adalah
-satu-satunya titik baca `D.assets` di modul Dana Titipan yang tidak
-menerapkan guard `_migratedToInvestmentId` / `investmentId`, sehingga
-aset yang sudah termigrasi/tertaut ke Holding Investasi tetap muncul
-sebagai opsi di picker "Pilih Aset" walau sudah hilang dari Buku Aset.
+- `modules/finance/worthit.js` — S646 (BUG-008)
+- `modules/finance/tx-list-cashflow.js` — S649 (BUG-012)
+- `modules/finance/financial-risk-dashboard-api.js` — S650 (BUG-013)
+- 8 file test baru (satu per sesi S646–S650, S652–S654)
+- 12 `SESSION-NOTE-S###.md` — seluruhnya disertakan sebagai jejak audit per sesi
 
-Fix: tambah filter `!a._migratedToInvestmentId && !a.investmentId` di
-`_assetOptionsHtml()`, pola sama persis `Aset.totalValue()`.
+## Verifikasi yang dilakukan
 
-Verifikasi asal: 4176/4176 test pass.
+- `node --check` pada seluruh file `.js` hasil merge (4 file modul + 8 file
+  test) → **lolos, tanpa error sintaks**.
+- Isi `filter-laporan.js`, `TODO.md`, dan `BUG_REGISTRY.md` di-diff antar
+  versi sesi untuk memastikan versi terakhir bersifat kumulatif/superset,
+  bukan regresi.
 
-## Ringkasan isi patch 2: Ownership Fix — Porsi Titipan Tidak Bisa Dihapus & Disimpan
+## Cara apply
 
-Dua perubahan di `aset.js` (fungsi owners-draft, modal Atur Kepemilikan Aset):
-
-1. `removeOwnerRow(i)` — porsi baris owner yang dihapus sekarang
-   didistribusi ulang ke baris tersisa (presisi 4 desimal), supaya
-   total tetap 100% dan tombol "✅ Simpan Porsi" tidak macet ter-disable.
-2. `saveOwners()` — field titipan legacy (`titipanAmount` /
-   `titipanOwnerType` / `titipanOwnerName`) ikut dikosongkan begitu
-   user simpan `owners[]` eksplisit lewat modal ini, konsisten dengan
-   blok AUTO-MIGRATE di `Aset._saveInner()`.
-
-Verifikasi asal: 4173/4173 test pass.
-
-## Catatan penggabungan
-- Tidak ada overlap file antara kedua patch → digabung tanpa perlu
-  merge manual per baris kode.
-- Setelah ditimpa, disarankan jalankan ulang full suite:
-  `node --test tests/*.test.js` untuk memastikan kombinasi keduanya
-  tetap 0 regresi (masing-masing sudah diverifikasi terpisah, tapi
-  belum pernah dijalankan bersamaan di baseline yang sama).
-- Belum ada entri `CHANGELOG.md` / bump versi `sw.js` untuk salah satu
-  fix ini (sama seperti catatan di patch Ownership Fix asli). Kalau mau
-  saya tambahkan, bilang saja.
+Extract isi zip ini ke root project (`app-main/`), timpa file yang sudah
+ada. Tidak perlu urutan apply — ini sudah merupakan hasil akhir gabungan
+seluruh sesi S646–S657.
