@@ -25,7 +25,26 @@ const chk=document.getElementById('txSyncBbm');
 const fields=document.getElementById('txBbmFields');
 if(!chk||!fields)return;
 fields.style.display=chk.checked?'block':'none';
-if(chk.checked)populateTxBbmVehicleSelect();
+if(chk.checked){
+populateTxBbmVehicleSelect();
+onTxBbmVehicleChange();
+}
+}
+// BUGFIX (lihat catatan diagnosa): kmModal punya onKmVehicleChange() yg
+// mengisi ulang field KM tiap ganti kendaraan (vehicle-core.js). Panel BBM
+// di txModal ini TIDAK punya ekuivalennya -- txBbmKm dibiarkan diam saat
+// txBbmVehicle diganti, sehingga km yg tersimpan lewat recordBbmLog() bisa
+// jadi km kendaraan lain (kalau user lupa update manual) atau field kelihatan
+// "tidak sync". Fix: reuse getVehicleKm() persis seperti onKmVehicleChange(),
+// dipanggil dari onchange="onTxBbmVehicleChange()" di txBbmVehicle (modals.js)
+// & dari toggleTxBbmFields() di atas supaya nilai awal saat panel dibuka juga benar.
+function onTxBbmVehicleChange(){
+const sel=document.getElementById('txBbmVehicle');
+const kmEl=document.getElementById('txBbmKm');
+if(!sel||!kmEl)return;
+if(typeof getVehicleKm==='function'){
+kmEl.value=getVehicleKm(sel.value)||'';
+}
 }
 function syncTxBbmAmt(){
 const liter=parseFloat(document.getElementById('txBbmLiter').value);
