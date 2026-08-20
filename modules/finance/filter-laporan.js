@@ -50,7 +50,16 @@ resetTxPageAndRender();
 function toggleKeuFilter(){
 const panel=document.getElementById('keuFilterPanel');
 if(!panel)return;
-const show=panel.style.display==='none';
+// FIX (BUG-009, audit 2026-08): panel ini disembunyikan DEFAULT lewat class CSS
+// 'u-dnone' (lihat index.html/app_production.html), BUKAN inline style -- jadi
+// panel.style.display kosong ('') di kondisi awal, bukan 'none'. Deteksi lama
+// (style.display==='none') salah baca kondisi awal sbg "sudah kebuka" (show=false),
+// jadi tap PERTAMA malah nge-set ulang jadi 'none' (keliatan no-op ke user) --
+// baru tap KEDUA panel benar-benar kebuka. Ganti ke classList/getComputedStyle
+// (fallback kalau class-nya sudah dilepas manual, mis. baris updateKfBadge() di
+// bawah yang langsung set style.display='block' saat ada filter aktif tersimpan).
+const show=panel.classList.contains('u-dnone')||getComputedStyle(panel).display==='none';
+panel.classList.remove('u-dnone');
 panel.style.display=show?'block':'none';
 if(show)populateKeuFilters();
 updateKfBadge();
@@ -348,7 +357,18 @@ const now=new Date(),m=now.getMonth(),y=now.getFullYear();
 txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
 } else if(scope==='keuangan'){
 const kf=getKeuFilters();
-txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&txMatchesFilters(t,kf);});
+// FIX (BUG-010, audit 2026-08): scope 'keuangan' di sini dulu cuma pakai
+// txMatchesFilters(t,kf) -- TIDAK ikut txMatchesSearch(t,kf.search), padahal
+// renderKeuangan() (modules-render.js, bagian render #txList) sudah lebih dulu
+// benar pakai KEDUANYA (txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search)).
+// Akibatnya: user ketik kata kunci di kolom cari filter Keuangan, badge/list utama
+// (renderKeuangan) sudah kefilter sesuai pencarian, TAPI tap kartu ringkasan
+// (mis. "Pemasukan"/"Pengeluaran" bulan ini) yang memanggil showFilteredTx() masih
+// nampilin transaksi TANPA filter pencarian itu -- summary/list-nya jadi tidak
+// nyambung 1:1 dengan apa yang user cari. Tambah &&txMatchesSearch(t,kf.search),
+// pola sama persis modules-render.js -- 0 rumus pencarian baru, cuma dipakai juga
+// di titik ini.
+txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search);});
 } else if(scope==='laporan'){
 const {from,to}=getRange();
 const f=getLaporanFilters();

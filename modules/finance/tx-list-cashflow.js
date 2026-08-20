@@ -382,6 +382,18 @@ if(curMonth>11){curMonth=0;curYear++;}
 if(curMonth<0){curMonth=11;curYear--;}
 closeModal('filterTxModal');
 txListPage=1;
+// FIX (BUG-012, audit 2026-08): FinanceIntelligence men-cache hasil panggilan TANPA
+// argumen eksplisit (mis. incomeVsExpense()/budgetSummary() bulan default -- lihat
+// komentar _ivxCache/invalidateCache() di finance-intelligence.js), diinvalidate lewat
+// hook yang sama dgn cache saldo akun (save()/renderPageContent()). changeMonth() ganti
+// curMonth/curYear (bulan aktif yg jadi acuan default itu) TAPI tidak lewat salah satu
+// hook itu -- dipanggil langsung dari tombol ‹ › navigasi bulan, cuma renderKeuangan().
+// Akibatnya kartu turunan yang baca FinanceIntelligence tanpa argumen (mis. "Skor
+// Kesehatan Finansial") tetap nampilin angka cache bulan SEBELUMNYA sampai ada
+// save()/pindah halaman berikutnya yang kebetulan invalidate cache-nya. Invalidate
+// eksplisit di sini, pola sama renderPageContent() -- 0 cache baru, cuma dipanggil juga
+// di titik ganti-bulan ini.
+if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
 renderKeuangan();
 }
 // BUGFIX (audit menyeluruh "tab nav tidak respon"): tombol ‹ › month-nav di kartu "📋 Semua

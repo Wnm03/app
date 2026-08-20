@@ -111,9 +111,24 @@ _emergencyFundRisk() {
   } catch (e) {
     return [];
   }
-  const done = !!(dd && dd.amount && dd.saved >= dd.amount);
+  // FIX (BUG-013, audit 2026-08): dulu pakai `dd.saved` mentah -- untuk Target Dana
+  // Darurat yang tertaut ke akun (dd.accountId), `dd.saved` adalah snapshot manual yang
+  // BISA STALE (saldo akun sebenarnya sudah naik lewat transaksi, tapi field `saved`
+  // tidak ikut ter-update tanpa ada aksi eksplisit -- lihat DanaDaruratAI.updateSaved()/
+  // baris 417 modules-calc.js: "Target ini tertaut ke akun, saldo ikut otomatis dari
+  // akunnya" -- yang "otomatis" itu maksudnya HARUS dibaca lewat recalcAccBalance(),
+  // bukan dari field `saved`). Akibatnya Financial Risk Dashboard bisa salah nampilin
+  // "Dana Darurat belum tercapai" padahal saldo akun real sudah capai/lewat target.
+  // Fix: reuse pola SAMA PERSIS DanaDaruratAI.currentSaved() (modules-calc.js) /
+  // invest-ai-widget.js._checkDanaDarurat() -- kalau dd.accountId ada & recalcAccBalance
+  // tersedia, baca saldo real-time; kalau tidak (saldo manual), tetap fallback ke
+  // dd.saved apa adanya (0 regresi untuk target Dana Darurat yang belum tertaut akun).
+  const saved = (dd && dd.accountId && typeof recalcAccBalance === 'function')
+    ? recalcAccBalance(dd.accountId)
+    : (dd ? (dd.saved || 0) : 0);
+  const done = !!(dd && dd.amount && saved >= dd.amount);
   if (done) return [];
-  const note = dd ? (Math.min(100, Math.round((dd.saved / (dd.amount || 1)) * 100)) + '% dari target') : 'Belum ada Target Dana Darurat';
+  const note = dd ? (Math.min(100, Math.round((saved / (dd.amount || 1)) * 100)) + '% dari target') : 'Belum ada Target Dana Darurat';
   return [{
     domain: 'emergency_fund',
     icon: '🚨',
