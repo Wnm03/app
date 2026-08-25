@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s643-keamanan-pin-per-device-salt';
+const MODULE_RENDER_VERSION='s651-keamanan-pin-per-device-salt';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -820,14 +820,22 @@ const selfVehicles=_dashServisSelfVehicles();
 // kategori dgn interval valid & tidak disembunyikan, biar kategori sampah
 // hasil scan Katalog Suku Cadang (intervalKm:0, showInReminder:false) tidak
 // numpuk juga di widget Beranda ini.
-const remindableCats=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
-if(!selfVehicles.length||!remindableCats.length){card.style.display='none';return;}
+// BUGFIX (audit lanjutan S622/S629, gap yang sama dgn resolveServisCatForVehicle()):
+// filter ini dulu TIDAK ikut catVisibleForVehicle(), beda dgn
+// Servis.renderReminder() (car-notes.js) yang sudah benar. Widget Beranda ini
+// bisa menampilkan BEBERAPA kendaraan sekaligus, jadi filter-nya tidak bisa
+// dilakukan 1x di luar (1 vehicleId) -- harus per-kendaraan DI DALAM loop di
+// bawah. Tanpa ini, kategori PRIVAT milik kendaraan lain ikut nyasar tampil
+// di kartu Pengingat kendaraan yang sedang difilter.
+const remindableCatsAll=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
+if(!selfVehicles.length||!remindableCatsAll.length){card.style.display='none';return;}
 const vehChipsHTML=renderDashServisVehChips();
 const vehicles=dashServisVehFilter==='semua'?selfVehicles:selfVehicles.filter(v=>v.id===dashServisVehFilter);
 const rows=[];
 vehicles.forEach(veh=>{
 const curKm=getVehicleKm(veh.id);
 const kmPerDay=estimateKmPerDay(veh.id);
+const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id));
 remindableCats.forEach(cat=>{
 const lastKm=getLastServiceKmForCat(veh.id,cat);
 const intervalKm=getEffectiveIntervalKm(veh.id,cat);
