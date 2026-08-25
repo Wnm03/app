@@ -23,6 +23,32 @@ if(!cat.vehicleId)return true;
 if(!vehicleId)return true;
 return cat.vehicleId===vehicleId;
 }
+// resolveServisCatForVehicle(name,vehicleId) — BUGFIX (audit sesi ini,
+// lanjutan S622/S629): sejak kategori sparepart bisa di-scope ke 1 kendaraan
+// spesifik (cat.vehicleId, lihat catVisibleForVehicle() di atas), kartu
+// Pengingat Servis Dashboard SUDAH benar memfilter per kendaraan. Tapi
+// titik-titik yang MENCARI kategori saat MENYIMPAN servis (Servis._saveInner
+// & onItemAutofillInterval & prefill edit di car-notes.js, plus
+// _resolveServisCategoryId() versi sinkron Transaksi di tx-servis.js) masih
+// pakai `D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase())`
+// polos -- cari cocok nama scr GLOBAL, tanpa peduli kendaraan mana yang
+// sedang aktif. Kalau 2 kendaraan sama-sama punya item bernama sama (mis.
+// "Ganti Oli"), servis kendaraan B bisa ke-link ke kategori PRIVAT milik
+// kendaraan A -- lalu di kartu Pengingat kendaraan B kategori itu disembunyikan
+// (vehicleId-nya bukan B), jadi dari sudut pandang B histori servis "tidak
+// kebaca" & interval yang diisi "tidak tersimpan" (padahal tersimpan, cuma ke
+// kategori kendaraan lain).
+// Fix: helper tunggal ini jadi SoT pencocokan nama->kategori yang sadar
+// kendaraan aktif -- prioritas kategori yang benar-benar scoped ke
+// vehicleId ybs, lalu fallback ke kategori UNIVERSAL (cat.vehicleId kosong),
+// dan TIDAK PERNAH jatuh ke kategori privat milik kendaraan lain.
+function resolveServisCatForVehicle(name,vehicleId){
+const n=(name||'').trim().toLowerCase();
+if(!n)return null;
+const cats=(D.sparepartCats||[]).filter(c=>c&&c.name&&c.name.toLowerCase()===n);
+if(!cats.length)return null;
+return cats.find(c=>c.vehicleId&&c.vehicleId===vehicleId)||cats.find(c=>!c.vehicleId)||null;
+}
 function servisLogMatchesCat(s,cat){
 if(s.categoryId) return s.categoryId===cat.id;
 const cn=cat.name.toLowerCase();
@@ -712,7 +738,12 @@ let addedCat=0,addedStock=0;
 toAdd.forEach((r,idx)=>{
 const it=r.item;
 const catName=(it.category||'Umum').trim()||'Umum';
-let cat=D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
+// BUGFIX (audit): sama seperti gap resolveServisCatForVehicle() -- match by
+// nama di sini dulu GLOBAL, bisa numpang ke kategori PRIVAT milik kendaraan
+// lain (cat.vehicleId beda) kalau nama kategori kebetulan sama. Sekarang
+// sadar kendaraan lewat resolveServisCatForVehicle(), guard typeof spy tetap
+// aman kalau dipanggil sebelum helper itu termuat.
+let cat=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(catName,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
 if(!cat){
 cat={id:'sp_'+Date.now()+'_'+idx,name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0};
 D.sparepartCats.push(cat);

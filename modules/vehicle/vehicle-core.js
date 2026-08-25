@@ -926,6 +926,13 @@ inp.onblur=()=>commitCurKmEdit(inp);
 async function commitCurKmEdit(inp){
 const cancelled=inp.dataset.cancel==='1';
 const raw=inp.value;
+// Fix (audit): lepas id sebelum renderCnTab() supaya guard
+// `!document.getElementById('cnCurKmInput')` di modules-render.js lolos --
+// elemen <input> ini masih ada di DOM saat blur baru terjadi, jadi kalau
+// id-nya tidak dilepas renderCnTab() akan terus skip update teks odometer
+// dan startEditCurKm() berikutnya akan selalu return karena mengira
+// sedang diedit. Efeknya field KM berhenti update permanen setelah edit pertama.
+inp.removeAttribute('id');
 renderCnTab();
 if(cancelled)return;
 const km=parseFloat(raw);
