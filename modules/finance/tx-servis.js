@@ -151,10 +151,18 @@ _servisAutoLinkAdjustStock(purchasedPartId,-purchasedPartQty);
 // kategori part yang baru dibeli/dipakai (purchasedPartId ->
 // D.partsStock[].catId) kalau item TIDAK cocok nama kategori manapun --
 // ini sinkron langsung dari SoT stok sparepart sesuai laporan user.
-function _resolveServisCategoryId(item,purchasedPartId){
+// BUGFIX (audit sesi ini, lanjutan langsung dari fix di atas): match-by-nama
+// di sini tadinya masih polos/global (D.sparepartCats.find by name saja),
+// sama seperti bug lama di car-notes.js -- servis yang lahir dari sinkron
+// Transaksi bisa ke-link ke kategori PRIVAT milik kendaraan lain kalau nama
+// item kebetulan sama. Sekarang pakai resolveServisCatForVehicle()
+// (sparepart-servis.js, SoT baru match-by-nama yang sadar kendaraan) dgn
+// guard typeof supaya tetap aman dipakai terisolasi di test yang tidak
+// memuat sparepart-servis.js.
+function _resolveServisCategoryId(item,purchasedPartId,vehicleId){
 const name=(item||'').trim().toLowerCase();
 if(name){
-const matched=(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name);
+const matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,vehicleId):(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name);
 if(matched)return matched.id;
 }
 if(purchasedPartId){
@@ -164,7 +172,7 @@ if(part&&part.catId)return part.catId;
 return null;
 }
 function recordServisLog(opts){
-const catIdForLog=_resolveServisCategoryId(opts.item,opts.purchasedPartId);
+const catIdForLog=_resolveServisCategoryId(opts.item,opts.purchasedPartId,opts.vehicleId);
 if(opts.existingServisId){
 const s=(D.servisLogs||[]).find(x=>x.id===opts.existingServisId);
 if(s){
