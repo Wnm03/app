@@ -408,7 +408,12 @@ onItemAutofillInterval(){
 const item=document.getElementById('servisItem').value.trim();
 const intervalEl=document.getElementById('servisInterval');
 if(intervalEl&&intervalEl.dataset.manual!=='1'){
-const matched=item?D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase()):null;
+// BUGFIX (audit): pakai resolveServisCatForVehicle() (sparepart-servis.js)
+// supaya interval yang diautofill milik kategori kendaraan AKTIF, bukan
+// ke-nyasar ke kategori privat kendaraan lain yang kebetulan nama-nya
+// sama. Guard typeof supaya tetap aman kalau file itu belum termuat
+// (mis. test yang load car-notes.js secara terisolasi).
+const matched=item?(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase())):null;
 intervalEl.value=matched?matched.intervalKm:'';
 }
 Servis.tryAutoLinkCatalogPart(item);
@@ -547,7 +552,10 @@ const firstCatalogRef=catalogRefs&&catalogRefs[0];
 Servis.populateCatalogPartSelect(firstCatalogRef?firstCatalogRef.catalogId:'');
 document.getElementById('servisCatalogPartQty').value=firstCatalogRef?firstCatalogRef.qty:1;
 Servis.renderCatalogRecommendations();
-const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||D.sparepartCats.find(c=>c.name.toLowerCase()===s.item.toLowerCase());
+// BUGFIX (audit): sama seperti onItemAutofillInterval() -- fallback by-nama
+// dulu polos & global, sekarang lewat resolveServisCatForVehicle() supaya
+// prefill interval saat edit tidak ke-nyasar ke kategori privat kendaraan lain.
+const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,s.vehicleId||curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===s.item.toLowerCase()));
 if(intervalEl)intervalEl.value=linkedCat?linkedCat.intervalKm:'';
 } else {
 document.getElementById('servisDate').value=new Date().toISOString().split('T')[0];
@@ -622,7 +630,11 @@ const item=document.getElementById('servisItem').value.trim();
 const costRaw=document.getElementById('servisCost').value.trim();
 const cost=costRaw===''?0:parseFloat(costRaw);
 if(!item||isNaN(cost)||cost<0){toast('⚠️ Lengkapi jenis servis (cek juga Biaya, harus 0 atau lebih)');return;}
-let matched=D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase());
+// BUGFIX (audit): idem -- pencarian kategori by-nama saat SIMPAN servis
+// sekarang scoped ke kendaraan aktif (curVehicleId) lewat
+// resolveServisCatForVehicle(), supaya servis kendaraan B tidak ke-link ke
+// kategori privat milik kendaraan A hanya karena nama item sama persis.
+let matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase());
 const date=document.getElementById('servisDate').value;
 const note=document.getElementById('servisNote').value;
 const accId=document.getElementById('servisAcc')?document.getElementById('servisAcc').value:D.accounts[0]?.id;
