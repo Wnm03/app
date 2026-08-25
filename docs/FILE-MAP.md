@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-08-17T06:28:22.322Z
-Total file source: 315 · Total identifier global: 2192
+Terakhir digenerate: 2026-08-25T06:04:31.303Z
+Total file source: 315 · Total identifier global: 2196
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -21,7 +21,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 
 | # | File | Baris | Ringkasan |
 |---|------|------:|-----------|
-| 1 | `modules/shared/modules-render.js` | 2177 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 1 | `modules/shared/modules-render.js` | 2185 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 2 | `modules/shared/modals.js` | 8 | Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 3 | `modules/shared/modules-calc.js` | 1142 | _(tidak ada komentar header)_ |
 | 4 | `modules/shop/cobek-etalase.js` | 876 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -34,7 +34,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 11 | `modules/finance/piutang-utang.js` | 843 | Domain Piutang & Utang: catatan piutang (uang dipinjamkan), utang (uang dipinjam) beserta status lunas/cicilan, dan DebtStrategy (simulasi strategi pelunasan Avalanche/Snowball). Dipindah ke … |
 | 12 | `modules/finance/pajak-pbb-zakat.js` | 396 | Kalkulator Pajak Bumi & Bangunan (PBB), Zakat (penghasilan, maal, fitrah), Referensi AI (cek harga emas/nisab via AI), Pajak UMKM, dan PPh 21 (Orang Pribadi) Dipindah ke modules/finance/pajak-pbb-zakat.js (Sesi 16 … |
 | 13 | `budget.js` | 545 | Anggaran Budget (batas pengeluaran per kategori, tab List/Rekomendasi, drill-down transaksi). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian budget/laporan — lihat … |
-| 14 | `car-notes.js` | 1306 | Catatan Kendaraan (Car Notes): pajak kendaraan (VEHTAX), log BBM, log servis + pengingat interval, kalkulator Torsi baut. Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian … |
+| 14 | `car-notes.js` | 1318 | Catatan Kendaraan (Car Notes): pajak kendaraan (VEHTAX), log BBM, log servis + pengingat interval, kalkulator Torsi baut. Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian … |
 | 15 | `chat-action-handlers.js` | 107 | Aksi AI Chat/RefAI: label & handler eksekusi usulan aksi dari balasan AI (blok [[ACTION]]). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 7 restrukturisasi folder — file lama SELESAI dihapus total, … |
 | 16 | `modules/finance/edukasi-dana.js` | 185 | Dana Pendidikan (EduFund): kalkulator target biaya sekolah/kuliah & nabung/bulan Dipindah ke modules/finance/edukasi-dana.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 17 | `modules/home/hidup-seimbang.js` | 228 | Domain Skor Hidup Seimbang: skor gabungan dari Dana Darurat, DSR cicilan, No-Spend 30 hari, & keseimbangan kerja-istirahat, plus riwayat snapshot bulanan. Dipindah ke modules/home/hidup-seimbang.js (Sesi 13 … |
@@ -53,7 +53,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 30 | `modules/asset/rental-management-presenter.js` | 144 | modules/asset/rental-management-presenter.js — Rental Management Presenter (Sesi 132, Batch 10 lanjutan). Target sesi: audit menemukan `RentalManagementAPI` (S103) sudah lengkap + ada test, tapi TIDAK PERNAH dipanggil … |
 | 31 | `modules/asset/asset-maintenance-api.js` | 132 | modules/asset/asset-maintenance-api.js — Asset Maintenance API (S104, Batch 10). Target sesi: Asset Maintenance Foundation. PRINSIP (RULE #1 sesi ini): 100% REUSE modul Asset yang SUDAH ADA — TIDAK ada rumus baru, TIDAK … |
 | 32 | `modules/asset/asset-maintenance-presenter.js` | 124 | modules/asset/asset-maintenance-presenter.js — Asset Maintenance Presenter (Sesi 132, Batch 10 lanjutan). Target sesi: audit menemukan `AssetMaintenanceAPI` (S104) sudah lengkap + ada test, tapi TIDAK PERNAH dipanggil … |
-| 33 | `modules/finance/worthit.js` | 733 | Domain Worth It? & Prioritas Belanja: cek kondisi keuangan sebelum belanja + daftar prioritas barang yang mau dibeli Dipindah ke modules/finance/worthit.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & … |
+| 33 | `modules/finance/worthit.js` | 751 | Domain Worth It? & Prioritas Belanja: cek kondisi keuangan sebelum belanja + daftar prioritas barang yang mau dibeli Dipindah ke modules/finance/worthit.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & … |
 | 34 | `modules/shared/ripple-position.js` | 64 | ROADMAP-v1.1.md item #8 (KNOWN-ISSUES.md §5.2): ripple berbasis koordinat sentuh/klik ASLI, bukan selalu pulsa dari tengah elemen. Murni aditif: CSS ripple Tahap 7 (styles.css, radial-gradient via ::after) sebelumnya … |
 | 35 | `modules/shared/data-default.js` | 68 | Domain Data Default: kategori shop bawaan (DEFAULT_COBEK_KATEGORI), Dipindah ke modules/shared/data-default.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 36 | `modules/shared/ownership-engine.js` | 208 | Ownership Engine (Sesi 191, fondasi lintas-domain). TARGET EKSPLISIT USER: "Implementasikan hanya Ownership Engine. Reuse seluruh modul existing. Jangan ubah business logic. Jangan refactor besar... Buat satu Ownership … |
@@ -64,10 +64,10 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 41 | `modules/shared/ghost-asset-cleanup-ui.js` | 81 | Sesi 592 (lanjutan patch PATCH-ghost-asset-migrated-investment.md). Patch S591/ghost-asset sudah menyaring record ber-flag `_migratedToInvestmentId` dari dropdown "Kaitkan ke Aset Multi-Owner" (getMultiOwnerAssets(), … |
 | 42 | `modules/shared/custodian-registry.js` | 130 | Custodian Registry (Sesi S540-A, Tahap 1/4 DESIGN-S540-CUSTODIAN-GROUPING.md, Design Lock disetujui user dengan keputusan final: Opsi A/registry, seed kosong, 0 backfill, assign manual, build() tidak berubah untuk … |
 | 43 | `modules/asset/asset-ownership-split-presenter.js` | 100 | Sesi 391: split keuntungan aset per pemilik berdasarkan porsi (lanjutan Sesi 390, Multi-Owner Engine). Target eksplisit user: "hitung otomatis keuntungan berdasarkan porsi". PRINSIP SESI INI (sama disiplin dgn … |
-| 44 | `modules/shared/features-helpers-global-security.js` | 682 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
-| 45 | `modules/shared/action-wrappers.js` | 204 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
+| 44 | `modules/shared/features-helpers-global-security.js` | 693 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 45 | `modules/shared/action-wrappers.js` | 239 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 46 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
-| 47 | `modules/shared/format-tema.js` | 181 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 47 | `modules/shared/format-tema.js` | 192 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 48 | `modules/shared/error-handler.js` | 39 | Domain Error Handler Global: tangkap error tak tertangani (uncaught error & Dipindah ke modules/shared/error-handler.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 49 | `modules/shared/helper-teks.js` | 26 | Domain Helper Teks & Kalender: escape karakter HTML berbahaya biar aman Dipindah ke modules/shared/helper-teks.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 50 | `modules/shared/keamanan-pin.js` | 457 | Domain Keamanan: layar PIN (showPinScreen/checkPin/pinPress/pinBack/updatePinDots), Dipindah ke modules/shared/keamanan-pin.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
@@ -80,18 +80,18 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 57 | `modules/shared/onboarding.js` | 55 | Domain Onboarding: preview perkiraan kasar gaji/kiriman saat setup awal Dipindah ke modules/shared/onboarding.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 58 | `modules/shared/kalkulator-input.js` | 142 | Kalkulator ekspresi angka: parser aman (safeCalc), popup kalkulator (openCalc/calcPress/dst), Dipindah ke modules/shared/kalkulator-input.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; … |
 | 59 | `modules/shared/scan-ocr.js` | 1677 | Scan struk belanja (OCR): struk belanja, bukti transfer, tanggal dari foto, odometer, portofolio aset, kategori & sparepart otomatis dari struk Dipindah ke modules/shared/scan-ocr.js (Sesi 17-18 restrukturisasi folder — … |
-| 60 | `modules/finance/filter-laporan.js` | 513 | Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx) Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi … |
+| 60 | `modules/finance/filter-laporan.js` | 533 | Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx) Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi … |
 | 61 | `modules/finance/akun.js` | 993 | Kelola Akun (Cash/Bank/Ewallet dll): saldo, filter dropdown akun di seluruh app, CRUD akun Dipindah ke modules/finance/akun.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 62 | `modules/business/gaji-calc.js` | 56 | Kalkulator gaji harian/borongan (Tukang & karyawan lepas), catat sbg pemasukan Dipindah ke modules/business/gaji-calc.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 63 | `modules/finance/cicilan.js` | 114 | logika form Cicilan pada txModal (Tambah/Edit Transaksi Keuangan). Dipindah ke modules/finance/cicilan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
-| 64 | `modules/finance/tx-bbm.js` | 196 | logika panel "Sinkron ke Catatan Mobil (BBM)" pada txModal Dipindah ke modules/finance/tx-bbm.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 65 | `modules/finance/tx-servis.js` | 227 | logika panel "Sinkron ke Catatan Servis juga?" pada txModal (Tambah/Edit Transaksi Keuangan). Dipisah dari transaksi.js (Sesi ini, "sync sparepart -> servis"), pola SAMA PERSIS tx-bbm.js (populateTxBbmVehicleSelect/ … |
+| 64 | `modules/finance/tx-bbm.js` | 215 | logika panel "Sinkron ke Catatan Mobil (BBM)" pada txModal Dipindah ke modules/finance/tx-bbm.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 65 | `modules/finance/tx-servis.js` | 235 | logika panel "Sinkron ke Catatan Servis juga?" pada txModal (Tambah/Edit Transaksi Keuangan). Dipisah dari transaksi.js (Sesi ini, "sync sparepart -> servis"), pola SAMA PERSIS tx-bbm.js (populateTxBbmVehicleSelect/ … |
 | 66 | `modules/finance/tx-stok-sparepart.js` | 364 | logika panel "Tambah ke Stok Sparepart juga?" pada Dipindah ke modules/finance/tx-stok-sparepart.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 67 | `modules/finance/tx-renov.js` | 165 | logika panel "🔨 Catat juga ke Proyek Renovasi?" pada txModal (Tambah/Edit Transaksi Keuangan). Pola panel kondisional PERSIS SAMA dengan tx-stok-sparepart.js (lihat file itu utk pola aslinya "Tambah ke Stok Sparepart … |
 | 68 | `modules/finance/tx-transfer.js` | 66 | logika modal "⇄ Transfer Antar Akun" (transferModal). Dipindah ke modules/finance/tx-transfer.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 69 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 70 | `modules/finance/tx-target.js` | 69 | domain "Target Tabungan" (modal tambah target, deteksi Dana Dipindah ke modules/finance/tx-target.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 71 | `modules/finance/tx-list-cashflow.js` | 764 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 71 | `modules/finance/tx-list-cashflow.js` | 776 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 72 | `modules/finance/transaksi.js` | 1863 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 73 | `modules/shared/profil-pengaturan.js` | 120 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 74 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -105,7 +105,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 82 | `modules/business/payroll-absensi.js` | 494 | Payroll: Absensi Harian & Kalkulator Gaji Mingguan (const Payroll={...}) Dipindah ke modules/business/payroll-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 83 | `modules/business/tukang-absensi.js` | 682 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 84 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
-| 85 | `modules/vehicle/vehicle-core.js` | 972 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
+| 85 | `modules/vehicle/vehicle-core.js` | 979 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 86 | `modules/vehicle/vehicle-catalog.js` | 612 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 87 | `modules/vehicle/vehicle-scanner.js` | 531 | Scan Barcode/QR/DataMatrix untuk Vehicle Catalog (lanjutan dari ACR-001/Tahap 2 — lihat komentar handleScan() di vehicle-catalog.js: "itu butuh keputusan produk terpisah: pilih library, izin kamera, dsb — di luar … |
 | 88 | `modules/vehicle/vehicle-catalog-ui.js` | 434 | UI dasar Vehicle Catalog (Katalog Suku Cadang), lanjutan ringkas Tahap 2 ACR-001. Scan (vehicle-scanner.js) & storage/CRUD (vehicle-catalog.js) SUDAH ADA dari sesi sebelumnya — sesi ini isinya HANYA lapisan UI, scope … |
@@ -133,7 +133,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 110 | `modules/business/shop-scan-ui.js` | 195 | Bagian B (Shop Import/Export: Scan/PDF/CSV/JSON) dari DESIGN_torsi-vehicle-selector_shop-import-export-2.md, §B.3.1 Scan (Sesi N+8, urutan implementasi disarankan di dokumen tsb — setelah Sesi N+7 Import PDF Shop). … |
 | 111 | `modules/ai/chat-action.js` | 84 | Parsing & UI blok [[ACTION]] dari balasan AI Chat (RefAI), murni ekstraksi/format teks, Dipindah ke modules/ai/chat-action.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 112 | `modules/shared/data-archive.js` | 162 | Storage usage estimate & Archive (export lalu hapus data lama per tahun). Dipindah ke modules/shared/data-archive.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 113 | `modules/vehicle/sparepart-servis.js` | 1548 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
+| 113 | `modules/vehicle/sparepart-servis.js` | 1579 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
 | 114 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
 | 115 | `modules/vehicle/shop-katalog-dinamis-presenter.js` | 83 | modules/vehicle/shop-katalog-dinamis-presenter.js — Shop Katalog Sparepart Dinamis Presenter. 100% REUSE ShopKatalogDinamisAPI (modules/vehicle/shop-katalog-dinamis-api.js) — TIDAK ada query/hitungan baru di sini, murni … |
 | 116 | `modules/vehicle/torsi-vehicle-api.js` | 138 | modules/vehicle/torsi-vehicle-api.js — Torsi Vehicle Selector API (Sesi 1). Basis: DESIGN_torsi-vehicle-selector_shop-import-export.md, Bagian A. Batch: "ringan dulu" — cuma layer data (API) + migrasi, TIDAK ada … |
@@ -166,7 +166,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 143 | `modules/finance/retirement-planner-presenter.js` | 142 | modules/finance/retirement-planner-presenter.js — Retirement Planner Presenter (Sesi 97, Batch 10). Target sesi: Retirement Planner Foundation — lihat catatan lengkap di modules/finance/ retirement-planner-api.js. … |
 | 144 | `modules/finance/financial-health-score-api.js` | 138 | modules/finance/financial-health-score-api.js — Financial Health Score API (Sesi 98, Batch 10). Target sesi: Financial Health Score Foundation — Score Overview, Component Breakdown, Recommendation, Presenter. PRINSIP … |
 | 145 | `modules/finance/financial-health-score-presenter.js` | 140 | modules/finance/financial-health-score-presenter.js — Financial Health Score Presenter (Sesi 98, Batch 10). Target sesi: Financial Health Score Foundation — lihat catatan lengkap di modules/finance/ … |
-| 146 | `modules/finance/financial-risk-dashboard-api.js` | 163 | modules/finance/financial-risk-dashboard-api.js — Financial Risk Dashboard API (Sesi 99, Batch 10). Target sesi: Financial Risk Dashboard — Risk Factors, Risk Level, Presenter. PRINSIP (RULE #1 sesi ini): 100% REUSE … |
+| 146 | `modules/finance/financial-risk-dashboard-api.js` | 178 | modules/finance/financial-risk-dashboard-api.js — Financial Risk Dashboard API (Sesi 99, Batch 10). Target sesi: Financial Risk Dashboard — Risk Factors, Risk Level, Presenter. PRINSIP (RULE #1 sesi ini): 100% REUSE … |
 | 147 | `modules/finance/financial-risk-dashboard-presenter.js` | 151 | modules/finance/financial-risk-dashboard-presenter.js — Financial Risk Dashboard Presenter (Sesi 99, Batch 10). Target sesi: Financial Risk Dashboard — lihat catatan lengkap di modules/finance/ … |
 | 148 | `modules/vehicle/vehicle-intelligence.js` | 181 | Vehicle Intelligence Foundation (Sesi 76, Batch 7). Target sesi: lapisan agregasi domain VEHICLE — vehicle overview, health score per kendaraan, ringkasan armada (fleet), insight dasar — lihat docs/BATCH_PLAN.md § Batch … |
 | 149 | `modules/vehicle/vehicle-dashboard.js` | 142 | modules/vehicle/vehicle-dashboard.js — Vehicle Dashboard Foundation (Sesi 77, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleIntelligence.summary() … |
@@ -326,7 +326,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 303 | `modules/finance/dana-titipan-pool-api.js` | 193 | Dana Titipan: Pool (dana masuk aktual), entitas BARU terpisah dari `D.titipanCommitments[]` (porsi/alokasi per owner, sudah ada). Lihat `MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md` §5 (New Data Model), §14 (API … |
 | 304 | `modules/finance/dana-titipan-aggregation-api.js` | 1041 | Dana Titipan dalam Investasi: Portfolio Allocation Projection (Sesi 484 + Sesi 485a-e + Sesi 486 + Sesi 499/B1 + Sesi B2 + Sesi E + Sesi 554 + Sesi 594). SESI R5 — REALISASI (sesi ini, menggantikan percobaan split … |
 | 305 | `modules/finance/dana-titipan-commitment-return-api.js` | 282 | Dana Titipan: CRUD Commitment (pokok dikomit manual per owner, Sesi 485b/523) + CRUD Return (Sesi 486). SESI R5 — REALISASI (sesi ini). PECAHAN KEDUA dari `dana-titipan-portfolio-presenter.js` (versi produksi s597) — … |
-| 306 | `modules/finance/dana-titipan-portfolio-render.js` | 1605 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
+| 306 | `modules/finance/dana-titipan-portfolio-render.js` | 1616 | Dana Titipan: render/UI (`DanaTitipanPortfolioPresenter`, `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`), termasuk baris pembanding otomatis "Estimasi dari Transaksi <Akun>" (`_expenseComparisonForOwner()`, Sesi … |
 | 307 | `modules/finance/titipan-expense-flow.js` | 250 | Sesi 521 (S521-A, implementasi Design Lock DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519). Scope: flow pencatatan pengeluaran Dana Titipan (single-owner & multi-owner) yang dipanggil dari modal khusus … |
 | 308 | `modules/finance/titipan-expense-ui.js` | 380 | Sesi 521 (S521-B2, UI ONLY, DESIGN-S520-DANA- TITIPAN-UI-MULTIOWNER.md, baseline v1251/S519 + S521-A/S521-B1). Scope: SATU-SATUNYA hal baru di sesi ini adalah `TitipanExpenseUI` — controller DOM tipis buat modal … |
 | 309 | `modules/vehicle/ride-activity-metrics.js` | 385 | RideActivityMetrics (S522, "Ride Activity Metrics Foundation"). HARD SCOPE sesi ini: PURE deterministic math functions saja — fondasi buat Ride Activity GPS recorder yang akan dibangun sesi-sesi berikutnya (S523+). … |
@@ -870,6 +870,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `clickElById` | `modules/shared/action-wrappers.js` |
 | `cloneSession` | `modules/vehicle/ride-storage.js` |
 | `cloneTrackpoint` | `modules/vehicle/ride-storage.js` |
+| `closeAllKeuFabs` | `modules/shared/action-wrappers.js` |
 | `closeCalc` | `modules/shared/kalkulator-input.js` |
 | `closeModal` | `modules/shared/modal-navigasi.js` |
 | `closeQS` | `modules/shared/modal-navigasi.js` |
@@ -1523,6 +1524,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `MY_WRENCH` | `car-notes.js` |
 | `navBillCalendar` | `modules/finance/tagihan-kalender.js` |
 | `navBillFilterMonth` | `modules/finance/tagihan-kalender.js` |
+| `navFabToggle` | `modules/shared/action-wrappers.js` |
 | `netWorthForecast` | `modules/asset/aset-misc.js` |
 | `normalizeAmtToken` | `modules/shared/kalkulator-input.js` |
 | `normalizeGeoError` | `modules/vehicle/ride-gps-recorder.js` |
@@ -1557,6 +1559,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `onTargetDanaDaruratToggle` | `modules/finance/tx-target.js` |
 | `onTxAccChange` | `modules/finance/transaksi.js` |
 | `onTxAssetChange` | `modules/finance/transaksi.js` |
+| `onTxBbmVehicleChange` | `modules/finance/tx-bbm.js` |
 | `onTxCatInput` | `modules/finance/transaksi.js` |
 | `onTxShopSaleItemChange` | `modules/shop/cobek-tx-cart.js` |
 | `onTxShopStockItemChange` | `modules/shop/cobek-tx-cart.js` |
@@ -1918,6 +1921,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `resolveLinkedInvestmentAsset` | `modules/asset/investasi.js` |
 | `resolveLinkedVehicleAsset` | `modules/vehicle/vehicle-core.js` |
 | `resolveOwnerDefaultForAccount` | `modules/finance/transaksi.js` |
+| `resolveServisCatForVehicle` | `modules/vehicle/sparepart-servis.js` |
 | `resolveShopKategori` | `modules/shop/cobek-tx-cart.js` |
 | `resolveTxOwnerAssignment` | `modules/finance/filter-laporan.js` |
 | `resolveTxOwnerSplitForAccount` | `modules/finance/filter-laporan.js` |
