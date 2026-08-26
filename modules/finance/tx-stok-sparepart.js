@@ -148,7 +148,19 @@ if(catalogItem.partName&&existing.name!==catalogItem.partName)existing.name=cata
 return existing;
 }
 const catName=(catalogItem.category||'Umum').trim()||'Umum';
-let cat=D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
+// AUDIT SOT lanjutan (permintaan user): lookup kategori dulu GLOBAL by-name
+// tanpa peduli kendaraan -- bug SAMA PERSIS yang sudah diperbaiki S629/
+// resolveServisCatForVehicle() (lihat sparepart-servis.js) utk titik lain:
+// kalau kendaraan lain sudah punya kategori PRIVAT bernama sama, part hasil
+// scan kendaraan ini ikut ke-link ke kategori privat kendaraan lain itu.
+// Fix: reuse resolveServisCatForVehicle() (SoT pencocokan nama->kategori
+// yang sadar kendaraan aktif, SUDAH ADA di sparepart-servis.js) kalau
+// tersedia; fallback ke lookup lama kalau file itu belum dimuat (mis. test
+// unit file ini berdiri sendiri) -- 0 regresi utk pemanggil lama.
+const vidSync=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+let cat=(typeof resolveServisCatForVehicle==='function')
+?resolveServisCatForVehicle(catName,vidSync)
+:D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
 if(!cat){
 // Sesi 295 (bugfix, permintaan eksplisit user): kategori auto dari scan
 // Katalog Suku Cadang ini TUJUANNYA cuma pengelompokan stok (biar
@@ -160,13 +172,27 @@ if(!cat){
 // SENGAJA mengaktifkannya (isi interval + toggle di 🔧 Kelola Kategori
 // Sparepart & Interval Servis) -- lihat filter di Servis.renderReminder()
 // (car-notes.js) & renderDashboardServisReminder() (modules-render.js).
-cat={id:'sp_'+Date.now(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false};
+// AUDIT SOT lanjutan: kategori BARU (bukan reuse) juga distempel vehicleId
+// -- pola SAMA PERSIS saveCat() (S629) -- supaya kategori auto-scan ikut
+// ter-scope ke kendaraan aktif di 🔧 Kelola Kategori Sparepart, konsisten
+// dgn kategori hasil input manual.
+const vehicleIdCatSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
+cat={id:'sp_'+Date.now(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 const code=(catalogItem.barcode||catalogItem.oemCode||(prefix+'-'+String(seq).padStart(3,'0')));
-const np={id:'st_'+Date.now(),name:catalogItem.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:catalogItem.price||0,note:'Terhubung dari Katalog Suku Cadang (scan)',catalogId:catalogItem.id};
+// AUDIT SOT (permintaan user): part BARU hasil scan dulu tidak pernah
+// distempel vehicleId (beda dgn Sparepart.saveStock() manual, S629, yang
+// SELALU mengunci ke curVehicleId) -- akibatnya part hasil scan jadi
+// "universal" (isPartForVehicle() fallback ke catalogId/compatibleVehicleIds,
+// yang buat draft hasil handleScan() kosong) & bocor tampil di SEMUA tab
+// kendaraan, beda perilaku dgn part hasil input manual. Fix: stempel
+// vehicleId=curVehicleId juga di sini (kalau ada & valid), pola SAMA PERSIS
+// saveStock() -- part existing (reuse di atas) TIDAK disentuh vehicleId-nya.
+const vehicleIdSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
+const np={id:'st_'+Date.now(),name:catalogItem.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:catalogItem.price||0,note:'Terhubung dari Katalog Suku Cadang (scan)',catalogId:catalogItem.id,vehicleId:vehicleIdSync};
 D.partsStock.push(np);
 return np;
 }
@@ -318,9 +344,17 @@ const purchaseDate=date||new Date().toISOString().split('T')[0];
 let targetPart=null;
 if(itemSel==='__new__'){
 const name=(document.getElementById('txStockNewName').value.trim())||note||'Sparepart Baru';
-let cat=D.sparepartCats.find(c=>c.name.toLowerCase()===name.toLowerCase());
+// AUDIT SOT lanjutan (permintaan user): sama seperti syncPartsStockFromCatalog()
+// di atas, lookup kategori jalur ini juga GLOBAL by-name tanpa peduli
+// kendaraan -- reuse resolveServisCatForVehicle() (SoT, sparepart-servis.js)
+// kalau tersedia, fallback ke lookup lama kalau belum dimuat.
+const vidNewCat=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+let cat=(typeof resolveServisCatForVehicle==='function')
+?resolveServisCatForVehicle(name,vidNewCat)
+:D.sparepartCats.find(c=>c.name.toLowerCase()===name.toLowerCase());
 if(!cat){
-cat={id:'sp_'+Date.now(),name,code:codeFromName(name),intervalKm:0};
+const vehicleIdNewCat=(vidNewCat&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNewCat))?vidNewCat:null;
+cat={id:'sp_'+Date.now(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(name);
@@ -331,7 +365,12 @@ if(existing){
 applyStockPurchase(existing,qty,unitPrice,purchaseDate,txId);
 targetPart=existing;
 } else {
-const np={id:'st_'+Date.now(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan'};
+// AUDIT SOT (permintaan user, lanjutan fix syncPartsStockFromCatalog di
+// atas): jalur "__new__" ketik manual di panel Transaksi Keuangan JUGA
+// tidak pernah menyetel vehicleId -- gap SAMA PERSIS, fix pola SAMA PERSIS.
+const vidNew=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vehicleIdNew=(vidNew&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNew))?vidNew:null;
+const np={id:'st_'+Date.now(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
 D.partsStock.push(np);
 applyStockPurchase(np,qty,unitPrice,purchaseDate,txId);
 targetPart=np;
