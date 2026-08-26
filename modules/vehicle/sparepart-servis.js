@@ -71,13 +71,37 @@ function hasIntervalOverride(vehicleId,cat){
 const veh=D.vehicles.find(v=>v.id===vehicleId);
 return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
 }
+// recommendIntervalKm(vehicleId,cat) -- FITUR BARU (audit, gap "interval
+// servis 100% statis, tidak ada rekomendasi berbasis data"): getEffectiveIntervalKm()
+// di atas cuma baca cat.intervalKm (default manual admin) atau
+// veh.intervalOverrides (override manual user) -- TIDAK PERNAH dibandingkan
+// dgn pola servis AKTUAL (D.servisLogs). Fungsi ini murni MEMBACA histori yg
+// sudah ada (reuse servisLogMatchesCat() apa adanya, 0 rumus status baru) &
+// menghitung rata-rata jarak KM antar servis kategori ybs utk 1 kendaraan --
+// hasilnya cuma ANGKA REKOMENDASI (disarankan), TIDAK PERNAH menimpa
+// interval manapun sendiri. Minimal 2 servis (1 jeda) supaya ada data
+// pembanding; kalau kurang dari itu balikin {ok:false} (histori belum cukup).
+function recommendIntervalKm(vehicleId,cat){
+const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.km>0&&servisLogMatchesCat(s,cat)).sort((a,b)=>a.km-b.km);
+if(logs.length<2)return{ok:false,reason:'Belum cukup histori servis (min. 2 catatan dgn KM terisi)',count:logs.length};
+const deltas=[];
+for(let i=1;i<logs.length;i++){
+const d=logs[i].km-logs[i-1].km;
+if(d>0)deltas.push(d);
+}
+if(!deltas.length)return{ok:false,reason:'Data KM histori tidak berurutan naik, tidak bisa dihitung',count:logs.length};
+const avg=Math.round(deltas.reduce((s,d)=>s+d,0)/deltas.length/100)*100;
+return{ok:true,avgKm:avg,count:logs.length,sampleCount:deltas.length};
+}
 async function editVehicleIntervalOverride(catId){
 const cat=D.sparepartCats.find(c=>c.id===catId);
 if(!cat){toast('⚠️ Kategori sparepart tidak ditemukan');return;}
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
 if(!veh){toast('⚠️ Pilih kendaraan dulu');return;}
 const current=getEffectiveIntervalKm(curVehicleId,cat);
-const val=await showPromptModal({title:'Interval Khusus '+veh.name,message:`Interval "${cat.name}" khusus untuk ${veh.emoji||'🏍️'} ${veh.name} (KM). Kosongkan/0 untuk pakai default global (${cat.intervalKm.toLocaleString('id-ID')} km, dipakai semua kendaraan lain).`,icon:'🔧',inputType:'number',defaultValue:current});
+const reko=recommendIntervalKm(curVehicleId,cat);
+const rekoLine=(reko.ok&&Math.abs(reko.avgKm-current)>=100)?`\n\n💡 Dari ${reko.sampleCount} jeda servis terakhir (${reko.count} catatan), rata-rata kamu servis tiap ~${reko.avgKm.toLocaleString('id-ID')} km -- beda dari interval saat ini (${current.toLocaleString('id-ID')} km). Ini cuma saran, isi angka manapun yang kamu mau.`:'';
+const val=await showPromptModal({title:'Interval Khusus '+veh.name,message:`Interval "${cat.name}" khusus untuk ${veh.emoji||'🏍️'} ${veh.name} (KM). Kosongkan/0 untuk pakai default global (${cat.intervalKm.toLocaleString('id-ID')} km, dipakai semua kendaraan lain).${rekoLine}`,icon:'🔧',inputType:'number',defaultValue:current});
 if(val===null)return;
 if(!veh.intervalOverrides)veh.intervalOverrides={};
 const num=parseFloat(val);
@@ -195,7 +219,15 @@ Sparepart._catalogNameCache=(filtered||[]).map(it=>it.partName).filter(Boolean);
 getItemSuggestions(){
 const names=new Map();
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-D.sparepartCats.forEach(c=>{ if(c.name) names.set(c.name.toLowerCase(),c.name); });
+// BUGFIX (audit lanjutan, gap yang sama dgn resolveServisCatForVehicle()):
+// dulu SEMUA D.sparepartCats ikut jadi sumber saran tanpa filter kendaraan
+// -- beda dgn Stok Sparepart (partsStock, sudah pakai isPartForVehicle()) &
+// Katalog Suku Cadang (_catalogNameCache, sudah pakai filterForVehicle())
+// di bawahnya yang SUDAH benar. Efeknya: suggest-box "Jenis Servis/Item"
+// bisa nawarin nama kategori PRIVAT milik kendaraan lain, membingungkan
+// (walau kalau dipilih tetap aman krn save() sudah lewat
+// resolveServisCatForVehicle() -- ini murni perbaikan relevansi saran).
+D.sparepartCats.forEach(c=>{ if(c.name&&catVisibleForVehicle(c,vid)) names.set(c.name.toLowerCase(),c.name); });
 D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&&!names.has(p.name.toLowerCase())) names.set(p.name.toLowerCase(),p.name); });
 (Sparepart._catalogNameCache||[]).forEach(n=>{ if(n&&!names.has(n.toLowerCase()))names.set(n.toLowerCase(),n); });
 return Array.from(names.values());
@@ -398,6 +430,29 @@ const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 const cats=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
 sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}</option>`).join('');
 if(cur&&cats.some(c=>c.id===cur)) sel.value=cur;
+// FITUR BARU (audit, gap "dropdown kategori tanpa pencarian"): reset kotak
+// cari tiap kali dropdown dimuat ulang (buka modal baru/ganti kendaraan),
+// supaya tidak ada filter nyangkut dari sesi buka-modal sebelumnya.
+const searchEl=document.getElementById('stockCatSearch');
+if(searchEl)searchEl.value='';
+},
+// filterStockCatOptions() -- FITUR BARU (audit, gap "dropdown kategori
+// tanpa pencarian"): dropdown Kategori di modal Stok Sparepart tadinya
+// <select> native flat -- begitu daftar kategori panjang (multi-kendaraan
+// x banyak jenis part), native picker HP jadi susah dicari. Fix: kotak cari
+// (#stockCatSearch) di atas <select> ini filter opsi secara live pakai
+// `.hidden` per <option> (didukung WebView Chromium modern) -- 0 perubahan
+// pada makna value/opsi itu sendiri, hanya visibilitasnya. Opsi "Tanpa
+// kategori" (value kosong) SELALU ikut tampil apa pun query-nya, supaya
+// tetap bisa dipilih kapan saja.
+filterStockCatOptions(){
+const searchEl=document.getElementById('stockCatSearch');
+const sel=document.getElementById('stockCatId');
+if(!searchEl||!sel)return;
+const q=searchEl.value.trim().toLowerCase();
+Array.from(sel.options||[]).forEach(opt=>{
+opt.hidden=!!(q&&opt.value&&!opt.textContent.toLowerCase().includes(q));
+});
 },
 autoFillStockCode(){
 const codeEl=document.getElementById('stockCode');
@@ -1361,9 +1416,19 @@ goToList('servisReminderCard','carnotes',4,null,'servis');
 function predictService({vehicleId,categoryId}={}){
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
+// BUGFIX (audit lanjutan Smart Delivery Engine): sebelumnya loop di sini
+// pakai (D.sparepartCats||[]) mentah -- tidak difilter catVisibleForVehicle()
+// (kategori privat kendaraan lain ikut terhitung) maupun intervalKm>0 &&
+// showInReminder!==false (kategori "sampah" hasil scan Katalog Suku Cadang,
+// intervalKm:0, bikin sisaKm selalu negatif -> status 'lewat' permanen).
+// Servis.renderReminder() (car-notes.js) SUDAH benar pakai kedua filter ini
+// sejak awal -- predictService() cuma belum ikut ditempel. Disamakan di sini
+// supaya predictService()/maintenanceForecast()/_vehicleOverdueCheck() (yang
+// semuanya menghitung hal yang sama) konsisten dgn renderReminder().
+const remindable=(D.sparepartCats||[]).filter(c=>c.intervalKm>0&&c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId));
 const cats=categoryId
-? (D.sparepartCats||[]).filter((c)=>c.id===categoryId)
-: (D.sparepartCats||[]);
+? remindable.filter((c)=>c.id===categoryId)
+: remindable;
 if(!cats.length)return{ok:false,reason:categoryId?'Kategori sparepart tidak ditemukan':'Belum ada kategori sparepart terdaftar'};
 const curKm=getVehicleKm(vehicleId);
 const kmPerDay=estimateKmPerDay(vehicleId);
@@ -1395,7 +1460,14 @@ const dueItems=pred.items.filter((r)=>r.status==='lewat'||(r.estDateISO&&new Dat
 let totalBiaya=0;
 let totalBiayaLengkap=true;
 const items=dueItems.map((r)=>{
-const logs=(D.servisLogs||[]).filter((s)=>s.vehicleId===vehicleId&&(s.categoryId===r.categoryId||(!s.categoryId&&s.item===r.categoryName))&&s.cost>0);
+// BUGFIX (audit lanjutan): pencocokan biaya histori sebelumnya pakai
+// exact-string-match polos (s.item===r.categoryName), bukan
+// servisLogMatchesCat() yang sudah ada (fuzzy match: cocok
+// substring/ambigu-check, dipakai recommendIntervalKm() di atas) --
+// biayaEstimasi jadi lebih sering null dari seharusnya walau catatan
+// servisnya sebenarnya cocok.
+const cat=(D.sparepartCats||[]).find((c)=>c.id===r.categoryId);
+const logs=(D.servisLogs||[]).filter((s)=>s.vehicleId===vehicleId&&s.cost>0&&cat&&servisLogMatchesCat(s,cat));
 const biayaEstimasi=logs.length?logs.reduce((s,l)=>s+l.cost,0)/logs.length:null;
 if(biayaEstimasi==null)totalBiayaLengkap=false;else totalBiaya+=biayaEstimasi;
 return Object.assign({},r,{biayaEstimasi});
