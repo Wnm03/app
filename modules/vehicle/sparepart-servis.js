@@ -283,26 +283,37 @@ toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Penging
 },
 // populateVehicleSelect() -- S622 mengisi dropdown "Berlaku untuk" di modal
 // Kategori Sparepart maupun Stok Sparepart (elId beda2, dipanggil dari 2
-// tempat). S629 (permintaan eksplisit user): dropdown ini DIKUNCI/disabled --
-// SELALU otomatis mengikuti curVehicleId (tab kendaraan yg lagi aktif),
-// baik utk tambah baru MAUPUN edit (termasuk kategori/stok lama yg tadinya
-// "🌐 Semua kendaraan", begitu dibuka & disimpan otomatis pindah scope ke
-// kendaraan tab aktif -- lihat saveCat()/saveStock()). Kalau tidak ada
-// kendaraan aktif (curVehicleId kosong/tidak valid), tetap fallback ke
-// "🌐 Semua kendaraan" (perilaku lama, select tetap dikunci).
+// tempat). S629 (permintaan eksplisit user, DIBALIK sesi ini): dulu dropdown
+// ini DIKUNCI/disabled total, baik tambah baru MAUPUN edit. AUDIT sesi ini
+// (permintaan eksplisit user: "ketika di edit kendaraan bisa diedit"): saat
+// TAMBAH kategori/stok baru dropdown TETAP dikunci otomatis ikut curVehicleId
+// (perilaku S629 utk kasus tambah baru tidak berubah -- kategori baru dibuat
+// dari tab kendaraan aktif ya wajar langsung ke kendaraan itu). Tapi saat EDIT
+// data yang SUDAH ADA, dropdown sekarang dibuka (enabled) supaya kendaraannya
+// bisa dipindah manual -- mis. kategori yang ke-input salah tab, atau memang
+// mau diubah scope-nya (khusus 1 kendaraan <-> "🌐 Semua kendaraan" <-> pindah
+// ke kendaraan lain). Nilai awal saat edit = currentValue (vehicleId
+// tersimpan), BUKAN dipaksa ke curVehicleId lagi.
 populateVehicleSelect(elId,currentValue,isEdit){
 const sel=document.getElementById(elId);
 if(!sel)return;
 sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
+const hintId=elId==='sparepartVehicleId'?'sparepartVehicleHint':'stockVehicleHint';
+const hintEl=document.getElementById(hintId);
+if(isEdit){
+const cvValid=currentValue&&D.vehicles.some(v=>v.id===currentValue);
+sel.value=cvValid?currentValue:'';
+sel.disabled=false;
+if(hintEl)hintEl.textContent='✏️ Bisa diubah manual kalau mau pindahkan ke kendaraan lain atau ke "🌐 Semua kendaraan"';
+}else{
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:'';
 const vidValid=vid&&D.vehicles.some(v=>v.id===vid);
 sel.value=vidValid?vid:'';
 sel.disabled=true;
-const hintId=elId==='sparepartVehicleId'?'sparepartVehicleHint':'stockVehicleHint';
-const hintEl=document.getElementById(hintId);
 if(hintEl){
 const veh=vidValid?D.vehicles.find(v=>v.id===vid):null;
 hintEl.textContent=veh?`🔒 Otomatis khusus kendaraan tab aktif: ${veh.emoji||'🏍️'} ${veh.name}`:'🔒 Otomatis "🌐 Semua kendaraan" (tidak ada kendaraan aktif dipilih di tab atas)';
+}
 }
 },
 openCatModal(idx){
@@ -322,9 +333,12 @@ Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:nul
 // kategori existing (termasuk kategori auto-scan yg default false).
 const showRemEl=document.getElementById('sparepartShowInReminder');
 if(showRemEl)showRemEl.checked=curCat?curCat.showInReminder!==false:true;
-const aiBoxEl=document.getElementById('sparepartAiSuggestBox');
-if(aiBoxEl){aiBoxEl.classList.add('u-dnone');aiBoxEl.innerHTML='';}
 const sparepartDelBtnEl=document.getElementById('sparepartDelBtn'); if(sparepartDelBtnEl) sparepartDelBtnEl.style.display=isEdit?'':'none';
+// AUDIT sesi ini: tampilkan rekomendasi AI otomatis begitu modal dibuka
+// (bukan nunggu tombol ditekan) -- untuk kategori existing (edit) langsung
+// dihitung ulang dari curVehicleId (kendaraan tab aktif SAAT INI), untuk
+// tambah baru dgn nama kosong box otomatis disembunyikan lagi.
+Sparepart.autoSuggestInterval();
 openModal('sparepartModal');
 },
 // suggestInterval() (Sesi 295, permintaan eksplisit user "tambahkan ai
@@ -339,10 +353,34 @@ openModal('sparepartModal');
 suggestInterval(){
 const nameEl=document.getElementById('sparepartName');
 const name=(nameEl?nameEl.value:'').trim();
-const boxEl=document.getElementById('sparepartAiSuggestBox');
 if(!name){toast('⚠️ Isi dulu Nama Part/Servis-nya');return;}
-const reko=suggestServiceIntervalKm(name,curVehicleId);
+Sparepart._renderAiSuggestBox(name);
+},
+// autoSuggestInterval() -- AUDIT sesi ini (permintaan eksplisit user: tab
+// rekomendasi AI harus SELALU tampil sesuai kendaraan aktif, bukan cuma
+// muncul setelah user tap tombol "🤖 Saran AI" manual). Dipanggil otomatis
+// dari oninput field Nama Part/Servis DAN dari openCatModal() saat modal
+// dibuka (baik tambah baru dgn nama kosong -> box disembunyikan lagi, MAUPUN
+// edit kategori existing yg sudah punya nama -> langsung tampil). Beda dari
+// suggestInterval() (dipicu tombol manual): versi auto ini TIDAK toast kalau
+// nama masih kosong -- cukup sembunyikan box diam-diam, supaya tidak spam
+// notifikasi tiap kali user baru mulai ngetik / modal baru dibuka kosong.
+autoSuggestInterval(){
+const nameEl=document.getElementById('sparepartName');
+const name=(nameEl?nameEl.value:'').trim();
+const boxEl=document.getElementById('sparepartAiSuggestBox');
+if(!name){ if(boxEl) boxEl.classList.add('u-dnone'); return; }
+Sparepart._renderAiSuggestBox(name);
+},
+// _renderAiSuggestBox(name) -- logika render bersama suggestInterval() (manual)
+// & autoSuggestInterval() (otomatis), supaya rekomendasi SELALU dihitung dari
+// curVehicleId (kendaraan tab aktif) yang berlaku SAAT INI -- sama seperti
+// filter kategori di renderCatList(), bukan kendaraan yg aktif saat kategori
+// ini pertama kali dibuat.
+_renderAiSuggestBox(name){
+const boxEl=document.getElementById('sparepartAiSuggestBox');
 if(!boxEl)return;
+const reko=suggestServiceIntervalKm(name,curVehicleId);
 boxEl.classList.remove('u-dnone');
 if(!reko){
 boxEl.innerHTML=`<div class="u-fs12 u-t2">🤖 Belum ada rekomendasi pasti utk "${escapeHtml(name)}" di data buku panduan yang tersimpan. Isi manual sesuai buku servis kendaraanmu ya.</div>`;
@@ -379,15 +417,22 @@ const clash=matchingVehicleName(name);
 if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis. Isi nama part yang mau diingatkan (mis. Oli Mesin, Ganti Ban, dll).`,4000);return;}
 if(!code) code=codeFromName(name);
 const intervalKm=(interval&&interval>0)?interval:0;
-// S629: dropdown "Berlaku untuk Kendaraan" dikunci -- vehicleId yg disimpan
-// diambil LANGSUNG dari curVehicleId (kendaraan tab aktif), bukan dari nilai
-// select (disabled select kadang tidak reliable dibaca .value-nya di semua
-// browser/WebView). Kategori baru MAUPUN hasil edit (termasuk yg tadinya
-// universal/"🌐 Semua kendaraan") otomatis pindah scope ke kendaraan tab
-// aktif saat disimpan -- lihat populateVehicleSelect(). Kosong/tidak valid
-// (tidak ada kendaraan aktif) tetap fallback null (universal, perilaku lama).
+// AUDIT sesi ini (permintaan eksplisit user, membalik S629): TAMBAH kategori
+// baru tetap dikunci auto ke curVehicleId (dropdown disabled, select-nya
+// tidak reliable dibaca -- lihat populateVehicleSelect()). Tapi utk EDIT
+// kategori yang SUDAH ADA, dropdown sekarang enabled & bisa diubah user --
+// jadi vehicleId yang disimpan diambil dari nilai select (elemen
+// #sparepartVehicleId), bukan dipaksa curVehicleId lagi.
+const isEditingCat=Sparepart.catEditIdx!==null;
+let vehicleId;
+if(isEditingCat){
+const vehSelEl=document.getElementById('sparepartVehicleId');
+const vehSelVal=vehSelEl?vehSelEl.value:'';
+vehicleId=(vehSelVal&&D.vehicles.some(v=>v.id===vehSelVal))?vehSelVal:null;
+}else{
 const vid622=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const vehicleId=(vid622&&D.vehicles.some(v=>v.id===vid622))?vid622:null;
+vehicleId=(vid622&&D.vehicles.some(v=>v.id===vid622))?vid622:null;
+}
 if(Sparepart.catEditIdx!==null){
 D.sparepartCats[Sparepart.catEditIdx].name=name;
 D.sparepartCats[Sparepart.catEditIdx].code=code;
@@ -687,12 +732,21 @@ const prefix=cat?(cat.code||codeFromName(cat.name)):codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 code=prefix+'-'+String(seq).padStart(3,'0');
 }
-// S629: dropdown "Berlaku untuk Kendaraan" dikunci -- vehicleId yg disimpan
-// diambil LANGSUNG dari curVehicleId (kendaraan tab aktif), sama pola dgn
-// saveCat() di atas. Stok baru MAUPUN hasil edit (termasuk yg tadinya
-// universal) otomatis pindah scope ke kendaraan tab aktif saat disimpan.
+// AUDIT sesi ini (permintaan eksplisit user, sama pola dgn saveCat()):
+// TAMBAH stok baru tetap dikunci auto ke curVehicleId. EDIT stok existing
+// sekarang baca vehicleId dari select #stockVehicleId (sudah enabled saat
+// edit -- lihat populateVehicleSelect()), bisa dipindah manual ke kendaraan
+// lain / ke universal.
+const isEditingStock=Sparepart.stockEditIdx!==null;
+let vehicleId;
+if(isEditingStock){
+const vehSelEl=document.getElementById('stockVehicleId');
+const vehSelVal=vehSelEl?vehSelEl.value:'';
+vehicleId=(vehSelVal&&D.vehicles.some(v=>v.id===vehSelVal))?vehSelVal:null;
+}else{
 const vid622s=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const vehicleId=(vid622s&&D.vehicles.some(v=>v.id===vid622s))?vid622s:null;
+vehicleId=(vid622s&&D.vehicles.some(v=>v.id===vid622s))?vid622s:null;
+}
 if(Sparepart.stockEditIdx!==null){
 Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId});
 } else {
