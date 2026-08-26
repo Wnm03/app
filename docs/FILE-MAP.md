@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-08-26T10:51:30.737Z
-Total file source: 315 · Total identifier global: 2205
+Terakhir digenerate: 2026-08-26T11:59:24.916Z
+Total file source: 315 · Total identifier global: 2197
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -27,14 +27,14 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 4 | `modules/shop/cobek-etalase.js` | 876 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 5 | `modules/shop/cobek-pricing.js` | 881 | Domain Shop bagian rekomendasi harga & ongkir: PriceReko (kalkulator Dipindah ke modules/shop/cobek-pricing.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 6 | `modules/shop/cobek-order.js` | 941 | Domain Shop bagian order & pelanggan: Produsen (supplier), SiapPulang Dipindah ke modules/shop/cobek-order.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
-| 7 | `modules/shop/cobek-tx-cart.js` | 489 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 7 | `modules/shop/cobek-tx-cart.js` | 520 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 8 | `modules/shop/cobek-io.js` | 616 | Domain Shop bagian impor/ekspor: ImportKatalog (impor massal produk+harga Dipindah ke modules/shop/cobek-io.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 9 | `modules/business/shop-data-io-api.js` | 657 | Bagian B (Shop Import/Export: Scan/PDF/CSV/JSON) dari DESIGN_torsi-vehicle-selector_shop-import-export-2.md. Bagian B (Scan, Import PDF, Import CSV, Import/Export JSON) SUDAH SELESAI 4/4. Sesi ini (lanjutan opsional, … |
 | 10 | `modules/business/kasir.js` | 375 | Modul "🧠 Kasir AI" (v127, kw81-kasir-ai-pos): Dipindah ke modules/business/kasir.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). Tab … |
 | 11 | `modules/finance/piutang-utang.js` | 843 | Domain Piutang & Utang: catatan piutang (uang dipinjamkan), utang (uang dipinjam) beserta status lunas/cicilan, dan DebtStrategy (simulasi strategi pelunasan Avalanche/Snowball). Dipindah ke … |
 | 12 | `modules/finance/pajak-pbb-zakat.js` | 396 | Kalkulator Pajak Bumi & Bangunan (PBB), Zakat (penghasilan, maal, fitrah), Referensi AI (cek harga emas/nisab via AI), Pajak UMKM, dan PPh 21 (Orang Pribadi) Dipindah ke modules/finance/pajak-pbb-zakat.js (Sesi 16 … |
 | 13 | `budget.js` | 545 | Anggaran Budget (batas pengeluaran per kategori, tab List/Rekomendasi, drill-down transaksi). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian budget/laporan — lihat … |
-| 14 | `car-notes.js` | 1341 | Catatan Kendaraan (Car Notes): pajak kendaraan (VEHTAX), log BBM, log servis + pengingat interval, kalkulator Torsi baut. Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian … |
+| 14 | `car-notes.js` | 1326 | Catatan Kendaraan (Car Notes): pajak kendaraan (VEHTAX), log BBM, log servis + pengingat interval, kalkulator Torsi baut. Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian … |
 | 15 | `chat-action-handlers.js` | 107 | Aksi AI Chat/RefAI: label & handler eksekusi usulan aksi dari balasan AI (blok [[ACTION]]). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 7 restrukturisasi folder — file lama SELESAI dihapus total, … |
 | 16 | `modules/finance/edukasi-dana.js` | 185 | Dana Pendidikan (EduFund): kalkulator target biaya sekolah/kuliah & nabung/bulan Dipindah ke modules/finance/edukasi-dana.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 17 | `modules/home/hidup-seimbang.js` | 228 | Domain Skor Hidup Seimbang: skor gabungan dari Dana Darurat, DSR cicilan, No-Spend 30 hari, & keseimbangan kerja-istirahat, plus riwayat snapshot bulanan. Dipindah ke modules/home/hidup-seimbang.js (Sesi 13 … |
@@ -133,7 +133,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 110 | `modules/business/shop-scan-ui.js` | 195 | Bagian B (Shop Import/Export: Scan/PDF/CSV/JSON) dari DESIGN_torsi-vehicle-selector_shop-import-export-2.md, §B.3.1 Scan (Sesi N+8, urutan implementasi disarankan di dokumen tsb — setelah Sesi N+7 Import PDF Shop). … |
 | 111 | `modules/ai/chat-action.js` | 84 | Parsing & UI blok [[ACTION]] dari balasan AI Chat (RefAI), murni ekstraksi/format teks, Dipindah ke modules/ai/chat-action.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 112 | `modules/shared/data-archive.js` | 162 | Storage usage estimate & Archive (export lalu hapus data lama per tahun). Dipindah ke modules/shared/data-archive.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 113 | `modules/vehicle/sparepart-servis.js` | 2054 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
+| 113 | `modules/vehicle/sparepart-servis.js` | 1716 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
 | 114 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
 | 115 | `modules/vehicle/shop-katalog-dinamis-presenter.js` | 83 | modules/vehicle/shop-katalog-dinamis-presenter.js — Shop Katalog Sparepart Dinamis Presenter. 100% REUSE ShopKatalogDinamisAPI (modules/vehicle/shop-katalog-dinamis-api.js) — TIDAK ada query/hitungan baru di sini, murni … |
 | 116 | `modules/vehicle/torsi-vehicle-api.js` | 138 | modules/vehicle/torsi-vehicle-api.js — Torsi Vehicle Selector API (Sesi 1). Basis: DESIGN_torsi-vehicle-selector_shop-import-export.md, Bagian A. Batch: "ringan dulu" — cuma layer data (API) + migrasi, TIDAK ada … |
@@ -484,7 +484,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_promptModalSubmit` | `modules/shared/modal-navigasi.js` |
 | `_promptStore` | `modules/shared/modal-navigasi.js` |
 | `_queueDialog` | `modules/shared/modal-navigasi.js` |
-| `_renderSuggestBox` | `modules/vehicle/sparepart-servis.js` |
 | `_repairLooseJson` | `modules/ai/chat-action.js` |
 | `_resolveDialog` | `modules/shared/modal-navigasi.js` |
 | `_resolveServisCategoryId` | `modules/finance/tx-servis.js` |
@@ -901,7 +900,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `computeProductionSyncStatus` | `diagnostik-versi.js` |
 | `computeRipplePercent` | `modules/shared/ripple-position.js` |
 | `computeSelfTestResults` | `self-test.js` |
-| `computeServiceUrgency` | `modules/vehicle/sparepart-servis.js` |
 | `computeTxShopSaleTotals` | `modules/shop/cobek-tx-cart.js` |
 | `confirmChatAction` | `ai-chat.js` |
 | `confirmWeeklyReset` | `modules/business/reset-gaji-mingguan.js` |
@@ -1189,7 +1187,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `gdriveTrySilentReconnectOnLoad` | `gdrive-backup.js` |
 | `gdriveUserEmail` | `laporan-export.js` |
 | `generateVirtualBillItemsForMonth` | `modules/finance/tagihan-kalender.js` |
-| `GENERIC_RECOMMEND_NAMES` | `modules/vehicle/sparepart-servis.js` |
 | `geolocationAvailable` | `modules/vehicle/ride-gps-recorder.js` |
 | `getAccOwners` | `modules/finance/akun.js` |
 | `getAccOwnersEffective` | `modules/finance/akun.js` |
@@ -1220,14 +1217,12 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `getCicilanSharedMine` | `modules/finance/cicilan.js` |
 | `getCnRange` | `modules/vehicle/vehicle-core.js` |
 | `getCustomerOrders` | `modules/shop/cobek-io.js` |
-| `getEffectiveIntervalBulan` | `modules/vehicle/sparepart-servis.js` |
 | `getEffectiveIntervalKm` | `modules/vehicle/sparepart-servis.js` |
 | `getFavoritKeys` | `modules/dashboard-hub/dashboard-hub-favorit.js` |
 | `getHtmlSnapshotForSelfTest` | `diagnostik-versi.js` |
 | `getInstance` | `modules/vehicle/ride-map.js` |
 | `getKeuFilters` | `modules/finance/filter-laporan.js` |
 | `getLaporanFilters` | `modules/finance/filter-laporan.js` |
-| `getLastServiceDateForCat` | `modules/vehicle/sparepart-servis.js` |
 | `getLastServiceKm` | `modules/vehicle/sparepart-servis.js` |
 | `getLatestBillPaymentTxId` | `modules/finance/tagihan-kalender.js` |
 | `getMultiOwnerAssets` | `modules/finance/piutang-utang.js` |
@@ -1289,8 +1284,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `healFuelStateReferenceKm` | `modules/vehicle/vehicle-core.js` |
 | `hideDashCardEl` | `modules/shared/modules-render.js` |
 | `hideSuggestBox` | `modules/finance/transaksi.js` |
-| `historyMatchesName` | `modules/vehicle/sparepart-servis.js` |
-| `historyStatsForName` | `modules/vehicle/sparepart-servis.js` |
 | `hitungPBB` | `pajak-aset-ui-wrappers.js` |
 | `hitungPPh21` | `pajak-aset-ui-wrappers.js` |
 | `hitungPPh21Progresif` | `pajak-aset-ui-wrappers.js` |
@@ -1526,7 +1519,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `modulesReady` | `modules/vehicle/ride-history.js` |
 | `MONTHS` | `modules/shared/helper-teks.js` |
 | `MONTHS_FULL` | `modules/shared/helper-teks.js` |
-| `monthsSinceISO` | `modules/vehicle/sparepart-servis.js` |
 | `MPS_TO_KMH` | `modules/vehicle/ride-activity-metrics.js` |
 | `MultiOwnerEngine` | `modules/shared/multi-owner-engine.js` |
 | `MY_WRENCH` | `car-notes.js` |
