@@ -546,7 +546,18 @@ return{totalPembelian,totalNilaiStok,totalNilaiTerpakai,biayaServisSparepart,tre
 renderDashboard(){
 const el=document.getElementById('sparepartDashboard');
 if(!el)return;
-const stats=Sparepart.calcDashboardStats(D.partsStock,D.servisLogs);
+// AUDIT SOT (permintaan user): widget ringkasan ini dulu selalu pakai
+// D.partsStock/D.servisLogs MENTAH tanpa filter kendaraan aktif -- beda
+// dgn renderStockList() (daftar di bawah widget ini, fungsi yang sama)
+// yang SUDAH benar filter via Sparepart.isPartForVehicle(). Akibatnya
+// kartu "Stok Menipis/Habis/Part Terlaris/Nilai Persediaan" mencampur
+// SEMUA kendaraan padahal daftar di bawahnya cuma nampilin 1 kendaraan --
+// membingungkan (angka ringkasan tidak sinkron dgn daftar yg dilihat).
+// Fix: filter dulu pakai pola SAMA PERSIS renderStockList().
+const vidDash=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const partsStockDash=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vidDash));
+const servisLogsDash=vidDash?D.servisLogs.filter(s=>s.vehicleId===vidDash):D.servisLogs;
+const stats=Sparepart.calcDashboardStats(partsStockDash,servisLogsDash);
 const{low,habis,topPart,topCount,nilaiPersediaan,avgPrice,lastPurchase,chartData}=stats;
 const lastPurchaseLbl=lastPurchase?escapeHtml(lastPurchase.name)+(lastPurchase.lastPurchaseDate?' • '+escapeHtml(lastPurchase.lastPurchaseDate):''):'-';
 let chartHtml='';
