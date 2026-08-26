@@ -1,3 +1,31 @@
+# Changelog — Sesi S660 (DP + Piutang di applyTxShopSaleFromTx, v1393)
+
+## Task
+Poin 1 dari 3 permintaan user: tambah field DP + logic piutang ke
+`applyTxShopSaleFromTx()` (modules/shop/cobek-tx-cart.js) — jalur
+penjualan Shop yang dipicu dari centang "Catat juga sbg Penjualan Shop"
+di modal Transaksi (txModal), BUKAN dari modal Order (orderModal) yang
+sudah lebih dulu punya fitur ini (kw-shop-dp, Order._saveInner() di
+cobek-order.js).
+
+## Fix (additive)
+- Field baru #txShopSaleDP ("Uang Diterima / DP (Rp)") ditambahkan ke
+  panel txShopSalePanel di modules/shared/modals.js, pola & copy sama
+  persis dgn #oDP di orderModal.
+- applyTxShopSaleFromTx() sekarang reuse PERSIS logic kw-shop-dp milik
+  Order._saveInner(): DP kosong = lunas penuh (0 regresi perilaku lama);
+  DP < Total -> sisa dicatat/disinkron sbg D.piutang (create/update/hapus
+  mengikuti pola existingPiutangId yang sama), linked via
+  shopRecord.piutangLinkId di D.cobek. Transaksi utama (tx.amount) di-set
+  ke DP (bukan Total) supaya saldo akun konsisten dgn uang yang benar2
+  diterima — barang tetap dianggap keluar/terjual penuh dari stok
+  (recordShopSale tidak berubah).
+- 0 perubahan pada Order._saveInner()/orderModal (referensi, tidak disentuh).
+
+## Test & Build
+4718/4718 test lulus (0 regresi), build v1393 sukses, sintaks bundle valid.
+
+
 # Changelog — Sesi S648 (Fix bug klik nama holding di Dana Titipan -> TypeError, v1382)
 
 ## Bug report
