@@ -825,13 +825,28 @@ const lastKm=Servis.getLastServiceKmForCat(curVehicleId,cat);
 const intervalKm=getEffectiveIntervalKm(curVehicleId,cat);
 const overridden=hasIntervalOverride(curVehicleId,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
+// FITUR BARU (Interval Waktu): 100% reuse computeServiceUrgency()
+// (modules/vehicle/sparepart-servis.js) -- SATU-SATUNYA titik hitung
+// status/sisa yg sadar 2 sumbu (km & bulan opsional per kategori). sisa/pct/
+// col/msg/severity di bawah TETAP dihitung dari sisaKm (utk progress bar &
+// label km yg sudah ada, 0 perubahan tampilan lama), cuma status
+// 'lewat'/'segera' (severity) skrg ikut u.status supaya axis bulan yg lebih
+// mendesak (mis. Minyak Rem sudah >6 bln walau km masih jauh) TETAP kebaca.
+const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:curVehicleId,cat,curKm,kmPerDay}):null;
 const sisa=intervalKm-jarakTempuh;
 const pct=Math.min(100,Math.max(0,Math.round((jarakTempuh/intervalKm)*100)));
+const status=u?u.status:(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman'));
 let col='green',msg=`Sisa ${sisa.toLocaleString('id-ID')} km`,severity=null;
-if(sisa<=0){col='red';msg=`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;severity='overdue';}
-else if(sisa<=intervalKm*0.15){col='orange';msg=`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;severity='due-soon';}
+if(status==='lewat'){col='red';msg=`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;severity='overdue';}
+else if(status==='segera'){col='orange';msg=`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;severity='due-soon';}
+// bulanNote — tampilkan sisa bulan cuma kalau kategori ini PUNYA
+// intervalBulan diatur DAN itu axis yg lebih mendesak (u.limitingAxis==='bulan'),
+// supaya tidak menambah noise di kategori pure-km (mayoritas data existing).
+const bulanNote=(u&&u.intervalBulan&&u.limitingAxis==='bulan')
+?(u.sisaBulan<=0?` · ⚠️ lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:` · sisa ~${Math.round(u.sisaBulan)} bln`)
+:'';
 const estDateISO=estimateServiceDateISO(sisa,kmPerDay);
-const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
+const estLabel=(estDateISO?` · ~${fmtDateID(estDateISO)}`:'')+bulanNote;
 // FITUR BARU (audit, gap "reminder tidak nyambung ke VehicleActionRecommendation"):
 // 100% reuse VehicleActionRecommendation.actionFor() (vehicle-action-recommendation.js,
 // Sesi 82) -- TIDAK menghitung ulang severity apa pun, cuma numpang teks aksi
