@@ -463,16 +463,47 @@ phone:(document.getElementById('txShopSaleCustPhone')?.value||'').trim(),
 address:(document.getElementById('txShopSaleCustAddr')?.value||'').trim()
 };
 const tx=existingTx||D.transactions.find(t=>t.id===txId);
+// kw-shop-dp (reuse persis logic Order._saveInner()): "Uang Diterima/DP" boleh
+// < Total kalau belum lunas walau barang sudah keluar stok (recordShopSale
+// tetap mengurangi stok penuh, TIDAK terkait status bayar). Kosong = dianggap
+// lunas penuh (perilaku lama, tidak berubah). Sisa (Total-DP) dicatat sbg
+// Piutang (reuse modul Piutang yg sudah ada, D.piutang — bukan ledger/rumus
+// baru), linked via piutangLinkId di D.cobek spy bisa disinkron ulang kalau
+// transaksi ini diedit lagi nanti — field & alur SAMA PERSIS dgn kw-shop-dp
+// milik Order._saveInner() (cobek-order.js), cuma sumber form-nya beda
+// (#txShopSaleDP, bukan #oDP).
+const dpRaw=document.getElementById('txShopSaleDP')?document.getElementById('txShopSaleDP').value.trim():'';
+const dp=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
+const sisa=Math.max(0,total-dp);
+const existingPiutangId=(existingTx&&existingTx.cobekLinkId)?(()=>{const p=D.cobek.find(c=>c.id===existingTx.cobekLinkId);return p?p.piutangLinkId:null;})():null;
 const result=recordShopSale({
 items,subtotal,diskon,ongkir,total,profit,date,note,customer,
 priceType:'normal',delivered:true,accountId:accId,txId,
 existingShopId:(existingTx&&existingTx.cobekLinkId)?existingTx.cobekLinkId:null
 });
 if(!result.ok){toast('⚠️ '+result.message);return;}
-if(tx)tx.cobekLinkId=result.shopId;
-renderProductList();renderShop();renderShopRecent();
+if(tx){tx.cobekLinkId=result.shopId;tx.amount=dp;}
+const shopRecord=D.cobek.find(c=>c.id===result.shopId);
 const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');
-toast(`🪨 Penjualan tercatat: ${itemSummary}`);
+if(sisa>0){
+const piutangName=customer.name||'Pembeli Shop';
+const piutangCatatan='Sisa pembayaran shop: '+itemSummary;
+const existingPiutang=existingPiutangId?D.piutang.find(p=>p.id===existingPiutangId):null;
+if(existingPiutang){
+Object.assign(existingPiutang,{name:piutangName,nilai:sisa,tanggal:date,catatan:piutangCatatan,lunas:false});
+if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
+}else{
+const pid=uid();
+D.piutang.push({id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
+if(shopRecord)shopRecord.piutangLinkId=pid;
+}
+}else if(existingPiutangId){
+D.piutang=D.piutang.filter(p=>p.id!==existingPiutangId);
+if(shopRecord)shopRecord.piutangLinkId=null;
+}
+if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
+renderProductList();renderShop();renderShopRecent();
+toast(`🪨 Penjualan tercatat: ${itemSummary}`+(sisa>0?' (DP '+fmt(dp)+', sisa piutang '+fmt(sisa)+')':''));
 }
 
 function openProductModal(idx){return Etalase.openModal(idx);}
