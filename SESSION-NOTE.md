@@ -157,6 +157,65 @@ ulang `app-bundle-a.min.js`/`app-bundle-b.min.js`,
 `index.html`/`app_production.html` (query `?v=1384`), dan `sw.js`
 (`CACHE_NAME` `kw-cache-v1384`).
 
+---
+
+## Sesi lanjutan — Audit "Car Notes lebih pintar" + 4 perbaikan
+
+Diminta audit menyeluruh fitur Car Notes utk rekomendasi AI/data, lalu kerjakan 4 gap yang ditemukan:
+
+### Gap 1 — Kartu Pengingat Servis (car-notes.js) tidak nyambung ke `VehicleActionRecommendation`
+App ini sudah punya decision-engine berlapis matang (`VehicleIntelligence` →
+`VehicleReminder` → `VehicleAIHook` → `VehicleRecommendationEngine` →
+`VehicleActionRecommendation`/`VehiclePriorityScoring`), tapi `Servis.renderReminder()`
+(car-notes.js) adalah implementasi terpisah sendiri yang tidak pernah
+memanggilnya — jadi teks aksi konkret ("Jadwalkan servis sekarang", dst)
+tidak pernah muncul di tab Car Notes.
+**Fix:** `renderReminder()` sekarang memetakan status baris (`sisa<=0` →
+`overdue`, mendekati ambang → `due-soon`) lalu 100% reuse
+`VehicleActionRecommendation.actionFor({type:'service',severity})` (fungsi
+yang SUDAH ADA, bukan logic baru) utk teks aksi, ditampilkan sebagai baris
+"👉 ..." di tiap kategori overdue/due-soon.
+
+### Gap 2 — Interval servis 100% statis, tidak ada rekomendasi berbasis data
+`getEffectiveIntervalKm()` cuma baca default admin/override manual, tidak
+pernah dibandingkan dgn pola servis AKTUAL (`D.servisLogs`).
+**Fix:** fungsi baru `recommendIntervalKm(vehicleId,cat)` (sparepart-servis.js)
+menghitung rata-rata jarak KM antar servis kategori itu dari histori nyata
+(reuse `servisLogMatchesCat()` apa adanya, min. 2 catatan). Hasilnya
+ditampilkan sbg baris saran ("💡 Dari N jeda servis terakhir, rata-rata kamu
+servis tiap ~X km...") di modal "Interval Khusus" (`editVehicleIntervalOverride()`)
+— hanya tampil kalau beda ≥100 km dari interval saat ini, murni saran, tidak
+pernah menimpa angka manapun sendiri.
+
+### Gap 3 — Dropdown "Kategori" (Stok Sparepart) tanpa pencarian
+`<select id="stockCatId">` native flat, makin susah dicari begitu daftar
+kategori panjang (multi-kendaraan × banyak part).
+**Fix:** kotak cari baru `#stockCatSearch` di atas dropdown (modals.js),
+filter live via `Sparepart.filterStockCatOptions()` (menyembunyikan
+`<option>` yang tidak cocok lewat `.hidden`, 0 perubahan pada value/opsi
+itu sendiri). Reset otomatis tiap `populateStockCatSelect()` dipanggil ulang
+(buka modal baru/ganti kendaraan).
+
+### Gap 4 — `getItemSuggestions()` (suggest-box "Jenis Servis/Item") tidak scoped per kendaraan
+Ditemukan saat audit: sumber saran dari `D.sparepartCats` diambil TANPA
+`catVisibleForVehicle()` — beda dari sumber lain di fungsi yang sama
+(`partsStock` & `_catalogNameCache`, keduanya sudah scoped). Bisa nawarin
+nama kategori privat milik kendaraan lain, membingungkan (walau tetap aman
+kalau dipilih, karena `save()` sudah lewat `resolveServisCatForVehicle()`).
+**Fix:** tambah filter `catVisibleForVehicle(c,vid)` di loop `D.sparepartCats`.
+
+### File tambahan yang berubah (di luar versi/bundle)
+- `modules/vehicle/sparepart-servis.js` — `recommendIntervalKm()`,
+  `filterStockCatOptions()`, fix scoping `getItemSuggestions()`
+- `car-notes.js` — `renderReminder()` pakai `VehicleActionRecommendation`
+- `modules/shared/modals.js` — kotak cari `#stockCatSearch` di modal Stok Sparepart
+
+### Verifikasi sesi ini
+`npm test` → 4700/4700 pass. `node scripts/build.js` → sukses (`s652`,
+`?v=1385`). `verify-bundle-freshness` & `verify-window-expose` → OK.
+
+---
+
 ## File yang berubah
 
 **Fix bug (5 file):**
@@ -178,3 +237,31 @@ aktif di app — HTML memuat bundle `.min.js`, bukan file source langsung):**
 
 **PENTING utk deploy:** upload SEMUA file di atas, bukan cuma HTML/sw.js —
 kalau cuma sebagian yang di-upload, bundle & source bisa tidak sinkron.
+
+---
+
+## Sesi lanjutan — Fix bug nyata di `predictService()`/`maintenanceForecast()` (audit sebelum tambah UI forecast)
+
+**Konteks:** saat audit kenapa `maintenanceForecast()` belum dipasang di UI, ditemukan `predictService()` sendiri sudah AKTIF dipakai `_vehicleOverdueCheck()` → rule AIDecision `vehicle-service-overdue` (notifikasi nyata ke user), dan di situ ada 2 gap + 1 gap turunan.
+
+### Gap A — `predictService()` tidak filter `catVisibleForVehicle()`
+Loop sebelumnya `(D.sparepartCats||[])` mentah — kategori PRIVAT kendaraan lain ikut terhitung utk kendaraan aktif.
+
+### Gap B — `predictService()` tidak filter `intervalKm>0 && showInReminder!==false`
+Bug yang sama persis dengan yang sudah diperbaiki di `Servis.renderReminder()` (car-notes.js, komentar "Sesi 295"), tapi belum pernah ditempel ke `predictService()` meski keduanya menghitung hal yang sama. Kategori "sampah" hasil scan Katalog Suku Cadang (`intervalKm:0`) membuat `sisaKm` selalu negatif → status `'lewat'` permanen → berpotensi memicu notifikasi AI "servis lewat jatuh tempo" yang salah/spam.
+
+**Fix A+B:** `predictService()` sekarang menghitung `remindable` (filter gabungan `intervalKm>0 && showInReminder!==false && catVisibleForVehicle(cat, vehicleId)`) sebelum dipakai baik untuk mode array (`categoryId` kosong) maupun mode 1 kategori (`categoryId` diisi) — disamakan persis dgn filter yang sudah benar di `Servis.renderReminder()`. Sudah dicek: tidak ada pemanggil `predictService()` lain di codebase ini yang mengisi `categoryId`, jadi perubahan pada cabang itu aman.
+
+### Gap C (turunan Gap A+B) — `maintenanceForecast()`: pencocokan biaya histori exact-string-match
+`s.item===r.categoryName` polos, bukan `servisLogMatchesCat()` (fuzzy match yang sudah dipakai `recommendIntervalKm()`) — `biayaEstimasi` lebih sering `null` dari seharusnya meski catatan servisnya sebenarnya cocok.
+
+**Fix C:** ambil objek kategori (`D.sparepartCats.find(c=>c.id===r.categoryId)`), lalu pakai `servisLogMatchesCat(s,cat)` seperti fungsi lain di file ini.
+
+**File berubah:** `modules/vehicle/sparepart-servis.js` (source), `app-bundle-b.min.js` (bundle ditempel manual dgn teks identik — lihat catatan verifikasi di bawah).
+
+**PENTING — belum diverifikasi penuh di sesi ini:** repo/payload yang di-upload ke sesi ini cuma berisi file sumber yang relevan + 2 bundle, TANPA `scripts/build.js`, suite test (`npm test`), atau `package.json`. Jadi:
+- Belum bisa dijalankan `npm test` (4700+ test) untuk memverifikasi tidak ada regresi.
+- Belum bisa dijalankan `node scripts/build.js` untuk bump versi & regenerasi bundle resmi (bundle di sini ditempel manual by hand, teks identik dgn source, TAPI belum lewat proses build/minify/version-sync yang biasa).
+- `verify-bundle-freshness.js` / `verify-window-expose.js` / `verify-release-ready.js` belum dijalankan.
+
+**Sebelum deploy:** jalankan ulang siklus biasa (full repo + `npm test` + `node scripts/build.js`) supaya versi & bundle resmi konsisten, bukan cuma pakai bundle hasil tempel manual di patch ini.

@@ -827,12 +827,19 @@ const overridden=hasIntervalOverride(curVehicleId,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
 const sisa=intervalKm-jarakTempuh;
 const pct=Math.min(100,Math.max(0,Math.round((jarakTempuh/intervalKm)*100)));
-let col='green',msg=`Sisa ${sisa.toLocaleString('id-ID')} km`;
-if(sisa<=0){col='red';msg=`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;}
-else if(sisa<=intervalKm*0.15){col='orange';msg=`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;}
+let col='green',msg=`Sisa ${sisa.toLocaleString('id-ID')} km`,severity=null;
+if(sisa<=0){col='red';msg=`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;severity='overdue';}
+else if(sisa<=intervalKm*0.15){col='orange';msg=`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;severity='due-soon';}
 const estDateISO=estimateServiceDateISO(sisa,kmPerDay);
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
-return{cat,lastKm,intervalKm,overridden,sisa,pct,col,msg,estLabel};
+// FITUR BARU (audit, gap "reminder tidak nyambung ke VehicleActionRecommendation"):
+// 100% reuse VehicleActionRecommendation.actionFor() (vehicle-action-recommendation.js,
+// Sesi 82) -- TIDAK menghitung ulang severity apa pun, cuma numpang teks aksi
+// konkret yang sudah ada utk severity 'overdue'/'due-soon' yang SAMA PERSIS
+// dgn yang dipakai VehicleAlertPanel/VehicleInsightFeed di Dashboard. Guard
+// typeof spy tetap aman kalau file itu belum termuat (mis. test terisolasi).
+const action=(severity&&typeof VehicleActionRecommendation!=='undefined')?VehicleActionRecommendation.actionFor({type:'service',severity}).label:null;
+return{cat,lastKm,intervalKm,overridden,sisa,pct,col,msg,estLabel,action};
 }).sort((a,b)=>a.sisa-b.sisa);
 card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+rows.map(r=>`
       <div class="u-mb12">
@@ -841,6 +848,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span cla
           <span class="${r.col} u-fw700">${r.msg}${r.estLabel}</span>
         </div>
         <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
+        ${r.action?`<div class="u-fs11 u-fw700 u-cacc" style="margin-top:2px">👉 ${escapeHtml(r.action)}</div>`:''}
         <div class="u-flex u-jcb u-aic" style="margin-top:3px">
           <div class="u-fs12t2">${r.lastKm===null?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km'} · <span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer">Interval ${r.intervalKm.toLocaleString('id-ID')} km${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span></div>
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="markSparepartServiced" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ Sudah Servis</button>
