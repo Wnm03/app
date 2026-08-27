@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s660-keamanan-pin-per-device-salt';
+const MODULE_RENDER_VERSION='s-audit-backup-partsstock-vehicleid-backfill-schema9';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh

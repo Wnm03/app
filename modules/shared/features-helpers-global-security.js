@@ -4,7 +4,7 @@
 // data-default.js (v79) — file itu HARUS dimuat SEBELUM file ini karena dibaca langsung di `let D = {...}`.
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 9;
 const DATA_MIGRATIONS=[
 {toVersion:2,desc:'Tambah kategori baku Investasi & Sedekah/Donasi (pengeluaran) utk user lama',migrate(d){
 if(!d.categories||!d.categories.expense)return;
@@ -43,6 +43,31 @@ if(typeof Investment!=='undefined'&&typeof Investment.migrateOwnersToRegistry===
 Investment.migrateOwnersToRegistry();
 }
 }},
+{toVersion:8,desc:'BUGFIX (audit backup user): D.partsStock id dulu dibuat lewat syncPartsStockFromCatalog() pakai \'st_\'+Date.now() MENTAH (bukan uid() SOT anti-tabrakan) -- kalau fungsi itu dipanggil banyak kali dlm loop sinkron (syncUnlinkedCatalogPartsToStock() saat bulk-import katalog), banyak baris ke-generate di milidetik yang sama & id-nya jadi TABRAKAN (temuan nyata di 1 backup: 292/296 baris cuma 40 id unik). Bug generation-nya sudah diperbaiki (lihat tx-stok-sparepart.js, _genId()), migrasi ini one-time cleanup utk backup LAMA yang sudah kena: baris pertama per id dipertahankan apa adanya, duplikatnya diberi id baru unik (pola _dupN) -- 0 baris dihapus, cuma id yang diganti.',migrate(d){
+if(!Array.isArray(d.partsStock)||!d.partsStock.length)return;
+const seen=new Set();
+let suf=1;
+d.partsStock.forEach(p=>{
+if(!p||p.id==null)return;
+if(!seen.has(p.id)){seen.add(p.id);return;}
+let nid=p.id+'_dup'+suf;
+while(seen.has(nid)){suf++;nid=p.id+'_dup'+suf;}
+p.id=nid;seen.add(nid);suf++;
+});
+}},
+{toVersion:9,desc:'BUGFIX (audit backup user, lanjutan toVersion:8): part hasil scan Katalog Suku Cadang dari SEBELUM sesi audit SOT vehicleId (lihat tx-stok-sparepart.js syncPartsStockFromCatalog()) tidak pernah distempel D.partsStock[].vehicleId -- part-nya jadi \"universal\" & bocor tampil di SEMUA tab kendaraan. Fix generation-nya forward-only (0 backfill retroaktif). Migrasi ini backfill vehicleId utk baris LAMA yang kosong, HANYA kalau bisa ditentukan dgn pasti: catalogId part cocok ke 1 entri _vehicleCatalogStore.items & entri itu compatibleVehicleIds isinya PERSIS 1 kendaraan (kalau 0/>1/ambigu, dilewati -- 0 tebakan). d._vehicleCatalogStore cuma tersedia sesaat di jalur restore JSON (lihat applyRestoredData(), backup-restore.js) -- migrasi ini no-op di jalur startup normal (app.load()), yg memang tidak punya sumber data katalog di titik ini.',migrate(d){
+if(!Array.isArray(d.partsStock)||!d.partsStock.length)return;
+const items=(d._vehicleCatalogStore&&Array.isArray(d._vehicleCatalogStore.items))?d._vehicleCatalogStore.items:null;
+if(!items)return;
+const byId={};
+items.forEach(it=>{ if(it&&it.id!=null)byId[it.id]=it; });
+d.partsStock.forEach(p=>{
+if(!p||p.vehicleId||p.catalogId==null)return;
+const it=byId[p.catalogId];
+const compat=(it&&Array.isArray(it.compatibleVehicleIds))?it.compatibleVehicleIds:[];
+if(compat.length===1)p.vehicleId=compat[0];
+});
+}},
 ];
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
@@ -66,8 +91,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's660-keamanan-pin-per-device-salt';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's660-keamanan-pin-per-device-salt';
+const APP_BUILD_VERSION = 's-audit-backup-partsstock-vehicleid-backfill-schema9';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's-audit-backup-partsstock-vehicleid-backfill-schema9';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],

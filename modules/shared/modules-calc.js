@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s660-keamanan-pin-per-device-salt';
+const MODULE_CALC_VERSION='s-audit-backup-partsstock-vehicleid-backfill-schema9';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){

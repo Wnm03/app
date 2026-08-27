@@ -416,10 +416,17 @@ try{
 D={...D,...imp};
 delete D._lifeosStore;
 delete D._eieStore;
-delete D._vehicleCatalogStore;
 delete D._hondaPdfImportStore;
 applyRestoredDataMigrations();
+// BUGFIX (audit backup, lanjutan toVersion:8 dedupe): D._vehicleCatalogStore
+// SENGAJA belum dihapus di sini (beda dari _lifeosStore/_eieStore/
+// _hondaPdfImportStore di atas) -- DATA_MIGRATIONS[toVersion:9] butuh baca
+// d._vehicleCatalogStore.items utk backfill D.partsStock[].vehicleId yang
+// kosong (part hasil scan katalog dari SEBELUM fix SOT vehicleId). Dihapus
+// SETELAH migrasi selesai di bawah, supaya tidak nyangkut sbg field liar di
+// D permanen (pola sama persis 3 store lain, cuma titik hapusnya digeser).
 runDataMigrations(backupVersion);
+delete D._vehicleCatalogStore;
 saveFlush();init();
 try{
 if(_restoredLifeosStore!==undefined){
