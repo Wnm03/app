@@ -102,6 +102,8 @@ const w=D.tukangWorkers.find(x=>x.id==id);
 if(!w)return;
 const hasLocked=D.tukangAbsensi.some(a=>a.workerId==id&&a.renovItemLinkId);
 if(hasLocked){toast('⚠️ Tidak bisa hapus — "'+w.name+'" masih punya absensi yang sudah dipakai di item Renovasi. Batalkan/hapus dulu item terkait.');return;}
+const hasPaid=D.tukangAbsensi.some(a=>a.workerId==id&&a.paidTxId);
+if(hasPaid){toast('⚠️ Tidak bisa hapus — "'+w.name+'" masih punya absensi yang sudah dibayar. Hapus/urungkan dulu transaksi pembayarannya di Keuangan.');return;}
 if(!await askConfirm(`Hapus pekerja "${w.name}"? Absensi yang belum dipakai ikut terhapus.`))return;
 D.tukangAbsensi=D.tukangAbsensi.filter(a=>a.workerId!=id);
 D.tukangWorkers=D.tukangWorkers.filter(x=>x.id!=id);
@@ -438,11 +440,22 @@ const name=w?w.name:'(pekerja dihapus)';
 const d=new Date(a.date+'T00:00:00');
 const dateLabel=d.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'});
 const lockNote=a.paidTxId?' · 💸 sudah dibayar':(a.renovItemLinkId?' · 🔒 dipakai di item Renovasi':'');
-return `<div class="tx-item">
+return `<div class="tx-item u-pointer" data-action="Tukang.viewBorHistoryDetail" data-args='["${a.id}"]'>
         <div class="u-minw0"><div class="tx-name">${escapeHtml(name)}</div><div class="tx-meta">${dateLabel} · ${fmtFull(a.borTotal)} ÷ ${a.borJumlah} tukang${lockNote}</div></div>
         <div class="tx-amount">${fmtFull(a.upah)}</div>
       </div>`;
 }).join('');
+},
+viewBorHistoryDetail(id){
+const a=D.tukangAbsensi.find(x=>sameId(x.id,id));
+if(!a)return;
+const w=D.tukangWorkers.find(x=>x.id==a.workerId);
+const name=w?w.name:'(pekerja dihapus)';
+const d=new Date(a.date+'T00:00:00');
+const dateLabel=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const lockNote=a.paidTxId?'💸 Sudah dibayar':(a.renovItemLinkId?'🔒 Dipakai di item Renovasi':'Belum dipakai/dibayar');
+const msg='👷 Tukang: '+name+'\n📅 Tanggal: '+dateLabel+'\n📦 Total Borongan: '+fmtFull(a.borTotal)+' ÷ '+a.borJumlah+' tukang\n💰 Upah Bagian Ini: '+fmtFull(a.upah)+'\n📌 Status: '+lockNote;
+if(typeof showAlertModal==='function')showAlertModal(msg,{icon:'📦',title:'Detail Absensi Borongan'});
 },
 payBorHistoryAsExpense(){
 const m=Tukang._borHistMonth||new Date(new Date().getFullYear(),new Date().getMonth(),1);
@@ -507,11 +520,51 @@ const jamLabel=a.masuk&&a.pulang?(a.masuk+'–'+a.pulang):'';
 let jamDetail=(a.jamKerja||0)+' jam kerja';
 if(a.jamLembur>0)jamDetail+=' + '+a.jamLembur+' jam lembur';
 const lockNote=a.paidTxId?' · 💸 sudah dibayar':(a.renovItemLinkId?' · 🔒 dipakai di item Renovasi':'');
-return `<div class="tx-item">
+return `<div class="tx-item u-pointer" data-action="Tukang.viewJamHistoryDetail" data-args='["${a.id}"]'>
         <div class="u-minw0"><div class="tx-name">${escapeHtml(name)}</div><div class="tx-meta">${dateLabel} · ${jamLabel} · ${jamDetail}${lockNote}</div></div>
         <div class="tx-amount">${fmtFull(a.upah)}</div>
       </div>`;
 }).join('');
+},
+viewJamHistoryDetail(id){
+const a=D.tukangAbsensi.find(x=>sameId(x.id,id));
+if(!a)return;
+const w=D.tukangWorkers.find(x=>x.id==a.workerId);
+const name=w?w.name:'(pekerja dihapus)';
+const d=new Date(a.date+'T00:00:00');
+const dateLabel=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const jamLabel=a.masuk&&a.pulang?(a.masuk+'–'+a.pulang):'(jam tidak tercatat)';
+let jamDetail=(a.jamKerja||0)+' jam kerja';
+if(a.jamLembur>0)jamDetail+=' + '+a.jamLembur+' jam lembur';
+const lockNote=a.paidTxId?'💸 Sudah dibayar':(a.renovItemLinkId?'🔒 Dipakai di item Renovasi':'Belum dipakai/dibayar');
+const msg='👷 Tukang: '+name+'\n📅 Tanggal: '+dateLabel+'\n⏱ Jam: '+jamLabel+'\n🕐 '+jamDetail+'\n💰 Upah: '+fmtFull(a.upah)+'\n📌 Status: '+lockNote;
+if(typeof showAlertModal==='function')showAlertModal(msg,{icon:'⏱',title:'Detail Absen Per Jam'});
+},
+payJamHistoryAsExpense(){
+const m=Tukang._jamHistMonth||new Date(new Date().getFullYear(),new Date().getMonth(),1);
+const from=dateToISO(m);
+const to=dateToISO(new Date(m.getFullYear(),m.getMonth()+1,0));
+const entries=D.tukangAbsensi.filter(a=>a.mode!=='borongan'&&!a.renovItemLinkId&&!a.paidTxId&&a.date>=from&&a.date<=to);
+if(!entries.length){toast('⚠️ Tidak ada absen per jam yang bisa dibayar di bulan ini (kosong, atau semua sudah dibayar/dipakai di item Renovasi)');return;}
+const total=entries.reduce((s,a)=>s+a.upah,0);
+const byWorker={};
+entries.forEach(a=>{
+const w=D.tukangWorkers.find(x=>x.id==a.workerId);
+const name=w?w.name:'(pekerja dihapus)';
+byWorker[name]=(byWorker[name]||0)+a.upah;
+});
+const detail=Object.entries(byWorker).map(([name,t])=>name+': '+fmtFull(t)).join(' · ');
+const monthLabel=m.toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+Tukang._pendingPaymentEntryIds=entries.map(a=>a.id);
+Tukang._pendingPaymentRange={from,to};
+closeModal('tkJamHistModal');closeModal('tukangModal');
+openTxModal('expense');
+setTimeout(()=>{
+document.getElementById('txAmt').value=Math.round(total);
+const upahCat=D.categories.expense.find(c=>/tukang|upah|gaji|renovasi/i.test(c.name));
+if(upahCat){ document.getElementById('txCat').value=upahCat.name; updateSubCatOptions(); }
+document.getElementById('txNote').value='Upah jam '+monthLabel+' — '+detail;
+},60);
 },
 renderAll(){
 const start=new Date(Tukang.weekStart);
