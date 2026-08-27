@@ -9,6 +9,25 @@
 //    onchange="onTxStockItemChange()")
 //  - scan-ocr.js (auto-centang & isi panel stok saat hasil scan struk
 //    terdeteksi sparepart)
+// _genId() — BUGFIX (audit backup, temuan user): id partsStock/sparepartCats
+// hasil sync katalog dulu pakai 'st_'/'sp_'+Date.now() MENTAH -- kalau
+// syncPartsStockFromCatalog() dipanggil banyak kali dlm loop sinkron
+// (syncUnlinkedCatalogPartsToStock() saat bulk-import katalog/Honda PDF
+// Import), banyak record ke-generate di milidetik yg sama -> id TABRAKAN
+// (temuan nyata: 292/296 baris partsStock berbagi cuma 40 id unik di 1
+// backup produksi). Fix: reuse uid() (SOT anti-tabrakan app, monotonic via
+// _lastUid, sudah dipakai di tempat lain) kalau tersedia; fallback ke
+// counter lokal monotonic (pola sama uid()) kalau file ini di-load berdiri
+// sendiri (mis. test unit lewat loadSource() yg tidak inject uid()) -- 0
+// regresi utk pemanggil lama, TIDAK ada lagi Date.now() mentah dipakai jadi id.
+let _genIdLocalLast = 0;
+function _genId(){
+if(typeof uid==='function')return uid();
+let n=Date.now();
+if(n<=_genIdLocalLast)n=_genIdLocalLast+1;
+_genIdLocalLast=n;
+return n;
+}
 // revertStockPurchase(partId,qty,txId) — Tahap 8B, DIPERBAIKI sesi Bug C
 // (audit lanjutan s625): kebalikan applyStockPurchase(), dipakai saat
 // transaksi Keuangan yang menambah stok Inventaris DIEDIT (checkbox
@@ -177,7 +196,7 @@ if(!cat){
 // ter-scope ke kendaraan aktif di 🔧 Kelola Kategori Sparepart, konsisten
 // dgn kategori hasil input manual.
 const vehicleIdCatSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
-cat={id:'sp_'+Date.now(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
+cat={id:'sp_'+_genId(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(catName);
@@ -192,7 +211,11 @@ const code=(catalogItem.barcode||catalogItem.oemCode||(prefix+'-'+String(seq).pa
 // vehicleId=curVehicleId juga di sini (kalau ada & valid), pola SAMA PERSIS
 // saveStock() -- part existing (reuse di atas) TIDAK disentuh vehicleId-nya.
 const vehicleIdSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
-const np={id:'st_'+Date.now(),name:catalogItem.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:catalogItem.price||0,note:'Terhubung dari Katalog Suku Cadang (scan)',catalogId:catalogItem.id,vehicleId:vehicleIdSync};
+// BUGFIX (audit backup): id dulu pakai 'st_'+Date.now() mentah -- kalau fungsi ini
+// dipanggil banyak kali dlm loop sinkron (syncUnlinkedCatalogPartsToStock() saat
+// bulk-import katalog), banyak part ke-generate di milidetik sama -> id tabrakan.
+// Ganti ke uid() (SOT anti-tabrakan app, sudah dipakai di tempat lain).
+const np={id:'st_'+_genId(),name:catalogItem.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:catalogItem.price||0,note:'Terhubung dari Katalog Suku Cadang (scan)',catalogId:catalogItem.id,vehicleId:vehicleIdSync};
 D.partsStock.push(np);
 return np;
 }
@@ -354,7 +377,7 @@ let cat=(typeof resolveServisCatForVehicle==='function')
 :D.sparepartCats.find(c=>c.name.toLowerCase()===name.toLowerCase());
 if(!cat){
 const vehicleIdNewCat=(vidNewCat&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNewCat))?vidNewCat:null;
-cat={id:'sp_'+Date.now(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
+cat={id:'sp_'+_genId(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(name);
@@ -370,7 +393,7 @@ targetPart=existing;
 // tidak pernah menyetel vehicleId -- gap SAMA PERSIS, fix pola SAMA PERSIS.
 const vidNew=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 const vehicleIdNew=(vidNew&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNew))?vidNew:null;
-const np={id:'st_'+Date.now(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
+const np={id:'st_'+_genId(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
 D.partsStock.push(np);
 applyStockPurchase(np,qty,unitPrice,purchaseDate,txId);
 targetPart=np;
