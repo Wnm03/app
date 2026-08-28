@@ -49,13 +49,28 @@ if(isNaN(d.getTime()))return false;
 return d.getFullYear()===year&&d.getMonth()===month;
 }
 
-// getMonthlyCashProjection(month,year) — fungsi murni, 0 baca DOM. Prinsip:
+// getMonthlyCashProjection(month,year,opts) — fungsi murni, 0 baca DOM. Prinsip:
 // Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban Terjadwal. SELALU kembalikan 3
 // angka terpisah (acceptance criteria #5), tidak ada mode gabungan 1-angka.
-function getMonthlyCashProjection(month,year){
+//
+// opts (S667B, OPSIONAL, 100% BACKWARD-COMPATIBLE) — {billWindowMode,cycleStartDay},
+// REUSE PERSIS CashflowProjSettings/billingCycleRange (cashflow-projection-settings.js/
+// tx-list-cashflow.js, Sesi 93/95) -- dipanggil tanpa opts (semua caller lama, termasuk
+// _renderCashProjectionCard() sblm sesi ini) hasilnya IDENTIK perilaku lama
+// (billWindowMode default 'kalender' = getBillOccurrencesInMonth(b,y,m), SAMA PERSIS kode
+// asli di bawah). HANYA sisaKewajiban/billMonthTotal/billPaidThisPeriod yang berubah kalau
+// billWindowMode==='siklus' -- proyeksiGaji TETAP selalu bulan kalender m/y (gaji tidak ada
+// konsep siklus tengah-bulan), pola sama persis computeCashflowForecast() yang cuma ubah
+// jendela TAGIHAN, bukan income. Mode '30hari' (dipakai kartu Proyeksi Saldo Kas lain) TIDAK
+// relevan di sini (kartu ini selalu per-bulan-kalender utk sisi gaji) -- kalau billWindowMode
+// dikirim '30hari', diperlakukan sama seperti 'kalender' (fallback aman, 0 behavior baru).
+function getMonthlyCashProjection(month,year,opts){
 const now=new Date();
 const y=(year!=null?year:now.getFullYear());
 const m=(month!=null?month:now.getMonth());
+const cfg=opts||{};
+const useSiklus=cfg.billWindowMode==='siklus'&&typeof billingCycleRange==='function';
+const cycleRange=useSiklus?billingCycleRange(now,cfg.cycleStartDay):null;
 
 // 1) Proyeksi Gaji = gaji SUDAH tercatat (D.transactions bulan ini, via
 // isGajiTransaction) + estimasi PENDING (D.workDays yang belum di-reset lewat
@@ -82,14 +97,29 @@ const proyeksiGaji=recordedGaji+pendingGajiEstimate;
 // masih nyangkut di bulan target walau sudah dibayar), sisanya baru dijumlah
 // occurrence x amount. billMonthTotal/billPaidThisPeriod tetap dikembalikan
 // terpisah sbg info mentah (bukan dipakai lagi utk hitung sisaKewajiban).
-const billMonthTotal=(typeof getBillStats==='function'?getBillStats(m,y).monthTotal:0)||0;
+// S667B: jendela hitung kewajiban -- 'siklus' pakai billingCycleRange() (via
+// getBillOccurrencesInRange(), SUDAH ADA di tagihan-kalender.js), default/lainnya PERSIS
+// kode asli (getBillOccurrencesInMonth(b,y,m), bulan kalender m/y target).
+// Catatan (limitasi terdokumentasi, disengaja): guard getBillPaidThisPeriodInfo() di mode
+// 'siklus' dicek pakai bulan/tahun akhir siklus (cycleRange.to) -- fungsi itu sendiri
+// murni month/year based (tidak ada versi range), jadi ini best-effort utk kasus tepi
+// freq mingguan yang disebut di komentar acceptance criteria #3 di atas; occurrence
+// utama (getBillOccurrencesInRange, via nextDue yang sudah dimajukan markBillPaid())
+// tetap benar utk kasus umum bulanan/tahunan/sekali.
+const billRangeYear=useSiklus?cycleRange.to.getFullYear():y;
+const billRangeMonth=useSiklus?cycleRange.to.getMonth():m;
+const billOccCount=(b)=>useSiklus
+?(typeof getBillOccurrencesInRange==='function'?getBillOccurrencesInRange(b,cycleRange.from,cycleRange.to).length:0)
+:(typeof getBillOccurrencesInMonth==='function'?getBillOccurrencesInMonth(b,y,m).length:0);
+const billMonthTotal=useSiklus
+?(D.bills||[]).reduce((s,b)=>s+billOccCount(b)*(b.amount||0),0)
+:((typeof getBillStats==='function'?getBillStats(m,y).monthTotal:0)||0);
 const billPaidThisPeriod=(D.bills||[])
-.filter(b=>typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,m,y)!=null)
+.filter(b=>typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,billRangeMonth,billRangeYear)!=null)
 .reduce((s,b)=>s+(b.amount||0),0);
 const sisaKewajiban=(D.bills||[]).reduce((s,b)=>{
-if(typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,m,y)!=null)return s;
-const occ=typeof getBillOccurrencesInMonth==='function'?getBillOccurrencesInMonth(b,y,m).length:0;
-return s+occ*(b.amount||0);
+if(typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,billRangeMonth,billRangeYear)!=null)return s;
+return s+billOccCount(b)*(b.amount||0);
 },0);
 
 // 3) Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban. Boleh negatif (justru itu

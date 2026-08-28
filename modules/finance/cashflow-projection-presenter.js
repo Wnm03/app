@@ -265,6 +265,11 @@ const CashFlowProjectionPresenter = {
     CashFlowProjectionPresenter.render();
     const panel = document.getElementById('cashflowProjSettingsPanel');
     if (panel && !panel.classList.contains('u-dnone')) CashFlowProjectionPresenter._fillSettingsPanel(panel);
+    // S667B: kartu "💰 Proyeksi Kas Bulan Ini" (dashCashProjCard, modules-render.js) SEKARANG
+    // ikut baca CashflowProjSettings yang SAMA (billWindowMode/cycleStartDay) -- refresh 2
+    // arah spy tidak stale kalau user ubah dari panel SATUNYA. Guard typeof (aman kalau kartu
+    // itu tidak ada di halaman/belum dimuat).
+    if (typeof _renderCashProjectionCard === 'function') _renderCashProjectionCard();
     if (typeof toast === 'function') toast('↺ Pengaturan proyeksi arus kas direset');
   },
   _applySettings(partial) {
@@ -273,6 +278,8 @@ const CashFlowProjectionPresenter = {
     CashFlowProjectionPresenter.render();
     const panel = document.getElementById('cashflowProjSettingsPanel');
     if (panel && !panel.classList.contains('u-dnone')) CashFlowProjectionPresenter._fillSettingsPanel(panel);
+    // S667B: lihat komentar resetSettings() di atas -- refresh 2 arah dgn dashCashProjCard.
+    if (typeof _renderCashProjectionCard === 'function') _renderCashProjectionCard();
   },
 
 };
