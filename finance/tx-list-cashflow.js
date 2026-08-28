@@ -70,14 +70,198 @@ const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pm
 const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxAssetSplit(t):null;
 const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
 const ownerSplitLine=(assetSplit&&assetSplit.ok)?`<div class="tx-meta">👥 ${assetSplit.splits.map(s=>escapeHtml(s.ownerName)+': '+fmt(s.bagian)).join(' · ')}</div>`:'';
+// Sesi T3 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md Track 1, lanjutan Sesi T1
+// tx.hitungKas): badge "📝 Catatan saja" utk transaksi yg SENGAJA di-skip dari saldo akun
+// (Sesi T1, recalcAccBalance()) & Pemasukan/Pengeluaran Dashboard (Sesi T2, _dashMonthlyIncExp())
+// -- murni presentasi, 0 logic hitung apa pun di sini, cuma nampilin status yg SUDAH ditentukan
+// t.hitungKas===false biar user tidak bingung kenapa transaksi ini "menghilang" dari saldo/laporan.
+// Scope T3 HANYA txHTML() (dipakai 10 tema lama) sesuai rencana kerja -- txTableRowHTML() (tema
+// "modern"/Ledger Pro, S637) SENGAJA tidak disentuh sesi ini, dicicil terpisah kalau diperlukan.
+const hitungKasBadge=t.hitungKas===false?' <span class="acc-chip">📝 Catatan saja</span>':'';
+// S574-E: badge "👤 Ditanggung: <nama owner>" di riwayat -- MURNI PRESENTASI,
+// tidak menghitung/split nominal apa pun (beda domain dari assetSplit di
+// atas, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §2.5/§7 -- assetId tetap
+// relasi riwayat, deductionOwnerId adalah domain akun/pemilik-penanggung yang
+// terpisah). Transaksi lama tanpa t.deductionOwnerId -> baris ini tetap
+// kosong, tampilan tx-item TIDAK berubah sama sekali (backward compatible).
+//
+// S579 FIX (DL-Next-6, source-mismatch lanjutan DL-Next-1/S578 -- lihat
+// DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
+// AUDIT-8-11-OWNER-RESOLVER-POST-DL-NEXT-1.md §Audit-9): basis lookup nama
+// diganti dari getAccOwners()/acc.owners (KEDUANYA cuma baca
+// acc.owners[]/acc.ownership, buta terhadap aset tertaut) ke
+// resolveOwnerDefaultForAccount(t.accountId) -- SUMBER SAMA PERSIS yang
+// dipakai guard validasi di _saveTxInner() (S578) & UI
+// updateTxDeductionOwnerVisibility() (Res-C). Sebelum fix ini, transaksi
+// yang deductionOwnerId-nya berasal dari source:'asset' (akun tanpa
+// acc.owners[] sendiri, tertaut aset multi-owner) tidak pernah ketemu
+// namanya di sini -> badge kosong walau data tersimpan benar. Guard typeof
+// tetap dipertahankan (aman kalau transaksi.js belum dimuat/urutan
+// build.js berubah, badge cuma tidak tampil, bukan error).
+let deductionOwnerLine='';
+if(t.deductionOwnerId){
+let ownerName=null;
+if(typeof resolveOwnerDefaultForAccount==='function'){
+const resolved=resolveOwnerDefaultForAccount(t.accountId);
+if(resolved&&resolved.ok){
+const ownerMatch=(resolved.owners||[]).find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+}
+if(!ownerName&&typeof getAccOwners==='function'){
+const ownRes=getAccOwners(t.accountId);
+if(ownRes&&ownRes.ok){
+const ownerMatch=(ownRes.owners||[]).find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+}
+if(!ownerName&&acc&&Array.isArray(acc.owners)){
+const ownerMatch=acc.owners.find(o=>String(o.ownerId)===String(t.deductionOwnerId));
+if(ownerMatch)ownerName=ownerMatch.ownerName;
+}
+if(ownerName)deductionOwnerLine=`<div class="tx-meta">👤 Ditanggung: ${escapeHtml(ownerName)}</div>`;
+}
 return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
     <div class="tx-icon" style="background:${bg}">${icon}</div>
-    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}</div>
+    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}${hitungKasBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
     <div class="u-flex u-aic u-gap6">
       <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
       <button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
     </div>
   </div>`;
+}
+// txTableRowHTML/txTableHTML — S637 (RENCANA-MODERNISASI-UI.md, tema
+// "modern"/Ledger Pro). Jalur render BARU, ADDITIF -- txHTML() di atas 0
+// disentuh, tetap dipakai apa adanya utk 10 tema lama. Dipanggil dari
+// renderKeuangan() (modules-render.js) HANYA saat D.profile.theme==='modern',
+// menggantikan visible.map(txHTML) utk container #allTx.
+// Cakupan sesi ini: HANYA tab Uang (#allTx). Riwayat (filterTxList) & Dana
+// Titipan sengaja TIDAK disentuh (rencana bertahap, sesi terpisah).
+// Item virtual tagihan (vbill_*, #allTxVirtualBills) TIDAK lewat sini --
+// tetap dirender via txHTML() apa adanya di jalur terpisah (bukan transaksi
+// riil, tidak boleh ikut hitungan saldo berjalan).
+// Kolom "Saldo" (saldo berjalan) HANYA muncul kalau balMap diisi (dipanggil
+// dgn accId spesifik, bukan "Semua Akun") -- keputusan user: saldo berjalan
+// lintas-akun (gabungan kas+bank+e-wallet dst) tidak bermakna secara
+// finansial, jadi kolom itu sengaja disembunyikan total (bukan ditampilkan
+// "0"/keliru) saat filter Akun = Semua Akun.
+function txTableRowHTML(t,balAfter){
+const cats=getAllCats();
+let icon='💰';
+if(t.type==='transfer_out'||t.type==='transfer_in')icon='⇄';
+else{const cat=cats.find(c=>c.name===t.category);if(cat)icon=cat.emoji;}
+const sign=(t.type==='income'||t.type==='transfer_in')?'+':'-';
+const cls=(t.type==='income'||t.type==='transfer_in')?'green':'red';
+const acc=D.accounts.find(a=>a.id===t.accountId);
+const subText=t.subcategory?(' · '+t.subcategory):'';
+const pmIcons={cicilan:'💳',langganan:'🔁',tagihan:'🧾',utang:'📕',tunai:''};
+const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pmIcons[t.payMethod]||''} ${t.payMethod}</span>`:'';
+const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxAssetSplit(t):null;
+const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
+const saldoCell=(balAfter!==undefined&&balAfter!==null)?`<td class="tx-amount tx-tbl-saldo num">${fmt(balAfter)}</td>`:'';
+return`<tr class="tx-tbl-row u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
+    <td class="tx-tbl-date">${t.date}</td>
+    <td class="tx-tbl-desc"><div class="tx-name">${icon} ${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.note?escapeHtml(t.note)+' · ':''}${acc?`<span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div></td>
+    <td class="tx-amount ${cls} num">${sign}${fmt(t.amount)}</td>
+    ${saldoCell}
+    <td class="tx-tbl-del"><button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button></td>
+  </tr>`;
+}
+function txTableHTML(items,accIdForBalance){
+const balMap=accIdForBalance&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accIdForBalance):null;
+const showSaldo=!!balMap;
+return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Nominal</th>${showSaldo?'<th class="num">Saldo</th>':''}<th></th></tr></thead><tbody>${items.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join('')}</tbody></table></div>`;
+}
+// BUGFIX (Bug E, s633, lihat AUDIT-s632-bugE-renovasi-delete-cascade.md):
+// diekstrak APA ADANYA (0 perubahan logika/urutan/pesan toast) dari badan
+// delTx() -- cascade bbmLinkId/partStockId/stockItems/stockProductId/
+// cobekLinkId/servisLinkId/renovItemLinkId/wishlistLinkId/sewaKiosLinkId/
+// tukangPaymentEntryIds SEKARANG jadi SATU SSOT yang dipakai delTx() (jalur
+// List Transaksi) DAN Renov.deleteItem() (jalur hapus item langsung dari UI
+// Renovasi, modules/home/renovasi.js) -- sebelum sesi ini Renov.deleteItem()
+// menghapus transaksi terkait langsung lewat D.transactions=D.transactions.
+// filter(...) TANPA menjalankan cascade ini sama sekali (Bug E: stok
+// sparepart/servis/BBM jadi orphan). titipanLinkId & billLinkId SENGAJA
+// TIDAK diikutkan di sini (tetap inline di delTx()) -- transaksi yang sudah
+// billLinkId/titipan-linked TIDAK BISA dihubungkan ke item Renov lewat
+// LinkTx (lihat LinkTx._getFiltered(), linktx.js), jadi kombinasi itu tidak
+// pernah terjadi utk transaksi renovItemLinkId -- 0 scope creep di luar
+// Bug E.
+// opts.skipRenovCascade: dipakai Renov.deleteItem() supaya TIDAK memanggil
+// Renov.onLinkedTxDeleted(t) balik ke dirinya sendiri -- onLinkedTxDeleted()
+// cuma mereset status lunas item (paid=false/txId=null), yang PERCUMA &
+// berpotensi konflik krn item itu SENDIRI sedang dihapus total oleh
+// pemanggil (p.items=p.items.filter(...) tepat setelah cascade ini
+// selesai) -- lihat komentar di Renov.deleteItem().
+function runTxDeleteCascades(t,opts){
+opts=opts||{};
+if(t&&t.bbmLinkId&&D.bbmLogs)D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
+if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
+revertStockPurchase(t.partStockId,t.partStockQty,t.id);
+toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
+renderStockList();
+}
+if(t&&t.stockItems&&t.stockItems.length){
+t.stockItems.forEach(si=>{
+const p=D.products.find(x=>x.id===si.productId);
+if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(si.qty||0));else p.stock=Math.max(0,(p.stock||0)-(si.qty||0));}
+});
+toast(`📦 Stok dikurangi (transaksi dihapus)`,2600);
+} else if(t&&t.stockProductId){
+const p=D.products.find(x=>x.id===t.stockProductId);
+if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(t.stockQty||0));else p.stock=Math.max(0,(p.stock||0)-(t.stockQty||0));toast(`📦 Stok "${p.name}" dikurangi ${t.stockQty} (transaksi dihapus)`,2600);}
+}
+if(t&&t.cobekLinkId){
+const linkedShop=D.cobek.find(c=>c.id===t.cobekLinkId);
+if(linkedShop&&linkedShop.items){
+linkedShop.items.forEach(it=>{const p=D.products.find(x=>x.id===it.productId);if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,it.qty);else p.stock=(p.stock||0)+it.qty;}});
+toast(`🪨 Stok dikembalikan, penjualan Shop terkait dihapus`,2600);
+}
+D.cobek=D.cobek.filter(c=>c.id!==t.cobekLinkId);
+renderShop();renderShopRecent();
+}
+if(t&&t.servisLinkId&&D.servisLogs){
+const linkedServis=D.servisLogs.find(s=>s.id===t.servisLinkId);
+if(linkedServis){
+if(linkedServis.usedPartId)revertStockUsage(linkedServis.usedPartId,linkedServis.usedPartQty);
+toast(`🔧 Catatan servis terkait ikut dihapus`,2600);
+}
+D.servisLogs=D.servisLogs.filter(s=>s.id!==t.servisLinkId);
+renderStockList();
+}
+if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'&&!opts.skipRenovCascade){
+Renov.onLinkedTxDeleted(t);
+}
+if(t&&t.wishlistLinkId){
+WorthIt.onLinkedTxDeleted(t);
+}
+if(t&&t.sewaKiosLinkId&&typeof SewaKios!=='undefined'){
+SewaKios.onLinkedTxDeleted(t);
+}
+if(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length){
+Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
+}
+// FIX (audit s-async-ownership lanjutan): cascade BARU -- sebelumnya
+// `investmentTxLinkId` (dibuat Investment.addTransaction() saat Beli/Jual
+// pakai "Akun Sumber Dana", modules/asset/investasi.js) TIDAK PERNAH dibaca
+// di manapun. Kalau transaksi Keuangan yang ditautkan dihapus dari SINI
+// (Transaksi/Cashflow, bukan dari layar Investasi), tx investasi (D.investmentTx)
+// & holding-nya (unit/avgPrice) tetap seolah pembelian/penjualan itu terjadi --
+// desync permanen antara Akun & Holding Investasi (saldo akun sudah balik,
+// tapi unit investasi tidak). Fix: cascade SAMA PERSIS pola cobekLinkId/
+// servisLinkId di atas -- hapus tx investasi terkait & recomputeHolding()
+// (fungsi yang SUDAH ADA, 0 rumus baru, sumber kebenarannya tetap 100%
+// riwayat D.investmentTx sisa).
+if(t&&t.investmentTxLinkId&&typeof Investment!=='undefined'&&D.investmentTx){
+const linkedInvTx=D.investmentTx.find(it=>it.id===t.investmentTxLinkId);
+if(linkedInvTx){
+D.investmentTx=D.investmentTx.filter(it=>it.id!==t.investmentTxLinkId);
+if(linkedInvTx.type==='beli'||linkedInvTx.type==='jual'){
+Investment.recomputeHolding(linkedInvTx.investmentId);
+}
+toast(`📈 Transaksi investasi terkait ikut dihapus & holding disesuaikan`,2600);
+}
+}
 }
 async function delTx(id){
 // S468b guard (defense in depth, lihat poin bahaya #2 di
@@ -110,52 +294,21 @@ let pairedTx=null;
 if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&t.transferPairId){
 pairedTx=D.transactions.find(x=>x.id!==id&&x.transferPairId===t.transferPairId);
 }
-if(t&&t.bbmLinkId&&D.bbmLogs)D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
-if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
-revertStockPurchase(t.partStockId,t.partStockQty);
-toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
-renderStockList();
+// S631 (Bug D fix, lihat AUDIT-s630-bugD-transfer-legacy-orphan.md §5.1
+// Opsi A): transfer LEGACY tanpa transferPairId TIDAK bisa dipasangkan
+// otomatis dgn aman -- heuristic amount+date+accountId TERBUKTI berisiko
+// salah pasang kalau ada >1 transfer lain dgn nominal/tanggal kebetulan
+// sama (lihat regression test 4 s630/s631, guard rail wajib tetap lolos).
+// Daripada menebak & menghapus transaksi lain secara diam-diam, user
+// diberi PERINGATAN eksplisit sebelum lanjut -- supaya sadar bahwa sisi
+// pasangannya TIDAK akan ikut terhapus & tidak bisa dipastikan otomatis.
+// Kalau user membatalkan di sini, TIDAK ADA apa pun yang terhapus (0
+// mutasi D.transactions) -- non-destruktif, keputusan tetap di tangan
+// user, 0 heuristic auto-pairing baru diciptakan.
+if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&!t.transferPairId){
+if(!await askConfirm('⚠️ Ini transfer lama (legacy) tanpa penanda pasangan otomatis. Sisi pasangannya TIDAK akan ikut terhapus dan tidak bisa dipastikan otomatis — cek & sesuaikan akun pasangan secara manual jika perlu. Tetap hapus transaksi ini?'))return;
 }
-if(t&&t.stockItems&&t.stockItems.length){
-t.stockItems.forEach(si=>{
-const p=D.products.find(x=>x.id===si.productId);
-if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(si.qty||0));else p.stock=Math.max(0,(p.stock||0)-(si.qty||0));}
-});
-toast(`📦 Stok dikurangi (transaksi dihapus)`,2600);
-} else if(t&&t.stockProductId){
-const p=D.products.find(x=>x.id===t.stockProductId);
-if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(t.stockQty||0));else p.stock=Math.max(0,(p.stock||0)-(t.stockQty||0));toast(`📦 Stok "${p.name}" dikurangi ${t.stockQty} (transaksi dihapus)`,2600);}
-}
-if(t&&t.cobekLinkId){
-const linkedShop=D.cobek.find(c=>c.id===t.cobekLinkId);
-if(linkedShop&&linkedShop.items){
-linkedShop.items.forEach(it=>{const p=D.products.find(x=>x.id===it.productId);if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,it.qty);else p.stock=(p.stock||0)+it.qty;}});
-toast(`🪨 Stok dikembalikan, penjualan Shop terkait dihapus`,2600);
-}
-D.cobek=D.cobek.filter(c=>c.id!==t.cobekLinkId);
-renderShop();renderShopRecent();
-}
-if(t&&t.servisLinkId&&D.servisLogs){
-const linkedServis=D.servisLogs.find(s=>s.id===t.servisLinkId);
-if(linkedServis){
-if(linkedServis.usedPartId)revertStockUsage(linkedServis.usedPartId,linkedServis.usedPartQty);
-toast(`🔧 Catatan servis terkait ikut dihapus`,2600);
-}
-D.servisLogs=D.servisLogs.filter(s=>s.id!==t.servisLinkId);
-renderStockList();
-}
-if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'){
-Renov.onLinkedTxDeleted(t);
-}
-if(t&&t.wishlistLinkId){
-WorthIt.onLinkedTxDeleted(t);
-}
-if(t&&t.sewaKiosLinkId&&typeof SewaKios!=='undefined'){
-SewaKios.onLinkedTxDeleted(t);
-}
-if(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length){
-Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
-}
+runTxDeleteCascades(t);
 // Sesi 519 (LANJUTKAN-S519, Design Lock S518 §7 "tx-list-cashflow.js —
 // DELETE PATH", scope expansion resmi — DELETE cascade Dana Titipan
 // SENGAJA ditaruh di sini, BUKAN transaksi.js, krn delTx() ada di file
@@ -174,10 +327,62 @@ Tukang.unmarkPaidEntries(t.tukangPaymentEntryIds);
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(t.id);
 }
+// FIX (audit lanjutan "tablist sync Dana Titipan", bug sekelas ke-5):
+// titipanLinkId adalah SATU-SATUNYA cascade *LinkId di fungsi ini yang
+// TIDAK memanggil render modulnya sendiri (bandingkan cobekLinkId ->
+// renderShop(), servisLinkId -> renderStockList(), renovItemLinkId ->
+// Renov.onLinkedTxDeleted(), dst di atas). Komentar Sesi 519 di atas
+// cuma menjamin KEBENARAN data (`usedTotal`/`available` otomatis benar
+// di render berikutnya) -- bukan REFRESH tampilan. Kalau tx yg dihapus
+// dibuat lewat modal Pengeluaran Dana Titipan (titipan-expense-flow.js,
+// type:'expense'), baris "Estimasi dari Transaksi <Akun>" di kartu owner
+// (_expenseComparisonForOwner(), Sesi C/S597) ikut berubah -- tapi kalau
+// dihapus dari sini (list transaksi umum, bukan tombol khusus Dana
+// Titipan), kartu yg sedang dilihat user (#danaTitipanTabList) tidak
+// ter-refresh sampai pindah tab/reload. Sync eksplisit, pola PERSIS
+// sama dgn cascade lain di atas, 0 logic baru.
+if(t&&t.titipanLinkId){
+if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
+if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+}
+// BUGFIX (Bug A, audit DELETE transaksi pembayaran): delTx() TIDAK PERNAH
+// memanggil revertBillFromDeletedTx(t) (tagihan-kalender.js) -- beda dari
+// deleteBillHistoryTx() (jalur DELETE lain, modal 📋 Riwayat Pembayaran)
+// yang SUDAH memanggilnya sejak sesi 291 (lihat komentar SSOT di definisi
+// revertBillFromDeletedTx()). Akibatnya hapus transaksi pembayaran
+// Tagihan/Cicilan/Langganan/Utang lewat tombol 🗑 di List Transaksi biasa
+// TIDAK membalikkan sisaTenor/nextDue/reaktivasi arsip/saldo utang/auto-
+// piutang "Ditanggung Bersama" -- data D.bills/D.billsArchive/D.debts/
+// D.piutang jadi basi/nyangkut permanen. Fix: panggil fungsi SSOT yang
+// SAMA PERSIS dipakai deleteBillHistoryTx(), guard typeof (pola sama
+// cascade *LinkId lain di atas -- aman kalau tagihan-kalender.js belum
+// dimuat/urutan build.js berubah). SENGAJA ditaruh SEBELUM baris filter
+// D.transactions di bawah (bukan sesudah) -- revertBillFromDeletedTx()
+// memanggil isLatestBillPaymentTx() yang re-scan D.transactions, harus
+// dijalankan SAAT `t` masih ada di array supaya identik dgn urutan yang
+// sudah terbukti benar di deleteBillHistoryTx() (0 logic baru ditulis di
+// sini, 100% reuse).
+let billRevert=null;
+if(t&&t.billLinkId&&typeof revertBillFromDeletedTx==='function'){
+billRevert=revertBillFromDeletedTx(t);
+if(typeof renderBillList==='function')renderBillList();
+if(typeof checkBills==='function')checkBills();
+if(billRevert&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang'&&typeof renderDebtList==='function')renderDebtList();
+if(billRevert&&(billRevert.isLatest||billRevert.removedPiutang)){
+if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+}
+if(billRevert&&billRevert.removedPiutang&&typeof Piutang!=='undefined')Piutang.renderList();
+}
+let billRevertMsg='';
+if(billRevert&&billRevert.restoredFromArchive)billRevertMsg=' (tagihan diaktifkan lagi)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='cicilan')billRevertMsg=' (sisa tenor dikembalikan)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang')billRevertMsg=' (sisa utang dikembalikan)';
+else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
 D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
 save();renderDashboard();renderKeuangan();renderCnTab();renderProductList();
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');
-else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':''))));
+else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
 }
 function changeMonth(dir){
 curMonth+=dir;
@@ -185,6 +390,18 @@ if(curMonth>11){curMonth=0;curYear++;}
 if(curMonth<0){curMonth=11;curYear--;}
 closeModal('filterTxModal');
 txListPage=1;
+// FIX (BUG-012, audit 2026-08): FinanceIntelligence men-cache hasil panggilan TANPA
+// argumen eksplisit (mis. incomeVsExpense()/budgetSummary() bulan default -- lihat
+// komentar _ivxCache/invalidateCache() di finance-intelligence.js), diinvalidate lewat
+// hook yang sama dgn cache saldo akun (save()/renderPageContent()). changeMonth() ganti
+// curMonth/curYear (bulan aktif yg jadi acuan default itu) TAPI tidak lewat salah satu
+// hook itu -- dipanggil langsung dari tombol ‹ › navigasi bulan, cuma renderKeuangan().
+// Akibatnya kartu turunan yang baca FinanceIntelligence tanpa argumen (mis. "Skor
+// Kesehatan Finansial") tetap nampilin angka cache bulan SEBELUMNYA sampai ada
+// save()/pindah halaman berikutnya yang kebetulan invalidate cache-nya. Invalidate
+// eksplisit di sini, pola sama renderPageContent() -- 0 cache baru, cuma dipanggil juga
+// di titik ganti-bulan ini.
+if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
 renderKeuangan();
 }
 // BUGFIX (audit menyeluruh "tab nav tidak respon"): tombol ‹ › month-nav di kartu "📋 Semua
