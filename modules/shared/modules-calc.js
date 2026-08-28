@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s-audit-backup-partsstock-vehicleid-backfill-schema9';
+const MODULE_CALC_VERSION='s659-networth-renderbersih-ssot-unify';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -965,8 +965,22 @@ const saldoAkun=totalSaldoAkun();
 const totalAset=totalAssetValue()+(typeof Investment!=='undefined'?Investment.selfOwnedTotalValue():0);
 const totalInventori=totalInventoriBisnisValue();
 const totalPiutang=totalPiutangValue();
-const utangManual=D.pajakZakat.utangJT||parsePzNum(document.getElementById('zmUtang')?document.getElementById('zmUtang').value:0);
-const utang=utangManual+totalDebtValue()+totalCicilanOutstanding();
+// SSOT FIX (Sesi 659, AUDIT-MENYELURUH-2026-08-28.md §5 & §6 poin 5): dulu
+// baris ini menghitung ulang "total utang" sendiri (utangManual+
+// totalDebtValue()+totalCicilanOutstanding()), LENGKAP dgn fallback baca
+// LANGSUNG dari DOM (`#zmUtang.value`) kalau D.pajakZakat.utangJT falsy --
+// beda dari FI.totalDebt() (SSOT resmi "total utang" project ini, sudah
+// dipakai currentNetWorth() sejak fix S268) yang TIDAK punya fallback DOM
+// itu. Karena app ini SPA (semua `<div class="page">` tetap ada di DOM,
+// ditoggle .active, bukan dibuat/dihapus), `#zmUtang` bisa saja terbaca
+// walau user sedang di halaman Dashboard -- kalau isinya stale/belum
+// tersinkron ke D.pajakZakat.utangJT (mis. sebelum oninput sempat jalan,
+// atau state dari restore/import), Net Worth Dashboard (elemen ini) bisa
+// beda angka dari Net Worth AssetPortfolioAPI/snapshot/CAGR/Financial
+// Freedom yang semua pakai currentNetWorth(). Sekarang reuse FI.totalDebt()
+// (0 rumus baru, pola identik fix S268) supaya BENAR-BENAR 1 sumber utang
+// yang sama di semua konsumen Net Worth, sesuai klaim komentar SSOT di atas.
+const utang=FI.totalDebt();
 const netWorth=saldoAkun+totalAset+totalInventori+totalPiutang-utang;
 // GAP FIX (lihat renderKeuangan()/modules-render.js, komentar "GAP FIX
 // Kekayaan Bersih"): dulu SEMUA elemen di bawah (kecuali #kbInventori)
