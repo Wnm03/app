@@ -341,7 +341,31 @@ closeModal('piutangModal');
 Piutang.renderList();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ Piutang tersimpan');
 },
+// FIX (BUG-DEL-TITIPAN lanjutan, audit 2026-08 — bug SERUPA ditemukan di sisi
+// Piutang): entri piutang otomatis (autoBillId/autoTxId dari
+// maybeCreateSharedPiutangFromBill(), atau autoTxId/autoTitipanOwnerId dari
+// maybeCreateTitipanTalanganPiutang()) BUKAN piutang manual -- dia
+// AUTO-GENERATE ULANG kalau transaksi sumbernya (pembayaran cicilan/tagihan
+// "Ditanggung Bersama", atau transaksi "talangan Dana Titipan") diedit &
+// disimpan ulang lagi (lihat cabang `hasExistingAutoPiutang` di
+// transaksi.js dekat syncSharedPiutangOnPaymentEdit(), & applyTxTitipanLinkageOnSave()
+// -- keduanya panggil ulang maybeCreateSharedPiutangFromBill()/
+// maybeCreateTitipanTalanganPiutang() yang idempotency-nya cuma cek "apa
+// tx.id ini SUDAH punya entri Piutang" -- kalau user hapus manual duluan,
+// guard itu lolos & entri BARU dibuat lagi). Pola identik Debt.delete() di
+// atas: delete "tampak sukses" (tidak error), tapi baris balik lagi begitu
+// transaksi sumbernya disentuh lagi -- bukan langsung, tapi tetap silent
+// resurrection, bukan penghapusan permanen yang user kira. Piutang manual
+// (tanpa autoBillId/autoTxId/autoTitipanOwnerId) tidak kena masalah ini.
+// Fix pola SAMA PERSIS Debt.delete(): cegah SEBELUM proses hapus jalan,
+// toast jelaskan cara benarnya -- edit/batalkan dari transaksi atau tagihan
+// sumbernya (bukan dari baris piutang ini langsung).
 async delete(id){
+const p=D.piutang.find(x=>sameId(x.id,id));
+if(p&&(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId)){
+if(typeof toast==='function')toast('Piutang ini tercatat otomatis dari transaksi/pembayaran tagihan terkait, tidak bisa dihapus langsung. Batalkan/edit dari transaksi atau tagihan sumbernya (tombol 🧾 di atas) supaya piutangnya ikut disesuaikan.',3600);
+return;
+}
 if(!await askConfirm('Hapus catatan piutang ini?',{okText:'Ya, Hapus'}))return;
 D.piutang=D.piutang.filter(p=>!sameId(p.id,id));
 save();
@@ -409,6 +433,13 @@ if(p.catatan)metaParts.push(escapeHtml(p.catatan));
 // data-stop="1" wajib supaya klik chip tidak ikut trigger data-action="openPiutangModal"
 // milik parent tx-item (pola sama dgn tombol 🗑 Hapus di bawah).
 if(p.autoBillId)metaParts.push(`<span class="u-fs10 u-pointer u-r6" style="color:var(--text2);background:var(--bg3);padding:1px 6px;border:1px solid var(--border)" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([p.autoBillId]))}" title="Lihat tagihan asal">🧾 Tagihan asal</span>`);
+// FIX (BUG-DEL-TITIPAN lanjutan): badge SAMA jenisnya utk piutang "Talangan
+// Dana Titipan" (autoTxId+autoTitipanOwnerId, TANPA autoBillId -- sumbernya
+// transaksi biasa, bukan tagihan, jadi tidak dapat chip "🧾 Tagihan asal" di
+// atas). Sebelumnya piutang ini TIDAK PUNYA penanda visual apa pun -- kelihatan
+// persis piutang manual biasa, padahal auto-sync dari transaksi (lihat
+// maybeCreateTitipanTalanganPiutang(), guard di Piutang.delete() di atas).
+if(p.autoTitipanOwnerId&&!p.autoBillId)metaParts.push('🔒 Talangan Dana Titipan — otomatis dari transaksi');
 // S394: badge porsi kepemilikan kalau piutang ini ditautkan ke aset
 // multi-owner (assetId) & porsinya < 100 -- kasus umum (tanpa assetId)
 // tidak pernah menampilkan badge ini.
@@ -416,7 +447,15 @@ if(p.assetId){const _porsi=resolveEntryAssetSelfPorsi(p);if(_porsi<100)metaParts
 const badge=p.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>'
 :(isPrioritas?' <span class="u-fs10 u-r6 u-ml4" style="color:#fff;background:var(--accent2);padding:1px 5px">🔥 Prioritas</span>'
 :(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':''));
-return `<div class="tx-item u-pointer" data-action="openPiutangModal" data-args="${escapeHtml(JSON.stringify([p.id]))}"><div class="tx-icon u-bgaccsoft">🤝</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)}${badge}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${p.lunas?'':' green'}">${fmt(p.nilai)}</div><button class="tx-del" data-stop="1" data-action="delPiutang" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Hapus">🗑</button></div>`;
+// FIX (BUG-DEL-TITIPAN lanjutan): sembunyikan tombol 🗑 utk piutang otomatis
+// (autoBillId/autoTxId/autoTitipanOwnerId), pola SAMA PERSIS Debt.renderList()
+// -- ganti ikon 🔒 kecil ber-tooltip, defense in depth thd guard di
+// Piutang.delete() (yang sudah tolak hapusnya lebih dulu).
+const isAutoPiutang=!!(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId);
+const delBtnHtml=isAutoPiutang
+?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi/pembayaran tagihan terkait — batalkan/edit dari sana untuk menghapus baris ini">🔒</span>'
+:`<button class="tx-del" data-stop="1" data-action="delPiutang" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Hapus">🗑</button>`;
+return `<div class="tx-item u-pointer" data-action="openPiutangModal" data-args="${escapeHtml(JSON.stringify([p.id]))}"><div class="tx-icon u-bgaccsoft">🤝</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)}${badge}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${p.lunas?'':' green'}">${fmt(p.nilai)}</div>${delBtnHtml}</div>`;
 }).join('');
 }
 };
@@ -554,9 +593,29 @@ D.bills.push(bill);
 }
 d.billId=bill.id;
 },
+// FIX (BUG-DEL-TITIPAN, audit 2026-08): baris utang "🔒 Titipan" (linkedAssetId/
+// linkedInvestmentId/linkedAccountId terisi) BUKAN entri manual -- dia
+// AUTO-GENERATE ULANG oleh save() itu sendiri lewat Aset._syncOwnerDebts(),
+// Investment._syncTitipanDebt(), atau TitipanSync.reconcileAccounts(), YANG
+// SEMUANYA DIPANGGIL DARI DALAM save() (gerbang tunggal). Urutan bug lama:
+// (1) baris dihapus dari D.debts, (2) save() dipanggil, (3) save() sendiri
+// langsung re-sync & mendeteksi aset/akun/investasi sumbernya masih
+// berporsi non-SELF > 0 -- baris itu DIBUAT LAGI sebelum render berikutnya.
+// Efeknya: delete "tampak sukses" (tidak error) tapi baris balik lagi --
+// looks-fixed-but-isnt persis pola BUG-016/S455/S460 di atas. Utang manual
+// (bukan titipan) TIDAK kena masalah ini -- tetap dihapus permanen seperti
+// biasa. Fix: cegah SEBELUM proses hapus jalan (bukan sesudah), kasih toast
+// yang jelas cara benarnya -- ubah porsi kepemilikan Aset/Akun/Investasi
+// terkait ke 0% atau lepas tautannya, baru baris ini otomatis hilang lewat
+// sync yang sama. Konsisten dgn tombol 🗑 yang sudah disembunyikan utk baris
+// ini di renderList() (lihat komentar di sana).
 async delete(id){
-if(!await askConfirm('Hapus catatan utang ini?',{okText:'Ya, Hapus'}))return;
 const d=D.debts.find(x=>sameId(x.id,id));
+if(d&&(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId)){
+if(typeof toast==='function')toast('Entri ini tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan, tidak bisa dihapus langsung. Ubah porsi kepemilikannya ke 0% atau lepas tautannya di menu Aset/Akun/Investasi terkait.',3600);
+return;
+}
+if(!await askConfirm('Hapus catatan utang ini?',{okText:'Ya, Hapus'}))return;
 if(d&&d.billId){D.bills=D.bills.filter(b=>!sameId(b.id,d.billId));}
 D.debts=D.debts.filter(d=>!sameId(d.id,id));
 save();
@@ -642,8 +701,24 @@ if(d.assetId){const _porsi=resolveEntryAssetSelfPorsi(d);if(_porsi<100)metaParts
 // FIX (S460): badge SAMA juga utk entri titipan investasi (linkedInvestmentId,
 // auto-sync dari Investment._syncTitipanDebt()) -- pola identik, cuma
 // sumbernya beda modul (aset vs investasi).
-if(d.linkedAssetId||d.linkedInvestmentId)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
-return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div><button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button></div>`;
+// FIX (BUG-DEL-TITIPAN, audit 2026-08): badge sebelumnya cuma cek
+// linkedAssetId/linkedInvestmentId -- kelupaan linkedAccountId (titipan
+// akun, ditulis TitipanSync.reconcileAccounts(), lihat akun.js). Baris
+// titipan akun jadi lolos tanpa badge & tombol 🗑 masih tampil -- padahal
+// sama-sama auto-sync & sama-sama kena bug delete di atas. Tambah 1 kondisi,
+// 0 filter/badge lain diubah.
+const isTitipanLinked=!!(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId);
+if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
+// FIX (BUG-DEL-TITIPAN): sembunyikan tombol 🗑 utk baris titipan auto-sync,
+// konsisten dengan baris "Cicilan Barang" (billRowsHtml) yang memang sudah
+// read-only -- ganti jadi ikon 🔒 kecil ber-tooltip, biar user tidak
+// tap-delete lalu bingung baris itu balik lagi (root cause: Debt.delete()
+// di atas). Debt.delete() sendiri TETAP punya guard-nya sendiri (defense in
+// depth) kalau tombol ini terpanggil lewat jalur lain.
+const delBtnHtml=isTitipanLinked
+?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan — ubah porsinya ke 0% atau lepas tautannya di sana untuk menghapus baris ini">🔒</span>'
+:`<button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button>`;
+return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div>${delBtnHtml}</div>`;
 }).join('');
 // KW-170: baris cicilan barang — read-only dari sini (edit/hapus/riwayat
 // pembayaran tetap lewat alur Tagihan yang sudah ada, krn datanya D.bills
