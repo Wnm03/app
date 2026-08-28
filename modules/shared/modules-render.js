@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s668-cashflow-siklus-legacy-card';
+const MODULE_RENDER_VERSION='s670-cashflow-siklus-legacy-card';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1107,11 +1107,12 @@ surplusHtml=`
 }
 el.innerHTML=`
 <div class="grid2 u-mb10">
-<div class="stat-box"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
-<div class="stat-box"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
-<div class="stat-box"><div class="stat-label">Pemasukan Bulan Ini</div><div class="stat-val u-fs14 green">${fmtFull(inc)}</div></div>
-<div class="stat-box"><div class="stat-label">Pengeluaran Bulan Ini</div><div class="stat-val u-fs14 red">${fmtFull(exp)}</div></div>
+<div class="stat-box u-pointer" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
+<div class="stat-box u-pointer" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
+<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','income','Pemasukan Bulan Ini')"><div class="stat-label">Pemasukan Bulan Ini</div><div class="stat-val u-fs14 green">${fmtFull(inc)}</div></div>
+<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','expense','Pengeluaran Bulan Ini')"><div class="stat-label">Pengeluaran Bulan Ini</div><div class="stat-val u-fs14 red">${fmtFull(exp)}</div></div>
 </div>
+<div class="stat-box u-pointer u-mb10" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Kiriman Mingguan (Estimasi)</div><div class="stat-val u-fs14">${fmtFull(r.kirimanEstimate)}</div></div>
 <div class="u-tac">
 <div class="u-fs11 u-t2">Proyeksi Kas Bulan Ini</div>
 <div class="stat-val ${kasCls} u-fs20">${fmtFullSigned(r.proyeksiKas)}</div>
@@ -1121,13 +1122,33 @@ ${surplusHtml}
 <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('dashCashProjDetailBody').classList.toggle('u-dnone')">Detail ▾</button>
 </div>
 <div id="dashCashProjDetailBody" class="u-dnone u-mt8">
-<div class="grid2">
-<div class="stat-box"><div class="stat-label">Gaji Tercatat</div><div class="stat-val u-fs12">${fmtFull(r.recordedGaji)}</div></div>
-<div class="stat-box"><div class="stat-label">Gaji Pending</div><div class="stat-val u-fs12">${fmtFull(r.pendingGajiEstimate)}</div></div>
-<div class="stat-box"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
-<div class="stat-box"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
+<div class="grid2 u-mb8">
+<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','gaji','Gaji Tercatat Bulan Ini')"><div class="stat-label">Gaji Tercatat</div><div class="stat-val u-fs12">${fmtFull(r.recordedGaji)}</div></div>
+<div class="stat-box u-pointer" onclick="_dashCashProjGoToAbsensi()"><div class="stat-label">Gaji Pending</div><div class="stat-val u-fs12">${fmtFull(r.pendingGajiEstimate)}</div></div>
+<div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
+<div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
 </div>
+<div class="u-fs11 u-t2 u-tac">Kiriman Mingguan: ${fmtFull(r.kirimanPerMinggu)} × ${r.weeksInMonth} minggu (setting Pengaturan → Profil) = ${fmtFull(r.kirimanEstimate)}</div>
 </div>`;
+}
+// _dashCashProjOpenDetail() — buka + scroll ke bagian Detail kartu ini (Proyeksi Gaji/
+// Sisa Kewajiban/Kiriman Mingguan sudah punya breakdown-nya sendiri DI DALAM kartu,
+// jadi klik cukup expand+scroll ke situ, TIDAK perlu modal baru — sesuai keputusan user).
+function _dashCashProjOpenDetail(){
+const body=document.getElementById('dashCashProjDetailBody');
+if(!body)return;
+body.classList.remove('u-dnone');
+body.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// _dashCashProjGoToAbsensi()/_dashCashProjGoToTagihan() — "Gaji Pending" sumbernya
+// D.workDays (belum di-reset), bukan daftar transaksi; "Total Kewajiban"/"Sudah Dibayar"
+// sumbernya D.bills — keduanya BUKAN tab Uang, jadi diarahkan ke halaman asalnya lewat
+// dashHubNavigateToFeature() yang sudah ada (0 navigasi baru dibuat).
+function _dashCashProjGoToAbsensi(){
+if(typeof dashHubNavigateToFeature==='function')dashHubNavigateToFeature({page:'dashboard-hub',dashKey:'absensi',goTo:'dashAbsensiCard'});
+}
+function _dashCashProjGoToTagihan(){
+if(typeof dashHubNavigateToFeature==='function')dashHubNavigateToFeature({page:'keuangan',tab:'tagihan'});
 }
 
 const DASH_CARD_DEFS=[
