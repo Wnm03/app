@@ -1,3 +1,63 @@
+# Changelog — Sesi S668 (Panel "⚙️ Atur" siklus tagihan di kartu Proyeksi Kas Bulan Ini lama, v1410)
+
+## Task
+Lanjutan S667: kartu "🏦 Proyeksi Saldo Kas" (CashFlowProjectionPresenter,
+#cashflowProjWrap) dan kartu "💰 Proyeksi Kas Bulan Ini" (dashCashProjCard,
+_renderCashProjectionCard) ternyata 2 widget TERPISAH dgn mesin hitung
+berbeda (audit sblm sesi ini). Setelah diskusi, dipilih: TAMBAH panel
+"⚙️ Atur" (siklus tagihan) ke kartu lama, TIDAK digabung jadi 1 tampilan
+(risiko 2 angka mirip nama beda makna tabrakan di 1 kartu).
+
+## Perubahan
+
+**`modules/finance/cash-projection.js`**
+- `getMonthlyCashProjection(month,year,opts)` — parameter `opts` BARU &
+  OPSIONAL (`billWindowMode`,`cycleStartDay`), 100% backward-compatible.
+  Tanpa opts / opts tanpa `billWindowMode:'siklus'` -> identik perilaku
+  lama (`getBillOccurrencesInMonth`, bulan kalender). Mode `'siklus'` pakai
+  `billingCycleRange()`+`getBillOccurrencesInRange()` (SUDAH ADA di
+  tx-list-cashflow.js/tagihan-kalender.js, Sesi 93/95) utk jendela
+  **sisaKewajiban/billMonthTotal/billPaidThisPeriod** saja —
+  **proyeksiGaji TETAP selalu bulan kalender** (gaji tidak ada konsep
+  siklus tengah-bulan).
+
+**`modules/shared/modules-render.js`**
+- `_renderCashProjectionCard()` sekarang baca `CashflowProjSettings`
+  (SAMA `D.profile.cashflowProjSettings` yang dipakai kartu satunya —
+  0 struktur data baru) & teruskan `billWindowMode`/`cycleStartDay` ke
+  `getMonthlyCashProjection()`.
+- Panel inline "⚙️ Atur" baru (`_dashCashProjSettingsToggle`/
+  `_dashCashProjToggleSettings`/`_dashCashProjFillSettingsPanel`/
+  `_dashCashProjSetBillWindowMode`/`_dashCashProjSetCycleDay`/
+  `_dashCashProjResetSettings`/`_dashCashProjRefreshAll`) — cuma expose
+  mode Kalender/Siklus Custom + tanggal mulai siklus (field
+  `months`/`accountId` di settings yang sama TIDAK relevan di kartu ini,
+  sengaja tidak ditampilkan). 0 CSS baru (reuse chip-btn/fg/fl/fi/btn).
+
+**`modules/finance/cashflow-projection-presenter.js`**
+- `resetSettings()`/`_applySettings()` sekarang ikut refresh
+  `_renderCashProjectionCard()` — 1 setting dipakai 2 kartu, disinkron
+  2 arah supaya tidak stale kalau diubah dari panel manapun.
+
+## Test
+- File baru `tests/cash-projection-s667b-siklus.test.js` (6 test):
+  backward-compat literal (tanpa opts vs opts={}), mode bukan-siklus
+  identik lama, mode siklus menangkap tagihan potong-tengah-bulan,
+  cycleStartDay custom, proyeksiGaji tetap kalender, guard aman tanpa
+  billingCycleRange dimuat.
+- `tests/cash-projection-card-s-p2.test.js` & `cash-projection-card-s-q3.test.js`
+  diupdate (ikut extract `_dashCashProjSettingsToggle`, dependency baru
+  `_renderCashProjectionCard`) — 0 assertion lama diubah.
+- `npm test` — **4833/4833 PASS** (4827 lama + 6 baru).
+- `node scripts/verify-window-expose.js` — OK, 77 modul.
+
+## Build
+- `node scripts/build.js s668-cashflow-siklus-legacy-card` — versi
+  1409 -> **1410**, `package.json` 0.85.9 -> 0.85.10, bundle a/b
+  diregenerasi (esbuild tidak terpasang di environment build ini ->
+  tanpa minifikasi, tetap valid).
+
+
 # Changelog — Sesi S667 (Cash Flow Projection: siklus tagihan tengah-bulan + panel Atur, v1409)
 
 ## Task
