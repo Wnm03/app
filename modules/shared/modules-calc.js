@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s663-networth-renderbersih-ssot-unify';
+const MODULE_CALC_VERSION='s665-networth-renderbersih-ssot-unify';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -657,7 +657,8 @@ if (typeof Pensiun !== 'undefined') window.Pensiun = Pensiun;
 // features-aiwidget-reminder-gdrive-search.js. FinCoach otomatis dihitung ulang & tampil tiap buka
 // Dashboard, mengecek beberapa sinyal keuangan/bisnis/hidup sekaligus (defisit bulan berjalan,
 // anggaran jebol, tagihan telat/naik aneh, saldo minus, utang jatuh tempo, surplus FI negatif,
-// margin bisnis Shop turun, target tabungan hampir tercapai) & menampilkan MAKS 4 yang paling
+// proyeksi kas bulan ini negatif (Sesi R1), margin bisnis Shop turun, target tabungan hampir
+// tercapai) & menampilkan MAKS 4 yang paling
 // mendesak dulu (urutan bahaya>peringatan>info>bagus) — supaya tidak perlu buka satu2 tiap halaman
 // buat tahu ada masalah. Polanya sama seperti widget rule-based lain yg sudah ada (badge anomali
 // tagihan di renderBillList(), Rekomendasi Servis AI, DanaDaruratAI di atas) — cuma FinCoach
@@ -734,6 +735,22 @@ out.push({id:'fi-surplus-neg',level:'warning',icon:'🟠',text:`Rata-rata surplu
 }
 }
 }catch(e){console.warn('FinCoach: gagal cek surplus FI',e);}
+// 7b. Proyeksi Kas bulan ini negatif (reuse getMonthlyCashProjection(), Sesi P1/Q1-Q3
+// — kartu "💰 Proyeksi Kas Bulan Ini" di Dashboard) — beda window dari insight #7
+// fi-surplus-neg di atas (proyeksiKas = bulan kalender ini, gaji vs kewajiban
+// TERJADWAL; fi-surplus-neg = rata-rata multi-bulan, pemasukan vs pengeluaran kas
+// riil) — sengaja TIDAK digabung jadi 1 insight (lihat AUDIT-RENCANA-fincoach-
+// proyeksi-kas-negatif.md Keputusan #4), teks di bawah sengaja pakai kata kunci
+// beda ("kewajiban terjadwal" bukan "surplus bulanan") supaya kalau kebetulan
+// muncul bersamaan tidak terlihat duplikat.
+try{
+if(typeof getMonthlyCashProjection==='function'){
+const{proyeksiKas}=getMonthlyCashProjection(m,y);
+if(proyeksiKas<0){
+out.push({id:'cash-proj-negative',level:'warning',icon:'🟠',text:`Proyeksi kas bulan ini minus (${fmtFull(proyeksiKas)}) — kewajiban terjadwal bulan ini lebih besar dari proyeksi gaji.`});
+}
+}
+}catch(e){console.warn('FinCoach: gagal cek proyeksi kas',e);}
 // 8. Bisnis Shop (Shop): margin profit bulan ini turun jauh (<=75%) dari bulan lalu, min. 3 transaksi biar tidak false-positive dari data sedikit
 try{
 // Sesi 194 (Ownership Sync Shop): insight margin Shop di Dashboard HANYA
