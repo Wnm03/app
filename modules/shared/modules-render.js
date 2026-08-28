@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s667-cashflow-siklus-tagihan-settings';
+const MODULE_RENDER_VERSION='s668-cashflow-siklus-legacy-card';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -981,11 +981,104 @@ toast('Oke, tidak akan diingatkan lagi. Kamu tetap bisa aktifkan backup kapan sa
 // vs bulan kalender berjalan) persis sesuai catatan risiko "SEDANG" di dokumen audit -- tanpa
 // penjelasan ini user bisa salah paham dikira Proyeksi Kas dihitung ulang/beda karena bug.
 // Guard typeof FI/fiMonthlySurplus -- aman kalau modules-calc.js belum dimuat bareng.
+// _dashCashProjSettingsToggle(el)/_dashCashProjApplySettings()/dst (S667B) — panel inline
+// "⚙️ Atur" (siklus tagihan), REUSE PERSIS CashflowProjSettings (cashflow-projection-
+// settings.js, Sesi 95/S667 — SAMA D.profile.cashflowProjSettings, jadi 1 setting dipakai
+// kedua kartu "Proyeksi Kas Bulan Ini" & "Proyeksi Pemasukan/Pengeluaran/Saldo Kas" --
+// TIDAK ada struktur data baru). Cuma expose billWindowMode('kalender'/'siklus')+
+// cycleStartDay -- field months/accountId TIDAK relevan di kartu ini (proyeksiGaji selalu
+// bulan kalender, bukan rata-rata N-bulan), jadi sengaja tidak ditampilkan di sini walau
+// field-nya tetap ada di objek settings yang sama (dipakai kartu satunya). Ditaruh sbg
+// sibling #dashCashProjBody (bukan di-replace innerHTML-nya tiap render, pola sama persis
+// _renderSettingsToggle() di cashflow-projection-presenter.js).
+function _dashCashProjSettingsToggle(bodyEl){
+const wrap=bodyEl.parentElement;
+if(!wrap)return;
+let toggle=document.getElementById('dashCashProjSettingsToggle');
+if(!toggle){
+toggle=document.createElement('button');
+toggle.id='dashCashProjSettingsToggle';
+toggle.type='button';
+toggle.className='chip-btn u-mb8';
+toggle.setAttribute('data-action','_dashCashProjToggleSettings');
+wrap.insertBefore(toggle,bodyEl);
+}
+const customized=(typeof CashflowProjSettings!=='undefined')&&CashflowProjSettings.isCustomized();
+toggle.textContent=customized?'⚙️ Atur (aktif)':'⚙️ Atur';
+if(!document.getElementById('dashCashProjSettingsPanel')){
+const panel=document.createElement('div');
+panel.id='dashCashProjSettingsPanel';
+panel.className='u-dnone u-mb10 u-r10';
+panel.style.padding='10px';
+panel.style.background='var(--surface3)';
+wrap.insertBefore(panel,bodyEl);
+}
+}
+function _dashCashProjToggleSettings(){
+const panel=document.getElementById('dashCashProjSettingsPanel');
+if(!panel)return;
+const opening=panel.classList.contains('u-dnone');
+if(opening)_dashCashProjFillSettingsPanel(panel);
+panel.classList.toggle('u-dnone',!opening);
+}
+function _dashCashProjFillSettingsPanel(panel){
+if(typeof CashflowProjSettings==='undefined'){panel.innerHTML='<div class="empty-text">Pengaturan belum tersedia</div>';return;}
+const s=CashflowProjSettings.get();
+// Default settings global (CASHFLOW_PROJ_SETTINGS_DEFAULT) = '30hari', dipakai kartu
+// Proyeksi Saldo Kas satunya -- kartu INI cuma kenal 'kalender'/'siklus' (lihat komentar
+// getMonthlyCashProjection() di cash-projection.js), jadi '30hari'/belum-diset dianggap
+// 'kalender' KHUSUS utk tombol aktif di sini (0 perubahan ke value tersimpan).
+const effMode=s.billWindowMode==='siklus'?'siklus':'kalender';
+const modeBtn=(mode,label)=>`<button type="button" class="chip-btn${effMode===mode?' active':''}" data-action="_dashCashProjSetBillWindowMode" data-args='["${mode}"]'>${label}</button>`;
+panel.innerHTML=`
+<div class="fg u-mb8"><label class="fl">Mode Jendela Kewajiban</label>
+<div class="u-flex u-fwrap u-gap6">
+${modeBtn('kalender','Kalender Bulan Ini')}
+${modeBtn('siklus','Siklus Custom')}
+</div>
+</div>
+<div class="fg u-mb8${s.billWindowMode==='siklus'?'':' u-dnone'}" id="dashCashProjCycleWrap">
+<label class="fl">Tanggal Mulai Siklus</label>
+<input type="number" class="fi" id="dashCashProjCycleDay" min="1" max="28" value="${s.cycleStartDay}" onchange="_dashCashProjSetCycleDay()">
+</div>
+<div class="u-flex u-gap8">
+<button type="button" class="btn btn-primary" data-action="_dashCashProjResetSettings">↺ Reset ke Default</button>
+</div>
+`;
+}
+function _dashCashProjSetBillWindowMode(mode){
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({billWindowMode:mode});
+_dashCashProjRefreshAll();
+}
+function _dashCashProjSetCycleDay(){
+const el=document.getElementById('dashCashProjCycleDay');
+const v=el?parseInt(el.value,10):16;
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({cycleStartDay:(Number.isFinite(v)&&v>=1&&v<=28)?v:16});
+_dashCashProjRefreshAll();
+}
+function _dashCashProjResetSettings(){
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.reset();
+_dashCashProjRefreshAll();
+if(typeof toast==='function')toast('↺ Pengaturan proyeksi kas direset');
+}
+// _dashCashProjRefreshAll() — re-render kartu ini + isi ulang panel kalau lg kebuka, LALU
+// (S667B) ikut refresh kartu "Proyeksi Pemasukan/Pengeluaran/Saldo Kas" satunya juga kalau
+// ada di halaman -- 1 setting dipakai 2 kartu, jadi harus sinkron 2 arah (lihat juga
+// perubahan simetris di CashFlowProjectionPresenter._applySettings/resetSettings,
+// cashflow-projection-presenter.js).
+function _dashCashProjRefreshAll(){
+_renderCashProjectionCard();
+const panel=document.getElementById('dashCashProjSettingsPanel');
+if(panel&&!panel.classList.contains('u-dnone'))_dashCashProjFillSettingsPanel(panel);
+if(typeof CashFlowProjectionPresenter!=='undefined')CashFlowProjectionPresenter.render();
+}
 function _renderCashProjectionCard(ctx){
 const el=document.getElementById('dashCashProjBody');
 if(!el)return;
+_dashCashProjSettingsToggle(el);
 if(typeof getMonthlyCashProjection!=='function'){el.innerHTML='<div class="u-fs12 u-t2">Modul proyeksi kas belum dimuat.</div>';return;}
-const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y);
+const cfg=(typeof CashflowProjSettings!=='undefined')?CashflowProjSettings.get():{};
+const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay});
 const kasCls=r.proyeksiKas<0?'red':'green';
 let inc,exp;
 if(ctx&&ctx.inc!=null&&ctx.exp!=null){
