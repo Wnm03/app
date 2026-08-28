@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s670-cashflow-siklus-legacy-card';
+const MODULE_RENDER_VERSION='s672-cashflow-siklus-legacy-card';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1030,6 +1030,11 @@ const s=CashflowProjSettings.get();
 // 'kalender' KHUSUS utk tombol aktif di sini (0 perubahan ke value tersimpan).
 const effMode=s.billWindowMode==='siklus'?'siklus':'kalender';
 const modeBtn=(mode,label)=>`<button type="button" class="chip-btn${effMode===mode?' active':''}" data-action="_dashCashProjSetBillWindowMode" data-args='["${mode}"]'>${label}</button>`;
+// Sesi pengaturan-proyeksi-kas-lengkap: kiriman mingguan (nominal) dibaca LANGSUNG dari
+// D.profile.kiriman (SATU-SATUNYA sumber, sama persis dipakai InsightTargetMingguan) --
+// input di sini nulis ke field itu juga (bukan field baru), jadi tetap konsisten kalau
+// diubah dari Pengaturan → Profil.
+const kirimanVal=(D.profile&&D.profile.kiriman)||0;
 panel.innerHTML=`
 <div class="fg u-mb8"><label class="fl">Mode Jendela Kewajiban</label>
 <div class="u-flex u-fwrap u-gap6">
@@ -1041,10 +1046,48 @@ ${modeBtn('siklus','Siklus Custom')}
 <label class="fl">Tanggal Mulai Siklus</label>
 <input type="number" class="fi" id="dashCashProjCycleDay" min="1" max="28" value="${s.cycleStartDay}" onchange="_dashCashProjSetCycleDay()">
 </div>
+<div class="fg u-mb8">
+<label class="fl">Kiriman Mingguan (Rp)</label>
+<input type="number" class="fi" id="dashCashProjKirimanVal" min="0" step="1000" value="${kirimanVal}" onchange="_dashCashProjSetKirimanVal()">
+<label class="u-flex u-gap6 u-fs12 u-t2 u-mt6"><input type="checkbox" id="dashCashProjIncludeKiriman"${s.includeKiriman?' checked':''} onchange="_dashCashProjSetIncludeKiriman()"> Sertakan ke Proyeksi Kas</label>
+</div>
+<div class="fg u-mb8">
+<label class="u-flex u-gap6 u-fs12"><input type="checkbox" id="dashCashProjIncludePending"${s.includePendingGaji?' checked':''} onchange="_dashCashProjSetIncludePendingGaji()"> Sertakan Gaji Pending (estimasi absensi belum di-reset) ke Proyeksi Gaji</label>
+</div>
+<div class="fg u-mb8">
+<label class="fl">Rentang Rata-rata Surplus Bulanan</label>
+<select class="fs" id="dashCashProjSurplusMonths" onchange="_dashCashProjSetSurplusMonths()">
+<option value=""${s.surplusMonths?'':' selected'}>Otomatis (ikut pengaturan Financial Freedom)</option>
+${[3,6,12].map(n=>`<option value="${n}"${s.surplusMonths===n?' selected':''}>${n} bulan terakhir</option>`).join('')}
+</select>
+</div>
 <div class="u-flex u-gap8">
 <button type="button" class="btn btn-primary" data-action="_dashCashProjResetSettings">↺ Reset ke Default</button>
 </div>
 `;
+}
+function _dashCashProjSetKirimanVal(){
+const el=document.getElementById('dashCashProjKirimanVal');
+const v=el?parseInt(el.value,10):0;
+if(D.profile)D.profile.kiriman=(Number.isFinite(v)&&v>=0)?v:0;
+if(typeof save==='function')save();
+_dashCashProjRefreshAll();
+}
+function _dashCashProjSetIncludeKiriman(){
+const el=document.getElementById('dashCashProjIncludeKiriman');
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({includeKiriman:!!(el&&el.checked)});
+_dashCashProjRefreshAll();
+}
+function _dashCashProjSetIncludePendingGaji(){
+const el=document.getElementById('dashCashProjIncludePending');
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({includePendingGaji:!!(el&&el.checked)});
+_dashCashProjRefreshAll();
+}
+function _dashCashProjSetSurplusMonths(){
+const el=document.getElementById('dashCashProjSurplusMonths');
+const v=el?parseInt(el.value,10):NaN;
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({surplusMonths:(Number.isFinite(v)&&v>=1)?v:null});
+_dashCashProjRefreshAll();
 }
 function _dashCashProjSetBillWindowMode(mode){
 if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({billWindowMode:mode});
@@ -1078,7 +1121,7 @@ if(!el)return;
 _dashCashProjSettingsToggle(el);
 if(typeof getMonthlyCashProjection!=='function'){el.innerHTML='<div class="u-fs12 u-t2">Modul proyeksi kas belum dimuat.</div>';return;}
 const cfg=(typeof CashflowProjSettings!=='undefined')?CashflowProjSettings.get():{};
-const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay});
+const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji});
 const kasCls=r.proyeksiKas<0?'red':'green';
 let inc,exp;
 if(ctx&&ctx.inc!=null&&ctx.exp!=null){
@@ -1094,8 +1137,9 @@ exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amo
 let surplusHtml='';
 if(typeof fiMonthlySurplus==='function'){
 try{
-const surplus=fiMonthlySurplus();
-const surplusMonths=(typeof FI!=='undefined'&&typeof FI.effectiveMonths==='function')?FI.effectiveMonths():null;
+const surplusMonthsOverride=cfg.surplusMonths;
+const surplus=fiMonthlySurplus(surplusMonthsOverride);
+const surplusMonths=surplusMonthsOverride||((typeof FI!=='undefined'&&typeof FI.effectiveMonths==='function')?FI.effectiveMonths():null);
 const surplusCls=surplus<0?'red':'green';
 surplusHtml=`
 <div class="u-tac u-mt10 divider-top">
@@ -1128,7 +1172,8 @@ ${surplusHtml}
 <div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
 <div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
 </div>
-<div class="u-fs11 u-t2 u-tac">Kiriman Mingguan: ${fmtFull(r.kirimanPerMinggu)} × ${r.weeksInMonth} minggu (setting Pengaturan → Profil) = ${fmtFull(r.kirimanEstimate)}</div>
+<div class="u-fs11 u-t2 u-tac">Kiriman Mingguan: ${fmtFull(r.kirimanPerMinggu)} × ${r.weeksInMonth} minggu (setting Pengaturan → Profil) = ${fmtFull(r.kirimanEstimate)}${r.includeKiriman?'':' (tidak disertakan ke Proyeksi Kas)'}</div>
+${r.includePendingGaji?'':'<div class="u-fs11 u-t2 u-tac u-mt4">Gaji Pending tidak disertakan ke Proyeksi Gaji</div>'}
 </div>`;
 }
 // _dashCashProjOpenDetail() — buka + scroll ke bagian Detail kartu ini (Proyeksi Gaji/

@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s668-cashflow-siklus-legacy-card';
+const MODULE_CALC_VERSION='s672-cashflow-siklus-legacy-card';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -68,8 +68,13 @@ targetNominal(){
 const {swr}=FI.getAssumptions();
 return FI.annualExpense()/(swr/100);
 },
-monthlySurplus(){
-const months=FI.effectiveMonths();
+// monthlySurplus(monthsOverride) — Sesi pengaturan-proyeksi-kas-lengkap (Keputusan #4):
+// parameter opsional supaya kartu "Proyeksi Kas Bulan Ini" bisa nampilin rata-rata surplus
+// pakai rentang bulan SENDIRI (CashflowProjSettings.surplusMonths), TANPA mengubah setting
+// finansialFreedom.avgMonths global (dipakai fitur FI lain: annualExpense/targetNominal/dst).
+// Dipanggil TANPA argumen (semua caller lama) hasilnya IDENTIK perilaku lama (FI.effectiveMonths()).
+monthlySurplus(monthsOverride){
+const months=(Number.isFinite(monthsOverride)&&monthsOverride>=1)?Math.round(monthsOverride):FI.effectiveMonths();
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): "Catatan saja" (hitungKas:false)
@@ -294,7 +299,7 @@ function fiMonthsOfDataAvailable(){return FI.monthsOfDataAvailable();}
 function fiEffectiveMonths(){return FI.effectiveMonths();}
 function fiAnnualExpense(){return FI.annualExpense();}
 function fiTargetNominal(){return FI.targetNominal();}
-function fiMonthlySurplus(){return FI.monthlySurplus();}
+function fiMonthlySurplus(monthsOverride){return FI.monthlySurplus(monthsOverride);}
 function fiEstimateMonthsToTarget(retOverride){return FI.estimateMonthsToTarget(retOverride);}
 function fiFormatMonths(monthsToGo){return FI.formatMonths(monthsToGo);}
 function fiCalcAge(iso){return FI.calcAge(iso);}
