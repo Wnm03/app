@@ -61,3 +61,41 @@ test('getMonthlyCashProjection() — proyeksiKas = proyeksiGaji - sisaKewajiban 
   assert.equal(r.kirimanEstimate, 500000); // 100000 x 5 minggu
   assert.equal(r.proyeksiKas, r.proyeksiGaji - r.sisaKewajiban - 500000);
 });
+
+// --- Sesi pengaturan-proyeksi-kas-lengkap: opts.includeKiriman / opts.includePendingGaji ---
+
+test('getMonthlyCashProjection({includeKiriman:false}) — kirimanEstimate TETAP dihitung & dikembalikan, tapi TIDAK dikurangkan ke proyeksiKas', () => {
+  const D = makeD({
+    profile: { kiriman: 100000 },
+    transactions: [{ type: 'income', category: 'Gaji', date: '2026-08-05', amount: 3000000 }],
+  });
+  const ctx = makeCtx(D);
+  const r = ctx.getMonthlyCashProjection(7, 2026, { includeKiriman: false });
+  assert.equal(r.kirimanEstimate, 500000);
+  assert.equal(r.includeKiriman, false);
+  assert.equal(r.proyeksiKas, r.proyeksiGaji - r.sisaKewajiban);
+});
+
+test('getMonthlyCashProjection({includePendingGaji:false}) — pendingGajiEstimate TETAP dikembalikan, tapi TIDAK ikut proyeksiGaji', () => {
+  const D = makeD({
+    workDays: [{ date: '2026-08-10', total: 400000 }],
+    transactions: [{ type: 'income', category: 'Gaji', date: '2026-08-05', amount: 3000000 }],
+  });
+  const ctx = makeCtx(D);
+  const r = ctx.getMonthlyCashProjection(7, 2026, { includePendingGaji: false });
+  assert.equal(r.pendingGajiEstimate, 400000);
+  assert.equal(r.includePendingGaji, false);
+  assert.equal(r.proyeksiGaji, r.recordedGaji);
+});
+
+test('getMonthlyCashProjection() tanpa opts — includeKiriman & includePendingGaji default true (backward-compatible)', () => {
+  const D = makeD({
+    profile: { kiriman: 100000 },
+    workDays: [{ date: '2026-08-10', total: 400000 }],
+  });
+  const ctx = makeCtx(D);
+  const r = ctx.getMonthlyCashProjection(7, 2026);
+  assert.equal(r.includeKiriman, true);
+  assert.equal(r.includePendingGaji, true);
+  assert.equal(r.proyeksiGaji, r.recordedGaji + r.pendingGajiEstimate);
+});
