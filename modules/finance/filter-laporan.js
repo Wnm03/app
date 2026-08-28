@@ -396,6 +396,11 @@ txs=D.transactions.filter(t=>sameId(t.accountId,accId));
 if(type==='income')txs=txs.filter(t=>t.type==='income');
 else if(type==='expense')txs=txs.filter(t=>t.type==='expense');
 else if(type==='all')txs=txs.filter(t=>t.type==='income'||t.type==='expense');
+// type==='gaji' (Sesi klik-nominal-proyeksi-kas): REUSE isGajiTransaction() apa adanya
+// (cash-projection.js, SATU-SATUNYA predikat gaji di app ini) — dipakai kartu "Proyeksi
+// Kas Bulan Ini" utk klik "Gaji Tercatat", supaya daftar yg tampil PERSIS sama transaksi
+// yg dihitung sbg recordedGaji di getMonthlyCashProjection(), 0 predikat baru.
+else if(type==='gaji')txs=txs.filter(t=>typeof isGajiTransaction==='function'&&isGajiTransaction(t));
 const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
 const total=sorted.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
 document.getElementById('filterTxTitle').textContent=label||'Transaksi';

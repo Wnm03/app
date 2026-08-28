@@ -49,6 +49,19 @@ if(isNaN(d.getTime()))return false;
 return d.getFullYear()===year&&d.getMonth()===month;
 }
 
+// _cpWeeksInMonth(year,month) — jumlah minggu (definisi Minggu-Sabtu, SAMA PERSIS
+// getWeekRange() di reset-gaji-mingguan.js) yang AKHIRNYA (hari Sabtu) jatuh di bulan
+// target. Dipakai murni utk estimasi Kiriman Mingguan (Sesi kiriman-mingguan-proyeksi-
+// kas) -- bukan konsep baru, cuma menghitung ulang hari Sabtu dlm 1 bulan kalender.
+function _cpWeeksInMonth(year,month){
+const daysInMonth=new Date(year,month+1,0).getDate();
+let count=0;
+for(let d=1;d<=daysInMonth;d++){
+if(new Date(year,month,d).getDay()===6)count++;
+}
+return count;
+}
+
 // getMonthlyCashProjection(month,year,opts) — fungsi murni, 0 baca DOM. Prinsip:
 // Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban Terjadwal. SELALU kembalikan 3
 // angka terpisah (acceptance criteria #5), tidak ada mode gabungan 1-angka.
@@ -122,15 +135,25 @@ if(typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,bi
 return s+billOccCount(b)*(b.amount||0);
 },0);
 
-// 3) Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban. Boleh negatif (justru itu
-// sinyal yang mau ditunjukkan ke user: kewajiban bulan ini lebih besar dari
-// proyeksi gaji) — TIDAK di-floor ke 0.
-const proyeksiKas=proyeksiGaji-sisaKewajiban;
+// 3) Kiriman Mingguan (Sesi kiriman-mingguan-proyeksi-kas) — estimasi = SETTING
+// GLOBAL yang sudah ada D.profile.kiriman ("Kiriman Mingguan (Rp)", Pengaturan →
+// Profil, dipakai juga oleh InsightTargetMingguan) dikali jumlah minggu di bulan
+// target (_cpWeeksInMonth di atas). SENGAJA reuse setting yang sudah ada, TIDAK ada
+// field/override baru — user pilih opsi "cukup pakai setting global yang sudah ada".
+const weeksInMonth=_cpWeeksInMonth(y,m);
+const kirimanPerMinggu=(D.profile&&D.profile.kiriman)||0;
+const kirimanEstimate=kirimanPerMinggu*weeksInMonth;
+
+// 4) Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban − Kiriman Mingguan (estimasi).
+// Boleh negatif (justru itu sinyal yang mau ditunjukkan ke user: pengeluaran
+// terjadwal bulan ini lebih besar dari proyeksi gaji) — TIDAK di-floor ke 0.
+const proyeksiKas=proyeksiGaji-sisaKewajiban-kirimanEstimate;
 
 return{
 month:m,year:y,
 proyeksiGaji,recordedGaji,pendingGajiEstimate,
 sisaKewajiban,billMonthTotal,billPaidThisPeriod,
+weeksInMonth,kirimanPerMinggu,kirimanEstimate,
 proyeksiKas,
 // Alias kompat Sesi P2 (kartu UI ditulis melawan penamaan draft P1 yang lain --
 // gajiProjected/kewajibanSisa/gajiTercatat/gajiPending/kewajibanTerjadwal --
