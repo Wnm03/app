@@ -127,21 +127,42 @@ test('InvestmentPlannerPresenter.render() — 3 kartu semua clickable (u-pointer
 
 // --- CashFlowProjectionPresenter -----------------------------------------
 
-test('CashFlowProjectionPresenter._incomeCard()/_expenseCard()/_cashBalanceCard() — onClick ke cashflowProjWrap', () => {
+// S95 (lanjutan Sesi 93): ketiga kartu SEKARANG punya tujuan navigasi
+// TERPISAH (dulu ketiganya sama-sama self-scroll ke cashflowProjWrap) —
+// income/expense ke tab Kelola > sub-tab Transaksi (lalu difilter
+// `#kfTipe` lewat target.action), Saldo Kas ke tab Tagihan.
+test('CashFlowProjectionPresenter._incomeCard() — onClick ke tab Kelola > Transaksi, filter income', () => {
   const ctx = makeCtx('modules/finance/cashflow-projection-presenter.js', 'CashFlowProjectionPresenter');
   const income = { ok: true, avgMonthly: 5000, months: 3, currentMonthIncome: 5200 };
+  const c = ctx.CashFlowProjectionPresenter._incomeCard(income);
+  assert.equal(c.onClick.action, 'dashHubNavigateToFeature');
+  assert.equal(c.onClick.args[0].page, 'keuangan');
+  assert.equal(c.onClick.args[0].tab, 'kelola');
+  assert.equal(c.onClick.args[0].subtab, 'transaksi');
+  assert.equal(c.onClick.args[0].goTo, 'kelolaTab-transaksi');
+  assert.equal(c.onClick.args[0].action, 'CashFlowProjectionPresenter._goToIncomeTx');
+});
+
+test('CashFlowProjectionPresenter._expenseCard() — onClick ke tab Kelola > Transaksi, filter expense', () => {
+  const ctx = makeCtx('modules/finance/cashflow-projection-presenter.js', 'CashFlowProjectionPresenter');
   const expense = { ok: true, avgMonthly: 3000, months: 3, currentMonthExpense: 3100 };
+  const c = ctx.CashFlowProjectionPresenter._expenseCard(expense);
+  assert.equal(c.onClick.action, 'dashHubNavigateToFeature');
+  assert.equal(c.onClick.args[0].page, 'keuangan');
+  assert.equal(c.onClick.args[0].tab, 'kelola');
+  assert.equal(c.onClick.args[0].subtab, 'transaksi');
+  assert.equal(c.onClick.args[0].goTo, 'kelolaTab-transaksi');
+  assert.equal(c.onClick.args[0].action, 'CashFlowProjectionPresenter._goToExpenseTx');
+});
+
+test('CashFlowProjectionPresenter._cashBalanceCard() — onClick ke tab Tagihan', () => {
+  const ctx = makeCtx('modules/finance/cashflow-projection-presenter.js', 'CashFlowProjectionPresenter');
   const cashBalance = { ok: true, saldoNow: 1000, projected: 900, billsDue: 200, upcomingCount: 1 };
-  [
-    ctx.CashFlowProjectionPresenter._incomeCard(income),
-    ctx.CashFlowProjectionPresenter._expenseCard(expense),
-    ctx.CashFlowProjectionPresenter._cashBalanceCard(cashBalance),
-  ].forEach((c) => {
-    assert.equal(c.onClick.action, 'dashHubNavigateToFeature');
-    assert.equal(c.onClick.args[0].page, 'keuangan');
-    assert.equal(c.onClick.args[0].goTo, 'cashflowProjWrap');
-    assert.equal(c.onClick.args[0].tab, 'laporan');
-  });
+  const c = ctx.CashFlowProjectionPresenter._cashBalanceCard(cashBalance);
+  assert.equal(c.onClick.action, 'dashHubNavigateToFeature');
+  assert.equal(c.onClick.args[0].page, 'keuangan');
+  assert.equal(c.onClick.args[0].tab, 'tagihan');
+  assert.equal(c.onClick.args[0].goTo, 'billList');
 });
 
 test('CashFlowProjectionPresenter.render() — 3 kartu semua clickable (u-pointer + data-action)', () => {
