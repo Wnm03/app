@@ -456,22 +456,86 @@ let _cashflowForecastCache=undefined;
 function invalidateCashflowForecastCache(){
 _cashflowForecastCache=undefined;
 }
-function computeCashflowForecast(){
-if(_cashflowForecastCache!==undefined)return _cashflowForecastCache;
+// billingCycleRange(refDate, cycleStartDay) — Desain siklus tagihan
+// (dikonfirmasi user, lanjutan CashflowProjSettings di file
+// cashflow-projection-settings.js): tagihan yang jatuh tempo tgl 1–15
+// tetap dihitung masuk siklus yang MULAI tgl 16 bulan SEBELUMNYA --
+// kebiasaan tagihan yang periode pemakaiannya potong di tengah bulan
+// (kartu kredit, listrik pascabayar, dst), bukan ikut kalender 1-akhir
+// bulan begitu saja. `cycleStartDay` bisa diatur manual (default 16,
+// dipaksa ke rentang 1-28 supaya tetap valid di bulan Februari) --
+// sumbernya CashflowProjSettings.get().cycleStartDay, diteruskan lewat
+// parameter di sini, TIDAK dibaca langsung dari D (fungsi ini tetap pure,
+// 0 dependency ke D/DOM).
+//
+// Contoh (cycleStartDay=16): refDate 3 Sep -> {from:16 Agu, to:15 Sep}.
+// refDate 20 Sep -> {from:16 Sep, to:15 Okt}.
+function billingCycleRange(refDate,cycleStartDay){
+const day=(typeof cycleStartDay==='number'&&cycleStartDay>=1&&cycleStartDay<=28)?cycleStartDay:16;
+const d=refDate?new Date(refDate):new Date();
+let start;
+if(d.getDate()>=day){start=new Date(d.getFullYear(),d.getMonth(),day);}
+else{start=new Date(d.getFullYear(),d.getMonth()-1,day);}
+start.setHours(0,0,0,0);
+const end=new Date(start.getFullYear(),start.getMonth()+1,day);
+end.setDate(end.getDate()-1);
+end.setHours(23,59,59,999);
+return{from:start,to:end};
+}
+// computeCashflowForecast(opts) — S95 (lanjutan Sesi 93 Cash Flow
+// Projection Foundation, docs/BATCH_PLAN.md): parameter `opts` BARU &
+// OPSIONAL ({months, accountId, billWindowMode, cycleStartDay, from}) --
+// 100% BACKWARD-COMPATIBLE. Dipanggil TANPA argumen (computeCashflowForecast(),
+// pola lama, dipakai puluhan caller existing lewat app), perilakunya PERSIS
+// SAMA seperti sebelum sesi ini SELAMA user belum pernah menyimpan
+// CashflowProjSettings custom (defaultnya sengaja identik ke hardcode lama
+// -- lihat komentar CASHFLOW_PROJ_SETTINGS_DEFAULT di file settings).
+// Cache singleton (_cashflowForecastCache) TETAP HANYA dipakai jalur
+// tanpa-argumen (opts===undefined) -- panggilan dgn opts eksplisit (dipakai
+// panel "⚙️ Atur" utk pratinjau sebelum Simpan) SENGAJA selalu dihitung
+// fresh, TIDAK ikut nyampah/menimpa cache singleton.
+function computeCashflowForecast(opts){
+if(opts===undefined&&_cashflowForecastCache!==undefined)return _cashflowForecastCache;
+const settings=(typeof CashflowProjSettings!=='undefined')?CashflowProjSettings.get():null;
+const cfg=Object.assign({},settings,opts||{});
 const avail=(typeof BudgetReko!=='undefined')?BudgetReko.monthsAvailable():0;
-const months=(typeof BudgetReko!=='undefined')?BudgetReko.effectiveMonths():3;
-const from=(typeof BudgetReko!=='undefined')?BudgetReko.rangeFrom():(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth()-2,1);})();
+const months=cfg.months||((typeof BudgetReko!=='undefined')?BudgetReko.effectiveMonths():3);
+const from=cfg.from||((typeof BudgetReko!=='undefined')?BudgetReko.rangeFrom():(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth()-2,1);})());
 const now=new Date();
-const txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+let txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+// Filter akun (cfg.accountId): 'semua'/kosong -> tidak difilter (perilaku
+// lama persis). Kalau diisi 1 id akun spesifik, incAvg/expAvg/saldoNow
+// SEMUA dihitung ulang dari sudut pandang akun itu saja -- guard
+// typeof recalcAccBalance sama pola guard lain di file ini.
+const accountId=cfg.accountId;
+const accFiltered=accountId&&accountId!=='semua';
+if(accFiltered)txs=txs.filter(t=>t.accountId===accountId);
 const incAvg=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)/months;
 const expAvg=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)/months;
-const saldoNow=totalSaldoAkun();
+const saldoNow=(accFiltered&&typeof recalcAccBalance==='function')?recalcAccBalance(accountId):totalSaldoAkun();
+// Mode jendela tagihan (cfg.billWindowMode): '30hari' (default, PERSIS
+// perilaku lama) | 'kalender' (sisa bulan kalender berjalan, now s.d.
+// akhir bulan) | 'siklus' (billingCycleRange() di atas, cycleStartDay
+// dari cfg -- tetap dipotong mulai `now`, bukan dari awal siklus, supaya
+// tagihan yang SUDAH lewat di siklus berjalan tidak ikut kehitung dobel
+// sbg "akan datang").
+const billWindowMode=cfg.billWindowMode||'30hari';
+let billRangeTo;
+if(billWindowMode==='kalender'){
+const to=new Date(now.getFullYear(),now.getMonth()+1,0);to.setHours(23,59,59,999);
+billRangeTo=to;
+}else if(billWindowMode==='siklus'){
+billRangeTo=billingCycleRange(now,cfg.cycleStartDay).to;
+}else{
 const in30=new Date(now);in30.setDate(in30.getDate()+30);
-const upcoming=(D.bills||[]).filter(b=>{const d=new Date(b.nextDue);return d>=now&&d<=in30;});
+billRangeTo=in30;
+}
+let upcoming=(D.bills||[]).filter(b=>{const d=new Date(b.nextDue);return d>=now&&d<=billRangeTo;});
+if(accFiltered)upcoming=upcoming.filter(b=>!b.accountId||b.accountId===accountId);
 const billsDue=upcoming.reduce((s,b)=>s+b.amount,0);
 const projected=saldoNow+incAvg-expAvg-billsDue;
 const result={incAvg,expAvg,saldoNow,billsDue,upcoming,projected,months,avail};
-_cashflowForecastCache=result;
+if(opts===undefined)_cashflowForecastCache=result;
 return result;
 }
 const KEU_TAB_ORDER=['kelola','tagihan','budget','utangpiutang','asetproyek','laporan','akun'];
