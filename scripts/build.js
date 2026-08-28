@@ -554,6 +554,14 @@ const GROUP_B = [
   // financial-forecast-*.js (dependency: CashFlowProjectionAPI butuh
   // FinancialForecastAPI.summary() sudah dimuat lebih dulu), bareng
   // budget-recommendation (grouping per-domain finance tetap bersebelahan).
+  //
+  // S95 (lanjutan Sesi 93 — Siklus Tagihan & Settings): cashflow-projection-
+  // settings.js ditaruh SEBELUM api/presenter (CashFlowProjectionPresenter
+  // panel "⚙️ Atur" & computeCashflowForecast()/tx-list-cashflow.js baca
+  // CashflowProjSettings lewat guard `typeof` runtime, jadi urutan load
+  // sebenarnya tidak kritikal -- ditaruh di sini murni supaya grouping
+  // per-fitur tetap bersebelahan di bundle, sama pola api+presenter di atas).
+  'modules/finance/cashflow-projection-settings.js',
   'modules/finance/cashflow-projection-api.js',
   'modules/finance/cashflow-projection-presenter.js',
 
