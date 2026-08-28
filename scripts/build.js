@@ -279,6 +279,15 @@ const GROUP_B = [
   'modules/finance/kategori.js',
   'modules/ai/kategorisasi-ai.js',
   'modules/finance/tagihan-kalender.js',
+  // Sesi P1 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md, Track 2):
+  // getMonthlyCashProjection() — presenter murni Proyeksi Kas Bulan Ini.
+  // Ditaruh TEPAT setelah tagihan-kalender.js (dependency wajib:
+  // getBillStats()/getBillPaidThisPeriodInfo(), didefinisikan di file itu,
+  // dipanggil lewat guard typeof jadi urutan sebenarnya tidak wajib tapi
+  // dikelompokkan berdekatan biar logis). Belum ada UI/wiring dashboard sesi
+  // ini (itu Sesi P2) — murni fungsi murni + test, pola sama persis
+  // ownership-engine.js S191 (terdaftar biar ikut ter-bundle, 0 consumer dulu).
+  'modules/finance/cash-projection.js',
   'modules/shared/backup-restore.js',
 
   // Data Management Core (Sesi ini): Backup History + Backup Health.
