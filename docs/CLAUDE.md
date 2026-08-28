@@ -10912,3 +10912,213 @@ Tidak ada known issue baru dari sesi ini.
 
 ## ZIP
 `kw_release_sesi543_titipan-assetpick-dropdown-preserve-selection_v1278.zip`.
+
+# Sesi Q1 (2026-08-28) — Proyeksi Kas: tampilkan Pemasukan/Pengeluaran Bulan Ini (data sudah ada, tinggal ditampilkan)
+
+## Konteks
+Lanjutan `AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md` (audit: kartu
+"💰 Proyeksi Kas Bulan Ini" sengaja sempit by design, cuma
+gaji-kewajiban -- `dashCtx.inc/exp` KAS RIIL semua tipe transaksi
+sudah dihitung & sudah dioper ke `_renderCashProjectionCard(ctx)`
+tiap buka Dashboard, tapi tidak pernah dipakai kartu). Sesi Q1 =
+prioritas WAJIB dari rencana 3 sesi (Q1 wajib, Q2/Q3 opsional).
+
+## Perubahan
+- `modules/shared/modules-render.js` — `_renderCashProjectionCard(ctx)`:
+  tambah 2 stat-box baru "Pemasukan Bulan Ini"/"Pengeluaran Bulan Ini"
+  (grid2 jadi 4 sel). REUSE `ctx.inc`/`ctx.exp` apa adanya kalau ctx
+  tersedia (Keputusan #1, 0 filter ulang) -- fallback hitung sendiri
+  dari `D.transactions` (ter-guard `hitungKas!==false`, pola identik
+  `_dashMonthlyIncExp()`/`FinCoach.compute()`) kalau dipanggil tanpa
+  ctx. 0 perubahan ke `getMonthlyCashProjection()` (acceptance
+  criteria #4, murni consumer). 3 angka existing (Proyeksi Gaji/Sisa
+  Kewajiban/Proyeksi Kas) tetap utuh, 0 mode gabungan (kriteria #5
+  lama tetap berlaku).
+- Keputusan #2 (tampilkan `FI.monthlySurplus()`) & #3 (breakdown gaji/
+  kewajiban di balik toggle) DITUNDA -- itu scope Sesi Q2/Q3
+  (opsional), TIDAK dikerjakan sesi ini sesuai rencana.
+
+## Test
+Test baru `tests/cash-projection-card-s-q1.test.js` (5 test): reuse
+ctx.inc/exp apa adanya, fallback tanpa ctx ter-guard hitungKas,
+fallback dgn ctx.m/y tapi tanpa ctx.inc/exp pakai bulan target (bukan
+bulan berjalan), 0 regresi 3 angka existing Sesi P1/P2, guard DOM
+absen tidak throw.
+`node --test tests/*.test.js` -> **4804/4804 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s661-networth-renderbersih-ssot-unify`,
+`?v=1403`, `index.html`/`app_production.html` sinkron. Catatan: sebelum
+build, ditemukan & diperbaiki drift versi pre-existing (BUKAN dari
+perubahan sesi ini) -- `MODULE_RENDER_VERSION`/`MODULE_CALC_VERSION` di
+`modules/shared/modules-render.js`/`modules-calc.js` sudah tertulis
+`s662-...` (lebih maju dari 3 file lain yg masih `s660-...`) sehingga
+`bumpVersionEverywhere()` tidak ikut me-replace-nya -- disamakan manual
+ke `s660-...` dulu spy build bisa jalan normal, lalu build otomatis
+menaikkan semua ke `s661-...`.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan -- `network egress disabled`)
+-- dicatat di `docs/RELEASE-GATE-LOG.md`. html-sync & version-sync:
+**lolos** murni. Gate akhir: **LOLOS**.
+
+## Progress
+Sesi Q1 (wajib) SELESAI. Data pemasukan/pengeluaran kas riil bulan
+berjalan yang sebelumnya dihitung tapi dibuang sekarang tampil di
+kartu Proyeksi Kas.
+
+## Next TODO
+Sesi Q2 (opsional, tunggu konfirmasi user): breakdown gaji tercatat vs
+pending & kewajiban total vs sudah dibayar, di balik toggle "Detail"
+(field-nya sudah ada di `getMonthlyCashProjection()`, 0 hitungan
+baru). Sesi Q3 (opsional): `FI.monthlySurplus()` sbg metrik ke-3
+terpisah + penjelasan beda window -- risiko SEDANG, wajib ada
+copywriting jelas kalau dikerjakan.
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-sesi-Q1-proyeksi-kas-pemasukan-pengeluaran.zip` (patch, hanya
+file berubah -- bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+chat-action-handlers.js, modules/shared/features-helpers-global-security.js,
+modules/shared/modals.js, modules/shared/modules-calc.js,
+modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md,
+tests/cash-projection-card-s-q1.test.js.
+
+# Sesi Q2 (2026-08-28) — Proyeksi Kas: breakdown gaji tercatat/pending & kewajiban total/dibayar (di balik toggle Detail)
+
+## Konteks
+Lanjutan Sesi Q1 & `AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md` (Sesi Q2
+opsional, dikerjakan atas konfirmasi user lanjut). `getMonthlyCashProjection()`
+sudah mengembalikan breakdown lebih detail dari yang ditampilkan kartu
+(`recordedGaji`/`pendingGajiEstimate` vs `proyeksiGaji` gabungan;
+`billMonthTotal`/`billPaidThisPeriod` vs `sisaKewajiban` gabungan) --
+belum pernah ditampilkan ke user.
+
+## Perubahan
+- `modules/shared/modules-render.js` — `_renderCashProjectionCard(ctx)`:
+  tambah blok breakdown "Gaji Tercatat"/"Gaji Pending"/"Total
+  Kewajiban"/"Sudah Dibayar", REUSE field `getMonthlyCashProjection()`
+  yang sudah ada (0 hitungan baru). Ditampilkan di balik toggle tombol
+  "Detail ▾" (Keputusan #3: default tersembunyi, class `u-dnone` --
+  pola sama `hideDashCardEl()`/`showDashCardEl()` yang sudah ada di
+  file yang sama) supaya kartu tidak makin padat by default (sudah 5
+  angka utama sejak Sesi Q1). Toggle murni `classList.toggle('u-dnone')`
+  inline, 0 fungsi/state baru di JS.
+- Keputusan #2 (`FI.monthlySurplus()` sbg metrik ke-3) TETAP DITUNDA --
+  scope Sesi Q3 (opsional terpisah), belum dikerjakan sesi ini.
+
+## Test
+Test baru `tests/cash-projection-card-s-q2.test.js` (4 test): breakdown
+4 angka baru tampil dgn nilai benar (reuse getMonthlyCashProjection()),
+breakdown tersembunyi default (`u-dnone`) + tombol toggle ada, 5 angka
+utama Sesi P1/P2/Q1 tetap utuh (0 regresi), guard DOM absen tidak throw.
+`node --test tests/*.test.js` -> **4808/4808 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s662-networth-renderbersih-ssot-unify`,
+`?v=1404`, `index.html`/`app_production.html` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan) -- dicatat di
+`docs/RELEASE-GATE-LOG.md`. html-sync & version-sync: **lolos** murni.
+Gate akhir: **LOLOS**.
+
+## Progress
+Sesi Q2 (opsional) SELESAI. Breakdown gaji tercatat/pending &
+kewajiban total/dibayar yang sebelumnya dihitung tapi tidak pernah
+ditampilkan sekarang tersedia di balik toggle "Detail" pada kartu
+Proyeksi Kas.
+
+## Next TODO
+Sesi Q3 (opsional, tunggu konfirmasi user): `FI.monthlySurplus()`
+sbg metrik ke-3 terpisah + penjelasan singkat beda window (rata-rata
+multi-bulan vs bulan kalender ini) -- risiko SEDANG (berpotensi
+membingungkan kalau labelnya tidak jelas), wajib ada 1-2 baris
+copywriting penjelasan di UI kalau dikerjakan.
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-sesi-Q2-proyeksi-kas-breakdown-gaji-kewajiban.zip` (patch,
+hanya file berubah -- bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+chat-action-handlers.js, modules/shared/features-helpers-global-security.js,
+modules/shared/modals.js, modules/shared/modules-calc.js,
+modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md,
+tests/cash-projection-card-s-q2.test.js.
+
+# Sesi Q3 (2026-08-28) — Proyeksi Kas: metrik "Rata-rata Surplus Bulanan" + penjelasan beda window
+
+## Konteks
+Lanjutan Sesi Q1/Q2 & `AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md` (Sesi
+Q3 opsional, risiko SEDANG -- dikerjakan atas konfirmasi user lanjut).
+Keputusan #2: `FI.monthlySurplus()` (rata-rata window multi-bulan,
+`FI.effectiveMonths()`) BEDA SEMANTIK dari `dashCtx.inc/exp` (bulan
+kalender berjalan) -- kalau digabung tanpa penjelasan, user bisa
+menyangka 2 angka itu representasi yang sama & bingung kenapa beda.
+
+## Perubahan
+- `modules/shared/modules-render.js` — `_renderCashProjectionCard(ctx)`:
+  tambah metrik ke-4 "Rata-rata Surplus Bulanan (N bln terakhir)",
+  REUSE `fiMonthlySurplus()`/`FI.effectiveMonths()` (0 rumus baru).
+  Ditampilkan SELALU (bukan di balik toggle Detail -- beda dari
+  breakdown Q2 yang murni info tambahan opsional, metrik ini wajib
+  kelihatan krn beda semantik dari Proyeksi Kas), disertai 1-2 baris
+  penjelasan eksplisit ("ini rata-rata ... bukan bulan kalender
+  berjalan saja -- wajar kalau angkanya tidak sama") sesuai mitigasi
+  risiko yang disyaratkan dokumen audit. Guard `typeof
+  fiMonthlySurplus`/`typeof FI` -- kartu tetap render normal kalau
+  modules-calc.js belum dimuat bareng (fallback diam, tanpa metrik
+  ini, tidak throw).
+
+## Test
+Test baru `tests/cash-projection-card-s-q3.test.js` (5 test): metrik
+surplus tampil SELALU (posisi sebelum blok toggle Detail, dibuktikan
+via index string), penjelasan beda window wajib ada, guard aman kalau
+FI/fiMonthlySurplus tidak dimuat (tidak throw, kartu lain tetap
+render), 0 regresi 5+4 angka Sesi P1/P2/Q1/Q2, guard DOM absen.
+`node --test tests/*.test.js` -> **4813/4813 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s663-networth-renderbersih-ssot-unify`,
+`?v=1405`, `index.html`/`app_production.html` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan) -- dicatat di
+`docs/RELEASE-GATE-LOG.md`. html-sync & version-sync: **lolos** murni.
+Gate akhir: **LOLOS**.
+
+## Progress
+Sesi Q3 (opsional, terakhir dari rencana 3 sesi audit proyeksi arus
+kas) SELESAI. Ketiga sesi (Q1 wajib + Q2/Q3 opsional) dari
+`AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md` sekarang TUNTAS -- kartu
+"💰 Proyeksi Kas Bulan Ini" sekarang menampilkan Proyeksi Gaji, Sisa
+Kewajiban, Pemasukan/Pengeluaran Bulan Ini, Proyeksi Kas, Rata-rata
+Surplus Bulanan (selalu tampil + penjelasan), & breakdown gaji/
+kewajiban detail (di balik toggle).
+
+## Next TODO
+Tidak ada TODO tersisa dari rencana audit ini (3/3 sesi selesai).
+Target sesi berikutnya menunggu arahan user.
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-sesi-Q3-proyeksi-kas-surplus-rata-rata.zip` (patch, hanya file
+berubah -- bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+chat-action-handlers.js, modules/shared/features-helpers-global-security.js,
+modules/shared/modals.js, modules/shared/modules-calc.js,
+modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md,
+tests/cash-projection-card-s-q3.test.js.

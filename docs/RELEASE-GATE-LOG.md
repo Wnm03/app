@@ -328,3 +328,18 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox Claude tanpa akses npm registry/jaringan -- eslint tidak bisa diinstall/dijalankan di environment ini
 - **unminified-bundle**: override dipakai. Alasan: Sandbox Claude tanpa akses jaringan -- esbuild tidak bisa diinstall, bundle unminified tapi sintaksnya sudah divalidasi node --check
+
+## 2026-08-28T07:00:24.119Z — versi s661-networth-renderbersih-ssot-unify
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox container tanpa akses jaringan (network egress disabled) -- npm install eslint tidak bisa dijalankan; perubahan Sesi Q1 hanya 1 fungsi presenter kecil (_renderCashProjectionCard), diverifikasi manual: gaya penulisan konsisten dgn kode sekitarnya (no-semicolon-per-statement style existing, no unused var), 0 pola baru
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos), ukuran lebih besar tapi fungsional, konsisten dgn build2 sesi2 sebelumnya di environment yg sama
+
+## 2026-08-28T07:09:05.008Z — versi s662-networth-renderbersih-ssot-unify
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox container tanpa akses jaringan (network egress disabled) -- npm install eslint tidak bisa dijalankan; perubahan Sesi Q2 hanya 1 fungsi presenter kecil (_renderCashProjectionCard, tambah blok toggle Detail), diverifikasi manual: gaya penulisan konsisten dgn kode sekitarnya, 0 pola baru
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos)
+
+## 2026-08-28T07:13:01.840Z — versi s663-networth-renderbersih-ssot-unify
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox container tanpa akses jaringan (network egress disabled) -- npm install eslint tidak bisa dijalankan; perubahan Sesi Q3 hanya 1 fungsi presenter kecil (_renderCashProjectionCard, tambah blok surplus rata-rata), diverifikasi manual: gaya penulisan konsisten dgn kode sekitarnya, 0 pola baru
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos)
