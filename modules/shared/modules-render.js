@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s662-normalisasi-hitungkas-financial-calc';
+const MODULE_RENDER_VERSION='s663-networth-renderbersih-ssot-unify';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -961,20 +961,79 @@ toast('Oke, tidak akan diingatkan lagi. Kamu tetap bisa aktifkan backup kapan sa
 // ctx (dari renderDashboard()) dipakai kalau ada (ctx.m/ctx.y = bulan berjalan yang sudah
 // dihitung sekali di atas), tapi function ini juga aman dipanggil tanpa ctx (fallback ke
 // bulan/tahun berjalan lewat getMonthlyCashProjection(undefined,undefined) sendiri).
+// Sesi Q1 (AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md, Keputusan #1): tambah 2 angka
+// "Pemasukan Bulan Ini"/"Pengeluaran Bulan Ini" -- REUSE ctx.inc/ctx.exp (kas riil, semua
+// tipe transaksi, sudah dihitung 1x di renderDashboard() lewat _dashMonthlyIncExp() & sudah
+// dioper ke sini sejak awal, cuma sebelum sesi ini tidak pernah dipakai). Kalau dipanggil
+// tanpa ctx (mis. dari test lama/pemanggilan berdiri sendiri), fallback hitung sendiri dari
+// D.transactions bulan target (m/y yang sama dipakai getMonthlyCashProjection() di atas),
+// tetap ter-guard hitungKas!==false -- pola sama persis FinCoach.compute() (modules-calc.js).
+// 0 perubahan ke getMonthlyCashProjection() sendiri (acceptance criteria #4) -- murni consumer.
+// Sesi Q2 (AUDIT-RENCANA-proyeksi-arus-kas-lengkap.md, Keputusan #3): breakdown gaji tercatat
+// vs pending & kewajiban total vs sudah dibayar -- field SUDAH ADA di getMonthlyCashProjection()
+// (recordedGaji/pendingGajiEstimate/billMonthTotal/billPaidThisPeriod), 0 hitungan baru, murni
+// ditampilkan di balik toggle "Detail" (class u-dnone, pola sama hideDashCardEl() di atas) supaya
+// kartu tidak makin padat by default (kartu sudah 5 angka utama sejak Sesi Q1).
+// Sesi Q3 (Keputusan #2): tambah "Rata-rata Surplus Bulanan" (REUSE fiMonthlySurplus(), 0 rumus
+// baru) sbg metrik ke-4 SELALU tampil (bukan di balik toggle -- beda dari breakdown Q2 yang murni
+// info tambahan, metrik ini beda SEMANTIK dari Proyeksi Kas jadi wajib kelihatan supaya user tidak
+// menyangka 2 angka itu sama). WAJIB disertai 1-2 baris penjelasan (window rata-rata multi-bulan
+// vs bulan kalender berjalan) persis sesuai catatan risiko "SEDANG" di dokumen audit -- tanpa
+// penjelasan ini user bisa salah paham dikira Proyeksi Kas dihitung ulang/beda karena bug.
+// Guard typeof FI/fiMonthlySurplus -- aman kalau modules-calc.js belum dimuat bareng.
 function _renderCashProjectionCard(ctx){
 const el=document.getElementById('dashCashProjBody');
 if(!el)return;
 if(typeof getMonthlyCashProjection!=='function'){el.innerHTML='<div class="u-fs12 u-t2">Modul proyeksi kas belum dimuat.</div>';return;}
 const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y);
 const kasCls=r.proyeksiKas<0?'red':'green';
+let inc,exp;
+if(ctx&&ctx.inc!=null&&ctx.exp!=null){
+inc=ctx.inc;exp=ctx.exp;
+}else{
+const now=new Date();
+const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
+const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
+const txM=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+inc=txM.filter(t=>t.type==='income'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+}
+let surplusHtml='';
+if(typeof fiMonthlySurplus==='function'){
+try{
+const surplus=fiMonthlySurplus();
+const surplusMonths=(typeof FI!=='undefined'&&typeof FI.effectiveMonths==='function')?FI.effectiveMonths():null;
+const surplusCls=surplus<0?'red':'green';
+surplusHtml=`
+<div class="u-tac u-mt10 divider-top">
+<div class="u-fs11 u-t2">Rata-rata Surplus Bulanan${surplusMonths?` (${surplusMonths} bln terakhir)`:''}</div>
+<div class="stat-val ${surplusCls} u-fs16">${fmtFullSigned(surplus)}</div>
+<div class="u-fs10 u-t2 u-mt4">Beda dari "Proyeksi Kas" di atas: ini rata-rata pemasukan−pengeluaran kas riil selama beberapa bulan terakhir, bukan bulan kalender berjalan saja -- wajar kalau angkanya tidak sama.</div>
+</div>`;
+}catch(e){console.warn('_renderCashProjectionCard: gagal hitung surplus rata-rata',e);}
+}
 el.innerHTML=`
 <div class="grid2 u-mb10">
 <div class="stat-box"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
 <div class="stat-box"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
+<div class="stat-box"><div class="stat-label">Pemasukan Bulan Ini</div><div class="stat-val u-fs14 green">${fmtFull(inc)}</div></div>
+<div class="stat-box"><div class="stat-label">Pengeluaran Bulan Ini</div><div class="stat-val u-fs14 red">${fmtFull(exp)}</div></div>
 </div>
 <div class="u-tac">
 <div class="u-fs11 u-t2">Proyeksi Kas Bulan Ini</div>
 <div class="stat-val ${kasCls} u-fs20">${fmtFullSigned(r.proyeksiKas)}</div>
+</div>
+${surplusHtml}
+<div class="u-tac u-mt6">
+<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('dashCashProjDetailBody').classList.toggle('u-dnone')">Detail ▾</button>
+</div>
+<div id="dashCashProjDetailBody" class="u-dnone u-mt8">
+<div class="grid2">
+<div class="stat-box"><div class="stat-label">Gaji Tercatat</div><div class="stat-val u-fs12">${fmtFull(r.recordedGaji)}</div></div>
+<div class="stat-box"><div class="stat-label">Gaji Pending</div><div class="stat-val u-fs12">${fmtFull(r.pendingGajiEstimate)}</div></div>
+<div class="stat-box"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
+<div class="stat-box"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
+</div>
 </div>`;
 }
 
