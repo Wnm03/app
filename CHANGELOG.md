@@ -1,3 +1,54 @@
+# Changelog — Sesi S667 (Cash Flow Projection: siklus tagihan tengah-bulan + panel Atur, v1409)
+
+## Task
+Audit + rilis resmi utk fitur "Cash Flow Projection — Siklus Tagihan &
+Settings" (CashflowProjSettings, billingCycleRange(),
+computeCashflowForecast(opts), panel "⚙️ Atur" di
+CashFlowProjectionPresenter) yang kodenya sudah ada di source tapi
+BELUM PERNAH melewati siklus build resmi (versi app tidak pernah
+di-bump, CHANGELOG tidak pernah ditulis utk fitur ini).
+
+## Temuan Audit
+- Source code fitur (cashflow-projection-settings.js,
+  billingCycleRange()/computeCashflowForecast(opts) di
+  tx-list-cashflow.js, 3 kartu navigasi + panel Atur di
+  cashflow-projection-presenter.js, entry build.js) SUDAH lengkap &
+  100% backward-compatible — diverifikasi via 4.827 test (`npm test`),
+  semua PASS.
+- package.json version & CHANGELOG.md TIDAK PERNAH ter-update utk
+  fitur ini sebelumnya (versi app masih tertahan di
+  s666-networth-renderbersih-ssot-unify / v1408).
+- Sesi ini murni menjalankan siklus build resmi (bump versi,
+  regenerasi bundle, sinkronisasi ?v= & cache) yang seharusnya sudah
+  dijalankan sebelumnya, TANPA mengubah logic apa pun.
+
+## Fitur (ringkasan)
+- `CashflowProjSettings` (get/set/reset/isCustomized) — preferensi
+  user (rentang bulan, filter akun, mode jendela tagihan,
+  cycleStartDay) disimpan di `D.profile.cashflowProjSettings`.
+- `billingCycleRange(refDate, cycleStartDay)` — siklus tagihan yang
+  potong di tengah bulan (mis. kartu kredit/listrik pascabayar),
+  default mulai tgl 16, bisa diatur 1–28.
+- `computeCashflowForecast(opts)` — parameter opsional baru
+  (months/accountId/billWindowMode/cycleStartDay), 100%
+  backward-compatible dgn pemanggilan lama tanpa argumen.
+- 3 kartu Proyeksi Saldo Kas sekarang klik ke tujuan berbeda
+  (income/expense -> tab Transaksi terfilter, bills -> tab Tagihan)
+  + panel inline "⚙️ Atur" utk ubah settings di atas.
+
+## Build
+- `npm test` — 4.827/4.827 PASS.
+- `node scripts/build.js s667-cashflow-siklus-tagihan-settings` —
+  versi app 1408 -> 1409, bundle a/b diregenerasi (esbuild tidak
+  terpasang di environment build ini -> bundle TANPA minifikasi,
+  tetap valid/aman, ukuran lebih besar dari versi terminifikasi).
+- File yang berubah: app-bundle-a.min.js, app-bundle-b.min.js,
+  app_production.html, index.html, sw.js,
+  modules/shared/{modals.js, modules-render.js, modules-calc.js,
+  features-helpers-global-security.js}, chat-action-handlers.js,
+  docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md.
+
+
 # Changelog — Sesi S660 (DP + Piutang di applyTxShopSaleFromTx, v1393)
 
 ## Task

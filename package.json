@@ -1,6 +1,6 @@
 {
   "name": "keluarga-w",
-  "version": "0.85.8",
+  "version": "0.85.9",
   "description": "Aplikasi manajemen keuangan, zakat, bisnis, dan kendaraan keluarga (Keluarga W) \u2014 PWA multi-file, dibangun jadi app-bundle-a.min.js / app-bundle-b.min.js lewat build.js.",
   "private": true,
   "license": "UNLICENSED",
