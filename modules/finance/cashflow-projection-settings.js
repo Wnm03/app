@@ -28,6 +28,14 @@ const CASHFLOW_PROJ_SETTINGS_DEFAULT = Object.freeze({
   accountId: 'semua',        // 'semua' atau id 1 akun spesifik
   billWindowMode: '30hari',  // '30hari' | 'kalender' | 'siklus'
   cycleStartDay: 16,         // dipakai kalau billWindowMode==='siklus' (1-28)
+  // Sesi pengaturan-proyeksi-kas-lengkap — 3 field baru, KHUSUS dipakai kartu "Proyeksi
+  // Kas Bulan Ini" (getMonthlyCashProjection()/_renderCashProjectionCard()), diabaikan
+  // begitu saja oleh kartu "Proyeksi Saldo Kas" (CashFlowProjectionPresenter) yg tidak
+  // baca field ini -- pola sama persis billWindowMode='kalender'/'siklus' yg juga cuma
+  // relevan di kartu satu lagi. Default SENGAJA identik perilaku lama (true/true/null).
+  includeKiriman: true,      // false = Kiriman Mingguan tidak dikurangkan ke Proyeksi Kas
+  includePendingGaji: true,  // false = Proyeksi Gaji cuma gaji tercatat (exclude estimasi absensi pending)
+  surplusMonths: null,       // null = ikut default global FI.effectiveMonths(); 1-24 = override khusus kartu ini
 });
 
 const CashflowProjSettings = {

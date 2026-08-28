@@ -66,22 +66,33 @@ return count;
 // Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban Terjadwal. SELALU kembalikan 3
 // angka terpisah (acceptance criteria #5), tidak ada mode gabungan 1-angka.
 //
-// opts (S667B, OPSIONAL, 100% BACKWARD-COMPATIBLE) — {billWindowMode,cycleStartDay},
-// REUSE PERSIS CashflowProjSettings/billingCycleRange (cashflow-projection-settings.js/
-// tx-list-cashflow.js, Sesi 93/95) -- dipanggil tanpa opts (semua caller lama, termasuk
-// _renderCashProjectionCard() sblm sesi ini) hasilnya IDENTIK perilaku lama
-// (billWindowMode default 'kalender' = getBillOccurrencesInMonth(b,y,m), SAMA PERSIS kode
-// asli di bawah). HANYA sisaKewajiban/billMonthTotal/billPaidThisPeriod yang berubah kalau
+// opts (S667B, OPSIONAL, 100% BACKWARD-COMPATIBLE) — {billWindowMode,cycleStartDay,
+// includeKiriman,includePendingGaji}, REUSE PERSIS CashflowProjSettings/billingCycleRange
+// (cashflow-projection-settings.js/tx-list-cashflow.js, Sesi 93/95) -- dipanggil tanpa opts
+// (semua caller lama, termasuk _renderCashProjectionCard() sblm sesi ini) hasilnya IDENTIK
+// perilaku lama (billWindowMode default 'kalender' = getBillOccurrencesInMonth(b,y,m), SAMA
+// PERSIS kode asli di bawah; includeKiriman/includePendingGaji default true = SAMA PERSIS
+// perilaku sesi kiriman-mingguan-proyeksi-kas, formula tidak berubah kalau opts tidak
+// dikirim). HANYA sisaKewajiban/billMonthTotal/billPaidThisPeriod yang berubah kalau
 // billWindowMode==='siklus' -- proyeksiGaji TETAP selalu bulan kalender m/y (gaji tidak ada
 // konsep siklus tengah-bulan), pola sama persis computeCashflowForecast() yang cuma ubah
 // jendela TAGIHAN, bukan income. Mode '30hari' (dipakai kartu Proyeksi Saldo Kas lain) TIDAK
 // relevan di sini (kartu ini selalu per-bulan-kalender utk sisi gaji) -- kalau billWindowMode
 // dikirim '30hari', diperlakukan sama seperti 'kalender' (fallback aman, 0 behavior baru).
+//
+// Sesi pengaturan-proyeksi-kas-lengkap (Keputusan #1-#3): includeKiriman(bool,default true)
+// & includePendingGaji(bool,default true) MURNI toggle formula -- field mentah
+// (recordedGaji/pendingGajiEstimate/kirimanEstimate/kirimanPerMinggu/weeksInMonth) SELALU
+// dikembalikan apa adanya (0 disembunyikan) supaya panel "⚙️ Atur" & kartu bisa tetap
+// menampilkan angka mentahnya sbg info, cuma formula proyeksiGaji/proyeksiKas yang
+// menyesuaikan mana yang disertakan.
 function getMonthlyCashProjection(month,year,opts){
 const now=new Date();
 const y=(year!=null?year:now.getFullYear());
 const m=(month!=null?month:now.getMonth());
 const cfg=opts||{};
+const includeKiriman=cfg.includeKiriman!==false;
+const includePendingGaji=cfg.includePendingGaji!==false;
 const useSiklus=cfg.billWindowMode==='siklus'&&typeof billingCycleRange==='function';
 const cycleRange=useSiklus?billingCycleRange(now,cfg.cycleStartDay):null;
 
@@ -95,7 +106,7 @@ const recordedGaji=(D.transactions||[])
 const pendingGajiEstimate=(D.workDays||[])
 .filter(w=>_cpInMonth(w.date,y,m))
 .reduce((s,w)=>s+(w.total||0),0);
-const proyeksiGaji=recordedGaji+pendingGajiEstimate;
+const proyeksiGaji=recordedGaji+(includePendingGaji?pendingGajiEstimate:0);
 
 // 2) Sisa Kewajiban Terjadwal — PENTING (acceptance criteria #3, "tidak dipotong
 // dua kali"): markBillPaid() SUDAH memajukan nextDue begitu bill dibayar, jadi
@@ -144,16 +155,17 @@ const weeksInMonth=_cpWeeksInMonth(y,m);
 const kirimanPerMinggu=(D.profile&&D.profile.kiriman)||0;
 const kirimanEstimate=kirimanPerMinggu*weeksInMonth;
 
-// 4) Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban − Kiriman Mingguan (estimasi).
-// Boleh negatif (justru itu sinyal yang mau ditunjukkan ke user: pengeluaran
-// terjadwal bulan ini lebih besar dari proyeksi gaji) — TIDAK di-floor ke 0.
-const proyeksiKas=proyeksiGaji-sisaKewajiban-kirimanEstimate;
+// 4) Proyeksi Kas = Proyeksi Gaji − Sisa Kewajiban − Kiriman Mingguan (kalau
+// includeKiriman!==false). Boleh negatif (justru itu sinyal yang mau ditunjukkan ke
+// user: pengeluaran terjadwal bulan ini lebih besar dari proyeksi gaji) — TIDAK
+// di-floor ke 0.
+const proyeksiKas=proyeksiGaji-sisaKewajiban-(includeKiriman?kirimanEstimate:0);
 
 return{
 month:m,year:y,
-proyeksiGaji,recordedGaji,pendingGajiEstimate,
+proyeksiGaji,recordedGaji,pendingGajiEstimate,includePendingGaji,
 sisaKewajiban,billMonthTotal,billPaidThisPeriod,
-weeksInMonth,kirimanPerMinggu,kirimanEstimate,
+weeksInMonth,kirimanPerMinggu,kirimanEstimate,includeKiriman,
 proyeksiKas,
 // Alias kompat Sesi P2 (kartu UI ditulis melawan penamaan draft P1 yang lain --
 // gajiProjected/kewajibanSisa/gajiTercatat/gajiPending/kewajibanTerjadwal --
