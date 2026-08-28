@@ -24,6 +24,23 @@ const end=new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59
 return {start,end};
 }
 let _wrLastTotal=0,_wrLastCount=0,_wrLastStart=null,_wrLastEnd=null;
+// FIX (audit kategori gaji absensi): sebelumnya kalau tidak ada kategori income
+// yang namanya match /gaji/i, sistem fallback diam-diam ke D.categories.income[0]
+// (kategori pemasukan PERTAMA apa adanya — bisa kategori bisnis, dll). Ini bikin
+// gaji mingguan dari absensi tercatat di kategori yang salah tanpa notifikasi
+// apapun, terutama kalau user pernah menghapus/mengganti nama kategori "Gaji toko"
+// bawaan (kategori.js SENGAJA membolehkan rename/hapus kategori apa saja, termasuk
+// kategori default — lihat saveCat/delCat). Fix: kalau tidak ketemu, buat kategori
+// "Gaji" baru otomatis alih-alih fallback ke kategori pertama sembarang. Dipakai
+// bareng oleh confirmWeeklyReset() di file ini & saveGajiAsIncome() di gaji-calc.js
+// (file itu dimuat SETELAH file ini di scripts/build.js, jadi aman diakses dari sana).
+function ensureGajiCategory(){
+const found=D.categories.income.find(c=>/gaji/i.test(c.name));
+if(found) return found;
+const created={id:'cat_gaji_'+uid(),name:'Gaji',emoji:'💼',subs:[]};
+D.categories.income.push(created);
+return created;
+}
 function checkWeeklySalaryReset(){
 const now=new Date();
 if(now.getDay()!==6) return;
@@ -79,16 +96,17 @@ const autoIncome=autoEl&&autoEl.checked&&_wrLastTotal>0;
 if(autoIncome){
 const accEl=document.getElementById('wrAcc');
 const accId=(accEl&&accEl.value)||(D.accounts.length?D.accounts[0].id:null);
-const gajiCat=D.categories.income.find(c=>/gaji/i.test(c.name));
-const catName=gajiCat?gajiCat.name:(D.categories.income[0]?D.categories.income[0].name:'Gaji');
+const gajiCat=ensureGajiCategory();
+const catName=gajiCat.name;
 // Auto-pilih subkategori yang paling cocok (mis. "Gaji Toko") kalau kategori
 // yang match punya subs — dulu subcategory SELALU dikosongkan walau user
 // sudah punya subkategori yang sesuai, jadi harus dipilih manual tiap minggu.
 // Prioritas: sub yang namanya mengandung "toko" > mengandung "gaji" > sub
-// pertama yang ada. Kalau kategori tidak punya subs sama sekali (default
-// lama), tetap kosong seperti sebelumnya — tidak ada regresi.
+// pertama yang ada. Kalau kategori tidak punya subs sama sekali (termasuk
+// kategori "Gaji" yang baru dibuat otomatis oleh ensureGajiCategory()), tetap
+// kosong seperti sebelumnya — tidak ada regresi.
 let subName='';
-if(gajiCat && Array.isArray(gajiCat.subs) && gajiCat.subs.length){
+if(Array.isArray(gajiCat.subs) && gajiCat.subs.length){
 const subMatch=gajiCat.subs.find(s=>/toko/i.test(s.name))||gajiCat.subs.find(s=>/gaji/i.test(s.name))||gajiCat.subs[0];
 if(subMatch) subName=subMatch.name;
 }

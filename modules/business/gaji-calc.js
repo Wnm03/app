@@ -36,8 +36,12 @@ closeModal('gajiCalcModal');
 openTxModal('income');
 setTimeout(()=>{
 document.getElementById('txAmt').value=amount;
-const gajiCat=D.categories.income.find(c=>/gaji/i.test(c.name));
-if(gajiCat){
+// FIX (audit kategori gaji absensi): dulu kalau tidak ada kategori match /gaji/i,
+// field kategori dibiarkan kosong (user isi manual) — sekarang pakai
+// ensureGajiCategory() (didefinisikan di reset-gaji-mingguan.js, dimuat lebih
+// dulu di scripts/build.js) yang auto-buat kategori "Gaji" kalau belum ada, jadi
+// selalu terisi otomatis & konsisten dengan confirmWeeklyReset().
+const gajiCat=ensureGajiCategory();
 document.getElementById('txCat').value=gajiCat.name;
 updateSubCatOptions();
 // Auto-pilih subkategori yang paling cocok (mis. "Gaji Toko"), sama pola
@@ -46,7 +50,6 @@ updateSubCatOptions();
 if(Array.isArray(gajiCat.subs)&&gajiCat.subs.length){
 const subMatch=gajiCat.subs.find(s=>/toko/i.test(s.name))||gajiCat.subs.find(s=>/gaji/i.test(s.name))||gajiCat.subs[0];
 if(subMatch) document.getElementById('txSubCat').value=subMatch.name;
-}
 }
 document.getElementById('txNote').value='Hasil kalkulator gaji';
 },60);
