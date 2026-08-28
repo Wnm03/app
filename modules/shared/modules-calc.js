@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s659-networth-renderbersih-ssot-unify';
+const MODULE_CALC_VERSION='s662-normalisasi-hitungkas-financial-calc';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -54,9 +54,13 @@ const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 const catIds=(fi.expenseCatIds&&fi.expenseCatIds.length)?fi.expenseCatIds:['__total__'];
 const pseudoBudget={catIds};
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): transaksi Tunai biasa dgn
+// hitungKas:false ("Catatan saja", 0 pengaruh ke kas/saldo) TIDAK BOLEH ikut
+// agregasi pengeluaran tahunan FI -- kalau tidak, target FI/SWR bisa salah
+// dihitung dari pengeluaran yg sebetulnya cuma catatan.
 const total=D.transactions.filter(t=>{
 const d=new Date(t.date);
-return d>=from&&d<=now&&budgetMatchesTx(pseudoBudget,t);
+return d>=from&&d<=now&&t.hitungKas!==false&&budgetMatchesTx(pseudoBudget,t);
 }).reduce((s,t)=>s+t.amount,0);
 return (total/months)*12;
 },
@@ -68,7 +72,10 @@ monthlySurplus(){
 const months=FI.effectiveMonths();
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
-const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): "Catatan saja" (hitungKas:false)
+// difilter di titik konstruksi txs, jadi inc & exp SAMA-SAMA sudah bersih (bukan
+// difilter terpisah supaya tidak ada celah salah satu sisi kelewatan).
+const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=now&&t.hitungKas!==false;});
 const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 return (inc-exp)/months;
@@ -308,7 +315,10 @@ avgMonthlyIncome(){
 const months=FI.effectiveMonths();
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
-const total=D.transactions.filter(t=>t.type==='income'&&new Date(t.date)>=from&&new Date(t.date)<=now).reduce((s,t)=>s+(t.amount||0),0);
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): income "Catatan saja" tidak
+// masuk kas riil, jadi tidak boleh menaikkan rata-rata gaji bulanan yg dipakai
+// utk saran alokasi (Dana Darurat/Pensiun/dll).
+const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(t.date)>=from&&new Date(t.date)<=now).reduce((s,t)=>s+(t.amount||0),0);
 return total/months;
 },
 suggest(){
@@ -341,7 +351,10 @@ const monthlyIncomes=[];
 for(let i=0;i<monthsAvail;i++){
 const from=new Date(now.getFullYear(),now.getMonth()-i,1);
 const to=new Date(now.getFullYear(),now.getMonth()-i+1,0,23,59,59);
-const total=D.transactions.filter(t=>t.type==='income'&&new Date(t.date)>=from&&new Date(t.date)<=to).reduce((s,t)=>s+t.amount,0);
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): sama alasan spt SalaryAllocation
+// di atas -- income "Catatan saja" tidak boleh ikut hitungan volatilitas (CV) income
+// bulanan yg dipakai utk rekomendasi target Dana Darurat.
+const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(t.date)>=from&&new Date(t.date)<=to).reduce((s,t)=>s+t.amount,0);
 monthlyIncomes.push(total);
 }
 const mean=monthlyIncomes.reduce((a,b)=>a+b,0)/monthlyIncomes.length;
@@ -661,7 +674,11 @@ const out=[];
 const now=(ctx&&ctx.now)||new Date();
 const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
 const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
-const txM=(ctx&&ctx.txM)||D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): txM difilter di titik konstruksi
+// (bukan di inc/exp terpisah) supaya SEMUA konsumen ctx.txM di bawah (termasuk yg
+// dioper ke KeuanganInsight.compute()) otomatis ikut bersih -- 1 titik guard, bukan
+// disebar ulang tiap tempat txM dipakai.
+const txM=(ctx&&ctx.txM)||D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
 const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 // 1-2. Defisit bulan berjalan & anggaran ketat/jebol — logic SEKARANG hidup satu-satunya di

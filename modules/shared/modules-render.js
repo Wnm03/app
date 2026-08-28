@@ -2,7 +2,7 @@
 // Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Semua fungsi ini murni definisi function global (bukan module), jadi tetap bisa dipanggil dari file manapun
 // yang loadnya belakangan (sama seperti modules-calc.js/features-*.js).
-const MODULE_RENDER_VERSION='s659-networth-renderbersih-ssot-unify';
+const MODULE_RENDER_VERSION='s662-normalisasi-hitungkas-financial-calc';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -953,8 +953,34 @@ toast('Oke, tidak akan diingatkan lagi. Kamu tetap bisa aktifkan backup kapan sa
 // dihapus sesi ini), BUKAN di #page-dashboard-hub. 4 entry sisanya (fi/pensiun/absensi/
 // refleksi) TETAP karena elemennya (dashFiCard/dashPensiunCard/dashAbsensiCard/
 // refleksiCard) sudah pindah ke #page-dashboard-hub sejak migrasi Tahap 3a.
+// _renderCashProjectionCard(ctx) — Sesi P2 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md
+// Track 2, lanjutan Sesi P1 modules/finance/cash-projection.js). Card baru "💰 Proyeksi Kas
+// Bulan Ini" -- 100% REUSE getMonthlyCashProjection() (0 rumus baru di sini, murni presenter).
+// Kriteria #5 (acceptance criteria P1-P2): SELALU render 3 angka terpisah (Proyeksi Gaji /
+// Sisa Kewajiban / Proyeksi Kas) -- TIDAK ADA mode 1-angka gabungan.
+// ctx (dari renderDashboard()) dipakai kalau ada (ctx.m/ctx.y = bulan berjalan yang sudah
+// dihitung sekali di atas), tapi function ini juga aman dipanggil tanpa ctx (fallback ke
+// bulan/tahun berjalan lewat getMonthlyCashProjection(undefined,undefined) sendiri).
+function _renderCashProjectionCard(ctx){
+const el=document.getElementById('dashCashProjBody');
+if(!el)return;
+if(typeof getMonthlyCashProjection!=='function'){el.innerHTML='<div class="u-fs12 u-t2">Modul proyeksi kas belum dimuat.</div>';return;}
+const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y);
+const kasCls=r.proyeksiKas<0?'red':'green';
+el.innerHTML=`
+<div class="grid2 u-mb10">
+<div class="stat-box"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
+<div class="stat-box"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
+</div>
+<div class="u-tac">
+<div class="u-fs11 u-t2">Proyeksi Kas Bulan Ini</div>
+<div class="stat-val ${kasCls} u-fs20">${fmtFullSigned(r.proyeksiKas)}</div>
+</div>`;
+}
+
 const DASH_CARD_DEFS=[
 {key:'fi',label:'🎯 Kebebasan Finansial',elId:'dashFiCard',render:()=>renderFinancialFreedom()},
+{key:'cashProjection',label:'💰 Proyeksi Kas Bulan Ini',elId:'dashCashProjCard',render:(ctx)=>_renderCashProjectionCard(ctx)},
 {key:'pensiun',label:'🏖️ Dana Pensiun',elId:'dashPensiunCard',render:()=>Pensiun.renderDashMini()},
 {key:'absensi',label:'📅 Absensi Harian',elId:'dashAbsensiCard',render:()=>Payroll.renderDashMini()},
 {key:'refleksi',label:'🌱 Refleksi & Self-Care',elId:'refleksiCard',render:()=>Refleksi.renderDashCard()},
@@ -962,7 +988,7 @@ const DASH_CARD_DEFS=[
 // Urutan render sesungguhnya di Beranda (beda dari urutan checklist Pengaturan di
 // DASH_CARD_DEFS). Dipisah dari DASH_CARD_DEFS supaya menambah/menyusun ulang checklist
 // Pengaturan tidak diam-diam mengubah urutan tampilan Beranda, begitu juga sebaliknya.
-const DASH_RENDER_ORDER=['fi','pensiun','absensi','refleksi'];
+const DASH_RENDER_ORDER=['fi','cashProjection','pensiun','absensi','refleksi'];
 const DASH_CARD_BY_KEY={};
 DASH_CARD_DEFS.forEach(c=>{DASH_CARD_BY_KEY[c.key]=c;});
 function isDashCardOn(key){
@@ -1039,6 +1065,23 @@ if(typeof setTimeout==='function'){setTimeout(fn,0);return;}
 fn();
 }
 
+// _dashMonthlyIncExp(txM) — Sesi T2 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md,
+// Track 1 "titik laporan utama Dashboard"). Pure helper: agregasi Pemasukan/Pengeluaran bulan
+// berjalan yg dipakai dashCtx di renderDashboard() (di bawah) — dipisah jadi fungsi sendiri
+// (bukan inline spt sebelumnya) supaya testable tanpa perlu sandbox DOM-heavy renderDashboard()
+// (extractFunction() di tests/helpers/loadSource.js bisa ambil fungsi ini sendirian).
+// Guard hitungKas:false (Sesi T1, lihat recalcAccBalance() di modules/finance/akun.js): transaksi
+// Tunai bertanda "Catatan saja" SENGAJA di-skip dari total Pemasukan/Pengeluaran di sini juga,
+// konsisten dgn saldo akun yg sudah skip transaksi itu (dua2nya sama2 representasi kas riil).
+// absen/undefined tetap dihitung normal (backward-compatible, 0 migrasi data lama, pola sama T1).
+// Scope T2 ini SENGAJA cuma titik dashCtx ini (dipakai FinCoach/KeuanganInsight lewat ctx) — titik
+// laporan sekunder lain (modules-calc.js, filter-laporan.js, cashflow/forecast presenter dst) ADA
+// query masing2 yg beda & BELUM disentuh sesi ini, dicicil terpisah di Sesi T4+ per RENCANA KERJA.
+function _dashMonthlyIncExp(txM){
+const inc=txM.filter(t=>t.type==='income'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+const exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+return{inc,exp};
+}
 function renderDashboard(){
 LifeBalance.render();
 // Konteks bulan-berjalan dihitung SEKALI di sini (dulu FinCoach & dashBillCard hitung
@@ -1051,8 +1094,7 @@ if(typeof Advisor!=='undefined')Advisor.render();
 if(typeof AIWidget!=='undefined')AIWidget.render();
 const now=new Date(),m=now.getMonth(),y=now.getFullYear();
 const txM=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
-const inc=txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+const{inc,exp}=_dashMonthlyIncExp(txM);
 const billStatsShared=(typeof getBillStats==='function')?getBillStats():null;
 const dashCtx={now,m,y,txM,inc,exp,billStats:billStatsShared};
 if(typeof FinCoach!=='undefined')FinCoach.renderDash(dashCtx);
