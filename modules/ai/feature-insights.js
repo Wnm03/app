@@ -46,7 +46,10 @@ const out=[];
 const now=(ctx&&ctx.now)||new Date();
 const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
 const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
-const txM=(ctx&&ctx.txM)||(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): sama pola dgn FinCoach.compute()
+// (modules-calc.js) -- difilter di titik konstruksi txM, supaya inc/exp di bawah &
+// sinyal defisit/anggaran otomatis ikut bersih dari transaksi "Catatan saja".
+const txM=(ctx&&ctx.txM)||(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
 const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 // (1) Defisit bulan berjalan (pengeluaran > pemasukan bulan ini)
@@ -57,7 +60,11 @@ out.push({id:'defisit',level:'danger',icon:'🔴',text:`Bulan ini pengeluaran ($
 try{
 if((D.budgets||[]).length){
 const rows=D.budgets.map(b=>{
-const used=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&budgetMatchesTx(b,t);}).reduce((s,t)=>s+t.amount,0);
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+): titik ini baca D.transactions
+// LANGSUNG (bukan lewat txM di atas), jadi butuh guard terpisah -- temuan tambahan
+// saat audit, transaksi "Catatan saja" tidak boleh ikut menghitung persentase
+// pemakaian anggaran (bisa membuat anggaran kelihatan jebol padahal cuma catatan).
+const used=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false&&budgetMatchesTx(b,t);}).reduce((s,t)=>s+t.amount,0);
 const pct=b.limit>0?Math.round(used/b.limit*100):0;
 return{b,pct};
 }).filter(r=>r.pct>=80).sort((a,b)=>b.pct-a.pct);
