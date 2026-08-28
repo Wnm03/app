@@ -21,6 +21,17 @@
 // 0 logic tambahan, 0 transformasi data. Nama "hook" di sini murni istilah
 // UI (titik akses data), BUKAN React hook / lifecycle hook apa pun.
 
+// AUDIT Sesi T2 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md, Track 1): file ini
+// terdaftar di scope T2 ("titik laporan utama Dashboard"), TAPI per RULE #1 di header file
+// (100% REUSE FinanceIntelligence.summary(), 0 pembacaan D langsung utk angka apa pun kecuali
+// totalSaldoAkun()/totalDebtValue() di _netWorthCard()) — 0 baris di file ini yang perlu diubah:
+//   - _netWorthCard(): sudah otomatis ikut guard tx.hitungKas (Sesi T1) krn totalSaldoAkun()
+//     memanggil recalcAccBalance() (modules/finance/akun.js) yang sudah di-guard sesi T1.
+//   - _cashFlowCard()/_budgetCard()/_healthCard(): angkanya dari FinanceIntelligence.summary()
+//     (incomeVsExpense()/budgetSummary()/healthScore(), modules/finance/finance-intelligence.js)
+//     — jalur query TERPISAH dari dashCtx renderDashboard(), BELUM di-guard sesi ini. Disengaja
+//     ditinggal ke sesi laporan sekunder (Sesi T4+ per RENCANA KERJA) supaya tiap file laporan
+//     diaudit dulu satu-satu sebelum diubah (0 regresi tak terduga), bukan luput/lupa.
 const FinanceDashboard = {
 
   // getAIHook() — reuse 100% FinanceIntelligence.summary(). Guard: kalau

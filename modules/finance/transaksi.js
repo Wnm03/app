@@ -814,6 +814,17 @@ if(map[m]) document.getElementById(map[m]).classList.add('active');
 document.getElementById('txCicilanPanel').style.display = m==='cicilan'?'block':'none';
 document.getElementById('txLanggananPanel').style.display = m==='langganan'?'block':'none';
 if(m==='cicilan'){syncCicilanDate('date');syncCicilanPreview();updateCicilanTenorUI();}
+// Sesi toggle hitungKas: field ini hanya berlaku utk transaksi Tunai biasa (scope
+// disepakati di AUDIT-hitung-kas-toggle-dan-ringkasan-tagihan.md §1.2 -- cicilan/
+// langganan/utang/tagihan punya efek samping lain di D.debts/D.bills yg belum tentu
+// ikut "tidak dihitung"). Wrap disembunyikan & checkbox direset ke default ON (dihitung)
+// begitu Cara Bayar bukan 'tunai', supaya _saveTxInner() (yg cuma membaca elemen ini utk
+// jalur generik/tunai) tidak pernah membaca nilai basi dari state sebelumnya.
+const txHitungKasWrapEl=document.getElementById('txHitungKasWrap');
+if(txHitungKasWrapEl){
+txHitungKasWrapEl.classList.toggle('u-dnone',m!=='tunai');
+if(m!=='tunai'){const cb=document.getElementById('txHitungKas');if(cb)cb.checked=true;}
+}
 }
 // BUGFIX s282 (v941) -- "Kenapa cicilan 1x tidak masuk Tagihan?" + "Kenapa masih ada
 // Jatuh Tempo Pertama padahal cuma 1x bayar?" -- riwayat lama: waktu itu Tenor 1x berarti
@@ -1210,6 +1221,12 @@ updateCicilanTenorUI();
 // (cicilan/langganan) tetap dipertahankan di _saveTxInner(), tidak ditimpa
 // jadi 'tunai'.
 setPayMethod('tunai',false);
+// isi ulang toggle "Hitung ke Saldo & Laporan" dari data tersimpan (absen=true,
+// backward-compatible dgn transaksi lama) -- setPayMethod('tunai',...) di atas
+// sudah menampilkan wrap-nya & default checkbox ke checked, jadi di sini cuma
+// perlu override kalau transaksi ASLI memang tersimpan hitungKas:false.
+const txHitungKasEditEl=document.getElementById('txHitungKas');
+if(txHitungKasEditEl)txHitungKasEditEl.checked=(t.hitungKas!==false);
 }
 openModal('txModal');
 }
@@ -1260,6 +1277,15 @@ const txAssetIdVal=txAssetIdSaveEl?txAssetIdSaveEl.value:'';
 // string kosong di sini, jadi 0 friksi tambahan utk akun lama/single-owner.
 const txDeductionOwnerSaveEl=document.getElementById('txDeductionOwner');
 const deductionOwnerIdVal=txDeductionOwnerSaveEl?txDeductionOwnerSaveEl.value:'';
+// hitungKasVal -- toggle "Hitung ke Saldo & Laporan" (AUDIT-hitung-kas-toggle-dan-
+// ringkasan-tagihan.md, scope Tunai biasa saja). Wrap-nya (txHitungKasWrap) hanya
+// tampil kalau curPayMethod==='tunai' (lihat setPayMethod()), jadi elemen checkbox
+// tetap ada di DOM tapi disembunyikan utk cicilan/langganan -- dibaca "apa adanya"
+// (pola sama txAssetIdVal/deductionOwnerIdVal), TIDAK dipakai sama sekali di cabang
+// existingBill (cicilan/langganan/tagihan, return lebih awal sebelum titik ini
+// dipakai) supaya scope tetap terkunci ke jalur generik/tunai saja.
+const txHitungKasSaveEl=document.getElementById('txHitungKas');
+const hitungKasVal=txHitungKasSaveEl?txHitungKasSaveEl.checked:true;
 // txOwnerPorsiVal/#txOwnerPorsiWrap DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT,
 // spesifikasi "relasi murni") — dropdown "Porsi Pemilik (akun patungan)"
 // sudah tidak ada di modal ini. Transaksi LAMA yang masih punya
@@ -1663,6 +1689,13 @@ Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:sub
 if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
 // S574-D1: persist deductionOwnerId di cabang generik (Object.assign 7/7).
 if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
+// Toggle hitungKas: hanya ditulis/dipertahankan kalau payMethod HASIL edit ini
+// 'tunai' (keepPayMethod, sudah dihitung di atas) -- transaksi yang keepPayMethod-nya
+// balik ke cicilan/langganan (mis. bill-nya tidak aktif lagi tapi user re-pilih chip)
+// TIDAK relevan dgn toggle ini, field dihapus supaya tidak ada nilai basi.
+// absen=true (default dihitung, 0 breaking change), jadi field HANYA ditulis saat
+// eksplisit false -- konsisten pola field opsional lain di cabang ini.
+if(keepPayMethod==='tunai'&&!hitungKasVal)existingTx.hitungKas=false;else delete existingTx.hitungKas;
 delete existingTx.billLinkId;
 if(existingTx.servisLinkId&&D.servisLogs){
 const linkedServis=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
@@ -1720,6 +1753,10 @@ if(txAssetIdVal)newTx.assetId=txAssetIdVal;
 // single-owner (dropdown kosong) -> deductionOwnerIdVal='' -> field TIDAK
 // diset sama sekali, sesuai pola existing txAssetIdVal di atas.
 if(deductionOwnerIdVal)newTx.deductionOwnerId=deductionOwnerIdVal;
+// Toggle hitungKas -- newTx di jalur CREATE generik ini SELALU payMethod:'tunai'
+// (lihat literal di atas), jadi 0 guard tambahan diperlukan spt di cabang EDIT.
+// absen=true (default dihitung), field HANYA ditulis saat eksplisit false.
+if(!hitungKasVal)newTx.hitungKas=false;
 // BEGIN transaction boundary (S629 Bug B): snapshot D SEBELUM mutasi CREATE
 // pertama (push newTx) supaya bisa di-rollback total kalau ADA side-effect
 // sesudahnya (langkah 4-13 audit s628) yang throw.

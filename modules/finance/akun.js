@@ -43,6 +43,10 @@ if(acc){
 bal=acc.baseBalance!==undefined?acc.baseBalance:(acc.balance||0);
 const list=_getTxByAccIndex().get(accId)||[];
 list.forEach(t=>{
+// Guard toggle hitungKas (AUDIT-hitung-kas-toggle-dan-ringkasan-tagihan.md Sesi T1):
+// transaksi bertanda hitungKas:false ("Catatan saja") sengaja SKIP dari saldo akun --
+// absen/undefined tetap dihitung (backward-compatible, 0 migrasi data lama).
+if(t.hitungKas===false)return;
 if(t.type==='income')bal+=t.amount;
 else if(t.type==='expense')bal-=t.amount;
 else if(t.type==='transfer_out')bal-=t.amount;

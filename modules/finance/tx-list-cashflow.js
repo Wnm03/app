@@ -70,6 +70,14 @@ const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pm
 const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxAssetSplit(t):null;
 const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
 const ownerSplitLine=(assetSplit&&assetSplit.ok)?`<div class="tx-meta">👥 ${assetSplit.splits.map(s=>escapeHtml(s.ownerName)+': '+fmt(s.bagian)).join(' · ')}</div>`:'';
+// Sesi T3 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md Track 1, lanjutan Sesi T1
+// tx.hitungKas): badge "📝 Catatan saja" utk transaksi yg SENGAJA di-skip dari saldo akun
+// (Sesi T1, recalcAccBalance()) & Pemasukan/Pengeluaran Dashboard (Sesi T2, _dashMonthlyIncExp())
+// -- murni presentasi, 0 logic hitung apa pun di sini, cuma nampilin status yg SUDAH ditentukan
+// t.hitungKas===false biar user tidak bingung kenapa transaksi ini "menghilang" dari saldo/laporan.
+// Scope T3 HANYA txHTML() (dipakai 10 tema lama) sesuai rencana kerja -- txTableRowHTML() (tema
+// "modern"/Ledger Pro, S637) SENGAJA tidak disentuh sesi ini, dicicil terpisah kalau diperlukan.
+const hitungKasBadge=t.hitungKas===false?' <span class="acc-chip">📝 Catatan saja</span>':'';
 // S574-E: badge "👤 Ditanggung: <nama owner>" di riwayat -- MURNI PRESENTASI,
 // tidak menghitung/split nominal apa pun (beda domain dari assetSplit di
 // atas, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §2.5/§7 -- assetId tetap
@@ -115,7 +123,7 @@ if(ownerName)deductionOwnerLine=`<div class="tx-meta">👤 Ditanggung: ${escapeH
 }
 return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
     <div class="tx-icon" style="background:${bg}">${icon}</div>
-    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
+    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}${hitungKasBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${acc.emoji} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
     <div class="u-flex u-aic u-gap6">
       <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
       <button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
