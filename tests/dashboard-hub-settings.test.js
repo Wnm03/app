@@ -99,9 +99,12 @@ test('applyDashCardOrder() — D.dashCardOrder kosong -> fallback ke DASH_RENDER
 
 test('applyDashCardOrder() — custom order valid dipakai penuh, tidak ada duplikat/kehilangan kartu', () => {
   const { context } = loadSandbox();
-  context.D.dashCardOrder = ['refleksi', 'fi', 'pensiun', 'absensi'];
+  // Sesi P2 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md): 'cashProjection' ikut
+  // ditambahkan ke DASH_RENDER_ORDER -- daftar custom order di sini disamakan supaya benar2
+  // "penuh" (semua key registry ada), bukan cuma 4 key lama.
+  context.D.dashCardOrder = ['refleksi', 'fi', 'pensiun', 'absensi', 'cashProjection'];
   const order = Array.from(context.DashboardSettings.applyDashCardOrder());
-  assert.deepEqual(order, ['refleksi', 'fi', 'pensiun', 'absensi']);
+  assert.deepEqual(order, ['refleksi', 'fi', 'pensiun', 'absensi', 'cashProjection']);
   assert.equal(new Set(order).size, context.DASH_RENDER_ORDER.length);
 });
 
@@ -123,9 +126,10 @@ test('applyDashCardOrder() — kartu baru yang belum ada di custom order tetap i
 
 test('reorderCard() — naik/turun menukar posisi dgn tetangga & tersimpan ke D.dashCardOrder', () => {
   const { context, saveCalls, renderDashboardCalls } = loadSandbox();
-  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi'];
+  // Sesi P2: 'cashProjection' ditambahkan ke urutan supaya order tetap "penuh" (5 key).
+  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection'];
   context.DashboardSettings.reorderCard('pensiun', 'up');
-  assert.deepEqual(Array.from(context.D.dashCardOrder), ['pensiun', 'fi', 'absensi', 'refleksi']);
+  assert.deepEqual(Array.from(context.D.dashCardOrder), ['pensiun', 'fi', 'absensi', 'refleksi', 'cashProjection']);
   assert.equal(saveCalls.length, 1);
   // page-dashboard-hub ada di DOM tiruan -> renderDashboard() ikut terpanggil
   assert.equal(renderDashboardCalls.length, 1);
@@ -133,17 +137,17 @@ test('reorderCard() — naik/turun menukar posisi dgn tetangga & tersimpan ke D.
 
 test('reorderCard() — kartu pertama tidak bisa naik (di luar batas -> no-op, bukan error)', () => {
   const { context, saveCalls } = loadSandbox();
-  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi'];
+  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection'];
   context.DashboardSettings.reorderCard('fi', 'up');
-  assert.deepEqual(context.D.dashCardOrder, ['fi', 'pensiun', 'absensi', 'refleksi']);
+  assert.deepEqual(context.D.dashCardOrder, ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection']);
   assert.equal(saveCalls.length, 0);
 });
 
 test('reorderCard() — kartu terakhir tidak bisa turun (di luar batas -> no-op)', () => {
   const { context, saveCalls } = loadSandbox();
-  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi'];
-  context.DashboardSettings.reorderCard('refleksi', 'down');
-  assert.deepEqual(context.D.dashCardOrder, ['fi', 'pensiun', 'absensi', 'refleksi']);
+  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection'];
+  context.DashboardSettings.reorderCard('cashProjection', 'down');
+  assert.deepEqual(context.D.dashCardOrder, ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection']);
   assert.equal(saveCalls.length, 0);
 });
 
