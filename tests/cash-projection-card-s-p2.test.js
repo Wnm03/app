@@ -56,7 +56,12 @@ function loadSandbox(D) {
   // duluan, baru fungsi render yang di-extract dari modules-render.js.
   vm.runInContext(SRC_BILL, context, { filename: 'tagihan-kalender.js' });
   vm.runInContext(SRC_PROJ, context, { filename: 'cash-projection.js' });
-  const snippet = `${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
+  // S667B: _renderCashProjectionCard() sekarang memanggil _dashCashProjSettingsToggle()
+  // (panel "⚙️ Atur") -- perlu ikut di-extract, walau di sandbox sempit ini dia balik lebih
+  // awal (bodyEl.parentElement undefined -> stub document di bawah tidak set parentElement,
+  // pola sama guard `if(!el)return` yang sudah ada), 0 assertion baru dites di sini (cakupan
+  // panel Atur ada di tests/cash-projection-s667b-siklus.test.js).
+  const snippet = `${extractFnSource('_dashCashProjSettingsToggle')}\n${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
   vm.runInContext(snippet, context, { filename: '_renderCashProjectionCard-extract.js' });
   return { context, byId };
 }

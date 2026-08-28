@@ -56,7 +56,9 @@ function loadSandbox(D, withCalc) {
   vm.runInContext(SRC_BILL, context, { filename: 'tagihan-kalender.js' });
   vm.runInContext(SRC_PROJ, context, { filename: 'cash-projection.js' });
   if (withCalc) vm.runInContext(SRC_CALC, context, { filename: 'modules-calc.js' });
-  const snippet = `${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
+  // S667B: _renderCashProjectionCard() sekarang memanggil _dashCashProjSettingsToggle()
+  // (panel "⚙️ Atur") -- ikut di-extract, lihat komentar sama di cash-projection-card-s-p2.test.js.
+  const snippet = `${extractFnSource('_dashCashProjSettingsToggle')}\n${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
   vm.runInContext(snippet, context, { filename: '_renderCashProjectionCard-extract.js' });
   return { context, byId };
 }
