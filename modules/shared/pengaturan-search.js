@@ -19,13 +19,21 @@
 // .cn-tab & toggle 'u-dnone' di panel yg cocok data-tab. toggleStgGroup() di bawah TETAP ada &
 // TIDAK diubah -- masih dipakai apa adanya utk accordion lain (dashSecondaryGroup di Beranda,
 // pzPiutangUtangGroup di Pajak & Zakat), cuma sudah tidak dipakai lagi utk stgGroup1..6.
-const SETTINGS_TAB_ORDER=['profil','keuangan','notifbackup','keamanan','kepemilikan','diagnostik'];
-// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
-// KEU_TAB_LABEL (tx-list-cashflow.js). CATATAN: 'pengingat' sengaja ikut
-// dipetakan walau tidak ada di SETTINGS_TAB_ORDER di atas (array itu sudah
-// pre-existing tidak lengkap sebelum sesi ini -- di luar scope S679, tidak
-// disentuh -- tapi breadcrumb tetap harus benar kalau tombol 'pengingat'
-// diklik langsung, krn `el` selalu ada dari klik tombol nyata).
+// FIX (audit lanjutan S679): array ini sebelumnya cuma 6 entry, hilang
+// 'pengingat' -- padahal ada 7 tombol .cn-tab nyata di #page-settings
+// (urutan DOM: profil, keuangan, pengingat, notifbackup, keamanan,
+// kepemilikan, diagnostik). Array ini dipakai sbg fallback index saat
+// setSettingsTab(tab) dipanggil TANPA `el` eksplisit (bukan dari klik
+// tombol) -- terbukti terjadi dari 3 pemanggil: stgSearch() di file ini
+// (baris di bawah), DashboardHub deep-link (dashboard-hub.js, blok
+// `target.group`), & _lifeOSHighlightSettingsCard (lifeos-nav.js). Saat
+// tab='pengingat', indexOf() sebelumnya balikin -1 -> fallback ke index 0
+// -> tombol 'Profil' yang ke-highlight active, padahal panel yang
+// ditampilkan tetap 'Pengingat' (baris `p.dataset.tab!==tab` di bawah
+// pakai `tab` asli, jadi ini bug visual: tombol aktif salah, bukan salah
+// panel). Urutan array HARUS sama persis dgn urutan tombol di DOM krn
+// `settingsTabBtns[idx]` mengandalkan itu.
+const SETTINGS_TAB_ORDER=['profil','keuangan','pengingat','notifbackup','keamanan','kepemilikan','diagnostik'];
 const SETTINGS_TAB_LABEL={profil:'Profil',keuangan:'Keuangan',pengingat:'Pengingat',notifbackup:'Notif&Backup',keamanan:'Keamanan',kepemilikan:'Kepemilikan',diagnostik:'Diagnostik'};
 function setSettingsTab(tab,el){
 const settingsTabBtns=document.querySelectorAll('#page-settings .cn-tabs .cn-tab');
