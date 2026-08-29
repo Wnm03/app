@@ -691,6 +691,9 @@ save();
 renderSimList();
 }
 /* moved to modules-render.js: renderSimList */
+// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
+// KEU_TAB_LABEL (tx-list-cashflow.js).
+const CN_TAB_LABEL={insight:'Insight AI',bbm:'BBM',servis:'Servis',pajak:'Pajak & SIM',jalan:'Jalan'};
 function setCnTab(t,el){
 // Sesi 157 (permintaan eksplisit user): page-carnotes sekarang 4 tab
 // (insight/bbm/servis/pajak) — dulu cuma bbm/servis. 'jalan' ditinggal
@@ -698,6 +701,9 @@ function setCnTab(t,el){
 curCnTab=t;
 document.querySelectorAll('#page-carnotes .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el) el.classList.add('active');
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
+const cnBc=document.getElementById('cnBreadcrumbSub');
+if(cnBc)cnBc.textContent=CN_TAB_LABEL[t]||t;
 ['insight','bbm','servis','pajak','jalan'].forEach(x=>{
 const elx=document.getElementById('cnTab-'+x);
 if(elx){ elx.classList.toggle('u-dnone', x!==t); elx.style.display=''; }
@@ -726,8 +732,10 @@ const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
 function setCnInsightTab(t,el){
 const cniSubtabBtns=document.querySelectorAll('#cnTab-insight .cni-subtab');
 cniSubtabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=CNI_SUBTAB_ORDER.indexOf(t); const btn=cniSubtabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=CNI_SUBTAB_ORDER.indexOf(t); const btn=cniSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 document.getElementById('cniTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
 document.getElementById('cniTab-ringkasan').style.display='';
 document.getElementById('cniTab-rekomendasi').classList.toggle('u-dnone', t!=='rekomendasi');
@@ -742,8 +750,10 @@ const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnBbmTab(t,el){
 const cnbSubtabBtns=document.querySelectorAll('#cnTab-bbm .cnb-subtab');
 cnbSubtabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=CNB_SUBTAB_ORDER.indexOf(t); const btn=cnbSubtabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=CNB_SUBTAB_ORDER.indexOf(t); const btn=cnbSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 document.getElementById('cnbTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
 document.getElementById('cnbTab-ringkasan').style.display='';
 document.getElementById('cnbTab-analisis').classList.toggle('u-dnone', t!=='analisis');
