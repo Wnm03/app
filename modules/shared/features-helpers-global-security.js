@@ -4,7 +4,7 @@
 // data-default.js (v79) — file itu HARUS dimuat SEBELUM file ini karena dibaca langsung di `let D = {...}`.
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 const DATA_MIGRATIONS=[
 {toVersion:2,desc:'Tambah kategori baku Investasi & Sedekah/Donasi (pengeluaran) utk user lama',migrate(d){
 if(!d.categories||!d.categories.expense)return;
@@ -68,6 +68,17 @@ const compat=(it&&Array.isArray(it.compatibleVehicleIds))?it.compatibleVehicleId
 if(compat.length===1)p.vehicleId=compat[0];
 });
 }},
+{toVersion:10,desc:'AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS: tambah kategori baku Piutang (pengeluaran)/Utang (pemasukan) utk user lama, pola SAMA PERSIS toVersion:2 (Investasi/Sedekah) -- dipakai transaksi otomatis dari toggle "Catat juga sebagai transaksi arus kas" di piutangModal/debtModal (piutang-utang.js).',migrate(d){
+if(!d.categories||!d.categories.income||!d.categories.expense)return;
+const inc=d.categories.income;
+const exp=d.categories.expense;
+if(!inc.some(c=>c.id==='cat_utang'||/^utang$/i.test(c.name||''))){
+inc.splice(Math.max(0,inc.length-1),0,{id:'cat_utang',name:'Utang',emoji:'🤝',subs:[]});
+}
+if(!exp.some(c=>c.id==='cat_piutang'||/^piutang$/i.test(c.name||''))){
+exp.splice(Math.max(0,exp.length-1),0,{id:'cat_piutang',name:'Piutang',emoji:'🤝',subs:[]});
+}
+}},
 ];
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
@@ -91,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's680-cashflow-siklus-legacy-card';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's680-cashflow-siklus-legacy-card';
+const APP_BUILD_VERSION = 's682-cashflow-siklus-legacy-card';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's682-cashflow-siklus-legacy-card';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
