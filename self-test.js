@@ -2420,6 +2420,12 @@ uploadBackupToDrive(true);
 };
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')tryBackupOnClose();});
 window.addEventListener('pagehide',tryBackupOnClose);
+// HARDENING (defense-in-depth, TWA/APK Android): 'freeze' (Page Lifecycle API,
+// pola sama dgn vehicle-scanner.js) -- jaring pengaman TAMBAHAN di luar
+// visibilitychange/pagehide utk kasus tab/activity dibekukan browser sebelum
+// pagehide sempat menembak. TIDAK menangani force-kill/OS-reclaim total
+// (tidak ada event JS apa pun yg bisa menangkap itu, limitasi platform).
+document.addEventListener('freeze',tryBackupOnClose);
 const pin=localStorage.getItem('kw_pin');
 if(pin){showPinScreen();return;}
 const setup=localStorage.getItem('kw_setup');
