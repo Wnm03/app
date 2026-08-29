@@ -717,6 +717,11 @@ const el=document.getElementById('productList');
 if(!el)return;
 if(!D.products.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div>';return;}
 el.innerHTML=D.products.map((p,i)=>{
+// BUGFIX (audit pola sama S601 "0 reaksi"): baris ini panggil beberapa service
+// eksternal (PricingService/InventoryService/ProductStore) per-produk TANPA
+// try/catch -- 1 produk error bikin SELURUH .map() throw sebelum el.innerHTML
+// ke-assign, daftar produk Etalase tetap nampilin render sukses SEBELUMNYA.
+try{
 // Tahap 7 (Generic Shop Engine, Pricing & Inventory Integration): harga
 // jual/beli/reseller yang DITAMPILKAN dialihkan lewat PricingService kalau
 // sudah dimuat — guard typeof + fallback field asli langsung, 0 perubahan
@@ -794,6 +799,10 @@ return`<div class="shop-product-card stock-${stockCls}">
           </div>
         </div>
       </div>`;
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[Etalase.renderList] gagal render produk',p&&p.id,err);
+return `<div class="shop-product-card"><div class="shop-product-head"><div><div class="shop-product-name">${escapeHtml(p&&p.name||'(tanpa nama)')} <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menampilkan produk ini — tap Edit untuk cek datanya">⚠️</span></div></div></div><div class="shop-product-actions"><button data-action="openProductModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button></div></div>`;
+}
 }).join('');
 }
 };
