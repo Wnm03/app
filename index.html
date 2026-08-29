@@ -80,9 +80,10 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1432">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1432">
-<script src="nav-scroll.js?v=1432" defer></script>
+<link rel="stylesheet" href="styles.css?v=1435">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1435">
+<script src="nav-scroll.js?v=1435" defer></script>
+<script src="sticky-tabbar.js?v=1435" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -148,17 +149,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1432');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1435');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1432');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1435');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1432');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1435');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -247,8 +248,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1432" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1432" defer></script>
+<script src="app-bundle-a.min.js?v=1435" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1435" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -323,6 +324,7 @@ window.location.reload();
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["laporan", "$el"]'>📊 Laporan</button>
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["akun", "$el"]'>🏦 Akun</button>
   </div>
+  <div class="page-breadcrumb"><span class="pb-current" id="keuanganBreadcrumbSub">Kelola</span></div>
 
   <!-- Finance 2.0 Sprint 2 Tahap 1: FAB tambah transaksi cepat.
        Aditif murni — reuse openTxModal() yang sudah ada (business logic
@@ -1201,6 +1203,7 @@ window.location.reload();
     <button class="cn-tab tab-fixed-pad" data-action="setShopTab" data-args='["laporan", "$el"]'>📊 Laporan</button>
     <button class="cn-tab tab-fixed-pad" data-action="setShopTab" data-args='["bi", "$el"]'>🧠 Business Intelligence</button>
   </div>
+<div class="page-breadcrumb"><span class="pb-current" id="shopBreadcrumbSub">Kasir AI</span></div>
 
   <!-- Sprint 2 Tahap 2: FAB Shop, menyamakan standar UI dgn Finance 2.0
        (Sprint 2 Tahap 1). Reuse PENUH komponen CSS `.keu-fab*` yang sudah
@@ -1612,6 +1615,7 @@ window.location.reload();
     <button class="cn-tab" data-action="setCnTab" data-args='["pajak", "$el"]'>🚦 Pajak &amp; SIM</button>
     <button class="cn-tab" data-action="setCnTab" data-args='["jalan", "$el"]'>🚴 Jalan</button>
   </div>
+<div class="page-breadcrumb"><span class="pb-current" id="cnBreadcrumbSub">BBM</span></div>
 
   <!-- INSIGHT AI TAB (Sesi 157) — kumpulan 6 card AI/dashboard yang dulu
        numpuk selalu tampil di atas (Vehicle Dashboard/Insight/Brief/
@@ -2037,6 +2041,7 @@ window.location.reload();
     <button class="cn-tab active" data-action="setPajakTab" data-args='["zakat", "$el"]'>🕌 Zakat</button>
     <button class="cn-tab" data-action="setPajakTab" data-args='["pajak", "$el"]'>🧾 Pajak (PPh 21)</button>
   </div>
+<div class="page-breadcrumb"><span class="pb-current" id="pajakBreadcrumbSub">Zakat</span></div>
 
   <!-- ZAKAT TAB -->
   <div id="pajakTab-zakat">
@@ -2239,6 +2244,7 @@ window.location.reload();
     <button class="cn-tab" data-action="setAsetTab" data-args='["manajemen", "$el"]'>🏢 Manajemen</button>
     <button class="cn-tab" data-action="setAsetTab" data-args='["investasi", "$el"]'>💹 Investasi</button>
   </div>
+  <div class="page-breadcrumb"><span class="pb-current" id="asetBreadcrumbSub">Ringkasan</span></div>
 
   <!-- RINGKASAN -->
   <div id="asetTab-ringkasan">
@@ -2518,6 +2524,7 @@ window.location.reload();
   <button class="cn-tab tab-fixed-pad" data-action="setSettingsTab" data-args='["kepemilikan", "$el"]'>🏷️ Kepemilikan</button>
   <button class="cn-tab tab-fixed-pad" data-action="setSettingsTab" data-args='["diagnostik", "$el"]'>🧪 Diagnostik</button>
 </div>
+<div class="page-breadcrumb"><span class="pb-current" id="settingsBreadcrumbSub">Profil</span></div>
 
 <div class="stg-tabpanel" id="stgGroup1" data-tab="profil">
   <div class="stg-group-body-inner">
@@ -4046,6 +4053,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1432" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1435" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

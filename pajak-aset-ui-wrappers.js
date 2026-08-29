@@ -48,9 +48,15 @@ intPart=intPart.replace(/[.,]/g,'');
 const n=parseFloat(intPart+(decPart?'.'+decPart:''));
 return n;
 }
+// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
+// KEU_TAB_LABEL (tx-list-cashflow.js).
+const PAJAK_TAB_LABEL={zakat:'Zakat',pajak:'Pajak (PPh 21)'};
 function setPajakTab(tab,el){
 document.querySelectorAll('#page-pajak .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el)el.classList.add('active');
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
+const pajakBc=document.getElementById('pajakBreadcrumbSub');
+if(pajakBc)pajakBc.textContent=PAJAK_TAB_LABEL[tab]||tab;
 document.getElementById('pajakTab-zakat').classList.toggle('u-dnone', tab!=='zakat');
 document.getElementById('pajakTab-zakat').style.display='';
 document.getElementById('pajakTab-pajak').classList.toggle('u-dnone', tab!=='pajak');
@@ -68,8 +74,10 @@ const PJK_SUBTAB_LABEL={pph21:'PPh 21',pbb:'PBB & UMKM'};
 function setPjkTab(t,el){
 const pjkSubtabBtns=document.querySelectorAll('#pajakTab-pajak .pjk-subtab');
 pjkSubtabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=PJK_SUBTAB_ORDER.indexOf(t); const btn=pjkSubtabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=PJK_SUBTAB_ORDER.indexOf(t); const btn=pjkSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 document.getElementById('pjkTab-pph21').classList.toggle('u-dnone', t!=='pph21');
 document.getElementById('pjkTab-pph21').style.display='';
 document.getElementById('pjkTab-pbb').classList.toggle('u-dnone', t!=='pbb');
