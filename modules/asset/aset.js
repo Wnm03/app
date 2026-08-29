@@ -646,6 +646,14 @@ Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.
 return;
 }
 el.innerHTML=migratedBanner+list.map(a=>{
+// BUGFIX (audit pola sama "0 reaksi" S601 InvestmentListUI._renderList): SEBELUMNYA
+// blok ini TANPA try/catch -- 1 aset dgn data yg bikin assetCrossCheckWarning()/Aset.ICON
+// lookup throw akan menjatuhkan SELURUH .map(), el.innerHTML tidak pernah ke-assign,
+// dan #assetList tetap nampilin HTML render sukses SEBELUMNYA (tap jadi 0 reaksi krn
+// data-action-nya sudah basi). Fix: bungkus per-aset dgn try/catch, fallback ke chip
+// aman & badge ⚠️ kalau gagal hitung, baris tetap bisa di-tap utk buka & benerin datanya.
+let jenisChip='',lokasiChip='',assetWarnChip='',renderError=false;
+try{
 // S306 UI polish: baris tx-meta sebelumnya menggabung jenis · label/extraLabel · lokasi ·
 // akun tertaut · kepemilikan · dana titipan · %untung jadi 1 kalimat panjang tanpa jarak
 // visual (lebih padat drpd kasus chip Tagihan S299/S304). Sekarang HANYA 2 chip prioritas
@@ -654,13 +662,18 @@ el.innerHTML=migratedBanner+list.map(a=>{
 // dana titipan, %untung) dipindah jadi baris teks di dalam overflow menu (Aset.
 // openActionsMenu di bawah) — dihitung ULANG di sana dari `a`/`id`, BUKAN dikirim lewat
 // closure, jadi TIDAK ada variabel sisa yang dihitung di sini tapi tidak dipakai.
-const jenisChip=`<span class="acc-chip">${escapeHtml(a.jenis)}</span>`;
-const lokasiChip=a.lokasi?` <span class="acc-chip">📍 ${escapeHtml(a.lokasi)}</span>`:'';
+jenisChip=`<span class="acc-chip">${escapeHtml(a.jenis)}</span>`;
+lokasiChip=a.lokasi?` <span class="acc-chip">📍 ${escapeHtml(a.lokasi)}</span>`:'';
 // S552 (diaktifkan) — badge cross-check kepemilikan arah balik (Investment.assetId ->
 // Asset), reuse assetCrossCheckWarning() (investasi.js) apa adanya, 0 rumus baru di sini.
 const assetWarn=(typeof assetCrossCheckWarning==='function')?assetCrossCheckWarning(a):null;
-const assetWarnChip=assetWarn?` <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="${escapeHtml(assetWarn)}">⚠️</span>`:'';
-return `<div class="tx-item u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}"><div class="tx-icon u-bgaccsoft">${Aset.ICON[a.jenis]||'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}${assetWarnChip}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></div><div class="tx-amount">${fmt(a.nilai)}</div><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></div>`;
+assetWarnChip=assetWarn?` <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="${escapeHtml(assetWarn)}">⚠️</span>`:'';
+}catch(err){
+renderError=true;
+if(typeof console!=='undefined'&&console.error)console.error('[Aset.renderList] gagal render aset',a&&a.id,err);
+assetWarnChip=' <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menghitung data aset ini — tap untuk buka & cek">⚠️</span>';
+}
+return `<div class="tx-item u-pointer" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([a.id]))}"><div class="tx-icon u-bgaccsoft">${Aset.ICON[a.jenis]||'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name||'(tanpa nama)')}${a.zakatable?' <span class="u-fs10 u-cacc3 u-r6 u-ml4" style="border:1px solid var(--accent3);padding:1px 5px">Zakat</span>':''}${assetWarnChip}</div><div class="tx-meta">${jenisChip}${lokasiChip}</div></div><div class="tx-amount">${renderError?'⚠️':fmt(a.nilai)}</div><button class="tx-del" data-stop="1" data-action="Aset.openActionsMenu" data-args="${escapeHtml(JSON.stringify([a.id]))}" aria-label="Aksi lainnya">⋮</button></div>`;
 }).join('');
 Aset.renderDashboard();
 Aset.renderInvestasi();
