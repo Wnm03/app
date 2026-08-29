@@ -544,6 +544,22 @@ const names=D.vehicles.filter(v=>v.assetId===aid).map(v=>v.name).join(', ');
 issues.push({level:'warn',title:'Entry Buku Aset ditautkan ke lebih dari 1 kendaraan',detail:`${vehAssetIdCount[aid]} kendaraan menunjuk ke entry Buku Aset yang sama (${names}) -- cek apakah memang disengaja, lepas tautan salah satunya di modal Kelola Kendaraan kalau keliru.`});
 }
 });
+// Cek tambahan (Opsi A -- AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-ASET.md,
+// keputusan produk): sejak fitur auto-create diaktifkan, kendaraan BARU dgn
+// ownership SELF otomatis dapat entry Buku Aset (lihat _autoCreateVehicleAsset()
+// di vehicle-core.js). Kendaraan LAMA (dibuat sebelum fitur ini ada) TIDAK
+// di-backfill massal (guardrail: tidak ada migrasi data otomatis) -- baru
+// ikut ter-auto-create begitu diedit & disimpan ulang. Cek ini murni PENGINGAT
+// (level warn, 0 auto-repair) utk kendaraan ownership SELF yang MASIH belum
+// tertaut ke Buku Aset sama sekali, supaya user tahu nilai kendaraan itu belum
+// ikut ke Total Aset/Net Worth & tinggal buka+simpan modal Kelola Kendaraan utk
+// melengkapi. isVehicleOwnershipSelf() reuse OwnershipEngine (S196), guard
+// typeof sama pola cek lain di file ini.
+D.vehicles.forEach((v,vIdx)=>{
+if(!v.assetId&&typeof isVehicleOwnershipSelf==='function'&&isVehicleOwnershipSelf(v.id)){
+issues.push({level:'warn',title:'Kendaraan milik sendiri belum tercatat nilainya di Buku Aset',detail:`"${escapeHtml(v.name||'?')}" (kepemilikan Milik Sendiri) belum tertaut ke entry Buku Aset mana pun -- nilainya belum ikut dihitung ke Total Aset/Kekayaan Bersih. Buka modal Kelola Kendaraan, edit kendaraan ini, isi field "Nilai/Harga Kendaraan" lalu Simpan Perubahan supaya otomatis tercatat.`,actions:[{label:'✏️ Buka Kendaraan',action:'editVehicle',args:[vIdx]}]});
+}
+});
 // Cek tambahan (S268 — bridge scan Keuangan->Stok, lihat NEXT_SESSION.md
 // "Kandidat migrasi penuh"): syncPartsStockFromCatalog() di modules/finance/
 // tx-stok-sparepart.js MENGASUMSIKAN 1 catalogId cuma nempel ke 1 baris
