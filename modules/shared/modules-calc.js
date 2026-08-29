@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s686-cashflow-siklus-legacy-card';
+const MODULE_CALC_VERSION='s608-renderlist-per-row-trycatch-guard';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
