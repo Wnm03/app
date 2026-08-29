@@ -80,10 +80,10 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1435">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1435">
-<script src="nav-scroll.js?v=1435" defer></script>
-<script src="sticky-tabbar.js?v=1435" defer></script>
+<link rel="stylesheet" href="styles.css?v=1436">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1436">
+<script src="nav-scroll.js?v=1436" defer></script>
+<script src="sticky-tabbar.js?v=1436" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -149,17 +149,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1435');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1436');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1435');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1436');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1435');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1436');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -248,8 +248,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1435" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1435" defer></script>
+<script src="app-bundle-a.min.js?v=1436" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1436" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -315,6 +315,9 @@ window.location.reload();
 
 <!-- KEUANGAN -->
 <div class="page" id="page-keuangan">
+  <div class="page-settings-btn">
+    <div class="page-title">💰 Keuangan</div>
+  </div>
   <div class="cn-tabs">
     <button class="cn-tab active" data-action="setKeuanganTab" data-args='["kelola", "$el"]'>💰 Kelola</button>
     <button class="cn-tab" data-action="setKeuanganTab" data-args='["tagihan", "$el"]'>🔔 Tagihan &amp; Cicilan</button>
@@ -2510,6 +2513,10 @@ window.location.reload();
 <!-- PENGATURAN -->
 <div class="page" id="page-settings">
 
+<div class="page-settings-btn">
+  <div class="page-title">⚙️ Pengaturan</div>
+</div>
+
 <div class="card" style="margin-bottom:14px">
   <input type="text" class="fi" id="stgSearchInput" placeholder="🔍 Cari pengaturan... (mis. PIN, Google Drive, tema)" oninput="stgSearch(this.value)" aria-label="Cari pengaturan">
   <div class="u-fs12 u-t2 u-mt8 u-dnone" id="stgSearchResult"></div>
@@ -4053,6 +4060,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1435" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1436" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
