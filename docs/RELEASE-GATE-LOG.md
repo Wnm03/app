@@ -343,3 +343,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox container tanpa akses jaringan (network egress disabled) -- npm install eslint tidak bisa dijalankan; perubahan Sesi Q3 hanya 1 fungsi presenter kecil (_renderCashProjectionCard, tambah blok surplus rata-rata), diverifikasi manual: gaya penulisan konsisten dgn kode sekitarnya, 0 pola baru
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos)
+
+## 2026-08-29T02:30:18.469Z — versi s672-cashflow-siklus-legacy-card
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox Claude tanpa akses npm registry/jaringan -- eslint tidak bisa diinstall/dijalankan di environment ini; perubahan sesi ini murni penghapusan 8 file dead code (0 referensi di build.js), tidak ada kode baru
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos)

@@ -11122,3 +11122,70 @@ modules/shared/modals.js, modules/shared/modules-calc.js,
 modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
 docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md,
 tests/cash-projection-card-s-q3.test.js.
+
+# Sesi Cleanup-DeadFiles (2026-08-29) — Hapus 8 file dead code duplikat (modules-render.js legacy dkk)
+
+## Konteks
+Ditemukan di catatan PATCH-README-oversized-files-split-modules-render.md
+(sesi split sebelumnya): `modules/modules-render.js` &
+`modules/shop/modules-render.js` disebut "duplikat/legacy, belum
+diaudit — kandidat sesi berikutnya kalau memang masih relevan". Dicek:
+KEDUANYA 0 referensi path-exact di `scripts/build.js` (tidak pernah
+ikut bundle), dan ternyata sudah ada script `scripts/remove-shop-dead-files.sh`
+dari sesi lebih lama yang sudah mendaftarkan keduanya (plus 6 file
+dead lain) sbg "TERKONFIRMASI 0 referensi" — tapi script itu belum
+pernah benar-benar dijalankan (file-file masih ada di ZIP upload).
+
+## Perubahan
+Menjalankan `scripts/remove-shop-dead-files.sh` — 8 file dihapus (1
+sudah tidak ada sebelumnya):
+- `modules/shop/modals.js`, `modules/shop/modules-render.js`,
+  `modules/shop/modules-calc.js`, `modules/shop/multi-owner-engine.js`,
+  `modules/shop/features-helpers-global-security.js`
+- `modules/modals.js`, `modules/modules-render.js`,
+  `modules/modules-calc.js`
+- (`finance/tx-cobek.js` — dilewati, sudah tidak ada)
+
+Tidak ada perubahan kode lain (0 fungsi baru/diubah).
+
+## Test
+`node --test tests/*.test.js` -> **4857/4857 pass** (0 regresi) —
+sama persis sebelum & sesudah penghapusan.
+
+## Build
+`node scripts/build.js` -> versi bump otomatis
+`s672-cashflow-siklus-legacy-card`, `?v=1417`,
+`index.html`/`app_production.html` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan) -- dicatat di
+`docs/RELEASE-GATE-LOG.md`. html-sync & version-sync: **lolos** murni.
+Gate akhir: **LOLOS**.
+
+## Progress
+Catatan "kandidat sesi berikutnya" dari patch split modules-render
+sudah dituntaskan — kedua file legacy duplikat itu bukan kandidat
+split (murni dead code), sudah dihapus bersama 6 file dead lain yang
+sebelumnya sudah teridentifikasi tapi belum dieksekusi.
+
+## Next TODO
+Tidak ada TODO baru dari sesi ini. Sisa file di atas ambang ukuran
+1600 baris (dari audit sesi split sebelumnya): `scripts/build.js`
+(wajar, script build itu sendiri), `modules/vehicle/sparepart-servis.js`,
+`modules/finance/transaksi.js`, `modules/shared/scan-ocr.js`,
+`modules/finance/dana-titipan-portfolio-render.js` — kandidat split
+sesi mendatang kalau relevan.
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-cleanup-8-dead-files-modules-render-legacy.zip` (patch, hanya
+file berubah — bukan full release; 8 file DIHAPUS, lihat daftar di
+atas, tidak ikut di ZIP): app-bundle-a.min.js, app-bundle-b.min.js,
+app_production.html, index.html, sw.js, chat-action-handlers.js,
+modules/shared/features-helpers-global-security.js,
+modules/shared/modals.js, modules/shared/modules-calc.js,
+modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md.
