@@ -208,6 +208,45 @@ _resolveDialog(_pinPromptStore,'pinPromptModalOverlay',val);
 function _pinPromptAnswer(val){
 _resolveDialog(_pinPromptStore,'pinPromptModalOverlay',val);
 }
+// AUDIT UI/UX 2026-08 (bug: "klik tab Laporan tidak mengarah ke data yang
+// sedang ditampilkan", laporan user, + audit menyeluruh lanjutan): SEMUA
+// fungsi ganti-subtab di app ini (setLaporanTab/setKelolaTab/setAsetTab/
+// setCnInsightTab/setCnBbmTab/setPjkTab/setKeuanganTab/setShopTab/setCnTab/
+// setPajakTab/setSettingsTab/setBillListTab/BudgetTabs.switchTo/
+// DashboardHub.applySectionTab) murni toggle class 'u-dnone' -- TIDAK
+// PERNAH scroll ke tombol/tab yang baru aktif. Kalau user sudah scroll
+// turun sebelum klik, halaman tetap di posisi scroll lama & konten baru
+// bisa jatuh di luar viewport -- kelihatan seperti klik "tidak ngefek".
+// Helper generik, dipanggil dari 14 titik di atas dgn tombol yang baru
+// jadi aktif -- diberi 2 lapis guard (typeof method + try/catch) supaya
+// aman dipanggil dari sandbox test manapun (banyak test pakai fake
+// document/element minimal yang tidak selalu punya scrollIntoView) tanpa
+// perlu tahu detail tiap mock. 0 perubahan DOM/behaviour lain.
+function scrollTabBarIntoView(el){
+// S679 (rekomendasi #3 audit S677): tambah flash-highlight setelah scroll,
+// pola SAMA PERSIS dgn goToList()/DashboardHub.jumpToTarget() (remove ->
+// void offsetWidth (force reflow) -> add -> setTimeout remove 1200ms).
+// Ditaruh DI SINI (1 titik, bukan diulang di 14 fungsi pemanggil) supaya
+// otomatis berlaku ke semua 14 titik ganti-tab yang sudah panggil helper
+// ini -- 0 perubahan di 14 fungsi tsb.
+try{
+if(el && typeof el.scrollIntoView==='function'){
+const run=()=>{
+try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+try{
+if(el.classList && typeof el.classList.add==='function'){
+el.classList.remove('flash-highlight');
+void el.offsetWidth;
+el.classList.add('flash-highlight');
+if(typeof setTimeout==='function') setTimeout(()=>{ try{ el.classList.remove('flash-highlight'); }catch(e){} },1200);
+}
+}catch(e){}
+};
+if(typeof requestAnimationFrame==='function') requestAnimationFrame(run);
+else run();
+}
+}catch(e){}
+}
 function showPage(name,el){
 // BUGFIX (audit "semua tombol di Car Notes tidak respon", laporan user, v1025):
 // root cause -- showPage() (dipanggil tiap pindah tab bawah) TIDAK PERNAH

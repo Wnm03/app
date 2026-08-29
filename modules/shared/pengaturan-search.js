@@ -20,11 +20,22 @@
 // TIDAK diubah -- masih dipakai apa adanya utk accordion lain (dashSecondaryGroup di Beranda,
 // pzPiutangUtangGroup di Pajak & Zakat), cuma sudah tidak dipakai lagi utk stgGroup1..6.
 const SETTINGS_TAB_ORDER=['profil','keuangan','notifbackup','keamanan','kepemilikan','diagnostik'];
+// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
+// KEU_TAB_LABEL (tx-list-cashflow.js). CATATAN: 'pengingat' sengaja ikut
+// dipetakan walau tidak ada di SETTINGS_TAB_ORDER di atas (array itu sudah
+// pre-existing tidak lengkap sebelum sesi ini -- di luar scope S679, tidak
+// disentuh -- tapi breadcrumb tetap harus benar kalau tombol 'pengingat'
+// diklik langsung, krn `el` selalu ada dari klik tombol nyata).
+const SETTINGS_TAB_LABEL={profil:'Profil',keuangan:'Keuangan',pengingat:'Pengingat',notifbackup:'Notif&Backup',keamanan:'Keamanan',kepemilikan:'Kepemilikan',diagnostik:'Diagnostik'};
 function setSettingsTab(tab,el){
 const settingsTabBtns=document.querySelectorAll('#page-settings .cn-tabs .cn-tab');
 settingsTabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=SETTINGS_TAB_ORDER.indexOf(tab); const btn=settingsTabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=SETTINGS_TAB_ORDER.indexOf(tab); const btn=settingsTabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
+const settingsBc=document.getElementById('settingsBreadcrumbSub');
+if(settingsBc)settingsBc.textContent=SETTINGS_TAB_LABEL[tab]||tab;
 document.querySelectorAll('#page-settings .stg-tabpanel').forEach(p=>{
 p.classList.toggle('u-dnone', p.dataset.tab!==tab);
 p.style.display='';
