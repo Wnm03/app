@@ -1153,6 +1153,7 @@ billListTab=tab;
 const btnBayar=document.getElementById('billTabBayarBtn'), btnLunas=document.getElementById('billTabLunasBtn');
 if(btnBayar)btnBayar.className='type-btn'+(tab==='aktif'?' at':'');
 if(btnLunas)btnLunas.className='type-btn'+(tab==='lunas'?' ai':'');
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(tab==='lunas'?btnLunas:btnBayar);
 billFilterStatus=tab;
 const elS=document.getElementById('billFilterStatus');
 if(elS)elS.value=tab;

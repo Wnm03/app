@@ -289,6 +289,38 @@ const before=D.piutang.length;
 D.piutang=D.piutang.filter(p=>!(p.autoTxId===txId&&!p.lunas));
 return D.piutang.length<before;
 }
+// populateSyncTxAccSelect(selId) — AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1:
+// isi <select> Akun di piutangModal/debtModal, pola SAMA PERSIS billAcc
+// (tagihan-kalender.js) -- 1 fungsi dipakai kedua modal (0 duplikasi).
+function populateSyncTxAccSelect(selId){
+const el=document.getElementById(selId);
+if(!el)return;
+el.innerHTML=(D.accounts||[]).map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+}
+// togglePiutangSyncTxFields()/toggleDebtSyncTxFields() — tampil/sembunyi
+// wrap Akun sesuai toggle "🧾 Catat juga sebagai transaksi arus kas"
+// (§5.1). Default OFF (dikonfirmasi user) -- lihat openModal() masing2.
+function togglePiutangSyncTxFields(){
+const on=document.getElementById('piutangSyncTx').checked;
+document.getElementById('piutangSyncTxWrap').classList.toggle('u-dnone',!on);
+if(on)populateSyncTxAccSelect('piutangSyncTxAcc');
+}
+function toggleDebtSyncTxFields(){
+const on=document.getElementById('debtSyncTx').checked;
+document.getElementById('debtSyncTxWrap').classList.toggle('u-dnone',!on);
+if(on)populateSyncTxAccSelect('debtSyncTxAcc');
+}
+// createPiutangUtangAutoTx(entry,type,category,accountId,note) — AUDIT-SYNC-
+// PIUTANG-UTANG-ARUS-KAS §5.1/§5.2: dorong 1 transaksi arus kas LANGSUNG ke
+// D.transactions (pola SAMA PERSIS titik push lain se-codebase, mis.
+// tagihan-kalender.js:1014/kasir.js:367 -- 0 generator baru). Nilai dicatat
+// PENUH (100%, TIDAK ikut logic porsi assetId -- keputusan §6.4) ke akun
+// yang dipilih user. Balikin tx.id yang baru dibuat.
+function createPiutangUtangAutoTx(type,amount,accountId,category,note,date){
+const tx={id:uid(),type,amount,category,subcategory:'',accountId,payMethod:'tunai',note,date:date||todayStr()};
+D.transactions.push(tx);
+return tx.id;
+}
 const Piutang={
 editId:null,
 _lunasState:false,
@@ -306,6 +338,14 @@ Piutang._lunasState=p?!!p.lunas:false;
 const btn=document.getElementById('piutangLunasBtn');
 btn.textContent=Piutang._lunasState?'✓ Lunas':'Belum Lunas';
 btn.className='chip-btn'+(Piutang._lunasState?' active':'');
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.5: toggle SELALU default OFF saat
+// buka modal (baik tambah baru maupun edit) -- ini toggle "buat transaksi
+// SEKALI saat disimpan", bukan field data piutang yang persist, jadi tidak
+// pernah di-restore dari `p` (entry lama sudah lewat titik itu, edit ulang
+// tidak boleh bikin transaksi kedua secara tidak sengaja).
+const syncEl=document.getElementById('piutangSyncTx');
+if(syncEl)syncEl.checked=false;
+document.getElementById('piutangSyncTxWrap').classList.add('u-dnone');
 openModal('piutangModal');
 },
 toggleLunas(){
@@ -329,12 +369,40 @@ const jatuhTempo=document.getElementById('piutangJatuhTempo').value||'';
 const catatan=document.getElementById('piutangCatatan').value.trim();
 const assetIdEl=document.getElementById('piutangAssetId');
 const assetId=assetIdEl?assetIdEl.value:'';
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1: toggle "🧾 Catat juga sebagai
+// transaksi arus kas" HANYA berlaku saat piutang BARU dibuat (bukan edit
+// -- edit tidak boleh nyipta transaksi kedua, konsisten §5.5/toggle default
+// OFF saat openModal()). Idempotency alami: toggle selalu balik OFF tiap
+// buka modal, jadi tidak ada jalur user tanpa sadar bikin tx dobel.
+const syncTxEl=document.getElementById('piutangSyncTx');
+const doSyncTx=!Piutang.editId&&syncTxEl&&syncTxEl.checked;
+const syncTxAccEl=document.getElementById('piutangSyncTxAcc');
+const syncTxAcc=syncTxAccEl?syncTxAccEl.value:'';
+if(doSyncTx&&!syncTxAcc){toast('⚠️ Pilih Akun dulu untuk mencatat transaksi arus kas');return;}
+let linkedTxId=null;
+if(doSyncTx)linkedTxId=createPiutangUtangAutoTx('expense',nilai,syncTxAcc,'Piutang','Piutang: '+name,tanggal);
 if(Piutang.editId){
 const p=D.piutang.find(x=>sameId(x.id,Piutang.editId));
 if(!p){toast('⚠️ Piutang tidak ditemukan, coba tutup dan buka lagi');return;}
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.2: transisi Belum Lunas -> Lunas
+// pada piutang yang PUNYA linkedTxId (dibuat lewat §5.1) otomatis mencatat
+// 1 transaksi pelunasan (income, ke akun YANG SAMA persis dgn transaksi
+// awal -- reuse tx.accountId, tidak minta pilih akun lagi). Idempotent via
+// linkedPayoffTxId (pola sama autoTxId di maybeCreateTitipanTalanganPiutang
+// di atas) -- sekali dibuat, edit ulang tidak pernah nyipta transaksi
+// pelunasan kedua.
+const becameLunas=!p.lunas&&Piutang._lunasState;
+if(becameLunas&&p.linkedTxId&&!p.linkedPayoffTxId){
+const origTx=D.transactions.find(t=>sameId(t.id,p.linkedTxId));
+if(origTx){
+p.linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piutang','Piutang lunas: '+name,todayStr());
+}
+}
 Object.assign(p,{name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState});
 } else {
-D.piutang.push({id:uid(),name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState});
+const newP={id:uid(),name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
+if(linkedTxId)newP.linkedTxId=linkedTxId;
+D.piutang.push(newP);
 }
 save();
 closeModal('piutangModal');
@@ -362,7 +430,11 @@ toast('✅ Piutang tersimpan');
 // sumbernya (bukan dari baris piutang ini langsung).
 async delete(id){
 const p=D.piutang.find(x=>sameId(x.id,id));
-if(p&&(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId)){
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: reuse guard yang sama -- piutang
+// yang punya `linkedTxId` (dibuat lewat toggle §5.1) juga tidak bisa
+// dihapus langsung dari sini, biar transaksi arus kas terkait tidak jadi
+// yatim tanpa piutang sumbernya.
+if(p&&(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||p.linkedTxId)){
 if(typeof toast==='function')toast('Piutang ini tercatat otomatis dari transaksi/pembayaran tagihan terkait, tidak bisa dihapus langsung. Batalkan/edit dari transaksi atau tagihan sumbernya (tombol 🧾 di atas) supaya piutangnya ikut disesuaikan.',3600);
 return;
 }
@@ -451,7 +523,7 @@ const badge=p.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span
 // (autoBillId/autoTxId/autoTitipanOwnerId), pola SAMA PERSIS Debt.renderList()
 // -- ganti ikon 🔒 kecil ber-tooltip, defense in depth thd guard di
 // Piutang.delete() (yang sudah tolak hapusnya lebih dulu).
-const isAutoPiutang=!!(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId);
+const isAutoPiutang=!!(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||p.linkedTxId);
 const delBtnHtml=isAutoPiutang
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi/pembayaran tagihan terkait — batalkan/edit dari sana untuk menghapus baris ini">🔒</span>'
 :`<button class="tx-del" data-stop="1" data-action="delPiutang" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Hapus">🗑</button>`;
@@ -512,6 +584,11 @@ Debt._lunasState=d?!!d.lunas:false;
 const btn=document.getElementById('debtLunasBtn');
 btn.textContent=Debt._lunasState?'✓ Lunas':'Belum Lunas';
 btn.className='chip-btn'+(Debt._lunasState?' active':'');
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.5: toggle sync selalu default OFF
+// tiap buka modal (tambah/edit), pola sama Piutang.openModal() di atas.
+const dSyncEl=document.getElementById('debtSyncTx');
+if(dSyncEl)dSyncEl.checked=false;
+document.getElementById('debtSyncTxWrap').classList.add('u-dnone');
 openModal('debtModal');
 },
 toggleLunas(){
@@ -550,13 +627,35 @@ const jatuhTempo=document.getElementById('debtJatuhTempo').value||'';
 const catatan=document.getElementById('debtCatatan').value.trim();
 const assetIdEl=document.getElementById('debtAssetId');
 const assetId=assetIdEl?assetIdEl.value:'';
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1: sama pola Piutang._saveInner()
+// di atas -- HANYA berlaku saat utang BARU dibuat, type income (uang
+// pinjaman MASUK ke akun yang dipilih).
+const dSyncTxEl=document.getElementById('debtSyncTx');
+const dDoSyncTx=!Debt.editId&&dSyncTxEl&&dSyncTxEl.checked;
+const dSyncTxAccEl=document.getElementById('debtSyncTxAcc');
+const dSyncTxAcc=dSyncTxAccEl?dSyncTxAccEl.value:'';
+if(dDoSyncTx&&!dSyncTxAcc){toast('⚠️ Pilih Akun dulu untuk mencatat transaksi arus kas');return;}
+let dLinkedTxId=null;
+if(dDoSyncTx)dLinkedTxId=createPiutangUtangAutoTx('income',nilai,dSyncTxAcc,'Utang','Utang: '+name,tanggal);
 let d;
 if(Debt.editId){
 d=D.debts.find(x=>sameId(x.id,Debt.editId));
 if(!d){toast('⚠️ Utang tidak ditemukan, coba tutup dan buka lagi');return;}
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.2: transisi Belum Lunas -> Lunas
+// pada utang yang PUNYA linkedTxId otomatis mencatat 1 transaksi
+// pelunasan (expense, ke akun sama dgn transaksi awal). Idempotent via
+// linkedPayoffTxId, pola sama Piutang di atas.
+const dBecameLunas=!d.lunas&&Debt._lunasState;
+if(dBecameLunas&&d.linkedTxId&&!d.linkedPayoffTxId){
+const dOrigTx=D.transactions.find(t=>sameId(t.id,d.linkedTxId));
+if(dOrigTx){
+d.linkedPayoffTxId=createPiutangUtangAutoTx('expense',nilai,dOrigTx.accountId,'Utang','Utang lunas: '+name,todayStr());
+}
+}
 Object.assign(d,{name,jenis,nilai,bunga,cicilanBulanan,tanggal,jatuhTempo,catatan,assetId,lunas:Debt._lunasState});
 } else {
 d={id:uid(),name,jenis,nilai,bunga,cicilanBulanan,tanggal,jatuhTempo,catatan,assetId,lunas:Debt._lunasState};
+if(dLinkedTxId)d.linkedTxId=dLinkedTxId;
 D.debts.push(d);
 }
 Debt.syncBill(d);
@@ -613,6 +712,14 @@ async delete(id){
 const d=D.debts.find(x=>sameId(x.id,id));
 if(d&&(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId)){
 if(typeof toast==='function')toast('Entri ini tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan, tidak bisa dihapus langsung. Ubah porsi kepemilikannya ke 0% atau lepas tautannya di menu Aset/Akun/Investasi terkait.',3600);
+return;
+}
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: guard TERPISAH (field beda,
+// semantik beda) utk utang yang punya transaksi arus kas terkait
+// (`linkedTxId`, dibuat lewat toggle §5.1) -- biar transaksinya tidak
+// jadi yatim tanpa utang sumbernya.
+if(d&&d.linkedTxId){
+if(typeof toast==='function')toast('Utang ini tercatat otomatis ke transaksi arus kas terkait, tidak bisa dihapus langsung. Hapus/edit dari transaksinya di Keuangan terlebih dulu.',3600);
 return;
 }
 if(!await askConfirm('Hapus catatan utang ini?',{okText:'Ya, Hapus'}))return;
@@ -709,6 +816,10 @@ if(d.assetId){const _porsi=resolveEntryAssetSelfPorsi(d);if(_porsi<100)metaParts
 // 0 filter/badge lain diubah.
 const isTitipanLinked=!!(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId);
 if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
+// AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: badge terpisah (semantik beda
+// dari titipan di atas) utk utang yang tercatat lewat toggle §5.1.
+if(d.linkedTxId&&!isTitipanLinked)metaParts.push('🔒 Tercatat otomatis dari transaksi arus kas');
+const isTxLinked=!!d.linkedTxId;
 // FIX (BUG-DEL-TITIPAN): sembunyikan tombol 🗑 utk baris titipan auto-sync,
 // konsisten dengan baris "Cicilan Barang" (billRowsHtml) yang memang sudah
 // read-only -- ganti jadi ikon 🔒 kecil ber-tooltip, biar user tidak
@@ -717,7 +828,9 @@ if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
 // depth) kalau tombol ini terpanggil lewat jalur lain.
 const delBtnHtml=isTitipanLinked
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan — ubah porsinya ke 0% atau lepas tautannya di sana untuk menghapus baris ini">🔒</span>'
-:`<button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button>`;
+:(isTxLinked
+?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi arus kas terkait — hapus/edit dari transaksinya di Keuangan untuk menghapus baris ini">🔒</span>'
+:`<button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button>`);
 return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div>${delBtnHtml}</div>`;
 }).join('');
 // KW-170: baris cicilan barang — read-only dari sini (edit/hapus/riwayat

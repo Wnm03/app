@@ -355,7 +355,7 @@ if(!a)return;
 a.includeInBalance=a.includeInBalance===false?true:false;
 save();renderLapAccList();renderDashAccList();renderAccGrid();
 }
-let editAccIdx=-1,accIncludeState=true;
+let editAccIdx=-1,accIncludeState=true,accModalCallback=null;
 // Field tambahan per Jenis Akun (KW-164, permintaan sesi ini) — Investasi butuh nama Platform
 // (mis. Bibit/Ajaib), Dikunci butuh perkiraan Target Tanggal Buka (mis. dana darurat baru boleh
 // dibuka saat tanggal tertentu). Kas Bebas tidak butuh field tambahan apa-apa.
@@ -371,8 +371,9 @@ wrap.innerHTML='<div class="fg"><label class="fl">Target Tanggal Buka (opsional)
 wrap.innerHTML='';
 }
 }
-function openAccModal(idx){
+function openAccModal(idx,callback){
 editAccIdx=(typeof idx==='number')?idx:-1;
+accModalCallback=typeof callback==='function'?callback:null;
 const a=editAccIdx>=0?D.accounts[editAccIdx]:null;
 document.getElementById('accModalTitle').textContent=a?'Edit Akun':'Tambah Akun';
 document.getElementById('accName').value=a?a.name:'';
@@ -434,9 +435,18 @@ const txDelta=recalcAccBalance(a.id)-(a.baseBalance!==undefined?a.baseBalance:(a
 a.baseBalance=nominal-txDelta;
 a.balance=nominal;
 save();closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun diperbarui');
+if(accModalCallback){
+const cb=accModalCallback; accModalCallback=null;
+cb(a);
+}
 } else {
-D.accounts.push({id:'acc_'+Date.now(),name,emoji,baseBalance:nominal,balance:nominal,includeInBalance:accIncludeState,jenis,platform,targetTanggalBuka,ownership});
+const newAcc={id:'acc_'+Date.now(),name,emoji,baseBalance:nominal,balance:nominal,includeInBalance:accIncludeState,jenis,platform,targetTanggalBuka,ownership};
+D.accounts.push(newAcc);
 save();closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun ditambahkan');
+if(accModalCallback){
+const cb=accModalCallback; accModalCallback=null;
+cb(newAcc);
+}
 }
 }
 // openAccTxHistory(id) — klik kartu akun di 🏦 Akun & Metode Pembayaran (Pengaturan >
