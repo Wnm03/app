@@ -353,3 +353,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox Claude tanpa akses npm registry/jaringan -- eslint tidak bisa diinstall/dijalankan di environment ini; perubahan sesi ini murni split file (sparepart-servis.js -> +sparepart-servis-b.js) di batas fungsi/object bersih, gaya penulisan 100% sama dgn kode asal, 0 logika diubah
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall (sandbox tanpa akses jaringan); bundle unminified tetap valid sintaksnya (node --check lolos)
+
+## 2026-08-29T08:53:34.719Z — versi s681-cashflow-siklus-legacy-card
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang & tidak bisa diinstall
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall - bundle valid tapi belum diminify

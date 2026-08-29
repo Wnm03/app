@@ -11533,3 +11533,117 @@ tests/s631-titipan-holding-name-direct-porsi.test.js,
 tests/session04a-dana-titipan-pool-ui-summary.test.js,
 tests/session04b-dana-titipan-pool-ui-modal.test.js,
 tests/session05-dana-titipan-fill-remaining.test.js.
+
+# Sesi KasirAcc (2026-08-29) — kasirAcc "➕ Akun Baru" (item #1 dari audit dropdown produk/akun Shop)
+
+Audit sebelumnya menemukan 2 titik dropdown produk yang tertaut Shop belum
+punya jalan pintas tambah data baru: (1) `kasirAcc` (dropdown akun di tab
+Kasir AI, form pembayaran) — dikerjakan sesi ini; (2) `txShopSaleItem`
+(Penjualan Shop di form Transaksi Pemasukan) — masih backlog, belum
+dikerjakan.
+
+**Implementasi:**
+- `modules/finance/akun.js`: `openAccModal(idx, callback)` sekarang
+  menerima callback opsional (var module-level baru `accModalCallback`,
+  di-reset ke `null` tiap kali openAccModal dipanggil ulang) — dipanggil
+  di akhir `_saveAccInner()` dengan akun yang baru dibuat/diedit, persis
+  pola `catModalCallback`/`openCatModal()` yang sudah ada di
+  `modules/finance/kategori.js`. Berlaku utk kedua cabang (edit & create).
+- `modules/business/kasir.js`: `Kasir.populateAccSelect()` sekarang
+  menyisipkan opsi `➕ Akun Baru` (value `__new__`) di akhir list &
+  menyimpan pilihan sebelumnya di `el.dataset.prevValue`; method baru
+  `Kasir.onAccSelectChange()` — kalau user pilih `__new__`, buka
+  `accModal` lewat callback (auto re-populate select & auto-select akun
+  baru begitu tersimpan), select langsung dikembalikan ke pilihan
+  sebelumnya SELAMA modal masih terbuka (bukan nyangkut di `__new__`).
+- `index.html`: `<select id="kasirAcc">` ditambah
+  `onchange="Kasir.onAccSelectChange()"`.
+
+**Verifikasi:**
+- Build (`node scripts/build.js`) sukses, versi naik ke 1437,
+  `app_production.html` ikut ter-generate, sintaks bundle lolos.
+- `verify-window-expose.js` ✅.
+- `verify-release-ready.js`: html-sync & version-sync ✅; lint (eslint)
+  & minify (esbuild) di-override manual (sandbox tanpa akses jaringan,
+  tercatat di `docs/RELEASE-GATE-LOG.md`) — gate akhir **LOLOS**.
+- Full test suite: 4873 test, **4870 pass, 3 fail** — 3 failure di
+  `s679-scroll-flash-14-tabswitch-regression.test.js`
+  (`scrollTabBarIntoView`), pre-existing & tidak berkaitan sama sekali
+  dgn `akun.js`/`kasir.js`/`index.html` yang diubah sesi ini (bukan
+  regresi dari patch ini).
+- Test regresi otomatis khusus utk `accModalCallback`/
+  `onAccSelectChange` TIDAK dibuat: keduanya menyentuh DOM
+  (`getElementById`, `openModal`), yang secara eksplisit di luar cakupan
+  harness `tests/helpers/loadSource.js` (dicatat di komentar helper
+  itu sendiri — ranah smoke-test/manual QA, bukan unit test murni), dan
+  pola sejenis (`catModalCallback`) juga tidak punya unit test tersendiri
+  di codebase, jadi konsisten kalau tidak dipaksakan di sini juga.
+
+## Next TODO
+Item #2 dari audit: `txShopSaleItem` (dropdown Penjualan Shop di form
+Transaksi Pemasukan/Pengeluaran) belum punya opsi `➕ Produk Baru` —
+`txShopStockItem` (Stok Shop) sudah punya sejak awal, `txShopSaleItem`
+belum, kalau `D.products` kosong cuma tampil "— Belum ada produk di
+Etalase —" tanpa jalan pintas tambah produk.
+
+## ZIP
+Patch (hanya file berubah — bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+chat-action-handlers.js, modules/finance/akun.js,
+modules/business/kasir.js, modules/shared/features-helpers-global-security.js,
+modules/shared/modals.js, modules/shared/modules-calc.js,
+modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md, docs/CLAUDE.md.
+
+# Sesi lanjutan KasirAcc (2026-08-29) — txShopSaleItem "➕ Produk Baru" (item #2 dari audit dropdown produk/akun Shop)
+
+Lanjutan sesi sebelumnya (kasirAcc "➕ Akun Baru", item #1). Item #2: dropdown
+Penjualan Shop (`txShopSaleItem`) di form Transaksi Pemasukan belum punya
+opsi "➕ Produk Baru" — `txShopStockItem` (Stok Shop) sudah punya sejak awal,
+`txShopSaleItem` belum, kalau `D.products` kosong cuma tampil "— Belum ada
+produk di Etalase —" tanpa jalan pintas tambah produk.
+
+**Implementasi:**
+- `modules/shop/cobek-etalase.js`: `Etalase.openModal(idx, callback)` sekarang
+  menerima callback opsional (property module baru `this.modalCallback`,
+  di-reset ke `null` tiap kali `openModal()` dipanggil ulang) — dipanggil di
+  3 titik keluar `_saveInner()` (cabang koreksi stok, cabang beli stok baru
+  dgn transaksi pengeluaran, cabang update biasa) dengan produk yang baru
+  dibuat/diedit, persis pola `accModalCallback`/`openAccModal()` (sesi
+  sebelumnya) & `catModalCallback`/`openCatModal()` yang sudah ada.
+- `modules/shop/cobek-tx-cart.js`: `populateTxShopSaleSelect()` sekarang
+  selalu menyisipkan opsi `➕ Produk Baru` (value `__new__`) di akhir list —
+  termasuk saat `D.products` kosong (sebelumnya cuma tampil pesan kosong
+  tanpa jalan pintas) — & menyimpan pilihan sebelumnya di
+  `el.dataset.prevValue`; `onTxShopSaleItemChange()` — kalau user pilih
+  `__new__`, buka `productModal` lewat `Etalase.openModal(null, callback)`
+  (auto re-populate select & auto-select produk baru begitu tersimpan),
+  select langsung dikembalikan ke pilihan sebelumnya SELAMA modal masih
+  terbuka (bukan nyangkut di `__new__`).
+- `index.html`: TIDAK ada perubahan — `<select id="txShopSaleItem">` sudah
+  punya `onchange="onTxShopSaleItemChange()"` sejak awal.
+
+**Verifikasi:**
+- Build (`node scripts/build.js`) sukses, versi naik ke 1439, sintaks bundle
+  lolos.
+- Full test suite: 4873 test, **4870 pass, 3 fail** — 3 failure sama persis
+  yang sudah didokumentasikan di sesi sebelumnya
+  (`s679-scroll-flash-14-tabswitch-regression.test.js`,
+  `scrollTabBarIntoView`), pre-existing & tidak berkaitan dengan
+  `cobek-etalase.js`/`cobek-tx-cart.js` yang diubah sesi ini (bukan regresi
+  dari patch ini).
+- Test regresi otomatis khusus utk `Etalase.modalCallback`/
+  `onTxShopSaleItemChange` TIDAK dibuat: sama alasan sesi sebelumnya
+  (menyentuh DOM, di luar cakupan harness `tests/helpers/loadSource.js`,
+  pola sejenis `catModalCallback`/`accModalCallback` juga tidak punya unit
+  test tersendiri).
+
+## Audit dropdown produk/akun Shop — SELESAI
+Kedua item dari audit awal (kasirAcc "➕ Akun Baru" & txShopSaleItem
+"➕ Produk Baru") sudah dikerjakan. Tidak ada backlog tersisa dari audit ini.
+
+## ZIP
+Patch (hanya file berubah — bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+modules/shop/cobek-etalase.js, modules/shop/cobek-tx-cart.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md, docs/CLAUDE.md.
