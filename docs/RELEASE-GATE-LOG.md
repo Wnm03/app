@@ -358,3 +358,18 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang & tidak bisa diinstall
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall - bundle valid tapi belum diminify
+
+## 2026-08-29T12:53:46.168Z — versi s683-cashflow-siklus-legacy-card
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan (npm registry diblokir), eslint tidak bisa di-install; kode sudah dites node --test 4873/4873 pass & node --check pada bundle
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa di-install; bundle unminified tapi valid & lolos node --check
+
+## 2026-08-29T13:05:20.120Z — versi s684-cashflow-siklus-legacy-card
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak bisa di-install; kode sudah dites node --test 4892/4892 pass
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa di-install; bundle unminified tapi valid & lolos node --check
+
+## 2026-08-29T13:09:40.626Z — versi s685-cashflow-siklus-legacy-card
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak bisa di-install; kode sudah dites node --test 4894/4894 pass
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa di-install; bundle unminified tapi valid & lolos node --check
