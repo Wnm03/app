@@ -74,6 +74,13 @@ const ROOT = path.join(__dirname, '..');
 
 const GROUP_A = [
   'modules/shared/modules-render.js',
+  // Audit ukuran file (lanjutan S589/s644): modules-render.js dipecah jadi 2 file agar
+  // di bawah OVERSIZED_FILE_LINE_THRESHOLD. Separuh keduanya (renderDashboard()/
+  // renderKeuangan()/renderVehicleManageList() dkk) HARUS dimuat SETELAH modules-render.js
+  // (bukan sebelum, beda dari pola Object.assign mixin aset-owners.js/business-flow-presenter-
+  // inventory.js) — file ini murni kelanjutan fungsi-fungsi global, tidak ada objek yang
+  // di-mixin balik ke modules-render.js.
+  'modules/shared/modules-render-b.js',
   'modules/shared/modals.js',
   'modules/shared/modules-calc.js',
   'modules/shop/cobek-etalase.js',
@@ -111,6 +118,10 @@ const GROUP_A = [
   // Proyek Renovasi pertama dibuka (lihat setKeuanganTab() di
   // tx-list-cashflow.js). Prasyarat Tahap 1a (guard typeof di semua titik
   // panggil) sudah beres sebelum ini -- lihat docs/SESI-13-GUARD-RENOV-TYPEOF.md.
+  // Audit ukuran file: aset.js dipecah lagi (lanjutan S589) — fitur multi-
+  // owner/porsi kepemilikan-nya (AssetOwnersMixin) HARUS dimuat SEBELUM
+  // aset.js karena aset.js Object.assign() mixin ini ke object Aset.
+  'modules/asset/aset-owners.js',
   'modules/asset/aset.js',
   'modules/asset/aset-reports.js',
   'modules/asset/aset-misc.js',
@@ -1035,6 +1046,13 @@ const GROUP_B = [
   // isCobekOwnershipSelf & getAIDeliveryThinMarginThreshold sudah dimuat
   // lebih dulu lewat GROUP_A/ownership-engine.js/cobek-pricing.js).
   'modules/shop/trip-presenter.js',
+
+  // Audit ukuran file: business-flow-presenter.js dipecah jadi 2 file agar
+  // di bawah OVERSIZED_FILE_LINE_THRESHOLD. Bagian Purchase Order/Movement/
+  // Inventory Transfer/Modal UI-nya (BusinessFlowPresenterInventoryMixin)
+  // HARUS dimuat SEBELUM business-flow-presenter.js karena file itu
+  // Object.assign() mixin ini ke object BusinessFlowPresenter di akhirnya.
+  'modules/shop/business-flow-presenter-inventory.js',
 
   // S205: BusinessFlowPresenter — WIRE ONLY, menyusun 4 tahap alur bisnis
   // Purchase->Trip->Stock->Sale dari ShopBusinessEnginePresenter.summary()
