@@ -133,9 +133,15 @@ function applyPriceRekoWidgetOne(id){return PriceRekoWidget.applyOne(id);}
 function openPriceRekoWidgetDetail(id){return PriceRekoWidget.openDetail(id);}
 function openStockRekoWidgetDetail(id,restockQty){return StockRekoWidget.openDetail(id,restockQty);}
 /* moved to modules-render.js: renderProductList */
+// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
+// KEU_TAB_LABEL (tx-list-cashflow.js).
+const SHOP_TAB_LABEL={kasir:'Kasir AI',jual:'Manual',etalase:'Etalase',produsen:'Produsen',riwayat:'Riwayat',pelanggan:'Pelanggan',laporan:'Laporan',bi:'Business Intelligence'};
 function setShopTab(t,el){
 document.querySelectorAll('#page-shop .cn-tab').forEach(b=>b.classList.remove('active'));
 el.classList.add('active');
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
+const shopBc=document.getElementById('shopBreadcrumbSub');
+if(shopBc)shopBc.textContent=SHOP_TAB_LABEL[t]||t;
 ['kasir','jual','etalase','produsen','riwayat','pelanggan','laporan','bi'].forEach(x=>{const elx=document.getElementById('shopTab-'+x);if(elx){elx.classList.toggle('u-dnone', x!==t);elx.style.display='';}});
 if(t==='kasir')Kasir.render();
 if(t==='etalase')renderProductList();
