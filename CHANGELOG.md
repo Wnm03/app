@@ -1,3 +1,77 @@
+# Changelog — Sesi S610 (Sisa renderer try/catch per-baris: modules/vehicle/, modules/cross/, v1451)
+
+## Task
+Lanjutan audit "0 reaksi" (pola sama S601/S608): sisa renderer di luar
+cakupan s608 — `modules/vehicle/`, `modules/cross/`, dashboard presenter —
+yang masih pakai `list.map(...) -> innerHTML` TANPA try/catch per-item.
+
+## Perubahan (try/catch per-item + fallback aman)
+- `modules/vehicle/fuel-history.js` — `FuelHistory.render()`
+- `modules/vehicle/fuel-compare.js` — `FuelCompare.render()`
+- `modules/vehicle/vehicle-attention-presenter.js` — `render()` (2 blok: actionRows & insightRows)
+- `modules/vehicle/vehicle-decision-presenter.js` — `render()`
+- `modules/cross/life-priority-panel.js` — `render()`
+- `modules/cross/action-queue.js` — `render()`
+
+## Sengaja TIDAK disentuh (risiko rendah — audit dicek, bukan terlewat)
+- `modules/dashboard-hub/dashboard-hub.js` — mayoritas `.map().join('')` di
+  file ini beroperasi atas array kecil TETAP (4-5 kartu ringkasan statis:
+  Pemasukan/Pengeluaran/Bersih/Transaksi, 5 tipe ownership), bukan daftar
+  dinamis dari data user — risiko throw per-item minim & sudah banyak
+  di-guard `typeof`.
+- `modules/cross/cross-insight-presenter.js`, `modules/cross/recommendation-panel.js`,
+  `modules/cross/cross-dashboard-card.js`, `modules/cross/cross-module-widgets.js` —
+  per-item cuma lookup emoji (`_icon(type)`, fallback default) +
+  `escapeHtml()`, tidak ada kalkulasi/derivasi lanjutan yang bisa throw.
+
+## Test
+- Baru: `tests/s610-vehicle-cross-renderlist-trycatch-guard.test.js` (4 test).
+- Full suite: 4911/4911 pass, 0 fail.
+- Build: `node scripts/build.js` — semua gate lolos, versi -> 1451.
+  `verify-bundle-freshness.js` lolos.
+
+---
+
+# Changelog — Sesi S609 (Audit alur pembayaran Utang/Piutang — revert transaksi pelunasan, v1450)
+
+## Task
+Lanjutan backlog item #4 dari sesi s608: audit alur pembayaran utang/piutang
+(`modules/finance/piutang-utang.js`), fitur AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS
+§5.1/§5.2 (toggle "🧾 Catat juga sebagai transaksi arus kas" saat entri
+Piutang/Utang dibuat & ditandai lunas).
+
+## Bug ditemukan
+§5.2 sudah menangani Belum Lunas -> Lunas (bikin 1 transaksi pelunasan
+otomatis, idempotent via `linkedPayoffTxId`). Arah sebaliknya — Lunas
+dibatalkan jadi Belum Lunas lagi — tidak membalikkan apa pun: transaksi
+pelunasan otomatis tetap nyangkut di `D.transactions` & tetap mempengaruhi
+saldo akun, padahal piutang/utangnya sendiri sudah kembali dihitung PENUH
+sbg belum lunas — double count di Total Piutang/Utang & Kekayaan Bersih.
+
+## Perubahan
+
+**`modules/finance/piutang-utang.js`**
+- `Piutang._saveInner()` — transisi Lunas -> Belum Lunas sekarang menghapus
+  balik `p.linkedPayoffTxId` dari `D.transactions` & membersihkan field
+  tsb (simetris dgn §5.2). Idempotent: kalau ditandai Lunas lagi nanti,
+  transaksi pelunasan baru dibuat lagi seperti biasa.
+- `Debt._saveInner()` — pola simetris persis, arah expense
+  (`d.linkedPayoffTxId`).
+- Entri manual (tanpa `linkedTxId`/`linkedPayoffTxId`, tidak pernah pakai
+  toggle §5.1) 0 terpengaruh.
+
+## Test
+- Baru: `tests/s609-audit-payoff-tx-revert-piutang-utang.test.js` (4 test).
+- Full suite: 4907/4907 pass, 0 fail.
+- Build: `node scripts/build.js` — semua gate lolos, versi -> 1450.
+  `verify-bundle-freshness.js` lolos.
+
+## Masih menggantung
+Sisa renderer di luar cakupan s608 (`modules/vehicle/`, `modules/cross/`,
+dashboard presenter) — belum disentuh sesi ini.
+
+---
+
 # Changelog — Sesi S668 (Panel "⚙️ Atur" siklus tagihan di kartu Proyeksi Kas Bulan Ini lama, v1410)
 
 ## Task
