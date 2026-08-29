@@ -66,7 +66,7 @@ function makeCtx(D, dom, promptedValue) {
       'modules/shared/multi-owner-engine.js',
       'modules/shared/owner-registry.js',
       'modules/asset/investasi.js',
-      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     {
       D,
@@ -154,6 +154,6 @@ test('S523-B.5. Nama yang SAMA (findOrCreate existing) -> TIDAK duplikat, baliki
 test('[gap-check] titipanCommitmentModal: tombol "Tambah Pemilik Baru" ada di template & data-action nyambung ke DanaTitipanCommitmentUI.addNewOwner', () => {
   const modalsSrc = fs.readFileSync(path.join(ROOT, 'modules/shared/modals.js'), 'utf8');
   assert.match(modalsSrc, /data-action=\\"DanaTitipanCommitmentUI\.addNewOwner\\"/, 'tombol Tambah Pemilik Baru harus data-action="DanaTitipanCommitmentUI.addNewOwner"');
-  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8');
+  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render-b.js'), 'utf8');
   assert.match(presenterSrc, /addNewOwner\(\)\s*{/, 'DanaTitipanCommitmentUI.addNewOwner() harus ada di presenter file');
 });

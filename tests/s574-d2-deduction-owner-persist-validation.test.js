@@ -25,7 +25,7 @@ function makeFakeDoc(values) {
 
 function makeCtx({ document, D, calls, txEditId = null }) {
   return loadSource(
-    ['modules/finance/transaksi.js'],
+    ['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document,
       D,

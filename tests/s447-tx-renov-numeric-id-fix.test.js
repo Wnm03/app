@@ -41,7 +41,7 @@ function makeFakeDoc(values) {
 
 function makeCtx({ document, D, calls, txEditId = null }) {
   return loadSource(
-    ['modules/shared/helper-teks.js', 'modules/finance/tx-renov.js', 'modules/finance/transaksi.js'],
+    ['modules/shared/helper-teks.js', 'modules/finance/tx-renov.js', 'modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document,
       D,

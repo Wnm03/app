@@ -99,7 +99,7 @@ function fillExtraEls(els) {
 
 function makeTxCtx({ document, D, calls, txEditId = null }) {
   return loadSource(
-    ['modules/finance/transaksi.js'],
+    ['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document, D, curPayMethod: 'tunai', curTxType: 'expense', txEditId,
       _txPayMethodTouchedByUser: false, _txCatLearnSource: null,

@@ -54,7 +54,7 @@ function makeCtx(D, dom, extra) {
       'modules/asset/investasi.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
-      'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     Object.assign({
       D, document: dom, escapeHtml,

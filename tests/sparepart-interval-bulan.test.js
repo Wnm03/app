@@ -42,7 +42,9 @@ function baseD(overrides) {
 
 function makeCtx(D, extra) {
   return loadSource(
-    ['modules/vehicle/sparepart-servis.js'],
+    // sparepart-servis-b.js ditambahkan (audit split sesi ini): predictService()
+    // dipindah ke situ, dimuat SETELAH sparepart-servis.js sama seperti build.js.
+    ['modules/vehicle/sparepart-servis.js', 'modules/vehicle/sparepart-servis-b.js'],
     Object.assign(
       {
         D,

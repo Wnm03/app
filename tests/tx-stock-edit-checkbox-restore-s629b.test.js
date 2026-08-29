@@ -49,7 +49,7 @@ function makeFakeDoc() {
 
 function makeCtx({ document, D, extra = {} }) {
   return loadSource(
-    ['modules/finance/transaksi.js'],
+    ['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     Object.assign({
       document, D,
       curTxType: 'expense', curPayMethod: 'tunai', txEditId: null,
@@ -136,7 +136,7 @@ test('END-TO-END (bukti bug data-loss sudah tidak terjadi) — Edit transaksi te
   };
   const { doc, els } = makeFakeDoc();
   const ctx = loadSource(
-    ['modules/finance/tx-stok-sparepart.js', 'modules/finance/transaksi.js'],
+    ['modules/finance/tx-stok-sparepart.js', 'modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document: doc, D,
       curTxType: 'expense', curPayMethod: 'tunai', txEditId: null, curVehicleId: null,

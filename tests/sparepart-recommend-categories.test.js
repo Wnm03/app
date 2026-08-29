@@ -20,7 +20,10 @@ const { loadSource } = require('./helpers/loadSource');
 
 function makeCtx({ D, curVehicleId, calls }) {
   return loadSource(
-    ['modules/vehicle/sparepart-servis.js'],
+    // sparepart-servis-b.js ditambahkan (audit split sesi ini): TORSI_DB/
+    // findTorsiDb()/suggestServiceIntervalKm() dipindah ke situ, dimuat
+    // SETELAH sparepart-servis.js sama seperti build.js.
+    ['modules/vehicle/sparepart-servis.js', 'modules/vehicle/sparepart-servis-b.js'],
     {
       D,
       curVehicleId,

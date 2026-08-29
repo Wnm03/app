@@ -93,7 +93,7 @@ function makeCtx({ D, calls, failStep, txEditId = null }) {
   }
 
   return loadSource(
-    ['modules/finance/transaksi.js'],
+    ['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document: doc,
       D,

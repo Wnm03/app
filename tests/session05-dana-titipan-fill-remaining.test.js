@@ -46,7 +46,7 @@ function makeCtx(D, dom, extraGlobals) {
       'modules/asset/investasi.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
-      'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     Object.assign(
       {
@@ -159,7 +159,7 @@ test('fillFromRemaining() guard: DanaTitipanPoolAPI belum dimuat -> toast pering
       'modules/asset/investasi.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
-      'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     { D, document: dom, uid: () => 'u1', save: () => {}, escapeHtml: (s) => String(s), fmt: (n) => 'Rp' + n, fmtFull: (n) => 'Rp' + n, toast: (m) => toasts.push(m) },
     ['DanaTitipanCommitmentUI'],

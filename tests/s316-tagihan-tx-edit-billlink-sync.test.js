@@ -29,7 +29,7 @@ function makeFakeDoc(values) {
 }
 
 function makeCtx({ document, D, isLatest, calls, aibusEvents }) {
-  return loadSource(['modules/finance/transaksi.js'], {
+  return loadSource(['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'], {
     document,
     D,
     curPayMethod: 'tunai',

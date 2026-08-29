@@ -37,7 +37,7 @@ function makeFakeDoc(values) {
 }
 
 function makeCtx({ document, D, calls, renovCalls, onLinkedTxEditedCalls, txEditId = 100 }) {
-  return loadSource(['modules/finance/transaksi.js'], {
+  return loadSource(['modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'], {
     document,
     D,
     curPayMethod: 'tunai',

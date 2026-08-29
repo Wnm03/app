@@ -12,7 +12,7 @@ function makeCtx() {
   // normalizeOcrNumber() dipakai parseWalletScreen() tapi didefinisikan di
   // pajak-aset-ui-wrappers.js (global, sama seperti di app asli) — dimuat
   // bareng supaya tidak ReferenceError.
-  return loadSource(['pajak-aset-ui-wrappers.js', 'modules/shared/scan-ocr.js'], {}, ['parseWalletScreen']);
+  return loadSource(['pajak-aset-ui-wrappers.js', 'modules/shared/scan-ocr.js', 'modules/shared/scan-ocr-b.js'], {}, ['parseWalletScreen']);
 }
 
 test('parseWalletScreen() — saldo utama diambil, BUKAN angka "sudah terpakai" di bawahnya', () => {

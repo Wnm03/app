@@ -44,7 +44,7 @@ function makeFakeDoc() {
 
 function makeCtx({ document, D }) {
   return loadSource(
-    ['modules/finance/tx-renov.js', 'modules/finance/transaksi.js'],
+    ['modules/finance/tx-renov.js', 'modules/finance/transaksi.js', 'modules/finance/transaksi-b.js'],
     {
       document, D,
       curTxType: 'expense', curPayMethod: 'tunai', txEditId: null,

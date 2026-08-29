@@ -39,7 +39,7 @@ function makeContext() {
   const calls = { toast: [], openModal: [], closeModal: [], render: 0, renderInto: [] };
   const doc = makeFakeDocument();
   const context = loadSource(
-    ['modules/finance/dana-titipan-pool-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/finance/dana-titipan-pool-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js'],
     {
       D,
       save: () => {},
@@ -130,7 +130,7 @@ test('save() guard: DanaTitipanPoolAPI belum dimuat -> toast peringatan, tidak c
   const calls = { toast: [] };
   const doc = makeFakeDocument();
   const context = loadSource(
-    ['modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js'],
     {
       D,
       document: doc,

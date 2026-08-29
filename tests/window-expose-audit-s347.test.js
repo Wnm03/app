@@ -45,7 +45,7 @@ const TARGETS = [
   { name: 'DanaDaruratAI', files: ['modules/shared/modules-calc.js'], sampleMethod: 'computeRecommendation' },
   { name: 'FinCoach', files: ['modules/shared/modules-calc.js'], sampleMethod: 'compute' },
   { name: 'BillMultiScan', files: ['modules/shared/scan-ocr.js'], sampleMethod: 'importSelected' },
-  { name: 'UniversalScan', files: ['modules/shared/scan-ocr.js'], sampleMethod: 'scan' },
+  { name: 'UniversalScan', files: ['modules/shared/scan-ocr.js', 'modules/shared/scan-ocr-b.js'], sampleMethod: 'scan' },
   { name: 'PriceReko', files: ['modules/shop/cobek-pricing.js'], sampleMethod: 'reset' },
   { name: 'OngkirCalc', files: ['modules/shop/cobek-pricing.js'], sampleMethod: 'getProdusenId' },
   { name: 'PriceRekoWidget', files: ['modules/shop/cobek-pricing.js'], sampleMethod: 'avgMarginForKategori' },

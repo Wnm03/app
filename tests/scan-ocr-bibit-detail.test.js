@@ -12,7 +12,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 function makeCtx() {
   return loadSource(
-    ['pajak-aset-ui-wrappers.js', 'modules/shared/scan-ocr.js'],
+    ['pajak-aset-ui-wrappers.js', 'modules/shared/scan-ocr.js', 'modules/shared/scan-ocr-b.js'],
     {},
     ['detectScreenType', 'parseBibitScreen', 'extractLabeledAmount']
   );

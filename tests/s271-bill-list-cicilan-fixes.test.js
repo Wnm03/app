@@ -169,7 +169,12 @@ test('openBillModal() — bill kind:"utang" (redirect LAMA, S regresi) tetap ke 
 test('source guard: transaksi.js membuat/mengedit bill kind cicilan shared HARUS set totalAmount:perBulan, TIDAK BOLEH lagi totalAmount:total (regresi S271)', () => {
   const fs = require('fs');
   const path = require('path');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'transaksi.js'), 'utf8');
+  // saveTx()/_saveTxInner() (yang mengandung pola-pola ini) dipindah ke
+  // transaksi-b.js (audit ukuran file, sesi lanjutan split
+  // sparepart-servis.js) -- baca gabungan kedua file, sama seperti build.js
+  // memuatnya berurutan.
+  const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'transaksi.js'), 'utf8')
+    + fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'transaksi-b.js'), 'utf8');
   const badPattern = /totalAmount:cicilanShared\?total:null/;
   const goodPatternCount = (src.match(/totalAmount:cicilanShared\?perBulan:null/g) || []).length;
   const goodPiutangCallCount = (src.match(/totalAmount:perBulan,amount:perBulanMine/g) || []).length;

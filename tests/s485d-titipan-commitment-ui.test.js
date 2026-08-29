@@ -100,7 +100,7 @@ function makeCtx(D, dom) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
-      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
+      'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     {
       D,
@@ -142,7 +142,7 @@ function extractModalHtml() {
 
 test('[gap-check] titipanCommitmentModal: semua id yang dipakai DanaTitipanCommitmentUI.open()/save() memang ada di template', () => {
   const html = extractModalHtml();
-  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8');
+  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render-b.js'), 'utf8');
   const start = presenterSrc.indexOf('const DanaTitipanCommitmentUI');
   assert.notEqual(start, -1, 'DanaTitipanCommitmentUI harus ada di presenter file -- nama berubah? update test ini');
   // UPDATE Sesi 486 (Case F): file ini sekarang punya object tambahan
@@ -169,7 +169,12 @@ test('[gap-check] titipanCommitmentModal: tag seimbang (div/label/select/button/
 });
 
 test('[gap-check] render(): tombol buka modal (data-action=DanaTitipanCommitmentUI.open) memang ada di render(), baik data-args global maupun per-owner', () => {
-  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8');
+  // Presenter.render() ada di bagian PERTAMA (dana-titipan-portfolio-render.js),
+  // sedangkan marker `const DanaTitipanCommitmentUI` sekarang di bagian KEDUA
+  // (dana-titipan-portfolio-render-b.js) -- baca gabungan keduanya, sama
+  // seperti build.js memuatnya berurutan.
+  const presenterSrc = fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render.js'), 'utf8')
+    + fs.readFileSync(path.join(ROOT, 'modules/finance/dana-titipan-portfolio-render-b.js'), 'utf8');
   const renderStart = presenterSrc.indexOf('render() {');
   const renderEnd = presenterSrc.indexOf('};', presenterSrc.indexOf('const DanaTitipanCommitmentUI'));
   const renderCode = presenterSrc.slice(renderStart, presenterSrc.indexOf('const DanaTitipanCommitmentUI'));
