@@ -261,18 +261,43 @@ function populateTxShopSaleSelect(){
 const sel=document.getElementById('txShopSaleItem');
 if(!sel)return;
 const cur=sel.value;
+// Sesi lanjutan KasirAcc (item #2 audit dropdown produk/akun Shop): opsi "➕ Produk Baru"
+// (value __new__) sekarang selalu disisipkan di akhir list, termasuk saat D.products masih
+// kosong -- pola PERSIS Kasir.populateAccSelect() (modules/business/kasir.js). Sebelumnya kalau
+// kosong cuma tampil "— Belum ada produk di Etalase —" tanpa jalan pintas tambah produk.
 if(!D.products.length){
-sel.innerHTML='<option value="">— Belum ada produk di Etalase —</option>';
+sel.innerHTML='<option value="">— Belum ada produk di Etalase —</option><option value="__new__">➕ Produk Baru</option>';
+sel.value=cur==='__new__'?'__new__':'';
+if(sel.value!=='__new__')sel.dataset.prevValue=sel.value;
+onTxShopSaleItemChange();
+renderTxShopSaleCartList();
 return;
 }
-sel.innerHTML=D.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.stock})</option>`).join('');
-sel.value=cur&&D.products.find(p=>p.id===cur)?cur:D.products[0].id;
+sel.innerHTML=D.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.stock})</option>`).join('')+'<option value="__new__">➕ Produk Baru</option>';
+sel.value=cur&&D.products.find(p=>p.id===cur)?cur:(cur==='__new__'?'__new__':D.products[0].id);
+if(sel.value!=='__new__')sel.dataset.prevValue=sel.value;
 onTxShopSaleItemChange();
 renderTxShopSaleCartList();
 }
+// onTxShopSaleItemChange() — dipanggil dari onchange <select id="txShopSaleItem"> (index.html,
+// sudah ada sejak awal). Kalau user pilih "➕ Produk Baru" (__new__), buka productModal
+// (Etalase.openModal(), modules/shop/cobek-etalase.js) lewat callback, pola PERSIS
+// Kasir.onAccSelectChange() (modules/business/kasir.js, sesi KasirAcc) -- select dikembalikan
+// ke pilihan sebelumnya SELAMA modal masih terbuka (bukan nyangkut di __new__), lalu auto
+// re-populate & auto-select produk baru begitu tersimpan.
 function onTxShopSaleItemChange(){
 const sel=document.getElementById('txShopSaleItem');
 if(!sel||!sel.value)return;
+if(sel.value==='__new__'){
+Etalase.openModal(null,(newProduct)=>{
+populateTxShopSaleSelect();
+const sel2=document.getElementById('txShopSaleItem');
+if(sel2&&newProduct&&newProduct.id){sel2.value=newProduct.id;sel2.dataset.prevValue=newProduct.id;onTxShopSaleItemChange();}
+});
+if(sel.value==='__new__'&&sel.dataset.prevValue)sel.value=sel.dataset.prevValue;
+return;
+}
+sel.dataset.prevValue=sel.value;
 const p=D.products.find(x=>x.id===sel.value);
 if(p) document.getElementById('txShopSaleHarga').value=p.hargaJual||'';
 }

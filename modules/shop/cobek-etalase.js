@@ -304,8 +304,13 @@ const elJual=document.getElementById('cNilaiJualStok');
 if(elModal)elModal.textContent=fmt(this.totalModalStok());
 if(elJual)elJual.textContent=fmt(this.totalNilaiJualStok());
 },
-openModal(idx){
+openModal(idx,callback){
 this.editIdx=(typeof idx==='number')?idx:null;
+// Sesi lanjutan KasirAcc (item #2 audit dropdown produk/akun Shop) — callback opsional,
+// dipanggil di akhir _saveInner() dgn produk yg baru dibuat/diedit, persis pola
+// accModalCallback/openAccModal() (modules/finance/akun.js) & catModalCallback/openCatModal()
+// (modules/finance/kategori.js). Direset ke null tiap kali openModal() dipanggil ulang.
+this.modalCallback=typeof callback==='function'?callback:null;
 const isEdit=this.editIdx!==null;
 document.getElementById('productModalTitle').textContent=isEdit?'Edit Produk':'Tambah Produk';
 const p=isEdit?D.products[this.editIdx]:null;
@@ -555,6 +560,7 @@ D.productStockCorrections.push({id:uid(),productId:product.id,from:prevStock,to:
 save();closeModal('productModal');this.renderList();
 toast(`✅ Stok dikoreksi (${delta>0?'+':''}${delta}), tanpa transaksi`);
 this.syncPairedPrice(product);
+if(this.modalCallback){const cb=this.modalCallback;this.modalCallback=null;cb(product);}
 return;
 }
 if(delta>0&&hargaBeli>0&&!isKoreksi){
@@ -564,10 +570,12 @@ D.transactions.push({id:txId,type:'expense',amount:cost,category:'Bisnis',subcat
 save();closeModal('productModal');this.renderList();renderDashboard();renderKeuangan();
 toast(`✅ Produk disimpan, +${delta} stok tercatat sbg pengeluaran ${fmtFull(cost)}`);
 this.syncPairedPrice(product);
+if(this.modalCallback){const cb=this.modalCallback;this.modalCallback=null;cb(product);}
 return;
 }
 save();closeModal('productModal');this.renderList();toast('✅ Produk disimpan (hanya update, tanpa transaksi)');
 this.syncPairedPrice(product);
+if(this.modalCallback){const cb=this.modalCallback;this.modalCallback=null;cb(product);}
 },
 async delete(i){
 if(!await askConfirm('Hapus produk ini dari etalase?'))return;
