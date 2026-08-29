@@ -402,7 +402,12 @@ else if(type==='all')txs=txs.filter(t=>t.type==='income'||t.type==='expense');
 // yg dihitung sbg recordedGaji di getMonthlyCashProjection(), 0 predikat baru.
 else if(type==='gaji')txs=txs.filter(t=>typeof isGajiTransaction==='function'&&isGajiTransaction(t));
 const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
-const total=sorted.reduce((s,t)=>s+(t.type==='income'?t.amount:-t.amount),0);
+// Guard hitungKas!==false (pola sama computeCashflowForecast() di tx-list-cashflow.js):
+// baris "📝 Catatan saja" (hitungKas:false) TETAP tampil di daftar (sorted tidak difilter,
+// user tetap lihat catatannya) -- yang di-guard cuma agregat moneter (total & split per
+// pemilik di bawah), konsisten dgn arti toggle "Hitung ke Saldo & Laporan" dan kartu
+// ringkasan lain yang sudah pakai guard ini.
+const total=sorted.reduce((s,t)=>s+(t.hitungKas!==false?(t.type==='income'?t.amount:-t.amount):0),0);
 document.getElementById('filterTxTitle').textContent=label||'Transaksi';
 document.getElementById('filterTxSummary').textContent=sorted.length+' transaksi · Total '+(total<0?'-':'')+fmt(Math.abs(total));
 // filterTxOwnerSplit (permintaan user: "riwayat transaksi ... tiap transaksi (modal/
@@ -446,8 +451,8 @@ const ownersRes={owners:resolvedSplit.owners};
 // diklik -- 0 refetch, cuma switch tampilan dari array yang sudah dihitung sekali di atas.
 const rows=ownersRes.owners.map(o=>{
 const ownerTxs=sorted.filter(t=>resolveTxOwnerAssignment(t,ownersRes.owners)===o.ownerId);
-const m=ownerTxs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const e=ownerTxs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+const m=ownerTxs.filter(t=>t.type==='income'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+const e=ownerTxs.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
 const t=m-e;
 // Baris tambahan (permintaan user: "tambahkan modal dikomit dan total setelah
 // dikurangi pengeluaran hanya ditampilkan per navigasi pemilik porsi") -- "Modal

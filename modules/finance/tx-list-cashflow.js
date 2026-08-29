@@ -494,6 +494,17 @@ return{from:start,to:end};
 // tanpa-argumen (opts===undefined) -- panggilan dgn opts eksplisit (dipakai
 // panel "⚙️ Atur" utk pratinjau sebelum Simpan) SENGAJA selalu dihitung
 // fresh, TIDAK ikut nyampah/menimpa cache singleton.
+// Guard hitungKas (Sesi Normalisasi hitungKas T4+, lanjutan): transaksi
+// "Catatan saja" (t.hitungKas===false, 0 pengaruh ke kas/saldo -- lihat
+// hitungKasBadge di atas) TIDAK BOLEH ikut nge-hitung incAvg/expAvg di
+// bawah -- sebelum guard ini, Perkiraan Pemasukan/Pengeluaran (Financial
+// Forecast) & Proyeksi Saldo 30 Hari (cashflow-projection-presenter.js)
+// SAMA-SAMA basi krn keduanya 100% reuse computeCashflowForecast() ini
+// (via FinanceIntelligence.cashflowSummary(), lihat komentar file itu) --
+// 1 titik guard di sini otomatis membersihkan turunan di 2 presenter itu
+// sekaligus, TIDAK perlu sentuh 2 file presenter (keduanya 0 akses D
+// langsung by design). Pola & alasan sama persis 5 titik hitungKas di
+// modules-calc.js (lihat SESI-NORMALISASI-HITUNGKAS-DAN-AUDIT-FINAL-P1.md).
 function computeCashflowForecast(opts){
 if(opts===undefined&&_cashflowForecastCache!==undefined)return _cashflowForecastCache;
 const settings=(typeof CashflowProjSettings!=='undefined')?CashflowProjSettings.get():null;
@@ -502,7 +513,7 @@ const avail=(typeof BudgetReko!=='undefined')?BudgetReko.monthsAvailable():0;
 const months=cfg.months||((typeof BudgetReko!=='undefined')?BudgetReko.effectiveMonths():3);
 const from=cfg.from||((typeof BudgetReko!=='undefined')?BudgetReko.rangeFrom():(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth()-2,1);})());
 const now=new Date();
-let txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+let txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now&&t.hitungKas!==false;});
 // Filter akun (cfg.accountId): 'semua'/kosong -> tidak difilter (perilaku
 // lama persis). Kalau diisi 1 id akun spesifik, incAvg/expAvg/saldoNow
 // SEMUA dihitung ulang dari sudut pandang akun itu saja -- guard
