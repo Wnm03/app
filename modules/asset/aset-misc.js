@@ -150,7 +150,20 @@ if(typeof Investment==='undefined'||typeof D==='undefined'||!D.assets)return{mig
 // jalan -> Holding DUPLIKAT terbuat (ROI +0.0%, avgPrice=currentPrice) & aset itu sendiri
 // baru ditandai `_migratedToInvestmentId` -> hilang dari Buku Aset. Tambah `!a.investmentId`
 // di sini, menyamakan pola exclude yang sudah ada di semua titik lain -- 0 logic lain diubah.
-const candidates=D.assets.filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId).map(a=>{
+// FIX (bug: aset non-investasi ikut ke-migrasi -- mis. Kendaraan): "Harga
+// Beli/Unit" & "Jumlah Unit" di assetModal itu field GENERIK yang tetap ada
+// di form apa pun jenis asetnya (termasuk Kendaraan/Elektronik/dll), bukan
+// eksklusif field investasi. Sebelum fix ini, `buku` di bawah dihitung dari
+// kedua field itu TANPA cek jenis dulu -- begitu user isi harga beli+jumlah
+// unit utk Kendaraan (mis. beli 1 motor Rp15jt), `buku`>0, lolos candidate,
+// lalu ikut termigrasi ke Holding Investasi dgn type='Lainnya' (fallback
+// mapAssetJenisToInvestmentType, jenis 'Kendaraan' tidak ada di mapping) --
+// dan Kendaraan itu sendiri hilang dari Buku Aset (ditandai
+// `_migratedToInvestmentId`). Tambah gate `!!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]`
+// di filter kandidat SEBELUM hitung buku, menyamakan syarat "jenis investasi
+// yang dikenal" yang sudah dipakai di fallback baris di bawah (bug: fallback
+// itu mengecek jenis tapi jalur utama hargaBeli*jumlahUnit tidak).
+const candidates=D.assets.filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId).filter(a=>!!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]).map(a=>{
 let buku=a.modalInvestasi!=null?a.modalInvestasi:(a.hargaBeli!=null&&a.jumlahUnit!=null?a.hargaBeli*a.jumlahUnit:null);
 // FIX (jenis-investasi-tanpa-modal): "Modal Investasi" & "Harga Beli/Unit"
 // di assetModal keduanya (opsional) -- kalau user pilih jenis investasi

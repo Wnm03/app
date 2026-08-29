@@ -92,20 +92,42 @@ const InvestmentListUI = {
       el.innerHTML = '<div class="empty"><div class="empty-icon">💹</div><div class="empty-text">Belum ada holding investasi tercatat</div></div>';
       return;
     }
+    // BUGFIX (audit user "tap holding hasil migrasi = 0 reaksi, 0 toast"): sebelumnya
+    // `.map()` di sini TANPA try/catch per-baris -- kalau SATU holding punya data yang
+    // bikin salah satu hitungan (holdingValue/holdingGainLoss/holdingROI/
+    // investmentCrossCheckWarning) throw, exception itu merambat keluar dari `.map()`
+    // SEBELUM `el.innerHTml=...` sempat jalan sama sekali. Efeknya: render_List() ini
+    // sendiri throw tanpa pernah ditangkap (dipanggil langsung dari render()/setAsetTab(),
+    // bukan lewat dispatcher data-action yang punya try/catch+toast), `console.error` yang
+    // muncul gampang tenggelam di HP, dan `#investmentHoldingList` tetap berisi HTML dari
+    // render SUKSES sebelumnya -- termasuk data-action yang tampak normal & bisa
+    // "diklik", tapi bindingnya sudah basi terhadap data holding yang sekarang (mis. row
+    // untuk holding yang sudah dihapus/berubah id). Gejalanya persis: kelihatan normal,
+    // tap = 0 reaksi, 0 toast (karena dispatcher pun tidak pernah kebagian action yang
+    // valid). Fix: bungkus hitungan PER HOLDING dgn try/catch -- 1 holding bermasalah
+    // fallback ke nilai aman (0/null) dan tetap dirender sbg row yang BISA di-tap (badge
+    // ⚠️ muncul di baris itu sbg penanda), tidak menjatuhkan seluruh render list.
     el.innerHTML = holdings.map((h) => {
-      const value = Investment.holdingValue(h);
-      const gain = Investment.holdingGainLoss(h);
-      const roi = Investment.holdingROI(h);
+      let value = 0, gain = 0, roi = 0, warn = null, renderError = false;
+      try {
+        value = Investment.holdingValue(h);
+        gain = Investment.holdingGainLoss(h);
+        roi = Investment.holdingROI(h);
+        // S552 (diaktifkan) — badge cross-check kepemilikan Aset<->Investasi, reuse
+        // investmentCrossCheckWarning() (investasi.js) apa adanya, 0 rumus baru di sini.
+        warn = (typeof investmentCrossCheckWarning === 'function') ? investmentCrossCheckWarning(h) : null;
+      } catch (err) {
+        renderError = true;
+        if (typeof console !== 'undefined' && console.error) console.error('[InvestmentListUI._renderList] gagal hitung holding', h && h.id, err);
+      }
       const cls = gain >= 0 ? 'green' : 'red';
-      // S552 (diaktifkan) — badge cross-check kepemilikan Aset<->Investasi, reuse
-      // investmentCrossCheckWarning() (investasi.js) apa adanya, 0 rumus baru di sini.
-      const warn = (typeof investmentCrossCheckWarning === 'function') ? investmentCrossCheckWarning(h) : null;
-      const warnChip = warn ? ' <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="' + escapeHtml(warn) + '">⚠️</span>' : '';
+      const warnText = renderError ? 'Gagal menghitung nilai holding ini — tap untuk buka & cek datanya' : warn;
+      const warnChip = warnText ? ' <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="' + escapeHtml(warnText) + '">⚠️</span>' : '';
       return '<div class="tx-item u-pointer" data-action="InvestmentListUI.openModal" data-args="' + escapeHtml(JSON.stringify([h.id])) + '">'
         + '<div class="tx-icon u-bgaccsoft">💹</div>'
         + '<div class="tx-info">'
-        + '<div class="tx-name">' + escapeHtml(h.name) + warnChip + '</div>'
-        + '<div class="tx-meta"><span class="acc-chip">' + escapeHtml(h.type) + '</span> ' + (h.unit || 0) + ' unit · ROI ' + (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%</div>'
+        + '<div class="tx-name">' + escapeHtml(h.name || '(tanpa nama)') + warnChip + '</div>'
+        + '<div class="tx-meta"><span class="acc-chip">' + escapeHtml(h.type || '-') + '</span> ' + (h.unit || 0) + ' unit · ROI ' + (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%</div>'
         + '</div>'
         + '<div class="tx-amount"><div>' + fmt(value) + '</div><div class="u-fs11 ' + cls + '">' + (gain >= 0 ? '+' : '') + fmt(gain) + '</div></div>'
         + '</div>';
