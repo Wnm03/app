@@ -183,3 +183,43 @@ test('E2E — Kekayaan.currentNetWorth() (SSOT asli) IDENTIK sebelum & sesudah m
   assert.equal(before, 15000000 + 10000000 + 22000000 * 0.7 + 500000000);
   assert.equal(after, before);
 });
+
+// ------ Regresi bug: Kendaraan (field generik hargaBeli+jumlahUnit) nyelip ke Holding ------
+//
+// "Harga Beli/Unit" & "Jumlah Unit" adalah field GENERIK di assetModal, tetap
+// ada di form apa pun jenis asetnya -- bukan field eksklusif investasi. Kalau
+// user isi keduanya utk aset non-investasi (mis. beli 1 motor Rp15.000.000),
+// `buku` dulu tetap kehitung > 0 dan aset itu lolos jadi kandidat migrasi ke
+// Holding Investasi (type fallback ke 'Lainnya'), padahal jenisnya bukan
+// investasi sama sekali. Fix: gate jenis (ASSET_JENIS_TO_INVESTMENT_TYPE) di
+// filter kandidat, sebelum `buku` dihitung.
+test('migrateAssetInvestmentsToHoldings() — Kendaraan dgn hargaBeli+jumlahUnit terisi TIDAK ikut termigrasi', () => {
+  const D = makeD();
+  D.assets.push({
+    id: 'a-motor', name: 'Motor Beat', jenis: 'Kendaraan',
+    hargaBeli: 15000000, jumlahUnit: 1, nilai: 13000000,
+    tanggal: '2025-04-01', zakatable: false,
+  });
+  const ctx = makeCtx(D);
+  const res = ctx.migrateAssetInvestmentsToHoldings();
+  // Cuma BTC/ETH/Majoris yang termigrasi (3), Motor & Rumah TIDAK.
+  assert.equal(res.migrated, 3);
+  assert.equal(D.investments.length, 3);
+  const motor = D.assets.find((a) => a.id === 'a-motor');
+  assert.equal(motor._migratedToInvestmentId, undefined);
+  assert.ok(!D.investments.some((h) => h.name === 'Motor Beat'));
+});
+
+test('migrateAssetInvestmentsToHoldings() — aset jenis lain-lain (Elektronik) dgn hargaBeli+jumlahUnit juga TIDAK termigrasi', () => {
+  const D = makeD();
+  D.assets.push({
+    id: 'a-laptop', name: 'Laptop Kerja', jenis: 'Elektronik',
+    hargaBeli: 12000000, jumlahUnit: 1, nilai: 9000000,
+    tanggal: '2025-05-01', zakatable: false,
+  });
+  const ctx = makeCtx(D);
+  ctx.migrateAssetInvestmentsToHoldings();
+  const laptop = D.assets.find((a) => a.id === 'a-laptop');
+  assert.equal(laptop._migratedToInvestmentId, undefined);
+  assert.equal(D.investments.length, 3);
+});
