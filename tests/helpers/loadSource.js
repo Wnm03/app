@@ -149,4 +149,61 @@ function extractFunction(file, fnName) {
   return context.__fn;
 }
 
-module.exports = { loadSource, makePermissiveStub, extractFunction };
+/**
+ * extractFunctionAutoStub — S679, dipakai untuk regresi 14 titik
+ * scroll-fix (tests/s679-scroll-flash-14-tabswitch-regression.test.js).
+ *
+ * Sama seperti extractFunction()/extractFunctionWithGlobals() (S335) --
+ * ambil fungsi ASLI dari source lewat brace-counting -- tapi sandbox-nya
+ * pakai Proxy yang mengizinkan REFERENSI GLOBAL APAPUN (bukan cuma
+ * property akses lewat document/window) supaya tidak perlu tahu/menebak
+ * satu-satu semua nama global yang dipakai tiap fungsi (mis. Kasir,
+ * renderProductList, curCnTab, dst di 8 file berbeda). Nama yang tidak
+ * dikenal otomatis jadi permissive stub (no-op kalau dipanggil); nama yang
+ * memang dikasih lewat `extraGlobals` (mis. spy `scrollTabBarIntoView`)
+ * tetap dipakai apa adanya.
+ *
+ * Batasan yang disengaja sama seperti loadSource(): hanya untuk fungsi
+ * yang TIDAK butuh DOM sungguhan (baca/tulis lewat stub permisif saja
+ * cukup) -- di sini kita cuma perlu tahu APAKAH scrollTabBarIntoView()
+ * dipanggil, bukan verifikasi detail render tiap tab.
+ */
+function extractFunctionAutoStub(file, fnName, extraGlobals = {}) {
+  const fullPath = path.join(ROOT, file);
+  const src = fs.readFileSync(fullPath, 'utf8');
+  const marker = `function ${fnName}(`;
+  const start = src.indexOf(marker);
+  if (start === -1) throw new Error(`extractFunctionAutoStub: "${marker}" tidak ditemukan di ${file}`);
+  const braceOpen = src.indexOf('{', start);
+  let depth = 1;
+  let i = braceOpen + 1;
+  while (i < src.length && depth > 0) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') depth--;
+    i++;
+  }
+  const snippet = src.slice(start, i);
+
+  const known = { console, Date, Math, JSON, Number, String, Boolean, Array, Object, RegExp, Map, Set, Promise, setTimeout: () => 0, clearTimeout: () => {}, ...extraGlobals };
+  const store = new Map(Object.entries(known));
+  const proxyHandler = {
+    has() { return true; },
+    get(target, prop) {
+      if (prop === Symbol.unscopables) return undefined;
+      if (store.has(prop)) return store.get(prop);
+      const stub = makePermissiveStub(String(prop));
+      store.set(prop, stub);
+      return stub;
+    },
+    set(target, prop, value) {
+      store.set(prop, value);
+      return true;
+    },
+  };
+  const sandbox = new Proxy({}, proxyHandler);
+  const context = vm.createContext(sandbox);
+  new vm.Script(`${snippet}\nthis.__fn = ${fnName};`, { filename: `${file}#${fnName}` }).runInContext(context);
+  return context.__fn;
+}
+
+module.exports = { loadSource, makePermissiveStub, extractFunction, extractFunctionAutoStub };
