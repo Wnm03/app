@@ -901,10 +901,12 @@ const DashboardHub = {
     }
 
     // Update tombol aktif.
+    let _activeSectionTabBtn = null;
     ['ringkasan', 'fitur', 'widget', 'insight'].forEach((t) => {
       const btn = document.getElementById(`dashHubSectionTabBtn-${t}`);
-      if (btn) btn.classList.toggle('active', t === tab);
+      if (btn) { btn.classList.toggle('active', t === tab); if (t === tab) _activeSectionTabBtn = btn; }
     });
+    if (typeof scrollTabBarIntoView === 'function') scrollTabBarIntoView(_activeSectionTabBtn);
   },
 
   // Discoverability fix (audit navigasi: "Bottom nav cuma 6 slot, sebagian
