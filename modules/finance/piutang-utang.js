@@ -491,6 +491,12 @@ summaryHtml=`<div class="u-fs12 u-cacc2 u-r10 u-mb10 u-lh15" style="padding:9px 
 }
 const ordered=[...active,...lunas];
 el.innerHTML=summaryHtml+ordered.map((p,idx)=>{
+// BUGFIX (audit pola sama S601 InvestmentListUI._renderList "0 reaksi"): baris ini
+// panggil resolveEntryAssetSelfPorsi()/overdueDays() per-piutang TANPA try/catch --
+// 1 piutang error bikin SELURUH .map() throw sebelum el.innerHTML ke-assign, daftar
+// piutang tetap nampilin render sukses SEBELUMNYA (tap = 0 reaksi). Fix: bungkus,
+// fallback ke baris aman ber-badge ⚠️ kalau gagal.
+try{
 const overdue=!p.lunas&&p.jatuhTempo&&p.jatuhTempo<today;
 const isPrioritas=idx===0&&topOverdueDays>0&&!p.lunas;
 const od=overdue?Piutang.overdueDays(p):0;
@@ -528,6 +534,10 @@ const delBtnHtml=isAutoPiutang
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi/pembayaran tagihan terkait — batalkan/edit dari sana untuk menghapus baris ini">🔒</span>'
 :`<button class="tx-del" data-stop="1" data-action="delPiutang" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Hapus">🗑</button>`;
 return `<div class="tx-item u-pointer" data-action="openPiutangModal" data-args="${escapeHtml(JSON.stringify([p.id]))}"><div class="tx-icon u-bgaccsoft">🤝</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)}${badge}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${p.lunas?'':' green'}">${fmt(p.nilai)}</div>${delBtnHtml}</div>`;
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[Piutang.renderList] gagal render piutang',p&&p.id,err);
+return `<div class="tx-item u-pointer" data-action="openPiutangModal" data-args="${escapeHtml(JSON.stringify([p.id]))}"><div class="tx-icon u-bgaccsoft">🤝</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name||'(tanpa nama)')} <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menghitung data piutang ini — tap untuk buka & cek">⚠️</span></div></div><div class="tx-amount">⚠️</div></div>`;
+}
 }).join('');
 }
 };
@@ -791,6 +801,9 @@ document.getElementById('debtCicilanVal').textContent=fmtFull(Debt.totalCicilanB
 if(!list.length&&!billCicilan.length){el.innerHTML='<div class="empty"><div class="empty-icon">📕</div><div class="empty-text">Belum ada utang tercatat</div></div>';return;}
 const today=new Date().toISOString().slice(0,10);
 const debtRowsHtml=list.map(d=>{
+// BUGFIX (audit pola sama S601 "0 reaksi"): try/catch per-utang, 1 baris error
+// tidak lagi menjatuhkan seluruh Buku Utang.
+try{
 const overdue=!d.lunas&&d.jatuhTempo&&d.jatuhTempo<today;
 const metaParts=[];
 if(d.jenis&&Debt.JENIS_DEFAULTS[d.jenis]&&d.jenis!=='lainnya')metaParts.push(Debt.JENIS_DEFAULTS[d.jenis].label);
@@ -832,17 +845,27 @@ const delBtnHtml=isTitipanLinked
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi arus kas terkait — hapus/edit dari transaksinya di Keuangan untuk menghapus baris ini">🔒</span>'
 :`<button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button>`);
 return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div>${delBtnHtml}</div>`;
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[Debt.renderList] gagal render utang',d&&d.id,err);
+return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name||'(tanpa nama)')} <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menghitung data utang ini — tap untuk buka & cek">⚠️</span></div></div><div class="tx-amount">⚠️</div></div>`;
+}
 }).join('');
 // KW-170: baris cicilan barang — read-only dari sini (edit/hapus/riwayat
 // pembayaran tetap lewat alur Tagihan yang sudah ada, krn datanya D.bills
 // bukan D.debts). Klik baris -> Riwayat Pembayaran (openBillHistory, sama
 // persis alur yg sudah dipakai utk cicilan di Buku Tagihan).
 const billRowsHtml=billCicilan.map(b=>{
+// BUGFIX (audit pola sama S601 "0 reaksi"): try/catch per-baris cicilan barang juga.
+try{
 const overdue=b.nextDue&&b.nextDue<today;
 const outstanding=(b.amount||0)*(b.sisaTenor||0);
 const metaParts=['🛒 Cicilan Barang','Cicilan '+fmt(b.amount)+'/bln','Sisa '+b.sisaTenor+'x'];
 if(b.nextDue)metaParts.push((overdue?'⚠️ Lewat jatuh tempo ':'Jatuh tempo ')+b.nextDue);
 return `<div class="tx-item u-pointer" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">🛒</div><div class="tx-info"><div class="tx-name">${escapeHtml(b.name)}${overdue?' <span style=\\"font-size:10px;color:var(--accent2);border:1px solid var(--accent2);border-radius:6px;padding:1px 5px;margin-left:4px\\">Jatuh Tempo</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount red">${fmt(outstanding)}</div></div>`;
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[Debt.renderList] gagal render cicilan barang',b&&b.id,err);
+return `<div class="tx-item u-pointer" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">🛒</div><div class="tx-info"><div class="tx-name">${escapeHtml(b.name||'(tanpa nama)')} <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menghitung data cicilan ini">⚠️</span></div></div><div class="tx-amount">⚠️</div></div>`;
+}
 }).join('');
 el.innerHTML=debtRowsHtml+billRowsHtml;
 if(typeof DebtStrategy!=='undefined')DebtStrategy.render();

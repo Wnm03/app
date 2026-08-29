@@ -414,7 +414,17 @@ if(totalEl)totalEl.innerHTML='';
 box.innerHTML='<div class="u-fs12 u-t2 u-tac" style="padding:20px 0">Belum ada barang di list. Tambahin dulu di atas ya.</div>';
 return;
 }
-const scored=items.map(it=>({it,...WorthIt.computeScore(it)})).sort((a,b)=>b.score-a.score);
+// BUGFIX (audit pola sama S601 "0 reaksi"): computeScore(it) per-item TANPA try/catch --
+// 1 item wishlist bermasalah bikin SELURUH renderList() throw sebelum box.innerHTML
+// ke-assign. Fallback: skor 0 + alasan error, item tetap tampil & bisa di-edit/hapus.
+const scored=items.map(it=>{
+try{
+return{it,...WorthIt.computeScore(it)};
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[WorthIt.renderList] gagal hitung skor',it&&it.id,err);
+return{it,score:0,reasons:[{level:'red',text:'Gagal menghitung skor item ini'}]};
+}
+}).sort((a,b)=>b.score-a.score);
 countEl.textContent=items.length+' barang';
 if(totalEl){
 const totalHarga=items.reduce((sum,it)=>sum+(Number(it.price)||0),0);

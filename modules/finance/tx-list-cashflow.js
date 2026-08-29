@@ -29,7 +29,27 @@
 // tombol 🗑 diganti non-fungsional (data-action kosong via bill id null,
 // lihat cabang khusus di delTx()) supaya tidak memicu dialog "Hapus
 // transaksi?" yang menyesatkan (poin bahaya #2 di plan).
+// BUGFIX (audit pola sama S601 InvestmentListUI._renderList "0 reaksi"): txHTML()
+// dipanggil via .map(txHTML) di ~10 titik (allTx/lapTx/filterTxList/tx-target/
+// modules-render.js/shop/modules-render.js dst) TANPA try/catch di sisi pemanggil
+// maupun di dalam fungsi ini -- 1 transaksi bermasalah (mis. resolveTxAssetSplit()/
+// resolveOwnerDefaultForAccount()/getAccOwners() throw krn data lama/korup) bikin
+// SELURUH .map() gagal SEBELUM innerHTML sempat ke-assign di titik manapun -- daftar
+// transaksi (halaman paling sering dibuka) bisa nampilin HTML render sukses
+// SEBELUMNYA & tap jadi 0 reaksi (data-action sudah basi). Fix minimal-invasif:
+// bungkus SELURUH badan txHTML() di 1 try/catch di sini -- otomatis melindungi
+// semua titik panggil sekaligus tanpa menyentuh 10 call site itu satu-satu.
+// Fallback: baris aman ber-badge ⚠️, tetap bisa di-tap (editTx) utk cek/benerin data.
 function txHTML(t){
+try{
+return _txHTMLInner(t);
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[txHTML] gagal render transaksi',t&&t.id,err);
+const safeId=t&&t.id!=null?t.id:null;
+return `<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([safeId]))}"><div class="tx-icon" style="background:var(--accent2-soft)">⚠️</div><div class="tx-info"><div class="tx-name">Gagal menampilkan transaksi ini</div><div class="tx-meta">Tap untuk buka & cek datanya</div></div><div class="tx-amount">⚠️</div></div>`;
+}
+}
+function _txHTMLInner(t){
 if(t&&t.virtual&&String(t.id).startsWith('vbill_')){
 const cats=getAllCats();
 const cat=cats.find(c=>c.name===t.category);
