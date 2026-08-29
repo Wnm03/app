@@ -36,6 +36,7 @@ function makeCtx(D, document) {
       'modules/shop/profit-engine.js',
       'modules/shop/shop-business-engine-presenter.js',
       'modules/shop/trip-presenter.js',
+      'modules/shop/business-flow-presenter-inventory.js',
       'modules/shop/business-flow-presenter.js',
     ],
     {
@@ -307,7 +308,8 @@ test('_renderPurchaseOrderBatchCart() — ringkasan #pobCartSummary menampilkan 
 
 test('restockCandidatesForBatch() — [] kalau InventoryEngine tidak dimuat', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );

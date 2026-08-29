@@ -104,7 +104,7 @@ function makeCtx(D) {
   const ctx = loadSource(
     [
       'modules/shared/multi-owner-engine.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js',
     ],
     globals,
     ['Aset', 'MultiOwnerEngine'],

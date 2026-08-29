@@ -56,7 +56,8 @@ function fakeDom(overrides) {
 
 function makeCtx(D, document) {
   return loadSource(
-    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter.js'],
+    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     {
       D,
       document,
@@ -147,7 +148,8 @@ test('tapTransferChip() — tap melebihi sisa stok di lokasi asal ditolak (toast
   const document = fakeDom();
   let toastMsg = null;
   const ctx = loadSource(
-    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter.js'],
+    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     {
       D,
       document,

@@ -76,7 +76,7 @@ function makeAssetD() {
 test('_aiContextAsset() — assetCount HANYA hitung aset ownership SELF (default+eksplisit)', () => {
   const D = makeAssetD();
   const netWorthForecast = () => ({ ok: true, netWorthNow: 1000000, projectedEnd: 1100000, metode: 'linear' });
-  const ctx = loadSource(['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], { D }, ['isAssetOwnershipSelf']);
+  const ctx = loadSource(['modules/shared/ownership-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], { D }, ['isAssetOwnershipSelf']);
   const sandbox = loadAiContextAssetSandbox(D, ctx.isAssetOwnershipSelf, netWorthForecast);
   const result = sandbox._aiContextAsset();
   assert.equal(result.available, true);
@@ -95,7 +95,7 @@ test('_aiContextAsset() — D.assets TIDAK dimutasi oleh filter ownership', () =
   const D = makeAssetD();
   const before = JSON.stringify(D.assets);
   const netWorthForecast = () => ({ ok: true, netWorthNow: 1000000, projectedEnd: 1100000, metode: 'linear' });
-  const ctx = loadSource(['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], { D }, ['isAssetOwnershipSelf']);
+  const ctx = loadSource(['modules/shared/ownership-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], { D }, ['isAssetOwnershipSelf']);
   const sandbox = loadAiContextAssetSandbox(D, ctx.isAssetOwnershipSelf, netWorthForecast);
   sandbox._aiContextAsset();
   assert.equal(JSON.stringify(D.assets), before);

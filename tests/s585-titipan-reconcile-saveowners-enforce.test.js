@@ -50,7 +50,7 @@ test('Aset.saveOwners(): memanggil TitipanReconcile.warnIfNotOk("Aset.saveOwners
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000, owners: [{ ownerId: 'SELF', porsi: 100 }] }], accounts: [], transactions: [], debts: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), TitipanReconcile: { warnIfNotOk: (context) => { calls.push(context); return { ok: true }; } } }),
     ['Aset', 'MultiOwnerEngine', 'OwnerRegistry']
   );
@@ -97,7 +97,7 @@ test('AccOwners.save(): memanggil TitipanReconcile.warnIfNotOk("AccOwners.save")
   const D = { assets: [], accounts: [{ id: 'acc1', name: 'Cash', baseBalance: 100000, includeInBalance: true }], transactions: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), TitipanReconcile: { warnIfNotOk: (context) => { calls.push(context); return { ok: true }; } } }),
     ['OwnershipEngine', 'MultiOwnerEngine', 'OwnerRegistry', 'Aset', 'AccOwners', 'getAccOwners', 'setAccOwners']
   );
@@ -114,7 +114,7 @@ test('AccOwners.save(): memanggil TitipanReconcile.warnIfNotOk("AccOwners.save")
 test('Guard: TitipanReconcile undefined (belum termuat) -> ketiga saveOwners() tetap sukses tanpa error', () => {
   const D1 = { assets: [{ id: 'a1', name: 'Tanah', nilai: 1000000, owners: [{ ownerId: 'SELF', porsi: 100 }] }], accounts: [], transactions: [], debts: [] };
   const ctx1 = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D: D1, toast: () => {} }), // TitipanReconcile SENGAJA tidak diinject
     ['Aset', 'MultiOwnerEngine']
   );
@@ -125,7 +125,7 @@ test('Guard: TitipanReconcile undefined (belum termuat) -> ketiga saveOwners() t
 
   const D2 = { assets: [], accounts: [{ id: 'acc1', name: 'Cash', baseBalance: 1000, includeInBalance: true }], transactions: [] };
   const ctx2 = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     baseGlobals({ D: D2, toast: () => {} }),
     ['OwnershipEngine', 'MultiOwnerEngine', 'Aset', 'AccOwners']
   );
@@ -149,7 +149,7 @@ test('End-to-end: checkAll() ok:false (stale debt name) -> console.warn terpangg
   const warnCalls = [];
   const fakeConsole = { warn: (...args) => warnCalls.push(args) };
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/finance/titipan-reconcile.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/finance/titipan-reconcile.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), console: fakeConsole }),
     ['Aset', 'MultiOwnerEngine', 'TitipanReconcile']
   );

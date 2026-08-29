@@ -67,7 +67,7 @@ function makeCtx(D, dom) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js',
       'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
     ],
     {

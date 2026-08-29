@@ -11,7 +11,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { extractFunction } = require('./helpers/loadSource');
 
-const _extracted = extractFunction('modules/shared/modules-render.js', '_dashMonthlyIncExp');
+const _extracted = extractFunction('modules/shared/modules-render-b.js', '_dashMonthlyIncExp');
 // _dashMonthlyIncExp() dijalankan lewat vm sandbox terpisah (extractFunction(), loadSource.js) —
 // objek hasil {inc,exp} yang di-return itu punya realm/Object.prototype BEDA dari realm test ini,
 // jadi assert.deepStrictEqual (yang ikut membandingkan prototype) SELALU gagal walau isinya sama

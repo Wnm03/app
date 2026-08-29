@@ -25,7 +25,7 @@ function makeInvCtx(D) {
 
 function makeResolverCtx(D) {
   return loadSource(
-    ['modules/shared/owner-registry.js', 'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset.js', 'modules/finance/akun.js', 'modules/finance/transaksi.js'],
+    ['modules/shared/owner-registry.js', 'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js', 'modules/finance/transaksi.js'],
     { D, document: { getElementById: () => null }, sameId: (a, b) => String(a) === String(b), escapeHtml: (s) => String(s), uid: () => 'u' + Math.random().toString(36).slice(2), save: () => {}, toast: () => {} },
     ['getAccOwnersEffective', 'resolveOwnerDefaultForAccount', 'findLinkedHoldingForAccount', 'findLinkedAssetForAccount', 'Aset', 'Investment'],
   );

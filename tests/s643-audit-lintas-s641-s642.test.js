@@ -50,7 +50,7 @@ test('audit — CSS .tx-tbl* dipakai s641/s642 reuse dari s637, 0 class baru di 
 test('audit — cakupan Ledger Pro genap 5/5 layar: Beranda/Uang/Aset/Riwayat/Titipan semua py gating "modern"', () => {
   const files = {
     'Beranda (ticker)': ['modules/dashboard-hub/dashboard-hub.js', /dashhub-ticker/],
-    'Uang (#allTx)': ['modules/shared/modules-render.js', /theme==='modern'/],
+    'Uang (#allTx)': ['modules/shared/modules-render-b.js', /theme==='modern'/],
     'Aset (#assetList)': ['modules/asset/aset.js', /theme==='modern'/],
     'Riwayat (#filterTxList)': ['modules/finance/filter-laporan.js', /theme==='modern'/],
     'Dana Titipan (returns)': ['modules/finance/dana-titipan-portfolio-render.js', /theme\s*===\s*'modern'/],

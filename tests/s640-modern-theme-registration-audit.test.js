@@ -93,7 +93,7 @@ test('audit — s636 ticker Beranda tetap gated via CSS (display:none default, f
 });
 
 test('audit — s637 tabel Uang tetap gated via D.profile.theme==="modern" di renderKeuangan()', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modules-render.js'), 'utf8');
+  const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modules-render-b.js'), 'utf8');
   assert.match(src, /D\.profile&&D\.profile\.theme==='modern'&&typeof txTableHTML==='function'/);
 });
 

@@ -110,7 +110,7 @@ test('openActionsMenu() — SESI 449: akun tertaut menampilkan saldo PENUH (reca
     const acc = D.accounts.find((a) => a.id === accId);
     return acc ? (acc.balance || 0) : 0;
   };
-  const ctx = loadSource(['modules/asset/aset.js'], {
+  const ctx = loadSource(['modules/asset/aset-owners.js', 'modules/asset/aset.js'], {
     document: fakeDoc,
     D,
     sameId: (a, b) => String(a) === String(b),

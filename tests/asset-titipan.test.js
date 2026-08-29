@@ -37,7 +37,7 @@ function makeD() {
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     { D, escapeHtml: (s) => String(s), uid: () => 'debt_' + (makeCtx._n = (makeCtx._n || 0) + 1), todayStr: () => '2026-07-25' },
     ['OwnershipEngine', 'MultiOwnerEngine', 'Aset']
   );

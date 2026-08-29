@@ -20,7 +20,7 @@ const stub = { escapeHtml: (s) => String(s), fmt: (n) => String(n), fmtFull: (n)
 
 function ctxAset(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, ...stub },
     ['OwnershipEngine', 'MultiOwnerEngine', 'Aset'],
   );

@@ -20,7 +20,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 function assetCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, escapeHtml: (s) => String(s), fmtFull: (n) => 'Rp ' + Math.round(n || 0) },
     ['OwnershipEngine', 'Aset', 'LaporanAset', 'isAssetOwnershipSelf'],
   );
@@ -80,7 +80,7 @@ test('S201: aset SEMUA ownership SELF (tanpa filter berpengaruh) -> Laporan teta
 test('S201: rollback aman — OwnershipEngine tidak dimuat -> LaporanAset & Aset.totalValue() KONSISTEN anggap semua SELF (fallback true)', () => {
   const D = mixedOwnershipAssets();
   const ctx = loadSource(
-    ['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], // TANPA ownership-engine.js
+    ['modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], // TANPA ownership-engine.js
     { D, escapeHtml: (s) => String(s), fmtFull: (n) => 'Rp ' + Math.round(n || 0) },
     ['Aset', 'LaporanAset', 'isAssetOwnershipSelf'],
   );

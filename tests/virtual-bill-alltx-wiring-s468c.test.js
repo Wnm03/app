@@ -30,7 +30,7 @@ function makeDocument(els) {
 }
 
 function runRenderKeuangan(D, opts) {
-  const fn = extractFunction('modules/shared/modules-render.js', 'renderKeuangan');
+  const fn = extractFunction('modules/shared/modules-render-b.js', 'renderKeuangan');
   const els = {
     monthLabel: makeEl('monthLabel'),
     txListMonthLabel: makeEl('txListMonthLabel'),

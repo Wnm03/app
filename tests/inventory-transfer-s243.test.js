@@ -26,7 +26,8 @@ function baseD(extra) {
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter.js'],
+    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     {
       D,
       escapeHtml: (s) => String(s),

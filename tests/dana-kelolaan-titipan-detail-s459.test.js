@@ -45,7 +45,7 @@ function makeD() {
 
 function makeCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/finance/akun.js', 'modules/asset/aset.js', 'modules/asset/investasi.js', 'modules/shop/cobek-order.js', 'modules/finance/dana-kelolaan.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/finance/akun.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/investasi.js', 'modules/shop/cobek-order.js', 'modules/finance/dana-kelolaan.js'],
     {
       D,
       escapeHtml: (s) => String(s),

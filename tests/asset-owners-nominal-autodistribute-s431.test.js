@@ -52,7 +52,7 @@ function makeStatefulDom() {
 
 function makeCtx(D, dom) {
   const ctx = loadSource(
-    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
+    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     {
       D,
       document: dom,

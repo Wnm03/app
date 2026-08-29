@@ -24,7 +24,7 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 const TARGETS = [
-  { name: 'AlokasiAset', files: ['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], sampleMethod: 'setRisk' },
+  { name: 'AlokasiAset', files: ['modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], sampleMethod: 'setRisk' },
 ];
 
 for (const { name, files, sampleMethod } of TARGETS) {

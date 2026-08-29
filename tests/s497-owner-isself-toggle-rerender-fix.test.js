@@ -130,7 +130,7 @@ function makeAsetD(assets) {
 function makeAsetCtx(D, dom) {
   let _n = 0;
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/asset-ownership-split-presenter.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/asset-ownership-split-presenter.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     {
       D,
       document: dom,

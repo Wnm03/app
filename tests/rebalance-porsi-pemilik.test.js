@@ -126,7 +126,7 @@ function makeAsetCtx() {
   };
   const D = { assets: [{ id: 'a1', name: 'Renov', nilai: 10000000, owners: [] }] };
   const ctx = loadSource(
-    ['modules/shared/modules-calc.js', 'modules/asset/aset.js'],
+    ['modules/shared/modules-calc.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     {
       D, document: fakeDocument, escapeHtml: (s) => String(s), toast: () => {}, save: () => {},
       openModal: () => {}, sameId: (a, b) => String(a) === String(b),
@@ -443,7 +443,7 @@ test('Aset.openOwnersModal: memanggil _checkRebalanceTrigger(draft.length-1) tep
   // supaya benar-benar sampai ke baris pemanggilan _checkRebalanceTrigger() yang dites di sini.
   const D = { assets: [{ id: 'a1', name: 'Renov', nilai: 10000000, owners: [{ ownerId: 'A', ownerName: 'A', porsi: 60 }, { ownerId: 'B', ownerName: 'B', porsi: 40 }] }] };
   const { Aset } = loadSource(
-    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     { D, document: fakeDocument, escapeHtml: (s) => String(s), toast: () => {}, save: () => {}, openModal: () => {}, sameId: (a, b) => String(a) === String(b) },
     ['Aset'],
   );
@@ -460,7 +460,7 @@ test('Aset.resetOwners: memanggil _checkRebalanceTrigger(draft.length-1) setelah
   const fakeDocument = { getElementById(id) { return el[id] !== undefined ? el[id] : stubEl(id); }, createElement() { return { id: '', innerHTML: '' }; } };
   const D = { assets: [{ id: 'a1', name: 'Renov', nilai: 10000000, owners: [{ ownerId: 'A', ownerName: 'A', porsi: 60 }, { ownerId: 'B', ownerName: 'B', porsi: 40 }] }] };
   const { Aset } = loadSource(
-    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/modules-calc.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     { D, document: fakeDocument, escapeHtml: (s) => String(s), toast: () => {}, save: () => {}, openModal: () => {}, sameId: (a, b) => String(a) === String(b) },
     ['Aset'],
   );

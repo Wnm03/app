@@ -53,7 +53,7 @@ test('Aset.saveOwners(): OwnerRegistry undefined + baris baru non-SELF -> DITOLA
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000 }], accounts: [], transactions: [], debts: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'], // OwnerRegistry SENGAJA tidak dimuat
+    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'], // OwnerRegistry SENGAJA tidak dimuat
     baseGlobals({ D, toast: (m) => toastMessages.push(m) }),
     ['Aset', 'MultiOwnerEngine']
   );
@@ -70,7 +70,7 @@ test('Aset.saveOwners(): OwnerRegistry undefined tapi SEMUA baris SELF/ownerId s
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000 }], accounts: [], transactions: [], debts: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m) }),
     ['Aset', 'MultiOwnerEngine']
   );
@@ -90,7 +90,7 @@ test('Aset.saveOwners(): OwnerRegistry ADA tapi findOrCreate bukan function -> D
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000 }], accounts: [], transactions: [], debts: [] };
   const toastMessages = [];
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: (m) => toastMessages.push(m), OwnerRegistry: { findOrCreate: 'bukan-function' } }),
     ['Aset', 'MultiOwnerEngine']
   );
@@ -106,7 +106,7 @@ test('Aset.saveOwners(): OwnerRegistry ADA tapi findOrCreate bukan function -> D
 test('Aset.saveOwners(): OwnerRegistry tersedia normal -> baris baru non-SELF ownerId == OwnerRegistry.findOrCreate(nama), 0 divergensi', () => {
   const D = { assets: [{ id: 'a1', name: 'Tanah', nilai: 100000000 }], accounts: [], transactions: [], debts: [], ownerRegistry: [] };
   const ctx = loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js'],
+    ['modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     baseGlobals({ D, toast: () => {} }),
     ['Aset', 'MultiOwnerEngine', 'OwnerRegistry']
   );
@@ -201,7 +201,7 @@ test('InvestmentUI.saveOwners(): OwnerRegistry tersedia normal -> ownerId baris 
 
 function makeAccCtx(D, extra) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     baseGlobals(Object.assign({ D }, extra || {})),
     ['OwnershipEngine', 'MultiOwnerEngine', 'Aset', 'AccOwners', 'getAccOwners', 'setAccOwners']
   );
@@ -209,7 +209,7 @@ function makeAccCtx(D, extra) {
 
 function makeAccCtxWithRegistry(D, extra) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     baseGlobals(Object.assign({ D }, extra || {})),
     ['OwnershipEngine', 'MultiOwnerEngine', 'OwnerRegistry', 'Aset', 'AccOwners', 'getAccOwners', 'setAccOwners']
   );

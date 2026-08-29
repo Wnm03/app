@@ -218,7 +218,8 @@ test('retur (processReturn) via Laporan.delete() — dipanggil oleh BusinessFlow
   });
   const ctx = makeCtx(D);
   const bfp = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D, escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );

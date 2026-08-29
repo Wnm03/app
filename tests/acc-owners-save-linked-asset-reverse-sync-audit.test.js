@@ -18,7 +18,7 @@ const { loadSource } = require('./helpers/loadSource');
 function makeCtx(D, extraGlobals) {
   let _n = 0;
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/finance/akun.js'],
     Object.assign(
       {
         D,

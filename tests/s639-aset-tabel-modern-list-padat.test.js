@@ -24,7 +24,7 @@ const ROOT = path.join(__dirname, '..');
 
 function makeCtx(D, extra) {
   return loadSource(
-    ['modules/asset/aset.js'],
+    ['modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     Object.assign(
       {
         D,

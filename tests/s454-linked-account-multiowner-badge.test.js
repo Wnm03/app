@@ -27,7 +27,7 @@ function baseCtx(D, fakeDoc, MultiOwnerEngine) {
     const acc = D.accounts.find((a) => a.id === accId);
     return acc ? (acc.balance || 0) : 0;
   };
-  return loadSource(['modules/asset/aset.js'], {
+  return loadSource(['modules/asset/aset-owners.js', 'modules/asset/aset.js'], {
     document: fakeDoc,
     D,
     sameId: (a, b) => String(a) === String(b),

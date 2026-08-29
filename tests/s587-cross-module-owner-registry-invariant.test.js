@@ -68,7 +68,7 @@ function loadFullStack(D, extra) {
       'modules/shared/multi-owner-engine.js',
       'modules/shared/ownership-engine.js',
       'modules/shared/owner-registry.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js',
       'modules/asset/investasi.js',
       'modules/finance/titipan-reconcile.js',
     ],

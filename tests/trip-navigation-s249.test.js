@@ -45,6 +45,7 @@ function makeCtx(D, extraGlobals) {
       'modules/shop/profit-engine.js',
       'modules/shop/shop-business-engine-presenter.js',
       'modules/shop/trip-presenter.js',
+      'modules/shop/business-flow-presenter-inventory.js',
       'modules/shop/business-flow-presenter.js',
     ],
     Object.assign(

@@ -34,7 +34,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 function makeAsetCtx(D) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     {
       D,
       todayStr: () => '2026-07-26',
@@ -104,7 +104,7 @@ test('S261: Aset.investmentPerformance() — kalau semua aset ber-modal non-SELF
 
 test('S261: Aset.investmentPerformance() — OwnershipEngine tidak dimuat -> fallback hitung semua (regresi lama tetap jalan)', () => {
   const D = { assets: assetsMix() };
-  const ctx = loadSource(['modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], {
+  const ctx = loadSource(['modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'], {
     D,
     todayStr: () => '2026-07-26',
     fmtFull: (n) => 'Rp' + Math.round(n || 0),
@@ -183,7 +183,7 @@ test('S261/s476b: InvestmentPlannerAPI.assetAllocation() — cascade, breakdown 
 
 function makeInvestAiCtx(D, extra = {}) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js', 'modules/asset/investasi.js', 'modules/asset/invest-ai-widget.js'],
+    ['modules/shared/ownership-engine.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js', 'modules/asset/investasi.js', 'modules/asset/invest-ai-widget.js'],
     {
       D,
       fmt: (n) => 'Rp' + Math.round(n || 0),

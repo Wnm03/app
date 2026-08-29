@@ -53,7 +53,7 @@ function makeD() {
 function makeCtx(D, filterValue) {
   const fake = makeFakeDocument(filterValue);
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/helper-teks.js', 'modules/vehicle/vehicle-core.js', 'modules/shared/modules-render.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/helper-teks.js', 'modules/vehicle/vehicle-core.js', 'modules/shared/modules-render.js', 'modules/shared/modules-render-b.js'],
     { D, document: fake.document },
     ['OwnershipEngine']
   );

@@ -34,6 +34,14 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'modules', 'shared', 'modules-render.js'),
   'utf8'
 );
+// Audit ukuran file (lanjutan S589/s644): modules-render.js dipecah jadi 2 --
+// loop renderDashboard() (dashCardRenderOrder) sekarang ada di
+// modules-render-b.js, sedangkan hideDashCardEl()/showDashCardEl() (dites lewat
+// extractFnSource() di bawah) tetap di modules-render.js (SRC).
+const SRC_B = fs.readFileSync(
+  path.join(__dirname, '..', 'modules', 'shared', 'modules-render-b.js'),
+  'utf8'
+);
 
 function extractFnSource(fnName) {
   const marker = `function ${fnName}(`;
@@ -137,8 +145,8 @@ test('renderDashboard() loop (modules-render.js): showDashCardEl(cardDef.elId) d
   // (`showDashCardEl(cardDef.elId)` ditambah SEBELUM `cardDef.render(...)`)
   // benar-benar ada di source, bukan cuma fungsi showDashCardEl() berdiri
   // sendiri tanpa pernah dipanggil dari alur render nyata.
-  const loopStart = SRC.indexOf('for(const key of dashCardRenderOrder)');
-  const loopSection = SRC.slice(loopStart, loopStart + 400);
+  const loopStart = SRC_B.indexOf('for(const key of dashCardRenderOrder)');
+  const loopSection = SRC_B.slice(loopStart, loopStart + 400);
   assert.match(loopSection, /if\(!isDashCardOn\(key\)\)\{hideDashCardEl\(cardDef\.elId\);continue;\}/);
   assert.match(loopSection, /showDashCardEl\(cardDef\.elId\);/);
   const idxGuard = loopSection.indexOf('if(!isDashCardOn(key))');

@@ -22,7 +22,7 @@ function makeCtx(D, extraGlobals) {
     [
       'modules/shared/ownership-engine.js',
       'modules/finance/akun.js',
-      'modules/asset/aset.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js',
       'modules/finance/piutang-utang.js',
       'pajak-aset-ui-wrappers.js',
       'modules/shared/modules-calc.js',

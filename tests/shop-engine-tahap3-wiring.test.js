@@ -43,7 +43,8 @@ const BFP_FILES_WITH_PRODUCTSTORE = [
   'modules/shop/generic/supplier-store.js',
   'modules/shop/generic/attribute-store.js',
   'modules/shop/generic/product-store.js',
-  'modules/shop/business-flow-presenter.js',
+  'modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js',
 ];
 
 const BFP_FILES_WITHOUT_PRODUCTSTORE = BFP_FILES_WITH_PRODUCTSTORE.filter(

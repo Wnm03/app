@@ -45,7 +45,7 @@ function makeD() {
 
 function makeCtx(D, extra = {}) {
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
+    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     { D, uid: () => 'uid_' + Math.random().toString(36).slice(2), save: () => {}, ...extra },
     ['Aset', 'Investment', 'migrateAssetInvestmentsToHoldings', 'MultiOwnerEngine']
   );
@@ -149,7 +149,7 @@ function makeFullCtx(D) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/finance/akun.js',
-      'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
       'pajak-aset-ui-wrappers.js',
       'modules/asset/investasi.js',
       'modules/shared/modules-calc.js',

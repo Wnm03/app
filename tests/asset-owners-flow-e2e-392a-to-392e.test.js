@@ -110,7 +110,7 @@ function makeCtx(D, AIDecision, dom) {
       'modules/shared/multi-owner-engine.js',
       'modules/shared/owner-registry.js',
       'modules/asset/asset-ownership-split-presenter.js',
-      'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
     ],
     {
       D,
@@ -192,7 +192,7 @@ test('[gap-check] assetModal & assetOwnersModal: semua tag seimbang (label/butto
 
 test('[gap-check] semua id yang dipakai Aset.openOwnersModal/_renderOwnersList/updateOwnersTotal/saveOwners/resetOwners memang ada di template assetOwnersModal', () => {
   const { assetOwnersModalHtml } = extractModalHtml();
-  const asetSrc = fs.readFileSync(path.join(ROOT, 'modules/asset/aset.js'), 'utf8');
+  const asetSrc = fs.readFileSync(path.join(ROOT, 'modules/asset/aset-owners.js'), 'utf8');
   // Ambil hanya potongan owners-modal (dari openOwnersModal sampai akhir resetOwners)
   // biar tidak ketarik id field form Aset lain yang tidak relevan.
   const start = asetSrc.indexOf('openOwnersModal(){');

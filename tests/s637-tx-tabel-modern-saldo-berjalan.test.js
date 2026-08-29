@@ -154,7 +154,7 @@ test('txHTML() — regresi, tidak berubah sama sekali oleh perubahan s637 (kartu
 // --- Wiring renderKeuangan() (modules-render.js) ---------------------------
 
 test('renderKeuangan() — percabangan tema "modern" ke txTableHTML() ada di source, guard typeof, fallback txHTML() utk tema lain', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modules-render.js'), 'utf8');
+  const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modules-render-b.js'), 'utf8');
   assert.match(src, /D\.profile&&D\.profile\.theme==='modern'&&typeof txTableHTML==='function'/);
   assert.match(src, /const singleAccId=\(kf\.acc&&kf\.acc!=='semua'\)\?kf\.acc:null;/);
   assert.match(src, /allTxEl\.innerHTML=visible\.length\?txTableHTML\(visible,singleAccId\):allTxEmpty;/);

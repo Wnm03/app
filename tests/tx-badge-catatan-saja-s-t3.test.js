@@ -93,7 +93,7 @@ test('Skenario gabungan T1+T2+T3 — transaksi hitungKas:false: skip saldo akun 
   assert.equal(akunCtx.recalcAccBalance('a1'), 600000, '100000+500000, tx2 (hitungKas:false) diabaikan dari saldo');
 
   // T2: _dashMonthlyIncExp() skip tx2 dari exp
-  const dashInc = extractFunction('modules/shared/modules-render.js', '_dashMonthlyIncExp');
+  const dashInc = extractFunction('modules/shared/modules-render-b.js', '_dashMonthlyIncExp');
   const rInc = dashInc(D.transactions);
   assert.equal(rInc.inc, 500000);
   assert.equal(rInc.exp, 0, 'tx2 (hitungKas:false) tidak ikut Pengeluaran Dashboard');

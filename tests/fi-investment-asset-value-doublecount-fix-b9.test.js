@@ -27,7 +27,7 @@ function makeCtx(D) {
     [
       'modules/shared/ownership-engine.js',
       'modules/finance/akun.js',
-      'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
+      'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js',
       'pajak-aset-ui-wrappers.js',
       'modules/asset/investasi.js',
       'modules/shared/modules-calc.js',

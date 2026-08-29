@@ -31,7 +31,7 @@ const { loadSource } = require('./helpers/loadSource');
 // tersedia), sampleMethod (dipakai utk cek dispatcher-style lookup) }
 const TARGETS = [
   { name: 'Budget', files: ['budget.js'], sampleMethod: 'getSettings' },
-  { name: 'Aset', files: ['modules/asset/aset.js'], sampleMethod: 'openModal' },
+  { name: 'Aset', files: ['modules/asset/aset-owners.js', 'modules/asset/aset.js'], sampleMethod: 'openModal' },
   { name: 'Kasir', files: ['modules/business/kasir.js'], sampleMethod: 'render' },
   {
     name: 'Payroll',

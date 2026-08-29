@@ -34,6 +34,7 @@ function makeCtx(D) {
       'modules/shop/profit-engine.js',
       'modules/shop/shop-business-engine-presenter.js',
       'modules/shop/trip-presenter.js',
+      'modules/shop/business-flow-presenter-inventory.js',
       'modules/shop/business-flow-presenter.js',
     ],
     {
@@ -51,7 +52,8 @@ function makeCtx(D) {
 
 test('flow() — kalau ShopBusinessEnginePresenter/TripPresenter tidak dimuat, tetap balikin shape aman (ok:false), tidak throw', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );
@@ -91,7 +93,8 @@ test('flow() — trip 100% sama dgn TripPresenter.summary() (0 recompute)', () =
 
 test('render() — container tidak ada -> aman diam2 (tidak throw)', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     {
       D: baseD(),
       document: { getElementById: () => null },
@@ -120,6 +123,7 @@ test('renderTab() — kalau container ada (stub permisif), tidak throw & innerHT
       'modules/shop/profit-engine.js',
       'modules/shop/shop-business-engine-presenter.js',
       'modules/shop/trip-presenter.js',
+      'modules/shop/business-flow-presenter-inventory.js',
       'modules/shop/business-flow-presenter.js',
     ],
     {
@@ -143,7 +147,8 @@ test('renderTab() — kalau container ada (stub permisif), tidak throw & innerHT
 
 test('restockTripCandidate() — null kalau InventoryEngine tidak dimuat', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );
@@ -282,7 +287,8 @@ function baseD2(extra) {
 
 test('orderStatus() — ok:false kalau D.cobek tidak ada / order tidak ditemukan', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD2(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );
@@ -329,7 +335,8 @@ test('markPaymentReceived() — set piutang.lunas=true PERSIS (0 nilai lain beru
 
 test('processReturn() — null kalau Laporan tidak dimuat, delegasi PERSIS ke Laporan.delete() kalau ada', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD2(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );
@@ -454,7 +461,8 @@ test('costPerKg() — ok:false kalau items/berat tidak ada; kalau ada, totalCost
     cobek: [{ id: 't1', total: 100000, profit: 30000, ongkir: 5000, date: new Date().toISOString(), items: [{ productId: 'p1', qty: 5, name: 'Cobek 20cm' }] }],
   });
   const ctx = loadSource(
-    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter.js'],
+    ['modules/shop/cobek-etalase.js', 'modules/shop/trip-engine.js', 'modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D, escapeHtml: (s) => String(s), fmt: (n) => 'Rp ' + Math.round(n || 0) },
     ['BusinessFlowPresenter', 'TripEngine'],
   );
@@ -543,6 +551,7 @@ function makeCtxWithTrip(D) {
       'modules/shop/cobek-order.js',
       'modules/shop/trip-engine.js',
       'modules/shop/profit-engine.js',
+      'modules/shop/business-flow-presenter-inventory.js',
       'modules/shop/business-flow-presenter.js',
     ],
     {
@@ -570,7 +579,8 @@ test('tripLoadAnalysis() — ok:false kalau TripEngine/packingCalculator tidak a
 
 test('costPerKm() — ok:false kalau TripEngine tidak dimuat', () => {
   const ctx = loadSource(
-    ['modules/shop/business-flow-presenter.js'],
+    ['modules/shop/business-flow-presenter-inventory.js',
+      'modules/shop/business-flow-presenter.js'],
     { D: baseD(), escapeHtml: (s) => String(s), fmt: (n) => String(n) },
     ['BusinessFlowPresenter'],
   );
