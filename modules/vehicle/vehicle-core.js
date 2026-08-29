@@ -240,7 +240,28 @@ const kmWrap=document.getElementById('vehKmAwalWrap');if(kmWrap)kmWrap.style.dis
 document.getElementById('vehSaveBtn').textContent='+ Tambah Kendaraan';
 _populateVehOwnershipSelect(null);
 _populateVehAssetLinkSelect(null);
+// vehNilaiWrap (Opsi A — auto-create Asset, lihat AUDIT-SYNC-ASET-KEPEMILIKAN-
+// SENDIRI-KE-BUKU-ASET.md): kendaraan baru belum punya tautan Aset apa pun,
+// jadi field nilai selalu ditampilkan di sini (dipakai saveVehicle() kalau
+// user tidak memilih link manual & ownership SELF -- lihat _syncVehNilaiWrap()).
+_syncVehNilaiWrap(null);
 openModal('vehicleModal');
+}
+// _syncVehNilaiWrap(v) — Opsi A (AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-
+// ASET.md): tampil/sembunyikan field "Nilai/Harga Kendaraan" & reset isinya.
+// Field ini HANYA relevan kalau kendaraan ini belum tertaut valid ke 1 entry
+// Buku Aset (v=null saat tambah baru, ATAU v ada tapi resolveLinkedVehicleAsset(v)
+// gagal/kosong) -- begitu sudah tertaut, nilai "tinggal" di Buku Aset (S506
+// tetap SSOT finansial), field ini disembunyikan supaya tidak menyiratkan ada
+// 2 tempat isi nilai. Dipanggil dari openVehicleModal (v=null) & editVehicle
+// (v=existing).
+function _syncVehNilaiWrap(v){
+const wrap=document.getElementById('vehNilaiWrap');
+if(!wrap)return;
+const alreadyLinked=!!(v&&resolveLinkedVehicleAsset(v));
+wrap.style.display=alreadyLinked?'none':'';
+const nilaiEl=document.getElementById('vehNilai');
+if(nilaiEl)nilaiEl.value='';
 }
 // _populateVehOwnershipSelect(v) — helper (S231, reuse OwnershipEngine) dipakai openVehicleModal
 // (tambah baru, v=null) & editVehicle (v=kendaraan existing). Kendaraan lama tanpa field
@@ -270,7 +291,52 @@ const kmWrap=document.getElementById('vehKmAwalWrap');if(kmWrap)kmWrap.style.dis
 document.getElementById('vehSaveBtn').textContent='Simpan Perubahan';
 _populateVehOwnershipSelect(v);
 _populateVehAssetLinkSelect(v);
+_syncVehNilaiWrap(v);
 openModal('vehicleModal');
+}
+// _autoCreateVehicleAsset(v,ownership) — Opsi A (AUDIT-SYNC-ASET-KEPEMILIKAN-
+// SENDIRI-KE-BUKU-ASET.md, keputusan produk): dipanggil dari saveVehicle()
+// SETELAH v.assetId final (baik dari link manual dropdown ATAU masih kosong).
+// 2 cabang:
+//  1) v.assetId SUDAH terisi (manual link ATAU aset auto-created sesi lalu):
+//     kalau resolve ke aset yang `autoCreatedFromVehicleId===v.id` (aset itu
+//     lifecycle-nya "milik" fitur ini, BUKAN link manual user ke aset lain),
+//     sinkron `ownership` aset itu SATU ARAH ke ownership kendaraan (sama
+//     pola Aset->Akun sync existing di aset.js) -- supaya kalau kendaraan
+//     diubah dari SELF ke non-SELF, `isAssetOwnershipSelf()` otomatis
+//     mengecualikannya dari Total Aset/Net Worth (jawaban Q2 audit) TANPA
+//     cascade-delete aset (tetap ada, cuma tidak lagi dihitung SELF).
+//     `name` aset itu JUGA disinkron satu arah (gap ditemukan di audit
+//     lanjutan: sebelum ini kalau kendaraan di-rename, nama di Buku Aset
+//     tetap yang lama) -- pola sama persis ownership, HANYA berlaku utk
+//     aset auto-created (autoCreatedFromVehicleId cocok), BUKAN aset hasil
+//     link manual. Aset hasil LINK MANUAL ke entry lain (tanpa tag ini)
+//     TIDAK disentuh sama sekali -- tetap murni referensi read-only sesuai
+//     S506.
+//  2) v.assetId KOSONG & ownership==='SELF': otomatis buat 1 entry Buku Aset
+//     baru jenis Kendaraan (nilai awal dari field opsional #vehNilai di modal
+//     -- kosong dianggap 0, Net Worth tetap 0 sampai user lengkapi manual di
+//     Buku Aset, TIDAK memaksa isi angka), lalu v.assetId diarahkan ke situ.
+//     ownership!=='SELF' & assetId kosong -> TIDAK ngapa-ngapain (kendaraan
+//     bukan milik sendiri memang tidak seharusnya otomatis masuk Buku Aset
+//     pribadi).
+function _autoCreateVehicleAsset(v,ownership){
+if(v.assetId){
+const a=resolveVehicleAssetLink(v.assetId);
+if(a&&a.autoCreatedFromVehicleId===v.id){a.ownership=ownership;a.name=v.name;}
+return;
+}
+if(ownership!=='SELF')return;
+const nilaiEl=document.getElementById('vehNilai');
+const nilai=nilaiEl&&nilaiEl.value!==''?(typeof calcPreviewValue==='function'?calcPreviewValue(nilaiEl.value):(parseFloat(nilaiEl.value)||0)):0;
+// zakatable:false -- keputusan eksplisit (bukan lupa isi), bukan default netral:
+// kendaraan pakai-pribadi (bukan barang dagangan/investasi) bukan objek zakat
+// maal secara fiqih, sama seperti default toggle "Kena Zakat" saat user
+// bikin entry Aset manual (off by default). Tetap bisa diubah manual oleh
+// user lewat modal Aset kalau kendaraan ybs memang diniatkan utk zakat.
+const autoAsset={id:uid(),name:v.name,jenis:'Kendaraan',lokasi:'',nilai:nilai||0,tanggal:typeof todayStr==='function'?todayStr():'',zakatable:false,accountId:'',ownership:'SELF',vehTahun:null,vehCc:null,vehBbm:null,autoCreatedFromVehicleId:v.id};
+D.assets.push(autoAsset);
+v.assetId=autoAsset.id;
 }
 function saveVehicle(){
 const name=document.getElementById('vehName').value.trim();
@@ -319,6 +385,18 @@ if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else 
 if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
 if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
 if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
+// Opsi A — auto-create Asset (lihat AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-
+// BUKU-ASET.md, keputusan produk "Opsi A"): kendaraan LAMA yang diedit &
+// ownership-nya SELF tapi belum tertaut ke Buku Aset sama sekali (v.assetId
+// kosong setelah baris di atas -- termasuk kendaraan sebelum fitur ini ada)
+// otomatis dapat 1 entry Buku Aset baru juga, sama seperti kendaraan baru
+// (lihat blok sama persis di create branch di bawah). Ini SEKALIGUS jadi
+// jalur "backfill" kendaraan lama tanpa migrasi massal -- cukup buka &
+// simpan lagi modal Kelola Kendaraan (didorong lewat pengingat data-health-
+// check "Kendaraan SELF belum tercatat nilainya"). TIDAK auto-create kalau
+// user barusan pilih link manual (v.assetId sudah keisi dari linkedAsset di
+// atas) -- itu tetap prioritas eksplisit user.
+_autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
 save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
@@ -332,11 +410,16 @@ if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
 if(capacityKg)newVeh.capacityKg=capacityKg;
 if(capacityM3)newVeh.capacityM3=capacityM3;
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
+// Opsi A — auto-create Asset (lihat komentar lengkap di _autoCreateVehicleAsset()
+// & AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-ASET.md): kendaraan BARU dgn
+// ownership SELF & TANPA link manual (linkedAsset kosong) otomatis dapat 1
+// entry Buku Aset baru, jadi langsung ikut Total Aset/Net Worth sejak awal.
+_autoCreateVehicleAsset(newVeh,ownership);
 D.vehicles.push(newVeh);
 if(!isNaN(kmAwal)&&kmAwal>0){
 D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
-save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':''));
+save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
 }
 // Teks ringkasan servis per kendaraan di daftar Kelola Kendaraan — beda per jenis (KW-165).
 // PURE function (tidak sentuh DOM/D), dipanggil dari renderVehicleManageList() di modules-render.js.
