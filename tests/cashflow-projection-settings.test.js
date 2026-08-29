@@ -203,3 +203,64 @@ test('computeCashflowForecast() -> setelah CashflowProjSettings.reset() -> balik
   assert.equal(rReset.expAvg, rOriginal.expAvg);
   assert.equal(rReset.saldoNow, rOriginal.saldoNow);
 });
+
+// ---------------------------------------------------------------------
+// computeCashflowForecast() -- guard hitungKas (Sesi Normalisasi hitungKas
+// T4+, lanjutan): transaksi "Catatan saja" (hitungKas:false) TIDAK BOLEH
+// ikut incAvg/expAvg -- ini SSOT yang dipakai financial-forecast-
+// presenter.js & cashflow-projection-presenter.js (0 akses D langsung di
+// keduanya), jadi 1 titik guard di sini menutup gap di 2 presenter itu
+// sekaligus. Nominal sengaja TIDAK simetris income/expense (pola sama
+// persis catatan hitungkas-normalisasi-financial-calc.test.js) supaya
+// guard yang cuma kena separuh (mis. income lupa difilter) tetap
+// terdeteksi, bukan false-negative krn kebetulan sama.
+// ---------------------------------------------------------------------
+
+test('computeCashflowForecast() -> transaksi hitungKas:false TIDAK ikut incAvg/expAvg', () => {
+  const D = {
+    transactions: [
+      { type: 'income', amount: 3000000, date: '2026-05-10', accountId: 'a1' },
+      { type: 'income', amount: 1000000, date: '2026-05-12', accountId: 'a2', hitungKas: false },
+      { type: 'expense', amount: 900000, date: '2026-05-15', accountId: 'a1' },
+      { type: 'expense', amount: 400000, date: '2026-05-20', accountId: 'a2', hitungKas: false },
+    ],
+    bills: [],
+    accounts: [{ id: 'a1' }, { id: 'a2' }],
+    profile: {},
+  };
+  const { computeCashflowForecast } = makeCtx({ D });
+  const r = computeCashflowForecast();
+  assert.equal(r.incAvg, 3000000 / 3, 'income hitungKas:false (1jt) harus dikecualikan');
+  assert.equal(r.expAvg, 900000 / 3, 'expense hitungKas:false (400rb) harus dikecualikan');
+});
+
+test('computeCashflowForecast() -> transaksi TANPA field hitungKas sama sekali tetap kehitung penuh (backward-compat, 0 migrasi data)', () => {
+  const D = {
+    transactions: [
+      { type: 'income', amount: 2000000, date: '2026-05-10', accountId: 'a1' },
+      { type: 'expense', amount: 700000, date: '2026-05-15', accountId: 'a1' },
+    ],
+    bills: [],
+    accounts: [{ id: 'a1' }],
+    profile: {},
+  };
+  const { computeCashflowForecast } = makeCtx({ D });
+  const r = computeCashflowForecast();
+  assert.equal(r.incAvg, 2000000 / 3);
+  assert.equal(r.expAvg, 700000 / 3);
+});
+
+test('computeCashflowForecast(opts) -> guard hitungKas tetap berlaku walau accountId difilter (jalur non-cache)', () => {
+  const D = {
+    transactions: [
+      { type: 'income', amount: 3000000, date: '2026-05-10', accountId: 'a1' },
+      { type: 'income', amount: 5000000, date: '2026-05-12', accountId: 'a1', hitungKas: false },
+    ],
+    bills: [],
+    accounts: [{ id: 'a1' }],
+    profile: {},
+  };
+  const { computeCashflowForecast } = makeCtx({ D });
+  const r = computeCashflowForecast({ accountId: 'a1' });
+  assert.equal(r.incAvg, 3000000 / 3, 'filter akun tidak boleh membuat guard hitungKas ke-skip');
+});
