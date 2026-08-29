@@ -21,7 +21,16 @@ render(vehicleId) {
     el.innerHTML = '<div class="empty"><div class="empty-text">Belum ada catatan BBM</div></div>';
     return;
   }
-  el.innerHTML = rows.map((b) => this._row(b)).join('');
+  // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _row(b) TANPA try/catch --
+  // 1 baris error bikin SELURUH .map() throw sebelum el.innerHTML ke-assign,
+  // daftar tetap nampilin render sukses SEBELUMNYA (tap = 0 reaksi).
+  el.innerHTML = rows.map((b) => {
+    try { return this._row(b); }
+    catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('[FuelHistory.render] gagal render baris', b && b.id, err);
+      return '<div class="tx-item u-pointer" style="opacity:.55"><div class="tx-info"><div class="tx-name">⚠️ Gagal menampilkan catatan ini</div></div></div>';
+    }
+  }).join('');
 },
 
 // _row(b) — 1 baris riwayat, format & data-action SAMA PERSIS baris

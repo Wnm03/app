@@ -70,7 +70,16 @@ render() {
   const withAction = VehicleActionRecommendation.withAction(ranked);
   const top = withAction.slice(0, 5);
 
-  const rows = top.map((r) => this._row(r)).join('');
+  // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _row() TANPA try/catch --
+  // 1 rekomendasi error bikin SELURUH .map() throw sebelum el.innerHTML
+  // ke-assign, kartu tetap nampilin render sukses SEBELUMNYA (tap = 0 reaksi).
+  const rows = top.map((r) => {
+    try { return this._row(r); }
+    catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('[VehicleDecisionPresenter.render] gagal render baris', r && r.vehicleId, err);
+      return '';
+    }
+  }).join('');
   el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🧭 Rekomendasi Kendaraan</div>${rows}`;
 },
 

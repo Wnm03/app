@@ -247,7 +247,17 @@ render(sortKey) {
       ${this._sortHeaderBtn('Biaya/Bulan', 'monthlyCost', this.sortKey, this.sortDir)}
       ${this._sortHeaderBtn('Sisa BBM', 'remainingFuel', this.sortKey, this.sortDir)}
     </div>
-    <div>${sorted.map((r) => this._rowHtml(r, priorityVehicleId)).join('')}</div>
+    <div>${sorted.map((r) => {
+      // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _rowHtml() TANPA
+      // try/catch -- 1 kendaraan error bikin SELURUH .map() throw sebelum
+      // body.innerHTML ke-assign, tabel tetap nampilin render sukses
+      // SEBELUMNYA (tap = 0 reaksi).
+      try { return this._rowHtml(r, priorityVehicleId); }
+      catch (err) {
+        if (typeof console !== 'undefined' && console.error) console.error('[FuelCompare.render] gagal render baris', r && r.vehicleId, err);
+        return '<div class="dashhub-cat-item" style="opacity:.55">⚠️ Gagal menampilkan kendaraan ini</div>';
+      }
+    }).join('')}</div>
   `;
 },
 

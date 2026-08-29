@@ -79,7 +79,16 @@ const VehicleAttentionPresenter = {
         const ranked = VehiclePriorityScoring.rank(recommendations);
         const withAction = VehicleActionRecommendation.withAction(ranked);
         const top = withAction.slice(0, 6);
-        actionRows = top.map((r) => this._actionRow(r)).join('');
+        // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _actionRow() TANPA
+        // try/catch -- 1 rekomendasi error bikin SELURUH .map() throw sebelum
+        // el.innerHTML ke-assign, kartu tetap nampilin render sukses SEBELUMNYA.
+        actionRows = top.map((r) => {
+          try { return this._actionRow(r); }
+          catch (err) {
+            if (typeof console !== 'undefined' && console.error) console.error('[VehicleAttentionPresenter.render] gagal render actionRow', r && r.vehicleId, err);
+            return '';
+          }
+        }).join('');
       }
     }
 
@@ -95,7 +104,13 @@ const VehicleAttentionPresenter = {
         const insightItems = ((hook.intelligence && hook.intelligence.insights) || [])
           .filter((ins) => ins.type !== 'warning')
           .map((ins) => ({ icon: this._insightIcon(ins.type), message: ins.message }));
-        insightRows = insightItems.slice(0, 3).map((item) => this._insightRow(item)).join('');
+        insightRows = insightItems.slice(0, 3).map((item) => {
+          try { return this._insightRow(item); }
+          catch (err) {
+            if (typeof console !== 'undefined' && console.error) console.error('[VehicleAttentionPresenter.render] gagal render insightRow', err);
+            return '';
+          }
+        }).join('');
       }
     }
 
