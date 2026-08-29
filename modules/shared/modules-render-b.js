@@ -823,6 +823,12 @@ el.innerHTML=`
       </details>
       <div class="u-ctext3 u-mt8 u-lh15" style="font-size:10.5px">📘 Sumber: ${escapeHtml(spec.sourceNote)}</div>
     </div>`;
+// Konsistensi persistence collapse (audit UI/UX sesi ini): kartu ini pakai
+// card-collapse-toggle/toggleCardCollapse() sama seperti ~40+ kartu lain,
+// tapi kelewat manggil applyOneCardCollapsePref() (localStorage
+// cardCollapsePrefs) sehingga state buka/tutup tidak diingat lintas
+// render/reload -- 0 mekanisme baru, guard typeof pola sama pemanggil lain.
+if(typeof applyOneCardCollapsePref==='function')applyOneCardCollapsePref('vehSpecCard');
 }
 
 function renderServisReminder(){return Servis.renderReminder();}

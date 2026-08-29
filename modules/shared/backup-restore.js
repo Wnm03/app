@@ -94,8 +94,16 @@ async function runFullBackup(){
 if(_saveGuards['fullBackup']){toast('⏳ Backup sebelumnya masih berjalan...');return;}
 _saveGuards['fullBackup']=true;
 const btn=document.getElementById('backupBadge');
-const btnOriginal=btn?btn.textContent:null;
-if(btn)btn.textContent='⏳ Backup...';
+const btnOriginal=btn?btn.innerHTML:null;
+// FIX (audit UI/UX 2026-08, Ronde 7): dulu cuma ganti textContent jadi '⏳
+// Backup...' TANPA disable -- tombol masih bisa di-tap ulang (double-tap
+// ditangkap _saveGuards['fullBackup'] di atas, tapi user tidak dapat
+// sinyal visual jelas kalau tombolnya sedang nonaktif). Reuse helper
+// _scanBtnBusy/_scanBtnIdle (scan-ocr.js, load lebih dulu) supaya
+// perilakunya konsisten dgn tombol scan: disabled + spinner PERSISTEN
+// selama proses (bukan cuma teks), balik ke normal di finally apa pun
+// hasilnya.
+if(btn)_scanBtnBusy(btn,'Backup...');
 const done=[];
 const skipped=[];
 const errors=[];
@@ -150,7 +158,10 @@ BackupHistoryAPI.recordEntry({type:'full',status,done,skipped,errors});
 }
 } finally {
 _saveGuards['fullBackup']=false;
-if(btn)btn.textContent=done.includes('File lokal (JSON)')?'💾 Backup':(btnOriginal||'⚠️ Backup');
+if(btn){
+_scanBtnIdle(btn);
+btn.textContent=done.includes('File lokal (JSON)')?'💾 Backup':(btnOriginal||'⚠️ Backup');
+}
 }
 }
 let backupModules={keuangan:true,carnotes:true,shop:true,aset:true,renov:true,pensiunZakat:true,habit:true,lain:true};
@@ -494,15 +505,38 @@ D.cobek.forEach(c=>{if(c.delivered===undefined)c.delivered=true;});
 }
 async function importData(e){
 const file=e.target.files[0];if(!file)return;
+// FIX (audit UI/UX 2026-08, Ronde 8): label "📥 Import / Restore (JSON)"
+// (bukan <button>, dipicu native <label for="restoreFileInput">) dulu 0
+// state busy -- applyRestoredData() bisa beberapa detik (tulis IndexedDB
+// LifeOS/EIE/Vehicle Catalog/Honda PDF dkk), tap ulang selagi proses jalan
+// bisa memicu 2 restore tumpang tindih. Reuse _scanBtnBusy/_scanBtnIdle
+// (scan-ocr.js, dimuat lebih dulu) lewat HTMLInputElement.labels -- +
+// disable input itu sendiri (klik label ke input disabled = no-op native
+// browser, 0 guard tambahan diperlukan spt dispatcher data-action).
+const inputEl=e.target;
+const labelEl=inputEl.labels&&inputEl.labels[0];
+if(labelEl)_scanBtnBusy(labelEl,'Me-restore...');
+inputEl.disabled=true;
 const r=new FileReader();
 r.onload=async ev=>{
 let imp;
 try{
 imp=JSON.parse(ev.target.result);
-}catch{toast('❌ File tidak valid / rusak (bukan JSON)!');e.target.value='';return;}
+}catch{
+toast('❌ File tidak valid / rusak (bukan JSON)!');
+inputEl.value='';
+if(labelEl)_scanBtnIdle(labelEl);
+inputEl.disabled=false;
+return;
+}
+try{
 const ok=await applyRestoredData(imp);
 if(ok)toast('✅ Data di-restore! (semua tab: keuangan, kendaraan, bisnis shop, dll)');
-e.target.value='';
+}finally{
+inputEl.value='';
+if(labelEl)_scanBtnIdle(labelEl);
+inputEl.disabled=false;
+}
 };
 r.readAsText(file);
 }

@@ -446,10 +446,12 @@ screenType:null,
 items:[],
 scanConfidence:0,
 scan(){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 this.items=[]; this.screenType=null; this.scanConfidence=0;
 openModal('universalOcrModal');
 this.render();
@@ -498,6 +500,8 @@ toast(this.items.length?'✅ '+this.items.length+' akun terbaca ('+(this.screenT
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
 this.render();
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();

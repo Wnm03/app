@@ -53,6 +53,40 @@ return true;
 }
 return false;
 }
+// FIX (audit UI/UX 2026-08, Ronde 7): tombol scan (OCR) & tombol Backup dulu
+// TIDAK punya state disabled+spinner yang bertahan SELAMA proses berjalan --
+// toast "mohon tunggu" transient (6 detik) hilang duluan sebelum OCR/upload
+// benar2 selesai (bisa 10-20+ detik di koneksi lambat), jadi tombol masih
+// bisa di-tap ulang berkali-kali (memicu worker OCR/upload dobel/tumpang
+// tindih). Fix: helper generik _scanBtnCapture/_scanBtnBusy/_scanBtnIdle di
+// bawah ini -- dipanggil dari SETIAP titik scan* (bukan 1 komponen yang
+// ditempel global, sesuai catatan audit sebelumnya: per titik pemanggil).
+// Tombol yang memicu scan* SELALU tombol <button> yang barusan di-klik
+// (onclick="scanXxx(...)" inline), jadi document.activeElement pas fungsi
+// scan* dipanggil (SEBELUM dialog file async) reliable jadi referensi tombol
+// itu tanpa perlu ubah tiap markup HTML pemanggil satu-satu. Busy state baru
+// benar2 dipasang saat user SUDAH pilih file (bukan saat baru buka dialog),
+// supaya kalau dialog file di-Cancel tombol tidak nyangkut disabled.
+function _scanBtnCapture(){
+const el=(typeof document!=='undefined')?document.activeElement:null;
+return(el&&el.tagName==='BUTTON'&&!el.disabled)?el:null;
+}
+function _scanBtnBusy(btn,label){
+if(!btn||btn.dataset.scanBusy==='1')return;
+btn.dataset.scanBusy='1';
+btn.dataset.scanOrigHtml=btn.innerHTML;
+btn.disabled=true;
+btn.setAttribute('aria-busy','true');
+btn.innerHTML='<span class="btn-spinner" aria-hidden="true"></span> '+(label||'Memproses...');
+}
+function _scanBtnIdle(btn){
+if(!btn||btn.dataset.scanBusy!=='1')return;
+btn.disabled=false;
+btn.removeAttribute('aria-busy');
+if(btn.dataset.scanOrigHtml!=null)btn.innerHTML=btn.dataset.scanOrigHtml;
+delete btn.dataset.scanBusy;
+delete btn.dataset.scanOrigHtml;
+}
 let _ocrWorkerPromise=null;
 function getOcrWorker(){
 if(!_ocrWorkerPromise){
@@ -173,10 +207,12 @@ const RECEIPT_TOTAL_LABEL_RE=/total\s*(belanja|tagihan|pembayaran|transaksi|baya
 // Fix: skip baris "chrome" umum ini saat mencari firstLine, supaya jatuh ke baris nama produk.
 const RECEIPT_NOISE_LINE_RE=/^\d{1,2}[:.]\d{2}$|^\d{1,3}\s*%$|detail\s*pesanan|no\.?\s*pesanan|lihat\s*invoice|tanggal\s*pembelian|^selesai$|^diproses$|^dikirim$|^dibatalkan$|detail\s*produk|beli\s*lagi|chat\s*penjual|info\s*pengiriman|\bwib\b|\d{1,2}\s+(jan(?:uari)?|feb(?:ruari)?|mar(?:et)?|apr(?:il)?|mei|jun(?:i)?|jul(?:i)?|agu(?:stus)?|sep(?:t|tember)?|okt(?:ober)?|nov(?:ember)?|des(?:ember)?)\s+\d{4}/i;
 function scanReceipt(amtId,dateId,noteId){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai gambar, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -196,6 +232,8 @@ toast(bestAmt!=null?'✅ Scan selesai, cek & koreksi hasilnya':'⚠️ Nominal t
 await maybeOfferPaylaterReminder(text,bestAmt,isoForBill);
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -214,10 +252,12 @@ if(next&&next.length>2&&!/^\d+$/.test(next))return next.slice(0,40);
 return null;
 }
 function scanBuktiTransfer(nameId,amtId,dateId){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai bukti transfer, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -236,15 +276,19 @@ if(name){const el=document.getElementById(nameId);if(el)el.value=name;}
 toast(nums.length?'✅ Scan selesai, cek & koreksi hasilnya (nama otomatis kadang meleset, tetap dicek ya)':'⚠️ Nominal tidak terbaca, isi manual ya');
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
 }
 function scanTanggalDariFoto(dateId){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai foto, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -261,15 +305,19 @@ toast('⚠️ Tanggal tidak terbaca, isi manual ya');
 }
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
 }
 function scanKmOdometer(){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai foto odometer, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -286,6 +334,8 @@ toast('⚠️ Angka odometer tidak terbaca jelas, isi manual ya');
 }
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -396,10 +446,12 @@ return l.slice(0,60);
 return null;
 }
 function scanAssetPortfolio(){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 const box=document.getElementById('assetScanCandidates');
 if(box){box.style.display='block';box.innerHTML='🔍 Memindai gambar, mohon tunggu...';}
 toast('🔍 Memindai gambar, mohon tunggu...',6000);
@@ -462,6 +514,8 @@ toast(filled.length?'✅ '+filled.join(', ')+' terisi — pilih juga angka Nilai
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
 if(box){box.style.display='none';box.innerHTML='';}
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -476,10 +530,12 @@ toast('✅ Nilai diisi: '+fmtFull(n));
 function quickScanAsset(id){
 const a=(D.assets||[]).find(x=>sameId(x.id,id));
 if(!a){toast('⚠️ Aset tidak ditemukan');return;}
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai gambar, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -493,6 +549,8 @@ if(!nums.length){toast('⚠️ Nominal tidak terbaca, isi manual lewat Edit Aset
 showQuickScanPicker(id,nums);
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -518,12 +576,14 @@ Aset.renderList();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ '+escapeHtml(a.name)+' diupdate ke '+fmtFull(n));
 }
 function scanReceiptBelanja(){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 const insightEl=document.getElementById('txScanInsight');
 if(insightEl){insightEl.style.display='none';insightEl.innerHTML='';}
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai struk, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -578,6 +638,8 @@ toast(amt?'✅ Scan selesai, cek & koreksi hasilnya':'⚠️ Nominal tidak terba
 await maybeOfferPaylaterReminder(text,amt||null,isoDate);
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -824,10 +886,12 @@ if(typeof refreshBillEverywhere==='function')refreshBillEverywhere();
 toast('🔔 Pengingat tagihan bulan depan ditambahkan (🧾 Tagihan)');
 }
 function scanWorthItCheckout(mode){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 toast('🔍 Memindai screenshot checkout, mohon tunggu...',6000);
 try{
 const _scanEpoch=_scanEpochNow();
@@ -883,6 +947,8 @@ toast(filled.length?'✅ Terisi otomatis: '+filled.join(', ')+' — cek lagi seb
 await maybeOfferPaylaterReminder(text,harga||null,null,!!cicilan);
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();
@@ -985,10 +1051,12 @@ return items;
 const BillMultiScan={
 items:[],
 scan(){
+const _btn=_scanBtnCapture();
 const inp=document.createElement('input');
 inp.type='file'; inp.accept='image/*';
 inp.onchange=async(e)=>{
 const file=e.target.files[0]; if(!file)return;
+_scanBtnBusy(_btn,'Memindai...');
 this.items=[];
 openModal('billMultiScanModal');
 this.render();
@@ -1006,6 +1074,8 @@ toast(this.items.length?'✅ '+this.items.length+' item terbaca — cek & koreks
 }catch(err){
 toast('❌ Gagal scan: '+scanErrorMessage(err));
 this.render();
+}finally{
+_scanBtnIdle(_btn);
 }
 };
 inp.click();

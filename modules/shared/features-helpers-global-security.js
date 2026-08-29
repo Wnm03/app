@@ -91,8 +91,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's672-cashflow-siklus-legacy-card';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's672-cashflow-siklus-legacy-card';
+const APP_BUILD_VERSION = 's675-cashflow-siklus-legacy-card';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's675-cashflow-siklus-legacy-card';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -329,6 +329,21 @@ function _dataActionClickHandler(e){
 try{
 const el = e.target.closest('[data-action]');
 if(!el) return;
+// FIX (audit UI/UX 2026-08, Ronde 7): sebagian tombol data-action (mis.
+// #backupBadge) adalah <div>, bukan <button> -- properti .disabled pada div
+// tidak berefek apa2 ke klik, jadi state busy yg dipasang _scanBtnBusy()
+// (disabled=true + aria-busy) tidak akan mencegah dispatch ulang tanpa guard
+// eksplisit ini. Cek dua2nya (disabled beneran utk <button>, aria-busy utk
+// elemen non-form spt div/span) supaya konsisten utk semua jenis elemen.
+// FIX (audit UI/UX 2026-08, Ronde 7): sebagian tombol data-action (mis.
+// #backupBadge) adalah <div>, bukan <button> -- properti .disabled pada div
+// tidak berefek apa2 ke klik, jadi state busy yg dipasang _scanBtnBusy()
+// (dataset.scanBusy='1') tidak akan mencegah dispatch ulang tanpa guard
+// eksplisit ini. Cek lewat dataset saja (bukan .disabled/.getAttribute)
+// supaya konsisten dgn kontrak elemen yg dibaca handler ini (lihat
+// tests/data-action-dispatcher-toast.test.js: elemen tiruan cuma py
+// dataset+closest()).
+if(el.dataset&&el.dataset.scanBusy==='1') return;
 if(el.dataset.stop) e.stopPropagation();
 {
 const path = el.dataset.action.split('.');
