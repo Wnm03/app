@@ -572,6 +572,13 @@ const DashboardHubOwnershipSummary = {
       + '<div class="card-collapse-body collapsed" id="dashHubOwnershipZero-cbody">'
       + zero.map(row).join('')
       + '</div>';
+    // Konsistensi persistence collapse (audit UI/UX sesi ini): kartu lain yang
+    // pakai card-collapse-toggle/toggleCardCollapse() sudah reuse
+    // applyOneCardCollapsePref() (localStorage cardCollapsePrefs) supaya state
+    // buka/tutup diingat lintas render/reload -- baris ini sebelumnya kelewat
+    // di kartu ini (markup selalu mulai dari class "collapsed" apa pun pref
+    // tersimpan). 0 mekanisme baru, guard typeof pola sama pemanggil lain.
+    if (typeof applyOneCardCollapsePref === 'function') applyOneCardCollapsePref('dashHubOwnershipZero');
   },
 };
 
