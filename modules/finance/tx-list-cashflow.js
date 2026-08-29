@@ -539,11 +539,19 @@ if(opts===undefined)_cashflowForecastCache=result;
 return result;
 }
 const KEU_TAB_ORDER=['kelola','tagihan','budget','utangpiutang','asetproyek','laporan','akun'];
+// S679 (rekomendasi #4 audit S677): breadcrumb utk 6 tab utama, pola SAMA
+// PERSIS dgn *_SUBTAB_LABEL/*BreadcrumbSub yg sudah ada di sub-tab
+// Laporan/Kelola (lihat setLaporanTab/setKelolaTab di bawah).
+const KEU_TAB_LABEL={kelola:'Kelola',tagihan:'Tagihan & Cicilan',budget:'Budget',utangpiutang:'Piutang & Utang',asetproyek:'Aset & Proyek',laporan:'Laporan',akun:'Akun'};
 function setKeuanganTab(t,el){
 const keuTabBtns=document.querySelectorAll('#page-keuangan .cn-tab');
 keuTabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=KEU_TAB_ORDER.indexOf(t); const btn=keuTabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=KEU_TAB_ORDER.indexOf(t); const btn=keuTabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
+const keuBc=document.getElementById('keuanganBreadcrumbSub');
+if(keuBc)keuBc.textContent=KEU_TAB_LABEL[t]||t;
 document.getElementById('keuanganTab-kelola').classList.toggle('u-dnone', t!=='kelola');
 document.getElementById('keuanganTab-kelola').style.display='';
 document.getElementById('keuanganTab-tagihan').classList.toggle('u-dnone', t!=='tagihan');
@@ -612,8 +620,10 @@ const LAPORAN_SUBTAB_LABEL={ringkasan:'Ringkasan',aruskas:'Arus Kas & Kategori',
 function setLaporanTab(t,el){
 const lapSubtabBtns=document.querySelectorAll('#keuanganTab-laporan .lap-subtab');
 lapSubtabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=LAPORAN_SUBTAB_ORDER.indexOf(t); const btn=lapSubtabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=LAPORAN_SUBTAB_ORDER.indexOf(t); const btn=lapSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 document.getElementById('laporanTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
 document.getElementById('laporanTab-ringkasan').style.display='';
 document.getElementById('laporanTab-aruskas').classList.toggle('u-dnone', t!=='aruskas');
@@ -636,8 +646,10 @@ const KELOLA_SUBTAB_LABEL={ringkasan:'Ringkasan',transaksi:'Transaksi',pengatura
 function setKelolaTab(t,el){
 const kelSubtabBtns=document.querySelectorAll('#keuanganTab-kelola .kel-subtab');
 kelSubtabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=KELOLA_SUBTAB_ORDER.indexOf(t); const btn=kelSubtabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=KELOLA_SUBTAB_ORDER.indexOf(t); const btn=kelSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 document.getElementById('kelolaTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
 document.getElementById('kelolaTab-ringkasan').style.display='';
 document.getElementById('kelolaTab-transaksi').classList.toggle('u-dnone', t!=='transaksi');
