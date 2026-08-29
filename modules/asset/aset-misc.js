@@ -561,11 +561,18 @@ applyOneCardCollapsePref('timelineWCard');
 // lagi aktif -- sama seperti pola kartu ber-collapse yg sudah ada di app ini,
 // cuma sekarang levelnya per-tab, bukan per-kartu.
 const ASET_TAB_ORDER=['ringkasan','buku','analisis','manajemen','investasi'];
+// S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
+// KEU_TAB_LABEL (tx-list-cashflow.js).
+const ASET_TAB_LABEL={ringkasan:'Ringkasan',buku:'Buku Aset',analisis:'Analisis & Pajak',manajemen:'Manajemen',investasi:'Investasi'};
 function setAsetTab(t,el){
 const asetTabBtns=document.querySelectorAll('#page-aset .cn-tab');
 asetTabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
 if(el) el.classList.add('active');
-else { const idx=ASET_TAB_ORDER.indexOf(t); const btn=asetTabBtns[idx>=0?idx:0]; if(btn) btn.classList.add('active'); }
+else { const idx=ASET_TAB_ORDER.indexOf(t); const btn=asetTabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
+const asetBc=document.getElementById('asetBreadcrumbSub');
+if(asetBc)asetBc.textContent=ASET_TAB_LABEL[t]||t;
 document.getElementById('asetTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
 document.getElementById('asetTab-ringkasan').style.display='';
 document.getElementById('asetTab-buku').classList.toggle('u-dnone', t!=='buku');
