@@ -273,6 +273,12 @@ const GROUP_B = [
   'modules/shared/onboarding.js',
   'modules/shared/kalkulator-input.js',
   'modules/shared/scan-ocr.js',
+  // Audit ukuran file (sesi split lanjutan setelah transaksi.js):
+  // scan-ocr.js dipecah jadi 2 -- fitur UniversalScan (Sesi 125, scan
+  // screenshot Bank/E-Wallet/Bibit/Jago Pocket) pindah ke scan-ocr-b.js.
+  // Murni top-level function, tidak di-mixin balik, cukup dimuat SETELAH
+  // scan-ocr.js.
+  'modules/shared/scan-ocr-b.js',
   'modules/finance/filter-laporan.js',
   'modules/finance/akun.js',
   'modules/business/gaji-calc.js',
@@ -286,6 +292,12 @@ const GROUP_B = [
   'modules/finance/tx-target.js',
   'modules/finance/tx-list-cashflow.js',
   'modules/finance/transaksi.js',
+  // Audit ukuran file (sesi split lanjutan setelah sparepart-servis.js):
+  // transaksi.js dipecah jadi 2 -- saveTx()/_saveTxInner() (mesin simpan
+  // transaksi) + saveCatatan/saveReminder/saveLDR/toggleMs/delReminder
+  // pindah ke transaksi-b.js. Murni top-level function, tidak di-mixin
+  // balik, jadi cukup dimuat SETELAH transaksi.js.
+  'modules/finance/transaksi-b.js',
   'modules/shared/profil-pengaturan.js',
   'modules/finance/kategori.js',
   'modules/ai/kategorisasi-ai.js',
@@ -518,6 +530,13 @@ const GROUP_B = [
   'modules/ai/chat-action.js',
   'modules/shared/data-archive.js',
   'modules/vehicle/sparepart-servis.js',
+  // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
+  // file agar di bawah OVERSIZED_FILE_LINE_THRESHOLD. Bagian KEDUA (SparepartCsvImport/
+  // TORSI_DB/VEHICLE_SPEC_DB/wrapper Servis/fitur AI kendaraan) HARUS dimuat SETELAH
+  // sparepart-servis.js (dependency: fungsi-fungsi di sparepart-servis-b.js manggil
+  // fungsi/const dari sparepart-servis.js). Murni top-level function/const, tidak
+  // di-mixin balik ke sparepart-servis.js.
+  'modules/vehicle/sparepart-servis-b.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof
@@ -1136,6 +1155,12 @@ const GROUP_B = [
   'modules/finance/dana-titipan-aggregation-api.js',
   'modules/finance/dana-titipan-commitment-return-api.js',
   'modules/finance/dana-titipan-portfolio-render.js',
+  // Audit ukuran file (sesi split lanjutan setelah scan-ocr.js):
+  // dana-titipan-portfolio-render.js dipecah jadi 2 -- DanaTitipanCommitmentUI/
+  // DanaTitipanReturnUI/DanaTitipanPoolUI pindah ke
+  // dana-titipan-portfolio-render-b.js. Murni top-level const, tidak
+  // di-mixin balik, cukup dimuat SETELAH file utama.
+  'modules/finance/dana-titipan-portfolio-render-b.js',
 
   // titipan-expense-flow.js (Sesi 521-A) — orkestrasi pencatatan
   // pengeluaran Dana Titipan (single & multi-owner), reuse
