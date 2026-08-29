@@ -80,9 +80,9 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1425">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1425">
-<script src="nav-scroll.js?v=1425" defer></script>
+<link rel="stylesheet" href="styles.css?v=1432">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1432">
+<script src="nav-scroll.js?v=1432" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -148,17 +148,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1425');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1432');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1425');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1432');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1425');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1432');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -247,8 +247,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1425" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1425" defer></script>
+<script src="app-bundle-a.min.js?v=1432" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1432" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -1650,6 +1650,7 @@ window.location.reload();
     <button type="button" class="cni-subtab active" data-action="setCnInsightTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button>
     <button type="button" class="cni-subtab" data-action="setCnInsightTab" data-args='["rekomendasi", "$el"]'>🧭 Rekomendasi &amp; Tren</button>
   </div>
+  <div class="page-breadcrumb">🧠 Insight AI › <span class="pb-current" id="cniBreadcrumbSub">Ringkasan</span></div>
 
   <div id="cniTab-ringkasan">
   <!-- VEHICLE DASHBOARD FOUNDATION (Sesi 77, Batch 7). Section di dalam
@@ -1911,6 +1912,7 @@ window.location.reload();
       <button type="button" class="cnb-subtab active" data-action="setCnBbmTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button>
       <button type="button" class="cnb-subtab" data-action="setCnBbmTab" data-args='["analisis", "$el"]'>📈 Analisis Lanjutan</button>
     </div>
+    <div class="page-breadcrumb">⛽ BBM › <span class="pb-current" id="cnbBreadcrumbSub">Ringkasan</span></div>
 
     <div id="cnbTab-ringkasan">
     <!-- FUEL INTELLIGENCE CARD (TASK-141) — DIPINDAH ke sini (Sesi 157,
@@ -4044,6 +4046,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1425" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1432" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>

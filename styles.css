@@ -112,6 +112,14 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
 .header-sub { font-size:var(--fs-label); color: var(--text2); margin-top: 1px; }
 .header-badge { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--r-pill); padding: 4px 10px; font-size:var(--fs-label); color: var(--accent); font-weight: 600; cursor: pointer; transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard); }
 .header-badge:active { transform: scale(0.94); }
+/* FIX (audit UI/UX 2026-08, Ronde 7): spinner kecil generik untuk tombol scan
+   (OCR)/Backup yang sedang memproses -- dipasang lewat _scanBtnBusy()
+   (modules/shared/scan-ocr.js), dipakai ulang persis sama di backup-restore.js.
+   1 komponen visual, disuntik ke innerHTML tombol apa pun (button/header-badge),
+   bukan style khusus per tombol. */
+.btn-spinner { display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; vertical-align:-2px; animation:btn-spinner-spin .6s linear infinite; opacity:.85; }
+@keyframes btn-spinner-spin { to { transform:rotate(360deg); } }
+button:disabled[aria-busy="true"], .header-badge[aria-busy="true"] { cursor:progress; opacity:.85; }
 .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--header-bg); backdrop-filter: blur(24px) saturate(140%); border-top: 1px solid var(--border); box-shadow: var(--shadow-panel-down); display: flex; z-index: var(--z-chrome); padding: 8px 2px 16px; overflow-x:auto; }
 /* BUGFIX: #scrollRoot pakai position:fixed tanpa z-index sendiri, jadi ikut membentuk
    stacking context "level 0" di root -- akibatnya SEMUA modal/bottom-sheet di dalamnya
@@ -851,7 +859,12 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .pm-btn:active { transform: scale(0.95); }
 .pm-btn.active { background:var(--accent-soft); color:var(--accent); border-color:var(--accent); }
 .pm-icon { font-size:var(--fs-icon); display:block; margin-bottom:3px; }
-.cn-tabs { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-5); }
+.cn-tabs { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-5); overflow-x:auto; flex-wrap:nowrap; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+.cn-tabs::-webkit-scrollbar { display:none; }
+.cn-tabs { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); }
+/* AUDIT UI/UX 2026-08 (slide-tab): semua grup tab digeser jadi horizontal-scroll
+   agar label tidak lagi wrap/kepepet saat jumlah tab banyak (mis. Pengaturan 7 tab).
+   Pola: flex:0 0 auto + white-space:nowrap pada tombol, overflow-x:auto pada wadah. */
 /* Breadcrumb kecil untuk navigasi 3-lapis (page -> tab -> subtab), mis.
    Keuangan -> Laporan -> Ringkasan/Aruskas/Transaksi. Murni label teks,
    ditulis oleh setLaporanTab()/setKelolaTab()/setPjkTab() lewat textContent
@@ -859,20 +872,20 @@ textarea.fi { resize: vertical; min-height: 80px; }
    supaya user tidak "nyasar" setelah 2-3 tap masuk. */
 .page-breadcrumb{font-size:var(--fs-caption);color:var(--text3);margin:-6px 0 10px;padding:0 2px;}
 .page-breadcrumb .pb-current{color:var(--text2);font-weight:600;}
-.cn-tab { flex:1; padding:var(--sp-4) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.cn-tab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-4) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cn-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
 /* 2026-07-17: sub-tab nav utk split tab Laporan (Keuangan) — class SENGAJA
    beda dari .cn-tab (bukan cuma varian) supaya query `#page-keuangan .cn-tab`
    yang dipakai setKeuanganTab()/KEU_TAB_IDX/self-test TIDAK ikut menangkap
    tombol sub-tab bersarang ini (lihat pola sama persis di .budget-tab-btn). */
 .lap-subtabs { margin-bottom:var(--sp-4); }
-.lap-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.lap-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .lap-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 /* 2026-07-17 (bagian ke-3): sub-tab nav utk split tab Kelola (Keuangan) —
    class terpisah lagi dari .cn-tab MAUPUN .lap-subtab (pola sama, alasan
    sama dgn .lap-subtab di atas: cegah tabrakan query per-page). */
 .kel-subtabs { margin-bottom:var(--sp-4); }
-.kel-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.kel-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .kel-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 /* 2026-07-17 (bagian ke-4): sub-tab nav utk split tab 🧾 Pajak (PPh 21)
    (page-pajak) — class terpisah lagi dari .cn-tab/.lap-subtab/.kel-subtab
@@ -880,7 +893,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
    `#page-pajak .cn-tab` yang dipakai setPajakTab()/PAJAK_TAB_IDX/self-test
    utk tab Zakat/Pajak tingkat atas). */
 .pjk-subtabs { margin-bottom:var(--sp-4); }
-.pjk-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.pjk-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .pjk-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 
 /* Sesi 158 (permintaan eksplisit user): sub-tab nav utk split tab
@@ -890,14 +903,14 @@ textarea.fi { resize: vertical; min-height: 80px; }
    yang dipakai setCnTab() utk tab Insight AI/BBM/Servis/Pajak & SIM
    tingkat atas. */
 .cni-subtabs { margin-bottom:var(--sp-4); }
-.cni-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.cni-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cni-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 
 /* Sesi 158: sub-tab nav utk split tab ⛽ BBM (page-carnotes,
    Ringkasan/Analisis Lanjutan) — class terpisah lagi, alasan sama persis
    .cni-subtab di atas. */
 .cnb-subtabs { margin-bottom:var(--sp-4); }
-.cnb-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.cnb-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cnb-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 
 /* Sub-tab Dashboard Hub (landing page, Fase 1 — lihat CLAUDE.md "Split tab
@@ -905,7 +918,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
    .kel-subtab/.pjk-subtab, alasan sama: cegah tabrakan query
    #page-dashboard-hub .cn-tab kalau nanti ada .cn-tab lain di page ini. */
 .dhb-subtabs { margin-bottom:var(--sp-4); }
-.dhb-subtab { flex:1; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
+.dhb-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .dhb-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
 .bbm-stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-3); margin-bottom:var(--sp-5); }
 .bbm-stat { background:var(--surface2); border-radius:var(--r-md); padding:var(--sp-5) var(--sp-3); text-align:center; border:1px solid var(--border); }
