@@ -11647,3 +11647,129 @@ Patch (hanya file berubah — bukan full release): app-bundle-a.min.js,
 app-bundle-b.min.js, app_production.html, index.html, sw.js,
 modules/shop/cobek-etalase.js, modules/shop/cobek-tx-cart.js,
 docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md, docs/CLAUDE.md.
+
+# Sesi Fix Migrasi Kendaraan ke Holding (2026-08-29) — bug #2 dari audit user (kendaraan nyelip ke Holding Investasi)
+
+**Konteks:** User audit manual kode (bukan cuma screenshot) dan nemu penyebab
+pasti bug #2 (kendaraan masuk ke Holding Investasi) di
+`migrateAssetInvestmentsToHoldings()` (`modules/asset/aset-misc.js`), plus
+dugaan kuat utk bug #1 (klik holding hasil migrasi tidak respon — kemungkinan
+gejala data korup dari migrasi, bukan bug klik/dispatcher terpisah; user
+diminta cek toast pas tap, belum ada laporan balik).
+
+**Root cause (dikonfirmasi):** "Harga Beli/Unit" & "Jumlah Unit" di
+`assetModal` adalah field GENERIK yang tetap tampil di form apa pun jenis
+asetnya (termasuk Kendaraan) — bukan field eksklusif investasi. Filter
+kandidat migrasi menghitung `buku = a.hargaBeli * a.jumlahUnit` TANPA cek
+`a.jenis` dulu di jalur utama (fallback `buku=a.nilai` di baris bawahnya
+SUDAH benar cek jenis, tapi jalur hargaBeli×jumlahUnit tidak). Akibatnya
+kendaraan yang diisi kedua field itu (mis. user catat harga beli motor) lolos
+jadi kandidat, ikut ke-`Investment.addHolding()` dgn `type` fallback
+`'Lainnya'` (jenis 'Kendaraan' tidak ada di `ASSET_JENIS_TO_INVESTMENT_TYPE`),
+dan asetnya sendiri hilang dari Buku Aset (ditandai
+`_migratedToInvestmentId`).
+
+**Fix:** `modules/asset/aset-misc.js` — tambah
+`.filter(a=>!!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis])` di filter kandidat
+`migrateAssetInvestmentsToHoldings()`, SEBELUM `buku` dihitung. Sekarang
+hanya aset berjenis investasi yang dikenal (Kripto/Reksadana/Saham/
+Deposito-Investasi/Emas-Logam-Mulia) yang bisa jadi kandidat sama sekali —
+aset jenis lain (Kendaraan, Properti, Elektronik, dll) tidak akan pernah
+lolos meski field hargaBeli/jumlahUnit terisi, berapa pun jenisnya.
+
+**Test baru** (`tests/s476a-migrate-investasi-to-holdings.test.js`, 2
+tambahan):
+- Kendaraan dgn `hargaBeli`+`jumlahUnit` terisi TIDAK ikut termigrasi (fixture
+  motor Rp15.000.000).
+- Aset jenis lain-lain (Elektronik, laptop) dgn field yang sama juga TIDAK
+  termigrasi — mengonfirmasi fix bukan cuma hardcode utk 'Kendaraan'.
+
+**Verifikasi:**
+- Test suite terkait (`s476a-migrate-investasi-to-holdings`,
+  `s476a2-cagr-yield`, `dana-titipan-portfolio-migrated-asset-doublecount-
+  s594`): semua pass, termasuk 2 test baru.
+- Full test suite: **4901 test, 4901 pass, 0 fail** — tidak ada regresi. (3
+  failure pre-existing yang disebut di sesi sebelumnya sudah tidak muncul
+  lagi di run ini; kemungkinan sudah kebetulan resolve di sesi lain sejak
+  dicatat, tidak diselidiki lebih lanjut di sesi ini karena di luar cakupan
+  patch.)
+- Build (`node scripts/build.js`) sukses, versi naik ke 1446, sintaks bundle
+  lolos.
+
+## Bug #1 (klik holding tidak respon) — BELUM di-fix, masih perlu info dari user
+Dispatcher tap sudah dicek & seharusnya selalu munculin toast error kalau ada
+masalah pas tap. Dugaan kuat: semua holding di screenshot (Schorder/Bni am/
+Sucorinvest, unit="1") adalah hasil auto-migrasi (bukan input manual), jadi
+kemungkinan besar ini gejala data hasil migrasi yang "aneh" (avgPrice=
+currentPrice, unit=1 buatan fallback), bukan bug klik terpisah. **Menunggu
+konfirmasi user**: pas tap item itu, ada toast kecil muncul atau benar-benar
+0 reaksi? Kalau 0 reaksi total → curigai overlay/CSS nutupin area klik. Kalau
+ada toast error → baru investigasi id/data holding tsb.
+
+## Next TODO
+- Tunggu jawaban user soal toast (bug #1) sebelum lanjut investigasi.
+- 3 test failure pre-existing yang disebut sesi sebelumnya (audit utang) —
+  tidak reproduce di full run sesi ini, cek ulang kalau muncul lagi.
+- Audit alur pembayaran utang/piutang (masih pending dari sesi sebelumnya,
+  belum disentuh sesi ini).
+
+## ZIP
+Patch (hanya file berubah — bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+modules/asset/aset-misc.js, tests/s476a-migrate-investasi-to-holdings.test.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md, docs/CLAUDE.md.
+
+# Sesi Fix Bug #1 (klik holding 0 reaksi) — hardening _renderList() (2026-08-29)
+
+**Konteks:** Lanjutan sesi sebelumnya (fix migrasi Kendaraan). User konfirmasi
+bug #1: tap holding hasil migrasi = **0 reaksi total, TIDAK ada toast**.
+
+**Analisis:** Dispatcher klik pusat (`_dataActionClickHandler`) sudah sangat
+robust — try/catch penuh, selalu toast kalau ada error atau fungsi tidak
+ditemukan. "0 toast" berarti dispatcher kemungkinan besar tidak pernah
+kebagian action yang valid utk row itu. `InvestmentListUI._renderList()`
+(`modules/asset/investasi-list-view.js`) membangun HTML lewat
+`holdings.map(...)` TANPA try/catch per-baris — kalau SATU holding bikin
+salah satu hitungan (`holdingValue`/`holdingGainLoss`/`holdingROI`/
+`investmentCrossCheckWarning`) throw, exception itu merambat keluar SEBELUM
+`el.innerHTML=...` sempat jalan. `_renderList()` sendiri dipanggil langsung
+dari `render()`/`setAsetTab()`, BUKAN lewat dispatcher data-action — jadi
+tidak ada try/catch/toast yang menangkapnya sama sekali. Efeknya:
+`#investmentHoldingList` tetap berisi HTML dari render sukses SEBELUMNYA
+(termasuk `data-action` yang tampak normal secara visual), tapi render
+TERBARU (yang seharusnya reflect state data sekarang) tidak pernah
+ter-apply — persis gejala "kelihatan normal, tap = 0 reaksi, 0 toast".
+
+**Fix:** Bungkus hitungan per-holding di `_renderList()` dengan try/catch.
+Kalau satu holding gagal dihitung, fallback ke nilai aman (value/gain/roi=0)
+dan tetap dirender sbg row yang BISA di-tap (dengan badge ⚠️ + tooltip
+sbg penanda), bukan menjatuhkan seluruh `.map()`/render list. `console.error`
+tetap dipanggil per-holding utk debugging.
+
+**Test:** TIDAK dibuat test otomatis khusus — sama alasan sesi-sesi
+sebelumnya (`cobek-etalase.js`/`cobek-tx-cart.js`, dst): fungsi ini menyentuh
+DOM (`document.getElementById`), di luar cakupan harness
+`tests/helpers/loadSource.js` (yang secara eksplisit menyatakan tidak untuk
+fungsi baca/tulis DOM). Verifikasi manual (`node --check`) + full suite tetap
+dijalankan utk pastikan 0 regresi di kode lain.
+
+**Verifikasi:**
+- `node --check modules/asset/investasi-list-view.js`: lolos.
+- Full test suite: **4901 test, 4901 pass, 0 fail**.
+- Build sukses, versi naik ke 1447 (s689), sintaks bundle lolos.
+
+**Catatan penting:** Fix ini adalah *hardening* (mencegah render silently
+gagal ke depannya) berdasarkan analisis kode terbaik yang bisa dilakukan
+tanpa akses langsung ke device user. Kalau setelah update ini tap holding
+masih 0 reaksi, kemungkinan besar penyebabnya BUKAN exception dalam
+`_renderList()` — perlu screenshot console error (aktifkan toggle "Debug
+Console" di Pengaturan biar toast error nunjukin lokasi persis) atau cek
+apakah overlay/CSS lain menutupi area tap.
+
+## ZIP
+Patch (hanya file berubah — bukan full release, KUMULATIF dgn sesi fix
+migrasi Kendaraan sebelumnya): app-bundle-a.min.js, app-bundle-b.min.js,
+app_production.html, index.html, sw.js, modules/asset/aset-misc.js,
+modules/asset/investasi-list-view.js,
+tests/s476a-migrate-investasi-to-holdings.test.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/CLAUDE.md.
