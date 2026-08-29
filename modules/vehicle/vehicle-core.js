@@ -722,6 +722,7 @@ renderCnTab();
 // disentuh, tetap tampil di semua sub-tab supaya konteks multi-kendaraan
 // tidak hilang.
 const CNI_SUBTAB_ORDER=['ringkasan','rekomendasi'];
+const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
 function setCnInsightTab(t,el){
 const cniSubtabBtns=document.querySelectorAll('#cnTab-insight .cni-subtab');
 cniSubtabBtns.forEach(b=>b.classList.remove('active'));
@@ -731,8 +732,13 @@ document.getElementById('cniTab-ringkasan').classList.toggle('u-dnone', t!=='rin
 document.getElementById('cniTab-ringkasan').style.display='';
 document.getElementById('cniTab-rekomendasi').classList.toggle('u-dnone', t!=='rekomendasi');
 document.getElementById('cniTab-rekomendasi').style.display='';
+// AUDIT UI/UX 2026-08 (breadcrumb): pola SAMA PERSIS setKelolaTab/setLaporanTab
+// (tx-list-cashflow.js) — murni label teks, tidak ada navigasi/logic baru.
+const cniBc=document.getElementById('cniBreadcrumbSub');
+if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
 }
 const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
+const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnBbmTab(t,el){
 const cnbSubtabBtns=document.querySelectorAll('#cnTab-bbm .cnb-subtab');
 cnbSubtabBtns.forEach(b=>b.classList.remove('active'));
@@ -742,6 +748,8 @@ document.getElementById('cnbTab-ringkasan').classList.toggle('u-dnone', t!=='rin
 document.getElementById('cnbTab-ringkasan').style.display='';
 document.getElementById('cnbTab-analisis').classList.toggle('u-dnone', t!=='analisis');
 document.getElementById('cnbTab-analisis').style.display='';
+const cnbBc=document.getElementById('cnbBreadcrumbSub');
+if(cnbBc)cnbBc.textContent=CNB_SUBTAB_LABEL[t]||t;
 }
 function getVehicleKm(vehicleId){
 const kms=[
