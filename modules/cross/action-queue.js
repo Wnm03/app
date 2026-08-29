@@ -81,13 +81,21 @@ const ActionQueue = {
       return;
     }
 
+    // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _label()/_vehicleIcon()
+    // TANPA try/catch -- 1 item error bikin SELURUH .map() throw sebelum
+    // el.innerHTML ke-assign, antrean tetap nampilin render sukses SEBELUMNYA.
     const rows = priorityItems.map((item, idx) => {
-      const icon = item.kind === 'finance' ? '💰' : this._vehicleIcon(item.vehicleType);
-      return `
+      try {
+        const icon = item.kind === 'finance' ? '💰' : this._vehicleIcon(item.vehicleType);
+        return `
       <div class="u-fs12 u-lh15 u-t2 u-mb6" style="border-left:3px solid var(--accent4);padding-left:8px;">
         ${idx + 1}. ${icon} ${this._label(item)}
       </div>
     `;
+      } catch (err) {
+        if (typeof console !== 'undefined' && console.error) console.error('[ActionQueue.render] gagal render baris', item && item.kind, err);
+        return '';
+      }
     }).join('');
 
     el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🗂️ Antrean Tindakan (${priorityItems.length})</div>`

@@ -55,7 +55,16 @@ const LifePriorityPanel = {
     const p = PriorityEngine.getItems();
     if (!p.ok || !p.items.length) { el.innerHTML = ''; return; }
 
-    const rows = p.items.map((item) => this._row(item)).join('');
+    // BUGFIX (audit pola sama S601/S608 "0 reaksi"): _row() TANPA try/catch --
+    // 1 item error bikin SELURUH .map() throw sebelum el.innerHTML ke-assign,
+    // panel tetap nampilin render sukses SEBELUMNYA (tap = 0 reaksi).
+    const rows = p.items.map((item) => {
+      try { return this._row(item); }
+      catch (err) {
+        if (typeof console !== 'undefined' && console.error) console.error('[LifePriorityPanel.render] gagal render baris', item && item.kind, err);
+        return '';
+      }
+    }).join('');
 
     el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📌 Prioritas Hidup Pribadi</div>`
       + rows;
