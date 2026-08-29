@@ -18,11 +18,11 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 861 |
-| JavaScript | 579 |
-| Tests | 222 |
-| Markdown | 258 |
-| HTML | 3 |
+| Total files | 1391 |
+| JavaScript | 833 |
+| Tests | 470 |
+| Markdown | 508 |
+| HTML | 5 |
 | JSON | 2 |
 | CSS | 2 |
 | Module families | 12 |
@@ -34,6 +34,8 @@ _Baseline diperbarui pasca-v1100/S398 ("update baseline drift", laporan `lintDoc
 _Baseline diperbarui lagi pasca-v1153/S438 ("update baseline drift"): Total files 740→822 (+82), JavaScript 527→555 (+28), Markdown 189→243 (+54), Tests/HTML/JSON/CSS/Module families tetap — drift terkumpul dari banyak sesi sejak S398 (baseline lama belum sempat diupdate lagi, bukan perubahan tunggal sesi ini; termasuk 3 file baru dari sesi s437 itu sendiri: 1 JS fix + 1 test + 1 dokumen FIX)._
 
 _Baseline diperbarui lagi pasca-v1189/S470 ("update baseline drift"): Total files 822→861 (+39), JavaScript 555→579 (+24), Markdown 243→258 (+15), Tests/HTML/JSON/CSS/Module families tetap — drift terkumpul dari banyak sesi sejak S438 (baseline lama belum sempat diupdate lagi selama ±31 sesi, bukan perubahan tunggal sesi ini; mencakup seluruh pekerjaan BUG-INV-001 Opsi 3, Sesi 466-469 — `InvestmentListUI`/`InvestmentTxUI`/`InvestmentWatchUI` + test coverage-nya, verifikasi 4 dead-read call site, & fix navigasi Investment Planner)._
+
+_Baseline diperbarui lagi (housekeeping, temuan audit lanjutan poin #3 pasca-S677/S679 — tabel ini sempat dibiarkan basi ±200 sesi, selisih makin lebar tiap kali dicek): Total files 861→1391 (+530), JavaScript 579→833 (+254), Markdown 258→508 (+250), HTML 3→5 (+2), Tests 222→470 (+248, dihitung dari jumlah file pola `*.test.js` — label ini TIDAK ikut auto-check `lintDocsBaselineCountDrift()` di build.js krn "Tests" tidak ada di `FILE_COUNT_LINT_LABELS`, jadi angka ini estimasi manual konsisten dgn definisi awal, bukan hasil lint), JSON/CSS/Module families tetap — drift terkumpul dari SANGAT banyak sesi sejak S470 (baseline lama belum sempat diupdate lagi selama ratusan sesi, bukan perubahan tunggal sesi ini). Snapshot dihitung dgn logic walk yang persis sama dgn `lintDocsBaselineCountDrift()` (exclude `node_modules/`, `.git/`, `backups/`), diambil pada versi app v1435 (`CACHE_NAME` = `kw-cache-v1435` di `sw.js`). CATATAN: poin #3 audit lanjutan cuma housekeeping dokumentasi — 0 perubahan kode aplikasi, 0 perubahan behavior._
 
 ---
 
