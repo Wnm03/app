@@ -11189,3 +11189,347 @@ modules/shared/features-helpers-global-security.js,
 modules/shared/modals.js, modules/shared/modules-calc.js,
 modules/shared/modules-render.js, docs/COVERAGE-PER-MODULE.md,
 docs/FILE-MAP.md, docs/RELEASE-GATE-LOG.md.
+
+# Sesi Split-SparepartServis (2026-08-29) — Pecah modules/vehicle/sparepart-servis.js (2053->1350 baris)
+
+## Konteks
+Lanjutan audit ukuran file (kandidat berikutnya setelah cleanup dead
+files): `modules/vehicle/sparepart-servis.js` (2053 baris) adalah file
+terbesar kedua sesudah `scripts/build.js`.
+
+## Perubahan
+Titik potong bersih: TEPAT SETELAH `window.Sparepart = Sparepart;`
+(baris terakhir object `Sparepart`).
+- **Diubah:** `modules/vehicle/sparepart-servis.js` — sisa bagian
+  PERTAMA (fungsi helper global: catVisibleForVehicle/
+  resolveServisCatForVehicle/computeServiceUrgency/recommendIntervalKm/
+  historyStatsForName dkk, + object `Sparepart` lengkap + `window.
+  Sparepart=Sparepart`).
+- **Baru:** `modules/vehicle/sparepart-servis-b.js` (727 baris) —
+  object `SparepartCsvImport`, data referensi `TORSI_DB`/
+  `VEHICLE_SPEC_DB`, `MY_WRENCH_SCALE`, seluruh fungsi wrapper global
+  ke `Servis` (car-notes.js) — saveServis/delServis/markSparepartServiced
+  dkk, & fitur prediksi/AI kendaraan (predictService, maintenanceForecast,
+  registerVehicleAIRules, 3 fungsi `_vehicle*Check()`).
+
+Sama seperti pola split modules-render.js: murni deklarasi
+`function`/`const` top-level, TIDAK butuh mixin `Object.assign` — cukup
+`sparepart-servis-b.js` dimuat SETELAH `sparepart-servis.js`
+(scripts/build.js, GROUP_A, entri baru tepat setelah file utama).
+
+## Test
+5 file test disesuaikan (`loadSource([...])` ditambah
+`modules/vehicle/sparepart-servis-b.js` krn menguji fungsi yang pindah
+— `predictService()`, `TORSI_DB`/`findTorsiDb()`/`suggestServiceIntervalKm()`):
+`tests/sparepart-interval-bulan.test.js`,
+`tests/sparepart-recommend-categories.test.js`,
+`tests/sparepart-sync-from-catalog-s331.test.js`. 7 file test lain yang
+menyebut `sparepart-servis.js` dicek — tidak butuh perubahan (semua
+fungsi yang mereka pakai tetap di bagian PERTAMA, atau sudah guard
+`typeof` thd fungsi yang pindah).
+`node --test tests/*.test.js` -> **4857/4857 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s674-cashflow-siklus-legacy-card`,
+`?v=1419`, `index.html`/`app_production.html`/`sw.js` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan) -- dicatat di
+`docs/RELEASE-GATE-LOG.md`. html-sync & version-sync: **lolos** murni.
+Gate akhir: **LOLOS**.
+
+## Progress
+Lint "file kegedean" (ambang 1600 baris): **4 -> 3** file (di luar
+`scripts/build.js` yang wajar). `sparepart-servis.js` sudah lepas dari
+daftar (2053 -> 1350).
+
+## Next TODO
+Sisa file oversized (kandidat sesi split berikutnya):
+`modules/finance/transaksi.js` (1900), `modules/shared/scan-ocr.js`
+(1677), `modules/finance/dana-titipan-portfolio-render.js` (1616).
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-split-sparepart-servis.zip` (patch, hanya file berubah — bukan
+full release): app-bundle-a.min.js, app-bundle-b.min.js,
+app_production.html, index.html, sw.js,
+modules/vehicle/sparepart-servis.js,
+modules/vehicle/sparepart-servis-b.js (baru), scripts/build.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md,
+docs/RELEASE-GATE-LOG.md,
+tests/sparepart-interval-bulan.test.js,
+tests/sparepart-recommend-categories.test.js,
+tests/sparepart-sync-from-catalog-s331.test.js.
+
+# Sesi Split-Transaksi (2026-08-29) — Pecah modules/finance/transaksi.js (1899->1244 baris)
+
+## Konteks
+Lanjutan audit ukuran file setelah split `sparepart-servis.js`. Kandidat
+prioritas #1 dari 3 sisa file oversized: `modules/finance/transaksi.js`
+(1899 baris), file terbesar di luar `scripts/build.js`.
+
+## Perubahan
+Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (baris
+1239, langsung setelah `deleteTxFromModal(){...}` selesai).
+- **Diubah:** `modules/finance/transaksi.js` — sisa bagian PERTAMA
+  (setTxType, panel kendaraan/BBM/sparepart/shop, autocomplete
+  kategori/produk, owner-resolver, openTxModal/editTx/
+  deleteTxFromModal, dkk).
+- **Baru:** `modules/finance/transaksi-b.js` (680 baris) —
+  `saveTx()`/`_saveTxInner()` (mesin simpan transaksi ~600 baris:
+  cicilan/langganan/piutang/servis/bbm/shop sync) + fungsi tak
+  terkait domain transaksi yang sebelumnya menumpuk di ekor file yang
+  sama: `saveCatatan`, `saveReminder`, `saveLDR`, `toggleMs`,
+  `delReminder`.
+
+Sama seperti pola split sebelumnya: murni deklarasi `function`
+top-level, TIDAK butuh mixin `Object.assign` — cukup
+`transaksi-b.js` dimuat SETELAH `transaksi.js` (scripts/build.js,
+entri baru tepat setelah file utama). Referensi ke variabel top-level
+(`let`/`var`) yang dideklarasikan di file lain
+(`features-helpers-global-security.js`: curTxType/txEditId/_txSaving)
+maupun di `transaksi.js` sendiri (`_txPayMethodTouchedByUser`) tetap
+aman: di browser, `let`/`var` top-level pada `<script>` klasik berbagi
+satu global lexical scope lintas file.
+
+## Test
+10 file test disesuaikan (`loadSource([...])` ditambah
+`modules/finance/transaksi-b.js` krn menguji fungsi yang ikut pindah,
+terutama `saveTx()`/`_saveTxInner()`):
+`tests/s628-bugB-atomicity-create-regression.test.js`,
+`tests/s316-tagihan-tx-edit-billlink-sync.test.js`,
+`tests/s433-tx-renov-edit-save-fix.test.js`,
+`tests/s436-tx-renov-e2e-real.test.js`,
+`tests/s447-tx-renov-numeric-id-fix.test.js`,
+`tests/s452-tx-renov-edit-checkbox-restore.test.js`,
+`tests/s574-d2-deduction-owner-persist-validation.test.js`,
+`tests/s574-e-history-badge-datahealth-regression.test.js`,
+`tests/s578-dl-next-1-deduction-owner-validation-source.test.js`,
+`tests/tx-stock-edit-checkbox-restore-s629b.test.js` (2 loadSource
+call di file ini).
+1 file test khusus (`tests/s271-bill-list-cicilan-fixes.test.js`) —
+"source guard" yang baca isi mentah `transaksi.js` via regex (bukan
+`loadSource`), diubah baca gabungan `transaksi.js` + `transaksi-b.js`
+karena pola yang dicek (`totalAmount:cicilanShared?perBulan:null` dkk)
+ikut pindah ke file baru.
+18 file test lain yang menyebut `transaksi.js` dicek satu per satu —
+TIDAK butuh perubahan (fungsi yang mereka pakai tetap di bagian
+PERTAMA, tidak menyentuh saveTx/saveCatatan/saveReminder/saveLDR/
+toggleMs/delReminder).
+`node --test tests/*.test.js` -> **4857/4857 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s676-cashflow-siklus-legacy-card`,
+`?v=1423`, `index.html`/`app_production.html`/`sw.js` sinkron. (Versi
+naik 3 langkah dari baseline krn build dijalankan berulang saat
+verifikasi output di sesi ini — tidak ada dampak fungsional, cuma
+nomor versi lebih tinggi dari yang seharusnya minimal.)
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan). html-sync & version-sync:
+**lolos** murni. Gate akhir: **LOLOS**.
+
+## Progress
+Lint "file kegedean" (ambang 1600 baris): **3 -> 2** file di antara
+file aktif/terdaftar di build.js (di luar `scripts/build.js` yang
+wajar). `transaksi.js` sudah lepas dari daftar (1899 -> 1244).
+Catatan: lint juga menandai `modules/modules-render.js` (2165) &
+`modules/shop/modules-render.js` (1974) sebagai oversized, tapi
+KEDUANYA file mati/duplikat — TIDAK terdaftar di `scripts/build.js`
+(hanya `modules/shared/modules-render.js` yang aktif), jadi bukan
+kandidat split & aman diabaikan (sama seperti temuan dead-file sesi
+sebelumnya).
+
+## Next TODO
+Sisa file oversized aktif (kandidat sesi split berikutnya):
+`modules/shared/scan-ocr.js` (1677),
+`modules/finance/dana-titipan-portfolio-render.js` (1616).
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-split-transaksi.zip` (patch, hanya file berubah — bukan full
+release): app-bundle-a.min.js, app-bundle-b.min.js,
+app_production.html, index.html, sw.js,
+modules/finance/transaksi.js,
+modules/finance/transaksi-b.js (baru), scripts/build.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md,
+tests/s628-bugB-atomicity-create-regression.test.js,
+tests/s271-bill-list-cicilan-fixes.test.js,
+tests/s316-tagihan-tx-edit-billlink-sync.test.js,
+tests/s433-tx-renov-edit-save-fix.test.js,
+tests/s436-tx-renov-e2e-real.test.js,
+tests/s447-tx-renov-numeric-id-fix.test.js,
+tests/s452-tx-renov-edit-checkbox-restore.test.js,
+tests/s574-d2-deduction-owner-persist-validation.test.js,
+tests/s574-e-history-badge-datahealth-regression.test.js,
+tests/s578-dl-next-1-deduction-owner-validation-source.test.js,
+tests/tx-stock-edit-checkbox-restore-s629b.test.js.
+
+# Sesi Split-ScanOCR (2026-08-29) — Pecah modules/shared/scan-ocr.js (1676->1067 baris)
+
+## Konteks
+Lanjutan audit ukuran file setelah split `transaksi.js`. Kandidat #1
+dari 2 sisa file oversized.
+
+## Perubahan
+Titik potong bersih: TEPAT SETELAH
+`function scanBillMultiItems(){return BillMultiScan.scan();}`, persis
+di depan header komentar section `// ==== UniversalScan (Sesi 125) ====`.
+- **Diubah:** `modules/shared/scan-ocr.js` — sisa bagian PERTAMA
+  (ocrRecognize/downscaleImage/scanReceipt/scanBuktiTransfer/
+  scanTanggalDariFoto/scanKmOdometer/scanAssetPortfolio/
+  scanReceiptBelanja/scanWorthItCheckout/BillMultiScan, dkk).
+- **Baru:** `modules/shared/scan-ocr-b.js` (638 baris) — seluruh
+  fitur UniversalScan (Sesi 125): scan screenshot Bank/E-Wallet/
+  Bibit/Jago Pocket buat isi Akun otomatis (`detectScreenType*()`,
+  `parseBankScreen`/`parseWalletScreen`/`parseWalletNominal`/
+  `parseBibitScreen`/`extractBibitKeuntungan`/`parseJagoPocketScreen`,
+  `_fuzzyAccountMatch`, `runUniversalScanParser`/
+  `validateUniversalScanItem`, `getOcrMinConfidence`/
+  `setOcrMinConfidence`, `UniversalScanHistory`, object
+  `UniversalScan`, `scanUniversal()`).
+
+Sama seperti pola split sebelumnya: murni deklarasi function/const
+top-level, TIDAK butuh `Object.assign` — cukup `scan-ocr-b.js`
+dimuat SETELAH `scan-ocr.js`.
+
+## Test
+3 file test disesuaikan (`loadSource([...])` ditambah
+`modules/shared/scan-ocr-b.js`): `tests/scan-ocr-bibit-detail.test.js`
+(`detectScreenType()`/`parseBibitScreen()`),
+`tests/scan-ocr-wallet.test.js` (`parseWalletScreen()`),
+`tests/window-expose-audit-s347.test.js` (entri audit
+`UniversalScan`; entri `BillMultiScan` di file yang sama TIDAK
+berubah). `tests/scan-ocr-epoch-guard.test.js` dicek — tidak butuh
+perubahan (`_scanEpochNow`/`_scanEpochStale` tetap di bagian PERTAMA).
+`node --test tests/*.test.js` -> **4857/4857 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s677-cashflow-siklus-legacy-card`,
+`?v=1424`, `index.html`/`app_production.html`/`sw.js` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan). html-sync & version-sync:
+**lolos** murni. Gate akhir: **LOLOS**.
+
+## Progress
+Lint "file kegedean" (ambang 1600 baris) di antara file aktif:
+**2 -> 1** file. `scan-ocr.js` sudah lepas dari daftar (1676 -> 1067).
+`modules/modules-render.js` & `modules/shop/modules-render.js` tetap
+ditandai lint tapi keduanya file mati/duplikat, tidak terdaftar di
+`scripts/build.js` — aman diabaikan.
+
+## Next TODO
+Sisa file oversized aktif (terakhir dari daftar awal 4 file, kandidat
+sesi split berikutnya): `modules/finance/dana-titipan-portfolio-render.js`
+(1616).
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-split-scan-ocr.zip` (patch, hanya file berubah — bukan full
+release): app-bundle-a.min.js, app-bundle-b.min.js,
+app_production.html, index.html, sw.js,
+modules/shared/scan-ocr.js,
+modules/shared/scan-ocr-b.js (baru), scripts/build.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md,
+tests/scan-ocr-bibit-detail.test.js,
+tests/scan-ocr-wallet.test.js,
+tests/window-expose-audit-s347.test.js.
+
+# Sesi Split-DanaTitipanPortfolioRender (2026-08-29) — Pecah modules/finance/dana-titipan-portfolio-render.js (1615->1092 baris)
+
+## Konteks
+Sesi terakhir dari backlog audit ukuran file (4 file awal: transaksi.js,
+sparepart-servis.js, scan-ocr.js, dana-titipan-portfolio-render.js).
+
+## Perubahan
+Titik potong bersih: TEPAT SETELAH penutup object
+`DanaTitipanPortfolioPresenter` (`};`), persis di depan header
+komentar `DanaTitipanCommitmentUI`.
+- **Diubah:** `modules/finance/dana-titipan-portfolio-render.js` —
+  sisa bagian PERTAMA (object `DanaTitipanPortfolioPresenter` saja).
+- **Baru:** `modules/finance/dana-titipan-portfolio-render-b.js`
+  (547 baris) — object `DanaTitipanCommitmentUI`, `DanaTitipanReturnUI`,
+  `DanaTitipanPoolUI`.
+
+Sama seperti pola split sebelumnya: murni deklarasi const top-level,
+TIDAK butuh `Object.assign` — cukup `dana-titipan-portfolio-render-b.js`
+dimuat SETELAH file utama.
+
+## Test
+12 file test disesuaikan (`loadSource([...])` ditambah
+`dana-titipan-portfolio-render-b.js`):
+`dana-titipan-asset-picker-holding-option-s608`,
+`s485d-titipan-commitment-ui`, `s486-titipan-commitment-return`,
+`s515-dana-titipan-owner-nominal-asset-kuota-porsi`,
+`s516-dana-titipan-commitment-ownerid-escaping`,
+`s523b-titipan-owner-creation`,
+`s544-titipan-duplicate-container-scoped-porsi`,
+`s550-titipan-commitment-ui-tablist-sync`,
+`s631-titipan-holding-name-direct-porsi`,
+`session04a-dana-titipan-pool-ui-summary`,
+`session04b-dana-titipan-pool-ui-modal`,
+`session05-dana-titipan-fill-remaining`. 4 "source guard"
+(`fs.readFileSync`) di 3 file diarahkan ke file baru; 1 guard khusus
+di `s485d` (cek `Presenter.render()` sampai marker
+`DanaTitipanCommitmentUI`) dibaca gabungan kedua file. 44 file test
+lain dicek — tidak butuh perubahan (hanya pakai
+`DanaTitipanPortfolioPresenter`, tetap di bagian PERTAMA).
+`node --test tests/*.test.js` -> **4857/4857 pass** (0 regresi).
+
+## Build
+`node scripts/build.js` -> versi `s678-cashflow-siklus-legacy-card`,
+`?v=1425`, `index.html`/`app_production.html`/`sw.js` sinkron.
+
+## Status lint & release gate
+Lint & minify: **tidak tersedia, di-override** (eslint/esbuild tidak
+terpasang, sandbox tanpa akses jaringan). html-sync & version-sync:
+**lolos** murni. Gate akhir: **LOLOS**.
+
+## Progress
+Lint "file kegedean" (ambang 1600 baris): **1 -> 0** file aktif.
+**Backlog audit ukuran file (4 file: transaksi.js, sparepart-servis.js,
+scan-ocr.js, dana-titipan-portfolio-render.js) SELESAI TUNTAS.** Sisa
+lint hanya `scripts/build.js` (wajar, di luar cakupan audit) + 2 file
+mati/duplikat (`modules/modules-render.js`,
+`modules/shop/modules-render.js`, tidak terdaftar di
+`scripts/build.js`, aman diabaikan).
+
+## Next TODO
+Tidak ada kandidat split file lagi dari backlog ini. Sesi berikutnya
+bisa lanjut ke pekerjaan lain (mis. audit dead file duplikat
+`modules/modules-render.js`/`modules/shop/modules-render.js` buat
+dihapus permanen, atau kembali ke fitur DP/piutang shop yang sempat
+tertunda sebelum backlog audit ukuran file ini dimulai).
+
+## Known Issue
+Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+`PATCH-split-dana-titipan-portfolio-render.zip` (patch, hanya file
+berubah — bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+modules/finance/dana-titipan-portfolio-render.js,
+modules/finance/dana-titipan-portfolio-render-b.js (baru),
+scripts/build.js, docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md,
+tests/dana-titipan-asset-picker-holding-option-s608.test.js,
+tests/s485d-titipan-commitment-ui.test.js,
+tests/s486-titipan-commitment-return.test.js,
+tests/s515-dana-titipan-owner-nominal-asset-kuota-porsi.test.js,
+tests/s516-dana-titipan-commitment-ownerid-escaping.test.js,
+tests/s523b-titipan-owner-creation.test.js,
+tests/s544-titipan-duplicate-container-scoped-porsi.test.js,
+tests/s550-titipan-commitment-ui-tablist-sync.test.js,
+tests/s631-titipan-holding-name-direct-porsi.test.js,
+tests/session04a-dana-titipan-pool-ui-summary.test.js,
+tests/session04b-dana-titipan-pool-ui-modal.test.js,
+tests/session05-dana-titipan-fill-remaining.test.js.
