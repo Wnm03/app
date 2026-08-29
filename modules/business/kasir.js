@@ -24,7 +24,27 @@ viewMode:'grid', // 'grid' (tile 2 kolom) atau 'list' (baris ringkas) — kw198-
 categoryFilter:'', // '' = semua kategori — kw199-kasir-kategori-chip, id dari D.cobekKategori
 populateAccSelect(){
 const el=document.getElementById('kasirAcc');
-if(el)el.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(!el)return;
+const cur=el.value;
+el.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('')+'<option value="__new__">➕ Akun Baru</option>';
+el.value=(cur&&[...el.options].some(o=>o.value===cur))?cur:(D.accounts[0]?D.accounts[0].id:'');
+if(el.value!=='__new__')el.dataset.prevValue=el.value;
+},
+// onAccSelectChange() — dipanggil dari onchange <select id="kasirAcc"> (index.html). Kalau user
+// pilih opsi "➕ Akun Baru" (__new__), buka accModal (modules/finance/akun.js) lewat callback
+// (pola identik openCatModal()/catModalCallback yang sudah ada), lalu auto-select akun yang baru
+// dibuat. Kalau modal dibatalkan (tidak ada akun baru tersimpan), select dikembalikan ke pilihan
+// sebelumnya (accModalCallback di-reset ke null oleh akun.js sendiri, jadi aman kalau modal cuma
+// ditutup tanpa simpan) supaya tidak nyangkut di opsi "➕ Akun Baru".
+onAccSelectChange(){
+const el=document.getElementById('kasirAcc');
+if(!el)return;
+if(el.value!=='__new__'){el.dataset.prevValue=el.value;return;}
+openAccModal(undefined,(newAcc)=>{
+Kasir.populateAccSelect();
+if(newAcc&&newAcc.id){el.value=newAcc.id;el.dataset.prevValue=newAcc.id;}
+});
+if(el.value==='__new__'&&el.dataset.prevValue)el.value=el.dataset.prevValue;
 },
 render(){
 Kasir.populateAccSelect();
