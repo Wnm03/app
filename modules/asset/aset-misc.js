@@ -211,6 +211,40 @@ migrated++;
 if(migrated>0&&typeof save==='function')save();
 return{migrated,skipped:candidates.length-migrated};
 }
+// findGhostMigratedAssets() -- audit user (Vario 125 nyangkut di D.investments):
+// deteksi aset yang SUDAH ditandai `_migratedToInvestmentId` TAPI jenisnya TIDAK ada di
+// ASSET_JENIS_TO_INVESTMENT_TYPE (mis. Kendaraan) -- kombinasi ini cuma mungkin terjadi
+// lewat bug lama SEBELUM gate `!!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]` ditambahkan di
+// migrateAssetInvestmentsToHoldings() (lihat catatan fix di atas), karena sejak gate itu
+// ada, aset berjenis di luar mapping tidak akan pernah lolos jadi candidate lagi. Fix
+// sumbernya TIDAK retroaktif -- holding "hantu" yang sudah kadung ke-migrasi sebelumnya
+// tetap nyangkut di D.investments & aset asalnya tetap tersembunyi dari Buku Aset. Hanya
+// disorot kalau holding tujuannya MASIH ADA di D.investments (kalau user sudah hapus
+// manual holding-nya, tidak perlu disorot lagi -- 0 aksi paksa, cuma deteksi read-only,
+// keputusan pulihkan/tidak tetap di tangan user lewat unmigrateAssetFromInvestment()).
+function findGhostMigratedAssets(){
+if(typeof D==='undefined'||!D.assets)return[];
+const invIds=new Set((D.investments||[]).map((h)=>String(h.id)));
+return D.assets.filter((a)=>a._migratedToInvestmentId&&!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]&&invIds.has(String(a._migratedToInvestmentId)));
+}
+// unmigrateAssetFromInvestment() -- pasangan findGhostMigratedAssets() di atas: membalik
+// migrasi utk SATU aset -- hapus holding tujuannya (Investment.deleteHolding(), SUDAH ADA,
+// sudah membersihkan D.investmentTx & entry Buku Utang tertaut, 0 logic baru di sini) &
+// bersihkan `_migratedToInvestmentId` di asetnya supaya aset itu lolos lagi dari filter
+// exclude di Aset.renderList()/totalValue() & kembali normal sbg entry Buku Aset biasa.
+// Dipanggil manual dari UI (data-action), TIDAK pernah otomatis -- data user, keputusan
+// tetap ada di tangan user. Return true kalau berhasil, false kalau assetId tidak
+// ditemukan/tidak sedang ke-migrasi.
+function unmigrateAssetFromInvestment(assetId){
+if(typeof D==='undefined'||!D.assets)return false;
+const a=D.assets.find((x)=>String(x.id)===String(assetId));
+if(!a||!a._migratedToInvestmentId)return false;
+const holdingId=a._migratedToInvestmentId;
+if(typeof Investment!=='undefined')Investment.deleteHolding(holdingId);
+a._migratedToInvestmentId=null;
+if(typeof save==='function')save();
+return true;
+}
 // syncLinkedAssetNilaiFromAkun() -- Sesi 422f: lengkapi arah sync yang selama
 // ini BELUM ADA (dicatat sejak Sesi C: "arah sync SATU ARAH dari Aset->Akun,
 // bukan sebaliknya"). Transaksi (bayar/terima/transfer) yang terjadi LANGSUNG

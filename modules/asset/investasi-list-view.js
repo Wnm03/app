@@ -50,8 +50,36 @@ const InvestmentListUI = {
     const valBox = document.getElementById('investSummaryValue');
     if (!valBox) return; // halaman ini belum ada di DOM (mis. dites via loadSource() tanpa DOM)
     if (typeof Investment === 'undefined') return;
-    const s = Investment.portfolioSummary();
-    valBox.textContent = fmt(s.totalValue);
+    // BUGFIX (audit user "tab Investasi tidak respon sama sekali, tap = 0 reaksi"):
+    // Investment.portfolioSummary() (investasi.js) me-reduce SEMUA holding sekaligus
+    // TANPA try/catch per-holding (beda dari _renderList() di bawah yang sudah dilindungi
+    // sejak fix sebelumnya) -- kalau SATU holding punya data yang bikin salah satu
+    // hitungan (holdingValue/holdingCost/dividendTotal/realizedGainLoss/holdingYieldPct)
+    // throw, exception itu merambat keluar SEBELUM render() sempat lanjut ke
+    // _renderList() sama sekali (lihat render() di atas: _renderSummary() dipanggil
+    // LEBIH DULU). Efeknya: seluruh tab Investasi gagal render dari titik ini, tapi
+    // karena render() dipanggil langsung dari setAsetTab()/renderPageContent('aset')
+    // (bukan lewat dispatcher data-action yang punya try/catch+toast), tidak ada toast
+    // error sama sekali -- gejalanya persis "tidak respon", tap apa pun 0 reaksi (karena
+    // _renderList() yang seharusnya mem-bind ulang data-action pada baris holding tidak
+    // pernah sempat jalan). Fix: bungkus dgn try/catch -- 1 holding bermasalah fallback
+    // ke kartu ringkasan kosong/aman (bukan skip total), TIDAK menjatuhkan render()
+    // secara keseluruhan, supaya _renderList() di bawah tetap sempat jalan & tab tetap
+    // bisa dipakai.
+    let s;
+    let summaryFailed = false;
+    try {
+      s = Investment.portfolioSummary();
+    } catch (err) {
+      summaryFailed = true;
+      if (typeof console !== 'undefined' && console.error) console.error('[InvestmentListUI._renderSummary] gagal hitung portfolioSummary', err);
+      s = { holdingsCount: 0, totalValue: 0, totalCost: 0, totalGainLoss: 0, roiPct: 0, yieldPct: null, totalDividend: 0, totalRealizedGain: 0 };
+    }
+    if (summaryFailed) {
+      valBox.innerHTML = '<span class="u-t2" style="font-size:13px">⚠️ Gagal menghitung — cek daftar holding di bawah</span>';
+    } else {
+      valBox.textContent = fmt(s.totalValue);
+    }
     const costBox = document.getElementById('investSummaryCost');
     if (costBox) costBox.textContent = fmt(s.totalCost);
     const gainBox = document.getElementById('investSummaryGain');
@@ -86,10 +114,32 @@ const InvestmentListUI = {
   _renderList() {
     const el = document.getElementById('investmentHoldingList');
     if (!el) return;
-    if (typeof Investment === 'undefined') { el.innerHTML = ''; return; }
+    // BUGFIX (audit user, konfirmasi ke data backup: Vario 125 nyangkut jadi Holding):
+    // banner peringatan utk holding "hantu" hasil bug lama migrateAssetInvestmentsToHoldings()
+    // (aset-misc.js) sebelum gate `!!ASSET_JENIS_TO_INVESTMENT_TYPE[a.jenis]` ada -- aset
+    // non-investasi (mis. Kendaraan) bisa kadung ikut termigrasi jadi Holding. Fix sumbernya
+    // TIDAK retroaktif, jadi holding yg sudah kadung ke-migrasi sebelumnya tetap nyangkut di
+    // sini. findGhostMigratedAssets() (aset-misc.js, SUDAH ADA) mendeteksi kandidatnya (read
+    // only, 0 auto-fix); tombol di banner panggil InvestmentListUI.unmigrateGhost() ->
+    // unmigrateAssetFromInvestment() (SUDAH ADA) supaya keputusan pulihkan tetap di tangan
+    // user. Dirender di ATAS daftar holding biasa & TETAP tampil walau holdings kosong,
+    // supaya tidak ketinggalan kalau semua holding user memang cuma holding hantu ini.
+    let ghostBanner = '';
+    if (typeof findGhostMigratedAssets === 'function') {
+      const ghosts = findGhostMigratedAssets();
+      if (ghosts.length) {
+        ghostBanner = ghosts.map((a) => (
+          '<div class="card" style="border:1px solid var(--accent4);background:var(--accent4-soft);margin-bottom:10px;padding:12px 14px">'
+          + '<div style="font-size:12.5px;line-height:1.6;margin-bottom:8px">⚠️ "' + escapeHtml(a.name || '(tanpa nama)') + '" kemungkinan salah ke-migrasi ke sini dari Buku Aset (bukan aset investasi, mis. Kendaraan) akibat bug lama. Pulihkan ke Buku Aset?</div>'
+          + '<button type="button" class="btn btn-ghost btn-sm" data-action="InvestmentListUI.unmigrateGhost" data-args="' + escapeHtml(JSON.stringify([a.id])) + '">↩️ Pulihkan ke Buku Aset</button>'
+          + '</div>'
+        )).join('');
+      }
+    }
+    if (typeof Investment === 'undefined') { el.innerHTML = ghostBanner; return; }
     const holdings = Investment.getHoldings();
     if (!holdings.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-icon">💹</div><div class="empty-text">Belum ada holding investasi tercatat</div></div>';
+      el.innerHTML = ghostBanner + '<div class="empty"><div class="empty-icon">💹</div><div class="empty-text">Belum ada holding investasi tercatat</div></div>';
       return;
     }
     // BUGFIX (audit user "tap holding hasil migrasi = 0 reaksi, 0 toast"): sebelumnya
@@ -107,7 +157,7 @@ const InvestmentListUI = {
     // valid). Fix: bungkus hitungan PER HOLDING dgn try/catch -- 1 holding bermasalah
     // fallback ke nilai aman (0/null) dan tetap dirender sbg row yang BISA di-tap (badge
     // ⚠️ muncul di baris itu sbg penanda), tidak menjatuhkan seluruh render list.
-    el.innerHTML = holdings.map((h) => {
+    el.innerHTML = ghostBanner + holdings.map((h) => {
       let value = 0, gain = 0, roi = 0, warn = null, renderError = false;
       try {
         value = Investment.holdingValue(h);
@@ -531,6 +581,24 @@ const InvestmentListUI = {
     if (typeof renderDebtList === 'function') renderDebtList();
     if (typeof AIBus !== 'undefined') AIBus.emit('investment.updated', { deletedId: targetId });
     toast('🗑️ Holding dihapus');
+  },
+
+  // unmigrateGhost(assetId) — pasangan banner "holding hantu" di _renderList() di atas:
+  // konfirmasi dulu (data user, keputusan bukan otomatis), lalu panggil
+  // unmigrateAssetFromInvestment() (aset-misc.js, SUDAH ADA, 0 logic baru di sini) yang
+  // menghapus holding tujuan & membersihkan `_migratedToInvestmentId` di asetnya. Refresh
+  // KEDUA sisi (Investasi & Buku Aset) + agregat turunan supaya konsisten sesegera
+  // mungkin, pola sama deleteFromModal()/saveFromModal() di atas.
+  async unmigrateGhost(assetId) {
+    if (typeof unmigrateAssetFromInvestment !== 'function') return;
+    if (!await askConfirm('Pulihkan aset ini ke Buku Aset? Holding investasinya akan dihapus (riwayat transaksi holding & entry Buku Utang titipan yang tertaut ikut terhapus), datanya kembali normal sbg entry Buku Aset biasa.', { okText: 'Ya, Pulihkan' })) return;
+    const ok = unmigrateAssetFromInvestment(assetId);
+    if (!ok) { toast('⚠️ Gagal memulihkan — aset tidak ditemukan'); return; }
+    InvestmentListUI.render();
+    if (typeof Aset !== 'undefined' && typeof Aset.renderList === 'function') Aset.renderList();
+    if (typeof renderKekayaanBersih === 'function') renderKekayaanBersih();
+    if (typeof hitungZakatMaal === 'function') hitungZakatMaal();
+    toast('✅ Aset dipulihkan ke Buku Aset');
   },
 };
 
