@@ -1,42 +1,43 @@
 'use strict';
-// tests/s668-dana-titipan-owner-status-filter.test.js — Sesi 668 (sesi
-// lanjutan eksplisit dari catatan "Belum dikerjakan" SESSION-NOTE-S667.md:
-// "filter Owner+Status nyambung ke tab Dana Titipan
-// (DanaTitipanPortfolioPresenter) — supaya konsisten dgn filter yang sudah
-// ada di daftar Investasi (S662) & daftar Buku Aset (S667 ini)").
+// tests/s668-dana-titipan-owner-status-filter.test.js — Sesi 668 (fondasi
+// dropdown single-select, sesi lanjutan eksplisit dari catatan "Belum
+// dikerjakan" SESSION-NOTE-S667.md: "filter Owner+Status nyambung ke tab
+// Dana Titipan"), ditulis ulang PENUH S674 (item backlog dari catatan "Belum
+// dikerjakan" SESSION-NOTE-S673.md: "Sesi 2 (S674, Dana Titipan)") mengikuti
+// bentuk final checkbox multi-select, pola SAMA PERSIS
+// tests/s667-aset-owner-status-filter.test.js (S673, aset.js), cuma domain
+// Dana Titipan (DanaTitipanPortfolioPresenter, dana-titipan-portfolio-
+// render.js). Fondasi query (_holdingSettlement()/Aset.getOwnerSettlement()/
+// Investment.getOwnerSettlement()) dari S660/S665/S668, TIDAK berubah sesi
+// ini — sesi ini mengganti dropdown owner jadi checkbox-list multi-select +
+// tombol Pilih Semua/Bersihkan (kalau owner >5), semantik OR, murni state UI
+// (DanaTitipanPortfolioPresenter.filterOwnerIds/filterSettlement, 0 tulis ke D).
 //
-// Fondasi query (Aset.getOwnerSettlement()/Investment.getOwnerSettlement())
-// dari S660/S665, sesi ini menyambungkan ke UI tab Dana Titipan
-// (DanaTitipanPortfolioPresenter, dana-titipan-portfolio-render.js):
-// dropdown "Pemilik" + "Status" di atas daftar kartu owner, awalnya (S668)
-// HANYA aktif di container #danaTitipanTabList (kartu ringkas
-// #danaTitipanPortfolioList di tab Ringkasan sengaja TIDAK diubah dulu).
-// SESI S670 (lanjutan): gate diperluas mencakup #danaTitipanPortfolioList
-// juga -- lihat assertion yang diupdate di bawah (ditandai "S670"). 1 file
-// source disentuh sesi ini (sesuai Mode PATCH ZIP, docs/ZIP_RULES.md):
+// 1 file source disentuh sesi ini (sesuai Mode PATCH ZIP, docs/ZIP_RULES.md):
 // modules/finance/dana-titipan-portfolio-render.js. dana-titipan-
-// aggregation-api.js TIDAK disentuh — reuse penuh projection.owners[].
-// holdings[] (linkedAssetId/linkedInvestmentId/linkedOwnerId, SUDAH ADA
-// sejak build()), 0 rumus/agregasi baru.
+// aggregation-api.js TIDAK disentuh — reuse penuh projection.owners[] apa
+// adanya, 0 rumus/agregasi baru.
 //
 // Cakupan test ini:
-//   1. _holdingSettlement(hh) — resolve via Aset.getOwnerSettlement() (aset)
-//      / Investment.getOwnerSettlement() (investasi), default 'titipan'
-//      kalau entity asal tidak ketemu.
-//   2. _ownerMatchesFilter(o) — predicate murni: filterOwnerId kosong ->
-//      lolos semua; owner harus match id; filterSettlement (kalau diisi)
-//      butuh minimal 1 holding owner ini yang cocok.
-//   3. _renderFilterBar(owners) — '' kalau 0 owner; render dropdown Pemilik
-//      (badge "(N holding)") + dropdown Status (disabled kalau
-//      filterOwnerId kosong).
-//   4. onFilterOwnerChange()/onFilterSettlementChange() — state UI +
-//      delegasi ke renderInto('danaTitipanTabList').
-//   5. renderInto()/_renderNow() end-to-end: filter bar HANYA muncul di
-//      container 'danaTitipanTabList', TIDAK muncul di
-//      'danaTitipanPortfolioList' (kartu ringkas Dana Kelolaan) walau state
-//      filter sedang terisi; hasil filter memfilter kartu owner yang
-//      dirender; pesan kosong "🔍 Tidak ada pemilik..." saat filter tidak
-//      match apa pun (beda dari pesan "Belum ada porsi..." saat 0 data).
+//   1. _holdingSettlement(hh) — TIDAK berubah sesi ini, dipertahankan apa
+//      adanya (resolve via Aset.getOwnerSettlement()/Investment.
+//      getOwnerSettlement(), default 'titipan' kalau entity asal tidak ketemu).
+//   2. _ownerMatchesFilter(o) — predicate murni, semantik OR: filterOwnerIds
+//      kosong -> lolos semua; owner lolos kalau ownerId-nya ADA di
+//      filterOwnerIds; filterSettlement (kalau diisi) butuh minimal 1
+//      holding owner ini yang cocok.
+//   3. _renderFilterBar(owners) — '' kalau 0 owner; render checkbox-list
+//      Pemilik (badge "(N holding)", atribut checked sesuai filterOwnerIds)
+//      + dropdown Status (disabled kalau filterOwnerIds kosong); tombol
+//      Pilih Semua/Bersihkan HANYA muncul kalau owner > 5.
+//   4. onFilterOwnerToggle()/onFilterSettlementChange()/
+//      onFilterOwnerSelectAll()/onFilterOwnerClearAll() — state UI murni +
+//      delegasi ke renderInto() KEDUA container.
+//   5. renderInto()/_renderNow() end-to-end: filter bar muncul di
+//      'danaTitipanTabList'; hasil filter (multi-select) memfilter kartu
+//      owner yang dirender; pesan kosong "🔍 Tidak ada pemilik..." saat
+//      filter tidak match apa pun (beda dari pesan "Belum ada porsi..." saat
+//      0 data).
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -99,7 +100,32 @@ function baseD() {
   };
 }
 
-// --- _holdingSettlement() ------------------------------------------------
+// seedBanyakOwner(n) — n aset, tiap aset 1 owner non-SELF unik (owner1..ownerN),
+// porsi non-zero (wajib lolos validateOwners()), supaya build().owners punya
+// persis n baris.
+function seedBanyakOwner(n) {
+  const assets = [];
+  for (let i = 1; i <= n; i += 1) {
+    assets.push({
+      id: 'aB' + i,
+      name: 'Aset ' + i,
+      nilai: 1000000,
+      owners: [
+        { ownerId: 'SELF', porsi: 1, ownerName: 'Milik Sendiri', isSelf: true },
+        { ownerId: 'owner' + i, porsi: 99, ownerName: 'Owner ' + i },
+      ],
+    });
+  }
+  return {
+    investments: [], investmentTx: [], investmentWatchlist: [], assets, debts: [], titipanCommitments: [], titipanReturns: [], transactions: [],
+  };
+}
+
+function makeEl(id) {
+  return { id, innerHTML: '', querySelectorAll: () => [] };
+}
+
+// --- _holdingSettlement() (tidak berubah, dipertahankan apa adanya) --------
 
 test('_holdingSettlement(): holding domain Investasi -> default "titipan" kalau belum diatur', () => {
   const D = baseD();
@@ -110,53 +136,53 @@ test('_holdingSettlement(): holding domain Investasi -> default "titipan" kalau 
   assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement(hh), 'titipan');
 });
 
-test('_holdingSettlement(): holding domain Investasi -> ikut Investment.getOwnerSettlement() = "milik"', () => {
-  const D = baseD();
-  const ctx = makeCtx(D);
-  ctx.Investment.setOwnerSettlement('h1', 'budi1', 'milik');
-  const p = ctx.DanaTitipanPortfolioAPI.build();
-  const budi = p.owners.find((o) => o.ownerId === 'budi1');
-  const hh = budi.holdings.find((h) => h.linkedInvestmentId === 'h1');
-  assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement(hh), 'milik');
-});
-
-test('_holdingSettlement(): holding domain Aset -> ikut Aset.getOwnerSettlement()', () => {
-  const D = baseD();
-  const ctx = makeCtx(D);
-  ctx.Aset.setOwnerSettlement('as1', 'adik1', 'milik');
-  const p = ctx.DanaTitipanPortfolioAPI.build();
-  const adik = p.owners.find((o) => o.ownerId === 'adik1');
-  const hh = adik.holdings.find((h) => h.linkedAssetId === 'as1');
-  assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement(hh), 'milik');
-});
-
 test('_holdingSettlement(): entity asal sudah tidak ada -> fallback "titipan" (bukan throw)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
   assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement({ linkedAssetId: 'ghost', linkedOwnerId: 'adik1' }), 'titipan');
-  assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement({ linkedInvestmentId: 'ghost', linkedOwnerId: 'budi1' }), 'titipan');
   assert.equal(ctx.DanaTitipanPortfolioPresenter._holdingSettlement(null), 'titipan');
 });
 
-// --- _ownerMatchesFilter() ------------------------------------------------
+// --- state awal -------------------------------------------------------------
 
-test('_ownerMatchesFilter(): filterOwnerId kosong -> lolos semua owner', () => {
+test('state awal: filterOwnerIds array kosong (bukan string)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = '';
+  assert.equal(Array.isArray(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), true);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
+});
+
+// --- _ownerMatchesFilter() --------------------------------------------------
+
+test('_ownerMatchesFilter(): filterOwnerIds kosong -> lolos semua owner', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = [];
   const p = ctx.DanaTitipanPortfolioAPI.build();
   p.owners.forEach((o) => assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(o), true));
 });
 
-test('_ownerMatchesFilter(): filterOwnerId terisi -> hanya owner yang cocok lolos', () => {
+test('_ownerMatchesFilter(): 1 owner terpilih -> hanya owner yang cocok lolos', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   const p = ctx.DanaTitipanPortfolioAPI.build();
   const budi = p.owners.find((o) => o.ownerId === 'budi1');
   const adik = p.owners.find((o) => o.ownerId === 'adik1');
   assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(budi), true);
   assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(adik), false);
+});
+
+test('_ownerMatchesFilter(): 2 owner dipilih sekaligus (semantik OR) -> owner dgn SALAH SATU id lolos', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1', 'adik1'];
+  const p = ctx.DanaTitipanPortfolioAPI.build();
+  const budi = p.owners.find((o) => o.ownerId === 'budi1');
+  const adik = p.owners.find((o) => o.ownerId === 'adik1');
+  assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(budi), true);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(adik), true);
 });
 
 test('_ownerMatchesFilter(): filterSettlement diisi -> butuh minimal 1 holding owner ini yang cocok', () => {
@@ -165,11 +191,18 @@ test('_ownerMatchesFilter(): filterSettlement diisi -> butuh minimal 1 holding o
   ctx.Investment.setOwnerSettlement('h1', 'budi1', 'milik');
   const p = ctx.DanaTitipanPortfolioAPI.build();
   const budi = p.owners.find((o) => o.ownerId === 'budi1');
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   ctx.DanaTitipanPortfolioPresenter.filterSettlement = 'milik';
   assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(budi), true);
   ctx.DanaTitipanPortfolioPresenter.filterSettlement = 'titipan';
   assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(budi), false);
+});
+
+test('_ownerMatchesFilter(): owner null/undefined -> false, tidak melempar', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
+  assert.doesNotThrow(() => assert.equal(ctx.DanaTitipanPortfolioPresenter._ownerMatchesFilter(null), false));
 });
 
 // --- _renderFilterBar() ------------------------------------------------
@@ -180,98 +213,178 @@ test('_renderFilterBar(): balik "" kalau 0 owner', () => {
   assert.equal(ctx.DanaTitipanPortfolioPresenter._renderFilterBar([]), '');
 });
 
-test('_renderFilterBar(): render dropdown Pemilik dgn badge "(N holding)" per owner', () => {
+test('_renderFilterBar(): render checkbox Pemilik dgn badge "(N holding)" per owner', () => {
   const D = baseD();
   const ctx = makeCtx(D);
   const p = ctx.DanaTitipanPortfolioAPI.build();
   const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
-  assert.match(html, /Budi \(1 holding\)/);
-  assert.match(html, /Adik \(1 holding\)/);
-  assert.match(html, /👥 Semua Pemilik/);
+  assert.match(html, /Budi.*\(1 holding\)/);
+  assert.match(html, /Adik.*\(1 holding\)/);
+  assert.match(html, /Filter Pemilik \(bisa pilih lebih dari satu\)/);
+  assert.match(html, /onFilterOwnerToggle\('budi1'\)/);
+  assert.match(html, /onFilterOwnerToggle\('adik1'\)/);
 });
 
-test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerId kosong, aktif kalau terisi', () => {
+test('_renderFilterBar(): checkbox owner yg sedang terpilih (filterOwnerIds) dirender checked', () => {
   const D = baseD();
   const ctx = makeCtx(D);
   const p = ctx.DanaTitipanPortfolioAPI.build();
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = '';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
+  const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
+  assert.match(html, /onFilterOwnerToggle\('budi1'\)" checked>/);
+  assert.doesNotMatch(html, /onFilterOwnerToggle\('adik1'\)" checked>/);
+});
+
+test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerIds kosong, aktif kalau terisi', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  const p = ctx.DanaTitipanPortfolioAPI.build();
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = [];
   let html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
   let statusSelect = html.match(/<select[^>]*onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange[^>]*>/);
   assert.ok(statusSelect);
   assert.match(statusSelect[0], / disabled/);
 
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
   statusSelect = html.match(/<select[^>]*onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange[^>]*>/);
   assert.ok(statusSelect);
   assert.doesNotMatch(statusSelect[0], / disabled/);
 });
 
-// --- onFilterOwnerChange() / onFilterSettlementChange() -----------------
-
-test('onFilterOwnerChange(): set state + delegasi ke renderInto() KEDUA container (S670)', () => {
-  const D = baseD();
+test('_renderFilterBar(): <=5 owner -> tombol Pilih Semua/Bersihkan TIDAK dirender', () => {
+  const D = seedBanyakOwner(5);
   const ctx = makeCtx(D);
-  const calledWith = [];
-  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith.push(id); };
-  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerChange('budi1');
-  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerId, 'budi1');
-  assert.deepEqual(calledWith, ['danaTitipanTabList', 'danaTitipanPortfolioList']);
+  const p = ctx.DanaTitipanPortfolioAPI.build();
+  const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
+  assert.doesNotMatch(html, /onFilterOwnerSelectAll/);
+  assert.doesNotMatch(html, /onFilterOwnerClearAll/);
 });
 
-test('onFilterOwnerChange(""): mengosongkan filterSettlement juga', () => {
+test('_renderFilterBar(): >5 owner -> tombol Pilih Semua/Bersihkan DIRENDER', () => {
+  const D = seedBanyakOwner(6);
+  const ctx = makeCtx(D);
+  const p = ctx.DanaTitipanPortfolioAPI.build();
+  const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
+  assert.match(html, /DanaTitipanPortfolioPresenter\.onFilterOwnerSelectAll\(\)/);
+  assert.match(html, /DanaTitipanPortfolioPresenter\.onFilterOwnerClearAll\(\)/);
+  assert.match(html, />Pilih Semua</);
+  assert.match(html, />Bersihkan</);
+});
+
+// --- onFilterOwnerToggle() / onFilterSettlementChange() -----------------
+
+test('onFilterOwnerToggle(id) pertama kali -> id masuk filterOwnerIds & renderInto() KEDUA container', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  const calls = [];
+  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calls.push(id); };
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 1);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds[0], 'budi1');
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0], 'danaTitipanTabList');
+  assert.equal(calls[1], 'danaTitipanPortfolioList');
+});
+
+test('onFilterOwnerToggle(id) yang sama 2x -> toggle off (dilepas dari array)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
   ctx.DanaTitipanPortfolioPresenter.renderInto = () => {};
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
-  ctx.DanaTitipanPortfolioPresenter.filterSettlement = 'milik';
-  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerChange('');
-  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerId, '');
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
+});
+
+test('onFilterOwnerToggle(): centang 2 owner -> filterOwnerIds berisi keduanya', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.renderInto = () => {};
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('adik1');
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 2);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.indexOf('budi1') !== -1, true);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.indexOf('adik1') !== -1, true);
+});
+
+test('onFilterOwnerToggle(): semua owner dilepas centang -> filterSettlement otomatis reset', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.renderInto = () => {};
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('milik');
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1'); // lepas centang terakhir
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
 });
 
-test('onFilterSettlementChange(): normalisasi nilai tidak valid ke "", delegasi ke renderInto() KEDUA container (S670)', () => {
+test('onFilterOwnerToggle("") / (undefined) tidak melempar & tidak mengubah state (guard id kosong)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  const calledWith = [];
-  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith.push(id); };
+  ctx.DanaTitipanPortfolioPresenter.renderInto = () => {};
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle('budi1');
+  assert.doesNotThrow(() => ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle(''));
+  assert.doesNotThrow(() => ctx.DanaTitipanPortfolioPresenter.onFilterOwnerToggle(undefined));
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 1);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds[0], 'budi1');
+});
+
+test('onFilterSettlementChange(): normalisasi nilai tidak valid ke "", delegasi ke renderInto() KEDUA container', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  let calls = [];
+  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calls.push(id); };
   ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('milik');
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, 'milik');
+  assert.equal(calls.length, 2);
+  calls = [];
   ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('ngasal');
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
-  assert.deepEqual(calledWith, ['danaTitipanTabList', 'danaTitipanPortfolioList', 'danaTitipanTabList', 'danaTitipanPortfolioList']);
+  assert.equal(calls.length, 2);
+});
+
+// --- onFilterOwnerSelectAll() / onFilterOwnerClearAll() -----------------
+
+test('onFilterOwnerSelectAll() -> filterOwnerIds terisi SEMUA ownerId hasil build() & renderInto() KEDUA container', () => {
+  const D = seedBanyakOwner(6);
+  const ctx = makeCtx(D);
+  const calls = [];
+  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calls.push(id); };
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerSelectAll();
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 6);
+  for (let i = 1; i <= 6; i += 1) assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.indexOf('owner' + i) !== -1, true);
+  assert.equal(calls.length, 2);
+});
+
+test('onFilterOwnerClearAll() setelah Select All -> filterOwnerIds & filterSettlement kosong lagi', () => {
+  const D = seedBanyakOwner(6);
+  const ctx = makeCtx(D);
+  ctx.DanaTitipanPortfolioPresenter.renderInto = () => {};
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerSelectAll();
+  ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('milik');
+  ctx.DanaTitipanPortfolioPresenter.onFilterOwnerClearAll();
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
+  assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
 });
 
 // --- renderInto()/_renderNow() end-to-end (DOM ringan) -------------------
 
-function makeEl(id) {
-  return { id, innerHTML: '', querySelectorAll: () => [] };
-}
-
-test('renderInto(): filter bar muncul di KEDUA container "danaTitipanTabList" & "danaTitipanPortfolioList" (S670)', () => {
+test('renderInto("danaTitipanTabList"): filter bar muncul & memfilter kartu owner (multi-select)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   const elTab = makeEl('danaTitipanTabList');
-  const elCard = makeEl('danaTitipanPortfolioList');
-  const elMap = { danaTitipanTabList: elTab, danaTitipanPortfolioList: elCard };
-  ctx.document = { getElementById: (id) => elMap[id] || null };
+  ctx.document = { getElementById: () => elTab };
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
-  ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
-  assert.match(elTab.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerChange/);
-  assert.match(elCard.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerChange/);
-  // filter aktif di KEDUA container (state dibagi) -- Adik (tidak match filter)
-  // disembunyikan di keduanya, Budi (match) tetap tampil di keduanya.
-  assert.doesNotMatch(elCard.innerHTML, /👤 Adik/);
-  assert.doesNotMatch(elTab.innerHTML, /👤 Adik/);
-  assert.match(elCard.innerHTML, /👤 Budi/);
+  assert.match(elTab.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerToggle/);
   assert.match(elTab.innerHTML, /👤 Budi/);
+  assert.doesNotMatch(elTab.innerHTML, /👤 Adik/);
 });
 
 test('renderInto(): filter tidak match apa pun -> pesan "🔍 Tidak ada pemilik..." (beda dari "Belum ada porsi...")', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'owner_tidak_ada';
+  ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['owner_tidak_ada'];
   const elTab = makeEl('danaTitipanTabList');
   ctx.document = { getElementById: () => elTab };
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
