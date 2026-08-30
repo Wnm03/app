@@ -408,3 +408,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm/jaringan, eslint tidak terpasang
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses npm/jaringan, esbuild tidak terpasang
+
+## 2026-08-30T12:04:32.075Z — versi s630-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox sesi ini tidak punya akses jaringan (npm install eslint gagal), pola sama sesi-sesi sebelumnya (S673 dst); verifikasi manual: node -c pada semua file yang diubah lolos, gaya kode konsisten pola existing yang di-mirror persis dari Aset (S673).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa diinstall; bundle tanpa minifikasi tapi valid sintaks (node --check lolos), pola sama sesi-sesi sebelumnya.
