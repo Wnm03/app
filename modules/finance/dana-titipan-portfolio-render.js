@@ -24,6 +24,23 @@
 // (`investasi-view.js`) sama sekali.
 const DanaTitipanPortfolioPresenter = {
 
+  // filterOwnerId / filterSettlement — S668 (sesi lanjutan eksplisit dari catatan
+  // "Belum dikerjakan" SESSION-NOTE-S667.md: "filter Owner+Status nyambung ke tab
+  // Dana Titipan (DanaTitipanPortfolioPresenter) — supaya konsisten dgn filter yang
+  // sudah ada di daftar Investasi (S662, investasi-list-view.js) & daftar Buku Aset
+  // (S667, aset.js)"), pola SAMA PERSIS InvestmentListUI.filterOwnerId/filterSettlement
+  // tapi domain owner Dana Titipan (projection.owners hasil DanaTitipanPortfolioAPI.
+  // build(), SUDAH per-owner NON-SELF, beda struktur dari Investasi/Aset yang per-item).
+  // State UI MURNI (bukan ditulis ke D), direset ke '' tiap reload halaman.
+  // filterOwnerId: '' = Semua Pemilik, atau ownerId dari salah satu projection.owners.
+  // filterSettlement: '' = Semua Status, atau 'titipan'/'milik' (Aset.getOwnerSettlement()/
+  // Investment.getOwnerSettlement(), S660/S665) -- HANYA relevan kalau filterOwnerId terisi.
+  // SENGAJA hanya aktif utk container tab (#danaTitipanTabList, sub-tab Laporan > Dana
+  // Titipan) -- kartu ringkas #danaTitipanPortfolioList di tab Ringkasan (Dana Kelolaan)
+  // TIDAK diubah sama sekali, lihat gating `isTabView` di `_renderNow()`.
+  filterOwnerId: '',
+  filterSettlement: '',
+
   _money(n) {
     return (typeof fmtFull === 'function') ? fmtFull(n) : ((typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0)));
   },
@@ -897,6 +914,110 @@ const DanaTitipanPortfolioPresenter = {
     </div>`;
   },
 
+  // _holdingSettlement(hh) — S668. Resolve status settlement ('titipan'/'milik')
+  // 1 baris holding owner (hh, elemen `o.holdings[]` hasil `DanaTitipanPortfolioAPI.
+  // build()`) dgn REUSE PENUH `Aset.getOwnerSettlement()`/`Investment.
+  // getOwnerSettlement()` yang SUDAH ADA (S660/S665) -- 0 rumus baru ditulis di sini,
+  // murni lookup entity asal via `hh.linkedAssetId`/`hh.linkedInvestmentId` (field yang
+  // SUDAH ADA di tiap holding sejak build(), lihat dana-titipan-aggregation-api.js)
+  // lalu delegasi ke helper domain yang sesuai. Holding domain Aset (`hh.linkedAssetId`
+  // terisi, `type:'aset'`) -> `Aset.getOwnerSettlement(asset, hh.linkedOwnerId)`.
+  // Holding domain Investasi (`hh.linkedInvestmentId` terisi) -> `Investment.
+  // getOwnerSettlement(holding, hh.linkedOwnerId)`. Default `'titipan'` kalau entity
+  // asal sudah tidak ketemu lagi (mis. terhapus di antara build() & render ini) atau
+  // helper-nya belum tersedia -- konsisten dgn default `getOwnerSettlement()` sendiri
+  // (data lama tanpa field settlement eksplisit dianggap 'titipan', bukan 'milik').
+  _holdingSettlement(hh) {
+    if (!hh) return 'titipan';
+    try {
+      if (hh.linkedAssetId != null) {
+        if (typeof D === 'undefined' || !Array.isArray(D.assets)) return 'titipan';
+        const a = D.assets.find((x) => x && x.id === hh.linkedAssetId);
+        if (!a || typeof Aset === 'undefined' || typeof Aset.getOwnerSettlement !== 'function') return 'titipan';
+        return Aset.getOwnerSettlement(a, hh.linkedOwnerId);
+      }
+      if (hh.linkedInvestmentId != null) {
+        if (typeof Investment === 'undefined' || typeof Investment.getHoldings !== 'function' || typeof Investment.getOwnerSettlement !== 'function') return 'titipan';
+        const h = Investment.getHoldings().find((x) => x && x.id === hh.linkedInvestmentId);
+        if (!h) return 'titipan';
+        return Investment.getOwnerSettlement(h, hh.linkedOwnerId);
+      }
+    } catch (err) {
+      return 'titipan';
+    }
+    return 'titipan';
+  },
+
+  // _ownerMatchesFilter(o) — S668. Predicate murni (0 mutasi), dipanggil per-owner
+  // dari `_renderNow()` (HANYA di container tab, lihat `isTabView`). filterOwnerId
+  // kosong -> semua owner lolos (filter nonaktif). Owner harus COCOK filterOwnerId
+  // DAN, kalau filterSettlement juga diisi, MINIMAL 1 holding owner ini (`o.holdings[]`)
+  // punya settlement yang cocok (`_holdingSettlement()`) -- beda dari Aset/Investasi
+  // (1 item = 1 owner-relation, match langsung), di sini 1 owner card bisa merangkum
+  // banyak holding lintas Aset+Investasi jadi dicek "ada minimal 1 yang cocok", bukan
+  // "semua harus cocok" (pola sama semangat "tampilkan owner ini kalau relevan dgn
+  // filter", bukan "sembunyikan holding yang tidak cocok di dalam kartu" -- granularitas
+  // filter di sini per KARTU OWNER, konsisten dgn unit yang dirender `_ownerListHtml()`).
+  _ownerMatchesFilter(o) {
+    if (!DanaTitipanPortfolioPresenter.filterOwnerId) return true;
+    if (!o || String(o.ownerId) !== String(DanaTitipanPortfolioPresenter.filterOwnerId)) return false;
+    if (!DanaTitipanPortfolioPresenter.filterSettlement) return true;
+    return (o.holdings || []).some((hh) => DanaTitipanPortfolioPresenter._holdingSettlement(hh) === DanaTitipanPortfolioPresenter.filterSettlement);
+  },
+
+  // _renderFilterBar(owners) — S668. Bangun 2 dropdown "Pemilik" & "Status" di atas
+  // daftar kartu owner tab Dana Titipan, pola SAMA PERSIS `InvestmentListUI.
+  // _renderFilterBar()` (S662/S664, investasi-list-view.js) -- termasuk badge jumlah
+  // "(N holding)" per owner (S664). Beda dari Investasi/Aset: `owners` di sini SUDAH
+  // 1 entry per ownerId (hasil `DanaTitipanPortfolioAPI.build()`, bukan array holding
+  // mentah), jadi 0 perlu agregasi ulang -- badge count = `o.holdings.length` apa
+  // adanya. `owners` (SEBELUM difilter S668) SELALU non-SELF (build() sudah exclude
+  // isSelf), jadi 0 owner sama sekali HANYA terjadi kalau projection.owners kosong
+  // total -- kasus itu sudah ditangani early-return terpisah di `_renderNow()`
+  // (pesan "Belum ada porsi dana titipan..."), jadi guard `!owners.length` di sini
+  // murni jaga-jaga (pola sama InvestmentListUI, filter bar disembunyikan bukan
+  // dirender kosong/nganggur).
+  _renderFilterBar(owners) {
+    if (!owners || !owners.length) return '';
+    const ownerOpts = ['<option value="">👥 Semua Pemilik</option>'].concat(
+      owners.map((o) => (
+        '<option value="' + escapeHtml(o.ownerId) + '"' + (String(DanaTitipanPortfolioPresenter.filterOwnerId) === String(o.ownerId) ? ' selected' : '') + '>'
+        + escapeHtml(o.ownerName) + ' (' + ((o.holdings && o.holdings.length) || 0) + ' holding)</option>'
+      )),
+    ).join('');
+    // Dropdown Status HANYA masuk akal kalau owner sudah dipilih (settlement adalah
+    // properti PER owner-holding, tidak bermakna lintas semua owner sekaligus) --
+    // disabled + balik ke '' otomatis lewat onFilterOwnerChange() saat filterOwnerId
+    // dikosongkan lagi, pola sama persis InvestmentListUI.
+    const statusDisabled = DanaTitipanPortfolioPresenter.filterOwnerId ? '' : ' disabled';
+    const statusOpts = '<option value="">Semua Status</option>'
+      + '<option value="titipan"' + (DanaTitipanPortfolioPresenter.filterSettlement === 'titipan' ? ' selected' : '') + '>🔒 Dana Titipan</option>'
+      + '<option value="milik"' + (DanaTitipanPortfolioPresenter.filterSettlement === 'milik' ? ' selected' : '') + '>✅ Milik Sendiri</option>';
+    return '<div class="u-flex u-gap8 u-mb10" style="flex-wrap:wrap">'
+      + '<select class="fs u-flex1" style="min-width:140px" onchange="DanaTitipanPortfolioPresenter.onFilterOwnerChange(this.value)">' + ownerOpts + '</select>'
+      + '<select class="fs u-flex1" style="min-width:140px"' + statusDisabled + ' onchange="DanaTitipanPortfolioPresenter.onFilterSettlementChange(this.value)">' + statusOpts + '</select>'
+      + '</div>';
+  },
+
+  // onFilterOwnerChange(val) / onFilterSettlementChange(val) — S668. onchange handler
+  // dropdown filter bar di atas, murni state UI + render ulang -- pola SAMA PERSIS
+  // `InvestmentListUI.onFilterOwnerChange()`/`onFilterSettlementChange()` (S662), BEDA
+  // cuma target render: `renderInto('danaTitipanTabList')` LANGSUNG (bukan 2 method
+  // terpisah _renderSummary()/_renderList() spt InvestmentListUI) -- Dana Titipan tab
+  // 0 kartu ringkasan terpisah dari isi utama container (poolSummary sudah bagian dari
+  // innerHTML yang sama), pola sama `Aset.onFilterOwnerChange()` (S667) yang juga
+  // langsung panggil 1 method render. Balik ke "Semua Pemilik" otomatis mengosongkan
+  // filterSettlement juga (status tanpa owner terpilih tidak bermakna apa-apa).
+  onFilterOwnerChange(val) {
+    DanaTitipanPortfolioPresenter.filterOwnerId = val || '';
+    if (!DanaTitipanPortfolioPresenter.filterOwnerId) DanaTitipanPortfolioPresenter.filterSettlement = '';
+    DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+  },
+  onFilterSettlementChange(val) {
+    DanaTitipanPortfolioPresenter.filterSettlement = (val === 'milik' || val === 'titipan') ? val : '';
+    DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+  },
+
   // renderInto(containerId) — SESI 498 (Tab "Dana Titipan" Terpadu, Sesi A
   // §2.2 rancangan audit AUDIT-DANA-TITIPAN-TAB-TERPADU.md): generalisasi
   // render() supaya bisa dipasang ke LEBIH dari satu container sekaligus
@@ -983,9 +1104,17 @@ const DanaTitipanPortfolioPresenter = {
   // sekeliling penggantian el.innerHTML (lihat _captureAssetPickSelections
   // / _restoreAssetPickSelections di atas) — SATU-SATUNYA perubahan
   // perilaku sesi ini, 0 logika projection/aggregasi lain disentuh.
+  // S668: `isTabView` gate -- filter Owner+Status HANYA aktif di container tab
+  // (#danaTitipanTabList, sub-tab Laporan > Dana Titipan). Kartu ringkas
+  // #danaTitipanPortfolioList (tab Ringkasan, di dalam kartu Dana Kelolaan)
+  // TETAP 100% apa adanya (0 filter bar, `projection.owners` penuh apa adanya)
+  // -- sesuai permintaan eksplisit user "nyambungin filter ini ke tab Dana
+  // Titipan" (bukan kartu ringkas), pola sama semangat filter Aset/Investasi
+  // yang dipasang di halaman DAFTAR (browsing), bukan di kartu ringkasan.
   _renderNow(el) {
     const savedAssetPicks = this._captureAssetPickSelections(el);
     const projection = DanaTitipanPortfolioAPI.build();
+    const isTabView = !!(el && el.id === 'danaTitipanTabList');
     // Sesi 485d — tombol buka modal "💰 Pokok Dana Titipan" (murni
     // konsumsi API sesi 485a-c: listExistingOwners()/saveCommitment(),
     // 0 logika CRUD/projection baru ditulis di sini). Selalu ditampilkan
@@ -1008,6 +1137,27 @@ const DanaTitipanPortfolioPresenter = {
       return;
     }
 
+    // S668 — filter bar dibangun dari `projection.owners` PENUH (SEBELUM
+    // difilter), supaya opsi dropdown owner tetap lengkap walau filter Status
+    // sedang aktif menyembunyikan sebagian kartu, pola sama persis
+    // `InvestmentListUI._renderFilterBar(allHoldings)`/`Aset._renderFilterBar(list)`.
+    // `filteredOwners` dipakai di `_ownerListHtml()` di bawah -- totals/poolSummary
+    // TETAP dihitung dari `projection` penuh (0 diubah), filter ini HANYA
+    // memfilter kartu owner apa yang dirender, konsisten dgn Aset (S667)/
+    // Investasi (S662): dashboard/ringkasan tidak ikut terfilter.
+    const filterBarHtml = isTabView ? this._renderFilterBar(projection.owners) : '';
+    const filteredOwners = isTabView ? projection.owners.filter((o) => this._ownerMatchesFilter(o)) : projection.owners;
+
+    // filteredOwners kosong TAPI projection.owners tidak -- beda pesan drpd
+    // "belum ada porsi dana titipan..." di atas (yang berarti 0 data sama
+    // sekali), pola sama persis Aset._assetMatchesFilter()/InvestmentListUI
+    // ("🔍 Tidak ada holding/aset yang cocok"). HANYA bisa terjadi di isTabView
+    // (filter nonaktif di container lain, filteredOwners === projection.owners).
+    if (isTabView && !filteredOwners.length) {
+      el.innerHTML = poolSummary + addBtn + expenseBtn + filterBarHtml + '<div class="u-fs11 u-t2 u-mt6">🔍 Tidak ada pemilik dana titipan yang cocok dengan filter ini.</div>';
+      return;
+    }
+
     // MOCKUP-ALIGN (audit tampilan, Agustus 2026 — screenshot user: layar
     // Dana Titipan didominasi baris teknis rekonsiliasi/audit — "Pengeluaran
     // Majoris", "Sisa Saldo Majoris Belum Terpotong", warning "Beda dgn
@@ -1025,9 +1175,9 @@ const DanaTitipanPortfolioPresenter = {
     // string yang dicek test (mis. "Total Kelebihan Alokasi",
     // "Pengeluaran Majoris") tetap ada di innerHTML, cuma disembunyikan
     // visual sampai user tap "🔍 Rincian Audit & Rekonsiliasi".
-    el.innerHTML = poolSummary + addBtn + expenseBtn + `
+    el.innerHTML = poolSummary + addBtn + expenseBtn + filterBarHtml + `
       <div class="u-fs11 u-t2 u-mt10 u-mb4">Dana titipan dalam investasi (per pemilik, teralokasi ke instrumen):</div>
-      ${this._ownerListHtml(projection.owners)}
+      ${this._ownerListHtml(filteredOwners)}
       <div class="titipan-card titipan-card-hero u-mt10">
         <span class="titipan-pool-lbl">Total Teralokasi</span>
         <span class="titipan-pool-amt">
