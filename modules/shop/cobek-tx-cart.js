@@ -34,7 +34,29 @@ function resetShopStockCart(){
 curShopStockCart=[];
 renderShopStockCartList();
 }
+// BUGFIX (audit lanjutan "input Nama Produk Baru di transaksi tidak respon", pola SAMA
+// PERSIS audit tombol tab Investasi/InvestmentWatchUI.render() sesi sebelumnya): kedua
+// fungsi ini (populateTxShopStockSelect/onTxShopStockItemChange) dipanggil LANGSUNG dari
+// attribute onchange="..." inline di modals.js — BUKAN lewat dispatcher data-action yang
+// sudah dilindungi try/catch (lihat _dataActionClickHandler di
+// features-helpers-global-security.js). Kalau 1 baris di sini throw (mis. txNote belum
+// ada di DOM saat dipanggil, atau D.produsen sempat undefined), exception jadi
+// UNCAUGHT: alur berhenti total, panel/field jadi "diam" tanpa toast maupun error yang
+// kelihatan user — persis gejala yang dilaporkan. Fix: bungkus try/catch, konsisten
+// dengan pola audit render() lain di codebase ini — 1 kegagalan tidak lagi membisukan
+// seluruh alur, dan errornya sekarang ke-log + toast (kalau Debug Console aktif) supaya
+// akar masalah sebenarnya (kalau ada) ketahuan di sesi berikutnya.
 function populateTxShopStockSelect(){
+try{ _populateTxShopStockSelectInner(); }
+catch(err){
+console.error('[populateTxShopStockSelect] error:', err);
+if(typeof toast==='function'){
+const debugOn=(typeof localStorage!=='undefined'&&localStorage.getItem('kw_debug_console')==='1');
+toast(debugOn?('⚠️ DEBUG populateTxShopStockSelect: '+(err&&err.message?err.message:err)):'⚠️ Gagal memuat daftar produk. Coba tutup & buka lagi transaksinya.',5000);
+}
+}
+}
+function _populateTxShopStockSelectInner(){
 const sel=document.getElementById('txShopStockItem');
 const prodSel=document.getElementById('txShopStockProdusen');
 const katList=document.getElementById('txShopKategoriList');
@@ -48,6 +70,16 @@ onTxShopStockItemChange();
 renderShopStockCartList();
 }
 function onTxShopStockItemChange(){
+try{ _onTxShopStockItemChangeInner(); }
+catch(err){
+console.error('[onTxShopStockItemChange] error:', err);
+if(typeof toast==='function'){
+const debugOn=(typeof localStorage!=='undefined'&&localStorage.getItem('kw_debug_console')==='1');
+toast(debugOn?('⚠️ DEBUG onTxShopStockItemChange: '+(err&&err.message?err.message:err)):'⚠️ Gagal memproses pilihan produk.',5000);
+}
+}
+}
+function _onTxShopStockItemChangeInner(){
 const sel=document.getElementById('txShopStockItem');
 const wrap=document.getElementById('txShopStockNewWrap');
 const jualWrap=document.getElementById('txShopStockJualWrap');
@@ -56,7 +88,8 @@ const isNew=sel.value==='__new__';
 wrap.style.display=isNew?'block':'none';
 if(jualWrap) jualWrap.style.display=isNew?'block':'none';
 if(isNew){
-const noteVal=document.getElementById('txNote').value.trim();
+const noteEl=document.getElementById('txNote');
+const noteVal=noteEl?noteEl.value.trim():'';
 const nameEl=document.getElementById('txShopStockNewName');
 if(nameEl&&!nameEl.value) nameEl.value=noteVal;
 document.getElementById('txShopStockKategori').value='';
@@ -257,7 +290,29 @@ function resetTxShopSaleCart(){
 curTxShopSaleCart=[];
 renderTxShopSaleCartList();
 }
+// BUGFIX (audit "input Nama Produk Baru di transaksi Pemasukan Shop tidak respon"):
+// populateTxShopSaleSelect/onTxShopSaleItemChange dipanggil LANGSUNG dari attribute
+// onchange="..." inline di modals.js (txShopSaleItem) — BUKAN lewat dispatcher
+// data-action yang sudah dilindungi try/catch (lihat _dataActionClickHandler,
+// features-helpers-global-security.js). onTxShopSaleItemChange() jugalah yang
+// memanggil Etalase.openModal() utk buka productModal (opsi "➕ Produk Baru") tempat
+// field "Nama Produk" (pName) diisi -- kalau 1 baris DI SINI throw sebelum openModal()
+// sempat jalan, modal tidak pernah benar-benar terbuka/terisi dgn bersih & field
+// terasa "diam" tanpa toast maupun error yg kelihatan user. Fix: bungkus try/catch,
+// pola SAMA PERSIS audit tombol tab Investasi (InvestmentWatchUI.render()) & audit
+// txShopStockItem (fungsi kembarannya di atas) -- 1 kegagalan tidak lagi membisukan
+// alur, errornya sekarang ke-log + toast (Debug Console) utk diagnosis lanjut.
 function populateTxShopSaleSelect(){
+try{ _populateTxShopSaleSelectInner(); }
+catch(err){
+console.error('[populateTxShopSaleSelect] error:', err);
+if(typeof toast==='function'){
+const debugOn=(typeof localStorage!=='undefined'&&localStorage.getItem('kw_debug_console')==='1');
+toast(debugOn?('⚠️ DEBUG populateTxShopSaleSelect: '+(err&&err.message?err.message:err)):'⚠️ Gagal memuat daftar produk. Coba tutup & buka lagi transaksinya.',5000);
+}
+}
+}
+function _populateTxShopSaleSelectInner(){
 const sel=document.getElementById('txShopSaleItem');
 if(!sel)return;
 const cur=sel.value;
@@ -286,13 +341,28 @@ renderTxShopSaleCartList();
 // ke pilihan sebelumnya SELAMA modal masih terbuka (bukan nyangkut di __new__), lalu auto
 // re-populate & auto-select produk baru begitu tersimpan.
 function onTxShopSaleItemChange(){
+try{ _onTxShopSaleItemChangeInner(); }
+catch(err){
+console.error('[onTxShopSaleItemChange] error:', err);
+if(typeof toast==='function'){
+const debugOn=(typeof localStorage!=='undefined'&&localStorage.getItem('kw_debug_console')==='1');
+toast(debugOn?('⚠️ DEBUG onTxShopSaleItemChange: '+(err&&err.message?err.message:err)):'⚠️ Gagal membuka form produk baru. Coba lagi, atau tutup & buka ulang transaksinya.',5000);
+}
+}
+}
+function _onTxShopSaleItemChangeInner(){
 const sel=document.getElementById('txShopSaleItem');
 if(!sel||!sel.value)return;
 if(sel.value==='__new__'){
 Etalase.openModal(null,(newProduct)=>{
+try{
 populateTxShopSaleSelect();
 const sel2=document.getElementById('txShopSaleItem');
 if(sel2&&newProduct&&newProduct.id){sel2.value=newProduct.id;sel2.dataset.prevValue=newProduct.id;onTxShopSaleItemChange();}
+}catch(err){
+console.error('[onTxShopSaleItemChange->callback] error:', err);
+if(typeof toast==='function')toast('⚠️ Produk baru tersimpan, tapi gagal auto-pilih di daftar. Pilih manual dari dropdown.',5000);
+}
 });
 if(sel.value==='__new__'&&sel.dataset.prevValue)sel.value=sel.dataset.prevValue;
 return;
