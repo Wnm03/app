@@ -18,26 +18,69 @@ const InvestmentWatchUI = {
 
   // render() — daftar watchlist + badge "🎯 Target tercapai" utk item yang lolos
   // Investment.watchlistAlerts() (100% reuse, 0 kondisi baru ditulis di sini).
+  //
+  // BUGFIX (audit "tab Investasi: semua tombol tidak berfungsi, 0 toast, ada console
+  // error"): render() ini dipanggil dari InvestmentListUI.render() (investasi-list-view.js)
+  // SETELAH _renderSummary()/_renderList() -- kedua fungsi itu sudah dilindungi try/catch
+  // sejak audit-audit sebelumnya (lihat komentar di investasi-list-view.js) justru karena
+  // pola bug yang PERSIS SAMA: exception yang lolos dari sini merambat ke atas lewat
+  // InvestmentListUI.render() -> setAsetTab()/renderPageContent('aset'), TIDAK PERNAH
+  // lewat dispatcher data-action (yang selalu bungkus try/catch+toast) karena render()
+  // dipanggil langsung, bukan lewat tap tombol. Efeknya: console.error muncul (uncaught
+  // exception asli), tapi 0 toast (tidak ada jalur toast di pemanggil), DAN kode setelah
+  // InvestmentListUI.render() di pemanggil (mis. langkah lain di showPage()/setAsetTab()
+  // yang seharusnya menuntaskan pindah tab/re-bind halaman) ikut batal jalan -- gejala
+  // yang terlihat user persis "semua tombol di tab ini tidak bereaksi". Root cause paling
+  // mungkin: Investment.watchlistAlerts()/getWatchlist() atau salah satu field item
+  // watchlist (w.name/w.type/w.lastPrice/w.targetPrice) bermasalah utk SATU entry data
+  // lama/tidak lengkap. Fix: bungkus pengambilan alertIds & hitungan PER ITEM dgn
+  // try/catch, pola SAMA PERSIS InvestmentListUI._renderSummary()/_renderList() -- 1 item
+  // bermasalah fallback ke tampilan aman (badge ⚠️), TIDAK menjatuhkan render() secara
+  // keseluruhan.
   render() {
     const el = document.getElementById('investmentWatchlist');
     if (!el) return;
     if (typeof Investment === 'undefined') { el.innerHTML = ''; return; }
-    const list = Investment.getWatchlist();
+    let list;
+    try {
+      list = Investment.getWatchlist();
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('[InvestmentWatchUI.render] gagal ambil watchlist', err);
+      el.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Gagal memuat daftar pantauan</div></div>';
+      return;
+    }
     if (!list.length) {
       el.innerHTML = '<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Belum ada instrumen dipantau</div></div>';
       return;
     }
-    const alertIds = new Set(Investment.watchlistAlerts().map((w) => String(w.id)));
+    let alertIds;
+    try {
+      alertIds = new Set(Investment.watchlistAlerts().map((w) => String(w.id)));
+    } catch (err) {
+      if (typeof console !== 'undefined' && console.error) console.error('[InvestmentWatchUI.render] gagal hitung watchlistAlerts', err);
+      alertIds = new Set();
+    }
     el.innerHTML = list.map((w) => {
-      const hit = alertIds.has(String(w.id));
-      const badge = hit
-        ? ' <span class="acc-chip" style="color:var(--accent3);border-color:var(--accent3)">🎯 Target tercapai</span>'
-        : '';
+      let name = '(tanpa nama)', type = '-', lastPrice = 0, targetPrice = 0, badge = '', renderError = false;
+      try {
+        const hit = alertIds.has(String(w.id));
+        badge = hit
+          ? ' <span class="acc-chip" style="color:var(--accent3);border-color:var(--accent3)">🎯 Target tercapai</span>'
+          : '';
+        name = w.name;
+        type = w.type;
+        lastPrice = w.lastPrice;
+        targetPrice = w.targetPrice;
+      } catch (err) {
+        renderError = true;
+        if (typeof console !== 'undefined' && console.error) console.error('[InvestmentWatchUI.render] gagal render item watchlist', w && w.id, err);
+      }
+      const warnChip = renderError ? ' <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menghitung item ini — tap untuk buka & cek datanya">⚠️</span>' : '';
       return '<div class="tx-item u-pointer" data-action="InvestmentWatchUI.openModal" data-args="' + escapeHtml(JSON.stringify([w.id])) + '">'
         + '<div class="tx-icon u-bgaccsoft">📈</div>'
         + '<div class="tx-info">'
-        + '<div class="tx-name">' + escapeHtml(w.name) + badge + '</div>'
-        + '<div class="tx-meta"><span class="acc-chip">' + escapeHtml(w.type) + '</span> Terakhir: ' + fmt(w.lastPrice) + ' · Target: ' + fmt(w.targetPrice) + '</div>'
+        + '<div class="tx-name">' + escapeHtml(name) + badge + warnChip + '</div>'
+        + '<div class="tx-meta"><span class="acc-chip">' + escapeHtml(type) + '</span> Terakhir: ' + fmt(lastPrice) + ' · Target: ' + fmt(targetPrice) + '</div>'
         + '</div>'
         + '</div>';
     }).join('');

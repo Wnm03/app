@@ -105,6 +105,17 @@ const PropertyManagementAPI = {
   // adanya per item), `totalPBB` murni dijumlahkan dari `.terutang` tiap
   // item — pola sama persis loop `properti.map()` di
   // `PajakAset.renderList()`, TIDAK dihitung ulang dgn rumus baru.
+  // BUGFIX (audit lanjutan sesi "InvestmentWatchUI.render() tanpa
+  // try/catch", pola bug yg sama persis): `PajakAset.hitungPBB(a,
+  // settings)` di sini dipanggil TANPA try/catch per item, padahal
+  // `AssetMaintenanceAPI.maintenanceOverview()` (file tetangga,
+  // `Penyusutan.hitung()`) SUDAH membungkusnya sejak awal. summary()
+  // (dipanggil presenter ini) pada akhirnya dipanggil langsung dari
+  // renderPageContent('aset') tanpa toast pelindung -- 1 aset properti
+  // dgn data yg bikin hitungPBB() throw akan menjatuhkan SELURUH
+  // taxSummary()/summary(), sama gejalanya dgn bug InvestmentWatchUI.
+  // Fix: 1 item gagal hitung -> fallback aman (pbb null), item lain
+  // tetap tampil, TIDAK menjatuhkan seluruh .map().
   taxSummary() {
     if (typeof PajakAset === 'undefined' || typeof PajakAset.hitungPBB !== 'function') {
       return { ok: false, reason: 'PajakAset belum dimuat' };
@@ -119,7 +130,13 @@ const PropertyManagementAPI = {
     }
     let totalPBB = 0;
     const items = pl.properties.map((a) => {
-      const r = PajakAset.hitungPBB(a, settings) || { njop: a.nilai, njoptkp: 0, dasar: 0, terutang: 0 };
+      let r;
+      try {
+        r = PajakAset.hitungPBB(a, settings) || { njop: a.nilai, njoptkp: 0, dasar: 0, terutang: 0 };
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.error) console.error('[PropertyManagementAPI.taxSummary] gagal hitung PBB', a && a.id, e);
+        r = { njop: a.nilai, njoptkp: 0, dasar: 0, terutang: 0, error: true };
+      }
       totalPBB += r.terutang || 0;
       return { id: a.id, name: a.name, jenis: a.jenis, icon: a.icon, pbb: r };
     });
@@ -131,6 +148,14 @@ const PropertyManagementAPI = {
   // PERSIS `LaporanAset.penyusutan()`), via `Penyusutan.hitung(a)`
   // (formula SUDAH ADA) — TIDAK ada rumus penyusutan baru, murni
   // dijumlahkan dari hasil yang sudah final per item.
+  // BUGFIX (pola sama persis fix taxSummary() di atas): `Penyusutan.
+  // hitung(a)` di sini juga dipanggil TANPA try/catch per item —
+  // `AssetMaintenanceAPI.maintenanceOverview()` (file tetangga) sudah
+  // membungkus panggilan `Penyusutan.hitung()` yang SAMA PERSIS sejak
+  // awal, jadi celah ini murni kelalaian, bukan perbedaan desain. 1
+  // aset dgn data penyusutan yg bikin hitung() throw sekarang di-skip
+  // aman (masuk hitungan belumLengkap) alih-alih menjatuhkan seluruh
+  // depreciationSummary()/summary().
   depreciationSummary() {
     if (typeof Penyusutan === 'undefined' || typeof Penyusutan.hitung !== 'function') {
       return { ok: false, reason: 'Penyusutan belum dimuat' };
@@ -144,7 +169,14 @@ const PropertyManagementAPI = {
     let totalNilaiBuku = 0;
     let belumLengkap = 0;
     aktif.forEach((a) => {
-      const hasil = Penyusutan.hitung(a);
+      let hasil;
+      try {
+        hasil = Penyusutan.hitung(a);
+      } catch (e) {
+        if (typeof console !== 'undefined' && console.error) console.error('[PropertyManagementAPI.depreciationSummary] gagal hitung penyusutan', a && a.id, e);
+        belumLengkap++;
+        return;
+      }
       if (!hasil) { belumLengkap++; return; }
       if (hasil.metode !== 'manual' && hasil.hargaPerolehan == null) { belumLengkap++; return; }
       totalNilaiBuku += hasil.nilaiBuku || 0;
