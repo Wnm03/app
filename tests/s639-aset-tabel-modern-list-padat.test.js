@@ -119,9 +119,14 @@ test("wiring — Aset.renderList() cek D.profile.theme==='modern' sebelum pakai 
 });
 
 test('wiring — jalur kartu list.map(...) LAMA masih ada apa adanya (0 dihapus, tetap dipakai 10 tema lama)', () => {
+  // S667 (filter Owner+Status): variabel yang dirender berganti nama jadi
+  // `filteredList` (list SETELAH filter owner+status S667 diterapkan, di atas
+  // filter tipe kepemilikan assetOwnFilter S235 & exclude item termigrasi yang
+  // sudah ada sebelumnya) & diprefix `ownerFilterBar` — 0 logic kartu itu
+  // sendiri berubah, murni sumber data + filter bar tambahan di atasnya.
   assert.match(
     asetSrc,
-    /el\.innerHTML=migratedBanner\+list\.map\(a=>\{/,
+    /el\.innerHTML=ownerFilterBar\+migratedBanner\+filteredList\.map\(a=>\{/,
   );
   assert.match(
     asetSrc,
@@ -130,9 +135,11 @@ test('wiring — jalur kartu list.map(...) LAMA masih ada apa adanya (0 dihapus,
 });
 
 test('wiring — jalur tabel modern menyertakan migratedBanner yang sama & memanggil ulang render turunan (dashboard/investasi/dst)', () => {
+  // S667: assetTableHTML() sekarang menerima `filteredList` (pasca filter
+  // Owner+Status), bukan `list` mentah lagi — lihat catatan di atas.
   assert.match(
     asetSrc,
-    /el\.innerHTML=migratedBanner\+assetTableHTML\(list\);/,
+    /el\.innerHTML=ownerFilterBar\+migratedBanner\+assetTableHTML\(filteredList\);/,
   );
 });
 
