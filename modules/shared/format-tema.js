@@ -125,10 +125,58 @@ function _toastShowNext(){
     _toastGapTimer=setTimeout(()=>{_toastGapTimer=null;_toastShowNext();},_TOAST_GAP_MS);
   },dur);
 }
+// _toastSuppressed — S622 (audit lanjutan S619/S621: laporan user "tab
+// Investasi tidak respon", ternyata BUKAN cuma soal navigasi tab). Root cause
+// beda: `autoRunSelfTestIfNeeded()`/`computeSelfTestResults()` (self-test.js)
+// menjalankan RATUSAN fungsi ASLI aplikasi (mis. `WorthIt.undoBought()`) di
+// atas data dummy `__selftest_*__` sbg bagian dari tes -- fungsi2 ini py efek
+// samping `toast()` sungguhan (mis. "↺ ... dikembalikan ke daftar Prioritas
+// Belanja"), jadi tes otomatis SENDIRI membanjiri `_toastQueue` dgn toast
+// beruntun. Ini TIDAK dibersihkan oleh fix `dismissAllToasts()` di S619/S621
+// krn tidak ada perpindahan tab yg trigger -- `autoRunSelfTestIfNeeded()` bisa
+// jalan kapan saja app baru boot/build version naik (lihat pemanggilnya di
+// features-helpers-global-security.js), TERLEPAS dari tab apa yg sedang aktif
+// (mis. user sudah di tab Investasi SAAT app reload). Toast beruntun ini numpuk
+// & mengantre menutupi tombol/isi tab yg sedang aktif selama beberapa detik --
+// dari sudut pandang user terlihat spt tab "tidak respon".
+// Fix MINIMAL: flag suppress opsional (default false, 0 perubahan perilaku
+// pemanggil existing manapun). Self-test.js yg nyalakan/matikan di sekeliling
+// loop eksekusi test case (lihat computeSelfTestResults()) -- toast dari
+// FUNGSI ASLI yg dites tetap terpanggil (assert tetap valid, tidak ada logic
+// yg dilewati), cuma tidak dirender ke user krn memang bukan feedback utk aksi
+// user sungguhan. Toast RINGKASAN akhir ("✅ Semua tes berhasil"/"⚠️ N tes
+// gagal") tetap muncul spt biasa krn dipanggil SETELAH suppress dimatikan lagi.
+let _toastSuppressed=false;
+function setToastSuppressed(v){ _toastSuppressed=!!v; }
 function toast(msg,dur=2200){
+  if(_toastSuppressed)return;
   _toastQueue.push({msg,dur});
   while(_toastQueue.length>_TOAST_QUEUE_MAX)_toastQueue.shift();
   if(!_toastShowing&&!_toastGapTimer)_toastShowNext();
+}
+// dismissAllToasts() — BUGFIX (audit video user: toast lama dari halaman/tab
+// SEBELUMNYA tetap tampil & antre menutupi tombol interaktif -- mis. "+ TAMBAH
+// HOLDING" & item Daftar Holding -- di tab Investasi setelah user pindah tab,
+// krn toast() TIDAK PERNAH tahu kalau konteks halaman sudah berganti (antrean
+// `_toastQueue` & timer `_toastHideTimer`/`_toastGapTimer` murni berbasis
+// waktu, lepas dari navigasi). ROOT CAUSE: toast dibuat utk kasih feedback
+// SAAT itu juga (mis. "Tersimpan ✅") -- begitu user sudah pindah konteks
+// (ganti tab bawah / sub-tab Aset), pesan lama itu tidak lagi relevan &
+// SEHARUSNYA tidak terus menghalangi UI baru. Fix MINIMAL & additive: 1 fungsi
+// baru yang (1) buang semua toast yg masih mengantre, (2) batalkan timer
+// show/gap yg berjalan, (3) sembunyikan toast yg sedang tampil SEKARANG JUGA
+// (tanpa animasi fade, konsisten dgn pola showPage() yg juga paksa-tutup
+// overlay yg nyangkut saat pindah tab -- lihat komentar showPage() di
+// modal-navigasi.js). 0 perubahan ke toast()/toastUndo()/API existing lain --
+// pemanggil lama 100% tidak terpengaruh, fungsi ini murni dipanggil dari titik
+// navigasi (showPage/setAsetTab) di sesi ini.
+function dismissAllToasts(){
+  _toastQueue.length=0;
+  if(_toastHideTimer){clearTimeout(_toastHideTimer);_toastHideTimer=null;}
+  if(_toastGapTimer){clearTimeout(_toastGapTimer);_toastGapTimer=null;}
+  _toastShowing=false;
+  const t=document.getElementById('toast');
+  if(t)t.classList.remove('show');
 }
 // toastUndo(msg,undoFn,dur=5000) — toast dgn tombol "Urungkan". Klik tombol
 // -> jalankan `undoFn()` (caller yang tanggung jawab kembalikan state, mis.
@@ -147,6 +195,7 @@ function toast(msg,dur=2200){
 // terpisah per cascade supaya restore-nya benar2 utuh, bukan cuma splice
 // balik 1 array).
 function toastUndo(msg,undoFn,dur=5000){
+  if(_toastSuppressed)return;
   _toastQueue.push({msg,dur,undoFn});
   while(_toastQueue.length>_TOAST_QUEUE_MAX)_toastQueue.shift();
   if(!_toastShowing&&!_toastGapTimer)_toastShowNext();

@@ -267,6 +267,13 @@ o.classList.remove('open');
 o.classList.remove('closing');
 });
 document.body.classList.remove('has-open-modal');
+// BUGFIX (audit video user -- lihat komentar dismissAllToasts() di
+// modules/shared/format-tema.js): toast basi dari halaman sebelumnya bisa
+// tetap tampil/mengantre & menutupi tombol di halaman/tab baru. Titik ini
+// (showPage, dipanggil tiap pindah tab bawah) pola sama dgn paksa-tutup
+// overlay yg nyangkut di atas -- pindah tab = keluar dari konteks toast lama,
+// aman dibersihkan tanpa animasi.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 // BUGFIX (audit "semua tombol Car Notes & Tagihan tidak respon, 0 toast",
 // laporan user): ScannerSession bisa nyangkut _scannerSessionActive=true
 // permanen kalau proses tutup kamera terputus (app di-minimize saat prompt

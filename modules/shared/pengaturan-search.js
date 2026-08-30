@@ -36,6 +36,13 @@
 const SETTINGS_TAB_ORDER=['profil','keuangan','pengingat','notifbackup','keamanan','kepemilikan','diagnostik'];
 const SETTINGS_TAB_LABEL={profil:'Profil',keuangan:'Keuangan',pengingat:'Pengingat',notifbackup:'Notif&Backup',keamanan:'Keamanan',kepemilikan:'Kepemilikan',diagnostik:'Diagnostik'};
 function setSettingsTab(tab,el){
+// BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
+// modules/shared/format-tema.js & setAsetTab() di modules/asset/aset-misc.js):
+// toast basi dari halaman/aksi sebelumnya bisa nyangkut menutupi tombol di
+// sub-tab baru begitu user pindah sub-tab TANPA lewat showPage() (mis. ganti
+// sub-tab di dalam halaman Settings yang sama). Pola sama persis dgn semua
+// fungsi set*Tab lain, lihat CHANGELOG-S620.md.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const settingsTabBtns=document.querySelectorAll('#page-settings .cn-tabs .cn-tab');
 settingsTabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
