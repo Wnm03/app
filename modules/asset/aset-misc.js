@@ -612,6 +612,14 @@ const ASET_TAB_ORDER=['ringkasan','buku','analisis','manajemen','investasi'];
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const ASET_TAB_LABEL={ringkasan:'Ringkasan',buku:'Buku Aset',analisis:'Analisis & Pajak',manajemen:'Manajemen',investasi:'Investasi'};
 function setAsetTab(t,el){
+// BUGFIX (audit video user, lihat komentar dismissAllToasts() di
+// modules/shared/format-tema.js): toast lama dari tab sebelumnya (mis.
+// "Nominal sudah diisi...", "...dikembalikan ke daftar Prioritas Belanja")
+// tetap tampil & antre menutupi tombol "+ TAMBAH HOLDING"/item Daftar
+// Holding begitu user pindah ke tab Investasi. Panggil di titik PALING AWAL
+// fungsi ini (sebelum toggle pane) supaya toast basi langsung hilang duluan,
+// sebelum konten tab baru dirender.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const asetTabBtns=document.querySelectorAll('#page-aset .cn-tab');
 asetTabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
