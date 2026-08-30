@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s612-renderlist-per-row-trycatch-guard';
+const MODULE_CALC_VERSION='s615-fix-investasi-render-crash-and-ghost-migration';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
