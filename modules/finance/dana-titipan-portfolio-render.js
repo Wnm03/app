@@ -35,9 +35,15 @@ const DanaTitipanPortfolioPresenter = {
   // filterOwnerId: '' = Semua Pemilik, atau ownerId dari salah satu projection.owners.
   // filterSettlement: '' = Semua Status, atau 'titipan'/'milik' (Aset.getOwnerSettlement()/
   // Investment.getOwnerSettlement(), S660/S665) -- HANYA relevan kalau filterOwnerId terisi.
-  // SENGAJA hanya aktif utk container tab (#danaTitipanTabList, sub-tab Laporan > Dana
-  // Titipan) -- kartu ringkas #danaTitipanPortfolioList di tab Ringkasan (Dana Kelolaan)
-  // TIDAK diubah sama sekali, lihat gating `isTabView` di `_renderNow()`.
+  // S670 (sesi lanjutan eksplisit dari catatan "Belum dikerjakan" SESSION-NOTE-S669.md:
+  // "filter Owner+Status di dalam kartu ringkas #danaTitipanPortfolioList (tab
+  // Ringkasan) — SENGAJA TIDAK disentuh sesi S668 ... kalau nanti dibutuhkan bisa
+  // reuse penuh _renderFilterBar()/_ownerMatchesFilter() ... cuma ubah gate isTabView
+  // jadi mencakup kedua container"): filter SEKARANG aktif di KEDUA container --
+  // #danaTitipanTabList (sub-tab Laporan > Dana Titipan) DAN #danaTitipanPortfolioList
+  // (kartu ringkas tab Ringkasan, Dana Kelolaan) -- state filter dibagi (shared) di
+  // antara keduanya, lihat gating `isFilterableView` di `_renderNow()` (ganti nama dari
+  // `isTabView` S668, sekarang mencakup 2 id bukan 1).
   filterOwnerId: '',
   filterSettlement: '',
 
@@ -949,7 +955,7 @@ const DanaTitipanPortfolioPresenter = {
   },
 
   // _ownerMatchesFilter(o) — S668. Predicate murni (0 mutasi), dipanggil per-owner
-  // dari `_renderNow()` (HANYA di container tab, lihat `isTabView`). filterOwnerId
+  // dari `_renderNow()` (HANYA di container filterable, lihat `isFilterableView`, S670). filterOwnerId
   // kosong -> semua owner lolos (filter nonaktif). Owner harus COCOK filterOwnerId
   // DAN, kalau filterSettlement juga diisi, MINIMAL 1 holding owner ini (`o.holdings[]`)
   // punya settlement yang cocok (`_holdingSettlement()`) -- beda dari Aset/Investasi
@@ -1002,20 +1008,30 @@ const DanaTitipanPortfolioPresenter = {
   // onFilterOwnerChange(val) / onFilterSettlementChange(val) — S668. onchange handler
   // dropdown filter bar di atas, murni state UI + render ulang -- pola SAMA PERSIS
   // `InvestmentListUI.onFilterOwnerChange()`/`onFilterSettlementChange()` (S662), BEDA
-  // cuma target render: `renderInto('danaTitipanTabList')` LANGSUNG (bukan 2 method
+  // cuma target render: `renderInto(containerId)` LANGSUNG (bukan 2 method
   // terpisah _renderSummary()/_renderList() spt InvestmentListUI) -- Dana Titipan tab
   // 0 kartu ringkasan terpisah dari isi utama container (poolSummary sudah bagian dari
   // innerHTML yang sama), pola sama `Aset.onFilterOwnerChange()` (S667) yang juga
   // langsung panggil 1 method render. Balik ke "Semua Pemilik" otomatis mengosongkan
   // filterSettlement juga (status tanpa owner terpilih tidak bermakna apa-apa).
+  // S670: dropdown dropdown filter bar bisa muncul di SALAH SATU dari 2 container
+  // (`danaTitipanTabList` ATAU `danaTitipanPortfolioList`, tergantung layar mana yang
+  // sedang dibuka user) TAPI state filter dibagi (shared) -- jadi kedua container
+  // di-render ulang sekaligus di sini, pola SAMA PERSIS semua caller lain di codebase
+  // yang SELALU memanggil `render()` (-> renderInto('danaTitipanPortfolioList')) DAN
+  // `renderInto('danaTitipanTabList')` berpasangan (mis. akun.js, investasi-view.js,
+  // dana-titipan-portfolio-render-b.js) -- container yang belum ada di DOM halaman ini
+  // diam2 di-skip oleh guard `if (!el) return` di `renderInto()`, 0 crash.
   onFilterOwnerChange(val) {
     DanaTitipanPortfolioPresenter.filterOwnerId = val || '';
     if (!DanaTitipanPortfolioPresenter.filterOwnerId) DanaTitipanPortfolioPresenter.filterSettlement = '';
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+    DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   },
   onFilterSettlementChange(val) {
     DanaTitipanPortfolioPresenter.filterSettlement = (val === 'milik' || val === 'titipan') ? val : '';
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
+    DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   },
 
   // renderInto(containerId) — SESI 498 (Tab "Dana Titipan" Terpadu, Sesi A
@@ -1104,17 +1120,16 @@ const DanaTitipanPortfolioPresenter = {
   // sekeliling penggantian el.innerHTML (lihat _captureAssetPickSelections
   // / _restoreAssetPickSelections di atas) — SATU-SATUNYA perubahan
   // perilaku sesi ini, 0 logika projection/aggregasi lain disentuh.
-  // S668: `isTabView` gate -- filter Owner+Status HANYA aktif di container tab
-  // (#danaTitipanTabList, sub-tab Laporan > Dana Titipan). Kartu ringkas
-  // #danaTitipanPortfolioList (tab Ringkasan, di dalam kartu Dana Kelolaan)
-  // TETAP 100% apa adanya (0 filter bar, `projection.owners` penuh apa adanya)
-  // -- sesuai permintaan eksplisit user "nyambungin filter ini ke tab Dana
-  // Titipan" (bukan kartu ringkas), pola sama semangat filter Aset/Investasi
-  // yang dipasang di halaman DAFTAR (browsing), bukan di kartu ringkasan.
+  // S668: filter Owner+Status HANYA aktif di container tab (#danaTitipanTabList,
+  // sub-tab Laporan > Dana Titipan). S670 (lanjutan): gate diperluas mencakup JUGA
+  // kartu ringkas #danaTitipanPortfolioList (tab Ringkasan, di dalam kartu Dana
+  // Kelolaan) -- 0 container lain lagi selain 2 ini yang dipakai
+  // DanaTitipanPortfolioPresenter, jadi variabel `isTabView` diganti nama jadi
+  // `isFilterableView` (lebih akurat, sekarang mencakup 2 id bukan 1 "tab").
   _renderNow(el) {
     const savedAssetPicks = this._captureAssetPickSelections(el);
     const projection = DanaTitipanPortfolioAPI.build();
-    const isTabView = !!(el && el.id === 'danaTitipanTabList');
+    const isFilterableView = !!(el && (el.id === 'danaTitipanTabList' || el.id === 'danaTitipanPortfolioList'));
     // Sesi 485d — tombol buka modal "💰 Pokok Dana Titipan" (murni
     // konsumsi API sesi 485a-c: listExistingOwners()/saveCommitment(),
     // 0 logika CRUD/projection baru ditulis di sini). Selalu ditampilkan
@@ -1145,15 +1160,15 @@ const DanaTitipanPortfolioPresenter = {
     // TETAP dihitung dari `projection` penuh (0 diubah), filter ini HANYA
     // memfilter kartu owner apa yang dirender, konsisten dgn Aset (S667)/
     // Investasi (S662): dashboard/ringkasan tidak ikut terfilter.
-    const filterBarHtml = isTabView ? this._renderFilterBar(projection.owners) : '';
-    const filteredOwners = isTabView ? projection.owners.filter((o) => this._ownerMatchesFilter(o)) : projection.owners;
+    const filterBarHtml = isFilterableView ? this._renderFilterBar(projection.owners) : '';
+    const filteredOwners = isFilterableView ? projection.owners.filter((o) => this._ownerMatchesFilter(o)) : projection.owners;
 
     // filteredOwners kosong TAPI projection.owners tidak -- beda pesan drpd
     // "belum ada porsi dana titipan..." di atas (yang berarti 0 data sama
     // sekali), pola sama persis Aset._assetMatchesFilter()/InvestmentListUI
-    // ("🔍 Tidak ada holding/aset yang cocok"). HANYA bisa terjadi di isTabView
-    // (filter nonaktif di container lain, filteredOwners === projection.owners).
-    if (isTabView && !filteredOwners.length) {
+    // ("🔍 Tidak ada holding/aset yang cocok"). HANYA bisa terjadi di isFilterableView
+    // (filter nonaktif di container lain -- kalau ada -- filteredOwners === projection.owners).
+    if (isFilterableView && !filteredOwners.length) {
       el.innerHTML = poolSummary + addBtn + expenseBtn + filterBarHtml + '<div class="u-fs11 u-t2 u-mt6">🔍 Tidak ada pemilik dana titipan yang cocok dengan filter ini.</div>';
       return;
     }
