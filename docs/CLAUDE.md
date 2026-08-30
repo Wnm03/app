@@ -11773,3 +11773,101 @@ app_production.html, index.html, sw.js, modules/asset/aset-misc.js,
 modules/asset/investasi-list-view.js,
 tests/s476a-migrate-investasi-to-holdings.test.js, docs/COVERAGE-PER-MODULE.md,
 docs/FILE-MAP.md, docs/CLAUDE.md.
+
+# Sesi Audit Tombol Investasi (2026-08-30) — InvestmentWatchUI.render() tanpa try/catch
+
+**Laporan user:** tab Aset bagian Investasi, semua tombol tidak berfungsi, 0 toast,
+TAPI ada console error (beda dari sesi-sesi audit sebelumnya di area yang sama yang
+melaporkan 0 toast DAN 0 error).
+
+**Diagnosa:** `InvestmentListUI.render()` (`modules/asset/investasi-list-view.js`)
+sudah dilindungi try/catch di `_renderSummary()` (s614) & `_renderList()` (s689) —
+tapi baris ketiga yang dipanggilnya, `InvestmentWatchUI.render()`
+(`modules/asset/investasi-watch-view.js`), TIDAK pernah dapat perlakuan sama. Fungsi
+ini dipanggil LANGSUNG dari `setAsetTab('investasi')`/`renderPageContent('aset')`,
+BUKAN lewat dispatcher `data-action` yang selalu toast — jadi kalau
+`Investment.watchlistAlerts()`/`getWatchlist()` atau salah satu field item watchlist
+(`w.name`/`w.type`/`w.lastPrice`/`w.targetPrice`) throw utk 1 entry data yang
+tidak lengkap/rusak, exception itu jadi console error MURNI (tidak ada jalur
+toast di pemanggil) DAN memutus alur setelahnya di pemanggil, persis gejala
+"semua tombol di tab ini tidak bereaksi" yang dilaporkan.
+
+**Fix:** `InvestmentWatchUI.render()` dibungkus try/catch dengan pola SAMA PERSIS
+`InvestmentListUI._renderSummary()`/`_renderList()`:
+- `Investment.getWatchlist()` gagal -> tampilkan empty-state "Gagal memuat daftar
+  pantauan" (bukan biarkan exception lolos).
+- `Investment.watchlistAlerts()` gagal -> fallback `alertIds` kosong (badge "Target
+  tercapai" di-skip, list tetap dirender).
+- 1 item watchlist gagal dihitung/dibaca -> fallback nilai aman + badge ⚠️ di baris
+  itu (tetap bisa di-tap utk dibuka & dicek), TIDAK menjatuhkan seluruh `.map()`.
+
+**Test baru:** `tests/investasi-watch-render-guard-audit-tombol-investasi.test.js`
+(3 test baru — watchlistAlerts() throw, 1 item watchlist "beracun" via getter throw,
+dan perilaku normal tanpa error tidak berubah).
+
+**Verifikasi:**
+- `node --check modules/asset/investasi-watch-view.js`: lolos.
+- Test file baru: 3/3 pass. Test terkait investasi lain (s467/s469/s540b-d/s552/s614/
+  s476a/ownership-sync-investasi/worthit-pricewatch): semua tetap pass, 0 regresi.
+- Full suite: **4916 test, 4916 pass, 0 fail**.
+- Build (`node scripts/build.js`) sukses, versi naik ke 1458 (s616), sintaks bundle
+  lolos, `sw.js` CACHE_NAME ikut naik ke v1458 (paksa client ambil ulang bundle).
+
+## ZIP
+Patch (hanya file berubah — bukan full release): app-bundle-a.min.js,
+app-bundle-b.min.js, app_production.html, index.html, sw.js,
+modules/asset/investasi-watch-view.js,
+tests/investasi-watch-render-guard-audit-tombol-investasi.test.js,
+docs/COVERAGE-PER-MODULE.md, docs/FILE-MAP.md, docs/CLAUDE.md.
+
+# Sesi Audit Lanjutan "Bug Serupa" (2026-08-30) — pola sama di PropertyManagementAPI
+
+**Konteks:** Lanjutan audit sesi InvestmentWatchUI.render() (di atas) — user minta cari
+bug SERUPA di tempat lain & akumulasikan ke patch yang sama.
+
+**Diagnosa:** Pola bug yang sama (fungsi dipanggil di luar dispatcher data-action,
+kalkulasi per-item TANPA try/catch, 1 item bermasalah menjatuhkan seluruh render tanpa
+toast) ditemukan di `modules/asset/property-management-api.js`:
+- `taxSummary()` — `PajakAset.hitungPBB(a, settings)` per item TIDAK dibungkus try/catch.
+- `depreciationSummary()` — `Penyusutan.hitung(a)` per item TIDAK dibungkus try/catch.
+
+Celah ini murni kelalaian, bukan perbedaan desain: `AssetMaintenanceAPI.
+maintenanceOverview()` (file tetangga) sudah membungkus panggilan `Penyusutan.hitung()`
+yang SAMA PERSIS sejak awal. `PropertyManagementAPI.summary()` (dipanggil
+`PropertyManagementPresenter.render()`, yang dipanggil LANGSUNG dari
+`renderPageContent('aset')`, sama seperti rantai InvestmentListUI.render()) berarti 1
+aset properti dgn data yang bikin `hitungPBB()`/`Penyusutan.hitung()` throw akan
+menjatuhkan seluruh render tab Aset dgn gejala yang sama: console error, 0 toast, tombol
+tidak bereaksi.
+
+Diaudit juga (tidak ada masalah, hanya untuk memastikan): `rental-management-api.js`
+(reduce murni aritmatika, tidak ada panggilan eksternal per-item yang bisa throw),
+`asset-portfolio-api.js` (map di array literal kecil, bukan data user), dan keempat
+`render()` di 4 presenter Aset (property/rental/portfolio/maintenance) — semuanya sudah
+guard `s.ok` sebelum render kartu, aman.
+
+**Fix:** `taxSummary()` & `depreciationSummary()` dibungkus try/catch per item, pola
+SAMA PERSIS `AssetMaintenanceAPI.maintenanceOverview()` — 1 item gagal fallback ke nilai
+aman (PBB `terutang:0` + flag `error:true` / masuk hitungan `belumLengkap`), item lain
+tetap dihitung normal.
+
+**Test baru:** `tests/property-management-api-per-item-guard.test.js` (4 test —
+taxSummary() 1 item throw, depreciationSummary() 1 item throw, summary() gabungan
+tetap ok:true, dan perilaku normal tanpa error tidak berubah).
+
+**Verifikasi:**
+- `node --check modules/asset/property-management-api.js`: lolos.
+- Test baru: 4/4 pass. `tests/asset-nav-consistency-s252.test.js` (cakupan 4 presenter
+  Aset terkait): tetap 14/14 pass, 0 regresi.
+- Full suite: **4920 test, 4920 pass, 0 fail**.
+- Build sukses, versi naik ke 1459 (s617), sintaks bundle lolos, `sw.js` CACHE_NAME naik
+  ke v1459.
+
+## ZIP
+Patch KUMULATIF dgn sesi InvestmentWatchUI.render() di atas (hanya file berubah — bukan
+full release): app-bundle-a.min.js, app-bundle-b.min.js, app_production.html,
+index.html, sw.js, modules/asset/investasi-watch-view.js,
+modules/asset/property-management-api.js,
+tests/investasi-watch-render-guard-audit-tombol-investasi.test.js,
+tests/property-management-api-per-item-guard.test.js, docs/COVERAGE-PER-MODULE.md,
+docs/FILE-MAP.md, docs/CLAUDE.md.
