@@ -778,6 +778,11 @@ renderSimList();
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const CN_TAB_LABEL={insight:'Insight AI',bbm:'BBM',servis:'Servis',pajak:'Pajak & SIM',jalan:'Jalan'};
 function setCnTab(t,el){
+// BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
+// modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
+// di tab Car Notes lain begitu user ganti tab. Pola sama persis dgn
+// setAsetTab(), lihat CHANGELOG-S620.md.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 // Sesi 157 (permintaan eksplisit user): page-carnotes sekarang 4 tab
 // (insight/bbm/servis/pajak) — dulu cuma bbm/servis. 'jalan' ditinggal
 // apa adanya (dead id, sudah begitu sebelum sesi ini, tidak disentuh).
@@ -813,6 +818,9 @@ renderCnTab();
 const CNI_SUBTAB_ORDER=['ringkasan','rekomendasi'];
 const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
 function setCnInsightTab(t,el){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setCnTab() di atas / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const cniSubtabBtns=document.querySelectorAll('#cnTab-insight .cni-subtab');
 cniSubtabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
@@ -831,6 +839,9 @@ if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
 const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
 const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnBbmTab(t,el){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setCnTab() di atas / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const cnbSubtabBtns=document.querySelectorAll('#cnTab-bbm .cnb-subtab');
 cnbSubtabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
