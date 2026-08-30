@@ -1149,6 +1149,9 @@ openModal('billArchiveModal');
 // murni UI convenience di atas filter status yg SUDAH ADA (billFilterStatus) — jadi tetap
 // kompatibel dgn dropdown Filter lanjutan (kategori/bulan/tahun) yg sudah ada.
 function setBillListTab(tab){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setKeuanganTab() (tx-list-cashflow.js) / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 billListTab=tab;
 const btnBayar=document.getElementById('billTabBayarBtn'), btnLunas=document.getElementById('billTabLunasBtn');
 if(btnBayar)btnBayar.className='type-btn'+(tab==='aktif'?' at':'');

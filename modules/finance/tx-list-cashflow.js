@@ -575,6 +575,11 @@ const KEU_TAB_ORDER=['kelola','tagihan','budget','utangpiutang','asetproyek','la
 // Laporan/Kelola (lihat setLaporanTab/setKelolaTab di bawah).
 const KEU_TAB_LABEL={kelola:'Kelola',tagihan:'Tagihan & Cicilan',budget:'Budget',utangpiutang:'Piutang & Utang',asetproyek:'Aset & Proyek',laporan:'Laporan',akun:'Akun'};
 function setKeuanganTab(t,el){
+// BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
+// modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
+// di sub-tab baru begitu user ganti sub-tab Keuangan. Pola sama persis dgn
+// setAsetTab(), lihat CHANGELOG-S620.md.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const keuTabBtns=document.querySelectorAll('#page-keuangan .cn-tab');
 keuTabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
@@ -649,6 +654,9 @@ if(t==='laporan'){populateCatFilter();populateAccFilters();renderLaporan();rende
 const LAPORAN_SUBTAB_ORDER=['ringkasan','aruskas','transaksi','titipan'];
 const LAPORAN_SUBTAB_LABEL={ringkasan:'Ringkasan',aruskas:'Arus Kas & Kategori',transaksi:'Transaksi & Export',titipan:'Dana Titipan'};
 function setLaporanTab(t,el){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setKeuanganTab() di atas / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const lapSubtabBtns=document.querySelectorAll('#keuanganTab-laporan .lap-subtab');
 lapSubtabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
@@ -675,6 +683,9 @@ if(lapBc)lapBc.textContent=LAPORAN_SUBTAB_LABEL[t]||t;
 const KELOLA_SUBTAB_ORDER=['ringkasan','transaksi','pengaturan'];
 const KELOLA_SUBTAB_LABEL={ringkasan:'Ringkasan',transaksi:'Transaksi',pengaturan:'Kelola Data'};
 function setKelolaTab(t,el){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setKeuanganTab() di atas / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const kelSubtabBtns=document.querySelectorAll('#keuanganTab-kelola .kel-subtab');
 kelSubtabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
