@@ -6,6 +6,20 @@
 const Aset={
 // NOTE (audit ukuran file): metode fitur owners/porsi kepemilikan DIPECAH ke aset-owners.js (0 logic diubah), digabung balik via Object.assign() setelah literal ini.
 editId:null,
+// filterOwnerId / filterSettlement — S667 (sesi lanjutan eksplisit dari catatan
+// "Belum dikerjakan" SESSION-NOTE-S666.md: "filter Owner+Status di daftar Buku
+// Aset"), pola SAMA PERSIS InvestmentListUI.filterOwnerId/filterSettlement (S662,
+// investasi-list-view.js) tapi domain Aset. State UI MURNI (bukan ditulis ke D),
+// direset ke '' tiap reload halaman -- pola sama editId di atas. filterOwnerId:
+// '' = Semua Pemilik, atau ownerId non-SELF (dari MultiOwnerEngine.getOwners(a),
+// kanonik lewat OwnerRegistry sejak S491/S665). filterSettlement: '' = Semua
+// Status, atau 'titipan'/'milik' (Aset.getOwnerSettlement(), S665) -- HANYA
+// relevan kalau filterOwnerId terisi (owner SELF tidak punya konsep settlement).
+// Beda dgn assetOwnFilter (S235, dropdown statis di index.html, filter TIPE
+// kepemilikan SELF/INVESTOR/CUSTOMER/FAMILY/THIRD_PARTY) -- 2 filter ini
+// independen, tidak saling menggantikan (lihat renderList() di bawah).
+filterOwnerId:'',
+filterSettlement:'',
 _zakatableState:false,
 // _tradableState / TRADABLE_JENIS / TRADABLE_TYPE_MAP -- §H/§I AUDIT-UNIFIED-ASSET-
 // INVESTMENT-FORM.md (wrapper UI tipis di atas assetModal yang sudah ada, 0 model baru).
@@ -633,7 +647,28 @@ if(assetOwnFiltered.ok)list=assetOwnFiltered.items;
 const migratedCount=list.filter(a=>a._migratedToInvestmentId).length;
 list=list.filter(a=>!a._migratedToInvestmentId);
 const migratedBanner=migratedCount?`<div class="tx-item u-pointer" data-action="dashHubNavigateToFeature" data-args='${escapeHtml(JSON.stringify([{page:'aset',tab:'investasi'}]))}'><div class="tx-icon u-bgaccsoft">💹</div><div class="tx-info"><div class="tx-name">Investasi kamu sekarang dikelola di tab Investasi</div><div class="tx-meta">${migratedCount} item dipindah dari Buku Aset</div></div><div class="tx-amount">→</div></div>`:'';
-if(!list.length){el.innerHTML=migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>';Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
+// S667 (sesi lanjutan eksplisit dari catatan "Belum dikerjakan" SESSION-NOTE-
+// S666.md, pola SAMA PERSIS InvestmentListUI S662/investasi-list-view.js,
+// domain Aset): filter dropdown "Pemilik"+"Status" di atas daftar Buku Aset,
+// murni state UI (Aset.filterOwnerId/filterSettlement, 0 tulis ke D) -- reuse
+// penuh MultiOwnerEngine.getOwners()+Aset.getOwnerSettlement() (fondasi S665,
+// 0 rumus baru). Filter bar dibangun dari `list` di ATAS (SUDAH lolos filter
+// tipe kepemilikan assetOwnFilter S235 + SUDAH exclude item yang termigrasi ke
+// Investasi) SEBELUM difilter owner+status, supaya opsi dropdown owner tetap
+// lengkap walau filter Status sedang aktif menyembunyikan sebagian aset -- 0
+// aset punya owner non-SELF sama sekali -> _renderFilterBar() balikin ''
+// (filter bar disembunyikan total, bukan dirender kosong/nganggur, sama pola
+// InvestmentListUI). Beda dgn assetOwnFilter (S235, filter TIPE kepemilikan
+// SELF/INVESTOR/dst) -- filter S667 ini soal OWNER SPESIFIK (nama pemilik
+// individual) + status settlement titipan/milik (S665/S666), 2 dropdown
+// independen, TIDAK saling menggantikan.
+const ownerFilterBar=Aset._renderFilterBar(list);
+const filteredList=list.filter(Aset._assetMatchesFilter);
+if(!list.length){el.innerHTML=ownerFilterBar+(migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>');Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
+// filteredList kosong TAPI list (sebelum filter owner+status) tidak -- beda
+// pesan kosong drpd "belum ada aset tercatat" di atas, pola sama persis
+// InvestmentListUI._renderList() ("🔍 Tidak ada holding yang cocok").
+if(!filteredList.length){el.innerHTML=ownerFilterBar+migratedBanner+'<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada aset yang cocok dengan filter ini</div></div>';Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
 // S639 (RENCANA-MODERNISASI-UI.md): tema "modern" pakai jalur tabel list
 // padat (assetTableHTML, lanjutan pola s637 Ledger Pro/tabel Uang & s638
 // class .money Dana Titipan) utk #assetList, GANTIKAN grid kartu `.tx-item`
@@ -641,11 +676,11 @@ if(!list.length){el.innerHTML=migratedBanner||'<div class="empty"><div class="em
 // apa adanya utk 10 tema lama. 0 kolom saldo berjalan (konsep itu spesifik
 // transaksi kronologis, tidak berlaku utk daftar aset).
 if(D.profile&&D.profile.theme==='modern'&&typeof assetTableHTML==='function'){
-el.innerHTML=migratedBanner+assetTableHTML(list);
+el.innerHTML=ownerFilterBar+migratedBanner+assetTableHTML(filteredList);
 Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();
 return;
 }
-el.innerHTML=migratedBanner+list.map(a=>{
+el.innerHTML=ownerFilterBar+migratedBanner+filteredList.map(a=>{
 // BUGFIX (audit pola sama "0 reaksi" S601 InvestmentListUI._renderList): SEBELUMNYA
 // blok ini TANPA try/catch -- 1 aset dgn data yg bikin assetCrossCheckWarning()/Aset.ICON
 // lookup throw akan menjatuhkan SELURUH .map(), el.innerHTML tidak pernah ke-assign,
@@ -681,6 +716,90 @@ Penyusutan.renderList();
 PajakAset.renderList();
 LaporanAset.renderList();
 AssetInsight.render();
+},
+// _renderFilterBar(list) — S667, pola SAMA PERSIS InvestmentListUI._renderFilterBar()
+// (investasi-list-view.js, S662, badge jumlah S664). Bangun 2 dropdown "Pemilik" &
+// "Status" di atas daftar aset, dari MultiOwnerEngine.getOwners(a) (owner non-SELF
+// sudah kanonik lewat OwnerRegistry sejak S491) + Aset.getOwnerSettlement() (S665).
+// Opsi owner dikumpulkan dari aset YANG ADA SEKARANG di `list` (bukan
+// OwnerRegistry.listAll() penuh, yg juga mencakup owner Investasi/Akun yg tidak
+// relevan di sini — 0 opsi mubazir yg pas dipilih hasilnya selalu kosong). 0 owner
+// non-SELF sama sekali (mis. semua aset masih milik sendiri) -> balikin '' (filter
+// bar disembunyikan total, bukan dirender kosong/nganggur).
+_renderFilterBar(list){
+// ownerMap: id -> {name, count}. count = JUMLAH ASET (bukan jumlah baris owner) di
+// mana owner ini muncul sbg salah satu pemilik non-SELF -- dipakai sbg badge "(N
+// aset)" di tiap opsi dropdown, pola sama persis badge "(N holding)" InvestmentListUI.
+// 1 aset dgn owner yg sama muncul >1x di getOwners() (data lama/duplikat) SENGAJA
+// cuma dihitung SEKALI per aset (pakai Set per-aset di bawah).
+const ownerMap=new Map();
+(list||[]).forEach(a=>{
+let owners;
+try{const res=(typeof MultiOwnerEngine!=='undefined')?MultiOwnerEngine.getOwners(a):null;owners=(res&&res.ok)?res.owners:[];}catch(err){owners=[];}
+const seenInThisAsset=new Set();
+owners.forEach(o=>{
+if(!o||o.isSelf||!o.ownerId)return;
+const id=String(o.ownerId);
+if(!ownerMap.has(id))ownerMap.set(id,{name:o.ownerName||'Pemilik',count:0});
+if(!seenInThisAsset.has(id)){ownerMap.get(id).count+=1;seenInThisAsset.add(id);}
+});
+});
+if(!ownerMap.size)return'';
+const ownerOpts=['<option value="">👥 Semua Pemilik</option>'].concat(
+Array.from(ownerMap.entries()).map(([id,info])=>(
+'<option value="'+escapeHtml(id)+'"'+(Aset.filterOwnerId===id?' selected':'')+'>'
++escapeHtml(info.name)+' ('+info.count+' aset)</option>'
+)),
+).join('');
+// Dropdown Status HANYA masuk akal kalau owner sudah dipilih (settlement adalah
+// properti PER owner-aset, bukan global) -- disabled + balik ke '' otomatis lewat
+// onFilterOwnerChange() saat filterOwnerId dikosongkan lagi.
+const statusDisabled=Aset.filterOwnerId?'':' disabled';
+const statusOpts='<option value="">Semua Status</option>'
++'<option value="titipan"'+(Aset.filterSettlement==='titipan'?' selected':'')+'>🔒 Dana Titipan</option>'
++'<option value="milik"'+(Aset.filterSettlement==='milik'?' selected':'')+'>✅ Milik Sendiri</option>';
+return'<div class="u-flex u-gap8 u-mb10" style="flex-wrap:wrap">'
++'<select class="fs u-flex1" style="min-width:140px" onchange="Aset.onFilterOwnerChange(this.value)">'+ownerOpts+'</select>'
++'<select class="fs u-flex1" style="min-width:140px"'+statusDisabled+' onchange="Aset.onFilterSettlementChange(this.value)">'+statusOpts+'</select>'
++'</div>';
+},
+// _assetMatchesFilter(a) — S667. Query murni (0 mutasi), dipanggil per-aset dari
+// renderList(). filterOwnerId kosong -> semua aset lolos (filter nonaktif). Owner-
+// nya harus ADA di aset ini (MultiOwnerEngine.getOwners(), non-SELF) DAN, kalau
+// filterSettlement juga diisi, status settlement-nya (Aset.getOwnerSettlement(),
+// S665) harus cocok -- pola query SAMA PERSIS Aset.assetsByOwnerSettlement()
+// (aset-owners.js), cuma dipecah jadi predicate per-aset supaya bisa dipakai
+// Array.prototype.filter() langsung di renderList(), sama pola InvestmentListUI.
+// _holdingMatchesFilter().
+_assetMatchesFilter(a){
+if(!Aset.filterOwnerId)return true;
+let owners;
+try{const res=(typeof MultiOwnerEngine!=='undefined')?MultiOwnerEngine.getOwners(a):null;owners=(res&&res.ok)?res.owners:[];}catch(err){return false;}
+const row=owners.find(o=>o&&!o.isSelf&&String(o.ownerId)===String(Aset.filterOwnerId));
+if(!row)return false;
+if(!Aset.filterSettlement)return true;
+try{
+return Aset.getOwnerSettlement(a,row.ownerId)===Aset.filterSettlement;
+}catch(err){
+return false;
+}
+},
+// onFilterOwnerChange(val) / onFilterSettlementChange(val) — S667. onchange handler
+// dropdown filter bar di atas, murni state UI lalu delegasi ke Aset.renderList()
+// (SAMA PERSIS pola assetOwnFilter yang sudah ada, S235: onchange="Aset.renderList()"
+// langsung di index.html) -- beda dari InvestmentListUI yang re-render summary+list
+// secara terpisah (Buku Aset tidak punya kartu ringkasan terpisah dari renderList()
+// spt #investSummaryValue, jadi 0 perlu jalur partial render tersendiri di sini).
+// Balik ke "Semua Pemilik" otomatis mengosongkan filterSettlement juga (status tanpa
+// owner terpilih tidak bermakna apa-apa, lihat komentar _renderFilterBar() di atas).
+onFilterOwnerChange(val){
+Aset.filterOwnerId=val||'';
+if(!Aset.filterOwnerId)Aset.filterSettlement='';
+Aset.renderList();
+},
+onFilterSettlementChange(val){
+Aset.filterSettlement=(val==='milik'||val==='titipan')?val:'';
+Aset.renderList();
 },
 // openActionsMenu(id) — menu overflow "⋮" utk aksi sekunder + detail kartu aset (S306
 // UI polish, lanjutan pola S299/S304/S305: SAMA PERSIS openBillActionsMenu() di

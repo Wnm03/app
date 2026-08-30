@@ -103,7 +103,11 @@ return;
 // Salinan (bukan referensi) -- aman diubah lewat addOwnerRow/removeOwnerRow/
 // onOwnerNameInput/onOwnerPorsiInput tanpa menyentuh data asli aset sampai
 // saveOwners() (ditunda ke sesi berikutnya) benar-benar dipanggil.
-Aset._ownersDraft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+// S666 (wiring UI dari fondasi S665 Aset.getOwnerSettlement()): field
+// settlement dibaca per-baris SEKARANG saat modal dibuka, sama pola persis
+// InvestmentUI.openOwnersModal() (S661) -- bukan disintesis ulang, supaya
+// toggle selalu mencerminkan status TERSIMPAN terakhir (a.ownerSettlement).
+Aset._ownersDraft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf,settlement:(typeof Aset.getOwnerSettlement==='function')?Aset.getOwnerSettlement(a,o.ownerId):'titipan'}));
 Aset._renderOwnersList();
 openModal('assetOwnersModal');
 // MIGRASI data lama (Agustus 2026): aset yang sudah overflow >100% SEBELUM fitur
@@ -325,6 +329,7 @@ Aset._ownerNameFieldHtml(o,i)+
 '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
 '<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' onchange="Aset.onOwnerIsSelfToggle('+i+',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'+
 '</label>'+
+(o.isSelf?'':Aset._ownerSettlementFieldHtml(o,i))+
 (o.isSelf?'':('<div id="assetOwnerKuota'+i+'">'+Aset._ownerQuotaText(o,i)+'</div>'))+
 '</div>';
 }).join('');
@@ -334,6 +339,39 @@ Aset.updateOwnersTotal();
 // Aman dipanggil di sini walau _rebalancePending null (fungsi itu sendiri yang
 // mengosongkan box kalau tidak ada apa2 utk ditampilkan).
 Aset._renderRebalancePanel();
+},
+// _ownerSettlementFieldHtml(o,i) -- S666 (wiring UI dari fondasi S665
+// Aset.getOwnerSettlement()/setOwnerSettlement()), pola SAMA PERSIS
+// InvestmentUI._ownerSettlementFieldHtml() (investasi-view.js, S661): toggle
+// status owner non-SELF, HANYA dirender utk baris non-SELF (pemilik "saya"
+// tidak relevan, tidak pernah masuk Buku Utang). 2 pilihan:
+//   - 'titipan' (default): perilaku SAMA seperti sebelum S665/S666 -- porsi
+//     owner ini masuk Buku Utang (Aset._syncOwnerDebts()/TitipanSync.reconcile()).
+//   - 'milik': owner ini pemilik SUNGGUHAN (mis. rumah warisan istri sendiri,
+//     BUKAN dana yang dititipkan buat dikelola) -- porsi TETAP tercatat sbg
+//     kepemilikan owner ini (bisa difilter), TAPI TIDAK menghasilkan entry
+//     Buku Utang.
+// <select> dipilih (bukan checkbox) supaya label kedua opsi eksplisit tampil,
+// tidak ambigu spt checkbox.
+_ownerSettlementFieldHtml(o,i){
+const val=o.settlement==='milik'?'milik':'titipan';
+return '<div class="fg u-mb0" style="margin-top:6px">'+
+'<label class="fl" style="margin-bottom:2px">Status Dana</label>'+
+'<select class="fi" id="assetOwnerSettlement'+i+'" onchange="Aset.onOwnerSettlementChange('+i+',this.value)">'+
+'<option value="titipan"'+(val==='titipan'?' selected':'')+'>🔒 Dana Titipan (tercatat di Buku Utang)</option>'+
+'<option value="milik"'+(val==='milik'?' selected':'')+'>✅ Milik Sendiri Pemilik Ini (bukan titipan, tidak ada utang)</option>'+
+'</select>'+
+'</div>';
+},
+// onOwnerSettlementChange(i,val) -- tulis pilihan status ke draft[i].settlement saja
+// (murni state, TIDAK menulis D.assets sampai saveOwners() -- pola sama persis
+// onOwnerNameInput()/onOwnerPorsiInput() di atas & InvestmentUI.onOwnerSettlementChange()).
+// Efeknya baru benar2 disinkronkan ke Buku Utang saat saveOwners() memanggil
+// Aset.setOwnerSettlement() (lihat di bawah).
+onOwnerSettlementChange(i,val){
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+if(!draft[i])return;
+draft[i].settlement=val==='milik'?'milik':'titipan';
 },
 // updateOwnersTotal() -- SESI 392c: hitung ulang & tampilkan total porsi Aset._ownersDraft
 // saat ini di #assetOwnersTotalBox, warna hijau kalau pas 100% / merah kalau belum (kurang
@@ -388,7 +426,7 @@ addOwnerRow(){
 if(Aset._ownersReadOnly){toast('🔗 Porsi aset ini diatur di Holding Investasi, tidak bisa diedit di sini');return;}
 if(!Aset._ownersModalAsset){toast('⚠️ Simpan aset ini dulu sebelum mengatur porsi kepemilikan');return;}
 Aset._ownersDraft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
-Aset._ownersDraft.push({ownerId:'',ownerName:'',porsi:0,isSelf:Aset._ownersDraft.length===0});
+Aset._ownersDraft.push({ownerId:'',ownerName:'',porsi:0,isSelf:Aset._ownersDraft.length===0,settlement:'titipan'});
 Aset._renderOwnersList();
 },
 // removeOwnerRow(i) -- SESI 392b: hapus 1 baris pemilik dari Aset._ownersDraft (index i),
@@ -1062,6 +1100,22 @@ throw e;
 const res=MultiOwnerEngine.setOwners(a,owners);
 if(!res.ok){toast('⚠️ '+res.reason);return;}
 Object.assign(a,{owners:res.entity.owners});
+// S666: sinkronkan status "Titipan"/"Milik Sendiri" per owner non-SELF --
+// HARUS setelah Object.assign di atas (baris/ownerId final baru pasti sudah
+// ada di a.owners), 100% reuse Aset.setOwnerSettlement() (fondasi S665, di
+// dalamnya sudah memanggil TitipanSync.reconcile()/_syncOwnerDebts() +
+// save() sendiri -- 0 rumus/sync Buku Utang baru ditulis di sini). Guard
+// `typeof` (bukan wajib, pola sama InvestmentUI.saveOwners() S661): beberapa
+// test lama memasang stub Aset minimal tanpa method S665 ini -- modul
+// aset-owners.js SUNGGUHAN (bukan stub) SELALU punya method ini sejak S665.
+if(typeof Aset.setOwnerSettlement==='function'){
+owners.forEach((o)=>{
+if(o.isSelf)return;
+const draftRow=draft.find((d)=>(d.ownerId&&String(d.ownerId).trim()===o.ownerId)||d.ownerName.trim()===o.ownerName);
+const settlement=draftRow&&draftRow.settlement==='milik'?'milik':'titipan';
+Aset.setOwnerSettlement(a.id,o.ownerId,settlement);
+});
+}
 // FIX (audit "porsi titipan tidak bisa dihapus & disimpan di tab edit
 // kepemilikan"): kalau aset ini masih py field dana titipan LEGACY
 // (a.titipanAmount/titipanOwnerType/titipanOwnerName -- disintesis jadi
@@ -1139,7 +1193,7 @@ if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{ownersUpdated:true,edi
 // _ownersAssetNilai() balik baca a.nilai asli (sekarang sudah terisi benar).
 Aset._ownersDraftNilai=null;
 Aset._ownersModalAsset=a;
-Aset._ownersDraft=res.entity.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
+Aset._ownersDraft=res.entity.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf,settlement:(typeof Aset.getOwnerSettlement==='function')?Aset.getOwnerSettlement(a,o.ownerId):'titipan'}));
 Aset._renderOwnersList();
 // Sesi 422c: sebelumnya cuma Aset.renderList() -- porsi berubah juga
 // mempengaruhi Kekayaan Bersih/Zakat (lewat Aset.totalValue(), S422c) &
@@ -1197,7 +1251,7 @@ return;
 }
 if(!Aset._ownersModalAsset){return;}
 const res=typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.getOwners(Aset._ownersModalAsset):null;
-Aset._ownersDraft=res&&res.ok?res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf})):[];
+Aset._ownersDraft=res&&res.ok?res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf,settlement:(typeof Aset.getOwnerSettlement==='function')?Aset.getOwnerSettlement(Aset._ownersModalAsset,o.ownerId):'titipan'})):[];
 // FIX (audit "Nominal tidak bisa diisi manual", laporan user Agustus 2026):
 // nilai tersirat dari Nominal (kalau ada, lihat _ownersDraftNilai) juga
 // bagian dari "perubahan draft yang belum disimpan" -- ikut dibuang saat
@@ -1240,6 +1294,55 @@ Aset._checkRebalanceTrigger(Aset._ownersDraft.length-1);
 // tidak manggil fungsi yang sudah tidak ada) -- migrasi data
 // titipanAmount->a.owners yang SEBENARNYA (nulis field `owners` array) &
 // perubahan UI assetModal jadi kerjaan Sesi C, sesuai rencana 4 sesi.
+// getOwnerSettlement(a, ownerId) / setOwnerSettlement(id, ownerId, settlement) —
+// S665 (lanjutan eksplisit dari Investment.getOwnerSettlement()/setOwnerSettlement(),
+// S660: "Pola sama ke D.assets[] (Buku Aset)" dari daftar ide user pasca-S662).
+// Port 1:1 -- SAMA PERSIS semantik & kontrak `Investment.getOwnerSettlement()`/
+// `setOwnerSettlement()` (investasi.js), cuma sumber datanya `a.ownerSettlement`
+// (bukan `h.ownerSettlement`) & sync-nya lewat `_syncOwnerDebts()`/`TitipanSync.
+// reconcile()` (bukan `_syncTitipanDebt()`). Default TOLERAN ke 'titipan' kalau
+// belum diisi/map belum ada -- 0 REGRESI utk seluruh data existing (setiap
+// owner non-SELF aset TETAP otomatis jadi entry Buku Utang persis seperti
+// sebelum sesi ini, kalau setOwnerSettlement() tidak pernah dipanggil).
+// 'milik' = owner itu pemilik sungguhan (mis. rumah warisan istri sendiri) ->
+// TIDAK menghasilkan/mempertahankan entry Buku Utang utk owner ybs (lihat
+// `nonSelfOwners` di `_syncOwnerDebts()` di bawah), TAPI tetap muncul di
+// getOwners() (porsi kepemilikan tidak berubah).
+getOwnerSettlement(a,ownerId){
+const map=a&&typeof a==='object'&&a.ownerSettlement&&typeof a.ownerSettlement==='object'?a.ownerSettlement:null;
+const v=map?map[ownerId]:undefined;
+return v==='milik'?'milik':'titipan';
+},
+setOwnerSettlement(id,ownerId,settlement){
+const a=D.assets.find(x=>sameId(x.id,id));
+if(!a)throw new Error('Aset tidak ditemukan');
+if(typeof ownerId!=='string'||!ownerId.trim())throw new Error('ownerId wajib diisi');
+const norm=settlement==='milik'?'milik':'titipan';
+a.ownerSettlement=(a.ownerSettlement&&typeof a.ownerSettlement==='object')?a.ownerSettlement:{};
+if(norm==='titipan'){
+delete a.ownerSettlement[ownerId];
+}else{
+a.ownerSettlement[ownerId]='milik';
+}
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcile==='function'){TitipanSync.reconcile(a);}else{Aset._syncOwnerDebts(a);}
+if(typeof save==='function')save();
+return a;
+},
+// assetsByOwnerSettlement(ownerId, settlement) — query murni (0 mutasi), pola
+// SAMA PERSIS `Investment.holdingsByOwnerSettlement()`: semua D.assets di mana
+// `ownerId` adalah salah satu owner EFEKTIF (lewat MultiOwnerEngine.getOwners(),
+// toleran data lama) DAN status settlement-nya (getOwnerSettlement) cocok
+// `settlement` ('titipan'|'milik').
+assetsByOwnerSettlement(ownerId,settlement){
+if(typeof D==='undefined'||!Array.isArray(D.assets))return[];
+const norm=settlement==='milik'?'milik':'titipan';
+return D.assets.filter(a=>{
+const res=typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.getOwners(a):null;
+const owners=(res&&res.ok)?res.owners:[];
+const row=owners.find(o=>o&&!o.isSelf&&String(o.ownerId)===String(ownerId));
+return!!row&&Aset.getOwnerSettlement(a,row.ownerId)===norm;
+});
+},
 _syncOwnerDebts(a){
 if(!a||typeof D==='undefined'||!D.debts)return;
 if(a.titipanDebtLinkId){
@@ -1253,7 +1356,7 @@ a.titipanDebtLinkId=null;
 const res=typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.getOwners(a):null;
 const owners=(res&&res.ok)?res.owners:[];
 const nilai=typeof a.nilai==='number'&&isFinite(a.nilai)?a.nilai:0;
-const nonSelfOwners=owners.filter(o=>!o.isSelf&&o.porsi>0);
+const nonSelfOwners=owners.filter(o=>!o.isSelf&&o.porsi>0&&Aset.getOwnerSettlement(a,o.ownerId)!=='milik');
 const existingLinked=D.debts.filter(d=>d.linkedAssetId===a.id);
 const keepIds=new Set();
 nonSelfOwners.forEach(o=>{

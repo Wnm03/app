@@ -272,6 +272,64 @@ const Investment = {
     return h;
   },
 
+  // getOwnerSettlement(h, ownerId) / setOwnerSettlement(id, ownerId, settlement) —
+  // S660 (audit "kepemilikan bukan titipan", laporan user Agustus 2026): sebelum
+  // sesi ini, SETIAP owner non-SELF (mis. istri pemilik emas asli, bukan dana
+  // yang dititipkan buat dikelola) otomatis diperlakukan _syncTitipanDebt() sbg
+  // "titipan" -> muncul entry Buku Utang seolah-olah ada kewajiban dikembalikan,
+  // padahal tidak ada. `settlement` MEMISAHKAN 2 konsep yang sebelumnya digabung:
+  //   - "siapa pemiliknya"      -> tetap h.owners/getOwners() (0 diubah)
+  //   - "apakah ada kewajiban"  -> BARU, h.ownerSettlement (map ownerId->'titipan'|
+  //     'milik'), TIDAK menyentuh skema h.owners/MultiOwnerEngine sama sekali.
+  // Default TOLERAN ke 'titipan' kalau belum diisi/map belum ada -- 0 REGRESI utk
+  // seluruh data existing (perilaku _syncTitipanDebt() persis sama sebelum sesi
+  // ini kalau ownerSettlement tidak pernah dipanggil, sesuai target eksplisit
+  // user "1 sesi 1 file, tanpa kehilangan perbaikan sebelumnya").
+  // 'milik' = owner itu pemilik sungguhan (mis. emas istri sendiri) -> TIDAK
+  // menghasilkan/mempertahankan entry Buku Utang utk owner ybs, TAPI tetap
+  // muncul di getOwners() (porsi kepemilikan tidak berubah) sehingga tetap bisa
+  // difilter per-owner (mis. "semua milik Istri") terpisah dari status titipan.
+  //
+  // BELUM ADA UI/filter sesi ini (fondasi + wiring _syncTitipanDebt saja) --
+  // sesuai pola "1 task = 1 sesi" project ini; dropdown "Titipan / Milik
+  // Sendiri" di investmentOwnersModal & filter list jadi sesi lanjutan.
+  getOwnerSettlement(h, ownerId) {
+    const map = h && typeof h === 'object' && h.ownerSettlement && typeof h.ownerSettlement === 'object' ? h.ownerSettlement : null;
+    const v = map ? map[ownerId] : undefined;
+    return v === 'milik' ? 'milik' : 'titipan';
+  },
+  setOwnerSettlement(id, ownerId, settlement) {
+    const h = Investment.getHolding(id);
+    if (!h) throw new Error('Holding tidak ditemukan');
+    if (typeof ownerId !== 'string' || !ownerId.trim()) throw new Error('ownerId wajib diisi');
+    const norm = settlement === 'milik' ? 'milik' : 'titipan';
+    h.ownerSettlement = (h.ownerSettlement && typeof h.ownerSettlement === 'object') ? h.ownerSettlement : {};
+    if (norm === 'titipan') {
+      delete h.ownerSettlement[ownerId];
+    } else {
+      h.ownerSettlement[ownerId] = 'milik';
+    }
+    Investment._syncTitipanDebt(h);
+    _invSave();
+    return h;
+  },
+
+  // holdingsByOwnerSettlement(ownerId, settlement) — query murni (0 mutasi):
+  // semua holding di mana `ownerId` adalah salah satu owner EFEKTIF (lewat
+  // getOwners(), toleran data lama) DAN status settlement-nya (getOwnerSettlement)
+  // cocok `settlement` ('titipan'|'milik'). Ini titik jawab konkret kebutuhan
+  // "filter kepemilikan Istri yang BUKAN titipan": panggil dgn
+  // (ownerIdIstri, 'milik').
+  holdingsByOwnerSettlement(ownerId, settlement) {
+    if (typeof D === 'undefined' || !Array.isArray(D.investments)) return [];
+    const norm = settlement === 'milik' ? 'milik' : 'titipan';
+    return D.investments.filter((h) => {
+      const owners = Investment.getOwners(h);
+      const row = owners.find((o) => !o.isSelf && String(o.ownerId) === String(ownerId));
+      return !!row && Investment.getOwnerSettlement(h, row.ownerId) === norm;
+    });
+  },
+
   // _syncTitipanDebt() — satu titik akses yang menjaga entry Buku Utang (D.debts) tetap sinkron
   // dgn holding 'titipan': nilai utang = holdingCost(h) (cost basis holding ini, angka yang SUDAH
   // ADA lewat holdingCost() di bawah — 0 rumus baru). Dipanggil tiap kali holding dibuat/diedit
@@ -294,7 +352,12 @@ const Investment = {
   // pemanggil yang masih baca field itu.
   _syncTitipanDebt(h) {
     if (!h || typeof D === 'undefined' || !D.debts) return;
-    const owners = Investment.getOwners(h).filter((o) => !o.isSelf && o.porsi > 0);
+    // S660: owner non-SELF dgn settlement==='milik' (pemilik sungguhan, mis.
+    // emas istri sendiri -- BUKAN dana dititipkan) sengaja DIKECUALIKAN dari
+    // sinkronisasi Buku Utang di bawah -- lihat komentar getOwnerSettlement()
+    // di atas. Default 'titipan' (owner tanpa entry di h.ownerSettlement) tetap
+    // ikut disinkron persis seperti sebelum sesi ini, 0 regresi.
+    const owners = Investment.getOwners(h).filter((o) => !o.isSelf && o.porsi > 0 && Investment.getOwnerSettlement(h, o.ownerId) !== 'milik');
     const cost = Investment.holdingCost(h);
     const catatan = `Dana titipan investasi: ${h.name}`;
     const existingLinked = D.debts.filter((d) => d.linkedInvestmentId === h.id);

@@ -30,6 +30,21 @@ const InvestmentListUI = {
   // Aset.editId -> Aset.openOwnersModal()/Aset.save()).
   editId: null,
 
+  // filterOwnerIds / filterSettlement — S662 (fondasi single-select), diubah jadi
+  // MULTI-select owner di S669 (lanjutan eksplisit dari catatan "Belum dikerjakan"
+  // SESSION-NOTE-S668.md: "S669: multi-select owner di daftar Investasi"). State UI
+  // MURNI (bukan ditulis ke D), direset tiap reload halaman -- pola sama editId di
+  // atas. filterOwnerIds: array ownerId non-SELF (dari Investment.getOwners(h),
+  // sudah kanonik lewat OwnerRegistry sejak S491) yang SEDANG dicentang; array
+  // kosong = Semua Pemilik (filter nonaktif). filterSettlement: '' = Semua Status,
+  // atau 'titipan'/'milik' (Investment.getOwnerSettlement(), S660) -- HANYA relevan
+  // kalau filterOwnerIds terisi (owner SELF tidak punya konsep settlement, lihat
+  // _syncTitipanDebt() di investasi.js yg selalu skip owner isSelf). Semantik OR:
+  // holding lolos kalau punya SALAH SATU owner dari filterOwnerIds (bukan harus
+  // semua) -- keputusan user "checkbox list, tap tiap nama, ada centang" (S669).
+  filterOwnerIds: [],
+  filterSettlement: '',
+
   // render() — dipanggil dari setAsetTab('investasi') & renderPageContent('aset') (SSOT,
   // sama pola AlokasiAset.init()/renderWealthSnapshots() yang dipanggil di 2 titik yang
   // sama). Aman dipanggil berkali-kali, murni re-render dari D.investments apa adanya.
@@ -105,6 +120,43 @@ const InvestmentListUI = {
         ? '<span class="u-t2">Yield/CAGR belum bisa dihitung (isi Tanggal Perolehan di holding masing-masing)</span>'
         : 'Setara ~<b class="' + (s.yieldPct >= 0 ? 'green' : 'red') + '">' + (s.yieldPct >= 0 ? '+' : '') + s.yieldPct.toFixed(2) + '%/tahun</b> (CAGR)';
     }
+    // investSummaryFilterNote (S663, lanjutan S662) — baris kecil "Menampilkan: X
+    // dari Y holding (Rp Z)" saat filter Pemilik (InvestmentListUI.filterOwnerId)
+    // sedang aktif. Kartu ringkasan di ATAS (totalValue/totalCost/gain, dari
+    // Investment.portfolioSummary()) SENGAJA TETAP dihitung dari SEMUA holding
+    // (0 diubah) -- baris ini cuma info tambahan supaya user sadar itu ≠ hasil
+    // filter yang lagi ditampilkan _renderList() di bawah, bukan pengganti kartu
+    // ringkasan. Dipasang sbg elemen sibling TEPAT SETELAH #investSummaryMeta
+    // lewat insertAdjacentElement (pola SAMA PERSIS
+    // InvestmentUI._renderRebalancePanel(), investasi-view.js) -- dibuat sekali,
+    // dipakai ulang di render berikutnya, TIDAK perlu ubah markup index.html sama
+    // sekali, supaya sesi ini tetap 1 file source yang disentuh (pola "1 sesi 1
+    // file" di docs/ZIP_RULES.md § Mode PATCH ZIP).
+    if (metaBox) {
+      let filterNoteBox = document.getElementById('investSummaryFilterNote');
+      if (!filterNoteBox) {
+        filterNoteBox = document.createElement('div');
+        filterNoteBox.id = 'investSummaryFilterNote';
+        filterNoteBox.className = 'u-fs11 u-t2 u-mt4';
+        metaBox.insertAdjacentElement('afterend', filterNoteBox);
+      }
+      if (InvestmentListUI.filterOwnerIds.length) {
+        // Reuse Investment.getHoldings()/_holdingMatchesFilter() (S662) + Investment.
+        // holdingValue() (SUDAH ADA, dipakai _renderList() juga) -- 0 rumus baru.
+        // Dibungkus try/catch PER HOLDING (pola sama _renderList()): 1 holding korup
+        // tidak menjatuhkan baris info ini, cuma dilewati dari total nilai terfilter.
+        let allHoldings = [];
+        try { allHoldings = Investment.getHoldings() || []; } catch (err) { allHoldings = []; }
+        const filtered = allHoldings.filter(InvestmentListUI._holdingMatchesFilter);
+        let filteredValue = 0;
+        filtered.forEach((h) => {
+          try { filteredValue += Investment.holdingValue(h); } catch (err) { /* skip holding korup dari total, konsisten guard _renderList() */ }
+        });
+        filterNoteBox.textContent = 'Menampilkan: ' + filtered.length + ' dari ' + allHoldings.length + ' holding (' + fmt(filteredValue) + ')';
+      } else {
+        filterNoteBox.textContent = '';
+      }
+    }
   },
 
   // _renderList() — daftar holding, 1 baris per holding (pola tx-item SAMA PERSIS
@@ -137,9 +189,20 @@ const InvestmentListUI = {
       }
     }
     if (typeof Investment === 'undefined') { el.innerHTML = ghostBanner; return; }
-    const holdings = Investment.getHoldings();
-    if (!holdings.length) {
+    const allHoldings = Investment.getHoldings();
+    if (!allHoldings.length) {
       el.innerHTML = ghostBanner + '<div class="empty"><div class="empty-icon">💹</div><div class="empty-text">Belum ada holding investasi tercatat</div></div>';
+      return;
+    }
+    // filterBar (S662) — dibangun dari allHoldings (SEBELUM difilter) supaya opsi
+    // dropdown Pemilik tetap lengkap walau filter Status sedang aktif menyembunyikan
+    // sebagian holding. _renderFilterBar() sendiri yang balikin '' kalau 0 holding
+    // punya owner non-SELF (0 yg bisa difilter -> filter bar disembunyikan, bukan
+    // dirender kosong/nganggur).
+    const filterBar = InvestmentListUI._renderFilterBar(allHoldings);
+    const holdings = allHoldings.filter(InvestmentListUI._holdingMatchesFilter);
+    if (!holdings.length) {
+      el.innerHTML = filterBar + ghostBanner + '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada holding yang cocok dengan filter ini</div></div>';
       return;
     }
     // BUGFIX (audit user "tap holding hasil migrasi = 0 reaksi, 0 toast"): sebelumnya
@@ -157,7 +220,7 @@ const InvestmentListUI = {
     // valid). Fix: bungkus hitungan PER HOLDING dgn try/catch -- 1 holding bermasalah
     // fallback ke nilai aman (0/null) dan tetap dirender sbg row yang BISA di-tap (badge
     // ⚠️ muncul di baris itu sbg penanda), tidak menjatuhkan seluruh render list.
-    el.innerHTML = ghostBanner + holdings.map((h) => {
+    el.innerHTML = filterBar + ghostBanner + holdings.map((h) => {
       let value = 0, gain = 0, roi = 0, warn = null, renderError = false;
       try {
         value = Investment.holdingValue(h);
@@ -182,6 +245,118 @@ const InvestmentListUI = {
         + '<div class="tx-amount"><div>' + fmt(value) + '</div><div class="u-fs11 ' + cls + '">' + (gain >= 0 ? '+' : '') + fmt(gain) + '</div></div>'
         + '</div>';
     }).join('');
+  },
+
+  // _renderFilterBar(allHoldings) — S662 (fondasi), badge jumlah holding per owner
+  // S664, diubah jadi CHECKBOX LIST multi-select S669 (dari dropdown <select> single
+  // sebelumnya — keputusan user "checkbox list, tap tiap nama, ada centang", native
+  // <select multiple> ditolak krn tidak nyaman di HP). Bangun daftar checkbox
+  // "Pemilik" + dropdown "Status" di atas daftar holding, dari Investment.getOwners(h)
+  // (S491, owner non-SELF sudah kanonik lewat OwnerRegistry) + Investment.
+  // getOwnerSettlement() (S660). Opsi owner dikumpulkan dari holding YANG ADA SEKARANG
+  // (bukan OwnerRegistry.listAll() penuh, yg juga mencakup owner Aset/Akun yg tidak
+  // relevan di sini — 0 opsi mubazir yg pas dipilih hasilnya selalu kosong). 0 owner
+  // non-SELF sama sekali (mis. semua holding masih milik sendiri) -> balikin ''
+  // (filter bar disembunyikan total, bukan dirender kosong/nganggur -- pola sama
+  // _renderAssetLinkAction() yg juga toggle kosong/isi tergantung ada-tidaknya data
+  // relevan).
+  _renderFilterBar(allHoldings) {
+    // ownerMap: id -> {name, count}. count = JUMLAH HOLDING (bukan jumlah baris
+    // owner) di mana owner ini muncul sbg salah satu pemilik non-SELF -- dipakai
+    // sbg badge "(N holding)" di tiap baris checkbox (S664), supaya user tahu
+    // seberapa banyak SEBELUM tap salah satu opsi (ide user: "biar user tahu
+    // seberapa banyak sebelum klik"). 1 holding dgn owner yg sama muncul >1x di
+    // getOwners() (data lama/duplikat) SENGAJA cuma dihitung SEKALI per holding
+    // (pakai Set per-holding di bawah) -- badge ini soal "berapa holding", bukan
+    // "berapa baris kepemilikan".
+    const ownerMap = new Map();
+    (allHoldings || []).forEach((h) => {
+      let owners;
+      try { owners = Investment.getOwners(h); } catch (err) { owners = []; }
+      const seenInThisHolding = new Set();
+      owners.forEach((o) => {
+        if (!o || o.isSelf || !o.ownerId) return;
+        const id = String(o.ownerId);
+        if (!ownerMap.has(id)) ownerMap.set(id, { name: o.ownerName || 'Pemilik', count: 0 });
+        if (!seenInThisHolding.has(id)) {
+          ownerMap.get(id).count += 1;
+          seenInThisHolding.add(id);
+        }
+      });
+    });
+    if (!ownerMap.size) return '';
+    const selectedIds = InvestmentListUI.filterOwnerIds;
+    const ownerChecks = Array.from(ownerMap.entries()).map(([id, info]) => {
+      const checked = selectedIds.indexOf(id) !== -1;
+      return '<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
+        + '<input type="checkbox" onchange="InvestmentListUI.onFilterOwnerToggle(\'' + escapeHtml(id) + '\')"' + (checked ? ' checked' : '') + '>'
+        + '<span class="u-fs13">' + escapeHtml(info.name) + ' <span class="u-t2 u-fs11">(' + info.count + ' holding)</span></span>'
+        + '</label>';
+    }).join('');
+    // Dropdown Status HANYA masuk akal kalau minimal 1 owner sudah dicentang
+    // (settlement adalah properti PER owner-holding, bukan global) -- disabled +
+    // balik ke '' otomatis lewat onFilterOwnerToggle() saat filterOwnerIds jadi
+    // kosong lagi.
+    const statusDisabled = selectedIds.length ? '' : ' disabled';
+    const statusOpts = '<option value="">Semua Status</option>'
+      + '<option value="titipan"' + (InvestmentListUI.filterSettlement === 'titipan' ? ' selected' : '') + '>🔒 Dana Titipan</option>'
+      + '<option value="milik"' + (InvestmentListUI.filterSettlement === 'milik' ? ' selected' : '') + '>✅ Milik Sendiri</option>';
+    return '<div class="card u-mb10" style="padding:8px 10px">'
+      + '<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
+      + ownerChecks
+      + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' onchange="InvestmentListUI.onFilterSettlementChange(this.value)">' + statusOpts + '</select>'
+      + '</div>';
+  },
+
+  // _holdingMatchesFilter(h) — S662 (fondasi single-owner), diubah jadi OR multi-owner
+  // S669. Query murni (0 mutasi), dipanggil per-holding dari _renderList().
+  // filterOwnerIds kosong -> semua holding lolos (filter nonaktif). Holding lolos
+  // kalau punya SALAH SATU owner dari filterOwnerIds (non-SELF) -- semantik OR,
+  // keputusan checkbox-list S669 (bukan AND, karena "punya semua owner yang
+  // dicentang sekaligus" jarang relevan & tidak diminta user). Kalau
+  // filterSettlement juga diisi, status settlement (getOwnerSettlement, S660) baris
+  // owner yang cocok itu harus sesuai -- pola query turunan dari
+  // Investment.holdingsByOwnerSettlement() (investasi.js), cuma dipecah jadi
+  // predicate per-holding supaya bisa dipakai Array.prototype.filter() langsung di
+  // _renderList().
+  _holdingMatchesFilter(h) {
+    if (!InvestmentListUI.filterOwnerIds.length) return true;
+    let owners;
+    try { owners = Investment.getOwners(h); } catch (err) { return false; }
+    const row = owners.find((o) => o && !o.isSelf && InvestmentListUI.filterOwnerIds.indexOf(String(o.ownerId)) !== -1);
+    if (!row) return false;
+    if (!InvestmentListUI.filterSettlement) return true;
+    try {
+      return Investment.getOwnerSettlement(h, row.ownerId) === InvestmentListUI.filterSettlement;
+    } catch (err) {
+      return false;
+    }
+  },
+
+  // onFilterOwnerToggle(id) — S669 (ganti onFilterOwnerChange S662, checkbox
+  // toggle bukan dropdown select). Tambah/hapus id dari filterOwnerIds, murni
+  // state UI + render ulang list. Panggil ulang _renderSummary() (sejak S663) --
+  // BUKAN supaya kartu ringkasan (totalValue/totalCost/gain) ikut terfilter (itu
+  // SENGAJA tetap dari SEMUA holding, 0 diubah), tapi supaya baris info
+  // #investSummaryFilterNote di bawah kartu ("Menampilkan: X dari Y holding") ikut
+  // update live begitu filter diganti. Array jadi kosong (owner terakhir
+  // dilepas-centang) otomatis mengosongkan filterSettlement juga (status tanpa
+  // owner terpilih tidak bermakna apa-apa, lihat komentar _renderFilterBar() di
+  // atas).
+  onFilterOwnerToggle(id) {
+    const key = String(id || '');
+    if (!key) return;
+    const idx = InvestmentListUI.filterOwnerIds.indexOf(key);
+    if (idx === -1) InvestmentListUI.filterOwnerIds.push(key);
+    else InvestmentListUI.filterOwnerIds.splice(idx, 1);
+    if (!InvestmentListUI.filterOwnerIds.length) InvestmentListUI.filterSettlement = '';
+    InvestmentListUI._renderSummary();
+    InvestmentListUI._renderList();
+  },
+  onFilterSettlementChange(val) {
+    InvestmentListUI.filterSettlement = (val === 'milik' || val === 'titipan') ? val : '';
+    InvestmentListUI._renderSummary();
+    InvestmentListUI._renderList();
   },
 
   // _resolveLinkedAsset(h) — B10: Investasi -> Aset Reverse Navigation (simetris dgn

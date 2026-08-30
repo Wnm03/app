@@ -70,6 +70,11 @@ const InvestmentUI = {
       ownerName: o.ownerName,
       porsi: o.porsi,
       isSelf: !!o.isSelf,
+      // settlement (S661, lanjutan fondasi S660 Investment.getOwnerSettlement()):
+      // 'titipan' (default) | 'milik' — dibaca per-baris SEKARANG saat modal dibuka,
+      // bukan disintesis ulang, supaya toggle di bawah selalu mencerminkan status
+      // TERSIMPAN terakhir (h.ownerSettlement), bukan asumsi.
+      settlement: (h && typeof Investment.getOwnerSettlement === 'function') ? Investment.getOwnerSettlement(h, o.ownerId) : 'titipan',
     }));
     InvestmentUI._renderOwnersList();
     // SESI 552 (Rekomendasi #2, audit S540/B1-B12 — lihat RENCANA-SESI-S552-BANNER-SAMAKAN-PORSI.md):
@@ -452,6 +457,7 @@ const InvestmentUI = {
         + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'
         + '<input type="checkbox" style="width:14px;height:14px"' + (o.isSelf ? ' checked' : '') + ' onchange="InvestmentUI.onOwnerIsSelfToggle(' + i + ',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'
         + '</label>'
+        + (o.isSelf ? '' : InvestmentUI._ownerSettlementFieldHtml(o, i))
         + (o.isSelf ? '' : ('<div id="investOwnerKuota' + i + '">' + InvestmentUI._ownerQuotaText(o, i) + '</div>'))
         + '</div>';
     }).join('');
@@ -460,6 +466,40 @@ const InvestmentUI = {
     // kali list ini di-render ulang penuh — lihat _renderRebalancePanel(). Sama pola persis
     // Aset._renderOwnersList()/AccOwners._renderList().
     InvestmentUI._renderRebalancePanel();
+  },
+
+  // _ownerSettlementFieldHtml(o,i) — S661 (wiring UI dari fondasi S660
+  // Investment.getOwnerSettlement()/setOwnerSettlement()): toggle status
+  // owner non-SELF, HANYA dirender utk baris non-SELF (pemilik = "saya"
+  // tidak relevan, tidak pernah masuk Buku Utang). 2 pilihan:
+  //   - 'titipan' (default): perilaku SAMA seperti sebelum S660/S661 — porsi
+  //     owner ini masuk Buku Utang (Investment._syncTitipanDebt()).
+  //   - 'milik': owner ini pemilik SUNGGUHAN (mis. emas istri sendiri, BUKAN
+  //     dana yang dititipkan buat dikelola) — porsi TETAP tercatat sbg
+  //     kepemilikan owner ini (bisa difilter), TAPI TIDAK menghasilkan entry
+  //     Buku Utang.
+  // <select> dipilih (bukan checkbox) supaya label kedua opsi eksplisit
+  // tampil, tidak ambigu spt checkbox bertuliskan status sebelumnya.
+  _ownerSettlementFieldHtml(o, i) {
+    const val = o.settlement === 'milik' ? 'milik' : 'titipan';
+    return '<div class="fg u-mb0" style="margin-top:6px">'
+      + '<label class="fl" style="margin-bottom:2px">Status Dana</label>'
+      + '<select class="fi" id="investOwnerSettlement' + i + '" onchange="InvestmentUI.onOwnerSettlementChange(' + i + ',this.value)">'
+      + '<option value="titipan"' + (val === 'titipan' ? ' selected' : '') + '>🔒 Dana Titipan (tercatat di Buku Utang)</option>'
+      + '<option value="milik"' + (val === 'milik' ? ' selected' : '') + '>✅ Milik Sendiri Pemilik Ini (bukan titipan, tidak ada utang)</option>'
+      + '</select>'
+      + '</div>';
+  },
+
+  // onOwnerSettlementChange(i,val) — tulis pilihan status ke draft[i].settlement
+  // saja (murni state, TIDAK menulis D.investments sampai saveOwners() — pola
+  // sama persis onOwnerNameInput()/onOwnerPorsiInput() di atas). Efeknya baru
+  // benar2 disinkronkan ke Buku Utang saat saveOwners() memanggil
+  // Investment.setOwnerSettlement() (lihat di bawah).
+  onOwnerSettlementChange(i, val) {
+    const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
+    if (!draft[i]) return;
+    draft[i].settlement = val === 'milik' ? 'milik' : 'titipan';
   },
 
   // updateOwnersTotal() — hitung ulang & tampilkan total porsi InvestmentUI._ownersDraft saat ini
@@ -501,6 +541,7 @@ const InvestmentUI = {
       ownerName: '',
       porsi: 0,
       isSelf: InvestmentUI._ownersDraft.length === 0,
+      settlement: 'titipan',
     });
     InvestmentUI._renderOwnersList();
   },
@@ -694,12 +735,30 @@ const InvestmentUI = {
       toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal menyimpan porsi kepemilikan'));
       return;
     }
+    // S661: sinkronkan status "Titipan"/"Milik Sendiri" per owner non-SELF —
+    // HARUS setelah Investment.setOwners() di atas (baris/ownerId final baru
+    // pasti sudah ada di h.owners), 100% reuse Investment.setOwnerSettlement()
+    // (fondasi S660, di dalamnya sudah memanggil _syncTitipanDebt() sendiri —
+    // 0 rumus/sync Buku Utang baru ditulis di sini). Guard `typeof` (bukan
+    // wajib): beberapa test unit memasang stub Investment minimal tanpa
+    // method ini (pola sama guard TitipanReconcile/AIBus di bawah) — modul
+    // investasi.js SUNGGUHAN (bukan stub) SELALU punya method ini sejak S660.
+    if (typeof Investment.setOwnerSettlement === 'function') {
+      owners.forEach((o) => {
+        if (o.isSelf) return;
+        const draftRow = draft.find((d) => (d.ownerId && String(d.ownerId).trim() === o.ownerId) || d.ownerName.trim() === o.ownerName);
+        const settlement = draftRow && draftRow.settlement === 'milik' ? 'milik' : 'titipan';
+        Investment.setOwnerSettlement(h.id, o.ownerId, settlement);
+      });
+      h = Investment.getHolding(h.id);
+    }
     InvestmentUI._ownersModalHolding = h;
     InvestmentUI._ownersDraft = Investment.getOwners(h).map((o) => ({
       ownerId: o.ownerId,
       ownerName: o.ownerName,
       porsi: o.porsi,
       isSelf: !!o.isSelf,
+      settlement: (typeof Investment.getOwnerSettlement === 'function') ? Investment.getOwnerSettlement(h, o.ownerId) : 'titipan',
     }));
     InvestmentUI._renderOwnersList();
     // Porsi berubah -> Kekayaan Bersih/Zakat Maal/Buku Utang (entry titipan investasi, lihat
@@ -730,12 +789,14 @@ const InvestmentUI = {
   // baru). Dipakai kalau user salah edit & mau mulai ulang tanpa menutup modal.
   resetOwners() {
     if (!InvestmentUI._ownersModalHolding) return;
-    const owners = typeof Investment !== 'undefined' ? Investment.getOwners(InvestmentUI._ownersModalHolding) : [];
+    const h = InvestmentUI._ownersModalHolding;
+    const owners = typeof Investment !== 'undefined' ? Investment.getOwners(h) : [];
     InvestmentUI._ownersDraft = owners.map((o) => ({
       ownerId: o.ownerId,
       ownerName: o.ownerName,
       porsi: o.porsi,
       isSelf: !!o.isSelf,
+      settlement: (typeof Investment !== 'undefined' && typeof Investment.getOwnerSettlement === 'function') ? Investment.getOwnerSettlement(h, o.ownerId) : 'titipan',
     }));
     InvestmentUI._rebalancePending = null;
     InvestmentUI._renderOwnersList();
