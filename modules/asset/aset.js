@@ -6,19 +6,23 @@
 const Aset={
 // NOTE (audit ukuran file): metode fitur owners/porsi kepemilikan DIPECAH ke aset-owners.js (0 logic diubah), digabung balik via Object.assign() setelah literal ini.
 editId:null,
-// filterOwnerId / filterSettlement — S667 (sesi lanjutan eksplisit dari catatan
-// "Belum dikerjakan" SESSION-NOTE-S666.md: "filter Owner+Status di daftar Buku
-// Aset"), pola SAMA PERSIS InvestmentListUI.filterOwnerId/filterSettlement (S662,
-// investasi-list-view.js) tapi domain Aset. State UI MURNI (bukan ditulis ke D),
-// direset ke '' tiap reload halaman -- pola sama editId di atas. filterOwnerId:
-// '' = Semua Pemilik, atau ownerId non-SELF (dari MultiOwnerEngine.getOwners(a),
-// kanonik lewat OwnerRegistry sejak S491/S665). filterSettlement: '' = Semua
-// Status, atau 'titipan'/'milik' (Aset.getOwnerSettlement(), S665) -- HANYA
-// relevan kalau filterOwnerId terisi (owner SELF tidak punya konsep settlement).
-// Beda dgn assetOwnFilter (S235, dropdown statis di index.html, filter TIPE
-// kepemilikan SELF/INVESTOR/CUSTOMER/FAMILY/THIRD_PARTY) -- 2 filter ini
-// independen, tidak saling menggantikan (lihat renderList() di bawah).
-filterOwnerId:'',
+// filterOwnerIds / filterSettlement — S667 (fondasi single-select, sesi lanjutan
+// eksplisit dari catatan "Belum dikerjakan" SESSION-NOTE-S666.md: "filter
+// Owner+Status di daftar Buku Aset"), diubah jadi MULTI-SELECT S673 (item backlog
+// dari catatan "Belum dikerjakan" SESSION-NOTE-S667.md: "multi-select owner Buku
+// Aset/Dana Titipan"), pola SAMA PERSIS InvestmentListUI.filterOwnerIds/
+// filterSettlement (S669/S671, investasi-list-view.js, bentuk final checkbox
+// multi-select) tapi domain Aset. State UI MURNI (bukan ditulis ke D), direset ke
+// [] tiap reload halaman -- pola sama editId di atas. filterOwnerIds: array
+// ownerId non-SELF (dari MultiOwnerEngine.getOwners(a), kanonik lewat
+// OwnerRegistry sejak S491/S665), [] = Semua Pemilik (filter nonaktif).
+// filterSettlement: '' = Semua Status, atau 'titipan'/'milik' (Aset.
+// getOwnerSettlement(), S665) -- HANYA relevan kalau filterOwnerIds terisi (owner
+// SELF tidak punya konsep settlement). Beda dgn assetOwnFilter (S235, dropdown
+// statis di index.html, filter TIPE kepemilikan SELF/INVESTOR/CUSTOMER/FAMILY/
+// THIRD_PARTY) -- 2 filter ini independen, tidak saling menggantikan (lihat
+// renderList() di bawah).
+filterOwnerIds:[],
 filterSettlement:'',
 _zakatableState:false,
 // _tradableState / TRADABLE_JENIS / TRADABLE_TYPE_MAP -- §H/§I AUDIT-UNIFIED-ASSET-
@@ -647,21 +651,23 @@ if(assetOwnFiltered.ok)list=assetOwnFiltered.items;
 const migratedCount=list.filter(a=>a._migratedToInvestmentId).length;
 list=list.filter(a=>!a._migratedToInvestmentId);
 const migratedBanner=migratedCount?`<div class="tx-item u-pointer" data-action="dashHubNavigateToFeature" data-args='${escapeHtml(JSON.stringify([{page:'aset',tab:'investasi'}]))}'><div class="tx-icon u-bgaccsoft">💹</div><div class="tx-info"><div class="tx-name">Investasi kamu sekarang dikelola di tab Investasi</div><div class="tx-meta">${migratedCount} item dipindah dari Buku Aset</div></div><div class="tx-amount">→</div></div>`:'';
-// S667 (sesi lanjutan eksplisit dari catatan "Belum dikerjakan" SESSION-NOTE-
-// S666.md, pola SAMA PERSIS InvestmentListUI S662/investasi-list-view.js,
-// domain Aset): filter dropdown "Pemilik"+"Status" di atas daftar Buku Aset,
-// murni state UI (Aset.filterOwnerId/filterSettlement, 0 tulis ke D) -- reuse
+// S667 (fondasi single-select, sesi lanjutan eksplisit dari catatan "Belum
+// dikerjakan" SESSION-NOTE-S666.md), diubah jadi CHECKBOX LIST multi-select S673
+// (item backlog SESSION-NOTE-S667.md, pola SAMA PERSIS InvestmentListUI S669/S671
+// /investasi-list-view.js, bentuk final checkbox multi-select, domain Aset):
+// filter checkbox-list "Pemilik" + dropdown "Status" di atas daftar Buku Aset,
+// murni state UI (Aset.filterOwnerIds/filterSettlement, 0 tulis ke D) -- reuse
 // penuh MultiOwnerEngine.getOwners()+Aset.getOwnerSettlement() (fondasi S665,
 // 0 rumus baru). Filter bar dibangun dari `list` di ATAS (SUDAH lolos filter
 // tipe kepemilikan assetOwnFilter S235 + SUDAH exclude item yang termigrasi ke
-// Investasi) SEBELUM difilter owner+status, supaya opsi dropdown owner tetap
+// Investasi) SEBELUM difilter owner+status, supaya opsi checkbox owner tetap
 // lengkap walau filter Status sedang aktif menyembunyikan sebagian aset -- 0
 // aset punya owner non-SELF sama sekali -> _renderFilterBar() balikin ''
 // (filter bar disembunyikan total, bukan dirender kosong/nganggur, sama pola
 // InvestmentListUI). Beda dgn assetOwnFilter (S235, filter TIPE kepemilikan
-// SELF/INVESTOR/dst) -- filter S667 ini soal OWNER SPESIFIK (nama pemilik
-// individual) + status settlement titipan/milik (S665/S666), 2 dropdown
-// independen, TIDAK saling menggantikan.
+// SELF/INVESTOR/dst) -- filter S667/S673 ini soal OWNER SPESIFIK (bisa pilih
+// lebih dari satu) + status settlement titipan/milik (S665/S666), independen,
+// TIDAK saling menggantikan.
 const ownerFilterBar=Aset._renderFilterBar(list);
 const filteredList=list.filter(Aset._assetMatchesFilter);
 if(!list.length){el.innerHTML=ownerFilterBar+(migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>');Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
@@ -717,10 +723,12 @@ PajakAset.renderList();
 LaporanAset.renderList();
 AssetInsight.render();
 },
-// _renderFilterBar(list) — S667, pola SAMA PERSIS InvestmentListUI._renderFilterBar()
-// (investasi-list-view.js, S662, badge jumlah S664). Bangun 2 dropdown "Pemilik" &
-// "Status" di atas daftar aset, dari MultiOwnerEngine.getOwners(a) (owner non-SELF
-// sudah kanonik lewat OwnerRegistry sejak S491) + Aset.getOwnerSettlement() (S665).
+// _renderFilterBar(list) — S667 (fondasi dropdown single-select), diubah jadi
+// CHECKBOX LIST multi-select S673, pola SAMA PERSIS InvestmentListUI.
+// _renderFilterBar() (investasi-list-view.js, S669 checkbox list, S671 tombol
+// Pilih Semua/Bersihkan). Bangun daftar checkbox "Pemilik" + dropdown "Status" di
+// atas daftar aset, dari MultiOwnerEngine.getOwners(a) (owner non-SELF sudah
+// kanonik lewat OwnerRegistry sejak S491) + Aset.getOwnerSettlement() (S665).
 // Opsi owner dikumpulkan dari aset YANG ADA SEKARANG di `list` (bukan
 // OwnerRegistry.listAll() penuh, yg juga mencakup owner Investasi/Akun yg tidak
 // relevan di sini — 0 opsi mubazir yg pas dipilih hasilnya selalu kosong). 0 owner
@@ -729,7 +737,7 @@ AssetInsight.render();
 _renderFilterBar(list){
 // ownerMap: id -> {name, count}. count = JUMLAH ASET (bukan jumlah baris owner) di
 // mana owner ini muncul sbg salah satu pemilik non-SELF -- dipakai sbg badge "(N
-// aset)" di tiap opsi dropdown, pola sama persis badge "(N holding)" InvestmentListUI.
+// aset)" di tiap baris checkbox, pola sama persis badge "(N holding)" InvestmentListUI.
 // 1 aset dgn owner yg sama muncul >1x di getOwners() (data lama/duplikat) SENGAJA
 // cuma dihitung SEKALI per aset (pakai Set per-aset di bawah).
 const ownerMap=new Map();
@@ -745,37 +753,54 @@ if(!seenInThisAsset.has(id)){ownerMap.get(id).count+=1;seenInThisAsset.add(id);}
 });
 });
 if(!ownerMap.size)return'';
-const ownerOpts=['<option value="">👥 Semua Pemilik</option>'].concat(
-Array.from(ownerMap.entries()).map(([id,info])=>(
-'<option value="'+escapeHtml(id)+'"'+(Aset.filterOwnerId===id?' selected':'')+'>'
-+escapeHtml(info.name)+' ('+info.count+' aset)</option>'
-)),
-).join('');
-// Dropdown Status HANYA masuk akal kalau owner sudah dipilih (settlement adalah
-// properti PER owner-aset, bukan global) -- disabled + balik ke '' otomatis lewat
-// onFilterOwnerChange() saat filterOwnerId dikosongkan lagi.
-const statusDisabled=Aset.filterOwnerId?'':' disabled';
+const selectedIds=Aset.filterOwnerIds;
+const ownerIdsAll=Array.from(ownerMap.keys());
+// Tombol cepat "Pilih Semua"/"Bersihkan" — pola SAMA PERSIS InvestmentListUI S671,
+// ambang sama (HANYA dirender kalau owner non-SELF > 5, di bawah itu tap manual
+// per-checkbox masih cepat). 0 perubahan pada checkbox list/predicate, tombol ini
+// murni bulk-set filterOwnerIds lewat handler baru di bawah
+// (onFilterOwnerSelectAll()/onFilterOwnerClearAll()).
+const quickActionsHtml=ownerIdsAll.length>5
+?'<div class="btn-row u-mb4">'
++'<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="Aset.onFilterOwnerSelectAll()">Pilih Semua</button>'
++'<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="Aset.onFilterOwnerClearAll()">Bersihkan</button>'
++'</div>'
+:'';
+const ownerChecks=Array.from(ownerMap.entries()).map(([id,info])=>{
+const checked=selectedIds.indexOf(id)!==-1;
+return'<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
++'<input type="checkbox" onchange="Aset.onFilterOwnerToggle(\''+escapeHtml(id)+'\')"'+(checked?' checked':'')+'>'
++'<span class="u-fs13">'+escapeHtml(info.name)+' <span class="u-t2 u-fs11">('+info.count+' aset)</span></span>'
++'</label>';
+}).join('');
+// Dropdown Status HANYA masuk akal kalau minimal 1 owner sudah dicentang
+// (settlement adalah properti PER owner-aset, bukan global) -- disabled + balik
+// ke '' otomatis lewat onFilterOwnerToggle() saat filterOwnerIds jadi kosong lagi.
+const statusDisabled=selectedIds.length?'':' disabled';
 const statusOpts='<option value="">Semua Status</option>'
 +'<option value="titipan"'+(Aset.filterSettlement==='titipan'?' selected':'')+'>🔒 Dana Titipan</option>'
 +'<option value="milik"'+(Aset.filterSettlement==='milik'?' selected':'')+'>✅ Milik Sendiri</option>';
-return'<div class="u-flex u-gap8 u-mb10" style="flex-wrap:wrap">'
-+'<select class="fs u-flex1" style="min-width:140px" onchange="Aset.onFilterOwnerChange(this.value)">'+ownerOpts+'</select>'
-+'<select class="fs u-flex1" style="min-width:140px"'+statusDisabled+' onchange="Aset.onFilterSettlementChange(this.value)">'+statusOpts+'</select>'
+return'<div class="card u-mb10" style="padding:8px 10px">'
++'<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
++quickActionsHtml
++ownerChecks
++'<select class="fs u-mt6" style="width:100%"'+statusDisabled+' onchange="Aset.onFilterSettlementChange(this.value)">'+statusOpts+'</select>'
 +'</div>';
 },
-// _assetMatchesFilter(a) — S667. Query murni (0 mutasi), dipanggil per-aset dari
-// renderList(). filterOwnerId kosong -> semua aset lolos (filter nonaktif). Owner-
-// nya harus ADA di aset ini (MultiOwnerEngine.getOwners(), non-SELF) DAN, kalau
-// filterSettlement juga diisi, status settlement-nya (Aset.getOwnerSettlement(),
-// S665) harus cocok -- pola query SAMA PERSIS Aset.assetsByOwnerSettlement()
-// (aset-owners.js), cuma dipecah jadi predicate per-aset supaya bisa dipakai
-// Array.prototype.filter() langsung di renderList(), sama pola InvestmentListUI.
-// _holdingMatchesFilter().
+// _assetMatchesFilter(a) — S667 (fondasi single-owner), diubah jadi OR multi-owner
+// S673. Query murni (0 mutasi), dipanggil per-aset dari renderList(). filterOwnerIds
+// kosong -> semua aset lolos (filter nonaktif). Aset lolos kalau punya SALAH SATU
+// owner dari filterOwnerIds (non-SELF) -- semantik OR, sama pola InvestmentListUI.
+// _holdingMatchesFilter() (S669). Kalau filterSettlement juga diisi, status
+// settlement (Aset.getOwnerSettlement(), S665) baris owner yang cocok itu harus
+// sesuai -- pola query turunan dari Aset.assetsByOwnerSettlement() (aset-owners.js),
+// cuma dipecah jadi predicate per-aset supaya bisa dipakai Array.prototype.filter()
+// langsung di renderList().
 _assetMatchesFilter(a){
-if(!Aset.filterOwnerId)return true;
+if(!Aset.filterOwnerIds.length)return true;
 let owners;
 try{const res=(typeof MultiOwnerEngine!=='undefined')?MultiOwnerEngine.getOwners(a):null;owners=(res&&res.ok)?res.owners:[];}catch(err){return false;}
-const row=owners.find(o=>o&&!o.isSelf&&String(o.ownerId)===String(Aset.filterOwnerId));
+const row=owners.find(o=>o&&!o.isSelf&&Aset.filterOwnerIds.indexOf(String(o.ownerId))!==-1);
 if(!row)return false;
 if(!Aset.filterSettlement)return true;
 try{
@@ -784,21 +809,53 @@ return Aset.getOwnerSettlement(a,row.ownerId)===Aset.filterSettlement;
 return false;
 }
 },
-// onFilterOwnerChange(val) / onFilterSettlementChange(val) — S667. onchange handler
-// dropdown filter bar di atas, murni state UI lalu delegasi ke Aset.renderList()
-// (SAMA PERSIS pola assetOwnFilter yang sudah ada, S235: onchange="Aset.renderList()"
-// langsung di index.html) -- beda dari InvestmentListUI yang re-render summary+list
-// secara terpisah (Buku Aset tidak punya kartu ringkasan terpisah dari renderList()
-// spt #investSummaryValue, jadi 0 perlu jalur partial render tersendiri di sini).
-// Balik ke "Semua Pemilik" otomatis mengosongkan filterSettlement juga (status tanpa
-// owner terpilih tidak bermakna apa-apa, lihat komentar _renderFilterBar() di atas).
-onFilterOwnerChange(val){
-Aset.filterOwnerId=val||'';
-if(!Aset.filterOwnerId)Aset.filterSettlement='';
+// onFilterOwnerToggle(id) — S673 (ganti onFilterOwnerChange S667, checkbox toggle
+// bukan dropdown select, pola SAMA PERSIS InvestmentListUI.onFilterOwnerToggle()
+// S669). Tambah/hapus id dari filterOwnerIds, murni state UI lalu delegasi ke
+// Aset.renderList() (SAMA PERSIS pola assetOwnFilter yang sudah ada, S235) -- beda
+// dari InvestmentListUI yang re-render summary+list secara terpisah (Buku Aset
+// tidak punya kartu ringkasan terpisah dari renderList() spt #investSummaryValue,
+// jadi 0 perlu jalur partial render tersendiri di sini). Array jadi kosong (owner
+// terakhir dilepas-centang) otomatis mengosongkan filterSettlement juga (status
+// tanpa owner terpilih tidak bermakna apa-apa, lihat komentar _renderFilterBar()
+// di atas).
+onFilterOwnerToggle(id){
+const key=String(id||'');
+if(!key)return;
+const idx=Aset.filterOwnerIds.indexOf(key);
+if(idx===-1)Aset.filterOwnerIds.push(key);
+else Aset.filterOwnerIds.splice(idx,1);
+if(!Aset.filterOwnerIds.length)Aset.filterSettlement='';
 Aset.renderList();
 },
 onFilterSettlementChange(val){
 Aset.filterSettlement=(val==='milik'||val==='titipan')?val:'';
+Aset.renderList();
+},
+// onFilterOwnerSelectAll()/onFilterOwnerClearAll() — S673, pola SAMA PERSIS
+// InvestmentListUI.onFilterOwnerSelectAll()/onFilterOwnerClearAll() (S671).
+// Dipicu tombol quick-action di _renderFilterBar() yang HANYA muncul kalau owner
+// non-SELF > 5. Murni state UI (filterOwnerIds/filterSettlement), 0 mutasi ke
+// D.assets, lalu Aset.renderList() seperti toggle manual. Select All mengumpulkan
+// SEMUA ownerId non-SELF dari D.assets saat ini (bukan cuma yang lagi kecentang,
+// dan bukan cuma dari `list` yang sudah terfilter assetOwnFilter/migrasi) --
+// owner baru yang belum pernah dicentang tetap ikut ter-include. Clear All juga
+// mengosongkan filterSettlement (status tanpa owner terpilih tidak bermakna,
+// sama seperti saat owner terakhir dilepas-centang manual di
+// onFilterOwnerToggle()).
+onFilterOwnerSelectAll(){
+const ids=new Set();
+(D.assets||[]).forEach(a=>{
+let owners;
+try{const res=(typeof MultiOwnerEngine!=='undefined')?MultiOwnerEngine.getOwners(a):null;owners=(res&&res.ok)?res.owners:[];}catch(err){owners=[];}
+owners.forEach(o=>{if(o&&!o.isSelf&&o.ownerId)ids.add(String(o.ownerId));});
+});
+Aset.filterOwnerIds=Array.from(ids);
+Aset.renderList();
+},
+onFilterOwnerClearAll(){
+Aset.filterOwnerIds=[];
+Aset.filterSettlement='';
 Aset.renderList();
 },
 // openActionsMenu(id) — menu overflow "⋮" utk aksi sekunder + detail kartu aset (S306

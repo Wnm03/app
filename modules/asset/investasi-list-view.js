@@ -45,10 +45,26 @@ const InvestmentListUI = {
   filterOwnerIds: [],
   filterSettlement: '',
 
+  // _filterPrefsLoaded/_filterStorageKey — S672, penyimpanan filter Pemilik+Status ke
+  // localStorage (item backlog dari SESSION-NOTE-S670.md/S671.md: "Persist pilihan
+  // filter owner (filterOwnerIds dkk) ke localStorage, pola sama cardCollapsePrefs").
+  // _filterPrefsLoaded murni flag runtime (bukan dipersist) supaya _loadFilterPrefsOnce()
+  // di render() cuma baca localStorage SEKALI per lifetime halaman -- baca ulang tiap
+  // render() akan menimpa balik perubahan live user dgn nilai lama di storage.
+  _filterPrefsLoaded: false,
+  _filterStorageKey: 'investmentListFilterPrefs',
+
   // render() — dipanggil dari setAsetTab('investasi') & renderPageContent('aset') (SSOT,
   // sama pola AlokasiAset.init()/renderWealthSnapshots() yang dipanggil di 2 titik yang
   // sama). Aman dipanggil berkali-kali, murni re-render dari D.investments apa adanya.
   render() {
+    // _loadFilterPrefsOnce() — S672 (item backlog "persist filter ke localStorage" dari
+    // SESSION-NOTE-S670.md/S671.md, pola sama cardCollapsePrefs di modal-navigasi.js).
+    // Dipanggil di render() (satu-satunya SSOT entry point tab Investasi dibuka/dibuka
+    // ulang) supaya filter tersimpan diterapkan begitu tab dibuka, TANPA menimpa
+    // perubahan live user tiap kali render() dipanggil ulang -- guard _filterPrefsLoaded
+    // di dalamnya bikin baca localStorage cuma terjadi SEKALI per lifetime halaman.
+    InvestmentListUI._loadFilterPrefsOnce();
     InvestmentListUI._renderSummary();
     InvestmentListUI._renderList();
     // Fase 3 (BUG-INV-001 Opsi 3, §3.5 audit): render Watchlist bareng di titik SSOT yang
@@ -286,6 +302,20 @@ const InvestmentListUI = {
     });
     if (!ownerMap.size) return '';
     const selectedIds = InvestmentListUI.filterOwnerIds;
+    const ownerIdsAll = Array.from(ownerMap.keys());
+    // Tombol cepat "Pilih Semua"/"Bersihkan" — S671 (item backlog dari catatan "Belum
+    // dikerjakan" SESSION-NOTE-S669.md/S670.md: "kalau owner-nya banyak (>5)"). HANYA
+    // dirender kalau owner non-SELF > 5 -- di bawah itu tap manual per-checkbox masih
+    // cepat, tombol cuma nambah noise visual (keputusan ambang sama seperti disebut
+    // eksplisit di catatan backlog). 0 perubahan pada checkbox list/predicate yang
+    // sudah ada dari S669, tombol ini murni bulk-set filterOwnerIds lewat handler baru
+    // di bawah (onFilterOwnerSelectAll()/onFilterOwnerClearAll()).
+    const quickActionsHtml = ownerIdsAll.length > 5
+      ? '<div class="btn-row u-mb4">'
+        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="InvestmentListUI.onFilterOwnerSelectAll()">Pilih Semua</button>'
+        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="InvestmentListUI.onFilterOwnerClearAll()">Bersihkan</button>'
+        + '</div>'
+      : '';
     const ownerChecks = Array.from(ownerMap.entries()).map(([id, info]) => {
       const checked = selectedIds.indexOf(id) !== -1;
       return '<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
@@ -303,6 +333,7 @@ const InvestmentListUI = {
       + '<option value="milik"' + (InvestmentListUI.filterSettlement === 'milik' ? ' selected' : '') + '>✅ Milik Sendiri</option>';
     return '<div class="card u-mb10" style="padding:8px 10px">'
       + '<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
+      + quickActionsHtml
       + ownerChecks
       + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' onchange="InvestmentListUI.onFilterSettlementChange(this.value)">' + statusOpts + '</select>'
       + '</div>';
@@ -350,13 +381,107 @@ const InvestmentListUI = {
     if (idx === -1) InvestmentListUI.filterOwnerIds.push(key);
     else InvestmentListUI.filterOwnerIds.splice(idx, 1);
     if (!InvestmentListUI.filterOwnerIds.length) InvestmentListUI.filterSettlement = '';
+    InvestmentListUI._saveFilterPrefs();
     InvestmentListUI._renderSummary();
     InvestmentListUI._renderList();
   },
   onFilterSettlementChange(val) {
     InvestmentListUI.filterSettlement = (val === 'milik' || val === 'titipan') ? val : '';
+    InvestmentListUI._saveFilterPrefs();
     InvestmentListUI._renderSummary();
     InvestmentListUI._renderList();
+  },
+
+  // onFilterOwnerSelectAll()/onFilterOwnerClearAll() — S671 (item backlog "Tombol
+  // cepat Pilih Semua/Bersihkan" dari SESSION-NOTE-S669.md/S670.md, dipicu tombol
+  // quick-action di _renderFilterBar() yang HANYA muncul kalau owner non-SELF > 5).
+  // Pola sama onFilterOwnerToggle(): murni state UI (filterOwnerIds/filterSettlement),
+  // 0 mutasi ke D.investments, lalu re-render summary+list seperti toggle manual.
+  // Select All mengumpulkan SEMUA ownerId non-SELF dari Investment.getHoldings()
+  // saat ini (bukan cuma yang lagi kecentang) -- owner baru yang belum pernah
+  // dicentang tetap ikut ter-include, konsisten sama daftar checkbox yang dirender
+  // _renderFilterBar() dari sumber yang sama. Clear All juga mengosongkan
+  // filterSettlement (status tanpa owner terpilih tidak bermakna, sama seperti
+  // saat owner terakhir dilepas-centang manual di onFilterOwnerToggle()).
+  onFilterOwnerSelectAll() {
+    if (typeof Investment === 'undefined') return;
+    let allHoldings;
+    try { allHoldings = Investment.getHoldings(); } catch (err) { allHoldings = []; }
+    const ids = new Set();
+    (allHoldings || []).forEach((h) => {
+      let owners;
+      try { owners = Investment.getOwners(h); } catch (err) { owners = []; }
+      owners.forEach((o) => { if (o && !o.isSelf && o.ownerId) ids.add(String(o.ownerId)); });
+    });
+    InvestmentListUI.filterOwnerIds = Array.from(ids);
+    InvestmentListUI._saveFilterPrefs();
+    InvestmentListUI._renderSummary();
+    InvestmentListUI._renderList();
+  },
+  onFilterOwnerClearAll() {
+    InvestmentListUI.filterOwnerIds = [];
+    InvestmentListUI.filterSettlement = '';
+    InvestmentListUI._saveFilterPrefs();
+    InvestmentListUI._renderSummary();
+    InvestmentListUI._renderList();
+  },
+
+  // _loadFilterPrefsOnce()/_saveFilterPrefs() — S672 (item backlog "Persist pilihan
+  // filter owner (filterOwnerIds dkk) ke localStorage, pola sama cardCollapsePrefs" —
+  // dari SESSION-NOTE-S670.md/S671.md). Reuse pola try/catch permisif yang sama persis
+  // toggleCardCollapse()/applyCardCollapsePrefs() (modal-navigasi.js): localStorage
+  // gagal/diblokir/korup TIDAK PERNAH melempar keluar -- filter tetap berfungsi murni
+  // di state UI in-memory kalau storage bermasalah, cuma tidak ke-persist lintas
+  // reload. Key `investmentListFilterPrefs` SENGAJA terpisah dari `cardCollapsePrefs`
+  // (concern beda: filter data vs UI collapse), pola sama banyak key localStorage lain
+  // di codebase yang masing-masing punya namespace sendiri.
+  //
+  // _loadFilterPrefsOnce() HANYA membaca sekali per lifetime halaman (guard
+  // `_filterPrefsLoaded`) -- dipanggil dari render() (SSOT tab dibuka), BUKAN dari
+  // _renderList()/_renderSummary() yang bisa dipanggil berkali-kali dari banyak titik
+  // (termasuk dari dalam handler filter itu sendiri) -- baca ulang tiap render() akan
+  // menimpa balik state live user dgn nilai lama di storage tiap kali salah satu
+  // handler filter dipanggil (karena semuanya juga memanggil _renderList()).
+  // Validasi bentuk data SEBELUM dipakai (Array.isArray utk filterOwnerIds, whitelist
+  // 'milik'/'titipan' utk filterSettlement) -- localStorage bisa diedit manual dari
+  // luar app (DevTools), jadi data JANGAN dipercaya mentah-mentah, pola sama validasi
+  // di onFilterSettlementChange() (val yang bukan 'milik'/'titipan' otomatis '').
+  _loadFilterPrefsOnce() {
+    if (InvestmentListUI._filterPrefsLoaded) return;
+    InvestmentListUI._filterPrefsLoaded = true;
+    if (typeof localStorage === 'undefined') return;
+    try {
+      const raw = localStorage.getItem(InvestmentListUI._filterStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.filterOwnerIds)) {
+        InvestmentListUI.filterOwnerIds = parsed.filterOwnerIds.map(String);
+      }
+      if (parsed && (parsed.filterSettlement === 'milik' || parsed.filterSettlement === 'titipan')) {
+        InvestmentListUI.filterSettlement = parsed.filterSettlement;
+      } else if (!InvestmentListUI.filterOwnerIds.length) {
+        // Konsisten sama guard onFilterOwnerToggle()/onFilterOwnerClearAll(): status
+        // tanpa owner terpilih tidak bermakna -- kalau data lama di storage (mis.
+        // format sebelum validasi ini ada) kebetulan punya filterOwnerIds kosong tapi
+        // filterSettlement terisi, jangan ikut dipakai.
+        InvestmentListUI.filterSettlement = '';
+      }
+    } catch (err) {
+      // localStorage korup/tidak tersedia -> abaikan, filter tetap default kosong
+      // (0 crash, pola sama try/catch cardCollapsePrefs).
+    }
+  },
+  _saveFilterPrefs() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(InvestmentListUI._filterStorageKey, JSON.stringify({
+        filterOwnerIds: InvestmentListUI.filterOwnerIds,
+        filterSettlement: InvestmentListUI.filterSettlement,
+      }));
+    } catch (err) {
+      // localStorage penuh/diblokir (mis. mode privat) -> abaikan, filter tetap
+      // jalan murni di state UI sesi ini saja (0 crash).
+    }
   },
 
   // _resolveLinkedAsset(h) — B10: Investasi -> Aset Reverse Navigation (simetris dgn
