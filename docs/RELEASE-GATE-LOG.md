@@ -388,3 +388,23 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak bisa di-install; kode sudah dites node --test 5011/5011 pass
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa di-install; bundle unminified tapi valid & lolos node --check
+
+## 2026-08-30T09:12:14.320Z — versi s626-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: eslint tidak terpasang di sandbox ini, tidak ada akses jaringan utk npm install
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini, tidak ada akses jaringan utk npm install
+
+## 2026-08-30T09:52:18.543Z — versi s627-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm install (no network), eslint tidak terpasang
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses npm install (no network), esbuild tidak terpasang
+
+## 2026-08-30T10:03:23.996Z — versi s628-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm install (no network), eslint tidak terpasang
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses npm install (no network), esbuild tidak terpasang
+
+## 2026-08-30T11:32:59.602Z — versi s629-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm/jaringan, eslint tidak terpasang
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses npm/jaringan, esbuild tidak terpasang
