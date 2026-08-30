@@ -1642,6 +1642,17 @@ try{ if(typeof ensureRenov==='function') await ensureRenov(); }catch(e){ _lazyLo
 try{ if(typeof ensureSewaKios==='function') await ensureSewaKios(); }catch(e){ _lazyLoadFailNote+=' | modules/business/sewakios.js gagal dimuat: '+(e&&e.message||e); }
 const cases=getSelfTestCases();
 const results=[];
+// S622: banyak test case di atas manggil FUNGSI ASLI aplikasi (mis.
+// WorthIt.undoBought()) yg py efek samping toast() sungguhan -- kalau tidak
+// diredam, tes yg jalan otomatis (autoRunSelfTestIfNeeded, lihat komentar
+// _toastSuppressed di format-tema.js) membanjiri antrean toast & menutupi
+// tombol di tab manapun yg sedang aktif user, PADAHAL bukan feedback utk aksi
+// user sungguhan. Redam SELAMA loop eksekusi test case saja -- assert &
+// logic tes 0 berubah, toast RINGKASAN akhir (di runSelfTest()/
+// autoRunSelfTestIfNeeded() sesudah fungsi ini return) tetap tampil normal
+// krn dipanggil setelah suppress dimatikan lagi di finally.
+if(typeof setToastSuppressed==='function')setToastSuppressed(true);
+try{
 for(const c of cases){
 try{ await c.fn(); results.push({name:c.name,pass:true}); }
 catch(e){
@@ -1649,6 +1660,9 @@ let msg=e.message;
 if(_lazyLoadFailNote && /\b(Renov\w*|SewaKios)\b is not defined/.test(msg)) msg+=' — BUKAN bug kode: '+_lazyLoadFailNote.replace(/^ \| /,'');
 results.push({name:c.name,pass:false,error:msg});
 }
+}
+}finally{
+if(typeof setToastSuppressed==='function')setToastSuppressed(false);
 }
 const passCount=results.filter(r=>r.pass).length;
 return {results,passCount,total:results.length,failCount:results.length-passCount,ranAt:new Date().toISOString()};
@@ -2360,6 +2374,12 @@ if(document.querySelector('.overlay.open')){
 setTimeout(autoRunSelfTestIfNeeded,3000);
 return;
 }
+// S622: bersihkan toast basi (mis. sisa dari aksi tepat sebelum boot selesai)
+// SEBELUM mulai jalan -- suppress di dalam computeSelfTestResults() menahan
+// toast BARU dari test case, tapi tidak menyentuh toast yg SUDAH mengantre
+// sebelum fungsi ini dipanggil. Pola sama dgn dismissAllToasts() di
+// showPage()/setAsetTab() (S619/S621), cuma titik panggilnya beda.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const data=await computeSelfTestResults();
 saveSelfTestState(data);
 safeSetItem('kw_selftest_build',APP_BUILD_VERSION);

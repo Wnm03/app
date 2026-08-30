@@ -52,6 +52,11 @@ return n;
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const PAJAK_TAB_LABEL={zakat:'Zakat',pajak:'Pajak (PPh 21)'};
 function setPajakTab(tab,el){
+// BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
+// modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
+// di tab Pajak/Zakat lain begitu user ganti tab. Pola sama persis dgn
+// setAsetTab(), lihat CHANGELOG-S620.md.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 document.querySelectorAll('#page-pajak .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el)el.classList.add('active');
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
@@ -72,6 +77,9 @@ document.getElementById('pajakTab-pajak').style.display='';
 const PJK_SUBTAB_ORDER=['pph21','pbb'];
 const PJK_SUBTAB_LABEL={pph21:'PPh 21',pbb:'PBB & UMKM'};
 function setPjkTab(t,el){
+// BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
+// setPajakTab() di atas / modules/shared/format-tema.js.
+if(typeof dismissAllToasts==='function')dismissAllToasts();
 const pjkSubtabBtns=document.querySelectorAll('#pajakTab-pajak .pjk-subtab');
 pjkSubtabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
