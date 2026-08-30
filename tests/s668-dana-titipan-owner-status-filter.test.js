@@ -8,13 +8,16 @@
 // Fondasi query (Aset.getOwnerSettlement()/Investment.getOwnerSettlement())
 // dari S660/S665, sesi ini menyambungkan ke UI tab Dana Titipan
 // (DanaTitipanPortfolioPresenter, dana-titipan-portfolio-render.js):
-// dropdown "Pemilik" + "Status" di atas daftar kartu owner, HANYA aktif di
-// container #danaTitipanTabList (kartu ringkas #danaTitipanPortfolioList di
-// tab Ringkasan TIDAK diubah). 1 file source disentuh sesi ini (sesuai Mode
-// PATCH ZIP, docs/ZIP_RULES.md): modules/finance/dana-titipan-portfolio-
-// render.js. dana-titipan-aggregation-api.js TIDAK disentuh — reuse penuh
-// projection.owners[].holdings[] (linkedAssetId/linkedInvestmentId/
-// linkedOwnerId, SUDAH ADA sejak build()), 0 rumus/agregasi baru.
+// dropdown "Pemilik" + "Status" di atas daftar kartu owner, awalnya (S668)
+// HANYA aktif di container #danaTitipanTabList (kartu ringkas
+// #danaTitipanPortfolioList di tab Ringkasan sengaja TIDAK diubah dulu).
+// SESI S670 (lanjutan): gate diperluas mencakup #danaTitipanPortfolioList
+// juga -- lihat assertion yang diupdate di bawah (ditandai "S670"). 1 file
+// source disentuh sesi ini (sesuai Mode PATCH ZIP, docs/ZIP_RULES.md):
+// modules/finance/dana-titipan-portfolio-render.js. dana-titipan-
+// aggregation-api.js TIDAK disentuh — reuse penuh projection.owners[].
+// holdings[] (linkedAssetId/linkedInvestmentId/linkedOwnerId, SUDAH ADA
+// sejak build()), 0 rumus/agregasi baru.
 //
 // Cakupan test ini:
 //   1. _holdingSettlement(hh) — resolve via Aset.getOwnerSettlement() (aset)
@@ -206,14 +209,14 @@ test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerId kosong, a
 
 // --- onFilterOwnerChange() / onFilterSettlementChange() -----------------
 
-test('onFilterOwnerChange(): set state + delegasi ke renderInto("danaTitipanTabList")', () => {
+test('onFilterOwnerChange(): set state + delegasi ke renderInto() KEDUA container (S670)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  let calledWith = null;
-  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith = id; };
+  const calledWith = [];
+  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith.push(id); };
   ctx.DanaTitipanPortfolioPresenter.onFilterOwnerChange('budi1');
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerId, 'budi1');
-  assert.equal(calledWith, 'danaTitipanTabList');
+  assert.deepEqual(calledWith, ['danaTitipanTabList', 'danaTitipanPortfolioList']);
 });
 
 test('onFilterOwnerChange(""): mengosongkan filterSettlement juga', () => {
@@ -227,16 +230,16 @@ test('onFilterOwnerChange(""): mengosongkan filterSettlement juga', () => {
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
 });
 
-test('onFilterSettlementChange(): normalisasi nilai tidak valid ke "", delegasi ke renderInto("danaTitipanTabList")', () => {
+test('onFilterSettlementChange(): normalisasi nilai tidak valid ke "", delegasi ke renderInto() KEDUA container (S670)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
-  let calledWith = null;
-  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith = id; };
+  const calledWith = [];
+  ctx.DanaTitipanPortfolioPresenter.renderInto = (id) => { calledWith.push(id); };
   ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('milik');
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, 'milik');
   ctx.DanaTitipanPortfolioPresenter.onFilterSettlementChange('ngasal');
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, '');
-  assert.equal(calledWith, 'danaTitipanTabList');
+  assert.deepEqual(calledWith, ['danaTitipanTabList', 'danaTitipanPortfolioList', 'danaTitipanTabList', 'danaTitipanPortfolioList']);
 });
 
 // --- renderInto()/_renderNow() end-to-end (DOM ringan) -------------------
@@ -245,7 +248,7 @@ function makeEl(id) {
   return { id, innerHTML: '', querySelectorAll: () => [] };
 }
 
-test('renderInto(): filter bar HANYA muncul di container "danaTitipanTabList", TIDAK di "danaTitipanPortfolioList"', () => {
+test('renderInto(): filter bar muncul di KEDUA container "danaTitipanTabList" & "danaTitipanPortfolioList" (S670)', () => {
   const D = baseD();
   const ctx = makeCtx(D);
   ctx.DanaTitipanPortfolioPresenter.filterOwnerId = 'budi1';
@@ -256,11 +259,12 @@ test('renderInto(): filter bar HANYA muncul di container "danaTitipanTabList", T
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   assert.match(elTab.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerChange/);
-  assert.doesNotMatch(elCard.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerChange/);
-  // kartu owner Adik (tidak match filter) tetap muncul di kartu ringkas (0 filter)...
-  assert.match(elCard.innerHTML, /Adik/);
-  // ...tapi disembunyikan di tab (filter aktif, hanya Budi yang match).
+  assert.match(elCard.innerHTML, /onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerChange/);
+  // filter aktif di KEDUA container (state dibagi) -- Adik (tidak match filter)
+  // disembunyikan di keduanya, Budi (match) tetap tampil di keduanya.
+  assert.doesNotMatch(elCard.innerHTML, /👤 Adik/);
   assert.doesNotMatch(elTab.innerHTML, /👤 Adik/);
+  assert.match(elCard.innerHTML, /👤 Budi/);
   assert.match(elTab.innerHTML, /👤 Budi/);
 });
 
