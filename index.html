@@ -80,10 +80,10 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1476">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1476">
-<script src="nav-scroll.js?v=1476" defer></script>
-<script src="sticky-tabbar.js?v=1476" defer></script>
+<link rel="stylesheet" href="styles.css?v=1479">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1479">
+<script src="nav-scroll.js?v=1479" defer></script>
+<script src="sticky-tabbar.js?v=1479" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -149,17 +149,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1476');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1479');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1476');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1479');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1476');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1479');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -248,8 +248,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1476" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1476" defer></script>
+<script src="app-bundle-a.min.js?v=1479" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1479" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -2797,6 +2797,18 @@ window.location.reload();
     <button class="btn btn-ghost btn-full btn-sm" data-action="openReminderModal" aria-label="Edit/Buka">+ Tambah Pengingat</button>
   </div>
 
+  <!-- (s632-fix-catatan-anak, sesi 1/2): entry point pertama utk Catatan
+       Anak (D.catatan.anak) -- sebelumnya sama sekali tidak ada tombol UI
+       (list/edit/hapus), cuma bisa diisi lewat AI chat action
+       add_catatan_anak. Ditaruh di sini (sebelah kartu Pengingat) supaya
+       gampang ditemukan, & modal catatanModal-nya sudah dipakai bareng
+       fitur ini sejak awal. -->
+  <div class="card">
+    <div class="card-title">📝 Catatan Anak</div>
+    <div class="u-hint10">Catatan bebas terkait anak (tumbuh kembang, jadwal, dll) -- terpisah dari Refleksi &amp; Self-Care.</div>
+    <button class="btn btn-ghost btn-full btn-sm" data-action="openCatatan" data-args='["anak"]' aria-label="Tambah/Buka">+ Catatan Anak</button>
+  </div>
+
   </div>
 </div>
 
@@ -4060,6 +4072,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1476" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1479" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
