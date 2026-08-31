@@ -37,6 +37,8 @@ const InvestmentUI = {
   // _ownersModalHolding — holding (D.investments[i]) yang sedang dibuka di modal ini, null kalau
   // id yang diberikan ke openOwnersModal() tidak ditemukan.
   _ownersModalHolding: null,
+  // DUST_THRESHOLD_RP -- SESI S687, mirror PERSIS Aset.DUST_THRESHOLD_RP (aset-owners.js).
+  DUST_THRESHOLD_RP: 100,
 
   // _rebalancePending — FITUR "Auto-Rebalance Porsi Pemilik" (Agustus 2026, permintaan user,
   // sesi lanjutan setelah domain Aset & Akun): {editedIndex,method,manualIndex} kalau panel
@@ -269,7 +271,10 @@ const InvestmentUI = {
     const ownerBucket = (projection && Array.isArray(projection.owners)) ? projection.owners.find((ow) => ow && ow.ownerId === o.ownerId) : null;
     const usedTotal = ownerBucket ? (ownerBucket.usedTotal || 0) : 0;
     const linkedExpenseTotal = ownerBucket ? (ownerBucket.linkedExpenseTotal || 0) : 0;
-    const sisaRp = principal - excluding - usedTotal - linkedExpenseTotal;
+    // SESI FIX-2026-08-31 (mirror aset-owners.js, lihat komentar
+    // DanaTitipanPortfolioAPI._renovExpenseTotalForOwner()).
+    const renovExpenseTotal = ownerBucket ? (ownerBucket.renovExpenseTotal || 0) : 0;
+    const sisaRp = principal - excluding - usedTotal - linkedExpenseTotal - renovExpenseTotal;
     if (!(sisaRp > 0)) return 0;
     const quotaPorsi = sisaRp / value * 100;
     const otherTotal = draft.reduce((sum, row, k) => k === i ? sum : sum + (typeof row.porsi === 'number' && isFinite(row.porsi) ? row.porsi : 0), 0);
@@ -360,14 +365,24 @@ const InvestmentUI = {
       ? projection.owners.find((ow) => ow && ow.ownerId === o.ownerId) : null;
     const usedTotal = ownerBucket ? (ownerBucket.usedTotal || 0) : 0;
     const linkedExpenseTotal = ownerBucket ? (ownerBucket.linkedExpenseTotal || 0) : 0;
+    // SESI FIX-2026-08-31 (mirror aset-owners.js, lihat komentar
+    // DanaTitipanPortfolioAPI._renovExpenseTotalForOwner()).
+    const renovExpenseTotal = ownerBucket ? (ownerBucket.renovExpenseTotal || 0) : 0;
     const holdingCost = (holding && typeof Investment !== 'undefined' && typeof Investment.holdingCost === 'function')
       ? (Investment.holdingCost(holding) || 0) : 0;
     const porsiNum = typeof o.porsi === 'number' && isFinite(o.porsi) ? o.porsi : 0;
     const draftNominal = holdingCost * (porsiNum / 100);
-    const sisa = principal - excluding - usedTotal - linkedExpenseTotal - draftNominal;
+    const sisa = principal - excluding - usedTotal - linkedExpenseTotal - renovExpenseTotal - draftNominal;
     const money = (typeof fmtFull === 'function') ? fmtFull : ((typeof fmt === 'function') ? fmt : (n) => 'Rp ' + Math.round(n || 0));
     const btnIdx = typeof i === 'number' ? i : (Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft.indexOf(o) : -1);
     const quotaBtn = '<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="InvestmentUI.applyQuotaToRow" data-args=\'[' + btnIdx + ']\'>🔄 Isi dari kuota sisa</button>';
+    // SESI S687 (mirror PERSIS Aset._ownerQuotaText(), lihat komentarnya di aset-owners.js
+    // utk alasan lengkap) — sisa sekecil |sisa|<DUST_THRESHOLD_RP dianggap noise pembulatan
+    // float, bukan sisa sungguhan -- tampil pudar tanpa tombol/warning, berlaku simetris utk
+    // sisa negatif kecil juga.
+    if (Math.abs(sisa) < InvestmentUI.DUST_THRESHOLD_RP) {
+      return '<div class="u-fs11 u-mt2" style="opacity:.55">💰 Kuota sisa: ' + money(sisa) + '</div>';
+    }
     if (sisa < 0) {
       // FIX (mirror Aset._ownerQuotaText(), laporan user "diklik tidak bereaksi"): tombol
       // sekarang disisipkan di cabang minus JUGA -- sebelumnya cabang ini tidak punya tombol

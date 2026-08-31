@@ -17,6 +17,11 @@
 // AssetOwnersMixin di Object.assign-nya) — pastikan urutan load file ini
 // SEBELUM aset.js di scripts/build.js & tests/helpers/loadSource per test.
 const AssetOwnersMixin = {
+// DUST_THRESHOLD_RP -- SESI S687. Ambang "sisa kuota titipan" di bawah mana angkanya
+// dianggap noise pembulatan float (bukan sisa sungguhan yang perlu tindakan user), dipakai
+// _ownerQuotaText() di bawah. Mirror PERSIS InvestmentUI.DUST_THRESHOLD_RP
+// (investasi-view.js) -- SATU angka yang sama di kedua modal supaya perilaku konsisten.
+DUST_THRESHOLD_RP:100,
 // _applyOwnersButtonLabel(linked)/_updateOwnersButtonLabel(a) -- SESI B2b: ubah label
 // tombol "Atur Porsi" di assetModal utama (id baru #assetOwnersBtn, lihat modals.js)
 // jadi "🔗 Atur Porsi di Investasi" kalau aset ini tertaut ke Holding Investasi yang
@@ -227,10 +232,13 @@ const proj=projection||((typeof DanaTitipanPortfolioAPI.build==='function')?Dana
 const ownerBucket=(proj&&Array.isArray(proj.owners))?proj.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
 const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
 const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
+// SESI FIX-2026-08-31 (lihat komentar DanaTitipanPortfolioAPI._renovExpenseTotalForOwner()):
+// jalur pengeluaran ketiga (tag "Proyek Renovasi" tanpa assignment eksplisit, akun 1-owner).
+const renovExpenseTotal=ownerBucket?(ownerBucket.renovExpenseTotal||0):0;
 const nilai=Aset._ownersAssetNilai();
 const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
 const draftNominal=nilai*(porsiNum/100);
-return principal-excluding-usedTotal-linkedExpenseTotal-draftNominal;
+return principal-excluding-usedTotal-linkedExpenseTotal-renovExpenseTotal-draftNominal;
 },
 _ownerQuotaText(o,i){
 if(!o||o.isSelf||!o.ownerId)return '';
@@ -243,6 +251,18 @@ const sisa=Aset._ownerSisaTitipan(o);
 const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
 const btnIdx=typeof i==='number'?i:(Array.isArray(Aset._ownersDraft)?Aset._ownersDraft.indexOf(o):-1);
 const quotaBtn='<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.applyQuotaToRow" data-args=\'['+btnIdx+']\'>🔄 Isi dari kuota sisa</button>';
+// SESI S687 (saran audit UI screenshot user, poin 1 "dust vs signifikan"): sisa sekecil
+// Rp1-3 (murni pembulatan float, lihat komentar _ownerSisaTitipan()) sebelumnya tetap
+// menampilkan tombol "Isi dari kuota sisa" full-size -- sama besar visualnya dgn owner
+// yang sisanya beneran ratusan ribu, jadi mata user tidak langsung fokus ke yang perlu
+// tindakan. FIX: kalau |sisa|<DUST_THRESHOLD_RP, treat sbg "beres/pas" -- tampil angka
+// pudar TANPA tombol & TANPA styling warning merah (berlaku juga utk sisa negatif kecil,
+// mis. -3, yang murni noise pembulatan bukan overallocation sungguhan). Ambang berlaku
+// SIMETRIS (pakai Math.abs) krn dari sisi UX "sisa -3" & "sisa 3" sama-sama tidak actionable.
+// 0 rumus `_ownerSisaTitipan()` diubah -- murni cabang tampilan baru di layer render ini.
+if(Math.abs(sisa)<Aset.DUST_THRESHOLD_RP){
+return '<div class="u-fs11 u-mt2" style="opacity:.55">💰 Kuota sisa: '+money(sisa)+'</div>';
+}
 if(sisa<0){
 return '<div class="u-fs11 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap"><span class="u-fw700 red">⚠️ Kuota sisa: '+money(sisa)+' (melebihi pokok dikomit)</span>'+quotaBtn+'</div>';
 }
@@ -276,7 +296,12 @@ if(typeof DanaTitipanPortfolioAPI==='undefined'||typeof DanaTitipanPortfolioAPI.
 const proj=projection||DanaTitipanPortfolioAPI.build();
 if(!proj||!Array.isArray(proj.owners))return false;
 const bucket=proj.owners.find((ow)=>ow&&ow.ownerId===ownerId);
-return !!(bucket&&typeof bucket.estimatedUnallocated==='number'&&isFinite(bucket.estimatedUnallocated)&&bucket.estimatedUnallocated>0);
+// SESI S687 (poin 1, mirror threshold _ownerQuotaText()): badge "cek holding lain" ini baca
+// metrik GLOBAL (estimatedUnallocated, beda dari `sisa` LOKAL baris tertentu) -- sebelumnya
+// muncul begitu >0 sedikit pun, jadi bisa nongol cuma gara2 sisa global Rp1-3 (dust,
+// pembulatan float), padahal tidak ada holding lain yang beneran perlu dicek. FIX: naikkan
+// syarat jadi >=DUST_THRESHOLD_RP -- 0 perubahan ke rumus estimatedUnallocated itu sendiri.
+return !!(bucket&&typeof bucket.estimatedUnallocated==='number'&&isFinite(bucket.estimatedUnallocated)&&bucket.estimatedUnallocated>=Aset.DUST_THRESHOLD_RP);
 },
 // _checkUnallocatedBannerOnOpen(a) -- SESI B (lihat
 // docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md § Sesi B,
@@ -774,7 +799,8 @@ const projection=(typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipan
 const ownerBucket=(projection&&Array.isArray(projection.owners))?projection.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
 const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
 const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
-const sisaRp=principal-excluding-usedTotal-linkedExpenseTotal;
+const renovExpenseTotal=ownerBucket?(ownerBucket.renovExpenseTotal||0):0;
+const sisaRp=principal-excluding-usedTotal-linkedExpenseTotal-renovExpenseTotal;
 if(!(sisaRp>0))return 0;
 const quotaPorsi=sisaRp/nilai*100;
 const otherTotal=draft.reduce((sum,row,k)=>k===i?sum:sum+(typeof row.porsi==='number'&&isFinite(row.porsi)?row.porsi:0),0);
