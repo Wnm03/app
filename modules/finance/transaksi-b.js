@@ -622,8 +622,57 @@ function saveCatatan(){
 const text=document.getElementById('catatanText').value;
 if(!text){toast('⚠️ Tulis catatan dulu');return;}
 if(!D.catatan[curCatatan])D.catatan[curCatatan]=[];
+// (s632-fix-catatan-anak, sesi 1/2): cabang update-in-place kalau
+// _editingCatatanAnakId aktif -- pola sama seperti Refleksi.addGratitude()/
+// Refleksi.addNote() & Tukang.addWorker() (lihat PATCH-NOTES). Tanggal &
+// text entry ikut diperbarui sesuai isi form, id tidak berubah.
+if(typeof _editingCatatanAnakId!=='undefined'&&_editingCatatanAnakId){
+const list=D.catatan[curCatatan]||[];
+const entry=list.find(function(e){return e.id===_editingCatatanAnakId;});
+if(entry){
+entry.date=document.getElementById('catatanDate').value;
+entry.text=text;
+save();
+if(typeof cancelEditCatatanAnak==='function')cancelEditCatatanAnak();
+closeModal('catatanModal');renderSettings();toast('✅ Catatan diperbarui');
+return;
+}
+// entry sudah tidak ada (mis. dihapus di tab lain) -- fallback ke tambah baru
+if(typeof cancelEditCatatanAnak==='function')cancelEditCatatanAnak();
+}
 D.catatan[curCatatan].push({id:uid(),date:document.getElementById('catatanDate').value,text});
 save();closeModal('catatanModal');renderSettings();toast('✅ Catatan tersimpan');
+if(typeof renderCatatanAnakList==='function')renderCatatanAnakList();
+}
+// (s632-fix-catatan-anak, sesi 1/2): renderCatatanAnakList/deleteCatatanAnak
+// -- pola sama seperti renderReminder()/delReminder() di file ini/
+// modules-render-b.js. curCatatan diset oleh openCatatan() sebelum modal
+// dibuka, jadi list yang dirender selalu sesuai type yang lagi aktif.
+function renderCatatanAnakList(){
+const el=document.getElementById('catatanAnakList');if(!el)return;
+const list=(D.catatan&&D.catatan[curCatatan])||[];
+if(!list.length){el.innerHTML='<div class="empty"><div class="empty-text">Belum ada catatan</div></div>';return;}
+const sorted=list.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+el.innerHTML=sorted.map(function(entry){
+return '<div class="reminder-item"><div class="u-flex1"><div class="u-fs12t2">'+escapeHtml(entry.date||'')+'</div><div class="u-fs13">'+escapeHtml(entry.text||'')+'</div></div>'
++'<button class="card-setting-btn" data-action="openCatatan" data-args="'+escapeHtml(JSON.stringify([curCatatan,entry.id]))+'" aria-label="Edit">✏️</button>'
++'<button class="tx-del" data-action="deleteCatatanAnak" data-args="'+escapeHtml(JSON.stringify([entry.id]))+'" aria-label="Hapus">🗑</button></div>';
+}).join('');
+}
+function deleteCatatanAnak(id){
+const list=(D.catatan&&D.catatan[curCatatan])||[];
+const idx=list.findIndex(function(e){return e.id===id;});
+if(idx===-1)return;
+list.splice(idx,1);
+save();
+// kalau entry yang sedang diedit itu yang dihapus, batalkan mode edit
+// -- pola sama seperti Refleksi.deleteGratitude()/deleteNote().
+if(typeof _editingCatatanAnakId!=='undefined'&&_editingCatatanAnakId===id&&typeof cancelEditCatatanAnak==='function'){
+cancelEditCatatanAnak();
+}else{
+renderCatatanAnakList();
+}
+toast('🗑 Catatan dihapus');
 }
 function saveReminder(){
 const title=document.getElementById('rTitle').value;

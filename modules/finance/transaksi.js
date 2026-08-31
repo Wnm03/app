@@ -788,7 +788,48 @@ if(typeof toggleTxRenovFields==='function')toggleTxRenovFields();
 // (lihat CLAUDE.md catatan kerja "split transaksi.js" bagian ke-9) --
 // tetap fungsi global, tetap dipanggil persis sama dari HTML (modals.js,
 // modules-render.js), maupun dari modules-calc.js/aset.js.
-function openCatatan(type){curCatatan=type;document.getElementById('catatanTitle').textContent='Catatan Anak';document.getElementById('catatanDate').value=new Date().toISOString().split('T')[0];document.getElementById('catatanText').value='';openModal('catatanModal');}
+// (s632-fix-catatan-anak, sesi 1/2): openCatatan(type) sekarang menerima
+// editId opsional supaya bisa dipakai ulang utk mode Edit (dipanggil dari
+// tombol ✏️ di #catatanAnakList, lihat renderCatatanAnakList() di
+// transaksi-b.js). _editingCatatanAnakId dipakai saveCatatan() (juga di
+// transaksi-b.js) utk tahu kapan harus update in-place vs push entry baru
+// -- pola sama seperti _editingGratitudeId/_editingNoteId di Refleksi
+// (lihat refleksi-selfcare.js) & _editingWorkerId di Tukang.
+var _editingCatatanAnakId=null;
+function openCatatan(type,editId){
+curCatatan=type;
+cancelEditCatatanAnak();
+if(editId){
+const list=D.catatan[type]||[];
+const entry=list.find(function(e){return e.id===editId;});
+if(entry){
+_editingCatatanAnakId=editId;
+document.getElementById('catatanTitle').textContent='Edit Catatan Anak';
+document.getElementById('catatanDate').value=entry.date||new Date().toISOString().split('T')[0];
+document.getElementById('catatanText').value=entry.text||'';
+document.getElementById('catatanSaveBtn').textContent='💾 Update Catatan';
+document.getElementById('catatanCancelEditBtn').classList.remove('u-dnone');
+openModal('catatanModal');
+renderCatatanAnakList();
+return;
+}
+}
+document.getElementById('catatanTitle').textContent='Catatan Anak';
+document.getElementById('catatanDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('catatanText').value='';
+openModal('catatanModal');
+renderCatatanAnakList();
+}
+function cancelEditCatatanAnak(){
+_editingCatatanAnakId=null;
+const titleEl=document.getElementById('catatanTitle');
+const saveBtn=document.getElementById('catatanSaveBtn');
+const cancelBtn=document.getElementById('catatanCancelEditBtn');
+if(titleEl)titleEl.textContent='Catatan Anak';
+if(saveBtn)saveBtn.textContent='Simpan';
+if(cancelBtn)cancelBtn.classList.add('u-dnone');
+if(typeof renderCatatanAnakList==='function')renderCatatanAnakList();
+}
 function openReminderModal(){['rTitle','rDesc'].forEach(id=>document.getElementById(id).value='');openModal('reminderModal');}
 // Catatan: openTransferModal/saveTransfer dipindah ke tx-transfer.js (lihat
 // CLAUDE.md catatan kerja "split transaksi.js") -- tetap fungsi global,
