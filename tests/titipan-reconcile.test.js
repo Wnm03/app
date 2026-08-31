@@ -665,3 +665,89 @@ test('repairMissing() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
   assert.strictEqual(res.synced, 0);
   assert.deepStrictEqual(res.unresolved, []);
 });
+
+// --- FIX S639: owner ber-status 'milik' harus dikecualikan dari expected(),
+// sama persis _syncOwnerDebts()/_syncTitipanDebt() -- sebelum fix ini,
+// check() SELALU melaporkan owner 'milik' sbg missing walau repairMissing()
+// sudah dipanggil berkali-kali (expected & actual tidak akan pernah ketemu).
+
+test('check() TIDAK menandai owner berstatus "milik" sbg missing (cabang Aset)', () => {
+  const a = { id: 'aMilik', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { aMilik: [{ ownerId: 'o1', isSelf: false, porsi: 50 }] },
+  });
+  global.Aset = { getOwnerSettlement: (asset, ownerId) => (asset.id === 'aMilik' && ownerId === 'o1') ? 'milik' : 'titipan' };
+  const res = TitipanReconcile.check();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.missing, []);
+  delete global.Aset;
+});
+
+test('check() TETAP menandai owner "titipan" sbg missing walau owner LAIN di aset yg sama "milik" (cabang Aset)', () => {
+  const a = { id: 'aCampur', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { aCampur: [
+      { ownerId: 'oMilik', isSelf: false, porsi: 30 },
+      { ownerId: 'oTitipan', isSelf: false, porsi: 20 },
+    ] },
+  });
+  global.Aset = { getOwnerSettlement: (asset, ownerId) => (ownerId === 'oMilik') ? 'milik' : 'titipan' };
+  const res = TitipanReconcile.check();
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.missing.length, 1);
+  assert.strictEqual(res.missing[0].key, 'aCampur::oTitipan');
+  delete global.Aset;
+});
+
+test('check() toleran (anggap "titipan") kalau Aset/getOwnerSettlement belum termuat -- 0 regresi', () => {
+  const a = { id: 'aNoAset', nilai: 1000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [{ id: 'd1', nilai: 500000, linkedAssetId: 'aNoAset', linkedOwnerId: 'o1' }],
+    ownersByAsset: { aNoAset: [{ ownerId: 'o1', isSelf: false, porsi: 50 }] },
+  });
+  // global.Aset sengaja tidak diset di sini.
+  const res = TitipanReconcile.check();
+  assert.strictEqual(res.ok, true);
+});
+
+test('check() TIDAK menandai owner berstatus "milik" sbg missing (cabang Investasi)', () => {
+  const h = { id: 'hMilik' };
+  setupGlobals({
+    investments: [h],
+    debts: [],
+    ownersByHolding: { hMilik: [{ ownerId: 'o1', isSelf: false, porsi: 50 }] },
+    costByHolding: { hMilik: 1000000 },
+  });
+  global.Investment.getOwnerSettlement = (holding, ownerId) => (holding.id === 'hMilik' && ownerId === 'o1') ? 'milik' : 'titipan';
+  const res = TitipanReconcile.check();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.missing, []);
+});
+
+test('repairMissing() + check() ulang: owner "milik" tetap ok=true sesudah "diperbaiki" (regresi tombol "Perbaiki Gap" macet)', () => {
+  const a = { id: 'aRepair', nilai: 2000000 };
+  setupGlobals({
+    assets: [a],
+    debts: [],
+    ownersByAsset: { aRepair: [{ ownerId: 'o1', isSelf: false, porsi: 50 }] },
+  });
+  global.Aset = {
+    getOwnerSettlement: () => 'milik',
+    // _syncOwnerDebts sengaja TIDAK didefinisikan di sini -- pola nyata:
+    // owner 'milik' memang tidak pernah ditulis _syncOwnerDebts(), jadi
+    // repairMissing() untuk key ini akan masuk unresolved (tidak ada yang
+    // perlu direkonsiliasi), TAPI check() sesudahnya tetap harus ok=true
+    // krn expected() sendiri sudah tidak lagi memintanya.
+  };
+  const pre = TitipanReconcile.check();
+  assert.strictEqual(pre.ok, true, 'seharusnya sudah ok SEBELUM repair -- owner "milik" bukan gap');
+  TitipanReconcile.repairMissing();
+  const post = TitipanReconcile.check();
+  assert.strictEqual(post.ok, true);
+  delete global.Aset;
+});
