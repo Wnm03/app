@@ -418,3 +418,28 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses registry npm (403 Forbidden ke registry.npmjs.org) -- eslint tidak bisa diinstal/dijalankan di environment audit ini.
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses registry npm (403 Forbidden ke registry.npmjs.org) -- esbuild tidak bisa diinstal, bundle ditulis TANPA minifikasi (fallback build.js sendiri, valid & node --check lolos).
+
+## 2026-08-31T07:20:03.571Z — versi s632-asset-owners-titipan-badge-linkout
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses npm registry/jaringan -- eslint tidak terinstall & tidak bisa diinstall di environment ini (sama seperti sesi-sesi sebelumnya). Perubahan sesi ini kecil (1 helper baru + 1 badge markup di aset-owners.js) & sudah diverifikasi manual mengikuti gaya kode file yang sama (indentasi, quote style, penamaan).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan -- esbuild tidak terinstall & tidak bisa diinstall (npm install butuh internet). Bundle tetap valid (node --check lolos) walau tidak diminify, sama seperti build-build sebelumnya di environment ini.
+
+## 2026-08-31T07:31:43.774Z — versi s634-asset-owners-titipan-badge-banner
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses npm registry/jaringan -- eslint tidak terinstall & tidak bisa diinstall (403 Forbidden ke registry.npmjs.org). Sesi B hanya menambah 1 fungsi baru (_checkUnallocatedBannerOnOpen) + 1 pemanggilan di openOwnersModal(), diverifikasi manual mengikuti gaya kode file yang sama (indentasi, quote style, penamaan, pola Sesi A).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan -- esbuild tidak terinstall & tidak bisa diinstall. Bundle tetap valid (node --check lolos) walau tidak diminify, sama pola sesi-sesi sebelumnya di environment ini.
+
+## 2026-08-31T07:44:07.445Z — versi s635-asset-owners-titipan-badge-banner
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses npm registry/jaringan -- eslint tidak terinstall & tidak bisa diinstall (403 Forbidden ke registry.npmjs.org). Sesi C hanya mengekstrak formula existing jadi helper murni (`Aset._ownerSisaTitipan(o)`, 0 rumus baru) + 1 fungsi baru (`_renderOwnersUnallocatedBox()`) + 1 div baru di modals.js, diverifikasi manual mengikuti gaya kode file yang sama (indentasi, quote style, penamaan, pola Sesi A/B).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan -- esbuild tidak terinstall & tidak bisa diinstall. Bundle tetap valid (node --check lolos) walau tidak diminify, sama pola sesi-sesi sebelumnya di environment ini.
+
+## 2026-08-31T08:10:10.000Z — versi s636-asset-owners-titipan-badge-banner
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses npm registry/jaringan -- eslint tidak terinstall & tidak bisa diinstall (403 Forbidden ke registry.npmjs.org). Sesi D1 hanya menambah 1 fungsi baru (`Aset.bagiRataUnallocated()`, 100% reuse `applyQuotaToRow(i)` per baris) + 1 tombol markup di dalam `_renderOwnersUnallocatedBox()` (0 file HTML disentuh, box-nya sudah ada sejak Sesi C) -- diverifikasi manual mengikuti gaya kode file yang sama (indentasi, quote style, penamaan, pola Sesi A/B/C).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan -- esbuild tidak terinstall & tidak bisa diinstall. Bundle tetap valid (node --check lolos) walau tidak diminify, sama pola sesi-sesi sebelumnya di environment ini.
+
+## 2026-08-31T08:36:18.302Z — versi s637-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox Claude (bash_tool) sesi ini network egress DISABLED -- npm install eslint gagal (403 registry.npmjs.org), eslint tidak pernah terpasang di environment ini sejak awal proyek, konsisten sesi2 sebelumnya (S424 dst, lihat docs/RELEASE-GATE-LOG.md). Perubahan sesi D2 (bagian 1/2) cuma 1 fungsi disentuh di modules/asset/aset-owners.js (bagiRataUnallocated(): tambah 2 baris cleanup state panel -- Aset._rebalancePending=null + Aset._renderRebalancePanel(), pola identik removeOwnerRow()/resetOwners() yang sudah ada di file yang sama) + 1 file test baru (6 test). Gaya kode konsisten pola existing (guard-first, comment block panjang menjelaskan alasan), 0 unused var/no-undef baru, diverifikasi manual.
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 saat npm install esbuild), konsisten sesi-sesi sebelumnya. Bundle unminified 100% valid (node --check lolos kedua bundle, verify-bundle-freshness OK).
