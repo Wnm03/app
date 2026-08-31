@@ -67,9 +67,13 @@ el.innerHTML=`<div class="u-fs11 u-r8 u-lh14" style="padding:9px 10px;background
 const Refleksi={
 curTab:'syukur',
 _revealed:{},
+_editingGratitudeId:null,
+_editingNoteId:null,
 open(){
 this.curTab='syukur';
 this._revealed={};
+this.cancelEditGratitude();
+this.cancelEditNote();
 this.render();
 openModal('refleksiModal');
 },
@@ -97,6 +101,16 @@ addGratitude(){
 const el=document.getElementById('refSyukurText');
 const text=(el.value||'').trim();
 if(!text){toast('Tulis dulu rasa syukurmu hari ini.');return;}
+if(this._editingGratitudeId){
+const g=(D.refleksi.gratitude||[]).find(x=>sameId(x.id,this._editingGratitudeId));
+if(g)g.text=text;
+this.cancelEditGratitude();
+save();
+this.renderGratitude();
+this.renderDashCard();
+toast('🙏 Catatan syukur diperbarui');
+return;
+}
 if(!D.refleksi.gratitude)D.refleksi.gratitude=[];
 D.refleksi.gratitude.push({id:uid(),date:todayStr(),text});
 el.value='';
@@ -105,9 +119,30 @@ this.renderGratitude();
 this.renderDashCard();
 toast('🙏 Rasa syukur tersimpan');
 },
+editGratitude(id){
+const g=(D.refleksi.gratitude||[]).find(x=>sameId(x.id,id));
+if(!g)return;
+this._editingGratitudeId=id;
+const el=document.getElementById('refSyukurText');
+if(el){el.value=g.text;el.scrollIntoView({block:'center',behavior:'smooth'});}
+const btn=document.getElementById('refSyukurSaveBtn');
+if(btn)btn.textContent='💾 Update Rasa Syukur';
+const cancelBtn=document.getElementById('refSyukurCancelEditBtn');
+if(cancelBtn)cancelBtn.classList.remove('u-dnone');
+},
+cancelEditGratitude(){
+this._editingGratitudeId=null;
+const el=document.getElementById('refSyukurText');
+if(el)el.value='';
+const btn=document.getElementById('refSyukurSaveBtn');
+if(btn)btn.textContent='+ Simpan Rasa Syukur';
+const cancelBtn=document.getElementById('refSyukurCancelEditBtn');
+if(cancelBtn)cancelBtn.classList.add('u-dnone');
+},
 async deleteGratitude(id){
 if(!await askConfirm('Hapus catatan syukur ini?',{okText:'Ya, Hapus'}))return;
 D.refleksi.gratitude=(D.refleksi.gratitude||[]).filter(g=>!sameId(g.id,id));
+if(sameId(this._editingGratitudeId,id))this.cancelEditGratitude();
 save();
 this.renderGratitude();
 },
@@ -120,7 +155,7 @@ listEl.innerHTML='<div class="empty"><div class="empty-icon">🙏</div><div clas
 return;
 }
 // lint-ok-no-escape: g.text di-escapeHtml() eksplisit di bawah krn ini teks ketikan user
-listEl.innerHTML=list.map(g=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🙏</div><div class="tx-info"><div class="tx-name">${g.date}</div><div class="tx-meta u-lh14">${escapeHtml(g.text)}</div></div><button class="tx-del" data-action="Refleksi.deleteGratitude" data-args="${escapeHtml(JSON.stringify([g.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
+listEl.innerHTML=list.map(g=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🙏</div><div class="tx-info"><div class="tx-name">${g.date}</div><div class="tx-meta u-lh14">${escapeHtml(g.text)}</div></div><button class="tx-del" data-action="Refleksi.editGratitude" data-args="${escapeHtml(JSON.stringify([g.id]))}" aria-label="Edit" style="color:var(--accent)">✏️</button><button class="tx-del" data-action="Refleksi.deleteGratitude" data-args="${escapeHtml(JSON.stringify([g.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
 },
 // ===== CHECKLIST SELF-CARE =====
 toggleSelfCare(itemId){
@@ -191,6 +226,17 @@ return;
 try{
 const plain=JSON.stringify({title:judul,text});
 const enc=await encryptApiKeyWithPin(_sessionRawPin,plain);
+if(this._editingNoteId){
+const n=(D.refleksi.privateNotes||[]).find(x=>sameId(x.id,this._editingNoteId));
+if(n)n.enc=enc;
+const editedId=this._editingNoteId;
+this.cancelEditNote();
+this._revealed[editedId]=true;
+save();
+this.renderNotes();
+toast('🔒 Catatan privat diperbarui');
+return;
+}
 if(!D.refleksi.privateNotes)D.refleksi.privateNotes=[];
 D.refleksi.privateNotes.push({id:uid(),date:todayStr(),enc});
 judulEl.value='';textEl.value='';
@@ -202,10 +248,46 @@ console.error('Gagal enkripsi catatan privat:',e);
 toast('⚠️ Gagal menyimpan catatan privat.');
 }
 },
+async editNote(id){
+const note=(D.refleksi.privateNotes||[]).find(n=>sameId(n.id,id));
+if(!note)return;
+if(typeof _sessionRawPin==='undefined'||!_sessionRawPin){
+toast('⚠️ Sesi PIN tidak aktif, tidak bisa membuka catatan ini sekarang.');
+return;
+}
+const decrypted=await decryptApiKeyWithPin(_sessionRawPin,note.enc);
+if(decrypted===null){
+toast('❌ Gagal membuka catatan (PIN berubah atau data rusak).');
+return;
+}
+let parsed=null; try{parsed=JSON.parse(decrypted);}catch(e){}
+this._editingNoteId=id;
+const judulEl=document.getElementById('refCatatanJudul');
+const textEl=document.getElementById('refCatatanText');
+if(judulEl)judulEl.value=parsed?(parsed.title||''):'';
+if(textEl)textEl.value=parsed?(parsed.text||''):decrypted;
+if(textEl)textEl.scrollIntoView({block:'center',behavior:'smooth'});
+const btn=document.getElementById('refCatatanSaveBtn');
+if(btn)btn.textContent='💾 Update Catatan Privat';
+const cancelBtn=document.getElementById('refCatatanCancelEditBtn');
+if(cancelBtn)cancelBtn.classList.remove('u-dnone');
+},
+cancelEditNote(){
+this._editingNoteId=null;
+const judulEl=document.getElementById('refCatatanJudul');
+const textEl=document.getElementById('refCatatanText');
+if(judulEl)judulEl.value='';
+if(textEl)textEl.value='';
+const btn=document.getElementById('refCatatanSaveBtn');
+if(btn)btn.textContent='🔒 Simpan Terenkripsi';
+const cancelBtn=document.getElementById('refCatatanCancelEditBtn');
+if(cancelBtn)cancelBtn.classList.add('u-dnone');
+},
 async deleteNote(id){
 if(!await askConfirm('Hapus catatan privat ini? Tindakan ini tidak bisa dibatalkan.',{okText:'Ya, Hapus'}))return;
 D.refleksi.privateNotes=(D.refleksi.privateNotes||[]).filter(n=>!sameId(n.id,id));
 delete this._revealed[id];
+if(sameId(this._editingNoteId,id))this.cancelEditNote();
 save();
 this.renderNotes();
 },
@@ -243,7 +325,7 @@ if(!list.length){
 listEl.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Belum ada catatan privat</div></div>';
 return;
 }
-listEl.innerHTML=list.map(n=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔒</div><div class="tx-info"><div class="tx-name">${n.date}</div><div class="tx-meta u-lh14" id="refNoteBody_${n.id}">•••• (Terenkripsi — tap 👁 utk lihat)</div></div><button class="tx-del" id="refNoteEyeBtn_${n.id}" data-action="Refleksi.toggleNoteView" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Lihat">👁</button><button class="tx-del" data-action="Refleksi.deleteNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
+listEl.innerHTML=list.map(n=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔒</div><div class="tx-info"><div class="tx-name">${n.date}</div><div class="tx-meta u-lh14" id="refNoteBody_${n.id}">•••• (Terenkripsi — tap 👁 utk lihat)</div></div><button class="tx-del" id="refNoteEyeBtn_${n.id}" data-action="Refleksi.toggleNoteView" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Lihat">👁</button><button class="tx-del" data-action="Refleksi.editNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Edit" style="color:var(--accent)">✏️</button><button class="tx-del" data-action="Refleksi.deleteNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
 },
 // ===== KARTU RINGKASAN DI DASHBOARD =====
 renderDashCard(){
