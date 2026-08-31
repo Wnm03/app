@@ -342,6 +342,71 @@ allocatedExcluding(ownerId, exclusion) {
   return total;
 },
 
+// _renovExpenseTotalForOwner(o) — SESI FIX-2026-08-31 (audit user: "renov"
+// Kuota sisa masih Rp377rb padahal katanya sudah teralokasi ke beberapa
+// holding). ROOT CAUSE: `majorisRenovReconciliation()` (di bawah, filter
+// `t.renovProjectLinkId`) SENGAJA dipisah dari `linkedExpenseTotal` (filter
+// `t.deductionOwnerId`, lihat catatan "dua tag scope BERBEDA, TIDAK
+// disatukan" di komentar `majorisRenovReconciliation()`) — transaksi yang
+// ditandai "🔨 Catat juga ke Proyek Renovasi?" TAPI TIDAK JUGA ditandai
+// "👤 Ditanggung: <owner>" tidak pernah mengurangi `estimatedUnallocated`/
+// "Kuota sisa" walau uangnya sudah keluar dari akun (lihat test
+// `patch-2026-08-14-b-majoris-deductionowner-sync.test.js` kasus #2 —
+// `synced:false` justru sengaja DIBIARKAN sinyal saja, tidak pernah jadi
+// input formula). Fix ini MENAMBAH jalur ketiga ke `spent`/`available`
+// (0 formula lama diubah, 0 field lama dihapus): transaksi ber-
+// `renovProjectLinkId` yang BELUM diassign eksplisit
+// (`resolveTxOwnerAssignment()` balik null — kalau sudah diassign, sudah
+// kehitung `linkedExpenseTotal`, guard anti-dobel sama seperti
+// `_linkedExpenseTotalForOwner()` thd `titipanLinkId`) DAN akunnya HANYA
+// py 1 owner non-SELF (tidak ambigu — akun patungan 2+ owner tanpa
+// assignment eksplisit SENGAJA dilewati, konsisten keputusan S620 "0
+// tebak-tebakan assignment"). Resolusi akun 100% REUSE pola
+// `_linkedExpenseTotalForOwner()` (holding langsung -> Aset perantara ->
+// `D.accounts` fallback S620).
+// Return: number, SELALU >=0 (bukan null, sama kontrak `_linkedExpenseTotalForOwner().total`).
+_renovExpenseTotalForOwner(o) {
+  if (!o) return 0;
+  if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof resolveTxOwnerAssignment !== 'function') return 0;
+  if (typeof D === 'undefined' || !Array.isArray(D.assets) || !Array.isArray(D.transactions)) return 0;
+  const seenAcc = new Set();
+  let total = 0;
+  const scan = (accountId) => {
+    if (!accountId || seenAcc.has(String(accountId))) return;
+    seenAcc.add(String(accountId));
+    const resolved = resolveTxOwnerSplitForAccount(accountId);
+    if (!resolved) return;
+    const nonSelf = (resolved.owners || []).filter((ow) => ow && !ow.isSelf);
+    if (nonSelf.length !== 1 || nonSelf[0].ownerId !== o.ownerId) return;
+    total += D.transactions
+      .filter((t) => t && t.type === 'expense' && t.renovProjectLinkId && !t.titipanLinkId
+        && String(t.accountId) === String(accountId) && !resolveTxOwnerAssignment(t, resolved.owners))
+      .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+  };
+  (o.holdings || []).forEach((h) => {
+    if (!h) return;
+    let accountId = null;
+    if (h.linkedInvestmentId && typeof Investment !== 'undefined' && typeof Investment.getHolding === 'function') {
+      const srcHolding = Investment.getHolding(h.linkedInvestmentId);
+      if (srcHolding && srcHolding.accountId) accountId = srcHolding.accountId;
+    }
+    if (!accountId) {
+      let asset = null;
+      if (h.type === 'aset' && h.linkedAssetId) {
+        asset = D.assets.find((a) => a && String(a.id) === String(h.linkedAssetId));
+      } else if (h.linkedInvestmentId) {
+        asset = D.assets.find((a) => a && String(a.investmentId) === String(h.linkedInvestmentId));
+      }
+      accountId = asset && asset.accountId;
+    }
+    scan(accountId);
+  });
+  if (Array.isArray(D.accounts)) {
+    D.accounts.forEach((acc) => { if (acc && acc.id) scan(acc.id); });
+  }
+  return total;
+},
+
 // _linkedExpenseTotalForOwner(o) — SESI PATCH-2026-08-14 (audit user:
 // "kenapa masih ada estimasi belum teralokasi padahal di akun keuangan
 // tertaut pemilik terpotong sudah ada modal pengeluaran total"). ROOT
@@ -368,11 +433,23 @@ allocatedExcluding(ownerId, exclusion) {
 // dipindah SATU LEVEL LEBIH AWAL (dari render ke `build()`, file
 // agregasi) supaya angkanya bisa dipakai sbg input `estimatedUnallocated`/
 // `allocationStatus`, bukan cuma baris pembanding pasif.
-// `_expenseComparisonForOwner()` sendiri diubah sesi ini jadi murni
-// membaca `o.linkedExpenseTotal`/`o.linkedExpenseAccountNames` hasil
-// fungsi ini (lihat dana-titipan-portfolio-render.js) — 1 sumber
-// kebenaran, 0 risiko dua angka "pengeluaran akun tertaut" yang beda utk
-// data yang sama.
+//
+// KOREKSI DOKUMENTASI (audit SSOT, sesi FIX-2026-08-31 lanjutan):
+// paragraf di sini SEBELUMNYA mengklaim `_expenseComparisonForOwner()`
+// "diubah sesi ini jadi murni membaca `o.linkedExpenseTotal`/
+// `o.linkedExpenseAccountNames`... — 1 sumber kebenaran". Klaim itu SALAH
+// / tidak pernah terealisasi — cek kode aktual di
+// dana-titipan-portfolio-render.js: fungsi itu TETAP menghitung mandiri
+// (independent loop atas D.transactions), TIDAK PERNAH dialihkan baca
+// field ini. `o.linkedExpenseAccountNames` (di-set di build() di bawah)
+// murni field internal yg dites sendiri (patch-2026-08-14-titipan-
+// unallocated-linked-expense.test.js) -- 0 konsumen lain. Fungsi INI dan
+// `_expenseComparisonForOwner()` adalah 2 IMPLEMENTASI TERPISAH dari
+// formula yang SAMA (bukan 1 SOT sungguhan) -- kalau salah satu diubah,
+// WAJIB ubah keduanya bersamaan (lihat kontrak lengkap & alasan kenapa
+// TIDAK disatukan jadi 1 fungsi di komentar `_expenseComparisonForOwner()`,
+// dana-titipan-portfolio-render.js — kontrak test lama fungsi itu manggil
+// standalone tanpa lewat `build()`).
 //
 // Perbandingan id akun pakai String() langsung (BUKAN `sameId()` global)
 // — pola sama `_majorisLinkedAccountIds()` di file ini: fungsi ini
@@ -673,6 +750,11 @@ build() {
     const linkedExpense = this._linkedExpenseTotalForOwner(o);
     o.linkedExpenseTotal = linkedExpense.total;
     o.linkedExpenseAccountNames = linkedExpense.accountNames;
+    // SESI FIX-2026-08-31 — jalur pengeluaran KETIGA (lihat komentar
+    // `_renovExpenseTotalForOwner()` di atas), saling eksklusif dgn
+    // `usedTotal`/`linkedExpenseTotal` (guard `titipanLinkId`/
+    // `resolveTxOwnerAssignment` di dalam helper-nya).
+    o.renovExpenseTotal = this._renovExpenseTotalForOwner(o);
 
     // DL-NEXT-9 REVISI 3 — HARD INVARIANT: `o.gain`/`gainSplit`/`currentValue`
     // (Untung-Rugi) TIDAK PERNAH masuk formula `estimatedUnallocated`/
@@ -703,7 +785,7 @@ build() {
       // ber-`titipanLinkId` (anti-doublecount dgn `usedTotal`), jadi
       // ketiga komponen `spent` ini SALING EKSKLUSIF (0 transaksi yang
       // sama terhitung 2x).
-      const spent = o.allocatedPrincipal + usedTotal + o.linkedExpenseTotal;
+      const spent = o.allocatedPrincipal + usedTotal + o.linkedExpenseTotal + o.renovExpenseTotal;
       if (spent > principalAmount) {
         allocationStatus = 'OVER_ALLOCATED';
         estimatedUnallocated = 0;
@@ -734,7 +816,7 @@ build() {
     // S518 §"dana-titipan-portfolio-presenter.js"). FIX SESI
     // PATCH-2026-08-14: tambah `linkedExpenseTotal` ke pengurang (pola sama
     // `estimatedUnallocated` di atas, konsisten definisi "sudah dipakai").
-    o.available = (principalAmount !== null) ? Math.max(0, principalAmount - usedTotal - o.linkedExpenseTotal - returnedTotal) : null;
+    o.available = (principalAmount !== null) ? Math.max(0, principalAmount - usedTotal - o.linkedExpenseTotal - o.renovExpenseTotal - returnedTotal) : null;
   });
   owners.sort((a, b) => b.allocatedPrincipal - a.allocatedPrincipal);
 
@@ -912,7 +994,14 @@ majorisRenovReconciliation(owners, principalAmountTotal) {
       }
       return accountId && idSet.has(String(accountId));
     });
-    return linked ? sum + (isFinite(o.linkedExpenseTotal) ? Number(o.linkedExpenseTotal) : 0) : sum;
+    if (!linked) return sum;
+    // SESI FIX-2026-08-31: ikutkan `o.renovExpenseTotal` (jalur ketiga baru,
+    // lihat `_renovExpenseTotalForOwner()`) supaya baris "sync" di sini
+    // tetap sinkron dgn `estimatedUnallocated` yang SEKARANG juga sudah
+    // menghitung jalur itu — 0 perubahan filter `pengeluaranMajoris` itu
+    // sendiri (tetap murni SUM `t.renovProjectLinkId`).
+    return sum + (isFinite(o.linkedExpenseTotal) ? Number(o.linkedExpenseTotal) : 0)
+      + (isFinite(o.renovExpenseTotal) ? Number(o.renovExpenseTotal) : 0);
   }, 0);
   const synced = pengeluaranMajoris === deductionOwnerTotal;
   return { pengeluaranMajoris, sisaSaldo, deductionOwnerTotal, synced };

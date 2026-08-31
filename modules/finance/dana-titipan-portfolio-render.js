@@ -200,12 +200,37 @@ const DanaTitipanPortfolioPresenter = {
   // dijumlah) — kalau salah satu diubah di sesi mendatang, WAJIB ubah
   // keduanya bersamaan (lihat catatan silang di
   // `_linkedExpenseTotalForOwner()`).
+  // FIX SESI FIX-2026-08-31 (audit user: "Estimasi dari Transaksi <Akun>"
+  // tidak konsisten dgn "Kuota sisa" stlh fix jalur ketiga
+  // `_renovExpenseTotalForOwner()`, dana-titipan-aggregation-api.js). Twin
+  // fungsi ini SEBELUM sesi ini TIDAK tahu soal jalur renov-unassigned
+  // (transaksi ber-`t.renovProjectLinkId` yg BELUM diassign eksplisit ke
+  // owner manapun) -- angka pembanding di kartu owner jadi lebih KECIL dari
+  // "Kuota sisa" yg sudah menghitung jalur itu sbg pengurang. `_renovAdd()`
+  // di bawah 100% REUSE guard yg SAMA PERSIS dgn `_renovExpenseTotalForOwner()`
+  // (nonSelf.length===1 & ownerId match, filter `renovProjectLinkId &&
+  // !titipanLinkId && !resolveTxOwnerAssignment(...)`, mutually exclusive dgn
+  // `ownerExpenseTotal` assignment-based di kedua loop di bawah krn syaratnya
+  // justru assignment KOSONG) -- 0 rumus baru, cuma dipanggil dari 2 titik yg
+  // sudah resolve `resolved.owners` per-akun (holdings loop & D.accounts
+  // loop) supaya 0 resolusi akun berulang. Kontrak "kedua fungsi 100% sama
+  // formulanya" (catatan di atas `_expenseComparisonForOwner`) sekarang
+  // berarti 3 komponen (assignment-based + renov-unassigned), bukan 2 lagi --
+  // kalau salah satu diubah sesi mendatang, WAJIB ubah keduanya bersamaan.
   _expenseComparisonForOwner(o) {
     if (typeof resolveTxOwnerSplitForAccount !== 'function' || typeof resolveTxOwnerAssignment !== 'function' || typeof MultiOwnerEngine === 'undefined') return null;
     if (typeof D === 'undefined' || !Array.isArray(D.assets) || !Array.isArray(D.transactions)) return null;
     const seenAcc = new Set();
     let total = 0;
     const accountNames = [];
+    const _renovAdd = (accountId, resolved) => {
+      const nonSelf = (resolved.owners || []).filter((ow) => ow && !ow.isSelf);
+      if (nonSelf.length !== 1 || nonSelf[0].ownerId !== o.ownerId) return 0;
+      return D.transactions
+        .filter((t) => t && t.type === 'expense' && t.renovProjectLinkId && !t.titipanLinkId
+          && sameId(t.accountId, accountId) && !resolveTxOwnerAssignment(t, resolved.owners))
+        .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
+    };
     (o.holdings || []).forEach((h) => {
       if (!h) return;
       let accountId = null;
@@ -261,7 +286,7 @@ const DanaTitipanPortfolioPresenter = {
       const ownerExpenseTotal = D.transactions
         .filter((t) => t && t.type === 'expense' && sameId(t.accountId, accountId) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
         .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
-      total += ownerExpenseTotal;
+      total += ownerExpenseTotal + _renovAdd(accountId, resolved);
       accountNames.push(accountLabel || 'Akun');
     });
     // SESI S620 -- twin fix dari `_linkedExpenseTotalForOwner()`
@@ -283,7 +308,7 @@ const DanaTitipanPortfolioPresenter = {
         const ownerExpenseTotal = D.transactions
           .filter((t) => t && t.type === 'expense' && sameId(t.accountId, acc.id) && resolveTxOwnerAssignment(t, resolved.owners) === o.ownerId)
           .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
-        total += ownerExpenseTotal;
+        total += ownerExpenseTotal + _renovAdd(acc.id, resolved);
         accountNames.push(acc.name || 'Akun');
       });
     }
