@@ -413,3 +413,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox sesi ini tidak punya akses jaringan (npm install eslint gagal), pola sama sesi-sesi sebelumnya (S673 dst); verifikasi manual: node -c pada semua file yang diubah lolos, gaya kode konsisten pola existing yang di-mirror persis dari Aset (S673).
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa diinstall; bundle tanpa minifikasi tapi valid sintaks (node --check lolos), pola sama sesi-sesi sebelumnya.
+
+## 2026-08-31T04:21:42.661Z — versi s631-fix-toast-menutupi-tombol-tab-investasi
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses registry npm (403 Forbidden ke registry.npmjs.org) -- eslint tidak bisa diinstal/dijalankan di environment audit ini.
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses registry npm (403 Forbidden ke registry.npmjs.org) -- esbuild tidak bisa diinstal, bundle ditulis TANPA minifikasi (fallback build.js sendiri, valid & node --check lolos).
