@@ -631,6 +631,26 @@ issues.push({level:'warn',title:'Utang tertaut ke aset yang bukan multi-owner',d
 }
 }
 });
+// Cek tambahan (S686 — audit rekomendasi fitur DSR/rasio cicilan, lihat
+// chat audit "cek foto audit langkah implementasi"): DSR (Debt Service
+// Ratio) sebelumnya HANYA kelihatan kalau user buka halaman Debt Strategy
+// sendiri (piutang-utang.js render()) atau kartu dashboard Debt Optimizer
+// (debt-optimizer-presenter.js) -- kalau DSR sudah di zona merah (>35%,
+// threshold SAMA PERSIS dgn yang dipakai kedua tempat itu) tapi user tidak
+// pernah buka salah satu halaman itu, dia bisa lolos tanpa disadari.
+// 0 rumus baru -- reuse PENUH DebtStrategy.computeDSR() (piutang-utang.js)
+// apa adanya, threshold >35 disamakan persis dgn debt-optimizer-api.js
+// (debt_dsr_high) & debt-optimizer-presenter.js (_dsrCard cls 'red').
+// Guard typeof DebtStrategy!=='undefined' sama pola dgn cek lain di file
+// ini yang bergantung ke modul luar (mis. DataHealth.unlinkStockCatalog
+// dkk) -- aman kalau load order berubah / dipanggil dari test terisolasi.
+if(typeof DebtStrategy!=='undefined'&&typeof DebtStrategy.computeDSR==='function'){
+const dsr=DebtStrategy.computeDSR();
+if(dsr&&dsr.incAvg>0&&typeof dsr.pct==='number'&&dsr.pct>35){
+const money=typeof fmtFull==='function'?fmtFull:(n=>'Rp '+Math.round(n||0).toLocaleString('id-ID'));
+issues.push({level:'warn',title:'DSR (Rasio Cicilan) di zona merah',detail:`Rasio cicilan/tagihan bulanan ${dsr.pct.toFixed(0)}% dari rata-rata income ${money(dsr.incAvg)}/bln -- sudah lewat batas aman 30–35%. Cek Debt Optimizer utk rekomendasi & simulasi percepatan pelunasan.`,actions:[{label:'💳 Buka Debt Optimizer',action:'dashHubNavigateToFeature',args:[{page:'keuangan',tab:'laporan',goTo:'debtOptimizerWrap'}]}]});
+}
+}
 // Cek tambahan (S283 — audit data integrity, temuan gap): D.renovProjects[].
 // items[] punya accountId & txId (lihat modules/finance/tx-renov.js) persis
 // spt bills/wishlist, tapi belum pernah dicek orphan di sini. Pola & level
