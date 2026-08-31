@@ -56,6 +56,7 @@ return `<div class="u-flex u-jcb u-aic u-pointer" data-tk-hist-toggle="${w.id}" 
       ${isOpen?`<div class="u-fdcol u-gap6">${listHtml}</div>`:''}`;
 },
 openModal(){
+Tukang.cancelEditWorker();
 Tukang.weekStart=getWeekRange(new Date()).start;
 const today=todayStr();
 const fromEl=document.getElementById('tkRangeFrom'), toEl=document.getElementById('tkRangeTo');
@@ -90,6 +91,13 @@ const upahLemburInput=parseFloat(document.getElementById('tkUpahLemburJamBaru').
 const upahLemburJam=upahLemburInput>0?upahLemburInput:Math.round(upahJam*1.5);
 if(!name){toast('⚠️ Isi nama pekerja');return;}
 if(!upahJam||upahJam<=0){toast('⚠️ Isi upah pokok/jam yang valid');return;}
+if(Tukang._editingWorkerId){
+const i=D.tukangWorkers.findIndex(x=>x.id==Tukang._editingWorkerId);
+if(i>=0){D.tukangWorkers[i]={...D.tukangWorkers[i],name,upahJam,jamKerjaNormal,upahLemburJam};}
+Tukang.cancelEditWorker();
+save();Tukang.renderAll();toast('✅ Pekerja "'+name+'" diperbarui');
+return;
+}
 D.tukangWorkers.push({id:uid(),name,upahJam,jamKerjaNormal,upahLemburJam});
 document.getElementById('tkNamaBaru').value='';
 document.getElementById('tkUpahJamBaru').value='';
@@ -108,6 +116,33 @@ if(!await askConfirm(`Hapus pekerja "${w.name}"? Absensi yang belum dipakai ikut
 D.tukangAbsensi=D.tukangAbsensi.filter(a=>a.workerId!=id);
 D.tukangWorkers=D.tukangWorkers.filter(x=>x.id!=id);
 save();Tukang.renderAll();toast('🗑 Pekerja dihapus');
+},
+_editingWorkerId:null,
+editWorker(id){
+const w=D.tukangWorkers.find(x=>x.id==id);
+if(!w)return;
+Tukang._editingWorkerId=id;
+document.getElementById('tkNamaBaru').value=w.name;
+document.getElementById('tkUpahJamBaru').value=w.upahJam;
+document.getElementById('tkJamKerjaBaru').value=w.jamKerjaNormal;
+document.getElementById('tkUpahLemburJamBaru').value=w.upahLemburJam;
+const btn=document.getElementById('tkAddWorkerBtn');
+if(btn)btn.textContent='💾 Simpan Perubahan Pekerja';
+const cancelBtn=document.getElementById('tkCancelEditWorkerBtn');
+if(cancelBtn)cancelBtn.classList.remove('u-dnone');
+const nameEl=document.getElementById('tkNamaBaru');
+if(nameEl)nameEl.scrollIntoView({block:'center',behavior:'smooth'});
+},
+cancelEditWorker(){
+Tukang._editingWorkerId=null;
+document.getElementById('tkNamaBaru').value='';
+document.getElementById('tkUpahJamBaru').value='';
+document.getElementById('tkJamKerjaBaru').value='7';
+document.getElementById('tkUpahLemburJamBaru').value='';
+const btn=document.getElementById('tkAddWorkerBtn');
+if(btn)btn.textContent='+ Tambah Pekerja';
+const cancelBtn=document.getElementById('tkCancelEditWorkerBtn');
+if(cancelBtn)cancelBtn.classList.add('u-dnone');
 },
 _computeDay(w,masuk,pulang,istMulai,istSelesai){
 let masukMin=timeToMinutes(masuk), pulangMin=timeToMinutes(pulang);
@@ -614,6 +649,7 @@ return `<div class="tx-item u-fdcol u-gap8" style="align-items:stretch">
         <div class="u-flex u-jcb u-aic u-gap8">
           <div class="u-minw0"><div class="tx-name">${escapeHtml(w.name)}</div><div class="tx-meta">${fmtFull(w.upahJam)}/jam · lembur ${fmtFull(w.upahLemburJam)}/jam</div></div>
           <div class="u-tar" style="flex-shrink:0"><div class="tx-amount">${fmtFull(weekTotal)}</div><div class="u-fs11 u-t2">minggu ini</div></div>
+          <button class="tx-del" data-tk-edit="${w.id}" aria-label="Edit" style="color:var(--accent)">✏️</button>
           <button class="tx-del" data-tk-del="${w.id}" aria-label="Hapus">🗑</button>
         </div>
         <div class="u-flex u-gap4">${chips}</div>
@@ -625,6 +661,8 @@ listEl._tkDelegated=true;
 const handleTap=(e)=>{
 const dayEl=e.target.closest('[data-tk-day]');
 if(dayEl){Tukang.openDayEntry(dayEl.getAttribute('data-tk-worker'),dayEl.getAttribute('data-tk-date'));return;}
+const editEl=e.target.closest('[data-tk-edit]');
+if(editEl){Tukang.editWorker(editEl.getAttribute('data-tk-edit'));return;}
 const delEl=e.target.closest('[data-tk-del]');
 if(delEl){Tukang.delWorker(delEl.getAttribute('data-tk-del'));return;}
 const histToggleEl=e.target.closest('[data-tk-hist-toggle]');
