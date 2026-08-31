@@ -108,6 +108,12 @@ return;
 // InvestmentUI.openOwnersModal() (S661) -- bukan disintesis ulang, supaya
 // toggle selalu mencerminkan status TERSIMPAN terakhir (a.ownerSettlement).
 Aset._ownersDraft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf,settlement:(typeof Aset.getOwnerSettlement==='function')?Aset.getOwnerSettlement(a,o.ownerId):'titipan'}));
+// SESI B (lihat docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md
+// § Sesi B, Fitur 3: banner proaktif) -- HANYA di cabang non-read-only ini
+// (aset tidak tertaut Holding Investasi, cabang read-only sudah return lebih
+// dulu di atas & dialihkan ke InvestmentUI.openOwnersModal()). Dipanggil
+// SEBELUM _renderOwnersList() (0 dampak ke urutan render, murni cek + toast).
+Aset._checkUnallocatedBannerOnOpen(a);
 Aset._renderOwnersList();
 openModal('assetOwnersModal');
 // MIGRASI data lama (Agustus 2026): aset yang sudah overflow >100% SEBELUM fitur
@@ -186,6 +192,46 @@ return (a&&typeof a.nilai==='number'&&isFinite(a.nilai)&&a.nilai>0)?a.nilai:0;
 // exclude instrumen/aset yang sedang dibuka di modal ini).
 //
 // HARD INVARIANT (DL-Next-9): gain/currentValue (Untung-Rugi) TIDAK PERNAH masuk formula ini.
+// _ownerSisaTitipan(o) -- SESI C (lihat
+// docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md § Sesi C,
+// prasyarat wajib Fitur 1a: ekstrak formula "sisa" dari _ownerQuotaText()
+// jadi helper murni yang me-return angka, BUKAN HTML). 0 rumus baru --
+// PERSIS sama dgn logic yang sebelumnya terkubur di tengah _ownerQuotaText()
+// (principal - allocatedExcluding - usedTotal - linkedExpenseTotal -
+// draftNominal, lihat komentar DL-NEXT-9 di atas). Dipanggil balik oleh
+// _ownerQuotaText() di bawah (0 perilaku berubah di situ) DAN oleh
+// _renderOwnersUnallocatedBox() (baris ringkasan agregat, fungsi baru sesi
+// ini) supaya keduanya 100% konsisten -- 1 sumber kebenaran, bukan 2 rumus
+// yang bisa desync.
+//
+// Return: number (bisa negatif kalau owner overallocated), atau null kalau
+// owner tidak valid / belum ada commitment tercatat (caller yang menentukan
+// bagaimana menampilkan null itu -- _ownerQuotaText() pakai pesan "belum
+// dicatat", _renderOwnersUnallocatedBox() skip owner ini dari sum).
+//
+// `projection` opsional (pola sama _ownerHasUnallocatedElsewhere Sesi A):
+// caller yang memanggil fungsi ini berulang dalam 1 loop (mis.
+// _renderOwnersUnallocatedBox() menjumlah semua baris draft) BISA meng-cache
+// 1x DanaTitipanPortfolioAPI.build() & mengopernya di sini, supaya TIDAK
+// N+1 calls -- kalau tidak dioper, fungsi ini panggil build() sendiri (aman
+// dipanggil standalone, sama seperti sebelum diekstrak/dipakai _ownerQuotaText()).
+_ownerSisaTitipan(o,projection){
+if(!o||o.isSelf||!o.ownerId)return null;
+if(typeof DanaTitipanPortfolioAPI==='undefined')return null;
+const commit=DanaTitipanPortfolioAPI.getCommitments().find((c)=>c&&c.ownerId===o.ownerId);
+if(!commit||!isFinite(commit.principalAmount))return null;
+const principal=Number(commit.principalAmount);
+const currentAssetId=Aset._ownersModalAsset?Aset._ownersModalAsset.id:null;
+const excluding=DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId,{assetId:currentAssetId});
+const proj=projection||((typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null);
+const ownerBucket=(proj&&Array.isArray(proj.owners))?proj.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
+const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
+const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
+const nilai=Aset._ownersAssetNilai();
+const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
+const draftNominal=nilai*(porsiNum/100);
+return principal-excluding-usedTotal-linkedExpenseTotal-draftNominal;
+},
 _ownerQuotaText(o,i){
 if(!o||o.isSelf||!o.ownerId)return '';
 if(typeof DanaTitipanPortfolioAPI==='undefined')return '';
@@ -193,17 +239,7 @@ const commit=DanaTitipanPortfolioAPI.getCommitments().find((c)=>c&&c.ownerId===o
 if(!commit||!isFinite(commit.principalAmount)){
 return '<div class="u-fs11 u-t2 u-mt2">💰 Kuota titipan: <span class="u-fw700">belum dicatat</span> — catat pokok dulu di menu Dana Titipan</div>';
 }
-const principal=Number(commit.principalAmount);
-const currentAssetId=Aset._ownersModalAsset?Aset._ownersModalAsset.id:null;
-const excluding=DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId,{assetId:currentAssetId});
-const projection=(typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null;
-const ownerBucket=(projection&&Array.isArray(projection.owners))?projection.owners.find((ow)=>ow&&ow.ownerId===o.ownerId):null;
-const usedTotal=ownerBucket?(ownerBucket.usedTotal||0):0;
-const linkedExpenseTotal=ownerBucket?(ownerBucket.linkedExpenseTotal||0):0;
-const nilai=Aset._ownersAssetNilai();
-const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
-const draftNominal=nilai*(porsiNum/100);
-const sisa=principal-excluding-usedTotal-linkedExpenseTotal-draftNominal;
+const sisa=Aset._ownerSisaTitipan(o);
 const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
 const btnIdx=typeof i==='number'?i:(Array.isArray(Aset._ownersDraft)?Aset._ownersDraft.indexOf(o):-1);
 const quotaBtn='<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.applyQuotaToRow" data-args=\'['+btnIdx+']\'>🔄 Isi dari kuota sisa</button>';
@@ -220,6 +256,72 @@ return '<div class="u-fs11 u-mt2 u-flex u-gap8" style="align-items:center;flex-w
 // Fix: tombol sekarang disisipkan di KEDUA cabang -- applyQuotaToRow() sendiri sudah
 // aman dipanggil kapan saja (cap<=0 -> toast "kuota sudah habis", bukan crash/diam).
 return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+quotaBtn+'</div>';
+},
+// _ownerHasUnallocatedElsewhere(ownerId,projection) -- SESI BARU (audit
+// "AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md" § Sesi A,
+// Fitur 2: badge link-out "masih ada sisa titipan"). BEDA dari `sisa` di
+// `_ownerQuotaText()` di atas: `_ownerQuotaText()` menghitung sisa kuota
+// SPESIFIK utk holding/aset yang sedang dibuka (exclude aset ini dari
+// alokasi). Fungsi ini baca `estimatedUnallocated` GLOBAL per-owner apa
+// adanya dari `DanaTitipanPortfolioAPI.build()` (SATU sumber kebenaran
+// yang sama, field yang sudah ada sejak awal S485/PATCH-2026-08-14 -- 0
+// rumus baru) -- artinya "owner ini py titipan nganggur DI MANA PUN",
+// tidak terikat aset yang sedang dibuka. `projection` opsional: caller
+// (`_renderOwnersList()`) meng-cache 1x `build()` per render list supaya
+// tidak N+1 calls tiap baris owner -- kalau tidak dioper, fungsi ini
+// panggil `build()` sendiri (aman dipanggil standalone, mis. dari test).
+_ownerHasUnallocatedElsewhere(ownerId,projection){
+if(!ownerId)return false;
+if(typeof DanaTitipanPortfolioAPI==='undefined'||typeof DanaTitipanPortfolioAPI.build!=='function')return false;
+const proj=projection||DanaTitipanPortfolioAPI.build();
+if(!proj||!Array.isArray(proj.owners))return false;
+const bucket=proj.owners.find((ow)=>ow&&ow.ownerId===ownerId);
+return !!(bucket&&typeof bucket.estimatedUnallocated==='number'&&isFinite(bucket.estimatedUnallocated)&&bucket.estimatedUnallocated>0);
+},
+// _checkUnallocatedBannerOnOpen(a) -- SESI B (lihat
+// docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md § Sesi B,
+// Fitur 3: banner proaktif). Dipanggil 1x dari openOwnersModal() (cabang
+// non-read-only saja, SETELAH Aset._ownersDraft terisi, SEBELUM
+// _renderOwnersList()) -- guard "sekali per buka modal" otomatis terpenuhi
+// krn openOwnersModal() sendiri cuma jalan sekali tiap modal dibuka (bukan
+// dipanggil ulang tiap render list), jadi TIDAK spam toast tiap ketik/ubah
+// baris draft.
+//
+// 100% REUSE deteksi Sesi A (`_ownerHasUnallocatedElsewhere`, 0 rumus baru
+// diulang) + `DanaTitipanPortfolioAPI.build()` (SATU cache lokal, bukan
+// dipanggil ulang per owner di loop). SATU perbandingan BARU (belum ada di
+// kode manapun sebelum sesi ini): nilai porsi owner ini DI HOLDING YANG
+// SEDANG DIBUKA (`assetNilai*porsi/100`, pola sama persis `draftNominal` di
+// `_ownerQuotaText()` atas) dibandingkan `estimatedUnallocated` GLOBAL milik
+// owner tsb. Kalau nilai holding SEKARANG < estimatedUnallocated -> owner
+// itu py sisa titipan yang belum ke-invest di holding INI juga (bukan cuma
+// "ada sisa di tempat lain" seperti badge Sesi A) -> layak diberi tahu
+// proaktif saat modal baru dibuka.
+//
+// PURE UI, 0 penulisan ke D.assets/D.investments/Aset._ownersDraft. Aman
+// no-op kalau `toast`/`DanaTitipanPortfolioAPI.build` belum ada (mis. modul
+// dana-titipan-aggregation-api.js belum dimuat) -- tidak pernah crash modal.
+_checkUnallocatedBannerOnOpen(a){
+if(typeof toast!=='function')return;
+if(typeof DanaTitipanPortfolioAPI==='undefined'||typeof DanaTitipanPortfolioAPI.build!=='function')return;
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+if(draft.length===0)return;
+const projection=DanaTitipanPortfolioAPI.build();
+if(!projection||!Array.isArray(projection.owners))return;
+const nilai=Aset._ownersAssetNilai();
+const names=[];
+draft.forEach((o)=>{
+if(!o||o.isSelf||!o.ownerId)return;
+if(!Aset._ownerHasUnallocatedElsewhere(o.ownerId,projection))return;
+const bucket=projection.owners.find((ow)=>ow&&ow.ownerId===o.ownerId);
+const estimatedUnallocated=bucket?Number(bucket.estimatedUnallocated):0;
+const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:0;
+const holdingNilaiOwner=nilai*(porsiNum/100);
+if(holdingNilaiOwner<estimatedUnallocated)names.push(o.ownerName||o.ownerId);
+});
+if(names.length>0){
+toast('👉 '+names.join(', ')+' masih punya sisa titipan belum terinvest -- cek Dana Titipan');
+}
 },
 // _updateOwnerQuotaDisplay(i) -- SESI 505 (mirror PERSIS InvestmentUI._updateOwnerQuotaDisplay(),
 // S494). Update HANYA elemen #assetOwnerKuota{i} tiap ketik porsi/nominal, TANPA render ulang
@@ -300,22 +402,35 @@ return '<div class="u-flex u-gap8" style="align-items:center;justify-content:spa
 '<span style="font-size:13px;font-weight:700;color:var(--accent)">'+porsiTxt+'%</span>'+
 '</div>';
 }).join(''):'<div class="empty"><div class="empty-text">Holding investasi terhubung belum punya pemilik tercatat.</div></div>';
+Aset._renderOwnersUnallocatedBox();
 return;
 }
 if(!Aset._ownersModalAsset){
 listBox.innerHTML='<div class="empty"><div class="empty-text">Simpan aset ini dulu (tombol "Simpan Aset") sebelum mengatur porsi kepemilikan.</div></div>';
 Aset.updateOwnersTotal();
+Aset._renderOwnersUnallocatedBox();
 return;
 }
 if(!draft.length){
 listBox.innerHTML='<div class="empty"><div class="empty-text">Belum ada pemilik. Tap "➕ Tambah Pemilik" di bawah.</div></div>';
 Aset.updateOwnersTotal();
+Aset._renderOwnersUnallocatedBox();
 return;
 }
 const nilai=Aset._ownersAssetNilai();
+// SESI BARU (audit § Sesi A, Fitur 2): cache 1x DanaTitipanPortfolioAPI.build()
+// di sini SEBELUM loop per-baris di bawah, dioper ke
+// _ownerHasUnallocatedElsewhere() per baris -- supaya badge link-out TIDAK
+// memicu N+1 pemanggilan build() kalau draft owner banyak (pola sama alasan
+// _ownerQuotaText() juga panggil build() sendiri, tapi di situ per-baris
+// memang perlu recompute krn `excluding`/porsi draft beda tiap baris; badge
+// ini murni baca field global `estimatedUnallocated`, tidak tergantung
+// baris/porsi draft, jadi aman di-cache sekali).
+const titipanProjection=(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null;
 listBox.innerHTML=draft.map((o,i)=>{
 const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:null;
 const nominalVal=(nilai>0&&porsiNum!==null)?Math.round(nilai*porsiNum/100):'';
+const unallocatedBadge=(!o.isSelf&&o.ownerId&&Aset._ownerHasUnallocatedElsewhere(o.ownerId,titipanProjection))?('<div class="u-fs11 u-mt2"><button type="button" style="background:none;border:none;padding:0;margin:0;color:var(--accent);text-decoration:underline dotted;cursor:pointer;font:inherit;font-weight:600" data-action="dashHubQaDanaTitipan">👉 masih ada sisa titipan, cek holding lain</button></div>'):'';
 return '<div style="margin-bottom:8px">'+
 '<div class="u-flex u-gap8" style="align-items:center;margin-bottom:6px">'+
 Aset._ownerNameFieldHtml(o,i)+
@@ -331,9 +446,11 @@ Aset._ownerNameFieldHtml(o,i)+
 '</label>'+
 (o.isSelf?'':Aset._ownerSettlementFieldHtml(o,i))+
 (o.isSelf?'':('<div id="assetOwnerKuota'+i+'">'+Aset._ownerQuotaText(o,i)+'</div>'))+
+unallocatedBadge+
 '</div>';
 }).join('');
 Aset.updateOwnersTotal();
+Aset._renderOwnersUnallocatedBox();
 // FITUR "Auto-Rebalance Porsi Pemilik": refresh panel penyesuaian (kalau sedang pending)
 // tiap kali list ini di-render ulang penuh -- lihat _renderRebalancePanel() di bawah.
 // Aman dipanggil di sini walau _rebalancePending null (fungsi itu sendiri yang
@@ -372,6 +489,111 @@ onOwnerSettlementChange(i,val){
 const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
 if(!draft[i])return;
 draft[i].settlement=val==='milik'?'milik':'titipan';
+},
+// _renderOwnersUnallocatedBox() -- SESI C (lihat
+// docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md § Sesi C,
+// Fitur 1a: baris ringkasan agregat "Total sisa belum terinvest (semua
+// owner)", READ-ONLY dulu -- tombol "Bagi rata" itu Sesi D). Dipanggil dari
+// SATU titik render yang sama dgn updateOwnersTotal() (_renderOwnersList(),
+// termasuk di tiap early-return branch-nya) -- disiplin "1 titik render"
+// yang sama, supaya box ini tidak pernah desync dari list di atasnya.
+//
+// 100% REUSE `Aset._ownerSisaTitipan(o)` (diekstrak sesi ini dari
+// _ownerQuotaText(), 0 rumus baru) utk tiap owner non-SELF di draft, lalu
+// SUM. Owner yang overallocated (sisa<0) SENGAJA di-skip dari penjumlahan
+// (bukan dikurangkan) supaya angka minus 1 owner tidak menutupi/mengecilkan
+// sisa owner lain yang masih positif -- ditampilkan sbg catatan terpisah,
+// bukan ikut ke total. Owner tanpa commitment tercatat (_ownerSisaTitipan
+// return null) juga di-skip (sama seperti pesan "belum dicatat" di
+// _ownerQuotaText, bukan dianggap 0).
+//
+// PURE UI, 0 penulisan ke D.assets/Aset._ownersDraft. Aman no-op kalau
+// elemen box belum ada di DOM (mis. modal sudah tertutup) atau semua owner
+// SELF/tanpa commitment (box dikosongkan, bukan ditampilkan Rp 0 yang
+// menyesatkan).
+_renderOwnersUnallocatedBox(){
+const box=document.getElementById('assetOwnersUnallocatedBox');
+if(!box)return;
+if(Aset._ownersReadOnly){box.innerHTML='';return;}
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+const nonSelf=draft.filter((o)=>o&&!o.isSelf&&o.ownerId);
+if(nonSelf.length===0){box.innerHTML='';return;}
+// Cache 1x build() di sini SEBELUM loop di bawah, dioper ke
+// _ownerSisaTitipan() per baris -- supaya box agregat ini TIDAK memicu N+1
+// pemanggilan build() kalau owner banyak (disiplin sama Sesi A/B).
+const titipanProjection=(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.build==='function')?DanaTitipanPortfolioAPI.build():null;
+let total=0;let hasNegative=false;let hasValid=false;
+nonSelf.forEach((o)=>{
+const sisa=Aset._ownerSisaTitipan(o,titipanProjection);
+if(sisa===null)return;
+hasValid=true;
+if(sisa<0){hasNegative=true;return;}
+total+=sisa;
+});
+if(!hasValid){box.innerHTML='';return;}
+const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
+let html='💰 Total sisa belum terinvest (semua owner): <span class="u-fw700">'+money(total)+'</span>';
+if(hasNegative){
+html+='<div class="u-fs11 u-mt2" style="color:var(--accent2)">⚠️ Ada owner yang kuotanya sudah minus (melebihi pokok dikomit) -- tidak ikut dijumlah di atas, cek baris masing-masing.</div>';
+}
+// SESI D1 (lihat docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md
+// § Sesi D, Fitur 1b): tombol "Bagi rata ke owner ini" -- HANYA muncul di cabang
+// hasValid ini (ada minimal 1 owner non-SELF dgn commitment tercatat), sejalan
+// dgn box di atas yg juga cuma tampil di cabang ini. Logic sesungguhnya ada di
+// bagiRataUnallocated() di bawah.
+html+='<div class="u-mt6"><button type="button" class="btn btn-ghost btn-sm" data-action="Aset.bagiRataUnallocated">🔄 Bagi rata ke owner ini</button></div>';
+box.innerHTML=html;
+},
+// bagiRataUnallocated() -- SESI D1 (lihat docs/AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md
+// § Sesi D, Fitur 1b): tombol "🔄 Bagi rata ke owner ini" di #assetOwnersUnallocatedBox
+// (Sesi C). 100% REUSE applyQuotaToRow(i) per baris owner non-SELF -- 0 logic isi-porsi baru
+// ditulis ulang di sini (keputusan user: reuse apa adanya, termasuk toast & render ulang PER
+// baris, bukan versi ringkas 1-toast-di-akhir).
+//
+// Dipanggil BERURUTAN per index (bukan snapshot semua cap dulu baru ditulis serentak) --
+// ini KUNCI supaya total porsi akhir otomatis ternormalisasi <=100% TANPA logic pembatas
+// tambahan: _ownerQuotaPorsiCap(i) (dipakai applyQuotaToRow) menghitung remainingPorsi =
+// 100 - otherTotal dari draft TERKINI tiap dipanggil, jadi baris ke-2 dst otomatis melihat
+// ruang porsi yang sudah menyempit krn baris sebelumnya baru saja diisi bagiRata ini.
+//
+// Indeks dikumpulkan SEKALI di awal (bukan re-filter tiap iterasi) krn applyQuotaToRow()
+// hanya mengubah porsi baris yang sudah ada, TIDAK pernah menambah/menghapus baris draft --
+// aman index tidak bergeser selama loop.
+bagiRataUnallocated(){
+if(Aset._ownersReadOnly)return;
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+const indices=draft.map((o,k)=>({o,k})).filter((x)=>x.o&&!x.o.isSelf&&x.o.ownerId).map((x)=>x.k);
+if(!indices.length)return;
+// SESI D2 (hardening, lanjutan D1 -- lihat docs/SESSION-NOTE-sesiD1.md "Lanjutan ke Sesi
+// D2"): buang panel "⚖️ Porsi melebihi 100%" yang MUNGKIN SUDAH tampil SEBELUM tombol ini
+// ditekan -- 2 jalur nyata bisa membuat Aset._rebalancePending sudah terisi di titik ini:
+//   1. Data migrasi lama yang overflow >100% (openOwnersModal()/resetOwners() memanggil
+//      _checkRebalanceTrigger() otomatis saat modal dibuka -- lihat komentar "MIGRASI data
+//      lama" di kedua fungsi itu).
+//   2. User sempat mengetik manual porsi salah 1 baris (>100%) sebelum berubah pikiran &
+//      pakai "Bagi rata" -- _checkRebalanceTrigger() dari onOwnerPorsiInput() sudah men-set
+//      pending itu.
+// Tanpa reset ini, applyQuotaToRow(i) per baris (yang TIDAK memanggil _checkRebalanceTrigger
+// sendiri -- lihat komentarnya) akan memicu _renderOwnersList()->_renderRebalancePanel() ulang
+// PAKAI pending LAMA (editedIndex/method basi) tiap iterasi. Karena bagiRataUnallocated()
+// SELALU menormalkan total ke <=100% (kunci normalisasi dijelaskan di atas), begitu total
+// benar2 <=100% calculateRebalance() akan balikin {ok:false,error:'no_reduction_needed'} --
+// TAPI _renderRebalancePanel() tidak membedakan error itu dari kegagalan lain, jadi malah
+// menampilkan pesan "⚠️ Porsi pemilik lain tidak cukup..." yang KELIRU/menyesatkan padahal
+// porsi sudah beres. Reset di sini (SEBELUM loop, konsisten pola removeOwnerRow()/
+// resetOwners() yang sudah ada) memastikan _renderRebalancePanel() ikut kosong lagi begitu
+// _renderOwnersList() jalan -- 0 logic kalkulasi porsi baru, murni bersih2 state panel.
+//
+// _renderRebalancePanel() dipanggil LANGSUNG di sini juga (bukan cuma menunggu render internal
+// applyQuotaToRow() di bawah) -- kalau SEMUA baris ternyata cap<=0 (ruang porsi sudah penuh
+// duluan oleh baris lain, mis. SELF sendiri sudah 100%), applyQuotaToRow() akan return AWAL
+// (toast "kuota sudah habis") tanpa pernah memanggil _renderOwnersList() sama sekali utk baris
+// itu -- box panel jadi TIDAK ikut ter-refresh walau Aset._rebalancePending sudah null di
+// memori, sisa markup lama tetap nempel di DOM. Panggilan eksplisit ini menjamin box selalu
+// sinkron dgn state pending yang baru saja dibersihkan, apa pun hasil loop di bawah.
+Aset._rebalancePending=null;
+Aset._renderRebalancePanel();
+indices.forEach((i)=>{Aset.applyQuotaToRow(i);});
 },
 // updateOwnersTotal() -- SESI 392c: hitung ulang & tampilkan total porsi Aset._ownersDraft
 // saat ini di #assetOwnersTotalBox, warna hijau kalau pas 100% / merah kalau belum (kurang
