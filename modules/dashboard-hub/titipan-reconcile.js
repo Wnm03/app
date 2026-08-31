@@ -21,14 +21,32 @@ const TitipanReconcile = {
 // _expectedFromAssets() — {key: amount} yang SEHARUSNYA ada di Buku Utang,
 // key = linkedAssetId+'::'+ownerId, dihitung PERSIS pola _syncOwnerDebts()
 // (aset.js) supaya expected value 1:1 sama dgn cara debt itu dibuat.
+// FIX (S639 — "Perbaiki Gap Dana Titipan" tidak pernah menghilangkan gap
+// utk owner ber-status 'milik'): _syncOwnerDebts() (aset-owners.js) SUDAH
+// LAMA skip owner yang Aset.getOwnerSettlement(a,ownerId)==='milik' (owner
+// itu pemilik LANGSUNG, bukan titipan -- SENGAJA tidak dibikinkan baris
+// Buku Utang, lihat komentar _syncOwnerDebts()) TAPI fungsi ini (yang
+// mendefinisikan "seharusnya ada") tidak pernah ikut menerapkan filter
+// yang sama -- jadi expected[] masih minta baris utk owner 'milik' itu
+// padahal _syncOwnerDebts() (dgn benar) tidak pernah menulisnya. Akibatnya
+// TitipanReconcile.repairMissing()/tombol "Perbaiki Gap Dana Titipan"
+// terlihat jalan (toast "N aset/holding disinkron ulang", reconcile()
+// beneran dipanggil) TAPI sync.missing tetap sama persis sesudahnya --
+// gap "hilang tapi muncul lagi identik" krn expected & actual dari awal
+// tidak pernah bisa ketemu utk owner 'milik'. Filter di bawah PORT 1:1
+// syarat yang sama persis dgn _syncOwnerDebts() (toleran: kalau Aset atau
+// Aset.getOwnerSettlement belum termuat, anggap 'titipan' spt defaultnya
+// getOwnerSettlement() sendiri -- 0 perubahan perilaku utk konsumen lama).
 _expectedFromAssets() {
   const out = {};
   if (typeof MultiOwnerEngine === 'undefined' || typeof D === 'undefined') return out;
+  const settlementOf = (a, ownerId) => (typeof Aset !== 'undefined' && typeof Aset.getOwnerSettlement === 'function')
+    ? Aset.getOwnerSettlement(a, ownerId) : 'titipan';
   (D.assets || []).forEach((a) => {
     const res = MultiOwnerEngine.getOwners(a);
     const owners = (res && res.ok) ? res.owners : [];
     const nilai = typeof a.nilai === 'number' && isFinite(a.nilai) ? a.nilai : 0;
-    owners.filter((o) => !o.isSelf && o.porsi > 0).forEach((o) => {
+    owners.filter((o) => !o.isSelf && o.porsi > 0 && settlementOf(a, o.ownerId) !== 'milik').forEach((o) => {
       out[a.id + '::' + o.ownerId] = nilai * (o.porsi / 100);
     });
   });
@@ -53,12 +71,19 @@ _actualLinkedDebts() {
 // space terpisah dari cabang Aset. amount = Investment.holdingCost(h) *
 // porsi/100 -- angka yang SAMA PERSIS dipakai Investment._syncTitipanDebt()
 // utk isi D.debts, jadi expected 1:1 sama dgn cara debt itu dibuat.
+// FIX (S639, cabang Investasi -- pola SAMA PERSIS _expectedFromAssets() di
+// atas): Investment._syncTitipanDebt() (investasi.js) skip owner ber-status
+// 'milik' (Investment.getOwnerSettlement(h,ownerId)==='milik'), tapi fungsi
+// ini belum ikut filter yang sama -- gap yang sama ("Perbaiki Gap" jalan,
+// missing tetap sama sesudahnya) juga berlaku utk holding, bukan cuma aset.
 _expectedFromInvestments() {
   const out = {};
   if (typeof Investment === 'undefined' || typeof D === 'undefined') return out;
+  const settlementOf = (h, ownerId) => (typeof Investment.getOwnerSettlement === 'function')
+    ? Investment.getOwnerSettlement(h, ownerId) : 'titipan';
   (D.investments || []).forEach((h) => {
     let owners;
-    try { owners = Investment.getOwners(h).filter((o) => !o.isSelf && o.porsi > 0); }
+    try { owners = Investment.getOwners(h).filter((o) => !o.isSelf && o.porsi > 0 && settlementOf(h, o.ownerId) !== 'milik'); }
     catch (e) { owners = []; }
     if (!owners.length) return;
     const cost = Investment.holdingCost(h);
