@@ -92,8 +92,8 @@ lihat `docs/AUDIT_MATRIX.md` §7. Task baru dari hasil audit ini:
 |---|---|---|---|---|
 | P1 High | `revertBillFromDeletedTx()`: simpan nilai saldo utang SEBELUM clamp (mis. field `debtNilaiBefore` di transaksi/arsip tagihan) & pakai nilai itu saat revert, bukan `+t.amount` mentah — cegah saldo utang salah lebih besar setelah transaksi pembayaran-lunas-sekaligus (overpay) dihapus | BUG-007 | Unassigned | ✅ DONE (sudah di source sebelum audit S646 — komentar `FIX (BUG-007, audit 2026-08)` di `tagihan-kalender.js`) |
 | P2 Medium | `Debt.syncBill()`: panggil `removeOrphanedAutoPiutangForBill(bill.id)` sebelum hapus tagihan auto (pola sama `delBill()`) — cegah piutang "Ditanggung Bersama" jadi orphan permanen saat utang ditandai Lunas/cicilan dinolkan | BUG-006 | Unassigned | ✅ DONE (sudah di source sebelum audit S646 — komentar `FIX (BUG-006, audit 2026-08)` di `piutang-utang.js`) |
-| Low (setelah fix di atas) | Tambah regression test skenario overpayment utang di `tests/s291-delTx-bill-sync.test.js` | BUG-007 | Unassigned | OPEN |
-| Low (setelah fix di atas) | Tambah regression test `Debt.syncBill()` + piutang orphan (analog test `removeOrphanedAutoPiutangForBill` yang sudah ada utk `delBill()`) | BUG-006 | Unassigned | OPEN |
+| Low (setelah fix di atas) | Tambah regression test skenario overpayment utang di `tests/s291-delTx-bill-sync.test.js` | BUG-007 | Unassigned | ✅ DONE (status disinkronkan sesi S700; test-nya sudah ada — `tests/bug007-overpayment-revert-debt.test.js`, cover skenario overpayment + snapshot `debtNilaiBefore`, bukan di file `s291-...` yang disebut awal tapi cakupan sama) |
+| Low (setelah fix di atas) | Tambah regression test `Debt.syncBill()` + piutang orphan (analog test `removeOrphanedAutoPiutangForBill` yang sudah ada utk `delBill()`) | BUG-006 | Unassigned | ✅ DONE (status disinkronkan sesi S700; test-nya sudah ada — `tests/bug006-syncbill-orphan-piutang.test.js`, 4 test) |
 
 ## Finance/WorthIt — dari Sesi Audit worthit.js
 

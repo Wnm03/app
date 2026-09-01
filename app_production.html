@@ -83,10 +83,10 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1507">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1507">
-<script src="nav-scroll.js?v=1507" defer></script>
-<script src="sticky-tabbar.js?v=1507" defer></script>
+<link rel="stylesheet" href="styles.css?v=1512">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1512">
+<script src="nav-scroll.js?v=1512" defer></script>
+<script src="sticky-tabbar.js?v=1512" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -152,17 +152,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1507');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1512');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1507');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1512');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1507');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1512');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -251,8 +251,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1507" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1507" defer></script>
+<script src="app-bundle-a.min.js?v=1512" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1512" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -946,6 +946,22 @@ window.location.reload();
   <div class="page-settings-btn">
     <div class="page-title">📊 Laporan</div>
     <button class="qs-btn" data-action="openQS" data-args='["qsLaporan"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+  </div>
+  <!-- lapMonthNav (Fix "slide bulan sebelum/sesudah di filter Laporan") —
+       pola sama persis #txListMonthLabel/changeTxListMonth() (di atas,
+       kartu "Semua Transaksi"), TAPI pakai changeLapMonth()/lapMonthOffset
+       (state terpisah, lihat tx-list-cashflow.js) supaya geser bulan di
+       sini TIDAK ikut menggeser bulan aktif tab Keuangan lain. Default
+       u-dnone (chip aktif awal = "Bulan Ini" via class="active" di bawah,
+       tapi ditampilkan lewat toggle di setPeriode() saat halaman render
+       pertama kali chip "bulan" belum pernah di-tap ulang secara eksplisit
+       -- guard: chip "Bulan Ini" SUDAH active di markup ini sejak awal,
+       jadi nav ini SENGAJA tanpa u-dnone di markup supaya konsisten dgn
+       filterPeriode default 'bulan' (features-helpers-global-security.js). -->
+  <div class="month-nav u-mb10" id="lapMonthNav">
+    <button class="month-nav-btn" data-action="changeLapMonth" data-args='[-1]' aria-label="Bulan sebelumnya">‹</button>
+    <div class="month-nav-label" id="lapMonthLabel"></div>
+    <button class="month-nav-btn" data-action="changeLapMonth" data-args='[1]' aria-label="Bulan berikutnya">›</button>
   </div>
   <div class="filter-scroll" id="periodeChips">
     <button class="chip-btn" data-action="setPeriode" data-args='["hari", "$el"]'>Hari Ini</button>
@@ -4063,6 +4079,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1507" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1512" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
