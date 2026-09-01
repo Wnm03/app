@@ -65,7 +65,21 @@ const VehicleAttentionPresenter = {
     `;
   },
 
+  // S702 (permintaan eksplisit user: fitur collapse di kartu Vehicle
+  // Attention): judul "🧭 Perlu Perhatian" DIPINDAH dari sini ke markup
+  // statis (.dashhub-cat-head di index.html/app_production.html) supaya
+  // card ini bisa collapse (tap header) sama seperti kartu lain — 100%
+  // reuse toggleCardCollapse()/card-collapse-toggle/card-collapse-body,
+  // 0 rumus/skoring baru. #vehAttentionBody sekarang HANYA berisi baris
+  // actionRows/insightRows (tanpa judul lagi, judulnya sudah statis).
+  // Pola SILENT (kalau tidak ada apa pun) sekarang menyembunyikan
+  // #vehAttentionWrap (wrap+header), bukan cuma mengosongkan body —
+  // sebelumnya body kosong tapi wrap+header (kalau ada) tetap tampak;
+  // sekarang wrap ini TIDAK ada header statis, jadi perilaku user-facing
+  // 0 berubah, cuma butuh baris ini supaya wrap tidak nongol kosong
+  // dengan header baru.
   render() {
+    const wrap = document.getElementById('vehAttentionWrap');
     const el = document.getElementById('vehAttentionBody');
     if (!el) return; // container belum ada di halaman ini, aman diam2.
 
@@ -114,9 +128,14 @@ const VehicleAttentionPresenter = {
       }
     }
 
-    if (!actionRows && !insightRows) { el.innerHTML = ''; return; }
+    if (!actionRows && !insightRows) {
+      el.innerHTML = '';
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
 
-    el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🧭 Perlu Perhatian</div>${actionRows}${insightRows}`;
+    if (wrap) wrap.style.display = '';
+    el.innerHTML = `${actionRows}${insightRows}`;
   },
 
 };
