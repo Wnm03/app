@@ -443,3 +443,28 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox Claude (bash_tool) sesi ini network egress DISABLED -- npm install eslint gagal (403 registry.npmjs.org), eslint tidak pernah terpasang di environment ini sejak awal proyek, konsisten sesi2 sebelumnya (S424 dst, lihat docs/RELEASE-GATE-LOG.md). Perubahan sesi D2 (bagian 1/2) cuma 1 fungsi disentuh di modules/asset/aset-owners.js (bagiRataUnallocated(): tambah 2 baris cleanup state panel -- Aset._rebalancePending=null + Aset._renderRebalancePanel(), pola identik removeOwnerRow()/resetOwners() yang sudah ada di file yang sama) + 1 file test baru (6 test). Gaya kode konsisten pola existing (guard-first, comment block panjang menjelaskan alasan), 0 unused var/no-undef baru, diverifikasi manual.
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar (npm error 403 saat npm install esbuild), konsisten sesi-sesi sebelumnya. Bundle unminified 100% valid (node --check lolos kedua bundle, verify-bundle-freshness OK).
+
+## 2026-08-31T22:29:52.675Z — versi s641-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: eslint tidak terpasang, network egress dinonaktifkan di environment sandbox
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang, network egress dinonaktifkan di environment sandbox
+
+## 2026-08-31T22:33:25.579Z — versi s642-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: eslint tidak terpasang, network egress dinonaktifkan di environment sandbox
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang, network egress dinonaktifkan di environment sandbox
+
+## 2026-08-31T22:52:35.147Z — versi s643-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, sama seperti sesi S674 sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang, sandbox tanpa akses jaringan, sama seperti sesi S674 sebelumnya
+
+## 2026-08-31T23:08:42.532Z — versi s644-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall (sama seperti S674/S675)
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall (sama seperti S674/S675)
+
+## 2026-08-31T23:16:17.919Z — versi s645-asset-owners-bagi-rata-d2-hardening-part1
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall (sama seperti S674/S675/S676)
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall (sama seperti S674/S675/S676)
