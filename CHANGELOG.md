@@ -1,3 +1,61 @@
+# Changelog — Sesi S706 (Fix Temuan #2 audit modul Aset: LaporanAset tidak exclude aset termigrasi ke Investasi, v1515)
+
+## Task
+Lanjutan audit mendalam 27 file `modules/asset` (sesi S705); sesi ini
+mengerjakan Temuan #2 (1 sesi = 1 task): `LaporanAset.nilaiAset()`/
+`ringkasanKekayaan()`/`build().daftarAset` (`aset-reports.js`) hanya
+memfilter `isAssetOwnershipSelf`, tidak memfilter
+`!a._migratedToInvestmentId`/`!a.investmentId` seperti `Aset.totalValue()`
+(`aset.js`) — menyebabkan aset yang sudah jadi Holding Investasi tetap
+dihitung dobel di kartu "📑 Laporan Aset".
+
+## Perubahan
+- `modules/asset/aset-reports.js` — tambah filter migrasi
+  (`!a._migratedToInvestmentId`, `!a.investmentId`) ke `nilaiAset()`,
+  `ringkasanKekayaan()`, dan sumber data `daftarAset` di `build()`, pola
+  SAMA PERSIS `Aset.totalValue()`. `aset.js` sendiri 0 disentuh.
+
+## Sengaja TIDAK dikerjakan sesi ini
+- Temuan #3 (dobel Buku Utang saat auto-holding di `saveUnified()`) —
+  backlog sesi berikutnya, sesuai aturan 1 sesi = 1 task.
+
+## Test
+- Baru: `tests/s706-laporan-aset-exclude-migrated-double-count.test.js`
+  (5 test).
+- Full suite: 5285/5285 (1 flake pre-existing tidak terkait, terkonfirmasi
+  di baseline).
+- Build: `node scripts/build.js` — semua gate lolos, versi → 1515.
+
+---
+
+# Changelog — Sesi S705 (Fix Temuan #1 audit modul Aset: 3 kartu laporan aset tanpa try/catch, v1514)
+
+## Task
+Audit mendalam 27 file `modules/asset` menemukan 3 temuan konkret; sesi ini
+mengerjakan Temuan #1 (1 sesi = 1 task): `Penyusutan.renderList()`,
+`PajakAset.renderList()`, `LaporanAset.renderList()` (`aset-reports.js`)
+dipanggil berurutan tanpa try/catch dari 4 titik di `Aset.renderList()`
+(`aset.js`), pola bug yang sama dengan yang sudah diperbaiki S601/S608 untuk
+per-item render.
+
+## Perubahan
+- `modules/asset/aset.js` — method baru `Aset._safeRenderReports()`
+  membungkus ketiga panggilan kartu laporan dengan try/catch masing-masing;
+  4 titik panggilan lama diganti pakai method ini. `aset-reports.js` sendiri
+  0 disentuh.
+
+## Sengaja TIDAK dikerjakan sesi ini
+- Temuan #2 (filter migrasi belum disinkron di `LaporanAset`) dan Temuan #3
+  (dobel Buku Utang saat auto-holding di `saveUnified()`) — backlog sesi
+  berikutnya, sesuai aturan 1 sesi = 1 task.
+
+## Test
+- Baru: `tests/s705-aset-report-cards-trycatch-guard.test.js` (4 test).
+- Full suite: 5277/5277 pass, 0 fail.
+- Build: `node scripts/build.js` — semua gate lolos, versi → 1514.
+
+---
+
 # Changelog — Sesi S610 (Sisa renderer try/catch per-baris: modules/vehicle/, modules/cross/, v1451)
 
 ## Task
