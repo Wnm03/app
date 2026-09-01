@@ -50,10 +50,20 @@ const UnifiedBriefingPresenter = {
     const briefing = UnifiedAIBriefing.generate();
     if (!briefing.ok) { clear(); return; }
 
-    const html = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📋 Ringkasan Harian Finance &amp; Vehicle</div>`
-      + `<div class="u-fs12 u-lh15 u-t2">${escapeHtml(briefing.text)}</div>`;
-    if (el) el.innerHTML = html;
-    if (chatEl) chatEl.innerHTML = html;
+    // S702 (fitur collapse, permintaan eksplisit user): judul "📋
+    // Ringkasan Harian Finance & Vehicle" DIPINDAH ke markup statis
+    // (.dashhub-cat-head) KHUSUS utk #crossBriefBody (kartu "Cross
+    // Brief" di Dashboard Hub) supaya card itu bisa collapse (tap
+    // header) — 100% reuse toggleCardCollapse(), 0 rumus baru.
+    // #aiUnifiedBriefBody (kartu "🧭 Penasihat" di ai-chat.js, BUKAN
+    // Dashboard Hub, TIDAK collapsible) TETAP dapat versi lengkap dgn
+    // judul di dalamnya seperti sebelumnya — 0 perubahan tampilan di
+    // sana, generate() TETAP dipanggil SATU KALI seperti sebelumnya.
+    const bodyOnlyHtml = `<div class="u-fs12 u-lh15 u-t2">${escapeHtml(briefing.text)}</div>`;
+    const fullHtml = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📋 Ringkasan Harian Finance &amp; Vehicle</div>`
+      + bodyOnlyHtml;
+    if (el) el.innerHTML = bodyOnlyHtml;
+    if (chatEl) chatEl.innerHTML = fullHtml;
   },
 
 };

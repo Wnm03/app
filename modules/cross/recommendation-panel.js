@@ -63,8 +63,13 @@ const RecommendationPanel = {
       </div>
     `).join('');
 
-    el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">💡 Rekomendasi utk Anda</div>`
-      + rows;
+    // S702 (fitur collapse, permintaan eksplisit user): judul "💡
+    // Rekomendasi utk Anda" DIPINDAH ke markup statis (.dashhub-cat-head
+    // di index.html/app_production.html) supaya card ini bisa collapse
+    // (tap header) sama seperti kartu lain — 100% reuse
+    // toggleCardCollapse(), 0 rumus baru. #recommendationPanelBody
+    // sekarang HANYA berisi rows.
+    el.innerHTML = rows;
   },
 
 };

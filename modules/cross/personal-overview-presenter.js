@@ -28,8 +28,12 @@ const PersonalOverviewPresenter = {
 
     if (!briefText && !s.priorityCount) { el.innerHTML = ''; return; }
 
-    el.innerHTML = `<div class="u-fs12 u-fw700 u-t2 u-mb6 u-mt10">👤 Ringkasan Hidup Pribadi</div>`
-      + (briefText ? `<div class="u-fs12 u-lh15 u-t2 u-mb6">${escapeHtml(briefText)}</div>` : '')
+    // S702 (fitur collapse, permintaan eksplisit user): judul "👤
+    // Ringkasan Hidup Pribadi" DIPINDAH ke markup statis (.dashhub-cat-head
+    // di index.html/app_production.html) supaya card ini bisa collapse
+    // (tap header) sama seperti kartu lain — 100% reuse
+    // toggleCardCollapse(), 0 rumus baru.
+    el.innerHTML = (briefText ? `<div class="u-fs12 u-lh15 u-t2 u-mb6">${escapeHtml(briefText)}</div>` : '')
       + `<div class="u-fs12 u-lh15 u-t2">${priorityLine}</div>`;
   },
 

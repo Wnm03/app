@@ -66,8 +66,12 @@ const LifePriorityPanel = {
       }
     }).join('');
 
-    el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📌 Prioritas Hidup Pribadi</div>`
-      + rows;
+    // S702 (fitur collapse, permintaan eksplisit user): judul "📌
+    // Prioritas Hidup Pribadi" DIPINDAH ke markup statis (.dashhub-cat-head
+    // di index.html/app_production.html) supaya card ini bisa collapse
+    // (tap header) sama seperti kartu lain — 100% reuse
+    // toggleCardCollapse(), 0 rumus baru.
+    el.innerHTML = rows;
   },
 
 };

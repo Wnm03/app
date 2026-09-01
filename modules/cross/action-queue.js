@@ -98,7 +98,13 @@ const ActionQueue = {
       }
     }).join('');
 
-    el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">🗂️ Antrean Tindakan (${priorityItems.length})</div>`
+    // S702 (fitur collapse, permintaan eksplisit user): judul "🗂️
+    // Antrean Tindakan" DIPINDAH ke markup statis (.dashhub-cat-head di
+    // index.html/app_production.html) supaya card ini bisa collapse (tap
+    // header) sama seperti kartu lain — 100% reuse toggleCardCollapse(),
+    // 0 rumus baru. Angka jumlah item (dulu bagian judul) sekarang
+    // ditaruh di baris pertama body, TIDAK hilang.
+    el.innerHTML = `<div class="u-fs11 u-fw700 u-t2 u-mb6">${priorityItems.length} item</div>`
       + rows;
   },
 
