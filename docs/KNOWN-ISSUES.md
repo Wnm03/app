@@ -5,23 +5,27 @@
 
 Ditambahkan dari hasil audit eksternal (bukan bagian dari program
 modernisasi UI Tahap 1–8 di atas — domain berbeda: JavaScript/business
-logic, bukan CSS). Semua item berikut **belum diperbaiki**, status **OPEN**.
-Detail lengkap per item (severity, root cause, module, rekomendasi): lihat
-`docs/BUG_REGISTRY.md` §0a.
+logic, bukan CSS). **Update sesi S699 (2026-09-01)**: semua 6 item di
+bawah sudah lama **FIXED** di source (sesi 338/339/342/487/audit-s327/
+pre-existing) — cuma dokumen ini yang tidak pernah disinkronkan, sama pola
+stale-doc `TODO.md` temukan di sesi 487. Status dikoreksi jadi ✅. Detail
+lengkap & sitasi source per item: lihat `docs/BUG_REGISTRY.md` §0a.
 
-- 🔴 **BUG-FIN-001** — Validasi nilai positif hilang di `Piutang.save()`
-  dan `Debt.save()`. Severity P2.
-- 🔴 **BUG-001** — Fallback self-heal `_saveBillInner()` tidak memakai
+- ✅ **BUG-FIN-001** — Validasi nilai positif hilang di `Piutang.save()`
+  dan `Debt.save()`. Severity P2. **FIXED** — guard `nilai<=0` sudah ada.
+- ✅ **BUG-001** — Fallback self-heal `_saveBillInner()` tidak memakai
   `countFallbackBillPaymentCandidates()`, kandidat ambigu bisa salah
-  ter-link. Severity Medium-High.
-- 🔴 **BUG-002** — Mismatch `tx.amount` vs label "Jumlah Total per Periode".
-- 🔴 **BUG-003** — Interaksi `_saveBillInner()` dengan
-  `syncOutstandingSharedPiutang()`.
-- 🔴 **BUG-004** — `markBillPaid()`: `payMethod = b.kind`, kind `"utang"`
+  ter-link. Severity Medium-High. **FIXED** (sesi 338).
+- ✅ **BUG-002** — Mismatch `tx.amount` vs label "Jumlah Total per Periode".
+  **FIXED** (sesi 342).
+- ✅ **BUG-003** — Interaksi `_saveBillInner()` dengan
+  `syncOutstandingSharedPiutang()`. **FIXED** (sesi 339).
+- ✅ **BUG-004** — `markBillPaid()`: `payMethod = b.kind`, kind `"utang"`
   tidak terdaftar di `pmIcons`/dropdown filter metode. Severity Medium.
-- 🔴 **BUG-005** — `delBillArchive()` tidak memanggil
+  **FIXED** (v1216/sesi 487).
+- ✅ **BUG-005** — `delBillArchive()` tidak memanggil
   `refreshBillEverywhere()`/`renderBillList()` → Daftar Tagihan tab Lunas
-  jadi stale. Severity Medium.
+  jadi stale. Severity Medium. **FIXED** (audit s327).
 
 Rencana perbaikan (kalau sudah diprioritaskan): lihat `docs/TODO.md` §
 "Bill/Piutang/Debt — dari Sesi Audit 2026-08-01".
@@ -29,18 +33,25 @@ Rencana perbaikan (kalau sudah diprioritaskan): lihat `docs/TODO.md` §
 ## 7. Business Logic — Bill/Piutang/Debt, lanjutan (Sesi Audit-Docs 2, 2026-08-01)
 
 Hasil audit langsung (bukan input eksternal) atas 4 fungsi yang
-sebelumnya `PENDING AUDIT`. Detail lengkap: `docs/BUG_REGISTRY.md` §0a-2.
+sebelumnya `PENDING AUDIT`. **Update sesi S700 (2026-09-01)**: kedua bug
+di bawah sudah FIXED (fix landing sebelum sesi S646, dikonfirmasi
+`docs/BUG_REGISTRY.md` sejak koreksi S657) — dokumen ini belum ikut
+disinkronkan sampai sesi ini, sama pola stale-doc §6 di atas (dikoreksi
+S699). Detail lengkap: `docs/BUG_REGISTRY.md` §0a-2.
 
-- 🔴 **BUG-006** — `Debt.syncBill()` menghapus tagihan cicilan-utang lewat
+- ✅ **BUG-006** — `Debt.syncBill()` menghapus tagihan cicilan-utang lewat
   array filter langsung, tidak memanggil `removeOrphanedAutoPiutangForBill()`
   → piutang otomatis "Ditanggung Bersama" jadi orphan permanen kalau utang
-  ditandai Lunas/cicilan dinolkan. Severity P2 Medium.
-- 🔴 **BUG-007** — `revertBillFromDeletedTx()` (dipakai `delTx()` &
+  ditandai Lunas/cicilan dinolkan. Severity P2 Medium. **FIXED** —
+  regression test `tests/bug006-syncbill-orphan-piutang.test.js`.
+- ✅ **BUG-007** — `revertBillFromDeletedTx()` (dipakai `delTx()` &
   `deleteBillHistoryTx()`) mengembalikan saldo utang sebesar `t.amount`
   penuh tanpa memperhitungkan clamp `Math.max(0,...)` saat pembayaran
   utang overpay (lunasin sekaligus lebih besar dari sisa) — saldo utang
   jadi lebih besar dari seharusnya setelah transaksi pembayaran tsb
-  dihapus. Severity **P1 High**.
+  dihapus. Severity **P1 High**. **FIXED** — snapshot `debtNilaiBefore`
+  dipakai saat revert, regression test
+  `tests/bug007-overpayment-revert-debt.test.js`.
 
 Rencana perbaikan: lihat `docs/TODO.md` § "Bill/Piutang/Debt — Sesi
 Audit-Docs 2 (lanjutan)".

@@ -276,7 +276,7 @@
 
 - Judul: Validasi nilai positif hilang di `Piutang.save()` dan `Debt.save()`
 - Severity: P2
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-09-01, sesi S699) krn fix sudah landing tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-006/BUG-007/GAP3-AUD-001. `modules/finance/piutang-utang.js` sudah berisi komentar `FIX (BUG-FIN-001)` di `Debt._saveInner`/`Piutang._saveInner` (guard nilai<=0). `TODO.md` mencatat status DONE ini sejak sesi 487 tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi ini. Full suite tidak berubah sesi ini (docs-only): 5273/5273 pass.
 - Module: Finance (Piutang & Debt)
 - Function: `Piutang.save()`, `Debt.save()`
 - Root Cause: Not specified in audit input
@@ -290,7 +290,7 @@
 
 - Judul: Fallback self-heal `_saveBillInner()` tidak memakai `countFallbackBillPaymentCandidates()`
 - Severity: Medium-High
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-09-01, sesi S699) krn fix sudah landing (sesi 338) tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-006/BUG-007/GAP3-AUD-001. `modules/finance/tagihan-kalender.js` sudah memanggil `countFallbackBillPaymentCandidates()` di `_saveBillInner()` (guard `<=1` sebelum self-heal). `TODO.md` mencatat status DONE ini sejak sesi 487 tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi ini. Full suite tidak berubah sesi ini (docs-only): 5273/5273 pass.
 - Module: Bill/Tagihan
 - Function: `_saveBillInner()`
 - Root Cause: Fallback self-heal tidak memakai `countFallbackBillPaymentCandidates()` sehingga kandidat ambigu bisa salah ter-link.
@@ -304,7 +304,7 @@
 
 - Judul: Mismatch `tx.amount` vs label "Jumlah Total per Periode"
 - Severity: Not specified in audit input
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-09-01, sesi S699) krn fix sudah landing (sesi 342) tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-006/BUG-007/GAP3-AUD-001. `modules/finance/tagihan-kalender.js` sudah berisi komentar `FIX (BUG-002, sesi 342)` — mengirim `amt` (porsi sendiri) ke `t.amount`, bukan `rawAmt` (nilai total field #billAmt). `TODO.md` mencatat status DONE ini sejak sesi 487 tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi ini. Full suite tidak berubah sesi ini (docs-only): 5273/5273 pass.
 - Module: Bill/Tagihan
 - Function: Not specified in audit input
 - Root Cause: Not specified in audit input
@@ -318,7 +318,7 @@
 
 - Judul: Interaksi `_saveBillInner()` dengan `syncOutstandingSharedPiutang()`
 - Severity: Not specified in audit input
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-09-01, sesi S699) krn fix sudah landing (sesi 339) tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-006/BUG-007/GAP3-AUD-001. `modules/finance/tagihan-kalender.js` sudah berisi komentar `FIX (BUG-003, sesi 339)` — guard `!billEditFromArchive` supaya edit tagihan lunas/arsip tidak ditimpa sync piutang yang salah sasaran. `TODO.md` mencatat status DONE ini sejak sesi 487 tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi ini. Full suite tidak berubah sesi ini (docs-only): 5273/5273 pass.
 - Module: Bill/Tagihan ↔ Piutang
 - Function: `_saveBillInner()`, `syncOutstandingSharedPiutang()`
 - Root Cause: Not specified in audit input
@@ -332,7 +332,7 @@
 
 - Judul: `markBillPaid()` — `payMethod = b.kind`, kind `"utang"` tidak terdaftar di `pmIcons`/dropdown filter metode
 - Severity: Medium
-- Status: **OPEN**
+- Status: **FIXED** (v1216/S487) — `modules/finance/tx-list-cashflow.js`, `pmIcons` ditambah `tagihan:'🧾'` dan `utang:'📕'`. Regression test: `tests/s487-txhtml-pmicons-tagihan-utang-badge.test.js` (6 test). Status ini tercatat sejak sesi 487 di `TODO.md` tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi S699. Lihat `FIX-v1215-to-v1216-s487-pmicons-badge-tagihan-utang.md`.
 - Module: Bill/Tagihan
 - Function: `markBillPaid()`
 - Root Cause: kind `"utang"` tidak terdaftar di `pmIcons` maupun dropdown filter metode.
@@ -346,7 +346,7 @@
 
 - Judul: `delBillArchive()` tidak memanggil `refreshBillEverywhere()`/`renderBillList()`
 - Severity: Medium
-- Status: **OPEN**
+- Status: **FIXED** — entry di bawah TIDAK diedit (histori audit asli dipertahankan); status ini ditambahkan belakangan (verifikasi 2026-09-01, sesi S699) krn fix sudah landing (audit s327) tapi entry lama tidak pernah diupdate, sama pola penutupan BUG-006/BUG-007/GAP3-AUD-001. `modules/finance/tagihan-kalender.js`, `delBillArchive()` sudah memanggil `save();refreshBillEverywhere();` setelah hapus arsip. `TODO.md` mencatat status DONE ini sejak sesi 487 tapi `BUG_REGISTRY.md`/`docs/KNOWN-ISSUES.md`/`docs/AUDIT_MATRIX.md` tidak pernah disinkronkan — dikoreksi sesi ini. Full suite tidak berubah sesi ini (docs-only): 5273/5273 pass.
 - Module: Bill/Tagihan
 - Function: `delBillArchive()`
 - Root Cause: Tidak memanggil `refreshBillEverywhere()` atau `renderBillList()` setelah delete.
@@ -1287,6 +1287,32 @@ Status: **BY DESIGN**
   dikerjakan — status TETAP **OPEN** sampai seluruh 4 fase selesai &
   4 dead-read call site (§Impact.3 di atas) terverifikasi tampil benar
   dgn data holding produksi nyata.
+- **Update Sesi 467**: Fase 2 (UI Transaksi Beli/Jual/Dividen, §3.3) &
+  Fase 3 (UI Watchlist, §3.5) `AUDIT-BUILD-UI-INVESTASI-OPSI3.md` **SELESAI**.
+  File baru `modules/asset/investasi-tx-view.js` (`InvestmentTxUI`) — modal
+  `investmentTxModal` (riwayat transaksi + form tambah tipe Beli/Jual/
+  Dividen), 100% reuse `Investment.addTransaction()`/`deleteTransaction()`/
+  `getTransactions()` (0 rumus baru), dipicu dari tombol "💱 Riwayat
+  Transaksi" baru di `investmentModal` (`InvestmentTxUI.openFromEdit()`,
+  pola sama `InvestmentListUI.openOwnersModalForEdit()`). File baru
+  `modules/asset/investasi-watch-view.js` (`InvestmentWatchUI`) — card
+  "📈 Watchlist" baru di tab Investasi + modal `investmentWatchModal`,
+  100% reuse `Investment.getWatchlist()`/`addWatch()`/`updateWatch()`/
+  `removeWatch()`/`watchlistAlerts()` (0 kondisi alert baru); render()-nya
+  dipanggil dari `InvestmentListUI.render()` (1 titik SSOT, otomatis ikut
+  ter-refresh dari 2 call-site render tab Investasi yang sudah ada). 2 modal
+  baru terdaftar di `MODAL_HTML[94]`/`MODAL_HTML[95]` (`modals.js`,
+  `MODAL_VERSION` → `s467-investment-list-ui-test-coverage`) & kedua file
+  didaftarkan ke `GROUP_B` (`build.js`, tepat setelah
+  `investasi-list-view.js`). Test coverage baru:
+  `tests/investment-tx-watch-ui-s467.test.js` (20 test case, pola sama
+  `investment-list-ui-s466.test.js`) — `node --test tests/*.test.js` →
+  **3019/3019 lolos, 0 gagal** (2999 lama + 20 baru, 0 regresi).
+  Fase 4 (verifikasi 4 dead-read call site dgn data nyata) MASIH belum
+  dikerjakan — butuh smoke-test manual di browser dgn data holding
+  produksi nyata, tidak bisa dilakukan dari sandbox headless. Status TETAP
+  **OPEN** sampai Fase 4 selesai & keempat dead-read call site (§Impact.3
+  di atas) terverifikasi tampil benar dgn data nyata.
 - **Update Sesi 468**: Fase 4 (verifikasi 4 dead-read call site dgn data
   holding nyata) **SELESAI** — status BUG-INV-001 diubah jadi **FIXED**.
   File baru `tests/investment-dead-read-verification-s468.test.js` (9 test
@@ -1323,35 +1349,22 @@ Status: **BY DESIGN**
   transformasi data). `node --test tests/*.test.js` -> **3028/3028 lolos,
   0 gagal** (3019 test lama + 9 baru, 0 regresi). Seluruh 4 fase Opsi 3
   (Aktifkan) sekarang tuntas — **BUG-INV-001 status: FIXED.**
-- **Update Sesi 467**: Fase 2 (UI Transaksi Beli/Jual/Dividen, §3.3) &
-  Fase 3 (UI Watchlist, §3.5) `AUDIT-BUILD-UI-INVESTASI-OPSI3.md` **SELESAI**.
-  File baru `modules/asset/investasi-tx-view.js` (`InvestmentTxUI`) — modal
-  `investmentTxModal` (riwayat transaksi + form tambah tipe Beli/Jual/
-  Dividen), 100% reuse `Investment.addTransaction()`/`deleteTransaction()`/
-  `getTransactions()` (0 rumus baru), dipicu dari tombol "💱 Riwayat
-  Transaksi" baru di `investmentModal` (`InvestmentTxUI.openFromEdit()`,
-  pola sama `InvestmentListUI.openOwnersModalForEdit()`). File baru
-  `modules/asset/investasi-watch-view.js` (`InvestmentWatchUI`) — card
-  "📈 Watchlist" baru di tab Investasi + modal `investmentWatchModal`,
-  100% reuse `Investment.getWatchlist()`/`addWatch()`/`updateWatch()`/
-  `removeWatch()`/`watchlistAlerts()` (0 kondisi alert baru); render()-nya
-  dipanggil dari `InvestmentListUI.render()` (1 titik SSOT, otomatis ikut
-  ter-refresh dari 2 call-site render tab Investasi yang sudah ada). 2 modal
-  baru terdaftar di `MODAL_HTML[94]`/`MODAL_HTML[95]` (`modals.js`,
-  `MODAL_VERSION` → `s467-investment-list-ui-test-coverage`) & kedua file
-  didaftarkan ke `GROUP_B` (`build.js`, tepat setelah
-  `investasi-list-view.js`). Test coverage baru:
-  `tests/investment-tx-watch-ui-s467.test.js` (20 test case, pola sama
-  `investment-list-ui-s466.test.js`) — `node --test tests/*.test.js` →
-  **3019/3019 lolos, 0 gagal** (2999 lama + 20 baru, 0 regresi).
-  Fase 4 (verifikasi 4 dead-read call site dgn data nyata) MASIH belum
-  dikerjakan — butuh smoke-test manual di browser dgn data holding
-  produksi nyata, tidak bisa dilakukan dari sandbox headless. Status TETAP
-  **OPEN** sampai Fase 4 selesai & keempat dead-read call site (§Impact.3
-  di atas) terverifikasi tampil benar dgn data nyata.
-- Status: **OPEN** (Fase 1-3/4 selesai + test coverage `InvestmentListUI`/
-  `InvestmentTxUI`/`InvestmentWatchUI` selesai — lihat "Update Sesi 466
-  (lanjutan)" & "Update Sesi 467" di atas; Fase 4 masih belum dikerjakan)
+- Status: **FIXED** — entry di atas TIDAK diedit (histori audit asli
+  dipertahankan); baris status ini dikoreksi sesi S701 krn paragraf
+  "Update Sesi 468" (yang sudah menyatakan FIXED) sebelumnya tercetak
+  SEBELUM paragraf "Update Sesi 467" secara fisik di file — urutan
+  terbalik dari kronologi sesi (466→467→468) — sehingga baris Status
+  final di bawah ini sempat tidak pernah ikut ter-update & membeku di
+  OPEN, sama pola staleness yang dibereskan S699/S700 utk BUG-006/BUG-007/
+  BUG-FIN-001. Re-verifikasi source S701 (bukan cuma percaya dokumen):
+  Fase 1-4 seluruhnya ada & wired (`Investment.addHolding()`/
+  `addTransaction()`/`addWatch()` masing2 punya caller nyata di
+  `investasi-list-view.js`/`investasi-tx-view.js`/`investasi-watch-view.js`,
+  di luar `aset.js`/`aset-misc.js`), `tests/investment-dead-read-
+  verification-s468.test.js` 9/9 pass, `tests/investment-tx-watch-ui-
+  s467.test.js` 20/20 pass, `tests/investment-list-ui-s466.test.js`
+  15/15 pass. Paragraf "Update Sesi 467"/"468" di atas juga direorder
+  jadi kronologis sesi ini (docs-only, isi paragraf tidak diubah).
 - Confidence: **High** — murni fakta struktural dari pencarian
   `grep -rn` menyeluruh atas seluruh codebase non-test (bukan bergantung
   data/state runtime yang ambigu), didukung pernyataan eksplisit dari

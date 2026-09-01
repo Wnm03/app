@@ -220,22 +220,22 @@ findings that are inherently cross-domain.
 
 | File | Function | Audit Status | Classification | Notes |
 |---|---|---|---|---|
-| (Piutang module) | `Piutang.save()` | AUDITED | Bug — OPEN | BUG-FIN-001, `BUG_REGISTRY.md` §0a |
-| (Debt module) | `Debt.save()` | AUDITED | Bug — OPEN | BUG-FIN-001, `BUG_REGISTRY.md` §0a |
-| (Bill module) | `_saveBillInner()` | AUDITED | Bug — OPEN | BUG-001, BUG-003, `BUG_REGISTRY.md` §0a |
+| (Piutang module) | `Piutang.save()` | AUDITED | Bug — FIXED | BUG-FIN-001, `BUG_REGISTRY.md` §0a (status disinkronkan sesi S699) |
+| (Debt module) | `Debt.save()` | AUDITED | Bug — FIXED | BUG-FIN-001, `BUG_REGISTRY.md` §0a (status disinkronkan sesi S699) |
+| (Bill module) | `_saveBillInner()` | AUDITED | Bug — FIXED | BUG-001, BUG-003, `BUG_REGISTRY.md` §0a (status disinkronkan sesi S699) |
 | (Bill module) | `applyBillPaymentTxSync()` | AUDITED | Not specified in audit input | No finding recorded against this function in the audit input |
 | (Bill module) | `isLatestBillPaymentTx()` | AUDITED | Not specified in audit input | No finding recorded against this function in the audit input |
 | (Bill module) | `getBillArchiveEditSource()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
 | (Bill module) | `saveBill()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
-| (Bill module) | `markBillPaid()` | AUDITED | Bug — OPEN | BUG-004, `BUG_REGISTRY.md` §0a |
+| (Bill module) | `markBillPaid()` | AUDITED | Bug — FIXED | BUG-004, `BUG_REGISTRY.md` §0a (v1216/sesi 487) |
 | (Bill module) | `delBill()` | AUDITED | By Design | `BUG_REGISTRY.md` §0c |
-| (Bill module) | `delBillArchive()` | AUDITED | Bug — OPEN | BUG-005, `BUG_REGISTRY.md` §0a |
+| (Bill module) | `delBillArchive()` | AUDITED | Bug — FIXED | BUG-005, `BUG_REGISTRY.md` §0a (status disinkronkan sesi S699) |
 | (Piutang module) | `syncOutstandingSharedPiutang()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
 | (Piutang module) | `maybeCreateSharedPiutangFromBill()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
-| `modules/finance/piutang-utang.js` | `Debt.syncBill()` | AUDITED | Bug — OPEN | BUG-006, `BUG_REGISTRY.md` §0a-2 |
+| `modules/finance/piutang-utang.js` | `Debt.syncBill()` | AUDITED | Bug — FIXED | BUG-006, `BUG_REGISTRY.md` §0a-2 (status disinkronkan sesi S700; `BUG_REGISTRY.md` sudah FIXED sejak S657, tabel ini belum ikut) |
 | `modules/finance/tagihan-kalender.js` | `getBillPaidThisPeriodInfo()` | AUDITED | False Positive | `BUG_REGISTRY.md` §0b |
-| `modules/finance/tagihan-kalender.js` | `revertBillFromDeletedTx()` | AUDITED | Bug — OPEN | BUG-007, `BUG_REGISTRY.md` §0a-2 |
-| `modules/finance/tagihan-kalender.js` | `deleteBillHistoryTx()` | AUDITED | No independent finding (inherits BUG-007 via shared `revertBillFromDeletedTx()`) | `BUG_REGISTRY.md` §0a-2 |
+| `modules/finance/tagihan-kalender.js` | `revertBillFromDeletedTx()` | AUDITED | Bug — FIXED | BUG-007, `BUG_REGISTRY.md` §0a-2 (status disinkronkan sesi S700; `BUG_REGISTRY.md` sudah FIXED sejak S657, tabel ini belum ikut) |
+| `modules/finance/tagihan-kalender.js` | `deleteBillHistoryTx()` | AUDITED | No independent finding (inherits fix via shared `revertBillFromDeletedTx()`) | `BUG_REGISTRY.md` §0a-2 |
 
 **Sesi Audit-Docs 2 (2026-08-01, lanjutan):** ke-4 fungsi di atas yang
 tadinya `PENDING AUDIT` sudah diaudit langsung dari source code (bukan
