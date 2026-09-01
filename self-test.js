@@ -1614,8 +1614,68 @@ const r=TitipanReconcile.checkAll();
 // lagi menggagalkan tes. checkAll().ok/warnIfNotOk() di titipan-reconcile.js
 // TIDAK diubah (tetap AND dari 6 sub-check, dipakai console.warn saat
 // saveOwners() -- itu memang tempat semestinya sinyal ini muncul).
+// Fix (SESI FIX-2026-09-01-lanjutan): sub-check ke-7 `poolCommitment`
+// (checkPoolCommitment(), audit gap D.titipanPool/D.titipanCommitments vs
+// Dana Titipan tab -- lihat komentar lengkap di titipan-reconcile.js).
+// SENGAJA informasional/non-blocking, pola SAMA PERSIS ownershipDualSource
+// (S638 di atas): status OVER_ALLOCATED (pool atau per-owner) adalah KONDISI
+// KEUANGAN NYATA yang butuh keputusan user (tambah pokok/kurangi alokasi),
+// BUKAN bug sync yang bisa "diperbaiki otomatis" spt orphan/missing baris
+// Buku Utang -- tidak ada tombol "Perbaiki Gap" utk ini, jadi Tes Otomatis
+// TIDAK SEHARUSNYA menandainya gagal. `coreOk` (5 sub-check asli, tidak
+// berubah) tetap satu-satunya syarat lulus; poolCommitment.ok/poolStatus/
+// overAllocatedOwners ditulis di pesan (informasional) supaya kalau ini
+// sendirian yang false, pesan tetap menjelaskan kenapa.
+// Fix (SESI S675): sub-check ke-8 `returnVsLiability`
+// (checkReturnVsLiability(), audit gap recordReturn() dicatat tapi porsi
+// owner belum ikut dikecilkan di Aset/Investasi -- lihat komentar lengkap
+// di titipan-reconcile.js). SENGAJA informasional/non-blocking, pola SAMA
+// PERSIS poolCommitment di atas: gap ini KONDISI KEUANGAN NYATA yang butuh
+// keputusan user (owner sudah ambil kembali dana, tapi porsi kepemilikan
+// belum dikecilkan manual -- bisa di aset mana pun, tidak ada 1 jawaban
+// auto-repair pasti benar), BUKAN baris data yang bisa "diperbaiki
+// otomatis" spt orphan/missing. `coreOk` (5 sub-check asli, tidak berubah)
+// tetap satu-satunya syarat lulus; returnVsLiability.ok/flagged ditulis di
+// pesan (informasional) supaya kalau ini sendirian yang false, pesan tetap
+// menjelaskan kenapa.
+// Fix (SESI S676): sub-check ke-9 `returnVsAccountLiability`
+// (checkReturnVsAccountLiability(), audit gap #2 dari SESSION-NOTE-S675.md
+// -- checkReturnVsLiability() di atas TIDAK cakup titipan yang pokoknya
+// murni di akun berdiri-sendiri, karena `allocatedPrincipal`-nya (dari
+// DanaTitipanPortfolioAPI.build()) HANYA cakupan Aset+Investasi. Lihat
+// komentar lengkap di titipan-reconcile.js). SENGAJA informasional/
+// non-blocking, pola SAMA PERSIS returnVsLiability di atas: gap channel
+// Akun ini KONDISI KEUANGAN NYATA yang sama (owner sudah ambil kembali
+// dana, tapi porsi kepemilikan di akun belum dikecilkan manual), BUKAN
+// baris data yang bisa "diperbaiki otomatis". `coreOk` (5 sub-check asli,
+// tidak berubah) tetap satu-satunya syarat lulus;
+// returnVsAccountLiability.ok/flagged ditulis di pesan (informasional)
+// supaya kalau ini sendirian yang false, pesan tetap menjelaskan kenapa.
+// Fix (poin 4, sesi lanjutan hasil audit 2026-09-01): sub-check ke-10
+// `pendingOwnerReview` (checkPendingOwnerReview(), daftar transaksi yang
+// deductionOwnerId-nya dikosongkan repairTransactionOwnerRefs() krn
+// ambigu & belum diisi ulang manual -- lihat komentar lengkap di
+// titipan-reconcile.js). SENGAJA informasional/non-blocking, pola SAMA
+// PERSIS returnVsLiability/returnVsAccountLiability di atas: butuh user
+// mengisi ulang pemiliknya manual (tidak bisa ditebak otomatis, itu
+// sebabnya dikosongkan bukan ditebak), bukan baris data yang bisa
+// "diperbaiki otomatis". `coreOk` (5 sub-check asli, tidak berubah) tetap
+// satu-satunya syarat lulus; pendingOwnerReview.ok/pending ditulis di
+// pesan (informasional) supaya kalau ini sendirian yang false, pesan
+// tetap menjelaskan kenapa -- dan supaya jumlahnya kelihatan tiap Tes
+// Otomatis dijalankan, bukan cuma sesaat di console.warn tombol perbaikan.
 const coreOk = r.sync.ok && r.ownerIdConsistency.ok && r.debtNameStaleness.ok && r.accountSync.ok && r.transactionOwnerRefs.ok;
-_selfTestAssert(coreOk,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+', informasional -- tidak menggagalkan tes)');
+// Fix (poin 1, sesi lanjutan): sub-check ke-11 `ownerIdConflicts`
+// (checkOwnerIdConflicts(), grup nama pemilik yang dilewati
+// repairOwnerIdConsistency() krn tabrakan -- lihat komentar lengkap di
+// titipan-reconcile.js). SENGAJA informasional/non-blocking, pola SAMA
+// PERSIS pendingOwnerReview di atas: butuh review manual (bukan bug yang
+// bisa ditombol perbaiki otomatis -- itu justru KENAPA dilewati, bukan
+// digabung sembarangan). `coreOk` (5 sub-check asli, tidak berubah) tetap
+// satu-satunya syarat lulus; ownerIdConflicts.ok/conflicts ditulis di
+// pesan (informasional) supaya kalau ini sendirian yang false, pesan
+// tetap menjelaskan kenapa.
+_selfTestAssert(coreOk,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+', informasional -- tidak menggagalkan tes), poolCommitment.ok='+r.poolCommitment.ok+' (poolStatus:'+r.poolCommitment.poolStatus+' overAllocatedOwners:'+r.poolCommitment.overAllocatedOwners.length+', informasional -- tidak menggagalkan tes), returnVsLiability.ok='+r.returnVsLiability.ok+' (flagged:'+r.returnVsLiability.flagged.length+', informasional -- tidak menggagalkan tes), returnVsAccountLiability.ok='+r.returnVsAccountLiability.ok+' (flagged:'+r.returnVsAccountLiability.flagged.length+', informasional -- tidak menggagalkan tes), pendingOwnerReview.ok='+r.pendingOwnerReview.ok+' (pending:'+r.pendingOwnerReview.pending.length+', informasional -- tidak menggagalkan tes), ownerIdConflicts.ok='+r.ownerIdConflicts.ok+' (conflicts:'+r.ownerIdConflicts.conflicts.length+', informasional -- tidak menggagalkan tes)');
 }},
 ];
 }
@@ -1748,21 +1808,99 @@ toast('⚠️ Gagal menyalin, coba lagi');
 // cabang orphan), masing-masing HANYA kalau sisi itu memang punya gap.
 // Keduanya MENGUBAH data (bikin/hapus baris Buku Utang) makanya tetap satu
 // askConfirm() sebelum keduanya, konsisten dgn kontrak lama tombol ini.
+//
+// BUGFIX S675-lanjutan (audit "repairTitipanOrphans() buta terhadap cabang
+// Akun", pola bug SAMA PERSIS S621 di atas -- cuma kambuh lagi di cabang
+// yang ditambah BELAKANGAN setelah fix S621, jadi tidak ikut kesisir fix
+// itu): sebelum ini, satu-satunya pre-check/confirm/repair di fungsi ini
+// adalah TitipanReconcile.check() -- cabang Aset+Investasi SAJA. Kalau
+// TitipanReconcile.checkAccounts() (cabang Akun berdiri-sendiri, lihat
+// titipan-reconcile.js) melapor gap SEMENTARA cabang Aset/Investasi bersih
+// (mis. restore backup lama dari sebelum fitur sync Akun ada, atau skenario
+// apa pun sebelum save() sempat jalan sekali -- save() SUDAH memanggil
+// TitipanSync.reconcileAccounts() tiap kali, lihat features-helpers-global-
+// security.js, tapi kalau save() belum pernah jalan gap-nya tetap ada),
+// cabang `if(pre.ok)` di atas langsung toast "tidak ada gap" & RETURN --
+// FALSE ALL-CLEAR persis gejala S621, padahal Tes Otomatis sedang melapor
+// `accountSync.ok=false`. Fix: pre-check & confirm dialog sekarang ikut
+// baca checkAccounts(); kalau ada gap di situ, TitipanSync.reconcileAccounts()
+// (sudah idempotent, sudah dipakai di save()) ikut dipanggil di dalam
+// askConfirm() yang sama (0 dialog tambahan -- 1 tombol, 1 konfirmasi,
+// ketiga cabang). Guard ganda `typeof TitipanReconcile.checkAccounts`/
+// `typeof TitipanSync.reconcileAccounts` -- kalau salah satu belum dimuat,
+// cabang Akun dilewati diam-diam (0 regresi ke behavior lama, sama pola
+// guard lain di fungsi ini).
+//
+// WIRING SESI FIX-2026-09-01-lanjutan2 (menutup gap dicatat di
+// SESSION-NOTE-FIX-2026-09-01-lanjutan2.md: "sesi lalu baru menyediakan
+// repairOwnerIdConsistency()/repairDebtNameStaleness()/
+// repairTransactionOwnerRefs(), BELUM disambungkan ke tombol/data-action apa
+// pun"). Pola SAMA PERSIS penambahan cabang Akun (S675-lanjutan) di atas --
+// 3 pre-check baru (checkOwnerIdConsistency/checkDebtNameStaleness/
+// checkTransactionOwnerRefs) ikut dibaca di pre-check/pesan konfirmasi, 3
+// repair barunya ikut dipanggil di DALAM askConfirm() yang SAMA (0 dialog
+// tambahan -- tetap 1 tombol, 1 konfirmasi, sekarang total 6 cabang: 2 lama
+// (missing/orphan) + Akun + 3 baru). Guard `typeof TitipanReconcile.check*`/
+// `repair*` per cabang, pola sama seluruh cabang lain di fungsi ini --
+// build lama yang belum sempat upload titipan-reconcile.js terbaru tetap
+// aman (cabang itu dilewati diam-diam, bukan crash).
+// `ownerConflicts`/`txUnresolved` (dari repairOwnerIdConsistency()/
+// repairTransactionOwnerRefs(), lihat komentar keduanya di
+// titipan-reconcile.js) SENGAJA TIDAK menghentikan/mem-block toast sukses --
+// keduanya kasus yang MEMANG butuh review manual (bukan bug), jadi cukup
+// dicatat ke console.warn (pola sama `unresolved` cabang missing yang sudah
+// ada), tidak mengganggu alur.
 async function repairTitipanOrphans(){
 if(typeof TitipanReconcile==='undefined'){
 toast('⚠️ Modul TitipanReconcile belum termuat');
 return;
 }
 const pre=TitipanReconcile.check();
-if(pre.ok){
+const preAcc=(typeof TitipanReconcile.checkAccounts==='function')?TitipanReconcile.checkAccounts():{ok:true,missing:[],orphan:[]};
+const preOwnerId=(typeof TitipanReconcile.checkOwnerIdConsistency==='function')?TitipanReconcile.checkOwnerIdConsistency():{ok:true,divergent:[]};
+const preDebtName=(typeof TitipanReconcile.checkDebtNameStaleness==='function')?TitipanReconcile.checkDebtNameStaleness():{ok:true,stale:[]};
+const preTxOwner=(typeof TitipanReconcile.checkTransactionOwnerRefs==='function')?TitipanReconcile.checkTransactionOwnerRefs():{ok:true,orphan:[]};
+// Fix (poin 4, sesi lanjutan hasil audit 2026-09-01): backlog
+// checkPendingOwnerReview() (transaksi yg deductionOwnerId-nya dikosongkan
+// run SEBELUMNYA & belum diisi ulang manual) HARUS tetap kelihatan walau
+// ke-5 sub-check di atas kebetulan sudah bersih run ini -- kalau dihitung
+// SETELAH early-return "tidak ada gap" ini, backlog lama jadi tidak pernah
+// ketoast lagi (early-return keburu keluar duluan). Dihitung di sini,
+// SEBELUM early-return, supaya kedua jalur (ada gap baru / tidak ada gap
+// baru) sama-sama ikut menyebutkannya.
+const prePendingReview=(typeof TitipanReconcile.checkPendingOwnerReview==='function')?TitipanReconcile.checkPendingOwnerReview():{ok:true,pending:[]};
+// Fix (poin 1, sesi lanjutan): backlog checkOwnerIdConflicts() (grup nama
+// pemilik yang dilewati repairOwnerIdConsistency() krn tabrakan -- lihat
+// komentar lengkap di titipan-reconcile.js) HARUS tetap kelihatan juga
+// walau ke-5 sub-check di atas sudah bersih run ini, pola SAMA PERSIS
+// prePendingReview di atas -- dihitung SEBELUM early-return.
+const preOwnerConflicts=(typeof TitipanReconcile.checkOwnerIdConflicts==='function')?TitipanReconcile.checkOwnerIdConflicts():{ok:true,conflicts:[]};
+if(pre.ok&&preAcc.ok&&preOwnerId.ok&&preDebtName.ok&&preTxOwner.ok){
+const backlogMsgs=[];
+if(prePendingReview.pending.length){
+const idPreview=prePendingReview.pending.slice(0,5).map(p=>p.txId).join(', ')+(prePendingReview.pending.length>5?', dst':'');
+backlogMsgs.push('📝 '+prePendingReview.pending.length+' transaksi lama perlu diisi ulang pemilik potongannya manual (id: '+idPreview+')');
+}
+if(preOwnerConflicts.conflicts.length){
+const namePreview=Array.from(new Set(preOwnerConflicts.conflicts.map(c=>c.name))).slice(0,5).join(', ');
+backlogMsgs.push('⚠️ '+preOwnerConflicts.conflicts.length+' baris kepemilikan bertabrakan (nama: '+namePreview+') butuh review manual');
+}
+if(backlogMsgs.length){
+toast('✅ Tidak ada gap Dana Titipan baru. Tapi masih ada backlog lama: '+backlogMsgs.join('; '));
+}else{
 toast('✅ Tidak ada gap Dana Titipan yang perlu diperbaiki');
+}
 return;
 }
 const parts=[];
 if(pre.missing.length)parts.push(pre.missing.length+' baris yang seharusnya ada tapi belum tercatat (missing)');
 if(pre.orphan.length)parts.push(pre.orphan.length+' baris yang pemiliknya sudah tidak ada (orphan)');
+if(!preAcc.ok)parts.push((preAcc.missing.length+preAcc.orphan.length)+' baris dana titipan akun berdiri-sendiri belum tersinkron');
+if(!preOwnerId.ok)parts.push(preOwnerId.divergent.length+' nama pemilik dgn ID tidak konsisten antar Aset/Investasi');
+if(!preDebtName.ok)parts.push(preDebtName.stale.length+' nama di Buku Utang basi (belum sinkron pasca ganti nama pemilik)');
+if(!preTxOwner.ok)parts.push(preTxOwner.orphan.length+' transaksi menunjuk pemilik potongan yang sudah tidak valid');
 const ok=await askConfirm(
-'Ditemukan '+parts.join(' & ')+'. Baris "missing" akan DIBUAT/disinkron ulang (disamakan dgn porsi kepemilikan Aset/Investasi saat ini), baris "orphan" akan DIHAPUS dari Buku Utang. Lanjutkan?',
+'Ditemukan '+parts.join(' & ')+'. Baris "missing" akan DIBUAT/disinkron ulang (disamakan dgn porsi kepemilikan Aset/Investasi saat ini), baris "orphan" akan DIHAPUS dari Buku Utang'+(!preAcc.ok?', baris dana titipan akun berdiri-sendiri akan disinkron ulang (mengikuti saldo akun saat ini)':'')+(!preOwnerId.ok?', ID pemilik bernama sama akan disatukan ke 1 ID (mengutamakan yang sudah terdaftar, kasus yang bertabrakan dilewati utk review manual)':'')+(!preDebtName.ok?', nama di Buku Utang akan disamakan ke nama pemilik terbaru':'')+(!preTxOwner.ok?', pemilik potongan transaksi yang sudah tidak valid akan diperbarui (atau dikosongkan kalau ambigu)':'')+'. Lanjutkan?',
 {title:'Perbaiki Gap Dana Titipan',icon:'🔧',okText:'Ya, Perbaiki',danger:true}
 );
 if(!ok)return;
@@ -1776,17 +1914,78 @@ if(pre.orphan.length&&typeof TitipanReconcile.repairOrphans==='function'){
 const ro=TitipanReconcile.repairOrphans();
 removed=ro.removed;
 }
-if(synced>0||removed>0){
+let accSynced=0,accRemoved=0;
+if(!preAcc.ok&&typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function'){
+const ra=TitipanSync.reconcileAccounts();
+accSynced=ra.synced||0;
+accRemoved=ra.removed||0;
+}
+let ownerUnified=0,ownerConflicts=[];
+if(!preOwnerId.ok&&typeof TitipanReconcile.repairOwnerIdConsistency==='function'){
+const ru=TitipanReconcile.repairOwnerIdConsistency();
+ownerUnified=ru.unified;
+ownerConflicts=ru.conflicts||[];
+}
+let debtNameSynced=0;
+if(!preDebtName.ok&&typeof TitipanReconcile.repairDebtNameStaleness==='function'){
+const rd=TitipanReconcile.repairDebtNameStaleness();
+debtNameSynced=rd.synced;
+}
+let txFixed=0,txCleared=0,txUnresolved=[];
+if(!preTxOwner.ok&&typeof TitipanReconcile.repairTransactionOwnerRefs==='function'){
+const rt=TitipanReconcile.repairTransactionOwnerRefs();
+txFixed=rt.fixed;
+txCleared=rt.cleared;
+txUnresolved=rt.unresolved||[];
+}
+if(synced>0||removed>0||accSynced>0||accRemoved>0||ownerUnified>0||debtNameSynced>0||txFixed>0||txCleared>0){
 save();
 const msgs=[];
 if(synced>0)msgs.push(synced+' aset/holding disinkron ulang');
 if(removed>0)msgs.push(removed+' baris orphan dibersihkan');
+if(accSynced>0||accRemoved>0)msgs.push('akun berdiri-sendiri disinkron ('+accSynced+' disinkron'+(accRemoved>0?', '+accRemoved+' dibersihkan':'')+')');
+if(ownerUnified>0)msgs.push(ownerUnified+' baris ID pemilik disatukan');
+if(debtNameSynced>0)msgs.push(debtNameSynced+' nama di Buku Utang disinkron');
+if(txFixed>0||txCleared>0)msgs.push('pemilik potongan transaksi diperbaiki ('+txFixed+' disesuaikan'+(txCleared>0?', '+txCleared+' dikosongkan':'')+')');
 toast('🔧 '+msgs.join(', '));
 }else{
 toast('✅ Tidak ada baris yang diubah (gap sudah bersih)');
 }
 if(unresolved.length&&typeof console!=='undefined'&&console.warn){
 console.warn('[repairTitipanOrphans] gap "missing" tidak bisa diperbaiki otomatis -- aset/holding sumbernya sudah tidak ada di data:',unresolved);
+}
+if(ownerConflicts.length&&typeof console!=='undefined'&&console.warn){
+console.warn('[repairTitipanOrphans] grup nama pemilik dilewati krn tabrakan (1 entity sudah punya >1 ID sekaligus) -- butuh review manual:',ownerConflicts);
+}
+if(txUnresolved.length&&typeof console!=='undefined'&&console.warn){
+console.warn('[repairTitipanOrphans] deductionOwnerId transaksi dikosongkan (owner valid ambigu/tidak ada) -- butuh isi ulang manual:',txUnresolved);
+}
+// Fix (poin 4, sesi lanjutan hasil audit 2026-09-01): `txUnresolved` di atas
+// cuma console.warn (devtools tidak kebuka di HP -- lihat catatan sesi ini),
+// jadi user awam tidak pernah tahu ada transaksi yang perlu diisi ulang
+// pemiliknya. checkPendingOwnerReview() (titipan-reconcile.js) membaca
+// SELURUH backlog (bukan cuma yang barusan di-cleared run ini -- termasuk
+// yang tertunda dari run sebelumnya & belum diisi manual), jadi toast ini
+// tetap muncul tiap tombol ditekan selama backlog belum kosong, bukan cuma
+// sesaat setelah cleared>0.
+if(typeof TitipanReconcile.checkPendingOwnerReview==='function'){
+const pendingReview=TitipanReconcile.checkPendingOwnerReview().pending;
+if(pendingReview.length){
+const idPreview=pendingReview.slice(0,5).map(p=>p.txId).join(', ')+(pendingReview.length>5?', dst':'');
+toast('📝 '+pendingReview.length+' transaksi perlu diisi ulang pemilik potongannya manual di Buku Transaksi (id: '+idPreview+')');
+}
+}
+// Fix (poin 1, sesi lanjutan): `ownerConflicts` di atas juga cuma
+// console.warn -- toast backlog tambahan di sini, pola SAMA PERSIS
+// pendingOwnerReview barusan. Dihitung ULANG via checkOwnerIdConflicts()
+// (bukan pakai `ownerConflicts` run ini saja) supaya backlog dari run
+// SEBELUMNYA yang belum direview manual juga ikut kelihatan.
+if(typeof TitipanReconcile.checkOwnerIdConflicts==='function'){
+const conflictsNow=TitipanReconcile.checkOwnerIdConflicts().conflicts;
+if(conflictsNow.length){
+const namePreview=Array.from(new Set(conflictsNow.map(c=>c.name))).slice(0,5).join(', ');
+toast('⚠️ '+conflictsNow.length+' baris kepemilikan bertabrakan (nama: '+namePreview+') butuh review manual -- lihat Aset/Investasi');
+}
 }
 if(typeof runSelfTest==='function') runSelfTest();
 }
