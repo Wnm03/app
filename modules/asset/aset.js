@@ -159,8 +159,24 @@ box.innerHTML='Estimasi untung/rugi: <b class="'+cls+'">'+(untung>=0?'+':'')+fmt
 toggleZakatable(){
 Aset._zakatableState=!Aset._zakatableState;
 const btn=document.getElementById('assetZakatableBtn');
+if(btn){
 btn.textContent=Aset._zakatableState?'✓ Aktif':'Nonaktif';
 btn.className='chip-btn'+(Aset._zakatableState?' active':'');
+}
+// FIX (laporan user: dropdown "Kepemilikan" tidak otomatis ke "Milik
+// Sendiri" saat toggle "Hitung ke Zakat Maal" dinyalakan): Zakat Maal
+// SECARA KONSEP cuma menghitung porsi milik SENDIRI (lihat asetZakatable
+// di pajak-pbb-zakat.js -- MultiOwnerEngine.selfOwnedValue()), jadi aset
+// yang ditandai zakatable tapi Kepemilikan-nya masih INVESTOR/CUSTOMER/dst
+// (mis. lupa diubah dari default/aset sebelumnya) bikin datanya mismatch
+// sejak input. Saat toggle dinyalakan (BUKAN dimatikan), dropdown
+// #assetOwnership dipaksa ke 'SELF' -- 0 field baru, 0 validasi baru,
+// murni auto-fill 1 dropdown yang sudah ada. Toggle OFF sengaja TIDAK
+// mengubah dropdown balik (aset non-zakatable boleh kepemilikan apa saja).
+if(Aset._zakatableState){
+const ownSel=document.getElementById('assetOwnership');
+if(ownSel)ownSel.value='SELF';
+}
 },
 // _renderTitipanSummary(a) -- SESI C (tahap terakhir migrasi Dana Titipan -> Multi-
 // Owner Engine): gantiin toggleTitipan()/onTitipanOwnerTypeChange()/
