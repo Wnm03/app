@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's693-akumulasi-timelinew-target-click';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's693-akumulasi-timelinew-target-click';
+const APP_BUILD_VERSION = 's699-akumulasi-timelinew-target-click';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's699-akumulasi-timelinew-target-click';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -168,6 +168,16 @@ refSources:{}
 let curVehicleId='veh_1', curCnTab='bbm', cnPeriode='selamanya';
 let curPayMethod='tunai';
 let curMonth=new Date().getMonth(), curYear=new Date().getFullYear();
+// lapMonthOffset (Fix slide bulan sebelum/sesudah di filter Laporan) —
+// TERPISAH dari curMonth/curYear di atas (dipakai tab Keuangan/Daftar
+// Transaksi lewat changeMonth()/changeTxListMonth()) karena ‹ › di panel
+// filter Laporan cuma boleh geser bulan YANG SEDANG DILIHAT DI LAPORAN,
+// tanpa ikut menggeser bulan aktif tab Keuangan/dashboard lain yang
+// kebetulan baca curMonth/curYear yang sama. 0 = bulan berjalan (now),
+// +1/-1 = N bulan sesudah/sebelum now. Direset ke 0 tiap chip "Bulan Ini"
+// di-tap ulang (lihat setPeriode(), tx-list-cashflow.js) supaya user tidak
+// nyangkut di bulan lampau kalau pindah lalu balik ke chip yang sama.
+let lapMonthOffset=0;
 let curTxType='income', curCatatan='anak', filterPeriode='bulan';
 let cicilanLastInput='total';
 let cicilanSharedLastInput='pct';

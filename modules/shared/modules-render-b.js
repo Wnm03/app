@@ -218,10 +218,18 @@ const km={};
 txM.forEach(t=>{if(t.type==='transfer_in'||t.type==='transfer_out')return;if(!km[t.category])km[t.category]={inc:0,exp:0,n:0};if(t.type==='income')km[t.category].inc+=t.amount;else km[t.category].exp+=t.amount;km[t.category].n++;});
 const ks=Object.entries(km).sort((a,b)=>(b[1].inc+b[1].exp)-(a[1].inc+a[1].exp)).slice(0,3);
 const maxV=Math.max(...ks.map(([,v])=>v.inc+v.exp),1);
+// Fix (audit lanjutan S697, item tertunda: "kategori di dashboard
+// ringkasan bisa dapat pola klik-ke-sumber yang sama seperti Fix 1") —
+// tiap baris kategori dibungkus data-action="showFilteredTx" + data-args,
+// pola SAMA PERSIS dgn #lapKat di renderLaporan() (lihat komentar di
+// fungsi itu). Tap kategori buka filterTxModal isi transaksi kategori itu
+// dalam scope 'dashboard' (bulan berjalan) — scope 'dashboard' di
+// showFilteredTx() (filter-laporan.js) ditambah guard `kat` yang sama
+// persis dgn scope 'laporan' utk fix ini. 0 perubahan visual/HTML lain.
 katEl.innerHTML=ks.length?ks.map(([k,v])=>{
 const val=v.inc+v.exp,pct=Math.round((val/maxV)*100);
 const col=v.inc>v.exp?'var(--accent3)':'var(--accent2)';
-return`<div class="cat-bar"><div class="cat-bar-head"><span style="font-weight:500">${escapeHtml(k)} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+return`<div class="cat-bar u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['dashboard','all','📁 '+k,null,k]))}"><div class="cat-bar-head"><span style="font-weight:500">${escapeHtml(k)} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
 }).join(''):'<div class="u-fs12t2">Belum ada transaksi bulan ini.</div>';
 }
 
@@ -419,6 +427,33 @@ billEl.innerHTML='';
 }
 
 function renderLaporan(){
+// lapMonthLabel (Fix "slide bulan sebelum/sesudah di filter Laporan", S695)
+// — label ‹ bulan › di panel filter Laporan, pola sama txListMonthLabel
+// (renderKeuangan()) TAPI baca now+lapMonthOffset (state terpisah, lihat
+// komentar lapMonthOffset di features-helpers-global-security.js). Guard
+// elemen: nav ini cuma ada kalau filterPeriode==='bulan' (toggle di
+// setPeriode(), tx-list-cashflow.js).
+//
+// AUDIT S697 (koreksi): fungsi ini SEBELUMNYA salah diterapkan ke
+// modules/modules-render.js (S694/S695) -- file itu TERKONFIRMASI dead
+// code, 0 referensi di scripts/build.js/index.html, tidak pernah ikut
+// bundle (lihat PATCH-README-cleanup-8-dead-files-modules-render-legacy.md,
+// yang sudah mengonfirmasi file ini seharusnya dihapus tapi belum
+// dieksekusi manual di snapshot ini). renderLaporan() yang BENAR-BENAR
+// dipanggil browser adalah fungsi INI (modules/shared/modules-render-b.js,
+// dimuat lewat GROUP_A scripts/build.js). Akibatnya label bulan & klik
+// kategori (di bawah) TIDAK PERNAH tampil di app nyata walau test S694/
+// S695 lolos (test itu load file dead-nya langsung lewat loadSource,
+// tidak lewat urutan bundle asli, jadi tidak menangkap masalah ini).
+// Fix dipindah/diterapkan ULANG di sini (fungsi yang live), TIDAK
+// mengubah file dead-nya (dibiarkan apa adanya, sudah lama begitu, di
+// luar scope sesi ini utk dihapus).
+const lapMonthLabelEl=document.getElementById('lapMonthLabel');
+if(lapMonthLabelEl){
+const _now=new Date();
+const _base=new Date(_now.getFullYear(),_now.getMonth()+lapMonthOffset,1);
+lapMonthLabelEl.textContent=MONTHS_FULL[_base.getMonth()]+' '+_base.getFullYear();
+}
 const {from,to}=getRange();
 const f=getLaporanFilters();
 const filterSig=JSON.stringify({from:+from,to:+to,f});
@@ -497,7 +532,18 @@ const badgeCol=naik?'var(--accent2)':(turun?'var(--accent3)':'var(--text2)');
 const arrow=naik?'▲':(turun?'▼':'≈');
 vsAvgHtml=`<div style="font-size:11px;color:${badgeCol};margin-top:2px">${arrow} ${selisihPct>0?'+':''}${selisihPct}% vs rata-rata bulanan (${fmt(avg)})</div>`;
 }
-return`<div class="cat-bar"><div class="cat-bar-head"><span style="font-weight:500">${k} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>${vsAvgHtml}</div>`;
+// Fix (permintaan user: "kategori di Laporan bisa diklik ke transaksi
+// asal") — tiap baris kategori dibungkus data-action="showFilteredTx" +
+// data-args, pola sama data-action lain di file ini. Tap kategori buka
+// filterTxModal isi transaksi kategori itu, tetap ikut filter Laporan yang
+// lagi aktif (periode/tipe/dll, lihat showFilteredTx() argumen ke-5 `kat`
+// di filter-laporan.js). 0 perubahan visual/HTML lain di baris ini.
+//
+// AUDIT S697: SEBELUMNYA fix ini (S694) diterapkan ke modules/modules-
+// render.js -- file dead code (lihat komentar renderLaporan() di atas
+// fungsi ini utk detail) -- jadi tidak pernah aktif di app nyata. Fix
+// dipindah ke sini (renderLaporan() yang BENAR-BENAR live).
+return`<div class="cat-bar u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['laporan','all','📁 '+k,null,k]))}"><div class="cat-bar-head"><span style="font-weight:500">${k} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>${vsAvgHtml}</div>`;
 }).join(''):'<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Belum ada data</div></div>';
 const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
 const visibleCount=Math.min(sorted.length,lapTxPage*TX_PAGE_SIZE);
