@@ -9,14 +9,40 @@
 // maupun dari file lintas-bundle lain (modules-calc.js & aset.js memanggil
 // openTargetModal/onTargetDanaDaruratToggle utk jalan pintas "+ Buat
 // targetnya sekarang" dari banner Dana Darurat).
-function openTargetModal(){
-['tName','tAmt','tSaved'].forEach(id=>document.getElementById(id).value='');
+// SESI S692 (lanjutan AUDIT-RENCANA-kartu-klik-ke-sumber, linimasa target-*
+// masih tertunda di S691 -- butuh fitur edit-by-id di sini dulu sebelum baris
+// TimelineW.goals() 'target-'+t.id aman diklik ke sumbernya): openTargetModal
+// sekarang terima id opsional. Tanpa id / id tidak ketemu = perilaku LAMA
+// (mode tambah, 0 breaking change). Dengan id valid = mode edit, field
+// diisi dari D.targets yg cocok & _editingTargetId dicatat supaya
+// saveTarget() tahu harus UPDATE (bukan push entry baru).
+var _editingTargetId=null;
+function openTargetModal(id){
+const target=id?(D.targets||[]).find(t=>sameId(t.id,id)):null;
+_editingTargetId=target?id:null;
+['tName','tAmt','tSaved'].forEach(elId=>document.getElementById(elId).value='');
 document.getElementById('tEmoji').value='🎯';
 document.getElementById('tDanaDarurat').checked=false;
 document.getElementById('tDanaDaruratHint').style.display='none';
 populateAccFilters();
 document.getElementById('tAcc').value='';
 document.getElementById('tSavedWrap').style.display='block';
+const titleEl=document.getElementById('targetModalTitle');
+if(target){
+document.getElementById('tName').value=target.name||'';
+document.getElementById('tAmt').value=target.amount||'';
+document.getElementById('tEmoji').value=target.emoji||'🎯';
+document.getElementById('tDanaDarurat').checked=!!target.isDanaDarurat;
+if(target.accountId){
+document.getElementById('tAcc').value=target.accountId;
+document.getElementById('tSavedWrap').style.display='none';
+}else{
+document.getElementById('tSaved').value=target.saved||'';
+}
+if(titleEl)titleEl.textContent='Edit Target';
+}else if(titleEl){
+titleEl.textContent='Tambah Target';
+}
 openModal('targetModal');
 }
 function onTargetAccChange(){
@@ -49,6 +75,17 @@ const accId=document.getElementById('tAcc').value||null;
 const saved=accId?0:(parseFloat(document.getElementById('tSaved').value)||0);
 const isDanaDarurat=document.getElementById('tDanaDarurat').checked;
 if(isDanaDarurat)D.targets.forEach(t=>{t.isDanaDarurat=false;});
+if(_editingTargetId){
+const idx=(D.targets||[]).findIndex(t=>sameId(t.id,_editingTargetId));
+_editingTargetId=null;
+if(idx>=0){
+D.targets[idx]={...D.targets[idx],name,amount:amt,saved,accountId:accId,emoji:document.getElementById('tEmoji').value||D.targets[idx].emoji||'🎯',isDanaDarurat};
+}
+save();closeModal('targetModal');renderSettings();
+if(typeof AlokasiAset!=='undefined')AlokasiAset.renderAll();
+toast('✅ Target diperbarui');
+return;
+}
 D.targets.push({id:uid(),name,amount:amt,saved,accountId:accId,emoji:document.getElementById('tEmoji').value||'🎯',isDanaDarurat});
 save();closeModal('targetModal');renderSettings();
 if(typeof AlokasiAset!=='undefined')AlokasiAset.renderAll();

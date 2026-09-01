@@ -1,6 +1,33 @@
 // modules/finance/finance-dashboard.js — Finance Dashboard & AI Hook Foundation
 // (Sesi 75, Batch 6). Lihat docs/BATCH_PLAN.md § Batch 6.
 //
+// FINANCE_DASHBOARD_CARD_NAV_TARGETS (S690 — Audit "kartu klik->sumber data"):
+// tujuan navigasi 4 kartu inti #findashGrid. MURNI DATA (0 logic navigasi
+// baru), format {page,tab,subtab,goTo} SAMA PERSIS pola
+// ASSET_MAINTENANCE_CARD_NAV_TARGETS (asset-maintenance-presenter.js,
+// S252) & CARD_NAV_TARGETS lain (Shop/Vehicle presenter) — dieksekusi lewat
+// dashHubNavigateToFeature() yang SUDAH ADA. Sebelum sesi ini 4 kartu ini
+// TIDAK punya onClick sama sekali (satu2nya di file ini yang belum, sisanya
+// _sparepartCards() sudah lewat goSparepart() dari sesi lain) — kelewat dari
+// batch S250-252 yang sudah cover Asset/Shop/Vehicle. Semua target VERIFIKASI
+// manual ada di index.html/app_production.html, 0 tab/subtab/container baru:
+//   netWorth  -> Keuangan > Laporan > Ringkasan (panel Saldo Akun + Aset
+//                Keluarga, komponen pembentuk Kekayaan Bersih; findashGrid
+//                sendiri juga ada di subtab ini, jadi kartu ini scroll ke
+//                dirinya + komponen di atasnya)
+//   cashFlow  -> Keuangan > Laporan > Arus Kas & Kategori (subtab aruskas,
+//                match langsung dgn angka "Arus Kas Bulan Ini")
+//   budget    -> Keuangan > Anggaran (tab top-level 'budget', KEU_TAB_IDX)
+//   health    -> Dashboard Hub > #financialHealthScoreWrap (panel breakdown
+//                skor kesehatan yg sudah dibuat khusus, S98 — target paling
+//                presisi dari 4 kartu ini)
+const FINANCE_DASHBOARD_CARD_NAV_TARGETS = Object.freeze({
+  netWorth: { page: 'keuangan', tab: 'laporan', subtab: 'ringkasan' },
+  cashFlow: { page: 'keuangan', tab: 'laporan', subtab: 'aruskas' },
+  budget: { page: 'keuangan', tab: 'budget' },
+  health: { page: 'dashboard-hub', goTo: 'financialHealthScoreWrap' },
+});
+//
 // PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE
 // FinanceIntelligence.summary() (modules/finance/finance-intelligence.js,
 // Sesi 74) — TIDAK ada rumus baru, TIDAK menghitung ulang cashflow/budget/
@@ -140,9 +167,10 @@ const FinanceDashboard = {
   // Dashboard/Report/Home konsisten (SSOT).
   _netWorthCard() {
     const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
+    const onClick = { action: 'dashHubNavigateToFeature', args: [FINANCE_DASHBOARD_CARD_NAV_TARGETS.netWorth] };
     if (typeof Kekayaan === 'undefined' || typeof Kekayaan.currentNetWorth !== 'function'
       || typeof totalSaldoAkun !== 'function' || typeof totalDebtValue !== 'function') {
-      return { icon: '💰', label: 'Kekayaan Bersih', value: '—', cls: '' };
+      return { icon: '💰', label: 'Kekayaan Bersih', value: '—', cls: '', onClick };
     }
     const saldo = totalSaldoAkun();
     const debt = totalDebtValue();
@@ -153,6 +181,7 @@ const FinanceDashboard = {
       value: (net < 0 ? '-' : '') + money(Math.abs(net)),
       cls: net < 0 ? 'red' : 'green',
       sub: `Saldo ${money(saldo)} · Utang ${money(debt)}`,
+      onClick,
     };
   },
 
@@ -161,8 +190,9 @@ const FinanceDashboard = {
   // projected dari computeCashflowForecast() — 0 recompute di sini).
   _cashFlowCard(cf) {
     const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
+    const onClick = { action: 'dashHubNavigateToFeature', args: [FINANCE_DASHBOARD_CARD_NAV_TARGETS.cashFlow] };
     if (!cf || !cf.ok) {
-      return { icon: '💸', label: 'Arus Kas', value: '—', cls: '', sub: cf && cf.reason };
+      return { icon: '💸', label: 'Arus Kas', value: '—', cls: '', sub: cf && cf.reason, onClick };
     }
     const net = cf.currentMonth.net;
     const projected = cf.projected;
@@ -172,6 +202,7 @@ const FinanceDashboard = {
       value: (net < 0 ? '-' : '') + money(Math.abs(net)),
       cls: net < 0 ? 'red' : 'green',
       sub: projected != null ? `Proyeksi 30 hari: ${(projected < 0 ? '-' : '') + money(Math.abs(projected))}` : undefined,
+      onClick,
     };
   },
 
@@ -180,8 +211,9 @@ const FinanceDashboard = {
   // getEffectiveLimit() — 0 recompute di sini).
   _budgetCard(bs) {
     const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
+    const onClick = { action: 'dashHubNavigateToFeature', args: [FINANCE_DASHBOARD_CARD_NAV_TARGETS.budget] };
     if (!bs || !bs.ok) {
-      return { icon: '📊', label: 'Anggaran', value: '—', cls: '', sub: bs && bs.reason };
+      return { icon: '📊', label: 'Anggaran', value: '—', cls: '', sub: bs && bs.reason, onClick };
     }
     const pct = Math.round((bs.overallPct || 0) * 100);
     return {
@@ -190,14 +222,16 @@ const FinanceDashboard = {
       value: pct + '%',
       cls: bs.overCount > 0 ? 'red' : (pct >= 80 ? 'orange' : 'green'),
       sub: `${money(bs.totalUsed)} dari ${money(bs.totalLimit)}${bs.overCount > 0 ? ` · ${bs.overCount} lewat batas` : ''}`,
+      onClick,
     };
   },
 
   // _healthCard(hs) — hs = FinanceIntelligence.summary().healthScore, dipakai
   // APA ADANYA (score/label sudah final dari healthScore() — 0 recompute).
   _healthCard(hs) {
+    const onClick = { action: 'dashHubNavigateToFeature', args: [FINANCE_DASHBOARD_CARD_NAV_TARGETS.health] };
     if (!hs) {
-      return { icon: '❤️', label: 'Skor Kesehatan Finansial', value: '—', cls: '' };
+      return { icon: '❤️', label: 'Skor Kesehatan Finansial', value: '—', cls: '', onClick };
     }
     const cls = hs.score >= 80 ? 'green' : hs.score >= 60 ? '' : hs.score >= 40 ? 'orange' : 'red';
     return {
@@ -206,6 +240,7 @@ const FinanceDashboard = {
       value: `${hs.score}/100`,
       cls,
       sub: hs.label,
+      onClick,
     };
   },
 
