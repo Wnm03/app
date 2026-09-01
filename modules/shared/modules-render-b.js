@@ -541,8 +541,8 @@ const pct=Math.min(100,Math.round((saved/t.amount)*100));
 const col=pct>=100?'green':pct>=50?'orange':'purple';
 const linkTag=acc?`<span class="u-fs11 u-r99 u-cacc u-ml4" style="background:var(--surface);border:1px solid var(--border2);padding:2px 7px">🔗 ${escapeHtml(acc.name)}</span>`:'';
 const daruratTag=t.isDanaDarurat?`<span class="u-fs10 u-fw700 u-cacc2 u-r99 u-ml4" style="background:var(--accent2-soft);padding:2px 7px">🚨 DARURAT</span>`:'';
-const actionsHtml=acc?`<button class="btn btn-sm btn-ghost u-flex1" data-action="showTargetAccountTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">📋 Lihat Transaksi</button><button class="btn btn-sm btn-danger" data-action="delTarget" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>`
-:`<button class="btn btn-sm btn-ghost u-flex1" data-action="addTarget" data-args="${escapeHtml(JSON.stringify([i]))}">+ Tambah</button><button class="btn btn-sm btn-danger" data-action="delTarget" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>`;
+const actionsHtml=acc?`<button class="btn btn-sm btn-ghost u-flex1" data-action="showTargetAccountTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">📋 Lihat Transaksi</button><button class="btn btn-sm btn-ghost" data-action="openTargetModal" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Edit">✏️</button><button class="btn btn-sm btn-danger" data-action="delTarget" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>`
+:`<button class="btn btn-sm btn-ghost u-flex1" data-action="addTarget" data-args="${escapeHtml(JSON.stringify([i]))}">+ Tambah</button><button class="btn btn-sm btn-ghost" data-action="openTargetModal" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Edit">✏️</button><button class="btn btn-sm btn-danger" data-action="delTarget" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>`;
 let daruratInfo='';
 if(t.isDanaDarurat&&typeof FI!=='undefined'){
 const avgBulanan=FI.annualExpense()/12;

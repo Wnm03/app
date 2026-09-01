@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s649-asset-owners-bagi-rata-d2-hardening-part1';
+const MODULE_RENDER_VERSION='s693-akumulasi-timelinew-target-click';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -691,6 +691,7 @@ const daysToDanger=Math.max(1,Math.round((dangerDate-today)/86400000));
 return `<div class="u-r10 u-cacc2 u-fs13 u-fw600" style="padding:10px;background:var(--accent2-soft)">⚠️ Berpotensi MINUS ${fmt(Math.abs(running))} sekitar ${dangerDate.toLocaleDateString('id-ID',{day:'numeric',month:'long'})} kalau tidak ada pemasukan tambahan.
         <div class="u-fw400 u-mt6 u-fs12">${cashflowActionSuggestion(Math.abs(running),daysToDanger)}</div></div>`;
 })()}
+    <div class="u-fs12 u-cacc u-tar u-mt8 u-pointer" data-action="openBillCalendar">📅 Lihat Tagihan yang Dihitung →</div>
     </div>
   `;
 applyOneCardCollapsePref('cashflowForecastCard');
