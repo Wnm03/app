@@ -192,20 +192,23 @@ const totalItems={};
 pending.forEach(c=>c.items.forEach(i=>{totalItems[i.name]=(totalItems[i.name]||0)+i.qty;}));
 const checklistHTML=Object.entries(totalItems).map(([name,qty])=>`<div class="siap-pulang-item"><span class="u-fs18">🪨</span><div class="u-flex1 u-fs13 u-fw600">${escapeHtml(name)}</div><span class="acc-chip">${qty}x</span></div>`).join('');
 const ordersHTML=pending.map(c=>`
-      <div class="siap-pulang-item">
+      <div class="siap-pulang-item u-pointer" data-action="Order.openEditModal" data-args="${escapeHtml(JSON.stringify([c.id]))}">
         <div class="u-flex1">
           <div class="u-fs13 u-fw600">${c.customer&&c.customer.name?escapeHtml(c.customer.name):'Pelanggan'} · ${escapeHtml(c.items.map(i=>i.name+' x'+i.qty).join(', '))}</div>
           <div class="u-fs12t2">${c.date}${c.customer&&c.customer.phone?' · '+escapeHtml(c.customer.phone):''}</div>
         </div>
-        <button class="btn btn-sm btn-primary" data-action="markShopDelivered" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Hapus">✅ Sudah</button>
+        <button class="btn btn-sm btn-primary" data-stop="1" data-action="markShopDelivered" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Hapus">✅ Sudah</button>
       </div>`).join('');
 wrap.innerHTML=`
-      <div class="card-title">📦 Siap Pulang — Barang Dibawa</div>
+      <div class="card-title">📦 Siap Pulang — Barang Dibawa <span class="card-collapse-toggle" id="siapPulangCard-chev" data-action="toggleCardCollapse" data-args='["siapPulangCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
+      <div class="card-collapse-body" id="siapPulangCard-cbody">
       <div class="u-fs12 u-t2 u-mb8">Pre-order pelanggan yang belum diserahkan. Pastikan dibawa pas pulang ke Pekalongan ya!</div>
       ${checklistHTML}
       <div class="div"></div>
       ${ordersHTML}
+      </div>
     `;
+applyOneCardCollapsePref('siapPulangCard');
 }
 };
 
@@ -786,12 +789,14 @@ document.getElementById('customerDetailTitle').textContent=c.name+(c.orders.leng
 body.innerHTML=`
       <div class="u-fs12 u-t2 u-mb10">${c.phone?escapeHtml(c.phone):'Tanpa no. HP'}${c.address?' · '+escapeHtml(c.address):''}</div>
       <div class="u-flex u-gap8" style="margin-bottom:14px">${waBtn}</div>
-      <div class="card-title u-p0 u-mb8">💰 Riwayat Harga per Produk</div>
-      ${priceHistHTML||'<div class="u-fs12t2">Belum ada data</div>'}
+      <div class="card-title u-p0 u-mb8">💰 Riwayat Harga per Produk <span class="card-collapse-toggle" id="custPriceHistCard-chev" data-action="toggleCardCollapse" data-args='["custPriceHistCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
+      <div class="card-collapse-body" id="custPriceHistCard-cbody">${priceHistHTML||'<div class="u-fs12t2">Belum ada data</div>'}</div>
       <div class="div"></div>
-      <div class="card-title u-p0 u-mb8">📋 Semua Transaksi (${orders.length}x)</div>
-      ${orderListHTML}
+      <div class="card-title u-p0 u-mb8">📋 Semua Transaksi (${orders.length}x) <span class="card-collapse-toggle" id="custAllTxCard-chev" data-action="toggleCardCollapse" data-args='["custAllTxCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
+      <div class="card-collapse-body" id="custAllTxCard-cbody">${orderListHTML}</div>
     `;
+applyOneCardCollapsePref('custPriceHistCard');
+applyOneCardCollapsePref('custAllTxCard');
 openModal('customerDetailModal');
 },
 _acList(){
