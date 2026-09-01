@@ -159,24 +159,8 @@ box.innerHTML='Estimasi untung/rugi: <b class="'+cls+'">'+(untung>=0?'+':'')+fmt
 toggleZakatable(){
 Aset._zakatableState=!Aset._zakatableState;
 const btn=document.getElementById('assetZakatableBtn');
-if(btn){
 btn.textContent=Aset._zakatableState?'✓ Aktif':'Nonaktif';
 btn.className='chip-btn'+(Aset._zakatableState?' active':'');
-}
-// FIX (laporan user: dropdown "Kepemilikan" tidak otomatis ke "Milik
-// Sendiri" saat toggle "Hitung ke Zakat Maal" dinyalakan): Zakat Maal
-// SECARA KONSEP cuma menghitung porsi milik SENDIRI (lihat asetZakatable
-// di pajak-pbb-zakat.js -- MultiOwnerEngine.selfOwnedValue()), jadi aset
-// yang ditandai zakatable tapi Kepemilikan-nya masih INVESTOR/CUSTOMER/dst
-// (mis. lupa diubah dari default/aset sebelumnya) bikin datanya mismatch
-// sejak input. Saat toggle dinyalakan (BUKAN dimatikan), dropdown
-// #assetOwnership dipaksa ke 'SELF' -- 0 field baru, 0 validasi baru,
-// murni auto-fill 1 dropdown yang sudah ada. Toggle OFF sengaja TIDAK
-// mengubah dropdown balik (aset non-zakatable boleh kepemilikan apa saja).
-if(Aset._zakatableState){
-const ownSel=document.getElementById('assetOwnership');
-if(ownSel)ownSel.value='SELF';
-}
 },
 // _renderTitipanSummary(a) -- SESI C (tahap terakhir migrasi Dana Titipan -> Multi-
 // Owner Engine): gantiin toggleTitipan()/onTitipanOwnerTypeChange()/
@@ -641,6 +625,20 @@ if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{deletedId:id});
 Aset.renderList();renderKekayaanBersih();hitungZakatMaal();renderAccGrid();renderDashAccList();renderLapAccList();
 if((hadTitipanDebt||(a&&a.owners&&a.owners.length))&&typeof renderDebtList==='function')renderDebtList();
 },
+// BUGFIX S705 (audit pola sama "0 reaksi" S601/S608 InvestmentListUI/Aset.renderList):
+// Penyusutan.renderList()/PajakAset.renderList()/LaporanAset.renderList() SEBELUMNYA
+// dipanggil berurutan TANPA try/catch dari 4 titik di Aset.renderList() -- 1 fungsi throw
+// (mis. data aset korup) merambat ke pemanggil, membatalkan panggilan berikutnya
+// (AssetInsight.render() ikut batal) dan di alur delete-aset (Aset.delete()) baris
+// setelah Aset.renderList() (renderAccGrid/renderDashAccList/renderLapAccList) ikut
+// batal jalan. Fix: 1 titik perbaikan (dipanggil dari ke-4 tempat), bungkus tiap kartu
+// laporan dgn try/catch sendiri2 -- 1 kartu gagal TIDAK menjatuhkan 2 lainnya maupun
+// pemanggil. 0 perubahan di aset-reports.js (isi ketiga renderList() itu sendiri 0 disentuh).
+_safeRenderReports(){
+try{Penyusutan.renderList();}catch(err){if(typeof console!=='undefined'&&console.error)console.error('[Aset._safeRenderReports] Penyusutan.renderList gagal',err);}
+try{PajakAset.renderList();}catch(err){if(typeof console!=='undefined'&&console.error)console.error('[Aset._safeRenderReports] PajakAset.renderList gagal',err);}
+try{LaporanAset.renderList();}catch(err){if(typeof console!=='undefined'&&console.error)console.error('[Aset._safeRenderReports] LaporanAset.renderList gagal',err);}
+},
 renderList(){
 const el=document.getElementById('assetList');
 if(!el)return;
@@ -686,11 +684,11 @@ const migratedBanner=migratedCount?`<div class="tx-item u-pointer" data-action="
 // TIDAK saling menggantikan.
 const ownerFilterBar=Aset._renderFilterBar(list);
 const filteredList=list.filter(Aset._assetMatchesFilter);
-if(!list.length){el.innerHTML=ownerFilterBar+(migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>');Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
+if(!list.length){el.innerHTML=ownerFilterBar+(migratedBanner||'<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Belum ada aset tercatat</div></div>');Aset.renderDashboard();Aset.renderInvestasi();Aset._safeRenderReports();AssetInsight.render();return;}
 // filteredList kosong TAPI list (sebelum filter owner+status) tidak -- beda
 // pesan kosong drpd "belum ada aset tercatat" di atas, pola sama persis
 // InvestmentListUI._renderList() ("🔍 Tidak ada holding yang cocok").
-if(!filteredList.length){el.innerHTML=ownerFilterBar+migratedBanner+'<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada aset yang cocok dengan filter ini</div></div>';Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();return;}
+if(!filteredList.length){el.innerHTML=ownerFilterBar+migratedBanner+'<div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Tidak ada aset yang cocok dengan filter ini</div></div>';Aset.renderDashboard();Aset.renderInvestasi();Aset._safeRenderReports();AssetInsight.render();return;}
 // S639 (RENCANA-MODERNISASI-UI.md): tema "modern" pakai jalur tabel list
 // padat (assetTableHTML, lanjutan pola s637 Ledger Pro/tabel Uang & s638
 // class .money Dana Titipan) utk #assetList, GANTIKAN grid kartu `.tx-item`
@@ -699,7 +697,7 @@ if(!filteredList.length){el.innerHTML=ownerFilterBar+migratedBanner+'<div class=
 // transaksi kronologis, tidak berlaku utk daftar aset).
 if(D.profile&&D.profile.theme==='modern'&&typeof assetTableHTML==='function'){
 el.innerHTML=ownerFilterBar+migratedBanner+assetTableHTML(filteredList);
-Aset.renderDashboard();Aset.renderInvestasi();Penyusutan.renderList();PajakAset.renderList();LaporanAset.renderList();AssetInsight.render();
+Aset.renderDashboard();Aset.renderInvestasi();Aset._safeRenderReports();AssetInsight.render();
 return;
 }
 el.innerHTML=ownerFilterBar+migratedBanner+filteredList.map(a=>{
@@ -734,9 +732,7 @@ return `<div class="tx-item u-pointer" data-action="openAssetModal" data-args="$
 }).join('');
 Aset.renderDashboard();
 Aset.renderInvestasi();
-Penyusutan.renderList();
-PajakAset.renderList();
-LaporanAset.renderList();
+Aset._safeRenderReports();
 AssetInsight.render();
 },
 // _renderFilterBar(list) — S667 (fondasi dropdown single-select), diubah jadi

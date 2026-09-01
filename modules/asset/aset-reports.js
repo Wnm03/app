@@ -377,8 +377,16 @@ return{akunTertaut,recentTx,totalTx:gabungan.length};
 // renderDashboard(), tapi LaporanAset.nilaiAset() sempat luput -> Dashboard
 // Aset & Laporan Aset bisa beda angka kalau ada aset ber-ownership non-SELF).
 // 0 rumus baru — reuse isAssetOwnershipSelf() yang sudah ada apa adanya.
+// S706 (Temuan #2, audit modul Aset sesi S705): TAMBAH filter
+// `!a._migratedToInvestmentId` & `!a.investmentId` — Aset.totalValue()
+// (aset.js) sudah exclude aset yang sudah "pindah" ke Holding Investasi
+// (migrasi otomatis s476a ATAU tautan manual B8) sejak lama, tapi
+// nilaiAset() di sini luput ikut disinkronkan waktu kedua filter itu
+// ditambahkan — aset yang nilainya sudah dihitung di sisi Investasi tetap
+// ikut dijumlah lagi di kartu "📑 Laporan Aset" (double count). Pola
+// filter SAMA PERSIS Aset.totalValue() (aset.js:987), 0 rumus baru.
 nilaiAset(){
-const list=(D.assets||[]).filter(isAssetOwnershipSelf);
+const list=(D.assets||[]).filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId);
 let totalPasar=0,totalBuku=0;
 const perKategori={};
 list.forEach(a=>{
@@ -415,7 +423,12 @@ ringkasanKekayaan(){
 // totalNilaiPasar/totalNilaiBuku (nilaiAset(), sudah difilter di atas) —
 // 1 laporan, 1 populasi aset yang sama, bukan jumlah dari populasi lebih
 // besar dipasangkan dgn nilai dari populasi lebih kecil.
-const list=(D.assets||[]).filter(isAssetOwnershipSelf);
+// S706 (Temuan #2): filter migrasi `!a._migratedToInvestmentId`/
+// `!a.investmentId` ikut ditambahkan di sini juga (SAMA PERSIS nilaiAset()
+// di atas) — supaya jumlahAset TETAP konsisten dgn populasi yang dipakai
+// nilai.totalPasar/nilai.totalBuku (yang sekarang sudah exclude aset
+// termigrasi/tertaut), bukan cuma isAssetOwnershipSelf saja.
+const list=(D.assets||[]).filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId);
 const nilai=LaporanAset.nilaiAset();
 const zakat=(typeof PajakAset!=='undefined'?PajakAset.hitungZakatAset():{totalNilai:0,totalZakat:0,list:[]});
 const kategoriRows=Object.entries(nilai.perKategori).sort((a,b)=>b[1].nilai-a[1].nilai);
@@ -426,7 +439,14 @@ return{jumlahAset:list.length,jumlahKategori:kategoriRows.length,totalNilaiPasar
 // tanpa DOM sama sekali).
 build(){
 return{
-daftarAset:(D.assets||[]).map(a=>({id:a.id,name:a.name,jenis:a.jenis,icon:Aset.ICON[a.jenis]||'📦',nilai:a.nilai||0,lokasi:a.lokasi||'',tanggal:a.tanggal||'',zakatable:!!a.zakatable,accountId:a.accountId||null})),
+// S706 (Temuan #2): daftarAset ikut difilter `isAssetOwnershipSelf` +
+// `!a._migratedToInvestmentId` + `!a.investmentId` (SAMA PERSIS populasi
+// nilaiAset()/ringkasanKekayaan() di atas) — sebelum ini daftarAset baca
+// D.assets MENTAH tanpa filter apapun, jadi baris "Daftar Aset" bisa
+// menampilkan aset non-SELF & aset yang sudah pindah ke Investasi
+// berdampingan dgn totalPasar/totalBuku yang sudah exclude keduanya
+// (rincian per-baris vs total jadi tidak nyambung).
+daftarAset:(D.assets||[]).filter(isAssetOwnershipSelf).filter(a=>!a._migratedToInvestmentId).filter(a=>!a.investmentId).map(a=>({id:a.id,name:a.name,jenis:a.jenis,icon:Aset.ICON[a.jenis]||'📦',nilai:a.nilai||0,lokasi:a.lokasi||'',tanggal:a.tanggal||'',zakatable:!!a.zakatable,accountId:a.accountId||null})),
 riwayatTransaksi:LaporanAset.riwayatTransaksi(),
 nilaiAset:LaporanAset.nilaiAset(),
 penyusutan:LaporanAset.penyusutan(),
