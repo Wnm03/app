@@ -61,7 +61,12 @@ function fmtFullStub(n) { return String(n); }
 const now = new Date();
 const y = now.getFullYear();
 const m = now.getMonth();
-const dInMonth = new Date(y, m, 10).toISOString().slice(0, 10);
+// Tanggal di bulan berjalan HARUS <= hari ini -- kalau dites tanggal 1-9,
+// "tanggal 10 bulan ini" masih di MASA DEPAN dan otomatis kefilter oleh guard
+// "d<=now" di FI.annualExpense()/monthlySurplus()/dst, bikin test ini
+// false-fail padahal bukan bug source (bukan soal hitungKas sama sekali).
+const safeDayThisMonth = Math.min(10, now.getDate());
+const dInMonth = new Date(y, m, safeDayThisMonth).toISOString().slice(0, 10);
 
 // --- 1. FI.annualExpense() ---
 
@@ -144,7 +149,11 @@ test('DanaDaruratAI.computeRecommendation() — income hitungKas:false tidak iku
   // sangat tidak stabil) dan mengubah rekomendasi (multiplier CV).
   const txs = [];
   for (let i = 0; i < 3; i++) {
-    const d = new Date(y, m - i, 10).toISOString().slice(0, 10);
+    // i===0 = bulan berjalan -> pakai safeDayThisMonth (lihat catatan di
+    // deklarasi dInMonth) supaya tidak jadi tanggal masa depan; bulan-bulan
+    // sebelumnya aman pakai tanggal 10 apa adanya.
+    const day = i === 0 ? safeDayThisMonth : 10;
+    const d = new Date(y, m - i, day).toISOString().slice(0, 10);
     txs.push({ type: 'income', amount: 900000, date: d });
   }
   txs.push({ type: 'income', amount: 9000000, date: dInMonth, hitungKas: false });

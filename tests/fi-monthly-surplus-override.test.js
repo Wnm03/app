@@ -42,14 +42,20 @@ test('FI.monthlySurplus(monthsOverride) — dipanggil dengan override TIDAK meng
 test('FI.monthlySurplus(monthsOverride) — override dipakai buat batasi window transaksi (beda hasil dari default kalau data beda per-bulan)', () => {
   const now = new Date();
   const fmt = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  // Tanggal di bulan berjalan HARUS <= hari ini (kalau dites tanggal 1-9,
+  // "tanggal 10 bulan ini" masih di MASA DEPAN -> otomatis kefilter oleh
+  // guard "d<=now" di FI.monthlySurplus(), bikin test ini false-fail padahal
+  // bukan bug source. 3 bulan lalu aman pakai tanggal 10 apa adanya (sudah
+  // pasti lewat).
+  const safeDayThisMonth = Math.min(10, now.getDate());
   // bulan berjalan: surplus 1jt. 3 bulan lalu: surplus 0 (in==out).
-  const thisM = new Date(now.getFullYear(), now.getMonth(), 10);
+  const thisM = new Date(now.getFullYear(), now.getMonth(), safeDayThisMonth);
   const prevM = new Date(now.getFullYear(), now.getMonth() - 3, 10);
   const D = makeD({
     finansialFreedom: { avgMonths: 12 },
     transactions: [
-      { type: 'income', amount: 2000000, date: fmt(thisM.getFullYear(), thisM.getMonth(), 10) },
-      { type: 'expense', amount: 1000000, date: fmt(thisM.getFullYear(), thisM.getMonth(), 10) },
+      { type: 'income', amount: 2000000, date: fmt(thisM.getFullYear(), thisM.getMonth(), thisM.getDate()) },
+      { type: 'expense', amount: 1000000, date: fmt(thisM.getFullYear(), thisM.getMonth(), thisM.getDate()) },
       { type: 'income', amount: 500000, date: fmt(prevM.getFullYear(), prevM.getMonth(), 10) },
       { type: 'expense', amount: 500000, date: fmt(prevM.getFullYear(), prevM.getMonth(), 10) },
     ],

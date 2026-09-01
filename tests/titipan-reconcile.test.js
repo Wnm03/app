@@ -751,3 +751,275 @@ test('repairMissing() + check() ulang: owner "milik" tetap ok=true sesudah "dipe
   assert.strictEqual(post.ok, true);
   delete global.Aset;
 });
+
+// --- repairOwnerIdConsistency() / repairDebtNameStaleness() /
+// repairTransactionOwnerRefs() (SESI FIX-2026-09-01-lanjutan2, menutup
+// jalur perbaikan checkOwnerIdConsistency()/checkDebtNameStaleness()/
+// checkTransactionOwnerRefs() yang sebelumnya audit-only) ---
+
+test('repairOwnerIdConsistency() satukan ownerId divergen ke id yang terdaftar di registry', () => {
+  const a = { id: 'a1', owners: [{ ownerId: 'uid_old_1', ownerName: 'Budi', isSelf: false, porsi: 30 }] };
+  const h = { id: 'h1', owners: [{ ownerId: 'owner_budi_registry', ownerName: 'Budi', isSelf: false, porsi: 70 }] };
+  global.D = {
+    assets: [a], investments: [h], debts: [
+      { id: 'd1', linkedAssetId: 'a1', linkedOwnerId: 'uid_old_1', name: 'Budi', nilai: 300 },
+    ],
+    ownerRegistry: [{ id: 'owner_budi_registry', name: 'Budi' }],
+  };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  global.Investment = { getOwners(entity) { return (entity.owners || []).slice(); }, holdingCost: () => 0 };
+  const pre = TitipanReconcile.checkOwnerIdConsistency();
+  assert.strictEqual(pre.ok, false);
+  const res = TitipanReconcile.repairOwnerIdConsistency();
+  assert.strictEqual(res.conflicts.length, 0);
+  assert.ok(res.unified > 0);
+  assert.strictEqual(a.owners[0].ownerId, 'owner_budi_registry');
+  assert.strictEqual(a.owners[0].ownerName, 'Budi');
+  assert.strictEqual(D.debts[0].linkedOwnerId, 'owner_budi_registry');
+  const post = TitipanReconcile.checkOwnerIdConsistency();
+  assert.strictEqual(post.ok, true);
+});
+
+test('repairOwnerIdConsistency() skip UTUH grup yang tabrakan (1 entity sudah punya kedua id)', () => {
+  const a = {
+    id: 'a1',
+    owners: [
+      { ownerId: 'id_a', ownerName: 'Budi', isSelf: false, porsi: 30 },
+      { ownerId: 'id_b', ownerName: 'Budi', isSelf: false, porsi: 20 },
+    ],
+  };
+  global.D = { assets: [a], investments: [], debts: [], ownerRegistry: [{ id: 'id_a', name: 'Budi' }] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  const res = TitipanReconcile.repairOwnerIdConsistency();
+  assert.strictEqual(res.unified, 0);
+  assert.strictEqual(res.conflicts.length, 1);
+  assert.strictEqual(a.owners[0].ownerId, 'id_a', 'tidak disentuh -- konflik, butuh review manual');
+  assert.strictEqual(a.owners[1].ownerId, 'id_b', 'tidak disentuh -- konflik, butuh review manual');
+});
+
+test('repairOwnerIdConsistency() tidak melakukan apa pun kalau tidak ada divergensi', () => {
+  const a = { id: 'a1', owners: [{ ownerId: 'o1', ownerName: 'Budi', isSelf: false, porsi: 30 }] };
+  global.D = { assets: [a], investments: [], debts: [] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  const res = TitipanReconcile.repairOwnerIdConsistency();
+  assert.deepStrictEqual(res, { unified: 0, conflicts: [] });
+});
+
+test('repairOwnerIdConsistency() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
+  delete global.D;
+  const res = TitipanReconcile.repairOwnerIdConsistency();
+  assert.deepStrictEqual(res, { unified: 0, conflicts: [] });
+});
+
+test('repairDebtNameStaleness() sinkronkan D.debts[].name yang stale ke nama registry', () => {
+  global.D = {
+    ownerRegistry: [{ id: 'o1', name: 'Budi Santoso' }],
+    debts: [
+      { id: 'd1', linkedOwnerId: 'o1', name: 'Budi', nilai: 300 },
+      { id: 'd2', linkedOwnerId: 'SELF', name: 'Utang biasa', nilai: 100 },
+    ],
+  };
+  const pre = TitipanReconcile.checkDebtNameStaleness();
+  assert.strictEqual(pre.ok, false);
+  const res = TitipanReconcile.repairDebtNameStaleness();
+  assert.strictEqual(res.synced, 1);
+  assert.strictEqual(D.debts[0].name, 'Budi Santoso');
+  assert.strictEqual(D.debts[1].name, 'Utang biasa', 'utang non-titipan tidak tersentuh');
+  const post = TitipanReconcile.checkDebtNameStaleness();
+  assert.strictEqual(post.ok, true);
+});
+
+test('repairDebtNameStaleness() tidak melakukan apa pun kalau tidak ada yang stale', () => {
+  global.D = { ownerRegistry: [{ id: 'o1', name: 'Budi' }], debts: [{ id: 'd1', linkedOwnerId: 'o1', name: 'Budi' }] };
+  const res = TitipanReconcile.repairDebtNameStaleness();
+  assert.deepStrictEqual(res, { synced: 0 });
+});
+
+test('repairDebtNameStaleness() aman (tidak throw, 0 mutasi) kalau D belum ada', () => {
+  delete global.D;
+  const res = TitipanReconcile.repairDebtNameStaleness();
+  assert.deepStrictEqual(res, { synced: 0 });
+});
+
+test('repairTransactionOwnerRefs() pindahkan deductionOwnerId basi ke 1 owner valid yang tidak ambigu', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }] };
+  global.resolveOwnerDefaultForAccount = (accId) => ({ ok: true, owners: [{ ownerId: 'owner_baru' }] });
+  const pre = TitipanReconcile.checkTransactionOwnerRefs();
+  assert.strictEqual(pre.ok, false);
+  const res = TitipanReconcile.repairTransactionOwnerRefs();
+  assert.strictEqual(res.fixed, 1);
+  assert.strictEqual(res.cleared, 0);
+  assert.strictEqual(D.transactions[0].deductionOwnerId, 'owner_baru');
+  const post = TitipanReconcile.checkTransactionOwnerRefs();
+  assert.strictEqual(post.ok, true);
+  delete global.resolveOwnerDefaultForAccount;
+});
+
+test('repairTransactionOwnerRefs() kosongkan deductionOwnerId kalau ambigu (0 atau >1 owner valid)', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }] };
+  global.resolveOwnerDefaultForAccount = (accId) => ({ ok: true, owners: [{ ownerId: 'owner_x' }, { ownerId: 'owner_y' }] });
+  const res = TitipanReconcile.repairTransactionOwnerRefs();
+  assert.strictEqual(res.fixed, 0);
+  assert.strictEqual(res.cleared, 1);
+  assert.deepStrictEqual(res.unresolved, ['t1']);
+  assert.strictEqual(D.transactions[0].deductionOwnerId, null);
+  delete global.resolveOwnerDefaultForAccount;
+});
+
+test('repairTransactionOwnerRefs() tidak melakukan apa pun kalau tidak ada orphan', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'o1' }] };
+  global.resolveOwnerDefaultForAccount = (accId) => ({ ok: true, owners: [{ ownerId: 'o1' }] });
+  const res = TitipanReconcile.repairTransactionOwnerRefs();
+  assert.deepStrictEqual(res, { fixed: 0, cleared: 0, unresolved: [] });
+  delete global.resolveOwnerDefaultForAccount;
+});
+
+test('repairTransactionOwnerRefs() aman (tidak throw, 0 mutasi) kalau resolveOwnerDefaultForAccount belum dimuat', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }] };
+  delete global.resolveOwnerDefaultForAccount;
+  const res = TitipanReconcile.repairTransactionOwnerRefs();
+  assert.deepStrictEqual(res, { fixed: 0, cleared: 0, unresolved: [] });
+});
+
+// --- checkPendingOwnerReview() / flag _deductionOwnerReviewNeeded (poin 4,
+// sesi lanjutan hasil audit 2026-09-01 -- menutup "unresolved cuma nilai
+// balik sesaat, tidak kelihatan lagi setelah tombol perbaikan ditekan") ---
+
+test('repairTransactionOwnerRefs() tandai transaksi yang di-cleared dgn _deductionOwnerReviewNeeded', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }] };
+  global.resolveOwnerDefaultForAccount = (accId) => ({ ok: true, owners: [{ ownerId: 'owner_x' }, { ownerId: 'owner_y' }] });
+  TitipanReconcile.repairTransactionOwnerRefs();
+  assert.strictEqual(D.transactions[0]._deductionOwnerReviewNeeded, true);
+  delete global.resolveOwnerDefaultForAccount;
+});
+
+test('repairTransactionOwnerRefs() TIDAK menandai transaksi yang berhasil di-fix (fixed, bukan cleared)', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }] };
+  global.resolveOwnerDefaultForAccount = (accId) => ({ ok: true, owners: [{ ownerId: 'owner_baru' }] });
+  TitipanReconcile.repairTransactionOwnerRefs();
+  assert.strictEqual(D.transactions[0]._deductionOwnerReviewNeeded, undefined);
+  delete global.resolveOwnerDefaultForAccount;
+});
+
+test('checkPendingOwnerReview() daftar transaksi ber-flag yang deductionOwnerId-nya masih kosong', () => {
+  global.D = {
+    transactions: [
+      { id: 't1', accountId: 'acc1', deductionOwnerId: null, _deductionOwnerReviewNeeded: true, tanggal: '2026-08-01', jumlah: 50000, catatan: 'Beli galon' },
+      { id: 't2', accountId: 'acc1', deductionOwnerId: 'o1' }, // tx biasa, tidak pernah kena repair
+    ],
+  };
+  const res = TitipanReconcile.checkPendingOwnerReview();
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.pending.length, 1);
+  assert.strictEqual(res.pending[0].txId, 't1');
+  assert.strictEqual(res.pending[0].catatan, 'Beli galon');
+});
+
+test('checkPendingOwnerReview() tx yang sudah diisi ulang manual lolos dari daftar walau flag lama masih menempel', () => {
+  global.D = {
+    transactions: [
+      { id: 't1', accountId: 'acc1', deductionOwnerId: 'owner_baru_manual', _deductionOwnerReviewNeeded: true },
+    ],
+  };
+  const res = TitipanReconcile.checkPendingOwnerReview();
+  assert.strictEqual(res.ok, true);
+  assert.deepStrictEqual(res.pending, []);
+});
+
+test('checkPendingOwnerReview() ok=true kalau tidak ada transaksi ber-flag sama sekali', () => {
+  global.D = { transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: 'o1' }] };
+  const res = TitipanReconcile.checkPendingOwnerReview();
+  assert.deepStrictEqual(res, { ok: true, pending: [] });
+});
+
+test('checkPendingOwnerReview() aman (tidak throw) kalau D/D.transactions belum ada', () => {
+  delete global.D;
+  assert.deepStrictEqual(TitipanReconcile.checkPendingOwnerReview(), { ok: true, pending: [] });
+  global.D = {};
+  assert.deepStrictEqual(TitipanReconcile.checkPendingOwnerReview(), { ok: true, pending: [] });
+});
+
+test('checkAll() menyertakan pendingOwnerReview sbg sub-check (informasional)', () => {
+  global.D = {
+    assets: [], investments: [], debts: [],
+    transactions: [{ id: 't1', accountId: 'acc1', deductionOwnerId: null, _deductionOwnerReviewNeeded: true }],
+  };
+  const res = TitipanReconcile.checkAll();
+  assert.strictEqual(res.pendingOwnerReview.ok, false);
+  assert.strictEqual(res.pendingOwnerReview.pending.length, 1);
+  assert.strictEqual(res.ok, false, 'pendingOwnerReview ikut AND ke checkAll().ok (dipakai warnIfNotOk(), non-blocking di jalur lain)');
+});
+
+// --- checkOwnerIdConflicts() (poin 1, sesi lanjutan -- surface tabrakan
+// owner ID yang sebelumnya dilewati repairOwnerIdConsistency() cuma via
+// console.warn, sekarang bisa dibaca ulang kapan saja TANPA menjalankan
+// repair, murni derivasi PURE dari D.assets/D.investments/D.ownerRegistry) ---
+
+test('checkOwnerIdConflicts() deteksi tabrakan (1 entity sudah punya kedua id divergen sekaligus)', () => {
+  const a = {
+    id: 'a1',
+    owners: [
+      { ownerId: 'id_a', ownerName: 'Budi', isSelf: false, porsi: 30 },
+      { ownerId: 'id_b', ownerName: 'Budi', isSelf: false, porsi: 20 },
+    ],
+  };
+  global.D = { assets: [a], investments: [], debts: [], ownerRegistry: [{ id: 'id_a', name: 'Budi' }] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  const res = TitipanReconcile.checkOwnerIdConflicts();
+  assert.strictEqual(res.ok, false);
+  assert.strictEqual(res.conflicts.length, 1);
+  assert.strictEqual(res.conflicts[0].name, 'Budi');
+  assert.strictEqual(res.conflicts[0].id, 'a1');
+});
+
+test('checkOwnerIdConflicts() TIDAK menulis apa pun ke D (PURE) -- beda dgn repairOwnerIdConsistency()', () => {
+  const a = {
+    id: 'a1',
+    owners: [
+      { ownerId: 'id_a', ownerName: 'Budi', isSelf: false, porsi: 30 },
+      { ownerId: 'id_b', ownerName: 'Budi', isSelf: false, porsi: 20 },
+    ],
+  };
+  global.D = { assets: [a], investments: [], debts: [], ownerRegistry: [{ id: 'id_a', name: 'Budi' }] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  TitipanReconcile.checkOwnerIdConflicts();
+  assert.strictEqual(a.owners[0].ownerId, 'id_a', '0 mutasi -- checkOwnerIdConflicts() cuma baca');
+  assert.strictEqual(a.owners[1].ownerId, 'id_b', '0 mutasi -- checkOwnerIdConflicts() cuma baca');
+});
+
+test('checkOwnerIdConflicts() ok=true kalau divergensi ADA tapi tidak bertabrakan (bisa disatukan aman)', () => {
+  const a = { id: 'a1', owners: [{ ownerId: 'uid_old_1', ownerName: 'Budi', isSelf: false, porsi: 30 }] };
+  const h = { id: 'h1', owners: [{ ownerId: 'owner_budi_registry', ownerName: 'Budi', isSelf: false, porsi: 70 }] };
+  global.D = { assets: [a], investments: [h], debts: [], ownerRegistry: [{ id: 'owner_budi_registry', name: 'Budi' }] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  global.Investment = { getOwners(entity) { return (entity.owners || []).slice(); }, holdingCost: () => 0 };
+  const res = TitipanReconcile.checkOwnerIdConflicts();
+  assert.deepStrictEqual(res, { ok: true, conflicts: [] });
+});
+
+test('checkOwnerIdConflicts() ok=true kalau tidak ada divergensi sama sekali', () => {
+  global.D = { assets: [], investments: [], debts: [] };
+  const res = TitipanReconcile.checkOwnerIdConflicts();
+  assert.deepStrictEqual(res, { ok: true, conflicts: [] });
+});
+
+test('checkOwnerIdConflicts() aman (tidak throw) kalau D belum ada', () => {
+  delete global.D;
+  assert.deepStrictEqual(TitipanReconcile.checkOwnerIdConflicts(), { ok: true, conflicts: [] });
+});
+
+test('checkAll() menyertakan ownerIdConflicts sbg sub-check (informasional)', () => {
+  const a = {
+    id: 'a1',
+    owners: [
+      { ownerId: 'id_a', ownerName: 'Budi', isSelf: false, porsi: 30 },
+      { ownerId: 'id_b', ownerName: 'Budi', isSelf: false, porsi: 20 },
+    ],
+  };
+  global.D = { assets: [a], investments: [], debts: [], ownerRegistry: [{ id: 'id_a', name: 'Budi' }] };
+  global.MultiOwnerEngine = { getOwners(entity) { return { ok: true, owners: (entity.owners || []).slice() }; } };
+  const res = TitipanReconcile.checkAll();
+  assert.strictEqual(res.ownerIdConflicts.ok, false);
+  assert.strictEqual(res.ownerIdConflicts.conflicts.length, 1);
+  assert.strictEqual(res.ok, false, 'ownerIdConflicts ikut AND ke checkAll().ok (dipakai warnIfNotOk(), non-blocking di jalur lain)');
+});

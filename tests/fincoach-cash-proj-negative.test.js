@@ -19,7 +19,12 @@ const { loadSource } = require('./helpers/loadSource');
 const now = new Date();
 const y = now.getFullYear();
 const m = now.getMonth();
-const dInMonth = new Date(y, m, 10).toISOString().slice(0, 10);
+// Tanggal bulan berjalan HARUS <= hari ini -- kalau dites tanggal 1-9,
+// "tanggal 10 bulan ini" masih di MASA DEPAN (lihat catatan sama di
+// tests/hitungkas-normalisasi-financial-calc.test.js &
+// tests/fi-monthly-surplus-override.test.js).
+const safeDayThisMonth = Math.min(10, now.getDate());
+const dInMonth = new Date(y, m, safeDayThisMonth).toISOString().slice(0, 10);
 
 function fmtFullStub(n) { return String(n); }
 
