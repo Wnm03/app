@@ -389,6 +389,271 @@ checkOwnershipDualSource() {
   return { ok: flagged.length === 0, flagged };
 },
 
+// checkPoolCommitment() — SESI FIX-2026-09-01-lanjutan (audit "gap kekurangan
+// dana titipan", diminta eksplisit user). LATAR: audit sesi ini menemukan
+// `D.titipanPool[]` (dana masuk aktual, dana-titipan-pool-api.js) &
+// `D.titipanCommitments[]` (pokok dikomit per owner) adalah SUMBER KEBENARAN
+// KETIGA yang terpisah dari Buku Utang (`D.debts`, cabang check()/
+// checkAccounts() di atas) -- tapi TIDAK PERNAH ikut checkAll()/Tes Otomatis,
+// jadi status OVER_ALLOCATED (baik level-pool maupun level-owner) hanya
+// kelihatan kalau user buka tab Dana Titipan secara manual, tidak ketahuan
+// otomatis spt 6 sub-check lain kalau muncul lewat backup lama/edit manual.
+//
+// PURE baca-saja, 0 mutasi, 0 rumus baru -- 100% REUSE 2 fungsi derived yang
+// SUDAH ADA (bukan re-derivasi logic gap baru, pola sama seluruh sub-check
+// lain di modul ini):
+//   1. `DanaTitipanPortfolioAPI.build()` (dana-titipan-aggregation-api.js) --
+//      tiap owner sudah py `allocationStatus`/`overAllocatedAmount` terhitung
+//      (spent = allocatedPrincipal+usedTotal+linkedExpenseTotal+
+//      renovExpenseTotal, dibanding principalAmount, lihat komentar `build()`
+//      DL-NEXT-9). Baris ini murni MEMBACA field yang SUDAH dihitung `build()`
+//      tiap render tab Dana Titipan, TIDAK menghitung ulang formulanya.
+//   2. `DanaTitipanPoolAPI.status()` (dana-titipan-pool-api.js) -- status
+//      level-pool ('NOT_MIGRATED'|'OK'|'OVER_ALLOCATED'), SUDAH derived murni
+//      tiap panggilan (0 caching), dipakai apa adanya.
+// Guard ganda `typeof DanaTitipanPortfolioAPI`/`typeof DanaTitipanPoolAPI` --
+// pola sama semua guard lain di modul ini: kalau salah satu/keduanya belum
+// dimuat (mis. test harness minimal, atau bundle lama sebelum fitur Pool
+// ada), fallback diam (0 false-positive), BUKAN crash.
+// `build()` dibungkus try/catch -- fungsi itu membaca banyak domain lain
+// (D.assets/D.investments/D.transactions/D.titipanCommitments/D.titipanReturns),
+// kalau salah satu dependency belum termuat di konteks pemanggil, error
+// TIDAK BOLEH menjatuhkan seluruh checkAll()/Tes Otomatis (pola sama
+// try/catch di checkOwnerIdConsistency()/checkOwnershipDualSource() dst).
+//
+// SENGAJA TIDAK menambah rumus pembanding baru antara `principalAmount`
+// (commitment) vs total porsi owner yang benar-benar tercatat di
+// D.assets/D.investments (_expectedFromAssets()/_expectedFromInvestments())
+// -- `build()` SUDAH melakukan itu (via `allocatedPrincipal`, dihitung dari
+// _assetSplits()/_holdingSplits()) DAN lebih lengkap (ikut hitung usedTotal/
+// linkedExpenseTotal/renovExpenseTotal yang modul ini sendiri tidak punya
+// akses mudah ke sana) -- menduplikasi sebagian formula itu di sini
+// beresiko DIVERGEN dari `build()` kalau salah satu diedit sesi lain
+// (persis kelas bug yang direktori modul ini sendiri dibuat utk dicegah).
+//
+// Return: {ok, poolStatus, overAllocatedOwners: [{ownerId, ownerName,
+//   overAllocatedAmount}]} -- ok=true kalau poolStatus bukan
+//   'OVER_ALLOCATED' (null/'NOT_MIGRATED'/'OK' semua ok) DAN
+//   overAllocatedOwners kosong. poolStatus null kalau DanaTitipanPoolAPI
+//   belum dimuat (BUKAN sama dgn 'NOT_MIGRATED' -- itu nilai valid dari
+//   status() sendiri kalau pool memang belum py entry, beda dari "modul
+//   tidak tersedia").
+checkPoolCommitment() {
+  const out = { ok: true, poolStatus: null, overAllocatedOwners: [] };
+  if (typeof DanaTitipanPoolAPI !== 'undefined' && typeof DanaTitipanPoolAPI.status === 'function') {
+    let poolStatus;
+    try { poolStatus = DanaTitipanPoolAPI.status(); } catch (e) { poolStatus = null; }
+    out.poolStatus = poolStatus;
+    if (poolStatus === 'OVER_ALLOCATED') out.ok = false;
+  }
+  if (typeof DanaTitipanPortfolioAPI !== 'undefined' && typeof DanaTitipanPortfolioAPI.build === 'function') {
+    let result;
+    try { result = DanaTitipanPortfolioAPI.build(); } catch (e) { result = null; }
+    const owners = (result && Array.isArray(result.owners)) ? result.owners : [];
+    owners.filter((o) => o && o.allocationStatus === 'OVER_ALLOCATED').forEach((o) => {
+      out.overAllocatedOwners.push({ ownerId: o.ownerId, ownerName: o.ownerName, overAllocatedAmount: o.overAllocatedAmount || 0 });
+    });
+    if (out.overAllocatedOwners.length) out.ok = false;
+  }
+  return out;
+},
+
+// checkReturnVsLiability() — SESI S675 (audit lanjutan "Total Titipan vs
+// Utang/Aset/Akun", gap #2 dari 2 temuan sesi ini). LATAR: `recordReturn()`
+// (dana-titipan-commitment-return-api.js) SENGAJA "ISOLASI TOTAL — HANYA
+// menyentuh `D.titipanReturns`" (lihat header fungsi itu) -- mencatat 1
+// baris riwayat pengembalian TIDAK PERNAH ikut mengurangi porsi owner di
+// `a.owners[]`/`h.owners[]`/`acc.owners[]` (itu keputusan desain sengaja,
+// sama alasan `checkPoolCommitment()` dibuat informational: tindakan
+// finansial nyata butuh keputusan eksplisit user, bukan mutasi diam-diam).
+// KONSEKUENSI: kalau user catat "Budi ambil kembali RpX" via recordReturn()
+// TAPI LUPA ikut mengecilkan/menghapus porsi Budi di Aset/Investasi/Akun
+// terkait (lewat "⚖️ Atur Porsi Kepemilikan"), baris Buku Utang
+// (linkedAssetId/linkedInvestmentId/linkedAccountId, ditulis
+// _syncOwnerDebts()/_syncTitipanDebt()/TitipanSync.reconcileAccounts())
+// TETAP PENUH seperti sebelum dikembalikan -- tab Dana Titipan bilang
+// "sudah dikembalikan" tapi Buku Utang & Kekayaan Bersih masih menganggap
+// kewajiban itu utuh, 2 fakta yang saling kontradiksi tanpa terdeteksi
+// otomatis.
+//
+// PURE baca-saja, 0 mutasi, 0 rumus baru -- 100% REUSE
+// `DanaTitipanPortfolioAPI.build()` (pola SAMA PERSIS `checkPoolCommitment()`
+// di atas): tiap owner ber-`principalAmount` (commitment tercatat) SUDAH
+// punya 3 field derived yang dibutuhkan, dihitung `build()` sendiri (lihat
+// dana-titipan-aggregation-api.js):
+//   - `returnedTotal`   = sum(D.titipanReturns milik owner ini) (Sesi 486)
+//   - `allocatedPrincipal` = porsi owner ini yang BENAR-BENAR MASIH tercatat
+//     saat ini di Aset+Investasi (angka yang SAMA PERSIS dipakai
+//     _syncOwnerDebts()/_syncTitipanDebt() utk isi nilai baris Buku Utang)
+//   - `outstandingPrincipal` = max(0, principalAmount - returnedTotal) --
+//     "SEHARUSNYA tersisa" kalau porsi ikut dikecilkan sejumlah yang
+//     dikembalikan.
+// Gap = `allocatedPrincipal - outstandingPrincipal`: kalau owner sudah
+// tercatat mengembalikan sebagian/seluruh pokok (`returnedTotal>0`) TAPI
+// porsi aktualnya (`allocatedPrincipal`, = liability Buku Utang) masih
+// LEBIH BESAR dari yang seharusnya tersisa (`outstandingPrincipal`), berarti
+// porsi belum ikut dikecilkan -- persis kondisi yang diflag. Toleransi Rp1
+// (pola sama check() di atas) supaya residu pembulatan float tidak
+// false-positive.
+// CATATAN: `allocatedPrincipal` HANYA cakupan Aset+Investasi (lihat
+// `build()`) -- porsi akun berdiri-sendiri (`_expectedFromAccounts()`,
+// cabang Akun) TIDAK ikut diperiksa gap ini (di luar scope `build()`
+// sesi ini, konsisten dgn catatan "SENGAJA TIDAK menambah rumus pembanding
+// baru" di `checkPoolCommitment()` -- menduplikasi sebagian formula
+// `build()` di sini beresiko DIVERGEN kalau salah satu diedit sesi lain).
+// Guard typeof + try/catch, pola SAMA PERSIS `checkPoolCommitment()` --
+// modul belum dimuat / `build()` error -> fallback diam (0 false-positive),
+// BUKAN crash.
+//
+// SENGAJA INFORMATIONAL (non-blocking, pola SAMA PERSIS `checkPoolCommitment()`
+// & `ownershipDualSource`) -- BUKAN diperbaiki otomatis: return itu tindakan
+// finansial nyata, user yang harus memutuskan mau mengecilkan porsi di aset
+// mana / holding mana (bisa saja pokok tersebar di >1 aset+holding, tidak
+// ada 1 jawaban tunggal yang "pasti benar" utk auto-repair). 0 tombol
+// "Perbaiki Gap" utk ini di sesi ini.
+//
+// Return: {ok, flagged: [{ownerId, ownerName, returnedTotal,
+//   allocatedPrincipal, outstandingPrincipal, unreducedAmount}]} --
+//   ok=true kalau flagged kosong. unreducedAmount = besar porsi yang
+//   masih "nyangkut" di Buku Utang padahal sudah tercatat dikembalikan.
+checkReturnVsLiability() {
+  const out = { ok: true, flagged: [] };
+  if (typeof DanaTitipanPortfolioAPI === 'undefined' || typeof DanaTitipanPortfolioAPI.build !== 'function') return out;
+  let result;
+  try { result = DanaTitipanPortfolioAPI.build(); } catch (e) { result = null; }
+  const owners = (result && Array.isArray(result.owners)) ? result.owners : [];
+  owners.forEach((o) => {
+    if (!o || !(o.returnedTotal > 0)) return;
+    if (o.principalAmount === null || o.principalAmount === undefined) return;
+    const outstanding = (typeof o.outstandingPrincipal === 'number')
+      ? o.outstandingPrincipal
+      : Math.max(0, o.principalAmount - o.returnedTotal);
+    const allocated = o.allocatedPrincipal || 0;
+    const unreducedAmount = allocated - outstanding;
+    if (unreducedAmount > 1) {
+      out.flagged.push({
+        ownerId: o.ownerId,
+        ownerName: o.ownerName,
+        returnedTotal: o.returnedTotal,
+        allocatedPrincipal: allocated,
+        outstandingPrincipal: outstanding,
+        unreducedAmount,
+      });
+    }
+  });
+  out.ok = out.flagged.length === 0;
+  return out;
+},
+
+// _actualLinkedAccountDebtTotalsByOwner() — SESI S676 (audit lanjutan Gap
+// #2: "checkReturnVsLiability() tidak cakup titipan yang pokoknya murni di
+// Akun berdiri-sendiri"). Varian _actualLinkedAccountDebts() di atas yang
+// SUDAH ADA (boolean-only, {key:true} per pasangan akun+owner) -- fungsi
+// itu tidak cukup utk checkReturnVsAccountLiability() di bawah karena kita
+// butuh NOMINAL-nya (bukan cuma existensi baris), dan dijumlah PER OWNER
+// (bukan per akun+owner, karena 1 owner bisa punya porsi di >1 akun
+// berdiri-sendiri sekaligus -- jumlahnya yang relevan utk dibandingkan ke
+// `returnedTotal`, bukan per-baris). PURE baca-saja, 0 mutasi, reuse 100%
+// field `d.nilai`/`d.linkedOwnerId` yang SUDAH ditulis TitipanSync.
+// reconcileAccounts() (titipan-sync.js) -- 0 rumus baru.
+// Return: {ownerId: totalNilai} -- owner tanpa baris linkedAccountId sama
+// sekali tidak muncul sbg key (bukan 0 eksplisit).
+_actualLinkedAccountDebtTotalsByOwner() {
+  const out = {};
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) return out;
+  D.debts.filter((d) => d && d.linkedAccountId != null && d.linkedOwnerId != null)
+    .forEach((d) => {
+      const key = String(d.linkedOwnerId);
+      out[key] = (out[key] || 0) + (isFinite(d.nilai) ? Number(d.nilai) : 0);
+    });
+  return out;
+},
+
+// checkReturnVsAccountLiability() — SESI S676 (audit lanjutan Gap #2 dari
+// SESSION-NOTE-S675.md: "checkReturnVsLiability() tidak cakup titipan yang
+// pokoknya murni di Akun berdiri-sendiri"). LATAR: checkReturnVsLiability()
+// (di atas) 100% reuse `DanaTitipanPortfolioAPI.build()`, yang HANYA
+// menghitung `allocatedPrincipal` dari `_assetSplits()`/`_holdingSplits()`
+// (cabang Aset+Investasi) -- TIDAK PERNAH menyertakan porsi di akun
+// berdiri-sendiri (cabang Akun, `_expectedFromAccounts()`/`checkAccounts()`
+// di atas). Konsekuensi: kalau pokok titipan seorang owner MURNI disimpan
+// di 1/lebih akun berdiri-sendiri (bukan aset/holding apa pun),
+// `allocatedPrincipal` owner itu di mata `build()` SELALU 0 -- 
+// checkReturnVsLiability() TIDAK PERNAH bisa mendeteksi gap "return
+// dicatat tapi porsi akun belum dikecilkan" utk owner semacam ini (batasan
+// yang sudah disebut eksplisit di komentar checkReturnVsLiability() sendiri
+// sesi S675, belum ada follow-up-nya sampai sesi ini).
+//
+// PURE baca-saja, 0 mutasi, 0 rumus baru -- SUB-CHECK TERPISAH (bukan
+// menambal checkReturnVsLiability() yang sudah ada) supaya 2 channel
+// (Aset+Investasi vs Akun) tetap independen & gampang dilacak sumbernya
+// kalau salah satu flag menyala (pola SAMA PERSIS kenapa checkAccounts()
+// dipisah dari check() -- 2 mekanisme berlawanan, lihat SESSION-NOTE-S675
+// bagian Gap #1). Reuse 2 sumber yang SUDAH ADA:
+//   1. `DanaTitipanPortfolioAPI.build()` -- utk `returnedTotal`/
+//      `principalAmount`/`outstandingPrincipal` per owner (field yang SAMA
+//      PERSIS dipakai checkReturnVsLiability(), TIDAK dihitung ulang di
+//      sini).
+//   2. `_actualLinkedAccountDebtTotalsByOwner()` (di atas) -- total nominal
+//      baris Buku Utang ber-`linkedAccountId` milik owner itu (liability
+//      channel Akun, ditulis `TitipanSync.reconcileAccounts()`).
+// Gap = `accountLiability - outstandingPrincipal`: kalau owner sudah
+// tercatat mengembalikan sebagian/seluruh pokok (`returnedTotal>0`) TAPI
+// total liability Akun-nya (`accountLiability`) masih LEBIH BESAR dari yang
+// seharusnya tersisa (`outstandingPrincipal`, commitment dikurangi
+// returnedTotal), berarti porsi di akun berdiri-sendiri belum ikut
+// dikecilkan setelah return dicatat. Toleransi Rp1, sama pola
+// checkReturnVsLiability(). Owner tanpa liability Akun sama sekali
+// (`accountLiability` 0/tidak ada) TIDAK diflag di sini (bukan gap channel
+// ini -- kalaupun ada gap, itu urusan checkReturnVsLiability() cabang
+// Aset+Investasi).
+// CATATAN: SENGAJA TIDAK digabung jadi 1 angka gabungan
+// (`allocatedPrincipal + accountLiability` dibanding `outstandingPrincipal`
+// sekali jalan) -- owner yang pokoknya tersebar di KEDUA channel sekaligus
+// bisa membingungkan diagnosis (flag mana yang harus dibenahi user duluan)
+// kalau digabung; 2 sub-check independen lebih jelas menunjuk channel mana
+// yang belum disinkron, konsisten filosofi modul ini (tiap sub-check =
+// 1 sumber gap yang jelas, checkAll() yang menggabungkan `ok`-nya).
+// Guard typeof + try/catch, pola SAMA PERSIS checkReturnVsLiability() --
+// modul belum dimuat / `build()` error -> fallback diam (0 false-positive).
+// SENGAJA INFORMATIONAL (non-blocking, pola SAMA PERSIS
+// checkReturnVsLiability()) -- 0 tombol "Perbaiki Gap" utk ini, alasan
+// SAMA PERSIS: return itu tindakan finansial nyata, user yang harus
+// memutuskan.
+// Return: {ok, flagged: [{ownerId, ownerName, returnedTotal,
+//   accountLiability, outstandingPrincipal, unreducedAmount}]} -- ok=true
+//   kalau flagged kosong.
+checkReturnVsAccountLiability() {
+  const out = { ok: true, flagged: [] };
+  if (typeof DanaTitipanPortfolioAPI === 'undefined' || typeof DanaTitipanPortfolioAPI.build !== 'function') return out;
+  let result;
+  try { result = DanaTitipanPortfolioAPI.build(); } catch (e) { result = null; }
+  const owners = (result && Array.isArray(result.owners)) ? result.owners : [];
+  const accountTotals = this._actualLinkedAccountDebtTotalsByOwner();
+  owners.forEach((o) => {
+    if (!o || !(o.returnedTotal > 0)) return;
+    if (o.principalAmount === null || o.principalAmount === undefined) return;
+    const accountLiability = accountTotals[String(o.ownerId)] || 0;
+    if (!(accountLiability > 0)) return;
+    const outstanding = (typeof o.outstandingPrincipal === 'number')
+      ? o.outstandingPrincipal
+      : Math.max(0, o.principalAmount - o.returnedTotal);
+    const unreducedAmount = accountLiability - outstanding;
+    if (unreducedAmount > 1) {
+      out.flagged.push({
+        ownerId: o.ownerId,
+        ownerName: o.ownerName,
+        returnedTotal: o.returnedTotal,
+        accountLiability,
+        outstandingPrincipal: outstanding,
+        unreducedAmount,
+      });
+    }
+  });
+  out.ok = out.flagged.length === 0;
+  return out;
+},
+
 // checkAll() — Rekomendasi #2 lanjutan (S583 sesi-6). check()/
 // checkOwnerIdConsistency()/checkDebtNameStaleness() sudah ADA dari sesi
 // sebelumnya, tapi masing-masing masih dipanggil terpisah (belum ada 1
@@ -419,6 +684,35 @@ checkOwnershipDualSource() {
 // berikutnya jalan. `_actualLinkedAccountDebts()` di bawah TIDAK diubah
 // (masih baca D.debts apa adanya) -- cukup krn sekarang benar-benar ADA
 // baris ber-linkedAccountId utk dibaca.
+// PERUBAHAN SESI FIX-2026-09-01-lanjutan: tambah `poolCommitment` sbg
+// sub-check ke-7 (lihat checkPoolCommitment() di atas utk latar lengkap) --
+// pola SAMA PERSIS penambahan `ownershipDualSource` sesi S636 (fungsi
+// audit-nya sudah berdiri sendiri, checkAll() cuma menambahkannya ke
+// agregat). `ok` keseluruhan sekarang AND dari 7 sub-check (sebelumnya 6).
+// PERUBAHAN SESI S675: tambah `returnVsLiability` sbg sub-check ke-8 (lihat
+// checkReturnVsLiability() di atas utk latar lengkap) -- pola SAMA PERSIS
+// penambahan `poolCommitment` di atas (fungsi audit-nya berdiri sendiri,
+// checkAll() cuma menambahkannya ke agregat). `ok` keseluruhan sekarang AND
+// dari 8 sub-check (sebelumnya 7).
+// PERUBAHAN SESI S676: tambah `returnVsAccountLiability` sbg sub-check
+// ke-9 (lihat checkReturnVsAccountLiability() di atas utk latar lengkap --
+// menutup Gap #2 dari SESSION-NOTE-S675.md, channel Akun berdiri-sendiri
+// yang tidak tercakup `returnVsLiability`) -- pola SAMA PERSIS penambahan
+// `returnVsLiability`. `ok` keseluruhan sekarang AND dari 9 sub-check
+// (sebelumnya 8).
+// PERUBAHAN (poin 4, sesi lanjutan hasil audit 2026-09-01): tambah
+// `pendingOwnerReview` sbg sub-check ke-10 (checkPendingOwnerReview() di
+// atas) — daftar transaksi yang deductionOwnerId-nya dikosongkan
+// repairTransactionOwnerRefs() krn ambigu & belum diisi ulang manual.
+// Pola SAMA PERSIS ownershipDualSource/poolCommitment/returnVsLiability:
+// masuk `ok` keseluruhan di sini (dipakai warnIfNotOk()/console.warn saat
+// saveOwners(), non-blocking) TAPI di self-test.js sengaja TIDAK ikut
+// `coreOk` (informasional -- butuh user isi ulang manual, bukan "bug sync"
+// yang bisa ditombol perbaiki otomatis, sama alasan returnVsLiability).
+// PERUBAHAN (poin 1, sesi lanjutan): tambah `ownerIdConflicts` sbg sub-check
+// ke-11 (checkOwnerIdConflicts() di atas) -- pola SAMA PERSIS pendingOwnerReview
+// di atas (informasional, masuk `ok` keseluruhan di sini utk warnIfNotOk(),
+// dikecualikan dari coreOk di self-test.js).
 checkAll() {
   const sync = this.check();
   const ownerIdConsistency = this.checkOwnerIdConsistency();
@@ -426,14 +720,24 @@ checkAll() {
   const accountSync = this.checkAccounts();
   const transactionOwnerRefs = this.checkTransactionOwnerRefs();
   const ownershipDualSource = this.checkOwnershipDualSource();
+  const poolCommitment = this.checkPoolCommitment();
+  const returnVsLiability = this.checkReturnVsLiability();
+  const returnVsAccountLiability = this.checkReturnVsAccountLiability();
+  const pendingOwnerReview = this.checkPendingOwnerReview();
+  const ownerIdConflicts = this.checkOwnerIdConflicts();
   return {
-    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok,
+    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok && poolCommitment.ok && returnVsLiability.ok && returnVsAccountLiability.ok && pendingOwnerReview.ok && ownerIdConflicts.ok,
     sync,
     ownerIdConsistency,
     debtNameStaleness,
     accountSync,
     transactionOwnerRefs,
     ownershipDualSource,
+    poolCommitment,
+    returnVsLiability,
+    returnVsAccountLiability,
+    pendingOwnerReview,
+    ownerIdConflicts,
   };
 },
 
@@ -597,6 +901,233 @@ repairMissing() {
     synced++;
   });
   return { synced, unresolved };
+},
+
+// repairOwnerIdConsistency() — SESI FIX-2026-09-01-lanjutan2, menutup jalur
+// perbaikan checkOwnerIdConsistency() (S583 sesi-4) yang dari awal MEMANG
+// baru audit (lihat komentar fungsi itu: "di luar scope modul PURE read-only
+// ini, ditunda sesi terpisah"). Sesi ini = sesi terpisah itu.
+// Pola SAMA PERSIS repairOrphans()/repairMissing() di atas: SATU-SATUNYA
+// tambahan yang menulis ke D, dipanggil EKSPLISIT (bukan dari checkAll()/
+// warnIfNotOk()), aman dipanggil berkali-kali (idempotent — grup yang sudah
+// konsisten tidak lagi divergent di panggilan berikutnya).
+// Per grup nama divergent: pilih 1 `canonicalId` (utamakan id yang SUDAH
+// terdaftar di D.ownerRegistry kalau ada — supaya hasil akhir konsisten dgn
+// R4/OwnerRegistry.rename(); kalau tidak ada satu pun id grup itu terdaftar
+// —- data lama pre-migrasi —- fallback ke id pertama yang ditemukan), lalu
+// tulis ulang `ownerId`+`ownerName` seluruh baris `owners[]` (Aset &
+// Investasi) yang id-nya != canonicalId jadi canonicalId + nama kanonik,
+// dan propagasi sama ke D.debts[].linkedOwnerId+name (biar
+// checkDebtNameStaleness() tidak langsung nyala gara-gara perbaikan ini).
+// GUARD tabrakan — pola SAMA PERSIS OwnerRegistry.merge() (R4): kalau 1
+// entity (aset/holding) SUDAH punya baris canonicalId DAN salah satu id
+// lain di grup yang sama sekaligus, itu 2 porsi BEDA yang kebetulan
+// namanya sama (bukan 1 orang yang perlu digabung) — seluruh grup nama itu
+// DI-SKIP UTUH, dicatat di `conflicts`, TIDAK di-merge sebagian.
+// Return: {unified, conflicts} — unified = jumlah baris owners[]/debts[]
+// yang ownerId-nya disatukan, conflicts = [{name, id}] entity yang
+// grup-nya dibatalkan gara-gara tabrakan (butuh review manual).
+repairOwnerIdConsistency() {
+  if (typeof D === 'undefined') return { unified: 0, conflicts: [] };
+  const divergent = this.checkOwnerIdConsistency().divergent;
+  if (!divergent.length) return { unified: 0, conflicts: [] };
+  const registry = Array.isArray(D.ownerRegistry) ? D.ownerRegistry : [];
+  let unified = 0;
+  const conflicts = [];
+  divergent.forEach((g) => {
+    const ids = g.ids;
+    const registered = ids.filter((id) => registry.some((o) => o && String(o.id) === String(id)));
+    const canonicalId = registered.length ? registered[0] : ids[0];
+    const regEntry = registry.find((o) => o && String(o.id) === String(canonicalId));
+    const canonicalName = regEntry ? regEntry.name : g.name;
+    const others = ids.filter((id) => String(id) !== String(canonicalId));
+    let groupConflict = false;
+    const scanConflict = (list) => {
+      (Array.isArray(list) ? list : []).forEach((entity) => {
+        const eids = (Array.isArray(entity && entity.owners) ? entity.owners : [])
+          .filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
+        if (eids.includes(String(canonicalId)) && others.some((oid) => eids.includes(String(oid)))) {
+          groupConflict = true;
+          conflicts.push({ name: g.name, id: entity.id });
+        }
+      });
+    };
+    scanConflict(D.assets);
+    scanConflict(D.investments);
+    if (groupConflict) return;
+    (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
+      (Array.isArray(a && a.owners) ? a.owners : []).forEach((o) => {
+        if (o && !o.isSelf && others.includes(String(o.ownerId))) { o.ownerId = canonicalId; o.ownerName = canonicalName; unified++; }
+      });
+    });
+    (Array.isArray(D.investments) ? D.investments : []).forEach((h) => {
+      (Array.isArray(h && h.owners) ? h.owners : []).forEach((o) => {
+        if (o && !o.isSelf && others.includes(String(o.ownerId))) { o.ownerId = canonicalId; o.ownerName = canonicalName; unified++; }
+      });
+    });
+    (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
+      if (d && others.includes(String(d.linkedOwnerId))) { d.linkedOwnerId = canonicalId; d.name = canonicalName; unified++; }
+    });
+  });
+  if (unified && typeof save === 'function') save();
+  return { unified, conflicts };
+},
+
+// repairDebtNameStaleness() — menutup jalur perbaikan checkDebtNameStaleness()
+// (S583 sesi-5) — pola SAMA repairOwnerIdConsistency() di atas: dipanggil
+// EKSPLISIT, idempotent, SATU-SATUNYA aksi = menyalin `registryName` (sumber
+// kanonik, sudah dijamin up-to-date oleh OwnerRegistry.rename()) ke
+// `D.debts[].name` utk tiap entri stale yang ditemukan check()-nya sendiri
+// — TIDAK ada rumus baru, murni menutup gap "rename() propagasi ke
+// owners[]/commitments tapi bukan debt snapshot lama" yang dijelaskan di
+// komentar checkDebtNameStaleness().
+// Return: {synced} — jumlah baris D.debts[].name yang disinkronkan.
+repairDebtNameStaleness() {
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) return { synced: 0 };
+  const stale = this.checkDebtNameStaleness().stale;
+  if (!stale.length) return { synced: 0 };
+  const registryNameByDebtId = {};
+  stale.forEach((s) => { registryNameByDebtId[String(s.debtId)] = s.registryName; });
+  let synced = 0;
+  D.debts.forEach((d) => {
+    const key = d && String(d.id);
+    if (d && Object.prototype.hasOwnProperty.call(registryNameByDebtId, key)) {
+      d.name = registryNameByDebtId[key];
+      synced++;
+    }
+  });
+  if (synced && typeof save === 'function') save();
+  return { synced };
+},
+
+// repairTransactionOwnerRefs() — menutup jalur perbaikan checkTransactionOwnerRefs()
+// (S635) — beda dgn 2 repair di atas, di sini TIDAK ADA satu "nilai benar"
+// yang bisa ditarik balik dari sumber lain (checkOwnerIdConsistency punya
+// nama yang sama sbg penanda, checkDebtNameStaleness punya D.ownerRegistry
+// sbg kanonik) — `deductionOwnerId` basi cuma bisa ditebak otomatis kalau
+// akun itu SEKARANG persis 1 owner valid (resolveOwnerDefaultForAccount(),
+// sumber kebenaran yang sama dipakai check()-nya, lihat komentar di sana).
+// Kalau owner valid saat ini TEPAT 1 -> pindah `deductionOwnerId` ke situ
+// (`fixed`, tidak ambigu). Kalau 0 atau >1 (ambigu, tidak bisa ditebak
+// otomatis mana yang benar) -> `deductionOwnerId` DIKOSONGKAN (null),
+// BUKAN dibiarkan nunjuk owner basi yang sudah tidak valid (silent-wrong
+// lebih buruk drpd eksplisit-kosong yang kelihatan di form transaksi utk
+// direview manual) — dicatat di `unresolved` biar tidak dibuang diam-diam.
+// Return: {fixed, cleared, unresolved} — unresolved = array txId yang
+// deductionOwnerId-nya dikosongkan (butuh isi ulang manual).
+// PERUBAHAN (poin 4, sesi lanjutan hasil audit 2026-09-01): sebelum ini,
+// `unresolved` cuma nilai balik SESAAT — begitu panggilan selesai, tidak
+// ada jalur lain user awam bisa menemukan transaksi mana saja yang kena
+// (harus buka Buku Transaksi & cari satu-satu). Sekarang tiap transaksi
+// yang di-cleared JUGA ditandai `_deductionOwnerReviewNeeded=true`,
+// flag PERSISTEN (tersimpan di data, bukan cuma nilai balik) yang dibaca
+// ulang oleh getPendingOwnerReviewTransactions() di bawah kapan saja.
+repairTransactionOwnerRefs() {
+  if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return { fixed: 0, cleared: 0, unresolved: [] };
+  if (typeof resolveOwnerDefaultForAccount !== 'function') return { fixed: 0, cleared: 0, unresolved: [] };
+  const orphan = this.checkTransactionOwnerRefs().orphan;
+  if (!orphan.length) return { fixed: 0, cleared: 0, unresolved: [] };
+  const orphanTxIds = new Set(orphan.map((o) => String(o.txId)));
+  let fixed = 0, cleared = 0;
+  const unresolved = [];
+  D.transactions.forEach((t) => {
+    if (!t || !orphanTxIds.has(String(t.id))) return;
+    let resolved;
+    try { resolved = resolveOwnerDefaultForAccount(t.accountId); } catch (e) { resolved = null; }
+    const owners = (resolved && resolved.ok && resolved.owners) ? resolved.owners : [];
+    if (owners.length === 1) {
+      t.deductionOwnerId = owners[0].ownerId;
+      fixed++;
+    } else {
+      t.deductionOwnerId = null;
+      t._deductionOwnerReviewNeeded = true;
+      cleared++;
+      unresolved.push(t.id);
+    }
+  });
+  if ((fixed || cleared) && typeof save === 'function') save();
+  return { fixed, cleared, unresolved };
+},
+
+// checkPendingOwnerReview() — poin 4 (sesi lanjutan hasil audit 2026-09-01),
+// jalur BACA daftar transaksi yang deductionOwnerId-nya dikosongkan
+// repairTransactionOwnerRefs() (di atas) karena ambigu. PURE baca-saja (0
+// mutasi), pola sama seluruh check*() lain di modul ini — hanya membaca
+// flag `_deductionOwnerReviewNeeded` yang ditulis repair tsb.
+// "Masih perlu direview" = flag ada DAN deductionOwnerId masih kosong —
+// begitu user mengisi ulang pemiliknya manual lewat form transaksi (jalur
+// normal, di luar modul ini), transaksi itu otomatis TIDAK lagi muncul di
+// sini walau flag lama masih menempel (field mati, tidak pernah dibaca
+// lagi setelah deductionOwnerId terisi) — jadi daftar ini selalu akurat
+// tanpa perlu jalur "tandai selesai" terpisah.
+// Return: {ok, pending: [{txId, accountId, tanggal, jumlah, catatan}]} --
+// ok=true kalau pending kosong.
+checkPendingOwnerReview() {
+  if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return { ok: true, pending: [] };
+  const pending = D.transactions
+    .filter((t) => t && t._deductionOwnerReviewNeeded === true && !t.deductionOwnerId)
+    .map((t) => ({ txId: t.id, accountId: t.accountId, tanggal: t.tanggal, jumlah: t.jumlah, catatan: t.catatan }));
+  return { ok: pending.length === 0, pending };
+},
+
+// _computeOwnerIdConflicts() — helper PURE bersama, dipakai
+// checkOwnerIdConflicts() (di bawah) DAN repairOwnerIdConsistency() (di
+// atas). LOGIKA IDENTIK dgn guard tabrakan yang sudah ada di dalam
+// repairOwnerIdConsistency() sejak awal (SESI FIX-2026-09-01-lanjutan2) --
+// diekstrak ke sini SUPAYA bisa dibaca TANPA menjalankan repair (repair
+// itu sendiri baru dipanggil EKSPLISIT lewat tombol + konfirmasi, tapi
+// user berhak tahu ADA tabrakan yang butuh review manual sebelum/tanpa
+// menekan tombol itu -- itu tujuan poin 1 sesi ini). 0 perubahan
+// perilaku repairOwnerIdConsistency() itu sendiri (tetap hitung ulang
+// inline, bukan dipanggil dari sini, supaya 0 risiko regresi ke logic
+// merge yang sudah teruji).
+// Per grup nama divergen (checkOwnerIdConsistency()): entity (aset/holding)
+// yang SUDAH punya baris canonicalId (id yang diutamakan -- id terdaftar
+// di D.ownerRegistry, atau id pertama grup kalau tidak ada yang terdaftar)
+// DAN salah satu id lain di grup yang sama SEKALIGUS = tabrakan (2 porsi
+// beda yang kebetulan namanya sama, bukan 1 orang yang perlu digabung).
+// Return: array [{name, id}] -- id = id entity (aset/holding) yang
+// tabrakan, name = nama pemilik yang divergen.
+_computeOwnerIdConflicts() {
+  if (typeof D === 'undefined') return [];
+  const divergent = this.checkOwnerIdConsistency().divergent;
+  if (!divergent.length) return [];
+  const registry = Array.isArray(D.ownerRegistry) ? D.ownerRegistry : [];
+  const conflicts = [];
+  divergent.forEach((g) => {
+    const ids = g.ids;
+    const registered = ids.filter((id) => registry.some((o) => o && String(o.id) === String(id)));
+    const canonicalId = registered.length ? registered[0] : ids[0];
+    const others = ids.filter((id) => String(id) !== String(canonicalId));
+    const scanConflict = (list) => {
+      (Array.isArray(list) ? list : []).forEach((entity) => {
+        const eids = (Array.isArray(entity && entity.owners) ? entity.owners : [])
+          .filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
+        if (eids.includes(String(canonicalId)) && others.some((oid) => eids.includes(String(oid)))) {
+          conflicts.push({ name: g.name, id: entity.id });
+        }
+      });
+    };
+    scanConflict(D.assets);
+    scanConflict(D.investments);
+  });
+  return conflicts;
+},
+
+// checkOwnerIdConflicts() — poin 1 (sesi lanjutan hasil audit 2026-09-01):
+// "conflicts cuma masuk console.warn -- kalau repairOwnerIdConsistency()
+// skip grup karena tabrakan, user awam tidak akan pernah lihat itu
+// (console devtools tidak kebuka di HP)". PURE baca-saja (0 mutasi), pola
+// sama seluruh check*() lain di modul ini -- reuse _computeOwnerIdConflicts()
+// di atas, TIDAK menjalankan repair apa pun. Beda dgn checkPendingOwnerReview()
+// (butuh flag persisten krn sinyal aslinya HILANG setelah deductionOwnerId
+// dikosongkan) -- tabrakan owner ID di sini SEPENUHNYA bisa dihitung ulang
+// tiap saat dari D.assets/D.investments/D.ownerRegistry, jadi TIDAK perlu
+// flag apa pun, murni derivasi data yang sudah ada.
+// Return: {ok, conflicts: [{name, id}]} -- ok=true kalau conflicts kosong.
+checkOwnerIdConflicts() {
+  const conflicts = this._computeOwnerIdConflicts();
+  return { ok: conflicts.length === 0, conflicts };
 },
 
 };
