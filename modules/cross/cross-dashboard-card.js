@@ -20,8 +20,36 @@
 // (modules/shared/modules-render.js), TIDAK ada mekanisme render baru —
 // pola SAMA PERSIS VehicleDashboard.render()/FinanceDashboard.render().
 //
-// CSS: TIDAK ada class baru — reuse penuh .findash-grid/.findash-card*
-// (styles.css, Sesi 75) apa adanya.
+// CSS: 1 class baru `.findash-card-sub-link` (styles.css) — reuse penuh
+// sisanya dari .findash-grid/.findash-card* (Sesi 75) apa adanya.
+//
+// KLIK->SUMBER (Sesi 691, lanjutan AUDIT-RENCANA-kartu-klik-ke-sumber-
+// v1503.md GAP #2): _combinedAttentionCard menggabung 2 counter dari 2
+// domain BEDA (budget Keuangan + reminder Kendaraan) jadi 1 angka --
+// beda dari 4 kartu FinanceDashboard (S690) yang tiap kartu = 1 sumber,
+// klik 1x ke 1 tujuan sudah cukup mewakili. Keputusan produk (dipilih
+// user, bukan Architect call sesi ini): PECAH baris `sub` jadi 2 SPAN
+// terpisah yang MASING-MASING clickable ke sumbernya sendiri (bukan 1
+// klik ke tujuan dominan/gabungan) -- kartu (`.findash-card`) SENDIRI
+// TETAP TIDAK clickable (beda dari FinanceDashboard/VehicleDashboard,
+// yang clickable di level div terluar), cuma 2 span di baris `sub` yang
+// carry `data-action`/`data-args`. Ini AMAN dipakai bareng dispatcher
+// generik `_dataActionClickHandler` (features-helpers-global-security.js)
+// yang pakai `e.target.closest('[data-action]')` -- closest() otomatis
+// berhenti di span terdekat duluan sebelum naik ke div kartu, jadi 0
+// perubahan ke dispatcher, 0 stopPropagation baru dibutuhkan (div kartu
+// memang sengaja tidak diberi data-action sama sekali).
+// Target navigasi REUSE PENUH const yang SUDAH ADA di file lain (0
+// duplikat literal target): `FINANCE_DASHBOARD_CARD_NAV_TARGETS.budget`
+// (finance-dashboard.js, S690) & `VEHICLE_DASHBOARD_NAV_TARGETS.service`
+// (vehicle-dashboard.js, S253) -- urutan load scripts/build.js SUDAH
+// menjamin kedua file itu load SEBELUM cross-dashboard-card.js (baris
+// 567/657 vs 831), jadi kedua const ini pasti sudah ada sbg global saat
+// file ini jalan di app sungguhan. Guard `typeof ... !== 'undefined'`
+// tetap dipasang (pola sama `typeof CrossAIHook==='undefined'` di
+// render()) utk kasus file ini di-load sendirian (headless/test) --
+// kalau target belum ada, span tetap tampil TAPI TANPA onClick (teks
+// biasa, bukan crash, bukan duplikat objek target).
 const CrossDashboardCard = {
 
   render() {
@@ -61,10 +89,30 @@ const CrossDashboardCard = {
         <div class="findash-card-body">
           <div class="findash-card-label">${escapeHtml(c.label)}</div>
           <div class="findash-card-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
-          ${c.sub ? `<div class="findash-card-sub">${escapeHtml(c.sub)}</div>` : ''}
+          ${this._renderSub(c)}
         </div>
       </div>
     `).join('');
+  },
+
+  // _renderSub(c) — baris `sub` findash-card. Kalau `c.subParts` ada
+  // (kartu gabungan lintas-domain, S691), render tiap bagian sbg SPAN
+  // terpisah yang carry data-action/data-args sendiri kalau `p.onClick`
+  // ada (kalau tidak, span polos tanpa class link -- fallback aman).
+  // Kalau tidak, fallback ke `c.sub` string biasa (perilaku LAMA, 0
+  // breaking change utk _financeHealthCard()/_vehicleHealthCard()).
+  _renderSub(c) {
+    if (c.subParts) {
+      const parts = c.subParts.map((p, i) => {
+        const attrs = p.onClick
+          ? ` data-action="${escapeHtml(p.onClick.action)}" data-args="${escapeHtml(JSON.stringify(p.onClick.args))}"`
+          : '';
+        const cls = p.onClick ? ' findash-card-sub-link' : '';
+        return `${i > 0 ? ' &middot; ' : ''}<span class="${cls.trim()}"${attrs}>${escapeHtml(p.text)}</span>`;
+      }).join('');
+      return `<div class="findash-card-sub">${parts}</div>`;
+    }
+    return c.sub ? `<div class="findash-card-sub">${escapeHtml(c.sub)}</div>` : '';
   },
 
   // _financeHealthCard(finance) — finance = CrossAIHook.getAIHook().finance
@@ -100,16 +148,31 @@ const CrossDashboardCard = {
   // (VehicleReminder.summary()). 0 threshold/skoring baru — kalau salah
   // satu sisi belum ok, dianggap 0 dari sisi itu (pola guard sama persis
   // fleetSummary()/getAIHook() lain di file ini).
+  //
+  // subParts (S691, lihat catatan header file § KLIK->SUMBER): 2 bagian
+  // klik terpisah, BUKAN 1 onClick gabungan di level kartu. Target
+  // REUSE 100% const yang sudah ada di file lain, 0 literal baru.
   _combinedAttentionCard(finance, vehicle) {
     const budgetOver = (finance && finance.ok && finance.budget && finance.budget.ok) ? (finance.budget.overCount || 0) : 0;
     const vehicleOverdue = (vehicle && vehicle.ok && vehicle.reminder) ? (vehicle.reminder.overdueCount || 0) : 0;
     const total = budgetOver + vehicleOverdue;
+    const budgetTarget = (typeof FINANCE_DASHBOARD_CARD_NAV_TARGETS !== 'undefined') ? FINANCE_DASHBOARD_CARD_NAV_TARGETS.budget : null;
+    const serviceTarget = (typeof VEHICLE_DASHBOARD_NAV_TARGETS !== 'undefined') ? VEHICLE_DASHBOARD_NAV_TARGETS.service : null;
     return {
       icon: '⚠️',
       label: 'Total Perhatian Gabungan',
       value: String(total),
       cls: total > 0 ? 'orange' : 'green',
-      sub: `${budgetOver} anggaran lewat batas · ${vehicleOverdue} servis/pajak/BBM lewat jatuh tempo`,
+      subParts: [
+        {
+          text: `${budgetOver} anggaran lewat batas`,
+          onClick: budgetTarget ? { action: 'dashHubNavigateToFeature', args: [budgetTarget] } : null,
+        },
+        {
+          text: `${vehicleOverdue} servis/pajak/BBM lewat jatuh tempo`,
+          onClick: serviceTarget ? { action: 'dashHubNavigateToFeature', args: [serviceTarget] } : null,
+        },
+      ],
     };
   },
 
