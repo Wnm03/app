@@ -391,7 +391,71 @@ const InvestmentUI = {
     }
     // SESI AF2: sisipkan tombol "🔄 Isi dari kuota sisa" — pemicu manual applyQuotaToRow(),
     // mirror PERSIS Aset._ownerQuotaText().
-    return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">' + money(sisa) + '</span>' + quotaBtn + '</div>';
+    // SESI FIX-2026-09-01 ("Alihkan sisa ke aset lain", mirror PERSIS Aset._ownerQuotaText()
+    // — lihat komentarnya di aset-owners.js utk desain lengkap): tombol KEDUA khusus sisa
+    // POSITIF signifikan, memindahkan sisa yang tidak tertampung HOLDING INI ke aset Buku
+    // Aset/holding LAIN yang masih punya ruang kosong (porsi Milik Sendiri) — Bagian 1 dari
+    // temuan audit S687-lanjutan: sebelumnya cakupan realokasi cuma Buku Aset, domain
+    // Investasi (holding ini sendiri) belum pernah bisa jadi SUMBER realokasi.
+    const realokasiBtn = '<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="InvestmentUI.previewRealokasiSisaKuota" data-args=\'[' + btnIdx + ']\'>🔀 Alihkan sisa ke aset lain</button>';
+    return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">' + money(sisa) + '</span>' + quotaBtn + realokasiBtn + '</div>';
+  },
+
+  // previewRealokasiSisaKuota(i) — SESI FIX-2026-09-01, mirror PERSIS Aset.previewRealokasiSisaKuota()
+  // (aset-owners.js — lihat komentarnya utk desain lengkap fitur). Beda basis sisa: holding
+  // investasi baca lewat _ownerQuotaText()-nya sendiri (formula sama, holdingCost() bukan
+  // a.nilai) — dihitung ULANG di sini dgn cara yang SAMA PERSIS (0 rumus baru) supaya
+  // konsisten dgn angka yang tampil di baris kuota yang sama.
+  async previewRealokasiSisaKuota(i) {
+    const draft = Array.isArray(InvestmentUI._ownersDraft) ? InvestmentUI._ownersDraft : [];
+    const o = draft[i];
+    if (!o || o.isSelf || !o.ownerId) return;
+    if (typeof RealokasiSisaKuota === 'undefined') { if (typeof toast === 'function') toast('⚠️ Fitur realokasi belum siap dimuat'); return; }
+    if (typeof DanaTitipanPortfolioAPI === 'undefined') return;
+    const commit = DanaTitipanPortfolioAPI.getCommitments().find((c) => c && c.ownerId === o.ownerId);
+    if (!commit || !isFinite(commit.principalAmount)) { if (typeof toast === 'function') toast('⚠️ Owner ini belum punya pokok titipan tercatat'); return; }
+    const principal = Number(commit.principalAmount);
+    const holding = InvestmentUI._ownersModalHolding;
+    const holdingId = holding ? holding.id : null;
+    const excluding = DanaTitipanPortfolioAPI.allocatedExcluding(o.ownerId, holdingId);
+    const projection = (typeof DanaTitipanPortfolioAPI.build === 'function') ? DanaTitipanPortfolioAPI.build() : null;
+    const ownerBucket = (projection && Array.isArray(projection.owners)) ? projection.owners.find((ow) => ow && ow.ownerId === o.ownerId) : null;
+    const usedTotal = ownerBucket ? (ownerBucket.usedTotal || 0) : 0;
+    const linkedExpenseTotal = ownerBucket ? (ownerBucket.linkedExpenseTotal || 0) : 0;
+    const renovExpenseTotal = ownerBucket ? (ownerBucket.renovExpenseTotal || 0) : 0;
+    const holdingCost = (holding && typeof Investment !== 'undefined' && typeof Investment.holdingCost === 'function') ? (Investment.holdingCost(holding) || 0) : 0;
+    const porsiNum = typeof o.porsi === 'number' && isFinite(o.porsi) ? o.porsi : 0;
+    const draftNominal = holdingCost * (porsiNum / 100);
+    const sisa = principal - excluding - usedTotal - linkedExpenseTotal - renovExpenseTotal - draftNominal;
+    if (!(sisa > InvestmentUI.DUST_THRESHOLD_RP)) { if (typeof toast === 'function') toast('⚠️ Tidak ada sisa kuota signifikan untuk dialihkan'); return; }
+    const candidates = RealokasiSisaKuota.findCandidates({ holdingId });
+    if (!candidates.length) { if (typeof toast === 'function') toast('⚠️ Tidak ada aset/holding lain dengan ruang kosong (porsi Milik Sendiri) untuk dialihkan'); return; }
+    const built = RealokasiSisaKuota.buildPlan(sisa, candidates);
+    if (!built.plan.length) { if (typeof toast === 'function') toast('⚠️ Tidak ada aset/holding lain dengan ruang kosong untuk dialihkan'); return; }
+    const money = (typeof fmtFull === 'function') ? fmtFull : ((typeof fmt === 'function') ? fmt : (n) => 'Rp ' + Math.round(n || 0));
+    let msg = '🔀 Alihkan sisa kuota titipan ' + (o.ownerName || 'owner ini') + ' (' + money(sisa) + ') ke:\n';
+    built.plan.forEach((p) => { msg += '• ' + p.name + ' (' + (p.type === 'holding' ? 'Holding Investasi' : 'Buku Aset') + '): ' + money(p.alloc) + '\n'; });
+    if (built.unallocated > InvestmentUI.DUST_THRESHOLD_RP) msg += 'Sisa ' + money(built.unallocated) + ' tetap belum teralokasi (tidak cukup ruang kosong di aset/holding lain).';
+    const ok = await askConfirm(msg.trim(), { title: 'Alihkan Sisa Kuota', okText: 'Ya, Alihkan', danger: false, icon: '🔀' });
+    if (!ok) return;
+    InvestmentUI._applyRealokasiSisaKuota(built.plan, o.ownerId, o.ownerName);
+  },
+
+  // _applyRealokasiSisaKuota(plan,ownerId,ownerName) — mirror PERSIS Aset._applyRealokasiSisaKuota(),
+  // 0 duplikasi logic tulis (SATU fungsi tulis bersama RealokasiSisaKuota.applyAllocationRow()).
+  _applyRealokasiSisaKuota(plan, ownerId, ownerName) {
+    let successCount = 0; let failCount = 0; let totalApplied = 0;
+    (plan || []).forEach((item) => {
+      const res = RealokasiSisaKuota.applyAllocationRow(item, ownerId, ownerName);
+      if (res && res.ok) { successCount++; totalApplied += res.actualAlloc || 0; } else { failCount++; }
+    });
+    const money = (typeof fmtFull === 'function') ? fmtFull : ((typeof fmt === 'function') ? fmt : (n) => 'Rp ' + Math.round(n || 0));
+    if (successCount > 0) {
+      if (typeof toast === 'function') toast('✅ Sisa kuota dialihkan ke ' + successCount + ' aset/holding (' + money(totalApplied) + ')' + (failCount ? ', ' + failCount + ' gagal' : ''));
+    } else {
+      if (typeof toast === 'function') toast('⚠️ Gagal mengalihkan sisa kuota — coba lagi');
+    }
+    InvestmentUI._renderOwnersList();
   },
 
   // _updateOwnerQuotaDisplay(i) — SESI 494. Update HANYA elemen #investOwnerKuota{i} tiap ketik

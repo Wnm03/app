@@ -275,7 +275,104 @@ return '<div class="u-fs11 u-mt2 u-flex u-gap8" style="align-items:center;flex-w
 // jadi klik di teks merahnya wajar tidak bereaksi (tidak ada elemen data-action di sana).
 // Fix: tombol sekarang disisipkan di KEDUA cabang -- applyQuotaToRow() sendiri sudah
 // aman dipanggil kapan saja (cap<=0 -> toast "kuota sudah habis", bukan crash/diam).
-return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+quotaBtn+'</div>';
+// SESI FIX-2026-09-01 ("Alihkan sisa ke aset lain"): tombol KEDUA khusus cabang sisa
+// POSITIF signifikan -- beda dari quotaBtn (yang mengisi PORSI BARIS INI dari kuota),
+// realokasiBtn memindahkan sisa yang TIDAK tertampung aset/holding ini ke aset/holding
+// LAIN yang masih punya ruang kosong (lihat previewRealokasiSisaKuota() di bawah). Tidak
+// disisipkan di cabang sisa<0/dust -- realokasi cuma masuk akal kalau owner MASIH punya
+// pokok nganggur, bukan saat sudah pas/overallocated.
+const realokasiBtn='<button type="button" class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:10.5px" data-action="Aset.previewRealokasiSisaKuota" data-args=\'['+btnIdx+']\'>🔀 Alihkan sisa ke aset lain</button>';
+return '<div class="u-fs11 u-t2 u-mt2 u-flex u-gap8" style="align-items:center;flex-wrap:wrap">💰 Kuota sisa: <span class="u-fw700">'+money(sisa)+'</span>'+quotaBtn+realokasiBtn+'</div>';
+},
+// previewRealokasiSisaKuota(i) -- SESI FIX-2026-09-01 (fitur "🔀 Alihkan sisa ke aset lain",
+// lihat header realokasi-sisa-kuota.js utk desain lengkap). Tombol kedua di baris kuota owner
+// non-SELF ke-i (disisipkan _ownerQuotaText() di atas, HANYA cabang sisa positif signifikan).
+// Cari kandidat aset Buku Aset LAIN & Holding Investasi (RealokasiSisaKuota.findCandidates(),
+// cakup KEDUA domain -- Bagian 1 dari temuan audit S687-lanjutan: sebelumnya tombol serupa
+// cuma menjangkau Buku Aset, HILANG Holding Investasi), susun rencana greedy ruang-terbesar-
+// dulu (buildPlan()), TAMPILKAN dulu lewat askConfirm() sebelum menulis apa pun -- 0 auto-
+// apply tanpa konfirmasi, pola sama seluruh aksi yang mengubah >1 entity sekaligus di project
+// ini (mis. Aset.migrateOwnersToRegistry()).
+async previewRealokasiSisaKuota(i){
+const draft=Array.isArray(Aset._ownersDraft)?Aset._ownersDraft:[];
+const o=draft[i];
+if(!o||o.isSelf||!o.ownerId)return;
+if(typeof RealokasiSisaKuota==='undefined'){if(typeof toast==='function')toast('⚠️ Fitur realokasi belum siap dimuat');return;}
+const sisa=Aset._ownerSisaTitipan(o);
+if(sisa===null||!(sisa>Aset.DUST_THRESHOLD_RP)){if(typeof toast==='function')toast('⚠️ Tidak ada sisa kuota signifikan untuk dialihkan');return;}
+const currentAssetId=Aset._ownersModalAsset?Aset._ownersModalAsset.id:null;
+const candidates=RealokasiSisaKuota.findCandidates({assetId:currentAssetId});
+if(!candidates.length){if(typeof toast==='function')toast('⚠️ Tidak ada aset/holding lain dengan ruang kosong (porsi Milik Sendiri) untuk dialihkan');return;}
+const built=RealokasiSisaKuota.buildPlan(sisa,candidates);
+if(!built.plan.length){if(typeof toast==='function')toast('⚠️ Tidak ada aset/holding lain dengan ruang kosong untuk dialihkan');return;}
+const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
+let msg='🔀 Alihkan sisa kuota titipan '+(o.ownerName||'owner ini')+' ('+money(sisa)+') ke:\n';
+built.plan.forEach((p)=>{msg+='• '+p.name+' ('+(p.type==='holding'?'Holding Investasi':'Buku Aset')+'): '+money(p.alloc)+'\n';});
+if(built.unallocated>Aset.DUST_THRESHOLD_RP)msg+='Sisa '+money(built.unallocated)+' tetap belum teralokasi (tidak cukup ruang kosong di aset/holding lain).';
+const ok=await askConfirm(msg.trim(),{title:'Alihkan Sisa Kuota',okText:'Ya, Alihkan',danger:false,icon:'🔀'});
+if(!ok)return;
+Aset._applyRealokasiSisaKuota(built.plan,o.ownerId,o.ownerName);
+},
+// _applyRealokasiSisaKuota(plan,ownerId,ownerName) -- eksekusi rencana yang SUDAH dikonfirmasi
+// user lewat previewRealokasiSisaKuota() di atas. Tiap baris ditulis via SATU fungsi tulis
+// bersama RealokasiSisaKuota.applyAllocationRow() (dipakai jg InvestmentUI, 0 duplikasi logic
+// tulis lintas domain). Baris yang GAGAL (mis. race -- ruang kosong berubah antara preview &
+// konfirmasi) dikumpulkan & dilaporkan lewat toast, TIDAK menghentikan baris plan lainnya
+// (tiap baris menyentuh entity independen, kegagalan 1 baris tidak boleh membatalkan yg lain).
+_applyRealokasiSisaKuota(plan,ownerId,ownerName){
+let successCount=0,failCount=0,totalApplied=0;
+(plan||[]).forEach((item)=>{
+const res=RealokasiSisaKuota.applyAllocationRow(item,ownerId,ownerName);
+if(res&&res.ok){successCount++;totalApplied+=res.actualAlloc||0;}else{failCount++;}
+});
+const money=(typeof fmtFull==='function')?fmtFull:((typeof fmt==='function')?fmt:(n)=>'Rp '+Math.round(n||0));
+if(successCount>0){
+if(typeof toast==='function')toast('✅ Sisa kuota dialihkan ke '+successCount+' aset/holding ('+money(totalApplied)+')'+(failCount?', '+failCount+' gagal':''));
+}else{
+if(typeof toast==='function')toast('⚠️ Gagal mengalihkan sisa kuota — coba lagi');
+}
+// Render ulang list owner modal ini SEKARANG -- kuota sisa baris ini (& mungkin baris lain
+// yang juga baca DanaTitipanPortfolioAPI global) berubah setelah realokasi, pola sama
+// _renderOwnersList() dipanggil ulang tiap perubahan draft/kuota lain di modal ini.
+Aset._renderOwnersList();
+},
+// _applyOwnersToAsset(a,owners) -- SESI FIX-2026-09-01: versi TANPA-MODAL dari inti tulis
+// saveOwners() (lihat method itu di bawah) -- dipakai RealokasiSisaKuota.applyAllocationRow()
+// (realokasi-sisa-kuota.js) utk menulis owners[] BARU langsung ke 1 aset TARGET realokasi
+// (BUKAN aset yang sedang dibuka di assetOwnersModal, jadi TIDAK lewat Aset._ownersDraft/DOM
+// sama sekali). 100% REUSE MultiOwnerEngine.setOwners() (validasi/normalisasi) + urutan side-
+// effect PERSIS SAMA dgn saveOwners() (bersihkan field titipan legacy, sync saldo & ownership
+// akun tertaut, TitipanSync.reconcile()/_syncOwnerDebts(), save(), AIBus.emit) -- 0 rumus
+// baru, murni diekstrak supaya bisa dipanggil dgn owners[] yang SUDAH final dari caller lain
+// selain modal ini (mis. OwnerRegistry.findOrCreate() TIDAK dipanggil di sini krn owners[]
+// yang dioper ke method ini WAJIB sudah punya ownerId final, beda dari draft mentah modal).
+// owners tetap divalidasi ulang oleh MultiOwnerEngine.setOwners() di bawah (TIDAK dipercaya
+// begitu saja dari caller manapun).
+_applyOwnersToAsset(a,owners){
+if(!a)throw new Error('Aset tidak ditemukan');
+if(typeof MultiOwnerEngine==='undefined')throw new Error('MultiOwnerEngine belum dimuat');
+const res=MultiOwnerEngine.setOwners(a,owners);
+if(!res.ok)throw new Error(res.reason);
+Object.assign(a,{owners:res.entity.owners});
+if(a.titipanAmount>0){
+a.titipanAmount=0;
+a.titipanOwnerType='';
+a.titipanOwnerName='';
+}
+if(a.accountId){
+const linkedAcc=D.accounts.find(x=>sameId(x.id,a.accountId));
+if(linkedAcc){
+const linkedAccNilai=a.nilai||0;
+const txDelta=recalcAccBalance(linkedAcc.id)-(linkedAcc.baseBalance!==undefined?linkedAcc.baseBalance:(linkedAcc.balance||0));
+linkedAcc.baseBalance=linkedAccNilai-txDelta;
+linkedAcc.balance=linkedAccNilai;
+if(typeof OwnershipEngine!=='undefined')linkedAcc.ownership=OwnershipEngine.resolve(a).type;
+}
+}
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcile==='function'){TitipanSync.reconcile(a);}else{Aset._syncOwnerDebts(a);}
+save();
+if(typeof AIBus!=='undefined')AIBus.emit('asset.updated',{ownersUpdated:true,editId:a.id});
+return a;
 },
 // _ownerHasUnallocatedElsewhere(ownerId,projection) -- SESI BARU (audit
 // "AUDIT-RENCANA-titipan-unallocated-ownersmodal-exposure.md" § Sesi A,
