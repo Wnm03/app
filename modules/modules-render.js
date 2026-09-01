@@ -1399,6 +1399,19 @@ billEl.innerHTML='';
 }
 
 function renderLaporan(){
+// lapMonthLabel (lanjutan Fix "slide bulan sebelum/sesudah di filter
+// Laporan") — label ‹ bulan › di panel filter Laporan, pola sama
+// txListMonthLabel (renderKeuangan() di atas) TAPI baca now+lapMonthOffset
+// (BUKAN curMonth/curYear — state terpisah, lihat komentar lapMonthOffset
+// di features-helpers-global-security.js). Guard elemen: nav ini cuma ada
+// kalau filterPeriode==='bulan' (toggle di setPeriode(), tx-list-
+// cashflow.js), jadi bisa saja belum ada di beberapa test harness.
+const lapMonthLabelEl=document.getElementById('lapMonthLabel');
+if(lapMonthLabelEl){
+const _now=new Date();
+const _base=new Date(_now.getFullYear(),_now.getMonth()+lapMonthOffset,1);
+lapMonthLabelEl.textContent=MONTHS_FULL[_base.getMonth()]+' '+_base.getFullYear();
+}
 const {from,to}=getRange();
 const f=getLaporanFilters();
 const filterSig=JSON.stringify({from:+from,to:+to,f});
@@ -1477,7 +1490,13 @@ const badgeCol=naik?'var(--accent2)':(turun?'var(--accent3)':'var(--text2)');
 const arrow=naik?'▲':(turun?'▼':'≈');
 vsAvgHtml=`<div style="font-size:11px;color:${badgeCol};margin-top:2px">${arrow} ${selisihPct>0?'+':''}${selisihPct}% vs rata-rata bulanan (${fmt(avg)})</div>`;
 }
-return`<div class="cat-bar"><div class="cat-bar-head"><span style="font-weight:500">${k} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>${vsAvgHtml}</div>`;
+// Fix (permintaan user: "kategori di Laporan bisa diklik ke transaksi asal") —
+// tiap baris kategori dibungkus data-action="showFilteredTx" + data-args (pola
+// sama data-action lain di file ini, mis. #accGrid/#catList di atas) — tap
+// kategori buka filterTxModal isi transaksi kategori itu, tetap ikut filter
+// Laporan yang lagi aktif (periode/tipe/dll, lihat showFilteredTx() argumen
+// ke-5 `kat` di filter-laporan.js). 0 perubahan visual/HTML lain di baris ini.
+return`<div class="cat-bar u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['laporan','all','📁 '+k,null,k]))}"><div class="cat-bar-head"><span style="font-weight:500">${k} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>${vsAvgHtml}</div>`;
 }).join(''):'<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Belum ada data</div></div>';
 const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
 const visibleCount=Math.min(sorted.length,lapTxPage*TX_PAGE_SIZE);
