@@ -1407,6 +1407,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .findash-card-label{font-size:var(--fs-caption);color:var(--text2);margin-bottom:2px;}
 .findash-card-val{font-size:var(--fs-title-sm);font-weight:700;color:var(--text);}
 .findash-card-sub{font-size:var(--fs-caption);color:var(--text2);opacity:.75;margin-top:2px;}
+.findash-card-sub-link{cursor:pointer;text-decoration:underline dotted;}
 @media (min-width:600px){
   .findash-grid{grid-template-columns:repeat(4,1fr);}
 }
