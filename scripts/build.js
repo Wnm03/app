@@ -1155,6 +1155,15 @@ const GROUP_B = [
   'modules/finance/dana-titipan-aggregation-api.js',
   'modules/finance/dana-titipan-commitment-return-api.js',
   'modules/finance/dana-titipan-portfolio-render.js',
+  // SESI FIX-2026-09-01 (fitur "🔀 Alihkan sisa ke aset lain", lihat header file itu utk
+  // desain lengkap): RealokasiSisaKuota — ditaruh setelah trio Dana Titipan di atas
+  // (dependency KONSEPTUAL saja lewat guard typeof, 0 dependency KODE wajib saat load —
+  // file ini pure/standalone, cuma baca D/MultiOwnerEngine/Investment/Aset di DALAM method,
+  // saat benar-benar dipanggil runtime, bukan saat load). Dipanggil dari
+  // Aset.previewRealokasiSisaKuota() (aset-owners.js, GROUP_A) & InvestmentUI.
+  // previewRealokasiSisaKuota() (investasi-view.js, GROUP_A) — aman krn GROUP_A & GROUP_B
+  // sama-sama sudah termuat penuh sebelum method mana pun sempat dipanggil user.
+  'modules/shared/realokasi-sisa-kuota.js',
   // Audit ukuran file (sesi split lanjutan setelah scan-ocr.js):
   // dana-titipan-portfolio-render.js dipecah jadi 2 -- DanaTitipanCommitmentUI/
   // DanaTitipanReturnUI/DanaTitipanPoolUI pindah ke
