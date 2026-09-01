@@ -1307,7 +1307,7 @@ const DanaTitipanPortfolioPresenter = {
         if (!majoris) return '';
         return `
       <div class="u-flex u-jcb u-fs11 u-mt2">
-        <span class="u-t2">Pengeluaran Majoris (dari transaksi Renov)</span>
+        <span class="u-t2">Pengeluaran Majoris (estimasi dari transaksi pemilik akun)</span>
         <span class="u-fw700">${this._money(majoris.pengeluaranMajoris)}</span>
       </div>
       <div class="u-flex u-jcb u-fs11 u-mt2">
@@ -1318,7 +1318,7 @@ const DanaTitipanPortfolioPresenter = {
       </div>
       ${majoris.synced ? '' : `
       <div class="u-flex u-jcb u-fs10 u-mt2 u-t2">
-        <span>⚠️ Beda dgn total "Estimasi dari Transaksi Akun" per pemilik (${this._money(majoris.deductionOwnerTotal)}) — cek tag "Proyek Renovasi" vs "Ditanggung"</span>
+        <span>⚠️ Beda dgn total tag "🔨 Proyek Renovasi" saja (${this._money(majoris.pengeluaranMajorisRenovTag)}) — ada transaksi "👤 Ditanggung" yang belum ditandai Renov</span>
       </div>`}`;
       })()}
       <div class="u-flex u-jcb u-fs11 u-mt2">

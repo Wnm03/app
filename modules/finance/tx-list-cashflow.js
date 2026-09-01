@@ -442,30 +442,75 @@ resetTxPageAndRender();
 function getTxListRange(){
 if(txListPeriode==='selamanya')return{from:new Date(0),to:new Date(8640000000000000)};
 const now=new Date();now.setHours(23,59,59,999);let from;
-if(txListPeriode==='hari'){from=new Date();from.setHours(0,0,0,0);}
-else if(txListPeriode==='minggu'){from=new Date();from.setDate(from.getDate()-from.getDay());from.setHours(0,0,0,0);}
+// Fix (audit lanjutan S695 -- "chip lain" kartu Semua Transaksi belum dicek
+// apakah punya bug serupa Fix 2): SEBELUMNYA chip hari/minggu/tahun selalu
+// to=now (terpotong "hari ini"/"jam ini" -- sama persis bug yang sudah
+// diperbaiki utk chip "bulan" di getRange()/getTxListRange() versi lama),
+// jadi 0 cara lihat transaksi bertanggal ke depan dalam periode yang sama
+// (mis. tagihan yang sengaja dicatat tgl akhir minggu/akhir tahun). Sekarang
+// tiap chip kembalikan rentang PENUH periodenya (awal s/d akhir hari/minggu/
+// tahun), pola sama chip "bulan" yang sudah lebih dulu begini.
+if(txListPeriode==='hari'){from=new Date();from.setHours(0,0,0,0);const to2=new Date();to2.setHours(23,59,59,999);return{from,to:to2};}
+else if(txListPeriode==='minggu'){from=new Date();from.setDate(from.getDate()-from.getDay());from.setHours(0,0,0,0);const to2=new Date(from);to2.setDate(to2.getDate()+6);to2.setHours(23,59,59,999);return{from,to:to2};}
 else if(txListPeriode==='bulan'){from=new Date(curYear,curMonth,1);const to2=new Date(curYear,curMonth+1,0);to2.setHours(23,59,59,999);return{from,to:to2};}
-else if(txListPeriode==='tahun'){from=new Date(now.getFullYear(),0,1);}
+else if(txListPeriode==='tahun'){from=new Date(now.getFullYear(),0,1);const to2=new Date(now.getFullYear(),11,31);to2.setHours(23,59,59,999);return{from,to:to2};}
 else{const f=document.getElementById('txListFrom').value,t2=document.getElementById('txListTo').value;return{from:f?new Date(f):new Date(0),to:t2?new Date(t2+'T23:59:59'):now};}
-return{from,to:now};
 }
 function setPeriode(p,el){
 filterPeriode=p;
+// Fix (permintaan user: "slide bulan sebelum/sesudah di filter Laporan") —
+// reset lapMonthOffset tiap chip "Bulan Ini" di-tap (termasuk RE-tap chip
+// yang sama), supaya user yang sudah geser ‹ › ke bulan lampau lalu tap
+// ulang "Bulan Ini" balik ke bulan berjalan, bukan nyangkut di offset lama.
+// Chip lain (hari/minggu/tahun/selamanya/custom) tidak pakai lapMonthOffset
+// sama sekali (lihat getRange() di bawah) jadi 0 dampak ke chip2 itu.
+if(p==='bulan')lapMonthOffset=0;
 document.querySelectorAll('#periodeChips .chip-btn').forEach(b=>b.classList.remove('active'));
 if(el&&el.classList)el.classList.add('active');
 document.getElementById('customRange').classList.toggle('u-dnone', p!=='custom');
 document.getElementById('customRange').style.display='';
+// lapMonthNav (‹ bulan ›) cuma relevan/aktif saat filterPeriode==='bulan' —
+// chip lain (hari/minggu/tahun/selamanya/custom) punya rentang sendiri yang
+// tidak digeser lewat lapMonthOffset, jadi navnya disembunyikan biar tidak
+// menyesatkan user (pola sama toggle #customRange di atas).
+const lapMonthNavEl=document.getElementById('lapMonthNav');
+if(lapMonthNavEl)lapMonthNavEl.classList.toggle('u-dnone', p!=='bulan');
+renderLaporan();
+}
+// changeLapMonth(dir) — tombol ‹ › panel filter Laporan (pola sama
+// changeMonth()/changeTxListMonth() di atas, TAPI geser lapMonthOffset,
+// BUKAN curMonth/curYear — lihat komentar lapMonthOffset di
+// features-helpers-global-security.js kenapa harus state terpisah).
+function changeLapMonth(dir){
+lapMonthOffset+=dir;
 renderLaporan();
 }
 function getRange(){
 if(filterPeriode==='selamanya')return{from:new Date(0),to:new Date(8640000000000000)};
 const now=new Date();now.setHours(23,59,59,999);let from;
-if(filterPeriode==='hari'){from=new Date();from.setHours(0,0,0,0);}
-else if(filterPeriode==='minggu'){from=new Date();from.setDate(from.getDate()-from.getDay());from.setHours(0,0,0,0);}
-else if(filterPeriode==='bulan'){from=new Date(now.getFullYear(),now.getMonth(),1);}
-else if(filterPeriode==='tahun'){from=new Date(now.getFullYear(),0,1);}
+// Fix (audit lanjutan S695, pola sama getTxListRange() di atas): chip
+// hari/minggu/tahun panel Laporan punya bug SAMA PERSIS dgn chip "bulan"
+// sebelum Fix 2 -- to=now (terpotong "hari ini"), bukan akhir periode.
+// Disamakan jadi rentang PENUH periode, konsisten dgn chip "bulan" (S695)
+// dan getTxListRange() (kartu Semua Transaksi) di atas.
+if(filterPeriode==='hari'){from=new Date();from.setHours(0,0,0,0);const to2=new Date();to2.setHours(23,59,59,999);return{from,to:to2};}
+else if(filterPeriode==='minggu'){from=new Date();from.setDate(from.getDate()-from.getDay());from.setHours(0,0,0,0);const to2=new Date(from);to2.setDate(to2.getDate()+6);to2.setHours(23,59,59,999);return{from,to:to2};}
+else if(filterPeriode==='bulan'){
+// Fix (permintaan user: "slide bulan sebelum/sesudah di filter Laporan") —
+// SEBELUMNYA chip "Bulan Ini" selalu from=awal bulan berjalan, to=now
+// (terpotong di HARI INI, bukan akhir bulan) -- jadi 0 cara melihat sisa
+// hari bulan berjalan (kalau ditanggal ke depan, mis. cicilan tercatat
+// akhir bulan) ATAU bulan lain sama sekali. Sekarang pakai lapMonthOffset
+// (0=bulan berjalan, +-N=N bulan sesudah/sebelum) DAN kembalikan rentang
+// PENUH 1 bulan (tanggal 1 s/d akhir bulan), bukan cuma s/d "now" --
+// konsisten dgn getTxListRange() (txListPeriode==='bulan', tx-list-
+// cashflow.js) yang sudah lebih dulu begini utk kartu "Semua Transaksi".
+const base=new Date(now.getFullYear(),now.getMonth()+lapMonthOffset,1);
+const to2=new Date(base.getFullYear(),base.getMonth()+1,0);to2.setHours(23,59,59,999);
+return{from:base,to:to2};
+}
+else if(filterPeriode==='tahun'){from=new Date(now.getFullYear(),0,1);const to2=new Date(now.getFullYear(),11,31);to2.setHours(23,59,59,999);return{from,to:to2};}
 else{const f=document.getElementById('fFrom').value,t2=document.getElementById('fTo').value;return{from:f?new Date(f):new Date(0),to:t2?new Date(t2+'T23:59:59'):now};}
-return{from,to:now};
 }
 // KW perf fix lanjutan: computeCashflowForecast() dipanggil berulang di siklus render yang
 // sama (FinanceIntelligence.cashflowSummary()/healthScore()/insights(), renderCashflowForecast(),

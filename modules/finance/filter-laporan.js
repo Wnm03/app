@@ -350,11 +350,27 @@ return t.ownerPorsiId;
 }
 return null;
 }
-function showFilteredTx(scope, type, label, accId){
+// Fix (permintaan user: "kategori di Laporan bisa diklik ke transaksi asal") —
+// parameter opsional ke-5 `kat`. Kalau diisi, transaksi scope 'laporan' difilter
+// LAGI ke kategori itu, DI ATAS filter periode/tipe/dll yang sedang aktif (fLaporan
+// panel) — 0 breaking change ke pemanggil lama (akun.js/aset.js/modules-render.js
+// dashboard, semua manggil tanpa argumen ke-5, tetap jalan apa adanya krn kat
+// default undefined -> guard `if(kat&&...)` di bawah otomatis skip).
+function showFilteredTx(scope, type, label, accId, kat){
 let txs=[];
 if(scope==='dashboard'){
 const now=new Date(),m=now.getMonth(),y=now.getFullYear();
 txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+// Fix (audit lanjutan S697/S698, permintaan user: "kategori di dashboard
+// ringkasan bisa dapat pola klik-ke-sumber yang sama seperti Fix 1") —
+// parameter opsional ke-5 `kat` SEBELUMNYA cuma diterapkan di blok scope
+// 'laporan' (lihat komentar di atas fungsi ini). Tambah guard yang sama
+// persis di sini supaya kartu "Kategori Teratas" Dashboard (renderDash
+// LaporanMini() -> #dashLapKatMini, modules/shared/modules-render-b.js)
+// bisa reuse fungsi ini juga -- 0 breaking change ke pemanggil lama
+// scope 'dashboard' yang sudah ada (semua manggil tanpa argumen ke-5,
+// tetap jalan apa adanya krn kat default undefined -> guard ini skip).
+if(kat)txs=txs.filter(t=>t.category===kat);
 } else if(scope==='keuangan'){
 const kf=getKeuFilters();
 // FIX (BUG-010, audit 2026-08): scope 'keuangan' di sini dulu cuma pakai
@@ -377,6 +393,7 @@ const d=new Date(t.date);
 if(d<from||d>to)return false;
 if(t.type==='transfer_in'||t.type==='transfer_out')return false;
 if(!txMatchesFilters(t,f))return false;
+if(kat&&t.category!==kat)return false;
 return true;
 });
 } else if(scope==='account'){

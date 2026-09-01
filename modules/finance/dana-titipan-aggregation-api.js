@@ -964,16 +964,37 @@ _majorisLinkedAccountIds(owners) {
 // `build()`, sudah terisi sejak fix PATCH-2026-08-14 pertama) — default 0
 // kalau owner tsb belum pernah lewat `build()` (mis. test lama yang
 // bikin objek owner manual), jadi 0 crash & 0 regresi kontrak lama.
+// SESI FIX-2026-09-01 (lanjutan audit "sync ke Total Estimasi Pemilik
+// Akun"): sebelum ini, `pengeluaranMajoris` (dipakai `sisaSaldo`) MURNI
+// filter `t.renovProjectLinkId` — kalau user lupa centang "🔨 Catat juga
+// ke Proyek Renovasi?" (tapi SUDAH menandai "👤 Ditanggung: <owner>" via
+// `deductionOwnerId`, atau lewat jalur ketiga `renovExpenseTotal`),
+// transaksi itu tidak pernah ikut kehitung di sini walau history-nya
+// jelas menunjukkan porsi itu SUDAH dipotong dari akun pemilik — makanya
+// baris "Sisa Saldo Majoris Belum Terpotong" bisa lebih besar dari
+// kenyataan (bug yang dilaporkan user: beda dgn "Total Estimasi dari
+// Transaksi Akun" per pemilik). Sumber KEDUA (`deductionOwnerTotal`,
+// SUM `o.linkedExpenseTotal` + `o.renovExpenseTotal` per owner — dua
+// tag scope yang SAMA-SAMA berasal dari riwayat transaksi akun pemilik,
+// BUKAN cuma tag renov) sudah lebih dulu ada sbg angka pembanding
+// read-only. Sekarang dijadikan SUMBER KEBENARAN TUNGGAL utk
+// `pengeluaranMajoris`/`sisaSaldo` (dipakai kartu/total) — filter
+// `t.renovProjectLinkId` LAMA tidak dihapus, tetap dihitung & dikirim
+// balik sbg `pengeluaranMajorisRenovTag` (diagnostik, dipakai `synced`
+// persis kontrak lama) supaya 0 informasi hilang, cuma tidak lagi jadi
+// angka utama yang ditampilkan di "Pengeluaran Majoris". 0 rumus Pokok
+// Dikomit/estimatedUnallocated disentuh — murni pindah SUMBER angka
+// `pengeluaranMajoris`, bentuk return TETAP additive (field lama semua
+// masih ada, cuma isi `pengeluaranMajoris` yang berubah sumber).
 majorisRenovReconciliation(owners, principalAmountTotal) {
   if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return null;
   const accountIds = this._majorisLinkedAccountIds(owners);
   if (!accountIds.length) return null;
   const idSet = new Set(accountIds.map((id) => String(id)));
-  const pengeluaranMajoris = D.transactions
+  const pengeluaranMajorisRenovTag = D.transactions
     .filter((t) => t && t.type === 'expense' && t.renovProjectLinkId && idSet.has(String(t.accountId)))
     .reduce((s, t) => s + (isFinite(t.amount) ? Number(t.amount) : 0), 0);
   const principal = isFinite(principalAmountTotal) ? Number(principalAmountTotal) : 0;
-  const sisaSaldo = principal - pengeluaranMajoris;
   const deductionOwnerTotal = (owners || []).reduce((sum, o) => {
     if (!o) return sum;
     const linked = (o.holdings || []).some((h) => {
@@ -1003,8 +1024,10 @@ majorisRenovReconciliation(owners, principalAmountTotal) {
     return sum + (isFinite(o.linkedExpenseTotal) ? Number(o.linkedExpenseTotal) : 0)
       + (isFinite(o.renovExpenseTotal) ? Number(o.renovExpenseTotal) : 0);
   }, 0);
-  const synced = pengeluaranMajoris === deductionOwnerTotal;
-  return { pengeluaranMajoris, sisaSaldo, deductionOwnerTotal, synced };
+  const pengeluaranMajoris = deductionOwnerTotal;
+  const sisaSaldo = principal - pengeluaranMajoris;
+  const synced = pengeluaranMajorisRenovTag === deductionOwnerTotal;
+  return { pengeluaranMajoris, sisaSaldo, deductionOwnerTotal, pengeluaranMajorisRenovTag, synced };
 },
 
 // listExistingOwners() — Sesi 485a (langkah 1/5), diperluas Sesi 492
