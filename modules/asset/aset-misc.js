@@ -515,12 +515,12 @@ const goals=[];
 (D.renovProjects||[]).forEach(p=>{
 if(typeof Renov==='undefined')return;
 const t=Renov.totals(p);
-if(t.sisa>0)goals.push({key:'renov-'+p.id,emoji:'🔨',label:'Renovasi: '+p.name,remaining:t.sisa,kind:'renov'});
+if(t.sisa>0)goals.push({key:'renov-'+p.id,id:p.id,emoji:'🔨',label:'Renovasi: '+p.name,remaining:t.sisa,kind:'renov'});
 });
 (D.targets||[]).forEach(t=>{
 if(t.isDanaDarurat)return;
 const remaining=Math.max(0,(t.amount||0)-(t.saved||0));
-if(remaining>0)goals.push({key:'target-'+t.id,emoji:t.emoji||'🎯',label:t.name,remaining,kind:'target'});
+if(remaining>0)goals.push({key:'target-'+t.id,id:t.id,emoji:t.emoji||'🎯',label:t.name,remaining,kind:'target'});
 });
 return goals;
 },
@@ -562,7 +562,17 @@ const dateLabel=(r.endMonth!=null)?TimelineW.addMonthsToDate(r.endMonth).toLocal
 const yrs=r.monthsNeeded!=null?Math.floor(r.monthsNeeded/12):null;
 const bln=r.monthsNeeded!=null?r.monthsNeeded%12:null;
 const durLabel=r.monthsNeeded!=null?`${yrs?yrs+' th ':''}${bln} bln lagi (mulai bulan ke-${r.startMonth+1})`:'—';
-return `<div style="display:flex;gap:10px;margin-bottom:${i===rows.length-1&&!pensiunAda?'0':'12px'}">
+// S689 (sesi 1/2, akumulasi ke S687+S688): baris "renov" klik-able ke
+// sumber datanya (modal detail proyek renovasi yang sama dipakai di tab Renovasi).
+// S693 (lanjutan, fondasi edit-by-id dibangun S692): baris "target" sekarang
+// JUGA klik-able, reuse openTargetModal(id) apa adanya (0 modal baru) --
+// dulu ditunda krn openTargetModal() cuma py mode "tambah", sudah dikasih
+// mode edit-by-id di S692.
+const ROW_CLICK_ACTION={renov:'Renov.openDetail',target:'openTargetModal'};
+const rowClickAction=ROW_CLICK_ACTION[r.kind];
+const rowClickAttr=rowClickAction?` data-action="${rowClickAction}" data-args='${JSON.stringify([r.id])}'`:'';
+const rowClass=rowClickAction?' u-pointer':'';
+return `<div class="${rowClass}" style="display:flex;gap:10px;margin-bottom:${i===rows.length-1&&!pensiunAda?'0':'12px'}"${rowClickAttr}>
         <div class="u-flex u-fdcol u-aic">
           <div class="u-bgaccsoft u-flex u-aic u-jcc u-fs13" style="width:26px;height:26px;border-radius:50%">${r.emoji}</div>
           ${(i<rows.length-1||pensiunAda)?'<div class="u-flex1 u-mt2" style="width:2px;background:var(--border)"></div>':''}
@@ -580,7 +590,9 @@ const years=Math.floor(n/12),sisaBln=n%12;
 const target=Number(pensiunP.targetDana)||0;
 const proyeksi=Pensiun.proyeksi();
 const onTrack=target>0&&proyeksi>=target;
-body+=`<div class="u-flex u-gap10">
+// S689: baris Pensiun klik-able ke Pensiun.openSettings (satu-satunya data
+// pensiun, tidak butuh argumen id -- sama seperti tombol "⚙️ Atur" di kartu Dana Pensiun).
+body+=`<div class="u-flex u-gap10 u-pointer" data-action="Pensiun.openSettings">
         <div class="u-flex u-fdcol u-aic">
           <div class="u-flex u-aic u-jcc u-fs13" style="width:26px;height:26px;border-radius:50%;background:var(--accent3-soft)">🏖️</div>
         </div>
