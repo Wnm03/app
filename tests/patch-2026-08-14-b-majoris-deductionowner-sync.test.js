@@ -48,7 +48,11 @@ test('2. transaksi ber-renovProjectLinkId tapi TANPA deductionOwnerId (linkedExp
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }], linkedExpenseTotal: 0 }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 3000000);
+  // FIX-2026-09-01: pengeluaranMajoris sekarang = deductionOwnerTotal (sumber
+  // tunggal), BUKAN lagi filter renovProjectLinkId saja -- angka lama itu
+  // masih tersedia lewat pengeluaranMajorisRenovTag utk diagnostik/synced.
+  assert.equal(r.pengeluaranMajorisRenovTag, 3000000);
+  assert.equal(r.pengeluaranMajoris, 0);
   assert.equal(r.deductionOwnerTotal, 0);
   assert.equal(r.synced, false);
 });
@@ -65,7 +69,7 @@ test('3. owner belum pernah lewat build() (linkedExpenseTotal undefined) -> dedu
   assert.equal(r.synced, false);
 });
 
-test('4. kontrak lama S595 (pengeluaranMajoris/sisaSaldo) tetap sama persis -- 0 regresi formula', () => {
+test('4. FIX-2026-09-01: renov-tag SUM masih tersimpan utuh di pengeluaranMajorisRenovTag (0 regresi filter tag) walau pengeluaranMajoris/sisaSaldo kini bersumber dari deductionOwnerTotal', () => {
   const D = baseD({
     assets: [{ id: 'a1', name: 'Majoris', accountId: 'acc1', nilai: 1000000 }],
     transactions: [
@@ -75,8 +79,9 @@ test('4. kontrak lama S595 (pengeluaranMajoris/sisaSaldo) tetap sama persis -- 0
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 12000000);
-  assert.equal(r.sisaSaldo, -2000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 12000000);
+  assert.equal(r.pengeluaranMajoris, 0);
+  assert.equal(r.sisaSaldo, 10000000);
 });
 
 // ===== Wiring render: baris peringatan additive kalau tidak sinkron =====

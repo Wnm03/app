@@ -100,8 +100,12 @@ test('B1. expense ber-renovProjectLinkId di akun tertaut -> Pengeluaran Majoris 
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
   assert.ok(r);
-  assert.equal(r.pengeluaranMajoris, 5000000);
-  assert.equal(r.sisaSaldo, 5000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 5000000);
+  // FIX-2026-09-01: pengeluaranMajoris/sisaSaldo sekarang bersumber dari
+  // deductionOwnerTotal (owner tanpa linkedExpenseTotal di test ini -> 0),
+  // BUKAN lagi dari renovProjectLinkId saja -- lihat pengeluaranMajorisRenovTag di atas.
+  assert.equal(r.pengeluaranMajoris, 0);
+  assert.equal(r.sisaSaldo, 10000000);
 });
 
 test('B2. expense TANPA renovProjectLinkId -> tidak ikut dihitung', () => {
@@ -115,7 +119,7 @@ test('B2. expense TANPA renovProjectLinkId -> tidak ikut dihitung', () => {
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 3000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 3000000);
 });
 
 test('B3. income (bukan expense) ber-renovProjectLinkId -> tidak ikut dihitung', () => {
@@ -129,7 +133,7 @@ test('B3. income (bukan expense) ber-renovProjectLinkId -> tidak ikut dihitung',
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 1000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 1000000);
 });
 
 test('B4. expense di akun LAIN (bukan akun tertaut Majoris) -> tidak ikut dihitung', () => {
@@ -143,7 +147,7 @@ test('B4. expense di akun LAIN (bukan akun tertaut Majoris) -> tidak ikut dihitu
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 1000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 1000000);
 });
 
 test('B5. tidak ada akun tertaut sama sekali -> null (baris disembunyikan)', () => {
@@ -162,8 +166,10 @@ test('B6. Pengeluaran Majoris melebihi Pokok Dikomit -> Sisa NEGATIF, TIDAK di-c
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 12000000);
-  assert.equal(r.sisaSaldo, -2000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 12000000);
+  // FIX-2026-09-01: sisaSaldo sekarang dari deductionOwnerTotal (0 di test ini).
+  assert.equal(r.pengeluaranMajoris, 0);
+  assert.equal(r.sisaSaldo, 10000000);
 });
 
 test('B7. 2 owner beda tertaut akun yang SAMA -> expense akun itu TIDAK dihitung dobel', () => {
@@ -177,7 +183,7 @@ test('B7. 2 owner beda tertaut akun yang SAMA -> expense akun itu TIDAK dihitung
     { ownerId: 'sihab', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] },
   ];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 10000000);
-  assert.equal(r.pengeluaranMajoris, 1000000);
+  assert.equal(r.pengeluaranMajorisRenovTag, 1000000);
 });
 
 test('B8. principalAmountTotal tidak diberikan/bukan angka -> diperlakukan 0, 0 crash', () => {
@@ -188,7 +194,8 @@ test('B8. principalAmountTotal tidak diberikan/bukan angka -> diperlakukan 0, 0 
   const ctx = makeApiCtx(D);
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'aset', linkedAssetId: 'a1' }] }];
   const r = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, undefined);
-  assert.equal(r.sisaSaldo, -1000000);
+  // FIX-2026-09-01: sisaSaldo = principal(0) - pengeluaranMajoris(deductionOwnerTotal, 0 di test ini).
+  assert.equal(r.sisaSaldo, 0);
 });
 
 // ===== Bagian C: wiring markup renderInto()/_renderNow() =====
@@ -242,7 +249,7 @@ test('C1. baris "Pengeluaran Majoris"/"Sisa Saldo Majoris" muncul di bawah "Tota
   ctx.DanaTitipanPortfolioPresenter._renderNow(el);
   const html = el.innerHTML;
   assert.ok(html.includes('Total Pokok Dikomit'));
-  assert.ok(html.includes('Pengeluaran Majoris (dari transaksi Renov)'));
+  assert.ok(html.includes('Pengeluaran Majoris (estimasi dari transaksi pemilik akun)'));
   assert.ok(html.includes('Sisa Saldo Majoris Belum Terpotong'));
   // urutan: "Total Pokok Dikomit" harus muncul SEBELUM baris Majoris baru.
   assert.ok(html.indexOf('Total Pokok Dikomit') < html.indexOf('Pengeluaran Majoris'));

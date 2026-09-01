@@ -195,8 +195,13 @@ test('A7. majorisRenovReconciliation() -- pengeluaran Renov di akun tertaut lang
   const owners = [{ ownerId: 'renov', holdings: [{ type: 'investasi', linkedInvestmentId: 'h1' }] }];
   const result = ctx.DanaTitipanPortfolioAPI.majorisRenovReconciliation(owners, 1000000);
   assert.ok(result, 'harus mengenali akun tertaut LANGSUNG ke holding, bukan cuma via Aset');
-  assert.equal(result.pengeluaranMajoris, 154280 + 51940);
-  assert.equal(result.sisaSaldo, 1000000 - (154280 + 51940));
+  // FIX-2026-09-01: pengeluaranMajoris kini = deductionOwnerTotal (owners[]
+  // manual di test ini tidak py linkedExpenseTotal -> 0); SUM renov-tag lama
+  // tetap terlihat utuh lewat pengeluaranMajorisRenovTag (0 regresi resolusi
+  // akun langsung-ke-Holding yang jadi fokus test ini).
+  assert.equal(result.pengeluaranMajorisRenovTag, 154280 + 51940);
+  assert.equal(result.pengeluaranMajoris, 0);
+  assert.equal(result.sisaSaldo, 1000000);
 });
 
 // ---------------------------------------------------------------------------
