@@ -83,10 +83,10 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1515">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1515">
-<script src="nav-scroll.js?v=1515" defer></script>
-<script src="sticky-tabbar.js?v=1515" defer></script>
+<link rel="stylesheet" href="styles.css?v=1522">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1522">
+<script src="nav-scroll.js?v=1522" defer></script>
+<script src="sticky-tabbar.js?v=1522" defer></script>
 <script>
 /* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
    Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
@@ -152,17 +152,17 @@ function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxi
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1515');}
+function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1522');}
 // sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
 // dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
 // Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
 // pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1515');}
+function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1522');}
 // business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
 // (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1515');}
+function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1522');}
 </script>
 <script>
 window.__moduleLoadFail=function(name){
@@ -251,8 +251,8 @@ window.location.reload();
 }catch(e){}
 })();
 </script>
-<script src="app-bundle-a.min.js?v=1515" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1515" defer></script>
+<script src="app-bundle-a.min.js?v=1522" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
+<script src="modules/shared/smoke-test.js?v=1522" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -742,20 +742,41 @@ window.location.reload();
        lokasi container HTML dipindah, diisi render() yang sama persis
        (sekarang dipanggil dari renderKeuangan(), modules/shared/
        modules-render.js, bukan lagi dari DashboardHub.render()). -->
+  <!-- COLLAPSE KARTU LAPORAN KEUANGAN (permintaan eksplisit user). Semua 10
+       section "dashhub-wrap" di tab Laporan (Finance Dashboard, Financial
+       Forecast, Budget Recommendation, Cash Flow Projection, Financial Goal
+       Planner, Investment Planner, Debt Optimizer, Retirement Planner,
+       Financial Health Score, Financial Risk Dashboard) sekarang bisa
+       dibuka/ditutup dgn tap header-nya. 100% REUSE mekanisme
+       toggleCardCollapse()/card-collapse-toggle/card-collapse-body yang
+       sudah dipakai ~40+ kartu lain di app ini (modal-navigasi.js) — pola
+       markup-nya SAMA PERSIS dgn yang dipakai DashboardHub.render() utk
+       kategori fitur (modules/dashboard-hub/dashboard-hub.js, lihat
+       `.dashhub-cat-head`+`data-action="toggleCardCollapse"`). TIDAK ADA
+       CSS baru (.card-collapse-toggle/.card-collapse-body/.dashhub-cat-head
+       sudah ada di styles.css, termasuk cursor:pointer-nya) & TIDAK ADA JS
+       baru (toggleCardCollapse/applyCardCollapsePrefs sudah ada, otomatis
+       ikut mem-persist status collapse per-kartu ke localStorage
+       cardCollapsePrefs seperti kartu lain). Key collapse pakai id wrap
+       masing-masing (mis. "findashWrap") supaya unik & tidak brentrok dgn
+       id -cbody/-chev kartu lain manapun. -->
   <!-- FINANCE DASHBOARD & AI HOOK FOUNDATION (Sesi 75, Batch 6). Section di
        dalam Dashboard Hub, sama seperti #eieWrap di atas — diisi oleh
        FinanceDashboard.render() (dipanggil dari DashboardHub.render() di
        dashboard-hub.js), 100% reuse FinanceIntelligence.summary() (Sesi 74).
        UI hanya presenter, tidak ada rumus baru di sini. -->
   <div class="dashhub-wrap card u-mb12" id="findashWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["findashWrap","$event"]'>
       <div class="dashhub-cat-icon">💹</div>
       <div>
         <div class="dashhub-cat-label">Finance Dashboard</div>
         <div class="dashhub-cat-desc">Kekayaan bersih, arus kas, anggaran & skor kesehatan finansial — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="findashWrap-chev" data-action="toggleCardCollapse" data-args='["findashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="findashWrap-cbody">
     <div class="findash-grid" id="findashGrid"></div>
+    </div>
   </div>
   <!-- FINANCIAL FORECAST FOUNDATION (Sesi 91, Batch 10). Section di dalam
        Dashboard Hub, sama seperti #findashWrap di atas — diisi oleh
@@ -766,14 +787,17 @@ window.location.reload();
        hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru —
        reuse penuh class findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="forecastWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["forecastWrap","$event"]'>
       <div class="dashhub-cat-icon">🔮</div>
       <div>
         <div class="dashhub-cat-label">Financial Forecast</div>
         <div class="dashhub-cat-desc">Perkiraan pemasukan, pengeluaran &amp; proyeksi saldo 30 hari — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="forecastWrap-chev" data-action="toggleCardCollapse" data-args='["forecastWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="forecastWrap-cbody">
     <div class="findash-grid" id="forecastGrid"></div>
+    </div>
   </div>
   <!-- BUDGET RECOMMENDATION FOUNDATION (Sesi 92, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #forecastWrap di atas — diisi oleh
@@ -784,14 +808,17 @@ window.location.reload();
        tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="budgetRecoWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["budgetRecoWrap","$event"]'>
       <div class="dashhub-cat-icon">💡</div>
       <div>
         <div class="dashhub-cat-label">Budget Recommendation</div>
         <div class="dashhub-cat-desc">Analisis pemakaian &amp; saran anggaran per kategori — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="budgetRecoWrap-chev" data-action="toggleCardCollapse" data-args='["budgetRecoWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="budgetRecoWrap-cbody">
     <div class="findash-grid" id="budgetRecoGrid"></div>
+    </div>
   </div>
   <!-- CASH FLOW PROJECTION FOUNDATION (Sesi 93, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #budgetRecoWrap di atas — diisi
@@ -802,14 +829,17 @@ window.location.reload();
        ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="cashflowProjWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["cashflowProjWrap","$event"]'>
       <div class="dashhub-cat-icon">🏦</div>
       <div>
         <div class="dashhub-cat-label">Cash Flow Projection</div>
         <div class="dashhub-cat-desc">Proyeksi pemasukan, pengeluaran &amp; saldo kas — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="cashflowProjWrap-chev" data-action="toggleCardCollapse" data-args='["cashflowProjWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="cashflowProjWrap-cbody">
     <div class="findash-grid" id="cashflowProjGrid"></div>
+    </div>
   </div>
   <!-- FINANCIAL GOAL PLANNER FOUNDATION (Sesi 94, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #cashflowProjWrap di atas — diisi
@@ -820,14 +850,17 @@ window.location.reload();
        presenter, tidak ada rumus baru di sini. CSS TIDAK baru — reuse
        penuh class findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="financialGoalWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["financialGoalWrap","$event"]'>
       <div class="dashhub-cat-icon">🎯</div>
       <div>
         <div class="dashhub-cat-label">Financial Goal Planner</div>
         <div class="dashhub-cat-desc">Progres, proyeksi &amp; rekomendasi target keuangan — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="financialGoalWrap-chev" data-action="toggleCardCollapse" data-args='["financialGoalWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="financialGoalWrap-cbody">
     <div class="findash-grid" id="financialGoalGrid"></div>
+    </div>
   </div>
   <!-- INVESTMENT PLANNER FOUNDATION (Sesi 95, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #financialGoalWrap di atas —
@@ -839,14 +872,17 @@ window.location.reload();
        ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="investPlannerWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["investPlannerWrap","$event"]'>
       <div class="dashhub-cat-icon">📈</div>
       <div>
         <div class="dashhub-cat-label">Investment Planner</div>
         <div class="dashhub-cat-desc">Ringkasan portofolio, alokasi aset &amp; rekomendasi investasi — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="investPlannerWrap-chev" data-action="toggleCardCollapse" data-args='["investPlannerWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="investPlannerWrap-cbody">
     <div class="findash-grid" id="investPlannerGrid"></div>
+    </div>
   </div>
   <!-- DEBT OPTIMIZER FOUNDATION (Sesi 96, Batch 10). Section di dalam
        Dashboard Hub, sama seperti #investPlannerWrap di atas — diisi
@@ -857,14 +893,17 @@ window.location.reload();
        hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru —
        reuse penuh class findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="debtOptimizerWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["debtOptimizerWrap","$event"]'>
       <div class="dashhub-cat-icon">📕</div>
       <div>
         <div class="dashhub-cat-label">Debt Optimizer</div>
         <div class="dashhub-cat-desc">Ringkasan utang, DSR &amp; rekomendasi pelunasan — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="debtOptimizerWrap-chev" data-action="toggleCardCollapse" data-args='["debtOptimizerWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="debtOptimizerWrap-cbody">
     <div class="findash-grid" id="debtOptimizerGrid"></div>
+    </div>
   </div>
   <!-- RETIREMENT PLANNER FOUNDATION (Sesi 97, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #debtOptimizerWrap di atas —
@@ -875,14 +914,17 @@ window.location.reload();
        tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="retirementPlannerWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["retirementPlannerWrap","$event"]'>
       <div class="dashhub-cat-icon">🏖️</div>
       <div>
         <div class="dashhub-cat-label">Retirement Planner</div>
         <div class="dashhub-cat-desc">Proyeksi, gap &amp; rekomendasi kontribusi dana pensiun — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="retirementPlannerWrap-chev" data-action="toggleCardCollapse" data-args='["retirementPlannerWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="retirementPlannerWrap-cbody">
     <div class="findash-grid" id="retirementPlannerGrid"></div>
+    </div>
   </div>
   <!-- FINANCIAL HEALTH SCORE FOUNDATION (Sesi 98, Batch 10). Section di
        dalam Dashboard Hub, sama seperti #retirementPlannerWrap di atas —
@@ -894,14 +936,17 @@ window.location.reload();
        rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="financialHealthScoreWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["financialHealthScoreWrap","$event"]'>
       <div class="dashhub-cat-icon">❤️</div>
       <div>
         <div class="dashhub-cat-label">Financial Health Score</div>
         <div class="dashhub-cat-desc">Skor kesehatan finansial, rincian komponen &amp; rekomendasi — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="financialHealthScoreWrap-chev" data-action="toggleCardCollapse" data-args='["financialHealthScoreWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="financialHealthScoreWrap-cbody">
     <div class="findash-grid" id="financialHealthScoreGrid"></div>
+    </div>
   </div>
   <!-- FINANCIAL RISK DASHBOARD (Sesi 99, Batch 10). Section di dalam
        Dashboard Hub, sama seperti #financialHealthScoreWrap di atas —
@@ -914,16 +959,19 @@ window.location.reload();
        baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="financialRiskDashboardWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["financialRiskDashboardWrap","$event"]'>
       <div class="dashhub-cat-icon">🛡️</div>
       <div>
         <div class="dashhub-cat-label">Financial Risk Dashboard</div>
         <div class="dashhub-cat-desc">Tingkat risiko, faktor risiko utama &amp; sebarannya — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="financialRiskDashboardWrap-chev" data-action="toggleCardCollapse" data-args='["financialRiskDashboardWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="financialRiskDashboardWrap-cbody">
     <div class="findash-grid" id="financialRiskDashboardGrid"></div>
+    </div>
   </div>
- menyamakan standar UI dgn Finance 2.0
+  <!-- Sprint 2 Tahap 4: FAB Halaman Laporan, menyamakan standar UI dgn Finance 2.0
        (Tahap 1), Shop FAB (Tahap 2) & Car Notes FAB (Tahap 3). Reuse PENUH
        komponen CSS `.keu-fab*` yang sudah ada di styles.css (tidak ada
        class CSS baru). Aksi FAB reuse exportLaporanPDF()/exportCSV() yang
@@ -1563,36 +1611,45 @@ window.location.reload();
        styles.css supaya sekarang tampil normal di tab ini. -->
   <div id="shopTab-bi" class="u-dnone">
     <div class="dashhub-wrap card u-mb12" id="shopBusinessEngineWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]'>
         <div class="dashhub-cat-icon">🪨</div>
         <div>
           <div class="dashhub-cat-label">Shop Business Engine</div>
           <div class="dashhub-cat-desc">Nilai stok, rencana restock &amp; margin Shop bulan ini — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="shopBusinessEngineWrap-chev" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="shopBusinessEngineWrap-cbody">
       <div class="findash-grid" id="shopBusinessEngineGrid"></div>
+      </div>
     </div>
     <div class="dashhub-wrap card u-mb12" id="tripPresenterWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]'>
         <div class="dashhub-cat-icon">🚚</div>
         <div>
           <div class="dashhub-cat-label">Pengiriman Shop</div>
           <div class="dashhub-cat-desc">Jumlah trip, ongkir &amp; margin pengiriman bulan ini — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="tripPresenterWrap-chev" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="tripPresenterWrap-cbody">
       <div class="findash-grid" id="tripPresenterGrid"></div>
+      </div>
     </div>
     <div class="dashhub-wrap card u-mb12" id="businessFlowWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]'>
         <div class="dashhub-cat-icon">🔁</div>
         <div>
           <div class="dashhub-cat-label">Alur Bisnis Shop</div>
           <div class="dashhub-cat-desc">Purchase → Trip → Stock → Sale — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="businessFlowWrap-chev" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="businessFlowWrap-cbody">
       <div class="findash-grid" id="businessFlowGrid"></div>
       <div id="businessFlowTransferList" class="u-mt10"></div>
       <div id="businessFlowPurchaseOrderBatchList" class="u-mt10"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1686,14 +1743,17 @@ window.location.reload();
        UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru —
        reuse penuh class findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="vehdashWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]'>
       <div class="dashhub-cat-icon">🚗</div>
       <div>
         <div class="dashhub-cat-label">Vehicle Dashboard</div>
         <div class="dashhub-cat-desc">Total kendaraan, servis lewat jatuh tempo & skor kesehatan armada — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="vehdashWrap-chev" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="vehdashWrap-cbody">
     <div class="findash-grid" id="vehdashGrid"></div>
+    </div>
   </div>
   <!-- VEHICLE AI HOOK FOUNDATION (Sesi 79, Batch 7). Section di dalam
        Dashboard Hub, sama seperti #vehdashWrap di atas — diisi oleh
@@ -1704,14 +1764,17 @@ window.location.reload();
        CSS TIDAK baru — reuse penuh class findash-grid/findash-card (grid
        generik). -->
   <div class="dashhub-wrap card u-mb12" id="vehinsightWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]'>
       <div class="dashhub-cat-icon">🔔</div>
       <div>
         <div class="dashhub-cat-label">Vehicle Insight</div>
         <div class="dashhub-cat-desc">Reminder servis, pajak & BBM kendaraan — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="vehinsightWrap-chev" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="vehinsightWrap-cbody">
     <div class="findash-grid" id="vehinsightGrid"></div>
+    </div>
   </div>
   <!-- VEHICLE AI DASHBOARD INTEGRATION (Sesi 80, Batch 7). 3 section di
        dalam Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi
@@ -1759,7 +1822,17 @@ window.location.reload();
        sudah tidak ada. Silent kalau tidak ada apa pun buat ditampilkan
        (pola sama persis panel lama). -->
   <div class="dashhub-wrap card u-mb12" id="vehAttentionWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]'>
+      <div class="dashhub-cat-icon">🧭</div>
+      <div>
+        <div class="dashhub-cat-label">Vehicle Attention</div>
+        <div class="dashhub-cat-desc">Servis/pajak/BBM &amp; insight yang perlu perhatian — dari rekomendasi yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="vehAttentionWrap-chev" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="vehAttentionWrap-cbody">
     <div id="vehAttentionBody"></div>
+    </div>
   </div>
   <!-- VEHICLE ANALYTICS FOUNDATION (Sesi 81, Batch 7). Section di dalam
        Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi oleh
@@ -1770,7 +1843,7 @@ window.location.reload();
        tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="vehAnalyticsWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAnalyticsCard","$event"]'>
       <div class="dashhub-cat-icon">📊</div>
       <div class="u-flex1">
         <div class="dashhub-cat-label">Vehicle Analytics</div>
@@ -1800,14 +1873,17 @@ window.location.reload();
        di sini. CSS TIDAK baru — reuse penuh class findash-grid/
        findash-card (grid generik). -->
   <div class="dashhub-wrap card u-mb12" id="vehAutomationWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]'>
       <div class="dashhub-cat-icon">🤖</div>
       <div>
         <div class="dashhub-cat-label">Vehicle Automation</div>
         <div class="dashhub-cat-desc">Jadwal servis &amp; pajak/dokumen otomatis — dari rekomendasi yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="vehAutomationWrap-chev" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="vehAutomationWrap-cbody">
     <div class="findash-grid" id="vehAutomationGrid"></div>
+    </div>
   </div>
 
   <div class="card u-mb12" id="vehSpecCard"></div>
@@ -1946,7 +2022,17 @@ window.location.reload();
          FuelCard.render()/FuelIntelligenceEngine.vehicleInsight(). Silent
          (disembunyikan) kalau belum ada kendaraan aktif/data. -->
     <div class="dashhub-wrap card u-mb12" id="fuelIntelWrap">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]'>
+        <div class="dashhub-cat-icon">⛽</div>
+        <div>
+          <div class="dashhub-cat-label">Fuel Intelligence</div>
+          <div class="dashhub-cat-desc">Estimasi BBM real-time &amp; rekomendasi kendaraan aktif — dari data yang sudah ada</div>
+        </div>
+        <span class="card-collapse-toggle" id="fuelIntelWrap-chev" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+      </div>
+      <div class="card-collapse-body" id="fuelIntelWrap-cbody">
       <div id="fuelIntelBody"></div>
+      </div>
     </div>
     <div class="bbm-stat-grid">
       <div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val" id="bbmAvgKmL">0</div><div class="bbm-lbl">Rata² km/liter</div></div>
@@ -2429,44 +2515,56 @@ window.location.reload();
        di modules-render.js. -->
   <div id="asetTab-manajemen" class="u-dnone">
     <div class="dashhub-wrap card u-mb12" id="propertyManagementWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["propertyManagementWrap","$event"]'>
         <div class="dashhub-cat-icon">🏠</div>
         <div>
           <div class="dashhub-cat-label">Property Management</div>
           <div class="dashhub-cat-desc">Portofolio, estimasi PBB &amp; penyusutan properti — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="propertyManagementWrap-chev" data-action="toggleCardCollapse" data-args='["propertyManagementWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="propertyManagementWrap-cbody">
       <div class="findash-grid" id="propertyManagementGrid"></div>
+      </div>
     </div>
     <div class="dashhub-wrap card u-mb12" id="rentalManagementWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["rentalManagementWrap","$event"]'>
         <div class="dashhub-cat-icon">🏘️</div>
         <div>
           <div class="dashhub-cat-label">Rental Management</div>
           <div class="dashhub-cat-desc">Pendapatan sewa bersih &amp; status penautan unit sewa — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="rentalManagementWrap-chev" data-action="toggleCardCollapse" data-args='["rentalManagementWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="rentalManagementWrap-cbody">
       <div class="findash-grid" id="rentalManagementGrid"></div>
+      </div>
     </div>
     <div class="dashhub-wrap card u-mb12" id="assetPortfolioWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["assetPortfolioWrap","$event"]'>
         <div class="dashhub-cat-icon">💼</div>
         <div>
           <div class="dashhub-cat-label">Asset Portfolio</div>
           <div class="dashhub-cat-desc">Komposisi &amp; alokasi kekayaan (kas/aset/investasi) — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="assetPortfolioWrap-chev" data-action="toggleCardCollapse" data-args='["assetPortfolioWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="assetPortfolioWrap-cbody">
       <div class="findash-grid" id="assetPortfolioGrid"></div>
+      </div>
     </div>
     <div class="dashhub-wrap card u-mb12" id="assetMaintenanceWrap">
-      <div class="dashhub-cat-head">
+      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["assetMaintenanceWrap","$event"]'>
         <div class="dashhub-cat-icon">🔧</div>
         <div>
           <div class="dashhub-cat-label">Asset Maintenance</div>
           <div class="dashhub-cat-desc">Aset yang perlu ditinjau (umur manfaat habis) — dari data yang sudah ada</div>
         </div>
+        <span class="card-collapse-toggle" id="assetMaintenanceWrap-chev" data-action="toggleCardCollapse" data-args='["assetMaintenanceWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
       </div>
+      <div class="card-collapse-body" id="assetMaintenanceWrap-cbody">
       <div class="findash-grid" id="assetMaintenanceGrid"></div>
+      </div>
     </div>
   </div>
   <!-- /MANAJEMEN -->
@@ -3438,13 +3536,15 @@ window.location.reload();
        tambah/hapus class u-dnone di div ini secara manual — biarkan
        LifeOSHome.applyVisibility() yang mengatur. -->
   <div class="dashhub-wrap u-dnone" id="lifeOSWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["lifeOSWrap","$event"]'>
       <div class="dashhub-cat-icon">🌱</div>
       <div>
         <div class="dashhub-cat-label">Life OS</div>
         <div class="dashhub-cat-desc">Today / Goals / Projects / Review / Knowledge / Area Summary — di atas data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="lifeOSWrap-chev" data-action="toggleCardCollapse" data-args='["lifeOSWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="lifeOSWrap-cbody">
     <div class="dashhub-feature-grid dashhub-feature-grid--icon" id="lifeOSHomeGrid"></div>
     <div class="lifeos-panel" id="lifeOSPanel-today"><div id="lifeOSTodayList"></div></div>
     <div class="lifeos-panel u-dnone" id="lifeOSPanel-goals"><div id="lifeOSGoalsGrid"></div></div>
@@ -3461,6 +3561,7 @@ window.location.reload();
       <button class="btn btn-primary btn-full" style="margin-bottom:8px" data-action="LifeOSPlugins.promptRegister">🔌 Daftarkan Plugin</button>
       <div id="lifeOSPluginsGrid"></div>
     </div>
+    </div>
   </div>
   <!-- ECONOMIC INTELLIGENCE ENGINE (fase 2, lihat
        Economic-Intelligence-Engine-Technical-Design.md). Section di dalam
@@ -3468,19 +3569,22 @@ window.location.reload();
        EIEDashboard.render() (dipanggil dari DashboardHub.render() di
        dashboard-hub.js), yang lalu delegasi ke EIEInsightFeed.render(). -->
   <div class="dashhub-wrap card u-mb12" id="eieWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["eieWrap","$event"]'>
       <div class="dashhub-cat-icon">🌦️</div>
       <div>
         <div class="dashhub-cat-label">Kondisi Ekonomi</div>
         <div class="dashhub-cat-desc">Dampak kurs/inflasi/BI Rate/IHSG ke keuanganmu, bukan berita mentah</div>
       </div>
+      <span class="card-collapse-toggle" id="eieWrap-chev" data-action="toggleCardCollapse" data-args='["eieWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="eieWrap-cbody">
     <!-- Kartu "Daftar pantauan" IHSG + USD/IDR, gaya widget watchlist saham
          (angka besar + panah tren + sparkline) — diisi oleh
          EIEDashboard._renderWatchlistCard(), lihat eie-dashboard.js. -->
     <div class="card u-mb12" id="eieWatchlistCard" style="padding:14px;"></div>
     <div id="eieStatusCard" style="padding:8px 2px;font-size:12.5px;opacity:.6;">Memuat kondisi ekonomi…</div>
     <div id="eieInsightFeed"></div>
+    </div>
   </div>
   <!-- Finance Dashboard/Forecast/Budget Reco/Cashflow Proj/Financial Goal/Invest Planner/Debt Optimizer/Retirement Planner/Financial Health Score/Financial Risk Dashboard (Sesi 75/91-99, Batch 6/10) — DIPINDAH (Sesi 133) ke #page-keuangan > #keuanganTab-laporan (lihat sana). Container ini SENGAJA dikosongkan, bukan dihapus totalnya, supaya histori git/diff jelas menandai lokasi lama. -->
   <!-- PROPERTY/RENTAL MANAGEMENT, ASSET PORTFOLIO, ASSET MAINTENANCE
@@ -3503,17 +3607,20 @@ window.location.reload();
        Kas/Aset/Net Worth/Dashboard Keuangan/Insight Keuangan (Sesi
        192-194) ditampilkan terpisah di sini supaya tetap terlacak. -->
   <div class="dashhub-wrap card u-mb12" id="danaKelolaanWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["danaKelolaanWrap","$event"]'>
       <div class="dashhub-cat-icon">💰</div>
       <div>
         <div class="dashhub-cat-label">Dana Kelolaan</div>
         <div class="dashhub-cat-desc">Dana investor, titipan, DP customer &amp; keluarga — di luar milik sendiri</div>
       </div>
+      <span class="card-collapse-toggle" id="danaKelolaanWrap-chev" data-action="toggleCardCollapse" data-args='["danaKelolaanWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="danaKelolaanWrap-cbody">
     <div class="findash-grid" id="danaKelolaanGrid"></div>
     <div class="card u-mt10 u-dnone" id="danaKelolaanInsightCard">
       <div class="card-title">💡 Insight Dana Kelolaan</div>
       <div id="danaKelolaanInsightBody"></div>
+    </div>
     </div>
   </div>
   <!-- SHOP MINI SUMMARY (Sesi 250, "Pindahkan Alur Bisnis Shop ke Shop >
@@ -3531,15 +3638,18 @@ window.location.reload();
        compute ulang. UI HANYA presenter + navigasi (showPage('shop')),
        pola sama findash-grid/findash-card generik yang sudah ada. -->
   <div class="dashhub-wrap card u-mb12" id="shopMiniSummaryWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopMiniSummaryWrap","$event"]'>
       <div class="dashhub-cat-icon">🪨</div>
       <div>
         <div class="dashhub-cat-label">Shop</div>
         <div class="dashhub-cat-desc">Ringkasan bisnis Shop bulan ini — detail lengkap ada di tab Business Intelligence</div>
       </div>
+      <span class="card-collapse-toggle" id="shopMiniSummaryWrap-chev" data-action="toggleCardCollapse" data-args='["shopMiniSummaryWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="shopMiniSummaryWrap-cbody">
     <div class="findash-grid" id="shopMiniSummaryGrid"></div>
     <button class="btn btn-ghost btn-full btn-sm u-mt10" data-action="showPage" data-args='["shop"]'>🪨 Buka Shop</button>
+    </div>
   </div>
   <!-- Rental Management/Asset Portfolio/Asset Maintenance — lihat catatan
        migrasi di atas (#propertyManagementWrap), ketiganya ikut pindah
@@ -3565,14 +3675,17 @@ window.location.reload();
        Car Notes). Yang tersisa cuma "Total Perhatian Gabungan", satu2nya
        angka di sini yang belum ada di kartu lain. -->
   <div class="dashhub-wrap card u-mb12" id="crossDashWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["crossDashWrap","$event"]'>
       <div class="dashhub-cat-icon">🔗</div>
       <div>
         <div class="dashhub-cat-label">Finance &amp; Vehicle Cross Summary</div>
         <div class="dashhub-cat-desc">Total perhatian gabungan (anggaran lewat batas + servis/pajak/BBM lewat jatuh tempo) — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="crossDashWrap-chev" data-action="toggleCardCollapse" data-args='["crossDashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="crossDashWrap-cbody">
     <div class="findash-grid" id="crossDashGrid"></div>
+    </div>
   </div>
   <!-- UNIFIED AI BRIEFING FOUNDATION (Sesi 88, Batch 8). Section di dalam
        Dashboard Hub, sama seperti #vehBriefWrap (Sesi 80) — diisi oleh
@@ -3584,19 +3697,39 @@ window.location.reload();
        dikosongkan kalau tidak ada apa pun buat diceritakan. "Daily
        Insight Feed" (target sesi ini) 100% REUSE #crossInsightWrap di
        bawah (Sesi 87) apa adanya — TIDAK ada container feed baru, supaya
-       tidak duplicate logic list-insight yang sama. -->
+       tidak duplicate logic list-insight yang sama.
+       S702 (fitur collapse, permintaan eksplisit user): judul "📋
+       Ringkasan Harian Finance & Vehicle" DIPINDAH ke markup statis di
+       bawah supaya card ini bisa collapse (tap header) — 100% reuse
+       toggleCardCollapse(). Container KEDUA #aiUnifiedBriefBody (kartu
+       "🧭 Penasihat" di ai-chat.js, BUKAN Dashboard Hub) TETAP dapat versi
+       lengkap dgn judul di dalam innerHTML-nya (lihat
+       unified-briefing-presenter.js) — 0 perubahan tampilan di sana. -->
   <div class="dashhub-wrap card u-mb12" id="crossBriefWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["crossBriefWrap","$event"]'>
+      <div class="dashhub-cat-icon">📋</div>
+      <div>
+        <div class="dashhub-cat-label">Cross Brief</div>
+        <div class="dashhub-cat-desc">Ringkasan harian Finance &amp; Vehicle — dari data yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="crossBriefWrap-chev" data-action="toggleCardCollapse" data-args='["crossBriefWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="crossBriefWrap-cbody">
     <div id="crossBriefBody"></div>
+    </div>
   </div>
   <div class="dashhub-wrap card u-mb12" id="crossInsightWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["crossInsightWrap","$event"]'>
       <div class="dashhub-cat-icon">📰</div>
       <div>
         <div class="dashhub-cat-label">Finance &amp; Vehicle Insight</div>
         <div class="dashhub-cat-desc">Insight gabungan finance &amp; kendaraan — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="crossInsightWrap-chev" data-action="toggleCardCollapse" data-args='["crossInsightWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="crossInsightWrap-cbody">
     <div id="crossInsightBody"></div>
+    </div>
   </div>
   <!-- PERSONAL LIFE DASHBOARD FOUNDATION (Sesi 89, Batch 8). 3 section di
        dalam Dashboard Hub, sama seperti #crossDashWrap/#crossBriefWrap/
@@ -3612,22 +3745,50 @@ window.location.reload();
        life-dashboard-summary-api.js). CSS TIDAK baru — reuse penuh class
        findash-grid/findash-card (grid generik). Overview/Priority Panel
        pola SILENT sama persis #vehAlertWrap/#crossBriefWrap — body
-       dikosongkan kalau tidak ada apa pun buat ditampilkan. -->
+       dikosongkan kalau tidak ada apa pun buat ditampilkan.
+       S702 (fitur collapse): judul "👤 Ringkasan Hidup Pribadi" DIPINDAH
+       ke markup statis di bawah (lihat personal-overview-presenter.js),
+       0 container/konsumen lain utk personalOverviewBody. -->
   <div class="dashhub-wrap card u-mb12" id="personalOverviewWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["personalOverviewWrap","$event"]'>
+      <div class="dashhub-cat-icon">👤</div>
+      <div>
+        <div class="dashhub-cat-label">Personal Overview</div>
+        <div class="dashhub-cat-desc">Ringkasan hidup pribadi &amp; jumlah hal yang butuh perhatian — dari data yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="personalOverviewWrap-chev" data-action="toggleCardCollapse" data-args='["personalOverviewWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="personalOverviewWrap-cbody">
     <div id="personalOverviewBody"></div>
+    </div>
   </div>
   <div class="dashhub-wrap card u-mb12" id="crossWidgetsWrap">
-    <div class="dashhub-cat-head">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["crossWidgetsWrap","$event"]'>
       <div class="dashhub-cat-icon">🧩</div>
       <div>
         <div class="dashhub-cat-label">Cross Module Widgets</div>
         <div class="dashhub-cat-desc">Insight &amp; prioritas gabungan Finance/Vehicle — dari data yang sudah ada</div>
       </div>
+      <span class="card-collapse-toggle" id="crossWidgetsWrap-chev" data-action="toggleCardCollapse" data-args='["crossWidgetsWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
     </div>
+    <div class="card-collapse-body" id="crossWidgetsWrap-cbody">
     <div class="findash-grid" id="crossWidgetsGrid"></div>
+    </div>
   </div>
+  <!-- S702 (fitur collapse): judul "📌 Prioritas Hidup Pribadi" DIPINDAH
+       ke markup statis di bawah (lihat life-priority-panel.js). -->
   <div class="dashhub-wrap card u-mb12" id="lifePriorityWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["lifePriorityWrap","$event"]'>
+      <div class="dashhub-cat-icon">📌</div>
+      <div>
+        <div class="dashhub-cat-label">Life Priority</div>
+        <div class="dashhub-cat-desc">Prioritas hidup pribadi — dari data yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="lifePriorityWrap-chev" data-action="toggleCardCollapse" data-args='["lifePriorityWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="lifePriorityWrap-cbody">
     <div id="lifePriorityBody"></div>
+    </div>
   </div>
   <!-- PERSONAL DECISION CENTER FOUNDATION (Sesi 90, Batch 8). 2 section di
        dalam Dashboard Hub, sama seperti #personalOverviewWrap/
@@ -3640,12 +3801,35 @@ window.location.reload();
        (satu-satunya operasi baru: filter insight ke type==='warning',
        field final — lihat komentar decision-center-api.js). CSS TIDAK
        baru. Pola SILENT sama persis #personalOverviewWrap/#lifePriorityWrap
-       — body dikosongkan kalau tidak ada apa pun buat ditampilkan. -->
+       — body dikosongkan kalau tidak ada apa pun buat ditampilkan.
+       S702 (fitur collapse): judul "💡 Rekomendasi utk Anda"/"🗂️ Antrean
+       Tindakan" DIPINDAH ke markup statis di bawah (lihat
+       recommendation-panel.js/action-queue.js). -->
   <div class="dashhub-wrap card u-mb12" id="recommendationPanelWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["recommendationPanelWrap","$event"]'>
+      <div class="dashhub-cat-icon">💡</div>
+      <div>
+        <div class="dashhub-cat-label">Recommendation Panel</div>
+        <div class="dashhub-cat-desc">Rekomendasi untuk Anda — dari data yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="recommendationPanelWrap-chev" data-action="toggleCardCollapse" data-args='["recommendationPanelWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="recommendationPanelWrap-cbody">
     <div id="recommendationPanelBody"></div>
+    </div>
   </div>
   <div class="dashhub-wrap card u-mb12" id="actionQueueWrap">
+    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["actionQueueWrap","$event"]'>
+      <div class="dashhub-cat-icon">🗂️</div>
+      <div>
+        <div class="dashhub-cat-label">Action Queue</div>
+        <div class="dashhub-cat-desc">Antrean tindakan prioritas — dari data yang sudah ada</div>
+      </div>
+      <span class="card-collapse-toggle" id="actionQueueWrap-chev" data-action="toggleCardCollapse" data-args='["actionQueueWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
+    </div>
+    <div class="card-collapse-body" id="actionQueueWrap-cbody">
     <div id="actionQueueBody"></div>
+    </div>
   </div>
   <div class="dashhub-pinned-wrap" id="dashboardHubPinnedWrap">
     <div class="dashhub-cat-head">
@@ -4079,6 +4263,6 @@ window.location.reload();
 <script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
 <script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1515" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="app-bundle-b.min.js?v=1522" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
 </body>
 </html>
