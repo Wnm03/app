@@ -1325,6 +1325,10 @@ const DanaTitipanPortfolioPresenter = {
         <span class="u-t2">Total Estimasi Belum Teralokasi</span>
         <span class="u-fw700">${this._money(projection.totals.estimatedUnallocatedTotal)}</span>
       </div>
+      ${projection.totals.estimatedUnallocatedTotal > 0 ? `
+      <button type="button" class="btn btn-ghost btn-full btn-sm u-mt4" data-action="TitipanExpenseUI.open" data-args='[${Math.round(projection.totals.estimatedUnallocatedTotal)}]'>📤 Catat Dana Keluar dari Sisa Belum Teralokasi</button>
+      <div class="u-fs10 u-t2 u-mt2">Buat pinjaman/utang (centang "Talangan" di form) atau transaksi biasa dari sisa dana ini — jumlah sudah terisi otomatis, bisa diubah.</div>
+      ` : ''}
       ${projection.totals.overAllocatedTotal > 0 ? `
       <div class="u-flex u-jcb u-fs11 u-mt2">
         <span class="u-t2">Total Kelebihan Alokasi</span>

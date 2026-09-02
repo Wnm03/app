@@ -1134,20 +1134,46 @@ if(renovLinkedProject){
 const renovProjSelEdit=document.getElementById('txRenovProject');
 if(renovProjSelEdit)renovProjSelEdit.value=renovLinkedProject.id;
 }
-// Sesi ini (sync sparepart -> servis, permintaan user): pola SAMA PERSIS
-// renovChkEdit tepat di atas -- tombol "✏️ Edit Detail Servis" cuma tampil
-// kalau transaksi ini memang sudah ter-link (t.servisLinkId) & baris
-// D.servisLogs-nya masih ada (bukan sudah dihapus manual dari tab Servis).
-// Checkbox "Sinkron ke Servis" SENGAJA selalu direset ke false di sini
-// (beda dgn renovChkEdit) -- centang itu cuma jalur bikin/re-sync tautan
-// dari Transaksi, sedang utk transaksi yang SUDAH tertaut, editnya lewat
-// tombol Edit Detail Servis (buka modal Servis asli), bukan re-centang.
+// BUGFIX (S710, laporan user via screenshot: "field Servis kosong pas
+// re-centang di Edit"): dulu servisChkEdit SELALU dipaksa checked=false di
+// sini TANPA pengecualian & field Kendaraan/Jenis Servis/KM TIDAK PERNAH
+// diisi ulang -- beda dgn renovChkEdit tepat di atas (yang sudah benar: cek
+// dulu apakah tx ini ter-link sebelum tentukan status checkbox + isi ulang
+// datanya). Desain awalnya memang mengarahkan user ke tombol "✏️ Edit Detail
+// Servis" utk transaksi yang sudah tertaut (bukan re-centang panel ini),
+// TAPI kalau user tetap re-centang manual (dropdown Kendaraan cuma default
+// ke kendaraan aktif, field Jenis Servis/Item & KM kosong), datanya
+// KELIHATAN hilang padahal aman di D.servisLogs -- cuma representasi
+// checkbox & field di form Edit yang tidak pernah disinkronkan balik. Fix:
+// samakan pola dgn renovChkEdit -- kalau transaksi ini memang ter-link ke
+// baris Servis (t.servisLinkId & baris D.servisLogs-nya masih ada, belum
+// dihapus manual dari tab Servis), checkbox otomatis checked=true & field
+// Kendaraan/Jenis Servis/Item/KM di-restore dari data tersimpan. Tombol
+// "✏️ Edit Detail Servis" tetap ditampilkan sebagai jalur edit detail lain
+// (part terpakai, interval, dll) yang tidak ada di panel ringkas ini.
 const servisEditBtn=document.getElementById('txEditServisBtn');
 const linkedServisLog=(t.servisLinkId&&D.servisLogs)?D.servisLogs.find(s=>s.id===t.servisLinkId):null;
 if(servisEditBtn)servisEditBtn.style.display=linkedServisLog?'block':'none';
 const servisChkEdit=document.getElementById('txSyncServis');
-if(servisChkEdit)servisChkEdit.checked=false;
+if(servisChkEdit)servisChkEdit.checked=!!linkedServisLog;
 if(typeof toggleTxServisFields==='function')toggleTxServisFields();
+if(linkedServisLog){
+const servisVehSelEdit=document.getElementById('txServisVehicle');
+if(servisVehSelEdit){
+// Sama seperti pola stockSelEdit di atas: pastikan opsi utk kendaraan ini
+// ADA dulu sebelum di-assign value (populateTxServisVehicleSelect() sudah
+// dipanggil lewat toggleTxServisFields() di atas, tapi tetap jaga-jaga
+// kalau kendaraannya kebetulan tidak ada di daftar aktif).
+if(servisVehSelEdit.options&&!Array.from(servisVehSelEdit.options).some(o=>o.value===linkedServisLog.vehicleId)){
+servisVehSelEdit.insertAdjacentHTML('beforeend',`<option value="${linkedServisLog.vehicleId}"></option>`);
+}
+servisVehSelEdit.value=linkedServisLog.vehicleId;
+}
+const servisItemEditEl=document.getElementById('txServisItem');
+if(servisItemEditEl)servisItemEditEl.value=linkedServisLog.item||'';
+const servisKmEditEl=document.getElementById('txServisKm');
+if(servisKmEditEl)servisKmEditEl.value=(linkedServisLog.km!=null)?linkedServisLog.km:'';
+}
 const shopChk=document.getElementById('txAddShopStock');
 const hasShopStock=(t.stockItems&&t.stockItems.length)||t.stockProductId;
 if(hasShopStock&&shopChk){

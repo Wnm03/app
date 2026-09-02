@@ -81,10 +81,23 @@ const TitipanExpenseUI = {
   // tercentang (selaras Design Lock §7 single-owner: porsi tidak relevan).
   _splitMode: 'manual',
 
-  // open() — reset seluruh form + isi daftar owner dari
+  // open(presetAmount) — reset seluruh form + isi daftar owner dari
   // DanaTitipanPortfolioAPI.listExistingOwners() (Design Lock §6: HANYA
   // owner existing, tidak bisa bikin baru di sini). 0 tulis ke D.
-  open() {
+  //
+  // presetAmount (opsional, S709 — tombol "📤 Catat Dana Keluar" di baris
+  // "Total Estimasi Belum Teralokasi", dana-titipan-portfolio-render.js):
+  // kalau diisi angka > 0, field Jumlah langsung terisi nilai itu (user
+  // tinggal cek/edit, tidak perlu ngitung ulang manual). TIDAK mengubah
+  // apa pun di flow submit/talangan yang sudah ada -- murni prefill 1
+  // field, checkbox "Talangan (jadi piutang, akan ditagih balik)" TETAP
+  // pilihan manual user (dana keluar ini bisa jadi pinjaman/piutang KALAU
+  // dicentang, atau transaksi pengeluaran biasa kalau tidak -- 2 tujuan
+  // yang diminta user sama2 sudah dilayani mekanisme talangan yang ada,
+  // 0 field/flow baru). Dipanggil TANPA argumen di semua pemanggilan lama
+  // (tombol "💸 Catat Pengeluaran Dana Titipan" di atas daftar owner) --
+  // 0 regresi, presetAmount undefined -> perilaku identik sebelum sesi ini.
+  open(presetAmount) {
     if (typeof TitipanExpenseFlow === 'undefined' || typeof DanaTitipanPortfolioAPI === 'undefined') {
       if (typeof toast === 'function') toast('⚠️ Fitur pengeluaran dana titipan belum siap dimuat');
       return;
@@ -96,7 +109,8 @@ const TitipanExpenseUI = {
     this._renderOwnersList();
 
     const amtEl = document.getElementById('titipanExpenseAmt');
-    if (amtEl) amtEl.value = '';
+    const hasPreset = typeof presetAmount === 'number' && isFinite(presetAmount) && presetAmount > 0;
+    if (amtEl) amtEl.value = hasPreset ? String(Math.round(presetAmount)) : '';
     if (typeof updateAmtPreview === 'function') updateAmtPreview('titipanExpenseAmt', 'titipanExpenseAmtPreview');
     // FIX (audit "Pemilik Sumber Potongan" tidak muncul/tidak sync): modal
     // ini sebelumnya TIDAK punya field Akun sama sekali (accountId hardcode

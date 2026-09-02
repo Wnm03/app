@@ -141,7 +141,23 @@ p.price=p.avgPrice;
 }
 p.lastPurchaseDate=purchaseDate;
 if(!Array.isArray(p.priceHistory))p.priceHistory=[];
+// BUGFIX (S713, audit lanjutan temuan user "dobel stok sparepart"): txRefs
+// tepat di bawah SUDAH dijaga anti-dobel lewat includes() check, tapi
+// priceHistory.push() di sini TIDAK -- kalau applyStockPurchase() ini
+// somehow kepanggil 2x utk txId yang SAMA tanpa revertStockPurchase() di
+// antaranya (mis. double-submit/double-click tombol Simpan sebelum debounce,
+// bukan jalur edit normal yang selalu revert-lalu-reapply), priceHistory
+// numpuk 2 entri identik persis (root cause dugaan di balik backup lama yg
+// ditemukan user: "ban belakang 90/90"/"pentil tubles"). Fix: pola SAMA
+// PERSIS dgn guard txRefs.includes() di bawah -- kalau txId ini SUDAH ada
+// entry-nya di priceHistory, skip push (silent, bukan error) drpd nambah
+// duplikat. qty/avgPrice/price di atas TETAP dihitung apa adanya (tidak
+// disentuh sesi ini) -- guard ini MURNI di titik tulis log riwayat, 0
+// perubahan ke rumus qty/harga yang sudah ada.
+const alreadyLogged=(txId!=null)&&p.priceHistory.some(h=>h&&h.txId===txId);
+if(!alreadyLogged){
 p.priceHistory.push({date:purchaseDate,qty,price:unitPrice||0,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvgEffective});
+}
 if(txId){
 if(!Array.isArray(p.txRefs))p.txRefs=[];
 if(!p.txRefs.includes(txId))p.txRefs.push(txId);
