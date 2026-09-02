@@ -473,3 +473,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak terpasang (node_modules kosong) -- konsisten dgn batasan environment sesi S705 sebelumnya
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak terpasang -- bundle unminified tapi valid (node --check lolos), sama seperti fallback pola sesi S705 sebelumnya
+
+## 2026-09-02T04:10:58.920Z — versi s713-fix-pricehistory-dup-guard
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak bisa diinstall (sama seperti sesi sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa diinstall -- bundle unminified tapi valid (node --check lolos), sama seperti sesi sebelumnya
