@@ -28,7 +28,8 @@ function buildCtx(overrides) {
   };
   const calls = [];
   const ctx = loadSource(
-    ['modules/asset/aset-owners.js', 'modules/asset/aset.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     Object.assign(
       {
         D,

@@ -53,6 +53,7 @@ function makeRenderCtx(D) {
       'modules/finance/filter-laporan.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/finance/dana-titipan-portfolio-render.js',
     ],
     {
@@ -147,6 +148,7 @@ function makeUiCtx(D, dom) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
       'modules/finance/piutang-utang.js',
       'modules/finance/transaksi.js',

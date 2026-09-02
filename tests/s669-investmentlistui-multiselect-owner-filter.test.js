@@ -60,6 +60,7 @@ function makeCtx(D, dom) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/investasi-list-view.js',
     ],
     {

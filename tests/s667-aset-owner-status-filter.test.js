@@ -46,7 +46,8 @@ const { loadSource } = require('./helpers/loadSource');
 function makeCtx(D) {
   let _n = 9000;
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     {
       D,
       escapeHtml: (s) => String(s),

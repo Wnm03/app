@@ -95,6 +95,7 @@ function makeRenderCtx(D) {
       'modules/finance/filter-laporan.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/finance/dana-titipan-portfolio-render.js',
     ],
     {

@@ -50,7 +50,8 @@ test('Aset.renderList() — 1 aset yang bikin assetCrossCheckWarning() throw tid
     ],
   };
   const ctx = loadSource(
-    ['modules/asset/aset-owners.js', 'modules/asset/aset.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/asset/aset-owners.js', 'modules/asset/aset.js'],
     {
       D,
       uid: () => 'uid_' + Math.random().toString(36).slice(2),

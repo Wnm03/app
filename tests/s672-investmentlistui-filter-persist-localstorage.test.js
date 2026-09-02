@@ -85,6 +85,7 @@ function makeCtx(D, dom, localStorage) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/investasi-list-view.js',
     ],
     extraGlobals,
@@ -233,6 +234,7 @@ test('localStorage TIDAK tersedia sama sekali (typeof undefined) -> render()/han
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/investasi-list-view.js',
     ],
     {

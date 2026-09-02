@@ -58,6 +58,7 @@ function makeCtx(D, dom, overrides = {}) {
       'modules/asset/investasi.js',
       'modules/asset/investasi-list-view.js',
       'modules/asset/aset-owners.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/aset.js',
       'modules/asset/aset-reports.js',
       'modules/asset/aset-misc.js',

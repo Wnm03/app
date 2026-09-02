@@ -61,7 +61,8 @@ function parseFirstOptionValue(html) {
 
 function makeCtx(D, dom, realEscapeHtml) {
   return loadSource(
-    ['modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',],
+    ['modules/shared/filter-prefs-store.js',
+'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',],
     {
       D,
       document: dom,

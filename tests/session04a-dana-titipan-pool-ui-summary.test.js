@@ -44,6 +44,7 @@ function makeCtx(D, dom, extraGlobals) {
       'modules/asset/investasi.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js',
     ],
     Object.assign(
@@ -205,7 +206,8 @@ test('E2. _poolSummaryHtml() balikin string kosong kalau DanaTitipanPoolAPI tida
   const D = baseD({});
   const dom = makeStatefulDom();
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js', 'modules/finance/dana-titipan-portfolio-render-b.js'],
     { D, document: dom, uid: () => 'u1', save: () => {}, escapeHtml: (s) => String(s), fmt: (n) => String(n), fmtFull: (n) => String(n) },
     ['DanaTitipanPortfolioPresenter'],
   );

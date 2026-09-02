@@ -90,6 +90,7 @@ function makeCtx(D, dom) {
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js',
       'modules/finance/piutang-utang.js',
       'modules/finance/transaksi.js',
@@ -508,18 +509,44 @@ test('9. save(): TitipanExpenseFlow.submit() gagal (nominal 0) -> toast reason, 
   assert.ok(ctx._toastMessages.length > 0);
 });
 
-test('10. save(): talangan dicentang -> tx.titipanTalangan true & piutang otomatis tercatat (delegasi S519, 0 logic baru)', async () => {
+test('10. save(): arah Piutang dipilih -> tx.titipanTalangan true & piutang otomatis tercatat (delegasi S519, 0 logic baru)', async () => {
   const dom = makeStatefulDom();
   const D = baseD();
   const ctx = makeCtx(D, dom);
   ctx.TitipanExpenseUI.open();
   ctx.TitipanExpenseUI.toggleOwner(0, true);
   dom.getElementById('titipanExpenseAmt').value = '50000';
-  dom.getElementById('titipanExpenseTalangan').checked = true;
+  ctx.TitipanExpenseUI.setDirection('piutang');
   await ctx.TitipanExpenseUI.save();
   assert.equal(D.transactions[0].titipanTalangan, true);
+  assert.equal(D.transactions[0].titipanPinjamUtang, undefined);
   assert.equal(D.piutang.length, 1);
   assert.equal(D.piutang[0].nilai, 50000);
+});
+
+test('10b. save(): arah Utang dipilih -> tx.titipanPinjamUtang true, titipanTalangan TIDAK diset, 0 piutang otomatis (rencana perbaikan sesi ini -- pembuatan D.debts menyusul sesi berikutnya)', async () => {
+  const dom = makeStatefulDom();
+  const D = baseD();
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.toggleOwner(0, true);
+  dom.getElementById('titipanExpenseAmt').value = '50000';
+  ctx.TitipanExpenseUI.setDirection('utang');
+  await ctx.TitipanExpenseUI.save();
+  assert.equal(D.transactions[0].titipanPinjamUtang, true);
+  assert.equal(D.transactions[0].titipanTalangan, undefined);
+  assert.equal(D.piutang.length, 0);
+});
+
+test('10c. open(): _direction direset ke \'biasa\' tiap kali modal dibuka (tidak nyangkut dari sesi sebelumnya)', () => {
+  const dom = makeStatefulDom();
+  const D = baseD();
+  const ctx = makeCtx(D, dom);
+  ctx.TitipanExpenseUI.open();
+  ctx.TitipanExpenseUI.setDirection('utang');
+  assert.equal(ctx.TitipanExpenseUI._direction, 'utang');
+  ctx.TitipanExpenseUI.open();
+  assert.equal(ctx.TitipanExpenseUI._direction, 'biasa');
 });
 
 test('11. save(): multi owner -> N transaksi terpisah tersimpan (delegasi TitipanExpenseFlow, 0 logic split baru di UI)', async () => {

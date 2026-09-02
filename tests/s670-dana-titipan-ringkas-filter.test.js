@@ -45,6 +45,7 @@ function makeCtx(D) {
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
       'modules/asset/aset-owners.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/aset.js',
       'modules/finance/dana-titipan-aggregation-api.js',
       'modules/finance/dana-titipan-commitment-return-api.js',

@@ -55,6 +55,7 @@ function makeCtx(D, dom, overrides = {}) {
   const ctx = loadSource(
     [
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/investasi-list-view.js',
       'modules/asset/investasi-tx-view.js',
       'modules/asset/investasi-watch-view.js',

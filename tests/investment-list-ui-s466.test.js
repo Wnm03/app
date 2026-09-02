@@ -81,6 +81,7 @@ function makeCtx(D, dom, overrides = {}) {
   const ctx = loadSource(
     [
       'modules/asset/investasi.js',
+      'modules/shared/filter-prefs-store.js',
       'modules/asset/investasi-list-view.js',
     ],
     {
@@ -293,7 +294,8 @@ test('[save] Investment belum dimuat (typeof undefined) -> toast peringatan, tid
   const dom = makeStatefulDom();
   const toastMsgs = [];
   const ctx = loadSource(
-    ['modules/asset/investasi-list-view.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/asset/investasi-list-view.js'],
     {
       D,
       document: dom,

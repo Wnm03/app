@@ -14,7 +14,8 @@ const { loadSource } = require('./helpers/loadSource');
 function makeAsetCtx(D) {
   const el = { value: '', textContent: '', innerHTML: '', style: {}, classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } } };
   return loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
+    ['modules/shared/filter-prefs-store.js',
+'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/shared/owner-registry.js', 'modules/asset/aset-owners.js', 'modules/asset/aset.js', 'modules/asset/aset-reports.js', 'modules/asset/aset-misc.js'],
     {
       D, uid: () => 'u' + (D._n = (D._n || 0) + 1), save: () => {}, toast: () => {}, sameId: (a, b) => String(a) === String(b), escapeHtml: (s) => String(s),
       todayStr: () => '2026-08-10',
