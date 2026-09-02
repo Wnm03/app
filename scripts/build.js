@@ -198,6 +198,14 @@ const GROUP_B = [
   // MultiOwnerEngine). TANPA WIRING sesi ini (0 consumer memanggil
   // OwnerRegistry.*), pola sama persis multi-owner-engine.js S390 sendiri.
   'modules/shared/owner-registry.js',
+  // Sesi 716: FilterPrefsStore — ekstraksi pola _loadFilterPrefsOnce()/
+  // _saveFilterPrefs() yang sebelumnya diduplikasi 3x persis (InvestmentListUI
+  // S672, Aset S715, DanaTitipanPortfolioPresenter S715). WAJIB dimuat SEBELUM
+  // ketiga consumer itu (modules/asset/aset.js, modules/asset/investasi-list-
+  // view.js, modules/finance/dana-titipan-portfolio-render.js) -- ditaruh di
+  // sini (blok modules/shared/ awal, standalone/0 dependency) supaya jelas
+  // dependency arah-nya: consumer butuh FilterPrefsStore, bukan sebaliknya.
+  'modules/shared/filter-prefs-store.js',
   // Sesi 564 (R4, AUDIT-DANA-TITIPAN-OWNERSHIP-SIMPLIFIKASI.md, menutup
   // OWNREG-GATE3-001): 1 layar terpusat Settings -> tab Kepemilikan yang
   // mewiring OwnerRegistry.rename()/merge() (S561) ke tombol nyata.
