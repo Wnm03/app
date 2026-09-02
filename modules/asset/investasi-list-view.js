@@ -428,60 +428,16 @@ const InvestmentListUI = {
 
   // _loadFilterPrefsOnce()/_saveFilterPrefs() — S672 (item backlog "Persist pilihan
   // filter owner (filterOwnerIds dkk) ke localStorage, pola sama cardCollapsePrefs" —
-  // dari SESSION-NOTE-S670.md/S671.md). Reuse pola try/catch permisif yang sama persis
-  // toggleCardCollapse()/applyCardCollapsePrefs() (modal-navigasi.js): localStorage
-  // gagal/diblokir/korup TIDAK PERNAH melempar keluar -- filter tetap berfungsi murni
-  // di state UI in-memory kalau storage bermasalah, cuma tidak ke-persist lintas
-  // reload. Key `investmentListFilterPrefs` SENGAJA terpisah dari `cardCollapsePrefs`
-  // (concern beda: filter data vs UI collapse), pola sama banyak key localStorage lain
-  // di codebase yang masing-masing punya namespace sendiri.
-  //
-  // _loadFilterPrefsOnce() HANYA membaca sekali per lifetime halaman (guard
-  // `_filterPrefsLoaded`) -- dipanggil dari render() (SSOT tab dibuka), BUKAN dari
-  // _renderList()/_renderSummary() yang bisa dipanggil berkali-kali dari banyak titik
-  // (termasuk dari dalam handler filter itu sendiri) -- baca ulang tiap render() akan
-  // menimpa balik state live user dgn nilai lama di storage tiap kali salah satu
-  // handler filter dipanggil (karena semuanya juga memanggil _renderList()).
-  // Validasi bentuk data SEBELUM dipakai (Array.isArray utk filterOwnerIds, whitelist
-  // 'milik'/'titipan' utk filterSettlement) -- localStorage bisa diedit manual dari
-  // luar app (DevTools), jadi data JANGAN dipercaya mentah-mentah, pola sama validasi
-  // di onFilterSettlementChange() (val yang bukan 'milik'/'titipan' otomatis '').
+  // dari SESSION-NOTE-S670.md/S671.md). S716: thin delegating wrapper ke
+  // FilterPrefsStore.loadOnce()/save() (modules/shared/filter-prefs-store.js) --
+  // logika try/catch permisif & validasi bentuk data DIPINDAH ke situ (dedup dari 3
+  // salinan identik: InvestmentListUI/Aset/DanaTitipanPortfolioPresenter). Nama method
+  // & perilaku dari luar 0 berubah, cuma body-nya sekarang delegasi 1 baris.
   _loadFilterPrefsOnce() {
-    if (InvestmentListUI._filterPrefsLoaded) return;
-    InvestmentListUI._filterPrefsLoaded = true;
-    if (typeof localStorage === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(InvestmentListUI._filterStorageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.filterOwnerIds)) {
-        InvestmentListUI.filterOwnerIds = parsed.filterOwnerIds.map(String);
-      }
-      if (parsed && (parsed.filterSettlement === 'milik' || parsed.filterSettlement === 'titipan')) {
-        InvestmentListUI.filterSettlement = parsed.filterSettlement;
-      } else if (!InvestmentListUI.filterOwnerIds.length) {
-        // Konsisten sama guard onFilterOwnerToggle()/onFilterOwnerClearAll(): status
-        // tanpa owner terpilih tidak bermakna -- kalau data lama di storage (mis.
-        // format sebelum validasi ini ada) kebetulan punya filterOwnerIds kosong tapi
-        // filterSettlement terisi, jangan ikut dipakai.
-        InvestmentListUI.filterSettlement = '';
-      }
-    } catch (err) {
-      // localStorage korup/tidak tersedia -> abaikan, filter tetap default kosong
-      // (0 crash, pola sama try/catch cardCollapsePrefs).
-    }
+    FilterPrefsStore.loadOnce(InvestmentListUI);
   },
   _saveFilterPrefs() {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(InvestmentListUI._filterStorageKey, JSON.stringify({
-        filterOwnerIds: InvestmentListUI.filterOwnerIds,
-        filterSettlement: InvestmentListUI.filterSettlement,
-      }));
-    } catch (err) {
-      // localStorage penuh/diblokir (mis. mode privat) -> abaikan, filter tetap
-      // jalan murni di state UI sesi ini saja (0 crash).
-    }
+    FilterPrefsStore.save(InvestmentListUI);
   },
 
   // _resolveLinkedAsset(h) — B10: Investasi -> Aset Reverse Navigation (simetris dgn

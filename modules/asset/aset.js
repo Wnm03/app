@@ -24,6 +24,20 @@ editId:null,
 // renderList() di bawah).
 filterOwnerIds:[],
 filterSettlement:'',
+// _filterPrefsLoaded/_filterStorageKey — S715, penyimpanan filter Pemilik+Status ke
+// localStorage (item backlog #4 dari SESSION-NOTE-S714-FINCOACH-TITIPAN-DEBT-STALE-
+// INSIGHT.md: "Multi-select owner untuk Buku Aset & Dana Titipan (+ tombol Pilih
+// Semua/Bersihkan + persist filterOwnerIds ke localStorage)" -- multi-select + tombol
+// SUDAH SELESAI S673, cuma persist yang belum, pola SAMA PERSIS
+// InvestmentListUI._loadFilterPrefsOnce()/_saveFilterPrefs() (S672,
+// investasi-list-view.js). _filterPrefsLoaded murni flag runtime (bukan dipersist)
+// supaya _loadFilterPrefsOnce() di renderList() cuma baca localStorage SEKALI per
+// lifetime halaman -- baca ulang tiap renderList() akan menimpa balik perubahan live
+// user dgn nilai lama di storage. Key `assetListFilterPrefs` SENGAJA terpisah dari
+// `investmentListFilterPrefs` (domain beda, filter independen -- lihat komentar
+// filterOwnerIds di atas).
+_filterPrefsLoaded:false,
+_filterStorageKey:'assetListFilterPrefs',
 _zakatableState:false,
 // _tradableState / TRADABLE_JENIS / TRADABLE_TYPE_MAP -- §H/§I AUDIT-UNIFIED-ASSET-
 // INVESTMENT-FORM.md (wrapper UI tipis di atas assetModal yang sudah ada, 0 model baru).
@@ -656,6 +670,13 @@ try{LaporanAset.renderList();}catch(err){if(typeof console!=='undefined'&&consol
 renderList(){
 const el=document.getElementById('assetList');
 if(!el)return;
+// _loadFilterPrefsOnce() — S715 (item backlog #4 "persist filter ke localStorage",
+// pola sama InvestmentListUI.render()/S672). Dipanggil di renderList() (SSOT
+// halaman Buku Aset dibuka/dibuka ulang) supaya filter tersimpan diterapkan begitu
+// halaman dibuka, TANPA menimpa perubahan live user tiap kali renderList()
+// dipanggil ulang -- guard _filterPrefsLoaded di dalamnya bikin baca localStorage
+// cuma terjadi SEKALI per lifetime halaman.
+Aset._loadFilterPrefsOnce();
 // s476a: migrasi idempotent dijalankan tiap renderList() -- murah (early-exit
 // begitu semua kandidat sudah bertanda `_migratedToInvestmentId`), memastikan
 // entri investasi lama otomatis pindah ke Holding tanpa perlu tombol manual.
@@ -852,10 +873,12 @@ const idx=Aset.filterOwnerIds.indexOf(key);
 if(idx===-1)Aset.filterOwnerIds.push(key);
 else Aset.filterOwnerIds.splice(idx,1);
 if(!Aset.filterOwnerIds.length)Aset.filterSettlement='';
+Aset._saveFilterPrefs();
 Aset.renderList();
 },
 onFilterSettlementChange(val){
 Aset.filterSettlement=(val==='milik'||val==='titipan')?val:'';
+Aset._saveFilterPrefs();
 Aset.renderList();
 },
 // onFilterOwnerSelectAll()/onFilterOwnerClearAll() — S673, pola SAMA PERSIS
@@ -877,12 +900,27 @@ try{const res=(typeof MultiOwnerEngine!=='undefined')?MultiOwnerEngine.getOwners
 owners.forEach(o=>{if(o&&!o.isSelf&&o.ownerId)ids.add(String(o.ownerId));});
 });
 Aset.filterOwnerIds=Array.from(ids);
+Aset._saveFilterPrefs();
 Aset.renderList();
 },
 onFilterOwnerClearAll(){
 Aset.filterOwnerIds=[];
 Aset.filterSettlement='';
+Aset._saveFilterPrefs();
 Aset.renderList();
+},
+// _loadFilterPrefsOnce()/_saveFilterPrefs() — S715 (item backlog #4 "Persist pilihan
+// filter owner (filterOwnerIds dkk) ke localStorage" dari SESSION-NOTE-S714-FINCOACH-
+// TITIPAN-DEBT-STALE-INSIGHT.md). S716: thin delegating wrapper ke
+// FilterPrefsStore.loadOnce()/save() (modules/shared/filter-prefs-store.js) --
+// logika try/catch permisif & validasi bentuk data DIPINDAH ke situ (dedup dari 3
+// salinan identik: Aset/InvestmentListUI/DanaTitipanPortfolioPresenter). Nama method
+// & perilaku dari luar 0 berubah, cuma body-nya sekarang delegasi 1 baris.
+_loadFilterPrefsOnce(){
+FilterPrefsStore.loadOnce(Aset);
+},
+_saveFilterPrefs(){
+FilterPrefsStore.save(Aset);
 },
 // openActionsMenu(id) — menu overflow "⋮" utk aksi sekunder + detail kartu aset (S306
 // UI polish, lanjutan pola S299/S304/S305: SAMA PERSIS openBillActionsMenu() di
