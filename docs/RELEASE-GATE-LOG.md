@@ -478,3 +478,38 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, eslint tidak bisa diinstall (sama seperti sesi sebelumnya)
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa diinstall -- bundle unminified tapi valid (node --check lolos), sama seperti sesi sebelumnya
+
+## 2026-09-02T06:32:16.595Z — versi s714-titipan-expense-arah-dana-toggle
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan (npm install eslint gagal, 403 registry.npmjs.org), eslint tidak pernah terpasang di environment ini, konsisten sesi-sesi sebelumnya (S713 dst). Perubahan Sesi 2/3 (S714) cuma 3 fungsi baru murni-mirror di piutang-utang.js (maybeCreateTitipanPinjamUtang/syncTitipanPinjamUtangOnEdit/removeUnpaidTitipanPinjamUtangForTx, pola SAMA PERSIS versi Piutang) + wiring 4 titik panggil (transaksi.js/transaksi-b.js/tx-list-cashflow.js) + 1 file test baru (13 test) -- gaya kode konsisten pola existing yg di-mirror persis, diverifikasi manual (node -c lolos semua file diubah, 5314/5314 test node --test pass).
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak terpasang & tidak bisa diinstall -- bundle unminified tapi valid (node --check lolos kedua bundle, verify-bundle-freshness OK), sama seperti sesi-sesi sebelumnya.
+
+## 2026-09-02T06:44:53.593Z — versi s714-titipan-pinjam-utang-sesi3-grid-row
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall
+
+## 2026-09-02T07:13:27.794Z — versi s714-dipinjam-utang-deeplink-buku-utang
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall - sama seperti sesi S714 Sesi 1/2/3 sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall - sama seperti sesi S714 Sesi 1/2/3 sebelumnya
+
+## 2026-09-02T07:19:56.400Z — versi s714-datahealthcheck-debt-titipan-orphan-guard
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall - sama seperti sesi S714 sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall - sama seperti sesi S714 sebelumnya
+
+## 2026-09-02T07:43:56.566Z — versi s714-fincoach-titipan-debt-stale-insight
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall - sama seperti sesi S714 sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall - sama seperti sesi S714 sebelumnya
+
+## 2026-09-02T08:11:02.276Z — versi s715-aset-titipan-filter-persist-localstorage
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall (sama seperti seluruh sesi S714 sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall (sama seperti seluruh sesi S714 sebelumnya)
+
+## 2026-09-02T08:54:07.428Z — versi s716-filter-prefs-store-shared-helper
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall (sama seperti seluruh sesi S714/S715 sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall (sama seperti seluruh sesi S714/S715 sebelumnya)
