@@ -51,6 +51,23 @@ const DanaTitipanPortfolioPresenter = {
   filterOwnerIds: [],
   filterSettlement: '',
 
+  // _filterPrefsLoaded/_filterStorageKey — S715, penyimpanan filter Pemilik+Status
+  // ke localStorage (item backlog #4 dari SESSION-NOTE-S714-FINCOACH-TITIPAN-DEBT-
+  // STALE-INSIGHT.md: "Multi-select owner untuk Buku Aset & Dana Titipan (+ tombol
+  // Pilih Semua/Bersihkan + persist filterOwnerIds ke localStorage)" -- multi-select
+  // + tombol SUDAH SELESAI S674, cuma persist yang belum, pola SAMA PERSIS
+  // `Aset._loadFilterPrefsOnce()`/`_saveFilterPrefs()` (S715, modules/asset/aset.js)/
+  // `InvestmentListUI` (S672, investasi-list-view.js). _filterPrefsLoaded murni flag
+  // runtime (bukan dipersist) supaya _loadFilterPrefsOnce() di `_renderNow()` cuma
+  // baca localStorage SEKALI per lifetime halaman, TERLEPAS dari container mana
+  // (`danaTitipanTabList`/`danaTitipanPortfolioList`) yang dirender lebih dulu --
+  // baca ulang tiap render akan menimpa balik perubahan live user dgn nilai lama di
+  // storage. Key `danaTitipanFilterPrefs` SENGAJA terpisah dari
+  // `assetListFilterPrefs`/`investmentListFilterPrefs` (domain owner beda -- filter
+  // di sini per-owner dari projection.owners, bukan per-item).
+  _filterPrefsLoaded: false,
+  _filterStorageKey: 'danaTitipanFilterPrefs',
+
   _money(n) {
     return (typeof fmtFull === 'function') ? fmtFull(n) : ((typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0)));
   },
@@ -109,6 +126,29 @@ const DanaTitipanPortfolioPresenter = {
   _outstandingCell(o) {
     if (o.outstandingPrincipal === null) return '<span class="u-t2">Belum dicatat</span>';
     return `<span class="u-fw700">${this._money(o.outstandingPrincipal)}</span>`;
+  },
+
+  // _debtPinjamCellHtml(o) — sesi lanjutan S714 (deep-link): baris
+  // "Dipinjam (Utang)" (S714 Sesi 3, murni angka o.debtPinjamTotal)
+  // sekarang bisa diklik utk lompat ke 📕 Buku Utang, pola SAMA PERSIS
+  // navigasi yang sudah ada di seluruh app (`goToList()`,
+  // filter-laporan.js -- reuse 100%, 0 fungsi navigasi baru). Class
+  // `findash-card-sub-link`/`u-pointer` REUSE (styles.css, sudah ada,
+  // theme-independent -- beda dari `.tx-tbl-name-btn` yang di-scope
+  // `[data-theme="modern"]` saja, TIDAK cocok dipakai di sini krn
+  // `_ownerCardHtml()` dipakai KEDUA tema, bukan cuma modern).
+  // Total ini bisa mewakili BANYAK baris `D.debts` (multi-utang per
+  // owner) -- jadi tujuannya seksi Buku Utang secara utuh (scroll +
+  // flash-highlight `#debtList`, tab "utangpiutang"), BUKAN 1 modal
+  // `openDebtModal(id)` spesifik (yang cuma pas kalau persis 1 entri).
+  // Kalau `debtPinjamTotal` 0, TIDAK diberi link (konsisten pola
+  // `nameHtml` di `_holdingRowHtmlModern()` yang juga cuma jadi tombol
+  // kalau ada target nyata utk dituju).
+  _debtPinjamCellHtml(o) {
+    const money = this._money(o.debtPinjamTotal);
+    if (!o || !o.debtPinjamTotal) return `<span class="u-fw700">${money}</span>`;
+    const args = escapeHtml(JSON.stringify(['debtList', null, null, null, null, 'utangpiutang']));
+    return `<span class="u-fw700 u-pointer findash-card-sub-link" data-action="goToList" data-args="${args}" role="button" tabindex="0" aria-label="Lihat detail utang ini di Buku Utang">${money}</span>`;
   },
 
   // _expenseComparisonForOwner(o) — Sesi C (Langkah B,
@@ -693,21 +733,27 @@ const DanaTitipanPortfolioPresenter = {
               &nbsp;<span class="u-fw700 money ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
             </span>
           </summary>
-          <!-- SESI 632 (audit S631, rekomendasi #2): 8-baris grid detail
-          (Pokok Dikomit/Estimasi Transaksi/Teralokasi/Belum Teralokasi/
-          Nilai Saat Ini/Untung-Rugi/Sudah Dikembalikan/Belum Dikembalikan)
+          <!-- SESI 632 (audit S631, rekomendasi #2): grid detail (Pokok
+          Dikomit/Estimasi Transaksi/Teralokasi/Belum Teralokasi/Nilai
+          Saat Ini/Untung-Rugi/Sudah Dikembalikan/Belum Dikembalikan)
           dibungkus <details> collapsed-by-default, pola SAMA PERSIS
           <details> kartu owner & grup kustodian di file ini (0 CSS/JS
           baru). Ringkasan Pokok→Kini→gain di <summary> kartu owner di
           atas TETAP selalu kelihatan tanpa expand apa pun — grid ini
           murni rincian tambahan, bukan info utama. 0 rumus/data diubah,
-          murni markup pembungkus. -->
+          murni markup pembungkus. SESI 3/3 (S714): +2 baris "Dipakai
+          (Transaksi Titipan)"/"Dipinjam (Utang)" ditambah di antara
+          Teralokasi ke Holding & Estimasi Belum Teralokasi (murni
+          tampilan, lihat _debtPinjamTotalForOwner() di
+          dana-titipan-aggregation-api.js). -->
           <details class="titipan-detail-toggle u-mb6">
             <summary class="u-fs11 u-t2 u-pointer">Detail lengkap</summary>
             <div class="titipan-detail-grid u-fs11 u-mt4" style="display:grid;grid-template-columns:1fr 1fr;gap:3px 10px">
               <span class="u-t2">Pokok Dikomit</span><span>${this._principalCell(o)}</span>
               ${(() => { const cmp = this._expenseComparisonForOwner(o); return cmp ? `<span class="u-t2">Estimasi dari Transaksi ${escapeHtml(cmp.accountNames.join(', '))}</span><span class="u-fw700">${this._money(cmp.total)}</span>` : ''; })()}
               <span class="u-t2">Teralokasi ke Holding</span><span class="u-fw700">${this._money(o.allocatedPrincipal)}</span>
+              <span class="u-t2">Dipakai (Transaksi Titipan)</span><span class="u-fw700">${this._money(o.usedTotal)}</span>
+              <span class="u-t2">Dipinjam (Utang)</span>${this._debtPinjamCellHtml(o)}
               <span class="u-t2">Estimasi Belum Teralokasi</span><span>${this._unallocatedCell(o)}</span>
               <span class="u-t2">Nilai Saat Ini</span><span class="u-fw700">${this._money(o.currentValue)}</span>
               <span class="u-t2">Untung-Rugi</span><span class="u-fw700 ${this._gainCls(o.gain)}">${this._gainMoney(o.gain)}</span>
@@ -1083,11 +1129,13 @@ const DanaTitipanPortfolioPresenter = {
     if (idx === -1) DanaTitipanPortfolioPresenter.filterOwnerIds.push(key);
     else DanaTitipanPortfolioPresenter.filterOwnerIds.splice(idx, 1);
     if (!DanaTitipanPortfolioPresenter.filterOwnerIds.length) DanaTitipanPortfolioPresenter.filterSettlement = '';
+    DanaTitipanPortfolioPresenter._saveFilterPrefs();
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   },
   onFilterSettlementChange(val) {
     DanaTitipanPortfolioPresenter.filterSettlement = (val === 'milik' || val === 'titipan') ? val : '';
+    DanaTitipanPortfolioPresenter._saveFilterPrefs();
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   },
@@ -1110,14 +1158,30 @@ const DanaTitipanPortfolioPresenter = {
     try { projection = DanaTitipanPortfolioAPI.build(); } catch (err) { projection = null; }
     const owners = (projection && projection.owners) || [];
     DanaTitipanPortfolioPresenter.filterOwnerIds = owners.map((o) => String(o.ownerId));
+    DanaTitipanPortfolioPresenter._saveFilterPrefs();
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
   },
   onFilterOwnerClearAll() {
     DanaTitipanPortfolioPresenter.filterOwnerIds = [];
     DanaTitipanPortfolioPresenter.filterSettlement = '';
+    DanaTitipanPortfolioPresenter._saveFilterPrefs();
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
+  },
+
+  // _loadFilterPrefsOnce()/_saveFilterPrefs() — S715 (item backlog #4 "Persist
+  // pilihan filter owner (filterOwnerIds dkk) ke localStorage" dari SESSION-NOTE-
+  // S714-FINCOACH-TITIPAN-DEBT-STALE-INSIGHT.md). S716: thin delegating wrapper ke
+  // FilterPrefsStore.loadOnce()/save() (modules/shared/filter-prefs-store.js) --
+  // logika try/catch permisif & validasi bentuk data DIPINDAH ke situ (dedup dari 3
+  // salinan identik: DanaTitipanPortfolioPresenter/Aset/InvestmentListUI). Nama
+  // method & perilaku dari luar 0 berubah, cuma body-nya sekarang delegasi 1 baris.
+  _loadFilterPrefsOnce() {
+    FilterPrefsStore.loadOnce(DanaTitipanPortfolioPresenter);
+  },
+  _saveFilterPrefs() {
+    FilterPrefsStore.save(DanaTitipanPortfolioPresenter);
   },
 
   // renderInto(containerId) — SESI 498 (Tab "Dana Titipan" Terpadu, Sesi A
@@ -1213,6 +1277,14 @@ const DanaTitipanPortfolioPresenter = {
   // DanaTitipanPortfolioPresenter, jadi variabel `isTabView` diganti nama jadi
   // `isFilterableView` (lebih akurat, sekarang mencakup 2 id bukan 1 "tab").
   _renderNow(el) {
+    // _loadFilterPrefsOnce() — S715 (item backlog #4 "persist filter ke
+    // localStorage", pola sama Aset.renderList()/InvestmentListUI.render()).
+    // Dipanggil di _renderNow() (SSOT badan render KEDUA container, dipanggil dari
+    // render()/renderInto() manapun yang lebih dulu) supaya filter tersimpan
+    // diterapkan begitu salah satu container dibuka, TANPA menimpa perubahan live
+    // user tiap kali _renderNow() dipanggil ulang -- guard _filterPrefsLoaded di
+    // dalamnya bikin baca localStorage cuma terjadi SEKALI per lifetime halaman.
+    DanaTitipanPortfolioPresenter._loadFilterPrefsOnce();
     const savedAssetPicks = this._captureAssetPickSelections(el);
     const projection = DanaTitipanPortfolioAPI.build();
     const isFilterableView = !!(el && (el.id === 'danaTitipanTabList' || el.id === 'danaTitipanPortfolioList'));
