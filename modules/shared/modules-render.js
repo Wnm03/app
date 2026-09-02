@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s702-akumulasi-timelinew-target-click';
+const MODULE_RENDER_VERSION='s713-fix-pricehistory-dup-guard';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
