@@ -143,6 +143,18 @@ fireNotif(n.title,n.body,n.fireKey,()=>{if(typeof FuelModal!=='undefined'&&typeo
 fired.ids.push(n.fireKey);
 });
 }
+// Sesi S724 (carry-forward S723, item "notifikasi proaktif defisit"): 100% REUSE
+// DeficitNotifBridge (modules/finance/deficit-notif-bridge.js, translator murni,
+// pola SAMA PERSIS VehicleNotifBridge/FuelNotifBridge di atas) + fireNotif() yang
+// sama (0 sistem notifikasi baru). Klik notifikasi membuka kartu "Proyeksi Kas
+// Bulan Ini" di Dashboard Hub (satu-satunya tempat proyeksi kas sudah ditampilkan
+// -- 0 UI baru dibuat khusus utk notifikasi ini).
+if(typeof DeficitNotifBridge!=='undefined'&&typeof DeficitNotifBridge.items==='function'){
+DeficitNotifBridge.items(fired.ids).forEach((n)=>{
+fireNotif(n.title,n.body,n.fireKey,()=>{if(typeof dashHubNavigateToFeature==='function')dashHubNavigateToFeature({page:'dashboard-hub',dashKey:'cashProj',goTo:'dashCashProjBody'});});
+fired.ids.push(n.fireKey);
+});
+}
 try{localStorage.setItem('kw_notif_fired',JSON.stringify(fired));}catch(e){console.error('Gagal simpan status notifikasi:',e);}
 }
 function shareBillWA(id){
