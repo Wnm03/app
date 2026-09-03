@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s713-fix-pricehistory-dup-guard';
+const MODULE_RENDER_VERSION='s726-titipan-pinjam-utang-sesi2-3-complete';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1070,6 +1070,14 @@ ${modeBtn('siklus','Siklus Custom')}
 ${[3,6,12].map(n=>`<option value="${n}"${s.surplusMonths===n?' selected':''}>${n} bulan terakhir</option>`).join('')}
 </select>
 </div>
+<div class="fg u-mb8">
+<label class="fl">Basis Pola Absen (Proyeksi Pola Absen)</label>
+<select class="fs" id="dashCashProjPolaAbsenWeeks" onchange="_dashCashProjSetPolaAbsenWeeks()">
+<option value=""${s.polaAbsenWeeks?'':' selected'}>Default (10 minggu terakhir)</option>
+${[5,10,15,20,26].map(n=>`<option value="${n}"${s.polaAbsenWeeks===n?' selected':''}>${n} minggu terakhir</option>`).join('')}
+</select>
+<div class="u-fs10 u-t2 u-mt4">Jumlah minggu absen TERCATAT terakhir (bukan minggu kalender) yang dipakai hitung rata-rata hari kerja/minggu & gaji/hari.</div>
+</div>
 <div class="u-flex u-gap8">
 <button type="button" class="btn btn-primary" data-action="_dashCashProjResetSettings">↺ Reset ke Default</button>
 </div>
@@ -1098,6 +1106,15 @@ const v=el?parseInt(el.value,10):NaN;
 if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({surplusMonths:(Number.isFinite(v)&&v>=1)?v:null});
 _dashCashProjRefreshAll();
 }
+// _dashCashProjSetPolaAbsenWeeks() — follow-up "UI pengaturan limit minggu" (sesi lanjutan
+// fitur Proyeksi Pola Absen). Pola sama persis _dashCashProjSetSurplusMonths() di atas:
+// value kosong -> null (fallback default 10 dari getAttendancePatternStats() sendiri).
+function _dashCashProjSetPolaAbsenWeeks(){
+const el=document.getElementById('dashCashProjPolaAbsenWeeks');
+const v=el?parseInt(el.value,10):NaN;
+if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({polaAbsenWeeks:(Number.isFinite(v)&&v>=1)?v:null});
+_dashCashProjRefreshAll();
+}
 function _dashCashProjSetBillWindowMode(mode){
 if(typeof CashflowProjSettings!=='undefined')CashflowProjSettings.set({billWindowMode:mode});
 _dashCashProjRefreshAll();
@@ -1124,6 +1141,205 @@ const panel=document.getElementById('dashCashProjSettingsPanel');
 if(panel&&!panel.classList.contains('u-dnone'))_dashCashProjFillSettingsPanel(panel);
 if(typeof CashFlowProjectionPresenter!=='undefined')CashFlowProjectionPresenter.render();
 }
+// _renderPolaAbsenBlock(ctx,cfg) — Sesi "Proyeksi Pola Absen" (Keputusan #2 W: muncul di
+// kartu Proyeksi Kas Bulan Ini di Beranda). 100% REUSE getPolaAbsenProjection() (cash-
+// projection.js) — 0 rumus baru di sini, murni presenter. Guard typeof (aman kalau
+// cash-projection.js belum dimuat bareng, pola sama getMonthlyCashProjection() di atas).
+// hasEnoughData:false (riwayat D.gajiMingguanHistory kosong / 0 hari kerja tercatat) ->
+// tampilkan pesan "belum cukup data" alih-alih angka proyeksi yang tidak berdasar.
+function _renderPolaAbsenBlock(ctx,cfg){
+if(typeof getPolaAbsenProjection!=='function')return'';
+let p;
+try{p=getPolaAbsenProjection(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji,polaAbsenWeeks:cfg.polaAbsenWeeks});}
+catch(e){console.warn('_renderPolaAbsenBlock: gagal hitung proyeksi pola absen',e);return'';}
+if(!p||!p.hasEnoughData){
+return`
+<div class="u-tac u-mt10 divider-top">
+<div class="u-fs11 u-t2">📊 Proyeksi Pola Absen</div>
+<div class="u-fs11 u-t2 u-mt4">Belum cukup riwayat absen mingguan (butuh minimal 1 minggu yang sudah di-reset) utk memproyeksikan pola.</div>
+</div>`;
+}
+const weeklyCls=p.weeklyVerdict==='tercapai'?'green':'red';
+const weeklyLabel=p.weeklyVerdict==='tercapai'?'Tercapai':'Kurang';
+const monthlyCls=p.monthlyVerdict==='plus'?'green':'red';
+// Badge "data masih sedikit" (quick win #6, audit-kartu-proyeksi-kas-insight) --
+// hasEnoughData cuma cek weeksUsed>0, jadi pola dari 1-2 minggu riwayat TETAP
+// tampil sbg angka pasti walau kurang bisa dipercaya. 0 rumus baru, cuma badge
+// visual kalau weeksUsed<4 (ambang sederhana, bukan statistik formal -- tujuannya
+// sekadar sinyal "hati-hati", bukan penolakan tampil).
+const sedikitDataBadge=p.pattern.weeksUsed<4?` <span class="u-fs9 u-t2" style="border:1px solid var(--border);border-radius:6px;padding:1px 5px;">data masih sedikit (${p.pattern.weeksUsed} minggu)</span>`:'';
+return`
+<div class="u-mt10 divider-top">
+<div class="u-fs11 u-t2 u-tac u-mt6">📊 Proyeksi Pola Absen${p.isCurrentMonth?'':' (bulan bukan berjalan — bagian bulan tidak diproyeksikan)'}${sedikitDataBadge}</div>
+<div class="u-fs10 u-t2 u-tac u-mt4">Basis: rata-rata ${p.pattern.avgHariKerjaPerMinggu.toFixed(1)} hari kerja/minggu & ${fmtFull(p.pattern.avgGajiPerHari)}/hari, dari ${p.pattern.weeksUsed} minggu absen terakhir yang tercatat.</div>
+<div class="grid2 u-mt8">
+<div class="stat-box"><div class="stat-label">Target Kiriman Mingguan</div><div class="stat-val u-fs13 ${weeklyCls}">${weeklyLabel}</div><div class="u-fs10 u-t2 u-mt2">Proyeksi ${fmtFull(p.projectedGajiMingguIni)} vs target ${fmtFull(p.kirimanTarget)}</div></div>
+<div class="stat-box"><div class="stat-label">Proyeksi Kas Akhir Bulan</div><div class="stat-val u-fs13 ${monthlyCls}">${fmtFullSigned(p.proyeksiKasPolaAbsen)}</div><div class="u-fs10 u-t2 u-mt2">Kalau pola absen berlanjut ${p.remainingDaysInMonth} hari sisa bulan ini</div></div>
+</div>
+</div>`;
+}
+// _dashCashProjMoMHtml(r,ctx,cfg) — quick win #3 (audit-kartu-proyeksi-kas-insight):
+// perbandingan bulan lalu (MoM). 100% REUSE getMonthlyCashProjection() dipanggil SEKALI
+// lagi utk bulan m-1 (0 rumus baru, cuma 1 panggilan tambahan pola sama persis "Rata-rata
+// Surplus Bulanan" di atas -- consumer, bukan formula). Guard try/catch (aman kalau bulan
+// lalu data D.bills/D.transactions kosong/aneh, tidak boleh bikin seluruh kartu gagal render).
+function _dashCashProjMoMHtml(r,ctx,cfg){
+if(typeof getMonthlyCashProjection!=='function')return'';
+try{
+const now=new Date();
+const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
+const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
+const prevM=m===0?11:m-1;
+const prevY=m===0?y-1:y;
+const prev=getMonthlyCashProjection(prevM,prevY,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji});
+const delta=r.proyeksiKas-prev.proyeksiKas;
+const arrow=delta>0?'▲':(delta<0?'▼':'▬');
+const cls=delta>0?'green':(delta<0?'red':'u-t2');
+return`<div class="u-fs10 u-t2 u-tac u-mt4">vs bulan lalu (${fmtFullSigned(prev.proyeksiKas)}): <span class="${cls}">${arrow} ${fmtFull(Math.abs(delta))}</span></div>`;
+}catch(e){console.warn('_dashCashProjMoMHtml: gagal hitung MoM',e);return'';}
+}
+// _dashCashProjInsightHtml(r) — quick win #4 (audit-kartu-proyeksi-kas-insight): 1 baris
+// insight RULE-BASED (bukan AI, murni if/else atas angka yang SUDAH dihitung
+// getMonthlyCashProjection() -- 0 rumus baru) supaya user tidak harus menyimpulkan sendiri
+// dari 8+ angka di kartu. topKewajiban (sudah diurutkan desc dari fungsi itu) dipakai kalau
+// ada, utk sebut kontributor terbesar pas defisit.
+function _dashCashProjInsightHtml(r){
+let text;
+if(r.proyeksiKas>=0){
+text=r.topKewajiban&&r.topKewajiban.length
+?`Proyeksi kas surplus ${fmtFull(r.proyeksiKas)} bulan ini, meski ada kewajiban ${fmtFull(r.topKewajiban[0].amount)} dari "${r.topKewajiban[0].name}".`
+:`Proyeksi kas surplus ${fmtFull(r.proyeksiKas)} bulan ini.`;
+}else if(r.topKewajiban&&r.topKewajiban.length){
+text=`Defisit ${fmtFull(Math.abs(r.proyeksiKas))} bulan ini, kontributor terbesar: "${r.topKewajiban[0].name}" (${fmtFull(r.topKewajiban[0].amount)}).`;
+}else{
+text=`Defisit ${fmtFull(Math.abs(r.proyeksiKas))} bulan ini — proyeksi gaji lebih kecil dari kiriman mingguan terjadwal.`;
+}
+return`<div class="u-fs11 u-tac u-mt8" style="background:var(--surface3);border-radius:8px;padding:6px 8px;">💡 ${text}</div>`;
+}
+// _dashCashProjSparklineHtml(ctx,cfg) — sparkline tren beberapa bulan (audit-kartu-
+// proyeksi-kas-insight, item besar-effort #9). 100% REUSE getCashProjectionTrend()
+// (cash-projection.js, murni panggil getMonthlyCashProjection() berulang, 0 rumus
+// baru) -- dirender sbg inline SVG polyline sederhana (0 dependency chart library
+// baru, sama filosofi "presenter murni" file ini). Guard typeof + try/catch (aman
+// kalau cash-projection.js belum dimuat / trend<2 titik, tidak boleh bikin seluruh
+// kartu gagal render).
+function _dashCashProjSparklineHtml(ctx,cfg){
+if(typeof getCashProjectionTrend!=='function')return'';
+try{
+const now=new Date();
+const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
+const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
+const opts={billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji};
+const trend=getCashProjectionTrend(m,y,opts,6);
+if(!trend||trend.length<2)return'';
+const vals=trend.map(t=>t.proyeksiKas);
+const min=Math.min.apply(null,vals.concat([0]));
+const max=Math.max.apply(null,vals.concat([0]));
+const range=(max-min)||1;
+const w=240,h=40,pad=4;
+const stepX=(vals.length>1)?(w-pad*2)/(vals.length-1):0;
+const pts=vals.map((v,i)=>{
+const x=pad+i*stepX;
+const py=h-pad-((v-min)/range)*(h-pad*2);
+return x.toFixed(1)+','+py.toFixed(1);
+}).join(' ');
+const zeroY=h-pad-((0-min)/range)*(h-pad*2);
+const lastCls=vals[vals.length-1]<0?'var(--red,#e5484d)':'var(--green,#30a46c)';
+const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const labelFirst=monthNames[trend[0].month]||'';
+const labelLast=monthNames[trend[trend.length-1].month]||'';
+return`
+<div class="u-tac u-mt10 divider-top">
+<div class="u-fs11 u-t2">Tren Proyeksi Kas (${trend.length} bln terakhir)</div>
+<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" style="max-width:280px;margin-top:4px;" preserveAspectRatio="none">
+<line x1="${pad}" y1="${zeroY.toFixed(1)}" x2="${w-pad}" y2="${zeroY.toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2"/>
+<polyline points="${pts}" fill="none" stroke="${lastCls}" stroke-width="2"/>
+</svg>
+<div class="u-fs9 u-t2 u-mt2">${labelFirst} → ${labelLast}</div>
+</div>`;
+}catch(e){console.warn('_dashCashProjSparklineHtml: gagal render sparkline tren',e);return'';}
+}
+// _dashCashProjCalibrationHtml() — kalibrasi proyeksi vs realisasi (item besar-effort
+// #10, carry-forward S721). 100% REUSE getCashProjectionCalibrationSummary() (cash-
+// projection.js) -- 0 rumus baru di sini, murni presenter. available:false (belum ada
+// snapshot bulan lampau tersimpan -- fitur baru mulai sesi ini, wajar kosong di awal)
+// -> return string kosong (BUKAN pesan "belum ada data" yang mengesankan bug, cukup
+// tidak tampil dulu sampai ada minimal 1 bulan lampau dgn snapshot).
+function _dashCashProjCalibrationHtml(){
+if(typeof getCashProjectionCalibrationSummary!=='function')return'';
+try{
+const s=getCashProjectionCalibrationSummary(6);
+if(!s||!s.available||s.avgPctError==null)return'';
+const pct=Math.round(Math.abs(s.avgPctError)*100);
+const biasText=s.biasVerdict==='optimis'
+?`proyeksi cenderung TERLALU OPTIMIS -- realisasi rata-rata ${pct}% lebih rendah dari proyeksi`
+:(s.biasVerdict==='pesimis'
+?`proyeksi cenderung TERLALU PESIMIS -- realisasi rata-rata ${pct}% lebih tinggi dari proyeksi`
+:`proyeksi cukup akurat -- rata-rata meleset ${pct}%`);
+return`
+<div class="u-fs11 u-t2 u-tac u-mt8">📏 Kalibrasi (${s.history.length} bln lampau): ${biasText}.</div>`;
+}catch(e){console.warn('_dashCashProjCalibrationHtml: gagal hitung kalibrasi',e);return'';}
+}
+// _dashCashProjForecastHtml(ctx,cfg) — proyeksi multi-bulan ke depan (carry-forward
+// S723). 100% REUSE getCashProjectionForecast() (cash-projection.js) -- 0 rumus baru
+// di sini, murni presenter (daftar N bulan + label sumber gaji aktual/pola). Ditaruh
+// di dalam blok Detail (info sekunder, sama posisi dgn kalibrasi/topKewajiban) --
+// beda dari sparkline tren (yg SELALU tampil di luar Detail) krn forecast ini angka
+// PROYEKSI (bukan histori), lebih berisiko disalahartikan sbg kepastian kalau
+// ditaruh menonjol tanpa penjelasan "gajiSource" per baris.
+// hasEnoughData:false (dari pattern absen) -> tetap ditampilkan (SESUAI filosofi
+// under-estimate-lebih-aman di cash-projection.js: 0/defisit besar yg tampak SENGAJA
+// tidak disembunyikan), TAPI diberi 1 baris peringatan eksplisit di atas daftar biar
+// user tau kenapa bulan ke-2 dst kelihatan pesimis banget kalau riwayat kerja masih
+// sedikit.
+//
+// ==== Sesi S725 (carry-forward S724, 3 dari 6 saran "proyeksi lebih informatif") ====
+// 3 tambahan per baris, SEMUA 100% REUSE field yang sudah dihitung
+// getCashProjectionForecast() (0 rumus baru di presenter ini):
+// 1) confidence -- badge titik (●/◐/○ utk tinggi/sedang/rendah) di depan tiap baris.
+// 2) breakdown komponen -- HANYA muncul kalau proyeksiKas<0 (bulan aman tidak perlu
+//    penjelasan penyebab), pecah gaji/kewajiban/kiriman biar kelihatan penyebab
+//    dominan defisit, bukan cuma angka net.
+// 3) additionalWorkDaysNeeded -- HANYA muncul kalau ada nilainya (bulan defisit +
+//    pattern.avgGajiPerHari>0, lihat guard di cash-projection.js), 1 baris kecil
+//    "≈N hari kerja tambahan" di bawah breakdown.
+//
+// ==== Sesi S726 (carry-forward S725, item "rentang optimis/pesimis") ====
+// rangeHtml -- muncul di SEMUA bulan (bukan cuma yg defisit, beda dari breakdown/
+// hari-kerja) kalau rangeLow/rangeHigh tersedia (kalibrasi cukup riwayat) -- rentang
+// relevan buat baca ketidakpastian titik tengah proyeksiKas terlepas dari
+// surplus/defisit. 100% REUSE rangeLow/rangeHigh dari getCashProjectionForecast(),
+// 0 rumus baru di presenter ini.
+function _dashCashProjForecastHtml(ctx,cfg){
+if(typeof getCashProjectionForecast!=='function')return'';
+try{
+const monthNames=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const f=getCashProjectionForecast(3,cfg);
+if(!f||!f.available||!f.months||f.months.length<2)return'';
+const warnHtml=f.hasEnoughData?'':`
+<div class="u-fs10 u-t2 u-mt2">⚠️ Riwayat absensi belum cukup -- estimasi gaji bulan ke-2 dst di bawah dianggap 0 (bukan proyeksi sungguhan, lihat "pola") sampai riwayat cukup.</div>`;
+const confidenceIcon={tinggi:'●',sedang:'◐',rendah:'○'};
+const rows=f.months.slice(1).map(o=>{
+const cls=o.proyeksiKas<0?'red':'green';
+const saldoCls=(o.proyeksiSaldoKumulatif!=null&&o.proyeksiSaldoKumulatif<0)?'red':'';
+const saldoSuffix=(o.proyeksiSaldoKumulatif!=null)?` <span class="${saldoCls}">(saldo ${fmtFullSigned(o.proyeksiSaldoKumulatif)})</span>`:'';
+const confIcon=confidenceIcon[o.confidence]||'';
+const breakdownHtml=o.proyeksiKas<0?`
+<div class="u-fs10 u-t2 u-tac">gaji ${fmtFull(o.proyeksiGaji)} − kewajiban ${fmtFull(o.sisaKewajiban)}${o.includeKiriman?` − kiriman ${fmtFull(o.kirimanEstimate)}`:''}</div>`:'';
+const workDaysHtml=(o.additionalWorkDaysNeeded!=null)?`
+<div class="u-fs10 u-t2 u-tac">≈${o.additionalWorkDaysNeeded} hari kerja tambahan buat nutup</div>`:'';
+const rangeHtml=(o.rangeLow!=null&&o.rangeHigh!=null)?`
+<div class="u-fs10 u-t2 u-tac">rentang: ${fmtFullSigned(o.rangeLow)} — ${fmtFullSigned(o.rangeHigh)}</div>`:'';
+return`<div class="u-fs11 u-tac u-mt4"><span class="u-t2" title="keyakinan: ${o.confidence}">${confIcon}</span> ${monthNames[o.month]} ${o.year}: <span class="${cls}">${fmtFullSigned(o.proyeksiKas)}</span>${saldoSuffix} <span class="u-t2">(gaji: ${o.gajiSource})</span>${breakdownHtml}${workDaysHtml}${rangeHtml}</div>`;
+}).join('');
+return`
+<div class="u-mt8 divider-top">
+<div class="u-fs11 u-t2 u-tac u-mt6">📆 Proyeksi 2 bulan ke depan</div>
+${warnHtml}
+${rows}
+</div>`;
+}catch(e){console.warn('_dashCashProjForecastHtml: gagal hitung proyeksi multi-bulan',e);return'';}
+}
 function _renderCashProjectionCard(ctx){
 const el=document.getElementById('dashCashProjBody');
 if(!el)return;
@@ -1131,7 +1347,38 @@ _dashCashProjSettingsToggle(el);
 if(typeof getMonthlyCashProjection!=='function'){el.innerHTML='<div class="u-fs12 u-t2">Modul proyeksi kas belum dimuat.</div>';return;}
 const cfg=(typeof CashflowProjSettings!=='undefined')?CashflowProjSettings.get():{};
 const r=getMonthlyCashProjection(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji});
+// Kalibrasi proyeksi vs realisasi (item besar-effort #10, carry-forward S721) — snapshot
+// proyeksiKas bulan target DIAMBIL OTOMATIS di sini, kali PERTAMA kartu dirender bulan
+// itu (recordCashProjectionSnapshot() idempoten per month/year, lihat komentar desain di
+// cash-projection.js). Guard try/catch+typeof: gagal simpan snapshot TIDAK boleh bikin
+// seluruh kartu gagal render (mis. D belum siap ditulis).
+if(typeof recordCashProjectionSnapshot==='function'){
+try{recordCashProjectionSnapshot(ctx&&ctx.m,ctx&&ctx.y,{billWindowMode:cfg.billWindowMode,cycleStartDay:cfg.cycleStartDay,includeKiriman:cfg.includeKiriman,includePendingGaji:cfg.includePendingGaji});}
+catch(e){console.warn('_renderCashProjectionCard: gagal simpan snapshot kalibrasi',e);}
+}
 const kasCls=r.proyeksiKas<0?'red':'green';
+const momHtml=_dashCashProjMoMHtml(r,ctx,cfg);
+const insightHtml=_dashCashProjInsightHtml(r);
+// saldoKasSekarang/proyeksiSaldoAkhirBulan (quick win #1) -- null kalau totalSaldoAkun()
+// belum dimuat (guard sama persis field-nya sendiri di cash-projection.js).
+const saldoHtml=(r.saldoKasSekarang!=null)?`
+<div class="u-tac u-mt10 divider-top">
+<div class="u-fs11 u-t2">Proyeksi Saldo Akhir Bulan</div>
+<div class="stat-val ${r.proyeksiSaldoAkhirBulan<0?'red':'green'} u-fs16">${fmtFullSigned(r.proyeksiSaldoAkhirBulan)}</div>
+<div class="u-fs10 u-t2 u-mt4">Saldo kas sekarang ${fmtFull(r.saldoKasSekarang)} + Proyeksi Kas ${fmtFullSigned(r.proyeksiKas)} di atas -- lebih menunjukkan posisi akhir sebenarnya drpd delta saja (defisit kecil bisa tetap aman kalau saldo sekarang masih longgar).</div>
+</div>`:'';
+// topKewajiban (quick win #5) -- Top-3 kontributor Sisa Kewajiban terbesar.
+const topKewajibanHtml=(r.topKewajiban&&r.topKewajiban.length)?`
+<div class="u-fs11 u-t2 u-tac u-mt6">Kontributor terbesar: ${r.topKewajiban.map(k=>`${k.name} (${fmtFull(k.amount)})`).join(', ')}</div>`:'';
+// sparkline tren beberapa bulan (item besar-effort #9) — dipanggil di sini (bukan di
+// dalam blok Detail yang di-toggle) supaya trennya kelihatan tanpa perlu expand dulu.
+const sparklineHtml=(typeof _dashCashProjSparklineHtml==='function')?_dashCashProjSparklineHtml(ctx,cfg):'';
+// kalibrasi proyeksi vs realisasi (item besar-effort #10) — ditaruh di dalam blok
+// Detail (info sekunder, bukan angka yang harus kelihatan sekilas spt sparkline).
+const calibrationHtml=(typeof _dashCashProjCalibrationHtml==='function')?_dashCashProjCalibrationHtml():'';
+// proyeksi multi-bulan (item carry-forward S723) — pola sama kalibrasi di atas,
+// ditaruh di dalam blok Detail (lihat komentar desain di fungsinya).
+const forecastHtml=(typeof _dashCashProjForecastHtml==='function')?_dashCashProjForecastHtml(ctx,cfg):'';
 let inc,exp;
 if(ctx&&ctx.inc!=null&&ctx.exp!=null){
 inc=ctx.inc;exp=ctx.exp;
@@ -1158,6 +1405,7 @@ surplusHtml=`
 </div>`;
 }catch(e){console.warn('_renderCashProjectionCard: gagal hitung surplus rata-rata',e);}
 }
+const polaAbsenHtml=(typeof _renderPolaAbsenBlock==='function')?_renderPolaAbsenBlock(ctx,cfg):'';
 el.innerHTML=`
 <div class="grid2 u-mb10">
 <div class="stat-box u-pointer" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
@@ -1169,7 +1417,11 @@ el.innerHTML=`
 <div class="u-tac">
 <div class="u-fs11 u-t2">Proyeksi Kas Bulan Ini</div>
 <div class="stat-val ${kasCls} u-fs20">${fmtFullSigned(r.proyeksiKas)}</div>
+${momHtml}
 </div>
+${insightHtml}
+${saldoHtml}
+${sparklineHtml}
 ${surplusHtml}
 <div class="u-tac u-mt6">
 <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('dashCashProjDetailBody').classList.toggle('u-dnone')">Detail ▾</button>
@@ -1183,7 +1435,13 @@ ${surplusHtml}
 </div>
 <div class="u-fs11 u-t2 u-tac">Kiriman Mingguan: ${fmtFull(r.kirimanPerMinggu)} × ${r.weeksInMonth} minggu (setting Pengaturan → Profil) = ${fmtFull(r.kirimanEstimate)}${r.includeKiriman?'':' (tidak disertakan ke Proyeksi Kas)'}</div>
 ${r.includePendingGaji?'':'<div class="u-fs11 u-t2 u-tac u-mt4">Gaji Pending tidak disertakan ke Proyeksi Gaji</div>'}
-</div>`;
+${r.titipanPinjamUnscheduledTotal?`<div class="u-fs11 u-t2 u-tac u-mt4">Termasuk pinjaman Dana Titipan belum berjadwal: ${fmtFull(r.titipanPinjamUnscheduledTotal)} (lihat komentar fix GAP-CP-002)</div>`:''}
+${topKewajibanHtml}
+${r.piutangJatuhTempoBulanIni?`<div class="u-fs11 u-tac u-mt8" style="border:1px dashed var(--border);border-radius:8px;padding:6px 8px;">📎 Skenario optimis: ada piutang jatuh tempo bulan ini ${fmtFull(r.piutangJatuhTempoBulanIni)} -- kalau cair TEPAT WAKTU, proyeksi saldo akhir bulan bisa jadi ${fmtFullSigned((r.proyeksiSaldoAkhirBulan!=null?r.proyeksiSaldoAkhirBulan:r.proyeksiKas)+r.piutangJatuhTempoBulanIni)}. TIDAK dijamin cair sesuai jadwal, jadi TIDAK ikut dihitung ke angka utama di atas.</div>`:''}
+${calibrationHtml}
+${forecastHtml}
+</div>
+${polaAbsenHtml}`;
 }
 // _dashCashProjOpenDetail() — buka + scroll ke bagian Detail kartu ini (Proyeksi Gaji/
 // Sisa Kewajiban/Kiriman Mingguan sudah punya breakdown-nya sendiri DI DALAM kartu,

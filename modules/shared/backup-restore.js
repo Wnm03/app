@@ -203,6 +203,12 @@ if(backupModules.keuangan){
 out.transactions=D.transactions.filter(t=>inRange(t.date,from,to)&&(tipe==='semua'||t.type===tipe));
 out.accounts=D.accounts;out.categories=D.categories;out.bills=D.bills;out.targets=D.targets;out.eduFunds=D.eduFunds||[];
 out.billsArchive=(D.billsArchive||[]).filter(b=>inRange(b.tanggal||b.nextDue||b.createdAt||new Date().toISOString(),from,to)||true);
+// cashProjSnapshots (Sesi kalibrasi-proyeksi-vs-realisasi) — snapshot proyeksi kas
+// awal bulan, dipakai getCashProjectionCalibration()/getCashProjectionCalibrationSummary()
+// (cash-projection.js). Filter by month/year (bukan field `date` tunggal spt array lain
+// di sini) -- snapshot yang bulan/tahunnya jatuh di rentang from..to (dicek via tanggal
+// 1 bulan itu) ikut ter-backup, sisanya tidak (custom backup ini scoped by tanggal).
+out.cashProjSnapshots=(D.cashProjSnapshots||[]).filter(s=>inRange(new Date(s.year,s.month,1).toISOString().slice(0,10),from,to));
 }
 if(backupModules.carnotes){
 out.vehicles=D.vehicles;out.sparepartCats=D.sparepartCats;out.partsStock=D.partsStock;

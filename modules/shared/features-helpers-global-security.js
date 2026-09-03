@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's713-fix-pricehistory-dup-guard';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's713-fix-pricehistory-dup-guard';
+const APP_BUILD_VERSION = 's726-titipan-pinjam-utang-sesi2-3-complete';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's726-titipan-pinjam-utang-sesi2-3-complete';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
