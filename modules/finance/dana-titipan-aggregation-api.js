@@ -727,8 +727,26 @@ build() {
     }
   });
 
+  // S714 Sesi 3 — debtPinjamTotal per owner, dihitung SEKALI di sini (pola
+  // SAMA PERSIS usedMap/talanganMap di atas) dari `D.debts` (utang
+  // otomatis "Pinjam Dana Titipan", `d.autoTitipanOwnerId`, dibuat
+  // `maybeCreateTitipanPinjamUtang()` di piutang-utang.js). Utang yang
+  // SUDAH lunas (`d.lunas===true`) TIDAK ikut dijumlahkan (konsisten pola
+  // "belum lunas saja" di seluruh lifecycle utang otomatis codebase ini).
+  // MURNI tampilan/informational -- 0 formula estimatedUnallocated/
+  // available/spent di bawah dibaca/diubah oleh angka ini (anti-doublecount
+  // thd usedTotal, dicek eksplisit di test #4).
+  const debtsList = (D && Array.isArray(D.debts)) ? D.debts : [];
+  const debtPinjamMap = new Map();
+  debtsList.forEach((d) => {
+    if (!d || d.lunas === true || !d.autoTitipanOwnerId) return;
+    const amt = isFinite(d.nilai) ? Number(d.nilai) : 0;
+    debtPinjamMap.set(d.autoTitipanOwnerId, (debtPinjamMap.get(d.autoTitipanOwnerId) || 0) + amt);
+  });
+
   const owners = Array.from(ownersMap.values());
   owners.forEach((o) => {
+    o.debtPinjamTotal = debtPinjamMap.get(o.ownerId) || 0;
     o.holdings.sort((x, y) => y.allocatedPrincipal - x.allocatedPrincipal);
     const commit = commitMap.get(o.ownerId);
     const principalAmount = commit ? (isFinite(commit.principalAmount) ? Number(commit.principalAmount) : 0) : null;

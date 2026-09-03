@@ -36,6 +36,14 @@ const CASHFLOW_PROJ_SETTINGS_DEFAULT = Object.freeze({
   includeKiriman: true,      // false = Kiriman Mingguan tidak dikurangkan ke Proyeksi Kas
   includePendingGaji: true,  // false = Proyeksi Gaji cuma gaji tercatat (exclude estimasi absensi pending)
   surplusMonths: null,       // null = ikut default global FI.effectiveMonths(); 1-24 = override khusus kartu ini
+  // Sesi "Proyeksi Pola Absen" (follow-up UI limit minggu) — jumlah minggu TERCATAT
+  // terakhir (D.gajiMingguanHistory) yang dipakai getAttendancePatternStats()/
+  // getPolaAbsenProjection() (cash-projection.js). null = default fungsi (10, SAMA
+  // PERSIS perilaku sebelum field ini ada -- backward-safe, user yang belum pernah
+  // buka panel "⚙️ Atur" TIDAK melihat perubahan angka). Diabaikan begitu saja oleh
+  // getMonthlyCashProjection()/CashFlowProjectionPresenter (tidak baca field ini),
+  // pola sama persis includeKiriman/includePendingGaji/surplusMonths di atas.
+  polaAbsenWeeks: null,
 });
 
 const CashflowProjSettings = {

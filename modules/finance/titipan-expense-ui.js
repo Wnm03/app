@@ -27,11 +27,15 @@
 //     berbeda (klik ganda di DOM vs pemanggilan langsung submit()).
 //
 // Field HTML yang dipakai (SEMUA sudah ada di titipanExpenseModal, S521-B1
-// kecuali titipanExpenseAcc -- lihat catatan wiring §2 di bawah):
+// kecuali titipanExpenseAcc -- lihat catatan wiring §2 di bawah; toggle
+// "Arah Dana" titipanExpenseDirToggle/Biasa/Piutang/Utang ditambah S714,
+// MENGGANTIKAN checkbox lama `titipanExpenseTalangan` yang sudah dihapus
+// dari template -- lihat `_direction`/`setDirection()` di bawah):
 //   titipanExpenseAmt, titipanExpenseAmtPreview, titipanExpenseAcc,
 //   titipanExpenseOwnersList, titipanExpenseSplitPreview,
-//   titipanExpenseTalangan, titipanExpenseNote, titipanExpenseDate,
-//   titipanExpensePortfolioInfo, titipanExpenseSaveBtn, titipanExpenseDelBtn.
+//   titipanExpenseDirToggle/DirBiasa/DirPiutang/DirUtang, titipanExpenseNote,
+//   titipanExpenseDate, titipanExpensePortfolioInfo, titipanExpenseSaveBtn,
+//   titipanExpenseDelBtn.
 //
 // Keputusan wiring (didokumentasikan eksplisit, BUKAN scope creep diam2):
 //   1. Field "Kategori / Keterangan" (titipanExpenseNote) dipakai sbg
@@ -81,6 +85,32 @@ const TitipanExpenseUI = {
   // tercentang (selaras Design Lock §7 single-owner: porsi tidak relevan).
   _splitMode: 'manual',
 
+  // _direction — S714 (lanjutan rencana "arah dana eksplisit Piutang vs
+  // Utang", menggantikan checkbox lama `titipanExpenseTalangan` dgn toggle
+  // 3-arah "Arah Dana" Biasa/Piutang/Utang di titipanExpenseModal, lihat
+  // modals.js `#titipanExpenseDirToggle`). 'biasa' (DEFAULT) = pengeluaran
+  // dana titipan biasa (0 talangan/pinjaman); 'piutang' = talangan (pola
+  // SAMA PERSIS perilaku checkbox lama, `tx.titipanTalangan=true`);
+  // 'utang' = pinjam dari dana titipan owner ini (`tx.titipanPinjamUtang
+  // =true`, S714 Sesi 1-3, piutang-utang.js). Murni state UI di memori,
+  // TIDAK pernah ditulis ke D -- reset ke 'biasa' tiap open() (0 nyangkut
+  // dari sesi buka-modal sebelumnya).
+  _direction: 'biasa',
+
+  // setDirection(mode) — setter murni utk `_direction` + toggle class
+  // "active" 3 tombol pm-btn (pola SAMA PERSIS setPayMethod()/setTxType()
+  // di file lain), dipanggil dari data-action="TitipanExpenseUI.
+  // setDirection" (modals.js). Mode di luar 3 pilihan diabaikan (fallback
+  // 'biasa', 0 state tak dikenal tersimpan).
+  setDirection(mode) {
+    this._direction = (mode === 'piutang' || mode === 'utang') ? mode : 'biasa';
+    const map = { biasa: 'titipanExpenseDirBiasa', piutang: 'titipanExpenseDirPiutang', utang: 'titipanExpenseDirUtang' };
+    Object.keys(map).forEach((key) => {
+      const el = document.getElementById(map[key]);
+      if (el) el.className = 'pm-btn' + (key === this._direction ? ' active' : '');
+    });
+  },
+
   // open(presetAmount) — reset seluruh form + isi daftar owner dari
   // DanaTitipanPortfolioAPI.listExistingOwners() (Design Lock §6: HANYA
   // owner existing, tidak bisa bikin baru di sini). 0 tulis ke D.
@@ -121,8 +151,7 @@ const TitipanExpenseUI = {
       accEl.innerHTML = D.accounts.map((a) => `<option value="${a.id}">${a.emoji || ''} ${escapeHtml(a.name)}</option>`).join('');
       accEl.value = D.accounts[0] ? D.accounts[0].id : '';
     }
-    const talanganEl = document.getElementById('titipanExpenseTalangan');
-    if (talanganEl) talanganEl.checked = false;
+    this.setDirection('biasa');
     const noteEl = document.getElementById('titipanExpenseNote');
     if (noteEl) noteEl.value = '';
     const dateEl = document.getElementById('titipanExpenseDate');
@@ -325,8 +354,17 @@ const TitipanExpenseUI = {
       const note = noteEl ? String(noteEl.value || '').trim() : '';
       const dateEl = document.getElementById('titipanExpenseDate');
       const date = dateEl ? dateEl.value : '';
-      const talanganEl = document.getElementById('titipanExpenseTalangan');
-      const talangan = !!(talanganEl && talanganEl.checked);
+      // S714 — talangan/titipanPinjamUtang sekarang derived dari toggle
+      // "Arah Dana" (_direction), menggantikan checkbox lama
+      // `titipanExpenseTalangan` (dihapus dari template, S714). 'piutang'
+      // = talangan (perilaku SAMA PERSIS checkbox lama); 'utang' = flag
+      // baru `titipanPinjamUtang` (S714, delegasi ke
+      // maybeCreateTitipanPinjamUtang() lewat applyTxTitipanLinkageOnSave(),
+      // piutang-utang.js) -- TitipanExpenseFlow.submit() sendiri belum
+      // tahu soal 'utang', jadi flag ini diset manual ke tiap tx hasil
+      // submit() di bawah (lihat blok sesudah res.ok).
+      const talangan = this._direction === 'piutang';
+      const pinjamUtang = this._direction === 'utang';
       // FIX (audit "Pemilik Sumber Potongan"): accountId sekarang dibaca
       // dari dropdown #titipanExpenseAcc (diisi/direset di open()), bukan
       // lagi hardcode ke D.accounts[0] -- fallback ke akun pertama TETAP
@@ -350,6 +388,22 @@ const TitipanExpenseUI = {
       if (!res || !res.ok) {
         if (typeof toast === 'function') toast('⚠️ ' + ((res && res.reason) || 'Gagal menyimpan pengeluaran dana titipan'));
         return;
+      }
+      // S714 — TitipanExpenseFlow.submit() (S521-A) belum tahu soal arah
+      // 'utang' (hanya 'talangan'/Piutang). Untuk arah Utang, set
+      // `tx.titipanPinjamUtang=true` manual ke tiap tx hasil submit() lalu
+      // panggil applyTxTitipanLinkageOnSave() ulang (pola SAMA PERSIS jalur
+      // EDIT owner existing, `prevTitipanLinkId` = titipanLinkId SAAT INI
+      // supaya ownerChanged=false, 0 cascade hapus/duplikasi) supaya
+      // `maybeCreateTitipanPinjamUtang()` (piutang-utang.js, S714)
+      // otomatis jalan -- 0 logic pembuatan utang ditulis ulang di sini.
+      if (pinjamUtang && Array.isArray(D.transactions) && typeof applyTxTitipanLinkageOnSave === 'function') {
+        res.txIds.forEach((txId) => {
+          const tx = D.transactions.find((t) => t.id === txId);
+          if (!tx) return;
+          tx.titipanPinjamUtang = true;
+          applyTxTitipanLinkageOnSave(tx, tx.titipanLinkId);
+        });
       }
       if (typeof closeModal === 'function') closeModal('titipanExpenseModal');
       if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();

@@ -347,6 +347,9 @@ runTxDeleteCascades(t);
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(t.id);
 }
+if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanPinjamUtangForTx==='function'){
+removeUnpaidTitipanPinjamUtangForTx(t.id);
+}
 // FIX (audit lanjutan "tablist sync Dana Titipan", bug sekelas ke-5):
 // titipanLinkId adalah SATU-SATUNYA cascade *LinkId di fungsi ini yang
 // TIDAK memanggil render modulnya sendiri (bandingkan cobekLinkId ->

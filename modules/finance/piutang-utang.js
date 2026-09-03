@@ -289,6 +289,64 @@ const before=D.piutang.length;
 D.piutang=D.piutang.filter(p=>!(p.autoTxId===txId&&!p.lunas));
 return D.piutang.length<before;
 }
+// maybeCreateTitipanPinjamUtang(tx) — Sesi 714 (lanjutan rencana "arah dana
+// eksplisit Piutang vs Utang", lihat catatan status di
+// titipan-expense-flow.js). Pola SAMA PERSIS
+// maybeCreateTitipanTalanganPiutang() (di atas) tapi utk arah Utang --
+// transaksi expense yang ditandai `tx.titipanLinkId` + `tx.titipanPinjamUtang
+// ===true` (field baru transaksi.js, diset TitipanExpenseFlow/UI) otomatis
+// bikin 1 utang ("Pinjam Dana Titipan") di `D.debts`, BUKAN piutang.
+// Talangan/Piutang menang kalau kedua flag kebetulan sama-sama true (defensif,
+// seharusnya mutually exclusive dari UI) -- 0 utang dibuat kalau
+// `tx.titipanTalangan===true` (Hard Invariant konsistensi jalur talangan).
+// Idempotency SAMA PERSIS (skip kalau `tx.id` ini sudah pernah punya entri
+// Utang otomatis manapun). ISOLASI: HANYA menyentuh `D.debts` (+
+// `uid()`/`todayStr()` existing, 0 utility baru) -- tidak menyentuh
+// `D.titipanCommitments`/`principalAmount` (principal immutable).
+function maybeCreateTitipanPinjamUtang(tx){
+if(!tx||tx.type!=='expense'||!tx.titipanLinkId||tx.titipanPinjamUtang!==true)return;
+if(tx.titipanTalangan===true)return;
+if(D.debts&&D.debts.some(d=>d.autoTxId===tx.id))return;
+if(!D.debts)D.debts=[];
+const known=(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.listExistingOwners==='function')?DanaTitipanPortfolioAPI.listExistingOwners().find(o=>o.ownerId===tx.titipanLinkId):null;
+const ownerName=known?known.ownerName:'Pemilik dana titipan';
+D.debts.push({
+id:uid(),
+name:'Pinjam Dana Titipan: '+ownerName,
+jenis:'pribadi',
+nilai:tx.amount,
+bunga:0,
+cicilanBulanan:0,
+tanggal:todayStr(),
+jatuhTempo:'',
+catatan:'Otomatis dari transaksi pinjam Dana Titipan ('+(tx.note||'')+')',
+lunas:false,
+autoTxId:tx.id,
+autoTitipanOwnerId:tx.titipanLinkId
+});
+}
+// syncTitipanPinjamUtangOnEdit(txId,oldAmount,newAmount) — Sesi 714, pola
+// SAMA PERSIS syncTitipanTalanganPiutangOnEdit() (di atas) tapi dicari di
+// `D.debts`. Utang yang SUDAH lunas TIDAK disentuh (Hard Invariant #14).
+function syncTitipanPinjamUtangOnEdit(txId,oldAmount,newAmount){
+if(!txId||!D.debts||!D.debts.length)return false;
+const d=D.debts.find(x=>x.autoTxId===txId&&!x.lunas);
+if(!d)return false;
+d.nilai=Math.max(0,(d.nilai||0)+(oldAmount||0)-(newAmount||0));
+return true;
+}
+// removeUnpaidTitipanPinjamUtangForTx(txId) — Sesi 714. Hapus utang
+// otomatis "Pinjam Dana Titipan" (by `autoTxId===txId`) HANYA kalau BELUM
+// lunas -- utang yang SUDAH lunas dipertahankan sbg historical record (pola
+// SAMA PERSIS removeUnpaidTitipanTalanganPiutangForTx()). Dipakai jalur EDIT
+// owner/UNLINK (transaksi.js) & DELETE transaksi (tx-list-cashflow.js,
+// delTx()). Return `true` kalau ada yang terhapus.
+function removeUnpaidTitipanPinjamUtangForTx(txId){
+if(!txId||!D.debts||!D.debts.length)return false;
+const before=D.debts.length;
+D.debts=D.debts.filter(d=>!(d.autoTxId===txId&&!d.lunas));
+return D.debts.length<before;
+}
 // populateSyncTxAccSelect(selId) — AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1:
 // isi <select> Akun di piutangModal/debtModal, pola SAMA PERSIS billAcc
 // (tagihan-kalender.js) -- 1 fungsi dipakai kedua modal (0 duplikasi).

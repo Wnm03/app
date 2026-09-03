@@ -88,14 +88,24 @@ if(!tx.titipanLinkId&&!prevTitipanLinkId)return;
 if(tx.titipanLinkId&&!resolveTxTitipanOwner(tx.titipanLinkId)){
 delete tx.titipanLinkId;
 tx.titipanTalangan=false;
+tx.titipanPinjamUtang=false;
 }
-if(!tx.titipanLinkId)tx.titipanTalangan=false;
+if(!tx.titipanLinkId){
+tx.titipanTalangan=false;
+tx.titipanPinjamUtang=false;
+}
 const ownerChanged=(prevTitipanLinkId||null)!==(tx.titipanLinkId||null);
 if(ownerChanged&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(tx.id);
 }
+if(ownerChanged&&typeof removeUnpaidTitipanPinjamUtangForTx==='function'){
+removeUnpaidTitipanPinjamUtangForTx(tx.id);
+}
 if(tx.titipanLinkId&&tx.titipanTalangan===true&&typeof maybeCreateTitipanTalanganPiutang==='function'){
 maybeCreateTitipanTalanganPiutang(tx);
+}
+if(tx.titipanLinkId&&tx.titipanPinjamUtang===true&&typeof maybeCreateTitipanPinjamUtang==='function'){
+maybeCreateTitipanPinjamUtang(tx);
 }
 }
 // updateTxAssetWrapVisibility() — show/hide blok "#txAssetWrap" (dropdown
