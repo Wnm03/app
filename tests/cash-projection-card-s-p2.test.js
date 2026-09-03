@@ -61,7 +61,11 @@ function loadSandbox(D) {
   // awal (bodyEl.parentElement undefined -> stub document di bawah tidak set parentElement,
   // pola sama guard `if(!el)return` yang sudah ada), 0 assertion baru dites di sini (cakupan
   // panel Atur ada di tests/cash-projection-s667b-siklus.test.js).
-  const snippet = `${extractFnSource('_dashCashProjSettingsToggle')}\n${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
+  // Sesi "Proyeksi Pola Absen": _renderCashProjectionCard() sekarang juga memanggil
+  // _renderPolaAbsenBlock() (guarded typeof, tapi tetap ikut di-extract di sini spy
+  // path normalnya kepakai, bukan cuma fallback string kosong) -- 0 assertion baru
+  // dites di sini (cakupan pola absen ada di tests/cash-projection-pola-absen.test.js).
+  const snippet = `${extractFnSource('_dashCashProjSettingsToggle')}\n${extractFnSource('_renderPolaAbsenBlock')}\n${extractFnSource('_dashCashProjMoMHtml')}\n${extractFnSource('_dashCashProjInsightHtml')}\n${extractFnSource('_dashCashProjSparklineHtml')}\n${extractFnSource('_dashCashProjCalibrationHtml')}\n${extractFnSource('_dashCashProjForecastHtml')}\n${extractFnSource('_renderCashProjectionCard')}\nthis._renderCashProjectionCard = _renderCashProjectionCard;`;
   vm.runInContext(snippet, context, { filename: '_renderCashProjectionCard-extract.js' });
   return { context, byId };
 }

@@ -108,6 +108,31 @@ test('CashflowProjSettings.isCustomized() -> false di awal, true setelah set(), 
   assert.equal(CashflowProjSettings.isCustomized(), false);
 });
 
+// Sesi "Proyeksi Pola Absen" follow-up (UI pengaturan limit minggu) — field baru
+// polaAbsenWeeks, pola sama persis surplusMonths (null default, merge partial,
+// ikut isCustomized()).
+test('CashflowProjSettings.get() -> polaAbsenWeeks default null (belum pernah di-set)', () => {
+  const { CashflowProjSettings } = makeCtx();
+  assert.equal(CashflowProjSettings.get().polaAbsenWeeks, null);
+});
+
+test('CashflowProjSettings.set({polaAbsenWeeks}) -> merge partial, field lain (mis. surplusMonths) tidak ikut berubah', () => {
+  const { CashflowProjSettings } = makeCtx();
+  CashflowProjSettings.set({ polaAbsenWeeks: 20 });
+  const s = CashflowProjSettings.get();
+  assert.equal(s.polaAbsenWeeks, 20);
+  assert.equal(s.surplusMonths, null);
+});
+
+test('CashflowProjSettings.isCustomized() -> true setelah set({polaAbsenWeeks}), false lagi setelah reset()', () => {
+  const { CashflowProjSettings } = makeCtx();
+  CashflowProjSettings.set({ polaAbsenWeeks: 5 });
+  assert.equal(CashflowProjSettings.isCustomized(), true);
+  CashflowProjSettings.reset();
+  assert.equal(CashflowProjSettings.get().polaAbsenWeeks, null);
+  assert.equal(CashflowProjSettings.isCustomized(), false);
+});
+
 test('CashflowProjSettings.set()/reset() -> aman (tidak throw) kalau D.profile belum ada', () => {
   const { CashflowProjSettings } = makeCtx({ D: { transactions: [], bills: [], accounts: [] } });
   assert.doesNotThrow(() => CashflowProjSettings.set({ billWindowMode: 'kalender' }));
