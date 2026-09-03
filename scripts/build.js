@@ -319,6 +319,13 @@ const GROUP_B = [
   // ini (itu Sesi P2) — murni fungsi murni + test, pola sama persis
   // ownership-engine.js S191 (terdaftar biar ikut ter-bundle, 0 consumer dulu).
   'modules/finance/cash-projection.js',
+  // Sesi S724 (carry-forward S723): DeficitNotifBridge — translator murni (pola SAMA
+  // PERSIS modules/vehicle/vehicle-notif-bridge.js), dependency getCashProjectionDeficitAlert()
+  // wajib dimuat DULUAN (cash-projection.js tepat di atas). Dipanggil lewat guard typeof
+  // dari reminder-notif.js checkAndFireReminders() (dimuat belakangan), jadi urutan load
+  // relatif thd reminder-notif.js sendiri tidak wajib -- ditaruh berdekatan dgn cash-
+  // projection.js biar mengelompok scr logis (finance domain).
+  'modules/finance/deficit-notif-bridge.js',
   'modules/shared/backup-restore.js',
 
   // Data Management Core (Sesi ini): Backup History + Backup Health.
