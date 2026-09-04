@@ -290,6 +290,9 @@ const GROUP_B = [
   'modules/finance/filter-laporan.js',
   'modules/finance/akun.js',
   'modules/business/gaji-calc.js',
+  // Sesi "Bulanan Tetap": butuh ensureGajiCategory() (reset-gaji-mingguan.js)
+  // & populateAccFilters() (akun.js, tepat di atas) -- dimuat setelah keduanya.
+  'modules/business/gaji-bulanan.js',
   'modules/finance/cicilan.js',
   'modules/finance/tx-bbm.js',
   'modules/finance/tx-servis.js',
