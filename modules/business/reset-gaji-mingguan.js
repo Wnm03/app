@@ -34,6 +34,21 @@ let _wrLastTotal=0,_wrLastCount=0,_wrLastStart=null,_wrLastEnd=null;
 // "Gaji" baru otomatis alih-alih fallback ke kategori pertama sembarang. Dipakai
 // bareng oleh confirmWeeklyReset() di file ini & saveGajiAsIncome() di gaji-calc.js
 // (file itu dimuat SETELAH file ini di scripts/build.js, jadi aman diakses dari sana).
+// computeWeeklyGajiTotal(weekDays) — Sesi Mingguan Tetap. Untuk tipeGaji
+// 'harian'/'borongan' (default, D.profile.tipeGaji tidak diset atau bukan
+// 'mingguanTetap'), perilaku PERSIS SAMA seperti sebelumnya: jumlah w.total
+// tiap hari. Untuk tipeGaji==='mingguanTetap', pokok harian TIDAK dipakai --
+// diganti 1 nominal flat D.profile.gajiPokokMingguan per minggu, lembur/
+// tambahan/potongan per hari TETAP dijumlah seperti biasa (fitur ini cuma
+// mengganti komponen POKOK, bukan komponen lain).
+function computeWeeklyGajiTotal(weekDays){
+if(D.profile&&D.profile.tipeGaji==='mingguanTetap'){
+const pokokMingguan=D.profile.gajiPokokMingguan||0;
+const lainLain=(weekDays||[]).reduce((s,w)=>s+(w.lembur||0)+(w.tambahan||0)-(w.potongan||0),0);
+return Math.max(0,pokokMingguan+lainLain);
+}
+return (weekDays||[]).reduce((s,w)=>s+w.total,0);
+}
 function ensureGajiCategory(){
 const found=D.categories.income.find(c=>/gaji/i.test(c.name));
 if(found) return found;
@@ -41,15 +56,29 @@ const created={id:'cat_gaji_'+uid(),name:'Gaji',emoji:'💼',subs:[]};
 D.categories.income.push(created);
 return created;
 }
-function checkWeeklySalaryReset(){
-const now=new Date();
+// FIX (gate jam sore): dulu popup "💰 Sabtu Gajian!" langsung muncul begitu app
+// dibuka hari Sabtu jam berapa pun (termasuk pagi/siang saat user kemungkinan
+// belum selesai kerja/gajian belum diterima). User kerja Minggu-Sabtu & gajian
+// diterima Sabtu SORE -- popup pagi/siang jadi prematur & harus di-"Tunda"
+// manual. Fix: tambah gerbang jam >=18 (18:00) sebelum popup ditampilkan.
+// PENTING: gerbang ini TIDAK ikut menandai D.lastResetPromptDate="sudah
+// ditawarkan hari ini" -- kalau app dibuka pagi (blm jam 18), fungsi ini cuma
+// diam & keluar tanpa efek, supaya begitu app dibuka lagi sore/malam hari yang
+// sama, popup tetap bisa muncul (bukan ke-skip seharian). Parameter `now`
+// OPSIONAL (default new Date()), pola sama persis checkMonthlySalaryReminder()
+// di gaji-bulanan.js -- murni supaya bisa dites deterministik tanpa mocking
+// Date global, caller produksi (setTimeout di features-helpers-global-
+// security.js) selalu manggil tanpa argumen, 0 perubahan behavior lain.
+function checkWeeklySalaryReset(now){
+now=now||new Date();
 if(now.getDay()!==6) return;
+if(now.getHours()<18) return;
 const ts=todayStr();
 if(D.lastResetPromptDate===ts) return;
 const {start,end}=getWeekRange(now);
 const weekDays=D.workDays.filter(w=>{const d=new Date(w.date);return d>=start&&d<=end;});
 if(!weekDays.length){ D.lastResetPromptDate=ts; save(); return; }
-const total=weekDays.reduce((s,w)=>s+w.total,0);
+const total=computeWeeklyGajiTotal(weekDays);
 _wrLastTotal=total;_wrLastCount=weekDays.length;_wrLastStart=start;_wrLastEnd=end;
 document.getElementById('wrCount').textContent=weekDays.length;
 document.getElementById('wrTotal').textContent=fmtFull(total);
@@ -70,7 +99,7 @@ const target=(typeof Payroll!=='undefined'&&Payroll.weekStart)?new Date(Payroll.
 const {start,end}=getWeekRange(target);
 const weekDays=D.workDays.filter(w=>{const d=new Date(w.date);return d>=start&&d<=end;});
 if(!weekDays.length){toast('⚠️ Belum ada absensi minggu ini untuk dicatat');return;}
-const total=weekDays.reduce((s,w)=>s+w.total,0);
+const total=computeWeeklyGajiTotal(weekDays);
 _wrLastTotal=total;_wrLastCount=weekDays.length;_wrLastStart=start;_wrLastEnd=end;
 populateAccFilters();
 document.getElementById('wrCount').textContent=weekDays.length;
@@ -110,7 +139,15 @@ if(Array.isArray(gajiCat.subs) && gajiCat.subs.length){
 const subMatch=gajiCat.subs.find(s=>/toko/i.test(s.name))||gajiCat.subs.find(s=>/gaji/i.test(s.name))||gajiCat.subs[0];
 if(subMatch) subName=subMatch.name;
 }
-D.transactions.push({id:uid(),type:'income',amount:_wrLastTotal,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:`Gaji mingguan dari absensi (${_wrLastCount} hari kerja, ${dateToISO(start)} s/d ${dateToISO(end)})`,date:dateToISO(now)});
+// FIX (bug tanggal): dulu pakai dateToISO(now) -- tanggal SAAT tombol
+// "Sudah Terima, Reset" di-tap, yang bisa beda hari (bahkan beda bulan) dari
+// Sabtu minggu yang sedang direset kalau user telat konfirmasi. Ini bikin
+// transaksi gaji tercatat di bulan yang salah & tidak konsisten dgn
+// pendingGajiEstimate/_cpWeeksInMonth (cash-projection.js) yang selalu
+// mengatribusikan minggu ke bulan tempat Sabtu-nya jatuh. Fix: pakai
+// dateToISO(end) -- tanggal Sabtu minggu yang di-"kunci" (_wrLastEnd/start
+// di atas), bukan tanggal hari ini.
+D.transactions.push({id:uid(),type:'income',amount:_wrLastTotal,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:`Gaji mingguan dari absensi (${_wrLastCount} hari kerja, ${dateToISO(start)} s/d ${dateToISO(end)})`,date:dateToISO(end)});
 incomeSaved=true;
 }
 if(!Array.isArray(D.gajiMingguanHistory))D.gajiMingguanHistory=[];
