@@ -93,7 +93,7 @@ test('getMonthlyCashProjection() — estimasi PENDING dari D.workDays (belum di-
     workDays: [
       { date: '2026-08-20', total: 78929 },
       { date: '2026-08-26', total: 65000 },
-      { date: '2026-07-30', total: 999999 }, // bulan lain, exclude
+      { date: '2026-07-15', total: 999999 }, // bulan lain, Sabtu minggunya (2026-07-18) juga di Juli -- exclude
     ],
   });
   const ctx = makeCtx(D);
