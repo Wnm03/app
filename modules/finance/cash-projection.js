@@ -111,9 +111,53 @@ const cycleRange=useSiklus?billingCycleRange(now,cfg.cycleStartDay):null;
 const recordedGaji=(D.transactions||[])
 .filter(t=>isGajiTransaction(t)&&_cpInMonth(t.date,y,m))
 .reduce((s,t)=>s+(t.amount||0),0);
-const pendingGajiEstimate=(D.workDays||[])
-.filter(w=>_cpInMonth(w.date,y,m))
-.reduce((s,w)=>s+(w.total||0),0);
+// FIX (bug atribusi minggu lintas-bulan): dulu tiap workDay dihitung ke bulan
+// TANGGAL HARI ITU SENDIRI, padahal _cpWeeksInMonth() di atas (jumlah minggu
+// utk Kiriman Mingguan) mendefinisikan 1 minggu = jatuh ke bulan tempat hari
+// SABTU-nya berada. Akibatnya workDay Senin-Jumat di ujung bulan lama bisa
+// kehitung ke bulan lama walau gajian mingguannya (via confirmWeeklyReset(),
+// tanggal Sabtu) akan tercatat di bulan baru. Fix: kelompokkan per minggu lalu
+// atribusikan TOTAL 1 minggu penuh ke bulan tempat Sabtu minggu itu jatuh --
+// konsisten dgn _cpWeeksInMonth() & confirmWeeklyReset(). _cpWeekSaturday()
+// SENGAJA didefinisikan lokal (bukan reuse getWeekRange() dari reset-gaji-
+// mingguan.js) supaya file ini tetap 0 dependency ke file lain (match logika
+// Minggu-Sabtu yang SAMA PERSIS getWeekRange(), lihat komentar _cpWeeksInMonth
+// di atas).
+function _cpWeekSaturday(dateStr){
+const d=_cpLocalDate(dateStr);
+const sat=new Date(d);
+sat.setDate(d.getDate()+(6-d.getDay()));
+sat.setHours(0,0,0,0);
+return sat;
+}
+// Sesi Mingguan Tetap/Bulanan Tetap (D.profile.tipeGaji): pendingGajiEstimate
+// HARUS konsisten dgn computeWeeklyGajiTotal() (reset-gaji-mingguan.js) &
+// confirmMonthlyGaji() (gaji-bulanan.js), supaya kartu Proyeksi Kas tidak
+// menampilkan angka yang beda dari yang nanti benar-benar tercatat:
+// - 'bulananTetap': D.workDays TIDAK dipakai sbg estimasi gaji sama sekali
+//   (gaji flat bulanan dicatat lewat confirmMonthlyGaji(), bukan dari
+//   akumulasi absensi -- kalau user tetap isi Absensi cuma buat tracking
+//   kehadiran, itu TIDAK boleh ikut menaikkan proyeksi gaji).
+// - 'mingguanTetap': pokok harian TIDAK dipakai, diganti flat D.profile.
+//   gajiPokokMingguan per minggu + lembur/tambahan/potongan harian tetap
+//   dijumlah (SAMA PERSIS computeWeeklyGajiTotal(), sengaja diduplikasi di
+//   sini bukan di-reuse -- lihat catatan _cpWeekSaturday() di atas soal 0
+//   dependency file ini ke reset-gaji-mingguan.js).
+// - default/'harian'/'borongan': 0 perubahan, tetap jumlah w.total per hari.
+const pendingGajiEstimate=(D.profile&&D.profile.tipeGaji==='bulananTetap')?0:(()=>{
+const isMingguanTetap=D.profile&&D.profile.tipeGaji==='mingguanTetap';
+const weekly={};
+(D.workDays||[]).forEach(w=>{
+const end=_cpWeekSaturday(w.date);
+const key=end.toDateString();
+if(!weekly[key])weekly[key]={end,total:0,extra:0};
+weekly[key].total+=(w.total||0);
+weekly[key].extra+=(w.lembur||0)+(w.tambahan||0)-(w.potongan||0);
+});
+return Object.values(weekly)
+.filter(wk=>wk.end.getFullYear()===y&&wk.end.getMonth()===m)
+.reduce((s,wk)=>s+(isMingguanTetap?Math.max(0,(D.profile.gajiPokokMingguan||0)+wk.extra):wk.total),0);
+})();
 const proyeksiGaji=recordedGaji+(includePendingGaji?pendingGajiEstimate:0);
 
 // 2) Sisa Kewajiban Terjadwal — PENTING (acceptance criteria #3, "tidak dipotong

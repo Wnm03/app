@@ -285,6 +285,9 @@ if(trFrom) trFrom.innerHTML=opts;
 if(trTo) trTo.innerHTML=opts;
 const wrAcc=document.getElementById('wrAcc');
 if(wrAcc) wrAcc.innerHTML=opts;
+// mgAcc (Sesi Bulanan Tetap, gaji-bulanan.js) — pola sama persis wrAcc di atas.
+const mgAcc=document.getElementById('mgAcc');
+if(mgAcc) mgAcc.innerHTML=opts;
 const tAcc=document.getElementById('tAcc');
 if(tAcc){const cur=tAcc.value;tAcc.innerHTML='<option value="">— Tidak terkait akun, isi manual —</option>'+opts;if(cur)tAcc.value=cur;}
 const assetAccId=document.getElementById('assetAccId');
