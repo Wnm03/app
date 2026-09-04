@@ -3,10 +3,26 @@
 // PTKP (kawin/tanggungan/pekerjaan) utk estimasi PPh21, preview usia, hint API key AI
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
+// onTipeGajiChange — Sesi "Mingguan Tetap"/"Bulanan Tetap": tampilkan field
+// yang relevan sesuai D.profile.tipeGaji dipilih di dropdown #sTipeGaji.
+// #sGajiHarianWrap (Gaji Pokok Harian) SENGAJA selalu terlihat apa pun
+// tipeGaji-nya -- masih dipakai sbg default upah/jam di Kalkulator Gaji &
+// input Absensi harian, tidak berubah dari perilaku lama.
+function onTipeGajiChange(){
+const tipe=document.getElementById('sTipeGaji').value;
+const mgWrap=document.getElementById('sGajiMingguanWrap');
+const mbWrap=document.getElementById('sGajiBulananWrap');
+if(mgWrap) mgWrap.classList.toggle('u-dnone',tipe!=='mingguanTetap');
+if(mbWrap) mbWrap.classList.toggle('u-dnone',tipe!=='bulananTetap');
+}
 function autoSaveProfile(){
 D.profile.nama=document.getElementById('sNama').value||'W';
 D.profile.gajiPokok=parseInt(document.getElementById('sGaji').value)||65000;
 D.profile.kiriman=parseInt(document.getElementById('sKirim').value)||500000;
+const sTipeGajiEl=document.getElementById('sTipeGaji'); if(sTipeGajiEl) D.profile.tipeGaji=sTipeGajiEl.value;
+const sGajiPokokMingguanEl=document.getElementById('sGajiPokokMingguan'); if(sGajiPokokMingguanEl) D.profile.gajiPokokMingguan=parseInt(sGajiPokokMingguanEl.value)||0;
+const sGajiBulananTetapEl=document.getElementById('sGajiBulananTetap'); if(sGajiBulananTetapEl) D.profile.gajiBulananTetap=parseInt(sGajiBulananTetapEl.value)||0;
+const sGajiBulananTanggalEl=document.getElementById('sGajiBulananTanggal'); if(sGajiBulananTanggalEl) D.profile.gajiBulananTanggal=Math.max(1,Math.min(31,parseInt(sGajiBulananTanggalEl.value)||1));
 const sLemburMxEl2=document.getElementById('sLemburMx'); if(sLemburMxEl2) D.profile.lemburMultiplier=parseFloat(sLemburMxEl2.value)||1.5;
 const sTarifMingguEl2=document.getElementById('sTarifMinggu'); if(sTarifMingguEl2) D.profile.tarifMinggu=parseInt(sTarifMingguEl2.value)||139000;
 const sTglLahirEl=document.getElementById('sTanggalLahir'); if(sTglLahirEl) D.profile.tanggalLahir=sTglLahirEl.value||null;

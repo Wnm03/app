@@ -978,6 +978,16 @@ document.getElementById('sGaji').value=D.profile.gajiPokok||65000;
 document.getElementById('sKirim').value=D.profile.kiriman||500000;
 const sLemburMxEl=document.getElementById('sLemburMx'); if(sLemburMxEl) sLemburMxEl.value=D.profile.lemburMultiplier||1.5;
 const sTarifMingguEl=document.getElementById('sTarifMinggu'); if(sTarifMingguEl) sTarifMingguEl.value=D.profile.tarifMinggu||139000;
+// Sesi "Mingguan Tetap"/"Bulanan Tetap" -- populate & toggle visibility sesuai
+// D.profile.tipeGaji tersimpan (default 'harian', perilaku lama tidak berubah).
+const sTipeGajiEl=document.getElementById('sTipeGaji');
+if(sTipeGajiEl){
+sTipeGajiEl.value=D.profile.tipeGaji||'harian';
+const sGajiPokokMingguanEl=document.getElementById('sGajiPokokMingguan'); if(sGajiPokokMingguanEl) sGajiPokokMingguanEl.value=D.profile.gajiPokokMingguan||'';
+const sGajiBulananTetapEl=document.getElementById('sGajiBulananTetap'); if(sGajiBulananTetapEl) sGajiBulananTetapEl.value=D.profile.gajiBulananTetap||'';
+const sGajiBulananTanggalEl=document.getElementById('sGajiBulananTanggal'); if(sGajiBulananTanggalEl) sGajiBulananTanggalEl.value=D.profile.gajiBulananTanggal||'';
+onTipeGajiChange();
+}
 const sInsightMingguanAktifEl=document.getElementById('sInsightMingguanAktif'); if(sInsightMingguanAktifEl) sInsightMingguanAktifEl.checked=!(D.profile&&D.profile.insightMingguanAktif===false);
 const sTglLahirEl=document.getElementById('sTanggalLahir'); if(sTglLahirEl) sTglLahirEl.value=(D.profile&&D.profile.tanggalLahir)||'';
 const kawinVal=!!(D.profile&&D.profile.statusKawin);

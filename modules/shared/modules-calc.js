@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s726-titipan-pinjam-utang-sesi2-3-complete';
+const MODULE_CALC_VERSION='s733-gajian-sabtu-sore-gate';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
