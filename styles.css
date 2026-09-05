@@ -1307,6 +1307,19 @@ textarea.fi { resize: vertical; min-height: 80px; }
    di HTML, cuma disembunyikan — pola sama persis .dashhub-summary-grid di
    atas (lihat DASHBOARD-DEDUP.md). */
 #danaKelolaanWrap{display:none!important;}
+/* Dedup Fix #3 (audit "informatif + saran" tab Insight, permintaan user):
+   #lifePriorityWrap (LifePriorityPanel) menampilkan item yang 100% SAMA
+   dgn #actionQueueWrap (ActionQueue) -- keduanya konsumen murni
+   PriorityEngine.getItems() yang sama persis, cuma beda presentasi (list
+   tanpa nomor vs list bernomor + total count). Action Queue dipertahankan
+   krn lebih informatif (ada total item) & juga dipakai AI Chat
+   (actionQueueChatContext(), ai-chat.js) -- Life Priority TIDAK dipakai
+   konsumen lain manapun selain DashboardHub sendiri. Container tetap ada
+   di HTML, LifePriorityPanel.render() TETAP dipanggil (tidak diubah di
+   JS, tidak menyentuh tests/decision-center-presenters-s286.test.js) --
+   cuma outputnya disembunyikan lewat display:none, pola sama persis Fix
+   #1/#2 di atas. Lihat DASHBOARD-DEDUP.md. */
+#lifePriorityWrap{display:none!important;}
 .dashhub-qa-row{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-3);margin-bottom:var(--sp-6);}
 .dashhub-qa-btn{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
