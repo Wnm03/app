@@ -98,6 +98,7 @@ const GROUP_A = [
   'modules/business/kasir.js',
   'modules/finance/piutang-utang.js',
   'modules/finance/pajak-pbb-zakat.js',
+  'modules/finance/zakat-reminder.js',
   'budget.js',
   'car-notes.js',
   'chat-action-handlers.js',
