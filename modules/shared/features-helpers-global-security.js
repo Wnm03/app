@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's740-gajian-sabtu-sore-gate';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's740-gajian-sabtu-sore-gate';
+const APP_BUILD_VERSION = 's744-gajian-sabtu-sore-gate';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's744-gajian-sabtu-sore-gate';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -450,6 +450,102 @@ if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses tombol.
 // sama seperti sebelumnya -- 1x klik = 1x eksekusi action, tidak ada duplikasi.
 document.addEventListener('click', _dataActionClickHandler, true);
 if(typeof console!=='undefined' && console.debug) console.debug('[app] data-action click dispatcher terpasang (capture phase).');
+// SA1 (s741): fondasi dispatcher `data-oninput`/`data-onchange` -- 89 dari 90
+// inline handler yang mau dimigrasi (SA2-SA9) justru oninput/onchange, bukan
+// click, dan _dataActionClickHandler di atas cuma menangkap event click.
+// Dibangun SEBELUM index.html disentuh supaya sesi migrasi per-halaman
+// berikutnya tinggal ganti atribut tanpa perlu mikirin infrastruktur.
+// Sengaja DIPISAH TOTAL dari _dataActionClickHandler (bukan direfactor jadi
+// 1 fungsi generik) supaya dispatcher click yang sudah stabil & terkunci
+// test tidak ikut berisiko di sesi fondasi ini.
+function _dataActionResolveArgs(argsRaw, el, e){
+let args = [];
+if(argsRaw){
+try{ args = JSON.parse(argsRaw); }
+catch(err){ console.error('data-oninput/data-onchange args JSON tidak valid:', argsRaw, err); return null; }
+}
+return args.map(a=>{
+if(a==='$el') return el;
+if(a==='$event') return e;
+if(a==='$value') return el.value;
+if(a==='$checked') return el.checked;
+if(typeof a==='string' && a.indexOf('$nav:')===0){
+const navItems=document.querySelectorAll('.nav-item');
+return navItems[Number(a.slice(5))]||null;
+}
+return a;
+});
+}
+function _dataActionInputChangeHandler(e){
+try{
+// SA1-REKONSTRUKSI (sesi lanjutan): dispatcher awalnya cuma menangani
+// 'input'/'change'. Diperluas ke 'blur'/'keydown' (event.type -> atribut
+// data-* yang sesuai) untuk menutup 3 dari 5 inline handler yang ditemukan
+// DI LUAR cakupan audit 92 (lihat SESSION-NOTE-SA1-REKONSTRUKSI-BASELINE.md
+// bagian "Temuan tambahan"): #dsExtra/#aaDana (onblur) & #chatInput
+// (onkeydown). Pola resolve & error handling tetap identik, cuma nama
+// atribut yang dibaca yang berbeda per event.type.
+const attrName = {input:'oninput', change:'onchange', blur:'onblur', keydown:'onkeydown'}[e.type];
+if(!attrName) return;
+const el = e.target.closest('[data-'+attrName+']');
+if(!el) return;
+const namesRaw = el.dataset[attrName];
+if(!namesRaw) return;
+const argsRaw = el.dataset[attrName+'Args'];
+const args = _dataActionResolveArgs(argsRaw, el, e);
+// JSON args tidak valid -> silent no-op (bukan throw): _dataActionResolveArgs
+// sudah console.error sendiri, di sini cukup berhenti tanpa toast supaya
+// user tidak dibanjiri toast tiap kali mengetik di input yang argsnya salah.
+if(args===null) return;
+// Dukung comma-separated function names (mis. inline lama
+// `onTipeGajiChange();autoSaveProfile()` -> data-onchange="onTipeGajiChange,autoSaveProfile"),
+// urutan eksekusi dipertahankan persis seperti urutan pemanggilan inline asli.
+const names = namesRaw.split(',');
+for(const rawName of names){
+const name = rawName.trim();
+const path = name.split('.');
+let owner = window, fn = window;
+for(const p of path){ owner = fn; fn = fn ? fn[p] : undefined; }
+if(typeof fn !== 'function'){
+console.error('data-'+attrName+' tidak ditemukan/bukan fungsi:', name);
+if(typeof toast==='function') toast('⚠️ Input ini belum berfungsi ('+name+'). Tolong laporkan ke pengembang.',5000);
+continue;
+}
+try{
+const result = fn.apply(owner, args);
+if(result && typeof result.catch==='function'){
+result.catch((err)=>{
+console.error('[data-'+attrName+'] async handler error:', name, err);
+if(typeof toast==='function') toast('⚠️ Gagal menjalankan "'+name+'": '+(err && err.message ? err.message : 'error tidak diketahui'), 5000);
+});
+}
+}catch(err){
+console.error('[data-'+attrName+'] handler error:', name, err);
+if(typeof localStorage!=='undefined' && localStorage.getItem('kw_debug_console')==='1'){
+const _loc=err&&err.stack?String(err.stack).split('\n').slice(0,2).join(' | '):((err&&err.message)||String(err));
+if(typeof toast==='function') toast('⚠️ DEBUG: '+_loc,9000);
+}else{
+if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses input. Cek console.',4000);
+}
+}
+}
+}catch(err){
+console.error('[data-oninput/data-onchange] handler error:', err);
+if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses input. Cek console.',4000);
+}
+}
+// Dipasang di document utk event 'input' DAN 'change', capture phase --
+// pola sama seperti dispatcher click di atas (lihat komentar di
+// document.addEventListener('click', ...) soal alasan capture phase).
+document.addEventListener('input', _dataActionInputChangeHandler, true);
+document.addEventListener('change', _dataActionInputChangeHandler, true);
+// SA1-REKONSTRUKSI (sesi lanjutan): 'blur' & 'keydown' TIDAK bubble, tapi
+// capture phase tetap menangkapnya turun ke elemen manapun di bawah
+// document (blur/keydown punya bubbles:false tapi capture:true di spec DOM),
+// jadi listener document-level dgn capture=true ini tetap benar utk kasus ini.
+document.addEventListener('blur', _dataActionInputChangeHandler, true);
+document.addEventListener('keydown', _dataActionInputChangeHandler, true);
+if(typeof console!=='undefined' && console.debug) console.debug('[app] data-oninput/data-onchange/data-onblur/data-onkeydown dispatcher terpasang (capture phase).');
 function migrateShopCategory(){
 let incCat=D.categories.income.find(c=>c.id==='cat_cb'||/^bisnis cobek$/i.test(c.name)||/^bisnis$/i.test(c.name));
 if(incCat){
