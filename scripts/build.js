@@ -1736,58 +1736,15 @@ function lintOcrPrematureTesseractCheck() {
 }
 
 // 3c. Lint regresi "MODAL_HTML index drift" (dicatat di FIX-v982-s320,
-// housekeeping). index.html menyuntik tiap modal balik ke posisi aslinya
-// lewat `<script>document.write(MODAL_HTML[N]);</script><!-- modal:xxx -->`.
-// Komentar "modal:xxx" itu CUMA dokumentasi utk manusia -- kalau suatu saat
-// ada modal baru disisipkan di TENGAH array MODAL_HTML di modals.js (bukan
-// di akhir), semua index N sesudahnya geser diam-diam & HTML akan
-// nge-render modal yang SALAH di posisi itu tanpa error apa pun. Lint ini
-// load MODAL_HTML sungguhan lewat vm (bukan re-implementasi manual), lalu
-// pastikan id="..." pada elemen overlay di index N benar-benar sama dgn
-// nama modal di komentarnya. Versi test unit (utk `npm test`) ada di
-// tests/modal-html-index-drift.test.js.
+// housekeeping; diupdate SA10a/v1568 & SA10b/v1569). Logic sungguhannya ada
+// di scripts/lib/modal-html-index-drift.js -- dipakai bareng dgn
+// tests/modal-html-index-drift.test.js supaya gate build.js & suite
+// `npm test` selalu ngecek pola yang SAMA persis, tidak bisa diam-diam
+// drift satu sama lain (sempat kejadian di SA10a: build.js pakai regex
+// lama sementara test unitnya sendiri tidak pernah dibuat).
+const { checkModalHtmlIndexDrift } = require('./lib/modal-html-index-drift');
 function lintModalHtmlIndexDrift() {
-  const vm = require('vm');
-  const modalsSrc = readFile('modules/shared/modals.js');
-  const context = {};
-  vm.createContext(context);
-  vm.runInContext(modalsSrc + '\nthis.__MODAL_HTML__ = MODAL_HTML;', context, { filename: 'modals.js' });
-  const MODAL_HTML = context.__MODAL_HTML__;
-  if (!Array.isArray(MODAL_HTML)) {
-    return ['modules/shared/modals.js — MODAL_HTML tidak ditemukan/bukan array, lint index drift tidak bisa jalan'];
-  }
-
-  const firstOverlayId = (html) => {
-    const m = html.match(/<div\s+class="overlay"\s+id="([a-zA-Z0-9_-]+)"/);
-    return m ? m[1] : null;
-  };
-
-  const writeRe = /document\.write\(MODAL_HTML\[(\d+)\]\);<\/script><!--\s*modal:([a-zA-Z0-9_-]+)/g;
-  const problems = [];
-  for (const file of HTML_FILES) {
-    const content = readFile(file);
-    let entriesFound = 0;
-    let m;
-    writeRe.lastIndex = 0;
-    while ((m = writeRe.exec(content)) !== null) {
-      entriesFound++;
-      const index = Number(m[1]);
-      const commentName = m[2];
-      const html = MODAL_HTML[index];
-      if (html === undefined) {
-        problems.push(`${file} — MODAL_HTML[${index}] di luar jangkauan array (panjang: ${MODAL_HTML.length}), dirujuk sbg "${commentName}"`);
-        continue;
-      }
-      const actual = firstOverlayId(html);
-      if (actual !== commentName) {
-        problems.push(`${file} — MODAL_HTML[${index}] id sungguhan="${actual}" TIDAK COCOK dgn komentar "<!-- modal:${commentName} -->" (kemungkinan index geser krn ada modal baru disisipkan di tengah array)`);
-      }
-    }
-    if (entriesFound < MODAL_HTML.length - 2) {
-      problems.push(`${file} — cuma ${entriesFound} baris document.write(MODAL_HTML[N]) ditemukan, padahal MODAL_HTML punya ${MODAL_HTML.length} elemen (format komentar mungkin berubah, lint ini perlu diupdate)`);
-    }
-  }
-  return problems;
+  return checkModalHtmlIndexDrift(ROOT, HTML_FILES);
 }
 
 // 3d. Lint regresi "drift struktural Scanner" (housekeeping, dicatat di
