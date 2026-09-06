@@ -190,3 +190,4 @@ const DashboardSettings = {
     this.renderDashCardOrderUI();
   },
 };
+if (typeof window !== 'undefined') window.DashboardSettings = DashboardSettings;
