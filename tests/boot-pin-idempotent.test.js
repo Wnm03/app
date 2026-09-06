@@ -82,9 +82,24 @@ test('showPinScreen() dipanggil 2x dalam 1 pemuatan halaman -> hanya render seka
 //     reload kalau window.__kwBooted sudah true, & hanya reload SEKALI (guard
 //     sessionStorage) kalau belum booted.
 // ---------------------------------------------------------------------------
+const CONTROLLERCHANGE_IIFE_RE = /\(function\(\)\{\s*try\{\s*if\(!\('serviceWorker' in navigator\)\)return;[\s\S]*?\}catch\(e\)\{\}\s*\}\)\(\);/;
+
 function extractControllerChangeIIFE(html) {
-  const m = html.match(/\(function\(\)\{\s*try\{\s*if\(!\('serviceWorker' in navigator\)\)return;[\s\S]*?\}catch\(e\)\{\}\s*\}\)\(\);/);
-  return m ? m[0] : null;
+  const m = html.match(CONTROLLERCHANGE_IIFE_RE);
+  if (m) return m[0];
+  // SA10a (v1568): blok ini dieksternalisasi keluar dari index.html/
+  // app_production.html ke modules/shared/boot-early.js (konsolidasi 4 blok
+  // boot-time, lihat SESSION-NOTE-SA10a). Kalau tidak ketemu inline di HTML,
+  // fallback cari di file eksternalnya -- supaya test ini tetap mengunci
+  // guard __kwBooted-nya, bukan diam-diam berhenti berfungsi hanya karena
+  // lokasi kodenya pindah.
+  try {
+    const external = fs.readFileSync(path.join(ROOT, 'modules', 'shared', 'boot-early.js'), 'utf8');
+    const m2 = external.match(CONTROLLERCHANGE_IIFE_RE);
+    return m2 ? m2[0] : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 function runControllerChangeScenario(html, { booted, alreadyReloadedThisSession }) {
