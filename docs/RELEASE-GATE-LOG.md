@@ -513,3 +513,28 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, eslint tidak bisa diinstall (sama seperti seluruh sesi S714/S715 sebelumnya)
 - **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan keluar, esbuild tidak bisa diinstall (sama seperti seluruh sesi S714/S715 sebelumnya)
+
+## 2026-09-06T04:49:50.993Z — versi s741-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses internet, eslint tidak terpasang (konsisten dgn sesi SA1-SA8 sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses internet, esbuild tidak terpasang (konsisten dgn sesi SA1-SA8 sebelumnya)
+
+## 2026-09-06T12:01:25.485Z — versi s742-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall; perubahan lint fix di build.js & test hanya regex/logic sederhana, sudah dicek manual
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall; bundle tidak berubah isi (modal-write.js/boot-early.js tetap non-bundled sesuai desain SA10a)
+
+## 2026-09-06T12:09:07.969Z — versi s743-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall; bundle tidak berubah isi (modal-write.js/boot-early.js tetap non-bundled)
+
+## 2026-09-06T12:14:30.286Z — versi s744-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall; bundle tidak berubah isi (test-only addition)
+
+## 2026-09-06T12:48:58.313Z — versi s744-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses internet, eslint tidak bisa diinstall - konsisten dgn semua sesi sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses internet, esbuild tidak bisa diinstall - bundle valid secara syntax, hanya belum diminify
