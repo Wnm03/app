@@ -161,6 +161,11 @@ html+=`<div class="chat-bubble ai">🗂️ <b>Antrean Tindakan:</b><br>${escapeH
 }catch(e){console.error('Gagal ambil Action Queue:',e);}
 document.getElementById('chatBox').innerHTML=html;
 }
+// SA1-REKONSTRUKSI (sesi lanjutan): pengganti inline
+// `onkeydown="if(event.key==='Enter')sendChat()"` di #chatInput (index.html)
+// -- dipindah ke dispatcher data-onkeydown (lihat features-helpers-global-
+// security.js), kondisi Enter yang tadinya inline sekarang di sini.
+function chatInputEnterSend(e){if(e&&e.key==='Enter')sendChat();}
 function aiQ(q){document.getElementById('chatInput').value=q;sendChat();}
 async function sendChat(){
 if(_saveGuards['chat'])return;

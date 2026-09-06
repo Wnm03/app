@@ -9,29 +9,97 @@
   jadi jaring pengaman: browser akan MENOLAK menjalankan/memuat apa pun yang
   tidak masuk allowlist di bawah, walau berhasil ke-inject ke DOM.
 
-  PENTING -- kejujuran soal batas proteksi CSP ini (bukan CSP "ideal"):
-  App ini masih banyak pakai inline event-handler attribute (onclick=,
-  onchange=, oninput=, dst -- 100+ titik di index.html). Jalur
-  `new Function(...)` (fallback data-onclick lama) sudah dihapus di S264
-  -- semua aksi klik sekarang lewat data-action. Supaya CSP ini TIDAK
-  langsung mematikan seluruh UI, script-src di bawah terpaksa masih
-  pakai 'unsafe-inline' & 'unsafe-eval'.
-  Konsekuensinya: CSP ini TIDAK memblokir payload injeksi gaya
-  `<img onerror="...">` atau `<svg onload="...">` yang nempel lewat celah
-  innerHTML/outerHTML yang lolos dari lint escapeHtml -- kode di payload
-  itu tetap akan jalan.
-  Yang TETAP terlindungi walau 'unsafe-inline'/'unsafe-eval' masih ada:
+  SA10a (v1568) -- STATUS TERKINI (baca dulu sebelum mengubah CSP ini lagi):
+  Migrasi atribut event inline TUNTAS 100% sejak SA1-SA9 (lihat histori di
+  bawah). SA10a MENUNTASKAN sisa 105 blok <script>...</script> TANPA atribut
+  src yang dulu sengaja dipisah jadi epic tersendiri (lihat
+  SESSION-NOTE-SA1-REKONSTRUKSI-BASELINE-lanjutan.md bagian "Carry-forward
+  ke SA9" utk latar belakang & 3 opsi yang dipertimbangkan: nonce/hash/
+  eksternalisasi). Opsi yang dipakai: EKSTERNALISASI (opsi 3), karena paling
+  konsisten dgn arsitektur modules/shared/*.js yang sudah dipakai proyek ini,
+  dan tidak butuh mesin hash/nonce baru yang cuma dipakai sementara.
+
+  Rincian 105 blok yang dipindah, jadi 2 file baru:
+    - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
+      -> `<script src="modules/shared/modal-write.js?v=1572"
+         data-modal-index="N"></script>`. modal-write.js baca
+      data-modal-index via document.currentScript, lalu document.write()
+      MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
+      TIDAK berubah (script masih sinkron, tanpa defer/async, di titik yang
+      sama persis). MODAL_HTML sendiri TIDAK dipindah -- tetap didefinisikan
+      di modules/shared/modals.js, tetap masuk ke app-bundle-a.min.js saat
+      build, HARUS sudah dieksekusi (lewat bundle-load-guard.js) sebelum tag
+      modal-write.js pertama -- urutan ini TIDAK diubah oleh SA10a.
+    - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
+      lazy-load helper, __moduleLoadFail + global runtime error banner,
+      anti-flash reload saat Service Worker controllerchange) -> digabung
+      1 file `modules/shared/boot-early.js?v=1572`, dipanggil lewat SATU
+      `<script src="...">` (tanpa defer/async) persis di posisi blok
+      pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
+      tidak berubah.
+  Hasilnya: `grep -oP '<script>(?!\s*document\.write)' index.html` dan
+  cek manual blok document.write -> **0 blok <script> inline tersisa** di
+  index.html maupun app_production.html (keduanya, disinkron seperti biasa).
+
+  KARENA ITU: `'unsafe-inline'` DICABUT dari `script-src` utama (lihat CSP
+  di bawah) -- TIDAK ADA lagi kode <script> inline maupun atribut event
+  inline yang membutuhkannya. Sudah diverifikasi dulu (SA9) utk atribut
+  event, dan sekarang (SA10a) utk isi <script> block.
+
+  `'unsafe-eval'` SENGAJA TIDAK dicabut -- diaudit dulu sebelum ambil
+  keputusan (bukan asumsi): `grep -o "new Function(" app-bundle-*.min.js`
+  menemukan 3 pemakaian nyata `new Function(...)` di app-bundle-b.min.js
+  (Function constructor butuh 'unsafe-eval' sama seperti eval() literal).
+  Mencabut 'unsafe-eval' tanpa mengganti 3 titik itu akan mematahkan fitur
+  yang memakainya -- di luar cakupan SA10a (yang fokusnya cuma <script>
+  block, bukan eval/Function). Audit & migrasi 'unsafe-eval' (kalau memang
+  mau dikejar) perlu jadi epic terpisah lagi (mis. "SA11"), dgn identifikasi
+  dulu 3 titik `new Function(` itu dipakai fitur apa & apakah bisa ditulis
+  ulang tanpa eval dinamis.
+
+  script-src UTAMA sekarang: `'self' 'unsafe-eval' <allowlist CDN/Google>`
+  -- SUDAH TANPA 'unsafe-inline'. Ini penguatan CSP yang nyata: script asing
+  yang berhasil ke-inject lewat celah XSS (mis. innerHTML tanpa escapeHtml)
+  TIDAK BISA lagi jalan sebagai <script>...</script> inline atau atribut
+  event -- HANYA bisa jalan lewat 'unsafe-eval' (mis. eval()/Function() dari
+  string) ATAU <script src> ke origin yang di-allowlist. Permukaan serangan
+  jauh lebih kecil dari sebelum SA10a.
+
+  Histori migrasi atribut event (SA1-SA9, SUDAH TUNTAS, tidak berubah oleh
+  SA10a): 0 atribut onclick=/onchange=/oninput=/onblur=/onkeydown= dst
+  tersisa -- semua lewat data-action/data-oninput/data-onchange/
+  data-onblur/data-onkeydown, di-dispatch oleh listener terpusat di
+  features-helpers-global-security.js. Verifikasi:
+    grep -oP '(?<!data-)\bon[a-z]+="[^"]*"' index.html   -> 0 baris
+  `script-src-attr 'none'` (CSP Level 3, terpisah dari script-src) tetap
+  aktif sejak SA9 utk atribut event -- lihat catatan kompatibilitas browser
+  di bawah, TIDAK berubah oleh SA10a.
+
+  KOMPATIBILITAS BROWSER `script-src-attr` (WAJIB tahu sebelum
+  mengandalkan directive ini sebagai satu2nya proteksi): CSP Level 3,
+  didukung Chrome/Edge/Firefox; dukungan Safari/WebKit historisnya
+  telat & tidak konsisten antar versi -- CEK ULANG status terkini kalau
+  perlu kepastian sebelum rilis. Degradasi di browser yang TIDAK
+  mengenali `script-src-attr` AMAN (tidak mematikan UI): directive yang
+  tidak dikenali browser diabaikan begitu saja, dan browser lama/tidak-
+  dukung itu balik ke perilaku pra-CSP3 di mana `script-src` (yang SEJAK
+  SA10a SUDAH TANPA 'unsafe-inline') yang menentukan boleh-tidaknya
+  atribut event juga -- jadi browser semacam itu TETAP MENOLAK atribut
+  event inline (karena script-src juga sudah tidak mengizinkannya), bukan
+  cuma browser modern yang dapat proteksi. ARTINYA sejak SA10a
+  `script-src-attr 'none'` jadi REDUNDAN-tapi-tidak-berbahaya di browser
+  lama (script-src sendiri sudah cukup ketat) -- tetap dipertahankan sbg
+  pertahanan berlapis & untuk kejelasan intent.
+
+  Yang TETAP terlindungi (di luar yang baru di atas):
     - Skrip/style dari domain asing yang TIDAK ada di allowlist connect-src/
       script-src (mis. attacker coba muat <script src="https://evil.com/x.js">
       atau exfiltrate data lewat fetch()/XHR ke domain asing) akan DITOLAK.
     - object-src 'none' menutup vektor lewat <object>/<embed>/Flash-style plugin.
     - base-uri 'self' & form-action 'self' mencegah base-tag hijacking &
       form dialihkan ke domain asing.
-  Supaya proteksi ini bisa dinaikkan ke `script-src 'self'` penuh (tanpa
-  unsafe-inline/unsafe-eval), 100+ inline handler di atas perlu dimigrasi
-  dulu ke pola data-action (yang sudah dipakai sebagian besar tombol lain
-  di app ini, lewat delegated listener di features-helpers-global-security.js)
-  -- ini pekerjaan terpisah/lebih besar, belum dikerjakan di sini.
+    - script-src-attr 'none' -- di browser pendukung CSP L3, atribut onX=
+      yang berhasil ke-inject lewat celah escapeHtml TETAP ditolak jalan.
 
   Domain yang di-allowlist & alasannya:
     cdn.jsdelivr.net / cdnjs.cloudflare.com -> lazy-load eruda (debug console),
@@ -65,7 +133,7 @@
   ini dihosting di server sendiri, sebaiknya arahan ini juga dikirim lewat
   header `Content-Security-Policy` di response, bukan cuma meta tag di sini.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://open.er-api.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://open.er-api.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#08090c">
@@ -80,176 +148,16 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1555">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1555">
-<script src="nav-scroll.js?v=1555" defer></script>
-<script src="sticky-tabbar.js?v=1555" defer></script>
-<script>
-/* Debug console (Eruda) — aktifkan sekali lewat ?debug=1 di URL, nempel via localStorage.
-   Matikan lagi lewat ?debug=0. Tidak aktif buat user biasa. */
-(function(){
-try{
-var params=new URLSearchParams(location.search);
-if(params.get('debug')==='1') localStorage.setItem('kw_debug_console','1');
-if(params.get('debug')==='0') localStorage.removeItem('kw_debug_console');
-if(localStorage.getItem('kw_debug_console')==='1'){
-var s=document.createElement('script');
-s.src='https://cdn.jsdelivr.net/npm/eruda';
-s.onload=function(){ try{ eruda.init(); }catch(e){} };
-(document.head||document.documentElement).appendChild(s);
-}
-}catch(e){}
-})();
-</script>
-<script>
-window._loadedScripts=window._loadedScripts||{};
-// Sesi 312 BUGFIX (scanner-fatal-perframe-fix): sebelum ini SATU kali gagal
-// (404 sesaat/CDN belum sinkron/hiccup jaringan) langsung reject permanen --
-// module lazy-load (renovasi.js/sewakios.js/business-intelligence-presenter.js)
-// jadi tampil banner "gagal dimuat" walau file-nya ADA, cuma request pertama
-// yang gagal. Sekarang retry otomatis 1x dengan cache-buster baru sebelum
-// benar-benar menyerah, dan promise gagal dihapus dari cache supaya tab
-// dibuka ulang bisa coba lagi (bukan tersangkut gagal selamanya per sesi).
-function _loadScriptOnce(src,_isRetry){
-if(!_isRetry && window._loadedScripts[src])return window._loadedScripts[src];
-const p=new Promise((resolve,reject)=>{
-const s=document.createElement('script');
-s.src=_isRetry?(src+(src.indexOf('?')>-1?'&':'?')+'_retry='+Date.now()):src;
-s.async=true;
-let done=false;
-const timeoutId=setTimeout(()=>{
-if(done)return;done=true;
-delete window._loadedScripts[src];
-reject(new Error('Timeout memuat '+src+' — cek koneksi internet, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
-},12000);
-s.onload=()=>{if(done)return;done=true;clearTimeout(timeoutId);resolve();};
-s.onerror=()=>{
-if(done)return;done=true;clearTimeout(timeoutId);
-delete window._loadedScripts[src];
-if(!_isRetry){
-// satu kali percobaan ulang otomatis sebelum melaporkan gagal
-_loadScriptOnce(src,true).then(resolve).catch(reject);
-}else{
-reject(new Error('Gagal memuat '+src));
-}
-};
-document.head.appendChild(s);
-});
-if(!_isRetry) window._loadedScripts[src]=p;
-return p;
-}
-function ensureTesseract(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');}
-function ensureJsPDF(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');}
-function ensureHtml2Canvas(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');}
-function ensureGoogleGSI(){return _loadScriptOnce('https://accounts.google.com/gsi/client');}
-function ensureXLSX(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');}
-function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');}
-// Sesi 13 Tahap 1b (lazy-load internal module, DESIGN_lazy-load-modules.md):
-// renovasi.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
-// dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn CDN di atas.
-// Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
-// > Proyek Renovasi pertama dibuka.
-function ensureRenov(){return _loadScriptOnce('modules/home/renovasi.js?v=1555');}
-// sewakios.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),
-// dimuat on-demand lewat pola _loadScriptOnce() yang sama dgn Renov di atas.
-// Dipanggil dari setKeuanganTab() (tx-list-cashflow.js) saat tab Aset & Proyek
-// pertama dibuka.
-function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v=1555');}
-// business-intelligence-presenter.js dikeluarkan dari app-bundle-b.min.js
-// (scripts/build.js GROUP_B), dimuat on-demand lewat pola sama.
-// Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
-// Intelligence pertama dibuka.
-function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1555');}
-</script>
-<script>
-window.__moduleLoadFail=function(name){
-try{
-var b=document.createElement('div');
-b.setAttribute('data-module-fail-banner','1');
-b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;padding:10px 14px;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3);';
-b.textContent='⚠️ File '+name+' gagal dimuat -- fitur aplikasi bisa error/blank. Cek koneksi internet lalu refresh, atau pastikan file '+name+' ada di hosting yang sama.';
-var closeBtn=document.createElement('span');
-closeBtn.textContent=' ✕';
-closeBtn.style.cssText='cursor:pointer;margin-left:10px;font-weight:900;';
-closeBtn.onclick=function(){b.remove();};
-b.appendChild(closeBtn);
-(document.body||document.documentElement).appendChild(b);
-}catch(_e){ console.error('Gagal tampilkan banner error modul:',_e); }
-};
-// BUGFIX: sebelum ini TIDAK ADA penangkap error runtime global -- kalau ada SATU exception
-// tak tertangkap di mana pun (paling sering di app-bootstrap.js saat Object.assign(window,{...})
-// atau di dalam init()), sisa kode boot script langsung berhenti TANPA pesan apa pun ke user.
-// Efeknya: banyak fitur yang sama sekali tidak berhubungan (mis. semua tombol Scan & semua
-// notifikasi) "mati" bersamaan dalam satu kali reload, dan satu-satunya jejak errornya cuma ada
-// di DevTools Console (yang mayoritas user tidak buka) -- gejalanya jadi "app diam total", susah
-// dibedakan dari sekadar lambat/loading. Handler di bawah menampilkan banner yang sama dengan
-// __moduleLoadFail supaya SETIAP error runtime tak tertangkap langsung kelihatan oleh user &
-// gampang dilaporkan, alih-alih diam senyap.
-window.__runtimeErrorBannerShown=false;
-window.__showRuntimeErrorBanner=function(msg){
-try{
-if(window.__runtimeErrorBannerShown)return; // 1 banner cukup, jangan spam kalau errornya beruntun
-window.__runtimeErrorBannerShown=true;
-var b=document.createElement('div');
-b.setAttribute('data-runtime-error-banner','1');
-b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;padding:10px 14px;font:600 13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.3);';
-b.textContent='⚠️ Terjadi error yang membuat sebagian/seluruh fitur (termasuk Scan & Notifikasi) mungkin tidak berfungsi: '+msg+'. Coba refresh halaman; kalau masih berulang, laporkan pesan ini ke pengembang.';
-var closeBtn=document.createElement('span');
-closeBtn.textContent=' ✕';
-closeBtn.style.cssText='cursor:pointer;margin-left:10px;font-weight:900;';
-closeBtn.onclick=function(){b.remove();};
-b.appendChild(closeBtn);
-(document.body||document.documentElement).appendChild(b);
-}catch(_e){ console.error('Gagal tampilkan banner error runtime:',_e); }
-};
-window.addEventListener('error',function(ev){
-try{
-var msg=(ev&&ev.message)?ev.message:'Unknown error';
-var loc=(ev&&ev.filename)?(' ('+ev.filename+':'+ev.lineno+')'):'';
-console.error('[Global Error]',msg+loc,ev&&ev.error);
-window.__showRuntimeErrorBanner(msg+loc);
-}catch(_e){}
-});
-window.addEventListener('unhandledrejection',function(ev){
-try{
-var reason=ev&&ev.reason;
-var msg=(reason&&reason.message)?reason.message:String(reason);
-console.error('[Unhandled Promise Rejection]',reason);
-window.__showRuntimeErrorBanner(msg);
-}catch(_e){}
-});
-</script>
-<script>
-/* FIX: tab yang sudah kebuka duluan bisa masih dikontrol SW versi lama
-   (skipWaiting/clients.claim ga instan ganti controller tab yg lagi aktif),
-   jadi HTML lama sempat ke-paint dulu sebelum JS baru koreksi tampilan
-   (nyebabin "flash" onboard->pin atau sebaliknya). Reload sekali otomatis
-   begitu controller SW berganti, guard sessionStorage biar ga infinite loop.
-   FIX (2026-07-30): guard TAMBAHAN window.__kwBooted -- sebelumnya listener ini
-   reload TANPA syarat kapan pun controllerchange nyala, termasuk SETELAH init()
-   sempat jalan & showPinScreen() sudah tampil (controllerchange SW baru aktif/
-   claim client-nya sering baru nyala beberapa saat SETELAH init() selesai, bukan
-   cuma sebelum paint pertama). Efeknya: user sudah lihat/mulai ketik PIN, tiba-tiba
-   ke-reload paksa -> app boot ulang dari nol -> layar PIN "muncul 2x" + reload
-   bundle besar bikin serasa "loading lama". Guard ini di-set oleh init()
-   (self-test.js) PERSIS begitu init() mulai jalan -- kalau boot sudah lewat
-   titik itu, reload anti-flash ini dilewati (tujuan awalnya cuma menghindari
-   flash SEBELUM boot, bukan menginterupsi sesi yang sudah berjalan). Update SW
-   berikutnya tetap otomatis kepakai di sesi/reload berikutnya seperti biasa. */
-(function(){
-try{
-if(!('serviceWorker' in navigator))return;
-navigator.serviceWorker.addEventListener('controllerchange',function(){
-if(sessionStorage.getItem('kw_sw_reloaded')==='1')return;
-if(window.__kwBooted)return;
-sessionStorage.setItem('kw_sw_reloaded','1');
-window.location.reload();
-});
-}catch(e){}
-})();
-</script>
-<script src="app-bundle-a.min.js?v=1555" onerror="window.__moduleLoadFail('app-bundle-a.min.js')"></script>
-<script src="modules/shared/smoke-test.js?v=1555" defer></script>
+<link rel="stylesheet" href="styles.css?v=1572">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1572">
+<script src="nav-scroll.js?v=1572" defer></script>
+<script src="sticky-tabbar.js?v=1572" defer></script>
+<script src="modules/shared/boot-early.js?v=1572"></script>
+
+
+
+<script src="modules/shared/bundle-load-guard.js?v=1572" data-guard-src="app-bundle-a.min.js?v=1572" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=1572" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -267,8 +175,8 @@ window.location.reload();
   <div class="onboard-sub">Selamat datang!<br>Atur profil keluarga Anda dulu</div>
   <div class="u-w100" style="max-width:340px">
     <div class="fg"><label class="fl">Nama Panggilan</label><input class="fi" id="ob_nama" placeholder="W" value="W"></div>
-    <div class="fg"><label class="fl">Gaji Pokok Harian (Rp)</label><input class="fi" id="ob_gaji" type="number" placeholder="65000" value="65000" inputmode="numeric" oninput="updateOnboardPreview()"></div>
-    <div class="fg"><label class="fl">Kiriman Rutin/Minggu (Rp)</label><input class="fi" id="ob_kirim" type="number" placeholder="500000" value="500000" inputmode="numeric" oninput="updateOnboardPreview()"></div>
+    <div class="fg"><label class="fl">Gaji Pokok Harian (Rp)</label><input class="fi" id="ob_gaji" type="number" placeholder="65000" value="65000" inputmode="numeric" data-oninput="updateOnboardPreview"></div>
+    <div class="fg"><label class="fl">Kiriman Rutin/Minggu (Rp)</label><input class="fi" id="ob_kirim" type="number" placeholder="500000" value="500000" inputmode="numeric" data-oninput="updateOnboardPreview"></div>
     <div class="u-r12 u-fs12" id="obPreviewBox" style="background:var(--surface3);padding:12px 14px;margin:2px 0 14px;line-height:1.7"></div>
     <div class="fg"><label class="fl">PIN Keamanan (4 digit)</label><input class="fi" id="ob_pin" type="password" maxlength="4" placeholder="••••" inputmode="numeric"></div>
     <div class="fg"><label class="fl">Pilih Tema</label>
@@ -442,20 +350,20 @@ window.location.reload();
     </div>
     <div class="u-dnone u-mb10" id="txListCustomRange">
       <div class="u-grid2">
-        <div><label class="fl">Dari</label><input type="date" class="fi" id="txListFrom" onchange="resetTxPageAndRender()"></div>
-        <div><label class="fl">Sampai</label><input type="date" class="fi" id="txListTo" onchange="resetTxPageAndRender()"></div>
+        <div><label class="fl">Dari</label><input type="date" class="fi" id="txListFrom" data-onchange="resetTxPageAndRender"></div>
+        <div><label class="fl">Sampai</label><input type="date" class="fi" id="txListTo" data-onchange="resetTxPageAndRender"></div>
       </div>
     </div>
     <div class="u-dnone u-mb10 u-r10" id="keuFilterPanel" style="padding:10px;background:var(--surface3)">
       <div class="u-gap8 u-mb8 u-grid2-nogap">
-        <div><label class="fl">Tipe</label><select class="fs" id="kfTipe" onchange="resetTxPageAndRender()"><option value="semua">Semua</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option><option value="transfer">Transfer</option></select></div>
-        <div><label class="fl">Kategori</label><select class="fs" id="kfKat" onchange="onKfKatChange()"><option value="semua">Semua</option></select></div>
+        <div><label class="fl">Tipe</label><select class="fs" id="kfTipe" data-onchange="resetTxPageAndRender"><option value="semua">Semua</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option><option value="transfer">Transfer</option></select></div>
+        <div><label class="fl">Kategori</label><select class="fs" id="kfKat" data-onchange="onKfKatChange"><option value="semua">Semua</option></select></div>
       </div>
       <div class="u-gap8 u-mb8 u-grid2-nogap">
-        <div><label class="fl">Sub Kategori</label><select class="fs" id="kfSub" onchange="resetTxPageAndRender()"><option value="semua">Semua</option></select></div>
-        <div><label class="fl">Akun</label><select class="fs" id="kfAcc" onchange="resetTxPageAndRender()"><option value="semua">Semua Akun</option></select></div>
+        <div><label class="fl">Sub Kategori</label><select class="fs" id="kfSub" data-onchange="resetTxPageAndRender"><option value="semua">Semua</option></select></div>
+        <div><label class="fl">Akun</label><select class="fs" id="kfAcc" data-onchange="resetTxPageAndRender"><option value="semua">Semua Akun</option></select></div>
       </div>
-      <div class="fg u-mb8"><label class="fl">Metode (Cicilan/Tagihan)</label><select class="fs" id="kfMethod" onchange="resetTxPageAndRender()">
+      <div class="fg u-mb8"><label class="fl">Metode (Cicilan/Tagihan)</label><select class="fs" id="kfMethod" data-onchange="resetTxPageAndRender">
         <option value="semua">Semua Metode</option>
         <option value="tunai">💵 Tunai</option>
         <option value="cicilan">💳 Cicilan</option>
@@ -466,7 +374,7 @@ window.location.reload();
       <div class="u-tar"><span class="u-fs12 u-cacc u-pointer" data-action="resetKeuFilter">↺ Reset Filter</span></div>
     </div>
     <div class="fg u-mb10">
-      <input type="text" class="fi" id="kfSearch" placeholder="🔎 Cari catatan/keterangan transaksi..." oninput="onKfSearchInput()">
+      <input type="text" class="fi" id="kfSearch" placeholder="🔎 Cari catatan/keterangan transaksi..." data-oninput="onKfSearchInput">
     </div>
     <div id="allTxVirtualBills"></div>
     <div id="allTx"><div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Belum ada transaksi</div></div></div>
@@ -506,7 +414,7 @@ window.location.reload();
         <div class="import-zone-icon">📂</div>
         <div class="import-zone-text">Tap untuk pilih file CSV/JSON</div>
       </label>
-      <input class="u-abs" type="file" id="importFileInput" accept=".csv,.json,text/csv,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" onchange="handleImport(event)">
+      <input class="u-abs" type="file" id="importFileInput" accept=".csv,.json,text/csv,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" data-onchange="handleImport" data-onchange-args='["$event"]'>
       <div id="importResult"></div>
     </div>
   </details>
@@ -544,12 +452,12 @@ window.location.reload();
     </div>
     <div class="u-dnone u-mb6" id="billFilterPanel" style="padding-top:2px">
       <div class="u-gap8 u-mb6 u-grid2-nogap">
-        <select class="fs" id="billFilterStatus" onchange="applyBillFilter()">
+        <select class="fs" id="billFilterStatus" data-onchange="applyBillFilter">
           <option value="all">Semua Status</option>
           <option value="aktif">Belum Dibayar (Aktif)</option>
           <option value="lunas">Sudah Lunas</option>
         </select>
-        <select class="fs" id="billFilterKategori" onchange="applyBillFilter()">
+        <select class="fs" id="billFilterKategori" data-onchange="applyBillFilter">
           <option value="all">Semua Kategori</option>
         </select>
         <div class="month-nav u-mb0" style="grid-column:1/-1">
@@ -557,14 +465,14 @@ window.location.reload();
           <div class="month-nav-label">Geser Bulan/Tahun Filter</div>
           <button class="month-nav-btn" data-action="navBillFilterMonth" data-args='[1]' aria-label="Bulan berikutnya">›</button>
         </div>
-        <select class="fs" id="billFilterBulan" onchange="applyBillFilter()">
+        <select class="fs" id="billFilterBulan" data-onchange="applyBillFilter">
           <option value="all">Semua Bulan</option>
           <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
           <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
           <option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option>
           <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
         </select>
-        <select class="fs" id="billFilterTahun" onchange="applyBillFilter()">
+        <select class="fs" id="billFilterTahun" data-onchange="applyBillFilter">
           <option value="all">Semua Tahun</option>
         </select>
       </div>
@@ -669,7 +577,7 @@ window.location.reload();
       <div class="fg u-mb12">
         <label class="fl">Dana Ekstra per Bulan buat Nambah Cicilan (opsional)</label>
         <div class="amt-wrap">
-          <input type="text" class="fi fi-calc-only" id="dsExtra" placeholder="0" inputmode="decimal" oninput="onDsExtraInput()" onblur="evalAmtExpr('dsExtra')">
+          <input type="text" class="fi fi-calc-only" id="dsExtra" placeholder="0" inputmode="decimal" data-oninput="onDsExtraInput" data-onblur="evalAmtExpr" data-onblur-args='["dsExtra"]'>
           <button type="button" class="calc-trigger" data-action="openCalc" data-args='["dsExtra"]' title="Buka kalkulator" aria-label="Buka kalkulator">🧮</button>
         </div>
         <div class="u-fs11 u-t2 u-mt4">Kalau ada surplus kas bulanan yang mau dialihkan ke cicilan tambahan, isi di sini buat lihat simulasi seberapa cepat semua utang lunas (tetap bayar minimum semua utang dulu, sisanya diarahkan ke utang prioritas teratas).</div>
@@ -1018,19 +926,19 @@ window.location.reload();
   </div>
   <div class="u-dnone u-mb10" id="customRange">
     <div class="u-grid2">
-      <div><label class="fl">Dari</label><input type="date" class="fi" id="fFrom" onchange="renderLaporan()"></div>
-      <div><label class="fl">Sampai</label><input type="date" class="fi" id="fTo" onchange="renderLaporan()"></div>
+      <div><label class="fl">Dari</label><input type="date" class="fi" id="fFrom" data-onchange="renderLaporan"></div>
+      <div><label class="fl">Sampai</label><input type="date" class="fi" id="fTo" data-onchange="renderLaporan"></div>
     </div>
   </div>
   <div class="u-gap8 u-mb8 u-grid2-nogap">
-    <div><label class="fl">Tipe</label><select class="fs" id="fTipe" onchange="renderLaporan()"><option value="semua">Semua</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select></div>
-    <div><label class="fl">Kategori</label><select class="fs" id="fKat" onchange="onFKatChange()"><option value="semua">Semua</option></select></div>
+    <div><label class="fl">Tipe</label><select class="fs" id="fTipe" data-onchange="renderLaporan"><option value="semua">Semua</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select></div>
+    <div><label class="fl">Kategori</label><select class="fs" id="fKat" data-onchange="onFKatChange"><option value="semua">Semua</option></select></div>
   </div>
   <div class="u-gap8 u-mb8 u-grid2-nogap">
-    <div><label class="fl">Sub Kategori</label><select class="fs" id="fSub" onchange="renderLaporan()"><option value="semua">Semua</option></select></div>
-    <div><label class="fl">Akun</label><select class="fs" id="fAcc" onchange="renderLaporan()"><option value="semua">Semua Akun</option></select></div>
+    <div><label class="fl">Sub Kategori</label><select class="fs" id="fSub" data-onchange="renderLaporan"><option value="semua">Semua</option></select></div>
+    <div><label class="fl">Akun</label><select class="fs" id="fAcc" data-onchange="renderLaporan"><option value="semua">Semua Akun</option></select></div>
   </div>
-  <div class="fg u-mb8"><label class="fl">Metode (Cicilan/Tagihan)</label><select class="fs" id="fMethod" onchange="renderLaporan()">
+  <div class="fg u-mb8"><label class="fl">Metode (Cicilan/Tagihan)</label><select class="fs" id="fMethod" data-onchange="renderLaporan">
     <option value="semua">Semua Metode</option>
     <option value="tunai">💵 Tunai</option>
     <option value="cicilan">💳 Cicilan</option>
@@ -1211,7 +1119,7 @@ window.location.reload();
       <div class="stat-val" id="accGridTotal" style="font-size:17px">Rp 0</div>
     </div>
     <div class="fg" style="margin-bottom:10px"><label class="fl">Filter Kepemilikan</label>
-      <select class="fs" id="accOwnFilter" onchange="renderAccGrid()">
+      <select class="fs" id="accOwnFilter" data-onchange="renderAccGrid">
         <option value="ALL">Semua</option>
         <option value="SELF">SELF</option>
         <option value="INVESTOR">INVESTOR</option>
@@ -1294,7 +1202,7 @@ window.location.reload();
     <div class="kasir-toolbar">
       <div class="search-wrap u-mb10">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input class="fi" id="kasirSearch" style="padding-left:38px" placeholder="Cari produk..." oninput="Kasir.onSearch(this.value)" autocomplete="off">
+        <input class="fi" id="kasirSearch" style="padding-left:38px" placeholder="Cari produk..." data-oninput="Kasir.onSearch" data-oninput-args='["$value"]' autocomplete="off">
       </div>
       <div class="u-flex u-gap8" style="align-items:center">
         <div class="u-flex u-gap8 u-flex1" id="kasirPriceToggle">
@@ -1323,18 +1231,18 @@ window.location.reload();
 
       <div class="kasir-cart-fields">
         <div class="u-grid2">
-          <div class="fg"><label class="fl">Diskon (Rp)</label><input type="number" class="fi" id="kasirDiskon" placeholder="0" inputmode="numeric" oninput="Kasir.renderCart()"></div>
-          <div class="fg"><label class="fl">Ongkos Kirim (Rp)</label><input type="number" class="fi" id="kasirOngkir" placeholder="0" inputmode="numeric" oninput="Kasir.renderCart()"></div>
+          <div class="fg"><label class="fl">Diskon (Rp)</label><input type="number" class="fi" id="kasirDiskon" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div>
+          <div class="fg"><label class="fl">Ongkos Kirim (Rp)</label><input type="number" class="fi" id="kasirOngkir" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div>
         </div>
         <div class="fg"><label class="fl">Nama Pembeli (opsional)</label><input type="text" class="fi" id="kasirCustName" placeholder="Bu Rina" autocomplete="off"></div>
         <div class="fg"><label class="fl">No. HP (opsional)</label><input type="text" class="fi" id="kasirCustPhone" placeholder="08xx" autocomplete="off"></div>
         <!-- kw-kasir-audit-1: Alamat opsional — dulu Kasir selalu kirim address:'' kosong ke recordShopSale(), beda dari Order yang punya field ini (oCustAddr). Additive, tidak mengubah recordShopSale(). -->
         <div class="fg"><label class="fl">Alamat (opsional)</label><input type="text" class="fi" id="kasirCustAddr" placeholder="Alamat kirim" autocomplete="off"></div>
-        <div class="fg"><label class="fl">Uang Masuk ke Akun</label><select class="fs" id="kasirAcc" onchange="Kasir.onAccSelectChange()"></select></div>
+        <div class="fg"><label class="fl">Uang Masuk ke Akun</label><select class="fs" id="kasirAcc" data-onchange="Kasir.onAccSelectChange"></select></div>
         <!-- kw-kasir-audit-2: Toggle "sudah diserahkan" — dulu Kasir selalu hardcode delivered:true. Sama pola dgn oDelivered di orderModal. -->
         <div class="setting-item" style="padding:10px 0">
           <div id="kasirDeliveredLbl" style="font-size:12px;font-weight:600">✅ Sudah diserahkan ke pelanggan</div>
-          <label class="tgl-switch"><input type="checkbox" id="kasirDelivered" checked onchange="toggleKasirDeliveredField()"><span class="tgl-track"></span></label>
+          <label class="tgl-switch"><input type="checkbox" id="kasirDelivered" checked data-onchange="toggleKasirDeliveredField"><span class="tgl-track"></span></label>
         </div>
         <!-- kw-kasir-audit-3: DP/Uang Diterima — dulu Kasir selalu dianggap lunas penuh, beda dari Order (oDP) yang sisa Total-DP-nya otomatis tercatat sbg Piutang. -->
         <div class="fg"><label class="fl">Uang Diterima / DP (Rp) <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(opsional, kosongkan kalau lunas penuh)</span></label><input type="number" class="fi" id="kasirDP" placeholder="Kosongkan = lunas penuh" inputmode="numeric"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kalau diisi lebih kecil dari Total Tagihan, sisanya otomatis tercatat sbg Piutang.</div></div>
@@ -1448,8 +1356,8 @@ window.location.reload();
     </div>
     <div class="u-dnone u-mb10" id="shopCustomRange">
       <div class="u-grid2">
-        <div><label class="fl">Dari</label><input type="date" class="fi" id="shopFrom" onchange="renderShop()"></div>
-        <div><label class="fl">Sampai</label><input type="date" class="fi" id="shopTo" onchange="renderShop()"></div>
+        <div><label class="fl">Dari</label><input type="date" class="fi" id="shopFrom" data-onchange="renderShop"></div>
+        <div><label class="fl">Sampai</label><input type="date" class="fi" id="shopTo" data-onchange="renderShop"></div>
       </div>
     </div>
     <div class="card u-mt12">
@@ -1511,8 +1419,8 @@ window.location.reload();
     </div>
     <div class="u-dnone u-mb10" id="lapCustomRange">
       <div class="u-grid2">
-        <div><label class="fl">Dari</label><input type="date" class="fi" id="lapFrom" onchange="renderShopLaporan()"></div>
-        <div><label class="fl">Sampai</label><input type="date" class="fi" id="lapTo" onchange="renderShopLaporan()"></div>
+        <div><label class="fl">Dari</label><input type="date" class="fi" id="lapFrom" data-onchange="renderShopLaporan"></div>
+        <div><label class="fl">Sampai</label><input type="date" class="fi" id="lapTo" data-onchange="renderShopLaporan"></div>
       </div>
     </div>
 
@@ -1967,8 +1875,8 @@ window.location.reload();
   </div>
   <div class="u-dnone u-mb10" id="cnCustomRange">
     <div class="u-grid2">
-      <div><label class="fl">Dari</label><input type="date" class="fi" id="cnFrom" onchange="renderCnTab()"></div>
-      <div><label class="fl">Sampai</label><input type="date" class="fi" id="cnTo" onchange="renderCnTab()"></div>
+      <div><label class="fl">Dari</label><input type="date" class="fi" id="cnFrom" data-onchange="renderCnTab"></div>
+      <div><label class="fl">Sampai</label><input type="date" class="fi" id="cnTo" data-onchange="renderCnTab"></div>
     </div>
   </div>
   </div>
@@ -2100,7 +2008,7 @@ window.location.reload();
       <summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">📦 Stok Sparepart</span></summary>
       <div class="summary-body-pad">
         <div class="u-hint10">Kelola stok fisik sparepart di gudang/bengkel. Setiap item bisa dikaitkan ke kategori servis di atas supaya kodenya konsisten. Stok di bawah minimum akan ditandai merah.</div>
-        <div class="fg u-mb10"><input type="text" class="fi" id="stockSearchInput" placeholder="🔍 Cari nama part / kode / kategori / catatan..." autocomplete="off" oninput="Sparepart.onStockSearchInput(this.value)"></div>
+        <div class="fg u-mb10"><input type="text" class="fi" id="stockSearchInput" placeholder="🔍 Cari nama part / kode / kategori / catatan..." autocomplete="off" data-oninput="Sparepart.onStockSearchInput" data-oninput-args='["$value"]'></div>
         <div id="stockList"></div>
         <div class="div"></div>
         <button class="btn btn-primary btn-full btn-sm" data-action="openStockModal" aria-label="Edit/Buka">+ Tambah Stok Sparepart</button>
@@ -2119,7 +2027,7 @@ window.location.reload();
           <div class="import-zone-icon">📂</div>
           <div class="import-zone-text">Tap untuk pilih file CSV/JSON</div>
         </label>
-        <input class="u-abs" type="file" id="carImportFileInput" accept=".csv,.json,text/csv,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" onchange="importCarData(event)">
+        <input class="u-abs" type="file" id="carImportFileInput" accept=".csv,.json,text/csv,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" data-onchange="importCarData" data-onchange-args='["$event"]'>
         <div id="carImportResult"></div>
       </div>
     </details>
@@ -2189,7 +2097,7 @@ window.location.reload();
       <div class="card-title">🌙 Zakat Fitrah <span class="card-collapse-toggle" id="pzZakatFitrahCard-chev" data-action="toggleCardCollapse" data-args='["pzZakatFitrahCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
       <div class="card-collapse-body" id="pzZakatFitrahCard-cbody">
       <div class="u-hint10">Referensi BAZNAS 2026: Rp37.500/jiwa (setara 2,5kg beras). Bisa beda tiap daerah — cek BAZNAS setempat.</div>
-      <div class="fg u-mb10"><label class="fl">Jumlah Anggota Keluarga <span class="u-fw400 u-t2">(otomatis dari Profil Pribadi, bisa dikoreksi)</span></label><input type="number" class="fi" id="zfJiwa" value="1" min="1" oninput="hitungZakatFitrah()"></div>
+      <div class="fg u-mb10"><label class="fl">Jumlah Anggota Keluarga <span class="u-fw400 u-t2">(otomatis dari Profil Pribadi, bisa dikoreksi)</span></label><input type="number" class="fi" id="zfJiwa" value="1" min="1" data-oninput="hitungZakatFitrah"></div>
       <div class="stat-box"><div class="stat-label">Total Zakat Fitrah Keluarga</div><div class="stat-val green" id="zfTotal">Rp 0</div></div>
       </div>
     </div>
@@ -2226,11 +2134,11 @@ window.location.reload();
       <div class="u-flex u-jcb u-aic u-fs12 u-r10 u-mb8" style="padding:8px 10px;background:var(--surface3)"><span class="u-t2">📅 Lapor SPT Tahunan (batas 31 Maret)</span><span id="pphSptBadge" class="u-fw700">-</span></div>
       <button class="btn btn-ghost btn-full btn-sm u-mb4" data-action="ikatSptTagihan">🔔 Ikat ke Tagihan</button>
       <div class="u-fs11 u-t2 u-mb10 u-lh15" id="sptBillStatus"></div>
-      <div class="fg u-mb8"><label class="fl">Penghasilan Bruto / Bulan <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphBruto" placeholder="0" oninput="hitungPPh21()"></div>
+      <div class="fg u-mb8"><label class="fl">Penghasilan Bruto / Bulan <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphBruto" placeholder="0" data-oninput="hitungPPh21"></div>
       <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanReceipt" data-args='["pphBruto", null, null]'>📷 Scan Bukti Potong (1721-A1)</button>
       <button class="btn btn-ghost btn-sm btn-full u-mb10" data-action="isiPPhDariTransaksi">🔄 Isi dari Rata-rata Pemasukan</button>
       <div class="fg u-mb8"><label class="fl">Status PTKP</label>
-        <select class="fs" id="pphStatus" onchange="hitungPPh21()">
+        <select class="fs" id="pphStatus" data-onchange="hitungPPh21">
           <option value="TK0">TK/0 — Belum Kawin, 0 Tanggungan</option>
           <option value="TK1">TK/1 — Belum Kawin, 1 Tanggungan</option>
           <option value="TK2">TK/2 — Belum Kawin, 2 Tanggungan</option>
@@ -2241,7 +2149,7 @@ window.location.reload();
           <option value="K3">K/3 — Kawin, 3 Tanggungan</option>
         </select>
       </div>
-      <div class="fg u-mb10"><label class="fl">Iuran Pensiun/JHT Ditanggung Sendiri (opsional, /bulan) <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphIuran" placeholder="0" oninput="hitungPPh21()"></div>
+      <div class="fg u-mb10"><label class="fl">Iuran Pensiun/JHT Ditanggung Sendiri (opsional, /bulan) <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphIuran" placeholder="0" data-oninput="hitungPPh21"></div>
 
       <div class="hr-divider"></div>
       <div id="pphResultBox">
@@ -2281,15 +2189,15 @@ window.location.reload();
       <div class="u-hint10">Dihitung dari <b>NJOP</b> (Nilai Jual Objek Pajak) tanah + bangunan, dikurangi <b>NJOPTKP</b>, dikali tarif PBB-P2. Sejak UU HKPD, tarif ditetapkan Pemda masing-masing (maks 0,5%) — cek Perda/SPPT setempat untuk angka pasti.</div>
       <div class="fg u-mb10">
         <label class="fl">Isi Otomatis dari Buku Aset (opsional)</label>
-        <select class="fs" id="pbbAssetPick" onchange="pilihAsetPBB()">
+        <select class="fs" id="pbbAssetPick" data-onchange="pilihAsetPBB">
           <option value="">— Pilih aset Tanah/Rumah —</option>
         </select>
       </div>
       <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanTanggalDariFoto" data-args='["pbbJatuhTempo"]'>📷 Scan Tanggal Jatuh Tempo (SPPT)</button>
-      <div class="fg u-mb8"><label class="fl" title="NJOP = Nilai Jual Objek Pajak, dasar perhitungan PBB berdasarkan harga pasar tanah/bangunan versi pemerintah">NJOP Bumi (Tanah) ℹ️</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBumi" placeholder="0" oninput="hitungPBB()"></div>
-      <div class="fg u-mb8"><label class="fl">NJOP Bangunan (opsional, kosongkan jika tanah kosong)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBangunan" placeholder="0" oninput="hitungPBB()"></div>
-      <div class="fg u-mb8"><label class="fl">NJOPTKP (Nilai Tidak Kena Pajak)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjoptkp" placeholder="0" oninput="hitungPBB()"></div>
-      <div class="fg u-mb10"><label class="fl">Tarif PBB-P2 (%, cek Perda daerah — umumnya 0,1%–0,5%)</label><input type="text" inputmode="decimal" class="fi" id="pbbTarif" placeholder="0.5" oninput="hitungPBB()"></div>
+      <div class="fg u-mb8"><label class="fl" title="NJOP = Nilai Jual Objek Pajak, dasar perhitungan PBB berdasarkan harga pasar tanah/bangunan versi pemerintah">NJOP Bumi (Tanah) ℹ️</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBumi" placeholder="0" data-oninput="hitungPBB"></div>
+      <div class="fg u-mb8"><label class="fl">NJOP Bangunan (opsional, kosongkan jika tanah kosong)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBangunan" placeholder="0" data-oninput="hitungPBB"></div>
+      <div class="fg u-mb8"><label class="fl">NJOPTKP (Nilai Tidak Kena Pajak)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjoptkp" placeholder="0" data-oninput="hitungPBB"></div>
+      <div class="fg u-mb10"><label class="fl">Tarif PBB-P2 (%, cek Perda daerah — umumnya 0,1%–0,5%)</label><input type="text" inputmode="decimal" class="fi" id="pbbTarif" placeholder="0.5" data-oninput="hitungPBB"></div>
       <div class="hr-divider"></div>
       <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">NJOP Total</span><span id="pbbNjopTotal" class="u-fw700">Rp 0</span></div>
       <div class="u-flex u-jcb u-fs13 u-mb10" style="padding-top:6px;border-top:1px solid var(--border)"><span class="u-ctext">NJOP Kena Pajak</span><span class="u-fw800" id="pbbNjopKenaPajak">Rp 0</span></div>
@@ -2319,9 +2227,9 @@ window.location.reload();
     <div class="summary-body-pad">
       <div class="u-hint10">Nilai ini berubah dari waktu ke waktu. Sesuaikan manual sesuai info terbaru dari <b>logammulia.com</b> (harga emas) &amp; <b>baznas.go.id</b> (nisab), atau minta AI cek otomatis di bawah.</div>
       <div class="u-dnone u-fs11 u-r8 u-mb10 u-lh14" id="refCheckReminder" style="padding:8px 10px"></div>
-      <div class="fg u-mb8"><label class="fl">Harga Emas / Gram (untuk nisab zakat maal)</label><input type="text" inputmode="numeric" class="fi" id="pzHargaEmas" oninput="savePajakSettings()"></div>
-      <div class="fg u-mb8"><label class="fl">Nisab Zakat Penghasilan / Bulan</label><input type="text" inputmode="numeric" class="fi" id="pzNisabBulan" oninput="savePajakSettings()"></div>
-      <div class="fg u-mb10"><label class="fl">Zakat Fitrah / Jiwa</label><input type="text" inputmode="numeric" class="fi" id="pzFitrahJiwa" oninput="savePajakSettings()"></div>
+      <div class="fg u-mb8"><label class="fl">Harga Emas / Gram (untuk nisab zakat maal)</label><input type="text" inputmode="numeric" class="fi" id="pzHargaEmas" data-oninput="savePajakSettings"></div>
+      <div class="fg u-mb8"><label class="fl">Nisab Zakat Penghasilan / Bulan</label><input type="text" inputmode="numeric" class="fi" id="pzNisabBulan" data-oninput="savePajakSettings"></div>
+      <div class="fg u-mb10"><label class="fl">Zakat Fitrah / Jiwa</label><input type="text" inputmode="numeric" class="fi" id="pzFitrahJiwa" data-oninput="savePajakSettings"></div>
       <button class="btn btn-ghost btn-full" id="refAiCheckBtn" data-action="RefAI.check">🔍 Cek Update via AI</button>
       <div class="u-fs11 u-ctext3 u-mt6 u-lh14" id="refCheckedNote"></div>
       <div class="u-fs11 u-ctext3 u-mt8 u-lh14">ℹ️ NJOPTKP &amp; Tarif PBB-P2 (di kartu Estimasi PBB) <b>tidak</b> ikut dicek AI — nilainya beda tiap daerah, cek Perda/SPPT setempat sendiri.</div>
@@ -2330,9 +2238,9 @@ window.location.reload();
 </div>
 
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
-<script>document.write(MODAL_HTML[0]);</script><!-- modal:refAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="0"></script><!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
-<script>document.write(MODAL_HTML[1]);</script><!-- modal:lbHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="1"></script><!-- modal:lbHistoryModal externalized to modals.js -->
 
 <!-- ASET (Navigation Asset, dipisah dari Pajak — bisa dibuka lewat nav-item bottom-nav
      "Aset" (menggantikan slot "AI" lama), maupun lewat kartu Dashboard Hub kategori
@@ -2408,7 +2316,7 @@ window.location.reload();
       <div class="card-collapse-body" id="pzAsetCard-cbody">
       <div class="u-hint10">Catat tanah, rumah, kendaraan, emas, saham, reksadana, kripto, atau investasi lain di sini. Tandai "Hitung ke Zakat Maal" hanya untuk aset produktif/dagang (emas, deposito, saham, tanah investasi) — bukan rumah tinggal atau kendaraan pakai sehari-hari.</div>
       <div class="fg" style="margin-bottom:10px"><label class="fl">Filter Kepemilikan</label>
-        <select class="fs" id="assetOwnFilter" onchange="Aset.renderList()">
+        <select class="fs" id="assetOwnFilter" data-onchange="Aset.renderList">
           <option value="ALL">Semua</option>
           <option value="SELF">SELF</option>
           <option value="INVESTOR">INVESTOR</option>
@@ -2422,10 +2330,10 @@ window.location.reload();
         <button class="btn btn-ghost btn-sm" data-action="Aset.exportXLSX">⬇️ Export Aset (Excel)</button>
         <button class="btn btn-ghost btn-sm" data-action="clickAssetImportFile">⬆️ Import Aset</button>
       </div>
-      <input type="file" id="assetImportFile" accept=".xlsx,.xls" style="display:none" onchange="Aset.importXLSX(event)">
+      <input type="file" id="assetImportFile" accept=".xlsx,.xls" style="display:none" data-onchange="Aset.importXLSX" data-onchange-args='["$event"]'>
       <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="GoldImport.open">📋 Impor Nota Emas (Massal)</button>
       <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="GoldZakat.open">🕌 Analisa Emas & Zakat</button>
-      <div class="fg u-mt10" style="margin-bottom:0"><label class="fl">Utang Lain-lain (belum tercatat di Buku Utang)</label><input type="text" inputmode="numeric" class="fi" id="zmUtang" placeholder="0" oninput="hitungZakatMaal()"></div>
+      <div class="fg u-mt10" style="margin-bottom:0"><label class="fl">Utang Lain-lain (belum tercatat di Buku Utang)</label><input type="text" inputmode="numeric" class="fi" id="zmUtang" placeholder="0" data-oninput="hitungZakatMaal"></div>
       <div class="u-fs11 u-ctext3 u-mt4">💡 Untuk utang dengan nama pemberi pinjaman, bunga, & jatuh tempo yang jelas, catat di kartu 📕 Buku Utang di 🕌 Pajak &amp; Zakat supaya lebih rapi & bisa dipantau per-item.</div>
       </div>
     </div>
@@ -2452,8 +2360,8 @@ window.location.reload();
       <div class="card-title">🧾 Pajak Aset</div>
       <div class="u-hint10">Estimasi <b>PBB</b> (Pajak Bumi &amp; Bangunan) utk aset Tanah/Rumah-Bangunan &amp; <b>Zakat Maal per Aset</b> khusus aset yang ditandai "Hitung ke Zakat Maal" di Buku Aset — <b>BUKAN</b> kalkulator Zakat Maal lengkap. Angka di sini HANYA dari daftar aset (Saldo Akun, Piutang, &amp; Utang TIDAK ikut dihitung). Untuk kewajiban Zakat Maal yang sebenarnya (harta cair + aset + piutang − utang), pakai kartu 💰 Zakat Maal di tab 🕌 Pajak. NJOP di sini didekati dari field "Nilai" aset (bukan NJOP resmi SPPT) — cek Perda/SPPT setempat utk angka pasti.</div>
       <div class="u-grid2 u-gap8 u-mb10">
-        <div><label class="fl">NJOPTKP (Rp)</label><input type="text" inputmode="numeric" class="fi" id="pajakAsetNjoptkp" placeholder="12000000" oninput="PajakAset.updateSetting('njoptkp',this.value)"></div>
-        <div><label class="fl">Tarif PBB-P2 (%, cek Perda daerah)</label><input type="text" inputmode="decimal" class="fi" id="pajakAsetTarif" placeholder="0.5" oninput="PajakAset.updateSetting('tarifPersen',this.value)"></div>
+        <div><label class="fl">NJOPTKP (Rp)</label><input type="text" inputmode="numeric" class="fi" id="pajakAsetNjoptkp" placeholder="12000000" data-oninput="PajakAset.updateSetting" data-oninput-args='["njoptkp","$value"]'></div>
+        <div><label class="fl">Tarif PBB-P2 (%, cek Perda daerah)</label><input type="text" inputmode="decimal" class="fi" id="pajakAsetTarif" placeholder="0.5" data-oninput="PajakAset.updateSetting" data-oninput-args='["tarifPersen","$value"]'></div>
       </div>
       <div class="budget-summary-grid u-mb10">
         <div class="budget-sum-box"><div class="budget-sum-val red" id="assetPajakTotalPBB">Rp 0</div><div class="budget-sum-lbl">Estimasi PBB/Tahun</div></div>
@@ -2488,7 +2396,7 @@ window.location.reload();
       <div class="u-hint10">Ilustrasi pembagian dana ke beberapa jenis instrumen berdasarkan profil risiko — <b>bukan rekomendasi produk/investasi personal</b>, cuma gambaran umum untuk bahan pertimbangan. Sesuaikan dgn kondisi, tujuan, dan toleransi risiko kamu sendiri.</div>
       <div class="fg u-mb10"><label class="fl">Dana yang Mau Dialokasikan (Rp)</label>
         <div class="amt-wrap">
-          <input type="text" class="fi fi-calc-only" id="aaDana" placeholder="0" inputmode="decimal" oninput="AlokasiAset.onDanaInput()" onblur="evalAmtExpr('aaDana')">
+          <input type="text" class="fi fi-calc-only" id="aaDana" placeholder="0" inputmode="decimal" data-oninput="AlokasiAset.onDanaInput" data-onblur="evalAmtExpr" data-onblur-args='["aaDana"]'>
           <button type="button" class="calc-trigger" data-action="openCalc" data-args='["aaDana"]' title="Buka kalkulator" aria-label="Buka kalkulator">🧮</button>
         </div>
         <div class="u-fs11 u-t2 u-mt4">Default terisi dari total saldo akun kamu saat ini — boleh diedit manual.</div>
@@ -2618,7 +2526,7 @@ window.location.reload();
   <div class="card u-p14">
     <div class="chat-container" id="chatBox"></div>
     <div class="chat-input-row">
-      <input class="chat-input" id="chatInput" placeholder="Tanya soal keuangan Anda..." onkeydown="if(event.key==='Enter')sendChat()">
+      <input class="chat-input" id="chatInput" placeholder="Tanya soal keuangan Anda..." data-onkeydown="chatInputEnterSend" data-onkeydown-args='["$event"]'>
       <button class="chat-send" id="chatSendBtn" data-action="sendChat" aria-label="Kirim pesan">↑</button>
     </div>
   </div>
@@ -2632,7 +2540,7 @@ window.location.reload();
 </div>
 
 <div class="card" style="margin-bottom:14px">
-  <input type="text" class="fi" id="stgSearchInput" placeholder="🔍 Cari pengaturan... (mis. PIN, Google Drive, tema)" oninput="stgSearch(this.value)" aria-label="Cari pengaturan">
+  <input type="text" class="fi" id="stgSearchInput" placeholder="🔍 Cari pengaturan... (mis. PIN, Google Drive, tema)" data-oninput="stgSearch" data-oninput-args='["$value"]' aria-label="Cari pengaturan">
   <div class="u-fs12 u-t2 u-mt8 u-dnone" id="stgSearchResult"></div>
 </div>
 
@@ -2652,29 +2560,29 @@ window.location.reload();
 
   <div class="card">
     <div class="card-title">👤 Profil</div>
-    <div class="fg"><label class="fl">Nama Panggilan</label><input class="fi" id="sNama" placeholder="W" oninput="autoSaveProfile()"></div>
+    <div class="fg"><label class="fl">Nama Panggilan</label><input class="fi" id="sNama" placeholder="W" data-oninput="autoSaveProfile"></div>
     <div class="fg"><label class="fl">Tipe Gaji</label>
-      <select class="fs" id="sTipeGaji" onchange="onTipeGajiChange();autoSaveProfile()">
+      <select class="fs" id="sTipeGaji" data-onchange="onTipeGajiChange,autoSaveProfile">
         <option value="harian">Harian/Borongan (dari Absensi)</option>
         <option value="mingguanTetap">Mingguan Tetap</option>
         <option value="bulananTetap">Bulanan Tetap</option>
       </select>
       <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Menentukan bagaimana pokok gaji mingguan (💰 Sabtu Gajian!) dihitung. "Harian/Borongan" pakai jumlah pokok harian dari Absensi seperti biasa (tidak berubah).</div>
     </div>
-    <div class="fg" id="sGajiHarianWrap"><label class="fl">Gaji Pokok Harian (Rp)</label><input class="fi" id="sGaji" type="number" inputmode="numeric" oninput="autoSaveProfile()"></div>
-    <div class="fg u-dnone" id="sGajiMingguanWrap"><label class="fl">Gaji Pokok Mingguan (Rp)</label><input class="fi" id="sGajiPokokMingguan" type="number" inputmode="numeric" placeholder="0" oninput="autoSaveProfile()"><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Nominal flat per minggu -- lembur/tambahan/potongan harian dari Absensi tetap ikut dijumlah di atas nominal ini.</div></div>
+    <div class="fg" id="sGajiHarianWrap"><label class="fl">Gaji Pokok Harian (Rp)</label><input class="fi" id="sGaji" type="number" inputmode="numeric" data-oninput="autoSaveProfile"></div>
+    <div class="fg u-dnone" id="sGajiMingguanWrap"><label class="fl">Gaji Pokok Mingguan (Rp)</label><input class="fi" id="sGajiPokokMingguan" type="number" inputmode="numeric" placeholder="0" data-oninput="autoSaveProfile"><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Nominal flat per minggu -- lembur/tambahan/potongan harian dari Absensi tetap ikut dijumlah di atas nominal ini.</div></div>
     <div class="fg u-dnone" id="sGajiBulananWrap">
-      <label class="fl">Gaji Bulanan Tetap (Rp)</label><input class="fi" id="sGajiBulananTetap" type="number" inputmode="numeric" placeholder="0" oninput="autoSaveProfile()">
-      <label class="fl" style="margin-top:10px">Tanggal Gajian (1-31)</label><input class="fi" id="sGajiBulananTanggal" type="number" min="1" max="31" inputmode="numeric" placeholder="25" oninput="autoSaveProfile()">
+      <label class="fl">Gaji Bulanan Tetap (Rp)</label><input class="fi" id="sGajiBulananTetap" type="number" inputmode="numeric" placeholder="0" data-oninput="autoSaveProfile">
+      <label class="fl" style="margin-top:10px">Tanggal Gajian (1-31)</label><input class="fi" id="sGajiBulananTanggal" type="number" min="1" max="31" inputmode="numeric" placeholder="25" data-oninput="autoSaveProfile">
       <button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="openMonthlyGajiModal">💰 Catat Gaji Bulan Ini</button>
     </div>
-    <div class="fg"><label class="fl">Kiriman Mingguan (Rp)</label><input class="fi" id="sKirim" type="number" inputmode="numeric" oninput="autoSaveProfile()"></div>
-    <div class="fg"><label class="fl">Kali Lipat Lembur (dari upah/jam)</label><input class="fi" id="sLemburMx" type="number" step="0.1" inputmode="decimal" placeholder="1.5" oninput="autoSaveProfile()"></div>
-    <div class="fg"><label class="fl">Tarif Hari Minggu (Rp)</label><input class="fi" id="sTarifMinggu" type="number" inputmode="numeric" placeholder="139000" oninput="autoSaveProfile()"></div>
+    <div class="fg"><label class="fl">Kiriman Mingguan (Rp)</label><input class="fi" id="sKirim" type="number" inputmode="numeric" data-oninput="autoSaveProfile"></div>
+    <div class="fg"><label class="fl">Kali Lipat Lembur (dari upah/jam)</label><input class="fi" id="sLemburMx" type="number" step="0.1" inputmode="decimal" placeholder="1.5" data-oninput="autoSaveProfile"></div>
+    <div class="fg"><label class="fl">Tarif Hari Minggu (Rp)</label><input class="fi" id="sTarifMinggu" type="number" inputmode="numeric" placeholder="139000" data-oninput="autoSaveProfile"></div>
     <div class="fg u-mb0">
       <div class="setting-item" style="padding:0">
         <div><div class="setting-label">🎯 Insight Target Mingguan</div><div class="setting-sub">Tampilkan kartu perbandingan Kiriman Mingguan vs gaji minggu ini di kartu Absensi</div></div>
-        <label class="tgl-switch"><input type="checkbox" id="sInsightMingguanAktif" checked onchange="autoSaveProfile()"><span class="tgl-track"></span></label>
+        <label class="tgl-switch"><input type="checkbox" id="sInsightMingguanAktif" checked data-onchange="autoSaveProfile"><span class="tgl-track"></span></label>
       </div>
     </div>
   </div>
@@ -2682,7 +2590,7 @@ window.location.reload();
   <div class="card">
     <div class="card-title">🪪 Profil Pribadi</div>
     <div class="u-hint10">Dipakai otomatis di seluruh aplikasi: estimasi usia di Kebebasan Finansial (FI) & status PTKP di kalkulator PPh 21 — tidak perlu isi ulang manual tiap buka fitur itu. Bisa diedit kapan saja di sini.</div>
-    <div class="fg"><label class="fl">Tanggal Lahir</label><input type="date" class="fi" id="sTanggalLahir" oninput="autoSaveProfile()"></div>
+    <div class="fg"><label class="fl">Tanggal Lahir</label><input type="date" class="fi" id="sTanggalLahir" data-oninput="autoSaveProfile"></div>
     <div class="u-fs12 u-t2 u-dnone" id="sUsiaPreview" style="margin:-6px 0 10px">Usia: <b class="u-ctext" id="sUsiaVal">-</b></div>
     <div class="fg">
       <label class="fl">Status Perkawinan</label>
@@ -2723,33 +2631,33 @@ window.location.reload();
   <div class="card">
     <div class="card-title">🤖 AI Asisten</div>
     <div class="fg u-mb6"><label class="fl">Provider AI</label>
-      <select class="fs" id="sApiProvider" oninput="autoSaveProfile();toggleApiKeyHint()">
+      <select class="fs" id="sApiProvider" data-oninput="autoSaveProfile,toggleApiKeyHint">
         <option value="claude">Claude (Anthropic)</option>
         <option value="gemini">Gemini (Google)</option>
       </select>
     </div>
-    <div class="fg u-mb6"><label class="fl">API Key</label><input class="fi" id="sApiKey" type="password" placeholder="Masukkan API key..." oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb6"><label class="fl">API Key</label><input class="fi" id="sApiKey" type="password" placeholder="Masukkan API key..." data-oninput="autoSaveProfile"></div>
     <div class="u-fs12 u-t2 u-lh15" id="apiKeyHint">Fitur chat AI butuh API key sendiri karena aplikasi ini jalan langsung di browser Anda (bukan lewat server). Key disimpan terenkripsi di HP ini (memakai PIN Anda sebagai kunci), tidak dikirim ke mana pun selain ke penyedia AI yang dipilih, dan TIDAK pernah ikut ke file backup. Catatan: karena PIN cuma 4 digit, enkripsi ini melindungi dari orang lain yang sekadar melihat isi penyimpanan HP — bukan dari orang yang tahu PIN Anda (yang otomatis juga bisa buka aplikasi ini).</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Peringatan Boros (% dari rata-rata)</label><input class="fi" id="sAIFinanceThreshold" type="number" min="100" step="10" inputmode="numeric" placeholder="150" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Peringatan Boros (% dari rata-rata)</label><input class="fi" id="sAIFinanceThreshold" type="number" min="100" step="10" inputmode="numeric" placeholder="150" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan memberi peringatan kalau pengeluaran bulan berjalan melebihi persentase ini dari rata-rata pengeluaran 3 bulan terakhir. Default 150% (1,5×).</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Margin Tipis Cobek (%)</label><input class="fi" id="sAIDeliveryThreshold" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="10" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Margin Tipis Cobek (%)</label><input class="fi" id="sAIDeliveryThreshold" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="10" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan memberi peringatan kalau margin transaksi Cobek yang baru disimpan di bawah persentase ini. Default 10%.</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Saldo Rendah (x rata-rata pengeluaran)</label><input class="fi" id="sAIFinanceLowBalance" type="number" min="0.1" max="2" step="0.1" inputmode="decimal" placeholder="0.5" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Saldo Rendah (x rata-rata pengeluaran)</label><input class="fi" id="sAIFinanceLowBalance" type="number" min="0.1" max="2" step="0.1" inputmode="decimal" placeholder="0.5" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan memberi peringatan kalau saldo total akun di bawah kelipatan ini dari rata-rata pengeluaran bulanan. Default 0,5×.</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Turun Efisiensi BBM (%)</label><input class="fi" id="sAIVehicleFuelDrop" type="number" min="5" max="90" step="1" inputmode="numeric" placeholder="20" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Turun Efisiensi BBM (%)</label><input class="fi" id="sAIVehicleFuelDrop" type="number" min="5" max="90" step="1" inputmode="numeric" placeholder="20" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan memberi peringatan kalau konsumsi BBM (km/L) pengisian Full Tank terakhir turun sebesar persentase ini dari rata-rata histori. Default 20%.</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Stok Menipis (pcs)</label><input class="fi" id="sAIDeliveryLowStock" type="number" min="0" step="1" inputmode="numeric" placeholder="2" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Stok Menipis (pcs)</label><input class="fi" id="sAIDeliveryLowStock" type="number" min="0" step="1" inputmode="numeric" placeholder="2" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan memberi peringatan kalau ada produk Shop/Cobek dengan stok di angka ini atau kurang. Default 2 pcs.</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Confidence Scan OCR (%)</label><input class="fi" id="sOcrMinConfidence" type="number" min="0" max="100" step="5" inputmode="numeric" placeholder="50" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Confidence Scan OCR (%)</label><input class="fi" id="sOcrMinConfidence" type="number" min="0" max="100" step="5" inputmode="numeric" placeholder="50" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">Hasil scan Universal OCR (➕ Akun dari foto Bank/E-Wallet/Bibit/Jago) dengan confidence di bawah persentase ini akan ditandai ⚠️ perlu dicek manual di layar preview. Default 50%.</div>
     <div class="hr-divider"></div>
-    <div class="fg u-mb0"><label class="fl">Ambang Minimal Zakat Maal (Rp)</label><input class="fi" id="sAIAssetZakatMin" type="number" min="0" step="10000" inputmode="numeric" placeholder="0" oninput="autoSaveProfile()"></div>
+    <div class="fg u-mb0"><label class="fl">Ambang Minimal Zakat Maal (Rp)</label><input class="fi" id="sAIAssetZakatMin" type="number" min="0" step="10000" inputmode="numeric" placeholder="0" data-oninput="autoSaveProfile"></div>
     <div class="u-fs11 u-t2 u-lh15">AI akan mengingatkan zakat hanya kalau estimasi Zakat Maal di atas nominal ini. Default Rp0 (selalu diingatkan selama ada zakat).</div>
   </div>
 
@@ -2804,11 +2712,11 @@ window.location.reload();
 
       <div class="setting-item">
         <div class="setting-label">Mode Ringkas</div>
-        <label class="tgl-switch"><input type="checkbox" id="dashCompactModeToggle" onchange="DashboardSettings.toggleCompactMode(this.checked)"><span class="tgl-track"></span></label>
+        <label class="tgl-switch"><input type="checkbox" id="dashCompactModeToggle" data-onchange="DashboardSettings.toggleCompactMode" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
       </div>
 
       <div class="fg u-mb0"><label class="fl">Kepadatan Kartu</label>
-        <select class="fs" id="dashCardDensitySelect" onchange="DashboardSettings.setDensity(this.value)">
+        <select class="fs" id="dashCardDensitySelect" data-onchange="DashboardSettings.setDensity" data-onchange-args='["$value"]'>
           <option value="nyaman">🌿 Nyaman (lapang)</option>
           <option value="normal">◻️ Normal</option>
           <option value="rapat">📐 Rapat (padat)</option>
@@ -2818,7 +2726,7 @@ window.location.reload();
       <div class="hr-divider"></div>
 
       <div class="fg u-mb0"><label class="fl">Tab Default Dashboard Hub</label>
-        <select class="fs" id="dashDefaultTabSelect" onchange="DashboardSettings.setDefaultTab(this.value)">
+        <select class="fs" id="dashDefaultTabSelect" data-onchange="DashboardSettings.setDefaultTab" data-onchange-args='["$value"]'>
           <option value="ringkasan">📊 Ringkasan</option>
           <option value="fitur">🧭 Semua Fitur</option>
           <option value="widget">🧩 Pinned Widgets</option>
@@ -2833,7 +2741,7 @@ window.location.reload();
       <div id="dashCardOrderList"></div>
 
       <div class="hr-divider"></div>
-      <button type="button" class="btn btn-ghost btn-sm u-w100" onclick="DashboardSettings.resetDashboardLayout()">↩️ Reset Tata Letak Dashboard</button>
+      <button type="button" class="btn btn-ghost btn-sm u-w100" data-action="DashboardSettings.resetDashboardLayout">↩️ Reset Tata Letak Dashboard</button>
     </div>
   </div>
 
@@ -2846,7 +2754,7 @@ window.location.reload();
     <div class="u-hint10">Section tambahan (Today / Goals / Projects / Review / Knowledge) yang muncul di halaman Dashboard Hub, dibangun di atas data yang sudah ada. Nonaktif secara default — aktifkan kalau mau mencobanya.</div>
     <div class="setting-item">
       <div class="setting-label">Tampilkan Life OS</div>
-      <label class="tgl-switch"><input type="checkbox" id="lifeOSVisibleToggle" onchange="LifeOSHome.toggleVisibility(this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" id="lifeOSVisibleToggle" data-onchange="LifeOSHome.toggleVisibility" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
     </div>
   </div>
 
@@ -2936,7 +2844,7 @@ window.location.reload();
     <div class="card-title">🔔 Reminder Notifikasi</div>
     <div class="setting-item">
       <div><div class="setting-label">Notifikasi Browser</div><div class="setting-sub" id="notifStatus">Belum aktif</div></div>
-      <label class="tgl-switch"><input type="checkbox" id="notifEnableToggle" onchange="toggleNotifEnabled(this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" id="notifEnableToggle" data-onchange="toggleNotifEnabled" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
     </div>
     <button class="btn btn-ghost btn-full btn-sm u-mt10" data-action="testNotif">🔔 Tes Notifikasi</button>
     <div class="u-fs12 u-t2 u-lh15 u-mt8">Notifikasi otomatis hanya berjalan selama aplikasi ini dibuka di browser/HP (tidak saat browser ditutup total). Untuk reminder ke WhatsApp, pakai tombol "💬 Kirim ke WA" yang ada di tagihan & jadwal pulang — kamu tinggal pilih kontak & kirim manual (kirim WA otomatis tanpa kamu pencet butuh WhatsApp Business API berbayar, tidak tersedia di aplikasi browser biasa).</div>
@@ -2947,7 +2855,7 @@ window.location.reload();
     <div class="card-title">🌦️ Notifikasi Kondisi Ekonomi</div>
     <div class="setting-item">
       <div><div class="setting-label">Insight kurs/inflasi/BI Rate/IHSG dsb</div><div class="setting-sub" id="eieNotifStatus">Belum aktif</div></div>
-      <label class="tgl-switch"><input type="checkbox" id="eieNotifToggle" onchange="toggleEieNotif(this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" id="eieNotifToggle" data-onchange="toggleEieNotif" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
     </div>
     <div class="u-fs12 u-t2 u-lh15 u-mt8">Kalau aktif, insight baru dari kartu "Kondisi Ekonomi" di Dashboard (mis. kurs naik tajam, BI Rate naik & ada utang berbunga) juga muncul sebagai notifikasi toast — tidak cuma tampil kalau kamu buka Dashboard. Tidak mengirim apa pun ke luar aplikasi, murni notifikasi in-app.</div>
   </div>
@@ -2955,12 +2863,12 @@ window.location.reload();
   <!-- GOOGLE DRIVE BACKUP -->
   <div class="card">
     <div class="card-title">☁️ Backup Otomatis ke Google Drive</div>
-    <div class="fg"><label class="fl">Google OAuth Client ID</label><input class="fi" id="gdClientId" placeholder="xxxxxxxx.apps.googleusercontent.com" oninput="gdriveSaveClientId()"></div>
+    <div class="fg"><label class="fl">Google OAuth Client ID</label><input class="fi" id="gdClientId" placeholder="xxxxxxxx.apps.googleusercontent.com" data-oninput="gdriveSaveClientId"></div>
     <div class="u-fs12 u-t2 u-lh15 u-mb10">Buat gratis di <b>Google Cloud Console → APIs & Services → Credentials</b>, buat OAuth Client ID tipe "Web application", tambahkan domain/origin tempat app ini dibuka, lalu tempel Client ID-nya di sini. Sekali setting, dipakai terus.</div>
     <div class="u-fs12 u-cacc4 u-lh15 u-mb10 u-fw600">⚠️ Wajib: app ini harus dibuka lewat alamat https:// (contoh: hosting gratis di GitHub Pages/Netlify/Vercel), BUKAN dibuka langsung dari file di HP. Google Sign-In tidak bisa jalan kalau app dibuka sebagai file lokal.</div>
     <div class="setting-item">
       <div><div class="setting-label">Auto-sync tiap 5 menit</div><div class="setting-sub" id="gdStatus">Belum pernah sinkron</div></div>
-      <label class="tgl-switch"><input type="checkbox" id="gdAutoSync" onchange="gdriveToggleAutoSync(this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" id="gdAutoSync" data-onchange="gdriveToggleAutoSync" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
     </div>
     <button class="btn btn-ghost btn-full btn-sm u-mt8" data-action="gdriveConnectOnly">🔗 Hubungkan ke Google Drive</button>
     <button class="btn btn-primary btn-full btn-sm u-mt8" data-action="gdriveBackupNow">☁️ Backup ke Drive Sekarang</button>
@@ -2974,7 +2882,7 @@ window.location.reload();
     <div class="card-title">📊 Sinkron ke Google Sheets</div>
     <div class="u-fs12 u-t2 u-lh15 u-mb10">Pakai Client ID yang sama dengan Google Drive di atas (isi dulu kartu Drive kalau belum). "Sync Sekarang" bikin 1 Spreadsheet baru otomatis (atau pakai yang sudah ada kalau kamu isi ID-nya di bawah), 1 tab per modul. Baris yang isinya sama persis dilewati; yang berubah ditimpa; yang baru ditambahkan; <b>baris yang item-nya sudah dihapus di HP ikut dihapus dari Sheets</b>. "Tarik dari Sheets" otomatis push dulu, baru menimpa total data di HP per modul.</div>
     <div class="u-fs12 u-cacc4 u-lh15 u-mb10 u-fw600">⚠️ Karena baris yatim otomatis terhapus: jangan tambah baris manual di Sheets dengan ID sembarangan (kolom A) — kalau ID itu tidak dikenal HP, baris itu akan ikut kehapus di sync berikutnya.</div>
-    <div class="fg"><label class="fl">Spreadsheet ID (kosongkan biar dibuatkan otomatis)</label><input class="fi" id="gsSpreadsheetId" placeholder="1AbCdEfG... (dari URL sheets, opsional)" oninput="sheetsSaveSpreadsheetId()"></div>
+    <div class="fg"><label class="fl">Spreadsheet ID (kosongkan biar dibuatkan otomatis)</label><input class="fi" id="gsSpreadsheetId" placeholder="1AbCdEfG... (dari URL sheets, opsional)" data-oninput="sheetsSaveSpreadsheetId"></div>
     <div class="setting-item">
       <div><div class="setting-label">Status sync</div><div class="setting-sub" id="gsStatus">Belum pernah sinkron</div></div>
     </div>
@@ -3002,7 +2910,7 @@ window.location.reload();
     <div class="card-title">💾 Backup & Restore</div>
     <button class="export-btn" data-action="openBackupModal" aria-label="Edit/Buka">📤 Backup Data (Pilih Modul & Format)</button>
     <label class="export-btn u-pointer" for="restoreFileInput">📥 Import / Restore (JSON)</label>
-    <input class="u-abs" type="file" id="restoreFileInput" accept=".json,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" onchange="importData(event)">
+    <input class="u-abs" type="file" id="restoreFileInput" accept=".json,application/json" style="width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none" data-onchange="importData" data-onchange-args='["$event"]'>
     <div class="u-fs12 u-ctext3 u-tac u-mt4">Terakhir backup: <span id="lastBackup">Belum pernah</span></div>
     <div id="backupHealthCard" class="u-mt12"></div>
     <div class="u-fs12 u-fw700 u-mt12 u-mb6">🕒 Histori Backup</div>
@@ -3021,11 +2929,11 @@ window.location.reload();
     <div class="setting-item u-dnone" id="stgPinInactiveRow"><div><div class="setting-label">Aktifkan PIN</div><div class="setting-sub">Buat PIN 4 digit utk mengunci aplikasi</div></div><button class="btn btn-sm btn-primary" data-action="enablePinFlow">Aktifkan</button></div>
     <div class="setting-item">
       <div><div class="setting-label">Nonaktifkan PIN</div><div class="setting-sub">Buka aplikasi tanpa kunci PIN sama sekali</div></div>
-      <label class="tgl-switch"><input type="checkbox" id="stgPinDisableToggle" onchange="onStgPinDisableToggleChange(this)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" id="stgPinDisableToggle" data-onchange="onStgPinDisableToggleChange" data-onchange-args='["$el"]'><span class="tgl-track"></span></label>
     </div>
     <div class="setting-item" id="stgPinAutolockRow">
       <div><div class="setting-label">Kunci Otomatis</div><div class="setting-sub">Minta PIN lagi setelah app di-background</div></div>
-      <select class="fs" id="stgPinAutolockSelect" style="max-width:140px;margin-bottom:0" onchange="setPinAutolock(this.value)">
+      <select class="fs" id="stgPinAutolockSelect" style="max-width:140px;margin-bottom:0" data-onchange="setPinAutolock" data-onchange-args='["$value"]'>
         <option value="langsung">Langsung</option>
         <option value="1m">1 menit</option>
         <option value="5m">5 menit</option>
@@ -3350,7 +3258,7 @@ window.location.reload();
        dikelola DashboardHub.setSectionTab() tidak tersentuh krn search wrap
        ini bukan salah satu dari section tsb. -->
   <div class="dashhub-search-wrap">
-    <input type="text" class="fi" id="dashHubSearchInput" placeholder="🔍 Cari fitur/menu... (mis. sewa kios, kasir, backup)" oninput="DashboardHubSearch.render(this.value)" aria-label="Cari fitur">
+    <input type="text" class="fi" id="dashHubSearchInput" placeholder="🔍 Cari fitur/menu... (mis. sewa kios, kasir, backup)" data-oninput="DashboardHubSearch.render" data-oninput-args='["$value"]' aria-label="Cari fitur">
     <div class="dashhub-search-results u-dnone" id="dashHubSearchResults"></div>
     <!-- Sesi 159: chip "Jelajahi Semua Fitur" dihapus — 100% redundan dgn
          tab "Fitur" (sama-sama nuju #dashHubMainGridCard, cuma beda entry
@@ -4070,210 +3978,210 @@ window.location.reload();
 </div>
 
 <!-- MODAL: TRANSAKSI -->
-<script>document.write(MODAL_HTML[2]);</script><!-- modal:txModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="2"></script><!-- modal:txModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR GAJI -->
-<script>document.write(MODAL_HTML[3]);</script><!-- modal:gajiCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="3"></script><!-- modal:gajiCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI & GAJI HARIAN -->
-<script>document.write(MODAL_HTML[4]);</script><!-- modal:absensiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="4"></script><!-- modal:absensiModal externalized to modals.js -->
 
 <!-- MODAL: KONFIRMASI RESET GAJIAN MINGGUAN (SABTU) -->
-<script>document.write(MODAL_HTML[5]);</script><!-- modal:weeklyResetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="5"></script><!-- modal:weeklyResetModal externalized to modals.js -->
 
 <!-- MODAL: TRANSFER ANTAR AKUN -->
-<script>document.write(MODAL_HTML[6]);</script><!-- modal:transferModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="6"></script><!-- modal:transferModal externalized to modals.js -->
 
 <!-- MODAL: AKUN -->
-<script>document.write(MODAL_HTML[7]);</script><!-- modal:accModal externalized to modals.js --><script>document.write(MODAL_HTML[8]);</script><!-- modal:accountOwnersModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="7"></script><!-- modal:accModal externalized to modals.js --><script src="modules/shared/modal-write.js?v=1572" data-modal-index="8"></script><!-- modal:accountOwnersModal externalized to modals.js -->
 
 <!-- MODAL: ASET (Buku Aset) -->
-<script>document.write(MODAL_HTML[9]);</script><!-- modal:assetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="9"></script><!-- modal:assetModal externalized to modals.js -->
 
 <!-- MODAL: QUICK SCAN ASET (⚡ update nilai langsung dari daftar, tanpa buka modal Edit) -->
-<script>document.write(MODAL_HTML[10]);</script><!-- modal:quickScanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="10"></script><!-- modal:quickScanModal externalized to modals.js -->
 
 <!-- MODAL: PIUTANG -->
-<script>document.write(MODAL_HTML[11]);</script><!-- modal:piutangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="11"></script><!-- modal:piutangModal externalized to modals.js -->
 
 <!-- MODAL: UTANG (BUKU UTANG) -->
-<script>document.write(MODAL_HTML[12]);</script><!-- modal:debtModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="12"></script><!-- modal:debtModal externalized to modals.js -->
 
 <!-- MODAL: SHOP -->
 <!-- MODAL: PRODUK ETALASE -->
-<script>document.write(MODAL_HTML[13]);</script><!-- modal:productModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="13"></script><!-- modal:productModal externalized to modals.js -->
 
 <!-- MODAL: PRODUSEN (CRUD) -->
-<script>document.write(MODAL_HTML[14]);</script><!-- modal:produsenModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="14"></script><!-- modal:produsenModal externalized to modals.js -->
 
 <!-- MODAL: ATUR HARGA PER PRODUSEN -->
-<script>document.write(MODAL_HTML[15]);</script><!-- modal:produsenHargaModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="15"></script><!-- modal:produsenHargaModal externalized to modals.js -->
 
 <!-- MODAL: TRANSAKSI POS -->
-<script>document.write(MODAL_HTML[16]);</script><!-- modal:orderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="16"></script><!-- modal:orderModal externalized to modals.js -->
 
 <!-- MODAL: DETAIL PELANGGAN -->
-<script>document.write(MODAL_HTML[17]);</script><!-- modal:customerDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="17"></script><!-- modal:customerDetailModal externalized to modals.js -->
 
 <!-- MODAL: TARGET -->
-<script>document.write(MODAL_HTML[18]);</script><!-- modal:targetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="18"></script><!-- modal:targetModal externalized to modals.js -->
 
 <!-- MODAL: DANA PENDIDIKAN -->
-<script>document.write(MODAL_HTML[19]);</script><!-- modal:eduFundModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="19"></script><!-- modal:eduFundModal externalized to modals.js -->
 
 <!-- MODAL: CATATAN -->
-<script>document.write(MODAL_HTML[20]);</script><!-- modal:catatanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="20"></script><!-- modal:catatanModal externalized to modals.js -->
 
 <!-- MODAL: REMINDER -->
-<script>document.write(MODAL_HTML[21]);</script><!-- modal:reminderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="21"></script><!-- modal:reminderModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI (dengan opsi tambah sebagai subkategori) -->
-<script>document.write(MODAL_HTML[22]);</script><!-- modal:catModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="22"></script><!-- modal:catModal externalized to modals.js -->
 
 <!-- MODAL: SUBKATEGORI -->
-<script>document.write(MODAL_HTML[23]);</script><!-- modal:subCatModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="23"></script><!-- modal:subCatModal externalized to modals.js -->
 
 <!-- MODAL: TAGIHAN / CICILAN / LANGGANAN -->
-<script>document.write(MODAL_HTML[24]);</script><!-- modal:billModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="24"></script><!-- modal:billModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - buat/edit proyek -->
-<script>document.write(MODAL_HTML[25]);</script><!-- modal:renovProjectModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="25"></script><!-- modal:renovProjectModal externalized to modals.js -->
 
 <!-- MODAL: SEWA KIOS - tambah/edit unit -->
-<script>document.write(MODAL_HTML[26]);</script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="26"></script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - detail (daftar item biaya + progress) -->
-<script>document.write(MODAL_HTML[27]);</script><!-- modal:renovDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="27"></script><!-- modal:renovDetailModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - saran AI (kebutuhan, ukuran, keperluan) -->
-<script>document.write(MODAL_HTML[28]);</script><!-- modal:renovAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="28"></script><!-- modal:renovAiModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - form item biaya -->
-<script>document.write(MODAL_HTML[29]);</script><!-- modal:renovItemModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="29"></script><!-- modal:renovItemModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - hubungkan ke transaksi lama yang sudah ada di Keuangan -->
 <!-- MODAL GENERIK: "Hubungkan Transaksi Lama" -- dipakai bersama oleh Renov (Proyek Renovasi),
      WorthIt (Prioritas Belanja) & Bill (Tagihan/Cicilan). Logikanya ada di const LinkTx={...}.
      z-index:300 supaya selalu tampil DI ATAS modal manapun yg jadi tempat tombol pemicunya
      (renovItemModal, worthItModal, billHistoryModal), terlepas dari urutan DOM. -->
-<script>document.write(MODAL_HTML[30]);</script><!-- modal:linkTxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="30"></script><!-- modal:linkTxModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - kalkulator bantu (Upah Tukang/Laden & Material per satuan) -->
 <!-- z-index lebih tinggi dari .overlay biasa (200) supaya tampil DI ATAS renovItemModal, sama seperti pola calcModal -->
-<script>document.write(MODAL_HTML[31]);</script><!-- modal:renovCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="31"></script><!-- modal:renovCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI TUKANG (BANYAK ORANG) untuk hitung Gaji Harian tukang/laden -->
-<script>document.write(MODAL_HTML[32]);</script><!-- modal:tukangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="32"></script><!-- modal:tukangModal externalized to modals.js -->
 
 <!-- MODAL: ABSEN HARIAN TUKANG (jam kerja & jam lembur per hari) -->
-<script>document.write(MODAL_HTML[33]);</script><!-- modal:tkDayModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="33"></script><!-- modal:tkDayModal externalized to modals.js -->
 
 <!-- MODAL: BORONGAN BARENG (isi 1 nominal, kebagi rata otomatis ke semua tukang yang dicentang, 1 tanggal) -->
-<script>document.write(MODAL_HTML[34]);</script><!-- modal:tkBorSharedModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="34"></script><!-- modal:tkBorSharedModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR BORONGAN (hitung total dari luas/ukuran × harga per m², mirip kalkulator material) -->
-<script>document.write(MODAL_HTML[35]);</script><!-- modal:tkBorCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="35"></script><!-- modal:tkBorCalcModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT BORONGAN (rekap semua absensi mode='borongan' per bulan, terpisah dari
      tampilan kotak-hari mingguan yang mencampur borongan dengan absensi jam biasa) -->
-<script>document.write(MODAL_HTML[36]);</script><!-- modal:tkBorHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="36"></script><!-- modal:tkBorHistModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT ABSEN JAM (rekap semua absensi mode='jam' per bulan, terpisah dari borongan) -->
-<script>document.write(MODAL_HTML[37]);</script><!-- modal:tkJamHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="37"></script><!-- modal:tkJamHistModal externalized to modals.js -->
 
 <!-- MODAL: KALENDER TAGIHAN/CICILAN/LANGGANAN -->
-<script>document.write(MODAL_HTML[38]);</script><!-- modal:billCalendarModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="38"></script><!-- modal:billCalendarModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT PEMBAYARAN TAGIHAN/CICILAN/LANGGANAN -->
-<script>document.write(MODAL_HTML[39]);</script><!-- modal:billHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="39"></script><!-- modal:billHistoryModal externalized to modals.js -->
 
 <!-- MODAL: EDIT SATU RIWAYAT PEMBAYARAN -->
-<script>document.write(MODAL_HTML[40]);</script><!-- modal:billHistoryEditModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="40"></script><!-- modal:billHistoryEditModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT CICILAN/TAGIHAN LUNAS (arsip) -->
-<script>document.write(MODAL_HTML[41]);</script><!-- modal:billArchiveModal externalized to modals.js -->
-<script>document.write(MODAL_HTML[42]);</script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="41"></script><!-- modal:billArchiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="42"></script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
 
 <!-- MODAL: KENDARAAN -->
-<script>document.write(MODAL_HTML[43]);</script><!-- modal:vehicleModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="43"></script><!-- modal:vehicleModal externalized to modals.js -->
 
 <!-- MODAL: PAJAK KENDARAAN (STNK Tahunan, 5 Tahunan, Uji Kelayakan) -->
-<script>document.write(MODAL_HTML[44]);</script><!-- modal:vehTaxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="44"></script><!-- modal:vehTaxModal externalized to modals.js -->
 
 <!-- MODAL: SIM -->
-<script>document.write(MODAL_HTML[45]);</script><!-- modal:simModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="45"></script><!-- modal:simModal externalized to modals.js -->
 
 <!-- MODAL: WORTH IT? (Kalkulator Layak Beli - Frugal Living) -->
-<script>document.write(MODAL_HTML[46]);</script><!-- modal:worthItModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="46"></script><!-- modal:worthItModal externalized to modals.js -->
 
 <!-- MODAL: UPDATE KM -->
-<script>document.write(MODAL_HTML[47]);</script><!-- modal:kmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="47"></script><!-- modal:kmModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI SPAREPART -->
-<script>document.write(MODAL_HTML[48]);</script><!-- modal:sparepartModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="48"></script><!-- modal:sparepartModal externalized to modals.js -->
 
 <!-- MODAL: STOK SPAREPART -->
-<script>document.write(MODAL_HTML[49]);</script><!-- modal:stockModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="49"></script><!-- modal:stockModal externalized to modals.js -->
 
 <!-- MODAL: BACKUP LANJUTAN -->
-<script>document.write(MODAL_HTML[50]);</script><!-- modal:backupModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="50"></script><!-- modal:backupModal externalized to modals.js -->
 
 <!-- MODAL: ARSIP DATA LAMA (per tahun) -->
-<script>document.write(MODAL_HTML[51]);</script><!-- modal:archiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="51"></script><!-- modal:archiveModal externalized to modals.js -->
 
 <!-- MODAL: BBM -->
-<script>document.write(MODAL_HTML[52]);</script><!-- modal:bbmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="52"></script><!-- modal:bbmModal externalized to modals.js -->
 
 <!-- MODAL: FUEL INTELLIGENCE -->
-<script>document.write(MODAL_HTML[53]);</script><!-- modal:fuelIntelModal -->
-<script>document.write(MODAL_HTML[54]);</script><!-- modal:servisModal -->
-<script>document.write(MODAL_HTML[55]);</script><!-- modal:torsiModal -->
-<script>document.write(MODAL_HTML[56]);</script><!-- modal:filterTxModal -->
-<script>document.write(MODAL_HTML[57]);</script><!-- modal:dataHealthModal -->
-<script>document.write(MODAL_HTML[58]);</script><!-- modal:globalSearchModal -->
-<script>document.write(MODAL_HTML[59]);</script><!-- modal:budgetModal -->
-<script>document.write(MODAL_HTML[60]);</script><!-- modal:fiSettingsModal -->
-<script>document.write(MODAL_HTML[61]);</script><!-- modal:pensiunModal -->
-<script>document.write(MODAL_HTML[62]);</script><!-- modal:confirmModalOverlay -->
-<script>document.write(MODAL_HTML[63]);</script><!-- modal:promptModalOverlay -->
-<script>document.write(MODAL_HTML[64]);</script><!-- modal:choiceModalOverlay -->
-<script>document.write(MODAL_HTML[65]);</script><!-- modal:infoModalOverlay -->
-<script>document.write(MODAL_HTML[66]);</script><!-- modal:pinPromptModalOverlay -->
-<script>document.write(MODAL_HTML[67]);</script><!-- modal:budgetSettingsModal -->
-<script>document.write(MODAL_HTML[68]);</script><!-- modal:refleksiModal -->
-<script>document.write(MODAL_HTML[69]);</script><!-- modal:importKatalogModal -->
-<script>document.write(MODAL_HTML[70]);</script><!-- modal:goldImportModal -->
-<script>document.write(MODAL_HTML[71]);</script><!-- modal:goldZakatModal -->
-<script>document.write(MODAL_HTML[72]);</script><!-- modal:importShopExcelModal -->
-<script>document.write(MODAL_HTML[73]);</script><!-- modal:shopCsvImportModal -->
-<script>document.write(MODAL_HTML[74]);</script><!-- modal:sparepartCsvImportModal -->
-<script>document.write(MODAL_HTML[75]);</script><!-- modal:shopPdfImportModal -->
-<script>document.write(MODAL_HTML[76]);</script><!-- modal:shopScanModal -->
-<script>document.write(MODAL_HTML[77]);</script><!-- modal:shopJsonModal -->
-<script>document.write(MODAL_HTML[78]);</script><!-- modal:mergeProductModal -->
-<script>document.write(MODAL_HTML[79]);</script><!-- modal:billMultiScanModal -->
-<script>document.write(MODAL_HTML[80]);</script><!-- modal:universalOcrModal -->
-<script>document.write(MODAL_HTML[81]);</script><!-- modal:fuelBarCorrectionModal -->
-<script>document.write(MODAL_HTML[82]);</script><!-- modal:fuelTankProfileModal -->
-<script>document.write(MODAL_HTML[83]);</script><!-- modal:catalogModal -->
-<script>document.write(MODAL_HTML[84]);</script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[85]);</script><!-- modal:vehCatWebImportModal -->
-<script>document.write(MODAL_HTML[86]);</script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[87]);</script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[88]);</script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[89]);</script><!-- modal:inventoryTransferModal (S244) -->
-<script>document.write(MODAL_HTML[90]);</script><!-- modal:purchaseOrderBatchModal (S381) -->
-<script>document.write(MODAL_HTML[91]);</script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
-<script>document.write(MODAL_HTML[92]);</script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
-<script>document.write(MODAL_HTML[93]);</script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
-<script>document.write(MODAL_HTML[94]);</script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[95]);</script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[96]);</script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
-<script>document.write(MODAL_HTML[97]);</script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
-<script>document.write(MODAL_HTML[98]);</script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
-<script>document.write(MODAL_HTML[99]);</script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
-<script>document.write(MODAL_HTML[100]);</script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="53"></script><!-- modal:fuelIntelModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="54"></script><!-- modal:servisModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="55"></script><!-- modal:torsiModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="56"></script><!-- modal:filterTxModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="57"></script><!-- modal:dataHealthModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="58"></script><!-- modal:globalSearchModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="59"></script><!-- modal:budgetModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="60"></script><!-- modal:fiSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="61"></script><!-- modal:pensiunModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="62"></script><!-- modal:confirmModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="63"></script><!-- modal:promptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="64"></script><!-- modal:choiceModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="65"></script><!-- modal:infoModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="66"></script><!-- modal:pinPromptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="67"></script><!-- modal:budgetSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="68"></script><!-- modal:refleksiModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="69"></script><!-- modal:importKatalogModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="70"></script><!-- modal:goldImportModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="71"></script><!-- modal:goldZakatModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="72"></script><!-- modal:importShopExcelModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="73"></script><!-- modal:shopCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="74"></script><!-- modal:sparepartCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="75"></script><!-- modal:shopPdfImportModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="76"></script><!-- modal:shopScanModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="77"></script><!-- modal:shopJsonModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="78"></script><!-- modal:mergeProductModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="79"></script><!-- modal:billMultiScanModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="80"></script><!-- modal:universalOcrModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="81"></script><!-- modal:fuelBarCorrectionModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="82"></script><!-- modal:fuelTankProfileModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="83"></script><!-- modal:catalogModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="84"></script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="85"></script><!-- modal:vehCatWebImportModal -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="86"></script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="87"></script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="88"></script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="89"></script><!-- modal:inventoryTransferModal (S244) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="90"></script><!-- modal:purchaseOrderBatchModal (S381) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="91"></script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="92"></script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="93"></script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="94"></script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="95"></script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="96"></script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="97"></script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="98"></script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="99"></script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
+<script src="modules/shared/modal-write.js?v=1572" data-modal-index="100"></script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
 
-<script src="app-bundle-b.min.js?v=1555" onerror="window.__moduleLoadFail('app-bundle-b.min.js')"></script>
+<script src="modules/shared/bundle-load-guard.js?v=1572" data-guard-src="app-bundle-b.min.js?v=1572" data-guard-id="appBundleBScript"></script>
 </body>
 </html>

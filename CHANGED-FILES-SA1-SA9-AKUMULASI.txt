@@ -1,0 +1,79 @@
+Patch AKUMULASI 3 SESI: SA1-REKONSTRUKSI (v1566) + Sesi Lanjutan blur/
+keydown/bundle-guard (v1567) + SA9 script-src-attr (v1568).
+Terapkan DI ATAS app-main baseline asli (app-main__59_.zip). Menggantikan
+patch-SA1-REKONSTRUKSI-AKUMULASI.zip sebelumnya (semua isinya sudah
+termasuk di sini + tambahan SA9).
+
+BARU:
+  SESSION-NOTE-SA1-REKONSTRUKSI-BASELINE.md          (sesi 1)
+  SESSION-NOTE-SA1-REKONSTRUKSI-BASELINE-lanjutan.md (sesi 2)
+  SESSION-NOTE-SA9-script-src-attr.md                (sesi 3, baru)
+  modules/shared/bundle-load-guard.js                (sesi 2)
+  tests/data-oninput-onchange-dispatcher.test.js     (13 test, sesi 1+2)
+  tests/csp-script-src-attr-sa9.test.js               (7 test, sesi 3, baru
+    -- PERMANEN, mengunci 0 inline attr + script-src-attr 'none' selamanya)
+
+BERUBAH — logic JS (WAJIB, bukan cosmetic):
+  modules/shared/features-helpers-global-security.js
+  - Sesi 1: fondasi dispatcher SA1 (_dataActionResolveArgs +
+    _dataActionInputChangeHandler) yang sebelumnya HILANG dari baseline.
+  - Sesi 2: dispatcher diperluas ke event 'blur' & 'keydown'.
+  - Sesi 3: TIDAK ADA perubahan logic (cuma version-string sync build.js).
+
+  ai-chat.js
+  - Sesi 2: fungsi baru chatInputEnterSend(e) (wrapper kondisi Enter).
+
+  modules/dashboard-hub/dashboard-hub-settings.js
+  - Window-expose DashboardSettings (sesi 1, dari fix SA8).
+
+BERUBAH — markup:
+  index.html
+  - Sesi 1: akumulasi penuh SA2-SA8, 89 atribut inline -> data-oninput/
+    data-onchange/data-action.
+  - Sesi 2: 2x onblur -> data-onblur; 1x onkeydown -> data-onkeydown; 2x
+    <script src="app-bundle-X.min.js" onerror="..."> -> lewat
+    bundle-load-guard.js (bukan migrasi ke dispatcher, beda kelas mekanisme).
+  - Sesi 3 (BARU): meta tag CSP ditambah `script-src-attr 'none'` (script-src
+    UTAMA tidak diubah, masih unsafe-inline utk 104 blok <script> yang belum
+    dimigrasi -- epic terpisah, belum dikerjakan). Komentar CSP ditulis
+    ulang total menjelaskan status terkini + kompatibilitas browser.
+
+BERUBAH — regenerated otomatis oleh scripts/build.js (versi -> 1568, sync
+rutin, TIDAK ada perubahan logic manual selain yang disebut di atas):
+  app_production.html
+  sw.js
+  app-bundle-a.min.js
+  app-bundle-b.min.js
+  chat-action-handlers.js
+  modules/shared/modals.js
+  modules/shared/modules-calc.js
+  modules/shared/modules-render.js
+  docs/FILE-MAP.md
+  docs/COVERAGE-PER-MODULE.md
+  docs/RELEASE-GATE-LOG.md
+
+STATUS SERI setelah patch ini:
+  grep -oP '(?<!data-)\bon[a-z]+="[^"]*"' index.html = 0 baris (semua jenis,
+  bukan cuma onclick/onchange/oninput)
+  CSP meta tag: script-src-attr 'none' AKTIF -- browser pendukung CSP L3
+  (Chrome/Edge/Firefox; Safari historinya belum konsisten) sekarang MENOLAK
+  eksekusi payload injeksi lewat atribut event (mis. <img onerror=...>) yang
+  lolos dari lint escapeHtml, TERLEPAS dari 'unsafe-inline' di script-src
+  utama (yang masih ada utk 104 blok <script>).
+Full suite: 5554/5554 pass, 0 fail.
+verify-window-expose.js: OK, 78 modul.
+verify-bundle-freshness.js: kedua bundle segar.
+verify-release-ready.js (override lint+minify, sandbox tanpa internet): LOLOS.
+
+CATATAN PENTING (belum selesai, epic terpisah dari SA1-SA9): index.html
+masih punya 104 blok <script>...</script> TANPA atribut src (kode JS
+langsung). CSP script-src UTAMA masih terpaksa 'unsafe-inline' krn ini --
+BELUM bisa dinaikkan ke 'self' penuh. 3 opsi (nonce/hash/eksternalisasi)
+dijelaskan di SESSION-NOTE-SA1-REKONSTRUKSI-BASELINE-lanjutan.md &
+SESSION-NOTE-SA9-script-src-attr.md. Sengaja TIDAK digabung ke SA9 supaya
+tidak mengulang pola "scope creep tanpa audit awal" yang bikin baseline
+SA1-SA8 sebelumnya tidak lengkap 3x berturut-turut.
+
+Verifikasi setelah apply: node scripts/build.js && node --test tests/*.test.js
+(harus 5554/5554 pass, 0 fail). Juga jalankan
+node scripts/verify-window-expose.js dan node scripts/verify-bundle-freshness.js.
