@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's754-fuel-jenis-unknown-edit-legacy';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's754-fuel-jenis-unknown-edit-legacy';
+const APP_BUILD_VERSION = 's1591-simpleautocomplete-onfocus-generic-dispatch';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1591-simpleautocomplete-onfocus-generic-dispatch';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -485,7 +485,7 @@ try{
 // bagian "Temuan tambahan"): #dsExtra/#aaDana (onblur) & #chatInput
 // (onkeydown). Pola resolve & error handling tetap identik, cuma nama
 // atribut yang dibaca yang berbeda per event.type.
-const attrName = {input:'oninput', change:'onchange', blur:'onblur', keydown:'onkeydown'}[e.type];
+const attrName = {input:'oninput', change:'onchange', blur:'onblur', keydown:'onkeydown', focus:'onfocus'}[e.type];
 if(!attrName) return;
 const el = e.target.closest('[data-'+attrName+']');
 if(!el) return;
@@ -497,6 +497,17 @@ const args = _dataActionResolveArgs(argsRaw, el, e);
 // sudah console.error sendiri, di sini cukup berhenti tanpa toast supaya
 // user tidak dibanjiri toast tiap kali mengetik di input yang argsnya salah.
 if(args===null) return;
+// SESI (konversi simpleAutocompleteInput data-onfocus, 10 field txCat/txSubCat-style):
+// data-onfocus-args mengirim nama variabel daftar saran (mis. "acTxNotes") sebagai
+// STRING biasa di JSON (bukan referensi array -- JSON tidak bisa membawa referensi
+// variabel), karena simpleAutocompleteInput(fieldId, boxId, list) butuh ARRAY asli
+// di parameter ke-3, bukan nama variabelnya. Di sinilah satu-satunya tempat
+// stringnya di-dereference ke variabel global aslinya -- khusus utk fungsi ini saja,
+// supaya _dataActionResolveArgs generik di atas TIDAK perlu tahu soal konvensi
+// "nama variabel list" ini (yang cuma dipakai simpleAutocompleteInput).
+if(namesRaw.trim()==='simpleAutocompleteInput' && args.length>=3 && typeof args[2]==='string' && typeof window[args[2]]!=='undefined'){
+args[2] = window[args[2]];
+}
 // Dukung comma-separated function names (mis. inline lama
 // `onTipeGajiChange();autoSaveProfile()` -> data-onchange="onTipeGajiChange,autoSaveProfile"),
 // urutan eksekusi dipertahankan persis seperti urutan pemanggilan inline asli.
@@ -545,7 +556,14 @@ document.addEventListener('change', _dataActionInputChangeHandler, true);
 // jadi listener document-level dgn capture=true ini tetap benar utk kasus ini.
 document.addEventListener('blur', _dataActionInputChangeHandler, true);
 document.addEventListener('keydown', _dataActionInputChangeHandler, true);
-if(typeof console!=='undefined' && console.debug) console.debug('[app] data-oninput/data-onchange/data-onblur/data-onkeydown dispatcher terpasang (capture phase).');
+// FIX (audit txCat/txSubCat dropdown hilang): 'focus' juga TIDAK bubble (sama
+// spt blur), tapi capture phase document-level tetap menangkapnya turun ke
+// elemen manapun -- pola identik dgn blur/keydown di atas. Diperlukan supaya
+// atribut data-onfocus= (pengganti inline onfocus=) ikut ke-dispatch; tanpa ini
+// field yg konversi ke data-onfocus= kehilangan trigger buka-dropdown saat
+// pertama kali di-tap (cuma jalan saat mulai ngetik lewat data-oninput=).
+document.addEventListener('focus', _dataActionInputChangeHandler, true);
+if(typeof console!=='undefined' && console.debug) console.debug('[app] data-oninput/data-onchange/data-onblur/data-onkeydown/data-onfocus dispatcher terpasang (capture phase).');
 function migrateShopCategory(){
 let incCat=D.categories.income.find(c=>c.id==='cat_cb'||/^bisnis cobek$/i.test(c.name)||/^bisnis$/i.test(c.name));
 if(incCat){
