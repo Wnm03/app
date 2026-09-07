@@ -356,6 +356,12 @@ const GROUP_B = [
   // tepat setelahnya krn dependency logis (dibaca setelah Payroll dimuat).
   'modules/business/insight-target-mingguan.js',
   'modules/vehicle/vehicle-core.js',
+  // fuel-price-ref.js (Sesi 749, BARU): FuelPriceRef — referensi harga BBM nasional
+  // (D.fuelPriceRef, 6 jenis) + "Cek Update via AI", pola sama persis RefAI
+  // (modules/finance/pajak-pbb-zakat.js, GROUP_A, sudah dimuat lebih dulu — reuse
+  // RefAI._parseJSON aman). Ditaruh tepat setelah vehicle-core.js krn sama-sama
+  // domain vehicle/BBM "foundational", pola sama vehicle-catalog.js di bawah.
+  'modules/vehicle/fuel-price-ref.js',
   // vehicle-catalog.js (Milestone 0 Phase 1, BARU — lihat ACR-001):
   // dependency uid()/sameId() (features-helpers-global-security.js) &
   // IDBStore (modules/asset/aset.js) sudah dimuat lebih dulu di blok atas.
