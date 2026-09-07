@@ -1247,6 +1247,15 @@ document.getElementById('txBbmLiter').value=linkedBbm.liter;
 document.getElementById('txBbmHargaL').value=linkedBbm.harga||'';
 document.getElementById('txBbmSpbu').value=linkedBbm.spbu||'';
 document.getElementById('txBbmFull').checked=!!linkedBbm.fullTank;
+// restore txBbmJenis dari linkedBbm.jenis SETELAH toggleTxBbmFields() di
+// atas (yg sudah populate opsi dropdown + isi default) -- kalau catatan BBM
+// ini punya jenis tersimpan, override value dropdown ke jenis itu.
+if(linkedBbm.jenis){
+const jenisEl=document.getElementById('txBbmJenis');
+if(jenisEl)jenisEl.value=linkedBbm.jenis;
+} else if(typeof FuelPriceRef!=='undefined'){
+FuelPriceRef.selectUnknown('txBbmJenis');
+}
 } else {
 if(bbmChk)bbmChk.checked=false;
 toggleTxBbmFields();

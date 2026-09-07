@@ -38,12 +38,22 @@ onTxBbmVehicleChange();
 // "tidak sync". Fix: reuse getVehicleKm() persis seperti onKmVehicleChange(),
 // dipanggil dari onchange="onTxBbmVehicleChange()" di txBbmVehicle (modals.js)
 // & dari toggleTxBbmFields() di atas supaya nilai awal saat panel dibuka juga benar.
+// Sesi 755: fungsi ini JUGA yang sekarang bertanggung jawab isi ulang dropdown
+// "Jenis BBM" (txBbmJenis) tiap kali kendaraan di txBbmVehicle diganti, dgn
+// vehicleId dikirim ke FuelPriceRef.populateSelect()/onSelectChange() supaya
+// tiap kendaraan pakai default jenis BBM-nya sendiri (D.fuelPriceRef.
+// lastTypeByVehicle), bukan 1 lastType global yang saling menimpa antar
+// kendaraan beda jenis BBM (mis. motor Pertalite vs mobil Pertamax).
 function onTxBbmVehicleChange(){
 const sel=document.getElementById('txBbmVehicle');
 const kmEl=document.getElementById('txBbmKm');
-if(!sel||!kmEl)return;
-if(typeof getVehicleKm==='function'){
+if(!sel)return;
+if(kmEl&&typeof getVehicleKm==='function'){
 kmEl.value=getVehicleKm(sel.value)||'';
+}
+if(typeof FuelPriceRef!=='undefined'){
+FuelPriceRef.populateSelect('txBbmJenis',sel.value);
+FuelPriceRef.onSelectChange('txBbmJenis','txBbmHargaL',sel.value);
 }
 }
 function syncTxBbmAmt(){
@@ -80,12 +90,16 @@ if(opts.existingBbmId){
 const b=D.bbmLogs.find(x=>x.id===opts.existingBbmId);
 if(b){
 Object.assign(b,{date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost,spbu:opts.spbu,fullTank:opts.fullTank,note:opts.note,accountId:opts.accountId,vehicleId:opts.vehicleId||b.vehicleId});
+// TASK-jenis-BBM: simpan jenis kalau caller kirim -- JANGAN timpa dgn
+// null/undefined kalau caller tidak kirim (mis. panggilan lama/lain yg
+// belum tahu soal field ini), supaya jenis yg sudah tersimpan tidak hilang.
+if(opts.jenis!==undefined&&opts.jenis!==null&&opts.jenis!=='')b.jenis=opts.jenis;
 if(opts.fullTank)syncFuelStateFromFullTankBbm(opts.vehicleId||b.vehicleId);else syncFuelStateFromEstimator(opts.vehicleId||b.vehicleId);
 return{bbmId:b.id,isNew:false,harga};
 }
 }
 const bbmId=uid();
-D.bbmLogs.push({id:bbmId,vehicleId:opts.vehicleId,date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost,spbu:opts.spbu,fullTank:opts.fullTank,note:opts.note,accountId:opts.accountId,txLinkId:opts.txId});
+D.bbmLogs.push({id:bbmId,vehicleId:opts.vehicleId,date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost,spbu:opts.spbu,fullTank:opts.fullTank,note:opts.note,accountId:opts.accountId,jenis:opts.jenis||undefined,txLinkId:opts.txId});
 if(opts.fullTank)syncFuelStateFromFullTankBbm(opts.vehicleId);else syncFuelStateFromEstimator(opts.vehicleId);
 return{bbmId,isNew:true,harga};
 }
@@ -202,8 +216,10 @@ const spbu=document.getElementById('txBbmSpbu').value.trim();
 const fullTank=document.getElementById('txBbmFull').checked;
 const vehSel=document.getElementById('txBbmVehicle');
 const vehicleId=vehSel&&vehSel.value?vehSel.value:((typeof curVehicleId!=='undefined'&&curVehicleId)||(D.vehicles[0]&&D.vehicles[0].id));
+const jenisEl=document.getElementById('txBbmJenis');
+const jenis=jenisEl?jenisEl.value:undefined;
 const result=recordBbmLog({
-vehicleId,date,km,liter,harga,cost:amt,spbu,fullTank,note,accountId:accId,
+vehicleId,date,km,liter,harga,cost:amt,spbu,fullTank,note,accountId:accId,jenis,
 txId,existingBbmId:(existingTx&&existingTx.bbmLinkId)?existingTx.bbmLinkId:null
 });
 if(!existingTx||!existingTx.bbmLinkId){
