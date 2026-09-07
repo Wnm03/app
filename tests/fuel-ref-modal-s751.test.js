@@ -87,6 +87,9 @@ test('s751: txBbmFields (panel BBM txModal) tetap ada di MODAL_HTML sesi ini (pe
 
 test('s751: markup lama bbmModal/txBbmFields dari sesi-sesi sebelumnya tidak ikut berubah (dropdown Jenis BBM S750 tetap ada)', () => {
   const html = loadModalHtml();
-  assert.match(html, /id="bbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('bbmJenis','bbmHarga'\)"/);
-  assert.match(html, /id="txBbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('txBbmJenis','txBbmHargaL'\)"/);
+  // Regex tolerant thd argumen ke-3 (curVehicleId / vehicleId dari txBbmVehicle) --
+  // lihat FIX-s750-s751-s752-stale-regex, dulu strict 2-arg jadi false-negative
+  // setelah sesi lain menambahkan argumen ke-3 ke onSelectChange.
+  assert.match(html, /id="bbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('bbmJenis','bbmHarga'[^"]*\)"/);
+  assert.match(html, /id="txBbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('txBbmJenis','txBbmHargaL'[^"]*\)"/);
 });

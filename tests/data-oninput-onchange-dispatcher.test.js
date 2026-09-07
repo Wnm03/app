@@ -232,11 +232,84 @@ test('dispatcher keydown — data-onkeydown dgn token $event, kondisi Enter dita
   assert.equal(toastCalls.length, 0);
 });
 
-test('dispatcher — event.type di luar input/change/blur/keydown diabaikan (tidak throw, tidak ada efek)', () => {
+test('dispatcher — event.type di luar input/change/blur/keydown/focus diabaikan (tidak throw, tidak ada efek)', () => {
   const windowObj = { seharusnyaTidakTerpanggil() { throw new Error('tidak boleh jalan'); } };
   const { context, toastCalls } = loadSandbox(windowObj);
-  const el = makeFakeElement({ onfocus: 'seharusnyaTidakTerpanggil' });
+  const el = makeFakeElement({ onmouseover: 'seharusnyaTidakTerpanggil' });
 
-  assert.doesNotThrow(() => context._dataActionInputChangeHandler({ type: 'focus', target: el }));
+  assert.doesNotThrow(() => context._dataActionInputChangeHandler({ type: 'mouseover', target: el }));
+  assert.equal(toastCalls.length, 0);
+});
+
+// FIX (audit "ketik var -> dropdown kategori/subkategori tidak muncul"): txCat/txSubCat
+// dulu dibuka lewat inline onfocus= (dipanggil browser native saat field pertama kali
+// di-tap), tapi konversi ke data-onfocus= butuh dispatcher ini benar-benar menangani
+// event 'focus' juga -- sebelum fix ini 'focus' sengaja diabaikan (lihat test di atas,
+// versi lama). Test ini mengunci bahwa 'focus' sekarang dipetakan ke data-onfocus= &
+// benar-benar terpanggil, konsisten dgn pola blur/keydown (capture phase document-level,
+// bukan bubble) yang sudah lebih dulu didukung.
+test('dispatcher focus — data-onfocus terpanggil, event input/change/blur TIDAK ikut terpanggil', () => {
+  let received = null;
+  const order = [];
+  const windowObj = {
+    onTxCatInput() { received = true; order.push('focus'); },
+    onDsExtraInput() { order.push('input'); },
+  };
+  const { context, toastCalls } = loadSandbox(windowObj);
+  const el = makeFakeElement({ oninput: 'onDsExtraInput', onfocus: 'onTxCatInput' });
+
+  context._dataActionInputChangeHandler({ type: 'focus', target: el });
+  assert.equal(received, true);
+  assert.deepEqual(order, ['focus'], 'event focus harus panggil data-onfocus saja, bukan data-oninput');
+  assert.equal(toastCalls.length, 0);
+});
+
+// SESI (konversi simpleAutocompleteInput data-onfocus, 10 field txCat/txSubCat-style,
+// modules/shared/modals.js): field autocomplete generik (txNote, txBbmSpbu, bbmSpbu,
+// billName, pName, prName, sparepartName, sparepartCode, stockName, stockCode) dulu
+// dibuka via inline onfocus="simpleAutocompleteInput('id','boxId',acListVar)" per-field.
+// Dikonversi ke 1 wiring generik data-onfocus="simpleAutocompleteInput" data-onfocus-args=
+// '["id","boxId","acListVar"]' -- tapi JSON args TIDAK BISA membawa referensi variabel
+// array, jadi arg ke-3 dikirim sbg STRING nama variabel & di-dereference balik ke window[..]
+// khusus di dalam _dataActionInputChangeHandler (lihat komentar di source). Test ini
+// mengunci bahwa dereferencing itu benar-benar terjadi (bukan string literal yang lolos).
+test('dispatcher focus — data-onfocus="simpleAutocompleteInput" men-dereference arg ke-3 (nama variabel list) ke array global aslinya', () => {
+  const acTxNotes = ['galon', 'beras warung', 'listrik'];
+  const windowObj = {
+    acTxNotes,
+    simpleAutocompleteInput(fieldId, boxId, list) {
+      received = { fieldId, boxId, list };
+    },
+  };
+  let received = null;
+  const { context, toastCalls } = loadSandbox(windowObj);
+  const el = makeFakeElement({
+    onfocus: 'simpleAutocompleteInput',
+    onfocusArgs: '["txNote","txNoteBox","acTxNotes"]',
+  });
+
+  context._dataActionInputChangeHandler({ type: 'focus', target: el });
+
+  assert.equal(received.fieldId, 'txNote');
+  assert.equal(received.boxId, 'txNoteBox');
+  assert.equal(received.list, acTxNotes, 'arg ke-3 harus jadi REFERENSI array asli, bukan string namanya');
+  assert.equal(toastCalls.length, 0);
+});
+
+test('dispatcher focus — dereferencing arg ke-3 HANYA berlaku utk fungsi simpleAutocompleteInput, fungsi lain menerima string apa adanya', () => {
+  const windowObj = {
+    acTxNotes: ['seharusnya tidak ke-resolve'],
+    fungsiLain(a, b, c) { received = c; },
+  };
+  let received = null;
+  const { context, toastCalls } = loadSandbox(windowObj);
+  const el = makeFakeElement({
+    onfocus: 'fungsiLain',
+    onfocusArgs: '["a","b","acTxNotes"]',
+  });
+
+  context._dataActionInputChangeHandler({ type: 'focus', target: el });
+
+  assert.equal(received, 'acTxNotes', 'fungsi selain simpleAutocompleteInput harus tetap terima string literal apa adanya');
   assert.equal(toastCalls.length, 0);
 });
