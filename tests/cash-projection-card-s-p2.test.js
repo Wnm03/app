@@ -50,6 +50,18 @@ function loadSandbox(D) {
       n = Number(n) || 0;
       return (n < 0 ? '-' : '') + 'Rp ' + Math.round(Math.abs(n)).toLocaleString('id-ID');
     },
+    // FIX (Sesi Fix Bug #2, migrasi onclick inline -> data-action): mirror
+    // persis escapeHtml() asli (modules/shared/helper-teks.js), yang sekarang
+    // dipanggil _renderCashProjectionCard() utk membungkus data-args JSON.
+    escapeHtml: (str) => {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    },
   };
   vm.createContext(context);
   // Load dependency getMonthlyCashProjection() (butuh getBillStats() dst dari tagihan-kalender.js)

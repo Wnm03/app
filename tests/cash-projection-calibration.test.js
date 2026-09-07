@@ -71,6 +71,22 @@ function loadCardSandbox(D) {
       n = Number(n) || 0;
       return (n < 0 ? '-' : '') + 'Rp ' + Math.round(Math.abs(n)).toLocaleString('id-ID');
     },
+    // FIX (Sesi Fix Bug #2, migrasi onclick inline -> data-action): sandbox VM
+    // ini cuma me-load tagihan-kalender.js + cash-projection.js + fungsi-fungsi
+    // _dashCashProj*, TIDAK men-load modules/shared/helper-teks.js (tempat asli
+    // escapeHtml() didefinisikan) -- padahal _renderCashProjectionCard() sekarang
+    // memanggil escapeHtml() utk membungkus data-args JSON (pola sama showFilteredTx
+    // di file lain, lihat modules-render-b.js). Stub ini MIRROR PERSIS implementasi
+    // asli helper-teks.js, bukan fungsi baru.
+    escapeHtml: (str) => {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    },
   };
   vm.createContext(context);
   vm.runInContext(SRC_BILL, context, { filename: 'tagihan-kalender.js' });

@@ -67,12 +67,25 @@ test('sanity — INLINE_SCRIPT_REGEX TIDAK salah tangkap <script src="...">', ()
   assert.equal(findInlineScripts(dummy).length, 0);
 });
 
-test('modal-write.js dirujuk persis 101 kali (index 0..100, tanpa lubang/duplikat) di index.html', () => {
+test('modal-write.js dirujuk persis 103 kali (index 0..102, tanpa lubang/duplikat) di index.html', () => {
+  // FIX (akumulasi v1575, sesi2-fix-cashproj-onclick-csp): jumlah naik dari
+  // 101->102 karena patch cashproj-onclick-csp mengeksternalisasi 1 blok
+  // onclick baru (modal cash-projection) menjadi modal-write.js#101.
+  // FIX LANJUTAN (akumulasi v1579, S751 fuel-ref-modal-bbmmodal): jumlah naik
+  // lagi dari 102->103 karena `fuelRefModal` ditambahkan sbg elemen index
+  // ke-102 di `MODAL_HTML` (modules/shared/modals.js) & baris
+  // `data-modal-index="102"` yang bersangkutan ditambahkan di index.html --
+  // gate ini sempat tidak ke-update sesi itu krn sandbox S751 tidak punya
+  // akses ke `tests/helpers/` (lihat SESSION-NOTE-S751), baru ketahuan &
+  // diperbaiki di sesi ini (S752) setelah sandbox sesi ini kebetulan punya
+  // akses `tests/helpers/` penuh. Tiap update di sini HANYA angka gate,
+  // BUKAN pelonggaran aturan -- gate "0 lubang/duplikat" di bawah tetap
+  // penuh berlaku terhadap index baru manapun.
   const matches = [...INDEX_HTML.matchAll(/data-modal-index="(\d+)"/g)].map((m) => Number(m[1]));
-  assert.equal(matches.length, 101, `jumlah tag modal-write.js harus 101, ditemukan ${matches.length}`);
+  assert.equal(matches.length, 103, `jumlah tag modal-write.js harus 103, ditemukan ${matches.length}`);
   const sorted = [...matches].sort((a, b) => a - b);
-  const expected = Array.from({ length: 101 }, (_, i) => i);
-  assert.deepEqual(sorted, expected, 'index modal-write.js harus 0..100 tanpa lubang/duplikat');
+  const expected = Array.from({ length: 103 }, (_, i) => i);
+  assert.deepEqual(sorted, expected, 'index modal-write.js harus 0..102 tanpa lubang/duplikat');
 });
 
 test('index.html & app_production.html sinkron soal jumlah & isi tag modal-write.js/boot-early.js', () => {
