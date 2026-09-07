@@ -538,3 +538,23 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses internet, eslint tidak bisa diinstall - konsisten dgn semua sesi sebelumnya
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses internet, esbuild tidak bisa diinstall - bundle valid secara syntax, hanya belum diminify
+
+## 2026-09-06T23:15:49.808Z — versi s745-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan, npm/eslint tidak bisa diinstall/dijalankan (konsisten dgn sesi-sesi sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang & tidak bisa diinstall tanpa akses jaringan di sandbox ini, bundle unminified tapi valid (node --check lolos)
+
+## 2026-09-06T23:35:25.000Z — versi s747-gajian-sabtu-sore-gate
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall (konsisten dgn sesi-sesi sebelumnya). Sesi Fix Bug #2 hanya mengganti 10 atribut onclick= inline jadi data-action/data-args (0 logika baru selain 1 fungsi kecil `_dashCashProjToggleDetail()`, exact-preserve toggle lama) di modules/shared/modules-render.js, + tambah `escapeHtml` ke 3 sandbox test VM lama yang sekarang butuh itu (cash-projection-calibration.test.js, cash-projection-sparkline.test.js, cash-projection-card-s-p2.test.js, cash-projection-card-s-q3.test.js), + 1 file test baru (8 test). Diverifikasi manual (node -c lolos, gaya kode konsisten pola data-action existing yang di-mirror persis dari showFilteredTx di modules-render-b.js).
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall (konsisten dgn sesi-sesi sebelumnya). Bundle unminified tapi valid (node --check lolos kedua bundle, verify-bundle-freshness OK).
+
+## 2026-09-07T02:27:50.572Z — versi 1577
+
+- **lint-unavailable**: override dipakai. Alasan: eslint devDependency tidak terinstall di sandbox ini (no network access), sama seperti sesi-sesi sebelumnya (S748 dst)
+- **unminified-bundle**: override dipakai. Alasan: esbuild devDependency tidak terinstall di sandbox ini (no network access), sama seperti sesi-sesi sebelumnya (S748 dst)
+
+## 2026-09-07T03:29:56.625Z — versi 1578
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang (sama seperti S748/S749)
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang (sama seperti S748/S749)

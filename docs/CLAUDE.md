@@ -11871,3 +11871,144 @@ modules/asset/property-management-api.js,
 tests/investasi-watch-render-guard-audit-tombol-investasi.test.js,
 tests/property-management-api-per-item-guard.test.js, docs/COVERAGE-PER-MODULE.md,
 docs/FILE-MAP.md, docs/CLAUDE.md.
+
+# Sesi Fix Bug #1 (redo dari audit sebelumnya, sesi terputus) — monthlyGajiModal hilang (2026-09-06)
+
+**Konteks:** Melanjutkan audit sesi sebelumnya yang kehabisan tool-use limit sebelum sempat
+menulis patch. Audit awal sesi itu keliru (parser manual buruk) menyimpulkan 4 modal hilang
+(termasuk 3 modal Dana Titipan) — setelah diverifikasi ulang dgn Node asli (`require()` array
+`MODAL_HTML`), klaim "3 modal Dana Titipan ikut hilang" DITARIK: array itu cuma 102 item
+(bukan 105), dan yang hilang cuma 1 — `monthlyGajiModal` di index 101 (yang memang dilaporkan
+di screenshot user). Sesuai arahan user, pekerjaan dipecah jadi beberapa sesi kecil, tiap sesi
+1 ZIP patch — ini SESI 1.
+
+**Root cause:** `index.html` & `app_production.html` berhenti di
+`data-modal-index="100"` (tepat SEBELUM baris `bundle-load-guard.js` penutup `</body>`),
+padahal `modules/shared/modals.js` sudah punya `MODAL_HTML[101]` = `monthlyGajiModal`. Modal
+itu tidak pernah ikut ke-`document.write` ke DOM, jadi `#monthlyGajiModal` tidak ditemukan
+saat dipanggil.
+
+**Kenapa lolos test sebelumnya (bug ke-2, ditemukan sekalian):**
+1. `tests/csp-script-src-sa10a.test.js` — meng-hardcode angka `101` & rentang `0..100` sbg
+   assert, jadi saat `MODAL_HTML` bertambah jadi 102 item tapi HTML tidak ikut diupdate,
+   test ini tetap `matches.length === 101` (cocok dgn HTML yang salah, bukan dgn array yang
+   benar) → PASS palsu.
+2. `scripts/lib/modal-html-index-drift.js` (dipakai bareng `scripts/build.js` & `tests/
+   modal-html-index-drift.test.js`) — punya toleransi `entriesFound < MODAL_HTML.length - 2`,
+   sengaja longgar 2 item. Selisih nyata cuma 1 (101 vs 102), jadi di BAWAH ambang toleransi →
+   tidak ke-flag sbg masalah. Ini bug independen di lint-nya sendiri, bukan cuma gejala.
+
+**Fix (3 file):**
+1. `index.html` & `app_production.html` — tambah 1 baris
+   `<script src="modules/shared/modal-write.js?v=..." data-modal-index="101"></script>
+   <!-- modal:monthlyGajiModal -->` setelah index=100, di kedua file.
+2. `tests/csp-script-src-sa10a.test.js` — hardcode 101/0..100 diganti baca panjang
+   `MODAL_HTML` langsung dari `modules/shared/modals.js` via `vm` (pola sama
+   `modal-html-index-drift.js`), supaya penambahan/pengurangan modal ke depan otomatis
+   ke-gate oleh `npm test`, bukan diam-diam basi lagi.
+3. `scripts/lib/modal-html-index-drift.js` — toleransi `-2` dihapus, jadi exact match
+   (`entriesFound !== MODAL_HTML.length`). Ini lint yang SAMA dipakai `scripts/build.js`
+   sbg gate blocking, jadi sesi ini juga menutup celah supaya bug sejenis (1-2 modal lupa
+   disuntik ke HTML) ke depan akan gagal di `node scripts/build.js`, bukan cuma ketahuan
+   manual/screenshot user.
+
+**Test:** 15/15 pass (`tests/csp-script-src-sa10a.test.js` + `tests/modal-html-index-drift.test.js`).
+Full suite: **5589 test, 5589 pass, 0 fail** (sebelum & sesudah build, 2x run).
+
+**Build:** `s745-gajian-sabtu-sore-gate` / v1573. `verify-window-expose.js`: OK (78 modul
+data-action, semuanya window-expose). html-sync & version-sync gate: lolos.
+
+**Status lint & release gate:** Tidak tersedia, di-override — eslint & esbuild tidak bisa
+dijalankan/diinstall di sandbox ini (tanpa akses jaringan), konsisten dgn sesi-sesi
+sebelumnya. Dicatat di `docs/RELEASE-GATE-LOG.md` (entry `2026-09-06T23:15:49.808Z — versi
+s745-gajian-sabtu-sore-gate`).
+
+**Progress:** Bug #1 (modal hilang) TUNTAS + lint-nya dikeraskan. Bug #2 (tombol "Detail ▾"
+tidak bisa diklik krn CSP `script-src-attr 'none'` memblokir `onclick=`/`onchange=` inline,
++ 8 handler inline lain di kartu Proyeksi Kas yang sama) BELUM dikerjakan — sesuai arahan
+user "1 sesi dulu, 1 zip patch", ditunda ke sesi berikutnya (Sesi 2).
+
+**Next TODO:** Sesi 2 — migrasi 9 handler inline (`onclick`/`onchange`) di
+`_renderCashProjectionCard()` (`modules/shared/modules-render.js`) ke dispatcher
+`data-action`/`data-onchange` yang sudah ada & aktif di codebase (0 refactor logika,
+fungsi target sudah ada sbg global). Rincian lengkap ada di ringkasan audit awal (lihat
+riwayat percakapan) — tombol Detail → fungsi baru kecil `_dashCashProjToggleDetail()`
+(exact-preserve toggle lama), 8 handler lain tinggal ganti atribut.
+
+**Known Issue:** Tidak ada known issue baru dari sesi ini.
+
+## ZIP
+Patch (HANYA file berubah, bukan full release), sesuai arahan user 1-sesi-1-zip:
+index.html, app_production.html, tests/csp-script-src-sa10a.test.js,
+scripts/lib/modal-html-index-drift.js, app-bundle-a.min.js, app-bundle-b.min.js, sw.js,
+modules/shared/features-helpers-global-security.js, modules/shared/modules-render.js,
+modules/shared/modals.js, modules/shared/modules-calc.js, chat-action-handlers.js,
+docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md, docs/RELEASE-GATE-LOG.md, docs/CLAUDE.md.
+
+# Sesi Fix Bug #2 — 10 handler onclick inline mati di kartu Proyeksi Kas (2026-09-07)
+
+**Konteks:** Lanjutan Sesi Fix Bug #1 (monthlyGajiModal hilang), sesuai arahan user
+"1 sesi dulu, 1 zip patch". Bug #2: tombol "Detail ▾" + handler lain di kartu
+"💰 Proyeksi Kas Bulan Ini" (`_renderCashProjectionCard()`, modules/shared/
+modules-render.js) mati total karena CSP `script-src-attr 'none'` memblokir semua
+atribut `onclick=`/`onchange=` inline.
+
+**Cakupan:** Audit ulang `_renderCashProjectionCard()` menemukan **10** atribut
+`onclick=` inline (bukan 9 seperti catatan Next TODO sesi lalu — dihitung ulang
+persis dari source): 3x `_dashCashProjOpenDetail()` (Proyeksi Gaji/Sisa Kewajiban/
+Kiriman Mingguan), 3x `showFilteredTx(...)` (Pemasukan/Pengeluaran Bulan Ini di luar
+Detail, Gaji Tercatat di dalam Detail), 1x toggle Detail (`document.getElementById(
+'dashCashProjDetailBody').classList.toggle('u-dnone')`), 1x `_dashCashProjGoToAbsensi()`,
+2x `_dashCashProjGoToTagihan()` (Total Kewajiban, Sudah Dibayar). Semua dimigrasi ke
+dispatcher `data-action`/`data-args` yang sudah ada & aktif (fondasi SA1, s741) — pola
+persis `data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify([...]))}"`
+yang sudah dipakai di modules-render-b.js.
+
+**Fix (1 file source + 4 file test lama + 1 file test baru):**
+1. `modules/shared/modules-render.js` — 10 atribut `onclick=` di
+   `_renderCashProjectionCard()` diganti `data-action`/`data-args`; 1 fungsi baru
+   kecil `_dashCashProjToggleDetail()` (exact-preserve toggle lama, 0 perubahan
+   perilaku) ditambah di sebelah `_dashCashProjOpenDetail()`. 0 refactor logika,
+   0 fungsi target baru selain toggle ini (semua fungsi lain sudah ada sbg global).
+2. `tests/cash-projection-calibration.test.js`, `tests/cash-projection-sparkline.test.js`,
+   `tests/cash-projection-card-s-p2.test.js`, `tests/cash-projection-card-s-q3.test.js`
+   — sandbox VM manual di 4 file ini me-load `_renderCashProjectionCard()` terisolasi
+   tanpa `modules/shared/helper-teks.js` (tempat asli `escapeHtml()`), jadi begitu
+   fungsi itu mulai memanggil `escapeHtml()` untuk data-args, sandboxnya throw
+   `ReferenceError`. Ditambahkan stub `escapeHtml` yang MIRROR PERSIS implementasi
+   asli ke context masing-masing (bukan fungsi baru, cuma menutup gap sandbox test).
+3. `tests/cash-proj-card-csp-bug2-data-action.test.js` (BARU, 8 test) — mengunci
+   PERMANEN 0 regresi `onclick=`/`onchange=` di HTML kartu ini + verifikasi tiap
+   10 elemen punya `data-action`/`data-args` yang benar + unit test
+   `_dashCashProjToggleDetail()` (toggle 2x + guard elemen absen).
+
+**Test:** 8/8 pass (file baru). Full suite: **5597 test, 5597 pass, 0 fail** (sebelum
+& sesudah build).
+
+**Build:** `s747-gajian-sabtu-sore-gate` / v1575. `verify-window-expose.js`: OK (78
+modul data-action, semuanya window-expose — 3 fungsi lama + 1 baru
+`_dashCashProjToggleDetail` semuanya function declaration top-level, otomatis
+window-expose tanpa perlu entry manual). `verify-bundle-freshness.js`: OK.
+
+**Status lint & release gate:** Tidak tersedia, di-override — eslint & esbuild tidak
+bisa dijalankan/diinstall di sandbox ini (tanpa akses jaringan), konsisten dgn
+sesi-sesi sebelumnya. Dicatat di `docs/RELEASE-GATE-LOG.md` (entry
+`2026-09-06T23:35:25.000Z — versi s747-gajian-sabtu-sore-gate`).
+
+**Progress:** Bug #2 TUNTAS — 0 `onclick=`/`onchange=` inline tersisa di kartu
+Proyeksi Kas, semua tombol berfungsi normal di bawah CSP `script-src-attr 'none'`.
+
+**Next TODO:** Tidak ada known issue baru dari audit awal yang tersisa untuk kartu
+ini. Kalau ada laporan tombol mati serupa di kartu/halaman lain, cek dulu apakah
+masih ada `onclick=`/`onchange=` inline dgn `grep -rn "onclick=\|onchange=" modules/`
+(2 fungsi lain di modules-render.js — settings panel Proyeksi Kas & preferensi kartu
+dashboard — masih pakai inline, TAPI di luar cakupan laporan bug ini, sengaja tidak
+disentuh sesuai disiplin "1 sesi 1 file source").
+
+## ZIP
+Patch (HANYA file berubah, bukan full release), sesuai arahan user 1-sesi-1-zip:
+modules/shared/modules-render.js, tests/cash-projection-calibration.test.js,
+tests/cash-projection-sparkline.test.js, tests/cash-projection-card-s-p2.test.js,
+tests/cash-projection-card-s-q3.test.js, tests/cash-proj-card-csp-bug2-data-action.test.js,
+app-bundle-a.min.js, app-bundle-b.min.js, index.html, app_production.html, sw.js,
+docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md, docs/RELEASE-GATE-LOG.md, docs/CLAUDE.md.
