@@ -558,3 +558,18 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang (sama seperti S748/S749)
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang (sama seperti S748/S749)
+
+## 2026-09-07T09:33:32.647Z — versi s756-fuel-jenis-unknown-edit-legacy
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak bisa diinstall
+- **unminified-bundle**: override dipakai. Alasan: Sandbox tanpa akses jaringan, esbuild tidak bisa diinstall via npm install
+
+## 2026-09-07T10:27:08.865Z — versi s757-fuel-jenis-unknown-edit-legacy
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak bisa diinstall (sama seperti sesi s756/S1587); tidak ada perubahan gaya kode baru di sesi ini, hanya regex assertion di file test
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak bisa diinstall (sama seperti sesi s756/S1587); bundle tetap valid (node --check lolos), hanya lebih besar dari versi minified
+
+## 2026-09-07T11:13:18.655Z — versi s758-fuel-jenis-unknown-edit-legacy
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang (S1587/S1588/S1589 override ke-3 berturut-turut, W harus npm install begitu ada akses jaringan)
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang (S1587/S1588/S1589 override ke-3 berturut-turut, W harus npm install begitu ada akses jaringan)
