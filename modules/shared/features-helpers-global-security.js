@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's744-gajian-sabtu-sore-gate';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's744-gajian-sabtu-sore-gate';
+const APP_BUILD_VERSION = 's754-fuel-jenis-unknown-edit-legacy';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's754-fuel-jenis-unknown-edit-legacy';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -596,6 +596,9 @@ runDataMigrations(_fromSchemaVersion);
 if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
 if(!D.accounts || !D.accounts.length) D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.pajakZakat) D.pajakZakat={hargaEmasPerGram:2640000,nisabPenghasilanBulan:7640144,nisabPenghasilanTahun:91681728,zakatFitrahPerJiwa:37500,haulMaalMulai:null,zakatLog:[]};
+// Sesi 749: referensi harga BBM nasional (1 angka per jenis) dipakai FuelPriceRef
+// (modules/vehicle/fuel-price-ref.js) — pola sama persis D.pajakZakat di atas.
+if(!D.fuelPriceRef) D.fuelPriceRef={pertalite:null,pertamax:null,pertamaxTurbo:null,pertaminaDex:null,dexlite:null,solar:null,lastType:'pertalite',lastTypeByVehicle:{},lastCheckedAt:null,refSources:{}};
 if(!D.pajakZakat.zakatLog) D.pajakZakat.zakatLog=[];
 if(!D.pajakZakat.pbb) D.pajakZakat.pbb={njoptkp:10000000,tarifPersen:0.5};
 if(D.pajakZakat.pbb.njoptkp===undefined) D.pajakZakat.pbb.njoptkp=10000000;

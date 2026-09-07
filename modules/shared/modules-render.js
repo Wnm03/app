@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s744-gajian-sabtu-sore-gate';
+const MODULE_RENDER_VERSION='s754-fuel-jenis-unknown-edit-legacy';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1408,12 +1408,12 @@ surplusHtml=`
 const polaAbsenHtml=(typeof _renderPolaAbsenBlock==='function')?_renderPolaAbsenBlock(ctx,cfg):'';
 el.innerHTML=`
 <div class="grid2 u-mb10">
-<div class="stat-box u-pointer" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
-<div class="stat-box u-pointer" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
-<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','income','Pemasukan Bulan Ini')"><div class="stat-label">Pemasukan Bulan Ini</div><div class="stat-val u-fs14 green">${fmtFull(inc)}</div></div>
-<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','expense','Pengeluaran Bulan Ini')"><div class="stat-label">Pengeluaran Bulan Ini</div><div class="stat-val u-fs14 red">${fmtFull(exp)}</div></div>
+<div class="stat-box u-pointer" data-action="_dashCashProjOpenDetail"><div class="stat-label">Proyeksi Gaji</div><div class="stat-val u-fs14">${fmtFull(r.gajiProjected)}</div></div>
+<div class="stat-box u-pointer" data-action="_dashCashProjOpenDetail"><div class="stat-label">Sisa Kewajiban</div><div class="stat-val u-fs14">${fmtFull(r.kewajibanSisa)}</div></div>
+<div class="stat-box u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['dashboard','income','Pemasukan Bulan Ini']))}"><div class="stat-label">Pemasukan Bulan Ini</div><div class="stat-val u-fs14 green">${fmtFull(inc)}</div></div>
+<div class="stat-box u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['dashboard','expense','Pengeluaran Bulan Ini']))}"><div class="stat-label">Pengeluaran Bulan Ini</div><div class="stat-val u-fs14 red">${fmtFull(exp)}</div></div>
 </div>
-<div class="stat-box u-pointer u-mb10" onclick="_dashCashProjOpenDetail()"><div class="stat-label">Kiriman Mingguan (Estimasi)</div><div class="stat-val u-fs14">${fmtFull(r.kirimanEstimate)}</div></div>
+<div class="stat-box u-pointer u-mb10" data-action="_dashCashProjOpenDetail"><div class="stat-label">Kiriman Mingguan (Estimasi)</div><div class="stat-val u-fs14">${fmtFull(r.kirimanEstimate)}</div></div>
 <div class="u-tac">
 <div class="u-fs11 u-t2">Proyeksi Kas Bulan Ini</div>
 <div class="stat-val ${kasCls} u-fs20">${fmtFullSigned(r.proyeksiKas)}</div>
@@ -1424,14 +1424,14 @@ ${saldoHtml}
 ${sparklineHtml}
 ${surplusHtml}
 <div class="u-tac u-mt6">
-<button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('dashCashProjDetailBody').classList.toggle('u-dnone')">Detail ▾</button>
+<button type="button" class="btn btn-ghost btn-sm" data-action="_dashCashProjToggleDetail">Detail ▾</button>
 </div>
 <div id="dashCashProjDetailBody" class="u-dnone u-mt8">
 <div class="grid2 u-mb8">
-<div class="stat-box u-pointer" onclick="showFilteredTx('dashboard','gaji','Gaji Tercatat Bulan Ini')"><div class="stat-label">Gaji Tercatat</div><div class="stat-val u-fs12">${fmtFull(r.recordedGaji)}</div></div>
-<div class="stat-box u-pointer" onclick="_dashCashProjGoToAbsensi()"><div class="stat-label">Gaji Pending</div><div class="stat-val u-fs12">${fmtFull(r.pendingGajiEstimate)}</div></div>
-<div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
-<div class="stat-box u-pointer" onclick="_dashCashProjGoToTagihan()"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
+<div class="stat-box u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['dashboard','gaji','Gaji Tercatat Bulan Ini']))}"><div class="stat-label">Gaji Tercatat</div><div class="stat-val u-fs12">${fmtFull(r.recordedGaji)}</div></div>
+<div class="stat-box u-pointer" data-action="_dashCashProjGoToAbsensi"><div class="stat-label">Gaji Pending</div><div class="stat-val u-fs12">${fmtFull(r.pendingGajiEstimate)}</div></div>
+<div class="stat-box u-pointer" data-action="_dashCashProjGoToTagihan"><div class="stat-label">Total Kewajiban</div><div class="stat-val u-fs12">${fmtFull(r.billMonthTotal)}</div></div>
+<div class="stat-box u-pointer" data-action="_dashCashProjGoToTagihan"><div class="stat-label">Sudah Dibayar</div><div class="stat-val u-fs12">${fmtFull(r.billPaidThisPeriod)}</div></div>
 </div>
 <div class="u-fs11 u-t2 u-tac">Kiriman Mingguan: ${fmtFull(r.kirimanPerMinggu)} × ${r.weeksInMonth} minggu (setting Pengaturan → Profil) = ${fmtFull(r.kirimanEstimate)}${r.includeKiriman?'':' (tidak disertakan ke Proyeksi Kas)'}</div>
 ${r.includePendingGaji?'':'<div class="u-fs11 u-t2 u-tac u-mt4">Gaji Pending tidak disertakan ke Proyeksi Gaji</div>'}
@@ -1451,6 +1451,16 @@ const body=document.getElementById('dashCashProjDetailBody');
 if(!body)return;
 body.classList.remove('u-dnone');
 body.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+// _dashCashProjToggleDetail() — Sesi Fix Bug #2 (CSP script-src-attr 'none' memblokir
+// onclick inline di tombol "Detail ▾" kartu Proyeksi Kas). Exact-preserve logika toggle
+// lama (`document.getElementById('dashCashProjDetailBody').classList.toggle('u-dnone')`),
+// cuma dipindah jadi fungsi bernama supaya bisa dipanggil lewat dispatcher
+// data-action (0 perubahan perilaku).
+function _dashCashProjToggleDetail(){
+const body=document.getElementById('dashCashProjDetailBody');
+if(!body)return;
+body.classList.toggle('u-dnone');
 }
 // _dashCashProjGoToAbsensi()/_dashCashProjGoToTagihan() — "Gaji Pending" sumbernya
 // D.workDays (belum di-reset), bukan daftar transaksi; "Total Kewajiban"/"Sudah Dibayar"
