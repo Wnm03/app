@@ -49,6 +49,7 @@ document.getElementById('bbmModalTitle').textContent=isEdit?'Edit Catatan BBM':'
 document.getElementById('bbmDelBtn').style.display=isEdit?'flex':'none';
 const bbmAccEl=document.getElementById('bbmAcc');
 if(bbmAccEl) bbmAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(typeof FuelPriceRef!=='undefined')FuelPriceRef.populateSelect('bbmJenis',curVehicleId);
 if(isEdit){
 const b=D.bbmLogs.find(x=>x.id===BBM.editId);
 if(!b)return;
@@ -61,11 +62,23 @@ document.getElementById('bbmSpbu').value=b.spbu||'';
 document.getElementById('bbmFull').checked=!!b.fullTank;
 document.getElementById('bbmNote').value=b.note||'';
 if(bbmAccEl&&b.accountId)bbmAccEl.value=b.accountId;
+// Edit: set dropdown Jenis BBM ke jenis tersimpan TANPA menimpa harga
+// (populateSelect() di atas sudah isi opsi + default lastType; di sini
+// cuma override value-nya sesuai catatan yang diedit, kalau ada).
+if(b.jenis){
+const jenisEl=document.getElementById('bbmJenis');
+if(jenisEl)jenisEl.value=b.jenis;
+} else if(typeof FuelPriceRef!=='undefined'){
+FuelPriceRef.selectUnknown('bbmJenis');
+}
 } else {
 document.getElementById('bbmDate').value=new Date().toISOString().split('T')[0];
 ['bbmLiter','bbmHarga','bbmCost','bbmSpbu','bbmNote'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('bbmKm').value=getVehicleKm(curVehicleId)||'';
 document.getElementById('bbmFull').checked=true;
+// Entry baru: isi harga referensi sesuai jenis default yang terpilih
+// (per-kendaraan, Sesi 755 -- lihat SESSION-NOTE S755).
+if(typeof FuelPriceRef!=='undefined')FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId);
 }
 openModal('bbmModal');
 },
@@ -115,8 +128,10 @@ if(isEdit&&!existing){toast('⚠️ Data tidak ditemukan');return;}
 // ulang transaksinya (sama seperti alur catatan baru), bukan dibiarkan.
 const wasOrphan=isEdit&&!existing.txLinkId;
 const txId=isEdit?(existing.txLinkId||uid()):uid();
+const jenisEl=document.getElementById('bbmJenis');
+const jenis=jenisEl?jenisEl.value:undefined;
 const result=recordBbmLog({
-vehicleId:curVehicleId,date,km,liter,harga,cost,spbu,fullTank,note,accountId:accId,
+vehicleId:curVehicleId,date,km,liter,harga,cost,spbu,fullTank,note,accountId:accId,jenis,
 txId,existingBbmId:isEdit?BBM.editId:null
 });
 if(isEdit){

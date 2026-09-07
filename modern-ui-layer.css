@@ -95,7 +95,12 @@ a:focus-visible {
       di atas --accentN-soft hanya 1.5-3.5:1 di 6 tema ini (accent3/accent4
       terutama). Fix: gelapkan warna teks via color-mix 55% black KHUSUS di
       badge/status text, background pill tetap sama. Tema dark/ocean/slate/ink
-      TIDAK disentuh - sudah lolos AA (6-9.5:1). */
+      TIDAK disentuh - sudah lolos AA (6-9.5:1).
+      FIX (akumulasi v1575+): "modern" ditambahkan ke daftar scoping di bawah
+      krn base-nya baru saja dikoreksi dari gelap jadi terang (lihat FIX di
+      styles.css [data-theme="modern"]) -- sekarang punya masalah kontras
+      terang yang sama persis dgn 6 tema lama ini (accent3/accent4 di atas
+      -soft), jadi perlu ikut fix onlight yang sama. */
 :root {
   --accent2-onlight: color-mix(in srgb, var(--accent2) 55%, black);
   --accent3-onlight: color-mix(in srgb, var(--accent3) 55%, black);
@@ -106,7 +111,8 @@ a:focus-visible {
 [data-theme="mono"] .shop-stock-pill.ok, [data-theme="mono"] .trs-tag-btn.stok-ok,
 [data-theme="sand"] .shop-stock-pill.ok, [data-theme="sand"] .trs-tag-btn.stok-ok,
 [data-theme="sage"] .shop-stock-pill.ok, [data-theme="sage"] .trs-tag-btn.stok-ok,
-[data-theme="fresh"] .shop-stock-pill.ok, [data-theme="fresh"] .trs-tag-btn.stok-ok {
+[data-theme="fresh"] .shop-stock-pill.ok, [data-theme="fresh"] .trs-tag-btn.stok-ok,
+[data-theme="modern"] .shop-stock-pill.ok, [data-theme="modern"] .trs-tag-btn.stok-ok {
   color: var(--accent3-onlight);
 }
 [data-theme="light"] .shop-stock-pill.mid,
@@ -115,12 +121,14 @@ a:focus-visible {
 [data-theme="sand"] .shop-stock-pill.mid,
 [data-theme="sage"] .shop-stock-pill.mid,
 [data-theme="fresh"] .shop-stock-pill.mid,
+[data-theme="modern"] .shop-stock-pill.mid,
 [data-theme="light"] .kasir-tile.stock-low .kasir-tile-stock,
 [data-theme="stone"] .kasir-tile.stock-low .kasir-tile-stock,
 [data-theme="mono"] .kasir-tile.stock-low .kasir-tile-stock,
 [data-theme="sand"] .kasir-tile.stock-low .kasir-tile-stock,
 [data-theme="sage"] .kasir-tile.stock-low .kasir-tile-stock,
-[data-theme="fresh"] .kasir-tile.stock-low .kasir-tile-stock {
+[data-theme="fresh"] .kasir-tile.stock-low .kasir-tile-stock,
+[data-theme="modern"] .kasir-tile.stock-low .kasir-tile-stock {
   color: var(--accent4-onlight);
 }
 [data-theme="light"] .shop-stock-pill.low, [data-theme="light"] .trs-tag-btn.stok-low,
@@ -129,12 +137,14 @@ a:focus-visible {
 [data-theme="sand"] .shop-stock-pill.low, [data-theme="sand"] .trs-tag-btn.stok-low,
 [data-theme="sage"] .shop-stock-pill.low, [data-theme="sage"] .trs-tag-btn.stok-low,
 [data-theme="fresh"] .shop-stock-pill.low, [data-theme="fresh"] .trs-tag-btn.stok-low,
+[data-theme="modern"] .shop-stock-pill.low, [data-theme="modern"] .trs-tag-btn.stok-low,
 [data-theme="light"] .kasir-tile.stock-out .kasir-tile-stock,
 [data-theme="stone"] .kasir-tile.stock-out .kasir-tile-stock,
 [data-theme="mono"] .kasir-tile.stock-out .kasir-tile-stock,
 [data-theme="sand"] .kasir-tile.stock-out .kasir-tile-stock,
 [data-theme="sage"] .kasir-tile.stock-out .kasir-tile-stock,
-[data-theme="fresh"] .kasir-tile.stock-out .kasir-tile-stock {
+[data-theme="fresh"] .kasir-tile.stock-out .kasir-tile-stock,
+[data-theme="modern"] .kasir-tile.stock-out .kasir-tile-stock {
   color: var(--accent2-onlight);
 }
 

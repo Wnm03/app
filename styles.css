@@ -26,7 +26,22 @@
    variabel + 1 aturan scoped tambahan, 0 markup disentuh; tema lama (10
    blok di atas) 0 dampak. Belum didaftarkan ke pemilihan tema di UI --
    itu scope sesi s636+ sesuai rencana bertahap. */
-[data-theme="modern"] {  --bg:#0b0b0c;--surface:#131314;--surface2:#18181a;--surface3:#1f1f22;--surface4:#28282b;  --accent:#9b9b9f;--accent-soft:rgba(155,155,159,0.12);  --accent2:#b56b66;--accent2-soft:rgba(181,107,102,0.12);  --accent3:#6f9c80;--accent3-soft:rgba(111,156,128,0.12);  --accent4:#9c8a68;--accent4-soft:rgba(156,138,104,0.12);  --text:#e6e6e8;--text2:#85858a;--text3:#57575c;  --border:rgba(255,255,255,0.045);--border2:rgba(255,255,255,0.08);  --header-bg:rgba(11,11,12,0.92);--shadow-card:0 16px 40px rgba(0,0,0,0.5);  --money-pos:var(--accent3);--money-neg:var(--accent2);
+/* FIX (akumulasi v1575+, audit UI/UX): blok token di bawah SEBELUMNYA berisi
+   nilai GELAP (--bg:#0b0b0c dst), padahal theme-card "modern" di index.html
+   (didaftarkan sesi s640) eksplisit berlabel "Terang flat & ringan (Minimal)"
+   dengan preview background #fafafa + teks aksen biru #2f6fed (lihat
+   LAPORAN-AUDIT-S640-TEMA-MODERN.md §3: "representatif thd tampilan asli").
+   Audit s640 memvalidasi PENDAFTARAN tema (card/test/sync), TAPI tidak
+   membandingkan literal nilai warna blok ini terhadap preview -- jadi
+   mismatch ini lolos tanpa terdeteksi. Akibat nyata: user pilih "Modern"
+   mengharap tampilan terang, yang muncul tema nyaris hitam. Fix: nilai
+   token diganti jadi terang, dgn aksen biru #2f6fed persis sesuai preview
+   card & teks "Terang" -- 0 file lain disentuh, 0 dampak ke 10 tema lama
+   (pola sama dgn s635: murni custom property, scoped ke [data-theme=
+   "modern"]). accent2/3/4 dipertahankan dari palet lama (nuansa
+   merah/hijau/kuning yg sama) supaya makna semantik uang (+/-) & status
+   tidak berubah, hanya base terang/gelap & --accent yang dikoreksi. */
+[data-theme="modern"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f2f2f2;--surface3:#e8e8e8;--surface4:#dcdcdc;  --accent:#2f6fed;--accent-soft:rgba(47,111,237,0.10);  --accent2:#b3554a;--accent2-soft:rgba(179,85,74,0.1);  --accent3:#5c8a6b;--accent3-soft:rgba(92,138,107,0.1);  --accent4:#a8874a;--accent4-soft:rgba(168,135,74,0.1);  --text:#18181a;--text2:#6b6b6b;--text3:#6e6e6e;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(250,250,250,0.92);--shadow-card:0 6px 20px rgba(47,111,237,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 :root {  --z-chrome:100; --z-dropdown:150; --z-overlay:200; --z-overlay-qs:300; --z-overlay-calc:400; --z-security:900; --z-onboard:950; --z-scanner:970; --z-toast:999;  --money-pos:#16a34a;--money-neg:#dc2626;--alert:#ff5050;--alert-soft:rgba(255,80,80,.15);  --sp-1: 4px; --sp-2: 6px; --sp-3: 8px; --sp-4: 10px; --sp-5: 14px;  --sp-6: 16px; --sp-7: 18px; --sp-8: 20px; --sp-9: 24px; --sp-10: 28px; --sp-11: 36px;  --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 16px; --r-xl: 18px;  --r-2xl: 20px; --r-pill: 24px; --r-full: 999px;  --fs-caption: 11px; --fs-label: 12px; --fs-body: 13px; --fs-body-lg: 14px;  --fs-title-sm: 15px; --fs-icon: 16px; --fs-title: 17px; --fs-icon-lg: 18px; --fs-stat: 20px;
   --dur-fast: 100ms; --dur-base: 150ms; --dur-moderate: 200ms; --dur-slow: 250ms; --dur-slower: 300ms;
