@@ -619,6 +619,19 @@ document.getElementById('txSubCat').value=subName;
 hideSuggestBox('txSubCatSuggestBox');
 updateTxVehiclePanels();
 }
+// FIX (audit txCat/txSubCat dropdown hilang, konversi inline onblur=setTimeout(()=>{...})
+// -> data-onblur=): dispatcher data-action cuma bisa panggil NAMA FUNGSI (lihat
+// _dataActionInputChangeHandler di features-helpers-global-security.js), tidak bisa
+// eval ekspresi arrow function inline. Dua fungsi named kecil ini menggantikan
+// onblur="setTimeout(()=>{hideSuggestBox('txCatSuggestBox');updateTxVehiclePanels();},150)"
+// dan versi txSubCat-nya persis 1:1 (delay 150ms sama supaya klik item suggest-box masih
+// sempat kena onmousedown sebelum box disembunyikan oleh blur).
+function _txCatOnBlur(){
+setTimeout(()=>{hideSuggestBox('txCatSuggestBox');updateTxVehiclePanels();},150);
+}
+function _txSubCatOnBlur(){
+setTimeout(()=>{hideSuggestBox('txSubCatSuggestBox');updateTxVehiclePanels();},150);
+}
 function recentUniqueStrings(list,getter,limit){
 limit=limit||50;
 const seen=new Set();const out=[];
