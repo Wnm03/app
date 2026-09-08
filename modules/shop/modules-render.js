@@ -873,13 +873,13 @@ function renderDashCardPrefsUI(){
 const wrap=document.getElementById('dashCardPrefsList');
 if(!wrap)return;
 wrap.innerHTML=`<div class="u-flex u-gap8 u-mb10">
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="setAllDashCardPrefs(true)">✅ Aktifkan Semua</button>
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="setAllDashCardPrefs(false)">🚫 Matikan Semua</button>
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[true]'>✅ Aktifkan Semua</button>
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[false]'>🚫 Matikan Semua</button>
     </div>`
 +DASH_CARD_DEFS.map(c=>`
     <div class="setting-item">
       <div class="setting-label">${c.label}</div>
-      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} onchange="toggleDashCardPref('${c.key}',this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} data-onchange="toggleDashCardPref" data-onchange-args='["${c.key}","$checked"]'><span class="tgl-track"></span></label>
     </div>`).join('');
 }
 function setAllDashCardPrefs(on){
