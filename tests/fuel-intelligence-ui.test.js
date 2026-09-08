@@ -60,6 +60,10 @@ function makeFakeDoc(extra = {}) {
     fbcBeforeLiter: { textContent: '' },
     fbcAfterLiter: { textContent: '' },
     fbcDiffLiter: { textContent: '' },
+    fbcFillCostRow: { style: { display: 'none' } },
+    fbcFillCostLabel: { textContent: '' },
+    fbcReserveExitRow: { style: { display: 'none' } },
+    fbcReserveExitLabel: { textContent: '' },
     fbcSaveBtn: { disabled: true },
     ...extra,
   };
@@ -77,6 +81,27 @@ function fakeGaugeEngine() {
     calculateFuelLiter: (vid, bar) => ({ ok: true, vehicleId: vid, liter: Math.round((bar / PROFILE.fuelBarCount) * PROFILE.tankCapacityLiter * 100) / 100, clamped: false }),
     calculateFuelBar: (vid, liter) => ({ ok: true, vehicleId: vid, bar: (liter / PROFILE.tankCapacityLiter) * PROFILE.fuelBarCount, clamped: false }),
     calculateFuelPercent: (vid, liter) => ({ ok: true, vehicleId: vid, percent: Math.round((liter / PROFILE.tankCapacityLiter) * 100), clamped: false }),
+    // estimateFillUpCost — pola sama fakeGaugeEngine lain di file ini: model
+    // linear sederhana cukup utk test wiring (TASK-148 punya file test
+    // sendiri utk logic aslinya, fuel-gauge-engine.test.js). avgHarga tetap
+    // 10000 (angka bulat, gampang diverifikasi di assertion).
+    // estimateFillUpCost — diperluas S765 (TASK-148 lanjutan S764) dgn field
+    // inReserve/literToExitReserve/costToExitReserve, model linear sama
+    // sederhananya: inReserve = liter <= PROFILE.reserveLiter (SAMA PERSIS
+    // ambang getReserveStatus() asli), literToExitReserve = reserveLiter -
+    // liter (clamp >=0), cost = literToExitReserve * avgHarga (10000, sama
+    // avgHarga dipakai fillCost di atas) — pola SAMA PERSIS literNeeded/
+    // estimatedCost yg sudah ada, cukup utk test wiring (bukan test ulang
+    // logic asli, sudah ada file test sendiri fuel-gauge-engine.test.js).
+    estimateFillUpCost: (vid, bar) => {
+      const liter = Math.round((bar / PROFILE.fuelBarCount) * PROFILE.tankCapacityLiter * 100) / 100;
+      const literNeeded = Math.round(Math.max(PROFILE.tankCapacityLiter - liter, 0) * 100) / 100;
+      const inReserve = liter <= PROFILE.reserveLiter;
+      const literToExitReserve = inReserve ? Math.round(Math.max(PROFILE.reserveLiter - liter, 0) * 100) / 100 : 0;
+      if (literNeeded <= 0) return { ok: true, vehicleId: vid, currentLiter: liter, literNeeded: 0, avgHarga: null, estimatedCost: 0, inReserve: false, literToExitReserve: 0, costToExitReserve: 0, clamped: false };
+      const costToExitReserve = Math.round(literToExitReserve * 10000);
+      return { ok: true, vehicleId: vid, currentLiter: liter, literNeeded, avgHarga: 10000, estimatedCost: Math.round(literNeeded * 10000), inReserve, literToExitReserve, costToExitReserve, clamped: false };
+    },
   };
 }
 
@@ -204,6 +229,161 @@ test('selectBar() — belum ada estimasi sebelumnya -> "Belum ada data", selisih
   ctx.FuelBarCorrection.selectBar(4);
   assert.equal(els.fbcBeforeLiter.textContent, 'Belum ada data');
   assert.equal(els.fbcDiffLiter.textContent, '-');
+});
+
+// --- selectBar() fill-up cost preview (TASK-148, S762) ---------------------
+
+test('selectBar() — bar belum penuh -> baris estimasi biaya tampil via FuelGaugeEngine.estimateFillUpCost() apa adanya', () => {
+  const { doc, els } = makeFakeDoc();
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: fakeGaugeEngine(),
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+    fmtFull: (n) => `Rp ${n}`,
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(4); // 5L dari 10L -> literNeeded 5, cost 50000
+  assert.equal(els.fbcFillCostRow.style.display, 'flex');
+  assert.equal(els.fbcFillCostLabel.textContent, 'Rp 50000 (5 L)');
+});
+
+test('selectBar() — bar penuh -> baris estimasi biaya tampil "Sudah penuh", bukan angka', () => {
+  const { doc, els } = makeFakeDoc();
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: fakeGaugeEngine(),
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+    fmtFull: (n) => `Rp ${n}`,
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(8); // penuh
+  assert.equal(els.fbcFillCostRow.style.display, 'flex');
+  assert.match(els.fbcFillCostLabel.textContent, /penuh/);
+});
+
+test('selectBar() — estimateFillUpCost() {ok:false} (histori BBM belum cukup) -> baris disembunyikan, bukan error', () => {
+  const { doc, els } = makeFakeDoc();
+  const gauge = fakeGaugeEngine();
+  gauge.estimateFillUpCost = () => ({ ok: false, reason: 'Data BBM kurang' });
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: gauge,
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(4);
+  assert.equal(els.fbcFillCostRow.style.display, 'none');
+});
+
+test('selectBar() — FuelGaugeEngine.estimateFillUpCost tidak ada (versi lama) -> tidak throw, baris tetap disembunyikan', () => {
+  const { doc, els } = makeFakeDoc();
+  const gauge = fakeGaugeEngine();
+  delete gauge.estimateFillUpCost;
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: gauge,
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+  });
+  ctx.FuelBarCorrection.open('v1');
+  assert.doesNotThrow(() => ctx.FuelBarCorrection.selectBar(4));
+  assert.equal(els.fbcFillCostRow.style.display, 'none');
+});
+
+// --- selectBar() reserve-exit preview (TASK-148 lanjutan, S765) -----------
+
+test('selectBar() — bar di dalam reserve -> baris "sampai keluar reserve" tampil via costRes.inReserve/literToExitReserve/costToExitReserve apa adanya', () => {
+  const { doc, els } = makeFakeDoc();
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: fakeGaugeEngine(),
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+    fmtFull: (n) => `Rp ${n}`,
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(0); // liter 0 <= reserveLiter 1 -> inReserve
+  assert.equal(els.fbcReserveExitRow.style.display, 'flex');
+  assert.equal(els.fbcReserveExitLabel.textContent, 'Rp 10000 (1 L)');
+});
+
+test('selectBar() — bar di atas ambang reserve -> baris "sampai keluar reserve" disembunyikan (bukan error)', () => {
+  const { doc, els } = makeFakeDoc();
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: fakeGaugeEngine(),
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+    fmtFull: (n) => `Rp ${n}`,
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(4); // liter 5, jauh di atas reserveLiter 1
+  assert.equal(els.fbcReserveExitRow.style.display, 'none');
+});
+
+test('selectBar() — tangki sudah penuh -> baris "sampai keluar reserve" disembunyikan (inReserve selalu false saat penuh)', () => {
+  const { doc, els } = makeFakeDoc();
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: fakeGaugeEngine(),
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+    fmtFull: (n) => `Rp ${n}`,
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(8); // penuh
+  assert.equal(els.fbcReserveExitRow.style.display, 'none');
+});
+
+test('selectBar() — estimateFillUpCost() {ok:false} (histori BBM belum cukup) -> baris "sampai keluar reserve" ikut disembunyikan', () => {
+  const { doc, els } = makeFakeDoc();
+  const gauge = fakeGaugeEngine();
+  gauge.estimateFillUpCost = () => ({ ok: false, reason: 'Data BBM kurang' });
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: gauge,
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+  });
+  ctx.FuelBarCorrection.open('v1');
+  ctx.FuelBarCorrection.selectBar(0);
+  assert.equal(els.fbcReserveExitRow.style.display, 'none');
+});
+
+test('selectBar() — FuelGaugeEngine.estimateFillUpCost tidak ada (versi lama) -> tidak throw, baris reserve-exit tetap disembunyikan', () => {
+  const { doc, els } = makeFakeDoc();
+  const gauge = fakeGaugeEngine();
+  delete gauge.estimateFillUpCost;
+  const ctx = makeCtx({
+    document: doc,
+    D: { vehicles: [VEH] },
+    FuelGaugeEngine: gauge,
+    FuelTankProfile: { get: () => PROFILE },
+    FuelStorage: { latest: () => null },
+    openModal: () => {},
+  });
+  ctx.FuelBarCorrection.open('v1');
+  assert.doesNotThrow(() => ctx.FuelBarCorrection.selectBar(0));
+  assert.equal(els.fbcReserveExitRow.style.display, 'none');
 });
 
 // --- save() ---------------------------------------------------------------
