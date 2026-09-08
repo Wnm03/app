@@ -1030,10 +1030,23 @@ function startEditCurKm(){
 const el=document.getElementById('cnCurKm');
 if(!el||document.getElementById('cnCurKmInput'))return;
 const curKm=getVehicleKm(curVehicleId);
-el.innerHTML='<input class="u-fw800 u-ctext u-r8" type="number" inputmode="numeric" id="cnCurKmInput" value="'+curKm+'" aria-label="Edit KM saat ini" style="width:120px;font-size:20px;background:var(--surface3);border:1px solid var(--accent);padding:2px 8px" data-stop="1" data-action="vehCnCurKmInputStop" onkeydown="if(event.key===\'Enter\'){this.blur();}else if(event.key===\'Escape\'){this.dataset.cancel=\'1\';this.blur();}">';
+el.innerHTML='<input class="u-fw800 u-ctext u-r8" type="number" inputmode="numeric" id="cnCurKmInput" value="'+curKm+'" aria-label="Edit KM saat ini" style="width:120px;font-size:20px;background:var(--surface3);border:1px solid var(--accent);padding:2px 8px" data-stop="1" data-action="vehCnCurKmInputStop" data-onkeydown="_vehCnCurKmKeydown" data-onkeydown-args=\'["$event"]\'>';
 const inp=document.getElementById('cnCurKmInput');
 inp.focus();inp.select();
 inp.onblur=()=>commitCurKmEdit(inp);
+}
+// s1607: wrapper utk #cnCurKmInput onkeydown -- inline lama BUKAN pemanggilan
+// fungsi bernama, melainkan ekspresi kondisional Enter/Escape yg pakai `this`
+// (elemen input). Dispatcher generik data-onkeydown cuma bisa resolve
+// `data-onkeydown="namaFungsi"` (path lookup ke window[...]), jadi logic di
+// atas dipindah apa adanya ke fungsi named ini -- `this` diganti `e.target`
+// (elemen yg sama, didapat dari event yg dikirim dispatcher lewat
+// data-onkeydown-args='["$event"]'), pola sama seperti `chatInputEnterSend(e)`
+// utk #chatInput yang sudah ada di ai-chat.js. Perilaku Enter/Escape TIDAK
+// berubah sama sekali.
+function _vehCnCurKmKeydown(e){
+if(e.key==='Enter'){e.target.blur();}
+else if(e.key==='Escape'){e.target.dataset.cancel='1';e.target.blur();}
 }
 async function commitCurKmEdit(inp){
 const cancelled=inp.dataset.cancel==='1';
