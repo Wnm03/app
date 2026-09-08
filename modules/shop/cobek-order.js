@@ -352,7 +352,7 @@ return`
         <div class="tx-info">
           <div class="tx-name">${escapeHtml(l.product.name)}</div>
           <div class="tx-meta u-flex u-aic u-gap4" style="margin-top:3px">
-            <input type="number" class="fi u-fs12" value="${l.harga}" oninput="updateOrderItemHarga(${i},this.value)" placeholder="${l.hargaDefault}" inputmode="numeric" style="width:90px;padding:5px 7px" title="Harga bisa diedit manual per transaksi (mis. nego/diskon)">
+            <input type="number" class="fi u-fs12" value="${l.harga}" data-oninput="updateOrderItemHarga" data-oninput-args='[${i},"$value"]' placeholder="${l.hargaDefault}" inputmode="numeric" style="width:90px;padding:5px 7px" title="Harga bisa diedit manual per transaksi (mis. nego/diskon)">
             <span>x ${l.qty}${l.hargaOverride!=null&&l.hargaOverride>0&&l.hargaOverride!==l.hargaDefault?' <span class="u-cacc4">(diedit, default '+fmt(l.hargaDefault)+')</span>':''}</span>
           </div>
           ${priceHint}
@@ -821,9 +821,12 @@ const q=el.value.trim().toLowerCase();
 const customers=this._acList();
 const matches=(q?customers.filter(c=>(c[field]||'').toLowerCase().includes(q)):customers).slice(0,8);
 if(!matches.length){box.style.display='none';box.innerHTML='';return;}
+// FIX (audit autocomplete pelanggan Shop "tap 0 reaksi", CSP script-src-attr 'none'):
+// onclick=/ontouchstart= inline diganti data-action/data-args supaya lolos CSP (lihat
+// komentar lengkap di onTxCatInput(), modules/finance/transaksi.js).
 box.innerHTML=matches.map(c=>{
 const label=field==='name'?c.name:(field==='phone'?(c.phone||'(tanpa HP)')+' — '+c.name:(c.address||'(tanpa alamat)')+' — '+c.name);
-return `<div class="suggest-item" onclick="selectShopCustomer('${jsAttrEscape(c.name)}','${jsAttrEscape(c.phone)}','${jsAttrEscape(c.address)}')" ontouchstart="event.preventDefault();selectShopCustomer('${jsAttrEscape(c.name)}','${jsAttrEscape(c.phone)}','${jsAttrEscape(c.address)}')">${escapeHtml(label)}</div>`;
+return `<div class="suggest-item" data-action="selectShopCustomer" data-args="${escapeHtml(JSON.stringify([c.name,c.phone,c.address]))}">${escapeHtml(label)}</div>`;
 }).join('');
 box.style.display='block';
 },
