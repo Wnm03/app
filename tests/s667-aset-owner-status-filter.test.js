@@ -138,8 +138,8 @@ test('_renderFilterBar(): render checkbox Pemilik dgn badge "(N aset)" per owner
   assert.match(html, /Istri.*\(1 aset\)/);
   assert.match(html, /Adik.*\(1 aset\)/);
   assert.match(html, /Filter Pemilik \(bisa pilih lebih dari satu\)/);
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)/);
-  assert.match(html, /onFilterOwnerToggle\('adik1'\)/);
+  assert.match(html, /data-onchange="Aset\.onFilterOwnerToggle" data-onchange-args='\["istri1"\]'/);
+  assert.match(html, /data-onchange="Aset\.onFilterOwnerToggle" data-onchange-args='\["adik1"\]'/);
 });
 
 test('_renderFilterBar(): checkbox owner yg sedang terpilih (filterOwnerIds) dirender checked', () => {
@@ -147,8 +147,8 @@ test('_renderFilterBar(): checkbox owner yg sedang terpilih (filterOwnerIds) dir
   const ctx = makeCtx(D);
   ctx.Aset.filterOwnerIds = ['istri1'];
   const html = ctx.Aset._renderFilterBar(D.assets);
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)" checked>/);
-  assert.doesNotMatch(html, /onFilterOwnerToggle\('adik1'\)" checked>/);
+  assert.match(html, /data-onchange-args='\["istri1"\]' checked>/);
+  assert.doesNotMatch(html, /data-onchange-args='\["adik1"\]' checked>/);
 });
 
 test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerIds kosong', () => {
@@ -156,7 +156,7 @@ test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerIds kosong',
   const ctx = makeCtx(D);
   ctx.Aset.filterOwnerIds = [];
   const html = ctx.Aset._renderFilterBar(D.assets);
-  const statusSelectMatch = html.match(/<select[^>]*onchange="Aset\.onFilterSettlementChange[^>]*>/);
+  const statusSelectMatch = html.match(/<select[^>]*data-onchange="Aset\.onFilterSettlementChange"[^>]*>/);
   assert.ok(statusSelectMatch);
   assert.match(statusSelectMatch[0], / disabled/);
 });
@@ -167,7 +167,7 @@ test('_renderFilterBar(): dropdown Status TIDAK disabled kalau >=1 owner terpili
   ctx.Aset.filterOwnerIds = ['istri1'];
   ctx.Aset.filterSettlement = 'milik';
   const html = ctx.Aset._renderFilterBar(D.assets);
-  const statusSelectMatch = html.match(/<select[^>]*onchange="Aset\.onFilterSettlementChange[^>]*>/);
+  const statusSelectMatch = html.match(/<select[^>]*data-onchange="Aset\.onFilterSettlementChange"[^>]*>/);
   assert.ok(statusSelectMatch);
   assert.doesNotMatch(statusSelectMatch[0], / disabled/);
   assert.match(html, /<option value="milik" selected>/);
@@ -197,8 +197,8 @@ test('_renderFilterBar(): >5 owner non-SELF -> tombol Pilih Semua & Bersihkan di
   const D = seedBanyakOwner(6);
   const ctx = makeCtx(D);
   const html = ctx.Aset._renderFilterBar(D.assets);
-  assert.match(html, /Aset\.onFilterOwnerSelectAll\(\)/);
-  assert.match(html, /Aset\.onFilterOwnerClearAll\(\)/);
+  assert.match(html, /data-action="Aset\.onFilterOwnerSelectAll"/);
+  assert.match(html, /data-action="Aset\.onFilterOwnerClearAll"/);
   assert.match(html, />Pilih Semua</);
   assert.match(html, />Bersihkan</);
 });

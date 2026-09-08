@@ -153,8 +153,8 @@ test('checkbox owner yang sedang tercentang dirender dengan atribut checked', ()
   ctx.InvestmentListUI.onFilterOwnerToggle('istri1');
   const html = dom.getElementById('investmentHoldingList').innerHTML;
   // Checkbox istri1 checked, checkbox anak1 TIDAK checked.
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)" checked>/);
-  assert.doesNotMatch(html, /onFilterOwnerToggle\('anak1'\)" checked>/);
+  assert.match(html, /data-onchange-args='\[&quot;istri1&quot;\]' checked>/);
+  assert.doesNotMatch(html, /data-onchange-args='\[&quot;anak1&quot;\]' checked>/);
 });
 
 test('filterOwnerIds 2 owner + filterSettlement="milik" -> hanya holding owner terpilih yang berstatus milik sendiri', () => {
@@ -183,12 +183,12 @@ test('dropdown Status disabled kalau 0 owner tercentang, enabled begitu ada 1 ow
 
   ctx.InvestmentListUI._renderList();
   let html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.match(html, /onchange="InvestmentListUI\.onFilterSettlementChange\(this\.value\)">[\s\S]*?<\/select>/);
-  assert.match(html, /disabled onchange="InvestmentListUI\.onFilterSettlementChange/);
+  assert.match(html, /data-onchange="InvestmentListUI\.onFilterSettlementChange" data-onchange-args='\["\$value"\]'[\s\S]*?<\/select>/);
+  assert.match(html, /disabled data-onchange="InvestmentListUI\.onFilterSettlementChange/);
 
   ctx.InvestmentListUI.onFilterOwnerToggle('istri1');
   html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.doesNotMatch(html, /disabled onchange="InvestmentListUI\.onFilterSettlementChange/);
+  assert.doesNotMatch(html, /disabled data-onchange="InvestmentListUI\.onFilterSettlementChange/);
 });
 
 test('semua owner dilepas centang -> filterSettlement otomatis reset & semua holding tampil lagi (termasuk SELF)', () => {

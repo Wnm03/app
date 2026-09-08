@@ -109,8 +109,8 @@ test('>5 owner non-SELF -> tombol Pilih Semua & Bersihkan dirender', () => {
   ctx.InvestmentListUI._renderList();
 
   const html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.match(html, /onFilterOwnerSelectAll\(\)/);
-  assert.match(html, /onFilterOwnerClearAll\(\)/);
+  assert.match(html, /data-action="InvestmentListUI\.onFilterOwnerSelectAll"/);
+  assert.match(html, /data-action="InvestmentListUI\.onFilterOwnerClearAll"/);
   assert.match(html, />Pilih Semua</);
   assert.match(html, />Bersihkan</);
 });
@@ -140,7 +140,7 @@ test('onFilterOwnerSelectAll() lalu render ulang -> semua checkbox berstatus che
   ctx.InvestmentListUI.onFilterOwnerSelectAll();
   const html = dom.getElementById('investmentHoldingList').innerHTML;
   for (let i = 1; i <= 6; i += 1) {
-    assert.match(html, new RegExp('onFilterOwnerToggle\\(\'owner' + i + '\'\\)" checked>'));
+    assert.match(html, new RegExp("data-onchange-args='\\[&quot;owner" + i + "&quot;\\]' checked>"));
   }
 });
 

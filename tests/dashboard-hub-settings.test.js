@@ -213,7 +213,10 @@ test('renderDashCardOrderUI() — render ke #dashCardOrderList sesuai urutan efe
   // Kartu pertama (refleksi): tombol ▲ disabled; kartu terakhir (absensi): tombol ▼ disabled.
   const firstItemIdx = html.indexOf('Refleksi & Self-Care');
   const firstItemBlock = html.slice(firstItemIdx, html.indexOf('</div>', html.indexOf('</div>', firstItemIdx) + 1));
-  assert.match(firstItemBlock, /reorderCard\('refleksi','up'\)[^>]*disabled|disabled[^>]*reorderCard\('refleksi','up'\)/);
+  // SA16: markup tombol migrasi dari onclick="reorderCard('key','up')" inline
+  // ke data-action="DashboardSettings.reorderCard" data-args='["key","up"]'
+  // (lihat SESSION-NOTE-SA16-dashboard-settings-dynamic-inline-attr.md).
+  assert.match(firstItemBlock, /data-args='\["refleksi","up"\]'[^>]*disabled|disabled[^>]*data-args='\["refleksi","up"\]'/);
 });
 
 test('resetDashboardLayout() — membersihkan semua preferensi (order/density/compact/tab) & re-render', async () => {

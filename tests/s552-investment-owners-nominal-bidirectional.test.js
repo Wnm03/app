@@ -102,8 +102,8 @@ test('5. _renderOwnersList(): container #investmentOwnersList berisi input id in
   // holdingValue = 10 * 1.000.000 = 10.000.000
   assert.match(listBox.innerHTML, /<input[^>]*id="investOwnerNominal0"/);
   assert.match(listBox.innerHTML, /<input[^>]*id="investOwnerNominal1"/);
-  assert.match(listBox.innerHTML, /oninput="InvestmentUI\.onOwnerNominalInput\(0,this\.value\)"/);
-  assert.match(listBox.innerHTML, /oninput="InvestmentUI\.onOwnerNominalInput\(1,this\.value\)"/);
+  assert.match(listBox.innerHTML, /data-oninput="InvestmentUI\.onOwnerNominalInput" data-oninput-args='\[0,"\$value"\]'/);
+  assert.match(listBox.innerHTML, /data-oninput="InvestmentUI\.onOwnerNominalInput" data-oninput-args='\[1,"\$value"\]'/);
   assert.match(listBox.innerHTML, /value="6000000"/); // 60% baris 0
   assert.match(listBox.innerHTML, /value="4000000"/); // 40% baris 1
 });

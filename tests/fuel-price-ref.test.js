@@ -259,3 +259,71 @@ test('onSelectChange() jenis BBM belum ada harga referensi -> field harga tidak 
   assert.equal(D.fuelPriceRef.lastType, 'pertamaxTurbo');
   assert.equal(harga.value, 'ORIGINAL');
 });
+
+// ---------------------------------------------------------------------------
+// Sesi fix: check(selectId,hargaId) -> _activeCtx -> applySelected() me-refresh
+// field Harga/Liter yg SEDANG DIBUKA (laporan user: "Rekomendasi Harga BBM
+// tidak sync ke Harga/Liter" -- lihat komentar _refreshActiveHargaField()).
+// ---------------------------------------------------------------------------
+
+test('check(selectId,hargaId) menyimpan _activeCtx supaya applySelected() tau field mana yg direfresh', async () => {
+  const calls = [];
+  const D = makeD();
+  const els = { fuelRefBody: autoEl(), fuelRefApplyBtn: { disabled: false }, fuelRefCheckBtn: { disabled: false, textContent: '' } };
+  const ctx = makeCtx({ document: makeDoc(els), D, calls, callAIProviderRaw: async () => ({ ok: true, text: '{}' }) });
+  await ctx.FuelPriceRef.check('txBbmJenis', 'txBbmHargaL');
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.FuelPriceRef._activeCtx)), { selectId: 'txBbmJenis', hargaId: 'txBbmHargaL' });
+});
+
+test('check() tanpa argumen (dipanggil dari pemanggil lama) -> _activeCtx null, tidak error', async () => {
+  const calls = [];
+  const D = makeD();
+  const els = { fuelRefBody: autoEl(), fuelRefApplyBtn: { disabled: false }, fuelRefCheckBtn: { disabled: false, textContent: '' } };
+  const ctx = makeCtx({ document: makeDoc(els), D, calls, callAIProviderRaw: async () => ({ ok: true, text: '{}' }) });
+  await ctx.FuelPriceRef.check();
+  assert.equal(ctx.FuelPriceRef._activeCtx, null);
+});
+
+test('applySelected() dgn _activeCtx aktif & jenis dropdown = jenis yg diapply -> field Harga/Liter ikut terisi nilai baru', () => {
+  const calls = [];
+  const D = makeD();
+  const checkboxes = [{ dataset: { refkey: 'pertalite' } }];
+  const sel = { value: 'pertalite' };
+  const harga = { value: '' };
+  const ctx = makeCtx({
+    document: makeDoc({ txBbmJenis: sel, txBbmHargaL: harga }, checkboxes),
+    D, calls,
+  });
+  ctx.FuelPriceRef._activeCtx = { selectId: 'txBbmJenis', hargaId: 'txBbmHargaL' };
+  ctx.FuelPriceRef._draft = { pertalite: { value: 10500, source: 'Pertamina', tanggal: '2026-09-01' } };
+  ctx.FuelPriceRef.applySelected();
+  assert.equal(D.fuelPriceRef.pertalite, 10500);
+  assert.equal(harga.value, 10500);
+});
+
+test('applySelected() dgn _activeCtx & dropdown Jenis BBM menunjuk jenis LAIN dari yg dicentang -> field Harga/Liter tetap disinkronkan ke nilai tersimpan utk jenis yg SEDANG DIPILIH (bukan yg dicentang)', () => {
+  const calls = [];
+  const D = makeD(); // pertalite tersimpan = 10000, tidak berubah ronde ini
+  const checkboxes = [{ dataset: { refkey: 'pertamax' } }];
+  const sel = { value: 'pertalite' }; // dropdown lagi nunjuk pertalite, bukan pertamax yg diapply
+  const harga = { value: 'ORIGINAL' };
+  const ctx = makeCtx({
+    document: makeDoc({ txBbmJenis: sel, txBbmHargaL: harga }, checkboxes),
+    D, calls,
+  });
+  ctx.FuelPriceRef._activeCtx = { selectId: 'txBbmJenis', hargaId: 'txBbmHargaL' };
+  ctx.FuelPriceRef._draft = { pertamax: { value: 13000, source: 'Pertamina', tanggal: '2026-09-01' } };
+  ctx.FuelPriceRef.applySelected();
+  assert.equal(D.fuelPriceRef.pertamax, 13000); // referensi tersimpan pertamax tetap ke-update
+  assert.equal(harga.value, 10000); // field disinkronkan ke harga pertalite TERSIMPAN (yg sedang dipilih di dropdown)
+});
+
+test('applySelected() tanpa _activeCtx (pemanggil lama tanpa selectId/hargaId) -> tidak error, tidak menyentuh field manapun', () => {
+  const calls = [];
+  const D = makeD();
+  const checkboxes = [{ dataset: { refkey: 'pertalite' } }];
+  const ctx = makeCtx({ document: makeDoc({}, checkboxes), D, calls });
+  ctx.FuelPriceRef._draft = { pertalite: { value: 10500, source: 'Pertamina', tanggal: '2026-09-01' } };
+  assert.doesNotThrow(() => ctx.FuelPriceRef.applySelected());
+  assert.equal(D.fuelPriceRef.pertalite, 10500);
+});

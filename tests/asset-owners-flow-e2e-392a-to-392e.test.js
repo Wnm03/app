@@ -242,8 +242,13 @@ test('[flow a->e] alur penuh: buka modal -> tambah baris -> isi porsi belum 100%
   ctx.Aset.addOwnerRow();
   assert.equal(ctx.Aset._ownersDraft.length, 2, '392b: addOwnerRow x2 harus menghasilkan 2 baris draft');
   const listHtmlAfterAdd = dom.getElementById('assetOwnersList').innerHTML;
-  assert.match(listHtmlAfterAdd, /Aset\.onOwnerNameInput\(0/, '392b: baris pertama harus render input nama dgn handler onOwnerNameInput(0,...)');
-  assert.match(listHtmlAfterAdd, /Aset\.onOwnerNameInput\(1/, '392b: baris kedua harus render input nama dgn handler onOwnerNameInput(1,...)');
+  // SA11 (migrasi CSP-safe onX="..." -> data-onX + data-onX-args, lihat
+  // tests/aset-owners-dynamic-inline-attr-sa11.test.js): handler tidak lagi
+  // muncul sbg teks "Aset.onOwnerNameInput(0" di dalam atribut inline
+  // (yang sekarang disaring CSP script-src-attr), melainkan sbg
+  // data-oninput="Aset.onOwnerNameInput" data-oninput-args='[0,"$value"]'.
+  assert.match(listHtmlAfterAdd, /data-oninput="Aset\.onOwnerNameInput" data-oninput-args='\[0,"\$value"\]'/, '392b: baris pertama harus render input nama dgn handler onOwnerNameInput(0,...)');
+  assert.match(listHtmlAfterAdd, /data-oninput="Aset\.onOwnerNameInput" data-oninput-args='\[1,"\$value"\]'/, '392b: baris kedua harus render input nama dgn handler onOwnerNameInput(1,...)');
   assert.match(listHtmlAfterAdd, /Aset\.removeOwnerRow.*\[0\]/, '392b: baris pertama harus punya tombol hapus dgn index 0');
   assert.match(listHtmlAfterAdd, /Aset\.removeOwnerRow.*\[1\]/, '392b: baris kedua harus punya tombol hapus dgn index 1');
 

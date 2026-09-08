@@ -222,8 +222,8 @@ test('_renderFilterBar(): render checkbox Pemilik dgn badge "(N holding)" per ow
   assert.match(html, /Budi.*\(1 holding\)/);
   assert.match(html, /Adik.*\(1 holding\)/);
   assert.match(html, /Filter Pemilik \(bisa pilih lebih dari satu\)/);
-  assert.match(html, /onFilterOwnerToggle\('budi1'\)/);
-  assert.match(html, /onFilterOwnerToggle\('adik1'\)/);
+  assert.match(html, /data-onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerToggle" data-onchange-args='\["budi1"\]'/);
+  assert.match(html, /data-onchange="DanaTitipanPortfolioPresenter\.onFilterOwnerToggle" data-onchange-args='\["adik1"\]'/);
 });
 
 test('_renderFilterBar(): checkbox owner yg sedang terpilih (filterOwnerIds) dirender checked', () => {
@@ -232,8 +232,8 @@ test('_renderFilterBar(): checkbox owner yg sedang terpilih (filterOwnerIds) dir
   const p = ctx.DanaTitipanPortfolioAPI.build();
   ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
-  assert.match(html, /onFilterOwnerToggle\('budi1'\)" checked>/);
-  assert.doesNotMatch(html, /onFilterOwnerToggle\('adik1'\)" checked>/);
+  assert.match(html, /data-onchange-args='\["budi1"\]' checked>/);
+  assert.doesNotMatch(html, /data-onchange-args='\["adik1"\]' checked>/);
 });
 
 test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerIds kosong, aktif kalau terisi', () => {
@@ -242,13 +242,13 @@ test('_renderFilterBar(): dropdown Status disabled kalau filterOwnerIds kosong, 
   const p = ctx.DanaTitipanPortfolioAPI.build();
   ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = [];
   let html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
-  let statusSelect = html.match(/<select[^>]*onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange[^>]*>/);
+  let statusSelect = html.match(/<select[^>]*data-onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange"[^>]*>/);
   assert.ok(statusSelect);
   assert.match(statusSelect[0], / disabled/);
 
   ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['budi1'];
   html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
-  statusSelect = html.match(/<select[^>]*onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange[^>]*>/);
+  statusSelect = html.match(/<select[^>]*data-onchange="DanaTitipanPortfolioPresenter\.onFilterSettlementChange"[^>]*>/);
   assert.ok(statusSelect);
   assert.doesNotMatch(statusSelect[0], / disabled/);
 });
@@ -267,8 +267,8 @@ test('_renderFilterBar(): >5 owner -> tombol Pilih Semua/Bersihkan DIRENDER', ()
   const ctx = makeCtx(D);
   const p = ctx.DanaTitipanPortfolioAPI.build();
   const html = ctx.DanaTitipanPortfolioPresenter._renderFilterBar(p.owners);
-  assert.match(html, /DanaTitipanPortfolioPresenter\.onFilterOwnerSelectAll\(\)/);
-  assert.match(html, /DanaTitipanPortfolioPresenter\.onFilterOwnerClearAll\(\)/);
+  assert.match(html, /data-action="DanaTitipanPortfolioPresenter\.onFilterOwnerSelectAll"/);
+  assert.match(html, /data-action="DanaTitipanPortfolioPresenter\.onFilterOwnerClearAll"/);
   assert.match(html, />Pilih Semua</);
   assert.match(html, />Bersihkan</);
 });

@@ -90,7 +90,7 @@ test('1 owner, 1 holding -> opsi dropdown "Istri (1 holding)"', () => {
   ctx.InvestmentListUI._renderList();
 
   const html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)/);
+  assert.match(html, /data-onchange="InvestmentListUI\.onFilterOwnerToggle" data-onchange-args='\[&quot;istri1&quot;\]'/);
   assert.match(html, /Istri <span[^>]*>\(1 holding\)<\/span>/);
 });
 
@@ -106,7 +106,7 @@ test('1 owner, 3 holding berbeda -> badge "(3 holding)"', () => {
   ctx.InvestmentListUI._renderList();
 
   const html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)/);
+  assert.match(html, /data-onchange="InvestmentListUI\.onFilterOwnerToggle" data-onchange-args='\[&quot;istri1&quot;\]'/);
   assert.match(html, /Istri <span[^>]*>\(3 holding\)<\/span>/);
 });
 
@@ -141,7 +141,7 @@ test('1 holding patungan 2 pemilik non-SELF -> masing-masing badge tetap "(1 hol
   ctx.InvestmentListUI._renderList();
 
   const html = dom.getElementById('investmentHoldingList').innerHTML;
-  assert.match(html, /onFilterOwnerToggle\('istri1'\)/);
+  assert.match(html, /data-onchange="InvestmentListUI\.onFilterOwnerToggle" data-onchange-args='\[&quot;istri1&quot;\]'/);
   assert.match(html, /Istri <span[^>]*>\(1 holding\)<\/span>/);
   assert.match(html, /Anak <span[^>]*>\(1 holding\)<\/span>/);
 });

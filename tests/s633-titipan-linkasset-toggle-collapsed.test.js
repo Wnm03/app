@@ -78,7 +78,7 @@ test('2. id "titipanAssetPick_0"/onchange/data-owner-id TETAP ada persis di dala
   const html = dom.getElementById('danaTitipanPortfolioList').innerHTML;
   assert.match(html, /id="titipanAssetPick_0"/);
   assert.match(html, /data-owner-id="budi"/);
-  assert.match(html, /onchange="DanaTitipanPortfolioPresenter\.onAssetPickChange\(this\)"/);
+  assert.match(html, /data-onchange="DanaTitipanPortfolioPresenter\.onAssetPickChange" data-onchange-args='\["\$el"\]'/);
   assert.match(html, /data-action="DanaTitipanCommitmentUI\.openAssetPorsi"/);
 });
 
