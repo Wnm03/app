@@ -1,43 +1,67 @@
-# PATCH s756 — Fix bundle basi: Jenis BBM tidak sync ke Harga per Liter
+# PATCH s756+s767 — Fix Jenis BBM↔Harga sync + gate anti-bundle-basi permanen
 
-## Isi patch
-Patch ini HANYA berisi file yang berubah karena `node scripts/build.js`
-dijalankan ulang (rebuild bundle produksi). TIDAK ADA perubahan logika baru
-— source logic (`fuel-price-ref.js`, `car-notes.js`, dst.) sudah benar
-sejak Sesi 755, cuma bundle produksinya yang belum pernah di-rebuild.
-Detail root cause & analisis lengkap ada di
-`SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md` di dalam patch ini.
+Ini patch KUMULATIF, gabungan 2 sesi (apply cukup SEKALI dari kondisi zip
+original kamu — tidak perlu apply patch v1625 sebelumnya lagi):
 
-File yang diganti (12):
-- `app-bundle-a.min.js` — rebuild, sekarang berisi
-  `FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId)`
-  (versi lama tanpa `curVehicleId`)
-- `app-bundle-b.min.js` — rebuild (idem)
-- `index.html` — `?v=` dinaikkan ke 1625 (cache-bust)
-- `app_production.html` — `?v=` dinaikkan ke 1625 (cache-bust)
-- `sw.js` — `CACHE_NAME` dinaikkan ke `kw-cache-v1625` (cache-bust PWA)
-- `chat-action-handlers.js` — bump konstanta versi saja (otomatis oleh
-  build.js, tanpa perubahan logika)
-- `modules/shared/modals.js` — bump konstanta versi saja
-- `modules/shared/modules-calc.js` — bump konstanta versi saja
-- `modules/shared/modules-render.js` — bump konstanta versi saja
-- `modules/shared/features-helpers-global-security.js` — bump konstanta
-  versi saja
-- `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md` — regenerasi otomatis
-  (dokumentasi, tanpa dampak fungsional)
+## S756 — Fix gejala yang kamu laporkan
+Jenis BBM tidak sync ke Harga per Liter. Root cause: bundle produksi
+(`app-bundle-a/b.min.js`) belum di-rebuild setelah source difix di Sesi
+755. Fix: rebuild bundle dari source (tidak ada perubahan logika baru).
+Detail lengkap: `SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md`.
+
+## S767 — Fix supaya insiden SEJENIS tidak lolos lagi ke depannya
+Ditemukan lewat audit lanjutan: skrip yang seharusnya menangkap bundle
+basi (`scripts/verify-bundle-freshness.js`) sudah ada sejak lama, TAPI
+gate wajib sebelum ZIP (`scripts/verify-release-ready.js`) tidak pernah
+memanggilnya. Sekarang sudah disambungkan sbg Gate 5 (wajib, tidak bisa
+di-override) — jadi kalau lupa rebuild bundle sebelum bikin ZIP, prosesnya
+sendiri yang akan BLOCK, bukan menunggu ketahuan dari laporan user lagi.
+Detail lengkap: `SESSION-NOTE-S767-bundle-freshness-gate-wired-into-release-check.md`.
+
+## File yang diganti/ditambah (18)
+Ganti (timpa) di lokasi yang sama persis:
+- `app-bundle-a.min.js`, `app-bundle-b.min.js` — rebuild
+- `index.html`, `app_production.html` — `?v=1627`
+- `sw.js` — `CACHE_NAME` `kw-cache-v1627`
+- `chat-action-handlers.js`, `modules/shared/modals.js`,
+  `modules/shared/modules-calc.js`, `modules/shared/modules-render.js`,
+  `modules/shared/features-helpers-global-security.js` — bump versi saja
+- `scripts/verify-bundle-freshness.js` — refactor (fungsi
+  `checkBundleFreshness()` diekspor, perilaku CLI tidak berubah)
+- `scripts/verify-release-ready.js` — **Gate 5 baru: bundle-freshness**
+- `docs/ZIP_RULES.md`, `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md`
+  — update dokumentasi
+
+Baru (tambahkan):
+- `tests/verify-release-ready-s767-bundle-freshness-gate.test.js`
+- `SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md`
+- `SESSION-NOTE-S767-bundle-freshness-gate-wired-into-release-check.md`
 
 ## Cara apply
-Timpa (overwrite) 12 file di atas pada lokasi yang sama persis di repo/
-hosting kamu (`wnm03.github.io/app/`), pertahankan struktur folder
-(`modules/shared/...`, `docs/...`). Upload SEMUA file di atas sekaligus —
-jangan cuma `index.html`/`sw.js`, karena inti fix-nya ada di kedua bundle
-`.js`.
+Timpa/tambahkan 18 file di atas persis di posisi folder yang sama
+(pertahankan `modules/shared/...`, `scripts/...`, `docs/...`,
+`tests/...`). Upload SEMUA sekaligus.
 
 ## Verifikasi setelah apply
 ```
+node scripts/build.js               # opsional, kalau mau rebuild ulang
 node scripts/verify-bundle-freshness.js
+node scripts/verify-release-ready.js
+npm test
 ```
-Harus menghasilkan "✓ kedua bundle segar". Lalu di browser: hard-refresh
-(atau clear PWA cache) supaya `sw.js` versi baru terpasang, baru tes ulang
-modal "Catat Isi BBM" — ganti Jenis BBM harus langsung meng-update Harga
-per Liter & (kalau Total Biaya sudah diisi) Volume BBM.
+- `verify-bundle-freshness.js` & Gate 5 di `verify-release-ready.js` harus
+  ✓ segar.
+- `npm test` di environment saya: 5879/5882 lolos. 3 gagal adalah
+  kegagalan PRA-EXISTING (gate SA16 soal atribut event inline) yang SUDAH
+  ada sebelum patch ini — tidak disebabkan oleh patch ini, sudah
+  dikonfirmasi dgn menjalankan test yg sama di zip original.
+- Gate `lint`/`minify` di `verify-release-ready.js` kemungkinan BLOCK di
+  sandbox tanpa akses npm (eslint/esbuild tidak terpasang) — ini batasan
+  environment saya, bukan bug. Kalau kamu punya environment dgn akses
+  internet, jalankan `npm install --save-dev eslint esbuild` lalu
+  `node scripts/build.js` sekali lagi supaya rilis final ter-lint &
+  ter-minify penuh.
+
+Setelah apply, di browser: hard-refresh / clear cache PWA, lalu tes ulang
+modal "Catat Isi BBM" — ganti Jenis BBM harus langsung update Harga per
+Liter (dan Volume BBM kalau Total Biaya sudah diisi).
