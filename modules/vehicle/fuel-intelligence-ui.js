@@ -215,6 +215,54 @@ selectBar(bar) {
   if (previewBox) previewBox.style.display = '';
   const saveBtn = document.getElementById('fbcSaveBtn');
   if (saveBtn) saveBtn.disabled = false;
+
+  // TASK-148 (audit fitur BBM, S762): tampilkan live-preview estimasi biaya
+  // isi sampai penuh dari bar yang barusan dipilih — 100% REUSE
+  // FuelGaugeEngine.estimateFillUpCost() (SUDAH ADA, fuel-gauge-engine.js),
+  // 0 rumus liter/harga baru dihitung di sini. Baris disembunyikan (bukan
+  // ditampilkan "-") kalau histori BBM belum cukup buat estimasi harga —
+  // live-preview liter di atas tetap jalan normal, cuma baris biaya ini
+  // yang opsional.
+  const fillCostRow = document.getElementById('fbcFillCostRow');
+  const fillCostLabel = document.getElementById('fbcFillCostLabel');
+  if (fillCostRow && fillCostLabel) {
+    const costRes = (typeof FuelGaugeEngine.estimateFillUpCost === 'function')
+      ? FuelGaugeEngine.estimateFillUpCost(this.curVehicleId, bar) : { ok: false };
+    if (costRes.ok) {
+      fillCostRow.style.display = 'flex';
+      // fmtFull() (format-tema.js) SELALU dimuat lebih dulu di build.js asli
+      // (jauh sebelum file ini) -- guard typeof di sini murni jaga-jaga utk
+      // konteks lain (mis. test yang cuma load file ini sendirian), pola
+      // sama persis guard toast()/save()/dll di seluruh file ini.
+      const fmt = (typeof fmtFull === 'function') ? fmtFull : ((n) => `Rp ${Math.round(n).toLocaleString('id-ID')}`);
+      fillCostLabel.textContent = costRes.literNeeded > 0
+        ? `${fmt(costRes.estimatedCost)} (${costRes.literNeeded} L)`
+        : '✅ Sudah penuh';
+    } else {
+      fillCostRow.style.display = 'none';
+    }
+
+    // S765 (lanjutan TASK-148, S764): baris "❗ Sampai keluar reserve" —
+    // 100% REUSE costRes yang SAMA dari estimateFillUpCost() di atas (0
+    // panggilan FuelGaugeEngine baru, 0 rumus baru di sini). Field
+    // inReserve/literToExitReserve/costToExitReserve sudah dihitung S764,
+    // sesi ini murni wiring tampilan — pola SAMA PERSIS baris fillCost di
+    // atas (S763). Baris disembunyikan (bukan ditampilkan "-") kalau
+    // costRes.ok:false (histori BBM belum cukup) ATAU inReserve:false
+    // (posisi saat ini bukan di reserve, memang tidak ada yang perlu
+    // ditampilkan) — bukan error di kedua kasus itu.
+    const reserveExitRow = document.getElementById('fbcReserveExitRow');
+    const reserveExitLabel = document.getElementById('fbcReserveExitLabel');
+    if (reserveExitRow && reserveExitLabel) {
+      if (costRes.ok && costRes.inReserve) {
+        reserveExitRow.style.display = 'flex';
+        const fmt = (typeof fmtFull === 'function') ? fmtFull : ((n) => `Rp ${Math.round(n).toLocaleString('id-ID')}`);
+        reserveExitLabel.textContent = `${fmt(costRes.costToExitReserve)} (${costRes.literToExitReserve} L)`;
+      } else {
+        reserveExitRow.style.display = 'none';
+      }
+    }
+  }
 },
 
 // save() — target data-action tombol Simpan. Tulis currentFuelBar/
