@@ -146,8 +146,8 @@ const DashboardSettings = {
       <div class="setting-item">
         <div class="setting-label">${escapeHtml(def.label)}</div>
         <div class="u-flex u-gap6">
-          <button type="button" class="btn btn-ghost btn-sm" ${i === 0 ? 'disabled' : ''} onclick="DashboardSettings.reorderCard('${key}','up')" aria-label="Pindah ke atas">▲</button>
-          <button type="button" class="btn btn-ghost btn-sm" ${i === order.length - 1 ? 'disabled' : ''} onclick="DashboardSettings.reorderCard('${key}','down')" aria-label="Pindah ke bawah">▼</button>
+          <button type="button" class="btn btn-ghost btn-sm" ${i === 0 ? 'disabled' : ''} data-action="DashboardSettings.reorderCard" data-args='["${key}","up"]' aria-label="Pindah ke atas">▲</button>
+          <button type="button" class="btn btn-ghost btn-sm" ${i === order.length - 1 ? 'disabled' : ''} data-action="DashboardSettings.reorderCard" data-args='["${key}","down"]' aria-label="Pindah ke bawah">▼</button>
         </div>
       </div>`;
     }).join('');
