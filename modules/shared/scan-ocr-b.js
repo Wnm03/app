@@ -543,10 +543,10 @@ const detailPreview=it.detail?`<div class="u-t2" style="margin-top:2px">${Object
 return`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
 <input type="checkbox" ${it.checked?'checked':''} style="width:16px;height:16px;margin-top:2px;flex-shrink:0" data-action="UniversalScan.toggle" data-args="${escapeHtml(JSON.stringify([i]))}">
 <div style="flex:1;font-size:12px">
-<div style="font-weight:700;display:flex;align-items:center;gap:4px">${emoji} <input type="text" value="${escapeHtml(it.nama)}" style="font-weight:700;border:1px solid var(--border);border-radius:4px;padding:2px 4px;flex:1;min-width:0" onchange="UniversalScan.updateItemField(${i},'nama',this.value)"></div>
-<div class="u-t2" style="display:flex;align-items:center;gap:4px;margin-top:2px">Rp <input type="number" value="${it.nominal}" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;width:110px" onchange="UniversalScan.updateItemField(${i},'nominal',this.value)">${confBadge}</div>
+<div style="font-weight:700;display:flex;align-items:center;gap:4px">${emoji} <input type="text" value="${escapeHtml(it.nama)}" style="font-weight:700;border:1px solid var(--border);border-radius:4px;padding:2px 4px;flex:1;min-width:0" data-onchange="UniversalScan.updateItemField" data-onchange-args='[${i},"nama","$value"]'></div>
+<div class="u-t2" style="display:flex;align-items:center;gap:4px;margin-top:2px">Rp <input type="number" value="${it.nominal}" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;width:110px" data-onchange="UniversalScan.updateItemField" data-onchange-args='[${i},"nominal","$value"]'>${confBadge}</div>
 ${detailPreview}
-<div style="margin-top:4px"><select class="fs" style="font-size:11px;padding:4px 6px" onchange="UniversalScan.setTarget(${i},this.value)">${accOptions}</select></div>
+<div style="margin-top:4px"><select class="fs" style="font-size:11px;padding:4px 6px" data-onchange="UniversalScan.setTarget" data-onchange-args='[${i},"$value"]'>${accOptions}</select></div>
 ${warn}
 </div>
 </div>`;

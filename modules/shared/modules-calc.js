@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s1602-simpleautocomplete-onfocus-generic-dispatch';
+const MODULE_CALC_VERSION='s1608-test-modules-modals-orphan-guard-coverage';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -225,7 +225,7 @@ document.getElementById('fiScenarioRange').value=fi.scenarioRange!=null?fi.scena
 openModal('fiSettingsModal');
 },
 renderCatOptions(selected){
-let html=`<label class="budget-cat-opt total"><input type="checkbox" id="fiCatTotal" onchange="onFiCatTotalToggle(this)"> 🎯 Total Pengeluaran (semua kategori)</label>`;
+let html=`<label class="budget-cat-opt total"><input type="checkbox" id="fiCatTotal" data-onchange="onFiCatTotalToggle" data-onchange-args='["$el"]'> 🎯 Total Pengeluaran (semua kategori)</label>`;
 D.categories.expense.forEach(c=>{
 html+=`<label class="budget-cat-opt"><input type="checkbox" class="fiCatChk" value="${c.id}"> ${c.icon||''} ${escapeHtml(c.name)}</label>`;
 (c.subs||[]).forEach(s=>{

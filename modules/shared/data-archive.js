@@ -7,7 +7,7 @@
 // Dipakai oleh: modules-render.js (renderStorageUsage, renderActualStorageQuota, renderArchiveSuggestHint,
 // renderArchiveHistory — panggilan runtime lewat referensi variabel/fungsi di bawah, tidak ada
 // dependensi urutan load) dan modals.js (HTML archiveModal, tombol data-action="archiveExportStep"/
-// "archiveDeleteStep", checkbox onchange="toggleArchiveYear(...)" — dievaluasi saat modal
+// "archiveDeleteStep", checkbox data-onchange="toggleArchiveYear" (s1604b) — dievaluasi saat modal
 // dibuka/ditap, bukan saat parse, jadi urutan load juga tidak masalah). Tidak ada state di sini yang
 // di-assign dari file lain sebelum dideklarasikan (beda dengan chatInited di chat-action.js), jadi
 // file ini boleh diletakkan di mana saja di GROUP_B asal sebelum features-sheets-pwa-selftest.js
@@ -79,7 +79,7 @@ hintEl.textContent=years.includes(curYear)?'⚠️ Tahun berjalan ('+curYear+') 
 listEl.innerHTML=years.map(y=>{
 const counts=ARCHIVE_MODULES.reduce((s,m)=>s+(D[m.key]||[]).filter(it=>archiveGetYear(it.date)===y).length,0);
 return `<label class="u-flex u-aic u-gap10 u-r10 u-pointer" style="padding:10px 12px;background:var(--surface3);border:1px solid var(--border2)">
-        <input type="checkbox" style="width:18px;height:18px" onchange="toggleArchiveYear(${y},this)">
+        <input type="checkbox" style="width:18px;height:18px" data-onchange="toggleArchiveYear" data-onchange-args='[${y},"$el"]'>
         <span class="u-flex1">${y}</span>
         <span class="u-fs12t2">${counts.toLocaleString('id-ID')} data</span>
       </label>`;

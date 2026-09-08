@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1602-simpleautocomplete-onfocus-generic-dispatch';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1602-simpleautocomplete-onfocus-generic-dispatch';
+const APP_BUILD_VERSION = 's1608-test-modules-modals-orphan-guard-coverage';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1608-test-modules-modals-orphan-guard-coverage';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -450,6 +450,33 @@ if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses tombol.
 // sama seperti sebelumnya -- 1x klik = 1x eksekusi action, tidak ada duplikasi.
 document.addEventListener('click', _dataActionClickHandler, true);
 if(typeof console!=='undefined' && console.debug) console.debug('[app] data-action click dispatcher terpasang (capture phase).');
+// FIX (audit dropdown Kategori/Subkategori/autocomplete "tap 0 reaksi", CSP
+// script-src-attr 'none'): item .suggest-item (saran kategori/subkategori/SPBU/
+// catatan/pelanggan Shop dll) dulu di-generate dgn onclick=/ontouchstart= inline --
+// attribute inline itu SEKARANG diblokir browser oleh CSP script-src-attr 'none'
+// (lapisan pertahanan XSS ke-2, lihat app_production.html), jadi tap pada item saran
+// 0 reaksi meski dropdown-nya kelihatan normal (bug dilaporkan lewat rekaman layar:
+// item ter-highlight saat disentuh tapi field tetap kosong). Semua generator
+// .suggest-item sudah dimigrasi ke data-action/data-args (pola yang sama dgn tombol
+// lain di app) supaya lolos CSP -- dispatcher click di atas SUDAH cukup utk itu di
+// desktop/mouse. Listener touchstart terpisah ini menjaga perilaku S1601/S1602 (lihat
+// komentar _txCatOnBlur() di modules/finance/transaksi.js): di device sentuh, blur
+// field input (yg memicu hideSuggestBox via setTimeout 150ms) bisa balapan dgn event
+// click yg baru muncul setelah touchend -- preventDefault() pada touchstart menjalankan
+// aksi SAAT ITU JUGA (sebelum blur sempat menutup dropdown/keyboard) & sekaligus
+// mencegah browser mensintesis event click susulan utk elemen yg sama, jadi TIDAK ada
+// dobel-eksekusi (mouse/desktop tetap lewat jalur click biasa krn tidak memicu
+// touchstart sama sekali). Discoped KHUSUS ke '.suggest-item[data-action]' (bukan semua
+// [data-action]) supaya tombol data-action lain (yg tidak punya masalah race blur ini)
+// tidak ikut berubah perilaku.
+document.addEventListener('touchstart', function(e){
+const el = e.target.closest('.suggest-item[data-action]');
+if(!el) return;
+if(el.dataset && el.dataset.scanBusy==='1') return;
+e.preventDefault();
+_dataActionClickHandler(e);
+}, {capture:true, passive:false});
+if(typeof console!=='undefined' && console.debug) console.debug('[app] .suggest-item touchstart dispatcher terpasang (capture phase).');
 // SA1 (s741): fondasi dispatcher `data-oninput`/`data-onchange` -- 89 dari 90
 // inline handler yang mau dimigrasi (SA2-SA9) justru oninput/onchange, bukan
 // click, dan _dataActionClickHandler di atas cuma menangkap event click.
