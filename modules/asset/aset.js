@@ -809,14 +809,14 @@ const ownerIdsAll=Array.from(ownerMap.keys());
 // (onFilterOwnerSelectAll()/onFilterOwnerClearAll()).
 const quickActionsHtml=ownerIdsAll.length>5
 ?'<div class="btn-row u-mb4">'
-+'<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="Aset.onFilterOwnerSelectAll()">Pilih Semua</button>'
-+'<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="Aset.onFilterOwnerClearAll()">Bersihkan</button>'
++'<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="Aset.onFilterOwnerSelectAll">Pilih Semua</button>'
++'<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="Aset.onFilterOwnerClearAll">Bersihkan</button>'
 +'</div>'
 :'';
 const ownerChecks=Array.from(ownerMap.entries()).map(([id,info])=>{
 const checked=selectedIds.indexOf(id)!==-1;
 return'<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
-+'<input type="checkbox" onchange="Aset.onFilterOwnerToggle(\''+escapeHtml(id)+'\')"'+(checked?' checked':'')+'>'
++'<input type="checkbox" data-onchange="Aset.onFilterOwnerToggle" data-onchange-args=\''+escapeHtml(JSON.stringify([id]))+'\''+(checked?' checked':'')+'>'
 +'<span class="u-fs13">'+escapeHtml(info.name)+' <span class="u-t2 u-fs11">('+info.count+' aset)</span></span>'
 +'</label>';
 }).join('');
@@ -831,7 +831,7 @@ return'<div class="card u-mb10" style="padding:8px 10px">'
 +'<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
 +quickActionsHtml
 +ownerChecks
-+'<select class="fs u-mt6" style="width:100%"'+statusDisabled+' onchange="Aset.onFilterSettlementChange(this.value)">'+statusOpts+'</select>'
++'<select class="fs u-mt6" style="width:100%"'+statusDisabled+' data-onchange="Aset.onFilterSettlementChange" data-onchange-args=\'["$value"]\'>'+statusOpts+'</select>'
 +'</div>';
 },
 // _assetMatchesFilter(a) — S667 (fondasi single-owner), diubah jadi OR multi-owner

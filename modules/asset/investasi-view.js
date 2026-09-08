@@ -186,7 +186,7 @@ const InvestmentUI = {
   _ownerNameFieldHtml(o, i) {
     const registryList = (typeof OwnerRegistry !== 'undefined') ? OwnerRegistry.listAll() : [];
     if (o.isSelf || !registryList.length || o._creatingNew) {
-      return '<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="' + escapeHtml(o.ownerName || '') + '" oninput="InvestmentUI.onOwnerNameInput(' + i + ',this.value)">';
+      return '<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="' + escapeHtml(o.ownerName || '') + '" data-oninput="InvestmentUI.onOwnerNameInput" data-oninput-args=\'[' + i + ',"$value"]\'>';
     }
     let matched = false;
     let opts = '<option value="">— Pilih pemilik —</option>';
@@ -199,7 +199,7 @@ const InvestmentUI = {
       opts += '<option value="' + escapeHtml(o.ownerId) + '" selected>' + escapeHtml(o.ownerName) + '</option>';
     }
     opts += '<option value="__new__">➕ Buat pemilik baru…</option>';
-    return '<select class="fi" style="flex:1" onchange="InvestmentUI.onOwnerSelectChange(' + i + ',this.value)">' + opts + '</select>';
+    return '<select class="fi" style="flex:1" data-onchange="InvestmentUI.onOwnerSelectChange" data-onchange-args=\'[' + i + ',"$value"]\'>' + opts + '</select>';
   },
 
   // onOwnerSelectChange(i,val) — SESI 491: replikasi PERSIS Aset.onOwnerSelectChange() (S490).
@@ -531,10 +531,10 @@ const InvestmentUI = {
         + InvestmentUI._ownerNameFieldHtml(o, i)
         + '<button type="button" class="btn btn-ghost btn-sm" data-action="InvestmentUI.removeOwnerRow" data-args=\'[' + i + ']\' aria-label="Hapus pemilik">✕</button>'
         + '</div>'
-        + '<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="investOwnerPorsi' + i + '" placeholder="%" inputmode="decimal" value="' + (porsiNum !== null ? porsiNum : '') + '" oninput="InvestmentUI.onOwnerPorsiInput(' + i + ',this.value)"></div>'
-        + '<div class="fg u-mb0" style="margin-top:6px"><label class="fl" style="margin-bottom:2px">Nominal (Rp)</label><input type="text" class="fi" id="investOwnerNominal' + i + '" placeholder="0" inputmode="decimal" value="' + InvestmentUI._ownerNominalValue(o) + '" oninput="InvestmentUI.onOwnerNominalInput(' + i + ',this.value)"></div>'
+        + '<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="investOwnerPorsi' + i + '" placeholder="%" inputmode="decimal" value="' + (porsiNum !== null ? porsiNum : '') + '" data-oninput="InvestmentUI.onOwnerPorsiInput" data-oninput-args=\'[' + i + ',"$value"]\'></div>'
+        + '<div class="fg u-mb0" style="margin-top:6px"><label class="fl" style="margin-bottom:2px">Nominal (Rp)</label><input type="text" class="fi" id="investOwnerNominal' + i + '" placeholder="0" inputmode="decimal" value="' + InvestmentUI._ownerNominalValue(o) + '" data-oninput="InvestmentUI.onOwnerNominalInput" data-oninput-args=\'[' + i + ',"$value"]\'></div>'
         + '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'
-        + '<input type="checkbox" style="width:14px;height:14px"' + (o.isSelf ? ' checked' : '') + ' onchange="InvestmentUI.onOwnerIsSelfToggle(' + i + ',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'
+        + '<input type="checkbox" style="width:14px;height:14px"' + (o.isSelf ? ' checked' : '') + ' data-onchange="InvestmentUI.onOwnerIsSelfToggle" data-onchange-args=\'[' + i + ',"$checked"]\'> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'
         + '</label>'
         + (o.isSelf ? '' : InvestmentUI._ownerSettlementFieldHtml(o, i))
         + (o.isSelf ? '' : ('<div id="investOwnerKuota' + i + '">' + InvestmentUI._ownerQuotaText(o, i) + '</div>'))
@@ -563,7 +563,7 @@ const InvestmentUI = {
     const val = o.settlement === 'milik' ? 'milik' : 'titipan';
     return '<div class="fg u-mb0" style="margin-top:6px">'
       + '<label class="fl" style="margin-bottom:2px">Status Dana</label>'
-      + '<select class="fi" id="investOwnerSettlement' + i + '" onchange="InvestmentUI.onOwnerSettlementChange(' + i + ',this.value)">'
+      + '<select class="fi" id="investOwnerSettlement' + i + '" data-onchange="InvestmentUI.onOwnerSettlementChange" data-onchange-args=\'[' + i + ',"$value"]\'>'
       + '<option value="titipan"' + (val === 'titipan' ? ' selected' : '') + '>🔒 Dana Titipan (tercatat di Buku Utang)</option>'
       + '<option value="milik"' + (val === 'milik' ? ' selected' : '') + '>✅ Milik Sendiri Pemilik Ini (bukan titipan, tidak ada utang)</option>'
       + '</select>'
@@ -973,7 +973,7 @@ const InvestmentUI = {
     }
     const eligibleOthers = draft.map((o, k) => ({ o, k })).filter((x) => x.k !== pending.editedIndex && x.o && typeof x.o.porsi === 'number' && x.o.porsi > 0);
     const manualSelectHtml = pending.method === 'manual' ? (
-      '<select class="fs u-mb10" onchange="InvestmentUI.setRebalanceManualOwner(this.value)">'
+      '<select class="fs u-mb10" data-onchange="InvestmentUI.setRebalanceManualOwner" data-onchange-args=\'["$value"]\'>'
       + '<option value="">— Pilih pemilik —</option>'
       + eligibleOthers.map((x) => '<option value="' + x.k + '"' + (pending.manualIndex === x.k ? ' selected' : '') + '>' + escapeHtml(InvestmentUI._rebalanceOwnerLabel(draft, x.k)) + ' (' + x.o.porsi + '%)</option>').join('')
       + '</select>'
@@ -983,9 +983,9 @@ const InvestmentUI = {
       + '<div style="font-size:12.5px;font-weight:700;color:var(--accent2);margin-bottom:4px">⚖️ Porsi melebihi 100%</div>'
       + '<div style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:10px">Porsi pemilik lama akan disesuaikan otomatis agar total kembali menjadi 100%.</div>'
       + '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cara menyesuaikan porsi</div>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="proporsional"' + (pending.method === 'proporsional' ? ' checked' : '') + ' onchange="InvestmentUI.setRebalanceMethod(this.value)"> Proporsional</label>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="largest"' + (pending.method === 'largest' ? ' checked' : '') + ' onchange="InvestmentUI.setRebalanceMethod(this.value)"> Kurangi dari pemilik terbesar</label>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="manual"' + (pending.method === 'manual' ? ' checked' : '') + ' onchange="InvestmentUI.setRebalanceMethod(this.value)"> Pilih pemilik manual</label>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="proporsional"' + (pending.method === 'proporsional' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Proporsional</label>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="largest"' + (pending.method === 'largest' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Kurangi dari pemilik terbesar</label>'
+      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="manual"' + (pending.method === 'manual' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Pilih pemilik manual</label>'
       + manualSelectHtml
       + '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Penyesuaian porsi</div>'
       + body

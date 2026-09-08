@@ -491,7 +491,7 @@ el.innerHTML=Aset._ownerQuotaText(draft[i],i);
 _ownerNameFieldHtml(o,i){
 const registryList=(typeof OwnerRegistry!=='undefined')?OwnerRegistry.listAll():[];
 if(o.isSelf||!registryList.length||o._creatingNew){
-return '<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" oninput="Aset.onOwnerNameInput('+i+',this.value)">';
+return '<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" data-oninput="Aset.onOwnerNameInput" data-oninput-args=\'['+i+',"$value"]\'>';
 }
 let matched=false;
 let opts='<option value="">— Pilih pemilik —</option>';
@@ -504,7 +504,7 @@ if(o.ownerId&&!matched&&o.ownerName){
 opts+='<option value="'+escapeHtml(o.ownerId)+'" selected>'+escapeHtml(o.ownerName)+'</option>';
 }
 opts+='<option value="__new__">➕ Buat pemilik baru…</option>';
-return '<select class="fi" style="flex:1" onchange="Aset.onOwnerSelectChange('+i+',this.value)">'+opts+'</select>';
+return '<select class="fi" style="flex:1" data-onchange="Aset.onOwnerSelectChange" data-onchange-args=\'['+i+',"$value"]\'>'+opts+'</select>';
 },
 _renderOwnersList(){
 Aset._toggleOwnersEditControls();
@@ -559,12 +559,12 @@ Aset._ownerNameFieldHtml(o,i)+
 '<button type="button" class="btn btn-ghost btn-sm" data-action="Aset.removeOwnerRow" data-args=\'['+i+']\' aria-label="Hapus pemilik">✕</button>'+
 '</div>'+
 '<div class="u-grid2" style="margin-bottom:0">'+
-'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="ownerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" oninput="Aset.onOwnerPorsiInput('+i+',this.value)"></div>'+
-'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Nominal (Rp)</label><input type="text" class="fi" id="ownerNominal'+i+'" placeholder="0" inputmode="decimal" value="'+nominalVal+'" oninput="Aset.onOwnerNominalInput('+i+',this.value)"></div>'+
+'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="ownerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" data-oninput="Aset.onOwnerPorsiInput" data-oninput-args=\'['+i+',"$value"]\'></div>'+
+'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Nominal (Rp)</label><input type="text" class="fi" id="ownerNominal'+i+'" placeholder="0" inputmode="decimal" value="'+nominalVal+'" data-oninput="Aset.onOwnerNominalInput" data-oninput-args=\'['+i+',"$value"]\'></div>'+
 '</div>'+
 (nilai>0?'':'<div style="font-size:10.5px;color:var(--text3);margin:-2px 0 4px">Estimasi Nilai Saat Ini aset ini belum diisi -- isi Nominal (Rp) baris yang porsinya sudah kamu tahu, nilai total otomatis dihitung dari situ</div>')+
 '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
-'<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' onchange="Aset.onOwnerIsSelfToggle('+i+',this.checked)"> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'+
+'<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' data-onchange="Aset.onOwnerIsSelfToggle" data-onchange-args=\'['+i+',"$checked"]\'> 👤 Ini saya (porsi ini dihitung ke Zakat/Pajak milikmu)'+
 '</label>'+
 (o.isSelf?'':Aset._ownerSettlementFieldHtml(o,i))+
 (o.isSelf?'':('<div id="assetOwnerKuota'+i+'">'+Aset._ownerQuotaText(o,i)+'</div>'))+
@@ -596,7 +596,7 @@ _ownerSettlementFieldHtml(o,i){
 const val=o.settlement==='milik'?'milik':'titipan';
 return '<div class="fg u-mb0" style="margin-top:6px">'+
 '<label class="fl" style="margin-bottom:2px">Status Dana</label>'+
-'<select class="fi" id="assetOwnerSettlement'+i+'" onchange="Aset.onOwnerSettlementChange('+i+',this.value)">'+
+'<select class="fi" id="assetOwnerSettlement'+i+'" data-onchange="Aset.onOwnerSettlementChange" data-onchange-args=\'['+i+',"$value"]\'>'+
 '<option value="titipan"'+(val==='titipan'?' selected':'')+'>🔒 Dana Titipan (tercatat di Buku Utang)</option>'+
 '<option value="milik"'+(val==='milik'?' selected':'')+'>✅ Milik Sendiri Pemilik Ini (bukan titipan, tidak ada utang)</option>'+
 '</select>'+
@@ -1204,16 +1204,16 @@ const msg=calc.error==='manual_owner_insufficient'?'⚠️ Porsi pemilik terpili
 previewHtml='<div style="font-size:12.5px;color:var(--accent2)">'+msg+'</div>';
 }
 const manualSelect=pending.method==='manual'
-?('<select class="fs u-mb10" onchange="Aset.setRebalanceManualOwner(this.value)">'
+?('<select class="fs u-mb10" data-onchange="Aset.setRebalanceManualOwner" data-onchange-args=\'["$value"]\'>'
 +'<option value="">Pilih pemilik…</option>'
 +eligibleOthers.map((x)=>'<option value="'+x.k+'"'+(pending.manualIndex===x.k?' selected':'')+'>'+escapeHtml(Aset._rebalanceOwnerLabel(draft,x.k))+' ('+x.o.porsi+'%)</option>').join('')
 +'</select>')
 :'';
 box.innerHTML='<div style="margin:10px 0;padding:12px;background:var(--surface3);border-radius:12px;border:1px solid var(--accent2)">'
 +'<div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px">⚖️ Porsi melebihi 100% -- pilih cara menyesuaikan:</div>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' onchange="Aset.setRebalanceMethod(this.value)"> Proporsional</label>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' onchange="Aset.setRebalanceMethod(this.value)"> Kurangi dari pemilik terbesar</label>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' onchange="Aset.setRebalanceMethod(this.value)"> Pilih pemilik manual</label>'
++'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Proporsional</label>'
++'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Kurangi dari pemilik terbesar</label>'
++'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Pilih pemilik manual</label>'
 +manualSelect
 +'<div style="margin:6px 0 10px">'+previewHtml+'</div>'
 +'<div class="u-flex u-gap8">'

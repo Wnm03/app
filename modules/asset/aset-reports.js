@@ -174,13 +174,13 @@ const metodeOpts=['garisLurus','saldoMenurun','manual'].map(m=>`<option value="$
 let fieldsHtml='';
 if(metode==='garisLurus'){
 fieldsHtml=`<div class="u-grid2 u-gap8 u-mb8">
-        <div><label class="fl">Umur Manfaat (tahun)</label><input type="text" inputmode="numeric" class="fi" value="${p.umurManfaatTahun!=null?p.umurManfaatTahun:''}" onchange="Penyusutan.updateParam('${a.id}','umurManfaatTahun',this.value)"></div>
-        <div><label class="fl">Nilai Residu (Rp)</label><input type="text" inputmode="numeric" class="fi" value="${p.nilaiResidu!=null?p.nilaiResidu:''}" onchange="Penyusutan.updateParam('${a.id}','nilaiResidu',this.value)"></div>
+        <div><label class="fl">Umur Manfaat (tahun)</label><input type="text" inputmode="numeric" class="fi" value="${p.umurManfaatTahun!=null?p.umurManfaatTahun:''}" data-onchange="Penyusutan.updateParam" data-onchange-args='${escapeHtml(JSON.stringify([a.id,'umurManfaatTahun','$value']))}'></div>
+        <div><label class="fl">Nilai Residu (Rp)</label><input type="text" inputmode="numeric" class="fi" value="${p.nilaiResidu!=null?p.nilaiResidu:''}" data-onchange="Penyusutan.updateParam" data-onchange-args='${escapeHtml(JSON.stringify([a.id,'nilaiResidu','$value']))}'></div>
       </div>`;
 } else if(metode==='saldoMenurun'){
 fieldsHtml=`<div class="u-grid2 u-gap8 u-mb8">
-        <div><label class="fl">Tarif per Tahun (%)</label><input type="text" inputmode="numeric" class="fi" value="${p.tarifPersen!=null?p.tarifPersen:''}" onchange="Penyusutan.updateParam('${a.id}','tarifPersen',this.value)"></div>
-        <div><label class="fl">Nilai Residu (Rp)</label><input type="text" inputmode="numeric" class="fi" value="${p.nilaiResidu!=null?p.nilaiResidu:''}" onchange="Penyusutan.updateParam('${a.id}','nilaiResidu',this.value)"></div>
+        <div><label class="fl">Tarif per Tahun (%)</label><input type="text" inputmode="numeric" class="fi" value="${p.tarifPersen!=null?p.tarifPersen:''}" data-onchange="Penyusutan.updateParam" data-onchange-args='${escapeHtml(JSON.stringify([a.id,'tarifPersen','$value']))}'></div>
+        <div><label class="fl">Nilai Residu (Rp)</label><input type="text" inputmode="numeric" class="fi" value="${p.nilaiResidu!=null?p.nilaiResidu:''}" data-onchange="Penyusutan.updateParam" data-onchange-args='${escapeHtml(JSON.stringify([a.id,'nilaiResidu','$value']))}'></div>
       </div>`;
 } else {
 fieldsHtml=`<div class="u-fs11 u-t2 u-mb8">Nilai buku = field "Nilai" aset ini, di-update manual sendiri lewat Edit Aset. Tidak ada formula otomatis di metode ini.</div>`;
@@ -194,12 +194,12 @@ if(hasil.akumulasi!=null)totalAkumulasi+=hasil.akumulasi;
 resultHtml=`<div class="u-fs12"><b>Nilai Buku Sekarang: ${fmtFull(hasil.nilaiBuku)}</b>${hasil.akumulasi!=null?' · Akumulasi Penyusutan: '+fmtFull(hasil.akumulasi):''}</div>`;
 if(hasil.habisManfaat)resultHtml+=`<div class="u-fs11 u-t2 u-mt2">✅ Sudah mencapai akhir umur manfaat.</div>`;
 }
-bodyHtml=`<div class="fg" style="margin-bottom:8px"><label class="fl">Metode</label><select class="fs" onchange="Penyusutan.updateParam('${a.id}','metode',this.value)">${metodeOpts}</select></div>`+fieldsHtml+resultHtml;
+bodyHtml=`<div class="fg" style="margin-bottom:8px"><label class="fl">Metode</label><select class="fs" data-onchange="Penyusutan.updateParam" data-onchange-args='${escapeHtml(JSON.stringify([a.id,'metode','$value']))}'>${metodeOpts}</select></div>`+fieldsHtml+resultHtml;
 }
 return `<div class="u-r10 u-mb10" style="border:1px solid var(--border);padding:10px 12px">
       <div class="u-flex u-jcb u-aic u-mb8">
         <div class="fi-insight-row u-fs13 u-fw600"><span class="fi-insight-icon">${iconHtml}</span><span>${escapeHtml(a.name)}</span></div>
-        <label class="u-fs11 u-flex u-aic" style="gap:4px"><input type="checkbox" ${aktif?'checked':''} onchange="Penyusutan.toggleAktif('${a.id}')"> Aktif</label>
+        <label class="u-fs11 u-flex u-aic" style="gap:4px"><input type="checkbox" ${aktif?'checked':''} data-onchange="Penyusutan.toggleAktif" data-onchange-args='${escapeHtml(JSON.stringify([a.id]))}'> Aktif</label>
       </div>
       ${bodyHtml}
     </div>`;

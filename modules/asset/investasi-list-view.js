@@ -312,14 +312,14 @@ const InvestmentListUI = {
     // di bawah (onFilterOwnerSelectAll()/onFilterOwnerClearAll()).
     const quickActionsHtml = ownerIdsAll.length > 5
       ? '<div class="btn-row u-mb4">'
-        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="InvestmentListUI.onFilterOwnerSelectAll()">Pilih Semua</button>'
-        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="InvestmentListUI.onFilterOwnerClearAll()">Bersihkan</button>'
+        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="InvestmentListUI.onFilterOwnerSelectAll">Pilih Semua</button>'
+        + '<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="InvestmentListUI.onFilterOwnerClearAll">Bersihkan</button>'
         + '</div>'
       : '';
     const ownerChecks = Array.from(ownerMap.entries()).map(([id, info]) => {
       const checked = selectedIds.indexOf(id) !== -1;
       return '<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
-        + '<input type="checkbox" onchange="InvestmentListUI.onFilterOwnerToggle(\'' + escapeHtml(id) + '\')"' + (checked ? ' checked' : '') + '>'
+        + '<input type="checkbox" data-onchange="InvestmentListUI.onFilterOwnerToggle" data-onchange-args=\'' + escapeHtml(JSON.stringify([id])) + '\'' + (checked ? ' checked' : '') + '>'
         + '<span class="u-fs13">' + escapeHtml(info.name) + ' <span class="u-t2 u-fs11">(' + info.count + ' holding)</span></span>'
         + '</label>';
     }).join('');
@@ -335,7 +335,7 @@ const InvestmentListUI = {
       + '<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
       + quickActionsHtml
       + ownerChecks
-      + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' onchange="InvestmentListUI.onFilterSettlementChange(this.value)">' + statusOpts + '</select>'
+      + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' data-onchange="InvestmentListUI.onFilterSettlementChange" data-onchange-args=\'["$value"]\'>' + statusOpts + '</select>'
       + '</div>';
   },
 
