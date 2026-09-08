@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1608-test-modules-modals-orphan-guard-coverage';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1608-test-modules-modals-orphan-guard-coverage';
+const APP_BUILD_VERSION = 's765-followup6-fuel-price-deviation-summary';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's765-followup6-fuel-price-deviation-summary';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -643,7 +643,30 @@ if(!D.accounts || !D.accounts.length) D.accounts=JSON.parse(JSON.stringify(DEFAU
 if(!D.pajakZakat) D.pajakZakat={hargaEmasPerGram:2640000,nisabPenghasilanBulan:7640144,nisabPenghasilanTahun:91681728,zakatFitrahPerJiwa:37500,haulMaalMulai:null,zakatLog:[]};
 // Sesi 749: referensi harga BBM nasional (1 angka per jenis) dipakai FuelPriceRef
 // (modules/vehicle/fuel-price-ref.js) — pola sama persis D.pajakZakat di atas.
-if(!D.fuelPriceRef) D.fuelPriceRef={pertalite:null,pertamax:null,pertamaxTurbo:null,pertaminaDex:null,dexlite:null,solar:null,lastType:'pertalite',lastTypeByVehicle:{},lastCheckedAt:null,refSources:{}};
+// Sesi S757-followup5: Pertalite & Bio Solar diseed dgn harga subsidi resmi nasional
+// (flat, tidak berubah per SPBU/wilayah, beda dgn 4 jenis nonsubsidi lain yg sengaja
+// dibiarkan null krn berubah tiap bulan & beda per provinsi -- lihat rekomendasi sesi
+// ini). User BARU (belum py D.fuelPriceRef sama sekali) langsung dapat 2 angka ini.
+if(!D.fuelPriceRef) D.fuelPriceRef={pertalite:10000,pertamax:null,pertamaxTurbo:null,pertaminaDex:null,dexlite:null,solar:6800,lastType:'pertalite',lastTypeByVehicle:{},lastCheckedAt:null,refSources:{pertalite:{source:'Harga BBM subsidi resmi Pertamina/BPH Migas (seed awal aplikasi)',tanggal:todayStr()},solar:{source:'Harga Bio Solar subsidi resmi Pertamina/BPH Migas (seed awal aplikasi)',tanggal:todayStr()}}};
+// User LAMA (D.fuelPriceRef sudah ada dari sebelum seed ini ditambahkan): seed HANYA
+// kalau field itu masih null DAN belum py refSources tersimpan (artinya user belum
+// pernah isi manual atau Cek Update via AI utk jenis itu) -- supaya tidak menimpa
+// data yg sudah ada/sengaja dikosongkan.
+// ⚠️ REMINDER (baca ini kalau nilai di bawah kelihatan basi): 10000/6800 di
+// baris-baris seed ini adalah SNAPSHOT MANUAL, BUKAN data live -- kalau
+// pemerintah merevisi harga Pertalite/Bio Solar subsidi, kedua angka ini
+// (di 3 titik: default D.fuelPriceRef di atas + 2 blok migrasi user lama di
+// bawah) WAJIB diupdate manual di source. Detail & checklist lengkap ada di
+// docs/REMINDER-UPDATE-HARGA-SUBSIDI-BBM.md.
+if(!D.fuelPriceRef.refSources) D.fuelPriceRef.refSources={};
+if((D.fuelPriceRef.pertalite===null||D.fuelPriceRef.pertalite===undefined)&&!D.fuelPriceRef.refSources.pertalite){
+D.fuelPriceRef.pertalite=10000;
+D.fuelPriceRef.refSources.pertalite={source:'Harga BBM subsidi resmi Pertamina/BPH Migas (seed awal aplikasi)',tanggal:todayStr()};
+}
+if((D.fuelPriceRef.solar===null||D.fuelPriceRef.solar===undefined)&&!D.fuelPriceRef.refSources.solar){
+D.fuelPriceRef.solar=6800;
+D.fuelPriceRef.refSources.solar={source:'Harga Bio Solar subsidi resmi Pertamina/BPH Migas (seed awal aplikasi)',tanggal:todayStr()};
+}
 if(!D.pajakZakat.zakatLog) D.pajakZakat.zakatLog=[];
 if(!D.pajakZakat.pbb) D.pajakZakat.pbb={njoptkp:10000000,tarifPersen:0.5};
 if(D.pajakZakat.pbb.njoptkp===undefined) D.pajakZakat.pbb.njoptkp=10000000;
