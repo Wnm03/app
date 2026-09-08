@@ -823,7 +823,7 @@ const matches=(q?customers.filter(c=>(c[field]||'').toLowerCase().includes(q)):c
 if(!matches.length){box.style.display='none';box.innerHTML='';return;}
 box.innerHTML=matches.map(c=>{
 const label=field==='name'?c.name:(field==='phone'?(c.phone||'(tanpa HP)')+' — '+c.name:(c.address||'(tanpa alamat)')+' — '+c.name);
-return `<div class="suggest-item" onmousedown="event.preventDefault();selectShopCustomer('${jsAttrEscape(c.name)}','${jsAttrEscape(c.phone)}','${jsAttrEscape(c.address)}')">${escapeHtml(label)}</div>`;
+return `<div class="suggest-item" onclick="selectShopCustomer('${jsAttrEscape(c.name)}','${jsAttrEscape(c.phone)}','${jsAttrEscape(c.address)}')">${escapeHtml(label)}</div>`;
 }).join('');
 box.style.display='block';
 },
