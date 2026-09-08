@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s1591-simpleautocomplete-onfocus-generic-dispatch';
+const MODULE_RENDER_VERSION='s1600-simpleautocomplete-onfocus-generic-dispatch';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -1053,26 +1053,26 @@ ${modeBtn('siklus','Siklus Custom')}
 </div>
 <div class="fg u-mb8${s.billWindowMode==='siklus'?'':' u-dnone'}" id="dashCashProjCycleWrap">
 <label class="fl">Tanggal Mulai Siklus</label>
-<input type="number" class="fi" id="dashCashProjCycleDay" min="1" max="28" value="${s.cycleStartDay}" onchange="_dashCashProjSetCycleDay()">
+<input type="number" class="fi" id="dashCashProjCycleDay" min="1" max="28" value="${s.cycleStartDay}" data-onchange="_dashCashProjSetCycleDay">
 </div>
 <div class="fg u-mb8">
 <label class="fl">Kiriman Mingguan (Rp)</label>
-<input type="number" class="fi" id="dashCashProjKirimanVal" min="0" step="1000" value="${kirimanVal}" onchange="_dashCashProjSetKirimanVal()">
-<label class="u-flex u-gap6 u-fs12 u-t2 u-mt6"><input type="checkbox" id="dashCashProjIncludeKiriman"${s.includeKiriman?' checked':''} onchange="_dashCashProjSetIncludeKiriman()"> Sertakan ke Proyeksi Kas</label>
+<input type="number" class="fi" id="dashCashProjKirimanVal" min="0" step="1000" value="${kirimanVal}" data-onchange="_dashCashProjSetKirimanVal">
+<label class="u-flex u-gap6 u-fs12 u-t2 u-mt6"><input type="checkbox" id="dashCashProjIncludeKiriman"${s.includeKiriman?' checked':''} data-onchange="_dashCashProjSetIncludeKiriman"> Sertakan ke Proyeksi Kas</label>
 </div>
 <div class="fg u-mb8">
-<label class="u-flex u-gap6 u-fs12"><input type="checkbox" id="dashCashProjIncludePending"${s.includePendingGaji?' checked':''} onchange="_dashCashProjSetIncludePendingGaji()"> Sertakan Gaji Pending (estimasi absensi belum di-reset) ke Proyeksi Gaji</label>
+<label class="u-flex u-gap6 u-fs12"><input type="checkbox" id="dashCashProjIncludePending"${s.includePendingGaji?' checked':''} data-onchange="_dashCashProjSetIncludePendingGaji"> Sertakan Gaji Pending (estimasi absensi belum di-reset) ke Proyeksi Gaji</label>
 </div>
 <div class="fg u-mb8">
 <label class="fl">Rentang Rata-rata Surplus Bulanan</label>
-<select class="fs" id="dashCashProjSurplusMonths" onchange="_dashCashProjSetSurplusMonths()">
+<select class="fs" id="dashCashProjSurplusMonths" data-onchange="_dashCashProjSetSurplusMonths">
 <option value=""${s.surplusMonths?'':' selected'}>Otomatis (ikut pengaturan Financial Freedom)</option>
 ${[3,6,12].map(n=>`<option value="${n}"${s.surplusMonths===n?' selected':''}>${n} bulan terakhir</option>`).join('')}
 </select>
 </div>
 <div class="fg u-mb8">
 <label class="fl">Basis Pola Absen (Proyeksi Pola Absen)</label>
-<select class="fs" id="dashCashProjPolaAbsenWeeks" onchange="_dashCashProjSetPolaAbsenWeeks()">
+<select class="fs" id="dashCashProjPolaAbsenWeeks" data-onchange="_dashCashProjSetPolaAbsenWeeks">
 <option value=""${s.polaAbsenWeeks?'':' selected'}>Default (10 minggu terakhir)</option>
 ${[5,10,15,20,26].map(n=>`<option value="${n}"${s.polaAbsenWeeks===n?' selected':''}>${n} minggu terakhir</option>`).join('')}
 </select>
@@ -1521,13 +1521,13 @@ function renderDashCardPrefsUI(){
 const wrap=document.getElementById('dashCardPrefsList');
 if(!wrap)return;
 wrap.innerHTML=`<div class="u-flex u-gap8 u-mb10">
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="setAllDashCardPrefs(true)">✅ Aktifkan Semua</button>
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="setAllDashCardPrefs(false)">🚫 Matikan Semua</button>
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[true]'>✅ Aktifkan Semua</button>
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[false]'>🚫 Matikan Semua</button>
     </div>`
 +DASH_CARD_DEFS.map(c=>`
     <div class="setting-item">
       <div class="setting-label">${c.label}</div>
-      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} onchange="toggleDashCardPref('${c.key}',this.checked)"><span class="tgl-track"></span></label>
+      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} data-onchange="toggleDashCardPref" data-onchange-args='["${c.key}","$checked"]'><span class="tgl-track"></span></label>
     </div>`).join('');
 }
 function setAllDashCardPrefs(on){
