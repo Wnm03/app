@@ -1,37 +1,43 @@
-# PATCH-README — Merged S646–S657
+# PATCH s756 — Fix bundle basi: Jenis BBM tidak sync ke Harga per Liter
 
-Gabungan 12 patch sesi (S646, S647, S648, S649, S650, S651, S652, S653, S654,
-S655, S656, S657) menjadi satu file patch. Setiap file yang berubah lebih
-dari sekali diambil dari sesi **paling akhir** (fix kumulatif — sesi
-berikutnya membangun di atas sesi sebelumnya, dikonfirmasi via diff, bukan
-menimpa/menghapus fix lama). File yang unik per sesi disertakan apa adanya.
+## Isi patch
+Patch ini HANYA berisi file yang berubah karena `node scripts/build.js`
+dijalankan ulang (rebuild bundle produksi). TIDAK ADA perubahan logika baru
+— source logic (`fuel-price-ref.js`, `car-notes.js`, dst.) sudah benar
+sejak Sesi 755, cuma bundle produksinya yang belum pernah di-rebuild.
+Detail root cause & analisis lengkap ada di
+`SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md` di dalam patch ini.
 
-## Resolusi file yang overlap antar sesi
-
-| File | Sesi yang menyentuh | Diambil dari | Alasan |
-|---|---|---|---|
-| `modules/finance/filter-laporan.js` | S647, S648 | **S648** | S648 menambahkan fix BUG-010 (`txMatchesSearch`) di atas fix BUG-009 milik S647 — diverifikasi via `diff`, tidak ada baris S647 yang hilang. |
-| `TODO.md` | S651, S652, S653, S654, S655 | **S655** | Update dokumentasi kumulatif tiap sesi; S655 adalah revisi terakhir & mencakup seluruh catatan sesi sebelumnya. |
-| `docs/BUG_REGISTRY.md` | S656, S657 | **S657** | S657 adalah koreksi eksplisit atas klaim yang keliru di catatan S656 (soal status test regresi BUG-006). |
-
-## File unik (tidak overlap, diambil langsung)
-
-- `modules/finance/worthit.js` — S646 (BUG-008)
-- `modules/finance/tx-list-cashflow.js` — S649 (BUG-012)
-- `modules/finance/financial-risk-dashboard-api.js` — S650 (BUG-013)
-- 8 file test baru (satu per sesi S646–S650, S652–S654)
-- 12 `SESSION-NOTE-S###.md` — seluruhnya disertakan sebagai jejak audit per sesi
-
-## Verifikasi yang dilakukan
-
-- `node --check` pada seluruh file `.js` hasil merge (4 file modul + 8 file
-  test) → **lolos, tanpa error sintaks**.
-- Isi `filter-laporan.js`, `TODO.md`, dan `BUG_REGISTRY.md` di-diff antar
-  versi sesi untuk memastikan versi terakhir bersifat kumulatif/superset,
-  bukan regresi.
+File yang diganti (12):
+- `app-bundle-a.min.js` — rebuild, sekarang berisi
+  `FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId)`
+  (versi lama tanpa `curVehicleId`)
+- `app-bundle-b.min.js` — rebuild (idem)
+- `index.html` — `?v=` dinaikkan ke 1625 (cache-bust)
+- `app_production.html` — `?v=` dinaikkan ke 1625 (cache-bust)
+- `sw.js` — `CACHE_NAME` dinaikkan ke `kw-cache-v1625` (cache-bust PWA)
+- `chat-action-handlers.js` — bump konstanta versi saja (otomatis oleh
+  build.js, tanpa perubahan logika)
+- `modules/shared/modals.js` — bump konstanta versi saja
+- `modules/shared/modules-calc.js` — bump konstanta versi saja
+- `modules/shared/modules-render.js` — bump konstanta versi saja
+- `modules/shared/features-helpers-global-security.js` — bump konstanta
+  versi saja
+- `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md` — regenerasi otomatis
+  (dokumentasi, tanpa dampak fungsional)
 
 ## Cara apply
+Timpa (overwrite) 12 file di atas pada lokasi yang sama persis di repo/
+hosting kamu (`wnm03.github.io/app/`), pertahankan struktur folder
+(`modules/shared/...`, `docs/...`). Upload SEMUA file di atas sekaligus —
+jangan cuma `index.html`/`sw.js`, karena inti fix-nya ada di kedua bundle
+`.js`.
 
-Extract isi zip ini ke root project (`app-main/`), timpa file yang sudah
-ada. Tidak perlu urutan apply — ini sudah merupakan hasil akhir gabungan
-seluruh sesi S646–S657.
+## Verifikasi setelah apply
+```
+node scripts/verify-bundle-freshness.js
+```
+Harus menghasilkan "✓ kedua bundle segar". Lalu di browser: hard-refresh
+(atau clear PWA cache) supaya `sw.js` versi baru terpasang, baru tes ulang
+modal "Catat Isi BBM" — ganti Jenis BBM harus langsung meng-update Harga
+per Liter & (kalau Total Biaya sudah diisi) Volume BBM.
