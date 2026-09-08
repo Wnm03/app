@@ -781,7 +781,7 @@ const DanaTitipanPortfolioPresenter = {
           <details class="titipan-linkasset-toggle u-mb6 u-ml10 u-fs11">
             <summary class="u-t2 u-pointer">+ Tautkan Aset Baru</summary>
             <div class="u-flex u-gap4 u-mt4">
-              <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" onchange="DanaTitipanPortfolioPresenter.onAssetPickChange(this)">${this._assetOptionsHtml()}</select>
+              <select id="titipanAssetPick_${oi}" data-owner-id="${escapeHtml(o.ownerId)}" class="fs u-flex-1" style="padding:8px 10px;font-size:11px" aria-label="Pilih Aset (lalu tap Atur Porsi Aset di sebelah kanan)" data-onchange="DanaTitipanPortfolioPresenter.onAssetPickChange" data-onchange-args='["$el"]'>${this._assetOptionsHtml()}</select>
               <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
             </div>
           </details>
@@ -1074,15 +1074,15 @@ const DanaTitipanPortfolioPresenter = {
     // di bawah (onFilterOwnerSelectAll()/onFilterOwnerClearAll()).
     const quickActionsHtml = owners.length > 5
       ? '<div class="btn-row u-mb4">'
-      + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="DanaTitipanPortfolioPresenter.onFilterOwnerSelectAll()">Pilih Semua</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm u-flex1" onclick="DanaTitipanPortfolioPresenter.onFilterOwnerClearAll()">Bersihkan</button>'
+      + '<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="DanaTitipanPortfolioPresenter.onFilterOwnerSelectAll">Pilih Semua</button>'
+      + '<button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="DanaTitipanPortfolioPresenter.onFilterOwnerClearAll">Bersihkan</button>'
       + '</div>'
       : '';
     const ownerChecks = owners.map((o) => {
       const id = String(o.ownerId);
       const checked = selectedIds.indexOf(id) !== -1;
       return '<label class="u-flex u-gap6" style="align-items:center;padding:4px 0">'
-        + '<input type="checkbox" onchange="DanaTitipanPortfolioPresenter.onFilterOwnerToggle(\'' + escapeHtml(id) + '\')"' + (checked ? ' checked' : '') + '>'
+        + '<input type="checkbox" data-onchange="DanaTitipanPortfolioPresenter.onFilterOwnerToggle" data-onchange-args=\'' + escapeHtml(JSON.stringify([id])) + '\'' + (checked ? ' checked' : '') + '>'
         + '<span class="u-fs13">' + escapeHtml(o.ownerName) + ' <span class="u-t2 u-fs11">(' + ((o.holdings && o.holdings.length) || 0) + ' holding)</span></span>'
         + '</label>';
     }).join('');
@@ -1099,7 +1099,7 @@ const DanaTitipanPortfolioPresenter = {
       + '<div class="u-fs11 u-t2 u-mb4">👥 Filter Pemilik (bisa pilih lebih dari satu)</div>'
       + quickActionsHtml
       + ownerChecks
-      + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' onchange="DanaTitipanPortfolioPresenter.onFilterSettlementChange(this.value)">' + statusOpts + '</select>'
+      + '<select class="fs u-mt6" style="width:100%"' + statusDisabled + ' data-onchange="DanaTitipanPortfolioPresenter.onFilterSettlementChange" data-onchange-args=\'["$value"]\'>' + statusOpts + '</select>'
       + '</div>';
   },
 

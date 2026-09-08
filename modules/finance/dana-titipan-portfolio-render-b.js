@@ -544,4 +544,12 @@ if (typeof window !== 'undefined') {
   window.DanaTitipanCommitmentUI = DanaTitipanCommitmentUI;
   window.DanaTitipanReturnUI = DanaTitipanReturnUI;
   window.DanaTitipanPoolUI = DanaTitipanPoolUI;
+  // SA18b: DanaTitipanPortfolioPresenter kini dipakai lewat data-action
+  // (tombol Pilih Semua/Bersihkan di _renderFilterBar(), migrasi inline
+  // onclick -> data-action) -- window-expose baru diperlukan sejak sesi
+  // ini (gate scripts/verify-window-expose.js, S423). Sebelumnya presenter
+  // ini cuma dipanggil via onclick/onchange inline (tidak discan gate),
+  // TIDAK ada regresi ke pemakaian lain (presenter tetap dipanggil lewat
+  // referensi variabel langsung di file ini/dana-titipan-portfolio-render.js).
+  window.DanaTitipanPortfolioPresenter = DanaTitipanPortfolioPresenter;
 }

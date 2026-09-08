@@ -654,12 +654,12 @@ listBox.innerHTML=draft.map((o,i)=>{
 const porsiNum=typeof o.porsi==='number'&&isFinite(o.porsi)?o.porsi:null;
 return '<div style="margin-bottom:8px">'+
 '<div class="u-flex u-gap8" style="align-items:center;margin-bottom:6px">'+
-'<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" oninput="AccOwners.onNameInput('+i+',this.value)">'+
+'<input type="text" class="fi" style="flex:1" placeholder="Nama pemilik" value="'+escapeHtml(o.ownerName||'')+'" data-oninput="AccOwners.onNameInput" data-oninput-args=\'['+i+',"$value"]\'>'+
 '<button type="button" class="btn btn-ghost btn-sm" data-action="AccOwners.removeRow" data-args=\'['+i+']\' aria-label="Hapus pemilik">✕</button>'+
 '</div>'+
-'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="accOwnerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" oninput="AccOwners.onPorsiInput('+i+',this.value)"></div>'+
+'<div class="fg u-mb0"><label class="fl" style="margin-bottom:2px">Porsi (%)</label><input type="number" class="fi" id="accOwnerPorsi'+i+'" placeholder="%" inputmode="decimal" value="'+(porsiNum!==null?porsiNum:'')+'" data-oninput="AccOwners.onPorsiInput" data-oninput-args=\'['+i+',"$value"]\'></div>'+
 '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-top:4px;cursor:pointer">'+
-'<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' onchange="AccOwners.onIsSelfToggle('+i+',this.checked)"> 👤 Ini saya'+
+'<input type="checkbox" style="width:14px;height:14px"'+(o.isSelf?' checked':'')+' data-onchange="AccOwners.onIsSelfToggle" data-onchange-args=\'['+i+',"$checked"]\'> 👤 Ini saya'+
 '</label>'+
 '</div>';
 }).join('');
@@ -928,7 +928,7 @@ return '<div style="display:flex;justify-content:space-between;gap:8px'+(changed
 }
 const eligibleOthers=draft.map((o,k)=>({o,k})).filter((x)=>x.k!==pending.editedIndex&&x.o&&typeof x.o.porsi==='number'&&x.o.porsi>0);
 const manualSelectHtml=pending.method==='manual'?(
-'<select class="fs u-mb10" onchange="AccOwners.setRebalanceManualOwner(this.value)">'+
+'<select class="fs u-mb10" data-onchange="AccOwners.setRebalanceManualOwner" data-onchange-args=\'["$value"]\'>'+
 '<option value="">— Pilih pemilik —</option>'+
 eligibleOthers.map((x)=>'<option value="'+x.k+'"'+(pending.manualIndex===x.k?' selected':'')+'>'+escapeHtml(AccOwners._rebalanceOwnerLabel(draft,x.k))+' ('+x.o.porsi+'%)</option>').join('')+
 '</select>'
@@ -938,9 +938,9 @@ box.innerHTML=
 '<div style="font-size:12.5px;font-weight:700;color:var(--accent2);margin-bottom:4px">⚖️ Porsi melebihi 100%</div>'+
 '<div style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:10px">Porsi pemilik lama akan disesuaikan otomatis agar total kembali menjadi 100%.</div>'+
 '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cara menyesuaikan porsi</div>'+
-'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Proporsional</label>'+
-'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Kurangi dari pemilik terbesar</label>'+
-'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' onchange="AccOwners.setRebalanceMethod(this.value)"> Pilih pemilik manual</label>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' data-onchange="AccOwners.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Proporsional</label>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' data-onchange="AccOwners.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Kurangi dari pemilik terbesar</label>'+
+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="accountRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' data-onchange="AccOwners.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Pilih pemilik manual</label>'+
 manualSelectHtml+
 '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Penyesuaian porsi</div>'+
 body+

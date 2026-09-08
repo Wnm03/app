@@ -210,13 +210,13 @@ const CashFlowProjectionPresenter = {
     const modeBtn = (mode, label) => `<button class="chip-btn${s.billWindowMode === mode ? ' active' : ''}" data-action="CashFlowProjectionPresenter._setBillWindowMode" data-args='["${mode}"]'>${label}</button>`;
     panel.innerHTML = `
       <div class="fg u-mb8"><label class="fl">Rentang Bulan (rata-rata)</label>
-        <select class="fs" id="cfpMonths" onchange="CashFlowProjectionPresenter._onMonthsChange()">
+        <select class="fs" id="cfpMonths" data-onchange="CashFlowProjectionPresenter._onMonthsChange">
           <option value=""${!s.months ? ' selected' : ''}>Otomatis</option>
           ${monthsOpts}
         </select>
       </div>
       <div class="fg u-mb8"><label class="fl">Filter Akun</label>
-        <select class="fs" id="cfpAcc" onchange="CashFlowProjectionPresenter._onAccChange()">
+        <select class="fs" id="cfpAcc" data-onchange="CashFlowProjectionPresenter._onAccChange">
           <option value="semua"${s.accountId === 'semua' ? ' selected' : ''}>Semua Akun</option>
           ${accOpts}
         </select>
@@ -230,7 +230,7 @@ const CashFlowProjectionPresenter = {
       </div>
       <div class="fg u-mb8${s.billWindowMode === 'siklus' ? '' : ' u-dnone'}" id="cfpCycleWrap">
         <label class="fl">Tanggal Mulai Siklus</label>
-        <input type="number" class="fi" id="cfpCycleDay" min="1" max="28" value="${s.cycleStartDay}" onchange="CashFlowProjectionPresenter._onCycleDayChange()">
+        <input type="number" class="fi" id="cfpCycleDay" min="1" max="28" value="${s.cycleStartDay}" data-onchange="CashFlowProjectionPresenter._onCycleDayChange">
       </div>
       <div class="u-flex u-gap8">
         <button class="btn btn-primary" data-action="CashFlowProjectionPresenter.resetSettings">↺ Reset ke Default</button>
