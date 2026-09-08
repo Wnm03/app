@@ -144,8 +144,8 @@ const AutoKat = {
     box.innerHTML = `<div><b>${label}:</b> ${escapeHtml(info.emoji||'📦')} ${escapeHtml(info.categoryName)}${subTxt}</div>`+
       reasonTxt+
       `<div style="display:flex;gap:8px;margin-top:8px">`+
-      `<button type="button" class="btn btn-primary btn-sm" style="flex:1;padding:8px" onclick="AutoKat.apply()">✅ Pakai</button>`+
-      `<button type="button" class="btn btn-ghost btn-sm" style="flex:1;padding:8px" onclick="AutoKat.hideSuggest()">✕ Abaikan</button>`+
+      `<button type="button" class="btn btn-primary btn-sm" style="flex:1;padding:8px" data-action="AutoKat.apply">✅ Pakai</button>`+
+      `<button type="button" class="btn btn-ghost btn-sm" style="flex:1;padding:8px" data-action="AutoKat.hideSuggest">✕ Abaikan</button>`+
       `</div>`;
     box.classList.remove('u-dnone');
   },
@@ -184,3 +184,12 @@ const AutoKat = {
     if(typeof save==='function') save();
   }
 };
+// FIX (migrasi data-action, sesi ini): AutoKat.apply/AutoKat.hideSuggest sekarang
+// dipanggil lewat data-action="AutoKat.xxx" (dispatcher generik resolve lewat
+// window['AutoKat']['xxx']) -- SEBELUMNYA lewat onclick="AutoKat.xxx()" inline yang
+// resolve lewat scope global biasa, TIDAK butuh window-expose eksplisit. Tanpa baris
+// ini, kedua tombol saran kategori AI ("Pakai"/"Abaikan") gagal DIAM-DIAM (bug class
+// s345-s348, lihat scripts/verify-window-expose.js) begitu CSP script-src-attr 'none'
+// aktif. Pola sama seperti window.TitipanExpenseUI=TitipanExpenseUI; di
+// modules/finance/titipan-expense-ui.js.
+window.AutoKat = AutoKat;
