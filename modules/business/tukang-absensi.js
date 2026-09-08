@@ -279,7 +279,7 @@ const locked=!!(entry&&(entry.renovItemLinkId||entry.paidTxId));
 const lockNote=locked?(entry.paidTxId?' — 🔒 sudah dibayar':' — 🔒 sudah dipakai di item Renovasi'):'';
 return `
       <label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.5':''}">
-        <input type="checkbox" class="tkBorWorkerChk" value="${w.id}" onchange="Tukang.calcSharedBorongan()" ${locked?'disabled':'checked'}>
+        <input type="checkbox" class="tkBorWorkerChk" value="${w.id}" data-onchange="Tukang.calcSharedBorongan" ${locked?'disabled':'checked'}>
         <span class="u-fs13 u-fw600">${escapeHtml(w.name)}${lockNote?'<span class="u-fw600 u-t2">'+lockNote+'</span>':''}</span>
       </label>`;
 }).join('');
