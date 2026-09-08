@@ -352,7 +352,7 @@ rekapPerJenis[j].count++;
 let html=`
 <div class="fg"><label class="fl">Harga Emas Saat Ini per Gram (24K, Rp)</label>
 <div class="amt-wrap">
-<input type="text" class="fi fi-calc-only" id="gzHargaGram" placeholder="cth. 1.500.000" inputmode="decimal" value="${harga||''}" oninput="GoldZakat.onHargaInput()" onblur="evalAmtExpr('gzHargaGram');GoldZakat.onHargaInput()">
+<input type="text" class="fi fi-calc-only" id="gzHargaGram" placeholder="cth. 1.500.000" inputmode="decimal" value="${harga||''}" data-oninput="GoldZakat.onHargaInput" data-onblur="_gzHargaOnBlur">
 </div>
 <div style="font-size:11px;color:var(--text2);margin-top:4px">Isi harga emas Antam/pasar hari ini per gram (24K) — dipakai utk estimasi nilai sekarang & cek Nisab. Cek harga terkini di Pegadaian/Antam/toko emas langganan.</div>
 </div>
@@ -393,3 +393,17 @@ if (typeof GoldZakat !== 'undefined') window.GoldZakat = GoldZakat;
 // --- wrapper global, dipanggil lewat data-action="..." di modal (pola sama seperti ImportKatalog) ---
 function previewGoldImport(){return GoldImport.preview();}
 function commitGoldImport(){return GoldImport.commit();}
+
+// s1606: wrapper utk #gzHargaGram onblur -- inline lama memanggil 2 fungsi
+// berbeda dgn argumen berbeda (`evalAmtExpr('gzHargaGram')` lalu
+// `GoldZakat.onHargaInput()`, TANPA argumen). Dispatcher generik
+// data-onblur mendukung nama fungsi comma-separated TAPI data-onblur-args
+// cuma 1 array yg diterapkan rata ke semua fungsi dalam daftar -- tidak
+// cocok di sini krn kedua fungsi butuh argumen berbeda (1 arg literal vs
+// 0 arg). Wrapper kecil ini memanggil keduanya scr eksplisit, urutan sama
+// persis dgn inline asli, TANPA mengubah logic evalAmtExpr/onHargaInput
+// sama sekali (pola sama spt previewGoldImport/commitGoldImport di atas).
+function _gzHargaOnBlur(){
+evalAmtExpr('gzHargaGram');
+GoldZakat.onHargaInput();
+}
