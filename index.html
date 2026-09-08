@@ -55,7 +55,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=1627"
+      -> `<script src="modules/shared/modal-write.js?v=1628"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -67,7 +67,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=1627`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=1628`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -187,16 +187,16 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1627">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1627">
-<script src="nav-scroll.js?v=1627" defer></script>
-<script src="sticky-tabbar.js?v=1627" defer></script>
-<script src="modules/shared/boot-early.js?v=1627"></script>
+<link rel="stylesheet" href="styles.css?v=1628">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1628">
+<script src="nav-scroll.js?v=1628" defer></script>
+<script src="sticky-tabbar.js?v=1628" defer></script>
+<script src="modules/shared/boot-early.js?v=1628"></script>
 
 
 
-<script src="modules/shared/bundle-load-guard.js?v=1627" data-guard-src="app-bundle-a.min.js?v=1627" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=1627" defer></script>
+<script src="modules/shared/bundle-load-guard.js?v=1628" data-guard-src="app-bundle-a.min.js?v=1628" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=1628" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -2278,9 +2278,9 @@
 </div>
 
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="0"></script><!-- modal:refAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="0"></script><!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="1"></script><!-- modal:lbHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="1"></script><!-- modal:lbHistoryModal externalized to modals.js -->
 
 <!-- ASET (Navigation Asset, dipisah dari Pajak — bisa dibuka lewat nav-item bottom-nav
      "Aset" (menggantikan slot "AI" lama), maupun lewat kartu Dashboard Hub kategori
@@ -4018,212 +4018,212 @@
 </div>
 
 <!-- MODAL: TRANSAKSI -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="2"></script><!-- modal:txModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="2"></script><!-- modal:txModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR GAJI -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="3"></script><!-- modal:gajiCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="3"></script><!-- modal:gajiCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI & GAJI HARIAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="4"></script><!-- modal:absensiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="4"></script><!-- modal:absensiModal externalized to modals.js -->
 
 <!-- MODAL: KONFIRMASI RESET GAJIAN MINGGUAN (SABTU) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="5"></script><!-- modal:weeklyResetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="5"></script><!-- modal:weeklyResetModal externalized to modals.js -->
 
 <!-- MODAL: TRANSFER ANTAR AKUN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="6"></script><!-- modal:transferModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="6"></script><!-- modal:transferModal externalized to modals.js -->
 
 <!-- MODAL: AKUN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="7"></script><!-- modal:accModal externalized to modals.js --><script src="modules/shared/modal-write.js?v=1627" data-modal-index="8"></script><!-- modal:accountOwnersModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="7"></script><!-- modal:accModal externalized to modals.js --><script src="modules/shared/modal-write.js?v=1628" data-modal-index="8"></script><!-- modal:accountOwnersModal externalized to modals.js -->
 
 <!-- MODAL: ASET (Buku Aset) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="9"></script><!-- modal:assetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="9"></script><!-- modal:assetModal externalized to modals.js -->
 
 <!-- MODAL: QUICK SCAN ASET (⚡ update nilai langsung dari daftar, tanpa buka modal Edit) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="10"></script><!-- modal:quickScanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="10"></script><!-- modal:quickScanModal externalized to modals.js -->
 
 <!-- MODAL: PIUTANG -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="11"></script><!-- modal:piutangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="11"></script><!-- modal:piutangModal externalized to modals.js -->
 
 <!-- MODAL: UTANG (BUKU UTANG) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="12"></script><!-- modal:debtModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="12"></script><!-- modal:debtModal externalized to modals.js -->
 
 <!-- MODAL: SHOP -->
 <!-- MODAL: PRODUK ETALASE -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="13"></script><!-- modal:productModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="13"></script><!-- modal:productModal externalized to modals.js -->
 
 <!-- MODAL: PRODUSEN (CRUD) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="14"></script><!-- modal:produsenModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="14"></script><!-- modal:produsenModal externalized to modals.js -->
 
 <!-- MODAL: ATUR HARGA PER PRODUSEN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="15"></script><!-- modal:produsenHargaModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="15"></script><!-- modal:produsenHargaModal externalized to modals.js -->
 
 <!-- MODAL: TRANSAKSI POS -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="16"></script><!-- modal:orderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="16"></script><!-- modal:orderModal externalized to modals.js -->
 
 <!-- MODAL: DETAIL PELANGGAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="17"></script><!-- modal:customerDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="17"></script><!-- modal:customerDetailModal externalized to modals.js -->
 
 <!-- MODAL: TARGET -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="18"></script><!-- modal:targetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="18"></script><!-- modal:targetModal externalized to modals.js -->
 
 <!-- MODAL: DANA PENDIDIKAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="19"></script><!-- modal:eduFundModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="19"></script><!-- modal:eduFundModal externalized to modals.js -->
 
 <!-- MODAL: CATATAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="20"></script><!-- modal:catatanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="20"></script><!-- modal:catatanModal externalized to modals.js -->
 
 <!-- MODAL: REMINDER -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="21"></script><!-- modal:reminderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="21"></script><!-- modal:reminderModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI (dengan opsi tambah sebagai subkategori) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="22"></script><!-- modal:catModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="22"></script><!-- modal:catModal externalized to modals.js -->
 
 <!-- MODAL: SUBKATEGORI -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="23"></script><!-- modal:subCatModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="23"></script><!-- modal:subCatModal externalized to modals.js -->
 
 <!-- MODAL: TAGIHAN / CICILAN / LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="24"></script><!-- modal:billModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="24"></script><!-- modal:billModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - buat/edit proyek -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="25"></script><!-- modal:renovProjectModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="25"></script><!-- modal:renovProjectModal externalized to modals.js -->
 
 <!-- MODAL: SEWA KIOS - tambah/edit unit -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="26"></script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="26"></script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - detail (daftar item biaya + progress) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="27"></script><!-- modal:renovDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="27"></script><!-- modal:renovDetailModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - saran AI (kebutuhan, ukuran, keperluan) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="28"></script><!-- modal:renovAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="28"></script><!-- modal:renovAiModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - form item biaya -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="29"></script><!-- modal:renovItemModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="29"></script><!-- modal:renovItemModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - hubungkan ke transaksi lama yang sudah ada di Keuangan -->
 <!-- MODAL GENERIK: "Hubungkan Transaksi Lama" -- dipakai bersama oleh Renov (Proyek Renovasi),
      WorthIt (Prioritas Belanja) & Bill (Tagihan/Cicilan). Logikanya ada di const LinkTx={...}.
      z-index:300 supaya selalu tampil DI ATAS modal manapun yg jadi tempat tombol pemicunya
      (renovItemModal, worthItModal, billHistoryModal), terlepas dari urutan DOM. -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="30"></script><!-- modal:linkTxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="30"></script><!-- modal:linkTxModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - kalkulator bantu (Upah Tukang/Laden & Material per satuan) -->
 <!-- z-index lebih tinggi dari .overlay biasa (200) supaya tampil DI ATAS renovItemModal, sama seperti pola calcModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="31"></script><!-- modal:renovCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="31"></script><!-- modal:renovCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI TUKANG (BANYAK ORANG) untuk hitung Gaji Harian tukang/laden -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="32"></script><!-- modal:tukangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="32"></script><!-- modal:tukangModal externalized to modals.js -->
 
 <!-- MODAL: ABSEN HARIAN TUKANG (jam kerja & jam lembur per hari) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="33"></script><!-- modal:tkDayModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="33"></script><!-- modal:tkDayModal externalized to modals.js -->
 
 <!-- MODAL: BORONGAN BARENG (isi 1 nominal, kebagi rata otomatis ke semua tukang yang dicentang, 1 tanggal) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="34"></script><!-- modal:tkBorSharedModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="34"></script><!-- modal:tkBorSharedModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR BORONGAN (hitung total dari luas/ukuran × harga per m², mirip kalkulator material) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="35"></script><!-- modal:tkBorCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="35"></script><!-- modal:tkBorCalcModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT BORONGAN (rekap semua absensi mode='borongan' per bulan, terpisah dari
      tampilan kotak-hari mingguan yang mencampur borongan dengan absensi jam biasa) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="36"></script><!-- modal:tkBorHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="36"></script><!-- modal:tkBorHistModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT ABSEN JAM (rekap semua absensi mode='jam' per bulan, terpisah dari borongan) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="37"></script><!-- modal:tkJamHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="37"></script><!-- modal:tkJamHistModal externalized to modals.js -->
 
 <!-- MODAL: KALENDER TAGIHAN/CICILAN/LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="38"></script><!-- modal:billCalendarModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="38"></script><!-- modal:billCalendarModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT PEMBAYARAN TAGIHAN/CICILAN/LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="39"></script><!-- modal:billHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="39"></script><!-- modal:billHistoryModal externalized to modals.js -->
 
 <!-- MODAL: EDIT SATU RIWAYAT PEMBAYARAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="40"></script><!-- modal:billHistoryEditModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="40"></script><!-- modal:billHistoryEditModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT CICILAN/TAGIHAN LUNAS (arsip) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="41"></script><!-- modal:billArchiveModal externalized to modals.js -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="42"></script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="41"></script><!-- modal:billArchiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="42"></script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
 
 <!-- MODAL: KENDARAAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="43"></script><!-- modal:vehicleModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="43"></script><!-- modal:vehicleModal externalized to modals.js -->
 
 <!-- MODAL: PAJAK KENDARAAN (STNK Tahunan, 5 Tahunan, Uji Kelayakan) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="44"></script><!-- modal:vehTaxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="44"></script><!-- modal:vehTaxModal externalized to modals.js -->
 
 <!-- MODAL: SIM -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="45"></script><!-- modal:simModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="45"></script><!-- modal:simModal externalized to modals.js -->
 
 <!-- MODAL: WORTH IT? (Kalkulator Layak Beli - Frugal Living) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="46"></script><!-- modal:worthItModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="46"></script><!-- modal:worthItModal externalized to modals.js -->
 
 <!-- MODAL: UPDATE KM -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="47"></script><!-- modal:kmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="47"></script><!-- modal:kmModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI SPAREPART -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="48"></script><!-- modal:sparepartModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="48"></script><!-- modal:sparepartModal externalized to modals.js -->
 
 <!-- MODAL: STOK SPAREPART -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="49"></script><!-- modal:stockModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="49"></script><!-- modal:stockModal externalized to modals.js -->
 
 <!-- MODAL: BACKUP LANJUTAN -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="50"></script><!-- modal:backupModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="50"></script><!-- modal:backupModal externalized to modals.js -->
 
 <!-- MODAL: ARSIP DATA LAMA (per tahun) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="51"></script><!-- modal:archiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="51"></script><!-- modal:archiveModal externalized to modals.js -->
 
 <!-- MODAL: BBM -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="52"></script><!-- modal:bbmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="52"></script><!-- modal:bbmModal externalized to modals.js -->
 
 <!-- MODAL: FUEL INTELLIGENCE -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="53"></script><!-- modal:fuelIntelModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="54"></script><!-- modal:servisModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="55"></script><!-- modal:torsiModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="56"></script><!-- modal:filterTxModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="57"></script><!-- modal:dataHealthModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="58"></script><!-- modal:globalSearchModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="59"></script><!-- modal:budgetModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="60"></script><!-- modal:fiSettingsModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="61"></script><!-- modal:pensiunModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="62"></script><!-- modal:confirmModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="63"></script><!-- modal:promptModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="64"></script><!-- modal:choiceModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="65"></script><!-- modal:infoModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="66"></script><!-- modal:pinPromptModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="67"></script><!-- modal:budgetSettingsModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="68"></script><!-- modal:refleksiModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="69"></script><!-- modal:importKatalogModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="70"></script><!-- modal:goldImportModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="71"></script><!-- modal:goldZakatModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="72"></script><!-- modal:importShopExcelModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="73"></script><!-- modal:shopCsvImportModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="74"></script><!-- modal:sparepartCsvImportModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="75"></script><!-- modal:shopPdfImportModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="76"></script><!-- modal:shopScanModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="77"></script><!-- modal:shopJsonModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="78"></script><!-- modal:mergeProductModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="79"></script><!-- modal:billMultiScanModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="80"></script><!-- modal:universalOcrModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="81"></script><!-- modal:fuelBarCorrectionModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="82"></script><!-- modal:fuelTankProfileModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="83"></script><!-- modal:catalogModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="84"></script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="85"></script><!-- modal:vehCatWebImportModal -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="86"></script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="87"></script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="88"></script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="89"></script><!-- modal:inventoryTransferModal (S244) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="90"></script><!-- modal:purchaseOrderBatchModal (S381) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="91"></script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="92"></script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="93"></script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="94"></script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="95"></script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="96"></script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="97"></script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="98"></script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="99"></script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="100"></script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="101"></script><!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
-<script src="modules/shared/modal-write.js?v=1627" data-modal-index="102"></script><!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="53"></script><!-- modal:fuelIntelModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="54"></script><!-- modal:servisModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="55"></script><!-- modal:torsiModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="56"></script><!-- modal:filterTxModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="57"></script><!-- modal:dataHealthModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="58"></script><!-- modal:globalSearchModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="59"></script><!-- modal:budgetModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="60"></script><!-- modal:fiSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="61"></script><!-- modal:pensiunModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="62"></script><!-- modal:confirmModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="63"></script><!-- modal:promptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="64"></script><!-- modal:choiceModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="65"></script><!-- modal:infoModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="66"></script><!-- modal:pinPromptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="67"></script><!-- modal:budgetSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="68"></script><!-- modal:refleksiModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="69"></script><!-- modal:importKatalogModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="70"></script><!-- modal:goldImportModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="71"></script><!-- modal:goldZakatModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="72"></script><!-- modal:importShopExcelModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="73"></script><!-- modal:shopCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="74"></script><!-- modal:sparepartCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="75"></script><!-- modal:shopPdfImportModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="76"></script><!-- modal:shopScanModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="77"></script><!-- modal:shopJsonModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="78"></script><!-- modal:mergeProductModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="79"></script><!-- modal:billMultiScanModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="80"></script><!-- modal:universalOcrModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="81"></script><!-- modal:fuelBarCorrectionModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="82"></script><!-- modal:fuelTankProfileModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="83"></script><!-- modal:catalogModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="84"></script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="85"></script><!-- modal:vehCatWebImportModal -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="86"></script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="87"></script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="88"></script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="89"></script><!-- modal:inventoryTransferModal (S244) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="90"></script><!-- modal:purchaseOrderBatchModal (S381) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="91"></script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="92"></script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="93"></script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="94"></script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="95"></script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="96"></script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="97"></script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="98"></script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="99"></script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="100"></script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="101"></script><!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
+<script src="modules/shared/modal-write.js?v=1628" data-modal-index="102"></script><!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=1627" data-guard-src="app-bundle-b.min.js?v=1627" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=1628" data-guard-src="app-bundle-b.min.js?v=1628" data-guard-id="appBundleBScript"></script>
 </body>
 </html>

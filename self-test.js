@@ -2205,6 +2205,23 @@ window.fetch=()=>Promise.reject(new Error('__sweep_blocked_fetch__'));
 try{ RenovAI.suggest('__sweep_dummy_project__'); } finally{ setTimeout(()=>{ window.fetch=origFetch; },80); }
 },
 after:()=>{ D.renovProjects=D.renovProjects.filter(p=>p.id!=='__sweep_dummy_project__'); }},
+// S768 (followup): fuelRefModal (modules/vehicle/fuel-price-ref.js, dibuat S749)
+// ada di halaman tapi belum terdaftar di sweep manapun -- terdeteksi
+// "(kelengkapan cakupan) modal belum terdaftar" di Tes Buka/Tutup Modal.
+// FuelPriceRef.check(selectId,hargaId) pola SAMA PERSIS RefAI.check() di atas
+// (guard apiKey lalu openModal() SEBELUM callAIProviderRaw), jadi dites dengan
+// cara yang sama: block window.fetch pakai closure lokal (origFetch) supaya
+// TIDAK ada network call sungguhan & tidak pernah menimpa window.fetch punya
+// spec lain, lalu dipanggil TANPA argumen (selectId/hargaId opsional -- cuma
+// dipakai utk sinkronisasi field harga setelah "Terapkan", bukan prasyarat
+// buka modal), 0 mutasi data permanen.
+{label:'FuelPriceRef.check()',id:'fuelRefModal',
+call:()=>{
+const origFetch=window.fetch;
+window.fetch=()=>Promise.reject(new Error('__sweep_blocked_fetch__'));
+try{ FuelPriceRef.check(); } finally{ setTimeout(()=>{ window.fetch=origFetch; },80); }
+},
+close:()=>{ closeModal('fuelRefModal'); }},
 // S555: openTxLinkedServisModal() (tx-servis.js) -- lihat catatan
 // MODAL_SWEEP_MANUAL_OVERRIDE_FNS di atas (computeModalSweepFnNames()) kenapa
 // fungsi ini dikeluarkan dari tebakan otomatis. id yang BENAR adalah
