@@ -544,9 +544,16 @@ const q=raw.trim().toLowerCase();
 const cats=getCatsByType(curTxType);
 const matches=cats.filter(c=>!q||c.name.toLowerCase().includes(q));
 const box=document.getElementById('txCatSuggestBox');
-let html=matches.map(c=>`<div class="suggest-item" onclick="selectTxCat('${jsAttrEscape(c.name)}')" ontouchstart="event.preventDefault();selectTxCat('${jsAttrEscape(c.name)}')">${escapeHtml(c.emoji||'📦')} ${escapeHtml(c.name)}</div>`).join('');
+// FIX (audit dropdown Kategori "tap 0 reaksi", CSP script-src-attr 'none'): item
+// suggest-box dulu pakai onclick=/ontouchstart= inline -- browser SEKARANG memblokir
+// attribute inline itu (CSP script-src-attr 'none', lapisan pertahanan XSS), jadi tap
+// pada saran kategori 0 reaksi meski dropdown-nya kelihatan normal & field tetap
+// kosong. Migrasi ke data-action/data-args (pola yang sama dgn seluruh app) --
+// dispatcher click & touchstart (lihat features-helpers-global-security.js) yang
+// memprosesnya, bukan attribute inline, jadi lolos CSP.
+let html=matches.map(c=>`<div class="suggest-item" data-action="selectTxCat" data-args="${escapeHtml(JSON.stringify([c.name]))}">${escapeHtml(c.emoji||'📦')} ${escapeHtml(c.name)}</div>`).join('');
 if(q && !cats.some(c=>c.name.toLowerCase()===q)){
-html+=`<div class="suggest-item suggest-add" onclick="addNewCatFromInput()" ontouchstart="event.preventDefault();addNewCatFromInput()">➕ Tambah kategori baru: "${escapeHtml(raw.trim())}"</div>`;
+html+=`<div class="suggest-item suggest-add" data-action="addNewCatFromInput">➕ Tambah kategori baru: "${escapeHtml(raw.trim())}"</div>`;
 }
 if(!html) html='<div class="suggest-empty">Belum ada kategori. Ketik nama baru lalu pilih "Tambah kategori baru".</div>';
 box.innerHTML=html;
@@ -598,8 +605,11 @@ if(catName){
 candidates.sort((a,b)=>(b.catName===catName)-(a.catName===catName));
 }
 const matches=candidates.filter(c=>!q||c.subName.toLowerCase().includes(q));
-let html='<div class="suggest-item" onclick="selectTxSubCat(\'\')" ontouchstart="event.preventDefault();selectTxSubCat(\'\')">— Tanpa subkategori —</div>';
-html+=matches.slice(0,30).map(c=>`<div class="suggest-item" onclick="selectTxSubCatWithCat('${jsAttrEscape(c.catName)}','${jsAttrEscape(c.subName)}')" ontouchstart="event.preventDefault();selectTxSubCatWithCat('${jsAttrEscape(c.catName)}','${jsAttrEscape(c.subName)}')">${escapeHtml(c.subName)} <span style="color:var(--text3);font-size:11px">— ${escapeHtml(c.catEmoji||'📦')} ${escapeHtml(c.catName)}</span></div>`).join('');
+// FIX (audit dropdown Subkategori "tap 0 reaksi", CSP script-src-attr 'none'): sama
+// seperti onTxCatInput() di atas -- onclick=/ontouchstart= inline diganti data-action/
+// data-args supaya lolos CSP (lihat komentar lengkap di onTxCatInput()).
+let html='<div class="suggest-item" data-action="selectTxSubCat" data-args=\'[""]\'>— Tanpa subkategori —</div>';
+html+=matches.slice(0,30).map(c=>`<div class="suggest-item" data-action="selectTxSubCatWithCat" data-args="${escapeHtml(JSON.stringify([c.catName,c.subName]))}">${escapeHtml(c.subName)} <span style="color:var(--text3);font-size:11px">— ${escapeHtml(c.catEmoji||'📦')} ${escapeHtml(c.catName)}</span></div>`).join('');
 if(!matches.length && q) html+='<div class="suggest-empty">Tidak ada subkategori yang cocok.</div>';
 box.innerHTML=html;
 box.style.display='block';
@@ -661,7 +671,10 @@ let values=[];
 try{values=sourceFn()||[];}catch(e){values=[];}
 const matches=(q?values.filter(v=>v.toLowerCase().includes(q)):values).slice(0,8);
 if(!matches.length){box.style.display='none';box.innerHTML='';return;}
-box.innerHTML=matches.map(v=>`<div class="suggest-item" onclick="selectSimpleAutocomplete('${jsAttrEscape(inputId)}','${jsAttrEscape(boxId)}','${jsAttrEscape(v)}')" ontouchstart="event.preventDefault();selectSimpleAutocomplete('${jsAttrEscape(inputId)}','${jsAttrEscape(boxId)}','${jsAttrEscape(v)}')">${escapeHtml(v)}</div>`).join('');
+// FIX (audit autocomplete "tap 0 reaksi" -- SPBU/catatan/nama produk/dll, CSP
+// script-src-attr 'none'): sama seperti onTxCatInput()/onTxSubCatInput() di atas --
+// onclick=/ontouchstart= inline diganti data-action/data-args supaya lolos CSP.
+box.innerHTML=matches.map(v=>`<div class="suggest-item" data-action="selectSimpleAutocomplete" data-args="${escapeHtml(JSON.stringify([inputId,boxId,v]))}">${escapeHtml(v)}</div>`).join('');
 box.style.display='block';
 }
 function selectSimpleAutocomplete(inputId,boxId,value){

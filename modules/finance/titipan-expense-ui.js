@@ -186,7 +186,7 @@ const TitipanExpenseUI = {
     const splitModeBox = (selectedCount > 1)
       ? `<div style="display:flex;align-items:center;gap:8px;padding:2px 0 10px">
           <span style="font-size:12px;color:var(--text2)">Bagi porsi:</span>
-          <select class="fs" style="width:auto;padding:6px 10px;font-size:12px" onchange="TitipanExpenseUI.onSplitModeChange(this.value)">
+          <select class="fs" style="width:auto;padding:6px 10px;font-size:12px" data-onchange="TitipanExpenseUI.onSplitModeChange" data-onchange-args='["$value"]'>
             <option value="rata"${this._splitMode === 'rata' ? ' selected' : ''}>⚖️ Rata Otomatis</option>
             <option value="manual"${this._splitMode !== 'rata' ? ' selected' : ''}>✍️ Manual (%)</option>
           </select>
@@ -196,11 +196,11 @@ const TitipanExpenseUI = {
       let porsiField = '';
       if (selectedCount > 1 && o.selected) {
         porsiField = (this._splitMode === 'manual')
-          ? `<input type="number" class="fi" id="titipanExpenseOwnerPorsi${i}" style="width:70px" placeholder="%" inputmode="decimal" value="${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}" oninput="TitipanExpenseUI.onPorsiInput(${i},this.value)">`
+          ? `<input type="number" class="fi" id="titipanExpenseOwnerPorsi${i}" style="width:70px" placeholder="%" inputmode="decimal" value="${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}" data-oninput="TitipanExpenseUI.onPorsiInput" data-oninput-args='[${i},"$value"]'>`
           : `<span style="width:70px;text-align:right;font-size:12px;color:var(--text2)">${o.porsi !== null && o.porsi !== undefined ? o.porsi : ''}%</span>`;
       }
       return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-        <input type="checkbox" style="width:16px;height:16px" ${o.selected ? 'checked' : ''} onchange="TitipanExpenseUI.toggleOwner(${i},this.checked)">
+        <input type="checkbox" style="width:16px;height:16px" ${o.selected ? 'checked' : ''} data-onchange="TitipanExpenseUI.toggleOwner" data-onchange-args='[${i},"$checked"]'>
         <span style="flex:1;font-size:13px">${escapeHtml(o.ownerName)}</span>
         ${porsiField}
       </label>`;

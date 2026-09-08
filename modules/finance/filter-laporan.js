@@ -496,7 +496,7 @@ commitHtml=`<div style="margin-top:2px">Modal Dikomit <span class="u-t2">Belum d
 return{name:o.ownerName,detailHtml:`<div style="margin-top:4px">${escapeHtml(o.ownerName)} (${o.porsi}%): Modal ${fmt(m)} · Pengeluaran ${fmt(e)} · Total ${t<0?'-':''}${fmt(Math.abs(t))}</div>${commitHtml}`};
 });
 window._filterTxOwnerSplitRows=rows;
-const tabsHtml=rows.map((r,idx)=>`<button type="button" class="cn-tab${idx===0?' active':''}" data-owner-idx="${idx}" onclick="selectFilterTxOwnerSplit(${idx})" style="flex:none;padding:6px 14px;margin-right:6px">${escapeHtml(r.name)}</button>`).join('');
+const tabsHtml=rows.map((r,idx)=>`<button type="button" class="cn-tab${idx===0?' active':''}" data-owner-idx="${idx}" data-action="selectFilterTxOwnerSplit" data-args='[${idx}]' style="flex:none;padding:6px 14px;margin-right:6px">${escapeHtml(r.name)}</button>`).join('');
 ownerSplitHtml=`<div style="font-weight:600;margin-bottom:6px">👥 Porsi per Pemilik</div><div style="display:flex;flex-wrap:wrap">${tabsHtml}</div><div id="filterTxOwnerSplitDetail">${rows[0].detailHtml}</div>`;
 }
 }
