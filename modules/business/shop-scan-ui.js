@@ -146,12 +146,12 @@ function shopScanUiRenderPreview() {
         : null);
     const statusLabel = exists ? '🔄 update' : '🆕 baru';
     return '<div class="tx-item" style="align-items:flex-start">'
-      + '<input type="checkbox" ' + checkedAttr + ' style="width:18px;height:18px;margin-top:8px;flex-shrink:0" onchange="ShopScanUI.toggleRow(' + idx + ')">'
+      + '<input type="checkbox" ' + checkedAttr + ' style="width:18px;height:18px;margin-top:8px;flex-shrink:0" data-onchange="ShopScanUI.toggleRow" data-onchange-args=\'[' + idx + ']\'>'
       + '<div class="tx-info" style="flex:1">'
-      + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.nama || '') + '" placeholder="Nama produk" oninput="ShopScanUI.editField(' + idx + ',\'nama\',this.value)">'
+      + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.nama || '') + '" placeholder="Nama produk" data-oninput="ShopScanUI.editField" data-oninput-args=\'[' + idx + ',"nama","$value"]\'>'
       + '<div class="u-flex u-gap8">'
-      + '<input type="text" class="fi" style="flex:1" value="' + escapeHtml(row.kategori || '') + '" placeholder="Kategori (opsional)" oninput="ShopScanUI.editField(' + idx + ',\'kategori\',this.value)">'
-      + '<input type="number" class="fi" style="flex:1" value="' + (row.harga || '') + '" placeholder="Harga" inputmode="numeric" oninput="ShopScanUI.editField(' + idx + ',\'harga\',this.value)">'
+      + '<input type="text" class="fi" style="flex:1" value="' + escapeHtml(row.kategori || '') + '" placeholder="Kategori (opsional)" data-oninput="ShopScanUI.editField" data-oninput-args=\'[' + idx + ',"kategori","$value"]\'>'
+      + '<input type="number" class="fi" style="flex:1" value="' + (row.harga || '') + '" placeholder="Harga" inputmode="numeric" data-oninput="ShopScanUI.editField" data-oninput-args=\'[' + idx + ',"harga","$value"]\'>'
       + '</div>'
       + '<div class="u-fs11 u-t2" style="margin-top:4px">' + statusLabel + '</div>'
       + '</div></div>';
