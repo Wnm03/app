@@ -58,6 +58,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { checkBundleFreshness } = require('./verify-bundle-freshness');
 
 const ROOT = path.join(__dirname, '..');
 const UNMINIFIED_MARKER = 'DIBUAT OTOMATIS oleh build.js';
@@ -297,6 +298,34 @@ function main() {
     blocking.push('version-sync (?v= HTML vs CACHE_NAME sw.js tidak sinkron)');
   }
 
+  // --- Gate 5: bundle freshness (S767) ---
+  // Ditambahkan setelah insiden S756: source sudah difix sejak S755, tapi
+  // app-bundle-a/b.min.js yang beneran dipakai browser tidak pernah
+  // di-rebuild ulang sebelum diupload -- lolos sampai ke user krn gate ini
+  // (satu-satunya pemeriksaan WAJIB sebelum ZIP per docs/ZIP_RULES.md)
+  // sebelumnya TIDAK memanggil pengecekan hash freshness sama sekali,
+  // padahal skripnya (verify-bundle-freshness.js) sudah ada sejak S365.
+  // TIDAK ADA override -- ini bukan batasan environment (beda dgn lint/
+  // minify yg butuh eslint/esbuild dari network), cuma perlu jalankan
+  // "node scripts/build.js" yang SELALU tersedia offline.
+  const freshness = checkBundleFreshness();
+  const staleBundles = freshness.filter((r) => r.status !== 'fresh');
+  if (staleBundles.length === 0) {
+    console.log('✓ GATE bundle-freshness: semua bundle segar (hash source cocok dgn marker di bundle).');
+  } else {
+    for (const r of staleBundles) {
+      if (r.status === 'missing') {
+        console.error(`✗ GATE bundle-freshness: ${r.file} tidak ditemukan.`);
+      } else if (r.status === 'no-marker') {
+        console.error(`✗ GATE bundle-freshness: ${r.file} belum punya marker hash (build.js versi lama).`);
+      } else {
+        console.error(`✗ GATE bundle-freshness: ${r.file} BASI — hash source (${r.current}) != hash tertanam di bundle (${r.embedded}).`);
+      }
+    }
+    console.error('    Perbaikan: jalankan "node scripts/build.js" lagi (selalu tersedia offline, tidak butuh eslint/esbuild), lalu upload ULANG semua bundle yang berubah. TIDAK BISA di-override.');
+    blocking.push('bundle-freshness (bundle basi, wajib rebuild — lihat SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md untuk insiden serupa)');
+  }
+
   if (overridden.length) appendAuditLog(overridden);
 
   console.log('');
@@ -312,6 +341,6 @@ function main() {
   }
 }
 
-module.exports = { checkLint, checkMinified, checkHtmlSync, checkVersionSync, readAppVersion };
+module.exports = { checkLint, checkMinified, checkHtmlSync, checkVersionSync, checkBundleFreshness, readAppVersion };
 
 if (require.main === module) main();

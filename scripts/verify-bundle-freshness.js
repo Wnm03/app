@@ -63,26 +63,55 @@ function bundleDefs() {
   ];
 }
 
-function main() {
-  let anyStale = false;
+// checkBundleFreshness() — diekstrak S767 supaya bisa dipanggil sbg gate
+// dari scripts/verify-release-ready.js (Gate baru "bundle-freshness"),
+// bukan cuma lewat CLI terpisah `npm run verify-bundle`. Alasan: gate S424
+// (verify-release-ready.js) SEHARUSNYA jadi satu-satunya pemeriksaan wajib
+// sebelum ZIP (lihat docs/ZIP_RULES.md), tapi sebelum S767 skrip itu TIDAK
+// pernah memanggil pengecekan freshness ini sama sekali -- artinya insiden
+// S756 (bundle basi lolos sampai ke user) bisa saja lolos LAGI walau
+// "npm run release-check" sudah dijalankan & lolos, selama orangnya lupa
+// menjalankan `npm run verify-bundle` secara terpisah. Fungsi ini murni
+// (tidak console.log/process.exit) supaya aman dipanggil dari modul lain;
+// main()/CLI di bawah tetap pakai perilaku cetak+exit yang sama seperti
+// sebelumnya.
+function checkBundleFreshness() {
+  const results = [];
   for (const { group, outFile } of bundleDefs()) {
     const bundlePath = path.join(ROOT, outFile);
     if (!fs.existsSync(bundlePath)) {
-      console.error(`❌ ${outFile} tidak ditemukan — jalankan node scripts/build.js dulu.`);
-      anyStale = true;
+      results.push({ file: outFile, status: 'missing' });
       continue;
     }
     const bundleContent = fs.readFileSync(bundlePath, 'utf8');
     const embedded = extractEmbeddedHash(bundleContent);
     const current = computeGroupHash(group, readFile);
     if (embedded === null) {
-      console.error(`❌ ${outFile} — belum punya marker hash (dibangun dgn build.js versi lama sebelum S365). Jalankan node scripts/build.js untuk rebuild.`);
-      anyStale = true;
+      results.push({ file: outFile, status: 'no-marker' });
     } else if (embedded !== current) {
-      console.error(`❌ ${outFile} BASI — hash source saat ini (${current}) tidak cocok dengan hash tertanam di bundle (${embedded}). Source sudah berubah sejak bundle ini terakhir di-build. Jalankan node scripts/build.js lalu upload ULANG bundle-nya sebelum deploy.`);
+      results.push({ file: outFile, status: 'stale', embedded, current });
+    } else {
+      results.push({ file: outFile, status: 'fresh', hash: current });
+    }
+  }
+  return results;
+}
+
+function main() {
+  const results = checkBundleFreshness();
+  let anyStale = false;
+  for (const r of results) {
+    if (r.status === 'missing') {
+      console.error(`❌ ${r.file} tidak ditemukan — jalankan node scripts/build.js dulu.`);
+      anyStale = true;
+    } else if (r.status === 'no-marker') {
+      console.error(`❌ ${r.file} — belum punya marker hash (dibangun dgn build.js versi lama sebelum S365). Jalankan node scripts/build.js untuk rebuild.`);
+      anyStale = true;
+    } else if (r.status === 'stale') {
+      console.error(`❌ ${r.file} BASI — hash source saat ini (${r.current}) tidak cocok dengan hash tertanam di bundle (${r.embedded}). Source sudah berubah sejak bundle ini terakhir di-build. Jalankan node scripts/build.js lalu upload ULANG bundle-nya sebelum deploy.`);
       anyStale = true;
     } else {
-      console.log(`✓ ${outFile} segar (hash source cocok: ${current})`);
+      console.log(`✓ ${r.file} segar (hash source cocok: ${r.hash})`);
     }
   }
   if (anyStale) {
@@ -92,4 +121,6 @@ function main() {
   console.log('\n✅ Semua bundle segar & siap deploy.');
 }
 
-main();
+module.exports = { bundleDefs, checkBundleFreshness };
+
+if (require.main === module) main();
