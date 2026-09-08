@@ -12012,3 +12012,466 @@ tests/cash-projection-sparkline.test.js, tests/cash-projection-card-s-p2.test.js
 tests/cash-projection-card-s-q3.test.js, tests/cash-proj-card-csp-bug2-data-action.test.js,
 app-bundle-a.min.js, app-bundle-b.min.js, index.html, app_production.html, sw.js,
 docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md, docs/RELEASE-GATE-LOG.md, docs/CLAUDE.md.
+
+# Sesi SA14a — Migrasi atribut event inline dinamis di investasi-list-view.js (2026-09-08)
+
+Lanjutan epic migrasi `docs/AUDIT-INLINE-EVENT-DINAMIS-S1588.md` (rekomendasi #3),
+rencana 8 sesi SA11-SA18. SA11 (aset-owners.js, 10 titik), SA12
+(investasi-view.js, 10 titik), SA13 (akun.js/AccOwners, 7 titik) sudah
+tuntas sebelumnya. SA14 rencana awal = investasi-list-view.js (4 titik) +
+aset.js (4 titik) — dipecah jadi 2 sesi ringan (SA14a/SA14b) supaya blast
+radius tetap kecil per patch.
+
+## Perubahan
+`modules/asset/investasi-list-view.js` — 4 titik di `_renderFilterBar()`
+dimigrasi dari `onclick=`/`onchange=` inline ke dispatcher `data-action`
+(klik, 0 args: tombol Pilih Semua/Bersihkan) dan `data-onchange`+
+`data-onchange-args` (checkbox filter per-owner dgn id literal
+`escapeHtml(JSON.stringify([id]))`, select Status Dana dgn token
+`$value`). 0 perubahan logic.
+
+## Test
++10 test baru (`tests/investasi-list-view-dynamic-inline-attr-sa14a.test.js`)
++ 3 file test lama disinkronkan ke markup baru (regresi). 5702/5702 pass.
+
+## Build
+v1593 -> v1594. verify-window-expose OK, bundle segar.
+
+## Status lint & release gate
+Override ke-5 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan).
+
+## ZIP
+Akumulasi sejak baseline v1591 (sesi fuel-price-ref + SA11 + SA12 + SA13 +
+SA14a): `PATCH-fuelpriceref-SA11-SA12-SA13-SA14a-v1594.zip`.
+
+## Next TODO
+SA14b (`aset.js`, 4 titik, pola identik) — sesi berikutnya.
+
+---
+
+# Sesi SA14b — Migrasi atribut event inline dinamis di aset.js (2026-09-08)
+
+Lanjutan SA14a (sesi sebelumnya, hari yang sama), menuntaskan SA14
+(investasi-list-view.js + aset.js). Pola markup identik dgn SA14a —
+`Aset._renderFilterBar()` adalah turunan langsung
+`InvestmentListUI._renderFilterBar()` (komentar S671/S673 di source
+sendiri menyebut "pola SAMA PERSIS InvestmentListUI").
+
+## Perubahan
+`modules/asset/aset.js` — 4 titik di `_renderFilterBar()` dimigrasi
+dgn pola identik SA14a: 2 tombol (Pilih Semua/Bersihkan) ->
+`data-action="Aset.onFilterOwnerSelectAll"`/`data-action="Aset.onFilterOwnerClearAll"`;
+checkbox filter per-owner -> `data-onchange="Aset.onFilterOwnerToggle"
+data-onchange-args='[...]'` (id di-`escapeHtml(JSON.stringify([id]))`);
+select Status Dana -> `data-onchange="Aset.onFilterSettlementChange"
+data-onchange-args='["$value"]'`. 0 perubahan logic.
+
+## Test
++10 test baru (`tests/aset-dynamic-inline-attr-sa14b.test.js`, pola
+persis SA14a: gate statis 0 inline tersisa + gate sanity regex + gate
+tepat 4 titik data-action/data-onchange baru + 3 test markup + 3 test
+end-to-end lewat dispatcher asli). Regresi: `tests/s667-aset-owner-status-filter.test.js`
+disinkronkan (5 assertion markup lama `onclick=`/`onchange=` inline ->
+pola `data-action`/`data-onchange`/`data-onchange-args` baru, makna
+test 0 berubah). 5712/5712 pass (5702 + 10 baru).
+
+## Build
+v1594 -> v1595. verify-window-expose OK (78 modul), kedua bundle segar.
+
+## Status lint & release gate
+Override ke-6 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan) — makin mendesak
+`npm install --save-dev eslint esbuild` begitu ada akses jaringan.
+
+## Progress
+SA11-SA14 (investasi-list-view.js + aset.js) TUNTAS. Epic
+`AUDIT-INLINE-EVENT-DINAMIS-S1588` sisa: SA15 (22 titik, preview
+import) -> SA16 (17 titik, dashboard settings) -> SA17 (8 titik) ->
+SA18 (45 titik, 18 file sisa).
+
+## ZIP
+Akumulasi sejak baseline v1591 (sesi fuel-price-ref + SA11 + SA12 +
+SA13 + SA14a + SA14b, TIMPA semua file di dalamnya ke project asli):
+`PATCH-fuelpriceref-SA11-SA12-SA13-SA14ab-v1595.zip`.
+
+## Next TODO
+SA15 (preview import, 22 titik, 5 file) — sesi berikutnya sesuai
+urutan rencana.
+
+# Sesi SA15 — Migrasi atribut event inline dinamis di 5 file preview import (2026-09-08)
+
+Lanjutan SA11-SA14 (tuntas), epic migrasi
+`docs/AUDIT-INLINE-EVENT-DINAMIS-S1588.md` (rekomendasi #3). Cakupan SA15
+sesuai rencana: 5 file "preview import" — `vehicle-catalog-import-ui.js`,
+`honda-pdf-import-ui.js`, `vehicle-catalog-web-import-ui.js`,
+`shop-scan-ui.js`, `shop-pdf-import-ui.js` — 22 titik total.
+
+## Kenapa file ini beda pola dari SA11-SA14
+
+Semua 22 titik pola SAMA persis lintas 5 file: 1 checkbox
+`onchange="X.toggleRow(idx)"` (1 arg numerik) + 3-4 input
+`oninput="X.editField(idx,'field',this.value)"` (3 arg: idx numerik, NAMA
+FIELD LITERAL, token `$value`). Pola 3-arg dengan literal field name di
+tengah ini BARU — SA11-SA14 selalu 2-arg (`[i,"$value"]`/`[i,"$checked"]`).
+Dispatcher (`_dataActionResolveArgs`) sudah generik mendukung array
+campuran literal+token tanpa perubahan infrastruktur.
+
+## Perubahan
+
+Kelima file — pola migrasi identik per titik:
+- `onchange="X.toggleRow(idx)"` → `data-onchange="X.toggleRow"
+  data-onchange-args='[idx]'`
+- `oninput="X.editField(idx,'field',this.value)"` → `data-oninput="X.editField"
+  data-oninput-args='[idx,"field","$value"]'`
+
+Rincian titik per file: `vehicle-catalog-import-ui.js` (5: 1 checkbox + 4
+field partName/category/oemCode/price), `honda-pdf-import-ui.js` (5, field
+sama), `vehicle-catalog-web-import-ui.js` (4: 1 checkbox + 3 field
+partName/oemCode/price), `shop-scan-ui.js` (4: 1 checkbox + 3 field
+nama/kategori/harga), `shop-pdf-import-ui.js` (4, field sama). 0 perubahan
+logic — fungsi `toggleRow`/`editField` di kelima file tidak disentuh.
+
+## Test
+
+Baru: `tests/sa15-import-preview-dynamic-inline-attr.test.js` (38 test,
+parametrized lintas 5 file) — gate statis 0 inline tersisa per file, gate
+sanity regex, gate string literal tepat 22 titik data-onchange/data-oninput
+di source, + 10 test end-to-end (2 per file: toggleRow & editField) lewat
+dispatcher ASLI (`_dataActionInputChangeHandler`, diekstrak dari source
+yang sama persis, tidak diubah) — verifikasi KHUSUS pola args 3-elemen
+[idx, field literal, $value] baru ini beneran ter-resolve dengan benar.
+0 test lama perlu regresi (audit: belum pernah ada test markup untuk
+`toggleRow`/`editField`/render preview di kelima file ini sebelumnya).
+5750/5750 pass (5712 + 38 baru).
+
+## Build
+
+v1595 -> v1596. verify-window-expose OK (78 modul), kedua bundle segar.
+
+## Status lint & release gate
+
+Override ke-7 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan).
+
+## Progress
+
+SA11-SA15 TUNTAS (67 dari 123 titik audit S1588). Sisa: SA16 (17 titik,
+dashboard settings) -> SA17 (8 titik) -> SA18 (45 titik, 18 file sisa).
+
+## ZIP
+
+Akumulasi sejak baseline v1591 (fuel-price-ref + SA11 + SA12 + SA13 +
+SA14a + SA14b + SA15, TIMPA semua file di dalamnya ke project asli):
+`PATCH-fuelpriceref-SA11-SA12-SA13-SA14ab-SA15-v1596.zip`.
+
+## Next TODO
+
+SA16 (dashboard settings, 17 titik, 4 file: 3x `modules-render.js` +
+`dashboard-hub-settings.js`) — sesi berikutnya sesuai urutan rencana.
+
+# Sesi SA16 — Migrasi atribut event inline dinamis di dashboard settings (2026-09-08)
+
+Lanjutan epic migrasi `docs/AUDIT-INLINE-EVENT-DINAMIS-S1588.md` (rekomendasi
+#3), rencana 8 sesi SA11-SA18. SA11-SA15 (67 dari 123 titik) sudah tuntas.
+SA16 = "dashboard settings", 4 file, 17 titik, sesuai urutan rencana yang
+dicatat di `SESSION-NOTE-SA15-import-preview-dynamic-inline-attr.md`.
+
+## Kenapa file ini beda pola dari SA11-SA15
+
+2 varian BARU di sesi ini (SA11-SA15 selalu punya token/literal per-baris):
+- `onclick="setAllDashCardPrefs(true|false)"` — literal boolean murni, 0
+  token dinamis sama sekali (`[true]`/`[false]` sebagai `data-args`, bukan
+  `[$el]`/`[$checked]`/dst).
+- `onchange="_dashCashProjSetXxx()"` (6 titik) — 0 argumen sama sekali,
+  fungsi baca DOM sendiri lewat `getElementById`. Migrasi ke
+  `data-onchange="_dashCashProjSetXxx"` TANPA atribut `data-onchange-args`
+  sama sekali (dispatcher generik `_dataActionResolveArgs` sudah default ke
+  `[]` kalau `argsRaw` falsy — 0 perubahan infrastruktur).
+
+2 titik sisanya pola sama SA11-SA15 (`toggleDashCardPref` key literal +
+`$checked`, `DashboardSettings.reorderCard` 2 literal string).
+
+## Perubahan
+
+4 file, 17 titik:
+
+| File | Titik | Pola |
+|---|---|---|
+| `modules/shared/modules-render.js` | 9 | 6× `_dashCashProjSetXxx()` 0-arg + `setAllDashCardPrefs(true/false)` + `toggleDashCardPref` |
+| `modules/shop/modules-render.js` | 3 | `setAllDashCardPrefs(true/false)` + `toggleDashCardPref` |
+| `modules/modules-render.js` | 3 | `setAllDashCardPrefs(true/false)` + `toggleDashCardPref` |
+| `modules/dashboard-hub/dashboard-hub-settings.js` | 2 | `DashboardSettings.reorderCard(key,'up'/'down')` |
+
+(`modules/shop/modules-render.js` & `modules/modules-render.js` isinya
+duplikat persis blok dashboard-card-prefs dari `modules/shared/modules-render.js`
+— 3 salinan/varian bundle terpisah, migrasi identik di ketiganya.)
+
+0 perubahan logic apa pun — murni migrasi cara handler dipanggil. Fungsi
+`setAllDashCardPrefs`/`toggleDashCardPref`/`DashboardSettings.reorderCard`/
+`_dashCashProjSetXxx` tidak disentuh sama sekali.
+
+## Test
+
+Baru: `tests/sa16-dashboard-settings-dynamic-inline-attr.test.js` (30 test)
+— gate statis 0 inline tersisa per file (4 file), gate sanity regex, gate
+string literal tepat 17 titik data-action/data-onchange di source (termasuk
+6 titik 0-arg BARU: `data-onchange="Xxx">` tanpa `data-onchange-args`), + 10
+test end-to-end lewat dispatcher ASLI (`_dataActionClickHandler` utk klik,
+`_dataActionInputChangeHandler` utk change, diekstrak dari source yang sama
+persis, tidak diubah) — termasuk verifikasi KHUSUS varian 0-arg (dataset
+tanpa `onchangeArgs` sama sekali → dispatcher tetap memanggil fungsi dgn
+args kosong `[]`, pola yang belum pernah diuji SA11-SA15).
+
+Regresi: 1 test lama ditemukan menguji markup inline lama secara langsung —
+`tests/dashboard-hub-settings.test.js` (`renderDashCardOrderUI() — render ke
+#dashCardOrderList...`) meng-assert regex `reorderCard\('refleksi','up'\)`.
+Disinkronkan ke assert `data-args='["refleksi","up"]'`. 0 test lain
+ditemukan menguji markup di 4 file ini (grep lintas `tests/`).
+
+5780/5780 pass (5750 baseline + 30 baru SA16).
+
+## Build
+
+v1596 -> v1597. verify-window-expose OK (78 modul), kedua bundle segar.
+
+## Status lint & release gate
+
+Override ke-8 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan).
+
+## Progress
+
+SA11-SA17 TUNTAS (87 dari 123 titik audit S1588 — lihat catatan SA17 di
+bawah soal kenapa "8 titik" di rencana lama ternyata cuma 3 titik nyata).
+
+## Catatan kerja — SA17 (v1598): migrasi panel "⚙️ Atur" Proyeksi Arus Kas + audit ulang rencana SA17 lama
+
+Lihat `SESSION-NOTE-SA17-cashflow-proj-settings-dynamic-inline-attr.md`
+untuk detail lengkap. Ringkasan: rencana lama menyebut SA17 = 4 file/8
+titik (`cashflow-projection-presenter.js`/`tx-bbm.js`/`cicilan.js`/
+`tx-stok-sparepart.js`). Diaudit ulang satu-satu (bukan cuma percaya angka
+tercatat) — ternyata **5 dari 8 "titik" itu adalah komentar** (regex audit
+S1588 murni tekstual, tidak membedakan kode asli dari baris `//` yang
+kebetulan menyebut pola lama sbg dokumentasi). Migrasi nyata cuma **3
+titik**, semuanya di `cashflow-projection-presenter.js._fillSettingsPanel()`
+(`onchange="...()"` 0-argumen -> `data-onchange="..."`, pola sama varian
+ke-3 SA16). `tx-bbm.js`/`cicilan.js`/`tx-stok-sparepart.js` TIDAK diubah —
+murni file logic, tidak ada kode HTML nyata untuk dimigrasi di dalamnya
+(field yang disebut komentarnya markup-nya ada di `modules/shared/modals.js`,
+file terpisah yang blind-spot dari audit S1588 krn escaping kutip beda —
+di luar cakupan SA11-SA18, dicatat sbg temuan bukan tugas sesi ini).
+
+Test baru: `tests/sa17-cashflow-proj-settings-dynamic-inline-attr.test.js`
+(9 test) — termasuk 1 test "audit ulang" yang memverifikasi tiap baris
+match regex di 3 file yang TIDAK diubah itu memang cuma komentar (bukan
+kode), supaya klaim "0 titik nyata" ini terverifikasi otomatis, bukan cuma
+diklaim di catatan.
+
+`node --test tests/*.test.js` → 5789 pass (naik dari 5780, +9). `node
+scripts/build.js` → sukses, v1597 -> v1598. `verify-window-expose` OK (78
+modul), kedua bundle segar.
+
+## Status lint & release gate
+
+Override ke-9 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan).
+
+## ZIP
+
+Akumulasi sejak baseline v1591 (fuel-price-ref + SA11 + SA12 + SA13 +
+SA14a + SA14b + SA15 + SA16 + SA17, TIMPA semua file di dalamnya ke project
+asli): `PATCH-fuelpriceref-SA11-SA12-SA13-SA14ab-SA15-SA16-SA17-v1598.zip`.
+
+## Next TODO
+
+SA18 — rencana lama menyebut "45 titik, 18 file sisa tersebar", TAPI
+mengingat pengalaman audit ulang SA17 di atas (5 dari 8 titik ternyata
+false-positive komentar), **audit ulang dulu ke-18 file itu satu-satu**
+dengan filter "baris tidak diawali `//`" sebelum menentukan cakupan
+sebenarnya — jangan asumsikan 45 titik itu semuanya nyata.
+
+**Belum diuji di browser sungguhan** (sandbox ini tidak ada akses browser)
+— kalau W punya kesempatan, coba buka Dashboard Hub → kartu Proyeksi Arus
+Kas → ⚙️ Atur → ubah Rentang Bulan/Filter Akun/Tanggal Mulai Siklus di
+Chrome/Edge/Firefox versi lama vs baru untuk konfirmasi independen migrasi
+ini benar di bawah CSP `script-src-attr 'none'`.
+
+# Sesi SA18a — Audit ulang rencana SA18 + migrasi atribut event inline dinamis di aset-reports.js/Penyusutan (2026-09-08)
+
+Lanjutan epic migrasi `docs/AUDIT-INLINE-EVENT-DINAMIS-S1588.md` (rekomendasi
+#3). SA11-SA17 (87 dari 123 titik) sudah tuntas. Rencana lama menyebut
+SA18 = "45 titik, 18 file sisa" — mengikuti pengalaman audit ulang SA17
+(5 dari 8 titik ternyata komentar), sesi ini audit ulang dulu 20 file sisa
+satu-satu (filter baris diawali `//`) sebelum eksekusi, sesuai arahan user.
+
+## Hasil audit ulang SA18
+
+Regex S1588 dijalankan ulang repo-wide: 48 kemunculan (bukan 45), tapi cuma
+**31 titik kode nyata** di 14 file setelah baris komentar difilter. 6 file
+ternyata 0 titik nyata sama sekali (`onboarding.js`, `pengaturan-search.js`,
+`scan-ocr.js`, `transaksi.js`, `cobek-tx-cart.js`, `ai-chat.js`) — pola sama
+seperti `tx-bbm.js`/`cicilan.js`/`tx-stok-sparepart.js` di SA17, TIDAK perlu
+disentuh sesi manapun. 14 file sisa (31 titik) dipecah SA18a-SA18f (lihat
+`SESSION-NOTE-SA18a-aset-reports-penyusutan-dynamic-inline-attr.md` utk
+tabel lengkap pembagian & alasan tiap kelompok).
+
+## Perubahan (SA18a)
+
+`modules/asset/aset-reports.js` — 6 titik di `Penyusutan.renderList()`
+dimigrasi dari `onchange=` inline ke `data-onchange`+`data-onchange-args`:
+5x `Penyusutan.updateParam(id,field,this.value)` (pola 3-arg id+field
+literal+`$value`, sudah ada sejak SA15) + 1x `Penyusutan.toggleAktif(id)`
+(1 literal, TIDAK butuh `$checked` — fungsi baca/tulis state sendiri, pola
+sama `DashboardSettings.reorderCard` SA16). 0 perubahan logic.
+
+## Test
+
+Baru: `tests/sa18a-aset-reports-penyusutan-dynamic-inline-attr.test.js`
+(10 test) — gate statis 0 inline tersisa, gate sanity regex, gate tepat 6
+titik data-onchange baru, 3 test markup nyata lewat `Penyusutan.renderList()`
+ASLI, + 4 test end-to-end lewat dispatcher ASLI
+(`_dataActionInputChangeHandler`, tidak diubah), termasuk verifikasi khusus
+`toggleAktif()` benar-benar tidak butuh `$checked`. 0 test lama perlu
+regresi (grep konfirmasi tidak ada test yg meng-assert markup inline lama).
+
+`node --test tests/*.test.js` → **5799 pass, 0 fail** (5789 + 10 baru).
+
+## Build
+
+v1598 -> v1599. `node scripts/build.js` sungguhan dijalankan.
+`verify-window-expose.js`: OK (78 modul). `verify-bundle-freshness.js`: OK,
+kedua bundle segar.
+
+## Status lint & release gate
+
+Override ke-10 berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan).
+
+## Progress
+
+SA11-SA17 (87 titik) + SA18a (6 titik) = 93/123 titik audit awal tuntas
+(91/113 titik nyata setelah dikurangi false-positif komentar SA17+SA18).
+Sisa: SA18b (`dana-titipan-portfolio-render.js`, 5 titik) → SA18c (6 titik,
+2 file) → SA18d (4 titik, 2 file, token `$el` lintas file) → SA18e (4
+titik, 2 file, termasuk 1 titik comma-separated function call campuran
+args) → SA18f (6 titik, 6 file, termasuk 1 titik `vehicle-core.js` yang
+BUKAN pemanggilan fungsi bernama — perlu fungsi named baru, beda kelas
+risiko dari sesi lain).
+
+## ZIP
+
+Akumulasi sejak baseline v1591 (fuel-price-ref + SA11 + SA12 + SA13 + SA14a
++ SA14b + SA15 + SA16 + SA17 + SA18a, TIMPA semua file di dalamnya ke
+project asli): `PATCH-fuelpriceref-SA11-SA12-SA13-SA14ab-SA15-SA16-SA17-SA18a-v1599.zip`.
+
+## Next TODO
+
+SA18b — `dana-titipan-portfolio-render.js` (5 titik, filter bar identik
+pola SA14a/SA14b) — sesi berikutnya sesuai urutan rencana di atas.
+
+**Belum diuji di browser sungguhan** (sandbox ini tidak ada akses browser)
+— kalau W punya kesempatan, coba buka Laporan Aset → kartu "📉 Penyusutan
+Aset" → aktifkan penyusutan 1 aset → ubah Metode/Umur Manfaat/Nilai
+Residu/Tarif di Chrome/Edge/Firefox versi lama vs baru untuk konfirmasi
+independen migrasi ini benar di bawah CSP `script-src-attr 'none'`.
+
+---
+
+## SA18b (v1600) — Migrasi atribut event inline dinamis di `dana-titipan-portfolio-render.js`
+
+Lanjutan epic `docs/AUDIT-INLINE-EVENT-DINAMIS-S1588.md` (rekomendasi #3),
+setelah SA18a. Cakupan rencana SA18b (dicatat di SESSION-NOTE-SA18a):
+`dana-titipan-portfolio-render.js`, 5 titik, filter bar pola identik
+SA14a/SA14b.
+
+## Perubahan (SA18b)
+
+`modules/finance/dana-titipan-portfolio-render.js` — 5 titik dimigrasi:
+
+1. Select "Pilih Aset" (`_ownerCardHtml()`) — `onchange="...onAssetPickChange(this)"`
+   → `data-onchange="DanaTitipanPortfolioPresenter.onAssetPickChange"
+   data-onchange-args='["$el"]'` (pola sama `openAssetPorsi` S608, di file
+   yang sama)
+2-3. Tombol "Pilih Semua"/"Bersihkan" (`_renderFilterBar()`) — `onclick=`
+   → `data-action` (0 args, pola sama SA14a/SA14b)
+4. Checkbox filter per-owner — `onchange="...onFilterOwnerToggle('id')"`
+   → `data-onchange` + `data-onchange-args='["id"]'` (literal,
+   `escapeHtml(JSON.stringify([id]))`)
+5. Select Status Dana — `onchange="...onFilterSettlementChange(this.value)"`
+   → `data-onchange` + `data-onchange-args='["$value"]'`
+
+0 perubahan logic — `onAssetPickChange()`/`onFilterOwner*()`/
+`onFilterSettlementChange()` tidak disentuh.
+
+**Temuan tambahan (beda dari SA14a/SA14b):** titik #2/#3 pakai
+`data-action`, dan gate `scripts/verify-window-expose.js` (S423) scan
+SEMUA `data-action="X.method"` di repo, mewajibkan `X` di-window-expose.
+`DanaTitipanPortfolioPresenter` sebelumnya TIDAK PERNAH dipakai lewat
+`data-action` (cuma `onclick`/`onchange` inline, luput dari gate ini) —
+window-expose belum ada. Ditambahkan di
+`modules/finance/dana-titipan-portfolio-render-b.js` (sejajar
+`DanaTitipanCommitmentUI`/`DanaTitipanReturnUI`/`DanaTitipanPoolUI` yang
+sudah ada di situ).
+
+## Regresi yang diperbaiki (sinkron ke markup baru, 0 perubahan makna test)
+
+- `tests/s633-titipan-linkasset-toggle-collapsed.test.js` — 1 assertion
+  (`onchange="...onAssetPickChange(this)"` → `data-onchange=...
+  data-onchange-args='["$el"]'`)
+- `tests/s668-dana-titipan-owner-status-filter.test.js` — 5 assertion
+  (2x checkbox `onFilterOwnerToggle('id')`, 1x checked, 2x dropdown Status
+  select regex, 2x tombol SelectAll/ClearAll `\(\)` literal)
+
+## Test
+
+Baru: `tests/sa18b-dana-titipan-portfolio-dynamic-inline-attr.test.js`
+(13 test) — gate statis 0 inline tersisa, gate sanity regex, gate tepat 5
+titik data-action/data-onchange baru, gate window-expose baru (temuan
+tambahan di atas), 4 test markup nyata lewat `_renderFilterBar()`/
+`_ownerCardHtml()` ASLI, + 5 test end-to-end lewat dispatcher ASLI
+(`_dataActionClickHandler`/`_dataActionInputChangeHandler`, tidak diubah).
+
+`node --test tests/*.test.js` → **5812 pass, 0 fail** (5799 + 13 baru).
+
+## Build
+
+v1599 -> v1600. `node scripts/build.js` sungguhan dijalankan.
+`verify-window-expose.js`: OK — **79 modul** (naik dari 78, window-expose
+baru `DanaTitipanPortfolioPresenter`). `verify-bundle-freshness.js`: OK,
+kedua bundle segar.
+
+## Status lint & release gate
+
+Override ke-**11** berturut-turut untuk gate `lint`/`minify` (eslint/esbuild
+tidak terpasang, sandbox tanpa akses jaringan) — makin mendesak
+`npm install --save-dev eslint esbuild` begitu ada akses jaringan.
+
+## Progress
+
+SA11-SA17 (87 titik) + SA18a (6 titik) + SA18b (5 titik) = **98/123** titik
+audit awal tuntas (**96/113** titik nyata setelah dikurangi false-positif
+komentar SA17+SA18). Sisa: SA18c (6 titik, 2 file) → SA18d (4 titik, 2
+file, token `$el` lintas file) → SA18e (4 titik, 2 file, termasuk 1 titik
+comma-separated function call campuran args) → SA18f (6 titik, 6 file,
+termasuk 1 titik `vehicle-core.js` yang BUKAN pemanggilan fungsi bernama —
+perlu fungsi named baru, beda kelas risiko dari sesi lain).
+
+## ZIP
+
+Akumulasi sejak baseline v1591 (fuel-price-ref + SA11-SA17 + SA18a +
+SA18b, TIMPA semua file di dalamnya ke project asli):
+`PATCH-fuelpriceref-SA11-SA12-SA13-SA14ab-SA15-SA16-SA17-SA18ab-v1600.zip`.
+
+## Next TODO
+
+SA18c — `scan-ocr-b.js` + `titipan-expense-ui.js` (6 titik, 3-arg
+literal-field pola SA15 + 1-2 arg standar) — sesi berikutnya sesuai
+urutan rencana di SESSION-NOTE-SA18a.
+
+**Belum diuji di browser sungguhan** (sandbox ini tidak ada akses browser)
+— kalau W punya kesempatan, coba buka tab Dana Titipan → filter Pemilik
+(checkbox multi-select, tombol Pilih Semua/Bersihkan, dropdown Status) +
+dropdown "Pilih Aset" per kartu owner di Chrome/Edge/Firefox versi lama vs
+baru, untuk konfirmasi independen migrasi ini benar di bawah CSP
+`script-src-attr 'none'`.
