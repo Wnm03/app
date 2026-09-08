@@ -1329,7 +1329,7 @@ extras+=`<div class="trs-tag-btn" data-stop="1" data-action="Torsi.catatServis" 
 const checkHtml=`<div class="trs-part-check ${this.pageMode==='checklist'?'show':''} ${checked?'checked':''}" data-stop="1" data-action="Torsi.toggleCheck" data-args="${escapeHtml(JSON.stringify([key]))}">${checked?'✓':''}</div>`;
 let biayaHtml='';
 if(it.consumable){
-biayaHtml=`<div class="trs-biaya-wrap" data-stop="1" data-action="stopPropOnly"><span>💰 Rp</span><input type="number" inputmode="numeric" placeholder="estimasi" value="${biayaVal}" oninput="Torsi.updateBiaya('${key.replace(/'/g,"\\'")}', this.value)"></div>`;
+biayaHtml=`<div class="trs-biaya-wrap" data-stop="1" data-action="stopPropOnly"><span>💰 Rp</span><input type="number" inputmode="numeric" placeholder="estimasi" value="${biayaVal}" data-oninput="Torsi.updateBiaya" data-oninput-args='${escapeHtml(JSON.stringify([key,'$value']))}'></div>`;
 }
 return `<div class="trs-part-row" data-action="torsiSelectPartIfAllowed" data-args="${escapeHtml(JSON.stringify([!!it.noTorque,catName,it.name]))}">
       ${checkHtml}

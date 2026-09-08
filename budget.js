@@ -153,11 +153,11 @@ cleanCatOptText(txt){
 return txt.replace(/^[\s↳]+/,'').replace(/^[^\w\s]+\s*/,'').trim();
 },
 renderCatOptions(selected){
-let html=`<label class="budget-cat-opt total"><input type="checkbox" id="budgetCatTotal" onchange="onBudgetCatTotalToggle(this)"> 🎯 Total Pengeluaran (semua kategori)</label>`;
+let html=`<label class="budget-cat-opt total"><input type="checkbox" id="budgetCatTotal" data-onchange="onBudgetCatTotalToggle" data-onchange-args='["$el"]'> 🎯 Total Pengeluaran (semua kategori)</label>`;
 D.categories.expense.forEach(c=>{
-html+=`<label class="budget-cat-opt"><input type="checkbox" class="budgetCatChk" value="${c.id}" onchange="onBudgetCatChildToggle()"> ${escapeHtml(c.icon||'')} ${escapeHtml(c.name)}</label>`;
+html+=`<label class="budget-cat-opt"><input type="checkbox" class="budgetCatChk" value="${c.id}" data-onchange="onBudgetCatChildToggle"> ${escapeHtml(c.icon||'')} ${escapeHtml(c.name)}</label>`;
 (c.subs||[]).forEach(s=>{
-html+=`<label class="budget-cat-opt sub"><input type="checkbox" class="budgetCatChk" value="${s.id}" onchange="onBudgetCatChildToggle()"> ↳ ${escapeHtml(s.icon||'')} ${escapeHtml(s.name)}</label>`;
+html+=`<label class="budget-cat-opt sub"><input type="checkbox" class="budgetCatChk" value="${s.id}" data-onchange="onBudgetCatChildToggle"> ↳ ${escapeHtml(s.icon||'')} ${escapeHtml(s.name)}</label>`;
 });
 });
 document.getElementById('budgetCatList').innerHTML=html;
