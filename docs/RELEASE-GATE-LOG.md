@@ -618,3 +618,18 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang (sama seperti SA11-SA18a)
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang (sama seperti SA11-SA18a)
+
+## 2026-09-08T18:18:01.779Z — versi s768-followup6-fuel-price-deviation-summary
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang/tidak bisa diinstall (konsisten S424 dst) -- sesi ini TIDAK mengubah logic produksi apa pun, cuma menyalin file statis (index.html/app_production.html/sw.js/css/js loader/bundle/manifest/icon) dari root ke folder docs/ (sync deploy GitHub Pages yang basi 215 versi).
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini (konsisten S508-S521 dst) -- bundle app-bundle-a/b.min.js yang disalin ke docs/ adalah byte-identik dgn bundle root yang sudah ada sebelumnya (fresh, hash source cocok), bukan hasil build baru sesi ini.
+
+## 2026-09-08T20:46:56.569Z — versi s768-followup6-fuel-price-deviation-summary
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang (konsisten S424 dst).
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini (konsisten S508-S521 dst) -- perubahan sesi ini cuma hapus 1 baris <script> dead-reference di index.html/app_production.html, tidak menyentuh bundle logic.
+
+## 2026-09-08T20:54:37.420Z — versi s769-followup6-fuel-price-deviation-summary
+
+- **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang (konsisten S424 dst).
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini (konsisten S508-S521 dst).
