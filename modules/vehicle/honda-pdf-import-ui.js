@@ -170,13 +170,13 @@ function hondaPdfImportUiRenderPreview() {
       const checkedAttr = row.included ? 'checked' : '';
       const priceVal = (typeof row.price === 'number' && !isNaN(row.price)) ? row.price : '';
       return '<div class="tx-item" style="align-items:flex-start">'
-        + '<input type="checkbox" ' + checkedAttr + ' style="width:18px;height:18px;margin-top:8px;flex-shrink:0" onchange="HondaPdfImportUI.toggleRow(' + idx + ')">'
+        + '<input type="checkbox" ' + checkedAttr + ' style="width:18px;height:18px;margin-top:8px;flex-shrink:0" data-onchange="HondaPdfImportUI.toggleRow" data-onchange-args=\'[' + idx + ']\'>'
         + '<div class="tx-info" style="flex:1">'
-        + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.partName || '') + '" placeholder="Nama part" oninput="HondaPdfImportUI.editField(' + idx + ',\'partName\',this.value)">'
-        + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.category || '') + '" placeholder="Kategori (opsional, otomatis dari PDF)" oninput="HondaPdfImportUI.editField(' + idx + ',\'category\',this.value)">'
+        + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.partName || '') + '" placeholder="Nama part" data-oninput="HondaPdfImportUI.editField" data-oninput-args=\'[' + idx + ',"partName","$value"]\'>'
+        + '<input type="text" class="fi" style="margin-bottom:6px" value="' + escapeHtml(row.category || '') + '" placeholder="Kategori (opsional, otomatis dari PDF)" data-oninput="HondaPdfImportUI.editField" data-oninput-args=\'[' + idx + ',"category","$value"]\'>'
         + '<div class="u-flex u-gap8">'
-        + '<input type="text" class="fi" style="flex:1" value="' + escapeHtml(row.oemCode || '') + '" placeholder="OEM code (opsional)" oninput="HondaPdfImportUI.editField(' + idx + ',\'oemCode\',this.value)">'
-        + '<input type="number" class="fi" style="flex:1" value="' + priceVal + '" placeholder="Harga (opsional)" inputmode="numeric" oninput="HondaPdfImportUI.editField(' + idx + ',\'price\',this.value)">'
+        + '<input type="text" class="fi" style="flex:1" value="' + escapeHtml(row.oemCode || '') + '" placeholder="OEM code (opsional)" data-oninput="HondaPdfImportUI.editField" data-oninput-args=\'[' + idx + ',"oemCode","$value"]\'>'
+        + '<input type="number" class="fi" style="flex:1" value="' + priceVal + '" placeholder="Harga (opsional)" inputmode="numeric" data-oninput="HondaPdfImportUI.editField" data-oninput-args=\'[' + idx + ',"price","$value"]\'>'
         + '</div></div></div>';
     }).join('');
     return header + rowsHtml;

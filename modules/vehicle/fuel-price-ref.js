@@ -22,6 +22,16 @@
 // bbmModal & txBbmFields sesi menyusul akan pakai ID beda tapi manggil fungsi yg sama).
 const FuelPriceRef={
 _draft:null,
+// Sesi fix (laporan user: "Rekomendasi Harga BBM tidak sync ke Harga/Liter"):
+// context field mana yg sedang aktif waktu tombol "🔄 Cek Update Harga BBM via
+// AI" ditekan -- diisi oleh check(selectId,hargaId) & dipakai applySelected()
+// utk langsung mengisi ulang field harga yg SEDANG DIBUKA setelah user tap
+// "✅ Terapkan yang Dicentang". Tanpa ini, applySelected() cuma menulis ke
+// D.fuelPriceRef (referensi tersimpan) tapi field harga di form (txBbmHargaL /
+// bbmHarga) tidak pernah di-refresh -- kelihatan spt "gak sync" padahal
+// datanya sudah tersimpan, cuma field yg lagi diisi tetap nilai lama sampai
+// dropdown Jenis BBM diganti-ganti manual (yg baru trigger onSelectChange()).
+_activeCtx:null,
 ITEMS:[
 {key:'pertalite',label:'Pertalite'},
 {key:'pertamax',label:'Pertamax'},
@@ -41,8 +51,12 @@ ${schema}
 }
 Kalau salah satu tidak ketemu/tidak yakin, isi value dengan null dan jelaskan alasannya singkat di source. JANGAN mengarang angka kalau tidak ketemu di hasil pencarian.`;
 },
-async check(){
-const btn=document.getElementById('fuelRefCheckBtn');
+async check(selectId,hargaId){
+// Simpan konteks field yg aktif SEBELUM apa pun lain terjadi (termasuk return
+// awal krn belum ada API Key) supaya applySelected() tetap tau field mana yg
+// harus di-refresh nanti kalau user isi API Key dulu lalu tap Cek lagi.
+FuelPriceRef._activeCtx=(selectId||hargaId)?{selectId:selectId||null,hargaId:hargaId||null}:null;
+const btn=document.getElementById('fuelRefCheckBtn')||document.getElementById('txFuelRefCheckBtn');
 const apiKey=D.profile.apiKey;
 const provider=D.profile.apiProvider||'claude';
 if(!apiKey){toast('⚠️ Belum ada API Key. Isi dulu di Pengaturan → AI Asisten.');return;}
@@ -119,8 +133,34 @@ fp.refSources[key]={source:item.source||'',tanggal:item.tanggal||''};
 n++;
 });
 save();
+FuelPriceRef._refreshActiveHargaField();
 closeModal('fuelRefModal');
 toast(`✅ ${n} harga BBM diperbarui dari hasil cek AI`);
+},
+// Sesi fix: isi ulang field Harga/Liter yg SEDANG DIBUKA (txBbmHargaL di
+// txBbmFields, atau bbmHarga di bbmModal) dari D.fuelPriceRef sesuai jenis
+// BBM yg SEDANG DIPILIH di dropdown Jenis BBM-nya -- SELALU disinkronkan ke
+// nilai tersimpan terbaru utk jenis itu (bukan cuma kalau jenis itu ikut
+// dicentang di ronde cek ini), sama spt semangat onSelectChange(): field
+// harga mengikuti apa pun yg tersimpan di D.fuelPriceRef utk jenis yg lagi
+// dipilih. Dipanggil dari applySelected() setelah D.fuelPriceRef ditulis,
+// pola sama persis bagian akhir onSelectChange() (isi value + dispatch
+// 'input' biar syncTxBbmAmt()/syncBbmHargaChanged() ikut jalan & Jumlah Rp
+// ke-update).
+_refreshActiveHargaField(){
+const ctx=FuelPriceRef._activeCtx;
+if(!ctx||!ctx.selectId||!ctx.hargaId)return;
+const sel=document.getElementById(ctx.selectId);
+const hEl=document.getElementById(ctx.hargaId);
+if(!sel||!hEl)return;
+const type=sel.value;
+if(!FuelPriceRef.ITEMS.find(it=>it.key===type))return;
+const val=D.fuelPriceRef[type];
+if(val===null||val===undefined||!isFinite(Number(val))||Number(val)<=0)return;
+hEl.value=Math.round(Number(val));
+if(typeof hEl.dispatchEvent==='function'&&typeof Event!=='undefined'){
+try{hEl.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
+}
 },
 // Isi <select id="selectId"> dgn 6 jenis BBM (FuelPriceRef.ITEMS), value terpilih
 // mengikuti D.fuelPriceRef.lastTypeByVehicle[vehicleId] kalau vehicleId dikirim &
