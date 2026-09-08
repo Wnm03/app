@@ -27,7 +27,7 @@ berikutnya kalau benar-benar terpaksa — tapi usahakan selalu sempat).
 ## Release Gate (BARU Sesi 424, WAJIB sebelum ZIP)
 
 Jalankan `node scripts/verify-release-ready.js` SETELAH build, SEBELUM
-bikin ZIP. Skrip ini mengecek 2 hal & BLOCK (exit 1, ZIP jangan dibuat)
+bikin ZIP. Skrip ini mengecek 5 hal & BLOCK (exit 1, ZIP jangan dibuat)
 kalau ada masalah:
 
 1. **Lint** — `eslint .` harus lolos. Kalau eslint ternyata TIDAK
@@ -46,6 +46,23 @@ kalau ada masalah:
    bawah). Kalau beda (biasanya lupa jalankan build lagi setelah edit
    HTML), BLOCK — **TIDAK BISA di-override**, cukup jalankan
    `node scripts/build.js` lagi.
+4. **Sinkronisasi versi cache** (Sesi 575) — `?v=N` di `index.html` &
+   `CACHE_NAME` di `sw.js` harus sama-sama menunjuk versi yang sama.
+   Kalau tidak, BLOCK — **TIDAK BISA di-override**, jalankan
+   `./scripts/bump-version.sh`.
+5. **Kesegaran bundle** (BARU Sesi 767, insiden S756) — hash source
+   yang tertanam di `app-bundle-a.min.js`/`-b.min.js` (lihat
+   `scripts/bundle-hash.js`) harus cocok dengan hash source SAAT INI
+   (dihitung ulang oleh `scripts/verify-bundle-freshness.js`, yang kini
+   dipanggil langsung dari sini, bukan cuma tersedia sbg `npm run
+   verify-bundle` terpisah yang gampang lupa dijalankan). Kalau beda —
+   artinya source sudah berubah tapi bundle belum di-rebuild ulang, persis
+   pola bug S326→S328 & S755→S756 (lihat
+   `SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md`) — BLOCK,
+   **TIDAK BISA di-override** (bukan batasan environment seperti
+   eslint/esbuild; `node scripts/build.js` selalu tersedia offline),
+   cukup jalankan `node scripts/build.js` lagi lalu upload ULANG semua
+   bundle yang berubah.
 
 Override APAPUN otomatis dicatat permanen ke `docs/RELEASE-GATE-LOG.md`
 (append-only, jangan diedit tangan) — supaya ada jejak audit kapan & kenapa
