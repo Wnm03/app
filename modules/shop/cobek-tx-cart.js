@@ -10,6 +10,23 @@ function acShopCustomers(){return Pelanggan._acList();}
 function onShopCustFieldInput(field){return Pelanggan.onFieldInput(field);}
 function selectShopCustomer(name,phone,address){return Pelanggan.select(name,phone,address);}
 
+// _txShopSaleCust{Name,Phone,Addr}OnBlur() — wrapper utk migrasi atribut inline
+// onblur txModal Penjualan Shop (Sesi 4, lanjutan
+// PATCH-SESI1-SESI2-SESI3-fix-csp-inline-handlers). Inline asli pakai arrow function
+// (mis. onblur="setTimeout(()=>hideSuggestBox('txShopSaleCustNameBox'),150)") --
+// dispatcher data-onblur cuma bisa panggil NAMA FUNGSI, tidak bisa eval ekspresi
+// arrow inline, jadi dibuat 3 fungsi named kecil (pola sama persis _txCatOnBlur/
+// _txSubCatOnBlur, transaksi.js), 1:1 per field, delay 150ms tetap dipertahankan.
+function _txShopSaleCustNameOnBlur(){
+setTimeout(()=>hideSuggestBox('txShopSaleCustNameBox'),150);
+}
+function _txShopSaleCustPhoneOnBlur(){
+setTimeout(()=>hideSuggestBox('txShopSaleCustPhoneBox'),150);
+}
+function _txShopSaleCustAddrOnBlur(){
+setTimeout(()=>hideSuggestBox('txShopSaleCustAddrBox'),150);
+}
+
 // resolveShopKategori(name) — dialihkan lewat CategoryStore.mutateResolve()
 // (Modul 8, kw modules/shop/generic/category-store.js) kalau tersedia, guard
 // `typeof CategoryStore!=='undefined'` + fallback logic lama PERSIS (SAMA
