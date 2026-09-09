@@ -706,6 +706,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .filter-scroll .chip-btn { flex-shrink: 0; text-align: center; }
 .chip-btn { padding: 11px 14px; border-radius: var(--r-pill); border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: var(--fs-label); font-weight: 600; cursor: pointer; white-space: nowrap; transition: all var(--dur-moderate); }
 .chip-btn:active { transform: scale(0.94); }
+#tEmergencySuggestBadge:active{transform:scale(0.98)}
 .chip-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 4px 12px var(--accent-soft); }
 /* Fuel gauge segmen visual (modal Koreksi BBM #fbcBarPicker + mini-gauge FuelCard) — blok terisi/kosong, warna beda utk area cadangan. Reuse var warna tema yg sudah ada (--accent2/3, --surface3), 0 warna hardcode baru. */
 .fbc-seg { display: flex; align-items: center; justify-content: flex-end; height: 30px; border-radius: 5px; border: 1px solid var(--border2); padding: 0 8px; cursor: pointer; background: var(--surface3); transition: all var(--dur-moderate); }
