@@ -38,6 +38,20 @@ const el=document.getElementById(ids.biaya);
 if(el)el.value=est;
 toast('✅ Diisi dari rata-rata pembayaran sebelumnya: '+fmtFull(est)+' — sesuaikan lagi kalau tarif resmi terbaru beda.',7000);
 }
+// onBbmJenisChange() — wrapper utk data-onchange="onBbmJenisChange" di dropdown
+// #bbmJenis (bbmModal, modules/shared/modals.js). Gap ditemukan lewat laporan
+// user (toast "Input ini belum berfungsi") + dikonfirmasi lewat audit statis
+// data-action/data-onchange di modals.js: markup & test s753 sudah mengasumsikan
+// wrapper ini ADA (lihat tests/fuel-jenis-wiring-s753.test.js), tapi definisinya
+// sendiri belum pernah ditulis -- beda dari onTxBbmJenisChange (txModal, sudah
+// ada di modules/finance/tx-bbm.js) yang jadi pola acuan di sini. Perilaku
+// disamakan persis: begitu jenis BBM diganti, harga referensi (#bbmHarga)
+// di-refresh sesuai jenis baru untuk kendaraan aktif (curVehicleId).
+function onBbmJenisChange(){
+if(typeof FuelPriceRef!=='undefined'){
+FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId);
+}
+}
 const BBM={
 editId:null,
 listPage:1,
