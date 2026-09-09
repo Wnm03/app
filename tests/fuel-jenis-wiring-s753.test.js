@@ -108,7 +108,10 @@ test('s753 (lanjutan): bbmModal -- markup Jenis BBM tetap lengkap (label, select
   assert.ok(jenisIdx < bbmHargaIdx, 'dropdown Jenis BBM harus tetap sebelum field Harga per Liter');
   const section = html.slice(jenisIdx - 60, bbmHargaIdx);
   assert.match(section, /Jenis BBM/);
-  assert.match(section, /onchange="FuelPriceRef\.onSelectChange\('bbmJenis','bbmHarga',curVehicleId\)"/);
+  // CSP-fix (lanjutan): inline onchange="FuelPriceRef.onSelectChange(...)" sudah
+  // dimigrasikan jadi data-onchange="onBbmJenisChange" (wrapper yg memanggil
+  // FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId) di runtime).
+  assert.match(section, /data-onchange="onBbmJenisChange"/);
   assert.match(section, /id="fuelRefCheckBtn"/, 'tombol cek AI (S751) harus tetap ada persis setelah dropdown');
 });
 
@@ -123,5 +126,8 @@ test('s753 (lanjutan): txBbmFields -- markup Jenis BBM tetap lengkap (label, sel
   assert.ok(jenisIdx < checkBtnIdx, 'dropdown Jenis BBM harus tetap sebelum tombol cek AI (S752)');
   const section = html.slice(jenisIdx - 60, checkBtnIdx);
   assert.match(section, /Jenis BBM/);
-  assert.match(section, /onchange="FuelPriceRef\.onSelectChange\('txBbmJenis','txBbmHargaL',document\.getElementById\('txBbmVehicle'\)\.value\)"/);
+  // CSP-fix (lanjutan): inline onchange="FuelPriceRef.onSelectChange(...)" sudah
+  // dimigrasikan jadi data-onchange="onTxBbmJenisChange" (wrapper yg baca ulang
+  // document.getElementById('txBbmVehicle').value tiap dipanggil di runtime).
+  assert.match(section, /data-onchange="onTxBbmJenisChange"/);
 });

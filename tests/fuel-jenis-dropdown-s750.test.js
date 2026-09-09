@@ -40,12 +40,15 @@ test('s750: bbmModal punya dropdown "Jenis BBM" (id=bbmJenis) dekat field bbmHar
   assert.ok(bbmJenisIdx < bbmHargaIdx, 'bbmJenis harus muncul sebelum bbmHarga di markup');
 });
 
-test('s750: select #bbmJenis wired ke FuelPriceRef.onSelectChange(\'bbmJenis\',\'bbmHarga\', ...)', () => {
+test('s750: select #bbmJenis wired ke FuelPriceRef.onSelectChange(\'bbmJenis\',\'bbmHarga\', ...) lewat wrapper onBbmJenisChange (CSP-fix: data-onchange, bukan inline onchange)', () => {
   const html = loadModalHtml();
-  // Regex sengaja tolerant thd argumen tambahan setelah 'bbmHarga' (mis. curVehicleId
-  // yang ditambahkan sesi lain) -- lihat SESSION-NOTE-S1587 & FIX-s750-s751-s752-stale-regex
-  // utk kenapa versi 2-arg strict sebelumnya jadi false-negative begitu argumen ke-3 masuk.
-  assert.match(html, /id="bbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('bbmJenis','bbmHarga'[^"]*\)"/);
+  // Sesi CSP-fix (lanjutan) memigrasikan semua inline onchange="..." jadi
+  // data-onchange="namaFungsi" (dispatcher data-onchange dipanggil lewat
+  // event delegation, tidak bisa membawa pemanggilan langsung
+  // FuelPriceRef.onSelectChange(...) di atribut). Wiring aktualnya sekarang
+  // ada di wrapper function onBbmJenisChange() (lihat modules/vehicle/*.js),
+  // jadi test ini cukup mengecek select memakai wrapper tsb.
+  assert.match(html, /id="bbmJenis"[^>]*data-onchange="onBbmJenisChange"/);
 });
 
 test('s750: txBbmFields punya dropdown "Jenis BBM" (id=txBbmJenis) tepat setelah select txBbmVehicle', () => {
@@ -59,10 +62,12 @@ test('s750: txBbmFields punya dropdown "Jenis BBM" (id=txBbmJenis) tepat setelah
   assert.ok(jenisIdx > vehIdx, 'txBbmJenis harus muncul setelah txBbmVehicle di markup');
 });
 
-test('s750: select #txBbmJenis wired ke FuelPriceRef.onSelectChange(\'txBbmJenis\',\'txBbmHargaL\', ...)', () => {
+test('s750: select #txBbmJenis wired ke FuelPriceRef.onSelectChange(\'txBbmJenis\',\'txBbmHargaL\', ...) lewat wrapper onTxBbmJenisChange (CSP-fix: data-onchange, bukan inline onchange)', () => {
   const html = loadModalHtml();
-  // Sama dgn test bbmJenis di atas -- tolerant thd argumen ke-3 (vehicleId).
-  assert.match(html, /id="txBbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('txBbmJenis','txBbmHargaL'[^"]*\)"/);
+  // Sama dgn test bbmJenis di atas -- wiring sekarang lewat wrapper
+  // onTxBbmJenisChange() (modules/finance/tx-bbm.js) yg baca ulang
+  // txBbmVehicle.value tiap dipanggil, dipasang via data-onchange.
+  assert.match(html, /id="txBbmJenis"[^>]*data-onchange="onTxBbmJenisChange"/);
 });
 
 test('s750: kedua select baru punya class "fs" (konsisten dgn select lain di app)', () => {

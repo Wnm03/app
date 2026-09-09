@@ -96,7 +96,13 @@ function makeCtx({ document, assets }) {
 
 test('s572 [1/6]: HTML LIVE modules/shared/modals.js #txAcc memanggil onTxAccChange() (bukan langsung _txAccManuallySet=true)', () => {
   const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modals.js'), 'utf8');
-  assert.match(src, /id=\\"txAcc\\"[^>]*onchange=\\"onTxAccChange\(\)\\"/, 'dropdown #txAcc harus wired ke onTxAccChange()');
+  // Dimigrasi dari onchange="onTxAccChange()" inline ke data-onchange="onTxAccChange"
+  // (dispatcher generik data-onchange, features-helpers-global-security.js) --
+  // lanjutan PATCH-SESI1-fix-csp-inline-handlers Sesi 2 (CSP script-src-attr 'none').
+  // Perilaku wiring 0 berubah (fungsi & argumen sama persis, 0 args), cuma
+  // mekanisme pemanggilannya yang berubah dari atribut inline ke dispatcher.
+  assert.match(src, /id=\\"txAcc\\"[^>]*data-onchange=\\"onTxAccChange\\"/, 'dropdown #txAcc harus wired ke onTxAccChange() lewat data-onchange');
+  assert.doesNotMatch(src, /id=\\"txAcc\\"[^>]*onchange=\\"onTxAccChange\(\)\\"/, 'wiring inline lama (blocked CSP) tidak boleh tersisa lagi di HTML LIVE');
   assert.doesNotMatch(src, /id=\\"txAcc\\"[^>]*onchange=\\"_txAccManuallySet=true\\"/, 'wiring lama (stale) tidak boleh tersisa lagi di HTML LIVE');
 
   // CATATAN (audit fitur Shop, sesi lanjutan): assertion "orphan

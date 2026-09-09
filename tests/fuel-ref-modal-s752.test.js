@@ -70,7 +70,9 @@ test('s752: fuelRefModal (S751) tetap elemen TERAKHIR MODAL_HTML, tidak tergeser
 
 test('s752: markup lama dropdown "Jenis BBM" (S750) di bbmModal & txBbmFields tidak ikut berubah', () => {
   const html = loadModalHtml();
-  // Regex tolerant thd argumen ke-3 -- lihat FIX-s750-s751-s752-stale-regex.
-  assert.match(html, /id="bbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('bbmJenis','bbmHarga'[^"]*\)"/);
-  assert.match(html, /id="txBbmJenis"[^>]*onchange="FuelPriceRef\.onSelectChange\('txBbmJenis','txBbmHargaL'[^"]*\)"/);
+  // CSP-fix (lanjutan): inline onchange="FuelPriceRef.onSelectChange(...)" sudah
+  // dimigrasikan jadi data-onchange="onBbmJenisChange" / "onTxBbmJenisChange"
+  // (wrapper function) -- lihat FIX-s750-s751-s752-stale-regex utk histori.
+  assert.match(html, /id="bbmJenis"[^>]*data-onchange="onBbmJenisChange"/);
+  assert.match(html, /id="txBbmJenis"[^>]*data-onchange="onTxBbmJenisChange"/);
 });

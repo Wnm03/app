@@ -143,10 +143,10 @@ test('[gap-check] assetModal: tombol Atur Porsi punya id="assetOwnersBtn" baru',
     'tombol Atur Porsi di assetModal harus punya id="assetOwnersBtn" (dipakai toggle label B2b)');
 });
 
-test('[gap-check] assetModal: dropdown assetInvestmentId punya onchange ke Aset.onInvestmentLinkChange()', () => {
+test('[gap-check] assetModal: dropdown assetInvestmentId punya data-onchange ke Aset.onInvestmentLinkChange (Sesi 6: migrasi CSP data-action dispatcher)', () => {
   const modalsSrc = fs.readFileSync(path.join(ROOT, 'modules/shared/modals.js'), 'utf8');
-  assert.match(modalsSrc, /id=\\"assetInvestmentId\\"[^>]*onchange=\\"Aset\.onInvestmentLinkChange\(\)\\"/,
-    'dropdown link investasi harus punya onchange supaya label tombol update live');
+  assert.match(modalsSrc, /id=\\"assetInvestmentId\\"[^>]*data-onchange=\\"Aset\.onInvestmentLinkChange\\"/,
+    'dropdown link investasi harus punya data-onchange supaya label tombol update live (via dispatcher CSP)');
 });
 
 // ============================================================
