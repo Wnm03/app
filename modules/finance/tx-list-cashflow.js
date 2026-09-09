@@ -54,7 +54,26 @@ if(t&&t.virtual&&String(t.id).startsWith('vbill_')){
 const cats=getAllCats();
 const cat=cats.find(c=>c.name===t.category);
 const icon=cat?cat.emoji:'⏳';
-return`<div class="tx-item u-pointer" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([t.billId]))}">
+// BUGFIX (laporan user, video 2026-09-09 -- "kegagalan bayar tagihan dari fitur
+// transaksi"): kartu tagihan belum-lunas ("⏳ Terjadwal") di daftar transaksi ini
+// SEBELUMNYA tap -> openBillModal(t.billId), action YANG SAMA dipakai tombol ✏️ Edit
+// di kartu .bill-item tab Tagihan (lihat toggleBillCardDetail() di action-wrappers.js
+// & komentar openBillModal() di tagihan-kalender.js: kalau bill.kind tagihan/langganan/
+// cicilan SUDAH PERNAH punya transaksi ter-link (linkedTxIds, dari pembayaran PERIODE
+// SEBELUMNYA), openBillModal() SELALU redirect ke editTx() transaksi LAMA itu -- TANPA
+// cek getBillPaidThisPeriodInfo() sama sekali. Akibatnya: tap kartu "wifi ⏳ Terjadwal"
+// yg belum dibayar bulan ini malah membuka & (kalau user tekan Simpan) menyimpan ULANG
+// transaksi bulan LALU -- toast "✅ Pembayaran tagihan diperbarui" muncul (sukses semu),
+// TAPI tidak ada transaksi baru ter-billLinkId utk periode berjalan, jadi kartu ini
+// tetap nangkring sbg "Terjadwal" selamanya (generateVirtualBillItemsForMonth() masih
+// menganggap belum lunas). User mengira sudah bayar, padahal gagal total.
+// Fix: kartu virtual ini CUMA pernah dirender kalau getBillPaidThisPeriodInfo() sudah
+// bilang belum lunas (lihat generateVirtualBillItemsForMonth() di tagihan-kalender.js),
+// jadi tap-nya seharusnya memang alur BAYAR, bukan alur Edit. Diarahkan langsung ke
+// markBillPaid(t.billId) -- fungsi "Bayar sekarang" yang SAMA PERSIS dipakai tombol ✅
+// di tab Tagihan (modules-render.js): ada konfirmasi tanggal/jumlah, bikin transaksi
+// baru ter-billLinkId utk periode ini, majukan nextDue, & toast yang jujur sesuai hasil.
+return`<div class="tx-item u-pointer" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([t.billId]))}">
     <div class="tx-icon" style="background:var(--accent-soft)">${icon}</div>
     <div class="tx-info"><div class="tx-name">${escapeHtml(t.name)} <span class="acc-chip">⏳ Terjadwal</span></div><div class="tx-meta">${t.date}</div></div>
     <div class="u-flex u-aic u-gap6">
