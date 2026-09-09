@@ -1073,6 +1073,24 @@ function openBbmModal(editId){return BBM.openModal(editId);}
 function syncBbmCost(){return BBM.syncCost();}
 function syncBbmLiterFromCost(){return BBM.syncLiterFromCost();}
 function syncBbmHargaChanged(){return BBM.syncHargaChanged();}
+// _bbmCostOnInput() — wrapper utk migrasi atribut inline oninput #bbmCost
+// (bbmModal, Sesi 5, PATCH-SESI1-SESI2-SESI3-SESI4-fix-csp-inline-handlers).
+// Inline asli 2 panggilan argumen berbeda-jumlah (syncBbmLiterFromCost() +
+// updateAmtPreview('bbmCost','bbmCostPreview')) -- dispatcher data-oninput
+// cuma bisa panggil 1 NAMA FUNGSI, jadi dipakai wrapper kecil sama persis
+// pola _txAmtOnInput/_txNoteOnInput (transaksi.js/modals.js Sesi 1-4).
+function _bbmCostOnInput(){
+syncBbmLiterFromCost();
+updateAmtPreview('bbmCost','bbmCostPreview');
+}
+// _bbmSpbuOnBlur() — wrapper utk migrasi atribut inline onblur #bbmSpbu
+// (bbmModal, Sesi 5). Inline asli pakai arrow function
+// (onblur="setTimeout(()=>hideSuggestBox('bbmSpbuBox'),150)") -- dispatcher
+// data-onblur cuma bisa panggil NAMA FUNGSI, jadi dipakai wrapper kecil sama
+// persis pola _txBbmSpbuOnBlur (tx-bbm.js Sesi 4), delay 150ms tetap.
+function _bbmSpbuOnBlur(){
+setTimeout(()=>hideSuggestBox('bbmSpbuBox'),150);
+}
 function saveBbm(){return BBM.save();}
 function deleteBbmFromModal(){return BBM.deleteFromModal();}
 function delBbm(id){return BBM.del(id);}
