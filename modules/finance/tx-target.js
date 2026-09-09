@@ -43,6 +43,7 @@ if(titleEl)titleEl.textContent='Edit Target';
 }else if(titleEl){
 titleEl.textContent='Tambah Target';
 }
+renderEmergencyFundSuggestBadge();
 openModal('targetModal');
 }
 function onTargetAccChange(){
@@ -52,7 +53,7 @@ document.getElementById('tSavedWrap').style.display=linked?'none':'block';
 function onTargetDanaDaruratToggle(){
 const chk=document.getElementById('tDanaDarurat');
 const hint=document.getElementById('tDanaDaruratHint');
-if(!chk.checked){hint.style.display='none';return;}
+if(!chk.checked){hint.style.display='none';renderEmergencyFundSuggestBadge();return;}
 const avgBulanan=(typeof FI!=='undefined')?FI.annualExpense()/12:0;
 const rekom=Math.round((avgBulanan||0)*6);
 if(!document.getElementById('tName').value.trim())document.getElementById('tName').value='Dana Darurat';
@@ -66,6 +67,44 @@ let html=avgBulanan>0
 if(already)html+=`<br>⚠️ Target "<b>${escapeHtml(already.name)}</b>" saat ini juga ditandai Dana Darurat — kalau disimpan, tandanya pindah ke target ini.`;
 hint.innerHTML=html;
 hint.style.display='block';
+renderEmergencyFundSuggestBadge();
+}
+// Sesi A3 (LANGKAH-SESI-IMPLEMENTASI.md Kelompok A) -- badge "Saran otomatis" di
+// form Target Dana Darurat. Reuse MURNI suggestEmergencyFundTarget() dari Sesi A1
+// (modules/finance/tx-list-cashflow.js) -- 0 hitungan baru dibuat di sini, beda
+// dari hint bawaan onTargetDanaDaruratToggle() di atas (yang sudah ada sejak
+// sebelum Kelompok A & pakai FI.annualExpense() sendiri -- SENGAJA tidak
+// disentuh/disatukan sesuai disiplin "1 sesi 1 target", biar 0 risiko regresi ke
+// perilaku hint lama). Badge ini murni tambahan opsional: tampil kalau checkbox
+// Dana Darurat dicentang DAN suggestEmergencyFundTarget() berhasil hitung
+// (ok:true) -- kalau data belum cukup / fungsi belum ter-load, badge tetap
+// tersembunyi (fallback diam, tidak ganggu alur simpan manual yang sudah ada).
+function _emergencyFundSuggestBadgeData(){
+if(typeof suggestEmergencyFundTarget!=='function')return null;
+try{
+const s=suggestEmergencyFundTarget();
+return(s&&s.ok)?s:null;
+}catch(e){return null;}
+}
+function renderEmergencyFundSuggestBadge(){
+const badge=document.getElementById('tEmergencySuggestBadge');
+if(!badge)return;
+const chk=document.getElementById('tDanaDarurat');
+if(!chk||!chk.checked){badge.style.display='none';badge.removeAttribute('data-suggested');return;}
+const s=_emergencyFundSuggestBadgeData();
+if(!s){badge.style.display='none';badge.removeAttribute('data-suggested');return;}
+badge.dataset.suggested=s.targetAmount;
+const textEl=badge.querySelector('.badge-text');
+if(textEl)textEl.textContent=`💡 Saran otomatis (Sesi A1): ${fmtFull(s.targetAmount)} — ${s.multiplier}× rata-rata pengeluaran ${s.basedOnMonths} bln terakhir`;
+badge.style.display='flex';
+}
+function applyEmergencyFundSuggestBadge(){
+const badge=document.getElementById('tEmergencySuggestBadge');
+if(!badge)return;
+const val=parseFloat(badge.dataset.suggested);
+if(!val||isNaN(val))return;
+document.getElementById('tAmt').value=val;
+toast('✅ Target diisi dari saran otomatis');
 }
 function saveTarget(){
 const name=document.getElementById('tName').value;

@@ -840,6 +840,35 @@ months.push({month:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'),in
 return{ok:true,saldoNow:cf.saldoNow,monthlyNet,billsDue:cf.billsDue,basedOnMonths:cf.months,months,projectedEnd:saldo};
 }
 
+// suggestEmergencyFundTarget({months}) — Sesi A1 (LANGKAH-SESI-IMPLEMENTASI.md
+// Kelompok A, tidak ada dependency ke keputusan lain): fungsi MURNI, TIDAK
+// menulis apa pun ke D (cuma menghitung & mengembalikan angka saran) — 100%
+// reuse computeCashflowForecast() yang SUDAH ADA di atas (cf.expAvg =
+// rata-rata pengeluaran bulanan historis, cf.months = basis jumlah bulan
+// histori yang dipakai hitungan itu). Guard/return-shape mengikuti pola
+// predictIncome()/predictExpense() persis di file ini ({ok:false,reason}
+// kalau computeCashflowForecast belum dimuat).
+//
+// PENTING beda makna param `months` di sini vs predictIncome/predictExpense:
+// di fungsi prediksi lain, `months`/`monthsAhead` = jumlah bulan PROYEKSI ke
+// depan. Di sini `months` = MULTIPLIER dana darurat (mis. 6 = target 6x
+// rata-rata pengeluaran bulanan, patokan umum dana darurat) -- default 6
+// kalau tidak diisi atau diisi nilai tidak valid (<=0/bukan number).
+//
+// Sesi A2 (berikutnya) akan mengonsumsi targetAmount di sini utk dibandingkan
+// vs D.targets tersimpan (isDanaDarurat) — SENGAJA 0 akses D di fungsi ini
+// supaya tetap murni & gampang dites terisolasi (pola sama alasan komentar
+// _financeOverspendCheck()/_financeLowBalanceCheck() di bawah, yang juga
+// cuma terima angka jadi dari computeCashflowForecast(), tidak baca D dobel).
+function suggestEmergencyFundTarget({months=6}={}){
+if(typeof computeCashflowForecast!=='function')return{ok:false,reason:'computeCashflowForecast belum dimuat'};
+const cf=computeCashflowForecast();
+if(!cf.expAvg||cf.expAvg<=0)return{ok:false,reason:'data pengeluaran historis belum cukup'};
+const multiplier=(typeof months==='number'&&months>0)?months:6;
+const targetAmount=Math.round(cf.expAvg*multiplier);
+return{ok:true,monthlyExpenseAvg:cf.expAvg,multiplier,targetAmount,basedOnMonths:cf.months};
+}
+
 // ---------------------------------------------------------------------------
 // Smart Delivery Engine, Sesi 7: rule domain FINANCE pertama utk AIDecision
 // (lihat RENCANA-SESI-RINGKAS.md — "Status nyata setelah Sesi 6": bus sudah

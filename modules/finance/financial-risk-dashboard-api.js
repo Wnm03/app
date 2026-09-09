@@ -129,12 +129,31 @@ _emergencyFundRisk() {
   const done = !!(dd && dd.amount && saved >= dd.amount);
   if (done) return [];
   const note = dd ? (Math.min(100, Math.round((saved / (dd.amount || 1)) * 100)) + '% dari target') : 'Belum ada Target Dana Darurat';
+  // A2 (LANGKAH-SESI-IMPLEMENTASI.md Kelompok A, lanjutan A1): tambahan field
+  // `suggestedAmount` -- reuse `suggestEmergencyFundTarget()` (A1,
+  // modules/finance/tx-list-cashflow.js) APA ADANYA, 0 hitungan baru di sini.
+  // Guard typeof (pola sama persis guard _debtRisk()/_healthRisk()/
+  // _cashflowBudgetRisk() di file ini) supaya aman kalau tx-list-cashflow.js
+  // belum ter-load ATAU hasilnya {ok:false} (mis. data pengeluaran historis
+  // belum cukup) -- di kedua kasus itu suggestedAmount jatuh ke `null`, TIDAK
+  // pernah throw, dan TIDAK mengubah logic risk (done/pesan warning) yang
+  // sudah ada sama sekali.
+  let suggestedAmount = null;
+  if (typeof suggestEmergencyFundTarget === 'function') {
+    try {
+      const suggestion = suggestEmergencyFundTarget();
+      if (suggestion && suggestion.ok) suggestedAmount = suggestion.targetAmount;
+    } catch (e) {
+      // biarkan null, pola sama guard try/catch _debtRisk() dkk di atas.
+    }
+  }
   return [{
     domain: 'emergency_fund',
     icon: '🚨',
     type: 'warning',
     code: 'risk_emergency_fund_low',
     message: `Dana Darurat belum tercapai — ${note}.`,
+    suggestedAmount,
   }];
 },
 
