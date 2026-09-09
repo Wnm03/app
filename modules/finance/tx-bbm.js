@@ -56,6 +56,29 @@ FuelPriceRef.populateSelect('txBbmJenis',sel.value);
 FuelPriceRef.onSelectChange('txBbmJenis','txBbmHargaL',sel.value);
 }
 }
+// SESI (fix CSP script-src-attr 'none' -- migrasi txBbmJenis dari inline
+// onchange= ke data-onchange=): wrapper ini menggantikan inline lama
+// onchange="FuelPriceRef.onSelectChange('txBbmJenis','txBbmHargaL',
+// document.getElementById('txBbmVehicle').value)" -- dibutuhkan krn
+// data-onchange-args di-resolve dari JSON statis (tidak bisa membawa
+// pemanggilan document.getElementById(...) secara langsung), jadi nilai
+// kendaraan aktif dibaca ulang di sini tiap kali txBbmJenis berubah.
+function onTxBbmJenisChange(){
+const vehSel=document.getElementById('txBbmVehicle');
+const vehicleId=vehSel?vehSel.value:undefined;
+if(typeof FuelPriceRef!=='undefined'){
+FuelPriceRef.onSelectChange('txBbmJenis','txBbmHargaL',vehicleId);
+}
+}
+// _txBbmSpbuOnBlur() — wrapper utk migrasi atribut inline onblur #txBbmSpbu
+// (txModal, Sesi 4, lanjutan PATCH-SESI1-SESI2-SESI3-fix-csp-inline-handlers).
+// Inline asli pakai arrow function
+// (onblur="setTimeout(()=>hideSuggestBox('txBbmSpbuBox'),150)") -- dispatcher
+// data-onblur cuma bisa panggil NAMA FUNGSI, jadi dipakai wrapper kecil sama
+// persis pola _txCatOnBlur/_txSubCatOnBlur (transaksi.js), delay 150ms tetap.
+function _txBbmSpbuOnBlur(){
+setTimeout(()=>hideSuggestBox('txBbmSpbuBox'),150);
+}
 function syncTxBbmAmt(){
 const liter=parseFloat(document.getElementById('txBbmLiter').value);
 const harga=parseFloat(document.getElementById('txBbmHargaL').value);

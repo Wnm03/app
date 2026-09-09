@@ -358,6 +358,18 @@ return{ok:true,source:'none',owners:[],needsConfirm:false,autoSelectId:null};
 // dropdown itu (lewat onTxAssetChange()), auto-suggest ini TIDAK menimpanya
 // (pola sama persis applyLastAccForCat() vs _txAccManuallySet) -- 0 override
 // paksa pilihan sadar user, cuma bantu isi kalau masih kosong/default.
+// _txAmtOnInput() — wrapper utk migrasi atribut inline #txAmt (txModal,
+// lanjutan PATCH-SESI1-fix-csp-inline-handlers, Sesi 2). Inline asli:
+// oninput="syncTxAmtToLiter();updateAmtPreview('txAmt','txAmtPreview')".
+// syncTxAmtToLiter() (tx-bbm.js) 0-argumen, updateAmtPreview() (kalkulator-input.js)
+// 2-argumen -- beda jumlah argumen, jadi comma-separated data-oninput generik
+// (1 array args diterapkan rata ke semua nama) tidak cocok; dipakai wrapper
+// kecil sama seperti pola _gzHargaOnBlur() (s1606). Urutan & argumen persis
+// sama dgn inline asli, 0 perubahan logic syncTxAmtToLiter/updateAmtPreview.
+function _txAmtOnInput(){
+syncTxAmtToLiter();
+updateAmtPreview('txAmt','txAmtPreview');
+}
 function onTxAccChange(){
 _txAccManuallySet=true;
 updateTxAssetWrapVisibility();
@@ -651,6 +663,25 @@ setTimeout(()=>{hideSuggestBox('txCatSuggestBox');updateTxVehiclePanels();},150)
 }
 function _txSubCatOnBlur(){
 setTimeout(()=>{hideSuggestBox('txSubCatSuggestBox');updateTxVehiclePanels();},150);
+}
+// _txNoteOnInput()/_txNoteOnBlur() — wrapper utk migrasi atribut inline
+// #txNote (txModal, Sesi 4, lanjutan
+// PATCH-SESI1-SESI2-SESI3-fix-csp-inline-handlers). Inline asli:
+// oninput="simpleAutocompleteInput('txNote','txNoteBox',acTxNotes);AutoKat.onNoteInput()"
+// -- simpleAutocompleteInput() 3-argumen, AutoKat.onNoteInput() 0-argumen,
+// beda jumlah argumen jadi comma-separated data-oninput generik (1 array args
+// diterapkan rata ke semua nama) tidak cocok; dipakai wrapper kecil sama
+// seperti pola _txAmtOnInput() di atas. onblur asli pakai arrow function
+// (setTimeout(()=>hideSuggestBox('txNoteBox'),150)), wrapper terpisah sama
+// persis pola _txCatOnBlur/_txSubCatOnBlur. Urutan & argumen persis sama
+// dgn inline asli, 0 perubahan logic simpleAutocompleteInput/AutoKat.onNoteInput/
+// hideSuggestBox.
+function _txNoteOnInput(){
+simpleAutocompleteInput('txNote','txNoteBox',acTxNotes);
+AutoKat.onNoteInput();
+}
+function _txNoteOnBlur(){
+setTimeout(()=>hideSuggestBox('txNoteBox'),150);
 }
 function recentUniqueStrings(list,getter,limit){
 limit=limit||50;

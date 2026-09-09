@@ -106,6 +106,33 @@ if(!dateEl.value&&!dueEl.value)return;
 if(src==='date') dueEl.value=dateEl.value;
 else dateEl.value=dueEl.value;
 }
+// SESI 2 (migrasi atribut inline txModal panel Cicilan, lanjutan
+// PATCH-SESI1-fix-csp-inline-handlers): wrapper kecil di bawah ini menggantikan
+// onblur/oninput inline yang aslinya memanggil >1 fungsi dgn ARGUMEN BERBEDA
+// (mis. evalAmtExpr('txCicilanTotal') + syncCicilanPreview('total')) --
+// dispatcher generik data-onblur/data-oninput (features-helpers-global-security.js)
+// cuma punya 1 array args yg diterapkan rata ke semua nama comma-separated,
+// jadi tidak cocok utk kasus ini. Pola sama persis dgn wrapper _gzHargaOnBlur()
+// (s1606, modules/asset/aset-emas-impor.js) -- fungsi top-level biasa, TIDAK
+// perlu window-expose (sama seperti fungsi lain di file ini). Urutan & argumen
+// tiap wrapper persis sama dgn inline asli, 0 perubahan logic evalAmtExpr/
+// syncCicilanPreview/syncCicilanDate itu sendiri.
+function _txCicilanTotalOnBlur(){
+evalAmtExpr('txCicilanTotal');
+syncCicilanPreview('total');
+}
+function _txCicilanPerBulanOnBlur(){
+evalAmtExpr('txCicilanPerBulan');
+syncCicilanPreview('perbulan');
+}
+function _txCicilanSharedNominalOnBlur(){
+evalAmtExpr('txCicilanSharedNominal');
+syncCicilanPreview('sharedNominal');
+}
+function _txCicilanDueOnInput(){
+syncCicilanPreview();
+syncCicilanDate('due');
+}
 function openCicilanHistoryFromTx(){
 if(!txEditLinkedBillId)return;
 closeModal('txModal');

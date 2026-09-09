@@ -929,6 +929,14 @@ el.innerHTML=debtRowsHtml+billRowsHtml;
 if(typeof DebtStrategy!=='undefined')DebtStrategy.render();
 }
 };
+// sesi7a (CSP-fix inline handlers): debtJenis select dipasangi
+// data-onchange="Debt.onJenisChange" -- dispatcher generik (lihat
+// modules/shared/features-helpers-global-security.js) resolve nama fungsi
+// lewat window[...], sedangkan Debt di atas cuma top-level const (TIDAK
+// otomatis jadi properti window). Tanpa expose ini, dispatch Debt.onJenisChange
+// gagal senyap (window.Debt undefined) begitu file ini dimuat berdiri sendiri
+// / lewat harness test (tests/helpers/loadSource.js).
+if(typeof Debt!=='undefined') window.Debt=Debt;
 const DebtStrategy={
 setMethod(method){
 D.debtStrategy=D.debtStrategy||{};
