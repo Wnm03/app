@@ -102,8 +102,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's775-followup6-fuel-price-deviation-summary';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's775-followup6-fuel-price-deviation-summary';
+const APP_BUILD_VERSION = 's776-followup6-fuel-price-deviation-summary';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's776-followup6-fuel-price-deviation-summary';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
