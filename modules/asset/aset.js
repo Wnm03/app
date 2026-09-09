@@ -1355,6 +1355,33 @@ Object.assign(Aset, AssetOwnersMixin);
 // di car-notes.js (Sesi 345) — bug yang sama pernah terjadi & diperbaiki di
 // sana. Tanpa baris ini, semua tombol data-action="Aset.xxx" gagal diam-diam.
 if (typeof Aset !== 'undefined') window.Aset = Aset;
+// _assetNilaiOnInput()/_assetNilaiOnBlur() — wrapper utk migrasi atribut
+// inline oninput/onblur #assetNilai (assetModal, Sesi 6, lanjutan
+// PATCH-SESI1..SESI5-fix-csp-inline-handlers). Inline asli 2 panggilan
+// argumen berbeda-jumlah tiap event (updateAmtPreview('assetNilai',
+// 'assetNilaiPreview')/evalAmtExpr('assetNilai') + Aset.updateProfitPreview())
+// -- dispatcher data-oninput/data-onblur cuma bisa panggil 1 NAMA FUNGSI,
+// jadi dipakai wrapper kecil sama persis pola _bbmCostOnInput
+// (vehicle-core.js Sesi 5) / _txAmtOnInput (transaksi.js Sesi 1-4).
+function _assetNilaiOnInput(){
+updateAmtPreview('assetNilai','assetNilaiPreview');
+Aset.updateProfitPreview();
+}
+function _assetNilaiOnBlur(){
+evalAmtExpr('assetNilai');
+Aset.updateProfitPreview();
+}
+// _assetModalInvestasiOnInput()/_assetModalInvestasiOnBlur() — wrapper sama
+// persis pola _assetNilaiOnInput/_assetNilaiOnBlur di atas, utk field
+// #assetModalInvestasi (assetModal, Sesi 6).
+function _assetModalInvestasiOnInput(){
+updateAmtPreview('assetModalInvestasi','assetModalInvestasiPreview');
+Aset.updateProfitPreview();
+}
+function _assetModalInvestasiOnBlur(){
+evalAmtExpr('assetModalInvestasi');
+Aset.updateProfitPreview();
+}
 // assetTableRowHTML/assetTableHTML — S639 (RENCANA-MODERNISASI-UI.md,
 // lanjutan pola s637 tabel Ledger Pro Uang & s638 class .money Dana
 // Titipan). Jalur render BARU, ADDITIF -- kartu `.tx-item` di
