@@ -55,6 +55,21 @@ const cats=(D.sparepartCats||[]).filter(c=>c&&c.name&&c.name.toLowerCase()===n);
 if(!cats.length)return null;
 return cats.find(c=>c.vehicleId&&c.vehicleId===vehicleId)||cats.find(c=>!c.vehicleId)||null;
 }
+// canonicalServisCategoryId(item,vehicleId,preferredId) — SoT tunggal linkage
+// Riwayat -> Pengingat. Jika preferredId masih menunjuk kategori yang valid
+// dan terlihat untuk kendaraan ini, pertahankan. Jika tidak, resolve berdasarkan
+// nama + kendaraan. TIDAK PERNAH mengembalikan kategori privat kendaraan lain.
+// Helper ini dipakai oleh jalur create/import/chat agar semua penulis log baru
+// memakai aturan canonical yang sama.
+function canonicalServisCategoryId(item,vehicleId,preferredId){
+const cats=D.sparepartCats||[];
+if(preferredId){
+const preferred=cats.find(c=>c&&c.id===preferredId);
+if(preferred&&(!preferred.vehicleId||preferred.vehicleId===vehicleId))return preferred.id;
+}
+const matched=resolveServisCatForVehicle(item,vehicleId);
+return matched?matched.id:null;
+}
 // GENERIC_RECOMMEND_NAMES — FITUR BARU (permintaan user: "rekomendasi kategori
 // part rutin servis sesuai pabrikan"). Daftar nama part/servis rutin yang UMUM
 // dipakai sbg starting point rekomendasi kategori, dipisah per jenis kendaraan
@@ -235,7 +250,12 @@ const hit=collectKnownGroups().find(g=>g.group===name);
 return hit?hit.icon:'📦';
 }
 function servisLogMatchesCat(s,cat){
-if(s.categoryId) return s.categoryId===cat.id;
+if(s.categoryId){
+const linked=D.sparepartCats.find(c=>c&&c.id===s.categoryId);
+if(!linked)return false;
+if(linked.vehicleId&&linked.vehicleId!==s.vehicleId)return false;
+return s.categoryId===cat.id;
+}
 const cn=cat.name.toLowerCase();
 const item=(s.item||'').toLowerCase().trim();
 if(!item)return false;

@@ -606,7 +606,10 @@ if(!cats.length)return{ok:false,reason:categoryId?'Kategori sparepart tidak dite
 const curKm=getVehicleKm(vehicleId);
 const kmPerDay=estimateKmPerDay(vehicleId);
 const rows=cats.map((cat)=>{
-const lastKm=getLastServiceKmForCat(vehicleId,cat);
+// Sesi 3D: lastKm yang diekspos predictService() harus baseline reset yang
+// sama dengan computeServiceUrgency(), bukan sekadar log kategori terakhir.
+const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
+const lastKm=getLastServiceKmForCat(vehicleId,cat,resetFilter,true);
 const overridden=hasIntervalOverride(vehicleId,cat);
 const u=computeServiceUrgency({vehicleId,cat,curKm,kmPerDay});
 return{categoryId:cat.id,categoryName:cat.name,lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,estDateISO:u.estDateISO,status:u.status};

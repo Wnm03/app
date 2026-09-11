@@ -370,6 +370,78 @@ const ServisChecklist = {
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
+  // toLogPayload() — snapshot checklist yang ikut disimpan DALAM satu entry
+  // D.servisLogs. Tidak membuat tabel/store baru; hanya array plain object
+  // yang menjadi bagian dari catatan servis. Hanya item yang dicentang yang
+  // disimpan agar log tetap ringkas.
+  toLogPayload() {
+    return Object.keys(this._checked).map(itemId => {
+      const found = this.findItemById(itemId);
+      if (!found) return null;
+      return {
+        itemId,
+        itemName: found.item.name,
+        group: found.group.group,
+        actionType: this._checked[itemId],
+      };
+    }).filter(Boolean);
+  },
+
+  // loadFromLog() — restore snapshot checklist saat edit catatan servis lama/baru.
+  // Entry lama tanpa checklist tetap valid dan menghasilkan checklist kosong.
+  loadFromLog(log) {
+    this._checked = {};
+    if (!log || !Array.isArray(log.checklist)) return { ok: true, count: 0 };
+    log.checklist.forEach(row => {
+      if (!row || !row.itemId) return;
+      const found = this.findItemById(row.itemId);
+      if (!found) return;
+      const valid = this._validActionTypesFor(found.item);
+      const action = valid.includes(row.actionType) ? row.actionType : this._defaultActionType(found.item);
+      this._checked[row.itemId] = action;
+    });
+    return { ok: true, count: Object.keys(this._checked).length };
+  },
+
+  findItemById(itemId) {
+    for (let gi = 0; gi < SERVICE_CHECKLIST_GROUPS.length; gi++) {
+      const group = SERVICE_CHECKLIST_GROUPS[gi];
+      const ii = group.items.findIndex(it => it.id === itemId);
+      if (ii !== -1) return { group, groupIdx: gi, item: group.items[ii], itemIdx: ii };
+    }
+    return null;
+  },
+
+  // firstCheckedGroup() — indeks grup pertama yang mempunyai item checklist
+  // tersimpan. Dipakai saat membuka ulang catatan lama supaya modal langsung
+  // fokus ke kategori yang benar-benar berisi catatan. Tidak mengubah data.
+  firstCheckedGroup() {
+    const ids = Object.keys(this._checked || {});
+    for (let gi = 0; gi < SERVICE_CHECKLIST_GROUPS.length; gi++) {
+      if (SERVICE_CHECKLIST_GROUPS[gi].items.some(it => ids.includes(it.id))) return gi;
+    }
+    return null;
+  },
+
+  // summaryFromLog() — satu sumber ringkasan untuk Riwayat Servis.
+  // Total selalu berasal dari SERVICE_CHECKLIST_GROUPS (SoT), sedangkan
+  // checklist tersimpan tetap berasal dari entry D.servisLogs[].checklist.
+  summaryFromLog(log) {
+    const total = SERVICE_CHECKLIST_GROUPS.reduce((n, g) => n + g.items.length, 0);
+    const rows = Array.isArray(log && log.checklist) ? log.checklist : [];
+    const validIds = new Set();
+    rows.forEach(row => {
+      if (row && this.findItemById(row.itemId)) validIds.add(row.itemId);
+    });
+    let replaced = 0, inspected = 0;
+    validIds.forEach(itemId => {
+      const row = rows.find(r => r && r.itemId === itemId);
+      if (row && row.actionType === 'ganti') replaced++;
+      else if (row && row.actionType === 'periksa') inspected++;
+    });
+    return { checked: validIds.size, total, replaced, inspected };
+  },
+
   // _item(groupIdx, itemIdx) — 1 titik akses ke SERVICE_CHECKLIST_GROUPS
   // by posisi (bukan by id -- signature toggleItem/setActionType di
   // breakdown dokumen pakai index, cocok dgn accordion Sesi 1C yang
@@ -480,6 +552,95 @@ const ServisChecklist = {
     const group = SERVICE_CHECKLIST_GROUPS[groupIdx];
     if (!group) return 0;
     return group.items.reduce((n, it) => n + (this._checked[it.id] !== undefined ? 1 : 0), 0);
+  },
+
+  // findGroupForItem(name) — SoT tunggal untuk menghubungkan field
+  // "Jenis Servis/Item" ke kategori checklist. TIDAK membaca TORSI_DB
+  // sebagai sumber checklist dan TIDAK membuat daftar kedua. Prioritas
+  // exact name -> nama item yang mengandung nama query -> query mengandung
+  // nama item. Ambiguitas ditolak supaya tidak salah kategori.
+  findGroupForItem(name) {
+    const q = String(name || '').trim().toLowerCase();
+    if (!q) return null;
+    const exact = [];
+    SERVICE_CHECKLIST_GROUPS.forEach((g, gi) => g.items.forEach((it, ii) => {
+      if (it.name.toLowerCase() === q) exact.push({ groupIdx: gi, itemIdx: ii, item: it });
+    }));
+    if (exact.length === 1) return { groupIdx: exact[0].groupIdx, itemIdx: exact[0].itemIdx, reason: 'exact', item: exact[0].item };
+    if (exact.length > 1) return null;
+
+    const candidates = [];
+    SERVICE_CHECKLIST_GROUPS.forEach((g, gi) => g.items.forEach((it, ii) => {
+      const n = it.name.toLowerCase();
+      if (n.includes(q) || q.includes(n)) candidates.push({ groupIdx: gi, itemIdx: ii, item: it });
+    }));
+    const groups = [...new Set(candidates.map(x => x.groupIdx))];
+    if (groups.length !== 1) return null;
+    return { groupIdx: groups[0], itemIdx: candidates[0].itemIdx, reason: 'partial', item: candidates[0].item };
+  },
+
+  _actionLabel(type) {
+    if (type === 'ganti') return '🔧 Ganti';
+    if (type === 'periksa') return '🔍 Periksa';
+    if (type === 'bersih') return '🧹 Bersihkan';
+    return '📝 Catat';
+  },
+
+  // renderHtml/render/toggleItemAndRender/setActionTypeAndRender dipertahankan
+  // untuk kontrak UI modal checklist mandiri yang sudah ada. Alur Catat Servis
+  // memakai renderer kategori milik Servis, tetapi API ini tetap menjadi kontrak
+  // kompatibilitas satu SoT checklist.
+  renderHtml() {
+    const total = SERVICE_CHECKLIST_GROUPS.reduce((n, g) => n + g.items.length, 0);
+    const checked = Object.keys(this._checked).length;
+    const groups = SERVICE_CHECKLIST_GROUPS.map((group, gi) => {
+      const count = this.checkedCount(gi);
+      const items = group.items.map((item, ii) => {
+        const action = this._checked[item.id];
+        const isChecked = action !== undefined;
+        const choices = this._validActionTypesFor(item);
+        const choiceHtml = choices.length > 1 && isChecked
+          ? `<div class="sc-action-toggle" role="group" aria-label="Tindakan ${escapeHtml(item.name)}">${choices.map(type => `<button type="button" class="sc-action-btn${action === type ? ' active' : ''}" data-action="ServisChecklist.setActionTypeAndRender" data-args='[${gi},${ii},"${type}"]'>${this._actionLabel(type)}</button>`).join('')}</div>`
+          : `<span class="sc-action-fixed">${this._actionLabel(isChecked ? action : this._defaultActionType(item))}</span>`;
+        return `<div class="sc-item${isChecked ? ' is-checked' : ''}"><button type="button" class="sc-check${isChecked ? ' checked' : ''}" role="checkbox" aria-checked="${isChecked ? 'true' : 'false'}" data-action="ServisChecklist.toggleItemAndRender" data-args='[${gi},${ii}]'>${isChecked ? '✓' : ''}</button><div class="sc-item-main"><div class="sc-item-name">${escapeHtml(item.name)}</div><div class="sc-item-meta">${escapeHtml(item.intervalLabel || 'Tanpa interval rutin')}</div>${choiceHtml}</div></div>`;
+      }).join('');
+      return `<details class="sc-group" id="sc-group-${gi}"${gi === 0 ? ' open' : ''}><summary><span>${escapeHtml(group.group)}</span><span class="sc-group-badge">${count}/${group.items.length}</span></summary><div class="sc-group-body">${items}</div></details>`;
+    }).join('');
+    const veh = (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.find(v => v.id === this._vehicleId) : null;
+    const vehicleName = veh && veh.name ? escapeHtml(veh.name) : 'Kendaraan aktif';
+    return `<div class="sc-summary"><div><strong>☑️ Checklist Servis Rutin</strong><div class="sc-subtitle">${vehicleName} · ${checked}/${total} item dipilih</div></div><span class="sc-count">${checked}/${total}</span></div><div class="sc-groups">${groups}</div>`;
+  },
+
+  render() {
+    const el = document.getElementById('servisChecklistBody');
+    if (!el) return { ok: false, reason: 'servisChecklistBody tidak ditemukan' };
+    el.innerHTML = this.renderHtml();
+    return { ok: true, checkedCount: Object.keys(this._checked).length };
+  },
+
+  toggleItemAndRender(groupIdx, itemIdx) {
+    const result = this.toggleItem(groupIdx, itemIdx);
+    this.render();
+    return result;
+  },
+
+  setActionTypeAndRender(groupIdx, itemIdx, type) {
+    const result = this.setActionType(groupIdx, itemIdx, type);
+    this.render();
+    return result;
+  },
+
+  groupOptions() {
+    return SERVICE_CHECKLIST_GROUPS.map((g, groupIdx) => ({
+      groupIdx,
+      name: g.group,
+      total: g.items.length,
+      checked: this.checkedCount(groupIdx),
+    }));
+  },
+
+  group(groupIdx) {
+    return SERVICE_CHECKLIST_GROUPS[groupIdx] || null;
   },
 
 };
