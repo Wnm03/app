@@ -1,0 +1,8 @@
+{
+  "baseline": "app-main (80).zip",
+  "session": "CATEGORY-SOT-05 actual implementation",
+  "scope": "canonical masterCategoryId on 13 checklist groups + read-only resolver + tests",
+  "checklist_items": 30,
+  "checklist_groups": 13,
+  "destructive": false
+}

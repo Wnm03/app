@@ -1,0 +1,11 @@
+{
+  "baseline": "app-main (80)",
+  "cumulative_base": "PATCH-CATEGORY-SOT-04-06-SERVICE-INTERVAL-INTEGRITY-CUMULATIVE-APP-MAIN80.zip",
+  "sessions_added": [
+    "SERVICE-EVENT-SOT-07",
+    "DATA-MIGRATION-08"
+  ],
+  "mode": "non-destructive",
+  "purpose": "canonical adapter + read-only migration classifier",
+  "no_production_data_mutation": true
+}

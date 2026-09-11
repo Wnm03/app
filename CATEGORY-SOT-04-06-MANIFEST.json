@@ -1,0 +1,14 @@
+{
+  "baseline": "app-main (80)",
+  "cumulative_base": "PATCH-CATEGORY-SOT-05-ACTUAL-CANONICAL-CHECKLIST-APP-MAIN80.zip",
+  "sessions_added": [
+    "CATEGORY-SOT-04",
+    "CATEGORY-SOT-06"
+  ],
+  "scope": [
+    "canonical service interval resolver",
+    "vehicle interval override",
+    "read-only 30-item checklist mapping audit"
+  ],
+  "destructive_migration": false
+}
