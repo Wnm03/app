@@ -366,8 +366,32 @@ let _vehicleDbLoaded = false;
 // SENGAJA TIDAK diubah utk memicu load sendiri, persis alasan di atas.
 let _vehicleDbLoadPromise = null;
 
+// Sesi coding gap (a) Sesi B (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md
+// §2g/§7, desain: DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md v1664):
+// registrasi, bukan salin manual. modules/vehicle/sparepart-servis-b.js
+// (dimuat SETELAH file ini, GROUP_B scripts/build.js) memanggil
+// registerSource() top-level dgn data TORSI_DB/VEHICLE_SPEC_DB gabungan
+// (pairing by id) begitu kedua const itu selesai didefinisikan — jadi
+// TORSI_DB/VEHICLE_SPEC_DB jadi satu-satunya sumber kebenaran untuk seed
+// baru, VEHICLE_DB_RECORDS literal di atas TIDAK dihapus (Keputusan (A)
+// additive, dokumen desain §5) -- tetap jadi fallback paling akhir kalau
+// registerSource() tidak pernah terpanggil (mis. 7 test yang me-load file
+// ini sendirian, tanpa sparepart-servis-b.js ikut termuat).
+let _registeredVehicleSource = null; // null = belum ada yg registrasi
+
+/** Didaftarkan sbg DatabaseAPI.vehicle.registerSource -- dipanggil
+ * sparepart-servis-b.js top-level. entries: array {id, displayName,
+ * torsi?, spec?} -- bentuk PERSIS sama dgn shape VEHICLE_DB_RECORDS yang
+ * sudah ada. Toleran kalau cuma salah satu (torsi-only/spec-only) ada utk
+ * suatu id (Keputusan 3 dokumen desain). No-op kalau argumennya bukan
+ * array (mis. dipanggil keliru). */
+function dbVehicleRegisterSource(entries) {
+  if (!Array.isArray(entries)) return;
+  _registeredVehicleSource = entries;
+}
+
 function _vehicleDbRecords() {
-  return _vehicleDbActiveRecords || VEHICLE_DB_RECORDS;
+  return _vehicleDbActiveRecords || _registeredVehicleSource || VEHICLE_DB_RECORDS;
 }
 
 async function _vehicleDbDoLoad() {
@@ -380,7 +404,14 @@ async function _vehicleDbDoLoad() {
     if (stored && Array.isArray(stored) && stored.length) {
       _vehicleDbActiveRecords = stored;
     } else {
-      _vehicleDbActiveRecords = VEHICLE_DB_RECORDS.slice();
+      // Sesi coding gap (a): seed dari _vehicleDbRecords() (registered >
+      // literal), BUKAN VEHICLE_DB_RECORDS langsung -- supaya instalasi
+      // BARU (storage kosong) ambil data dari TORSI_DB/VEHICLE_SPEC_DB
+      // teregistrasi kalau ada (sumber kebenaran sekarang), fallback ke
+      // literal cuma kalau registerSource() tidak pernah dipanggil.
+      // _vehicleDbActiveRecords masih null di titik ini, jadi
+      // _vehicleDbRecords() jatuh ke _registeredVehicleSource||VEHICLE_DB_RECORDS.
+      _vehicleDbActiveRecords = _vehicleDbRecords().slice();
       await IDBStore.set(VEHICLE_DB_STORE_KEY, _vehicleDbActiveRecords);
     }
   } catch (e) {
@@ -506,13 +537,23 @@ const VEHICLE_MODELS = VEHICLE_DB_RECORDS.map((r) => ({
 // yaitu skenario sebelum ensureLoaded() pernah dipanggil — 0 regresi).
 // ------------------------------------------------------------------------
 function _vehicleModelRecords() {
-  if (!_vehicleDbActiveRecords) return VEHICLE_MODELS;
-  return _vehicleDbActiveRecords.map((r) => ({
+  if (_vehicleDbActiveRecords) return _vehicleDbActiveRecords.map(_toVehicleModelRecord);
+  // Sesi coding gap (a): cabang BARU -- kalau storage belum pernah dimuat
+  // TAPI sparepart-servis-b.js sudah registerSource(), turunkan model list
+  // dari situ (bukan VEHICLE_MODELS literal beku) supaya 1 pintu konsisten
+  // dgn _vehicleDbRecords()/dbVehicleGetAll() dkk yang sudah storage+
+  // registered-aware.
+  if (_registeredVehicleSource) return _registeredVehicleSource.map(_toVehicleModelRecord);
+  return VEHICLE_MODELS;
+}
+
+function _toVehicleModelRecord(r) {
+  return {
     id: r.id,
     manufacturerId: "honda",
     name: r.displayName,
     matchNames: (r.torsi && r.torsi.matchNames) || (r.spec && r.spec.matchNames) || [],
-  }));
+  };
 }
 
 /** Semua record Manufacturer. Salinan dangkal (pola sama dbVehicleGetAll()). */
@@ -639,6 +680,98 @@ function dbMasterGetFallbackKeywords() {
 }
 
 // ------------------------------------------------------------------------
+// Sesi D (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 "Sesi D") — 13
+// kategori Master Kategori Servis TERKUNCI, namespace `masterCategory`
+// (SENGAJA beda nama dari `master` di atas -- itu wadah baca 3 literal
+// generik lama, BUKAN Master Database poin 2 di peta §1. `masterCategory`
+// = data statis pertama utk Master Database itu).
+//
+// Sumber 13 kategori: breakdown servis Honda Vario 125 KZR 2012 (PGM-FI
+// generasi pertama) yang diberikan W sesi ini sbg keputusan produk --
+// dipakai APA ADANYA sbg taksonomi terkunci (bukan ditebak Claude), sesuai
+// permintaan W "jika ada butuh keputusan produk" di prompt sesi ini.
+//
+// Desain (ADDITIVE, pola sama persis Sesi B gap (a) "Keputusan 1: additive
+// dulu, full-cutover sesi terpisah" -- BUKAN meniru langkah gap (a) itu
+// sendiri, 2 hal beda, cuma filosofinya sama): 13 kategori ini BARU
+// (0 kategori/grup lama dihapus atau diganti namanya). `classifyItemName()`
+// di bawah cuma MENAMBAH cara baca baru (keyword-based, per-item, mirip
+// gaya GENERIC_GROUP_BY_NAME_RECORDS di atas -- eksplisit dilabeli
+// "estimasi", BUKAN data pabrikan) -- dipakai resolveCatGroup()
+// (sparepart-servis.js) utk mengisi field BARU masterCategoryId/-Name/-Icon
+// di hasilnya, field group/icon LAMA 0 berubah (0 titik baca lama
+// terpengaruh, 0 regresi). Migrasi penuh 8 grup ad-hoc TORSI_DB ke 13
+// kategori ini (kalau nanti diinginkan) sengaja BUKAN scope sesi ini --
+// 8 grup ad-hoc itu per-KELOMPOK (per cats[].cat), sedangkan classifier di
+// sini per-ITEM (lebih presisi, tapi beda satuan) krn 1 grup ad-hoc spt
+// "Perawatan Berkala" isinya campuran lintas kategori (oli mesin=Servis
+// Mesin, v-belt=Servis CVT, minyak rem=Pengereman, dst) -- tidak bisa
+// dipetakan 1:1 per grup tanpa kehilangan presisi.
+//
+// Item yang TIDAK match keyword mana pun balikin null (bukan ditebak ke
+// kategori terdekat) -- pola sama E2 (`_findAutoGantiStock`) "0/>1
+// kandidat = dilewati, aman, tidak menebak".
+// ------------------------------------------------------------------------
+const MASTER_SERVICE_CATEGORIES_RECORDS = [
+  { id: 'servis-mesin', name: 'Servis Mesin', icon: '🔧',
+    keywords: ['oli mesin', 'filter oli', 'saringan oli', 'busi', 'celah klep', 'klep', 'valve', 'kompresi mesin', 'piston', 'ring piston', 'silinder', 'head silinder', 'cylinder head', 'rantai keteng', 'keteng', 'tensioner', 'noken as', 'camshaft', 'rocker arm', 'gasket', 'seal mesin', 'crankcase', 'pompa oli'] },
+  { id: 'servis-cvt', name: 'Servis CVT', icon: '🔗',
+    keywords: ['v-belt', 'drive belt', 'roller', 'rumah roller', 'variator', 'slider piece', 'ramp plate', 'kampas kopling', 'mangkok kopling', 'per cvt', 'torque driver', 'bearing cvt', 'seal cvt', 'pulley', 'clutch', 'kopling'] },
+  { id: 'sistem-injeksi-pgmfi', name: 'Sistem Injeksi PGM-FI', icon: '💉',
+    keywords: ['throttle body', 'isc', 'idle speed', 'injector', 'sensor tps', 'tps', 'map sensor', 'intake manifold', 'sensor ect', 'ect', 'sensor eot', 'eot', 'solenoid', 'sensor o2'] },
+  { id: 'sistem-bahan-bakar', name: 'Sistem Bahan Bakar', icon: '⛽',
+    keywords: ['tangki bensin', 'selang bensin', 'tutup tangki', 'fuel pump', 'pompa bahan bakar', 'pompa bensin', 'saringan bensin', 'filter bensin'] },
+  { id: 'sistem-pendingin', name: 'Sistem Pendingin', icon: '🌡️',
+    keywords: ['radiator', 'coolant', 'cairan pendingin', 'selang radiator', 'water pump', 'pompa air', 'thermostat', 'kipas'] },
+  { id: 'sistem-pengereman', name: 'Sistem Pengereman', icon: '🛑',
+    keywords: ['kampas rem', 'cakram', 'caliper', 'kaliper', 'minyak rem', 'master rem', 'master cylinder', 'selang rem', 'tromol', 'tuas rem', 'kabel rem', 'handel rem', 'rem'] },
+  { id: 'suspensi', name: 'Suspensi', icon: '🌀',
+    keywords: ['shock', 'fork', 'suspensi', 'bushing', 'bottom bridge'] },
+  { id: 'sistem-kemudi', name: 'Sistem Kemudi', icon: '🎯',
+    keywords: ['komstir', 'poros kemudi', 'stang kemudi', 'batang stang', 'segitiga'] },
+  { id: 'kelistrikan', name: 'Kelistrikan', icon: '🔌',
+    keywords: ['aki', 'alternator', 'spul', 'regulator', 'kiprok', 'starter', 'relay', 'sekring', 'kabel bodi', 'ecu', 'sensor ckp', 'sensor vs', 'lampu', 'klakson', 'saklar', 'flywheel', 'stator', 'meter kombinasi'] },
+  { id: 'roda', name: 'Roda', icon: '🛞',
+    keywords: ['ban depan', 'ban belakang', 'pentil', 'bearing roda', 'as roda'] },
+  { id: 'filter-udara', name: 'Filter Udara', icon: '🌬️',
+    keywords: ['filter udara', 'saringan udara', 'air cleaner', 'elemen filter', 'box filter', 'saluran masuk udara'] },
+  { id: 'final-gear', name: 'Final Gear', icon: '⚙️',
+    keywords: ['final reduction', 'final gear', 'oli gardan', 'gardan', 'oli transmisi'] },
+  { id: 'body-kontrol', name: 'Body dan Kontrol', icon: '🧰',
+    keywords: ['kabel gas', 'standar samping', 'standar tengah', 'engsel jok', 'kunci kontak', 'key shutter', 'baut bodi', 'baut-baut bodi'] },
+];
+
+/** Salinan dangkal 13 kategori (tanpa field `keywords`, internal saja -- pola sama dbVehicleGetAll() balikin salinan, bukan referensi). */
+function dbMasterCategoryGetAll() {
+  return MASTER_SERVICE_CATEGORIES_RECORDS.map((c) => ({ id: c.id, name: c.name, icon: c.icon }));
+}
+
+/** Cari 1 kategori via id. null kalau tidak ada. */
+function dbMasterCategoryGetById(id) {
+  if (!id) return null;
+  const hit = MASTER_SERVICE_CATEGORIES_RECORDS.find((c) => c.id === id);
+  return hit ? { id: hit.id, name: hit.name, icon: hit.icon } : null;
+}
+
+/** classifyItemName(name) -- cocokkan nama part/item (mis. cat.name dari
+ * D.sparepartCats atau item.name dari TORSI_DB) ke 1 dari 13 kategori
+ * terkunci via keyword substring match (case-insensitive), urutan array di
+ * atas = urutan prioritas. Balikin {id,name,icon} pada match pertama, atau
+ * null kalau 0 keyword cocok (SENGAJA tidak menebak ke kategori terdekat,
+ * lihat catatan di atas namespace). Estimasi/heuristik, bukan data
+ * pabrikan -- pola sama persis GENERIC_GROUP_BY_NAME_RECORDS. */
+function dbMasterCategoryClassifyItemName(name) {
+  const n = (name || '').trim().toLowerCase();
+  if (!n) return null;
+  for (const cat of MASTER_SERVICE_CATEGORIES_RECORDS) {
+    if (cat.keywords.some((kw) => n.includes(kw))) {
+      return { id: cat.id, name: cat.name, icon: cat.icon };
+    }
+  }
+  return null;
+}
+
+// ------------------------------------------------------------------------
 // Namespace publik — pola sama persis AIBus/VehicleCatalog (const object,
 // expose eksplisit ke window karena app ini script global non-module).
 // ------------------------------------------------------------------------
@@ -651,6 +784,7 @@ const DatabaseAPI = {
     ensureLoaded: dbVehicleEnsureLoaded,
     isLoaded: dbVehicleIsLoaded,
     invalidateCache: dbVehicleInvalidateCache,
+    registerSource: dbVehicleRegisterSource,
   },
   manufacturer: {
     getAll: dbManufacturerGetAll,
@@ -665,6 +799,11 @@ const DatabaseAPI = {
     getGenericGroupByName: dbMasterGetGenericGroupByName,
     getGenericRecommendNames: dbMasterGetGenericRecommendNames,
     getFallbackKeywords: dbMasterGetFallbackKeywords,
+  },
+  masterCategory: {
+    getAll: dbMasterCategoryGetAll,
+    getById: dbMasterCategoryGetById,
+    classifyItemName: dbMasterCategoryClassifyItemName,
   },
 };
 
