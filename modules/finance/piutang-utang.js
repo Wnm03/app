@@ -120,7 +120,7 @@ if(D.piutang&&D.piutang.some(p=>p.autoTxId===txId))return;
 const sisa=Math.round((b.totalAmount||0)-(b.amount||0));
 if(sisa<=0)return;
 if(!D.piutang)D.piutang=[];
-D.piutang.push({
+const _entrySesiCascade=({
 id:uid(),
 name:b.sharedOtherName?b.sharedOtherName:('Porsi bersama: '+(b.name||'Tagihan')),
 nilai:sisa,
@@ -131,6 +131,7 @@ lunas:false,
 autoBillId:b.id,
 autoTxId:txId
 });
+D.piutang.push(_entrySesiCascade);
 // Self-contained refresh (bukan cuma save() di caller) -- markBillPaid()
 // punya beberapa titik early-return (utang lunas/cicilan lunas/tagihan
 // sekali-selesai) SEBELUM refreshBillEverywhere() dipanggil di sana, jadi
@@ -139,6 +140,10 @@ autoTxId:txId
 if(typeof Piutang!=='undefined')Piutang.renderList();
 if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
 if(typeof hitungZakatMaal==='function')hitungZakatMaal();
+// Sesi C (cascade): emit finance.updated -- kind:"piutang" SAMA dgn CRUD
+// manual (sesi #7), auto:true+source membedakan ini piutang OTOMATIS dari
+// cascade bill shared, bukan input user langsung.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:sisa,auto:true,source:"bill-shared"});
 }
 // removeOrphanedAutoPiutangForBill(billId) — FIX (audit user, sync 2 arah "Ditanggung
 // Bersama"): dulu hapus TAGIHAN itu sendiri (delBill/delBillArchive, tagihan-kalender.js)
@@ -151,6 +156,8 @@ function removeOrphanedAutoPiutangForBill(billId){
 if(!billId||!D.piutang||!D.piutang.length)return false;
 const before=D.piutang.length;
 D.piutang=D.piutang.filter(p=>p.autoBillId!==billId);
+const _removed=before-D.piutang.length;
+if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"bill-removed",billId,deletedCount:_removed});
 return D.piutang.length<before;
 }
 // syncOutstandingSharedPiutang(billId,newSisa) — FIX (audit user, sync 2 arah "Ditanggung
@@ -175,6 +182,7 @@ const outstanding=D.piutang.filter(p=>p.autoBillId===billId&&!p.lunas);
 if(!outstanding.length)return 0;
 const latest=outstanding.reduce((a,b)=>((b.autoTxId||0)>(a.autoTxId||0)?b:a));
 latest.nilai=sisa;
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:latest.id,amount:sisa,auto:true,source:"bill-edit-sync"});
 return 1;
 }
 // getAutoPiutangIdForBill(billId,piutangList) — FIX ringkas (audit lanjutan user, laporan
@@ -208,6 +216,7 @@ if(!txId||!D.piutang||!D.piutang.length)return false;
 const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!p)return false;
 p.nilai=Math.max(0,Math.round((p.nilai||0)+(oldAmount||0)-(newAmount||0)));
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"payment-edit-sync"});
 return true;
 }
 // syncDebtBalanceOnPaymentEdit(bill,oldAmount,newAmount) — FIX (audit user, item #4 dari
@@ -229,6 +238,7 @@ if(!bill||bill.kind!=='utang'||!bill.debtId)return false;
 const dbt=D.debts.find(x=>sameId(x.id,bill.debtId));
 if(!dbt)return false;
 dbt.nilai=Math.max(0,(dbt.nilai||0)+(oldAmount||0)-(newAmount||0));
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"edit",debtId:dbt.id,amount:dbt.nilai,auto:true,source:"payment-edit-sync"});
 return true;
 }
 // maybeCreateTitipanTalanganPiutang(tx) — Sesi 519 (LANJUTKAN-S519, Design
@@ -249,7 +259,7 @@ if(D.piutang&&D.piutang.some(p=>p.autoTxId===tx.id))return;
 if(!D.piutang)D.piutang=[];
 const known=(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.listExistingOwners==='function')?DanaTitipanPortfolioAPI.listExistingOwners().find(o=>o.ownerId===tx.titipanLinkId):null;
 const ownerName=known?known.ownerName:'Pemilik dana titipan';
-D.piutang.push({
+const _entrySesiCascade=({
 id:uid(),
 name:'Talangan Dana Titipan: '+ownerName,
 nilai:tx.amount,
@@ -260,6 +270,8 @@ lunas:false,
 autoTxId:tx.id,
 autoTitipanOwnerId:tx.titipanLinkId
 });
+D.piutang.push(_entrySesiCascade);
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-talangan"});
 }
 // syncTitipanTalanganPiutangOnEdit(txId,oldAmount,newAmount) — Sesi 519,
 // pola SAMA PERSIS syncSharedPiutangOnPaymentEdit() (di atas) tapi dicari
@@ -273,6 +285,7 @@ if(!txId||!D.piutang||!D.piutang.length)return false;
 const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!p)return false;
 p.nilai=Math.max(0,(p.nilai||0)+(oldAmount||0)-(newAmount||0));
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"titipan-talangan-edit"});
 return true;
 }
 // removeUnpaidTitipanTalanganPiutangForTx(txId) — Sesi 519. Hapus piutang
@@ -287,6 +300,8 @@ function removeUnpaidTitipanTalanganPiutangForTx(txId){
 if(!txId||!D.piutang||!D.piutang.length)return false;
 const before=D.piutang.length;
 D.piutang=D.piutang.filter(p=>!(p.autoTxId===txId&&!p.lunas));
+const _removed=before-D.piutang.length;
+if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"titipan-talangan-removed",deletedTxId:txId});
 return D.piutang.length<before;
 }
 // maybeCreateTitipanPinjamUtang(tx) — Sesi 714 (lanjutan rencana "arah dana
@@ -310,7 +325,7 @@ if(D.debts&&D.debts.some(d=>d.autoTxId===tx.id))return;
 if(!D.debts)D.debts=[];
 const known=(typeof DanaTitipanPortfolioAPI!=='undefined'&&typeof DanaTitipanPortfolioAPI.listExistingOwners==='function')?DanaTitipanPortfolioAPI.listExistingOwners().find(o=>o.ownerId===tx.titipanLinkId):null;
 const ownerName=known?known.ownerName:'Pemilik dana titipan';
-D.debts.push({
+const _entrySesiCascade=({
 id:uid(),
 name:'Pinjam Dana Titipan: '+ownerName,
 jenis:'pribadi',
@@ -324,6 +339,8 @@ lunas:false,
 autoTxId:tx.id,
 autoTitipanOwnerId:tx.titipanLinkId
 });
+D.debts.push(_entrySesiCascade);
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"create",debtId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-pinjam"});
 }
 // syncTitipanPinjamUtangOnEdit(txId,oldAmount,newAmount) — Sesi 714, pola
 // SAMA PERSIS syncTitipanTalanganPiutangOnEdit() (di atas) tapi dicari di
@@ -333,6 +350,7 @@ if(!txId||!D.debts||!D.debts.length)return false;
 const d=D.debts.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!d)return false;
 d.nilai=Math.max(0,(d.nilai||0)+(oldAmount||0)-(newAmount||0));
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"edit",debtId:d.id,amount:d.nilai,auto:true,source:"titipan-pinjam-edit"});
 return true;
 }
 // removeUnpaidTitipanPinjamUtangForTx(txId) — Sesi 714. Hapus utang
@@ -345,6 +363,8 @@ function removeUnpaidTitipanPinjamUtangForTx(txId){
 if(!txId||!D.debts||!D.debts.length)return false;
 const before=D.debts.length;
 D.debts=D.debts.filter(d=>!(d.autoTxId===txId&&!d.lunas));
+const _removed=before-D.debts.length;
+if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"delete",auto:true,source:"titipan-pinjam-removed",deletedTxId:txId});
 return D.debts.length<before;
 }
 // populateSyncTxAccSelect(selId) — AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1:
@@ -439,6 +459,7 @@ const syncTxAcc=syncTxAccEl?syncTxAccEl.value:'';
 if(doSyncTx&&!syncTxAcc){toast('⚠️ Pilih Akun dulu untuk mencatat transaksi arus kas');return;}
 let linkedTxId=null;
 if(doSyncTx)linkedTxId=createPiutangUtangAutoTx('expense',nilai,syncTxAcc,'Piutang','Piutang: '+name,tanggal);
+let _savedPiutangIdSesiC=null;
 if(Piutang.editId){
 const p=D.piutang.find(x=>sameId(x.id,Piutang.editId));
 if(!p){toast('⚠️ Piutang tidak ditemukan, coba tutup dan buka lagi');return;}
@@ -457,14 +478,17 @@ p.linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piu
 }
 }
 Object.assign(p,{name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState});
+_savedPiutangIdSesiC=p.id;
 } else {
 const newP={id:uid(),name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
 if(linkedTxId)newP.linkedTxId=linkedTxId;
 D.piutang.push(newP);
+_savedPiutangIdSesiC=newP.id;
 }
 save();
 closeModal('piutangModal');
 Piutang.renderList();renderKekayaanBersih();hitungZakatMaal();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:(Piutang.editId?"edit":"create"),piutangId:_savedPiutangIdSesiC,amount:nilai});
 toast('✅ Piutang tersimpan');
 },
 // FIX (BUG-DEL-TITIPAN lanjutan, audit 2026-08 — bug SERUPA ditemukan di sisi
@@ -500,6 +524,7 @@ if(!await askConfirm('Hapus catatan piutang ini?',{okText:'Ya, Hapus'}))return;
 D.piutang=D.piutang.filter(p=>!sameId(p.id,id));
 save();
 Piutang.renderList();renderKekayaanBersih();hitungZakatMaal();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",deletedId:id,amount:p&&p.nilai});
 },
 // totalValue() — Sesi 255 (Ownership Sync): TAMBAH 1 filter
 // isPiutangOwnershipSelf(p) di atas filter lunas yang sudah ada (pola
@@ -730,6 +755,7 @@ Debt.syncBill(d);
 save();
 closeModal('debtModal');
 Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:(Debt.editId?"edit":"create"),debtId:d.id,amount:nilai});
 toast('✅ Utang tersimpan');
 },
 syncBill(d){
@@ -795,6 +821,7 @@ if(d&&d.billId){D.bills=D.bills.filter(b=>!sameId(b.id,d.billId));}
 D.debts=D.debts.filter(d=>!sameId(d.id,id));
 save();
 Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"delete",deletedId:id,amount:d&&d.nilai});
 },
 // totalValue()/totalCicilanBulanan() — Sesi 255 (Ownership Sync): TAMBAH 1
 // filter isDebtOwnershipSelf(d) di atas filter lunas yang sudah ada (pola

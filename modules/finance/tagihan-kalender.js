@@ -532,6 +532,7 @@ const archBFallback=(D.billsArchive||[]).find(x=>x.id===billEditId);
 if(archBFallback)archBFallback.completedAt=due;
 }
 }
+let _newBillIdSesiC=null;
 if(billEditId!==null){
 // BUGFIX: tagihan lunas (di D.billsArchive) HARUS ditulis balik ke array
 // yang sama tempat dia ditemukan (lihat openBillModal) — bukan D.bills,
@@ -545,7 +546,7 @@ const idx=D.bills.findIndex(b=>b.id===billEditId);
 D.bills[idx]={...D.bills[idx],...data};
 }
 } else {
-D.bills.push({id:uid(),...data});
+D.bills.push({id:(_newBillIdSesiC=uid()),...data});
 }
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): kalau tagihan yang DIEDIT (bukan
 // baru) masih shared+sharedAutoPiutang, sesuaikan piutang otomatis yang BELUM lunas ke
@@ -571,6 +572,17 @@ piutangSynced=syncOutstandingSharedPiutang(billEditId,rawAmt-amt);
 }
 const anyPiutangSynced=!!piutangSynced||paymentPiutangSynced;
 save();closeModal('billModal');refreshBillEverywhere();
+// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
+// _saveBillInner()/delBill() SEBELUMNYA 0% emit AIBus -- CRUD tagihan
+// penuh berjalan sunyi. kind:"tagihan" di payload finance.updated yang
+// sama (bukan event baru), konsisten dgn kind:"transaksi"/"target"/
+// "stok-sparepart" sesi-sesi sebelumnya. `billKind` (nama field beda dari
+// `kind` di payload, supaya tidak tabrakan) menyimpan jenis tagihan
+// (utang/tagihan/cicilan/langganan, field `data.kind`/`curBillType`) --
+// bukan jenis event. 1 emit menutupi ke-3 jalur (create/edit
+// aktif/edit arsip) lewat ternary `action` & `billId`, 0 cascade
+// piutang/utang/renov lain di atas diubah.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:billEditId!==null?(billEditFromArchive?"edit-archive":"edit"):"create",billId:billEditId!==null?billEditId:_newBillIdSesiC,billKind:data.kind,amount:data.amount});
 if(anyPiutangSynced){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 if(paymentDebtSynced){if(typeof renderDebtList==='function')renderDebtList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('✅ Tagihan tersimpan'+(anyPiutangSynced?' (piutang terkait ikut disesuaikan)':'')+(paymentDebtSynced?' (sisa utang ikut disesuaikan)':''));
@@ -589,6 +601,7 @@ D.bills=D.bills.filter(b=>b.id!==id);
 // removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
 save();refreshBillEverywhere();renderDebtList();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"delete",deletedId:id,billKind:b&&b.kind});
 if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('🗑 Tagihan dihapus'+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
 }

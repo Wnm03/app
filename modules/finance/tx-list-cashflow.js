@@ -423,6 +423,16 @@ else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linke
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
 D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
 save();renderDashboard();renderKeuangan();renderCnTab();renderProductList();
+// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
+// delTx() SEBELUMNYA 0% emit AIBus sama sekali -- cascade transfer/titipan/
+// tagihan/investasi di atas semua jalan sunyi, beda dari saveTx()/
+// _saveTxInner() (transaksi-b.js) yang sudah emit finance.updated per-kind.
+// Pola payload SAMA PERSIS dgn delVehicle() (vehicle-core.js, Sesi C
+// sebelumnya): {kind,action:"delete",deletedId}, ditambah category/type dari
+// `t` (kalau ada) supaya konsumen event bisa filter tanpa lookup balik ke
+// D.transactions (yg saat ini dipanggil sudah tidak berisi baris ini lagi).
+// 0 cascade baru ditulis di sini -- murni penambahan 1 baris emit.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"transaksi",action:"delete",deletedId:id,category:t&&t.category,type:t&&t.type});
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');
 else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
 }

@@ -83,11 +83,20 @@ let bill=D.bills.find(b=>b.pbbLink&&(asset?sameId(b.pbbLink,asset.id):b.pbbLink=
 const nama='PBB (Pajak Bumi & Bangunan)'+(asset?(' — '+asset.name):'');
 if(bill){
 bill.amount=jumlah; bill.nextDue=due; bill.freq='tahunan'; bill.name=nama;
-save(); refreshBillEverywhere(); PBB.renderBillStatus();
+save();
+// Sesi C-lanjutan (Zakat/PBB, Prioritas Sedang audit): PBB.ikatTagihan()
+// menulis D.bills langsung (di luar tagihan-kalender.js) tanpa pernah emit
+// -- pola sama persis kind:"tagihan" yang sudah ada di tagihan-kalender.js
+// (_saveBillInner), field source:"pbb" supaya konsumen bisa bedakan asal.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"edit",billId:bill.id,amount:jumlah,source:"pbb"});
+refreshBillEverywhere(); PBB.renderBillStatus();
 toast('✅ Tagihan PBB diperbarui: '+fmtFull(jumlah)+' jatuh tempo '+due);
 } else {
 D.bills.push({id:uid(),name:nama,amount:jumlah,nextDue:due,freq:'tahunan',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Kalkulator PBB',kind:'tagihan',pbbLink:asset?asset.id:true});
-save(); refreshBillEverywhere(); PBB.renderBillStatus();
+const _newPbbBillId=D.bills[D.bills.length-1].id;
+save();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"create",billId:_newPbbBillId,amount:jumlah,source:"pbb"});
+refreshBillEverywhere(); PBB.renderBillStatus();
 toast('✅ Tagihan tahunan PBB dibuat, reminder aktif di menu Tagihan');
 }
 }
@@ -174,6 +183,10 @@ D.pajakZakat.zakatLog.unshift({id:uid(),jenis,tanggal:new Date().toISOString().s
 D.transactions.push({id:uid(),type:'expense',amount:jumlah,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:'Zakat '+(jenis==='penghasilan'?'Penghasilan':'Maal'),date:new Date().toISOString().slice(0,10)});
 if(jenis==='maal')D.pajakZakat.haulMaalMulai=new Date().toISOString().slice(0,10);
 save();
+// Sesi C-lanjutan: catatDibayar() menulis D.pajakZakat.zakatLog + D.transactions
+// (baris pengeluaran zakat) tanpa pernah emit -- kind BARU "zakat" (belum ada
+// presedennya, konsisten skema kind:"tagihan"/"piutang"/"transaksi" dst).
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"zakat",action:"create",jenis,amount:jumlah});
 Zakat.renderLog();
 Zakat.hitungMaal();
 renderDashboard();
@@ -190,7 +203,9 @@ el.innerHTML=log.slice(0,20).map(l=>`<div class="tx-item"><div class="tx-icon" s
 async delLog(id){
 if(!await askConfirm('Hapus catatan zakat ini?',{okText:'Ya, Hapus'}))return;
 D.pajakZakat.zakatLog=D.pajakZakat.zakatLog.filter(l=>!sameId(l.id,id));
-save();Zakat.renderLog();
+save();
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"zakat",action:"delete",deletedId:id});
+Zakat.renderLog();
 },
 renderDashMini(incomeBulan){
 const card=document.getElementById('dashZakatMiniCard');

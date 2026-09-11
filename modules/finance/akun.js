@@ -437,7 +437,12 @@ a.name=name;a.emoji=emoji;a.includeInBalance=accIncludeState;a.jenis=jenis;a.pla
 const txDelta=recalcAccBalance(a.id)-(a.baseBalance!==undefined?a.baseBalance:(a.balance||0));
 a.baseBalance=nominal-txDelta;
 a.balance=nominal;
-save();closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun diperbarui');
+save();
+// Sesi C-lanjutan (Prioritas Tinggi #4, AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md):
+// CRUD Akun sebelumnya 0% emit -- replikasi pola vehicle.updated/asset.updated.
+// Nama event: account.updated (keputusan diambil sesi ini, belum ada presedennya).
+if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"edit",accountId:a.id});
+closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun diperbarui');
 if(accModalCallback){
 const cb=accModalCallback; accModalCallback=null;
 cb(a);
@@ -445,7 +450,9 @@ cb(a);
 } else {
 const newAcc={id:'acc_'+Date.now(),name,emoji,baseBalance:nominal,balance:nominal,includeInBalance:accIncludeState,jenis,platform,targetTanggalBuka,ownership};
 D.accounts.push(newAcc);
-save();closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun ditambahkan');
+save();
+if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"create",accountId:newAcc.id});
+closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun ditambahkan');
 if(accModalCallback){
 const cb=accModalCallback; accModalCallback=null;
 cb(newAcc);
@@ -557,7 +564,9 @@ D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
 (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
 (D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
 (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
-save();renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();renderDashboard();renderKeuangan();refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
+save();
+if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"delete",deletedId:acc.id,migratedToAccountId:target.id});
+renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();renderDashboard();renderKeuangan();refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
 }
 // --- S574-B: UI "⚖️ Porsi Kepemilikan" pada modal Akun (accountOwnersModal) -------------------
 // Scope sesi ini (lanjutan S574-A, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §9 Tahap 2): HANYA
@@ -806,6 +815,9 @@ if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 }
 }
 save();
+// Sesi C-lanjutan: edit pemilik akun -- pola sama persis 2 titik edit owner
+// di aset-owners.js (asset.updated).
+if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"edit-owners",accountId:AccOwners._accId});
 AccOwners._draft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
 AccOwners._renderList();
 if(typeof renderAccGrid==='function')renderAccGrid();

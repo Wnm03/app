@@ -61,5 +61,14 @@ const note=(document.getElementById('trNote').value||'').trim()||'Transfer';
 const transferPairId=uid();
 D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`${note} → ${escapeHtml(toAcc.name)}`,date,accountId:from,transferPairId});
 D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`${note} ← ${escapeHtml(fromAcc.name)}`,date,accountId:to,transferPairId});
-save();closeModal('transferModal');renderDashboard();renderKeuangan();toast('✅ Transfer berhasil');
+save();closeModal('transferModal');renderDashboard();renderKeuangan();
+// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
+// saveTransfer() SEBELUMNYA 0% emit AIBus -- beda dari saveTx()/
+// _saveTxInner() (transaksi-b.js) yang sudah emit finance.updated per-kind
+// utk transaksi umum. Pola payload SAMA dgn delTx() (tx-list-cashflow.js,
+// sesi sebelumnya): {kind,action,...}. transferPairId disertakan (bukan
+// deletedId) supaya konsumen event bisa tahu ini transfer berpasangan,
+// bukan transaksi tunggal. 0 logic transfer lain diubah, cuma 1 baris emit.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"transaksi",action:"create",transferPairId,fromAccountId:from,toAccountId:to,amount:amt});
+toast('✅ Transfer berhasil');
 }

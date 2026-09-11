@@ -74,6 +74,16 @@ if(!partId||!qty)return;
 const p=D.partsStock.find(x=>x.id===partId);
 if(!p)return;
 p.qty=Math.max(0,(p.qty||0)-qty);
+// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
+// revertStockPurchase()/applyStockPurchase() SEBELUMNYA 0% emit AIBus.
+// Ditaruh SEGERA setelah p.qty dimutasi (baris di atas) -- titik ini
+// dijalankan di SEMUA jalur fungsi (baik txId ada maupun tidak / entry
+// priceHistory ketemu atau tidak), jadi 1 emit di sini sudah cukup
+// mewakili "stok direvert" tanpa duplikasi di tiap early-return di bawah.
+// kind:"stok-sparepart" (domain baru dalam event finance.updated yang
+// sama, bukan event baru) -- konsisten dgn kind:"transaksi"/"target" di
+// sesi-sesi sebelumnya. 0 logic revert lain diubah.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"stok-sparepart",action:"purchase-revert",partId,qty,txId:txId||null});
 if(!txId||!Array.isArray(p.priceHistory))return;
 const idx=p.priceHistory.findIndex(h=>h&&h.txId===txId);
 if(idx===-1){
@@ -163,6 +173,12 @@ if(!Array.isArray(p.txRefs))p.txRefs=[];
 if(!p.txRefs.includes(txId))p.txRefs.push(txId);
 p.lastTxId=txId;
 }
+// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
+// pola sama persis revertStockPurchase() di atas -- 1 emit di akhir fungsi
+// (setelah semua field p.qty/avgPrice/priceHistory/txRefs sudah dimutasi),
+// bukan event baru, kind:"stok-sparepart" di payload finance.updated yang
+// sama. 0 logic apply lain diubah.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"stok-sparepart",action:"purchase-apply",partId:p.id,qty,unitPrice,txId:txId||null});
 }
 // syncPartsStockFromCatalog(catalogItem) — Tahap 9 (Jembatan Vehicle
 // Catalog <-> Stok Sparepart Keuangan): cari-atau-buat 1 baris D.partsStock

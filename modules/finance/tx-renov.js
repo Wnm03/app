@@ -126,6 +126,7 @@ if(typeof Renov!=='undefined'){
 Renov.render();
 if(sameId(Renov.curId,p.id))Renov.renderDetail();
 }
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"renov",action:"link-paid",projectId:p.id,itemId:it.id,txId:txId,amount:amt});
 return `🔨 Item "${escapeHtml(itemName)}" otomatis dicatat & lunas di proyek "${escapeHtml(p.name)}"`;
 }
 // handleTxRenovBelumDibeli(note,cat) -- dipanggil di AWAL _saveTxInner
@@ -159,6 +160,7 @@ if(typeof Renov!=='undefined'){
 Renov.render();
 if(sameId(Renov.curId,p.id))Renov.renderDetail();
 }
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"renov",action:"belum-dibeli",projectId:p.id,itemId:it.id,amount:amt});
 toast(`🛒 Item "${escapeHtml(itemName)}" masuk daftar belanja proyek "${escapeHtml(p.name)}" (belum lunas) — transaksi Keuangan TIDAK dicatat`);
 return true;
 }
