@@ -545,6 +545,12 @@ else product.hargaByProdusen[produsenId]=hargaBeli;
 const produsenName=produsenId?(D.produsen.find(pr=>pr.id===produsenId)||{}).name:'';
 const kategoriLabel=kategoriName?` · kategori ${kategoriName}`:'';
 const produsenLabel=produsenName?` · dari ${produsenName}`:'';
+// Sesi C-lanjutan Shop/Cobek (AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md
+// temuan #6): create/edit produk SEBELUMNYA 0% emit AIBus. 1 emit
+// menutupi ke-3 jalur save() di bawah (koreksi stok/beli stok/update
+// biasa — sama pola "1 emit ke-3 jalur" tagihan-kalender.js), kind BARU
+// "produk" konsisten skema kind:"tagihan"/"zakat"/dst yang sudah ada.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produk",action:this.editIdx!==null?"edit":"create",productId:product.id,name:product.name});
 // Sesi s478 (Koreksi Stok / Stok Opname): kalau toggle "🔍 Ini Koreksi Stok" aktif,
 // kenaikan stok BUKAN dianggap beli baru — gate transaksi pengeluaran di bawah
 // (`delta>0&&hargaBeli>0`) sengaja di-skip lewat `&&!isKoreksi` supaya TIDAK ada
@@ -600,6 +606,7 @@ if(p&&D.productMovementOverride&&D.productMovementOverride[p.id]){
 delete D.productMovementOverride[p.id];
 }
 save();this.renderList();toast('🗑 Dihapus');
+if(p&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produk",action:"delete",deletedId:p.id,name:p.name});
 },
 katEditId:null,
 // editKategori(id) — Fitur Edit Kategori Produk (audit sesi 132: kategori
@@ -650,10 +657,14 @@ save();el.value='';this.renderKategoriList();this.renderList();
 const btn=document.getElementById('cobekKategoriAddBtn');if(btn)btn.textContent='+ Tambah';
 const cancelBtn=document.getElementById('cobekKategoriCancelBtn');if(cancelBtn)cancelBtn.style.display='none';
 toast('✅ Kategori diperbarui');
+// Sesi C-lanjutan Shop/Cobek: rename kategori SEBELUMNYA 0% emit AIBus.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"kategori",action:"edit",categoryId:kat.id,name:kat.name});
 return;
 }
-resolveShopKategori(name);
+const _newKatIdSesiShop=resolveShopKategori(name);
 save();el.value='';this.renderKategoriList();toast('✅ Kategori ditambahkan');
+// Sesi C-lanjutan Shop/Cobek: tambah kategori baru SEBELUMNYA 0% emit AIBus.
+if(_newKatIdSesiShop&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"kategori",action:"create",categoryId:_newKatIdSesiShop,name});
 },
 async delKategori(id){
 const kat=D.cobekKategori.find(c=>c.id===id);
@@ -681,6 +692,8 @@ D.cobekKategori=D.cobekKategori.filter(c=>c.id!==id);
 }
 D.products.forEach(p=>{if(p.kategoriId===id){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(p,'kategoriId','');else p.kategoriId='';}});
 save();this.renderKategoriList();this.renderList();toast('🗑 Kategori dihapus');
+// Sesi C-lanjutan Shop/Cobek: hapus kategori SEBELUMNYA 0% emit AIBus.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"kategori",action:"delete",deletedId:id,name:kat.name});
 },
 renderKategoriList(){
 const el=document.getElementById('cobekKategoriList');

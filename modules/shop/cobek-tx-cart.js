@@ -145,6 +145,11 @@ D.produsen.push(np);
 populateTxShopStockSelect();
 prodSel.value=np.id;
 save();
+// Sesi C-lanjutan (§7 Sesi C): titik #4 "inline-produsen-di-cart" — 1
+// emit saat produsen baru dibuat lewat opsi "➕ Produsen Baru" di dropdown
+// keranjang transaksi, pola sama Etalase.onProdusenChange() (yg belum
+// disentuh sesi ini, di luar 5 titik yang disepakati).
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produsen",action:"create",produsenId:np.id,name:np.name});
 } else {
 prodSel.value='';
 }

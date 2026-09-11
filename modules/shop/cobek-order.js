@@ -147,6 +147,12 @@ openModal('produsenHargaModal');
 saveHarga(){
 if(!this.hargaEditId)return;
 const inputs=document.querySelectorAll('#produsenHargaList input[data-prod-id]');
+// Sesi C-lanjutan (5 titik sisa Shop/Cobek, ROADMAP-KONSOLIDASI-DATABASE-
+// SERVIS-v2.md §7 Sesi C): titik #1 "harga produsen batch" — 1 emit
+// SETELAH loop menutupi seluruh baris yang disentuh sekali jalan (pola
+// sama _saveBillInner()/_saveInner() sesi-sesi Sesi C sebelumnya: 1 aksi
+// user = 1 emit, bukan per-baris).
+const _changedProdukIdsSesiC=[];
 inputs.forEach(inp=>{
 const p=D.products.find(x=>x.id===inp.getAttribute('data-prod-id'));
 if(!p)return;
@@ -160,8 +166,10 @@ else{if(!p.hargaByProdusen)p.hargaByProdusen={};p.hargaByProdusen[this.hargaEdit
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateDeleteHargaProdusen(p,this.hargaEditId);
 else{if(!p.hargaByProdusen)p.hargaByProdusen={};delete p.hargaByProdusen[this.hargaEditId];}
 }
+_changedProdukIdsSesiC.push(p.id);
 });
 save();closeModal('produsenHargaModal');this.renderList();renderProductList();toast('✅ Harga produsen disimpan');
+if(_changedProdukIdsSesiC.length&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"harga-produsen",action:"batch",produsenId:this.hargaEditId,productIds:_changedProdukIdsSesiC,count:_changedProdukIdsSesiC.length});
 }
 };
 

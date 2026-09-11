@@ -382,6 +382,9 @@ if(!reko){toast('⚠️ Tidak bisa hitung estimasi (isi dulu Harga Beli)');retur
 if(!await askConfirm(`Ubah Harga Jual "${p.name}" dari ${fmt(p.hargaJual)} jadi ${fmt(reko)}?`))return;
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(p,'hargaJual',reko);else p.hargaJual=reko;
 save();this.render();renderProductList();
+// Sesi C-lanjutan (5 titik sisa Shop/Cobek, §7 Sesi C): titik #2 "price
+// reko apply" — 1 emit per aksi terapkan (satuan), pola sama Etalase.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"price-reko",action:"apply-one",productId:p.id,name:p.name,hargaJual:reko});
 toast(`✅ Harga Jual "${p.name}" diperbarui ke ${fmtFull(reko)}`);
 },
 // applyBulk() — hitung ulang Harga Jual SEMUA produk ownership SELF (yg Harga Beli-nya terisi)
@@ -402,6 +405,9 @@ if(!targets.length){toast('⚠️ Belum ada produk dengan Harga Beli terisi');re
 if(!await askConfirm(`Hitung ulang Harga Jual ${targets.length} produk pakai rumus (Harga Beli + Transport ${fmtFull(transport)}) × (1 + Margin ${margin}%)? Harga Jual lama akan ditimpa.`,{okText:'Ya, Terapkan ke Semua'}))return;
 targets.forEach(p=>{const newHargaJual=PriceReko.roundNice((p.hargaBeli+transport)*(1+margin/100));if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(p,'hargaJual',newHargaJual);else p.hargaJual=newHargaJual;});
 save();this.render();renderProductList();
+// Sesi C-lanjutan (§7 Sesi C): titik #2 "price reko apply" — 1 emit
+// menutupi seluruh batch (pola sama _saveBillInner()), bukan per-produk.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"price-reko",action:"apply-bulk",productIds:targets.map(p=>p.id),count:targets.length,transport,margin});
 toast(`✅ Harga Jual ${targets.length} produk dihitung ulang sekaligus`);
 },
 openDetail(productId){
@@ -526,15 +532,20 @@ if(!flagged.length){toast('⚠️ Tidak ada saran restock yang bisa diterapkan s
 const totalQty=flagged.reduce((s,x)=>s+x.restockQty,0);
 if(!await askConfirm(`Tambah stok ${flagged.length} produk (total +${totalQty} unit) sesuai saran restock? Ini cuma update angka stok, TIDAK otomatis tercatat sbg pengeluaran — catat belanjanya terpisah kalau perlu.`,{okText:'Ya, Tambah Semua'}))return;
 let count=0;
+const _appliedProdukIdsSesiC=[];
 flagged.forEach(({product,restockQty})=>{
 const idx=(D.products||[]).findIndex(p=>p.id===product.id);
 if(idx<0)return;
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(D.products[idx],restockQty);else D.products[idx].stock=(D.products[idx].stock||0)+restockQty;
 count++;
+_appliedProdukIdsSesiC.push(D.products[idx].id);
 });
 save();this.render();renderProductList();
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
 if(typeof BusinessFlowPresenter!=='undefined')BusinessFlowPresenter.renderTab();
+// Sesi C-lanjutan (§7 Sesi C): titik #2 "stock reko apply" — 1 emit
+// menutupi seluruh batch (pola sama PriceRekoWidget.applyBulk() di atas).
+if(count&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"stock-reko",action:"apply-all",productIds:_appliedProdukIdsSesiC,count,totalQty});
 toast(`✅ Stok ${count} produk diperbarui (+${totalQty} unit total)`);
 }
 };
@@ -595,6 +606,8 @@ if(r.ok)D.products[idx]=r.product;
 D.products[idx].beratPerUnit=val;
 }
 save();this.render();renderProductList();
+// Sesi C-lanjutan (§7 Sesi C): titik #3 "weight-bulk" — 1 emit per baris.
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"weight-bulk",action:"apply-one",productId:D.products[idx].id,beratPerUnit:val});
 toast(`✅ Berat per unit "${D.products[idx].name}" disimpan (${val} kg)`);
 },
 // applyBulk() — simpan SEMUA baris yang kolomnya sudah diisi angka >0 sekaligus (baris yang
@@ -623,6 +636,9 @@ D.products[idx].beratPerUnit=val;
 }
 });
 save();this.render();renderProductList();
+// Sesi C-lanjutan (§7 Sesi C): titik #3 "weight-bulk" — 1 emit menutupi
+// seluruh batch (pola sama WeightBulkWidget di atas / PriceRekoWidget).
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"weight-bulk",action:"apply-bulk",productIds:filled.map(x=>x.p.id),count:filled.length});
 toast(`✅ Berat per unit ${filled.length} produk disimpan sekaligus`);
 }
 };

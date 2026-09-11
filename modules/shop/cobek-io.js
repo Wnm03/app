@@ -574,6 +574,11 @@ created++;
 }
 });
 save();closeModal('importShopExcelModal');renderProdusenList();
+// Sesi C-lanjutan (§7 Sesi C): titik #5 "bulk import Excel" — 1 emit
+// menutupi seluruh batch (created+updated), pola sama titik batch lain
+// sesi ini (harga produsen, price/stock reko, weight-bulk), bukan
+// per-baris (bisa ratusan baris di 1 file Excel).
+if((created||updated)&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"import-excel",action:"produsen",created,updated});
 toast(`✅ Import Produsen selesai: ${created} baru, ${updated} diperbarui`);
 } else {
 this.parsedRows.forEach(r=>{
@@ -616,6 +621,10 @@ created++;
 }
 });
 save();closeModal('importShopExcelModal');renderProductList();
+// Sesi C-lanjutan (§7 Sesi C): titik #5 "bulk import Excel" (cabang
+// etalase/produk) — 1 emit menutupi seluruh batch, pola sama cabang
+// produsen di atas.
+if((created||updated)&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"import-excel",action:"etalase",created,updated});
 toast(`✅ Import Etalase selesai: ${created} produk baru, ${updated} diperbarui`);
 }
 this.parsedRows=[];
