@@ -68,9 +68,26 @@
 // `linkCat:true` -- divalidasi otomatis lewat
 // tests/servis-checklist-groups-sesi1a.test.js).
 
+/**
+ * CATEGORY-SOT-05: canonical checklist lookup.
+ * Checklist groups reference DatabaseAPI.masterCategory by stable ID.
+ * This helper is read-only and never creates a second taxonomy.
+ */
+function getServiceChecklistMasterCategoryId(groupOrItem) {
+  if (!groupOrItem) return null;
+  if (groupOrItem.masterCategoryId) return groupOrItem.masterCategoryId;
+  const group = groupOrItem.group;
+  if (!group || typeof DatabaseAPI === 'undefined' ||
+      !DatabaseAPI.masterCategory ||
+      typeof DatabaseAPI.masterCategory.getAll !== 'function') return null;
+  const hit = DatabaseAPI.masterCategory.getAll().find(c => c.name === group);
+  return hit ? hit.id : null;
+}
+
 const SERVICE_CHECKLIST_GROUPS = [
   {
     group: 'Servis Mesin',
+    masterCategoryId: 'servis-mesin',
     items: [
       {
         id: 'oli-mesin', name: 'Oli Mesin', linkCat: true,
@@ -107,6 +124,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Servis CVT',
+    masterCategoryId: 'servis-cvt',
     items: [
       {
         id: 'v-belt-cvt', name: 'V-Belt CVT', linkCat: true,
@@ -142,6 +160,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Sistem Injeksi PGM-FI',
+    masterCategoryId: 'sistem-injeksi-pgmfi',
     items: [
       {
         id: 'throttle-body', name: 'Throttle Body (bersihkan)', linkCat: false,
@@ -164,6 +183,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Sistem Bahan Bakar',
+    masterCategoryId: 'sistem-bahan-bakar',
     items: [
       {
         id: 'selang-tutup-tangki', name: 'Cek Selang & Tutup Tangki', linkCat: false,
@@ -175,6 +195,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Sistem Pendingin',
+    masterCategoryId: 'sistem-pendingin',
     items: [
       {
         id: 'coolant', name: 'Coolant', linkCat: false,
@@ -198,6 +219,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Sistem Pengereman',
+    masterCategoryId: 'sistem-pengereman',
     items: [
       {
         id: 'kampas-rem-depan', name: 'Kampas Rem Depan', linkCat: true,
@@ -227,6 +249,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Suspensi',
+    masterCategoryId: 'suspensi',
     items: [
       {
         id: 'kebocoran-shock', name: 'Cek Kebocoran Shock Depan/Belakang', linkCat: false,
@@ -238,6 +261,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Sistem Kemudi',
+    masterCategoryId: 'sistem-kemudi',
     items: [
       {
         id: 'stel-grease-komstir', name: 'Stel/Grease Bearing Komstir', linkCat: false,
@@ -249,6 +273,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Kelistrikan',
+    masterCategoryId: 'kelistrikan',
     items: [
       {
         id: 'aki', name: 'Aki', linkCat: true,
@@ -260,6 +285,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Roda',
+    masterCategoryId: 'roda',
     items: [
       {
         id: 'ban-depan', name: 'Ban Depan', linkCat: false,
@@ -285,6 +311,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Filter Udara',
+    masterCategoryId: 'filter-udara',
     items: [
       {
         id: 'filter-udara', name: 'Filter Udara', linkCat: true,
@@ -296,6 +323,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Final Gear',
+    masterCategoryId: 'final-gear',
     items: [
       {
         id: 'oli-gardan', name: 'Oli Gardan/Final Drive', linkCat: true,
@@ -306,6 +334,7 @@ const SERVICE_CHECKLIST_GROUPS = [
   },
   {
     group: 'Body & Kontrol',
+    masterCategoryId: 'body-kontrol',
     items: [
       {
         id: 'kabel-gas-standar-kunci', name: 'Cek Kabel Gas/Standar/Kunci Kontak', linkCat: false,
