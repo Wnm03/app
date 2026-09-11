@@ -633,3 +633,18 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Sandbox tanpa akses jaringan npm registry, eslint tidak terpasang (konsisten S424 dst).
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini (konsisten S508-S521 dst).
+
+## 2026-09-11T03:22:02.657Z — versi s-servis-foto-riwayat-sesi-f1-1658
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm registry, eslint tidak bisa diinstall (sama seperti sesi2 sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini, sama seperti sesi F1 sebelumnya
+
+## 2026-09-11T03:29:35.380Z — versi s-servis-foto-riwayat-sesi-f1-1659
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm registry, eslint tidak bisa diinstall (sama seperti sesi2 sebelumnya)
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak terpasang di sandbox ini, sama seperti sesi2 sebelumnya
+
+## 2026-09-11T03:41:27.541Z — versi s-servis-foto-riwayat-sesi-f1-1660
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses npm/eslint, konsisten sesi2 sebelumnya
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses esbuild, konsisten sesi2 sebelumnya
