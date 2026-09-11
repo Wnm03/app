@@ -642,7 +642,32 @@ const AIService = {
    * _wired) supaya aman kalau termanggil dobel. TIDAK di-debounce dgn
    * sengaja (setTimeout tidak reliable di semua konteks test/sandbox) —
    * decide() sendiri murah (baca D + rule evaluation ringan), jadi
-   * dipanggil langsung tiap event tanpa delay tambahan. */
+   * dipanggil langsung tiap event tanpa delay tambahan.
+   *
+   * Update (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §2e/§7 Sesi C,
+   * keputusan §2d poin 3 — "wiring listener AIService.wireEvents()
+   * SEBELUM lanjut domain Event Bus baru"): audit ulang SEMUA
+   * `AIBus.emit(...)` di kode (bukan cuma yang disebut roadmap) nemu 3
+   * event yang sudah emit tapi 0 listener ("pemancar tanpa radio") —
+   * `account.updated` (Sesi C-lanjutan Akun, v1640), `product.updated`
+   * (Sesi C Shop/Cobek, 9/9 titik per v1662), dan `investment.updated`
+   * (modul investasi, preseden LEBIH LAMA dari audit Sesi C tapi
+   * ketemu sekaligus saat audit — bukan scope roadmap, ditambah krn
+   * kriteria sama persis: event bisnis real yang sudah emit, 0
+   * konsumen). `finance.updated{kind:'zakat'}` TIDAK butuh entri baru —
+   * itu kind di DALAM payload `finance.updated`, nama event-nya sama,
+   * sudah otomatis ikut listener `finance.updated` yang ada. 0 event
+   * lama dihapus/diubah, murni tambah 3 nama ke array.
+   *
+   * Update (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §2i/§7 Sesi C
+   * Prioritas Sedang, keputusan §2d poin 2 — nama event Dana Titipan:
+   * `titipan.updated`): domain Dana Titipan (dana-titipan-pool-api.js,
+   * dana-titipan-commitment-return-api.js, titipan-reconcile.js,
+   * titipan-expense-flow.js — 10 titik `save()` total) sekarang emit
+   * `titipan.updated`, jadi listener-nya ditambahkan sekalian di sesi
+   * yang sama supaya tidak jadi "pemancar tanpa radio" baru lagi
+   * (sama alasan §2e/§2f menyambungkan account/product/investment). 0
+   * event lama dihapus/diubah, murni tambah 1 nama ke array. */
   _wired: false,
   wireEvents() {
     if (this._wired) return;
@@ -652,7 +677,10 @@ const AIService = {
         console.warn('[AIService] decide() gagal untuk event "' + eventName + '":', e);
       });
     };
-    ['finance.updated', 'asset.updated', 'vehicle.updated', 'delivery.created'].forEach((evt) => {
+    [
+      'finance.updated', 'asset.updated', 'vehicle.updated', 'delivery.created',
+      'account.updated', 'product.updated', 'investment.updated', 'titipan.updated',
+    ].forEach((evt) => {
       AIBus.on(evt, handle(evt));
     });
     this._wired = true;
