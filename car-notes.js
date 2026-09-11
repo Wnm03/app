@@ -339,6 +339,19 @@ const Servis={
 editId:null,
 listPage:1,
 lastFilterSig:null,
+// _photoDraft — BARU (Sesi F1, ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md
+// §7 Sesi F "Foto di Service History"). Array dataURL string, in-memory
+// draft SAJA selama modal servis terbuka (dipopulasi dari s.foto saat
+// edit, dikosongkan saat tambah baru) -- baru ditulis ke D.servisLogs[].foto
+// saat _saveInner() sukses. Pola construction sama seperti field lain di
+// objek ini (editId dll): reset di openModal(), dibaca di _saveInner().
+_photoDraft:[],
+// activeActionTypeFilter — BARU (Sesi E6, ROADMAP-KONSOLIDASI-DATABASE-
+// SERVIS-v2.md §7 Sesi E item 6 "filter riwayat by actionType"). State
+// in-memory murni (bukan field D baru, tidak dipersist -- pola sama
+// Torsi.activeCat). null = "Semua" (0 filter, 0 perubahan perilaku
+// renderList() lama). Nilai lain: 'periksa'/'bersih'/'ganti'.
+activeActionTypeFilter:null,
 populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
@@ -586,6 +599,8 @@ Servis.renderCatalogRecommendations();
 // prefill interval saat edit tidak ke-nyasar ke kategori privat kendaraan lain.
 const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,s.vehicleId||curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===s.item.toLowerCase()));
 if(intervalEl)intervalEl.value=linkedCat?linkedCat.intervalKm:'';
+Servis._photoDraft=(s.foto||[]).slice();
+Servis._renderPhotoThumbs();
 } else {
 document.getElementById('servisDate').value=new Date().toISOString().split('T')[0];
 ['servisItem','servisCost','servisNote'].forEach(id=>document.getElementById(id).value='');
@@ -595,6 +610,8 @@ Servis.populatePartSelect('');
 document.getElementById('servisPartQty').value=1;
 Servis.populateCatalogPartSelect('');
 document.getElementById('servisCatalogPartQty').value=1;
+Servis._photoDraft=[];
+Servis._renderPhotoThumbs();
 if(prefillItem){
 document.getElementById('servisItem').value=prefillItem;
 Servis.onItemAutofillInterval();
@@ -645,6 +662,44 @@ if(!await askConfirm(`⚠️ Stok "${escapeHtml(p.name)}" cuma sisa ${p.qty}${p.
 }
 p.qty=(p.qty||0)-qty;
 return true;
+},
+// ===== Foto Riwayat Servis (Sesi F1) =====
+// Cakupan sengaja dipersempit ke: tambah/lihat/hapus foto di form Servis +
+// simpan/muat dari D.servisLogs[].foto. TIDAK termasuk sesi ini (backlog
+// Sesi F lanjutan): thumbnail/badge di daftar Riwayat Servis, kompresi
+// gambar sebelum jadi dataURL, atau batas ukuran per-foto selain guard
+// kasar di bawah. Field `foto` OPSIONAL & backward-compatible -- entry
+// lama tanpa field ini tetap kebaca normal (fallback `s.foto||[]`).
+pickPhoto(){
+const el=document.getElementById('servisPhotoInput');
+if(el)el.click();
+},
+addPhoto(event){
+const files=event&&event.target&&event.target.files?Array.from(event.target.files):[];
+if(event&&event.target)event.target.value='';
+if(!files.length)return;
+const MAX_PHOTOS=5;
+const MAX_BYTES=5*1024*1024;
+files.forEach(file=>{
+if(!file||!file.type||!file.type.startsWith('image/')){toast('⚠️ File bukan gambar, dilewati');return;}
+if(file.size>MAX_BYTES){toast(`⚠️ "${file.name}" terlalu besar (maks 5MB), dilewati`);return;}
+if(Servis._photoDraft.length>=MAX_PHOTOS){toast(`⚠️ Maksimal ${MAX_PHOTOS} foto per catatan servis`);return;}
+const reader=new FileReader();
+reader.onload=()=>{
+if(typeof reader.result==='string')Servis._photoDraft.push(reader.result);
+Servis._renderPhotoThumbs();
+};
+reader.readAsDataURL(file);
+});
+},
+removePhoto(idx){
+Servis._photoDraft.splice(idx,1);
+Servis._renderPhotoThumbs();
+},
+_renderPhotoThumbs(){
+const wrap=document.getElementById('servisPhotoThumbs');
+if(!wrap)return;
+wrap.innerHTML=Servis._photoDraft.map((src,i)=>`<div style="position:relative;width:64px;height:64px"><img src="${src}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--border2)"><button type="button" data-action="Servis.removePhoto" data-args='[${i}]' aria-label="Hapus foto" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent2);color:#fff;font-size:11px;line-height:20px;text-align:center;padding:0;cursor:pointer">✕</button></div>`).join('');
 },
 save(){return withSaveGuardAsync('servis','servisModal',Servis._saveInner);},
 async _saveInner(){
@@ -730,10 +785,18 @@ if(intervalKm&&intervalKm>0&&!matched&&s.categoryId){
 const linkedCat=D.sparepartCats.find(c=>c.id===s.categoryId);
 if(linkedCat){linkedCat.intervalKm=intervalKm;catIdForLog=linkedCat.id;}
 }
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,km,cost,note,accountId:accId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null});
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,km,cost,note,accountId:accId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice()});
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
 if(tx)Object.assign(tx,{amount:cost,date,accountId:accId,note:noteFull});
+// BUGFIX (backlog v1644, gap sama sifatnya dgn markServiced() yg sudah
+// diperbaiki -- jalur BERBEDA, submit modal servis biasa via edit): dulu
+// TIDAK pernah emit "finance.updated" walau tx terkait barusan di-update
+// di atas -- listener AI (apa pun yg subscribe "finance.updated") tidak
+// pernah tahu ada perubahan transaksi servis dari modal ini. Pola sama
+// persis _saveTxInner() (modules/finance/transaksi-b.js baris ~588) yg
+// emit "finance.updated" di jalur create MAUPUN edit transaksi umum.
+if(tx&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:tx.id,category:tx.category,type:'expense',amount:cost,kind:'servis'});
 }
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
 VehicleCatalogServisLink.attachToServis(s.id,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
@@ -752,11 +815,21 @@ return;
 }
 const servisId=uid();
 const txId=uid();
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
-D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,km,cost,note,accountId:accId,txLinkId:txId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null});
+const txCat=resolveVehicleTxCategory(veh);
+D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
+D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,km,cost,note,accountId:accId,txLinkId:txId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice()});
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
 VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
 }
+// BUGFIX (backlog v1644): jalur BUAT BARU servis dari modal biasa (beda dari
+// markServiced() yg sudah diperbaiki sesi lalu) juga TIDAK PERNAH emit
+// "finance.updated" walau D.transactions.push() barusan terjadi persis di
+// atas -- listener AI tidak pernah tahu ada transaksi servis baru dari
+// modal ini. Emit di sini, SELALU (bukan cuma cost>0) krn transaksi di sini
+// memang SELALU dibuat apa pun nilai cost-nya (beda dgn markServiced() yg
+// cuma bikin tx kalau cost>0) -- pola sama _saveTxInner() (transaksi-b.js
+// baris ~588) yg juga emit tanpa syarat amount setelah tx tersimpan.
+if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId,category:txCat,type:'expense',amount:cost,kind:'servis'});
 save();closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();
 if(newCatCreated){
 toast(`✅ Catatan servis tersimpan, "${item}" ditambahkan ke Pengingat Servis (tiap ${intervalKm.toLocaleString('id-ID')} km)`);
@@ -789,33 +862,239 @@ const s=D.servisLogs.find(x=>x.id===id);
 if(s&&s.txLinkId)D.transactions=D.transactions.filter(tx=>tx.id!==s.txLinkId);
 if(s&&s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
 if(s&&s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
+// Sesi E2 (auto-potong stok saat "ganti"): kalau entry ini dulu ikut
+// motong stok otomatis lewat _findAutoGantiStock() (lihat markServiced()),
+// kembalikan qty-nya juga saat catatan dihapus -- pola sama persis
+// usedPartId/catalogPartLinkedStockId di atas, biar stok tidak nyangkut.
+if(s&&s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
 D.servisLogs=D.servisLogs.filter(s=>s.id!==id);
 save();renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();toast('🗑 Catatan servis dihapus');
 },
-async markServiced(catId){
+// markServiced(catId, actionType) — actionType FITUR BARU (opsional, backward
+// compatible; PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2a/§6-poin1):
+// dulu cuma dipanggil markServiced(catId) dari tombol "✅ Sudah Servis" di
+// kartu Pengingat Servis (renderReminder(), tetap 1-arg, tidak berubah).
+// Disiapkan supaya checklist servis (rencana Sesi 2 -- lihat dokumen §2d)
+// bisa REUSE fungsi ini apa adanya + kirim actionType ('periksa'/'bersih'/
+// 'ganti'), bukan bikin jalur simpan sendiri (0 logic duplikat, kartu
+// reminder & stok otomatis ikut ter-update). actionType kosong/undefined =
+// persis perilaku lama (disimpan sbg null, diperlakukan 'ganti' oleh
+// getLastServiceKmForCat/getLastServiceDateForCat, lihat §2a).
+// markServiced(catId, actionType, opts) — opts FITUR BARU (Sesi E1,
+// ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 1): opsional,
+// backward compatible -- dipanggil markServiced(catId) atau
+// markServiced(catId,actionType) spt sebelumnya = 0 perubahan perilaku.
+// Tujuan opts: kasih fondasi supaya checklist multi-item (rencana Sesi
+// 1C/2A, belum ada kodenya) bisa nanti REUSE fungsi ini per-item lewat
+// markServicedBatch() di bawah, tanpa jalur simpan duplikat.
+//   opts.skipConfirm    — lewati askConfirm() (dipakai batch: 1 konfirmasi
+//                          di pemanggil, bukan per-item)
+//   opts.skipEarlyGuard — (Sesi E5, sebelumnya placeholder di E1) lewati
+//                          guard "ganti terlalu dini" (lihat
+//                          `_checkTooEarlyGanti()` di bawah) -- dipakai
+//                          `markServicedBatch()` supaya batch tetap "1
+//                          konfirmasi total", bukan 1 dialog guard per item.
+//                          Independen dari opts.skipConfirm (2 knob
+//                          terpisah, sesuai desain E1).
+//   opts.presetCost     — angka biaya yg sudah diketahui pemanggil, lewati
+//                          showPromptModal() (dipakai batch: 1 prompt total
+//                          di pemanggil kalau perlu, atau 0 kalau memang
+//                          mau 0 tanpa tanya)
+//   opts.batchId        — (Sesi E3, sebelumnya placeholder di E1) ID batch
+//                          yang sama utk seluruh item dari 1x pemanggilan
+//                          markServicedBatch(), disimpan sbg entry.batchId
+//                          di D.servisLogs & ditandai "🔗 batch" di riwayat
+//                          (Servis.renderList()) -- 0 efek kalau dipanggil
+//                          langsung tanpa lewat markServicedBatch() (opts
+//                          kosong = batchId null, sama spt sebelum Sesi E3).
+// Sesi E4 (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 4
+// "default cost per actionType"): kalau opts.presetCost TIDAK diisi DAN
+// actionType eksplisit 'periksa' atau 'bersih' (bukan 'ganti', bukan
+// kosong/undefined), cost otomatis 0 TANPA showPromptModal() -- alasan:
+// item "periksa"/"bersih" biasanya tidak ada biaya (cuma cek/lap), jadi
+// prompt biaya cuma gesekan tambahan. actionType 'ganti' atau kosong
+// (tombol "✅ Sudah Servis" lama di kartu Pengingat Servis, SELALU
+// dipanggil tanpa actionType) TETAP prompt seperti biasa -- 0 regresi ke
+// jalur lama. opts.presetCost (dipakai markServicedBatch()) tetap prioritas
+// PALING TINGGI di atas default actionType ini, tidak berubah dari E1.
+// _findAutoGantiStock(cat, vehicleId) — BARU (Sesi E2, ROADMAP-KONSOLIDASI-
+// DATABASE-SERVIS-v2.md §7 Sesi E item 2 "auto-potong stok saat ganti").
+// Cari 1 kandidat Stok Sparepart (D.partsStock) yang cocok kategori (catId
+// sama persis dgn kategori pengingat yg ditandai) DAN kendaraan (lewat
+// Sparepart.isPartForVehicle(), fungsi yg SUDAH ADA & dipakai dropdown
+// "Gunakan Stok Sparepart" -- 0 skema baru, reuse logic vehicle-scoping yg
+// sudah teruji). SENGAJA hanya auto-potong kalau PERSIS 1 kandidat cocok
+// -- 0 kandidat (tidak ada stok utk kategori ini) atau >1 kandidat
+// (ambigu, mis. ada 2 baris "Oli Mesin" beda merek) DILEWATI (return null,
+// tidak menebak) supaya tidak salah motong stok yang salah. Ini FINDER
+// murni (0 efek samping, 0 tulis D) -- pemotongan qty dilakukan terpisah
+// oleh pemanggil (lihat markServiced() di bawah).
+_findAutoGantiStock(cat,vehicleId){
+if(!cat||!Array.isArray(D.partsStock))return null;
+const candidates=D.partsStock.filter(p=>p.catId===cat.id&&(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):true));
+return candidates.length===1?candidates[0]:null;
+},
+// _checkTooEarlyGanti(cat, vehicleId, curKm) — BARU (Sesi E5, ROADMAP-
+// KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 5 "guard 'ganti terlalu
+// dini'"). FINDER murni (0 efek samping, 0 tulis D) -- cari log "ganti"
+// TERAKHIR utk kategori+kendaraan ini (reuse getLastServiceKmForCat() apa
+// adanya dgn actionTypeFilter:'ganti', SAMA fungsi yg sudah dipakai basis
+// reset pengingat -- 0 logic baca log duplikat), lalu bandingkan jarak KM
+// yg sudah ditempuh sejak itu dgn ambang batas 20% dari intervalKm
+// kategori. Kalau jarak tempuh < ambang (mis. interval 3000km, ambang
+// 600km, baru jalan 300km sejak ganti terakhir) -> dianggap "terlalu
+// dini", return detail supaya pemanggil bisa tanya konfirmasi tambahan.
+// SENGAJA return null (tidak menganggap dini) kalau: kategori tidak
+// punya intervalKm valid, belum pernah ada log "ganti" sebelumnya
+// (lastKm null -- servis pertama kali, wajar), atau odometer curKm <
+// lastKm (data KM tidak konsisten/mundur -- tidak ditebak, biar tidak
+// salah blokir gara2 data aneh, bukan tanggung jawab guard ini).
+_checkTooEarlyGanti(cat,vehicleId,curKm){
+if(!cat||!cat.intervalKm||cat.intervalKm<=0)return null;
+const lastKm=Servis.getLastServiceKmForCat(vehicleId,cat,'ganti');
+if(lastKm===null||lastKm===undefined)return null;
+const traveled=curKm-lastKm;
+if(traveled<0)return null;
+const thresholdKm=cat.intervalKm*0.2;
+if(traveled>=thresholdKm)return null;
+return{lastKm,traveled,intervalKm:cat.intervalKm,thresholdKm};
+},
+async markServiced(catId,actionType,opts){
+opts=opts||{};
 const cat=D.sparepartCats.find(c=>c.id===catId);
 if(!cat)return;
 const curKm=getVehicleKm(curVehicleId);
-if(!await askConfirm(`Tandai "${cat.name}" sudah diservis hari ini di KM ${curKm.toLocaleString('id-ID')}? Pengingat akan otomatis reset ke KM ini.`,{danger:false,okText:'Ya, Tandai',icon:'✅'}))return;
+const actLabel=actionType==='periksa'?'diperiksa':(actionType==='bersih'?'dibersihkan':'diservis');
+// willReset — HANYA relevan utk pola 4/periksa-conditional (§2c): kalau
+// item ini punya gantiResetsInterval:false & yg ditandai actionType
+// 'ganti', reset TIDAK terjadi (basis jatuh-tempo tetap dari log
+// 'periksa') -- teks konfirmasi/toast disesuaikan supaya user tidak
+// dikasih janji palsu "pengingat direset" padahal tidak.
+const willReset=!(cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&(actionType||'ganti')==='ganti');
+// Sesi E5 (guard "ganti terlalu dini"): HANYA saat actionType eksplisit
+// 'ganti' (bukan kosong/'periksa'/'bersih' -- checklist lama/tombol
+// "✅ Sudah Servis" tanpa actionType TIDAK pernah masuk cabang ini, 0
+// regresi) DAN opts.skipEarlyGuard tidak di-set. Dialog guard ini TERPISAH
+// dari konfirmasi utama di bawah (independen dari opts.skipConfirm) --
+// kalau user batal di sini, fungsi berhenti SEBELUM konfirmasi utama
+// ditampilkan (0 dialog dobel utk kasus batal).
+if(actionType==='ganti'&&!opts.skipEarlyGuard){
+const early=Servis._checkTooEarlyGanti(cat,curVehicleId,curKm);
+if(early){
+const earlyMsg=`⚠️ "${cat.name}" baru diganti ${early.traveled.toLocaleString('id-ID')} km lalu (interval ${early.intervalKm.toLocaleString('id-ID')} km) -- kelihatannya masih terlalu dini. Tetap tandai ganti sekarang?`;
+if(!await askConfirm(earlyMsg,{danger:true,okText:'Ya, Tetap Ganti',icon:'⚠️'}))return;
+}
+}
+if(!opts.skipConfirm){
+const confirmMsg=`Tandai "${cat.name}" sudah ${actLabel} hari ini di KM ${curKm.toLocaleString('id-ID')}?`+(willReset?' Pengingat akan otomatis reset ke KM ini.':' (Item ini basis jatuh-temponya dari "periksa" -- catatan "ganti" ini TIDAK mereset pengingat.)');
+if(!await askConfirm(confirmMsg,{danger:false,okText:'Ya, Tandai',icon:'✅'}))return;
+}
+let cost;
+if(opts.presetCost!==undefined&&opts.presetCost!==null){
+cost=parseFloat(opts.presetCost)||0;
+}else if(actionType==='periksa'||actionType==='bersih'){
+// Sesi E4: default cost per actionType -- periksa/bersih auto 0, 0 prompt.
+cost=0;
+}else{
 const costStr=await showPromptModal({title:'Biaya Servis',message:'Biaya servis ini (opsional, boleh dikosongkan/0):',icon:'💵',inputType:'number',defaultValue:0});
-const cost=parseFloat(costStr)||0;
+cost=parseFloat(costStr)||0;
+}
 const date=new Date().toISOString().split('T')[0];
 const accId=D.accounts[0]?.id;
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
 const servisId=uid();
-const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null};
+const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null,actionType:actionType||null,batchId:opts.batchId||null};
 if(cost>0){
 const txId=uid();
 D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId});
 entry.txLinkId=txId;
 }
 D.servisLogs.push(entry);
-save();renderCnTab();renderDashboard();renderKeuangan();toast(`✅ ${cat.name} ditandai selesai, pengingat direset ke KM sekarang`);
+// Sesi E2 (auto-potong stok saat "ganti"): HANYA saat actionType eksplisit
+// 'ganti' (bukan actionType kosong/'periksa'/'bersih') -- 0 dampak ke
+// tombol "✅ Sudah Servis" lama di kartu Pengingat Servis (dipanggil tanpa
+// actionType sama sekali, jadi tidak pernah masuk cabang ini, 0 regresi).
+// Auto-potong 1 qty SAJA kalau stok cukup (qty>=1) -- kalau stok
+// tidak cukup/0, DILEWATI DIAM-DIAM (bukan nge-prompt konfirmasi minus
+// spt applyStockUsage() manual) krn ini aksi otomatis di balik tombol
+// "tandai selesai", bukan input eksplisit user pilih part -- munculin
+// dialog konfirmasi tak terduga di sini (apalagi saat dipanggil dari
+// markServicedBatch() dgn skipConfirm) akan mengejutkan/menghalangi user.
+let autoGantiStock=null;
+if(actionType==='ganti'){
+autoGantiStock=Servis._findAutoGantiStock(cat,curVehicleId);
+if(autoGantiStock&&(autoGantiStock.qty||0)>=1){
+autoGantiStock.qty=autoGantiStock.qty-1;
+entry.autoGantiStockId=autoGantiStock.id;
+}else{
+autoGantiStock=null;
+}
+}
+save();renderCnTab();renderDashboard();renderKeuangan();
+// BUGFIX (audit "✅ Sudah Servis" tidak emit AIBus event): markServiced() menulis
+// langsung ke D.servisLogs/D.transactions tanpa lewat saveServis() (sparepart-servis-b.js)
+// -- alur submit modal servis biasa emit AIBus 'vehicle.updated' lewat wrapper itu, tapi
+// jalur cepat ini (tombol di kartu Pengingat Servis) TIDAK, jadi listener AI (mis. audit
+// overdue servis) tidak pernah tahu ada servis baru kalau user cuma tap tombol ini.
+// Fix: emit event yang sama di titik ini, sama persis polanya dgn saveServis() utk
+// 'vehicle.updated' (selalu) & pola BBM (car-notes.js baris ~180) utk 'finance.updated'
+// (cuma kalau benar ada transaksi baru yg tercatat, yaitu saat cost>0/txLinkId terisi).
+if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"servis"});
+if(entry.txLinkId&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'});
+if(autoGantiStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();
+if(!opts.skipConfirm)toast(`✅ ${cat.name} ditandai ${actLabel}, `+(willReset?'pengingat direset ke KM sekarang':'tercatat (pengingat tidak berubah)')+(autoGantiStock?` (stok "${autoGantiStock.name}" otomatis dipotong 1)`:''));
+return entry;
 },
-getLastServiceKmForCat(vehicleId,cat){
-const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat))
+// markServicedBatch(items) — BARU (Sesi E1). items: array of
+// {catId, actionType, cost}. REUSE markServiced() apa adanya per item
+// (0 logic simpan duplikat) dgn opts.skipConfirm:true (1 konfirmasi di
+// pemanggil nanti, bukan per-item) & opts.presetCost (dari `cost` per
+// item kalau diisi, kalau tidak diisi tetap 0 tanpa prompt -- checklist
+// multi-item belum ada UI-nya, jadi fondasi ini sengaja tidak nge-prompt
+// per-item, itu akan bikin batch >1 item butuh N kali showPromptModal).
+// opts.skipEarlyGuard:true (Sesi E5) juga selalu di-set -- guard "ganti
+// terlalu dini" per-item akan bertentangan dgn prinsip "1 konfirmasi
+// total" batch ini (sama alasannya dgn skipConfirm).
+// Fondasi ini disiapkan utk checklist multi-item (rencana Sesi 1C/2A,
+// belum ada kodenya) -- dipakai apa adanya begitu checklist dibangun.
+async markServicedBatch(items){
+if(!Array.isArray(items)||!items.length)return[];
+// Sesi E3: 1 batchId (uid()) DIBAGI ke seluruh item dari 1x pemanggilan
+// ini -- dipakai buat nandain "🔗 batch" di riwayat (Servis.renderList())
+// supaya user bisa lihat item mana saja yang ditandai selesai bersamaan.
+const batchId=uid();
+const results=[];
+for(const it of items){
+const entry=await Servis.markServiced(it.catId,it.actionType,{skipConfirm:true,skipEarlyGuard:true,presetCost:it.cost!==undefined?it.cost:0,batchId});
+if(entry)results.push(entry);
+}
+toast(`✅ ${results.length} item servis ditandai selesai`);
+return results;
+},
+// getLastServiceKmForCat(vehicleId, cat, actionTypeFilter, forReminder) —
+// actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
+// PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
+// baru ini (mis. dari riwayat/servisList) = 0 perubahan perilaku lama.
+// Delegasi filter ke Servis._matchesActionTypeForReset() di bawah supaya
+// logic-nya persis 1 tempat (twin di modules/vehicle/sparepart-servis.js
+// getLastServiceDateForCat() punya salinan yang HARUS tetap identik).
+getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
+const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder))
 .sort((a,b)=>new Date(b.date)-new Date(a.date)||b.km-a.km);
 return logs.length?logs[0].km:null;
+},
+// _matchesActionTypeForReset(log, cat, actionTypeFilter, forReminder) — lihat
+// dokumentasi lengkap di twin-nya modules/vehicle/sparepart-servis.js
+// (matchesActionTypeForReset(), top-level function, dipakai getLastServiceDateForCat()
+// di file itu). Duplikasi SENGAJA (bukan reuse cross-file) krn file ini
+// (car-notes.js) dimuat SEBELUM sparepart-servis.js di build.js & beberapa
+// test harness (mis. sparepart-interval-bulan.test.js) memuat sparepart-servis.js
+// TANPA car-notes.js sama sekali -- kalau salah satu diubah, cek ulang yang lain.
+_matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
+const effType=log.actionType||'ganti';
+if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+if(!actionTypeFilter)return true;
+return effType===actionTypeFilter;
 },
 editSparepartFromReminder(catId){
 const idx=D.sparepartCats.findIndex(c=>c.id===catId);
@@ -901,25 +1180,66 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span cla
 applyOneCardCollapsePref('servisReminderCard');
 },
 loadMore(){Servis.listPage++;Servis.renderList();},
+// setActionTypeFilter(type) — BARU (Sesi E6). Dipanggil dari klik chip
+// filter (data-action="Servis.setActionTypeFilter"). type: null ("Semua")
+// atau 'periksa'/'bersih'/'ganti'. Reset listPage ke 1 (pola sama BBM/
+// Torsi.setCat()) supaya pagination tidak nyangkut di halaman lama saat
+// filter berganti (bisa beda jumlah total item).
+setActionTypeFilter(type){
+Servis.activeActionTypeFilter=type||null;
+Servis.listPage=1;
+Servis.renderList();
+},
+// renderActionTypeChips(beforeEl) — BARU (Sesi E6). Chip row filter
+// riwayat by actionType, DISISIPKAN lewat JS sebelum #servisList (bukan
+// markup statis di index.html -- beda dgn Torsi.chips() yg pakai
+// container #trsChipRow yang SUDAH ada di markup). Pola pembuatan elemen
+// dinamis 1x (cek getElementById dulu, buat kalau belum ada) SAMA PERSIS
+// dgn servisMoreWrap di bawah (renderList()), supaya tidak dobel-insert
+// tiap kali renderList() dipanggil ulang.
+renderActionTypeChips(beforeEl){
+let row=document.getElementById('servisActionTypeChipRow');
+if(!row){
+row=document.createElement('div');
+row.id='servisActionTypeChipRow';
+row.className='u-flex u-fs12 u-mb10';
+row.style.cssText='gap:6px;flex-wrap:wrap';
+beforeEl.insertAdjacentElement('beforebegin',row);
+}
+const options=[{v:null,label:'🔍 Semua'},{v:'periksa',label:'🔍 Diperiksa'},{v:'bersih',label:'🧽 Dibersihkan'},{v:'ganti',label:'🔧 Diganti'}];
+row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFilter?'active':''}" data-action="Servis.setActionTypeFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label}</div>`).join('');
+},
 renderList(){
 Servis.renderReminder();
 const {from,to}=getCnRange();
-const filterSig=curVehicleId+'|'+(+from)+'|'+(+to);
+const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFilter;
 if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filterSig;}
-const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to).sort((a,b)=>new Date(b.date)-new Date(a.date));
+const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)).sort((a,b)=>new Date(b.date)-new Date(a.date));
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
 const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
 document.getElementById('servisCount').textContent=logs.length;
 document.getElementById('servisTotalCost').textContent=fmt(totalCost);
 document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString('id-ID')+' km':'-';
 const el=document.getElementById('servisList');
+Servis.renderActionTypeChips(el);
 if(!logs.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Belum ada catatan servis</div></div>';return;}
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
 el.innerHTML=visible.map(s=>{
 const part=s.usedPartId?D.partsStock.find(p=>p.id===s.usedPartId):null;
 const partInfo=part?` · 📦 ${s.usedPartQty}${part.unit?' '+escapeHtml(part.unit):''} ${escapeHtml(part.name)}`:'';
-return `<div class="tx-item u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info"><div class="tx-name">${escapeHtml(s.item)}</div><div class="tx-meta">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''} ${s.note?'· '+escapeHtml(s.note):''}${partInfo}</div></div><div class="tx-amount red">${fmt(s.cost)}</div><button class="tx-del" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
+// Sesi E3: tandai "🔗 batch" di riwayat kalau entry ini punya batchId
+// (ditandai selesai bareng item lain lewat markServicedBatch()) -- 0
+// dampak ke entry lama/single (batchId null/undefined = tidak ditandai).
+const batchInfo=s.batchId?' · 🔗 batch':'';
+// Sesi F2 (lanjutan F1, ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi
+// F): badge jumlah foto di riwayat servis. Pola sama persis batchInfo di
+// atas (string kosong kalau tidak ada field/tidak relevan, 0 dampak ke
+// entry lama tanpa field `foto`). Thumbnail gambar & lightbox SENGAJA
+// belum -- backlog langkah Sesi F berikutnya, badge teks dulu sesuai
+// urutan risiko rendah -> tinggi.
+const fotoInfo=s.foto&&s.foto.length?` · 📷 ${s.foto.length}`:'';
+return `<div class="tx-item u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info"><div class="tx-name">${escapeHtml(s.item)}</div><div class="tx-meta">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''} ${s.note?'· '+escapeHtml(s.note):''}${partInfo}${batchInfo}${fotoInfo}</div></div><div class="tx-amount red">${fmt(s.cost)}</div><button class="tx-del" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
 if(!servisMoreWrap){
@@ -967,7 +1287,7 @@ _selectedVehicleId:null,
 itemKey(cat,name){return cat+'|'+name;},
 computeCats(){
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
-this.db=veh?findTorsiDb(veh.name):null;
+this.db=veh?findTorsiDb(veh.name,veh.modelId):null;
 this.cats=[TORSI_STANDARD_CAT,...(this.db?this.db.cats:[])];
 },
 renderSourceNote(){

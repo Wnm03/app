@@ -1,491 +1,442 @@
-# Changelog — Sesi S706 (Fix Temuan #2 audit modul Aset: LaporanAset tidak exclude aset termigrasi ke Investasi, v1515)
+# Changelog — Sesi C-lanjutan: Shop/Cobek, 5 titik sisa (v1662, `product.updated`)
 
 ## Task
-Lanjutan audit mendalam 27 file `modules/asset` (sesi S705); sesi ini
-mengerjakan Temuan #2 (1 sesi = 1 task): `LaporanAset.nilaiAset()`/
-`ringkasanKekayaan()`/`build().daftarAset` (`aset-reports.js`) hanya
-memfilter `isAssetOwnershipSelf`, tidak memfilter
-`!a._migratedToInvestmentId`/`!a.investmentId` seperti `Aset.totalValue()`
-(`aset.js`) — menyebabkan aset yang sudah jadi Holding Investasi tetap
-dihitung dobel di kartu "📑 Laporan Aset".
+Lanjutan Sesi C (Event Bus umum, ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md
+§7 Sesi C / §2d urutan poin 2): tuntaskan 5 titik sisa Shop/Cobek yang
+sengaja ditunda dari `PATCH-v1642-sesi-c-shop-cobek-product-updated.zip`
+(CRUD inti produk & kategori sudah emit `product.updated` sejak v1642).
+Fase 1 belum tuntas (gap (a) `VEHICLE_DB_RECORDS` literal masih terbuka,
+lihat v1661) — Sesi D (`service_categories`) TETAP tidak dikerjakan sesi
+ini, sesuai larangan §6.
 
 ## Perubahan
-- `modules/asset/aset-reports.js` — tambah filter migrasi
-  (`!a._migratedToInvestmentId`, `!a.investmentId`) ke `nilaiAset()`,
-  `ringkasanKekayaan()`, dan sumber data `daftarAset` di `build()`, pola
-  SAMA PERSIS `Aset.totalValue()`. `aset.js` sendiri 0 disentuh.
+5 titik baru, semua event `product.updated` (guard `typeof
+AIBus!=="undefined"`, 0 perubahan business logic):
+- `modules/shop/cobek-order.js` — `Produsen.saveHarga()`: 1 emit/batch
+  `{kind:"harga-produsen",action:"batch",produsenId,productIds,count}`.
+- `modules/shop/cobek-pricing.js` — `PriceRekoWidget.applyOne()`/
+  `applyBulk()`: `{kind:"price-reko",action:"apply-one"|"apply-bulk",...}`.
+- `modules/shop/cobek-pricing.js` — `StockRekoWidget.applyAll()`:
+  `{kind:"stock-reko",action:"apply-all",productIds,count,totalQty}`.
+- `modules/shop/cobek-pricing.js` — `WeightBulkWidget.applyOne()`/
+  `applyBulk()`: `{kind:"weight-bulk",action:"apply-one"|"apply-bulk",...}`.
+- `modules/shop/cobek-tx-cart.js` — `onTxShopStockProdusenChange()`
+  (inline create Produsen dari keranjang): `{kind:"produsen",
+  action:"create",produsenId,name}`.
+- `modules/shop/cobek-io.js` — `ImportShopExcel.commit()` (bulk import
+  Excel, 2 cabang): `{kind:"import-excel",action:"produsen"|"etalase",
+  created,updated}`.
+
+Domain Shop/Cobek Sesi C sekarang **9/9 titik TUNTAS** (4 CRUD inti v1642
++ 5 titik ini).
 
 ## Sengaja TIDAK dikerjakan sesi ini
-- Temuan #3 (dobel Buku Utang saat auto-holding di `saveUnified()`) —
-  backlog sesi berikutnya, sesuai aturan 1 sesi = 1 task.
+- Sesi B gap (a) (`VEHICLE_DB_RECORDS` literal) — tetap ditunda (v1661).
+- Sesi D (`service_categories`) — belum aman mulai, Fase 1 belum tuntas.
+- Wiring listener `AIService.wireEvents()` — direkomendasikan sesi
+  TERSENDIRI berikutnya (§2d poin 3), SEBELUM Dana Titipan/investasi/
+  aset non-core.
+- Dana Titipan, `investasi.js` dasar, Aset non-core — backlog lain.
+- `Etalase.onProdusenChange()` (pola serupa titik #5, file lain) — di
+  luar 5 titik yang disepakati.
 
 ## Test
-- Baru: `tests/s706-laporan-aset-exclude-migrated-double-count.test.js`
-  (5 test).
-- Full suite: 5285/5285 (1 flake pre-existing tidak terkait, terkonfirmasi
-  di baseline).
-- Build: `node scripts/build.js` — semua gate lolos, versi → 1515.
+- Baru: `tests/cobek-shop-5-titik-sisa-sesi-c.test.js` (14 test, 14/14
+  pass) — mencakup ke-5 titik + guard `AIBus` tidak ada.
+- Full suite: 6353/6357 pass, 4 fail — 4 kegagalan IDENTIK
+  pre-existing (`verify-release-ready` eslint-override,
+  `checkBundleFreshness()`, 2× `txHTML()`/S468d), **0 regresi baru**.
+- Build: `APP_BUILD_VERSION`/`PRODUCTION_BUILD_SYNCED_VERSION` dibump
+  manual ke `s-sesi-c-shop-cobek-5-titik-sisa-1662` (delta zip, `node
+  scripts/build.js` rebuild penuh belum dijalankan — perlu checkout
+  lengkap, sama seperti sesi-sesi sebelumnya).
 
 ---
 
-# Changelog — Sesi S705 (Fix Temuan #1 audit modul Aset: 3 kartu laporan aset tanpa try/catch, v1514)
+# Changelog — Sesi B-followup (dedup `ensureLoaded()` — ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi B, gap (c))
 
-## Task
-Audit mendalam 27 file `modules/asset` menemukan 3 temuan konkret; sesi ini
-mengerjakan Temuan #1 (1 sesi = 1 task): `Penyusutan.renderList()`,
-`PajakAset.renderList()`, `LaporanAset.renderList()` (`aset-reports.js`)
-dipanggil berurutan tanpa try/catch dari 4 titik di `Aset.renderList()`
-(`aset.js`), pola bug yang sama dengan yang sudah diperbaiki S601/S608 untuk
-per-item render.
+## Konteks
 
-## Perubahan
-- `modules/asset/aset.js` — method baru `Aset._safeRenderReports()`
-  membungkus ketiga panggilan kartu laporan dengan try/catch masing-masing;
-  4 titik panggilan lama diganti pakai method ini. `aset-reports.js` sendiri
-  0 disentuh.
+Sesi B tercatat tinggal 2 gap kecil: (a) hapus literal `VEHICLE_DB_RECORDS`,
+(c) `await ensureLoaded()` di konsumen `findTorsiDb`/`findVehicleSpec`.
+Audit ulang di awal sesi ini menemukan keduanya lebih besar dari
+perkiraan — (a) butuh mekanisme registrasi baru (ditunda, sesi
+tersendiri), (c) titik pemanggilnya semua sync di jalur render UI
+(mengubahnya jadi `async` = refactor besar, ditolak). Perbaikan yang
+tetap dikerjakan utk (c): dedup pemanggilan `ensureLoaded()` supaya
+pemanggilan bersamaan dari >1 titik tidak memicu round-trip IndexedDB
+dobel — `load()` sendiri sudah `await ensureLoaded()` sebelum app jalan,
+jadi race praktis di konsumen render sudah sempit; ini menutup sisi lain
+(concurrent-call) dari race tsb.
+
+## Hasil
+
+- `modules/engine/database-api.js`: `dbVehicleEnsureLoaded()` dipecah jadi
+  orkestrasi dedup (`_vehicleDbLoadPromise`) + `_vehicleDbDoLoad()` (badan
+  asli, 0 logika diubah). `dbVehicleInvalidateCache()` ikut reset dedup
+  guard. Getter sync (`_vehicleDbRecords()`) SENGAJA TIDAK diubah — tidak
+  memicu load sendiri, supaya kontrak test lama ("IDBStore tidak disentuh
+  sebelum `ensureLoaded()` dipanggil") tetap 100% berlaku.
+- `APP_BUILD_VERSION`/`PRODUCTION_BUILD_SYNCED_VERSION` dibump ke
+  `s-sesi-b-followup-ensureloaded-dedup-1661`.
 
 ## Sengaja TIDAK dikerjakan sesi ini
-- Temuan #2 (filter migrasi belum disinkron di `LaporanAset`) dan Temuan #3
-  (dobel Buku Utang saat auto-holding di `saveUnified()`) — backlog sesi
-  berikutnya, sesuai aturan 1 sesi = 1 task.
+
+- (a) Hapus literal `VEHICLE_DB_RECORDS` — ditunda, sesi desain
+  registrasi `TORSI_DB`/`VEHICLE_SPEC_DB` → `DatabaseAPI` tersendiri.
+- Refactor `resolveCatGroup()`/`renderVehicleSpecCard()`/dkk jadi `async`.
+- Hapus duplikasi `TORSI_DB`/`VEHICLE_SPEC_DB` vs `VEHICLE_DB_RECORDS`
+  (item Critical §3 terakhir, bergantung (a)).
 
 ## Test
-- Baru: `tests/s705-aset-report-cards-trycatch-guard.test.js` (4 test).
-- Full suite: 5277/5277 pass, 0 fail.
-- Build: `node scripts/build.js` — semua gate lolos, versi → 1514.
+
+- Baru: `tests/database-api-vehicledb-ensureloaded-dedup-sesi-b-followup.test.js`
+  (3 test, semua pass).
+- 44 test lama terkait Vehicle Database/Sesi A/B: 44/44 pass, 0 regresi.
+- Full delta zip: 294/308 pass, 14 gagal pre-existing (`ENOENT`
+  `ownership-engine.js` tidak ikut delta zip ini, tidak terkait
+  perubahan sesi ini).
+
+Detail lengkap: `SESSION-NOTE-sesi-b-followup-ensureloaded-dedup.md`.
 
 ---
 
-# Changelog — Sesi S610 (Sisa renderer try/catch per-baris: modules/vehicle/, modules/cross/, v1451)
+# Changelog — Sesi F2 (Badge jumlah foto di Riwayat Servis — ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi F, lanjutan F1)
 
-## Task
-Lanjutan audit "0 reaksi" (pola sama S601/S608): sisa renderer di luar
-cakupan s608 — `modules/vehicle/`, `modules/cross/`, dashboard presenter —
-yang masih pakai `list.map(...) -> innerHTML` TANPA try/catch per-item.
+## Konteks
 
-## Perubahan (try/catch per-item + fallback aman)
-- `modules/vehicle/fuel-history.js` — `FuelHistory.render()`
-- `modules/vehicle/fuel-compare.js` — `FuelCompare.render()`
-- `modules/vehicle/vehicle-attention-presenter.js` — `render()` (2 blok: actionRows & insightRows)
-- `modules/vehicle/vehicle-decision-presenter.js` — `render()`
-- `modules/cross/life-priority-panel.js` — `render()`
-- `modules/cross/action-queue.js` — `render()`
+Audit roadmap (sinkronisasi ulang status §2b/§2c/§7 terhadap isi kode
+nyata di `app-main__76_.zip` + `PATCH-v1642-sesi-c-shop-cobek-product-updated.zip`)
+menemukan banyak sesi sudah selesai tapi belum tercatat di dokumen:
+Sesi E1-E6 (checklist `actionType` lanjutan, seluruh 6 item), Sesi F1
+(foto — data model+capture+persist), dan Sesi C-lanjutan (Akun, Zakat/PBB,
+Shop/Cobek) — detail lengkap di update roadmap §2d. Instruksi W: utamakan
+langkah implementasi ke `car-notes.js` dulu. Backlog yang paling langsung
+menyentuh `car-notes.js` dan sudah eksplisit dicatat di sesi sebelumnya:
+"Thumbnail/badge foto di daftar Riwayat Servis (`Servis.renderList()`)"
+(disebut SENGAJA ditunda di `SESSION-NOTE-sesi-f1-foto-riwayat-servis.md`).
 
-## Sengaja TIDAK disentuh (risiko rendah — audit dicek, bukan terlewat)
-- `modules/dashboard-hub/dashboard-hub.js` — mayoritas `.map().join('')` di
-  file ini beroperasi atas array kecil TETAP (4-5 kartu ringkasan statis:
-  Pemasukan/Pengeluaran/Bersih/Transaksi, 5 tipe ownership), bukan daftar
-  dinamis dari data user — risiko throw per-item minim & sudah banyak
-  di-guard `typeof`.
-- `modules/cross/cross-insight-presenter.js`, `modules/cross/recommendation-panel.js`,
-  `modules/cross/cross-dashboard-card.js`, `modules/cross/cross-module-widgets.js` —
-  per-item cuma lookup emoji (`_icon(type)`, fallback default) +
-  `escapeHtml()`, tidak ada kalkulasi/derivasi lanjutan yang bisa throw.
+## Hasil
 
-## Test
-- Baru: `tests/s610-vehicle-cross-renderlist-trycatch-guard.test.js` (4 test).
-- Full suite: 4911/4911 pass, 0 fail.
-- Build: `node scripts/build.js` — semua gate lolos, versi -> 1451.
-  `verify-bundle-freshness.js` lolos.
+- `car-notes.js` (`Servis.renderList()`): badge teks `📷 N` (N = jumlah
+  foto) ditambahkan ke `tx-meta` tiap entry riwayat servis yang punya
+  `s.foto` berisi >=1 item — pola SAMA PERSIS `batchInfo` (Sesi E3):
+  string kosong kalau `foto` tidak ada/kosong, 0 perubahan struktur
+  `tx-item` (tidak ada thumbnail gambar sungguhan — itu tetap backlog,
+  lihat bagian "Sengaja tidak dikerjakan" di bawah).
+- Version marker source (`APP_BUILD_VERSION`, `PRODUCTION_BUILD_SYNCED_VERSION`,
+  `MODAL_VERSION`, `MODULE_CALC_VERSION`, `MODULE_RENDER_VERSION`,
+  `MODULE_FEATURES_VERSION`) dibump manual & konsisten ke
+  `s-servis-foto-badge-sesi-f2-1660` (pola sama F1: bump manual krn delta
+  zip ini tidak membawa seluruh file GROUP_A, `scripts/build.js` tidak
+  aman dijalankan penuh di sini — lihat catatan Verifikasi).
+
+## Sengaja TIDAK dikerjakan sesi ini (backlog Sesi F berikutnya)
+
+- Thumbnail gambar sungguhan (mis. `<img>` 32x32) di daftar Riwayat
+  Servis — badge teks dulu (risiko lebih rendah, 0 perubahan struktur
+  HTML `tx-item`), thumbnail visual butuh perubahan struktur & CSS,
+  disengaja dipisah jadi langkah berikutnya.
+- Lightbox/viewer untuk lihat foto ukuran penuh dari daftar riwayat.
+- Kompresi gambar sebelum jadi dataURL (masih backlog F1, belum
+  disentuh sesi manapun).
+
+## Verifikasi
+
+- `node --check car-notes.js` dan seluruh file version-marker yang
+  disentuh: **lolos** (tersedia di sandbox delta ini).
+- Test baru `tests/servis-foto-badge-sesi-f2.test.js` (5 test: badge
+  muncul dgn jumlah benar, `foto:[]` tidak muncul badge, entry lama
+  tanpa field `foto` tidak muncul badge, badge foto & badge batch
+  koeksis, badge per-entry tidak tercampur) — **belum bisa dijalankan**
+  di sandbox ini: `tests/helpers/loadSource.js` tidak ikut ter-bundle
+  di delta zip ini (limitasi sama persis yang dicatat di semua sesi
+  sebelumnya, termasuk F1 — bukan masalah baru). **Wajib dijalankan di
+  checkout lengkap** sebelum deploy, bersama `node scripts/build.js`
+  (rebuild bundle + sinkron `?v=`/`CACHE_NAME`) dan
+  `node scripts/verify-release-ready.js` penuh.
+- `?v=` di `index.html`/`app_production.html` dan `CACHE_NAME` (`sw.js`)
+  **belum dibump** sesi ini (sama seperti F1) — perlu `scripts/build.js`
+  di checkout lengkap, jangan dibump manual sendiri-sendiri (pelajaran
+  dari sesi Akun sebelumnya soal version marker basi).
+
+Detail lengkap: `SESSION-NOTE-sesi-f2-badge-foto-riwayat-servis.md`.
 
 ---
 
-# Changelog — Sesi S609 (Audit alur pembayaran Utang/Piutang — revert transaksi pelunasan, v1450)
+# Changelog — Sesi C-lanjutan Shop/Cobek (event BARU `product.updated` — ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi C / AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md Prioritas Sedang, temuan #6)
 
-## Task
-Lanjutan backlog item #4 dari sesi s608: audit alur pembayaran utang/piutang
-(`modules/finance/piutang-utang.js`), fitur AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS
-§5.1/§5.2 (toggle "🧾 Catat juga sebagai transaksi arus kas" saat entri
-Piutang/Utang dibuat & ditandai lunas).
+## Konteks
 
-## Bug ditemukan
-§5.2 sudah menangani Belum Lunas -> Lunas (bikin 1 transaksi pelunasan
-otomatis, idempotent via `linkedPayoffTxId`). Arah sebaliknya — Lunas
-dibatalkan jadi Belum Lunas lagi — tidak membalikkan apa pun: transaksi
-pelunasan otomatis tetap nyangkut di `D.transactions` & tetap mempengaruhi
-saldo akun, padahal piutang/utangnya sendiri sudah kembali dihitung PENUH
-sbg belum lunas — double count di Total Piutang/Utang & Kekayaan Bersih.
+Lanjutan dari sesi Zakat/PBB (`finance.updated` kind `zakat`, v1641) —
+domain berikutnya di Prioritas Sedang yang direkomendasikan sesi lalu:
+Shop/Cobek produk & stok (scope lebih kecil dari Dana Titipan).
 
-## Perubahan
+Audit ulang (`cobek-etalase.js`/`cobek-pricing.js`/`cobek-tx-cart.js`/
+`cobek-order.js`) menemukan 9 titik `save()` tanpa emit. Keputusan user:
+(1) nama event **`product.updated`** (1 event, pola `kind:...` sama
+`finance.updated`), (2) **scope sesi ini dipersempit** ke CRUD inti
+produk & kategori (`cobek-etalase.js`, 4 titik) — 5 titik sisa
+(harga produsen batch/`cobek-order.js`; price reko apply/restock reko/
+weight-bulk/`cobek-pricing.js`; inline create produsen di
+keranjang/`cobek-tx-cart.js`; bulk import Excel/`cobek-io.js`) SENGAJA
+ditunda ke sesi berikutnya.
 
-**`modules/finance/piutang-utang.js`**
-- `Piutang._saveInner()` — transisi Lunas -> Belum Lunas sekarang menghapus
-  balik `p.linkedPayoffTxId` dari `D.transactions` & membersihkan field
-  tsb (simetris dgn §5.2). Idempotent: kalau ditandai Lunas lagi nanti,
-  transaksi pelunasan baru dibuat lagi seperti biasa.
-- `Debt._saveInner()` — pola simetris persis, arah expense
-  (`d.linkedPayoffTxId`).
-- Entri manual (tanpa `linkedTxId`/`linkedPayoffTxId`, tidak pernah pakai
-  toggle §5.1) 0 terpengaruh.
+## Hasil
 
-## Test
-- Baru: `tests/s609-audit-payoff-tx-revert-piutang-utang.test.js` (4 test).
-- Full suite: 4907/4907 pass, 0 fail.
-- Build: `node scripts/build.js` — semua gate lolos, versi -> 1450.
-  `verify-bundle-freshness.js` lolos.
+Event BARU `product.updated` (belum ada presedennya sebelum sesi ini),
+4 titik emit di `modules/shop/cobek-etalase.js`, semua di-guard
+`typeof AIBus!=="undefined"`:
 
-## Masih menggantung
-Sisa renderer di luar cakupan s608 (`modules/vehicle/`, `modules/cross/`,
-dashboard presenter) — belum disentuh sesi ini.
+- `Etalase._saveInner()` — create/edit produk. **1 emit menutupi ke-3
+  jalur** (koreksi stok/beli stok+tx/update biasa — pola "1 emit
+  banyak jalur" sama `tagihan-kalender.js` sesi lalu) →
+  `product.updated {kind:"produk",action:"create"/"edit",productId,
+  name}`.
+- `Etalase.delete(i)` — hapus produk →
+  `product.updated {kind:"produk",action:"delete",deletedId,name}`.
+- `Etalase.addKategoriManual()` — 2 cabang terpisah (create baru/rename
+  existing, pola sama `PBB.ikatTagihan()`) →
+  `product.updated {kind:"kategori",action:"create"/"edit",categoryId,
+  name}`.
+- `Etalase.delKategori(id)` — hapus kategori →
+  `product.updated {kind:"kategori",action:"delete",deletedId,name}`.
+
+## SENGAJA TIDAK disentuh sesi ini (backlog)
+
+- `cobek-order.js` — `Produsen.saveHarga()` (set harga beli per-produsen
+  massal ke banyak produk sekaligus).
+- `cobek-pricing.js` — `OngkirCalc.saveProdusenPref()` (rute tetap
+  produsen, metadata supplier bukan produk/stok); `PriceReko.applyOne/
+  applyBulk()` (terapkan estimasi Harga Jual); `StockRekoWidget.
+  applyAll()` (restock reko multi-produk); `WeightBulkWidget.applyOne/
+  applyBulk()` (isi massal `beratPerUnit`, metadata atribut).
+- `cobek-tx-cart.js` — inline "Produsen Baru" saat transaksi keranjang.
+- `cobek-io.js` — bulk import Excel produk & produsen (`saveProdusen`/
+  `saveOrder` wrapper tipis, import massal).
+- Dana Titipan (scope besar, ditunda sejak sesi lalu), `investasi.js`
+  dasar, Aset non-core, wiring listener `AIService.wireEvents()` ke
+  event2 baru (`account.updated`/`finance.updated{kind:zakat}`/
+  `product.updated`) — semua masih backlog dari sesi-sesi sebelumnya.
+
+## Verifikasi
+
+- Test baru `tests/cobek-etalase-aibus-emit-sesi-c.test.js` — 9 test,
+  semua pass.
+- Full suite: **6335/6335 pass** (base 6326 + 9 test baru). Sempat
+  4 gagal di percobaan pertama (2 pre-existing lama + `checkBundleFreshness`
+  krn bundle belum di-rebuild sejak source berubah + 1 turunan
+  bundle-stale) — setelah `node scripts/build.js` dijalankan, kembali ke
+  **2 gagal pre-existing** (`verify-release-ready` end-to-end
+  eslint-override test, `txHTML()` virtual-bill S468d), identik dgn
+  baseline sesi-sesi sebelumnya, 0 regresi baru.
+- `node scripts/build.js`: lolos bersih, versi `1641` → **v1642**.
+- `node scripts/verify-release-ready.js`: LOLOS, 2 override `lint`/
+  `minify` (sandbox tanpa akses npm/esbuild, konsisten).
+
+Detail lengkap: `SESSION-NOTE-sesi-c-lanjutan-shop-cobek-product-updated.md`.
 
 ---
 
-# Changelog — Sesi S668 (Panel "⚙️ Atur" siklus tagihan di kartu Proyeksi Kas Bulan Ini lama, v1410)
+# Changelog — Sesi C-lanjutan (Zakat/PBB, `finance.updated` kind BARU "zakat" + "tagihan" source:"pbb" — ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi C / AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md Prioritas Sedang)
 
-## Task
-Lanjutan S667: kartu "🏦 Proyeksi Saldo Kas" (CashFlowProjectionPresenter,
-#cashflowProjWrap) dan kartu "💰 Proyeksi Kas Bulan Ini" (dashCashProjCard,
-_renderCashProjectionCard) ternyata 2 widget TERPISAH dgn mesin hitung
-berbeda (audit sblm sesi ini). Setelah diskusi, dipilih: TAMBAH panel
-"⚙️ Atur" (siklus tagihan) ke kartu lama, TIDAK digabung jadi 1 tampilan
-(risiko 2 angka mirip nama beda makna tabrakan di 1 kartu).
+## Konteks
 
-## Perubahan
+Lanjutan dari sesi Akun (`account.updated`, v1640) — Prioritas Tinggi
+audit sudah tuntas semua. Sesi ini masuk Prioritas Sedang, dimulai dari
+domain Zakat/PBB (`modules/finance/pajak-pbb-zakat.js`, disebut audit
+sbg "9 titik `save()`") — dipilih duluan krn pola paling sederhana/mirip
+yang sudah terbukti, sesuai rekomendasi sesi sebelumnya.
 
-**`modules/finance/cash-projection.js`**
-- `getMonthlyCashProjection(month,year,opts)` — parameter `opts` BARU &
-  OPSIONAL (`billWindowMode`,`cycleStartDay`), 100% backward-compatible.
-  Tanpa opts / opts tanpa `billWindowMode:'siklus'` -> identik perilaku
-  lama (`getBillOccurrencesInMonth`, bulan kalender). Mode `'siklus'` pakai
-  `billingCycleRange()`+`getBillOccurrencesInRange()` (SUDAH ADA di
-  tx-list-cashflow.js/tagihan-kalender.js, Sesi 93/95) utk jendela
-  **sisaKewajiban/billMonthTotal/billPaidThisPeriod** saja —
-  **proyeksiGaji TETAP selalu bulan kalender** (gaji tidak ada konsep
-  siklus tengah-bulan).
+## Hasil
 
-**`modules/shared/modules-render.js`**
-- `_renderCashProjectionCard()` sekarang baca `CashflowProjSettings`
-  (SAMA `D.profile.cashflowProjSettings` yang dipakai kartu satunya —
-  0 struktur data baru) & teruskan `billWindowMode`/`cycleStartDay` ke
-  `getMonthlyCashProjection()`.
-- Panel inline "⚙️ Atur" baru (`_dashCashProjSettingsToggle`/
-  `_dashCashProjToggleSettings`/`_dashCashProjFillSettingsPanel`/
-  `_dashCashProjSetBillWindowMode`/`_dashCashProjSetCycleDay`/
-  `_dashCashProjResetSettings`/`_dashCashProjRefreshAll`) — cuma expose
-  mode Kalender/Siklus Custom + tanggal mulai siklus (field
-  `months`/`accountId` di settings yang sama TIDAK relevan di kartu ini,
-  sengaja tidak ditampilkan). 0 CSS baru (reuse chip-btn/fg/fl/fi/btn).
+Dari 9 titik `save()` di file ini, HANYA **3** yang aksi diskrit/relevan
+lintas-modul (create/edit/delete data finansial nyata) yang ditambah
+emit:
 
-**`modules/finance/cashflow-projection-presenter.js`**
-- `resetSettings()`/`_applySettings()` sekarang ikut refresh
-  `_renderCashProjectionCard()` — 1 setting dipakai 2 kartu, disinkron
-  2 arah supaya tidak stale kalau diubah dari panel manapun.
+- `PBB.ikatTagihan()` — create tagihan PBB baru & update existing →
+  `finance.updated {kind:"tagihan",action:"create"/"edit",billId,
+  amount,source:"pbb"}` — REPLIKASI persis skema `kind:"tagihan"` yang
+  sudah ada di `tagihan-kalender.js`, field `source:"pbb"` baru supaya
+  konsumen bisa bedakan asal (bill ini dibuat DI LUAR alur Tagihan
+  biasa).
+- `Zakat.catatDibayar()` — create log+transaksi zakat → `finance.
+  updated {kind:"zakat",action:"create",jenis,amount}` — kind BARU
+  "zakat" (belum ada presedennya, payload konsisten skema kind lain).
+- `Zakat.delLog()` — hapus log zakat → `finance.updated {kind:"zakat",
+  action:"delete",deletedId}`.
+
+## SENGAJA TIDAK disentuh (6 titik save() sisa)
+
+Semua dipanggil BERULANG tiap render/kalkulasi (bukan aksi diskrit
+user) — emit di sini beresiko SPAM event tiap kali angka di-render
+ulang, sama kriteria "rendah" di metode audit:
+
+- `PBB.hitung()` — save tarif/njoptkp, dipanggil tiap `PBB.render()`.
+- `Zakat.hitungMaal()` — save `utangJT`, dipanggil tiap render Maal.
+- `RefAI.check()` — save `refCheckedAt` (timestamp cek AI, bukan data
+  finansial).
+- `RefAI.applySelected()` — update referensi harga emas/nisab/SIM
+  (borderline, lebih ke "settings" global daripada transaksi diskrit —
+  ditinjau ulang sesi lain kalau ternyata dibutuhkan).
+- `PPh21.hitung()` — save `pphBrutoBulan`/`pphIuranBulan`, dipanggil
+  tiap render kalkulator PPh21.
 
 ## Test
-- File baru `tests/cash-projection-s667b-siklus.test.js` (6 test):
-  backward-compat literal (tanpa opts vs opts={}), mode bukan-siklus
-  identik lama, mode siklus menangkap tagihan potong-tengah-bulan,
-  cycleStartDay custom, proyeksiGaji tetap kalender, guard aman tanpa
-  billingCycleRange dimuat.
-- `tests/cash-projection-card-s-p2.test.js` & `cash-projection-card-s-q3.test.js`
-  diupdate (ikut extract `_dashCashProjSettingsToggle`, dependency baru
-  `_renderCashProjectionCard`) — 0 assertion lama diubah.
-- `npm test` — **4833/4833 PASS** (4827 lama + 6 baru).
-- `node scripts/verify-window-expose.js` — OK, 77 modul.
 
-## Build
-- `node scripts/build.js s668-cashflow-siklus-legacy-card` — versi
-  1409 -> **1410**, `package.json` 0.85.9 -> 0.85.10, bundle a/b
-  diregenerasi (esbuild tidak terpasang di environment build ini ->
-  tanpa minifikasi, tetap valid).
+- Baru: `tests/pajak-pbb-zakat-aibus-emit-sesi-c.test.js` (5 test, semua
+  pass) — cakupan: PBB.ikatTagihan() create & edit, Zakat.catatDibayar(),
+  Zakat.delLog(), guard AIBus tidak ada.
+- Full suite: **6324/6326 pass** (naik dari 6319/6321 sebelum sesi ini,
+  +5 test baru semua pass), 2 gagal pre-existing tidak terkait (sama
+  persis 2 kegagalan yang sudah dikonfirmasi di sesi Akun sebelumnya).
+- `node scripts/build.js`: **lolos bersih** (0 version-marker basi kali
+  ini — pelajaran dari sesi F1/Akun sebelumnya, build langsung
+  dijalankan sebelum lupa), versi naik `1640` → **v1641**.
+- `node scripts/verify-release-ready.js`: **LOLOS** (2 override manual
+  `lint`/`minify` — sandbox tanpa akses npm/esbuild, konsisten sesi2
+  sebelumnya).
 
-
-# Changelog — Sesi S667 (Cash Flow Projection: siklus tagihan tengah-bulan + panel Atur, v1409)
-
-## Task
-Audit + rilis resmi utk fitur "Cash Flow Projection — Siklus Tagihan &
-Settings" (CashflowProjSettings, billingCycleRange(),
-computeCashflowForecast(opts), panel "⚙️ Atur" di
-CashFlowProjectionPresenter) yang kodenya sudah ada di source tapi
-BELUM PERNAH melewati siklus build resmi (versi app tidak pernah
-di-bump, CHANGELOG tidak pernah ditulis utk fitur ini).
-
-## Temuan Audit
-- Source code fitur (cashflow-projection-settings.js,
-  billingCycleRange()/computeCashflowForecast(opts) di
-  tx-list-cashflow.js, 3 kartu navigasi + panel Atur di
-  cashflow-projection-presenter.js, entry build.js) SUDAH lengkap &
-  100% backward-compatible — diverifikasi via 4.827 test (`npm test`),
-  semua PASS.
-- package.json version & CHANGELOG.md TIDAK PERNAH ter-update utk
-  fitur ini sebelumnya (versi app masih tertahan di
-  s666-networth-renderbersih-ssot-unify / v1408).
-- Sesi ini murni menjalankan siklus build resmi (bump versi,
-  regenerasi bundle, sinkronisasi ?v= & cache) yang seharusnya sudah
-  dijalankan sebelumnya, TANPA mengubah logic apa pun.
-
-## Fitur (ringkasan)
-- `CashflowProjSettings` (get/set/reset/isCustomized) — preferensi
-  user (rentang bulan, filter akun, mode jendela tagihan,
-  cycleStartDay) disimpan di `D.profile.cashflowProjSettings`.
-- `billingCycleRange(refDate, cycleStartDay)` — siklus tagihan yang
-  potong di tengah bulan (mis. kartu kredit/listrik pascabayar),
-  default mulai tgl 16, bisa diatur 1–28.
-- `computeCashflowForecast(opts)` — parameter opsional baru
-  (months/accountId/billWindowMode/cycleStartDay), 100%
-  backward-compatible dgn pemanggilan lama tanpa argumen.
-- 3 kartu Proyeksi Saldo Kas sekarang klik ke tujuan berbeda
-  (income/expense -> tab Transaksi terfilter, bills -> tab Tagihan)
-  + panel inline "⚙️ Atur" utk ubah settings di atas.
-
-## Build
-- `npm test` — 4.827/4.827 PASS.
-- `node scripts/build.js s667-cashflow-siklus-tagihan-settings` —
-  versi app 1408 -> 1409, bundle a/b diregenerasi (esbuild tidak
-  terpasang di environment build ini -> bundle TANPA minifikasi,
-  tetap valid/aman, ukuran lebih besar dari versi terminifikasi).
-- File yang berubah: app-bundle-a.min.js, app-bundle-b.min.js,
-  app_production.html, index.html, sw.js,
-  modules/shared/{modals.js, modules-render.js, modules-calc.js,
-  features-helpers-global-security.js}, chat-action-handlers.js,
-  docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md.
-
-
-# Changelog — Sesi S660 (DP + Piutang di applyTxShopSaleFromTx, v1393)
-
-## Task
-Poin 1 dari 3 permintaan user: tambah field DP + logic piutang ke
-`applyTxShopSaleFromTx()` (modules/shop/cobek-tx-cart.js) — jalur
-penjualan Shop yang dipicu dari centang "Catat juga sbg Penjualan Shop"
-di modal Transaksi (txModal), BUKAN dari modal Order (orderModal) yang
-sudah lebih dulu punya fitur ini (kw-shop-dp, Order._saveInner() di
-cobek-order.js).
-
-## Fix (additive)
-- Field baru #txShopSaleDP ("Uang Diterima / DP (Rp)") ditambahkan ke
-  panel txShopSalePanel di modules/shared/modals.js, pola & copy sama
-  persis dgn #oDP di orderModal.
-- applyTxShopSaleFromTx() sekarang reuse PERSIS logic kw-shop-dp milik
-  Order._saveInner(): DP kosong = lunas penuh (0 regresi perilaku lama);
-  DP < Total -> sisa dicatat/disinkron sbg D.piutang (create/update/hapus
-  mengikuti pola existingPiutangId yang sama), linked via
-  shopRecord.piutangLinkId di D.cobek. Transaksi utama (tx.amount) di-set
-  ke DP (bukan Total) supaya saldo akun konsisten dgn uang yang benar2
-  diterima — barang tetap dianggap keluar/terjual penuh dari stok
-  (recordShopSale tidak berubah).
-- 0 perubahan pada Order._saveInner()/orderModal (referensi, tidak disentuh).
-
-## Test & Build
-4718/4718 test lulus (0 regresi), build v1393 sukses, sintaks bundle valid.
-
-
-# Changelog — Sesi S648 (Fix bug klik nama holding di Dana Titipan -> TypeError, v1382)
-
-## Bug report
-User lapor via screenshot: klik tombol di kartu owner Dana Titipan
-("mas sihab"/"Aku") memunculkan toast "Terjadi error saat memproses
-tombol. Cek console." Diagnosis awal (audit statis + simulasi Node
-dgn data dummy) tidak berhasil mereproduksi. Dipasang patch DEBUG
-sementara (toast menampilkan pesan+lokasi error asli) — user klik lagi
-tombol yang error, dapat pesan pasti: `TypeError: assetId.indexOf is
-not a function | at Object._routeAssetPorsi`.
-
-## Root cause
-`_routeAssetPorsi(assetId)` (modules/finance/dana-titipan-portfolio-render.js)
-memanggil `assetId.indexOf('h:')` dengan asumsi `assetId` selalu string.
-Jalur klik-nama-langsung `openAssetPorsiDirect()` (Sesi 631) mengoper
-`hh.linkedAssetId` MENTAH dari `D.assets[].id`/`D.investments[].id` —
-id-id itu di app ini berupa ANGKA (`uid()`-based), bukan string. `Number`
-tidak punya method `.indexOf` -> throw. Jalur dropdown lama
-(`openAssetPorsi()`, baca `<select>.value`) tidak kena krn value DOM
-`<select>` selalu string.
-
-## Fix (additive, 1 titik)
-`_routeAssetPorsi()` sekarang koersi `String(assetId)` sekali di titik
-masuk (dipakai kedua caller: `openAssetPorsi()` & `openAssetPorsiDirect()`,
-0 perubahan di caller). 2 test regresi baru (assetId angka murni & assetId
-angka dgn prefix `h:`), 4630/4630 test lulus 0 regresi, build+
-verify-bundle-freshness+verify-window-expose semua OK.
-
-
-
-## Audit
-Bukan laporan bug user — audit keamanan proaktif atas `modules/shared/keamanan-pin.js`.
-
-## Temuan
-Salt yang dipakai `hashPin()` sebelumnya adalah string TETAP
-(`'kwPinSalt_v1:'`) yang sama persis di semua instalasi aplikasi. Karena
-source code app ini terbuka (di-hosting di repo GitHub), salt itu bukan
-rahasia. Efeknya: siapa pun bisa precompute SATU tabel hash untuk 10.000
-kombinasi PIN 4-digit (dengan salt tetap itu) SEKALI SAJA, lalu memakai
-tabel yang sama untuk membalik hash `kw_pin` curian dari instalasi mana pun
-dalam hitungan mikrodetik — salting jadi tidak memberi proteksi tambahan
-sama sekali dibanding hash polos.
-
-## Fix (additive, backward-compatible)
-1. `modules/shared/keamanan-pin.js` — tiap instalasi sekarang generate
-   salt acak 16-byte sendiri (`kw_pin_salt` di localStorage, dibuat sesaat
-   sebelum dipakai pertama kali via `_getOrCreatePinSalt()`), dipakai
-   `hashPin()` untuk semua PIN baru/ganti PIN.
-2. Migrasi otomatis: `checkPin()` sekarang fallback ke skema lama
-   (`hashPinLegacyFixedSalt()`, salt tetap) SATU KALI kalau hash skema baru
-   tidak cocok — kalau cocok, PIN tetap dianggap benar (user TIDAK perlu
-   reset PIN) & hash langsung ditulis ulang pakai skema baru, sehingga
-   instalasi lama otomatis "naik kelas" begitu user login sekali.
-3. `disablePinFlow()` juga menghapus `kw_pin_salt` (kebersihan, konsisten
-   dengan penghapusan `kw_pin` & data terkait lainnya).
-- CATATAN JUJUR: ini tetap bukan pengganti PIN yang lebih panjang/kuat —
-  10.000 kombinasi tetap brute-force-able dalam hitungan detik begitu
-  penyerang tahu salt spesifik korban (yang tersimpan di localStorage yang
-  sama). Perbaikan ini menutup celah "satu tabel pracetak dipakai ulang
-  lintas semua instalasi", bukan brute-force per-korban itu sendiri
-  (sudah dimitigasi terpisah oleh lockout percobaan PIN yang sudah ada).
-- Version otomatis naik v1368 → **v1369** (`scripts/build.js`).
-- Test: `node --test tests/*.test.js` — **4505/4505 lulus, 0 gagal**.
+Detail lengkap: `SESSION-NOTE-sesi-c-lanjutan-zakat-pbb.md`.
 
 ---
 
-# Changelog — Sesi S609 (Dana Titipan: fix modal "Catat Pengeluaran" tidak sync deductionOwnerId & tidak punya field Akun, v1342)
-
-## Laporan user
-Dropdown "Pemilik Sumber Potongan" tidak pernah muncul saat mencatat
-pengeluaran lewat modal "Catat Pengeluaran Dana Titipan", dan transaksi yang
-dicatat lewat modal itu tidak sync ke badge "👤 Ditanggung", kartu "Porsi
-per Pemilik", dan "Estimasi dari Transaksi Akun" di dashboard Dana Titipan.
-
-## Root cause
-Modal Dana Titipan (`TitipanExpenseFlow`/`TitipanExpenseUI`, S521) adalah
-alur transaksi terpisah dari form Transaksi biasa (`txModal`):
-1. Tidak punya field Akun sama sekali — `accountId` di-hardcode ke
-   `D.accounts[0]`, jadi tidak ada `#txAcc`-equivalent yang bisa memicu
-   dropdown "Pemilik Sumber Potongan" (field itu murni milik `txModal`).
-2. Tidak pernah mengisi `deductionOwnerId` — field yang sejak S574/S608
-   dibaca `resolveTxOwnerAssignment()` (filter-laporan.js) sebagai sumber
-   kebenaran badge/kartu/estimasi Dana Titipan di atas. Modal ini hanya
-   menulis `titipanLinkId` (field terpisah, tidak dibaca konsumen tsb),
-   jadi transaksi lewat sini selalu jatuh ke fallback "owner pertama" di
-   semua tampilan yang membaca `deductionOwnerId`.
-
-## Fix (additive, 0 logic lama diubah)
-1. `modules/shared/modals.js` — tambah dropdown "Bayar dari Akun"
-   (`#titipanExpenseAcc`) ke `titipanExpenseModal`.
-2. `modules/finance/titipan-expense-ui.js` — `open()` mengisi & reset
-   dropdown akun ke akun pertama (pola sama `billAcc`,
-   tagihan-kalender.js); `save()` membaca `accountId` dari dropdown itu
-   (fallback ke akun pertama dipertahankan hanya untuk elemen yang belum
-   sempat terisi).
-3. `modules/finance/titipan-expense-flow.js` — `submit()` sekarang juga
-   mengisi `tx.deductionOwnerId = row.ownerId` di tiap transaksi yang
-   dibuat (1 baris split = 1 owner yang sudah tervalidasi lewat
-   `resolveOwner()`/`validate()`, aman diisi langsung tanpa validasi
-   ulang terhadap owners akun).
-4. Test baru/diperluas: `tests/s521-titipan-expense-flow.test.js` (assert
-   `deductionOwnerId` di test 1 & 2, konsisten dgn `titipanLinkId` di tiap
-   baris split) dan `tests/s521-titipan-expense-ui.test.js` (assert
-   `deductionOwnerId` di test 7 + test baru 7b/7c untuk dropdown akun).
-- Version otomatis naik v1341 → **v1342** (`scripts/build.js`).
-- Test: `node --test tests/*.test.js` — **4280/4280 lulus, 0 gagal**.
-- `verify-release-ready.js`: lolos (gate lint/minify di-override manual —
-  sandbox tanpa akses npm/jaringan, eslint & esbuild tidak terpasang;
-  gate html-sync & version-sync lolos bersih).
-
-# Changelog — Sesi S591 (Dana Titipan: dedup holding "Majoris" 2x + tombol Atur Porsi ganda, v1319)
+# Changelog — Sesi C-lanjutan (Akun, `account.updated` — ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi C / AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md Prioritas Tinggi #4)
 
 ## Konteks
-Laporan user: di kartu Dana Titipan (tab Uang), 1 aset yang sama (mis.
-"🏦 Majoris") muncul lebih dari 1 kali di daftar holding untuk owner yang
-sama, dengan persentase porsi identik di tiap baris — dan tiap baris punya
-tombol "⚖️ Atur Porsi" sendiri, terpisah dari dropdown "Pilih Aset" +
-tombol "⚖️ Atur Porsi Aset" yang sudah ada di bawahnya.
+
+Instruksi user: Sesi F (Foto di Riwayat Servis) diturunkan prioritasnya
+("tidak terlalu penting"), lanjut ke sesi berikutnya. Re-cek
+`AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md`: dari daftar Prioritas Tinggi
+(delTx, 4 jenis transaksi khusus, piutang-utang, tagihan-kalender, Akun),
+SEMUA sudah emit di sesi-sesi sebelumnya KECUALI **Akun** —
+`modules/finance/akun.js` masih 0% `AIBus.emit()`. Ini jadi fokus tunggal
+sesi ini (item Prioritas Tinggi TERAKHIR yang tersisa).
+
+Baseline: overlay `app-main__76_.zip` (v1638) + `PATCH-v1639-sesi-E6-
+actiontypefilter.zip` (yang ternyata sudah kumulatif s.d. Sesi E1-E6 +
+F1) — dikonfirmasi 0 konflik/overlap, sesuai metode rekonsiliasi sesi
+sebelumnya (`SESSION-NOTE-rekonsiliasi-vehicle-databaseapi-plus-sesi-c-
+finance.md`).
 
 ## Hasil
-- **Root cause**: `DanaTitipanPortfolioAPI.build()`
-  (`modules/finance/dana-titipan-portfolio-presenter.js`) push 1 baris
-  holding PER BARIS `owners[]` hasil `_assetSplits(a)` tanpa dedup — kalau
-  1 aset punya lebih dari 1 baris pemilik dengan `ownerId` yang sama, aset
-  itu tampil sebagai beberapa baris terpisah.
-- **Fix**:
-  1. Dedup per (aset, owner) — baris `owners[]` diagregasi dulu per
-     `ownerId` (jumlah porsi/allocatedPrincipal/currentValue/gain) sebelum
-     push ke `bucket.holdings`; total per-owner tidak berubah.
-  2. Tombol "⚖️ Atur Porsi" per-baris holding dihapus dari
-     `_holdingRowHtml()` — pengaturan porsi sekarang hanya lewat dropdown
-     "Pilih Aset" + tombol "⚖️ Atur Porsi Aset" per kartu owner.
-- `modules/finance/dana-titipan-portfolio-presenter.js` — satu-satunya
-  file source produksi yang disentuh sesi ini.
-- Version otomatis naik v1318 → **v1319** (`scripts/bump-version.sh`),
-  disusulkan di sesi ini bareng entri changelog ini (patch asli S591
-  belum menyertakan bump versi/changelog).
-- `verify-release-ready.js` Gate version-sync (S588): lolos di v1319.
-- Test: `node --test tests/*.test.js` — 386/387 lulus di scope
-  dana-titipan/portfolio saat S591 dikirim (1 kegagalan pre-existing tidak
-  terkait, `s461-cross-source-titipan-total-regression.test.js`); full
-  suite belum dijalankan ulang di sesi susulan ini.
 
-Detail lengkap: `s591-SESSION-NOTE.md`.
+- **Nama event baru**: `account.updated` (belum ada presedennya —
+  keputusan diambil sesi ini, bukan ditunda lagi ke user, karena
+  polanya sudah 100% mengikuti presedon `vehicle.updated`/
+  `asset.updated`: payload `{kind:"account",action,...}`).
+- `modules/finance/akun.js` — 4 titik emit baru (replikasi pola
+  `vehicle-core.js` persis):
+  - `_saveAccInner()` jalur EDIT: `{action:"edit",accountId}`
+  - `_saveAccInner()` jalur BUAT BARU: `{action:"create",accountId}`
+  - `delAcc()`: `{action:"delete",deletedId,migratedToAccountId}`
+  - `AccOwners.save()` (edit porsi kepemilikan akun): `{action:"edit-
+    owners",accountId}` — pola sama 2 titik edit owner di
+    `aset-owners.js` (`asset.updated`)
+- Semua 4 titik pakai guard `typeof AIBus!=="undefined"` konsisten
+  pola lama (tidak throw kalau AIBus belum dimuat).
+- **Sengaja TIDAK disentuh** sesi ini: `quickToggleInclude()` (toggle
+  "ikut dihitung saldo" — murni setting tampilan, relevansi rendah
+  utk konsumen event, sama penilaian "rendah" di metode audit).
 
-# Changelog — Sesi S590 (Fix: tombol Hapus menu aksi aset ketutup nav bawah, v1318)
+## Yang masih tersisa dari audit (Prioritas Sedang, backlog sesi lain)
+
+Dana Titipan (4 file, kandidat `titipan.updated`), Shop/Cobek
+produk-stok, Zakat/PBB (9 titik `save()`), `investasi.js` dasar, Aset
+non-core (`aset-misc.js`, `aset-emas-impor.js`, `aset-reports.js`) —
+BELUM disentuh, semua source file-nya SEKARANG tersedia (ikut
+`app-main__76_.zip`), jadi sesi berikutnya bisa langsung mulai tanpa
+menunggu upload tambahan.
+
+## Test
+
+- Baru: `tests/akun-crud-aibus-account-updated-sesi-c.test.js` (5 test,
+  semua pass) — cakupan: create, edit, delete, edit-owners, guard
+  AIBus tidak ada.
+- Full suite: **6319/6321 pass** (naik dari 6314/6316 sebelum sesi ini,
+  +5 test baru semua pass), 2 gagal pre-existing tidak terkait
+  (verify-release-ready eslint-override end-to-end, txHTML virtual
+  bill S468d — dikonfirmasi sama sebelum & sesudah sesi ini, bukan
+  regresi baru).
+- `node scripts/build.js`: **lolos**, versi naik `1639` → **v1640**.
+  Sempat menemukan 5 konstanta versi basi peninggalan Sesi F1
+  (`MODULE_RENDER_VERSION`/`MODAL_VERSION`/`MODULE_CALC_VERSION`/
+  `MODULE_FEATURES_VERSION`/`PRODUCTION_BUILD_SYNCED_VERSION` masih
+  `s-vehiclemodel-storage-sync-followup-1655`, gagal ke-replace
+  otomatis krn sudah menyimpang) — diperbaiki manual sebelum build
+  ulang, gate `verifyVersionConstantsSynced()` sekarang lolos bersih.
+- `node scripts/verify-release-ready.js`: **LOLOS** (2 override manual
+  `lint`/`minify` — sandbox tanpa akses npm/esbuild, sama seperti
+  sesi-sesi sebelumnya, dicatat di `docs/RELEASE-GATE-LOG.md`).
+
+Detail lengkap: `SESSION-NOTE-sesi-c-lanjutan-akun-account-updated.md`.
+
+---
+
+# Changelog — Sesi F1 (Foto di Riwayat Servis, LANGKAH PERTAMA -- ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi F)
 
 ## Konteks
-Laporan user (live, dikonfirmasi bukan cuma recent-apps Android): tombol
-"🗑 Hapus" di modal aksi aset ketutup nav bawah walau modal sudah terbuka,
-tetap terjadi setelah patch v1316 (cache-bump) di-upload & di-refresh.
+
+Sesi F (Foto di Service History) independen dari Sesi A-E (app-layer murni,
+field foto di `D.servisLogs`, tidak bergantung Database API/Vehicle Model
+relasional). Dipecah jadi beberapa langkah kecil sesuai instruksi nm --
+sesi ini HANYA data model + capture UI + persist (simpan/muat), TIDAK
+termasuk thumbnail/badge di daftar Riwayat Servis (backlog langkah
+berikutnya).
 
 ## Hasil
-- **Root cause**: `body.has-open-modal .nav { display: none; }` (styles.css)
-  tanpa `!important` — kalah lawan inline style `mn.style.display='flex'`
-  yang di-set `showMain()` sekali saat app dibuka. Class `has-open-modal`
-  sendiri toggle BENAR, tapi efek visualnya kalah, jadi nav tidak pernah
-  benar-benar hilang lagi sejak app pertama dibuka — berpotensi
-  mempengaruhi semua modal/qs-sheet yang pakai mekanisme ini, tidak cuma
-  menu aksi aset.
-- **Fix**: tambah `!important` ke rule itu. `showMain()`/inline style-nya
-  tidak disentuh sama sekali (0 risiko regresi ke titik lain).
-- `styles.css` — satu-satunya file source produksi yang disentuh sesi ini.
-- `tests/nav-hidden-modal-inline-style-override-s590.test.js` (**baru**, 3
-  test, semua pass).
-- Version otomatis naik v1317 → **v1318** (`scripts/bump-version.sh`).
-- Full `npm test`: **4147 test, 4056 pass, 91 fail** (baseline sebelum sesi
-  ini: 4144/4053/91 — identik), **0 regresi baru**.
-- `verify-release-ready.js` Gate version-sync (S588): **lolos** di v1318.
 
-Detail lengkap: `s590-SESSION-NOTE.md`.
+- `car-notes.js` (`Servis` object): state baru `_photoDraft` (array
+  dataURL string, in-memory selama modal terbuka) + 4 method baru --
+  `pickPhoto()` (trigger file input), `addPhoto(event)` (FileReader ->
+  dataURL, guard maks 5 foto & maks 5MB/foto, skip file bukan image),
+  `removePhoto(idx)`, `_renderPhotoThumbs()` (render thumbnail 64x64 +
+  tombol hapus per foto).
+- `Servis.openModal()`: reset `_photoDraft` ke `[]` utk tambah baru, atau
+  `(s.foto||[]).slice()` utk edit (fallback aman utk entry lama tanpa
+  field `foto`).
+- `Servis._saveInner()`: `foto: Servis._photoDraft.slice()` ditambahkan ke
+  object yang di-push (jalur BUAT BARU) maupun `Object.assign()` (jalur
+  EDIT) -- field opsional, backward-compatible, 0 migrasi data perlu.
+- `modules/shared/modals.js` (`servisModal` HTML): field baru "Foto
+  (opsional)" disisipkan antara Catatan & Bayar dari Akun -- input file
+  hidden (`servisPhotoInput`, accept image/*) + tombol "📷 Tambah Foto" +
+  div thumbnail (`servisPhotoThumbs`), pola sama persis
+  `catPhotoInput`/`catPhotoThumbs` yang sudah ada di `catalogModal`
+  (`VehicleCatalogUI.addPhoto`/`pickPhoto`) -- 0 pola baru diciptakan.
+- `modules/shared/features-helpers-global-security.js`: `APP_BUILD_VERSION`
+  dibump ke `s-servis-foto-riwayat-sesi-f1-1656`.
 
-# Changelog — Sesi S588 (Gate 4 "version-sync" di verify-release-ready.js)
+## Sengaja TIDAK dikerjakan sesi ini
 
-## Konteks
-Menutup celah yang menyebabkan bug cache basi sebelumnya (?v=1314 lupa
-dinaikkan bareng CACHE_NAME sw.js — lihat PATCH-README-v1316-cache-bump.md):
-`bump-version.sh` sudah bisa menaikkan versi dengan benar, tapi belum ada
-gate yang BLOCK pembuatan ZIP kalau ternyata versi masih tidak sinkron.
+- Thumbnail/badge foto di daftar Riwayat Servis (`Servis.renderList()`) --
+  langkah berikutnya Sesi F.
+- Kompresi gambar sebelum jadi dataURL (guard kasar 5MB/foto dipakai
+  sementara).
+- Lightbox/viewer utk lihat foto ukuran penuh.
 
-## Hasil
-- Gate 4 baru "version-sync" di `scripts/verify-release-ready.js`: BLOCK
-  ZIP (tanpa override) kalau `?v=N` di `index.html` tidak seragam, atau
-  tidak sama dengan `CACHE_NAME` di `sw.js`.
-- `tests/verify-release-ready-s575-version-sync.test.js` (**baru**, 4 test,
-  semua pass).
-- `scripts/verify-release-ready.js` — satu-satunya file source produksi
-  yang disentuh sesi ini.
-- Full `npm test`: **4144 test, 4053 pass, 91 fail** (baseline tanpa test
-  baru: 4140/4049/91 — identik), **0 regresi baru**.
+## Test
 
-Detail lengkap: `s588-SESSION-NOTE.md`.
+- Baru: `tests/servis-foto-riwayat-sesi-f1.test.js` (6 test, semua pass) --
+  cakupan: default `_photoDraft` kosong, persist foto jalur buat baru
+  (dengan & tanpa foto), persist foto jalur edit (menimpa foto lama),
+  fallback aman entry lama tanpa field `foto`, `removePhoto()` menghapus
+  index yang benar.
+- Full suite (delta zip, `node --test tests/*.test.js`): **281/286 pass**
+  (naik dari 275/280 sebelum sesi ini, +6 test baru), 5 gagal
+  pre-existing tidak terkait (`ownership-engine.js` tidak ada di delta
+  zip ini -- sama persis E1-E6/A-C1 sebelumnya, dikonfirmasi bukan
+  regresi baru).
+- `node --check` pass utk `car-notes.js` dan `modules/shared/modals.js`.
+- **Belum dijalankan** sesi ini (di luar cakupan sandbox delta zip):
+  `node scripts/build.js` (rebuild `app-bundle-a.min.js`/
+  `app-bundle-b.min.js` + sinkron seluruh version marker `?v=` di
+  `index.html`) -- delta zip ini tidak membawa seluruh file GROUP_A
+  (mis. `ownership-engine.js` dkk), jadi build penuh tidak aman
+  dijalankan di sini. Perlu dijalankan nm di checkout lengkap sebelum
+  deploy; `APP_BUILD_VERSION` sudah dibump manual sbg penanda minimal.
 
-# Changelog — Sesi S581 (DL-Next-8: Data Health Check Other-Account Owner Source Fix, v1312)
+Detail lengkap: `SESSION-NOTE-sesi-f1-foto-riwayat-servis.md`.
 
-## Konteks
-Implementasi **DL-Next-8** dari `docs/DESIGN-LOCK-DL-NEXT-8-DATA-HEALTH-
-CHECK-OTHER-ACC-SOURCE.md` (ref `docs/AUDIT-13-OWNER-RESOLVER-POST-DL-
-NEXT-7.md`). 1 sesi, 1 fokus: ganti basis cabang `existsOnOtherAcc` di
-`runDataHealthCheck()`.
+---
 
-## Hasil
-- **Bug diperbaiki**: kategorisasi salah di Data Health Check untuk
-  transaksi yang `deductionOwnerId`-nya valid HANYA lewat aset multi-
-  owner tertaut di AKUN LAIN — sebelumnya dikategorikan "tidak ditemukan
-  sama sekali" (kasus A), seharusnya "ada, tapi di akun lain" (kasus C).
-  Level `warn` tidak berubah di kedua kasus (bukan false-negative), murni
-  perbaikan judul/pesan.
-- `data-health-check.js` sekarang pakai `resolveOwnerDefaultForAccount()`
-  per akun lain (sumber sama dgn cabang utama DL-Next-7), fallback ke
-  `a.owners[]` lama kalau fungsi belum termuat.
-- `data-health-check.js` — **satu-satunya** file source produksi yang
-  disentuh sesi ini.
-- `tests/data-health-check-other-acc-owner-source-s581.test.js`
-  (**baru**, 4 test — regresi utama AUDIT-13 dikonfirmasi fix).
-- Full `npm test`: **4081 test, 4072 pass, 9 fail** (naik dari 4077/4068/9,
-  +4 test baru semua pass) — 9 kegagalan identik pre-existing, **0
-  regresi baru**.
-
-Detail lengkap: `docs/FIX-v1310-to-v1312-s581-data-health-check-other-acc-owner-source-fix.md`.
