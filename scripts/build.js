@@ -561,7 +561,22 @@ const GROUP_B = [
   // sparepart-servis.js (dependency: fungsi-fungsi di sparepart-servis-b.js manggil
   // fungsi/const dari sparepart-servis.js). Murni top-level function/const, tidak
   // di-mixin balik ke sparepart-servis.js.
+  // Database API Fase 1, Sesi 1/N: modules/engine/database-api.js HARUS
+  // dimuat SEBELUM sparepart-servis-b.js -- findTorsiDb()/findVehicleSpec()
+  // di file itu sekarang baca dari DatabaseAPI.vehicle kalau tersedia
+  // (fallback ke TORSI_DB/VEHICLE_SPEC_DB literal kalau belum termuat,
+  // mis. test terisolasi yg cuma load sparepart-servis-b.js sendirian).
+  'modules/engine/database-api.js',
   'modules/vehicle/sparepart-servis-b.js',
+  // Servis Checklist, Sesi 1A (BREAKDOWN-SESI-RINGAN-CHECKLIST-UI-30-ITEM.md):
+  // SERVICE_CHECKLIST_GROUPS — murni konstanta data (30 item/13 grup), 0
+  // state/UI di sesi ini. Ditaruh SETELAH sparepart-servis-b.js sesuai
+  // RENCANA-SESI-SERVICE-CHECKLIST.md §4 Sesi 1 (file ini nantinya, di
+  // Sesi 1B/1C, butuh resolveServisCatForVehicle()/servisLogMatchesCat()
+  // dari sparepart-servis.js sudah termuat lebih dulu untuk sinkron
+  // linkCat — belum dipakai di Sesi 1A, tapi posisinya disiapkan sekali
+  // jalan supaya tidak perlu geser urutan lagi di sesi berikutnya).
+  'modules/vehicle/servis-checklist.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof
