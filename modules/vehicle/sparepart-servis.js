@@ -73,6 +73,133 @@ motor:['Oli Mesin','Filter Oli','Oli Gardan','Busi','Filter Udara','Kampas Rem',
 mobil:['Oli Mesin','Filter Oli','Oli Transmisi','Busi','Filter Udara','Filter AC','Kampas Rem','Minyak Rem','Aki','Coolant','Timing Belt','Ban Depan'],
 listrik:['Kampas Rem','Minyak Rem','Aki','Ban Depan'],
 };
+// GENERIC_GROUP_BY_NAME/resolveCatGroup() — FITUR BARU (audit sesi ini,
+// permintaan user: kartu "🔔 Pengingat Servis per Part" & rekomendasi
+// kategori masih FLAT walau data pabrikan TORSI_DB sudah terkategori 8 grup
+// komponen — lihat audit sebelumnya). Label grup di map statis ini dipetakan
+// SAMA PERSIS dgn nama kategori TORSI_DB (cat.cat) biar konsisten dgn tab
+// Torsi — HANYA dipakai sbg fallback terakhir utk part GENERIC_RECOMMEND_NAMES
+// yg TIDAK match TORSI_DB kendaraan aktif (mis. kendaraan yg belum py entri
+// TORSI_DB sama sekali). Bukan data pabrikan, cuma pengelompokan estimasi.
+// _genericGroupByName()/_genericRecommendNames() -- wiring literal tersisa
+// (roadmap §7 baris 91, lanjutan Sesi B v1650): pola guard SAMA PERSIS
+// _allTorsiEntries() (sparepart-servis-b.js) -- baca DatabaseAPI.master
+// kalau termuat, fallback ke literal di bawah kalau DatabaseAPI/namespace
+// master belum ada (mis. test terisolasi yg cuma load file ini sendirian).
+// CATATAN URUTAN MUAT: di scripts/build.js, database-api.js dimuat SETELAH
+// file ini (tepat sebelum sparepart-servis-b.js) -- kebalikan urutan
+// _allTorsiEntries(). Ini AMAN krn 2 fungsi ini (sama seperti
+// collectKnownGroups()/resolveCatGroup() yg memanggilnya) cuma DIPANGGIL
+// saat runtime (buka modal/render kartu), bukan dieksekusi top-level saat
+// file ini pertama dimuat -- jadi DatabaseAPI (var global) sudah pasti
+// terdaftar duluan di scope global begitu app selesai boot, terlepas dari
+// urutan deklarasi file. Konstanta literal
+// GENERIC_GROUP_BY_NAME/GENERIC_RECOMMEND_NAMES di bawah TETAP ADA sbg
+// fallback -- pola sama VEHICLE_DB_RECORDS, TIDAK dihapus.
+function _genericGroupByName(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getGenericGroupByName==='function'){
+return DatabaseAPI.master.getGenericGroupByName();
+}
+return GENERIC_GROUP_BY_NAME;
+}
+function _genericRecommendNames(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getGenericRecommendNames==='function'){
+return DatabaseAPI.master.getGenericRecommendNames();
+}
+return GENERIC_RECOMMEND_NAMES;
+}
+const GENERIC_GROUP_BY_NAME={
+'oli mesin':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter oli':{group:'Perawatan Berkala',icon:'🛠️'},
+'oli gardan':{group:'Perawatan Berkala',icon:'🛠️'},
+'oli transmisi':{group:'Perawatan Berkala',icon:'🛠️'},
+'busi':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter udara':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter ac':{group:'Perawatan Berkala',icon:'🛠️'},
+'v-belt cvt':{group:'Perawatan Berkala',icon:'🛠️'},
+'minyak rem':{group:'Perawatan Berkala',icon:'🛠️'},
+'coolant':{group:'Perawatan Berkala',icon:'🛠️'},
+'roller cvt':{group:'Mesin — Kopling/Pulley/Final Drive',icon:'🔗'},
+'timing belt':{group:'Mesin — Cylinder Head/Valve',icon:'⚙️'},
+'kampas rem':{group:'Sistem Rem',icon:'🛑'},
+'aki':{group:'Kelistrikan & Panel',icon:'🔌'},
+'ban depan':{group:'Roda Depan/Suspensi/Kemudi',icon:'🛞'},
+};
+// resolveCatGroup(cat,vehicleId) — SoT tunggal utk cari "kategori induk" (grup
+// komponen) sebuah kategori sparepart, dipakai Servis.renderReminder()
+// (car-notes.js) utk render Pengingat Servis per grup (bukan flat). Prioritas:
+// (1) cat.group tersimpan langsung (kategori baru hasil recommendCategories(),
+// lihat di bawah), (2) match nama ke item TORSI_DB kendaraan aktif (data
+// pabrikan asli, paling akurat — pola pencocokan sama servisLogMatchesCat()),
+// (3) GENERIC_GROUP_BY_NAME (estimasi, di atas), (4) 'Lainnya' kalau semua
+// gagal. 100% backward-compatible — kategori LAMA yg belum py field `group`
+// tetap kegrup otomatis lewat (2)/(3) tanpa migrasi data apa pun.
+function resolveCatGroup(cat,vehicleId){
+if(!cat)return{group:'Lainnya',icon:'📦'};
+if(cat.group)return{group:cat.group,icon:cat.groupIcon||'📦'};
+const n=(cat.name||'').trim().toLowerCase();
+if(n&&vehicleId&&typeof findTorsiDb==='function'&&typeof D!=='undefined'&&D.vehicles){
+const veh=D.vehicles.find(v=>v.id===vehicleId);
+const db=veh?findTorsiDb(veh.name,veh.modelId):null;
+if(db&&Array.isArray(db.cats)){
+for(const catGroup of db.cats){
+const hit=(catGroup.items||[]).some(it=>{
+const itn=(it.name||'').trim().toLowerCase();
+if(!itn)return false;
+return itn===n||itn.includes(n)||(n.includes(itn)&&itn.length>=4);
+});
+if(hit)return{group:catGroup.cat,icon:catGroup.icon||'📦'};
+}
+}
+}
+const gmap=_genericGroupByName();
+if(n&&gmap[n])return gmap[n];
+return{group:'Lainnya',icon:'📦'};
+}
+// collectKnownGroups()/iconForGroupName() -- FITUR BARU sesi v1642 (Sesi 1 dari
+// 2, backlog "override grup manual" sejak v1638): kumpulkan daftar SEMUA nama
+// grup komponen yg "dikenal" aplikasi -- gabungan unik dari cat.cat di setiap
+// entri TORSI_DB (semua kendaraan, bukan cuma kendaraan aktif, supaya dropdown
+// override tetap konsisten walau user lagi buka kategori kendaraan lain) +
+// GENERIC_GROUP_BY_NAME (fallback estimasi). Dipakai Sparepart.populateGroupSelect()
+// utk isi dropdown "Grup Komponen" di modal Kategori Sparepart -- 0 rumus
+// grouping baru, murni pengumpulan nama grup yg SUDAH ADA.
+// Database API Fase 1 lanjutan (sesi v1645): sumber entri TORSI_DB sekarang
+// lewat _allTorsiEntries() (modules/vehicle/sparepart-servis-b.js -- fungsi
+// itu sendiri sudah baca DatabaseAPI.vehicle.getAll() kalau termuat, fallback
+// literal TORSI_DB kalau belum), BUKAN baca TORSI_DB literal langsung lagi.
+// _allTorsiEntries() dideklarasikan di sparepart-servis-b.js yg dimuat
+// SETELAH file ini (lihat urutan resmi di scripts/build.js) -- aman krn
+// collectKnownGroups() cuma DIPANGGIL saat runtime (buka modal Kategori
+// Sparepart), bukan di top-level saat file ini pertama dieksekusi, jadi
+// _allTorsiEntries() sudah terdaftar di scope global saat dipanggil (pola
+// sama persis seperti resolveCatGroup() di atas yg sudah lebih dulu panggil
+// findTorsiDb(), juga didefinisikan di sparepart-servis-b.js). Guard typeof
+// dipertahankan supaya tetap aman kalau sparepart-servis-b.js belum termuat
+// sama sekali (mis. test terisolasi yg cuma load file ini sendirian) --
+// fallback ke TORSI_DB literal langsung, IDENTIK perilaku lama.
+function collectKnownGroups(){
+const map=new Map();
+const torsiEntries=(typeof _allTorsiEntries==='function')
+?_allTorsiEntries()
+:((typeof TORSI_DB!=='undefined'&&Array.isArray(TORSI_DB))?TORSI_DB:[]);
+torsiEntries.forEach(veh=>{
+(veh&&Array.isArray(veh.cats)?veh.cats:[]).forEach(cg=>{
+if(cg&&cg.cat&&!map.has(cg.cat))map.set(cg.cat,cg.icon||'📦');
+});
+});
+const gmap=_genericGroupByName();
+Object.keys(gmap).forEach(k=>{
+const g=gmap[k];
+if(g&&g.group&&!map.has(g.group))map.set(g.group,g.icon||'📦');
+});
+return Array.from(map.entries()).map(([group,icon])=>({group,icon}));
+}
+function iconForGroupName(name){
+if(!name)return'📦';
+const hit=collectKnownGroups().find(g=>g.group===name);
+return hit?hit.icon:'📦';
+}
 function servisLogMatchesCat(s,cat){
 if(s.categoryId) return s.categoryId===cat.id;
 const cn=cat.name.toLowerCase();
@@ -111,10 +238,67 @@ return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 // cari log servis TERAKHIR utk kategori ini (reuse servisLogMatchesCat() yg
 // sama persis, 0 logic pencocokan baru) & balikin field .date-nya (ISO
 // string), null kalau belum pernah dicatat servis dgn tanggal terisi.
-function getLastServiceDateForCat(vehicleId,cat){
-const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.date&&servisLogMatchesCat(s,cat))
+// getLastServiceDateForCat(vehicleId, cat, actionTypeFilter, forReminder) —
+// actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
+// PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
+// baru ini (mis. dari riwayat) = 0 perubahan perilaku lama.
+function getLastServiceDateForCat(vehicleId,cat,actionTypeFilter,forReminder){
+const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.date&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder))
 .sort((a,b)=>new Date(b.date)-new Date(a.date));
 return logs.length?logs[0].date:null;
+}
+// getEffectiveActionMode(cat)/getEffectiveResetType(cat) — FITUR BARU (§2b):
+// field opsional per-kategori BARU pada D.sparepartCats, 0 migrasi data.
+// Kategori lama tanpa field ini = pola 1 "ganti-saja km" (perilaku persis
+// sebelum fitur ini ada).
+// - cat.actionMode: 'ganti'(default) | 'bersih' | 'alternate' | 'periksa-conditional' | 'none'
+// - cat.resetType: 'km'(default) | 'time' | 'both'
+// - cat.gantiResetsInterval: default true, HANYA dipakai saat actionMode==='periksa-conditional'
+function getEffectiveActionMode(cat){return(cat&&cat.actionMode)||'ganti';}
+function getEffectiveResetType(cat){return(cat&&cat.resetType)||'km';}
+// resolveResetActionTypeFilter(cat) — actionTypeFilter yang dipakai jalur
+// hitung jatuh-tempo (computeServiceUrgency, di bawah) tergantung pola item
+// (tabel §2b): pola 1/5/6 (ganti-saja/bersih-saja/kondisional) & pola 3
+// (alternasi, mis. Busi) = null (SEMUA actionType ikut jadi basis reset, 0
+// perubahan dari desain lama). Pola 2 (resetType 'both'/'time', mis. Oli
+// Gardan/Coolant) & pola 4 (periksa-conditional, mis. Kampas Rem) = filter
+// eksplisit.
+function resolveResetActionTypeFilter(cat){
+if(getEffectiveActionMode(cat)==='periksa-conditional')return'periksa';
+const resetType=getEffectiveResetType(cat);
+if(resetType==='both'||resetType==='time')return'ganti';
+return null;
+}
+// matchesActionTypeForReset(log, cat, actionTypeFilter, forReminder) — twin
+// PERSIS Servis._matchesActionTypeForReset() (car-notes.js). Duplikasi
+// SENGAJA (bukan reuse cross-file, lihat catatan di twin-nya) -- kalau salah
+// satu diubah, cek ulang yang lain.
+// - forReminder=true & cat.actionMode==='periksa-conditional' &
+//   cat.gantiResetsInterval===false: log actionType='ganti' (atau
+//   default/undefined, sesuai fallback §2a) DIKELUARKAN dari basis reset,
+//   APAPUN actionTypeFilter yang dipakai caller -- safety net sesuai desain,
+//   supaya baseline "ganti kondisional tanpa km-ganti resmi" tidak pernah
+//   menciptakan jatuh-tempo palsu. Dipanggil TANPA forReminder (riwayat/
+//   servisList/dll) = pengecualian ini TIDAK berlaku, 0 perubahan lama.
+// - actionTypeFilter (opsional): kalau diisi, log harus actionType yang sama
+//   (default 'ganti' kalau log.actionType kosong -- 0 migrasi data).
+function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
+const effType=log.actionType||'ganti';
+if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+if(!actionTypeFilter)return true;
+return effType===actionTypeFilter;
+}
+// suggestNextBusiAction(vehicleId, cat) — FITUR BARU, khusus pola 3
+// (alternasi 1-interval, mis. Busi): saran DEFAULT toggle checklist (§2d),
+// BUKAN penentu reset (reset tetap dipicu actionType APAPUN utk pola ini,
+// lihat resolveResetActionTypeFilter() balikin null). Genap (0,2,4,...) log
+// sebelumnya -> saran 'periksa', ganjil -> 'ganti'. Urutan histori ASLI
+// (tidak diurutkan ulang) -- kalau user pernah override manual, paritas
+// boleh tidak rapi & itu tidak masalah (cuma default toggle, tidak mengunci
+// actionType, user tetap bisa override manual).
+function suggestNextBusiAction(vehicleId,cat){
+const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat));
+return(logs.length%2===0)?'periksa':'ganti';
 }
 // monthsSinceISO(dateISO,nowISO) — selisih waktu (bulan, desimal) antara 2
 // tanggal ISO, dipakai computeServiceUrgency() di bawah. Pakai konstanta
@@ -140,7 +324,13 @@ return(b-a)/86400000/30.4368;
 // predictService(), TIDAK diubah supaya urutan kategori pure-km tidak
 // berubah/regresi).
 function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
-const lastKm=getLastServiceKmForCat(vehicleId,cat);
+// resetFilter (§2c, lihat resolveResetActionTypeFilter di atas) -- basis
+// jatuh-tempo utk pola 2/4 dihitung HANYA dari actionType tertentu ('ganti'
+// / 'periksa'); pola 1/3/5/6 tetap null (SEMUA actionType, 0 perubahan dari
+// desain lama). forReminder=true di kedua panggilan getLastService*ForCat
+// di bawah -- INI jalur hitung jatuh-tempo Pengingat Servis (bukan riwayat).
+const resetFilter=resolveResetActionTypeFilter(cat);
+const lastKm=getLastServiceKmForCat(vehicleId,cat,resetFilter,true);
 const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
 const sisaKm=intervalKm-jarakTempuh;
@@ -148,7 +338,7 @@ const fracRemainKm=intervalKm>0?sisaKm/intervalKm:null;
 const intervalBulan=getEffectiveIntervalBulan(cat);
 let sisaBulan=null,fracRemainBulan=null;
 if(intervalBulan){
-const lastDate=getLastServiceDateForCat(vehicleId,cat);
+const lastDate=getLastServiceDateForCat(vehicleId,cat,resetFilter,true);
 const elapsedBulan=lastDate?monthsSinceISO(lastDate,nowISO):0;
 sisaBulan=intervalBulan-elapsedBulan;
 fracRemainBulan=sisaBulan/intervalBulan;
@@ -478,7 +668,7 @@ let added=0;
 chosen.forEach((r,idx)=>{
 const already=D.sparepartCats.some(c=>catVisibleForVehicle(c,vid)&&c.name.trim().toLowerCase()===r.name.trim().toLowerCase());
 if(already)return;
-D.sparepartCats.push({id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid});
+D.sparepartCats.push({id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon});
 added++;
 });
 save();
@@ -565,6 +755,28 @@ const host=anchor.closest('.u-mt8')||anchor.parentNode;
 host.parentNode.insertBefore(wrap,host.nextSibling);
 return document.getElementById('sparepartIntervalBulan');
 },
+// populateGroupSelect() -- FITUR BARU sesi ini (Sesi 1 dari 2, backlog
+// "override grup manual" sejak v1638): isi dropdown "Grup Komponen" di modal
+// Kategori Sparepart -- opsi 🤖 Otomatis (nilai '', biarkan resolveCatGroup()
+// yg tentukan spt perilaku lama) + semua grup dikenal dari collectKnownGroups()
+// + grup KUSTOM kategori yg lagi diedit kalau grup itu tersimpan tapi TIDAK
+// ada di daftar dikenal (mis. dulu di-set manual/lewat cara lain) supaya tidak
+// hilang dari dropdown & tidak keliru kelihatan seolah "Otomatis". Nilai awal
+// dropdown = cat.group tersimpan (atau 🤖 Otomatis kalau kosong/kategori baru).
+// Sesi ini CUMA populate & tampilkan -- saveCat() BELUM baca dropdown ini
+// (backlog Sesi 2), jadi pilihan apa pun di sini belum berpengaruh ke data
+// tersimpan.
+populateGroupSelect(currentGroup){
+const sel=document.getElementById('sparepartGroupId');
+if(!sel)return;
+const known=collectKnownGroups();
+if(currentGroup&&!known.some(g=>g.group===currentGroup)){
+known.push({group:currentGroup,icon:iconForGroupName(currentGroup)});
+}
+sel.innerHTML='<option value="">🤖 Otomatis</option>'
++known.map(g=>`<option value="${escapeHtml(g.group)}">${g.icon} ${escapeHtml(g.group)}</option>`).join('');
+sel.value=currentGroup||'';
+},
 openCatModal(idx){
 Sparepart.catEditIdx=(typeof idx==='number')?idx:null;
 const isEdit=Sparepart.catEditIdx!==null;
@@ -579,6 +791,7 @@ document.getElementById('sparepartInterval').value=(curCat&&curCat.intervalKm>0)
 const bulanEl=Sparepart.ensureIntervalBulanField();
 if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
 Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
+Sparepart.populateGroupSelect(curCat?curCat.group:null);
 // Sesi 295: toggle "Tampilkan di Pengingat Servis" -- default AKTIF utk
 // kategori baru (perilaku lama, tidak berubah), ikut nilai tersimpan utk
 // kategori existing (termasuk kategori auto-scan yg default false).
@@ -675,15 +888,68 @@ vehicleId=(selVal&&D.vehicles.some(v=>v.id===selVal))?selVal:null;
 const vid622=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 vehicleId=(vid622&&D.vehicles.some(v=>v.id===vid622))?vid622:null;
 }
+// FITUR BARU sesi ini (Sesi 2 dari 2, lanjutan Sesi 1 -- populateGroupSelect()
+// /openCatModal() sudah isi dropdown #sparepartGroupId, sesi lalu SENGAJA
+// belum baca dropdown ini saat simpan): baca pilihan dropdown "Grup Komponen".
+// groupSelEl null (elemen TIDAK ADA sama sekali di DOM -- guard kompatibilitas
+// mundur utk caller/test lama yang belum mengenal dropdown ini) SENGAJA
+// dibedakan dari groupSelEl ada tapi value-nya "" (opsi "🤖 Otomatis" dipilih
+// EKSPLISIT lewat form): yang pertama berarti "tidak ada info override sama
+// sekali" -> perilaku 100% identik sebelum Sesi 2 (rule v1641 murni); yang
+// kedua baru dianggap sinyal reset eksplisit dari user.
+const groupSelEl=document.getElementById('sparepartGroupId');
+const groupSelVal=groupSelEl?groupSelEl.value:'';
 if(Sparepart.catEditIdx!==null){
-D.sparepartCats[Sparepart.catEditIdx].name=name;
-D.sparepartCats[Sparepart.catEditIdx].code=code;
-D.sparepartCats[Sparepart.catEditIdx].intervalKm=intervalKm;
-D.sparepartCats[Sparepart.catEditIdx].intervalBulan=intervalBulan;
-D.sparepartCats[Sparepart.catEditIdx].showInReminder=wantShow;
-D.sparepartCats[Sparepart.catEditIdx].vehicleId=vehicleId;
+const editCat=D.sparepartCats[Sparepart.catEditIdx];
+// FITUR BARU (audit lanjutan grouping, sesi lalu v1641): kalau nama ATAU
+// kendaraan berubah, `group`/`groupIcon` tersimpan ikut direcompute lewat
+// resolveCatGroup() -- 2 hal itu satu-satunya input match TORSI_DB (lihat
+// resolveCatGroup() atas), jadi group lama berpotensi basi kalau salah
+// satunya berubah (mis. rename "Oli Mesin"->"Kampas Rem", atau pindah
+// kendaraan yang TORSI_DB-nya beda). Kalau nama & kendaraan TIDAK berubah,
+// group existing (termasuk yang di-set manual dari kategori rekomendasi)
+// dibiarkan apa adanya -- 0 risiko menimpa niat manual tanpa alasan.
+const nameChanged=editCat.name!==name;
+const vehChanged=editCat.vehicleId!==vehicleId;
+if(groupSelEl&&groupSelVal){
+// Override manual dari dropdown MENANG mutlak (Sesi 2) -- bahkan atas
+// rule recompute-by-rename di atas, walau nama/kendaraan ikut berubah.
+editCat.group=groupSelVal;
+editCat.groupIcon=(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦';
+} else if(nameChanged||vehChanged){
+const grpEdit=(typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:editCat.group,icon:editCat.groupIcon};
+editCat.group=grpEdit.group;
+editCat.groupIcon=grpEdit.icon;
+} else if(groupSelEl){
+// Dropdown ADA & value-nya "" -- "🤖 Otomatis" dipilih EKSPLISIT (bukan
+// cuma efek rename/pindah kendaraan di atas) -- ini reset ke otomatis:
+// hapus group/groupIcon TERSIMPAN supaya resolveCatGroup() ke depan
+// benar2 jatuh ke jalur otomatis (match TORSI_DB/GENERIC_GROUP_BY_NAME/
+// 'Lainnya'), bukan cuma dibiarkan (yang tetap akan dibaca sbg "cat.group
+// tersimpan" krn itu prioritas #1 resolveCatGroup()).
+delete editCat.group;
+delete editCat.groupIcon;
+}
+// groupSelEl null (elemen tidak ada sama sekali di DOM): nameChanged/
+// vehChanged sudah false di sini -- tidak ada branch lain yg cocok, group
+// existing dibiarkan apa adanya, IDENTIK perilaku v1641 sebelum Sesi ini.
+editCat.name=name;
+editCat.code=code;
+editCat.intervalKm=intervalKm;
+editCat.intervalBulan=intervalBulan;
+editCat.showInReminder=wantShow;
+editCat.vehicleId=vehicleId;
 } else {
-D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,intervalBulan,showInReminder:wantShow,vehicleId});
+// FITUR BARU (audit lanjutan grouping, sesi lalu): kategori baru dari form
+// manual ini mewarisi group/groupIcon -- override dropdown manual (Sesi 2)
+// MENANG kalau dipilih, fallback ke resolveCatGroup() yang SUDAH ADA (match
+// nama ke TORSI_DB kendaraan aktif dulu, lalu GENERIC_GROUP_BY_NAME, lalu
+// 'Lainnya' kalau tidak match sama sekali) kalau dropdown "🤖 Otomatis" atau
+// elemen dropdown tidak ada sama sekali di DOM.
+const grpNew=(groupSelEl&&groupSelVal)
+?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
+:((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
+D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,intervalBulan,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -1106,7 +1372,13 @@ const catName=(it.category||'Umum').trim()||'Umum';
 // aman kalau dipanggil sebelum helper itu termuat.
 let cat=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(catName,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
 if(!cat){
-cat={id:'sp_'+Date.now()+'_'+idx,name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0};
+// FITUR BARU (audit lanjutan grouping): kategori baru dari sinkron Katalog
+// juga mewarisi group/groupIcon lewat resolveCatGroup() -- match dipakai
+// it.partName (nama part spesifik) dulu, fallback catName (label kategori
+// umum dari katalog, mis. "Umum") kalau partName kosong. catName SENDIRI
+// (bukan partName) tetap dipakai sbg cat.name, 0 perilaku lama berubah.
+const grpSync=(typeof resolveCatGroup==='function')?resolveCatGroup({name:it.partName||catName},curVehicleId):{group:'Lainnya',icon:'📦'};
+cat={id:'sp_'+Date.now()+'_'+idx,name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0,group:grpSync.group,groupIcon:grpSync.icon};
 D.sparepartCats.push(cat);
 addedCat++;
 } else if(r.intervalKm>0&&(!cat.intervalKm||cat.intervalKm<=0)){
@@ -1166,7 +1438,13 @@ const code=r.kode||codeFromName(nama);
 const intervalKm=(r.intervalKm&&r.intervalKm>0)?r.intervalKm:0;
 const intervalBulan=(r.intervalBulan&&r.intervalBulan>0)?r.intervalBulan:0;
 const showInReminder=(r.showInReminder!==undefined&&r.showInReminder!==null)?r.showInReminder:(intervalKm>0);
-D.sparepartCats.push({id:'sp_'+Date.now()+'_'+created+'_'+updated,name:nama,code,intervalKm,intervalBulan,showInReminder});
+// FITUR BARU (audit lanjutan grouping): kategori baru dari import CSV juga
+// mewarisi group/groupIcon lewat resolveCatGroup(). Fungsi ini tidak selalu
+// dipanggil dalam konteks kendaraan aktif (bisa dari alur import umum) --
+// guard typeof curVehicleId, fallback null (resolveCatGroup tetap aman,
+// jatuh ke GENERIC_GROUP_BY_NAME/'Lainnya' tanpa match TORSI_DB spesifik).
+const grpCsv=(typeof resolveCatGroup==='function')?resolveCatGroup({name:nama},(typeof curVehicleId!=='undefined')?curVehicleId:null):{group:'Lainnya',icon:'📦'};
+D.sparepartCats.push({id:'sp_'+Date.now()+'_'+created+'_'+updated,name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon});
 created++;
 }
 });
@@ -1245,7 +1523,7 @@ if(!veh)return{ok:false,reason:'Pilih kendaraan dulu di atas'};
 const existing=new Set(D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid)).map(c=>c.name.trim().toLowerCase()));
 const seen=new Set();
 const tier1=[];
-const own=(typeof findTorsiDb==='function')?findTorsiDb(veh.name):null;
+const own=(typeof findTorsiDb==='function')?findTorsiDb(veh.name,veh.modelId):null;
 if(own&&Array.isArray(own.cats)){
 own.cats.forEach(catGroup=>{
 (catGroup.items||[]).forEach(item=>{
@@ -1255,20 +1533,22 @@ if(existing.has(key)||seen.has(key))return;
 const km=(typeof _parseIntervalKmFromText==='function')?_parseIntervalKmFromText(item.interval):null;
 if(!km)return;
 seen.add(key);
-tier1.push({name:item.name,intervalKm:km,tier:'manual',source:own.sourceNote});
+tier1.push({name:item.name,intervalKm:km,tier:'manual',source:own.sourceNote,group:catGroup.cat,groupIcon:catGroup.icon||'📦'});
 });
 });
 }
 const tier2=[];
-const jenis=(veh.jenis&&GENERIC_RECOMMEND_NAMES[veh.jenis])?veh.jenis:'motor';
-(GENERIC_RECOMMEND_NAMES[jenis]||[]).forEach(name=>{
+const recNames=_genericRecommendNames();
+const jenis=(veh.jenis&&recNames[veh.jenis])?veh.jenis:'motor';
+(recNames[jenis]||[]).forEach(name=>{
 const key=name.trim().toLowerCase();
 if(existing.has(key)||seen.has(key))return;
 const reko=(typeof suggestServiceIntervalKm==='function')?suggestServiceIntervalKm(name,vid):null;
 if(!reko)return;
 seen.add(key);
 const isManual=!!(own&&reko.source===own.sourceNote);
-tier2.push({name,intervalKm:reko.km,tier:isManual?'manual':'generic',source:reko.source});
+const g=resolveCatGroup({name},vid);
+tier2.push({name,intervalKm:reko.km,tier:isManual?'manual':'generic',source:reko.source,group:g.group,groupIcon:g.icon});
 });
 // Cross-check tier1/tier2 thd riwayat servis asli (historyStatsForName(),
 // FITUR BARU di atas) -- kandidat yg sudah sering dicatat manual ditandai

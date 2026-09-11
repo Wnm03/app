@@ -398,7 +398,15 @@ if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
 // atas) -- itu tetap prioritas eksplisit user.
 _autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
-save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
+save();
+// Sesi C (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7): CRUD kendaraan
+// sendiri belum emit 'vehicle.updated' sebelum sesi ini (event ini SUDAH
+// ada, dipancarkan dari sisi servis -- sparepart-servis-b.js/
+// Servis.markServiced() -- tapi tambah/edit/hapus kendaraan itu sendiri
+// belum). Pola & nama event REPLIKASI persis dari titik yang sudah ada,
+// 0 event baru diciptakan.
+if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"edit",vehicleId:v.id});
+renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
 }
 const kmAwalEl=document.getElementById('vehKmAwal');
@@ -419,7 +427,10 @@ D.vehicles.push(newVeh);
 if(!isNaN(kmAwal)&&kmAwal>0){
 D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
-save();renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
+save();
+// Sesi C: sama seperti cabang edit di atas -- replikasi pola vehicle.updated.
+if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"create",vehicleId:newId});
+renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
 }
 // Teks ringkasan servis per kendaraan di daftar Kelola Kendaraan — beda per jenis (KW-165).
 // PURE function (tidak sentuh DOM/D), dipanggil dari renderVehicleManageList() di modules-render.js.
@@ -484,12 +495,21 @@ const curKm=getVehicleKm(vehicleId);
 if(km<curKm){if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return;}
 D.kmLogs.push({id:uid(),vehicleId,date:document.getElementById('kmDate').value,km,note:document.getElementById('kmNote').value});
 if(vehicleId!==curVehicleId){curVehicleId=vehicleId;renderVehicleSelect();}
-save();closeModal('kmModal');renderCnTab();renderDashboardServisReminder();toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
+save();
+// Sesi C: update KM juga bagian dari 'vehicle.updated' (mengubah state
+// kendaraan yang sama relevan-nya buat konsumen event ini spt CRUD).
+if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"km",vehicleId});
+closeModal('kmModal');renderCnTab();renderDashboardServisReminder();toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
 }
 async function delVehicle(i){
 if(D.vehicles.length<=1){toast('⚠️ Minimal 1 kendaraan');return;}
 if(!await askConfirm('Hapus kendaraan ini? Catatan BBM/servis terkait tetap ada.'))return;
-D.vehicles.splice(i,1);save();renderVehicleManageList();renderVehicleSelect();renderCnTab();renderDashboardServisReminder();toast('🗑 Dihapus');
+const deletedId=D.vehicles[i]&&D.vehicles[i].id;
+D.vehicles.splice(i,1);save();
+// Sesi C: jalur hapus kendaraan -- tandai deletedId (pola sama persis
+// AIBus.emit("asset.updated",{deletedId:id}) di modules/asset/aset.js).
+if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"delete",deletedId});
+renderVehicleManageList();renderVehicleSelect();renderCnTab();renderDashboardServisReminder();toast('🗑 Dihapus');
 }
 function daysUntilDate(dateStr){
 if(!dateStr)return null;

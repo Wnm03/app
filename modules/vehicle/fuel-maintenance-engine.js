@@ -122,7 +122,7 @@ _dropInfo(vehicleId) {
 // katalog (motor tidak dikenali).
 _tirePressureRef(veh) {
   if (!veh || typeof findVehicleSpec !== 'function') return null;
-  const spec = findVehicleSpec(veh.name);
+  const spec = findVehicleSpec(veh.name, veh.modelId);
   return (spec && spec.ban) ? spec.ban : null;
 },
 

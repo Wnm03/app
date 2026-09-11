@@ -112,7 +112,7 @@ function onServisItemInput(){return Servis.onItemInputSuggest();}
 function openServisModal(editId,prefillItem){return Servis.openModal(editId,prefillItem);}
 const TORSI_DB=[
 {matchNames:['vario 125'],
-sourceNote:'Honda Vario 125 (KZR) — Buku Pedoman Reparasi, bagian Spesifikasi & Torsi Pengencangan (hal. 1-4 s/d 1-8) & Perawatan (hal. 3-3).',
+sourceNote:'Honda Vario 125 Techno/KZR (PGM-FI, liquid-cooled) — Buku Pedoman Reparasi resmi (scan lengkap 310 hal., diverifikasi user), bagian Spesifikasi & Torsi Pengencangan (hal. 1-9 s/d 1-12) & Jadwal Perawatan Berkala (hal. 3-3). Semua nilai torsi di entri ini di-cross-check baris-per-baris thd scan manual tsb (sesi audit ini) — 100% cocok, 0 nilai diubah, cuma nambah beberapa part yg sebelumnya belum masuk (lihat item-item baru di bawah).',
 cats:[
 {cat:'Perawatan Berkala', icon:'🛠️', items:[
 {name:'Mur pengunci kabel gas', ulir:'8 mm', nm:8.5, kgf:0.9},
@@ -165,6 +165,8 @@ cats:[
 {name:'Baut pemasangan caliper rem depan', ulir:'8 mm', nm:30, kgf:3.1, note:'new'},
 {name:'Mur batang stang kemudi', ulir:'10 mm', nm:59, kgf:6.0},
 {name:'Mur pengunci poros kemudi', ulir:'26 mm', nm:74, kgf:7.5},
+{name:'Sekrup as handel rem belakang (tipe standard)', ulir:'5 mm', nm:1, kgf:0.1},
+{name:'Mur as handel rem belakang (tipe standard)', ulir:'5 mm', nm:4.5, kgf:0.5, note:'Mur-U'},
 ]},
 {cat:'Roda Belakang/Suspensi', icon:'🛞', items:[
 {name:'Mur as roda belakang', ulir:'16 mm', nm:118, kgf:12.0, note:'oli'},
@@ -179,6 +181,10 @@ cats:[
 {name:'Mur as handel rem depan', ulir:'6 mm', nm:6, kgf:0.6},
 {name:'Baut oli selang rem', ulir:'10 mm', nm:34, kgf:3.5},
 {name:'Pin dudukan caliper rem', ulir:'8 mm', nm:18, kgf:1.8},
+{name:'Baut as handel rem depan (tipe standard)', ulir:'6 mm', nm:1, kgf:0.1},
+{name:'Sekrup as handel rem depan (tipe CBS)', ulir:'6 mm', nm:1, kgf:0.1},
+{name:'Sekrup switch lampu rem depan', ulir:'4 mm', nm:1, kgf:0.1},
+{name:'Sekrup cover dudukan handel rem belakang (tipe CBS)', ulir:'5 mm', nm:4.3, kgf:0.4},
 ]},
 {cat:'Kelistrikan & Panel', icon:'🔌', items:[
 {name:'Baut socket pemasangan stator', ulir:'6 mm', nm:10, kgf:1.0},
@@ -191,6 +197,10 @@ cats:[
 {name:'Mur joint pipa exhaust', ulir:'7 mm', nm:26.5, kgf:2.7},
 {name:'Baut as standar samping', ulir:'10 mm', nm:10, kgf:1.0},
 {name:'Mur pengunci as standar samping', ulir:'10 mm', nm:29, kgf:3.0},
+{name:'Sekrup pemasangan meter kombinasi', ulir:'5 mm', nm:1.1, kgf:0.1},
+{name:'Sekrup meter kombinasi', ulir:'3 mm', nm:0.54, kgf:0.1},
+{name:'Baut socket pelindung sensor VS', ulir:'6 mm', nm:10, kgf:1.0, note:'new'},
+{name:'Baut socket key shutter', ulir:'5 mm', nm:4.95, kgf:0.5},
 ]},
 ]},
 {matchNames:['beat fi','beat-fi','beat esp','beat pgm-fi','vario 110','vario110','vario 110 esp'],
@@ -276,7 +286,19 @@ cats:[
 ]},
 ]},
 ];
-function findTorsiDb(vehName){
+function findTorsiDb(vehName,modelId){
+if(!vehName&&!modelId)return null;
+// Database API Fase 1: baca dari DatabaseAPI.vehicle kalau sudah termuat
+// (urutan load resmi, lihat GROUP_B di scripts/build.js). Fallback ke
+// literal TORSI_DB kalau belum (mis. test terisolasi yg cuma load file
+// ini sendirian tanpa modules/engine/database-api.js) -- 0 regresi.
+// modelId (Sesi A2, roadmap §7) opsional -- diteruskan apa adanya ke
+// findTorsiByName(), diabaikan di jalur fallback literal (jalur itu masih
+// 100% name-matching seperti sebelum Sesi A2, konsisten dgn behaviour lama
+// utk test terisolasi yg tidak muat DatabaseAPI).
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.findTorsiByName==='function'){
+return DatabaseAPI.vehicle.findTorsiByName(vehName,modelId);
+}
 if(!vehName)return null;
 const n=vehName.toLowerCase();
 return TORSI_DB.find(s=>s.matchNames.some(m=>n.includes(m)))||null;
@@ -304,6 +326,46 @@ const anyMatch=text.match(/([\d.,]+)\s*km/i);
 if(anyMatch)return parseFloat(anyMatch[1].replace(/\./g,'').replace(',','.'));
 return null;
 }
+// _allTorsiEntries() -- Database API Fase 1 lanjutan (sesi Database API
+// v1643/v1644): sama pola guard persis findTorsiDb()/findVehicleSpec() di
+// atas -- baca dari DatabaseAPI.vehicle.getAll() (map ke field `.torsi`
+// tiap record) kalau DatabaseAPI sudah termuat, fallback ke literal
+// TORSI_DB kalau belum (mis. test terisolasi yg cuma load file ini
+// sendirian). Dipakai loop scan-semua-entri di suggestServiceIntervalKm()
+// di bawah supaya tidak lagi baca TORSI_DB literal langsung.
+function _allTorsiEntries(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.getAll==='function'){
+return DatabaseAPI.vehicle.getAll().map(r=>r.torsi).filter(Boolean);
+}
+return TORSI_DB;
+}
+// FALLBACK_KEYWORDS_LITERAL/_fallbackKeywords() -- wiring literal tersisa
+// (roadmap §7 baris 91, lanjutan Sesi B v1650): dipindah dari inline const
+// per-panggilan (di dalam suggestServiceIntervalKm(), sebelumnya dibuat
+// ulang tiap panggilan) jadi module-scope + helper guard, pola SAMA PERSIS
+// _allTorsiEntries() di atas -- baca DatabaseAPI.master.getFallbackKeywords()
+// kalau termuat, fallback ke literal di bawah kalau belum (mis. test
+// terisolasi). Isi & urutan 100% sama dgn literal lama, 0 perubahan hasil.
+const FALLBACK_KEYWORDS_LITERAL=[
+{keys:['oli mesin','oli mesin motor'],km:2000,label:'rata-rata rekomendasi ganti oli mesin motor matic'},
+{keys:['filter oli','saringan oli'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
+{keys:['oli gardan','oli transmisi','final drive','final reduction'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
+{keys:['busi'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
+{keys:['filter udara','saringan udara'],km:16000,label:'rata-rata rekomendasi buku servis motor matic'},
+{keys:['kampas rem','brake pad'],km:10000,label:'rata-rata rekomendasi pemeriksaan kampas rem'},
+{keys:['v-belt','vbelt','drive belt','cvt belt'],km:24000,label:'rata-rata rekomendasi ganti v-belt CVT'},
+{keys:['roller','roller cvt'],km:24000,label:'rata-rata rekomendasi ganti roller CVT'},
+{keys:['minyak rem','brake fluid'],km:20000,label:'rata-rata rekomendasi ganti minyak rem (≈2 tahun)'},
+{keys:['coolant','radiator','cairan pendingin'],km:20000,label:'rata-rata rekomendasi ganti coolant (≈2 tahun)'},
+{keys:['aki','accu','battery'],km:15000,label:'rata-rata usia pakai aki motor sebelum dicek ulang'},
+{keys:['ban depan','ban belakang','ban luar'],km:20000,label:'rata-rata usia pakai ban motor'},
+];
+function _fallbackKeywords(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getFallbackKeywords==='function'){
+return DatabaseAPI.master.getFallbackKeywords();
+}
+return FALLBACK_KEYWORDS_LITERAL;
+}
 function suggestServiceIntervalKm(partName,vehicleId){
 if(!partName)return null;
 const q=partName.trim().toLowerCase();
@@ -328,27 +390,16 @@ const own=findTorsiDb(veh.name);
 const hit=searchInDb(own);
 if(hit)return hit;
 }
-for(const dbEntry of TORSI_DB){
+for(const dbEntry of _allTorsiEntries()){
 const hit=searchInDb(dbEntry);
 if(hit)return hit;
 }
 // Fallback: tabel kata kunci umum (bukan dari TORSI_DB spesifik kendaraan,
 // tapi angka rule-of-thumb yg lazim dipakai buku servis motor matic).
-const FALLBACK_KEYWORDS=[
-{keys:['oli mesin','oli mesin motor'],km:2000,label:'rata-rata rekomendasi ganti oli mesin motor matic'},
-{keys:['filter oli','saringan oli'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
-{keys:['oli gardan','oli transmisi','final drive','final reduction'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
-{keys:['busi'],km:8000,label:'rata-rata rekomendasi buku servis motor matic'},
-{keys:['filter udara','saringan udara'],km:16000,label:'rata-rata rekomendasi buku servis motor matic'},
-{keys:['kampas rem','brake pad'],km:10000,label:'rata-rata rekomendasi pemeriksaan kampas rem'},
-{keys:['v-belt','vbelt','drive belt','cvt belt'],km:24000,label:'rata-rata rekomendasi ganti v-belt CVT'},
-{keys:['roller','roller cvt'],km:24000,label:'rata-rata rekomendasi ganti roller CVT'},
-{keys:['minyak rem','brake fluid'],km:20000,label:'rata-rata rekomendasi ganti minyak rem (≈2 tahun)'},
-{keys:['coolant','radiator','cairan pendingin'],km:20000,label:'rata-rata rekomendasi ganti coolant (≈2 tahun)'},
-{keys:['aki','accu','battery'],km:15000,label:'rata-rata usia pakai aki motor sebelum dicek ulang'},
-{keys:['ban depan','ban belakang','ban luar'],km:20000,label:'rata-rata usia pakai ban motor'},
-];
-for(const fb of FALLBACK_KEYWORDS){
+// Wiring literal tersisa (roadmap §7 baris 91, lanjutan Sesi B v1650):
+// FALLBACK_KEYWORDS_LITERAL & _fallbackKeywords() (module-scope, lihat atas
+// dekat _allTorsiEntries()) dipakai di sini, bukan lagi inline const.
+for(const fb of _fallbackKeywords()){
 if(fb.keys.some(k=>q.includes(k)))return{km:fb.km,source:fb.label+' (bukan dari buku manual kendaraan spesifik ini — sesuaikan lagi kalau ada datanya)'};
 }
 return null;
@@ -430,7 +481,15 @@ batasServis:[
 ],
 },
 ];
-function findVehicleSpec(vehName){
+function findVehicleSpec(vehName,modelId){
+if(!vehName&&!modelId)return null;
+// Database API Fase 1: sama pola findTorsiDb() di atas -- baca dari
+// DatabaseAPI.vehicle kalau termuat, fallback ke literal VEHICLE_SPEC_DB
+// kalau belum (test terisolasi). modelId (Sesi A2, roadmap §7) opsional,
+// pola sama persis findTorsiDb() di atas.
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.findSpecByName==='function'){
+return DatabaseAPI.vehicle.findSpecByName(vehName,modelId);
+}
 if(!vehName)return null;
 const n=vehName.toLowerCase();
 return VEHICLE_SPEC_DB.find(s=>s.matchNames.some(m=>n.includes(m)))||null;
@@ -452,8 +511,11 @@ return r;
 }
 function deleteServisFromModal(){return Servis.deleteFromModal();}
 function delServis(id){return Servis.del(id);}
-function markSparepartServiced(catId){return Servis.markServiced(catId);}
-function getLastServiceKmForCat(vehicleId,cat){return Servis.getLastServiceKmForCat(vehicleId,cat);}
+// markSparepartServiced/getLastServiceKmForCat -- actionType/actionTypeFilter/
+// forReminder FITUR BARU (opsional, thru-pass; lihat Servis.markServiced()/
+// Servis.getLastServiceKmForCat() di car-notes.js utk dokumentasi lengkap).
+function markSparepartServiced(catId,actionType){return Servis.markServiced(catId,actionType);}
+function getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){return Servis.getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder);}
 function editSparepartFromReminder(catId){return Servis.editSparepartFromReminder(catId);}
 /* moved to modules-render.js: renderServisReminder */
 function loadMoreServisList(){return Servis.loadMore();}
