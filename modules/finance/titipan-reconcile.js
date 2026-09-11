@@ -970,6 +970,7 @@ repairOwnerIdConsistency() {
     });
   });
   if (unified && typeof save === 'function') save();
+  if (unified && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-owner-id', unified });
   return { unified, conflicts };
 },
 
@@ -997,6 +998,7 @@ repairDebtNameStaleness() {
     }
   });
   if (synced && typeof save === 'function') save();
+  if (synced && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-debt-name', synced });
   return { synced };
 },
 
@@ -1046,6 +1048,7 @@ repairTransactionOwnerRefs() {
     }
   });
   if ((fixed || cleared) && typeof save === 'function') save();
+  if ((fixed || cleared) && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-tx-owner-refs', fixed, cleared });
   return { fixed, cleared, unresolved };
 },
 

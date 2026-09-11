@@ -210,6 +210,7 @@ const TitipanExpenseFlow = {
       txs.forEach((tx) => { applyTxTitipanLinkageOnSave(tx, null); });
       // Step 5: satu save() setelah seluruh data valid & siap.
       save();
+      if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'expense', action: 'create', txIds: txs.map((t) => t.id) });
 
       return { ok: true, txIds: txs.map((t) => t.id), rows: v.rows, owners: v.owners };
     } finally {

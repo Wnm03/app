@@ -97,6 +97,7 @@ saveCommitment(input) {
   const ownerName = (params.ownerName && String(params.ownerName).trim()) || known.ownerName;
   const now = Date.now();
   let record = D.titipanCommitments.find((c) => c && c.ownerId === ownerId);
+  const isEditCommitment = !!record;
   if (record) {
     record.ownerName = ownerName;
     record.principalAmount = principalAmount;
@@ -117,6 +118,7 @@ saveCommitment(input) {
     D.titipanCommitments.push(record);
   }
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'commitment', action: isEditCommitment ? 'edit' : 'create', ownerId: record.ownerId });
   return record;
 },
 
@@ -138,6 +140,7 @@ deleteCommitment(ownerId) {
   if (idx === -1) return false;
   D.titipanCommitments.splice(idx, 1);
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'commitment', action: 'delete', ownerId });
   return true;
 },
 
@@ -261,6 +264,7 @@ recordReturn(input) {
   };
   D.titipanReturns.push(record);
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'return', action: 'create', returnId: record.id, ownerId: record.ownerId });
   return record;
 },
 
@@ -275,6 +279,7 @@ deleteReturn(id) {
   if (idx === -1) return false;
   D.titipanReturns.splice(idx, 1);
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'return', action: 'delete', returnId: id });
   return true;
 },
 

@@ -299,6 +299,12 @@ if(linkedInvTx.type==='beli'||linkedInvTx.type==='jual'){
 Investment.recomputeHolding(linkedInvTx.investmentId);
 }
 toast(`📈 Transaksi investasi terkait ikut dihapus & holding disesuaikan`,2600);
+// Sesi C (investasi.js dasar): cascade ini SEBELUMNYA 0% emit AIBus -- unit/avgPrice
+// holding berubah lewat delTx() (jalur Transaksi/Cashflow) sunyi, beda dari CRUD holding
+// langsung (investasi-list-view.js) yang sudah emit. Pola payload SAMA PERSIS cascade
+// finance.updated di akhir delTx() (kind/action/deletedId), ditambah holdingId supaya
+// konsumen tahu holding mana yang ikut disesuaikan.
+if(typeof AIBus!=='undefined')AIBus.emit('investment.updated',{kind:'tx-cascade',action:'delete',deletedTxLinkId:linkedInvTx.id,holdingId:linkedInvTx.investmentId});
 }
 }
 }

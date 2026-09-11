@@ -96,6 +96,7 @@ _addEntry(type, input) {
   };
   D.titipanPool.push(record);
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'pool', action: type, entryId: record.id });
   return record;
 },
 
@@ -140,6 +141,7 @@ deleteEntry(id) {
   if (idx === -1) return false;
   D.titipanPool.splice(idx, 1);
   if (typeof save === 'function') save();
+  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'pool', action: 'delete', entryId: id });
   return true;
 },
 
