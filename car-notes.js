@@ -352,6 +352,117 @@ _photoDraft:[],
 // Torsi.activeCat). null = "Semua" (0 filter, 0 perubahan perilaku
 // renderList() lama). Nilai lain: 'periksa'/'bersih'/'ganti'.
 activeActionTypeFilter:null,
+// activeMasterCategoryFilter — BARU (Sesi D-lanjutan4, ROADMAP-KONSOLIDASI-
+// DATABASE-SERVIS-v2.md §7 Sesi D — item "filter/chip masterCategory di
+// Servis.renderList() (Riwayat Servis)" yang SENGAJA ditunda di Sesi
+// D-lanjutan3 (v1670, lihat SESSION-NOTE-sesi-d-lanjutan3-mastercategoryfilter-
+// v1670.md "Sengaja TIDAK dikerjakan sesi ini") krn renderList() adalah
+// daftar LOG (butuh join balik ke kategori dulu via resolveLogMasterCategoryId()
+// di bawah), beda dari Sparepart.renderCatList() yg daftar KATEGORI langsung.
+// State in-memory murni (bukan field D baru, tidak dipersist -- pola sama
+// persis activeActionTypeFilter/Sparepart.activeMasterCategoryFilter). null =
+// "Semua" (0 filter, 0 perubahan perilaku lama).
+activeMasterCategoryFilter:null,
+// _masterCategoryFilterPrefsLoaded/_masterCategoryFilterStorageKey +
+// _loadMasterCategoryFilterPrefsOnce()/_saveMasterCategoryFilterPrefs() --
+// Sesi D-lanjutan5. Pola & alasan SAMA PERSIS versi Sparepart
+// (modules/vehicle/sparepart-servis.js) -- lihat komentar lengkap di sana
+// (kenapa bukan FilterPrefsStore apa adanya, dst). Key storage BEDA (khusus
+// Servis, terpisah dari Sparepart) supaya preferensi filter kedua tab tidak
+// saling timpa.
+_masterCategoryFilterPrefsLoaded:false,
+_masterCategoryFilterStorageKey:'servisMasterCategoryFilterPrefs',
+_loadMasterCategoryFilterPrefsOnce(){
+if(Servis._masterCategoryFilterPrefsLoaded)return;
+Servis._masterCategoryFilterPrefsLoaded=true;
+if(typeof localStorage==='undefined')return;
+try{
+const raw=localStorage.getItem(Servis._masterCategoryFilterStorageKey);
+if(!raw)return;
+const parsed=JSON.parse(raw);
+const id=parsed&&parsed.activeMasterCategoryFilter;
+if(id===null)return;
+if(typeof id!=='string')return;
+const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+const validIds=hasApi?(DatabaseAPI.masterCategory.getAll()||[]).map(c=>c.id):[];
+if((typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&id===UNCATEGORIZED_FILTER_ID)||validIds.indexOf(id)!==-1){
+Servis.activeMasterCategoryFilter=id;
+}
+}catch(err){
+// localStorage korup/tidak tersedia -> abaikan, filter tetap default null
+// ("Semua") -- 0 crash.
+}
+},
+_saveMasterCategoryFilterPrefs(){
+if(typeof localStorage==='undefined')return;
+try{
+localStorage.setItem(Servis._masterCategoryFilterStorageKey,JSON.stringify({activeMasterCategoryFilter:Servis.activeMasterCategoryFilter}));
+}catch(err){
+// localStorage penuh/diblokir -> abaikan (0 crash).
+}
+},
+// resolveLogMasterCategoryId(s) -- Sesi D-lanjutan4. Join 1 entry riwayat
+// servis (s, dari D.servisLogs) balik ke kategori masternya (13 kategori
+// terkunci, DatabaseAPI.masterCategory). Reuse persis pola join yang SUDAH
+// ADA di openServisModal() (lihat baris `linkedCat` jalur edit/prefill
+// interval): s.categoryId (tautan langsung, entry baru sejak field ini ada)
+// -> fallback resolveServisCatForVehicle(s.item, vehicleId) (match nama+
+// kendaraan, utk entry lama tanpa categoryId) -> fallback match nama polos
+// (fail-safe terakhir kalau resolveServisCatForVehicle tidak termuat). Begitu
+// dapat kategori (cat), delegasi ke resolveCatGroup() apa adanya (SoT
+// tunggal, 0 logic classify baru) utk masterCategoryId-nya -- pola sama
+// persis Sparepart.dashReminderMasterCatBadgeHTML()/updateMasterCatBadge().
+// 0 match kategori ATAU 0 match kategori master -> null (bukan ditebak),
+// entry itu tidak akan cocok filter kategori master mana pun (tetap tampil
+// normal saat filter "Semua").
+resolveLogMasterCategoryId(s){
+if(typeof resolveCatGroup!=='function')return null;
+const vehicleId=s.vehicleId||curVehicleId;
+const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,vehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===(s.item||'').toLowerCase()));
+if(!linkedCat)return null;
+const r=resolveCatGroup(linkedCat,vehicleId);
+return r?r.masterCategoryId:null;
+},
+// setMasterCategoryFilter(id) -- Sesi D-lanjutan4. Dipanggil dari klik chip
+// filter (data-action="Servis.setMasterCategoryFilter") di Riwayat Servis.
+// id: null ("Semua") atau salah satu id dari 13 kategori master. Pola sama
+// persis setActionTypeFilter() di atas -- reset listPage ke 1 supaya
+// pagination tidak nyangkut di halaman lama saat filter berganti.
+setMasterCategoryFilter(id){
+Servis.activeMasterCategoryFilter=id||null;
+// Sesi D-lanjutan5: persist pilihan chip (lihat _saveMasterCategoryFilterPrefs()
+// di atas) -- 0 dampak kalau storage gagal/diblokir.
+Servis._saveMasterCategoryFilterPrefs();
+Servis.listPage=1;
+Servis.renderList();
+},
+// renderMasterCategoryChips(beforeEl) -- Sesi D-lanjutan4. Chip row filter
+// riwayat by kategori master (13 terkunci), DISISIPKAN lewat JS sebelum
+// beforeEl (pola sama persis renderActionTypeChips() di atas &
+// Sparepart.renderMasterCategoryChips() Sesi D-lanjutan3) -- 1x dibuat (cek
+// getElementById dulu), tidak dobel-insert di render berikutnya. Guard: 0
+// DatabaseAPI.masterCategory sama sekali -> row TIDAK dibuat sama sekali
+// (bukan tampil kosong), pola sama "0/>1 kandidat = dilewati, tidak
+// menebak" yang konsisten dipakai di seluruh fitur Sesi D.
+renderMasterCategoryChips(beforeEl){
+const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+if(!hasApi)return;
+let row=document.getElementById('servisMasterCatChipRow');
+if(!row){
+row=document.createElement('div');
+row.id='servisMasterCatChipRow';
+row.className='u-flex u-fs12 u-mb10';
+row.style.cssText='gap:6px;flex-wrap:wrap';
+beforeEl.insertAdjacentElement('beforebegin',row);
+}
+const cats=DatabaseAPI.masterCategory.getAll()||[];
+// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" -- pola & alasan SAMA
+// PERSIS Sparepart.renderMasterCategoryChips() (sparepart-servis.js), lihat
+// komentar lengkap di sana. UNCATEGORIZED_FILTER_ID dideklarasikan di
+// sparepart-servis.js (dimuat sebelum file ini via scripts/build.js).
+const options=[{id:null,label:'🔍 Semua'}].concat(cats.map(c=>({id:c.id,label:(c.icon||'🔧')+' '+c.name}))).concat([{id:UNCATEGORIZED_FILTER_ID,label:'❔ Belum Terklasifikasi'}]);
+row.innerHTML=options.map(o=>`<div class="chip ${o.id===Servis.activeMasterCategoryFilter?'active':''}" data-action="Servis.setMasterCategoryFilter" data-args="${escapeHtml(JSON.stringify([o.id]))}">${o.label}</div>`).join('');
+},
 populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
@@ -1211,10 +1322,28 @@ row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFi
 },
 renderList(){
 Servis.renderReminder();
+// Sesi D-lanjutan5: baca preferensi filter tersimpan SEKALI per lifetime
+// halaman, SEBELUM filterSig/logs dihitung di bawah -- supaya render
+// pertama tab ini langsung mencerminkan pilihan filter sesi sebelumnya
+// (pola sama persis Sparepart.renderCatList()).
+Servis._loadMasterCategoryFilterPrefsOnce();
 const {from,to}=getCnRange();
-const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFilter;
+// filterSig -- Sesi D-lanjutan4: activeMasterCategoryFilter ditambahkan sbg
+// komponen (pola sama persis penambahan activeActionTypeFilter di E6),
+// supaya listPage ikut direset otomatis saat filter kategori master
+// berganti (jumlah total item bisa beda).
+const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFilter+'|'+Servis.activeMasterCategoryFilter;
 if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filterSig;}
-const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)).sort((a,b)=>new Date(b.date)-new Date(a.date));
+// Sesi D-lanjutan4: kondisi filter tambahan by kategori master, reuse
+// resolveLogMasterCategoryId(s) apa adanya (0 logic classify baru).
+// activeMasterCategoryFilter===null (default) = 0 perubahan hasil filter
+// dari sebelum sesi ini -- 0 regresi, sama persis pola E6.
+// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" (UNCATEGORIZED_FILTER_ID)
+// -- cocokkan entry yang resolveLogMasterCategoryId(s)-nya null (baik krn
+// classify 0 keyword cocok, maupun krn 0 kategori yang bisa di-join sama
+// sekali), BUKAN dibandingkan literal ke salah satu dari 13 id terkunci.
+const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
+const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))).sort((a,b)=>new Date(b.date)-new Date(a.date));
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
 const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
 document.getElementById('servisCount').textContent=logs.length;
@@ -1222,7 +1351,25 @@ document.getElementById('servisTotalCost').textContent=fmt(totalCost);
 document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString('id-ID')+' km':'-';
 const el=document.getElementById('servisList');
 Servis.renderActionTypeChips(el);
-if(!logs.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Belum ada catatan servis</div></div>';return;}
+// renderMasterCategoryChips(el) -- Sesi D-lanjutan4. Dipanggil SETELAH
+// renderActionTypeChips(el) (keduanya pakai insertAdjacentElement
+// 'beforebegin' relatif ke el) supaya urutan tampil konsisten: chip
+// actionType (E6) di atas, chip kategori master (sesi ini) di bawahnya,
+// baru #servisList. Dipanggil sebelum cek logs.length supaya chip tetap
+// tampil walau hasil filter 0 entry (user bisa ganti filter lagi), pola
+// sama persis renderActionTypeChips(el) di atas.
+Servis.renderMasterCategoryChips(el);
+if(!logs.length){
+// Sesi D-lanjutan4: pesan empty state dibedakan saat filter kategori
+// master aktif & 0 match, supaya user tidak salah kira riwayat servis
+// kendaraannya benar-benar kosong -- pola sama persis pembedaan pesan di
+// Sparepart.renderCatList() (Sesi D-lanjutan3). Filter actionType/rentang
+// tanggal 0 match tetap pakai pesan default lama (0 perubahan, di luar
+// scope sesi ini).
+const emptyText=Servis.activeMasterCategoryFilter?'Tidak ada catatan servis utk kategori master ini':'Belum ada catatan servis';
+el.innerHTML=`<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">${emptyText}</div></div>`;
+return;
+}
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
 el.innerHTML=visible.map(s=>{
@@ -1239,7 +1386,18 @@ const batchInfo=s.batchId?' · 🔗 batch':'';
 // belum -- backlog langkah Sesi F berikutnya, badge teks dulu sesuai
 // urutan risiko rendah -> tinggi.
 const fotoInfo=s.foto&&s.foto.length?` · 📷 ${s.foto.length}`:'';
-return `<div class="tx-item u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info"><div class="tx-name">${escapeHtml(s.item)}</div><div class="tx-meta">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''} ${s.note?'· '+escapeHtml(s.note):''}${partInfo}${batchInfo}${fotoInfo}</div></div><div class="tx-amount red">${fmt(s.cost)}</div><button class="tx-del" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
+// Sesi F-lanjutan (backlog eksplisit Sesi F2, ROADMAP-KONSOLIDASI-DATABASE-
+// SERVIS-v2.md §7 Sesi F): thumbnail gambar sungguhan di Riwayat Servis --
+// <img> 38x38 (sama persis ukuran .tx-icon di styles.css) memakai
+// s.foto[0] (foto PERTAMA saja, bukan galeri) sbg preview, ditaruh SETELAH
+// tx-icon SEBELUM tx-info. 0 dampak ke entry tanpa foto (string kosong,
+// markup tx-item persis sama seperti sebelumnya) -- pola sama persis
+// fotoInfo (badge teks) di bawah: kondisional murni pada s.foto.length.
+// Lightbox/viewer ukuran penuh & kompresi dataURL TETAP backlog terpisah
+// (thumbnail 38x38 dari dataURL mentah aman utk ukuran preview kecil ini,
+// beban/kompresi cuma relevan kalau dataURL asli dipakai ukuran penuh).
+const fotoThumb=s.foto&&s.foto.length?`<img src="${s.foto[0]}" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0">`:'';
+return `<div class="tx-item u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><div class="tx-icon u-bgaccsoft">🔧</div>${fotoThumb}<div class="tx-info"><div class="tx-name">${escapeHtml(s.item)}</div><div class="tx-meta">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''} ${s.note?'· '+escapeHtml(s.note):''}${partInfo}${batchInfo}${fotoInfo}</div></div><div class="tx-amount red">${fmt(s.cost)}</div><button class="tx-del" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
 if(!servisMoreWrap){

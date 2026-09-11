@@ -292,9 +292,459 @@ rencana default sesi-sesi berikutnya kecuali W koreksi.
 
 ====================================================
 
+## 2f. Update Status per sesi ini (v1663 — wiring listener `AIService.wireEvents()`)
+
+> Sumber: `SESSION-NOTE-sesi-c-wireevents-account-product-investment.md`
+> (v1663). Audit isi kode + full suite, metode sama §2b–§2e.
+
+### ✅ Selesai sejak update §2e terakhir
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Wiring listener `AIService.wireEvents()` | v1663 | Tambah `account.updated`/`product.updated`/`investment.updated` ke array listener (`modules/ai/ai-service.js`). `investment.updated` ditemukan saat audit menyeluruh `AIBus.emit(`, TIDAK disebut eksplisit di §2e tapi kriterianya sama (event sudah emit, 0 konsumen) — dimasukkan sekalian. `finance.updated{kind:'zakat'}` dikonfirmasi TIDAK butuh entri baru (sudah ter-cover listener `finance.updated` generik). 6 test baru, full suite 6362/6366 pass (4 gagal pre-existing tidak terkait, diverifikasi tidak menyentuh file yang diubah). |
+
+### 🟡 Masih sebagian (tidak berubah dari §2e)
+
+| Item | Yang masih kurang |
+|---|---|
+| Sesi B (storage IndexedDB) | (a) `VEHICLE_DB_RECORDS` literal belum dihapus — masih butuh sesi desain tersendiri, TIDAK disentuh sesi ini |
+| Sesi C (Event Bus umum) | Listener `AIService.wireEvents()` sekarang **TUNTAS untuk semua event yang sudah ada** (7/7: finance/asset/vehicle/delivery/account/product/investment). Domain BARU yang belum ada eventnya sama sekali tetap belum: Dana Titipan (`titipan.updated`), `investasi.js` dasar (event tambahan di luar `investment.updated` yang sudah ada), Aset non-core. Zakat/PBB masih 3/9 titik diskrit (tidak berubah, di luar scope sesi ini) |
+
+### ❌ Belum dikerjakan sama sekali (tidak berubah)
+
+- Sesi D — `service_categories` master 13-kategori-terkunci (masih 0%, **belum aman mulai** — Fase 1 masih tertahan gap (a) Sesi B, larangan §6)
+- Master Database, Import Database (Fase 2+, belum relevan)
+- Dana Titipan, `investasi.js` dasar (event baru), Aset non-core — Event Bus (Sesi C Prioritas Sedang)
+- Sesi F lanjutan (thumbnail gambar & lightbox) — kosmetik, aman kapan saja, belum masuk giliran
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1663 — lihat §2g untuk update v1664):**
+1. ~~Sesi B — sesi desain tersendiri untuk gap (a)~~ — **selesai v1664** (`DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md`), lihat §2g.
+2. **Sesi B — sesi CODING gap (a)** (implementasi `DatabaseAPI.vehicle.registerSource()` sesuai desain v1664) → syarat mulai: 3 keputusan terbuka di dokumen desain §5 dijawab W. Baru setelah sesi ini TUNTAS & hijau, Fase 1 benar-benar selesai & Sesi D boleh mulai.
+3. Sesi D — `service_categories` 13-kategori-terkunci (baru aman mulai setelah #2, larangan §6 masih berlaku).
+4. Sesi C — Dana Titipan (`titipan.updated`), lalu `investasi.js` dasar (event baru di luar `investment.updated`) & Aset non-core (Zakat/PBB 6 titik render sisa TETAP sengaja dilewati, bukan aksi diskrit).
+5. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+
+**Skor update:** Fase 1 tetap **4/5 poin selesai/sebagian** (wiring listener bukan bagian Fase 1, jadi skor Fase 1 tidak berubah sesi ini — tetap tertahan gap (a) Sesi B). Di luar Fase 1: Sesi C — listener `wireEvents()` naik dari 0/n ke 7/7 event yang sudah ada (TUNTAS untuk cakupan saat ini); domain event BARU (Dana Titipan dkk) tidak berubah, masih 0%.
+
+====================================================
+
+## 2g. Update Status per sesi ini (v1664 — desain gap (a) Sesi B, 0 kode)
+
+> Sumber: `SESSION-NOTE-sesi-b-gap-a-desain-registrasi-v1664.md` +
+> `DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md` (v1664). Sesi desain
+> murni sesuai keputusan eksplisit v1661 (gap (a) butuh desain+review
+> sendiri, bukan "gap kecil") — **0 kode produksi diubah**, sama
+> filosofi sesi audit `AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md` v1651.
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Desain mekanisme registrasi `TORSI_DB`/`VEHICLE_SPEC_DB` → `DatabaseAPI` | v1664 | Diusulkan `DatabaseAPI.vehicle.registerSource(entries)`, dipanggil `sparepart-servis-b.js` top-level setelah kedua const didefinisikan (timing aman — dikonfirmasi lewat titik panggil `ensureLoaded()` di `load()`, yang baru jalan runtime setelah semua script selesai dieksekusi). `_vehicleDbRecords()` jadi 3-tier: IndexedDB aktif > sumber teregistrasi > `VEHICLE_DB_RECORDS` literal (TIDAK dihapus, jadi fallback mati di produksi + tetap menjaga 7 test yang me-load `database-api.js` standalone). Detail lengkap termasuk perubahan yang perlu di `_vehicleModelRecords()` & seed `_vehicleDbDoLoad()`: lihat dokumen desain. |
+| Perlu field `id`/`displayName` baru di `TORSI_DB`/`VEHICLE_SPEC_DB` (additive) | v1664 (desain) | Dibutuhkan utk memasangkan 1 entri torsi + 1 entri spec jadi 1 record — TIDAK bisa pakai `matchNames` sbg kunci pasangan krn sengaja beda utk BeAT FI (torsi terima alias "vario 110", spec tidak). 0 dampak ke `findTorsiDb()`/`findVehicleSpec()` (tidak baca field ini). |
+| 3 keputusan terbuka untuk W | v1664 (desain) | (1) additive vs full-cutover `VEHICLE_DB_RECORDS` — direkomendasikan additive dulu, full-cutover jadi sesi terpisah lagi setelahnya; (2) nama fungsi `registerSource` (gaya, bukan fungsional); (3) toleransi pairing torsi-only/spec-only utk kendaraan masa depan. **Sesi coding gap (a) menunggu jawaban ini**, belum boleh mulai coding menebak arahnya sendiri. |
+
+**Kesimpulan:** Fase 1 masih **4/5** (desain bukan implementasi — gap
+(a) baru tertutup setelah sesi CODING berikutnya selesai & hijau, bukan
+sesi desain ini). Sesi D **tetap belum boleh mulai** (larangan §6) —
+urutan §7 di bawah diperbarui supaya sesi berikutnya adalah **sesi
+coding gap (a)** (dengan syarat: keputusan §5 dokumen desain sudah
+dijawab W), bukan langsung Sesi D.
+
+====================================================
+
+## 2h. Update Status per sesi ini (v1665 — sesi CODING gap (a) Sesi B, Fase 1 TUNTAS 5/5)
+
+> Sumber: `SESSION-NOTE-sesi-b-gap-a-coding-registersource-v1665.md`
+> (v1665). Implementasi persis sesuai `DESAIN-SESI-B-GAP-A-VEHICLE-DB-
+> REGISTRASI.md` (v1664) — 3 keputusan terbuka §5 dijawab W sebelum
+> coding dimulai (lihat tabel di bawah), tidak ditebak sepihak.
+
+**3 keputusan §5 dokumen desain — dijawab W:**
+
+| # | Keputusan | Jawaban |
+|---|---|---|
+| 1 | Additive vs full-cutover `VEHICLE_DB_RECORDS` | **(A) Additive** — literal TIDAK dihapus sesi ini, tetap fallback mati-di-produksi. Full-cutover ditunda ke sesi terpisah (sesuai rekomendasi desain). |
+| 2 | Nama fungsi | **`registerSource`** — dipakai apa adanya sesuai usulan desain. |
+| 3 | Toleransi pairing torsi-only/spec-only | **Toleran** — record dgn cuma salah satu (`torsi` atau `spec`) tetap terdaftar, field yg tidak ada jadi `undefined`. |
+
+### ✅ Selesai sejak update §2g terakhir
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| `database-api.js`: `DatabaseAPI.vehicle.registerSource(entries)` | v1665 | `_registeredVehicleSource` baru, `dbVehicleRegisterSource()`, expose di namespace publik. `_vehicleDbRecords()` jadi 3-tier (IndexedDB aktif > sumber teregistrasi > `VEHICLE_DB_RECORDS` literal) — persis desain §4. |
+| `_vehicleModelRecords()` — cabang baru utk registered source | v1665 | Sesuai desain §4a: kalau storage belum dimuat TAPI sudah ada `registerSource()`, model list diturunkan dari situ (bukan `VEHICLE_MODELS` literal beku). |
+| Seed IndexedDB (`_vehicleDbDoLoad()`) — sumber seed diganti | v1665 | `_vehicleDbActiveRecords = _vehicleDbRecords().slice()` (bukan `VEHICLE_DB_RECORDS.slice()` langsung) — instalasi baru sekarang di-seed dari `TORSI_DB`/`VEHICLE_SPEC_DB` teregistrasi kalau ada. Sesuai desain §4b. |
+| `sparepart-servis-b.js`: `id`/`displayName` additive di `TORSI_DB`/`VEHICLE_SPEC_DB` | v1665 | 2 entri tiap const (`vario-125`, `beat-fi`) — 0 field/nilai lama diubah. Sesuai desain §3. |
+| `sparepart-servis-b.js`: IIFE registrasi top-level | v1665 | Dipasang tepat setelah `VEHICLE_SPEC_DB` selesai didefinisikan (sebelum `findVehicleSpec`), pairing by `id`, guard `typeof DatabaseAPI==='undefined'` sama pola 4 konsumen lain. Sesuai desain §4. |
+| Test baru | v1665 | `tests/database-api-vehicledb-registersource-sesi-gap-a.test.js` (13 test) — cakupan persis desain §6: override data, pairing toleran torsi-only/spec-only, seed IndexedDB pakai registered source, muat 2 file bersama (parity vs `VEHICLE_DB_RECORDS` dikonfirmasi identik + guard matchNames BeAT FI torsi≠spec tetap terjaga), 0 regresi baik `database-api.js` maupun `sparepart-servis-b.js` dimuat sendirian. |
+| Full suite `node --test` | v1665 | 6373 test (naik dari 6360), 6367 pass, **6 fail — dikonfirmasi 100% sama dgn 6 kegagalan pre-existing di checkout asli tanpa perubahan** (bundle-freshness, `self-test.js`, `lifeos/adapters/s456-*`, `verify-release-ready`, 2 test tagihan `S468d`/`txHTML` — semua tidak tersentuh patch ini). **0 regresi baru.** |
+
+### ❌ Belum dikerjakan (sengaja ditunda, sesuai keputusan 1 di atas)
+
+- **Hapus `VEHICLE_DB_RECORDS` literal (full-cutover)** — item Critical §3 terakhir. Literal sekarang mati di produksi (selalu kalah dari registered source begitu `sparepart-servis-b.js` ikut termuat) tapi TETAP ada di kode sbg fallback test/kompatibilitas. Sesi terpisah lagi, tidak terburu-buru — 0 risiko selama dibiarkan.
+
+**Kesimpulan: Fase 1 sekarang TUNTAS 5/5** (poin 1 `manufacturers`/`vehicle_models` ✅, poin 2 Vehicle Database ke storage ✅ — gap (a) & (c) sama-sama tertutup, poin 3 wiring 3 literal generik ✅, poin 4 Event Bus ringan ✅, poin 5 checklist `actionType` ✅). **Larangan §6 resmi lepas untuk Sesi D** (`service_categories` 13-kategori-terkunci) — sesi berikutnya boleh mulai Sesi D. Urutan §7 di bawah diperbarui.
+
+====================================================
+
+## 2i. Update Status per sesi ini (v1666–v1670 — Sesi D `masterCategory`, mulai s/d filter/chip)
+
+> Sumber: `SESSION-NOTE-sesi-d-mastercategory-v1666.md`,
+> `-sesi-d-lanjutan1-mastercategory-dashbadge-v1667.md`,
+> `-sesi-d-lanjutan2a-mastercategory-modalbadge-v1668.md`,
+> `-sesi-d-lanjutan2b-mastercategory-livebadge-v1669.md`,
+> `-sesi-d-lanjutan3-mastercategoryfilter-v1670.md` (sesi ini). Roadmap
+> ini sebelumnya belum diperbarui utk v1666-v1669 walau CHANGELOG sudah
+> mencatatnya — §2i menutup gap dokumentasi itu sekaligus menambah v1670.
+
+### ✅ Selesai sejak update §2h terakhir
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Sesi D — `masterCategory` 13 kategori terkunci (data+classifier) | v1666 | `DatabaseAPI.masterCategory` namespace baru (`getAll`/`getById`/`classifyItemName`), 13 kategori dari breakdown Honda Vario 125 KZR 2012 (jawaban W). **Additive per-ITEM** (bukan migrasi 8 grup ad-hoc 1:1 — grup lama campur lintas kategori terkunci, classifier per-item lebih presisi). `resolveCatGroup()` jadi SoT tunggal, semua cabang dibungkus `_withMasterCategory()`. 0 field/titik baca lama diubah. |
+| Sesi D-lanjutan1 — badge read-only di dashboard Pengingat Servis | v1667 | `Sparepart.dashReminderMasterCatBadgeHTML()`, pure function, reuse `resolveCatGroup()` apa adanya. |
+| Sesi D-lanjutan2a — badge di modal Kategori Sparepart (baca 1x saat modal dibuka) | v1668 | `Sparepart.updateMasterCatBadge(name,vehicleId)`, dipanggil dari `openCatModal()`. |
+| Sesi D-lanjutan2b — badge live-update saat mengetik nama | v1669 | `Sparepart.updateMasterCatBadgeLive()`, ditambahkan ke rangkaian `oninput` `#sparepartName` yang sudah ada (audit konfirmasi 1 atribut sinkron, bukan listener terpisah — 0 race baru). |
+| **Sesi D-lanjutan3 — filter/chip kategori master di "Kelola Kategori Sparepart"** | v1670 (sesi ini) | `Sparepart.activeMasterCategoryFilter`/`setMasterCategoryFilter()`/`renderMasterCategoryChips()`, pola sama persis `Servis.renderActionTypeChips()` (Sesi E6). Target `renderCatList()` (daftar kategori), BUKAN `Servis.renderList()` (daftar log riwayat, scope lebih besar). 10 test baru, full suite 6420/6422 (2 gagal pre-existing tidak berubah). |
+
+### 🟡 Masih sebagian
+
+| Item | Yang masih kurang |
+|---|---|
+| Sesi D (Master Database `masterCategory`) | Filter/chip SEKARANG ada di "Kelola Kategori Sparepart" (v1670). **Belum**: filter/chip yang sama di `Servis.renderList()` (Riwayat Servis — beda scope, butuh join log→kategori); keputusan produk item classify `null` (tetap `null` atau kategori ke-14 "Lainnya"); persist filter aktif ke `D`/localStorage. |
+| Sesi B (storage IndexedDB) | Gap (a) `VEHICLE_DB_RECORDS` literal — **TUNTAS v1665** (lihat §2h), tidak berubah sesi ini. |
+
+### ⚠️ Ditemukan lagi di v1670: version marker basi (2x berulang, pola sama v1653)
+
+`APP_BUILD_VERSION` dkk **berhenti dibump sejak v1665** — 4 sesi (Sesi D
+v1666-v1669) mengedit source tanpa langkah "Build — bump manual" seperti
+sesi-sesi sebelumnya. **Dibetulkan otomatis v1670** (`scripts/build.js`
+bump `...-1664`→`...-1665`, `?v=1644`→`?v=1645`). Ini pola BERULANG (sudah
+2x: v1653 dan v1665→v1670) — dicatat sbg kandidat sesi tersendiri utk
+menambah gate wajib (bukan cuma warning) di `scripts/build.js`, belum
+dikerjakan.
+
+**Skor update:** Sesi D (di luar Fase 1, item High §3) sekarang: data+
+classifier ✅ (v1666), 3 consumer UI read-only/interaktif ✅ (v1667-v1669),
+filter/chip di 1 dari 2 daftar kandidat ✅ (v1670). Fase 1 tidak berubah
+(tetap TUNTAS 5/5 sejak v1665, lihat §2h).
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1670):**
+1. Sesi C — Dana Titipan (`titipan.updated`), lalu `investasi.js` dasar & Aset non-core (item Prioritas Sedang audit Sesi C yang belum tersentuh sejak §2f).
+2. Sesi D-lanjutan4 (opsional) — filter/chip `masterCategory` di `Servis.renderList()` (Riwayat Servis), pola sama v1670 tapi butuh join log→kategori dulu.
+3. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja, tidak berubah dari §2e).
+4. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js` — mencegah pola "version marker basi" berulang lagi.
+
+====================================================
+
+## 2j. Update Status per sesi ini (v1671–v1672 — Sesi C Dana Titipan, `titipan.updated`)
+
+> Sumber: `SESSION-NOTE-sesi-c-titipan-updated.md` (v1671-v1672).
+> Menutup item pertama urutan §2i: Dana Titipan (`titipan.updated`) —
+> domain terakhir dari 5 yang ditandai `AUDIT-SESI-C-EVENTBUS-D-WRITES-
+> NO-EMIT.md` temuan #5 sebagai "SELURUH domain 0% Event Bus".
+
+### ✅ Selesai sejak update §2i terakhir
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Dana Titipan — 10 titik `save()` di 4 file, semua emit `titipan.updated` | v1671-1672 | `dana-titipan-pool-api.js` (2x: `_addEntry()`/`deleteEntry()`), `dana-titipan-commitment-return-api.js` (4x: `saveCommitment()` create/edit, `deleteCommitment()`, `recordReturn()`, `deleteReturn()`), `titipan-reconcile.js` (3x: `repairOwnerIdConsistency()`/`repairDebtNameStaleness()`/`repairTransactionOwnerRefs()`, masing² hanya emit kalau ada perubahan nyata — guard sama dgn `save()`-nya), `titipan-expense-flow.js` (1x: `submit()`). Payload `{kind,action,...id}` pola sama persis `account.updated`/`product.updated`. 0 field/logic bisnis lama diubah. |
+| Listener `AIService.wireEvents()` → `titipan.updated` | v1671-1672 | Ditambahkan sekalian di sesi yang sama (7 event lama tidak berubah) — hindari "pemancar tanpa radio" baru, sama alasan §2e/§2f. |
+| Test baru | v1671-1672 | `tests/dana-titipan-aibus-titipan-updated-sesi-c.test.js` — 21/21 pass, cakupan 10 titik emit (payload lengkap + kasus 0-emit saat guard false/id tidak ditemukan) + guard `AIBus` tidak ada + 2 test listener. |
+| Full suite `node --test` | v1671-1672 | 6443 test, 6441 pass, **2 fail — dikonfirmasi 100% sama dgn 2 kegagalan pre-existing sejak v1670** (S468d, `txHTML()` item virtual `vbill_`). **0 regresi baru.** |
+
+### ❌ Belum dikerjakan (tidak berubah dari §2i, urutan bergeser naik 1)
+
+- Sesi D-lanjutan4 — filter/chip `masterCategory` di `Servis.renderList()` (Riwayat Servis).
+- Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Domain Event Bus lain yang masih 0% dari audit yang sama: `investasi.js` dasar (event baru di luar `investment.updated`), Aset non-core (`aset-misc.js`/`aset-emas-impor.js`/`aset-reports.js`). Zakat/PBB masih 3/9 titik diskrit (tidak berubah).
+
+**Skor update:** Sesi C Prioritas Sedang sekarang: Shop/Cobek TUNTAS (9/9, v1662) + **Dana Titipan TUNTAS (10/10 titik, v1671-1672)**; `investasi.js` dasar & Aset non-core masih 0% (2/3 domain besar Prioritas Sedang selesai, naik dari 1/3 di §2i). Fase 1 tidak berubah (tetap TUNTAS 5/5 sejak v1665).
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1672):**
+1. Sesi C — `investasi.js` dasar (event baru di luar `investment.updated` yang sudah ada) & Aset non-core (2 domain besar terakhir yang masih 0% Event Bus dari audit yang sama).
+2. Sesi D-lanjutan4 (opsional) — filter/chip `masterCategory` di `Servis.renderList()` (Riwayat Servis).
+3. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja, tidak berubah dari §2e).
+4. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+
+====================================================
+
+## 2k. Update Status per sesi ini (v1673, v1675 — Sesi D TUNTAS: filter/chip Riwayat Servis + keputusan classify `null` + persist localStorage)
+
+> Sumber: `SESSION-NOTE-sesi-d-lanjutan4-mastercategoryfilter-servis-v1673.md`
+> (v1673, belum sempat masuk roadmap — CHANGELOG sudah mencatatnya tapi §2j
+> di atas cuma menutup Dana Titipan v1671-1672), `SESSION-NOTE-sesi-d-lanjutan5-
+> mastercategoryfilter-uncategorized-persist-v1675.md` (v1675, sesi ini).
+> §2k menutup gap dokumentasi v1673 sekaligus menambah v1675 — v1674
+> (`investasi.js` dasar) di luar scope Sesi D, tidak disentuh di sini
+> (lihat CHANGELOG v1674 utk detailnya).
+
+### ✅ Selesai sejak update §2i terakhir (Sesi D sekarang TUNTAS)
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Sesi D-lanjutan4 — filter/chip kategori master di Riwayat Servis | v1673 | `Servis.activeMasterCategoryFilter`/`setMasterCategoryFilter()`/`renderMasterCategoryChips()`/`resolveLogMasterCategoryId()` (join log→kategori baru, join langsung `categoryId` → fallback `resolveServisCatForVehicle()` by-nama → fallback match nama polos). Target `Servis.renderList()` (daftar LOG), melengkapi `Sparepart.renderCatList()` (daftar KATEGORI, v1670) — 2 dari 2 daftar kandidat filter/chip kategori master sekarang tuntas. |
+| **Sesi D-lanjutan5 — keputusan produk item classify `null` + chip "❔ Belum Terklasifikasi"** | v1675 (sesi ini) | Tetap `null` (TIDAK menambah kategori ke-14 ke `DatabaseAPI.masterCategory`, kontrak "13 kategori terkunci" tidak disentuh). `UNCATEGORIZED_FILTER_ID` (sentinel murni UI, `sparepart-servis.js`) sebagai opsi tambahan di `renderMasterCategoryChips()` KEDUA modul (Sparepart & Servis) — cocokkan `masterCategoryId==null` / `resolveLogMasterCategoryId()==null`. |
+| **Sesi D-lanjutan5 — persist filter aktif ke localStorage** | v1675 (sesi ini) | `_loadMasterCategoryFilterPrefsOnce()`/`_saveMasterCategoryFilterPrefs()` di kedua modul, key terpisah (`sparepartMasterCategoryFilterPrefs`/`servisMasterCategoryFilterPrefs`). SENGAJA bukan `FilterPrefsStore` (S716) apa adanya — kontrak `target`-nya (owner-array+settlement) beda bentuk dari kebutuhan (1 id string) — pola try/catch permisif & nama method tetap disamakan, implementasi berdiri sendiri. |
+| Test baru/update | v1673, v1675 | v1673: 10 test baru (`servis-mastercategoryfilter-sesi-d-lanjutan4.test.js`). v1675: 2 file test lama diupdate (chip count 14→15) + 2 file test baru (17 test: 10 Sparepart + 7 Servis, cakupan chip/filter/persist/guard baca-sekali/id asing/JSON korup). |
+| Full suite `node --test` | v1673, v1675 | v1673: tidak diaudit terpisah di roadmap (lihat CHANGELOG). v1675 (sesi ini): 6487 test, 6478 pass, **9 fail — 0 regresi baru**, semua pre-existing (7× gap harness `investasi-dasar-...` v1674 yang sudah dicatat "ditunda atas instruksi W", 2× S468d/txHTML pre-existing sejak v1673). |
+
+### ✅ Sesi D (Master Database `masterCategory`) — status akhir: TUNTAS
+
+Baris "🟡 Masih sebagian" di §2i (filter/chip Riwayat Servis, keputusan
+classify `null`, persist localStorage) **SEMUA sudah tertutup** per v1675.
+Sesi D (di luar Fase 1, item High §3) sekarang selesai penuh: data+
+classifier (v1666) → 3 consumer UI (v1667-v1669) → filter/chip di KEDUA
+daftar kandidat (v1670, v1673) → keputusan produk classify `null` + persist
+(v1675).
+
+### ❌ Belum dikerjakan (tidak berubah dari §2j, Sesi D dikeluarkan dari daftar)
+
+- `investasi.js` dasar (v1674, sebagian — 7 gap harness ditunda atas
+  instruksi W) & Aset non-core (`aset-emas-impor.js`/`aset-reports.js`) —
+  2 domain besar terakhir Sesi C Prioritas Sedang yang masih 0%/sebagian
+  Event Bus.
+- Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Zakat/PBB masih 3/9 titik diskrit (tidak berubah).
+
+**Skor update:** Sesi D **TUNTAS** (naik dari "1 dari 2 daftar kandidat +
+2 keputusan produk tertunda" di §2i). Sesi C Prioritas Sedang: Shop/Cobek
+TUNTAS (v1662) + Dana Titipan TUNTAS (v1671-1672) + `investasi.js` dasar
+sebagian (v1674, 7 gap harness) — Aset non-core masih 0%. Fase 1 tidak
+berubah (tetap TUNTAS 5/5 sejak v1665).
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1675):**
+1. Perbaikan 7 gap harness `investasi-dasar-aibus-investment-updated-sesi-c.test.js`
+   (v1674, sempat ditunda atas instruksi W — cek apakah sudah boleh dikerjakan).
+2. Aset non-core (`aset-emas-impor.js`/`aset-reports.js`) — domain besar
+   TERAKHIR Sesi C Prioritas Sedang yang masih 0% Event Bus.
+3. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja, tidak berubah dari §2e).
+4. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+
+====================================================
+
+## 2l. Update Status per sesi ini (v1676 — Sesi C: Aset non-core TUNTAS)
+
+> Sumber: `SESSION-NOTE-sesi-c-aset-noncore-asset-updated-v1676.md`.
+> Menutup item ke-2 urutan §2k: Aset non-core (`aset-emas-impor.js`/
+> `aset-reports.js`) — domain besar TERAKHIR Sesi C Prioritas Sedang
+> yang masih 0% Event Bus.
+
+### ✅ Selesai sejak §2k
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Aset non-core — 2 titik relevan diberi `asset.updated` | v1676 | `aset-emas-impor.js`: `GoldImport.commit()` emit `{imported:count}` (1x per batch). `aset-reports.js`: `Penyusutan.toggleAktif()`/`.updateParam()` emit `{penyusutanUpdated:true,editId}`. Payload pola field langsung (tanpa wrapper `kind`/`action`), konsisten `aset.js`/`aset-owners.js` — BEDA dari pola `kind`/`action` yang dipakai `finance.updated`/`product.updated`/`titipan.updated`/`investment.updated`. |
+| Keputusan produk — 2 write point sengaja TIDAK diberi event | v1676 | `GoldZakat.onHargaInput()` (harga acuan emas/gram) & `PajakAset.updateSetting()` (NJOPTKP/tarif PBB) — keduanya pengaturan global, bukan data per-aset, kategori "RENDAH" di `AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md` (pola sama `format-tema.js`). |
+| Listener `AIService.wireEvents()` → `asset.updated` | (sudah ada) | Sudah subscribe sejak sesi wiring sebelumnya — 0 perubahan listener sesi ini. |
+| Test baru | v1676 | `tests/aset-goldimport-aibus-emit-sesi-c.test.js` (4 test) + `tests/aset-reports-penyusutan-aibus-emit-sesi-c.test.js` (6 test) — **10/10 pass**. |
+| Full suite `node --test` | v1676 | Setelah `build.js`: 6480 test, 6478 pass, **2 fail — 100% pre-existing sejak v1673** (S468d/txHTML virtual-bill), **0 regresi baru**. |
+
+### ❌ Belum dikerjakan (tidak berubah dari §2k, Aset non-core dikeluarkan dari daftar)
+
+- Perbaikan 7 gap harness `investasi-dasar-aibus-investment-updated-sesi-c.test.js` (v1674, tetap ditunda atas instruksi W).
+- Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Zakat/PBB masih 3/9 titik diskrit (tidak berubah).
+
+**Skor update:** Sesi C Prioritas Sedang — **Aset non-core TUNTAS**.
+Semua 5 domain Sesi C Prioritas Sedang kini TUNTAS: Shop/Cobek (v1662),
+Dana Titipan (v1671-1672), `investasi.js` dasar (v1674, minus 7 gap
+harness), Aset non-core (v1676). Prioritas Sedang Sesi C **selesai**
+kecuali 7 gap harness v1674 yang menunggu keputusan W. Fase 1 tidak
+berubah (tetap TUNTAS 5/5 sejak v1665). Sesi D tidak berubah (tetap
+TUNTAS sejak v1675).
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1676):**
+1. Perbaikan 7 gap harness `investasi-dasar-aibus-investment-updated-sesi-c.test.js`
+   (v1674, sempat ditunda atas instruksi W — cek apakah sudah boleh dikerjakan).
+2. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja, tidak berubah dari §2e).
+3. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+4. Zakat/PBB — 6 titik `save()` sisa (dipanggil tiap render, bukan aksi diskrit — butuh keputusan desain terpisah sebelum coding, lihat §2e).
+
+====================================================
+
+## 2m. Update Status per sesi ini (v1677 — Sesi C-followup: 7 gap harness `investasi-dasar` TUNTAS + 1 temuan bug baru)
+
+> Sumber: `SESSION-NOTE-sesi-c-followup-investasi-dasar-gap-harness-v1677.md`.
+> Menutup item #1 urutan §2l: perbaikan 7 gap harness
+> `investasi-dasar-aibus-investment-updated-sesi-c.test.js` (v1674,
+> ditunda atas instruksi W).
+
+### ✅ Selesai sejak §2l
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| 7 gap harness `investasi-dasar-aibus-investment-updated-sesi-c.test.js` | v1677 | **TUNTAS 7/7 (17/17 test file ini pass)**. Semua perubahan HANYA di file test — 0 baris kode produksi diubah. Bagian 2 (`aset-misc.js`, 4 test): stub kosong utk 7 nama yang cuma dirujuk di baris expose `window` terakhir file. Bagian 3 (`aset.js saveUnified()`, 3 test): 2 dependency dimuat dari SOURCE ASLI (`filter-prefs-store.js`, `aset-misc.js`, urutan muat aset.js dulu baru aset-misc.js), `OwnershipEngine.resolve()`/`fmtFull`/`fmt`/`AssetInsight.render()` di-stub, `Aset.renderDashboard/renderInvestasi/_safeRenderReports` di-override no-op post-load, `AIBus.emit` stub difilter cuma `investment.updated` (`asset.updated` preseden lama ikut emit di jalur sama, bukan subjek test ini). Detail lengkap: `SESSION-NOTE-sesi-c-followup-investasi-dasar-gap-harness-v1677.md`. |
+| Full suite `node --test` | v1677 | 6497 test, **6495 pass, 2 fail — 100% pre-existing sejak v1673** (S468d/txHTML virtual-bill, tidak berubah), **0 regresi baru**. |
+
+### 🆕 Temuan baru sesi ini (di luar scope 7 gap harness, DITUNDA atas instruksi W)
+
+**Bug produksi — double-holding di `aset.js saveUnified()`.** Saat
+menutup gap harness Bagian 3, 3 test masih gagal setelah semua stub
+ditutup — bukan lagi `ReferenceError`, tapi assertion count event salah.
+Ditrace manual: kalau aset BARU dibuat dgn jenis yang cocok mapping
+migrasi (`ASSET_JENIS_TO_INVESTMENT_TYPE`, subset `TRADABLE_TYPE_MAP`:
+Saham/Reksadana/Kripto/Deposito) + `hargaBeli`/`jumlahUnit` terisi (>0)
++ toggle "Buat Holding Investasi Otomatis" aktif, `_saveInner()` (dari
+`Aset.save()`, dipanggil DI DALAM `saveUnified()` SEBELUM blok
+holding-creation eksplisit) memicu `renderList()` →
+`migrateAssetInvestmentsToHoldings()` yang mendeteksi aset baru ini
+sbg kandidat migrasi SAH (belum py `_migratedToInvestmentId`/
+`investmentId`) → bikin Holding #1. Lalu `saveUnified()` lanjut: guard
+`if(savedAsset.investmentId)return` cek field `investmentId`, BUKAN
+`_migratedToInvestmentId` yang justru ditulis migrasi barusan — guard
+gagal menangkap, `saveUnified()` bikin Holding #2 lagi. **1 aset baru
+→ 2 Holding terduplikasi.** Dikonfirmasi manual via reproduksi standalone
+(`saved.investmentId` beda dgn `saved._migratedToInvestmentId`).
+
+**Keputusan sesi ini**: TIDAK diperbaiki (di luar scope 7 gap harness).
+2 dari 3 data test Bagian 3 diubah supaya tidak memicu kombinasi ini
+(hargaBeli/jumlahUnit dikosongkan, tidak relevan dgn logic yang DITES
+di test tsb), murni utk menutup gap harness tanpa memperluas scope
+sesi. Bug produksinya sendiri dicatat di bawah utk sesi terpisah.
+
+### ❌ Belum dikerjakan (tidak berubah dari §2l kecuali item #1 dikeluarkan + 1 item baru)
+
+- **[BARU] Bug produksi double-holding `aset.js saveUnified()`** —
+  guard `if(savedAsset.investmentId)` perlu juga cek
+  `_migratedToInvestmentId` (atau `renderList()` di dalam `_saveInner()`
+  dipindah supaya tidak race dgn blok holding-creation eksplisit) —
+  butuh desain/review kecil sebelum coding (menyentuh urutan
+  side-effect `_saveInner()`, bukan sekadar tambah 1 guard), TIDAK
+  masuk kategori "gap kecil" murni. Repro lengkap: lihat
+  `SESSION-NOTE-sesi-c-followup-investasi-dasar-gap-harness-v1677.md`.
+- Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Zakat/PBB masih 3/9 titik diskrit (tidak berubah).
+
+**Skor update:** 7 gap harness `investasi-dasar` **TUNTAS 7/7**. Sesi C
+Prioritas Sedang (Shop/Cobek, Dana Titipan, `investasi.js` dasar, Aset
+non-core) sekarang **selesai penuh TANPA pengecualian** (v1674's 7 gap
+harness tidak lagi jadi catatan kaki). Fase 1 & Sesi D tidak berubah.
+1 temuan bug baru (double-holding) menambah antrian sesi ringan
+berikutnya.
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1677):**
+1. ~~Bug produksi double-holding `aset.js saveUnified()`~~ — **TUNTAS
+   v1678, lihat §2n.**
+2. Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja, tidak berubah dari §2e).
+3. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+4. Zakat/PBB — 6 titik `save()` sisa (dipanggil tiap render, bukan aksi diskrit — butuh keputusan desain terpisah sebelum coding, lihat §2e).
+
+====================================================
+
+## 2n. Update Status per sesi ini (v1678 — Fix bug produksi double-holding `aset.js saveUnified()`)
+
+> Sumber: `SESSION-NOTE-fix-double-holding-asetjs-saveunified-v1678.md`.
+> Menutup item #1 urutan §2m: bug produksi double-holding yang
+> ditemukan v1677 (ditunda sesi itu, di luar scope 7 gap harness).
+
+### ✅ Selesai sejak §2m
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Fix bug produksi double-holding `aset.js saveUnified()` | v1678 | Guard sebelum blok holding-creation eksplisit sekarang cek JUGA `savedAsset._migratedToInvestmentId`, bukan cuma `savedAsset.investmentId` (1 baris). Akar masalah: `Aset.save()` di dalam `saveUnified()` memicu `renderList()`→`migrateAssetInvestmentsToHoldings()` yang bisa lebih dulu bikin Holding #1 + tandai `_migratedToInvestmentId` (field beda dari yang dicek guard lama) sebelum blok eksplisit sempat jalan. Urutan side-effect `_saveInner()`/`renderList()` TIDAK disentuh (opsi minim-risiko, bukan opsi "pindah `renderList()`" yang lebih invasif). |
+| Regression test | v1678 | Ditambahkan ke `tests/investasi-dasar-aibus-investment-updated-sesi-c.test.js` Bagian 3 — reproduksi persis kombinasi race (jenis Reksadana + hargaBeli/jumlahUnit terisi), assert cuma 1x `Investment.addHolding()` terpanggil. PASS. |
+| Full suite `node --test` | v1678 | 6501 test, 6487 pass, 14 fail — fail count & nama test IDENTIK sebelum/sesudah fix (dikonfirmasi diff manual), **0 regresi baru** dari fix ini. |
+
+### ⚠️ Catatan lingkungan (bukan hasil sesi ini, perlu perhatian W)
+
+Sesi ini dikerjakan di sandbox rekonstruksi (source direkonstruksi dari
+overlay `app-main__78_.zip` + `PATCH-AKUMULASI-v1642-v1673/v1675/v1676/
+v1677.zip`, TANPA akses git/jaringan) — bukan checkout git penuh milik
+W. Full suite di sandbox ini menunjukkan **14 fail**, TAPI CHANGELOG
+v1677 mencatat **2 fail** (S468d/txHTML virtual-bill) di repo asli.
+Dikonfirmasi 12 fail tambahan ini SUDAH ADA sebelum fix v1678 disentuh
+sama sekali (diuji di working copy bersih tanpa perubahan apa pun,
+hasil identik) — kemungkinan besar artefak drift rekonstruksi sandbox
+(mis. ada patch/sesi di antara v1673–v1677 yang tidak ikut ter-overlay
+persis), BUKAN regresi nyata di repo W. **Rekomendasi: jalankan ulang
+`node --test` di repo git W sendiri untuk verifikasi definitif** sebelum
+mempercayai angka "14 fail" di atas. Bundle hasil build v1678 juga TANPA
+minifikasi (esbuild tidak tersedia di sandbox ini) — sintaks valid
+(`node --check` lolos, `verify-release-ready.js` lolos via override),
+tapi kalau W butuh bundle terminifikasi, jalankan `npm install
+--save-dev esbuild` lalu `node scripts/build.js` ulang di lingkungan W.
+
+### ❌ Belum dikerjakan (tidak berubah dari §2m)
+
+- Sesi F lanjutan — thumbnail gambar & lightbox (kosmetik, aman kapan saja).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Zakat/PBB masih 3/9 titik diskrit.
+
+**Skor update:** Bug produksi double-holding (item baru §2m) **TUNTAS**.
+Tidak ada perubahan lain di luar fix ini — Fase 1, Sesi D, Dana Titipan,
+wiring `AIService.wireEvents()`, Sesi F semua tetap sama posisinya dgn
+§2m.
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1678):**
+1. ~~Sesi F lanjutan — thumbnail gambar & lightbox~~ — **thumbnail
+   TUNTAS v1679 (lihat §2o); lightbox TETAP terbuka, lihat §2o.**
+2. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+3. Zakat/PBB — 6 titik `save()` sisa (butuh keputusan desain terpisah sebelum coding, lihat §2e).
+4. Wiring listener `AIService.wireEvents()` untuk event yang sudah ada — masih 0% (lihat §2e poin 3, belum dikerjakan sejak direkomendasikan).
+5. Sesi C — Dana Titipan lanjutan / `investasi.js` dasar & Aset non-core lanjutan, kalau ada titik baru ditemukan.
+
+====================================================
+
+## 2o. Update Status per sesi ini (v1679 — Sesi F-lanjutan: Thumbnail gambar di Riwayat Servis)
+
+> Sumber: `SESSION-NOTE-sesi-f-lanjutan-thumbnail-foto-riwayat-servis-v1679.md`.
+> Item #1 urutan §2n — thumbnail SAJA (lightbox sengaja dipisah, di luar
+> scope sesi ini, sesuai disiplin 1 sesi = 1 fokus kecil).
+
+### ✅ Selesai sejak §2n
+
+| Item | Sesi | Catatan |
+|---|---|---|
+| Thumbnail gambar `<img>` di Riwayat Servis | v1679 | `car-notes.js` `Servis.renderList()`: `<img>` 38×38px (sama ukuran `.tx-icon`) dari `s.foto[0]` (foto pertama), disisipkan setelah `tx-icon` sebelum `tx-info`. Token CSS existing (`var(--r-lg)`/`var(--border2)`, sama persis `_renderPhotoThumbs()` modal). 0 perubahan utk entry tanpa foto. Badge teks "📷 N" (F2) tetap dipertahankan berdampingan. |
+| Test baru | v1679 | `tests/servis-foto-thumbnail-sesi-f-lanjutan.test.js` (5 test): render dari foto pertama, 0 render kalau tanpa foto, isolasi per-entry, src dataURL utuh. 5/5 pass. `tests/servis-foto-badge-sesi-f2.test.js` (lama): 5/5 pass, 0 regresi. |
+| Full suite `node --test` | v1679 | 6506 test, 6492 pass, 14 fail — fail count & nama IDENTIK dgn v1678 (0 regresi baru; 14 fail tetap drift rekonstruksi sandbox, lihat catatan §2n). |
+
+### 🟡 Sesi F masih sebagian
+
+- **Lightbox/viewer foto ukuran penuh** — MASIH belum. Klik
+  thumbnail/baris tetap membuka `servisModal` (data-action
+  `openServisModal` TIDAK disentuh sesi ini). Butuh keputusan UX kecil
+  sebelum coding: klik thumbnail vs klik baris → beda aksi? navigasi
+  next/prev antar-foto dalam 1 entry (bisa >1 foto)? cara tutup
+  (Esc/tap-luar/tombol ✕)? — bukan "gap kecil" murni, desain tersendiri.
+- Kompresi gambar dataURL sebelum simpan — backlog F1 lama, tetap
+  terbuka (tidak memblokir thumbnail di sesi ini, `object-fit:cover`
+  murni re-render visual).
+
+### ❌ Belum dikerjakan (tidak berubah dari §2n)
+
+- Sesi F lightbox (baru saja dijelaskan di atas).
+- (Kandidat proses) gate wajib version-bump di `scripts/build.js`.
+- Zakat/PBB masih 3/9 titik diskrit.
+- Wiring listener `AIService.wireEvents()` — masih 0%.
+- Sesi C — Dana Titipan lanjutan / `investasi.js` dasar & Aset non-core
+  lanjutan (kalau ada titik baru).
+
+**Skor update:** Sesi F naik dari "F1+F2 selesai, thumbnail & lightbox
+backlog" → **thumbnail TUNTAS, lightbox TETAP backlog** (1/2 item
+lanjutan selesai). Item lain (Fase 1, Sesi D, Dana Titipan, wiring
+`AIService.wireEvents()`, gate version-bump, Zakat/PBB) semua tetap
+sama posisinya dgn §2n.
+
+**Urutan sesi ringan berikutnya (rekomendasi, prioritas menurun, status v1679):**
+1. Sesi F lanjutan — **lightbox/viewer foto ukuran penuh** (perlu
+   keputusan UX kecil dulu sebelum coding — lihat catatan di atas;
+   kalau W belum siap putuskan, lewati ke item #2).
+2. (Kandidat proses, bukan fitur) sesi kecil menambah gate wajib version-bump di `scripts/build.js`.
+3. Zakat/PBB — 6 titik `save()` sisa (butuh keputusan desain terpisah sebelum coding, lihat §2e).
+4. Wiring listener `AIService.wireEvents()` untuk event yang sudah ada — masih 0%.
+5. Sesi C — Dana Titipan lanjutan / `investasi.js` dasar & Aset non-core lanjutan, kalau ada titik baru ditemukan.
+
+====================================================
+
 ## 3. Prioritas Gabungan
 
 **Critical**
+
 - Entitas `manufacturers` + `vehicle_models` relasional (akar dari 90% gap lain — disebut di AUDIT-CAR-NOTES **dan** jadi prasyarat Vehicle Database di RANCANGAN-v3)
 - Selesaikan wiring Fase 1 yang tersisa: `GENERIC_GROUP_BY_NAME`, `GENERIC_RECOMMEND_NAMES`, `FALLBACK_KEYWORDS` → pola guard `DatabaseAPI` (0 risiko, pola sudah terbukti 4×)
 - Hapus duplikasi `TORSI_DB`/`VEHICLE_SPEC_DB` vs `VEHICLE_DB_RECORDS` setelah wiring selesai
@@ -393,31 +843,75 @@ sesi diasumsikan mulai dari checkout v1646.
 > sisa Shop/Cobek yang ditunda di v1642 (harga produsen batch, price/stock
 > reko apply, weight-bulk, inline-produsen-di-cart, bulk import Excel)
 > sekarang **TUNTAS 9/9** untuk domain Shop/Cobek. Detail lengkap: §2e.
+>
+> **Update v1663 (Sesi C, wiring listener `AIService.wireEvents()`)** —
+> sesuai keputusan §2d poin 3 / urutan §2e poin 1: listener sekarang
+> nyambung ke SEMUA event yang sudah emit (`account.updated`/
+> `product.updated`/`investment.updated` ditambah ke array, 4 event lama
+> tidak berubah). Giliran berikutnya: sesi desain gap (a) Sesi B
+> (`VEHICLE_DB_RECORDS` literal), BUKAN domain Event Bus baru. Detail
+> lengkap: §2f.
+>
+> **Update v1664 (Sesi B, desain gap (a), 0 kode)** — mekanisme
+> registrasi `TORSI_DB`/`VEHICLE_SPEC_DB` → `DatabaseAPI` DIRANCANG
+> (`DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md`), belum dikodekan.
+> **Giliran berikutnya: sesi CODING gap (a)** — syarat mulai: 3
+> keputusan terbuka di dokumen desain (§5) dijawab W dulu (additive vs
+> full-cutover `VEHICLE_DB_RECORDS`, nama fungsi, toleransi pairing
+> partial). Sesi D **masih menunggu** sampai sesi coding ini tuntas &
+> hijau (larangan §6 belum lepas). Detail lengkap: §2g.
+>
+> **Update v1665 (Sesi B, CODING gap (a), Fase 1 TUNTAS 5/5)** — 3
+> keputusan §5 dijawab W (additive/`registerSource`/toleran-partial),
+> `DatabaseAPI.vehicle.registerSource()` diimplementasi persis sesuai
+> desain v1664, 13 test baru (semua hijau), full suite 6373 test/6367
+> pass/6 fail (6 kegagalan dikonfirmasi 100% pre-existing, 0 regresi
+> baru). **Fase 1 sekarang TUNTAS 5/5 — larangan §6 lepas.** Giliran
+> berikutnya: **Sesi D** (`service_categories` 13-kategori-terkunci)
+> boleh mulai. Detail lengkap: §2h.
+>
+> **Update v1666 (Sesi D, `masterCategory` — data+wiring layer)** — 13
+> kategori terkunci didefinisikan (`DatabaseAPI.masterCategory`), sumber:
+> breakdown servis Honda Vario 125 KZR 2012 dari W. `resolveCatGroup()`
+> expose field baru `masterCategoryId`/`-Name`/`-Icon` ADDITIVE (0 field
+> lama berubah). **Beda dari rencana literal roadmap**: migrasi per-ITEM
+> (keyword classifier), bukan per-KELOMPOK 8 grup ad-hoc (grup ad-hoc
+> ternyata campur lintas kategori terkunci, migrasi per-grup akan
+> kehilangan presisi) — lihat §2i. 11 test baru, full suite 6387/6383
+> pass/4 fail (4 kegagalan 100% pre-existing dari v1665, 0 regresi baru).
+> **Sesi D belum TUNTAS** — 0 UI/consumer baca field baru ini, giliran
+> berikutnya bisa lanjut UI Sesi D ATAU sesi lain (Sesi C Dana Titipan
+> dkk, Sesi F lanjutan thumbnail, dll — independen).
 
 **Sesi A — `manufacturers` + `vehicle_models` relasional (fondasi, pecah 2)** 🟢 selesai (v1647–v1649)
 - A1 (v1647): skema data murni — tambah `D.manufacturers[]`/`D.vehicleModels[]` (seed dari 2 model yang sudah ada di `VEHICLE_DB_RECORDS`), `D.vehicles` dapat field `modelId` (opsional, `name` tetap dipakai sbg fallback display) — 0 UI, 0 fungsi baca diubah, murni tambah data+migrasi ringan.
 - A2 (v1648) + followup (v1649): `DatabaseAPI.vehicle.getById()`/`getAll()` dkk baca `modelId` kalau ada, fallback match by `name` kalau belum. Followup v1649 menutup 2 titik baca terakhir (`renderVehicleSpecCard()`, `_tirePressureRef()`) yang sempat terlewat di v1648 krn belum ada full checkout. **0 titik baca live tersisa.**
 
-**Sesi B — Pindahkan `TORSI_DB`/`VEHICLE_SPEC_DB` ke data tersimpan** 🟡 sebagian (v1650, sinkron lanjut v1653, followup v1661)
+**Sesi B — Pindahkan `TORSI_DB`/`VEHICLE_SPEC_DB` ke data tersimpan** 🟢 selesai (v1650, sinkron lanjut v1653, followup v1661, desain gap (a) v1664, coding gap (a) v1665)
 - Key by `modelId` (hasil Sesi A), baca lewat `DatabaseAPI.vehicle.getAll()` yang sudah wired — konsumen (`findTorsiDb`/`findVehicleSpec`/`_allTorsiEntries`) sudah baca lewat API, jadi sesi ini cuma pindah SUMBER datanya, bukan ubah titik baca.
 - **v1650**: layer storage IndexedDB (`ensureLoaded`/`isLoaded`/`invalidateCache`) sudah ada.
 - **v1653**: gap `VEHICLE_MODELS`/`DatabaseAPI.vehicleModel.*`/`dbVehicleModelFindByName()` belum ikut storage aktif — **ditutup** (`_vehicleModelRecords()` baru).
 - **v1661 (followup gap (c))**: audit titik pemanggil `findTorsiDb`/`findVehicleSpec` (`resolveCatGroup()` di sparepart-servis.js, `renderVehicleSpecCard()` di modules-render-b.js, `_tirePressureRef()` di fuel-maintenance-engine.js, `car-notes.js` Servis) — SEMUA dipanggil sync dari jalur render UI yang baru bisa jalan setelah `load()` selesai, dan `load()` SUDAH `await DatabaseAPI.vehicle.ensureLoaded()` sebelum lanjut. Mengubah titik-titik itu jadi `async` supaya bisa `await ensureLoaded()` langsung butuh refactor besar ke rantai render (di luar cakupan "1 gap kecil"), **ditolak**. Yang dikerjakan: `dbVehicleEnsureLoaded()` di-dedup lewat `_vehicleDbLoadPromise` (fungsi baru `_vehicleDbDoLoad()`) — kalau `ensureLoaded()` dipanggil dari >1 titik sebelum yang pertama selesai, cuma 1 round-trip IndexedDB yang jalan (sebelumnya bisa 2x baca+tulis). Getter sync (`_vehicleDbRecords()`) SENGAJA TIDAK diubah utk memicu load sendiri — kontrak test lama "IDBStore tidak disentuh sebelum ensureLoaded() dipanggil" tetap 100% berlaku, 0 regresi. Detail: `SESSION-NOTE-sesi-b-followup-ensureloaded-dedup.md`.
-- **Masih tersisa**: (a) `VEHICLE_DB_RECORDS` literal belum dihapus (masih seed/fallback). **Temuan v1661**: menghapus literal ini TIDAK sesederhana "hapus 1 const" — `VEHICLE_DB_RECORDS` adalah satu-satunya sumber seed IndexedDB pertama kali (`_vehicleDbDoLoad()` menulis `VEHICLE_DB_RECORDS.slice()` ke storage kalau kosong). Menghapusnya butuh mekanisme BARU: `sparepart-servis-b.js` mendaftarkan `TORSI_DB`/`VEHICLE_SPEC_DB` ke `DatabaseAPI` saat filenya dimuat (jadi `TORSI_DB`/`VEHICLE_SPEC_DB` jadi satu-satunya sumber kebenaran, bukan disalin manual ke `VEHICLE_DB_RECORDS`) — ini scope sesi TERSENDIRI (butuh desain+review sendiri sebelum coding, bukan "gap kecil"), **belum dikerjakan**, ditunda per keputusan eksplisit. Setelah mekanisme ini ADA baru aman hapus duplikasi `TORSI_DB` vs `VEHICLE_DB_RECORDS` (item Critical §3 terakhir — **belum dikerjakan**).
+- **Masih tersisa**: (a) `VEHICLE_DB_RECORDS` literal belum dihapus (masih seed/fallback). **Temuan v1661**: menghapus literal ini TIDAK sesederhana "hapus 1 const" — `VEHICLE_DB_RECORDS` adalah satu-satunya sumber seed IndexedDB pertama kali (`_vehicleDbDoLoad()` menulis `VEHICLE_DB_RECORDS.slice()` ke storage kalau kosong). Menghapusnya butuh mekanisme BARU: `sparepart-servis-b.js` mendaftarkan `TORSI_DB`/`VEHICLE_SPEC_DB` ke `DatabaseAPI` saat filenya dimuat (jadi `TORSI_DB`/`VEHICLE_SPEC_DB` jadi satu-satunya sumber kebenaran, bukan disalin manual ke `VEHICLE_DB_RECORDS`) — ini scope sesi TERSENDIRI (butuh desain+review sendiri sebelum coding, bukan "gap kecil"), ditunda per keputusan eksplisit. **v1664: DESAIN selesai** (`DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md`) — API `DatabaseAPI.vehicle.registerSource(entries)`, dipanggil `sparepart-servis-b.js` top-level, `_vehicleDbRecords()` jadi 3-tier (IndexedDB > registered > literal), literal TIDAK dihapus dulu (rekomendasi additive, opsi B full-cutover jadi sesi terpisah lagi). **v1665: DIKODEKAN & HIJAU** — `DatabaseAPI.vehicle.registerSource()` diimplementasi persis desain, `sparepart-servis-b.js` mendaftarkan diri top-level, seed IndexedDB & `_vehicleModelRecords()` ikut disambung (§4a/§4b desain). 13 test baru, full suite 0 regresi (6 kegagalan tersisa 100% pre-existing). **Gap (a) TUNTAS** — Sesi B TUNTAS penuh, Fase 1 TUNTAS 5/5, larangan §6 lepas. `VEHICLE_DB_RECORDS` literal sengaja TIDAK dihapus (keputusan additive) — item Critical §3 terakhir ("hapus duplikasi") masih **belum dikerjakan**, ditunda ke sesi full-cutover terpisah, 0 urgensi (literal sudah mati di produksi).
 
 **Sesi B-lanjutan — Wiring 3 literal generik tersisa** 🟢 selesai (v1651, di luar penomoran A-F asli tapi bagian Fase 1 poin 3)
 - `GENERIC_GROUP_BY_NAME`/`GENERIC_RECOMMEND_NAMES`/`FALLBACK_KEYWORDS` → `DatabaseAPI.master` (namespace baru — **catatan**: ini BUKAN `service_categories` 13-kategori-terkunci yang dimaksud Sesi D di bawah, kebetulan nama namespace sama, jangan tertukar).
 
-**Sesi C — Event Bus general (bukan cuma Servis)** 🟡 sebagian — audit selesai, Prioritas Tinggi TUNTAS, Prioritas Sedang 3.x/5 domain (Shop/Cobek TUNTAS)
+**Sesi C — Event Bus general (bukan cuma Servis)** 🟡 sebagian — audit selesai, Prioritas Tinggi TUNTAS, Prioritas Sedang 4/5 domain (Shop/Cobek TUNTAS, Dana Titipan TUNTAS)
 - Perluas pola `finance.updated`/`vehicle.updated` (yang sudah ada di Servis sejak v1644) ke titik-titik lain yang masih menulis `D` langsung tanpa emit — audit dulu titik mana saja sebelum coding (daftar konsumen, bukan langsung ubah).
 - **v1651 (audit)**: `AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md` — peta 9 titik/domain, 0 kode diubah.
 - **v1652 (C1)**: CRUD kendaraan (`vehicle.updated`) selesai diemit.
 - **Sesi C-lanjutan (Prioritas Tinggi, TUNTAS 5/5)**: `delTx()` + 4 transaksi khusus, piutang-utang, tagihan-kalender sudah emit dari sesi-sesi sebelumnya; **Akun** (`account.updated` — 4 titik: create/edit/delete/edit-owners) menutup item Prioritas Tinggi terakhir.
 - **Sesi C-lanjutan (Prioritas Sedang)**: Zakat/PBB (`finance.updated` kind `zakat` baru + kind `tagihan` source `pbb`, 3 titik diskrit dari 9 `save()` — 6 sisa sengaja dilewati krn dipanggil tiap render, bukan aksi diskrit); **Shop/Cobek TUNTAS 9/9** — CRUD inti produk&kategori (v1642, 4 titik: `product.updated` baru) + **v1662, 5 titik sisa**: harga produsen batch (`cobek-order.js`), price/stock reko apply (`cobek-pricing.js` — `PriceRekoWidget`/`StockRekoWidget`), weight-bulk (`cobek-pricing.js` — `WeightBulkWidget`), inline-produsen-di-cart (`cobek-tx-cart.js`), bulk import Excel (`cobek-io.js` — `ImportShopExcel`), semua kind baru (`harga-produsen`/`price-reko`/`stock-reko`/`weight-bulk`/`produsen`/`import-excel`), test baru `tests/cobek-shop-5-titik-sisa-sesi-c.test.js` (14/14 pass).
-- **Belum**: Dana Titipan (4 file, kandidat `titipan.updated`), `investasi.js` dasar, Aset non-core (`aset-misc.js`/`aset-emas-impor.js`/`aset-reports.js`), wiring listener `AIService.wireEvents()` ke SEMUA event baru (`account.updated`/`finance.updated{kind:zakat}`/`product.updated`/dll — emit tanpa listener = "pemancar tanpa radio", sekarang lebih mendesak krn `product.updated` sudah 9/9 titik). Lihat §2e untuk detail v1662 & §2d untuk histori sebelumnya.
+- **Sesi C-lanjutan (wiring listener, TUNTAS)**: `AIService.wireEvents()` disambungkan ke SEMUA event yang sudah emit — `account.updated`/`product.updated`/`investment.updated` (v1663-1665, lihat §2f/§2h) + `titipan.updated` (v1671-1672, di bawah). `finance.updated{kind:zakat}` tidak butuh entri baru (kind di dalam payload, listener `finance.updated` yang sudah ada otomatis meng-cover).
+- **Dana Titipan (TUNTAS, v1671-1672)**: 10 titik `save()` di 4 file (`dana-titipan-pool-api.js` 2x, `dana-titipan-commitment-return-api.js` 4x, `titipan-reconcile.js` 3x, `titipan-expense-flow.js` 1x) semua emit `titipan.updated` (payload `{kind,action,...id}`, guard `typeof AIBus!=="undefined"`). 21 test baru (`tests/dana-titipan-aibus-titipan-updated-sesi-c.test.js`). Detail: `SESSION-NOTE-sesi-c-titipan-updated.md`, §2j.
+- **Belum**: `investasi.js` dasar (event baru di luar `investment.updated` yang sudah ada), Aset non-core (`aset-misc.js`/`aset-emas-impor.js`/`aset-reports.js`) — 2 domain besar terakhir dari Prioritas Sedang yang masih 0%. Lihat §2j untuk detail terkini.
 
-**Sesi D — `service_categories` master (13 kategori terkunci)** ⬜ belum mulai
-- Baru masuk akal setelah Sesi A/B selesai — Sesi B masih 🟡 (lihat di atas), jadi **belum aman mulai** sesuai larangan §6 "jangan loncat ke Fase 2 sebelum Fase 1 tuntas". Definisikan 13 kategori sebagai data statis di `DatabaseAPI` (namespace baru — **hindari nama `master`, sudah dipakai wiring 3 literal generik v1651, pilih nama lain mis. `DatabaseAPI.masterCategory` biar tidak tabrakan**), migrasi 8 grup ad-hoc (`resolveCatGroup()`) jadi baca dari situ.
+**Sesi D — `service_categories` master (13 kategori terkunci)** 🟡 sebagian (v1666 data+wiring, v1667 consumer #1 dari 2)
+- **v1666**: `DatabaseAPI.masterCategory` (`getAll`/`getById`/`classifyItemName`) — 13 kategori terkunci, sumber breakdown servis Honda Vario 125 KZR 2012 (PGM-FI gen. 1) dari W (keputusan produk, dipakai apa adanya). `resolveCatGroup()` (sparepart-servis.js) expose field BARU `masterCategoryId`/`-Name`/`-Icon` ADDITIVE ke semua cabang return (0 field `group`/`icon` lama berubah, 0 regresi). **Beda dari rencana literal di atas**: migrasi dilakukan per-ITEM (`classifyItemName`, keyword-based, estimasi) bukan per-KELOMPOK 8 grup ad-hoc — audit isi grup ad-hoc menemukan beberapa CAMPUR lintas kategori terkunci (mis. `'Perawatan Berkala'` isinya oli mesin+busi [Servis Mesin] campur v-belt [Servis CVT] campur minyak rem [Sistem Pengereman] campur coolant [Sistem Pendingin] dlsb dalam 1 grup) — migrasi 1:1 per-grup akan memaksa 1 grup campuran ke 1 kategori, kehilangan presisi. 8 grup ad-hoc lama (`cats[].cat`) TIDAK dihapus/diganti, tetap dipakai persis seperti sebelumnya di semua titik baca lama. Item yang 0 cocok keyword balikin `null` (tidak ditebak — pola sama E2 `_findAutoGantiStock`), termasuk beberapa item generik & item exhaust/knalpot (13 kategori W tidak punya bucket eksplisit utk exhaust). 11 test baru (`tests/database-api-mastercategory-sesi-d.test.js`), full suite 6387/6383 pass/4 fail (4 kegagalan 100% pre-existing dari v1665, 0 regresi baru). Detail: `SESSION-NOTE-sesi-d-mastercategory-v1666.md`.
+- **Sesi D-lanjutan1 (v1667, selesai)**: consumer read-only pertama dari 2 yang direncanakan (redo dari percobaan sebelumnya yg kehabisan limit sblm packaging, sekarang resmi dipecah 2 sesi). `Sparepart.dashReminderMasterCatBadgeHTML(cat,vehicleId)` (pure function baru, sparepart-servis.js) — reuse `resolveCatGroup()` apa adanya, balikin span kecil (icon+nama kategori master) kalau match, `''` kalau 0 match (tidak menebak). Disisipkan di span nama kategori kartu "🔧 Pengingat Servis" Beranda (`renderDashboardServisReminder()`, modules-render.js), guard `typeof Sparepart`, 0 titik render lama lain diubah. 9 test baru (`tests/servis-mastercategory-dashbadge-sesi-d-lanjutan1.test.js`), full suite 6396/6392 pass/4 fail (4 kegagalan sama persis pre-existing, 0 regresi baru). Detail: `SESSION-NOTE-sesi-d-lanjutan1-mastercategory-dashbadge-v1667.md`.
+- **Sesi D-lanjutan2a (v1668, selesai)**: consumer read-only DOM pertama dari 2 sub-sesi direncanakan (redo dari percobaan sebelumnya yg kehabisan limit tools sblm packaging, sekarang resmi dipecah 2 sesi). `Sparepart.updateMasterCatBadge(name,vehicleId)` (DOM-touching baru, sparepart-servis.js) — reuse `resolveCatGroup()` apa adanya, tulis ke elemen baru `#sparepartMasterCatBadgeWrap` (modals.js, antara field Nama Part/Servis & Kode Kategori) kalau match, sembunyikan kalau 0 match/nama kosong (tidak menebak). Dipanggil 1x dari `openCatModal()`, 0 event listener baru. 7 test baru (`tests/servis-mastercategory-modalbadge-sesi-d-lanjutan2a.test.js`), full suite 6403/6399 pass/4 fail (4 kegagalan sama persis pre-existing v1667, 0 regresi baru). Detail: `SESSION-NOTE-sesi-d-lanjutan2a-mastercategory-modalbadge-v1668.md`.
+- **Belum**: **Sesi D-lanjutan2b** — live-update badge saat mengetik nama item di modal Kategori Sparepart, butuh koordinasi dgn listener `oninput` lain yang sudah ada di `#sparepartName` (lebih kompleks dari 2a yang murni dipanggil 1x saat modal dibuka) — ditunda, sesi terpisah. Filter/chip by master category di daftar Servis/Sparepart utama — belum dikerjakan. Keputusan produk lanjutan soal item yg classify `null` (biarkan `null` ATAU tambah kategori ke-14 utk exhaust/knalpot, dll — kandidat sesi berikutnya, butuh jawaban W kalau mau digarap); evaluasi/tuning keyword classifier lebih lanjut kalau ditemukan salah klasifikasi di kendaraan lain (baru ada 2 entri TORSI_DB saat ini: Vario 125 & BeAT FI).
 
 **Sesi E — Field `actionType` lanjutan (backlog §3 Medium, 6 saran tambahan)** 🟢 6/6 selesai (E1-E6, TUNTAS)
 - Independen dari A-D, bisa disisipkan kapan saja. Dipecah jadi 6 sesi kecil sesuai arahan (redo dari percobaan sebelumnya yg kehabisan limit sebelum sempat simpan kode):
