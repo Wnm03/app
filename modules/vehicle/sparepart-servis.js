@@ -134,9 +134,43 @@ const GENERIC_GROUP_BY_NAME={
 // (3) GENERIC_GROUP_BY_NAME (estimasi, di atas), (4) 'Lainnya' kalau semua
 // gagal. 100% backward-compatible — kategori LAMA yg belum py field `group`
 // tetap kegrup otomatis lewat (2)/(3) tanpa migrasi data apa pun.
+// _withMasterCategory(result,cat) -- Sesi D (roadmap §7): tempel field BARU
+// masterCategoryId/masterCategoryName/masterCategoryIcon ke hasil
+// resolveCatGroup(), diturunkan dari 13 kategori terkunci
+// (DatabaseAPI.masterCategory, modules/engine/database-api.js) via
+// classifyItemName(cat.name) -- ADDITIVE murni, field group/icon LAMA di
+// `result` 0 berubah (0 titik baca lama yg terpengaruh). null kalau
+// DatabaseAPI/namespace belum termuat (guard sama pola _genericGroupByName())
+// atau kalau 0 keyword cocok (SENGAJA tidak menebak, lihat komentar
+// namespace masterCategory di database-api.js).
+function _withMasterCategory(result,cat){
+const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.classifyItemName==='function')
+?DatabaseAPI.masterCategory.classifyItemName(cat&&cat.name):null;
+result.masterCategoryId=mc?mc.id:null;
+result.masterCategoryName=mc?mc.name:null;
+result.masterCategoryIcon=mc?mc.icon:null;
+return result;
+}
+// UNCATEGORIZED_FILTER_ID -- Sesi D-lanjutan5 (ROADMAP-KONSOLIDASI-DATABASE-
+// SERVIS-v2.md §7 Sesi D -- keputusan produk item classify `null`). Kategori
+// master TETAP terkunci 13 (DatabaseAPI.masterCategory) -- id ini SENGAJA
+// bukan salah satu dari 13 id itu (nilai sentinel murni level UI, TIDAK
+// pernah ditulis ke DatabaseAPI.masterCategory ataupun ke field
+// masterCategoryId hasil classify manapun). Dipakai HANYA sebagai value
+// activeMasterCategoryFilter di Sparepart (file ini) & Servis (car-notes.js)
+// utk merepresentasikan chip "❔ Belum Terklasifikasi" -- supaya item yang
+// classifyItemName()-nya balik null (0 keyword cocok ke 13 kategori) tetap
+// bisa ditemukan/ditinjau user, tanpa nambah kategori ke-14 ke skema data
+// terkunci maupun logic classify baru. Dideklarasikan di sini (dimuat
+// sebelum car-notes.js, lihat scripts/build.js) tapi cuma dipakai di dalam
+// isi fungsi (bukan top-level eksekusi), jadi car-notes.js tetap bisa
+// mereferensikannya di runtime walau urutan load-nya sebenarnya lebih dulu
+// dari file ini (pola sama seperti car-notes.js sudah lama mereferensikan
+// resolveCatGroup() dari file ini).
+const UNCATEGORIZED_FILTER_ID='__uncategorized__';
 function resolveCatGroup(cat,vehicleId){
-if(!cat)return{group:'Lainnya',icon:'📦'};
-if(cat.group)return{group:cat.group,icon:cat.groupIcon||'📦'};
+if(!cat)return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
+if(cat.group)return _withMasterCategory({group:cat.group,icon:cat.groupIcon||'📦'},cat);
 const n=(cat.name||'').trim().toLowerCase();
 if(n&&vehicleId&&typeof findTorsiDb==='function'&&typeof D!=='undefined'&&D.vehicles){
 const veh=D.vehicles.find(v=>v.id===vehicleId);
@@ -148,13 +182,13 @@ const itn=(it.name||'').trim().toLowerCase();
 if(!itn)return false;
 return itn===n||itn.includes(n)||(n.includes(itn)&&itn.length>=4);
 });
-if(hit)return{group:catGroup.cat,icon:catGroup.icon||'📦'};
+if(hit)return _withMasterCategory({group:catGroup.cat,icon:catGroup.icon||'📦'},cat);
 }
 }
 }
 const gmap=_genericGroupByName();
-if(n&&gmap[n])return gmap[n];
-return{group:'Lainnya',icon:'📦'};
+if(n&&gmap[n])return _withMasterCategory(Object.assign({},gmap[n]),cat);
+return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
 }
 // collectKnownGroups()/iconForGroupName() -- FITUR BARU sesi v1642 (Sesi 1 dari
 // 2, backlog "override grup manual" sejak v1638): kumpulkan daftar SEMUA nama
@@ -473,6 +507,182 @@ const Sparepart={
 catEditIdx:null,
 stockEditIdx:null,
 _catalogNameCache:[],
+// activeMasterCategoryFilter — BARU (Sesi D-lanjutan3, ROADMAP-KONSOLIDASI-
+// DATABASE-SERVIS-v2.md §7 Sesi D — item "filter/chip by master category di
+// daftar Servis/Sparepart utama" yang tercatat "Belum dikerjakan" di
+// CHANGELOG sesi D-lanjutan2b/v1669). null = "Semua" (0 filter, perilaku
+// lama). Nilai lain: salah satu id dari 13 kategori master
+// (DatabaseAPI.masterCategory.getAll()). Pola state sama persis
+// Servis.activeActionTypeFilter (Sesi E6).
+activeMasterCategoryFilter:null,
+// _masterCategoryFilterPrefsLoaded/_masterCategoryFilterStorageKey -- Sesi
+// D-lanjutan5. Guard baca-sekali + key localStorage utk persist
+// activeMasterCategoryFilter lintas reload (lihat _loadMasterCategoryFilterPrefsOnce()/
+// _saveMasterCategoryFilterPrefs() di bawah). TIDAK memakai FilterPrefsStore
+// (modules/shared/filter-prefs-store.js, S716) apa adanya -- kontrak
+// target-nya (filterOwnerIds array + filterSettlement enum, dipakai
+// Aset/InvestmentListUI/DanaTitipanPortfolioPresenter) beda bentuk dari
+// kebutuhan di sini (1 id string tunggal, bukan array+enum), maksa masuk
+// kontrak itu cuma bikin field palsu yang tidak dipakai. Pola try/catch
+// permisif & nama method (_load...Once()/_save...()) tetap DISAMAKAN dgn
+// FilterPrefsStore/consumer-consumernya supaya konsisten dibaca, cuma
+// implementasinya berdiri sendiri per modul (Sparepart di sini, Servis di
+// car-notes.js -- key beda, lihat masing-masing).
+_masterCategoryFilterPrefsLoaded:false,
+_masterCategoryFilterStorageKey:'sparepartMasterCategoryFilterPrefs',
+// _loadMasterCategoryFilterPrefsOnce() -- HANYA baca sekali per lifetime
+// halaman (guard _masterCategoryFilterPrefsLoaded), dipanggil dari
+// renderCatList() (SSOT tab "Kelola Kategori Sparepart" dibuka) -- BUKAN
+// dari renderMasterCategoryChips()/setMasterCategoryFilter() supaya baca
+// ulang tidak menimpa balik perubahan live user. Validasi bentuk data
+// SEBELUM dipakai: harus string & (null literal tersimpan sbg null JSON,
+// aman) ATAU salah satu dari 13 id terkunci ATAU UNCATEGORIZED_FILTER_ID --
+// localStorage bisa diedit manual dari luar app (DevTools), jadi id asing
+// (mis. app versi lama/baru beda skema) diabaikan (fallback null/"Semua"),
+// bukan dipakai mentah-mentah.
+_loadMasterCategoryFilterPrefsOnce(){
+if(Sparepart._masterCategoryFilterPrefsLoaded)return;
+Sparepart._masterCategoryFilterPrefsLoaded=true;
+if(typeof localStorage==='undefined')return;
+try{
+const raw=localStorage.getItem(Sparepart._masterCategoryFilterStorageKey);
+if(!raw)return;
+const parsed=JSON.parse(raw);
+const id=parsed&&parsed.activeMasterCategoryFilter;
+if(id===null)return;
+if(typeof id!=='string')return;
+const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+const validIds=hasApi?(DatabaseAPI.masterCategory.getAll()||[]).map(c=>c.id):[];
+if(id===UNCATEGORIZED_FILTER_ID||validIds.indexOf(id)!==-1){
+Sparepart.activeMasterCategoryFilter=id;
+}
+}catch(err){
+// localStorage korup/tidak tersedia -> abaikan, filter tetap default null
+// ("Semua") -- 0 crash, pola sama persis FilterPrefsStore.loadOnce().
+}
+},
+// _saveMasterCategoryFilterPrefs() -- dipanggil dari setMasterCategoryFilter()
+// tiap kali user ganti chip filter. Gagal simpan (storage penuh/diblokir,
+// mis. mode privat) diabaikan -- filter tetap berfungsi murni di state UI
+// sesi ini, cuma tidak ke-persist lintas reload (0 crash).
+_saveMasterCategoryFilterPrefs(){
+if(typeof localStorage==='undefined')return;
+try{
+localStorage.setItem(Sparepart._masterCategoryFilterStorageKey,JSON.stringify({activeMasterCategoryFilter:Sparepart.activeMasterCategoryFilter}));
+}catch(err){
+// localStorage penuh/diblokir -> abaikan (0 crash).
+}
+},
+// dashReminderMasterCatBadgeHTML(cat,vehicleId) -- Sesi D-lanjutan1 (UI
+// consumer #1 dari 2 sesi, lanjutan Sesi D v1666 yg baru wiring data+belum
+// ada consumer, lihat SESSION-NOTE-sesi-d-mastercategory-v1666.md
+// "Sengaja TIDAK dikerjakan sesi ini > UI"). Pure function (0 DOM) --
+// dipanggil renderDashboardServisReminder() (modules-render.js) utk
+// tampilkan badge kategori master terkunci (13 kategori, DatabaseAPI.
+// masterCategory) di samping nama kategori kartu "🔧 Pengingat Servis".
+// Reuse resolveCatGroup() apa adanya (SoT tunggal, sudah expose field
+// masterCategoryName/-Icon additive sejak Sesi D) -- 0 logic classify
+// baru. Balikin '' kalau 0 match keyword (masterCategoryName null, pola
+// sama "0/>1 kandidat = dilewati, tidak menebak" E2/Sesi D), BUKAN
+// ditebak/fallback ke 'Lainnya' -- badge ini murni info tambahan, beda
+// dari group/icon lama yg tetap selalu tampil (kontrak lama, 0 diubah).
+dashReminderMasterCatBadgeHTML(cat,vehicleId){
+const r=(typeof resolveCatGroup==='function')?resolveCatGroup(cat,vehicleId):null;
+if(!r||!r.masterCategoryName)return'';
+return` <span class="u-fs11 u-t2" style="opacity:.75">· ${r.masterCategoryIcon||'🔧'} ${escapeHtml(r.masterCategoryName)}</span>`;
+},
+// updateMasterCatBadge() -- Sesi D-lanjutan2a (consumer #2 dari 2 direncanakan,
+// lanjutan Sesi D-lanjutan1/v1667 yg baru wiring dashboard read-only). Badge
+// kategori master (13 kategori terkunci, DatabaseAPI.masterCategory) di modal
+// Kategori Sparepart -- DIBACA 1x SAJA saat modal dibuka (openCatModal(), jalur
+// Tambah maupun Edit), BUKAN live-update saat mengetik nama item (itu
+// Sesi D-lanjutan2b, ditunda -- lebih kompleks krn perlu koordinasi dgn
+// listener `oninput` lain yg sudah ada di #sparepartName, lihat SESSION-NOTE
+// sesi ini utk detail keputusan pemecahan). 0 event listener baru ditambah
+// sesi ini. Reuse resolveCatGroup() apa adanya (SoT tunggal) -- 0 logic
+// classify baru, pola sama persis dashReminderMasterCatBadgeHTML() di atas.
+// name/vehicleId kosong (mis. modal Tambah baru sebelum nama diisi) ->
+// sembunyikan wrap (guard fail-safe), bukan tampilkan badge kosong/menebak.
+updateMasterCatBadge(name,vehicleId){
+const wrapEl=document.getElementById('sparepartMasterCatBadgeWrap');
+if(!wrapEl)return;
+if(!name){wrapEl.classList.add('u-dnone');wrapEl.innerHTML='';return;}
+const r=(typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):null;
+if(!r||!r.masterCategoryName){wrapEl.classList.add('u-dnone');wrapEl.innerHTML='';return;}
+wrapEl.classList.remove('u-dnone');
+wrapEl.innerHTML=`${r.masterCategoryIcon||'🔧'} Kategori master: ${escapeHtml(r.masterCategoryName)}`;
+},
+// updateMasterCatBadgeLive() -- Sesi D-lanjutan2b (lanjutan D-lanjutan2a/v1668):
+// wiring live-update badge kategori master SAAT MENGETIK nama item di modal
+// Kategori Sparepart. Ditunda dari 2a krn field #sparepartName sudah punya
+// beberapa panggilan `oninput` terpasang (autoFillSparepartCode(),
+// simpleAutocompleteInput(), Sparepart.autoSuggestInterval()) -- audit ulang
+// menemukan itu semua CUMA rangkaian pemanggilan sinkron biasa dalam SATU
+// atribut `oninput` (bukan beberapa `addEventListener` terpisah), jadi
+// menambah 1 pemanggilan lagi ke rangkaian yg sama TIDAK membuka race
+// condition baru (tetap 1 event, 1 urutan eksekusi sinkron, sama seperti
+// 3 pemanggilan yg sudah ada). Wrapper ini (bukan langsung
+// updateMasterCatBadge() di oninput) supaya vehicleId SELALU dibaca ulang
+// dari dropdown #sparepartVehicleId saat itu juga -- penting utk jalur EDIT
+// dimana dropdown itu bisa dipindah manual user (S629) SEBELUM/SESUDAH nama
+// diketik ulang, badge harus ikut kendaraan yg lagi dipilih di dropdown,
+// BUKAN vehicleId lama dari saat modal pertama dibuka (curCat.vehicleId,
+// itu cuma dipakai openCatModal() 1x). Dropdown disabled (jalur Tambah baru)
+// tetap punya `.value` terbaca normal di DOM, jadi guard ini juga aman di
+// jalur itu. 0 logic classify baru -- reuse updateMasterCatBadge() apa
+// adanya (yg reuse resolveCatGroup() apa adanya).
+updateMasterCatBadgeLive(){
+const nameEl=document.getElementById('sparepartName');
+const vehEl=document.getElementById('sparepartVehicleId');
+const name=nameEl?nameEl.value:'';
+const vehicleId=(vehEl&&vehEl.value)?vehEl.value:null;
+Sparepart.updateMasterCatBadge(name,vehicleId);
+},
+// setMasterCategoryFilter(id) -- Sesi D-lanjutan3. Dipanggil dari klik chip
+// filter (data-action="Sparepart.setMasterCategoryFilter") di "Kelola
+// Kategori Sparepart" (renderCatList()). id: null ("Semua") atau salah
+// satu id dari 13 kategori master. Pola sama persis
+// Servis.setActionTypeFilter() (Sesi E6) -- renderCatList() tidak
+// paginasi (0 listPage), jadi tidak ada yang perlu direset selain filter
+// itu sendiri.
+setMasterCategoryFilter(id){
+Sparepart.activeMasterCategoryFilter=id||null;
+// Sesi D-lanjutan5: persist pilihan chip ke localStorage tiap kali user
+// ganti filter (lihat _saveMasterCategoryFilterPrefs() di atas) -- 0
+// dampak kalau storage gagal/diblokir (try/catch permisif di dalamnya).
+Sparepart._saveMasterCategoryFilterPrefs();
+Sparepart.renderCatList();
+},
+// renderMasterCategoryChips(beforeEl) -- Sesi D-lanjutan3. Chip row filter
+// "Kelola Kategori Sparepart" by kategori master (13 terkunci), DISISIPKAN
+// lewat JS sebelum beforeEl (pola sama persis
+// Servis.renderActionTypeChips(), Sesi E6) -- 1x dibuat (getElementById
+// dulu), tidak dobel-insert di render berikutnya. Guard: kalau
+// DatabaseAPI.masterCategory belum termuat (mis. file database-api.js
+// belum ikut dimuat), row TIDAK dibuat sama sekali -- pola sama "0/>1
+// kandidat = dilewati, tidak menebak" yang konsisten dipakai di seluruh
+// fitur Sesi D (dashReminderMasterCatBadgeHTML/updateMasterCatBadge di
+// atas).
+renderMasterCategoryChips(beforeEl){
+const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+if(!hasApi)return;
+let row=document.getElementById('sparepartMasterCatChipRow');
+if(!row){
+row=document.createElement('div');
+row.id='sparepartMasterCatChipRow';
+row.className='u-flex u-fs12 u-mb10';
+row.style.cssText='gap:6px;flex-wrap:wrap';
+beforeEl.insertAdjacentElement('beforebegin',row);
+}
+const cats=DatabaseAPI.masterCategory.getAll()||[];
+// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" DITAMBAHKAN di UJUNG (setelah
+// 13 kategori master, sebelum -- 0 di antara -- opsi "Semua"), pakai
+// UNCATEGORIZED_FILTER_ID (sentinel murni UI, lihat komentar di deklarasinya
+// di atas). 0 perubahan ke DatabaseAPI.masterCategory.getAll() itu sendiri --
+// kontrak "13 kategori terkunci" tidak tersentuh.
+const options=[{id:null,label:'🔍 Semua'}].concat(cats.map(c=>({id:c.id,label:(c.icon||'🔧')+' '+c.name}))).concat([{id:UNCATEGORIZED_FILTER_ID,label:'❔ Belum Terklasifikasi'}]);
+row.innerHTML=options.map(o=>`<div class="chip ${o.id===Sparepart.activeMasterCategoryFilter?'active':''}" data-action="Sparepart.setMasterCategoryFilter" data-args="${escapeHtml(JSON.stringify([o.id]))}">${o.label}</div>`).join('');
+},
 // isPartForVehicle(part, vehicleId) — bugfix (laporan user): Stok Sparepart
 // & dropdown "Gunakan Stok Sparepart"/"Tambah ke Stok Sparepart" dulu
 // selalu tampil SEMUA item D.partsStock tanpa pandang kendaraan aktif.
@@ -579,8 +789,34 @@ renderCatList(){
 const el=document.getElementById('sparepartCatList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
-if(!visible.length){el.innerHTML='<div class="empty"><div class="empty-text">Belum ada kategori sparepart utk kendaraan ini</div></div>';return;}
+// Sesi D-lanjutan5: baca preferensi filter tersimpan SEKALI per lifetime
+// halaman (guard di dalam fungsinya sendiri) -- SEBELUM render chip/filter
+// di bawah, supaya render pertama tab ini langsung mencerminkan pilihan
+// filter sesi sebelumnya.
+Sparepart._loadMasterCategoryFilterPrefsOnce();
+Sparepart.renderMasterCategoryChips(el);
+let visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+// Sesi D-lanjutan3: filter tambahan by kategori master (13 terkunci),
+// SETELAH filter kendaraan lama (0 perubahan urutan/prioritas filter
+// lama) -- reuse resolveCatGroup() apa adanya (SoT tunggal, sama persis
+// updateMasterCatBadge()/dashReminderMasterCatBadgeHTML() di atas), 0
+// logic classify baru.
+if(Sparepart.activeMasterCategoryFilter){
+// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" (UNCATEGORIZED_FILTER_ID)
+// -- cocokkan kategori yang r.masterCategoryId-nya null (classifyItemName()
+// 0 keyword cocok), BUKAN dibandingkan literal ke salah satu dari 13 id
+// terkunci. r sendiri selalu truthy kalau c ada (resolveCatGroup() selalu
+// balikin objek via _withMasterCategory(), lihat definisinya di atas) --
+// jadi cabang ini murni beda KRITERIA banding, bukan beda null-check.
+const isUncategorizedFilter=Sparepart.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
+visible=visible.filter(c=>{
+const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,vid):null;
+if(!r)return false;
+if(isUncategorizedFilter)return r.masterCategoryId==null;
+return r.masterCategoryId===Sparepart.activeMasterCategoryFilter;
+});
+}
+if(!visible.length){el.innerHTML='<div class="empty"><div class="empty-text">'+(Sparepart.activeMasterCategoryFilter?'Tidak ada kategori sparepart utk kategori master ini':'Belum ada kategori sparepart utk kendaraan ini')+'</div></div>';return;}
 // Sesi 295 (permintaan eksplisit user): tiap baris sekarang menunjukkan apakah
 // kategori ini AKTIF tampil di 🔔 Pengingat Servis atau tidak -- baik karena
 // belum diatur intervalnya (intervalKm 0, biasanya hasil scan Katalog Suku
@@ -792,6 +1028,9 @@ const bulanEl=Sparepart.ensureIntervalBulanField();
 if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
 Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
 Sparepart.populateGroupSelect(curCat?curCat.group:null);
+// Sesi D-lanjutan2a: badge kategori master, dibaca 1x saat modal dibuka
+// (bukan live-update saat mengetik -- lihat catatan di updateMasterCatBadge()).
+Sparepart.updateMasterCatBadge(curCat?curCat.name:'',curCat?curCat.vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null));
 // Sesi 295: toggle "Tampilkan di Pengingat Servis" -- default AKTIF utk
 // kategori baru (perilaku lama, tidak berubah), ikut nilai tersimpan utk
 // kategori existing (termasuk kategori auto-scan yg default false).

@@ -111,7 +111,8 @@ function onServisItemAutofillInterval(){return Servis.onItemAutofillInterval();}
 function onServisItemInput(){return Servis.onItemInputSuggest();}
 function openServisModal(editId,prefillItem){return Servis.openModal(editId,prefillItem);}
 const TORSI_DB=[
-{matchNames:['vario 125'],
+{id:'vario-125', displayName:'Honda Vario 125 (KZR)',
+matchNames:['vario 125'],
 sourceNote:'Honda Vario 125 Techno/KZR (PGM-FI, liquid-cooled) — Buku Pedoman Reparasi resmi (scan lengkap 310 hal., diverifikasi user), bagian Spesifikasi & Torsi Pengencangan (hal. 1-9 s/d 1-12) & Jadwal Perawatan Berkala (hal. 3-3). Semua nilai torsi di entri ini di-cross-check baris-per-baris thd scan manual tsb (sesi audit ini) — 100% cocok, 0 nilai diubah, cuma nambah beberapa part yg sebelumnya belum masuk (lihat item-item baru di bawah).',
 cats:[
 {cat:'Perawatan Berkala', icon:'🛠️', items:[
@@ -203,7 +204,8 @@ cats:[
 {name:'Baut socket key shutter', ulir:'5 mm', nm:4.95, kgf:0.5},
 ]},
 ]},
-{matchNames:['beat fi','beat-fi','beat esp','beat pgm-fi','vario 110','vario110','vario 110 esp'],
+{id:'beat-fi', displayName:'Honda BeAT FI Gen 1',
+matchNames:['beat fi','beat-fi','beat esp','beat pgm-fi','vario 110','vario110','vario 110 esp'],
 sourceNote:'Honda BeAT FI Gen 1 — Buku Pedoman Reparasi, bab Informasi Umum (Spesifikasi & Torsi Pengencangan, hal. 1-4 s/d 1-11) & Perawatan (Jadwal Perawatan Berkala, hal. 3-3). Catatan: mesin 108cc (non-liquid cooled) satu platform dengan Vario 110 (eSP) — torsi mekanis dipakaikan juga untuk Vario 110 di sini, TAPI spek non-mesin (ban/rem/kelistrikan/kapasitas) belum terverifikasi khusus utk Vario 110 — cek ulang ke buku manual Vario 110 kalau ragu, terutama bagian Roda/Rem/Kelistrikan.',
 cats:[
 {cat:'Perawatan Berkala', icon:'🛠️', items:[
@@ -406,7 +408,8 @@ return null;
 }
 const TORSI_NM_PER_KGF=9.80665, TORSI_NM_PER_LBFT=1.35582, TORSI_NM_PER_LBIN=0.112985;
 const VEHICLE_SPEC_DB=[
-{matchNames:['vario 125'], sourceNote:'Honda Vario 125 (KZR) — Buku Pedoman Reparasi, bab SPESIFIKASI (hal. 1-4 s/d 1-8) & PERAWATAN (hal. 3-3)',
+{id:'vario-125', displayName:'Honda Vario 125 (KZR)',
+matchNames:['vario 125'], sourceNote:'Honda Vario 125 (KZR) — Buku Pedoman Reparasi, bab SPESIFIKASI (hal. 1-4 s/d 1-8) & PERAWATAN (hal. 3-3)',
 umum:{
 'Kapasitas tangki BBM':'5,5 liter',
 'Oli mesin (ganti rutin)':'0,8 liter',
@@ -443,7 +446,8 @@ batasServis:[
 ['Diameter tromol rem belakang','–','Maks 131,0 mm'],
 ],
 },
-{matchNames:['beat fi','beat-fi','beat esp','beat pgm-fi'], sourceNote:'Honda BeAT FI Gen 1 — Buku Pedoman Reparasi, bab INFORMASI UMUM (hal. 1-4 s/d 1-11) & PERAWATAN (hal. 3-3). Mesin 108cc satu platform dengan Vario 110 (eSP), tapi verifikasi ulang sebelum dipakai untuk motor lain.',
+{id:'beat-fi', displayName:'Honda BeAT FI Gen 1',
+matchNames:['beat fi','beat-fi','beat esp','beat pgm-fi'], sourceNote:'Honda BeAT FI Gen 1 — Buku Pedoman Reparasi, bab INFORMASI UMUM (hal. 1-4 s/d 1-11) & PERAWATAN (hal. 3-3). Mesin 108cc satu platform dengan Vario 110 (eSP), tapi verifikasi ulang sebelum dipakai untuk motor lain.',
 umum:{
 'Kapasitas tangki BBM':'3,7 liter',
 'Oli mesin (ganti rutin)':'0,7 liter',
@@ -481,6 +485,32 @@ batasServis:[
 ],
 },
 ];
+// Sesi coding gap (a) Sesi B (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md
+// §2g/§7, desain: DESAIN-SESI-B-GAP-A-VEHICLE-DB-REGISTRASI.md v1664):
+// daftarkan TORSI_DB/VEHICLE_SPEC_DB ke DatabaseAPI.vehicle SEBAGAI sumber
+// data (bukan disalin manual ke VEHICLE_DB_RECORDS lagi). Dipanggil di
+// sini (top-level, SETELAH kedua const di atas selesai didefinisikan) —
+// aman dari sisi urutan muat: database-api.js sudah dieksekusi duluan
+// (GROUP_B, scripts/build.js) sehingga DatabaseAPI.vehicle.registerSource
+// sudah ada di scope global saat baris ini jalan. Pairing 1 entri torsi +
+// 1 entri spec "kendaraan sama" dilakukan via `id` (bukan tebak dari
+// matchNames — sengaja beda utk BeAT FI, lihat dokumen desain §3),
+// toleran kalau cuma salah satu ada (torsi-only/spec-only, Keputusan 3
+// dokumen desain — belum ada kasusnya sekarang, 2/2 record py keduanya).
+// Guard `typeof DatabaseAPI==='undefined'` — pola SAMA PERSIS 4 konsumen
+// lain (findTorsiDb dkk) — supaya test terisolasi yang cuma me-load file
+// ini sendirian (tanpa database-api.js) tetap jalan, cuma no-op.
+// Keputusan (A) additive (dokumen desain §5): VEHICLE_DB_RECORDS di
+// database-api.js TIDAK dihapus sesi ini — literal itu tetap jadi
+// fallback kalau registerSource() tidak pernah terpanggil (7 test yang
+// me-load database-api.js sendirian). Full-cutover jadi sesi terpisah.
+(function _registerVehicleDbSource(){
+if(typeof DatabaseAPI==='undefined'||!DatabaseAPI.vehicle||typeof DatabaseAPI.vehicle.registerSource!=='function')return;
+const byId={};
+TORSI_DB.forEach(function(t){byId[t.id]=byId[t.id]||{id:t.id,displayName:t.displayName};byId[t.id].torsi=t;});
+VEHICLE_SPEC_DB.forEach(function(s){byId[s.id]=byId[s.id]||{id:s.id,displayName:s.displayName};byId[s.id].spec=s;});
+DatabaseAPI.vehicle.registerSource(Object.values(byId));
+})();
 function findVehicleSpec(vehName,modelId){
 if(!vehName&&!modelId)return null;
 // Database API Fase 1: sama pola findTorsiDb() di atas -- baca dari
