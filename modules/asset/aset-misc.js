@@ -209,6 +209,7 @@ a._migratedToInvestmentId=holding.id;
 migrated++;
 });
 if(migrated>0&&typeof save==='function')save();
+if(migrated>0&&typeof AIBus!=='undefined')AIBus.emit('investment.updated',{kind:'migrate-from-asset',migrated});
 return{migrated,skipped:candidates.length-migrated};
 }
 // findGhostMigratedAssets() -- audit user (Vario 125 nyangkut di D.investments):
@@ -243,6 +244,7 @@ const holdingId=a._migratedToInvestmentId;
 if(typeof Investment!=='undefined')Investment.deleteHolding(holdingId);
 a._migratedToInvestmentId=null;
 if(typeof save==='function')save();
+if(typeof AIBus!=='undefined')AIBus.emit('investment.updated',{kind:'unmigrate-to-asset',deletedId:holdingId,assetId:a.id});
 return true;
 }
 // syncLinkedAssetNilaiFromAkun() -- Sesi 422f: lengkapi arah sync yang selama

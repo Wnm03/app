@@ -124,6 +124,7 @@ if(!a)return;
 a.penyusutan=a.penyusutan||Object.assign({},Penyusutan.DEFAULTS);
 a.penyusutan.aktif=!a.penyusutan.aktif;
 save();
+if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{penyusutanUpdated:true,editId:id});
 Penyusutan.renderList();
 },
 // Update 1 parameter (metode/umurManfaatTahun/nilaiResidu/tarifPersen) dari kontrol
@@ -143,6 +144,7 @@ a.penyusutan.umurManfaatTahun=parseDecStr(rawValue)||0;
 a.penyusutan.tarifPersen=parseDecStr(rawValue)||0;
 }
 save();
+if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{penyusutanUpdated:true,editId:id});
 Penyusutan.renderList();
 },
 // Render kartu "📉 Penyusutan Aset": 1 baris per aset (toggle aktif + kontrol

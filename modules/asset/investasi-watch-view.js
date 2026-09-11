@@ -130,11 +130,12 @@ const InvestmentWatchUI = {
     const targetPrice = (targetEl && targetEl.value !== '') ? parseDecStr(targetEl.value) : 0;
     const notesEl = document.getElementById('watchNotes');
     const notes = notesEl ? notesEl.value : '';
+    let w;
     try {
       if (InvestmentWatchUI.editId) {
-        Investment.updateWatch(InvestmentWatchUI.editId, { name, type, lastPrice, targetPrice, notes });
+        w = Investment.updateWatch(InvestmentWatchUI.editId, { name, type, lastPrice, targetPrice, notes });
       } else {
-        Investment.addWatch({ name, type, lastPrice, targetPrice, notes });
+        w = Investment.addWatch({ name, type, lastPrice, targetPrice, notes });
       }
     } catch (e) {
       toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal menyimpan pantauan'));
@@ -142,6 +143,7 @@ const InvestmentWatchUI = {
     }
     closeModal('investmentWatchModal');
     InvestmentWatchUI.render();
+    if (typeof AIBus !== 'undefined') AIBus.emit('investment.updated', { kind: 'watch', action: InvestmentWatchUI.editId ? 'edit' : 'create', watchId: w && w.id });
     toast('✅ Pantauan tersimpan');
   },
 
@@ -156,6 +158,7 @@ const InvestmentWatchUI = {
     InvestmentWatchUI.editId = null;
     closeModal('investmentWatchModal');
     InvestmentWatchUI.render();
+    if (typeof AIBus !== 'undefined') AIBus.emit('investment.updated', { kind: 'watch', action: 'delete', deletedId: targetId });
     toast('🗑️ Pantauan dihapus');
   },
 };

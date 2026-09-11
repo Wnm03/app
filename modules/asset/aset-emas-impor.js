@@ -282,6 +282,7 @@ goldToko:it.nama||''
 count++;
 });
 save();
+if(typeof AIBus!=="undefined")AIBus.emit("asset.updated",{imported:count});
 closeModal('goldImportModal');
 Aset.renderList();renderKekayaanBersih();hitungZakatMaal();
 toast(`✅ ${count} aset emas berhasil diimpor`);

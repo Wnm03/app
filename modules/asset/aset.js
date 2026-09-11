@@ -430,8 +430,14 @@ if(!savedAsset)return savedAsset;// validasi gagal (mis. nama kosong) atau save 
 if(!wantAutoHolding)return savedAsset;
 // Guard ganda thd race/duplikasi: kalau asetnya SUDAH tertaut (a.investmentId, mis. dari
 // link manual yang barusan tersimpan) ATAU module Investment belum dimuat, jangan bikin
-// holding kedua / gagal diam-diam.
-if(savedAsset.investmentId)return savedAsset;
+// holding kedua / gagal diam-diam. Cek JUGA `_migratedToInvestmentId` -- BUKAN cuma
+// `investmentId` (fix bug produksi double-holding, ROADMAP §2m): Aset.save() di atas
+// (_saveInner()) sudah memicu renderList()->migrateAssetInvestmentsToHoldings() SEBELUM
+// baris ini, yang bisa mendeteksi aset baru ini sbg kandidat migrasi sah (jenis tradable
+// + buku>0) dan langsung bikin Holding #1 + tandai `_migratedToInvestmentId` (BUKAN
+// `investmentId`). Tanpa cek field ini, guard lama lolos & blok di bawah bikin Holding #2
+// -- 1 aset baru jadi 2 Holding terduplikasi.
+if(savedAsset.investmentId||savedAsset._migratedToInvestmentId)return savedAsset;
 if(typeof Investment==='undefined'||typeof Investment.addHolding!=='function')return savedAsset;
 const type=Aset.TRADABLE_TYPE_MAP[savedAsset.jenis]||'Lainnya';
 const unit=isFinite(savedAsset.jumlahUnit)&&savedAsset.jumlahUnit>0?savedAsset.jumlahUnit:0;
