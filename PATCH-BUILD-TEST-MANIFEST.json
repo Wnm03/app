@@ -1,0 +1,23 @@
+{
+  "type": "patch-only-with-cumulative-tests",
+  "baseline": "app-main (79).zip",
+  "base_patch": "PATCH-KUMULATIF-2B-3F-FIX-BUILD-TEST-NO-STALE-BUNDLE.zip",
+  "runtime_and_bundles": "inherited from base patch; exact app-main relative paths",
+  "added_test_files": [
+    "tests/servis-checklist-saveall-sesi2a.test.js",
+    "tests/servis-checklist-history-summary-sesi2b.test.js",
+    "tests/servis-history-responsive-sesi2c.test.js",
+    "tests/servis-history-responsive-sesi2c.test.js",
+    "tests/servis-history-interaction-sesi2d.test.js",
+    "tests/servis-checklist-category-warning-sesi2a3.test.js",
+    "tests/servis-category-integrity-sesi3a.test.js",
+    "tests/servis-canonical-category-link-sesi3b.test.js",
+    "tests/servis-unified-service-event-sesi3c.test.js",
+    "tests/servis-reminder-history-sync-sesi3d.test.js",
+    "tests/data-health-check-servis-reminder-sesi3e.test.js",
+    "tests/servis-history-reminder-link-sesi3f.test.js",
+    "scripts/test-servis-sync-cumulative.js"
+  ],
+  "test_runner": "scripts/test-servis-sync-cumulative.js",
+  "note": "Existing project build scripts remain the canonical build path; this runner executes the service/reminder regression set."
+}

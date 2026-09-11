@@ -733,6 +733,38 @@ listEl.innerHTML=issues.map(i=>`<div style="padding:10px;border-radius:10px;marg
       </div>
     </div>`).join('');
 }
+// SESI 3E — Service ↔ Reminder Integrity Guard.
+// Read-only: tidak memperbaiki/menulis data. Tujuan utamanya mendeteksi
+// tautan Riwayat Servis yang bisa membuat Pengingat membaca kategori/interval
+// yang salah. Canonical relation tetap categoryId -> D.sparepartCats, dengan
+// resolveServisCatForVehicle() hanya sebagai fallback legacy untuk log lama.
+if(Array.isArray(D.servisLogs)){
+  D.servisLogs.forEach(s=>{
+    if(!s||!s.item)return;
+    const vehicleId=s.vehicleId||null;
+    const linked=s.categoryId?(D.sparepartCats||[]).find(c=>c&&c.id===s.categoryId):null;
+    if(s.categoryId&&!linked){
+      issues.push({level:'warn',title:'Riwayat servis memiliki categoryId orphan',detail:`"${s.item}" (${s.date||'?'}) menyimpan categoryId "${s.categoryId}" tetapi kategori tersebut sudah tidak ada. Catatan ini tidak boleh dipakai untuk mereset Pengingat Servis.`});
+      return;
+    }
+    if(linked&&linked.vehicleId&&vehicleId&&linked.vehicleId!==vehicleId){
+      issues.push({level:'error',title:'Riwayat servis tertaut ke kategori kendaraan lain',detail:`"${s.item}" (${s.date||'?'}) untuk kendaraan "${vehicleId}" menunjuk kategori privat kendaraan "${linked.vehicleId}". Tautan ini berisiko membuat Pengingat kendaraan yang salah.`});
+      return;
+    }
+    const resolved=(typeof resolveServisCatForVehicle==='function'&&vehicleId)
+      ?resolveServisCatForVehicle(s.item,vehicleId):null;
+    if(!s.categoryId&&resolved){
+      issues.push({level:'warn',title:'Riwayat servis belum memiliki categoryId canonical',detail:`"${s.item}" (${s.date||'?'}) dapat dihubungkan ke kategori "${escapeHtml(resolved.name||resolved.id)}", tetapi entry masih categoryId kosong. Data lama ini masih bisa difallback, namun sebaiknya dimigrasikan ke linkage canonical.`});
+    }
+    const cat=linked||resolved;
+    if(cat&&cat.showInReminder===true&&(!Number.isFinite(Number(cat.intervalKm))||Number(cat.intervalKm)<=0)){
+      issues.push({level:'warn',title:'Kategori Pengingat aktif tetapi interval KM tidak valid',detail:`Kategori "${escapeHtml(cat.name||cat.id)}" ditandai tampil di Pengingat tetapi intervalKm belum valid. Cek 🔧 Kelola Kategori Sparepart.`});
+    }
+  });
+}
+// Guard kategori yang terdaftar untuk Pengingat tetapi tidak lagi terlihat pada
+// kendaraan aktif bukan error data; vehicle visibility memang merupakan aturan
+// runtime. Karena itu Sesi 3E sengaja tidak mengubah/menandai kasus tersebut.
 openModal('dataHealthModal');
 return issues;
 }

@@ -34,7 +34,9 @@ const date=(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:new Date
 const accId=D.accounts[0]?.id||'';
 const txId=uid(),servisId=uid();
 D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:(data.item||'Servis')+' - '+veh.name,date,servisLinkId:servisId});
-D.servisLogs.push({id:servisId,vehicleId:veh.id,date,item:data.item||'Servis',categoryId:null,km:data.km?Number(data.km):null,cost,note:data.note||'',accountId:accId,txLinkId:txId});
+const servisItem=data.item||'Servis';
+const canonicalCatId=typeof canonicalServisCategoryId==='function'?canonicalServisCategoryId(servisItem,veh.id,null):null;
+D.servisLogs.push({id:servisId,vehicleId:veh.id,date,item:servisItem,categoryId:canonicalCatId,km:data.km?Number(data.km):null,cost,note:data.note||'',accountId:accId,txLinkId:txId});
 save();refreshCurrentPage();renderDashboardServisReminder();
 return `Servis "${data.item||'Servis'}" untuk ${veh.name} ${fmtFull(cost)} tersimpan`;
 },
