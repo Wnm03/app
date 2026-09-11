@@ -4,7 +4,7 @@
 // data-default.js (v79) — file itu HARUS dimuat SEBELUM file ini karena dibaca langsung di `let D = {...}`.
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
 const DATA_MIGRATIONS=[
 {toVersion:2,desc:'Tambah kategori baku Investasi & Sedekah/Donasi (pengeluaran) utk user lama',migrate(d){
 if(!d.categories||!d.categories.expense)return;
@@ -79,6 +79,15 @@ if(!exp.some(c=>c.id==='cat_piutang'||/^piutang$/i.test(c.name||''))){
 exp.splice(Math.max(0,exp.length-1),0,{id:'cat_piutang',name:'Piutang',emoji:'🤝',subs:[]});
 }
 }},
+{toVersion:11,desc:'ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi A1 (manufacturers/vehicle_models relasional, fondasi): backfill field modelId (opsional) di D.vehicles lama lewat DatabaseAPI.vehicleModel.findByName(v.name) -- pola guard typeof sama seperti migrasi toVersion:4/6/7 di atas (no-op kalau DatabaseAPI belum termuat, mis. test terisolasi). `name` TETAP jadi display fallback, modelId cuma metadata tambahan -- 0 field lama diubah/dihapus, entri yang sudah punya modelId (mis. dari input manual sesi berikutnya) dilewati.',migrate(d){
+if(!Array.isArray(d.vehicles)||!d.vehicles.length)return;
+if(typeof DatabaseAPI==='undefined'||!DatabaseAPI.vehicleModel||typeof DatabaseAPI.vehicleModel.findByName!=='function')return;
+d.vehicles.forEach(v=>{
+if(!v||v.modelId)return;
+const m=DatabaseAPI.vehicleModel.findByName(v.name||'');
+if(m)v.modelId=m.id;
+});
+}},
 ];
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
@@ -102,8 +111,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's777-followup6-fuel-price-deviation-summary';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's777-followup6-fuel-price-deviation-summary';
+const APP_BUILD_VERSION = 's-sesi-c-shop-cobek-5-titik-sisa-1662';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's-sesi-c-shop-cobek-5-titik-sisa-1662';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -113,7 +122,7 @@ nextPulang:'',lastBackup:null,lastResetPromptDate:null,
 profile:{nama:'W',gajiPokok:65000,kiriman:500000,theme:'dark',lemburMultiplier:1.5,tarifMinggu:139000,tanggalLahir:null,statusKawin:false,tanggungan:0,statusPekerjaan:null,targetGajiBulanan:null,insightMingguanAktif:true},
 categories:{income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))},
 accounts:JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS)),
-vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}],
+vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000,modelId:'vario-125'}],
 simList:[],
 bbmLogs:[],servisLogs:[],jalanLogs:[],kmLogs:[],workDays:[],gajiMingguanHistory:[],
 tukangBorHargaMemory:{},
@@ -636,6 +645,19 @@ return;
 }
 D={...D,...p};
 if(!fromIdb) IDBStore.set('kw_v4_mirror',s).catch(e=>console.error('Gagal migrasi awal ke IndexedDB:',e));
+// Sesi B (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §4 Fase 1 poin 2):
+// muat Vehicle Database aktif dari IndexedDB SEBELUM migrasi jalan --
+// migrasi toVersion:11 (DatabaseAPI.vehicleModel.findByName) baca dari
+// VEHICLE_MODELS (statis, tidak berubah oleh langkah ini), jadi urutan ini
+// tidak wajib untuknya, tapi ditaruh di sini (bukan di titik lain) supaya
+// SATU tempat startup yang menjamin Vehicle Database siap sebelum fitur
+// lain (Servis dkk) mulai baca -- pola guard sama seperti pemanggilan
+// migrasi lain di load(), 0 efek ke app kalau DatabaseAPI belum termuat
+// (mis. build tanpa modul ini ikut, atau test terisolasi).
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.ensureLoaded==='function'){
+try{ await DatabaseAPI.vehicle.ensureLoaded(); }
+catch(e){ console.error('Gagal ensureLoaded DatabaseAPI.vehicle:',e); }
+}
 const _fromSchemaVersion=D.schemaVersion===undefined?0:D.schemaVersion;
 runDataMigrations(_fromSchemaVersion);
 if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
@@ -728,7 +750,7 @@ if(D.profile&&D.profile.tanggungan===undefined) D.profile.tanggungan=0;
 if(D.profile&&D.profile.statusPekerjaan===undefined) D.profile.statusPekerjaan=null;
 if(!D.bills) D.bills=[];
 if(!D.billsArchive) D.billsArchive=[];
-if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}];
+if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000,modelId:'vario-125'}];
 D.vehicles.forEach(v=>{if(!v.serviceIntervalKm)v.serviceIntervalKm=3000;});
 if(!D.torsiChecklist||typeof D.torsiChecklist!=='object'||Array.isArray(D.torsiChecklist)) D.torsiChecklist={};
 // Sesi "Revisi migrasi" (torsi-vehicle-selector, Bagian A): migrasi jaring

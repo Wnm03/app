@@ -821,7 +821,7 @@ function renderVehicleSpecCard(){
 const el=document.getElementById('vehSpecCard');
 if(!el)return;
 const veh=D.vehicles&&D.vehicles.find(v=>v.id===curVehicleId);
-const spec=veh?findVehicleSpec(veh.name):null;
+const spec=veh?findVehicleSpec(veh.name,veh.modelId):null;
 if(!spec){ el.innerHTML=''; return; }
 const umumRows=Object.entries(spec.umum).map(([k,v])=>`<div class="u-flex u-jcb u-gap10 u-fs12" style="padding:5px 0;border-bottom:1px solid var(--border)"><span class="u-t2">${escapeHtml(k)}</span><span class="u-fw600 u-tar">${escapeHtml(v)}</span></div>`).join('');
 const banRows=['depan','belakang'].map(pos=>`
