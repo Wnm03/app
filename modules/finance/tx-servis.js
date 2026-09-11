@@ -162,12 +162,18 @@ _servisAutoLinkAdjustStock(purchasedPartId,-purchasedPartQty);
 function _resolveServisCategoryId(item,purchasedPartId,vehicleId){
 const name=(item||'').trim().toLowerCase();
 if(name){
-const matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,vehicleId):(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name);
-if(matched)return matched.id;
+const matched=typeof canonicalServisCategoryId==='function'
+?canonicalServisCategoryId(item,vehicleId,null)
+:(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,vehicleId):(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name));
+if(matched)return matched&&matched.id?matched.id:matched;
 }
 if(purchasedPartId){
 const part=(D.partsStock||[]).find(p=>p.id===purchasedPartId);
-if(part&&part.catId)return part.catId;
+if(part&&part.catId){
+const partCat=typeof canonicalServisCategoryId==='function'
+?canonicalServisCategoryId(item,vehicleId,part.catId):null;
+if(partCat)return partCat&&partCat.id?partCat.id:partCat;
+}
 }
 return null;
 }
