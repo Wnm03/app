@@ -161,6 +161,12 @@ applyAllocationRow(item, ownerId, ownerName) {
   } catch (e) {
     return { ok: false, reason: (e && e.message) || 'Gagal menyimpan alokasi' };
   }
+  // Cabang holding menulis lewat Investment.setOwners() LANGSUNG (bukan lewat
+  // InvestmentUI.saveOwners() yang sudah emit investment.updated{ownersUpdated:true}) --
+  // emit di sini supaya listener (AIService.wireEvents()) tetap dapat sinyal porsi
+  // holding berubah lewat jalur realokasi ini juga. Cabang asset TIDAK emit di sini
+  // (di luar cakupan sesi ini, beda event `asset.updated`).
+  if (item.type === 'holding' && typeof AIBus !== 'undefined') AIBus.emit('investment.updated', { ownersUpdated: true, holdingId: item.id });
   return { ok: true, actualAlloc: value * (actualAdd / 100) };
 },
 

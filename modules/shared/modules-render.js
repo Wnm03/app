@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s-servis-foto-badge-sesi-f2-1660';
+const MODULE_RENDER_VERSION='s-sesi-c-titipan-updated-1679';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -876,14 +876,22 @@ const top=rows.slice(0,3);
 card.classList.remove('u-dnone');card.style.display='block';
 card.innerHTML=`<div class="card-title">🔧 Pengingat Servis <span class="acc-chip u-cacc2" style="border-color:var(--accent2)">${rows.length}</span> <span class="card-collapse-toggle" id="dashServisReminderCard-chev" data-action="toggleCardCollapse" data-args='["dashServisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="dashServisReminderCard-cbody">`
 +vehChipsHTML
-+top.map(r=>`
++top.map(r=>{
+// Sesi D-lanjutan1: badge kategori master (13 kategori terkunci) di
+// samping nama kategori -- '' kalau 0 match (lihat komentar
+// dashReminderMasterCatBadgeHTML di sparepart-servis.js), badge langsung
+// nempel di span nama kategori (bukan div terpisah) supaya 0 elemen
+// kosong nambah tinggi kartu saat badge '' (kasus paling umum sebelum
+// user isi lebih banyak kategori item lewat classifier).
+const mcBadge=(typeof Sparepart!=='undefined'&&typeof Sparepart.dashReminderMasterCatBadgeHTML==='function')?Sparepart.dashReminderMasterCatBadgeHTML(r.cat,r.veh.id):'';
+return`
     <div class="u-mb10 u-pointer" data-action="goToServisFromDash" data-args="${escapeHtml(JSON.stringify([r.veh.id]))}">
       <div class="u-flex u-jcb u-aic u-fs12 u-mb4">
-        <span class="u-fw700">${r.veh.emoji||'🏍️'} ${escapeHtml(r.veh.name)} · ${escapeHtml(r.cat.name)}</span>
+        <span class="u-fw700">${r.veh.emoji||'🏍️'} ${escapeHtml(r.veh.name)} · ${escapeHtml(r.cat.name)}${mcBadge}</span>
         <span class="${r.col} u-fw700">${r.msg}</span>
       </div>
       <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
-    </div>`).join('')
+    </div>`;}).join('')
 +(rows.length>top.length?`<div class="u-fs12 u-cacc u-tar u-pointer" data-action="goToServisFromDash">Lihat semua (${rows.length}) →</div>`:'')
 +`</div>`;
 applyOneCardCollapsePref('dashServisReminderCard');

@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s-servis-foto-badge-sesi-f2-1660';
+const MODULE_CALC_VERSION='s-sesi-c-titipan-updated-1679';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
