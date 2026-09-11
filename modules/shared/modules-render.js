@@ -846,17 +846,26 @@ const curKm=getVehicleKm(veh.id);
 const kmPerDay=estimateKmPerDay(veh.id);
 const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id));
 remindableCats.forEach(cat=>{
-const lastKm=getLastServiceKmForCat(veh.id,cat);
-const intervalKm=getEffectiveIntervalKm(veh.id,cat);
+// Sesi 3D — Dashboard wajib memakai SoT urgency yang sama dgn kartu
+// Pengingat Servis utama. Dulu widget ini menghitung ulang pure-KM sendiri,
+// sehingga intervalBulan/actionType reset bisa berbeda dari Riwayat.
+const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
+const lastKm=getLastServiceKmForCat(veh.id,cat,resetFilter,true);
+const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:veh.id,cat,curKm,kmPerDay}):null;
+const intervalKm=u?u.intervalKm:getEffectiveIntervalKm(veh.id,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-const sisa=intervalKm-jarakTempuh;
-const pct=Math.min(100,Math.max(0,Math.round((jarakTempuh/intervalKm)*100)));
+const sisa=u?u.sisaKm:(intervalKm-jarakTempuh);
+const pct=Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100)));
+const status=u?u.status:(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman'));
 let col=null;
-if(sisa<=0)col='red';
-else if(sisa<=intervalKm*0.15)col='orange';
+if(status==='lewat')col='red';
+else if(status==='segera')col='orange';
 if(!col)return;
-const msg=sisa<=0?`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;
-const estDateISO=estimateServiceDateISO(sisa,kmPerDay);
+const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
+const msg=status==='lewat'
+?(monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
+:(monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`);
+const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
 rows.push({veh,cat,sisa,pct,col,msg:msg+estLabel});
 });

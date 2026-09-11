@@ -658,7 +658,11 @@ bbmCount++;
 if(Array.isArray(parsed.servisLogs)){
 parsed.servisLogs.forEach(s=>{
 if(D.servisLogs.find(x=>x.id===s.id))return;
-D.servisLogs.push({...s,id:uid(),vehicleId:s.vehicleId||vehId});
+const restoredVehicleId=s.vehicleId||vehId;
+const restoredItem=s.item||'Servis';
+const restoredCatId=typeof canonicalServisCategoryId==='function'
+?canonicalServisCategoryId(restoredItem,restoredVehicleId,s.categoryId||null):s.categoryId||null;
+D.servisLogs.push({...s,id:uid(),vehicleId:restoredVehicleId,categoryId:restoredCatId});
 servisCount++;
 });
 }
@@ -700,7 +704,10 @@ if(isBbm){
 D.bbmLogs.push({id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
 bbmCount++;
 } else if(isServis){
-D.servisLogs.push({id:uid(),vehicleId:rowVehId,date,item:ket||'Servis (import)',categoryId:null,km:km||null,cost:amount,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
+const importServisItem=ket||'Servis (import)';
+const importCatId=typeof canonicalServisCategoryId==='function'
+?canonicalServisCategoryId(importServisItem,rowVehId,null):null;
+D.servisLogs.push({id:uid(),vehicleId:rowVehId,date,item:importServisItem,categoryId:importCatId,km:km||null,cost:amount,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
 servisCount++;
 } else {
 skipCount++;
