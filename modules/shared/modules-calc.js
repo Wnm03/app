@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s-sesi-c-titipan-updated-1682';
+const MODULE_CALC_VERSION='s-sesi-c-titipan-updated-1695';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -842,7 +842,7 @@ try{return JSON.parse(localStorage.getItem(FinCoach.DISMISS_LS_KEY)||'[]');}catc
 dismiss(id){
 const cur=FinCoach.dismissedIds();
 if(!cur.includes(id))cur.push(id);
-try{localStorage.setItem(FinCoach.DISMISS_LS_KEY,JSON.stringify(cur.slice(-40)));}catch(e){}
+try{localStorage.setItem(FinCoach.DISMISS_LS_KEY,JSON.stringify(cur.slice(-40)));}catch(e){void e;}
 FinCoach.renderDash();
 },
 renderDash(ctx){

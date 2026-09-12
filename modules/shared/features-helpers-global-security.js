@@ -111,8 +111,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's-sesi-c-titipan-updated-1682';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's-sesi-c-titipan-updated-1682';
+const APP_BUILD_VERSION = 's-sesi-c-titipan-updated-1695';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's-sesi-c-titipan-updated-1695';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -715,7 +715,7 @@ if(!D.purchaseOrders) D.purchaseOrders=[];
 // Pola migration guard SAMA PERSIS purchaseOrders di atas.
 if(!D.productStockCorrections) D.productStockCorrections=[];
 if(!D.debts) D.debts=[];
-D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){}});
+D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){void e;}});
 if(!D.renovProjects) D.renovProjects=[];
 if(!D.sewaKios) D.sewaKios={units:[]};
 if(!D.sewaKios.units) D.sewaKios.units=[];
@@ -864,7 +864,7 @@ return base;
 }
 function applyDashHubMainGridDefaultCollapse(){
 let prefs={};
-try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){}
+try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){void e;}
 if('dashHubMainGrid' in prefs)return; // user sudah pernah pilih manual, hormati pilihannya
 const body=document.getElementById('dashHubMainGrid-cbody');
 const chev=document.getElementById('dashHubMainGrid-chev');
