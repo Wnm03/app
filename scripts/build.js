@@ -296,6 +296,8 @@ const GROUP_B = [
   'modules/business/gaji-bulanan.js',
   'modules/finance/cicilan.js',
   'modules/finance/tx-bbm.js',
+  'modules/vehicle/service-event-lifecycle.js',
+  'modules/vehicle/service-event-adapter.js',
   'modules/finance/tx-servis.js',
   'modules/finance/tx-stok-sparepart.js',
   'modules/finance/tx-renov.js',
@@ -368,6 +370,11 @@ const GROUP_B = [
   // Tidak bergantung ke vehicle-core.js secara langsung, ditaruh
   // bersebelahan krn sama-sama domain vehicle "core"/foundational.
   'modules/vehicle/vehicle-catalog.js',
+  // honda-oem-catalog-master.js (S20): adapter READ-ONLY untuk menormalkan
+  // master OEM dari teks parts catalog Honda. Tidak membuat taxonomy servis
+  // baru dan tidak menulis D/VehicleCatalog/IDBStore. Metadata katalog
+  // (block/halaman/ref) dipertahankan sebagai provenance.
+  'modules/vehicle/honda-oem-catalog-master.js',
   // vehicle-scanner.js (lanjutan ringkas Tahap 2 ACR-001 — scan Barcode/
   // QR/DataMatrix): HANYA lapisan kamera/decode (ZXing-JS), dependency
   // vehicle-catalog.js (VehicleCatalog.handleScan) & toast()/
@@ -554,6 +561,11 @@ const GROUP_B = [
   'modules/business/shop-scan-ui.js',
   'modules/ai/chat-action.js',
   'modules/shared/data-archive.js',
+  // CATEGORY-SOT cumulative: canonical taxonomy + interval policy must load
+  // before vehicle sparepart/reminder logic so all runtime interval/category
+  // reads pass through the same SoT helpers.
+  'modules/vehicle/category-canonical-ref.js',
+  'modules/vehicle/service-interval-policy.js',
   'modules/vehicle/sparepart-servis.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
   // file agar di bawah OVERSIZED_FILE_LINE_THRESHOLD. Bagian KEDUA (SparepartCsvImport/
@@ -577,6 +589,7 @@ const GROUP_B = [
   // linkCat — belum dipakai di Sesi 1A, tapi posisinya disiapkan sekali
   // jalan supaya tidak perlu geser urutan lagi di sesi berikutnya).
   'modules/vehicle/servis-checklist.js',
+  'modules/vehicle/service-input-catalog.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof

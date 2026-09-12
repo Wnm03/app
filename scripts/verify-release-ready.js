@@ -169,6 +169,21 @@ function checkVersionSync() {
   return { status: 'synced', version: swVersion };
 }
 
+function checkServiceSotIntegrity() {
+  try {
+    execSync('node scripts/service-sot-integrity-gate.js', {
+      cwd: ROOT,
+      stdio: 'pipe',
+      maxBuffer: 32 * 1024 * 1024,
+      shell: true,
+    });
+    return { status: 'passed', detail: 'SERVICE-SOT-INTEGRITY-GATE PASS' };
+  } catch (e) {
+    const out = `${e.stdout || ''}${e.stderr || ''}`.trim();
+    return { status: 'failed', detail: out.slice(-8000) || `service SoT gate exit ${e.status}` };
+  }
+}
+
 function readAppVersion() {
   const candidates = [
     path.join(ROOT, 'modules/shared/features-helpers-global-security.js'),
@@ -298,6 +313,19 @@ function main() {
     blocking.push('version-sync (?v= HTML vs CACHE_NAME sw.js tidak sinkron)');
   }
 
+  // --- Gate 5: SERVICE-SOT-INTEGRITY-GATE ---
+  // Cumulative category/service release contract: canonical taxonomy,
+  // checklist 30/30 mapping, interval precedence, single service event,
+  // vehicle isolation, idempotency, and full regression.
+  const serviceSot = checkServiceSotIntegrity();
+  if (serviceSot.status === 'passed') {
+    console.log('✓ GATE service-sot-integrity: PASS.');
+  } else {
+    console.error('✗ GATE service-sot-integrity: GAGAL.');
+    console.error(serviceSot.detail);
+    blocking.push('service-sot-integrity (wajib diperbaiki; tidak dapat di-override)');
+  }
+
   // --- Gate 5: bundle freshness (S767) ---
   // Ditambahkan setelah insiden S756: source sudah difix sejak S755, tapi
   // app-bundle-a/b.min.js yang beneran dipakai browser tidak pernah
@@ -341,6 +369,6 @@ function main() {
   }
 }
 
-module.exports = { checkLint, checkMinified, checkHtmlSync, checkVersionSync, checkBundleFreshness, readAppVersion };
+module.exports = { checkLint, checkMinified, checkHtmlSync, checkVersionSync, checkBundleFreshness, checkServiceSotIntegrity, readAppVersion };
 
 if (require.main === module) main();
