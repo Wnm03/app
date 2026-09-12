@@ -1,7 +1,7 @@
 {
   "name": "keluarga-w",
   "version": "0.85.10",
-  "description": "Aplikasi manajemen keuangan, zakat, bisnis, dan kendaraan keluarga (Keluarga W) \u2014 PWA multi-file, dibangun jadi app-bundle-a.min.js / app-bundle-b.min.js lewat build.js.",
+  "description": "Aplikasi manajemen keuangan, zakat, bisnis, dan kendaraan keluarga (Keluarga W) — PWA multi-file, dibangun jadi app-bundle-a.min.js / app-bundle-b.min.js lewat build.js.",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -15,7 +15,8 @@
     "verify-window-expose": "node scripts/verify-window-expose.js",
     "release-check": "node scripts/verify-release-ready.js",
     "check": "npm run lint && npm run verify-window-expose && npm test && npm run build",
-    "release": "bash scripts/release.sh"
+    "release": "bash scripts/release.sh",
+    "service-sot-gate": "node scripts/service-sot-integrity-gate.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

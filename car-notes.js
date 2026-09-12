@@ -369,6 +369,7 @@ activeActionTypeFilter:null,
 // persis activeActionTypeFilter/Sparepart.activeMasterCategoryFilter). null =
 // "Semua" (0 filter, 0 perubahan perilaku lama).
 activeMasterCategoryFilter:null,
+activeServiceComponentFilter:null,
 // _masterCategoryFilterPrefsLoaded/_masterCategoryFilterStorageKey +
 // _loadMasterCategoryFilterPrefsOnce()/_saveMasterCategoryFilterPrefs() --
 // Sesi D-lanjutan5. Pola & alasan SAMA PERSIS versi Sparepart
@@ -436,11 +437,26 @@ return r?r.masterCategoryId:null;
 // pagination tidak nyangkut di halaman lama saat filter berganti.
 setMasterCategoryFilter(id){
 Servis.activeMasterCategoryFilter=id||null;
-// Sesi D-lanjutan5: persist pilihan chip (lihat _saveMasterCategoryFilterPrefs()
-// di atas) -- 0 dampak kalau storage gagal/diblokir.
+Servis.activeServiceComponentFilter=null;
 Servis._saveMasterCategoryFilterPrefs();
 Servis.listPage=1;
 Servis.renderList();
+},
+setServiceComponentFilter(id){
+Servis.activeServiceComponentFilter=id||null;
+Servis.listPage=1;
+Servis.renderList();
+},
+renderServiceComponentFilter(beforeEl){
+let wrap=document.getElementById('servisComponentFilterWrap');
+if(!wrap){wrap=document.createElement('div');wrap.id='servisComponentFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
+if(typeof ServisChecklist==='undefined'||typeof ServisChecklist.itemsForMasterCategory!=='function'){wrap.innerHTML='';return;}
+const mid=Servis.activeMasterCategoryFilter;
+const items=mid&&mid!==UNCATEGORIZED_FILTER_ID?ServisChecklist.itemsForMasterCategory(mid):SERVICE_CHECKLIST_GROUPS.reduce((a,g)=>a.concat(g.items),[]);
+const uniq=[];const seen=new Set();(items||[]).forEach(it=>{if(it&&it.id&&!seen.has(it.id)){seen.add(it.id);uniq.push(it);}});
+const selected=uniq.some(it=>it.id===Servis.activeServiceComponentFilter)?Servis.activeServiceComponentFilter:null;
+Servis.activeServiceComponentFilter=selected;
+wrap.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700">🧩 Komponen</label><select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="Servis.setServiceComponentFilter" data-onchange-args='["$value"]'><option value="">Semua komponen${mid&&mid!==UNCATEGORIZED_FILTER_ID?' pada kategori ini':''}</option>${uniq.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===selected?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
 },
 // renderMasterCategoryChips(beforeEl) -- Sesi D-lanjutan4. Chip row filter
 // riwayat by kategori master (13 terkunci), DISISIPKAN lewat JS sebelum
@@ -570,8 +586,14 @@ Servis.onCatalogPartChange();
 syncServiceChecklist(){
 const box=document.getElementById('servisChecklistPanel');
 if(!box||typeof ServisChecklist==='undefined')return;
+const selectedMasterId=(document.getElementById('servisCategory')?.value||'').trim();
 const item=(document.getElementById('servisItem')?.value||'').trim();
-let match=ServisChecklist.findGroupForItem(item);
+// PRIORITAS: kategori yang dipilih user menjadi filter checklist.
+// Item/keterangan hanya fallback saat kategori belum dipilih (edit data lama).
+let match=selectedMasterId&&typeof ServisChecklist.findGroupByMasterCategoryId==='function'
+  ?ServisChecklist.findGroupByMasterCategoryId(selectedMasterId)
+  :null;
+if(!match&&item)match=ServisChecklist.findGroupForItem(item);
 if(match){
   Servis._serviceChecklistGroupIdx=match.groupIdx;
 }else if(Servis._serviceChecklistGroupIdx===null){
@@ -603,8 +625,13 @@ const groups=ServisChecklist.groupOptions();
 let gi=Servis._serviceChecklistGroupIdx;
 if(!Number.isInteger(gi)||!ServisChecklist.group(gi))gi=0;
 Servis._serviceChecklistGroupIdx=gi;
-const group=ServisChecklist.group(gi);
-const chips=groups.map(g=>`<button type=\"button\" class=\"chip ${g.groupIdx===gi?'active':''}\" data-action=\"Servis.setServiceChecklistGroup\" data-args=\"${escapeHtml(JSON.stringify([g.groupIdx]))}\">${escapeHtml(g.name)} <span style=\"opacity:.7\">${g.checked}/${g.total}</span></button>`).join('');
+let group=ServisChecklist.group(gi);
+const selectedMasterId=(document.getElementById('servisCategory')?.value||'').trim();
+const selectedGroup=selectedMasterId&&typeof ServisChecklist.findGroupByMasterCategoryId==='function'
+  ?ServisChecklist.findGroupByMasterCategoryId(selectedMasterId)
+  :null;
+if(selectedGroup){gi=selectedGroup.groupIdx;Servis._serviceChecklistGroupIdx=gi;group=selectedGroup.group;}
+const categoryName=selectedGroup?selectedGroup.group.group:(document.getElementById('servisCategory')?.selectedOptions?.[0]?.textContent||group.group);
 const rows=group.items.map((it,ii)=>{
   const checked=ServisChecklist._checked[it.id]!==undefined;
   const action=ServisChecklist._checked[it.id];
@@ -617,9 +644,29 @@ const rows=group.items.map((it,ii)=>{
   const missingCatBadge=linkedCat&&!resolvedCat?`<span class=\"sc-cat-warning\" title=\"Kategori sparepart belum tersedia untuk kendaraan ini\">⚠️ kategori belum ada</span>`:'';
   return `<div style=\"display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border2)\"><button type=\"button\" class=\"btn ${checked?'btn-primary':'btn-ghost'} btn-sm\" style=\"min-width:72px\" data-action=\"Servis.toggleServiceChecklistItem\" data-args=\"${escapeHtml(JSON.stringify([gi,ii]))}\">${checked?'✓ Selesai':'○ Cek'}</button><div style=\"flex:1;min-width:0\"><div class=\"u-fw700 u-fs12\">${escapeHtml(it.name)} ${missingCatBadge}</div><div class=\"u-fs11 u-t2\">${escapeHtml(it.intervalLabel)}</div>${checked&&action?`<div class=\"u-fs11 u-cacc\">Tindakan: ${escapeHtml(action)}</div>`:''}${actionButtons?`<div style=\"display:flex;gap:6px;margin-top:6px\">${actionButtons}</div>`:''}</div></div>`;
 }).join('');
-box.innerHTML=`<div style=\"background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px\"><div class=\"u-flex u-jcb u-aic u-mb8\"><div><div class=\"u-fw700\">☑️ Checklist Komponen Servis</div><div class=\"u-fs11 u-t2\">Kategori mengikuti 1 SoT checklist — bukan hanya Torsi.</div></div><span class=\"chip active\">${ServisChecklist.checkedCount(gi)}/${group.items.length}</span></div><div style=\"display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px\">${chips}</div><div>${rows}</div></div>`;
+box.innerHTML=`<div style=\"background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px\"><div class=\"u-flex u-jcb u-aic u-mb8\"><div><div class=\"u-fw700\">☑️ Checklist Komponen Servis</div><div class=\"u-fs11 u-t2\">Kategori: <b>${escapeHtml(categoryName)}</b> · centang hanya komponen yang benar-benar dikerjakan.</div></div><span class=\"chip active\">${ServisChecklist.checkedCount(gi)}/${group.items.length}</span></div><div style=\"font-size:11px;color:var(--text2);margin-bottom:8px\">Jangan dianggap semua komponen servis otomatis dikerjakan hanya karena kategori dipilih.</div><div>${rows}</div></div>`;
 },
 
+onServiceCategoryChange(){
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.onCategoryChange(document.getElementById('servisCategory'),document.getElementById('servisComponent'),document.getElementById('servisItem'));
+Servis.onItemAutofillInterval();
+},
+onServiceComponentChange(){
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.onComponentChange(document.getElementById('servisComponent'),document.getElementById('servisCategory'),document.getElementById('servisItem'));
+Servis.onItemAutofillInterval();
+},
+renderServiceInputSelectors(selectedMasterId,selectedComponentId){
+if(typeof ServiceInputCatalog==='undefined')return;
+const catEl=document.getElementById('servisCategory');
+const compEl=document.getElementById('servisComponent');
+const itemEl=document.getElementById('servisItem');
+ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
+const master=selectedMasterId||catEl&&catEl.value||'';
+ServiceInputCatalog.populateComponentSelect(compEl,master,selectedComponentId||'');
+if(itemEl&&itemEl.value)ServiceInputCatalog.sync(catEl,compEl,itemEl);
+},
 onItemAutofillInterval(){
 const item=document.getElementById('servisItem').value.trim();
 const intervalEl=document.getElementById('servisInterval');
@@ -745,6 +792,7 @@ if(wrap){wrap.classList.add('u-dnone');wrap.style.display='none';}
 openModal(editId,prefillItem){
 Sparepart.populateDatalist();
 Servis.editId=(typeof editId!=='undefined')?editId:null;
+Servis._editTab='detail';
 Servis._serviceChecklistGroupIdx=null;
 if(typeof ServisChecklist!=='undefined')ServisChecklist.open(curVehicleId);
 const isEdit=Servis.editId!==null;
@@ -761,6 +809,7 @@ if(!s)return;
 if(typeof ServisChecklist!=='undefined'){ ServisChecklist.open(s.vehicleId||curVehicleId); ServisChecklist.loadFromLog(s); Servis._serviceChecklistGroupIdx=ServisChecklist.firstCheckedGroup(); }
 document.getElementById('servisDate').value=s.date;
 document.getElementById('servisItem').value=s.item;
+Servis.renderServiceInputSelectors(s.masterCategoryId||'',s.serviceComponentId||'');
 document.getElementById('servisKm').value=s.km||'';
 document.getElementById('servisCost').value=s.cost;
 document.getElementById('servisNote').value=s.note||'';
@@ -779,10 +828,14 @@ const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(t
 if(intervalEl)intervalEl.value=linkedCat?linkedCat.intervalKm:'';
 Servis._photoDraft=(s.foto||[]).slice();
 Servis._renderPhotoThumbs();
+const editTabs=document.getElementById('servisEditTabs');
+if(editTabs)editTabs.style.display='flex';
+Servis.setEditTab('detail');
 } else {
 if(typeof ServisChecklist!=='undefined'){ ServisChecklist.open(curVehicleId); Servis._serviceChecklistGroupIdx=0; }
 document.getElementById('servisDate').value=new Date().toISOString().split('T')[0];
 ['servisItem','servisCost','servisNote'].forEach(id=>document.getElementById(id).value='');
+Servis.renderServiceInputSelectors();
 document.getElementById('servisKm').value=getVehicleKm(curVehicleId)||'';
 if(intervalEl)intervalEl.value='';
 Servis.populatePartSelect('');
@@ -799,6 +852,14 @@ if(matchStock)Servis.populatePartSelect(matchStock.id);
 } else {
 Servis.renderCatalogRecommendations();
 }
+}
+if(Servis.editId===null){
+const editTabs=document.getElementById('servisEditTabs');
+if(editTabs)editTabs.style.display='none';
+const detail=document.getElementById('servisDetailPanel');
+const reminder=document.getElementById('servisReminderPanel');
+if(detail)detail.style.display='';
+if(reminder){reminder.style.display='none';reminder.innerHTML='';}
 }
 if(typeof ServisChecklist!=='undefined'&&typeof Servis.syncServiceChecklist==='function')Servis.syncServiceChecklist();
 openModal('servisModal');
@@ -899,6 +960,8 @@ if(!item||isNaN(cost)||cost<0){toast('⚠️ Lengkapi jenis servis (cek juga Bia
 // resolveServisCatForVehicle(), supaya servis kendaraan B tidak ke-link ke
 // kategori privat milik kendaraan A hanya karena nama item sama persis.
 let matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase());
+const masterCategoryId=document.getElementById('servisCategory')?.value||null;
+const serviceComponentId=document.getElementById('servisComponent')?.value||null;
 const date=document.getElementById('servisDate').value;
 const note=document.getElementById('servisNote').value;
 const accId=document.getElementById('servisAcc')?document.getElementById('servisAcc').value:D.accounts[0]?.id;
@@ -979,7 +1042,7 @@ const linkedCat=D.sparepartCats.find(c=>c.id===s.categoryId);
 if(linkedCat){linkedCat.intervalKm=intervalKm;catIdForLog=linkedCat.id;}
 }
 const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,km,cost,note,accountId:accId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
 if(tx)Object.assign(tx,{amount:cost,date,accountId:accId,note:noteFull});
@@ -995,7 +1058,9 @@ if(tx&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:tx.id,categ
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
 VehicleCatalogServisLink.attachToServis(s.id,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
 }
-save();closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();toast('✅ Catatan servis diperbarui'+(intervalKm?' & interval pengingat disinkron':''));
+save();closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.update(s,{txId:s.txLinkId||null,categoryId:s.categoryId||null});
+toast('✅ Catatan servis diperbarui'+(intervalKm?' & interval pengingat disinkron':''));
 return;
 }
 if(usedPartId&&!await Servis.applyStockUsage(usedPartId,usedPartQty))return;
@@ -1012,7 +1077,9 @@ const txId=uid();
 const txCat=resolveVehicleTxCategory(veh);
 D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
 const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,km,cost,note,accountId:accId,txLinkId:txId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,masterCategoryId,serviceComponentId,km,cost,note,accountId:accId,txLinkId:txId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+const _newServisLog=D.servisLogs[D.servisLogs.length-1];
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(_newServisLog);
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
 VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
 }
@@ -1050,6 +1117,69 @@ save();Sparepart.renderCatList();Servis.renderList();toast('✅ Kategori penging
 toast('✅ Catatan servis tersimpan & tersinkron ke Keuangan');
 }
 },
+setEditTab(tab){
+const isEdit=Servis.editId!==null;
+if(!isEdit)return;
+const next=tab==='reminder'?'reminder':'detail';
+const detail=document.getElementById('servisDetailPanel');
+const reminder=document.getElementById('servisReminderPanel');
+const detailBtn=document.getElementById('servisEditTabDetail');
+const reminderBtn=document.getElementById('servisEditTabReminder');
+if(detail)detail.style.display=next==='detail'?'':'none';
+if(reminder)reminder.style.display=next==='reminder'?'':'none';
+if(detailBtn)detailBtn.classList.toggle('active',next==='detail');
+if(reminderBtn)reminderBtn.classList.toggle('active',next==='reminder');
+if(next==='reminder')Servis.renderEditReminderTab();
+Servis._editTab=next;
+},
+renderEditReminderTab(){
+const panel=document.getElementById('servisReminderPanel');
+if(!panel||Servis.editId===null)return;
+const s=(D.servisLogs||[]).find(x=>x.id===Servis.editId);
+if(!s){panel.innerHTML='<div class="empty"><div class="empty-text">Data riwayat servis tidak ditemukan.</div></div>';return;}
+const vehicleId=s.vehicleId||curVehicleId;
+const vehicle=(D.vehicles||[]).find(v=>v.id===vehicleId);
+const resolveCat=(item,preferredId)=>{
+  const preferred=preferredId?(D.sparepartCats||[]).find(c=>c&&c.id===preferredId):null;
+  if(preferred&&(!preferred.vehicleId||preferred.vehicleId===vehicleId))return preferred;
+  return typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,vehicleId):null;
+};
+const linkedCat=resolveCat(s.item,s.categoryId);
+const vehicleOverride=vehicle&&vehicle.intervalOverrides&&linkedCat?vehicle.intervalOverrides[linkedCat.id]:null;
+const canonical=typeof getCanonicalServiceInterval==='function'
+  ?getCanonicalServiceInterval(linkedCat||{}, {intervalKm:vehicleOverride})
+  :{intervalKm:typeof getEffectiveIntervalKm==='function'&&linkedCat?getEffectiveIntervalKm(vehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null),intervalBulan:typeof getEffectiveIntervalBulan==='function'&&linkedCat?getEffectiveIntervalBulan(linkedCat,vehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null)};
+const urgency=linkedCat&&canonical.intervalKm>0&&typeof computeServiceUrgency==='function'
+  ?computeServiceUrgency({vehicleId,cat:linkedCat,curKm:typeof getVehicleKm==='function'?getVehicleKm(vehicleId):null,kmPerDay:typeof estimateKmPerDay==='function'?estimateKmPerDay(vehicleId):null})
+  :null;
+const statusLabel=urgency?(urgency.status==='lewat'?'🔴 Lewat':urgency.status==='segera'?'🟠 Segera':'🟢 Aman'):'⚪ Belum aktif';
+const intervalLabel=canonical.intervalKm||canonical.intervalBulan
+  ?[(canonical.intervalKm?canonical.intervalKm.toLocaleString('id-ID')+' km':null),(canonical.intervalBulan?canonical.intervalBulan.toLocaleString('id-ID')+' bulan':null)].filter(Boolean).join(' atau ')
+  :'Belum diatur';
+const overrideLabel=vehicleOverride&&vehicleOverride>0?'Khusus kendaraan':'Kategori';
+const usedPart=s.usedPartId?(D.partsStock||[]).find(p=>p.id===s.usedPartId):null;
+const partCat=usedPart?resolveCat(usedPart.name,usedPart.catId):null;
+const partOverride=vehicle&&vehicle.intervalOverrides&&partCat?vehicle.intervalOverrides[partCat.id]:null;
+const partCanonical=partCat&&typeof getCanonicalServiceInterval==='function'
+  ?getCanonicalServiceInterval(partCat,{intervalKm:partOverride})
+  :{intervalKm:partCat&&partCat.intervalKm>0?partCat.intervalKm:null,intervalBulan:partCat&&partCat.intervalBulan>0?partCat.intervalBulan:null};
+const checklist=Array.isArray(s.checklist)?s.checklist:[];
+const checklistRows=checklist.map(row=>{
+  const item=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.findItemById==='function')?ServisChecklist.findItemById(row&&row.itemId):null;
+  const name=(row&&row.itemName)||(item&&item.item&&item.item.name)||'';
+  const cat=item&&typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(name,vehicleId):null;
+  const iv=cat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat&&cat.intervalKm>0?cat.intervalKm:null);
+  const ib=cat&&typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat&&cat.intervalBulan>0?cat.intervalBulan:null);
+  return `<div style="padding:8px 0;border-top:1px dashed var(--border)"><div class="u-fw700 u-fs12">${escapeHtml(name||'Komponen checklist')}</div><div class="u-fs11 u-t2">${cat?('🔗 '+escapeHtml(cat.name)+' · '+(iv?iv.toLocaleString('id-ID')+' km':'tanpa interval')+(ib?' / '+ib.toLocaleString('id-ID')+' bln':'')+' · '+(row.actionType||'catat')):'ℹ️ Belum terhubung ke kategori servis — tidak membuat interval baru.'}</div></div>`;
+}).join('');
+const componentHtml=usedPart?`<div class="fg"><label class="fl">📦 Komponen/Stok yang dipakai</label><div style="background:var(--surface3);border-radius:12px;padding:10px 12px"><div class="u-fw700 u-fs12">${escapeHtml(usedPart.name)}</div><div class="u-fs11 u-t2">${partCat?'🔗 '+escapeHtml(partCat.name)+' · '+(partCanonical.intervalKm?partCanonical.intervalKm.toLocaleString('id-ID')+' km':'tanpa interval')+(partCanonical.intervalBulan?' / '+partCanonical.intervalBulan.toLocaleString('id-ID')+' bln':''):'Tidak ada kategori reminder aktif untuk komponen ini.'}</div></div></div>`:'<div class="fg"><label class="fl">📦 Komponen/Stok</label><div class="u-fs12t2">Tidak ada stok sparepart yang ditautkan ke riwayat ini.</div></div>';
+panel.innerHTML=`<div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">🔔 Pengingat tersinkron</div><div class="u-fs11 u-t2" style="margin-top:4px">Tab ini hanya membaca SoT kategori/komponen yang sudah ada. Tidak menyimpan interval atau reminder kedua di riwayat servis.</div></div>
+<div class="fg"><label class="fl">Kendaraan</label><div class="u-fs12">${vehicle?escapeHtml(vehicle.name):'Kendaraan tidak ditemukan'}</div></div>
+<div class="fg"><label class="fl">Kategori Pengingat</label>${linkedCat?`<div style="background:var(--surface3);border-radius:12px;padding:10px 12px"><div class="u-flex u-jcb u-aic"><div><div class="u-fw700 u-fs12">${escapeHtml(linkedCat.name)}</div><div class="u-fs11 u-t2">${statusLabel} · ${escapeHtml(intervalLabel)} · sumber: ${overrideLabel}</div></div><button type="button" class="btn btn-ghost btn-sm" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([linkedCat.id]))}">✏️ Kelola</button></div>${urgency?`<div class="u-fs11 u-t2" style="margin-top:6px">${urgency.sisaKm!=null?'Sisa '+urgency.sisaKm.toLocaleString('id-ID')+' km':''}${urgency.sisaBulan!=null?' · sisa '+Math.round(urgency.sisaBulan)+' bln':''}</div>`:''}</div>`:'<div class="u-fs12t2">⚪ Riwayat ini belum terhubung ke kategori pengingat kendaraan. Jangan membuat kategori otomatis dari tab ini.</div>'}</div>
+${componentHtml}
+${checklistRows?`<div class="fg"><label class="fl">☑️ Komponen Checklist</label><div style="background:var(--surface3);border-radius:12px;padding:2px 12px">${checklistRows}</div></div>`:''}
+<div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori/komponen → interval efektif → reminder → riwayat</b>. Mengubah interval dilakukan melalui pengaturan kategori/override kendaraan, bukan membuat field interval baru di riwayat.</div>`;
+},
 deleteFromModal(){if(Servis.editId===null)return;const id=Servis.editId;closeModal('servisModal');Servis.del(id);},
 async del(id){
 if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan dihapus.'))return;
@@ -1063,7 +1193,10 @@ if(s&&s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStoc
 // usedPartId/catalogPartLinkedStockId di atas, biar stok tidak nyangkut.
 if(s&&s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
 D.servisLogs=D.servisLogs.filter(s=>s.id!==id);
-save();renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();toast('🗑 Catatan servis dihapus');
+save();renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.remove(s,{deletedTxId:s.txLinkId||null,categoryId:s.categoryId||null});
+if(s&&s.txLinkId&&typeof AIBus!=='undefined')AIBus.emit('finance.updated',{txId:s.txLinkId,kind:'servis',action:'delete',deletedId:s.txLinkId});
+toast('🗑 Catatan servis dihapus');
 },
 // markServiced(catId, actionType) — actionType FITUR BARU (opsional, backward
 // compatible; PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2a/§6-poin1):
@@ -1234,7 +1367,8 @@ save();renderCnTab();renderDashboard();renderKeuangan();
 // Fix: emit event yang sama di titik ini, sama persis polanya dgn saveServis() utk
 // 'vehicle.updated' (selalu) & pola BBM (car-notes.js baris ~180) utk 'finance.updated'
 // (cuma kalau benar ada transaksi baru yg tercatat, yaitu saat cost>0/txLinkId terisi).
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"servis"});
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(entry);
+else if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"servis",action:"create",vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null});
 if(entry.txLinkId&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'});
 if(autoGantiStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();
 if(!opts.skipConfirm)toast(`✅ ${cat.name} ditandai ${actLabel}, `+(willReset?'pengingat direset ke KM sekarang':'tercatat (pengingat tidak berubah)')+(autoGantiStock?` (stok "${autoGantiStock.name}" otomatis dipotong 1)`:''));
@@ -1296,6 +1430,18 @@ const idx=D.sparepartCats.findIndex(c=>c.id===catId);
 if(idx<0){toast('⚠️ Kategori sparepart tidak ditemukan');return;}
 Sparepart.openCatModal(idx);
 },
+activeReminderMasterCategoryFilter:null,
+activeReminderComponentFilter:'',
+setReminderMasterCategoryFilter(id){Servis.activeReminderMasterCategoryFilter=String(id||'');Servis.activeReminderComponentFilter='';Servis.renderReminder();},
+setReminderComponentFilter(id){Servis.activeReminderComponentFilter=String(id||'');Servis.renderReminder();},
+renderReminderFilters(card){
+  if(!card)return;
+  let wrap=document.getElementById('servisReminderFilterWrap');
+  if(!wrap){wrap=document.createElement('div');wrap.id='servisReminderFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';const title=card.querySelector('.card-title');if(title)title.insertAdjacentElement('afterend',wrap);else card.prepend(wrap);}
+  if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
+  const groups=ServiceInputCatalog.groups||[]; const mid=Servis.activeReminderMasterCategoryFilter||''; const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
+  wrap.innerHTML=`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="Servis.setReminderMasterCategoryFilter" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}"${g.masterCategoryId===mid?' selected':''}>${escapeHtml(g.group)}</option>`).join('')}</select><select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="Servis.setReminderComponentFilter" data-onchange-args='["$value"]'><option value="">${mid?'Semua komponen':'Pilih kategori dulu'}</option>${comps.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===Servis.activeReminderComponentFilter?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
+},
 renderReminder(){
 const card=document.getElementById('servisReminderCard');
 if(!card)return;
@@ -1318,12 +1464,22 @@ const kmPerDay=estimateKmPerDay(curVehicleId);
 // kosong, mayoritas data lama) tetap tampil di semua kendaraan (fail-open,
 // 0 data lama berubah perilaku).
 const remindableCats=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId));
-if(!remindableCats.length){
+const rfMaster=Servis.activeReminderMasterCategoryFilter;
+const rfComp=Servis.activeReminderComponentFilter;
+const filteredRemindableCats=remindableCats.filter(c=>{
+  if(!rfMaster&&!rfComp)return true;
+  const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,curVehicleId):null;
+  const mid=r?r.masterCategoryId:null;
+  if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;return !!hit&&mid===hit.group.masterCategoryId;}
+  return mid===rfMaster;
+});
+if(!filteredRemindableCats.length){
 const hiddenCount=D.sparepartCats.length-remindableCats.length;
 card.innerHTML='<div class="card-title">🔔 Pengingat Servis</div><div class="empty"><div class="empty-text">'+(hiddenCount?'Belum ada kategori dgn interval servis aktif. '+hiddenCount+' kategori lain disembunyikan/belum diatur intervalnya — atur di 🔧 Kelola Kategori Sparepart.':'Belum ada kategori sparepart. Atur di Pengaturan.')+'</div></div>';
+Servis.renderReminderFilters(card);
 return;
 }
-const rows=remindableCats.map(cat=>{
+const rows=filteredRemindableCats.map(cat=>{
 // Sesi 3D — Reminder ↔ History Sync: baseline KM yang DITAMPILKAN harus
 // memakai aturan reset yang SAMA dengan computeServiceUrgency(). Sebelumnya
 // lastKm di sini mengambil log kategori terakhir tanpa actionTypeFilter,
@@ -1382,6 +1538,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span cla
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="markSparepartServiced" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ Sudah Servis</button>
         </div>
       </div>`).join('')+`</div>`;
+Servis.renderReminderFilters(card);
 applyOneCardCollapsePref('servisReminderCard');
 },
 loadMore(){Servis.listPage++;Servis.renderList();},
@@ -1437,7 +1594,7 @@ if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filt
 // classify 0 keyword cocok, maupun krn 0 kategori yang bisa di-join sama
 // sekali), BUKAN dibandingkan literal ke salah satu dari 13 id terkunci.
 const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
-const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||(Array.isArray(s.checklist)&&s.checklist.some(r=>r&&r.itemId===Servis.activeServiceComponentFilter)))).sort((a,b)=>new Date(b.date)-new Date(a.date));
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
 const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
 document.getElementById('servisCount').textContent=logs.length;
@@ -1453,6 +1610,7 @@ Servis.renderActionTypeChips(el);
 // tampil walau hasil filter 0 entry (user bisa ganti filter lagi), pola
 // sama persis renderActionTypeChips(el) di atas.
 Servis.renderMasterCategoryChips(el);
+Servis.renderServiceComponentFilter(el);
 if(!logs.length){
 // Sesi D-lanjutan4: pesan empty state dibedakan saat filter kategori
 // master aktif & 0 match, supaya user tidak salah kira riwayat servis
