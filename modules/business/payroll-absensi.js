@@ -10,6 +10,58 @@ weekStart:getWeekRange(new Date()).start,
 editId:null,
 selectedGridDate:null,
 timeToMinutes(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m;},
+// v1685: cek user (Riwayat Absensi) -- dulu cuma "(lembur N jam)" ditampilkan kalau totalJam>7,
+// tapi kalau totalJam<7 (mis. hari Selasa/Rabu di screenshot) tidak ada info APAPUN soal
+// kekurangan jam, padahal sejak fix pokok-prorata (v1684) nominalnya sekarang beda-beda sesuai
+// jam kerja -- user jadi bingung kenapa nominal beda tanpa keterangan. jenis 'minggu' (tarifMinggu
+// flat) & 'borongan' (upah manual) tidak relevan dgn "kurang jam", selalu return 0.
+jamKurang(w){
+if(!w||w.jenis==='minggu'||w.jenis==='borongan')return 0;
+const totalJam=w.totalJam||0;
+return totalJam>0&&totalJam<7?Math.round((7-totalJam)*100)/100:0;
+},
+// v1685: audit + koreksi data D.workDays LAMA yang tersimpan SEBELUM fix pokok-prorata (v1684).
+// Ciri entri lama yang masih flat: jenis biasa, totalJam<7, gajiHariInput tercatat, TAPI
+// pokok tersimpan == gajiHariInput penuh (bukan hasil prorata gajiHariInput/7*totalJam).
+// Entri yang sudah dibuat/diedit setelah fix otomatis punya pokok hasil prorata (kalau memang
+// totalJam<7), jadi tidak akan lolos filter ini -- migrasi ini aman dijalankan berulang kali.
+auditPokokProrataLama(){
+return (D.workDays||[]).filter(w=>{
+if(!w||w.jenis==='minggu'||w.jenis==='borongan')return false;
+if(w.gajiHariInput==null||!w.gajiHariInput)return false;
+const totalJam=w.totalJam||0;
+if(!(totalJam>0&&totalJam<7))return false;
+const expected=Math.round(w.gajiHariInput/7*totalJam);
+return w.pokok===w.gajiHariInput&&w.pokok!==expected;
+});
+},
+fixPokokProrataLama(){
+const affected=Payroll.auditPokokProrataLama();
+affected.forEach(w=>{
+const pokokBaru=Math.round(w.gajiHariInput/7*w.totalJam);
+const selisih=pokokBaru-w.pokok;
+w.pokok=pokokBaru;
+w.total=Math.max(0,Math.round(w.total+selisih));
+});
+if(affected.length){save();Payroll.renderWorkDays();Payroll.renderDashMini();}
+return affected.length;
+},
+async runPokokProrataLamaMigration(){
+const affected=Payroll.auditPokokProrataLama();
+if(!affected.length){toast('✅ Tidak ada data absensi lama yang perlu dikoreksi');return;}
+const totalSelisih=affected.reduce((s,w)=>s+(Math.round(w.gajiHariInput/7*w.totalJam)-w.pokok),0);
+const ok=await askConfirm(`Ditemukan ${affected.length} entri absensi lama (sebelum fix prorata pokok v1684) yang masih pakai gaji pokok flat, bukan diprorata sesuai jam kerja.\n\nKoreksi sekarang? Total penyesuaian: ${totalSelisih>=0?'+':'−'}${fmtFull(Math.abs(totalSelisih))}.`);
+if(!ok)return;
+const n=Payroll.fixPokokProrataLama();
+toast(`✅ ${n} entri absensi lama dikoreksi`);
+},
+renderPokokProrataLamaBox(){
+const box=document.getElementById('whPokokProrataLamaBox');
+if(!box)return;
+const affected=Payroll.auditPokokProrataLama();
+if(!affected.length){box.innerHTML='';return;}
+box.innerHTML=`<div style="background:var(--accent4-soft);border:1px solid var(--accent4);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:12px;line-height:1.5">⚠️ Ditemukan <b>${affected.length} entri absensi lama</b> yang masih pakai gaji pokok flat (sebelum fix prorata jam kerja) — nominalnya belum sesuai jam kerja asli. <button type="button" class="btn btn-primary btn-full btn-sm u-mt8" data-action="Payroll.runPokokProrataLamaMigration">🔧 Koreksi Data Lama Sekarang</button></div>`;
+},
 setWhTab(tab){
 const isAbsensi=tab==='absensi';
 const aBtn=document.getElementById('whTabAbsensiBtn'), kBtn=document.getElementById('whTabKalkulatorBtn');
@@ -243,13 +295,14 @@ syncBoxEl.innerHTML=`<button class="btn btn-income btn-full btn-sm" data-action=
 }
 } else resEl.style.display='none';
 Payroll.renderPendingOldWeeksBox();
+Payroll.renderPokokProrataLamaBox();
 const listEl=document.getElementById('whList');
 if(!listEl)return;
 listEl.innerHTML=thisWeek.length?thisWeek.map(w=>`
       <div class="wh-day-item u-pointer" data-action="editWorkDay" data-args="${escapeHtml(JSON.stringify([w.id]))}">
         <div class="wh-day-info">
           <div class="wh-day-date">${new Date(w.date).toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})} ${w.jenis==='minggu'?'🔴':''}${w.jenis==='borongan'?'📦':''} <span class="u-fs10 u-t2 u-fw400">✏️</span></div>
-          <div class="wh-day-time">${w.jenis==='borongan'?'Borongan/Per-Trip'+(w.borNote?' · '+escapeHtml(w.borNote):''):w.masuk+'–'+w.pulang+' ('+w.totalJam+' jam'+(w.jamLembur>0?', lembur '+w.jamLembur+' jam':'')+')'}${w.tambahan>0?' · tambahan +'+fmtFull(w.tambahan):''}${w.potongan>0?' · potongan −'+fmtFull(w.potongan):''}</div>
+          <div class="wh-day-time">${w.jenis==='borongan'?'Borongan/Per-Trip'+(w.borNote?' · '+escapeHtml(w.borNote):''):w.masuk+'–'+w.pulang+' ('+w.totalJam+' jam'+(w.jamLembur>0?', lembur '+w.jamLembur+' jam':'')+(Payroll.jamKurang(w)>0?', kurang '+Payroll.jamKurang(w)+' jam':'')+')'}${w.tambahan>0?' · tambahan +'+fmtFull(w.tambahan):''}${w.potongan>0?' · potongan −'+fmtFull(w.potongan):''}</div>
         </div>
         <div class="wh-day-pay">${fmtFull(w.total)}</div>
         <button class="tx-del" data-stop="1" data-action="delWorkDay" data-args="${escapeHtml(JSON.stringify([w.id]))}" aria-label="Hapus">🗑</button>
