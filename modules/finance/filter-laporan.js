@@ -78,7 +78,7 @@ toast('↺ Filter direset');
 function populateServiceFilterSelects(){
   const catEl=document.getElementById('kfServiceCategory'), compEl=document.getElementById('kfServiceComponent');
   if(!catEl||!compEl||typeof ServiceInputCatalog==='undefined')return;
-  const cats=ServiceInputCatalog.groups||[]; const curCat=catEl.value||'semua'; const curComp=compEl.value||'semua';
+  const cats=ServiceInputCatalog.groups()||[]; const curCat=catEl.value||'semua'; const curComp=compEl.value||'semua';
   catEl.innerHTML='<option value="semua">Semua Kategori Servis</option>'+cats.map(c=>`<option value="${escapeHtml(c.masterCategoryId)}">${escapeHtml(c.label||c.name||c.masterCategoryId)}</option>`).join('');
   catEl.value=cats.some(c=>c.masterCategoryId===curCat)?curCat:'semua';
   const comps=catEl.value==='semua'?[]:(ServiceInputCatalog.itemsForCategory?ServiceInputCatalog.itemsForCategory(catEl.value):[]);
