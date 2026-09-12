@@ -1,0 +1,14 @@
+const fs=require('fs');
+const path=require('path');
+const tx=fs.readFileSync(path.join(__dirname,'..','modules/finance','tx-servis.js'),'utf8');
+const trx=fs.readFileSync(path.join(__dirname,'..','modules/finance','transaksi.js'),'utf8');
+const modal=fs.readFileSync(path.join(__dirname,'..','modules/shared','modals.js'),'utf8');
+if(!tx.includes('_isFinanceServiceTransaction'))throw new Error('auto service transaction detector missing');
+if(!tx.includes("if(!autoService&&(!chk||!chk.checked))return;"))throw new Error('service sync still requires manual checkbox');
+if(!tx.includes("AIBus.emit('vehicle.updated',{kind:'servis',txId,vehicleId,servisId})"))throw new Error('vehicle/reminder event bridge missing');
+if(!tx.includes("Aset.renderList()"))throw new Error('asset renderer bridge missing');
+if(!tx.includes("renderBillList()"))throw new Error('bill renderer bridge missing');
+if(!trx.includes("const showServis=showStock||(_isFinanceServiceTransaction&&_isFinanceServiceTransaction());"))throw new Error('finance service panel auto activation missing');
+if(!trx.includes("servisChk.checked=true"))throw new Error('service checkbox not auto-enabled');
+if(!modal.includes('Sinkron ke Catatan Servis (otomatis untuk Servis & Oli)'))throw new Error('UI does not state automatic service sync');
+console.log('Finance Service Auto SoT Sync S12: 8/8 PASS');
