@@ -94,7 +94,7 @@ const VehicleAnalyticsPresenter = {
       el.innerHTML = '';
       return;
     }
-    const cats = ServiceInputCatalog.groups || [];
+    const cats = ServiceInputCatalog.groups() || [];
     const catVal = window._vehicleServiceAnalyticsCategory || 'semua';
     const compVal = window._vehicleServiceAnalyticsComponent || 'semua';
     const comps = catVal === 'semua' ? [] : ServiceInputCatalog.itemsForCategory ? ServiceInputCatalog.itemsForCategory(catVal) : ((ServiceInputCatalog.itemById ? Object.values(ServiceInputCatalog.itemById) : []).filter(x => x.masterCategoryId === catVal));

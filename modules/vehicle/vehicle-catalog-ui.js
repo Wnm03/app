@@ -51,7 +51,7 @@ function catalogUiRenderFilters(anchor){
   let wrap=document.getElementById('catalogServiceFilterWrap');
   if(!wrap){wrap=document.createElement('div');wrap.id='catalogServiceFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';anchor.insertAdjacentElement('beforebegin',wrap);}
   if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
-  const groups=ServiceInputCatalog.groups||[], mid=_catMasterFilter; const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
+  const groups=ServiceInputCatalog.groups()||[], mid=_catMasterFilter; const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
   wrap.innerHTML=`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="VehicleCatalogUI.setMasterFilter" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}"${g.masterCategoryId===mid?' selected':''}>${escapeHtml(g.group)}</option>`).join('')}</select><select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="VehicleCatalogUI.setComponentFilter" data-onchange-args='["$value"]'><option value="">${mid?'Semua komponen':'Pilih kategori dulu'}</option>${comps.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===_catComponentFilter?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
 }
 
