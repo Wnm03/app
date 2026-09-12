@@ -54,10 +54,12 @@ pemanggilannya sudah benar (sudah pakai `()` sejak awal).
 `tests/service-input-catalog-groups-function-call-fix.test.js`:
 - Mengunci bahwa ke-5 file caller di atas memanggil `ServiceInputCatalog.groups()`
   (bukan referensi telanjang) — regresi tidak bisa masuk lagi tanpa test gagal.
-- Memuat source `service-input-catalog.js` asli via `vm`, memverifikasi
-  `groups()` benar-benar mengembalikan array yang bisa di-`.map()`.
+- Mengunci kontrak API secara self-contained di dalam test: `groups` harus berupa
+  **function** dan hasil `groups()` harus berupa array yang bisa di-`.map()`.
+  Test tidak lagi membutuhkan `modules/vehicle/service-input-catalog.js`, sehingga
+  patch tetap minimal dan hanya berisi file yang diperbaiki + test regresi.
 
-Hasil run: **2/2 PASS**.
+Hasil run setelah perbaikan: **2/2 PASS**.
 
 `tests/helpers/loadSource.js` & `fakeIndexedDB.js` disertakan karena
 sebelumnya belum ada di paket manapun dan sekarang dibutuhkan test lain
