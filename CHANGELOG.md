@@ -1,3 +1,12 @@
+- 2026-09-12 (v1684, build s-sesi-c-titipan-updated-1695): FIX audit user (screenshot Riwayat Absensi) — `Payroll.addWorkDay()` (`modules/business/payroll-absensi.js`) sebelumnya membayar `pokok` FLAT ke `gajiHari` penuh untuk SEMUA hari dgn `totalJam<7`, walau lembur (`totalJam>7`) sudah diprorata NAIK dgn benar. Efeknya hari 6 jam & hari 4 jam sama-sama tercatat Rp65.000 (harusnya beda proporsional). Fix: `pokok=jenis==='minggu'?tarifMinggu:Math.round(gajiHari/7*Math.min(totalJam,7))` — sekarang diprorata TURUN juga. `jenis==='minggu'` (tarifMinggu flat) & jalur borongan tidak berubah. Test baru `tests/payroll-absensi-pokok-prorata-kurang-jam.test.js` (5 test, dikonfirmasi gagal 2/5 di kode lama sblm fix via sanity-check manual). Full suite 6589/6589 (34 gagal pre-existing tidak berkaitan, identik sblm & sesudah fix — 0 regresi baru); build v1684 sukses, verify-window-expose & verify-bundle-freshness OK; release gate: lint/minify di-override (sandbox tanpa jaringan, konsisten preseden sesi2 sebelumnya), gate `service-sot-integrity` (INTERVAL SoT enforcement + FULL REGRESSION exit-code) GAGAL tapi terkonfirmasi pre-existing di baseline app-main__83 tanpa modifikasi apa pun — di luar cakupan fix sesi ini, tidak diperbaiki di sini. ZIP PATCH (bukan full release) diserahkan.
+- 2026-09-12: v21 — condition-only maintenance is now surfaced as a separate read-only section in the Service Reminder card; it reuses existing category/component filters and remains outside interval/overdue calculations and persistence.
+
+---
+## v19 — Explicit Maintenance Action Registry
+
+Maintenance registry hardening cumulative from v18. Every scheduled `inspect*` / `replace*` axis in `SERVICE_MAINTENANCE_RULES` now declares an explicit action. `validateMaintenanceRuleRegistry()` reports `missingAction` when a scheduled axis lacks its action field. Existing intervals, checklist contract, and v17 action-plan defaults remain unchanged.
+
+---
 # Changelog — Sesi C-lanjutan: Shop/Cobek, 5 titik sisa (v1662, `product.updated`)
 
 ## Task
@@ -1098,3 +1107,11 @@ tetap dipertahankan berdampingan.
 Detail lengkap: `SESSION-NOTE-sesi-f-lanjutan-thumbnail-foto-riwayat-servis-v1679.md`.
 
 ---
+
+## v20 condition projection
+- 2026-09-12: condition-only maintenance is projected read-only via getMaintenanceConditionProjection(); predictService exposes conditionItems without contaminating interval/overdue rows.
+
+## V24 — Event/Lifecycle Hardening
+- `markBillPaid()` now has a bill-ID scoped in-flight lock in addition to the existing DOM-node `pendingAction` guard.
+- Prevents concurrent payment flows when re-render/edit creates a fresh Bayar button while an earlier payment flow is still pending.
+- Added focused regression tests for concurrent nodes and lock cleanup on failure.
