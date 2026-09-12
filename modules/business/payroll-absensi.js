@@ -124,7 +124,11 @@ const totalJam=totalMinBersih/60;
 const lemburMx=D.profile.lemburMultiplier||1.5;
 const tarifMinggu=D.profile.tarifMinggu||139000;
 const jamLembur=jenis==='minggu'?0:Math.max(0,totalJam-7);
-const pokok=jenis==='minggu'?tarifMinggu:gajiHari;
+// FIX (audit gaji Selasa/Rabu — jam kerja <7 jam sebelumnya tetap dibayar
+// gajiHari PENUH, sama seperti kerja 7 jam genap. Sekarang pokok diprorata
+// turun kalau totalJam<7, sejalan dgn lembur yg sudah diprorata naik kalau
+// totalJam>7. jenis 'minggu' tetap pakai tarifMinggu flat, tidak diprorata.
+const pokok=jenis==='minggu'?tarifMinggu:Math.round(gajiHari/7*Math.min(totalJam,7));
 const upahLemburPerJam=gajiHari/7*lemburMx;
 const lembur=jenis==='minggu'?0:jamLembur*upahLemburPerJam;
 const potonganEl=document.getElementById('whPotongan');
