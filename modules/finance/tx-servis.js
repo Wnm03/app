@@ -72,7 +72,32 @@ const chk=document.getElementById('txSyncServis');
 const fields=document.getElementById('txServisFields');
 if(!chk||!fields)return;
 fields.style.display=chk.checked?'block':'none';
-if(chk.checked)populateTxServisVehicleSelect();
+if(chk.checked){populateTxServisVehicleSelect();renderTxServisSelectors();}
+}
+function renderTxServisSelectors(selectedMasterId,selectedComponentId){
+const catEl=document.getElementById('txServisCategory');
+const compEl=document.getElementById('txServisComponent');
+const itemEl=document.getElementById('txServisItem');
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
+const master=selectedMasterId||catEl&&catEl.value||'';
+ServiceInputCatalog.populateComponentSelect(compEl,master,selectedComponentId||'');
+if(itemEl&&itemEl.value)ServiceInputCatalog.sync(catEl,compEl,itemEl);
+renderTxServisChecklist();
+}
+function onTxServisCategoryChange(){
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.onCategoryChange(document.getElementById('txServisCategory'),document.getElementById('txServisComponent'),document.getElementById('txServisItem'));
+renderTxServisChecklist();
+}
+function onTxServisComponentChange(){
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.onComponentChange(document.getElementById('txServisComponent'),document.getElementById('txServisCategory'),document.getElementById('txServisItem'));
+renderTxServisChecklist();
+}
+function onTxServisItemInput(){
+if(typeof ServiceInputCatalog==='undefined')return;
+ServiceInputCatalog.sync(document.getElementById('txServisCategory'),document.getElementById('txServisComponent'),document.getElementById('txServisItem'));
 }
 // _servisAutoLinkAdjustStock(partId,deltaQty) — helper murni (baca/tulis
 // D.partsStock saja, TIDAK memanggil save()), dipakai _syncServisUsedPartFromPurchase()
@@ -171,26 +196,78 @@ if(purchasedPartId){
 const part=(D.partsStock||[]).find(p=>p.id===purchasedPartId);
 if(part&&part.catId){
 const partCat=typeof canonicalServisCategoryId==='function'
-?canonicalServisCategoryId(item,vehicleId,part.catId):null;
+?canonicalServisCategoryId(item,vehicleId,part.catId):part.catId;
 if(partCat)return partCat&&partCat.id?partCat.id:partCat;
 }
 }
 return null;
 }
 function recordServisLog(opts){
-const catIdForLog=_resolveServisCategoryId(opts.item,opts.purchasedPartId,opts.vehicleId);
+const vehicleId=opts.vehicleId||null;
+const catIdForLog=_resolveServisCategoryId(opts.item,opts.purchasedPartId,vehicleId);
+const masterCategoryId=opts.masterCategoryId||null;
+const componentId=opts.componentId||null;
+const checklist=Array.isArray(opts.checklist)?opts.checklist:[];
+
+// Existing link wins, but it may only update an event belonging to the same
+// vehicle. A stale/corrupt link from another vehicle is never mutated.
+let s=null;
 if(opts.existingServisId){
-const s=(D.servisLogs||[]).find(x=>x.id===opts.existingServisId);
+const candidate=(D.servisLogs||[]).find(x=>x.id===opts.existingServisId);
+if(candidate&&candidate.vehicleId===vehicleId)s=candidate;
+}
+
+// Idempotency: retries of the same financial transaction must converge on
+// the same service event even when servisLinkId was not persisted yet.
+if(!s&&opts.txId&&typeof findServiceEventForTransaction==='function'){
+s=findServiceEventForTransaction(D.servisLogs||[],opts.txId,vehicleId);
+}
+
 if(s){
-Object.assign(s,{date:opts.date,item:opts.item,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,vehicleId:opts.vehicleId||s.vehicleId,categoryId:catIdForLog||s.categoryId});
+Object.assign(s,{
+  date:opts.date,
+  item:opts.item,
+  km:opts.km,
+  cost:opts.cost,
+  note:opts.note,
+  accountId:opts.accountId,
+  vehicleId,
+  masterCategoryId:masterCategoryId||s.masterCategoryId||null,
+  serviceComponentId:componentId||s.serviceComponentId||null,
+  checklist:checklist.length?checklist:s.checklist||[]
+});
+if(catIdForLog)s.categoryId=catIdForLog;
 _syncServisUsedPartFromPurchase(s,opts.purchasedPartId,opts.purchasedPartQty);
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.update(s,{source:'finance'});
 return s.id;
 }
-}
+
 const servisId=uid();
-const log={id:servisId,vehicleId:opts.vehicleId,date:opts.date,item:opts.item,categoryId:catIdForLog,km:opts.km,cost:opts.cost,note:opts.note,accountId:opts.accountId,txLinkId:opts.txId,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartOemCode:'',catalogPartLinkedStockId:null,autoLinkedPartStock:false};
+const log={
+  id:servisId,
+  vehicleId,
+  date:opts.date,
+  item:opts.item,
+  categoryId:catIdForLog,
+  masterCategoryId,
+  serviceComponentId:componentId,
+  checklist,
+  km:opts.km,
+  cost:opts.cost,
+  note:opts.note,
+  accountId:opts.accountId,
+  txLinkId:opts.txId,
+  usedPartId:null,
+  usedPartQty:0,
+  catalogPartId:null,
+  catalogPartQty:0,
+  catalogPartOemCode:'',
+  catalogPartLinkedStockId:null,
+  autoLinkedPartStock:false
+};
 D.servisLogs.push(log);
 _syncServisUsedPartFromPurchase(log,opts.purchasedPartId,opts.purchasedPartQty);
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(log,{source:'finance'});
 return servisId;
 }
 // applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx) — dipanggil dari
@@ -204,25 +281,84 @@ return servisId;
 // checkbox "Tambah ke Stok Sparepart" di transaksi yang sama) SUDAH terisi
 // & siap dibaca di sini utk auto-link usedPartId (lihat catatan bugfix di
 // atas berkas ini).
+function _isFinanceServiceTransaction(){
+const cat=(document.getElementById('txCat')?.value||'').trim();
+const sub=(document.getElementById('txSubCat')?.value||'').trim();
+return (typeof curTxType==='undefined'||curTxType==='expense')&&typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&/servis\s*&\s*oli|servis|service/i.test(sub);
+}
+function _ensureAutoServisFields(){
+const vehicleEl=document.getElementById('txServisVehicle');
+const itemEl=document.getElementById('txServisItem');
+const kmEl=document.getElementById('txServisKm');
+if(vehicleEl&&typeof populateTxServisVehicleSelect==='function')populateTxServisVehicleSelect();
+if(itemEl&&!itemEl.value.trim()){
+ const note=(document.getElementById('txNote')?.value||'').trim();
+ const sub=(document.getElementById('txSubCat')?.value||'').trim();
+ itemEl.value=note||sub||'Servis';
+}
+onTxServisItemInput();
+if(kmEl&&!kmEl.value&&typeof getVehicleKm==='function'&&vehicleEl&&vehicleEl.value){
+ const km=getVehicleKm(vehicleEl.value); if(Number.isFinite(km)&&km>0)kmEl.value=km;
+}
+}
+function ensureTxServisChecklistPanel(){
+const fields=document.getElementById('txServisFields');
+if(!fields||typeof ServisChecklist==='undefined')return null;
+let box=document.getElementById('txServisChecklistPanel');
+if(!box){box=document.createElement('div');box.id='txServisChecklistPanel';fields.appendChild(box);}
+return box;
+}
+function renderTxServisChecklist(){
+const box=ensureTxServisChecklistPanel(); if(!box)return;
+const masterId=document.getElementById('txServisCategory')?.value||'';
+const found=typeof ServisChecklist.findGroupByMasterCategoryId==='function'?ServisChecklist.findGroupByMasterCategoryId(masterId):null;
+if(!found){box.innerHTML='<div style="font-size:11px;color:var(--text2);padding:10px 0">Pilih Kategori Servis untuk menampilkan checklist komponennya.</div>';return;}
+const group=found.group,gi=found.groupIdx;
+const rows=group.items.map((it,ii)=>{const checked=ServisChecklist._checked[it.id]!==undefined;const action=ServisChecklist._checked[it.id];const valid=ServisChecklist._validActionTypesFor(it);const acts=checked&&valid.length>1?valid.map(v=>`<button type="button" class="btn btn-ghost btn-sm ${action===v?'active':''}" data-action="TxServis.setChecklistAction" data-args="${escapeHtml(JSON.stringify([gi,ii,v]))}">${v==='periksa'?'🔍 Periksa':'🔧 Ganti'}</button>`).join(''):'';return `<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border2)"><button type="button" class="btn ${checked?'btn-primary':'btn-ghost'} btn-sm" data-action="TxServis.toggleChecklist" data-args="${escapeHtml(JSON.stringify([gi,ii]))}">${checked?'✓':'○'} Cek</button><div style="flex:1"><div class="u-fw700 u-fs12">${escapeHtml(it.name)}</div><div class="u-fs11 u-t2">${escapeHtml(it.intervalLabel)}</div>${checked?`<div class="u-fs11 u-cacc">Tindakan: ${escapeHtml(action||'')}</div>`:''}${acts?`<div style="display:flex;gap:6px;margin-top:5px">${acts}</div>`:''}</div></div>`;}).join('');
+box.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-top:10px"><div class="u-fw700 u-fs12">☑️ Komponen yang benar-benar diservis</div><div class="u-fs11 u-t2" style="margin:3px 0 8px">Kategori hanya menyaring daftar. Centang komponen yang dikerjakan; yang tidak dicentang tidak masuk Service Event.</div><div>${rows}</div></div>`;
+}
+const TxServis=typeof window!=='undefined'?(window.TxServis=window.TxServis||{}):{};
+TxServis.toggleChecklist=function(groupIdx,itemIdx){if(typeof ServisChecklist==='undefined')return;ServisChecklist.toggleItem(Number(groupIdx),Number(itemIdx));renderTxServisChecklist();};
+TxServis.setChecklistAction=function(groupIdx,itemIdx,type){if(typeof ServisChecklist==='undefined')return;ServisChecklist.setActionType(Number(groupIdx),Number(itemIdx),type);renderTxServisChecklist();};
 function applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx){
 const chk=document.getElementById('txSyncServis');
-if(!chk||!chk.checked)return;
+const autoService=_isFinanceServiceTransaction();
+if(!autoService&&(!chk||!chk.checked))return;
 const panel=document.getElementById('txServisPanel');
 if(!panel||panel.style.display==='none')return;
+if(autoService){
+  if(chk)chk.checked=true;
+  _ensureAutoServisFields();
+}
 const vehicleId=document.getElementById('txServisVehicle').value;
+if(typeof ServisChecklist!=='undefined'&&ServisChecklist._vehicleId!==vehicleId)ServisChecklist.open(vehicleId);
+const masterCategoryId=document.getElementById('txServisCategory')?.value||null;
+const componentId=document.getElementById('txServisComponent')?.value||null;
 const item=document.getElementById('txServisItem').value.trim();
 const km=parseFloat(document.getElementById('txServisKm').value)||null;
-if(!vehicleId){toast('⚠️ Pilih kendaraan dulu utk sinkron ke Servis');return;}
-if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk sinkron ke Servis');return;}
+if(!vehicleId){toast('⚠️ Pilih kendaraan dulu utk transaksi servis');return;}
+if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk transaksi servis');return;}
 const existingServisId=(existingTx&&existingTx.servisLinkId)?existingTx.servisLinkId:null;
 const purchasedPartId=(tx&&tx.partStockId)?tx.partStockId:null;
 const purchasedPartQty=purchasedPartId?(tx.partStockQty||0):0;
-const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,purchasedPartId,purchasedPartQty});
+const checklist=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
+const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist});
 if(tx)tx.servisLinkId=servisId;
 if(typeof Sparepart!=='undefined'&&Sparepart.renderStockList)Sparepart.renderStockList();
 if(typeof Sparepart!=='undefined'&&Sparepart.renderCatList)Sparepart.renderCatList();
 if(typeof renderCnTab==='function')renderCnTab();
-toast(existingServisId?'✅ Catatan Servis tertaut ikut diperbarui':'🔧 Catatan Servis dibuat & tertaut ke transaksi ini');
+// SOT bridge: satu perubahan transaksi servis harus langsung memberi sinyal ke
+// vehicle/reminder/AI dan renderer domain lain. Tagihan tidak dibuat/dimodifikasi
+// karena servis bukan kewajiban tagihan; aset hanya berubah bila transaksi memang
+// sudah memiliki assetId, sedangkan renderer global tetap aman dipanggil ulang.
+if(typeof AIBus!=='undefined')AIBus.emit('vehicle.updated',{kind:'servis',txId,vehicleId,servisId});
+if(typeof Aset!=='undefined'&&Aset&&typeof Aset.renderList==='function'&&tx&&tx.assetId)Aset.renderList();
+if(typeof renderDashboard==='function')renderDashboard();
+if(typeof renderKeuangan==='function')renderKeuangan();
+if(typeof renderBillList==='function')renderBillList();
+toast(autoService
+  ? (existingServisId?'🔧 Transaksi servis diperbarui — Riwayat & Pengingat tersinkron':'🔧 Transaksi servis otomatis masuk ke Riwayat & Pengingat')
+  : (existingServisId?'✅ Catatan Servis tertaut ikut diperbarui':'🔧 Catatan Servis dibuat & tertaut ke transaksi ini'));
 }
 // openTxLinkedServisModal() — tombol "✏️ Edit Detail Servis" di modal Edit
 // Transaksi (lihat editTx() di transaksi.js utk logic tampil/sembunyi

@@ -264,6 +264,7 @@ const linkedServis=D.servisLogs.find(s=>s.id===t.servisLinkId);
 if(linkedServis){
 if(linkedServis.usedPartId)revertStockUsage(linkedServis.usedPartId,linkedServis.usedPartQty);
 toast(`🔧 Catatan servis terkait ikut dihapus`,2600);
+if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.remove(linkedServis,{deletedTxId:t.id,source:'finance'});
 }
 D.servisLogs=D.servisLogs.filter(s=>s.id!==t.servisLinkId);
 renderStockList();

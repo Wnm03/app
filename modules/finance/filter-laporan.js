@@ -11,6 +11,8 @@ if(f.kat&&f.kat!=='semua'&&t.category!==f.kat)return false;
 if(f.sub&&f.sub!=='semua'&&(t.subcategory||'')!==f.sub)return false;
 if(f.acc&&f.acc!=='semua'&&t.accountId!==f.acc)return false;
 if(f.method&&f.method!=='semua'&&(t.payMethod||'tunai')!==f.method)return false;
+if(f.serviceCategory&&f.serviceCategory!=='semua'){ if(!t.servisLinkId) return false; const sl=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId); if(!sl || sl.masterCategoryId!==f.serviceCategory) return false; }
+if(f.serviceComponent&&f.serviceComponent!=='semua'){ if(!t.servisLinkId) return false; const sl=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId); if(!sl || !Array.isArray(sl.checklist) || !sl.checklist.some(x=>x&&x.itemId===f.serviceComponent)) return false; }
 return true;
 }
 function populateCatFilter(){
@@ -39,6 +41,7 @@ method:document.getElementById('fMethod')?.value||'semua'
 function populateKeuFilters(){
 populateCatSelect('kfKat');
 populateSubSelect('kfSub','kfKat');
+populateServiceFilterSelects();
 const opts=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 const kfAcc=document.getElementById('kfAcc');
 if(kfAcc){const cur=kfAcc.value;kfAcc.innerHTML='<option value="semua">Semua Akun</option>'+opts;kfAcc.value=[...kfAcc.options].some(o=>o.value===cur)?cur:'semua';}
@@ -65,13 +68,24 @@ if(show)populateKeuFilters();
 updateKfBadge();
 }
 function resetKeuFilter(){
-['kfTipe','kfKat','kfSub','kfAcc','kfMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='kfAcc'?'semua':'semua';});
+['kfTipe','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='kfAcc'?'semua':'semua';});
 const s=document.getElementById('kfSearch');if(s)s.value='';
 populateSubSelect('kfSub','kfKat');
 saveKeuFilterPrefs();
 resetTxPageAndRender();
 toast('↺ Filter direset');
 }
+function populateServiceFilterSelects(){
+  const catEl=document.getElementById('kfServiceCategory'), compEl=document.getElementById('kfServiceComponent');
+  if(!catEl||!compEl||typeof ServiceInputCatalog==='undefined')return;
+  const cats=ServiceInputCatalog.groups||[]; const curCat=catEl.value||'semua'; const curComp=compEl.value||'semua';
+  catEl.innerHTML='<option value="semua">Semua Kategori Servis</option>'+cats.map(c=>`<option value="${escapeHtml(c.masterCategoryId)}">${escapeHtml(c.label||c.name||c.masterCategoryId)}</option>`).join('');
+  catEl.value=cats.some(c=>c.masterCategoryId===curCat)?curCat:'semua';
+  const comps=catEl.value==='semua'?[]:(ServiceInputCatalog.itemsForCategory?ServiceInputCatalog.itemsForCategory(catEl.value):[]);
+  compEl.innerHTML='<option value="semua">'+(catEl.value==='semua'?'Pilih kategori dulu':'Semua Komponen Servis')+'</option>'+comps.map(c=>`<option value="${escapeHtml(c.id||c.itemId)}">${escapeHtml(c.label||c.name||c.itemId)}</option>`).join('');
+  compEl.value=comps.some(c=>(c.id||c.itemId)===curComp)?curComp:'semua';
+}
+function onKfServiceCategoryChange(){ populateServiceFilterSelects(); resetTxPageAndRender(); }
 function getKeuFilters(){
 return{
 tipe:document.getElementById('kfTipe')?.value||'semua',
@@ -79,6 +93,8 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
+serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
 search:(document.getElementById('kfSearch')?.value||'').trim().toLowerCase()
 };
 }
@@ -116,6 +132,8 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
+serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
 search:document.getElementById('kfSearch')?.value||'',
 periode:txListPeriode,
 from:document.getElementById('txListFrom')?.value||'',
@@ -137,6 +155,10 @@ populateSubSelect('kfSub','kfKat');
 if(document.getElementById('kfSub'))document.getElementById('kfSub').value=prefs.sub||'semua';
 if(document.getElementById('kfAcc'))document.getElementById('kfAcc').value=prefs.acc||'semua';
 if(document.getElementById('kfMethod'))document.getElementById('kfMethod').value=prefs.method||'semua';
+populateServiceFilterSelects();
+if(document.getElementById('kfServiceCategory'))document.getElementById('kfServiceCategory').value=prefs.serviceCategory||'semua';
+populateServiceFilterSelects();
+if(document.getElementById('kfServiceComponent'))document.getElementById('kfServiceComponent').value=prefs.serviceComponent||'semua';
 if(document.getElementById('kfSearch'))document.getElementById('kfSearch').value=prefs.search||'';
 if(prefs.periode){
 txListPeriode=prefs.periode;

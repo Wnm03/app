@@ -795,7 +795,7 @@ const showRenov=isExpense&&isRenovCatName(catName);
 // bareng kondisi panel Stok Sparepart (showStock) -- keduanya boleh aktif
 // BERSAMAAN dalam 1 transaksi (mis. beli part sekaligus langsung dipasang),
 // lihat catatan applyTxServisFromTx() di tx-servis.js soal efek stok net.
-const showServis=showStock;
+const showServis=showStock||(_isFinanceServiceTransaction&&_isFinanceServiceTransaction());
 bbmPanel.style.display=showBbm?'block':'none';
 stockPanel.style.display=showStock?'block':'none';
 const servisPanel=document.getElementById('txServisPanel');
@@ -819,10 +819,16 @@ toggleTxStockFields();
 }
 if(showServis){
 if(typeof populateTxServisVehicleSelect==='function')populateTxServisVehicleSelect();
+if(typeof renderTxServisSelectors==='function')renderTxServisSelectors();
 } else {
 const servisChk=document.getElementById('txSyncServis');
 if(servisChk)servisChk.checked=false;
 if(typeof toggleTxServisFields==='function')toggleTxServisFields();
+}
+if(showServis&&_isFinanceServiceTransaction&&_isFinanceServiceTransaction()){
+  const servisChk=document.getElementById('txSyncServis');
+  if(servisChk)servisChk.checked=true;
+  if(typeof toggleTxServisFields==='function')toggleTxServisFields();
 }
 if(showShop){
 populateTxShopStockSelect();
@@ -1248,6 +1254,7 @@ servisVehSelEdit.value=linkedServisLog.vehicleId;
 }
 const servisItemEditEl=document.getElementById('txServisItem');
 if(servisItemEditEl)servisItemEditEl.value=linkedServisLog.item||'';
+if(typeof renderTxServisSelectors==='function')renderTxServisSelectors(linkedServisLog.masterCategoryId||'',linkedServisLog.serviceComponentId||'');
 const servisKmEditEl=document.getElementById('txServisKm');
 if(servisKmEditEl)servisKmEditEl.value=(linkedServisLog.km!=null)?linkedServisLog.km:'';
 }

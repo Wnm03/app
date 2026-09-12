@@ -468,6 +468,20 @@ const prevTxTitipanLinkId=existingTx.titipanLinkId||null;
 const oldTxAmountForTitipanSync=existingTx.amount;
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethod,note,date});
 if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
+// S13 SERVICE-EVENT-LIFECYCLE: if an auto-linked service transaction is edited
+// out of the service domain, remove the service event instead of leaving a ghost
+// history/reminder. Manual Service edits remain the SoT and are not touched here.
+const _wasServisTx=!!(existingTx&&existingTx.servisLinkId);
+const _isNowServisTx=typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&/servis\s*&\s*oli|servis|service/i.test(subCat||'');
+if(existingTx&&_wasServisTx&&!_isNowServisTx&&D.servisLogs){
+ const _ghost=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
+ if(_ghost){
+   if(_ghost.usedPartId&&typeof revertStockUsage==='function')revertStockUsage(_ghost.usedPartId,_ghost.usedPartQty);
+   D.servisLogs=D.servisLogs.filter(s=>s.id!==_ghost.id);
+   if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.remove(_ghost,{reason:'finance-domain-change',source:'finance'});
+ }
+ delete existingTx.servisLinkId;
+}
 // S574-D1: persist deductionOwnerId di cabang generik (Object.assign 7/7).
 if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
 // Toggle hitungKas: hanya ditulis/dipertahankan kalau payMethod HASIL edit ini
