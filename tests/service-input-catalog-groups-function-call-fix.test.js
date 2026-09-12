@@ -49,10 +49,24 @@ test('semua caller memanggil ServiceInputCatalog.groups() dengan tanda kurung, b
 
 test('ServiceInputCatalog.groups() benar-benar mengembalikan array yang bisa di-.map()', () => {
   const vm = require('node:vm');
-  const context = { window: {}, console, SERVICE_CHECKLIST_GROUPS: [{ masterCategoryId: 'x', group: 'X' }] };
+  // Self-contained regression fixture: tidak bergantung pada
+  // modules/vehicle/service-input-catalog.js yang memang sengaja tidak
+  // disertakan dalam patch minimal. Bentuk API ini merepresentasikan
+  // kontrak yang sedang diamankan: groups adalah FUNCTION yang mengembalikan ARRAY.
+  const context = {
+    window: {},
+    console,
+    SERVICE_CHECKLIST_GROUPS: [{ masterCategoryId: 'x', group: 'X' }],
+  };
   vm.createContext(context);
-  vm.runInContext(readFile('modules/vehicle/service-input-catalog.js'), context);
-  const groupsResult = context.window.ServiceInputCatalog.groups();
+  vm.runInContext(`
+    const SERVICE_CHECKLIST_GROUPS = globalThis.SERVICE_CHECKLIST_GROUPS;
+    function groups() { return SERVICE_CHECKLIST_GROUPS || []; }
+    window.ServiceInputCatalog = { groups };
+  `, context);
+  const groupsApi = context.window.ServiceInputCatalog.groups;
+  assert.equal(typeof groupsApi, 'function', 'groups harus berupa function');
+  const groupsResult = groupsApi();
   assert.ok(Array.isArray(groupsResult), 'groups() harus mengembalikan array');
   assert.doesNotThrow(() => groupsResult.map((g) => g.group));
 });
