@@ -41,6 +41,20 @@ let _catPhotos = [];
 // hapus 1). true = list tampil checkbox, tap baris = toggle centang.
 let _catSelectMode = false;
 let _catSelectedIds = new Set();
+let _catSearchQuery = '';
+let _catMasterFilter = '';
+let _catComponentFilter = '';
+function catalogUiSetMasterFilter(id){ _catMasterFilter=String(id||''); _catComponentFilter=''; catalogUiRenderList(); }
+function catalogUiSetComponentFilter(id){ _catComponentFilter=String(id||''); catalogUiRenderList(); }
+function catalogUiOnSearchInput(value){ _catSearchQuery=String(value||''); catalogUiRenderList(); }
+function catalogUiRenderFilters(anchor){
+  let wrap=document.getElementById('catalogServiceFilterWrap');
+  if(!wrap){wrap=document.createElement('div');wrap.id='catalogServiceFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';anchor.insertAdjacentElement('beforebegin',wrap);}
+  if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
+  const groups=ServiceInputCatalog.groups||[], mid=_catMasterFilter; const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
+  wrap.innerHTML=`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="VehicleCatalogUI.setMasterFilter" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}"${g.masterCategoryId===mid?' selected':''}>${escapeHtml(g.group)}</option>`).join('')}</select><select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="VehicleCatalogUI.setComponentFilter" data-onchange-args='["$value"]'><option value="">${mid?'Semua komponen':'Pilih kategori dulu'}</option>${comps.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===_catComponentFilter?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
+}
+
 
 // Kompresi ringan sebelum disimpan sbg base64 (IndexedDB) — REUSE penuh
 // downscaleImage() yang sudah ada di scan-ocr.js (dipakai jg oleh scanReceipt
@@ -78,9 +92,16 @@ async function catalogUiRenderList() {
   // kendaraan aktif. Sekarang di-filter ke curVehicleId, reuse field
   // compatibleVehicleIds yang sudah ada (part tanpa tag dianggap universal
   // -- lihat VehicleCatalog.filterForVehicle()). 0 perubahan skema data.
-  const items = (typeof curVehicleId !== 'undefined')
+  let items = (typeof curVehicleId !== 'undefined')
     ? VehicleCatalog.filterForVehicle(allItems, curVehicleId)
     : allItems;
+  catalogUiRenderFilters(el);
+  if (_catSearchQuery.trim()) {
+    const q=_catSearchQuery.trim().toLowerCase(); items=items.filter(it=>[it.partName,it.oemCode,it.category,it.barcode].filter(Boolean).join(' ').toLowerCase().includes(q));
+  }
+  if (_catMasterFilter || _catComponentFilter) {
+    items=items.filter(it=>{const inf=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.infer([it.partName,it.category].filter(Boolean).join(' ')):null; const mid=inf&&inf.group?inf.group.masterCategoryId:null; const cid=inf&&inf.item?inf.item.id:null; return (!_catMasterFilter||mid===_catMasterFilter)&&(!_catComponentFilter||cid===_catComponentFilter);});
+  }
   if (!items.length) {
     _catSelectMode = false;
     _catSelectedIds.clear();
@@ -420,6 +441,9 @@ const VehicleCatalogUI = {
   save: catalogUiSave,
   remove: catalogUiRemove,
   onScanResult: catalogUiOnScanResult,
+  onSearchInput: catalogUiOnSearchInput,
+  setMasterFilter: catalogUiSetMasterFilter,
+  setComponentFilter: catalogUiSetComponentFilter,
   toggleSelectMode: catalogUiToggleSelectMode,
   toggleSelectItem: catalogUiToggleSelectItem,
   selectAll: catalogUiSelectAll,

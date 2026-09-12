@@ -268,15 +268,18 @@ if(!ambiguous) return true;
 return false;
 }
 function getEffectiveIntervalKm(vehicleId,cat){
-const veh=D.vehicles.find(v=>v.id===vehicleId);
+const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id];
-return(ov!=null&&ov>0)?ov:cat.intervalKm;
+if(typeof resolveCanonicalInterval==='function'){
+  return resolveCanonicalInterval(cat,{intervalKm:ov}).intervalKm;
+}
+return(ov!=null&&ov>0)?ov:(cat&&cat.intervalKm>0?cat.intervalKm:null);
 }
 function hasIntervalOverride(vehicleId,cat){
 const veh=D.vehicles.find(v=>v.id===vehicleId);
 return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
 }
-// getEffectiveIntervalBulan(cat) — FITUR BARU (permintaan user: "Interval
+// getEffectiveIntervalBulan(cat,vehicleId) — FITUR BARU (permintaan user: "Interval
 // Waktu"): interval berbasis WAKTU (bulan) opsional per kategori, independen
 // dari getEffectiveIntervalKm() di atas -- dipakai utk kategori yg idealnya
 // diingatkan berbasis waktu juga, bukan cuma km (mis. Minyak Rem/Aki, yg bisa
@@ -284,7 +287,12 @@ return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
 // per-kendaraan (beda dari intervalKm) -- cukup 1 field global per kategori
 // (cat.intervalBulan). Backward compatible: null/undefined/0 berarti
 // kategori ini TIDAK pakai interval waktu (perilaku lama, murni km).
-function getEffectiveIntervalBulan(cat){
+function getEffectiveIntervalBulan(cat,vehicleId){
+const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
+const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat&&cat.id];
+if(typeof resolveCanonicalInterval==='function'){
+  return resolveCanonicalInterval(cat,{intervalBulan:ov}).intervalBulan;
+}
 return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 }
 // getLastServiceDateForCat(vehicleId,cat) — twin TANGGAL dari
@@ -389,7 +397,7 @@ const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
 const sisaKm=intervalKm-jarakTempuh;
 const fracRemainKm=intervalKm>0?sisaKm/intervalKm:null;
-const intervalBulan=getEffectiveIntervalBulan(cat);
+const intervalBulan=getEffectiveIntervalBulan(cat,vehicleId);
 let sisaBulan=null,fracRemainBulan=null;
 if(intervalBulan){
 const lastDate=getLastServiceDateForCat(vehicleId,cat,resetFilter,true);
@@ -1396,6 +1404,21 @@ el.innerHTML=`<div class="bbm-stat-grid">
 </div>${chartHtml}`;
 },
 _stockSearchQuery:'',
+activeStockMasterCategoryFilter:null,
+activeStockComponentFilter:null,
+onStockMasterCategoryFilterChange(id){Sparepart.activeStockMasterCategoryFilter=String(id||'');Sparepart.activeStockComponentFilter='';Sparepart.renderStockList();},
+onStockComponentFilterChange(id){Sparepart.activeStockComponentFilter=String(id||'');Sparepart.renderStockList();},
+renderStockFilters(beforeEl){
+  let wrap=document.getElementById('stockServiceFilterWrap');
+  if(!wrap){wrap=document.createElement('div');wrap.id='stockServiceFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
+  if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
+  const groups=ServiceInputCatalog.groups||[];
+  const mid=Sparepart.activeStockMasterCategoryFilter||'';
+  const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
+  const cat=mid?`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="Sparepart.onStockMasterCategoryFilterChange" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}"${g.masterCategoryId===mid?' selected':''}>${escapeHtml(g.group)}</option>`).join('')}</select>`:`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="Sparepart.onStockMasterCategoryFilterChange" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}">${escapeHtml(g.group)}</option>`).join('')}</select>`;
+  const comp=`<select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="Sparepart.onStockComponentFilterChange" data-onchange-args='["$value"]'><option value="">${mid?'Semua komponen':'Pilih kategori dulu'}</option>${comps.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===Sparepart.activeStockComponentFilter?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
+  wrap.innerHTML=cat+comp;
+},
 onStockSearchInput(value){
 Sparepart._stockSearchQuery=String(value||'');
 Sparepart.renderStockList();
@@ -1406,6 +1429,18 @@ const el=document.getElementById('stockList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 let list=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vid));
+const filterAnchor=document.getElementById('stockList');
+Sparepart.renderStockFilters(filterAnchor);
+const masterFilter=Sparepart.activeStockMasterCategoryFilter;
+const componentFilter=Sparepart.activeStockComponentFilter;
+if(masterFilter||componentFilter){
+  list=list.filter(p=>{
+    const inferred=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.infer([p.name,p.code].filter(Boolean).join(' ')):null;
+    const mid=inferred&&inferred.group?inferred.group.masterCategoryId:null;
+    const cid=inferred&&inferred.item?inferred.item.id:null;
+    return (!masterFilter||mid===masterFilter)&&(!componentFilter||cid===componentFilter);
+  });
+}
 const q=Sparepart._stockSearchQuery.trim().toLowerCase();
 if(q){
 list=list.filter(p=>{

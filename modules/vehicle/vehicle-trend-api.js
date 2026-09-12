@@ -101,6 +101,22 @@ _costLogs(vehicleId, source) {
 // ada rumus/estimasi/proyeksi baru (beda dari fuelEfficiency()/
 // maintenanceForecast() yang MEMPREDIKSI masa depan — trend ini murni
 // HISTORI transaksi aktual yang sudah tercatat).
+serviceLogs({ vehicleId, masterCategoryId = null, serviceComponentId = null } = {}) {
+  const arr=(typeof D!=='undefined'&&Array.isArray(D.servisLogs))?D.servisLogs:[];
+  return arr.filter(l=>{
+    if(vehicleId && l.vehicleId!==vehicleId)return false;
+    if(!vehicleId && typeof isVehicleOwnershipSelf==='function' && !isVehicleOwnershipSelf(l.vehicleId))return false;
+    if(masterCategoryId){
+      const mid=(typeof Servis!=='undefined'&&typeof Servis.resolveLogMasterCategoryId==='function')?Servis.resolveLogMasterCategoryId(l):l.masterCategoryId||null;
+      if(mid!==masterCategoryId)return false;
+    }
+    if(serviceComponentId){
+      if(!Array.isArray(l.checklist)||!l.checklist.some(r=>r&&r.itemId===serviceComponentId))return false;
+    }
+    return true;
+  });
+},
+
 monthlyCostTrend({ vehicleId, type = 'all', months = 6 } = {}) {
   const keys = this._monthKeys(months);
   const fuelLogs = (type === 'fuel' || type === 'all') ? this._costLogs(vehicleId, 'bbmLogs') : [];

@@ -18,7 +18,7 @@ const VehicleServiceTrendSummary = {
 // persis VehicleTrendAPI). {ok:false} kalau VehicleTrendAPI ATAU
 // VehicleReminder belum dimuat (guard urutan load / dipakai headless di
 // test, pola sama persis VehicleAIHook.fleetSummary()).
-summary(vehicleId, months = 6) {
+summary(vehicleId, months = 6, filters = {}) {
   if (typeof VehicleTrendAPI === 'undefined') {
     return { ok: false, reason: 'VehicleTrendAPI belum dimuat' };
   }
@@ -26,13 +26,29 @@ summary(vehicleId, months = 6) {
     return { ok: false, reason: 'VehicleReminder belum dimuat' };
   }
   const trend = VehicleTrendAPI.monthlyCostTrend({ vehicleId, type: 'service', months });
+  const rawLogs = (typeof VehicleTrendAPI.serviceLogs === 'function') ? VehicleTrendAPI.serviceLogs({ vehicleId, masterCategoryId: filters.masterCategoryId, serviceComponentId: filters.serviceComponentId }) : [];
+  const hasFilter = !!(filters.masterCategoryId || filters.serviceComponentId);
+  const rows = hasFilter
+    ? trend.rows.map(r => {
+        const key = String(r.month || '');
+        const service = rawLogs.reduce((sum, l) => {
+          const d = new Date(l.date); const ym = isNaN(d) ? '' : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+          return sum + (ym === key ? (Number(l.cost)||0) : 0);
+        }, 0);
+        return { ...r, service, total: service };
+      })
+    : trend.rows.map(r => ({ ...r }));
+  // Filtered service total is derived only from canonical D.servisLogs via VehicleTrendAPI.
+  const filteredTotal = rawLogs.reduce((sum, l) => sum + (Number(l.cost) || 0), 0);
   const reminders = VehicleReminder.serviceReminders(vehicleId);
   return {
     ok: true,
     vehicleId: vehicleId || null,
     months: trend.months,
-    rows: trend.rows,
-    total: trend.total,
+    rows: rows,
+    total: filters.masterCategoryId || filters.serviceComponentId ? filteredTotal : trend.total,
+    filteredLogCount: rawLogs.length,
+    filter: { masterCategoryId: filters.masterCategoryId || null, serviceComponentId: filters.serviceComponentId || null },
     reminders,
     overdueCount: reminders.filter((r) => r.severity === 'overdue').length,
     dueSoonCount: reminders.filter((r) => r.severity === 'due-soon').length,

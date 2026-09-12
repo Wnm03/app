@@ -375,6 +375,16 @@ const SERVICE_CHECKLIST_GROUPS = [
 // State `checked{}` MURNI in-memory (bukan D.*) -- tutup modal tanpa
 // simpan = state hilang, sesuai default RENCANA §6-poin3 (belum
 // draft-persist), lihat QA manual Sesi 1C di breakdown dokumen.
+// CATEGORY-SOT-10: every checklist item carries the canonical master
+// category identity explicitly. This is a projection of the existing group
+// SoT, not a second taxonomy and not a categoryId. No item invents a
+// sparepart category when the concrete category does not exist.
+SERVICE_CHECKLIST_GROUPS.forEach((group) => {
+  (group.items || []).forEach((item) => {
+    if (!item.masterCategoryId) item.masterCategoryId = group.masterCategoryId || null;
+  });
+});
+
 const ServisChecklist = {
 
   // _vehicleId — kendaraan aktif utk sesi checklist ybs, diisi open().
@@ -403,16 +413,34 @@ const ServisChecklist = {
   // D.servisLogs. Tidak membuat tabel/store baru; hanya array plain object
   // yang menjadi bagian dari catatan servis. Hanya item yang dicentang yang
   // disimpan agar log tetap ringkas.
+  // resolveCategoryForItem() — resolusi kategori SPAREPART bersifat
+  // runtime-only dan vehicle-scoped. Tidak pernah membuat kategori baru,
+  // tidak pernah mengambil kategori privat kendaraan lain, dan tidak
+  // mengganti masterCategoryId SoT checklist. Dengan ini semua 30 item
+  // dapat ditautkan ke kategori konkret BILA kategori tersebut memang ada
+  // di D.sparepartCats; bila tidak ada, payload tetap valid tanpa categoryId.
+  resolveCategoryForItem(item, vehicleId) {
+    if (!item || typeof resolveServisCatForVehicle !== 'function') return null;
+    const cat = resolveServisCatForVehicle(item.name, vehicleId || this._vehicleId);
+    return cat && cat.id ? cat : null;
+  },
+
   toLogPayload() {
     return Object.keys(this._checked).map(itemId => {
       const found = this.findItemById(itemId);
       if (!found) return null;
-      return {
+      const category = this.resolveCategoryForItem(found.item, this._vehicleId);
+      const row = {
         itemId,
         itemName: found.item.name,
         group: found.group.group,
+        masterCategoryId: found.item.masterCategoryId || found.group.masterCategoryId || null,
         actionType: this._checked[itemId],
       };
+      // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
+      // ditemukan untuk kendaraan aktif. Jangan pernah mengarang ID.
+      if (category) row.categoryId = category.id;
+      return row;
     }).filter(Boolean);
   },
 
@@ -672,6 +700,22 @@ const ServisChecklist = {
     return SERVICE_CHECKLIST_GROUPS[groupIdx] || null;
   },
 
+  // findGroupByMasterCategoryId() — kategori servis pada form adalah
+  // FILTER/PARENT untuk memilih komponen yang benar-benar dikerjakan.
+  // Jadi setelah user memilih kategori, UI checklist hanya menampilkan
+  // komponen milik masterCategoryId tersebut; user lalu mencentang itemnya.
+  // Tidak ada konsep "servis per kategori" yang otomatis berarti semua item.
+  findGroupByMasterCategoryId(masterCategoryId) {
+    if (!masterCategoryId) return null;
+    const idx = SERVICE_CHECKLIST_GROUPS.findIndex(g => g.masterCategoryId === masterCategoryId);
+    return idx < 0 ? null : { group: SERVICE_CHECKLIST_GROUPS[idx], groupIdx: idx };
+  },
+
+  itemsForMasterCategory(masterCategoryId) {
+    const found = this.findGroupByMasterCategoryId(masterCategoryId);
+    return found ? found.group.items.slice() : [];
+  },
+
 };
 // Ekspos ke window — belum ada data-action="ServisChecklist.xxx" yang
 // dipasang di sesi ini (0 markup, lihat catatan file di atas), TAPI
@@ -679,4 +723,5 @@ const ServisChecklist = {
 // bug class s345-348 (tombol data-action gagal diam-diam krn modul lupa
 // di-window-expose) -- pola sama persis window.Sparepart di file kakaknya
 // (sparepart-servis.js) & window.FuelModal/BBM/Servis/Torsi (car-notes.js).
-if (typeof ServisChecklist !== 'undefined') window.ServisChecklist = ServisChecklist;
+if (typeof window !== 'undefined' && typeof ServisChecklist !== 'undefined') window.ServisChecklist = ServisChecklist;
+if (typeof module !== 'undefined') module.exports = { SERVICE_CHECKLIST_GROUPS, ServisChecklist };

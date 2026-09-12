@@ -43,6 +43,8 @@ const VEHICLE_ANALYTICS_NAV_TARGETS = Object.freeze({
 const VehicleAnalyticsPresenter = {
 
   render() {
+    const filterEl = document.getElementById('vehicleServiceAnalyticsFilter');
+    if (filterEl) this._renderServiceFilter(filterEl);
     const el = document.getElementById('vehanalyticsGrid');
     if (!el) return; // container belum ada di halaman ini, aman diam2.
 
@@ -85,6 +87,48 @@ const VehicleAnalyticsPresenter = {
         </div>
       </div>
     `).join('');
+  },
+
+  _renderServiceFilter(el) {
+    if (typeof ServiceInputCatalog === 'undefined') {
+      el.innerHTML = '';
+      return;
+    }
+    const cats = ServiceInputCatalog.groups || [];
+    const catVal = window._vehicleServiceAnalyticsCategory || 'semua';
+    const compVal = window._vehicleServiceAnalyticsComponent || 'semua';
+    const comps = catVal === 'semua' ? [] : ServiceInputCatalog.itemsForCategory ? ServiceInputCatalog.itemsForCategory(catVal) : ((ServiceInputCatalog.itemById ? Object.values(ServiceInputCatalog.itemById) : []).filter(x => x.masterCategoryId === catVal));
+    el.innerHTML = `<div class="u-grid2-nogap u-gap8">
+      <div><label class="fl">Kategori Servis</label><select class="fs" data-action="VehicleAnalyticsPresenter.setServiceFilterCategory" data-args='["$el"]'><option value="semua">Semua Kategori</option>${cats.map(c=>`<option value="${escapeHtml(c.masterCategoryId)}"${c.masterCategoryId===catVal?' selected':''}>${escapeHtml(c.label||c.name||c.masterCategoryId)}</option>`).join('')}</select></div>
+      <div><label class="fl">Komponen Servis</label><select class="fs" data-action="VehicleAnalyticsPresenter.setServiceFilterComponent" data-args='["$el"]'><option value="semua">${catVal==='semua'?'Pilih kategori dulu':'Semua Komponen'}</option>${comps.map(c=>`<option value="${escapeHtml(c.id||c.itemId)}"${(c.id||c.itemId)===compVal?' selected':''}>${escapeHtml(c.label||c.name||c.itemId)}</option>`).join('')}</select></div>
+    </div>`;
+    const out=document.getElementById('vehicleServiceAnalyticsResult');
+    if(out) this._renderServiceResult(out);
+  },
+
+  setServiceFilterCategory(el) {
+    window._vehicleServiceAnalyticsCategory = el && el.value !== 'semua' ? el.value : 'semua';
+    window._vehicleServiceAnalyticsComponent = 'semua';
+    this.render();
+  },
+  setServiceFilterComponent(el) {
+    window._vehicleServiceAnalyticsComponent = el && el.value !== 'semua' ? el.value : 'semua';
+    this.render();
+  },
+  resetServiceFilter() {
+    window._vehicleServiceAnalyticsCategory = 'semua';
+    window._vehicleServiceAnalyticsComponent = 'semua';
+    this.render();
+  },
+  _renderServiceResult(el) {
+    if (typeof VehicleServiceTrendSummary === 'undefined') { el.innerHTML=''; return; }
+    const category = window._vehicleServiceAnalyticsCategory || 'semua';
+    const component = window._vehicleServiceAnalyticsComponent || 'semua';
+    const hasFilter = category !== 'semua' || component !== 'semua';
+    const r = VehicleServiceTrendSummary.summary(undefined, 6, { masterCategoryId: category !== 'semua' ? category : null, serviceComponentId: component !== 'semua' ? component : null });
+    if (!r.ok) { el.innerHTML=''; return; }
+    const money = this._money(r.total);
+    el.innerHTML = `<div class="u-fs12 u-t2">${hasFilter ? 'Filter diterapkan pada log servis aktual yang tersimpan di Service Event.' : 'Ringkasan seluruh servis.'}</div><div class="u-flex u-jcb u-aic u-mt8"><span>Biaya servis</span><b>${escapeHtml(money)}</b></div><div class="u-fs12 u-t2 u-mt4">${r.filteredLogCount} catatan servis sesuai filter</div>`;
   },
 
   // _money(n) — reuse fmt() (format-tema.js, SUDAH ADA & dipakai
@@ -155,3 +199,6 @@ const VehicleAnalyticsPresenter = {
   },
 
 };
+
+// Global exposure is required by the central data-action dispatcher.
+if (typeof window !== 'undefined') window.VehicleAnalyticsPresenter = VehicleAnalyticsPresenter;
