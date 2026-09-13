@@ -108,8 +108,15 @@ const ServiceEventOutbox = (()=>{
       // fallback could collapse two legitimate events for the same vehicle.
       const stablePayloadId=payload.id||payload.servisId||payload.txLinkId||payload.deletedTxId||null;
       const fallback=JSON.stringify({vehicleId:payload.vehicleId||null,action:payload.action||'',kind:payload.kind||'',at:evt.at||null});
+      // Vehicle events are action-aware: the same entity may legitimately emit
+      // update/delete/unlink operations that must all survive in the outbox.
+      // Keep action/kind in the canonical identity for vehicle.updated instead
+      // of collapsing every event sharing the same payload id.
+      const identity=evt.type==='vehicle.updated'
+        ? JSON.stringify({id:stablePayloadId||null,vehicleId:payload.vehicleId||null,action:payload.action||'',kind:payload.kind||''})
+        : String(stablePayloadId||fallback);
       // V36: callers cannot override canonical event identity with a stale/custom key.
-      const key=`${evt.type||'event'}::${stablePayloadId||fallback}`;
+      const key=`${evt.type||'event'}::${identity}`;
       if(!q.some(x=>x.key===key)){const entry={...evt,key,at:Date.now(),attempts:Number(evt.attempts)||0};q.push(entry);if(persist())return true;q.pop();return false;}
       return false;
     },
@@ -117,9 +124,24 @@ const ServiceEventOutbox = (()=>{
     drain(handler){
       if(typeof handler!=='function')return 0;
       let n=0;
-      for(let i=q.length-1;i>=0;i--){
-        try{handler(q[i]);const removed=q.splice(i,1)[0];if(!persist()){q.splice(i,0,removed);throw new Error('Outbox persistence failed after handler success');}n++;}
-        catch(err){q[i]={...q[i],attempts:(Number(q[i].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};persist();}
+      // Preserve causal order: create/update/delete events for the same entity
+      // must replay FIFO. On a failed head event, stop rather than replaying a
+      // later event against stale state.
+      while(q.length){
+        const index=0;
+        try{
+          handler(q[index]);
+          const removed=q.splice(index,1)[0];
+          if(!persist()){
+            q.splice(index,0,removed);
+            throw new Error('Outbox persistence failed after handler success');
+          }
+          n++;
+        }catch(err){
+          q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};
+          persist();
+          break;
+        }
       }
       return n;
     },
@@ -135,7 +157,7 @@ const ServiceEventOutbox = (()=>{
         throw new Error('No handler available for '+evt.type);
       });
     },
-    clear(){q=[];persist();}
+    clear(){const previous=q;q=[];if(!persist())q=previous;return q.length===0;}
   };
 })();
 if(typeof window!=='undefined')window.ServiceEventOutbox=ServiceEventOutbox;
