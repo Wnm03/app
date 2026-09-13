@@ -1100,6 +1100,61 @@ D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&
 (Sparepart._catalogNameCache||[]).forEach(n=>{ if(n&&!names.has(n.toLowerCase()))names.set(n.toLowerCase(),n); });
 return Array.from(names.values());
 },
+// ensureCanonicalSparepartComponentCategories() -- SA27. Menjamin setiap
+// komponen servis yang memang berupa part/consumable mempunyai kategori stok
+// yang terhubung ke SERVICE_CHECKLIST_GROUPS. Id komponen tetap SoT; kategori
+// sparepart hanyalah projection stok. Migrasi additive + idempotent: kategori
+// user yang sudah ada tidak dihapus/ditimpa, hanya linkage canonical yang
+// belum ada dilengkapi. Item prosedural/diagnostik murni sengaja tidak dibuat
+// sebagai kategori stok (mis. Kompresi Mesin, Cek Kebocoran Shock,
+// Pembersihan Rumah CVT, Stel/Grease Komstir).
+ensureCanonicalSparepartComponentCategories(){
+  if(typeof SERVICE_CHECKLIST_GROUPS==='undefined'||!Array.isArray(SERVICE_CHECKLIST_GROUPS)||!Array.isArray(D.sparepartCats))return {ok:false,added:0,linked:0};
+  const stockIds=new Set([
+    'oli-mesin','filter-oli','busi','rantai-keteng-tensioner','filter-kawat-oli-mesin','paking-knalpot',
+    'v-belt-cvt','slide-piece-cvt','boss-pulley-drive-face','roller-cvt','kampas-kopling-ganda','mangkok-kopling-ganda','seal-driven-face','per-sentri','per-cvt','bearing-bak-cvt','busa-filter-cvt',
+    'throttle-body','isc','injector','filter-fuel-pump','selang-tutup-tangki','coolant','radiator-water-pump','thermostat',
+    'kampas-rem-depan','minyak-rem','kampas-rem-belakang','selang-rem',
+    'oli-shockbreaker','engine-mounting-bushing-arm','aki','saklar-sistem-penerangan','relay-sekring',
+    'ban-depan','ban-belakang','bearing-roda','filter-udara','oli-gardan','kabel-gas-standar-kunci'
+  ]);
+  const aliases={
+    'oli-gardan':'Oli Gardan/Transmisi',
+    'v-belt-cvt':'V-Belt (CVT)',
+    'kampas-rem-depan':'Kampas Rem Depan',
+    'kampas-rem-belakang':'Kampas Rem Belakang',
+    'minyak-rem':'Minyak Rem',
+    'filter-udara':'Filter Udara',
+    'aki':'Aki (cek/ganti)'
+  };
+  let added=0,linked=0;
+  SERVICE_CHECKLIST_GROUPS.forEach(g=>(g.items||[]).forEach(it=>{
+    if(!it||!stockIds.has(it.id))return;
+    let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id);
+    if(!cat){
+      const targetName=aliases[it.id]||it.name;
+      const exact=(D.sparepartCats||[]).find(c=>c&&String(c.name||'').trim().toLowerCase()===targetName.trim().toLowerCase());
+      cat=exact||null;
+    }
+    if(cat){
+      let changed=false;
+      if(cat.serviceComponentId!==it.id){cat.serviceComponentId=it.id;changed=true;}
+      if(cat.masterCategoryId!==g.masterCategoryId){cat.masterCategoryId=g.masterCategoryId;changed=true;}
+      if(!cat.group)cat.group=g.group;
+      if(!cat.groupIcon){const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;if(mc&&mc.icon)cat.groupIcon=mc.icon;}
+      if(changed)linked++;
+      return;
+    }
+    const base='sp_component_'+it.id;
+    const idTaken=(D.sparepartCats||[]).some(c=>c&&c.id===base);
+    const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;
+    D.sparepartCats.push({id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:''});
+    added++;
+  }));
+  if(added||linked)save();
+  return {ok:true,added,linked};
+},
+
 // renderCatList() -- S622: skrg CUMA tampilkan kategori milik kendaraan aktif
 // (curVehicleId) + kategori UNIVERSAL (cat.vehicleId kosong), supaya "Kelola
 // Kategori Sparepart" jadi cakupan per-kendaraan juga (sinkron dgn Pengingat
@@ -1107,6 +1162,7 @@ return Array.from(names.values());
 // pakai findIndex ke D.sparepartCats supaya index utk edit/delete tetap
 // benar ke array ASLI (bukan index dari hasil filter).
 renderCatList(){
+Sparepart.ensureCanonicalSparepartComponentCategories();
 const el=document.getElementById('sparepartCatList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
