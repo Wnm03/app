@@ -34,7 +34,27 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'selang-rem': { maintenanceType: 'condition', condition: 'retak, getas, bocor, atau kerusakan fisik' },
   'kebocoran-shock': { maintenanceType: 'condition', condition: 'terdapat kebocoran oli pada seal shock' },
   'ban-depan': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 29 psi' },
-  'ban-belakang': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi' }
+  'ban-belakang': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi' },
+  // V33: every canonical checklist component now has an explicit maintenance rule.
+  // Items without a defensible fixed interval remain condition/event based rather
+  // than inventing a km schedule. Interval-bearing accumulated items preserve the
+  // values already declared by SERVICE_CHECKLIST_GROUPS.
+  'filter-oli': { maintenanceType: 'condition', condition: 'periksa saat penggantian oli atau sesuai interval category/vehicle override' },
+  'filter-kawat-oli-mesin': { inspectKm: 12000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'paking-knalpot': { maintenanceType: 'event_based', event: 'setiap kali knalpot dilepas' },
+  'slide-piece-cvt': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila aus' },
+  'boss-pulley-drive-face': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'mangkok-kopling-ganda': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'seal-driven-face': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila bocor/aus' },
+  'per-sentri': { maintenanceType: 'condition', condition: 'ganti bila kendur/lemah' },
+  'pelumasan-cvt-grease': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'bearing-bak-cvt': { maintenanceType: 'condition', condition: 'beri grease/periksa bila bergemuruh' },
+  'busa-filter-cvt': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'filter-fuel-pump': { inspectKm: 12000, inspectAction: 'periksa', replaceKm: 48000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'ganti bila tekanan turun' },
+  'oli-shockbreaker': { replaceKm: 15000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'ganti saat seal bocor' },
+  'engine-mounting-bushing-arm': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila getas/aus' },
+  'saklar-sistem-penerangan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'relay-sekring': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic' }
 });
 
 /** v17: normalize inspect-vs-replace semantics without changing existing intervals. */

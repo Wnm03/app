@@ -14,7 +14,7 @@ test('S16: kategori servis menjadi filter checklist komponen, bukan auto-servis 
 
 test('S16: setelah kategori dipilih, hanya komponen dalam kategori tersebut yang tersedia', () => {
   const mesin = ServisChecklist.itemsForMasterCategory('servis-mesin');
-  assert.deepEqual(mesin.map(x => x.id), ['oli-mesin','busi','celah-klep','rantai-keteng-tensioner','kompresi-mesin']);
+  assert.deepEqual(mesin.map(x => x.id), ['oli-mesin','filter-oli','busi','celah-klep','rantai-keteng-tensioner','kompresi-mesin','filter-kawat-oli-mesin','paking-knalpot']);
   assert.equal(ServisChecklist.itemsForMasterCategory('servis-cvt').some(x => x.id === 'oli-mesin'), false);
   assert.deepEqual(ServisChecklist.itemsForMasterCategory('kategori-tidak-ada'), []);
 });

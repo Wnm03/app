@@ -14,26 +14,26 @@
 > utk ditinjau, bukan vonis akhir. Kalau file ini kelihatan tidak sinkron,
 > jalankan ulang generatornya, JANGAN diedit tangan.
 
-Terakhir digenerate: 2026-09-12T09:14:38.373Z
-Total file test (`tests/*.test.js`): 679 · Total module family: 18
+Terakhir digenerate: 2026-09-13T07:09:05.291Z
+Total file test (`tests/*.test.js`): 698 · Total module family: 18
 
 | Module family | File source (.js) | File test yang menyentuh | Status |
 |---|---:|---:|---|
 | `economic-intelligence` | 20 | 2 |  |
+| `modules/modals.js` | 1 | 2 |  |
 | `modules/modules-render.js` | 1 | 2 |  |
 | `modules/self-reward` | 3 | 2 |  |
-| `modules/modals.js` | 1 | 3 |  |
 | `lifeos` | 30 | 4 |  |
 | `modules/logistics` | 2 | 4 |  |
 | `modules/home` | 3 | 5 |  |
 | `modules/cross` | 17 | 10 |  |
 | `modules/dashboard-hub` | 6 | 10 |  |
-| `modules/ai` | 7 | 15 |  |
-| `modules/engine` | 1 | 17 |  |
-| `modules/business` | 11 | 26 |  |
-| `modules/shop` | 26 | 70 |  |
-| `modules/vehicle` | 90 | 125 |  |
-| `root` | 19 | 157 |  |
-| `modules/asset` | 26 | 186 |  |
+| `modules/ai` | 7 | 16 |  |
+| `modules/engine` | 1 | 19 |  |
+| `modules/business` | 11 | 27 |  |
+| `modules/shop` | 26 | 71 |  |
+| `modules/vehicle` | 90 | 132 |  |
+| `root` | 19 | 173 |  |
+| `modules/asset` | 26 | 188 |  |
 | `modules/finance` | 59 | 266 |  |
-| `modules/shared` | 41 | 304 |  |
+| `modules/shared` | 41 | 310 |  |

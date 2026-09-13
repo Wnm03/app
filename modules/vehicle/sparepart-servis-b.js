@@ -550,7 +550,7 @@ function editSparepartFromReminder(catId){return Servis.editSparepartFromReminde
 /* moved to modules-render.js: renderServisReminder */
 function loadMoreServisList(){return Servis.loadMore();}
 let dashServisVehFilter='semua';
-(function(){try{dashServisVehFilter=localStorage.getItem('kw_dashServisVehFilter')||'semua';}catch(e){}})();
+(function(){try{dashServisVehFilter=localStorage.getItem('kw_dashServisVehFilter')||'semua';}catch(e){dashServisVehFilter='semua';}})();
 function setDashServisVehFilter(vehId){
 dashServisVehFilter=vehId;
 safeSetItem('kw_dashServisVehFilter',vehId);

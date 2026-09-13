@@ -5,7 +5,7 @@ const ctx={console,escapeHtml:s=>String(s),SERVICE_CHECKLIST_GROUPS:undefined};c
 vm.createContext(ctx);vm.runInContext(checklist,ctx);vm.runInContext(src,ctx);
 const api=ctx.ServiceInputCatalog;
 assert.strictEqual(api.groups().length,13,'13 service groups');
-assert.strictEqual(api.groups().reduce((n,g)=>n+(g.items||[]).length,0),30,'30 service components');
+assert.strictEqual(api.groups().reduce((n,g)=>n+(g.items||[]).length,0),46,'46 service components');
 assert.strictEqual(api.infer('Ganti oli mesin').group.masterCategoryId,'servis-mesin');
 assert.strictEqual(api.infer('Ganti oli mesin').item.id,'oli-mesin');
 assert.strictEqual(api.infer('Bersihkan CVT').group.masterCategoryId,'servis-cvt');

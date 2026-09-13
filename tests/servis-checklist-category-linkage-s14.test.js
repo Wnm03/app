@@ -7,7 +7,7 @@ const vm=require('node:vm');
 
 const src=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/servis-checklist.js'),'utf8');
 
-test('exactly 30 checklist items carry canonical masterCategoryId',()=>{
+test('exactly 46 checklist items carry canonical masterCategoryId',()=>{
   const ctx={window:null,DatabaseAPI:{masterCategory:{getAll:()=>[]}}};
   ctx.window=ctx;
   vm.createContext(ctx);
@@ -15,7 +15,7 @@ test('exactly 30 checklist items carry canonical masterCategoryId',()=>{
   const groups=ctx.__groups;
   const items=groups.flatMap(g=>g.items||[]);
   assert.equal(groups.length,13,'checklist must remain 13 categories');
-  assert.equal(items.length,30,'checklist must remain exactly 30 items');
+  assert.equal(items.length,46,'checklist must remain exactly 46 items');
   assert.ok(items.every(x=>x.masterCategoryId),'every item must have masterCategoryId');
   assert.ok(items.every(x=>groups.some(g=>g.masterCategoryId===x.masterCategoryId)),'item masterCategoryId must belong to its group SoT');
 });

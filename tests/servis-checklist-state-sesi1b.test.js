@@ -27,19 +27,24 @@ function freshCtx(D) {
   );
 }
 
-// Index posisi item yang dipakai di test ini (persis SERVICE_CHECKLIST_GROUPS
-// Sesi 1A) -- dicek ulang lewat nama di masing-masing test pertama supaya
-// kalau urutan data berubah di sesi lain, test ini gagal jelas (bukan diam2
-// nge-test item yang salah).
-const G_MESIN = 0; // 'Servis Mesin'
-const I_OLI_MESIN = 0; // ganti (terkunci)
-const I_BUSI = 1; // alternate
-const I_CELAH_KLEP = 2; // periksa (terkunci)
-const I_RANTAI_KETENG = 3; // periksa-conditional
-const I_KOMPRESI_MESIN = 4; // none
-const G_REM = 5; // 'Sistem Pengereman'
-const I_KAMPAS_REM_DEPAN = 0; // periksa-conditional
-const I_SELANG_REM = 3; // ganti (terkunci)
+// Resolve indices by stable IDs rather than hard-coding positions. The
+// checklist is intentionally additive (30 -> 46 items), so inserting a new
+// component must never retarget an existing state test to a different item.
+const CATALOG = require('../modules/vehicle/servis-checklist.js').SERVICE_CHECKLIST_GROUPS;
+const groupIndex = name => CATALOG.findIndex(g => g.group === name);
+const itemIndex = (groupName, id) => {
+  const g = CATALOG.find(g => g.group === groupName);
+  return g ? g.items.findIndex(i => i.id === id) : -1;
+};
+const G_MESIN = groupIndex('Servis Mesin');
+const I_OLI_MESIN = itemIndex('Servis Mesin','oli-mesin');
+const I_BUSI = itemIndex('Servis Mesin','busi');
+const I_CELAH_KLEP = itemIndex('Servis Mesin','celah-klep');
+const I_RANTAI_KETENG = itemIndex('Servis Mesin','rantai-keteng-tensioner');
+const I_KOMPRESI_MESIN = itemIndex('Servis Mesin','kompresi-mesin');
+const G_REM = groupIndex('Sistem Pengereman');
+const I_KAMPAS_REM_DEPAN = itemIndex('Sistem Pengereman','kampas-rem-depan');
+const I_SELANG_REM = itemIndex('Sistem Pengereman','selang-rem');
 
 test('sanity index: nama item di posisi yang dipakai test ini masih sesuai Sesi 1A', () => {
   const ctx = freshCtx({ sparepartCats: [], servisLogs: [] });

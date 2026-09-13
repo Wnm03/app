@@ -15,7 +15,12 @@ ok(spare.includes('s.inspectDays||s.replaceDays'), 'day-axis schedules are consi
 ok(a.includes('function getMaintenanceReminderProjection(vehicleId)'), 'bundle A contains projection');
 ok(a.includes('const reminderCategoryPool='), 'bundle A contains projection pool in Reminder');
 ok(b.includes('s.inspectDays||s.replaceDays'), 'bundle B contains day-axis remindable check');
-ok(/v=1669/.test(fs.readFileSync(path.join(root,'index.html'),'utf8')), 'index cache-bust bumped to v1669');
-ok(/v=1669/.test(fs.readFileSync(path.join(root,'app_production.html'),'utf8')), 'production cache-bust bumped to v1669');
-ok(fs.readFileSync(path.join(root,'sw.js'),'utf8').includes('kw-cache-v1669'), 'service-worker cache bumped to v1669');
+const indexSrc=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const productionSrc=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
+const swSrc=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+const version=(indexSrc.match(/app-bundle-a\.min\.js\?v=(\d+)/)||[])[1];
+ok(!!version,'index contains a numeric cache-bust version');
+ok(new RegExp('app-bundle-a\\.min\\.js\\?v='+version).test(indexSrc),'index bundle A uses current cache version');
+ok(new RegExp('app-bundle-a\\.min\\.js\\?v='+version).test(productionSrc),'production bundle A uses current cache version');
+ok(swSrc.includes('kw-cache-v'+version),'service-worker cache uses current numeric version');
 console.log(`${pass}/11 PASS`);

@@ -10,5 +10,5 @@ ok(car.includes("if(cost>0){\n txId=uid();\n D.transactions.push"),'new Finance 
 ok(car.includes("if(s.txLinkId){\nconst tx=D.transactions.find(t=>t.id===s.txLinkId);\nif(cost===0)"),'edit from paid service to Rp0 removes old Finance tx');
 ok(car.includes("s.txLinkId=null;"),'edit-to-zero clears finance linkage');
 ok(bundle.includes("const cost=costRaw===''?0:Number(costRaw);"),'production bundle contains zero-cost validation');
-ok(bundle.includes('if(cost>0){\ntxId=uid();'),'production bundle gates Finance tx on cost > 0');
+ok(/if\(cost>0\)\s*\{\s*txId=uid\(\);/.test(bundle),'production bundle gates Finance tx on cost > 0');
 console.log('TOTAL 8 PASS');

@@ -566,6 +566,16 @@ const GROUP_B = [
   // reads pass through the same SoT helpers.
   'modules/vehicle/category-canonical-ref.js',
   'modules/vehicle/service-interval-policy.js',
+  // HOUSEKEEPING (audit registrasi build.js, pola sama persis S592
+  // owner-registry-settings-ui.js): service-interval-sot.js
+  // (resolveCanonicalInterval — canonical interval resolver, disebut
+  // sebagai SoT di komentar filenya sendiri) sudah lama punya kode +
+  // test (tests/service-interval-sot-04-06.test.js) DAN sudah dipanggil
+  // dari sparepart-servis.js lewat guard typeof (baris di bawah) TAPI
+  // source-nya sendiri TIDAK PERNAH terdaftar di sini — akibatnya guard
+  // itu diam-diam selalu jatuh ke fallback di produksi. Ditaruh SEBELUM
+  // sparepart-servis.js (consumer-nya) sesuai urutan dependency.
+  'modules/vehicle/service-interval-sot.js',
   'modules/vehicle/sparepart-servis.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
   // file agar di bawah OVERSIZED_FILE_LINE_THRESHOLD. Bagian KEDUA (SparepartCsvImport/
@@ -897,6 +907,20 @@ const GROUP_B = [
   // app-bootstrap.js. Urutan internal: summary API dulu, lalu 3 presenter
   // yang konsumsi-nya, baru orchestrator (UnifiedDashboardHome) yang
   // memanggil ketiga presenter itu.
+  // HOUSEKEEPING (audit registrasi build.js, pola sama persis S592
+  // owner-registry-settings-ui.js / service-interval-sot.js di atas):
+  // PiutangUtangReminder & TagihanReminder sudah lama punya kode + test
+  // sendiri (tests/piutang-utang-reminder*.test.js, tests/tagihan-
+  // reminder.test.js) DAN sudah dipanggil dari life-dashboard-summary-
+  // api.js (di bawah) lewat guard typeof — TAPI source-nya sendiri TIDAK
+  // PERNAH terdaftar di sini, jadi guard itu diam-diam selalu jatuh ke
+  // fallback kosong di produksi. Ditaruh SEBELUM life-dashboard-summary-
+  // api.js (consumer-nya). Dependency: daysUntilDate() (vehicle-core.js)
+  // & billNextDueLocalMidnight()/getBillPaidThisPeriodInfo() (tagihan-
+  // kalender.js) sudah dimuat lebih dulu di atas (guard typeof, tidak
+  // wajib urutan tapi sudah aman).
+  'modules/finance/piutang-utang-reminder.js',
+  'modules/finance/tagihan-reminder.js',
   'modules/cross/life-dashboard-summary-api.js',
   'modules/cross/priority-engine.js',
   'modules/cross/personal-overview-presenter.js',
@@ -1064,6 +1088,17 @@ const GROUP_B = [
   'modules/shop/purchase-engine.js',
   'modules/shop/trip-engine.js',
   'modules/shop/inventory-engine.js',
+  // HOUSEKEEPING (audit registrasi build.js, pola sama persis reminder
+  // finance di atas): ShopRestockReminder sudah lama punya kode + test
+  // sendiri (tests/shop-restock-reminder.test.js) DAN sudah dipanggil
+  // dari life-dashboard-summary-api.js lewat guard typeof — TAPI
+  // source-nya sendiri TIDAK PERNAH terdaftar di sini. Ditaruh SETELAH
+  // inventory-engine.js (dependency wajib: restockReminders() memanggil
+  // InventoryEngine.restockScan() langsung, guard typeof). Load-order
+  // relatif ke life-dashboard-summary-api.js (di atas, GROUP_B) tidak
+  // wajib krn ShopRestockReminder.summary() cuma dipanggil lazy saat
+  // runtime, bukan saat file di-parse.
+  'modules/shop/shop-restock-reminder.js',
   'modules/shop/profit-engine.js',
 
   // Generic Shop Engine Tahap 1 (Generic Domain Layer, lanjutan
