@@ -1,0 +1,207 @@
+/* KELUARGA W — Modern Minimal / Neutral Gray UI
+ * Visual target: user-provided 13 Sep 2026 mockup.
+ * Scope: [data-theme="minimal"] only. No business logic or data rendering.
+ * Palette intentionally neutral-gray/slate; no green/teal success color.
+ */
+[data-theme="minimal"] {
+  --bg:#eef1f4;
+  --surface:#f8fafb;
+  --surface2:#f2f5f7;
+  --surface3:#e7ecf0;
+  --surface4:#dce3e8;
+  --accent:#607487;
+  --accent-soft:rgba(96,116,135,.12);
+  --accent2:#b45b5b;
+  --accent2-soft:rgba(180,91,91,.10);
+  --accent3:#687985;
+  --accent3-soft:rgba(104,121,133,.10);
+  --accent4:#7a6f62;
+  --accent4-soft:rgba(122,111,98,.10);
+  --text:#1f2933;
+  --text2:#66727d;
+  --text3:#7c8791;
+  --border:rgba(52,67,80,.10);
+  --border2:rgba(52,67,80,.16);
+  --header-bg:rgba(248,250,251,.94);
+  --shadow-card:0 3px 12px rgba(39,52,64,.055);
+  --money-pos:var(--accent3);
+  --money-neg:var(--accent2);
+  --grad-accent:linear-gradient(135deg,var(--accent),#748596);
+  --grad-accent-diag:linear-gradient(135deg,var(--accent),#718495);
+}
+
+/* Global shell: lighter, flatter, closer to the reference mockup. */
+body[data-theme="minimal"] { font-family:'Plus Jakarta Sans',sans-serif; }
+[data-theme="minimal"] .header {
+  padding:12px 18px 11px;
+  background:var(--header-bg);
+  box-shadow:0 1px 8px rgba(39,52,64,.04);
+}
+[data-theme="minimal"] .header-brand { font-size:20px; letter-spacing:-.55px; }
+[data-theme="minimal"] .header-sub { color:var(--text3); }
+[data-theme="minimal"] .header-badge {
+  background:var(--surface2); color:var(--text); border-color:var(--border2);
+  box-shadow:none;
+}
+
+[data-theme="minimal"] .page { padding:12px 14px 18px; }
+[data-theme="minimal"] .card {
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:12px;
+  box-shadow:var(--shadow-card);
+}
+[data-theme="minimal"] .card:hover {
+  transform:none;
+  box-shadow:0 4px 14px rgba(39,52,64,.07);
+  border-color:var(--border2);
+}
+[data-theme="minimal"] .card-title {
+  color:var(--text2);
+  font-size:12px;
+  letter-spacing:.75px;
+  margin-bottom:11px;
+}
+[data-theme="minimal"] .stat-box,
+[data-theme="minimal"] .budget-sum-box,
+[data-theme="minimal"] .dashhub-summary-card,
+[data-theme="minimal"] .dashhub-analytics-card {
+  background:var(--surface);
+  border-color:var(--border);
+  border-radius:14px;
+  box-shadow:none;
+}
+[data-theme="minimal"] .stat-box { padding:12px 11px; }
+[data-theme="minimal"] .stat-label { color:var(--text2); font-size:11px; }
+[data-theme="minimal"] .stat-val { font-size:17px; }
+[data-theme="minimal"] .green,
+[data-theme="minimal"] .orange { color:var(--accent3)!important; }
+[data-theme="minimal"] .red { color:var(--accent2)!important; }
+
+/* Tabs: one calm segmented system, active state is slate-gray rather than blue/green. */
+[data-theme="minimal"] .cn-tabs { gap:6px; margin-bottom:12px; mask-image:none; -webkit-mask-image:none; }
+[data-theme="minimal"] .cn-tab,
+[data-theme="minimal"] .kel-subtab,
+[data-theme="minimal"] .lap-subtab,
+[data-theme="minimal"] .aset-subtab,
+[data-theme="minimal"] .dhb-subtab {
+  background:var(--surface2);
+  color:var(--text2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:8px 12px;
+  font-size:11px;
+  font-weight:650;
+  box-shadow:none;
+}
+[data-theme="minimal"] .cn-tab.active,
+[data-theme="minimal"] .kel-subtab.active,
+[data-theme="minimal"] .lap-subtab.active,
+[data-theme="minimal"] .aset-subtab.active,
+[data-theme="minimal"] .dhb-subtab.active {
+  background:var(--accent);
+  color:#fff;
+  border-color:var(--accent);
+}
+
+/* Buttons and fields. */
+[data-theme="minimal"] .btn-primary { background:var(--accent); box-shadow:none; }
+[data-theme="minimal"] .btn-income,
+[data-theme="minimal"] .btn-expense {
+  background:var(--surface3);
+  color:var(--text);
+  border:1px solid var(--border2);
+}
+[data-theme="minimal"] .qs-btn,
+[data-theme="minimal"] .btn-ghost,
+[data-theme="minimal"] .card-setting-btn {
+  background:var(--surface2);
+  color:var(--text2);
+  border-color:var(--border2);
+  box-shadow:none;
+}
+[data-theme="minimal"] .fi,
+[data-theme="minimal"] input,
+[data-theme="minimal"] select,
+[data-theme="minimal"] textarea {
+  background:var(--surface);
+  border-color:var(--border2);
+  color:var(--text);
+  border-radius:12px;
+}
+
+/* Dashboard: flatter hero, compact quick actions, clear data hierarchy. */
+[data-theme="minimal"] .dashhub-hero {
+  background:var(--surface2);
+  border-color:var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:var(--shadow-card);
+}
+[data-theme="minimal"] .dashhub-hero-balance-val {
+  background:none;
+  color:var(--text);
+  -webkit-text-fill-color:initial;
+  font-size:28px;
+}
+[data-theme="minimal"] .dashhub-qa-btn,
+[data-theme="minimal"] .dashhub-feature-card {
+  background:var(--surface);
+  border-color:var(--border);
+  border-radius:14px;
+  box-shadow:none;
+}
+[data-theme="minimal"] .dashhub-qa-btn { padding:10px 5px; }
+[data-theme="minimal"] .dashhub-feature-icon,
+[data-theme="minimal"] .dashhub-cat-icon {
+  background:var(--surface3);
+  border-radius:12px;
+}
+[data-theme="minimal"] .dashhub-feature-name { color:var(--text); }
+
+/* Aset / investasi summary boxes: align with compact two-column mockup cards. */
+[data-theme="minimal"] .budget-summary-grid { gap:8px; }
+[data-theme="minimal"] .budget-sum-box { padding:11px 9px; }
+[data-theme="minimal"] .budget-sum-val { font-size:16px; color:var(--text); }
+[data-theme="minimal"] .budget-sum-lbl { color:var(--text2); font-size:10px; }
+
+/* Bottom navigation: neutral floating dock, restrained center FAB. */
+@media (max-width:899px) {
+  [data-theme="minimal"] .nav {
+    background:rgba(248,250,251,.96);
+    border-color:var(--border2);
+    border-radius:22px;
+    box-shadow:0 8px 28px rgba(39,52,64,.12);
+    padding:5px 4px;
+  }
+  [data-theme="minimal"] .nav-item { color:var(--text3); gap:2px; }
+  [data-theme="minimal"] .nav-item.active { color:var(--accent); text-shadow:none; }
+  [data-theme="minimal"] .nav-item.active svg { transform:none; }
+  [data-theme="minimal"] .nav-dot { background:var(--accent); }
+  [data-theme="minimal"] .nav-fab-icon {
+    background:var(--accent);
+    border:3px solid var(--header-bg);
+    color:#fff;
+    box-shadow:0 4px 12px rgba(39,52,64,.16);
+  }
+}
+
+/* Status badges: success is neutral slate, error remains muted red. */
+[data-theme="minimal"] .shop-stock-pill.ok,
+[data-theme="minimal"] .trs-tag-btn.stok-ok,
+[data-theme="minimal"] .shop-stock-pill.mid,
+[data-theme="minimal"] .kasir-tile.stock-low .kasir-tile-stock {
+  color:var(--accent3);
+  background:var(--accent3-soft);
+}
+[data-theme="minimal"] .shop-stock-pill.low,
+[data-theme="minimal"] .trs-tag-btn.stok-low,
+[data-theme="minimal"] .kasir-tile.stock-out .kasir-tile-stock {
+  color:var(--accent2);
+  background:var(--accent2-soft);
+}
+
+/* Theme selector preview for this option. */
+[data-theme="minimal"] .theme-card.active { border-color:var(--accent); }
