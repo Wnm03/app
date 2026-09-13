@@ -260,7 +260,7 @@ if(decrypted===null){
 toast('❌ Gagal membuka catatan (PIN berubah atau data rusak).');
 return;
 }
-let parsed=null; try{parsed=JSON.parse(decrypted);}catch(e){}
+let parsed=null; try{parsed=JSON.parse(decrypted);}catch(e){void e;}
 this._editingNoteId=id;
 const judulEl=document.getElementById('refCatatanJudul');
 const textEl=document.getElementById('refCatatanText');
@@ -312,7 +312,7 @@ if(decrypted===null){
 toast('❌ Gagal membuka catatan (PIN berubah atau data rusak).');
 return;
 }
-let parsed=null; try{parsed=JSON.parse(decrypted);}catch(e){}
+let parsed=null; try{parsed=JSON.parse(decrypted);}catch(e){void e;}
 this._revealed[id]=true;
 if(btnEl)btnEl.textContent='🙈';
 bodyEl.innerHTML=parsed?`${parsed.title?'<b>'+escapeHtml(parsed.title)+'</b><br>':''}${escapeHtml(parsed.text||'')}`:escapeHtml(decrypted);

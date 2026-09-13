@@ -139,7 +139,16 @@ function sparepartScannerResumeCamera(video) {
   try { if (video && typeof video.play === 'function') video.play().catch(() => { /* no-op */ }); } catch (e) { /* no-op */ }
 }
 
+const _sparepartScannerLifecycleByVideo = typeof WeakMap === 'function' ? new WeakMap() : null;
+
 function sparepartScannerAttachLifecycle(video, onPageHide) {
+  // Defensive re-attach guard: jika lifecycle fungsi ini terpanggil lagi
+  // untuk video DOM yang sama sebelum handler lama dilepas, lepas handler
+  // lama terlebih dahulu agar tidak terjadi listener leak / callback ganda.
+  if (_sparepartScannerLifecycleByVideo && video && (typeof video === 'object' || typeof video === 'function')) {
+    const previous = _sparepartScannerLifecycleByVideo.get(video);
+    if (previous) sparepartScannerDetachLifecycle(previous);
+  }
   const onVisibility = () => {
     if (typeof document === 'undefined' || typeof document.hidden === 'undefined') return;
     if (document.hidden) sparepartScannerPauseCamera(video);
@@ -152,10 +161,15 @@ function sparepartScannerAttachLifecycle(video, onPageHide) {
     document.addEventListener('freeze', onFreeze);
     document.addEventListener('resume', onResume);
   }
+  const pageHideHandler = typeof onPageHide === 'function' ? onPageHide : () => {};
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pagehide', pageHideHandler);
   }
-  return { onVisibility, onFreeze, onResume, onPageHide };
+  const handlers = { onVisibility, onFreeze, onResume, onPageHide: pageHideHandler, video };
+  if (_sparepartScannerLifecycleByVideo && video && (typeof video === 'object' || typeof video === 'function')) {
+    _sparepartScannerLifecycleByVideo.set(video, handlers);
+  }
+  return handlers;
 }
 
 function sparepartScannerDetachLifecycle(handlers) {
@@ -167,6 +181,9 @@ function sparepartScannerDetachLifecycle(handlers) {
   }
   if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
     window.removeEventListener('pagehide', handlers.onPageHide);
+  }
+  if (_sparepartScannerLifecycleByVideo && handlers.video && (typeof handlers.video === 'object' || typeof handlers.video === 'function') && _sparepartScannerLifecycleByVideo.get(handlers.video) === handlers) {
+    _sparepartScannerLifecycleByVideo.delete(handlers.video);
   }
 }
 

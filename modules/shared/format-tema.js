@@ -236,5 +236,5 @@ document.body.setAttribute('data-theme',t);
 // Guarded try/catch: localStorage bisa gagal (private mode Safari lama, storage
 // penuh, dll) -- kegagalan cache ini TIDAK BOLEH bikin applyEffectiveTheme() ikut
 // gagal (tema tetap harus keterapkan biar app tetap kepakai).
-try{localStorage.setItem('kw_theme_cache',t);}catch(e){}
+try{localStorage.setItem('kw_theme_cache',t);}catch(e){void e;}
 }

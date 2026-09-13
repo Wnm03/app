@@ -29,8 +29,8 @@ function assertChecklistDoesNotOverride(category, vehicleOverride, checklist = {
   const canonical = getCanonicalServiceInterval(category, vehicleOverride);
   return {
     canonical,
-    checklistIntervalKm: Number.isFinite(checklist.intervalKm) ? checklist.intervalKm : null,
-    checklistIntervalBulan: Number.isFinite(checklist.intervalBulan) ? checklist.intervalBulan : null,
+    checklistIntervalKm: Number.isFinite(checklist['intervalKm']) ? checklist['intervalKm'] : null,
+    checklistIntervalBulan: Number.isFinite(checklist['intervalBulan']) ? checklist['intervalBulan'] : null,
     authoritativeSource: vehicleOverride && (
       Number.isFinite(vehicleOverride.intervalKm) ||
       Number.isFinite(vehicleOverride.intervalBulan)

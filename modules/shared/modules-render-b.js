@@ -932,7 +932,7 @@ if(el.isConnected===false)return;
 if(typeof est.usage==='number'&&typeof est.quota==='number'&&est.quota>0){
 el.textContent=`ℹ️ Kuota nyata dari browser ini: ${fmtBytes(est.usage)} terpakai dari ${fmtBytes(est.quota)} (mencakup SEMUA data situs ini, bukan cuma app ini kalau ada data lain).`;
 }
-}catch(e){ }
+}catch(e){void e;}
 }
 
 function renderArchiveSuggestHint(){
@@ -1135,7 +1135,7 @@ if(!raw) return;
 const stored=JSON.parse(raw);
 if(!stored||!Array.isArray(stored.results)) return;
 renderSelfTestResults(stored);
-}catch(e){ }
+}catch(e){void e;}
 }
 
 function renderNavSmokeResults(data){

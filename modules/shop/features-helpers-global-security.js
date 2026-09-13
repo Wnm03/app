@@ -403,7 +403,7 @@ if(!D.productMovementOverride) D.productMovementOverride={};
 // Movement lanjutan S377). Pola migration guard SAMA PERSIS inventoryTransfers.
 if(!D.purchaseOrders) D.purchaseOrders=[];
 if(!D.debts) D.debts=[];
-D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){}});
+D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){void e;}});
 if(!D.renovProjects) D.renovProjects=[];
 if(!D.sewaKios) D.sewaKios={units:[]};
 if(!D.sewaKios.units) D.sewaKios.units=[];
@@ -530,7 +530,7 @@ showAlertModal('Terjadi error saat membuka data tersimpan: '+(e&&e.message?e.mes
 function todayStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
 function applyDashHubMainGridDefaultCollapse(){
 let prefs={};
-try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){}
+try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){void e;}
 if('dashHubMainGrid' in prefs)return; // user sudah pernah pilih manual, hormati pilihannya
 const body=document.getElementById('dashHubMainGrid-cbody');
 const chev=document.getElementById('dashHubMainGrid-chev');

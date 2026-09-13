@@ -96,7 +96,7 @@ return _sha256Fallback(data);
 // yg sama), sama seperti catatan jujur soal lockout PIN di bawah.
 function _getOrCreatePinSalt(){
 let existing=null;
-try{ existing=localStorage.getItem('kw_pin_salt'); }catch(e){}
+try{ existing=localStorage.getItem('kw_pin_salt'); }catch(e){void e;}
 if(existing)return existing;
 let bytes;
 if(typeof crypto!=='undefined'&&crypto.getRandomValues){
@@ -106,7 +106,7 @@ bytes=new Uint8Array(16);
 for(let i=0;i<16;i++)bytes[i]=Math.floor(Math.random()*256);
 }
 const salt=Array.from(bytes).map(b=>b.toString(16).padStart(2,'0')).join('');
-try{ localStorage.setItem('kw_pin_salt',salt); }catch(e){}
+try{ localStorage.setItem('kw_pin_salt',salt); }catch(e){void e;}
 return salt;
 }
 async function hashPin(pin){
@@ -242,7 +242,7 @@ const newHashed=await hashPin(p);
 try{
 const rawEnc=localStorage.getItem(API_KEY_ENC_STORAGE_KEY);
 if(rawEnc&&oldPin){
-let encObj=null; try{encObj=JSON.parse(rawEnc);}catch(e){}
+let encObj=null; try{encObj=JSON.parse(rawEnc);}catch(e){void e;}
 const decrypted=await decryptApiKeyWithPin(oldPin,encObj);
 if(decrypted!==null){
 const reEnc=await encryptApiKeyWithPin(p,decrypted);
@@ -283,7 +283,7 @@ localStorage.removeItem('kw_pin_lock_stage');
 localStorage.removeItem(API_KEY_ENC_STORAGE_KEY);
 if(D.profile)D.profile.apiKey='';
 _sessionRawPin=null;
-try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){}
+try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){void e;}
 toast('🔓 PIN dinonaktifkan');
 if(typeof renderKeamananSettings==='function')renderKeamananSettings();
 }
@@ -326,7 +326,7 @@ function _pinAutolockCheckOnResume(){
 const pin=localStorage.getItem('kw_pin');
 if(!pin)return; // PIN nonaktif -- tidak ada yang perlu dikunci ulang
 let bgTs=0;
-try{bgTs=parseInt(sessionStorage.getItem('kw_pin_bg_ts')||'0',10)||0;}catch(e){}
+try{bgTs=parseInt(sessionStorage.getItem('kw_pin_bg_ts')||'0',10)||0;}catch(e){void e;}
 if(!bgTs)return;
 const elapsed=Date.now()-bgTs;
 const thresholdMs=PIN_AUTOLOCK_OPTIONS[getPinAutolockOption()];
@@ -339,12 +339,12 @@ if(el){ el.style.display='none'; el.classList.add('u-dnone'); }
 window.__kwPinScreenShown=false;
 showPinScreen();
 }
-try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){}
+try{sessionStorage.removeItem('kw_pin_bg_ts');}catch(e){void e;}
 }
 document.addEventListener('visibilitychange',()=>{
 if(document.visibilityState==='hidden'){
 if(localStorage.getItem('kw_pin')){
-try{sessionStorage.setItem('kw_pin_bg_ts',String(Date.now()));}catch(e){}
+try{sessionStorage.setItem('kw_pin_bg_ts',String(Date.now()));}catch(e){void e;}
 }
 }else if(document.visibilityState==='visible'){
 _pinAutolockCheckOnResume();
@@ -429,7 +429,7 @@ const pin=_sessionRawPin;
 if(!pin||!D.profile)return;
 const rawEnc=localStorage.getItem(API_KEY_ENC_STORAGE_KEY);
 if(rawEnc){
-let encObj=null; try{encObj=JSON.parse(rawEnc);}catch(e){}
+let encObj=null; try{encObj=JSON.parse(rawEnc);}catch(e){void e;}
 let decrypted=await decryptApiKeyWithPin(pin,encObj);
 if(decrypted===null){
 // Fallback migrasi (perbaikan keamanan 2026-07-10): sebelum perbaikan ini, kunci enkripsi

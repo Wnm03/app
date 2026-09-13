@@ -267,6 +267,59 @@ if(!ambiguous) return true;
 }
 return false;
 }
+function normalizeMaintenanceRuleKey(v){
+return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function vehicleMatchesMaintenanceRuleSet(vehicleId){
+const veh=(D.vehicles||[]).find(v=>v&&v.id===vehicleId);
+if(!veh)return false;
+if(typeof findTorsiDb==='function'){
+const db=findTorsiDb(veh.name,veh.modelId);
+if(db&&db.id==='vario-125')return true;
+}
+const hay=(String(veh.name||'')+' '+String(veh.modelId||'')).toLowerCase();
+return /vario\s*125|kzr/.test(hay);
+}
+function resolveMaintenanceRule(vehicleId,cat){
+if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
+if(!cat)return null;
+const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
+if(direct&&SERVICE_MAINTENANCE_RULES[direct])return SERVICE_MAINTENANCE_RULES[direct];
+const n=normalizeMaintenanceRuleKey(cat.name);
+if(n&&SERVICE_MAINTENANCE_RULES[n])return SERVICE_MAINTENANCE_RULES[n];
+if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'){
+for(const g of ServiceInputCatalog.groups()||[]){
+for(const it of g.items||[]){
+if(normalizeMaintenanceRuleKey(it.id)===n||normalizeMaintenanceRuleKey(it.name)===n){
+const r=SERVICE_MAINTENANCE_RULES[it.id];
+if(r)return Object.assign({serviceComponentId:it.id,componentName:it.name},r);
+}
+}
+}
+}
+return null;
+}
+function getMaintenanceSchedule(vehicleId,cat){
+const rule=resolveMaintenanceRule(vehicleId,cat);
+if(!rule)return null;
+return {
+ rule,
+ inspectKm:Number.isFinite(rule.inspectKm)&&rule.inspectKm>0?rule.inspectKm:null,
+ replaceKm:Number.isFinite(rule.replaceKm)&&rule.replaceKm>0?rule.replaceKm:null,
+ inspectMonths:Number.isFinite(rule.inspectMonths)&&rule.inspectMonths>0?rule.inspectMonths:null,
+ replaceMonths:Number.isFinite(rule.replaceMonths)&&rule.replaceMonths>0?rule.replaceMonths:null,
+ inspectDays:Number.isFinite(rule.inspectDays)&&rule.inspectDays>0?rule.inspectDays:null,
+ replaceDays:Number.isFinite(rule.replaceDays)&&rule.replaceDays>0?rule.replaceDays:null,
+ maintenanceType:rule.maintenanceType||'periodic',
+ condition:rule.condition||null
+ };
+}
+function hasMaintenanceReminderSchedule(vehicleId,cat){
+const s=getMaintenanceSchedule(vehicleId,cat);
+if(!s)return false;
+if(s.maintenanceType==='event_based')return false;
+return !!(s.inspectKm||s.replaceKm||s.inspectMonths||s.replaceMonths||s.inspectDays||s.replaceDays);
+}
 function getEffectiveIntervalKm(vehicleId,cat){
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id];
@@ -386,30 +439,53 @@ return(b-a)/86400000/30.4368;
 // predictService(), TIDAK diubah supaya urutan kategori pure-km tidak
 // berubah/regresi).
 function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
-// resetFilter (§2c, lihat resolveResetActionTypeFilter di atas) -- basis
-// jatuh-tempo utk pola 2/4 dihitung HANYA dari actionType tertentu ('ganti'
-// / 'periksa'); pola 1/3/5/6 tetap null (SEMUA actionType, 0 perubahan dari
-// desain lama). forReminder=true di kedua panggilan getLastService*ForCat
-// di bawah -- INI jalur hitung jatuh-tempo Pengingat Servis (bukan riwayat).
+const schedule=getMaintenanceSchedule(vehicleId,cat);
 const resetFilter=resolveResetActionTypeFilter(cat);
-const lastKm=getLastServiceKmForCat(vehicleId,cat,resetFilter,true);
-const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
-const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-const sisaKm=intervalKm-jarakTempuh;
-const fracRemainKm=intervalKm>0?sisaKm/intervalKm:null;
-const intervalBulan=getEffectiveIntervalBulan(cat,vehicleId);
-let sisaBulan=null,fracRemainBulan=null;
-if(intervalBulan){
-const lastDate=getLastServiceDateForCat(vehicleId,cat,resetFilter,true);
-const elapsedBulan=lastDate?monthsSinceISO(lastDate,nowISO):0;
-sisaBulan=intervalBulan-elapsedBulan;
-fracRemainBulan=sisaBulan/intervalBulan;
+const currentKm=Number.isFinite(curKm)?curKm:0;
+const kmPerDaySafe=Number.isFinite(kmPerDay)&&kmPerDay>0?kmPerDay:null;
+const candidates=[];
+const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
+  const hasKm=intervalKm>0, hasMonths=intervalMonths>0, hasDays=intervalDays>0;
+  if(!hasKm&&!hasMonths&&!hasDays)return;
+  let lastKm=null,lastDate=null;
+  let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
+  if(hasKm){
+    lastKm=getLastServiceKmForCat(vehicleId,cat,lastFilter,true);
+    const traveled=lastKm===null?currentKm:currentKm-lastKm;
+    remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
+  }
+  if(hasMonths||hasDays){
+    lastDate=getLastServiceDateForCat(vehicleId,cat,lastFilter,true);
+    const elapsedDays=lastDate?((new Date(nowISO||new Date())-new Date(lastDate))/86400000):0;
+    if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
+    if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
+  }
+  let limitingAxis='km',score=fracKm;
+  if(score==null){limitingAxis=hasMonths?'bulan':'hari';score=hasMonths?fracMonths:fracDays;}
+  if(fracMonths!=null&&fracMonths<score){limitingAxis='bulan';score=fracMonths;}
+  if(fracDays!=null&&fracDays<score){limitingAxis='hari';score=fracDays;}
+  candidates.push({action,intervalKm:hasKm?intervalKm:null,lastKm,sisaKm:remainingKm,fracRemainKm:fracKm,intervalBulan:hasMonths?intervalMonths:null,sisaBulan:remainingMonths,fracRemainBulan:fracMonths,intervalHari:hasDays?intervalDays:null,sisaHari:remainingDays,fracRemainHari:fracDays,limitingAxis,score,lastDate});
+};
+if(schedule){
+  const type=schedule.maintenanceType;
+  const override=getEffectiveIntervalKm(vehicleId,cat);
+  const hasOverride=hasIntervalOverride(vehicleId,cat);
+  const inspectKm=schedule.inspectKm;
+  const replaceKm=hasOverride&&override>0?override:schedule.replaceKm;
+  if((inspectKm||schedule.inspectMonths||schedule.inspectDays) && (type==='periodic'||type==='periodic_or_condition')) addCandidate('periksa',inspectKm,'periksa',schedule.inspectMonths,schedule.inspectDays);
+  if(type!=='event_based' && (replaceKm||schedule.replaceMonths||schedule.replaceDays)) addCandidate('ganti',replaceKm,'ganti',schedule.replaceMonths,schedule.replaceDays);
+} else {
+  const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
+  const intervalBulan=getEffectiveIntervalBulan(cat,vehicleId);
+  addCandidate('ganti',intervalKm,resetFilter,intervalBulan,null);
 }
-let limitingAxis='km',frac=fracRemainKm;
-if(fracRemainBulan!=null&&(frac==null||fracRemainBulan<frac)){limitingAxis='bulan';frac=fracRemainBulan;}
-const status=frac==null?'aman':(frac<=0?'lewat':(frac<=0.15?'segera':'aman'));
-const estDateISO=(typeof estimateServiceDateISO==='function')?estimateServiceDateISO(sisaKm,kmPerDay):null;
-return{sisaKm,intervalKm,sisaBulan,intervalBulan,limitingAxis,status,estDateISO};
+if(!candidates.length){
+  return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'aman',estDateISO:null,nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null};
+}
+const c=candidates.sort((a,b)=>a.score-b.score)[0];
+const status=c.score<=0?'lewat':(c.score<=0.15?'segera':'aman');
+const estDateISO=c.limitingAxis==='bulan'||c.limitingAxis==='hari'?null:((typeof estimateServiceDateISO==='function')?estimateServiceDateISO(c.sisaKm,kmPerDaySafe):null);
+return Object.assign({},c,{status,estDateISO,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
 }
 // recommendIntervalKm(vehicleId,cat) -- FITUR BARU (audit, gap "interval
 // servis 100% statis, tidak ada rekomendasi berbasis data"): getEffectiveIntervalKm()
@@ -1410,7 +1486,7 @@ onStockMasterCategoryFilterChange(id){Sparepart.activeStockMasterCategoryFilter=
 onStockComponentFilterChange(id){Sparepart.activeStockComponentFilter=String(id||'');Sparepart.renderStockList();},
 renderStockFilters(beforeEl){
   let wrap=document.getElementById('stockServiceFilterWrap');
-  if(!wrap){wrap=document.createElement('div');wrap.id='stockServiceFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
+  if(!wrap){if(typeof document.createElement!=='function')return;wrap=document.createElement('div');wrap.id='stockServiceFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
   if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
   const groups=ServiceInputCatalog.groups()||[];
   const mid=Sparepart.activeStockMasterCategoryFilter||'';

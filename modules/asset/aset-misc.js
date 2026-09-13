@@ -413,7 +413,7 @@ IDBStore._dbPromise=null;
 reject(new Error('Membuka IndexedDB terlalu lama (mungkin diblokir tab/koneksi lain) -- coba tutup tab lain yang membuka aplikasi ini, lalu ulangi.'));
 },8000);
 req.onblocked=()=>{ console.warn('IndexedDB open() diblokir -- kemungkinan ada koneksi lain (tab lain) yang masih terbuka di versi lama.'); };
-req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDBStore.STORE); }catch(e){} };
+req.onupgradeneeded=()=>{ try{ req.result.createObjectStore(IDBStore.STORE); }catch(e){void e;} };
 req.onsuccess=()=>{
 if(settled)return;
 settled=true;
@@ -426,7 +426,7 @@ const db=req.result;
 // lempar InvalidStateError. Makanya begitu koneksi ditutup dgn cara apa
 // pun, cache di-null-kan supaya panggilan _open() berikutnya buka koneksi
 // baru yang sehat.
-db.onversionchange=()=>{ try{db.close();}catch(e){} IDBStore._dbPromise=null; };
+db.onversionchange=()=>{ try{db.close();}catch(e){void e;} IDBStore._dbPromise=null; };
 db.onclose=()=>{ IDBStore._dbPromise=null; };
 resolve(db);
 };

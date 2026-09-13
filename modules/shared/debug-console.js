@@ -21,14 +21,14 @@ function toggleDebugConsole(){
 const active=localStorage.getItem('kw_debug_console')==='1';
 if(active){
 localStorage.removeItem('kw_debug_console');
-try{ if(window.eruda) eruda.destroy(); }catch(e){}
+try{ if(window.eruda) eruda.destroy(); }catch(e){void e;}
 toast('🐞 Debug console dimatikan');
 updateDebugConsoleBtn();
 return;
 }
 localStorage.setItem('kw_debug_console','1');
 if(window.eruda){
-try{ eruda.init(); }catch(e){}
+try{ eruda.init(); }catch(e){void e;}
 toast('🐞 Debug console diaktifkan');
 updateDebugConsoleBtn();
 return;

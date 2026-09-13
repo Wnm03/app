@@ -159,7 +159,7 @@ const val=D.fuelPriceRef[type];
 if(val===null||val===undefined||!isFinite(Number(val))||Number(val)<=0)return;
 hEl.value=Math.round(Number(val));
 if(typeof hEl.dispatchEvent==='function'&&typeof Event!=='undefined'){
-try{hEl.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
+try{hEl.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){void e;}
 }
 },
 // Isi <select id="selectId"> dgn 6 jenis BBM (FuelPriceRef.ITEMS), value terpilih
@@ -223,7 +223,7 @@ const hEl=document.getElementById(hargaId);
 if(!hEl)return;
 hEl.value=Math.round(Number(val));
 if(typeof hEl.dispatchEvent==='function'&&typeof Event!=='undefined'){
-try{hEl.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){}
+try{hEl.dispatchEvent(new Event('input',{bubbles:true}));}catch(e){void e;}
 }
 }
 };

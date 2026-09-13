@@ -384,7 +384,7 @@ const BusinessIntelligencePresenter = {
     if (typeof ShopInsight === 'undefined') return { title: '💡 Detail AI Insight', html: '<div class="u-fs12 u-t2">Belum ada data.</div>' };
     const items = ShopInsight.compute();
     if (!items.length) return { title: '💡 Detail AI Insight', html: '<div class="u-fs12 u-t2 u-lh15">Belum ada rekomendasi khusus — data Shop bulan ini terlihat wajar.</div>' };
-    const html = items.map((x) => `<div class="u-fs12 u-lh15 u-mb8">${x.icon} ${x.text}</div>`).join('');
+    const html = items.map((x) => `<div class="u-fs12 u-lh15 u-mb8">${escapeHtml(x.icon)} ${escapeHtml(x.text)}</div>`).join('');
     return { title: '💡 Semua Insight Bisnis Shop', html };
   },
 
@@ -552,7 +552,7 @@ const BusinessIntelligencePresenter = {
     el.classList.add('u-pointer');
     const items = this.aiInsight();
     if (!items.length) { el.innerHTML = '<div class="u-fs12 u-t2 u-lh15">Belum ada rekomendasi khusus — data Shop bulan ini terlihat wajar.</div>'; return; }
-    el.innerHTML = items.map((x) => `<div class="u-fs12 u-lh15 u-mb8">${x.icon} ${x.text}</div>`).join('');
+    el.innerHTML = items.map((x) => `<div class="u-fs12 u-lh15 u-mb8">${escapeHtml(x.icon)} ${escapeHtml(x.text)}</div>`).join('');
   },
 
 };

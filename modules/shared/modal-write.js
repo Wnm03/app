@@ -38,7 +38,7 @@
     // tambahan kalau index-nya di luar jangkauan array (mis. typo saat migrasi).
     try {
       console.error('[modal-write] MODAL_HTML[' + raw + '] tidak ditemukan -- 1 modal tidak akan tampil.');
-    } catch (_e) {}
+    } catch(_e){void _e;}
     return;
   }
   document.write(MODAL_HTML[idx]);

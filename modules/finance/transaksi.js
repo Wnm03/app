@@ -795,7 +795,7 @@ const showRenov=isExpense&&isRenovCatName(catName);
 // bareng kondisi panel Stok Sparepart (showStock) -- keduanya boleh aktif
 // BERSAMAAN dalam 1 transaksi (mis. beli part sekaligus langsung dipasang),
 // lihat catatan applyTxServisFromTx() di tx-servis.js soal efek stok net.
-const showServis=showStock||(_isFinanceServiceTransaction&&_isFinanceServiceTransaction());
+const showServis=showStock||(typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction());
 bbmPanel.style.display=showBbm?'block':'none';
 stockPanel.style.display=showStock?'block':'none';
 const servisPanel=document.getElementById('txServisPanel');
@@ -825,7 +825,7 @@ const servisChk=document.getElementById('txSyncServis');
 if(servisChk)servisChk.checked=false;
 if(typeof toggleTxServisFields==='function')toggleTxServisFields();
 }
-if(showServis&&_isFinanceServiceTransaction&&_isFinanceServiceTransaction()){
+if(showServis&&typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction()){
   const servisChk=document.getElementById('txSyncServis');
   if(servisChk)servisChk.checked=true;
   if(typeof toggleTxServisFields==='function')toggleTxServisFields();

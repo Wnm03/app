@@ -26,7 +26,7 @@ toast('⚠️ Ada error kecil, coba ulangi aksi terakhir'+detail,5000);
 }else{
 console.warn('App error (toast belum siap):',msg);
 }
-}catch(_e){ }
+}catch(_e){void _e;}
 }
 window.addEventListener('error',function(e){
 console.error('Uncaught error:',e.error||e.message,e.filename,e.lineno);

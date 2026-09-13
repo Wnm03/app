@@ -599,10 +599,11 @@ if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
 // supaya predictService()/maintenanceForecast()/_vehicleOverdueCheck() (yang
 // semuanya menghitung hal yang sama) konsisten dgn renderReminder().
 const remindable=(D.sparepartCats||[]).filter(c=>c.intervalKm>0&&c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId));
+const conditionItems=(typeof getMaintenanceConditionProjection==='function')?getMaintenanceConditionProjection(vehicleId):[];
 const cats=categoryId
 ? remindable.filter((c)=>c.id===categoryId)
 : remindable;
-if(!cats.length)return{ok:false,reason:categoryId?'Kategori sparepart tidak ditemukan':'Belum ada kategori sparepart terdaftar'};
+if(!cats.length&&!conditionItems.length)return{ok:false,reason:categoryId?'Kategori sparepart tidak ditemukan':'Belum ada kategori sparepart terdaftar'};
 const curKm=getVehicleKm(vehicleId);
 const kmPerDay=estimateKmPerDay(vehicleId);
 const rows=cats.map((cat)=>{
@@ -614,7 +615,12 @@ const overridden=hasIntervalOverride(vehicleId,cat);
 const u=computeServiceUrgency({vehicleId,cat,curKm,kmPerDay});
 return{categoryId:cat.id,categoryName:cat.name,lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,estDateISO:u.estDateISO,status:u.status};
 }).sort((a,b)=>a.sisaKm-b.sisaKm);
-return{ok:true,vehicleId,curKm,kmPerDay,items:categoryId?undefined:rows,...(categoryId?rows[0]:{})};
+if(categoryId){
+  if(rows.length)return{ok:true,vehicleId,curKm,kmPerDay,conditionItems,items:undefined,...rows[0]};
+  const cond=conditionItems.find(x=>x.id===categoryId||x.serviceComponentId===categoryId||x.maintenanceRuleId===categoryId);
+  if(cond)return{ok:true,vehicleId,curKm,kmPerDay,conditionItems,categoryId:cond.serviceComponentId,categoryName:cond.name,maintenanceType:'condition',condition:cond.condition,nextAction:cond.maintenanceActionPlan[0]?.action||'periksa',status:'kondisi'};
+}
+return{ok:true,vehicleId,curKm,kmPerDay,items:rows,conditionItems};
 }
 
 // maintenanceForecast({vehicleId, monthsAhead}) — perkiraan item servis yang

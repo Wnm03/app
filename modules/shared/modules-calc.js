@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s-sesi-c-titipan-updated-1695';
+const MODULE_CALC_VERSION='s-v26-scanner-lifecycle-reattach-final';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){

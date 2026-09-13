@@ -50,7 +50,7 @@ let _vehicleScannerBusy = false;
 // decodeFromVideoDevice() (ZXing) memanggil getUserMedia() yang bisa
 // menggantung SELAMANYA (tidak resolve maupun reject) kalau browser/OS diam-
 // diam block izin kamera tanpa menampilkan prompt. Karena await ini tidak
-// pernah selesai, catch{}/finally{} di vehicleScannerScan() tidak pernah
+// pernah selesai, catch/finally di vehicleScannerScan() tidak pernah
 // jalan -> _vehicleScannerBusy & ScannerSession tetap "aktif" permanen ->
 // scan berikutnya ditolak diam-diam ("Scanner lain sedang aktif") atau tidak
 // terbuka sama sekali. Modul ini sebelumnya TIDAK punya timeout guard (beda
@@ -322,7 +322,16 @@ function vehicleScannerResumeCamera(video) {
 // visibilitychange, pagehide, freeze, resume (Page Lifecycle API) SELAMA
 // scanner aktif saja, dilepas di teardown supaya tidak ada listener bocor
 // menempel ke document/window setelah scanner ditutup.
+const _vehicleScannerLifecycleByVideo = typeof WeakMap === 'function' ? new WeakMap() : null;
+
 function vehicleScannerAttachLifecycle(video, onPageHide) {
+  // Defensive re-attach guard: jika lifecycle fungsi ini terpanggil lagi
+  // untuk video DOM yang sama sebelum handler lama dilepas, lepas handler
+  // lama terlebih dahulu agar tidak terjadi listener leak / callback ganda.
+  if (_vehicleScannerLifecycleByVideo && video && (typeof video === 'object' || typeof video === 'function')) {
+    const previous = _vehicleScannerLifecycleByVideo.get(video);
+    if (previous) vehicleScannerDetachLifecycle(previous);
+  }
   const onVisibility = () => {
     if (typeof document === 'undefined' || typeof document.hidden === 'undefined') return;
     if (document.hidden) vehicleScannerPauseCamera(video);
@@ -335,10 +344,15 @@ function vehicleScannerAttachLifecycle(video, onPageHide) {
     document.addEventListener('freeze', onFreeze);
     document.addEventListener('resume', onResume);
   }
+  const pageHideHandler = typeof onPageHide === 'function' ? onPageHide : () => {};
   if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pagehide', pageHideHandler);
   }
-  return { onVisibility, onFreeze, onResume, onPageHide };
+  const handlers = { onVisibility, onFreeze, onResume, onPageHide: pageHideHandler, video };
+  if (_vehicleScannerLifecycleByVideo && video && (typeof video === 'object' || typeof video === 'function')) {
+    _vehicleScannerLifecycleByVideo.set(video, handlers);
+  }
+  return handlers;
 }
 
 function vehicleScannerDetachLifecycle(handlers) {
@@ -350,6 +364,9 @@ function vehicleScannerDetachLifecycle(handlers) {
   }
   if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
     window.removeEventListener('pagehide', handlers.onPageHide);
+  }
+  if (_vehicleScannerLifecycleByVideo && handlers.video && (typeof handlers.video === 'object' || typeof handlers.video === 'function') && _vehicleScannerLifecycleByVideo.get(handlers.video) === handlers) {
+    _vehicleScannerLifecycleByVideo.delete(handlers.video);
   }
 }
 

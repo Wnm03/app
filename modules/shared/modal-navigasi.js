@@ -87,7 +87,8 @@ el.classList.remove('open');
 _focusTrapDeactivate(el);
 const cur=store.queue.shift();
 if(cur)cur.resolve(val);
-if(store.queue.length) setTimeout(()=>{ _dialogSelfHeal(); store.queue[0].renderFn(); },0);
+if(store._renderTimer!=null){ clearTimeout(store._renderTimer); store._renderTimer=null; }
+if(store.queue.length) store._renderTimer=setTimeout(()=>{ store._renderTimer=null; if(store.queue.length){ _dialogSelfHeal(); store.queue[0].renderFn(); } },0);
 }
 const _confirmStore={queue:[]};
 function askConfirm(message,opts){
@@ -232,22 +233,46 @@ function scrollTabBarIntoView(el){
 try{
 if(el && typeof el.scrollIntoView==='function'){
 const run=()=>{
-try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){}
+try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){void e;}
 try{
 if(el.classList && typeof el.classList.add==='function'){
 el.classList.remove('flash-highlight');
 void el.offsetWidth;
 el.classList.add('flash-highlight');
-if(typeof setTimeout==='function') setTimeout(()=>{ try{ el.classList.remove('flash-highlight'); }catch(e){} },1200);
+if(typeof setTimeout==='function') setTimeout(()=>{ try{ el.classList.remove('flash-highlight'); }catch(e){void e;} },1200);
 }
-}catch(e){}
+}catch(e){void e;}
 };
 if(typeof requestAnimationFrame==='function') requestAnimationFrame(run);
 else run();
 }
-}catch(e){}
+}catch(e){void e;}
+}
+// FIX (S41/S42): cancel all custom dialog queues on forced tab navigation and
+// prevent a previously scheduled queue-render timer from resurrecting a canceled dialog.
+function _cancelDialogQueue(store,overlayId,value){
+if(store._renderTimer!=null){ clearTimeout(store._renderTimer); store._renderTimer=null; }
+const el=document.getElementById(overlayId);
+if(el){
+  el.classList.remove('open');
+  el.classList.remove('closing');
+  _focusTrapDeactivate(el);
+}
+const pending=store.queue.splice(0);
+pending.forEach(item=>{ try{item.resolve(value);}catch(e){void e;} });
+}
+function _cancelAllCustomDialogQueues(){
+_cancelDialogQueue(_confirmStore,'confirmModalOverlay',false);
+_cancelDialogQueue(_promptStore,'promptModalOverlay',null);
+_cancelDialogQueue(_choiceStore,'choiceModalOverlay',null);
+_cancelDialogQueue(_infoStore,'infoModalOverlay',true);
+_cancelDialogQueue(_pinPromptStore,'pinPromptModalOverlay',null);
 }
 function showPage(name,el){
+_cancelAllCustomDialogQueues();
+document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.open').forEach(o=>{
+  _focusTrapDeactivate(o);
+});
 // BUGFIX (audit "semua tombol di Car Notes tidak respon", laporan user, v1025):
 // root cause -- showPage() (dipanggil tiap pindah tab bawah) TIDAK PERNAH
 // membersihkan overlay/modal yang masih class="open" (mis. catalogModal
@@ -376,8 +401,14 @@ if(_focusTrapStack.length===0){
 document.removeEventListener('keydown',_focusTrapKeydown,true);
 }
 if(entry.lastFocused && typeof entry.lastFocused.focus==='function' && document.contains(entry.lastFocused)){
-try{entry.lastFocused.focus();}catch(e){}
+try{entry.lastFocused.focus();}catch(e){void e;}
 }
+}
+const _swipeDismissCloseTimers=typeof WeakMap==='function'?new WeakMap():null;
+function _clearSwipeDismissCloseTimer(overlay){
+if(!_swipeDismissCloseTimers||!overlay)return;
+const timer=_swipeDismissCloseTimers.get(overlay);
+if(timer!=null){clearTimeout(timer);_swipeDismissCloseTimers.delete(overlay);}
 }
 function openModal(id){
 const el=document.getElementById(id);
@@ -466,11 +497,11 @@ try{
 const prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');
 prefs[key]=collapsed;
 localStorage.setItem('cardCollapsePrefs',JSON.stringify(prefs));
-}catch(e){ }
+}catch(e){void e;}
 }
 function applyOneCardCollapsePref(key){
 let prefs={};
-try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){}
+try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){void e;}
 const body=document.getElementById(key+'-cbody');
 const chev=document.getElementById(key+'-chev');
 if(_cardCollapseShouldBeCollapsed(key,prefs)){
@@ -483,13 +514,15 @@ if(chev)chev.classList.remove('collapsed');
 }
 function applyCardCollapsePrefs(){
 let prefs={};
-try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){}
+try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){void e;}
 const keys=new Set(Object.keys(prefs).concat(CARD_COLLAPSE_DEFAULT_CLOSED));
 keys.forEach(key=>applyOneCardCollapsePref(key));
 }
 function closeModal(id){
 const el=document.getElementById(id);
 if(!el)return;
+_clearSwipeDismissCloseTimer(el);
+if(typeof _cleanupSwipeDismissForOverlay==='function')_cleanupSwipeDismissForOverlay(el);
 if(id==='txModal'&&typeof WorthIt!=='undefined'&&WorthIt.pendingBuyId){
 WorthIt.pendingBuyId=null;
 }
@@ -514,12 +547,30 @@ function onAnimEnd(e){ if(e.target===el)finish(); }
 if(el.addEventListener)el.addEventListener('animationend',onAnimEnd);
 setTimeout(finish,260);
 }
+// V25 MODAL LIFECYCLE HARDENING: bind swipe listeners idempotently per handle.
+// Fungsi ini bisa dipanggil ulang oleh bootstrap/test/re-render. Jangan menumpuk
+// listener touch/window pada handle yang sama karena satu gesture bisa dieksekusi
+// N kali. WeakSet memakai identity DOM node; kalau isi modal diganti total, handle
+// baru tetap bisa dibind tanpa membawa state/listener dari node lama.
+// S30 MODAL SWIPE LIFECYCLE HARDENING: selain idempotensi bind (S25), simpan
+// cleanup per handle supaya listener touch + window mouse ikut dilepas saat modal
+// ditutup. WeakSet saja tidak cukup: DOM handle yang sudah dilepas dari modal
+// masih bisa tertahan oleh listener window yang menangkap closure onMove/onEnd.
+const _swipeDismissCleanupByHandle=typeof WeakMap==='function'?new WeakMap():null;
+function _cleanupSwipeDismissForOverlay(overlay){
+if(!overlay||!_swipeDismissCleanupByHandle)return;
+const handle=overlay.querySelector('.modal-handle');
+if(!handle)return;
+const cleanup=_swipeDismissCleanupByHandle.get(handle);
+if(typeof cleanup==='function')cleanup();
+}
 function enableSwipeToDismiss(overlayId){
 const overlay=document.getElementById(overlayId);
 if(!overlay)return;
 const sheet=overlay.querySelector('.modal');
 const handle=overlay.querySelector('.modal-handle');
 if(!sheet||!handle)return;
+if(_swipeDismissCleanupByHandle&&_swipeDismissCleanupByHandle.has(handle))return;
 const THRESHOLD=90;
 let startY=0,lastDy=0,dragging=false;
 function pointY(e){return e.touches?e.touches[0].clientY:e.clientY;}
@@ -542,7 +593,15 @@ dragging=false;
 sheet.style.transition='transform 0.2s ease';
 if(lastDy>THRESHOLD){
 sheet.style.transform='translateY(100%)';
-setTimeout(()=>{ closeModal(overlayId); sheet.style.transform=''; },160);
+_clearSwipeDismissCloseTimer(overlay);
+const timer=setTimeout(()=>{
+  if(_swipeDismissCloseTimers&&_swipeDismissCloseTimers.get(overlay)===timer){
+    _swipeDismissCloseTimers.delete(overlay);
+  }
+  closeModal(overlayId);
+  sheet.style.transform='';
+},160);
+if(_swipeDismissCloseTimers)_swipeDismissCloseTimers.set(overlay,timer);
 } else {
 sheet.style.transform='';
 }
@@ -555,6 +614,19 @@ handle.addEventListener('touchcancel',onEnd);
 handle.addEventListener('mousedown',onStart);
 window.addEventListener('mousemove',onMove);
 window.addEventListener('mouseup',onEnd);
+if(_swipeDismissCleanupByHandle){
+  _swipeDismissCleanupByHandle.set(handle,()=>{
+    handle.removeEventListener('touchstart',onStart,{passive:true});
+    handle.removeEventListener('touchmove',onMove,{passive:true});
+    handle.removeEventListener('touchend',onEnd);
+    handle.removeEventListener('touchcancel',onEnd);
+    handle.removeEventListener('mousedown',onStart);
+    window.removeEventListener('mousemove',onMove);
+    window.removeEventListener('mouseup',onEnd);
+    _swipeDismissCleanupByHandle.delete(handle);
+    dragging=false;
+  });
+}
 }
 // BUGFIX (audit lanjutan v1026, sama persis kasus _queueDialog() di atas):
 // openQS() juga langsung classList.add('open') tanpa lewat openModal(),

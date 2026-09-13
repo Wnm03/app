@@ -35,8 +35,19 @@ function applyRipplePosition(el, clientX, clientY) {
   el.style.setProperty('--ripple-y', pos.y);
 }
 
+const _rippleTrackingDocs = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+
 function setupRipplePositionTracking(doc) {
   const d = doc || document;
+  if (_rippleTrackingDocs) {
+    if (_rippleTrackingDocs.has(d)) return;
+    _rippleTrackingDocs.add(d);
+  } else if (d.__kwRipplePositionTrackingAttached) {
+    return;
+  } else {
+    try { Object.defineProperty(d, '__kwRipplePositionTrackingAttached', { value: true, configurable: true }); }
+    catch (_) { d.__kwRipplePositionTrackingAttached = true; }
+  }
   // Pointer Events menyatukan mouse+touch+pen di satu event — dipakai kalau tersedia
   // (semua browser modern). Fallback mousedown/touchstart cuma untuk browser sangat lama
   // yang belum dukung PointerEvent sama sekali.

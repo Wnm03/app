@@ -934,6 +934,22 @@ return d;
 async function markBillPaid(id,advance){
 const b=D.bills.find(x=>x.id===id);
 if(!b)return;
+// V24 EVENT/LIFECYCLE HARDENING: lock berdasarkan bill ID, bukan hanya elemen DOM.
+// Dispatcher `pendingAction` mencegah double-tap pada ELEMEN YANG SAMA, tetapi
+// render ulang (mis. setelah edit/pensil) dapat membuat node Bayar baru tanpa
+// dataset.pendingAction. Dua node berbeda kemudian masih bisa masuk ke
+// markBillPaid() secara concurrent dan menabrakkan dialog/side-effect pembayaran.
+// Lock ini adalah SSOT di level action: satu bill hanya boleh punya satu
+// markBillPaid() aktif pada satu waktu, lintas semua entry point/DOM node.
+const _kwLockRoot=typeof globalThis!=='undefined'?globalThis:(typeof window!=='undefined'?window:this);
+if(!_kwLockRoot.__kwMarkBillPaidInFlight)_kwLockRoot.__kwMarkBillPaidInFlight=new Set();
+const _billPaymentLockKey=String(id);
+if(_kwLockRoot.__kwMarkBillPaidInFlight.has(_billPaymentLockKey)){
+  if(typeof toast==='function')toast('⏳ Pembayaran sedang diproses. Tunggu sampai selesai.',3000);
+  return;
+}
+_kwLockRoot.__kwMarkBillPaidInFlight.add(_billPaymentLockKey);
+try{
 // Guard dobel-bayar (Sesi 292, fix laporan user) -- getBillPaidThisPeriodInfo() sudah ADA
 // sejak S322 (dipakai murni utk badge visual "✅ Sudah dibayar bulan ini" di renderBillItemHtml/
 // applyBillFilter), tapi TIDAK pernah dipanggil di sini, jadi tombol ✅ Bayar di kartu bisa
@@ -1090,6 +1106,9 @@ if(b.kind==='utang')renderDebtList();
 renderKekayaanBersih();hitungZakatMaal();
 const sisaMsg=b.sisaTenor!=null?` Sisa ${b.sisaTenor}x lagi.`:'';
 toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
+  }finally{
+    _kwLockRoot.__kwMarkBillPaidInFlight.delete(_billPaymentLockKey);
+  }
 }
 // getBillPaidThisPeriodInfo(b) — cek apakah tagihan AKTIF (masih di D.bills, BUKAN
 // D.billsArchive) ini SUDAH dibayar utk periode berjalan (cicilan bulan ini, langganan

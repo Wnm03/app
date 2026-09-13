@@ -280,9 +280,9 @@ renderRefCheckReminder();
 _parseJSON(text){
 if(!text)return null;
 let t=text.trim().replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-try{return JSON.parse(t);}catch(e){}
+try{return JSON.parse(t);}catch(e){void e;}
 const s=t.indexOf('{'),eIdx=t.lastIndexOf('}');
-if(s>=0&&eIdx>s){ try{return JSON.parse(t.slice(s,eIdx+1));}catch(e){} }
+if(s>=0&&eIdx>s){ try{return JSON.parse(t.slice(s,eIdx+1));}catch(e){void e;} }
 return null;
 },
 renderDraft(){

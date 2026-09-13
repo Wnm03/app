@@ -437,21 +437,30 @@ if(!wantAutoHolding)return savedAsset;
 // + buku>0) dan langsung bikin Holding #1 + tandai `_migratedToInvestmentId` (BUKAN
 // `investmentId`). Tanpa cek field ini, guard lama lolos & blok di bawah bikin Holding #2
 // -- 1 aset baru jadi 2 Holding terduplikasi.
-if(savedAsset.investmentId||savedAsset._migratedToInvestmentId)return savedAsset;
-if(typeof Investment==='undefined'||typeof Investment.addHolding!=='function')return savedAsset;
-const type=Aset.TRADABLE_TYPE_MAP[savedAsset.jenis]||'Lainnya';
-const unit=isFinite(savedAsset.jumlahUnit)&&savedAsset.jumlahUnit>0?savedAsset.jumlahUnit:0;
-const avgPrice=isFinite(savedAsset.hargaBeli)&&savedAsset.hargaBeli>0?savedAsset.hargaBeli:0;
-const holding=Investment.addHolding({
-name:savedAsset.name,
-type,
-unit,
-avgPrice,
-currentPrice:currentPrice!=null?currentPrice:avgPrice,
-notes:'Auto-dibuat dari Buku Aset: '+savedAsset.name,
-zakatable:!!savedAsset.zakatable,
-purchaseDate:savedAsset.tanggal||null,
-});
+if(savedAsset.investmentId&&!savedAsset._migratedToInvestmentId)return savedAsset;
+if(typeof Investment==='undefined')return savedAsset;
+let holding=null;
+// Bila renderList()->migrateAssetInvestmentsToHoldings() sudah lebih dulu
+// membuat holding untuk aset yang baru disimpan, jangan membuat holding kedua.
+// Namun ownership aset tetap harus diwariskan ke holding yang SUDAH dibuat.
+if(savedAsset._migratedToInvestmentId){
+  holding={id:savedAsset._migratedToInvestmentId};
+}else{
+  if(typeof Investment.addHolding!=='function')return savedAsset;
+  const type=Aset.TRADABLE_TYPE_MAP[savedAsset.jenis]||'Lainnya';
+  const unit=isFinite(savedAsset.jumlahUnit)&&savedAsset.jumlahUnit>0?savedAsset.jumlahUnit:0;
+  const avgPrice=isFinite(savedAsset.hargaBeli)&&savedAsset.hargaBeli>0?savedAsset.hargaBeli:0;
+  holding=Investment.addHolding({
+    name:savedAsset.name,
+    type,
+    unit,
+    avgPrice,
+    currentPrice:currentPrice!=null?currentPrice:avgPrice,
+    notes:'Auto-dibuat dari Buku Aset: '+savedAsset.name,
+    zakatable:!!savedAsset.zakatable,
+    purchaseDate:savedAsset.tanggal||null,
+  });
+}
 // Waris ownership aset -> holding baru (§I) -- 100% reuse Investment.setOwners(), yang di
 // dalamnya delegasi penuh ke MultiOwnerEngine.setOwners() (0 rumus baru ditulis di sini).
 // Kalau aset ini SELF 100% (owners.length<=1 SELF), tidak perlu dipanggil -- addHolding()
@@ -459,10 +468,13 @@ purchaseDate:savedAsset.tanggal||null,
 if(typeof MultiOwnerEngine!=='undefined'){
 const ownersRes=MultiOwnerEngine.getOwners(savedAsset);
 if(ownersRes&&ownersRes.ok&&Array.isArray(ownersRes.owners)&&(ownersRes.owners.length>1||!ownersRes.owners[0]?.isSelf)){
-try{Investment.setOwners(holding.id,ownersRes.owners);}catch(e){/* non-fatal: holding tetap tersimpan (default SELF) walau porsi gagal diwariskan */}
+try{
+  Investment.setOwners(holding.id,ownersRes.owners);
+  if(typeof AIBus!=='undefined'&&AIBus&&typeof AIBus.emit==='function') AIBus.emit('investment.updated',{kind:'asset-ownership',action:'owners-updated',ownersUpdated:true,holdingId:holding.id,assetId:savedAsset.id});
+}catch(e){/* non-fatal: holding tetap tersimpan (default SELF) walau porsi gagal diwariskan */}
 }
 }
-savedAsset.investmentId=holding.id;
+if(!savedAsset._migratedToInvestmentId)savedAsset.investmentId=holding.id;
 save();
 Aset.renderList();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ Aset tersimpan & Holding Investasi otomatis dibuat');

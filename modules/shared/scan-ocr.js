@@ -102,7 +102,7 @@ async function resetOcrWorker(){
 const old=_ocrWorkerPromise;
 _ocrWorkerPromise=null;
 if(old){
-try{const w=await old; if(w&&typeof w.terminate==='function')await w.terminate();}catch(e){ }
+try{const w=await old; if(w&&typeof w.terminate==='function')await w.terminate();}catch(e){void e;}
 }
 }
 function withTimeout(promise,ms,label){

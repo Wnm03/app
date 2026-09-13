@@ -93,6 +93,14 @@ const SERVICE_CHECKLIST_GROUPS = [
         id: 'oli-mesin', name: 'Oli Mesin', linkCat: true,
         actionMode: 'ganti', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Ganti tiap 4.000 km', sumber: 'TORSI_DB',
+        catatanTambahan: 'Daftar tambahan user: kapasitas 0,8 L; rekomendasi usia kendaraan >10 tahun 2.000–2.500 km (tidak mengganti canonical interval).',
+      },
+      {
+        id: 'filter-oli', name: 'Filter Oli', linkCat: false,
+        actionMode: 'periksa', resetType: null, intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Interval tidak ditetapkan dalam daftar tambahan ini',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+        catatan: 'Komponen tambahan. Jangan menebak interval dari rasio oli mesin/gardan; interval canonical tetap berasal dari category/vehicle override.',
       },
       {
         id: 'busi', name: 'Busi', linkCat: true,
@@ -100,12 +108,14 @@ const SERVICE_CHECKLIST_GROUPS = [
         gantiResetsInterval: null,
         intervalLabel: 'Periksa 4.000 km · Ganti 8.000 km (bergantian tiap 4.000 km)',
         sumber: 'TORSI_DB',
+        catatanTambahan: 'Kode yang dicantumkan user: NGK CPR9EA-9 atau Denso U27EPR9.',
       },
       {
         id: 'celah-klep', name: 'Celah Klep (Setel Klep)', linkCat: false,
         actionMode: 'periksa', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Periksa/setel tiap 4.000 km',
         sumber: 'TORSI_DB ada interval, tapi nama tidak match kategori manapun',
+        catatanTambahan: 'Spesifikasi mesin dingin dari daftar user: In 0,10 mm; Ex 0,24 mm.',
       },
       {
         id: 'rantai-keteng-tensioner', name: 'Rantai Keteng & Tensioner', linkCat: false,
@@ -120,6 +130,18 @@ const SERVICE_CHECKLIST_GROUPS = [
         gantiResetsInterval: null, intervalLabel: 'Kondisional (indikasi performa turun)',
         sumber: 'Torsi-only di TORSI_DB',
       },
+      {
+        id: 'filter-kawat-oli-mesin', name: 'Filter Kawat Oli Mesin (Oil Strainer Screen)', linkCat: false,
+        actionMode: 'bersih', resetType: 'km', intervalKm: 12000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Bersihkan 12.000 km',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'paking-knalpot', name: 'Paking (Gasket) Knalpot', linkCat: false,
+        actionMode: 'periksa-conditional', resetType: null, intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa setiap kali knalpot dilepas · ganti bila gepeng/bocor',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
     ],
   },
   {
@@ -128,13 +150,29 @@ const SERVICE_CHECKLIST_GROUPS = [
     items: [
       {
         id: 'v-belt-cvt', name: 'V-Belt CVT', linkCat: true,
+        catatanTambahan: 'Daftar tambahan user: periksa 8.000 km, ganti 24.000 km untuk KZR 2012; kode sabuk KZR; berbeda dari metadata checklist existing 32.000 km dan tidak menimpa canonical SoT.',
         actionMode: 'ganti', resetType: 'km', intervalKm: 32000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Periksa 8.000 km · Ganti 32.000 km',
         sumber: 'TORSI_DB', needsReview: true,
         catatan: 'Pola alternate vs 2-interval-independen belum diputuskan -- lihat PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b catatan pola 3. actionMode:"ganti" di sini SEMENTARA (perilaku lama, bukan keputusan final).',
       },
       {
+        id: 'slide-piece-cvt', name: 'Slide Piece CVT', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 8.000 km · ganti bersamaan dengan roller bila aus',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+        catatan: 'Klip plastik/guide pin pada blok pulley depan.',
+      },
+      {
+        id: 'boss-pulley-drive-face', name: 'Boss Pulley & Drive Face', linkCat: false,
+        catatanTambahan: 'Daftar tambahan user: torsi mur pulley depan 59 N·m dan mur pulley belakang 49 N·m; hindari impact wrench berlebihan agar drat as tidak rusak.',
+        actionMode: 'periksa', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 8.000 km · cek goresan boss dan parit/permukaan drive face',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
         id: 'roller-cvt', name: 'Roller CVT', linkCat: true,
+        catatanTambahan: 'Daftar user: periksa 8.000 km; standar KZR 18 g; substitusi 15 g disebut untuk akselerasi. Interval ganti 12.000–15.000 km versi user berbeda dari metadata existing ±24.000 km; tidak menimpa SoT.',
         actionMode: 'ganti', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Ganti ±24.000 km', sumber: 'FALLBACK_KEYWORDS',
       },
@@ -143,6 +181,30 @@ const SERVICE_CHECKLIST_GROUPS = [
         actionMode: 'ganti', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Ganti ±24.000 km (biasa bareng roller)',
         sumber: 'Gap §2.1, estimasi umum',
+      },
+      {
+        id: 'mangkok-kopling-ganda', name: 'Mangkok Kopling Ganda', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa & bersihkan debu setiap 8.000 km',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'seal-driven-face', name: 'Seal Driven Face (O-Ring & Karet)', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 12000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 12.000 km · ganti bila bocor/aus',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'per-sentri', name: 'Per Sentri', linkCat: false,
+        actionMode: 'periksa-conditional', resetType: null, intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Kondisional · ganti bila kendur/lemah',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'pelumasan-cvt-grease', name: 'Pelumasan CVT Grease (Pin Guide & Driven Face)', linkCat: false,
+        actionMode: 'none', resetType: null, intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Lumasi ulang setiap 8.000 km',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
       },
       {
         id: 'per-cvt', name: 'Per CVT (weight/kick starter spring)', linkCat: false,
@@ -156,6 +218,18 @@ const SERVICE_CHECKLIST_GROUPS = [
         gantiResetsInterval: null, intervalLabel: 'Tiap 8.000–10.000 km',
         sumber: 'Estimasi umum bengkel',
       },
+      {
+        id: 'bearing-bak-cvt', name: 'Bearing Bak CVT', linkCat: false,
+        actionMode: 'periksa-conditional', resetType: null, intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Kondisional · beri grease bila bergemuruh',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'busa-filter-cvt', name: 'Busa Filter CVT', linkCat: false,
+        actionMode: 'bersih', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Cuci setiap 8.000 km',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
     ],
   },
   {
@@ -167,6 +241,7 @@ const SERVICE_CHECKLIST_GROUPS = [
         actionMode: 'bersih', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Tiap 8.000 km',
         sumber: 'Gap §2.2 — disebut jadwal resmi, 0 representasi di app',
+        catatanTambahan: 'Daftar tambahan user: pembersihan throttle body 12.000 km; berbeda dari interval checklist saat ini 8.000 km, sehingga disimpan sebagai catatan dan tidak menimpa SoT.',
       },
       {
         id: 'isc', name: 'Idle Speed Control (ISC)', linkCat: false,
@@ -175,6 +250,7 @@ const SERVICE_CHECKLIST_GROUPS = [
       },
       {
         id: 'injector', name: 'Injector (bersihkan)', linkCat: false,
+        catatanTambahan: 'Daftar tambahan user: pembersihan setiap 12.000 km; metadata existing bersifat kondisional/±20.000 km dan tidak ditimpa.',
         actionMode: 'bersih', resetType: 'km', intervalKm: null, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Kondisional / ±20.000 km',
         sumber: 'Torsi-only di TORSI_DB',
@@ -185,6 +261,13 @@ const SERVICE_CHECKLIST_GROUPS = [
     group: 'Sistem Bahan Bakar',
     masterCategoryId: 'sistem-bahan-bakar',
     items: [
+      {
+        id: 'filter-fuel-pump', name: 'Filter Fuel Pump (Saringan Bensin)', linkCat: false,
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 12000, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa 12.000 km · ganti 48.000 km atau bila tekanan turun',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+        catatan: 'Tekanan bahan bakar yang disebut dalam daftar tambahan: sekitar 294 kPa.',
+      },
       {
         id: 'selang-tutup-tangki', name: 'Cek Selang & Tutup Tangki', linkCat: false,
         actionMode: 'periksa', resetType: null, intervalKm: null, intervalTimeMonths: null,
@@ -202,6 +285,7 @@ const SERVICE_CHECKLIST_GROUPS = [
         actionMode: 'periksa-conditional', resetType: 'both', intervalKm: 4000, intervalTimeMonths: 24,
         gantiResetsInterval: true, intervalLabel: 'Periksa 4.000 km · Ganti 2 tahun',
         sumber: 'TORSI_DB+FALLBACK lengkap, tapi tidak ada di GENERIC_RECOMMEND_NAMES.motor',
+        catatanTambahan: 'Daftar tambahan user: kuras/ganti 12.000–24.000 km atau maksimal 2 tahun; interval ini bersifat rekomendasi tambahan dan tidak menimpa canonical SoT.',
         needsReview: true,
         catatan: 'linkCat sengaja tetap false ikut VERIFIKASI §4 -- naik jadi true kalau W tambah "Coolant" ke GENERIC_RECOMMEND_NAMES.motor (di luar scope checklist ini).',
       },
@@ -231,9 +315,11 @@ const SERVICE_CHECKLIST_GROUPS = [
         id: 'minyak-rem', name: 'Minyak Rem', linkCat: true,
         actionMode: 'periksa-conditional', resetType: 'both', intervalKm: 4000, intervalTimeMonths: 24,
         gantiResetsInterval: true, intervalLabel: 'Periksa 4.000 km · Ganti 2 tahun', sumber: 'TORSI_DB',
+        catatanTambahan: 'Daftar tambahan user konsisten: ganti 24.000 km atau 2 tahun.',
       },
       {
         id: 'kampas-rem-belakang', name: 'Kampas Rem Belakang', linkCat: false,
+        catatanTambahan: 'Daftar tambahan user: bersihkan area tromol belakang setiap mengganti ban atau oli gardan.',
         actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
         gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km, ganti sesuai kondisi',
         sumber: 'Akan numpuk ke kategori "Kampas Rem" yang sama dgn depan', needsReview: true,
@@ -257,6 +343,18 @@ const SERVICE_CHECKLIST_GROUPS = [
         gantiResetsInterval: null, intervalLabel: 'Tiap servis besar, no interval km',
         sumber: 'Unit sealed, opsional',
       },
+      {
+        id: 'oli-shockbreaker', name: 'Oli Shockbreaker Depan', linkCat: false,
+        actionMode: 'ganti', resetType: 'km', intervalKm: 15000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Ganti 15.000–20.000 km atau saat seal bocor',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'engine-mounting-bushing-arm', name: 'Engine Mounting & Bushing Arm', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 12000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 12.000 km · ganti bila getas/aus',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
     ],
   },
   {
@@ -265,6 +363,7 @@ const SERVICE_CHECKLIST_GROUPS = [
     items: [
       {
         id: 'stel-grease-komstir', name: 'Stel/Grease Bearing Komstir', linkCat: false,
+        catatanTambahan: 'Daftar tambahan user: periksa kelancaran tiap 12.000 km; grease/ganti pelor bila berat atau jeduk.',
         actionMode: 'periksa', resetType: 'km', intervalKm: null, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: '±8.000–16.000 km (servis besar)',
         sumber: 'Gap — tidak ada di TORSI_DB sbg interval',
@@ -280,6 +379,19 @@ const SERVICE_CHECKLIST_GROUPS = [
         actionMode: 'ganti', resetType: 'km', intervalKm: 15000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Cek ulang usia pakai ±15.000 km',
         sumber: 'FALLBACK_KEYWORDS',
+        catatan: 'Daftar tambahan: 12V 5Ah; voltase normal 12,4–12,8V; periksa voltase tiap 4.000 km.',
+      },
+      {
+        id: 'saklar-sistem-penerangan', name: 'Saklar & Sistem Penerangan', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 4.000 km · bersihkan saklar bila seret',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
+      },
+      {
+        id: 'relay-sekring', name: 'Relay & Sekring (Fuse)', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 12000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa 12.000 km · cek meleleh/berkarat',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12',
       },
     ],
   },
@@ -290,20 +402,21 @@ const SERVICE_CHECKLIST_GROUPS = [
       {
         id: 'ban-depan', name: 'Ban Depan', linkCat: false,
         actionMode: 'ganti', resetType: 'km', intervalKm: 20000, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Usia pakai ±20.000 km',
+        gantiResetsInterval: null, intervalLabel: 'Periksa kondisi/TWI tiap 4.000 km · usia pakai ±20.000 km',
         sumber: 'Datanya lengkap (GENERIC+FALLBACK), sengaja false ikut RENCANA §3',
         needsReview: true,
-        catatan: 'linkCat bisa naik jadi true kapan saja (kategori "Ban Depan" sudah ada) -- lihat VERIFIKASI §4 poin a.',
+        catatan: 'Daftar tambahan: tekanan acuan Depan 29 psi, Belakang 33 psi; cek tekanan rutin tiap 2 minggu. linkCat bisa naik jadi true kapan saja (kategori "Ban Depan" sudah ada) -- lihat VERIFIKASI §4 poin a.',
       },
       {
         id: 'ban-belakang', name: 'Ban Belakang', linkCat: false,
         actionMode: 'ganti', resetType: 'km', intervalKm: null, intervalTimeMonths: null,
         gantiResetsInterval: null,
-        intervalLabel: 'Usia pakai ±16.000–20.000 km (lebih cepat aus krn traksi CVT)',
+        intervalLabel: 'Periksa kondisi/TWI tiap 4.000 km · usia pakai ±16.000–20.000 km (lebih cepat aus krn traksi CVT)',
         sumber: 'Gap §2.3',
       },
       {
         id: 'bearing-roda', name: 'Bearing Roda', linkCat: false,
+        catatanTambahan: 'Daftar tambahan user: cek kelancaran 12.000 km; ganti bila oblak atau gemuruh.',
         actionMode: 'none', resetType: null, intervalKm: null, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Kondisional, no interval tetap', sumber: 'Torsi-only',
       },
@@ -318,6 +431,7 @@ const SERVICE_CHECKLIST_GROUPS = [
         actionMode: 'ganti', resetType: 'km', intervalKm: 16000, intervalTimeMonths: null,
         gantiResetsInterval: null,
         intervalLabel: 'Ganti tiap 16.000 km (lebih cepat kalau berdebu)', sumber: 'TORSI_DB',
+        catatanTambahan: 'Daftar tambahan user: elemen kertas viscous berlapis oli; jangan dicuci atau disemprot kompresor.',
       },
     ],
   },
@@ -327,6 +441,7 @@ const SERVICE_CHECKLIST_GROUPS = [
     items: [
       {
         id: 'oli-gardan', name: 'Oli Gardan/Final Drive', linkCat: true,
+        catatanTambahan: 'Daftar tambahan user: kapasitas 120 ml; rasio praktis 3× ganti oli mesin : 1× ganti oli gardan.',
         actionMode: 'ganti', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
         gantiResetsInterval: null, intervalLabel: 'Ganti tiap 8.000 km', sumber: 'TORSI_DB',
       },
@@ -337,10 +452,11 @@ const SERVICE_CHECKLIST_GROUPS = [
     masterCategoryId: 'body-kontrol',
     items: [
       {
-        id: 'kabel-gas-standar-kunci', name: 'Cek Kabel Gas/Standar/Kunci Kontak', linkCat: false,
-        actionMode: 'periksa', resetType: null, intervalKm: null, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Tiap servis besar, no interval tetap',
-        sumber: 'Torsi mounting saja, opsional',
+        id: 'kabel-gas-standar-kunci', name: 'Cek Kabel Gas/Rem Belakang/Standar/Kunci Kontak', linkCat: false,
+        actionMode: 'periksa', resetType: 'km', intervalKm: 8000, intervalTimeMonths: null,
+        gantiResetsInterval: null, intervalLabel: 'Periksa & lumasi kabel 8.000 km; lumasi engsel standar tiap 4.000 km',
+        sumber: 'USER_ACCUMULATED_LIST_2026-09-12 + existing checklist',
+        catatan: 'Menggabungkan kabel gas + kabel rem belakang + standar tanpa membuat item kabel gas duplikat.',
       },
     ],
   },

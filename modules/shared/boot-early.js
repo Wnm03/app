@@ -32,10 +32,10 @@ if(params.get('debug')==='0') localStorage.removeItem('kw_debug_console');
 if(localStorage.getItem('kw_debug_console')==='1'){
 var s=document.createElement('script');
 s.src='https://cdn.jsdelivr.net/npm/eruda';
-s.onload=function(){ try{ eruda.init(); }catch(e){} };
+s.onload=function(){ try{ eruda.init(); }catch(e){void e;} };
 (document.head||document.documentElement).appendChild(s);
 }
-}catch(e){}
+}catch(e){void e;}
 })();
 
 
@@ -147,7 +147,7 @@ var msg=(ev&&ev.message)?ev.message:'Unknown error';
 var loc=(ev&&ev.filename)?(' ('+ev.filename+':'+ev.lineno+')'):'';
 console.error('[Global Error]',msg+loc,ev&&ev.error);
 window.__showRuntimeErrorBanner(msg+loc);
-}catch(_e){}
+}catch(_e){void _e;}
 });
 window.addEventListener('unhandledrejection',function(ev){
 try{
@@ -155,7 +155,7 @@ var reason=ev&&ev.reason;
 var msg=(reason&&reason.message)?reason.message:String(reason);
 console.error('[Unhandled Promise Rejection]',reason);
 window.__showRuntimeErrorBanner(msg);
-}catch(_e){}
+}catch(_e){void _e;}
 });
 
 
@@ -185,6 +185,6 @@ if(window.__kwBooted)return;
 sessionStorage.setItem('kw_sw_reloaded','1');
 window.location.reload();
 });
-}catch(e){}
+}catch(e){void e;}
 })();
 

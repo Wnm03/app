@@ -34,7 +34,7 @@ async function finishOnboard(){
 // ulang, lihat kw_pin baru tersimpan, showPinScreen() lagi sebelum user lihat halaman utama).
 // Set guard duluan di sini menutup celah race tsb; reload SW normal utk update berikutnya tetap
 // jalan seperti biasa (guard cuma berlaku sekali per sesi transisi onboarding->main ini).
-try{sessionStorage.setItem('kw_sw_reloaded','1');}catch(e){}
+try{sessionStorage.setItem('kw_sw_reloaded','1');}catch(e){void e;}
 const nama=document.getElementById('ob_nama').value||'W';
 const gaji=parseInt(document.getElementById('ob_gaji').value)||65000;
 const kirim=parseInt(document.getElementById('ob_kirim').value)||500000;

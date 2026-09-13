@@ -32,7 +32,7 @@ const box=document.getElementById(bodyId);
 if(!card||!box)return;
 if(!hasData){card.classList.add('u-dnone');return;}
 card.classList.remove('u-dnone');
-box.innerHTML=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${x.icon} ${x.text}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${emptyMsg}</div>`;
+box.innerHTML=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${escapeHtml(x.icon)} ${escapeHtml(x.text)}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${escapeHtml(emptyMsg)}</div>`;
 }
 };
 
