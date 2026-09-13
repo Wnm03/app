@@ -47,9 +47,9 @@ for (const t of OLD_THEMES) {
   });
 }
 
-test('index.html — total theme-card = 11 (10 lama termasuk auto + 1 baru "modern")', () => {
+test('index.html — total theme-card = 12 (10 lama termasuk auto + 1 baru "modern")', () => {
   const matches = indexHtml.match(/class="theme-card"/g) || [];
-  assert.equal(matches.length, 11);
+  assert.equal(matches.length, 12);
 });
 
 test('index.html — urutan 9 tema lama + auto tetap di atas "modern" (modern ditambah di akhir, bukan disisipkan)', () => {
