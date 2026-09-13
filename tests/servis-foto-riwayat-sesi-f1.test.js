@@ -52,7 +52,7 @@ function makeCtx({ document, D, curVehicleId }) {
       escapeHtml: (s) => String(s),
       matchingVehicleName: () => null,
       codeFromName: (s) => String(s).toLowerCase(),
-      getVehicleKm: () => 0,
+      getVehicleKm: () => 15000,
       resolveVehicleTxCategory: () => 'Transportasi',
       save: () => {},
       closeModal: () => {},

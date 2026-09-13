@@ -70,6 +70,57 @@ if(preferred&&(!preferred.vehicleId||preferred.vehicleId===vehicleId))return pre
 const matched=resolveServisCatForVehicle(item,vehicleId);
 return matched?matched.id:null;
 }
+
+// P13 — backward-compatible normalization for legacy service history.
+// Read/migration helper only: it NEVER overwrites an existing historical
+// snapshot and NEVER creates finance/stock side effects. Safe to call more
+// than once. Legacy rows are assigned a deterministic idempotency key from
+// their own immutable log id (or txLinkId when one already exists), so adding
+// this field cannot accidentally deduplicate two legitimate old services.
+function normalizeLegacyServiceLogs(){
+const logs=Array.isArray(D.servisLogs)?D.servisLogs:[];
+let changed=0;
+logs.forEach(s=>{
+  if(!s||!s.id)return;
+  const vehicleId=s.vehicleId||s.vehicle||null;
+  const item=s.item||s.name||null;
+  if(s.vehicleId==null&&vehicleId!=null){s.vehicleId=vehicleId;changed++;}
+  if(s.item==null&&item!=null){s.item=item;changed++;}
+
+  const catId=canonicalServisCategoryId(s.item||'',vehicleId,s.categoryId||s.catId||null);
+  const cat=catId?(D.sparepartCats||[]).find(c=>c&&c.id===catId):null;
+  if(s.categoryId==null&&catId){s.categoryId=catId;changed++;}
+  if(s.masterCategoryId==null&&(s.categoryId&&cat?.masterCategoryId)){s.masterCategoryId=cat.masterCategoryId;changed++;}
+  if(s.serviceComponentId==null&&(cat?.serviceComponentId||cat?.maintenanceRuleId)){
+    s.serviceComponentId=cat.serviceComponentId||cat.maintenanceRuleId;changed++;
+  }
+  if(s.actionType===undefined){s.actionType=null;changed++;}
+
+  // Only backfill snapshot fields when the row has no canonical snapshot at all.
+  const hasSnapshot=s.nextDueAxis!=null || s.nextDueKm!=null || s.nextDueDate!=null || s.intervalKmAtService!=null || s.intervalBulanAtService!=null;
+  if(!hasSnapshot&&cat&&typeof buildServiceNextDueSnapshot==='function'){
+    const snap=buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:s.km,serviceDate:s.date||s.tanggal,actionType:s.actionType||null});
+    s.intervalKmAtService=snap.intervalKmAtService??null;
+    s.intervalBulanAtService=snap.intervalBulanAtService??null;
+    s.nextDueKm=snap.nextDueKm??null;
+    s.nextDueDate=snap.nextDueDate??null;
+    s.nextDueAxis=snap.nextDueAxis||'none';
+    changed++;
+  } else {
+    if(s.intervalKmAtService===undefined)s.intervalKmAtService=null,changed++;
+    if(s.intervalBulanAtService===undefined)s.intervalBulanAtService=null,changed++;
+    if(s.nextDueKm===undefined)s.nextDueKm=null,changed++;
+    if(s.nextDueDate===undefined)s.nextDueDate=null,changed++;
+    if(s.nextDueAxis===undefined)s.nextDueAxis='none',changed++;
+  }
+
+  if(s.idempotencyKey==null){
+    s.idempotencyKey=s.txLinkId?`tx:${s.txLinkId}`:`legacy-service:${s.id}`;
+    changed++;
+  }
+});
+return changed;
+}
 // GENERIC_RECOMMEND_NAMES — FITUR BARU (permintaan user: "rekomendasi kategori
 // part rutin servis sesuai pabrikan"). Daftar nama part/servis rutin yang UMUM
 // dipakai sbg starting point rekomendasi kategori, dipisah per jenis kendaraan
@@ -159,8 +210,15 @@ const GENERIC_GROUP_BY_NAME={
 // atau kalau 0 keyword cocok (SENGAJA tidak menebak, lihat komentar
 // namespace masterCategory di database-api.js).
 function _withMasterCategory(result,cat){
-const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.classifyItemName==='function')
-?DatabaseAPI.masterCategory.classifyItemName(cat&&cat.name):null;
+let mc=null;
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory){
+  if(cat&&cat.masterCategoryId&&typeof DatabaseAPI.masterCategory.getAll==='function'){
+    mc=DatabaseAPI.masterCategory.getAll().find(c=>c&&c.id===cat.masterCategoryId)||null;
+  }
+  if(!mc&&typeof DatabaseAPI.masterCategory.classifyItemName==='function'){
+    mc=DatabaseAPI.masterCategory.classifyItemName(cat&&cat.name);
+  }
+}
 result.masterCategoryId=mc?mc.id:null;
 result.masterCategoryName=mc?mc.name:null;
 result.masterCategoryIcon=mc?mc.icon:null;
@@ -283,6 +341,11 @@ return /vario\s*125|kzr/.test(hay);
 function resolveMaintenanceRule(vehicleId,cat){
 if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
 if(!cat)return null;
+// V37: persisted master-component values are authoritative. The legacy KZR registry
+// below is compatibility fallback only for components that have no persisted interval.
+const persistedKm=Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null;
+const persistedMonths=Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null;
+if(persistedKm||persistedMonths)return{serviceComponentId:cat.serviceComponentId||cat.id||null,componentName:cat.name||null,replaceKm:persistedKm,replaceMonths:persistedMonths,maintenanceType:cat.maintenanceType||'periodic'};
 const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
 if(direct&&SERVICE_MAINTENANCE_RULES[direct])return SERVICE_MAINTENANCE_RULES[direct];
 const n=normalizeMaintenanceRuleKey(cat.name);
@@ -319,6 +382,45 @@ const s=getMaintenanceSchedule(vehicleId,cat);
 if(!s)return false;
 if(s.maintenanceType==='event_based')return false;
 return !!(s.inspectKm||s.replaceKm||s.inspectMonths||s.replaceMonths||s.inspectDays||s.replaceDays);
+}
+// SERVICE MASTER LINKAGE — P1/P3 akumulasi: satu resolver untuk hubungan
+// Kategori Servis -> Komponen Servis -> Part. Komponen adalah SoT untuk identitas
+// maintenance; part/stok hanya implementasi fisiknya. Resolver selalu memvalidasi
+// bahwa masterCategoryId cocok dengan serviceComponentId agar data tidak silang.
+function resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,name){
+  let group=null,item=null;
+  if(typeof ServiceInputCatalog!=='undefined'){
+    if(serviceComponentId&&typeof ServiceInputCatalog.itemById==='function'){
+      const hit=ServiceInputCatalog.itemById(serviceComponentId);
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+    if(!item&&name&&typeof ServiceInputCatalog.infer==='function'){
+      const inf=ServiceInputCatalog.infer(name);
+      if(inf&&inf.item){item=inf.item;group=inf.group||null;}
+    }
+    if(!group&&masterCategoryId&&typeof ServiceInputCatalog.groupById==='function'){
+      group=ServiceInputCatalog.groupById(masterCategoryId)||null;
+    }
+  }
+  const finalMaster=group&&group.masterCategoryId?group.masterCategoryId:(masterCategoryId||null);
+  const finalComponent=item&&item.id?item.id:(serviceComponentId||null);
+  return {masterCategoryId:finalMaster,serviceComponentId:finalComponent,componentName:item?item.name:null,masterCategoryName:group?group.group:null};
+}
+function getServiceLinkage(catOrPart,vehicleId){
+  const x=catOrPart||{};
+  const linkedCat=x.catId?(D.sparepartCats||[]).find(c=>c&&c.id===x.catId):null;
+  const inferred=(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function')
+    ?ServiceInputCatalog.infer([x.name,x.code].filter(Boolean).join(' ')):null;
+  const resolved=resolveServiceCategoryComponent(
+    x.masterCategoryId||linkedCat?.masterCategoryId||inferred?.group?.masterCategoryId||null,
+    x.serviceComponentId||linkedCat?.serviceComponentId||inferred?.item?.id||null,
+    x.name||linkedCat?.name||''
+  );
+  if(!resolved.masterCategoryId&&typeof resolveCatGroup==='function'&&(linkedCat||x.name)){
+    const rg=resolveCatGroup(linkedCat||x,vehicleId);
+    if(rg&&rg.masterCategoryId)resolved.masterCategoryId=rg.masterCategoryId;
+  }
+  return resolved;
 }
 function getEffectiveIntervalKm(vehicleId,cat){
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
@@ -357,10 +459,42 @@ return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 // actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
 // PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
 // baru ini (mis. dari riwayat) = 0 perubahan perilaku lama.
+// P21: canonical ordering for service history. Service DATE is the primary
+// business meaning of "last service"; KM breaks ties on the same calendar
+// date, then explicit timestamps/id make ordering deterministic. Invalid/missing
+// dates never participate as a newer date. This prevents backdated records,
+// same-day multiple services, and malformed dates from producing a different
+// baseline in different consumers.
+function compareServiceHistoryRecencyLocal(a,b){
+  if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency==='function'&&window.compareServiceHistoryRecency!==compareServiceHistoryRecencyLocal)return window.compareServiceHistoryRecency(a,b);
+  const da=parseServiceDateOnly(a&&a.date), db=parseServiceDateOnly(b&&b.date);
+  const av=!!da,bv=!!db;
+  if(av!==bv)return av?-1:1;
+  if(av){
+    const d=db.getTime()-da.getTime();
+    if(d)return d;
+  }
+  const ak=Number(a&&a.km),bk=Number(b&&b.km);
+  const akv=Number.isFinite(ak),bkv=Number.isFinite(bk);
+  if(akv!==bkv)return akv?-1:1;
+  if(akv&&bk!==ak)return bk-ak;
+  const at=Date.parse(a&& (a.updatedAt||a.createdAt||a.timestamp));
+  const bt=Date.parse(b&& (b.updatedAt||b.createdAt||b.timestamp));
+  if(Number.isFinite(at)||Number.isFinite(bt)){
+    const avT=Number.isFinite(at)?at:-Infinity,bvT=Number.isFinite(bt)?bt:-Infinity;
+    if(bvT!==avT)return bvT-avT;
+  }
+  return String(b&&b.id||'').localeCompare(String(a&&a.id||''));
+}
+if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency!=='function')window.compareServiceHistoryRecency=compareServiceHistoryRecencyLocal;
+function getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder){
+  const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+  logs.sort(compareServiceHistoryRecencyLocal);
+  return logs.length?logs[0]:null;
+}
 function getLastServiceDateForCat(vehicleId,cat,actionTypeFilter,forReminder){
-const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.date&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder))
-.sort((a,b)=>new Date(b.date)-new Date(a.date));
-return logs.length?logs[0].date:null;
+const log=getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder);
+return log&&parseServiceDateOnly(log.date)?log.date:null;
 }
 // getEffectiveActionMode(cat)/getEffectiveResetType(cat) — FITUR BARU (§2b):
 // field opsional per-kategori BARU pada D.sparepartCats, 0 migrasi data.
@@ -419,11 +553,50 @@ return(logs.length%2===0)?'periksa':'ganti';
 // tanggal ISO, dipakai computeServiceUrgency() di bawah. Pakai konstanta
 // rata-rata hari/bulan (30.4368 -- 365.2425/12, standar astronomis) supaya
 // hasilnya konsisten & tidak tergantung bulan spesifik mana yg dilewati.
+// P20: date-only service dates are calendar dates, not UTC timestamps.
+// Parsing YYYY-MM-DD with new Date(str) makes the value UTC and can move the
+// displayed day across local timezones. Keep service calculations on local
+// calendar components and clamp month-end overflow (Jan 31 + 1 month = Feb 28/29).
+function parseServiceDateOnly(value){
+  if(value instanceof Date)return isNaN(value)?null:new Date(value.getTime());
+  const m=String(value??'').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m){
+    const y=Number(m[1]),mo=Number(m[2])-1,d=Number(m[3]);
+    const out=new Date(y,mo,d);
+    if(out.getFullYear()===y&&out.getMonth()===mo&&out.getDate()===d)return out;
+    return null;
+  }
+  const out=new Date(value);
+  return isNaN(out)?null:out;
+}
+function formatServiceDateOnly(date){
+  const d=parseServiceDateOnly(date);
+  if(!d)return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function addServiceMonthsClamped(date,months){
+  const d=parseServiceDateOnly(date);
+  const n=Number(months);
+  if(!d||!Number.isFinite(n))return null;
+  const whole=Math.trunc(n);
+  const targetMonth=d.getMonth()+whole;
+  const out=new Date(d.getFullYear(),targetMonth,1);
+  const lastDay=new Date(out.getFullYear(),out.getMonth()+1,0).getDate();
+  out.setDate(Math.min(d.getDate(),lastDay));
+  return out;
+}
+function diffServiceDays(dateA,dateB){
+  const a=parseServiceDateOnly(dateA),b=parseServiceDateOnly(dateB);
+  if(!a||!b)return null;
+  const utcA=Date.UTC(a.getFullYear(),a.getMonth(),a.getDate());
+  const utcB=Date.UTC(b.getFullYear(),b.getMonth(),b.getDate());
+  return (utcB-utcA)/86400000;
+}
+
 function monthsSinceISO(dateISO,nowISO){
 if(!dateISO)return null;
-const a=new Date(dateISO),b=nowISO?new Date(nowISO):new Date();
-if(isNaN(a)||isNaN(b))return null;
-return(b-a)/86400000/30.4368;
+const days=diffServiceDays(dateISO,nowISO?nowISO:new Date());
+return days==null?null:days/30.4368;
 }
 // computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}) — FITUR BARU,
 // SATU-SATUNYA titik hitung status/sisa servis yg sadar 2 sumbu (km & bulan).
@@ -438,6 +611,34 @@ return(b-a)/86400000/30.4368;
 // interval km. sisaKm TETAP dibalikin apa adanya (dipakai sort ascending di
 // predictService(), TIDAK diubah supaya urutan kategori pure-km tidak
 // berubah/regresi).
+function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
+  if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+  const intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
+  const intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+  const km=Number(serviceKm);
+  const baseDate=parseServiceDateOnly(serviceDate||new Date());
+  const nextDueKm=intervalKm>0&&Number.isFinite(km)?km+intervalKm:null;
+  let nextDueDate=null;
+  if(intervalBulan>0&&!isNaN(baseDate)){
+    const d=addServiceMonthsClamped(baseDate,intervalBulan); nextDueDate=formatServiceDateOnly(d);
+  }
+  let nextDueAxis='none';
+  if(nextDueKm!==null&&nextDueDate)nextDueAxis='km_or_date';
+  else if(nextDueKm!==null)nextDueAxis='km';
+  else if(nextDueDate)nextDueAxis='date';
+  return{nextDueKm,nextDueDate,nextDueAxis,intervalKmAtService:intervalKm||null,intervalBulanAtService:intervalBulan||null};
+}
+
+function resolveServiceStatusMeta(score){
+  const n=Number(score);
+  if(!Number.isFinite(n))return{code:'aman',label:'Aman',icon:'🟢',severity:0};
+  if(n< -0.10)return{code:'terlewat',label:'Terlewat',icon:'⚫',severity:4};
+  if(n<=0)return{code:'jatuh_tempo',label:'Jatuh tempo',icon:'🔴',severity:3};
+  if(n<=0.15)return{code:'segera',label:'Segera',icon:'🟡',severity:2};
+  if(n<=0.30)return{code:'mendekati',label:'Mendekati',icon:'🔵',severity:1};
+  return{code:'aman',label:'Aman',icon:'🟢',severity:0};
+}
+
 function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
 const schedule=getMaintenanceSchedule(vehicleId,cat);
 const resetFilter=resolveResetActionTypeFilter(cat);
@@ -456,7 +657,7 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   }
   if(hasMonths||hasDays){
     lastDate=getLastServiceDateForCat(vehicleId,cat,lastFilter,true);
-    const elapsedDays=lastDate?((new Date(nowISO||new Date())-new Date(lastDate))/86400000):0;
+    const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):0;
     if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
     if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
   }
@@ -483,9 +684,24 @@ if(!candidates.length){
   return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'aman',estDateISO:null,nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null};
 }
 const c=candidates.sort((a,b)=>a.score-b.score)[0];
-const status=c.score<=0?'lewat':(c.score<=0.15?'segera':'aman');
-const estDateISO=c.limitingAxis==='bulan'||c.limitingAxis==='hari'?null:((typeof estimateServiceDateISO==='function')?estimateServiceDateISO(c.sisaKm,kmPerDaySafe):null);
-return Object.assign({},c,{status,estDateISO,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
+// Canonical 5-level service state. All reminder consumers must read this
+// resolver instead of inventing their own thresholds. score is the normalized
+// fraction remaining on the most urgent axis (KM / bulan / hari).
+const statusMeta=resolveServiceStatusMeta(c.score);
+const status=statusMeta.code;
+let estDateISO=null;
+let nextDueKm=null,nextDueDate=null,nextDueAxis='none';
+if(c.lastKm!=null&&c.intervalKm>0)nextDueKm=c.lastKm+c.intervalKm;
+if(c.lastDate){
+  if(c.intervalBulan>0){const d=addServiceMonthsClamped(c.lastDate,c.intervalBulan);if(d)nextDueDate=formatServiceDateOnly(d);}
+  if(c.intervalHari>0&&!nextDueDate){const d=parseServiceDateOnly(c.lastDate);if(d){d.setDate(d.getDate()+c.intervalHari);nextDueDate=formatServiceDateOnly(d);}}
+}
+if(nextDueKm!==null&&nextDueDate)nextDueAxis='km_or_date';
+else if(nextDueKm!==null)nextDueAxis='km';
+else if(nextDueDate)nextDueAxis='date';
+if(c.limitingAxis==='bulan'||c.limitingAxis==='hari')estDateISO=nextDueDate;
+else if(typeof estimateServiceDateISO==='function')estDateISO=estimateServiceDateISO(c.sisaKm,kmPerDaySafe);
+return Object.assign({},c,{status,statusLabel:statusMeta.label,statusIcon:statusMeta.icon,statusSeverity:statusMeta.severity,estDateISO,nextDueKm,nextDueDate,nextDueAxis,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
 }
 // recommendIntervalKm(vehicleId,cat) -- FITUR BARU (audit, gap "interval
 // servis 100% statis, tidak ada rekomendasi berbasis data"): getEffectiveIntervalKm()
@@ -573,8 +789,9 @@ toast('✅ Interval khusus '+veh.name+' disimpan: '+num.toLocaleString('id-ID')+
 }
 }
 function getLastServiceKm(vehicleId){
-const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km).sort((a,b)=>new Date(b.date)-new Date(a.date)||b.km-a.km);
-return logs.length?logs[0].km:0;
+const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&Number.isFinite(Number(s.km)));
+logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+return logs.length?Number(logs[0].km):0;
 }
 function matchingVehicleName(name){
 if(!name)return null;
@@ -931,7 +1148,9 @@ const i=D.sparepartCats.indexOf(c);
 const noInterval=!(c.intervalKm>0);
 const hidden=c.showInReminder===false;
 const inactive=noInterval||hidden;
-const metaText=noInterval?'⚠️ Belum diatur interval servis':'Setiap '+c.intervalKm.toLocaleString('id-ID')+' km'+((c.intervalBulan>0)?' atau '+c.intervalBulan.toLocaleString('id-ID')+' bln':'');
+const compRef=(c.serviceComponentId&&typeof ServiceInputCatalog!=='undefined')?ServiceInputCatalog.itemById(c.serviceComponentId):null;
+const compLabel=compRef&&compRef.item?(' • '+compRef.item.name):'';
+const metaText=noInterval?'⚠️ Belum diatur interval servis':'Setiap '+c.intervalKm.toLocaleString('id-ID')+' km'+((c.intervalBulan>0)?' atau '+c.intervalBulan.toLocaleString('id-ID')+' bln':'')+compLabel;
 const statusBadge=noInterval
 ?`<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent2-soft,rgba(230,80,80,.12));color:var(--accent2,#e65050)">⚠️ Tanpa interval</span>`
 :(hidden
@@ -1132,6 +1351,13 @@ const bulanEl=Sparepart.ensureIntervalBulanField();
 if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
 Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
 Sparepart.populateGroupSelect(curCat?curCat.group:null);
+const catMasterEl=document.getElementById('sparepartMasterCategoryId');
+const catCompEl=document.getElementById('sparepartServiceComponentId');
+if(catMasterEl&&typeof ServiceInputCatalog!=='undefined'){const groups=ServiceInputCatalog.groups()||[];catMasterEl.innerHTML='<option value="">— Pilih kategori servis —</option>'+groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}">${escapeHtml(g.group)}</option>`).join('');}
+const catInferred=(typeof ServiceInputCatalog!=='undefined'&&curCat)?ServiceInputCatalog.infer(curCat.name):null;
+const catMaster=curCat?.masterCategoryId||(catInferred&&catInferred.group&&catInferred.group.masterCategoryId)||'';
+if(catMasterEl)catMasterEl.value=catMaster;
+Sparepart.populateServiceComponentSelect('sparepartServiceComponentId',catMaster,curCat?.serviceComponentId||(catInferred&&catInferred.item&&catInferred.item.id)||'');
 // Sesi D-lanjutan2a: badge kategori master, dibaca 1x saat modal dibuka
 // (bukan live-update saat mengetik -- lihat catatan di updateMasterCatBadge()).
 Sparepart.updateMasterCatBadge(curCat?curCat.name:'',curCat?curCat.vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null));
@@ -1215,6 +1441,11 @@ if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis.
 if(!code) code=codeFromName(name);
 const intervalKm=(interval&&interval>0)?interval:0;
 const intervalBulan=(intervalBulanRaw&&intervalBulanRaw>0)?intervalBulanRaw:0;
+const catInfer=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog.infer)?ServiceInputCatalog.infer(name):null;
+let masterCategoryId=document.getElementById('sparepartMasterCategoryId')?.value||catInfer?.group?.masterCategoryId||null;
+let serviceComponentId=document.getElementById('sparepartServiceComponentId')?.value||catInfer?.item?.id||null;
+const linkage=resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,name);
+masterCategoryId=linkage.masterCategoryId; serviceComponentId=linkage.serviceComponentId;
 // vehicleId: TAMBAH baru tetap dikunci ikut curVehicleId (S629, perilaku
 // lama tidak berubah -- dropdown disabled saat tambah baru, .value-nya
 // kadang tidak reliable dibaca di semua browser/WebView, jadi tetap ambil
@@ -1280,6 +1511,8 @@ editCat.name=name;
 editCat.code=code;
 editCat.intervalKm=intervalKm;
 editCat.intervalBulan=intervalBulan;
+editCat.masterCategoryId=masterCategoryId||null;
+editCat.serviceComponentId=serviceComponentId||null;
 editCat.showInReminder=wantShow;
 editCat.vehicleId=vehicleId;
 } else {
@@ -1292,7 +1525,7 @@ editCat.vehicleId=vehicleId;
 const grpNew=(groupSelEl&&groupSelVal)
 ?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
 :((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
-D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,intervalBulan,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
+D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -1319,6 +1552,24 @@ toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait suda
 // kategori khusus kendaraan ini), pakai catVisibleForVehicle() yg sama
 // dipakai renderCatList()/renderReminder(), supaya user tidak bisa taut-kan
 // stok kendaraan A ke kategori khusus kendaraan B.
+populateServiceComponentSelect(elId,masterCategoryId,selectedId){
+const sel=document.getElementById(elId);
+if(!sel||typeof ServiceInputCatalog==='undefined')return;
+const g=ServiceInputCatalog.groupById(masterCategoryId);
+const cur=selectedId||'';
+sel.innerHTML='<option value="">— Tanpa komponen spesifik —</option>'+(g?(g.items||[]).map(it=>`<option value="${escapeHtml(it.id)}">${escapeHtml(it.name)}</option>`).join(''):'');
+if(cur&&g&&(g.items||[]).some(it=>it.id===cur))sel.value=cur;
+},
+syncStockServiceComponent(){
+const catId=document.getElementById('stockCatId')?.value||'';
+const cat=D.sparepartCats.find(c=>c.id===catId);
+const master=cat&&cat.masterCategoryId?cat.masterCategoryId:((typeof resolveCatGroup==='function'&&cat)?resolveCatGroup(cat,(typeof curVehicleId!=='undefined'?curVehicleId:null)).masterCategoryId:null);
+this.populateServiceComponentSelect('stockServiceComponentId',master,cat&&cat.serviceComponentId||'');
+},
+syncCategoryServiceComponent(){
+const master=document.getElementById('sparepartMasterCategoryId')?.value||'';
+this.populateServiceComponentSelect('sparepartServiceComponentId',master,document.getElementById('sparepartServiceComponentId')?.value||'');
+},
 populateStockCatSelect(){
 const sel=document.getElementById('stockCatId');
 if(!sel)return;
@@ -1512,8 +1763,10 @@ const componentFilter=Sparepart.activeStockComponentFilter;
 if(masterFilter||componentFilter){
   list=list.filter(p=>{
     const inferred=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.infer([p.name,p.code].filter(Boolean).join(' ')):null;
-    const mid=inferred&&inferred.group?inferred.group.masterCategoryId:null;
-    const cid=inferred&&inferred.item?inferred.item.id:null;
+    const linkedCat=p.catId?(D.sparepartCats||[]).find(c=>c&&c.id===p.catId):null;
+    const linkedGroup=linkedCat&&typeof resolveCatGroup==='function'?resolveCatGroup(linkedCat,(typeof curVehicleId!=='undefined'?curVehicleId:null)):null;
+    const mid=p.masterCategoryId||linkedCat?.masterCategoryId||(linkedGroup&&linkedGroup.masterCategoryId)||(inferred&&inferred.group?inferred.group.masterCategoryId:null);
+    const cid=p.serviceComponentId||linkedCat?.serviceComponentId||(inferred&&inferred.item?inferred.item.id:null);
     return (!masterFilter||mid===masterFilter)&&(!componentFilter||cid===componentFilter);
   });
 }
@@ -1535,7 +1788,9 @@ el.innerHTML=list.map((p)=>{
 const i=D.partsStock.indexOf(p);
 const cat=D.sparepartCats.find(c=>c.id===p.catId);
 const low=p.minStock>0&&p.qty<=p.minStock;
-const meta=[`${p.qty}${p.unit?' '+p.unit:''}`,cat?cat.name:null,p.price?'Rata2 '+fmtFull(p.price):null,p.lastPrice?'Terakhir '+fmtFull(p.lastPrice):null,p.lastPurchaseDate?'Dibeli '+p.lastPurchaseDate:null].filter(Boolean).join(' • ');
+const partLinkage=getServiceLinkage(p,vid);
+const partComponent=partLinkage.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(partLinkage.serviceComponentId):null;
+const meta=[`${p.qty}${p.unit?' '+p.unit:''}`,cat?cat.name:null,partLinkage.masterCategoryName||null,partComponent&&partComponent.item?partComponent.item.name:null,p.price?'Rata2 '+fmtFull(p.price):null,p.lastPrice?'Terakhir '+fmtFull(p.lastPrice):null,p.lastPurchaseDate?'Dibeli '+p.lastPurchaseDate:null].filter(Boolean).join(' • ');
 const history=Sparepart.getPartUsageHistory(p.id);
 const historyHtml=history.length?`<div class="u-mt4">${history.map(h=>`<div class="u-pointer" style="padding:6px 0 6px 4px;border-top:1px dashed var(--border)" data-action="Sparepart.openPartHistoryEntry" data-args="${escapeHtml(JSON.stringify([h.servisId,h.vehicleId]))}"><div class="tx-name u-fs12">🗓️ ${escapeHtml(h.item)} <span class="u-fs12t2">— ${escapeHtml(h.vehicleName)}</span></div><div class="tx-meta">${escapeHtml(h.date)}${h.km?' • '+h.km.toLocaleString('id-ID')+' km':''} • ${h.qty}${p.unit?' '+escapeHtml(p.unit):''} dipakai</div></div>`).join('')}</div>`:'';
 const priceHistoryHtml=Sparepart.getPartPriceHistoryHtml(p);
@@ -1554,7 +1809,10 @@ return D.servisLogs.filter(s=>s.usedPartId===partId||s.catalogPartLinkedStockId=
 const veh=D.vehicles.find(v=>v.id===s.vehicleId);
 const qty=(s.usedPartId===partId)?(s.usedPartQty||0):(s.catalogPartQty||0);
 return{servisId:s.id,vehicleId:s.vehicleId,vehicleName:veh?veh.name:'-',date:s.date,item:s.item,km:s.km||null,qty};
-}).sort((a,b)=>new Date(b.date)-new Date(a.date));
+}).sort((a,b)=>{
+  if(typeof compareServiceHistoryRecency==='function')return compareServiceHistoryRecency(a,b);
+  return String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0);
+});
 },
 openPartHistoryEntry(servisId,vehicleId){
 if(vehicleId&&vehicleId!==curVehicleId&&typeof selectVehicle==='function')selectVehicle(vehicleId);
@@ -1567,7 +1825,10 @@ if(typeof openServisModal==='function')openServisModal(servisId);
 // transaksi, editTx() di transaksi.js) kalau txId-nya ada & transaksinya
 // masih ada.
 getPartPriceHistoryHtml(p){
-const list=Array.isArray(p.priceHistory)?p.priceHistory.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5):[];
+const list=Array.isArray(p.priceHistory)?p.priceHistory.slice().sort((a,b)=>{
+  if(typeof compareServiceHistoryRecency==='function')return compareServiceHistoryRecency(a,b);
+  return String(b.date||'').localeCompare(String(a.date||''));
+}).slice(0,5):[];
 if(!list.length)return'';
 return `<div class="u-mt4">${list.map(h=>{
 const clickable=h.txId&&D.transactions.some(t=>t.id===h.txId);
@@ -1582,6 +1843,8 @@ Sparepart.populateStockCatSelect();
 document.getElementById('stockModalTitle').textContent=isEdit?'Edit Stok Sparepart':'Tambah Stok Sparepart';
 const p=isEdit?D.partsStock[Sparepart.stockEditIdx]:null;
 document.getElementById('stockCatId').value=isEdit?(p.catId||''):'';
+Sparepart.syncStockServiceComponent();
+if(isEdit&&p&&p.serviceComponentId){const sc=document.getElementById('stockServiceComponentId');if(sc)sc.value=p.serviceComponentId;}
 document.getElementById('stockName').value=isEdit?p.name:'';
 const codeEl=document.getElementById('stockCode');
 codeEl.value=isEdit?(p.code||''):'';
@@ -1604,6 +1867,12 @@ const unit=document.getElementById('stockUnit').value.trim();
 const minStock=parseFloat(document.getElementById('stockMin').value)||0;
 const price=parseFloat(document.getElementById('stockPrice').value)||0;
 const note=document.getElementById('stockNote').value.trim();
+const stockCat=D.sparepartCats.find(c=>c.id===catId);
+const stockCompEl=document.getElementById('stockServiceComponentId');
+const inferredStock=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog.infer)?ServiceInputCatalog.infer(name):null;
+const stockLinkage=resolveServiceCategoryComponent(stockCat?.masterCategoryId||(inferredStock?.group?.masterCategoryId)||null,stockCompEl?.value||stockCat?.serviceComponentId||inferredStock?.item?.id||null,name);
+const serviceComponentId=stockLinkage.serviceComponentId;
+const masterCategoryId=stockLinkage.masterCategoryId;
 if(!name){toast('⚠️ Isi nama sparepart dulu');return;}
 if(!code){
 const cat=D.sparepartCats.find(c=>c.id===catId);
@@ -1625,9 +1894,9 @@ const vid622s=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 vehicleId=(vid622s&&D.vehicles.some(v=>v.id===vid622s))?vid622s:null;
 }
 if(Sparepart.stockEditIdx!==null){
-Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId});
+Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId,masterCategoryId,serviceComponentId});
 } else {
-const np={id:'st_'+Date.now(),name,catId,code,qty,unit,minStock,price,note,vehicleId};
+const np={id:'st_'+Date.now(),name,catId,code,qty,unit,minStock,price,note,vehicleId,masterCategoryId,serviceComponentId};
 D.partsStock.push(np);
 // Tahap 10 (lanjutan Tahap 9, jembatan Vehicle Catalog <-> Stok Sparepart):
 // part baru yang ditambah manual di sini (⚙️ Atur -> Stok Sparepart) JUGA
@@ -1997,4 +2266,5 @@ return lines.length-1;
 // Servis, Torsi di car-notes.js (Sesi 345) — bug yang sama pernah terjadi
 // & diperbaiki di sana. Tanpa baris ini, semua tombol data-action=
 // "Sparepart.xxx" gagal diam-diam.
+if (typeof normalizeLegacyServiceLogs === 'function') window.normalizeLegacyServiceLogs = normalizeLegacyServiceLogs;
 if (typeof Sparepart !== 'undefined') window.Sparepart = Sparepart;

@@ -114,7 +114,7 @@ fleetSummary() {
     if (typeof predictService === 'function') {
       const pred = predictService({ vehicleId: v.id });
       if (pred.ok && Array.isArray(pred.items)) {
-        overdueCount = pred.items.filter((it) => it.status === 'lewat').length;
+        overdueCount = pred.items.filter((it) => it.status === 'terlewat').length;
       }
     }
     return { vehicleId: v.id, name: v.name, healthScore: hs.score, healthLabel: hs.label, overdueCount };
@@ -139,7 +139,7 @@ insights(vehicleId) {
     const ov = this.vehicleOverview(vehicleId);
     if (!ov.ok) return out;
     if (ov.service.ok && Array.isArray(ov.service.items)) {
-      const lewat = ov.service.items.filter((it) => it.status === 'lewat');
+      const lewat = ov.service.items.filter((it) => it.status === 'terlewat');
       if (lewat.length) {
         out.push({ type: 'warning', code: 'service_overdue', message: `${lewat.length} item servis ${ov.name} sudah lewat jatuh tempo.` });
       }

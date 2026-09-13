@@ -85,7 +85,7 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     setInterval: () => 0,
     clearInterval: () => {},
     document: makePermissiveStub('document'),
-    window: makePermissiveStub('window'),
+    window: {},
     navigator: makePermissiveStub('navigator'),
     localStorage: makePermissiveStub('localStorage'),
     location: makePermissiveStub('location'),
@@ -95,6 +95,17 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     TextDecoder: globalThis.TextDecoder,
     btoa: globalThis.btoa,
     atob: globalThis.atob,
+    parseServiceDateOnly: (value) => {
+      if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : new Date(value.getTime());
+      const m = String(value ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) {
+        const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+        const out = new Date(y, mo, d);
+        return out.getFullYear() === y && out.getMonth() === mo && out.getDate() === d ? out : null;
+      }
+      const out = new Date(value);
+      return Number.isNaN(out.getTime()) ? null : out;
+    },
     ...extraGlobals,
   };
   const context = vm.createContext(sandbox);

@@ -131,7 +131,7 @@ test('computeServiceUrgency() — axis bulan yang lebih mendesak MENANG (mis. Mi
   // curKm dekat lastKm -> axis km masih aman, tapi sudah >12 bulan sejak servis terakhir
   const u = ctx.computeServiceUrgency({ vehicleId: 'v1', cat, curKm: 1500, kmPerDay: 5, nowISO: '2026-08-26' });
   assert.equal(u.limitingAxis, 'bulan');
-  assert.equal(u.status, 'lewat');
+  assert.equal(u.status, 'terlewat');
   assert.ok(u.sisaBulan < 0);
 });
 
@@ -149,7 +149,7 @@ test('predictService() — kategori dgn intervalBulan mendesak ikut ditandai "le
   const r = ctx.predictService({ vehicleId: 'v1' });
   assert.equal(r.ok, true);
   const row = r.items.find((it) => it.categoryId === 'c1');
-  assert.equal(row.status, 'lewat');
+  assert.equal(row.status, 'terlewat');
   assert.equal(row.limitingAxis, 'bulan');
 });
 

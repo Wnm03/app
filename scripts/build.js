@@ -1888,8 +1888,11 @@ function lintScannerStructuralDrift() {
 }
 
 // 4. Naikkan ?v=N & CACHE_NAME lewat bump-version.sh yang sudah ada
-function bumpCacheVersion() {
-  const out = execSync('bash scripts/bump-version.sh', { cwd: ROOT }).toString();
+function bumpCacheVersion(version) {
+  const m = String(version).match(/(\d+)$/);
+  if (!m) throw new Error(`Versi build tidak memiliki nomor cache di akhir: ${version}`);
+  const cacheVersion = m[1];
+  const out = execSync(`bash scripts/bump-version.sh ${JSON.stringify(cacheVersion)}`, { cwd: ROOT }).toString();
   return out;
 }
 
@@ -2410,7 +2413,7 @@ function main() {
   }
 
   console.log('');
-  console.log(bumpCacheVersion().trim());
+  console.log(bumpCacheVersion(newVersion).trim());
 
   console.log('Mengecek sintaks bundle hasil build...');
   const checkA = syntaxCheck('app-bundle-a.min.js');

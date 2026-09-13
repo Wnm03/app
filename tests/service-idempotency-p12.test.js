@@ -1,0 +1,23 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const adapter=fs.readFileSync(path.join(root,'modules/vehicle/service-event-adapter.js'),'utf8');
+const finance=fs.readFileSync(path.join(root,'modules/finance/tx-servis.js'),'utf8');
+const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+let pass=0;
+function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
+const sandbox={window:{}}; vm.createContext(sandbox); vm.runInContext(adapter,sandbox);
+const find=sandbox.window.findServiceEventByIdempotencyKey;
+const logs=[{id:'s1',vehicleId:'v1',idempotencyKey:'tx:t1'},{id:'s2',vehicleId:'v2',idempotencyKey:'tx:t1'}];
+ok(find(logs,'tx:t1','v1').id==='s1','same transaction key converges to existing service event');
+ok(find(logs,'tx:t1','v2').id==='s2','idempotency remains vehicle-scoped');
+ok(find(logs,'tx:t1','v3')===null,'cross-vehicle key is never reused');
+ok(finance.includes('const _idempotencyKey=opts.idempotencyKey||((opts.txId)?`tx:${opts.txId}`:null);'),'finance service write derives stable tx idempotency key');
+ok(finance.includes('findServiceEventByIdempotencyKey(D.servisLogs||[],_idempotencyKey,vehicleId)'),'finance retries use stable idempotency lookup');
+ok(finance.includes('idempotencyKey:_idempotencyKey'),'new finance-created service log persists idempotency key');
+ok(finance.includes('idempotencyKey:`tx:${txId}`'),'transaction path passes the same stable key into service recorder');
+ok(car.includes('idempotencyKey:opts.idempotencyKey||(`reminder:'),'reminder-created service events carry an idempotency key');
+ok(car.includes('findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKey,entry.vehicleId)'),'reminder path has a defensive persisted duplicate guard');
+console.log(`${pass} PASS`);

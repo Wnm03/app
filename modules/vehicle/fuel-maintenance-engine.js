@@ -168,7 +168,7 @@ maintenanceImpact(vehicleId) {
   if (!svc) return { ok: false, reason: 'predictService belum dimuat' };
   if (!svc.ok) return { ok: false, reason: svc.reason || 'Belum ada kategori sparepart terdaftar' };
   const overdueItems = this._relevantOverdueItems(svc.items);
-  const serviceIntervalOverdueCount = svc.items.filter((it) => it.status === 'lewat').length;
+  const serviceIntervalOverdueCount = svc.items.filter((it) => it.status === 'terlewat').length;
   return {
     ok: true,
     vehicleId,
@@ -231,7 +231,7 @@ maintenanceRecommendation(vehicleId) {
   const health = this.fuelEfficiencyHealth(vehicleId);
   const recommendations = [];
   impact.overdueItems.forEach((it) => {
-    const detail = (it.status === 'lewat')
+    const detail = (it.status === 'terlewat')
       ? `sudah lewat ${Math.abs(Math.round(it.sisaKm))} km dari jadwal`
       : `tersisa ${Math.round(it.sisaKm)} km lagi`;
     recommendations.push(`Cek/servis "${it.categoryName}" — ${detail}, berpotensi memengaruhi konsumsi BBM.`);
@@ -265,7 +265,7 @@ maintenanceRisk(vehicleId) {
   if (!impact.ok) return impact;
   const health = this.fuelEfficiencyHealth(vehicleId);
   const degradationDetected = health.ok ? health.degradationDetected : false;
-  const overdueLewatCount = impact.overdueItems.filter((it) => it.status === 'lewat').length;
+  const overdueLewatCount = impact.overdueItems.filter((it) => it.status === 'terlewat').length;
   let riskLevel = 'rendah';
   if (overdueLewatCount > 0 && degradationDetected) riskLevel = 'tinggi';
   else if (overdueLewatCount > 0 || degradationDetected) riskLevel = 'sedang';

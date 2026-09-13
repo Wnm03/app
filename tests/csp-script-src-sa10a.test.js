@@ -107,10 +107,10 @@ test('CSP: script-src UTAMA sudah TANPA \'unsafe-inline\' (index.html)', () => {
   assert.doesNotMatch(scriptSrc, /'unsafe-inline'/, "script-src utama seharusnya tidak lagi butuh 'unsafe-inline' setelah SA10a");
 });
 
-test('CSP: script-src UTAMA tetap memuat \'unsafe-eval\' (dibutuhkan new Function() di app-bundle-b.min.js)', () => {
+test('CSP: script-src UTAMA sudah TANPA \'unsafe-eval\' setelah SA11', () => {
   const match = INDEX_HTML.match(/<meta http-equiv="Content-Security-Policy" content="([^"]*)">/);
   const scriptSrc = match[1].match(/script-src\s+([^;]*);/)[1];
-  assert.match(scriptSrc, /'unsafe-eval'/, "script-src utama harus tetap punya 'unsafe-eval' -- lihat SESSION-NOTE-SA10a untuk audit new Function()");
+  assert.doesNotMatch(scriptSrc, /'unsafe-eval'/, "script-src utama tidak boleh memuat 'unsafe-eval' setelah SA11");
 });
 
 test('CSP: script-src-attr \'none\' (dari SA9) tidak ikut terhapus oleh perubahan SA10a', () => {

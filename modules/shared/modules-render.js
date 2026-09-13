@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s-v26-scanner-lifecycle-reattach-final-1688';
+const MODULE_RENDER_VERSION='s-v26-scanner-lifecycle-reattach-final-1696';
 
 function renderPageContent(name){
 // KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
@@ -858,11 +858,11 @@ const sisa=u?u.sisaKm:(intervalKm-jarakTempuh);
 const pct=Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100)));
 const status=u?u.status:(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman'));
 let col=null;
-if(status==='lewat')col='red';
+if(status==='terlewat')col='red';
 else if(status==='segera')col='orange';
 if(!col)return;
 const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
-const msg=status==='lewat'
+const msg=status==='terlewat'
 ?(monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
 :(monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`);
 const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));

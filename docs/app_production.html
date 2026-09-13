@@ -83,24 +83,17 @@
   inline yang membutuhkannya. Sudah diverifikasi dulu (SA9) utk atribut
   event, dan sekarang (SA10a) utk isi <script> block.
 
-  `'unsafe-eval'` SENGAJA TIDAK dicabut -- diaudit dulu sebelum ambil
-  keputusan (bukan asumsi): `grep -o "new Function(" app-bundle-*.min.js`
-  menemukan 3 pemakaian nyata `new Function(...)` di app-bundle-b.min.js
-  (Function constructor butuh 'unsafe-eval' sama seperti eval() literal).
-  Mencabut 'unsafe-eval' tanpa mengganti 3 titik itu akan mematahkan fitur
-  yang memakainya -- di luar cakupan SA10a (yang fokusnya cuma <script>
-  block, bukan eval/Function). Audit & migrasi 'unsafe-eval' (kalau memang
-  mau dikejar) perlu jadi epic terpisah lagi (mis. "SA11"), dgn identifikasi
-  dulu 3 titik `new Function(` itu dipakai fitur apa & apakah bisa ditulis
-  ulang tanpa eval dinamis.
+  SA11 Security Hardening: audit final terhadap bundle menunjukkan tidak ada
+  pemanggilan runtime `eval()`/`new Function()` yang tersisa di production code;
+  kemunculan `new Function()` yang masih ada hanya berada di test harness. Karena
+  itu `'unsafe-eval'` sekarang dicabut dari CSP production. Test harness boleh
+  tetap memakai evaluasi dinamis karena berjalan di Node, bukan browser production.
 
-  script-src UTAMA sekarang: `'self' 'unsafe-eval' <allowlist CDN/Google>`
-  -- SUDAH TANPA 'unsafe-inline'. Ini penguatan CSP yang nyata: script asing
-  yang berhasil ke-inject lewat celah XSS (mis. innerHTML tanpa escapeHtml)
-  TIDAK BISA lagi jalan sebagai <script>...</script> inline atau atribut
-  event -- HANYA bisa jalan lewat 'unsafe-eval' (mis. eval()/Function() dari
-  string) ATAU <script src> ke origin yang di-allowlist. Permukaan serangan
-  jauh lebih kecil dari sebelum SA10a.
+  script-src UTAMA sekarang: `'self' <allowlist CDN/Google>`
+  -- SUDAH TANPA 'unsafe-inline' DAN 'unsafe-eval'. Script asing yang berhasil
+  ke-inject lewat celah XSS tidak dapat mengeksekusi kode dinamis lewat eval/
+  Function constructor; eksekusi hanya mungkin melalui script yang memenuhi
+  allowlist CSP/SRI.
 
   Histori migrasi atribut event (SA1-SA9, TUNTAS untuk markup statis di
   index.html & app_production.html sejak SA1-SA9, tidak berubah oleh
@@ -175,7 +168,7 @@
   ini dihosting di server sendiri, sebaiknya arahan ini juga dikirim lewat
   header `Content-Security-Policy` di response, bukan cuma meta tag di sini.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://open.er-api.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://accounts.google.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://open.er-api.com https://api.anthropic.com https://generativelanguage.googleapis.com https://www.googleapis.com https://sheets.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://accounts.google.com; worker-src 'self' blob: https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#08090c">

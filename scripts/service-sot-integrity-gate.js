@@ -36,13 +36,13 @@ function main() {
     if (!src.includes('record.masterCategoryId')) fail('canonical field is not authoritative');
   }, results);
 
-  check('CHECKLIST 30/30 masterCategoryId mapping', () => {
+  check('CHECKLIST 46/46 masterCategoryId mapping', () => {
     const src = read('modules/vehicle/servis-checklist.js');
     if (!src.includes('SERVICE_CHECKLIST_GROUPS.forEach')) fail('checklist projection missing');
     const { SERVICE_CHECKLIST_GROUPS } = require(path.join(ROOT, 'modules/vehicle/servis-checklist.js'));
     if (!Array.isArray(SERVICE_CHECKLIST_GROUPS) || SERVICE_CHECKLIST_GROUPS.length !== 13) fail('expected 13 checklist groups');
     const items = SERVICE_CHECKLIST_GROUPS.flatMap(g => g.items || []);
-    if (items.length !== 30) fail(`expected 30 checklist items, got ${items.length}`);
+    if (items.length !== 46) fail(`expected 46 checklist items, got ${items.length}`);
     const missing = items.filter(i => !i.masterCategoryId);
     if (missing.length) fail(`${missing.length} checklist items lack masterCategoryId`);
     const unique = new Set(items.map(i => i.masterCategoryId));

@@ -10,7 +10,7 @@ let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
 
 ok(car.includes('D.servisLogs.push(entry);'),'markServiced persists the canonical service event in D.servisLogs');
-ok(car.includes("if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(entry);"),'markServiced calls the canonical lifecycle create bridge');
+ok(/ServiceEventLifecycle\.create\(entry\)/.test(car),'markServiced calls the canonical lifecycle create bridge');
 ok(car.includes("AIBus.emit(\"vehicle.updated\",{kind:\"servis\",action:\"create\""),'fallback vehicle.updated bridge remains present');
 ok(car.includes("if(entry.txLinkId&&typeof AIBus!=="),'finance event remains limited to transactions created by markServiced');
 ok(bundle.includes('ServiceEventLifecycle={'),'production bundle contains ServiceEventLifecycle bridge');

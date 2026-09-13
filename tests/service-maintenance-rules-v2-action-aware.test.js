@@ -40,7 +40,7 @@ test('maintenance rule v2: inspection is the first due action, replacement remai
   assert.equal(u.nextAction,'periksa');
   assert.equal(u.intervalKm,8000);
   assert.equal(u.sisaKm,-1000);
-  assert.equal(u.status,'lewat');
+  assert.equal(u.status,'terlewat');
 });
 
 test('maintenance rule v2: after inspection at 8k, next inspection is 16k while replacement remains 24k', () => {

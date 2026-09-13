@@ -134,6 +134,8 @@ const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===exis
 // cabang-cabang itu, catch di bawah cuma throw ulang (0 perubahan perilaku,
 // scope sesi ini murni Bug B/CREATE generik, tidak menyentuh Bug A/C/D/E).
 let _txCreateSnapshot=null;
+let _serviceCommitMeta=null;
+const _serviceEditSnapshot={servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null};
 try{
 if(existingTx&&(existingTx.stockProductId||(existingTx.stockItems&&existingTx.stockItems.length))){
 const stillChecked=document.getElementById('txAddShopStock')&&document.getElementById('txAddShopStock').checked;
@@ -478,7 +480,10 @@ if(existingTx&&_wasServisTx&&!_isNowServisTx&&D.servisLogs){
  if(_ghost){
    if(_ghost.usedPartId&&typeof revertStockUsage==='function')revertStockUsage(_ghost.usedPartId,_ghost.usedPartQty);
    D.servisLogs=D.servisLogs.filter(s=>s.id!==_ghost.id);
-   if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.remove(_ghost,{reason:'finance-domain-change',source:'finance'});
+   // V28: defer the lifecycle side-effect until the enclosing Finance save commits.
+   // The caller emits the normal finance event after persistence; queue service removal
+   // here so a later save failure cannot publish a ghost-delete event.
+   existingTx._pendingServiceLifecycleRemove={service:_ghost,options:{reason:'finance-domain-change',source:'finance'}};
  }
  delete existingTx.servisLinkId;
 }
@@ -572,7 +577,7 @@ applyTxStockFromTx(note,savedTxId,date,amt,existingTx);
 // baca D.partsStock APA ADANYA saat itu dijalankan, bukan snapshot lama.
 if(typeof applyTxServisFromTx==='function'){
 const txObjForServis=existingTx||(D.transactions||[]).find(t=>t.id===savedTxId);
-applyTxServisFromTx(savedTxId,amt,date,accId,note,txObjForServis,existingTx);
+_serviceCommitMeta=await applyTxServisFromTx(savedTxId,amt,date,accId,note,txObjForServis,existingTx);
 }
 applyTxBbmFromTx(savedTxId,amt,date,accId,note,existingTx);
 applyTxShopStockFromTx(savedTxId,note,existingTx);
@@ -598,8 +603,39 @@ if((!existingTx||!existingTx.renovItemLinkId)&&typeof applyTxRenovFromTx==='func
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderCnTab();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:savedTxId,category:cat,type:curTxType,amount:amt});
+save();
+// V28: flush deferred Finance->Service removals only after the Finance commit.
+for(const _txPost of (D.transactions||[])){
+  const _pendingRemove=_txPost&&_txPost._pendingServiceLifecycleRemove;
+  if(_pendingRemove){
+    delete _txPost._pendingServiceLifecycleRemove;
+    try{if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.remove==='function')ServiceEventLifecycle.remove(_pendingRemove.service,_pendingRemove.options||{});}
+    catch(_pendingErr){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.remove',payload:{..._pendingRemove.service,...(_pendingRemove.options||{})}});else console.error('V28: deferred service removal failed',_pendingErr);}
+  }
+}
+// V24 G3/G9: Finance is now committed. Only after that point may the
+// deferred Service lifecycle and vehicle event be published.
+if(_serviceCommitMeta&&typeof ServiceEventLifecycle!=='undefined'){
+  const _svc=(D.servisLogs||[]).find(x=>x.id===_serviceCommitMeta.servisId);
+  if(_svc){
+    try{
+      if(_serviceCommitMeta.created&&typeof ServiceEventLifecycle.create==='function')ServiceEventLifecycle.create(_svc,{source:'finance'});
+      else if(typeof ServiceEventLifecycle.update==='function')ServiceEventLifecycle.update(_svc,{source:'finance'});
+    }catch(_svcLifeErr){
+      console.error('V29: finance->service lifecycle failed after commit',_svcLifeErr);
+      if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:_serviceCommitMeta.created?'service.create':'service.update',payload:_svc,options:{source:'finance'}});
+    }
+  }
+}
+closeModal('txModal');renderDashboard();renderKeuangan();renderCnTab();
+const _financePostCommitPayload={txId:savedTxId,category:cat,type:curTxType,amount:amt};
+try{if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",_financePostCommitPayload);}
+catch(_financeEventErr){console.error('V36: finance event failed after commit; queued for reconciliation',_financeEventErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_financePostCommitPayload});}
+if(_serviceCommitMeta&&typeof AIBus!=="undefined"){
+ const _vehiclePostCommitPayload={kind:'servis',txId:savedTxId,vehicleId:_serviceCommitMeta.vehicleId,servisId:_serviceCommitMeta.servisId};
+ try{AIBus.emit('vehicle.updated',_vehiclePostCommitPayload);}
+ catch(_vehicleEventErr){console.error('V36: vehicle event failed after commit; queued for reconciliation',_vehicleEventErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehiclePostCommitPayload});}
+}
 // txAssetSplitMsg DIHAPUS (audit AUDIT-S540/B1-B12-DOUBLECOUNT) — toast
 // sukses tidak lagi menampilkan info "(dibagi ke N pemilik)", karena
 // resolveTxAssetSplit() sudah dihapus (kaitan aset kini relasi murni).
@@ -616,6 +652,15 @@ toast((existingTx?'✅ Transaksi diperbarui':'✅ Transaksi tersimpan')+txAssetS
 // cicilan/tagihan/langganan/utang) tidak pernah mengisi snapshot ini, jadi
 // exception di cabang-cabang itu langsung throw ulang tanpa rollback --
 // persis perilaku sebelum s629 (di luar scope Bug B, lihat AUDIT s628).
+const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.servisLinkId));
+if(_serviceMutationTouched){
+  try{
+    if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
+    if(_serviceEditSnapshot.transactions!==null)D.transactions=JSON.parse(_serviceEditSnapshot.transactions);
+    if(_serviceEditSnapshot.partsStock!==null)D.partsStock=JSON.parse(_serviceEditSnapshot.partsStock);
+    if(_serviceEditSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_serviceEditSnapshot.sparepartCats);
+  }catch(_serviceRollbackErr){console.error('V25: Finance->Service rollback failed',_serviceRollbackErr);}
+}
 if(_txCreateSnapshot){
 try{
 const _restored=JSON.parse(_txCreateSnapshot);

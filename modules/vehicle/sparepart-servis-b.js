@@ -535,9 +535,8 @@ return marks;
 function revertStockUsage(partId,qty){return Servis.revertStockUsage(partId,qty);}
 function applyStockUsage(partId,qty){return Servis.applyStockUsage(partId,qty);}
 function saveServis(){
-const r=Servis.save();
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"servis"});
-return r;
+// V32: Servis.save() owns canonical post-commit service events.
+return Servis.save();
 }
 function deleteServisFromModal(){return Servis.deleteFromModal();}
 function delServis(id){return Servis.del(id);}
@@ -550,7 +549,7 @@ function editSparepartFromReminder(catId){return Servis.editSparepartFromReminde
 /* moved to modules-render.js: renderServisReminder */
 function loadMoreServisList(){return Servis.loadMore();}
 let dashServisVehFilter='semua';
-(function(){try{dashServisVehFilter=localStorage.getItem('kw_dashServisVehFilter')||'semua';}catch(e){dashServisVehFilter='semua';}})();
+(function(){try{dashServisVehFilter=localStorage.getItem('kw_dashServisVehFilter')||'semua';}catch(e){void e;}})();
 function setDashServisVehFilter(vehId){
 dashServisVehFilter=vehId;
 safeSetItem('kw_dashServisVehFilter',vehId);
@@ -587,6 +586,7 @@ goToList('servisReminderCard','carnotes',4,null,'servis');
 // (bukan array) buat kategori itu saja. Balikin {ok:false} kalau kendaraan
 // tidak ditemukan atau belum ada kategori sparepart terdaftar.
 function predictService({vehicleId,categoryId}={}){
+if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
 // BUGFIX (audit lanjutan Smart Delivery Engine): sebelumnya loop di sini
@@ -598,7 +598,7 @@ if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
 // sejak awal -- predictService() cuma belum ikut ditempel. Disamakan di sini
 // supaya predictService()/maintenanceForecast()/_vehicleOverdueCheck() (yang
 // semuanya menghitung hal yang sama) konsisten dgn renderReminder().
-const remindable=(D.sparepartCats||[]).filter(c=>c.intervalKm>0&&c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId));
+const remindable=(D.sparepartCats||[]).filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(vehicleId,c))));
 const conditionItems=(typeof getMaintenanceConditionProjection==='function')?getMaintenanceConditionProjection(vehicleId):[];
 const cats=categoryId
 ? remindable.filter((c)=>c.id===categoryId)
@@ -613,8 +613,8 @@ const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveRese
 const lastKm=getLastServiceKmForCat(vehicleId,cat,resetFilter,true);
 const overridden=hasIntervalOverride(vehicleId,cat);
 const u=computeServiceUrgency({vehicleId,cat,curKm,kmPerDay});
-return{categoryId:cat.id,categoryName:cat.name,lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,estDateISO:u.estDateISO,status:u.status};
-}).sort((a,b)=>a.sisaKm-b.sisaKm);
+return{categoryId:cat.id,categoryName:cat.name,currentKm:curKm,lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,nextDueKm:u.nextDueKm,nextDueDate:u.nextDueDate,nextDueAxis:u.nextDueAxis,estDateISO:u.estDateISO,status:u.status,statusLabel:u.statusLabel,statusIcon:u.statusIcon,statusSeverity:u.statusSeverity};
+}).sort((a,b)=>{const av=a.sisaKm==null?Infinity:a.sisaKm;const bv=b.sisaKm==null?Infinity:b.sisaKm;return av-bv;});
 if(categoryId){
   if(rows.length)return{ok:true,vehicleId,curKm,kmPerDay,conditionItems,items:undefined,...rows[0]};
   const cond=conditionItems.find(x=>x.id===categoryId||x.serviceComponentId===categoryId||x.maintenanceRuleId===categoryId);
@@ -632,9 +632,13 @@ return{ok:true,vehicleId,curKm,kmPerDay,items:rows,conditionItems};
 function maintenanceForecast({vehicleId,monthsAhead=3}={}){
 const pred=predictService({vehicleId});
 if(!pred.ok)return pred;
-const now=new Date();
-const batas=new Date(now.getFullYear(),now.getMonth()+monthsAhead,now.getDate());
-const dueItems=pred.items.filter((r)=>r.status==='lewat'||(r.estDateISO&&new Date(r.estDateISO)<=batas));
+// V24 G5: use the same service date-only calendar helpers as the canonical
+// reminder engine. Avoid `new Date(YYYY-MM-DD)` UTC parsing and timezone drift.
+const _forecastNowISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(new Date()):new Date().toISOString().slice(0,10);
+const _forecastNow=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(_forecastNowISO):new Date();
+const batas=typeof addServiceMonthsClamped==='function'?addServiceMonthsClamped(_forecastNow,monthsAhead):new Date(_forecastNow.getFullYear(),_forecastNow.getMonth()+monthsAhead,_forecastNow.getDate());
+const batasISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(batas):batas.toISOString().slice(0,10);
+const dueItems=pred.items.filter((r)=>r.status==='terlewat'||(r.estDateISO&&String(r.estDateISO).slice(0,10)<=batasISO));
 let totalBiaya=0;
 let totalBiayaLengkap=true;
 const items=dueItems.map((r)=>{
@@ -670,7 +674,7 @@ const overdue=[];
 (D.vehicles||[]).forEach((v)=>{
 const pred=predictService({vehicleId:v.id});
 if(pred&&pred.ok&&Array.isArray(pred.items)){
-pred.items.filter((it)=>it.status==='lewat').forEach((it)=>overdue.push({vehicleName:v.name,categoryName:it.categoryName,sisaKm:it.sisaKm}));
+pred.items.filter((it)=>it.status==='terlewat').forEach((it)=>overdue.push({vehicleName:v.name,categoryName:it.categoryName,sisaKm:it.sisaKm}));
 }
 });
 return{trigger:overdue.length>0,overdue};

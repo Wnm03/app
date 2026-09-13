@@ -3,7 +3,7 @@
 // Isi: MODULE_FEATURES_VERSION (konstanta versi, dicek sinkron oleh diagnostik-versi.js) + CHAT_ACTION_LABELS (label tombol usul per tipe aksi) + CHAT_ACTION_HANDLERS (eksekusi nyata tiap tipe aksi ke D.*, dipanggil dari chat-action.js via chatActionInnerHTML/extractChatAction) + CHAT_ACTION_EDIT_FIELDS (skema field utk form edit usulan sebelum dieksekusi).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah car-notes.js, sebelum edukasi-dana.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
-const MODULE_FEATURES_VERSION='s-v26-scanner-lifecycle-reattach-final-1688';
+const MODULE_FEATURES_VERSION='s-v26-scanner-lifecycle-reattach-final-1696';
 const CHAT_ACTION_LABELS={add_transaksi:'💸 Usul: Tambah Transaksi',add_tagihan:'🧾 Usul: Tambah Tagihan/Cicilan',add_servis:'🔧 Usul: Catat Servis Kendaraan',add_target:'🎯 Usul: Tambah Target Tabungan',add_catatan_anak:'👶 Usul: Catat soal Anak',add_wishlist:'📋 Usul: Tambah ke Prioritas Belanja'};
 const CHAT_ACTION_HANDLERS={
 add_transaksi(data){
@@ -24,21 +24,37 @@ save();refreshCurrentPage();
 return `Tagihan "${data.name||'Tagihan'}" ${fmtFull(amount)} (jatuh tempo ${data.nextDue}) tersimpan`;
 },
 add_servis(data){
+const _run=()=>{const _snap={servisLogs:JSON.stringify(D.servisLogs||[]),transactions:JSON.stringify(D.transactions||[]),partsStock:JSON.stringify(D.partsStock||[])};try{
 const cost=Math.round(Number(data.cost));
-if(!cost||cost<=0)throw new Error('Biaya tidak valid');
+if(!Number.isFinite(cost)||cost<0)throw new Error('Biaya tidak valid');
 let veh=D.vehicles.find(v=>v.id===data.vehicleId);
 if(!veh&&data.vehicleName)veh=D.vehicles.find(v=>v.name.toLowerCase().includes(String(data.vehicleName).toLowerCase()));
 if(!veh&&D.vehicles.length===1)veh=D.vehicles[0];
 if(!veh)throw new Error('Kendaraan tidak dikenali, sebutkan namanya lebih jelas ya');
-const date=(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:new Date().toISOString().split('T')[0];
+const date=(data.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(data.date)))?String(data.date):new Date().toISOString().slice(0,10);
 const accId=D.accounts[0]?.id||'';
-const txId=uid(),servisId=uid();
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:(data.item||'Servis')+' - '+veh.name,date,servisLinkId:servisId});
 const servisItem=data.item||'Servis';
+const idem=data.idempotencyKey||('chat:servis:'+veh.id+':'+date+':'+String(servisItem).trim().toLowerCase()+':'+String(data.km??'')+':'+String(cost)+':'+String(data.note||'').trim().toLowerCase());
+const existing=typeof findServiceEventByIdempotencyKey==='function'?findServiceEventByIdempotencyKey(D.servisLogs||[],idem,veh.id):null;
+if(existing)return `Servis "${existing.item||servisItem}" untuk ${veh.name} sudah pernah dicatat`;
+const txId=uid(),servisId=uid();
 const canonicalCatId=typeof canonicalServisCategoryId==='function'?canonicalServisCategoryId(servisItem,veh.id,null):null;
-D.servisLogs.push({id:servisId,vehicleId:veh.id,date,item:servisItem,categoryId:canonicalCatId,km:data.km?Number(data.km):null,cost,note:data.note||'',accountId:accId,txLinkId:txId});
-save();refreshCurrentPage();renderDashboardServisReminder();
-return `Servis "${data.item||'Servis'}" untuk ${veh.name} ${fmtFull(cost)} tersimpan`;
+const _chatCat=canonicalCatId?(D.sparepartCats||[]).find(c=>c&&c.id===canonicalCatId):null;
+const _chatKm=data.km==null||data.km===''?null:Number(data.km);
+if(_chatKm!==null&&(!Number.isFinite(_chatKm)||_chatKm<0))throw new Error('KM servis tidak valid');
+if(typeof Servis!=='undefined'&&typeof Servis.validateServiceOdometer==='function'){const _chatOdo=Servis.validateServiceOdometer({vehicleId:veh.id,km:_chatKm,date,excludeId:null});if(_chatOdo&&_chatOdo.ok===false)throw new Error(_chatOdo.message||'KM servis tidak konsisten dengan histori kendaraan');}
+const _chatSnap=(_chatCat&&typeof buildServiceNextDueSnapshot==='function')?buildServiceNextDueSnapshot({vehicleId:veh.id,cat:_chatCat,serviceKm:_chatKm,serviceDate:date,actionType:data.actionType||null}):{};
+D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:servisItem+' - '+veh.name,date,servisLinkId:servisId});
+const _chatServiceLog={id:servisId,vehicleId:veh.id,date,item:servisItem,categoryId:canonicalCatId,km:_chatKm,cost,note:data.note||'',accountId:accId,txLinkId:txId,intervalKmAtService:_chatSnap.intervalKmAtService||null,intervalBulanAtService:_chatSnap.intervalBulanAtService||null,nextDueKm:_chatSnap.nextDueKm??null,nextDueDate:_chatSnap.nextDueDate||null,nextDueAxis:_chatSnap.nextDueAxis||'none',idempotencyKey:idem};
+D.servisLogs.push(_chatServiceLog);
+save();
+try{if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.create==='function')ServiceEventLifecycle.create(_chatServiceLog);}catch(err){if(typeof ServiceEventOutbox!=='undefined'&&!ServiceEventOutbox.enqueue({type:'service.create',payload:_chatServiceLog}))console.error('V37: service.create outbox persistence failed',err);}
+const _chatFinancePayload={txId:txId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'};
+try{if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',_chatFinancePayload);}catch(_chatFinanceErr){if(typeof ServiceEventOutbox!=='undefined'&&!ServiceEventOutbox.enqueue({type:'finance.updated',payload:_chatFinancePayload}))console.error('V37: finance.updated outbox persistence failed',_chatFinanceErr);}
+refreshCurrentPage();renderDashboardServisReminder();
+return `Servis "${servisItem}" untuk ${veh.name} ${fmtFull(cost)} tersimpan`;
+}catch(err){try{D.servisLogs=JSON.parse(_snap.servisLogs);D.transactions=JSON.parse(_snap.transactions);D.partsStock=JSON.parse(_snap.partsStock);}catch(_){ /* best-effort cleanup; primary action already completed */ }throw err;}};
+return typeof withServiceMutationLock==='function'?withServiceMutationLock(_run):_run();
 },
 add_target(data){
 const amount=Math.round(Number(data.amount));

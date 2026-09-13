@@ -5,6 +5,22 @@
  */
 const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'oli-mesin': { inspectKm: 2000, inspectAction: 'periksa', replaceKm: 2500, replaceAction: 'ganti', maintenanceType: 'periodic' },
+  'filter-oli': { maintenanceType: 'condition', condition: 'periksa saat penggantian oli atau bila ada indikasi kontaminasi' },
+  'filter-kawat-oli-mesin': { inspectKm: 12000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'paking-knalpot': { maintenanceType: 'event_based', condition: 'periksa setiap kali knalpot dilepas; ganti bila gepeng atau bocor' },
+  'slide-piece-cvt': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'ganti bersamaan dengan roller bila aus' },
+  'boss-pulley-drive-face': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'mangkok-kopling-ganda': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'seal-driven-face': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'ganti bila bocor atau aus' },
+  'per-sentri': { maintenanceType: 'condition', condition: 'ganti bila kendur atau lemah' },
+  'pelumasan-cvt-grease': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'bearing-bak-cvt': { maintenanceType: 'condition', condition: 'periksa dan beri grease bila bergemuruh' },
+  'busa-filter-cvt': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
+  'filter-fuel-pump': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti 48.000 km atau bila tekanan bahan bakar turun' },
+  'oli-shockbreaker': { inspectKm: 15000, inspectAction: 'periksa', replaceAction: 'ganti', replaceKm: 15000, maintenanceType: 'periodic_or_condition', condition: 'ganti saat seal bocor atau kondisi oli menurun' },
+  'engine-mounting-bushing-arm': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila getas atau aus' },
+  'saklar-sistem-penerangan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'relay-sekring': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic' },
   'busi': { inspectKm: 4000, inspectAction: 'periksa', replaceKm: 8000, replaceAction: 'ganti', maintenanceType: 'periodic' },
   'filter-udara': { replaceKm: 16000, replaceAction: 'ganti', maintenanceType: 'periodic' },
   'coolant': { inspectKm: 4000, inspectAction: 'periksa', replaceKm: 12000, replaceAction: 'ganti', replaceMonths: 24, maintenanceType: 'periodic' },
@@ -34,27 +50,7 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'selang-rem': { maintenanceType: 'condition', condition: 'retak, getas, bocor, atau kerusakan fisik' },
   'kebocoran-shock': { maintenanceType: 'condition', condition: 'terdapat kebocoran oli pada seal shock' },
   'ban-depan': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 29 psi' },
-  'ban-belakang': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi' },
-  // V33: every canonical checklist component now has an explicit maintenance rule.
-  // Items without a defensible fixed interval remain condition/event based rather
-  // than inventing a km schedule. Interval-bearing accumulated items preserve the
-  // values already declared by SERVICE_CHECKLIST_GROUPS.
-  'filter-oli': { maintenanceType: 'condition', condition: 'periksa saat penggantian oli atau sesuai interval category/vehicle override' },
-  'filter-kawat-oli-mesin': { inspectKm: 12000, inspectAction: 'bersih', maintenanceType: 'periodic' },
-  'paking-knalpot': { maintenanceType: 'event_based', event: 'setiap kali knalpot dilepas' },
-  'slide-piece-cvt': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila aus' },
-  'boss-pulley-drive-face': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
-  'mangkok-kopling-ganda': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic' },
-  'seal-driven-face': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila bocor/aus' },
-  'per-sentri': { maintenanceType: 'condition', condition: 'ganti bila kendur/lemah' },
-  'pelumasan-cvt-grease': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
-  'bearing-bak-cvt': { maintenanceType: 'condition', condition: 'beri grease/periksa bila bergemuruh' },
-  'busa-filter-cvt': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
-  'filter-fuel-pump': { inspectKm: 12000, inspectAction: 'periksa', replaceKm: 48000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'ganti bila tekanan turun' },
-  'oli-shockbreaker': { replaceKm: 15000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'ganti saat seal bocor' },
-  'engine-mounting-bushing-arm': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila getas/aus' },
-  'saklar-sistem-penerangan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
-  'relay-sekring': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic' }
+  'ban-belakang': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi' }
 });
 
 /** v17: normalize inspect-vs-replace semantics without changing existing intervals. */
@@ -525,6 +521,14 @@ loadMore(){BBM.listPage++;BBM.renderList();}
 // di fuel-modal.js (bug yang sama pernah terjadi & diperbaiki di sana).
 // Tanpa baris ini, semua tombol data-action="BBM.xxx" gagal diam-diam.
 if (typeof BBM !== 'undefined') window.BBM = BBM;
+function refreshServiceReminderState(){
+  // P19: Reminder is a projection, never a second datastore. After any
+  // service mutation, refresh the projection explicitly so Edit/Delete and
+  // direct modal flows cannot leave a stale reminder card.
+  try{ if(typeof Servis!=='undefined'&&Servis&&typeof Servis.renderReminder==='function')Servis.renderReminder(); }catch(err){ console.error('P19: reminder refresh failed',err); }
+  try{ if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder(); }catch(err){ console.error('P19: dashboard reminder refresh failed',err); }
+}
+
 const Servis={
 editId:null,
 listPage:1,
@@ -1132,7 +1136,59 @@ const wrap=document.getElementById('servisPhotoThumbs');
 if(!wrap)return;
 wrap.innerHTML=Servis._photoDraft.map((src,i)=>`<div style="position:relative;width:64px;height:64px"><img src="${escapeHtml(src)}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--border2)"><button type="button" data-action="Servis.removePhoto" data-args='[${i}]' aria-label="Hapus foto" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent2);color:#fff;font-size:11px;line-height:20px;text-align:center;padding:0;cursor:pointer">✕</button></div>`).join('');
 },
-save(){return withSaveGuardAsync('servis','servisModal',Servis._saveInner);},
+save(){return withSaveGuardAsync('servis','servisModal',()=>{
+  const snapshot={
+    servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
+    transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
+    partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,
+    sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null
+  };
+  const restore=()=>{
+    try{
+      if(snapshot.servisLogs!==null)D.servisLogs=JSON.parse(snapshot.servisLogs);
+      if(snapshot.transactions!==null)D.transactions=JSON.parse(snapshot.transactions);
+      if(snapshot.partsStock!==null)D.partsStock=JSON.parse(snapshot.partsStock);
+      if(snapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(snapshot.sparepartCats);
+      return true;
+    }catch(e){console.error('P16: service rollback failed',e);return false;}
+  };
+  const run=async()=>{
+    try{return await Servis._saveInner();}
+    catch(err){restore();throw err;}
+  };
+  return typeof withServiceMutationLock==='function'?withServiceMutationLock(run):run();
+});},
+/* P22: SERVICE ODOMETER INTEGRITY — canonical guards for create/edit. */
+validateServiceOdometer({vehicleId,km,date,excludeId}={}){
+  const n=Number(km);
+  if(!Number.isFinite(n)||n<0)return{ok:false,code:'invalid_km',message:'KM servis harus berupa angka 0 atau lebih.'};
+  const d=String(date||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number.isNaN(Date.parse(d+'T00:00:00')))return{ok:false,code:'invalid_date',message:'Tanggal servis tidak valid.'};
+  const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId&&s.id!==excludeId&&Number.isFinite(Number(s.km))&&Number(s.km)>=0):[];
+  const current=typeof getVehicleKm==='function'?Number(getVehicleKm(vehicleId)):NaN;
+  if(Number.isFinite(current)&&current>=0&&n>current)return{ok:false,code:'above_current_odometer',message:`KM servis (${n.toLocaleString('id-ID')}) melebihi odometer kendaraan saat ini (${current.toLocaleString('id-ID')}).`};
+  const target={id:excludeId||'__service_validation_target__',vehicleId,km:n,date:d};
+  const ordered=logs.slice().sort((a,b)=>{
+    if(typeof compareServiceHistoryRecency==='function')return -compareServiceHistoryRecency(a,b);
+    return String(a.date||'').localeCompare(String(b.date||''))||Number(a.km||0)-Number(b.km||0);
+  });
+  let prev=null,next=null;
+  for(const row of ordered){
+    if(typeof compareServiceHistoryRecency==='function'){
+      const rel=compareServiceHistoryRecency(row,target);
+      if(rel>0){next=row;break;}
+      if(rel<0)prev=row;
+    }else{
+      const rd=String(row.date||'');
+      if(rd<d||(rd===d&&Number(row.km||0)<=n))prev=row;
+      else if(rd>d||(rd===d&&Number(row.km||0)>n)){next=row;break;}
+    }
+  }
+  if(prev&&n<Number(prev.km))return{ok:false,code:'below_previous_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih rendah dari servis sebelumnya (${Number(prev.km).toLocaleString('id-ID')} km pada ${prev.date}).`};
+  if(next&&n>Number(next.km))return{ok:false,code:'above_next_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih tinggi dari servis sesudahnya (${Number(next.km).toLocaleString('id-ID')} km pada ${next.date}).`};
+  return{ok:true,currentKm:Number.isFinite(current)?current:null,previousKm:prev?Number(prev.km):null,nextKm:next?Number(next.km):null};
+},
+
 async _saveInner(){
 const item=document.getElementById('servisItem').value.trim();
 // BUGFIX (laporan user, Sesi 545): dulu `!cost` menolak simpan kalau Biaya
@@ -1150,12 +1206,16 @@ if(!item||!Number.isFinite(cost)||cost<0){toast('⚠️ Lengkapi jenis servis (c
 // resolveServisCatForVehicle(), supaya servis kendaraan B tidak ke-link ke
 // kategori privat milik kendaraan A hanya karena nama item sama persis.
 let matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase());
-const masterCategoryId=document.getElementById('servisCategory')?.value||null;
-const serviceComponentId=document.getElementById('servisComponent')?.value||null;
-const date=document.getElementById('servisDate').value;
+let masterCategoryId=document.getElementById('servisCategory')?.value||null;
+let serviceComponentId=document.getElementById('servisComponent')?.value||null;
+if(typeof resolveServiceCategoryComponent==='function'){const svcLink=resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,item);masterCategoryId=svcLink.masterCategoryId;serviceComponentId=svcLink.serviceComponentId;}
 const note=document.getElementById('servisNote').value;
 const accId=document.getElementById('servisAcc')?document.getElementById('servisAcc').value:D.accounts[0]?.id;
-const km=parseFloat(document.getElementById('servisKm').value)||null;
+const kmRaw=document.getElementById('servisKm').value.trim();
+const km=kmRaw===''?null:Number(kmRaw);
+const date=document.getElementById('servisDate').value;
+const odometerCheck=km===null?{ok:true}:Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
+if(!odometerCheck.ok){toast('⚠️ '+odometerCheck.message);return;}
 const intervalRaw=document.getElementById('servisInterval')?document.getElementById('servisInterval').value:'';
 const intervalKm=intervalRaw?parseFloat(intervalRaw):null;
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
@@ -1208,31 +1268,37 @@ newCatCreated=true;
 }
 if(Servis.editId!==null){
 const s=D.servisLogs.find(x=>x.id===Servis.editId);
-if(!s){toast('⚠️ Data tidak ditemukan');return;}
+if(!s){
+  // P18: kategori baru/interval belum boleh meninggalkan mutasi parsial
+  // ketika target service ternyata sudah hilang. Rollback snapshot lokal.
+  restore();
+  toast('⚠️ Data tidak ditemukan');
+  return;
+}
+// P18: Edit Service adalah satu transaksi domain. Jangan melakukan restore
+// stok lama secara parsial lalu mencoba membaliknya manual pada setiap
+// failure branch; snapshot canonical di wrapper adalah sumber rollback.
 Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
 Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
 if(usedPartId&&!await Servis.applyStockUsage(usedPartId,usedPartQty)){
-await Servis.applyStockUsage(s.usedPartId,s.usedPartQty);
-Servis.applyStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
-return;
+  restore();
+  return;
 }
 if(catalogLinkedStockId&&!await Servis.applyStockUsage(catalogLinkedStockId,catalogPartQty)){
-// BUGFIX (audit S324): dulu baris di bawah ini malah applyStockUsage() lagi
-// (dobel-potong stok usedPartId yang BARU SAJA sukses dipotong di atas),
-// bukan revertStockUsage() -- dan restore usedPartId LAMA (s.usedPartId)
-// tidak pernah dikembalikan sama sekali di jalur ini walau sudah di-revert
-// duluan di awal fungsi. Fix: revert dulu potongan baru, baru restore yang lama.
-if(usedPartId)Servis.revertStockUsage(usedPartId,usedPartQty);
-Servis.applyStockUsage(s.usedPartId,s.usedPartQty);
-Servis.applyStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
-return;
+  restore();
+  return;
 }
 if(intervalKm&&intervalKm>0&&!matched&&s.categoryId){
 const linkedCat=D.sparepartCats.find(c=>c.id===s.categoryId);
 if(linkedCat){linkedCat.intervalKm=intervalKm;catIdForLog=linkedCat.id;}
 }
 const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?getEffectiveIntervalKm(curVehicleId,_catForSnapshot):(_catForSnapshot&&_catForSnapshot.intervalKm>0?_catForSnapshot.intervalKm:null);
+const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapshot)?getEffectiveIntervalBulan(_catForSnapshot,curVehicleId):(_catForSnapshot&&_catForSnapshot.intervalBulan>0?_catForSnapshot.intervalBulan:null);
+const _nextSnapshotEdit=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:s.vehicleId||curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:s.actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,intervalKmAtService:_ivSnapshot,intervalBulanAtService:_ibSnapshot,nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+let _postCommitFinanceEvent=null;
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
 if(cost===0){
@@ -1241,10 +1307,20 @@ if(cost===0){
 // transaksi lama agar Finance tidak menyimpan transaksi Rp0 palsu.
 D.transactions=D.transactions.filter(t=>t.id!==s.txLinkId);
 s.txLinkId=null;
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:null,deletedId:tx.id,category:tx.category,type:'expense',amount:0,kind:'servis'});
+_postCommitFinanceEvent={txId:null,deletedId:tx.id,category:tx.category,type:'expense',amount:0,kind:'servis'};
 }else if(tx){
 Object.assign(tx,{amount:cost,date,accountId:accId,note:noteFull});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:tx.id,category:tx.category,type:'expense',amount:cost,kind:'servis'});
+_postCommitFinanceEvent={txId:tx.id,category:tx.category,type:'expense',amount:cost,kind:'servis'};
+}else if(cost>0){
+// P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu (mis. dihapus
+// dari modul Finance). Jangan biarkan D.servisLogs menyimpan txLinkId yatim.
+// Rekonsiliasi dengan membuat transaksi pengganti yang menunjuk ke servis
+// yang sama, sehingga edit servis kembali menjadi konsisten.
+const repairTxId=uid();
+const repairTxCat=resolveVehicleTxCategory(veh);
+D.transactions.push({id:repairTxId,type:'expense',amount:cost,category:repairTxCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id});
+s.txLinkId=repairTxId;
+_postCommitFinanceEvent={txId:repairTxId,category:repairTxCat,type:'expense',amount:cost,kind:'servis',action:'relink'};
 }
 }else if(cost>0){
 // v13: transaksikan hanya biaya > 0. Servis Rp0 tetap tersimpan di
@@ -1253,13 +1329,34 @@ const txId=uid();
 const txCat=resolveVehicleTxCategory(veh);
 D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id});
 s.txLinkId=txId;
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId,category:txCat,type:'expense',amount:cost,kind:'servis'});
+_postCommitFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
 }
+try{
+  // V24 G2: catalog linkage is a post-commit side effect, never part of the pre-commit critical path.
+  // P18: persistence commit happens before lifecycle notification.
+  // Lifecycle is an event bridge only; it must never announce an edit that
+  // failed to persist.
+  save();
+}catch(err){
+  restore();
+  // Best-effort persistence of the pre-edit snapshot. If storage itself is
+  // unavailable, keep the in-memory rollback and rethrow the original error.
+  try{save();}catch(_rollbackErr){console.error('P18: persisted edit rollback failed',_rollbackErr);}
+  throw err;
+}
+closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();refreshServiceReminderState();
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
-VehicleCatalogServisLink.attachToServis(s.id,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
+  try{VehicleCatalogServisLink.attachToServis(s.id,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);}
+  catch(_catalogEditErr){console.error('V24: post-commit catalog edit link failed; queued for reconciliation',_catalogEditErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:s.id,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
 }
-save();closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.update(s,{txId:s.txLinkId||null,categoryId:s.categoryId||null});
+if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.update(s,{txId:s.txLinkId||null,categoryId:s.categoryId||null});}catch(_lifecycleEditErr){console.error('V25: post-commit service edit lifecycle failed; reconciliation required',_lifecycleEditErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.update',payload:s,options:{txId:s.txLinkId||null,categoryId:s.categoryId||null}});}}
+if(_postCommitFinanceEvent&&typeof AIBus!=="undefined"){
+  try{AIBus.emit('finance.updated',_postCommitFinanceEvent);}
+  catch(_financeEventErr){
+    console.error('V35: service edit finance event failed after commit; queued for reconciliation',_financeEventErr);
+    if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_postCommitFinanceEvent});
+  }
+}
 toast('✅ Catatan servis diperbarui'+(intervalKm?' & interval pengingat disinkron':''));
 return;
 }
@@ -1283,15 +1380,30 @@ if(cost>0){
  D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
 }
 const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,masterCategoryId,serviceComponentId,km,cost,note,accountId:accId,txLinkId:txId,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?getEffectiveIntervalKm(curVehicleId,_catForSnapshot):(_catForSnapshot&&_catForSnapshot.intervalKm>0?_catForSnapshot.intervalKm:null);
+const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapshot)?getEffectiveIntervalBulan(_catForSnapshot,curVehicleId):(_catForSnapshot&&_catForSnapshot.intervalBulan>0?_catForSnapshot.intervalBulan:null);
+const _nextSnapshot=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+D.servisLogs.push({id:servisId,vehicleId:curVehicleId,date,item,categoryId:catIdForLog,masterCategoryId,serviceComponentId,km,cost,note,accountId:accId,txLinkId:txId,intervalKmAtService:_ivSnapshot,intervalBulanAtService:_ibSnapshot,nextDueKm:_nextSnapshot.nextDueKm,nextDueDate:_nextSnapshot.nextDueDate,nextDueAxis:_nextSnapshot.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+// V24 G1/G2/G9: persist the service domain BEFORE emitting lifecycle/catalog/AI side effects.
+// If persistence fails, the surrounding P16 snapshot wrapper restores all service-domain mutations.
+save();
 const _newServisLog=D.servisLogs[D.servisLogs.length-1];
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(_newServisLog);
+if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(_newServisLog);}catch(_lifecycleCreateErr){console.error('V25: post-commit service create lifecycle failed; reconciliation required',_lifecycleCreateErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:_newServisLog});}}
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
-VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);
+  try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);}
+  catch(_catalogErr){console.error('V24: post-commit catalog service link failed; queued for reconciliation',_catalogErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:servisId,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
 }
 // v13: finance.updated hanya untuk transaksi Finance yang benar-benar dibuat (cost>0).
-if(txId&&typeof AIBus!=="undefined")AIBus.emit('finance.updated',{txId,category:txCat,type:'expense',amount:cost,kind:'servis'});
-save();closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();
+if(txId&&typeof AIBus!=="undefined"){
+  const _createFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
+  try{AIBus.emit('finance.updated',_createFinanceEvent);}
+  catch(_createFinanceEventErr){
+    console.error('V35: service create finance event failed after commit; queued for reconciliation',_createFinanceEventErr);
+    if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_createFinanceEvent});
+  }
+}
+closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();refreshServiceReminderState();
 if(newCatCreated){
 toast(`✅ Catatan servis tersimpan, "${item}" ditambahkan ke Pengingat Servis (tiap ${intervalKm.toLocaleString('id-ID')} km)`);
 } else if(matched&&intervalKm){
@@ -1348,10 +1460,10 @@ const vehicleOverride=vehicle&&vehicle.intervalOverrides&&linkedCat?vehicle.inte
 const canonical=typeof getCanonicalServiceInterval==='function'
   ?getCanonicalServiceInterval(linkedCat||{}, {intervalKm:vehicleOverride})
   :{intervalKm:typeof getEffectiveIntervalKm==='function'&&linkedCat?getEffectiveIntervalKm(vehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null),intervalBulan:typeof getEffectiveIntervalBulan==='function'&&linkedCat?getEffectiveIntervalBulan(linkedCat,vehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null)};
-const urgency=linkedCat&&canonical.intervalKm>0&&typeof computeServiceUrgency==='function'
+const urgency=linkedCat&&(canonical.intervalKm>0||canonical.intervalBulan>0||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(vehicleId,linkedCat)))&&typeof computeServiceUrgency==='function'
   ?computeServiceUrgency({vehicleId,cat:linkedCat,curKm:typeof getVehicleKm==='function'?getVehicleKm(vehicleId):null,kmPerDay:typeof estimateKmPerDay==='function'?estimateKmPerDay(vehicleId):null})
   :null;
-const statusLabel=urgency?(urgency.status==='lewat'?'🔴 Lewat':urgency.status==='segera'?'🟠 Segera':'🟢 Aman'):'⚪ Belum aktif';
+const statusLabel=urgency?(urgency.statusIcon+' '+urgency.statusLabel):'⚪ Belum aktif';
 const intervalLabel=canonical.intervalKm||canonical.intervalBulan
   ?[(canonical.intervalKm?canonical.intervalKm.toLocaleString('id-ID')+' km':null),(canonical.intervalBulan?canonical.intervalBulan.toLocaleString('id-ID')+' bulan':null)].filter(Boolean).join(' atau ')
   :'Belum diatur';
@@ -1382,20 +1494,51 @@ ${checklistRows?`<div class="fg"><label class="fl">☑️ Komponen Checklist</la
 deleteFromModal(){if(Servis.editId===null)return;const id=Servis.editId;closeModal('servisModal');Servis.del(id);},
 async del(id){
 if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan dihapus.'))return;
+const _runDelete=async()=>{
 const s=D.servisLogs.find(x=>x.id===id);
-if(s&&s.txLinkId)D.transactions=D.transactions.filter(tx=>tx.id!==s.txLinkId);
-if(s&&s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
-if(s&&s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
-// Sesi E2 (auto-potong stok saat "ganti"): kalau entry ini dulu ikut
-// motong stok otomatis lewat _findAutoGantiStock() (lihat markServiced()),
-// kembalikan qty-nya juga saat catatan dihapus -- pola sama persis
-// usedPartId/catalogPartLinkedStockId di atas, biar stok tidak nyangkut.
-if(s&&s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
-D.servisLogs=D.servisLogs.filter(s=>s.id!==id);
-save();renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.remove(s,{deletedTxId:s.txLinkId||null,categoryId:s.categoryId||null});
-if(s&&s.txLinkId&&typeof AIBus!=='undefined')AIBus.emit('finance.updated',{txId:s.txLinkId,kind:'servis',action:'delete',deletedId:s.txLinkId});
+if(!s)return;
+// P17: capture immutable linkage + domain snapshots BEFORE mutation.
+// Delete must behave as one service-domain mutation and must not leave a
+// half-deleted log/finance/stock state if a later step throws.
+const deletedTxId=s.txLinkId||null;
+const before={
+  servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
+  transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
+  partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null
+};
+try{
+  if(deletedTxId)D.transactions=D.transactions.filter(tx=>tx.id!==deletedTxId);
+  if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
+  if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
+  // Sesi E2: restore automatic stock deduction created by "ganti".
+  if(s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
+  // Keep the captured tx id in the lifecycle payload. Do NOT null s.txLinkId
+  // before lifecycle.remove(): that used to erase the only deletion linkage.
+  D.servisLogs=D.servisLogs.filter(x=>x.id!==id);
+  save();
+  // V25 G11/G12: lifecycle removal is strictly post-commit. A lifecycle
+  // failure must not turn a committed delete into a false rollback.
+  if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.remove==='function'){
+    try{ServiceEventLifecycle.remove(s,{deletedTxId,categoryId:s.categoryId||null,vehicleId:s.vehicleId||null});}
+    catch(_lifecycleDeleteErr){console.error('V25: post-commit service delete lifecycle failed; queued for reconciliation',_lifecycleDeleteErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.remove',payload:s,options:{deletedTxId,categoryId:s.categoryId||null,vehicleId:s.vehicleId||null}});}
+  }
+}catch(err){
+  // P17 atomic delete rollback: restore only service-domain arrays.
+  try{
+    if(before.servisLogs!==null)D.servisLogs=JSON.parse(before.servisLogs);
+    if(before.transactions!==null)D.transactions=JSON.parse(before.transactions);
+    if(before.partsStock!==null)D.partsStock=JSON.parse(before.partsStock);
+  }catch(restoreErr){console.error('P17: service delete rollback failed',restoreErr);}
+  console.error('P17: service delete failed',err);
+  toast('⚠️ Penghapusan servis dibatalkan karena proses gagal');
+  return;
+}
+renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();refreshServiceReminderState();
+if(deletedTxId&&typeof AIBus!=='undefined'){try{AIBus.emit('finance.updated',{txId:deletedTxId,kind:'servis',action:'delete',deletedId:deletedTxId});}catch(_deleteFinanceEventErr){console.error('V32: finance delete event failed after commit; queued for reconciliation',_deleteFinanceEventErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:{txId:deletedTxId,kind:'servis',action:'delete',deletedId:deletedTxId}});}}
 toast('🗑 Catatan servis dihapus');
+};
+if(typeof withServiceMutationLock==='function')return withServiceMutationLock(_runDelete);
+return _runDelete();
 },
 // markServiced(catId, actionType) — actionType FITUR BARU (opsional, backward
 // compatible; PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2a/§6-poin1):
@@ -1534,15 +1677,38 @@ cost=0;
 const costStr=await showPromptModal({title:'Biaya Servis',message:'Biaya servis ini (opsional, boleh dikosongkan/0):',icon:'💵',inputType:'number',defaultValue:0});
 cost=parseFloat(costStr)||0;
 }
-const date=new Date().toISOString().split('T')[0];
+const date=(typeof formatServiceDateOnly==='function'&&typeof parseServiceDateOnly==='function')?formatServiceDateOnly(parseServiceDateOnly(new Date())):new Date().toISOString().split('T')[0];
 const accId=D.accounts[0]?.id;
+// V26 G26/G31: quick-service uses the canonical service date helper when available.
+// V25 G14/G15: quick-action must use the same service mutation boundary as
+// the main Service modal. Keep a domain snapshot and shared mutation lock.
+const _markDomainSnapshot={
+  servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
+  transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
+  partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,
+  sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null
+};
+const _restoreMarkDomain=()=>{
+  try{
+    if(_markDomainSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_markDomainSnapshot.servisLogs);
+    if(_markDomainSnapshot.transactions!==null)D.transactions=JSON.parse(_markDomainSnapshot.transactions);
+    if(_markDomainSnapshot.partsStock!==null)D.partsStock=JSON.parse(_markDomainSnapshot.partsStock);
+    if(_markDomainSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_markDomainSnapshot.sparepartCats);
+  }catch(_markRollbackErr){console.error('V25: markServiced rollback failed',_markRollbackErr);}
+};
+const _runMarkMutation=async()=>{
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
 const servisId=uid();
-const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null,actionType:actionType||null,batchId:opts.batchId||null};
+const _serviceSnapshot=(typeof buildServiceNextDueSnapshot==='function')?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat,serviceKm:curKm,serviceDate:date,actionType:actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null,intervalKmAtService:null,intervalBulanAtService:null};
+const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,masterCategoryId:cat.masterCategoryId||null,serviceComponentId:cat.serviceComponentId||null,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null,actionType:actionType||null,batchId:opts.batchId||null,idempotencyKey:opts.idempotencyKey||(`reminder:${curVehicleId||''}:${cat.id}:${actionType||'default'}:${opts.batchId||servisId}`),intervalKmAtService:_serviceSnapshot.intervalKmAtService,intervalBulanAtService:_serviceSnapshot.intervalBulanAtService,nextDueKm:_serviceSnapshot.nextDueKm,nextDueDate:_serviceSnapshot.nextDueDate,nextDueAxis:_serviceSnapshot.nextDueAxis};
 if(cost>0){
 const txId=uid();
 D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId});
 entry.txLinkId=txId;
+}
+if(entry.idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
+const _dup=findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKey,entry.vehicleId);
+if(_dup){_clearMarkGuard();return _dup;}
 }
 D.servisLogs.push(entry);
 // Sesi E2 (auto-potong stok saat "ganti"): HANYA saat actionType eksplisit
@@ -1565,7 +1731,10 @@ entry.autoGantiStockId=autoGantiStock.id;
 autoGantiStock=null;
 }
 }
-save();renderCnTab();renderDashboard();renderKeuangan();
+try{
+if(!opts._batchDeferSave){save();renderCnTab();renderDashboard();renderKeuangan();}
+// V25 G11/G12/G15: lifecycle and AI events are post-commit only and
+// lifecycle exceptions do not invalidate an already committed service.
 // BUGFIX (audit "✅ Sudah Servis" tidak emit AIBus event): markServiced() menulis
 // langsung ke D.servisLogs/D.transactions tanpa lewat saveServis() (sparepart-servis-b.js)
 // -- alur submit modal servis biasa emit AIBus 'vehicle.updated' lewat wrapper itu, tapi
@@ -1574,13 +1743,24 @@ save();renderCnTab();renderDashboard();renderKeuangan();
 // Fix: emit event yang sama di titik ini, sama persis polanya dgn saveServis() utk
 // 'vehicle.updated' (selalu) & pola BBM (car-notes.js baris ~180) utk 'finance.updated'
 // (cuma kalau benar ada transaksi baru yg tercatat, yaitu saat cost>0/txLinkId terisi).
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(entry);
-else if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"servis",action:"create",vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null});
-if(entry.txLinkId&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'});
+if(!opts._batchDeferEvents){
+if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(entry);}catch(_markLifecycleErr){console.error('V27: post-commit service lifecycle failed; queued for reconciliation',_markLifecycleErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});}}
+else if(typeof AIBus!=="undefined"){try{AIBus.emit("vehicle.updated",{kind:"servis",action:"create",vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null});}catch(_markVehicleEventErr){console.error('V31: vehicle event failed after commit; queued for reconciliation',_markVehicleEventErr);if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:{kind:'servis',action:'create',vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null}});}}
+if(entry.txLinkId&&typeof AIBus!=="undefined"){try{AIBus.emit('finance.updated',{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'});}catch(_eventErr){console.error('V31: finance event failed after commit; queued for reconciliation',_eventErr);if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'finance.updated',payload:{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'}});}}
+}
 if(autoGantiStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();
 if(!opts.skipConfirm)toast(`✅ ${cat.name} ditandai ${actLabel}, `+(willReset?'pengingat direset ke KM sekarang':'tercatat (pengingat tidak berubah)')+(autoGantiStock?` (stok "${autoGantiStock.name}" otomatis dipotong 1)`:''));
 _clearMarkGuard();
 return entry;
+}catch(_markSaveErr){
+  _restoreMarkDomain();
+  console.error('V25: markServiced failed; domain rolled back',_markSaveErr);
+  throw _markSaveErr;
+}finally{
+  if(typeof Servis._markCommitInFlight!=='undefined')Servis._markCommitInFlight=false;
+}
+};
+return opts._batchOwnedLock?await _runMarkMutation():(typeof withServiceMutationLock==='function'?await withServiceMutationLock(_runMarkMutation):await _runMarkMutation());
 },
 // markServicedBatch(items) — BARU (Sesi E1). items: array of
 // {catId, actionType, cost}. REUSE markServiced() apa adanya per item
@@ -1596,18 +1776,83 @@ return entry;
 // belum ada kodenya) -- dipakai apa adanya begitu checklist dibangun.
 async markServicedBatch(items){
 if(!Array.isArray(items)||!items.length)return[];
-// Sesi E3: 1 batchId (uid()) DIBAGI ke seluruh item dari 1x pemanggilan
-// ini -- dipakai buat nandain "🔗 batch" di riwayat (Servis.renderList())
-// supaya user bisa lihat item mana saja yang ditandai selesai bersamaan.
-const batchId=uid();
-const results=[];
-for(const it of items){
-const entry=await Servis.markServiced(it.catId,it.actionType,{skipConfirm:true,skipEarlyGuard:true,presetCost:it.cost!==undefined?it.cost:0,batchId});
-if(entry)results.push(entry);
-}
-toast(`✅ ${results.length} item servis ditandai selesai`);
-return results;
+// V26 G33/G34: a batch is one atomic domain mutation. Each item still reuses
+// markServiced() for its business rules, but a failure restores the entire
+// pre-batch domain snapshot rather than leaving a partial checklist.
+const batchSnapshot={
+  servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
+  transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
+  partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,
+  sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null
+};
+const restoreBatch=()=>{
+  try{
+    if(batchSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(batchSnapshot.servisLogs);
+    if(batchSnapshot.transactions!==null)D.transactions=JSON.parse(batchSnapshot.transactions);
+    if(batchSnapshot.partsStock!==null)D.partsStock=JSON.parse(batchSnapshot.partsStock);
+    if(batchSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(batchSnapshot.sparepartCats);
+  }catch(e){console.error('V26: batch rollback failed',e);}
+};
+const runBatch=async()=>{
+  const batchId=uid();
+  const results=[];
+  try{
+    for(const it of items){
+      const entry=await Servis.markServiced(it.catId,it.actionType,{skipConfirm:true,skipEarlyGuard:true,presetCost:it.cost!==undefined?it.cost:0,batchId,_batchOwnedLock:true,_batchDeferEvents:true,_batchDeferSave:true});
+      // Invalid/stale category IDs are skipped; valid siblings remain part of the atomic batch.
+      // markServiced() already treats an unresolved category as a no-op, so batch orchestration
+      // must not convert that expected per-item validation result into a whole-batch failure.
+      if(entry)results.push(entry);
+    }
+    // V28: no item-level persistence. Commit the whole batch once, then publish side-effects once.
+    save();
+    for(const entry of results){
+      // V36: lifecycle and finance projections are independent post-commit effects.
+      // A lifecycle failure must never skip the Finance event for the same committed item.
+      try{
+        if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.create==='function')ServiceEventLifecycle.create(entry);
+        else if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});
+      }catch(e){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});else console.error('V36: batch service lifecycle failed',e);}
+      if(entry.txLinkId&&typeof AIBus!=='undefined'){
+        const _batchFinancePayload={txId:entry.txLinkId,category:resolveVehicleTxCategory(D.vehicles.find(v=>v.id===entry.vehicleId)),type:'expense',amount:entry.cost||0,kind:'servis'};
+        try{AIBus.emit('finance.updated',_batchFinancePayload);}
+        catch(_batchFinanceEventErr){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_batchFinancePayload});else console.error('V36: batch finance event failed',_batchFinanceEventErr);}
+      }
+    }
+    toast(`✅ ${results.length} item servis ditandai selesai`);
+    return results;
+  }catch(err){
+    restoreBatch();
+    throw err;
+  }
+};
+return typeof withServiceMutationLock==='function'?await withServiceMutationLock(runBatch):await runBatch();
 },
+getServiceOdometerIntegrity(vehicleId){
+  const allLogs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[];
+  const incomplete=allLogs.filter(s=>s.km==null||s.km==='').map(s=>({type:'missing_km',id:s.id||null,date:s.date||null}));
+  const invalidKm=allLogs.filter(s=>s.km!=null&&s.km!==''&&(!Number.isFinite(Number(s.km))||Number(s.km)<0)).map(s=>({type:'invalid_km',id:s.id||null,km:s.km}));
+  const logs=allLogs.filter(s=>Number.isFinite(Number(s.km))&&Number(s.km)>=0);
+  const violations=[];
+  const sorted=logs.slice().sort((a,b)=>{const cmp=typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(b,a):String(a.date||'').localeCompare(String(b.date||''))||Number(a.km)-Number(b.km)||String(a.id||'').localeCompare(String(b.id||''));return -cmp;});
+  for(let i=1;i<sorted.length;i++){const a=sorted[i-1],b=sorted[i];if(String(a.date||'')<String(b.date||'')&&Number(a.km)>Number(b.km))violations.push({type:'km_regression',previousId:a.id,currentId:b.id,previousKm:Number(a.km),currentKm:Number(b.km),previousDate:a.date,currentDate:b.date});}
+  const current=typeof getVehicleKm==='function'?Number(getVehicleKm(vehicleId)):NaN;
+  const issues=violations.concat(incomplete,invalidKm);
+  return{vehicleId,currentKm:Number.isFinite(current)?current:null,maxHistoricalKm:logs.length?Math.max(...logs.map(s=>Number(s.km))):null,violations,issues,incomplete,invalidKm,ok:issues.length===0};
+},
+// V33: explicit Finance ownership diagnostic. Repair is intentionally not
+// automatic because ambiguous legacy ownership must never be guessed.
+getServiceFinanceOwnershipIntegrity(vehicleId){
+  const logs=(Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(s=>s&&(!vehicleId||s.vehicleId===vehicleId));
+  const txs=Array.isArray(D.transactions)?D.transactions:[];
+  const owners=new Map();
+  txs.forEach(t=>{if(t&&t.servisLinkId){if(!owners.has(t.servisLinkId))owners.set(t.servisLinkId,[]);owners.get(t.servisLinkId).push(t);}});
+  const issues=[];
+  logs.forEach(s=>{const list=owners.get(s.id)||[];if(list.length>1)issues.push({type:'multiple_finance_owners',servisId:s.id,transactionIds:list.map(t=>t.id)});});
+  txs.forEach(t=>{if(!t||!t.servisLinkId)return;const s=logs.find(x=>x.id===t.servisLinkId);if(!s)issues.push({type:'orphan_finance_service_link',transactionId:t.id,servisId:t.servisLinkId});else if(s.vehicleId&&t.vehicleId&&s.vehicleId!==t.vehicleId)issues.push({type:'finance_service_vehicle_mismatch',transactionId:t.id,servisId:s.id,serviceVehicleId:s.vehicleId,transactionVehicleId:t.vehicleId});});
+  return{vehicleId:vehicleId||null,issues,ok:issues.length===0};
+},
+
 // getLastServiceKmForCat(vehicleId, cat, actionTypeFilter, forReminder) —
 // actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
 // PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
@@ -1616,8 +1861,8 @@ return results;
 // logic-nya persis 1 tempat (twin di modules/vehicle/sparepart-servis.js
 // getLastServiceDateForCat() punya salinan yang HARUS tetap identik).
 getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
-const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder))
-.sort((a,b)=>new Date(b.date)-new Date(a.date)||b.km-a.km);
+const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
 return logs.length?logs[0].km:null;
 },
 // _matchesActionTypeForReset(log, cat, actionTypeFilter, forReminder) — lihat
@@ -1653,6 +1898,8 @@ renderReminderFilters(card){
 renderReminder(){
 const card=document.getElementById('servisReminderCard');
 if(!card)return;
+const _legacyServiceMigrationChanged=typeof normalizeLegacyServiceLogs==='function'?normalizeLegacyServiceLogs():0;
+if(_legacyServiceMigrationChanged&&typeof save==='function')save();
 const curKm=getVehicleKm(curVehicleId);
 const kmPerDay=estimateKmPerDay(curVehicleId);
 // Sesi 295 (bugfix "Pengingat Servis" kebanjiran kategori sampah): dulu SEMUA
@@ -1679,7 +1926,7 @@ const filteredRemindableCats=remindableCats.filter(c=>{
   if(!rfMaster&&!rfComp)return true;
   const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,curVehicleId):null;
   const mid=r?r.masterCategoryId:null;
-  if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;return !!hit&&mid===hit.group.masterCategoryId;}
+  if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;if(!hit||mid!==hit.group.masterCategoryId)return false;const cid=c.serviceComponentId||(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'&&ServiceInputCatalog.infer(c.name)?.item?.id)||null;return cid===rfComp;}
   return mid===rfMaster;
 });
 // v21: condition-only maintenance gets its own read-only section.
@@ -1727,17 +1974,22 @@ const effectiveIntervalKm=u&&u.intervalKm>0?u.intervalKm:intervalKm;
 const effectiveLastKm=u&&u.lastKm!==undefined?u.lastKm:lastKm;
 const sisa=u&&u.sisaKm!=null?u.sisaKm:(effectiveIntervalKm>0?(effectiveIntervalKm-(effectiveLastKm===null?curKm:curKm-effectiveLastKm)):null);
 const pct=effectiveIntervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((effectiveIntervalKm-sisa)/effectiveIntervalKm)*100))):0;
-const status=u?u.status:(sisa==null?'aman':(sisa<=0?'lewat':(sisa<=effectiveIntervalKm*0.15?'segera':'aman')));
+const status=u?u.status:(sisa==null?'aman':(typeof resolveServiceStatusMeta==='function'?resolveServiceStatusMeta(effectiveIntervalKm>0?sisa/effectiveIntervalKm:1).code:(sisa<=0?'jatuh_tempo':(sisa<=effectiveIntervalKm*0.15?'segera':'aman'))));
 const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
 const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
 let col='green',msg=dayLimited?`Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`Sisa ${sisa.toLocaleString('id-ID')} km`,severity=null;
-if(status==='lewat'){
+if(status==='terlewat'){
 col='red';severity='overdue';
-msg=dayLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;
-}
-else if(status==='segera'){
+msg=dayLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Terlewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;
+}else if(status==='jatuh_tempo'){
+col='red';severity='overdue';
+msg=dayLimited?'🔴 Jatuh tempo hari ini':monthLimited?'🔴 Jatuh tempo bulan ini':'🔴 Jatuh tempo servis';
+}else if(status==='segera'){
 col='orange';severity='due-soon';
 msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;
+}else if(status==='mendekati'){
+col='orange';severity='watch';
+msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`;
 }
 // Kalau axis bulan yang membatasi, jangan tempel estimasi tanggal berbasis
 // sisa-KM karena itu memberi dua baseline berbeda pada kartu yang sama.
@@ -1754,8 +2006,11 @@ const nextAction=u&&u.nextAction&&u.nextAction!=='event_based'?u.nextAction:null
 const condition=u&&u.condition?u.condition:null;
 const actionText=nextAction?((nextAction==='periksa'?'Periksa':'Ganti')+(condition?' — '+condition:'')):action;
 const scheduleLabel=(u&&u.intervalHari&&u.limitingAxis==='hari')?`Setiap ${u.intervalHari} hari`:((effectiveIntervalKm!=null&&effectiveIntervalKm>0)?`Interval ${effectiveIntervalKm.toLocaleString('id-ID')} km`:'Berbasis kondisi/event');
-return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction,condition,scheduleLabel};
-}).sort((a,b)=>a.sisa-b.sisa);
+const nextDueKm=u&&u.nextDueKm!=null?u.nextDueKm:null;
+const nextDueDate=u&&u.nextDueDate?u.nextDueDate:null;
+const dueLabel=nextDueKm!==null&&nextDueDate?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km / ${fmtDateID(nextDueDate)}`:nextDueKm!==null?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km`:nextDueDate?`Berikutnya: ${fmtDateID(nextDueDate)}`:'';
+return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction,condition,scheduleLabel,nextDueKm,nextDueDate,dueLabel};
+}).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
 card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+rows.map(r=>`
       <div class="u-mb12">
         <div class="u-flex u-jcb u-aic u-fs12 u-mb4 u-pointer" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Tap untuk edit kategori (berlaku semua kendaraan)">
@@ -1764,6 +2019,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span cla
         </div>
         <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
         ${r.action?`<div class="u-fs11 u-fw700 u-cacc" style="margin-top:2px">👉 ${escapeHtml(r.action)}</div>`:''}
+        ${r.dueLabel?`<div class="u-fs11 u-t2" style="margin-top:2px">📅 ${escapeHtml(r.dueLabel)}</div>`:''}
         <div class="u-flex u-jcb u-aic" style="margin-top:3px">
           <div class="u-fs12t2">${r.lastKm===null?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km'} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="markSparepartServiced" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ Sudah Servis</button>
@@ -1832,7 +2088,7 @@ if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filt
 // classify 0 keyword cocok, maupun krn 0 kategori yang bisa di-join sama
 // sekali), BUKAN dibandingkan literal ke salah satu dari 13 id terkunci.
 const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
-const logs=D.servisLogs.filter(s=>s.vehicleId===curVehicleId&&new Date(s.date)>=from&&new Date(s.date)<=to&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||(Array.isArray(s.checklist)&&s.checklist.some(r=>r&&r.itemId===Servis.activeServiceComponentFilter)))).sort((a,b)=>new Date(b.date)-new Date(a.date));
+const logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||(Array.isArray(s.checklist)&&s.checklist.some(r=>r&&r.itemId===Servis.activeServiceComponentFilter)));}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
 const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
 document.getElementById('servisCount').textContent=logs.length;

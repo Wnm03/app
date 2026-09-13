@@ -1,0 +1,22 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const spare=fs.readFileSync(path.join(root,'modules/vehicle/sparepart-servis.js'),'utf8');
+const tx=fs.readFileSync(path.join(root,'modules/finance/transaksi-b.js'),'utf8');
+const backup=fs.readFileSync(path.join(root,'modules/shared/backup-restore.js'),'utf8');
+function ok(x,m){if(!x)throw new Error('FAIL: '+m);console.log('PASS: '+m)}
+const del=car.indexOf('async del(id){');
+const delSave=car.indexOf('save();',del);
+const delLifecycle=car.indexOf('ServiceEventLifecycle.remove(s,',del);
+ok(delSave>del && delLifecycle>delSave,'delete lifecycle is post-commit');
+const mark=car.indexOf('async markServiced(catId');
+ok(car.indexOf('withServiceMutationLock(_runMarkMutation)',mark)>mark,'markServiced uses shared mutation lock');
+ok(car.indexOf('_restoreMarkDomain()',mark)>mark,'markServiced has rollback path');
+ok(spare.includes('logs.sort(typeof compareServiceHistoryRecency'), 'getLastServiceKm uses canonical recency comparator');
+const snap=tx.indexOf('const _serviceEditSnapshot=');
+ok(snap>=0 && tx.indexOf('_serviceMutationTouched',snap)>snap,'Finance has service edit rollback boundary');
+const imp=backup.indexOf('parsed.servisLogs.forEach');
+ok(backup.indexOf('id:(s&&s.id)||uid()',imp)>imp,'JSON service import preserves source id when available');
+ok(backup.indexOf('findServiceEventByIdempotencyKey',imp)>imp,'JSON service import deduplicates stable idempotency key');
+console.log('P25 PASS');

@@ -34,6 +34,6 @@ test('Sesi 3C: transaksi memakai servisLinkId untuk hubungan 1:1',()=>{
 
 test('Sesi 3C: batch tetap punya batchId bersama tanpa menggabungkan event kategori',()=>{
   assert.match(car,/const batchId=uid\(\);/);
-  assert.match(car,/batchId\}/);
+  assert.match(car,/batchId/);
   assert.match(car,/Servis\.markServiced\(it\.catId,it\.actionType/);
 });

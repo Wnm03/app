@@ -40,10 +40,10 @@ const ITEM = (categoryName, status, sisaKm) => ({ categoryId: 'c_' + categoryNam
 
 test('maintenanceImpact() — deteksi item overdue relevan BBM (oli/saringan udara/busi/CVT) via keyword match', () => {
   const items = [
-    ITEM('Oli Mesin', 'lewat', -200),
+    ITEM('Oli Mesin', 'terlewat', -200),
     ITEM('Saringan Udara', 'segera', 300),
     ITEM('Busi', 'aman', 3000),
-    ITEM('Ban Belakang', 'lewat', -50), // tidak relevan BBM, tidak masuk overdueItems
+    ITEM('Ban Belakang', 'terlewat', -50), // tidak relevan BBM, tidak masuk overdueItems
   ];
   const D = { vehicles: [VEH] };
   const ctx = makeCtx(D, {
@@ -60,7 +60,7 @@ test('maintenanceImpact() — deteksi item overdue relevan BBM (oli/saringan uda
   assert.ok(res.overdueItems.some((it) => it.part === 'airFilter'));
   // "Ban Belakang" lewat tapi tidak relevan BBM -> tidak masuk overdueItems,
   // tapi TETAP dihitung di serviceIntervalOverdueCount (sinyal umum).
-  assert.equal(res.serviceIntervalOverdueCount, 2); // Oli Mesin + Ban Belakang (keduanya 'lewat')
+  assert.equal(res.serviceIntervalOverdueCount, 2); // Oli Mesin + Ban Belakang (keduanya 'terlewat')
 });
 
 test('maintenanceImpact() — hasMaintenanceImpact:false kalau semua item aman', () => {
@@ -196,7 +196,7 @@ test('fuelEfficiencyHealth() — {ok:false} kalau kendaraan tidak ditemukan', ()
 // --- maintenanceRecommendation() ------------------------------------------
 
 test('maintenanceRecommendation() — 1 baris rekomendasi per item overdue relevan BBM', () => {
-  const items = [ITEM('Oli Mesin', 'lewat', -200), ITEM('Busi', 'segera', 500)];
+  const items = [ITEM('Oli Mesin', 'terlewat', -200), ITEM('Busi', 'segera', 500)];
   const D = { vehicles: [VEH] };
   const ctx = makeCtx(D, {
     FuelCostAnalytics: { costPerKm: COST_OK },
@@ -208,7 +208,7 @@ test('maintenanceRecommendation() — 1 baris rekomendasi per item overdue relev
   assert.equal(res.hasMaintenanceImpact, true);
   assert.equal(res.recommendations.length, 2);
   assert.match(res.recommendations[0], /Oli Mesin/);
-  assert.match(res.recommendations[0], /lewat 200 km/);
+  assert.match(res.recommendations[0], /sudah lewat 200 km/);
 });
 
 test('maintenanceRecommendation() — saran tekanan ban kalau efisiensi turun TANPA item servis overdue relevan', () => {
@@ -257,7 +257,7 @@ test('maintenanceRisk() — "tinggi" kalau ada item lewat relevan BBM DAN efisie
   const D = { vehicles: [VEH] };
   const ctx = makeCtx(D, {
     FuelCostAnalytics: { costPerKm: COST_OK },
-    predictService: SVC_OK([ITEM('Oli Mesin', 'lewat', -200)]),
+    predictService: SVC_OK([ITEM('Oli Mesin', 'terlewat', -200)]),
     fuelEfficiency: () => ({ ok: true, kmPerLiter: 30, rpPerKm: 300 }),
     _vehicleFuelEfficiencyDropCheck: () => ({
       trigger: true,
@@ -276,7 +276,7 @@ test('maintenanceRisk() — "sedang" kalau HANYA salah satu sinyal (overdue ATAU
   const D = { vehicles: [VEH] };
   const ctx = makeCtx(D, {
     FuelCostAnalytics: { costPerKm: COST_OK },
-    predictService: SVC_OK([ITEM('Oli Mesin', 'lewat', -200)]),
+    predictService: SVC_OK([ITEM('Oli Mesin', 'terlewat', -200)]),
     fuelEfficiency: () => ({ ok: true, kmPerLiter: 40, rpPerKm: 250 }),
   });
   const res = ctx.FuelMaintenanceEngine.maintenanceRisk('v1');

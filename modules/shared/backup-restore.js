@@ -304,10 +304,10 @@ csvParts.push(toCSVRow([b.date,vehName,b.km,b.liter,b.harga||'',b.cost,b.spbu||'
 });
 csvParts.push('');
 csvParts.push('=== CAR NOTES: SERVIS ===');
-csvParts.push(toCSVRow(['Tanggal','Kendaraan','Item','KM','Biaya','Catatan']));
+csvParts.push(toCSVRow(['Tanggal','Kendaraan','Item','KM','Biaya','Catatan','Service ID','Category ID','Master Category ID','Component ID','Action Type','Interval KM','Interval Bulan','Next Due KM','Next Due Date','Next Due Axis','TX Link ID','Idempotency Key']));
 out.servisLogs.forEach(s=>{
 const vehName=D.vehicles.find(v=>v.id===s.vehicleId)?.name||'';
-csvParts.push(toCSVRow([s.date,vehName,s.item,s.km||'',s.cost,s.note||'']));
+csvParts.push(toCSVRow([s.date,vehName,s.item,s.km??'',s.cost??0,s.note||'',s.id||'',s.categoryId||'',s.masterCategoryId||'',s.serviceComponentId||'',s.actionType||'',s.intervalKmAtService??'',s.intervalBulanAtService??'',s.nextDueKm??'',s.nextDueDate||'',s.nextDueAxis||'',s.txLinkId||'',s.idempotencyKey||'']));
 });
 csvParts.push('');
 csvParts.push('=== CAR NOTES: PERJALANAN ===');
@@ -398,6 +398,92 @@ if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'cus
 closeModal('backupModal');
 toast('✅ Backup berhasil di-download!');
 }
+
+// P23 — Service import/restore odometer integrity.
+function validateServiceOdometerImportIntegrity(candidateLogs){
+const logs=Array.isArray(candidateLogs)?candidateLogs:[];
+if(!logs.length)return{ok:true,checked:0,invalid:[]};
+if(typeof Servis==='undefined'||!Servis||typeof Servis.validateServiceOdometer!=='function')return{ok:true,checked:0,invalid:[],skipped:true};
+const original=Array.isArray(D.servisLogs)?D.servisLogs:[];D.servisLogs=original.concat(logs);const invalid=[];
+try{logs.forEach(s=>{if(!s||s.km==null||s.km==='')return;const r=Servis.validateServiceOdometer({vehicleId:s.vehicleId||null,km:s.km,date:s.date,excludeId:s.id});if(!r.ok)invalid.push({id:s.id||null,vehicleId:s.vehicleId||null,code:r.code,message:r.message});});}finally{D.servisLogs=original;}
+return{ok:invalid.length===0,checked:logs.filter(s=>s&&s.km!=null&&s.km!=='').length,invalid};
+}
+
+// P11 — Restore/Backup service integrity reconciliation.
+// Full restore mengganti D.servisLogs + D.transactions sekaligus. Backup lama /
+// partial data dapat membawa linkage satu arah (txLinkId tanpa servisLinkId, atau
+// sebaliknya). Rekonsiliasi ini TIDAK membuat transaksi baru, TIDAK menghapus
+// histori, dan TIDAK memutar ulang pemakaian stok — restore harus idempotent.
+// Ia hanya memperbaiki referensi dua arah yang bisa dibuktikan dari data yang ada
+// dan melengkapi snapshot next-due yang memang belum pernah tersimpan.
+function reconcileRestoredServiceIntegrity(){
+const logs=Array.isArray(D.servisLogs)?D.servisLogs:[];
+const txs=Array.isArray(D.transactions)?D.transactions:[];
+const txById=new Map(txs.filter(t=>t&&t.id).map(t=>[t.id,t]));
+const logById=new Map(logs.filter(s=>s&&s.id).map(s=>[s.id,s]));
+const txsByServis=new Map();
+txs.forEach(t=>{
+  if(!t||!t.servisLinkId)return;
+  if(!txsByServis.has(t.servisLinkId))txsByServis.set(t.servisLinkId,[]);
+  txsByServis.get(t.servisLinkId).push(t);
+});
+const stats={linked:0,backlinked:0,clearedServiceLinks:0,clearedTxLinks:0,snapshots:0,conflicts:0};
+logs.forEach(s=>{
+  if(!s||!s.id)return;
+  let linkedTx=s.txLinkId?txById.get(s.txLinkId):null;
+  if(linkedTx&&s.vehicleId&&linkedTx.vehicleId&&s.vehicleId!==linkedTx.vehicleId){s.txLinkId=null;linkedTx=null;stats.clearedServiceLinks++;stats.conflicts++;}
+  const reverse=(txsByServis.get(s.id)||[]).filter(t=>!s.vehicleId||!t.vehicleId||t.vehicleId===s.vehicleId);
+  if(linkedTx){
+    if(!linkedTx.servisLinkId){linkedTx.servisLinkId=s.id;stats.backlinked++;}
+    else if(linkedTx.servisLinkId!==s.id){
+      // Jangan rebut transaksi yang sudah menunjuk servis valid lain.
+      s.txLinkId=null; linkedTx=null; stats.clearedServiceLinks++; stats.conflicts++;
+    }
+  }else if(s.txLinkId){
+    if(reverse.length===1){s.txLinkId=reverse[0].id;linkedTx=reverse[0];stats.linked++;}
+    else {s.txLinkId=null;stats.clearedServiceLinks++;if(reverse.length>1)stats.conflicts++;}
+  }else if(reverse.length===1){
+    s.txLinkId=reverse[0].id;linkedTx=reverse[0];stats.linked++;
+  }else if(reverse.length>1){stats.conflicts++;}
+
+  // Snapshot historis hanya dibackfill bila field canonical belum ada sama sekali.
+  // Snapshot lama yang sudah tersimpan tidak pernah ditimpa oleh interval master baru.
+  const missingSnapshot=s.nextDueAxis==null;
+  if(missingSnapshot&&typeof buildServiceNextDueSnapshot==='function'){
+    const vehicleId=s.vehicleId||null;
+    const catId=typeof canonicalServisCategoryId==='function'
+      ?canonicalServisCategoryId(s.item||'Servis',vehicleId,s.categoryId||null)
+      :(s.categoryId||null);
+    const cat=(D.sparepartCats||[]).find(c=>c&&c.id===catId);
+    if(cat){
+      const snap=buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:s.km,serviceDate:s.date,actionType:s.actionType||null});
+      if(snap){
+        if(s.categoryId==null)s.categoryId=catId;
+        s.intervalKmAtService=s.intervalKmAtService??snap.intervalKmAtService??null;
+        s.intervalBulanAtService=s.intervalBulanAtService??snap.intervalBulanAtService??null;
+        s.nextDueKm=s.nextDueKm??snap.nextDueKm??null;
+        s.nextDueDate=s.nextDueDate||snap.nextDueDate||null;
+        s.nextDueAxis=snap.nextDueAxis||'none';
+        stats.snapshots++;
+      }
+    }
+  }
+});
+
+// Bersihkan linkage Finance yang menunjuk servis yang memang tidak ada.
+// Bila service ada, service.txLinkId adalah authority; transaksi duplikat tidak
+// boleh ikut mengklaim service yang sama.
+txs.forEach(t=>{
+  if(!t||!t.servisLinkId)return;
+  const s=logById.get(t.servisLinkId);
+  if(!s){t.servisLinkId=null;stats.clearedTxLinks++;return;}
+  if(s.vehicleId&&t.vehicleId&&s.vehicleId!==t.vehicleId){t.servisLinkId=null;stats.clearedTxLinks++;stats.conflicts++;return;}
+  if(!s.txLinkId){s.txLinkId=t.id;stats.linked++;return;}
+  if(s.txLinkId!==t.id){t.servisLinkId=null;stats.clearedTxLinks++;stats.conflicts++;}
+});
+return stats;
+}
+
 async function applyRestoredData(imp){
 if(!imp||typeof imp!=='object'){await showAlertModal('File backup tidak dikenali (bukan format yang valid).',{icon:'❌',title:'Backup Tidak Valid'});return false;}
 const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios'];
@@ -418,6 +504,20 @@ snapJson=JSON.stringify(D);
 safeSetItem('kw_v4_prerestore',snapJson);
 }catch(e){console.error('Gagal simpan snapshot pengaman:',e);}
 const prevD=JSON.parse(JSON.stringify(D));
+// V24 G10: snapshot every external IndexedDB domain before restore. D itself
+// can be rolled back synchronously, but the auxiliary stores need their own
+// compensating rollback if a later store write fails.
+let _prevLifeosStore,_prevEieStore,_prevVehicleCatalogStore,_prevHondaPdfImportStore;
+try{
+  _prevLifeosStore=await IDBStore.get('lifeos:store');
+  _prevEieStore=await IDBStore.get('eie:store');
+  _prevVehicleCatalogStore=await IDBStore.get('vehicle-catalog:store');
+  _prevHondaPdfImportStore=await IDBStore.get('honda-pdf-import:store');
+}catch(_idbSnapshotErr){
+  console.error('V24: gagal mengambil snapshot auxiliary IndexedDB sebelum restore',_idbSnapshotErr);
+  await showAlertModal('Snapshot keamanan database tambahan gagal dibuat. Restore dibatalkan agar tidak terjadi restore parsial.',{icon:'❌',title:'Restore Dibatalkan'});
+  return false;
+}
 // BUGFIX-INTEGRASI: `_lifeosStore`/`_eieStore` (lihat buildBackupPayload())
 // adalah titipan data IndexedDB, BUKAN properti D — disimpan dulu sebelum
 // merge, lalu dihapus dari D supaya tidak nyangkut sbg field liar di D.
@@ -443,7 +543,21 @@ applyRestoredDataMigrations();
 // SETELAH migrasi selesai di bawah, supaya tidak nyangkut sbg field liar di
 // D permanen (pola sama persis 3 store lain, cuma titik hapusnya digeser).
 runDataMigrations(backupVersion);
+// P13: normalize legacy service logs after all schema migrations so old
+// records receive canonical category/component + next-due/idempotency fields
+// without overwriting existing snapshots or replaying Finance/stock effects.
+if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
 delete D._vehicleCatalogStore;
+// P11: setelah seluruh migration selesai, rapikan linkage servis↔Finance dan
+// backfill snapshot lama sebelum data persisten disimpan / UI di-init.
+const _serviceRestoreIntegrity=reconcileRestoredServiceIntegrity();
+if(_serviceRestoreIntegrity.conflicts||_serviceRestoreIntegrity.clearedServiceLinks||_serviceRestoreIntegrity.clearedTxLinks){
+console.warn('Restore service integrity reconciled:',_serviceRestoreIntegrity);
+}
+const _p23RestoreValidation=validateServiceOdometerImportIntegrity(D.servisLogs||[]);
+if(!_p23RestoreValidation.ok)throw new Error('Restore dibatalkan: integritas odometer servis tidak valid ('+_p23RestoreValidation.invalid.length+' record).');
+// V37: ownership conflicts are a restore-invalid state; never guess an owner.
+if(typeof getServiceFinanceOwnershipIntegrity==='function'){const _own=getServiceFinanceOwnershipIntegrity();if(_own&&_own.issues&&_own.issues.length)throw new Error('Restore dibatalkan: konflik ownership servis↔Finance ('+_own.issues.length+' issue).');}
 saveFlush();init();
 try{
 if(_restoredLifeosStore!==undefined){
@@ -462,13 +576,28 @@ if(_restoredHondaPdfImportStore!==undefined){
 await IDBStore.set('honda-pdf-import:store',_restoredHondaPdfImportStore);
 if(typeof hondaPdfImportInvalidateCache==='function')hondaPdfImportInvalidateCache();
 }
-}catch(e){console.error('Restore data LifeOS/EIE/Vehicle Catalog/Honda PDF Import (IndexedDB) gagal (data D lain tetap ter-restore):',e);}
+}catch(e){
+  console.error('V24: Restore auxiliary IndexedDB gagal, memulai compensating rollback:',e);
+  try{
+    if(_prevLifeosStore!==undefined)await IDBStore.set('lifeos:store',_prevLifeosStore);
+    if(_prevEieStore!==undefined)await IDBStore.set('eie:store',_prevEieStore);
+    if(_prevVehicleCatalogStore!==undefined)await IDBStore.set('vehicle-catalog:store',_prevVehicleCatalogStore);
+    if(_prevHondaPdfImportStore!==undefined)await IDBStore.set('honda-pdf-import:store',_prevHondaPdfImportStore);
+  }catch(_idbRollbackErr){console.error('V24: compensating rollback auxiliary IndexedDB juga gagal',_idbRollbackErr);}
+  throw e;
+}
 return true;
 }catch(e){
 console.error('Restore gagal, mengembalikan data sebelumnya:',e);
 D=prevD;
 saveFlush();init();
-await showAlertModal('Terjadi error saat restore, data dikembalikan ke sebelum restore agar tidak corrupt. Detail error ada di console.',{icon:'❌',title:'Restore Gagal'});
+try{
+  if(_prevLifeosStore!==undefined)await IDBStore.set('lifeos:store',_prevLifeosStore);
+  if(_prevEieStore!==undefined)await IDBStore.set('eie:store',_prevEieStore);
+  if(_prevVehicleCatalogStore!==undefined)await IDBStore.set('vehicle-catalog:store',_prevVehicleCatalogStore);
+  if(_prevHondaPdfImportStore!==undefined)await IDBStore.set('honda-pdf-import:store',_prevHondaPdfImportStore);
+}catch(_idbRollbackErr){console.error('V24: restore rollback auxiliary IndexedDB gagal',_idbRollbackErr);}
+await showAlertModal('Terjadi error saat restore, seluruh domain yang dapat dikembalikan sudah dipulihkan ke sebelum restore. Detail error ada di console.',{icon:'❌',title:'Restore Gagal'});
 return false;
 }
 }
@@ -631,12 +760,14 @@ const resultEl=document.getElementById('carImportResult');
 resultEl.innerHTML='⏳ Memproses file...';
 const reader=new FileReader();
 reader.onload=function(ev){
+const _v26ImportSnapshot={bbmLogs:JSON.stringify(D.bbmLogs||[]),servisLogs:JSON.stringify(D.servisLogs||[]),transactions:JSON.stringify(D.transactions||[]),partsStock:JSON.stringify(D.partsStock||[]),sparepartCats:JSON.stringify(D.sparepartCats||[])};
 try{
 const content=ev.target.result;
 if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}];
 const selectedVehId=document.getElementById('carImportVehicle')?document.getElementById('carImportVehicle').value:'';
 const vehId=(selectedVehId&&D.vehicles.find(v=>v.id===selectedVehId))?selectedVehId:D.vehicles[0].id;
 let bbmCount=0, servisCount=0, skipCount=0, autoDetectCount=0, vehColDetected=false;
+const importedServiceCandidates=[];
 function matchVehicleFromText(text){
 if(!text)return null;
 const t=text.toString().trim().toLowerCase();
@@ -656,15 +787,24 @@ bbmCount++;
 });
 }
 if(Array.isArray(parsed.servisLogs)){
+const _v34CsvDomainSnapshot={bbmLogs:JSON.stringify(D.bbmLogs||[]),servisLogs:JSON.stringify(D.servisLogs||[])};
 parsed.servisLogs.forEach(s=>{
-if(D.servisLogs.find(x=>x.id===s.id))return;
+const _sourceKey=s&&s.idempotencyKey||null;
+if(_sourceKey&&typeof findServiceEventByIdempotencyKey==='function'&&findServiceEventByIdempotencyKey(D.servisLogs||[],_sourceKey,s.vehicleId||vehId))return;
+if(s&&s.id&&D.servisLogs.find(x=>x.id===s.id))return;
 const restoredVehicleId=s.vehicleId||vehId;
 const restoredItem=s.item||'Servis';
 const restoredCatId=typeof canonicalServisCategoryId==='function'
 ?canonicalServisCategoryId(restoredItem,restoredVehicleId,s.categoryId||null):s.categoryId||null;
-D.servisLogs.push({...s,id:uid(),vehicleId:restoredVehicleId,categoryId:restoredCatId});
+const restoredCat=(D.sparepartCats||[]).find(c=>c&&c.id===restoredCatId);
+const restoredSnap=(restoredCat&&typeof buildServiceNextDueSnapshot==='function'&&!s.nextDueAxis)?buildServiceNextDueSnapshot({vehicleId:restoredVehicleId,cat:restoredCat,serviceKm:s.km,serviceDate:s.date,actionType:s.actionType||null}):null;
+const importedService={...s,id:(s&&s.id)||uid(),vehicleId:restoredVehicleId,categoryId:restoredCatId,...(restoredSnap?{intervalKmAtService:restoredSnap.intervalKmAtService,intervalBulanAtService:restoredSnap.intervalBulanAtService,nextDueKm:restoredSnap.nextDueKm,nextDueDate:restoredSnap.nextDueDate,nextDueAxis:restoredSnap.nextDueAxis}: {})};
+importedServiceCandidates.push(importedService);
+D.servisLogs.push(importedService);
 servisCount++;
 });
+const _p23JsonValidation=validateServiceOdometerImportIntegrity(importedServiceCandidates);
+if(!_p23JsonValidation.ok){D.servisLogs=D.servisLogs.filter(s=>!importedServiceCandidates.some(c=>c&&c.id===s.id));throw new Error('Import JSON servis ditolak karena integritas odometer: '+_p23JsonValidation.invalid.map(x=>x.message||x.code).join('; '));}
 }
 if(!Array.isArray(parsed.bbmLogs)&&!Array.isArray(parsed.servisLogs)){
 resultEl.innerHTML='⚠️ File JSON ini tidak mengandung data BBM/Servis (bbmLogs/servisLogs).';
@@ -707,19 +847,30 @@ bbmCount++;
 const importServisItem=ket||'Servis (import)';
 const importCatId=typeof canonicalServisCategoryId==='function'
 ?canonicalServisCategoryId(importServisItem,rowVehId,null):null;
-D.servisLogs.push({id:uid(),vehicleId:rowVehId,date,item:importServisItem,categoryId:importCatId,km:km||null,cost:amount,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
+const importCat=(D.sparepartCats||[]).find(c=>c&&c.id===importCatId);
+const importSnap=(importCat&&typeof buildServiceNextDueSnapshot==='function')?buildServiceNextDueSnapshot({vehicleId:rowVehId,cat:importCat,serviceKm:km||null,serviceDate:date,actionType:null}):{};
+const _csvFingerprint=[rowVehId,date,importServisItem,km||'',amount,ket].map(v=>String(v).trim().toLowerCase()).join('|');
+const _csvIdemKey='csv:'+_csvFingerprint;
+if(typeof findServiceEventByIdempotencyKey==='function'&&findServiceEventByIdempotencyKey(D.servisLogs||[],_csvIdemKey,rowVehId)){skipCount++;continue;}
+const importedService={id:uid(),vehicleId:rowVehId,date,item:importServisItem,categoryId:importCatId,km:km||null,cost:amount,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null,idempotencyKey:_csvIdemKey,intervalKmAtService:importSnap.intervalKmAtService||null,intervalBulanAtService:importSnap.intervalBulanAtService||null,nextDueKm:importSnap.nextDueKm??null,nextDueDate:importSnap.nextDueDate||null,nextDueAxis:importSnap.nextDueAxis||'none'};
+importedServiceCandidates.push(importedService);
+D.servisLogs.push(importedService);
 servisCount++;
 } else {
 skipCount++;
 }
 }
 }
+const _p23CsvValidation=validateServiceOdometerImportIntegrity(importedServiceCandidates);
+if(!_p23CsvValidation.ok){D.bbmLogs=JSON.parse(_v34CsvDomainSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v34CsvDomainSnapshot.servisLogs);throw new Error('Import CSV servis ditolak karena integritas odometer: '+_p23CsvValidation.invalid.map(x=>x.message||x.code).join('; '));}
 save();
 if(typeof renderCnTab==='function')renderCnTab();
 const vehName=(D.vehicles.find(v=>v.id===vehId)||{}).name||'kendaraan terpilih';
 resultEl.innerHTML=`✅ Import selesai untuk <b>${escapeHtml(vehName)}</b> (default): <b>${bbmCount}</b> catatan BBM, <b>${servisCount}</b> catatan servis ditambahkan otomatis (dikelompokkan sesuai tanggal & kata kunci). ${vehColDetected?`<br>🚗 Kolom kendaraan terdeteksi di CSV: <b>${autoDetectCount}</b> baris otomatis dicocokkan ke kendaraannya masing-masing, sisanya masuk ke "${escapeHtml(vehName)}".`:''} ${skipCount?`<br>⚠️ ${skipCount} baris dilewati karena tidak cocok format/kata kunci.`:''}`;
 toast('✅ Import Car Notes selesai');
 }catch(err){
+// V26 G27: CSV import is atomic across both Car Notes domains.
+try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);D.transactions=JSON.parse(_v26ImportSnapshot.transactions);D.partsStock=JSON.parse(_v26ImportSnapshot.partsStock);D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
 resultEl.innerHTML='❌ Gagal import: '+(err&&err.message?err.message:'format file tidak dikenali');
 }
 };

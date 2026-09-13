@@ -48,12 +48,14 @@ window._loadedScripts=window._loadedScripts||{};
 // yang gagal. Sekarang retry otomatis 1x dengan cache-buster baru sebelum
 // benar-benar menyerah, dan promise gagal dihapus dari cache supaya tab
 // dibuka ulang bisa coba lagi (bukan tersangkut gagal selamanya per sesi).
-function _loadScriptOnce(src,_isRetry){
+function _loadScriptOnce(src,_isRetry,integrity,crossOrigin){
 if(!_isRetry && window._loadedScripts[src])return window._loadedScripts[src];
 const p=new Promise((resolve,reject)=>{
 const s=document.createElement('script');
 s.src=_isRetry?(src+(src.indexOf('?')>-1?'&':'?')+'_retry='+Date.now()):src;
 s.async=true;
+if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
+if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
 let done=false;
 const timeoutId=setTimeout(()=>{
 if(done)return;done=true;
@@ -66,7 +68,7 @@ if(done)return;done=true;clearTimeout(timeoutId);
 delete window._loadedScripts[src];
 if(!_isRetry){
 // satu kali percobaan ulang otomatis sebelum melaporkan gagal
-_loadScriptOnce(src,true).then(resolve).catch(reject);
+_loadScriptOnce(src,true,integrity,crossOrigin).then(resolve).catch(reject);
 }else{
 reject(new Error('Gagal memuat '+src));
 }
@@ -76,11 +78,13 @@ document.head.appendChild(s);
 if(!_isRetry) window._loadedScripts[src]=p;
 return p;
 }
-function ensureTesseract(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');}
-function ensureJsPDF(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');}
-function ensureHtml2Canvas(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');}
+function ensureTesseract(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',false,'sha512-mpQLT7yiRJ06RkhNTYhVnvvr3c71il3h+wEI16ICc+fnFHxrBRoJrMmDJ8iBY04+U/FgTj7xah5Vbltq5pg+aQ==');}
+function ensureJsPDF(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',false,'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==');}
+function ensureHtml2Canvas(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',false,'sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==');}
 function ensureGoogleGSI(){return _loadScriptOnce('https://accounts.google.com/gsi/client');}
-function ensureXLSX(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');}
+function ensureXLSX(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',false,'sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==');}
+// ZXing remains version-pinned but intentionally has no guessed SRI hash; a verified
+// digest must be generated from the exact CDN bytes before enabling it.
 function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');}
 // Sesi 13 Tahap 1b (lazy-load internal module, DESIGN_lazy-load-modules.md):
 // renovasi.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),

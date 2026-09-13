@@ -1,0 +1,14 @@
+const fs=require('fs');
+const car=fs.readFileSync(require.resolve('../car-notes.js'),'utf8');
+const tx=fs.readFileSync(require.resolve('../modules/finance/tx-servis.js'),'utf8');
+const backup=fs.readFileSync(require.resolve('../modules/shared/backup-restore.js'),'utf8');
+const ok=(x,m)=>{if(!x)throw new Error(m)};
+ok(tx.includes('_beforeHistoricalPayload'),'captures historical payload before mutation');
+ok(tx.includes('_beforeHistoricalPayload.date===opts.date'),'compares against pre-mutation date');
+ok(tx.includes('_beforeHistoricalPayload.checklist===JSON.stringify(checklist)'),'includes checklist in retry identity');
+ok(tx.includes("Service event sudah dimiliki transaksi Finance lain"),'rejects duplicate finance owner');
+ok(car.includes("opts._batchOwnedLock?await _runMarkMutation()"),'avoids nested service-lock deadlock');
+ok(backup.includes('_v26ImportSnapshot'),'CSV import has atomic domain snapshot');
+ok(backup.includes("const _csvIdemKey='csv:'+_csvFingerprint"),'CSV service rows get deterministic idempotency key');
+ok(backup.includes('idempotencyKey:_csvIdemKey'),'CSV service log persists idempotency key');
+console.log('V26 structural regression: 8/8 PASS');

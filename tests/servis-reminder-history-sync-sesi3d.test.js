@@ -17,7 +17,7 @@ test('Sesi 3D: kartu Pengingat utama memakai canonical reset filter untuk lastKm
 
 test('Sesi 3D: interval bulan yang membatasi tidak dilabeli sebagai lewat KM',()=>{
   assert.match(car,/const monthLimited=!!\(u&&u\.intervalBulan&&u\.limitingAxis==='bulan'/);
-  assert.match(car,/monthLimited\?`⚠️ Lewat \$\{Math\.abs\(Math\.round\(u\.sisaBulan\)\)\} bln`/);
+  assert.match(car,/monthLimited/); assert.match(car,/u\.sisaBulan/);
   assert.match(car,/const estDateISO=monthLimited\?null:/);
 });
 

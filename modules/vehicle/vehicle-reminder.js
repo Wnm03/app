@@ -66,7 +66,7 @@ serviceReminders(vehicleId) {
     const pred = predictService({ vehicleId: v.id });
     if (!pred.ok || !Array.isArray(pred.items)) return;
     pred.items.filter((it) => it.status !== 'aman').forEach((it) => {
-      const severity = it.status === 'lewat' ? 'overdue' : 'due-soon';
+      const severity = it.status === 'terlewat' ? 'overdue' : 'due-soon';
       const message = severity === 'overdue'
         ? `Servis ${it.categoryName} ${v.name} sudah lewat jatuh tempo (${Math.abs(it.sisaKm)} km lewat batas).`
         : `Servis ${it.categoryName} ${v.name} segera jatuh tempo (sisa ${it.sisaKm} km).`;

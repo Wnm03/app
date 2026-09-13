@@ -222,8 +222,25 @@ if(candidate&&candidate.vehicleId===vehicleId)s=candidate;
 if(!s&&opts.txId&&typeof findServiceEventForTransaction==='function'){
 s=findServiceEventForTransaction(D.servisLogs||[],opts.txId,vehicleId);
 }
+const _idempotencyKey=opts.idempotencyKey||((opts.txId)?`tx:${opts.txId}`:null);
+if(!s&&_idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
+s=findServiceEventByIdempotencyKey(D.servisLogs||[],_idempotencyKey,vehicleId);
+}
 
 if(s){
+// V26 G38: one Service Event may have at most one Finance owner.
+const _owners=(D.transactions||[]).filter(t=>t&&t.servisLinkId===s.id&&t.id!==opts.txId);
+if(_owners.length){
+  throw new Error('Service event sudah dimiliki transaksi Finance lain; linkage ditolak untuk mencegah duplicate owner.');
+}
+// V26 G25/G32: capture the persisted historical payload BEFORE mutation.
+// Otherwise Object.assign() makes a genuine edit look identical to opts and
+// can incorrectly preserve an obsolete nextDue snapshot.
+const _beforeHistoricalPayload={
+  date:s.date,item:s.item,km:s.km,cost:s.cost,note:s.note,accountId:s.accountId,
+  categoryId:s.categoryId,serviceComponentId:s.serviceComponentId,
+  checklist:Array.isArray(s.checklist)?JSON.stringify(s.checklist):JSON.stringify([])
+};
 Object.assign(s,{
   date:opts.date,
   item:opts.item,
@@ -237,8 +254,26 @@ Object.assign(s,{
   checklist:checklist.length?checklist:s.checklist||[]
 });
 if(catIdForLog)s.categoryId=catIdForLog;
+const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+// V24 G4: an idempotent retry with identical service payload must NOT
+// recalculate historical snapshot fields from today's master interval.
+// A genuine Finance edit (date/item/KM/cost/note/account/category/component/checklist change)
+// is allowed to recompute the snapshot.
+const _sameHistoricalPayload=
+  _beforeHistoricalPayload.date===opts.date && _beforeHistoricalPayload.item===opts.item && Number(_beforeHistoricalPayload.km??null)===Number(opts.km??null) &&
+  Number(_beforeHistoricalPayload.cost??0)===Number(opts.cost??0) && String(_beforeHistoricalPayload.note||'')===String(opts.note||'') &&
+  String(_beforeHistoricalPayload.accountId||'')===String(opts.accountId||'') &&
+  String(_beforeHistoricalPayload.categoryId||'')===String(catIdForLog||'') &&
+  String(_beforeHistoricalPayload.serviceComponentId||'')===String(componentId||'') &&
+  _beforeHistoricalPayload.checklist===JSON.stringify(checklist);
+if(_catForSnapshot&&typeof buildServiceNextDueSnapshot==='function'&&!(_sameHistoricalPayload&&s.nextDueAxis!==undefined)){
+  const _snap=buildServiceNextDueSnapshot({vehicleId,cat:_catForSnapshot,serviceKm:opts.km,serviceDate:opts.date,actionType:opts.actionType||null});
+  s.intervalKmAtService=_snap.intervalKmAtService; s.intervalBulanAtService=_snap.intervalBulanAtService;
+  s.nextDueKm=_snap.nextDueKm; s.nextDueDate=_snap.nextDueDate; s.nextDueAxis=_snap.nextDueAxis;
+}
 _syncServisUsedPartFromPurchase(s,opts.purchasedPartId,opts.purchasedPartQty);
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.update(s,{source:'finance'});
+// V24 G3: Finance->Service must not emit lifecycle events before the Finance
+// transaction itself commits. Caller flushes this after its final save().
 return s.id;
 }
 
@@ -257,6 +292,7 @@ const log={
   note:opts.note,
   accountId:opts.accountId,
   txLinkId:opts.txId,
+  idempotencyKey:_idempotencyKey,
   usedPartId:null,
   usedPartQty:0,
   catalogPartId:null,
@@ -265,9 +301,15 @@ const log={
   catalogPartLinkedStockId:null,
   autoLinkedPartStock:false
 };
+const _catForSnapshotNew=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+if(_catForSnapshotNew&&typeof buildServiceNextDueSnapshot==='function'){
+  const _snap=buildServiceNextDueSnapshot({vehicleId,cat:_catForSnapshotNew,serviceKm:opts.km,serviceDate:opts.date,actionType:opts.actionType||null});
+  log.intervalKmAtService=_snap.intervalKmAtService; log.intervalBulanAtService=_snap.intervalBulanAtService;
+  log.nextDueKm=_snap.nextDueKm; log.nextDueDate=_snap.nextDueDate; log.nextDueAxis=_snap.nextDueAxis;
+}
 D.servisLogs.push(log);
 _syncServisUsedPartFromPurchase(log,opts.purchasedPartId,opts.purchasedPartQty);
-if(typeof ServiceEventLifecycle!=='undefined')ServiceEventLifecycle.create(log,{source:'finance'});
+// V24 G3: defer lifecycle create until Finance commit succeeds.
 return servisId;
 }
 // applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx) — dipanggil dari
@@ -320,29 +362,42 @@ box.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--bor
 const TxServis=typeof window!=='undefined'?(window.TxServis=window.TxServis||{}):{};
 TxServis.toggleChecklist=function(groupIdx,itemIdx){if(typeof ServisChecklist==='undefined')return;ServisChecklist.toggleItem(Number(groupIdx),Number(itemIdx));renderTxServisChecklist();};
 TxServis.setChecklistAction=function(groupIdx,itemIdx,type){if(typeof ServisChecklist==='undefined')return;ServisChecklist.setActionType(Number(groupIdx),Number(itemIdx),type);renderTxServisChecklist();};
-function applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx){
+async function applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx){
+const run=async()=>{
 const chk=document.getElementById('txSyncServis');
 const autoService=_isFinanceServiceTransaction();
-if(!autoService&&(!chk||!chk.checked))return;
+if(!autoService&&(!chk||!chk.checked))return null;
 const panel=document.getElementById('txServisPanel');
-if(!panel||panel.style.display==='none')return;
+if(!panel||panel.style.display==='none')return null;
 if(autoService){
   if(chk)chk.checked=true;
   _ensureAutoServisFields();
 }
 const vehicleId=document.getElementById('txServisVehicle').value;
+// P14 — vehicle isolation: a Finance transaction that already has a vehicle
+// identity must never be linked to a service event for another vehicle.
+const txVehicleId=tx&&tx.vehicleId!=null?tx.vehicleId:(existingTx&&existingTx.vehicleId!=null?existingTx.vehicleId:null);
+if(txVehicleId&&vehicleId&&txVehicleId!==vehicleId){
+  toast('⚠️ Kendaraan transaksi berbeda dengan kendaraan servis — linkage dibatalkan');
+  return null;
+}
 if(typeof ServisChecklist!=='undefined'&&ServisChecklist._vehicleId!==vehicleId)ServisChecklist.open(vehicleId);
 const masterCategoryId=document.getElementById('txServisCategory')?.value||null;
 const componentId=document.getElementById('txServisComponent')?.value||null;
 const item=document.getElementById('txServisItem').value.trim();
-const km=parseFloat(document.getElementById('txServisKm').value)||null;
-if(!vehicleId){toast('⚠️ Pilih kendaraan dulu utk transaksi servis');return;}
-if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk transaksi servis');return;}
+const kmRaw=document.getElementById('txServisKm').value.trim();
+const km=kmRaw===''?null:Number(kmRaw);
+if(!vehicleId){toast('⚠️ Pilih kendaraan dulu utk transaksi servis');return null;}
+if(km!==null&&typeof Servis!=='undefined'&&typeof Servis.validateServiceOdometer==='function'){
+  const odometerCheck=Servis.validateServiceOdometer({vehicleId,km,date,excludeId:(existingTx&&existingTx.servisLinkId)||null});
+  if(!odometerCheck.ok){toast('⚠️ '+odometerCheck.message);return null;}
+}
+if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk transaksi servis');return null;}
 const existingServisId=(existingTx&&existingTx.servisLinkId)?existingTx.servisLinkId:null;
 const purchasedPartId=(tx&&tx.partStockId)?tx.partStockId:null;
 const purchasedPartQty=purchasedPartId?(tx.partStockQty||0):0;
 const checklist=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist});
+const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist});
 if(tx)tx.servisLinkId=servisId;
 if(typeof Sparepart!=='undefined'&&Sparepart.renderStockList)Sparepart.renderStockList();
 if(typeof Sparepart!=='undefined'&&Sparepart.renderCatList)Sparepart.renderCatList();
@@ -351,7 +406,6 @@ if(typeof renderCnTab==='function')renderCnTab();
 // vehicle/reminder/AI dan renderer domain lain. Tagihan tidak dibuat/dimodifikasi
 // karena servis bukan kewajiban tagihan; aset hanya berubah bila transaksi memang
 // sudah memiliki assetId, sedangkan renderer global tetap aman dipanggil ulang.
-if(typeof AIBus!=='undefined')AIBus.emit('vehicle.updated',{kind:'servis',txId,vehicleId,servisId});
 if(typeof Aset!=='undefined'&&Aset&&typeof Aset.renderList==='function'&&tx&&tx.assetId)Aset.renderList();
 if(typeof renderDashboard==='function')renderDashboard();
 if(typeof renderKeuangan==='function')renderKeuangan();
@@ -359,6 +413,9 @@ if(typeof renderBillList==='function')renderBillList();
 toast(autoService
   ? (existingServisId?'🔧 Transaksi servis diperbarui — Riwayat & Pengingat tersinkron':'🔧 Transaksi servis otomatis masuk ke Riwayat & Pengingat')
   : (existingServisId?'✅ Catatan Servis tertaut ikut diperbarui':'🔧 Catatan Servis dibuat & tertaut ke transaksi ini'));
+return {servisId,created:!existingServisId,vehicleId,txId};
+};
+return typeof withServiceMutationLock==='function'?withServiceMutationLock(run):run();
 }
 // openTxLinkedServisModal() — tombol "✏️ Edit Detail Servis" di modal Edit
 // Transaksi (lihat editTx() di transaksi.js utk logic tampil/sembunyi
@@ -371,6 +428,7 @@ const t=(D.transactions||[]).find(x=>x.id===txEditId);
 if(!t||!t.servisLinkId){toast('⚠️ Transaksi ini belum tertaut ke catatan Servis');return;}
 const s=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId);
 if(!s){toast('⚠️ Catatan Servis tertaut sudah tidak ditemukan (mungkin sudah dihapus)');return;}
+if(t.vehicleId&&s.vehicleId&&t.vehicleId!==s.vehicleId){toast('⚠️ Link Servis tidak valid: kendaraan transaksi dan servis berbeda');return;}
 closeModal('txModal');
 if(typeof Servis!=='undefined'&&Servis.openModal)Servis.openModal(s.id);
 }
