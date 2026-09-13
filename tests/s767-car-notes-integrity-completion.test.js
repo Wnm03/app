@@ -1,0 +1,5 @@
+const test=require('node:test');const assert=require('node:assert/strict');
+const F=require('../modules/vehicle/finance-service-adapter.js');const P=require('../modules/vehicle/service-photo-validator.js');const R=require('../modules/vehicle/reminder-lifecycle.js');
+test('finance adapter validates and plans create/update',()=>{assert.equal(F.create({serviceId:'s',vehicleId:'v',amount:100}).ok,true);assert.equal(F.create({serviceId:'s',vehicleId:'v',amount:0}).code,'INVALID_AMOUNT');assert.equal(F.update({id:'tx'},{serviceId:'s',vehicleId:'v',amount:200}).operation,'update');});
+test('photo validator rejects non-image and oversized payload',()=>{assert.equal(P.validate('abc').code,'INVALID_IMAGE_DATA');assert.equal(P.validate('data:image/png;base64,abc').ok,true);assert.equal(P.validate('data:image/png;base64,'+'a'.repeat(300),{maxBytes:10}).code,'IMAGE_TOO_LARGE');});
+test('reminder lifecycle validates transitions',()=>{assert.equal(R.transition('ACTIVE','COMPLETED').ok,true);assert.equal(R.transition('COMPLETED','ACTIVE').code,'COMPLETED_CANNOT_REOPEN');assert.equal(R.transition('ACTIVE','BROKEN').code,'INVALID_STATE');});

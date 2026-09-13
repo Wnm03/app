@@ -1,0 +1,4 @@
+const test=require('node:test');const assert=require('node:assert/strict');
+const stock=require('../modules/vehicle/service-stock-ledger');const odo=require('../modules/vehicle/odometer-audit');
+test('stock ledger plans only net deltas and does not mutate inputs',()=>{const before=[{stockId:'a',qty:2},{stockId:'b',qty:1}],after=[{stockId:'a',qty:5},{stockId:'c',qty:4}];const snapshot=JSON.stringify({before,after});assert.deepEqual(stock.plan(before,after),[{stockId:'a',delta:3},{stockId:'b',delta:-1},{stockId:'c',delta:4}]);assert.equal(JSON.stringify({before,after}),snapshot);});
+test('odometer audit rejects rollback and invalid values',()=>{assert.deepEqual(odo.compare(100,90),{ok:false,code:'ODOMETER_ROLLBACK'});assert.deepEqual(odo.compare(100,-1),{ok:false,code:'INVALID_ODOMETER'});assert.deepEqual(odo.compare(100,120),{ok:true,changed:true,from:100,to:120});});

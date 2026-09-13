@@ -1,0 +1,6 @@
+'use strict';
+const test=require('node:test'); const assert=require('node:assert/strict');
+const audit=require('../modules/vehicle/car-notes-final-audit.js');
+test('clean Car Notes graph is valid',()=>{assert.deepEqual(audit.reconcile({services:[{id:'s1',txLinkId:'t1',usedPartId:'p1',usedPartQty:1,km:10,foto:[]}],transactions:[{id:'t1',servisLinkId:'s1'}],partsStock:[{id:'p1'}],reminders:[{id:'r1',serviceId:'s1',status:'ACTIVE'}]}),{ok:true,issues:[]});});
+test('detects orphan, duplicate, stock, odometer, photo and reminder issues',()=>{const r=audit.reconcile({services:[{id:'s1',txLinkId:'t1',usedPartId:'missing',usedPartQty:-1,km:-2,foto:{}} ,{id:'s2',txLinkId:'t1'}],transactions:[{id:'t1',servisLinkId:'missing-service'}],partsStock:[],reminders:[{id:'r1',serviceId:'missing-service',status:'BAD'}]}); const codes=r.issues.map(x=>x.code); for(const c of ['SERVICE_STOCK_MISSING','SERVICE_STOCK_QTY_INVALID','SERVICE_ODOMETER_INVALID','SERVICE_PHOTO_INVALID','SERVICE_FINANCE_DUPLICATE','FINANCE_SERVICE_MISSING','REMINDER_SERVICE_MISSING','REMINDER_STATUS_INVALID'])assert.ok(codes.includes(c),c);});
+test('does not mutate input',()=>{const input={services:[{id:'s',km:1}],transactions:[],partsStock:[],reminders:[]};const before=JSON.stringify(input);audit.reconcile(input);assert.equal(JSON.stringify(input),before);});
