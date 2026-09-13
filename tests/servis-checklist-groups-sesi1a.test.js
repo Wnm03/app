@@ -5,7 +5,7 @@
 // Target: SERVICE_CHECKLIST_GROUPS (modules/vehicle/servis-checklist.js)
 // — MURNI DATA, 0 state/logic/UI (itu Sesi 1B/1C). Test ini memvalidasi
 // bentuk data sesuai kontrak yang dikunci di
-// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (46 item/13 grup, 9
+// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (46 item/13 grup, 40
 // `linkCat:true`) + PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b
 // (enum actionMode/resetType).
 
@@ -34,13 +34,23 @@ test('SERVICE_CHECKLIST_GROUPS: 46 item setelah pelengkap KZR 2012 (13 grup; 30 
   assert.equal(items.length, 46);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: persis 9 item linkCat:true (kunci RENCANA §3 / VERIFIKASI §3)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 40 item stockable linkCat:true (kontrak taxonomy SA27)', () => {
   const items = flatten(GROUPS);
   const linked = items.filter((it) => it.linkCat === true);
-  assert.equal(linked.length, 9);
+  assert.equal(linked.length, 40);
   const expectedNames = [
-    'Oli Mesin', 'Busi', 'V-Belt CVT', 'Roller CVT',
-    'Kampas Rem Depan', 'Minyak Rem', 'Aki', 'Filter Udara', 'Oli Gardan/Final Drive',
+    'Oli Mesin', 'Filter Oli', 'Busi', 'Rantai Keteng & Tensioner',
+    'Filter Kawat Oli Mesin (Oil Strainer Screen)', 'Paking (Gasket) Knalpot',
+    'V-Belt CVT', 'Slide Piece CVT', 'Boss Pulley & Drive Face', 'Roller CVT',
+    'Kampas Kopling Ganda', 'Mangkok Kopling Ganda', 'Seal Driven Face (O-Ring & Karet)',
+    'Per Sentri', 'Per CVT (weight/kick starter spring)', 'Bearing Bak CVT',
+    'Busa Filter CVT', 'Throttle Body (bersihkan)', 'Idle Speed Control (ISC)',
+    'Injector (bersihkan)', 'Filter Fuel Pump (Saringan Bensin)', 'Cek Selang & Tutup Tangki',
+    'Coolant', 'Radiator & Water Pump (cek/flush)', 'Thermostat', 'Kampas Rem Depan',
+    'Minyak Rem', 'Kampas Rem Belakang', 'Selang Rem', 'Oli Shockbreaker Depan',
+    'Engine Mounting & Bushing Arm', 'Aki', 'Saklar & Sistem Penerangan',
+    'Relay & Sekring (Fuse)', 'Ban Depan', 'Ban Belakang', 'Bearing Roda', 'Filter Udara',
+    'Oli Gardan/Final Drive', 'Cek Kabel Gas/Rem Belakang/Standar/Kunci Kontak',
   ];
   assert.deepEqual(linked.map((it) => it.name).sort(), expectedNames.sort());
 });

@@ -26,7 +26,7 @@ test('Sesi 2A3: warning bersifat read-only dan tidak mengubah snapshot checklist
 });
 
 
-test('Sesi 2A3: kontrak SoT tetap memiliki 9 item linkCat=true', () => {
+test('Sesi 2A3: kontrak SoT memiliki 40 item linkCat=true setelah taxonomy SA27', () => {
   const matches = checklist.match(/name:\s*[^,\n]+,\s*linkCat:\s*true/g) || [];
-  assert.equal(matches.length, 9);
+  assert.equal(matches.length, 40);
 });
