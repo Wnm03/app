@@ -47,7 +47,7 @@ for (const t of OLD_THEMES) {
   });
 }
 
-test('index.html — total theme-card = 12 (10 lama termasuk auto + 1 baru "modern")', () => {
+test('index.html — total theme-card = 12 (10 lama termasuk auto + modern + Graphite)', () => {
   const matches = indexHtml.match(/class="theme-card"/g) || [];
   assert.equal(matches.length, 12);
 });
