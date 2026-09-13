@@ -1,0 +1,3 @@
+modules/vehicle/service-integrity-reconciler.js
+tests/s758-service-integrity-extended.test.js
+SESSION-NOTE-S758-SERVICE-INTEGRITY-EXTENDED.md

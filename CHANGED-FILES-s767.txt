@@ -1,0 +1,7 @@
+modules/vehicle/finance-service-adapter.js
+modules/vehicle/service-photo-validator.js
+modules/vehicle/reminder-lifecycle.js
+scripts/build.js
+tests/s767-car-notes-integrity-completion.test.js
+SESSION-NOTE-S767-CAR-NOTES-COMPLETION.md
+CHANGED-FILES-s767.txt

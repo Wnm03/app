@@ -1,0 +1,4 @@
+modules/modules-render.js
+tests/s757-service-integrity-ui-fallback.test.js
+SESSION-NOTE-S757-SERVICE-INTEGRITY-UI-GUARD.md
+CHANGED-FILES-s757.txt

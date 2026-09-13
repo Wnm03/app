@@ -1,0 +1,5 @@
+modules/vehicle/car-notes-final-audit.js
+scripts/build.js
+tests/s769-car-notes-final-audit.test.js
+SESSION-NOTE-S769-CAR-NOTES-FINAL-AUDIT.md
+CHANGED-FILES-s769.txt

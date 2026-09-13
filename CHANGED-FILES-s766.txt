@@ -1,0 +1,5 @@
+modules/vehicle/service-stock-ledger.js
+modules/vehicle/odometer-audit.js
+tests/s766-car-notes-integrity-foundations.test.js
+SESSION-NOTE-S766-CAR-NOTES-INTEGRITY-FOUNDATIONS.md
+CHANGED-FILES-s766.txt

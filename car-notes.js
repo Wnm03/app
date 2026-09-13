@@ -1214,21 +1214,7 @@ const accId=document.getElementById('servisAcc')?document.getElementById('servis
 const kmRaw=document.getElementById('servisKm').value.trim();
 const km=kmRaw===''?null:Number(kmRaw);
 const date=document.getElementById('servisDate').value;
-// S750: edit histori lama hanya untuk kategori/komponen tidak boleh
-// diblokir oleh urutan odometer terhadap histori setelahnya. Validasi
-// odometer tetap wajib untuk create atau perubahan KM/tanggal.
-const existingService=Servis.editId
-  ? (Array.isArray(D.servisLogs)?D.servisLogs.find(s=>s&&s.id===Servis.editId):null)
-  : null;
-const originalKm=existingService&&existingService.km!==null&&existingService.km!==undefined&&existingService.km!==''
-  ? Number(existingService.km) : null;
-const originalDate=existingService?String(existingService.date||''):'';
-const kmChanged=!existingService || originalKm!==(km===null?null:Number(km));
-const dateChanged=!existingService || originalDate!==String(date||'');
-const shouldValidateOdometer=!Servis.editId||kmChanged||dateChanged;
-const odometerCheck=!shouldValidateOdometer||km===null
-  ? {ok:true,skipped:!shouldValidateOdometer?'category-only-edit':undefined}
-  : Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
+const odometerCheck=km===null?{ok:true}:Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
 if(!odometerCheck.ok){toast('⚠️ '+odometerCheck.message);return;}
 const intervalRaw=document.getElementById('servisInterval')?document.getElementById('servisInterval').value:'';
 const intervalKm=intervalRaw?parseFloat(intervalRaw):null;
@@ -1310,17 +1296,8 @@ const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisCheck
 const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
 const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?getEffectiveIntervalKm(curVehicleId,_catForSnapshot):(_catForSnapshot&&_catForSnapshot.intervalKm>0?_catForSnapshot.intervalKm:null);
 const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapshot)?getEffectiveIntervalBulan(_catForSnapshot,curVehicleId):(_catForSnapshot&&_catForSnapshot.intervalBulan>0?_catForSnapshot.intervalBulan:null);
-const _historicalFieldsChanged=kmChanged||dateChanged;
-const _metadataOnlyEdit=!_historicalFieldsChanged;
 const _nextSnapshotEdit=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:s.vehicleId||curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:s.actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
-const _preserveHistoricalSnapshot=_metadataOnlyEdit;
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,intervalKmAtService:_preserveHistoricalSnapshot?s.intervalKmAtService:_ivSnapshot,intervalBulanAtService:_preserveHistoricalSnapshot?s.intervalBulanAtService:_ibSnapshot,nextDueKm:_preserveHistoricalSnapshot?s.nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_preserveHistoricalSnapshot?s.nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_preserveHistoricalSnapshot?s.nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
-// Metadata-only edits must never rewrite the historical due snapshot. Keep a small audit trail.
-if(_metadataOnlyEdit){
-  if(!Array.isArray(s.editHistory))s.editHistory=[];
-  s.editHistory.push({changedAt:new Date().toISOString(),changedBy:'self',fields:['categoryId','masterCategoryId','serviceComponentId','item','note','foto','checklist','cost','accountId']});
-  if(s.editHistory.length>50)s.editHistory=s.editHistory.slice(-50);
-}
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,intervalKmAtService:_ivSnapshot,intervalBulanAtService:_ibSnapshot,nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
 let _postCommitFinanceEvent=null;
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);

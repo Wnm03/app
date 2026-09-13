@@ -1,0 +1,4 @@
+modules/vehicle/car-notes-integrity-suite.js
+tests/s768-car-notes-integrity-suite.test.js
+SESSION-NOTE-S768-CAR-NOTES-INTEGRITY-SUITE.md
+CHANGED-FILES-s768.txt
