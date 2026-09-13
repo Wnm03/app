@@ -701,26 +701,52 @@ const selfVehicles=_dashServisSelfVehicles();
 // kategori dgn interval valid & tidak disembunyikan, biar kategori sampah
 // hasil scan Katalog Suku Cadang (intervalKm:0, showInReminder:false) tidak
 // numpuk juga di widget Beranda ini.
-const remindableCats=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
-if(!selfVehicles.length||!remindableCats.length){card.style.display='none';return;}
+// BUGFIX (audit lanjutan S622/S629, gap yang sama dgn resolveServisCatForVehicle()):
+// filter ini dulu TIDAK ikut catVisibleForVehicle(), beda dgn
+// Servis.renderReminder() (car-notes.js) yang sudah benar. Widget Beranda ini
+// bisa menampilkan BEBERAPA kendaraan sekaligus, jadi filter-nya tidak bisa
+// dilakukan 1x di luar (1 vehicleId) -- harus per-kendaraan DI DALAM loop di
+// bawah. Tanpa ini, kategori PRIVAT milik kendaraan lain ikut nyasar tampil
+// di kartu Pengingat kendaraan yang sedang difilter.
+// FIX (audit sinkronisasi Pengingat Servis vs Riwayat Servis/KM terbaru,
+// file ini dead/tidak ikut bundle scripts/build.js -- lihat
+// FIX-audit-dashboard-servis-reminder-dead-files-sync.md): file ini
+// sebelumnya masih pakai formula pure-KM lama (SEBELUM fix Sesi 3D di
+// modules/shared/modules-render.js yang benar-benar live) -- lastKm tanpa
+// resetFilter/actionType & tanpa computeServiceUrgency (jadi tidak sadar
+// sumbu bulan/hari maupun baseline reset yang sama dgn Riwayat Servis).
+// Disamakan persis dgn versi live supaya kalau file dead ini suatu saat
+// tidak sengaja ikut ter-load, tidak lagi mereproduksi bug lama.
+const remindableCatsAll=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
+if(!selfVehicles.length||!remindableCatsAll.length){card.style.display='none';return;}
 const vehChipsHTML=renderDashServisVehChips();
 const vehicles=dashServisVehFilter==='semua'?selfVehicles:selfVehicles.filter(v=>v.id===dashServisVehFilter);
 const rows=[];
 vehicles.forEach(veh=>{
 const curKm=getVehicleKm(veh.id);
 const kmPerDay=estimateKmPerDay(veh.id);
+const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id));
 remindableCats.forEach(cat=>{
-const lastKm=getLastServiceKmForCat(veh.id,cat);
-const intervalKm=getEffectiveIntervalKm(veh.id,cat);
+// Sesi 3D — Dashboard wajib memakai SoT urgency yang sama dgn kartu
+// Pengingat Servis utama. Dulu widget ini menghitung ulang pure-KM sendiri,
+// sehingga intervalBulan/actionType reset bisa berbeda dari Riwayat.
+const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
+const lastKm=getLastServiceKmForCat(veh.id,cat,resetFilter,true);
+const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:veh.id,cat,curKm,kmPerDay}):null;
+const intervalKm=u?u.intervalKm:getEffectiveIntervalKm(veh.id,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-const sisa=intervalKm-jarakTempuh;
-const pct=Math.min(100,Math.max(0,Math.round((jarakTempuh/intervalKm)*100)));
+const sisa=u?u.sisaKm:(intervalKm-jarakTempuh);
+const pct=Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100)));
+const status=u?u.status:(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman'));
 let col=null;
-if(sisa<=0)col='red';
-else if(sisa<=intervalKm*0.15)col='orange';
+if(status==='terlewat')col='red';
+else if(status==='segera')col='orange';
 if(!col)return;
-const msg=sisa<=0?`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;
-const estDateISO=estimateServiceDateISO(sisa,kmPerDay);
+const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
+const msg=status==='terlewat'
+?(monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
+:(monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`);
+const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
 rows.push({veh,cat,sisa,pct,col,msg:msg+estLabel});
 });
