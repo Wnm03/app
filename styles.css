@@ -1839,3 +1839,30 @@ textarea.fi { resize: vertical; min-height: 80px; }
 /* Sesi 2A3: warning kategori checklist — read-only, ringkas, aman di mobile. */
 .sc-cat-warning{display:inline-block;margin-left:6px;padding:2px 6px;border:1px solid var(--border2);border-radius:999px;font-size:10px;font-weight:600;line-height:1.2;vertical-align:middle;white-space:nowrap;opacity:.9}
 @media(max-width:600px){.sc-cat-warning{display:block;width:max-content;max-width:100%;margin:4px 0 0}}
+
+/* UI REFRESH — Graphite: dark, neutral gray, minimal/no-green palette. */
+[data-theme="graphite"] {
+  --bg:#111315;--surface:#17191c;--surface2:#1d2024;--surface3:#25282c;--surface4:#2d3136;
+  --accent:#d1d5da;--accent-soft:rgba(209,213,218,0.10);
+  --accent2:#d1847d;--accent2-soft:rgba(209,132,125,0.12);
+  --accent3:#b8bdc3;--accent3-soft:rgba(184,189,195,0.10);
+  --accent4:#9298a0;--accent4-soft:rgba(146,152,160,0.10);
+  --text:#f1f3f5;--text2:#a1a6ad;--text3:#858b92;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --header-bg:rgba(17,19,21,0.90);--shadow-card:0 4px 16px rgba(0,0,0,0.24);
+  --money-pos:#b8bdc3;--money-neg:#d1847d;
+  --grad-accent:linear-gradient(135deg,var(--accent),var(--accent3));
+}
+/* Graphite structural polish: less rounded, flatter elevation, calmer controls. */
+[data-theme="graphite"] .card,
+[data-theme="graphite"] .stg-group,
+[data-theme="graphite"] .ldr-card { border-radius:16px; box-shadow:var(--shadow-card); }
+[data-theme="graphite"] .theme-card,
+[data-theme="graphite"] .stat-box,
+[data-theme="graphite"] .shop-stat,
+[data-theme="graphite"] .shop-product-card { box-shadow:none; }
+[data-theme="graphite"] .btn-primary { box-shadow:0 3px 10px rgba(0,0,0,0.20); }
+[data-theme="graphite"] .nav-item.active { text-shadow:none; }
+[data-theme="graphite"] .chip-btn,
+[data-theme="graphite"] .qs-btn,
+[data-theme="graphite"] .btn-ghost { background:var(--surface3); }
