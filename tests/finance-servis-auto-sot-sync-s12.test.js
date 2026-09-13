@@ -8,7 +8,7 @@ if(!tx.includes("if(!autoService&&(!chk||!chk.checked))return;"))throw new Error
 if(!tx.includes("AIBus.emit('vehicle.updated',{kind:'servis',txId,vehicleId,servisId})"))throw new Error('vehicle/reminder event bridge missing');
 if(!tx.includes("Aset.renderList()"))throw new Error('asset renderer bridge missing');
 if(!tx.includes("renderBillList()"))throw new Error('bill renderer bridge missing');
-if(!trx.includes("const showServis=showStock||(_isFinanceServiceTransaction&&_isFinanceServiceTransaction());"))throw new Error('finance service panel auto activation missing');
+if(!trx.includes("const showServis=showStock||(typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction());"))throw new Error('finance service panel auto activation missing');
 if(!trx.includes("servisChk.checked=true"))throw new Error('service checkbox not auto-enabled');
 if(!modal.includes('Sinkron ke Catatan Servis (otomatis untuk Servis & Oli)'))throw new Error('UI does not state automatic service sync');
 console.log('Finance Service Auto SoT Sync S12: 8/8 PASS');

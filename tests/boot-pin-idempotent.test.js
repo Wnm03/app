@@ -82,7 +82,10 @@ test('showPinScreen() dipanggil 2x dalam 1 pemuatan halaman -> hanya render seka
 //     reload kalau window.__kwBooted sudah true, & hanya reload SEKALI (guard
 //     sessionStorage) kalau belum booted.
 // ---------------------------------------------------------------------------
-const CONTROLLERCHANGE_IIFE_RE = /\(function\(\)\{\s*try\{\s*if\(!\('serviceWorker' in navigator\)\)return;[\s\S]*?\}catch\(e\)\{\}\s*\}\)\(\);/;
+// Guard-empty-catch (lint) menulis ulang catch kosong jadi `catch(e){void e;}`
+// -- terima kedua bentuk (kosong ATAU `void e;`) supaya lint rewrite kosmetik
+// tidak mem-break test ini; guard __kwBooted yang dikunci test tidak berubah.
+const CONTROLLERCHANGE_IIFE_RE = /\(function\(\)\{\s*try\{\s*if\(!\('serviceWorker' in navigator\)\)return;[\s\S]*?\}catch\(e\)\{(?:\s*void e;\s*)?\}\s*\}\)\(\);/;
 
 function extractControllerChangeIIFE(html) {
   const m = html.match(CONTROLLERCHANGE_IIFE_RE);

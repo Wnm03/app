@@ -5,7 +5,7 @@
 // Target: SERVICE_CHECKLIST_GROUPS (modules/vehicle/servis-checklist.js)
 // — MURNI DATA, 0 state/logic/UI (itu Sesi 1B/1C). Test ini memvalidasi
 // bentuk data sesuai kontrak yang dikunci di
-// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (30 item/13 grup, 9
+// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (46 item/13 grup, 9
 // `linkCat:true`) + PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b
 // (enum actionMode/resetType).
 
@@ -29,9 +29,9 @@ test('SERVICE_CHECKLIST_GROUPS: 13 grup, sesuai jumlah sistem di AUDIT-SERVICE-C
   assert.equal(GROUPS.length, 13);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: total 30 item persis VERIFIKASI §3 (bukan 30-40 rentang RENCANA lama)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 46 item setelah pelengkap KZR 2012 (13 grup; 30 item baseline + 16 item pelengkap)', () => {
   const items = flatten(GROUPS);
-  assert.equal(items.length, 30);
+  assert.equal(items.length, 46);
 });
 
 test('SERVICE_CHECKLIST_GROUPS: persis 9 item linkCat:true (kunci RENCANA §3 / VERIFIKASI §3)', () => {

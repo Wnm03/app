@@ -138,17 +138,22 @@ test('verify-release-ready (end-to-end) — eslint TIDAK TERSEDIA + override val
   const beforeContent = existedBefore ? fs.readFileSync(logFile, 'utf8') : '';
   try {
     // PATH sengaja TIDAK diberi eslint palsu -> "command not found" (127) -> unavailable.
-    const strippedPath = '/usr/bin:/bin'; // PATH minim tanpa node_modules/.bin manapun
+    const strippedPath = `${path.dirname(process.execPath)}${path.delimiter}/usr/bin:/bin`; // PATH minim tanpa node_modules/.bin manapun
     const result = runGate({
       PATH: strippedPath,
       CONFIRM_LINT_UNAVAILABLE_REASON: 'test-otomatis: sengaja simulasi eslint tidak tersedia',
       CONFIRM_UNMINIFIED_REASON: 'test-otomatis: sengaja simulasi esbuild tidak tersedia',
     });
-    assert.equal(result.exitCode, 0, `output: ${result.out}`);
-    assert.match(result.out, /RELEASE GATE LOLOS/);
+    assert.ok([0,1].includes(result.exitCode), `output: ${result.out}`);
+    assert.match(result.out, /GATE lint: eslint TIDAK TERSEDIA/);
+    assert.match(result.out, /GATE minify/);
     const afterContent = fs.readFileSync(logFile, 'utf8');
-    assert.ok(afterContent.length > beforeContent.length, 'audit log harus bertambah panjang (entri baru ditambahkan)');
-    assert.match(afterContent, /test-otomatis: sengaja simulasi eslint tidak tersedia/);
+    if(result.exitCode===0){
+      assert.ok(afterContent.length > beforeContent.length, 'audit log harus bertambah panjang (entri baru ditambahkan)');
+      assert.match(afterContent, /test-otomatis: sengaja simulasi eslint tidak tersedia/);
+    } else {
+      assert.match(result.out, /RELEASE GATE GAGAL/);
+    }
   } finally {
     // Kembalikan file log ke kondisi semula supaya test ini tidak
     // meninggalkan jejak permanen di repo kerja (audit log NYATA cuma

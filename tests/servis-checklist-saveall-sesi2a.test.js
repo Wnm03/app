@@ -20,7 +20,7 @@ test('Sesi 2A: edit servis memperbarui checklist pada entry yang sama, bukan mem
 
 test('Sesi 2A: snapshot checklist hanya berisi item tercentang + actionType dari satu SoT', () => {
   assert.match(checklist, /toLogPayload\(\) \{/);
-  assert.match(checklist, /itemId,\n\s*itemName: found\.item\.name,\n\s*group: found\.group\.group,\n\s*actionType: this\._checked\[itemId\]/);
+  assert.match(checklist, /itemId,[\s\S]*?itemName: found\.item\.name,[\s\S]*?group: found\.group\.group,[\s\S]*?actionType: this\._checked\[itemId\]/);
 });
 
 test('Sesi 2A: edit memulihkan checklist lama secara backward-compatible', () => {

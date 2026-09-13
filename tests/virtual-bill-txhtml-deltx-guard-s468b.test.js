@@ -52,7 +52,7 @@ test('txHTML() — item virtual (prefix vbill_) render badge "⏳ Terjadwal", da
   const vItem = { id: 'vbill_b1_202608', billId: 'b1', virtual: true, name: 'Listrik', category: 'Tagihan', amount: 150000, date: '2026-08-05' };
   const html = ctx.txHTML(vItem);
   assert.match(html, /⏳ Terjadwal/);
-  assert.match(html, /data-action="openBillModal"/);
+  assert.match(html, /data-action="markBillPaid"/);
   assert.match(html, /data-args="\[&quot;b1&quot;\]"|data-args='\["b1"\]'|b1/);
   assert.doesNotMatch(html, /data-action="delTx"/, 'kartu virtual tidak boleh punya tombol delTx');
   assert.doesNotMatch(html, /data-action="editTx"/, 'kartu virtual tidak boleh routing ke editTx');

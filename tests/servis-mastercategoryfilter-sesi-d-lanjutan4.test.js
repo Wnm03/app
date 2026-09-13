@@ -49,13 +49,14 @@ function makeDocumentStub() {
       innerHTML: '',
       insertAdjacentElement(pos, node) {
         if (pos === 'beforebegin') {
+          if (node.id === 'servisActionTypeChipRow') elements.servisActionTypeChipRow = node;
+          else if (node.id === 'servisMasterCatChipRow') elements.servisMasterCatChipRow = node;
+          else if (node.id === 'servisComponentFilterWrap') elements.servisComponentFilterWrap = node;
           // Sesi E6 (actionType) insert dulu, Sesi D-lanjutan4 (masterCategory)
           // insert kedua -- keduanya 'beforebegin' relatif ke #servisList,
           // jadi panggilan kedua menempatkan row-nya SETELAH row pertama
           // (urutan tampil: actionType di atas, masterCategory di bawahnya).
-          if (!elements.servisActionTypeChipRow) elements.servisActionTypeChipRow = node;
-          else elements.servisMasterCatChipRow = node;
-        }
+                  }
         if (pos === 'afterend') elements.servisListLoadMoreWrap = node;
       },
     },
@@ -70,7 +71,7 @@ function makeDocumentStub() {
     getElementById: (id) => (elements[id] !== undefined ? elements[id] : null),
     createElement: () => {
       createElementCalls++;
-      return { style: {}, innerHTML: '', querySelector: () => ({}) };
+      return { id: '', style: {}, innerHTML: '', querySelector: () => ({}) };
     },
     getCreateElementCalls: () => createElementCalls,
   };
@@ -78,7 +79,7 @@ function makeDocumentStub() {
 }
 
 function makeCtx({ D, documentStub, files, extra }) {
-  return loadSource(files || [DB_API_FILE, SPAREPART_FILE, CAR_NOTES_FILE], {
+  const ctx = loadSource(files || [DB_API_FILE, SPAREPART_FILE, CAR_NOTES_FILE], {
     D,
     curVehicleId: 'v1',
     uid: (() => { let n = 0; return () => 'id' + (++n); })(),
@@ -106,6 +107,9 @@ function makeCtx({ D, documentStub, files, extra }) {
     fmt: (n) => String(n),
     ...extra,
   }, ['Servis']);
+  ctx.Servis._masterCategoryFilterPrefsLoaded = true;
+  ctx.Servis.activeMasterCategoryFilter = null;
+  return ctx;
 }
 
 // Oli mesin -> classify 'servis-mesin'; Minyak rem/Kampas rem -> classify
@@ -188,8 +192,7 @@ test('renderList() -- chip "Semua" (masterCategory) bertanda active saat filter 
   ctx.Servis.renderReminder = () => {};
   ctx.Servis.renderList();
   const chipHtml = documentStub.elements.servisMasterCatChipRow.innerHTML;
-  const semuaBlock = chipHtml.split('data-args')[0];
-  assert.ok(semuaBlock.includes('active'));
+  assert.match(chipHtml, /<option value="" selected>Semua kategori servis<\/option>/);
 });
 
 test('renderList() -- chip row masterCategory memuat 13 kategori master + "Semua" + "❔ Belum Terklasifikasi" (15 total, Sesi D-lanjutan5)', () => {
@@ -206,8 +209,9 @@ test('renderList() -- chip row masterCategory memuat 13 kategori master + "Semua
   ctx.Servis.renderReminder = () => {};
   ctx.Servis.renderList();
   const chipHtml = documentStub.elements.servisMasterCatChipRow.innerHTML;
-  const chipCount = (chipHtml.match(/data-action="Servis.setMasterCategoryFilter"/g) || []).length;
-  assert.equal(chipCount, 15, '1 "Semua" + 13 kategori master terkunci + 1 "❔ Belum Terklasifikasi"');
+  const optionCount = (chipHtml.match(/<option /g) || []).length;
+  assert.equal(optionCount, 15, '1 Semua + 13 kategori master terkunci + 1 Belum dikategorikan');
+  assert.match(chipHtml, /Belum dikategorikan/);
 });
 
 test("setMasterCategoryFilter('sistem-pengereman') -- mengubah activeMasterCategoryFilter, reset listPage, render ulang dgn filter aktif", () => {

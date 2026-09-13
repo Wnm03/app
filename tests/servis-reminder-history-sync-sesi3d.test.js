@@ -9,7 +9,10 @@ const servisB=fs.readFileSync(require.resolve('../modules/vehicle/sparepart-serv
 test('Sesi 3D: kartu Pengingat utama memakai canonical reset filter untuk lastKm',()=>{
   assert.match(car,/const resetFilter=\(typeof resolveResetActionTypeFilter==='function'\)\?resolveResetActionTypeFilter\(cat\):null;/);
   assert.match(car,/Servis\.getLastServiceKmForCat\(curVehicleId,cat,resetFilter,true\)/);
-  assert.match(car,/const sisa=u\?u\.sisaKm:/);
+  // v21: sisa km sekarang dihitung lewat effectiveIntervalKm/effectiveLastKm
+  // (dukungan interval hari & proyeksi kondisi), bukan ternary sebaris lama.
+  // Lihat komentar "Maintenance Rule v2" & "v21" di car-notes.js.
+  assert.match(car,/const sisa=u&&u\.sisaKm!=null\?u\.sisaKm:/);
 });
 
 test('Sesi 3D: interval bulan yang membatasi tidak dilabeli sebagai lewat KM',()=>{

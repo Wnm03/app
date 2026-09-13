@@ -12,5 +12,5 @@ assert(has('modules/vehicle/vehicle-catalog-ui.js','_catMasterFilter'),'Catalog 
 assert(has('modules/vehicle/vehicle-catalog-ui.js','onSearchInput: catalogUiOnSearchInput'),'Catalog search handler missing');
 const trend=fs.readFileSync('modules/vehicle/vehicle-service-trend.js','utf8');
 assert(trend.includes('const hasFilter = !!(filters.masterCategoryId || filters.serviceComponentId);'),'Trend filter branch missing');
-assert(trend.includes('return { ...r, value }'),'Filtered trend row recomputation missing');
+assert(trend.includes('return { ...r, service, total: service }'),'Filtered trend row recomputation missing');
 console.log('S19 static SoT/filter checks: 10/10 PASS');

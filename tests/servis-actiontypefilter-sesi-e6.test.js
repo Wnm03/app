@@ -17,7 +17,7 @@ const { loadSource } = require('./helpers/loadSource');
 function makeDocumentStub() {
   const elements = {
     servisList: { innerHTML: '', insertAdjacentElement(pos, node) {
-      if (pos === 'beforebegin') elements.servisActionTypeChipRow = node;
+      if (pos === 'beforebegin') { if (node.id === 'servisActionTypeChipRow') elements.servisActionTypeChipRow = node; else if (node.id === 'servisMasterCatChipRow') elements.servisMasterCatChipRow = node; }
       if (pos === 'afterend') elements.servisListLoadMoreWrap = node;
     } },
     servisCount: { textContent: '' },
@@ -29,14 +29,14 @@ function makeDocumentStub() {
   const documentStub = {
     elements,
     getElementById: (id) => elements[id] !== undefined ? elements[id] : null,
-    createElement: () => { createElementCalls++; return { style: {}, innerHTML: '', querySelector: () => ({}) }; },
+    createElement: () => { createElementCalls++; return { id: '', style: {}, innerHTML: '', querySelector: () => ({}) }; },
     getCreateElementCalls: () => createElementCalls,
   };
   return documentStub;
 }
 
 function makeCtx({ D, documentStub, extra }) {
-  return loadSource(['car-notes.js'], {
+  const ctx = loadSource(['car-notes.js'], {
     D,
     curVehicleId: 'v1',
     uid: (() => { let n = 0; return () => 'id' + (++n); })(),
@@ -64,6 +64,9 @@ function makeCtx({ D, documentStub, extra }) {
     fmt: (n) => String(n),
     ...extra,
   }, ['Servis']);
+  ctx.Servis._masterCategoryFilterPrefsLoaded = true;
+  ctx.Servis.activeMasterCategoryFilter = null;
+  return ctx;
 }
 
 function makeD() {
@@ -129,9 +132,10 @@ test('renderList() -- chip row disisipkan sebelum #servisList (beforebegin), 1x 
   ctx.Servis.renderReminder = () => {};
   ctx.Servis.renderList();
   assert.ok(documentStub.elements.servisActionTypeChipRow, 'chip row harus ada setelah render pertama');
-  assert.equal(documentStub.getCreateElementCalls(), 2, 'render 1: 1x createElement utk chip row + 1x utk load-more wrap');
+  assert.ok(documentStub.elements.servisActionTypeChipRow, 'chip row actionType dibuat pada render pertama');
+  const actionRow = documentStub.elements.servisActionTypeChipRow;
   ctx.Servis.renderList();
-  assert.equal(documentStub.getCreateElementCalls(), 2, 'render ke-2: getElementById sudah menemukan elemen lama, 0 createElement tambahan');
+  assert.strictEqual(documentStub.elements.servisActionTypeChipRow, actionRow, 'render ke-2: getElementById sudah menemukan elemen lama, row yang sama dipakai ulang');
 });
 
 test('renderList() -- chip "Semua" bertanda active saat filter null, chip lain tidak', () => {

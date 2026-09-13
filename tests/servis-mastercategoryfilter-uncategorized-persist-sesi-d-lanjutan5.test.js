@@ -40,10 +40,13 @@ function makeDocumentStub() {
     servisList: {
       innerHTML: '',
       insertAdjacentElement(pos, node) {
-        if (pos === 'beforebegin') {
-          if (!elements.servisActionTypeChipRow) elements.servisActionTypeChipRow = node;
-          else elements.servisMasterCatChipRow = node;
-        }
+        // Sesi D-lanjutan5 follow-up: renderList() sekarang menyisipkan 3 row
+        // beforebegin (renderActionTypeChips, renderMasterCategoryChips,
+        // renderServiceComponentFilter, lihat car-notes.js) -- routing by
+        // node.id (sudah di-set SEBELUM insertAdjacentElement() dipanggil di
+        // masing-masing render fn) supaya tidak salah tertimpa berdasarkan
+        // urutan panggilan/posisi semata.
+        if (pos === 'beforebegin' && node && node.id) elements[node.id] = node;
         if (pos === 'afterend') elements.servisListLoadMoreWrap = node;
       },
     },
@@ -126,7 +129,7 @@ function makeD() {
   };
 }
 
-test('renderList() -- chip "❔ Belum Terklasifikasi" muncul di chip row masterCategory', () => {
+test('renderList() -- opsi "❔ Belum dikategorikan" muncul di dropdown masterCategory (Sesi UX: dropdown, bukan chip row)', () => {
   const D = makeD();
   const documentStub = makeDocumentStub();
   const ctx = makeCtx({ D, documentStub });
@@ -134,7 +137,7 @@ test('renderList() -- chip "❔ Belum Terklasifikasi" muncul di chip row masterC
   ctx.Servis.renderReminder = () => {};
   ctx.Servis.renderList();
   const chipHtml = documentStub.elements.servisMasterCatChipRow.innerHTML;
-  assert.ok(chipHtml.includes('❔ Belum Terklasifikasi'));
+  assert.ok(chipHtml.includes('❔ Belum dikategorikan'));
   assert.ok(chipHtml.includes(ctx.UNCATEGORIZED_FILTER_ID));
 });
 

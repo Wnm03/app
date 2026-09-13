@@ -48,7 +48,7 @@ function baseEls(){
 }
 
 test('modal source memiliki tab Pengingat + panel terpisah tanpa mengubah SoT data',()=>{
-  const src=fs.readFileSync(path.join(__dirname,'..','modules/modals.js'),'utf8');
+  const src=fs.readFileSync(path.join(__dirname,'..','modules/shared/modals.js'),'utf8');
   assert.match(src,/id=\\"servisEditTabs\\"/);
   assert.match(src,/data-action=\\"Servis\.setEditTab\\"/);
   assert.match(src,/id=\\"servisDetailPanel\\"/);

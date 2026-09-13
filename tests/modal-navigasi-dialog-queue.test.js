@@ -39,8 +39,10 @@ function makeFakeOverlay() {
 function makeFakeDocument(ids) {
   const els = {};
   for (const id of ids) els[id] = makeFakeOverlay();
+  els.body = makeFakeOverlay();
   return {
     _els: els,
+    body: els.body,
     getElementById(id) {
       if (!els[id]) els[id] = makeFakeOverlay();
       return els[id];
@@ -58,6 +60,10 @@ function loadModalNavigasi() {
     'confirmModalCancel', 'confirmModalOverlay',
     'promptModalOverlay', 'promptModalIcon', 'promptModalTitle', 'promptModalMsg',
     'promptModalInput', 'promptModalError', 'promptModalOkBtn', 'promptModalCancelBtn',
+    'choiceModalOverlay', 'choiceModalTitle', 'choiceModalMsg', 'choiceModalList',
+    'infoModalOverlay', 'infoModalIcon', 'infoModalTitle', 'infoModalMsg', 'infoModalOk',
+    'pinPromptModalOverlay', 'pinPromptModalTitle', 'pinPromptModalMsg', 'pinPromptInput', 'pinPromptError',
+    'page-test',
   ]);
   const ctx = loadSource(
     ['modules/shared/modal-navigasi.js'],
@@ -122,4 +128,24 @@ test('showPromptModal() — 3 panggilan beruntun semua resolve dgn nilainya masi
   input.value = 'jawaban-3';
   ctx._promptModalSubmit();
   assert.equal(await p3, 'jawaban-3');
+});
+
+
+test('showPage() — pindah tab membatalkan custom dialog yang sedang tampil + seluruh antreannya, tidak ada Promise orphan', async () => {
+  const { ctx, fakeDoc } = loadModalNavigasi();
+  ctx.renderPageContent = () => {};
+  ctx.ScannerSession = undefined;
+
+  const p1 = ctx.askConfirm('Konfirmasi A');
+  const p2 = ctx.askConfirm('Konfirmasi B');
+  assert.equal(fakeDoc._els.confirmModalOverlay.classList.contains('open'), true);
+
+  // showPage() juga memakai querySelectorAll('.page') dan nav-item.
+  // Harness fakeDoc mengembalikan [] untuk keduanya; page-test ada agar lookup halaman sukses.
+  fakeDoc._els['page-test'] = makeFakeOverlay();
+  ctx.showPage('test');
+
+  assert.equal(await p1, false, 'dialog aktif harus dibatalkan saat pindah tab');
+  assert.equal(await p2, false, 'dialog yang masih antre juga harus dibatalkan, bukan tampil lagi');
+  assert.equal(fakeDoc._els.confirmModalOverlay.classList.contains('open'), false);
 });

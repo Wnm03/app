@@ -72,7 +72,7 @@ test('S468d skenario gabungan — 1 bill biasa + 1 shared + 1 mingguan, semua bu
   vItems.forEach((v) => {
     const html = ctx.txHTML(v);
     assert.match(html, /⏳ Terjadwal/);
-    assert.match(html, /data-action="openBillModal"/);
+    assert.match(html, /data-action="markBillPaid"/);
     assert.doesNotMatch(html, /data-action="delTx"/);
   });
 
