@@ -1879,7 +1879,7 @@ if(el.isConnected===false)return;
 if(typeof est.usage==='number'&&typeof est.quota==='number'&&est.quota>0){
 el.textContent=`ℹ️ Kuota nyata dari browser ini: ${fmtBytes(est.usage)} terpakai dari ${fmtBytes(est.quota)} (mencakup SEMUA data situs ini, bukan cuma app ini kalau ada data lain).`;
 }
-}catch(e){ }
+}catch(e){void e;}
 }
 
 function renderArchiveSuggestHint(){
@@ -2034,7 +2034,7 @@ stEl.textContent=gdriveConnStatusLabel(true)+' · '+syncLabel;
 }
 const dcBtn=document.getElementById('gsDisconnectBtn'); if(dcBtn) dcBtn.style.display=gdriveAccessToken?'':'none';
 const linkEl=document.getElementById('gsLink');
-if(linkEl) linkEl.innerHTML=D.googleSheets.spreadsheetId? `<a class="u-cacc4" href="https://docs.google.com/spreadsheets/d/${D.googleSheets.spreadsheetId}" target="_blank">🔗 Buka Spreadsheet</a><br><span class="u-ctext3">🕘 Riwayat versi: di dalam Sheets, buka menu <b>File → Riwayat versi → Lihat riwayat versi</b> (atau tekan Ctrl+Alt+Shift+H)</span>` : '';
+if(linkEl) linkEl.innerHTML=D.googleSheets.spreadsheetId? `<a class="u-cacc4" href="https://docs.google.com/spreadsheets/d/${escapeHtml(D.googleSheets.spreadsheetId)}" target="_blank">🔗 Buka Spreadsheet</a><br><span class="u-ctext3">🕘 Riwayat versi: di dalam Sheets, buka menu <b>File → Riwayat versi → Lihat riwayat versi</b> (atau tekan Ctrl+Alt+Shift+H)</span>` : '';
 const cntEl=document.getElementById('gsLocalCount');
 if(cntEl){
 const perModul=SHEETS_MODULES.map(m=>`${m}:${(D[m]||[]).length}`).join(', ');
@@ -2072,7 +2072,7 @@ if(!raw) return;
 const stored=JSON.parse(raw);
 if(!stored||!Array.isArray(stored.results)) return;
 renderSelfTestResults(stored);
-}catch(e){ }
+}catch(e){void e;}
 }
 
 function renderNavSmokeResults(data){
