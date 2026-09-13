@@ -44,7 +44,7 @@ const res=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{
 if(!res.ok)return;
 const info=await res.json();
 gdriveUserEmail=info.email||null;
-}catch(e){ }
+}catch(e){void e;}
 renderGDriveSettings();
 renderSheetsSettings();
 }

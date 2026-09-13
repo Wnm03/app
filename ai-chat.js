@@ -564,7 +564,7 @@ const Advisor={
 LS_KEY:'kw_advisor_tab',
 current(){ try{return localStorage.getItem(Advisor.LS_KEY)||'coach';}catch(e){return'coach';} },
 setTab(tab){
-try{localStorage.setItem(Advisor.LS_KEY,tab);}catch(e){}
+try{localStorage.setItem(Advisor.LS_KEY,tab);}catch(e){void e;}
 Advisor.render();
 },
 render(){
@@ -610,7 +610,7 @@ try{return JSON.parse(localStorage.getItem(AIRecommendCard.DISMISS_LS_KEY)||'[]'
 markDismissed(id){
 const cur=AIRecommendCard.dismissedIds();
 if(!cur.includes(id))cur.push(id);
-try{localStorage.setItem(AIRecommendCard.DISMISS_LS_KEY,JSON.stringify(cur.slice(-40)));}catch(e){}
+try{localStorage.setItem(AIRecommendCard.DISMISS_LS_KEY,JSON.stringify(cur.slice(-40)));}catch(e){void e;}
 },
 // runAction(type,id) — Sesi 344b (audit gap #1): dulu 'actions' cuma teks
 // ('Isi Kapasitas Angkut Maks di Kelola Kendaraan' dst) — recommendationId/
@@ -999,7 +999,7 @@ const inc=txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 const accInfo=D.accounts.map(a=>`${escapeHtml(a.name)}: ${fmtFull(recalcAccBalance(a.id))}`).join(', ')||'Belum ada akun';
 let netWorth=0;
-try{ netWorth=totalSaldoAkun()+totalAssetValue()-((D.pajakZakat&&D.pajakZakat.utangJT)||0)-totalDebtValue()-totalCicilanOutstanding(); }catch(e){}
+try{ netWorth=totalSaldoAkun()+totalAssetValue()-((D.pajakZakat&&D.pajakZakat.utangJT)||0)-totalDebtValue()-totalCicilanOutstanding(); }catch(e){void e;}
 const shopOmzet=D.cobek.reduce((s,t)=>s+(t.total||0),0);
 const shopProfit=D.cobek.reduce((s,t)=>s+(t.profit||0),0);
 // S260 (Business AI Ownership Sync): fallback jalur (Etalase belum dimuat) disamakan dgn
@@ -1056,14 +1056,14 @@ const pct=b.limit>0?Math.round(used/b.limit*100):0;
 return `${escapeHtml(b.name)}: ${pct}% terpakai${pct>=100?' (OVER)':pct>=80?' (hampir habis)':''}`;
 }).join('; ');
 }
-}catch(e){}
+}catch(e){void e;}
 let lifeBalanceInfo='Belum ada data Skor Hidup Seimbang.';
 try{
 if(typeof LifeBalance!=='undefined'&&typeof LifeBalance.compute==='function'){
 const sc=LifeBalance.compute();
 lifeBalanceInfo=`Skor Hidup Seimbang: ${sc.total}/100 (${sc.level}) — rincian: ${sc.parts.map(p=>p.label+' '+p.pts+'/'+p.max+' ('+p.note+')').join(', ')}`;
 }
-}catch(e){}
+}catch(e){void e;}
 const targetInfo=(D.targets||[]).map(t=>`${escapeHtml(t.name)}: ${t.amount>0?Math.round((t.saved/t.amount)*100)+'%':'-'}`).join(', ')||'Belum ada target tabungan';
 let asetInfo='Belum ada aset tercatat';
 try{
@@ -1080,7 +1080,7 @@ if(asetSelf.length){
 const totalAset=totalAssetValue();
 asetInfo=`Total ${fmtFull(totalAset)} dari ${asetSelf.length} aset (${asetSelf.map(a=>a.name+' '+fmtFull(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0))).join(', ')})`;
 }
-}catch(e){}
+}catch(e){void e;}
 return{m,y,inc,exp,accInfo,netWorth,shopOmzet,shopProfit,shopModalStok,shopOmzetBulan,shopProfitBulan,gajiBulan,whCount:whThisMonth.length,gajiMinggu,whCountMinggu,avgGajiMingguan,gajiMingguanHistCount,fiInfo,debtInfo,billInfo,budgetInfo,lifeBalanceInfo,targetInfo,asetInfo};
 },
 buildSystemPrompt(c){
