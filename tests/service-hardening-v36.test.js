@@ -9,5 +9,5 @@ ok('batch lifecycle failure cannot skip finance event', car.includes('V36: lifec
 ok('finance post-commit event queues on failure', tx.includes("V36: finance event failed after commit; queued for reconciliation") && tx.includes("type:'finance.updated',payload:_financePostCommitPayload"));
 ok('finance vehicle event queues on failure', tx.includes("V36: vehicle event failed after commit; queued for reconciliation") && tx.includes("type:'vehicle.updated',payload:_vehiclePostCommitPayload"));
 ok('chat service publishes finance event after commit', chat.includes("const _chatFinancePayload") && chat.includes("type:'finance.updated',payload:_chatFinancePayload"));
-ok('outbox canonical key cannot be caller-overridden', adapter.includes("const key=`${evt.type||'event'}::${stablePayloadId||fallback}`"));
+ok('outbox canonical key cannot be caller-overridden', adapter.includes("const key=`${evt.type||'event'}::${identity}`") && adapter.includes("evt.type==='vehicle.updated'"));
 console.log(`${pass}/5 PASS`);
