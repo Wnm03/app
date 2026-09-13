@@ -457,3 +457,386 @@ a:focus-visible {
   [data-theme="graphite"] #page-dashboard-hub .dashhub-hero-stats { gap: 8px; }
   [data-theme="graphite"] #page-dashboard-hub .dashhub-search-wrap { margin-bottom: 10px; }
 }
+
+/* =========================================================================
+   KELUARGA W — MOCKUP LAYOUT SYSTEM V4
+   Responsive layout/component pass for every registered theme.
+   Theme colors remain owned by styles.css; this layer only consumes tokens.
+   ========================================================================= */
+:root {
+  --mockup-page-max: 1180px;
+  --mockup-radius-card: 18px;
+  --mockup-radius-control: 13px;
+  --mockup-space: 12px;
+}
+
+/* Keep the same information architecture in light and dark themes. */
+[data-theme] body {
+  background: var(--bg);
+  color: var(--text);
+}
+[data-theme] #scrollRoot {
+  width: 100%;
+  max-width: var(--mockup-page-max);
+  margin: 0 auto;
+  background: var(--bg);
+}
+[data-theme] .header {
+  min-height: 68px;
+  padding: 14px clamp(16px, 3vw, 28px) 12px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+[data-theme] .header-brand {
+  font-size: clamp(18px, 2.2vw, 22px);
+  letter-spacing: -.55px;
+}
+[data-theme] .header-sub {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* Pages become a consistent responsive canvas rather than a stack of oversized cards. */
+[data-theme] .page {
+  width: 100%;
+  max-width: var(--mockup-page-max);
+  margin: 0 auto;
+  padding: 18px clamp(14px, 3vw, 28px) 112px;
+  box-sizing: border-box;
+}
+[data-theme] .page-title {
+  font-size: clamp(18px, 2.4vw, 24px);
+  font-weight: 750;
+  letter-spacing: -.45px;
+}
+[data-theme] .page-breadcrumb {
+  margin: 4px 0 14px;
+  font-size: 11px;
+}
+[data-theme] .page-settings-btn {
+  margin-bottom: 12px;
+}
+
+/* Unified component language: cards, metric tiles, lists, and controls. */
+[data-theme] .card,
+[data-theme] .stg-group,
+[data-theme] .ldr-card,
+[data-theme] .dashhub-wrap {
+  border-radius: var(--mockup-radius-card);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-card, none);
+}
+[data-theme] .card {
+  padding: clamp(14px, 2vw, 20px);
+  margin-bottom: var(--mockup-space);
+}
+[data-theme] .card-title {
+  margin-bottom: 12px;
+  font-size: 13px;
+  letter-spacing: .02em;
+  line-height: 1.3;
+}
+[data-theme] .stat-box,
+[data-theme] .shop-stat,
+[data-theme] .bbm-stat,
+[data-theme] .budget-sum-box {
+  min-width: 0;
+  border-radius: 14px;
+  padding: 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+[data-theme] .stat-label,
+[data-theme] .shop-label {
+  font-size: 11px;
+  line-height: 1.35;
+}
+[data-theme] .stat-val,
+[data-theme] .shop-val,
+[data-theme] .money,
+[data-theme] .card-val {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.25px;
+}
+
+/* Reduce pill overload: tabs remain pills, content controls become soft rectangles. */
+[data-theme] .chip-btn,
+[data-theme] .kel-subtab,
+[data-theme] .lap-subtab,
+[data-theme] .budget-tab-btn,
+[data-theme] .tab-btn,
+[data-theme] .nav-tab,
+[data-theme] .qs-btn {
+  border-radius: var(--mockup-radius-control);
+  min-height: 36px;
+  padding: 8px 13px;
+}
+[data-theme] .btn-primary,
+[data-theme] .btn-ghost,
+[data-theme] .card-setting-btn,
+[data-theme] input,
+[data-theme] select,
+[data-theme] textarea {
+  border-radius: var(--mockup-radius-control);
+}
+[data-theme] input,
+[data-theme] select,
+[data-theme] textarea {
+  min-height: 42px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+}
+
+/* List-first presentation matching the reference screens. */
+[data-theme] .tx-item,
+[data-theme] .bill-item,
+[data-theme] .dashhub-search-item {
+  min-width: 0;
+  padding: 11px 2px;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+[data-theme] .tx-name { font-size: 12px; font-weight: 700; }
+[data-theme] .tx-meta { font-size: 10px; }
+[data-theme] .tx-amount { font-size: 12px; font-variant-numeric: tabular-nums; }
+[data-theme] .tx-icon { width: 32px; height: 32px; border-radius: 10px; }
+
+/* Dashboard hero and summary grids adapt from phone to desktop. */
+[data-theme] .dashhub-hero,
+[data-theme] #findashWrap .dashhub-hero,
+[data-theme] #forecastWrap .dashhub-hero {
+  border-radius: var(--mockup-radius-card);
+  padding: clamp(16px, 2.5vw, 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+[data-theme] .dashhub-hero-balance-val {
+  font-size: clamp(27px, 4vw, 42px);
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+}
+[data-theme] .dashhub-feature-grid {
+  gap: var(--mockup-space);
+}
+[data-theme] .dashhub-feature-card {
+  border-radius: 14px;
+  padding: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+}
+
+/* Bottom navigation: floating on small screens, centered rail on wide screens. */
+[data-theme] .nav {
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  max-width: min(760px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 6px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  background: var(--header-bg);
+  box-shadow: var(--shadow-panel-down, 0 8px 24px rgba(0,0,0,.12));
+}
+[data-theme] .nav-item {
+  min-width: 56px;
+  padding: 7px 5px;
+  gap: 4px;
+  border-radius: 13px;
+  font-size: 11px;
+}
+[data-theme] .nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+[data-theme] .nav-item.active svg { transform: none; }
+[data-theme] .nav-dot { display: none !important; }
+
+@media (min-width: 900px) {
+  [data-theme] #scrollRoot { max-width: 1440px; }
+  [data-theme] .page { padding-left: 36px; padding-right: 36px; }
+  [data-theme] .nav {
+    left: auto;
+    right: 24px;
+    bottom: 20px;
+    max-width: 680px;
+  }
+}
+
+@media (max-width: 480px) {
+  [data-theme] .header { min-height: 62px; }
+  [data-theme] .page { padding-top: 12px; padding-bottom: 104px; }
+  [data-theme] .card { padding: 13px; border-radius: 16px; }
+  [data-theme] .nav { left: 8px; right: 8px; max-width: none; border-radius: 18px; }
+  [data-theme] .nav-item { min-width: 44px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme] *, [data-theme] *::before, [data-theme] *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   S749 ACCUMULATION — Mockup fidelity pass 2
+   Scope: presentation only. Applies to both light and dark themes.
+   ========================================================================= */
+
+/* Global design rhythm: calmer canvas and predictable content width. */
+:root {
+  --mockup-space-1: 4px;
+  --mockup-space-2: 8px;
+  --mockup-space-3: 12px;
+  --mockup-space-4: 16px;
+  --mockup-space-5: 20px;
+  --mockup-space-6: 24px;
+  --mockup-control-h: 42px;
+  --mockup-card-radius: 18px;
+}
+
+html, body { min-width: 0; }
+#scrollRoot { padding-bottom: 104px; }
+.page {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18px 16px 28px;
+}
+.page > * { min-width: 0; }
+
+/* Header follows the compact mockup hierarchy. */
+.header {
+  min-height: 70px;
+  box-sizing: border-box;
+  padding: 14px 18px 12px;
+  gap: 12px;
+}
+.header-brand { font-size: clamp(18px, 4.8vw, 22px); letter-spacing: -0.65px; }
+.header-sub { font-size: 12px; line-height: 1.35; }
+.header-actions, .header-right, .header-tools { gap: 8px; }
+.header-badge, .header .btn, .header button { min-height: 36px; }
+
+/* Cards become quieter and less vertically dominant. */
+.card {
+  border-radius: var(--mockup-card-radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card, 0 1px 2px rgba(0,0,0,.04));
+}
+.card-title {
+  font-size: 13px;
+  line-height: 1.35;
+  letter-spacing: .02em;
+}
+.card-subtitle, .card-desc, .u-hint10, .u-t2 { line-height: 1.45; }
+
+/* Metric groups: compact two-column tiles, collapsing cleanly on narrow screens. */
+.stat-box, .stat-card, .metric-card, .dashhub-stat, .dashhub-hero-stat {
+  min-width: 0;
+  border-radius: 15px;
+}
+.stat-label { font-size: 11px; line-height: 1.35; }
+.stat-val { font-size: clamp(19px, 5vw, 27px); line-height: 1.15; letter-spacing: -.45px; }
+.stat-grid, .stats-grid, .metric-grid, .dashhub-hero-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Consistent segmented controls: no accidental clipped pills. */
+.chip-btn, .kel-subtab, .lap-subtab, .budget-tab-btn, .tab-btn, .nav-tab, .qs-btn,
+.btn, .header-badge {
+  min-height: var(--mockup-control-h);
+  box-sizing: border-box;
+  border-radius: 12px;
+  line-height: 1.2;
+}
+.chip-btn, .kel-subtab, .lap-subtab, .budget-tab-btn, .tab-btn, .nav-tab, .qs-btn {
+  padding: 10px 13px;
+  font-size: 12px;
+}
+.btn { padding: 10px 15px; }
+.btn-sm { min-height: 34px; padding: 8px 11px; font-size: 11px; }
+.btn-full { width: 100%; }
+
+/* Forms match the mockup's large, readable controls. */
+input, select, textarea {
+  min-height: var(--mockup-control-h);
+  box-sizing: border-box;
+  border-radius: 12px;
+  font-size: 13px;
+  padding: 10px 12px;
+}
+textarea { min-height: 84px; }
+label { line-height: 1.35; }
+
+/* Data rows: stronger hierarchy without extra decorative chrome. */
+.tx-row, .transaction-row, .list-row, .asset-row, .shop-product-row,
+.dashhub-row, .setting-row {
+  min-width: 0;
+  gap: 12px;
+  padding: 12px 0;
+}
+.tx-row > *, .transaction-row > *, .list-row > *, .asset-row > *,
+.shop-product-row > *, .dashhub-row > *, .setting-row > * { min-width: 0; }
+.tx-amount, .money, .card-val { font-variant-numeric: tabular-nums; }
+
+/* Bottom navigation: floating, evenly distributed, no horizontal scroll. */
+.nav {
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  width: auto;
+  max-width: 760px;
+  margin-inline: auto;
+  padding: 6px 5px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  overflow: hidden;
+  gap: 2px;
+}
+.nav-item {
+  min-width: 0;
+  padding: 7px 2px;
+  border-radius: 14px;
+  font-size: 11px;
+  gap: 4px;
+}
+.nav-item svg { width: 19px; height: 19px; }
+.nav-item.active { background: var(--surface3); color: var(--accent); }
+.nav-fab-icon { width: 38px; height: 38px; }
+
+/* Avoid the mockup's horizontal overflow on phone widths. */
+.tabs, .subtabs, .chip-row, .nav-tabs, .horizontal-tabs {
+  min-width: 0;
+  max-width: 100%;
+  scrollbar-width: none;
+}
+@media (max-width: 640px) {
+  .page { padding-inline: 12px; }
+  .card { padding: 14px; border-radius: 16px; }
+  .header { padding-inline: 14px; }
+  .stat-grid, .stats-grid, .metric-grid, .dashhub-hero-stats { gap: 8px; }
+  .stat-val { font-size: 21px; }
+  .nav { left: 8px; right: 8px; border-radius: 19px; }
+  .nav-item { font-size: 10px; }
+}
+@media (max-width: 359px) {
+  .page { padding-inline: 10px; }
+  .card { padding: 12px; }
+  .nav-item { font-size: 9px; }
+  .nav-item svg { width: 17px; height: 17px; }
+}
+@media (min-width: 900px) {
+  .page { max-width: 1120px; margin-inline: auto; padding-inline: 24px; }
+  .card { padding: 20px; }
+}
+
+/* Respect reduced-motion preferences across the new presentation layer. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
