@@ -1787,7 +1787,7 @@ if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
 renderCarImportVehicleSelect();
 renderVehTaxSim();
 if(curCnTab==='bbm')renderBbmList();
-if(curCnTab==='servis')renderServisList();
+if(curCnTab==='servis'){renderServiceIntegrityCard();renderServisList();}
 }
 
 function renderBbmList(){return BBM.renderList();}
@@ -1849,6 +1849,32 @@ el.innerHTML=`
       <div class="u-ctext3 u-mt8 u-lh15" style="font-size:10.5px">📘 Sumber: ${escapeHtml(spec.sourceNote)}</div>
     </div>`;
 }
+
+function renderServiceIntegrityCard(){
+const el=document.getElementById('serviceIntegrityCard');
+if(!el)return;
+let result;
+try{
+  result=typeof ServiceIntegrityReconciler!=='undefined'&&ServiceIntegrityReconciler.reconcile
+    ?ServiceIntegrityReconciler.reconcile({services:Array.isArray(D.servisLogs)?D.servisLogs:[],transactions:Array.isArray(D.transactions)?D.transactions:[]})
+    :{ok:null,issues:[],unavailable:true};
+}catch(err){
+  console.warn('[ServiceIntegrity] checker failed',err);
+  result={ok:null,issues:[],unavailable:true};
+}
+if(result.unavailable){
+  el.innerHTML='<div class="u-fw700 u-fs13">🛡️ Integritas Servis ↔ Keuangan</div><div class="u-fs11 u-t2 u-mt4">Pemeriksaan belum tersedia. Data tidak diubah.</div>';
+  return;
+}
+if(result.ok){
+  el.innerHTML='<div class="u-flex u-aic u-jcb u-gap10"><div><div class="u-fw700 u-fs13">🛡️ Integritas Servis ↔ Keuangan</div><div class="u-fs11 u-t2">Tidak ditemukan tautan servis/keuangan yang rusak.</div></div><span class="badge badge-ok">OK</span></div>';
+  return;
+}
+const labels={MISSING_FINANCE:'Transaksi keuangan hilang',MISSING_SERVICE:'Catatan servis hilang',CROSS_LINK:'Tautan servis berbeda',CROSS_VEHICLE_LINK:'Kendaraan tidak cocok',DUPLICATE_SERVICE_TX_LINK:'Transaksi dipakai dua servis'};
+el.innerHTML='<div class="u-fw700 u-fs13">⚠️ Integritas Servis ↔ Keuangan</div><div class="u-fs11 u-t2 u-mt4">'+result.issues.length+' masalah ditemukan. Periksa detail data sebelum melakukan koreksi.</div><div class="u-mt6">'+result.issues.map(i=>'<div class="u-fs11">• '+escapeHtml(labels[i.code]||i.code)+' — '+escapeHtml(i.serviceId||i.transactionId||'')+'</div>').join('')+'</div>';
+}
+
+function checkServiceIntegrity(){renderServiceIntegrityCard();}
 
 function renderServisReminder(){return Servis.renderReminder();}
 
