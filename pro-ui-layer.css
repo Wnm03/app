@@ -1,0 +1,210 @@
+/* KELUARGA W — Pro Dark UI layer
+ * Sesi desain: visual target mockup dark 14 Sep 2026.
+ * Additive CSS only: no new dependency, no JS/data contract changes.
+ * Semua aturan scoped ke [data-theme="pro"].
+ */
+[data-theme="pro"]{
+  --bg:#06111f;--surface:#0a1a2c;--surface2:#0d2238;--surface3:#12304c;--surface4:#173c5f;
+  --accent:#2d9cff;--accent-soft:rgba(45,156,255,.16);
+  --accent2:#ff5d61;--accent2-soft:rgba(255,93,97,.15);
+  --accent3:#20d88b;--accent3-soft:rgba(32,216,139,.14);
+  --accent4:#f3c64e;--accent4-soft:rgba(243,198,78,.15);
+  --text:#f4f8ff;--text2:#9bb0c7;--text3:#6f879f;
+  --border:rgba(112,176,230,.16);--border2:rgba(112,176,230,.28);
+  --header-bg:rgba(6,17,31,.90);--shadow-card:0 10px 30px rgba(0,10,25,.42);
+  --r-card:18px;--r-pill:999px;
+  --grad-accent:linear-gradient(135deg,#2d9cff,#4a74ff);
+}
+body[data-theme="pro"]{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;}
+[data-theme="pro"] #scrollRoot{background:radial-gradient(circle at 50% -8%,rgba(45,156,255,.10),transparent 36%),var(--bg);}
+[data-theme="pro"] .header{padding:12px 18px 10px;background:var(--header-bg);border-bottom:1px solid var(--border);box-shadow:0 8px 26px rgba(0,0,0,.18);}
+[data-theme="pro"] .header-brand{font-size:20px;letter-spacing:-.6px;}
+[data-theme="pro"] .header-brand span{background:none;-webkit-text-fill-color:var(--accent);color:var(--accent);}
+[data-theme="pro"] .header-sub{color:var(--text3);}
+[data-theme="pro"] .header-badge{background:rgba(13,34,56,.82);border-color:var(--border2);color:var(--text);padding:7px 11px;}
+[data-theme="pro"] .page{padding:12px 14px 96px;max-width:760px;margin:0 auto;}
+[data-theme="pro"] .page-title{color:var(--text);}
+[data-theme="pro"] .card{background:linear-gradient(180deg,rgba(13,34,56,.96),rgba(9,27,45,.96));border:1px solid var(--border);border-radius:var(--r-card);padding:16px;box-shadow:var(--shadow-card);}
+[data-theme="pro"] .card:hover{border-color:var(--border2);box-shadow:0 12px 32px rgba(0,10,25,.48);}
+[data-theme="pro"] .card-title{color:var(--text);letter-spacing:.35px;text-transform:none;font-size:14px;}
+[data-theme="pro"] .card-title .card-setting-btn,[data-theme="pro"] .card-collapse-toggle{background:rgba(18,48,76,.9);border-color:var(--border);color:var(--text2);}
+[data-theme="pro"] .stat-box,[data-theme="pro"] .bbm-stat,[data-theme="pro"] .dashhub-summary-card,[data-theme="pro"] .dashhub-analytics-card{background:rgba(13,34,56,.9);border:1px solid var(--border);box-shadow:none;border-radius:14px;}
+[data-theme="pro"] .bbm-stat-grid{gap:8px;}
+[data-theme="pro"] .bbm-val{color:var(--text);}
+[data-theme="pro"] .bbm-lbl{color:var(--text3);}
+[data-theme="pro"] .btn-primary{background:var(--grad-accent);border-color:transparent;box-shadow:0 8px 22px rgba(45,156,255,.20);}
+[data-theme="pro"] .btn-ghost,[data-theme="pro"] .qs-btn{background:rgba(13,34,56,.9);border-color:var(--border);color:var(--text2);}
+[data-theme="pro"] .fi,[data-theme="pro"] .fs,[data-theme="pro"] textarea.fi{background:#0a1d31;border-color:var(--border2);color:var(--text);border-radius:12px;}
+[data-theme="pro"] .fi::placeholder,[data-theme="pro"] textarea.fi::placeholder{color:#5f7892;}
+[data-theme="pro"] .fl{color:var(--text2);}
+[data-theme="pro"] .cn-tabs{gap:7px;padding:4px;background:rgba(13,34,56,.72);border:1px solid var(--border);border-radius:999px;}
+[data-theme="pro"] .cn-tab{padding:9px 16px;border:0;border-radius:999px;background:transparent;color:var(--text2);}
+[data-theme="pro"] .cn-tab.active{background:var(--grad-accent);color:#fff;box-shadow:0 4px 14px rgba(45,156,255,.24);}
+[data-theme="pro"] .dashhub-wrap{background:linear-gradient(180deg,#0d2238,#091d31);}
+[data-theme="pro"] .dashhub-cat-head{gap:10px;}
+[data-theme="pro"] .dashhub-cat-label{color:var(--text);}
+[data-theme="pro"] .dashhub-cat-desc{color:var(--text3);}
+[data-theme="pro"] .dashhub-cat-icon{background:rgba(45,156,255,.12);border-radius:12px;padding:7px;}
+[data-theme="pro"] #servisReminderCard{background:linear-gradient(180deg,#0d2238,#081a2b);}
+[data-theme="pro"] #servisReminderCard .card-title{color:var(--text);}
+[data-theme="pro"] #servisReminderCard .u-fs11,[data-theme="pro"] #servisReminderCard .u-fs12{color:var(--text2);}
+[data-theme="pro"] #servisList > div{border-color:var(--border)!important;}
+[data-theme="pro"] #servisList .card,[data-theme="pro"] #servisList .servis-history-card{background:#0b2034;border-color:var(--border);}
+[data-theme="pro"] .theme-card{background:var(--surface2);border-color:var(--border);}
+[data-theme="pro"] .theme-card.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(45,156,255,.14);}
+[data-theme="pro"] .nav{background:rgba(6,17,31,.94);border-top:1px solid var(--border);box-shadow:0 -10px 30px rgba(0,0,0,.24);}
+[data-theme="pro"] .nav-item{color:var(--text3);}
+[data-theme="pro"] .nav-item.active{color:var(--accent);text-shadow:0 0 16px rgba(45,156,255,.24);}
+[data-theme="pro"] .nav-fab{background:rgba(13,34,56,.9);}
+[data-theme="pro"] .progress-bar,[data-theme="pro"] .progress-fill{border-radius:999px;}
+[data-theme="pro"] .progress-fill{background:linear-gradient(90deg,#20d88b,#2d9cff);}
+[data-theme="pro"] .empty{color:var(--text2);}
+[data-theme="pro"] .empty-icon{filter:saturate(.7);}
+[data-theme="pro"] .toast{border:1px solid var(--border2);background:#0a1a2c;color:var(--text);box-shadow:0 14px 34px rgba(0,0,0,.45);}
+@media (max-width:420px){
+  [data-theme="pro"] .page{padding-left:10px;padding-right:10px;}
+  [data-theme="pro"] .card{padding:14px;border-radius:16px;}
+  [data-theme="pro"] .header-badge{padding:6px 9px;}
+  [data-theme="pro"] .cn-tab{padding:8px 13px;font-size:12px;}
+}
+@media (max-width:760px){
+  [data-theme="pro"] .page{padding-left:12px;padding-right:12px;}
+  [data-theme="pro"] .pro-service-stats,[data-theme="pro"] .bbm-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  [data-theme="pro"] .pro-checklist-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+@media (prefers-reduced-motion:reduce){
+  [data-theme="pro"] *{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;}
+}
+
+/* M1–M3.4 mockup fidelity layer: presentation only, existing actions/data stay intact. */
+[data-theme="pro"] .pro-vehicle-page{max-width:760px;}
+[data-theme="pro"] .pro-vehicle-hero{margin-bottom:10px;}
+[data-theme="pro"] .pro-vehicle-context{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 4px 9px;}
+[data-theme="pro"] .pro-kicker{font-size:20px;font-weight:800;letter-spacing:-.45px;color:var(--text);}
+[data-theme="pro"] .pro-date{font-size:11px;color:var(--text2);font-weight:600;}
+[data-theme="pro"] .pro-vehicle-hero .vehicle-select{margin:0;}
+[data-theme="pro"] .pro-vehicle-hero .vehicle-select > *{border-radius:18px!important;}
+[data-theme="pro"] .pro-odometer-card{min-height:96px;padding:16px!important;background:linear-gradient(135deg,rgba(16,46,74,.98),rgba(9,28,47,.98));border-color:rgba(45,156,255,.24);}
+[data-theme="pro"] .pro-odometer-card #cnCurKm{font-size:30px!important;line-height:1.05;letter-spacing:-1px;color:#fff;}
+[data-theme="pro"] .pro-odometer-card #cnCurKmSrc{font-size:10px;}
+[data-theme="pro"] .pro-odometer-card .btn{min-height:38px;border-radius:12px;}
+[data-theme="pro"] .pro-primary-tabs{position:sticky;top:0;z-index:5;margin:8px 0 10px;padding:4px;overflow-x:auto;scrollbar-width:none;background:rgba(6,17,31,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+[data-theme="pro"] .pro-primary-tabs::-webkit-scrollbar{display:none;}
+[data-theme="pro"] .pro-primary-tabs .cn-tab{flex:0 0 auto;min-height:38px;white-space:nowrap;font-weight:700;}
+[data-theme="pro"] .pro-screen-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 2px 10px;}
+[data-theme="pro"] .pro-screen-title{font-size:20px;font-weight:800;letter-spacing:-.45px;color:var(--text);}
+[data-theme="pro"] .pro-screen-subtitle{font-size:11px;color:var(--text3);margin-top:3px;line-height:1.45;}
+[data-theme="pro"] .pro-reminder-card{border-radius:18px!important;}
+[data-theme="pro"] .pro-service-stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px;}
+[data-theme="pro"] .pro-service-stats .bbm-stat{min-height:72px;padding:11px 8px;border-radius:14px;text-align:left;}
+[data-theme="pro"] .pro-service-stats .bbm-val{font-size:17px!important;line-height:1.15;}
+[data-theme="pro"] .pro-service-stats .bbm-lbl{font-size:10px;margin-top:5px;}
+[data-theme="pro"] .pro-servis-screen > .btn.btn-primary{min-height:48px;border-radius:14px;font-size:13px;font-weight:800;}
+[data-theme="pro"] .pro-history-card{border-radius:18px!important;overflow:hidden;}
+[data-theme="pro"] .pro-history-card > .card-title{padding-bottom:10px;}
+[data-theme="pro"] #servisList{display:grid;gap:8px;}
+[data-theme="pro"] #servisList > div{border-radius:14px;}
+[data-theme="pro"] #servisReminderCard .card-title{font-size:14px;}
+[data-theme="pro"] #servisReminderCard .chip-btn{border-radius:999px;min-height:30px;padding:6px 10px;font-size:10px;}
+[data-theme="pro"] #cnTab-servis .summary-toggle{padding:13px 14px!important;}
+@media (max-width:420px){
+  [data-theme="pro"] .pro-kicker{font-size:18px;}
+  [data-theme="pro"] .pro-date{font-size:10px;}
+  [data-theme="pro"] .pro-odometer-card #cnCurKm{font-size:27px!important;}
+  [data-theme="pro"] .pro-service-stats .bbm-stat{min-height:68px;padding:10px 7px;}
+  [data-theme="pro"] .pro-service-stats .bbm-val{font-size:15px!important;}
+}
+
+/* M3.5–M3.8: mockup fidelity for component detail, checklist, reminder,
+ * service form, fuel intelligence and map/ride surfaces. Presentation only. */
+[data-theme="pro"] #servisModal .modal{background:linear-gradient(180deg,#081a2b,#061522);border:1px solid var(--border2);border-radius:22px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+[data-theme="pro"] #servisModal .modal-title{font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.3px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+[data-theme="pro"] #servisModal .modal-close{background:var(--surface3);border:1px solid var(--border);border-radius:10px;color:var(--text2);}
+[data-theme="pro"] #servisEditTabs{background:rgba(18,48,76,.58)!important;border:1px solid var(--border);border-radius:999px!important;padding:4px!important;}
+[data-theme="pro"] #servisEditTabs button{border-radius:999px!important;min-height:38px;}
+[data-theme="pro"] #servisEditTabs button.active{background:var(--grad-accent)!important;color:#fff!important;box-shadow:0 5px 16px rgba(45,156,255,.2);}
+[data-theme="pro"] #servisServiceCategoryPanel{background:rgba(13,34,56,.55);border:1px solid var(--border);border-radius:16px;padding:12px;}
+[data-theme="pro"] #servisMasterCategoryChips>div:last-child{font-size:10px!important;color:var(--text3)!important;}
+[data-theme="pro"] #servisMasterCategoryChips .chip,[data-theme="pro"] #servisChecklistPanel .chip{border-radius:999px;padding:7px 10px;border:1px solid var(--border);background:rgba(10,29,49,.9);color:var(--text2);}
+[data-theme="pro"] #servisMasterCategoryChips .chip.active,[data-theme="pro"] #servisChecklistPanel .chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+[data-theme="pro"] #servisChecklistPanel{margin-top:10px;}
+[data-theme="pro"] #servisChecklistPanel .sc-group{background:linear-gradient(180deg,rgba(18,48,76,.9),rgba(10,29,49,.92))!important;border:1px solid var(--border)!important;border-radius:16px!important;padding:0 12px!important;overflow:hidden;}
+[data-theme="pro"] #servisChecklistPanel .sc-group summary{padding:13px 0!important;font-size:12px;color:var(--text);}
+[data-theme="pro"] #servisChecklistPanel .sc-group .chip.active{font-size:10px;}
+[data-theme="pro"] #servisChecklistPanel .sc-item{padding:11px 0!important;border-bottom:1px solid var(--border)!important;}
+[data-theme="pro"] #servisChecklistPanel .sc-item:last-child{border-bottom:0!important;}
+[data-theme="pro"] #servisChecklistPanel .sc-check{width:36px;min-width:36px;height:36px;border-radius:12px!important;display:grid;place-items:center;font-weight:800;}
+[data-theme="pro"] #servisChecklistPanel .sc-item.is-checked .sc-check{background:var(--accent3);border-color:var(--accent3);color:#03150e;}
+[data-theme="pro"] #servisChecklistPanel .sc-item-name{font-size:12px;color:var(--text);font-weight:800;}
+[data-theme="pro"] #servisChecklistPanel .sc-item-meta{font-size:10px;color:var(--text3);margin-top:3px;}
+[data-theme="pro"] #servisChecklistPanel .sc-action-toggle{margin-top:7px;}
+[data-theme="pro"] #servisChecklistPanel .sc-action-btn{min-height:30px;border-radius:999px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:10px;padding:5px 9px;}
+[data-theme="pro"] #servisChecklistPanel .sc-action-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+[data-theme="pro"] #servisModal #servisDetailPanel>.fg{margin-bottom:13px;}
+[data-theme="pro"] #servisModal .fl{font-size:10px;text-transform:uppercase;letter-spacing:.35px;color:var(--text3);}
+[data-theme="pro"] #servisModal #servisItem{font-size:15px;font-weight:700;min-height:44px;}
+[data-theme="pro"] #servisModal #servisKm,[data-theme="pro"] #servisModal #servisDate,[data-theme="pro"] #servisModal #servisCost,[data-theme="pro"] #servisModal #servisInterval{min-height:44px;}
+[data-theme="pro"] #servisModal #servisSaveBtn,[data-theme="pro"] #servisModal .btn-primary.btn-full{min-height:48px;border-radius:14px;font-weight:800;}
+
+[data-theme="pro"] #servisReminderCard .card-collapse-body{padding-top:3px;}
+[data-theme="pro"] #servisReminderCard .filter-scroll,[data-theme="pro"] #servisReminderCard .u-flex.u-fs12{gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+[data-theme="pro"] #servisReminderCard .filter-scroll::-webkit-scrollbar{display:none;}
+[data-theme="pro"] #servisReminderCard select.fs{min-height:38px;border-radius:12px;font-size:11px;}
+[data-theme="pro"] #servisReminderCard .chip{border-radius:999px;min-height:30px;padding:6px 10px;background:rgba(10,29,49,.9);border:1px solid var(--border);color:var(--text2);font-size:10px;}
+[data-theme="pro"] #servisReminderCard .chip.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+[data-theme="pro"] #servisReminderCard .u-mb10{margin-bottom:8px;}
+[data-theme="pro"] #servisReminderCard .servis-reminder-row,[data-theme="pro"] #servisReminderCard .tx-item{background:rgba(10,29,49,.72);border:1px solid var(--border);border-radius:14px;padding:11px!important;margin-bottom:8px;}
+[data-theme="pro"] #servisReminderCard .red{color:#ff7377;}
+[data-theme="pro"] #servisReminderCard .u-cacc4{color:var(--accent4);}
+[data-theme="pro"] #servisReminderCard .btn-sm{min-height:32px;border-radius:10px;font-size:10px;}
+
+[data-theme="pro"] .pro-checklist-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+[data-theme="pro"] .pro-checklist-grid>*{min-width:0;}
+[data-theme="pro"] .servis-history-session{background:linear-gradient(180deg,#0d2238,#091b2d);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:none;}
+[data-theme="pro"] .servis-history-session-summary{margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;padding:12px!important;}
+[data-theme="pro"] .servis-history-session[open] .servis-history-session-summary{border-bottom:1px solid var(--border)!important;}
+[data-theme="pro"] .servis-history-session-body{padding:8px;background:rgba(6,17,31,.45);}
+[data-theme="pro"] .servis-history-item{background:rgba(10,29,49,.86);border:1px solid var(--border);border-radius:14px;padding:10px!important;margin:0 0 7px;}
+[data-theme="pro"] .servis-history-item:last-child{margin-bottom:0;}
+[data-theme="pro"] #servisList > div,
+[data-theme="pro"] #servisReminderCard .servis-reminder-row,
+[data-theme="pro"] #fuelIntelHistoryList > div{content-visibility:auto;contain:content;}
+[data-theme="pro"] .servis-history-title{font-size:12px;font-weight:800;color:var(--text);}
+[data-theme="pro"] .servis-history-primary{font-size:10px;color:var(--text3);margin-top:3px;}
+[data-theme="pro"] .servis-history-note{font-size:10px;color:var(--text2);margin-top:4px;line-height:1.45;}
+[data-theme="pro"] .servis-history-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+[data-theme="pro"] .servis-history-badge{border-radius:999px;background:rgba(18,48,76,.8);border:1px solid var(--border);padding:4px 7px;font-size:9px;color:var(--text2);}
+[data-theme="pro"] .servis-history-reminder{color:var(--accent3);border-color:rgba(32,216,139,.25);}
+[data-theme="pro"] .servis-history-check{color:var(--accent);}
+[data-theme="pro"] .servis-history-photo{color:var(--accent4);}
+[data-theme="pro"] .servis-history-amount{font-size:11px;font-weight:800;white-space:nowrap;}
+[data-theme="pro"] .servis-history-delete{width:30px;height:30px;border-radius:9px;background:rgba(255,93,97,.08);border:1px solid rgba(255,93,97,.18);}
+
+[data-theme="pro"] #fuelIntelWrap{border-color:rgba(45,156,255,.24);}
+[data-theme="pro"] #fuelIntelWrap .dashhub-cat-icon{background:var(--accent-soft);}
+[data-theme="pro"] #fuelIntelBody{padding-top:4px;}
+[data-theme="pro"] #fuelIntelBody .fuelcard-gauge{margin:12px 0;padding:9px;border:1px solid var(--border);border-radius:14px;background:rgba(6,17,31,.45);}
+[data-theme="pro"] #fuelIntelBody .fuelcard-gauge-seg{border-radius:6px;}
+[data-theme="pro"] #fuelIntelBody .btn{min-height:36px;border-radius:11px;font-size:10px;}
+[data-theme="pro"] #fuelIntelHistoryList .tx-item,[data-theme="pro"] #fuelIntelHistoryList>div{border-color:var(--border)!important;}
+[data-theme="pro"] .bbm-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+[data-theme="pro"] #bbmTrendCard{border-radius:18px;overflow:hidden;}
+[data-theme="pro"] #cnTab-bbm .bbm-stat{min-height:78px;display:flex;flex-direction:column;justify-content:center;}
+[data-theme="pro"] #cnTab-bbm .bbm-val{font-size:17px;font-weight:800;}
+
+[data-theme="pro"] #cnTab-jalan .card{overflow:hidden;}
+[data-theme="pro"] #cnTab-jalan .ride-map-svg{border-radius:16px;overflow:hidden;background:#0a1d31;}
+[data-theme="pro"] #cnTab-jalan .ride-map-route{filter:drop-shadow(0 0 4px rgba(45,156,255,.25));}
+[data-theme="pro"] #cnTab-jalan #rideStatusText{font-size:15px;color:var(--text);}
+[data-theme="pro"] #cnTab-jalan #rideDistanceText,[data-theme="pro"] #cnTab-jalan #rideDurationText{font-size:18px;}
+[data-theme="pro"] #cnTab-jalan .btn{min-height:38px;border-radius:12px;}
+
+@media (max-width:420px){
+  [data-theme="pro"] .pro-checklist-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  [data-theme="pro"] #servisModal .modal{padding:14px;border-radius:20px;}
+  [data-theme="pro"] #servisModal .modal-title{font-size:16px;}
+  [data-theme="pro"] #servisChecklistPanel .sc-item-name{font-size:11px;}
+  [data-theme="pro"] #servisChecklistPanel .sc-item-meta{font-size:9px;}
+  [data-theme="pro"] .servis-history-item{padding:9px!important;}
+}
