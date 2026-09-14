@@ -610,6 +610,7 @@ const GROUP_B = [
   // jalan supaya tidak perlu geser urutan lagi di sesi berikutnya).
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
+  'modules/vehicle/servis.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof
