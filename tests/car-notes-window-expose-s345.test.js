@@ -22,9 +22,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
+const SERVIS_SPLIT=['car-notes.js','modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/servis.js'];
 
 test('car-notes.js — window.BBM/Servis/Torsi ter-ekspos utk dispatcher data-action global', () => {
-  const ctx = loadSource(['car-notes.js']);
+  const ctx = loadSource(SERVIS_SPLIT);
 
   assert.equal(typeof ctx.window.BBM, 'object', 'window.BBM harus ada (dipakai data-action="BBM.xxx")');
   assert.equal(typeof ctx.window.Servis, 'object', 'window.Servis harus ada (dipakai data-action="Servis.xxx", termasuk chip rekomendasi part)');
@@ -32,7 +33,7 @@ test('car-notes.js — window.BBM/Servis/Torsi ter-ekspos utk dispatcher data-ac
 });
 
 test('car-notes.js — window.BBM/Servis/Torsi adalah objek yang SAMA dengan binding lexical (bukan copy)', () => {
-  const ctx = loadSource(['car-notes.js'], {}, ['BBM', 'Servis', 'Torsi']);
+  const ctx = loadSource(SERVIS_SPLIT, {}, ['BBM', 'Servis', 'Torsi']);
 
   assert.strictEqual(ctx.window.BBM, ctx.BBM, 'window.BBM harus referensi identik ke const BBM, bukan objek terpisah');
   assert.strictEqual(ctx.window.Servis, ctx.Servis, 'window.Servis harus referensi identik ke const Servis, bukan objek terpisah');
@@ -40,7 +41,7 @@ test('car-notes.js — window.BBM/Servis/Torsi adalah objek yang SAMA dengan bin
 });
 
 test('car-notes.js — dispatcher-style lookup window["Owner"]["method"] berhasil resolve method nyata', () => {
-  const ctx = loadSource(['car-notes.js']);
+  const ctx = loadSource(SERVIS_SPLIT);
 
   // Simulasikan persis cara features-helpers-global-security.js resolve
   // data-action="Owner.method" -> window[Owner][method].

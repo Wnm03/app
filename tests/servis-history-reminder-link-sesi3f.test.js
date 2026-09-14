@@ -1,9 +1,10 @@
+const { readCarNotesSource } = require('./helpers/carNotesSource');
 const fs=require('fs');
 const assert=require('assert');
-const js=fs.readFileSync(require('path').join(__dirname,'..','car-notes.js'),'utf8');
+const js=readCarNotesSource();
 assert(js.includes('linkedReminderInfo'),'3F reminder linkage UI missing');
 assert(js.includes('getEffectiveIntervalKm(curVehicleId,linkedCat)'),'3F must reuse effective KM interval');
-assert(js.includes('getEffectiveIntervalBulan(curVehicleId,linkedCat)'),'3F must reuse effective month interval');
+assert(js.includes('getEffectiveIntervalBulan(linkedCat,curVehicleId)'),'3F must reuse effective month interval');
 assert(js.includes('resolveServisCatForVehicle(s.item,curVehicleId)'),'3F legacy fallback missing');
 assert(js.includes('Pengingat belum aktif'),'3F inactive reminder state missing');
 assert(js.includes('Terhubung ke Pengingat Servis'),'3F linked tooltip missing');

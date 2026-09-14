@@ -5,7 +5,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.join(__dirname, '..');
-const carNotes = fs.readFileSync(path.join(root, 'car-notes.js'), 'utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const carNotes = readServisSource();
 const checklist = fs.readFileSync(path.join(root, 'modules/vehicle/servis-checklist.js'), 'utf8');
 
 test('Sesi 2A3: UI memberi warning kategori hanya untuk item linkCat=true yang belum ter-resolve', () => {

@@ -1,7 +1,8 @@
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const car=readCarNotesSource();
 const spare=fs.readFileSync(path.join(root,'modules/vehicle/sparepart-servis.js'),'utf8');
 const tx=fs.readFileSync(path.join(root,'modules/finance/transaksi-b.js'),'utf8');
 const backup=fs.readFileSync(path.join(root,'modules/shared/backup-restore.js'),'utf8');

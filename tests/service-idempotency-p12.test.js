@@ -1,11 +1,12 @@
 'use strict';
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const path=require('path');
 const vm=require('vm');
 const root=path.resolve(__dirname,'..');
 const adapter=fs.readFileSync(path.join(root,'modules/vehicle/service-event-adapter.js'),'utf8');
 const finance=fs.readFileSync(path.join(root,'modules/finance/tx-servis.js'),'utf8');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const car=readCarNotesSource();
 let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
 const sandbox={window:{}}; vm.createContext(sandbox); vm.runInContext(adapter,sandbox);

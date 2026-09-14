@@ -1,7 +1,8 @@
 const fs=require('fs');
 const path=require('path');
 const assert=require('assert');
-const js=fs.readFileSync(path.join(__dirname,'..','car-notes.js'),'utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const js=readServisSource();
 const vehicleCoreJs=fs.readFileSync(path.join(__dirname,'..','modules','vehicle','vehicle-core.js'),'utf8');
 const helpersJs=fs.readFileSync(path.join(__dirname,'..','modules','shared','features-helpers-global-security.js'),'utf8');
 

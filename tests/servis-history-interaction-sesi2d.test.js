@@ -1,5 +1,6 @@
 const fs=require('fs');
-const js=fs.readFileSync('car-notes.js','utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const js=readServisSource();
 const css=fs.readFileSync('styles.css','utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 assert(js.includes('const fotoOrIcon=fotoThumb||`<div class="tx-icon u-bgaccsoft">🔧</div>`;'),'photo/icon fallback missing');

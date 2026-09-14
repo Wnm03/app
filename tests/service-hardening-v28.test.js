@@ -1,5 +1,7 @@
-const fs=require('fs'),assert=require('assert');
-const cn=fs.readFileSync('car-notes.js','utf8');
+const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const fs2=require('fs'),assert=require('assert');
+const cn=readCarNotesSource();
 const tx=fs.readFileSync('modules/finance/transaksi-b.js','utf8');
 const ad=fs.readFileSync('modules/vehicle/service-event-adapter.js','utf8');
 function ok(n,c){assert.ok(c,n);console.log('PASS',n)}

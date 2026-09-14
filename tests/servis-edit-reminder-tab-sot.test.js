@@ -31,6 +31,7 @@ function makeCtx({D,els}){
     getEffectiveIntervalBulan:cat=>cat.intervalBulan||null,
     computeServiceUrgency:()=>({status:'segera',sisaKm:500,sisaBulan:null}),
     getVehicleKm:()=>9500,
+    getLastServiceKmForCat:()=>9000,
     estimateKmPerDay:()=>20,
     ServisChecklist:{findItemById:id=>id==='oil-check'?{item:{name:'Oli Mesin'}}:null},
     Sparepart:{renderStockList:()=>{},renderCatList:()=>{}},

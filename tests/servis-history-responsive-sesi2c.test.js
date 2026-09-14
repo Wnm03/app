@@ -1,5 +1,6 @@
 const fs = require('fs');
-const js = fs.readFileSync('car-notes.js','utf8');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const js = readCarNotesSource();
 const css = fs.readFileSync('styles.css','utf8');
 function assert(c,m){if(!c)throw new Error(m)}
 assert(js.includes('servis-history-item'),'row class missing');

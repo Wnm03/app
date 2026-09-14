@@ -2,9 +2,10 @@
 // v10: lifecycle contract test for the Reminder -> D.servisLogs -> ServiceEventLifecycle path.
 // Static by design: this patch ZIP is deployable without the full app test harness.
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const car=readCarNotesSource();
 const bundle=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
 let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}

@@ -1,5 +1,6 @@
 const fs=require('fs');
-const cn=fs.readFileSync('car-notes.js','utf8');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const cn=readCarNotesSource();
 let n=0,ok=0;function t(name,v){n++;if(v)ok++;else{console.error('FAIL',name);process.exitCode=1;}}
 t('edit finance event has post-commit catch/outbox',cn.includes("V35: service edit finance event failed after commit; queued for reconciliation")&&cn.includes("type:'finance.updated',payload:_postCommitFinanceEvent"));
 t('create finance event has post-commit catch/outbox',cn.includes("V35: service create finance event failed after commit; queued for reconciliation")&&cn.includes("const _createFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'}"));

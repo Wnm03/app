@@ -1,8 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const {readServisSource}=require('./helpers/carNotesSource');
 
-const src = fs.readFileSync(require.resolve('../car-notes.js'), 'utf8');
+const src = readServisSource();
 
 test('Sesi 3A: edit servis tidak mempertahankan categoryId lama saat item berubah ke item tanpa kategori', () => {
   assert.match(src, /if\(Servis\.editId!==null&&!matched\)/);

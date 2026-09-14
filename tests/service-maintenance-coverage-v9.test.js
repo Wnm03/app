@@ -1,8 +1,10 @@
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const car=readCarNotesSource();
 const a=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
+const b=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
 const checklist=fs.readFileSync(path.join(root,'modules/vehicle/servis-checklist.js'),'utf8');
 let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
@@ -15,5 +17,5 @@ ok(car.includes('_maintenanceProjection?`<span'),'projected category does not ex
 ok(car.includes('Setiap ${u.intervalHari} hari'),'day-only schedule label exists');
 ok(car.includes('resolveReminderCategory(catId,curVehicleId)'),'markServiced resolves projected category');
 ok(car.includes('ServiceEventLifecycle.create(entry)'),'markServiced emits canonical service lifecycle');
-ok(a.includes('Setiap ${u.intervalHari} hari'),'bundle A contains day-only schedule fix');
+ok(b.includes('Setiap ${u.intervalHari} hari'),'bundle B contains day-only schedule fix');
 console.log(`${pass} PASS`);

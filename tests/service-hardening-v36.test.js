@@ -1,5 +1,6 @@
 const fs=require('fs');
-const car=fs.readFileSync('car-notes.js','utf8');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const car=readCarNotesSource();
 const tx=fs.readFileSync(require('path').join(__dirname,'../modules/finance/transaksi-b.js'),'utf8');
 const chat=fs.readFileSync('chat-action-handlers.js','utf8');
 const adapter=fs.readFileSync(require('path').join(__dirname,'../modules/vehicle/service-event-adapter.js'),'utf8');

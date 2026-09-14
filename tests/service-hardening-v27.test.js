@@ -1,5 +1,7 @@
-const fs=require('fs'), assert=require('assert');
-const cn=fs.readFileSync('car-notes.js','utf8');
+const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const fs2=require('fs'), assert=require('assert');
+const cn=readCarNotesSource();
 const br=fs.readFileSync('modules/shared/backup-restore.js','utf8');
 const ad=fs.readFileSync('modules/vehicle/service-event-adapter.js','utf8');
 function ok(name,cond){assert.ok(cond,name);console.log('PASS',name)}

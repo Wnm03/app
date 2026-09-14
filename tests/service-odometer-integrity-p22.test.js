@@ -1,6 +1,7 @@
 const assert=require('assert');
 const fs=require('fs');
-const src=fs.readFileSync(require.resolve('../car-notes.js'),'utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const src=readServisSource();
 const m=src.match(/validateServiceOdometer\(\{vehicleId,km,date,excludeId\}=\{\}\)\{([\s\S]*?)\n\},\n\nasync _saveInner/);
 assert(m,'P22 validator missing');
 const validate=new Function('D','getVehicleKm',`return function validateServiceOdometer({vehicleId,km,date,excludeId}={}){${m[1]}}`);

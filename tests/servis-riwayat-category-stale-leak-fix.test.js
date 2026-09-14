@@ -15,6 +15,7 @@
 // populateCategorySelect/populateComponentSelect, supaya fallback di dalamnya
 // tidak pernah kebaca dari value riwayat SEBELUMNYA.
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const {readServisSource}=require('./helpers/carNotesSource');
 
 function makeSelectStub(){ return { value:'', innerHTML:'', options:[] }; }
 
@@ -62,7 +63,7 @@ function extractMethodBody(source,name){
   // feature) -- irrelevant to the stale-leak fix under test, so it's a no-op stub.
   ctx.Servis={syncServiceActionType(){}};
 
-  const carNotesSrc=fs.readFileSync('car-notes.js','utf8');
+  const carNotesSrc=readServisSource();
   const body=extractMethodBody(carNotesSrc,'renderServiceInputSelectors');
   const fn=vm.runInContext(`(function(selectedMasterId,selectedComponentId,selectedActionType){${body}})`,ctx);
 

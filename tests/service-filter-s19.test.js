@@ -1,7 +1,8 @@
 // S19: reminder/stock/catalog read-only category+component filters + trend rows.
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const assert=require('assert');
-function has(p,t){return fs.readFileSync(p,'utf8').includes(t);}
+function has(p,t){return (p==='car-notes.js'?readCarNotesSource():fs.readFileSync(p,'utf8')).includes(t);}
 assert(has('car-notes.js','activeReminderMasterCategoryFilter:null'),'Reminder category filter state missing');
 assert(has('car-notes.js','setReminderComponentFilter(id)'),'Reminder component filter handler missing');
 assert(has('car-notes.js','filteredRemindableCats'),'Reminder filtered view missing');

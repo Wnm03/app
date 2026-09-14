@@ -1,7 +1,8 @@
-const fs=require('fs'); const assert=require('assert'); const path=require('path');
+const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource'); const assert=require('assert'); const path=require('path');
 const root=path.join(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(root,f),'utf8');
-const car=read('car-notes.js'), tx=read('modules/finance/transaksi-b.js'), del=read('modules/finance/tx-list-cashflow.js'), bridge=read('modules/finance/transaksi-b.js'), life=read('modules/vehicle/service-event-lifecycle.js');
+const car=readCarNotesSource(), tx=read('modules/finance/transaksi-b.js'), del=read('modules/finance/tx-list-cashflow.js'), bridge=read('modules/finance/transaksi-b.js'), life=read('modules/vehicle/service-event-lifecycle.js');
 function test(name,fn){try{fn();console.log('PASS',name)}catch(e){console.error('FAIL',name);throw e}}
 test('lifecycle bridge emits service.updated and backward vehicle.updated',()=>{assert(life.includes("AIBus.emit('service.updated'"));assert(life.includes("AIBus.emit('vehicle.updated'"));});
 test('service edit emits lifecycle update',()=>assert(car.includes('ServiceEventLifecycle.update(s')));

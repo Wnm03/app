@@ -53,6 +53,7 @@ function makeCtx({ D, promptValue = '0', confirmValue = true, toasts, Sparepart 
     hasIntervalOverride: () => false,
     estimateServiceDateISO: () => null,
     fmtDateID: () => '',
+    fmtFull: () => '',
     Sparepart: Sparepart || makeSparepartStub(D),
     AIBus: { emit() {} },
   }, ['Servis']);

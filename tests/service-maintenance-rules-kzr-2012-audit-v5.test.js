@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 test('KZR 125 maintenance metadata v5: every registry key exists in SERVICE_CHECKLIST_GROUPS and inspection/replacement axes stay separate', () => {
-  const ctx = loadSource(['modules/vehicle/servis-checklist.js', 'car-notes.js'], {}, ['Servis','SERVICE_MAINTENANCE_RULES','SERVICE_CHECKLIST_GROUPS']);
+  const ctx = loadSource(['modules/vehicle/servis-checklist.js', 'car-notes.js', 'modules/vehicle/service-input-catalog.js', 'modules/vehicle/servis.js'], {}, ['Servis','SERVICE_MAINTENANCE_RULES','SERVICE_CHECKLIST_GROUPS']);
   const ids = new Set((ctx.SERVICE_CHECKLIST_GROUPS || []).flatMap(g => (g.items || []).map(i => i.id)));
   const rules = ctx.SERVICE_MAINTENANCE_RULES || {};
   assert.ok(Object.keys(rules).length >= 20);

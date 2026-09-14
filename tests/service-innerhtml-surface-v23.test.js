@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 
 test('v23 dynamic innerHTML surfaces use HTML escaping for identified user/data-controlled text', () => {
   const checks = [
@@ -14,7 +15,7 @@ test('v23 dynamic innerHTML surfaces use HTML escaping for identified user/data-
     ['modules/shop/modules-render.js', '${escapeHtml(D.googleSheets.spreadsheetId)}'],
   ];
   for (const [file, needle] of checks) {
-    const s = fs.readFileSync(path.join(ROOT, file), 'utf8');
+    const s = file==='car-notes.js' ? readCarNotesSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
     assert.match(s, new RegExp(needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `${file} missing: ${needle}`);
   }
 });

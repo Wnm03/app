@@ -1,5 +1,6 @@
+const { readServisSource } = require('./helpers/carNotesSource');
 const fs=require('fs'); const path=require('path');
-const car=fs.readFileSync(path.join(__dirname,'..','car-notes.js'),'utf8');
+const car=readServisSource();
 function ok(c,m){if(!c)throw new Error(m);console.log('PASS',m)}
 ok(car.includes('P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu'),'edit repairs orphaned txLinkId');
 ok(car.includes('s.txLinkId=repairTxId;'),'repaired transaction relinks to service');

@@ -4,12 +4,7 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 function ctxWith(data, extra={}) {
-  return loadSource([
-    'modules/vehicle/servis-checklist.js',
-    'car-notes.js',
-    'modules/vehicle/sparepart-servis.js',
-    'modules/vehicle/sparepart-servis-b.js'
-  ], Object.assign({ D:data }, extra), [
+  return loadSource(['modules/vehicle/servis-checklist.js','car-notes.js','modules/vehicle/service-input-catalog.js','modules/vehicle/servis.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-b.js'], Object.assign({ D:data }, extra), [
     'SERVICE_MAINTENANCE_RULES','resolveMaintenanceRule','getMaintenanceSchedule',
     'hasMaintenanceReminderSchedule','computeServiceUrgency'
   ]);

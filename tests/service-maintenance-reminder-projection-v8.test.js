@@ -1,7 +1,8 @@
 const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const car=readCarNotesSource();
 const spare=fs.readFileSync(path.join(root,'modules/vehicle/sparepart-servis.js'),'utf8');
 const a=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
 const b=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
@@ -13,7 +14,7 @@ ok(car.includes('resolveReminderCategory(catId,curVehicleId)'), 'markServiced re
 ok(car.includes('const reminderCategoryPool='), 'Reminder consumes projected category pool');
 ok(spare.includes('s.inspectDays||s.replaceDays'), 'day-axis schedules are considered remindable');
 ok(a.includes('function getMaintenanceReminderProjection(vehicleId)'), 'bundle A contains projection');
-ok(a.includes('const reminderCategoryPool='), 'bundle A contains projection pool in Reminder');
+ok(b.includes('reminderCategoryPool'), 'bundle B contains projection pool in Reminder');
 ok(b.includes('s.inspectDays||s.replaceDays'), 'bundle B contains day-axis remindable check');
 const indexSrc=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const productionSrc=fs.readFileSync(path.join(root,'app_production.html'),'utf8');

@@ -5,7 +5,8 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const checklist = fs.readFileSync(path.join(root, 'modules/vehicle/servis-checklist.js'), 'utf8');
-const carNotes = fs.readFileSync(path.join(root, 'car-notes.js'), 'utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const carNotes = readServisSource();
 
 test('Sesi 2B: SoT menyediakan ringkasan checklist per log untuk Riwayat Servis', () => {
   assert.match(checklist, /summaryFromLog\(log\) \{/);

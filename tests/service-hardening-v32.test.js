@@ -1,5 +1,7 @@
-const fs=require('fs'),assert=require('assert');
-const cn=fs.readFileSync('car-notes.js','utf8');
+const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const assert=require('assert');
+const cn=readCarNotesSource();
 const sb=fs.readFileSync('modules/vehicle/sparepart-servis-b.js','utf8');
 function ok(n,c){assert.ok(c,n);console.log('PASS',n)}
 ok('create lifecycle failure queues outbox',cn.includes("post-commit service create lifecycle failed; reconciliation required")&&cn.includes("type:'service.create',payload:_newServisLog"));

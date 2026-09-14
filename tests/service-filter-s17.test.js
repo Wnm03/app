@@ -3,7 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
-const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const car=readCarNotesSource();
 const trend=fs.readFileSync(path.join(root,'modules/vehicle/vehicle-trend-api.js'),'utf8');
 
 test('S17 Car Notes has cascading category -> component history filter',()=>{

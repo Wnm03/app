@@ -1,14 +1,15 @@
+const { readCarNotesSource } = require('./helpers/carNotesSource');
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('fs');
-const car=fs.readFileSync(require.resolve('../car-notes.js'),'utf8');
+const car=readCarNotesSource();
 const tx=fs.readFileSync(require.resolve('../modules/finance/tx-servis.js'),'utf8');
 
 test('Sesi 3C: satu catatan servis = satu canonical service event/log',()=>{
   assert.match(car,/const servisId=uid\(\);/);
-  assert.match(car,/D\.servisLogs\.push\(\{id:servisId/);
+  assert.match(car,/D\.servisLogs\.push\(\{id:_rowIdx===0\?servisId:uid\(\),sessionId:_serviceSessionId/);
   assert.match(car,/checklist:checklistPayload/);
-  assert.match(car,/txLinkId:txId/);
+  assert.match(car,/txLinkId:_rowIdx===0\?txId:null/);
 });
 
 test('Sesi 3C: edit memperbarui event yang sama, tidak membuat log kedua',()=>{

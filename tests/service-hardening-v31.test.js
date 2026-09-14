@@ -1,5 +1,7 @@
-const fs=require('fs'),assert=require('assert');
-const cn=fs.readFileSync('car-notes.js','utf8');
+const fs=require('fs');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const assert=require('assert');
+const cn=readCarNotesSource();
 const ad=fs.readFileSync('modules/vehicle/service-event-adapter.js','utf8');
 function ok(n,c){assert.ok(c,n);console.log('PASS',n)}
 ok('markServiced vehicle event failure queues outbox',cn.includes("type:'vehicle.updated'")&&cn.includes('V31: vehicle event failed after commit'));

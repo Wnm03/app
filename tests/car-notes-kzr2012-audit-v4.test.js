@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const car = fs.readFileSync(path.join(process.cwd(), 'car-notes.js'), 'utf8');
+const car = [
+  fs.readFileSync(path.join(process.cwd(), 'car-notes.js'), 'utf8'),
+  fs.readFileSync(path.join(process.cwd(), 'modules/vehicle/servis-checklist.js'), 'utf8'),
+  fs.readFileSync(path.join(process.cwd(), 'modules/vehicle/service-input-catalog.js'), 'utf8'),
+  fs.readFileSync(path.join(process.cwd(), 'modules/vehicle/servis.js'), 'utf8')
+].join('\n');
 
 assert.match(car, /ServiceInputCatalog\.groups\(\)/);
 assert.match(car, /Belum dikategorikan/);

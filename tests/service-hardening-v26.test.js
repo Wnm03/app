@@ -1,5 +1,6 @@
 const fs=require('fs');
-const car=fs.readFileSync(require.resolve('../car-notes.js'),'utf8');
+const {readCarNotesSource}=require('./helpers/carNotesSource');
+const car=readCarNotesSource();
 const tx=fs.readFileSync(require.resolve('../modules/finance/tx-servis.js'),'utf8');
 const backup=fs.readFileSync(require.resolve('../modules/shared/backup-restore.js'),'utf8');
 const ok=(x,m)=>{if(!x)throw new Error(m)};

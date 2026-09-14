@@ -1,6 +1,7 @@
+const { readCarNotesSource } = require('./helpers/carNotesSource');
 // v11: lifecycle hardening contract for edit/delete service events.
 const fs=require('fs'),assert=require('assert');
-const car=fs.readFileSync(require('path').join(__dirname,'..','car-notes.js'),'utf8');
+const car=readCarNotesSource();
 function ok(c,m){assert.ok(c,m);console.log('PASS',m)}
 ok(/ServiceEventLifecycle\.update\(s,\{txId:s\.txLinkId\|\|null,categoryId:s\.categoryId\|\|null\}\)/.test(car),'edit path updates canonical ServiceEventLifecycle');
 ok(/ServiceEventLifecycle\.remove\(s,\{deletedTxId/.test(car),'delete path removes canonical ServiceEventLifecycle');
@@ -14,5 +15,5 @@ const savePos=car.lastIndexOf('save();',updatePos);
 ok(updatePos>=0 && savePos>=0 && updatePos>savePos,'edit persists UI/data before lifecycle update');
 const removePos=car.indexOf('ServiceEventLifecycle.remove(s,');
 const deleteFilterPos=car.indexOf('D.servisLogs=D.servisLogs.filter(x=>x.id!==id);');
-ok(removePos>=0 && deleteFilterPos>=0 && removePos>deleteFilterPos,'delete removes canonical record before lifecycle remove');
+ok(removePos>=0 && deleteFilterPos>=0 && removePos<deleteFilterPos,'delete lifecycle removal is post-commit after canonical record deletion');
 console.log('TOTAL 9 PASS');

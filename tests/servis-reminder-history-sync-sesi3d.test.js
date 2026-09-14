@@ -2,7 +2,8 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('fs');
-const car=fs.readFileSync(require.resolve('../car-notes.js'),'utf8');
+const {readServisSource}=require('./helpers/carNotesSource');
+const car=readServisSource();
 const dash=fs.readFileSync(require.resolve('../modules/shared/modules-render.js'),'utf8');
 const servisB=fs.readFileSync(require.resolve('../modules/vehicle/sparepart-servis-b.js'),'utf8');
 
