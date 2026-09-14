@@ -79,6 +79,13 @@ const catEl=document.getElementById('txServisCategory');
 const compEl=document.getElementById('txServisComponent');
 const itemEl=document.getElementById('txServisItem');
 if(typeof ServiceInputCatalog==='undefined')return;
+// BUGFIX (audit, sama persis kasusnya dgn Servis.renderServiceInputSelectors()
+// di car-notes.js -- lihat catatan lengkap di sana): reset dulu ke '' sebelum
+// populate, supaya fallback "selectedId||sel.value" di dalam
+// populateCategorySelect/populateComponentSelect tidak kebaca dari value LAMA
+// yang masih nempel di <select> dari transaksi servis lain yang barusan dibuka.
+if(catEl)catEl.value='';
+if(compEl)compEl.value='';
 ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
 const master=selectedMasterId||catEl&&catEl.value||'';
 ServiceInputCatalog.populateComponentSelect(compEl,master,selectedComponentId||'');
