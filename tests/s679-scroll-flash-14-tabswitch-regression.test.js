@@ -40,6 +40,21 @@ function makeFakeEl(name) {
   el.scrollIntoViewCalls = 0;
   el.scrollIntoView = () => { el.scrollIntoViewCalls++; };
   Object.defineProperty(el, 'offsetWidth', { get: () => 0 });
+  // querySelectorAll/querySelector -- BARU (audit rekomendasi N-lanjutan, Sep
+  // 2026, saran #1: cnPeriode per sub-tab BBM/Servis). setCnTab() sekarang
+  // JUGA memanggil document.getElementById('cnPeriodeChips').querySelectorAll(
+  // '.chip-btn') utk menyinkronkan chip periode saat ganti tab (lihat
+  // vehicle-core.js) -- fungsi baru itu TIDAK bergantung ke scrollTabBarIntoView
+  // sama sekali, jadi 0 hubungan dgn yang diuji test ini, tapi getElementById
+  // mock di TOPLEVEL_CASES di bawah SELALU mengembalikan fakeEl yang sama utk
+  // id APA PUN (lihat `document: { getElementById: () => fakeEl, ... }`) --
+  // tanpa stub no-op ini, jalur baru itu akan throw "querySelectorAll is not
+  // a function" & bikin 12 test generik di bawah gagal semua, padahal murni
+  // limitasi mock (bukan bug scroll-fix yang sedang diuji). Balikin objek
+  // NodeList-like kosong (forEach no-op) supaya kode baru itu aman dipanggil
+  // tanpa mempengaruhi assertion scrollIntoViewCalls/flash-highlight di atas.
+  el.querySelectorAll = () => ({ forEach: () => {} });
+  el.querySelector = () => null;
   return el;
 }
 
