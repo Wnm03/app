@@ -111,8 +111,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1703';
-const PRODUCTION_BUILD_SYNCED_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1703';
+const APP_BUILD_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1708';
+const PRODUCTION_BUILD_SYNCED_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1708';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -175,19 +175,6 @@ refSources:{}
 }
 };
 let curVehicleId='veh_1', curCnTab='bbm', cnPeriode='selamanya';
-// cnPeriodeByTab -- BARU (audit rekomendasi N-lanjutan, Sep 2026, saran #1).
-// cnPeriode di atas dulu 1 variabel GLOBAL dipakai bareng sub-tab BBM & Servis
-// (chip Harian/Mingguan/Bulanan/Tahunan/Selamanya di atas tab Catatan
-// Kendaraan) -- gantinya pindah tab dari Servis balik ke BBM (atau
-// sebaliknya) diam-diam ikut membawa periode tab sebelumnya, walau chip-nya
-// sendiri tetap kesinkron secara visual. cnPeriodeByTab menyimpan periode
-// PER sub-tab; cnPeriode sendiri TETAP ADA & tetap jadi variabel yang benar-
-// benar dibaca getCnRange()/dipakai renderList() (0 perubahan ke fungsi itu)
-// -- cuma sekarang disinkronkan dari cnPeriodeByTab[tab yang aktif] tiap
-// ganti tab (setCnTab(), vehicle-core.js) & tiap ganti chip (setCnPeriode(),
-// vehicle-core.js) menyalin baliknya. Default 'selamanya' utk kedua tab
-// (SAMA PERSIS default cnPeriode lama, 0 regresi kalau fitur split ini
-// tidak pernah "kelihatan" krn user cuma pernah pakai 1 sub-tab).
 let cnPeriodeByTab={bbm:'selamanya',servis:'selamanya'};
 let curPayMethod='tunai';
 let curMonth=new Date().getMonth(), curYear=new Date().getFullYear();
