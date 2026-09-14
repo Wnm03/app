@@ -663,6 +663,45 @@ openHistoryFromReminder(categoryId,componentId){
   Servis.activeActionTypeFilter=null;
   Servis.activeMasterCategoryFilter=masterId;
   Servis.activeServiceComponentFilter=componentId||null;
+  // FIX (audit rekomendasi N, Sep 2026 -- "filter waktu riwayat servis per
+  // part"): sebelum ini, tombol "🧾 Riwayat" di kartu Pengingat cuma
+  // men-set filter kategori/komponen TANPA menyentuh cnPeriode (chip
+  // Harian/Mingguan/Bulanan/Tahunan/Selamanya di atas tab Catatan
+  // Kendaraan -- dipakai bareng oleh Servis.renderList() lewat
+  // getCnRange()). Kalau user sebelumnya sempat pindah periode ke yang
+  // sempit (mis. "Bulanan") lalu tap "Riwayat" dari kartu part tertentu,
+  // riwayat part itu bisa tampak KOSONG walau datanya ada -- padahal siklus
+  // servis 1 part (bulan-tahun) jarang muat di jendela waktu sesempit itu.
+  // Paksa 'selamanya' di sini (sama seperti setCnPeriode('selamanya',..)
+  // tanpa memanggil ulang renderCnTab() yang lebih berat) supaya tap
+  // "Riwayat" dari part MANAPUN selalu tampilkan histori lengkapnya dulu;
+  // user tetap bebas mempersempit lagi manual via chip periode kalau perlu.
+  // 0 perubahan ke setCnPeriode()/getCnRange() itu sendiri.
+  // FIX-LANJUTAN (audit rekomendasi N-lanjutan, Sep 2026, saran #1): cnPeriode
+  // dulu 1 variabel GLOBAL dipakai bareng sub-tab BBM & Servis, jadi paksa
+  // 'selamanya' di sini ikut ke-reset filter periode BBM begitu user pindah
+  // sub-tab (efek samping yang dilaporkan -- chip-nya tetap kesinkron
+  // secara visual, cuma bikin bingung). SoT periode kini per sub-tab lewat
+  // cnPeriodeByTab (features-helpers-global-security.js) + setCnTab()/
+  // setCnPeriode() (vehicle-core.js) yang menyalin cnPeriodeByTab[tab] ->
+  // cnPeriode tiap ganti tab. Di sini cukup timpa cnPeriodeByTab['servis']
+  // (BUKAN 'bbm') supaya filter BBM tidak ikut kesentuh; setCnTab() akan
+  // otomatis mengembalikan periode BBM begitu user pindah ke sana lagi.
+  // saran #2: toast konfirmasi HANYA saat periode benar-benar berubah
+  // (bukan sudah 'selamanya' dari sebelumnya) -- supaya tidak dobel-notif
+  // tiap tap "Riwayat" beruntun dari part yang berbeda.
+  const _periodeBerubah=cnPeriode!=='selamanya';
+  cnPeriode='selamanya';
+  if(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab)cnPeriodeByTab.servis='selamanya';
+  const periodeChips=document.getElementById('cnPeriodeChips');
+  if(periodeChips){
+    periodeChips.querySelectorAll('.chip-btn').forEach(b=>b.classList.remove('active'));
+    const foreverChip=periodeChips.querySelector('[data-args*="selamanya"]');
+    if(foreverChip)foreverChip.classList.add('active');
+  }
+  const customRange=document.getElementById('cnCustomRange');
+  if(customRange)customRange.classList.add('u-dnone');
+  if(_periodeBerubah&&typeof toast==='function')toast('Menampilkan seluruh riwayat (periode direset ke Selamanya)');
   Servis.listPage=1;
   Servis._saveMasterCategoryFilterPrefs();
   Servis.renderList();
@@ -2024,8 +2063,68 @@ Sparepart.openCatModal(idx);
 },
 activeReminderMasterCategoryFilter:null,
 activeReminderComponentFilter:'',
+// activeReminderSeverityFilter -- BARU (audit rekomendasi N, Sep 2026:
+// "Pengingat Servis" sebelumnya SELALU menampilkan SEMUA kategori aktif
+// -- aman s/d terlewat -- tanpa cara mempersempit ke yang mendesak saja,
+// beda dgn Riwayat yang sudah punya chip actionType. null = 'Semua'
+// (perilaku lama, 0 regresi kalau chip baru ini tidak pernah disentuh).
+// Nilai lain: 'lewat' (terlewat+jatuh_tempo), 'segera', 'mendekati', 'aman'.
+activeReminderSeverityFilter:null,
 setReminderMasterCategoryFilter(id){Servis.activeReminderMasterCategoryFilter=String(id||'');Servis.activeReminderComponentFilter='';Servis.renderReminder();},
 setReminderComponentFilter(id){Servis.activeReminderComponentFilter=String(id||'');Servis.renderReminder();},
+setReminderSeverityFilter(v){Servis.activeReminderSeverityFilter=v||null;Servis._saveReminderSeverityFilterPrefs();Servis.renderReminder();},
+// _reminderSeverityFilterPrefsLoaded/_reminderSeverityFilterStorageKey +
+// _loadReminderSeverityFilterPrefsOnce()/_saveReminderSeverityFilterPrefs()
+// -- BARU (audit rekomendasi N-lanjutan, Sep 2026, saran #5). Sebelum ini,
+// activeReminderSeverityFilter (chip status kartu Pengingat) SELALU reset
+// ke null ("Semua") tiap pindah tab/reload -- beda dari
+// activeMasterCategoryFilter (chip kategori master di Riwayat Servis) yang
+// sudah dipersist lewat _saveMasterCategoryFilterPrefs() di atas. Pola &
+// alasan (kenapa localStorage manual, bukan FilterPrefsStore) SAMA PERSIS
+// versi itu -- cuma key storage beda supaya tidak tabrakan. TRADE-OFF
+// (disadari, didiskusikan eksplisit): kalau preferensi tersimpan BUKAN
+// null (mis. sesi lalu terakhir pilih "🔴 Terlewat"), part berstatus lain
+// tidak akan tampil sampai user sadar & ganti chip -- bisa terkesan "part
+// hilang" padahal cuma ketutup filter lama. Fail-open ke null/"Semua" kalau
+// nilai storage rusak/tak dikenal, supaya paling buruk balik ke perilaku
+// lama (tampil semua, 0 crash).
+_reminderSeverityFilterPrefsLoaded:false,
+_reminderSeverityFilterStorageKey:'servisReminderSeverityFilterPrefs',
+_loadReminderSeverityFilterPrefsOnce(){
+if(Servis._reminderSeverityFilterPrefsLoaded)return;
+Servis._reminderSeverityFilterPrefsLoaded=true;
+if(typeof localStorage==='undefined')return;
+try{
+const raw=localStorage.getItem(Servis._reminderSeverityFilterStorageKey);
+if(!raw)return;
+const parsed=JSON.parse(raw);
+const v=parsed&&parsed.activeReminderSeverityFilter;
+if(v===null||v===undefined)return;
+const validValues=['lewat','segera','mendekati','aman'];
+if(validValues.indexOf(v)!==-1)Servis.activeReminderSeverityFilter=v;
+}catch(err){
+// localStorage korup/tidak tersedia -> abaikan, filter tetap default null ("Semua") -- 0 crash.
+}
+},
+_saveReminderSeverityFilterPrefs(){
+if(typeof localStorage==='undefined')return;
+try{
+localStorage.setItem(Servis._reminderSeverityFilterStorageKey,JSON.stringify({activeReminderSeverityFilter:Servis.activeReminderSeverityFilter}));
+}catch(err){
+// localStorage penuh/diblokir -> abaikan (0 crash).
+}
+},
+// reminderSeverityChipsHtml(counts) -- render chip filter status kartu
+// Pengingat. Reuse class "chip" apa adanya (pola sama persis
+// renderActionTypeChips()/Sparepart chip kategori master di file ini --
+// 0 CSS baru). Angka di tiap chip dihitung dari kategori yang SUDAH lolos
+// filter kategori master/komponen (lihat pemanggil), supaya tetap relevan
+// dgn konteks filter yang sedang aktif.
+reminderSeverityChipsHtml(counts){
+  const cur=Servis.activeReminderSeverityFilter;
+  const opts=[{v:null,label:'🔍 Semua'},{v:'lewat',label:'🔴 Terlewat'},{v:'segera',label:'🟠 Segera'},{v:'mendekati',label:'🔵 Mendekati'},{v:'aman',label:'🟢 Aman'}];
+  return `<div class="u-flex u-fs12 u-mb10" style="gap:6px;flex-wrap:wrap">`+opts.map(o=>{const n=o.v===null?counts.total:counts[o.v];return `<div class="chip ${o.v===cur?'active':''}" data-action="Servis.setReminderSeverityFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label} (${n})</div>`;}).join('')+`</div>`;
+},
 renderReminderFilters(card){
   if(!card)return;
   let wrap=document.getElementById('servisReminderFilterWrap');
@@ -2037,6 +2136,11 @@ renderReminderFilters(card){
 renderReminder(){
 const card=document.getElementById('servisReminderCard');
 if(!card)return;
+// saran #5: baca preferensi chip status tersimpan SEKALI per lifetime
+// halaman, SEBELUM counts/displayRows di bawah dihitung -- pola sama
+// persis Servis._loadMasterCategoryFilterPrefsOnce() (dipanggil dari
+// renderList(), lihat komentar di sana).
+Servis._loadReminderSeverityFilterPrefsOnce();
 const _legacyServiceMigrationChanged=typeof normalizeLegacyServiceLogs==='function'?normalizeLegacyServiceLogs():0;
 if(_legacyServiceMigrationChanged&&typeof save==='function')save();
 const curKm=getVehicleKm(curVehicleId);
@@ -2156,9 +2260,29 @@ const dueLabel=nextDueKm!==null&&nextDueDate?`Berikutnya: ${nextDueKm.toLocaleSt
 // dari D.servisLogs, reuse servisLogMatchesCat() yg sudah dipakai di atas.
 const historyLogsForSummary=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId&&servisLogMatchesCat(s,cat)):[];
 const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.length} riwayat tercatat`:'Belum ada riwayat tercatat';
-return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction,condition,historySummary,scheduleLabel,nextDueKm,nextDueDate,dueLabel};
+return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction,condition,historySummary,scheduleLabel,nextDueKm,nextDueDate,dueLabel,status};
 }).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
-card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+rows.map(r=>`
+// FITUR BARU (audit rekomendasi N, Sep 2026: "Pengingat Servis" tampil
+// SEMUA kategori tanpa filter status): reminderSeverityCounts dihitung dari
+// `rows` SEBELUM difilter severity (tapi SESUDAH filter kategori
+// master/komponen) supaya angka tiap chip tetap match dgn kategori yang
+// lagi dipilih. displayRows = hasil filter severity yang benar-benar
+// dirender di bawah -- `rows` mentah tidak diubah supaya sort/urutan lama
+// tetap sama persis kalau chip baru ini tidak disentuh (activeReminderSeverityFilter
+// null => displayRows===rows, 0 regresi).
+const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length};
+const rfSeverity=Servis.activeReminderSeverityFilter;
+const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):r.status===rfSeverity);
+// saran #3: badge judul kartu dulu cuma menghitung "Terlewat" -- kategori
+// "Segera" (oranye, akan jatuh tempo) sama pentingnya utk dilihat sekilas
+// tanpa scroll, jadi diikutkan juga di sini. Bagian yang nilainya 0 tidak
+// ditampilkan (mis. 0 Terlewat tapi ada Segera -> cuma "(2 Segera)"), badge
+// disembunyikan total kalau keduanya 0 (perilaku lama saat semua aman).
+const reminderBadgeParts=[];
+if(reminderSeverityCounts.lewat)reminderBadgeParts.push(`${reminderSeverityCounts.lewat} Terlewat`);
+if(reminderSeverityCounts.segera)reminderBadgeParts.push(`${reminderSeverityCounts.segera} Segera`);
+const reminderBadgeHtml=reminderBadgeParts.length?` <span class="red u-fw700 u-fs11" title="Jumlah part berstatus Terlewat/Jatuh tempo & Segera">(${reminderBadgeParts.join(' · ')})</span>`:'';
+card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminderBadgeHtml} <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+(rows.length?Servis.reminderSeverityChipsHtml(reminderSeverityCounts):'')+(rfSeverity&&!displayRows.length&&rows.length?`<div class="u-fs12 u-t2" style="padding:8px 0">Tidak ada part dengan status ini pada kategori yang dipilih.</div>`:'')+displayRows.map(r=>`
       <div class="u-mb12">
         <div class="u-flex u-jcb u-aic u-fs12 u-mb4 u-pointer" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Tap untuk edit kategori (berlaku semua kendaraan)">
           <span class="u-fw700">${escapeHtml(r.cat.name)} <span class="u-fs11 u-t2">✏️</span></span>
@@ -2176,7 +2300,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part <span cla
         </div>
         </div>
       </div>`).join('')+(filteredConditionCats.length?`<div class="u-mt12 u-pt10" style="border-top:1px solid var(--border,#ddd)">
-      <div class="u-fs12 u-fw700 u-mb8">🩺 Perawatan berbasis kondisi</div>
+      <div class="u-fs12 u-fw700 u-mb8">🩺 Perawatan berbasis kondisi${rfSeverity?' <span class="u-fs10 u-t2 u-fw400">(selalu tampil, di luar filter status)</span>':''}</div>
       ${filteredConditionCats.map(c=>`<div class="u-mb10">
         <div class="u-fs12 u-fw700">${escapeHtml(c.name)}</div>
         <div class="u-fs11 u-t2" style="margin-top:2px">Kondisi: ${escapeHtml(c.condition||'Periksa sesuai gejala')}</div>
