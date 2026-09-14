@@ -823,6 +823,26 @@ const fabEl=document.getElementById('carNotesFab');
 if(fabEl) fabEl.classList.toggle('u-dnone',!relevan);
 const periodeEl=document.getElementById('cnPeriodeWrap');
 if(periodeEl) periodeEl.classList.toggle('u-dnone',!relevan);
+// saran #1 (audit rekomendasi N-lanjutan, Sep 2026): sinkronkan cnPeriode
+// (variabel yang benar-benar dibaca getCnRange()/renderList()) dari
+// cnPeriodeByTab[tab yang baru aktif] tiap pindah sub-tab BBM<->Servis --
+// supaya filter periode masing-masing sub-tab independen (lihat komentar
+// lengkap di cnPeriodeByTab, features-helpers-global-security.js, & di
+// setCnPeriode() atas). Chip #cnPeriodeChips ikut disinkronkan biar tidak
+// nampak "nyangkut" di periode tab sebelumnya. Cuma jalan utk tab bbm/
+// servis (satu-satunya pemilik cnPeriodeByTab) -- tab lain (insight/pajak/
+// jalan) tidak punya periode chip, 0 perubahan perilaku di sana.
+if(relevan){
+cnPeriode=(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab&&cnPeriodeByTab[t])?cnPeriodeByTab[t]:'selamanya';
+const periodeChips=document.getElementById('cnPeriodeChips');
+if(periodeChips){
+periodeChips.querySelectorAll('.chip-btn').forEach(b=>b.classList.remove('active'));
+const activeChip=periodeChips.querySelector('[data-args*="'+cnPeriode+'"]');
+if(activeChip)activeChip.classList.add('active');
+}
+const customRangeEl=document.getElementById('cnCustomRange');
+if(customRangeEl)customRangeEl.classList.toggle('u-dnone', cnPeriode!=='custom');
+}
 renderCnTab();
 }
 // setCnInsightTab/setCnBbmTab (Sesi 158, permintaan eksplisit user): tab
@@ -1030,6 +1050,11 @@ return{ok:true,vehicleId,kmPerLiter:est.kmPerLiter,rpPerKm:est.rpPerKm,avgHarga:
    interval servis per-kategori & override per-kendaraan. */
 function setCnPeriode(p,el){
 cnPeriode=p;
+// saran #1 (audit rekomendasi N-lanjutan, Sep 2026): simpan periode ke
+// sub-tab yang SEDANG aktif (cnPeriodeByTab, features-helpers-global-
+// security.js) supaya BBM & Servis tidak lagi berbagi 1 state periode --
+// lihat sinkronisasi baliknya di setCnTab() di bawah.
+if(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab&&(curCnTab==='bbm'||curCnTab==='servis'))cnPeriodeByTab[curCnTab]=p;
 document.querySelectorAll('#cnPeriodeChips .chip-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
 document.getElementById('cnCustomRange').classList.toggle('u-dnone', p!=='custom');
 document.getElementById('cnCustomRange').style.display='';
