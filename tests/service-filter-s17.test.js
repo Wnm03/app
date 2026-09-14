@@ -11,7 +11,12 @@ test('S17 Car Notes has cascading category -> component history filter',()=>{
   assert.match(car,/setServiceComponentFilter\(id\)/);
   assert.match(car,/renderServiceComponentFilter\(beforeEl\)/);
   assert.match(car,/ServisChecklist\.itemsForMasterCategory\(mid\)/);
-  assert.match(car,/Array\.isArray\(s\.checklist\)&&s\.checklist\.some\(r=>r&&r\.itemId===Servis\.activeServiceComponentFilter\)/);
+  // Updated (merged from PATCH-sesi-servis-actiontype-v3): the component filter now
+  // goes through Servis.resolveLogServiceComponentId(s) -- a single resolver
+  // (serviceComponentId SoT -> checklist[].itemId legacy fallback -> catalog infer)
+  // -- instead of reading s.checklist directly, so entries valid without a checklist
+  // payload (e.g. created from the reminder/modal flow) are matched correctly too.
+  assert.match(car,/Servis\.activeServiceComponentFilter\|\|Servis\.resolveLogServiceComponentId\(s\)===Servis\.activeServiceComponentFilter/);
 });
 
 test('S17 category change clears component filter to prevent cross-category result',()=>{
