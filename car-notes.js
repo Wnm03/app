@@ -1055,8 +1055,31 @@ const reminder=document.getElementById('servisReminderPanel');
 if(detail)detail.style.display='';
 if(reminder){reminder.style.display='none';reminder.innerHTML='';}
 }
+Servis._renderKmEditHint(isEdit);
 if(typeof ServisChecklist!=='undefined'&&typeof Servis.syncServiceChecklist==='function')Servis.syncServiceChecklist();
 openModal('servisModal');
+},
+// _renderKmEditHint(isEdit) — BARU (rekomendasi audit S749/S750). Info kecil di
+// bawah field Odometer/KM: HANYA muncul saat mode Edit, supaya user tahu kenapa
+// koreksi KM boleh lebih rendah dari servis sebelumnya di sini padahal Tambah
+// Baru tetap wajib urutan kronologis (lihat validateServiceOdometer(), cabang
+// below_previous_service dilewati saat excludeId/edit terisi). Batas "tidak
+// boleh melebihi odometer sekarang" & "tidak boleh melebihi servis sesudahnya"
+// TETAP berlaku & TIDAK disebut longgar di sini -- teks cuma menjelaskan urutan
+// kronologis ke BELAKANG yang dilonggarkan. Pola pembuatan elemen dinamis 1x
+// (cek getElementById dulu) sama persis servisMoreWrap/bbmMoreWrap di file ini.
+_renderKmEditHint(isEdit){
+const kmInput=document.getElementById('servisKm');
+if(!kmInput)return;
+let hint=document.getElementById('servisKmEditHint');
+if(!hint){
+hint=document.createElement('div');
+hint.id='servisKmEditHint';
+hint.style.cssText='font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5';
+kmInput.insertAdjacentElement('afterend',hint);
+}
+hint.style.display=isEdit?'block':'none';
+hint.textContent=isEdit?'✏️ Mode edit: KM boleh dikoreksi lebih rendah dari servis sebelumnya (tetap tidak boleh melebihi odometer kendaraan sekarang atau servis sesudahnya).':'';
 },
 revertStockUsage(partId,qty){
 if(!partId||!qty)return;
@@ -1184,7 +1207,14 @@ validateServiceOdometer({vehicleId,km,date,excludeId}={}){
       else if(rd>d||(rd===d&&Number(row.km||0)>n)){next=row;break;}
     }
   }
-  if(prev&&n<Number(prev.km))return{ok:false,code:'below_previous_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih rendah dari servis sebelumnya (${Number(prev.km).toLocaleString('id-ID')} km pada ${prev.date}).`};
+  // S749: saat EDIT riwayat servis lama (excludeId terisi), koreksi KM ke
+  // angka lebih rendah dari servis sebelumnya tetap diizinkan -- pengguna
+  // sering perlu membetulkan data historis yang salah input. Batas aman
+  // "above_current_odometer" di atas tetap berlaku (KM tidak boleh melebihi
+  // odometer kendaraan sekarang), jadi ini bukan menghapus validasi sama
+  // sekali, cuma melonggarkan urutan-kronologis SAAT edit. Untuk catatan
+  // BARU (excludeId kosong), aturan urutan tetap wajib seperti semula.
+  if(prev&&n<Number(prev.km)&&!excludeId)return{ok:false,code:'below_previous_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih rendah dari servis sebelumnya (${Number(prev.km).toLocaleString('id-ID')} km pada ${prev.date}).`};
   if(next&&n>Number(next.km))return{ok:false,code:'above_next_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih tinggi dari servis sesudahnya (${Number(next.km).toLocaleString('id-ID')} km pada ${next.date}).`};
   return{ok:true,currentKm:Number.isFinite(current)?current:null,previousKm:prev?Number(prev.km):null,nextKm:next?Number(next.km):null};
 },
@@ -1214,7 +1244,21 @@ const accId=document.getElementById('servisAcc')?document.getElementById('servis
 const kmRaw=document.getElementById('servisKm').value.trim();
 const km=kmRaw===''?null:Number(kmRaw);
 const date=document.getElementById('servisDate').value;
-const odometerCheck=km===null?{ok:true}:Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
+// S750: edit histori lama hanya untuk kategori/komponen tidak boleh
+// diblokir oleh urutan odometer terhadap histori setelahnya. Validasi
+// odometer tetap wajib untuk create atau perubahan KM/tanggal.
+const existingService=Servis.editId
+  ? (Array.isArray(D.servisLogs)?D.servisLogs.find(s=>s&&s.id===Servis.editId):null)
+  : null;
+const originalKm=existingService&&existingService.km!==null&&existingService.km!==undefined&&existingService.km!==''
+  ? Number(existingService.km) : null;
+const originalDate=existingService?String(existingService.date||''):'';
+const kmChanged=!existingService || originalKm!==(km===null?null:Number(km));
+const dateChanged=!existingService || originalDate!==String(date||'');
+const shouldValidateOdometer=!Servis.editId||kmChanged||dateChanged;
+const odometerCheck=!shouldValidateOdometer||km===null
+  ? {ok:true,skipped:!shouldValidateOdometer?'category-only-edit':undefined}
+  : Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
 if(!odometerCheck.ok){toast('⚠️ '+odometerCheck.message);return;}
 const intervalRaw=document.getElementById('servisInterval')?document.getElementById('servisInterval').value:'';
 const intervalKm=intervalRaw?parseFloat(intervalRaw):null;
@@ -1296,8 +1340,17 @@ const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisCheck
 const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
 const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?getEffectiveIntervalKm(curVehicleId,_catForSnapshot):(_catForSnapshot&&_catForSnapshot.intervalKm>0?_catForSnapshot.intervalKm:null);
 const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapshot)?getEffectiveIntervalBulan(_catForSnapshot,curVehicleId):(_catForSnapshot&&_catForSnapshot.intervalBulan>0?_catForSnapshot.intervalBulan:null);
+const _historicalFieldsChanged=kmChanged||dateChanged;
+const _metadataOnlyEdit=!_historicalFieldsChanged;
 const _nextSnapshotEdit=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:s.vehicleId||curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:s.actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,intervalKmAtService:_ivSnapshot,intervalBulanAtService:_ibSnapshot,nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+const _preserveHistoricalSnapshot=_metadataOnlyEdit;
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,km,cost,note,accountId:accId,intervalKmAtService:_preserveHistoricalSnapshot?s.intervalKmAtService:_ivSnapshot,intervalBulanAtService:_preserveHistoricalSnapshot?s.intervalBulanAtService:_ibSnapshot,nextDueKm:_preserveHistoricalSnapshot?s.nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_preserveHistoricalSnapshot?s.nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_preserveHistoricalSnapshot?s.nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+// Metadata-only edits must never rewrite the historical due snapshot. Keep a small audit trail.
+if(_metadataOnlyEdit){
+  if(!Array.isArray(s.editHistory))s.editHistory=[];
+  s.editHistory.push({changedAt:new Date().toISOString(),changedBy:'self',fields:['categoryId','masterCategoryId','serviceComponentId','item','note','foto','checklist','cost','accountId']});
+  if(s.editHistory.length>50)s.editHistory=s.editHistory.slice(-50);
+}
 let _postCommitFinanceEvent=null;
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
@@ -1489,7 +1542,26 @@ panel.innerHTML=`<div style="background:var(--accent-soft);border:1px solid var(
 <div class="fg"><label class="fl">Kategori Pengingat</label>${linkedCat?`<div style="background:var(--surface3);border-radius:12px;padding:10px 12px"><div class="u-flex u-jcb u-aic"><div><div class="u-fw700 u-fs12">${escapeHtml(linkedCat.name)}</div><div class="u-fs11 u-t2">${statusLabel} · ${escapeHtml(intervalLabel)} · sumber: ${overrideLabel}</div></div><button type="button" class="btn btn-ghost btn-sm" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([linkedCat.id]))}">✏️ Kelola</button></div>${urgency?`<div class="u-fs11 u-t2" style="margin-top:6px">${urgency.sisaKm!=null?'Sisa '+urgency.sisaKm.toLocaleString('id-ID')+' km':''}${urgency.sisaBulan!=null?' · sisa '+Math.round(urgency.sisaBulan)+' bln':''}</div>`:''}</div>`:'<div class="u-fs12t2">⚪ Riwayat ini belum terhubung ke kategori pengingat kendaraan. Jangan membuat kategori otomatis dari tab ini.</div>'}</div>
 ${componentHtml}
 ${checklistRows?`<div class="fg"><label class="fl">☑️ Komponen Checklist</label><div style="background:var(--surface3);border-radius:12px;padding:2px 12px">${checklistRows}</div></div>`:''}
+${Servis._renderEditHistoryHtml(s)}
 <div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori/komponen → interval efektif → reminder → riwayat</b>. Mengubah interval dilakukan melalui pengaturan kategori/override kendaraan, bukan membuat field interval baru di riwayat.</div>`;
+},
+// _renderEditHistoryHtml(s) — BARU (rekomendasi audit S749/S750). s.editHistory[]
+// sudah ditulis oleh _saveInner() untuk edit metadata-only (lihat komentar di
+// sana), tapi sebelum ini tidak ada tempat melihatnya. Read-only murni (0 tulis
+// D di sini) -- tampilkan maks 5 entri terbaru, terbaru dulu, di tab Pengingat
+// modal Edit Servis (bukan tab Detail, supaya tidak menambah gesekan alur isi
+// form utama). String kosong kalau riwayat kosong/tidak ada -- 0 dampak visual
+// ke entry lama yang belum pernah diedit metadata-only.
+_renderEditHistoryHtml(s){
+const hist=Array.isArray(s&&s.editHistory)?s.editHistory:[];
+if(!hist.length)return'';
+const rows=hist.slice(-5).reverse().map(h=>{
+const when=h&&h.changedAt?new Date(h.changedAt):null;
+const whenLabel=when&&!isNaN(when)?when.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):'(waktu tidak tercatat)';
+const fields=Array.isArray(h&&h.fields)&&h.fields.length?h.fields.join(', '):'-';
+return `<div style="padding:6px 0;border-top:1px dashed var(--border)"><div class="u-fs11 u-fw700">${escapeHtml(whenLabel)}</div><div class="u-fs11 u-t2">Diubah: ${escapeHtml(fields)}</div></div>`;
+}).join('');
+return `<div class="fg"><label class="fl">📝 Riwayat Perubahan (metadata)</label><div style="background:var(--surface3);border-radius:12px;padding:2px 12px">${rows}</div><div class="u-fs11 u-t2" style="margin-top:4px">Hanya mencatat edit yang tidak mengubah KM/tanggal (maks 5 terbaru ditampilkan dari ${hist.length} total).</div></div>`;
 },
 deleteFromModal(){if(Servis.editId===null)return;const id=Servis.editId;closeModal('servisModal');Servis.del(id);},
 async del(id){
@@ -2046,6 +2118,28 @@ Servis.activeActionTypeFilter=type||null;
 Servis.listPage=1;
 Servis.renderList();
 },
+// renderOdometerIntegrityBadge(beforeEl) — BARU (rekomendasi audit S749/S750).
+// getServiceOdometerIntegrity() sudah ada (deteksi km_regression/missing_km/
+// invalid_km lintas riwayat) tapi sebelum ini tidak dipanggil dari UI mana pun
+// -- murni tersembunyi di belakang test. Read-only, 0 tulis D. Tampil HANYA
+// kalau ada temuan (ok:false) supaya tidak menambah noise visual saat data
+// bersih (0 dampak ke tampilan normal). Pola pembuatan elemen dinamis 1x sama
+// persis renderActionTypeChips(beforeEl) di bawah ini.
+renderOdometerIntegrityBadge(beforeEl){
+let box=document.getElementById('servisOdometerIntegrityBadge');
+if(typeof Servis.getServiceOdometerIntegrity!=='function'){if(box)box.style.display='none';return;}
+const report=Servis.getServiceOdometerIntegrity(curVehicleId);
+if(!report||report.ok){if(box)box.style.display='none';return;}
+if(!box){
+box=document.createElement('div');
+box.id='servisOdometerIntegrityBadge';
+box.style.cssText='font-size:11px;color:var(--accent2);background:var(--accent2-soft,rgba(255,0,0,0.06));border:1px solid var(--accent2);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.5';
+beforeEl.insertAdjacentElement('beforebegin',box);
+}
+const n=(report.issues||[]).length;
+box.style.display='block';
+box.textContent=`⚠️ ${n} data KM riwayat servis kendaraan ini perlu dicek (KM mundur/kosong/tidak valid) — tap satu per satu di daftar bawah untuk cek & perbaiki.`;
+},
 // renderActionTypeChips(beforeEl) — BARU (Sesi E6). Chip row filter
 // riwayat by actionType, DISISIPKAN lewat JS sebelum #servisList (bukan
 // markup statis di index.html -- beda dgn Torsi.chips() yg pakai
@@ -2095,6 +2189,7 @@ document.getElementById('servisCount').textContent=logs.length;
 document.getElementById('servisTotalCost').textContent=fmt(totalCost);
 document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString('id-ID')+' km':'-';
 const el=document.getElementById('servisList');
+Servis.renderOdometerIntegrityBadge(el);
 Servis.renderActionTypeChips(el);
 // renderMasterCategoryChips(el) -- Sesi D-lanjutan4. Dipanggil SETELAH
 // renderActionTypeChips(el) (keduanya pakai insertAdjacentElement
