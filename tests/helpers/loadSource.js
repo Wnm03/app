@@ -109,7 +109,17 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     ...extraGlobals,
   };
   const context = vm.createContext(sandbox);
-  for (const file of files) {
+  // Compatibility for legacy tests that historically loaded car-notes.js as a
+  // monolith. Runtime build order remains controlled by scripts/build.js;
+  // this harness transparently loads the split Servis sources once, avoiding
+  // duplicate lexical declarations when a caller already lists them.
+  const loadFiles = [...files];
+  if (loadFiles.includes('car-notes.js') || loadFiles.includes('modules/vehicle/servis.js')) {
+    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/servis.js']) {
+      if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);
+    }
+  }
+  for (const file of loadFiles) {
     const fullPath = path.join(ROOT, file);
     const src = fs.readFileSync(fullPath, 'utf8');
     const script = new vm.Script(src, { filename: file });
