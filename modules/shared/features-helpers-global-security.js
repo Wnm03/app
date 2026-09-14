@@ -175,6 +175,20 @@ refSources:{}
 }
 };
 let curVehicleId='veh_1', curCnTab='bbm', cnPeriode='selamanya';
+// cnPeriodeByTab -- BARU (audit rekomendasi N-lanjutan, Sep 2026, saran #1).
+// cnPeriode di atas dulu 1 variabel GLOBAL dipakai bareng sub-tab BBM & Servis
+// (chip Harian/Mingguan/Bulanan/Tahunan/Selamanya di atas tab Catatan
+// Kendaraan) -- gantinya pindah tab dari Servis balik ke BBM (atau
+// sebaliknya) diam-diam ikut membawa periode tab sebelumnya, walau chip-nya
+// sendiri tetap kesinkron secara visual. cnPeriodeByTab menyimpan periode
+// PER sub-tab; cnPeriode sendiri TETAP ADA & tetap jadi variabel yang benar-
+// benar dibaca getCnRange()/dipakai renderList() (0 perubahan ke fungsi itu)
+// -- cuma sekarang disinkronkan dari cnPeriodeByTab[tab yang aktif] tiap
+// ganti tab (setCnTab(), vehicle-core.js) & tiap ganti chip (setCnPeriode(),
+// vehicle-core.js) menyalin baliknya. Default 'selamanya' utk kedua tab
+// (SAMA PERSIS default cnPeriode lama, 0 regresi kalau fitur split ini
+// tidak pernah "kelihatan" krn user cuma pernah pakai 1 sub-tab).
+let cnPeriodeByTab={bbm:'selamanya',servis:'selamanya'};
 let curPayMethod='tunai';
 let curMonth=new Date().getMonth(), curYear=new Date().getFullYear();
 // lapMonthOffset (Fix slide bulan sebelum/sesudah di filter Laporan) —
