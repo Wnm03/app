@@ -47,9 +47,9 @@ for (const t of OLD_THEMES) {
   });
 }
 
-test('index.html — total theme-card = 13 (10 lama termasuk auto + modern + Graphite + Minimal/S749)', () => {
+test('index.html — total theme-card = 14 (10 lama termasuk auto + modern + Graphite + Minimal/S749 + Pro Dark)', () => {
   const matches = indexHtml.match(/class="theme-card"/g) || [];
-  assert.equal(matches.length, 13);
+  assert.equal(matches.length, 14);
 });
 
 test('index.html — urutan 9 tema lama + auto tetap di atas "modern" (modern ditambah di akhir, bukan disisipkan)', () => {
