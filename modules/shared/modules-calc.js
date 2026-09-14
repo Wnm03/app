@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='1700';
+const MODULE_CALC_VERSION='sesi-servis-actiontype-riwayat-leak-merge-1702';
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
