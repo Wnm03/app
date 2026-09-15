@@ -797,6 +797,25 @@ renderSimList();
 // S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const CN_TAB_LABEL={beranda:'Beranda',insight:'Insight AI',bbm:'BBM',servis:'Servis',pajak:'Pajak & SIM',jalan:'Jalan'};
+// S1747: keep a tiny, non-blocking offline indicator visible while Car Notes is active.
+// The app remains local/PWA-first; this is only a trust/status cue, not a network dependency.
+function _cnUpdateOfflineStatus(){
+  const el=document.getElementById('cnOfflineStatus');
+  if(!el)return;
+  const offline=typeof navigator!=='undefined'&&navigator.onLine===false;
+  el.textContent=offline?'● Offline • data lokal':'● Online';
+  el.classList.toggle('is-offline',offline);
+  el.title=offline?'Car Notes tetap dapat digunakan dengan data lokal.':'Koneksi tersedia; data Car Notes tetap disimpan secara lokal.';
+}
+function _cnInstallOfflineStatus(){
+  if(typeof window==='undefined'||typeof window.addEventListener!=='function'||window.__cnOfflineStatus1747)return;
+  window.__cnOfflineStatus1747=true;
+  window.addEventListener('online',_cnUpdateOfflineStatus);
+  window.addEventListener('offline',_cnUpdateOfflineStatus);
+  _cnUpdateOfflineStatus();
+}
+_cnInstallOfflineStatus();
+
 function setCnTab(t,el){
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
@@ -809,7 +828,7 @@ if(typeof dismissAllToasts==='function')dismissAllToasts();
 curCnTab=t;
 document.querySelectorAll('#page-carnotes .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el) el.classList.add('active');
-// 1727/1730 cumulative: keep the dedicated Car Notes Pro bottom navigation
+// 1727/s748-carnotes-regression-1750 cumulative: keep the dedicated Car Notes Pro bottom navigation
 // state synchronized with the real tab and guard DOM collections in partial
 // test/WebView DOMs where `children` may be absent.
 const proBottom=document.getElementById('proCnBottomNav');
@@ -819,9 +838,21 @@ if(proBottom){
   const bi=map[t];
   if(bi!=null&&proBottom.children?.[bi])proBottom.children[bi].classList.add('active');
 }
+// S1733: in the dedicated Pro mockup, the visible navigation is driven by
+// proMockupSetScreen(), not by the hidden legacy cn-tab panes. Previously a
+// tap on Pro bottom-nav Perawatan/BBM/Lainnya (or a home shortcut that called
+// setCnTab()) only changed the hidden legacy pane, leaving the visible Pro
+// screen stuck on the current mockup screen. Keep the legacy state in sync,
+// but route the visible Pro UI to the matching mockup destination.
+if(document.body&&document.body.dataset.theme==='pro'&&typeof proMockupSetScreen==='function'){
+  const proScreenMap={beranda:1,servis:3,bbm:7,pajak:8,insight:1,jalan:1};
+  const target=proScreenMap[t];
+  if(target!=null)proMockupSetScreen(target);
+}
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
 const cnBc=document.getElementById('cnBreadcrumbSub');
 if(cnBc)cnBc.textContent=CN_TAB_LABEL[t]||t;
+if(typeof _cnUpdateOfflineStatus==='function')_cnUpdateOfflineStatus();
 ['beranda','insight','bbm','servis','pajak','jalan'].forEach(x=>{
 const elx=document.getElementById('cnTab-'+x);
 if(elx){ elx.classList.toggle('u-dnone', x!==t); elx.style.display=''; }
@@ -873,23 +904,149 @@ function proMockupSetScreen(n){
   }
   if(n===1&&typeof renderProHome==='function')renderProHome();
 }
+// Android/browser back: Pro screen navigation gets a lightweight history state.
+// It only intercepts entries created by this router, so leaving Car Notes to a
+// normal app feature still follows the existing showPage() history behavior.
+function proMockupPushHistory(n){
+  try{
+    if(typeof history==='undefined'||typeof history.pushState!=='function')return;
+    history.pushState(Object.assign({},history.state||{},{__carnotesPro:true,screen:Number(n)||1}),'',location.href);
+  }catch(e){void e;}
+}
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function'&&!window.__proMockupBackBound){
+  window.__proMockupBackBound=true;
+  window.addEventListener('popstate',function(e){
+    const st=e&&e.state;
+    const page=document.getElementById('page-carnotes');
+    const carNotesActive=!!(page&&page.classList&&page.classList.contains('active'));
+    if(st&&st.__carnotesPro&&document.body&&document.body.dataset.theme==='pro'&&carNotesActive){
+      proMockupSetScreen(st.screen||1);
+      return;
+    }
+    // S1736: Pro history belongs only to the visible Car Notes page. A stale
+    // state encountered after leaving the feature must not hijack Back on
+    // dashboard/other app features.
+    if(document.body&&document.body.dataset.theme==='pro'&&carNotesActive){
+      proReturnToMainNav();
+    }
+  });
+}
+
 function proMockupInit(){
+  if(document.body&&document.body.dataset.theme==='pro'){
+    try{
+      const current=Number(document.getElementById('page-carnotes')?.getAttribute('data-pro-screen'))||1;
+      if(typeof history!=='undefined'&&typeof history.replaceState==='function'&&!(history.state&&history.state.__carnotesPro)){
+        history.replaceState(Object.assign({},history.state||{},{__carnotesPro:true,screen:current}),'',location.href);
+      }
+    }catch(e){void e;}
+  }
   if(document.body&&document.body.dataset.theme==='pro'&&!window.__proMockup1717Bound){
     window.__proMockup1717Bound=true;
     document.addEventListener('click',function(e){
       var el=e.target&&e.target.closest?e.target.closest('[data-pro-goto]'):null;
-      if(!el)return;
-      var n=el.getAttribute('data-pro-goto');
-      if(n){e.preventDefault();e.stopPropagation();proMockupSetScreen(n);}
+      if(el){
+        var n=el.getAttribute('data-pro-goto');
+        if(n){e.preventDefault();e.stopPropagation();proMockupPushHistory(n);proMockupSetScreen(n);return;}
+      }
+      var sf=e.target&&e.target.closest?e.target.closest('[data-pro-service-filter]'):null;
+      if(sf){
+        e.preventDefault();e.stopPropagation();
+        var f=sf.getAttribute('data-pro-service-filter')||'all';
+        if(window.ProMockupPresenter&&typeof window.ProMockupPresenter.setServiceFilter==='function')window.ProMockupPresenter.setServiceFilter(f);
+        return;
+      }
+      var hf=e.target&&e.target.closest?e.target.closest('[data-pro-history-filter]'):null;
+      if(hf){
+        e.preventDefault();e.stopPropagation();
+        var h=hf.getAttribute('data-pro-history-filter')||'all';
+        if(window.ProMockupPresenter&&typeof window.ProMockupPresenter.setHistoryFilter==='function')window.ProMockupPresenter.setHistoryFilter(h);
+      }
     },true);
   }
   proMockupSetScreen(document.getElementById('page-carnotes')?.getAttribute('data-pro-screen')||1);
 }
 
 function proOpenHistoryTab(){
+  // S1733/S1742: the Pro History destination is mockup screen 5. Keep this
+  // action on the same browser-history contract as the other Pro destinations
+  // so Android/browser Back returns to the previous visible Pro screen.
+  if(document.body&&document.body.dataset.theme==='pro'&&typeof proMockupSetScreen==='function'){
+    curCnTab='servis';
+    proMockupPushHistory(5);
+    proMockupSetScreen(5);
+    return;
+  }
   setCnTab('servis');
   const card=document.getElementById('cnServisListCard');
   if(card) setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),0);
+}
+// Public action alias kept in sync with the Pro bottom-nav markup.
+// The dispatcher resolves data-action names against window, so the exact
+// action name in HTML must have a matching global function.
+function proOpenHistory(){ return proOpenHistoryTab(); }
+function proOpenGlobalSearch(){
+  if(typeof openGlobalSearch==='function')return openGlobalSearch();
+  if(typeof toast==='function')toast('⚠️ Pencarian belum siap.');
+}
+function proOpenNotifications(){ proMockupPushHistory(4); proMockupSetScreen(4); }
+function proOpenActivity(){ proMockupPushHistory(5); proMockupSetScreen(5); }
+function proWorkshopUnavailable(){
+  if(typeof toast==='function')toast('ℹ️ Data bengkel terdekat belum tersedia di aplikasi.');
+}
+
+// s748-carnotes-regression-1750: explicit escape hatch from the dedicated Car Notes Pro navigation
+// back to the app-wide feature navbar. In Pro theme #mainNav is intentionally
+// hidden while #page-carnotes is active, so users previously had no obvious
+// route from Car Notes back to Uang/Shop/Aset/Pajak/Beranda.
+function proReturnToMainNav(){
+  const leave=()=>{
+    try{
+      if(typeof history!=='undefined'&&typeof history.replaceState==='function'){
+        const st=Object.assign({},history.state||{}); let changed=false;
+        if(Object.prototype.hasOwnProperty.call(st,'__carnotesPro')){delete st.__carnotesPro;delete st.screen;changed=true;}
+        if(Object.prototype.hasOwnProperty.call(st,'__kwModalStack')){delete st.__kwModalStack;changed=true;}
+        if(changed)history.replaceState(st,'',location.href);
+      }
+      if(typeof showPage==='function')showPage('dashboard-hub');
+      const nav=document.getElementById('mainNav');
+      if(nav){nav.classList.remove('u-dnone');nav.style.display='flex';}
+      const root=document.getElementById('scrollRoot'); if(root)root.scrollTop=0;
+    }catch(e){ console.warn('proReturnToMainNav gagal:',e); }
+  };
+  try{
+    if(typeof proHasUnsavedChanges==='function'&&proHasUnsavedChanges()){
+      const ask=typeof askConfirm==='function'?askConfirm('Perubahan belum disimpan. Keluar dari Car Notes?',{title:'Perubahan belum disimpan',okText:'Keluar',cancelText:'Tetap di sini',danger:false,icon:'⚠️'}):Promise.resolve(true);
+      return Promise.resolve(ask).then(ok=>{if(ok)leave();return ok;});
+    }
+  }catch(e){ console.warn('Pengecekan perubahan Car Notes gagal:',e); }
+  leave(); return true;
+}
+
+// Small presentation controls used by the Pro mockup. They intentionally
+// change only the visible selection; real data filtering remains owned by the
+// existing Car Notes/Servis modules.
+function proMockupActivateGroup(el){
+  if(!el)return;
+  const group=el.parentElement;
+  if(!group)return;
+  group.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  const text=String(el.textContent||'').trim();
+  const screen3=el.closest&&el.closest('#proMockScreen3');
+  if(screen3&&window.ProMockupPresenter&&typeof window.ProMockupPresenter.setServiceFilter==='function'){
+    const key=text==='Semua'?'all':text.replace(/\./g,'').replace(/km/ig,'').trim();
+    window.ProMockupPresenter.setServiceFilter(key);
+    return;
+  }
+  const screen5=el.closest&&el.closest('#proMockScreen5');
+  if(screen5&&window.ProMockupPresenter&&typeof window.ProMockupPresenter.setHistoryFilter==='function'){
+    const key=text.toLowerCase()==='semua'?'all':text.toLowerCase();
+    window.ProMockupPresenter.setHistoryFilter(key);
+  }
+}
+function proMockupMapUnavailable(){
+  if(typeof toast==='function')toast('Data bengkel/peta belum tersedia di aplikasi.');
 }
 
 // setCnInsightTab/setCnBbmTab (Sesi 158, permintaan eksplisit user): tab

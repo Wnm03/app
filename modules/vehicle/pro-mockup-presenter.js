@@ -38,6 +38,8 @@
     }
     return null;
   }
+  let serviceFilter='all';
+  let historyFilter='all';
   function serviceRows(){
     const v=vehicle();
     if(!v||typeof predictService!=='function')return [];
@@ -89,8 +91,11 @@
 
   function renderChecklist(){
     const grid=document.querySelector('#proMockScreen3 .pro-check-grid'); if(!grid)return;
-    const rows=serviceRows().slice(0,8);
-    if(!rows.length){grid.innerHTML='<div class="pro-mock-empty">Belum ada jadwal servis untuk kendaraan ini.</div>';return;}
+    let rows=serviceRows();
+    if(serviceFilter!=='all'){const km=Number(serviceFilter);rows=rows.filter(r=>Number(r.intervalKm||r.intervalKmAtService||0)===km);}
+    rows=rows.slice(0,8);
+    document.querySelectorAll('#proMockScreen3 .pro-chip-row button').forEach(b=>{const key=String(b.textContent||'').replace(/\./g,'').replace(/km/ig,'').trim()==='Semua'?'all':String(b.textContent||'').replace(/\./g,'').replace(/km/ig,'').trim();b.classList.toggle('active',key===serviceFilter);});
+    if(!rows.length){grid.innerHTML='<div class="pro-mock-empty">Tidak ada jadwal yang cocok dengan filter ini.</div>';return;}
     grid.innerHTML=rows.map(r=>{
       const catId=r.categoryId||'';
       const hit=componentFor({name:r.categoryName,serviceComponentId:r.serviceComponentId});
@@ -139,15 +144,20 @@
   function renderHistory(){
     const screen=document.getElementById('proMockScreen5'); if(!screen)return;
     const old=screen.querySelectorAll('.pro-history-entry');old.forEach(e=>e.remove());
-    const list=typeof D!=='undefined'&&Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)).slice(0,8):[];
+    const services=typeof D!=='undefined'&&Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId).map(s=>({kind:'servis',id:s.id,date:s.date,km:s.km,item:s.item,note:s.note,cost:s.cost,raw:s})):[];
+    const fuels=typeof D!=='undefined'&&Array.isArray(D.bbmLogs)?D.bbmLogs.filter(b=>b&&b.vehicleId===curVehicleId).map(b=>({kind:'bbm',id:b.id,date:b.date,km:b.km,item:b.spbu||'Isi BBM',note:b.note,cost:b.cost,raw:b})):[];
+    let list=[...services,...fuels];
+    if(historyFilter==='servis')list=services; else if(historyFilter==='bbm')list=fuels; else if(historyFilter==='penggantian')list=services.filter(x=>String(x.raw&&x.raw.actionType||'').toLowerCase()==='ganti'||/ganti|penggantian/i.test(String(x.item||'')));
+    list.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0));list=list.slice(0,8);
     const anchor=screen.querySelector('.pro-chip-row.history');
+    screen.querySelectorAll('.pro-chip-row.history button').forEach(b=>{const key=String(b.textContent||'').trim().toLowerCase()==='semua'?'all':String(b.textContent||'').trim().toLowerCase();b.classList.toggle('active',key===historyFilter);});
     list.forEach(s=>{
-      const tags=Array.isArray(s.checklist)?s.checklist.filter(x=>x&&x.checked).slice(0,4).map(x=>x.name||x.item||x.itemId).filter(Boolean):[];
-      const div=document.createElement('div');div.className='pro-history-entry';div.setAttribute('data-action','openServisModal');div.setAttribute('data-args',JSON.stringify([s.id]));
-      div.innerHTML=`<span class="history-icon">${icon('history')}</span><div><div class="pro-history-title"><b>${esc(s.item||'Servis')}</b><em>Selesai</em></div><small>${esc(dateLabel(s.date))} • ${esc(fmtKm(s.km||0))}</small>${s.note?`<small>${esc(s.note)}</small>`:''}<div class="pro-tags">${tags.map(t=>`<i>${esc(t)}</i>`).join('')}</div></div><strong>${esc(fmtRp(s.cost||0))}</strong>`;
+      const tags=s.kind==='servis'&&Array.isArray(s.raw.checklist)?s.raw.checklist.filter(x=>x&&x.checked).slice(0,4).map(x=>x.name||x.item||x.itemId).filter(Boolean):[];
+      const div=document.createElement('div');div.className='pro-history-entry';if(s.kind==='servis'){div.setAttribute('data-action','openServisModal');div.setAttribute('data-args',JSON.stringify([s.id]));}
+      div.innerHTML=`<span class="history-icon">${icon(s.kind==='bbm'?'fuel':'history')}</span><div><div class="pro-history-title"><b>${esc(s.item||'Catatan')}</b><em>Selesai</em></div><small>${esc(dateLabel(s.date))} • ${esc(fmtKm(s.km||0))}</small>${s.note?`<small>${esc(s.note)}</small>`:''}<div class="pro-tags">${tags.map(t=>`<i>${esc(t)}</i>`).join('')}</div></div><strong>${esc(fmtRp(s.cost||0))}</strong>`;
       anchor.insertAdjacentElement('afterend',div);
     });
-    if(!list.length){const e=document.createElement('div');e.className='pro-mock-empty';e.textContent='Belum ada riwayat servis kendaraan ini.';anchor.insertAdjacentElement('afterend',e);}
+    if(!list.length){const e=document.createElement('div');e.className='pro-mock-empty';e.textContent='Tidak ada riwayat yang cocok.';anchor.insertAdjacentElement('afterend',e);}
   }
 
   function renderForm(){
@@ -205,7 +215,7 @@
     renderHome();renderChecklist();renderComponent();renderReminders();renderHistory();renderForm();renderFuel();renderMap();
   }
 
-  window.ProMockupPresenter={render:renderAll,setComponent:function(id){window.__proMockComponentId=id||null;renderAll();}};
+  window.ProMockupPresenter={render:renderAll,setComponent:function(id){window.__proMockComponentId=id||null;renderAll();},setServiceFilter:function(v){serviceFilter=String(v||'all');renderAll();},setHistoryFilter:function(v){historyFilter=String(v||'all');renderAll();}};
   window.addEventListener('pro:mockup-refresh',renderAll);
   // Reuse the existing mockup router; add only component/vehicle selection.
   document.addEventListener('click',function(e){

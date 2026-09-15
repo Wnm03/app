@@ -681,9 +681,77 @@ hint.style.display=isEdit?'block':'none';
 hint.textContent=isEdit?'✏️ Mode edit: KM boleh dikoreksi lebih rendah dari servis sebelumnya (tetap tidak boleh melebihi odometer kendaraan sekarang atau servis sesudahnya).':'';
 },
 revertStockUsage(partId,qty){
-if(!partId||!qty)return;
+const n=Number(qty);
+if(!partId||!Number.isFinite(n)||n<=0)return;
 const p=D.partsStock.find(x=>x.id===partId);
-if(p)p.qty=(p.qty||0)+qty;
+if(p)p.qty=(Number(p.qty)||0)+n;
+},
+/**
+ * Apply one or more stock usages as a single net mutation per stock row.
+ * This prevents double-deduction when the legacy `usedPartId` and the
+ * Vehicle Catalog bridge resolve to the SAME physical stock row.
+ * The caller owns rollback/persistence; this helper only mutates qty.
+ */
+async applyStockUsages(entries){
+const net=new Map();
+(Array.isArray(entries)?entries:[]).forEach(e=>{
+  const id=e&&e.partId;
+  const qty=Number(e&&e.qty);
+  if(!id||!Number.isFinite(qty)||qty<=0)return;
+  net.set(id,(net.get(id)||0)+qty);
+});
+// P27: atomic even when called outside Servis.save(). If a later stock
+// confirmation rejects, restore every quantity already mutated here.
+const before=new Map();
+for(const [id] of net){
+  const p=D.partsStock.find(x=>x.id===id);
+  if(p)before.set(id,Number(p.qty)||0);
+}
+for(const [id,qty] of net){
+  if(!await Servis.applyStockUsage(id,qty)){
+    for(const [restoreId,restoreQty] of before){
+      const p=D.partsStock.find(x=>x.id===restoreId);
+      if(p)p.qty=restoreQty;
+    }
+    return false;
+  }
+}
+return true;
+},
+/** Replace an edit's previous stock usage with its new usage by netting
+ * quantities per physical stock id. Positive net = deduct, negative net = restore.
+ * P27: failed positive application compensates ALL rows touched by this helper,
+ * so the helper is atomic even when invoked directly by another workflow. */
+async replaceStockUsages(oldEntries,newEntries){
+const net=new Map();
+const add=(entries,sign)=>{
+  (Array.isArray(entries)?entries:[]).forEach(e=>{
+    const id=e&&e.partId;
+    const qty=Number(e&&e.qty);
+    if(!id||!Number.isFinite(qty)||qty<=0)return;
+    net.set(id,(net.get(id)||0)+(sign*qty));
+  });
+};
+add(oldEntries,-1); add(newEntries,1);
+const before=new Map();
+for(const [id] of net){
+  const p=D.partsStock.find(x=>x.id===id);
+  if(p)before.set(id,Number(p.qty)||0);
+}
+for(const [id,delta] of net){
+  if(delta>0){
+    if(!await Servis.applyStockUsage(id,delta)){
+      for(const [restoreId,restoreQty] of before){
+        const p=D.partsStock.find(x=>x.id===restoreId);
+        if(p)p.qty=restoreQty;
+      }
+      return false;
+    }
+  }else if(delta<0){
+    Servis.revertStockUsage(id,-delta);
+  }
+}
+return true;
 },
 /** Cari 1 item Stok Sparepart (D.partsStock) yang `catalogId`-nya PERSIS
  * sama dengan part katalog terpilih di form Servis (Sesi 273, tindak
@@ -899,6 +967,12 @@ if(Servis.editId!==null&&!matched){
   const sameItem=existing&&String(existing.item||'').trim().toLowerCase()===item.toLowerCase();
   if(oldCat&&sameItem)catIdForLog=oldCat.id;
 }
+// Validate the effective service item BEFORE any stock/Finance mutation.
+// A checklist-only service is valid; an entirely empty service must be a
+// no-op with zero stock deduction and zero Finance transaction.
+const _preSaveChecklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
+const _preSaveEffectiveItem=item||(_preSaveChecklistPayload.length>0?String(_preSaveChecklistPayload[0].itemName||'').trim():'');
+if(!_preSaveEffectiveItem){toast('⚠️ Pilih minimal satu komponen checklist atau isi jenis servis');return;}
 let newCatCreated=false;
 if(intervalKm&&intervalKm>0){
 if(matched){
@@ -923,13 +997,18 @@ if(!s){
 // P18: Edit Service adalah satu transaksi domain. Jangan melakukan restore
 // stok lama secara parsial lalu mencoba membaliknya manual pada setiap
 // failure branch; snapshot canonical di wrapper adalah sumber rollback.
-Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
-Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
-if(usedPartId&&!await Servis.applyStockUsage(usedPartId,usedPartQty)){
-  restore();
-  return;
-}
-if(catalogLinkedStockId&&!await Servis.applyStockUsage(catalogLinkedStockId,catalogPartQty)){
+// Net old -> new usage per physical stock row. If both service selectors
+// point at the same stock item, only the quantity delta is applied once.
+if(!await Servis.replaceStockUsages(
+  [
+    {partId:s.usedPartId,qty:s.usedPartQty},
+    {partId:s.catalogPartLinkedStockId,qty:s.catalogPartQty}
+  ],
+  [
+    {partId:usedPartId,qty:usedPartQty},
+    {partId:catalogLinkedStockId,qty:catalogPartQty}
+  ]
+)){
   restore();
   return;
 }
@@ -1014,15 +1093,10 @@ if(_postCommitFinanceEvent&&typeof AIBus!=="undefined"){
 toast('✅ Catatan servis diperbarui'+(intervalKm?' & interval pengingat disinkron':''));
 return;
 }
-if(usedPartId&&!await Servis.applyStockUsage(usedPartId,usedPartQty))return;
-if(catalogLinkedStockId&&!await Servis.applyStockUsage(catalogLinkedStockId,catalogPartQty)){
-// BUGFIX (audit S324): dulu applyStockUsage() lagi di sini (dobel-potong
-// stok usedPartId yang barusan sukses dipotong 1 baris di atas) padahal
-// seharusnya revertStockUsage() -- catatan servis ini batal disimpan
-// (return di bawah), jadi potongan usedPartId di atas harus dikembalikan.
-if(usedPartId)Servis.revertStockUsage(usedPartId,usedPartQty);
-return;
-}
+if(!await Servis.applyStockUsages([
+  {partId:usedPartId,qty:usedPartQty},
+  {partId:catalogLinkedStockId,qty:catalogPartQty}
+]))return;
 const servisId=uid();
 const txCat=resolveVehicleTxCategory(veh);
 let txId=null;
@@ -1033,7 +1107,7 @@ if(cost>0){
  txId=uid();
  D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
 }
-const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
+const checklistPayload=_preSaveChecklistPayload;
 // Sesi Konsolidasi Servis 2A: bila checklist berisi beberapa item, satu sesi
 // menghasilkan N log service yang masing-masing tetap berbentuk legacy single-log.
 // Jalur CREATE saja; EDIT multi-log ditahan ke tahap berikutnya agar migrasi/edit/
@@ -1041,7 +1115,7 @@ const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisCheck
 const _serviceSessionId=uid();
 const _checkedServiceRows=checklistPayload.slice();
 const _hasChecklistRows=_checkedServiceRows.length>0;
-const _effectiveItem=item||(_hasChecklistRows?_checkedServiceRows[0].itemName:'');
+const _effectiveItem=item||(_hasChecklistRows?_checkedServiceRows[0].itemName:_preSaveEffectiveItem);
 if(!_effectiveItem){toast('⚠️ Pilih minimal satu komponen checklist atau isi jenis servis');return;}
 const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
 const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?getEffectiveIntervalKm(curVehicleId,_catForSnapshot):(_catForSnapshot&&_catForSnapshot.intervalKm>0?_catForSnapshot.intervalKm:null);
