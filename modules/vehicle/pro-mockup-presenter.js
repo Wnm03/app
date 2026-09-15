@@ -1,5 +1,5 @@
 // modules/vehicle/pro-mockup-presenter.js — Car Notes Pro 8-screen presenter
-// 1725: data-driven UI layer. READ-ONLY: reuses existing engines/state and
+// 1728: data-driven UI layer. READ-ONLY: reuses existing engines/state and
 // never creates a parallel data model. Interactive writes continue through
 // the existing Servis/Fuel/Vehicle actions.
 (function(){
@@ -67,7 +67,6 @@
     setText('proMockKm',fmtKm(km));
     const src=typeof getVehicleKmSource==='function'?getVehicleKmSource(v.id):null;
     setText('proMockKmSrc',src&&typeof kmSourceLabel==='function'?kmSourceLabel(src.source):'');
-    document.querySelectorAll('[data-pro-today]').forEach(el=>el.textContent=dateLabel(dateISO()));
     const rows=serviceRows();
     const overdue=rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length;
     const soon=rows.filter(r=>r.status==='segera'||r.status==='due-soon').length;
@@ -193,7 +192,14 @@
     if(list)list.innerHTML='<div class="pro-mock-empty">Belum ada sumber data bengkel terdekat yang tersimpan. Tampilan peta tetap dipertahankan sebagai shell UI.</div>';
   }
 
+  function syncTodayLabels(){
+    const label=dateLabel(dateISO());
+    document.querySelectorAll('[data-pro-today]').forEach(el=>el.textContent=label);
+  }
   function renderAll(){
+    /* Date labels are shared by the legacy vehicle header and the Pro mockup.
+       Keep them synchronized even when the active theme is not Pro. */
+    syncTodayLabels();
     if(!document.body||document.body.dataset.theme!=='pro')return;
     const v=vehicle();if(!v)return;
     renderHome();renderChecklist();renderComponent();renderReminders();renderHistory();renderForm();renderFuel();renderMap();

@@ -809,8 +809,16 @@ if(typeof dismissAllToasts==='function')dismissAllToasts();
 curCnTab=t;
 document.querySelectorAll('#page-carnotes .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el) el.classList.add('active');
+// 1727/1730 cumulative: keep the dedicated Car Notes Pro bottom navigation
+// state synchronized with the real tab and guard DOM collections in partial
+// test/WebView DOMs where `children` may be absent.
 const proBottom=document.getElementById('proCnBottomNav');
-if(proBottom){proBottom.querySelectorAll('button').forEach(b=>b.classList.remove('active')); const map={beranda:0,servis:1,bbm:3,pajak:4}; const bi=map[t]; const btnEl=bi!=null&&proBottom.children?proBottom.children[bi]:null; if(btnEl)btnEl.classList.add('active');}
+if(proBottom){
+  proBottom.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+  const map={beranda:0,servis:1,bbm:3,pajak:4};
+  const bi=map[t];
+  if(bi!=null&&proBottom.children?.[bi])proBottom.children[bi].classList.add('active');
+}
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
 const cnBc=document.getElementById('cnBreadcrumbSub');
 if(cnBc)cnBc.textContent=CN_TAB_LABEL[t]||t;
