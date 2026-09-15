@@ -728,7 +728,30 @@ return `<div class="tx-item u-pointer" data-action="openSimModal" data-args="${e
 }).join('');
 }
 
+function renderProHome(){
+const home=document.getElementById('cnTab-beranda'); if(!home)return;
+const km=document.getElementById('cnCurKm'), src=document.getElementById('cnCurKmSrc');
+const hk=document.getElementById('proHomeKm'), hs=document.getElementById('proHomeKmSrc');
+if(hk&&km)hk.textContent=km.textContent||'0 km'; if(hs&&src)hs.textContent=src.textContent||'';
+const sel=document.getElementById('vehicleSelect');
+const name=home.querySelector('#proHomeVehicleName'), meta=home.querySelector('#proHomeVehicleMeta');
+if(sel){
+  const active=sel.querySelector('.vehicle-chip.active,.vehicle-select-item.active,.vehicle-option.active,[aria-selected="true"]');
+  const txt=(active||sel.querySelector('*'))?.textContent?.trim().replace(/\s+/g,' ');
+  if(name&&txt)name.textContent=txt.slice(0,42);
+}
+if(meta)meta.textContent=(src&&src.textContent)||'Kendaraan aktif';
+const out=document.getElementById('proHomeReminders');
+if(!out)return;
+const source=document.getElementById('servisReminderCard');
+if(!source||!source.textContent.trim()){out.innerHTML='<div class="pro-home-reminder"><div class="pro-home-reminder-icon">!</div><div class="pro-home-reminder-copy"><strong>Belum ada pengingat</strong><span>Data servis akan muncul di sini.</span></div></div>';return;}
+const rows=Array.from(source.querySelectorAll('.servis-reminder-row,.tx-item')).slice(0,2);
+if(!rows.length){out.innerHTML='<div class="pro-home-reminder"><div class="pro-home-reminder-icon">!</div><div class="pro-home-reminder-copy"><strong>Pengingat servis</strong><span>Buka Perawatan untuk melihat detail.</span></div><span class="pro-home-reminder-arrow">›</span></div>';return;}
+out.innerHTML=rows.map(r=>{const title=r.querySelector('.tx-name,.u-fw700,.u-fw800')?.textContent?.trim()||'Perawatan'; const meta=r.querySelector('.tx-meta,.u-fs10,.u-fs11')?.textContent?.trim()||'Periksa jadwal servis'; return `<div class="pro-home-reminder"><div class="pro-home-reminder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10M8 7l4-4 4 4M5 17h14M7 21h10"/></svg></div><div class="pro-home-reminder-copy"><strong>${escapeHtml(title.slice(0,45))}</strong><span>${escapeHtml(meta.slice(0,60))}</span></div><span class="pro-home-reminder-arrow">›</span></div>`;}).join('');
+}
+
 function renderCnTab(){
+if(document.body&&document.body.dataset.theme==='pro'&&typeof window!=='undefined'&&!window.__proCnHomeInitialized){curCnTab='beranda';window.__proCnHomeInitialized=true;}
 // SELF-HEAL (audit S444+): backfill fuelState.referenceKm yang kosong di
 // data lama SEBELUM presenter fuel di bawah dipanggil, supaya begitu
 // halaman Car Notes ini dibuka, estimasi liter langsung mulai reaktif
@@ -798,6 +821,9 @@ if(typeof VehicleAutomationPresenter!=='undefined')VehicleAutomationPresenter.re
 // build v1266-1267 (Sesi 538) karena modules-render.js ter-rebuild dari
 // base lama sebelum Sesi 532 -- dipasang ulang persis sama.
 if(typeof RideUI!=='undefined')RideUI.render();
+renderProHome();
+if(typeof proMockupInit==='function')proMockupInit();
+if(typeof ProMockupPresenter!=='undefined')ProMockupPresenter.render();
 const curKmEl=document.getElementById('cnCurKm');
 const curKmSrcEl=document.getElementById('cnCurKmSrc');
 if(curKmEl&&!document.getElementById('cnCurKmInput')){
