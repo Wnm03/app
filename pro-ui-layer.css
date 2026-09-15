@@ -228,6 +228,9 @@ body[data-theme="pro"]{background:var(--bg);font-family:'Plus Jakarta Sans',sans
 /* 1714+ PRO MOCKUP RECONSTRUCTION: home shell + dedicated bottom navigation. */
 [data-theme="pro"] #page-carnotes .pro-primary-tabs{display:none!important;}
 [data-theme="pro"] #page-carnotes .page-breadcrumb{display:none!important;}
+[data-theme="pro"] #page-carnotes .pro-carnotes-breadcrumb{display:block!important;margin:0 0 10px;padding:0 2px;color:var(--text3);font-size:11px;font-weight:700;letter-spacing:.1px;}
+[data-theme="pro"] #page-carnotes .pro-carnotes-breadcrumb span{color:var(--text2);}
+[data-theme="pro"] #page-carnotes .pro-carnotes-breadcrumb .pb-current{color:var(--text1);}
 [data-theme="pro"] #page-carnotes > .pro-vehicle-hero{display:none;}
 [data-theme="pro"] #page-carnotes > .pro-odometer-card{display:none;}
 [data-theme="pro"] #page-carnotes > .u-mb12[data-action="openVehicleModal"],
@@ -388,3 +391,25 @@ body[data-theme="pro"]{background:var(--bg);font-family:'Plus Jakarta Sans',sans
 [data-theme="pro"] .pro-rem-icon svg,[data-theme="pro"] .component-icon svg,[data-theme="pro"] .r-icon svg,[data-theme="pro"] .history-icon svg{width:15px;height:15px;display:block}
 [data-theme="pro"] .pro-mock-bottom-nav button span svg,[data-theme="pro"] .pro-mock-screen .pro-icon-button svg,[data-theme="pro"] .pro-search svg{width:17px;height:17px;display:block}
 [data-theme="pro"] .pro-rem-icon svg,[data-theme="pro"] .component-icon svg,[data-theme="pro"] .r-icon svg,[data-theme="pro"] .history-icon svg{width:15px;height:15px;display:block}
+
+/* 1732: explicit route from Car Notes Pro back to the app-wide feature navbar. */
+[data-theme="pro"] .pro-main-nav-back{
+  margin-left:auto;
+  border:1px solid var(--border2);
+  background:rgba(13,34,56,.72);
+  color:var(--text2);
+  border-radius:10px;
+  min-height:34px;
+  padding:0 10px;
+  font:inherit;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+[data-theme="pro"] .pro-main-nav-back:active{transform:scale(.98);}
+
+/* 1747: compact online/offline status for Car Notes; informational only. */
+[data-theme="pro"] .pro-offline-status{margin-left:7px;color:var(--text3);font-size:10px;font-weight:700;white-space:nowrap;align-self:center;}
+[data-theme="pro"] .pro-offline-status.is-offline{color:#ffb454;}
+@media (max-width:420px){[data-theme="pro"] .pro-offline-status{font-size:9px;margin-left:4px;}[data-theme="pro"] .pro-main-nav-back{padding:0 8px;font-size:11px;}}

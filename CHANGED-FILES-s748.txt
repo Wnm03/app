@@ -1,0 +1,20 @@
+index.html
+app_production.html
+app-bundle-a.min.js
+app-bundle-b.min.js
+sw.js
+chat-action-handlers.js
+pro-ui-layer.css
+modules/shared/features-helpers-global-security.js
+modules/shared/modal-navigasi.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/pro-mockup-presenter.js
+modules/vehicle/servis.js
+modules/vehicle/vehicle-core.js
+docs/FILE-MAP.md
+docs/COVERAGE-PER-MODULE.md
+docs/CLAUDE.md
+docs/RELEASE-GATE-LOG.md
+tests/ (FULL directory, 787 file, bukan cuma yang berubah)
