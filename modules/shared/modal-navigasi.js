@@ -268,8 +268,51 @@ _cancelDialogQueue(_choiceStore,'choiceModalOverlay',null);
 _cancelDialogQueue(_infoStore,'infoModalOverlay',true);
 _cancelDialogQueue(_pinPromptStore,'pinPromptModalOverlay',null);
 }
-function showPage(name,el){
+let _mainAppNavPopInProgress=false;
+const _MAIN_APP_NAV_PAGES=new Set(['dashboard-hub','keuangan','shop','aset','carnotes','pajak','settings']);
+function _mainAppNavState(name){
+  return {__mainAppNav:String(name||'dashboard-hub')};
+}
+function _mainAppNavEnsureInitial(){
+  try{
+    if(typeof history==='undefined'||typeof history.replaceState!=='function')return;
+    const st=history.state||{};
+    if(!st.__mainAppNav){
+      history.replaceState(Object.assign({},st,_mainAppNavState('dashboard-hub')),'',location.href);
+    }
+  }catch(e){void e;}
+}
+function _mainAppNavPush(name){
+  try{
+    if(typeof history==='undefined'||typeof history.pushState!=='function')return;
+    const target=String(name||'dashboard-hub');
+    if(!_MAIN_APP_NAV_PAGES.has(target))return;
+    const current=history.state&&history.state.__mainAppNav;
+    if(current===target)return;
+    history.pushState(Object.assign({},history.state||{},_mainAppNavState(target)),'',location.href);
+  }catch(e){void e;}
+}
+if(typeof document!=='undefined'&&document.readyState!=='loading')_mainAppNavEnsureInitial();
+else if(typeof document!=='undefined'&&typeof document.addEventListener==='function')document.addEventListener('DOMContentLoaded',_mainAppNavEnsureInitial,{once:true});
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function'&&!window.__mainAppNavBackBound){
+  window.__mainAppNavBackBound=true;
+  window.addEventListener('popstate',function(e){
+    if(_mainAppNavPopInProgress)return;
+    const st=e&&e.state;
+    const target=st&&st.__mainAppNav;
+    if(!_MAIN_APP_NAV_PAGES.has(String(target||'')))return;
+    const page=document.getElementById('page-'+target);
+    if(page&&page.classList&&page.classList.contains('active'))return;
+    _mainAppNavPopInProgress=true;
+    try{showPage(target,null,{fromHistory:true});}finally{_mainAppNavPopInProgress=false;}
+  });
+}
+function showPage(name,el,opts){
+if(!_mainAppNavPopInProgress&&!(opts&&opts.fromHistory)&&el){
+  _mainAppNavPush(name);
+}
 _cancelAllCustomDialogQueues();
+_modalHistoryClearForPage();
 document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.open').forEach(o=>{
   _focusTrapDeactivate(o);
 });
@@ -410,6 +453,70 @@ if(!_swipeDismissCloseTimers||!overlay)return;
 const timer=_swipeDismissCloseTimers.get(overlay);
 if(timer!=null){clearTimeout(timer);_swipeDismissCloseTimers.delete(overlay);}
 }
+// S1735 — modal back-stack hardening for Android/browser Back.
+// Standard feature modals previously only listened to Escape/✕. On Android,
+// system Back usually becomes history.back()/popstate in a PWA/WebView, so a
+// visible modal could be skipped or the app could leave the current feature.
+// Keep a tiny history marker per openModal() call; nested modals therefore
+// unwind one level at a time. The marker is URL-state only (no query/hash), so
+// reload/deep links are unaffected. closeModal() consumes its own marker;
+// popstate closes the visual modal without calling history.back() again.
+const _MODAL_HISTORY_KEY='__kwModalStack';
+let _modalHistoryPopInProgress=false;
+function _modalHistoryStack(){
+try{
+const st=history&&history.state;
+return st&&Array.isArray(st[_MODAL_HISTORY_KEY])?st[_MODAL_HISTORY_KEY].slice():[];
+}catch(e){return []}
+}
+function _modalHistoryPush(id){
+try{
+if(!history||typeof history.pushState!=='function')return;
+const stack=_modalHistoryStack();
+stack.push(String(id));
+history.pushState(Object.assign({},history.state||{}, {[_MODAL_HISTORY_KEY]:stack}),'',location.href);
+}catch(e){void e;}
+}
+function _modalHistoryConsume(id){
+try{
+if(!history||typeof history.back!=='function')return false;
+const stack=_modalHistoryStack();
+if(stack[stack.length-1]!==String(id))return false;
+_modalHistoryPopInProgress=true;
+history.back();
+setTimeout(()=>{_modalHistoryPopInProgress=false;},800);
+return true;
+}catch(e){_modalHistoryPopInProgress=false;return false;}
+}
+function _modalHistoryClearForPage(){
+try{
+if(!history||typeof history.replaceState!=='function')return;
+const st=Object.assign({},history.state||{});
+if(st[_MODAL_HISTORY_KEY]!==undefined){delete st[_MODAL_HISTORY_KEY];history.replaceState(st,'',location.href);}
+}catch(e){void e;}
+}
+
+// S1747: lightweight dirty-form guard for Car Notes escape actions. We snapshot only
+// editable controls when a Car Notes modal opens; the global close button remains
+// immediate, while the explicit "Aplikasi Utama" route can ask before discarding edits.
+let _proModalEditSnapshot=null;
+function _proModalSnapshot(el){
+try{
+ if(!el||!document.getElementById('page-carnotes')?.classList.contains('active'))return null;
+ const controls=Array.from(el.querySelectorAll('input,select,textarea')).filter(x=>!x.disabled);
+ return JSON.stringify(controls.map(x=>({name:x.name||x.id||'',type:x.type||'',value:x.type==='checkbox'||x.type==='radio'?!!x.checked:x.value,files:x.type==='file'?(x.files?x.files.length:0):0})));
+}catch(e){return null;}
+}
+function proHasUnsavedChanges(){
+try{
+ if(!_proModalEditSnapshot)return false;
+ const el=document.getElementById(_proModalEditSnapshot.id);
+ if(!el||!el.classList.contains('open'))return false;
+ return _proModalSnapshot(el)!==_proModalEditSnapshot.snapshot;
+}catch(e){return false;}
+}
+function _proClearModalEditSnapshot(id){if(_proModalEditSnapshot&&_proModalEditSnapshot.id===String(id))_proModalEditSnapshot=null;}
+
 function openModal(id){
 const el=document.getElementById(id);
 if(!el){
@@ -455,6 +562,7 @@ const _stacked=!!document.querySelector('.overlay.open');
 const _modalInner=(typeof el.querySelector==='function')?el.querySelector('.modal'):null;
 if(_modalInner)_modalInner.classList.toggle('no-anim',_stacked);
 el.classList.remove('closing');
+_modalHistoryPush(id);
 el.classList.add('open');
 // FIX (audit opacity-stuck-0, laporan user "vehicleModal keluar tapi opacity 0
 // permanen walau display:flex & class .open benar, prefers-reduced-motion OFF"):
@@ -471,6 +579,7 @@ el.classList.add('open');
 // tidak membuang baris ini krn dikira "unused expression" -- efek sampingnya
 // (memaksa reflow) yg memang dibutuhkan, bukan nilainya.
 void el.offsetWidth;
+_proModalEditSnapshot={id:String(id),snapshot:_proModalSnapshot(el)};
 _syncNavVisibilityForModals();
 _focusTrapActivate(el);
 }
@@ -518,9 +627,15 @@ try{prefs=JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}');}catch(e){
 const keys=new Set(Object.keys(prefs).concat(CARD_COLLAPSE_DEFAULT_CLOSED));
 keys.forEach(key=>applyOneCardCollapsePref(key));
 }
-function closeModal(id){
+function closeModal(id,opts){
+opts=opts||{};
 const el=document.getElementById(id);
 if(!el)return;
+_proClearModalEditSnapshot(id);
+if(!opts.skipHistory && !_modalHistoryPopInProgress && _modalHistoryConsume(id)){
+  // Visual close happens immediately; popstate only consumes the marker.
+}
+
 _clearSwipeDismissCloseTimer(el);
 if(typeof _cleanupSwipeDismissForOverlay==='function')_cleanupSwipeDismissForOverlay(el);
 if(id==='txModal'&&typeof WorthIt!=='undefined'&&WorthIt.pendingBuyId){
@@ -648,6 +763,29 @@ function closeQS(id){document.getElementById(id).classList.remove('open');_syncN
 // z-index paling tinggi kalau lebih dari 1 yg terbuka bertumpuk, spt renovItemModal di atas
 // renovDetailModal). Escape TIDAK dipakai kalau fokus lagi di input/textarea yg sedang autocomplete
 // suggest-box terbuka (biar tidak nutup modal saat user cuma mau tutup dropdown saran).
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('popstate',function(){
+  const stack=_modalHistoryStack();
+  const open=Array.from(document.querySelectorAll('.overlay.open'));
+  if(!_modalHistoryPopInProgress && !stack.length && open.length){
+    open.sort((a,b)=>(parseInt(getComputedStyle(b).zIndex)||0)-(parseInt(getComputedStyle(a).zIndex)||0));
+    closeModal(open[0].id,{skipHistory:true});
+    return;
+  }
+  if(_modalHistoryPopInProgress){
+    _modalHistoryPopInProgress=false;
+    const top=stack[stack.length-1];
+    if(!top)return;
+    const el=document.getElementById(top);
+    if(el&&el.classList.contains('open'))return;
+  }
+  const tracked=new Set(stack);
+  const stale=open.filter(o=>!tracked.has(o.id));
+  if(stale.length){
+    stale.sort((a,b)=>(parseInt(getComputedStyle(b).zIndex)||0)-(parseInt(getComputedStyle(a).zIndex)||0));
+    closeModal(stale[0].id,{skipHistory:true});
+  }
+});
+
 document.addEventListener('keydown', function(e){
 if(e.key!=='Escape')return;
 const calc=document.getElementById('calcModal');

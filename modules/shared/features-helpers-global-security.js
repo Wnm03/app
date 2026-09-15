@@ -111,8 +111,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = '1730';
-const PRODUCTION_BUILD_SYNCED_VERSION = '1730';
+const APP_BUILD_VERSION = 's748-carnotes-regression-1750';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's748-carnotes-regression-1750';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -290,16 +290,20 @@ else showAlertModal(msg);
 return false;
 }
 }
+// P28: serialize async persistence writes. Tanpa queue, dua save() yang berdekatan
+// dapat menjalankan IDBStore.set() bersamaan; bila write lama selesai belakangan,
+// snapshot LAMA bisa menimpa snapshot BARU di IndexedDB. Queue ini hanya mengatur
+// urutan persistence, tidak menahan mutasi/render UI. Jika satu write gagal, queue
+// tetap lanjut ke snapshot berikutnya dan snapshot yang gagal punya fallback LS.
+let _savePersistChain=Promise.resolve();
 function _saveImmediate(){
-try{
-const json=_buildSaveJson();
-IDBStore.set('kw_v4_mirror',json).catch(e=>{
+let json;
+try{json=_buildSaveJson();}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
 _writeLocalSnapshot(json);
+_announcePersistenceWrite();
 });
-}catch(e){
-console.error('Gagal menyimpan data:',e);
-}
 }
 function save(){
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
@@ -352,7 +356,64 @@ function saveFlush(){
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 _saveImmediate();
 _writeLocalSnapshot(_buildSaveJson());
+_announcePersistenceWrite();
 }
+// P29: flush the latest synchronous snapshot at mobile/page lifecycle boundaries.
+// visibilitychange is the primary signal on Android/iOS when an app is backgrounded;
+// pagehide/beforeunload cover navigation/tab-close paths where supported. Guards keep
+// isolated test harnesses and partial WebViews safe when document/window events are absent.
+let _lifecycleFlushInstalled=false;
+function _installPersistenceLifecycleFlush(){
+if(_lifecycleFlushInstalled||typeof window==='undefined'||typeof document==='undefined')return;
+_lifecycleFlushInstalled=true;
+const flush=()=>{try{saveFlush();}catch(e){console.error('Gagal flush persistence saat lifecycle:',e);}};
+if(typeof document.addEventListener==='function'){
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
+}
+if(typeof window.addEventListener==='function'){
+ window.addEventListener('pagehide',flush);
+ window.addEventListener('beforeunload',flush);
+}
+}
+_installPersistenceLifecycleFlush();
+// P30: detect writes coming from another app tab/window without blindly replacing
+// in-memory D. Auto-merging a full finance snapshot is unsafe (it can silently
+// delete changes made in the other tab), so cross-instance writes are surfaced as
+// a stale-state warning and the current tab keeps its own state until the user
+// reloads deliberately. BroadcastChannel covers modern Android/WebView; storage
+// event covers browsers where a same-origin localStorage marker is available.
+let _crossTabStateStale=false;
+let _crossTabWarnShown=false;
+let _crossTabChannel=null;
+const _crossTabInstance='cn_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+function _markCrossTabStale(){
+ if(_crossTabStateStale)return;
+ _crossTabStateStale=true;
+ if(!_crossTabWarnShown){
+  _crossTabWarnShown=true;
+  const msg='⚠️ Data aplikasi berubah dari tab/perangkat aplikasi lain. Tab ini tidak otomatis menimpa data tersebut. Muat ulang sebelum melakukan perubahan lanjutan agar data terbaru tetap aman.';
+  if(typeof toast==='function')toast(msg,6500); else console.warn(msg);
+ }
+}
+function _announcePersistenceWrite(){
+ try{ if(typeof localStorage!=='undefined') localStorage.setItem('kw_v4_writer',_crossTabInstance+'|'+Date.now()); }catch(e){void e;}
+ try{ if(_crossTabChannel) _crossTabChannel.postMessage({type:'kw-v4-write',source:_crossTabInstance,ts:Date.now()}); }catch(e){void e;}
+}
+function _installCrossTabPersistenceGuard(){
+ if(typeof window==='undefined')return;
+ if(typeof BroadcastChannel==='function'){
+  try{
+   _crossTabChannel=new BroadcastChannel('kw_v4_persistence');
+   _crossTabChannel.addEventListener('message',e=>{if(e&&e.data&&e.data.type==='kw-v4-write'&&e.data.source!==_crossTabInstance)_markCrossTabStale();});
+  }catch(e){_crossTabChannel=null;}
+ }
+ if(typeof window.addEventListener==='function'){
+  window.addEventListener('storage',e=>{
+   if(e&&e.key==='kw_v4_writer'&&e.newValue&&e.newValue.indexOf(_crossTabInstance+'|')!==0)_markCrossTabStale();
+  });
+ }
+}
+_installCrossTabPersistenceGuard();
 let _lastUid=0;
 function uid(){let n=Date.now();if(n<=_lastUid)n=_lastUid+1;_lastUid=n;return n;}
 function sameId(a,b){return String(a)===String(b);}
@@ -629,23 +690,54 @@ if(t.type==='expense'&&t.category===oldName){t.category='Bisnis';if(!t.subcatego
 }
 async function load(){
 try{
-let s=null, fromIdb=false;
+let s=null, fromIdb=false, idbRaw=null, lsRaw=null;
+// P31: recovery source-by-source. Snapshot IDB yang corrupt TIDAK boleh
+// langsung menghentikan startup bila localStorage masih punya snapshot valid.
+// Sebaliknya, localStorage yang corrupt juga tidak boleh menghalangi IDB valid.
+// Ini mencegah satu media penyimpanan rusak membuat data valid di media lain
+// tidak pernah dicoba.
 try{
 const idbVal=await IDBStore.get('kw_v4_mirror');
-if(idbVal){ s=idbVal; fromIdb=true; }
-}catch(e){ console.error('Gagal baca IndexedDB, fallback ke localStorage:',e); }
-if(!s) s=localStorage.getItem('kw_v4');
-if(s){
-let p;
+if(idbVal) idbRaw=idbVal;
+}catch(e){ console.error('Gagal baca IndexedDB, coba localStorage:',e); }
 try{
-p=JSON.parse(s);
+if(typeof localStorage!=='undefined') lsRaw=localStorage.getItem('kw_v4');
+}catch(e){ console.error('Gagal baca localStorage:',e); }
+const _parseStoredSnapshot=(raw,label)=>{
+if(!raw)return null;
+try{
+const parsed=JSON.parse(raw);
+if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('root snapshot bukan object');
+return parsed;
 }catch(parseErr){
-console.error('Data tersimpan corrupt:',parseErr);
-showAlertModal('Data tersimpan di HP ini rusak/tidak terbaca (corrupt). Aplikasi akan dibuka dengan data kosong agar tidak error.\n\nKalau punya file backup (.json) dari menu Pengaturan → Backup, silakan import ulang lewat menu tersebut setelah aplikasi terbuka.',{icon:'⚠️',title:'Data Tersimpan Rusak'});
-return;
+console.error('Snapshot '+label+' corrupt/tidak terbaca:',parseErr);
+return null;
 }
+};
+let p=null;
+if(idbRaw){
+ p=_parseStoredSnapshot(idbRaw,'IndexedDB');
+ if(p) fromIdb=true;
+}
+if(!p&&lsRaw){
+ p=_parseStoredSnapshot(lsRaw,'localStorage');
+ if(p){
+  s=lsRaw;
+  // Jangan set fromIdb: snapshot LS yang lolos recovery perlu dimigrasikan
+  // kembali ke mirror IDB, tetapi hanya setelah JSON tervalidasi.
+ }
+}
+if(!p){
+ if(idbRaw||lsRaw){
+  const msg='Data tersimpan di HP ini tidak dapat dibaca dari IndexedDB maupun localStorage (corrupt). Aplikasi akan dibuka dengan data kosong agar tidak error.\n\nKalau punya file backup (.json) dari menu Pengaturan → Backup, silakan import ulang lewat menu tersebut setelah aplikasi terbuka.';
+  console.error(msg);
+  showAlertModal(msg,{icon:'⚠️',title:'Data Tersimpan Rusak'});
+ }
+ return;
+}
+if(p){
 D={...D,...p};
-if(!fromIdb) IDBStore.set('kw_v4_mirror',s).catch(e=>console.error('Gagal migrasi awal ke IndexedDB:',e));
+if(!fromIdb) IDBStore.set('kw_v4_mirror',s||lsRaw).catch(e=>console.error('Gagal memulihkan mirror IndexedDB dari localStorage:',e));
 // Sesi B (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §4 Fase 1 poin 2):
 // muat Vehicle Database aktif dari IndexedDB SEBELUM migrasi jalan --
 // migrasi toVersion:11 (DatabaseAPI.vehicleModel.findByName) baca dari
