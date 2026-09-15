@@ -43,17 +43,33 @@
   function serviceRows(){
     const v=vehicle();
     if(!v||typeof predictService!=='function')return [];
-    try{ const r=predictService({vehicleId:v.id}); return r&&Array.isArray(r.items)?r.items:[]; }catch(e){ return []; }
+    const calc=()=>{try{ const r=predictService({vehicleId:v.id}); return r&&Array.isArray(r.items)?r.items:[]; }catch(e){ return []; }};
+    return typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.memo==='function'?CarNotesPerformance.memo('serviceRows',v.id,calc):calc();
   }
   function serviceReminders(){
     const v=vehicle();
     if(!v||typeof VehicleReminder==='undefined'||typeof VehicleReminder.serviceReminders!=='function')return [];
-    try{return VehicleReminder.serviceReminders(v.id)||[];}catch(e){return [];}
+    const calc=()=>{try{return VehicleReminder.serviceReminders(v.id)||[];}catch(e){return [];}};
+    return typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.memo==='function'?CarNotesPerformance.memo('serviceReminders',v.id,calc):calc();
   }
   function fuelSummary(){
     const v=vehicle();
     if(!v||typeof FuelInsightEngine==='undefined'||typeof FuelInsightEngine.getSummary!=='function')return null;
-    try{const r=FuelInsightEngine.getSummary(v.id);return r&&r.ok?r:null;}catch(e){return null;}
+    const calc=()=>{try{const r=FuelInsightEngine.getSummary(v.id);return r&&r.ok?r:null;}catch(e){return null;}};
+    return typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.memo==='function'?CarNotesPerformance.memo('fuelSummary',v.id,calc):calc();
+  }
+  // Level 1 fuel status: only read the lightweight stored state/last log for the home card.
+  // Full Fuel Intelligence (trend, score, distance) remains lazy on screen 7.
+  function fuelLite(){
+    const v=vehicle();if(!v)return null;
+    const calc=()=>{
+      const fs=(v.fuelState&&typeof v.fuelState==='object')?v.fuelState:{};
+      const logs=typeof D!=='undefined'&&Array.isArray(D.bbmLogs)?D.bbmLogs.filter(x=>x&&x.vehicleId===v.id):[];
+      const last=logs.length?logs.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0))[0]:null;
+      const liter=Number(fs.currentFuelLiter);
+      return {liter:Number.isFinite(liter)?liter:null,last:last||null};
+    };
+    return typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.memo==='function'?CarNotesPerformance.memo('fuelLite',v.id,calc):calc();
   }
   function setText(id,value){const el=document.getElementById(id);if(el)el.textContent=value;}
   function statusClass(status){return status==='terlewat'||status==='jatuh_tempo'||status==='overdue'?'red':status==='segera'||status==='due-soon'?'yellow':'green';}
@@ -79,9 +95,9 @@
     if(health==='Baik'&&(overdue||soon))health=overdue?'Perlu Servis':'Perlu Perhatian';
     const healthEl=document.querySelector('#proMockScreen1 .pro-mock-stat.health b'); if(healthEl)healthEl.textContent=health;
     const svcEl=document.querySelector('#proMockScreen1 .pro-mock-stat.service b'); if(svcEl)svcEl.textContent=overdue?'Terlambat':soon?'Segera':'Tepat Waktu';
-    const fuel=fuelSummary();
+    const fuel=fuelLite();
     const fuelEl=document.querySelector('#proMockScreen1 .pro-mock-stat.fuel b');
-    if(fuelEl)fuelEl.textContent=fuel&&fuel.healthScore!=null?(fuel.healthScore>=80?'Efisien':fuel.healthScore>=60?'Cukup':'Perlu Cek'):'Belum Ada Data';
+    if(fuelEl)fuelEl.textContent=fuel&&fuel.liter!=null?(fuel.liter>0?'Tersedia':'Perlu Isi'):(fuel&&fuel.last?'Ada Data':'Belum Ada Data');
     const list=document.querySelector('#proMockScreen1 .pro-mock-reminder-list');
     if(list){
       const rem=serviceReminders().slice(0,3);
@@ -171,17 +187,27 @@
 
   function renderFuel(){
     const v=vehicle();const summary=fuelSummary();
-    if(!v||!summary){
-      const main=document.querySelector('#proMockScreen7 .pro-fuel-card');if(main)main.innerHTML='<h3>Fuel Intelligence</h3><p>Data BBM belum cukup untuk menampilkan intelijen kendaraan.</p>';return;
-    }
+    if(!v)return;
     const current=typeof fuelEfficiency==='function'?fuelEfficiency(v.id):null;
     const kmpl=current&&current.ok?current.kmPerLiter:null;
-    const score=summary.healthScore;
+    const score=summary&&summary.healthScore!=null?summary.healthScore:null;
     const main=document.querySelector('#proMockScreen7 .pro-fuel-card');
-    if(main)main.innerHTML=`<h3>Fuel Intelligence</h3><p>Estimasi BBM dan rekomendasi kendaraan aktif dari data yang sudah ada.</p><div class="pro-fuel-main"><div><small>↯ Rata-rata Konsumsi</small><b>${kmpl!=null?kmpl.toFixed(1)+' km/L':'—'}</b><em>${summary.monthlyCost!=null?fmtRp(summary.monthlyCost)+'/bulan':'Biaya belum cukup dihitung'}</em></div><div class="pro-score"><span>Score ↗</span><strong>${score!=null?score:'—'}<small>/100</small></strong><b>${score==null?'Belum Ada Data':score>=80?'Sangat Baik':score>=60?'Cukup':'Perlu Cek'}</b></div></div>`;
-    const fuel=summary.fuel;
+    if(main)main.innerHTML=`<h3>Fuel Intelligence</h3><p>${summary?'Estimasi BBM dan rekomendasi kendaraan aktif dari data yang sudah ada.':'Data BBM belum cukup untuk menampilkan intelijen penuh.'}</p><div class="pro-fuel-main"><div><small>↯ Rata-rata Konsumsi</small><b>${kmpl!=null?kmpl.toFixed(1)+' km/L':'—'}</b><em>${summary&&summary.monthlyCost!=null?fmtRp(summary.monthlyCost)+'/bulan':'Biaya belum cukup dihitung'}</em></div><div class="pro-score"><span>Score ↗</span><strong>${score!=null?score:'—'}<small>/100</small></strong><b>${score==null?'Belum Ada Data':score>=80?'Sangat Baik':score>=60?'Cukup':'Perlu Cek'}</b></div></div>`;
+    const gauge=document.getElementById('proFuelGauge');
+    if(gauge){
+      const html=typeof FuelCard!=='undefined'&&typeof FuelCard._gaugeHtml==='function'?FuelCard._gaugeHtml(v.id):'';
+      gauge.innerHTML=html||'<div class="pro-mock-empty">Bar BBM belum dapat dihitung. Catat Full Tank atau atur profil tangki.</div>';
+    }
+    const source=document.getElementById('proFuelSource');
+    if(source){
+      const html=typeof FuelCard!=='undefined'&&typeof FuelCard._sourceBadgeHtml==='function'?FuelCard._sourceBadgeHtml(v.id):'';
+      source.innerHTML=html||'';
+    }
+    const actions=document.querySelectorAll('#proMockScreen7 .pro-fuel-actions [data-action]');
+    actions.forEach(btn=>btn.setAttribute('data-vehicle-id',v.id));
+    const fuel=summary&&summary.fuel;
     const stats=document.querySelector('#proMockScreen7 .pro-fuel-stats');
-    if(stats)stats.innerHTML=`<div><small>Estimasi Jarak</small><b>${summary.remainingDistance!=null?Math.round(summary.remainingDistance).toLocaleString('id-ID')+' km':'—'}</b><em>${fuel&&fuel.remainingLiter!=null?'dari sisa BBM '+fuel.remainingLiter+' L':'Data sisa BBM belum tersedia'}</em></div><div><small>Biaya BBM</small><b>${summary.monthlyCost!=null?fmtRp(summary.monthlyCost):'—'}</b><em>${fuel&&fuel.remainingLiter!=null?'sisa '+fuel.remainingLiter+' L':'Data biaya belum tersedia'}</em></div>`;
+    if(stats)stats.innerHTML=`<div><small>Estimasi Jarak</small><b>${summary.remainingDistance!=null?Math.round(summary.remainingDistance).toLocaleString('id-ID')+' km':'—'}</b><em>${fuel&&fuel.remainingLiter!=null?'dari sisa BBM '+fuel.remainingLiter+' L':'Data sisa BBM belum tersedia'}</em></div><div><small>Biaya BBM</small><b>${summary&&summary.monthlyCost!=null?fmtRp(summary.monthlyCost):'—'}</b><em>${fuel&&fuel.remainingLiter!=null?'sisa '+fuel.remainingLiter+' L':'Data biaya belum tersedia'}</em></div>`;
     const trend=typeof VehicleFuelTrendSummary!=='undefined'&&typeof VehicleFuelTrendSummary.summary==='function'?VehicleFuelTrendSummary.summary(v.id,7):null;
     const chart=document.querySelector('#proMockScreen7 .pro-fuel-history');
     if(chart&&trend&&trend.ok&&Array.isArray(trend.rows)&&trend.rows.length){
@@ -190,6 +216,73 @@
     }else if(chart){chart.innerHTML='<h3>Tren BBM</h3><div class="pro-mock-empty">Belum cukup histori BBM untuk tren.</div>';}
     const pills=document.querySelector('#proMockScreen7 .pro-vehicle-pills');if(pills&&vehicles().length>1)pills.innerHTML=vehicles().map(x=>`<button class="${x.id===v.id?'active':''}" data-pro-vehicle="${esc(x.id)}">${esc(x.name||'Kendaraan')}⌄</button>`).join('');
     else if(pills){const b=pills.querySelector('[data-pro-vehicle]');if(b)b.setAttribute('data-pro-vehicle',v.id);}
+  }
+
+  function renderOther(){
+    const screen=document.getElementById('proMockScreen8'); if(!screen)return;
+    const taxBody=document.getElementById('proOtherTaxBody');
+    if(taxBody){
+      const vs=vehicles();
+      const taxRows=vs.length?vs.map(v=>{
+        const rows=(typeof VEHTAX_ITEMS!=='undefined'?Object.entries(VEHTAX_ITEMS):[]).map(([key,cfg])=>{
+          const raw=v[cfg.tglKey];
+          const st=typeof dateStatusBadge==='function'?dateStatusBadge(raw):{label:raw?'Tercatat':'Belum diisi',col:''};
+          return `<div class="pro-other-line"><span>${esc(cfg.label)}</span><b class="${esc(st.col||'')}">${esc(st.label||'Belum diisi')}</b><button data-action="openVehTaxModal" data-args="${esc(JSON.stringify([v.id]))}" aria-label="Edit pajak ${esc(v.name||'kendaraan')}">✏️</button></div>`;
+        }).join('');
+        return `<div class="pro-other-vehicle"><div><b>${esc(v.emoji||'🏍️')} ${esc(v.name||'Kendaraan')}</b><button data-action="openVehTaxModal" data-args="${esc(JSON.stringify([v.id]))}" aria-label="Kelola pajak ${esc(v.name||'kendaraan')}">Kelola</button></div>${taxRows}</div>`;
+      }).join(''):'<div class="pro-mock-empty">Belum ada kendaraan.</div>';
+      const sims=Array.isArray(D?.simList)?D.simList:[];
+      const simRows=sims.length?sims.slice(0,4).map(x=>`<div class="pro-other-line"><span>🪪 ${esc(x.nama||'SIM')}</span><b>${esc(typeof dateStatusBadge==='function'?(dateStatusBadge(x.tglAkhir).label||'Tercatat'):(x.tglAkhir||'Tercatat'))}</b><button data-action="openSimModal" data-args="${esc(JSON.stringify([x.id]))}" aria-label="Edit SIM ${esc(x.nama||'SIM')}">✏️</button></div>`).join(''):'<div class="pro-mock-empty">Belum ada data SIM.</div>';
+      taxBody.innerHTML=`${taxRows}<div class="pro-other-subhead"><span>🪪 SIM</span><button data-action="openSimModal" aria-label="Tambah SIM">＋ Tambah</button></div>${simRows}`;
+    }
+
+    const auditBody=document.getElementById('proOtherAuditBody');
+    if(auditBody&&!auditBody.dataset.ready){
+      auditBody.innerHTML='<div class="pro-mock-empty">Audit data siap dijalankan kapan saja. Pemeriksaan hanya baca, tidak mengubah data.</div>';
+    }
+    const rideBody=document.getElementById('proOtherRideBody');
+    if(rideBody){
+      const st=typeof RideUI!=='undefined'&&typeof RideUI.getState==='function'?RideUI.getState():{status:'IDLE',summary:null};
+      const label=st.status==='RECORDING'?'🔴 Merekam':st.status==='PAUSED'?'⏸ Dijeda':st.status==='STOPPED'?'✅ Selesai':'Siap merekam';
+      const dist=st.summary&&Number.isFinite(Number(st.summary.distanceKm))?Number(st.summary.distanceKm).toFixed(2)+' km':'0.00 km';
+      let controls='';
+      if(st.status==='RECORDING')controls='<button data-action="ProMockupPresenter.pauseRide" aria-label="Jeda rekaman">⏸ Jeda</button><button data-action="ProMockupPresenter.stopRide" aria-label="Selesai dan simpan rekaman">⏹ Selesai</button>';
+      else if(st.status==='PAUSED')controls='<button data-action="ProMockupPresenter.resumeRide" aria-label="Lanjutkan rekaman">▶️ Lanjut</button><button data-action="ProMockupPresenter.stopRide" aria-label="Selesai dan simpan rekaman">⏹ Selesai</button>';
+      else controls='<button data-action="ProMockupPresenter.startRide" aria-label="Mulai rekam perjalanan">▶️ Mulai Rekam</button>';
+      rideBody.innerHTML=`<div class="pro-other-ride-stats"><div><small>Status</small><b>${esc(label)}</b></div><div><small>Jarak sesi</small><b>${esc(dist)}</b></div></div><div class="pro-other-actions">${controls}</div>`;
+    }
+  }
+
+  function runAudit(){
+    const body=document.getElementById('proOtherAuditBody'); if(!body)return;
+    const input={
+      services:Array.isArray(D?.servisLogs)?D.servisLogs:[],
+      bbmLogs:Array.isArray(D?.bbmLogs)?D.bbmLogs:[],
+      taxRecords:[],
+      vehicles:vehicles(),
+      transactions:Array.isArray(D?.transactions)?D.transactions:[],
+      partsStock:Array.isArray(D?.partsStock)?D.partsStock:[],
+      reminders:Array.isArray(D?.reminders)?D.reminders:[]
+    };
+    let audit;
+    let reports=[];
+    try{
+      audit=typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.runIncremental==='function'
+        ?CarNotesPerformance.runIncremental(input)
+        :null;
+      if(!audit){
+        if(typeof CarNotesIntegritySuite!=='undefined'&&typeof CarNotesIntegritySuite.run==='function')reports.push(CarNotesIntegritySuite.run(input));
+        if(typeof CarNotesFinalAudit!=='undefined'&&typeof CarNotesFinalAudit.reconcile==='function')reports.push(CarNotesFinalAudit.reconcile(input));
+        audit={ok:reports.every(r=>r&&r.ok),issues:reports.flatMap(r=>Array.isArray(r&&r.issues)?r.issues:[]),changedDomains:[]};
+      }else{
+        reports=[audit];
+      }
+    }catch(e){audit={ok:false,issues:[{code:'AUDIT_RUNTIME_ERROR',detail:String(e&&e.message||e)}]};reports=[audit];}
+    const issues=Array.isArray(audit.issues)?audit.issues:[];
+    body.dataset.ready='1';
+    if(!reports.length){body.innerHTML='<div class="pro-mock-empty">Mesin audit belum tersedia di build ini.</div>';return;}
+    if(!issues.length){body.innerHTML='<div class="pro-audit-ok"><b>✓ Data Car Notes sehat</b><small>Tidak ditemukan gap tautan servis, BBM, pajak, stok, odometer, foto, atau reminder.</small></div>';return;}
+    body.innerHTML=`<div class="pro-audit-warn"><b>⚠️ ${issues.length} gap ditemukan</b><small>Pemeriksaan bersifat read-only. Tidak ada data yang diubah otomatis.</small><div>${issues.slice(0,8).map(x=>`<span>• ${esc(x.code||'AUDIT_ISSUE')}</span>`).join('')}</div>${issues.length>8?`<small>+ ${issues.length-8} gap lainnya</small>`:''}</div>`;
   }
 
   function renderMap(){
@@ -207,15 +300,37 @@
     document.querySelectorAll('[data-pro-today]').forEach(el=>el.textContent=label);
   }
   function renderAll(){
-    /* Date labels are shared by the legacy vehicle header and the Pro mockup.
-       Keep them synchronized even when the active theme is not Pro. */
+    /* Performance guard (audit 1751): render only the visible Pro screen.
+       Previously all 8 screens recalculated on every navigation/filter change.
+       No feature is removed; each screen is refreshed when it becomes active. */
     syncTodayLabels();
     if(!document.body||document.body.dataset.theme!=='pro')return;
     const v=vehicle();if(!v)return;
-    renderHome();renderChecklist();renderComponent();renderReminders();renderHistory();renderForm();renderFuel();renderMap();
+    const n=Number(document.getElementById('page-carnotes')?.getAttribute('data-pro-screen'))||1;
+    if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.beginRender==='function')CarNotesPerformance.beginRender('pro-screen-'+n);
+    try{
+      if(n===1)renderHome();
+      else if(n===2)renderComponent();
+      else if(n===3)renderChecklist();
+      else if(n===4)renderReminders();
+      else if(n===5)renderHistory();
+      else if(n===6)renderForm();
+      else if(n===7)renderFuel();
+      else if(n===8){renderOther();renderMap();}
+    }finally{
+      if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.finishRender==='function')CarNotesPerformance.finishRender('pro-screen-'+n);
+    }
   }
 
-  window.ProMockupPresenter={render:renderAll,setComponent:function(id){window.__proMockComponentId=id||null;renderAll();},setServiceFilter:function(v){serviceFilter=String(v||'all');renderAll();},setHistoryFilter:function(v){historyFilter=String(v||'all');renderAll();}};
+  function currentVehicleId(){return vehicle()&&vehicle().id||null;}
+  function openFuelDetail(){const id=currentVehicleId();if(id&&typeof FuelModal!=='undefined'&&typeof FuelModal.open==='function')return FuelModal.open(id);}
+  function openFuelCorrection(){const id=currentVehicleId();if(id&&typeof FuelBarCorrection!=='undefined'&&typeof FuelBarCorrection.open==='function')return FuelBarCorrection.open(id);}
+  function openFuelTank(){const id=currentVehicleId();if(id&&typeof FuelTankProfileUI!=='undefined'&&typeof FuelTankProfileUI.open==='function')return FuelTankProfileUI.open(id);}
+  function startRide(){if(typeof RideUI!=='undefined'&&typeof RideUI.start==='function'){const r=RideUI.start(currentVehicleId());renderAll();return r;}}
+  function pauseRide(){if(typeof RideUI!=='undefined'&&typeof RideUI.pause==='function'){const r=RideUI.pause();renderAll();return r;}}
+  function resumeRide(){if(typeof RideUI!=='undefined'&&typeof RideUI.resume==='function'){const r=RideUI.resume();renderAll();return r;}}
+  function stopRide(){if(typeof RideUI!=='undefined'&&typeof RideUI.stop==='function'){const r=RideUI.stop();renderAll();return r;}}
+  window.ProMockupPresenter={render:renderAll,runAudit,openFuelDetail,openFuelCorrection,openFuelTank,startRide,pauseRide,resumeRide,stopRide,setComponent:function(id){window.__proMockComponentId=id||null;renderAll();},setServiceFilter:function(v){serviceFilter=String(v||'all');renderAll();},setHistoryFilter:function(v){historyFilter=String(v||'all');renderAll();}};
   window.addEventListener('pro:mockup-refresh',renderAll);
   // Reuse the existing mockup router; add only component/vehicle selection.
   document.addEventListener('click',function(e){

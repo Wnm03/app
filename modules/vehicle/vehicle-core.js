@@ -903,6 +903,12 @@ function proMockupSetScreen(n){
     window.scrollTo(0,0);
   }
   if(n===1&&typeof renderProHome==='function')renderProHome();
+  // S1751: direct Pro navigation (data-pro-goto) must refresh the newly
+  // visible screen immediately. Previously only renderCnTab() refreshed the
+  // presenter, so direct taps could expose stale/static mockup values (notably
+  // BBM/Fuel Intelligence). The presenter itself is now screen-lazy, so this
+  // is one bounded render rather than recalculating all 8 screens.
+  if(typeof ProMockupPresenter!=='undefined'&&typeof ProMockupPresenter.render==='function')ProMockupPresenter.render();
 }
 // Android/browser back: Pro screen navigation gets a lightweight history state.
 // It only intercepts entries created by this router, so leaving Car Notes to a
