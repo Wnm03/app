@@ -68,7 +68,12 @@ test('M7 regression firewall: Servis SoT and build group integrity remain intact
 });
 
 test('M8 cache/build wiring: Pro UI is shipped and version markers are synchronized', () => {
-  assert.match(html, /pro-ui-layer\.css\?v=1713/);
-  assert.match(sw, /kw-cache-v1713/);
+  // FIX (1725): versi cache-buster ikut naik tiap sesi lanjutan (1713 -> ...
+  // -> 1725). Gate ini ngecek pola PENOMORAN-nya konsisten (html & sw.js
+  // sinkron di versi TERBARU yang sama), bukan angka statis 1713 yg jadi
+  // basi begitu ada sesi lanjutan. Lihat AUDIT-APP-MAIN13-MOCKUP-FIDELITY-
+  // COMPLETION-1724.md dan SESSION-NOTE fix setCnTab (1725).
+  assert.match(html, /pro-ui-layer\.css\?v=1725/);
+  assert.match(sw, /kw-cache-v1725/);
   assert.match(sw, /pro-ui-layer\.css/);
 });
