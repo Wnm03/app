@@ -1,3 +1,27 @@
-car-notes.js
-SESSION-NOTE-S750-SERVIS-CATEGORY-EDIT.md
-CHANGED-FILES-s750.txt
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+index.html
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render-b.js
+modules/shared/modules-render.js
+modules/vehicle/car-notes-performance.js (dari sesi s749)
+modules/vehicle/pro-mockup-presenter.js (poin #1: hapus dead selector .pro-shop-list)
+modules/vehicle/vehicle-core.js
+pro-ui-layer.css (poin #1: hapus dead CSS .pro-shop-list/.shop-icon)
+scripts/build.js
+self-test.js
+sw.js
+docs/AUDIT_MATRIX.md (poin #2: refresh Coverage Baseline)
+docs/FILE-MAP.md
+docs/COVERAGE-PER-MODULE.md
+docs/RELEASE-GATE-LOG.md
+docs/CLAUDE.md
+tests/ (FULL directory, 790 file, dipecah part-01..part-08 maks 100/folder)
+  - tests/pro-mockup-fidelity-completion-1718.test.js (dari sesi s749)
+  - tests/pro-mockup-data-driven-1724.test.js: DIPERBAIKI sesi ini (1 assertion basi
+    akibat cleanup poin #1, lihat README)
+  - tests/carnotes-shop-list-removal-s749.test.js (BARU sesi ini — guard poin #1)

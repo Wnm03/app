@@ -1514,6 +1514,23 @@ let tabName=null;
 try{ tabName=JSON.parse(btn.getAttribute('data-args')||'[]')[0]; }catch(e){ /* data-args tidak valid/kosong -- tabName tetap null, di-skip guard di bawah */ }
 if(!tabName)return;
 g.fn(tabName,btn);
+// Pro Car Notes intentionally hides the legacy #cnTab-* panes with
+// display:none!important and routes the visible experience to one of the
+// dedicated #proMockScreen* panes. Treat that route as the real visibility
+// contract; otherwise this self-test becomes a false-positive whenever the
+// active theme is Pro (S1751).
+if(g.page==='#page-carnotes'&&document.body&&document.body.dataset.theme==='pro'){
+const proMap={beranda:1,servis:3,bbm:7,pajak:8,insight:1,jalan:1};
+const screenNo=proMap[tabName];
+if(screenNo!=null){
+const proPane=document.querySelector('#page-carnotes .pro-mock-screen[data-pro-screen="'+screenNo+'"]');
+if(proPane){
+const disp=getComputedStyle(proPane).display;
+_selfTestAssert(disp!=='none','Pro Car Notes screen #'+screenNo+' harus terlihat setelah tab "'+tabName+'" diaktifkan');
+}
+return;
+}
+}
 const pane=document.getElementById(g.paneId(tabName));
 if(pane){
 const disp=getComputedStyle(pane).display;
@@ -1676,6 +1693,36 @@ const coreOk = r.sync.ok && r.ownerIdConsistency.ok && r.debtNameStaleness.ok &&
 // pesan (informasional) supaya kalau ini sendirian yang false, pesan
 // tetap menjelaskan kenapa.
 _selfTestAssert(coreOk,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r.sync.ok+' (missing:'+r.sync.missing.length+' orphan:'+r.sync.orphan.length+' mismatch:'+r.sync.mismatch.length+'), ownerIdConsistency.ok='+r.ownerIdConsistency.ok+' (divergent:'+r.ownerIdConsistency.divergent.length+'), debtNameStaleness.ok='+r.debtNameStaleness.ok+' (stale:'+r.debtNameStaleness.stale.length+'), accountSync.ok='+r.accountSync.ok+' (missing:'+r.accountSync.missing.length+' orphan:'+r.accountSync.orphan.length+'), transactionOwnerRefs.ok='+r.transactionOwnerRefs.ok+' (orphan:'+r.transactionOwnerRefs.orphan.length+'), ownershipDualSource.ok='+r.ownershipDualSource.ok+' (flagged:'+r.ownershipDualSource.flagged.length+', informasional -- tidak menggagalkan tes), poolCommitment.ok='+r.poolCommitment.ok+' (poolStatus:'+r.poolCommitment.poolStatus+' overAllocatedOwners:'+r.poolCommitment.overAllocatedOwners.length+', informasional -- tidak menggagalkan tes), returnVsLiability.ok='+r.returnVsLiability.ok+' (flagged:'+r.returnVsLiability.flagged.length+', informasional -- tidak menggagalkan tes), returnVsAccountLiability.ok='+r.returnVsAccountLiability.ok+' (flagged:'+r.returnVsAccountLiability.flagged.length+', informasional -- tidak menggagalkan tes), pendingOwnerReview.ok='+r.pendingOwnerReview.ok+' (pending:'+r.pendingOwnerReview.pending.length+', informasional -- tidak menggagalkan tes), ownerIdConflicts.ok='+r.ownerIdConflicts.ok+' (conflicts:'+r.ownerIdConflicts.conflicts.length+', informasional -- tidak menggagalkan tes)');
+}},
+{name:'Car Notes: Feature Parity Guard — fitur inti legacy tidak boleh hilang dari build',fn:()=>{
+  _selfTestAssert(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.inventory==='function','CarNotesPerformance feature inventory tidak tersedia di build');
+  const r=CarNotesPerformance.inventory();
+  _selfTestAssert(r.ok,'Feature Parity Car Notes gagal — fitur hilang: '+r.missing.join(', '));
+}},
+{name:'Car Notes: Performance Cache Guard — memo menghindari kalkulasi berulang dalam satu revision',fn:()=>{
+  _selfTestAssert(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.memo==='function','CarNotesPerformance.memo tidak tersedia');
+  let calls=0; const id='__selftest_cn_cache__';
+  if(typeof CarNotesPerformance.bump==='function')CarNotesPerformance.bump('selftest-cache');
+  const a=CarNotesPerformance.memo('selftest',id,()=>{calls++;return 42;});
+  const b=CarNotesPerformance.memo('selftest',id,()=>{calls++;return 99;});
+  _selfTestAssert(a===42&&b===42&&calls===1,'Cache Car Notes tidak bekerja: calls='+calls+' a='+a+' b='+b);
+}},
+{name:'Car Notes: Incremental Audit Guard — audit tetap read-only dan memakai revision/domain cache',fn:()=>{
+  _selfTestAssert(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.auditCurrent==='function','CarNotesPerformance.auditCurrent tidak tersedia');
+  const r=CarNotesPerformance.auditCurrent();
+  _selfTestAssert(r&&Array.isArray(r.issues)&&Array.isArray(r.reports),'Hasil incremental audit tidak valid');
+  _selfTestAssert(r.revision===CarNotesPerformance.revision(),'Revision audit tidak sinkron');
+}},
+{name:'Car Notes: Performance Metrics Guard — render tercatat per tab dan cache hit/miss terukur',fn:()=>{
+  _selfTestAssert(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.snapshot==='function','CarNotesPerformance.snapshot tidak tersedia');
+  if(typeof CarNotesPerformance.render==='function'){CarNotesPerformance.render('selftest');CarNotesPerformance.render('selftest');}
+  const s=CarNotesPerformance.snapshot();
+  _selfTestAssert(s.metrics&&s.metrics.byTab&&s.metrics.byTab.selftest>=2,'Metrics render Car Notes tidak mencatat render per tab');
+  _selfTestAssert(Number.isFinite(Number(s.metrics.cacheHits))&&Number.isFinite(Number(s.metrics.cacheMisses)),'Metrics cache hit/miss tidak valid');
+}},
+{name:'Car Notes: Fuel Intelligence bertingkat — Home tidak memanggil full Fuel Insight Engine',fn:()=>{
+  _selfTestAssert(typeof CarNotesPerformance!=='undefined','Performance guard harus termuat sebelum presenter Car Notes');
+  _selfTestAssert(typeof FuelInsightEngine!=='undefined' || typeof FuelCard!=='undefined','Engine Fuel Intelligence/ FuelCard harus tetap tersedia');
 }},
 ];
 }
