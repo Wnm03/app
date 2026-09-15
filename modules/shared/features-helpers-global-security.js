@@ -111,8 +111,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1708';
-const PRODUCTION_BUILD_SYNCED_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1708';
+const APP_BUILD_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1713';
+const PRODUCTION_BUILD_SYNCED_VERSION = 'sesi-servis-actiontype-riwayat-leak-merge-1713';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
