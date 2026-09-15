@@ -69,7 +69,16 @@ function main() {
   }, results);
 
   check('HISTORY/REMINDER consume the same service-log fact', () => {
-    const history = read('car-notes.js');
+    // FIX (sesi perbaikan release-gate): dulu "history" dibaca dari
+    // car-notes.js, tapi sejak sesi refactor arsitektur Servis (lihat
+    // komentar "Servis canonical source: modules/vehicle/servis.js
+    // (GROUP_B)." di car-notes.js baris ~532), seluruh logic riwayat servis
+    // (baca/tulis D.servisLogs, render riwayat, checklist, dst) sudah
+    // dipindah ke modules/vehicle/servis.js. car-notes.js sekarang cuma
+    // berisi VEHTAX/BBM/Torsi — 0 referensi D.servisLogs, jadi gate ini
+    // selalu FAIL walau kode sebenarnya sehat. Diarahkan ke lokasi source-
+    // of-truth yang benar saat ini.
+    const history = read('modules/vehicle/servis.js');
     const reminder = read('modules/vehicle/sparepart-servis.js');
     if (!history.includes('D.servisLogs')) fail('history does not use servisLogs');
     if (!reminder.includes('D.servisLogs')) fail('reminder does not use servisLogs');
