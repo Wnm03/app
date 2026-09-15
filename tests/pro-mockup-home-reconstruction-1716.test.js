@@ -26,6 +26,7 @@ test('Pro navigation has five mockup destinations and keeps existing action cont
   assert.match(html,/data-args='\["pajak", "\$el"\]'/);
   assert.match(core,/const CN_TAB_LABEL=\{beranda:/);
   assert.match(core,/function proOpenHistoryTab\(\)/);
+  assert.match(core,/function proOpenHistory\(\)/);
   assert.match(core,/\['beranda','insight','bbm','servis','pajak','jalan'\]/);
   assert.match(render,/function renderProHome\(\)/);
   assert.match(render,/renderProHome\(\);/);
