@@ -751,7 +751,41 @@ out.innerHTML=rows.map(r=>{const title=r.querySelector('.tx-name,.u-fw700,.u-fw8
 }
 
 function renderCnTab(){
-if(document.body&&document.body.dataset.theme==='pro'&&typeof window!=='undefined'&&!window.__proCnHomeInitialized){curCnTab='beranda';window.__proCnHomeInitialized=true;}
+// BUGFIX (audit laporan user, screenshot tema Klasik: panel "BBM" & panel
+// "Beranda" kelihatan NUMPUK/dobel sekaligus di halaman Car Notes).
+// ROOT CAUSE: markup statis index.html/app_production.html mem-bikin
+// #cnTab-beranda (pane dashboard baru, Sesi 1716) TIDAK punya class
+// u-dnone by default (supaya langsung kelihatan di tema Pro tanpa nunggu
+// JS), tapi #cnTab-bbm (pane lama, default tab SEBELUM fitur Beranda ada)
+// JUGA tidak punya u-dnone -- jadi begitu markup dirender browser, KEDUA
+// pane itu computed-visible BERSAMAAN di tema Klasik (beda dgn tema Pro
+// yang panel bbm/insight/servis/jalan-nya SELALU disembunyikan paksa lewat
+// CSS !important, lihat pro-ui-layer.css). Baris LAMA di sini cuma
+// nge-set variable `curCnTab='beranda'` utk tema Pro tanpa PERNAH
+// benar2 toggle class u-dnone/active di DOM -- jadi baik tema Pro maupun
+// Klasik sama2 mengandalkan default markup HTML yg TIDAK konsisten satu
+// sama lain (markup di-desain utk Pro, kebobolan ke Klasik).
+// FIX: sekali per sesi (guard __cnTabBootInitialized), panggil setCnTab()
+// SUNGGUHAN (bukan cuma set variable) dgn tab default yg benar per tema --
+// 'beranda' utk Pro (dashboard baru), 'bbm' utk Klasik (perilaku ASLI
+// sebelum fitur Beranda ditambah, TIDAK diubah). setCnTab() sendiri yang
+// menjamin cuma SATU pane ter-computed-visible (toggle u-dnone ke semua
+// #cnTab-* sekaligus, pola sama persis dipakai tiap kali user tap tab
+// manual) -- 0 CSS baru, 0 rumus baru, murni pemanggilan fungsi yg SUDAH
+// ada di titik yang tepat. `return` di akhir supaya badan renderCnTab()
+// tidak dobel jalan (setCnTab() sendiri sudah manggil renderCnTab() ulang
+// di akhir, lihat definisinya di vehicle-core.js).
+if(typeof window!=='undefined'&&!window.__cnTabBootInitialized){
+window.__cnTabBootInitialized=true;
+const isPro=document.body&&document.body.dataset.theme==='pro';
+const defaultTab=isPro?'beranda':'bbm';
+if(typeof setCnTab==='function'){
+const btn=document.querySelector('#page-carnotes .cn-tab[data-args*="'+defaultTab+'"]');
+setCnTab(defaultTab,btn||null);
+return;
+}
+curCnTab=defaultTab;
+}
 // SELF-HEAL (audit S444+): backfill fuelState.referenceKm yang kosong di
 // data lama SEBELUM presenter fuel di bawah dipanggil, supaya begitu
 // halaman Car Notes ini dibuka, estimasi liter langsung mulai reaktif
