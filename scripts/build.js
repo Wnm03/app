@@ -308,6 +308,7 @@ const GROUP_B = [
     'modules/vehicle/car-notes-integrity-suite.js',
   'modules/vehicle/fuel-integrity-reconciler.js',
   'modules/vehicle/vehicle-tax-integrity-reconciler.js',
+  'modules/vehicle/car-notes-performance.js',
   'modules/finance/tx-servis.js',
   'modules/finance/tx-stok-sparepart.js',
   'modules/finance/tx-renov.js',
