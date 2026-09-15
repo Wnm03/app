@@ -1,3 +1,19 @@
+/* PRO MOCKUP ISOLATION (1728 cumulative visual acceptance): dedicated Pro
+ * screens and their Pro-only navigation must never paint outside the Pro theme.
+ * This prevents Screen 8 map/SVG layers from leaking into legacy Car Notes. */
+.pro-mockup-screens,
+.pro-mock-screen,
+.pro-mock-bottom-nav,
+.pro-cn-bottom-nav {
+  display: none !important;
+}
+
+[data-theme="pro"] .pro-mockup-screens { display: block !important; }
+[data-theme="pro"] .pro-mock-screen { display: none !important; }
+[data-theme="pro"] .pro-mock-screen.active { display: block !important; }
+[data-theme="pro"] .pro-mock-bottom-nav { display: grid !important; }
+[data-theme="pro"] .pro-cn-bottom-nav { display: grid !important; }
+
 /* KELUARGA W — Pro Dark UI layer
  * Sesi desain: visual target mockup dark 14 Sep 2026.
  * Additive CSS only: no new dependency, no JS/data contract changes.
@@ -261,7 +277,19 @@ body[data-theme="pro"]{background:var(--bg);font-family:'Plus Jakarta Sans',sans
 [data-theme="pro"] .pro-cn-bottom-nav button{min-width:0;min-height:47px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:12px;background:transparent;color:var(--text3);font:600 8px 'Plus Jakarta Sans',sans-serif;}
 [data-theme="pro"] .pro-cn-bottom-nav button svg{width:18px;height:18px;}
 [data-theme="pro"] .pro-cn-bottom-nav button.active{color:var(--accent);background:rgba(45,156,255,.10);}
-[data-theme="pro"] #mainNav{display:none!important;}
+/* 1729 NAV VISIBILITY FIX
+ * The global #mainNav is the app-wide navigation and must remain available
+ * after a theme switch. The previous blanket Pro rule hid it on EVERY page,
+ * leaving Dashboard/Finance/Shop/etc. without navigation. On Car Notes Pro,
+ * the dedicated .pro-cn-bottom-nav replaces the global bar; elsewhere the
+ * global nav remains visible. Use :has only for the optional replacement hide;
+ * if an older engine lacks :has, the safe fallback is to keep #mainNav visible.
+ */
+[data-theme="pro"] #mainNav{display:flex!important;}
+@supports selector(body:has(#page-carnotes.active)) {
+  body[data-theme="pro"]:has(#page-carnotes.active) #mainNav{display:none!important;}
+}
+
 [data-theme="pro"] #page-carnotes{padding-bottom:88px;}
 @media (max-width:420px){
   [data-theme="pro"] .pro-home-heading{margin-top:0;}
@@ -279,7 +307,18 @@ body[data-theme="pro"]{background:var(--bg);font-family:'Plus Jakarta Sans',sans
   [data-theme="pro"] .pro-home-screen{max-width:736px;margin:0 auto;}
 }
 
-[data-theme="pro"] #page-carnotes > #cnTab-beranda,[data-theme="pro"] #page-carnotes > #cnTab-insight,[data-theme="pro"] #page-carnotes > #cnTab-bbm,[data-theme="pro"] #page-carnotes > #cnTab-servis,[data-theme="pro"] #page-carnotes > #cnTab-jalan,[data-theme="pro"] #page-carnotes > .pro-primary-tabs,[data-theme="pro"] #page-carnotes > .page-breadcrumb{display:none!important;}
+/* BUGFIX (audit self-test "u-dnone (!important) menang lawan inline style
+   display:block"): #cnTab-beranda TIDAK BOLEH ikut daftar hide-permanen ini.
+   Beda dgn #cnTab-insight/bbm/servis/jalan (yang kontennya sudah digantikan
+   total oleh #proMockupScreens & tidak pernah perlu tampil lagi di tema pro),
+   #cnTab-beranda tetap pane aktif sungguhan yang di-toggle oleh setCnTab()
+   (vehicle-core.js) via class u-dnone + inline style.display -- selector
+   !important di sini SEBELUMNYA menang mutlak lawan kombinasi itu sehingga
+   panel beranda tidak pernah computed-visible walau tab "beranda" aktif.
+   Cukup exclude #cnTab-beranda; 4 pane lain & .pro-primary-tabs/.page-
+   breadcrumb tetap disembunyikan permanen seperti semula, TIDAK ADA
+   perubahan perilaku lain. */
+[data-theme="pro"] #page-carnotes > #cnTab-insight,[data-theme="pro"] #page-carnotes > #cnTab-bbm,[data-theme="pro"] #page-carnotes > #cnTab-servis,[data-theme="pro"] #page-carnotes > #cnTab-jalan,[data-theme="pro"] #page-carnotes > .pro-primary-tabs,[data-theme="pro"] #page-carnotes > .page-breadcrumb{display:none!important;}
 /* 1717 PRO MOCKUP FIDELITY COMPLETION: eight dedicated screens reconstructed from mockup-dark.png. */
 [data-theme="pro"] #page-carnotes .pro-mockup-screens{display:block;max-width:736px;margin:0 auto;min-height:590px;}
 [data-theme="pro"] #page-carnotes .pro-mock-screen{display:none;min-height:590px;padding:2px 0 10px;}
