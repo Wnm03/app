@@ -68,12 +68,19 @@ test('M7 regression firewall: Servis SoT and build group integrity remain intact
 });
 
 test('M8 cache/build wiring: Pro UI is shipped and version markers are synchronized', () => {
-  // FIX (1725): versi cache-buster ikut naik tiap sesi lanjutan (1713 -> ...
-  // -> 1725). Gate ini ngecek pola PENOMORAN-nya konsisten (html & sw.js
-  // sinkron di versi TERBARU yang sama), bukan angka statis 1713 yg jadi
-  // basi begitu ada sesi lanjutan. Lihat AUDIT-APP-MAIN13-MOCKUP-FIDELITY-
-  // COMPLETION-1724.md dan SESSION-NOTE fix setCnTab (1725).
-  assert.match(html, /pro-ui-layer\.css\?v=1725/);
-  assert.match(sw, /kw-cache-v1725/);
+  // FIX (1726, audit bug "u-dnone !important menang lawan display:block" di
+  // #cnTab-beranda): versi cache-buster ikut naik tiap sesi lanjutan (1713 ->
+  // ... -> 1725 -> 1726). Gate ini SEBELUMNYA menghardcode angka statis
+  // (v=1725) sehingga otomatis basi/gagal begitu ada sesi lanjutan menaikkan
+  // versi lagi -- diperbaiki jadi ekstrak versi TERBARU langsung dari
+  // app_production.html, lalu cek POLA-nya konsisten (html & sw.js sinkron
+  // di versi yang sama), bukan angka statis. Lihat AUDIT-APP-MAIN13-MOCKUP-
+  // FIDELITY-COMPLETION-1724.md, SESSION-NOTE fix setCnTab (1725), dan audit
+  // fix #cnTab-beranda always-hidden (1726).
+  const vMatch = html.match(/pro-ui-layer\.css\?v=(\d+)/);
+  assert.ok(vMatch, 'app_production.html harus punya pro-ui-layer.css?v=<angka>');
+  const currentVersion = vMatch[1];
+  assert.match(html, new RegExp(`pro-ui-layer\\.css\\?v=${currentVersion}(?!\\d)`));
+  assert.match(sw, new RegExp(`kw-cache-v${currentVersion}(?!\\d)`));
   assert.match(sw, /pro-ui-layer\.css/);
 });
