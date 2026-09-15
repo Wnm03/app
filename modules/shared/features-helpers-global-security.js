@@ -321,6 +321,8 @@ if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='fun
 if(typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun();
 if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
 if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
+// S1752: one mutation clock for Car Notes caches/audits. All feature engines remain the SoT.
+if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.bump==='function')CarNotesPerformance.bump('save');
 // s422g: guard di titik tunggal ini (bukan nambal tiap pemanggil save() satu-satu)
 // supaya panel/kalkulasi turunan yang bergantung ke nilai aset/saldo akun (mis.
 // Kekayaan Bersih) otomatis ikut refresh tiap ada mutasi data -- pola sama dgn

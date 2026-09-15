@@ -751,30 +751,11 @@ out.innerHTML=rows.map(r=>{const title=r.querySelector('.tx-name,.u-fw700,.u-fw8
 }
 
 function renderCnTab(){
-// BUGFIX (audit laporan user, screenshot tema Klasik: panel "BBM" & panel
-// "Beranda" kelihatan NUMPUK/dobel sekaligus di halaman Car Notes).
-// ROOT CAUSE: markup statis index.html/app_production.html mem-bikin
-// #cnTab-beranda (pane dashboard baru, Sesi 1716) TIDAK punya class
-// u-dnone by default (supaya langsung kelihatan di tema Pro tanpa nunggu
-// JS), tapi #cnTab-bbm (pane lama, default tab SEBELUM fitur Beranda ada)
-// JUGA tidak punya u-dnone -- jadi begitu markup dirender browser, KEDUA
-// pane itu computed-visible BERSAMAAN di tema Klasik (beda dgn tema Pro
-// yang panel bbm/insight/servis/jalan-nya SELALU disembunyikan paksa lewat
-// CSS !important, lihat pro-ui-layer.css). Baris LAMA di sini cuma
-// nge-set variable `curCnTab='beranda'` utk tema Pro tanpa PERNAH
-// benar2 toggle class u-dnone/active di DOM -- jadi baik tema Pro maupun
-// Klasik sama2 mengandalkan default markup HTML yg TIDAK konsisten satu
-// sama lain (markup di-desain utk Pro, kebobolan ke Klasik).
-// FIX: sekali per sesi (guard __cnTabBootInitialized), panggil setCnTab()
-// SUNGGUHAN (bukan cuma set variable) dgn tab default yg benar per tema --
-// 'beranda' utk Pro (dashboard baru), 'bbm' utk Klasik (perilaku ASLI
-// sebelum fitur Beranda ditambah, TIDAK diubah). setCnTab() sendiri yang
-// menjamin cuma SATU pane ter-computed-visible (toggle u-dnone ke semua
-// #cnTab-* sekaligus, pola sama persis dipakai tiap kali user tap tab
-// manual) -- 0 CSS baru, 0 rumus baru, murni pemanggilan fungsi yg SUDAH
-// ada di titik yang tepat. `return` di akhir supaya badan renderCnTab()
-// tidak dobel jalan (setCnTab() sendiri sudah manggil renderCnTab() ulang
-// di akhir, lihat definisinya di vehicle-core.js).
+// CAR NOTES PERFORMANCE GUARD (audit 1751): the old pipeline rendered the
+// entire Vehicle + Fuel + Ride stack on EVERY tab switch. On low-end Android
+// this made Car Notes feel heavy even when the user only opened one tab.
+// Keep the existing renderers/SoT, but render only the active domain. Hidden
+// panes are rendered lazily when first activated, so no feature is removed.
 if(typeof window!=='undefined'&&!window.__cnTabBootInitialized){
 window.__cnTabBootInitialized=true;
 const isPro=document.body&&document.body.dataset.theme==='pro';
@@ -786,89 +767,78 @@ return;
 }
 curCnTab=defaultTab;
 }
-// SELF-HEAL (audit S444+): backfill fuelState.referenceKm yang kosong di
-// data lama SEBELUM presenter fuel di bawah dipanggil, supaya begitu
-// halaman Car Notes ini dibuka, estimasi liter langsung mulai reaktif
-// thd KM terbaru (0 aksi manual dibutuhkan). Idempotent & murah — lihat
-// catatan lengkap di healFuelStateReferenceKm() (vehicle-core.js).
+
+// SELF-HEAL (audit S444+): keep legacy fuelState referenceKm repair before
+// any fuel renderer that may read the estimate. This is idempotent and cheap.
 if(typeof healFuelStateReferenceKm==='function')healFuelStateReferenceKm();
-if(typeof MobilInsight!=='undefined')MobilInsight.render();
-// Vehicle Dashboard/Insight/Brief/Alert/Insight Feed/Analytics/Decision/
-// Automation (Sesi 77-83, Batch 7) — DIPINDAH ke sini dari
-// DashboardHub.render() (Sesi 133, permintaan eksplisit user). 100%
-// reuse presenter yang sudah ada, TIDAK ada rumus baru. Container HTML
-// (#vehdashWrap dst) juga sudah dipindah ke #page-carnotes.
-if(typeof VehicleDashboard!=='undefined')VehicleDashboard.render();
-if(typeof VehicleInsightPresenter!=='undefined')VehicleInsightPresenter.render();
-// Sesi 171 (temuan audit, permintaan eksplisit user): VehicleDailyBrief.render()
-// TIDAK LAGI dipanggil di sini — semua angka yang disusunnya (totalVehicles/
-// avgHealth/totalOverdue via VehicleDashboard, reminder.total/overdueCount via
-// VehicleInsightPresenter) SUDAH tampil sbg card di halaman Car Notes ini
-// (sumbernya sama: VehicleAIHook.fleetSummary()), jadi narasi teksnya 100%
-// presentasi ganda — pola sama persis alasan VehicleAlertPanel/VehicleInsightFeed
-// di Sesi 156b (lihat komentar di bawah). File
-// modules/vehicle/vehicle-daily-brief.js & tests/vehicle-daily-brief.test.js
-// TIDAK dihapus (test itu me-load file sendirian, tidak lewat sini) — hanya
-// wiring live-nya yg dicabut. #vehBriefWrap turut disembunyikan (lihat
-// index.html/app_production.html) supaya tidak nongol sbg card kosong.
-// Sesi 156b (permintaan eksplisit user): VehicleAlertPanel.render()/
-// VehicleInsightFeed.render() TIDAK LAGI dipanggil terpisah di sini —
-// digabung jadi satu panggilan VehicleAttentionPresenter.render() bareng
-// VehicleDecisionPresenter (lihat baris itu di bawah, dihapus dari sana
-// juga) supaya mengisi SATU container #vehAttentionBody ("🧭 Perlu
-// Perhatian"), bukan 3 container/versi terpisah dari info yang sama.
-if(typeof VehicleAttentionPresenter!=='undefined')VehicleAttentionPresenter.render();
-if(typeof VehicleAnalyticsPresenter!=='undefined')VehicleAnalyticsPresenter.render();
-// TASK-141: Fuel Intelligence Card — 100% reuse FuelIntelligenceEngine
-// (yang sendiri 100% reuse VehicleFuelTrendSummary/VehicleReminder di
-// atas), pola sama persis presenter vehicle lain di baris ini.
-if(typeof FuelCard!=='undefined')FuelCard.render();
-// TASK-150: Fuel Dashboard — 100% reuse FuelInsightEngine.getSummary()
-// (yang sendiri 100% reuse seluruh engine fuel yang sudah ada), pola sama
-// persis FuelCard.render() di baris atas.
-if(typeof FuelDashboard!=='undefined')FuelDashboard.render();
-// TASK-154: Fuel Comparison — 100% reuse FuelInsightEngine.getSummary()
-// (per kendaraan) + FuelFleetSelector.selectVehicle() (badge prioritas),
-// pola sama persis FuelDashboard.render() di baris atas. Refresh setelah
-// transaksi BBM/servis terjadi lewat renderCnTab() ini sendiri dipanggil
-// ulang (pola sama persis refresh FuelCard/FuelDashboard).
-if(typeof FuelCompare!=='undefined')FuelCompare.render();
-// TASK-156: Fuel Trend Dashboard — 100% reuse FuelInsightEngine.getSummary()
-// + FuelCostAnalytics/FuelPredictionEngine/FuelMaintenanceEngine (dipanggil
-// langsung utk field trend granular) + FuelModal.open()/
-// FuelBarCorrection.open(), pola sama persis FuelDashboard.render() di
-// baris atas. Refresh setelah transaksi BBM/servis terjadi lewat
-// renderCnTab() ini sendiri dipanggil ulang (pola sama persis refresh
-// FuelCard/FuelDashboard/FuelCompare).
-if(typeof FuelTrendDashboard!=='undefined')FuelTrendDashboard.render();
-if(typeof VehicleAutomationPresenter!=='undefined')VehicleAutomationPresenter.render();
-// Sesi 532 (fix audit "UI Ride tidak muncul di tab Jalan"): RideUI (S525)
-// sudah lengkap dikoding+ditest tapi render()-nya belum pernah dipanggil
-// dari mana pun (pane #cnTab-jalan juga belum ada di markup -- sudah
-// ditambah sesi ini, lihat index.html/app_production.html). Panggilan
-// ini pola SAMA PERSIS presenter Car Notes lain di atas -- 0 rumus baru,
-// murni sinkron DOM. RideUI.render() sendiri SELALU guard getElementById
-// null, jadi aman dipanggil tiap renderCnTab() walau tab 'jalan' sedang
-// tidak aktif (sama seperti presenter lain di sini yang tetap dipanggil
-// terlepas tab mana yang aktif).
-// RE-APPLIED (Sesi 543, audit): panggilan ini sempat hilang lagi di
-// build v1266-1267 (Sesi 538) karena modules-render.js ter-rebuild dari
-// base lama sebelum Sesi 532 -- dipasang ulang persis sama.
-if(typeof RideUI!=='undefined')RideUI.render();
-renderProHome();
-if(typeof proMockupInit==='function')proMockupInit();
-if(typeof ProMockupPresenter!=='undefined')ProMockupPresenter.render();
+
+const activeTab=curCnTab||'bbm';
+const isPro=document.body&&document.body.dataset.theme==='pro';
+if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==='function')CarNotesPerformance.render(activeTab);
+
+// The Pro theme has a dedicated data-driven mockup. Legacy panes are hidden
+// by pro-ui-layer.css, so rendering them here is pure wasted work. The Pro
+// presenter now renders only its active screen (see pro-mockup-presenter.js).
+if(isPro){
+  renderProHome();
+  if(typeof proMockupInit==='function'&&!window.__proMockup1717Bound)proMockupInit();
+  else if(typeof ProMockupPresenter!=='undefined'&&typeof ProMockupPresenter.render==='function')ProMockupPresenter.render();
+  const curKmEl=document.getElementById('cnCurKm');
+  const curKmSrcEl=document.getElementById('cnCurKmSrc');
+  if(curKmEl&&!document.getElementById('cnCurKmInput')){
+    const kmSrc=getVehicleKmSource(curVehicleId);
+    curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
+    if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
+  }
+  renderCarImportVehicleSelect();
+  return;
+}
+
+// Classic theme: keep each existing feature, but render only the active
+// feature family. This is the critical performance fix: no hidden fuel,
+// analytics, ride, tax, or vehicle-intelligence cards are recomputed on every
+// unrelated tab switch.
+if(activeTab==='insight'){
+  if(typeof MobilInsight!=='undefined')MobilInsight.render();
+  if(typeof VehicleDashboard!=='undefined')VehicleDashboard.render();
+  if(typeof VehicleInsightPresenter!=='undefined')VehicleInsightPresenter.render();
+  if(typeof VehicleAttentionPresenter!=='undefined')VehicleAttentionPresenter.render();
+  if(typeof VehicleAnalyticsPresenter!=='undefined')VehicleAnalyticsPresenter.render();
+  if(typeof VehicleAutomationPresenter!=='undefined')VehicleAutomationPresenter.render();
+}else if(activeTab==='bbm'){
+  if(typeof FuelCard!=='undefined')FuelCard.render();
+  if(typeof FuelDashboard!=='undefined')FuelDashboard.render();
+  if(typeof FuelCompare!=='undefined')FuelCompare.render();
+  if(typeof FuelTrendDashboard!=='undefined')FuelTrendDashboard.render();
+  renderBbmList();
+}else if(activeTab==='servis'){
+  if(typeof renderServiceIntegrityCard==='function')renderServiceIntegrityCard();
+  if(typeof Servis!=='undefined'&&typeof Servis.renderReminder==='function')Servis.renderReminder();
+  renderServisList();
+  if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.auditCurrent==='function'){
+    const audit=CarNotesPerformance.auditCurrent();
+    const auditEl=document.getElementById('serviceIntegrityCard');
+    if(auditEl&&audit&&audit.issues&&audit.issues.length){
+      auditEl.setAttribute('data-cn-audit-issues',String(audit.issues.length));
+    }else if(auditEl){auditEl.setAttribute('data-cn-audit-issues','0');}
+  }
+}else if(activeTab==='pajak'){
+  renderVehTaxSim();
+}else if(activeTab==='jalan'){
+  if(typeof RideUI!=='undefined')RideUI.render();
+}else if(activeTab==='beranda'){
+  // Classic has no visible Beranda pane; keep this branch intentionally tiny
+  // for callers that restore a persisted Pro-only tab in a partial DOM.
+}
+
 const curKmEl=document.getElementById('cnCurKm');
 const curKmSrcEl=document.getElementById('cnCurKmSrc');
 if(curKmEl&&!document.getElementById('cnCurKmInput')){
-const kmSrc=getVehicleKmSource(curVehicleId);
-curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
-if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
+  const kmSrc=getVehicleKmSource(curVehicleId);
+  curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
+  if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
 }
 renderCarImportVehicleSelect();
-renderVehTaxSim();
-if(curCnTab==='bbm')renderBbmList();
-if(curCnTab==='servis')renderServisList();
 }
 
 function renderBbmList(){return BBM.renderList();}
