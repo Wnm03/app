@@ -796,7 +796,7 @@ renderSimList();
 /* moved to modules-render.js: renderSimList */
 // S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
 // KEU_TAB_LABEL (tx-list-cashflow.js).
-const CN_TAB_LABEL={insight:'Insight AI',bbm:'BBM',servis:'Servis',pajak:'Pajak & SIM',jalan:'Jalan'};
+const CN_TAB_LABEL={beranda:'Beranda',insight:'Insight AI',bbm:'BBM',servis:'Servis',pajak:'Pajak & SIM',jalan:'Jalan'};
 function setCnTab(t,el){
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
@@ -809,10 +809,12 @@ if(typeof dismissAllToasts==='function')dismissAllToasts();
 curCnTab=t;
 document.querySelectorAll('#page-carnotes .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el) el.classList.add('active');
+const proBottom=document.getElementById('proCnBottomNav');
+if(proBottom){proBottom.querySelectorAll('button').forEach(b=>b.classList.remove('active')); const map={beranda:0,servis:1,bbm:3,pajak:4}; const bi=map[t]; const btnEl=bi!=null&&proBottom.children?proBottom.children[bi]:null; if(btnEl)btnEl.classList.add('active');}
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
 const cnBc=document.getElementById('cnBreadcrumbSub');
 if(cnBc)cnBc.textContent=CN_TAB_LABEL[t]||t;
-['insight','bbm','servis','pajak','jalan'].forEach(x=>{
+['beranda','insight','bbm','servis','pajak','jalan'].forEach(x=>{
 const elx=document.getElementById('cnTab-'+x);
 if(elx){ elx.classList.toggle('u-dnone', x!==t); elx.style.display=''; }
 });
@@ -845,6 +847,43 @@ if(customRangeEl)customRangeEl.classList.toggle('u-dnone', cnPeriode!=='custom')
 }
 renderCnTab();
 }
+function proMockupSetScreen(n){
+  n=Number(n)||1;
+  if(n<1||n>8)n=1;
+  document.querySelectorAll('#proMockupScreens .pro-mock-screen').forEach(function(el){
+    el.classList.toggle('active',Number(el.getAttribute('data-pro-screen'))===n);
+  });
+  document.querySelectorAll('#proMockBottomNav [data-pro-goto]').forEach(function(el){
+    var targets=String(el.getAttribute('data-pro-goto')||'').split(',');
+    el.classList.toggle('active',targets.indexOf(String(n))!==-1);
+  });
+  var page=document.getElementById('page-carnotes');
+  if(page&&document.body&&document.body.dataset.theme==='pro'){
+    page.setAttribute('data-pro-screen',String(n));
+    try{page.scrollTop=0;}catch(e){ /* scrolling may be unavailable in non-browser test DOM */ }
+    window.scrollTo(0,0);
+  }
+  if(n===1&&typeof renderProHome==='function')renderProHome();
+}
+function proMockupInit(){
+  if(document.body&&document.body.dataset.theme==='pro'&&!window.__proMockup1717Bound){
+    window.__proMockup1717Bound=true;
+    document.addEventListener('click',function(e){
+      var el=e.target&&e.target.closest?e.target.closest('[data-pro-goto]'):null;
+      if(!el)return;
+      var n=el.getAttribute('data-pro-goto');
+      if(n){e.preventDefault();e.stopPropagation();proMockupSetScreen(n);}
+    },true);
+  }
+  proMockupSetScreen(document.getElementById('page-carnotes')?.getAttribute('data-pro-screen')||1);
+}
+
+function proOpenHistoryTab(){
+  setCnTab('servis');
+  const card=document.getElementById('cnServisListCard');
+  if(card) setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),0);
+}
+
 // setCnInsightTab/setCnBbmTab (Sesi 158, permintaan eksplisit user): tab
 // Insight AI & tab BBM (di dalam page-carnotes) masing-masing dipecah lagi
 // jadi 2 sub-tab bersarang — pola SAMA PERSIS setPjkTab() (pajak-aset-ui-
