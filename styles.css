@@ -1069,6 +1069,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 #dashHubMainGrid-cbody {
   max-height: 20000px;
 }
+#servisReminderCard-cbody .servis-reminder-list { max-height: 420px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 #bbmList, #servisList, #allTx, #lapTx, #zakatLogList,
 #wealthSnapshotList, #assetList, #piutangList, #debtList, #renovList {
   max-height: 420px;
