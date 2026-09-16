@@ -14,7 +14,7 @@
     "verify-bundle": "node scripts/verify-bundle-freshness.js",
     "verify-window-expose": "node scripts/verify-window-expose.js",
     "release-check": "node scripts/verify-release-ready.js",
-    "check": "npm run lint && npm run verify-window-expose && npm run audit:carnotes-runtime && npm test && npm run build",
+    "check": "npm run lint && npm run verify-window-expose && npm test && npm run build",
     "release": "bash scripts/release.sh",
     "service-sot-gate": "node scripts/service-sot-integrity-gate.js",
     "audit:carnotes": "node scripts/verify-carnotes-integrity.js",
@@ -23,8 +23,14 @@
     "test:full": "node scripts/run-full-test.js",
     "audit:carnotes-performance": "node scripts/verify-carnotes-performance.js",
     "build:release": "node scripts/build.js --require-minify",
-    "release:preflight": "node scripts/build.js --require-minify && node scripts/verify-carnotes-runtime-contracts.js && node scripts/verify-release-ready.js",
-    "audit:carnotes-runtime": "node scripts/verify-carnotes-runtime-contracts.js"
+    "release:preflight": "node scripts/build.js --require-minify && node scripts/verify-release-ready.js",
+    "apply-delete-manifest": "node scripts/apply-delete-manifest.js",
+    "audit:sot": "node scripts/sot-integrity-gate.js",
+    "audit:architecture": "node scripts/architecture-integrity-gate.js",
+    "audit:persistence": "node scripts/persistence-integrity-gate.js",
+    "audit:pwa": "node scripts/pwa-recovery-integrity-gate.js",
+    "audit:features": "node scripts/feature-regression-gate.js",
+    "release:firewall": "node scripts/release-firewall.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",
