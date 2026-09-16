@@ -884,6 +884,8 @@ document.getElementById('cniTab-rekomendasi').style.display='';
 const cniBc=document.getElementById('cniBreadcrumbSub');
 if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
 }
+const CNI_SUBTAB_ORDER=['ringkasan','rekomendasi'];
+const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
 const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
 const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnBbmTab(t,el){
