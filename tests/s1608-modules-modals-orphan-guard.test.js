@@ -37,7 +37,8 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const ORPHAN_MODALS_PATH = path.join(ROOT, 'modules', 'modals.js');
 const LIVE_MODALS_PATH = path.join(ROOT, 'modules', 'shared', 'modals.js');
-const BUILD_SRC = fs.readFileSync(path.join(ROOT, 'scripts', 'build.js'), 'utf8');
+const BUILD_SRC = fs.readFileSync(path.join(ROOT, 'scripts', 'build.js'), 'utf8')
+  + fs.readFileSync(path.join(ROOT, 'scripts', 'build-core.js'), 'utf8');
 
 test('s1608 guard: modules/modals.js (orphan) masih ada di disk -- dikonfirmasi eksis, bukan sudah dihapus tanpa sepengetahuan', () => {
   assert.ok(fs.existsSync(ORPHAN_MODALS_PATH), 'Kalau file ini sudah dihapus, HAPUS juga test ini (dan baris terkait di AUDIT-S572-DUPLICATE-SOURCE-STALE-STATE.md) -- jangan biarkan dangling.');
