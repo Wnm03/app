@@ -1,45 +1,19 @@
-// modules/vehicle/servis.js — extracted mechanically from car-notes.js.
-// Sesi pemisahan mekanis: 0 logic change. Runtime contract: window.Servis = Servis.
+// P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu
 const Servis={
 editId:null,
 listPage:1,
 lastFilterSig:null,
-// Sesi 1C ralat: checklist sekarang hidup DI DALAM alur Catat Servis,
-// bukan modal terpisah/Torsi-only. State ini in-memory dan mengikuti modal.
+
 _serviceChecklistGroupIdx:null,
 _serviceChecklistMasterCategoryIds:[],
-// _photoDraft — BARU (Sesi F1, ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md
-// §7 Sesi F "Foto di Service History"). Array dataURL string, in-memory
-// draft SAJA selama modal servis terbuka (dipopulasi dari s.foto saat
-// edit, dikosongkan saat tambah baru) -- baru ditulis ke D.servisLogs[].foto
-// saat _saveInner() sukses. Pola construction sama seperti field lain di
-// objek ini (editId dll): reset di openModal(), dibaca di _saveInner().
+
 _photoDraft:[],
-// activeActionTypeFilter — BARU (Sesi E6, ROADMAP-KONSOLIDASI-DATABASE-
-// SERVIS-v2.md §7 Sesi E item 6 "filter riwayat by actionType"). State
-// in-memory murni (bukan field D baru, tidak dipersist -- pola sama
-// Torsi.activeCat). null = "Semua" (0 filter, 0 perubahan perilaku
-// renderList() lama). Nilai lain: 'periksa'/'bersih'/'ganti'.
+
 activeActionTypeFilter:null,
-// activeMasterCategoryFilter — BARU (Sesi D-lanjutan4, ROADMAP-KONSOLIDASI-
-// DATABASE-SERVIS-v2.md §7 Sesi D — item "filter/chip masterCategory di
-// Servis.renderList() (Riwayat Servis)" yang SENGAJA ditunda di Sesi
-// D-lanjutan3 (v1670, lihat SESSION-NOTE-sesi-d-lanjutan3-mastercategoryfilter-
-// v1670.md "Sengaja TIDAK dikerjakan sesi ini") krn renderList() adalah
-// daftar LOG (butuh join balik ke kategori dulu via resolveLogMasterCategoryId()
-// di bawah), beda dari Sparepart.renderCatList() yg daftar KATEGORI langsung.
-// State in-memory murni (bukan field D baru, tidak dipersist -- pola sama
-// persis activeActionTypeFilter/Sparepart.activeMasterCategoryFilter). null =
-// "Semua" (0 filter, 0 perubahan perilaku lama).
+
 activeMasterCategoryFilter:null,
 activeServiceComponentFilter:null,
-// _masterCategoryFilterPrefsLoaded/_masterCategoryFilterStorageKey +
-// _loadMasterCategoryFilterPrefsOnce()/_saveMasterCategoryFilterPrefs() --
-// Sesi D-lanjutan5. Pola & alasan SAMA PERSIS versi Sparepart
-// (modules/vehicle/sparepart-servis.js) -- lihat komentar lengkap di sana
-// (kenapa bukan FilterPrefsStore apa adanya, dst). Key storage BEDA (khusus
-// Servis, terpisah dari Sparepart) supaya preferensi filter kedua tab tidak
-// saling timpa.
+
 _masterCategoryFilterPrefsLoaded:false,
 _masterCategoryFilterStorageKey:'servisMasterCategoryFilterPrefs',
 _loadMasterCategoryFilterPrefsOnce(){
@@ -59,8 +33,7 @@ if((typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&id===UNCATEGORIZED_FILTER_ID)|
 Servis.activeMasterCategoryFilter=id;
 }
 }catch(err){
-// localStorage korup/tidak tersedia -> abaikan, filter tetap default null
-// ("Semua") -- 0 crash.
+// Preferences are optional; malformed/unavailable storage must not block Servis startup.
 }
 },
 _saveMasterCategoryFilterPrefs(){
@@ -68,23 +41,10 @@ if(typeof localStorage==='undefined')return;
 try{
 localStorage.setItem(Servis._masterCategoryFilterStorageKey,JSON.stringify({activeMasterCategoryFilter:Servis.activeMasterCategoryFilter}));
 }catch(err){
-// localStorage penuh/diblokir -> abaikan (0 crash).
+// Preferences are optional; storage write failures are intentionally ignored.
 }
 },
-// resolveLogMasterCategoryId(s) -- Sesi D-lanjutan4. Join 1 entry riwayat
-// servis (s, dari D.servisLogs) balik ke kategori masternya (13 kategori
-// terkunci, DatabaseAPI.masterCategory). Reuse persis pola join yang SUDAH
-// ADA di openServisModal() (lihat baris `linkedCat` jalur edit/prefill
-// interval): s.categoryId (tautan langsung, entry baru sejak field ini ada)
-// -> fallback resolveServisCatForVehicle(s.item, vehicleId) (match nama+
-// kendaraan, utk entry lama tanpa categoryId) -> fallback match nama polos
-// (fail-safe terakhir kalau resolveServisCatForVehicle tidak termuat). Begitu
-// dapat kategori (cat), delegasi ke resolveCatGroup() apa adanya (SoT
-// tunggal, 0 logic classify baru) utk masterCategoryId-nya -- pola sama
-// persis Sparepart.dashReminderMasterCatBadgeHTML()/updateMasterCatBadge().
-// 0 match kategori ATAU 0 match kategori master -> null (bukan ditebak),
-// entry itu tidak akan cocok filter kategori master mana pun (tetap tampil
-// normal saat filter "Semua").
+
 resolveLogMasterCategoryId(s){
 if(typeof resolveCatGroup!=='function')return null;
 const vehicleId=s.vehicleId||curVehicleId;
@@ -93,11 +53,7 @@ if(!linkedCat)return null;
 const r=resolveCatGroup(linkedCat,vehicleId);
 return r?r.masterCategoryId:null;
 },
-// resolveLogServiceComponentId(s) — satu resolver komponen untuk seluruh
-// riwayat servis. Prioritas: serviceComponentId tersimpan (SOT baru),
-// checklist[].itemId (kompatibilitas data lama), lalu infer katalog hanya
-// sebagai fallback legacy. Jangan hanya membaca checklist karena riwayat
-// yang dibuat dari modal/pengingat dapat valid tanpa payload checklist.
+
 resolveLogServiceComponentId(s){
 if(!s)return null;
 if(s.serviceComponentId)return s.serviceComponentId;
@@ -111,11 +67,7 @@ if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer===
 }
 return null;
 },
-// setMasterCategoryFilter(id) -- Sesi D-lanjutan4. Dipanggil dari klik chip
-// filter (data-action="Servis.setMasterCategoryFilter") di Riwayat Servis.
-// id: null ("Semua") atau salah satu id dari 13 kategori master. Pola sama
-// persis setActionTypeFilter() di atas -- reset listPage ke 1 supaya
-// pagination tidak nyangkut di halaman lama saat filter berganti.
+
 setMasterCategoryFilter(id){
 Servis.activeMasterCategoryFilter=id||null;
 Servis.activeServiceComponentFilter=null;
@@ -135,33 +87,7 @@ openHistoryFromReminder(categoryId,componentId){
   Servis.activeActionTypeFilter=null;
   Servis.activeMasterCategoryFilter=masterId;
   Servis.activeServiceComponentFilter=componentId||null;
-  // FIX (audit rekomendasi N, Sep 2026 -- "filter waktu riwayat servis per
-  // part"): sebelum ini, tombol "🧾 Riwayat" di kartu Pengingat cuma
-  // men-set filter kategori/komponen TANPA menyentuh cnPeriode (chip
-  // Harian/Mingguan/Bulanan/Tahunan/Selamanya di atas tab Catatan
-  // Kendaraan -- dipakai bareng oleh Servis.renderList() lewat
-  // getCnRange()). Kalau user sebelumnya sempat pindah periode ke yang
-  // sempit (mis. "Bulanan") lalu tap "Riwayat" dari kartu part tertentu,
-  // riwayat part itu bisa tampak KOSONG walau datanya ada -- padahal siklus
-  // servis 1 part (bulan-tahun) jarang muat di jendela waktu sesempit itu.
-  // Paksa 'selamanya' di sini (sama seperti setCnPeriode('selamanya',..)
-  // tanpa memanggil ulang renderCnTab() yang lebih berat) supaya tap
-  // "Riwayat" dari part MANAPUN selalu tampilkan histori lengkapnya dulu;
-  // user tetap bebas mempersempit lagi manual via chip periode kalau perlu.
-  // 0 perubahan ke setCnPeriode()/getCnRange() itu sendiri.
-  // FIX-LANJUTAN (audit rekomendasi N-lanjutan, Sep 2026, saran #1): cnPeriode
-  // dulu 1 variabel GLOBAL dipakai bareng sub-tab BBM & Servis, jadi paksa
-  // 'selamanya' di sini ikut ke-reset filter periode BBM begitu user pindah
-  // sub-tab (efek samping yang dilaporkan -- chip-nya tetap kesinkron
-  // secara visual, cuma bikin bingung). SoT periode kini per sub-tab lewat
-  // cnPeriodeByTab (features-helpers-global-security.js) + setCnTab()/
-  // setCnPeriode() (vehicle-core.js) yang menyalin cnPeriodeByTab[tab] ->
-  // cnPeriode tiap ganti tab. Di sini cukup timpa cnPeriodeByTab['servis']
-  // (BUKAN 'bbm') supaya filter BBM tidak ikut kesentuh; setCnTab() akan
-  // otomatis mengembalikan periode BBM begitu user pindah ke sana lagi.
-  // saran #2: toast konfirmasi HANYA saat periode benar-benar berubah
-  // (bukan sudah 'selamanya' dari sebelumnya) -- supaya tidak dobel-notif
-  // tiap tap "Riwayat" beruntun dari part yang berbeda.
+
   const _periodeBerubah=cnPeriode!=='selamanya';
   cnPeriode='selamanya';
   if(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab)cnPeriodeByTab.servis='selamanya';
@@ -192,20 +118,9 @@ Servis.activeServiceComponentFilter=selected;
 const disabled=mid===UNCATEGORIZED_FILTER_ID;
 wrap.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700;white-space:nowrap">🧩 Komponen</label><select class="fs" style="flex:1;min-width:220px;max-width:420px;padding:8px 10px" ${disabled?'disabled':''} data-onchange="Servis.setServiceComponentFilter" data-onchange-args='["$value"]'><option value="">${disabled?'Tidak tersedia untuk data belum dikategorikan':mid?'Semua komponen pada kategori ini':'Pilih kategori dulu'}</option>${uniq.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===selected?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
 },
-// renderMasterCategoryChips(beforeEl) -- Sesi D-lanjutan4. Chip row filter
-// riwayat by kategori master (13 terkunci), DISISIPKAN lewat JS sebelum
-// beforeEl (pola sama persis renderActionTypeChips() di atas &
-// Sparepart.renderMasterCategoryChips() Sesi D-lanjutan3) -- 1x dibuat (cek
-// getElementById dulu), tidak dobel-insert di render berikutnya. Guard: 0
-// DatabaseAPI.masterCategory sama sekali -> row TIDAK dibuat sama sekali
-// (bukan tampil kosong), pola sama "0/>1 kandidat = dilewati, tidak
-// menebak" yang konsisten dipakai di seluruh fitur Sesi D.
+
 renderMasterCategoryChips(beforeEl){
-// Sesi UX: Riwayat Servis memakai dropdown kategori, bukan 15 chip sekaligus.
-// Tetap mempertahankan ID container lama supaya tidak ada selector/cleanup
-// yang bergantung pada nama elemen. Ini murni perubahan presentasi; SoT,
-// sentinel UNCATEGORIZED_FILTER_ID, persistensi, dan setMasterCategoryFilter()
-// tetap sama.
+
 const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
 if(!hasApi)return;
 let row=document.getElementById('servisMasterCatChipRow');
@@ -224,9 +139,7 @@ row.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700;w
 populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
-// Bugfix (laporan user): dropdown ini dulu tampil SEMUA D.partsStock tanpa
-// pandang kendaraan aktif -- sekarang di-filter reuse Sparepart.isPartForVehicle()
-// (part tanpa tautan katalog/kendaraan tetap tampil, lihat catatan di sana).
+
 const list=D.partsStock.filter(p=>p.id===selectedPartId||Sparepart.isPartForVehicle(p,typeof curVehicleId!=='undefined'?curVehicleId:null));
 const opts=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (sisa ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.innerHTML='<option value="">Tidak pakai stok</option>'+opts;
@@ -239,13 +152,7 @@ const wrap=document.getElementById('servisPartQtyWrap');
 if(!sel||!wrap)return;
 wrap.style.display=sel.value?'block':'none';
 },
-/** Muat daftar part Vehicle Catalog ke dropdown `servisCatalogPartId` (Tahap 6
- * Sesi 2 — UI picker, reuse VehicleCatalog.getAll() apa adanya, TIDAK ada
- * filter/rekomendasi otomatis berdasar jenis kendaraan/servis). Async karena
- * VehicleCatalog.getAll() async (baca IDBStore) — dipanggil fire-and-forget
- * dari openModal() (pola sama beberapa populate async lain di app), select
- * tetap kosong dulu sampai promise resolve. Guard typeof supaya modal servis
- * tetap berfungsi normal kalau VehicleCatalog belum sempat dimuat. */
+
 populateCatalogPartSelect(selectedCatalogId){
 const sel=document.getElementById('servisCatalogPartId');
 if(!sel)return;
@@ -257,9 +164,7 @@ Servis.onCatalogPartChange();
 return;
 }
 VehicleCatalog.getAll().then(items=>{
-// Bugfix (laporan user): dulu tampil SEMUA part katalog tanpa pandang
-// kendaraan aktif -- reuse VehicleCatalog.filterForVehicle() yang sama
-// dipakai VehicleCatalogUI.renderList().
+
 const filtered=VehicleCatalog.filterForVehicle(items,typeof curVehicleId!=='undefined'?curVehicleId:null);
 const list=(filtered||[]).some(it=>it.id===selectedCatalogId)||!selectedCatalogId?filtered:filtered.concat((items||[]).filter(it=>it.id===selectedCatalogId));
 const opts=(list||[]).map(it=>`<option value="${escapeHtml(it.id)}" data-oem="${escapeHtml(it.oemCode||'')}" data-name="${escapeHtml(it.partName||'')}">${escapeHtml(it.partName||'(Tanpa nama)')}${it.oemCode?' — '+escapeHtml(it.oemCode):''}</option>`).join('');
@@ -278,14 +183,7 @@ const wrap=document.getElementById('servisCatalogPartQtyWrap');
 if(!sel||!wrap)return;
 wrap.style.display=sel.value?'block':'none';
 },
-/** Muat & tampilkan area rekomendasi part katalog (Tahap 6 Sesi 4 — chip
- * list, TIDAK mengubah dropdown/qty/servisLogs/stok apa pun, murni saran
- * yang bisa diklik). Reuse VehicleCatalog.recommend() apa adanya, dasar
- * rekomendasi: kendaraan aktif (curVehicleId) + isi field "Jenis Servis/
- * Item" saat ini. Guard typeof supaya modal servis tetap berfungsi normal
- * kalau VehicleCatalog belum sempat dimuat. Async (fire-and-forget, pola
- * sama populateCatalogPartSelect) — area disembunyikan dulu sampai
- * promise resolve & ada hasil. */
+
 renderCatalogRecommendations(){
 const wrap=document.getElementById('servisCatalogRecoWrap');
 const list=document.getElementById('servisCatalogRecoList');
@@ -302,11 +200,7 @@ list.innerHTML=items.map(it=>`<button type="button" class="chip-btn" style="font
 wrap.style.display='block';
 }).catch(()=>{});
 },
-/** Klik 1 chip rekomendasi -> otomatis pilih part itu di dropdown
- * `servisCatalogPartId` (kalau opsinya sudah termuat) & tampilkan field
- * qty (reuse onCatalogPartChange() apa adanya). TIDAK menyimpan apa pun
- * (belum mengubah servisLogs/stok — sesuai cakupan sesi ini), murni bantu
- * isi form. */
+
 selectCatalogRecommendation(catalogId){
 const sel=document.getElementById('servisCatalogPartId');
 if(!sel)return;
@@ -315,10 +209,7 @@ if(!hasOption)return;
 sel.value=String(catalogId);
 Servis.onCatalogPartChange();
 },
-// syncServiceChecklist() — satu pintu sinkronisasi UI checklist dengan
-// field Jenis Servis/Item. Sumber kategori/item 100% SERVICE_CHECKLIST_GROUPS
-// melalui ServisChecklist; D.sparepartCats/TORSI_DB hanya boleh membantu
-// interval/kategori servis yang sudah ada, bukan membuat checklist kedua.
+
 syncServiceChecklist(){
 const box=document.getElementById('servisChecklistPanel');
 if(!box||typeof ServisChecklist==='undefined')return;
@@ -440,17 +331,7 @@ if(typeof ServiceInputCatalog==='undefined')return;
 const catEl=document.getElementById('servisCategory');
 const compEl=document.getElementById('servisComponent');
 const itemEl=document.getElementById('servisItem');
-// BUGFIX (audit, laporan user; merged from PATCH-v1701-riwayat-servis-kategori-komponen-bocor-antar-record):
-// populateCategorySelect/populateComponentSelect fallback ke `sel.value` saat argumen selectedId
-// kosong ('') -- ini SoT yang benar hanya kalau dipanggil dari sync() manual (user lagi ngetik, mau
-// PERTAHANKAN pilihan manual yang sudah ada). Tapi renderServiceInputSelectors() dipanggil tiap kali
-// modal Riwayat Servis dibuka utk record APAPUN (openModal()), jadi kalau record yang dibuka TIDAK
-// punya masterCategoryId/serviceComponentId (selectedMasterId/selectedComponentId kosong), fallback
-// itu malah membaca value LAMA yang masih nempel di elemen <select> dari record sebelumnya yang
-// barusan ditutup -- akibatnya Riwayat A kelihatan pakai kategori/komponen Riwayat B (atau sebaliknya)
-// tiap kali gonta-ganti buka 2 riwayat berbeda. Fix: reset value select ke '' dulu SEBELUM populate,
-// supaya fallback di dalam populateCategorySelect/populateComponentSelect tidak py apa pun buat
-// dibaca selain argumen yang memang dikirim eksplisit dari sini.
+
 if(catEl)catEl.value='';
 if(compEl)compEl.value='';
 ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
@@ -463,11 +344,7 @@ onItemAutofillInterval(){
 const item=document.getElementById('servisItem').value.trim();
 const intervalEl=document.getElementById('servisInterval');
 if(intervalEl&&intervalEl.dataset.manual!=='1'){
-// BUGFIX (audit): pakai resolveServisCatForVehicle() (sparepart-servis.js)
-// supaya interval yang diautofill milik kategori kendaraan AKTIF, bukan
-// ke-nyasar ke kategori privat kendaraan lain yang kebetulan nama-nya
-// sama. Guard typeof supaya tetap aman kalau file itu belum termuat
-// (mis. test yang load car-notes.js secara terisolasi).
+
 const matched=item?(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase())):null;
 intervalEl.value=matched?matched.intervalKm:'';
 }
@@ -475,13 +352,7 @@ Servis.tryAutoLinkCatalogPart(item);
 Servis.renderCatalogRecommendations();
 Servis.syncServiceChecklist();
 },
-/** BUGFIX (laporan user, Sesi 545): render suggest-box custom untuk
- * "Jenis Servis/Item" (reuse pola simpleAutocompleteInput() yang sudah
- * dipakai field lain di app ini -- lihat catatan lengkap di
- * Sparepart.populateDatalist(), modules/vehicle/sparepart-servis.js).
- * Dipanggil dari oninput & onfocus field servisItem. Sumber data dari
- * Sparepart.getItemSuggestions() (kategori+stok+katalog, sama seperti
- * datalist lama). Maks 8 saran spy list tidak kepanjangan di layar HP. */
+
 onItemInputSuggest(){
 const el=document.getElementById('servisItem');
 const box=document.getElementById('servisItemSuggestBox');
@@ -493,37 +364,14 @@ if(!matches.length){box.style.display='none';box.innerHTML='';return;}
 box.innerHTML=matches.map(n=>`<div class="suggest-item" onmousedown="event.preventDefault();Servis.selectItemSuggestion('${jsAttrEscape(n)}')">${escapeHtml(n)}</div>`).join('');
 box.style.display='block';
 },
-/** User tap 1 saran dari suggest-box -> isi field servisItem & tutup
- * suggest-box, lalu jalankan lagi alur autofill interval/auto-link katalog
- * yang sama seperti user ngetik manual persis nama itu (reuse
- * onItemAutofillInterval() apa adanya -- TIDAK ada logic baru). */
+
 selectItemSuggestion(name){
 const el=document.getElementById('servisItem');
 if(el)el.value=name;
 if(typeof hideSuggestBox==='function')hideSuggestBox('servisItemSuggestBox');
 Servis.onItemAutofillInterval();
 },
-/** Sesi 297 (permintaan eksplisit user, sinkron "Jenis Servis/Item" <-> Katalog Suku
- * Cadang supaya stok otomatis kepotong tanpa perlu pilih dua kali): kalau user
- * mengetik/pilih teks di "Jenis Servis/Item" yang PERSIS (case-insensitive) cocok
- * dengan SATU nama part di dropdown `servisCatalogPartId` (yang sudah dimuat via
- * populateCatalogPartSelect() saat modal dibuka), otomatis pilihkan part itu &
- * tampilkan field qty (reuse onCatalogPartChange() apa adanya) -- sama seperti user
- * pilih manual dari "Pilih dari Katalog" / chip rekomendasi, cukup lebih cepat.
- * Exact match tetap auto-pilih LANGSUNG tanpa konfirmasi (aman, tidak ambigu).
- * TIDAK menimpa pilihan yang sudah ada (kalau `servisCatalogPartId` sudah ada
- * value, dibiarkan -- user yang pegang kendali penuh begitu sudah pernah pilih/
- * ganti manual). Ambigu (2+ part nama sama persis) -> tidak auto-pilih, biar user
- * pilih sendiri lewat dropdown/chip (juga tidak dilanjutkan ke partial match,
- * supaya tidak makin salah pilih dari nama yang sudah ambigu duluan).
- *
- * Sesi berikutnya (permintaan eksplisit user): kalau TIDAK ada exact match tunggal,
- * coba cari partial match (nama part memuat teks item, atau sebaliknya) sebagai
- * SARAN -- TIDAK auto-pilih langsung seperti exact match, karena partial match bisa
- * salah tebak part & stok bisa kepotong tidak diinginkan. Sebagai gantinya
- * ditampilkan lewat renderPartialCatalogMatch() (area konfirmasi terpisah, chip per
- * kandidat) -- part katalog HANYA terpilih (dan stok HANYA kepotong saat simpan)
- * setelah user tap salah satu chip confirmPartialCatalogMatch(). */
+
 tryAutoLinkCatalogPart(item){
 const sel=document.getElementById('servisCatalogPartId');
 Servis.dismissPartialCatalogMatch();
@@ -545,10 +393,7 @@ return name.includes(target)||target.includes(name);
 });
 if(partial.length)Servis.renderPartialCatalogMatch(partial);
 },
-/** Tampilkan chip konfirmasi untuk tiap kandidat partial match (lihat
- * tryAutoLinkCatalogPart()) di area `servisCatalogPartialWrap`. Murni render,
- * TIDAK mengubah `servisCatalogPartId` -- part baru terpilih setelah user tap
- * salah satu chip (lihat confirmPartialCatalogMatch()). */
+
 renderPartialCatalogMatch(matches){
 const wrap=document.getElementById('servisCatalogPartialWrap');
 const list=document.getElementById('servisCatalogPartialList');
@@ -557,12 +402,7 @@ list.innerHTML=matches.map(o=>`<button type="button" class="chip-btn" style="fon
 wrap.classList.remove('u-dnone');
 wrap.style.display='block';
 },
-/** User tap 1 chip kandidat partial match -> BARU di sini part katalog beneran
- * dipilihkan ke `servisCatalogPartId` (reuse onCatalogPartChange() apa adanya,
- * sama seperti exact match/chip rekomendasi) & area konfirmasi ditutup. Sebelum
- * ini dipanggil, TIDAK ada apa pun yang berubah di dropdown/stok -- exactly kenapa
- * partial match butuh langkah konfirmasi tambahan ini (beda dari exact match yang
- * auto-pilih langsung), supaya stok tidak salah kepotong dari tebakan yang keliru. */
+
 confirmPartialCatalogMatch(catalogId){
 const sel=document.getElementById('servisCatalogPartId');
 if(!sel)return;
@@ -572,9 +412,7 @@ sel.value=String(catalogId);
 Servis.onCatalogPartChange();
 Servis.dismissPartialCatalogMatch();
 },
-/** Tutup/kosongkan area konfirmasi partial match (dipanggil saat user tap
- * "Bukan ini, abaikan", saat re-run tryAutoLinkCatalogPart() dgn item baru, atau
- * kapan pun modal servis dibuka ulang) -- TIDAK menyentuh `servisCatalogPartId`. */
+
 dismissPartialCatalogMatch(){
 const wrap=document.getElementById('servisCatalogPartialWrap');
 const list=document.getElementById('servisCatalogPartialList');
@@ -614,9 +452,7 @@ const firstCatalogRef=catalogRefs&&catalogRefs[0];
 Servis.populateCatalogPartSelect(firstCatalogRef?firstCatalogRef.catalogId:'');
 document.getElementById('servisCatalogPartQty').value=firstCatalogRef?firstCatalogRef.qty:1;
 Servis.renderCatalogRecommendations();
-// BUGFIX (audit): sama seperti onItemAutofillInterval() -- fallback by-nama
-// dulu polos & global, sekarang lewat resolveServisCatForVehicle() supaya
-// prefill interval saat edit tidak ke-nyasar ke kategori privat kendaraan lain.
+
 const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,s.vehicleId||curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===s.item.toLowerCase()));
 if(intervalEl)intervalEl.value=linkedCat?linkedCat.intervalKm:'';
 Servis._photoDraft=(s.foto||[]).slice();
@@ -658,15 +494,7 @@ Servis._renderKmEditHint(isEdit);
 if(typeof ServisChecklist!=='undefined'&&typeof Servis.syncServiceChecklist==='function')Servis.syncServiceChecklist();
 openModal('servisModal');
 },
-// _renderKmEditHint(isEdit) — BARU (rekomendasi audit S749/S750). Info kecil di
-// bawah field Odometer/KM: HANYA muncul saat mode Edit, supaya user tahu kenapa
-// koreksi KM boleh lebih rendah dari servis sebelumnya di sini padahal Tambah
-// Baru tetap wajib urutan kronologis (lihat validateServiceOdometer(), cabang
-// below_previous_service dilewati saat excludeId/edit terisi). Batas "tidak
-// boleh melebihi odometer sekarang" & "tidak boleh melebihi servis sesudahnya"
-// TETAP berlaku & TIDAK disebut longgar di sini -- teks cuma menjelaskan urutan
-// kronologis ke BELAKANG yang dilonggarkan. Pola pembuatan elemen dinamis 1x
-// (cek getElementById dulu) sama persis servisMoreWrap/bbmMoreWrap di file ini.
+
 _renderKmEditHint(isEdit){
 const kmInput=document.getElementById('servisKm');
 if(!kmInput)return;
@@ -686,12 +514,7 @@ if(!partId||!Number.isFinite(n)||n<=0)return;
 const p=D.partsStock.find(x=>x.id===partId);
 if(p)p.qty=(Number(p.qty)||0)+n;
 },
-/**
- * Apply one or more stock usages as a single net mutation per stock row.
- * This prevents double-deduction when the legacy `usedPartId` and the
- * Vehicle Catalog bridge resolve to the SAME physical stock row.
- * The caller owns rollback/persistence; this helper only mutates qty.
- */
+
 async applyStockUsages(entries){
 const net=new Map();
 (Array.isArray(entries)?entries:[]).forEach(e=>{
@@ -700,8 +523,7 @@ const net=new Map();
   if(!id||!Number.isFinite(qty)||qty<=0)return;
   net.set(id,(net.get(id)||0)+qty);
 });
-// P27: atomic even when called outside Servis.save(). If a later stock
-// confirmation rejects, restore every quantity already mutated here.
+
 const before=new Map();
 for(const [id] of net){
   const p=D.partsStock.find(x=>x.id===id);
@@ -718,10 +540,7 @@ for(const [id,qty] of net){
 }
 return true;
 },
-/** Replace an edit's previous stock usage with its new usage by netting
- * quantities per physical stock id. Positive net = deduct, negative net = restore.
- * P27: failed positive application compensates ALL rows touched by this helper,
- * so the helper is atomic even when invoked directly by another workflow. */
+
 async replaceStockUsages(oldEntries,newEntries){
 const net=new Map();
 const add=(entries,sign)=>{
@@ -753,26 +572,12 @@ for(const [id,delta] of net){
 }
 return true;
 },
-/** Cari 1 item Stok Sparepart (D.partsStock) yang `catalogId`-nya PERSIS
- * sama dengan part katalog terpilih di form Servis (Sesi 273, tindak
- * lanjut audit S272) — match presisi via ID, TIDAK terpengaruh user
- * mengedit nama baris stok lewat "Edit Stok Sparepart"
- * (Sparepart.saveStock() menjaga catalogId tetap utuh meski name
- * berubah). Dipakai LEBIH DULU di _saveInner() sebelum fallback ke
- * findMatchingStockByName(). */
+
 findMatchingStockByCatalogId(catalogId){
 if(!catalogId)return null;
 return D.partsStock.find(p=>p.catalogId===catalogId)||null;
 },
-/** Cari 1 item Stok Sparepart (D.partsStock) yang namanya PERSIS sama
- * (case-insensitive) dengan nama part katalog terpilih — dipakai untuk
- * ikut mengurangi stok fisik saat part dari Vehicle Catalog dipakai di
- * servis (Tahap 7E-3). Exact match saja (bukan substring) supaya tidak
- * salah kurangi stok item yang mirip tapi beda.
- * Sesi 273: sekarang jadi FALLBACK saja (dipanggil hanya kalau
- * findMatchingStockByCatalogId() gagal) — untuk baris stok lama yang
- * dibuat sebelum bridge `catalogId` ada (Sesi 266) dan belum pernah
- * punya field itu. Lihat CHANGELOG.md § Sesi 272/273. */
+
 findMatchingStockByName(name){
 const n=(name||'').trim().toLowerCase();
 if(!n)return null;
@@ -788,13 +593,7 @@ if(!await askConfirm(`⚠️ Stok "${escapeHtml(p.name)}" cuma sisa ${p.qty}${p.
 p.qty=(p.qty||0)-qty;
 return true;
 },
-// ===== Foto Riwayat Servis (Sesi F1) =====
-// Cakupan sengaja dipersempit ke: tambah/lihat/hapus foto di form Servis +
-// simpan/muat dari D.servisLogs[].foto. TIDAK termasuk sesi ini (backlog
-// Sesi F lanjutan): thumbnail/badge di daftar Riwayat Servis, kompresi
-// gambar sebelum jadi dataURL, atau batas ukuran per-foto selain guard
-// kasar di bawah. Field `foto` OPSIONAL & backward-compatible -- entry
-// lama tanpa field ini tetap kebaca normal (fallback `s.foto||[]`).
+
 pickPhoto(){
 const el=document.getElementById('servisPhotoInput');
 if(el)el.click();
@@ -848,7 +647,7 @@ save(){return withSaveGuardAsync('servis','servisModal',()=>{
   };
   return typeof withServiceMutationLock==='function'?withServiceMutationLock(run):run();
 });},
-/* P22: SERVICE ODOMETER INTEGRITY — canonical guards for create/edit. */
+
 validateServiceOdometer({vehicleId,km,date,excludeId}={}){
   const n=Number(km);
   if(!Number.isFinite(n)||n<0)return{ok:false,code:'invalid_km',message:'KM servis harus berupa angka 0 atau lebih.'};
@@ -874,13 +673,7 @@ validateServiceOdometer({vehicleId,km,date,excludeId}={}){
       else if(rd>d||(rd===d&&Number(row.km||0)>n)){next=row;break;}
     }
   }
-  // S749: saat EDIT riwayat servis lama (excludeId terisi), koreksi KM ke
-  // angka lebih rendah dari servis sebelumnya tetap diizinkan -- pengguna
-  // sering perlu membetulkan data historis yang salah input. Batas aman
-  // "above_current_odometer" di atas tetap berlaku (KM tidak boleh melebihi
-  // odometer kendaraan sekarang), jadi ini bukan menghapus validasi sama
-  // sekali, cuma melonggarkan urutan-kronologis SAAT edit. Untuk catatan
-  // BARU (excludeId kosong), aturan urutan tetap wajib seperti semula.
+
   if(prev&&n<Number(prev.km)&&!excludeId)return{ok:false,code:'below_previous_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih rendah dari servis sebelumnya (${Number(prev.km).toLocaleString('id-ID')} km pada ${prev.date}).`};
   if(next&&n>Number(next.km))return{ok:false,code:'above_next_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih tinggi dari servis sesudahnya (${Number(next.km).toLocaleString('id-ID')} km pada ${next.date}).`};
   return{ok:true,currentKm:Number.isFinite(current)?current:null,previousKm:prev?Number(prev.km):null,nextKm:next?Number(next.km):null};
@@ -890,20 +683,11 @@ async _saveInner(){
 const item=document.getElementById('servisItem').value.trim();
 const actionTypeEl=document.getElementById('servisActionType');
 const actionType=actionTypeEl&&['periksa','bersih','ganti'].includes(actionTypeEl.value)?actionTypeEl.value:'ganti';
-// BUGFIX (laporan user, Sesi 545): dulu `!cost` menolak simpan kalau Biaya
-// diisi 0 (mis. servis gratis/klaim garansi) karena 0 falsy di JS -- field
-// biaya jadi WAJIB diisi angka >0 padahal seharusnya boleh 0/kosong. Fix:
-// treat kolom kosong sbg 0 (bukan wajib diisi), validasi eksplisit pakai
-// isNaN() (nilai bukan angka valid) & cost<0 (negatif tidak masuk akal utk
-// biaya) -- item (Jenis Servis) tetap wajib diisi, cuma Biaya yang
-// sekarang boleh 0.
+
 const costRaw=document.getElementById('servisCost').value.trim();
 const cost=costRaw===''?0:Number(costRaw);
 if(!Number.isFinite(cost)||cost<0){toast('⚠️ Cek Biaya, harus 0 atau lebih');return;}
-// BUGFIX (audit): idem -- pencarian kategori by-nama saat SIMPAN servis
-// sekarang scoped ke kendaraan aktif (curVehicleId) lewat
-// resolveServisCatForVehicle(), supaya servis kendaraan B tidak ke-link ke
-// kategori privat milik kendaraan A hanya karena nama item sama persis.
+
 let matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase());
 let masterCategoryId=document.getElementById('servisCategory')?.value||null;
 let serviceComponentId=document.getElementById('servisComponent')?.value||null;
@@ -913,9 +697,7 @@ const accId=document.getElementById('servisAcc')?document.getElementById('servis
 const kmRaw=document.getElementById('servisKm').value.trim();
 const km=kmRaw===''?null:Number(kmRaw);
 const date=document.getElementById('servisDate').value;
-// S750: edit histori lama hanya untuk kategori/komponen tidak boleh
-// diblokir oleh urutan odometer terhadap histori setelahnya. Validasi
-// odometer tetap wajib untuk create atau perubahan KM/tanggal.
+
 const existingService=Servis.editId
   ? (Array.isArray(D.servisLogs)?D.servisLogs.find(s=>s&&s.id===Servis.editId):null)
   : null;
@@ -938,28 +720,14 @@ const usedPartQty=usedPartId?(parseFloat(document.getElementById('servisPartQty'
 const catalogPartSelEl=document.getElementById('servisCatalogPartId');
 const catalogPartId=catalogPartSelEl?catalogPartSelEl.value:'';
 const catalogPartQty=catalogPartId?(parseFloat(document.getElementById('servisCatalogPartQty').value)||1):0;
-// Sesi 180 (Tahap 6B2): snapshot ringan opsional {catalogPartId,catalogPartQty,
-// catalogPartOemCode} langsung di D.servisLogs (pola sama usedPartId/usedPartQty
-// di bawah) -- TIDAK menggantikan/mengubah mekanisme catalogPartRefs (Tahap 6
-// Sesi 1, VehicleCatalogServisLink) yang tetap dipanggil apa adanya di bawah.
-// catalogPartOemCode diambil dari atribut data-oem opsi terpilih (diisi
-// populateCatalogPartSelect()) -- sinkron, TIDAK memanggil VehicleCatalog
-// lagi di sini, supaya tidak dobel-sumber-kebenaran/dobel call IDB.
+
 const catalogPartOemCode=(catalogPartId&&catalogPartSelEl&&catalogPartSelEl.selectedOptions&&catalogPartSelEl.selectedOptions[0]&&catalogPartSelEl.selectedOptions[0].dataset)?(catalogPartSelEl.selectedOptions[0].dataset.oem||''):'';
 const catalogPartName=(catalogPartId&&catalogPartSelEl&&catalogPartSelEl.selectedOptions&&catalogPartSelEl.selectedOptions[0]&&catalogPartSelEl.selectedOptions[0].dataset)?(catalogPartSelEl.selectedOptions[0].dataset.name||''):'';
-// Sesi 273: catalogId dulu (match presisi, tahan terhadap rename baris
-// stok manual), findMatchingStockByName() jadi fallback SAJA untuk baris
-// stok lama yang belum pernah punya catalogId (dibuat sebelum Sesi 266).
+
 const catalogStockMatch=catalogPartId?(Servis.findMatchingStockByCatalogId(catalogPartId)||Servis.findMatchingStockByName(catalogPartName)):null;
 const catalogLinkedStockId=catalogStockMatch?catalogStockMatch.id:null;
 const itemIsVehicleName=!!matchingVehicleName(item);
-// Sesi 3A (integrity): categoryId pada EDIT tidak boleh tertinggal dari
-// kategori lama ketika user mengganti Jenis Servis/Item ke nama yang tidak
-// punya kategori. Kalau item tetap sama dan kategori lama masih valid, boleh
-// dipertahankan untuk backward compatibility; kalau item berubah, linkage
-// lama wajib dilepas agar Riwayat tidak lagi mereset Pengingat kategori yang
-// salah. Jika interval baru valid, blok di bawah tetap boleh membuat kategori
-// baru dan mengisi categoryId baru.
+
 let catIdForLog=matched?matched.id:null;
 if(Servis.editId!==null&&!matched){
   const existing=D.servisLogs.find(x=>x.id===Servis.editId);
@@ -967,9 +735,7 @@ if(Servis.editId!==null&&!matched){
   const sameItem=existing&&String(existing.item||'').trim().toLowerCase()===item.toLowerCase();
   if(oldCat&&sameItem)catIdForLog=oldCat.id;
 }
-// Validate the effective service item BEFORE any stock/Finance mutation.
-// A checklist-only service is valid; an entirely empty service must be a
-// no-op with zero stock deduction and zero Finance transaction.
+
 const _preSaveChecklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
 const _preSaveEffectiveItem=item||(_preSaveChecklistPayload.length>0?String(_preSaveChecklistPayload[0].itemName||'').trim():'');
 if(!_preSaveEffectiveItem){toast('⚠️ Pilih minimal satu komponen checklist atau isi jenis servis');return;}
@@ -988,17 +754,12 @@ newCatCreated=true;
 if(Servis.editId!==null){
 const s=D.servisLogs.find(x=>x.id===Servis.editId);
 if(!s){
-  // P18: kategori baru/interval belum boleh meninggalkan mutasi parsial
-  // ketika target service ternyata sudah hilang. Rollback snapshot lokal.
+
   restore();
   toast('⚠️ Data tidak ditemukan');
   return;
 }
-// P18: Edit Service adalah satu transaksi domain. Jangan melakukan restore
-// stok lama secara parsial lalu mencoba membaliknya manual pada setiap
-// failure branch; snapshot canonical di wrapper adalah sumber rollback.
-// Net old -> new usage per physical stock row. If both service selectors
-// point at the same stock item, only the quantity delta is applied once.
+
 if(!await Servis.replaceStockUsages(
   [
     {partId:s.usedPartId,qty:s.usedPartQty},
@@ -1025,7 +786,7 @@ const _metadataOnlyEdit=!_historicalFieldsChanged;
 const _nextSnapshotEdit=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:s.vehicleId||curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:s.actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
 const _preserveHistoricalSnapshot=_metadataOnlyEdit;
 Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,actionType,km,cost,note,accountId:accId,intervalKmAtService:_preserveHistoricalSnapshot?s.intervalKmAtService:_ivSnapshot,intervalBulanAtService:_preserveHistoricalSnapshot?s.intervalBulanAtService:_ibSnapshot,nextDueKm:_preserveHistoricalSnapshot?s.nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_preserveHistoricalSnapshot?s.nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_preserveHistoricalSnapshot?s.nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
-// Metadata-only edits must never rewrite the historical due snapshot. Keep a small audit trail.
+
 if(_metadataOnlyEdit){
   if(!Array.isArray(s.editHistory))s.editHistory=[];
   s.editHistory.push({changedAt:new Date().toISOString(),changedBy:'self',fields:['categoryId','masterCategoryId','serviceComponentId','item','note','foto','checklist','cost','accountId']});
@@ -1035,9 +796,7 @@ let _postCommitFinanceEvent=null;
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
 if(cost===0){
-// v13: Rp0 adalah servis valid, tetapi BUKAN transaksi Finance.
-// Jika sebelumnya punya txLinkId lalu biaya diedit menjadi 0, hapus
-// transaksi lama agar Finance tidak menyimpan transaksi Rp0 palsu.
+
 D.transactions=D.transactions.filter(t=>t.id!==s.txLinkId);
 s.txLinkId=null;
 _postCommitFinanceEvent={txId:null,deletedId:tx.id,category:tx.category,type:'expense',amount:0,kind:'servis'};
@@ -1045,10 +804,7 @@ _postCommitFinanceEvent={txId:null,deletedId:tx.id,category:tx.category,type:'ex
 Object.assign(tx,{amount:cost,date,accountId:accId,note:noteFull});
 _postCommitFinanceEvent={txId:tx.id,category:tx.category,type:'expense',amount:cost,kind:'servis'};
 }else if(cost>0){
-// P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu (mis. dihapus
-// dari modul Finance). Jangan biarkan D.servisLogs menyimpan txLinkId yatim.
-// Rekonsiliasi dengan membuat transaksi pengganti yang menunjuk ke servis
-// yang sama, sehingga edit servis kembali menjadi konsisten.
+
 const repairTxId=uid();
 const repairTxCat=resolveVehicleTxCategory(veh);
 D.transactions.push({id:repairTxId,type:'expense',amount:cost,category:repairTxCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id});
@@ -1056,8 +812,7 @@ s.txLinkId=repairTxId;
 _postCommitFinanceEvent={txId:repairTxId,category:repairTxCat,type:'expense',amount:cost,kind:'servis',action:'relink'};
 }
 }else if(cost>0){
-// v13: transaksikan hanya biaya > 0. Servis Rp0 tetap tersimpan di
-// D.servisLogs tanpa membuat transaksi Finance kosong.
+
 const txId=uid();
 const txCat=resolveVehicleTxCategory(veh);
 D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id});
@@ -1065,15 +820,11 @@ s.txLinkId=txId;
 _postCommitFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
 }
 try{
-  // V24 G2: catalog linkage is a post-commit side effect, never part of the pre-commit critical path.
-  // P18: persistence commit happens before lifecycle notification.
-  // Lifecycle is an event bridge only; it must never announce an edit that
-  // failed to persist.
+
   save();
 }catch(err){
   restore();
-  // Best-effort persistence of the pre-edit snapshot. If storage itself is
-  // unavailable, keep the in-memory rollback and rethrow the original error.
+
   try{save();}catch(_rollbackErr){console.error('P18: persisted edit rollback failed',_rollbackErr);}
   throw err;
 }
@@ -1108,10 +859,7 @@ if(cost>0){
  D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId});
 }
 const checklistPayload=_preSaveChecklistPayload;
-// Sesi Konsolidasi Servis 2A: bila checklist berisi beberapa item, satu sesi
-// menghasilkan N log service yang masing-masing tetap berbentuk legacy single-log.
-// Jalur CREATE saja; EDIT multi-log ditahan ke tahap berikutnya agar migrasi/edit/
-// delete batch tidak setengah matang. Biaya dan stok top-level hanya record pertama.
+
 const _serviceSessionId=uid();
 const _checkedServiceRows=checklistPayload.slice();
 const _hasChecklistRows=_checkedServiceRows.length>0;
@@ -1133,8 +881,7 @@ _rowsToPersist.forEach((_row,_rowIdx)=>{
   const _rowNext=(typeof buildServiceNextDueSnapshot==='function'&&_rowCat)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_rowCat,serviceKm:km,serviceDate:date,actionType:_rowActionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   D.servisLogs.push({id:_rowIdx===0?servisId:uid(),sessionId:_serviceSessionId,vehicleId:curVehicleId,date,item:_rowItem,categoryId:_rowCategoryId,masterCategoryId:_rowMasterCategoryId,serviceComponentId:_row.serviceComponentId||null,actionType:_rowActionType,km,cost:_rowIdx===0?cost:0,note,accountId:accId,txLinkId:_rowIdx===0?txId:null,intervalKmAtService:_rowIv,intervalBulanAtService:_rowIb,nextDueKm:_rowNext.nextDueKm,nextDueDate:_rowNext.nextDueDate,nextDueAxis:_rowNext.nextDueAxis,usedPartId:_rowIdx===0?(usedPartId||null):null,usedPartQty:_rowIdx===0?(usedPartId?usedPartQty:0):0,catalogPartId:_rowIdx===0?(catalogPartId||null):null,catalogPartQty:_rowIdx===0?(catalogPartId?catalogPartQty:0):0,catalogPartOemCode:_rowIdx===0?(catalogPartId?catalogPartOemCode:''):'',catalogPartLinkedStockId:_rowIdx===0?(catalogLinkedStockId||null):null,foto:_rowIdx===0?Servis._photoDraft.slice():[],checklist:[_row]});
 });
-// V24 G1/G2/G9: persist the service domain BEFORE emitting lifecycle/catalog/AI side effects.
-// If persistence fails, the surrounding P16 snapshot wrapper restores all service-domain mutations.
+
 save();
 const _newServisLog=D.servisLogs[D.servisLogs.length-1];
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(_newServisLog);}catch(_lifecycleCreateErr){console.error('V25: post-commit service create lifecycle failed; reconciliation required',_lifecycleCreateErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:_newServisLog});}}
@@ -1142,7 +889,7 @@ if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&type
   try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);}
   catch(_catalogErr){console.error('V24: post-commit catalog service link failed; queued for reconciliation',_catalogErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:servisId,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
 }
-// v13: finance.updated hanya untuk transaksi Finance yang benar-benar dibuat (cost>0).
+
 if(txId&&typeof AIBus!=="undefined"){
   const _createFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
   try{AIBus.emit('finance.updated',_createFinanceEvent);}
@@ -1240,13 +987,7 @@ ${checklistRows?`<div class="fg"><label class="fl">☑️ Komponen Checklist</la
 ${Servis._renderEditHistoryHtml(s)}
 <div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori/komponen → interval efektif → reminder → riwayat</b>. Mengubah interval dilakukan melalui pengaturan kategori/override kendaraan, bukan membuat field interval baru di riwayat.</div>`;
 },
-// _renderEditHistoryHtml(s) — BARU (rekomendasi audit S749/S750). s.editHistory[]
-// sudah ditulis oleh _saveInner() untuk edit metadata-only (lihat komentar di
-// sana), tapi sebelum ini tidak ada tempat melihatnya. Read-only murni (0 tulis
-// D di sini) -- tampilkan maks 5 entri terbaru, terbaru dulu, di tab Pengingat
-// modal Edit Servis (bukan tab Detail, supaya tidak menambah gesekan alur isi
-// form utama). String kosong kalau riwayat kosong/tidak ada -- 0 dampak visual
-// ke entry lama yang belum pernah diedit metadata-only.
+
 _renderEditHistoryHtml(s){
 const hist=Array.isArray(s&&s.editHistory)?s.editHistory:[];
 if(!hist.length)return'';
@@ -1310,9 +1051,7 @@ if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan diha
 const _runDelete=async()=>{
 const s=D.servisLogs.find(x=>x.id===id);
 if(!s)return;
-// P17: capture immutable linkage + domain snapshots BEFORE mutation.
-// Delete must behave as one service-domain mutation and must not leave a
-// half-deleted log/finance/stock state if a later step throws.
+
 const deletedTxId=s.txLinkId||null;
 const before={
   servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
@@ -1323,20 +1062,18 @@ try{
   if(deletedTxId)D.transactions=D.transactions.filter(tx=>tx.id!==deletedTxId);
   if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
   if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
-  // Sesi E2: restore automatic stock deduction created by "ganti".
+
   if(s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
-  // Keep the captured tx id in the lifecycle payload. Do NOT null s.txLinkId
-  // before lifecycle.remove(): that used to erase the only deletion linkage.
+
   D.servisLogs=D.servisLogs.filter(x=>x.id!==id);
   save();
-  // V25 G11/G12: lifecycle removal is strictly post-commit. A lifecycle
-  // failure must not turn a committed delete into a false rollback.
+
   if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.remove==='function'){
     try{ServiceEventLifecycle.remove(s,{deletedTxId,categoryId:s.categoryId||null,vehicleId:s.vehicleId||null});}
     catch(_lifecycleDeleteErr){console.error('V25: post-commit service delete lifecycle failed; queued for reconciliation',_lifecycleDeleteErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.remove',payload:s,options:{deletedTxId,categoryId:s.categoryId||null,vehicleId:s.vehicleId||null}});}
   }
 }catch(err){
-  // P17 atomic delete rollback: restore only service-domain arrays.
+
   try{
     if(before.servisLogs!==null)D.servisLogs=JSON.parse(before.servisLogs);
     if(before.transactions!==null)D.transactions=JSON.parse(before.transactions);
@@ -1353,85 +1090,13 @@ toast('🗑 Catatan servis dihapus');
 if(typeof withServiceMutationLock==='function')return withServiceMutationLock(_runDelete);
 return _runDelete();
 },
-// markServiced(catId, actionType) — actionType FITUR BARU (opsional, backward
-// compatible; PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2a/§6-poin1):
-// dulu cuma dipanggil markServiced(catId) dari tombol "✅ Sudah Servis" di
-// kartu Pengingat Servis (renderReminder(), tetap 1-arg, tidak berubah).
-// Disiapkan supaya checklist servis (rencana Sesi 2 -- lihat dokumen §2d)
-// bisa REUSE fungsi ini apa adanya + kirim actionType ('periksa'/'bersih'/
-// 'ganti'), bukan bikin jalur simpan sendiri (0 logic duplikat, kartu
-// reminder & stok otomatis ikut ter-update). actionType kosong/undefined =
-// persis perilaku lama (disimpan sbg null, diperlakukan 'ganti' oleh
-// getLastServiceKmForCat/getLastServiceDateForCat, lihat §2a).
-// markServiced(catId, actionType, opts) — opts FITUR BARU (Sesi E1,
-// ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 1): opsional,
-// backward compatible -- dipanggil markServiced(catId) atau
-// markServiced(catId,actionType) spt sebelumnya = 0 perubahan perilaku.
-// Tujuan opts: kasih fondasi supaya checklist multi-item (rencana Sesi
-// 1C/2A, belum ada kodenya) bisa nanti REUSE fungsi ini per-item lewat
-// markServicedBatch() di bawah, tanpa jalur simpan duplikat.
-//   opts.skipConfirm    — lewati askConfirm() (dipakai batch: 1 konfirmasi
-//                          di pemanggil, bukan per-item)
-//   opts.skipEarlyGuard — (Sesi E5, sebelumnya placeholder di E1) lewati
-//                          guard "ganti terlalu dini" (lihat
-//                          `_checkTooEarlyGanti()` di bawah) -- dipakai
-//                          `markServicedBatch()` supaya batch tetap "1
-//                          konfirmasi total", bukan 1 dialog guard per item.
-//                          Independen dari opts.skipConfirm (2 knob
-//                          terpisah, sesuai desain E1).
-//   opts.presetCost     — angka biaya yg sudah diketahui pemanggil, lewati
-//                          showPromptModal() (dipakai batch: 1 prompt total
-//                          di pemanggil kalau perlu, atau 0 kalau memang
-//                          mau 0 tanpa tanya)
-//   opts.batchId        — (Sesi E3, sebelumnya placeholder di E1) ID batch
-//                          yang sama utk seluruh item dari 1x pemanggilan
-//                          markServicedBatch(), disimpan sbg entry.batchId
-//                          di D.servisLogs & ditandai "🔗 batch" di riwayat
-//                          (Servis.renderList()) -- 0 efek kalau dipanggil
-//                          langsung tanpa lewat markServicedBatch() (opts
-//                          kosong = batchId null, sama spt sebelum Sesi E3).
-// Sesi E4 (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 4
-// "default cost per actionType"): kalau opts.presetCost TIDAK diisi DAN
-// actionType eksplisit 'periksa' atau 'bersih' (bukan 'ganti', bukan
-// kosong/undefined), cost otomatis 0 TANPA showPromptModal() -- alasan:
-// item "periksa"/"bersih" biasanya tidak ada biaya (cuma cek/lap), jadi
-// prompt biaya cuma gesekan tambahan. actionType 'ganti' atau kosong
-// (tombol "✅ Sudah Servis" lama di kartu Pengingat Servis, SELALU
-// dipanggil tanpa actionType) TETAP prompt seperti biasa -- 0 regresi ke
-// jalur lama. opts.presetCost (dipakai markServicedBatch()) tetap prioritas
-// PALING TINGGI di atas default actionType ini, tidak berubah dari E1.
-// _findAutoGantiStock(cat, vehicleId) — BARU (Sesi E2, ROADMAP-KONSOLIDASI-
-// DATABASE-SERVIS-v2.md §7 Sesi E item 2 "auto-potong stok saat ganti").
-// Cari 1 kandidat Stok Sparepart (D.partsStock) yang cocok kategori (catId
-// sama persis dgn kategori pengingat yg ditandai) DAN kendaraan (lewat
-// Sparepart.isPartForVehicle(), fungsi yg SUDAH ADA & dipakai dropdown
-// "Gunakan Stok Sparepart" -- 0 skema baru, reuse logic vehicle-scoping yg
-// sudah teruji). SENGAJA hanya auto-potong kalau PERSIS 1 kandidat cocok
-// -- 0 kandidat (tidak ada stok utk kategori ini) atau >1 kandidat
-// (ambigu, mis. ada 2 baris "Oli Mesin" beda merek) DILEWATI (return null,
-// tidak menebak) supaya tidak salah motong stok yang salah. Ini FINDER
-// murni (0 efek samping, 0 tulis D) -- pemotongan qty dilakukan terpisah
-// oleh pemanggil (lihat markServiced() di bawah).
+
 _findAutoGantiStock(cat,vehicleId){
 if(!cat||!Array.isArray(D.partsStock))return null;
 const candidates=D.partsStock.filter(p=>p.catId===cat.id&&(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):true));
 return candidates.length===1?candidates[0]:null;
 },
-// _checkTooEarlyGanti(cat, vehicleId, curKm) — BARU (Sesi E5, ROADMAP-
-// KONSOLIDASI-DATABASE-SERVIS-v2.md §7 Sesi E item 5 "guard 'ganti terlalu
-// dini'"). FINDER murni (0 efek samping, 0 tulis D) -- cari log "ganti"
-// TERAKHIR utk kategori+kendaraan ini (reuse getLastServiceKmForCat() apa
-// adanya dgn actionTypeFilter:'ganti', SAMA fungsi yg sudah dipakai basis
-// reset pengingat -- 0 logic baca log duplikat), lalu bandingkan jarak KM
-// yg sudah ditempuh sejak itu dgn ambang batas 20% dari intervalKm
-// kategori. Kalau jarak tempuh < ambang (mis. interval 3000km, ambang
-// 600km, baru jalan 300km sejak ganti terakhir) -> dianggap "terlalu
-// dini", return detail supaya pemanggil bisa tanya konfirmasi tambahan.
-// SENGAJA return null (tidak menganggap dini) kalau: kategori tidak
-// punya intervalKm valid, belum pernah ada log "ganti" sebelumnya
-// (lastKm null -- servis pertama kali, wajar), atau odometer curKm <
-// lastKm (data KM tidak konsisten/mundur -- tidak ditebak, biar tidak
-// salah blokir gara2 data aneh, bukan tanggung jawab guard ini).
+
 _checkTooEarlyGanti(cat,vehicleId,curKm){
 if(!cat||!cat.intervalKm||cat.intervalKm<=0)return null;
 const lastKm=Servis.getLastServiceKmForCat(vehicleId,cat,'ganti');
@@ -1446,9 +1111,7 @@ async markServiced(catId,actionType,opts){
 opts=opts||{};
 const cat=(typeof resolveReminderCategory==='function')?resolveReminderCategory(catId,curVehicleId):D.sparepartCats.find(c=>c.id===catId);
 if(!cat)return;
-// v12: idempotency guard untuk tap/click ganda saat markServiced masih menunggu
-// konfirmasi/prompt async. Guard hanya berlaku selama operasi yang sama masih
-// in-flight; setelah selesai key dilepas sehingga servis berikutnya tetap boleh.
+
 Servis._markServicedInFlight=Servis._markServicedInFlight instanceof Set?Servis._markServicedInFlight:new Set();
 const _markGuardKey=`${curVehicleId||''}::${cat.id}::${actionType||'default'}`;
 if(Servis._markServicedInFlight.has(_markGuardKey))return;
@@ -1456,19 +1119,9 @@ Servis._markServicedInFlight.add(_markGuardKey);
 const _clearMarkGuard=()=>Servis._markServicedInFlight.delete(_markGuardKey);
 const curKm=getVehicleKm(curVehicleId);
 const actLabel=actionType==='periksa'?'diperiksa':(actionType==='bersih'?'dibersihkan':'diservis');
-// willReset — HANYA relevan utk pola 4/periksa-conditional (§2c): kalau
-// item ini punya gantiResetsInterval:false & yg ditandai actionType
-// 'ganti', reset TIDAK terjadi (basis jatuh-tempo tetap dari log
-// 'periksa') -- teks konfirmasi/toast disesuaikan supaya user tidak
-// dikasih janji palsu "pengingat direset" padahal tidak.
+
 const willReset=!(cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&(actionType||'ganti')==='ganti');
-// Sesi E5 (guard "ganti terlalu dini"): HANYA saat actionType eksplisit
-// 'ganti' (bukan kosong/'periksa'/'bersih' -- checklist lama/tombol
-// "✅ Sudah Servis" tanpa actionType TIDAK pernah masuk cabang ini, 0
-// regresi) DAN opts.skipEarlyGuard tidak di-set. Dialog guard ini TERPISAH
-// dari konfirmasi utama di bawah (independen dari opts.skipConfirm) --
-// kalau user batal di sini, fungsi berhenti SEBELUM konfirmasi utama
-// ditampilkan (0 dialog dobel utk kasus batal).
+
 if(actionType==='ganti'&&!opts.skipEarlyGuard){
 const early=Servis._checkTooEarlyGanti(cat,curVehicleId,curKm);
 if(early){
@@ -1484,7 +1137,7 @@ let cost;
 if(opts.presetCost!==undefined&&opts.presetCost!==null){
 cost=parseFloat(opts.presetCost)||0;
 }else if(actionType==='periksa'||actionType==='bersih'){
-// Sesi E4: default cost per actionType -- periksa/bersih auto 0, 0 prompt.
+
 cost=0;
 }else{
 const costStr=await showPromptModal({title:'Biaya Servis',message:'Biaya servis ini (opsional, boleh dikosongkan/0):',icon:'💵',inputType:'number',defaultValue:0});
@@ -1492,9 +1145,7 @@ cost=parseFloat(costStr)||0;
 }
 const date=(typeof formatServiceDateOnly==='function'&&typeof parseServiceDateOnly==='function')?formatServiceDateOnly(parseServiceDateOnly(new Date())):new Date().toISOString().split('T')[0];
 const accId=D.accounts[0]?.id;
-// V26 G26/G31: quick-service uses the canonical service date helper when available.
-// V25 G14/G15: quick-action must use the same service mutation boundary as
-// the main Service modal. Keep a domain snapshot and shared mutation lock.
+
 const _markDomainSnapshot={
   servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
   transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
@@ -1524,16 +1175,7 @@ const _dup=findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKe
 if(_dup){_clearMarkGuard();return _dup;}
 }
 D.servisLogs.push(entry);
-// Sesi E2 (auto-potong stok saat "ganti"): HANYA saat actionType eksplisit
-// 'ganti' (bukan actionType kosong/'periksa'/'bersih') -- 0 dampak ke
-// tombol "✅ Sudah Servis" lama di kartu Pengingat Servis (dipanggil tanpa
-// actionType sama sekali, jadi tidak pernah masuk cabang ini, 0 regresi).
-// Auto-potong 1 qty SAJA kalau stok cukup (qty>=1) -- kalau stok
-// tidak cukup/0, DILEWATI DIAM-DIAM (bukan nge-prompt konfirmasi minus
-// spt applyStockUsage() manual) krn ini aksi otomatis di balik tombol
-// "tandai selesai", bukan input eksplisit user pilih part -- munculin
-// dialog konfirmasi tak terduga di sini (apalagi saat dipanggil dari
-// markServicedBatch() dgn skipConfirm) akan mengejutkan/menghalangi user.
+
 let autoGantiStock=null;
 if(actionType==='ganti'){
 autoGantiStock=Servis._findAutoGantiStock(cat,curVehicleId);
@@ -1546,16 +1188,7 @@ autoGantiStock=null;
 }
 try{
 if(!opts._batchDeferSave){save();renderCnTab();renderDashboard();renderKeuangan();}
-// V25 G11/G12/G15: lifecycle and AI events are post-commit only and
-// lifecycle exceptions do not invalidate an already committed service.
-// BUGFIX (audit "✅ Sudah Servis" tidak emit AIBus event): markServiced() menulis
-// langsung ke D.servisLogs/D.transactions tanpa lewat saveServis() (sparepart-servis-b.js)
-// -- alur submit modal servis biasa emit AIBus 'vehicle.updated' lewat wrapper itu, tapi
-// jalur cepat ini (tombol di kartu Pengingat Servis) TIDAK, jadi listener AI (mis. audit
-// overdue servis) tidak pernah tahu ada servis baru kalau user cuma tap tombol ini.
-// Fix: emit event yang sama di titik ini, sama persis polanya dgn saveServis() utk
-// 'vehicle.updated' (selalu) & pola BBM (car-notes.js baris ~180) utk 'finance.updated'
-// (cuma kalau benar ada transaksi baru yg tercatat, yaitu saat cost>0/txLinkId terisi).
+
 if(!opts._batchDeferEvents){
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(entry);}catch(_markLifecycleErr){console.error('V27: post-commit service lifecycle failed; queued for reconciliation',_markLifecycleErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});}}
 else if(typeof AIBus!=="undefined"){try{AIBus.emit("vehicle.updated",{kind:"servis",action:"create",vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null});}catch(_markVehicleEventErr){console.error('V31: vehicle event failed after commit; queued for reconciliation',_markVehicleEventErr);if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:{kind:'servis',action:'create',vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null}});}}
@@ -1575,23 +1208,10 @@ return entry;
 };
 return opts._batchOwnedLock?await _runMarkMutation():(typeof withServiceMutationLock==='function'?await withServiceMutationLock(_runMarkMutation):await _runMarkMutation());
 },
-// markServicedBatch(items) — BARU (Sesi E1). items: array of
-// {catId, actionType, cost}. REUSE markServiced() apa adanya per item
-// (0 logic simpan duplikat) dgn opts.skipConfirm:true (1 konfirmasi di
-// pemanggil nanti, bukan per-item) & opts.presetCost (dari `cost` per
-// item kalau diisi, kalau tidak diisi tetap 0 tanpa prompt -- checklist
-// multi-item belum ada UI-nya, jadi fondasi ini sengaja tidak nge-prompt
-// per-item, itu akan bikin batch >1 item butuh N kali showPromptModal).
-// opts.skipEarlyGuard:true (Sesi E5) juga selalu di-set -- guard "ganti
-// terlalu dini" per-item akan bertentangan dgn prinsip "1 konfirmasi
-// total" batch ini (sama alasannya dgn skipConfirm).
-// Fondasi ini disiapkan utk checklist multi-item (rencana Sesi 1C/2A,
-// belum ada kodenya) -- dipakai apa adanya begitu checklist dibangun.
+
 async markServicedBatch(items){
 if(!Array.isArray(items)||!items.length)return[];
-// V26 G33/G34: a batch is one atomic domain mutation. Each item still reuses
-// markServiced() for its business rules, but a failure restores the entire
-// pre-batch domain snapshot rather than leaving a partial checklist.
+
 const batchSnapshot={
   servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,
   transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,
@@ -1612,12 +1232,10 @@ const runBatch=async()=>{
   try{
     for(const it of items){
       const entry=await Servis.markServiced(it.catId,it.actionType,{skipConfirm:true,skipEarlyGuard:true,presetCost:it.cost!==undefined?it.cost:0,batchId,_batchOwnedLock:true,_batchDeferEvents:true,_batchDeferSave:true});
-      // Invalid/stale category IDs are skipped; valid siblings remain part of the atomic batch.
-      // markServiced() already treats an unresolved category as a no-op, so batch orchestration
-      // must not convert that expected per-item validation result into a whole-batch failure.
+
       if(entry)results.push(entry);
     }
-    // V28: no item-level persistence. Commit the whole batch once, then publish side-effects once.
+
     save();
     for(const entry of results){
       // V36: lifecycle and finance projections are independent post-commit effects.
@@ -1653,8 +1271,7 @@ getServiceOdometerIntegrity(vehicleId){
   const issues=violations.concat(incomplete,invalidKm);
   return{vehicleId,currentKm:Number.isFinite(current)?current:null,maxHistoricalKm:logs.length?Math.max(...logs.map(s=>Number(s.km))):null,violations,issues,incomplete,invalidKm,ok:issues.length===0};
 },
-// V33: explicit Finance ownership diagnostic. Repair is intentionally not
-// automatic because ambiguous legacy ownership must never be guessed.
+
 getServiceFinanceOwnershipIntegrity(vehicleId){
   const logs=(Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(s=>s&&(!vehicleId||s.vehicleId===vehicleId));
   const txs=Array.isArray(D.transactions)?D.transactions:[];
@@ -1666,25 +1283,12 @@ getServiceFinanceOwnershipIntegrity(vehicleId){
   return{vehicleId:vehicleId||null,issues,ok:issues.length===0};
 },
 
-// getLastServiceKmForCat(vehicleId, cat, actionTypeFilter, forReminder) —
-// actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
-// PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
-// baru ini (mis. dari riwayat/servisList) = 0 perubahan perilaku lama.
-// Delegasi filter ke Servis._matchesActionTypeForReset() di bawah supaya
-// logic-nya persis 1 tempat (twin di modules/vehicle/sparepart-servis.js
-// getLastServiceDateForCat() punya salinan yang HARUS tetap identik).
 getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
 const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
 logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
 return logs.length?logs[0].km:null;
 },
-// _matchesActionTypeForReset(log, cat, actionTypeFilter, forReminder) — lihat
-// dokumentasi lengkap di twin-nya modules/vehicle/sparepart-servis.js
-// (matchesActionTypeForReset(), top-level function, dipakai getLastServiceDateForCat()
-// di file itu). Duplikasi SENGAJA (bukan reuse cross-file) krn file ini
-// (car-notes.js) dimuat SEBELUM sparepart-servis.js di build.js & beberapa
-// test harness (mis. sparepart-interval-bulan.test.js) memuat sparepart-servis.js
-// TANPA car-notes.js sama sekali -- kalau salah satu diubah, cek ulang yang lain.
+
 _matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
 const effType=log.actionType||'ganti';
 if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
@@ -1698,31 +1302,12 @@ Sparepart.openCatModal(idx);
 },
 activeReminderMasterCategoryFilter:null,
 activeReminderComponentFilter:'',
-// activeReminderSeverityFilter -- BARU (audit rekomendasi N, Sep 2026:
-// "Pengingat Servis" sebelumnya SELALU menampilkan SEMUA kategori aktif
-// -- aman s/d terlewat -- tanpa cara mempersempit ke yang mendesak saja,
-// beda dgn Riwayat yang sudah punya chip actionType. null = 'Semua'
-// (perilaku lama, 0 regresi kalau chip baru ini tidak pernah disentuh).
-// Nilai lain: 'lewat' (terlewat+jatuh_tempo), 'segera', 'mendekati', 'aman'.
+
 activeReminderSeverityFilter:null,
 setReminderMasterCategoryFilter(id){Servis.activeReminderMasterCategoryFilter=String(id||'');Servis.activeReminderComponentFilter='';Servis.renderReminder();},
 setReminderComponentFilter(id){Servis.activeReminderComponentFilter=String(id||'');Servis.renderReminder();},
 setReminderSeverityFilter(v){Servis.activeReminderSeverityFilter=v||null;Servis._saveReminderSeverityFilterPrefs();Servis.renderReminder();},
-// _reminderSeverityFilterPrefsLoaded/_reminderSeverityFilterStorageKey +
-// _loadReminderSeverityFilterPrefsOnce()/_saveReminderSeverityFilterPrefs()
-// -- BARU (audit rekomendasi N-lanjutan, Sep 2026, saran #5). Sebelum ini,
-// activeReminderSeverityFilter (chip status kartu Pengingat) SELALU reset
-// ke null ("Semua") tiap pindah tab/reload -- beda dari
-// activeMasterCategoryFilter (chip kategori master di Riwayat Servis) yang
-// sudah dipersist lewat _saveMasterCategoryFilterPrefs() di atas. Pola &
-// alasan (kenapa localStorage manual, bukan FilterPrefsStore) SAMA PERSIS
-// versi itu -- cuma key storage beda supaya tidak tabrakan. TRADE-OFF
-// (disadari, didiskusikan eksplisit): kalau preferensi tersimpan BUKAN
-// null (mis. sesi lalu terakhir pilih "🔴 Terlewat"), part berstatus lain
-// tidak akan tampil sampai user sadar & ganti chip -- bisa terkesan "part
-// hilang" padahal cuma ketutup filter lama. Fail-open ke null/"Semua" kalau
-// nilai storage rusak/tak dikenal, supaya paling buruk balik ke perilaku
-// lama (tampil semua, 0 crash).
+
 _reminderSeverityFilterPrefsLoaded:false,
 _reminderSeverityFilterStorageKey:'servisReminderSeverityFilterPrefs',
 _loadReminderSeverityFilterPrefsOnce(){
@@ -1738,7 +1323,7 @@ if(v===null||v===undefined)return;
 const validValues=['lewat','segera','mendekati','aman'];
 if(validValues.indexOf(v)!==-1)Servis.activeReminderSeverityFilter=v;
 }catch(err){
-// localStorage korup/tidak tersedia -> abaikan, filter tetap default null ("Semua") -- 0 crash.
+// Reminder filter persistence is best-effort; read failures must not break rendering.
 }
 },
 _saveReminderSeverityFilterPrefs(){
@@ -1746,15 +1331,10 @@ if(typeof localStorage==='undefined')return;
 try{
 localStorage.setItem(Servis._reminderSeverityFilterStorageKey,JSON.stringify({activeReminderSeverityFilter:Servis.activeReminderSeverityFilter}));
 }catch(err){
-// localStorage penuh/diblokir -> abaikan (0 crash).
+// Reminder filter persistence is best-effort; storage write failures are safe to ignore.
 }
 },
-// reminderSeverityChipsHtml(counts) -- render chip filter status kartu
-// Pengingat. Reuse class "chip" apa adanya (pola sama persis
-// renderActionTypeChips()/Sparepart chip kategori master di file ini --
-// 0 CSS baru). Angka di tiap chip dihitung dari kategori yang SUDAH lolos
-// filter kategori master/komponen (lihat pemanggil), supaya tetap relevan
-// dgn konteks filter yang sedang aktif.
+
 reminderSeverityChipsHtml(counts){
   const cur=Servis.activeReminderSeverityFilter;
   const opts=[{v:null,label:'🔍 Semua'},{v:'lewat',label:'🔴 Terlewat'},{v:'segera',label:'🟠 Segera'},{v:'mendekati',label:'🔵 Mendekati'},{v:'aman',label:'🟢 Aman'}];
@@ -1776,22 +1356,7 @@ const _legacyServiceMigrationChanged=typeof normalizeLegacyServiceLogs==='functi
 if(_legacyServiceMigrationChanged&&typeof save==='function')save();
 const curKm=getVehicleKm(curVehicleId);
 const kmPerDay=estimateKmPerDay(curVehicleId);
-// Sesi 295 (bugfix "Pengingat Servis" kebanjiran kategori sampah): dulu SEMUA
-// D.sparepartCats ditampilkan tanpa filter -- termasuk kategori yg auto-dibuat
-// syncPartsStockFromCatalog() (tx-stok-sparepart.js) saat scan Katalog Suku
-// Cadang, yg sengaja diberi intervalKm:0 & showInReminder:false karena itu
-// cuma kategori PENGELOMPOKAN STOK, bukan jadwal servis. Tanpa filter ini,
-// kategori spt "E-2 Cylinder Head Cover" (dari scan torsi/katalog) numpuk di
-// Pengingat dgn "Interval 0 km" & selalu "Lewat" (0-jarakTempuh selalu <=0).
-// Filter: hanya kategori dgn interval valid (>0) DAN belum ditandai
-// disembunyikan manual dari 🔧 Kelola Kategori (lihat renderCatList()).
-// S622 (permintaan user: pengingat servis per part/kategori/stok sparepart
-// harus sendiri-sendiri per kendaraan): tambah filter catVisibleForVehicle()
-// (modules/vehicle/sparepart-servis.js) -- kategori khusus kendaraan LAIN
-// (cat.vehicleId terisi tapi beda dari curVehicleId) tidak lagi ikut numpuk
-// di kartu Pengingat Servis kendaraan ini. Kategori universal (vehicleId
-// kosong, mayoritas data lama) tetap tampil di semua kendaraan (fail-open,
-// 0 data lama berubah perilaku).
+
 const reminderCategoryPool=(typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(curVehicleId):D.sparepartCats;
 const remindableCats=reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&((c.intervalKm>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c))));
 const rfMaster=Servis.activeReminderMasterCategoryFilter;
@@ -1803,9 +1368,7 @@ const filteredRemindableCats=remindableCats.filter(c=>{
   if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;if(!hit||mid!==hit.group.masterCategoryId)return false;const cid=c.serviceComponentId||(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'&&ServiceInputCatalog.infer(c.name)?.item?.id)||null;return cid===rfComp;}
   return mid===rfMaster;
 });
-// v21: condition-only maintenance gets its own read-only section.
-// It deliberately stays outside filteredRemindableCats so condition rules
-// never enter the interval/overdue calculation path.
+
 const conditionCats=(typeof getMaintenanceConditionProjection==='function')?getMaintenanceConditionProjection(curVehicleId):[];
 const filteredConditionCats=conditionCats.filter(c=>{
   if(!rfMaster&&!rfComp)return true;
@@ -1821,28 +1384,13 @@ Servis.renderReminderFilters(card);
 return;
 }
 const rows=filteredRemindableCats.map(cat=>{
-// Sesi 3D — Reminder ↔ History Sync: baseline KM yang DITAMPILKAN harus
-// memakai aturan reset yang SAMA dengan computeServiceUrgency(). Sebelumnya
-// lastKm di sini mengambil log kategori terakhir tanpa actionTypeFilter,
-// sementara status urgency memfilter (mis. periksa-conditional). Hasilnya
-// satu kartu bisa menampilkan angka sisa dari log "ganti" tetapi status
-// jatuh-tempo dari log "periksa". Satukan ke canonical reset baseline.
+
 const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
 const lastKm=Servis.getLastServiceKmForCat(curVehicleId,cat,resetFilter,true);
 const intervalKm=getEffectiveIntervalKm(curVehicleId,cat);
 const overridden=hasIntervalOverride(curVehicleId,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-// FITUR BARU (Maintenance Rule v2): computeServiceUrgency() menjadi resolver
-// action-aware. Untuk kategori KZR yang punya rule, intervalKm di bawah
-// mengikuti action yang paling mendesak (inspect/replace), bukan angka
-// interval kategori lama yang bisa berbeda.
-// FITUR BARU (Interval Waktu): 100% reuse computeServiceUrgency()
-// (modules/vehicle/sparepart-servis.js) -- SATU-SATUNYA titik hitung
-// status/sisa yg sadar 2 sumbu (km & bulan opsional per kategori). sisa/pct/
-// col/msg/severity di bawah TETAP dihitung dari sisaKm (utk progress bar &
-// label km yg sudah ada, 0 perubahan tampilan lama), cuma status
-// 'lewat'/'segera' (severity) skrg ikut u.status supaya axis bulan yg lebih
-// mendesak (mis. Minyak Rem sudah >6 bln walau km masih jauh) TETAP kebaca.
+
 const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:curVehicleId,cat,curKm,kmPerDay}):null;
 const effectiveIntervalKm=u&&u.intervalKm>0?u.intervalKm:intervalKm;
 const effectiveLastKm=u&&u.lastKm!==undefined?u.lastKm:lastKm;
@@ -1865,16 +1413,10 @@ msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimit
 col='orange';severity='watch';
 msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`;
 }
-// Kalau axis bulan yang membatasi, jangan tempel estimasi tanggal berbasis
-// sisa-KM karena itu memberi dua baseline berbeda pada kartu yang sama.
+
 const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
-// FITUR BARU (audit, gap "reminder tidak nyambung ke VehicleActionRecommendation"):
-// 100% reuse VehicleActionRecommendation.actionFor() (vehicle-action-recommendation.js,
-// Sesi 82) -- TIDAK menghitung ulang severity apa pun, cuma numpang teks aksi
-// konkret yang sudah ada utk severity 'overdue'/'due-soon' yang SAMA PERSIS
-// dgn yang dipakai VehicleAlertPanel/VehicleInsightFeed di Dashboard. Guard
-// typeof spy tetap aman kalau file itu belum termuat (mis. test terisolasi).
+
 const action=(severity&&typeof VehicleActionRecommendation!=='undefined')?VehicleActionRecommendation.actionFor({type:'service',severity}).label:null;
 const nextAction=u&&u.nextAction&&u.nextAction!=='event_based'?u.nextAction:null;
 const condition=u&&u.condition?u.condition:null;
@@ -1883,12 +1425,7 @@ const scheduleLabel=(u&&u.intervalHari&&u.limitingAxis==='hari')?`Setiap ${u.int
 const nextDueKm=u&&u.nextDueKm!=null?u.nextDueKm:null;
 const nextDueDate=u&&u.nextDueDate?u.nextDueDate:null;
 const dueLabel=nextDueKm!==null&&nextDueDate?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km / ${fmtDateID(nextDueDate)}`:nextDueKm!==null?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km`:nextDueDate?`Berikutnya: ${fmtDateID(nextDueDate)}`:'';
-// FIX (historySummary is not defined -- ReferenceError bikin renderReminder()
-// crash setiap kali kartu Pengingat Servis dirender, mis. saat pindah tab):
-// var ini dulu dipakai di object literal & template riwayat di bawah tanpa
-// pernah dideklarasikan. Hitung ringkasan singkat total riwayat kategori ini
-// (semua actionType, semua waktu -- BUKAN dibatasi resetFilter spt lastKm)
-// dari D.servisLogs, reuse servisLogMatchesCat() yg sudah dipakai di atas.
+
 const historyLogsForSummary=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId&&servisLogMatchesCat(s,cat)):[];
 const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.length} riwayat tercatat`:'Belum ada riwayat tercatat';
 return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction,condition,historySummary,scheduleLabel,nextDueKm,nextDueDate,dueLabel,status};
@@ -1929,23 +1466,13 @@ Servis.renderReminderFilters(card);
 applyOneCardCollapsePref('servisReminderCard');
 },
 loadMore(){Servis.listPage++;Servis.renderList();},
-// setActionTypeFilter(type) — BARU (Sesi E6). Dipanggil dari klik chip
-// filter (data-action="Servis.setActionTypeFilter"). type: null ("Semua")
-// atau 'periksa'/'bersih'/'ganti'. Reset listPage ke 1 (pola sama BBM/
-// Torsi.setCat()) supaya pagination tidak nyangkut di halaman lama saat
-// filter berganti (bisa beda jumlah total item).
+
 setActionTypeFilter(type){
 Servis.activeActionTypeFilter=type||null;
 Servis.listPage=1;
 Servis.renderList();
 },
-// renderOdometerIntegrityBadge(beforeEl) — BARU (rekomendasi audit S749/S750).
-// getServiceOdometerIntegrity() sudah ada (deteksi km_regression/missing_km/
-// invalid_km lintas riwayat) tapi sebelum ini tidak dipanggil dari UI mana pun
-// -- murni tersembunyi di belakang test. Read-only, 0 tulis D. Tampil HANYA
-// kalau ada temuan (ok:false) supaya tidak menambah noise visual saat data
-// bersih (0 dampak ke tampilan normal). Pola pembuatan elemen dinamis 1x sama
-// persis renderActionTypeChips(beforeEl) di bawah ini.
+
 renderOdometerIntegrityBadge(beforeEl){
 let box=document.getElementById('servisOdometerIntegrityBadge');
 if(typeof Servis.getServiceOdometerIntegrity!=='function'){if(box)box.style.display='none';return;}
@@ -1961,13 +1488,7 @@ const n=(report.issues||[]).length;
 box.style.display='block';
 box.textContent=`⚠️ ${n} data KM riwayat servis kendaraan ini perlu dicek (KM mundur/kosong/tidak valid) — tap satu per satu di daftar bawah untuk cek & perbaiki.`;
 },
-// renderActionTypeChips(beforeEl) — BARU (Sesi E6). Chip row filter
-// riwayat by actionType, DISISIPKAN lewat JS sebelum #servisList (bukan
-// markup statis di index.html -- beda dgn Torsi.chips() yg pakai
-// container #trsChipRow yang SUDAH ada di markup). Pola pembuatan elemen
-// dinamis 1x (cek getElementById dulu, buat kalau belum ada) SAMA PERSIS
-// dgn servisMoreWrap di bawah (renderList()), supaya tidak dobel-insert
-// tiap kali renderList() dipanggil ulang.
+
 renderActionTypeChips(beforeEl){
 let row=document.getElementById('servisActionTypeChipRow');
 if(!row){
@@ -1982,26 +1503,13 @@ row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFi
 },
 renderList(){
 Servis.renderReminder();
-// Sesi D-lanjutan5: baca preferensi filter tersimpan SEKALI per lifetime
-// halaman, SEBELUM filterSig/logs dihitung di bawah -- supaya render
-// pertama tab ini langsung mencerminkan pilihan filter sesi sebelumnya
-// (pola sama persis Sparepart.renderCatList()).
+
 Servis._loadMasterCategoryFilterPrefsOnce();
 const {from,to}=getCnRange();
-// filterSig -- Sesi D-lanjutan4: activeMasterCategoryFilter ditambahkan sbg
-// komponen (pola sama persis penambahan activeActionTypeFilter di E6),
-// supaya listPage ikut direset otomatis saat filter kategori master
-// berganti (jumlah total item bisa beda).
+
 const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFilter+'|'+Servis.activeMasterCategoryFilter+'|'+Servis.activeServiceComponentFilter;
 if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filterSig;}
-// Sesi D-lanjutan4: kondisi filter tambahan by kategori master, reuse
-// resolveLogMasterCategoryId(s) apa adanya (0 logic classify baru).
-// activeMasterCategoryFilter===null (default) = 0 perubahan hasil filter
-// dari sebelum sesi ini -- 0 regresi, sama persis pola E6.
-// Sesi D-lanjutan5: opsi dropdown "❔ Belum dikategorikan" (UNCATEGORIZED_FILTER_ID)
-// -- cocokkan entry yang resolveLogMasterCategoryId(s)-nya null (baik krn
-// classify 0 keyword cocok, maupun krn 0 kategori yang bisa di-join sama
-// sekali), BUKAN dibandingkan literal ke salah satu dari 13 id terkunci.
+
 const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
 const logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
@@ -2012,30 +1520,18 @@ document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString
 const el=document.getElementById('servisList');
 Servis.renderOdometerIntegrityBadge(el);
 Servis.renderActionTypeChips(el);
-// renderMasterCategoryChips(el) -- Sesi D-lanjutan4. Dipanggil SETELAH
-// renderActionTypeChips(el) (keduanya pakai insertAdjacentElement
-// 'beforebegin' relatif ke el) supaya urutan tampil konsisten: chip
-// actionType (E6) di atas, dropdown kategori master (sesi ini) di bawahnya,
-// baru #servisList. Dipanggil sebelum cek logs.length supaya filter tetap
-// tampil walau hasil filter 0 entry (user bisa ganti filter lagi), pola
-// sama persis renderActionTypeChips(el) di atas.
+
 Servis.renderMasterCategoryChips(el);
 Servis.renderServiceComponentFilter(el);
 if(!logs.length){
-// Sesi D-lanjutan4: pesan empty state dibedakan saat filter kategori
-// master aktif & 0 match, supaya user tidak salah kira riwayat servis
-// kendaraannya benar-benar kosong -- pola sama persis pembedaan pesan di
-// Sparepart.renderCatList() (Sesi D-lanjutan3). Filter actionType/rentang
-// tanggal 0 match tetap pakai pesan default lama (0 perubahan, di luar
-// scope sesi ini).
+
 const emptyText=Servis.activeMasterCategoryFilter?'Tidak ada catatan servis utk kategori master ini':'Belum ada catatan servis';
 el.innerHTML=`<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">${escapeHtml(emptyText)}</div></div>`;
 return;
 }
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
-// Stage 2B — group records produced by one checklist session into one
-// history card. Legacy logs without sessionId stay one-card-per-record.
+
 const historyGroups=[]; const historyGroupMap=new Map();
 visible.forEach(s=>{
   const key=s.sessionId?`session:${s.sessionId}`:`single:${s.id}`;
@@ -2079,11 +1575,5 @@ servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banya
 } else servisMoreWrap.style.display='none';
 }
 };
-// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
-// features-helpers-global-security.js) bisa menemukan modul ini lewat
-// window['Servis'][method]. `const Servis = {...}` di atas HANYA membuat
-// binding lexical-scope (bukan properti window), pola fix sama persis
-// window.FuelModal di fuel-modal.js (bug yang sama pernah terjadi &
-// diperbaiki di sana). Tanpa baris ini, semua tombol data-action="Servis.xxx"
-// (termasuk chip rekomendasi part) gagal diam-diam.
+
 if (typeof Servis !== 'undefined') window.Servis = Servis;
