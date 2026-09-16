@@ -27,13 +27,12 @@ test('Car Notes classic polish: accessibility and mobile touch targets', () => {
   assert.match(css, /max-width:380px/);
 });
 
-test('Car Notes classic polish: cache-bust is aligned with the current release version', () => {
+test('Car Notes classic polish: cache-bust mengikuti release version saat ini', () => {
   const index = read('index.html');
   const prod = read('app_production.html');
   const sw = read('sw.js');
-  const m = index.match(/styles\.css\?v=(\d+)/);
-  assert.ok(m, 'index.html harus punya versi styles.css');
-  const v=m[1];
-  assert.match(prod, new RegExp('styles\\.css\\?v='+v));
-  assert.match(sw, new RegExp('kw-cache-v'+v+'\\b'));
+  const version = (index.match(/styles\.css\?v=(\d+)/) || [])[1];
+  assert.ok(version, 'index harus memiliki cache-bust styles.css');
+  assert.match(prod, new RegExp('styles\\.css\\?v=' + version));
+  assert.match(sw, new RegExp('kw-cache-v' + version + '\\b'));
 });
