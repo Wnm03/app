@@ -16,7 +16,14 @@
     "release-check": "node scripts/verify-release-ready.js",
     "check": "npm run lint && npm run verify-window-expose && npm test && npm run build",
     "release": "bash scripts/release.sh",
-    "service-sot-gate": "node scripts/service-sot-integrity-gate.js"
+    "service-sot-gate": "node scripts/service-sot-integrity-gate.js",
+    "audit:carnotes": "node scripts/verify-carnotes-integrity.js",
+    "audit:source-size": "node scripts/verify-source-size.js --strict",
+    "test:critical": "node --test tests/carnotes-permanent-integrity-gate.test.js tests/fresh-install-cache-integrity.test.js tests/carnotes-theme-pro-rollback.test.js tests/carnotes-navigation-servis-regression-1749.test.js",
+    "test:full": "node scripts/run-full-test.js",
+    "audit:carnotes-performance": "node scripts/verify-carnotes-performance.js",
+    "build:release": "node scripts/build.js --require-minify",
+    "release:preflight": "node scripts/build.js --require-minify && node scripts/verify-release-ready.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

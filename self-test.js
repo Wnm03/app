@@ -1514,23 +1514,6 @@ let tabName=null;
 try{ tabName=JSON.parse(btn.getAttribute('data-args')||'[]')[0]; }catch(e){ /* data-args tidak valid/kosong -- tabName tetap null, di-skip guard di bawah */ }
 if(!tabName)return;
 g.fn(tabName,btn);
-// Pro Car Notes intentionally hides the legacy #cnTab-* panes with
-// display:none!important and routes the visible experience to one of the
-// dedicated #proMockScreen* panes. Treat that route as the real visibility
-// contract; otherwise this self-test becomes a false-positive whenever the
-// active theme is Pro (S1751).
-if(g.page==='#page-carnotes'&&document.body&&document.body.dataset.theme==='pro'){
-const proMap={beranda:1,servis:3,bbm:7,pajak:8,insight:1,jalan:1};
-const screenNo=proMap[tabName];
-if(screenNo!=null){
-const proPane=document.querySelector('#page-carnotes .pro-mock-screen[data-pro-screen="'+screenNo+'"]');
-if(proPane){
-const disp=getComputedStyle(proPane).display;
-_selfTestAssert(disp!=='none','Pro Car Notes screen #'+screenNo+' harus terlihat setelah tab "'+tabName+'" diaktifkan');
-}
-return;
-}
-}
 const pane=document.getElementById(g.paneId(tabName));
 if(pane){
 const disp=getComputedStyle(pane).display;

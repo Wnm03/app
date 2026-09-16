@@ -58,7 +58,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=1754"
+      -> `<script src="modules/shared/modal-write.js?v=1756"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -70,7 +70,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=1754`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=1756`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -183,17 +183,16 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1754">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1754">
-<link rel="stylesheet" href="minimal-ui-theme.css?v=1754">
-<link rel="stylesheet" href="pro-ui-layer.css?v=1754">
-<script src="nav-scroll.js?v=1754" defer></script>
-<script src="modules/shared/boot-early.js?v=1754"></script>
+<link rel="stylesheet" href="styles.css?v=1756">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1756">
+<link rel="stylesheet" href="minimal-ui-theme.css?v=1756">
+<script src="nav-scroll.js?v=1756" defer></script>
+<script src="modules/shared/boot-early.js?v=1756"></script>
 
 
 
-<script src="modules/shared/bundle-load-guard.js?v=1754" data-guard-src="app-bundle-a.min.js?v=1754" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=1754" defer></script>
+<script src="modules/shared/bundle-load-guard.js?v=1756" data-guard-src="app-bundle-a.min.js?v=1756" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=1756" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 </head>
 <body data-theme="fresh">
@@ -1598,9 +1597,9 @@
 </div>
 
 <!-- CAR NOTES -->
-<div class="page pro-vehicle-page" id="page-carnotes">
+<div class="page" id="page-carnotes">
   <div class="page-settings-btn">
-    <div class="page-title">🏍️ Car Notes</div><button class="pro-main-nav-back" data-action="proReturnToMainNav" aria-label="Kembali ke aplikasi utama">← Aplikasi Utama</button><span class="pro-offline-status" id="cnOfflineStatus" role="status" aria-live="polite">● Online</span>
+    <div class="page-title">🏍️ Car Notes</div>
     <button class="qs-btn" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   </div>
     <div class="card u-mb12 u-dnone" id="mobilInsightCard">
@@ -1612,13 +1611,22 @@
        dilihat", jangan dikubur di bawah 11 card lain. DIPINDAH dari lokasi
        lama (bawah #vehAutomationWrap) ke sini, TIDAK ADA perubahan
        markup/id/logic — murni urutan DOM yang berubah. -->
-  <div class="pro-vehicle-hero"><div class="pro-vehicle-context"><span class="pro-kicker">Keluarga</span><span class="pro-date" data-pro-today>—</span></div><div class="vehicle-select" id="vehicleSelect"></div></div>
-  <div class="card u-mb10 u-flex u-aic u-jcb pro-odometer-card" style="padding:12px 14px">
-    <div><div class="u-fs12 u-t2 u-fw700" style="text-transform:uppercase;letter-spacing:0.6px">Odometer Saat Ini</div><div class="u-fw800 u-pointer" style="font-size:20px;user-select:none;-webkit-user-select:none" id="cnCurKm" data-action="startEditCurKm" title="Tap untuk edit langsung" aria-label="Edit odometer saat ini">0 km</div><div class="u-fs11 u-t3" id="cnCurKmSrc" style="margin-top:2px"></div></div>
-    <button class="btn btn-ghost btn-sm" data-action="openKmModal" aria-label="Edit/Buka">📏 Update KM</button>
-  </div>
-  <button class="btn btn-ghost btn-full btn-sm u-mb12" data-action="openVehicleModal" aria-label="Edit/Buka">+ Kelola Kendaraan</button>
-  <button class="btn btn-ghost btn-full btn-sm u-mb12" data-action="VehicleCatalogUI.open" aria-label="Buka">📦 Katalog Suku Cadang</button>
+  <section class="cn-vehicle-summary" aria-label="Ringkasan kendaraan aktif">
+    <div class="cn-vehicle-summary-head">
+      <div class="cn-vehicle-summary-label">🚗 Kendaraan aktif</div>
+      <button class="cn-summary-link" type="button" data-action="openVehicleModal" aria-label="Kelola kendaraan">Kelola</button>
+    </div>
+    <div class="vehicle-select" id="vehicleSelect"></div>
+    <div class="cn-summary-metrics">
+      <div class="cn-summary-metric cn-summary-metric-primary">
+        <div class="cn-summary-metric-label">Odometer saat ini</div>
+        <button class="cn-km-value" id="cnCurKm" type="button" data-action="startEditCurKm" title="Tap untuk edit langsung" aria-label="Edit odometer saat ini">0 km</button>
+        <div class="cn-summary-metric-source" id="cnCurKmSrc"></div>
+      </div>
+      <button class="cn-summary-action" type="button" data-action="openKmModal" aria-label="Update odometer">📏<span>Update KM</span></button>
+      <button class="cn-summary-action" type="button" data-action="VehicleCatalogUI.open" aria-label="Buka katalog suku cadang">📦<span>Katalog</span></button>
+    </div>
+  </section>
 
   <!-- Sesi 157 (permintaan eksplisit user): pecah page-carnotes jadi 4
        cn-tabs (Insight AI / BBM / Servis / Pajak & SIM) — pola SAMA PERSIS
@@ -1630,140 +1638,14 @@
        konteks multi-kendaraan tetap kelihatan di semua tab, tidak
        berubah sama sekali. TIDAK ADA rumus/render baru — murni
        reorganisasi DOM + toggle visibility (setCnTab()). -->
-  <div class="cn-tabs pro-primary-tabs" aria-label="Navigasi Car Notes Pro">
-    <button class="cn-tab active" data-action="setCnTab" data-args='["beranda", "$el"]'>Beranda</button>
-    <button class="cn-tab" data-action="setCnTab" data-args='["servis", "$el"]'>Perawatan</button>
-    <button class="cn-tab" data-action="setCnTab" data-args='["bbm", "$el"]'>BBM</button>
-    <button class="cn-tab" data-action="setCnTab" data-args='["insight", "$el"]'>Insight</button>
-    <button class="cn-tab" data-action="setCnTab" data-args='["pajak", "$el"]'>Lainnya</button>
+  <div class="cn-tabs">
+    <button class="cn-tab" data-action="setCnTab" data-args='["insight", "$el"]'>🧠 Insight AI</button>
+    <button class="cn-tab active" data-action="setCnTab" data-args='["bbm", "$el"]'>⛽ BBM</button>
+    <button class="cn-tab" data-action="setCnTab" data-args='["servis", "$el"]'>🔧 Servis</button>
+    <button class="cn-tab" data-action="setCnTab" data-args='["pajak", "$el"]'>🚦 Pajak &amp; SIM</button>
+    <button class="cn-tab" data-action="setCnTab" data-args='["jalan", "$el"]'>🚴 Jalan</button>
   </div>
-<div class="page-breadcrumb pro-carnotes-breadcrumb" aria-label="Lokasi saat ini">Aplikasi Utama <span aria-hidden="true">›</span> Car Notes <span aria-hidden="true">›</span> <span class="pb-current" id="cnBreadcrumbSub">Beranda</span></div>
-
-  <!-- PRO MOCKUP HOME: presentation shell assembled from existing rendered values. -->
-  <div id="cnTab-beranda" class="pro-home-screen">
-    <div class="pro-home-heading"><div><div class="pro-screen-title">Beranda</div><div class="pro-screen-subtitle">Ringkasan kendaraan dan perawatan hari ini</div></div><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan Car Notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.2 2.4 2.6.4.8 2.5-1.9 1.8.5 2.6-2.4 1.1L12 12l-2.8 1.8-2.4-1.1.5-2.6-1.9-1.8.8-2.5 2.6-.4L12 3z"/><circle cx="12" cy="9" r="2"/></svg></button></div>
-    <div class="pro-home-vehicle card">
-      <div class="pro-home-vehicle-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><path d="M8 28l3-11c.7-2.5 2.5-4 5.2-4h15.6c2.7 0 4.5 1.5 5.2 4l3 11v6H8v-6z" stroke="currentColor" stroke-width="2.5"/><path d="M13 28h22M14 35v3m20-3v3" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><circle cx="14" cy="31" r="2" fill="currentColor"/><circle cx="34" cy="31" r="2" fill="currentColor"/></svg></div>
-      <div class="pro-home-vehicle-copy"><strong id="proHomeVehicleName">Kendaraan aktif</strong><span id="proHomeVehicleMeta">Data kendaraan</span></div>
-      <button class="pro-home-chevron" data-action="openVehicleModal" aria-label="Kelola kendaraan">›</button>
-    </div>
-    <div class="pro-home-odo card"><div><span>Odometer Saat Ini</span><strong id="proHomeKm">0 km</strong><small id="proHomeKmSrc"></small></div><button class="btn btn-ghost btn-sm" data-action="openKmModal">Update KM</button></div>
-    <div class="pro-home-stats">
-      <button class="pro-home-stat" data-action="setCnTab" data-args='["servis"]'><span class="pro-stat-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-9 9-4-4"/><circle cx="12" cy="12" r="9"/></svg></span><b id="proHomeHealth">Baik</b><small>Kesehatan</small></button>
-      <button class="pro-home-stat" data-action="setCnTab" data-args='["servis"]'><span class="pro-stat-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg></span><b id="proHomeServiceStatus">Tepat Waktu</b><small>Servis</small></button>
-      <button class="pro-home-stat" data-action="setCnTab" data-args='["bbm"]'><span class="pro-stat-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><b id="proHomeFuelStatus">Efisien</b><small>BBM</small></button>
-    </div>
-    <div class="pro-home-section-title"><span>Pengingat Servis</span><button data-action="setCnTab" data-args='["servis"]'>Lihat Semua ›</button></div>
-    <div class="pro-home-reminders" id="proHomeReminders"></div>
-    <div class="pro-home-section-title"><span>Quick Action</span></div>
-    <div class="pro-home-actions">
-      <button data-action="openServisModal"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 6l4 4-8 8H6v-4z"/><path d="M13 7l4 4"/></svg></span><b>Servis<br/>Komponen</b></button>
-      <button data-action="setCnTab" data-args='["servis"]'><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 12h6M9 16h6"/></svg></span><b>Riwayat<br/>Servis</b></button>
-      <button data-action="VehicleCatalogUI.open"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><b>Katalog<br/>Sparepart</b></button>
-    </div>
-  </div>
-
-  <!-- PRO MOCKUP FIDELITY SCREENS 1717: dedicated visual screens matching mockup-dark.png. -->
-  <section id="proMockupScreens" class="pro-mockup-screens" aria-label="Car Notes Pro Mockup">
-    <!-- 1. Dashboard Kendaraan -->
-    <section id="proMockScreen1" class="pro-mock-screen active" data-pro-screen="1">
-      <div class="pro-mock-top"><div><div class="pro-screen-title">Keluarga</div><div class="pro-screen-subtitle" data-pro-today>—</div></div><div class="pro-mock-top-actions"><button class="pro-icon-button" data-action="openGlobalSearch" aria-label="Cari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button><button class="pro-icon-button" data-action="proOpenNotifications" aria-label="Notifikasi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg></button><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-2.83 2.83-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6"/></svg></button></div></div>
-      <button class="pro-mock-vehicle" data-action="openVehicleModal"><span class="pro-mock-bike"><svg viewBox="0 0 64 44" fill="none"><path d="M7 29h5l4-12c1-3 3-5 7-5h17c3 0 6 2 7 5l4 12h5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19 29h27M25 12l4-5h8l4 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="17" cy="31" r="7" stroke="currentColor" stroke-width="2.2"/><circle cx="48" cy="31" r="7" stroke="currentColor" stroke-width="2.2"/></svg></span><span><b id="proMockVehicleName">Vario 125</b><small>Honda • 2021 • B 1234 XYZ</small></span><span class="pro-chevron">⌄</span></button>
-      <div class="pro-mock-odo"><div><small>Odometer Saat Ini</small><strong id="proMockKm">19.608 km</strong><span id="proMockKmSrc">dari log BBM</span></div><button class="pro-mini-btn" data-action="openKmModal">Update KM</button></div>
-      <div class="pro-mock-stat-grid"><button class="pro-mock-stat health" data-pro-goto="2"><span class="pro-round-icon">✓</span><b>Baik</b><small>Kesehatan</small></button><button class="pro-mock-stat service" data-pro-goto="3"><span class="pro-round-icon">◷</span><b>Tepat Waktu</b><small>Servis</small></button><button class="pro-mock-stat fuel" data-pro-goto="7"><span class="pro-round-icon">◉</span><b>Efisien</b><small>BBM</small></button></div>
-      <div class="pro-mock-section-head"><b>Pengingat Servis</b><button data-pro-goto="4">Lihat Semua ›</button></div>
-      <div class="pro-mock-reminder-list"><button class="pro-mock-reminder danger" data-pro-goto="4"><span class="pro-rem-icon">◉</span><span><b>Ban Belakang</b><small>Terlambat 15.608 km<br/>14 Des 2026 • 91 hr</small></span><i>›</i></button><button class="pro-mock-reminder warn" data-pro-goto="4"><span class="pro-rem-icon">●</span><span><b>Tune Up</b><small>Dalam 8.392 km<br/>Est. 25 Des 2026 • 30 hr</small></span><i>›</i></button></div>
-      <div class="pro-mock-section-head"><b>Quick Action</b></div>
-      <div class="pro-mock-quick"><button data-pro-goto="6"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 6l4 4-8 8H6v-4z"/></svg></span><b>Servis<br/>Komponen</b></button><button data-pro-goto="5"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M9 12h6M9 16h6"/></svg></span><b>Riwayat<br/>Servis</b></button><button data-action="VehicleCatalogUI.open"><span class="qa-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></span><b>Katalog<br/>Sparepart</b></button></div>
-    </section>
-
-    <!-- 2. Detail Komponen -->
-    <section id="proMockScreen2" class="pro-mock-screen" data-pro-screen="2">
-      <div class="pro-mock-page-head"><button class="pro-back" data-pro-goto="3">‹</button><div><h2 id="proMockComponentName">Komponen Servis</h2><small>Grup: <b id="proMockComponentGroup">—</b></small></div><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.6a6.7 6.7 0 0 0-.8-1.8l.9-1.9-2.1-2.1-1.9.9a6.7 6.7 0 0 0-1.8-.8L10.7 2h-3l-.6 2a6.7 6.7 0 0 0-1.8.8l-1.9-.9-2.1 2.1.9 1.9a6.7 6.7 0 0 0-.8 1.8l-2 .6v3l2 .6a6.7 6.7 0 0 0 .8 1.8l-.9 1.9 2.1 2.1 1.9-.9a6.7 6.7 0 0 0 1.8.8l.6 2h3l.6-2a6.7 6.7 0 0 0 1.8-.8l1.9.9 2.1-2.1-.9-1.9a6.7 6.7 0 0 0 .8-1.8z"/></svg></button></div>
-      <div class="pro-segment"><button class="active" data-pro-goto="2">Saat Ini</button><button data-pro-goto="5">Riwayat</button></div>
-      <div class="pro-condition"><span>✓</span><div><b id="proMockComponentStatus">Kondisi Normal</b><small id="proMockComponentCondition">Komponen dalam kondisi baik.</small></div></div>
-      <div class="pro-info-card"><h3>Interval Servis</h3><div class="pro-two-col"><div><small>Jarak Tempuh</small><b id="proMockComponentInterval">—</b></div><div><small>Waktu</small><b>—</b></div></div></div>
-      <div class="pro-info-card"><div class="pro-line-head"><h3>Sisa Jarak</h3><b>—</b></div><strong id="proMockComponentRemaining">—</strong><div class="pro-progress"><i id="proMockComponentProgress" style="width:0%"></i></div><div class="pro-line-head"><h3>Sisa Waktu</h3><b>63%</b></div><strong>5 bulan</strong><div class="pro-progress"><i style="width:63%"></i></div></div>
-      <div class="pro-note-card"><span>▣</span><div><b>Catatan</b><p>Ganti busi sesuai interval untuk performa mesin tetap optimal.</p></div></div>
-      <button class="btn btn-primary btn-full pro-large-btn" data-pro-goto="6">Jadwalkan Servis</button>
-    </section>
-
-    <!-- 3. Checklist Perawatan -->
-    <section id="proMockScreen3" class="pro-mock-screen" data-pro-screen="3">
-      <div class="pro-mock-top"><div><div class="pro-screen-title">Keluarga</div><div class="pro-screen-subtitle" data-pro-today>—</div></div><div class="pro-mock-top-actions"><button class="pro-icon-button" data-action="openGlobalSearch" aria-label="Cari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button><button class="pro-icon-button" data-pro-goto="5" aria-label="Aktivitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h12M6 9h12M6 14h8M6 19h12"/></svg></button><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.6a6.7 6.7 0 0 0-.8-1.8l.9-1.9-2.1-2.1-1.9.9a6.7 6.7 0 0 0-1.8-.8L10.7 2h-3l-.6 2a6.7 6.7 0 0 0-1.8.8l-1.9-.9-2.1 2.1.9 1.9a6.7 6.7 0 0 0-.8 1.8l-2 .6v3l2 .6a6.7 6.7 0 0 0 .8 1.8l-.9 1.9 2.1 2.1 1.9-.9a6.7 6.7 0 0 0 1.8.8l.6 2h3l.6-2a6.7 6.7 0 0 0 1.8-.8l1.9.9 1.9-.9 2.1 2.1-.9-1.9a6.7 6.7 0 0 0 .8-1.8z"/></svg></button></div></div>
-      <div class="pro-filter-card"><b>Semua Kategori Servis</b><div class="pro-chip-row"><button class="active" data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter servis semua kategori">Semua</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter servis 1.000 km">1.000 km</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter servis 2.000 km">2.000 km</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter servis 4.000 km">4.000 km</button></div></div>
-      <div class="pro-check-grid"><button class="pro-check-card green" data-pro-goto="2"><span class="component-icon">⌁</span><b>Servis Mesin</b><small>Sisa 2.000 km</small><em>Est. Sep 2026</em></button><button class="pro-check-card yellow" data-pro-goto="2"><span class="component-icon">◒</span><b>Tune Up</b><small>Sisa 1.000 km</small><em>Est. Des 2026</em></button><button class="pro-check-card green" data-pro-goto="2"><span class="component-icon">◉</span><b>Ganti Oli</b><small>Sisa 3.000 km</small><em>Est. Nov 2026</em></button><button class="pro-check-card green" data-pro-goto="2"><span class="component-icon">◎</span><b>Ban</b><small>Sisa 11.500 km</small><em>Est. Mar 2028</em></button><button class="pro-check-card green" data-pro-goto="2"><span class="component-icon">◉</span><b>Kampas Rem</b><small>Sisa 14.000 km</small><em>Est. Sep 2026</em></button><button class="pro-check-card green" data-pro-goto="2"><span class="component-icon">◉</span><b>Cakram Rem</b><small>Sisa 19.000 km</small><em>Est. Okt 2026</em></button></div>
-    </section>
-
-    <!-- 4. Pengingat Servis per Part -->
-    <section id="proMockScreen4" class="pro-mock-screen" data-pro-screen="4">
-      <div class="pro-mock-page-head"><button class="pro-back" data-pro-goto="3">‹</button><h2>Pengingat Servis</h2><button class="pro-icon-button" data-action="openQS" data-args=["qsCarnotes"] aria-label="Pengaturan">⚙</button></div>
-      <div class="pro-filter-selects"><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Buka filter kategori servis">Semua Kategori⌄</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Buka filter status servis">Semua Status⌄</button></div>
-      <div class="pro-info-strip"><span>i</span>Estimasi jarak dan tanggal dihitung dari rata-rata pemakaian -36.5 km/hari (Hitung Catatan KM & BBM).</div>
-      <div class="pro-reminder-detail"><span class="r-icon red">B↔</span><div><b>Pin brake pad (kampas rem)</b><strong>⚠ Terlewat 15.608 km</strong><small>Belum pernah dicatat • Interval 4.000 km</small><button data-pro-goto="6">Jadwalkan Servis</button></div><i>R</i></div>
-      <div class="pro-reminder-detail"><span class="r-icon yellow">C</span><div><b>Kampas Rem</b><strong>⚠ Terlewat 15.608 km</strong><small>Belum pernah dicatat • Interval 4.000 km</small><button data-pro-goto="6">Jadwalkan Servis</button></div><i>R</i></div>
-      <div class="pro-reminder-detail"><span class="r-icon red">▣</span><div><b>Coolant</b><strong>⚠ Terlewat 15.608 km</strong><small>Belum pernah dicatat • Interval 4.000 km</small><button data-pro-goto="6">Jadwalkan Servis</button></div><i>R</i></div>
-      <div class="pro-reminder-detail"><span class="r-icon yellow">⌕</span><div><b>Oli Transmisi</b><strong>⚠ Tersisa 2.392 km</strong><small>Interval 8.000 km</small><button data-pro-goto="6">Jadwalkan Servis</button></div><i>R</i></div>
-    </section>
-
-    <!-- 5. Riwayat Servis -->
-    <section id="proMockScreen5" class="pro-mock-screen" data-pro-screen="5">
-      <div class="pro-mock-page-head"><button class="pro-back" data-pro-goto="1">‹</button><h2>Riwayat Servis</h2><button class="pro-icon-button" data-action="openGlobalSearch" aria-label="Cari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button></div>
-      <div class="pro-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg> Cari komponen, tanggal, atau jenis servis...</div>
-      <div class="pro-chip-row history"><button class="active" data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter riwayat semua">Semua</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter riwayat servis">Servis</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter riwayat BBM">BBM</button><button data-action="proMockupActivateGroup" data-args='["$el"]' aria-label="Filter riwayat penggantian">Penggantian</button></div>
-      <div class="pro-history-entry"><span class="history-icon">R</span><div><div class="pro-history-title"><b>Servis Lengkap</b><em>Selesai</em></div><small>12 Sep 2026 • 18.470 km</small><small>◉ Honda Bengkel Resmi</small><div class="pro-tags"><i>Oli Mesin</i><i>Filter Oli</i><i>Filter Udara</i></div></div><strong>Rp 252.000</strong></div>
-      <div class="pro-history-entry"><span class="history-icon">◉</span><div><div class="pro-history-title"><b>Ganti Oli</b><em>Selesai</em></div><small>05 Jun 2026 • 15.919 km</small><div class="pro-tags"><i>Oli Mesin</i><i>Filter Oli</i></div></div><strong>Rp 120.000</strong></div>
-      <div class="pro-history-entry"><span class="history-icon">⚙</span><div><div class="pro-history-title"><b>Servis CVT</b><em>Selesai</em></div><small>26 Mei 2026 • 14.500 km</small><small>Bengkel Mandiri</small><div class="pro-tags"><i>CVT</i><i>Gear</i><i>Roller</i></div></div><strong>Rp 180.000</strong></div>
-    </section>
-
-    <!-- 6. Form Input Servis -->
-    <section id="proMockScreen6" class="pro-mock-screen" data-pro-screen="6">
-      <div class="pro-mock-page-head"><button class="pro-back" data-pro-goto="1">‹</button><h2>Tambah Servis</h2></div>
-      <div class="pro-stepper"><b>1. Data</b><span>2. Komponen</span><span>3. Biaya</span><span>4. Selesai</span></div>
-      <h3 class="pro-form-title">Data Servis</h3>
-      <label>Jenis Servis<select id="proMockFormService"><option>Servis</option></select></label>
-      <label>Tanggal Servis<div class="pro-input" id="proMockFormDate">—</div></label>
-      <label>Odometer<div class="pro-input" id="proMockFormKm">—</div></label>
-      <label>Bengkel<div class="pro-input" id="proMockFormWorkshop">Belum dicatat</div></label>
-      <label>Catatan<div class="pro-textarea">Masukkan catatan (opsional)...</div></label>
-      <button class="btn btn-primary btn-full pro-large-btn" data-action="openServisModal">Lanjut</button>
-    </section>
-
-    <!-- 7. BBM / Fuel Intelligence -->
-    <section id="proMockScreen7" class="pro-mock-screen" data-pro-screen="7">
-      <div class="pro-mock-top"><div><div class="pro-screen-title">Keluarga</div><div class="pro-screen-subtitle" data-pro-today>—</div></div><div class="pro-mock-top-actions"><button class="pro-icon-button" data-action="openGlobalSearch" aria-label="Cari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button><button class="pro-icon-button" data-pro-goto="5" aria-label="Aktivitas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h12M6 9h12M6 14h8M6 19h12"/></svg></button><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 13.5v-3l-2-.6a6.7 6.7 0 0 0-.8-1.8l.9-1.9-2.1-2.1-1.9.9a6.7 6.7 0 0 0-1.8-.8L10.7 2h-3l-.6 2a6.7 6.7 0 0 0-1.8.8l-1.9-.9-2.1 2.1.9 1.9a6.7 6.7 0 0 0-.8 1.8l-2 .6v3l2 .6a6.7 6.7 0 0 0 .8 1.8l-.9 1.9 2.1 2.1 1.9-.9a6.7 6.7 0 0 0 1.8.8l.6 2h3l.6-2a6.7 6.7 0 0 0 1.8-.8l1.9.9 1.9-.9 2.1 2.1-.9-1.9a6.7 6.7 0 0 0 .8-1.8z"/></svg></button></div></div>
-      <div class="pro-vehicle-pills"><button class="active" data-pro-vehicle="">Kendaraan aktif⌄</button></div>
-      <div class="pro-fuel-card"><h3>Fuel Intelligence</h3><p>Estimasi BBM real-time & rekomendasi kendaraan aktif — dari data yang sudah ada</p><div class="pro-fuel-main"><div><small>↯ Rata-rata Konsumsi</small><b>—</b><em>—</em></div><div class="pro-score"><span>Score ↗</span><strong>—<small>/100</small></strong><b>Belum Ada Data</b></div></div><div id="proFuelGauge" class="pro-fuel-gauge-wrap" aria-label="Bar BBM kendaraan aktif"></div><div id="proFuelSource" class="pro-fuel-source"></div><div class="pro-fuel-actions"><button data-action="ProMockupPresenter.openFuelDetail" aria-label="Lihat detail Fuel Intelligence">📊 Detail</button><button data-action="ProMockupPresenter.openFuelCorrection" aria-label="Koreksi estimasi BBM dengan speedometer">⚙️ Koreksi</button><button data-action="ProMockupPresenter.openFuelTank" aria-label="Atur profil tangki kendaraan">⛽ Tangki</button></div></div>
-      <div class="pro-fuel-history"><h3>Tren BBM <strong>—</strong></h3><div class="pro-bars"><i style="height:8%"></i></div></div>
-      <div class="pro-fuel-stats"><div><small>Estimasi Jarak</small><b>—</b><em>Data sisa BBM belum tersedia</em></div><div><small>Biaya BBM</small><b>—</b><em>Data biaya belum tersedia</em></div></div>
-    </section>
-
-    <!-- 8. Lainnya: Pajak/SIM + Audit + Jalan + Bengkel shell. Old features stay reachable in Pro. -->
-    <section id="proMockScreen8" class="pro-mock-screen" data-pro-screen="8">
-      <div class="pro-mock-page-head"><button class="pro-back" data-pro-goto="1" aria-label="Kembali ke Beranda">‹</button><div><h2>Lainnya</h2><small>Pajak, SIM, audit data & perjalanan</small></div><button class="pro-icon-button" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Pengaturan">⚙️</button></div>
-      <div class="pro-other-card">
-        <div class="pro-other-head"><div><b>🚦 Pajak Kendaraan & SIM</b><small>Jatuh tempo STNK, ganti plat, dan masa berlaku SIM</small></div></div>
-        <div id="proOtherTaxBody"><div class="pro-mock-empty">Memuat data pajak & SIM…</div></div>
-      </div>
-      <div class="pro-other-card">
-        <div class="pro-other-head"><div><b>🛡️ Audit Integritas Car Notes</b><small>Servis ↔ keuangan, BBM, pajak, stok, odometer, foto & reminder</small></div><button data-action="ProMockupPresenter.runAudit" aria-label="Jalankan audit integritas Car Notes">🔎 Audit</button></div>
-        <div id="proOtherAuditBody"><div class="pro-mock-empty">Pemeriksaan read-only; tap Audit untuk memeriksa.</div></div>
-      </div>
-      <div class="pro-other-card">
-        <div class="pro-other-head"><div><b>🚴 Jalan</b><small>Rekam perjalanan dari modul Ride yang sudah ada</small></div><button data-action="RideUI.start" aria-label="Mulai rekam perjalanan">▶️ Mulai</button></div>
-        <div id="proOtherRideBody"></div>
-      </div>
-      <details class="pro-other-card pro-other-map"><summary><b>🔧 Bengkel Terdekat</b><span>Data eksternal opsional</span></summary><div class="pro-map"><svg viewBox="0 0 400 220" preserveAspectRatio="none"><path d="M-20 180 90 140 155 160 230 105 430 55M-10 50 80 90 150 75 230 120 420 150M90-10l50 95-20 150M285-10 250 70l60 220"/><path d="M0 125 400 95M210 0 190 220"/></svg><div class="map-bubble"><b>Peta Bengkel</b><small>Data bengkel terdekat belum tersedia di penyimpanan aplikasi.</small><button data-action="proMockupMapUnavailable" aria-label="Info data bengkel">Detail</button></div></div></details>
-    </section>
-  </section>
-
-  <nav id="proMockBottomNav" class="pro-mock-bottom-nav" aria-label="Navigasi mockup Car Notes">
-    <button class="active" data-pro-goto="1"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 10 8-6 8 6v9H4z"/><path d="M9 19v-5h6v5"/></svg></span><small>Beranda</small></button>
-    <button data-pro-goto="3"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14 6 4 4-8 8H6v-4z"/><path d="m13 7 4 4"/></svg></span><small>Perawatan</small></button>
-    <button data-pro-goto="5"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span><small>Riwayat</small></button>
-    <button data-pro-goto="7"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h8v16H7z"/><path d="M15 7h3l2 2v7a2 2 0 0 1-4 0V9"/><path d="M9 7h4"/></svg></span><small>BBM</small></button>
-    <button data-pro-goto="8"><span><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></span><small>Lainnya</small></button>
-  </nav>
+<div class="page-breadcrumb"><span class="pb-current" id="cnBreadcrumbSub">BBM</span></div>
 
   <!-- INSIGHT AI TAB (Sesi 157) — kumpulan 6 card AI/dashboard yang dulu
        numpuk selalu tampil di atas (Vehicle Dashboard/Insight/Brief/
@@ -2046,14 +1928,6 @@
   </div>
   </div>
 
-  <nav class="pro-cn-bottom-nav" id="proCnBottomNav" aria-label="Navigasi Car Notes Pro">
-    <button class="active" data-action="setCnTab" data-args='["beranda", "$el"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg><span>Beranda</span></button>
-    <button data-action="setCnTab" data-args='["servis", "$el"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.1 2.1-2.4-2.4 1.5-1.7z"/></svg><span>Perawatan</span></button>
-    <button data-action="proOpenHistory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg><span>Riwayat</span></button>
-    <button data-action="setCnTab" data-args='["bbm", "$el"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h7v16H7zM14 8h3l2 2v8h-5M9 7h3"/></svg><span>BBM</span></button>
-    <button data-action="setCnTab" data-args='["pajak", "$el"]'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/></svg><span>Lainnya</span></button>
-  </nav>
-
   <!-- Sprint 2 Tahap 3: FAB Car Notes, menyamakan standar UI dgn Finance 2.0
        (Sprint 2 Tahap 1) & Shop FAB (Sprint 2 Tahap 2). Reuse PENUH komponen
        CSS `.keu-fab*` yang sudah ada di styles.css (tidak ada class CSS baru
@@ -2118,7 +1992,7 @@
       <div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val u-fs13" id="bbmTotalCost">Rp 0</div><div class="bbm-lbl">Total biaya</div></div>
     </div>
     <div class="card u-mb12" id="bbmTrendCard"></div>
-    <button class="btn btn-primary btn-full u-mb12" style="padding:14px" data-action="openBbmModal" aria-label="Edit/Buka">+ Catat Isi BBM</button>
+    <button class="btn btn-primary btn-full cn-primary-action u-mb12" data-action="openBbmModal" aria-label="Catat isi BBM"><span>⛽</span> Catat Isi BBM</button>
     <div class="card"><div class="card-title">⛽ Riwayat Isi BBM <span class="card-collapse-toggle" id="cnBbmListCard-chev" data-action="toggleCardCollapse" data-args='["cnBbmListCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="cnBbmListCard-cbody"><div id="bbmList"><div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">Belum ada catatan BBM</div></div></div></div></div>
     </div>
     <!-- /Sesi 158: sub-tab "Ringkasan" (#cnbTab-ringkasan) selesai di sini. -->
@@ -2153,18 +2027,17 @@
   </div>
 
   <!-- SERVIS TAB -->
-  <div id="cnTab-servis" class="u-dnone pro-servis-screen">
-    <div class="pro-screen-heading"><div><div class="pro-screen-title">Pengingat Servis</div><div class="pro-screen-subtitle">Perawatan kendaraan berdasarkan kondisi dan interval</div></div></div>
-    <div class="card u-mb12 pro-reminder-card" id="servisReminderCard"></div>
-    <div class="bbm-stat-grid pro-service-stats">
+  <div id="cnTab-servis" class="u-dnone">
+    <div class="card u-mb12" id="servisReminderCard"></div>
+    <div class="bbm-stat-grid">
       <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val" id="servisCount" style="font-size:15px">0</div><div class="bbm-lbl">Jumlah Servis</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val u-fs13" id="servisTotalCost">Rp 0</div><div class="bbm-lbl">Total Biaya</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val u-fs13" id="servisLastKm">-</div><div class="bbm-lbl">KM Terakhir</div></div>
     </div>
-    <button class="btn btn-primary btn-full u-mb12" style="padding:14px" data-action="openServisModal" aria-label="Edit/Buka">+ Catat Servis/Sparepart</button>
+    <button class="btn btn-primary btn-full cn-primary-action u-mb12" data-action="openServisModal" aria-label="Catat servis dan sparepart"><span>🔧</span> Catat Servis/Sparepart</button>
     <button class="btn btn-ghost btn-full btn-sm u-mb12" data-action="Torsi.open">🔩 Torsi Sparepart & Kalkulator Kunci</button>
     <div class="card u-mb12" id="serviceIntegrityCard"><div class="u-fs11 u-t2">Memeriksa integritas tautan servis dan keuangan…</div></div>
-    <div class="card pro-history-card"><div class="card-title">🔧 Riwayat Servis <span class="u-flexc8"><button class="card-setting-btn" data-action="openQS" data-args='["qsCarnotes"]'>⚙️ Atur</button><span class="card-collapse-toggle" id="cnServisListCard-chev" data-action="toggleCardCollapse" data-args='["cnServisListCard","$event"]' aria-label="Buka/tutup bagian">▾</span></span></div><div class="card-collapse-body" id="cnServisListCard-cbody"><div id="servisList"><div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Belum ada catatan servis</div></div></div></div></div>
+    <div class="card"><div class="card-title">🔧 Riwayat Servis <span class="u-flexc8"><button class="card-setting-btn" data-action="openQS" data-args='["qsCarnotes"]'>⚙️ Atur</button><span class="card-collapse-toggle" id="cnServisListCard-chev" data-action="toggleCardCollapse" data-args='["cnServisListCard","$event"]' aria-label="Buka/tutup bagian">▾</span></span></div><div class="card-collapse-body" id="cnServisListCard-cbody"><div id="servisList"><div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">Belum ada catatan servis</div></div></div></div></div>
     <details class="card u-p0">
       <summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">🛠️ Kelola Kategori Sparepart & Interval Servis</span></summary>
       <div class="summary-body-pad">
@@ -2413,9 +2286,9 @@
 </div>
 
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="0"></script><!-- modal:refAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="0"></script><!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="1"></script><!-- modal:lbHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="1"></script><!-- modal:lbHistoryModal externalized to modals.js -->
 
 <!-- ASET (Navigation Asset, dipisah dari Pajak — bisa dibuka lewat nav-item bottom-nav
      "Aset" (menggantikan slot "AI" lama), maupun lewat kartu Dashboard Hub kategori
@@ -4159,212 +4032,212 @@
 </div>
 
 <!-- MODAL: TRANSAKSI -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="2"></script><!-- modal:txModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="2"></script><!-- modal:txModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR GAJI -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="3"></script><!-- modal:gajiCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="3"></script><!-- modal:gajiCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI & GAJI HARIAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="4"></script><!-- modal:absensiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="4"></script><!-- modal:absensiModal externalized to modals.js -->
 
 <!-- MODAL: KONFIRMASI RESET GAJIAN MINGGUAN (SABTU) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="5"></script><!-- modal:weeklyResetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="5"></script><!-- modal:weeklyResetModal externalized to modals.js -->
 
 <!-- MODAL: TRANSFER ANTAR AKUN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="6"></script><!-- modal:transferModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="6"></script><!-- modal:transferModal externalized to modals.js -->
 
 <!-- MODAL: AKUN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="7"></script><!-- modal:accModal externalized to modals.js --><script src="modules/shared/modal-write.js?v=1754" data-modal-index="8"></script><!-- modal:accountOwnersModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="7"></script><!-- modal:accModal externalized to modals.js --><script src="modules/shared/modal-write.js?v=1756" data-modal-index="8"></script><!-- modal:accountOwnersModal externalized to modals.js -->
 
 <!-- MODAL: ASET (Buku Aset) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="9"></script><!-- modal:assetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="9"></script><!-- modal:assetModal externalized to modals.js -->
 
 <!-- MODAL: QUICK SCAN ASET (⚡ update nilai langsung dari daftar, tanpa buka modal Edit) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="10"></script><!-- modal:quickScanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="10"></script><!-- modal:quickScanModal externalized to modals.js -->
 
 <!-- MODAL: PIUTANG -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="11"></script><!-- modal:piutangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="11"></script><!-- modal:piutangModal externalized to modals.js -->
 
 <!-- MODAL: UTANG (BUKU UTANG) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="12"></script><!-- modal:debtModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="12"></script><!-- modal:debtModal externalized to modals.js -->
 
 <!-- MODAL: SHOP -->
 <!-- MODAL: PRODUK ETALASE -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="13"></script><!-- modal:productModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="13"></script><!-- modal:productModal externalized to modals.js -->
 
 <!-- MODAL: PRODUSEN (CRUD) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="14"></script><!-- modal:produsenModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="14"></script><!-- modal:produsenModal externalized to modals.js -->
 
 <!-- MODAL: ATUR HARGA PER PRODUSEN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="15"></script><!-- modal:produsenHargaModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="15"></script><!-- modal:produsenHargaModal externalized to modals.js -->
 
 <!-- MODAL: TRANSAKSI POS -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="16"></script><!-- modal:orderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="16"></script><!-- modal:orderModal externalized to modals.js -->
 
 <!-- MODAL: DETAIL PELANGGAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="17"></script><!-- modal:customerDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="17"></script><!-- modal:customerDetailModal externalized to modals.js -->
 
 <!-- MODAL: TARGET -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="18"></script><!-- modal:targetModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="18"></script><!-- modal:targetModal externalized to modals.js -->
 
 <!-- MODAL: DANA PENDIDIKAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="19"></script><!-- modal:eduFundModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="19"></script><!-- modal:eduFundModal externalized to modals.js -->
 
 <!-- MODAL: CATATAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="20"></script><!-- modal:catatanModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="20"></script><!-- modal:catatanModal externalized to modals.js -->
 
 <!-- MODAL: REMINDER -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="21"></script><!-- modal:reminderModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="21"></script><!-- modal:reminderModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI (dengan opsi tambah sebagai subkategori) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="22"></script><!-- modal:catModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="22"></script><!-- modal:catModal externalized to modals.js -->
 
 <!-- MODAL: SUBKATEGORI -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="23"></script><!-- modal:subCatModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="23"></script><!-- modal:subCatModal externalized to modals.js -->
 
 <!-- MODAL: TAGIHAN / CICILAN / LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="24"></script><!-- modal:billModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="24"></script><!-- modal:billModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - buat/edit proyek -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="25"></script><!-- modal:renovProjectModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="25"></script><!-- modal:renovProjectModal externalized to modals.js -->
 
 <!-- MODAL: SEWA KIOS - tambah/edit unit -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="26"></script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="26"></script><!-- modal:sewaKiosUnitModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - detail (daftar item biaya + progress) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="27"></script><!-- modal:renovDetailModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="27"></script><!-- modal:renovDetailModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - saran AI (kebutuhan, ukuran, keperluan) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="28"></script><!-- modal:renovAiModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="28"></script><!-- modal:renovAiModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - form item biaya -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="29"></script><!-- modal:renovItemModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="29"></script><!-- modal:renovItemModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - hubungkan ke transaksi lama yang sudah ada di Keuangan -->
 <!-- MODAL GENERIK: "Hubungkan Transaksi Lama" -- dipakai bersama oleh Renov (Proyek Renovasi),
      WorthIt (Prioritas Belanja) & Bill (Tagihan/Cicilan). Logikanya ada di const LinkTx={...}.
      z-index:300 supaya selalu tampil DI ATAS modal manapun yg jadi tempat tombol pemicunya
      (renovItemModal, worthItModal, billHistoryModal), terlepas dari urutan DOM. -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="30"></script><!-- modal:linkTxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="30"></script><!-- modal:linkTxModal externalized to modals.js -->
 
 <!-- MODAL: PROYEK RENOVASI - kalkulator bantu (Upah Tukang/Laden & Material per satuan) -->
 <!-- z-index lebih tinggi dari .overlay biasa (200) supaya tampil DI ATAS renovItemModal, sama seperti pola calcModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="31"></script><!-- modal:renovCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="31"></script><!-- modal:renovCalcModal externalized to modals.js -->
 
 <!-- MODAL: ABSENSI TUKANG (BANYAK ORANG) untuk hitung Gaji Harian tukang/laden -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="32"></script><!-- modal:tukangModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="32"></script><!-- modal:tukangModal externalized to modals.js -->
 
 <!-- MODAL: ABSEN HARIAN TUKANG (jam kerja & jam lembur per hari) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="33"></script><!-- modal:tkDayModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="33"></script><!-- modal:tkDayModal externalized to modals.js -->
 
 <!-- MODAL: BORONGAN BARENG (isi 1 nominal, kebagi rata otomatis ke semua tukang yang dicentang, 1 tanggal) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="34"></script><!-- modal:tkBorSharedModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="34"></script><!-- modal:tkBorSharedModal externalized to modals.js -->
 
 <!-- MODAL: KALKULATOR BORONGAN (hitung total dari luas/ukuran × harga per m², mirip kalkulator material) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="35"></script><!-- modal:tkBorCalcModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="35"></script><!-- modal:tkBorCalcModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT BORONGAN (rekap semua absensi mode='borongan' per bulan, terpisah dari
      tampilan kotak-hari mingguan yang mencampur borongan dengan absensi jam biasa) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="36"></script><!-- modal:tkBorHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="36"></script><!-- modal:tkBorHistModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT ABSEN JAM (rekap semua absensi mode='jam' per bulan, terpisah dari borongan) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="37"></script><!-- modal:tkJamHistModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="37"></script><!-- modal:tkJamHistModal externalized to modals.js -->
 
 <!-- MODAL: KALENDER TAGIHAN/CICILAN/LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="38"></script><!-- modal:billCalendarModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="38"></script><!-- modal:billCalendarModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT PEMBAYARAN TAGIHAN/CICILAN/LANGGANAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="39"></script><!-- modal:billHistoryModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="39"></script><!-- modal:billHistoryModal externalized to modals.js -->
 
 <!-- MODAL: EDIT SATU RIWAYAT PEMBAYARAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="40"></script><!-- modal:billHistoryEditModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="40"></script><!-- modal:billHistoryEditModal externalized to modals.js -->
 
 <!-- MODAL: RIWAYAT CICILAN/TAGIHAN LUNAS (arsip) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="41"></script><!-- modal:billArchiveModal externalized to modals.js -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="42"></script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="41"></script><!-- modal:billArchiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="42"></script><!-- modal:billFallbackScanModal (scan massal saran#4) -->
 
 <!-- MODAL: KENDARAAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="43"></script><!-- modal:vehicleModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="43"></script><!-- modal:vehicleModal externalized to modals.js -->
 
 <!-- MODAL: PAJAK KENDARAAN (STNK Tahunan, 5 Tahunan, Uji Kelayakan) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="44"></script><!-- modal:vehTaxModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="44"></script><!-- modal:vehTaxModal externalized to modals.js -->
 
 <!-- MODAL: SIM -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="45"></script><!-- modal:simModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="45"></script><!-- modal:simModal externalized to modals.js -->
 
 <!-- MODAL: WORTH IT? (Kalkulator Layak Beli - Frugal Living) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="46"></script><!-- modal:worthItModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="46"></script><!-- modal:worthItModal externalized to modals.js -->
 
 <!-- MODAL: UPDATE KM -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="47"></script><!-- modal:kmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="47"></script><!-- modal:kmModal externalized to modals.js -->
 
 <!-- MODAL: KATEGORI SPAREPART -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="48"></script><!-- modal:sparepartModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="48"></script><!-- modal:sparepartModal externalized to modals.js -->
 
 <!-- MODAL: STOK SPAREPART -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="49"></script><!-- modal:stockModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="49"></script><!-- modal:stockModal externalized to modals.js -->
 
 <!-- MODAL: BACKUP LANJUTAN -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="50"></script><!-- modal:backupModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="50"></script><!-- modal:backupModal externalized to modals.js -->
 
 <!-- MODAL: ARSIP DATA LAMA (per tahun) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="51"></script><!-- modal:archiveModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="51"></script><!-- modal:archiveModal externalized to modals.js -->
 
 <!-- MODAL: BBM -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="52"></script><!-- modal:bbmModal externalized to modals.js -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="52"></script><!-- modal:bbmModal externalized to modals.js -->
 
 <!-- MODAL: FUEL INTELLIGENCE -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="53"></script><!-- modal:fuelIntelModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="54"></script><!-- modal:servisModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="55"></script><!-- modal:torsiModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="56"></script><!-- modal:filterTxModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="57"></script><!-- modal:dataHealthModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="58"></script><!-- modal:globalSearchModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="59"></script><!-- modal:budgetModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="60"></script><!-- modal:fiSettingsModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="61"></script><!-- modal:pensiunModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="62"></script><!-- modal:confirmModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="63"></script><!-- modal:promptModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="64"></script><!-- modal:choiceModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="65"></script><!-- modal:infoModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="66"></script><!-- modal:pinPromptModalOverlay -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="67"></script><!-- modal:budgetSettingsModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="68"></script><!-- modal:refleksiModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="69"></script><!-- modal:importKatalogModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="70"></script><!-- modal:goldImportModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="71"></script><!-- modal:goldZakatModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="72"></script><!-- modal:importShopExcelModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="73"></script><!-- modal:shopCsvImportModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="74"></script><!-- modal:sparepartCsvImportModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="75"></script><!-- modal:shopPdfImportModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="76"></script><!-- modal:shopScanModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="77"></script><!-- modal:shopJsonModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="78"></script><!-- modal:mergeProductModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="79"></script><!-- modal:billMultiScanModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="80"></script><!-- modal:universalOcrModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="81"></script><!-- modal:fuelBarCorrectionModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="82"></script><!-- modal:fuelTankProfileModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="83"></script><!-- modal:catalogModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="84"></script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="85"></script><!-- modal:vehCatWebImportModal -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="86"></script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="87"></script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="88"></script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="89"></script><!-- modal:inventoryTransferModal (S244) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="90"></script><!-- modal:purchaseOrderBatchModal (S381) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="91"></script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="92"></script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="93"></script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="94"></script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="95"></script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="96"></script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="97"></script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="98"></script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="99"></script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="100"></script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="101"></script><!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
-<script src="modules/shared/modal-write.js?v=1754" data-modal-index="102"></script><!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="53"></script><!-- modal:fuelIntelModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="54"></script><!-- modal:servisModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="55"></script><!-- modal:torsiModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="56"></script><!-- modal:filterTxModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="57"></script><!-- modal:dataHealthModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="58"></script><!-- modal:globalSearchModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="59"></script><!-- modal:budgetModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="60"></script><!-- modal:fiSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="61"></script><!-- modal:pensiunModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="62"></script><!-- modal:confirmModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="63"></script><!-- modal:promptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="64"></script><!-- modal:choiceModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="65"></script><!-- modal:infoModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="66"></script><!-- modal:pinPromptModalOverlay -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="67"></script><!-- modal:budgetSettingsModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="68"></script><!-- modal:refleksiModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="69"></script><!-- modal:importKatalogModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="70"></script><!-- modal:goldImportModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="71"></script><!-- modal:goldZakatModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="72"></script><!-- modal:importShopExcelModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="73"></script><!-- modal:shopCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="74"></script><!-- modal:sparepartCsvImportModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="75"></script><!-- modal:shopPdfImportModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="76"></script><!-- modal:shopScanModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="77"></script><!-- modal:shopJsonModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="78"></script><!-- modal:mergeProductModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="79"></script><!-- modal:billMultiScanModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="80"></script><!-- modal:universalOcrModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="81"></script><!-- modal:fuelBarCorrectionModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="82"></script><!-- modal:fuelTankProfileModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="83"></script><!-- modal:catalogModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="84"></script><!-- modal:vehCatalogImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="85"></script><!-- modal:vehCatWebImportModal -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="86"></script><!-- modal:sparepartOcrDetailModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="87"></script><!-- modal:hondaPdfImportModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="88"></script><!-- modal:deliveryPlanModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="89"></script><!-- modal:inventoryTransferModal (S244) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="90"></script><!-- modal:purchaseOrderBatchModal (S381) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="91"></script><!-- modal:shopKatalogDinamisModal (fix: sebelumnya tidak pernah di-write) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="92"></script><!-- modal:assetOwnersModal (fix s422b: sebelumnya tidak pernah di-write, sebab TypeError {} saat klik "Atur Porsi Kepemilikan") -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="93"></script><!-- modal:investmentOwnersModal (S464, AUD-008 lanjutan S462) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="94"></script><!-- modal:investmentModal (S466, Fase 1 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="95"></script><!-- modal:investmentTxModal (S467, Fase 2 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="96"></script><!-- modal:investmentWatchModal (S467, Fase 3 BUG-INV-001 Opsi 3) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="97"></script><!-- modal:titipanCommitmentModal (S485d, Sesi 4/5 Gap #3 audit) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="98"></script><!-- modal:titipanReturnModal (S486, Case F: Partial Return) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="99"></script><!-- modal:titipanExpenseModal (S521-B1, DESIGN-S520-DANA-TITIPAN-UI-MULTIOWNER.md) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="100"></script><!-- modal:titipanPoolModal (Sesi 4 Bagian 2, MASTER_HANDOFF_DANA_TITIPAN_POOL_PORSI.md §13.4) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="101"></script><!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
+<script src="modules/shared/modal-write.js?v=1756" data-modal-index="102"></script><!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=1754" data-guard-src="app-bundle-b.min.js?v=1754" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=1756" data-guard-src="app-bundle-b.min.js?v=1756" data-guard-id="appBundleBScript"></script>
 </body>
 </html>
