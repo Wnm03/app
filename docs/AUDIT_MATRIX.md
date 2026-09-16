@@ -18,14 +18,14 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 1958 |
-| JavaScript | 1197 |
-| Tests | 544 |
-| Markdown | 680 |
-| HTML | 5 |
-| JSON | 7 |
+| Total files | 2023 |
+| JavaScript | 1215 |
+| Tests | 790 |
+| Markdown | 691 |
+| HTML | 7 |
+| JSON | 40 |
 | CSS | 4 |
-| Module families | 12 |
+| Module families | 18 |
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
 
@@ -527,3 +527,5 @@ tapi cakupan `_budget()`/`_classify()`/`budgetInsight()`/`summary()`
 langsung masih 0) — lihat `docs/KNOWN-ISSUES.md` §14 dan `TODO.md` §
 "Finance/BudgetRecommendationAPI — dari Sesi Audit
 budget-recommendation-api.js".
+
+_Baseline disegarkan pada S1793 setelah deep hardening: snapshot repo aktif (exclude `backups/`, `node_modules/`, `.git/`) dihitung ulang menjadi 2023 file, 1215 JavaScript, 790 test, 691 Markdown, 7 HTML, 40 JSON, 4 CSS. Module families mengikuti coverage generator menjadi 18. Perubahan ini hanya menyelaraskan traceability baseline dengan isi repo saat ini; tidak mengubah runtime behavior._
