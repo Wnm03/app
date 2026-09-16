@@ -611,7 +611,6 @@ const GROUP_B = [
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
   'modules/vehicle/servis.js',
-  'modules/vehicle/pro-mockup-presenter.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof
@@ -1407,8 +1406,9 @@ function main() {
   }
   console.log('✓ Semua konstanta versi (MODULE_RENDER_VERSION/MODAL_VERSION/MODULE_CALC_VERSION/MODULE_FEATURES_VERSION/APP_BUILD_VERSION/PRODUCTION_BUILD_SYNCED_VERSION) terverifikasi sinkron\n');
 
-  const resA = buildBundle(GROUP_A, 'app-bundle-a.min.js', oldVersion);
-  const resB = buildBundle(GROUP_B, 'app-bundle-b.min.js', oldVersion);
+  const buildRequireMinify = process.argv.includes('--require-minify') || process.env.REQUIRE_MINIFY === '1';
+  const resA = buildBundle(GROUP_A, 'app-bundle-a.min.js', oldVersion, buildRequireMinify);
+  const resB = buildBundle(GROUP_B, 'app-bundle-b.min.js', oldVersion, buildRequireMinify);
   console.log(`✓ app-bundle-a.min.js ditulis (${(resA.size / 1024).toFixed(1)} KB${resA.minified ? ', diminify pakai esbuild' : ' — TANPA minifikasi, esbuild tidak ditemukan'})`);
   console.log(`✓ app-bundle-b.min.js ditulis (${(resB.size / 1024).toFixed(1)} KB${resB.minified ? ', diminify pakai esbuild' : ' — TANPA minifikasi, esbuild tidak ditemukan'})`);
   if (resA.backupName || resB.backupName) {
@@ -1430,8 +1430,7 @@ function main() {
   // lewat release.sh/git), gate WAJIB yg setara ada di
   // scripts/verify-release-ready.js -- lihat file itu utk detail lengkap
   // kenapa gate terpisah ini perlu (env tanpa git/tanpa akses jaringan).
-  const requireMinify = process.argv.includes('--require-minify') || process.env.REQUIRE_MINIFY === '1';
-  if (requireMinify && (!resA.minified || !resB.minified)) {
+  if (buildRequireMinify && (!resA.minified || !resB.minified)) {
     console.error(
       '\n❌ BUILD DIHENTIKAN — --require-minify aktif tapi esbuild tidak terdeteksi/tidak jalan,\n' +
       'jadi bundle di atas TIDAK diminify. Ini biasanya berarti `npm install` di environment ini\n' +

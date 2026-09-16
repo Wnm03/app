@@ -94,7 +94,7 @@ function main() {
   }, results);
 
   check('FULL REGRESSION (app-main tests)', () => {
-    execSync('node --test tests/*.test.js', {
+    execSync('TEST_SHARDS=32 TEST_CONCURRENCY=8 TEST_SHARD_TIMEOUT_MS=90000 node scripts/run-full-test.js', {
       cwd: ROOT,
       stdio: 'pipe',
       maxBuffer: 32 * 1024 * 1024,

@@ -12,16 +12,52 @@ module.exports = function createBuildCore(ctx) {
 
 // 1. Deteksi versi sekarang dari features-helpers-global-security.js (sumber APP_BUILD_VERSION)
 function detectCurrentVersion() {
-  const src = readFile('modules/shared/features-helpers-global-security.js');
-  const m = src.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
-  if (!m) {
-    throw new Error('Tidak ketemu APP_BUILD_VERSION di features-helpers-global-security.js — cek apakah nama variabelnya berubah.');
+  const candidates = [];
+  const sourceFiles = [
+    'modules/shared/features-helpers-global-security.js',
+    'modules/shared/modules-render.js',
+    'modules/shared/modals.js',
+    'modules/shared/modules-calc.js',
+    'chat-action-handlers.js',
+    'index.html',
+    'app_production.html',
+    'sw.js',
+  ];
+  for (const file of sourceFiles) {
+    if (!fs.existsSync(path.join(ROOT, file))) continue;
+    const src = readFile(file);
+    if (file === 'sw.js') {
+      for (const m of src.matchAll(/CACHE_NAME\s*=\s*'kw-cache-v(\d+)'/g)) candidates.push({ value: `kw-cache-v${m[1]}`, num: Number(m[1]) });
+    } else if (file.endsWith('.html')) {
+      for (const m of src.matchAll(/\?v=(\d+)/g)) candidates.push({ value: m[1], num: Number(m[1]) });
+    } else {
+      const m = src.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
+      if (m) {
+        const n = (m[1].match(/(\d+)$/) || [])[1];
+        if (n) candidates.push({ value: m[1], num: Number(n) });
+      }
+    }
   }
-  return m[1];
+  if (!candidates.length) throw new Error('Tidak ketemu sumber versi aplikasi.');
+  return candidates.sort((a,b)=>b.num-a.num)[0].value;
 }
 
 function computeNextVersion(current, explicit) {
-  if (explicit) return explicit;
+  const currentNumMatch = current.match(/(\d+)$/);
+  const currentNum = currentNumMatch ? Number(currentNumMatch[1]) : null;
+  if (explicit) {
+    // Numeric explicit versions inherit the current version prefix, preventing
+    // accidental downgrade from mixed HTML/SW/source versions.
+    if (/^\d+$/.test(explicit) && currentNum !== null) {
+      const n = Number(explicit);
+      if (n < currentNum) throw new Error(`Versi eksplisit ${explicit} lebih rendah dari versi aktif ${current} — build downgrade ditolak.`);
+      return current.slice(0, current.length - currentNumMatch[1].length) + explicit;
+    }
+    if (currentNum !== null && (explicit.match(/(\d+)$/) || [])[1] && Number((explicit.match(/(\d+)$/) || [])[1]) < currentNum) {
+      throw new Error(`Versi eksplisit ${explicit} lebih rendah dari versi aktif ${current} — build downgrade ditolak.`);
+    }
+    return explicit;
+  }
   // Format lama: "...-32" (angka polos di akhir) -> naikkan angka itu.
   const mTrailing = current.match(/^(.*-)(\d+)$/);
   if (mTrailing) {
@@ -90,13 +126,17 @@ function verifyVersionConstantsSynced(newV) {
 }
 
 // 3. Minifikasi opsional lewat esbuild (kalau terpasang), fallback ke gabungan mentah
-function minify(code) {
+function minify(code, requireMinify = false) {
   try {
     // eslint-disable-next-line global-require
     const esbuild = require('esbuild');
     const result = esbuild.transformSync(code, { minify: true, loader: 'js', target: 'es2019' });
     return { code: result.code, minified: true };
   } catch (e) {
+    if (requireMinify) {
+      const reason = e && e.message ? e.message : String(e);
+      throw new Error(`Production build membutuhkan esbuild untuk minifikasi. Install devDependency esbuild terlebih dahulu. Detail: ${reason}`);
+    }
     return { code, minified: false };
   }
 }
@@ -140,10 +180,10 @@ function pruneOldBackups(base, ext) {
   }
 }
 
-function buildBundle(group, outFile, oldVersion) {
+function buildBundle(group, outFile, oldVersion, requireMinify = false) {
   const backupName = backupBundle(outFile, oldVersion);
   const combined = group.map(readFile).join('\n');
-  const { code, minified } = minify(combined);
+  const { code, minified } = minify(combined, requireMinify);
   const header = `// ${outFile} — DIBUAT OTOMATIS oleh build.js dari: ${group.join(', ')}\n` +
                  `// JANGAN diedit manual — edit file source-nya lalu jalankan: node build.js\n`;
   // S365 (tier-2, lanjutan audit ScannerSession self-heal s360-s364): marker

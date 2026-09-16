@@ -59,6 +59,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { checkBundleFreshness } = require('./verify-bundle-freshness');
+const { check: checkSourceSize, THRESHOLD: SOURCE_SIZE_THRESHOLD, ALLOWLIST_MAX: SOURCE_SIZE_ALLOWLIST } = require('./verify-source-size');
+const { audit: auditCarNotesIntegrity } = require('./verify-carnotes-integrity');
 
 const ROOT = path.join(__dirname, '..');
 const UNMINIFIED_MARKER = 'DIBUAT OTOMATIS oleh build.js';
@@ -324,6 +326,30 @@ function main() {
     console.error('✗ GATE service-sot-integrity: GAGAL.');
     console.error(serviceSot.detail);
     blocking.push('service-sot-integrity (wajib diperbaiki; tidak dapat di-override)');
+  }
+
+  // --- Gate 6: Car Notes rollback integrity ---
+  try {
+    const cnAudit = auditCarNotesIntegrity();
+    if (!cnAudit.ok) throw new Error(`forbidden=${cnAudit.forbidden.length}, duplicateIds=${cnAudit.dup.length}/${cnAudit.prodDup.length}, ServisDeclarations=${cnAudit.servis.length}, missingAnchors=${cnAudit.missing.length}`);
+    console.log('✓ GATE car-notes-integrity: PASS — no retired Theme Pro layer, no duplicate IDs, canonical Servis/UI anchors intact.');
+  } catch (e) {
+    console.error('✗ GATE car-notes-integrity: GAGAL.');
+    console.error(e.message || e);
+    blocking.push('car-notes-integrity (wajib diperbaiki; tidak dapat di-override)');
+  }
+
+  // --- Gate 7: source-size maintainability ---
+  const oversized = checkSourceSize(false);
+  const sourceSizeBlocking = oversized.filter((x) => x.lines > (SOURCE_SIZE_ALLOWLIST[x.file] ?? SOURCE_SIZE_THRESHOLD));
+  if (oversized.length === 0) {
+    console.log('✓ GATE source-size: semua JS source di bawah 1600 baris.');
+  } else if (sourceSizeBlocking.length === 0) {
+    console.log(`⚠ GATE source-size: ${oversized.length} file melewati 1600 baris tetapi masih dalam guard cap allowlist (tidak memblokir).`);
+  } else {
+    console.error(`✗ GATE source-size: ${sourceSizeBlocking.length} file melewati guard cap.`);
+    console.error('    Pecah modul sebelum rilis atau turunkan ukurannya agar blast radius perubahan tidak terus melebar.');
+    blocking.push('source-size (guard cap terlampaui)');
   }
 
   // --- Gate 5: bundle freshness (S767) ---
