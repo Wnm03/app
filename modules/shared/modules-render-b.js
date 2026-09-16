@@ -728,28 +728,6 @@ return `<div class="tx-item u-pointer" data-action="openSimModal" data-args="${e
 }).join('');
 }
 
-function renderProHome(){
-const home=document.getElementById('cnTab-beranda'); if(!home)return;
-const km=document.getElementById('cnCurKm'), src=document.getElementById('cnCurKmSrc');
-const hk=document.getElementById('proHomeKm'), hs=document.getElementById('proHomeKmSrc');
-if(hk&&km)hk.textContent=km.textContent||'0 km'; if(hs&&src)hs.textContent=src.textContent||'';
-const sel=document.getElementById('vehicleSelect');
-const name=home.querySelector('#proHomeVehicleName'), meta=home.querySelector('#proHomeVehicleMeta');
-if(sel){
-  const active=sel.querySelector('.vehicle-chip.active,.vehicle-select-item.active,.vehicle-option.active,[aria-selected="true"]');
-  const txt=(active||sel.querySelector('*'))?.textContent?.trim().replace(/\s+/g,' ');
-  if(name&&txt)name.textContent=txt.slice(0,42);
-}
-if(meta)meta.textContent=(src&&src.textContent)||'Kendaraan aktif';
-const out=document.getElementById('proHomeReminders');
-if(!out)return;
-const source=document.getElementById('servisReminderCard');
-if(!source||!source.textContent.trim()){out.innerHTML='<div class="pro-home-reminder"><div class="pro-home-reminder-icon">!</div><div class="pro-home-reminder-copy"><strong>Belum ada pengingat</strong><span>Data servis akan muncul di sini.</span></div></div>';return;}
-const rows=Array.from(source.querySelectorAll('.servis-reminder-row,.tx-item')).slice(0,2);
-if(!rows.length){out.innerHTML='<div class="pro-home-reminder"><div class="pro-home-reminder-icon">!</div><div class="pro-home-reminder-copy"><strong>Pengingat servis</strong><span>Buka Perawatan untuk melihat detail.</span></div><span class="pro-home-reminder-arrow">›</span></div>';return;}
-out.innerHTML=rows.map(r=>{const title=r.querySelector('.tx-name,.u-fw700,.u-fw800')?.textContent?.trim()||'Perawatan'; const meta=r.querySelector('.tx-meta,.u-fs10,.u-fs11')?.textContent?.trim()||'Periksa jadwal servis'; return `<div class="pro-home-reminder"><div class="pro-home-reminder-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v10M8 7l4-4 4 4M5 17h14M7 21h10"/></svg></div><div class="pro-home-reminder-copy"><strong>${escapeHtml(title.slice(0,45))}</strong><span>${escapeHtml(meta.slice(0,60))}</span></div><span class="pro-home-reminder-arrow">›</span></div>`;}).join('');
-}
-
 function renderCnTab(){
 // CAR NOTES PERFORMANCE GUARD (audit 1751): the old pipeline rendered the
 // entire Vehicle + Fuel + Ride stack on EVERY tab switch. On low-end Android
@@ -758,8 +736,7 @@ function renderCnTab(){
 // panes are rendered lazily when first activated, so no feature is removed.
 if(typeof window!=='undefined'&&!window.__cnTabBootInitialized){
 window.__cnTabBootInitialized=true;
-const isPro=document.body&&document.body.dataset.theme==='pro';
-const defaultTab=isPro?'beranda':'bbm';
+const defaultTab='bbm';
 if(typeof setCnTab==='function'){
 const btn=document.querySelector('#page-carnotes .cn-tab[data-args*="'+defaultTab+'"]');
 setCnTab(defaultTab,btn||null);
@@ -773,26 +750,7 @@ curCnTab=defaultTab;
 if(typeof healFuelStateReferenceKm==='function')healFuelStateReferenceKm();
 
 const activeTab=curCnTab||'bbm';
-const isPro=document.body&&document.body.dataset.theme==='pro';
 if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==='function')CarNotesPerformance.render(activeTab);
-
-// The Pro theme has a dedicated data-driven mockup. Legacy panes are hidden
-// by pro-ui-layer.css, so rendering them here is pure wasted work. The Pro
-// presenter now renders only its active screen (see pro-mockup-presenter.js).
-if(isPro){
-  renderProHome();
-  if(typeof proMockupInit==='function'&&!window.__proMockup1717Bound)proMockupInit();
-  else if(typeof ProMockupPresenter!=='undefined'&&typeof ProMockupPresenter.render==='function')ProMockupPresenter.render();
-  const curKmEl=document.getElementById('cnCurKm');
-  const curKmSrcEl=document.getElementById('cnCurKmSrc');
-  if(curKmEl&&!document.getElementById('cnCurKmInput')){
-    const kmSrc=getVehicleKmSource(curVehicleId);
-    curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
-    if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
-  }
-  renderCarImportVehicleSelect();
-  return;
-}
 
 // Classic theme: keep each existing feature, but render only the active
 // feature family. This is the critical performance fix: no hidden fuel,
@@ -826,9 +784,6 @@ if(activeTab==='insight'){
   renderVehTaxSim();
 }else if(activeTab==='jalan'){
   if(typeof RideUI!=='undefined')RideUI.render();
-}else if(activeTab==='beranda'){
-  // Classic has no visible Beranda pane; keep this branch intentionally tiny
-  // for callers that restore a persisted Pro-only tab in a partial DOM.
 }
 
 const curKmEl=document.getElementById('cnCurKm');
