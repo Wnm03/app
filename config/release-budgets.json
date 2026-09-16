@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "bundle_budget_bytes": {
+    "app-bundle-a.min.js": 1602953,
+    "app-bundle-b.min.js": 4808116
+  }
+}
