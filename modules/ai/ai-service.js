@@ -669,6 +669,7 @@ const AIService = {
    * (sama alasan §2e/§2f menyambungkan account/product/investment). 0
    * event lama dihapus/diubah, murni tambah 1 nama ke array. */
   _wired: false,
+  _subscriptions: [],
   wireEvents() {
     if (this._wired) return;
     if (typeof AIBus === 'undefined' || typeof AIBus.on !== 'function') return;
@@ -681,9 +682,15 @@ const AIService = {
       'finance.updated', 'asset.updated', 'vehicle.updated', 'delivery.created',
       'account.updated', 'product.updated', 'investment.updated', 'titipan.updated',
     ].forEach((evt) => {
-      AIBus.on(evt, handle(evt));
+      this._subscriptions.push(AIBus.on(evt, handle(evt)));
     });
     this._wired = true;
+  },
+  unwireEvents() {
+    this._subscriptions.splice(0).forEach((unsubscribe) => {
+      try { unsubscribe(); } catch (e) { console.warn('[AIService] unsubscribe gagal:', e); }
+    });
+    this._wired = false;
   },
 };
 

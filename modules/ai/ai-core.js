@@ -38,8 +38,11 @@ const AIBus = {
   _listeners: Object.create(null),
 
   on(eventName, handler) {
+    if (typeof handler !== 'function') return () => {};
     if (!this._listeners[eventName]) this._listeners[eventName] = [];
-    this._listeners[eventName].push(handler);
+    // S1783: identical subscriptions are idempotent. This prevents a module
+    // that is wired twice from multiplying business-event work.
+    if (!this._listeners[eventName].includes(handler)) this._listeners[eventName].push(handler);
     return () => this.off(eventName, handler); // unsubscribe helper
   },
 
@@ -47,6 +50,7 @@ const AIBus = {
     const arr = this._listeners[eventName];
     if (!arr) return;
     this._listeners[eventName] = arr.filter((h) => h !== handler);
+    if (!this._listeners[eventName].length) delete this._listeners[eventName];
   },
 
   emit(eventName, payload) {
