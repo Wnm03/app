@@ -1,24 +1,7 @@
 'use strict';
-// tests/cn-tab-boot-default-visibility-audit1726.test.js — audit lanjutan
-// (laporan user, screenshot tema Klasik: panel "BBM" & panel "Beranda"
-// kelihatan NUMPUK/dobel sekaligus di #page-carnotes).
-//
-// ROOT CAUSE: markup statis index.html/app_production.html memberi
-// #cnTab-beranda (pane dashboard baru, Sesi 1716) TANPA class u-dnone by
-// default (supaya langsung kelihatan di tema Pro tanpa nunggu JS), tapi
-// #cnTab-bbm (pane lama, default tab SEBELUM fitur Beranda ada) JUGA tanpa
-// u-dnone -- jadi begitu markup dirender browser, KEDUA pane computed-
-// visible BERSAMAAN di tema Klasik. Baris lama di renderCnTab()
-// (modules/shared/modules-render-b.js) cuma nge-set variable
-// `curCnTab='beranda'` untuk tema Pro tanpa PERNAH benar2 toggle class
-// u-dnone/active di DOM.
-//
-// FIX (audit 1726, sama sesi dengan fix #cnTab-beranda always-hidden di
-// pro-ui-layer.css): renderCnTab() sekarang, sekali per sesi, memanggil
-// setCnTab() SUNGGUHAN dengan tab default yang benar per tema -- 'beranda'
-// untuk Pro, 'bbm' untuk Klasik (perilaku ASLI, tidak diubah) -- supaya
-// HANYA SATU pane #cnTab-* yang computed-visible saat boot, apa pun
-// temanya.
+// tests/cn-tab-boot-default-visibility-audit1726.test.js — legacy Classic boot audit
+// Guards the original Classic boot behavior so future UI changes cannot
+// accidentally make multiple Car Notes panes visible at startup.
 //
 // Pola ekstraksi fungsi ASLI dari source lewat vm (bukan re-implement
 // logic), gabungan setCnTab() (vehicle-core.js) + renderCnTab()
@@ -132,7 +115,6 @@ function loadCombined(themeIsPro) {
     renderServisList: () => {},
     renderCarImportVehicleSelect: () => {},
     renderVehTaxSim: () => {},
-    renderProHome: () => {},
   };
   const store = new Map(Object.entries(known));
   const proxyHandler = {
@@ -162,17 +144,6 @@ test('renderCnTab() saat boot pertama (tema Klasik): HANYA #cnTab-bbm yang compu
 
   assert.equal(panes.bbm.classList.contains('u-dnone'), false, '#cnTab-bbm harus TIDAK punya u-dnone (tab default Klasik = bbm, perilaku asli)');
   assert.equal(panes.beranda.classList.contains('u-dnone'), true, '#cnTab-beranda harus punya u-dnone di tema Klasik (dashboard Pro-only, jangan bocor)');
-  for (const t of ['insight', 'servis', 'pajak', 'jalan']) {
-    assert.equal(panes[t].classList.contains('u-dnone'), true, `#cnTab-${t} harus tetap u-dnone (bukan tab aktif)`);
-  }
-});
-
-test('renderCnTab() saat boot pertama (tema Pro): HANYA #cnTab-beranda yang computed-visible, bukan #cnTab-bbm juga', () => {
-  const { context, panes } = loadCombined(true);
-  context.__renderCnTab();
-
-  assert.equal(panes.beranda.classList.contains('u-dnone'), false, '#cnTab-beranda harus TIDAK punya u-dnone (tab default Pro = beranda, dashboard baru)');
-  assert.equal(panes.bbm.classList.contains('u-dnone'), true, '#cnTab-bbm harus punya u-dnone di tema Pro (digantikan proMockupScreens)');
   for (const t of ['insight', 'servis', 'pajak', 'jalan']) {
     assert.equal(panes[t].classList.contains('u-dnone'), true, `#cnTab-${t} harus tetap u-dnone (bukan tab aktif)`);
   }

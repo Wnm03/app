@@ -26,21 +26,14 @@ test('Main App: showPage has lightweight history contract and Back replay', () =
   assert.match(navSrc, /_mainAppNavEnsureInitial\(\)/);
 });
 
-test('Main App: Car Notes Pro history preserves the parent Main App route state', () => {
-  assert.match(vehicleSrc, /history\.pushState\(Object\.assign\(\{\},history\.state\|\|\{\},\{__carnotesPro:true,screen:/);
-  assert.match(vehicleSrc, /history\.replaceState\(Object\.assign\(\{\},history\.state\|\|\{\},\{__carnotesPro:true,screen:/);
-  assert.match(bundleB, /function proMockupPushHistory\(n\)/);
-  assert.match(bundleB, /__carnotesPro/);
-});
-
 test('Main App: production Bundle-B contains the same primary navigation history contract', () => {
   assert.match(bundleB, /_MAIN_APP_NAV_PAGES=new Set\(\['dashboard-hub','keuangan','shop','aset','carnotes','pajak','settings'\]\)/);
   assert.match(bundleB, /function showPage\(name,el,opts\)/);
   assert.match(bundleB, /if\s*\(\s*!_mainAppNavPopInProgress\s*&&\s*!\(opts\s*&&\s*opts\.fromHistory\)\s*&&\s*el\s*\)\s*\{\s*_mainAppNavPush\(name\)\s*;?\s*\}/);
 });
 
-test('Main App: shipped Car Notes actions exist in production Bundle-B', () => {
-  assert.match(bundleB, /function proOpenHistory\(\)/);
-  assert.match(bundleB, /function proReturnToMainNav\(\)/);
-  assert.match(bundleB, /function proOpenGlobalSearch\(\)/);
+test('Main App: shipped Car Notes uses the legacy navigation path after Pro rollback', () => {
+  assert.doesNotMatch(vehicleSrc, /proMockup|proOpenHistoryTab|__carnotesPro/);
+  assert.doesNotMatch(bundleB, /proMockup|proOpenHistoryTab|proCnBottomNav/);
+  assert.match(bundleB, /function setCnTab\(t,el\)/);
 });
