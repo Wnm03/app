@@ -83,11 +83,12 @@ async function exportData(){
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json';a.click();
-D.lastBackup=new Date().toISOString();save();
+D.lastBackup=new Date().toISOString();
 document.getElementById('lastBackup').textContent=new Date().toLocaleDateString('id-ID');
 document.getElementById('backupBadge').textContent='💾 Backup';
 document.getElementById('backupBanner')?.classList.add('hidden');
 if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'local',status:'success',done:['File lokal (JSON)']});
+save();
 toast('✅ Backup berhasil!');
 }
 async function runFullBackup(){
@@ -112,7 +113,7 @@ try{
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json';a.click();
-D.lastBackup=new Date().toISOString();save();
+D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup'); if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
 const bn=document.getElementById('backupBanner'); if(bn)bn.classList.add('hidden');
 done.push('File lokal (JSON)');
@@ -156,6 +157,10 @@ if(typeof BackupHistoryAPI!=='undefined'){
 const status=errors.length?(done.length?'partial':'failed'):'success';
 BackupHistoryAPI.recordEntry({type:'full',status,done,skipped,errors});
 }
+// Persist D.lastBackup AND the just-recorded history atomically through the
+// existing queued save path. History must be recorded BEFORE save(); otherwise
+// the new entry remains only in memory until some later unrelated mutation.
+save();
 } finally {
 _saveGuards['fullBackup']=false;
 if(btn){
@@ -264,6 +269,8 @@ out.reminders=D.reminders;
 out.budgets=D.budgets;
 out.notifSettings=D.notifSettings;
 out.archiveHistory=D.archiveHistory||[];
+out.lastBackup=D.lastBackup||null;
+out.backupHistory=D.backupHistory||[];
 // FIX: field berikut sebelumnya TIDAK ikut modul manapun sehingga selalu
 // hilang dari backup custom ini (beda dari tombol Backup utama yang pakai
 // buildBackupPayload() / {...D} sehingga otomatis lengkap). Ditambahkan di
@@ -390,11 +397,12 @@ csvParts.push(toCSVRow(['Tanggal','Catatan']));
 const blob=new Blob([csvParts.join('\n')],{type:'text/csv'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-W-'+dateTag+'.csv';a.click();
 }
-D.lastBackup=new Date().toISOString();save();
+D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup');if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
 document.getElementById('backupBadge').textContent='💾 Backup';
 document.getElementById('backupBanner')?.classList.add('hidden');
 if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'custom',status:'success',done:['Backup custom ('+format+')']});
+save();
 closeModal('backupModal');
 toast('✅ Backup berhasil di-download!');
 }

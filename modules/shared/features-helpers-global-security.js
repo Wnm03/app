@@ -92,11 +92,22 @@ if(m)v.modelId=m.id;
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
 const pending=DATA_MIGRATIONS.filter(m=>m.toVersion>v).sort((a,b)=>a.toVersion-b.toVersion);
-pending.forEach(m=>{
-try{ m.migrate(D); v=m.toVersion; }
-catch(e){ console.error(`Migrasi data ke versi ${m.toVersion} ("${m.desc}") gagal:`,e); }
-});
-D.schemaVersion=SCHEMA_VERSION;
+for(const m of pending){
+try{
+  m.migrate(D);
+  v=m.toVersion;
+}catch(e){
+  // DATA INTEGRITY HARDENING: jangan pernah menaikkan schemaVersion melewati
+  // migrasi yang gagal. Jika kita menandai schema terbaru walau migrasi gagal,
+  // boot/restore berikutnya tidak akan mencoba ulang dan data bisa tertinggal
+  // permanen. Stop di titik gagal; migrasi yang sudah sukses tetap dipertahankan
+  // dan migrasi ini akan dicoba lagi pada load/restore berikutnya.
+  console.error(`Migrasi data ke versi ${m.toVersion} ("${m.desc}") gagal; schemaVersion ditahan di ${v}:`,e);
+  break;
+}
+}
+D.schemaVersion=v;
+return D.schemaVersion;
 }
 // isDevMode() — satu sumber kebenaran untuk deteksi mode developer, dipakai di seluruh app
 // (Diagnostik di Pengaturan, smoke-test.js, dll). Aktif kalau: ?dev=1 di URL, localStorage
@@ -111,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's748-carnotes-regression-1757';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's748-carnotes-regression-1757';
+const APP_BUILD_VERSION = 's1793-final-hardening-1795';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1795';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -296,12 +307,16 @@ return false;
 // urutan persistence, tidak menahan mutasi/render UI. Jika satu write gagal, queue
 // tetap lanjut ke snapshot berikutnya dan snapshot yang gagal punya fallback LS.
 let _savePersistChain=Promise.resolve();
+let _savePersistSeq=0;
+// S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
 function _saveImmediate(){
 let json;
 try{json=_buildSaveJson();}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+const seq=++_savePersistSeq;
 _savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
-_writeLocalSnapshot(json);
+if(seq===_savePersistSeq)_writeLocalSnapshot(json);
+else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
 _announcePersistenceWrite();
 });
 }
@@ -371,6 +386,7 @@ _lifecycleFlushInstalled=true;
 const flush=()=>{try{saveFlush();}catch(e){console.error('Gagal flush persistence saat lifecycle:',e);}};
 if(typeof document.addEventListener==='function'){
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
+ document.addEventListener('freeze',flush);
 }
 if(typeof window.addEventListener==='function'){
  window.addEventListener('pagehide',flush);
