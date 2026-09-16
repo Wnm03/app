@@ -18,13 +18,13 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 1523 |
-| JavaScript | 915 |
+| Total files | 1958 |
+| JavaScript | 1197 |
 | Tests | 544 |
-| Markdown | 558 |
+| Markdown | 680 |
 | HTML | 5 |
-| JSON | 2 |
-| CSS | 2 |
+| JSON | 7 |
+| CSS | 4 |
 | Module families | 12 |
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
@@ -40,6 +40,8 @@ _Baseline diperbarui lagi (housekeeping, temuan audit lanjutan poin #3 pasca-S67
 _Baseline diperbarui lagi pasca-v1555/s740 (akumulasi 6 sesi ringan: Tagihan reminder, Dana Titipan reconcile, Piutang/Utang reminder, konsolidasi widget ad-hoc Shop restock, `FinancialRiskDashboardAPI`, `ZakatReminder` Penghasilan & Maal — laporan `lintDocsBaselineCountDrift()` di build.js): Total files 1391→1523 (+132), JavaScript 833→915 (+82), Markdown 508→558 (+50, termasuk +1 dari `AUDIT-DASHBOARD-INSIGHT-COVERAGE.md` yang baru ditaruh di root repo sesi ini juga — sebelumnya cuma ada di luar repo/lampiran terpisah), Tests 470→544 (+74, dihitung manual dari jumlah file pola `*.test.js`, sama seperti definisi baseline sebelumnya — label ini tetap tidak ikut auto-check), HTML/JSON/CSS/Module families tetap — drift terkumpul dari 6 sesi di atas ditambah sesi-sesi lain sejak v1435/pasca-S679 (baseline lama belum sempat diupdate lagi, bukan perubahan tunggal sesi ini). Snapshot dihitung dgn logic walk yang persis sama dgn `lintDocsBaselineCountDrift()` (exclude `node_modules/`, `.git/`, `backups/`), diambil pada versi app v1555 (`CACHE_NAME` = `kw-cache-v1555` di `sw.js`). CATATAN: housekeeping dokumentasi murni — 0 perubahan kode aplikasi tambahan di luar 6 sesi yang sudah dites (`node --test`: 5534/5534 lulus) & di-build (`node scripts/build.js`) sebelumnya._
 
 ---
+
+_Baseline diperbarui lagi pasca-S8 (housekeeping dokumentasi): Total files 1523→1958 (+435), JavaScript 915→1197 (+282), Markdown 558→680 (+122), HTML tetap 5, JSON 2→7 (+5), CSS 2→4 (+2). Snapshot dihitung dengan logic walk yang sama dengan `lintDocsBaselineCountDrift()` (exclude `node_modules/`, `.git/`, `backups/`). Perubahan ini hanya menyinkronkan dokumentasi dengan isi repo; tidak mengubah runtime behavior._
 
 # 2. Feature Domains
 
