@@ -367,9 +367,6 @@ const GROUP_B = [
   // dari Payroll.renderDashMini() (payroll-absensi.js, di atas) — ditaruh
   // tepat setelahnya krn dependency logis (dibaca setelah Payroll dimuat).
   'modules/business/insight-target-mingguan.js',
-  // Car Notes Performance MUST precede all Car Notes presenters/consumers.
-  // It is a read-only cache/metrics/parity API; keeping it in the canonical
-  // bundle order prevents runtime missing-symbol drift for CarNotesPerformance.
   'modules/vehicle/car-notes-performance.js',
   'modules/vehicle/vehicle-core.js',
   // fuel-price-ref.js (Sesi 749, BARU): FuelPriceRef — referensi harga BBM nasional
@@ -591,9 +588,6 @@ const GROUP_B = [
   // sparepart-servis.js (consumer-nya) sesuai urutan dependency.
   'modules/vehicle/service-interval-sot.js',
   'modules/vehicle/sparepart-servis.js',
-  // Extracted Sparepart UI methods MUST follow Sparepart creation and precede
-  // the split continuation that consumes these methods. Without this entry
-  // Sparepart.renderStockList() can disappear from production despite source tests passing.
   'modules/vehicle/sparepart-servis-ui.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
   // file agar di bawah OVERSIZED_FILE_LINE_THRESHOLD. Bagian KEDUA (SparepartCsvImport/
@@ -643,6 +637,9 @@ const GROUP_B = [
   'sheets-schema.js',
   'sheets-sync.js',
   'pwa-setup.js',
+  'modules/shared/app-init-runtime.js',
+  'modules/shared/self-test-cases-a.js',
+  'modules/shared/self-test-cases-b.js',
   'self-test.js',
   'pajak-aset-ui-wrappers.js',
   'modules/finance/finance-intelligence.js',

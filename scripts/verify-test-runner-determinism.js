@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+'use strict';
+const fs=require('node:fs');const path=require('node:path');const os=require('node:os');const {spawnSync}=require('node:child_process');
+const ROOT=path.join(__dirname,'..');
+function run(dir){return spawnSync(process.execPath,['scripts/run-full-test.js'],{cwd:ROOT,env:{...process.env,TEST_SHARDS:'32',TEST_SHARD_INDEX:'0',TEST_CONCURRENCY:'1',TEST_CHECKPOINT_DIR:dir,TEST_FORCE_RERUN:'1',TEST_SHARD_TIMEOUT_MS:'60000'},encoding:'utf8',timeout:90000});}
+function main(){const base=fs.mkdtempSync(path.join(os.tmpdir(),'kw-s1783-determinism-'));try{const runs=[];for(let i=0;i<3;i++){const dir=path.join(base,'run-'+i);fs.mkdirSync(dir);const r=run(dir);if(r.error||r.status!==0)throw new Error(`determinism run ${i+1} gagal: ${r.error||r.stderr||r.stdout}`);const manifest=JSON.parse(fs.readFileSync(path.join(dir,'manifest.json'),'utf8'));const shard=JSON.parse(fs.readFileSync(path.join(dir,'shard-1.json'),'utf8'));runs.push({manifestFingerprint:shard.manifestFingerprint,manifest,shard});}const stable=runs.every(r=>r.manifestFingerprint===runs[0].manifestFingerprint&&JSON.stringify(r.manifest)===JSON.stringify(runs[0].manifest)&&JSON.stringify(r.shard)===JSON.stringify(runs[0].shard));if(!stable)throw new Error('manifest/checkpoint antar 3 run berbeda');console.log('✓ TEST-RUNNER-DETERMINISM PASS — 3 run shard identik (manifest + checkpoint).');}finally{fs.rmSync(base,{recursive:true,force:true});}}
+if(require.main===module)main();

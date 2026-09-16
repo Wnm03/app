@@ -608,7 +608,12 @@ function lintEmptyCatchGuard() {
 //   menambah/mengembalikan class 'open' SEMENTARA utk menguji renderer
 //   (simpan state asli, restore persis di finally) — bukan jalur UI yang
 //   dipicu tap user, jadi tidak relevan dgn bug "tombol macet, 0 toast".
-const OVERLAY_OPEN_BYPASS_ALLOWLIST = ['modules/shared/modal-navigasi.js', 'self-test.js'];
+const OVERLAY_OPEN_BYPASS_ALLOWLIST = [
+  'modules/shared/modal-navigasi.js',
+  'self-test.js',
+  // Self-test harness deliberately opens real overlays to inspect rendered HTML/state.
+  'modules/shared/self-test-cases-b.js',
+];
 
 function lintOverlayOpenBypassesGuard() {
   const problems = [];

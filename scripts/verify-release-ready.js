@@ -61,6 +61,11 @@ const { execSync } = require('child_process');
 const { checkBundleFreshness } = require('./verify-bundle-freshness');
 const { check: checkSourceSize, THRESHOLD: SOURCE_SIZE_THRESHOLD, ALLOWLIST_MAX: SOURCE_SIZE_ALLOWLIST } = require('./verify-source-size');
 const { audit: auditCarNotesIntegrity } = require('./verify-carnotes-integrity');
+const { verify: verifyDeleteManifest } = require('./verify-delete-manifest');
+const { verify: verifyVersionIntegrity } = require('./verify-version-integrity');
+const { verify: verifyRuntimeLifecycle } = require('./verify-runtime-lifecycle');
+const { main: verifySotIntegrity } = require('./sot-integrity-gate');
+const { execFileSync } = require('node:child_process');
 
 const ROOT = path.join(__dirname, '..');
 const UNMINIFIED_MARKER = 'DIBUAT OTOMATIS oleh build.js';
@@ -281,6 +286,47 @@ function main() {
     }
   }
 
+  // --- Gate 3: DELETE-FILES manifest ---
+  // S1780: DELETE-FILES.txt adalah kontrak executable. File retired yang
+  // masih ada harus memblokir release, bukan menunggu puluhan test gagal.
+  const deleteManifest = verifyDeleteManifest();
+  if (deleteManifest.violations.length === 0) {
+    console.log(`✓ GATE delete-manifest: ${deleteManifest.entries.length} path terverifikasi sudah terhapus.`);
+  } else {
+    console.error(`✗ GATE delete-manifest: ${deleteManifest.violations.length} path masih ada di repository.`);
+    deleteManifest.violations.forEach((v) => console.error(`    - ${v.path}: ${v.reason}`));
+    blocking.push('delete-manifest (path DELETE-FILES.txt masih ada)');
+  }
+
+  // --- Gate 3: version integrity (S1783) ---
+  const versionIntegrity = verifyVersionIntegrity();
+  if (versionIntegrity.ok) {
+    console.log(`✓ GATE version-integrity: ${versionIntegrity.appVersion} ↔ ?v=${versionIntegrity.htmlValues[0]} ↔ kw-cache-v${versionIntegrity.swVersion}.`);
+  } else {
+    console.error('✗ GATE version-integrity: GAGAL.');
+    versionIntegrity.errors.forEach((e) => console.error('    - ' + e));
+    blocking.push('version-integrity (konstanta/runtime/cache tidak konsisten)');
+  }
+
+  // --- Gate 3c: application Source-of-Truth ---
+  try {
+    verifySotIntegrity();
+    console.log('✓ GATE app-sot-integrity: canonical runtime manifest/version/HTML verified.');
+  } catch (e) {
+    console.error('✗ GATE app-sot-integrity: GAGAL.');
+    console.error(e.message || e);
+    blocking.push('app-sot-integrity (single source of truth violated)');
+  }
+
+  // --- Gate 3b: runtime lifecycle ---
+  const runtimeLifecycle = verifyRuntimeLifecycle();
+  if (runtimeLifecycle.ok) console.log('✓ GATE runtime-lifecycle: singleton listener/timer & AIBus cleanup terverifikasi.');
+  else {
+    console.error('✗ GATE runtime-lifecycle: GAGAL.');
+    runtimeLifecycle.errors.forEach((e) => console.error('    - ' + e));
+    blocking.push('runtime-lifecycle (potensi duplicate listener/timer/leak)');
+  }
+
   // --- Gate 3: sinkronisasi index.html <-> app_production.html (Sesi 425) ---
   const htmlSync = checkHtmlSync();
   if (htmlSync.status === 'synced') {
@@ -326,6 +372,21 @@ function main() {
     console.error('✗ GATE service-sot-integrity: GAGAL.');
     console.error(serviceSot.detail);
     blocking.push('service-sot-integrity (wajib diperbaiki; tidak dapat di-override)');
+  }
+
+  // --- Gate 5d: deep release firewall (S1787-S1793) ---
+  // Satu entry point untuk SoT/arsitektur/persistence/PWA/feature/lifecycle
+  // dan freshness gates. Ini sengaja structural-only; lint/minify tetap
+  // dikelola oleh gate environment di atas agar unavailable tidak tercampur
+  // dengan failure kode aplikasi.
+  try {
+    execFileSync(process.execPath, [path.join(ROOT, 'scripts', 'release-firewall.js')], { cwd: ROOT, stdio: 'pipe', maxBuffer: 32 * 1024 * 1024 });
+    console.log('✓ GATE deep-release-firewall: S1787-S1793 hard gates PASS.');
+  } catch (e) {
+    const out = `${e.stdout || ''}${e.stderr || ''}`.trim();
+    console.error('✗ GATE deep-release-firewall: GAGAL.');
+    console.error(out.slice(-12000) || `release-firewall exit ${e.status}`);
+    blocking.push('deep-release-firewall (arsitektur/persistence/PWA/feature/SoT/runtime/bundle)');
   }
 
   // --- Gate 6: Car Notes rollback integrity ---

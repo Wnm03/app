@@ -12,34 +12,16 @@ module.exports = function createBuildCore(ctx) {
 
 // 1. Deteksi versi sekarang dari features-helpers-global-security.js (sumber APP_BUILD_VERSION)
 function detectCurrentVersion() {
-  const candidates = [];
-  const sourceFiles = [
-    'modules/shared/features-helpers-global-security.js',
-    'modules/shared/modules-render.js',
-    'modules/shared/modals.js',
-    'modules/shared/modules-calc.js',
-    'chat-action-handlers.js',
-    'index.html',
-    'app_production.html',
-    'sw.js',
-  ];
-  for (const file of sourceFiles) {
-    if (!fs.existsSync(path.join(ROOT, file))) continue;
-    const src = readFile(file);
-    if (file === 'sw.js') {
-      for (const m of src.matchAll(/CACHE_NAME\s*=\s*'kw-cache-v(\d+)'/g)) candidates.push({ value: `kw-cache-v${m[1]}`, num: Number(m[1]) });
-    } else if (file.endsWith('.html')) {
-      for (const m of src.matchAll(/\?v=(\d+)/g)) candidates.push({ value: m[1], num: Number(m[1]) });
-    } else {
-      const m = src.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
-      if (m) {
-        const n = (m[1].match(/(\d+)$/) || [])[1];
-        if (n) candidates.push({ value: m[1], num: Number(n) });
-      }
-    }
-  }
-  if (!candidates.length) throw new Error('Tidak ketemu sumber versi aplikasi.');
-  return candidates.sort((a,b)=>b.num-a.num)[0].value;
+  // SINGLE SOURCE OF TRUTH: only the canonical shared source owns the
+  // application build version. HTML, Service Worker and bundles are derived
+  // artifacts and MUST NEVER participate in version detection.
+  const canonicalFile = 'modules/shared/features-helpers-global-security.js';
+  const canonical = readFile(canonicalFile);
+  const m = canonical.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
+  if (!m) throw new Error(`SOT versi aplikasi tidak ditemukan di ${canonicalFile}.`);
+  const value = m[1];
+  if (!/(\d+)$/.test(value)) throw new Error(`APP_BUILD_VERSION canonical '${value}' harus memiliki nomor release di akhir.`);
+  return value;
 }
 
 function computeNextVersion(current, explicit) {
