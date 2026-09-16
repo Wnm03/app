@@ -3,17 +3,12 @@ const Servis={
 editId:null,
 listPage:1,
 lastFilterSig:null,
-
 _serviceChecklistGroupIdx:null,
 _serviceChecklistMasterCategoryIds:[],
-
 _photoDraft:[],
-
 activeActionTypeFilter:null,
-
 activeMasterCategoryFilter:null,
 activeServiceComponentFilter:null,
-
 _masterCategoryFilterPrefsLoaded:false,
 _masterCategoryFilterStorageKey:'servisMasterCategoryFilterPrefs',
 _loadMasterCategoryFilterPrefsOnce(){
@@ -44,7 +39,6 @@ localStorage.setItem(Servis._masterCategoryFilterStorageKey,JSON.stringify({acti
 // Preferences are optional; storage write failures are intentionally ignored.
 }
 },
-
 resolveLogMasterCategoryId(s){
 if(typeof resolveCatGroup!=='function')return null;
 const vehicleId=s.vehicleId||curVehicleId;
@@ -53,7 +47,6 @@ if(!linkedCat)return null;
 const r=resolveCatGroup(linkedCat,vehicleId);
 return r?r.masterCategoryId:null;
 },
-
 resolveLogServiceComponentId(s){
 if(!s)return null;
 if(s.serviceComponentId)return s.serviceComponentId;
@@ -67,7 +60,6 @@ if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer===
 }
 return null;
 },
-
 setMasterCategoryFilter(id){
 Servis.activeMasterCategoryFilter=id||null;
 Servis.activeServiceComponentFilter=null;
@@ -87,7 +79,6 @@ openHistoryFromReminder(categoryId,componentId){
   Servis.activeActionTypeFilter=null;
   Servis.activeMasterCategoryFilter=masterId;
   Servis.activeServiceComponentFilter=componentId||null;
-
   const _periodeBerubah=cnPeriode!=='selamanya';
   cnPeriode='selamanya';
   if(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab)cnPeriodeByTab.servis='selamanya';
@@ -118,9 +109,7 @@ Servis.activeServiceComponentFilter=selected;
 const disabled=mid===UNCATEGORIZED_FILTER_ID;
 wrap.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700;white-space:nowrap">🧩 Komponen</label><select class="fs" style="flex:1;min-width:220px;max-width:420px;padding:8px 10px" ${disabled?'disabled':''} data-onchange="Servis.setServiceComponentFilter" data-onchange-args='["$value"]'><option value="">${disabled?'Tidak tersedia untuk data belum dikategorikan':mid?'Semua komponen pada kategori ini':'Pilih kategori dulu'}</option>${uniq.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===selected?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
 },
-
 renderMasterCategoryChips(beforeEl){
-
 const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
 if(!hasApi)return;
 let row=document.getElementById('servisMasterCatChipRow');
@@ -139,7 +128,6 @@ row.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700;w
 populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
-
 const list=D.partsStock.filter(p=>p.id===selectedPartId||Sparepart.isPartForVehicle(p,typeof curVehicleId!=='undefined'?curVehicleId:null));
 const opts=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (sisa ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.innerHTML='<option value="">Tidak pakai stok</option>'+opts;
@@ -152,7 +140,6 @@ const wrap=document.getElementById('servisPartQtyWrap');
 if(!sel||!wrap)return;
 wrap.style.display=sel.value?'block':'none';
 },
-
 populateCatalogPartSelect(selectedCatalogId){
 const sel=document.getElementById('servisCatalogPartId');
 if(!sel)return;
@@ -164,7 +151,6 @@ Servis.onCatalogPartChange();
 return;
 }
 VehicleCatalog.getAll().then(items=>{
-
 const filtered=VehicleCatalog.filterForVehicle(items,typeof curVehicleId!=='undefined'?curVehicleId:null);
 const list=(filtered||[]).some(it=>it.id===selectedCatalogId)||!selectedCatalogId?filtered:filtered.concat((items||[]).filter(it=>it.id===selectedCatalogId));
 const opts=(list||[]).map(it=>`<option value="${escapeHtml(it.id)}" data-oem="${escapeHtml(it.oemCode||'')}" data-name="${escapeHtml(it.partName||'')}">${escapeHtml(it.partName||'(Tanpa nama)')}${it.oemCode?' — '+escapeHtml(it.oemCode):''}</option>`).join('');
@@ -183,7 +169,6 @@ const wrap=document.getElementById('servisCatalogPartQtyWrap');
 if(!sel||!wrap)return;
 wrap.style.display=sel.value?'block':'none';
 },
-
 renderCatalogRecommendations(){
 const wrap=document.getElementById('servisCatalogRecoWrap');
 const list=document.getElementById('servisCatalogRecoList');
@@ -200,7 +185,6 @@ list.innerHTML=items.map(it=>`<button type="button" class="chip-btn" style="font
 wrap.style.display='block';
 }).catch(()=>{});
 },
-
 selectCatalogRecommendation(catalogId){
 const sel=document.getElementById('servisCatalogPartId');
 if(!sel)return;
@@ -209,7 +193,6 @@ if(!hasOption)return;
 sel.value=String(catalogId);
 Servis.onCatalogPartChange();
 },
-
 syncServiceChecklist(){
 const box=document.getElementById('servisChecklistPanel');
 if(!box||typeof ServisChecklist==='undefined')return;
@@ -331,7 +314,6 @@ if(typeof ServiceInputCatalog==='undefined')return;
 const catEl=document.getElementById('servisCategory');
 const compEl=document.getElementById('servisComponent');
 const itemEl=document.getElementById('servisItem');
-
 if(catEl)catEl.value='';
 if(compEl)compEl.value='';
 ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
@@ -344,7 +326,6 @@ onItemAutofillInterval(){
 const item=document.getElementById('servisItem').value.trim();
 const intervalEl=document.getElementById('servisInterval');
 if(intervalEl&&intervalEl.dataset.manual!=='1'){
-
 const matched=item?(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase())):null;
 intervalEl.value=matched?matched.intervalKm:'';
 }
@@ -352,7 +333,6 @@ Servis.tryAutoLinkCatalogPart(item);
 Servis.renderCatalogRecommendations();
 Servis.syncServiceChecklist();
 },
-
 onItemInputSuggest(){
 const el=document.getElementById('servisItem');
 const box=document.getElementById('servisItemSuggestBox');
@@ -364,14 +344,12 @@ if(!matches.length){box.style.display='none';box.innerHTML='';return;}
 box.innerHTML=matches.map(n=>`<div class="suggest-item" onmousedown="event.preventDefault();Servis.selectItemSuggestion('${jsAttrEscape(n)}')">${escapeHtml(n)}</div>`).join('');
 box.style.display='block';
 },
-
 selectItemSuggestion(name){
 const el=document.getElementById('servisItem');
 if(el)el.value=name;
 if(typeof hideSuggestBox==='function')hideSuggestBox('servisItemSuggestBox');
 Servis.onItemAutofillInterval();
 },
-
 tryAutoLinkCatalogPart(item){
 const sel=document.getElementById('servisCatalogPartId');
 Servis.dismissPartialCatalogMatch();
@@ -393,7 +371,6 @@ return name.includes(target)||target.includes(name);
 });
 if(partial.length)Servis.renderPartialCatalogMatch(partial);
 },
-
 renderPartialCatalogMatch(matches){
 const wrap=document.getElementById('servisCatalogPartialWrap');
 const list=document.getElementById('servisCatalogPartialList');
@@ -624,6 +601,45 @@ _renderPhotoThumbs(){
 const wrap=document.getElementById('servisPhotoThumbs');
 if(!wrap)return;
 wrap.innerHTML=Servis._photoDraft.map((src,i)=>`<div style="position:relative;width:64px;height:64px"><img src="${escapeHtml(src)}" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--border2)"><button type="button" data-action="Servis.removePhoto" data-args='[${i}]' aria-label="Hapus foto" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent2);color:#fff;font-size:11px;line-height:20px;text-align:center;padding:0;cursor:pointer">✕</button></div>`).join('');
+},
+_closePhotoLightbox(){
+const box=document.getElementById('servisPhotoLightbox');
+if(!box)return;
+box.remove();
+if(Servis._photoLightboxKeyHandler)document.removeEventListener('keydown',Servis._photoLightboxKeyHandler);
+Servis._photoLightboxKeyHandler=null;
+},
+openPhotoLightbox(src,alt='Foto servis'){
+if(typeof document==='undefined'||!src)return false;
+Servis._closePhotoLightbox();
+const box=document.createElement('div');
+box.id='servisPhotoLightbox';
+box.setAttribute('role','dialog');
+box.setAttribute('aria-modal','true');
+box.setAttribute('aria-label',alt||'Foto servis');
+box.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;cursor:zoom-out';
+const img=document.createElement('img');
+img.src=src;
+img.alt=alt||'Foto servis';
+img.decoding='async';
+img.style.cssText='max-width:96vw;max-height:88vh;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.45);cursor:default';
+const close=document.createElement('button');
+close.type='button';
+close.textContent='✕';
+close.setAttribute('aria-label','Tutup foto');
+close.style.cssText='position:absolute;top:12px;right:12px;width:42px;height:42px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:22px;cursor:pointer';
+box.appendChild(img);box.appendChild(close);
+box.addEventListener('click',(e)=>{if(e.target===box||e.target===close)Servis._closePhotoLightbox();});
+document.body.appendChild(box);
+Servis._photoLightboxKeyHandler=(e)=>{if(e.key==='Escape')Servis._closePhotoLightbox();};
+document.addEventListener('keydown',Servis._photoLightboxKeyHandler);
+close.focus();
+return true;
+},
+openHistoryPhoto(logId,index=0){
+const log=(D.servisLogs||[]).find((s)=>String(s.id)===String(logId));
+const src=log&&Array.isArray(log.foto)?log.foto[Number(index)||0]:null;
+return Servis.openPhotoLightbox(typeof src==='string'?src:'','Foto servis');
 },
 save(){return withSaveGuardAsync('servis','servisModal',()=>{
   const snapshot={
@@ -1454,14 +1470,14 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminder
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="markSparepartServiced" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ Sudah Servis</button>
         </div>
         </div>
-      </div>`).join('')+(filteredConditionCats.length?`<div class="u-mt12 u-pt10" style="border-top:1px solid var(--border,#ddd)">
+      </div>`).join('')+`</div>`+`</div>`+(filteredConditionCats.length?`<div class="u-mt12 u-pt10" style="border-top:1px solid var(--border,#ddd)">
       <div class="u-fs12 u-fw700 u-mb8">🩺 Perawatan berbasis kondisi${rfSeverity?' <span class="u-fs10 u-t2 u-fw400">(selalu tampil, di luar filter status)</span>':''}</div>
       ${filteredConditionCats.map(c=>`<div class="u-mb10">
         <div class="u-fs12 u-fw700">${escapeHtml(c.name)}</div>
         <div class="u-fs11 u-t2" style="margin-top:2px">Kondisi: ${escapeHtml(c.condition||'Periksa sesuai gejala')}</div>
         <div class="u-fs11 u-cacc u-fw700" style="margin-top:2px">👉 ${escapeHtml((c.maintenanceActionPlan&&c.maintenanceActionPlan[0]&&c.maintenanceActionPlan[0].action)||'periksa')}</div>
       </div>`).join('')}
-    </div>`:'')+`</div></div>`;
+    </div>`:'')+`</div>`;
 Servis.renderReminderFilters(card);
 applyOneCardCollapsePref('servisReminderCard');
 },
@@ -1549,7 +1565,7 @@ const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(
 const linkedIntervalKm=linkedCat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(curVehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null);
 const linkedIntervalBulan=linkedCat&&typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(linkedCat,curVehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null);
 const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-history-badge servis-history-reminder" title="Terhubung ke Pengingat Servis: kategori dan interval dibaca dari sumber yang sama">🔔 ${escapeHtml(linkedCat.name)} · ${linkedIntervalKm.toLocaleString('id-ID')} km${linkedIntervalBulan?` / ${linkedIntervalBulan.toLocaleString('id-ID')} bln`:''}</span>`:(s.categoryId?`<span class="servis-history-badge servis-history-reminder-missing" title="Kategori servis ada, tetapi interval Pengingat belum aktif untuk kendaraan ini">⚠️ Pengingat belum aktif</span>`:'');
-const fotoThumb=s.foto&&s.foto.length?`<img src="${s.foto[0]}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0">`:'';
+const fotoThumb=s.foto&&s.foto.length?`<button type="button" class="servis-history-photo-thumb" data-stop="1" data-action="Servis.openHistoryPhoto" data-args="${escapeHtml(JSON.stringify([s.id,0]))}" aria-label="Buka foto servis"><img src="${s.foto[0]}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0"></button>`:'';
 const fotoOrIcon=fotoThumb||`<div class="tx-icon u-bgaccsoft">🔧</div>`;
 return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}">${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 };
