@@ -115,8 +115,15 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   // duplicate lexical declarations when a caller already lists them.
   const loadFiles = [...files];
   if (loadFiles.includes('car-notes.js') || loadFiles.includes('modules/vehicle/servis.js')) {
-    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/servis.js']) {
+    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js']) {
       if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);
+    }
+  } else if (loadFiles.includes('modules/vehicle/sparepart-servis.js')) {
+    // Sesi oversized-file S2: Sparepart UI methods live in a post-object
+    // compatibility layer. Load it automatically for isolated source tests.
+    if (!loadFiles.includes('modules/vehicle/sparepart-servis-ui.js')) {
+      const mainIndex = loadFiles.indexOf('modules/vehicle/sparepart-servis.js');
+      loadFiles.splice(mainIndex + 1, 0, 'modules/vehicle/sparepart-servis-ui.js');
     }
   }
   for (const file of loadFiles) {
