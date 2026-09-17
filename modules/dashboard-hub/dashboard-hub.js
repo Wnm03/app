@@ -355,14 +355,22 @@ const DashboardHubTickerModern = {
       { label: 'Transaksi', value: String(count), cls: '' },
     ];
 
-    el.innerHTML = items.map((i) => `
+    __kwDashHubSetHTMLIfChanged(el, items.map((i) => `
       <div class="bill-stat-pill">
         <span class="stat-label">${esc(i.label)}</span>
         <span class="stat-val${i.cls ? ' ' + i.cls : ''}">${esc(i.value)}</span>
       </div>
-    `).join('');
+    `).join(''));
   },
 };
+
+// S1812: avoid redundant DOM writes when a render produces identical HTML.
+// This preserves synchronous rendering while preventing unnecessary style/layout work.
+function __kwDashHubSetHTMLIfChanged(el, html){
+  if(!el || el.innerHTML===html)return false;
+  el.innerHTML=html;
+  return true;
+}
 
 // ================== SUMMARY CARDS (Sprint 1 Tahap 5, lihat DASHBOARD-SUMMARY.md) ==================
 // DashboardHubSummary — MURNI TAMPILAN, tidak ada business logic baru. Baris
@@ -398,12 +406,12 @@ const DashboardHubSummary = {
       { label: 'Jumlah Transaksi', value: String(count), cls: '' },
     ];
 
-    el.innerHTML = cards.map((c) => `
+    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
       <div class="dashhub-summary-card">
         <div class="dashhub-summary-label">${escapeHtml(c.label)}</div>
         <div class="dashhub-summary-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
       </div>
-    `).join('');
+    `).join(''));
   },
 };
 
@@ -496,7 +504,7 @@ const DashboardHubAnalytics = {
     //     bawah kartu "Pemasukan vs Pengeluaran", supaya rasio lebih cepat
     //     dibaca dibanding cuma teks "49% : 51%". Class baru murni CSS,
     //     tidak ada kalkulasi tambahan.
-    el.innerHTML = cards.map((c) => `
+    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
       <div class="dashhub-analytics-card${c.warn ? ' dashhub-analytics-card--warn' : ''}${c.good ? ' dashhub-analytics-card--good' : ''}">
         <div class="dashhub-analytics-label-row">
           <div class="dashhub-analytics-label">${escapeHtml(c.label)}</div>
@@ -506,7 +514,7 @@ const DashboardHubAnalytics = {
         ${c.sub ? '<div class="dashhub-analytics-sub' + (c.good ? ' dashhub-analytics-sub--good' : '') + '">' + (c.good ? '' : '⚠️ ') + escapeHtml(c.sub) + '</div>' : ''}
         ${c.bar ? '<div class="dashhub-analytics-bar"><div class="dashhub-analytics-bar-inc" style="width:' + c.bar.incPct + '%"></div><div class="dashhub-analytics-bar-exp" style="width:' + c.bar.expPct + '%"></div></div>' : ''}
       </div>
-    `).join('');
+    `).join(''));
   },
 };
 
@@ -617,14 +625,14 @@ const ShopMiniSummary = {
       { label: 'Profit Bulan Ini', value: this._money(untung), cls: untung < 0 ? 'red' : 'green' },
       { label: 'Stok Menipis', value: String(stokMenipis), cls: stokMenipis > 0 ? 'red' : '' },
     ];
-    el.innerHTML = cards.map((c) => `
+    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
       <div class="findash-card">
         <div class="findash-card-body">
           <div class="findash-card-label">${esc(c.label)}</div>
           <div class="findash-card-val${c.cls ? ' ' + c.cls : ''}">${esc(c.value)}</div>
         </div>
       </div>
-    `).join('');
+    `).join(''));
   },
 };
 
