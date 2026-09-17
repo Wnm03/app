@@ -6,7 +6,7 @@
   const state={revision:0,cache:new Map(),metrics:{renders:0,byTab:{},cacheHits:0,cacheMisses:0,last:null}};
   const arr=v=>Array.isArray(v)?v:[];
   function rev(){return state.revision;}
-  function bump(reason){state.revision++;state.cache.clear();state.metrics.last={type:'invalidate',reason:reason||'mutation',revision:state.revision,at:Date.now()};return state.revision;}
+  function bump(reason){state.revision++;state.cache.clear();state._auditResult=null;state._auditRevision=-1;state.metrics.last={type:'invalidate',reason:reason||'mutation',revision:state.revision,at:Date.now()};return state.revision;}
   function key(domain,id){return domain+'::'+String(id||'fleet')+'::'+state.revision;}
   function memo(domain,id,fn){const k=key(domain,id);if(state.cache.has(k)){state.metrics.cacheHits++;return state.cache.get(k);}state.metrics.cacheMisses++;const value=fn();state.cache.set(k,value);return value;}
   function render(tab){state.metrics.renders++;const t=String(tab||'unknown');state.metrics.byTab[t]=(state.metrics.byTab[t]||0)+1;state.metrics.last={type:'render',tab:t,revision:state.revision,at:Date.now()};}
@@ -56,8 +56,15 @@
     return {ok:issues.length===0,issues,reports,changedDomains:changed,revision:state.revision};
   }
   function auditCurrent(){
+    // Car Notes servis tab can call renderCnTab() repeatedly. The incremental
+    // audit already invalidates on save via bump(); avoid rebuilding large
+    // JSON fingerprints and rerunning reconciliers when nothing changed.
+    if(state._auditRevision===state.revision&&state._auditResult)return state._auditResult;
     const d=(typeof D!=='undefined'&&D)||{};
-    return runIncremental({services:d.servisLogs,bbmLogs:d.bbmLogs,transactions:d.transactions,vehicles:d.vehicles,taxRecords:d.taxRecords});
+    const result=runIncremental({services:d.servisLogs,bbmLogs:d.bbmLogs,transactions:d.transactions,vehicles:d.vehicles,taxRecords:d.taxRecords});
+    state._auditRevision=state.revision;
+    state._auditResult=result;
+    return result;
   }
   function snapshot(){return {revision:state.revision,metrics:JSON.parse(JSON.stringify(state.metrics)),cacheSize:state.cache.size,featureParity:inventory()};}
   const api={revision:rev,bump,invalidate:bump,memo,render,beginRender,finishRender,inventory,domainSignatures,runIncremental,auditCurrent,snapshot};
