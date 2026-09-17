@@ -55,7 +55,6 @@ const s=document.createElement('script');
 s.src=_isRetry?(src+(src.indexOf('?')>-1?'&':'?')+'_retry='+Date.now()):src;
 s.async=true;
 if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
-if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
 let done=false;
 const timeoutId=setTimeout(()=>{
 if(done)return;done=true;

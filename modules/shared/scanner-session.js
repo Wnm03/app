@@ -330,6 +330,10 @@ function _scannerSessionRecoveryTick() {
   if (stuckLongEnough && overlayGone) _scannerSessionShowRecoveryBanner();
 }
 
+// Recovery watchdog sengaja memakai SATU interval ringan (3 detik) agar
+// lifecycle recovery tetap punya satu titik pemasangan yang dapat diaudit.
+// Tick sendiri no-op saat sesi tidak aktif, sehingga tidak melakukan DOM work
+// pada kondisi normal.
 if (typeof window !== 'undefined' && typeof window.setInterval === 'function') {
   window.setInterval(_scannerSessionRecoveryTick, RECOVERY_POLL_MS);
 }

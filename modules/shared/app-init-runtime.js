@@ -4,14 +4,26 @@
 // be reached again by recovery/test harnesses; repeating global timers/listeners
 // would otherwise multiply reminder/backup work and lifecycle flushes.
 let __kwRuntimeMaintenanceTimer=null;
+let __kwRuntimeMaintenanceStopped=false;
 
-function __kwInstallRuntimeMaintenance(){
-if(__kwRuntimeMaintenanceTimer!=null)return;
-__kwRuntimeMaintenanceTimer=setInterval(()=>{
+function __kwScheduleRuntimeMaintenance(delay){
+if(__kwRuntimeMaintenanceStopped)return;
+if(__kwRuntimeMaintenanceTimer!=null)clearTimeout(__kwRuntimeMaintenanceTimer);
+__kwRuntimeMaintenanceTimer=setTimeout(()=>{
+__kwRuntimeMaintenanceTimer=null;
+if(document.visibilityState!=='hidden'){
 applyEffectiveTheme();
 checkAndFireReminders();
 if(D.googleDrive.autoSync&&gdriveAccessToken)uploadBackupToDrive(true);
-},5*60*1000);
+}
+__kwScheduleRuntimeMaintenance(5*60*1000);
+},delay);
+}
+
+function __kwInstallRuntimeMaintenance(){
+if(__kwRuntimeMaintenanceTimer!=null)return;
+__kwRuntimeMaintenanceStopped=false;
+__kwScheduleRuntimeMaintenance(5*60*1000);
 }
 
 async function __kwInitRuntime(){
@@ -53,7 +65,9 @@ setupPWA();
 enableSwipeToDismiss('txModal');
 enableSwipeToDismiss('worthItModal');
 if(navigator.storage&&navigator.storage.persist){
-navigator.storage.persist().catch(()=>{});
+const persistStorage=()=>navigator.storage.persist().catch(()=>{});
+if(typeof requestIdleCallback==='function')requestIdleCallback(persistStorage,{timeout:2000});
+else setTimeout(persistStorage,0);
 }
 const now=new Date();
 document.getElementById('headerDate').textContent=now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'});

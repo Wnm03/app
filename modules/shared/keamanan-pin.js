@@ -152,12 +152,20 @@ document.getElementById('onboard').style.display='none';const ps=document.getEle
 // murni memperlambat orang yang literally mencet-mencet keypad di HP yang lagi dipegang.
 const PIN_MAX_ATTEMPTS=5;
 const PIN_LOCK_DURATIONS_SEC=[30,60,120,300,600]; // 30d, 1m, 2m, 5m, 10m; stage berikutnya tetap di durasi terakhir (10m)
+let _pinLockStateCache=null;
+let _pinLockStateCacheAt=0;
+const _PIN_LOCK_STATE_CACHE_MS=250;
+function _invalidatePinLockStateCache(){_pinLockStateCache=null;_pinLockStateCacheAt=0;}
 function _pinLockState(){
-return {
+const now=Date.now();
+if(_pinLockStateCache&&now-_pinLockStateCacheAt<_PIN_LOCK_STATE_CACHE_MS)return _pinLockStateCache;
+_pinLockStateCache={
 fails:parseInt(localStorage.getItem('kw_pin_fails')||'0',10)||0,
 until:parseInt(localStorage.getItem('kw_pin_lock_until')||'0',10)||0,
 stage:parseInt(localStorage.getItem('kw_pin_lock_stage')||'0',10)||0
 };
+_pinLockStateCacheAt=now;
+return _pinLockStateCache;
 }
 function _pinLockRemainingMs(){
 return Math.max(0,_pinLockState().until-Date.now());
@@ -168,6 +176,9 @@ const m=Math.floor(totalSec/60), s=totalSec%60;
 return m>0?(m+' menit '+s+' detik'):(s+' detik');
 }
 let _pinLockTimer=null;
+if(typeof window!=='undefined'&&typeof window.addEventListener==='function')window.addEventListener('storage',ev=>{
+if(ev.key==='kw_pin_fails'||ev.key==='kw_pin_lock_until'||ev.key==='kw_pin_lock_stage')_invalidatePinLockStateCache();
+});
 function updatePinLockUI(){
 const msg=document.getElementById('pinLockMsg');
 const pad=document.getElementById('pinPad');
@@ -183,6 +194,7 @@ const tick=()=>{
 const left=_pinLockRemainingMs();
 if(left<=0){
 localStorage.removeItem('kw_pin_lock_until');
+_invalidatePinLockStateCache();
 updatePinLockUI();
 return;
 }
@@ -215,6 +227,7 @@ safeSetItem('kw_pin',hashedInput);
 }
 if(pinMatch){
 localStorage.removeItem('kw_pin_fails');localStorage.removeItem('kw_pin_lock_until');localStorage.removeItem('kw_pin_lock_stage');
+_invalidatePinLockStateCache();
 _sessionRawPin=pinBuffer;document.getElementById('pinScreen').style.display='none';showMain();loadAndMigrateApiKeyOnUnlock();
 }else{
 pinBuffer='';updatePinDots();
@@ -226,10 +239,12 @@ const durSec=PIN_LOCK_DURATIONS_SEC[Math.min(stage-1,PIN_LOCK_DURATIONS_SEC.leng
 localStorage.setItem('kw_pin_lock_until',String(Date.now()+durSec*1000));
 localStorage.setItem('kw_pin_lock_stage',String(stage));
 localStorage.setItem('kw_pin_fails','0');
+_invalidatePinLockStateCache();
 toast('🔒 5x PIN salah. Coba lagi dalam '+_formatLockDuration(durSec*1000)+'.',4000);
 updatePinLockUI();
 }else{
 localStorage.setItem('kw_pin_fails',String(fails));
+_invalidatePinLockStateCache();
 toast('❌ PIN salah ('+fails+'/'+PIN_MAX_ATTEMPTS+' sebelum terkunci sementara)');
 }
 }

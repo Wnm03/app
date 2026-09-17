@@ -29,17 +29,51 @@
   'use strict';
   var cur = document.currentScript;
   if (!cur) return;
-  var raw = cur.getAttribute('data-modal-index');
-  var idx = parseInt(raw, 10);
-  if (isNaN(idx)) return;
-  if (typeof MODAL_HTML === 'undefined' || !MODAL_HTML || MODAL_HTML[idx] === undefined) {
-    // Gagal senyap TAPI kelihatan: banner __moduleLoadFail sudah dipasang oleh
-    // boot-early.js kalau bundle-nya sendiri gagal load; ini lapisan jaga-jaga
-    // tambahan kalau index-nya di luar jangkauan array (mis. typo saat migrasi).
-    try {
-      console.error('[modal-write] MODAL_HTML[' + raw + '] tidak ditemukan -- 1 modal tidak akan tampil.');
-    } catch(_e){void _e;}
+
+  // S1810: support a compact batch/range so the 103 parser-blocking
+  // modal-write tags can be reduced to one synchronous script execution.
+  // Single-index mode remains backward-compatible for older HTML overlays.
+  var rawRange = cur.getAttribute('data-modal-range');
+  var rawIndex = cur.getAttribute('data-modal-index');
+  var indexes = [];
+
+  if (rawRange) {
+    var parts = rawRange.split(',');
+    for (var p = 0; p < parts.length; p++) {
+      var token = parts[p].trim();
+      if (!token) continue;
+      var dash = token.indexOf('-');
+      if (dash > 0) {
+        var first = parseInt(token.slice(0, dash), 10);
+        var last = parseInt(token.slice(dash + 1), 10);
+        if (!isNaN(first) && !isNaN(last)) {
+          var step = first <= last ? 1 : -1;
+          for (var n = first; step > 0 ? n <= last : n >= last; n += step) indexes.push(n);
+        }
+      } else {
+        var one = parseInt(token, 10);
+        if (!isNaN(one)) indexes.push(one);
+      }
+    }
+  } else if (rawIndex !== null) {
+    var idx = parseInt(rawIndex, 10);
+    if (!isNaN(idx)) indexes.push(idx);
+  }
+
+  if (!indexes.length) return;
+  if (typeof MODAL_HTML === 'undefined' || !MODAL_HTML) {
+    try { console.error('[modal-write] MODAL_HTML tidak ditemukan.'); } catch(_e){void _e;}
     return;
   }
-  document.write(MODAL_HTML[idx]);
+
+  var output = '';
+  for (var i = 0; i < indexes.length; i++) {
+    var index = indexes[i];
+    if (MODAL_HTML[index] === undefined) {
+      try { console.error('[modal-write] MODAL_HTML[' + index + '] tidak ditemukan -- modal dilewati.'); } catch(_e2){void _e2;}
+      continue;
+    }
+    output += MODAL_HTML[index];
+  }
+  if (output) document.write(output);
 })();

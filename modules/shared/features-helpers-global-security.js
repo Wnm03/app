@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1793-final-hardening-1796';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1796';
+const APP_BUILD_VERSION = 's1793-final-hardening-1811';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1811';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -1041,8 +1041,11 @@ checkAndFireReminders();
 setTimeout(checkWeeklySalaryReset,600);
 setTimeout(checkMonthlySalaryReminder,600);
 refreshCurrentPage();
-setTimeout(autoRunSelfTestIfNeeded,800);
-setTimeout(gdriveTrySilentReconnectOnLoad,900);
+// S1811: diagnostic/self-test dan silent Google Drive reconnect dipindah keluar dari
+// critical first-second startup window. Keduanya tetap otomatis sekali per boot, tetapi
+// diberi jeda agar render awal, input PIN, dan first interaction mendapat prioritas.
+setTimeout(autoRunSelfTestIfNeeded,2500);
+setTimeout(gdriveTrySilentReconnectOnLoad,3000);
 }
 async function clearChat(){
 if(!await askConfirm('Reset semua riwayat chat AI?'))return;
