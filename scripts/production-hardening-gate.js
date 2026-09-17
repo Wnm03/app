@@ -11,6 +11,6 @@ if(!/modules\/vehicle\/servis\.js/.test(build)) throw new Error('servis.js missi
 if(!/let\s+cnPeriodeByTab\s*=/.test(read('modules/shared/features-helpers-global-security.js'))) throw new Error('cnPeriodeByTab missing');
 for(const f of ['app-bundle-a.min.js','app-bundle-b.min.js']) child.execFileSync(process.execPath,['--check',f],{stdio:'ignore'});
 const html=read('index.html'); const sw=read('sw.js');
-const v=(html.match(/[?&]v=(\d+)/)||[])[1]; const cv=(sw.match(/kw-cache-v(\d+)/)||[])[1];
+const v=(html.match(/[?&]v=(\d+)/)||[])[1]; const cv=(sw.match(/CACHE_NAME\s*=\s*['\"]kw-cache-v(\d+)['\"]/ )||[])[1];
 if(v && cv && v!==cv) throw new Error(`HTML/SW version mismatch: ${v}/${cv}`);
 console.log('PRODUCTION HARDENING GATE: PASS');
