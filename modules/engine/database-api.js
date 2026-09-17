@@ -635,14 +635,20 @@ const GENERIC_GROUP_BY_NAME_RECORDS = {
   'roller cvt': { group: 'Mesin — Kopling/Pulley/Final Drive', icon: '🔗' },
   'timing belt': { group: 'Mesin — Cylinder Head/Valve', icon: '⚙️' },
   'kampas rem': { group: 'Sistem Rem', icon: '🛑' },
+  'kampas rem depan': { group: 'Sistem Pengereman', icon: '🛑' },
+  'kampas rem belakang': { group: 'Sistem Pengereman', icon: '🛑' },
+  'cakram rem depan': { group: 'Sistem Pengereman', icon: '🛑' },
+  'kaliper rem depan': { group: 'Sistem Pengereman', icon: '🛑' },
+  'master rem & reservoir': { group: 'Sistem Pengereman', icon: '🛑' },
+  'tromol rem belakang': { group: 'Sistem Pengereman', icon: '🛑' },
   aki: { group: 'Kelistrikan & Panel', icon: '🔌' },
   'ban depan': { group: 'Roda Depan/Suspensi/Kemudi', icon: '🛞' },
 };
 
 const GENERIC_RECOMMEND_NAMES_RECORDS = {
-  motor: ['Oli Mesin', 'Filter Oli', 'Oli Gardan', 'Busi', 'Filter Udara', 'Kampas Rem', 'V-Belt CVT', 'Roller CVT', 'Minyak Rem', 'Aki', 'Ban Depan'],
-  mobil: ['Oli Mesin', 'Filter Oli', 'Oli Transmisi', 'Busi', 'Filter Udara', 'Filter AC', 'Kampas Rem', 'Minyak Rem', 'Aki', 'Coolant', 'Timing Belt', 'Ban Depan'],
-  listrik: ['Kampas Rem', 'Minyak Rem', 'Aki', 'Ban Depan'],
+  motor: ['Oli Mesin', 'Filter Oli', 'Oli Gardan', 'Busi', 'Filter Udara', 'Kampas Rem Depan', 'Kampas Rem Belakang', 'V-Belt CVT', 'Roller CVT', 'Minyak Rem', 'Aki', 'Ban Depan'],
+  mobil: ['Oli Mesin', 'Filter Oli', 'Oli Transmisi', 'Busi', 'Filter Udara', 'Filter AC', 'Kampas Rem Depan', 'Kampas Rem Belakang', 'Minyak Rem', 'Aki', 'Coolant', 'Timing Belt', 'Ban Depan'],
+  listrik: ['Kampas Rem Depan', 'Kampas Rem Belakang', 'Minyak Rem', 'Aki', 'Ban Depan'],
 };
 
 const FALLBACK_KEYWORDS_RECORDS = [
