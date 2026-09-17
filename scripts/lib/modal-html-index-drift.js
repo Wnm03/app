@@ -31,6 +31,7 @@ const path = require('path');
 // saat ada campuran/rollback parsial pun drift tetap terdeteksi, bukan
 // diam-diam berhenti berfungsi.
 const WRITE_RE = /(?:document\.write\(MODAL_HTML\[(\d+)\]\);<\/script>|<script\s+src="modules\/shared\/modal-write\.js\?v=\d+"\s+data-modal-index="(\d+)"><\/script>)<!--\s*modal:([a-zA-Z0-9_-]+)/g;
+const RANGE_RE = /<script\s+src="modules\/shared\/modal-write\.js\?v=\d+"\s+data-modal-range="(\d+)-(\d+)"><\/script>/g;
 
 function firstOverlayId(html) {
   const m = html.match(/<div\s+class="overlay"\s+id="([a-zA-Z0-9_-]+)"/);
@@ -60,6 +61,17 @@ function checkModalHtmlIndexDrift(rootDir, htmlFiles) {
     const content = readFile(file);
     let entriesFound = 0;
     let m;
+    RANGE_RE.lastIndex = 0;
+    let rangeFound = false;
+    while ((m = RANGE_RE.exec(content)) !== null) {
+      rangeFound = true;
+      entriesFound += Math.abs(Number(m[2]) - Number(m[1])) + 1;
+      const first = Number(m[1]), last = Number(m[2]);
+      if (first !== 0 || last !== MODAL_HTML.length - 1) {
+        problems.push(`${file} — data-modal-range=\"${first}-${last}\" tidak mencakup seluruh MODAL_HTML (panjang: ${MODAL_HTML.length})`);
+      }
+    }
+
     WRITE_RE.lastIndex = 0;
     while ((m = WRITE_RE.exec(content)) !== null) {
       entriesFound++;
@@ -67,16 +79,19 @@ function checkModalHtmlIndexDrift(rootDir, htmlFiles) {
       const commentName = m[3];
       const html = MODAL_HTML[index];
       if (html === undefined) {
-        problems.push(`${file} — MODAL_HTML[${index}] di luar jangkauan array (panjang: ${MODAL_HTML.length}), dirujuk sbg "${commentName}"`);
+        problems.push(`${file} — MODAL_HTML[${index}] di luar jangkauan array (panjang: ${MODAL_HTML.length}), dirujuk sbg \"${commentName}\"`);
         continue;
       }
       const actual = firstOverlayId(html);
       if (actual !== commentName) {
-        problems.push(`${file} — MODAL_HTML[${index}] id sungguhan="${actual}" TIDAK COCOK dgn komentar "<!-- modal:${commentName} -->" (kemungkinan index geser krn ada modal baru disisipkan di tengah array)`);
+        problems.push(`${file} — MODAL_HTML[${index}] id sungguhan=\"${actual}\" TIDAK COCOK dgn komentar \"<!-- modal:${commentName} -->\"`);
       }
     }
-    if (entriesFound < MODAL_HTML.length - 2) {
-      problems.push(`${file} — cuma ${entriesFound} baris document.write(MODAL_HTML[N])/modal-write.js ditemukan, padahal MODAL_HTML punya ${MODAL_HTML.length} elemen (format komentar mungkin berubah, lint ini perlu diupdate)`);
+    if (!rangeFound && entriesFound < MODAL_HTML.length - 2) {
+      problems.push(`${file} — cuma ${entriesFound} modal writer entries ditemukan, padahal MODAL_HTML punya ${MODAL_HTML.length} elemen`);
+    }
+    if (rangeFound && entriesFound !== MODAL_HTML.length) {
+      problems.push(`${file} — jumlah modal yang dicakup writer=${entriesFound}, MODAL_HTML=${MODAL_HTML.length}`);
     }
   }
   return problems;
