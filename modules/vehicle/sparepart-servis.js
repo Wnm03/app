@@ -29,6 +29,48 @@ if(!cat.vehicleId)return true;
 if(!vehicleId)return true;
 return cat.vehicleId===vehicleId;
 }
+// SERVICE COMPONENT CANONICAL RESOLVER — names are only a legacy bridge.
+// New linkage must use serviceComponentId; ambiguous text is never guessed.
+function resolveCanonicalServiceComponent(name,preferredId){
+  if(typeof ServiceInputCatalog==='undefined')return preferredId||null;
+  if(preferredId&&typeof ServiceInputCatalog.itemById==='function'){
+    const direct=ServiceInputCatalog.itemById(preferredId);
+    if(direct&&direct.item)return direct.item.id;
+  }
+  const q=String(name||'').trim().toLowerCase();
+  if(!q)return null;
+  const exact=[];
+  for(const g of ServiceInputCatalog.groups()||[]){
+    for(const it of g.items||[]){
+      if(String(it.name||'').trim().toLowerCase()===q)exact.push(it.id);
+    }
+  }
+  return exact.length===1?exact[0]:null;
+}
+function serviceComponentIdForCategory(cat){
+  if(!cat)return null;
+  return resolveCanonicalServiceComponent(cat.name,cat.serviceComponentId||null);
+}
+function dedupeServiceCategoriesForVehicle(categories,vehicleId){
+  const out=[],seen=new Set();
+  const list=(categories||[]).slice().sort((a,b)=>{
+    const av=a&&a.vehicleId===vehicleId?0:1, bv=b&&b.vehicleId===vehicleId?0:1;
+    return av-bv;
+  });
+  const canonicalIds=new Set();
+  list.forEach(c=>{const cid=serviceComponentIdForCategory(c);if(cid)canonicalIds.add(cid);});
+  list.forEach(c=>{
+    if(!c)return;
+    const cid=serviceComponentIdForCategory(c);
+    const n=String(c.name||'').trim().toLowerCase();
+    if(!cid && n==='kampas rem' && (canonicalIds.has('kampas-rem-depan')||canonicalIds.has('kampas-rem-belakang'))) return;
+    const key=cid||('legacy:'+String(c.id||c.name||'').toLowerCase());
+    if(seen.has(key))return;
+    seen.add(key); out.push(c);
+  });
+  return out;
+}
+
 // resolveServisCatForVehicle(name,vehicleId) — BUGFIX (audit sesi ini,
 // lanjutan S622/S629): sejak kategori sparepart bisa di-scope ke 1 kendaraan
 // spesifik (cat.vehicleId, lihat catVisibleForVehicle() di atas), kartu
@@ -135,9 +177,9 @@ return changed;
 // kendaraan spesifik ini" oleh suggestServiceIntervalKm() sendiri) — 0 logic
 // interval baru diciptakan di sini, 100% reuse.
 const GENERIC_RECOMMEND_NAMES={
-motor:['Oli Mesin','Filter Oli','Oli Gardan','Busi','Filter Udara','Kampas Rem','V-Belt CVT','Roller CVT','Minyak Rem','Aki','Ban Depan'],
-mobil:['Oli Mesin','Filter Oli','Oli Transmisi','Busi','Filter Udara','Filter AC','Kampas Rem','Minyak Rem','Aki','Coolant','Timing Belt','Ban Depan'],
-listrik:['Kampas Rem','Minyak Rem','Aki','Ban Depan'],
+motor:['Oli Mesin','Filter Oli','Oli Gardan','Busi','Filter Udara','Kampas Rem Depan','Kampas Rem Belakang','V-Belt CVT','Roller CVT','Minyak Rem','Aki','Ban Depan'],
+mobil:['Oli Mesin','Filter Oli','Oli Transmisi','Busi','Filter Udara','Filter AC','Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Coolant','Timing Belt','Ban Depan'],
+listrik:['Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Ban Depan'],
 };
 // GENERIC_GROUP_BY_NAME/resolveCatGroup() — FITUR BARU (audit sesi ini,
 // permintaan user: kartu "🔔 Pengingat Servis per Part" & rekomendasi
@@ -188,6 +230,12 @@ const GENERIC_GROUP_BY_NAME={
 'roller cvt':{group:'Mesin — Kopling/Pulley/Final Drive',icon:'🔗'},
 'timing belt':{group:'Mesin — Cylinder Head/Valve',icon:'⚙️'},
 'kampas rem':{group:'Sistem Rem',icon:'🛑'},
+'kampas rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'kampas rem belakang':{group:'Sistem Pengereman',icon:'🛑'},
+'cakram rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'kaliper rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'master rem & reservoir':{group:'Sistem Pengereman',icon:'🛑'},
+'tromol rem belakang':{group:'Sistem Pengereman',icon:'🛑'},
 'aki':{group:'Kelistrikan & Panel',icon:'🔌'},
 'ban depan':{group:'Roda Depan/Suspensi/Kemudi',icon:'🛞'},
 };
@@ -308,10 +356,14 @@ const hit=collectKnownGroups().find(g=>g.group===name);
 return hit?hit.icon:'📦';
 }
 function servisLogMatchesCat(s,cat){
+const catComponent=serviceComponentIdForCategory(cat);
+if(catComponent&&s&&s.serviceComponentId&&String(s.serviceComponentId)===String(catComponent)) return true;
 if(s.categoryId){
 const linked=D.sparepartCats.find(c=>c&&c.id===s.categoryId);
 if(!linked)return false;
 if(linked.vehicleId&&linked.vehicleId!==s.vehicleId)return false;
+const linkedComponent=serviceComponentIdForCategory(linked);
+if(catComponent&&linkedComponent) return linkedComponent===catComponent;
 return s.categoryId===cat.id;
 }
 const cn=cat.name.toLowerCase();
@@ -341,21 +393,40 @@ return /vario\s*125|kzr/.test(hay);
 function resolveMaintenanceRule(vehicleId,cat){
 if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
 if(!cat)return null;
-// V37: persisted master-component values are authoritative. The legacy KZR registry
-// below is compatibility fallback only for components that have no persisted interval.
+// V37+: persisted category intervals remain authoritative for the replacement
+// axis, but must not erase an explicit inspection axis from the maintenance registry.
 const persistedKm=Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null;
 const persistedMonths=Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null;
-if(persistedKm||persistedMonths)return{serviceComponentId:cat.serviceComponentId||cat.id||null,componentName:cat.name||null,replaceKm:persistedKm,replaceMonths:persistedMonths,maintenanceType:cat.maintenanceType||'periodic'};
 const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
-if(direct&&SERVICE_MAINTENANCE_RULES[direct])return SERVICE_MAINTENANCE_RULES[direct];
+if(direct&&SERVICE_MAINTENANCE_RULES[direct]){
+  const base=SERVICE_MAINTENANCE_RULES[direct];
+  return Object.assign({},base,{
+    serviceComponentId:cat.serviceComponentId||direct,
+    componentName:cat.name||base.componentName||null,
+    replaceKm:persistedKm!==null?persistedKm:base.replaceKm,
+    replaceMonths:persistedMonths!==null?persistedMonths:base.replaceMonths
+  });
+}
+if(persistedKm||persistedMonths)return{serviceComponentId:cat.serviceComponentId||cat.id||null,componentName:cat.name||null,replaceKm:persistedKm,replaceMonths:persistedMonths,maintenanceType:cat.maintenanceType||'periodic'};
 const n=normalizeMaintenanceRuleKey(cat.name);
-if(n&&SERVICE_MAINTENANCE_RULES[n])return SERVICE_MAINTENANCE_RULES[n];
+if(n&&SERVICE_MAINTENANCE_RULES[n]){
+  const base=SERVICE_MAINTENANCE_RULES[n];
+  return Object.assign({},base,{
+    serviceComponentId:cat.serviceComponentId||n,
+    componentName:cat.name||base.componentName||null,
+    replaceKm:persistedKm!==null?persistedKm:base.replaceKm,
+    replaceMonths:persistedMonths!==null?persistedMonths:base.replaceMonths
+  });
+}
 if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'){
 for(const g of ServiceInputCatalog.groups()||[]){
 for(const it of g.items||[]){
 if(normalizeMaintenanceRuleKey(it.id)===n||normalizeMaintenanceRuleKey(it.name)===n){
 const r=SERVICE_MAINTENANCE_RULES[it.id];
-if(r)return Object.assign({serviceComponentId:it.id,componentName:it.name},r);
+if(r)return Object.assign({serviceComponentId:it.id,componentName:it.name},r,{
+  replaceKm:persistedKm!==null?persistedKm:r.replaceKm,
+  replaceMonths:persistedMonths!==null?persistedMonths:r.replaceMonths
+});
 }
 }
 }
@@ -1114,7 +1185,7 @@ ensureCanonicalSparepartComponentCategories(){
     'oli-mesin','filter-oli','busi','rantai-keteng-tensioner','filter-kawat-oli-mesin','paking-knalpot',
     'v-belt-cvt','slide-piece-cvt','boss-pulley-drive-face','roller-cvt','kampas-kopling-ganda','mangkok-kopling-ganda','seal-driven-face','per-sentri','per-cvt','bearing-bak-cvt','busa-filter-cvt',
     'throttle-body','isc','injector','filter-fuel-pump','selang-tutup-tangki','coolant','radiator-water-pump','thermostat',
-    'kampas-rem-depan','minyak-rem','kampas-rem-belakang','selang-rem',
+    'kampas-rem-depan','minyak-rem','kampas-rem-belakang','cakram-rem-depan','kaliper-rem-depan','master-rem-reservoir','tromol-rem-belakang','selang-rem',
     'oli-shockbreaker','engine-mounting-bushing-arm','aki','saklar-sistem-penerangan','relay-sekring',
     'ban-depan','ban-belakang','bearing-roda','filter-udara','oli-gardan','kabel-gas-standar-kunci'
   ]);
@@ -1283,7 +1354,9 @@ let added=0;
 chosen.forEach((r,idx)=>{
 const already=D.sparepartCats.some(c=>catVisibleForVehicle(c,vid)&&c.name.trim().toLowerCase()===r.name.trim().toLowerCase());
 if(already)return;
-D.sparepartCats.push({id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon});
+const compId=resolveCanonicalServiceComponent(r.name,null);
+const compRef=compId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(compId):null;
+D.sparepartCats.push({id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null});
 added++;
 });
 save();

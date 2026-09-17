@@ -1,0 +1,334 @@
+// S1812 split: lower-level service history/reminder methods extracted from servis.js.
+// Loaded immediately after servis.js; public API remains Servis.* unchanged.
+
+if (typeof Servis === "undefined") throw new Error("Servis must load before servis-b.js");
+Object.assign(Servis, {
+getServiceOdometerIntegrity(vehicleId){
+  const allLogs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[];
+  const incomplete=allLogs.filter(s=>s.km==null||s.km==='').map(s=>({type:'missing_km',id:s.id||null,date:s.date||null}));
+  const invalidKm=allLogs.filter(s=>s.km!=null&&s.km!==''&&(!Number.isFinite(Number(s.km))||Number(s.km)<0)).map(s=>({type:'invalid_km',id:s.id||null,km:s.km}));
+  const logs=allLogs.filter(s=>Number.isFinite(Number(s.km))&&Number(s.km)>=0);
+  const violations=[];
+  const sorted=logs.slice().sort((a,b)=>{const cmp=typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(b,a):String(a.date||'').localeCompare(String(b.date||''))||Number(a.km)-Number(b.km)||String(a.id||'').localeCompare(String(b.id||''));return -cmp;});
+  for(let i=1;i<sorted.length;i++){const a=sorted[i-1],b=sorted[i];if(String(a.date||'')<String(b.date||'')&&Number(a.km)>Number(b.km))violations.push({type:'km_regression',previousId:a.id,currentId:b.id,previousKm:Number(a.km),currentKm:Number(b.km),previousDate:a.date,currentDate:b.date});}
+  const current=typeof getVehicleKm==='function'?Number(getVehicleKm(vehicleId)):NaN;
+  const issues=violations.concat(incomplete,invalidKm);
+  return{vehicleId,currentKm:Number.isFinite(current)?current:null,maxHistoricalKm:logs.length?Math.max(...logs.map(s=>Number(s.km))):null,violations,issues,incomplete,invalidKm,ok:issues.length===0};
+},
+
+getServiceFinanceOwnershipIntegrity(vehicleId){
+  const logs=(Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(s=>s&&(!vehicleId||s.vehicleId===vehicleId));
+  const txs=Array.isArray(D.transactions)?D.transactions:[];
+  const owners=new Map();
+  txs.forEach(t=>{if(t&&t.servisLinkId){if(!owners.has(t.servisLinkId))owners.set(t.servisLinkId,[]);owners.get(t.servisLinkId).push(t);}});
+  const issues=[];
+  logs.forEach(s=>{const list=owners.get(s.id)||[];if(list.length>1)issues.push({type:'multiple_finance_owners',servisId:s.id,transactionIds:list.map(t=>t.id)});});
+  txs.forEach(t=>{if(!t||!t.servisLinkId)return;const s=logs.find(x=>x.id===t.servisLinkId);if(!s)issues.push({type:'orphan_finance_service_link',transactionId:t.id,servisId:t.servisLinkId});else if(s.vehicleId&&t.vehicleId&&s.vehicleId!==t.vehicleId)issues.push({type:'finance_service_vehicle_mismatch',transactionId:t.id,servisId:s.id,serviceVehicleId:s.vehicleId,transactionVehicleId:t.vehicleId});});
+  return{vehicleId:vehicleId||null,issues,ok:issues.length===0};
+},
+
+getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
+const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
+return logs.length?logs[0].km:null;
+},
+
+_matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
+const effType=log.actionType||'ganti';
+if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+if(!actionTypeFilter)return true;
+return effType===actionTypeFilter;
+},
+editSparepartFromReminder(catId){
+const idx=D.sparepartCats.findIndex(c=>c.id===catId);
+if(idx<0){toast('⚠️ Kategori sparepart tidak ditemukan');return;}
+Sparepart.openCatModal(idx);
+},
+activeReminderMasterCategoryFilter:null,
+activeReminderComponentFilter:'',
+
+activeReminderSeverityFilter:null,
+setReminderMasterCategoryFilter(id){Servis.activeReminderMasterCategoryFilter=String(id||'');Servis.activeReminderComponentFilter='';Servis.renderReminder();},
+setReminderComponentFilter(id){Servis.activeReminderComponentFilter=String(id||'');Servis.renderReminder();},
+setReminderSeverityFilter(v){Servis.activeReminderSeverityFilter=v||null;Servis._saveReminderSeverityFilterPrefs();Servis.renderReminder();},
+
+_reminderSeverityFilterPrefsLoaded:false,
+_reminderSeverityFilterStorageKey:'servisReminderSeverityFilterPrefs',
+_loadReminderSeverityFilterPrefsOnce(){
+if(Servis._reminderSeverityFilterPrefsLoaded)return;
+Servis._reminderSeverityFilterPrefsLoaded=true;
+if(typeof localStorage==='undefined')return;
+try{
+const raw=localStorage.getItem(Servis._reminderSeverityFilterStorageKey);
+if(!raw)return;
+const parsed=JSON.parse(raw);
+const v=parsed&&parsed.activeReminderSeverityFilter;
+if(v===null||v===undefined)return;
+const validValues=['lewat','segera','mendekati','aman'];
+if(validValues.indexOf(v)!==-1)Servis.activeReminderSeverityFilter=v;
+}catch(err){
+// Reminder filter persistence is best-effort; read failures must not break rendering.
+}
+},
+_saveReminderSeverityFilterPrefs(){
+if(typeof localStorage==='undefined')return;
+try{
+localStorage.setItem(Servis._reminderSeverityFilterStorageKey,JSON.stringify({activeReminderSeverityFilter:Servis.activeReminderSeverityFilter}));
+}catch(err){
+// Reminder filter persistence is best-effort; storage write failures are safe to ignore.
+}
+},
+
+reminderSeverityChipsHtml(counts){
+  const cur=Servis.activeReminderSeverityFilter;
+  const opts=[{v:null,label:'🔍 Semua'},{v:'lewat',label:'🔴 Terlewat'},{v:'segera',label:'🟠 Segera'},{v:'mendekati',label:'🔵 Mendekati'},{v:'aman',label:'🟢 Aman'}];
+  return `<div class="u-flex u-fs12 u-mb10" style="gap:6px;flex-wrap:wrap">`+opts.map(o=>{const n=o.v===null?counts.total:counts[o.v];return `<div class="chip ${o.v===cur?'active':''}" data-action="Servis.setReminderSeverityFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label} (${n})</div>`;}).join('')+`</div>`;
+},
+renderReminderFilters(card){
+  if(!card)return;
+  let wrap=document.getElementById('servisReminderFilterWrap');
+  if(!wrap){wrap=document.createElement('div');wrap.id='servisReminderFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px';const title=card.querySelector('.card-title');if(title)title.insertAdjacentElement('afterend',wrap);else card.prepend(wrap);}
+  if(typeof ServiceInputCatalog==='undefined'){wrap.innerHTML='';return;}
+  const groups=ServiceInputCatalog.groups()||[]; const mid=Servis.activeReminderMasterCategoryFilter||''; const comps=mid?((ServiceInputCatalog.groupById(mid)||{}).items||[]):[];
+  wrap.innerHTML=`<select class="fs" style="width:auto;min-width:180px;padding:7px 9px" data-onchange="Servis.setReminderMasterCategoryFilter" data-onchange-args='["$value"]'><option value="">Semua kategori servis</option>${groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}"${g.masterCategoryId===mid?' selected':''}>${escapeHtml(g.group)}</option>`).join('')}</select><select class="fs" style="width:auto;min-width:190px;padding:7px 9px" data-onchange="Servis.setReminderComponentFilter" data-onchange-args='["$value"]'><option value="">${mid?'Semua komponen':'Pilih kategori dulu'}</option>${comps.map(it=>`<option value="${escapeHtml(it.id)}"${it.id===Servis.activeReminderComponentFilter?' selected':''}>${escapeHtml(it.name)}</option>`).join('')}</select>`;
+},
+renderReminder(){
+const card=document.getElementById('servisReminderCard');
+if(!card)return;
+Servis._loadReminderSeverityFilterPrefsOnce();
+const _legacyServiceMigrationChanged=typeof normalizeLegacyServiceLogs==='function'?normalizeLegacyServiceLogs():0;
+if(_legacyServiceMigrationChanged&&typeof save==='function')save();
+const curKm=getVehicleKm(curVehicleId);
+const kmPerDay=estimateKmPerDay(curVehicleId);
+
+const reminderCategoryPool=(typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(curVehicleId):D.sparepartCats;
+const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c)))),curVehicleId):reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c))));
+const rfMaster=Servis.activeReminderMasterCategoryFilter;
+const rfComp=Servis.activeReminderComponentFilter;
+const filteredRemindableCats=remindableCats.filter(c=>{
+  if(!rfMaster&&!rfComp)return true;
+  const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,curVehicleId):null;
+  const mid=r?r.masterCategoryId:null;
+  if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;if(!hit||mid!==hit.group.masterCategoryId)return false;const cid=c.serviceComponentId||(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'&&ServiceInputCatalog.infer(c.name)?.item?.id)||null;return cid===rfComp;}
+  return mid===rfMaster;
+});
+
+const conditionCats=(typeof getMaintenanceConditionProjection==='function')?getMaintenanceConditionProjection(curVehicleId):[];
+const filteredConditionCats=conditionCats.filter(c=>{
+  if(!rfMaster&&!rfComp)return true;
+  const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,curVehicleId):null;
+  const mid=r?r.masterCategoryId:null;
+  if(rfComp){const hit=typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(rfComp):null;return !!hit&&mid===hit.group.masterCategoryId;}
+  return mid===rfMaster;
+});
+if(!filteredRemindableCats.length&&!filteredConditionCats.length){
+const hiddenCount=reminderCategoryPool.length-remindableCats.length;
+card.innerHTML='<div class="card-title">🔔 Pengingat Servis</div><div class="empty"><div class="empty-text">'+(hiddenCount?'Belum ada kategori dgn interval servis aktif. '+hiddenCount+' kategori lain disembunyikan/belum diatur intervalnya — atur di 🔧 Kelola Kategori Sparepart.':'Belum ada kategori sparepart. Atur di Pengaturan.')+'</div></div>';
+Servis.renderReminderFilters(card);
+return;
+}
+const rows=filteredRemindableCats.map(cat=>{
+
+const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
+const lastKm=Servis.getLastServiceKmForCat(curVehicleId,cat,resetFilter,true);
+const intervalKm=getEffectiveIntervalKm(curVehicleId,cat);
+const overridden=hasIntervalOverride(curVehicleId,cat);
+const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
+
+const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:curVehicleId,cat,curKm,kmPerDay}):null;
+const history=typeof summarizeServiceHistory==='function'?summarizeServiceHistory(curVehicleId,cat):{lastInspected:null,lastReplaced:null,lastCleaned:null,count:0};
+const latestInspectionResult=history.lastInspected&&(history.lastInspected.conditionResult||history.lastInspected.conditionStatus)||null;
+const effectiveIntervalKm=u&&u.intervalKm>0?u.intervalKm:intervalKm;
+const effectiveLastKm=u&&u.lastKm!==undefined?u.lastKm:lastKm;
+const sisa=u&&u.sisaKm!=null?u.sisaKm:(effectiveIntervalKm>0?(effectiveIntervalKm-(effectiveLastKm===null?curKm:curKm-effectiveLastKm)):null);
+const pct=effectiveIntervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((effectiveIntervalKm-sisa)/effectiveIntervalKm)*100))):0;
+const status=u?u.status:(sisa==null?'aman':(typeof resolveServiceStatusMeta==='function'?resolveServiceStatusMeta(effectiveIntervalKm>0?sisa/effectiveIntervalKm:1).code:(sisa<=0?'jatuh_tempo':(sisa<=effectiveIntervalKm*0.15?'segera':'aman'))));
+const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
+const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
+let col='green',msg=dayLimited?`Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`Sisa ${sisa.toLocaleString('id-ID')} km`,severity=null;
+if(status==='terlewat'){
+col='red';severity='overdue';
+msg=dayLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Terlewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;
+}else if(status==='jatuh_tempo'){
+col='red';severity='overdue';
+msg=dayLimited?'🔴 Jatuh tempo hari ini':monthLimited?'🔴 Jatuh tempo bulan ini':'🔴 Jatuh tempo servis';
+}else if(status==='segera'){
+col='orange';severity='due-soon';
+msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;
+}else if(status==='mendekati'){
+col='orange';severity='watch';
+msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`;
+}
+
+const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
+const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
+
+const action=(severity&&typeof VehicleActionRecommendation!=='undefined')?VehicleActionRecommendation.actionFor({type:'service',severity}).label:null;
+const nextAction=u&&u.status!=='aman'&&u.nextAction&&u.nextAction!=='event_based'?u.nextAction:null;
+const condition=u&&u.condition?u.condition:null;
+const componentMeta=(typeof ServiceInputCatalog!=='undefined'&&cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const rec=typeof recommendServiceAction==='function'&&((u&&u.status!=='aman')||latestInspectionResult)?recommendServiceAction({item:componentMeta&&componentMeta.item,cat,urgency:u,conditionResult:latestInspectionResult}):null;
+const recommendedAction=rec&&rec.action?rec.action:nextAction;
+const recommendationReason=rec&&rec.reason?rec.reason:'';
+const actionText=recommendedAction?((recommendedAction==='periksa'?'Periksa':recommendedAction==='bersih'?'Bersihkan':'Ganti')+(condition?' — '+condition:'')):action;
+const scheduleLabel=(u&&u.intervalHari&&u.limitingAxis==='hari')?`Setiap ${u.intervalHari} hari`:((effectiveIntervalKm!=null&&effectiveIntervalKm>0)?`Interval ${effectiveIntervalKm.toLocaleString('id-ID')} km`:'Berbasis kondisi/event');
+const nextDueKm=u&&u.nextDueKm!=null?u.nextDueKm:null;
+const nextDueDate=u&&u.nextDueDate?u.nextDueDate:null;
+const dueLabel=nextDueKm!==null&&nextDueDate?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km / ${fmtDateID(nextDueDate)}`:nextDueKm!==null?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km`:nextDueDate?`Berikutnya: ${fmtDateID(nextDueDate)}`:'';
+
+const historyLogsForSummary=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId&&servisLogMatchesCat(s,cat)):[];
+const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.length} riwayat tercatat`:'Belum ada riwayat tercatat';
+const legacyReminderFields={nextDueKm,nextDueDate,dueLabel,status};
+return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult};
+}).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
+const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length};
+const rfSeverity=Servis.activeReminderSeverityFilter;
+const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):r.status===rfSeverity);
+const reminderBadgeParts=[];
+if(reminderSeverityCounts.lewat)reminderBadgeParts.push(`${reminderSeverityCounts.lewat} Terlewat`);
+if(reminderSeverityCounts.segera)reminderBadgeParts.push(`${reminderSeverityCounts.segera} Segera`);
+const reminderBadgeHtml=reminderBadgeParts.length?` <span class="red u-fw700 u-fs11" title="Jumlah part berstatus Terlewat/Jatuh tempo & Segera">(${reminderBadgeParts.join(' · ')})</span>`:'';
+card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminderBadgeHtml} <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+(rows.length?Servis.reminderSeverityChipsHtml(reminderSeverityCounts):'')+(rfSeverity&&!displayRows.length&&rows.length?`<div class="u-fs12 u-t2" style="padding:8px 0">Tidak ada part dengan status ini pada kategori yang dipilih.</div>`:'')+`<div class="servis-reminder-list">`+displayRows.map(r=>`
+      <div class="u-mb12">
+        <div class="u-flex u-jcb u-aic u-fs12 u-mb4 u-pointer" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Tap untuk edit kategori (berlaku semua kendaraan)">
+          <span class="u-fw700">${escapeHtml(r.cat.name)} <span class="u-fs11 u-t2">✏️</span></span>
+          <span class="${r.col} u-fw700">${r.msg}${r.estLabel}</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
+        ${r.action?`<div class="u-fs11 u-fw700 u-cacc" style="margin-top:2px">👉 ${escapeHtml(r.action)}</div>`:''}${r.recommendationReason?`<div class="u-fs10 u-t2" style="margin-top:2px">💡 ${escapeHtml(r.recommendationReason)}</div>`:''}${r.history&&r.history.lastInspected?`<div class="u-fs10 u-t2" style="margin-top:2px">🔍 Terakhir diperiksa: ${escapeHtml(serviceHistorySnapshotText(r.history.lastInspected))}${r.latestInspectionResult?` · ${escapeHtml(serviceConditionLabel(r.latestInspectionResult))}`:''}</div>`:''}${r.history&&r.history.lastReplaced?`<div class="u-fs10 u-t2" style="margin-top:2px">🔧 Terakhir diganti: ${escapeHtml(serviceHistorySnapshotText(r.history.lastReplaced))}</div>`:''}
+        ${r.dueLabel?`<div class="u-fs11 u-t2" style="margin-top:2px">📅 ${escapeHtml(r.dueLabel)}</div>`:''}
+        <div class="u-fs11 u-t2" style="margin-top:2px">🧾 ${escapeHtml(r.historySummary)}</div>
+        <div class="u-flex u-jcb u-aic" style="margin-top:3px">
+          <div class="u-fs12t2">${r.lastKm===null?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km'} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
+          <div class="u-flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="Servis.openHistoryFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id,r.cat.serviceComponentId||null]))}">🧾 Riwayat</button>
+          <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="Servis.chooseReminderAction" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ ${r.nextAction&&r.nextAction!=='event_based'?`Pilih tindakan · ${r.nextAction==='periksa'?'Periksa':r.nextAction==='bersih'?'Bersihkan':'Ganti'}`:'Pilih tindakan'}</button>
+          ${r.nextAction==='periksa'&&r.cat.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'&&typeof ServisChecklist!=='undefined'&&ServisChecklist._validActionTypesFor((ServiceInputCatalog.itemById(r.cat.serviceComponentId)||{}).item||{}).includes('ganti')?`<button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="markSparepartServiced" data-args="${escapeHtml(JSON.stringify([r.cat.id,'ganti']))}">🔧 Tandai Ganti</button>`:''}
+        </div>
+        </div>
+      </div>`).join('')+`</div>`+`</div>`+(filteredConditionCats.length?`<div class="u-mt12 u-pt10" style="border-top:1px solid var(--border,#ddd)">
+      <div class="u-fs12 u-fw700 u-mb8">🩺 Perawatan berbasis kondisi${rfSeverity?' <span class="u-fs10 u-t2 u-fw400">(selalu tampil, di luar filter status)</span>':''}</div>
+      ${filteredConditionCats.map(c=>`<div class="u-mb10">
+        <div class="u-fs12 u-fw700">${escapeHtml(c.name)}</div>
+        <div class="u-fs11 u-t2" style="margin-top:2px">Kondisi: ${escapeHtml(c.condition||'Periksa sesuai gejala')}</div>
+        <div class="u-fs11 u-cacc u-fw700" style="margin-top:2px">👉 ${escapeHtml((c.maintenanceActionPlan&&c.maintenanceActionPlan[0]&&c.maintenanceActionPlan[0].action)||'periksa')}</div>
+      </div>`).join('')}
+    </div>`:'')+`</div>`;
+Servis.renderReminderFilters(card);
+applyOneCardCollapsePref('servisReminderCard');
+},
+loadMore(){Servis.listPage++;Servis.renderList();},
+
+setActionTypeFilter(type){
+Servis.activeActionTypeFilter=type||null;
+Servis.listPage=1;
+Servis.renderList();
+},
+
+renderOdometerIntegrityBadge(beforeEl){
+let box=document.getElementById('servisOdometerIntegrityBadge');
+if(typeof Servis.getServiceOdometerIntegrity!=='function'){if(box)box.style.display='none';return;}
+const report=Servis.getServiceOdometerIntegrity(curVehicleId);
+if(!report||report.ok){if(box)box.style.display='none';return;}
+if(!box){
+box=document.createElement('div');
+box.id='servisOdometerIntegrityBadge';
+box.style.cssText='font-size:11px;color:var(--accent2);background:var(--accent2-soft,rgba(255,0,0,0.06));border:1px solid var(--accent2);border-radius:10px;padding:8px 10px;margin-bottom:10px;line-height:1.5';
+beforeEl.insertAdjacentElement('beforebegin',box);
+}
+const n=(report.issues||[]).length;
+box.style.display='block';
+box.textContent=`⚠️ ${n} data KM riwayat servis kendaraan ini perlu dicek (KM mundur/kosong/tidak valid) — tap satu per satu di daftar bawah untuk cek & perbaiki.`;
+},
+
+renderActionTypeChips(beforeEl){
+let row=document.getElementById('servisActionTypeChipRow');
+if(!row){
+row=document.createElement('div');
+row.id='servisActionTypeChipRow';
+row.className='u-flex u-fs12 u-mb10';
+row.style.cssText='gap:6px;flex-wrap:wrap';
+beforeEl.insertAdjacentElement('beforebegin',row);
+}
+const options=[{v:null,label:'🔍 Semua'},{v:'periksa',label:'🔍 Diperiksa'},{v:'bersih',label:'🧽 Dibersihkan'},{v:'ganti',label:'🔧 Diganti'}];
+row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFilter?'active':''}" data-action="Servis.setActionTypeFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label}</div>`).join('');
+},
+renderList(){
+Servis.renderReminder();
+
+Servis._loadMasterCategoryFilterPrefsOnce();
+const {from,to}=getCnRange();
+
+const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFilter+'|'+Servis.activeMasterCategoryFilter+'|'+Servis.activeServiceComponentFilter;
+if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filterSig;}
+
+const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
+const logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
+const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
+document.getElementById('servisCount').textContent=logs.length;
+document.getElementById('servisTotalCost').textContent=fmt(totalCost);
+document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString('id-ID')+' km':'-';
+const el=document.getElementById('servisList');
+Servis.renderOdometerIntegrityBadge(el);
+Servis.renderActionTypeChips(el);
+
+Servis.renderMasterCategoryChips(el);
+Servis.renderServiceComponentFilter(el);
+if(!logs.length){
+
+const emptyText=Servis.activeMasterCategoryFilter?'Tidak ada catatan servis utk kategori master ini':'Belum ada catatan servis';
+el.innerHTML=`<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">${escapeHtml(emptyText)}</div></div>`;
+return;
+}
+const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
+const visible=logs.slice(0,visibleCount);
+
+const historyGroups=[]; const historyGroupMap=new Map();
+visible.forEach(s=>{
+  const key=s.sessionId?`session:${s.sessionId}`:`single:${s.id}`;
+  let g=historyGroupMap.get(key);
+  if(!g){g={key,sessionId:s.sessionId||null,logs:[]};historyGroupMap.set(key,g);historyGroups.push(g);}
+  g.logs.push(s);
+});
+const renderHistoryItem=s=>{
+const part=s.usedPartId?D.partsStock.find(p=>p.id===s.usedPartId):null;
+const partInfo=part?` · 📦 ${s.usedPartQty}${part.unit?' '+escapeHtml(part.unit):''} ${escapeHtml(part.name)}`:'';
+const checklistSummary=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.summaryFromLog==='function')?ServisChecklist.summaryFromLog(s):null;
+const checklistInfo=checklistSummary&&checklistSummary.checked?`<span class="servis-history-badge servis-history-check">☑️ ${checklistSummary.checked}/${checklistSummary.total}</span>${(checklistSummary.replaced||checklistSummary.inspected)?`<span class="servis-history-badge servis-history-replaced">🔧 ${checklistSummary.replaced} diganti</span><span class="servis-history-badge servis-history-inspected">🔍 ${checklistSummary.inspected} diperiksa</span>`:''}`:'';
+const actionBadge=s.actionType?`<span class="servis-history-badge">${s.actionType==='ganti'?'🔧 Ganti':s.actionType==='bersih'?'🧹 Bersihkan':s.actionType==='periksa'?'🔍 Periksa':'📝 '+escapeHtml(s.actionType)}</span>`:'';
+const legacyMappingBadge=(!s.serviceComponentId&&['Kampas Rem','Pembersihan Rem','Servis Rem','Ganti Kampas','Cek Rem'].includes(String(s.item||'').trim()))?`<span class="servis-history-badge servis-history-reminder-missing" title="Riwayat lama belum dipetakan ke komponen canonical. Buka Edit untuk memilih komponen.">⚠️ Perlu pemetaan komponen</span>`:'';
+const conditionBadge=s.conditionResult&&typeof serviceConditionLabel==='function'?`<span class="servis-history-badge">${typeof serviceConditionIcon==='function'?serviceConditionIcon(s.conditionResult):'🩺'} ${escapeHtml(serviceConditionLabel(s.conditionResult))}</span>`:'';
+const conditionNoteHtml=s.conditionNote?`<div class="servis-history-note">🩺 ${escapeHtml(s.conditionNote)}</div>`:'';
+const fotoInfo=s.foto&&s.foto.length?`<span class="servis-history-badge servis-history-photo">📷 ${s.foto.length}</span>`:'';
+const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(!c.vehicleId||c.vehicleId===curVehicleId)))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,curVehicleId):null);
+const linkedIntervalKm=linkedCat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(curVehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null);
+const linkedIntervalBulan=linkedCat&&typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(linkedCat,curVehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null);
+const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-history-badge servis-history-reminder" title="Terhubung ke Pengingat Servis: kategori dan interval dibaca dari sumber yang sama">🔔 ${escapeHtml(linkedCat.name)} · ${linkedIntervalKm.toLocaleString('id-ID')} km${linkedIntervalBulan?` / ${linkedIntervalBulan.toLocaleString('id-ID')} bln`:''}</span>`:(s.categoryId?`<span class="servis-history-badge servis-history-reminder-missing" title="Kategori servis ada, tetapi interval Pengingat belum aktif untuk kendaraan ini">⚠️ Pengingat belum aktif</span>`:'');
+const fotoThumb=s.foto&&s.foto.length?`<button type="button" class="servis-history-photo-thumb" data-stop="1" data-action="Servis.openHistoryPhoto" data-args="${escapeHtml(JSON.stringify([s.id,0]))}" aria-label="Buka foto servis"><img src="${s.foto[0]}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0"></button>`:'';
+const fotoOrIcon=fotoThumb||`<div class="tx-icon u-bgaccsoft">🔧</div>`;
+return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}">${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}${conditionNoteHtml}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${actionBadge}${conditionBadge}${legacyMappingBadge}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
+};
+el.innerHTML=historyGroups.map(g=>{
+  if(g.logs.length===1)return renderHistoryItem(g.logs[0]);
+  const first=g.logs[0], total=g.logs.reduce((n,x)=>n+(x.cost||0),0);
+  const names=g.logs.map(x=>x.item).filter(Boolean);
+  const summary=names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:'');
+  const groupId=`servis-session-${escapeHtml(String(g.sessionId).replace(/[^a-zA-Z0-9_-]/g,'_'))}`;
+  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span></div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
+}).join('');
+let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
+if(!servisMoreWrap){
+servisMoreWrap=document.createElement('div');
+servisMoreWrap.id='servisListLoadMoreWrap';
+servisMoreWrap.style.cssText='text-align:center;margin-top:10px';
+servisMoreWrap.innerHTML='<button class="btn btn-ghost btn-sm" data-action="loadMoreServisList" aria-label="Tampilkan lebih banyak riwayat servis"></button>';
+el.insertAdjacentElement('afterend',servisMoreWrap);
+}
+if(visibleCount<logs.length){
+servisMoreWrap.style.display='block';
+servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banyak (${logs.length-visibleCount} lagi)`;
+} else servisMoreWrap.style.display='none';
+}
+
+});

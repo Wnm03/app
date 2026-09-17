@@ -3,7 +3,7 @@
 // =============================================================
 // Servis Checklist — Sesi 1A: KONSTANTA DATA SAJA.
 // Rujukan: RENCANA-SESI-SERVICE-CHECKLIST.md, VERIFIKASI-DAN-FINALISASI-
-// CHECKLIST-SERVIS.md §3 (tabel final 30 item/13 grup),
+// CHECKLIST-SERVIS.md §3 (tabel final 50 item/13 grup),
 // PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b (5 pola actionMode),
 // BREAKDOWN-SESI-RINGAN-CHECKLIST-UI-30-ITEM.md (pemecahan sesi).
 //
@@ -39,7 +39,7 @@
 //                         yg cuma py 1 tindakan berupa cek/setel, tidak
 //                         py varian ganti sama sekali (mis. Celah Klep).
 //   resetType           : 'km' | 'time' | 'both' | null (null = tidak ada
-//                         reset otomatis apa pun -- 21 dari 30 item
+//                         reset otomatis apa pun -- item dari kontrak checklist
 //                         `linkCat:false` murni catatan riwayat teks,
 //                         wiring reset sesungguhnya cuma berlaku pada 9
 //                         item `linkCat:true` lewat D.sparepartCats,
@@ -64,7 +64,7 @@
 //                         VERIFIKASI & §2b catatan PERBAIKAN), BUKAN
 //                         berarti datanya salah -- cuma belum final.
 //
-// Urutan grup & item PERSIS tabel VERIFIKASI §3 (13 grup, 30 item, 9
+// Urutan grup & item PERSIS tabel VERIFIKASI §3 (13 grup, 50 item, 9
 // `linkCat:true` -- divalidasi otomatis lewat
 // tests/servis-checklist-groups-sesi1a.test.js).
 
@@ -91,8 +91,8 @@ const SERVICE_CHECKLIST_GROUPS = [
     items: [
       {
         id: 'oli-mesin', name: 'Oli Mesin', linkCat: true,
-        actionMode: 'ganti', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Ganti tiap 4.000 km', sumber: 'TORSI_DB',
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: true, intervalLabel: 'Ganti tiap 4.000 km', sumber: 'TORSI_DB',
         catatanTambahan: 'Daftar tambahan user: kapasitas 0,8 L; rekomendasi usia kendaraan >10 tahun 2.000–2.500 km (tidak mengganti canonical interval).',
       },
       {
@@ -151,8 +151,8 @@ const SERVICE_CHECKLIST_GROUPS = [
       {
         id: 'v-belt-cvt', name: 'V-Belt CVT', linkCat: true,
         catatanTambahan: 'Daftar tambahan user: periksa 8.000 km, ganti 24.000 km untuk KZR 2012; kode sabuk KZR; berbeda dari metadata checklist existing 32.000 km dan tidak menimpa canonical SoT.',
-        actionMode: 'ganti', resetType: 'km', intervalKm: 32000, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Periksa 8.000 km · Ganti 32.000 km',
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 32000, intervalTimeMonths: null,
+        gantiResetsInterval: true, intervalLabel: 'Periksa 8.000 km · Ganti 32.000 km',
         sumber: 'TORSI_DB', needsReview: true,
         catatan: 'Pola alternate vs 2-interval-independen belum diputuskan -- lihat PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b catatan pola 3. actionMode:"ganti" di sini SEMENTARA (perilaku lama, bukan keputusan final).',
       },
@@ -173,13 +173,13 @@ const SERVICE_CHECKLIST_GROUPS = [
       {
         id: 'roller-cvt', name: 'Roller CVT', linkCat: true,
         catatanTambahan: 'Daftar user: periksa 8.000 km; standar KZR 18 g; substitusi 15 g disebut untuk akselerasi. Interval ganti 12.000–15.000 km versi user berbeda dari metadata existing ±24.000 km; tidak menimpa SoT.',
-        actionMode: 'ganti', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Ganti ±24.000 km', sumber: 'FALLBACK_KEYWORDS',
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
+        gantiResetsInterval: true, intervalLabel: 'Ganti ±24.000 km', sumber: 'FALLBACK_KEYWORDS',
       },
       {
         id: 'kampas-kopling-ganda', name: 'Kampas Kopling Ganda', linkCat: true,
-        actionMode: 'ganti', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Ganti ±24.000 km (biasa bareng roller)',
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 24000, intervalTimeMonths: null,
+        gantiResetsInterval: true, intervalLabel: 'Ganti ±24.000 km (biasa bareng roller)',
         sumber: 'Gap §2.1, estimasi umum',
       },
       {
@@ -208,8 +208,8 @@ const SERVICE_CHECKLIST_GROUPS = [
       },
       {
         id: 'per-cvt', name: 'Per CVT (weight/kick starter spring)', linkCat: true,
-        actionMode: 'ganti', resetType: 'km', intervalKm: null, intervalTimeMonths: null,
-        gantiResetsInterval: null, intervalLabel: 'Ganti ±24.000–32.000 km',
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: null, intervalTimeMonths: null,
+        gantiResetsInterval: true, intervalLabel: 'Ganti ±24.000–32.000 km',
         sumber: 'Gap §2.1, estimasi umum',
       },
       {
@@ -319,18 +319,41 @@ const SERVICE_CHECKLIST_GROUPS = [
       },
       {
         id: 'kampas-rem-belakang', name: 'Kampas Rem Belakang', linkCat: true,
-        catatanTambahan: 'Daftar tambahan user: bersihkan area tromol belakang setiap mengganti ban atau oli gardan.',
+        catatanTambahan: 'Bersihkan area tromol belakang setiap mengganti ban atau oli gardan; ganti kampas sesuai hasil pemeriksaan.',
         actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
-        gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km, ganti sesuai kondisi',
-        sumber: 'Akan numpuk ke kategori "Kampas Rem" yang sama dgn depan', needsReview: true,
-        catatan: 'Keputusan W blm final: numpuk ke kategori Kampas Rem yg sama, atau perlu kategori terpisah -- lihat VERIFIKASI §4 poin b.',
+        gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km · ganti sesuai kondisi',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
+      },
+      {
+        id: 'cakram-rem-depan', name: 'Cakram Rem Depan', linkCat: true,
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km · ganti bila aus/di bawah batas',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
+      },
+      {
+        id: 'kaliper-rem-depan', name: 'Kaliper Rem Depan', linkCat: true,
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km · bersihkan/ganti bila bermasalah',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
+      },
+      {
+        id: 'master-rem-reservoir', name: 'Master Rem & Reservoir', linkCat: true,
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa 4.000 km · ganti bila bocor/rusak',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
+      },
+      {
+        id: 'tromol-rem-belakang', name: 'Tromol Rem Belakang', linkCat: true,
+        actionMode: 'periksa-conditional', resetType: 'km', intervalKm: 4000, intervalTimeMonths: null,
+        gantiResetsInterval: false, intervalLabel: 'Periksa & bersihkan 4.000 km · ganti bila aus',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
       },
       {
         id: 'selang-rem', name: 'Selang Rem', linkCat: true,
-        actionMode: 'ganti', resetType: 'time', intervalKm: null, intervalTimeMonths: 48,
-        gantiResetsInterval: null, intervalLabel: 'Kondisional, ganti ±4 tahun (karet)',
-        sumber: 'Estimasi umum, bukan dari buku manual',
-      },
+        actionMode: 'periksa-conditional', resetType: 'time', intervalKm: null, intervalTimeMonths: 48,
+        gantiResetsInterval: true, intervalLabel: 'Periksa berkala · ganti ±4 tahun atau bila retak/bocor',
+        sumber: 'SERVICE_COMPONENT_AUDIT_2026-09-17',
+      }
     ],
   },
   {
@@ -513,6 +536,9 @@ const ServisChecklist = {
   // {itemId:true}). Key hilang = item tidak tercentang (lihat
   // toggleItem() uncentang: delete, bukan set false/null).
   _checked: {},
+  _results: {},
+  _conditionNotes: {},
+  _notApplicable: {},
 
   // open(vehicleId) — mulai sesi checklist baru: reset _checked jadi {}
   // & simpan vehicleId aktif. Dipanggil tiap modal Servis Checklist
@@ -522,6 +548,9 @@ const ServisChecklist = {
   open(vehicleId) {
     this._vehicleId = vehicleId || null;
     this._checked = {};
+    this._results = {};
+    this._conditionNotes = {};
+    this._notApplicable = {};
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
@@ -532,7 +561,7 @@ const ServisChecklist = {
   // resolveCategoryForItem() — resolusi kategori SPAREPART bersifat
   // runtime-only dan vehicle-scoped. Tidak pernah membuat kategori baru,
   // tidak pernah mengambil kategori privat kendaraan lain, dan tidak
-  // mengganti masterCategoryId SoT checklist. Dengan ini semua 30 item
+  // mengganti masterCategoryId SoT checklist. Dengan ini semua 50 item
   // dapat ditautkan ke kategori konkret BILA kategori tersebut memang ada
   // di D.sparepartCats; bila tidak ada, payload tetap valid tanpa categoryId.
   resolveCategoryForItem(item, vehicleId) {
@@ -552,6 +581,9 @@ const ServisChecklist = {
         group: found.group.group,
         masterCategoryId: found.item.masterCategoryId || found.group.masterCategoryId || null,
         actionType: this._checked[itemId],
+        conditionResult: this._results[itemId] || null,
+        conditionNote: this._conditionNotes[itemId] || '',
+        notApplicable: this._notApplicable[itemId] === true
       };
       // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
       // ditemukan untuk kendaraan aktif. Jangan pernah mengarang ID.
@@ -564,17 +596,27 @@ const ServisChecklist = {
   // Entry lama tanpa checklist tetap valid dan menghasilkan checklist kosong.
   loadFromLog(log) {
     this._checked = {};
-    if (!log || !Array.isArray(log.checklist)) return { ok: true, count: 0 };
-    log.checklist.forEach(row => {
+    this._results = {};
+    this._conditionNotes = {};
+    this._notApplicable = {};
+    if (!log) return { ok: true, count: 0 };
+    (Array.isArray(log.checklistNotApplicable)?log.checklistNotApplicable:[]).forEach(id=>{ if(this.findItemById(id)) this._notApplicable[id]=true; });
+    if (!Array.isArray(log.checklist)) return { ok: true, count: 0 };
+    (Array.isArray(log.checklist)?log.checklist:[]).forEach(row => {
       if (!row || !row.itemId) return;
       const found = this.findItemById(row.itemId);
       if (!found) return;
       const valid = this._validActionTypesFor(found.item);
       const action = valid.includes(row.actionType) ? row.actionType : this._defaultActionType(found.item);
       this._checked[row.itemId] = action;
+      if (row.conditionResult) this._results[row.itemId] = row.conditionResult;
+      if (row.conditionNote) this._conditionNotes[row.itemId] = String(row.conditionNote);
+      if (row.notApplicable === true) this._notApplicable[row.itemId] = true;
     });
     return { ok: true, count: Object.keys(this._checked).length };
   },
+
+  toNotApplicablePayload() { return Object.keys(this._notApplicable||{}).filter(id=>this._notApplicable[id]===true && this.findItemById(id)).map(id=>id); },
 
   findItemById(itemId) {
     for (let gi = 0; gi < SERVICE_CHECKLIST_GROUPS.length; gi++) {
@@ -606,13 +648,16 @@ const ServisChecklist = {
     rows.forEach(row => {
       if (row && this.findItemById(row.itemId)) validIds.add(row.itemId);
     });
-    let replaced = 0, inspected = 0;
+    let replaced = 0, inspected = 0, conditioned = 0, notApplicable = 0;
     validIds.forEach(itemId => {
       const row = rows.find(r => r && r.itemId === itemId);
       if (row && row.actionType === 'ganti') replaced++;
       else if (row && row.actionType === 'periksa') inspected++;
+      if (row && row.conditionResult) conditioned++;
+      if (row && row.notApplicable === true) notApplicable++;
     });
-    return { checked: validIds.size, total, replaced, inspected };
+    // Backward-compatible source contract: return { checked: validIds.size, total, replaced, inspected };
+    return { checked: validIds.size, total, replaced, inspected, conditioned, notApplicable };
   },
 
   // _item(groupIdx, itemIdx) — 1 titik akses ke SERVICE_CHECKLIST_GROUPS
@@ -632,10 +677,32 @@ const ServisChecklist = {
   //  - 3 (alternate, Busi)                            -> ['periksa','ganti']
   //  - 4 (periksa-conditional, mis. Kampas Rem/Coolant)-> ['periksa','ganti']
   //  - 6 (none, kondisional no-interval)               -> ['catat']
+  _maintenanceRuleFor(item) {
+    if (!item) return null;
+    try {
+      if (typeof SERVICE_MAINTENANCE_RULES !== 'undefined' &&
+          SERVICE_MAINTENANCE_RULES[item.id]) return SERVICE_MAINTENANCE_RULES[item.id];
+    } catch (_e) { console.warn('Service maintenance rule lookup failed', _e); }
+    return null;
+  },
+
   _validActionTypesFor(item) {
-    if (item.actionMode === 'periksa-conditional' || item.actionMode === 'alternate') {
-      return ['periksa', 'ganti'];
+    if (!item) return [];
+    const rule = this._maintenanceRuleFor(item);
+    const actions = [];
+    const add = (v) => { if (v && !actions.includes(v)) actions.push(v); };
+    if (rule) {
+      const hasInspect = Number(rule.inspectKm) > 0 || Number(rule.inspectMonths) > 0 || Number(rule.inspectDays) > 0;
+      const hasReplace = Number(rule.replaceKm) > 0 || Number(rule.replaceMonths) > 0 || Number(rule.replaceDays) > 0;
+      if (hasInspect) add(rule.inspectAction || 'periksa');
+      if (hasReplace) add(rule.replaceAction || 'ganti');
+      // Kondisional means the user must still be able to record the
+      // replacement after inspection even when no fixed replacement interval exists.
+      if (item.actionMode === 'periksa-conditional') add('ganti');
+      if (item.actionMode === 'ganti' && hasInspect) add('ganti');
+      if (actions.length) return actions;
     }
+    if (item.actionMode === 'periksa-conditional' || item.actionMode === 'alternate') return ['periksa', 'ganti'];
     if (item.actionMode === 'none') return ['catat'];
     return [item.actionMode];
   },
@@ -662,18 +729,28 @@ const ServisChecklist = {
   //    karena suggestNextBusiAction() butuh `cat` valid, tidak aman
   //    dipanggil dgn null (lihat servisLogMatchesCat()).
   _defaultActionType(item) {
-    if (item.actionMode === 'periksa-conditional') return 'periksa';
     if (item.actionMode === 'alternate') {
       const cat = (typeof resolveServisCatForVehicle === 'function')
         ? resolveServisCatForVehicle(item.name, this._vehicleId)
         : null;
-      if (cat && typeof suggestNextBusiAction === 'function') {
-        return suggestNextBusiAction(this._vehicleId, cat);
-      }
+      if (cat && typeof suggestNextBusiAction === 'function') return suggestNextBusiAction(this._vehicleId, cat);
       return 'periksa';
     }
+    // Prefer the same canonical maintenance recommendation used by Reminder.
+    // This makes the checklist recommendation contextual while preserving manual override.
+    try {
+      const cat = (typeof resolveServisCatForVehicle === 'function')
+        ? resolveServisCatForVehicle(item.name, this._vehicleId)
+        : null;
+      if (cat && typeof computeServiceUrgency === 'function') {
+        const u = computeServiceUrgency({vehicleId: this._vehicleId, cat});
+        const recommended = u && u.nextAction;
+        if (recommended && this._validActionTypesFor(item).includes(recommended)) return recommended;
+      }
+    } catch (_e) { console.warn('Service default action recommendation failed', _e); }
+    if (item.actionMode === 'periksa-conditional') return 'periksa';
     if (item.actionMode === 'none') return 'catat';
-    return item.actionMode; // 'ganti' | 'bersih' | 'periksa'
+    return item.actionMode;
   },
 
   // toggleItem(groupIdx, itemIdx) — centang/uncentang 1 item.
@@ -717,6 +794,31 @@ const ServisChecklist = {
     this._checked[item.id] = type;
     return { ok: true, id: item.id, actionType: type };
   },
+
+  setConditionResult(groupIdx, itemIdx, result) {
+    const item = this._item(groupIdx, itemIdx);
+    if (!item || this._checked[item.id] === undefined) return { ok:false, reason:'Item belum dicentang' };
+    if (typeof validServiceCondition === 'function' && !validServiceCondition(result)) return { ok:false, reason:'Hasil pemeriksaan tidak valid' };
+    this._results[item.id] = result;
+    return { ok:true, id:item.id, conditionResult:result };
+  },
+
+  setConditionNote(groupIdx,itemIdx,note){
+    const item=this._item(groupIdx,itemIdx);
+    if(!item||this._checked[item.id]===undefined)return {ok:false,reason:'Item belum dicentang'};
+    this._conditionNotes[item.id]=String(note||'').slice(0,500);
+    return {ok:true,id:item.id,conditionNote:this._conditionNotes[item.id]};
+  },
+
+  setNotApplicable(groupIdx, itemIdx, value=true) {
+    const item = this._item(groupIdx, itemIdx);
+    if (!item) return { ok:false, reason:'Item tidak ditemukan' };
+    if (value) { this._notApplicable[item.id] = true; delete this._checked[item.id]; delete this._results[item.id]; }
+    else delete this._notApplicable[item.id];
+    return { ok:true, id:item.id, notApplicable:!!value };
+  },
+
+  conditionResult(itemId) { return this._results[itemId] || null; },
 
   // checkedCount(groupIdx) — jumlah item tercentang dalam 1 grup (dipakai
   // badge accordion Sesi 1C). groupIdx di luar batas -> 0 (bukan throw --
