@@ -91,19 +91,19 @@ if(m)v.modelId=m.id;
 ];
 function runDataMigrations(fromVersion){
 let v=Number.isFinite(fromVersion)?fromVersion:0;
+let migrationBlocked=false;
 const pending=DATA_MIGRATIONS.filter(m=>m.toVersion>v).sort((a,b)=>a.toVersion-b.toVersion);
 for(const m of pending){
 try{
   m.migrate(D);
-  v=m.toVersion;
+  // Setelah ada satu kegagalan, migrasi berikutnya TETAP dijalankan sesuai
+  // kontrak maintenance. Namun schemaVersion tidak boleh melompati versi
+  // pertama yang gagal; pada boot/restore berikutnya titik gagal akan dicoba
+  // lagi. Migrasi setelahnya wajib idempoten karena bisa dieksekusi ulang.
+  if(!migrationBlocked)v=m.toVersion;
 }catch(e){
-  // DATA INTEGRITY HARDENING: jangan pernah menaikkan schemaVersion melewati
-  // migrasi yang gagal. Jika kita menandai schema terbaru walau migrasi gagal,
-  // boot/restore berikutnya tidak akan mencoba ulang dan data bisa tertinggal
-  // permanen. Stop di titik gagal; migrasi yang sudah sukses tetap dipertahankan
-  // dan migrasi ini akan dicoba lagi pada load/restore berikutnya.
-  console.error(`Migrasi data ke versi ${m.toVersion} ("${m.desc}") gagal; schemaVersion ditahan di ${v}:`,e);
-  break;
+  migrationBlocked=true;
+  console.error(`Migrasi data ke versi ${m.toVersion} ("${m.desc}") gagal; migrasi berikutnya tetap dilanjutkan, schemaVersion ditahan di ${v}:`,e);
 }
 }
 D.schemaVersion=v;
@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1793-final-hardening-1795';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1795';
+const APP_BUILD_VERSION = 's1793-final-hardening-1796';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1796';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
