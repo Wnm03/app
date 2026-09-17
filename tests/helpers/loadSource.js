@@ -115,7 +115,7 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   // duplicate lexical declarations when a caller already lists them.
   const loadFiles = [...files];
   if (loadFiles.includes('car-notes.js') || loadFiles.includes('modules/vehicle/servis.js')) {
-    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js']) {
+    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js','modules/vehicle/servis-b.js']) {
       if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);
     }
   } else if (loadFiles.includes('modules/vehicle/sparepart-servis.js')) {
