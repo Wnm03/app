@@ -235,6 +235,13 @@ if(typeof FuelPriceRef!=='undefined'){
 FuelPriceRef.onSelectChange('bbmJenis','bbmHarga',curVehicleId);
 }
 }
+// S1812: skip redundant BBM list DOM writes when pagination/filter state renders
+// the same visible rows. No async behavior or public API is changed.
+function __kwBbmSetHTMLIfChanged(el, html){
+  if(!el || el.innerHTML===html)return false;
+  el.innerHTML=html;
+  return true;
+}
 const BBM={
 editId:null,
 listPage:1,
@@ -481,7 +488,7 @@ i=j;
 }
 const visibleCount=Math.min(sorted.length,BBM.listPage*TX_PAGE_SIZE);
 const visible=sorted.slice(0,visibleCount);
-el.innerHTML=visible.map((b)=>{
+__kwBbmSetHTMLIfChanged(el,visible.map((b)=>{
 const prev=prevMap.get(b.id)||null;
 let kmL=null;
 if(prev&&b.fullTank){
@@ -498,7 +505,7 @@ return`<div class="tx-item u-pointer" data-action="openBbmModal" data-args="${es
         </div>
         <button class="tx-del" data-stop="1" data-action="delBbm" data-args="${escapeHtml(JSON.stringify([b.id]))}" aria-label="Hapus">🗑</button>
       </div>`;
-}).join('');
+}).join(''));
 let bbmMoreWrap=document.getElementById('bbmListLoadMoreWrap');
 if(!bbmMoreWrap){
 bbmMoreWrap=document.createElement('div');

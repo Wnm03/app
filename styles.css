@@ -1,28 +1,48 @@
 
-[data-theme="dark"] {  --bg:#08090c;--surface:#0e0f13;--surface2:#131418;--surface3:#191b20;--surface4:#22242b;  --accent:#c9a35f;--accent-soft:rgba(201,163,95,0.14);  --accent2:#e8756a;--accent2-soft:rgba(232,117,106,0.13);  --accent3:#3fcf8e;--accent3-soft:rgba(63,207,142,0.13);  --accent4:#dcb56e;--accent4-soft:rgba(220,181,110,0.12);  --text:#f3f1ec;--text2:#84868d;--text3:#888a92;  --border:rgba(255,255,255,0.045);--border2:rgba(255,255,255,0.09);  --header-bg:rgba(8,9,12,0.82);--shadow-card:0 16px 40px rgba(0,0,0,0.5);
+[data-theme="dark"] {  --bg:#08090c;--surface:#0e0f13;--surface2:#131418;--surface3:#191b20;--surface4:#22242b;  --accent:#c9a35f;--accent-soft:rgba(201,163,95,0.14);  --accent2:#e8756a;--accent2-soft:rgba(232,117,106,0.13);  --accent3:#3fcf8e;--accent3-soft:rgba(63,207,142,0.13);  --accent4:#dcb56e;--accent4-soft:rgba(220,181,110,0.12);  --text:#f3f1ec;--text2:#84868d;--text3:#888a92;  --border:rgba(255,255,255,0.045);--border2:rgba(255,255,255,0.09);  --header-bg:rgba(8,9,12,0.82);--shadow-card:0 16px 40px rgba(0,0,0,0.5);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
-[data-theme="ocean"] {  --bg:#050f1a;--surface:#0a1828;--surface2:#0f2035;--surface3:#152840;--surface4:#1a3050;  --accent:#38bdf8;--accent-soft:rgba(56,189,248,0.15);  --accent2:#f472b6;--accent2-soft:rgba(244,114,182,0.15);  --accent3:#4ade80;--accent3-soft:rgba(74,222,128,0.12);  --accent4:#fb923c;--accent4-soft:rgba(251,146,60,0.12);  --text:#e0f0ff;--text2:#5c8dae;--text3:#6886c2;  --border:rgba(56,189,248,0.08);--border2:rgba(56,189,248,0.15);  --header-bg:rgba(5,15,26,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.4);
+[data-theme="ocean"] {  --bg:#050f1a;--surface:#0a1828;--surface2:#0f2035;--surface3:#152840;--surface4:#1a3050;  --accent:#38bdf8;--accent-soft:rgba(56,189,248,0.15);  --accent2:#f472b6;--accent2-soft:rgba(244,114,182,0.15);  --accent3:#4ade80;--accent3-soft:rgba(74,222,128,0.12);  --accent4:#fb923c;--accent4-soft:rgba(251,146,60,0.12);  --text:#e0f0ff;--text2:#5c8dae;--text3:#6886c2;  --border:rgba(56,189,248,0.08);--border2:rgba(56,189,248,0.15);  --header-bg:rgba(5,15,26,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.4);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
-[data-theme="light"] {  --bg:#f5f5fa;--surface:#ffffff;--surface2:#f0f0f8;--surface3:#e8e8f4;--surface4:#dcdcf0;  --accent:#6366f1;--accent-soft:rgba(99,102,241,0.1);  --accent2:#ec4899;--accent2-soft:rgba(236,72,153,0.1);  --accent3:#10b981;--accent3-soft:rgba(16,185,129,0.1);  --accent4:#f59e0b;--accent4-soft:rgba(245,158,11,0.1);  --text:#1a1a2e;--text2:#6060a0;--text3:#6565b4;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.12);  --header-bg:rgba(245,245,250,0.92);--shadow-card:0 6px 20px rgba(99,102,241,0.10);
+[data-theme="light"] {  --bg:#f5f5fa;--surface:#ffffff;--surface2:#f0f0f8;--surface3:#e8e8f4;--surface4:#dcdcf0;  --accent:#6366f1;--accent-soft:rgba(99,102,241,0.1);  --accent2:#ec4899;--accent2-soft:rgba(236,72,153,0.1);  --accent3:#10b981;--accent3-soft:rgba(16,185,129,0.1);  --accent4:#f59e0b;--accent4-soft:rgba(245,158,11,0.1);  --text:#1a1a2e;--text2:#6060a0;--text3:#6565b4;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.12);  --header-bg:rgba(245,245,250,0.92);--shadow-card:0 6px 20px rgba(99,102,241,0.10);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
-[data-theme="stone"] {  --bg:#f7f5f1;--surface:#ffffff;--surface2:#f1efe8;--surface3:#e8e4da;--surface4:#ddd7ca;  --accent:#8a7f6b;--accent-soft:rgba(138,127,107,0.12);  --accent2:#c9695f;--accent2-soft:rgba(201,105,95,0.12);  --accent3:#6f9c7d;--accent3-soft:rgba(111,156,125,0.12);  --accent4:#c99a4a;--accent4-soft:rgba(201,154,74,0.12);  --text:#33302a;--text2:#706a5f;--text3:#746c5c;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(247,245,241,0.92);--shadow-card:0 6px 20px rgba(80,70,50,0.08);
+[data-theme="stone"] {  --bg:#f7f5f1;--surface:#ffffff;--surface2:#f1efe8;--surface3:#e8e4da;--surface4:#ddd7ca;  --accent:#8a7f6b;--accent-soft:rgba(138,127,107,0.12);  --accent2:#c9695f;--accent2-soft:rgba(201,105,95,0.12);  --accent3:#6f9c7d;--accent3-soft:rgba(111,156,125,0.12);  --accent4:#c99a4a;--accent4-soft:rgba(201,154,74,0.12);  --text:#33302a;--text2:#706a5f;--text3:#746c5c;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(247,245,241,0.92);--shadow-card:0 6px 20px rgba(80,70,50,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
-[data-theme="slate"] {  --bg:#1c1c1e;--surface:#232325;--surface2:#2a2a2d;--surface3:#323235;--surface4:#3a3a3e;  --accent:#8a94a6;--accent-soft:rgba(138,148,166,0.14);  --accent2:#c17971;--accent2-soft:rgba(193,121,113,0.14);  --accent3:#7fae8e;--accent3-soft:rgba(127,174,142,0.13);  --accent4:#c9a05f;--accent4-soft:rgba(201,160,95,0.13);  --text:#e8e8ea;--text2:#929299;--text3:#909096;  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);  --header-bg:rgba(28,28,30,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.3);
+[data-theme="slate"] {  --bg:#1c1c1e;--surface:#232325;--surface2:#2a2a2d;--surface3:#323235;--surface4:#3a3a3e;  --accent:#8a94a6;--accent-soft:rgba(138,148,166,0.14);  --accent2:#c17971;--accent2-soft:rgba(193,121,113,0.14);  --accent3:#7fae8e;--accent3-soft:rgba(127,174,142,0.13);  --accent4:#c9a05f;--accent4-soft:rgba(201,160,95,0.13);  --text:#e8e8ea;--text2:#929299;--text3:#909096;  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);  --header-bg:rgba(28,28,30,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.3);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 [data-theme="mono"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f2f2f2;--surface3:#e8e8e8;--surface4:#dcdcdc;  --accent:#171717;--accent-soft:rgba(23,23,23,0.08);  --accent2:#b3554a;--accent2-soft:rgba(179,85,74,0.1);  --accent3:#5c8a6b;--accent3-soft:rgba(92,138,107,0.1);  --accent4:#a8874a;--accent4-soft:rgba(168,135,74,0.1);  --text:#171717;--text2:#6b6b6b;--text3:#6e6e6e;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(250,250,250,0.92);--shadow-card:0 6px 18px rgba(0,0,0,0.08);
 }
+
 [data-theme="sand"] {  --bg:#f8f6f2;--surface:#ffffff;--surface2:#f1ede4;--surface3:#e8e1d3;--surface4:#ddd3bf;  --accent:#a8927a;--accent-soft:rgba(168,146,122,0.12);  --accent2:#c1685a;--accent2-soft:rgba(193,104,90,0.12);  --accent3:#7a9b6e;--accent3-soft:rgba(122,155,110,0.12);  --accent4:#c4954a;--accent4-soft:rgba(196,149,74,0.12);  --text:#2b2620;--text2:#72695c;--text3:#756b56;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(248,246,242,0.92);--shadow-card:0 6px 20px rgba(120,90,60,0.08);
 }
+
 [data-theme="ink"] {  --bg:#0a0a0a;--surface:#141414;--surface2:#1c1c1c;--surface3:#242424;--surface4:#2e2e2e;  --accent:#e5e5e5;--accent-soft:rgba(229,229,229,0.1);  --accent2:#d4726a;--accent2-soft:rgba(212,114,106,0.15);  --accent3:#6fbf8a;--accent3-soft:rgba(111,191,138,0.13);  --accent4:#d9a75c;--accent4-soft:rgba(217,167,92,0.13);  --text:#f0f0f0;--text2:#8a8a8a;--text3:#848484;  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);  --header-bg:rgba(10,10,10,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.4);
 }
-[data-theme="sage"] {  --bg:#f6f7f4;--surface:#ffffff;--surface2:#eef0ea;--surface3:#e3e6dc;--surface4:#d5d9cb;  --accent:#7a8b6f;--accent-soft:rgba(122,139,111,0.12);  --accent2:#bc6a5e;--accent2-soft:rgba(188,106,94,0.12);  --accent3:#5f9670;--accent3-soft:rgba(95,150,112,0.12);  --accent4:#bf9552;--accent4-soft:rgba(191,149,82,0.12);  --text:#2a2e26;--text2:#646d5c;--text3:#68705c;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(246,247,244,0.92);--shadow-card:0 6px 20px rgba(80,100,70,0.08);
-}
+
 [data-theme="fresh"] {  --bg:#f4f6fb;--surface:#ffffff;--surface2:#eef1fa;--surface3:#e6eaf6;--surface4:#dde2f2;  --accent:#6c7fee;--accent-soft:rgba(108,127,238,0.12);  --accent2:#ff8a80;--accent2-soft:rgba(255,138,128,0.12);  --accent3:#4fc9a8;--accent3-soft:rgba(79,201,168,0.12);  --accent4:#ffb454;--accent4-soft:rgba(255,180,84,0.12);  --text:#292d45;--text2:#646a92;--text3:#5b6089;  --border:rgba(41,45,69,0.08);--border2:rgba(41,45,69,0.13);  --header-bg:rgba(244,246,251,0.85);--shadow-card:0 8px 24px rgba(99,102,241,0.10);
+}
+[data-theme="sage"] {  --bg:#f6f7f4;--surface:#ffffff;--surface2:#eef0ea;--surface3:#e3e6dc;--surface4:#d5d9cb;  --accent:#7a8b6f;--accent-soft:rgba(122,139,111,0.12);  --accent2:#bc6a5e;--accent2-soft:rgba(188,106,94,0.12);  --accent3:#5f9670;--accent3-soft:rgba(95,150,112,0.12);  --accent4:#bf9552;--accent4-soft:rgba(191,149,82,0.12);  --text:#2a2e26;--text2:#646d5c;--text3:#68705c;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(246,247,244,0.92);--shadow-card:0 6px 20px rgba(80,100,70,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 /* RENCANA-MODERNISASI-UI s635: tema ke-11, fondasi "Minimal" (flat, aksen
    tunggal, shadow tipis) + kesiapan pola "Ledger Pro" (font mono via
    --font-mono di bawah, dipakai scoped ke elemen angka -- lihat aturan
-   [data-theme="modern"] .stat-val, ... setelah blok :root). Sesi ini MURNI
+   [data-theme="modern"] .stat-val, ... setelah blok 
+/* THEME-CONSISTENCY-S1807: preview colors are derived from the same palette tokens as the active theme. */
+.theme-card-preview{color:var(--text)!important;border:1px solid var(--border2);}
+.theme-card[data-t="dark"] .theme-card-preview{background:#08090c!important;color:#c9a35f!important;}
+.theme-card[data-t="ocean"] .theme-card-preview{background:#050f1a!important;color:#38bdf8!important;}
+.theme-card[data-t="light"] .theme-card-preview{background:#f5f5fa!important;color:#6366f1!important;}
+.theme-card[data-t="stone"] .theme-card-preview{background:#f7f5f1!important;color:#8a7f6b!important;}
+.theme-card[data-t="slate"] .theme-card-preview{background:#1c1c1e!important;color:#8a94a6!important;}
+.theme-card[data-t="sage"] .theme-card-preview{background:#f6f7f4!important;color:#7a8b6f!important;}
+.theme-card[data-t="modern"] .theme-card-preview{background:#fafafa!important;color:#2f6fed!important;}
+.theme-card[data-t="graphite"] .theme-card-preview{background:#111315!important;color:#d1d5da!important;}
+.theme-card[data-t="minimal"] .theme-card-preview{background:#eef1f4!important;color:#607487!important;}
+.theme-card[data-t="auto"] .theme-card-preview{background:linear-gradient(135deg,#08090c 50%,#f5f5fa 50%)!important;color:#c9a35f!important;}
+[data-theme] .green{color:var(--money-pos,var(--accent3))!important;}
+[data-theme] .red{color:var(--money-neg,var(--accent2))!important;}
+[data-theme] .orange{color:var(--accent4)!important;}
+
+:root). Sesi ini MURNI
    variabel + 1 aturan scoped tambahan, 0 markup disentuh; tema lama (10
    blok di atas) 0 dampak. Belum didaftarkan ke pemilihan tema di UI --
    itu scope sesi s636+ sesuai rencana bertahap. */
@@ -800,7 +820,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .grafik-bar { flex: 1; border-radius: 4px 4px 0 0; min-height: 4px; transition: height 0.5s ease; }
 .grafik-lbl { font-size:var(--fs-label); color: var(--text3); }
 .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.theme-card { background: var(--surface2); box-shadow: var(--shadow-card, 0 4px 16px rgba(0,0,0,0.06)); border-radius: var(--r-lg); padding: 14px 10px; border: 2px solid transparent; cursor: pointer; text-align: center; transition: all var(--dur-moderate); }
+.theme-card { background: var(--surface2); box-shadow: var(--shadow-card, 0 4px 16px rgba(0,0,0,0.06)); border-radius: var(--r-lg); padding: 14px 10px; border: 2px solid transparent; cursor: pointer; text-align: center; transition: border-color var(--dur-moderate), box-shadow var(--dur-moderate), transform var(--dur-moderate), background-color var(--dur-moderate); }
 .theme-card:active { transform: scale(0.96); }
 .theme-card.active { border-color: var(--accent); }
 .theme-card-preview { width: 40px; height: 40px; border-radius: var(--r-md); margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size:var(--fs-icon-lg); }
@@ -1922,3 +1942,73 @@ textarea.fi { resize: vertical; min-height: 80px; }
 @media (max-width:380px){#page-carnotes .cn-summary-metrics{grid-template-columns:minmax(0,1fr) 58px 58px}#page-carnotes .cn-summary-action{min-width:58px;padding-left:5px;padding-right:5px}#page-carnotes .cn-km-value{font-size:17px}}
 @media (min-width:700px){#page-carnotes .cn-vehicle-summary{padding:15px}#page-carnotes .cn-summary-metrics{grid-template-columns:minmax(0,1fr) 110px 110px}#page-carnotes .cn-summary-action{flex-direction:row;gap:6px}}
 @media (prefers-reduced-motion:reduce){#page-carnotes *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* BUTTON-CONTRAST-S1809: complete interaction/accessibility hardening.
+   S1808 fixed the main filled controls; S1809 extends the same contract to
+   semantic/compact controls, the navigation FAB, active states, and keyboard focus.
+   No business logic is changed. */
+[data-theme="dark"],
+[data-theme="ocean"],
+[data-theme="slate"],
+[data-theme="stone"],
+[data-theme="sage"],
+[data-theme="graphite"] { --on-accent:#17181b; }
+[data-theme="light"],
+[data-theme="modern"] { --on-accent:#ffffff; }
+
+/* Filled/active controls: foreground is chosen for the actual accent family. */
+.btn-primary,
+.chip-btn.active,
+.cn-tab.active,
+.kel-subtab.active,
+.nav-fab-icon,
+#lifeOSReviewPanel button[data-action="LifeOSReview.startWeekly"] {
+  color:var(--on-accent)!important;
+}
+
+/* Soft semantic surfaces need normal theme text, not the same accent used by the
+   background. Accent meaning remains visible through borders/icons/status styling. */
+.btn-income, .type-btn.ai { color:var(--text)!important; }
+.btn-expense, .btn-danger, .type-btn.ae { color:var(--text)!important; }
+.btn-transfer, .type-btn.at { color:var(--text)!important; }
+.header-badge { color:var(--text)!important; }
+.pin-key:active, .qs-btn:active, .kasir-qty-pill button:active { color:var(--text)!important; }
+
+/* Important filled actions retain a comfortable touch target without resizing compact
+   chips, tabs, table controls, or quantity steppers. */
+.btn-primary, .btn-income, .btn-expense, .btn-transfer, .btn-danger { min-height:44px; }
+
+/* Keyboard/focus contract: never let focus disappear on filled or compact controls. */
+button, [role="button"], summary { text-shadow:none; }
+button:disabled, [role="button"][aria-disabled="true"] { text-shadow:none; }
+.btn:focus-visible, .chip-btn:focus-visible, .cn-tab:focus-visible,
+.kel-subtab:focus-visible, .type-btn:focus-visible, .qs-btn:focus-visible,
+.month-nav-btn:focus-visible, .pin-key:focus-visible, .header-badge:focus-visible,
+.nav-fab:focus-visible, button:focus-visible, [role="button"]:focus-visible,
+summary:focus-visible {
+  outline:3px solid color-mix(in srgb, var(--accent) 72%, var(--text) 28%);
+  outline-offset:2px;
+}
+
+/* Keyboard-operable div[role=button] controls must visibly accept focus. */
+[role="button"][tabindex="0"] { cursor:pointer; }
+
+/* Respect reduced-motion while preserving interaction state feedback. */
+@media (prefers-reduced-motion:reduce) {
+  .btn, .chip-btn, .cn-tab, .kel-subtab, .type-btn, .qs-btn,
+  .pin-key, .nav-fab-icon { transition:none!important; }
+}
+
+/* S1817: reduce expensive compositing on touch/mobile surfaces. */
+@media (hover: none) and (pointer: coarse) {
+  .header,
+  .nav {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .btn:hover {
+    filter: none;
+  }
+}
+

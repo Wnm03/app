@@ -949,7 +949,7 @@ return;
 // input yang sedang diisi user. Tunda & coba lagi nanti (self-test cuma jalan sekali per
 // build, jadi ditunda beberapa detik tidak masalah).
 if(document.querySelector('.overlay.open')){
-setTimeout(autoRunSelfTestIfNeeded,3000);
+setTimeout(autoRunSelfTestIfNeeded,2500);
 return;
 }
 // S622: bersihkan toast basi (mis. sisa dari aksi tepat sebelum boot selesai)
