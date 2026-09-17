@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-16T15:19:00.049Z
-Total file source: 358 · Total identifier global: 2547
+Terakhir digenerate: 2026-09-16T21:53:05.034Z
+Total file source: 358 · Total identifier global: 2549
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -127,7 +127,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 104 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 105 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 106 | `modules/vehicle/car-notes-performance.js` | 67 | _(tidak ada komentar header)_ |
-| 107 | `modules/vehicle/vehicle-core.js` | 1175 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
+| 107 | `modules/vehicle/vehicle-core.js` | 1177 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 108 | `modules/vehicle/fuel-price-ref.js` | 231 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
 | 109 | `modules/vehicle/vehicle-catalog.js` | 612 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 110 | `modules/vehicle/honda-oem-catalog-master.js` | 83 | canonical READ-ONLY adapter for Honda parts-catalog text. Tidak menulis D/VehicleCatalog/IDBStore. Sumber tetap PDF/text hasil extract. Tujuan: normalisasi metadata OEM katalog (kode unik, nama, blok, halaman, ref … |
@@ -1082,6 +1082,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `CNB_SUBTAB_LABEL` | `modules/vehicle/vehicle-core.js` |
 | `CNB_SUBTAB_ORDER` | `modules/vehicle/vehicle-core.js` |
 | `CNI_SUBTAB_IDX` | `modules/dashboard-hub/dashboard-hub.js` |
+| `CNI_SUBTAB_LABEL` | `modules/vehicle/vehicle-core.js` |
+| `CNI_SUBTAB_ORDER` | `modules/vehicle/vehicle-core.js` |
 | `cnPeriodeByTab` | `modules/shared/features-helpers-global-security.js` |
 | `codeFromName` | `modules/vehicle/sparepart-servis.js` |
 | `collectKnownGroups` | `modules/vehicle/sparepart-servis.js` |
