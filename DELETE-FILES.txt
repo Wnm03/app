@@ -1,20 +1,5 @@
 modules/vehicle/pro-mockup-presenter.js
 pro-ui-layer.css
-tests/car-notes-pro-action-contract-1731.test.js
-tests/pro-carnotes-history-exit-1736.test.js
-tests/pro-carnotes-navigation-return-1732.test.js
-tests/pro-carnotes-ux-hardening-1747.test.js
-tests/pro-carnotes-visible-controls-1734.test.js
-tests/pro-carnotes-visible-controls-1738.test.js
-tests/pro-carnotes-visible-routing-1733.test.js
-tests/pro-mockup-data-driven-1724.test.js
-tests/pro-mockup-fidelity-batch1-contract.test.js
-tests/pro-mockup-fidelity-batch2-contract.test.js
-tests/pro-mockup-fidelity-completion-1718.test.js
-tests/pro-mockup-final-gate-1713.test.js
-tests/pro-mockup-home-reconstruction-1716.test.js
-tests/pro-theme-nav-visibility-audit1730.test.js
-tests/pro-ui-theme-contract.test.js
 
 # S1778: remove duplicate root-level runner; canonical runner is scripts/run-full-test.js
 run-full-test.js
