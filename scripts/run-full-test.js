@@ -21,8 +21,8 @@ const checkpointDir=process.env.TEST_CHECKPOINT_DIR?path.resolve(ROOT,process.en
 const shardCount=Math.max(1,Math.min(Number(process.env.TEST_SHARDS)||32,64));
 const requestedIndex=process.env.TEST_SHARD_INDEX==null?null:Number(process.env.TEST_SHARD_INDEX);
 const timeoutMs=Math.max(10000,Number(process.env.TEST_SHARD_TIMEOUT_MS)||120000);
-const recoveryTimeoutMs=Math.max(10000,Math.min(timeoutMs,Number(process.env.TEST_RECOVERY_TIMEOUT_MS)||30000));
-const defaultConcurrency=Math.max(1,Math.min(8,typeof os.availableParallelism==='function'?os.availableParallelism():os.cpus().length||1));
+const recoveryTimeoutMs=Math.max(10000,Math.min(timeoutMs,Number(process.env.TEST_RECOVERY_TIMEOUT_MS)||timeoutMs));
+const defaultConcurrency=Math.max(1,Math.min(4,typeof os.availableParallelism==='function'?os.availableParallelism():os.cpus().length||1));
 const concurrency=Math.max(1,Math.min(8,Number(process.env.TEST_CONCURRENCY)||defaultConcurrency));
 const force=process.env.TEST_FORCE_RERUN==='1';
 const tmpToken=crypto.randomBytes(8).toString('hex');
@@ -89,6 +89,9 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
    const pos=results.indexOf(empty);
    if(pos>=0)results[pos]=recovered;
  }
+ // Aggregate only after serial recovery has replaced every empty-TAP result.
+ // Otherwise a successfully recovered shard would remain missing from the
+ // printed totals even though its checkpoint is now valid.
  let totals={tests:0,pass:0,fail:0,cancelled:0,skipped:0,todo:0};
  for(const r of results)for(const k of Object.keys(totals))totals[k]+=r[k]||0;
  const failed=results.filter(r=>r.status!=='pass');
