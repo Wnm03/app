@@ -603,7 +603,7 @@ const GROUP_B = [
   'modules/engine/database-api.js',
   'modules/vehicle/sparepart-servis-b.js',
   // Servis Checklist, Sesi 1A (BREAKDOWN-SESI-RINGAN-CHECKLIST-UI-30-ITEM.md):
-  // SERVICE_CHECKLIST_GROUPS — murni konstanta data (30 item/13 grup), 0
+  // SERVICE_CHECKLIST_GROUPS — murni konstanta data (50 item/13 grup), 0
   // state/UI di sesi ini. Ditaruh SETELAH sparepart-servis-b.js sesuai
   // RENCANA-SESI-SERVICE-CHECKLIST.md §4 Sesi 1 (file ini nantinya, di
   // Sesi 1B/1C, butuh resolveServisCatForVehicle()/servisLogMatchesCat()
@@ -613,6 +613,12 @@ const GROUP_B = [
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
   'modules/vehicle/servis.js',
+  // S1812: lower-level service history/reminder methods split from servis.js.
+  // Must load immediately after servis.js; public Servis API is preserved.
+  'modules/vehicle/servis-b.js',
+  // S1811: condition/result/history/recommendation guidance layer. Loaded after
+  // checklist + servis so it can consume their runtime APIs without becoming a second SoT.
+  'modules/vehicle/service-maintenance-guidance.js',
   // Sesi 331 (sync-katalog-sparepart, updated): Shop Katalog Sparepart
   // Dinamis per-Kendaraan — API dulu (murni logic, reuse D.vehicles/
   // D.sparepartCats/D.servisLogs/D.partsCatalog apa adanya, guard typeof

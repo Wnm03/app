@@ -36,17 +36,43 @@ function main() {
     if (!src.includes('record.masterCategoryId')) fail('canonical field is not authoritative');
   }, results);
 
-  check('CHECKLIST 46/46 masterCategoryId mapping', () => {
+  check('CHECKLIST 50/50 masterCategoryId mapping', () => {
     const src = read('modules/vehicle/servis-checklist.js');
     if (!src.includes('SERVICE_CHECKLIST_GROUPS.forEach')) fail('checklist projection missing');
     const { SERVICE_CHECKLIST_GROUPS } = require(path.join(ROOT, 'modules/vehicle/servis-checklist.js'));
     if (!Array.isArray(SERVICE_CHECKLIST_GROUPS) || SERVICE_CHECKLIST_GROUPS.length !== 13) fail('expected 13 checklist groups');
     const items = SERVICE_CHECKLIST_GROUPS.flatMap(g => g.items || []);
-    if (items.length !== 46) fail(`expected 46 checklist items, got ${items.length}`);
+    if (items.length !== 50) fail(`expected 50 checklist items, got ${items.length}`);
     const missing = items.filter(i => !i.masterCategoryId);
     if (missing.length) fail(`${missing.length} checklist items lack masterCategoryId`);
     const unique = new Set(items.map(i => i.masterCategoryId));
     if (unique.size > 13) fail('checklist introduced more master categories than groups');
+  }, results);
+
+  check('BRAKE COMPONENT SoT + action override contract', () => {
+    const src = read('modules/vehicle/servis-checklist.js');
+    for (const id of ['kampas-rem-depan','kampas-rem-belakang','cakram-rem-depan','kaliper-rem-depan','master-rem-reservoir','tromol-rem-belakang','minyak-rem','selang-rem']) {
+      if (!src.includes(`id: '${id}'`)) fail(`missing brake component ${id}`);
+    }
+    if (src.includes("name: 'Kampas Rem',")) fail('generic Kampas Rem must not be a canonical checklist component');
+    const generic = read('modules/vehicle/sparepart-servis.js');
+    if (/motor:\[[^\]]*'Kampas Rem'[^\]]*\]/.test(generic)) fail('generic recommendation still contains Kampas Rem');
+    if (!generic.includes('dedupeServiceCategoriesForVehicle')) fail('reminder category dedupe helper missing');
+  }, results);
+
+  check('S1811 ACTION/CONDITION/HISTORY guidance layer', () => {
+    const guidance = read('modules/vehicle/service-maintenance-guidance.js');
+    for (const token of ['SERVICE_CONDITION_RESULTS','recommendServiceAction','summarizeServiceHistory','isServiceComponentNotApplicable','auditServiceMaintenanceIntegrity']) {
+      if (!guidance.includes(token)) fail(`guidance helper missing: ${token}`);
+    }
+    const servis = read('modules/vehicle/servis.js');
+    if (!servis.includes('Servis.chooseReminderAction')) fail('reminder manual action picker missing');
+    if (!servis.includes('conditionResult')) fail('condition result persistence missing');
+    if (!servis.includes('conditionNote')) fail('per-component condition note missing');
+    if (!servis.includes('checklistNotApplicable')) fail('not-applicable persistence missing');
+    if (!servis.includes('c.intervalBulan>0')) fail('date/month reminder filter missing');
+    const modal = read('modules/shared/modals.js');
+    if (!modal.includes('servisConditionResult')) fail('condition result UI missing');
   }, results);
 
   check('INTERVAL SoT enforcement', () => {
