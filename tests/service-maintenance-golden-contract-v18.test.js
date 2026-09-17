@@ -43,6 +43,10 @@ const GOLDEN_IDS=[
  'kampas-rem-depan',
  'minyak-rem',
  'kampas-rem-belakang',
+ 'cakram-rem-depan',
+ 'kaliper-rem-depan',
+ 'master-rem-reservoir',
+ 'tromol-rem-belakang',
  'selang-rem',
  'kebocoran-shock',
  'oli-shockbreaker',
@@ -59,12 +63,12 @@ const GOLDEN_IDS=[
  'kabel-gas-standar-kunci'
 ];
 
-test('v18 golden checklist contract remains 46 unique components',()=>{
+test('v18 golden checklist contract remains 50 unique components',()=>{
  const c=load();
  const groups=c.__groups||[];
  const items=groups.flatMap(g=>g.items||[]);
  assert.equal(groups.length,13,'master category count drifted');
- assert.equal(items.length,46,'checklist component count drifted');
+ assert.equal(items.length,50,'checklist component count drifted');
  const ids=items.map(x=>x.id);
  assert.equal(new Set(ids).size,ids.length,'duplicate checklist id');
  assert.deepEqual([...ids].sort(),[...new Set(ids)].sort(),'checklist IDs changed unexpectedly');

@@ -36,9 +36,10 @@ test('DatabaseAPI.master.getGenericGroupByName() -- isi sama persis literal GENE
   const ctx = loadSource([DB_API_FILE], {}, ['DatabaseAPI']);
   const fromApi = ctx.DatabaseAPI.master.getGenericGroupByName();
   assert.equal(fromApi['aki'].group, 'Kelistrikan & Panel');
-  assert.equal(fromApi['kampas rem'].group, 'Sistem Rem');
+  assert.equal(fromApi['kampas rem depan'].group, 'Sistem Pengereman');
+  assert.equal(fromApi['kampas rem belakang'].group, 'Sistem Pengereman');
   assert.equal(fromApi['oli mesin'].group, 'Perawatan Berkala');
-  assert.equal(Object.keys(fromApi).length, 15);
+  assert.equal(Object.keys(fromApi).length, 21);
 });
 
 test('DatabaseAPI.master.getGenericRecommendNames() -- isi sama persis literal GENERIC_RECOMMEND_NAMES asli', () => {
@@ -49,7 +50,7 @@ test('DatabaseAPI.master.getGenericRecommendNames() -- isi sama persis literal G
   // langsung sempat menganggapnya "tidak reference-equal" walau isinya
   // sama persis. Array.from() menormalkan ke Array realm test ini dulu
   // supaya perbandingan murni berdasar isi, bukan identitas constructor.
-  assert.deepEqual(Array.from(fromApi.motor), ['Oli Mesin', 'Filter Oli', 'Oli Gardan', 'Busi', 'Filter Udara', 'Kampas Rem', 'V-Belt CVT', 'Roller CVT', 'Minyak Rem', 'Aki', 'Ban Depan']);
+  assert.deepEqual(Array.from(fromApi.motor), ['Oli Mesin', 'Filter Oli', 'Oli Gardan', 'Busi', 'Filter Udara', 'Kampas Rem Depan', 'Kampas Rem Belakang', 'V-Belt CVT', 'Roller CVT', 'Minyak Rem', 'Aki', 'Ban Depan']);
   assert.ok(fromApi.mobil.includes('Timing Belt'));
   assert.ok(fromApi.listrik.includes('Aki'));
 });

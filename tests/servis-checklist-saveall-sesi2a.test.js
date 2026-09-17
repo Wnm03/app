@@ -25,7 +25,8 @@ test('Sesi 2A: snapshot checklist hanya berisi item tercentang + actionType dari
 
 test('Sesi 2A: edit memulihkan checklist lama secara backward-compatible', () => {
   assert.match(checklist, /loadFromLog\(log\) \{/);
-  assert.match(checklist, /if \(!log \|\| !Array\.isArray\(log\.checklist\)\) return \{ ok: true, count: 0 \};/);
+  assert.match(checklist, /if \(!log\) return \{ ok: true, count: 0 \};/);
+  assert.match(checklist, /checklistNotApplicable/);
 });
 
 test('Sesi 2A: modal servis merender checklist inline dan sinkron saat dibuka', () => {

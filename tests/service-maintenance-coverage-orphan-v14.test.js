@@ -10,11 +10,11 @@ const ids=[...checklist.matchAll(/\bid:\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
 const registry=car.match(/const SERVICE_MAINTENANCE_RULES\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
 ok(!!registry,'maintenance registry exists');
 const rules=[...registry[1].matchAll(/^\s*['"]([^'"]+)['"]\s*:\s*\{/gm)].map(m=>m[1]);
-ok(ids.length===46,'KZR checklist contains exactly 46 components');
+ok(ids.length===50,'KZR checklist contains exactly 50 components');
 ok(new Set(ids).size===ids.length,'checklist component IDs are unique');
 for(const id of ids)ok(rules.includes(id),'maintenance rule covers '+id);
 for(const id of rules)ok(ids.includes(id),'maintenance rule has no orphan '+id);
-const conditionOnly=['rantai-keteng-tensioner','kompresi-mesin','selang-tutup-tangki','radiator-water-pump','selang-rem','kebocoran-shock','thermostat'];
+const conditionOnly=['rantai-keteng-tensioner','kompresi-mesin','selang-tutup-tangki','radiator-water-pump','kebocoran-shock','thermostat'];
 for(const id of conditionOnly){const re=new RegExp("['\"]"+id+"['\"]\\s*:\\s*\\{[^}]*maintenanceType:\\s*['\"]condition['\"]");ok(re.test(car),'condition-only component is explicitly classified: '+id);}
 ok(bundle.includes("'rantai-keteng-tensioner'"),'bundle A contains condition coverage registry');
 const indexSrc=fs.readFileSync(path.join(root,'index.html'),'utf8');

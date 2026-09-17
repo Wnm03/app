@@ -9,9 +9,9 @@ function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
 const ids=[...checklist.matchAll(/\bid:\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
 const registry=car.match(/const SERVICE_MAINTENANCE_RULES\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
 ok(!!registry,'maintenance registry exists');
-ok(ids.length===46,'KZR checklist contains 46 components');
+ok(ids.length===50,'KZR checklist contains 50 components');
 const rules=[...registry[1].matchAll(/^\s*['"]([^'"]+)['"]\s*:\s*\{/gm)].map(m=>m[1]);
-ok(rules.length===46,'maintenance registry contains 46 rules');
+ok(rules.length===50,'maintenance registry contains 50 rules');
 ok(new Set(rules).size===rules.length,'maintenance rule IDs are unique');
 for(const id of ids)ok(rules.includes(id),'rule covers '+id);
 for(const id of rules)ok(ids.includes(id),'no orphan rule '+id);

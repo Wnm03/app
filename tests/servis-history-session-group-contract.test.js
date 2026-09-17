@@ -1,9 +1,8 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const fs=require('fs');
-const path=require('path');
-const src=fs.readFileSync(path.join(__dirname,'..','modules','vehicle','servis.js'),'utf8');
+const { readServisSource } = require('./helpers/carNotesSource');
+const src = readServisSource();
 
 test('Servis Stage 2B: history groups by sessionId and keeps legacy logs as singletons',()=>{
   assert.match(src,/const historyGroups=\[\]; const historyGroupMap=new Map\(\);/);

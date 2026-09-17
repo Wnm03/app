@@ -10,10 +10,10 @@ test('CATEGORY-SOT-05 source maps every checklist group to canonical masterCateg
   for (const id of ids) assert.match(id, /^[a-z0-9-]+$/);
 });
 
-test('CATEGORY-SOT-05 preserves 13 groups and 46 checklist items', () => {
+test('CATEGORY-SOT-05 preserves 13 groups and 50 checklist items', () => {
   const src = fs.readFileSync(require.resolve('../modules/vehicle/servis-checklist.js'), 'utf8');
   assert.equal((src.match(/group:\s*'/g) || []).length, 13);
-  assert.equal((src.match(/id:\s*'[^']+',\s*name:/g) || []).length, 46);
+  assert.equal((src.match(/id:\s*'[^']+',\s*name:/g) || []).length, 50);
 });
 
 test('CATEGORY-SOT-05 canonical lookup does not invent IDs', () => {

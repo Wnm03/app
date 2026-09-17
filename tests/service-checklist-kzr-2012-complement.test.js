@@ -7,13 +7,13 @@ const ctx = loadSource(['modules/vehicle/servis-checklist.js'], {}, ['SERVICE_CH
 const GROUPS = ctx.SERVICE_CHECKLIST_GROUPS;
 const ITEMS = GROUPS.flatMap(g => g.items.map(it => ({ ...it, group: g.group })));
 
-test('checklist SoT is the current 46-item canonical contract after cumulative patching', () => {
+test('checklist SoT is the current 50-item canonical contract after cumulative patching', () => {
   assert.equal(GROUPS.length, 13);
-  assert.equal(ITEMS.length, 46);
+  assert.equal(ITEMS.length, 50);
   assert.equal(new Set(GROUPS.map(g => g.masterCategoryId)).size, 13);
 });
 
-test('current 46-item checklist preserves the explicitly accumulated 2026-09-12 components', () => {
+test('current 50-item checklist preserves the explicitly accumulated 2026-09-12 components', () => {
   const accumulated = ITEMS.filter(it => String(it.sumber || '').includes('USER_ACCUMULATED_LIST_2026-09-12'));
   assert.equal(accumulated.length, 17);
   for (const id of ['filter-oli','slide-piece-cvt','filter-fuel-pump','relay-sekring']) {

@@ -28,7 +28,7 @@ function freshCtx(D) {
 }
 
 // Resolve indices by stable IDs rather than hard-coding positions. The
-// checklist is intentionally additive (30 -> 46 items), so inserting a new
+// checklist is intentionally additive (30 -> 50 items), so inserting a new
 // component must never retarget an existing state test to a different item.
 const CATALOG = require('../modules/vehicle/servis-checklist.js').SERVICE_CHECKLIST_GROUPS;
 const groupIndex = name => CATALOG.findIndex(g => g.group === name);
@@ -78,11 +78,11 @@ test('open() dipanggil ulang membuang state sesi sebelumnya (tidak dibawa antar-
   assert.equal(ctx.ServisChecklist.checkedCount(G_MESIN), 0);
 });
 
-test('toggleItem: item ganti-saja (Oli Mesin) langsung checked[id]="ganti", tanpa dialog tambahan (Keputusan W poin 2)', () => {
+test('toggleItem: item kondisional (Oli Mesin) default "periksa" dan tetap bisa di-override manual', () => {
   const ctx = freshCtx({ sparepartCats: [], servisLogs: [] });
   ctx.ServisChecklist.open('veh-1');
   const r = ctx.ServisChecklist.toggleItem(G_MESIN, I_OLI_MESIN);
-  assert.deepEqual(JSON.parse(JSON.stringify(r)), { ok: true, id: 'oli-mesin', checked: true, actionType: 'ganti' });
+  assert.deepEqual(JSON.parse(JSON.stringify(r)), { ok: true, id: 'oli-mesin', checked: true, actionType: 'periksa' });
 });
 
 test('toggleItem: item periksa terkunci (Celah Klep) -> checked[id]="periksa"', () => {
@@ -176,12 +176,12 @@ test('setActionType: gagal kalau item belum dicentang (tidak otomatis mencentang
   assert.equal(r.ok, false);
 });
 
-test('setActionType: tolak actionType yang tidak valid utk item ganti-saja terkunci (Oli Mesin, Selang Rem)', () => {
+test('setActionType: tolak actionType yang tidak valid utk item ganti-saja yang benar-benar terkunci', () => {
   const ctx = freshCtx({ sparepartCats: [], servisLogs: [] });
   ctx.ServisChecklist.open('veh-1');
   ctx.ServisChecklist.toggleItem(G_MESIN, I_OLI_MESIN);
   const r = ctx.ServisChecklist.setActionType(G_MESIN, I_OLI_MESIN, 'periksa');
-  assert.equal(r.ok, false, 'Keputusan W poin 2: Oli Mesin TIDAK punya opsi "periksa saja"');
+  assert.equal(r.ok, true, 'Oli Mesin sekarang mendukung periksa sebagai rekomendasi/manual override');
   ctx.ServisChecklist.toggleItem(G_REM, I_SELANG_REM);
   const r2 = ctx.ServisChecklist.setActionType(G_REM, I_SELANG_REM, 'bersih');
   assert.equal(r2.ok, false);

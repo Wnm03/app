@@ -5,7 +5,7 @@
 // Target: SERVICE_CHECKLIST_GROUPS (modules/vehicle/servis-checklist.js)
 // — MURNI DATA, 0 state/logic/UI (itu Sesi 1B/1C). Test ini memvalidasi
 // bentuk data sesuai kontrak yang dikunci di
-// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (46 item/13 grup, 40
+// VERIFIKASI-DAN-FINALISASI-CHECKLIST-SERVIS.md §3 (50 item/13 grup, 40
 // `linkCat:true`) + PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b
 // (enum actionMode/resetType).
 
@@ -29,15 +29,15 @@ test('SERVICE_CHECKLIST_GROUPS: 13 grup, sesuai jumlah sistem di AUDIT-SERVICE-C
   assert.equal(GROUPS.length, 13);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: 46 item setelah pelengkap KZR 2012 (13 grup; 30 item baseline + 16 item pelengkap)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 50 item setelah pelengkap KZR 2012 (13 grup; 30 item baseline + 16 item pelengkap + 4 item rem)', () => {
   const items = flatten(GROUPS);
-  assert.equal(items.length, 46);
+  assert.equal(items.length, 50);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: 40 item stockable linkCat:true (kontrak taxonomy SA27)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 44 item stockable linkCat:true (kontrak taxonomy SA27)', () => {
   const items = flatten(GROUPS);
   const linked = items.filter((it) => it.linkCat === true);
-  assert.equal(linked.length, 40);
+  assert.equal(linked.length, 44);
   const expectedNames = [
     'Oli Mesin', 'Filter Oli', 'Busi', 'Rantai Keteng & Tensioner',
     'Filter Kawat Oli Mesin (Oil Strainer Screen)', 'Paking (Gasket) Knalpot',
@@ -45,9 +45,9 @@ test('SERVICE_CHECKLIST_GROUPS: 40 item stockable linkCat:true (kontrak taxonomy
     'Kampas Kopling Ganda', 'Mangkok Kopling Ganda', 'Seal Driven Face (O-Ring & Karet)',
     'Per Sentri', 'Per CVT (weight/kick starter spring)', 'Bearing Bak CVT',
     'Busa Filter CVT', 'Throttle Body (bersihkan)', 'Idle Speed Control (ISC)',
-    'Injector (bersihkan)', 'Filter Fuel Pump (Saringan Bensin)', 'Cek Selang & Tutup Tangki',
+    'Injector (bersihkan)', 'Cakram Rem Depan', 'Kaliper Rem Depan', 'Filter Fuel Pump (Saringan Bensin)', 'Cek Selang & Tutup Tangki',
     'Coolant', 'Radiator & Water Pump (cek/flush)', 'Thermostat', 'Kampas Rem Depan',
-    'Minyak Rem', 'Kampas Rem Belakang', 'Selang Rem', 'Oli Shockbreaker Depan',
+    'Minyak Rem', 'Kampas Rem Belakang', 'Master Rem & Reservoir', 'Tromol Rem Belakang', 'Selang Rem', 'Oli Shockbreaker Depan',
     'Engine Mounting & Bushing Arm', 'Aki', 'Saklar & Sistem Penerangan',
     'Relay & Sekring (Fuse)', 'Ban Depan', 'Ban Belakang', 'Bearing Roda', 'Filter Udara',
     'Oli Gardan/Final Drive', 'Cek Kabel Gas/Rem Belakang/Standar/Kunci Kontak',
@@ -121,10 +121,10 @@ test('SERVICE_CHECKLIST_GROUPS: tiap item punya intervalLabel & sumber non-koson
   }
 });
 
-test('SERVICE_CHECKLIST_GROUPS: item bertanda needsReview (keputusan W belum final) persis 4 -- V-Belt CVT, Coolant, Kampas Rem Belakang, Ban Depan', () => {
+test('SERVICE_CHECKLIST_GROUPS: item bertanda needsReview (keputusan W belum final) persis 3 -- V-Belt CVT, Coolant, Ban Depan', () => {
   const items = flatten(GROUPS);
   const flagged = items.filter((it) => it.needsReview === true).map((it) => it.name).sort();
-  assert.deepEqual(flagged, ['Ban Depan', 'Coolant', 'Kampas Rem Belakang', 'V-Belt CVT'].sort());
+  assert.deepEqual(flagged, ['Ban Depan', 'Coolant', 'V-Belt CVT'].sort());
 });
 
 test('SERVICE_CHECKLIST_GROUPS: urutan grup persis 13 sistem AUDIT-SERVICE-CHECKLIST-COVERAGE.md', () => {

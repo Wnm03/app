@@ -1,8 +1,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const fs=require('fs');
-const path=require('path');
-const src=fs.readFileSync(path.join(__dirname,'..','modules','vehicle','servis.js'),'utf8');
+const { readServisSource } = require('./helpers/carNotesSource');
+const src = readServisSource();
 
 test('Servis session delete exists and targets all session logs',()=>{
   assert.match(src,/async delSession\(sessionId\)/);
