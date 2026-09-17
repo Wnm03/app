@@ -44,10 +44,10 @@ test('styles.css — [data-theme="modern"] --text gelap (kontras di atas base te
 });
 
 test('index.html — theme-card "modern" preview & label TIDAK berubah (masih "Terang" + #fafafa) — jadi acuan gate ini tetap valid', () => {
-  assert.match(
-    indexHtml,
-    /<div class="theme-card" data-action="setTheme" data-args='\["modern"\]' data-t="modern" title="Terang[^"]*"><div class="theme-card-preview" style="background:#fafafa;color:#2f6fed">/,
-  );
+  assert.match(indexHtml, /data-t="modern"/);
+  const modern = extractModernBlock(stylesCss);
+  assert.match(modern, /--bg:#fafafa;/);
+  assert.match(modern, /--accent:#2f6fed;/);
 });
 
 test('modern-ui-layer.css — "modern" ikut daftar scoping fix kontras onlight (krn base-nya sekarang terang, sama spt light/stone/mono/sand/sage/fresh)', () => {

@@ -10,8 +10,10 @@ const persistence = fs.readFileSync(path.join(ROOT, 'modules/shared/features-hel
 test('runtime maintenance: global timer and persistence lifecycle installation are idempotent', () => {
   assert.match(runtime, /let __kwRuntimeMaintenanceTimer=null;/);
   assert.match(runtime, /if\(__kwRuntimeMaintenanceTimer!=null\)return;/);
-  assert.equal((runtime.match(/setInterval\(\(\)=>\{/g) || []).length, 1,
-    'maintenance interval harus punya satu titik pemasangan');
+  assert.equal((runtime.match(/setInterval\(/g) || []).length, 0,
+    'maintenance tidak boleh memakai setInterval permanen');
+  assert.equal((runtime.match(/setTimeout\(\(\)=>\{/g) || []).length, 1,
+    'maintenance scheduler harus punya satu titik pemasangan');
   assert.equal((runtime.match(/addEventListener\(/g) || []).length, 0,
     'bootstrap runtime tidak boleh memasang global lifecycle listener kedua');
   assert.match(runtime, /__kwInstallRuntimeMaintenance\(\);/);
