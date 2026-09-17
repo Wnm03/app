@@ -865,6 +865,10 @@ if(customRangeEl)customRangeEl.classList.toggle('u-dnone', cnPeriode!=='custom')
 }
 renderCnTab();
 }
+const CNI_SUBTAB_ORDER=['ringkasan','rekomendasi'];
+const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
+const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
+const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnInsightTab(t,el){
 // BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
 // setCnTab() di atas / modules/shared/format-tema.js.
@@ -884,10 +888,6 @@ document.getElementById('cniTab-rekomendasi').style.display='';
 const cniBc=document.getElementById('cniBreadcrumbSub');
 if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
 }
-const CNI_SUBTAB_ORDER=['ringkasan','rekomendasi'];
-const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
-const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
-const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnBbmTab(t,el){
 // BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
 // setCnTab() di atas / modules/shared/format-tema.js.
