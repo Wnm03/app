@@ -1,18 +1,18 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('fs');
-const path = require('path');
-const ROOT = path.resolve(__dirname, '..');
-const css = fs.readFileSync(path.join(ROOT, 'pro-ui-layer.css'), 'utf8');
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ROOT=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const index=read('index.html');
+const prod=read('app_production.html');
+const core=read('modules/vehicle/vehicle-core.js');
+const render=read('modules/shared/modules-render-b.js');
+const bundle=read('app-bundle-b.min.js');
+const sw=read('sw.js');
+const build=read('scripts/build.js');
 
-test('pro mockup batch2 remains presentation-only and covers screens 2-8 surfaces', () => {
-  assert.match(css, /#servisModal \.modal/);
-  assert.match(css, /#servisChecklistPanel \.sc-group/);
-  assert.match(css, /#servisReminderCard/);
-  assert.match(css, /\.servis-history-session/);
-  assert.match(css, /#fuelIntelWrap/);
-  assert.match(css, /#cnTab-jalan/);
-  assert.match(css, /\[data-theme="pro"\]/);
-  assert.doesNotMatch(css, /@import/i);
-  assert.doesNotMatch(css, /<script/i);
+test('canonical Car Notes uses the shared application navigation and modal contracts',()=>{
+  assert.match(core,/function showPage|function setCnTab/); assert.match(index,/data-action=\"showPage\"/);
 });

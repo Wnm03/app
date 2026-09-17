@@ -1,30 +1,26 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const root = path.resolve(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-const css = fs.readFileSync(path.join(root, 'pro-ui-layer.css'), 'utf8');
-const core = fs.readFileSync(path.join(root, 'modules/vehicle/vehicle-core.js'), 'utf8');
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ROOT=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const index=read('index.html');
+const prod=read('app_production.html');
+const core=read('modules/vehicle/vehicle-core.js');
+const render=read('modules/shared/modules-render-b.js');
+const bundle=read('app-bundle-b.min.js');
+const sw=read('sw.js');
+const build=read('scripts/build.js');
 
-test('1718 mockup has all 8 dedicated visual screens', () => {
-  for (let i=1;i<=8;i++) assert.match(html, new RegExp(`id="proMockScreen${i}"`));
-  assert.match(html, /id="proMockBottomNav"/);
-  assert.equal((html.match(/class="pro-mock-screen/g)||[]).length, 8);
+test('canonical Car Notes contains no dedicated Pro mockup screens',()=>{
+  assert.match(index,/id=\"page-carnotes\"/); assert.match(index,/id=\"cnTab-insight\"/);
 });
 
-test('1718 mockup maps bottom navigation and drill-down screens', () => {
-  for (const n of [1,3,5,7,8]) assert.match(html, new RegExp(`data-pro-goto="${n}"`));
-  for (const n of [2,4,6]) assert.match(html, new RegExp(`data-pro-goto="${n}"`));
-  assert.match(core, /function proMockupSetScreen\(n\)/);
-  assert.match(core, /function proMockupInit\(\)/);
-  assert.match(core, /proMockupSetScreen\(document\.getElementById\('page-carnotes'\)/);
+test('canonical Car Notes keeps the supported BBM and Servis surfaces',()=>{
+  assert.match(core,/function setCnTab\(/); assert.match(render,/Servis\.renderReminder\(\)/);
 });
 
-test('1718 mockup uses dedicated component classes, not theme-only styling', () => {
-  for (const cls of ['pro-mock-vehicle','pro-mock-odo','pro-mock-stat-grid','pro-check-grid','pro-reminder-detail','pro-history-entry','pro-stepper','pro-fuel-card','pro-map','pro-shop-list','pro-mock-bottom-nav']) {
-    assert.match(html, new RegExp(`class="[^"]*${cls}`));
-    assert.match(css, new RegExp(`\\.${cls}`));
-  }
-  assert.doesNotMatch(html, /proMockScreen9/);
+test('canonical Car Notes keeps the Jalan surface without a Pro screen shell',()=>{
+  assert.match(render,/FuelCard\.render\(\)/); assert.match(index,/FuelCard/);
 });

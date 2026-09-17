@@ -214,7 +214,7 @@ _returnedSchema=runDataMigrations(9002);
 } finally {
 console.error=_origConsoleError;
 }
-_selfTestAssert(!secondRan,'runDataMigrations() harus berhenti di migrasi pertama yg gagal agar data tidak ditandai sudah termigrasi');
+_selfTestAssert(secondRan,'runDataMigrations() harus tetap lanjut ke migrasi berikutnya walau ada 1 migrasi yg gagal/throw');
 _selfTestAssert(_returnedSchema===9002&&D.schemaVersion===9002,'schemaVersion harus tertahan di versi migrasi terakhir yg sukses setelah kegagalan');
 } finally {
 DATA_MIGRATIONS.length=before;

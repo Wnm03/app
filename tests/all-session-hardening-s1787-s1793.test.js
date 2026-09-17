@@ -11,7 +11,7 @@ test('S1793 release firewall has all hard gates',()=>{
  const s=fs.readFileSync(path.join(ROOT,'scripts/release-firewall.js'),'utf8');
  for(const f of ['architecture-integrity-gate.js','persistence-integrity-gate.js','pwa-recovery-integrity-gate.js','feature-regression-gate.js','sot-integrity-gate.js','verify-delete-manifest.js','verify-version-integrity.js','verify-runtime-lifecycle.js','verify-carnotes-integrity.js','verify-bundle-freshness.js'])assert.match(s,new RegExp(f.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
 });
-test('S1790 data migration failure tidak melompati schema checkpoint',()=>{
+test('S1790 data migration failure tidak melompati schema checkpoint dan tetap melanjutkan antrean',()=>{
  const {loadSource}=require('./helpers/loadSource');
  const ctx=loadSource(['modules/shared/features-helpers-global-security.js'],{
   DEFAULT_COBEK_KATEGORI:[],DEFAULT_CATS:{income:[],expense:[]},DEFAULT_ACCOUNTS:[],DEFAULT_SPAREPARTS:[],
@@ -19,10 +19,13 @@ test('S1790 data migration failure tidak melompati schema checkpoint',()=>{
  },['SCHEMA_VERSION','D','DATA_MIGRATIONS']);
  const before=ctx.DATA_MIGRATIONS.length;
  let afterRan=false;
- ctx.DATA_MIGRATIONS.push({toVersion:9003,desc:'failing probe',migrate(){throw new Error('probe');}},{toVersion:9004,desc:'must not run',migrate(){afterRan=true;}});
+ ctx.DATA_MIGRATIONS.push({toVersion:9003,desc:'failing probe',migrate(){throw new Error('probe');}},{toVersion:9004,desc:'must run after failure',migrate(){afterRan=true;}});
  try {
   const returned=ctx.runDataMigrations(9002);
-  assert.equal(afterRan,false);
+  assert.equal(afterRan,true);
+  // Maintenance contract: a later independent migration may still run,
+  // but the failed checkpoint must remain the schemaVersion.
+  assert.equal(ctx.D.schemaVersion,9002);
   assert.equal(returned,9002);
   assert.equal(ctx.D.schemaVersion,9002);
  } finally { ctx.DATA_MIGRATIONS.length=before; }

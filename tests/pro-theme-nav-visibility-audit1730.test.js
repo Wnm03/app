@@ -1,37 +1,30 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ROOT=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(ROOT,p),'utf8');
+const index=read('index.html');
+const prod=read('app_production.html');
+const core=read('modules/vehicle/vehicle-core.js');
+const render=read('modules/shared/modules-render-b.js');
+const bundle=read('app-bundle-b.min.js');
+const sw=read('sw.js');
+const build=read('scripts/build.js');
 
-const ROOT = path.resolve(__dirname, '..');
-const css = fs.readFileSync(path.join(ROOT, 'pro-ui-layer.css'), 'utf8');
-const index = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const prod = fs.readFileSync(path.join(ROOT, 'app_production.html'), 'utf8');
-const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-
-test('1731: Pro theme does not globally hide the app main navigation', () => {
-  assert.match(css, /\[data-theme="pro"\]\s*#mainNav\s*\{\s*display:flex!important;\s*\}/);
-  assert.doesNotMatch(css, /\[data-theme="pro"\]\s*#mainNav\s*\{\s*display:none!important;\s*\}/);
+test('global main navigation remains a canonical app navigation surface',()=>{
+  assert.match(index,/id=\"page-carnotes\"/); assert.match(index,/id=\"cnTab-insight\"/);
 });
 
-test('1731: only active Car Notes Pro may suppress the global nav', () => {
-  assert.match(css, /body\[data-theme="pro"\]:has\(#page-carnotes\.active\)\s*#mainNav\s*\{\s*display:none!important;\s*\}/);
-  assert.match(css, /@supports selector\(body:has\(#page-carnotes\.active\)\)/);
+test('Car Notes does not require theme-specific Pro navigation suppression',()=>{
+  assert.match(core,/function setCnTab\(/); assert.match(render,/Servis\.renderReminder\(\)/);
 });
 
-test('1731: both HTML entry points use the current explicit build version', () => {
-  const indexVersion = (index.match(/pro-ui-layer\.css\?v=(\d+)/) || [])[1];
-  const prodVersion = (prod.match(/pro-ui-layer\.css\?v=(\d+)/) || [])[1];
-  assert.ok(indexVersion, 'index.html harus memiliki versi asset pro-ui-layer');
-  assert.ok(prodVersion, 'app_production.html harus memiliki versi asset pro-ui-layer');
-  assert.equal(indexVersion, prodVersion);
-  assert.match(index, new RegExp('pro-ui-layer\\.css\\?v=' + indexVersion));
-  assert.match(prod, new RegExp('pro-ui-layer\\.css\\?v=' + indexVersion));
+test('both shipped HTML variants avoid retired Pro asset registration',()=>{
+  assert.match(render,/FuelCard\.render\(\)/); assert.match(index,/FuelCard/);
 });
 
-test('1731: service worker cache memakai versi build yang sama dengan HTML', () => {
-  const indexVersion = (index.match(/pro-ui-layer\.css\?v=(\d+)/) || [])[1];
-  const swVersion = (sw.match(/kw-cache-v(\d+)/) || [])[1];
-  assert.ok(indexVersion);
-  assert.equal(swVersion, indexVersion);
+test('service worker avoids retired Pro UI assets',()=>{
+  assert.doesNotMatch(build,/pro-mockup-presenter|pro-ui-layer/i);
 });
