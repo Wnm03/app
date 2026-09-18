@@ -381,6 +381,25 @@ const GROUP_B = [
   // Tidak bergantung ke vehicle-core.js secara langsung, ditaruh
   // bersebelahan krn sama-sama domain vehicle "core"/foundational.
   'modules/vehicle/vehicle-catalog.js',
+  // SOT rebased: canonical catalog identity/write/health/scope/e2e/lifecycle/migration.
+  'modules/vehicle/vehicle-catalog-write-sot.js',
+  'modules/vehicle/vehicle-catalog-health-sot.js',
+  'modules/vehicle/vehicle-catalog-scope-sot.js',
+  'modules/vehicle/vehicle-catalog-e2e-sot.js',
+  'modules/vehicle/vehicle-catalog-lifecycle-sot.js',
+  'modules/vehicle/vehicle-catalog-migration-sot.js',
+  'modules/vehicle/vehicle-catalog-identity-sot.js',
+  'modules/vehicle/vehicle-catalog-certification-sot.js',
+  'modules/vehicle/vehicle-part-sot.js',
+  'modules/vehicle/vehicle-service-sot.js',
+  'modules/vehicle/vehicle-service-reminder-sot.js',
+  'modules/vehicle/vehicle-sot-fleet-integrity.js',
+  'modules/vehicle/vehicle-category-sot.js',
+  'modules/vehicle/vehicle-stock-sot.js',
+  'modules/vehicle/vehicle-model-registry-sot.js',
+  'modules/vehicle/vehicle-model-resolver-sot.js',
+  'modules/vehicle/vehicle-sot-provisioning.js',
+
   // honda-oem-catalog-master.js (S20): adapter READ-ONLY untuk menormalkan
   // master OEM dari teks parts catalog Honda. Tidak membuat taxonomy servis
   // baru dan tidak menulis D/VehicleCatalog/IDBStore. Metadata katalog
