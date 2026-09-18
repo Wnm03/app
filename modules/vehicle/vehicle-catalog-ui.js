@@ -397,9 +397,15 @@ async function catalogUiSave() {
     weight: weightRaw === '' ? null : weightRaw,
     source, confidence, consumable,
   };
-  const res = _catEditId
-    ? await VehicleCatalog.update(_catEditId, data)
-    : await VehicleCatalog.create(data);
+  let res;
+  if (_catEditId) {
+    res = await VehicleCatalog.update(_catEditId, data);
+  } else if (typeof VehicleCatalogWriteSOT !== 'undefined' && VehicleCatalogWriteSOT && typeof VehicleCatalogWriteSOT.ensurePart === 'function') {
+    const item = await VehicleCatalogWriteSOT.ensurePart({partName, oemCode, barcode, category, extra: data}, (typeof curVehicleId !== 'undefined' ? curVehicleId : null));
+    res = item ? {success:true,item} : {success:false,errors:['Gagal membuat/menemukan identitas katalog']};
+  } else {
+    res = {success:false,errors:['VehicleCatalogWriteSOT tidak tersedia; pembuatan katalog dibatalkan agar identity tetap satu SOT.']};
+  }
   if (!res.success) {
     toast('⚠️ ' + ((res.errors && res.errors[0]) || 'Gagal menyimpan part'));
     return;

@@ -338,7 +338,7 @@ const autoAsset={id:uid(),name:v.name,jenis:'Kendaraan',lokasi:'',nilai:nilai||0
 D.assets.push(autoAsset);
 v.assetId=autoAsset.id;
 }
-function saveVehicle(){
+async function saveVehicle(){
 const name=document.getElementById('vehName').value.trim();
 const emoji=document.getElementById('vehEmoji').value||'🏍️';
 const jenisEl=document.getElementById('vehJenis');
@@ -396,6 +396,8 @@ if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
 // check "Kendaraan SELF belum tercatat nilainya"). TIDAK auto-create kalau
 // user barusan pilih link manual (v.assetId sudah keisi dari linkedAsset di
 // atas) -- itu tetap prioritas eksplisit user.
+if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(v);
+if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(v.id,{vehicle:v});
 _autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
 save();
@@ -418,6 +420,8 @@ if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
 if(capacityKg)newVeh.capacityKg=capacityKg;
 if(capacityM3)newVeh.capacityM3=capacityM3;
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
+if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
+if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
 // Opsi A — auto-create Asset (lihat komentar lengkap di _autoCreateVehicleAsset()
 // & AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-ASET.md): kendaraan BARU dgn
 // ownership SELF & TANPA link manual (linkedAsset kosong) otomatis dapat 1

@@ -144,6 +144,12 @@ function vehicleCatalogValidate(data) {
   if (!category) errors.push('Kategori wajib diisi.');
   else if (category.length > 50) errors.push('Kategori maksimal 50 karakter.');
 
+  if (data.subcategory !== undefined && data.subcategory !== null && typeof data.subcategory !== 'string') {
+    errors.push('Subkategori harus berupa teks.');
+  } else if (data.subcategory && data.subcategory.length > 80) {
+    errors.push('Subkategori maksimal 80 karakter.');
+  }
+
   if (data.oemCode !== undefined && data.oemCode !== null && typeof data.oemCode !== 'string') {
     errors.push('OEM Code harus berupa teks.');
   } else if (data.oemCode && data.oemCode.length > 50) {
@@ -161,6 +167,14 @@ function vehicleCatalogValidate(data) {
       errors.push('Kompatibilitas kendaraan harus berupa daftar (array).');
     } else if (data.compatibleVehicleIds.some((v) => typeof v !== 'string' && typeof v !== 'number')) {
       errors.push('Setiap id kendaraan kompatibel harus berupa teks/angka.');
+    }
+  }
+
+  if (data.compatibleModelIds !== undefined && data.compatibleModelIds !== null) {
+    if (!Array.isArray(data.compatibleModelIds)) {
+      errors.push('Kompatibilitas model harus berupa daftar (array).');
+    } else if (data.compatibleModelIds.some((v) => typeof v !== 'string' && typeof v !== 'number')) {
+      errors.push('Setiap id model kompatibel harus berupa teks/angka.');
     }
   }
 
@@ -267,10 +281,14 @@ function _vehicleCatalogNormalize(data) {
   return {
     partName: (typeof data.partName === 'string' ? data.partName : '').trim(),
     category: (typeof data.category === 'string' ? data.category : '').trim(),
+    subcategory: (typeof data.subcategory === 'string' ? data.subcategory : '').trim(),
     oemCode: data.oemCode ? String(data.oemCode).trim() : '',
     barcode: data.barcode ? String(data.barcode).trim() : '',
     compatibleVehicleIds: Array.isArray(data.compatibleVehicleIds)
       ? data.compatibleVehicleIds.map((v) => String(v))
+      : [],
+    compatibleModelIds: Array.isArray(data.compatibleModelIds)
+      ? data.compatibleModelIds.map((v) => String(v))
       : [],
     photos: Array.isArray(data.photos) ? data.photos.slice(0, VEHICLE_CATALOG_MAX_PHOTOS) : [],
     notes: data.notes ? String(data.notes).trim() : '',

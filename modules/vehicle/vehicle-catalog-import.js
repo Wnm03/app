@@ -511,18 +511,26 @@ async function vehicleImportCommitRows(rows) {
       const existing = await VehicleCatalog.findByCode(code);
       if (existing) { duplicates++; skipped++; continue; }
     }
+    const vehicleId = (typeof curVehicleId !== 'undefined' ? curVehicleId : null);
     const data = {
       partName: row.partName,
       oemCode: row.oemCode || '',
       barcode: row.barcode || '',
       price: (typeof row.price === 'number' && !isNaN(row.price)) ? row.price : undefined,
       category: _vehicleImportSafeCategory(row.category),
+      compatibleVehicleIds: vehicleId ? [vehicleId] : [],
     };
     if (typeof VehicleCatalog !== 'undefined' && VehicleCatalog && typeof VehicleCatalog.validate === 'function') {
       const check = VehicleCatalog.validate(data);
       if (check && check.valid === false) { skipped++; if (check.errors) errors.push(...check.errors); continue; }
     }
-    const res = await VehicleCatalog.create(data);
+    let res;
+    if (typeof VehicleCatalogWriteSOT !== 'undefined' && VehicleCatalogWriteSOT && typeof VehicleCatalogWriteSOT.ensurePart === 'function') {
+      const item = await VehicleCatalogWriteSOT.ensurePart(data, vehicleId);
+      res = item ? { success:true, item } : { success:false, errors:['Gagal membuat/menemukan identitas katalog melalui Write SOT.'] };
+    } else {
+      res = { success:false, errors:['VehicleCatalogWriteSOT tidak tersedia; import dibatalkan agar tidak membuat identitas katalog di luar SOT.'] };
+    }
     if (res && res.success) { imported++; if (res.item) createdItems.push(res.item); }
     else { skipped++; if (res && res.errors) errors.push(...res.errors); }
   }

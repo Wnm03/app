@@ -531,13 +531,18 @@ D.partsStock.push(np);
 // dikenali lewat scan barcode/OEM & muncul di dropdown "Pilih Sparepart"
 // form transaksi Keuangan tanpa harus discan dulu. Pola & alasan SAMA
 // PERSIS applyTxStockFromTx() di tx-stok-sparepart.js (arah Keuangan ->
-// Katalog) -- di sini arahnya Kelola Stok -> Katalog. Kegagalan (mis.
-// VehicleCatalog belum termuat) diabaikan diam-diam, bukan syarat simpan.
-if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.create==='function'){
+// Katalog) -- di sini arahnya Kelola Stok -> Katalog. Kegagalan tidak
+// memblokir simpan stok, tetapi selalu diberi diagnostic warning agar
+// kegagalan wiring SOT tidak menjadi silent failure.
+if(typeof VehicleCatalogWriteSOT!=='undefined'&&VehicleCatalogWriteSOT&&typeof VehicleCatalogWriteSOT.ensurePart==='function'){
 const cat=D.sparepartCats.find(c=>c.id===catId);
-VehicleCatalog.create({partName:name,category:(cat&&cat.name)||'Umum'}).then(res=>{
-if(res&&res.success&&res.item){np.catalogId=res.item.id;if(typeof save==='function')save();}
-}).catch(()=>{});
+VehicleCatalogWriteSOT.ensurePart({partName:name,oemCode:code,category:(cat&&cat.name)||'Umum'},vehicleId).then(ci=>{
+if(ci){np.catalogPartId=ci.id;np.catalogId=ci.id;if(typeof VehicleStockSOT!=='undefined'&&VehicleStockSOT.apply)VehicleStockSOT.apply(np,ci);if(typeof save==='function')save();}
+}).catch(err=>{
+if(typeof console!=='undefined'&&console&&typeof console.warn==='function')console.warn('[VehicleCatalogWriteSOT] saveStock ensurePart gagal:',err&&err.message?err.message:err);
+});
+}else if(typeof console!=='undefined'&&console&&typeof console.warn==='function'){
+console.warn('[VehicleCatalogWriteSOT] tidak tersedia; stok disimpan tanpa catalogPartId. Periksa load-order/runtime SOT.');
 }
 }
 save();closeModal('stockModal');Sparepart.renderStockList();toast('✅ Stok sparepart disimpan');
