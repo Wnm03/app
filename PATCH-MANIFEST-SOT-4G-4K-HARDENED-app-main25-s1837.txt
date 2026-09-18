@@ -1,0 +1,28 @@
+PATCH SOT-4G–4K HARDENED — REBASED app-main__25
+Version build: s1793-final-hardening-1817
+
+Basis: app-main__25 + PATCH-SOT-4G-4K-REBASed-app-main25-s1837.
+
+Hardening applied:
+1. Synchronize all release-version constants used by verify-version-integrity (MODULE_RENDER_VERSION, MODAL_VERSION, MODULE_CALC_VERSION, MODULE_FEATURES_VERSION, APP_BUILD_VERSION, PRODUCTION_BUILD_SYNCED_VERSION) to the build-generated 1817 release.
+2. Keep VehicleCatalogWriteSOT as the canonical write gate for vehicle catalog import and manual sparepart stock creation.
+3. Update legacy integration tests to explicitly stub VehicleCatalogWriteSOT.ensurePart(), while retaining underlying VehicleCatalog.create() assertions through the stub adapter.
+4. Add production diagnostics (console.warn) when WriteSOT is unavailable or ensurePart rejects during best-effort stock->catalog synchronization; stock save remains non-blocking.
+5. Preserve v25 fixes by rebasing rather than overlaying the old v24-modified files.
+6. Verify WriteSOT load order remains before catalog import, vehicle part SOT, and sparepart UI consumers.
+
+Validation in working tree:
+- Targeted hardening/version/SOT integration tests: PASS after final source changes.
+- Build s1793-final-hardening-1817: PASS; both bundles node --check PASS.
+- Full suite was attempted in this environment but exceeded the execution window; no final full-suite PASS claim is made here.
+- Baseline-known failures remain unrelated to this hardening: carnotes-theme-pro-rollback and delete-manifest-contract-s1780 due to leftover pro-ui-layer.css.
+
+Important: deploy the complete changed-file set, not only HTML/SW.
+
+
+SOT-4G–4K hardening delta s1838:
+- Fixed tests/vehicle-catalog-import.test.js to explicitly stub VehicleCatalogWriteSOT.ensurePart() in commitRows integration tests.
+- Fixed tests/sparepart-savestock-catalog-push.test.js to load the split UI layer and explicitly stub VehicleCatalogWriteSOT.ensurePart().
+- Added tests/vehicle-catalog-write-sot-registration.test.js to verify build registration/load ordering for Write SOT before catalog import and sparepart UI consumers.
+- Production source path was audited: sparepart saveStock implementation lives in modules/vehicle/sparepart-servis-ui.js; that consumer already uses VehicleCatalogWriteSOT.ensurePart(), so no duplicate/incorrect edit was made to sparepart-servis.js facade.
+- Focused regression suite: 48/48 PASS. Full-suite rerun was attempted but exceeded the local execution window; no full-suite PASS claim is made here.

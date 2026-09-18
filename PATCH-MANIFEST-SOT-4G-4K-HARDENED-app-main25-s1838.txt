@@ -1,0 +1,21 @@
+PATCH SOT-4G–4K HARDENED + WRITE-SOT TEST INTEGRATION — app-main__25 — s1838
+
+BASELINE
+- app-main__25
+- This patch is rebased on v25; it does not restore/overlay the stale v24 files.
+
+ACCUMULATED SOT
+- Accumulated SOT-4G through SOT-4K and prior catalog SOT layers from the immediately previous s1837 hardened patch.
+- Vehicle-specific SOT provisioning, model registry/resolver, service/reminder projection, fleet integrity, catalog identity/write/health/scope/e2e/lifecycle/migration/certification, stock SOT, and related regression tests are retained.
+
+HARDENING FIXES IN THIS S1838 DELTA
+1. Version SSOT remains synchronized at s1793-final-hardening-1817 across the already-hardened version constants/build artifacts.
+2. tests/vehicle-catalog-import.test.js now explicitly stubs VehicleCatalogWriteSOT.ensurePart() for commitRows() integration cases. Assertions verify the canonical Write SOT call and returned createdItems/category behavior; tests no longer expect direct VehicleCatalog.create() from the consumer.
+3. tests/sparepart-savestock-catalog-push.test.js now loads the split sparepart UI source and explicitly stubs VehicleCatalogWriteSOT.ensurePart(). New/edit/failure behavior is tested against the actual consumer path.
+4. Production audit confirmed Sparepart.saveStock() implementation is in modules/vehicle/sparepart-servis-ui.js (sparepart-servis.js is the compatibility facade). The consumer already calls VehicleCatalogWriteSOT.ensurePart(); no duplicate or stale edit was applied to the facade.
+5. Added tests/vehicle-catalog-write-sot-registration.test.js to verify scripts/build.js registers VehicleCatalogWriteSOT before vehicle-catalog-import.js and sparepart-servis-ui.js.
+6. Focused integration/regression suite: 48/48 PASS.
+7. A full-suite rerun was attempted in the build environment but exceeded the execution window; therefore this manifest makes no full-suite PASS claim.
+
+KNOWN BASELINE FAILURE
+- carnotes-theme-pro-rollback remains attributable to leftover pro-ui-layer.css in app-main__25 and is outside this patch.
