@@ -304,7 +304,7 @@ const cards=groups.map(found=>{
 }).join('');
 const checked=Object.keys(ServisChecklist._checked||{}).length;
 const na=Object.keys(ServisChecklist._notApplicable||{}).length;
-const total=groups.reduce((n,g)=>n+g.items.length,0);
+const total=groups.reduce((n,g)=>n+g.group.items.length,0);
 box.innerHTML=`<div style="margin-bottom:8px"><div class="u-fw700 u-fs12">☑️ Checklist Komponen Servis</div><div class="u-fs11 u-t2">${groups.length} kategori aktif · ${checked}/${total} dikerjakan${na?` · ${na} tidak berlaku`:''}. Manual override tersedia.</div></div>${cards}`;
 },
 _serviceActionTypesForCurrentComponent(){
