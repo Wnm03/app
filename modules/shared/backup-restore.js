@@ -21,6 +21,10 @@
 
 /* moved to modules-render.js: renderLaporan */
 /* moved to modules-render.js: renderGrafik */
+function _reportCsvCell(v){
+const s=(v===null||v===undefined)?'':String(v);
+return /[\",\n\r]/.test(s)?'\"'+s.replace(/\"/g,'\"\"')+'\"':s;
+}
 function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
@@ -29,7 +33,7 @@ const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah',
 const accName=D.accounts.find(a=>a.id===t.accountId)?.name||'';
 return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||''];
 })];
-const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+const blob=new Blob([rows.map(r=>r.map(_reportCsvCell).join(',')).join('\n')],{type:'text/csv'});
 const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laporan-W-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
 }
 function exportJSON(){
@@ -493,7 +497,8 @@ return stats;
 }
 
 async function applyRestoredData(imp){
-if(!imp||typeof imp!=='object'){await showAlertModal('File backup tidak dikenali (bukan format yang valid).',{icon:'❌',title:'Backup Tidak Valid'});return false;}
+const _shape=_validateRestoreShape(imp);
+if(!_shape.ok){await showAlertModal('File backup ditolak: '+_shape.msg,{icon:'❌',title:'Backup Tidak Valid'});return false;}
 const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios'];
 if(!knownKeys.some(k=>imp[k]!==undefined)){await showAlertModal('File ini sepertinya bukan file backup aplikasi ini. Restore dibatalkan.',{icon:'❌',title:'Backup Tidak Valid'});return false;}
 const backupVersion=imp.schemaVersion||0;
@@ -712,6 +717,27 @@ spendee:`<div class="u-fs12 u-fw700 u-mb6">📱 Cara export dari Spendee:</div><
 };
 const g=document.getElementById('importGuide'); if(g) g.innerHTML=guides[type];
 }
+function _importTxFingerprint(t){
+if(!t||typeof t!=='object')return null;
+const norm=v=>String(v==null?'':v).trim().toLowerCase();
+return [norm(t.date),norm(t.type),Number(t.amount)||0,norm(t.category),norm(t.subcategory),norm(t.note),norm(t.accountId)].join('|');
+}
+function _dedupeImportedTransactions(imported){
+if(!Array.isArray(imported)||!imported.length)return[];
+const existingKeys=new Set((Array.isArray(D.transactions)?D.transactions:[]).map(t=>t&&t.importIdempotencyKey).filter(Boolean));
+return imported.filter(t=>{
+  const key=t&&t.importIdempotencyKey;
+  return !key||!existingKeys.has(key);
+});
+}
+function _validateRestoreShape(imp){
+if(!imp||typeof imp!=='object'||Array.isArray(imp))return{ok:false,msg:'Root backup harus berupa objek JSON.'};
+const arrayKeys=['transactions','accounts','bills','billsArchive','vehicles','bbmLogs','servisLogs','jalanLogs','kmLogs','sparepartCats','partsStock','workDays','targets','eduFunds','reminders','products','produsen','cobek','cobekKategori','chatHistory','wealthSnapshots','wishlist'];
+for(const k of arrayKeys){if(imp[k]!==undefined&&!Array.isArray(imp[k]))return{ok:false,msg:`Field "${k}" harus berupa array.`};}
+if(imp.categories!==undefined&&(typeof imp.categories!=='object'||Array.isArray(imp.categories)))return{ok:false,msg:'Field "categories" harus berupa objek.'};
+if(imp.profile!==undefined&&(typeof imp.profile!=='object'||Array.isArray(imp.profile)))return{ok:false,msg:'Field "profile" harus berupa objek.'};
+return{ok:true};
+}
 function handleImport(e){
 const file=e.target.files[0];if(!file)return;
 const r=new FileReader();
@@ -722,15 +748,22 @@ let imported=[];
 let taxonomySummary=null;
 if(file.name.endsWith('.json')){
 const parsed=JSON.parse(content);
+if(!Array.isArray(parsed)&&(!parsed||typeof parsed!=='object'))throw new Error('Format JSON transaksi tidak valid');
 imported=Array.isArray(parsed)?parsed:(parsed.transactions||[]);
+imported=Array.isArray(imported)?imported.map((t,i)=>{
+  const row=(t&&typeof t==='object')?{...t}:t;
+  if(row&&typeof row==='object'&&!row.importIdempotencyKey){row.importIdempotencyKey=row.id?`json:${row.id}`:`json-row:${i}:${_importTxFingerprint(row)||''}`;}
+  return row;
+}):[];
 } else {
 if(curImportType==='cashew'){
 taxonomySummary=ensureCashewTaxonomy(content);
 }
 imported=parseCSVImport(content,curImportType);
 }
-if(imported.length===0){document.getElementById('importResult').innerHTML='<div class="u-cacc2 u-fs12" style="padding:8px">⚠️ Tidak ada data valid ditemukan</div>';return;}
-let confirmMsg=`Ditemukan ${imported.length} transaksi.`;
+imported=_dedupeImportedTransactions(imported);
+if(imported.length===0){document.getElementById('importResult').innerHTML='<div class="u-cacc2 u-fs12" style="padding:8px">⚠️ Tidak ada transaksi baru. Data yang sama sudah pernah diimpor atau file kosong.</div>';return;}
+let confirmMsg=`Ditemukan ${imported.length} transaksi baru setelah deduplikasi.`;
 if(taxonomySummary){
 const {newAccounts,newCats,newSubs}=taxonomySummary;
 if(newAccounts.length) confirmMsg+=`\n\n🆕 Akun baru dibuat (${newAccounts.length}): ${newAccounts.join(', ')}`;
@@ -789,8 +822,12 @@ if(file.name.toLowerCase().endsWith('.json')){
 const parsed=JSON.parse(content);
 if(Array.isArray(parsed.bbmLogs)){
 parsed.bbmLogs.forEach(b=>{
-if(D.bbmLogs.find(x=>x.id===b.id))return;
-D.bbmLogs.push({...b,id:uid(),vehicleId:b.vehicleId||vehId});
+const importedId=(b&&b.id)||uid();
+// Preserve source identity when available. The previous code checked the
+// source id for duplicates but then replaced it with a new uid(), making the
+// duplicate check ineffective on repeated JSON Car Notes import.
+if(b&&b.id&&D.bbmLogs.find(x=>x&&x.id===b.id))return;
+D.bbmLogs.push({...b,id:importedId,vehicleId:b.vehicleId||vehId});
 bbmCount++;
 });
 }
@@ -819,7 +856,7 @@ resultEl.innerHTML='⚠️ File JSON ini tidak mengandung data BBM/Servis (bbmLo
 return;
 }
 } else {
-const lines=content.split(/\r?\n/).filter(l=>l.trim().length);
+const lines=splitCSVRecords(content);
 if(lines.length<2){resultEl.innerHTML='⚠️ File CSV kosong atau format tidak terbaca.';return;}
 const header=splitCSVLine(lines[0]).map(h=>h.trim().toLowerCase());
 const idxDate=header.findIndex(h=>/tanggal|date/.test(h));
@@ -884,16 +921,36 @@ resultEl.innerHTML='❌ Gagal import: '+(err&&err.message?err.message:'format fi
 };
 reader.readAsText(file);
 }
-function splitCSVLine(line){
-const out=[];let cur='';let inQ=false;
-for(let i=0;i<line.length;i++){
-const ch=line[i];
-if(ch==='"'){inQ=!inQ;}
-else if(ch===','&&!inQ){out.push(cur);cur='';}
-else cur+=ch;
+function splitCSVRecords(content){
+const rows=[];let row='',inQ=false;
+for(let i=0;i<String(content||'').length;i++){
+  const ch=String(content||'')[i];
+  if(ch==='"'){
+    if(inQ&&String(content||'')[i+1]==='"'){row+='"';i++;continue;}
+    inQ=!inQ;row+=ch;continue;
+  }
+  if(!inQ&&(ch==='\n'||ch==='\r')){
+    if(ch==='\r'&&String(content||'')[i+1]==='\n')i++;
+    if(row.trim())rows.push(row); row=''; continue;
+  }
+  row+=ch;
 }
-out.push(cur);
-return out.map(v=>v.trim().replace(/^"|"$/g,''));
+if(row.trim())rows.push(row);
+return rows;
+}
+function splitCSVLine(line){
+const out=[];let cur='',inQ=false;
+for(let i=0;i<String(line||'').length;i++){
+  const ch=String(line||'')[i];
+  if(ch==='"'){
+    if(inQ&&String(line||'')[i+1]==='"'){cur+='"';i++;continue;}
+    inQ=!inQ;continue;
+  }
+  if(ch===','&&!inQ){out.push(cur.trim());cur='';continue;}
+  cur+=ch;
+}
+out.push(cur.trim());
+return out;
 }
 const CAT_EMOJI_GUESS=[
 [/gaji|penghasilan|salary/i,'💼'],[/bonus/i,'🎁'],[/bisnis|usaha|jual|dagang|shop/i,'🪨'],
@@ -912,7 +969,7 @@ return hit?hit[1]:(type==='income'?'💰':'📦');
 }
 function slugify(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'x';}
 function ensureCashewTaxonomy(content){
-const lines=content.split('\n').filter(l=>l.trim());
+const lines=splitCSVRecords(content);
 const summary={newAccounts:[],newCats:[],newSubs:[]};
 if(lines.length<2)return summary;
 const headers=splitCSVLine(lines[0]).map(h=>h.toLowerCase());
@@ -964,7 +1021,7 @@ if(p.length===3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}
 return new Date().toISOString().split('T')[0];
 }
 function parseCSVImport(content,type){
-const lines=content.split('\n').filter(l=>l.trim());
+const lines=splitCSVRecords(content);
 if(lines.length<2)return[];
 const headers=splitCSVLine(lines[0]).map(h=>h.toLowerCase());
 const results=[];
@@ -993,7 +1050,7 @@ const title=idxTitle>=0?vals[idxTitle]:'';
 const noteV=idxNote>=0?vals[idxNote]:'';
 const acc=idxAccount>=0?vals[idxAccount]:'';
 const matchedAcc=acc?D.accounts.find(a=>a.name.toLowerCase()===acc.toLowerCase()):null;
-results.push({id:uid(),date,type:isIncome?'income':'expense',amount,category,subcategory:sub,accountId:(matchedAcc?matchedAcc.id:D.accounts[0]?.id),payMethod:'tunai',note:[title,noteV].filter(Boolean).join(' - ')});
+results.push({id:uid(),date,type:isIncome?'income':'expense',amount,category,subcategory:sub,accountId:(matchedAcc?matchedAcc.id:D.accounts[0]?.id),payMethod:'tunai',note:[title,noteV].filter(Boolean).join(' - '),importIdempotencyKey:`csv:${type}:${i}:${vals.join('|')}`});
 }
 return results;
 }
@@ -1015,6 +1072,7 @@ const noteKey=headers.find(h=>h.includes('note')||h==='keterangan'||h==='deskrip
 if(noteKey&&row[noteKey])tx.note=row[noteKey];
 tx.accountId=D.accounts[0]?.id;
 tx.payMethod='tunai';
+tx.importIdempotencyKey=`csv:${type}:${i}:${vals.join('|')}`;
 if(tx.amount>0)results.push(tx);
 }
 return results;
