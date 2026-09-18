@@ -11,11 +11,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
-function makeCtx(vehicleCatalogStub) {
+function makeCtx(vehicleCatalogStub, writeSotStub) {
   return loadSource(
     ['modules/vehicle/vehicle-catalog-import.js'],
     {
       _loadScriptOnce: () => Promise.resolve(),
+      VehicleCatalogWriteSOT: writeSotStub || {
+        ensurePart: async (data) => ({ id: 'sot_' + data.partName, ...data }),
+      },
       VehicleCatalog: vehicleCatalogStub || {
         // Stub minimal parseLabelText — regex SAMA dgn vehicle-catalog.js
         // asli, disalin di sini supaya test ini tidak butuh load file itu
@@ -181,12 +184,12 @@ test('groupRowsByCategory() — array kosong menghasilkan array grup kosong, tid
 // commitRows() — HANYA baris yang dikirim yang di-commit (preview/konfirmasi
 // jadi tanggung jawab pemanggil/UI, sesuai Tahap 5)
 // ------------------------------------------------------------------------
-test('commitRows() — memanggil VehicleCatalog.create() per baris valid, skip baris tanpa nama', async () => {
+test('commitRows() — memanggil VehicleCatalogWriteSOT.ensurePart() per baris valid, skip baris tanpa nama', async () => {
   const created = [];
   const stub = {
-    create: async (data) => { created.push(data); return { success: true, item: Object.assign({ id: 'x' }, data) }; },
+    ensurePart: async (data) => { created.push(data); return Object.assign({ id: 'x' }, data); },
   };
-  const ctx = makeCtx(stub);
+  const ctx = makeCtx(undefined, stub);
   const result = await ctx.VehicleCatalogImport.commitRows([
     { partName: 'Kampas Rem', price: 50000, oemCode: '' },
     { partName: '', price: 1000 }, // tanpa nama -> skip, TIDAK panggil create()
@@ -196,11 +199,11 @@ test('commitRows() — memanggil VehicleCatalog.create() per baris valid, skip b
   assert.equal(result.skipped, 1);
 });
 
-test('commitRows() — mengumpulkan error dari create() yang gagal, tidak melempar exception', async () => {
+test('commitRows() — mengumpulkan error dari Write SOT yang gagal, tidak melempar exception', async () => {
   const stub = {
-    create: async () => ({ success: false, errors: ['Nama part wajib diisi.'] }),
+    ensurePart: async () => null,
   };
-  const ctx = makeCtx(stub);
+  const ctx = makeCtx(undefined, stub);
   const result = await ctx.VehicleCatalogImport.commitRows([{ partName: 'Item Gagal' }]);
   assert.equal(result.imported, 0);
   assert.equal(result.skipped, 1);
@@ -214,13 +217,15 @@ test('commitRows() — array kosong menghasilkan ringkasan nol tanpa error', asy
   assert.equal(result.skipped, 0);
 });
 
-test('commitRows() — baris dengan oemCode/barcode yang sudah ada di katalog dilewati sebagai duplikat, TIDAK panggil create()', async () => {
+test('commitRows() — baris dengan oemCode/barcode yang sudah ada di katalog dilewati, Write SOT tidak dipanggil untuk duplikat', async () => {
   const created = [];
   const stub = {
-    findByCode: async (code) => (code === 'CPR8EA-9' ? { id: 'existing' } : null),
-    create: async (data) => { created.push(data); return { success: true, item: Object.assign({ id: 'x' }, data) }; },
+    ensurePart: async (data) => { created.push(data); return Object.assign({ id: 'x' }, data); },
   };
-  const ctx = makeCtx(stub);
+  const catalogStub = {
+    findByCode: async (code) => (code === 'CPR8EA-9' ? { id: 'existing' } : null),
+  };
+  const ctx = makeCtx(catalogStub, stub);
   const result = await ctx.VehicleCatalogImport.commitRows([
     { partName: 'Busi NGK', oemCode: 'CPR8EA-9' },
     { partName: 'Kampas Rem', oemCode: '' },
@@ -231,15 +236,17 @@ test('commitRows() — baris dengan oemCode/barcode yang sudah ada di katalog di
   assert.equal(result.skipped, 1);
 });
 
-test('commitRows() — createdItems berisi item yang BENAR-BENAR berhasil dibuat (bukan baris asli/skip/duplikat)', async () => {
+test('commitRows() — createdItems berisi item yang BENAR-BENAR berhasil dibuat lewat Write SOT', async () => {
   const stub = {
-    findByCode: async (code) => (code === 'DUP-1' ? { id: 'existing' } : null),
-    create: async (data) => {
-      if (data.partName === 'Item Gagal') return { success: false, errors: ['gagal'] };
-      return { success: true, item: Object.assign({ id: 'cat_' + data.partName }, data) };
+    ensurePart: async (data) => {
+      if (data.partName === 'Item Gagal') return null;
+      return Object.assign({ id: 'cat_' + data.partName }, data);
     },
   };
-  const ctx = makeCtx(stub);
+  const catalogStub = {
+    findByCode: async (code) => (code === 'DUP-1' ? { id: 'existing' } : null),
+  };
+  const ctx = makeCtx(catalogStub, stub);
   const result = await ctx.VehicleCatalogImport.commitRows([
     { partName: 'Kampas Rem', oemCode: 'ABC-1' },
     { partName: 'Item Gagal', oemCode: 'XYZ-1' },
@@ -503,7 +510,7 @@ test('parseCatalogRows() — baris "(tidak ada harga)" tetap dapat kategori yang
 
 test('commitRows() — memakai category hasil parse (bukan selalu "Belum Dikategorikan")', async () => {
   const created = [];
-  const ctx = makeCtx({
+  const catalogStub = {
     parseLabelText: (text) => {
       const raw = (text || '').toString();
       const barcodeMatch = raw.match(/\b\d{8,14}\b/);
@@ -512,8 +519,9 @@ test('commitRows() — memakai category hasil parse (bukan selalu "Belum Dikateg
     },
     findByCode: async () => null,
     validate: () => ({ valid: true, errors: [] }),
-    create: async (data) => { created.push(data); return { success: true, item: data }; },
-  });
+  };
+  const writeStub = { ensurePart: async (data) => { created.push(data); return { success: true, item: data }; } };
+  const ctx = makeCtx(catalogStub, writeStub);
   const rows = ctx.VehicleCatalogImport.parseCatalogRows('E-2 Cylinder Head Cover 12310KZR701 COVER COMP., HEAD Rp 87.000');
   await ctx.VehicleCatalogImport.commitRows(rows);
   assert.equal(created.length, 1);
@@ -522,7 +530,7 @@ test('commitRows() — memakai category hasil parse (bukan selalu "Belum Dikateg
 
 test('commitRows() — category tetap fallback "Belum Dikategorikan" kalau baris memang tidak punya kategori', async () => {
   const created = [];
-  const ctx = makeCtx({
+  const catalogStub = {
     parseLabelText: (text) => {
       const raw = (text || '').toString();
       const oemMatch = raw.match(/\b(?=[A-Za-z0-9-]{5,30}\b)(?=[A-Za-z0-9-]*[A-Za-z])(?=[A-Za-z0-9-]*\d)[A-Za-z0-9-]{5,30}\b/);
@@ -530,8 +538,9 @@ test('commitRows() — category tetap fallback "Belum Dikategorikan" kalau baris
     },
     findByCode: async () => null,
     validate: () => ({ valid: true, errors: [] }),
-    create: async (data) => { created.push(data); return { success: true, item: data }; },
-  });
+  };
+  const writeStub = { ensurePart: async (data) => { created.push(data); return { success: true, item: data }; } };
+  const ctx = makeCtx(catalogStub, writeStub);
   const rows = ctx.VehicleCatalogImport.parseCatalogRows('Kampas Rem Depan KMP-1234 Rp50.000');
   await ctx.VehicleCatalogImport.commitRows(rows);
   assert.equal(created.length, 1);
@@ -577,12 +586,13 @@ test('parseCatalogRow() — nama part yang mengandung huruf O/I/l asli (mis. "OI
 
 test('commitRows() — category >50 karakter (batas VehicleCatalog.validate()) DIPOTONG, bukan bikin part-nya skip diam-diam', async () => {
   const created = [];
-  const ctx = makeCtx({
+  const catalogStub = {
     parseLabelText: () => ({ oemCode: '', barcode: '' }),
     findByCode: async () => null,
     validate: (data) => (data.category && data.category.length > 50 ? { valid: false, errors: ['Kategori maksimal 50 karakter.'] } : { valid: true, errors: [] }),
-    create: async (data) => { created.push(data); return { success: true, item: data }; },
-  });
+  };
+  const writeStub = { ensurePart: async (data) => { created.push(data); return { success: true, item: data }; } };
+  const ctx = makeCtx(catalogStub, writeStub);
   const longCategory = 'X'.repeat(80);
   const res = await ctx.VehicleCatalogImport.commitRows([{ partName: 'Part A', oemCode: 'ABC12345', category: longCategory, price: 1000 }]);
   assert.equal(res.imported, 1, 'part TIDAK boleh skip hanya karena kategori kepanjangan');
