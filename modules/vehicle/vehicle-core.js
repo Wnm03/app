@@ -199,6 +199,7 @@ function _vehCapacityFieldsHtml(v){
 v=v||{};
 return '<div class="u-grid2"><div class="fg u-mb0"><label class="fl">Kapasitas Angkut Maks (kg, opsional)</label><input type="number" step="0.1" class="fi" id="vehCapacityKg" placeholder="cth. 100" inputmode="decimal" value="'+(v.capacityKg||'')+'"></div>'
 +'<div class="fg u-mb0"><label class="fl">Kapasitas Volume Box (m³, opsional)</label><input type="number" step="0.001" class="fi" id="vehCapacityM3" placeholder="cth. 0.05" inputmode="decimal" value="'+(v.capacityM3||'')+'"></div></div>'
++'<div class="fg u-mb0"><label class="fl">Kapasitas Tangki BBM (liter, opsional)</label><input type="number" step="0.1" min="0" class="fi" id="vehFuelTankCapacity" placeholder="cth. 5.5" inputmode="decimal" value="'+(v.fuelTankCapacityLiter||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Isi sesuai spesifikasi pabrikan. Dipakai hanya untuk mendeteksi pengisian BBM yang tidak wajar; tidak mengubah rumus konsumsi.</div></div>'
 +'<div style="font-size:11px;color:var(--text2);margin:-6px 0 12px;line-height:1.5">Dipakai fitur 🚚 Rencana Pengiriman utk cek muatan (AMAN/HAMPIR OVERLOAD/OVERLOAD) — kosongkan kalau kendaraan ini bukan utk operasional Shop.</div>';
 }
 function vehJenisFieldsHtml(jenis,v){
@@ -356,6 +357,8 @@ const capKgEl=document.getElementById('vehCapacityKg');
 const capM3El=document.getElementById('vehCapacityM3');
 const capacityKg=capKgEl?(parseFloat(capKgEl.value)||null):null;
 const capacityM3=capM3El?(parseFloat(capM3El.value)||null):null;
+const fuelTankCapEl=document.getElementById('vehFuelTankCapacity');
+const fuelTankCapacityLiter=fuelTankCapEl?(parseFloat(fuelTankCapEl.value)||null):null;
 if(jenis==='listrik'){
 const batEl=document.getElementById('vehBatteryCapacity');
 batteryCapacity=batEl?(parseFloat(batEl.value)||null):null;
@@ -384,6 +387,7 @@ if(jenis==='mobil'&&oliTrans)v.oliTransmisiIntervalKm=oliTrans;else delete v.oli
 if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else delete v.batteryCapacityKwh;
 if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
 if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
+if(fuelTankCapacityLiter)v.fuelTankCapacityLiter=fuelTankCapacityLiter;else delete v.fuelTankCapacityLiter;
 if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
 // Opsi A — auto-create Asset (lihat AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-
 // BUKU-ASET.md, keputusan produk "Opsi A"): kendaraan LAMA yang diedit &
@@ -419,6 +423,7 @@ if(jenis==='mobil'&&oliTrans)newVeh.oliTransmisiIntervalKm=oliTrans;
 if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
 if(capacityKg)newVeh.capacityKg=capacityKg;
 if(capacityM3)newVeh.capacityM3=capacityM3;
+if(fuelTankCapacityLiter)newVeh.fuelTankCapacityLiter=fuelTankCapacityLiter;
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
@@ -1006,31 +1011,89 @@ if(!kmPerDay||kmPerDay<=0||sisaKm===null||sisaKm===undefined||sisaKm<=0)return n
 const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+Math.ceil(sisaKm/kmPerDay));
 return dateToISO(d);
 }
-// estimateRpPerKm — dipakai OngkirCalc.autoFillBiaya() (cobek.js, kw191-ongkir-jarak) utk isi
-// otomatis field "Ongkos/km" dari histori BBM kendaraan (lebih akurat drpd cuma harga/liter, karena
-// ikut memperhitungkan konsumsi BBM motor/mobil itu sendiri, bukan cuma harga bensin).
-// Formula: ambil SEMUA log "Isi Full Tank" kendaraan ini (diurutkan by km) -- jarak antara 2 titik
-// full tank berturut-turut ditempuh dgn BAHAN BAKAR SEBANYAK liter di titik KEDUA (convention standar
-// hitung konsumsi BBM: isi penuh -> jalan -> isi penuh lagi, liter pengisian ke-2 = liter yg abis
-// dipakai sepanjang jarak itu). Totalkan semua km & liter dari seluruh pasangan berurutan, baru itung
-// km/liter gabungannya (lebih stabil drpd rata-rata dari tiap pasangan kecil). Ongkos/km = rata-rata
-// harga/liter (10 log BBM terakhir) ÷ km/liter itu. Butuh minimal 2 log "Isi Full Tank" dgn km naik
-// utk kendaraan ini -- kalau kurang, balikin null.
-function estimateRpPerKm(vehicleId){
-const logs=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&b.fullTank&&isFinite(b.km)&&b.km>0&&b.liter>0).sort((a,b)=>a.km-b.km);
-if(logs.length<2)return null;
-let totalKm=0,totalLiter=0;
-for(let i=1;i<logs.length;i++){
-const kmDiff=logs[i].km-logs[i-1].km;
-if(kmDiff<=0)continue;
-totalKm+=kmDiff;totalLiter+=logs[i].liter;
+// getFuelFullTankSegments(vehicleId) — SSOT segmen konsumsi BBM metode FULL-TO-FULL.
+// Standar pengukuran: titik A harus FULL TANK, titik B harus FULL TANK berikutnya; semua
+// pengisian PARSIAL di antara A dan B ikut dihitung karena total bahan bakar yang ditambahkan
+// untuk mengembalikan tangki ke penuh = bahan bakar yang terpakai sepanjang interval A→B.
+// Tidak ada tebakan dari nama/urutan transaksi: hanya log valid dengan vehicleId, km>0, liter>0.
+// Partial fill tanpa km valid tidak dapat dialokasikan ke segmen dan sengaja diabaikan.
+// Return [] bila belum ada minimal 2 full-tank anchor yang km-nya naik.
+function getFuelFullTankSegments(vehicleId){
+const all=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&isFinite(b.km)&&b.km>0&&b.liter>0);
+const full=all.filter(b=>b.fullTank).sort((a,b)=>a.km-b.km);
+if(full.length<2)return[];
+const segments=[];
+for(let i=1;i<full.length;i++){
+const start=full[i-1],end=full[i];
+const km=end.km-start.km;
+if(km<=0)continue;
+const fills=all.filter(b=>b.km>start.km&&b.km<=end.km);
+const liters=fills.reduce((sum,b)=>sum+b.liter,0);
+if(liters<=0)continue;
+const cost=fills.reduce((sum,b)=>sum+(isFinite(b.cost)&&b.cost>0?b.cost:(isFinite(b.harga)&&b.harga>0?b.harga*b.liter:0)),0);
+segments.push({startKm:start.km,endKm:end.km,km,liter:liters,cost,kmPerLiter:km/liters,fillCount:fills.length});
 }
+return segments;
+}
+
+// estimateRpPerKm — dipakai OngkirCalc.autoFillBiaya() utk isi otomatis "Ongkos/km".
+// Konsumsi memakai SSOT getFuelFullTankSegments(): TOTAL km / TOTAL liter dari seluruh segmen
+// full-to-full yang valid, termasuk partial fill di antara dua full tank. Harga/liter juga
+// ditimbang berdasarkan volume (TOTAL biaya / TOTAL liter), bukan rata-rata harga per transaksi.
+// Butuh minimal 2 full-tank anchor dengan km naik dan minimal 1 liter terukur di tiap agregat.
+function _fuelMedian(values){
+const a=values.filter(Number.isFinite).slice().sort((x,y)=>x-y);
+if(!a.length)return null;
+const m=Math.floor(a.length/2);
+return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function _fuelQuantile(sorted,p){
+if(!sorted.length)return null;
+const pos=(sorted.length-1)*p, lo=Math.floor(pos), hi=Math.ceil(pos);
+return lo===hi?sorted[lo]:sorted[lo]+(sorted[hi]-sorted[lo])*(pos-lo);
+}
+// getFuelDataQuality — audit kualitas data tanpa mengubah/membuang log pengguna.
+// Semua masalah dikembalikan sebagai flags agar UI/AI dapat memberi konteks, bukan
+// diam-diam mengubah angka konsumsi. Outlier segmen tetap DIHITUNG ke SSOT.
+function getFuelDataQuality(vehicleId){
+const logs=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId);
+const valid=logs.filter(b=>Number.isFinite(b.km)&&b.km>0&&Number.isFinite(b.liter)&&b.liter>0);
+const invalidCount=logs.length-valid.length;
+const ids=new Set(),duplicateIdCount=logs.reduce((n,b)=>{if(!b.id)return n; if(ids.has(b.id))return n+1; ids.add(b.id); return n;},0);
+const chronological=valid.slice().sort((a,b)=>{const da=a.date?new Date(a.date).getTime():0,db=b.date?new Date(b.date).getTime():0;return da-db||a.km-b.km;});
+let odometerBackstepCount=0;
+for(let i=1;i<chronological.length;i++)if(chronological[i].km<chronological[i-1].km)odometerBackstepCount++;
+const partialMissingKmCount=logs.filter(b=>!b.fullTank&&(!Number.isFinite(b.km)||b.km<=0)&&Number.isFinite(b.liter)&&b.liter>0).length;
+const segments=getFuelFullTankSegments(vehicleId);
+const eff=segments.map(s=>s.kmPerLiter).filter(Number.isFinite);
+let outlierSegmentIndexes=[];
+if(eff.length>=4){
+ const sorted=eff.slice().sort((a,b)=>a-b),q1=_fuelQuantile(sorted,.25),q3=_fuelQuantile(sorted,.75),iqr=q3-q1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
+ outlierSegmentIndexes=eff.map((v,i)=>(v<lo||v>hi)?i:-1).filter(i=>i>=0);
+}
+const vehicle=(D.vehicles||[]).find(v=>v.id===vehicleId);
+const capacity=(vehicle&&Number.isFinite(vehicle.fuelTankCapacityLiter)&&vehicle.fuelTankCapacityLiter>0)?vehicle.fuelTankCapacityLiter:null;
+const overCapacityFillCount=capacity?logs.filter(b=>b.fullTank&&Number.isFinite(b.liter)&&b.liter>capacity*1.1).length:0;
+const flags=[];
+if(invalidCount)flags.push('invalid-log');
+if(duplicateIdCount)flags.push('duplicate-id');
+if(odometerBackstepCount)flags.push('odometer-backstep');
+if(partialMissingKmCount)flags.push('partial-fill-missing-km');
+if(outlierSegmentIndexes.length)flags.push('segment-outlier');
+if(overCapacityFillCount)flags.push('full-fill-over-capacity');
+return{status:flags.length?'warning':'ok',flags,logCount:logs.length,validLogCount:valid.length,invalidCount,duplicateIdCount,odometerBackstepCount,partialMissingKmCount,segmentCount:segments.length,outlierSegmentIndexes,capacityLiter:capacity,overCapacityFillCount,method:segments.length?'full-to-full-total-km-total-liter':null};
+}
+function estimateRpPerKm(vehicleId){
+const segments=getFuelFullTankSegments(vehicleId);
+if(!segments.length)return null;
+const totalKm=segments.reduce((s,x)=>s+x.km,0);
+const totalLiter=segments.reduce((s,x)=>s+x.liter,0);
 if(totalKm<=0||totalLiter<=0)return null;
+const totalCost=segments.reduce((s,x)=>s+x.cost,0);
 const kmPerLiter=totalKm/totalLiter;
-const recentHarga=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&b.harga>0).slice(-10);
-if(!recentHarga.length)return null;
-const avgHarga=recentHarga.reduce((s,b)=>s+b.harga,0)/recentHarga.length;
-return{rpPerKm:avgHarga/kmPerLiter,kmPerLiter,avgHarga};
+const avgHarga=totalCost>0?totalCost/totalLiter:null;
+if(avgHarga===null)return null;
+return{rpPerKm:totalCost/totalKm,kmPerLiter,avgHarga,totalKm,totalLiter,segmentCount:segments.length,method:'full-to-full-total-km-total-liter',dataQuality:getFuelDataQuality(vehicleId)};
 }
 // ---------------------------------------------------------------------------
 // Smart Delivery Engine, Sesi 5/6: fuelEfficiency() — fungsi prediktif
@@ -1056,7 +1119,7 @@ const kmPerDay=estimateKmPerDay(vehicleId);
 const estMonthlyKm=kmPerDay?kmPerDay*30:null;
 const estMonthlyLiter=estMonthlyKm?estMonthlyKm/est.kmPerLiter:null;
 const estMonthlyCost=estMonthlyLiter?estMonthlyLiter*est.avgHarga:null;
-return{ok:true,vehicleId,kmPerLiter:est.kmPerLiter,rpPerKm:est.rpPerKm,avgHarga:est.avgHarga,kmPerDay,estMonthlyKm,estMonthlyLiter,estMonthlyCost};
+return{ok:true,vehicleId,kmPerLiter:est.kmPerLiter,rpPerKm:est.rpPerKm,avgHarga:est.avgHarga,kmPerDay,estMonthlyKm,estMonthlyLiter,estMonthlyCost,method:est.method,segmentCount:est.segmentCount,dataQuality:est.dataQuality};
 }
 
 /* moved to sparepart-servis.js (2026-07-12, split file besar bagian ke-3): servisLogMatchesCat,

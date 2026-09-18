@@ -102,7 +102,7 @@ let wrap=document.getElementById('servisComponentFilterWrap');
 if(!wrap){wrap=document.createElement('div');wrap.id='servisComponentFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
 if(typeof ServisChecklist==='undefined'||typeof ServisChecklist.itemsForMasterCategory!=='function'){wrap.innerHTML='';return;}
 const mid=Servis.activeMasterCategoryFilter;
-const items=mid&&mid!==UNCATEGORIZED_FILTER_ID?ServisChecklist.itemsForMasterCategory(mid):(!mid?SERVICE_CHECKLIST_GROUPS.reduce((a,g)=>a.concat(g.items),[]):[]);
+const items=mid&&mid!==UNCATEGORIZED_FILTER_ID?ServisChecklist.itemsForMasterCategory(mid):(!mid?SERVICE_CHECKLIST_GROUPS.reduce((a,g)=>a.concat(ServisChecklist.itemsOfGroup(g)),[]):[]);
 const uniq=[];const seen=new Set();(items||[]).forEach(it=>{if(it&&it.id&&!seen.has(it.id)){seen.add(it.id);uniq.push(it);}});
 const selected=uniq.some(it=>it.id===Servis.activeServiceComponentFilter)?Servis.activeServiceComponentFilter:null;
 Servis.activeServiceComponentFilter=selected;
@@ -277,7 +277,8 @@ if(!groups.length){box.innerHTML=`<div style="background:var(--surface3);border:
 const vehicleId=ServisChecklist._vehicleId||curVehicleId;
 const cards=groups.map(found=>{
   const group=found.group,gi=found.groupIdx;
-  const rows=group.items.map((it,ii)=>{
+  const groupItems=ServisChecklist.itemsOfGroup(group);
+  const rows=groupItems.map((it,ii)=>{
     const checked=ServisChecklist._checked[it.id]!==undefined;
     const notApplicable=ServisChecklist._notApplicable&&ServisChecklist._notApplicable[it.id]===true;
     const action=ServisChecklist._checked[it.id];
@@ -300,11 +301,11 @@ const cards=groups.map(found=>{
     const missingCatBadge=linkedCat&&!resolvedCat?`<span class="sc-cat-warning" title="Kategori sparepart belum tersedia untuk kendaraan ini">⚠️ kategori belum ada</span>`:'';
     return `<div style="display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border2);opacity:${notApplicable?'.55':'1'}"><button type="button" class="btn ${checked?'btn-primary':'btn-ghost'} btn-sm" style="min-width:72px" data-action="Servis.toggleServiceChecklistItem" data-args="${escapeHtml(JSON.stringify([gi,ii]))}" ${notApplicable?'disabled':''}>${checked?'✓ Selesai':notApplicable?'⊘ Tidak berlaku':'○ Cek'}</button><div style="flex:1;min-width:0"><div class="u-fw700 u-fs12">${escapeHtml(it.name)} ${missingCatBadge}</div><div class="u-fs11 u-t2">${escapeHtml(it.intervalLabel||'Tanpa interval rutin')}</div>${recommendationHtml}${checked&&action?`<div class="u-fs11 u-cacc">Tindakan: ${escapeHtml(action)}</div>`:''}${resultHtml}${conditionNote}${checked&&reason?`<div class="u-fs10 u-t2" style="margin-top:3px">💡 ${escapeHtml(reason)}</div>`:''}${actionButtons?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${actionButtons}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${naButton}</div></div></div>`;
   }).join('');
-  return `<details class="sc-group" open style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:0 12px;margin-bottom:10px"><summary style="cursor:pointer;padding:12px 0;font-weight:700;display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(group.group)}</span><span class="chip active">${ServisChecklist.checkedCount(gi)}/${group.items.length}</span></summary><div style="padding-bottom:4px"><div style="font-size:11px;color:var(--text2);margin-bottom:6px">Centang yang benar-benar dikerjakan. Rekomendasi hanya saran; tindakan dan hasil tetap dapat diubah manual.</div>${rows}</div></details>`;
+  return `<details class="sc-group" open style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:0 12px;margin-bottom:10px"><summary style="cursor:pointer;padding:12px 0;font-weight:700;display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(group.group)}</span><span class="chip active">${ServisChecklist.checkedCount(gi)}/${groupItems.length}</span></summary><div style="padding-bottom:4px"><div style="font-size:11px;color:var(--text2);margin-bottom:6px">Centang yang benar-benar dikerjakan. Rekomendasi hanya saran; tindakan dan hasil tetap dapat diubah manual.</div>${rows}</div></details>`;
 }).join('');
 const checked=Object.keys(ServisChecklist._checked||{}).length;
 const na=Object.keys(ServisChecklist._notApplicable||{}).length;
-const total=groups.reduce((n,g)=>n+g.group.items.length,0);
+const total=groups.reduce((n,g)=>n+ServisChecklist.itemsOfGroup(g.group).length,0);
 box.innerHTML=`<div style="margin-bottom:8px"><div class="u-fw700 u-fs12">☑️ Checklist Komponen Servis</div><div class="u-fs11 u-t2">${groups.length} kategori aktif · ${checked}/${total} dikerjakan${na?` · ${na} tidak berlaku`:''}. Manual override tersedia.</div></div>${cards}`;
 },
 _serviceActionTypesForCurrentComponent(){

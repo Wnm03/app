@@ -12,7 +12,7 @@
 //   - VEHTAX_ITEMS            (car-notes.js)
 //   - dateStatusBadge()/daysUntilDate() (modules/vehicle/vehicle-core.js)
 //   - fuelEfficiency()/getVehicleKm()/estimateServiceDateISO() (vehicle-core.js)
-//   - D.bbmLogs (mentah, HANYA untuk fuelReminders() — lihat catatan di sana)
+//   - D.bbmLogs (mentah, hanya untuk anchor Full Tank; konsumsi/range tetap reuse SSOT segmen)
 //
 // serviceReminders()/taxReminders() TIDAK menghitung ulang status apa pun —
 // status 'lewat'/'segera' (servis) & warna 'red'/'orange' (pajak, dari
@@ -133,8 +133,8 @@ taxReminders(vehicleId) {
 // "Foundation"). Sebagai gantinya, "jangkauan per Full Tank" diestimasi
 // dari RATA-RATA liter tiap pengisian Full Tank historis (data mentah
 // D.bbmLogs yang SUDAH difilter fullTank, pola filter SAMA PERSIS yang
-// dipakai estimateRpPerKm()/_vehicleFuelEfficiencyDropCheck() di
-// vehicle-core.js/sparepart-servis.js) dikali kmPerLiter (reuse
+// dipakai sebagai anchor; konsumsi/range reuse getFuelFullTankSegments() di
+// vehicle-core.js, sehingga partial fill di antara dua Full Tank ikut terhitung) dikali kmPerLiter (reuse
 // fuelEfficiency()). Km yang sudah ditempuh sejak pengisian Full Tank
 // TERAKHIR (curKm - lastFull.km, curKm dari getVehicleKm() yang SUDAH
 // ADA) dibandingkan ke estimasi jangkauan itu. Ambang "due-soon" pakai
@@ -162,18 +162,23 @@ fuelReminders(vehicleId) {
       .sort((a, b) => a.km - b.km);
     if (!fullLogs.length) return; // fuel.ok tapi tanpa log fullTank valid (edge-case) -- tidak cukup dasar utk estimasi range.
     const lastFull = fullLogs[fullLogs.length - 1];
-    const avgLiter = fullLogs.reduce((s, b) => s + b.liter, 0) / fullLogs.length;
-    const rangeKm = avgLiter * fuel.kmPerLiter;
-    if (!(rangeKm > 0)) return;
+    const segments = (typeof getFuelFullTankSegments === 'function') ? getFuelFullTankSegments(v.id) : [];
+    const avgLiter = segments.length
+      ? segments.reduce((s, seg) => s + seg.liter, 0) / segments.length
+      : null;
+    const rangeKm = avgLiter && fuel.kmPerLiter > 0 ? avgLiter * fuel.kmPerLiter : null;
+    if (!(rangeKm > 0)) return; // belum ada segmen full-to-full yang valid utk basis range.
     const curKm = (typeof getVehicleKm === 'function') ? getVehicleKm(v.id) : lastFull.km;
     const kmSinceLastFull = curKm - lastFull.km;
     const sisaKm = rangeKm - kmSinceLastFull;
     if (sisaKm > rangeKm * 0.15) return; // masih jauh dari batas jangkauan, belum perlu diingatkan.
     const severity = sisaKm <= 0 ? 'overdue' : 'due-soon';
     const estDateISO = (typeof estimateServiceDateISO === 'function') ? estimateServiceDateISO(sisaKm, fuel.kmPerDay) : null;
+    const qualityHint = fuel.dataQuality && fuel.dataQuality.status === 'warning' ? ' ⚠️ Ada kualitas data BBM yang perlu dicek.' : '';
+    const methodHint = fuel.segmentCount ? ` (${fuel.segmentCount} segmen Full-to-Full)` : '';
     const message = severity === 'overdue'
-      ? `Berdasarkan histori, ${v.name} kemungkinan sudah melewati estimasi jangkauan BBM sejak isi Full Tank terakhir.`
-      : `${v.name} diperkirakan perlu isi BBM lagi dalam \u2248${Math.round(sisaKm)} km.`;
+      ? `Berdasarkan histori, ${v.name} kemungkinan sudah melewati estimasi jangkauan BBM sejak isi Full Tank terakhir.${methodHint}${qualityHint}`
+      : `${v.name} diperkirakan perlu isi BBM lagi dalam \u2248${Math.round(sisaKm)} km.${methodHint}${qualityHint}`;
     out.push({
       type: 'fuel',
       vehicleId: v.id,

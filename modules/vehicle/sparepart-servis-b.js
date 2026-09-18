@@ -686,8 +686,9 @@ return{trigger:overdue.length>0,overdue};
 // TANK terakhir turun ≥20% dari rata-rata histori sebelumnya. SENGAJA tidak
 // menduplikasi/mengubah fuelEfficiency()/estimateRpPerKm() di atas (yang
 // menghitung km/liter GABUNGAN semua histori, bukan per-segmen) —
-// _vehicleFuelEfficiencyDropCheck() menghitung km/liter PER PASANGAN log full
-// tank berurutan sendiri, lalu membandingkan segmen TERAKHIR vs rata-rata
+// _vehicleFuelEfficiencyDropCheck() reuse getFuelFullTankSegments() agar km/liter
+// per segmen konsisten dengan SSOT full-to-full, termasuk partial fill di antaranya,
+// lalu membandingkan segmen TERAKHIR vs rata-rata
 // segmen SEBELUMNYA. Ambang drop (default 20%) BISA DIATUR user (Sesi
 // lanjutan, pola sama dgn getAIFinanceOverspendThreshold/getAIDeliveryThin-
 // MarginThreshold) lewat D.profile.aiVehicleFuelDropThresholdPct, field baru
@@ -715,17 +716,11 @@ function _vehicleFuelEfficiencyDropCheck(){
 const thresholdPct=getAIVehicleFuelDropThreshold();
 const drops=[];
 (D.vehicles||[]).forEach((v)=>{
-const logs=(D.bbmLogs||[]).filter((b)=>b.vehicleId===v.id&&b.fullTank&&isFinite(b.km)&&b.km>0&&b.liter>0).sort((a,b)=>a.km-b.km);
-if(logs.length<4)return; // butuh min. 3 segmen historis + 1 segmen terakhir yg dibandingkan
-const segments=[];
-for(let i=1;i<logs.length;i++){
-const kmDiff=logs[i].km-logs[i-1].km;
-if(kmDiff<=0)continue;
-segments.push(kmDiff/logs[i].liter);
-}
-if(segments.length<4)return;
-const last=segments[segments.length-1];
-const prevSegs=segments.slice(0,-1);
+const segments=(typeof getFuelFullTankSegments==='function')?getFuelFullTankSegments(v.id):[];
+if(segments.length<4)return; // butuh min. 3 segmen historis + 1 segmen terakhir yg dibandingkan
+const efficiencySegments=segments.map((x)=>x.kmPerLiter);
+const last=efficiencySegments[efficiencySegments.length-1];
+const prevSegs=efficiencySegments.slice(0,-1);
 const avgPrev=prevSegs.reduce((s,x)=>s+x,0)/prevSegs.length;
 if(avgPrev<=0)return;
 const dropPct=Math.round((1-last/avgPrev)*100);
