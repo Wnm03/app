@@ -349,9 +349,15 @@ const ShopDataIO = {
       if (!src || !src.name) return;
       const nama = String(src.name).trim();
       if (!nama) return;
-      const product = (typeof ProductStore !== 'undefined')
+      let product;
+      const sourceId = src.id != null ? String(src.id).trim() : '';
+      const byId = sourceId ? D.products.find((p) => p && String(p.id) === sourceId) : null;
+      const byName = (typeof ProductStore !== 'undefined')
         ? ProductStore.findByName(nama)
-        : D.products.find((p) => p.name.toLowerCase() === nama.toLowerCase());
+        : D.products.find((p) => p && String(p.name || '').toLowerCase() === nama.toLowerCase());
+      if (byId) product = byId;
+      else if (sourceId && byName && String(byName.id) !== sourceId) return;
+      else product = byName;
       if (product) {
         // Modul 16 (sesi ini): Import JSON Product Mutation Gate — reroute
         // titik TULIS `product[f]=src[f]` mentah (update produk existing saat
@@ -386,7 +392,7 @@ const ShopDataIO = {
         // object literal mentah PERSIS spt sebelum Modul 16 supaya baris
         // tidak pernah hilang.
         const rawProduct = {
-          id: 'prod_' + Date.now() + '_' + uid(),
+          id: sourceId && !D.products.some((p) => p && String(p.id) === sourceId) ? sourceId : 'prod_' + Date.now() + '_' + uid(),
           name: nama,
           stock: src.stock || 0,
           hargaBeli: src.hargaBeli || 0,
@@ -440,9 +446,13 @@ const ShopDataIO = {
     let produsenCreated = 0;
     produsenList.forEach((p) => {
       if (!p || !p.name) return;
-      const exists = D.produsen.find((x) => x.name.toLowerCase() === String(p.name).toLowerCase());
+      const sourceSupplierId = p.id != null ? String(p.id).trim() : '';
+      const bySupplierId = sourceSupplierId ? D.produsen.find((x) => x && String(x.id) === sourceSupplierId) : null;
+      const bySupplierName = D.produsen.find((x) => x && String(x.name || '').toLowerCase() === String(p.name).toLowerCase());
+      if (!bySupplierId && sourceSupplierId && bySupplierName && String(bySupplierName.id) !== sourceSupplierId) return;
+      const exists = bySupplierId || bySupplierName;
       if (!exists) {
-        const rawSupplier = { id: 'prd_' + Date.now() + '_' + uid(), name: p.name, contact: p.contact || '', note: p.note || '' };
+        const rawSupplier = { id: sourceSupplierId && !D.produsen.some((x) => x && String(x.id) === sourceSupplierId) ? sourceSupplierId : 'prd_' + Date.now() + '_' + uid(), name: p.name, contact: p.contact || '', note: p.note || '' };
         if (typeof SupplierStore !== 'undefined') {
           const sr = SupplierStore.mutateCreate({ name: p.name, contact: p.contact || '', note: p.note || '' });
           if (sr.ok) D.produsen.push({ ...sr.supplier, id: rawSupplier.id }); else D.produsen.push(rawSupplier);
