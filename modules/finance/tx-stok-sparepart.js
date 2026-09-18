@@ -434,9 +434,9 @@ targetPart=np;
 // alur simpan transaksi yg sync) supaya part yg sama bisa dikenali lewat
 // scan barcode/OEM di sesi berikutnya. Kegagalan (mis. VehicleCatalog
 // belum ada) diabaikan diam-diam -- ini pelengkap, bukan syarat simpan.
-if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.create==='function'){
-VehicleCatalog.create({partName:name,category:cat.name}).then(res=>{
-if(res&&res.success&&res.item){np.catalogId=res.item.id;if(typeof save==='function')save();}
+if(typeof VehicleCatalogWriteSOT!=='undefined'&&VehicleCatalogWriteSOT&&typeof VehicleCatalogWriteSOT.ensurePart==='function'){
+VehicleCatalogWriteSOT.ensurePart({partName:name,oemCode:code,category:cat.name},vehicleIdNew).then(ci=>{
+if(ci){np.catalogPartId=ci.id;np.catalogId=ci.id;if(typeof VehicleStockSOT!=='undefined'&&VehicleStockSOT.apply)VehicleStockSOT.apply(np,ci);if(typeof save==='function')save();}
 }).catch(()=>{});
 }
 }
