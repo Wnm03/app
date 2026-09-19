@@ -253,8 +253,9 @@ beforeEl.insertAdjacentElement('beforebegin',row);
 const options=[{v:null,label:'🔍 Semua'},{v:'periksa',label:'🔍 Diperiksa'},{v:'bersih',label:'🧽 Dibersihkan'},{v:'ganti',label:'🔧 Diganti'}];
 row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFilter?'active':''}" data-action="Servis.setActionTypeFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label}</div>`).join('');
 },
-renderList(){
-Servis.renderReminder();
+renderList(opts){
+const _opts=opts||{};
+if(!_opts.skipReminder)Servis.renderReminder();
 
 Servis._loadMasterCategoryFilterPrefsOnce();
 const {from,to}=getCnRange();
@@ -263,7 +264,16 @@ const filterSig=curVehicleId+'|'+(+from)+'|'+(+to)+'|'+Servis.activeActionTypeFi
 if(filterSig!==Servis.lastFilterSig){Servis.listPage=1;Servis.lastFilterSig=filterSig;}
 
 const isUncategorizedFilter=typeof UNCATEGORIZED_FILTER_ID!=='undefined'&&Servis.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
-const logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+const _perfRev=typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.revision==='function'?CarNotesPerformance.revision():null;
+const _cacheKey=_perfRev===null?null:filterSig+'|r'+_perfRev;
+let logs=null;
+if(_cacheKey&&Servis._renderListCache&&Servis._renderListCache.key===_cacheKey)logs=Servis._renderListCache.logs;
+if(!logs){
+  const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());
+  const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());
+  logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||(s.actionType||'ganti')===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+  if(_cacheKey)Servis._renderListCache={key:_cacheKey,logs};
+}
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);
 const lastKm=logs.reduce((m,x)=>x.km&&x.km>m?x.km:m,0);
 document.getElementById('servisCount').textContent=logs.length;
@@ -291,8 +301,14 @@ visible.forEach(s=>{
   if(!g){g={key,sessionId:s.sessionId||null,logs:[]};historyGroupMap.set(key,g);historyGroups.push(g);}
   g.logs.push(s);
 });
+const _partsById=(_cacheKey&&Servis._renderListPartsCache&&Servis._renderListPartsCache.key===_perfRev)?Servis._renderListPartsCache.map:null;
+const partsById=_partsById||new Map((Array.isArray(D.partsStock)?D.partsStock:[]).filter(Boolean).map(p=>[p.id,p]));
+if(_cacheKey&&!_partsById)Servis._renderListPartsCache={key:_perfRev,map:partsById};
+const _catsById=(_cacheKey&&Servis._renderListCatsCache&&Servis._renderListCatsCache.key===_perfRev)?Servis._renderListCatsCache.map:null;
+const catsById=_catsById||new Map((Array.isArray(D.sparepartCats)?D.sparepartCats:[]).filter(Boolean).map(c=>[c.id,c]));
+if(_cacheKey&&!_catsById)Servis._renderListCatsCache={key:_perfRev,map:catsById};
 const renderHistoryItem=s=>{
-const part=s.usedPartId?D.partsStock.find(p=>p.id===s.usedPartId):null;
+const part=s.usedPartId?partsById.get(s.usedPartId):null;
 const partInfo=part?` · 📦 ${s.usedPartQty}${part.unit?' '+escapeHtml(part.unit):''} ${escapeHtml(part.name)}`:'';
 const checklistSummary=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.summaryFromLog==='function')?ServisChecklist.summaryFromLog(s):null;
 const checklistInfo=checklistSummary&&checklistSummary.checked?`<span class="servis-history-badge servis-history-check">☑️ ${checklistSummary.checked}/${checklistSummary.total}</span>${(checklistSummary.replaced||checklistSummary.inspected)?`<span class="servis-history-badge servis-history-replaced">🔧 ${checklistSummary.replaced} diganti</span><span class="servis-history-badge servis-history-inspected">🔍 ${checklistSummary.inspected} diperiksa</span>`:''}`:'';
@@ -301,7 +317,7 @@ const legacyMappingBadge=(!s.serviceComponentId&&['Kampas Rem','Pembersihan Rem'
 const conditionBadge=s.conditionResult&&typeof serviceConditionLabel==='function'?`<span class="servis-history-badge">${typeof serviceConditionIcon==='function'?serviceConditionIcon(s.conditionResult):'🩺'} ${escapeHtml(serviceConditionLabel(s.conditionResult))}</span>`:'';
 const conditionNoteHtml=s.conditionNote?`<div class="servis-history-note">🩺 ${escapeHtml(s.conditionNote)}</div>`:'';
 const fotoInfo=s.foto&&s.foto.length?`<span class="servis-history-badge servis-history-photo">📷 ${s.foto.length}</span>`:'';
-const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(!c.vehicleId||c.vehicleId===curVehicleId)))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,curVehicleId):null);
+const linkedCat=(s.categoryId&&catsById.get(s.categoryId)&&(!catsById.get(s.categoryId).vehicleId||catsById.get(s.categoryId).vehicleId===curVehicleId)?catsById.get(s.categoryId):null)||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,curVehicleId):null);
 const linkedIntervalKm=linkedCat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(curVehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null);
 const linkedIntervalBulan=linkedCat&&typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(linkedCat,curVehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null);
 const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-history-badge servis-history-reminder" title="Terhubung ke Pengingat Servis: kategori dan interval dibaca dari sumber yang sama">🔔 ${escapeHtml(linkedCat.name)} · ${linkedIntervalKm.toLocaleString('id-ID')} km${linkedIntervalBulan?` / ${linkedIntervalBulan.toLocaleString('id-ID')} bln`:''}</span>`:(s.categoryId?`<span class="servis-history-badge servis-history-reminder-missing" title="Kategori servis ada, tetapi interval Pengingat belum aktif untuk kendaraan ini">⚠️ Pengingat belum aktif</span>`:'');

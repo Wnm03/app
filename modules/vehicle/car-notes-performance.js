@@ -3,13 +3,33 @@
  * No duplicate business logic: all calculations still belong to existing SoT engines.
  */
 (function(g){'use strict';
-  const state={revision:0,cache:new Map(),metrics:{renders:0,byTab:{},cacheHits:0,cacheMisses:0,last:null}};
+  const state={revision:0,cache:new Map(),metrics:{renders:0,byTab:{},cacheHits:0,cacheMisses:0,last:null,profiles:{},samples:[]}};
+  const perfEnabled=()=>typeof window!=='undefined'&&window.__APP_PERF_ENABLED===true;
+  const now=()=>typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();
   const arr=v=>Array.isArray(v)?v:[];
   function rev(){return state.revision;}
   function bump(reason){state.revision++;state.cache.clear();state._auditResult=null;state._auditRevision=-1;state.metrics.last={type:'invalidate',reason:reason||'mutation',revision:state.revision,at:Date.now()};return state.revision;}
   function key(domain,id){return domain+'::'+String(id||'fleet')+'::'+state.revision;}
   function memo(domain,id,fn){const k=key(domain,id);if(state.cache.has(k)){state.metrics.cacheHits++;return state.cache.get(k);}state.metrics.cacheMisses++;const value=fn();state.cache.set(k,value);return value;}
   function render(tab){state.metrics.renders++;const t=String(tab||'unknown');state.metrics.byTab[t]=(state.metrics.byTab[t]||0)+1;state.metrics.last={type:'render',tab:t,revision:state.revision,at:Date.now()};}
+  function profile(name,fn,meta){
+    if(typeof fn!=='function')return undefined;
+    if(!perfEnabled())return fn();
+    const t0=now();
+    try{return fn();}
+    finally{
+      const ms=Math.max(0,now()-t0),key=String(name||'unknown');
+      const x=state.metrics.profiles[key]||(state.metrics.profiles[key]={count:0,totalMs:0,maxMs:0,lastMs:0});
+      x.count++;x.totalMs+=ms;x.maxMs=Math.max(x.maxMs,ms);x.lastMs=ms;
+      state.metrics.samples.push({name:key,durationMs:ms,revision:state.revision,at:Date.now(),meta:meta||null});
+      if(state.metrics.samples.length>200)state.metrics.samples.splice(0,state.metrics.samples.length-200);
+    }
+  }
+  function resetProfiles(){state.metrics.profiles={};state.metrics.samples=[];state.metrics.last=null;}
+  function profileReport(){
+    const profiles={};Object.keys(state.metrics.profiles).forEach(k=>{const x=state.metrics.profiles[k];profiles[k]={count:x.count,totalMs:+x.totalMs.toFixed(2),avgMs:+(x.totalMs/x.count).toFixed(2),maxMs:+x.maxMs.toFixed(2),lastMs:+x.lastMs.toFixed(2)};});
+    return {enabled:perfEnabled(),revision:state.revision,profiles,samples:state.metrics.samples.slice(-50),dataCounts:(typeof D!=='undefined'&&D)?{servisLogs:Array.isArray(D.servisLogs)?D.servisLogs.length:0,transactions:Array.isArray(D.transactions)?D.transactions.length:0,partsStock:Array.isArray(D.partsStock)?D.partsStock.length:0,sparepartCats:Array.isArray(D.sparepartCats)?D.sparepartCats.length:0}:null};
+  }
   function beginRender(tab){state._renderStart=typeof performance!=='undefined'&&performance.now?performance.now():Date.now();state._renderTab=String(tab||'unknown');}
   function finishRender(tab){if(state._renderStart==null)return null;const now=typeof performance!=='undefined'&&performance.now?performance.now():Date.now();const duration=Math.max(0,now-state._renderStart);state.metrics.lastDurationMs=duration;state.metrics.last={type:'render-complete',tab:String(tab||state._renderTab||'unknown'),revision:state.revision,durationMs:duration,at:Date.now()};state._renderStart=null;return duration;}
   function inventory(){
@@ -67,7 +87,7 @@
     return result;
   }
   function snapshot(){return {revision:state.revision,metrics:JSON.parse(JSON.stringify(state.metrics)),cacheSize:state.cache.size,featureParity:inventory()};}
-  const api={revision:rev,bump,invalidate:bump,memo,render,beginRender,finishRender,inventory,domainSignatures,runIncremental,auditCurrent,snapshot};
+  const api={revision:rev,bump,invalidate:bump,memo,render,profile,resetProfiles,profileReport,beginRender,finishRender,inventory,domainSignatures,runIncremental,auditCurrent,snapshot};
   g.CarNotesPerformance=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
