@@ -277,8 +277,10 @@ IDBStore.set('kw_v4_mirror',json).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
 _writeLocalSnapshot(json);
 });
+return json;
 }catch(e){
 console.error('Gagal menyimpan data:',e);
+return null;
 }
 }
 function save(){
@@ -330,8 +332,10 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 // tab langsung ditutup/di-suspend setelah ini.
 function saveFlush(){
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
-_saveImmediate();
-_writeLocalSnapshot(_buildSaveJson());
+// S1843 cumulative: _saveImmediate() already builds the exact snapshot sent to IDB.
+// Reuse that JSON for the synchronous localStorage safety net instead of serializing D twice.
+const json=_saveImmediate();
+if(json!==null&&json!==undefined)_writeLocalSnapshot(json);
 }
 let _lastUid=0;
 function uid(){let n=Date.now();if(n<=_lastUid)n=_lastUid+1;_lastUid=n;return n;}
