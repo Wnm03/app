@@ -39,7 +39,7 @@ const path = require('path');
 const vm = require('vm');
 
 const FILES = [
-  'modules/shared/modules-render.js',
+  'modules/shared/modules-render-b.js',
   'modules/shop/modules-render.js',
   'modules/dashboard-hub/dashboard-hub-settings.js',
 ];
@@ -70,7 +70,7 @@ test('SA16 gate sanity: regex di atas memang mendeteksi pola asli & tidak salah 
 // ---- Gate literal per titik ----
 
 const DASH_PREFS_FILES = [
-  'modules/shared/modules-render.js',
+  'modules/shared/modules-render-b.js',
   'modules/shop/modules-render.js',
 ];
 for (const relPath of DASH_PREFS_FILES) {

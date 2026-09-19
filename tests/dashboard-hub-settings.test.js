@@ -43,8 +43,10 @@ function makeEl(id) {
 
 function loadSandbox() {
   const dom = Object.create(null);
-  ['dashCompactModeToggle', 'dashCardDensitySelect', 'dashDefaultTabSelect', 'dashCardOrderList', 'page-dashboard-hub']
+  ['dashCompactModeToggle', 'dashCardDensitySelect', 'dashDefaultTabSelect', 'dashCardOrderList', 'page-dashboard', 'page-dashboard-hub']
     .forEach((id) => { dom[id] = makeEl(id); });
+
+  dom['page-dashboard-hub'].classList.add('active');
 
   const localStorageStore = {};
   const saveCalls = [];
@@ -125,14 +127,23 @@ test('applyDashCardOrder() — kartu baru yang belum ada di custom order tetap i
 });
 
 test('reorderCard() — naik/turun menukar posisi dgn tetangga & tersimpan ke D.dashCardOrder', () => {
-  const { context, saveCalls, renderDashboardCalls } = loadSandbox();
+  const { context, saveCalls, renderDashboardCalls, localStorageStore } = loadSandbox();
   // Sesi P2: 'cashProjection' ditambahkan ke urutan supaya order tetap "penuh" (5 key).
   context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection'];
+  localStorageStore.dashHubSectionTab = 'widget';
   context.DashboardSettings.reorderCard('pensiun', 'up');
   assert.deepEqual(Array.from(context.D.dashCardOrder), ['pensiun', 'fi', 'absensi', 'refleksi', 'cashProjection']);
   assert.equal(saveCalls.length, 1);
   // page-dashboard-hub ada di DOM tiruan -> renderDashboard() ikut terpanggil
   assert.equal(renderDashboardCalls.length, 1);
+});
+
+test('reorderCard() — halaman Dashboard Hub tidak aktif -> tidak render ulang', () => {
+  const { context, dom, renderDashboardCalls } = loadSandbox();
+  dom['page-dashboard-hub'].classList.remove('active');
+  context.D.dashCardOrder = ['fi', 'pensiun', 'absensi', 'refleksi', 'cashProjection'];
+  context.DashboardSettings.reorderCard('pensiun', 'up');
+  assert.equal(renderDashboardCalls.length, 0);
 });
 
 test('reorderCard() — kartu pertama tidak bisa naik (di luar batas -> no-op, bukan error)', () => {

@@ -1379,11 +1379,11 @@ if(!card)return;
 const backupBudgets=D.budgets;
 try{
 D.budgets=[{id:'__selftest_dashbudget__',name:'Tes Diagnostik',icon:'💰',catIds:['__total__'],limit:100000,rollover:false,period:'bulanan'}];
-renderDashboard();
+renderDashboard({force:true});
 _selfTestAssert(card.style.display!=='none','#dashBudgetMiniCard harus tampil (bukan display:none) setelah renderDashboard() saat D.budgets tidak kosong — cek renderDashboard() memanggil renderDashBudgetMini()/Budget.renderDashMini()');
 } finally {
 D.budgets=backupBudgets;
-renderDashboard();
+renderDashboard({force:true});
 }
 }},
 {name:'DebtStrategy.computeOrder() urutkan Avalanche (bunga tertinggi) & Snowball (saldo terkecil) dengan benar', fn:()=>{
