@@ -896,7 +896,7 @@ try{
   try{save();}catch(_rollbackErr){console.error('P18: persisted edit rollback failed',_rollbackErr);}
   throw err;
 }
-closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();refreshServiceReminderState();
+closeModal('servisModal');if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'servis'});
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
   try{VehicleCatalogServisLink.attachToServis(s.id,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);}
   catch(_catalogEditErr){console.error('V24: post-commit catalog edit link failed; queued for reconciliation',_catalogEditErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:s.id,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
@@ -966,7 +966,7 @@ if(txId&&typeof AIBus!=="undefined"){
     if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_createFinanceEvent});
   }
 }
-closeModal('servisModal');renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();Sparepart.renderCatList();refreshServiceReminderState();
+closeModal('servisModal');if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'servis'});
 if(newCatCreated){
 toast(`✅ Catatan servis tersimpan, "${item}" ditambahkan ke Pengingat Servis (tiap ${intervalKm.toLocaleString('id-ID')} km)`);
 } else if(matched&&intervalKm){
@@ -1105,7 +1105,7 @@ const _runDeleteSession=async()=>{
     toast('⚠️ Penghapusan sesi servis dibatalkan karena proses gagal');
     return;
   }
-  renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();refreshServiceReminderState();
+  if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'servis'});
   if(typeof AIBus!=='undefined'){
     for(const txId of txIds){try{AIBus.emit('finance.updated',{txId,kind:'servis',action:'delete',sessionId});}catch(err){console.error('V32: session finance delete event failed',err);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:{txId,kind:'servis',action:'delete',sessionId}});}}
   }
@@ -1151,7 +1151,7 @@ try{
   toast('⚠️ Penghapusan servis dibatalkan karena proses gagal');
   return;
 }
-renderCnTab();renderDashboard();renderKeuangan();Sparepart.renderStockList();refreshServiceReminderState();
+if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'servis'});
 if(deletedTxId&&typeof AIBus!=='undefined'){try{AIBus.emit('finance.updated',{txId:deletedTxId,kind:'servis',action:'delete',deletedId:deletedTxId});}catch(_deleteFinanceEventErr){console.error('V32: finance delete event failed after commit; queued for reconciliation',_deleteFinanceEventErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:{txId:deletedTxId,kind:'servis',action:'delete',deletedId:deletedTxId}});}}
 toast('🗑 Catatan servis dihapus');
 };
@@ -1276,7 +1276,7 @@ autoGantiStock=null;
 }
 }
 try{
-if(!opts._batchDeferSave){save();renderCnTab();renderDashboard();renderKeuangan();}
+if(!opts._batchDeferSave){save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'servis'});}
 
 if(!opts._batchDeferEvents){
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(entry);}catch(_markLifecycleErr){console.error('V27: post-commit service lifecycle failed; queued for reconciliation',_markLifecycleErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});}}

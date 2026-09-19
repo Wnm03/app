@@ -689,8 +689,7 @@ cfg.advance(base);
 v[cfg.tglKey]=base.toISOString().split('T')[0];
 save();
 renderVehTaxList();
-renderDashboard();
-renderKeuangan();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast('✅ Tercatat di Keuangan & jadwal diperpanjang ke '+fmtDateID(v[cfg.tglKey]));
 }
 let editSimId=null;
