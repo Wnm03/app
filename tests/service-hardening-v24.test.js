@@ -16,7 +16,9 @@ const createCatalog=car.indexOf('VehicleCatalogServisLink.attachToServis(servisI
 const createClose=car.indexOf("closeModal('servisModal')",createSave);
 ok(createSave>=0,'service create persists one or more service records');
 ok(createLifecycle>createPersistedLog && createCatalog>createSave,'create post-commit side effects remain after save');
-ok(car.indexOf("save();\nconst _newServisLog",createSave)>createSave,'service create save precedes lifecycle');
+// S1857: save() now takes a scoped-mutation options object (domain/financeMutation/accountIds)
+// instead of being called bare; ordering relative to lifecycle create is what matters here.
+ok(/save\(\{[^)]*\}\);\nconst _newServisLog/.test(car.slice(createSave)),'service create save precedes lifecycle');
 ok(car.indexOf("_postCommitFinanceEvent",car.indexOf('if(s.txLinkId)'))>=0,'edit finance event deferred metadata exists');
 const recordLifecycleCreate=tx.indexOf("ServiceEventLifecycle.create(log",tx.indexOf('function recordServisLog'));
 ok(recordLifecycleCreate<0,'finance service recorder no longer emits lifecycle before transaction commit');

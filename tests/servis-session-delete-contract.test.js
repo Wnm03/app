@@ -13,8 +13,8 @@ test('Servis session delete restores all linked stock and finance state atomical
   assert.match(src,/txIds=new Set\(logs\.map\(x=>x&&x\.txLinkId\)\.filter\(Boolean\)\)/);
   assert.match(src,/Servis\.revertStockUsage\(s\.usedPartId,s\.usedPartQty\)/);
   assert.match(src,/Servis\.revertStockUsage\(s\.catalogPartLinkedStockId,s\.catalogPartQty\)/);
-  assert.match(src,/JSON\.stringify\(D\.servisLogs\)/);
-  assert.match(src,/JSON\.parse\(before\.servisLogs\)/);
+  assert.match(src,/beforeLogs=logs\.map/);
+  assert.match(src,/for\(const row of beforeLogs\)/);
 });
 
 test('Grouped history exposes a session-level delete action',()=>{

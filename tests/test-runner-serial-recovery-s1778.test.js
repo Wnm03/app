@@ -28,4 +28,4 @@ test('S1805 runner: aggregate FULL TEST dihitung setelah serial recovery',()=>{
 });
 
 
-test('S1805 runner: default concurrency dibatasi 4 untuk menghindari empty-TAP akibat contention',()=>assert.match(runner,/Math\.min\(4,typeof os\.availableParallelism/));
+test('S1805 runner: default concurrency dibatasi 4 untuk menghindari empty-TAP akibat contention',()=>assert.match(runner,/Math\.min\(4,detectedParallelism/));

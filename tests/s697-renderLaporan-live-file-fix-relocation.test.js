@@ -64,10 +64,7 @@ test('renderLaporan() live (modules/shared/modules-render-b.js) — #lapKat kate
   assert.match(block, /data-action="showFilteredTx"/);
 });
 
-test('modules/modules-render.js (dead file) TIDAK disentuh sesi ini -- tetap versi lama, bukti fix sengaja direlokasi bukan diduplikasi', () => {
-  const src = fs.readFileSync(path.join(ROOT, 'modules', 'modules-render.js'), 'utf8');
-  // Cuma bukti file itu masih ada apa adanya (masih py fungsi renderLaporan()
-  // sendiri, tanda belum dihapus) -- BUKAN klaim isinya benar/salah, sudah
-  // di luar scope (file ini dead, tidak mempengaruhi app nyata sama sekali).
-  assert.match(src, /function renderLaporan\(\)/);
+test('modules/modules-render.js dead duplicate is retired', () => {
+  assert.equal(fs.existsSync(path.join(ROOT, 'modules', 'modules-render.js')), false,
+    'dead root modules/modules-render.js harus sudah dihapus; canonical live renderer ada di modules/shared/');
 });

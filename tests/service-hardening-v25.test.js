@@ -13,7 +13,8 @@ const delLifecycle=car.indexOf('ServiceEventLifecycle.remove(s,',del);
 ok(delSave>del && delLifecycle>delSave,'delete lifecycle is post-commit');
 const mark=car.indexOf('async markServiced(catId');
 ok(car.indexOf('withServiceMutationLock(_runMarkMutation)',mark)>mark,'markServiced uses shared mutation lock');
-ok(car.indexOf('_restoreMarkDomain()',mark)>mark,'markServiced has rollback path');
+// S1857: rollback restore was scoped to take the affected servisId instead of a bare call.
+ok(car.indexOf('_restoreMarkDomain(',mark)>mark,'markServiced has rollback path');
 ok(spare.includes('logs.sort(typeof compareServiceHistoryRecency'), 'getLastServiceKm uses canonical recency comparator');
 const snap=tx.indexOf('const _serviceEditSnapshot=');
 ok(snap>=0 && tx.indexOf('_serviceMutationTouched',snap)>snap,'Finance has service edit rollback boundary');

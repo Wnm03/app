@@ -41,7 +41,6 @@ const vm = require('vm');
 const FILES = [
   'modules/shared/modules-render.js',
   'modules/shop/modules-render.js',
-  'modules/modules-render.js',
   'modules/dashboard-hub/dashboard-hub-settings.js',
 ];
 
@@ -73,7 +72,6 @@ test('SA16 gate sanity: regex di atas memang mendeteksi pola asli & tidak salah 
 const DASH_PREFS_FILES = [
   'modules/shared/modules-render.js',
   'modules/shop/modules-render.js',
-  'modules/modules-render.js',
 ];
 for (const relPath of DASH_PREFS_FILES) {
   const SRC = fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
