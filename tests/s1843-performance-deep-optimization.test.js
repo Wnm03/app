@@ -31,7 +31,10 @@ test('S1843 saveFlush serializes the critical snapshot only once',()=>{
   const code=(body+'\n'+snapshotHelper).replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
   assert.equal((code.match(/_buildSaveJson\(\)/g)||[]).length,1);
   assert.match(body,/_getSaveSnapshotForVersion\(version\)/);
-  assert.match(body,/IDBStore\.set\('kw_v4_mirror',json\)/);
+  assert.match(body,/_saveImmediate\(json\)/);
+  assert.match(snapshotHelper,/_buildSaveJson\(\)/);
+  assert.match(s,/function _saveImmediate\(snapshotJson\)/);
+  assert.match(s,/IDBStore\.set\('kw_v4_mirror',json\)/);
   assert.match(body,/_writeLocalSnapshot\(json\)/);
 });
 
@@ -47,6 +50,25 @@ test('S1843 cumulative saveFlush mirrors do not re-serialize D for localStorage'
   for(const file of files){
     const s=read(file);
     assert.equal(s.includes('_writeLocalSnapshot(_buildSaveJson())'),false,`${file} still serializes D twice in saveFlush()`);
+  }
+});
+
+test('S1851 hard-flush mirrors call _saveImmediate exactly once with the same snapshot',()=>{
+  const files=[
+    'modules/asset/features-helpers-global-security.js',
+    'modules/finance/features-helpers-global-security.js',
+    'modules/shop/features-helpers-global-security.js',
+    'docs/app-bundle-b.min.js',
+  ];
+  for(const file of files){
+    const s=read(file);
+    const body=functionBody(s,'function saveFlush(){');
+    const immediate=functionBody(s,'function _saveImmediate(snapshotJson){');
+    assert.match(body,/_saveImmediate\(json\);/,`${file} saveFlush() must call _saveImmediate exactly once with the prepared snapshot`);
+    assert.match(body,/_getSaveSnapshotForVersion\(version\)/,`${file} saveFlush() must obtain one versioned snapshot`);
+    assert.match(body,/_writeLocalSnapshot\(json\)/,`${file} saveFlush() must use the same snapshot for synchronous fallback`);
+    assert.match(immediate,/let json=snapshotJson;/,`${file} _saveImmediate() must start from the passed snapshot`);
+    assert.match(immediate,/if\(json===undefined\)json=_getSaveSnapshotForVersion\(version\)/,`${file} _saveImmediate() must only build when no snapshot was passed`);
   }
 });
 

@@ -6,5 +6,6 @@ assert(src.includes('let _savePersistChain=Promise.resolve();'),'source harus pu
 assert(src.includes('_savePersistChain=_savePersistChain.then(()=>IDBStore.set(\'kw_v4_mirror\',json))'),'source harus serialize IDB writes');
 assert(bundle.includes('let _savePersistChain=Promise.resolve();'),'Bundle-B harus membawa persistence queue');
 assert(bundle.includes('_savePersistChain=_savePersistChain.then(()=>IDBStore.set(\'kw_v4_mirror\',json))'),'Bundle-B harus serialize IDB writes');
-assert((src.match(/IDBStore\.set\('kw_v4_mirror'/g)||[]).length===3,'source harus punya tiga mirror write: queued save + flush + startup migration');
+assert((src.match(/_savePersistChain=_savePersistChain\.then\(\(\)=>IDBStore\.set\('kw_v4_mirror',json\)/g)||[]).length>=1,'source harus punya satu jalur queued mirror write');
+assert(src.includes('_writeLocalSnapshot(json)'),'source harus punya synchronous flush fallback');
 console.log('PASS persistence race guard 1742');

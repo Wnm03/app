@@ -6,5 +6,6 @@ ok(s.includes('function _getSaveSnapshotForVersion(version){'),'S1850: snapshot 
 ok(s.includes('if(_saveSnapshotVersion===version&&_saveSnapshotJson!==null)return _saveSnapshotJson;'),'S1850: same-version snapshot reuse missing');
 ok(s.includes('_saveStateVersion++;'),'S1850: save mutation clock missing');
 ok(s.includes('if(_saveQueuedVersion===version)return;'),'S1850: duplicate persistence queue guard missing');
-ok(s.includes('if(_saveQueuedVersion!==version){'),'S1850: flush duplicate-write guard missing');
+ok(s.includes('_savePersistChain=_savePersistChain.then(()=>IDBStore.set(\'kw_v4_mirror\',json))'),'S1850: serialized persistence queue missing');
+ok(s.includes('_saveImmediate(json)'),'S1850: flush must hand the prepared snapshot to _saveImmediate');
 console.log('S1850 persistence tests: 6/6 pass');

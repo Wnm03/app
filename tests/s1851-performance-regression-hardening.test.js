@@ -15,6 +15,10 @@ test('S1851 filter report keeps isolated loadSource tests safe without getAllCat
   assert.match(fl,/const _ftxCats=typeof getAllCats==='function'\?getAllCats\(\):\[\];/);
 });
 
-test('S1851 persistence race contract accounts for save, flush, and recovery mirror writes',()=>{
-  assert.equal((fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8').match(/IDBStore\.set\('kw_v4_mirror'/g)||[]).length,3);
+test('S1851 persistence race contract uses the serialized queue rather than fixed write counts',()=>{
+  const s=fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8');
+  assert.match(s,/let _savePersistChain=Promise\.resolve\(\);/);
+  assert.match(s,/_savePersistChain=_savePersistChain\.then\(\(\)=>IDBStore\.set\('kw_v4_mirror',json\)/);
+  assert.match(s,/function saveFlush\(\)\{/);
+  assert.match(s,/function _saveImmediate\(snapshotJson\)/);
 });
