@@ -1,5 +1,3 @@
-modules/vehicle/pro-mockup-presenter.js
+# Canonical delete manifest for S1860
 pro-ui-layer.css
-
-# S1778: remove duplicate root-level runner; canonical runner is scripts/run-full-test.js
-run-full-test.js
+modules/modules-render.js

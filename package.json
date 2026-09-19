@@ -30,7 +30,17 @@
     "audit:persistence": "node scripts/persistence-integrity-gate.js",
     "audit:pwa": "node scripts/pwa-recovery-integrity-gate.js",
     "audit:features": "node scripts/feature-regression-gate.js",
-    "release:firewall": "node scripts/release-firewall.js"
+    "release:firewall": "node scripts/release-firewall.js",
+    "build:patch": "node scripts/build-with-patch-manifest.js",
+    "audit:test-hygiene": "node scripts/audit-brittle-source-tests.js",
+    "build:atomic": "node scripts/build-atomic.js",
+    "audit:patch-integrity": "node scripts/verify-patch-integrity.js",
+    "audit:duplicates": "node scripts/audit-duplicate-dead-code.js",
+    "audit:runtime-io": "node scripts/audit-runtime-io.js",
+    "audit:event-listeners": "node scripts/audit-event-listeners.js",
+    "audit:scalability": "node scripts/verify-carnotes-scalability.js",
+    "audit:patch-contamination": "node scripts/verify-patch-contamination.js",
+    "verify:reproducible-build": "node scripts/verify-reproducible-build.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",
