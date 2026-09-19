@@ -1,6 +1,7 @@
-PATCH: app-main-AUDIT-SAVEFLUSH-CUMULATIVE-6-CORRECTED
-BASE: app-main + CUMULATIVE-5-COMPLETE
-PURPOSE: update legacy persistence tests to the queue contract and refresh bundle-B via scripts/build.js
-FILES: 12 code/test/bundle files + README + manifest + hashes
-BUILD: node scripts/build.js s1793-final-hardening-1825
-FULL TEST: not claimed; local execution exceeded tool time limit
+PATCH: app-main-AUDIT-SAVEFLUSH-CUMULATIVE-7
+BASE: app-main (31) + KW v1825 patch; CUMULATIVE (includes all SAVEFLUSH fixes from CUMULATIVE-2/5-COMPLETE/6-CORRECTED, so those zips need not be applied first)
+PURPOSE: persistence durability audit + false cross-tab announcement fix + UI self-test isolation
+FILES: 4 persistence mirrors + self-test-cases-b source + 7 persistence regression tests (incl. corrected s1765) + README + manifest + hashes
+BUNDLE: intentionally unchanged; rebuild from canonical full tree with scripts/build.js
+TARGETED TESTS: S1742/S1850/S1852/S1853 persistence audit PASS
+FULL TEST: 7101 tests, 7101 pass, 0 fail (app-main 31 + v1825-TEST-CORRECTION + this single zip; bundle-B NOT rebuilt, see README)
