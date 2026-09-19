@@ -274,10 +274,13 @@ return true;
 // Aset._syncOwnerDebts(a) juga -- guard typeof Aset (fungsi ini murni &
 // dites headless tanpa Aset dimuat, lihat tests/asset-nilai-sync-from-akun-
 // s422f.test.js) supaya tidak WAJIB Aset ada di scope.
-function syncLinkedAssetNilaiFromAkun(){
+function syncLinkedAssetNilaiFromAkun(opts){
+opts=opts||{};
+const _accountFilter=Array.isArray(opts.accountIds)&&opts.accountIds.length?new Set(opts.accountIds.map(String)):null;
 if(!Array.isArray(D.assets)||typeof recalcAccBalance!=='function')return;
 D.assets.forEach((a)=>{
 if(!a.accountId)return;
+if(_accountFilter&&!_accountFilter.has(String(a.accountId)))return;
 const acc=(D.accounts||[]).find(x=>sameId(x.id,a.accountId));
 if(!acc)return;
 const nilaiBaru=recalcAccBalance(acc.id);
