@@ -384,8 +384,9 @@ const el=document.getElementById('servisItem');
 const box=document.getElementById('servisItemSuggestBox');
 if(!el||!box)return;
 const q=el.value.trim().toLowerCase();
-const names=(typeof Sparepart!=='undefined'&&Sparepart.getItemSuggestions)?Sparepart.getItemSuggestions():[];
-const matches=(q?names.filter(n=>n.toLowerCase().includes(q)):names).slice(0,8);
+const namesRaw=(typeof Sparepart!=='undefined'&&Sparepart.getItemSuggestions)?Sparepart.getItemSuggestions():[];
+const names=Array.isArray(namesRaw)?namesRaw:[];
+const matches=(q?names.filter(n=>String(n).toLowerCase().includes(q)):names).slice(0,8);
 if(!matches.length){box.style.display='none';box.innerHTML='';return;}
 box.innerHTML=matches.map(n=>`<div class="suggest-item" onmousedown="event.preventDefault();Servis.selectItemSuggestion('${jsAttrEscape(n)}')">${escapeHtml(n)}</div>`).join('');
 box.style.display='block';
