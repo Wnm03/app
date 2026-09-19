@@ -798,11 +798,12 @@ if(activeTab==='insight'){
   if(typeof FuelTrendDashboard!=='undefined')FuelTrendDashboard.render();
   renderBbmList();
 }else if(activeTab==='servis'){
-  if(typeof renderServiceIntegrityCard==='function')renderServiceIntegrityCard();
-  if(typeof Servis!=='undefined'&&typeof Servis.renderReminder==='function')Servis.renderReminder();
-  renderServisList();
+  const _cnProfile=typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.profile==='function'?CarNotesPerformance.profile:(name,fn)=>fn();
+  if(typeof renderServiceIntegrityCard==='function')_cnProfile('carnotes.render.serviceIntegrity',renderServiceIntegrityCard,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
+  if(typeof Servis!=='undefined'&&typeof Servis.renderReminder==='function')_cnProfile('carnotes.render.serviceReminder',Servis.renderReminder,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
+  _cnProfile('carnotes.render.serviceList',()=>renderServisList({skipReminder:true}),{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
   if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.auditCurrent==='function'){
-    const audit=CarNotesPerformance.auditCurrent();
+    const audit=_cnProfile('carnotes.audit.service',CarNotesPerformance.auditCurrent,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
     const auditEl=document.getElementById('serviceIntegrityCard');
     if(auditEl&&audit&&audit.issues&&audit.issues.length){
       auditEl.setAttribute('data-cn-audit-issues',String(audit.issues.length));

@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1793-final-hardening-1819';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1819';
+const APP_BUILD_VERSION = 's1793-final-hardening-1823';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1793-final-hardening-1823';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -399,6 +399,38 @@ function _getPerfCategoryIndex(){
 }
 function clearPerfIndexes(){_perfAccountIndex={src:null,len:-1,map:null};_perfCategoryIndex={src:null,len:-1,map:null};}
 
+function refreshCarNotesAfterMutation(opts){
+  opts=opts||{};
+  const isVisible=(id)=>{
+    if(typeof document==='undefined')return false;
+    const el=document.getElementById(id);
+    if(!el||el.hidden)return false;
+    if(el.style&&el.style.display==='none')return false;
+    if(el.classList&&el.classList.contains('u-dnone'))return false;
+    return true;
+  };
+  if(!isVisible('page-carnotes'))return;
+  const safe=(name,fn)=>{
+    const t0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+    try{if(typeof fn==='function')fn();}
+    catch(e){console.error('Car Notes scoped refresh failed: '+name,e);}
+    finally{if(t0)_perfMark('render:cn:'+name,t0);}
+  };
+  const tab=typeof curCnTab==='string'?curCnTab:'bbm';
+  if(tab==='servis'){
+    safe('serviceIntegrity',typeof renderServiceIntegrityCard==='function'?renderServiceIntegrityCard:null);
+    safe('serviceList',typeof renderServisList==='function'?renderServisList:null);
+    safe('serviceReminder',typeof refreshServiceReminderState==='function'?refreshServiceReminderState:null);
+    if(typeof Sparepart!=='undefined'){
+      if(opts.stock!==false)safe('stockList',typeof Sparepart.renderStockList==='function'?()=>Sparepart.renderStockList():null);
+      if(opts.categories)safe('categoryList',typeof Sparepart.renderCatList==='function'?()=>Sparepart.renderCatList():null);
+    }
+    return;
+  }
+  if(tab==='bbm'&&opts.bbm&&typeof renderBbmList==='function')safe('bbmList',renderBbmList);
+  else if(tab==='insight'&&opts.insight&&typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==='function')safe('insight',()=>CarNotesPerformance.render('insight'));
+}
+
 function refreshAfterMutation(opts){
   opts=opts||{};
   const isVisible=(id)=>{
@@ -418,14 +450,7 @@ function refreshAfterMutation(opts){
   };
   // If a specific domain is requested, render it only when its page/container is live.
   if(opts.domain==='servis'){
-    if(isVisible('page-carnotes')){
-      safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
-      if(typeof Sparepart!=='undefined'){
-        safe('Sparepart.renderStockList',typeof Sparepart.renderStockList==='function'?()=>Sparepart.renderStockList():null);
-        safe('Sparepart.renderCatList',typeof Sparepart.renderCatList==='function'?()=>Sparepart.renderCatList():null);
-      }
-      safe('refreshServiceReminderState',typeof refreshServiceReminderState==='function'?refreshServiceReminderState:null);
-    }
+    refreshCarNotesAfterMutation(opts);
     return;
   }
   if(opts.domain==='finance'){
@@ -456,8 +481,12 @@ function refreshAfterMutation(opts){
     safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
 }
 
-function save(){
+function save(opts){
+opts=opts||{};
 _saveStateVersion++;
+const _saveDomain=opts.domain||null;
+const _saveFinanceMutation=opts.financeMutation!==false;
+const _saveAccountIds=Array.isArray(opts.accountIds)?opts.accountIds.filter(Boolean):null;
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
 // (renderAccGrid/renderDashAccList/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
@@ -469,14 +498,14 @@ if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 // = saldo akun saat ini (real-time, keputusan desain eksplisit -- lihat komentar
 // TitipanSync.reconcileAccounts()). Ditaruh SETELAH invalidateAccBalCache() supaya
 // recalcAccBalance() di dalamnya baca saldo TERBARU, bukan cache basi dari siklus lalu.
-if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function'){
+if(_saveFinanceMutation&&typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function'){
 const _tTitipan=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
-TitipanSync.reconcileAccounts();
+TitipanSync.reconcileAccounts({accountIds:_saveAccountIds});
 if(_tTitipan)_perfMark('save:TitipanSync',_tTitipan);
 }
-if(typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun();
-if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
-if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
+if(_saveFinanceMutation&&typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun({accountIds:_saveAccountIds});
+if(_saveFinanceMutation&&typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
+if(_saveFinanceMutation&&typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
 // S1752: one mutation clock for Car Notes caches/audits. All feature engines remain the SoT.
 if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.bump==='function')CarNotesPerformance.bump('save');
 // s422g: guard di titik tunggal ini (bukan nambal tiap pemanggil save() satu-satu)
