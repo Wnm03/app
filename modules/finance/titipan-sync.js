@@ -141,7 +141,9 @@ reconcile(a) {
 // Aset), {synced:0,removed:0} kalau D/D.accounts/recalcAccBalance belum
 // tersedia (no-op aman, dipanggil dari save() yang jalan di banyak konteks
 // termasuk sebagian test headless).
-reconcileAccounts() {
+reconcileAccounts(opts) {
+  opts=opts||{};
+  const _accountFilter=Array.isArray(opts.accountIds)&&opts.accountIds.length?new Set(opts.accountIds.map(String)):null;
   const result = { synced: 0, removed: 0 };
   if (typeof D === 'undefined' || !Array.isArray(D.debts) || !Array.isArray(D.accounts)) return result;
   if (typeof recalcAccBalance !== 'function') return result;
@@ -163,6 +165,7 @@ reconcileAccounts() {
   const removedDebtIds = new Set();
   D.accounts.forEach((acc) => {
     if (!acc || acc.id == null) return;
+    if (_accountFilter && !_accountFilter.has(String(acc.id))) return;
     if (linkedAccountIds.has(String(acc.id))) return; // sudah kehitung via Aset tertaut, lihat catatan di atas
     touchedAccountIds.add(String(acc.id));
     let owners = [];
@@ -216,7 +219,11 @@ reconcileAccounts() {
   const beforeFinal = D.debts.length;
   D.debts = D.debts.filter((d) => {
     if (removedDebtIds.has(d && d.id)) return false;
-    if (d && d.linkedAccountId != null && !touchedAccountIds.has(String(d.linkedAccountId))) return false;
+    if (d && d.linkedAccountId != null) {
+      const key=String(d.linkedAccountId);
+      if (_accountFilter) return !_accountFilter.has(key) || touchedAccountIds.has(key);
+      return touchedAccountIds.has(key);
+    }
     return true;
   });
   // Rows removed by the final stale-account rule were not counted above.
