@@ -573,7 +573,7 @@ if(delta>0&&hargaBeli>0&&!isKoreksi){
 const cost=delta*hargaBeli;
 const txId=uid();
 D.transactions.push({id:txId,type:'expense',amount:cost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Beli stok ${name} x${delta}${kategoriLabel}${produsenLabel} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:delta,produsenId:produsenId||undefined,kategoriId:kategoriId||undefined});
-save();closeModal('productModal');this.renderList();renderDashboard();renderKeuangan();
+save();closeModal('productModal');this.renderList();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast(`✅ Produk disimpan, +${delta} stok tercatat sbg pengeluaran ${fmtFull(cost)}`);
 this.syncPairedPrice(product);
 if(this.modalCallback){const cb=this.modalCallback;this.modalCallback=null;cb(product);}

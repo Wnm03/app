@@ -185,7 +185,7 @@ const t=D.cobek.find(x=>x.id===id);
 if(!t)return;
 t.delivered=true;
 save();this.render();renderShop();renderShopRecent();
-if(typeof renderDashboard==='function')renderDashboard();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true});
 if(typeof BusinessFlowPresenter!=='undefined'){BusinessFlowPresenter.renderTab();BusinessFlowPresenter.markRealized(id);}
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
 toast('✅ Ditandai sudah diserahkan');
@@ -436,7 +436,7 @@ save();
 const marginPct=total>0?(profit/total)*100:0;
 if(typeof AIBus!=="undefined")AIBus.emit("delivery.created",{orderId:txId,total,ongkir,delivered,date,marginPct});
 Order.editId=null;
-closeModal('orderModal');renderProductList();renderShop();Order.renderRecent();renderDashboard();renderKeuangan();renderSiapPulang();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
+closeModal('orderModal');renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
 if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
