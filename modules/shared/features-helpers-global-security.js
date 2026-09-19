@@ -323,10 +323,10 @@ _saveSnapshotVersion=version;
 _saveSnapshotJson=json;
 return json;
 }
-function _saveImmediate(){
+function _saveImmediate(snapshotJson){
 const version=_saveStateVersion;
-let json;
-try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+let json=snapshotJson;
+try{if(json===undefined)json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
 if(_saveQueuedVersion===version)return;
 _saveQueuedVersion=version;
 const seq=++_savePersistSeq;
@@ -484,6 +484,7 @@ function refreshAfterMutation(opts){
 function save(opts){
 opts=opts||{};
 _saveStateVersion++;
+if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 const _saveDomain=opts.domain||null;
 const _saveFinanceMutation=opts.financeMutation!==false;
 const _saveAccountIds=Array.isArray(opts.accountIds)?opts.accountIds.filter(Boolean):null;
@@ -544,6 +545,7 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 // sinkron sebagai jaring pengaman, karena IndexedDB async-nya belum tentu sempat commit kalau
 // tab langsung ditutup/di-suspend setelah ini.
 function saveFlush(){
+if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 // S1843 PERF: build the critical snapshot ONCE. Previously _saveImmediate() serialized D,
 // then _buildSaveJson() ran a second full JSON.stringify(D) immediately for localStorage.
@@ -551,16 +553,10 @@ if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;
 const version=_saveStateVersion;
 let json;
 try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk flush:',e);return;}
-if(_saveQueuedVersion!==version){
-  _saveQueuedVersion=version;
-  const seq=++_savePersistSeq;
-  _savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
-    console.error('Gagal menyimpan ke IndexedDB saat flush, fallback ke localStorage:',e);
-    if(seq===_savePersistSeq)_writeLocalSnapshot(json);
-    else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
-    _announcePersistenceWrite();
-  });
-}
+// Keep the public hard-flush contract: saveFlush() must synchronously invoke
+// _saveImmediate() once. Passing the already-built snapshot prevents a second
+// JSON.stringify(D) while preserving the existing persistence queue/dedupe.
+_saveImmediate(json);
 _writeLocalSnapshot(json);
 }
 // P29: flush the latest synchronous snapshot at mobile/page lifecycle boundaries.
