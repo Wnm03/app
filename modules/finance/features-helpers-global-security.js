@@ -198,6 +198,13 @@ let _saveDebounceTimer=null;
 // IndexedDB commit, datanya bisa hilang -- terutama di Safari iOS yang agresif suspend tab.
 // localStorage.setItem() sinkron, jadi tetap jadi jaring pengaman di momen itu saja (lihat
 // tryBackupOnClose() yang manggil saveFlush()), bukan di setiap keystroke.
+var _saveStateVersion=0;
+var _saveSnapshotVersion=-1;
+var _saveSnapshotJson=null;
+var _saveQueuedVersion=-1;
+var _savePersistChain=Promise.resolve();
+var _savePersistSeq=0;
+
 function _buildSaveJson(){
 D.schemaVersion=SCHEMA_VERSION;
 let json;
@@ -234,20 +241,30 @@ else showAlertModal(msg);
 return false;
 }
 }
-function _saveImmediate(){
-try{
+function _getSaveSnapshotForVersion(version){
+if(_saveSnapshotVersion===version&&_saveSnapshotJson!==null)return _saveSnapshotJson;
 const json=_buildSaveJson();
-IDBStore.set('kw_v4_mirror',json).catch(e=>{
-console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
-_writeLocalSnapshot(json);
-});
+_saveSnapshotVersion=version;
+_saveSnapshotJson=json;
 return json;
-}catch(e){
-console.error('Gagal menyimpan data:',e);
-return null;
 }
+function _saveImmediate(snapshotJson){
+const version=_saveStateVersion;
+let json=snapshotJson;
+try{if(json===undefined)json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+if(_saveQueuedVersion===version)return;
+_saveQueuedVersion=version;
+const seq=++_savePersistSeq;
+_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
+console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
+if(seq===_savePersistSeq)_writeLocalSnapshot(json);
+else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
+_announcePersistenceWrite();
+});
 }
 function save(){
+_saveStateVersion++;
+if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
 // (renderAccGrid/renderDashAccList/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
@@ -295,12 +312,52 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 // sinkron sebagai jaring pengaman, karena IndexedDB async-nya belum tentu sempat commit kalau
 // tab langsung ditutup/di-suspend setelah ini.
 function saveFlush(){
+if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
-// S1843 cumulative: _saveImmediate() already builds the exact snapshot sent to IDB.
-// Reuse that JSON for the synchronous localStorage safety net instead of serializing D twice.
-const json=_saveImmediate();
-if(json!==null&&json!==undefined)_writeLocalSnapshot(json);
+// S1851/S1852: hard flush builds one snapshot and reuses it for IDB + localStorage.
+const version=_saveStateVersion;
+let json;
+try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk flush:',e);return false;}
+_saveImmediate(json);
+_writeLocalSnapshot(json);
+return true;
 }
+
+// S1852: lifecycle durability + cross-instance stale-state guard.
+var _lifecycleFlushInstalled=false;
+function _installPersistenceLifecycleFlush(){
+if(_lifecycleFlushInstalled||typeof window==='undefined'||typeof document==='undefined')return;
+_lifecycleFlushInstalled=true;
+const flush=()=>{try{saveFlush();}catch(e){console.error('Gagal flush persistence saat lifecycle:',e);}};
+if(typeof document.addEventListener==='function'){
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();});
+ document.addEventListener('freeze',flush);
+}
+if(typeof window.addEventListener==='function'){
+ window.addEventListener('pagehide',flush);
+ window.addEventListener('beforeunload',flush);
+}
+}
+_installPersistenceLifecycleFlush();
+var _crossTabStateStale=false;
+var _crossTabWarnShown=false;
+var _crossTabChannel=null;
+var _crossTabInstance='mirror_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+function _markCrossTabStale(){
+if(_crossTabStateStale)return;
+_crossTabStateStale=true;
+if(!_crossTabWarnShown){_crossTabWarnShown=true;const msg='⚠️ Data aplikasi berubah dari tab/perangkat aplikasi lain. Muat ulang sebelum melakukan perubahan lanjutan agar data terbaru tetap aman.';if(typeof toast==='function')toast(msg,6500);else console.warn(msg);}
+}
+function _announcePersistenceWrite(){
+try{if(typeof localStorage!=='undefined')localStorage.setItem('kw_v4_writer',_crossTabInstance+'|'+Date.now());}catch(e){void e;}
+try{if(_crossTabChannel)_crossTabChannel.postMessage({type:'kw-v4-write',source:_crossTabInstance,ts:Date.now()});}catch(e){void e;}
+}
+function _installCrossTabPersistenceGuard(){
+if(typeof window==='undefined')return;
+if(typeof BroadcastChannel==='function'){try{_crossTabChannel=new BroadcastChannel('kw_v4_persistence');_crossTabChannel.addEventListener('message',e=>{if(e&&e.data&&e.data.type==='kw-v4-write'&&e.data.source!==_crossTabInstance)_markCrossTabStale();});}catch(e){_crossTabChannel=null;}}
+if(typeof window.addEventListener==='function'){window.addEventListener('storage',e=>{if(e&&e.key==='kw_v4_writer'&&e.newValue&&e.newValue.indexOf(_crossTabInstance+'|')!==0)_markCrossTabStale();});}
+}
+_installCrossTabPersistenceGuard();
 let _lastUid=0;
 function uid(){let n=Date.now();if(n<=_lastUid)n=_lastUid+1;_lastUid=n;return n;}
 function sameId(a,b){return String(a)===String(b);}
