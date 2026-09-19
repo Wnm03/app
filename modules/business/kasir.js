@@ -373,7 +373,7 @@ const shopRecord=D.cobek.find(c=>c.id===result.shopId);
 if(shopRecord)shopRecord.piutangLinkId=pid;
 }
 save();
-renderProductList();renderShop();Order.renderRecent();renderDashboard();renderKeuangan();renderSiapPulang();
+renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
 toast(sisa>0?`✅ Tersimpan — DP ${fmtFull(dpVal)}, sisa ${fmtFull(sisa)} otomatis masuk Piutang`:'✅ Transaksi tersimpan & tersinkron ke Keuangan');
 Kasir.reset();

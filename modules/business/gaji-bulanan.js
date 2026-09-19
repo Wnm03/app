@@ -88,6 +88,5 @@ D.profile.gajiBulananLastRecordedMonth=ym;
 save();
 closeModal('monthlyGajiModal');
 toast(`✅ Gaji bulanan ${fmtFull(amount)} dicatat sebagai Pemasukan! 🎉`);
-renderDashboard();
-renderKeuangan();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 }
