@@ -315,6 +315,19 @@ return false;
 // tetap lanjut ke snapshot berikutnya dan snapshot yang gagal punya fallback LS.
 let _savePersistChain=Promise.resolve();
 let _savePersistSeq=0;
+var _savePersistStamp=0;
+var _saveQueuedStamp=0;
+const _savePersistMetaKey='kw_v4_persist_meta';
+function _readSavePersistMeta(){
+try{const raw=localStorage.getItem(_savePersistMetaKey);const m=raw?JSON.parse(raw):null;return m&&typeof m==='object'?{localTs:Number(m.localTs)||0,idbTs:Number(m.idbTs)||0}:{localTs:0,idbTs:0};}catch(e){return {localTs:0,idbTs:0};}
+}
+function _nextSavePersistStamp(){
+const m=_readSavePersistMeta();const now=Date.now();const stamp=Math.max(now,m.localTs,m.idbTs,_savePersistStamp)+1;_savePersistStamp=stamp;return stamp;
+}
+function _markSavePersistMeta(kind,stamp){
+if(!stamp)return false;try{const m=_readSavePersistMeta();if(kind==='local')m.localTs=Math.max(m.localTs,stamp);else if(kind==='idb')m.idbTs=Math.max(m.idbTs,stamp);localStorage.setItem(_savePersistMetaKey,JSON.stringify(m));return true;}catch(e){return false;}
+}
+
 // S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
 function _getSaveSnapshotForVersion(version){
 if(_saveSnapshotVersion===version&&_saveSnapshotJson!==null)return _saveSnapshotJson;
@@ -327,15 +340,17 @@ function _saveImmediate(snapshotJson){
 const version=_saveStateVersion;
 let json=snapshotJson;
 try{if(json===undefined)json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
-if(_saveQueuedVersion===version)return;
+if(_saveQueuedVersion===version)return _saveQueuedStamp;
 _saveQueuedVersion=version;
+const stamp=_nextSavePersistStamp();
+_saveQueuedStamp=stamp;
 const seq=++_savePersistSeq;
-_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
+_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_markSavePersistMeta('idb',stamp);_announcePersistenceWrite();}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
-if(seq===_savePersistSeq)_writeLocalSnapshot(json);
+if(seq===_savePersistSeq){const fallbackOk=_writeLocalSnapshot(json);if(fallbackOk){_markSavePersistMeta('local',stamp);_announcePersistenceWrite();}else{_saveQueuedVersion=-1;_saveQueuedStamp=0;}}
 else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
-_announcePersistenceWrite();
 });
+return stamp;
 }
 
 // S1841: scoped post-mutation rendering.
@@ -556,8 +571,9 @@ try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal meny
 // Keep the public hard-flush contract: saveFlush() must synchronously invoke
 // _saveImmediate() once. Passing the already-built snapshot prevents a second
 // JSON.stringify(D) while preserving the existing persistence queue/dedupe.
-_saveImmediate(json);
-_writeLocalSnapshot(json);
+const persistStamp=_saveImmediate(json);
+const localOk=_writeLocalSnapshot(json);
+if(localOk)_markSavePersistMeta('local',persistStamp);
 }
 // P29: flush the latest synchronous snapshot at mobile/page lifecycle boundaries.
 // visibilitychange is the primary signal on Android/iOS when an app is backgrounded;
@@ -928,6 +944,9 @@ if(!p&&lsRaw){
   // Jangan set fromIdb: snapshot LS yang lolos recovery perlu dimigrasikan
   // kembali ke mirror IDB, tetapi hanya setelah JSON tervalidasi.
  }
+}
+if(idbRaw&&lsRaw){
+ try{const _pm=_readSavePersistMeta();if(_pm.localTs>_pm.idbTs){const _lp=_parseStoredSnapshot(lsRaw,'localStorage-newer');if(_lp){p=_lp;s=lsRaw;fromIdb=false;}}}catch(e){void e;}
 }
 if(!p){
  if(idbRaw||lsRaw){

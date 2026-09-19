@@ -186,9 +186,14 @@ if(backupKw4===null)localStorage.removeItem('kw_v4'); else localStorage.setItem(
 {name:'save() di-debounce (PERFORMA): beberapa panggilan berturutan cuma menulis ke disk SATU KALI', fn:async()=>{
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 const original=_saveImmediate;
+const staleBefore=typeof _crossTabStateStale!=='undefined'?_crossTabStateStale:false;
+const warnBefore=typeof _crossTabWarnShown!=='undefined'?_crossTabWarnShown:false;
 let callCount=0;
 _saveImmediate=function(){callCount++;};
 try{
+// Isolate the contract test from a real cross-tab stale state. Production guard remains intact.
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=false;
+if(typeof _crossTabWarnShown!=='undefined')_crossTabWarnShown=false;
 save();save();save();save();save();
 const pollStart=Date.now();
 while(callCount===0 && (Date.now()-pollStart)<3000){ await new Promise(r=>setTimeout(r,25)); }
@@ -212,6 +217,8 @@ await new Promise(r=>setTimeout(r,500));
 _selfTestAssert(callCount===1,'Tidak boleh ada _saveImmediate() tambahan setelah saveFlush() (timer debounce lama harusnya sudah dibatalkan)');
 } finally {
 _saveImmediate=original;
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=staleBefore;
+if(typeof _crossTabWarnShown!=='undefined')_crossTabWarnShown=warnBefore;
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 }
 }},
@@ -821,3 +828,9 @@ _selfTestAssert(coreOk,'TitipanReconcile.checkAll() menemukan gap -- sync.ok='+r
 function __kwSelfTestCases(){
 return __kwSelfTestCasesA().concat(__kwSelfTestCasesB());
 }
+
+// CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi
+// namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load &
+// "gagal" kalau `node --test` dijalankan TANPA argumen di root. `npm test`
+// sudah aman (lihat package.json: `node --test tests/*.test.js`, membatasi
+// hanya folder tests/) — lihat juga catatan di README.md bagian Testing.
