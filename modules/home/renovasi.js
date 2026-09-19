@@ -353,7 +353,7 @@ if(calcDetail&&calcDetail.type==='absensi')Tukang.markUsed(calcDetail.entryIds,n
 RenovCalc._pendingDetail=null;
 Renov.editItemId=null;
 save();closeModal('renovItemModal');
-Renov.render();renderDashboard();renderKeuangan();
+Renov.render();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 Renov.openDetail(p.id);
 toast('✅ Item tersimpan');
 },
@@ -370,13 +370,13 @@ const newTx={id:txId,type:'expense',amount:it.harga,category:it.category||'Renov
 if(it.deductionOwnerId)newTx.deductionOwnerId=it.deductionOwnerId;
 D.transactions.push(newTx);
 it.paid=true;it.txId=txId;it.paidDate=tglBayar;
-save();renderDashboard();renderKeuangan();Renov.render();Renov.renderDetail();
+save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});Renov.render();Renov.renderDetail();
 toast('✅ Item ditandai lunas & transaksi tercatat di Keuangan');
 } else {
 if(!await askConfirm(`Batalkan status lunas "${escapeHtml(it.name)}"? Transaksi terkait di Keuangan akan ikut dihapus.`,{title:'Batalkan Lunas',okText:'Ya, Batalkan'}))return;
 if(it.txId)D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));
 it.paid=false;it.txId=null;it.paidDate=null;
-save();renderDashboard();renderKeuangan();Renov.render();Renov.renderDetail();
+save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});Renov.render();Renov.renderDetail();
 toast('↺ Status lunas dibatalkan, transaksi terkait dihapus');
 }
 },
@@ -407,7 +407,7 @@ D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));
 }
 if(it.calcDetail&&it.calcDetail.type==='absensi')Tukang.releaseEntries(it.calcDetail.entryIds);
 p.items=p.items.filter(x=>!sameId(x.id,itemId));
-save();renderDashboard();renderKeuangan();Renov.render();Renov.renderDetail();
+save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});Renov.render();Renov.renderDetail();
 toast('🗑 Item dihapus');
 },
 onLinkedTxDeleted(t){
@@ -454,7 +454,7 @@ else if(t.deductionOwnerId)it.deductionOwnerId=t.deductionOwnerId;
 t.renovProjectLinkId=p.id;t.renovItemLinkId=it.id;
 Renov.editItemId=null;
 save();closeModal('linkTxModal');closeModal('renovItemModal');
-Renov.render();renderDashboard();renderKeuangan();
+Renov.render();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 Renov.openDetail(p.id);
 toast('✅ Transaksi lama dihubungkan ke item renovasi (tidak dobel)');
 }
