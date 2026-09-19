@@ -10,45 +10,97 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s1793-final-hardening-1823';
+const MODULE_RENDER_VERSION='s1793-final-hardening-1825';
+
+function renderAsetCore(){
+// Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
+// source of truth; this helper only centralizes when it is invoked so hidden Manajemen/
+// Investasi presenters do not run during page navigation.
+renderAssetList();
+AlokasiAset.init();
+renderWealthSnapshots();
+}
 
 function renderPageContent(name){
-// KW perf fix: jaring pengaman selain hook di save() -- pastikan cache saldo akun juga fresh
-// tiap ganti halaman/refresh page penuh (mis. showPage(), restore data), bukan cuma tiap save().
+// PERF NAVIGATION GUARD: cache invalidation tetap dilakukan di titik ini untuk menjaga
+// correctness saat full-page refresh/restore, tetapi renderer berat hanya dijalankan untuk
+// tab yang benar-benar aktif. Tidak mengubah business logic; hanya mengubah KAPAN presenter UI
+// dipanggil. Sub-tab switcher masing-masing tetap menjadi SoT render saat tab dibuka.
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
 if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
+
 if(name==='dashboard')renderDashboard();
 if(name==='dashboard-hub'&&typeof DashboardHub!=='undefined')DashboardHub.render();
 if(name==='keuangan'){
-populateKeuFilters();loadKeuFilterPrefsIntoDOM();renderKeuangan();renderBillList();
-const lapTab=document.getElementById('keuanganTab-laporan');
-if(lapTab&&lapTab.style.display!=='none'){populateCatFilter();populateAccFilters();renderLaporan();}
+  const tab=getActivePageTab('page-keuangan','kelola');
+  if(tab==='kelola'){
+    populateKeuFilters();loadKeuFilterPrefsIntoDOM();renderKeuangan();
+  }else if(tab==='tagihan'){
+    renderBillList();
+  }else if(tab==='budget'){
+    renderBudgets();if(typeof BudgetReko!=='undefined')BudgetReko.init();
+  }else if(tab==='utangpiutang'){
+    if(typeof Piutang!=='undefined')Piutang.renderList();
+    if(typeof Debt!=='undefined')Debt.renderList();
+  }else if(tab==='akun'){
+    if(typeof renderAccGrid==='function')renderAccGrid();
+  }else if(tab==='asetproyek'){
+    if(typeof Pensiun!=='undefined')Pensiun.render();
+    if(typeof Renov!=='undefined')Renov.render();
+    else if(typeof ensureRenov==='function')ensureRenov().then(function(){if(typeof Renov!=='undefined')Renov.render();}).catch(function(e){console.error('[Renov] Gagal lazy-load modules/home/renovasi.js:',e);});
+    if(typeof SewaKios!=='undefined')SewaKios.render();
+    else if(typeof ensureSewaKios==='function')ensureSewaKios().then(function(){if(typeof SewaKios!=='undefined')SewaKios.render();}).catch(function(e){console.error('[SewaKios] Gagal lazy-load modules/business/sewakios.js:',e);});
+  }else if(tab==='laporan'){
+    populateCatFilter();populateAccFilters();renderLaporan();renderKeuangan();
+  }
 }
-if(name==='shop'){renderShopRecent();renderProductList();renderShop();if(typeof Kasir!=='undefined')Kasir.render();}
+if(name==='shop'){
+  // Shop sebelumnya merender 5+ presenter besar sekaligus saat masuk halaman,
+  // walaupun hanya satu sub-tab yang terlihat. Sekarang 1 sub-tab = 1 render owner.
+  const tab=getActivePageTab('page-shop','kasir');
+  if(tab==='kasir'){
+    if(typeof Kasir!=='undefined')Kasir.render();
+  }else if(tab==='jual'){
+    renderShopRecent();
+  }else if(tab==='etalase'){
+    renderProductList();
+  }else if(tab==='produsen'){
+    renderProdusenList();
+  }else if(tab==='riwayat'){
+    renderShop();renderShopGrafik();
+  }else if(tab==='pelanggan'){
+    renderCustomerList();
+  }else if(tab==='laporan'){
+    if(typeof Laporan!=='undefined'&&typeof Laporan.renderTab==='function')Laporan.renderTab();
+    else renderShop();
+  }else if(tab==='bi'){
+    if(typeof ShopBusinessEnginePresenter!=='undefined')ShopBusinessEnginePresenter.render();
+    if(typeof TripPresenter!=='undefined')TripPresenter.render();
+    if(typeof BusinessFlowPresenter!=='undefined')BusinessFlowPresenter.render();
+    if(typeof BusinessIntelligencePresenter!=='undefined')BusinessIntelligencePresenter.render();
+    else if(typeof ensureBusinessIntelligence==='function')ensureBusinessIntelligence().then(function(){if(typeof BusinessIntelligencePresenter!=='undefined')BusinessIntelligencePresenter.render();}).catch(function(e){console.error('[BusinessIntelligencePresenter] Gagal lazy-load:',e);});
+  }
+}
 if(name==='laporan'){populateCatFilter();populateAccFilters();renderLaporan();}
 if(name==='carnotes'){renderVehicleSelect();renderCnTab();}
 if(name==='ai')initChat();
 if(name==='pajak')renderPajakZakat();
 if(name==='aset'){
-renderAssetList();AlokasiAset.init();renderWealthSnapshots();
-// Property/Rental Management, Asset Portfolio, Asset Maintenance (S101-104)
-// — DIPINDAH dari DashboardHub.render() (dashboard-hub.js) ke sini, pola
-// sama Sesi 133 Finance/Vehicle (renderKeuangan()/renderCnTab()). 100%
-// reuse presenter yang sama, container-nya sekarang di tab "Manajemen"
-// #page-aset (lihat index.html).
-if(typeof PropertyManagementPresenter!=='undefined')PropertyManagementPresenter.render();
-if(typeof RentalManagementPresenter!=='undefined')RentalManagementPresenter.render();
-if(typeof AssetPortfolioPresenter!=='undefined')AssetPortfolioPresenter.render();
-if(typeof AssetMaintenancePresenter!=='undefined')AssetMaintenancePresenter.render();
-// Investasi (S466, Fase 1 BUG-INV-001 Opsi 3) — dipanggil di sini SEKALI tiap
-// #page-aset dibuka (sama pola presenter Manajemen di atas), TERLEPAS dari tab mana
-// yang lagi aktif -- konsisten dgn komentar lama di file ini "Semua card di dalam
-// pane tetap dirender penuh...TERLEPAS dari tab mana yang lagi aktif" (lihat
-// setAsetTab() di aset.js). setAsetTab('investasi') JUGA memanggil ulang render()
-// ini saat tab-nya benar2 dibuka (fresh data), jadi pemanggilan ganda di sini aman
-// & murah (render() murni baca D.investments, 0 side-effect).
-if(typeof InvestmentListUI!=='undefined')InvestmentListUI.render();
+  const tab=getActivePageTab('page-aset','ringkasan');
+  // Aset.renderList() tetap menjadi SoT untuk Buku/summary/analysis (renderer ini memang
+  // mengisi beberapa kartu terkait). Yang dihindari di sini adalah presenter domain yang
+  // hanya hidup di tab Manajemen/Investasi dan sebelumnya selalu dihitung saat page dibuka.
+  if(tab!=='manajemen'&&tab!=='investasi')renderAsetCore();
+  if(tab==='manajemen'){
+    if(typeof PropertyManagementPresenter!=='undefined')PropertyManagementPresenter.render();
+    if(typeof RentalManagementPresenter!=='undefined')RentalManagementPresenter.render();
+    if(typeof AssetPortfolioPresenter!=='undefined')AssetPortfolioPresenter.render();
+    if(typeof AssetMaintenancePresenter!=='undefined')AssetMaintenancePresenter.render();
+  }
+  if(tab==='investasi'){
+    if(typeof InvestmentListUI!=='undefined')InvestmentListUI.render();
+  }
 }
 if(name==='settings'){renderSettings();renderBillList();}
 }
@@ -1534,30 +1586,5 @@ if(!el)return;
 el.classList.remove('u-dnone');
 el.style.display='';
 }
-function renderDashCardPrefsUI(){
-const wrap=document.getElementById('dashCardPrefsList');
-if(!wrap)return;
-wrap.innerHTML=`<div class="u-flex u-gap8 u-mb10">
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[true]'>✅ Aktifkan Semua</button>
-      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[false]'>🚫 Matikan Semua</button>
-    </div>`
-+DASH_CARD_DEFS.map(c=>`
-    <div class="setting-item">
-      <div class="setting-label">${c.label}</div>
-      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} data-onchange="toggleDashCardPref" data-onchange-args='["${c.key}","$checked"]'><span class="tgl-track"></span></label>
-    </div>`).join('');
-}
-function setAllDashCardPrefs(on){
-if(!D.dashCardPrefs)D.dashCardPrefs={};
-DASH_CARD_DEFS.forEach(c=>{if(on)delete D.dashCardPrefs[c.key];else D.dashCardPrefs[c.key]=false;});
-save();
-renderDashCardPrefsUI();
-if(document.getElementById('page-dashboard-hub'))renderDashboard();
-}
-function toggleDashCardPref(key,checked){
-if(!D.dashCardPrefs)D.dashCardPrefs={};
-if(checked)delete D.dashCardPrefs[key]; else D.dashCardPrefs[key]=false;
-save();
-if(document.getElementById('page-dashboard-hub'))renderDashboard();
-}
+
 

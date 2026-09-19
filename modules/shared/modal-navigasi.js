@@ -313,7 +313,8 @@ if(!_mainAppNavPopInProgress&&!(opts&&opts.fromHistory)&&el){
 }
 _cancelAllCustomDialogQueues();
 _modalHistoryClearForPage();
-document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.open').forEach(o=>{
+const _openOverlays=document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.open');
+_openOverlays.forEach(o=>{
   _focusTrapDeactivate(o);
 });
 // BUGFIX (audit "semua tombol di Car Notes tidak respon", laporan user, v1025):
@@ -330,7 +331,7 @@ document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.op
 // tiap kali user pindah tab bawah -- pindah tab = keluar dari konteks modal
 // manapun, jadi aman ditutup paksa tanpa animasi (bukan closeModal() biasa,
 // supaya tidak nunggu 260ms/animationend & tidak konflik state modal lain).
-document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.open').forEach(o=>{
+_openOverlays.forEach(o=>{
 o.classList.remove('open');
 o.classList.remove('closing');
 });
@@ -366,6 +367,14 @@ const pageEl=document.getElementById('page-'+name);
 if(!pageEl){
 console.warn(`showPage: halaman #page-${name} tidak ditemukan di DOM -- cek nama page/id (mis. typo, atau halaman belum dirender).`);
 return;
+}
+// PERF NAV: tap ulang nav item yang sudah aktif tidak perlu merender seluruh halaman lagi.
+// Hanya berlaku untuk navigation chrome; programmatic showPage(name) tetap refresh penuh.
+const _sameActiveNav=pageEl.classList.contains('active')&&el&&el.classList&&el.classList.contains('nav-item');
+if(_sameActiveNav){
+  el.classList.add('active');
+  el.setAttribute('aria-current','page');
+  return;
 }
 pageEl.classList.add('active');
 const activeBtn=el||document.querySelector(`.nav-item[onclick*="'${name}'"]`);

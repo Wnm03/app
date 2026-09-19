@@ -149,7 +149,7 @@ function carNotesFabToggleMain(el){ const _o=document.getElementById('carNotesFa
 
 function clickAssetImportFile(){ document.getElementById('assetImportFile').click(); }
 function printWindow(){ window.print(); }
-function goToDashboardHub(){ showPage('dashboard-hub'); DashboardHub.render(); }
+function goToDashboardHub(){ showPage('dashboard-hub'); }
 
 function qsKeuTambahAkun(){ closeQS('qsKeuangan'); openAccModal(); }
 function qsKeuTransferAkun(){ closeQS('qsKeuangan'); openTransferModal(); }

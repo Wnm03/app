@@ -1,3 +1,24 @@
+
+// Shared navigation helpers for render ownership. Defined in render-b because it loads
+// immediately after modules-render.js; keeping it here prevents the main renderer from
+// growing past the source-size guard while remaining available at runtime.
+function getActivePageTab(pageId,defaultTab){
+  try{
+    const page=document.getElementById(pageId);
+    const buttons=page&&page.querySelectorAll?page.querySelectorAll('.cn-tab'):null;
+    if(buttons){
+      for(const btn of buttons){
+        if(btn.classList?.contains('active')){
+          const raw=btn.getAttribute('data-args');
+          const args=raw?JSON.parse(raw):[];
+          if(args&&args[0])return args[0];
+        }
+      }
+    }
+  }catch(e){ /* isolated DOM/test environments may omit tab APIs; use default */ }
+  return defaultTab;
+}
+
 // modules/shared/modules-render-b.js — lanjutan modules/shared/modules-render.js
 // (Audit ukuran file, lanjutan S589/s644): file modules-render.js dipecah jadi 2 supaya
 // di bawah OVERSIZED_FILE_LINE_THRESHOLD (1600 baris, scripts/build.js). File ini berisi
@@ -41,6 +62,21 @@ const exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s
 return{inc,exp};
 }
 function renderDashboard(){
+const options=(arguments[0]&&typeof arguments[0]==='object')?arguments[0]:{};
+const _activePage=(typeof document!=='undefined'&&typeof document.querySelector==='function')?document.querySelector('.page.active'):null;
+const _dashboardHubActive=!!(_activePage&&_activePage.id==='page-dashboard-hub');
+const _legacyDashboardActive=!!(_activePage&&_activePage.id==='page-dashboard');
+const _hubSection=(typeof localStorage!=='undefined'&&localStorage.getItem('dashHubSectionTab'))||'ringkasan';
+// Dashboard Hub now owns the default landing page. Legacy Beranda widgets
+// only need rendering while the legacy page is visible or while the Hub's
+// Widget tab is visible. `force:true` preserves the diagnostic/self-test API.
+const _renderLegacyDashboard=options.force===true||_legacyDashboardActive||(_dashboardHubActive&&_hubSection==='widget');
+// `hubLive:false` is used by DashboardHub.renderSection('widget') because
+// renderDashboard() is already the widget renderer in that path. Without the
+// flag, the function would finish its widget work and schedule another Hub
+// render pass immediately afterward.
+const _hubLive=options.hubLive!==false;
+if(_renderLegacyDashboard){
 LifeBalance.render();
 // Konteks bulan-berjalan dihitung SEKALI di sini (dulu FinCoach & dashBillCard hitung
 // txM/inc/exp/billStats sendiri-sendiri lagi walau datanya sama persis dengan yang dihitung di
@@ -107,6 +143,7 @@ cardDef.render(dashCtx);
 console.warn('renderDashboard: card "'+key+'" ('+cardDef.elId+') gagal dirender, dilewati:',e);
 }
 }
+}
 // ================== DASHBOARD HUB — LIVE WIRING (dashboard wiring Fase 2) ==================
 // renderDashboard() sudah dipanggil dari puluhan titik save() di seluruh app (transaksi, shop,
 // vehicle, akun, kategori, tagihan, dst) — Advisor.render()/LifeBalance.render() di atas SUDAH
@@ -133,6 +170,7 @@ console.warn('renderDashboard: card "'+key+'" ('+cardDef.elId+') gagal dirender,
 // dashboard-core (Advisor/LifeBalance/kartu ringkasan/loop DASH_RENDER_ORDER di atas) dulu
 // sebelum blok ini menyusul sepersekian detik kemudian. 0 perubahan logika/urutan/isi widget —
 // yang berubah cuma KAPAN blok ini dieksekusi, bukan APA yang dieksekusi ataupun isi try/catch-nya.
+if(!_dashboardHubActive||!_hubLive)return;
 runDeferredOrNow(function(){
 // S159 (bugfix — kartu presenter tertentu "menghitung terus"): blok ini
 // SEBELUMNYA 1 try/catch besar membungkus ~14 presenter berurutan. Kalau
@@ -143,10 +181,25 @@ runDeferredOrNow(function(){
 // sama persis dgn loop DASH_RENDER_ORDER di atas blok ini) -- 1 presenter
 // gagal cuma melewati presenter itu, sisanya tetap jalan. 0 perubahan
 // urutan/logika presenter manapun, murni isolasi failure.
+const _hubRenderSection={
+DashboardHubHero:'always',
+DashboardHubTickerModern:'always',
+DashboardHubSummary:'ringkasan',DashboardHubAnalytics:'ringkasan',DashboardHubOwnershipSummary:'ringkasan',
+DashboardHubFavoritView:'fitur',
+// These presenters no longer belong to Dashboard Hub. Keep them explicitly
+// disabled here as a regression guard so future wiring cannot accidentally
+// bring their expensive domain renders back into this hot path.
+PropertyManagementPresenter:'never',RentalManagementPresenter:'never',AssetPortfolioPresenter:'never',AssetMaintenancePresenter:'never',
+ShopBusinessEnginePresenter:'never',TripPresenter:'never',BusinessFlowPresenter:'never',BusinessIntelligencePresenter:'never',
+ShopMiniSummary:'insight',CrossDashboardCard:'insight',CrossInsightPresenter:'insight',UnifiedBriefingPresenter:'insight',UnifiedDashboardHome:'insight',DecisionCenterHome:'insight',EIEDashboard:'insight'
+};
 function _safeRender(name,fn){
+const section=_hubRenderSection[name];
+if(section==='never'||(section&&section!=='always'&&section!==_hubSection))return;
 try{fn();}catch(e){console.warn('renderDashboard: presenter "'+name+'" gagal dirender, dilewati:',e);}
 }
 _safeRender('DashboardHubHero',function(){if(typeof DashboardHubHero!=='undefined')DashboardHubHero.render();});
+_safeRender('DashboardHubTickerModern',function(){if(typeof DashboardHubTickerModern!=='undefined')DashboardHubTickerModern.render();});
 _safeRender('DashboardHubSummary',function(){if(typeof DashboardHubSummary!=='undefined')DashboardHubSummary.render();});
 _safeRender('DashboardHubAnalytics',function(){if(typeof DashboardHubAnalytics!=='undefined')DashboardHubAnalytics.render();});
 _safeRender('DashboardHubOwnershipSummary',function(){if(typeof DashboardHubOwnershipSummary!=='undefined')DashboardHubOwnershipSummary.render();});
@@ -1259,3 +1312,29 @@ function renderKekayaanBersih(){return Kekayaan.renderBersih();}
 function renderPBB(){return PBB.render();}
 
 function renderPBBBillStatus(){return PBB.renderBillStatus();}
+function renderDashCardPrefsUI(){
+const wrap=document.getElementById('dashCardPrefsList');
+if(!wrap)return;
+wrap.innerHTML=`<div class="u-flex u-gap8 u-mb10">
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[true]'>✅ Aktifkan Semua</button>
+      <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="setAllDashCardPrefs" data-args='[false]'>🚫 Matikan Semua</button>
+    </div>`
++DASH_CARD_DEFS.map(c=>`
+    <div class="setting-item">
+      <div class="setting-label">${c.label}</div>
+      <label class="tgl-switch"><input type="checkbox" ${isDashCardOn(c.key)?'checked':''} data-onchange="toggleDashCardPref" data-onchange-args='["${c.key}","$checked"]'><span class="tgl-track"></span></label>
+    </div>`).join('');
+}
+function setAllDashCardPrefs(on){
+if(!D.dashCardPrefs)D.dashCardPrefs={};
+DASH_CARD_DEFS.forEach(c=>{if(on)delete D.dashCardPrefs[c.key];else D.dashCardPrefs[c.key]=false;});
+save();
+renderDashCardPrefsUI();
+if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&localStorage.getItem('dashHubSectionTab')==='widget'))renderDashboard();
+}
+function toggleDashCardPref(key,checked){
+if(!D.dashCardPrefs)D.dashCardPrefs={};
+if(checked)delete D.dashCardPrefs[key]; else D.dashCardPrefs[key]=false;
+save();
+if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&localStorage.getItem('dashHubSectionTab')==='widget'))renderDashboard();
+}
