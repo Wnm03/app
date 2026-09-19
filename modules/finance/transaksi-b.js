@@ -202,7 +202,7 @@ const debtSyncedMsg=debtSynced?' (sisa utang ikut disesuaikan)':'';
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();renderDebtList();renderKekayaanBersih();hitungZakatMaal();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});renderDebtList();renderKekayaanBersih();hitungZakatMaal();
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"utang"});
 toast(isLatestInstallment?('✅ Pembayaran utang diperbarui'+debtSyncedMsg):'ℹ️ Ini pembayaran utang lama — hanya catatan transaksi ini yang diubah, sisa utang tidak ikut disesuaikan (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
 return;
@@ -233,7 +233,7 @@ if(isLatestTagihan&&linkedTagihanBill.completedAt){linkedTagihanBill.completedAt
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"tagihan"});
 toast(isLatestTagihan?('✅ Pembayaran tagihan diperbarui'+(archiveSynced?' (tanggal arsip ikut disinkron)':'')):'ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang diubah, tanggal arsip tidak ikut berubah (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
 return;
@@ -337,7 +337,7 @@ toast('ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang d
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-lama"});
 if(isLatestInstallment)toast('✅ Cicilan/tagihan diperbarui');
 return;
@@ -377,7 +377,7 @@ D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan'
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-baru"});
 toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
 return;
@@ -418,7 +418,7 @@ maybeCreateSharedPiutangFromBill({shared:true,sharedAutoPiutang:true,totalAmount
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-baru"});
 toast(cicilanShared?`✅ Cicilan ${nama} ${tenor}x dimulai! Porsi kamu ${fmtFull(perBulanMine)}/bulan (total ${fmtFull(perBulan)}/bulan)`:`✅ Cicilan ${nama} ${tenor}x dimulai! ${fmtFull(perBulan)}/bulan`);
 return;
@@ -447,7 +447,7 @@ WorthIt.applyBuyLink(billId+1);
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
-save();closeModal('txModal');renderDashboard();renderKeuangan();renderBillList();checkBills();
+save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"langganan"});
 toast(`✅ ${nama} dicatat & dijadwalkan ${freq}`);
 return;
@@ -627,7 +627,7 @@ if(_serviceCommitMeta&&typeof ServiceEventLifecycle!=='undefined'){
     }
   }
 }
-closeModal('txModal');renderDashboard();renderKeuangan();renderCnTab();
+closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance',carNotes:true});
 const _financePostCommitPayload={txId:savedTxId,category:cat,type:curTxType,amount:amt};
 try{if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",_financePostCommitPayload);}
 catch(_financeEventErr){console.error('V36: finance event failed after commit; queued for reconciliation',_financeEventErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_financePostCommitPayload});}

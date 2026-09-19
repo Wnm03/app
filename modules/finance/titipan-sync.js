@@ -148,6 +148,19 @@ reconcileAccounts() {
   const assets = Array.isArray(D.assets) ? D.assets : [];
   const linkedAccountIds = new Set(assets.filter((a) => a && a.accountId != null).map((a) => String(a.accountId)));
   const touchedAccountIds = new Set();
+  // S1842 PERF: index linked debts once. The old implementation ran
+  // D.debts.filter(...) for every account, turning one save into O(accounts*debts)
+  // work. Keep the exact same reconciliation semantics, but make lookup O(1)
+  // per account and rebuild the final debt array once.
+  const linkedDebtsByAccount = new Map();
+  for (const d of D.debts) {
+    if (!d || d.linkedAccountId == null) continue;
+    const key = String(d.linkedAccountId);
+    let arr = linkedDebtsByAccount.get(key);
+    if (!arr) { arr = []; linkedDebtsByAccount.set(key, arr); }
+    arr.push(d);
+  }
+  const removedDebtIds = new Set();
   D.accounts.forEach((acc) => {
     if (!acc || acc.id == null) return;
     if (linkedAccountIds.has(String(acc.id))) return; // sudah kehitung via Aset tertaut, lihat catatan di atas
@@ -160,7 +173,7 @@ reconcileAccounts() {
     }
     const nonSelfOwners = owners.filter((o) => o && !o.isSelf && o.porsi > 0);
     const balance = recalcAccBalance(acc.id);
-    const existingLinked = D.debts.filter((d) => d && d.linkedAccountId != null && String(d.linkedAccountId) === String(acc.id));
+    const existingLinked = linkedDebtsByAccount.get(String(acc.id)) || [];
     const keepIds = new Set();
     nonSelfOwners.forEach((o) => {
       const amount = balance * (o.porsi / 100);
@@ -187,9 +200,10 @@ reconcileAccounts() {
       keepIds.add(String(o.ownerId));
       result.synced++;
     });
-    const before = D.debts.length;
-    D.debts = D.debts.filter((d) => !(d && d.linkedAccountId != null && String(d.linkedAccountId) === String(acc.id) && !keepIds.has(String(d.linkedOwnerId))));
-    result.removed += before - D.debts.length;
+    for (const d of existingLinked) {
+      if (!keepIds.has(String(d.linkedOwnerId))) removedDebtIds.add(d.id);
+    }
+    result.removed += existingLinked.filter((d) => !keepIds.has(String(d.linkedOwnerId))).length;
   });
   // Bersihkan baris linkedAccountId "sisa" -- akun yang sudah dihapus
   // permanen (id-nya tidak ketemu di D.accounts sama sekali) ATAU akun yang
@@ -197,9 +211,16 @@ reconcileAccounts() {
   // dilewati loop di atas & tidak kena touchedAccountIds) -- keduanya harus
   // dibersihkan di sini krn loop di atas cuma iterasi akun yang masih ada &
   // masih berdiri-sendiri.
-  const beforeDeleted = D.debts.length;
-  D.debts = D.debts.filter((d) => !(d && d.linkedAccountId != null && !touchedAccountIds.has(String(d.linkedAccountId))));
-  result.removed += beforeDeleted - D.debts.length;
+  // Remove stale linked rows in one pass. This also covers deleted accounts and
+  // accounts newly linked to an Asset, exactly as the previous final filter did.
+  const beforeFinal = D.debts.length;
+  D.debts = D.debts.filter((d) => {
+    if (removedDebtIds.has(d && d.id)) return false;
+    if (d && d.linkedAccountId != null && !touchedAccountIds.has(String(d.linkedAccountId))) return false;
+    return true;
+  });
+  // Rows removed by the final stale-account rule were not counted above.
+  result.removed += beforeFinal - D.debts.length - removedDebtIds.size;
   return result;
 },
 

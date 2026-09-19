@@ -1,4 +1,7 @@
 // filter-laporan.js — Filter transaksi/keuangan (panel filter Keuangan & Laporan), pencarian, paginasi list transaksi, navigasi antar-list (goToList/showFilteredTx)
+
+// S1845 PERF: centralized transaction-date parsing for report filters/sorts.
+function _lapTxDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime();}
 // Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, filter-laporan.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
@@ -382,7 +385,7 @@ function showFilteredTx(scope, type, label, accId, kat){
 let txs=[];
 if(scope==='dashboard'){
 const now=new Date(),m=now.getMonth(),y=now.getFullYear();
-txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+txs=D.transactions.filter(t=>{const d=new Date(_lapTxDateMs(t));return d.getMonth()===m&&d.getFullYear()===y;});
 // Fix (audit lanjutan S697/S698, permintaan user: "kategori di dashboard
 // ringkasan bisa dapat pola klik-ke-sumber yang sama seperti Fix 1") —
 // parameter opsional ke-5 `kat` SEBELUMNYA cuma diterapkan di blok scope
@@ -406,12 +409,12 @@ const kf=getKeuFilters();
 // nyambung 1:1 dengan apa yang user cari. Tambah &&txMatchesSearch(t,kf.search),
 // pola sama persis modules-render.js -- 0 rumus pencarian baru, cuma dipakai juga
 // di titik ini.
-txs=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===curMonth&&d.getFullYear()===curYear&&txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search);});
+txs=D.transactions.filter(t=>{const d=new Date(_lapTxDateMs(t));return d.getMonth()===curMonth&&d.getFullYear()===curYear&&txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search);});
 } else if(scope==='laporan'){
 const {from,to}=getRange();
 const f=getLaporanFilters();
 txs=D.transactions.filter(t=>{
-const d=new Date(t.date);
+const d=new Date(_lapTxDateMs(t));
 if(d<from||d>to)return false;
 if(t.type==='transfer_in'||t.type==='transfer_out')return false;
 if(!txMatchesFilters(t,f))return false;
@@ -440,7 +443,7 @@ else if(type==='all')txs=txs.filter(t=>t.type==='income'||t.type==='expense');
 // Kas Bulan Ini" utk klik "Gaji Tercatat", supaya daftar yg tampil PERSIS sama transaksi
 // yg dihitung sbg recordedGaji di getMonthlyCashProjection(), 0 predikat baru.
 else if(type==='gaji')txs=txs.filter(t=>typeof isGajiTransaction==='function'&&isGajiTransaction(t));
-const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+const sorted=[...txs].sort((a,b)=>_lapTxDateMs(b)-_lapTxDateMs(a));
 // Guard hitungKas!==false (pola sama computeCashflowForecast() di tx-list-cashflow.js):
 // baris "📝 Catatan saja" (hitungKas:false) TETAP tampil di daftar (sorted tidak difilter,
 // user tetap lihat catatannya) -- yang di-guard cuma agregat moneter (total & split per
@@ -540,10 +543,13 @@ const visible=sorted.slice(0,visibleCount);
 // `scope==='account'?accId:null` -- 0 percabangan tambahan di sini. 10
 // tema lama 0 dampak, tetap jalur txHTML() kartu apa adanya di else.
 const ftxEmpty='<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Tidak ada transaksi</div></div>';
+// S1844 PERF: reuse category/account indexes across every visible batch in this render.
+const _ftxCats=typeof getAllCats==='function'?getAllCats():[];
+const _ftxRenderCtx={cats:_ftxCats,catsByName:new Map(_ftxCats.map(c=>[c.name,c])),accounts:new Map((D.accounts||[]).map(a=>[a.id,a]))};
 if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
-document.getElementById('filterTxList').innerHTML=visible.length?txTableHTML(visible,scope==='account'?accId:null):ftxEmpty;
+document.getElementById('filterTxList').innerHTML=visible.length?txTableHTML(visible,scope==='account'?accId:null,_ftxRenderCtx):ftxEmpty;
 }else{
-document.getElementById('filterTxList').innerHTML=visible.length?visible.map(txHTML).join(''):ftxEmpty;
+document.getElementById('filterTxList').innerHTML=visible.length?visible.map(t=>txHTML(t,_ftxRenderCtx)).join(''):ftxEmpty;
 }
 let ftxMoreWrap=document.getElementById('filterTxLoadMoreWrap');
 if(!ftxMoreWrap){
@@ -568,9 +574,9 @@ if(D.profile&&D.profile.theme==='modern'&&typeof txTableRowHTML==='function'){
 const balMap=scope==='account'&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accId):null;
 const tbody=document.querySelector('#filterTxList .tx-tbl tbody');
 if(tbody)tbody.insertAdjacentHTML('beforeend',nextBatch.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join(''));
-else document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(txHTML).join(''));
+else document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(t=>txHTML(t,_ftxRenderCtx)).join(''));
 }else{
-document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(txHTML).join(''));
+document.getElementById('filterTxList').insertAdjacentHTML('beforeend',nextBatch.map(t=>txHTML(t,_ftxRenderCtx)).join(''));
 }
 ftxMoreWrap.dataset.shown=nextCount;
 if(nextCount>=sorted.length){ftxMoreWrap.style.display='none';}

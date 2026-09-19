@@ -1,4 +1,7 @@
 // tx-target.js — domain "Target Tabungan" (modal tambah target, deteksi Dana
+
+// S1845 PERF: reuse the shared transaction-date cache for target history sorting.
+function _targetTxDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime();}
 // Dipindah ke modules/finance/tx-target.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // Darurat, simpan, lihat transaksi akun terkait, tambah/hapus progres).
 // Dipindah dari transaksi.js (lihat CLAUDE.md catatan kerja "split
@@ -133,11 +136,13 @@ toast(accId?'✅ Target tersimpan, tersambung ke akun (otomatis update)':'✅ Ta
 function showTargetAccountTx(targetId){
 const t=D.targets.find(x=>sameId(x.id,targetId));if(!t||!t.accountId)return;
 const acc=D.accounts.find(a=>a.id===t.accountId);if(!acc)return;
-const txs=D.transactions.filter(x=>x.accountId===acc.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+const txs=D.transactions.filter(x=>x.accountId===acc.id).sort((a,b)=>_targetTxDateMs(b)-_targetTxDateMs(a));
 const bal=recalcAccBalance(acc.id);
 document.getElementById('filterTxTitle').textContent=`${t.emoji} ${t.name} (${acc.emoji} ${acc.name})`;
 document.getElementById('filterTxSummary').textContent=`${txs.length} transaksi · Saldo saat ini ${fmtFull(bal)} dari target ${fmtFull(t.amount)}`;
-document.getElementById('filterTxList').innerHTML=txs.length?txs.slice(0,100).map(txHTML).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Belum ada transaksi di akun ini</div></div>';
+const _targetCats=getAllCats();
+const _targetRenderCtx={cats:_targetCats,catsByName:new Map(_targetCats.map(c=>[c.name,c])),accounts:new Map((D.accounts||[]).map(a=>[a.id,a]))};
+document.getElementById('filterTxList').innerHTML=txs.length?txs.slice(0,100).map(t=>txHTML(t,_targetRenderCtx)).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Belum ada transaksi di akun ini</div></div>';
 openModal('filterTxModal');
 }
 async function addTarget(i){const addStr=await showPromptModal({title:'Tambah Tabungan',message:'Tambah berapa? (Rp)',icon:'🎯',inputType:'number'});if(addStr===null)return;const add=parseFloat(addStr);if(!add||isNaN(add))return;D.targets[i].saved+=add;save();renderSettings();toast('✅ Target diperbarui');}

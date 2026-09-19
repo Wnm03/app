@@ -189,8 +189,7 @@ save();
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"zakat",action:"create",jenis,amount:jumlah});
 Zakat.renderLog();
 Zakat.hitungMaal();
-renderDashboard();
-renderKeuangan();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast('✅ Tercatat & masuk Keuangan, semoga berkah 🤲');
 },
 renderLog(){

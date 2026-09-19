@@ -1,4 +1,7 @@
 // tagihan-kalender.js — Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo
+
+// S1845 PERF: reuse the shared transaction-date cache for bill-history scans/sorts.
+function _billTxDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime();}
 // Dipindah ke modules/finance/tagihan-kalender.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, filter-laporan.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
@@ -624,12 +627,12 @@ toast('🗑 Tagihan dihapus'+(removedPiutang?' (piutang otomatis terkait ikut di
 // mengembalikan tagihan dari arsip ke aktif / balikin sisa tenor), edit
 // tanggal/jumlah tidak menyentuh apa pun yang tampil di halaman Pengaturan.
 function refreshBillHistoryModalViews(){
-renderDashboard();renderKeuangan();renderBillList();checkBills();renderBillHistory();renderBillArchive();
+if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderBillList();checkBills();renderBillHistory();renderBillArchive();
 }
 function refreshBillEverywhere(){
 renderBillList();
 renderSettings();
-renderDashboard();
+if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true});
 checkBills();
 renderBillHistory();
 const archModal=document.getElementById('billArchiveModal');
@@ -1125,7 +1128,7 @@ toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
 // D.billsArchive lewat markBillPaid(), tidak pernah nyangkut di D.bills lagi).
 function getBillPaidThisPeriodInfo(b,targetBulan,targetTahun){
 if(!b||!b.id||b.freq==='sekali')return null;
-const history=(D.transactions||[]).filter(t=>t.billLinkId===b.id&&t.date).map(t=>({t,d:new Date(t.date)})).filter(x=>!isNaN(x.d.getTime())).sort((a,c)=>c.d-a.d);
+const history=(D.transactions||[]).filter(t=>t.billLinkId===b.id&&t.date).map(t=>({t,d:new Date(_billTxDateMs(t))})).filter(x=>!isNaN(x.d.getTime())).sort((a,c)=>c.d-a.d);
 if(!history.length)return null;
 const{t,d}=history[0];
 // targetBulan/targetTahun datang dari billFilterBulan/billFilterTahun (dropdown filter
@@ -1531,7 +1534,7 @@ const ml=document.getElementById(prefix+'MonthLabel'); if(ml)ml.textContent=MONT
 const BILL_ANOMALY_THRESHOLD_PCT=25;
 function getBillAnomalyInfo(billId,currentAmount){
 if(!currentAmount||currentAmount<=0)return null;
-const history=D.transactions.filter(t=>t.billLinkId===billId).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,3);
+const history=D.transactions.filter(t=>t.billLinkId===billId).sort((a,b)=>_billTxDateMs(b)-_billTxDateMs(a)).slice(0,3);
 if(history.length<2)return null;
 const avgPrev=history.reduce((s,t)=>s+t.amount,0)/history.length;
 if(avgPrev<=0)return null;

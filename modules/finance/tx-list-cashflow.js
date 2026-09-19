@@ -40,19 +40,21 @@
 // bungkus SELURUH badan txHTML() di 1 try/catch di sini -- otomatis melindungi
 // semua titik panggil sekaligus tanpa menyentuh 10 call site itu satu-satu.
 // Fallback: baris aman ber-badge ⚠️, tetap bisa di-tap (editTx) utk cek/benerin data.
-function txHTML(t){
+function _txPerfDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime();}
+function txHTML(t,renderCtx){
 try{
-return _txHTMLInner(t);
+return _txHTMLInner(t,renderCtx);
 }catch(err){
 if(typeof console!=='undefined'&&console.error)console.error('[txHTML] gagal render transaksi',t&&t.id,err);
 const safeId=t&&t.id!=null?t.id:null;
 return `<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([safeId]))}"><div class="tx-icon" style="background:var(--accent2-soft)">⚠️</div><div class="tx-info"><div class="tx-name">Gagal menampilkan transaksi ini</div><div class="tx-meta">Tap untuk buka & cek datanya</div></div><div class="tx-amount">⚠️</div></div>`;
 }
 }
-function _txHTMLInner(t){
+function _txHTMLInner(t,renderCtx){
+renderCtx=renderCtx||null;
 if(t&&t.virtual&&String(t.id).startsWith('vbill_')){
-const cats=getAllCats();
-const cat=cats.find(c=>c.name===t.category);
+const cats=renderCtx&&renderCtx.cats?renderCtx.cats:getAllCats();
+const cat=renderCtx&&renderCtx.catsByName?renderCtx.catsByName.get(t.category):((typeof _getPerfCategoryIndex==='function'?_getPerfCategoryIndex():null)?.get(t.category)||cats.find(c=>c.name===t.category));
 const icon=cat?cat.emoji:'⏳';
 // BUGFIX (laporan user, video 2026-09-09 -- "kegagalan bayar tagihan dari fitur
 // transaksi"): kartu tagihan belum-lunas ("⏳ Terjadwal") di daftar transaksi ini
@@ -81,13 +83,14 @@ return`<div class="tx-item u-pointer" data-action="markBillPaid" data-args="${es
     </div>
   </div>`;
 }
-const cats=getAllCats();
+const cats=renderCtx&&renderCtx.cats?renderCtx.cats:getAllCats();
+const catsByName=renderCtx&&renderCtx.catsByName?renderCtx.catsByName:((typeof _getPerfCategoryIndex==='function'?_getPerfCategoryIndex():null)||new Map(cats.map(c=>[c.name,c])));
 let icon='💰', bg='var(--accent-soft)';
 if(t.type==='transfer_out'||t.type==='transfer_in'){icon='⇄';bg='var(--accent-soft)';}
-else { const cat=cats.find(c=>c.name===t.category); if(cat){icon=cat.emoji;} bg=t.type==='income'?'var(--accent3-soft)':'var(--accent2-soft)'; }
+else { const cat=catsByName?catsByName.get(t.category):cats.find(c=>c.name===t.category); if(cat){icon=cat.emoji;} bg=t.type==='income'?'var(--accent3-soft)':'var(--accent2-soft)'; }
 const sign=(t.type==='income'||t.type==='transfer_in')?'+':'-';
 const cls=(t.type==='income'||t.type==='transfer_in')?'green':'red';
-const acc=D.accounts.find(a=>a.id===t.accountId);
+const acc=renderCtx&&renderCtx.accounts?renderCtx.accounts.get(t.accountId):((typeof _getPerfAccountIndex==='function'?_getPerfAccountIndex():null)?.get(t.accountId)||D.accounts.find(a=>a.id===t.accountId));
 const subText=t.subcategory?(' · '+t.subcategory):'';
 // FIX (BUG-004, TODO.md — Bill/Piutang/Debt audit 2026-08-01): kind
 // 'tagihan'/'utang' belum terdaftar di sini (dropdown filter `#kfMethod`
@@ -184,14 +187,16 @@ return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHt
 // lintas-akun (gabungan kas+bank+e-wallet dst) tidak bermakna secara
 // finansial, jadi kolom itu sengaja disembunyikan total (bukan ditampilkan
 // "0"/keliru) saat filter Akun = Semua Akun.
-function txTableRowHTML(t,balAfter){
-const cats=getAllCats();
+function txTableRowHTML(t,balAfter,renderCtx){
+renderCtx=renderCtx||null;
+const cats=renderCtx&&renderCtx.cats?renderCtx.cats:getAllCats();
+const catsByName=renderCtx&&renderCtx.catsByName?renderCtx.catsByName:null;
 let icon='💰';
 if(t.type==='transfer_out'||t.type==='transfer_in')icon='⇄';
-else{const cat=cats.find(c=>c.name===t.category);if(cat)icon=cat.emoji;}
+else{const cat=catsByName?catsByName.get(t.category):cats.find(c=>c.name===t.category);if(cat)icon=cat.emoji;}
 const sign=(t.type==='income'||t.type==='transfer_in')?'+':'-';
 const cls=(t.type==='income'||t.type==='transfer_in')?'green':'red';
-const acc=D.accounts.find(a=>a.id===t.accountId);
+const acc=renderCtx&&renderCtx.accounts?renderCtx.accounts.get(t.accountId):((typeof _getPerfAccountIndex==='function'?_getPerfAccountIndex():null)?.get(t.accountId)||D.accounts.find(a=>a.id===t.accountId));
 const subText=t.subcategory?(' · '+t.subcategory):'';
 const pmIcons={cicilan:'💳',langganan:'🔁',tagihan:'🧾',utang:'📕',tunai:''};
 const pmBadge=(t.payMethod&&t.payMethod!=='tunai')?` <span class="acc-chip">${pmIcons[t.payMethod]||''} ${t.payMethod}</span>`:'';
@@ -206,10 +211,10 @@ return`<tr class="tx-tbl-row u-pointer" data-action="editTx" data-args="${escape
     <td class="tx-tbl-del"><button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button></td>
   </tr>`;
 }
-function txTableHTML(items,accIdForBalance){
+function txTableHTML(items,accIdForBalance,renderCtx){
 const balMap=accIdForBalance&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accIdForBalance):null;
 const showSaldo=!!balMap;
-return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Nominal</th>${showSaldo?'<th class="num">Saldo</th>':''}<th></th></tr></thead><tbody>${items.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join('')}</tbody></table></div>`;
+return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Uraian</th><th class="num">Nominal</th>${showSaldo?'<th class="num">Saldo</th>':''}<th></th></tr></thead><tbody>${items.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined,renderCtx)).join('')}</tbody></table></div>`;
 }
 // BUGFIX (Bug E, s633, lihat AUDIT-s632-bugE-renovasi-delete-cascade.md):
 // diekstrak APA ADANYA (0 perubahan logika/urutan/pesan toast) dari badan
@@ -429,7 +434,7 @@ else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linke
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang')billRevertMsg=' (sisa utang dikembalikan)';
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
 D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
-save();renderDashboard();renderKeuangan();renderCnTab();renderProductList();
+save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});else{if(typeof renderDashboard==='function')renderDashboard();if(typeof renderKeuangan==='function')renderKeuangan();}renderCnTab();renderProductList();
 // Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
 // delTx() SEBELUMNYA 0% emit AIBus sama sekali -- cascade transfer/titipan/
 // tagihan/investasi di atas semua jalan sunyi, beda dari saveTx()/
@@ -617,7 +622,7 @@ const avail=(typeof BudgetReko!=='undefined')?BudgetReko.monthsAvailable():0;
 const months=cfg.months||((typeof BudgetReko!=='undefined')?BudgetReko.effectiveMonths():3);
 const from=cfg.from||((typeof BudgetReko!=='undefined')?BudgetReko.rangeFrom():(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth()-2,1);})());
 const now=new Date();
-let txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now&&t.hitungKas!==false;});
+let txs=(D.transactions||[]).filter(t=>{const d=new Date(_txPerfDateMs(t));return d>=from&&d<=now&&t.hitungKas!==false;});
 // Filter akun (cfg.accountId): 'semua'/kosong -> tidak difilter (perilaku
 // lama persis). Kalau diisi 1 id akun spesifik, incAvg/expAvg/saldoNow
 // SEMUA dihitung ulang dari sudut pandang akun itu saja -- guard
@@ -926,7 +931,7 @@ if(!cf.expAvg||cf.expAvg<=0)return{trigger:false};
 const now=new Date();
 const monthExpense=(D.transactions||[]).filter(t=>{
 if(t.type!=='expense')return false;
-const d=new Date(t.date);
+const d=new Date(_txPerfDateMs(t));
 return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
 }).reduce((s,t)=>s+t.amount,0);
 const thresholdPct=getAIFinanceOverspendThreshold();

@@ -566,7 +566,7 @@ D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
 (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
 save();
 if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"delete",deletedId:acc.id,migratedToAccountId:target.id});
-renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();renderDashboard();renderKeuangan();refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
+renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
 }
 // --- S574-B: UI "⚖️ Porsi Kepemilikan" pada modal Akun (accountOwnersModal) -------------------
 // Scope sesi ini (lanjutan S574-A, lihat AUDIT-S574-PEMILIK-SUMBER-POTONGAN.md §9 Tahap 2): HANYA

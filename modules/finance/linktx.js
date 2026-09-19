@@ -190,13 +190,13 @@ if(typeof Renov!=='undefined'){
 Renov.render();
 if(sameId(Renov.curId,LinkTx.targetId))Renov.renderDetail();
 }
-renderDashboard();renderKeuangan();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 } else if(LinkTx.ctx==='wishlist'){
 WorthIt.renderList();
 if(typeof WorthIt.renderBoughtList==='function')WorthIt.renderBoughtList();
 } else if(LinkTx.ctx==='bill'){
 if(typeof refreshBillEverywhere==='function')refreshBillEverywhere();
-renderDashboard();renderKeuangan();
+if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 }
 },
 async confirmBulk(){

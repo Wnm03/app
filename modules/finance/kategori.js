@@ -94,7 +94,7 @@ D.transactions.forEach(t=>{if(t.category===oldName){t.category=name;catRenameAff
 } else {
 D.categories[type].push({id:'cat_'+Date.now(),name,emoji,subs:[]});
 }
-save(); closeModal('catModal'); renderCatList(); populateCatFilter(); populateKeuFilters(); refreshTxCatIfOpen(); renderDashboard(); renderKeuangan();
+save(); closeModal('catModal'); renderCatList(); populateCatFilter(); populateKeuFilters(); refreshTxCatIfOpen(); if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast(catRenameAffected?`✅ Kategori disimpan, ${catRenameAffected} transaksi lama ikut disesuaikan`:'✅ Kategori disimpan',catRenameAffected?3200:undefined);
 if(catModalCallback){
 const cb=catModalCallback; catModalCallback=null;
