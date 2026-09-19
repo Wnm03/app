@@ -240,6 +240,19 @@ var _saveSnapshotJson=null;
 var _saveQueuedVersion=-1;
 var _savePersistChain=Promise.resolve();
 var _savePersistSeq=0;
+var _savePersistStamp=0;
+var _saveQueuedStamp=0;
+const _savePersistMetaKey='kw_v4_persist_meta';
+function _readSavePersistMeta(){
+try{const raw=localStorage.getItem(_savePersistMetaKey);const m=raw?JSON.parse(raw):null;return m&&typeof m==='object'?{localTs:Number(m.localTs)||0,idbTs:Number(m.idbTs)||0}:{localTs:0,idbTs:0};}catch(e){return {localTs:0,idbTs:0};}
+}
+function _nextSavePersistStamp(){
+const m=_readSavePersistMeta();const now=Date.now();const stamp=Math.max(now,m.localTs,m.idbTs,_savePersistStamp)+1;_savePersistStamp=stamp;return stamp;
+}
+function _markSavePersistMeta(kind,stamp){
+if(!stamp)return false;try{const m=_readSavePersistMeta();if(kind==='local')m.localTs=Math.max(m.localTs,stamp);else if(kind==='idb')m.idbTs=Math.max(m.idbTs,stamp);localStorage.setItem(_savePersistMetaKey,JSON.stringify(m));return true;}catch(e){return false;}
+}
+
 
 function _buildSaveJson(){
 D.schemaVersion=SCHEMA_VERSION;
@@ -288,15 +301,17 @@ function _saveImmediate(snapshotJson){
 const version=_saveStateVersion;
 let json=snapshotJson;
 try{if(json===undefined)json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
-if(_saveQueuedVersion===version)return;
+if(_saveQueuedVersion===version)return _saveQueuedStamp;
 _saveQueuedVersion=version;
+const stamp=_nextSavePersistStamp();
+_saveQueuedStamp=stamp;
 const seq=++_savePersistSeq;
-_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
+_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_markSavePersistMeta('idb',stamp);_announcePersistenceWrite();}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
-if(seq===_savePersistSeq)_writeLocalSnapshot(json);
+if(seq===_savePersistSeq){const fallbackOk=_writeLocalSnapshot(json);if(fallbackOk){_markSavePersistMeta('local',stamp);_announcePersistenceWrite();}else{_saveQueuedVersion=-1;_saveQueuedStamp=0;}}
 else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
-_announcePersistenceWrite();
 });
+return stamp;
 }
 function save(){
 _saveStateVersion++;
@@ -354,8 +369,9 @@ if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;
 const version=_saveStateVersion;
 let json;
 try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk flush:',e);return false;}
-_saveImmediate(json);
-_writeLocalSnapshot(json);
+const persistStamp=_saveImmediate(json);
+const localOk=_writeLocalSnapshot(json);
+if(localOk)_markSavePersistMeta('local',persistStamp);
 return true;
 }
 
@@ -534,7 +550,12 @@ try{
 const idbVal=await IDBStore.get('kw_v4_mirror');
 if(idbVal){ s=idbVal; fromIdb=true; }
 }catch(e){ console.error('Gagal baca IndexedDB, fallback ke localStorage:',e); }
-if(!s) s=localStorage.getItem('kw_v4');
+let _lsSnapshot=null;
+try{_lsSnapshot=localStorage.getItem('kw_v4');}catch(e){_lsSnapshot=null;}
+if(_lsSnapshot){
+ try{const _pm=_readSavePersistMeta();if(s&&_pm.localTs>_pm.idbTs){s=_lsSnapshot;fromIdb=false;}}catch(e){void e;}
+}
+if(s===null||s===undefined) s=_lsSnapshot;
 if(s){
 let p;
 try{
@@ -545,7 +566,7 @@ showAlertModal('Data tersimpan di HP ini rusak/tidak terbaca (corrupt). Aplikasi
 return;
 }
 D={...D,...p};
-if(!fromIdb) IDBStore.set('kw_v4_mirror',s).catch(e=>console.error('Gagal migrasi awal ke IndexedDB:',e));
+if(!fromIdb) IDBStore.set('kw_v4_mirror',s).then(()=>_markSavePersistMeta('idb',_readSavePersistMeta().localTs)).catch(e=>console.error('Gagal migrasi awal ke IndexedDB:',e));
 const _fromSchemaVersion=D.schemaVersion===undefined?0:D.schemaVersion;
 runDataMigrations(_fromSchemaVersion);
 if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
