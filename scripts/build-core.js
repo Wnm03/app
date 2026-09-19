@@ -61,7 +61,20 @@ function computeNextVersion(current, explicit) {
 }
 
 // 2. Ganti string versi lama -> baru di SEMUA file source yang memuatnya
+function assertVersionConstantsAtOldVersion(oldV) {
+  const problems = [];
+  for (const { file, varName } of VERSION_CONSTANTS_TO_VERIFY) {
+    const content = readFile(file);
+    const re = new RegExp(varName + "\\s*=\\s*'([^']+)'");
+    const m = content.match(re);
+    if (!m) problems.push(`${file}: konstanta ${varName} tidak ditemukan sebelum bump`);
+    else if (m[1] !== oldV) problems.push(`${file}: ${varName}='${m[1]}' tetapi canonical oldV='${oldV}'`);
+  }
+  if (problems.length) throw new Error('PRE-BUILD VERSION PREFLIGHT FAILED — tidak ada file yang ditulis.\n' + problems.map(p => '  - '+p).join('\n'));
+}
+
 function bumpVersionEverywhere(oldV, newV) {
+  assertVersionConstantsAtOldVersion(oldV);
   const changed = [];
   for (const f of ALL_SOURCE) {
     const content = readFile(f);
@@ -189,6 +202,7 @@ function buildBundle(group, outFile, oldVersion, requireMinify = false) {
     detectCurrentVersion,
     computeNextVersion,
     bumpVersionEverywhere,
+    assertVersionConstantsAtOldVersion,
     verifyVersionConstantsSynced,
     buildBundle,
   };

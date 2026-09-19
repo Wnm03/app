@@ -1408,7 +1408,22 @@ const {
   execSync,
 });
 
+function preflightPatchManifest() {
+  const manifestPath = process.env.PATCH_MANIFEST;
+  if (!manifestPath) return;
+  const file = path.resolve(ROOT, manifestPath);
+  if (!fs.existsSync(file)) throw new Error(`PATCH_MANIFEST tidak ditemukan: ${manifestPath}`);
+  const text = fs.readFileSync(file, 'utf8');
+  const a=text.lastIndexOf('\nBEGIN_APPLY_FILES\n'), b=text.indexOf('\nEND_APPLY_FILES',a);
+  if(a<0 || b<a) throw new Error(`PATCH_MANIFEST ${manifestPath} tidak memiliki blok BEGIN_APPLY_FILES/END_APPLY_FILES`);
+  const listed=text.slice(a+'\nBEGIN_APPLY_FILES\n'.length,b).split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'));
+  const missing=listed.filter(rel=>!fs.existsSync(path.join(ROOT,rel)));
+  if(missing.length) throw new Error('PATCH PREFLIGHT FAILED — semua file manifest harus sudah diterapkan sebelum build/version bump.\n'+missing.map(x=>'  - '+x).join('\n'));
+  console.log(`✓ Patch preflight: ${listed.length} manifest files present (${manifestPath})`);
+}
+
 function main() {
+  preflightPatchManifest();
   runLintRegistry(LINT_REGISTRY);
 
   // Ambil argumen non-flag pertama sbg explicit version (skip --flag spt --require-minify)

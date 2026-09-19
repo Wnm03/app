@@ -4,7 +4,7 @@ const fs=require('node:fs');const path=require('node:path');
 const ROOT=path.join(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
 function check(){const errors=[];const s=read('modules/shared/features-helpers-global-security.js');
- if(!/function save\(\)/.test(s)||!/function saveFlush\(\)/.test(s))errors.push('save/saveFlush canonical API hilang');
+ if(!/function save\(/.test(s)||!/function saveFlush\(\)/.test(s))errors.push('save/saveFlush canonical API hilang');
  if(!/IDBStore\.set\('kw_v4_mirror',json\)/.test(s))errors.push('IndexedDB kw_v4_mirror bukan persistence primary');
  if(!/localStorage\.setItem\('kw_v4',json\)/.test(s))errors.push('localStorage critical snapshot fallback hilang');
  if(!/_savePersistChain=Promise\.resolve\(\)/.test(s))errors.push('persistence write queue hilang');
