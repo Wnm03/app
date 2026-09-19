@@ -1,0 +1,14 @@
+b6e872730427d9f401a466766b45f849bb763f67090934a61d220361e5413d7e  ./PATCH-README.md
+b7587fc263a625ae764bf0a9906472abc0a98b9bc836b6d58701519bc371b0fe  ./SHA256SUMS.txt
+6b4f361b82d1ebd8bf4382fca48e8183a0f424c545291a32b7831284cf220ea6  ./app-bundle-b.min.js
+6b4f361b82d1ebd8bf4382fca48e8183a0f424c545291a32b7831284cf220ea6  ./docs/app-bundle-b.min.js
+72abb1146a089d03c41c47ac9db68d2f89e91de1b3f51a61cfc3e1cf0c112aed  ./modules/asset/features-helpers-global-security.js
+755e7a5519459094f3374fbd01c4b991dd0d0ae870431832c5ddb56e149ae772  ./modules/finance/features-helpers-global-security.js
+5fa4166228b8fde9096f2b4b26bbbf07aaa1a2b08d913ef977e933192aa50729  ./modules/shared/debug-console.js
+fd4cb73d10529979ac2dd003cb27d38d8985fd1eb477c9b5d2a8695341f44711  ./modules/shared/features-helpers-global-security.js
+e55691cb07c5fb2cf94e27f7199707e33cc9b61c3ae08f6513dc9d6d3e565e13  ./modules/shop/features-helpers-global-security.js
+e0692995960521b27e90775f8e9b74414d786fd3906879bbc7005872e2c80646  ./tests/carnotes-persistence-race-1742.test.js
+b85bb3c821fbf46ca0c3c9e8f383d600cba7836ebeb25927e61d9a627291b311  ./tests/s1843-performance-deep-optimization.test.js
+cada051abe6ae4d439d8c07638150cc4347d731885c191dcad0e88432a445122  ./tests/s1850-persistence-memory-audit.test.js
+cf2f2f334c50ce8fe4b8e7f976972b321744456a14387cf90775b291c5fff661  ./tests/s1851-performance-regression-hardening.test.js
+edd7a067a12a3189e114dbc9c2bc16de75ffaa2246dc51355e39c3f911b63c49  ./tests/s1852-persistence-contract-audit.test.js

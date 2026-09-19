@@ -1,11 +1,6 @@
-PATCH: app-main-AUDIT-SAVEFLUSH-CUMULATIVE-2
-DATE: 2026-09-19
-FILES:
-modules/shared/features-helpers-global-security.js
-modules/asset/features-helpers-global-security.js
-modules/finance/features-helpers-global-security.js
-modules/shop/features-helpers-global-security.js
-app-bundle-b.min.js
-docs/app-bundle-b.min.js
-tests/s1843-performance-deep-optimization.test.js
-PATCH-README.md
+PATCH: app-main-AUDIT-SAVEFLUSH-CUMULATIVE-6-CORRECTED
+BASE: app-main + CUMULATIVE-5-COMPLETE
+PURPOSE: update legacy persistence tests to the queue contract and refresh bundle-B via scripts/build.js
+FILES: 12 code/test/bundle files + README + manifest + hashes
+BUILD: node scripts/build.js s1793-final-hardening-1825
+FULL TEST: not claimed; local execution exceeded tool time limit

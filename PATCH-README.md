@@ -1,40 +1,21 @@
-# AUDIT + FIX CUMULATIVE — saveFlush / persistence serialization
+# CUMULATIVE-6 CORRECTED — Persistence Contract + Fresh Bundle
 
-Tanggal: 19 September 2026
+Basis: CUMULATIVE-5-COMPLETE layered onto the full app-main tree.
 
-## Temuan
-Audit lanjutan menemukan 4 mirror implementasi yang masih memakai pola lama:
-`_saveImmediate(); _writeLocalSnapshot(_buildSaveJson());`
+## Corrections
+- Updated legacy persistence tests to assert the serialized persistence-queue contract instead of fixed `IDBStore.set()` counts.
+- Updated S1850 to assert the current queue/snapshot contract instead of the removed `_saveQueuedVersion!==version` flush guard.
+- Updated S1843/S1851 hard-flush mirror assertions to accept the current `_saveImmediate(json)` contract and versioned snapshot helper.
+- Rebuilt `app-bundle-b.min.js` with `node scripts/build.js s1793-final-hardening-1825` so the embedded source hash is fresh.
+- Synchronized `docs/app-bundle-b.min.js` with the freshly built bundle-B.
+- No manual bundle editing was used.
 
-Lokasi:
-- `modules/asset/features-helpers-global-security.js`
-- `modules/finance/features-helpers-global-security.js`
-- `modules/shop/features-helpers-global-security.js`
-- `docs/app-bundle-b.min.js`
+## Verification performed
+- Targeted persistence/regression tests: 12/12 PASS.
+- `node scripts/verify-bundle-freshness.js`: PASS.
+- `node scripts/persistence-integrity-gate.js`: PASS.
+- `node scripts/verify-window-expose.js`: PASS (82 modules).
+- Full `npm test` was started in this environment but exceeded the execution time limit before completion; therefore this patch does NOT claim full-suite green here. Run the full suite in the target tree.
 
-Canonical source `modules/shared/features-helpers-global-security.js` dan production `app-bundle-b.min.js` sudah membawa fix S1843 sebelumnya.
-
-## Fix
-`_saveImmediate()` pada mirror lama sekarang mengembalikan JSON snapshot yang baru dibangunnya. `saveFlush()` memakai JSON yang sama untuk `_writeLocalSnapshot(json)`, sehingga tidak ada serialisasi `D` kedua.
-
-## Regression test
-`tests/s1843-performance-deep-optimization.test.js` ditambah pemeriksaan semua mirror/source/bundle terkait agar pola lama tidak muncul kembali.
-
-## Verifikasi
-- `node --check` file JS terkait: PASS
-- `node --test tests/s1843-performance-deep-optimization.test.js`: **5/5 PASS**
-- `node scripts/persistence-integrity-gate.js`: **PASS**
-- pencarian global pola `_writeLocalSnapshot(_buildSaveJson())`: **0 occurrence**
-- `npm test` dijalankan tetapi timeout pada 120 detik setelah test #4384; full-suite 100% **tidak diklaim**.
-
-## Cumulative contents
-Paket mencakup snapshot file dari patch sebelumnya sekaligus mirror baru yang diperbaiki:
-- `modules/shared/features-helpers-global-security.js`
-- `app-bundle-b.min.js`
-- `tests/s1843-performance-deep-optimization.test.js`
-- `modules/asset/features-helpers-global-security.js`
-- `modules/finance/features-helpers-global-security.js`
-- `modules/shop/features-helpers-global-security.js`
-- `docs/app-bundle-b.min.js`
-
-Perubahan terbatas pada persistence snapshot/performance; tidak menyentuh business logic domain.
+## Important
+Apply this patch on the same full tree used for the 7097-test run. Do not mix it with an older bundle-B. The corrected regression tests are included in this patch.
