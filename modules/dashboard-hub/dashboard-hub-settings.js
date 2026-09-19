@@ -30,6 +30,14 @@ const DASH_DEFAULT_TAB_KEY = 'dashDefaultSectionTab';
 const DASH_DENSITY_VALUES = ['nyaman', 'normal', 'rapat'];
 const DASH_DEFAULT_TAB_VALUES = ['ringkasan', 'fitur', 'widget', 'insight'];
 
+function shouldRenderDashboardFromSettings(){
+  const dash=document.getElementById('page-dashboard');
+  const hub=document.getElementById('page-dashboard-hub');
+  const dashActive=!!dash?.classList?.contains('active');
+  const hubActive=!!hub?.classList?.contains('active');
+  return dashActive||(hubActive&&localStorage.getItem('dashHubSectionTab')==='widget');
+}
+
 const DashboardSettings = {
 
   // =====================================================================
@@ -129,7 +137,7 @@ const DashboardSettings = {
     D.dashCardOrder = order;
     save();
     this.renderDashCardOrderUI();
-    if (document.getElementById('page-dashboard-hub')) renderDashboard();
+    if(shouldRenderDashboardFromSettings())renderDashboard();
   },
 
   // Render checklist urutan (id=dashCardOrderList, lihat Pengaturan → Kartu
@@ -172,7 +180,7 @@ const DashboardSettings = {
     localStorage.removeItem(DASH_DEFAULT_TAB_KEY);
     this.applyDashDisplayPrefs();
     this.renderSettingsUI();
-    if (document.getElementById('page-dashboard-hub')) renderDashboard();
+    if(shouldRenderDashboardFromSettings())renderDashboard();
     if (typeof toast === 'function') toast('↩️ Tata letak Dashboard Hub dikembalikan ke default');
   },
 

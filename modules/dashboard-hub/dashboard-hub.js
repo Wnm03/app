@@ -274,16 +274,31 @@ function dashHubNavigateToFeature(target) {
 // (nama & bentuk return per fungsi tetap sama, cuma isinya sekarang
 // delegasi ke sini) — DashboardHubHero/Summary/Analytics tetap 3 object
 // terpisah seperti sebelumnya (lihat test "...tetap terpisah dari...").
+let _dashHubMonthTxCache = { version: null, src: null, month: -1, year: -1, value: null };
 function _dashHubMonthTxShared() {
-  if (typeof D === 'undefined' || !D.transactions) return { inc: 0, exp: 0, count: 0 };
+  if (typeof D === 'undefined' || !Array.isArray(D.transactions)) return { inc: 0, exp: 0, count: 0 };
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  const txM = D.transactions.filter((t) => {
-    const d = new Date(t.date);
-    return d.getMonth() === m && d.getFullYear() === y;
-  });
-  const inc = txM.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const exp = txM.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  return { inc, exp, count: txM.length };
+  // save() advances _saveStateVersion on every mutation. Reuse the aggregate
+  // across Hero/Ticker/Summary/Analytics during the same mutation state instead
+  // of scanning D.transactions once per widget. The fallback still remains
+  // correct in isolated tests that do not load persistence state.
+  const version = typeof _saveStateVersion === 'number' ? _saveStateVersion : null;
+  if (version !== null && _dashHubMonthTxCache.version === version &&
+      _dashHubMonthTxCache.src === D.transactions && _dashHubMonthTxCache.month === m &&
+      _dashHubMonthTxCache.year === y && _dashHubMonthTxCache.value) {
+    return _dashHubMonthTxCache.value;
+  }
+  let inc = 0, exp = 0, count = 0;
+  for (const t of D.transactions) {
+    const d = new Date(t && t.date);
+    if (d.getMonth() !== m || d.getFullYear() !== y) continue;
+    count++;
+    if (t.type === 'income') inc += Number(t.amount) || 0;
+    else if (t.type === 'expense') exp += Number(t.amount) || 0;
+  }
+  const value = { inc, exp, count };
+  if (version !== null) _dashHubMonthTxCache = { version, src: D.transactions, month: m, year: y, value };
+  return value;
 }
 
 function _dashHubHeroMonthTx() {
@@ -292,6 +307,52 @@ function _dashHubHeroMonthTx() {
 }
 
 const DashboardHubHero = {
+  renderFeatureGrid() {
+    const el = document.getElementById('dashboardHubGrid');
+    if (!el) return;
+    if (typeof FEATURE_REGISTRY === 'undefined' || !FEATURE_REGISTRY.length) {
+      el.innerHTML = '';
+      const mainGridCountEl0 = document.getElementById('dashHubMainGridCount');
+      if (mainGridCountEl0) mainGridCountEl0.textContent = '0';
+      return;
+    }
+    el.innerHTML = FEATURE_REGISTRY.map(cat => {
+      const collapseKey = `dashHubCat-${cat.key}`;
+      return `
+      <div class="dashhub-cat" id="dashHubCat-${escapeHtml(cat.key)}">
+        <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='${escapeHtml(JSON.stringify([collapseKey, '$event']))}'>
+          <div class="dashhub-cat-icon">${(typeof FeatureIcons !== 'undefined') ? FeatureIcons.render(cat.icon) : cat.icon}</div>
+          <div>
+            <div class="dashhub-cat-label">${escapeHtml(cat.label)}<span class="dashhub-cat-badge">${cat.features.length}</span></div>
+            <div class="dashhub-cat-desc">${escapeHtml(cat.desc)}</div>
+          </div>
+          <span class="card-collapse-toggle" id="${collapseKey}-chev" data-action="toggleCardCollapse" data-args='${escapeHtml(JSON.stringify([collapseKey, '$event']))}' aria-label="Buka/tutup kategori">▾</span>
+        </div>
+        <div class="card-collapse-body" id="${collapseKey}-cbody">
+          <div class="dashhub-feature-grid dashhub-feature-grid--icon">
+            ${cat.features.map(f => `
+              <div class="dashhub-feature-card dashhub-feature-card--icon" data-action="DashboardHub.open" data-args='${escapeHtml(JSON.stringify([f.key]))}' title="${escapeHtml(f.desc || '')}">
+                <div class="dashhub-fav-star${_dashHubIsFav(f.key) ? ' is-fav' : ''}" data-stop data-action="DashboardHubFavoritView.toggle" data-args='${escapeHtml(JSON.stringify([f.key]))}' role="button" tabindex="0" aria-label="${_dashHubIsFav(f.key) ? 'Hapus dari favorit: ' + escapeHtml(f.label) : 'Tambah ke favorit: ' + escapeHtml(f.label)}">★</div>
+                <div class="dashhub-feature-icon">${(typeof FeatureIcons !== 'undefined') ? FeatureIcons.render(f.icon || cat.icon) : (f.icon || cat.icon)}</div>
+                <div class="dashhub-feature-name">${escapeHtml(f.label)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    }).join('');
+
+    if (typeof applyOneCardCollapsePref === 'function') {
+      FEATURE_REGISTRY.forEach(cat => applyOneCardCollapsePref(`dashHubCat-${cat.key}`));
+    }
+    const mainGridCountEl = document.getElementById('dashHubMainGridCount');
+    if (mainGridCountEl) {
+      const totalFeatures = FEATURE_REGISTRY.reduce((sum, c) => sum + c.features.length, 0);
+      mainGridCountEl.textContent = String(totalFeatures);
+    }
+  },
+
   render() {
     const greetEl = document.getElementById('dashHubHeroGreet');
     const dateEl = document.getElementById('dashHubHeroDate');
@@ -637,68 +698,72 @@ const ShopMiniSummary = {
 };
 
 const DashboardHub = {
+  _defaultSectionTab() {
+    return (typeof DashboardSettings !== 'undefined' && typeof DashboardSettings.getDefaultTab === 'function')
+      ? DashboardSettings.getDefaultTab() : 'ringkasan';
+  },
+
+  _currentSectionTab() {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('dashHubSectionTab') : null;
+    return saved || this._defaultSectionTab();
+  },
+
+  renderSection(tab) {
+    const safe = (name, fn) => {
+      try { fn(); } catch (e) { console.warn('DashboardHub: section presenter "' + name + '" gagal dirender:', e); }
+    };
+    if (tab === 'ringkasan') {
+      safe('DashboardHubSummary', () => { if (typeof DashboardHubSummary !== 'undefined') DashboardHubSummary.render(); });
+      safe('DashboardHubAnalytics', () => { if (typeof DashboardHubAnalytics !== 'undefined') DashboardHubAnalytics.render(); });
+      safe('DashboardHubOwnershipSummary', () => { if (typeof DashboardHubOwnershipSummary !== 'undefined') DashboardHubOwnershipSummary.render(); });
+      return;
+    }
+    if (tab === 'fitur') {
+      // The feature registry/grid is the heaviest static DOM block on the Hub.
+      // Own it exclusively from the active `fitur` section so opening or
+      // refreshing Ringkasan/Widget/Insight does not rebuild dozens of cards
+      // that are immediately hidden by CSS.
+      safe('DashboardHubFeatureGrid', () => this.renderFeatureGrid());
+      safe('DashboardHubFavoritView', () => { if (typeof DashboardHubFavoritView !== 'undefined') DashboardHubFavoritView.render(); });
+      return;
+    }
+    if (tab === 'widget') {
+      // renderDashboard() is already the caller here. Disable its Hub live
+      // wiring for this invocation to avoid a second deferred render of the
+      // same section (renderDashboard -> live wiring -> renderDashboard).
+      if (typeof renderDashboard === 'function') safe('renderDashboardWidgets', () => renderDashboard({ hubLive: false }));
+      return;
+    }
+    if (tab === 'insight') {
+      safe('LifeOSHome', () => { if (typeof LifeOSHome !== 'undefined') LifeOSHome.render(); });
+      safe('ShopMiniSummary', () => { if (typeof ShopMiniSummary !== 'undefined') ShopMiniSummary.render(); });
+      safe('CrossDashboardCard', () => { if (typeof CrossDashboardCard !== 'undefined') CrossDashboardCard.render(); });
+      safe('CrossInsightPresenter', () => { if (typeof CrossInsightPresenter !== 'undefined') CrossInsightPresenter.render(); });
+      safe('UnifiedBriefingPresenter', () => { if (typeof UnifiedBriefingPresenter !== 'undefined') UnifiedBriefingPresenter.render(); });
+      safe('UnifiedDashboardHome', () => { if (typeof UnifiedDashboardHome !== 'undefined') UnifiedDashboardHome.render(); });
+      safe('DecisionCenterHome', () => { if (typeof DecisionCenterHome !== 'undefined') DecisionCenterHome.render(); });
+      safe('EIEDashboard', () => { if (typeof EIEDashboard !== 'undefined') EIEDashboard.render(); });
+    }
+  },
+
   render() {
+    const activeSection = this._currentSectionTab();
     const el = document.getElementById('dashboardHubGrid');
     if (!el) return;
     if (typeof FEATURE_REGISTRY === 'undefined' || !FEATURE_REGISTRY.length) {
-      el.innerHTML = '<div class="empty"><div class="empty-text">Belum ada data fitur</div></div>';
+      el.innerHTML = '';
       const mainGridCountEl0 = document.getElementById('dashHubMainGridCount');
       if (mainGridCountEl0) mainGridCountEl0.textContent = '0';
       return;
-    }
-    el.innerHTML = FEATURE_REGISTRY.map(cat => {
-      const collapseKey = `dashHubCat-${cat.key}`;
-      return `
-      <div class="dashhub-cat" id="dashHubCat-${escapeHtml(cat.key)}">
-        <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='${escapeHtml(JSON.stringify([collapseKey, '$event']))}'>
-          <div class="dashhub-cat-icon">${(typeof FeatureIcons !== 'undefined') ? FeatureIcons.render(cat.icon) : cat.icon}</div>
-          <div>
-            <div class="dashhub-cat-label">${escapeHtml(cat.label)}<span class="dashhub-cat-badge">${cat.features.length}</span></div>
-            <div class="dashhub-cat-desc">${escapeHtml(cat.desc)}</div>
-          </div>
-          <span class="card-collapse-toggle" id="${collapseKey}-chev" data-action="toggleCardCollapse" data-args='${escapeHtml(JSON.stringify([collapseKey, '$event']))}' aria-label="Buka/tutup kategori">▾</span>
-        </div>
-        <div class="card-collapse-body" id="${collapseKey}-cbody">
-          <div class="dashhub-feature-grid dashhub-feature-grid--icon">
-            ${cat.features.map(f => `
-              <div class="dashhub-feature-card dashhub-feature-card--icon" data-action="DashboardHub.open" data-args='${escapeHtml(JSON.stringify([f.key]))}' title="${escapeHtml(f.desc || '')}">
-                <div class="dashhub-fav-star${_dashHubIsFav(f.key) ? ' is-fav' : ''}" data-stop data-action="DashboardHubFavoritView.toggle" data-args='${escapeHtml(JSON.stringify([f.key]))}' role="button" tabindex="0" aria-label="${_dashHubIsFav(f.key) ? 'Hapus dari favorit: ' + escapeHtml(f.label) : 'Tambah ke favorit: ' + escapeHtml(f.label)}">★</div>
-                <div class="dashhub-feature-icon">${(typeof FeatureIcons !== 'undefined') ? FeatureIcons.render(f.icon || cat.icon) : (f.icon || cat.icon)}</div>
-                <div class="dashhub-feature-name">${escapeHtml(f.label)}</div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    }).join('');
-
-    // Terapkan preferensi collapse per kategori (localStorage cardCollapsePrefs) —
-    // pola sama persis dgn applyOneCardCollapsePref() dipanggil setelah render
-    // kartu lain (lihat modules-render.js). Dipanggil per-kategori krn semua
-    // kategori di-render sekaligus lewat 1 innerHTML di atas.
-    if (typeof applyOneCardCollapsePref === 'function') {
-      FEATURE_REGISTRY.forEach(cat => applyOneCardCollapsePref(`dashHubCat-${cat.key}`));
-    }
-
-    // Badge jumlah total fitur di header kartu collapse "Semua Fitur" (lihat
-    // #dashHubMainGridCard di index.html/app_production.html). Tambahan
-    // murni — cuma isi teks 1 elemen, tidak menyentuh grid di atas.
-    const mainGridCountEl = document.getElementById('dashHubMainGridCount');
-    if (mainGridCountEl) {
-      const totalFeatures = FEATURE_REGISTRY.reduce((s, c) => s + c.features.length, 0);
-      mainGridCountEl.textContent = String(totalFeatures);
     }
 
     // LifeOS (section terpisah, lihat #lifeOSWrap di index.html/
     // app_production.html & lifeos/ui/lifeos-home.js). Tambahan murni —
     // tidak mengubah baris manapun di atas.
-    if (typeof LifeOSHome !== 'undefined') LifeOSHome.render();
 
     // Favorit (Tahap 3, Langkah 7-8, lihat dashboard-hub-favorit-view.js).
     // Tambahan murni, pola sama dgn LifeOSHome.render() di atas — tidak
     // mengubah baris manapun sebelum ini.
-    if (typeof DashboardHubFavoritView !== 'undefined') DashboardHubFavoritView.render();
 
     // Hero Card (Sprint 1 Tahap 2, lihat HERO-CARD.md). Tambahan murni, pola
     // sama dgn LifeOSHome.render()/DashboardHubFavoritView.render() di atas —
@@ -710,15 +775,17 @@ const DashboardHub = {
     // DashboardHubTickerModern), jadi dipanggil selalu tanpa cek tema.
     if (typeof DashboardHubTickerModern !== 'undefined') DashboardHubTickerModern.render();
 
+    // Render only the active Hub section. Hidden Insight/Widget presenters are
+    // intentionally lazy and will be populated when the user opens that tab.
+    this.renderSection(activeSection);
+
     // Summary Cards (Sprint 1 Tahap 5, lihat DASHBOARD-SUMMARY.md). Tambahan
     // murni, pola sama dgn DashboardHubHero.render() di atas — tidak
     // mengubah baris manapun sebelum ini.
-    if (typeof DashboardHubSummary !== 'undefined') DashboardHubSummary.render();
 
     // Dashboard Analytics (Sprint 1 Tahap 7, lihat DASHBOARD-ANALYTICS.md).
     // Tambahan murni, pola sama dgn DashboardHubSummary.render() di atas —
     // tidak mengubah baris manapun sebelum ini.
-    if (typeof DashboardHubAnalytics !== 'undefined') DashboardHubAnalytics.render();
 
     // Finance Dashboard/Forecast/Budget Reco/Cashflow Proj/Financial
     // Goal/Invest Planner/Debt Optimizer/Retirement Planner/Health
@@ -766,8 +833,6 @@ const DashboardHub = {
     // FinanceDashboard.getAIHook()+VehicleAIHook.fleetSummary()) +
     // FinanceIntelligence.insights()/VehicleIntelligence.insights(), UI
     // hanya presenter.
-    if (typeof CrossDashboardCard !== 'undefined') CrossDashboardCard.render();
-    if (typeof CrossInsightPresenter !== 'undefined') CrossInsightPresenter.render();
 
     // Unified AI Briefing Foundation (Sesi 88, Batch 8, lihat
     // #crossBriefWrap di index.html/app_production.html). Tambahan murni,
@@ -775,7 +840,6 @@ const DashboardHub = {
     // baris manapun sebelum ini. 100% reuse UnifiedAIBriefing.generate()
     // (sendiri 100% reuse UnifiedSummaryAPI.summary() -> CrossAIHook.
     // getAIHook()), UI hanya presenter.
-    if (typeof UnifiedBriefingPresenter !== 'undefined') UnifiedBriefingPresenter.render();
 
     // Personal Life Dashboard Foundation (Sesi 89, Batch 8, lihat
     // #personalOverviewWrap/#crossWidgetsWrap/#lifePriorityWrap di
@@ -787,7 +851,6 @@ const DashboardHub = {
     // panggilan (UnifiedDashboardHome.render()) yang di dalamnya
     // memanggil PersonalOverviewPresenter/CrossModuleWidgets/
     // LifePriorityPanel — lihat unified-dashboard-home.js.
-    if (typeof UnifiedDashboardHome !== 'undefined') UnifiedDashboardHome.render();
 
     // Personal Decision Center Foundation (Sesi 90, Batch 8, lihat
     // #recommendationPanelWrap/#actionQueueWrap di index.html/
@@ -800,7 +863,6 @@ const DashboardHub = {
     // — field final, bukan rule baru), UI hanya presenter. Satu
     // panggilan (DecisionCenterHome.render()) yang di dalamnya memanggil
     // RecommendationPanel/ActionQueue — lihat decision-center-home.js.
-    if (typeof DecisionCenterHome !== 'undefined') DecisionCenterHome.render();
 
     // Economic Intelligence Engine (fase 2, lihat
     // Economic-Intelligence-Engine-Technical-Design.md & #eieWrap di
@@ -808,7 +870,6 @@ const DashboardHub = {
     // DashboardHubAnalytics.render() di atas — tidak mengubah baris
     // manapun sebelum ini. Async & self-guarded (try/catch di dalam
     // EIEDashboard.render()), jadi tidak memblokir render kartu lain.
-    if (typeof EIEDashboard !== 'undefined') EIEDashboard.render();
 
     // Dana Kelolaan / Managed Funds Foundation (S195, lihat
     // #danaKelolaanWrap di index.html/app_production.html). Tambahan
@@ -845,8 +906,7 @@ const DashboardHub = {
     // ada — ini cuma mengganti nilai fallback-nya, BUKAN mekanisme baru.
     // Guard typeof: DashboardSettings opsional, fallback ke 'ringkasan' persis
     // seperti sebelumnya kalau modul itu belum dimuat.
-    const dashDefaultTab=(typeof DashboardSettings!=='undefined'&&typeof DashboardSettings.getDefaultTab==='function')?DashboardSettings.getDefaultTab():'ringkasan';
-    this.applySectionTab(localStorage.getItem('dashHubSectionTab') || dashDefaultTab);
+    this.applySectionTab(activeSection);
 
     // S129 (Dashboard Settings): terapkan Compact Mode/Card Density ke
     // #page-dashboard-hub tiap kali Dashboard Hub dirender ulang — tambahan
@@ -859,8 +919,11 @@ const DashboardHub = {
   // Ganti sub-tab aktif & simpan pilihannya (localStorage key:
   // dashHubSectionTab).
   setSectionTab(tab) {
-    localStorage.setItem('dashHubSectionTab', tab);
-    this.applySectionTab(tab);
+    const allowed = ['ringkasan', 'fitur', 'widget', 'insight'];
+    const next = allowed.includes(tab) ? tab : 'ringkasan';
+    localStorage.setItem('dashHubSectionTab', next);
+    this.applySectionTab(next);
+    this.renderSection(next);
   },
 
   // Toggle visibility 3 kelompok section yang SUDAH ADA (tidak ada wrapper
@@ -898,15 +961,6 @@ const DashboardHub = {
         if (el) { el.classList.toggle('u-dnone', t !== tab); el.style.display = ''; }
       });
     });
-
-    // dashHubFavoritSection punya visibility SENDIRI yang data-driven
-    // (disembunyikan total kalau belum ada key favorit tersimpan) — panggil
-    // ulang render aslinya supaya keputusan itu tetap dihormati begitu
-    // sub-tab "fitur" aktif lagi, bukan ketimpa jadi selalu-tampil oleh
-    // toggle generik di atas.
-    if (tab === 'fitur' && typeof DashboardHubFavoritView !== 'undefined') {
-      DashboardHubFavoritView.render();
-    }
 
     // Update tombol aktif.
     let _activeSectionTabBtn = null;
