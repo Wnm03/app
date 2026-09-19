@@ -1,67 +1,72 @@
-# PATCH s756+s767 — Fix Jenis BBM↔Harga sync + gate anti-bundle-basi permanen
+Keluarga-W — accumulated performance/hardening patch v1825
 
-Ini patch KUMULATIF, gabungan 2 sesi (apply cukup SEKALI dari kondisi zip
-original kamu — tidak perlu apply patch v1625 sebelumnya lagi):
+Scope
+- Accumulates and preserves the supplied v1824 Dashboard/Service performance fixes.
+- Deep audit focused on page navigation, active feature/tab rendering, duplicate render paths, hidden presenter work, DOM scans, and cache-busting.
+- No business-rule rewrite, no data-schema migration, and no CSS/layout/UI redesign.
 
-## S756 — Fix gejala yang kamu laporkan
-Jenis BBM tidak sync ke Harga per Liter. Root cause: bundle produksi
-(`app-bundle-a/b.min.js`) belum di-rebuild setelah source difix di Sesi
-755. Fix: rebuild bundle dari source (tidak ada perubahan logika baru).
-Detail lengkap: `SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md`.
+Inherited v1824 fixes preserved
+- Dashboard Hub section-aware/lazy rendering.
+- FEATURE_REGISTRY lazy feature grid.
+- Favorit double-render fix.
+- Widget recursive render guard.
+- Dashboard preference active-page guards.
+- Dashboard month aggregation/cache hardening.
+- Service checklist undefined-length hardening and malformed suggestion-array guard.
+- Production bundle freshness/cache-busting baseline.
 
-## S767 — Fix supaya insiden SEJENIS tidak lolos lagi ke depannya
-Ditemukan lewat audit lanjutan: skrip yang seharusnya menangkap bundle
-basi (`scripts/verify-bundle-freshness.js`) sudah ada sejak lama, TAPI
-gate wajib sebelum ZIP (`scripts/verify-release-ready.js`) tidak pernah
-memanggilnya. Sekarang sudah disambungkan sbg Gate 5 (wajib, tidak bisa
-di-override) — jadi kalau lupa rebuild bundle sebelum bikin ZIP, prosesnya
-sendiri yang akan BLOCK, bukan menunggu ketahuan dari laporan user lagi.
-Detail lengkap: `SESSION-NOTE-S767-bundle-freshness-gate-wired-into-release-check.md`.
+New v1825 audit fixes
+1. Keuangan navigation is top-tab scoped.
+   - Entering Keuangan no longer renders the full Kelola/transaction pipeline when the user is actually on Tagihan, Budget, Utang/Piutang, Akun, Aset/Proyek, or Laporan.
+   - The existing tab switcher remains the render owner when the user opens a tab.
+2. Shop navigation is active-tab scoped.
+   - Entering Shop no longer renders Kasir + Etalase + Riwayat + Produk + recent widgets together.
+   - Only the active Shop tab is rendered on page entry.
+3. Asset Management/Investment presenters are lazy.
+   - Property/Rental/Portfolio/Maintenance presenters render only for the Manajemen tab.
+   - InvestmentListUI renders only for the Investasi tab.
+   - Ringkasan/Buku/Analisis keep the existing Aset renderer as their source of truth.
+4. Asset tab switching is lazy and freshness-safe.
+   - Opening a new Asset tab renders its active domain once.
+   - Re-tapping the already-active Asset tab does not trigger another heavy render.
+5. showPage() no longer scans the same open-overlay selector twice during one navigation.
+6. Re-tapping an already-active bottom navigation item is a no-op for the full page renderer. Programmatic showPage(name) behavior is preserved.
+7. Cache-busting/service-worker cache is advanced to v1825 so stale v1824 assets cannot mask the patch.
 
-## File yang diganti/ditambah (18)
-Ganti (timpa) di lokasi yang sama persis:
-- `app-bundle-a.min.js`, `app-bundle-b.min.js` — rebuild
-- `index.html`, `app_production.html` — `?v=1627`
-- `sw.js` — `CACHE_NAME` `kw-cache-v1627`
-- `chat-action-handlers.js`, `modules/shared/modals.js`,
-  `modules/shared/modules-calc.js`, `modules/shared/modules-render.js`,
-  `modules/shared/features-helpers-global-security.js` — bump versi saja
-- `scripts/verify-bundle-freshness.js` — refactor (fungsi
-  `checkBundleFreshness()` diekspor, perilaku CLI tidak berubah)
-- `scripts/verify-release-ready.js` — **Gate 5 baru: bundle-freshness**
-- `docs/ZIP_RULES.md`, `docs/FILE-MAP.md`, `docs/COVERAGE-PER-MODULE.md`
-  — update dokumentasi
+Intentional non-changes
+- No business calculations/formulas were changed.
+- No HTML structure, CSS, theme, spacing, or visual component treatment was changed.
+- renderPajakZakat() remains its existing full pipeline; splitting it safely requires a separate presenter extraction and is intentionally outside this low-risk pass.
+- Aset.renderList() remains the existing SoT for its core Ringkasan/Buku/Analisis pipeline; only Manajemen/Investasi side presenters were made lazy.
 
-Baru (tambahkan):
-- `tests/verify-release-ready-s767-bundle-freshness-gate.test.js`
-- `SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md`
-- `SESSION-NOTE-S767-bundle-freshness-gate-wired-into-release-check.md`
+Validation
+- Targeted accumulated dashboard/service/performance tests: 16/16 PASS.
+- app-bundle-a.min.js: node --check PASS.
+- app-bundle-b.min.js: node --check PASS.
+- modules/shared/modules-render.js: node --check PASS.
+- modules/shared/modal-navigasi.js: node --check PASS.
+- modules/asset/aset-misc.js: node --check PASS.
+- Version/cache/source-size gates: PASS (9/9 targeted integrity tests + verify-bundle + strict source-size).
+- Dashboard settings + tab-switch regression: PASS (35/35).
+- Business/performance regression set: PASS (102/102 targeted tests).
+- Full project suite: the supplied baseline reported 7 failures from 3 causes; all 3 causes are addressed in this accumulated patch. A complete 7,093-test rerun was not completed in this execution environment, so full-suite green is not claimed here.
+- esbuild/minification is not performed in this environment; rebuilt production bundles are valid JavaScript and bundle-freshness PASS, but they are not minified.
 
-## Cara apply
-Timpa/tambahkan 18 file di atas persis di posisi folder yang sama
-(pertahankan `modules/shared/...`, `scripts/...`, `docs/...`,
-`tests/...`). Upload SEMUA sekaligus.
+Deployment
+Upload all files in this patch, especially:
+- index.html
+- app_production.html
+- sw.js
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- changed source modules under modules/
+- tests/ (regression gates)
 
-## Verifikasi setelah apply
-```
-node scripts/build.js               # opsional, kalau mau rebuild ulang
-node scripts/verify-bundle-freshness.js
-node scripts/verify-release-ready.js
-npm test
-```
-- `verify-bundle-freshness.js` & Gate 5 di `verify-release-ready.js` harus
-  ✓ segar.
-- `npm test` di environment saya: 5879/5882 lolos. 3 gagal adalah
-  kegagalan PRA-EXISTING (gate SA16 soal atribut event inline) yang SUDAH
-  ada sebelum patch ini — tidak disebabkan oleh patch ini, sudah
-  dikonfirmasi dgn menjalankan test yg sama di zip original.
-- Gate `lint`/`minify` di `verify-release-ready.js` kemungkinan BLOCK di
-  sandbox tanpa akses npm (eslint/esbuild tidak terpasang) — ini batasan
-  environment saya, bukan bug. Kalau kamu punya environment dgn akses
-  internet, jalankan `npm install --save-dev eslint esbuild` lalu
-  `node scripts/build.js` sekali lagi supaya rilis final ter-lint &
-  ter-minify penuh.
+Do not deploy only source JS while retaining the old production bundles.
 
-Setelah apply, di browser: hard-refresh / clear cache PWA, lalu tes ulang
-modal "Catat Isi BBM" — ganti Jenis BBM harus langsung update Harga per
-Liter (dan Volume BBM kalau Total Biaya sudah diisi).
+Final v1825 corrections included
+- All five version-bearing source files are synchronized to s1793-final-hardening-1825.
+- modules/shared/modules-render.js is reduced to 1590 lines, below the 1600-line guard, without changing business rules.
+- DashboardSettings uses an active-page helper based on existing DOM elements/class state instead of requiring document.querySelector(), keeping the runtime guard and the repository's lightweight test harness compatible.
+- setAsetTab() no longer requires document.querySelector() to identify the previous active tab; it reuses the existing tab NodeList.
+- Regression tests were updated to model the intended active-page contract, including an explicit inactive-page no-render case.
