@@ -31,8 +31,9 @@ for(const f of files){
  return '';
 }
  const flush=functionBody(s,'function saveFlush()');
- ok((flush.match(/\n\s*_saveImmediate\(/g)||[]).length===1,'S1852 '+f+': saveFlush must call _saveImmediate exactly once');
+ ok((flush.match(/_saveImmediate\(json\)/g)||[]).length===1,'S1852 '+f+': saveFlush must call _saveImmediate(json) exactly once');
  ok(flush.includes('_writeLocalSnapshot(json)'),'S1852 '+f+': hard flush localStorage safety net missing');
+ ok(flush.includes("_markSavePersistMeta('local',persistStamp)"),'S1852 '+f+': hard flush durability metadata missing');
 }
 const bundle=read(path.join(root,'app-bundle-b.min.js'));
 const docs=read(path.join(root,'docs/app-bundle-b.min.js'));
