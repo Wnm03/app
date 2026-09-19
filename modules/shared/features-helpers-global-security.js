@@ -255,6 +255,13 @@ return false;
 }
 let _bigDataWarnShown=false;
 let _saveDebounceTimer=null;
+// S1850 PERF: mutation-versioned persistence snapshot. Lifecycle events on mobile can
+// fire visibilitychange -> pagehide -> beforeunload in quick succession. Reusing the
+// exact snapshot for the same save version avoids repeated full JSON.stringify(D) work.
+let _saveStateVersion=0;
+let _saveSnapshotVersion=-1;
+let _saveSnapshotJson=null;
+let _saveQueuedVersion=-1;
 // MIGRASI STORAGE (LEVEL 3): IndexedDB sekarang jadi penyimpanan UTAMA untuk data besar (kw_v4_mirror).
 // localStorage['kw_v4'] TIDAK lagi ditulis di tiap save() biasa (dulu ditulis dobel setiap ada
 // perubahan data, padahal localStorage kapasitasnya kecil & write-nya blocking). localStorage
@@ -309,9 +316,19 @@ return false;
 let _savePersistChain=Promise.resolve();
 let _savePersistSeq=0;
 // S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
+function _getSaveSnapshotForVersion(version){
+if(_saveSnapshotVersion===version&&_saveSnapshotJson!==null)return _saveSnapshotJson;
+const json=_buildSaveJson();
+_saveSnapshotVersion=version;
+_saveSnapshotJson=json;
+return json;
+}
 function _saveImmediate(){
+const version=_saveStateVersion;
 let json;
-try{json=_buildSaveJson();}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}
+if(_saveQueuedVersion===version)return;
+_saveQueuedVersion=version;
 const seq=++_savePersistSeq;
 _savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
@@ -320,7 +337,127 @@ else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah
 _announcePersistenceWrite();
 });
 }
+
+// S1841: scoped post-mutation rendering.
+// save() remains the persistence/reconciliation gate, but callers must not redraw
+// unrelated domains after every mutation. On mobile this is especially important:
+// a single transaction/service save used to synchronously redraw Dashboard + Finance +
+// Car Notes + Sparepart even when only one page was visible.
+// The helper preserves synchronous freshness for the currently visible page while
+// deliberately skipping hidden/unrelated pages. It is intentionally global so legacy
+// feature modules can migrate incrementally without changing their public APIs.
+// S1842 PERF: tiny in-memory profiler. It is disabled by default and only records
+// timings when window.__APP_PERF_ENABLED is explicitly true, so production users pay
+// essentially zero cost. Tests/diagnostics can enable it to identify real mobile hot spots.
+// S1844 PERF: cache parsed transaction dates per object. Date parsing is a surprisingly
+// hot path because the same transaction is visited by Dashboard, Finance, reports and
+// ledger rendering. Cache is invalidated automatically when t.date changes.
+const _txDateCache=typeof WeakMap!=='undefined'?new WeakMap():null;
+function getCachedTxDateMs(t){
+  if(!t)return NaN;
+  const raw=t.date;
+  if(_txDateCache){
+    const hit=_txDateCache.get(t);
+    if(hit&&hit.raw===raw)return hit.ms;
+    const ms=new Date(raw).getTime();
+    _txDateCache.set(t,{raw,ms});
+    return ms;
+  }
+  return new Date(raw).getTime();
+}
+
+function _perfMark(name,start){
+  if(typeof window==='undefined'||window.__APP_PERF_ENABLED!==true)return;
+  try{
+    const ms=performance.now()-start;
+    const P=window.__APP_PERF||(window.__APP_PERF={count:0,totalMs:0,byName:{}});
+    P.count++;P.totalMs+=ms;
+    const x=P.byName[name]||(P.byName[name]={count:0,totalMs:0,maxMs:0});
+    x.count++;x.totalMs+=ms;x.maxMs=Math.max(x.maxMs,ms);
+  }catch(_e){ /* perf telemetry must never affect app flow */ }
+}
+// S1846 PERF: reusable tiny indexes for hot-path display lookups. They are keyed by
+// the current array identity + length; callers that replace/mutate the collection can
+// invalidate explicitly via clearPerfIndexes(). No data is changed.
+let _perfAccountIndex={src:null,len:-1,map:null};
+let _perfCategoryIndex={src:null,len:-1,map:null};
+function _getPerfAccountIndex(){
+  const src=(typeof D!=='undefined'&&Array.isArray(D.accounts))?D.accounts:[];
+  if(_perfAccountIndex.src!==src||_perfAccountIndex.len!==src.length){
+    const m=new Map(); for(const a of src){if(a&&a.id!=null)m.set(a.id,a);} 
+    _perfAccountIndex={src,len:src.length,map:m};
+  }
+  return _perfAccountIndex.map;
+}
+function _getPerfCategoryIndex(){
+  const src=typeof getAllCats==='function'?getAllCats():[];
+  if(_perfCategoryIndex.src!==src||_perfCategoryIndex.len!==src.length){
+    const m=new Map(); for(const c of src){if(c&&c.name!=null)m.set(c.name,c);} 
+    _perfCategoryIndex={src,len:src.length,map:m};
+  }
+  return _perfCategoryIndex.map;
+}
+function clearPerfIndexes(){_perfAccountIndex={src:null,len:-1,map:null};_perfCategoryIndex={src:null,len:-1,map:null};}
+
+function refreshAfterMutation(opts){
+  opts=opts||{};
+  const isVisible=(id)=>{
+    if(typeof document==='undefined')return false;
+    const el=document.getElementById(id);
+    if(!el)return false;
+    if(el.hidden)return false;
+    if(el.style&&el.style.display==='none')return false;
+    if(el.classList&&el.classList.contains('u-dnone'))return false;
+    return true;
+  };
+  const safe=(name,fn)=>{
+    const t0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+    try{if(typeof fn==='function')fn();}
+    catch(e){console.error('S1841 scoped mutation refresh failed: '+name,e);}
+    finally{if(t0)_perfMark('render:'+name,t0);}
+  };
+  // If a specific domain is requested, render it only when its page/container is live.
+  if(opts.domain==='servis'){
+    if(isVisible('page-carnotes')){
+      safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
+      if(typeof Sparepart!=='undefined'){
+        safe('Sparepart.renderStockList',typeof Sparepart.renderStockList==='function'?()=>Sparepart.renderStockList():null);
+        safe('Sparepart.renderCatList',typeof Sparepart.renderCatList==='function'?()=>Sparepart.renderCatList():null);
+      }
+      safe('refreshServiceReminderState',typeof refreshServiceReminderState==='function'?refreshServiceReminderState:null);
+    }
+    return;
+  }
+  if(opts.domain==='finance'){
+    if(isVisible('page-keuangan')){
+      safe('renderKeuangan',typeof renderKeuangan==='function'?renderKeuangan:null);
+      if(opts.bills!==false)safe('renderBillList',typeof renderBillList==='function'?renderBillList:null);
+      if(opts.bills!==false)safe('checkBills',typeof checkBills==='function'?checkBills:null);
+      if(opts.debt)safe('renderDebtList',typeof renderDebtList==='function'?renderDebtList:null);
+    }else if(isVisible('page-dashboard')){
+      // A finance mutation made while the dashboard is the visible page only needs
+      // the dashboard refresh; renderKeuangan() would be completely hidden work.
+      safe('renderDashboard',typeof renderDashboard==='function'?renderDashboard:null);
+    }else if(isVisible('page-carnotes')&&opts.carNotes){
+      safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
+    }
+    return;
+  }
+  // Generic explicit requests. If several domains are requested by a legacy caller,
+  // refresh only the currently visible expensive page. This prevents a save in Shop,
+  // Investment, Renovasi, etc. from synchronously repainting hidden Dashboard/Finance.
+  // Callers that explicitly need a second visible domain can still request it via a
+  // domain-specific branch above.
+  if(opts.dashboard&&isVisible('page-dashboard'))
+    safe('renderDashboard',typeof renderDashboard==='function'?renderDashboard:null);
+  if(opts.finance&&isVisible('page-keuangan')&&!isVisible('page-dashboard'))
+    safe('renderKeuangan',typeof renderKeuangan==='function'?renderKeuangan:null);
+  if(opts.carNotes&&isVisible('page-carnotes')&&!isVisible('page-dashboard')&&!isVisible('page-keuangan'))
+    safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
+}
+
 function save(){
+_saveStateVersion++;
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
 // (renderAccGrid/renderDashAccList/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
@@ -332,7 +469,11 @@ if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 // = saldo akun saat ini (real-time, keputusan desain eksplisit -- lihat komentar
 // TitipanSync.reconcileAccounts()). Ditaruh SETELAH invalidateAccBalCache() supaya
 // recalcAccBalance() di dalamnya baca saldo TERBARU, bukan cache basi dari siklus lalu.
-if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function')TitipanSync.reconcileAccounts();
+if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcileAccounts==='function'){
+const _tTitipan=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+TitipanSync.reconcileAccounts();
+if(_tTitipan)_perfMark('save:TitipanSync',_tTitipan);
+}
 if(typeof syncLinkedAssetNilaiFromAkun==='function')syncLinkedAssetNilaiFromAkun();
 if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
 if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
@@ -361,7 +502,11 @@ if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.bump==='
 // perlu refactor Zakat.hitungMaal() dulu (pisahkan baca input DOM dari
 // kalkulasi murni, hilangkan panggilan save() rekursif) sebelum aman
 // digerbangi dari titik tunggal ini. Lihat FIX-...-s422i-*.md.
-if(typeof renderKekayaanBersih==='function'&&typeof document!=='undefined'&&document.getElementById('kbNetWorth'))renderKekayaanBersih();
+if(typeof renderKekayaanBersih==='function'&&typeof document!=='undefined'&&document.getElementById('kbNetWorth')){
+const _tKB=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+renderKekayaanBersih();
+if(_tKB)_perfMark('save:KekayaanBersih',_tKB);
+}
 if(_saveDebounceTimer)clearTimeout(_saveDebounceTimer);
 _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},400);
 }
@@ -371,9 +516,23 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 // tab langsung ditutup/di-suspend setelah ini.
 function saveFlush(){
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
-_saveImmediate();
-_writeLocalSnapshot(_buildSaveJson());
-_announcePersistenceWrite();
+// S1843 PERF: build the critical snapshot ONCE. Previously _saveImmediate() serialized D,
+// then _buildSaveJson() ran a second full JSON.stringify(D) immediately for localStorage.
+// Keep both durability paths, but reuse the exact same snapshot bytes.
+const version=_saveStateVersion;
+let json;
+try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk flush:',e);return;}
+if(_saveQueuedVersion!==version){
+  _saveQueuedVersion=version;
+  const seq=++_savePersistSeq;
+  _savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_announcePersistenceWrite();}).catch(e=>{
+    console.error('Gagal menyimpan ke IndexedDB saat flush, fallback ke localStorage:',e);
+    if(seq===_savePersistSeq)_writeLocalSnapshot(json);
+    else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
+    _announcePersistenceWrite();
+  });
+}
+_writeLocalSnapshot(json);
 }
 // P29: flush the latest synchronous snapshot at mobile/page lifecycle boundaries.
 // visibilitychange is the primary signal on Android/iOS when an app is backgrounded;

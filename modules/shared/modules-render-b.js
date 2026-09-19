@@ -51,10 +51,21 @@ LifeBalance.render();
 if(typeof Advisor!=='undefined')Advisor.render();
 if(typeof AIWidget!=='undefined')AIWidget.render();
 const now=new Date(),m=now.getMonth(),y=now.getFullYear();
-const txM=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
-const{inc,exp}=_dashMonthlyIncExp(txM);
+// S1843 PERF: aggregate the current-month transaction context in one pass instead of
+// filter -> filter/reduce -> filter/reduce. The resulting txM/inc/exp are identical.
+const txM=[];let inc=0,exp=0,dashInc=0,dashExp=0;
+for(const t of D.transactions){
+  const dms=(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime());
+  const d=new Date(dms);
+  if(d.getMonth()!==m||d.getFullYear()!==y)continue;
+  txM.push(t);
+  if(t.type==='income'){const n=t.amount||0;inc+=n;if(t.hitungKas!==false)dashInc+=n;}
+  else if(t.type==='expense'){const n=t.amount||0;exp+=n;if(t.hitungKas!==false)dashExp+=n;}
+  else if(t.type==='transfer_in')inc+=t.amount||0;
+  else if(t.type==='transfer_out')exp+=t.amount||0;
+}
 const billStatsShared=(typeof getBillStats==='function')?getBillStats():null;
-const dashCtx={now,m,y,txM,inc,exp,billStats:billStatsShared};
+const dashCtx={now,m,y,txM,inc:dashInc,exp:dashExp,billStats:billStatsShared};
 if(typeof FinCoach!=='undefined')FinCoach.renderDash(dashCtx);
 if(typeof AIRecommendCard!=='undefined')AIRecommendCard.render();
 if(typeof AIDailyBriefingCard!=='undefined')AIDailyBriefingCard.render();
@@ -200,7 +211,7 @@ if(!trendEl||!katEl)return;
 const net=inc-exp;
 const now=new Date();
 const prevM=new Date(now.getFullYear(),now.getMonth()-1,1);
-const txPrev=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===prevM.getMonth()&&d.getFullYear()===prevM.getFullYear();});
+const txPrev=D.transactions.filter(t=>{const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));return d.getMonth()===prevM.getMonth()&&d.getFullYear()===prevM.getFullYear();});
 const incPrev=txPrev.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const expPrev=txPrev.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 const netPrev=incPrev-expPrev;
@@ -273,11 +284,19 @@ document.getElementById('monthLabel').textContent=MONTHS_FULL[curMonth]+' '+curY
 const txListMonthLabelEl=document.getElementById('txListMonthLabel');
 if(txListMonthLabelEl)txListMonthLabelEl.textContent=MONTHS_FULL[curMonth]+' '+curYear;
 renderKeuAbsensiGajiCard();
-const txM=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===curMonth&&d.getFullYear()===curYear;});
-const inc=txM.filter(t=>t.type==='income'||t.type==='transfer_in').reduce((s,t)=>s+t.amount,0);
-const exp=txM.filter(t=>t.type==='expense'||t.type==='transfer_out').reduce((s,t)=>s+t.amount,0);
-const incReal=txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const expReal=txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+// S1843 PERF: one pass for month filtering + all four totals. This preserves the exact
+// semantic split between transfer-inclusive inc/exp and real income/expense totals.
+const txM=[];let inc=0,exp=0,incReal=0,expReal=0;
+for(const t of D.transactions){
+  const dms=(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime());
+  const d=new Date(dms);
+  if(d.getMonth()!==curMonth||d.getFullYear()!==curYear)continue;
+  txM.push(t);
+  if(t.type==='income'){const n=t.amount||0;inc+=n;incReal+=n;}
+  else if(t.type==='expense'){const n=t.amount||0;exp+=n;expReal+=n;}
+  else if(t.type==='transfer_in')inc+=t.amount||0;
+  else if(t.type==='transfer_out')exp+=t.amount||0;
+}
 const net=incReal-expReal;
 // PERF: KeuanganInsight.compute() dipanggil SETELAH txM/inc/exp di atas dihitung, supaya bisa
 // dioper sbg ctx (0 scan ulang D.transactions) -- TAPI cuma kalau curMonth/curYear yg lagi
@@ -313,8 +332,8 @@ const nEl=document.getElementById('mNet');nEl.textContent=(net<0?'-':'')+fmtFull
 if(typeof renderKekayaanBersih!=='undefined')renderKekayaanBersih();
 const {from:txFrom,to:txTo}=getTxListRange();
 const kf=getKeuFilters();
-const txList=D.transactions.filter(t=>{const d=new Date(t.date);return d>=txFrom&&d<=txTo&&txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search);});
-const sorted=[...txList].sort((a,b)=>new Date(b.date)-new Date(a.date));
+const txList=D.transactions.filter(t=>{const ms=(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime());return ms>=txFrom.getTime()&&ms<=txTo.getTime()&&txMatchesFilters(t,kf)&&txMatchesSearch(t,kf.search);});
+const sorted=[...txList].sort((a,b)=>(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(b):new Date(b&&b.date).getTime())-(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(a):new Date(a&&a.date).getTime()));
 const hasFilter=Object.values(kf).some(v=>v&&v!=='semua');
 const visibleCount=Math.min(sorted.length,txListPage*TX_PAGE_SIZE);
 const visible=sorted.slice(0,visibleCount);
@@ -348,12 +367,21 @@ vBillWrapEl.innerHTML='';
 // txTableRowHTML/txTableHTML (tx-list-cashflow.js) utk alasan. 10 tema lama
 // 0 dampak, tetap jalur txHTML() kartu apa adanya.
 const allTxEl=document.getElementById('allTx');
+// S1843 PERF: transaction row rendering repeatedly searched the complete category and
+// account arrays for every visible row. Build the two tiny lookup structures once per
+// render and pass them down; standalone txHTML() callers remain backward compatible.
+const _cats=typeof getAllCats==='function'?getAllCats():[];
+const txRenderCtx={
+  cats:_cats,
+  catsByName:(typeof _getPerfCategoryIndex==='function'?_getPerfCategoryIndex():new Map(_cats.map(c=>[c.name,c]))),
+  accounts:(typeof _getPerfAccountIndex==='function'?_getPerfAccountIndex():new Map((D.accounts||[]).map(a=>[a.id,a])))
+};
 const allTxEmpty=`<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">${hasFilter?'Tidak ada transaksi yang cocok dengan filter':'Belum ada transaksi di periode ini'}</div></div>`;
 if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
 const singleAccId=(kf.acc&&kf.acc!=='semua')?kf.acc:null;
-allTxEl.innerHTML=visible.length?txTableHTML(visible,singleAccId):allTxEmpty;
+allTxEl.innerHTML=visible.length?txTableHTML(visible,singleAccId,txRenderCtx):allTxEmpty;
 }else{
-allTxEl.innerHTML=visible.length?visible.map(txHTML).join(''):allTxEmpty;
+allTxEl.innerHTML=visible.length?visible.map(t=>txHTML(t,txRenderCtx)).join(''):allTxEmpty;
 }
 const moreWrap=document.getElementById('allTxLoadMoreWrap');
 if(moreWrap){
@@ -459,7 +487,7 @@ const f=getLaporanFilters();
 const filterSig=JSON.stringify({from:+from,to:+to,f});
 if(filterSig!==_lapLastFilterSig){lapTxPage=1;_lapLastFilterSig=filterSig;}
 const txs=D.transactions.filter(t=>{
-const d=new Date(t.date);
+const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));
 if(d<from||d>to)return false;
 if(t.type==='transfer_in'||t.type==='transfer_out')return false;
 if(!txMatchesFilters(t,f))return false;
@@ -545,7 +573,7 @@ vsAvgHtml=`<div style="font-size:11px;color:${badgeCol};margin-top:2px">${arrow}
 // dipindah ke sini (renderLaporan() yang BENAR-BENAR live).
 return`<div class="cat-bar u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['laporan','all','📁 '+k,null,k]))}"><div class="cat-bar-head"><span style="font-weight:500">${k} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>${vsAvgHtml}</div>`;
 }).join(''):'<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Belum ada data</div></div>';
-const sorted=[...txs].sort((a,b)=>new Date(b.date)-new Date(a.date));
+const sorted=[...txs].sort((a,b)=>(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(b):new Date(b&&b.date).getTime())-(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(a):new Date(a&&a.date).getTime()));
 const visibleCount=Math.min(sorted.length,lapTxPage*TX_PAGE_SIZE);
 const visible=sorted.slice(0,visibleCount);
 document.getElementById('lapTx').innerHTML=visible.length?visible.map(txHTML).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Tidak ada transaksi</div></div>';
@@ -567,7 +595,7 @@ function renderGrafik(){
 const now=new Date();const bars=[];
 for(let i=5;i>=0;i--){
 const m=(now.getMonth()-i+12)%12,y=now.getFullYear()+(now.getMonth()-i<0?-1:0);
-const txM=D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
+const txM=D.transactions.filter(t=>{const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));return d.getMonth()===m&&d.getFullYear()===y;});
 bars.push({label:MONTHS[m],inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)});
 }
 const maxV=Math.max(...bars.map(b=>Math.max(b.inc,b.exp)),1);

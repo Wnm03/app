@@ -1,6 +1,12 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 const MODULE_CALC_VERSION='s1793-final-hardening-1819';
+// S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
+// fallback so this file remains independently loadable in focused tests/legacy builds.
+function _calcTxDateMs(t){
+  if(typeof getCachedTxDateMs==='function')return getCachedTxDateMs(t);
+  return new Date(t&&t.date).getTime();
+}
 const FI={
 assetScopeState:'zakatable',
 investmentAssetValue(){
@@ -38,7 +44,7 @@ return {swr,ret,inf,avgMonths};
 monthsOfDataAvailable(){
 if(!D.transactions||!D.transactions.length) return 0;
 let earliest=null;
-D.transactions.forEach(t=>{const d=new Date(t.date);if(!earliest||d<earliest)earliest=d;});
+D.transactions.forEach(t=>{const d=new Date(_calcTxDateMs(t));if(!earliest||d<earliest)earliest=d;});
 if(!earliest) return 0;
 const now=new Date();
 return Math.max(1,(now.getFullYear()-earliest.getFullYear())*12+(now.getMonth()-earliest.getMonth())+1);
@@ -59,7 +65,7 @@ const pseudoBudget={catIds};
 // agregasi pengeluaran tahunan FI -- kalau tidak, target FI/SWR bisa salah
 // dihitung dari pengeluaran yg sebetulnya cuma catatan.
 const total=D.transactions.filter(t=>{
-const d=new Date(t.date);
+const d=new Date(_calcTxDateMs(t));
 return d>=from&&d<=now&&t.hitungKas!==false&&budgetMatchesTx(pseudoBudget,t);
 }).reduce((s,t)=>s+t.amount,0);
 return (total/months)*12;
@@ -80,7 +86,7 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): "Catatan saja" (hitungKas:false)
 // difilter di titik konstruksi txs, jadi inc & exp SAMA-SAMA sudah bersih (bukan
 // difilter terpisah supaya tidak ada celah salah satu sisi kelewatan).
-const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=now&&t.hitungKas!==false;});
+const txs=D.transactions.filter(t=>{const d=new Date(_calcTxDateMs(t));return d>=from&&d<=now&&t.hitungKas!==false;});
 const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 return (inc-exp)/months;
@@ -285,7 +291,7 @@ fi.swr=swr;
 fi.assumsiReturn=ret;
 fi.assumsiInflasi=inf;
 fi.scenarioRange=range;
-save();closeModal('fiSettingsModal');renderDashboard();toast('✅ Asumsi Kebebasan Finansial disimpan');
+save();closeModal('fiSettingsModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true});toast('✅ Asumsi Kebebasan Finansial disimpan');
 }
 };
 // Wrapper global tipis ke FI.* — digabung dari backup-restore.js (v90),
@@ -323,7 +329,7 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): income "Catatan saja" tidak
 // masuk kas riil, jadi tidak boleh menaikkan rata-rata gaji bulanan yg dipakai
 // utk saran alokasi (Dana Darurat/Pensiun/dll).
-const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(t.date)>=from&&new Date(t.date)<=now).reduce((s,t)=>s+(t.amount||0),0);
+const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(_calcTxDateMs(t))>=from&&new Date(_calcTxDateMs(t))<=now).reduce((s,t)=>s+(t.amount||0),0);
 return total/months;
 },
 suggest(){
@@ -359,7 +365,7 @@ const to=new Date(now.getFullYear(),now.getMonth()-i+1,0,23,59,59);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): sama alasan spt SalaryAllocation
 // di atas -- income "Catatan saja" tidak boleh ikut hitungan volatilitas (CV) income
 // bulanan yg dipakai utk rekomendasi target Dana Darurat.
-const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(t.date)>=from&&new Date(t.date)<=to).reduce((s,t)=>s+t.amount,0);
+const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(_calcTxDateMs(t))>=from&&new Date(_calcTxDateMs(t))<=to).reduce((s,t)=>s+t.amount,0);
 monthlyIncomes.push(total);
 }
 const mean=monthlyIncomes.reduce((a,b)=>a+b,0)/monthlyIncomes.length;
@@ -459,7 +465,7 @@ const wantMonths=Math.max(1,Math.min(24,Number(p.rekoBulan)||3));
 const months=Math.max(1,Math.min(wantMonths,Pensiun.monthsOfDataAvailable()||1));
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
-const txs=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+const txs=(D.transactions||[]).filter(t=>{const d=new Date(_calcTxDateMs(t));return d>=from&&d<=now;});
 const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 return {surplus:(inc-exp)/months,months};
@@ -619,7 +625,7 @@ D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer'
 D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id,transferPairId});
 if(!p.riwayatKontribusi) p.riwayatKontribusi=[];
 p.riwayatKontribusi.push({id:uid(),date,amount:amt,fromAcc:fromAcc.id});
-save();renderDashboard();renderKeuangan();
+save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast(`✅ Kontribusi ${fmtFull(amt)} tercatat, saldo akun ter-update`);
 },
 renderDashMini(){
@@ -684,7 +690,7 @@ const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
 // (bukan di inc/exp terpisah) supaya SEMUA konsumen ctx.txM di bawah (termasuk yg
 // dioper ke KeuanganInsight.compute()) otomatis ikut bersih -- 1 titik guard, bukan
 // disebar ulang tiap tempat txM dipakai.
-const txM=(ctx&&ctx.txM)||D.transactions.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
+const txM=(ctx&&ctx.txM)||D.transactions.filter(t=>{const d=new Date(_calcTxDateMs(t));return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
 const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 // 1-2. Defisit bulan berjalan & anggaran ketat/jebol — logic SEKARANG hidup satu-satunya di
@@ -762,9 +768,9 @@ try{
 // hitung transaksi ownership SELF (guard typeof biar aman kalau
 // ownership-engine.js belum dimuat — fallback isCobekOwnershipSelf true).
 const cobSelfFilter=typeof isCobekOwnershipSelf==='function'?isCobekOwnershipSelf:(()=>true);
-const cobThis=D.cobek.filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;}).filter(cobSelfFilter);
+const cobThis=D.cobek.filter(t=>{const d=new Date(_calcTxDateMs(t));return d.getMonth()===m&&d.getFullYear()===y;}).filter(cobSelfFilter);
 const prevD=new Date(y,m-1,1);
-const cobPrev=D.cobek.filter(t=>{const d=new Date(t.date);return d.getMonth()===prevD.getMonth()&&d.getFullYear()===prevD.getFullYear();}).filter(cobSelfFilter);
+const cobPrev=D.cobek.filter(t=>{const d=new Date(_calcTxDateMs(t));return d.getMonth()===prevD.getMonth()&&d.getFullYear()===prevD.getFullYear();}).filter(cobSelfFilter);
 const marginOf=rows=>{const omzet=rows.reduce((s,t)=>s+(t.total||0),0);const profit=rows.reduce((s,t)=>s+(t.profit||0),0);return omzet>0?profit/omzet:null;};
 const mThis=marginOf(cobThis),mPrev=marginOf(cobPrev);
 if(mThis!=null&&mPrev!=null&&mPrev>0&&mThis<mPrev*0.75&&cobThis.length>=3){
