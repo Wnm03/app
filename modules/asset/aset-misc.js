@@ -628,7 +628,21 @@ const ASET_TAB_ORDER=['ringkasan','buku','analisis','manajemen','investasi'];
 // S679 (rekomendasi #4 audit S677): breadcrumb tab utama, pola sama dgn
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const ASET_TAB_LABEL={ringkasan:'Ringkasan',buku:'Buku Aset',analisis:'Analisis & Pajak',manajemen:'Manajemen',investasi:'Investasi'};
+function renderAsetCore(){
+renderAssetList();
+AlokasiAset.init();
+renderWealthSnapshots();
+}
+
 function setAsetTab(t,el){
+let _prevAsetTab=null;
+const asetTabBtns=document.querySelectorAll('#page-aset .cn-tab');
+if(asetTabBtns?.forEach)asetTabBtns.forEach(b=>{
+  if(_prevAsetTab!==null||!b.classList?.contains('active'))return;
+  try{_prevAsetTab=JSON.parse(b.getAttribute('data-args')||'[]')[0]||null;}catch(e){_prevAsetTab=null;}
+});
+const _sameAsetTab=_prevAsetTab===t;
+
 // BUGFIX (audit video user, lihat komentar dismissAllToasts() di
 // modules/shared/format-tema.js): toast lama dari tab sebelumnya (mis.
 // "Nominal sudah diisi...", "...dikembalikan ke daftar Prioritas Belanja")
@@ -637,7 +651,6 @@ function setAsetTab(t,el){
 // fungsi ini (sebelum toggle pane) supaya toast basi langsung hilang duluan,
 // sebelum konten tab baru dirender.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
-const asetTabBtns=document.querySelectorAll('#page-aset .cn-tab');
 asetTabBtns.forEach(b=>b.classList.remove('active'));
 let _activeBtn=el;
 if(el) el.classList.add('active');
@@ -665,7 +678,14 @@ const investTab=document.getElementById('asetTab-investasi');
 if(investTab){
 investTab.classList.toggle('u-dnone', t!=='investasi');
 investTab.style.display='';
-if(t==='investasi'&&typeof InvestmentListUI!=='undefined')InvestmentListUI.render();
+if(t==='investasi'&&!_sameAsetTab&&typeof InvestmentListUI!=='undefined')InvestmentListUI.render();
+}
+if(!_sameAsetTab&&t!=='investasi'&&t!=='manajemen'&&typeof renderAsetCore==='function')renderAsetCore();
+if(t==='manajemen'&&!_sameAsetTab){
+if(typeof PropertyManagementPresenter!=='undefined')PropertyManagementPresenter.render();
+if(typeof RentalManagementPresenter!=='undefined')RentalManagementPresenter.render();
+if(typeof AssetPortfolioPresenter!=='undefined')AssetPortfolioPresenter.render();
+if(typeof AssetMaintenancePresenter!=='undefined')AssetMaintenancePresenter.render();
 }
 }
 
