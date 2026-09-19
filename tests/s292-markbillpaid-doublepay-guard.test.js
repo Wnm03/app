@@ -80,6 +80,7 @@ function loadSandbox(D, { confirmQueue = [], promptDefault = true } = {}) {
   };
   vm.createContext(context);
   const snippet = `${extractFnSource('_amc015')}
+${extractFnSource('_billTxDateMs')}
 ${extractFnSource('getBillPaidThisPeriodInfo')}
 ${extractFnSource('advanceBillNextDue')}
 ${extractFnSource('markBillPaid')}

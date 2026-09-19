@@ -16,7 +16,7 @@ const ROOT = path.join(__dirname, '..');
 test('audit — s641 Riwayat (#filterTxList) tetap gated via D.profile.theme==="modern" di showFilteredTx()', () => {
   const src = fs.readFileSync(path.join(ROOT, 'modules/finance/filter-laporan.js'), 'utf8');
   assert.match(src, /D\.profile&&D\.profile\.theme==='modern'&&typeof txTableHTML==='function'/);
-  assert.match(src, /visible\.map\(txHTML\)\.join\(''\)/, 'jalur kartu txHTML() masih ada apa adanya utk 10 tema lama');
+  assert.match(src, /visible\.map\(t=>txHTML\(t,_ftxRenderCtx\)\)\.join\(''\)/, 'jalur kartu txHTML() masih ada utk 10 tema lama');
 });
 
 test('audit — s641 kolom saldo berjalan Riwayat tetap kondisional scope==="account" (bukan selalu tampil)', () => {

@@ -63,6 +63,8 @@ function runRenderKeuangan(D, opts) {
     renderKeuAbsensiGajiCard: () => {},
     runDeferredOrNow: () => {}, // sengaja tidak eksekusi callback -- widget2 di dalamnya irrelevant utk test ini
     generateVirtualBillItemsForMonth: (y, m) => { genCalls.push([y, m]); return opts.vItems || []; },
+    getCachedTxDateMs: (t) => new Date(t && t.date).getTime(),
+    getAllCats: () => [],
   };
   const context = vm.createContext(sandbox);
   const wrapped = `(${fn.toString()})()`;

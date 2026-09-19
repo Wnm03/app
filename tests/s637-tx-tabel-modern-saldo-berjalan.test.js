@@ -157,8 +157,8 @@ test('renderKeuangan() — percabangan tema "modern" ke txTableHTML() ada di sou
   const src = fs.readFileSync(path.join(ROOT, 'modules/shared/modules-render-b.js'), 'utf8');
   assert.match(src, /D\.profile&&D\.profile\.theme==='modern'&&typeof txTableHTML==='function'/);
   assert.match(src, /const singleAccId=\(kf\.acc&&kf\.acc!=='semua'\)\?kf\.acc:null;/);
-  assert.match(src, /allTxEl\.innerHTML=visible\.length\?txTableHTML\(visible,singleAccId\):allTxEmpty;/);
-  assert.match(src, /allTxEl\.innerHTML=visible\.length\?visible\.map\(txHTML\)\.join\(''\):allTxEmpty;/);
+  assert.match(src, /allTxEl\.innerHTML=visible\.length\?txTableHTML\(visible,singleAccId(?:,txRenderCtx)?\):allTxEmpty;/);
+  assert.match(src, /allTxEl\.innerHTML=visible\.length\?visible\.map\(t=>txHTML\(t(?:,txRenderCtx)?\)\)\.join\(''\):allTxEmpty;/);
 });
 
 test('CSS — class .tx-tbl* ada di styles.css (structural, dipakai txTableHTML)', () => {

@@ -29,11 +29,11 @@ test('showFilteredTx() — percabangan tema "modern" ke txTableHTML() ada, guard
   assert.match(src, /D\.profile&&D\.profile\.theme==='modern'&&typeof txTableHTML==='function'/);
   assert.match(
     src,
-    /document\.getElementById\('filterTxList'\)\.innerHTML=visible\.length\?txTableHTML\(visible,scope==='account'\?accId:null\):ftxEmpty;/
+    /document\.getElementById\('filterTxList'\)\.innerHTML=visible\.length\?txTableHTML\(visible,scope==='account'\?accId:null(?:,_ftxRenderCtx)?\):ftxEmpty;/
   );
   assert.match(
     src,
-    /document\.getElementById\('filterTxList'\)\.innerHTML=visible\.length\?visible\.map\(txHTML\)\.join\(''\):ftxEmpty;/
+    /document\.getElementById\('filterTxList'\)\.innerHTML=visible\.length\?visible\.map\(t=>txHTML\(t(?:,_ftxRenderCtx)?\)\)\.join\(''\):ftxEmpty;/
   );
 });
 
@@ -50,7 +50,7 @@ test('showFilteredTx() — batch "muat lebih banyak" tema modern append <tr> via
 test('showFilteredTx() — batch "muat lebih banyak" fallback txHTML() apa adanya utk 10 tema lain (0 regresi)', () => {
   assert.match(
     src,
-    /document\.getElementById\('filterTxList'\)\.insertAdjacentHTML\('beforeend',nextBatch\.map\(txHTML\)\.join\(''\)\);/
+    /document\.getElementById\('filterTxList'\)\.insertAdjacentHTML\('beforeend',nextBatch\.map\(t=>txHTML\(t(?:,_ftxRenderCtx)?\)\)\.join\(''\)\);/
   );
 });
 

@@ -60,6 +60,8 @@ test('refreshBillHistoryModalViews() — memanggil ke-6 render inti (dashboard/k
   const context = {
     renderDashboard: () => calls.push('renderDashboard'),
     renderKeuangan: () => calls.push('renderKeuangan'),
+    // S1854: refreshAfterMutation now owns dashboard/finance refresh routing.
+    refreshAfterMutation: () => { calls.push('renderDashboard'); calls.push('renderKeuangan'); },
     renderBillList: () => calls.push('renderBillList'),
     checkBills: () => calls.push('checkBills'),
     renderBillHistory: () => calls.push('renderBillHistory'),
