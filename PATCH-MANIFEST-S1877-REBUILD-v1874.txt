@@ -1,0 +1,35 @@
+PATCH-ONLY S1877 REBUILD — versi s1877-selftest-persistence-fix-1874 (?v=1874 / kw-cache-v1874)
+Basis: app-main (34) (source v1871). Kumulatif: S1874 + S1875 + S1876 + S1877 + rebuild + perbaikan test.
+APPLY: 29 file (timpa/tambah). DELETE: 0 file.
+Build: node scripts/build.js s1877-selftest-persistence-fix-1874 (versi eksplisit, tanpa auto-bump)
+
+FILES:
+  PATCH-README-APP-WIDE-DATA-INTEGRITY-S1874.md
+  PATCH-README-S1875-SERVICE-JSON-CONTENT-DEDUPE.md
+  PATCH-README-S1876-DUPLICATE-DATA-REGRESSION.md
+  PATCH-README-S1877-SELFTEST-PERSISTENCE-FIX.md
+  PATCH-README-SERVICE-HISTORY-INTEGRITY-AUDIT.md
+  app-bundle-a.min.js
+  app-bundle-b.min.js
+  app-wide-data-integrity-audit.json
+  app_production.html
+  chat-action-handlers.js
+  docs/COVERAGE-PER-MODULE.md
+  docs/FILE-MAP.md
+  index.html
+  modules/shared/backup-restore.js
+  modules/shared/features-helpers-global-security.js
+  modules/shared/modals.js
+  modules/shared/modules-calc.js
+  modules/shared/modules-render.js
+  modules/shared/self-test-cases-a.js
+  modules/shared/self-test-cases-b.js
+  modules/vehicle/service-history-integrity-audit.js
+  scripts/app-wide-data-integrity-audit.js
+  scripts/build.js
+  sw.js
+  tests/app-wide-data-integrity-audit.test.js
+  tests/car-notes-json-roundtrip-s1829.test.js
+  tests/duplicate-data-regression.test.js
+  tests/service-history-integrity-audit.test.js
+  tests/service-json-content-dedupe.test.js

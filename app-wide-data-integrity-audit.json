@@ -1,0 +1,1589 @@
+{
+  "domains": [
+    {
+      "domain": "vehicle",
+      "files": 130,
+      "signalHits": 67,
+      "writerFiles": [
+        "modules/vehicle/car-notes-final-audit.js",
+        "modules/vehicle/car-notes-integrity-suite.js",
+        "modules/vehicle/car-notes-performance.js",
+        "modules/vehicle/fuel-analytics.js",
+        "modules/vehicle/fuel-card.js",
+        "modules/vehicle/fuel-compare.js",
+        "modules/vehicle/fuel-fleet-selector.js",
+        "modules/vehicle/fuel-insight-engine.js",
+        "modules/vehicle/fuel-integrity-reconciler.js",
+        "modules/vehicle/fuel-maintenance-engine.js",
+        "modules/vehicle/fuel-notif-bridge.js",
+        "modules/vehicle/fuel-state-history.js",
+        "modules/vehicle/fuel-tank-profile.js",
+        "modules/vehicle/honda-oem-service-mapping.js",
+        "modules/vehicle/honda-pdf-catalog-auto-import.js",
+        "modules/vehicle/honda-pdf-import-extract.js",
+        "modules/vehicle/honda-pdf-import-parse.js",
+        "modules/vehicle/honda-pdf-import.js",
+        "modules/vehicle/parts-catalog-database.js",
+        "modules/vehicle/ride-gps-recorder.js",
+        "modules/vehicle/service-event-adapter.js",
+        "modules/vehicle/service-integrity-reconciler.js",
+        "modules/vehicle/service-maintenance-guidance.js",
+        "modules/vehicle/service-maintenance-repository.js",
+        "modules/vehicle/servis-b.js",
+        "modules/vehicle/servis-checklist.js",
+        "modules/vehicle/servis.js",
+        "modules/vehicle/sparepart-servis-b.js",
+        "modules/vehicle/sparepart-servis-ui.js",
+        "modules/vehicle/sparepart-servis.js",
+        "modules/vehicle/vehicle-catalog-certification-sot.js",
+        "modules/vehicle/vehicle-catalog-e2e-sot.js",
+        "modules/vehicle/vehicle-catalog-health-sot.js",
+        "modules/vehicle/vehicle-catalog-identity-sot.js",
+        "modules/vehicle/vehicle-catalog-import-ui.js",
+        "modules/vehicle/vehicle-catalog-import.js",
+        "modules/vehicle/vehicle-catalog-lifecycle-sot.js",
+        "modules/vehicle/vehicle-catalog-migration-sot.js",
+        "modules/vehicle/vehicle-catalog-scope-sot.js",
+        "modules/vehicle/vehicle-catalog-servis-link.js",
+        "modules/vehicle/vehicle-catalog-ui.js",
+        "modules/vehicle/vehicle-catalog-web-import.js",
+        "modules/vehicle/vehicle-catalog.js",
+        "modules/vehicle/vehicle-core.js",
+        "modules/vehicle/vehicle-daily-brief.js",
+        "modules/vehicle/vehicle-intelligence.js",
+        "modules/vehicle/vehicle-maintenance-template-engine.js",
+        "modules/vehicle/vehicle-model-registry-sot.js",
+        "modules/vehicle/vehicle-notif-bridge.js",
+        "modules/vehicle/vehicle-part-sot.js",
+        "modules/vehicle/vehicle-reminder.js",
+        "modules/vehicle/vehicle-sot-fleet-integrity.js",
+        "modules/vehicle/vehicle-sot-provisioning.js",
+        "modules/vehicle/vehicle-tax-integrity-reconciler.js",
+        "modules/vehicle/vehicle-trend-api.js"
+      ]
+    },
+    {
+      "domain": "finance",
+      "files": 59,
+      "signalHits": 0,
+      "writerFiles": [
+        "modules/finance/akun.js",
+        "modules/finance/budget-recommendation-api.js",
+        "modules/finance/cash-projection.js",
+        "modules/finance/dana-kelolaan.js",
+        "modules/finance/dana-titipan-aggregation-api.js",
+        "modules/finance/dana-titipan-commitment-return-api.js",
+        "modules/finance/dana-titipan-pool-api.js",
+        "modules/finance/dana-titipan-portfolio-render.js",
+        "modules/finance/debt-optimizer-api.js",
+        "modules/finance/edukasi-dana.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/finance/finance-intelligence.js",
+        "modules/finance/financial-goal-api.js",
+        "modules/finance/financial-health-score-api.js",
+        "modules/finance/investment-planner-api.js",
+        "modules/finance/kategori.js",
+        "modules/finance/linktx.js",
+        "modules/finance/pajak-pbb-zakat.js",
+        "modules/finance/piutang-utang-reminder.js",
+        "modules/finance/piutang-utang.js",
+        "modules/finance/retirement-planner-api.js",
+        "modules/finance/tagihan-kalender.js",
+        "modules/finance/tagihan-reminder.js",
+        "modules/finance/titipan-expense-flow.js",
+        "modules/finance/titipan-reconcile.js",
+        "modules/finance/titipan-sync.js",
+        "modules/finance/transaksi-b.js",
+        "modules/finance/transaksi.js",
+        "modules/finance/tx-bbm.js",
+        "modules/finance/tx-list-cashflow.js",
+        "modules/finance/tx-renov.js",
+        "modules/finance/tx-servis.js",
+        "modules/finance/tx-stok-sparepart.js",
+        "modules/finance/tx-target.js",
+        "modules/finance/tx-transfer.js",
+        "modules/finance/vehicle-catalog-tx-link.js",
+        "modules/finance/worthit.js"
+      ]
+    },
+    {
+      "domain": "shop",
+      "files": 26,
+      "signalHits": 20,
+      "writerFiles": [
+        "modules/shop/business-flow-presenter-inventory.js",
+        "modules/shop/business-flow-presenter.js",
+        "modules/shop/business-intelligence-presenter.js",
+        "modules/shop/cobek-etalase.js",
+        "modules/shop/cobek-io.js",
+        "modules/shop/cobek-order.js",
+        "modules/shop/cobek-pricing.js",
+        "modules/shop/cobek-tx-cart.js",
+        "modules/shop/features-helpers-global-security.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "domain": "shared",
+      "files": 44,
+      "signalHits": 38,
+      "writerFiles": [
+        "modules/shared/backup-history-api.js",
+        "modules/shared/backup-restore.js",
+        "modules/shared/custodian-registry.js",
+        "modules/shared/data-archive.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shared/format-tema.js",
+        "modules/shared/modal-navigasi.js",
+        "modules/shared/modal-write.js",
+        "modules/shared/modules-calc.js",
+        "modules/shared/modules-render-b.js",
+        "modules/shared/modules-render.js",
+        "modules/shared/multi-owner-engine.js",
+        "modules/shared/owner-registry-settings-ui.js",
+        "modules/shared/owner-registry.js",
+        "modules/shared/ownership-engine.js",
+        "modules/shared/pengaturan-search.js",
+        "modules/shared/realokasi-sisa-kuota.js",
+        "modules/shared/scan-ocr-b.js",
+        "modules/shared/scan-ocr.js",
+        "modules/shared/self-test-cases-a.js",
+        "modules/shared/self-test-cases-b.js",
+        "modules/shared/smoke-test.js"
+      ]
+    },
+    {
+      "domain": "asset",
+      "files": 26,
+      "signalHits": 0,
+      "writerFiles": [
+        "modules/asset/aset-emas-impor.js",
+        "modules/asset/aset-misc.js",
+        "modules/asset/aset-owners.js",
+        "modules/asset/aset.js",
+        "modules/asset/asset-ownership-split-presenter.js",
+        "modules/asset/features-helpers-global-security.js",
+        "modules/asset/format-tema.js",
+        "modules/asset/invest-ai-widget.js",
+        "modules/asset/investasi-list-view.js",
+        "modules/asset/investasi-view.js",
+        "modules/asset/investasi.js",
+        "modules/asset/modal-navigasi.js",
+        "modules/asset/penyusutan-ai-widget.js"
+      ]
+    }
+  ],
+  "duplicateWriteCandidates": [
+    {
+      "symbol": "renderAsetCore",
+      "files": [
+        "modules/asset/aset-misc.js",
+        "modules/shared/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "runDataMigrations",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "isDevMode",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shared/smoke-test.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "withSaveGuard",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "withSaveGuardAsync",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "safeSetItem",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_readSavePersistMeta",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_nextSavePersistStamp",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_markSavePersistMeta",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_buildSaveJson",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_writeLocalSnapshot",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_getSaveSnapshotForVersion",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_saveImmediate",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "save",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "saveFlush",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_installPersistenceLifecycleFlush",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_markCrossTabStale",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_announcePersistenceWrite",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_installCrossTabPersistenceGuard",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "uid",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "sameId",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "_dataActionClickHandler",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "migrateShopCategory",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "load",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "todayStr",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "addMonthsClamped",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "applyDashHubMainGridDefaultCollapse",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "showMain",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "clearChat",
+      "files": [
+        "modules/asset/features-helpers-global-security.js",
+        "modules/finance/features-helpers-global-security.js",
+        "modules/shared/features-helpers-global-security.js",
+        "modules/shop/features-helpers-global-security.js"
+      ]
+    },
+    {
+      "symbol": "fmt",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "fmtFull",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "fmtFullSigned",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "_toastShowNext",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "toast",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "dismissAllToasts",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "toastUndo",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "setTheme",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "applyEffectiveTheme",
+      "files": [
+        "modules/asset/format-tema.js",
+        "modules/shared/format-tema.js"
+      ]
+    },
+    {
+      "symbol": "_dialogSelfHeal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_openDialogOverlay",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_queueDialog",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_resolveDialog",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "askConfirm",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_confirmModalAnswer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "showPromptModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_promptModalSubmit",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_promptModalAnswer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "showChoiceModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_choiceModalAnswer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "showAlertModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_infoModalAnswer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "showPinPromptModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_pinPromptSubmit",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_pinPromptAnswer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "scrollTabBarIntoView",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "showPage",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "refreshCurrentPage",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_syncNavVisibilityForModals",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_focusTrapFocusableEls",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_focusTrapKeydown",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_focusTrapActivate",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_focusTrapDeactivate",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_clearSwipeDismissCloseTimer",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "openModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_cardCollapseShouldBeCollapsed",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "toggleCardCollapse",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "applyOneCardCollapsePref",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "applyCardCollapsePrefs",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "closeModal",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "finish",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "onAnimEnd",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_cleanupSwipeDismissForOverlay",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "enableSwipeToDismiss",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "pointY",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "onStart",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "onMove",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "onEnd",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "openQS",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "closeQS",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "openShopKatalogDinamis",
+      "files": [
+        "modules/asset/modal-navigasi.js",
+        "modules/shared/modal-navigasi.js"
+      ]
+    },
+    {
+      "symbol": "_amc015",
+      "files": [
+        "modules/finance/piutang-utang.js",
+        "modules/finance/tagihan-kalender.js",
+        "modules/finance/transaksi.js",
+        "modules/shared/scan-ocr.js"
+      ]
+    },
+    {
+      "symbol": "ensureZXing",
+      "files": [
+        "modules/shared/boot-early.js",
+        "modules/vehicle/vehicle-scanner.js"
+      ]
+    },
+    {
+      "symbol": "finalize",
+      "files": [
+        "modules/shared/modules-calc.js",
+        "modules/vehicle/ride-storage.js"
+      ]
+    },
+    {
+      "symbol": "runDeferredOrNow",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashboard",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "_safeRender",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashLaporanMini",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashBudgetMini",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashZakatMini",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderFiScenarios",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderFinancialFreedom",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderFiCatOptions",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashDanaDarurat",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderKeuAbsensiGajiCard",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderKeuangan",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBudgets",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBudgetCatOptions",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderCashflowForecast",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderLaporan",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderGrafik",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderMs",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderTarget",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderReminder",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderWorkDays",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehicleSelect",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderCarImportVehicleSelect",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehicleManageList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSptLinkStatus",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehTaxSim",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehTaxList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehTaxLinkStatus",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSimLinkStatus",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSimList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderCnTab",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBbmList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSparepartCatList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderStockList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderVehicleSpecCard",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderServisReminder",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderServisList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderStorageUsage",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderActualStorageQuota",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderArchiveSuggestHint",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderArchiveHistory",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSettings",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderChatActionBubble",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderNotifSettings",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderGDriveSettings",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSheetsSettings",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSelfTestResults",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderSelfTestLastResult",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderNavSmokeResults",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderModalSweepResults",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPajakZakat",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderRefCheckReminder",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderZakatLog",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderUMKMPajak",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderAssetList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPiutangList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDebtList",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderWealthSnapshots",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderKekayaanBersih",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPBB",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPBBBillStatus",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashCardPrefsUI",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "setAllDashCardPrefs",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "toggleDashCardPref",
+      "files": [
+        "modules/shared/modules-render-b.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPageContent",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderAccGrid",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashAccList",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderLapAccList",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderReceiptInsight",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderPajakRekomendasi",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderCatList",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "findFallbackBillPaymentTxIdsForActiveBill",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBillHistory",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "billArchiveActionButtonsHtml",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBillArchive",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBillList",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBillItemHtml",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashCashflowForecast",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderBillCalendar",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashboardBills",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderLDR",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "_dashServisSelfVehicles",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashServisVehChips",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashboardServisReminder",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashboardSewaKiosReminder",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "renderDashboardBackupReminder",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "dismissBackupReminder",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "isDashCardOn",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "hideDashCardEl",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "showDashCardEl",
+      "files": [
+        "modules/shared/modules-render.js",
+        "modules/shop/modules-render.js"
+      ]
+    },
+    {
+      "symbol": "scanBillMultiItems",
+      "files": [
+        "modules/shared/scan-ocr-b.js",
+        "modules/shared/scan-ocr.js"
+      ]
+    },
+    {
+      "symbol": "add",
+      "files": [
+        "modules/shared/smoke-test.js",
+        "modules/vehicle/car-notes-performance.js"
+      ]
+    },
+    {
+      "symbol": "run",
+      "files": [
+        "modules/shared/smoke-test.js",
+        "modules/vehicle/car-notes-integrity-suite.js"
+      ]
+    },
+    {
+      "symbol": "arr",
+      "files": [
+        "modules/vehicle/car-notes-final-audit.js",
+        "modules/vehicle/vehicle-catalog-migration-sot.js"
+      ]
+    },
+    {
+      "symbol": "reconcile",
+      "files": [
+        "modules/vehicle/car-notes-final-audit.js",
+        "modules/vehicle/fuel-integrity-reconciler.js",
+        "modules/vehicle/service-integrity-reconciler.js",
+        "modules/vehicle/vehicle-tax-integrity-reconciler.js"
+      ]
+    },
+    {
+      "symbol": "validate",
+      "files": [
+        "modules/vehicle/finance-service-adapter.js",
+        "modules/vehicle/service-photo-validator.js"
+      ]
+    },
+    {
+      "symbol": "create",
+      "files": [
+        "modules/vehicle/finance-service-adapter.js",
+        "modules/vehicle/ride-map.js"
+      ]
+    },
+    {
+      "symbol": "update",
+      "files": [
+        "modules/vehicle/finance-service-adapter.js",
+        "modules/vehicle/ride-map.js"
+      ]
+    },
+    {
+      "symbol": "ensureLoaded",
+      "files": [
+        "modules/vehicle/parts-catalog-database.js",
+        "modules/vehicle/service-master-database.js"
+      ]
+    },
+    {
+      "symbol": "isFiniteNumber",
+      "files": [
+        "modules/vehicle/ride-activity-metrics.js",
+        "modules/vehicle/ride-gps-recorder.js",
+        "modules/vehicle/ride-map.js",
+        "modules/vehicle/ride-storage.js"
+      ]
+    },
+    {
+      "symbol": "hasValidCoordinate",
+      "files": [
+        "modules/vehicle/ride-activity-metrics.js",
+        "modules/vehicle/ride-map.js"
+      ]
+    },
+    {
+      "symbol": "asArray",
+      "files": [
+        "modules/vehicle/ride-activity-metrics.js",
+        "modules/vehicle/ride-map.js"
+      ]
+    },
+    {
+      "symbol": "isNullish",
+      "files": [
+        "modules/vehicle/ride-gps-recorder.js",
+        "modules/vehicle/ride-storage.js"
+      ]
+    },
+    {
+      "symbol": "getTrackpoints",
+      "files": [
+        "modules/vehicle/ride-gps-recorder.js",
+        "modules/vehicle/ride-storage.js"
+      ]
+    },
+    {
+      "symbol": "clear",
+      "files": [
+        "modules/vehicle/ride-gps-recorder.js",
+        "modules/vehicle/ride-map.js"
+      ]
+    },
+    {
+      "symbol": "normalize",
+      "files": [
+        "modules/vehicle/service-input-catalog.js",
+        "modules/vehicle/service-stock-ledger.js"
+      ]
+    }
+  ],
+  "sourceOfTruthSignals": [
+    {
+      "store": "D.servisLogs",
+      "expected": "vehicle service history",
+      "status": "declared-canonical"
+    },
+    {
+      "store": "D.vehicles",
+      "expected": "vehicle records",
+      "status": "requires-runtime-validation"
+    },
+    {
+      "store": "D.transaksi",
+      "expected": "finance transactions",
+      "status": "requires-runtime-validation"
+    },
+    {
+      "store": "D.products",
+      "expected": "shop products",
+      "status": "requires-runtime-validation"
+    }
+  ],
+  "incompleteChecks": [
+    "Runtime snapshots are required to confirm duplicate records.",
+    "Repeated names/functions are advisory and may be intentional module-local implementations."
+  ]
+}
