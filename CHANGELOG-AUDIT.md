@@ -1,5 +1,18 @@
 # CHANGELOG-AUDIT.md — Log implementasi hasil audit ke dokumentasi
 
+## 2026-09-20 — Sesi Audit Kumulatif: SA-F → SA-I follow-up
+
+- **Baseline:** `app-main (7)` + `PATCH-AKUMULASI-SEMUA-PERBAIKAN-APP-MAIN-7-SA-H.zip`. Patch lama dipertahankan dan diterapkan lebih dulu.
+- **Audit status:** SA-A–SA-E sudah terwakili di patch kumulatif; SA-F (SSOT/vehicle scope), SA-G (CSP-safe suggestion handler), dan SA-H (import idempotency) juga sudah ada di patch upload.
+- **Confirmed new finding fixed:** service prefill `prefillItem` di `modules/vehicle/servis.js` masih memilih `D.partsStock` lintas kendaraan; diperbaiki menjadi vehicle-scoped + regression SA-E.
+- **Confirmed new finding fixed:** CSV kategori sparepart (`sparepart-servis-b.js` preview + `sparepart-servis-ui.js` commit) dapat match kategori private kendaraan lain berdasarkan nama; sekarang current-vehicle → global fallback dan kategori baru diberi `vehicleId`. Regression test baru `tests/sa-c-category-csv-vehicle-scope.test.js`.
+- **Finance backlog fixed:** WorthIt saldo ≤0 UX, filter reset ternary, FinanceIntelligence account lookup `Map`, FinancialHealthScoreAPI local reuse, FinancialRiskDashboardAPI local reuse, BudgetRecommendationAPI local reuse. Regression/performance-count tests ditambahkan/ diperluas.
+- **Validation:** targeted cumulative gate **15/15 PASS** untuk SA-B/SA-C/SA-D/SA-E; finance/performance gate **48/48 PASS**; seluruh file yang disentuh lolos `node --check`.
+- **Remaining:** smoke/manual UI verification untuk kartu Financial Health setelah `BUG-012` cache invalidation; direct tests untuk `FinanceIntelligence.insights()`/`summary()`/`cashflowSummary()` masih dapat ditambah.
+
+---
+
+
 > Berbeda dari `CHANGELOG.md` (log perubahan kode/rilis). File ini murni
 > mencatat KAPAN hasil audit eksternal diimplementasikan ke
 > `docs/BUG_REGISTRY.md` / `docs/AUDIT_MATRIX.md` / `docs/KNOWN-ISSUES.md` /
@@ -467,3 +480,26 @@ input audit. 0 file kode disentuh. 0 bug ditandai fixed.
 `docs/KNOWN-ISSUES.md`, `TODO.md`, `CHANGELOG-AUDIT.md` (file ini, baru
 dibuat). Semua perubahan bersifat append/update — tidak ada dokumentasi
 lama yang dihapus.
+
+## 2026-09-20 — SA-L: IndexedDB / Persistence Restore Atomicity
+
+- **Temuan terkonfirmasi:** jalur backup restore mengganti `D` secara langsung lalu memanggil `saveFlush()`, tetapi mutation clock/snapshot cache persistence tidak selalu diinvalidate. Jika `_saveSnapshotVersion` masih sama dengan `_saveStateVersion`, `saveFlush()` dapat memakai JSON snapshot sebelum restore dan mem-persist data stale.
+- **Fix:** `modules/shared/features-helpers-global-security.js` menambahkan `_markPersistenceStateChanged()` untuk menaikkan mutation clock dan mengosongkan cached snapshot. `save()` memakai gate yang sama.
+- **Fix restore:** `modules/shared/backup-restore.js` menginval cache/clock sebelum commit restore dan sebelum rollback restore.
+- **Regression:** `tests/sa-l-restore-snapshot-invalidation.test.js` + seluruh `tests/backup-restore-regression-s266.test.js` + `tests/s1850-persistence-memory-audit.test.js` PASS (26/26 pada run gabungan).
+- **Catatan build:** bundle production tidak diregenerate karena toolchain minifier/esbuild tidak tersedia di environment audit; patch source/test adalah source of truth.
+
+
+---
+
+## 2026-09-21 — SA-FINAL: Residual Audit Closeout + cumulative rebuild
+
+- Residual verification completed in one stage against the cumulative SA-L baseline.
+- High-risk queues AUD-001..AUD-006 were cross-checked against current source and existing regression suites; no new confirmed bug was found.
+- Modal/overlay, scanner lifecycle, bill/payment/fallback, dashboard ownership, persistence/atomicity, and event-bus/idempotency suites passed in the targeted combined run: **713/714 tests PASS**. The sole failure was `tests/verify-release-ready.js`, which correctly blocked because the environment has no `eslint`/minifier and the freshly generated bundles are intentionally unminified.
+- `node scripts/build.js` completed successfully: source checks, modal/scanner structural checks, escape checks, version synchronization, HTML synchronization, bundle syntax, FILE-MAP, and COVERAGE-PER-MODULE all passed.
+- Documentation baseline drift was synchronized to the build-reported counts (2168 files / 1333 JavaScript / 737 Markdown).
+- Stale TODO item for Tahap 5 Daily Summary/Reminder Summary was reconciled with `ROADMAP.md`/`PROJECT_STATE.md`: feature is already complete since Sesi 31.
+- No existing fix was removed. Production minification remains the only release-environment blocker.
+
+- Cumulative cleanup also honors `DELETE-FILES.txt`: unused `pro-ui-layer.css` is removed from the final merged tree. Build re-run at version `s1862-sa-i-cumulative-audit-1828`; final structural counts are 2167 files / 1333 JS / 737 Markdown / 3 CSS / 870 tests.

@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s1861-saveflush-cache-hardening-1827';
+const MODULE_RENDER_VERSION='s1862-sa-i-cumulative-audit-1828';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -888,7 +888,7 @@ const selfVehicles=_dashServisSelfVehicles();
 // dilakukan 1x di luar (1 vehicleId) -- harus per-kendaraan DI DALAM loop di
 // bawah. Tanpa ini, kategori PRIVAT milik kendaraan lain ikut nyasar tampil
 // di kartu Pengingat kendaraan yang sedang difilter.
-const remindableCatsAll=D.sparepartCats.filter(c=>c.intervalKm>0&&c.showInReminder!==false);
+const remindableCatsAll=D.sparepartCats.filter(c=>c.showInReminder!==false&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(undefined,c))));
 if(!selfVehicles.length||!remindableCatsAll.length){card.style.display='none';return;}
 const vehChipsHTML=renderDashServisVehChips();
 const vehicles=dashServisVehFilter==='semua'?selfVehicles:selfVehicles.filter(v=>v.id===dashServisVehFilter);
@@ -896,7 +896,7 @@ const rows=[];
 vehicles.forEach(veh=>{
 const curKm=getVehicleKm(veh.id);
 const kmPerDay=estimateKmPerDay(veh.id);
-const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id));
+const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(veh.id,c))));
 remindableCats.forEach(cat=>{
 // Sesi 3D — Dashboard wajib memakai SoT urgency yang sama dgn kartu
 // Pengingat Servis utama. Dulu widget ini menghitung ulang pure-KM sendiri,
@@ -906,17 +906,18 @@ const lastKm=getLastServiceKmForCat(veh.id,cat,resetFilter,true);
 const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:veh.id,cat,curKm,kmPerDay}):null;
 const intervalKm=u?u.intervalKm:getEffectiveIntervalKm(veh.id,cat);
 const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-const sisa=u?u.sisaKm:(intervalKm-jarakTempuh);
-const pct=Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100)));
-const status=u?u.status:(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman'));
-let col=null;
-if(status==='terlewat')col='red';
-else if(status==='segera')col='orange';
-if(!col)return;
+const sisa=u&&u.sisaKm!=null?u.sisaKm:(intervalKm>0?(intervalKm-jarakTempuh):null);
 const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
+const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
+const pct=intervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100))):(u&&u.score!=null?Math.min(100,Math.max(0,Math.round((1-u.score)*100))):0);
+const status=u?u.status:(sisa==null?'aman':(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman')));
+let col=null;
+if(status==='terlewat'||status==='jatuh_tempo')col='red';
+else if(status==='segera'||status==='mendekati')col='orange';
+if(!col)return;
 const msg=status==='terlewat'
-?(monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
-:(monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`);
+?(dayLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
+:(status==='jatuh_tempo'?(dayLimited?'🔴 Jatuh tempo hari ini':monthLimited?'🔴 Jatuh tempo bulan ini':'🔴 Jatuh tempo servis'):(status==='mendekati'?(dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`):(dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`)));
 const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
 rows.push({veh,cat,sisa,pct,col,msg:msg+estLabel});

@@ -135,6 +135,9 @@ const dsrSesudah=incAvg>0?((cicilanAktifBulanan+cicilanBaruBulanan)/incAvg)*100:
 const uangKeluarSekarang=method==='cicilan'?dp:price;
 const pctSaldoTerkuras=(saldo>0&&uangKeluarSekarang>0)?(uangKeluarSekarang/saldo)*100:0;
 const issues=[];
+if(saldo<=0&&uangKeluarSekarang>0){
+issues.push({level:'red',text:'Saldo akun saat ini tidak tersedia atau ≤ 0, jadi pembelian ini belum punya sumber dana tunai yang teridentifikasi. Periksa saldo/akun sebelum melanjutkan. '});
+}
 if(ddPct===null){
 issues.push({level:'orange',text:'Belum ada Target Keuangan yang ditandai 🚨 Dana Darurat, jadi kondisi keamanan finansialmu belum bisa dicek otomatis di sini. Cek juga secara manual sebelum belanja besar.'});
 } else if(ddPct<100){

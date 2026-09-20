@@ -173,9 +173,9 @@ riskFactors() {
 // (0 -> Rendah, 1-2 -> Sedang, 3+ -> Tinggi), pola sama persis
 // kategorisasi score->label di `financialHealthRecommendation()`
 // (financial-health-score-api.js) — 0 rumus baru.
-riskLevel() {
-  const factors = this.riskFactors();
-  const count = factors.length;
+riskLevel(factors) {
+  const list = Array.isArray(factors) ? factors : this.riskFactors();
+  const count = list.length;
   const level = count === 0 ? 'low' : count <= 2 ? 'medium' : 'high';
   const label = count === 0 ? 'Rendah' : count <= 2 ? 'Sedang' : 'Tinggi';
   return { count, level, label };
@@ -189,7 +189,7 @@ riskLevel() {
 // riskLevel() tetap balikin 'Rendah' apa adanya, bukan gagal).
 summary() {
   const riskFactors = this.riskFactors();
-  const riskLevel = this.riskLevel();
+  const riskLevel = this.riskLevel(riskFactors);
   return { ok: true, riskFactors, riskLevel };
 },
 

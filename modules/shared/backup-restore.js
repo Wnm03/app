@@ -571,6 +571,7 @@ const _p23RestoreValidation=validateServiceOdometerImportIntegrity(D.servisLogs|
 if(!_p23RestoreValidation.ok)throw new Error('Restore dibatalkan: integritas odometer servis tidak valid ('+_p23RestoreValidation.invalid.length+' record).');
 // V37: ownership conflicts are a restore-invalid state; never guess an owner.
 if(typeof getServiceFinanceOwnershipIntegrity==='function'){const _own=getServiceFinanceOwnershipIntegrity();if(_own&&_own.issues&&_own.issues.length)throw new Error('Restore dibatalkan: konflik ownership servis↔Finance ('+_own.issues.length+' issue).');}
+if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
 saveFlush();init();
 try{
 if(_restoredLifeosStore!==undefined){
@@ -603,6 +604,7 @@ return true;
 }catch(e){
 console.error('Restore gagal, mengembalikan data sebelumnya:',e);
 D=prevD;
+if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
 saveFlush();init();
 try{
   if(_prevLifeosStore!==undefined)await IDBStore.set('lifeos:store',_prevLifeosStore);
@@ -724,11 +726,18 @@ return [norm(t.date),norm(t.type),Number(t.amount)||0,norm(t.category),norm(t.su
 }
 function _dedupeImportedTransactions(imported){
 if(!Array.isArray(imported)||!imported.length)return[];
+// SA-H: dedupe against BOTH existing data and the current import batch.
+// Previously accepted rows were not added to existingKeys, so the same
+// transaction repeated twice in one file could be imported twice.
 const existingKeys=new Set((Array.isArray(D.transactions)?D.transactions:[]).map(t=>t&&t.importIdempotencyKey).filter(Boolean));
+const acceptedKeys=new Set();
 return imported.filter(t=>{
   const key=t&&t.importIdempotencyKey;
-  return !key||!existingKeys.has(key);
-});
+  if(!key)return true;
+  if(existingKeys.has(key)||acceptedKeys.has(key))return false;
+  acceptedKeys.add(key);
+  return true;
+}); 
 }
 function _validateRestoreShape(imp){
 if(!imp||typeof imp!=='object'||Array.isArray(imp))return{ok:false,msg:'Root backup harus berupa objek JSON.'};

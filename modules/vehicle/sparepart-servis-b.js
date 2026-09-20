@@ -61,7 +61,8 @@ return;
 }
 let created=0,updated=0;
 const rowsHtml=this.parsedRows.slice(0,50).map(r=>{
-const exists=D.sparepartCats.find(c=>c.name.toLowerCase()===r.nama.toLowerCase());
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const exists=(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===r.nama.toLowerCase()&&(!c.vehicleId||String(c.vehicleId)===String(vid)));
 if(exists)updated++;else created++;
 const statusLabel=exists?'🔄 update':'🆕 baru';
 const sub=(r.kode||'-')+(r.intervalKm?' · setiap '+r.intervalKm.toLocaleString('id-ID')+' km':'');

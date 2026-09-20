@@ -130,3 +130,11 @@ test('summary() -> ok:false kalau FinanceIntelligence belum dimuat, recommendati
   assert.equal(r.ok, false);
   assert.equal(r.recommendation.length, 0);
 });
+
+test('summary() -> reuse satu scoreOverview untuk breakdown + recommendation', () => {
+  let calls = 0;
+  const { FinancialHealthScoreAPI } = makeCtx({ healthScore: () => { calls++; return GOOD_HS; } });
+  const r = FinancialHealthScoreAPI.summary();
+  assert.equal(r.ok, true);
+  assert.equal(calls, 1);
+});

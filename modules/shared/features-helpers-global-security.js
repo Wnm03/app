@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1861-saveflush-cache-hardening-1827';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1861-saveflush-cache-hardening-1827';
+const APP_BUILD_VERSION = 's1862-sa-i-cumulative-audit-1828';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1862-sa-i-cumulative-audit-1828';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -336,6 +336,15 @@ _saveSnapshotVersion=version;
 _saveSnapshotJson=json;
 return json;
 }
+// SA-L: direct state replacement (restore/import/rollback) must advance the
+// persistence mutation clock just like save(). Otherwise saveFlush() can reuse
+// the pre-restore JSON snapshot for the same version and persist stale data.
+function _markPersistenceStateChanged(){
+_saveStateVersion++;
+_saveSnapshotVersion=-1;
+_saveSnapshotJson=null;
+return _saveStateVersion;
+}
 function _saveImmediate(snapshotJson){
 const version=_saveStateVersion;
 let json=snapshotJson;
@@ -498,7 +507,7 @@ function refreshAfterMutation(opts){
 
 function save(opts){
 opts=opts||{};
-_saveStateVersion++;
+_markPersistenceStateChanged();
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 const _saveDomain=opts.domain||null;
 const _saveFinanceMutation=opts.financeMutation!==false;

@@ -200,3 +200,14 @@ test('summary(): ok=false kalau FinanceIntelligence belum dimuat, insight tetap 
   assert.equal(Array.isArray(sum.insight), true);
   assert.equal(sum.insight.length, 0);
 });
+
+test('summary() -> reuse satu spendingAnalysis untuk suggestion + insight', () => {
+  let calls = 0;
+  const { BudgetRecommendationAPI: api } = makeCtx(() => {
+    calls++;
+    return { ok: true, month: 8, year: 2026, items: [], totalLimit: 0, totalUsed: 0, totalSisa: 0, overallPct: 0, overCount: 0, nearCount: 0, underusedCount: 0 };
+  });
+  const r = api.summary();
+  assert.equal(r.ok, true);
+  assert.equal(calls, 1);
+});

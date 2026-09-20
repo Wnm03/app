@@ -5,6 +5,8 @@
 // behavior intentionally changed. Must load immediately AFTER sparepart-servis.js
 // and BEFORE sparepart-servis-b.js.
 
+function _spCatId(suffix){const base=(typeof uid==='function')?uid():(Date.now()+'_'+Math.random().toString(36).slice(2,8));return 'sp_'+base+(suffix?'_'+suffix:'');}
+
 Object.assign(Sparepart,{
 // suggestInterval() (Sesi 295, permintaan eksplisit user "tambahkan ai
 // rekomendasi interval pergantian sparepart sesuai panduan pengguna"): isi
@@ -61,7 +63,7 @@ const showRemEl=document.getElementById('sparepartShowInReminder');
 // tetap WAJIB kalau toggle-nya aktif (perilaku lama tidak berubah).
 const wantShow=showRemEl?showRemEl.checked:true;
 if(!name){toast('⚠️ Lengkapi nama kategori');return;}
-if(wantShow&&(!interval||interval<=0)){toast('⚠️ Lengkapi interval servis, atau matikan toggle "Tampilkan di Pengingat Servis" kalau kategori ini cuma buat stok');return;}
+if(wantShow&&(!((interval&&interval>0)||(intervalBulanRaw&&intervalBulanRaw>0)))){toast('⚠️ Isi interval KM atau interval bulan, atau matikan toggle "Tampilkan di Pengingat Servis" kalau kategori ini cuma buat stok');return;}
 const clash=matchingVehicleName(name);
 if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis. Isi nama part yang mau diingatkan (mis. Oli Mesin, Ganti Ban, dll).`,4000);return;}
 if(!code) code=codeFromName(name);
@@ -151,7 +153,7 @@ editCat.vehicleId=vehicleId;
 const grpNew=(groupSelEl&&groupSelVal)
 ?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
 :((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
-D.sparepartCats.push({id:'sp_'+Date.now(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
+D.sparepartCats.push({id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -196,13 +198,19 @@ syncCategoryServiceComponent(){
 const master=document.getElementById('sparepartMasterCategoryId')?.value||'';
 this.populateServiceComponentSelect('sparepartServiceComponentId',master,document.getElementById('sparepartServiceComponentId')?.value||'');
 },
-populateStockCatSelect(){
+populateStockCatSelect(selectedId){
 const sel=document.getElementById('stockCatId');
 if(!sel)return;
-const cur=sel.value;
+const cur=selectedId||sel.value||'';
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const cats=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
-sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}</option>`).join('');
+const visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+// Saat edit stok universal, kategori bisa saja scoped ke kendaraan lain.
+// Kategori lama itu TETAP dimunculkan sebagai opsi terpilih agar membuka+
+// menyimpan ulang stok tidak diam-diam memutus catId. Namun kategori private
+// kendaraan lain tidak ditawarkan sebagai opsi baru.
+const selectedCat=cur?(D.sparepartCats||[]).find(c=>c&&c.id===cur):null;
+const cats=selectedCat&&!visible.some(c=>c.id===selectedCat.id)?[selectedCat,...visible]:visible;
+sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}${selectedCat&&c.id===selectedCat.id&&!catVisibleForVehicle(c,vid)?' — kategori kendaraan lain':''}</option>`).join('');
 if(cur&&cats.some(c=>c.id===cur)) sel.value=cur;
 // FITUR BARU (audit, gap "dropdown kategori tanpa pencarian"): reset kotak
 // cari tiap kali dropdown dimuat ulang (buka modal baru/ganti kendaraan),
@@ -465,9 +473,9 @@ return `<div ${attrs} style="padding:6px 0 6px 4px;border-top:1px dashed var(--b
 openStockModal(idx){
 Sparepart.stockEditIdx=(typeof idx==='number')?idx:null;
 const isEdit=Sparepart.stockEditIdx!==null;
-Sparepart.populateStockCatSelect();
-document.getElementById('stockModalTitle').textContent=isEdit?'Edit Stok Sparepart':'Tambah Stok Sparepart';
 const p=isEdit?D.partsStock[Sparepart.stockEditIdx]:null;
+Sparepart.populateStockCatSelect(isEdit&&p?p.catId:null);
+document.getElementById('stockModalTitle').textContent=isEdit?'Edit Stok Sparepart':'Tambah Stok Sparepart';
 document.getElementById('stockCatId').value=isEdit?(p.catId||''):'';
 Sparepart.syncStockServiceComponent();
 if(isEdit&&p&&p.serviceComponentId){const sc=document.getElementById('stockServiceComponentId');if(sc)sc.value=p.serviceComponentId;}
@@ -621,7 +629,7 @@ try{ items=await VehicleCatalog.getAll(); }catch(e){ toast('⚠️ Gagal membaca
 const candidates=(items||[]).filter(it=>it&&!it.isDraft&&(!Array.isArray(it.compatibleVehicleIds)||!it.compatibleVehicleIds.length||it.compatibleVehicleIds.some(id=>String(id)===String(curVehicleId))));
 if(!candidates.length){toast('ℹ️ Belum ada part di Katalog Suku Cadang untuk '+(veh?veh.name:'kendaraan ini'));return;}
 const rows=candidates.map(it=>{
-const already=D.partsStock.some(p=>p.catalogId===it.id);
+const already=D.partsStock.some(p=>p.catalogId===it.id&&(!p.vehicleId||String(p.vehicleId)===String(curVehicleId)));
 const reko=already?null:suggestServiceIntervalKm(it.partName||'',curVehicleId);
 return{item:it,already,intervalKm:reko?reko.km:0};
 });
@@ -648,7 +656,7 @@ if(!cat){
 // umum dari katalog, mis. "Umum") kalau partName kosong. catName SENDIRI
 // (bukan partName) tetap dipakai sbg cat.name, 0 perilaku lama berubah.
 const grpSync=(typeof resolveCatGroup==='function')?resolveCatGroup({name:it.partName||catName},curVehicleId):{group:'Lainnya',icon:'📦'};
-cat={id:'sp_'+Date.now()+'_'+idx,name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0,group:grpSync.group,groupIcon:grpSync.icon};
+cat={id:_spCatId(String(idx)),name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0,group:grpSync.group,groupIcon:grpSync.icon,vehicleId:curVehicleId};
 D.sparepartCats.push(cat);
 addedCat++;
 } else if(r.intervalKm>0&&(!cat.intervalKm||cat.intervalKm<=0)){
@@ -658,7 +666,7 @@ cat.showInReminder=true;
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 const code=(it.barcode||it.oemCode||(prefix+'-'+String(seq).padStart(3,'0')));
-D.partsStock.push({id:'st_'+Date.now()+'_'+idx,name:it.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:it.price||0,note:'Disinkron dari Katalog Suku Cadang',catalogId:it.id});
+D.partsStock.push({id:'st_'+Date.now()+'_'+idx,name:it.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:it.price||0,note:'Disinkron dari Katalog Suku Cadang',catalogId:it.id,vehicleId:curVehicleId});
 addedStock++;
 });
 save();
@@ -696,7 +704,9 @@ rows.forEach(r=>{
 if(!r||!r.nama)return;
 const nama=String(r.nama).trim();
 if(!nama)return;
-let cat=D.sparepartCats.find(c=>c.name.toLowerCase()===nama.toLowerCase());
+const vidCsv=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+let cat=(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===nama.toLowerCase()&&c.vehicleId&&String(c.vehicleId)===String(vidCsv))
+  ||(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===nama.toLowerCase()&&!c.vehicleId);
 if(cat){
 if(r.kode)cat.code=r.kode;
 if(r.intervalKm!==undefined&&r.intervalKm!==null&&r.intervalKm>0)cat.intervalKm=r.intervalKm;
@@ -713,8 +723,9 @@ const showInReminder=(r.showInReminder!==undefined&&r.showInReminder!==null)?r.s
 // dipanggil dalam konteks kendaraan aktif (bisa dari alur import umum) --
 // guard typeof curVehicleId, fallback null (resolveCatGroup tetap aman,
 // jatuh ke GENERIC_GROUP_BY_NAME/'Lainnya' tanpa match TORSI_DB spesifik).
-const grpCsv=(typeof resolveCatGroup==='function')?resolveCatGroup({name:nama},(typeof curVehicleId!=='undefined')?curVehicleId:null):{group:'Lainnya',icon:'📦'};
-D.sparepartCats.push({id:'sp_'+Date.now()+'_'+created+'_'+updated,name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon});
+const grpCsv=(typeof resolveCatGroup==='function')?resolveCatGroup({name:nama},vidCsv):{group:'Lainnya',icon:'📦'};
+const vehicleIdCsv=(vidCsv&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidCsv))?vidCsv:null;
+D.sparepartCats.push({id:_spCatId(created+'_'+updated),name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon,vehicleId:vehicleIdCsv});
 created++;
 }
 });

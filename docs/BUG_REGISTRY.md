@@ -1758,3 +1758,14 @@ Status: **BY DESIGN**
 3. A regression receives a new finding linked to the original bug.
 4. Business-rule uncertainty is `VERIFY`, not `BUG`.
 5. Suspected defects must be distinguished from confirmed defects.
+
+
+## BUG-020
+
+- Severity: P2 Medium
+- Domain: Vehicle/Sparepart — CSV category import + service prefill
+- Finding: category/stock name matching could cross vehicle boundaries. `Servis` prefill searched `D.partsStock` globally by `prefillItem`; CSV category preview/commit matched `D.sparepartCats` globally by name, so a private category belonging to another vehicle could be selected/updated.
+- Fix: service prefill now filters stock through `Sparepart.isPartForVehicle()`/`vehicleId`; CSV import now prefers current-vehicle category, then global category, and new categories receive the active `vehicleId`.
+- Regression: `tests/sa-e-cross-vehicle-stock-isolation.test.js`, `tests/sa-c-category-csv-vehicle-scope.test.js`.
+- Verification: targeted cumulative gate 15/15 PASS; syntax checks PASS.
+- Status: FIXED (2026-09-20 cumulative audit).

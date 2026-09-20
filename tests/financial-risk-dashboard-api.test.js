@@ -116,3 +116,13 @@ test('summary() -> ok selalu true walau ke-4 sumber belum dimuat sama sekali', (
   assert.equal(r.riskFactors.length, 0);
   assert.equal(r.riskLevel.count, 0); assert.equal(r.riskLevel.level, 'low'); assert.equal(r.riskLevel.label, 'Rendah');
 });
+
+test('summary() -> reuse satu riskFactors untuk riskLevel', () => {
+  let calls = 0;
+  const { FinancialRiskDashboardAPI: api } = makeCtx({ D: makeD([{ isDanaDarurat: true, amount: 100, saved: 100 }]) });
+  const original = api.riskFactors;
+  api.riskFactors = () => { calls++; return original.call(api); };
+  const r = api.summary();
+  assert.equal(r.ok, true);
+  assert.equal(calls, 1);
+});

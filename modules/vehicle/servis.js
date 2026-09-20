@@ -42,7 +42,7 @@ localStorage.setItem(Servis._masterCategoryFilterStorageKey,JSON.stringify({acti
 resolveLogMasterCategoryId(s){
 if(typeof resolveCatGroup!=='function')return null;
 const vehicleId=s.vehicleId||curVehicleId;
-const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,vehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===(s.item||'').toLowerCase()));
+const linkedCat=(()=>{const preferred=s.categoryId&&D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(!c.vehicleId||c.vehicleId===vehicleId));return preferred||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,vehicleId):D.sparepartCats.find(c=>!c.vehicleId&&c.name.toLowerCase()===(s.item||'').toLowerCase()));})();
 if(!linkedCat)return null;
 const r=resolveCatGroup(linkedCat,vehicleId);
 return r?r.masterCategoryId:null;
@@ -388,7 +388,14 @@ const namesRaw=(typeof Sparepart!=='undefined'&&Sparepart.getItemSuggestions)?Sp
 const names=Array.isArray(namesRaw)?namesRaw:[];
 const matches=(q?names.filter(n=>String(n).toLowerCase().includes(q)):names).slice(0,8);
 if(!matches.length){box.style.display='none';box.innerHTML='';return;}
-box.innerHTML=matches.map(n=>`<div class="suggest-item" onmousedown="event.preventDefault();Servis.selectItemSuggestion('${jsAttrEscape(n)}')">${escapeHtml(n)}</div>`).join('');
+box.innerHTML=matches.map((n,i)=>`<div class="suggest-item" data-suggest-index="${i}">${escapeHtml(n)}</div>`).join('');
+Array.from(box.querySelectorAll('[data-suggest-index]')).forEach(node=>{
+  node.addEventListener('mousedown',event=>{
+    event.preventDefault();
+    const index=Number(node.dataset.suggestIndex);
+    if(Number.isInteger(index)&&index>=0&&index<matches.length)Servis.selectItemSuggestion(matches[index]);
+  });
+});
 box.style.display='block';
 },
 selectItemSuggestion(name){
@@ -480,7 +487,7 @@ Servis.populateCatalogPartSelect(firstCatalogRef?firstCatalogRef.catalogId:'');
 document.getElementById('servisCatalogPartQty').value=firstCatalogRef?firstCatalogRef.qty:1;
 Servis.renderCatalogRecommendations();
 
-const linkedCat=(s.categoryId&&D.sparepartCats.find(c=>c.id===s.categoryId))||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,s.vehicleId||curVehicleId):D.sparepartCats.find(c=>c.name.toLowerCase()===s.item.toLowerCase()));
+const linkedCat=(()=>{const vehicleId=s.vehicleId||curVehicleId;const preferred=s.categoryId&&D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(!c.vehicleId||c.vehicleId===vehicleId));return preferred||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,vehicleId):D.sparepartCats.find(c=>!c.vehicleId&&c.name.toLowerCase()===s.item.toLowerCase()));})();
 if(intervalEl)intervalEl.value=linkedCat?linkedCat.intervalKm:'';
 Servis._photoDraft=(s.foto||[]).slice();
 Servis._renderPhotoThumbs();
@@ -503,7 +510,13 @@ Servis._renderPhotoThumbs();
 if(prefillItem){
 document.getElementById('servisItem').value=prefillItem;
 Servis.onItemAutofillInterval();
-const matchStock=D.partsStock.find(p=>p.name.toLowerCase()===prefillItem.toLowerCase()||p.name.toLowerCase().includes(prefillItem.toLowerCase())||prefillItem.toLowerCase().includes(p.name.toLowerCase()));
+const vehicleIdPrefill=curVehicleId;
+const visibleStock=(D.partsStock||[]).filter(p=>{
+  if(!(p&&p.name))return false;
+  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleIdPrefill);
+  return !p.vehicleId||String(p.vehicleId)===String(vehicleIdPrefill);
+});
+const matchStock=visibleStock.find(p=>p.name.toLowerCase()===prefillItem.toLowerCase()||p.name.toLowerCase().includes(prefillItem.toLowerCase())||prefillItem.toLowerCase().includes(p.name.toLowerCase()));
 if(matchStock)Servis.populatePartSelect(matchStock.id);
 } else {
 Servis.renderCatalogRecommendations();
@@ -600,15 +613,39 @@ for(const [id,delta] of net){
 return true;
 },
 
-findMatchingStockByCatalogId(catalogId){
+findMatchingStockByCatalogId(catalogId,vehicleId){
 if(!catalogId)return null;
-return D.partsStock.find(p=>p.catalogId===catalogId)||null;
+const rows=(D.partsStock||[]).filter(p=>p&&String(p.catalogPartId||p.catalogId||'')===String(catalogId));
+if(!rows.length)return null;
+const scoped=rows.filter(p=>{
+  if(!vehicleId)return true;
+  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleId);
+  return !p.vehicleId||p.vehicleId===vehicleId;
+});
+if(scoped.length===1)return scoped[0];
+if(scoped.length>1){
+  const exact=scoped.find(p=>p.vehicleId&&String(p.vehicleId)===String(vehicleId));
+  return exact||null;
+}
+return null;
 },
 
-findMatchingStockByName(name){
+findMatchingStockByName(name,vehicleId){
 const n=(name||'').trim().toLowerCase();
 if(!n)return null;
-return D.partsStock.find(p=>p.name.trim().toLowerCase()===n)||null;
+const rows=(D.partsStock||[]).filter(p=>p&&String(p.name||'').trim().toLowerCase()===n);
+if(!rows.length)return null;
+const scoped=rows.filter(p=>{
+  if(!vehicleId)return true;
+  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleId);
+  return !p.vehicleId||p.vehicleId===vehicleId;
+});
+if(scoped.length===1)return scoped[0];
+if(scoped.length>1){
+  const exact=scoped.find(p=>p.vehicleId&&String(p.vehicleId)===String(vehicleId));
+  return exact||null;
+}
+return null;
 },
 async applyStockUsage(partId,qty){
 if(!partId||!qty)return true;
@@ -806,14 +843,14 @@ const catalogPartQty=catalogPartId?(parseFloat(document.getElementById('servisCa
 const catalogPartOemCode=(catalogPartId&&catalogPartSelEl&&catalogPartSelEl.selectedOptions&&catalogPartSelEl.selectedOptions[0]&&catalogPartSelEl.selectedOptions[0].dataset)?(catalogPartSelEl.selectedOptions[0].dataset.oem||''):'';
 const catalogPartName=(catalogPartId&&catalogPartSelEl&&catalogPartSelEl.selectedOptions&&catalogPartSelEl.selectedOptions[0]&&catalogPartSelEl.selectedOptions[0].dataset)?(catalogPartSelEl.selectedOptions[0].dataset.name||''):'';
 
-const catalogStockMatch=catalogPartId?(Servis.findMatchingStockByCatalogId(catalogPartId)||Servis.findMatchingStockByName(catalogPartName)):null;
+const catalogStockMatch=catalogPartId?(Servis.findMatchingStockByCatalogId(catalogPartId,curVehicleId)||Servis.findMatchingStockByName(catalogPartName,curVehicleId)):null;
 const catalogLinkedStockId=catalogStockMatch?catalogStockMatch.id:null;
 const itemIsVehicleName=!!matchingVehicleName(item);
 
 let catIdForLog=matched?matched.id:null;
 if(Servis.editId!==null&&!matched){
   const existing=D.servisLogs.find(x=>x.id===Servis.editId);
-  const oldCat=existing&&existing.categoryId?D.sparepartCats.find(c=>c.id===existing.categoryId):null;
+  const oldCat=existing&&existing.categoryId?D.sparepartCats.find(c=>c&&c.id===existing.categoryId&&(!c.vehicleId||c.vehicleId===curVehicleId)):null;
   const sameItem=existing&&String(existing.item||'').trim().toLowerCase()===item.toLowerCase();
   if(oldCat&&sameItem)catIdForLog=oldCat.id;
 }
@@ -858,7 +895,7 @@ if(!await Servis.replaceStockUsages(
   return;
 }
 if(intervalKm&&intervalKm>0&&!matched&&s.categoryId){
-const linkedCat=D.sparepartCats.find(c=>c.id===s.categoryId);
+const linkedCat=D.sparepartCats.find(c=>c&&c.id===s.categoryId&&(!c.vehicleId||c.vehicleId===curVehicleId));
 if(linkedCat){linkedCat.intervalKm=intervalKm;catIdForLog=linkedCat.id;}
 }
 const checklistPayload=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
@@ -1179,7 +1216,7 @@ return _runDelete();
 
 _findAutoGantiStock(cat,vehicleId){
 if(!cat||!Array.isArray(D.partsStock))return null;
-const candidates=D.partsStock.filter(p=>p.catId===cat.id&&(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):true));
+const candidates=D.partsStock.filter(p=>p.catId===cat.id&&(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):(!p.vehicleId||String(p.vehicleId)===String(vehicleId))));
 return candidates.length===1?candidates[0]:null;
 },
 

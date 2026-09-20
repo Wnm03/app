@@ -142,8 +142,8 @@ spendingAnalysis(month, year) {
 // bukan menghitung proyeksi/rata-rata baru — beda dari
 // FinancialForecastAPI yang proyeksi 30 hari, sesi ini TIDAK menyentuh
 // itu). Teks pesan murni template string, tidak mengarang angka baru.
-budgetSuggestion(month, year) {
-  const sa = this.spendingAnalysis(month, year);
+budgetSuggestion(month, year, spendingAnalysis) {
+  const sa = spendingAnalysis || this.spendingAnalysis(month, year);
   if (!sa.ok) return sa;
   const suggestions = sa.items
     .filter((it) => it.category !== 'ok')
@@ -197,8 +197,8 @@ budgetSuggestion(month, year) {
 // spendingAnalysis() milik file ini sendiri (over count, near count,
 // underused count), tidak membaca ulang D atau menghitung ulang rumus
 // apa pun.
-budgetInsight() {
-  const sa = this.spendingAnalysis();
+budgetInsight(spendingAnalysis) {
+  const sa = spendingAnalysis || this.spendingAnalysis();
   if (!sa.ok) return sa;
   const out = [];
   if (sa.overCount > 0) {
@@ -227,8 +227,8 @@ budgetInsight() {
 // syarat ok.
 summary() {
   const spendingAnalysis = this.spendingAnalysis();
-  const budgetSuggestion = this.budgetSuggestion();
-  const insight = this.budgetInsight();
+  const budgetSuggestion = this.budgetSuggestion(undefined, undefined, spendingAnalysis);
+  const insight = this.budgetInsight(spendingAnalysis);
   return {
     ok: !!(spendingAnalysis.ok && budgetSuggestion.ok),
     spendingAnalysis,

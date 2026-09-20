@@ -193,7 +193,14 @@ if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"stok-sparepart
 // alur, sama seperti applyTxStockFromTx() di bawah).
 function syncPartsStockFromCatalog(catalogItem){
 if(!catalogItem||!catalogItem.id)return null;
-const existing=D.partsStock.find(p=>p.catalogId===catalogItem.id);
+const vidCatalog=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const catalogRows=D.partsStock.filter(p=>p&&String(p.catalogPartId||p.catalogId||'')===String(catalogItem.id));
+const catalogVisible=catalogRows.filter(p=>{
+  if(!vidCatalog)return true;
+  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vidCatalog);
+  return !p.vehicleId||String(p.vehicleId)===String(vidCatalog);
+});
+const existing=catalogVisible.find(p=>p.vehicleId&&String(p.vehicleId)===String(vidCatalog))||catalogVisible[0]||null;
 if(existing){
 if(catalogItem.partName&&existing.name!==catalogItem.partName)existing.name=catalogItem.partName;
 return existing;
@@ -415,7 +422,7 @@ D.sparepartCats.push(cat);
 const prefix=cat.code||codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 const code=prefix+'-'+String(seq).padStart(3,'0');
-const existing=D.partsStock.find(p=>p.catId===cat.id&&p.name.toLowerCase()===name.toLowerCase());
+const existing=D.partsStock.find(p=>p.catId===cat.id&&p.name.toLowerCase()===name.toLowerCase()&&(!p.vehicleId||String(p.vehicleId)===String(vidNewCat)));
 if(existing){
 applyStockPurchase(existing,qty,unitPrice,purchaseDate,txId);
 targetPart=existing;

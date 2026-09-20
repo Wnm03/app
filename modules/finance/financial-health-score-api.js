@@ -67,8 +67,8 @@ scoreOverview() {
 // scoreOverview().parts (key/weight/score dari FinanceIntelligence.
 // healthScore(), 0 recompute) + pemetaan LABEL tampilan per key + `pct`
 // (score/weight, pembagian sederhana) — 0 rumus finansial baru.
-componentBreakdown() {
-  const o = this.scoreOverview();
+componentBreakdown(scoreOverview) {
+  const o = scoreOverview || this.scoreOverview();
   if (!o.ok) return o;
   const LABELS = {
     savings: 'Tingkat Tabungan',
@@ -95,8 +95,8 @@ componentBreakdown() {
 //     warning), message pakai `label` APA ADANYA (tidak dihitung ulang)
 //   - tiap komponen dgn pct<0.5 (kontribusi di bawah separuh bobot
 //     maksimalnya) -> warning per komponen
-financialHealthRecommendation() {
-  const o = this.scoreOverview();
+financialHealthRecommendation(scoreOverview, componentBreakdown) {
+  const o = scoreOverview || this.scoreOverview();
   const out = [];
   if (!o.ok) return out;
   out.push({
@@ -104,7 +104,7 @@ financialHealthRecommendation() {
     code: 'health_score_overall',
     message: `Skor kesehatan finansial ${o.score}/100 (${o.label}).`,
   });
-  const b = this.componentBreakdown();
+  const b = componentBreakdown || this.componentBreakdown(o);
   if (b.ok) {
     b.items.filter((i) => i.pct < 0.5).forEach((i) => {
       out.push({
@@ -124,8 +124,8 @@ financialHealthRecommendation() {
 // `ok` gabungan).
 summary() {
   const scoreOverview = this.scoreOverview();
-  const componentBreakdown = this.componentBreakdown();
-  const recommendation = this.financialHealthRecommendation();
+  const componentBreakdown = this.componentBreakdown(scoreOverview);
+  const recommendation = this.financialHealthRecommendation(scoreOverview, componentBreakdown);
   return {
     ok: !!scoreOverview.ok,
     scoreOverview,

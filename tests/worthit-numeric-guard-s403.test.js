@@ -94,3 +94,11 @@ test('computeScore() — price/hargaNormal numerik normal tetap hitung diskon dg
   assert.ok(Number.isFinite(score));
   assert.ok(reasons.some((r) => /Diskon/.test(r.text)));
 });
+
+test('hitung() — saldo nol menampilkan peringatan sumber dana yang jelas', () => {
+  const D = baseD();
+  const dom = fakeDom({ wiMethod: { value: 'tunai' }, wiIssueList: { innerHTML: '' } });
+  const ctx = makeCtx(D, dom);
+  ctx.WorthIt.hitung();
+  assert.match(dom._els.wiIssueList.innerHTML, /Saldo akun saat ini tidak tersedia|≤ 0/);
+});

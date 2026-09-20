@@ -50,10 +50,10 @@ invalidateCache() {
 // Toleran: transaksi tanpa accountId, atau accountId yg akunnya sudah
 // tidak ada di D.accounts, tetap dihitung (fallback dianggap SELF) —
 // SAMA prinsip toleran dgn OwnershipEngine.resolve() thd data lama.
-_isTxAccountSelf(t) {
+_isTxAccountSelf(t, accountMap) {
   if (typeof OwnershipEngine === 'undefined') return true;
   if (!t || !t.accountId) return true;
-  const acc = (D.accounts || []).find((a) => a.id === t.accountId);
+  const acc = accountMap instanceof Map ? accountMap.get(t.accountId) : (D.accounts || []).find((a) => a.id === t.accountId);
   if (!acc) return true;
   return OwnershipEngine.resolve(acc).type === 'SELF';
 },
@@ -77,9 +77,10 @@ _resolveRange(range) {
 incomeVsExpense(range) {
   if (!range && this._ivxCache !== undefined) return this._ivxCache;
   const { from, to } = this._resolveRange(range);
+  const accountMap = new Map((D.accounts || []).map((a) => [a.id, a]));
   const txs = (D.transactions || []).filter((t) => {
     const d = new Date(t.date);
-    return d >= from && d <= to && this._isTxAccountSelf(t);
+    return d >= from && d <= to && this._isTxAccountSelf(t, accountMap);
   });
   const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);

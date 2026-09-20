@@ -27,7 +27,7 @@ populateSubSelect('fSub','fKat');
 renderLaporan();
 }
 function resetLaporanFilter(){
-['fTipe','fKat','fSub','fAcc','fMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=el.id==='fAcc'?'semua':'semua';});
+['fTipe','fKat','fSub','fAcc','fMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 populateSubSelect('fSub','fKat');
 renderLaporan();
 toast('↺ Filter laporan direset');
@@ -71,7 +71,7 @@ if(show)populateKeuFilters();
 updateKfBadge();
 }
 function resetKeuFilter(){
-['kfTipe','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=id==='kfAcc'?'semua':'semua';});
+['kfTipe','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 const s=document.getElementById('kfSearch');if(s)s.value='';
 populateSubSelect('kfSub','kfKat');
 saveKeuFilterPrefs();

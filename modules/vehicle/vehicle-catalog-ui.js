@@ -141,8 +141,15 @@ async function catalogUiRenderList() {
       // Sesi 274/275: catalogId dulu (match presisi, tahan rename nama
       // stok manual — pola sama S273/car-notes.js), name-match jadi
       // fallback SAJA untuk baris stok lama yang belum punya catalogId.
-      const matchedStock = D.partsStock.find((p) => p.catalogId === it.id)
-        || (it.partName ? D.partsStock.find((p) => p.name && p.name.trim().toLowerCase() === it.partName.trim().toLowerCase()) : null);
+      const catalogMatches = D.partsStock.filter((p) => p && String(p.catalogPartId || p.catalogId || '') === String(it.id));
+      const vid = (typeof curVehicleId !== 'undefined') ? curVehicleId : null;
+      const inVehicle = (p) => {
+        if (!vid) return true;
+        if (typeof Sparepart !== 'undefined' && typeof Sparepart.isPartForVehicle === 'function') return Sparepart.isPartForVehicle(p, vid);
+        return !p.vehicleId || String(p.vehicleId) === String(vid);
+      };
+      const matchedStock = catalogMatches.filter(inVehicle).sort((a,b) => (String(a.vehicleId||'')===String(vid)?-1:0) - (String(b.vehicleId||'')===String(vid)?-1:0))[0]
+        || (it.partName ? D.partsStock.filter((p) => p && p.name && p.name.trim().toLowerCase() === it.partName.trim().toLowerCase()).filter(inVehicle)[0] : null);
       if (matchedStock) metaParts.push('📦 Stok ' + matchedStock.qty + (matchedStock.unit ? ' ' + matchedStock.unit : ''));
     }
     if (it.isDraft) metaParts.push('⚠️ Draft');

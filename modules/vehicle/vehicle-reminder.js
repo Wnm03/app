@@ -66,10 +66,17 @@ serviceReminders(vehicleId) {
     const pred = predictService({ vehicleId: v.id });
     if (!pred.ok || !Array.isArray(pred.items)) return;
     pred.items.filter((it) => it.status !== 'aman').forEach((it) => {
-      const severity = it.status === 'terlewat' ? 'overdue' : 'due-soon';
+      const severity = (it.status === 'terlewat' || it.status === 'jatuh_tempo') ? 'overdue' : 'due-soon';
+      const isMonthLimited = it.limitingAxis === 'bulan' && it.sisaBulan != null;
+      const isDayLimited = it.limitingAxis === 'hari' && it.sisaHari != null;
+      const dueDetail = isDayLimited
+        ? `${Math.abs(Math.round(it.sisaHari))} hari`
+        : isMonthLimited
+          ? `${Math.abs(Math.round(it.sisaBulan))} bln`
+          : `${Math.abs(Math.round(it.sisaKm || 0)).toLocaleString('id-ID')} km`;
       const message = severity === 'overdue'
-        ? `Servis ${it.categoryName} ${v.name} sudah lewat jatuh tempo (${Math.abs(it.sisaKm)} km lewat batas).`
-        : `Servis ${it.categoryName} ${v.name} segera jatuh tempo (sisa ${it.sisaKm} km).`;
+        ? `Servis ${it.categoryName} ${v.name} sudah lewat jatuh tempo (${dueDetail} lewat batas).`
+        : `Servis ${it.categoryName} ${v.name} segera jatuh tempo (sisa ${dueDetail}).`;
       out.push({
         type: 'service',
         vehicleId: v.id,

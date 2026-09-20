@@ -622,7 +622,12 @@ const guessedPart=guessSparepartFromReceiptText(text);
 if(guessedPart){
 const chk=document.getElementById('txAddStock');
 if(chk&&!chk.checked){chk.checked=true;toggleTxStockFields();}
-const existing=D.partsStock.find(p=>p.name.toLowerCase().includes(guessedPart.name.toLowerCase())||guessedPart.name.toLowerCase().includes(p.name.toLowerCase()));
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const existing=D.partsStock.find(p=>{
+  if(!(p&&p.name))return false;
+  if(vid&&typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'&&!Sparepart.isPartForVehicle(p,vid))return false;
+  return p.name.toLowerCase().includes(guessedPart.name.toLowerCase())||guessedPart.name.toLowerCase().includes(p.name.toLowerCase());
+});
 const sel=document.getElementById('txStockItem');
 if(sel){sel.value=existing?existing.id:'__new__';onTxStockItemChange();}
 if(!existing){const nameEl=document.getElementById('txStockNewName');if(nameEl)nameEl.value=guessedPart.name;}

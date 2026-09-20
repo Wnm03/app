@@ -18,13 +18,13 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2020 |
-| JavaScript | 1230 |
-| Tests | 796 |
-| Markdown | 704 |
+| Total files | 2167 |
+| JavaScript | 1333 |
+| Tests | 870 |
+| Markdown | 737 |
 | HTML | 7 |
 | JSON | 8 |
-| CSS | 4 |
+| CSS | 3 |
 | Module families | 18 |
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
@@ -41,7 +41,7 @@ _Baseline diperbarui lagi pasca-v1555/s740 (akumulasi 6 sesi ringan: Tagihan rem
 
 ---
 
-_Baseline diperbarui lagi pasca-S8 (housekeeping dokumentasi): Total files 1523→1958 (+435), JavaScript 915→1197 (+282), Markdown 558→680 (+122), HTML tetap 5, JSON 2→7 (+5), CSS 2→4 (+2). Snapshot dihitung dengan logic walk yang sama dengan `lintDocsBaselineCountDrift()` (exclude `node_modules/`, `.git/`, `backups/`). Perubahan ini hanya menyinkronkan dokumentasi dengan isi repo; tidak mengubah runtime behavior._
+_Baseline diperbarui pada audit kumulatif SA-FINAL (2026-09-21): Total files 2020→2167 (+147), JavaScript 1230→1333 (+103), Markdown 704→737 (+33), CSS 4→3 (-1) setelah penghapusan `pro-ui-layer.css` yang sudah dinyatakan di `DELETE-FILES.txt`. Angka mengikuti `lintDocsBaselineCountDrift()` dari build terbaru; `backups/`, `node_modules/`, dan `.git/` dikecualikan. Tests tetap dicatat terpisah sesuai konvensi historis. Perubahan ini adalah sinkronisasi dokumentasi terhadap repo hasil patch kumulatif + build, bukan perubahan behavior tambahan._
 
 # 2. Feature Domains
 
@@ -529,3 +529,52 @@ langsung masih 0) — lihat `docs/KNOWN-ISSUES.md` §14 dan `TODO.md` §
 budget-recommendation-api.js".
 
 _Baseline disegarkan pada S1793 setelah deep hardening: snapshot repo aktif (exclude `backups/`, `node_modules/`, `.git/`) dihitung ulang menjadi 2023 file, 1215 JavaScript, 790 test, 691 Markdown, 7 HTML, 40 JSON, 4 CSS. Module families mengikuti coverage generator menjadi 18. Perubahan ini hanya menyelaraskan traceability baseline dengan isi repo saat ini; tidak mengubah runtime behavior._
+
+
+---
+
+# 15. Cumulative SA-F → SA-I follow-up — 2026-09-20
+
+| Area | Result | Evidence |
+|---|---|---|
+| SA-F SSOT / vehicle scope | PASS | cumulative patch + targeted SA-C/SA-E tests |
+| Service prefill stock scope | FIXED/PASS | `modules/vehicle/servis.js`, `tests/sa-e-cross-vehicle-stock-isolation.test.js` |
+| Sparepart category CSV vehicle isolation | FIXED/PASS | `modules/vehicle/sparepart-servis-b.js`, `modules/vehicle/sparepart-servis-ui.js`, `tests/sa-c-category-csv-vehicle-scope.test.js` |
+| SA-G CSP suggestion handler | PASS | cumulative patch |
+| SA-H import idempotency | PASS | cumulative patch `backup-restore.js` |
+| Finance performance cleanup | PASS | health/risk/budget summary reuse + FinanceIntelligence account Map |
+| WorthIt saldo ≤ 0 UX | PASS | warning added + regression test |
+
+No prior patch file is intentionally discarded by this session.
+
+### SA-L — IndexedDB / Persistence Restore Atomicity (2026-09-20)
+
+- `modules/shared/features-helpers-global-security.js` — persistence mutation clock + cached snapshot invalidation: **AUDITED / FIXED**.
+- `modules/shared/backup-restore.js` — restore commit/rollback persistence boundary: **AUDITED / FIXED**.
+- Regression: `tests/sa-l-restore-snapshot-invalidation.test.js`, `tests/backup-restore-regression-s266.test.js`, `tests/s1850-persistence-memory-audit.test.js` — **PASS 26/26**.
+- Production bundle: **NOT regenerated** in this environment because minifier/esbuild is unavailable; source remains authoritative for this patch.
+
+
+# 4. SA-FINAL — Residual High-Risk Verification (2026-09-21)
+
+Audit satu tahap terhadap seluruh residual high-risk area yang sebelumnya
+masih berstatus REVIEW/OPEN sebagai verification queue. Tidak ditemukan
+temuan baru yang memenuhi kriteria confirmed bug setelah cross-check source,
+existing regression suites, dan build gates.
+
+| Area | Verification | Result |
+|---|---|---|
+| AUD-001 Bill/payment synchronization | 25 bill/payment/fallback suites, termasuk payment-flow, double-pay, bill-history, fallback, revert | PASS |
+| AUD-002 Modal/overlay lifecycle | modal navigation, swipe lifecycle, stale timer, stacked dialog, overlay cleanup, ScannerSession self-heal | PASS |
+| AUD-003 Scanner lifecycle | vehicle/sparepart scanner, ScannerSession watchdog/recovery/reattach, structural drift | PASS |
+| AUD-004 Source/bundle drift | `node scripts/build.js`, HTML/version sync, bundle syntax, FILE-MAP/COVERAGE regeneration | PASS* |
+| AUD-005 Dashboard/widget ownership | dashboard hub, net-worth SSOT, card-click source, ticker/performance/AI insight suites | PASS |
+| AUD-006 Data fallback resolution | bill fallback scan, dangling billLink migration, payment/delete/revert regression suites | PASS |
+| Persistence/atomicity | persistence lifecycle/race/recovery/memory/contract/durability + SA-L restore tests | PASS |
+| Event bus/idempotency | event-bus contract + bill-payment lock + lifecycle idempotency | PASS |
+
+`*` Source/bundle synchronization and syntax pass. Production minification
+remains environment-limited because `esbuild` is unavailable; the generated
+bundles are syntactically valid but intentionally unminified. The release gate
+therefore correctly remains blocking for a production ZIP until a minifier is
+available or an explicit release override with a documented reason is supplied.

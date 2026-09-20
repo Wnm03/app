@@ -112,3 +112,10 @@ test('incomeVsExpense() — kalau OwnershipEngine tidak dimuat, fallback hitung 
   assert.equal(res.income, 1000000 + 5000000);
   assert.equal(res.expense, 300000 + 2000000);
 });
+
+test('_isTxAccountSelf() menerima accountMap prebuilt untuk menghindari scan D.accounts berulang', () => {
+  const D = makeD();
+  const ctx = makeCtx(D);
+  const accountMap = new Map(D.accounts.map(a => [a.id, a]));
+  assert.equal(ctx.FinanceIntelligence._isTxAccountSelf({ accountId: 'a1' }, accountMap), true);
+});
