@@ -199,15 +199,23 @@ const pollStart=Date.now();
 while(callCount===0 && (Date.now()-pollStart)<3000){ await new Promise(r=>setTimeout(r,25)); }
 } finally {
 _saveImmediate=original;
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=staleBefore;
+if(typeof _crossTabWarnShown!=='undefined')_crossTabWarnShown=warnBefore;
+if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 }
 _selfTestAssert(callCount===1,'_saveImmediate() seharusnya cuma terpanggil 1x dari 5x panggilan save() berturutan (digabung debounce), malah terpanggil '+callCount+'x');
 }},
 {name:'saveFlush() (PERFORMA): menulis ke disk SEKARANG & membatalkan jeda debounce yang masih tertunda', fn:async()=>{
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 const original=_saveImmediate;
+const staleBefore=typeof _crossTabStateStale!=='undefined'?_crossTabStateStale:false;
+const warnBefore=typeof _crossTabWarnShown!=='undefined'?_crossTabWarnShown:false;
 let callCount=0;
 _saveImmediate=function(){callCount++;};
 try{
+// Isolate the hard-flush contract test from cross-tab stale state left by another self-test.
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=false;
+if(typeof _crossTabWarnShown!=='undefined')_crossTabWarnShown=false;
 save();
 _selfTestAssert(callCount===0,'Sesaat setelah save(), _saveImmediate() belum boleh terpanggil (masih menunggu jeda debounce)');
 saveFlush();

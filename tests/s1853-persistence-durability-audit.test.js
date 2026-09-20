@@ -52,13 +52,31 @@ test('S1853 recovery prefers the newer synchronous local snapshot when IDB is st
  assert.match(s,/localStorage-newer/);
 });
 
-test('S1853 UI hard-flush self-test isolates cross-tab stale state and restores it',()=>{
- const s=fs.readFileSync('modules/shared/self-test-cases-b.js','utf8');
- assert.match(s,/const staleBefore=typeof _crossTabStateStale/);
- assert.match(s,/const warnBefore=typeof _crossTabWarnShown/);
- assert.match(s,/if\(typeof _crossTabStateStale!=='undefined'\)_crossTabStateStale=false/);
- assert.match(s,/if\(typeof _crossTabStateStale!=='undefined'\)_crossTabStateStale=staleBefore/);
- assert.match(s,/if\(typeof _crossTabWarnShown!=='undefined'\)_crossTabWarnShown=warnBefore/);
+function extractNamedSelfTest(src,name){
+ const marker=`{name:'${name}'`;
+ const start=src.indexOf(marker);
+ assert.notEqual(start,-1,`missing self-test ${name}`);
+ const next=src.indexOf("{name:'",start+marker.length);
+ return src.slice(start,next===-1?src.length:next);
+}
+
+test('S1853 UI save/saveFlush self-tests isolate and restore cross-tab stale state independently',()=>{
+ for(const f of ['modules/shared/self-test-cases-b.js','tests/self-test.js']){
+  const s=fs.readFileSync(f,'utf8');
+  for(const name of [
+   'save() di-debounce (PERFORMA): beberapa panggilan berturutan cuma menulis ke disk SATU KALI',
+   'saveFlush() (PERFORMA): menulis ke disk SEKARANG & membatalkan jeda debounce yang masih tertunda'
+  ]){
+   const body=extractNamedSelfTest(s,name);
+   assert.match(body,/const staleBefore=typeof _crossTabStateStale/ ,`${f}: ${name} must snapshot stale state locally`);
+   assert.match(body,/const warnBefore=typeof _crossTabWarnShown/ ,`${f}: ${name} must snapshot warning state locally`);
+   assert.match(body,/if\(typeof _crossTabStateStale!=='undefined'\)_crossTabStateStale=false/,`${f}: ${name} must isolate stale state`);
+   assert.match(body,/if\(typeof _crossTabWarnShown!=='undefined'\)_crossTabWarnShown=false/,`${f}: ${name} must isolate warning state`);
+   assert.match(body,/if\(typeof _crossTabStateStale!=='undefined'\)_crossTabStateStale=staleBefore/,`${f}: ${name} must restore stale state`);
+   assert.match(body,/if\(typeof _crossTabWarnShown!=='undefined'\)_crossTabWarnShown=warnBefore/,`${f}: ${name} must restore warning state`);
+   assert.match(body,/if\(_saveDebounceTimer\)\{clearTimeout\(_saveDebounceTimer\);_saveDebounceTimer=null;\}/,`${f}: ${name} must clean debounce timer`);
+  }
+ }
 });
 
 console.log('S1853 persistence durability audit: PASS');

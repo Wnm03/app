@@ -40,7 +40,8 @@
     "audit:event-listeners": "node scripts/audit-event-listeners.js",
     "audit:scalability": "node scripts/verify-carnotes-scalability.js",
     "audit:patch-contamination": "node scripts/verify-patch-contamination.js",
-    "verify:reproducible-build": "node scripts/verify-reproducible-build.js"
+    "verify:reproducible-build": "node scripts/verify-reproducible-build.js",
+    "audit:app-wide": "node scripts/s1860-app-wide-hardening-gate.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

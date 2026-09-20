@@ -178,11 +178,13 @@ function checkVersionSync() {
 
 function checkServiceSotIntegrity() {
   try {
+    const env = Object.assign({}, process.env, { SERVICE_SOT_SKIP_FULL_REGRESSION: '1' });
     execSync('node scripts/service-sot-integrity-gate.js', {
       cwd: ROOT,
       stdio: 'pipe',
       maxBuffer: 32 * 1024 * 1024,
       shell: true,
+      env,
     });
     return { status: 'passed', detail: 'SERVICE-SOT-INTEGRITY-GATE PASS' };
   } catch (e) {

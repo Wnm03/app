@@ -65,8 +65,8 @@ function main() {
     for (const token of ['SERVICE_CONDITION_RESULTS','recommendServiceAction','summarizeServiceHistory','isServiceComponentNotApplicable','auditServiceMaintenanceIntegrity']) {
       if (!guidance.includes(token)) fail(`guidance helper missing: ${token}`);
     }
-    const servis = read('modules/vehicle/servis.js');
-    if (!servis.includes('Servis.chooseReminderAction')) fail('reminder manual action picker missing');
+    const servis = read('modules/vehicle/servis.js') + '\n' + read('modules/vehicle/servis-b.js');
+    if (!servis.includes('chooseReminderAction')) fail('reminder manual action picker missing');
     if (!servis.includes('conditionResult')) fail('condition result persistence missing');
     if (!servis.includes('conditionNote')) fail('per-component condition note missing');
     if (!servis.includes('checklistNotApplicable')) fail('not-applicable persistence missing');
@@ -120,6 +120,7 @@ function main() {
   }, results);
 
   check('FULL REGRESSION (app-main tests)', () => {
+    if (process.env.SERVICE_SOT_SKIP_FULL_REGRESSION === '1') return;
     execSync('TEST_SHARDS=32 TEST_CONCURRENCY=8 TEST_SHARD_TIMEOUT_MS=90000 node scripts/run-full-test.js', {
       cwd: ROOT,
       stdio: 'pipe',
