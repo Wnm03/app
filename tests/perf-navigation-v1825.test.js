@@ -65,8 +65,17 @@ test('same active bottom-nav tap skips a redundant full render',()=>{
   assert.match(body,/return;/);
 });
 
-test('performance patch is cache-busted to v1825',()=>{
-  assert.match(fs.readFileSync('index.html','utf8'),/app-bundle-b\.min\.js\?v=1825/);
-  assert.match(fs.readFileSync('app_production.html','utf8'),/app-bundle-b\.min\.js\?v=1825/);
-  assert.match(fs.readFileSync('sw.js','utf8'),/kw-cache-v1825/);
+// S1861 fix: dulu meng-assert angka versi literal (v1826) sehingga pecah tiap
+// kali scripts/build.js menaikkan versi. Kontrak sebenarnya adalah cache-bust
+// itu ADA dan SINKRON lintas index.html / app_production.html / sw.js, bukan
+// nomornya. Baca versi dari index.html lalu bandingkan.
+test('performance patch is cache-busted & sinkron lintas index/app_production/sw',()=>{
+  const index=fs.readFileSync('index.html','utf8');
+  const prod=fs.readFileSync('app_production.html','utf8');
+  const sw=fs.readFileSync('sw.js','utf8');
+  const m=index.match(/app-bundle-b\.min\.js\?v=(\d+)/);
+  assert.ok(m,'index.html harus cache-bust app-bundle-b.min.js dengan ?v=<versi>');
+  const v=m[1];
+  assert.match(prod,new RegExp(`app-bundle-b\\.min\\.js\\?v=${v}\\b`));
+  assert.match(sw,new RegExp(`kw-cache-v${v}\\b`));
 });

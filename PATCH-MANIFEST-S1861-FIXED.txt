@@ -1,0 +1,27 @@
+# PATCH-MANIFEST-S1861-FIXED
+# Basis: app-main (6) / S1860 full stack (bundles fresh @ v1825)
+# Hasil: v1827 — s1861-saveflush-cache-hardening-1827
+# Tidak ada penghapusan file baru di sesi ini (DELETE-FILES.txt S1860 sudah
+# ter-apply di baseline: pro-ui-layer.css, modules/modules-render.js).
+
+BEGIN_APPLY_FILES
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+docs/RELEASE-GATE-LOG.md
+docs/app-bundle-a.min.js
+docs/app-bundle-b.min.js
+index.html
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+sw.js
+tests/perf-navigation-v1825.test.js
+END_APPLY_FILES
+
+BEGIN_DELETE_FILES
+END_DELETE_FILES

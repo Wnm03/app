@@ -697,3 +697,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang
 - **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang
+
+## 2026-09-20T01:56:37.365Z — versi s1861-saveflush-cache-hardening-1827
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox: eslint unavailable
+- **unminified-bundle**: override dipakai. Alasan: sandbox: esbuild unavailable
