@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1868-dynamic-vehicle-maintenance-template-1871';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1868-dynamic-vehicle-maintenance-template-1871';
+const APP_BUILD_VERSION = 's1877-selftest-persistence-fix-1874';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1877-selftest-persistence-fix-1874';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -346,6 +346,13 @@ _saveSnapshotJson=null;
 return _saveStateVersion;
 }
 function _saveImmediate(snapshotJson){
+// S1877 TESTABILITY: optional, side-effect-free observer for diagnostic tests.
+// It observes an invocation without replacing the persistence function itself,
+// avoiding brittle monkey-patching across concatenated/browser bundles.
+try{
+if(typeof globalThis!=='undefined'&&typeof globalThis.__kwSaveImmediateObserver==='function')
+  globalThis.__kwSaveImmediateObserver(snapshotJson);
+}catch(e){void e;}
 const version=_saveStateVersion;
 let json=snapshotJson;
 try{if(json===undefined)json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk disimpan:',e);return;}

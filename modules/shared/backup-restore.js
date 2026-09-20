@@ -412,6 +412,37 @@ toast('✅ Backup berhasil di-download!');
 }
 
 // P23 — Service import/restore odometer integrity.
+// S1875: content-based dedupe for JSON Car Notes service imports.
+// Identity fields are intentionally excluded because repeated exports/imports
+// may regenerate id/idempotencyKey while preserving the same service event.
+function _serviceImportFingerprint(s){
+  if(!s||typeof s!=='object')return null;
+  const omit=new Set(['id','idempotencyKey','createdAt','updatedAt']);
+  const normalize=v=>{
+    if(Array.isArray(v))return v.map(normalize);
+    if(v&&typeof v==='object'){
+      const out={};
+      Object.keys(v).sort().forEach(k=>{if(!omit.has(k))out[k]=normalize(v[k]);});
+      return out;
+    }
+    return v;
+  };
+  return JSON.stringify(normalize(s));
+}
+
+function _contentImportFingerprint(value, omitKeys){
+  if(!value||typeof value!=='object')return null;
+  const omit=new Set(omitKeys||['id','createdAt','updatedAt','importedAt']);
+  const normalize=v=>{
+    if(Array.isArray(v))return v.map(normalize);
+    if(v&&typeof v==='object'){
+      const out={};Object.keys(v).sort().forEach(k=>{if(!omit.has(k))out[k]=normalize(v[k]);});return out;
+    }
+    return v;
+  };
+  return JSON.stringify(normalize(value));
+}
+
 function validateServiceOdometerImportIntegrity(candidateLogs){
 const logs=Array.isArray(candidateLogs)?candidateLogs:[];
 if(!logs.length)return{ok:true,checked:0,invalid:[]};
@@ -818,6 +849,8 @@ const selectedVehId=document.getElementById('carImportVehicle')?document.getElem
 const vehId=(selectedVehId&&D.vehicles.find(v=>v.id===selectedVehId))?selectedVehId:D.vehicles[0].id;
 let bbmCount=0, servisCount=0, skipCount=0, autoDetectCount=0, vehColDetected=false;
 const importedServiceCandidates=[];
+const importedServiceFingerprints=new Set();
+const existingServiceFingerprints=new Set((Array.isArray(D.servisLogs)?D.servisLogs:[]).map(_serviceImportFingerprint).filter(Boolean));
 function matchVehicleFromText(text){
 if(!text)return null;
 const t=text.toString().trim().toLowerCase();
@@ -830,13 +863,16 @@ return D.vehicles.find(v=>v.name.toLowerCase()===t)
 if(file.name.toLowerCase().endsWith('.json')){
 const parsed=JSON.parse(content);
 if(Array.isArray(parsed.bbmLogs)){
+const existingBbmFingerprints=new Set((Array.isArray(D.bbmLogs)?D.bbmLogs:[]).map(b=>_contentImportFingerprint(b)).filter(Boolean));
+const importedBbmFingerprints=new Set();
 parsed.bbmLogs.forEach(b=>{
 const importedId=(b&&b.id)||uid();
-// Preserve source identity when available. The previous code checked the
-// source id for duplicates but then replaced it with a new uid(), making the
-// duplicate check ineffective on repeated JSON Car Notes import.
 if(b&&b.id&&D.bbmLogs.find(x=>x&&x.id===b.id))return;
-D.bbmLogs.push({...b,id:importedId,vehicleId:b.vehicleId||vehId});
+const normalized={...b,vehicleId:b&&b.vehicleId||vehId};
+const fp=_contentImportFingerprint(normalized);
+if(fp&&(existingBbmFingerprints.has(fp)||importedBbmFingerprints.has(fp))){skipCount++;return;}
+if(fp)importedBbmFingerprints.add(fp);
+D.bbmLogs.push({...normalized,id:importedId});
 bbmCount++;
 });
 }
@@ -846,6 +882,9 @@ parsed.servisLogs.forEach(s=>{
 const _sourceKey=s&&s.idempotencyKey||null;
 if(_sourceKey&&typeof findServiceEventByIdempotencyKey==='function'&&findServiceEventByIdempotencyKey(D.servisLogs||[],_sourceKey,s.vehicleId||vehId))return;
 if(s&&s.id&&D.servisLogs.find(x=>x.id===s.id))return;
+const _serviceFp=_serviceImportFingerprint(s);
+if(_serviceFp&&(existingServiceFingerprints.has(_serviceFp)||importedServiceFingerprints.has(_serviceFp))){skipCount++;return;}
+if(_serviceFp)importedServiceFingerprints.add(_serviceFp);
 const restoredVehicleId=s.vehicleId||vehId;
 const restoredItem=s.item||'Servis';
 const restoredCatId=typeof canonicalServisCategoryId==='function'

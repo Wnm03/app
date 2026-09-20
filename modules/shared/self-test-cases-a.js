@@ -97,9 +97,11 @@ _selfTestAssert(Array.isArray(parsed.transactions),'kw_v4 tersimpan tidak punya 
 {name:'MIGRASI STORAGE (LEVEL 3): save() biasa TIDAK menulis kw_v4 ke localStorage (IndexedDB jadi utama)', fn:async()=>{
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 localStorage.removeItem('kw_v4');
-const original=_saveImmediate;
+const previousStale=typeof _crossTabStateStale!=='undefined'?_crossTabStateStale:false;
+const previousObserver=typeof globalThis!=='undefined'?globalThis.__kwSaveImmediateObserver:undefined;
 let called=false;
-_saveImmediate=function(){called=true;original();};
+if(typeof globalThis!=='undefined')globalThis.__kwSaveImmediateObserver=function(){called=true;};
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=false;
 try{
 save();
 const pollStart=Date.now();
@@ -107,7 +109,8 @@ while(!called && (Date.now()-pollStart)<3000){ await new Promise(r=>setTimeout(r
 _selfTestAssert(called,'_saveImmediate() seharusnya terpanggil lewat debounce save()');
 await new Promise(r=>setTimeout(r,80));
 } finally {
-_saveImmediate=original;
+if(typeof globalThis!=='undefined')globalThis.__kwSaveImmediateObserver=previousObserver;
+if(typeof _crossTabStateStale!=='undefined')_crossTabStateStale=previousStale;
 }
 _selfTestAssert(localStorage.getItem('kw_v4')===null,'save() biasa TIDAK BOLEH menulis kw_v4 ke localStorage -- itu tugas saveFlush() saja di titik kritis');
 const mirror=await IDBStore.get('kw_v4_mirror');
