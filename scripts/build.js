@@ -298,6 +298,7 @@ const GROUP_B = [
   'modules/finance/tx-bbm.js',
   'modules/vehicle/service-event-lifecycle.js',
   'modules/vehicle/service-event-adapter.js',
+  'modules/vehicle/service-history-integrity-audit.js',
   'modules/vehicle/finance-service-adapter.js',
   'modules/vehicle/service-photo-validator.js',
   'modules/vehicle/reminder-lifecycle.js',
