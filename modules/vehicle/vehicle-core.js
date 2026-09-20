@@ -215,6 +215,37 @@ return '<div class="fg"><label class="fl">Kapasitas Baterai (kWh)</label><input 
 return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>'
 +_vehCapacityFieldsHtml(v);
 }
+let _vehMaintenanceTemplateRenderToken=0;
+async function renderVehMaintenanceTemplatePreview(vehicle){
+const wrap=document.getElementById('vehMaintenanceTemplateWrap');
+if(!wrap)return;
+const token=++_vehMaintenanceTemplateRenderToken;
+const v=vehicle||((vehEditIdx!==null&&vehEditIdx!==undefined)?D.vehicles[vehEditIdx]:null)||{};
+const jenis=(document.getElementById('vehJenis')&&document.getElementById('vehJenis').value)||v.jenis||'motor';
+const name=(document.getElementById('vehName')&&document.getElementById('vehName').value.trim())||v.name||'';
+if(typeof VehicleMaintenanceTemplateEngine==='undefined'){
+ wrap.innerHTML='<div class="u-hint10">Template perawatan dinamis belum tersedia pada build ini.</div>';return;
+}
+wrap.innerHTML='<div style="padding:10px 12px;border:1px solid var(--border2);border-radius:12px;background:var(--surface2);font-size:11px;color:var(--text2)">⏳ Menyiapkan template kategori &amp; komponen perawatan...</div>';
+let template=null;
+try{
+ if(v&&v.maintenanceTemplate&&v.maintenanceTemplate.vehicleType===jenis&&Array.isArray(v.maintenanceTemplate.components))template=JSON.parse(JSON.stringify(v.maintenanceTemplate));
+ else template=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:v.modelId,modelName:v.modelDisplayName||v.name,year:v.modelYear,variant:v.modelVariant,engineCc:v.modelEngineCc,catalogId:v.catalogId||null,vehicleId:v.id});
+}catch(e){console.warn('[S1868] template preview failed',e);wrap.innerHTML='<div class="u-hint10">⚠️ Template belum dapat dibuat. Kendaraan tetap bisa disimpan.</div>';return;}
+if(token!==_vehMaintenanceTemplateRenderToken)return;
+const cats=(template.categories||[]).map(cat=>{
+ const comps=(cat.components||[]).map(c=>'<label style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;cursor:pointer"><input type="checkbox" class="veh-maint-component" value="'+escapeHtml(String(c.componentId))+'" '+(c.selected!==false?'checked':'')+'><span><b>'+escapeHtml(c.componentName||'')+'</b><span style="display:block;font-size:10px;color:var(--text3)">'+escapeHtml(c.source||'service-master')+(c.intervalLabel?' · '+escapeHtml(c.intervalLabel):'')+(c.needsReview?' · ⚠ review':'')+'</span></span></label>').join('');
+ return '<div style="margin-top:8px"><div style="font-size:11px;font-weight:700">'+escapeHtml(cat.icon||'🧰')+' '+escapeHtml(cat.masterCategory||'Lainnya')+'</div>'+comps+'</div>';
+}).join('');
+const status=template.identificationStatus==='resolved'?'Model teridentifikasi':template.modelId?'Model terpilih':'Template generik berdasarkan jenis kendaraan';
+wrap.dataset.templateJson=JSON.stringify(template);
+wrap.innerHTML='<div style="border:1px solid var(--border2);border-radius:12px;padding:10px 12px;background:var(--surface2)"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div style="font-size:12px;font-weight:700">🛠️ Template Perawatan Berkala</div><span class="acc-chip">'+escapeHtml(status)+'</span></div><div style="font-size:10px;color:var(--text2);margin:4px 0 8px;line-height:1.5">Centang komponen yang ingin dipakai. Interval hanya memakai data Service Master/evidence katalog; sistem tidak mengarang interval baru.</div>'+ (cats||'<div class="u-hint10">Belum ada komponen yang dapat dipetakan.</div>') +'</div>';
+}
+function _readVehMaintenanceTemplateSelection(){
+const wrap=document.getElementById('vehMaintenanceTemplateWrap');
+if(!wrap||!wrap.dataset.templateJson)return null;
+try{const t=JSON.parse(wrap.dataset.templateJson);const ids=Array.from(wrap.querySelectorAll('.veh-maint-component:checked')).map(x=>x.value);return typeof VehicleMaintenanceTemplateEngine!=='undefined'&&VehicleMaintenanceTemplateEngine.applySelection?VehicleMaintenanceTemplateEngine.applySelection(t,ids):t;}catch(e){return null;}
+}
 function onVehJenisChange(){
 const jenisEl=document.getElementById('vehJenis');
 const wrap=document.getElementById('vehJenisFieldsWrap');
@@ -227,6 +258,7 @@ const def=VEH_JENIS_DEFAULT_INTERVAL[jenis];
 const intervalEl=document.getElementById('vehInterval');
 if(def&&intervalEl&&!intervalEl.value)intervalEl.value=def;
 }
+renderVehMaintenanceTemplatePreview(editing||null);
 }
 function openVehicleModal(){
 vehEditIdx=null;
@@ -388,6 +420,9 @@ if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else 
 if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
 if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
 if(fuelTankCapacityLiter)v.fuelTankCapacityLiter=fuelTankCapacityLiter;else delete v.fuelTankCapacityLiter;
+const existingTemplate=v.maintenanceTemplate&&v.maintenanceTemplate.vehicleType===jenis?v.maintenanceTemplate:null;
+const selectedTemplate=_readVehMaintenanceTemplateSelection();
+if(selectedTemplate)v.maintenanceTemplate=selectedTemplate;else if(!existingTemplate&&typeof VehicleMaintenanceTemplateEngine!=='undefined')v.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:v.modelId,modelName:v.modelDisplayName||v.name,year:v.modelYear,variant:v.modelVariant,engineCc:v.modelEngineCc,catalogId:v.catalogId||null,vehicleId:v.id});
 if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
 // Opsi A — auto-create Asset (lihat AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-
 // BUKU-ASET.md, keputusan produk "Opsi A"): kendaraan LAMA yang diedit &
@@ -424,6 +459,9 @@ if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
 if(capacityKg)newVeh.capacityKg=capacityKg;
 if(capacityM3)newVeh.capacityM3=capacityM3;
 if(fuelTankCapacityLiter)newVeh.fuelTankCapacityLiter=fuelTankCapacityLiter;
+const selectedTemplateNew=_readVehMaintenanceTemplateSelection();
+if(selectedTemplateNew)newVeh.maintenanceTemplate=selectedTemplateNew;
+else if(typeof VehicleMaintenanceTemplateEngine!=='undefined')newVeh.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:newVeh.modelId,modelName:newVeh.modelDisplayName||name,year:newVeh.modelYear,variant:newVeh.modelVariant,engineCc:newVeh.modelEngineCc,catalogId:newVeh.catalogId||null,vehicleId:newVeh.id});
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
@@ -439,7 +477,7 @@ D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')
 save();
 // Sesi C: sama seperti cabang edit di atas -- replikasi pola vehicle.updated.
 if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"create",vehicleId:newId});
-renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
+renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';const vehTplWrap=document.getElementById('vehMaintenanceTemplateWrap');if(vehTplWrap){vehTplWrap.innerHTML='';vehTplWrap.dataset.templateJson='';}toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
 }
 // Teks ringkasan servis per kendaraan di daftar Kelola Kendaraan — beda per jenis (KW-165).
 // PURE function (tidak sentuh DOM/D), dipanggil dari renderVehicleManageList() di modules-render.js.

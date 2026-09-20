@@ -50,6 +50,7 @@ function extractMethodBody(source,name){
   const checklistSrc=fs.readFileSync('modules/vehicle/servis-checklist.js','utf8');
   ctx.document={getElementById(id){ return id==='servisChecklistPanel'?box:null; }};
   ctx.localStorage=undefined;
+  vm.runInContext(require('./helpers/serviceMasterFixture').generatedSource(),ctx);
   vm.runInContext(checklistSrc,ctx);
   assert.ok(ctx.ServisChecklist,'ServisChecklist gagal ter-load dari source asli');
 
@@ -95,6 +96,7 @@ function extractMethodBody(source,name){
   vm.createContext(ctx);
   const checklistSrc=fs.readFileSync('modules/vehicle/servis-checklist.js','utf8');
   ctx.document={getElementById(id){ return id==='servisChecklistPanel'?box:null; }};
+  vm.runInContext(require('./helpers/serviceMasterFixture').generatedSource(),ctx);
   vm.runInContext(checklistSrc,ctx);
   ctx.curVehicleId='veh-1';
   ctx.Servis={_serviceChecklistMasterCategoryIds:[]};

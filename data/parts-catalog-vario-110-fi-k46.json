@@ -1,0 +1,1056 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "honda-vario-110-fi-k46-2014-2015",
+  "model": "Honda Vario 110 FI",
+  "catalogCode": "K46",
+  "years": [
+    "2014",
+    "2015"
+  ],
+  "engineSerial": [
+    "JFH1E"
+  ],
+  "frameSerial": [
+    "MH1JFH1"
+  ],
+  "source": {
+    "title": "Katalog Suku Cadang New Honda Vario 110 FI",
+    "url": "https://www.hondacengkareng.com/catalogs/katalog-honda-vario-110-fi/",
+    "pdfUrl": null,
+    "catalogDate": "2014-02-10",
+    "note": "K46-only dataset. Records are limited to part numbers directly verified from the indexed K46 catalog text and Honda Cengkareng K46 product/FAQ pages; this is not a complete transcription of the catalog. K46H/eSP and older Vario 110 variants are excluded even when a part is shared. No maintenance interval is inferred from the parts catalog."
+  },
+  "sections": [
+    {
+      "id": "E-1",
+      "name": "Shroud/Fan Cover"
+    },
+    {
+      "id": "E-3",
+      "name": "Cylinder Head"
+    },
+    {
+      "id": "E-4",
+      "name": "Camshaft/Valve"
+    },
+    {
+      "id": "E-5",
+      "name": "Cam Chain/Tensioner"
+    },
+    {
+      "id": "E-6",
+      "name": "Cylinder"
+    },
+    {
+      "id": "E-8",
+      "name": "Generator"
+    },
+    {
+      "id": "E-11",
+      "name": "Oil Pump"
+    },
+    {
+      "id": "E-17",
+      "name": "Driven Face"
+    },
+    {
+      "id": "E-17-10",
+      "name": "Transmission"
+    },
+    {
+      "id": "E-19-10",
+      "name": "Right Crankcase"
+    },
+    {
+      "id": "E-19-20",
+      "name": "Left Crankcase"
+    },
+    {
+      "id": "E-22",
+      "name": "Throttle Body"
+    },
+    {
+      "id": "F-1",
+      "name": "Headlight"
+    },
+    {
+      "id": "F-2",
+      "name": "Meter"
+    },
+    {
+      "id": "F-4-10",
+      "name": "Handle Lever/Switch/Cable"
+    },
+    {
+      "id": "F-5-10",
+      "name": "Front Brake Master Cylinder"
+    },
+    {
+      "id": "F-9",
+      "name": "Handle Pipe/Handle Cover"
+    },
+    {
+      "id": "F-10",
+      "name": "Steering Stem"
+    },
+    {
+      "id": "F-12",
+      "name": "Front Cover/Inner Cover"
+    },
+    {
+      "id": "F-14",
+      "name": "Floor Step"
+    },
+    {
+      "id": "F-15",
+      "name": "Body Cover"
+    },
+    {
+      "id": "F-17",
+      "name": "Front Fork"
+    },
+    {
+      "id": "F-18",
+      "name": "Front Brake Caliper"
+    },
+    {
+      "id": "F-20-40",
+      "name": "Front Wheel"
+    },
+    {
+      "id": "F-22-30",
+      "name": "Rear Wheel"
+    },
+    {
+      "id": "F-24",
+      "name": "Seat"
+    },
+    {
+      "id": "F-26",
+      "name": "Fuel Tank"
+    },
+    {
+      "id": "F-28",
+      "name": "Air Cleaner"
+    },
+    {
+      "id": "F-30",
+      "name": "Exhaust Muffler"
+    },
+    {
+      "id": "F-35",
+      "name": "Stand/Kick Pedal"
+    },
+    {
+      "id": "F-36",
+      "name": "Rear Cushion"
+    },
+    {
+      "id": "F-38-10",
+      "name": "Rear Combination Light"
+    },
+    {
+      "id": "F-39",
+      "name": "Rear Fender"
+    },
+    {
+      "id": "F-40",
+      "name": "Battery"
+    },
+    {
+      "id": "F-41",
+      "name": "Wire Harness"
+    },
+    {
+      "id": "F-42",
+      "name": "Frame Body"
+    },
+    {
+      "id": "E-16",
+      "name": "Drive Face"
+    },
+    {
+      "id": "F-48",
+      "name": "Mark/Stripe"
+    }
+  ],
+  "parts": [
+    {
+      "partNumber": "19510-KVY-900",
+      "name": "FAN COMP., COOLING",
+      "section": "E-1",
+      "ref": 1,
+      "componentIds": [
+        "kipas-radiator"
+      ]
+    },
+    {
+      "partNumber": "15133-KVY-900",
+      "name": "GEAR, OIL PUMP DRIVEN(39T)",
+      "section": "E-11",
+      "ref": 2,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "15135-KVY-901",
+      "name": "SHAFT COMP., OIL PUMP",
+      "section": "E-11",
+      "ref": 3,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "15331-KVB-900",
+      "name": "ROTOR, OIL PUMP INNER",
+      "section": "E-11",
+      "ref": 4,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "15332-KVB-900",
+      "name": "ROTOR, OIL PUMP OUTER",
+      "section": "E-11",
+      "ref": 5,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "15100-KVB-900",
+      "name": "PUMP ASSY., OIL",
+      "section": "E-11",
+      "ref": 6,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "2212A-KVB-900",
+      "name": "ROLLER SET, WEIGHT",
+      "section": "E-16",
+      "ref": 7,
+      "componentIds": [
+        "roller-cvt"
+      ]
+    },
+    {
+      "partNumber": "22535-KZL-A00",
+      "name": "WEIGHT SET, CLUTCH",
+      "section": "E-17",
+      "ref": 1,
+      "componentIds": [
+        "kampas-kopling-ganda",
+        "clutch-spring-weight"
+      ]
+    },
+    {
+      "partNumber": "23100-K25-901",
+      "name": "BELT, DRIVE",
+      "section": "E-17",
+      "ref": 6,
+      "componentIds": [
+        "v-belt-cvt"
+      ]
+    },
+    {
+      "partNumber": "23411-KZL-930",
+      "name": "SHAFT, DRIVE",
+      "section": "E-17-10",
+      "ref": 1,
+      "componentIds": [
+        "drive-shaft"
+      ]
+    },
+    {
+      "partNumber": "23421-KZL-930",
+      "name": "SHAFT, COUNTER",
+      "section": "E-17-10",
+      "ref": 2,
+      "componentIds": [
+        "countershaft"
+      ]
+    },
+    {
+      "partNumber": "11103-KVB-930",
+      "name": "BUSH, MOUNTING",
+      "section": "E-19-10",
+      "ref": 6,
+      "componentIds": [
+        "engine-mounting-bushing-arm"
+      ]
+    },
+    {
+      "partNumber": "91202-K50-T01",
+      "name": "OIL SEAL, CRANKSHAFT LEFT",
+      "section": "E-19-20",
+      "ref": 10,
+      "componentIds": [
+        "oil-seal-final-gear"
+      ]
+    },
+    {
+      "partNumber": "16015-KVY-901",
+      "name": "INJECTOR ASSY.",
+      "section": "E-22",
+      "ref": 1,
+      "componentIds": [
+        "injector"
+      ]
+    },
+    {
+      "partNumber": "16400-K46-N01",
+      "name": "THROTTLE BODY ASSY.",
+      "section": "E-22",
+      "ref": 5,
+      "componentIds": [
+        "throttle-body"
+      ]
+    },
+    {
+      "partNumber": "16450-K03-N31",
+      "name": "INJECTOR ASSY., FUEL",
+      "section": "E-22",
+      "ref": 7,
+      "componentIds": [
+        "injector"
+      ]
+    },
+    {
+      "partNumber": "16472-KPC-D50",
+      "name": "SEAL, INJECTOR",
+      "section": "E-22",
+      "ref": 8,
+      "componentIds": [
+        "injector"
+      ]
+    },
+    {
+      "partNumber": "16485-GGZ-J01",
+      "name": "SEAT SET",
+      "section": "E-22",
+      "ref": 10,
+      "componentIds": [
+        "isc"
+      ]
+    },
+    {
+      "partNumber": "37750-KPH-702",
+      "name": "SENSOR ASSY., THERMOSTAT OIL",
+      "section": "E-3",
+      "ref": 7,
+      "componentIds": [
+        "sensor-suhu-mesin"
+      ]
+    },
+    {
+      "partNumber": "36532-K46-N01",
+      "name": "SENSOR, OXYGEN",
+      "section": "E-3",
+      "ref": 8,
+      "componentIds": [
+        "sensor-o2"
+      ]
+    },
+    {
+      "partNumber": "12209-GB4-682",
+      "name": "SEAL, VALVE STEM",
+      "section": "E-4",
+      "ref": 1,
+      "componentIds": [
+        "seal-klep"
+      ]
+    },
+    {
+      "partNumber": "14100-KZL-C00",
+      "name": "CAMSHAFT COMP.",
+      "section": "E-4",
+      "ref": 6,
+      "componentIds": [
+        "camshaft-rocker-arm"
+      ]
+    },
+    {
+      "partNumber": "14401-KVB-901",
+      "name": "CHAIN, CAM",
+      "section": "E-5",
+      "ref": 1,
+      "componentIds": [
+        "rantai-keteng-tensioner"
+      ]
+    },
+    {
+      "partNumber": "14510-KVB-901",
+      "name": "TENSIONER, CAM CHAIN",
+      "section": "E-5",
+      "ref": 2,
+      "componentIds": [
+        "rantai-keteng-tensioner"
+      ]
+    },
+    {
+      "partNumber": "14520-GFC-771",
+      "name": "LIFTER ASSY., TENSIONER",
+      "section": "E-5",
+      "ref": 3,
+      "componentIds": [
+        "rantai-keteng-tensioner"
+      ]
+    },
+    {
+      "partNumber": "14611-KVB-900",
+      "name": "GUIDE, CAM CHAIN",
+      "section": "E-5",
+      "ref": 6,
+      "componentIds": [
+        "rantai-keteng-tensioner"
+      ]
+    },
+    {
+      "partNumber": "13101-KZL-C30",
+      "name": "PISTON",
+      "section": "E-6",
+      "ref": 1,
+      "componentIds": [
+        "piston-ring"
+      ]
+    },
+    {
+      "partNumber": "13011-K25-305",
+      "name": "RING SET, PISTON",
+      "section": "E-6",
+      "ref": 2,
+      "componentIds": [
+        "piston-ring"
+      ]
+    },
+    {
+      "partNumber": "13111-087-001",
+      "name": "PIN, PISTON",
+      "section": "E-6",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "13115-GN5-911",
+      "name": "CLIP, PISTON PIN",
+      "section": "E-6",
+      "ref": 3,
+      "componentIds": []
+    },
+    {
+      "partNumber": "31120-K25-901",
+      "name": "STATOR COMP.",
+      "section": "E-8",
+      "ref": 1,
+      "componentIds": [
+        "generator-stator"
+      ]
+    },
+    {
+      "partNumber": "33110-K46-N02",
+      "name": "HEADLIGHT UNIT",
+      "section": "F-1",
+      "ref": 1,
+      "componentIds": [
+        "saklar-sistem-penerangan"
+      ]
+    },
+    {
+      "partNumber": "50301-GN5-902",
+      "name": "THREAD COMP., STEERING HEAD",
+      "section": "F-10",
+      "ref": 3,
+      "componentIds": [
+        "bearing-komstir",
+        "race-komstir"
+      ]
+    },
+    {
+      "partNumber": "64301-K46-N00",
+      "name": "COVER, FR. TOP",
+      "section": "F-12",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "64501-K46-N00CSR",
+      "name": "COVER, R. FR.",
+      "section": "F-12",
+      "ref": 3,
+      "componentIds": []
+    },
+    {
+      "partNumber": "81141-K46-N00ZA",
+      "name": "COVER, INNER LOWER",
+      "section": "F-12",
+      "ref": 9,
+      "componentIds": []
+    },
+    {
+      "partNumber": "64460-K46-N00",
+      "name": "LID, BATTERY",
+      "section": "F-14",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "80151-K46-N00ZA",
+      "name": "COVER CENTER",
+      "section": "F-14",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "83650-K46-N00ZA",
+      "name": "COVER L. BODY SIDE",
+      "section": "F-15",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "83500-K46-N00CSR",
+      "name": "COVER, R. BODY",
+      "section": "F-15",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "51400-K25-902",
+      "name": "FORK ASSY., L. FR.",
+      "section": "F-17",
+      "ref": 1,
+      "componentIds": [
+        "seal-shock-depan"
+      ]
+    },
+    {
+      "partNumber": "51401-K25-902",
+      "name": "FORK ASSY., R. FR.",
+      "section": "F-17",
+      "ref": 2,
+      "componentIds": [
+        "seal-shock-depan"
+      ]
+    },
+    {
+      "partNumber": "51490-KGH-901",
+      "name": "SEAL SET, FRONT FORK",
+      "section": "F-17",
+      "ref": 16,
+      "componentIds": [
+        "seal-shock-depan"
+      ]
+    },
+    {
+      "partNumber": "06455-KVB-T01",
+      "name": "PAD SET, FR. BRAKE",
+      "section": "F-18",
+      "ref": 3,
+      "componentIds": [
+        "kampas-rem-depan"
+      ]
+    },
+    {
+      "partNumber": "06455-K46-N21",
+      "name": "PAD SET, FR. BRAKE",
+      "section": "F-18",
+      "ref": 4,
+      "componentIds": [
+        "kampas-rem-depan"
+      ]
+    },
+    {
+      "partNumber": "37200-K46-N01",
+      "name": "METER ASSY. KPH",
+      "section": "F-2",
+      "ref": 1,
+      "componentIds": [
+        "meter-speedometer"
+      ]
+    },
+    {
+      "partNumber": "37210-K46-N01",
+      "name": "METER COMP.",
+      "section": "F-2",
+      "ref": 2,
+      "componentIds": [
+        "meter-speedometer"
+      ]
+    },
+    {
+      "partNumber": "44830-K46-N01",
+      "name": "CABLE COMP., SPDMT.",
+      "section": "F-2",
+      "ref": 13,
+      "componentIds": []
+    },
+    {
+      "partNumber": "44301-KVG-950",
+      "name": "AXLE, FR. WHEEL",
+      "section": "F-20-40",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "44711-K46-N00",
+      "name": "TIRE, FR. 80/90-14",
+      "section": "F-20-40",
+      "ref": 2,
+      "componentIds": [
+        "ban-depan"
+      ]
+    },
+    {
+      "partNumber": "44311-KVB-910",
+      "name": "COLLAR, FR. WHEEL SIDE",
+      "section": "F-20-40",
+      "ref": 3,
+      "componentIds": []
+    },
+    {
+      "partNumber": "44601-KVG-911",
+      "name": "WHEEL COMP., FR.",
+      "section": "F-20-40",
+      "ref": 5,
+      "componentIds": [
+        "velg-rim"
+      ]
+    },
+    {
+      "partNumber": "44711-KVB-930",
+      "name": "TIRE, FR.",
+      "section": "F-20-40",
+      "ref": 6,
+      "componentIds": [
+        "ban-depan"
+      ]
+    },
+    {
+      "partNumber": "45351-KVB-931",
+      "name": "DISK, FR. BRAKE",
+      "section": "F-20-40",
+      "ref": 10,
+      "componentIds": [
+        "cakram-rem-depan"
+      ]
+    },
+    {
+      "partNumber": "91052-K03-N41",
+      "name": "BEARING, RADIAL BALL 6201U",
+      "section": "F-20-40",
+      "ref": 13,
+      "componentIds": [
+        "bearing-roda-depan",
+        "bearing-roda"
+      ]
+    },
+    {
+      "partNumber": "06430-KWN-900",
+      "name": "PAD SET, RR. BRAKE",
+      "section": "F-22-30",
+      "ref": 1,
+      "componentIds": [
+        "kampas-rem-belakang"
+      ]
+    },
+    {
+      "partNumber": "42601-KVG-911",
+      "name": "WHEEL COMP., RR.",
+      "section": "F-22-30",
+      "ref": 2,
+      "componentIds": [
+        "velg-rim"
+      ]
+    },
+    {
+      "partNumber": "42711-K46-N00",
+      "name": "TIRE, RR. 90/90-14",
+      "section": "F-22-30",
+      "ref": 2,
+      "componentIds": [
+        "ban-belakang"
+      ]
+    },
+    {
+      "partNumber": "06430-KZL-930",
+      "name": "PAD SET, RR. BRAKE",
+      "section": "F-22-30",
+      "ref": 3,
+      "componentIds": [
+        "kampas-rem-belakang"
+      ]
+    },
+    {
+      "partNumber": "42711-KVB-930",
+      "name": "TIRE, RR.",
+      "section": "F-22-30",
+      "ref": 3,
+      "componentIds": [
+        "ban-belakang"
+      ]
+    },
+    {
+      "partNumber": "77200-K46-N00ZA",
+      "name": "SEAT ASSY.",
+      "section": "F-24",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "77240-K46-N01",
+      "name": "CABLE COMP., SEAT LOCK",
+      "section": "F-24",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "81200-K46-N00ZA",
+      "name": "GRAB, REAR",
+      "section": "F-24",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "77215-KW7-901",
+      "name": "RUBBER C, SEAT SETTING",
+      "section": "F-24",
+      "ref": 3,
+      "componentIds": []
+    },
+    {
+      "partNumber": "81250-K46-N00",
+      "name": "BOX, LUGGAGE",
+      "section": "F-24",
+      "ref": 9,
+      "componentIds": []
+    },
+    {
+      "partNumber": "16700-K46-N01",
+      "name": "PUMP UNIT, FUEL",
+      "section": "F-26",
+      "ref": 1,
+      "componentIds": [
+        "fuel-pump-assembly"
+      ]
+    },
+    {
+      "partNumber": "17510-K16-900",
+      "name": "TANK COMP., FUEL",
+      "section": "F-26",
+      "ref": 6,
+      "componentIds": [
+        "fuel-tank-strainer"
+      ]
+    },
+    {
+      "partNumber": "17528-K16-901",
+      "name": "HOSE COMP., FUEL FEED",
+      "section": "F-26",
+      "ref": 10,
+      "componentIds": [
+        "selang-tutup-tangki"
+      ]
+    },
+    {
+      "partNumber": "37800-K46-N01",
+      "name": "FUEL UNIT",
+      "section": "F-26",
+      "ref": 15,
+      "componentIds": [
+        "fuel-tank-strainer"
+      ]
+    },
+    {
+      "partNumber": "17210-K46-N20",
+      "name": "ELEMENT COMP., AIR CLEANER",
+      "section": "F-28",
+      "ref": 1,
+      "componentIds": [
+        "filter-udara"
+      ]
+    },
+    {
+      "partNumber": "17225-K16-900",
+      "name": "CASE SUB ASSY., AIR CLEANER",
+      "section": "F-28",
+      "ref": 2,
+      "componentIds": [
+        "filter-udara"
+      ]
+    },
+    {
+      "partNumber": "17245-K16-900",
+      "name": "COVER SUB ASSY., AIR CLEANER",
+      "section": "F-28",
+      "ref": 3,
+      "componentIds": [
+        "filter-udara"
+      ]
+    },
+    {
+      "partNumber": "18300-K46-N00",
+      "name": "MUFFLER COMP. EXH.",
+      "section": "F-30",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "35700-K46-N01",
+      "name": "SWITCH ASSY., SIDE STAND",
+      "section": "F-35",
+      "ref": 2,
+      "componentIds": [
+        "standar-tengah-samping"
+      ]
+    },
+    {
+      "partNumber": "50500-KZL-C30",
+      "name": "STAND COMP., MAIN",
+      "section": "F-35",
+      "ref": 3,
+      "componentIds": [
+        "standar-tengah-samping"
+      ]
+    },
+    {
+      "partNumber": "50530-K16-A00",
+      "name": "STAND COMP., SIDE",
+      "section": "F-35",
+      "ref": 6,
+      "componentIds": [
+        "standar-tengah-samping"
+      ]
+    },
+    {
+      "partNumber": "52400-K25-901",
+      "name": "CUSHION ASSY., RR.",
+      "section": "F-36",
+      "ref": 1,
+      "componentIds": [
+        "shock-belakang"
+      ]
+    },
+    {
+      "partNumber": "33710-K46-N01",
+      "name": "BASE COMP., RR. COMBINATION",
+      "section": "F-38-10",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "80105-K46-N00ZA",
+      "name": "FENDER, RR.",
+      "section": "F-39",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "31500-KWW-A01",
+      "name": "BATTERY GTZ4V",
+      "section": "F-40",
+      "ref": 1,
+      "componentIds": [
+        "aki"
+      ]
+    },
+    {
+      "partNumber": "80110-K16-900",
+      "name": "COVER, BATTERY",
+      "section": "F-40",
+      "ref": 5,
+      "componentIds": []
+    },
+    {
+      "partNumber": "98200-41001",
+      "name": "FUSE, MINI(10A)",
+      "section": "F-40",
+      "ref": 7,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "98200-41501",
+      "name": "FUSE, MINI(15A)",
+      "section": "F-40",
+      "ref": 8,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "30510-K25-901",
+      "name": "COIL COMP., IGNITION",
+      "section": "F-41",
+      "ref": 1,
+      "componentIds": [
+        "ignition-coil"
+      ]
+    },
+    {
+      "partNumber": "32100-K46-N00",
+      "name": "HARNESS, WIRE",
+      "section": "F-41",
+      "ref": 5,
+      "componentIds": [
+        "kabel-harness"
+      ]
+    },
+    {
+      "partNumber": "30400-K46-NA1",
+      "name": "ENGINE CONTROL UNIT CBS",
+      "section": "F-41",
+      "ref": 9,
+      "componentIds": []
+    },
+    {
+      "partNumber": "38110-KZL-A01",
+      "name": "HORN COMP.(HIGH)",
+      "section": "F-41",
+      "ref": 9,
+      "componentIds": [
+        "horn"
+      ]
+    },
+    {
+      "partNumber": "30400-K46-NB1",
+      "name": "ENGINE CONTROL UNIT CBS ISS",
+      "section": "F-41",
+      "ref": 10,
+      "componentIds": []
+    },
+    {
+      "partNumber": "31600-K46-N01",
+      "name": "RECTIFIER COMP., REGULATOR",
+      "section": "F-41",
+      "ref": 11,
+      "componentIds": []
+    },
+    {
+      "partNumber": "38501-KVZ-631",
+      "name": "RELAY ASSY., POWER",
+      "section": "F-41",
+      "ref": 12,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "38770-K46-N01",
+      "name": "PGM-FI UNIT",
+      "section": "F-41",
+      "ref": 14,
+      "componentIds": []
+    },
+    {
+      "partNumber": "35010-K46-N00",
+      "name": "KEY SET",
+      "section": "F-42",
+      "ref": 1,
+      "componentIds": [
+        "kunci-kontak"
+      ]
+    },
+    {
+      "partNumber": "3510A-K46-N00",
+      "name": "KEY SET ASSY.",
+      "section": "F-42",
+      "ref": 1,
+      "componentIds": [
+        "kunci-kontak"
+      ]
+    },
+    {
+      "partNumber": "35101-K46-N01",
+      "name": "SWITCH ASSY., COMBINATION",
+      "section": "F-42",
+      "ref": 2,
+      "componentIds": [
+        "kunci-kontak"
+      ]
+    },
+    {
+      "partNumber": "35190-K46-N01",
+      "name": "SWITCH ASSY., SEAT OPENER",
+      "section": "F-42",
+      "ref": 5,
+      "componentIds": []
+    },
+    {
+      "partNumber": "36418-KWN-931",
+      "name": "BATTERY (CR2025)",
+      "section": "F-42",
+      "ref": 7,
+      "componentIds": [
+        "aki"
+      ]
+    },
+    {
+      "partNumber": "50100-K46-N00",
+      "name": "FRAME BODY COMP.",
+      "section": "F-42",
+      "ref": 9,
+      "componentIds": []
+    },
+    {
+      "partNumber": "871X0-K46-N00ZER",
+      "name": "MARK/STRIPE",
+      "section": "F-48",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "45500-K25-911",
+      "name": "CYLINDER ASSY., FR. MASTER",
+      "section": "F-5-10",
+      "ref": 5,
+      "componentIds": [
+        "master-rem-reservoir"
+      ]
+    },
+    {
+      "partNumber": "45126-K25-901",
+      "name": "HOSE COMP., FR. BRAKE",
+      "section": "F-5-10",
+      "ref": 7,
+      "componentIds": [
+        "selang-rem"
+      ]
+    },
+    {
+      "partNumber": "53100-K46-N00",
+      "name": "HANDLE PIPE",
+      "section": "F-9",
+      "ref": 1,
+      "componentIds": []
+    },
+    {
+      "partNumber": "53205-K46-N00",
+      "name": "COVER, FR. HANDLE",
+      "section": "F-9",
+      "ref": 3,
+      "componentIds": []
+    },
+    {
+      "partNumber": "53208-K46-N00ZA",
+      "name": "COVER, SPEEDOMETER",
+      "section": "F-9",
+      "ref": 4,
+      "componentIds": []
+    }
+  ],
+  "catalogAudit": {
+    "session": "S1866",
+    "scope": "Honda Vario 110 FI K46 only",
+    "verifiedRecordCount": 103,
+    "imagesEmbedded": false,
+    "pdfEmbedded": false,
+    "maintenanceIntervalsInvented": false,
+    "crossModelPolicy": "K46H/eSP and older Vario 110 catalog records are not imported merely because a part is shared. Shared-part compatibility is preserved only as part metadata evidence, never as catalog ownership."
+  }
+}

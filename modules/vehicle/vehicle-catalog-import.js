@@ -60,6 +60,16 @@ function _vehicleImportRenderPageToBlob(page) {
 /** extractPdfText(file) — baca SEMUA halaman PDF, gabung jadi 1 string teks
  * (dipisah newline per baris/item). Text layer natif diutamakan; fallback
  * OCR per halaman kalau text layer kosong/terlalu pendek (<10 karakter). */
+function _vehicleImportLooksReadable(text) {
+  const t=(text||'').replace(/\s+/g,' ').trim();
+  if(t.length<10)return false;
+  const letters=(t.match(/[A-Za-zÀ-ÿ]/g)||[]).length;
+  const words=t.split(/\s+/).filter(w=>w.length>=2);
+  if(!words.length)return false;
+  const common=(t.match(/\b(honda|parts|catalog|part|deskripsi|mesin|rangka|cover|bolt|no|nomor|jumlah|kode)\b/gi)||[]).length;
+  return (letters/t.length)>=0.38 && (common>=2 || words.length>=8);
+}
+
 async function vehicleImportExtractPdfText(file) {
   await ensurePdfJs();
   if (!file || !file.size) {
@@ -80,7 +90,7 @@ async function vehicleImportExtractPdfText(file) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const nativeText = content.items.map((it) => it.str).join('\n').trim();
-    if (nativeText.length >= 10) {
+    if (_vehicleImportLooksReadable(nativeText)) {
       pageTexts.push(nativeText);
       continue;
     }
@@ -97,7 +107,7 @@ async function vehicleImportExtractPdfText(file) {
       }
     }
   }
-  return pageTexts.join('\n');
+  return pageTexts.map((t, i) => '---PDF_PAGE_BREAK---\n' + t + '\n---PDF_PAGE_BREAK---').join('\n');
 }
 
 // Toleransi typo OCR (laporan user: modul ini juga dipakai jalur OCR utk

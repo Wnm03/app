@@ -1,0 +1,1046 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "honda-vario-techno-125-kzrj-2013-2015",
+  "model": "Honda Vario Techno 125",
+  "catalogCode": "KZRJ",
+  "years": [
+    "2013",
+    "2014",
+    "2015"
+  ],
+  "source": {
+    "title": "Katalog Suku Cadang Honda Vario Techno 125 -2",
+    "url": "https://www.hondacengkareng.com/catalogs/katalog-honda-vario-techno-125-2/",
+    "pdfUrl": "https://www.hondacengkareng.com/wp-content/uploads/2016/02/Katalog-Suku-Cadang-Honda-Vario-Techno-125-2.pdf",
+    "catalogDate": "2013-01-20",
+    "note": "Part-level records below are only those directly verified against the catalog text. They are not a complete transcription of the 104-page catalog; empty componentIds means the part is catalog-verified but not yet normalized into a maintenance component."
+  },
+  "sections": [
+    {
+      "id": "E-3",
+      "name": "Cylinder Head"
+    },
+    {
+      "id": "E-4",
+      "name": "Camshaft/Valve"
+    },
+    {
+      "id": "E-6",
+      "name": "Cylinder"
+    },
+    {
+      "id": "E-10",
+      "name": "A.C.G. Starter"
+    },
+    {
+      "id": "E-11",
+      "name": "Oil Pump"
+    },
+    {
+      "id": "E-14",
+      "name": "Radiator"
+    },
+    {
+      "id": "E-16",
+      "name": "Drive Face"
+    },
+    {
+      "id": "E-17",
+      "name": "Driven Face"
+    },
+    {
+      "id": "E-17-10",
+      "name": "Transmission"
+    },
+    {
+      "id": "E-19-10",
+      "name": "Right Crankcase"
+    },
+    {
+      "id": "E-19-20",
+      "name": "Left Crankcase"
+    },
+    {
+      "id": "E-22",
+      "name": "Throttle Body/Fuel Injector"
+    },
+    {
+      "id": "F-10",
+      "name": "Steering Stem"
+    },
+    {
+      "id": "F-17",
+      "name": "Front Fork"
+    },
+    {
+      "id": "F-18",
+      "name": "Front Brake Caliper"
+    },
+    {
+      "id": "F-23",
+      "name": "Swingarm"
+    },
+    {
+      "id": "F-26",
+      "name": "Fuel Tank"
+    },
+    {
+      "id": "F-28",
+      "name": "Air Cleaner"
+    },
+    {
+      "id": "F-35",
+      "name": "Stand/Kick Starter Arm"
+    },
+    {
+      "id": "F-36",
+      "name": "Rear Cushion"
+    },
+    {
+      "id": "F-40",
+      "name": "Battery"
+    },
+    {
+      "id": "F-41",
+      "name": "Wire Harness"
+    },
+    {
+      "id": "F-20-40",
+      "name": "Front Wheel"
+    },
+    {
+      "id": "E-9",
+      "name": "Water Pump"
+    }
+  ],
+  "parts": [
+    {
+      "partNumber": "12209-GB4-681",
+      "name": "SEAL, VALVE STEM",
+      "section": "E-4",
+      "ref": 1,
+      "componentIds": [
+        "seal-klep"
+      ]
+    },
+    {
+      "partNumber": "14100-KZR-600",
+      "name": "CAMSHAFT COMP.",
+      "section": "E-4",
+      "ref": 2,
+      "componentIds": [
+        "camshaft-rocker-arm"
+      ]
+    },
+    {
+      "partNumber": "14430-KZR-600",
+      "name": "ARM COMP., IN. VALVE ROCKER",
+      "section": "E-4",
+      "ref": 4,
+      "componentIds": [
+        "camshaft-rocker-arm"
+      ]
+    },
+    {
+      "partNumber": "14440-KZR-600",
+      "name": "ARM COMP., EX. VALVE ROCKER",
+      "section": "E-4",
+      "ref": 5,
+      "componentIds": [
+        "camshaft-rocker-arm"
+      ]
+    },
+    {
+      "partNumber": "14711-KWN-901",
+      "name": "VALVE, IN.",
+      "section": "E-4",
+      "ref": 7,
+      "componentIds": [
+        "klep-intake-exhaust"
+      ]
+    },
+    {
+      "partNumber": "14721-KWN-901",
+      "name": "VALVE, EX.",
+      "section": "E-4",
+      "ref": 8,
+      "componentIds": [
+        "klep-intake-exhaust"
+      ]
+    },
+    {
+      "partNumber": "12100-KZL-930",
+      "name": "CYLINDER COMP.",
+      "section": "E-6",
+      "ref": 1,
+      "componentIds": [
+        "cylinder-gasket"
+      ]
+    },
+    {
+      "partNumber": "12191-GGC-900",
+      "name": "GASKET, CYLINDER",
+      "section": "E-6",
+      "ref": 2,
+      "componentIds": [
+        "cylinder-gasket"
+      ]
+    },
+    {
+      "partNumber": "31210-KZR-601",
+      "name": "FLYWHEEL COMP.",
+      "section": "E-10",
+      "ref": 1,
+      "componentIds": [
+        "acg-starter"
+      ]
+    },
+    {
+      "partNumber": "31220-KZR-601",
+      "name": "STATOR COMP.",
+      "section": "E-10",
+      "ref": 2,
+      "componentIds": [
+        "generator-stator",
+        "acg-starter"
+      ]
+    },
+    {
+      "partNumber": "15010-KWN-900",
+      "name": "PUMP SET, OIL",
+      "section": "E-11",
+      "ref": 1,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "15133-KWN-900",
+      "name": "GEAR, OIL PUMP DRIVEN(35T)",
+      "section": "E-11",
+      "ref": 2,
+      "componentIds": [
+        "oil-pump"
+      ]
+    },
+    {
+      "partNumber": "19037-KVB-902",
+      "name": "CAP COMP., RADIATOR",
+      "section": "E-14",
+      "ref": 3,
+      "componentIds": [
+        "tutup-radiator"
+      ]
+    },
+    {
+      "partNumber": "19100-KZR-600",
+      "name": "RADIATOR ASSY.",
+      "section": "E-14",
+      "ref": 5,
+      "componentIds": [
+        "radiator-water-pump"
+      ]
+    },
+    {
+      "partNumber": "1950B-KZR-600",
+      "name": "HOSE A, WATER ASSY.",
+      "section": "E-14",
+      "ref": 10,
+      "componentIds": [
+        "selang-radiator"
+      ]
+    },
+    {
+      "partNumber": "1950A-KZR-600",
+      "name": "HOSE B, WATER ASSY.",
+      "section": "E-14",
+      "ref": 11,
+      "componentIds": [
+        "selang-radiator"
+      ]
+    },
+    {
+      "partNumber": "1950D-KZR-600",
+      "name": "HOSE, BYPASS ASSY.",
+      "section": "E-14",
+      "ref": 12,
+      "componentIds": [
+        "selang-radiator"
+      ]
+    },
+    {
+      "partNumber": "19510-KZR-600",
+      "name": "FAN COMP., COOLING",
+      "section": "E-14",
+      "ref": 13,
+      "componentIds": [
+        "kipas-radiator"
+      ]
+    },
+    {
+      "partNumber": "19510-KZR-601",
+      "name": "FAN COMP., COOLING",
+      "section": "E-14",
+      "ref": 13,
+      "componentIds": [
+        "kipas-radiator"
+      ]
+    },
+    {
+      "partNumber": "22132-KWN-900",
+      "name": "PIECE SET, SLIDE",
+      "section": "E-16",
+      "ref": 1,
+      "componentIds": [
+        "slide-piece-cvt"
+      ]
+    },
+    {
+      "partNumber": "22102-KZR-600",
+      "name": "FACE, DRIVE",
+      "section": "E-16",
+      "ref": 2,
+      "componentIds": [
+        "boss-pulley-drive-face"
+      ]
+    },
+    {
+      "partNumber": "22105-KWN-901",
+      "name": "BOSS, DRIVE FACE",
+      "section": "E-16",
+      "ref": 3,
+      "componentIds": [
+        "boss-pulley-drive-face"
+      ]
+    },
+    {
+      "partNumber": "22110-KZR-600",
+      "name": "FACE COMP., MOVABLE DRIVE",
+      "section": "E-16",
+      "ref": 5,
+      "componentIds": [
+        "boss-pulley-drive-face"
+      ]
+    },
+    {
+      "partNumber": "2213A-KWN-900",
+      "name": "ROLLER SET, WEIGHT",
+      "section": "E-16",
+      "ref": 6,
+      "componentIds": [
+        "roller-cvt"
+      ]
+    },
+    {
+      "partNumber": "22131-KWN-900",
+      "name": "PLATE, RAMP",
+      "section": "E-16",
+      "ref": 7,
+      "componentIds": [
+        "ramp-plate-cvt"
+      ]
+    },
+    {
+      "partNumber": "23100-KZR-601",
+      "name": "BELT, DRIVE",
+      "section": "E-17",
+      "ref": 7,
+      "componentIds": [
+        "v-belt-cvt"
+      ]
+    },
+    {
+      "partNumber": "22100-KWN-900",
+      "name": "OUTER COMP., CLUTCH",
+      "section": "E-17",
+      "ref": 1,
+      "componentIds": [
+        "mangkok-kopling-ganda"
+      ]
+    },
+    {
+      "partNumber": "22535-KWN-900",
+      "name": "WEIGHT SET, CLUTCH",
+      "section": "E-17",
+      "ref": 5,
+      "componentIds": [
+        "kampas-kopling-ganda",
+        "clutch-spring-weight"
+      ]
+    },
+    {
+      "partNumber": "22401-KGF-912",
+      "name": "SPRING, CLUTCH",
+      "section": "E-17",
+      "ref": 4,
+      "componentIds": [
+        "per-sentri",
+        "clutch-spring-weight"
+      ]
+    },
+    {
+      "partNumber": "23205-KWN-640",
+      "name": "FACE SET, DRIVEN",
+      "section": "E-17",
+      "ref": 8,
+      "componentIds": [
+        "driven-face-cvt"
+      ]
+    },
+    {
+      "partNumber": "23224-KZR-600",
+      "name": "FACE SET, MOVABLE DRIVEN",
+      "section": "E-17",
+      "ref": 9,
+      "componentIds": [
+        "driven-face-cvt"
+      ]
+    },
+    {
+      "partNumber": "23233-KZR-600",
+      "name": "SPRING, DRIVEN FACE",
+      "section": "E-17",
+      "ref": 12,
+      "componentIds": [
+        "per-cvt"
+      ]
+    },
+    {
+      "partNumber": "91109-KVY-901",
+      "name": "BEARING, NEEDLE, 20X29X18",
+      "section": "E-17",
+      "ref": 18,
+      "componentIds": [
+        "needle-bearing-cvt"
+      ]
+    },
+    {
+      "partNumber": "91002-GA7-701",
+      "name": "BEARING, RADIAL BALL, 6902U(NT)",
+      "section": "E-17",
+      "ref": 19,
+      "componentIds": [
+        "bearing-driven-face"
+      ]
+    },
+    {
+      "partNumber": "91009-KVY-961",
+      "name": "BEARING, RADIAL BALL, 6902U(NK)",
+      "section": "E-17",
+      "ref": 19,
+      "componentIds": [
+        "bearing-driven-face"
+      ]
+    },
+    {
+      "partNumber": "91211-KN7-671",
+      "name": "SEAL, DRIVEN FACE, 34X41X4",
+      "section": "E-17",
+      "ref": 20,
+      "componentIds": [
+        "seal-driven-face"
+      ]
+    },
+    {
+      "partNumber": "2120B-KZR-600",
+      "name": "CASE COMP., MISSION",
+      "section": "E-17-10",
+      "ref": 3,
+      "componentIds": [
+        "gasket-transmission-case"
+      ]
+    },
+    {
+      "partNumber": "21395-KZR-600",
+      "name": "GASKET, TRANSMISSION CASE",
+      "section": "E-17-10",
+      "ref": 4,
+      "componentIds": [
+        "gasket-transmission-case"
+      ]
+    },
+    {
+      "partNumber": "23411-KZR-600",
+      "name": "SHAFT, DRIVE(17T)",
+      "section": "E-17-10",
+      "ref": 5,
+      "componentIds": [
+        "drive-shaft"
+      ]
+    },
+    {
+      "partNumber": "23421-KZR-600",
+      "name": "COUNTERSHAFT(13T)",
+      "section": "E-17-10",
+      "ref": 6,
+      "componentIds": [
+        "countershaft"
+      ]
+    },
+    {
+      "partNumber": "23422-KWN-901",
+      "name": "GEAR, COUNTER(53T)",
+      "section": "E-17-10",
+      "ref": 7,
+      "componentIds": [
+        "gear-final-drive"
+      ]
+    },
+    {
+      "partNumber": "23430-KZR-600",
+      "name": "GEAR COMP., FINAL(44T)",
+      "section": "E-17-10",
+      "ref": 8,
+      "componentIds": [
+        "gear-final-drive"
+      ]
+    },
+    {
+      "partNumber": "91004-KZR-601",
+      "name": "BEARING, RADIAL BALL, 6202(NT)",
+      "section": "E-17-10",
+      "ref": 10,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91004-KZR-602",
+      "name": "BEARING, RADIAL BALL, 6202(FK)",
+      "section": "E-17-10",
+      "ref": 10,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91006-KZR-601",
+      "name": "BEARING, RADIAL BALL, 6201(NT)",
+      "section": "E-17-10",
+      "ref": 11,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91006-KZR-602",
+      "name": "BEARING, RADIAL BALL, 6201(FK)",
+      "section": "E-17-10",
+      "ref": 11,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91006-KAB-004",
+      "name": "BEARING, RADIAL BALL,6205-2NSG",
+      "section": "E-17-10",
+      "ref": 12,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91009-KWN-901",
+      "name": "BEARING, RADIAL BALL, 6205 UU",
+      "section": "E-17-10",
+      "ref": 12,
+      "componentIds": [
+        "bearing-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91201-434-003",
+      "name": "OIL SEAL, 14X20X3.2",
+      "section": "E-17-10",
+      "ref": 13,
+      "componentIds": [
+        "oil-seal-final-gear"
+      ]
+    },
+    {
+      "partNumber": "91204-KWN-900",
+      "name": "OIL SEAL, 34X52X7",
+      "section": "E-17-10",
+      "ref": 14,
+      "componentIds": [
+        "oil-seal-final-gear"
+      ]
+    },
+    {
+      "partNumber": "1110B-KZR-600",
+      "name": "CRANKCASE COMP., R.",
+      "section": "E-19-10",
+      "ref": 1,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "15651-KZR-600",
+      "name": "GAUGE, OIL LEVEL",
+      "section": "E-19-10",
+      "ref": 9,
+      "componentIds": [
+        "oli-mesin"
+      ]
+    },
+    {
+      "partNumber": "91201-KWN-901",
+      "name": "OIL SEAL, 20.8X32X6",
+      "section": "E-19-10",
+      "ref": 16,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "11200-KZR-601",
+      "name": "CRANKCASE COMP., L.",
+      "section": "E-19-20",
+      "ref": 2,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "15421-107-000",
+      "name": "SCREEN, OIL FILTER",
+      "section": "E-19-20",
+      "ref": 7,
+      "componentIds": [
+        "filter-kawat-oli-mesin"
+      ]
+    },
+    {
+      "partNumber": "15421-KPL-900",
+      "name": "SCREEN, OIL FILTER",
+      "section": "E-19-20",
+      "ref": 7,
+      "componentIds": [
+        "filter-kawat-oli-mesin"
+      ]
+    },
+    {
+      "partNumber": "37700-KZR-601",
+      "name": "SENSOR ASSY., SPEED",
+      "section": "E-19-20",
+      "ref": 11,
+      "componentIds": [
+        "meter-speedometer"
+      ]
+    },
+    {
+      "partNumber": "91002-KZR-601",
+      "name": "BEARING, RADIAL BALL SPECIAL,6207",
+      "section": "E-19-20",
+      "ref": 15,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "91003-KZR-601",
+      "name": "BEARING, RADIAL BALL, 6204(NT)",
+      "section": "E-19-20",
+      "ref": 16,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "91005-KZR-601",
+      "name": "BEARING, RADIAL BALL, 6301(NT)",
+      "section": "E-19-20",
+      "ref": 17,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "91008-KZR-601",
+      "name": "BEARING, RADIAL BALL, 630(NT)",
+      "section": "E-19-20",
+      "ref": 18,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "91202-KWN-902",
+      "name": "OIL SEAL, 26X45X6",
+      "section": "E-19-20",
+      "ref": 19,
+      "componentIds": [
+        "kruk-as-bearing"
+      ]
+    },
+    {
+      "partNumber": "16700-KZR-601",
+      "name": "PUMP UNIT, FUEL",
+      "section": "F-26",
+      "ref": 1,
+      "componentIds": [
+        "fuel-pump-assembly"
+      ]
+    },
+    {
+      "partNumber": "16707-KZR-601",
+      "name": "FILTER SET",
+      "section": "F-26",
+      "ref": 3,
+      "componentIds": [
+        "filter-fuel-pump"
+      ]
+    },
+    {
+      "partNumber": "17510-KZL-C00",
+      "name": "TANK COMP., FUEL",
+      "section": "F-26",
+      "ref": 4,
+      "componentIds": [
+        "fuel-tank-strainer"
+      ]
+    },
+    {
+      "partNumber": "17570-KZR-601",
+      "name": "HOSE COMP., FUEL FEED",
+      "section": "F-26",
+      "ref": 9,
+      "componentIds": [
+        "selang-tutup-tangki"
+      ]
+    },
+    {
+      "partNumber": "17570-KZR-651",
+      "name": "HOSE COMP., FUEL FEED",
+      "section": "F-26",
+      "ref": 9,
+      "componentIds": [
+        "selang-tutup-tangki"
+      ]
+    },
+    {
+      "partNumber": "37800-KZR-601",
+      "name": "FUEL UNIT",
+      "section": "F-26",
+      "ref": 16,
+      "componentIds": [
+        "fuel-tank-strainer"
+      ]
+    },
+    {
+      "partNumber": "17210-KZR-600",
+      "name": "ELEMENT SET, AIR CLEANER(WL)",
+      "section": "F-28",
+      "ref": 5,
+      "componentIds": [
+        "filter-udara"
+      ]
+    },
+    {
+      "partNumber": "17225-KZR-600",
+      "name": "CASE SUB ASSY., AIR CLEANER",
+      "section": "F-28",
+      "ref": 6,
+      "componentIds": [
+        "filter-udara"
+      ]
+    },
+    {
+      "partNumber": "51490-KGH-901",
+      "name": "SEAL SET, FR. FORK",
+      "section": "F-17",
+      "ref": 18,
+      "componentIds": [
+        "seal-shock-depan"
+      ]
+    },
+    {
+      "partNumber": "52100-KZR-600",
+      "name": "SWINGARM ASSY.",
+      "section": "F-23",
+      "ref": 3,
+      "componentIds": [
+        "bushing-swingarm"
+      ]
+    },
+    {
+      "partNumber": "91051-KZR-601",
+      "name": "BEARING, RADIAL BALL, 6203UU",
+      "section": "F-23",
+      "ref": 6,
+      "componentIds": [
+        "bearing-swingarm"
+      ]
+    },
+    {
+      "partNumber": "91252-KZR-601",
+      "name": "DUST SEAL, 25X40X5",
+      "section": "F-23",
+      "ref": 7,
+      "componentIds": [
+        "bushing-swingarm"
+      ]
+    },
+    {
+      "partNumber": "91253-KZR-601",
+      "name": "DUST SEAL, 25X35X6",
+      "section": "F-23",
+      "ref": 8,
+      "componentIds": [
+        "bushing-swingarm"
+      ]
+    },
+    {
+      "partNumber": "06451-961-405",
+      "name": "SEAL SET, PISTON",
+      "section": "F-18",
+      "ref": 1,
+      "componentIds": [
+        "seal-piston-kaliper"
+      ]
+    },
+    {
+      "partNumber": "06455-KVB-T01",
+      "name": "PAD SET, FR. BRAKE",
+      "section": "F-18",
+      "ref": 2,
+      "componentIds": [
+        "kampas-rem-depan"
+      ]
+    },
+    {
+      "partNumber": "31500-KZR-602",
+      "name": "BATTERY(GTZ6V)",
+      "section": "F-40",
+      "ref": 2,
+      "componentIds": [
+        "aki"
+      ]
+    },
+    {
+      "partNumber": "30400-KZR-601",
+      "name": "CONTROL UNIT, ENGINE",
+      "section": "F-41",
+      "ref": 1,
+      "componentIds": [
+        "kabel-harness"
+      ]
+    },
+    {
+      "partNumber": "30510-KZR-601",
+      "name": "COIL COMP., IGNITION",
+      "section": "F-41",
+      "ref": 3,
+      "componentIds": [
+        "ignition-coil"
+      ]
+    },
+    {
+      "partNumber": "32100-KZR-600",
+      "name": "HARNESS, WIRE",
+      "section": "F-41",
+      "ref": 6,
+      "componentIds": [
+        "kabel-harness"
+      ]
+    },
+    {
+      "partNumber": "38110-KZR-601",
+      "name": "HORN COMP.(HIGH)",
+      "section": "F-41",
+      "ref": 10,
+      "componentIds": [
+        "horn"
+      ]
+    },
+    {
+      "partNumber": "38501-KVZ-631",
+      "name": "RELAY ASSY., POWER",
+      "section": "F-41",
+      "ref": 12,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "38502-KWN-901",
+      "name": "RELAY COMP., POWER",
+      "section": "F-41",
+      "ref": 13,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "98200-31001",
+      "name": "FUSE, MINI(10A)",
+      "section": "F-41",
+      "ref": 20,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "98200-42500",
+      "name": "FUSE, MINI(25A)",
+      "section": "F-41",
+      "ref": 21,
+      "componentIds": [
+        "relay-sekring"
+      ]
+    },
+    {
+      "partNumber": "44301-KVG-950",
+      "name": "AXLE, FR. WHEEL",
+      "section": "F-20-40",
+      "ref": 1,
+      "componentIds": [
+        "bearing-roda-depan"
+      ]
+    },
+    {
+      "partNumber": "44650-KZR-600ZC",
+      "name": "WHEEL SUB ASSY., FR.",
+      "section": "F-20-40",
+      "ref": 5,
+      "componentIds": [
+        "velg-rim"
+      ]
+    },
+    {
+      "partNumber": "44711-KVB-931",
+      "name": "TIRE, FR.(80/90-14 M/C 40P)",
+      "section": "F-20-40",
+      "ref": 6,
+      "componentIds": [
+        "ban-depan"
+      ]
+    },
+    {
+      "partNumber": "91052-KVB-901",
+      "name": "BEARING, RADIAL BALL, 6201(U)",
+      "section": "F-20-40",
+      "ref": 11,
+      "componentIds": [
+        "bearing-roda-depan"
+      ]
+    },
+    {
+      "partNumber": "91251-KPH-901",
+      "name": "DUST SEAL 21X37X7",
+      "section": "F-20-40",
+      "ref": 12,
+      "componentIds": [
+        "dust-seal-roda"
+      ]
+    },
+    {
+      "partNumber": "5320B-KZR-600",
+      "name": "STEM ASSY., STEERING",
+      "section": "F-10",
+      "ref": 10,
+      "componentIds": [
+        "bearing-komstir"
+      ]
+    },
+    {
+      "partNumber": "50301-GN5-902",
+      "name": "RACE, STEERING TOP BALL",
+      "section": "F-10",
+      "ref": 3,
+      "componentIds": [
+        "race-komstir"
+      ]
+    },
+    {
+      "partNumber": "50302-GN5-901",
+      "name": "RACE, STEERING BOTTOM BALL",
+      "section": "F-10",
+      "ref": 4,
+      "componentIds": [
+        "race-komstir"
+      ]
+    },
+    {
+      "partNumber": "53214-GN5-900",
+      "name": "DUST SEAL, STEERING HEAD",
+      "section": "F-10",
+      "ref": 8,
+      "componentIds": [
+        "bearing-komstir"
+      ]
+    },
+    {
+      "partNumber": "50500-KZR-600",
+      "name": "STAND COMP., MAIN",
+      "section": "F-35",
+      "ref": 3,
+      "componentIds": [
+        "standar-tengah-samping"
+      ]
+    },
+    {
+      "partNumber": "50530-KZR-600",
+      "name": "BAR COMP., SIDE STAND",
+      "section": "F-35",
+      "ref": 6,
+      "componentIds": [
+        "standar-tengah-samping"
+      ]
+    },
+    {
+      "partNumber": "35700-KZR-601",
+      "name": "SWITCH ASSY., SIDE STAND",
+      "section": "F-35",
+      "ref": 2,
+      "componentIds": []
+    },
+    {
+      "partNumber": "52400-KZR-600",
+      "name": "CUSHION ASSY., RR.",
+      "section": "F-36",
+      "ref": 1,
+      "componentIds": [
+        "shock-belakang"
+      ]
+    },
+    {
+      "partNumber": "36532-KZR-601",
+      "name": "SENSOR, OXYGEN",
+      "section": "E-3",
+      "ref": 8,
+      "componentIds": [
+        "sensor-o2"
+      ]
+    },
+    {
+      "partNumber": "37870-KZR-601",
+      "name": "SENSOR ASSY., WATER TEMP",
+      "section": "E-3",
+      "ref": 10,
+      "componentIds": [
+        "sensor-suhu-mesin"
+      ]
+    },
+    {
+      "partNumber": "19200-KWN-901",
+      "name": "PUMP ASSY., WATER",
+      "section": "E-9",
+      "ref": 1,
+      "componentIds": [
+        "radiator-water-pump"
+      ]
+    },
+    {
+      "partNumber": "19300-KZR-601",
+      "name": "THERMOSTAT ASSY.",
+      "section": "E-9",
+      "ref": 4,
+      "componentIds": [
+        "thermostat"
+      ]
+    }
+  ]
+}

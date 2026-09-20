@@ -29,15 +29,15 @@ test('SERVICE_CHECKLIST_GROUPS: 13 grup, sesuai jumlah sistem di AUDIT-SERVICE-C
   assert.equal(GROUPS.length, 13);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: 50 item setelah pelengkap KZR 2012 (13 grup; 30 item baseline + 16 item pelengkap + 4 item rem)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 102 item cumulative master (13 grup; legacy 50 + catalog expansion)', () => {
   const items = flatten(GROUPS);
-  assert.equal(items.length, 50);
+  assert.equal(items.length, 102);
 });
 
-test('SERVICE_CHECKLIST_GROUPS: 44 item stockable linkCat:true (kontrak taxonomy SA27)', () => {
+test('SERVICE_CHECKLIST_GROUPS: 46 item stockable linkCat:true (cumulative catalog expansion) (kontrak taxonomy SA27)', () => {
   const items = flatten(GROUPS);
   const linked = items.filter((it) => it.linkCat === true);
-  assert.equal(linked.length, 44);
+  assert.equal(linked.length, 46);
   const expectedNames = [
     'Oli Mesin', 'Filter Oli', 'Busi', 'Rantai Keteng & Tensioner',
     'Filter Kawat Oli Mesin (Oil Strainer Screen)', 'Paking (Gasket) Knalpot',
@@ -51,6 +51,7 @@ test('SERVICE_CHECKLIST_GROUPS: 44 item stockable linkCat:true (kontrak taxonomy
     'Engine Mounting & Bushing Arm', 'Aki', 'Saklar & Sistem Penerangan',
     'Relay & Sekring (Fuse)', 'Ban Depan', 'Ban Belakang', 'Bearing Roda', 'Filter Udara',
     'Oli Gardan/Final Drive', 'Cek Kabel Gas/Rem Belakang/Standar/Kunci Kontak',
+    'Oil Pump', 'Bearing Swingarm',
   ];
   assert.deepEqual(linked.map((it) => it.name).sort(), expectedNames.sort());
 });
@@ -121,10 +122,10 @@ test('SERVICE_CHECKLIST_GROUPS: tiap item punya intervalLabel & sumber non-koson
   }
 });
 
-test('SERVICE_CHECKLIST_GROUPS: item bertanda needsReview (keputusan W belum final) persis 3 -- V-Belt CVT, Coolant, Ban Depan', () => {
+test('SERVICE_CHECKLIST_GROUPS: item bertanda needsReview pada cumulative master persis 5 -- V-Belt CVT, Coolant, Ban Depan, Oil Pump, Bearing Swingarm', () => {
   const items = flatten(GROUPS);
   const flagged = items.filter((it) => it.needsReview === true).map((it) => it.name).sort();
-  assert.deepEqual(flagged, ['Ban Depan', 'Coolant', 'V-Belt CVT'].sort());
+  assert.deepEqual(flagged, ['Ban Depan', 'Bearing Swingarm', 'Coolant', 'Oil Pump', 'V-Belt CVT'].sort());
 });
 
 test('SERVICE_CHECKLIST_GROUPS: urutan grup persis 13 sistem AUDIT-SERVICE-CHECKLIST-COVERAGE.md', () => {

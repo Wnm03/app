@@ -3,16 +3,21 @@ const path=require('path');
 const root=path.resolve(__dirname,'..');
 const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
 const bundle=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
-const checklist=fs.readFileSync(path.join(root,'modules/vehicle/servis-checklist.js'),'utf8');
 let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
-const ids=[...checklist.matchAll(/\bid:\s*['"]([^'"]+)['"]/g)].map(m=>m[1]);
+// S1863+: checklist adalah proyeksi Service Master (102 komponen = 50 legacy KZR + 52 katalog).
+// Registry aturan KZR (SERVICE_MAINTENANCE_RULES) memang hanya mencakup 50 komponen legacy.
+const F=require('./helpers/serviceMasterFixture');
+const legacyIds=F.LEGACY_CHECKLIST_IDS;
+const ids=F.masterItems().map(i=>i.id);
 const registry=car.match(/const SERVICE_MAINTENANCE_RULES\s*=\s*Object\.freeze\(\{([\s\S]*?)\}\);/);
 ok(!!registry,'maintenance registry exists');
 const rules=[...registry[1].matchAll(/^\s*['"]([^'"]+)['"]\s*:\s*\{/gm)].map(m=>m[1]);
-ok(ids.length===50,'KZR checklist contains exactly 50 components');
+ok(ids.length===F.MASTER_COMPONENT_COUNT,'cumulative checklist contains 102 components (50 legacy KZR + 52 catalog expansion)');
 ok(new Set(ids).size===ids.length,'checklist component IDs are unique');
-for(const id of ids)ok(rules.includes(id),'maintenance rule covers '+id);
+ok(legacyIds.length===50&&legacyIds.every(id=>ids.includes(id)),'all 50 legacy KZR components remain in the master checklist');
+ok(ids.length-legacyIds.length===52,'catalog expansion adds exactly 52 components beyond the legacy set');
+for(const id of legacyIds)ok(rules.includes(id),'maintenance rule covers '+id);
 for(const id of rules)ok(ids.includes(id),'maintenance rule has no orphan '+id);
 const conditionOnly=['rantai-keteng-tensioner','kompresi-mesin','selang-tutup-tangki','radiator-water-pump','kebocoran-shock','thermostat'];
 for(const id of conditionOnly){const re=new RegExp("['\"]"+id+"['\"]\\s*:\\s*\\{[^}]*maintenanceType:\\s*['\"]condition['\"]");ok(re.test(car),'condition-only component is explicitly classified: '+id);}

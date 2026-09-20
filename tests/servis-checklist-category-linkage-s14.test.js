@@ -6,16 +6,19 @@ const path=require('node:path');
 const vm=require('node:vm');
 
 const src=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/servis-checklist.js'),'utf8');
+const F=require('./helpers/serviceMasterFixture');
 
-test('exactly 50 checklist items carry canonical masterCategoryId',()=>{
+test('all 102 checklist items (50 legacy + 52 catalog expansion) carry canonical masterCategoryId',()=>{
   const ctx={window:null,DatabaseAPI:{masterCategory:{getAll:()=>[]}}};
   ctx.window=ctx;
   vm.createContext(ctx);
-  vm.runInContext(src+'\nthis.__groups=SERVICE_CHECKLIST_GROUPS;',ctx);
+  vm.runInContext(F.generatedSource()+'\n'+src+'\nthis.__groups=SERVICE_CHECKLIST_GROUPS;',ctx);
   const groups=ctx.__groups;
   const items=groups.flatMap(g=>g.items||[]);
   assert.equal(groups.length,13,'checklist must remain 13 categories');
-  assert.equal(items.length,50,'checklist must remain exactly 50 items');
+  assert.equal(items.length,102,'checklist must equal the cumulative master (102 items)');
+  assert.ok(F.LEGACY_CHECKLIST_IDS.every(id=>items.some(x=>x.id===id)),'the 50 legacy KZR items must remain present');
+  assert.equal(new Set(items.map(x=>x.id)).size,102,'component ids must be unique');
   assert.ok(items.every(x=>x.masterCategoryId),'every item must have masterCategoryId');
   assert.ok(items.every(x=>groups.some(g=>g.masterCategoryId===x.masterCategoryId)),'item masterCategoryId must belong to its group SoT');
 });

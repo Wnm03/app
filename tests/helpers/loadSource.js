@@ -114,6 +114,9 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   // this harness transparently loads the split Servis sources once, avoiding
   // duplicate lexical declarations when a caller already lists them.
   const loadFiles = [...files];
+  if (loadFiles.includes('modules/vehicle/servis-checklist.js') && !loadFiles.includes('modules/vehicle/service-master-data.generated.js')) {
+    loadFiles.unshift('modules/vehicle/service-master-data.generated.js');
+  }
   if (loadFiles.includes('car-notes.js') || loadFiles.includes('modules/vehicle/servis.js')) {
     for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js','modules/vehicle/servis-b.js']) {
       if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);

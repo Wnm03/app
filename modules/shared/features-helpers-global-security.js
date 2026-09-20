@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1862-sa-i-cumulative-audit-1828';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1862-sa-i-cumulative-audit-1828';
+const APP_BUILD_VERSION = 's1868-dynamic-vehicle-maintenance-template-1871';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1868-dynamic-vehicle-maintenance-template-1871';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -980,6 +980,12 @@ if(!fromIdb) IDBStore.set('kw_v4_mirror',s||lsRaw).catch(e=>console.error('Gagal
 if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.ensureLoaded==='function'){
 try{ await DatabaseAPI.vehicle.ensureLoaded(); }
 catch(e){ console.error('Gagal ensureLoaded DatabaseAPI.vehicle:',e); }
+}
+// Canonical 13-category/50-component service master. Reuse the existing IDBStore
+// infrastructure; the master is loaded before service UI/reminder consumers run.
+if(typeof ServiceMasterDB!=='undefined'&&ServiceMasterDB&&typeof ServiceMasterDB.ensureLoaded==='function'){
+try{ await ServiceMasterDB.ensureLoaded(); }
+catch(e){ console.error('Gagal ensureLoaded ServiceMasterDB:',e); }
 }
 const _fromSchemaVersion=D.schemaVersion===undefined?0:D.schemaVersion;
 runDataMigrations(_fromSchemaVersion);

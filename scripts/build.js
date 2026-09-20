@@ -620,6 +620,13 @@ const GROUP_B = [
   // (fallback ke TORSI_DB/VEHICLE_SPEC_DB literal kalau belum termuat,
   // mis. test terisolasi yg cuma load sparepart-servis-b.js sendirian).
   'modules/engine/database-api.js',
+  // Canonical service master: generated from data/database-kategori-komponen-servis.json.
+  // The DB adapter reuses the existing IDBStore key/value architecture; no second DB wrapper.
+  'modules/vehicle/service-master-data.generated.js',
+  'modules/vehicle/service-master-database.js',
+  'modules/vehicle/parts-catalog-database.js',
+  'modules/vehicle/vehicle-maintenance-template-engine.js',
+  'modules/vehicle/honda-pdf-catalog-auto-import.js',
   'modules/vehicle/sparepart-servis-b.js',
   // Servis Checklist, Sesi 1A (BREAKDOWN-SESI-RINGAN-CHECKLIST-UI-30-ITEM.md):
   // SERVICE_CHECKLIST_GROUPS — murni konstanta data (50 item/13 grup), 0
@@ -632,6 +639,8 @@ const GROUP_B = [
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
   'modules/vehicle/servis.js',
+  'modules/vehicle/service-maintenance-engine.js',
+  'modules/vehicle/service-maintenance-repository.js',
   // S1812: lower-level service history/reminder methods split from servis.js.
   // Must load immediately after servis.js; public Servis API is preserved.
   'modules/vehicle/servis-b.js',
@@ -1424,6 +1433,9 @@ function preflightPatchManifest() {
 
 function main() {
   preflightPatchManifest();
+  // Canonical Service Master is maintained as JSON; generate the runtime artifact
+  // before lint/bundle so checklist consumers never carry a hand-maintained duplicate.
+  execSync('node scripts/generate-service-master-data.js', { cwd: ROOT, stdio: 'inherit' });
   runLintRegistry(LINT_REGISTRY);
 
   // Ambil argumen non-flag pertama sbg explicit version (skip --flag spt --require-minify)

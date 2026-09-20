@@ -36,25 +36,34 @@ function main() {
     if (!src.includes('record.masterCategoryId')) fail('canonical field is not authoritative');
   }, results);
 
-  check('CHECKLIST 50/50 masterCategoryId mapping', () => {
+  check('CHECKLIST 102/102 masterCategoryId mapping (50 legacy + 52 catalog expansion)', () => {
     const src = read('modules/vehicle/servis-checklist.js');
     if (!src.includes('SERVICE_CHECKLIST_GROUPS.forEach')) fail('checklist projection missing');
+    // S1863+: checklist is a projection of the generated Service Master; the
+    // gate validates the projected/generated groups, not literals in the source.
+    const F = require(path.join(ROOT, 'tests/helpers/serviceMasterFixture.js'));
     const { SERVICE_CHECKLIST_GROUPS } = require(path.join(ROOT, 'modules/vehicle/servis-checklist.js'));
-    if (!Array.isArray(SERVICE_CHECKLIST_GROUPS) || SERVICE_CHECKLIST_GROUPS.length !== 13) fail('expected 13 checklist groups');
+    if (!Array.isArray(SERVICE_CHECKLIST_GROUPS) || SERVICE_CHECKLIST_GROUPS.length !== F.MASTER_GROUP_COUNT) fail('expected 13 checklist groups');
     const items = SERVICE_CHECKLIST_GROUPS.flatMap(g => g.items || []);
-    if (items.length !== 50) fail(`expected 50 checklist items, got ${items.length}`);
+    if (items.length !== F.MASTER_COMPONENT_COUNT) fail(`expected ${F.MASTER_COMPONENT_COUNT} checklist items, got ${items.length}`);
+    if (new Set(items.map(i => i.id)).size !== items.length) fail('checklist component ids are not unique');
+    const lost = F.LEGACY_CHECKLIST_IDS.filter(id => !items.some(i => i.id === id));
+    if (lost.length) fail(`legacy checklist components lost: ${lost.join(', ')}`);
     const missing = items.filter(i => !i.masterCategoryId);
     if (missing.length) fail(`${missing.length} checklist items lack masterCategoryId`);
     const unique = new Set(items.map(i => i.masterCategoryId));
-    if (unique.size > 13) fail('checklist introduced more master categories than groups');
+    if (unique.size > F.MASTER_GROUP_COUNT) fail('checklist introduced more master categories than groups');
+    const orphan = items.filter(i => !SERVICE_CHECKLIST_GROUPS.some(g => g.masterCategoryId === i.masterCategoryId));
+    if (orphan.length) fail(`${orphan.length} checklist items reference a master category without a group`);
   }, results);
 
   check('BRAKE COMPONENT SoT + action override contract', () => {
-    const src = read('modules/vehicle/servis-checklist.js');
+    const { SERVICE_CHECKLIST_GROUPS } = require(path.join(ROOT, 'modules/vehicle/servis-checklist.js'));
+    const items = SERVICE_CHECKLIST_GROUPS.flatMap(g => g.items || []);
     for (const id of ['kampas-rem-depan','kampas-rem-belakang','cakram-rem-depan','kaliper-rem-depan','master-rem-reservoir','tromol-rem-belakang','minyak-rem','selang-rem']) {
-      if (!src.includes(`id: '${id}'`)) fail(`missing brake component ${id}`);
+      if (!items.some(i => i.id === id)) fail(`missing brake component ${id}`);
     }
-    if (src.includes("name: 'Kampas Rem',")) fail('generic Kampas Rem must not be a canonical checklist component');
+    if (items.some(i => i.name === 'Kampas Rem')) fail('generic Kampas Rem must not be a canonical checklist component');
     const generic = read('modules/vehicle/sparepart-servis.js');
     if (/motor:\[[^\]]*'Kampas Rem'[^\]]*\]/.test(generic)) fail('generic recommendation still contains Kampas Rem');
     if (!generic.includes('dedupeServiceCategoriesForVehicle')) fail('reminder category dedupe helper missing');

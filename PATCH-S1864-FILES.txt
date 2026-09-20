@@ -1,0 +1,36 @@
+# CUMULATIVE PATCH MANIFEST — S1864
+# Includes all S1863 files plus S1864 updates.
+BEGIN_APPLY_FILES
+AUDIT-S1863-SERVICE-MASTER-DATABASE-INTEGRATION.md
+AUDIT-S1864-SERVICE-MASTER-CATALOG-EXPANSION.md
+CHANGELOG-AUDIT.md
+PATCH-README-S1863-SERVICE-MASTER-DATABASE.md
+PATCH-README-S1864-SERVICE-MASTER-CATALOG-EXPANSION.md
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+data/database-kategori-komponen-servis.json
+docs/AUDIT_MATRIX.md
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+index.html
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/service-maintenance-engine.js
+modules/vehicle/service-maintenance-repository.js
+modules/vehicle/service-master-data.generated.js
+modules/vehicle/service-master-database.js
+modules/vehicle/servis-checklist.js
+scripts/build.js
+scripts/generate-service-master-data.js
+sw.js
+tests/helpers/loadSource.js
+tests/service-maintenance-golden-contract-v18.test.js
+tests/service-master-database-s1863.test.js
+tests/service-master-catalog-expansion-s1864.test.js
+PATCH-S1863-FILES.txt
+PATCH-S1864-FILES.txt
+END_APPLY_FILES

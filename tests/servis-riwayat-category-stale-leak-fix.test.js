@@ -22,6 +22,7 @@ function makeSelectStub(){ return { value:'', innerHTML:'', options:[] }; }
 function loadServiceInputCatalog(ctx){
   const checklist=fs.readFileSync('modules/vehicle/servis-checklist.js','utf8');
   const src=fs.readFileSync('modules/vehicle/service-input-catalog.js','utf8');
+  vm.runInContext(require('./helpers/serviceMasterFixture').generatedSource(),ctx);
   vm.runInContext(checklist,ctx);
   vm.runInContext(src,ctx);
   return ctx.ServiceInputCatalog;

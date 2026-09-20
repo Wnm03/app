@@ -7,7 +7,7 @@ const VEHICLE_MODEL_PROFILE_OVERRIDES={
   'beat-fi':{vehicleType:'motor',bodyType:'matic',manufacturerId:'honda',generation:'Gen 1',yearRange:null,aliases:['honda beat fi','beat fi gen 1']}
 };
 function vmrsNorm(v){return String(v==null?'':v).trim().toLowerCase().replace(/[()[\],./_-]+/g,' ').replace(/\s+/g,' ').trim();}
-function vmrsModels(){if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.modelGetAll==='function')return DatabaseAPI.vehicle.modelGetAll();return []}
+function vmrsModels(){if(typeof DatabaseAPI!=='undefined'){if(DatabaseAPI.vehicleModel&&typeof DatabaseAPI.vehicleModel.getAll==='function')return DatabaseAPI.vehicleModel.getAll();if(DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.modelGetAll==='function')return DatabaseAPI.vehicle.modelGetAll();}return []}
 function vmrsProfile(model){if(!model)return null;const o=VEHICLE_MODEL_PROFILE_OVERRIDES[String(model.id)]||{};return Object.assign({id:model.id,name:model.name||model.displayName||model.id,manufacturerId:model.manufacturerId||o.manufacturerId||null,vehicleType:o.vehicleType||model.vehicleType||null,bodyType:o.bodyType||model.bodyType||null,generation:o.generation||model.generation||null,yearRange:o.yearRange||model.yearRange||null,aliases:[]},o,{id:model.id,name:model.name||model.displayName||model.id});}
 function vmrsFind(input={}){const models=vmrsModels();const explicit=String(input.modelId||'').trim();if(explicit){const m=models.find(x=>String(x.id)===explicit);if(m)return {model:m,profile:vmrsProfile(m),confidence:'explicit'};}
  const n=vmrsNorm(input.name||input.vehicleName||'');if(!n)return {model:null,profile:null,confidence:'none',candidates:[]};

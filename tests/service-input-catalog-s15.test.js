@@ -1,11 +1,14 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const F=require('./helpers/serviceMasterFixture');
 const src=fs.readFileSync('modules/vehicle/service-input-catalog.js','utf8');
 const checklist=fs.readFileSync('modules/vehicle/servis-checklist.js','utf8');
 const ctx={console,escapeHtml:s=>String(s),SERVICE_CHECKLIST_GROUPS:undefined};ctx.window=ctx;
-vm.createContext(ctx);vm.runInContext(checklist,ctx);vm.runInContext(src,ctx);
+vm.createContext(ctx);vm.runInContext(F.generatedSource(),ctx);vm.runInContext(checklist,ctx);vm.runInContext(src,ctx);
 const api=ctx.ServiceInputCatalog;
 assert.strictEqual(api.groups().length,13,'13 service groups');
-assert.strictEqual(api.groups().reduce((n,g)=>n+(g.items||[]).length,0),50,'50 service components');
+assert.strictEqual(api.groups().reduce((n,g)=>n+(g.items||[]).length,0),102,'102 service components (50 legacy + 52 catalog expansion)');
+const _ids=new Set(api.groups().flatMap(g=>(g.items||[]).map(i=>i.id)));
+assert.ok(F.LEGACY_CHECKLIST_IDS.every(id=>_ids.has(id)),'all 50 legacy components preserved');
 assert.strictEqual(api.infer('Ganti oli mesin').group.masterCategoryId,'servis-mesin');
 assert.strictEqual(api.infer('Ganti oli mesin').item.id,'oli-mesin');
 assert.strictEqual(api.infer('Bersihkan CVT').group.masterCategoryId,'servis-cvt');

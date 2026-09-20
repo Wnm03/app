@@ -40,7 +40,7 @@ function makeCtx(D, domValues, extra) {
   }, domValues || {});
   const els = {};
   const getEl = (id) => {
-    if (!els[id]) els[id] = { value: values[id] !== undefined ? values[id] : '' };
+    if (!els[id]) els[id] = { value: values[id] !== undefined ? values[id] : '', innerHTML: '', dataset: {}, querySelectorAll: () => [] };
     return els[id];
   };
   const aibusEvents = [];

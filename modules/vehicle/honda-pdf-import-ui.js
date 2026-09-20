@@ -35,6 +35,7 @@ async function hondaPdfImportUiOpen() {
   _hondaImportSetStatus('');
   _hondaImportHidePreview();
   await hondaPdfImportUiRenderList();
+  if(typeof _hondaAutoEnsureButton==='function') _hondaAutoEnsureButton();
   openModal('hondaPdfImportModal');
 }
 
@@ -232,4 +233,37 @@ const HondaPdfImportUI = {
 
 if (typeof window !== 'undefined') {
   window.HondaPdfImportUI = HondaPdfImportUI;
+}
+
+// ------------------------------------------------------------------------
+// S1867 — Auto Catalog Flow: PDF -> vehicle choice -> dry-run -> commit.
+// This is intentionally additive to the existing 7D preview UI. No direct
+// DB write happens until the dry-run is shown and the user confirms.
+// ------------------------------------------------------------------------
+function _hondaAutoEnsureButton(){
+  const list=document.getElementById('hondaPdfImportList'); if(!list||document.getElementById('hondaPdfAutoBtn'))return;
+  const b=document.createElement('button'); b.id='hondaPdfAutoBtn'; b.type='button'; b.className='btn btn-primary btn-full u-p14'; b.style.marginBottom='10px'; b.textContent='🤖 Auto Katalog Kendaraan — PDF → Kendaraan → Dry Run'; b.onclick=()=>hondaPdfAutoUiStart(); list.parentNode.insertBefore(b,list);
+}
+function _hondaAutoRenderHook(){_hondaAutoEnsureButton();}
+const _hondaOldRenderList=hondaPdfImportUiRenderList;
+hondaPdfImportUiRenderList=async function(){const r=await _hondaOldRenderList();_hondaAutoRenderHook();return r;};
+function _hondaAutoModalClose(){const el=document.getElementById('hondaPdfAutoModal');if(el)el.remove();}
+function _hondaAutoEscape(v){return typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function hondaPdfAutoUiStart(){
+  const list=await HondaPdfImport.list(); const candidates=list.filter(x=>x&&(x.status==='parsed'||x.status==='extracted'));
+  if(!candidates.length){toast('⚠️ Proses PDF dulu sampai status siap di-analisis.');return;}
+  const rec=candidates[candidates.length-1];
+  let plan; try{plan=await HondaPdfCatalogAutoImport.analyze({text:rec.extractedText||'',fileName:rec.fileName,pageCount:null});}catch(e){toast('❌ Analisis gagal: '+(e.message||e));return;}
+  const vehicles=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles:[]; const active=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+  const opts=['<option value="active">🚗 Kendaraan aktif'+(active?' — '+_hondaAutoEscape((vehicles.find(v=>String(v.id)===String(active))||{}).name||active):' — belum dipilih')+'</option>'].concat(vehicles.map(v=>'<option value="existing:'+_hondaAutoEscape(v.id)+'">'+_hondaAutoEscape(v.name||v.id)+'</option>')).concat(['<option value="new">➕ Buat kendaraan baru (isi metadata di form kendaraan)</option>']);
+  const dry=HondaPdfCatalogAutoImport.buildDryRun(plan);
+  _hondaAutoModalClose(); const modal=document.createElement('div'); modal.id='hondaPdfAutoModal'; modal.className='overlay'; modal.innerHTML='<div class="modal" style="max-height:90vh;overflow:auto"><div class="modal-handle"></div><div class="modal-title"><span>🤖 Auto Import Katalog Honda</span><button class="modal-close" type="button" id="hondaAutoClose">✕</button></div><div class="u-hint12">PDF dianalisis dulu. Belum ada database yang ditulis.</div><div style="background:var(--surface3);padding:12px;border-radius:12px;margin:10px 0;line-height:1.6;font-size:12px"><b>Katalog:</b> '+_hondaAutoEscape(dry.catalog.model||'-')+'<br><b>Kode:</b> '+_hondaAutoEscape(dry.catalog.catalogCode||'-')+'<br><b>File:</b> '+_hondaAutoEscape(dry.catalog.sourceFileName||'-')+'<br><b>Halaman:</b> '+_hondaAutoEscape(dry.pages||'-')+'<br><b>Section:</b> '+dry.sectionsDetected+'<br><b>Part terdeteksi:</b> '+dry.partsDetected+'<br><b>Mapping HIGH:</b> '+(dry.mapping.high||0)+' · MEDIUM: '+(dry.mapping.medium||0)+' · AMBIGUOUS: '+(dry.mapping.ambiguous||0)+' · UNMAPPED: '+(dry.mapping.unmapped||0)+'</div><div class="fg"><label class="fl">Target kendaraan</label><select class="fs" id="hondaAutoTarget">'+opts.join('')+'</select></div><div id="hondaAutoWarnings" style="font-size:11px;color:var(--warning,#b26a00);line-height:1.6;margin:8px 0">'+(dry.newComponentCandidates.length?('⚠️ '+dry.newComponentCandidates.length+' part belum punya mapping pasti. Tidak dibuat menjadi komponen maintenance otomatis.'): '✅ Tidak ada kandidat unmapped/ambiguous pada hasil analisis ini.')+'</div><button class="btn btn-primary btn-full u-p14" id="hondaAutoCommit">🔎 Tampilkan Dry Run & Konfirmasi Import</button></div>';
+  document.body.appendChild(modal); modal.style.display='flex'; document.getElementById('hondaAutoClose').onclick=_hondaAutoModalClose;
+  document.getElementById('hondaAutoCommit').onclick=async()=>{const sel=document.getElementById('hondaAutoTarget').value;_hondaAutoShowFinalDryRun(plan,rec,sel);};
+}
+function _hondaAutoShowFinalDryRun(plan,rec,sel){
+  const vehicleId=sel==='active'?((typeof curVehicleId!=='undefined')?curVehicleId:null):(sel.startsWith('existing:')?sel.slice(9):null);
+  const target=sel==='new'?{mode:'new'}:{mode:sel==='active'?'active':'existing',vehicleId};
+  const dry=HondaPdfCatalogAutoImport.buildDryRun(plan); const modal=document.getElementById('hondaPdfAutoModal'); if(!modal)return;
+  const body=modal.querySelector('.modal'); const old=body.querySelector('#hondaAutoCommit'); if(old)old.remove(); const actions=document.createElement('div'); actions.innerHTML='<div style="background:var(--surface3);padding:12px;border-radius:12px;margin:10px 0;font-size:12px;line-height:1.6"><b>PROPOSED DATABASE CHANGES</b><br>• Simpan 1 catalog dinamis ke IndexedDB<br>• Simpan '+dry.partsDetected+' part dengan scope katalog/kendaraan<br>• '+(vehicleId?'Hubungkan part ke kendaraan '+_hondaAutoEscape(vehicleId):'Kendaraan baru belum dibuat; form kendaraan akan dibuka')+'<br>• Service Master: <b>0 perubahan otomatis</b><br>• Semua mapping AMBIGUOUS/UNMAPPED tetap ditandai untuk review</div><div class="u-flex u-gap8"><button class="btn btn-ghost u-flex1" id="hondaAutoCancel">Batal</button><button class="btn btn-primary u-flex1" id="hondaAutoConfirm">✅ Konfirmasi</button></div>'; body.appendChild(actions); document.getElementById('hondaAutoCancel').onclick=_hondaAutoModalClose; document.getElementById('hondaAutoConfirm').onclick=async()=>{if(sel==='new'){_hondaAutoModalClose();HondaPdfCatalogAutoImport.prepareNewVehicle(plan.meta);toast('✅ Form kendaraan baru dibuka. Simpan kendaraan, lalu jalankan Auto Katalog lagi untuk mengikat katalog.');return;}const res=await HondaPdfCatalogAutoImport.commit(plan,target);if(res.success){_hondaAutoModalClose();toast('✅ Katalog '+(plan.meta.catalogCode||'PDF')+' tersimpan: '+res.parts+' part');await hondaPdfImportUiRenderList();}else toast('❌ Import dibatalkan: '+(res.errors||[]).join('; '));};
 }

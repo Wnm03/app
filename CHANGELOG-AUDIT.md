@@ -503,3 +503,67 @@ lama yang dihapus.
 - No existing fix was removed. Production minification remains the only release-environment blocker.
 
 - Cumulative cleanup also honors `DELETE-FILES.txt`: unused `pro-ui-layer.css` is removed from the final merged tree. Build re-run at version `s1862-sa-i-cumulative-audit-1828`; final structural counts are 2167 files / 1333 JS / 737 Markdown / 3 CSS / 870 tests.
+
+
+## S1863 — Service Master Database Integration (2026-09-20)
+
+- Canonical master `data/database-kategori-komponen-servis.json`: 13 kategori / 50 komponen.
+- Generated runtime projection menggantikan literal checklist manual di `modules/vehicle/servis-checklist.js`.
+- `ServiceMasterDB` memakai existing `IDBStore`/`kw_idb_v1` key `service-master:store`; tidak membuat DB/wrapper kedua.
+- Import idempotent + checksum metadata + deprecated/orphan preservation.
+- `ServiceMaintenanceEngine` menambah evaluasi `km`/`time`/`both` dengan calendar-month handling dan odometer regression guard.
+- `ServiceMaintenanceRepository` reuse `D.servisLogs`; tidak membuat history store kedua.
+- Targeted regression: 48/48 PASS (40 checklist + 8 S1863).
+- Full suite belum diberi status green karena environment timeout sebelum terminal summary; tidak ada failure baru yang terlihat sampai test #3499.
+- Build `s1863-service-master-db-1863`: source/syntax/HTML/SW checks PASS; esbuild tidak tersedia sehingga bundle belum diminify.
+
+## S1864 — Service Master Catalog Expansion
+- Mempertahankan taxonomy 13 kategori dan seluruh 50 component ID lama.
+- Memperluas canonical service master menjadi 100 maintenance components berdasarkan audit struktur katalog Honda Vario Techno 125 -2 (KZRJ).
+- Menambahkan provenance `catalogRefs` pada component yang section katalog-nya sudah diverifikasi serta `catalogSources` pada root master.
+- Tidak memasukkan gambar katalog, PDF, atau part-level inventory ke bundle/startup aplikasi.
+- Interval servis baru tidak diinferensikan dari katalog; component baru tanpa interval tetap tidak memicu reset otomatis.
+- Targeted verification: 11/11 PASS; build s1864 selesai dan syntax bundle PASS.
+
+## S1865 — Part Catalog Normalization (2026-09-20)
+- Audit lanjutan terhadap katalog Honda Vario Techno 125 -2 / KZRJ memisahkan `maintenance component` dari `part-level catalog record`.
+- Master kumulatif menjadi **13 kategori / 102 components**; seluruh 100 ID S1864 dipertahankan, ditambah `oil-pump` dan `bearing-swingarm`.
+- Ditambahkan `data/parts-catalog-vario-techno-125-kzrj.json` berisi **103 part records terverifikasi** dari section katalog yang sudah dibaca, bukan transkripsi penuh katalog.
+- Ditambahkan `modules/vehicle/parts-catalog-database.js` dengan lazy/on-demand fetch JSON agar data katalog tidak ikut dimuat saat startup.
+- Tidak ada gambar katalog/PDF yang dimasukkan ke bundle.
+- Mapping part yang belum dapat dinormalisasi dibiarkan kosong; tidak ada mapping semantik yang dipaksakan.
+- Targeted regression S1863/S1864/S1865 + golden checklist: **22/22 PASS** sebelum build.
+
+## S1866 — Honda Vario 110 FI K46 Part Catalog Isolation
+
+- Scope: **Honda Vario 110 FI K46 only** (2014–2015; engine `JFH1E`, frame `MH1JFH1`).
+- Added `data/parts-catalog-vario-110-fi-k46.json` with 103 directly verified part records from the K46 catalog text / Honda Cengkareng K46 evidence.
+- Extended `PartsCatalogDB` to support explicit catalog/model namespaces (`KZRJ` and `K46`) while preserving KZRJ as the backward-compatible default.
+- K46 lookup/search cannot cross-read KZRJ when an explicit K46 scope is selected.
+- No images/PDF payload embedded; catalog remains lazy/on-demand.
+- No maintenance intervals invented from the parts catalog.
+- K46H/eSP and older Vario 110 variants are excluded from the K46 dataset even when a part is shared.
+- Targeted cumulative service/catalog suite: **66/66 PASS**.
+- Build: PASS; generated bundles syntax-valid. esbuild unavailable, so bundles remain unminified.
+- Version synchronized by build to `s1866-vario-110-fi-k46-part-catalog-1867`, cache `kw-cache-v1867`.
+
+
+## S1867 — Generic Honda PDF Catalog Auto-Import (K61 dry-run foundation)
+
+- Menambahkan `modules/vehicle/honda-pdf-catalog-auto-import.js`: alur generik PDF → identitas katalog → ekstraksi part → mapping ke Service Master → dry-run → commit, tanpa membuat file JSON/source baru per kendaraan.
+- Katalog dinamis disimpan di IndexedDB `honda-pdf-catalog:store`; `PartsCatalogDB` diperluas untuk membaca katalog dinamis tanpa mengubah katalog statis KZRJ/K46.
+- Target kendaraan tersedia: kendaraan aktif, kendaraan existing, atau jalur kendaraan baru melalui form kendaraan existing; tidak ada write otomatis sebelum konfirmasi dry-run.
+- Mapping `HIGH/MEDIUM/AMBIGUOUS/UNMAPPED`; `AMBIGUOUS/UNMAPPED` tidak membuat komponen maintenance baru otomatis. Service Master tetap 102 komponen dan tidak menerima interval yang diinferensikan dari PDF.
+- `vehicle-catalog-import.js` diperkuat: kualitas text-layer PDF dinilai sebelum dipakai; PDF dengan text-layer ter-encode/gibberish akan fallback ke OCR. Hasil extract mempertahankan marker page-break agar importer generik tidak membawa kategori lintas halaman.
+- PDF audit yang diuji: Honda BeAT & BeAT Street eSP, cover `ACH110CBF`, katalog bertanggal 10 November 2018; file 88 halaman. Text layer native terbukti tidak layak dijadikan sumber utama, sehingga jalur OCR diperlukan.
+- Targeted regression: 63/63 PASS (KZRJ, K46, S1864, parser PDF, dan S1867). Build PASS; esbuild tidak tersedia sehingga bundle valid tetapi belum diminify.
+
+
+## S1868 — Dynamic Vehicle Onboarding & Maintenance Template Engine (2026-09-20)
+- Menambahkan `modules/vehicle/vehicle-maintenance-template-engine.js` untuk membentuk template kategori + komponen perawatan berkala berdasarkan jenis kendaraan, model yang sudah teridentifikasi, dan katalog PDF dinamis yang sudah terikat ke kendaraan.
+- Modal Tambah/Edit Kendaraan sekarang menampilkan preview template dinamis dengan checkbox komponen; pilihan user disimpan sebagai `D.vehicles[].maintenanceTemplate` tanpa membuat history/store servis baru.
+- `PartsCatalogDB.getCatalogByVehicle(vehicleId)` menghubungkan katalog PDF S1867 ke template tanpa mencampur namespace KZRJ/K46.
+- Interval servis tidak diinferensikan; template hanya membawa interval yang sudah ada di Service Master/evidence katalog.
+- Memperbaiki adapter Vehicle Model SOT agar membaca API produksi `DatabaseAPI.vehicleModel.getAll()` sebelum fallback lama, sehingga resolusi model dapat dipakai oleh template engine.
+- Targeted S1868: 4/4 PASS untuk engine + production-shape model registry; regression S1863–S1867 dan parser/import PDF tetap PASS.
+- Build `s1868-dynamic-vehicle-maintenance-template-1871` PASS; bundle syntax PASS. `esbuild` tidak tersedia sehingga bundle belum diminify.

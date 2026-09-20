@@ -9,6 +9,8 @@ function load(){
   ctx.window=ctx;
   ctx.document={getElementById(id){return id==='servisChecklistPanel'?{innerHTML:''}:null;}};
   vm.createContext(ctx);
+  // Checklist = proyeksi Service Master generated -> muat data dulu (seperti bundle browser).
+  vm.runInContext(require('./helpers/serviceMasterFixture').generatedSource(),ctx);
   vm.runInContext(fs.readFileSync('modules/vehicle/servis-checklist.js','utf8'),ctx);
   return ctx;
 }

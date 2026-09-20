@@ -6,8 +6,9 @@ const vm=require('node:vm');
 function load(){
  const ctx={console,window:{},D:{sparepartCats:[]}};
  vm.createContext(ctx);
+ const master=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/service-master-data.generated.js'),'utf8');
  const src=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/servis-checklist.js'),'utf8');
- vm.runInContext(src+'\nthis.__groups=SERVICE_CHECKLIST_GROUPS;',ctx,{filename:'servis-checklist.js'});
+ vm.runInContext(master+'\n'+src+'\nthis.__groups=SERVICE_CHECKLIST_GROUPS;',ctx,{filename:'servis-checklist.js'});
  return ctx;
 }
 const GOLDEN_IDS=[
@@ -63,16 +64,17 @@ const GOLDEN_IDS=[
  'kabel-gas-standar-kunci'
 ];
 
-test('v18 golden checklist contract remains 50 unique components',()=>{
+test('v18 golden checklist contract remains included in the expanded cumulative master',()=>{
  const c=load();
  const groups=c.__groups||[];
  const items=groups.flatMap(g=>g.items||[]);
  assert.equal(groups.length,13,'master category count drifted');
- assert.equal(items.length,50,'checklist component count drifted');
+ assert.equal(items.length,102,'expanded checklist component count drifted');
  const ids=items.map(x=>x.id);
+ const idSet=new Set(ids);
  assert.equal(new Set(ids).size,ids.length,'duplicate checklist id');
- assert.deepEqual([...ids].sort(),[...new Set(ids)].sort(),'checklist IDs changed unexpectedly');
- assert.deepEqual([...ids].sort(),[...GOLDEN_IDS].sort(),'canonical checklist IDs changed unexpectedly');
+ assert.deepEqual([...ids].sort(),[...new Set(ids)].sort(),'checklist IDs duplicated');
+ for (const id of GOLDEN_IDS) assert.equal(idSet.has(id),true,`legacy canonical ID missing: ${id}`);
 });
 
 test('v18 golden critical action contracts remain stable',()=>{
@@ -88,6 +90,7 @@ test('v18 golden critical action contracts remain stable',()=>{
 test('v18 golden IDs have no accidental accumulated-list contamination',()=>{
  const c=load(); const items=(c.__groups||[]).flatMap(g=>g.items||[]);
  const ids=new Set(items.map(x=>x.id));
+ const idSet=ids;
  const accumulated=['filter-oli','filter-kawat-oli-mesin','paking-knalpot','slide-piece-cvt','boss-pulley-drive-face','mangkok-kopling-ganda','seal-driven-face','per-sentri','pelumasan-cvt-grease','bearing-bak-cvt','busa-filter-cvt','filter-fuel-pump','oli-shockbreaker','engine-mounting-bushing-arm','saklar-sistem-penerangan','relay-sekring'];
- for(const id of accumulated) assert.equal(ids.has(id),true,`expected accumulated id missing: ${id}`);
+ for(const id of accumulated) assert.equal(idSet.has(id),true,`expected accumulated id missing: ${id}`);
 });

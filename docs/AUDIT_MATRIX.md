@@ -18,13 +18,13 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2167 |
-| JavaScript | 1333 |
-| Tests | 870 |
-| Markdown | 737 |
+| Total files | 2209 |
+| JavaScript | 1349 |
+| Tests | 880 |
+| Markdown | 752 |
 | HTML | 7 |
-| JSON | 8 |
-| CSS | 3 |
+| JSON | 11 |
+| CSS | 4 |
 | Module families | 18 |
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
@@ -42,6 +42,11 @@ _Baseline diperbarui lagi pasca-v1555/s740 (akumulasi 6 sesi ringan: Tagihan rem
 ---
 
 _Baseline diperbarui pada audit kumulatif SA-FINAL (2026-09-21): Total files 2020→2167 (+147), JavaScript 1230→1333 (+103), Markdown 704→737 (+33), CSS 4→3 (-1) setelah penghapusan `pro-ui-layer.css` yang sudah dinyatakan di `DELETE-FILES.txt`. Angka mengikuti `lintDocsBaselineCountDrift()` dari build terbaru; `backups/`, `node_modules/`, dan `.git/` dikecualikan. Tests tetap dicatat terpisah sesuai konvensi historis. Perubahan ini adalah sinkronisasi dokumentasi terhadap repo hasil patch kumulatif + build, bukan perubahan behavior tambahan._
+
+---
+
+_Baseline diperbarui pada S1868 (2026-09-20): snapshot repo aktif setelah Dynamic Vehicle Onboarding & Maintenance Template Engine menjadi 2209 file, 1349 JavaScript, 880 test, 752 Markdown, 7 HTML, 11 JSON, 4 CSS, dan 18 module families. Angka mengikuti definisi baseline build; `backups/`, `node_modules/`, dan `.git/` dikecualikan.
+
 
 # 2. Feature Domains
 

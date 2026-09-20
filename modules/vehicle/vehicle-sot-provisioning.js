@@ -5,7 +5,10 @@
 const VEHICLE_SOT_PROVISIONING_VERSION='SOT-VEHICLE-PROVISIONING-V1';
 function vspsNorm(v){return String(v==null?'':v).trim().toLowerCase().replace(/[()\[\],./_-]+/g,' ').replace(/\s+/g,' ');}
 function vspsModels(){
-  if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.modelGetAll==='function')return DatabaseAPI.vehicle.modelGetAll();
+  if(typeof DatabaseAPI!=='undefined'){
+    if(DatabaseAPI.vehicleModel&&typeof DatabaseAPI.vehicleModel.getAll==='function')return DatabaseAPI.vehicleModel.getAll();
+    if(DatabaseAPI.vehicle&&typeof DatabaseAPI.vehicle.modelGetAll==='function')return DatabaseAPI.vehicle.modelGetAll();
+  }
   if(typeof dbVehicleModelGetAll==='function')return dbVehicleModelGetAll();
   return [];
 }

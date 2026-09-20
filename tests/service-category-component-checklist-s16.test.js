@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { SERVICE_CHECKLIST_GROUPS, ServisChecklist } = require('../modules/vehicle/servis-checklist.js');
+const F = require('./helpers/serviceMasterFixture');
 
 test('S16: kategori servis menjadi filter checklist komponen, bukan auto-servis seluruh kategori', () => {
   assert.equal(SERVICE_CHECKLIST_GROUPS.length, 13);
@@ -14,7 +15,12 @@ test('S16: kategori servis menjadi filter checklist komponen, bukan auto-servis 
 
 test('S16: setelah kategori dipilih, hanya komponen dalam kategori tersebut yang tersedia', () => {
   const mesin = ServisChecklist.itemsForMasterCategory('servis-mesin');
-  assert.deepEqual(mesin.map(x => x.id), ['oli-mesin','filter-oli','busi','celah-klep','rantai-keteng-tensioner','kompresi-mesin','filter-kawat-oli-mesin','paking-knalpot']);
+  // 8 komponen legacy tetap di depan & berurutan; komponen katalog (S1864+) menyusul setelahnya.
+  const legacyMesin = ['oli-mesin','filter-oli','busi','celah-klep','rantai-keteng-tensioner','kompresi-mesin','filter-kawat-oli-mesin','paking-knalpot'];
+  assert.deepEqual(mesin.slice(0, legacyMesin.length).map(x => x.id), legacyMesin);
+  assert.ok(mesin.length > legacyMesin.length, 'komponen katalog servis-mesin harus ikut tersedia');
+  assert.ok(mesin.slice(legacyMesin.length).every(x => !F.LEGACY_CHECKLIST_IDS.includes(x.id)), 'setelah 8 legacy hanya komponen katalog');
+  assert.ok(mesin.every(x => x.masterCategoryId === 'servis-mesin'));
   assert.equal(ServisChecklist.itemsForMasterCategory('servis-cvt').some(x => x.id === 'oli-mesin'), false);
   assert.deepEqual(ServisChecklist.itemsForMasterCategory('kategori-tidak-ada'), []);
 });
