@@ -18,10 +18,10 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2272 |
-| JavaScript | 1389 |
+| Total files | 2301 |
+| JavaScript | 1391 |
 | Tests | 907 |
-| Markdown | 774 |
+| Markdown | 775 |
 | HTML | 7 |
 | JSON | 12 |
 | CSS | 4 |
