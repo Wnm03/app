@@ -1,0 +1,13 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.join(__dirname,'..');
+const css=fs.readFileSync(path.join(root,'pwa-ui-layer.css'),'utf8');
+const ux=fs.readFileSync(path.join(root,'modules/shared/pwa-ux-performance.js'),'utf8');
+const pkg=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));
+test('PWA UI CSS remains under 15 KB',()=>assert.ok(Buffer.byteLength(css)<15000,`${Buffer.byteLength(css)} bytes`));
+test('Performance helper provides debounce and large-list deferral',()=>{assert.match(ux,/debounce/);assert.match(ux,/contentVisibility/);assert.match(ux,/containIntrinsicSize/)});
+test('No heavyweight UI framework dependency added',()=>{for(const dep of Object.keys({...pkg.dependencies,...pkg.devDependencies}))assert.ok(!/tailwind|bootstrap|material-ui|mui|ant-design/i.test(dep),dep)});
+test('WebView-safe CSS avoids expensive backdrop filter in domain redesign',()=>{const block=css.slice(css.indexOf('S1891'));assert.doesNotMatch(block,/backdrop-filter/)});
+test('Release UI gate script exists',()=>assert.equal(pkg.scripts['release:ui-gate'],'node scripts/release-ui-gate.js'));

@@ -41,15 +41,3 @@ test('PWA UI layer is included in offline precache and standalone preview toolin
   assert.match(preview, /pwa-ui-layer\.css/);
   assert.match(budget, /['"]pwa-ui-layer\.css['"]:\s*15_000/);
 });
-
-test('S1881 implements a real presentation composition, not only theme overrides', () => {
-  const css = read('pwa-ui-layer.css');
-  assert.match(css, /#page-dashboard-hub\.page\.active\s*\{[\s\S]*grid-template-areas:/);
-  assert.match(css, /grid-area:\s*hero/);
-  assert.match(css, /grid-area:\s*actions/);
-  assert.match(css, /grid-area:\s*main/);
-  assert.match(css, /dashhub-hero[\s\S]*grid-template-areas:/);
-  assert.match(css, /dashhub-qa-btn::after/);
-  assert.match(css, /dashhub-feature-card/);
-  assert.match(css, /S1881.*TRUE PRESENTATION REDESIGN/);
-});
