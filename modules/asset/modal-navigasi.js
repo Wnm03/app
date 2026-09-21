@@ -266,7 +266,7 @@ document.querySelectorAll('.overlay.open,.calc-overlay.open,.qs-modal-overlay.op
 o.classList.remove('open');
 o.classList.remove('closing');
 });
-document.body.classList.remove('has-open-modal');
+if(document.body&&document.body.classList)document.body.classList.remove('has-open-modal');
 // BUGFIX (audit video user -- lihat komentar dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi dari halaman sebelumnya bisa
 // tetap tampil/mengantre & menutupi tombol di halaman/tab baru. Titik ini
@@ -314,7 +314,7 @@ renderPageContent(active.id.replace('page-',''));
 }
 function _syncNavVisibilityForModals(){
 const anyOpen=document.querySelector('.overlay.open,.qs-modal-overlay.open,.calc-overlay.open');
-document.body.classList.toggle('has-open-modal',!!anyOpen);
+if(document.body&&document.body.classList)document.body.classList.toggle('has-open-modal',!!anyOpen);
 }
 // FOCUS TRAP (audit UI/UX aksesibilitas keyboard, Agustus 2026): sebelum ini,
 // Tab/Shift+Tab masih bisa "bocor" dari dalam modal ke elemen di belakang
@@ -619,7 +619,7 @@ el.classList.add('open');
 void el.offsetWidth; // FIX opacity-stuck-0: pola sama persis openModal(), lihat komentar lengkap di sana
 _syncNavVisibilityForModals();
 }
-function closeQS(id){document.getElementById(id).classList.remove('open');_syncNavVisibilityForModals();}
+function closeQS(id){const el=document.getElementById(id);if(!el||!el.classList)return false;el.classList.remove('open');_syncNavVisibilityForModals();return true;}
 
 // SARAN (dari review sebelumnya): dukung tombol Escape utk nutup modal, tidak cuma tap ✕/backdrop.
 // Urutan prioritas: kalkulator popup (di atas modal lain) -> quick-switcher (qsXxx) -> modal
