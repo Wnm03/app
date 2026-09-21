@@ -103,8 +103,9 @@ const FinancialAuditEngine = {
     return { rows, range: { from, to }, stats };
   },
 
-  summary(range) {
-    const q = this._eligibleTransactions(range);
+  summary(range, options) {
+    const opts = options || {};
+    const q = opts._eligible || this._eligibleTransactions(range);
     let income = 0;
     let expense = 0;
     q.rows.forEach(({ tx }) => {
@@ -120,13 +121,14 @@ const FinancialAuditEngine = {
       expense,
       net: income - expense,
       txCount: q.rows.length,
-      dataQuality: this.dataQuality(range),
+      dataQuality: opts._dataQuality || (opts.skipDataQuality ? null : this.dataQuality(range, { _eligible: q })),
     };
   },
 
-  topCategories(range, limit) {
+  topCategories(range, limit, options) {
+    const opts = options || {};
     const n = Number.isFinite(Number(limit)) ? Math.max(1, Math.floor(Number(limit))) : 3;
-    const q = this._eligibleTransactions(range);
+    const q = opts._eligible || this._eligibleTransactions(range);
     const groups = new Map();
     q.rows.forEach(({ tx }) => {
       if (tx.type !== 'expense') return;
@@ -149,7 +151,7 @@ const FinancialAuditEngine = {
     const opts = options || {};
     const maxAmount = Number.isFinite(Number(opts.maxAmount)) ? Math.max(0, Number(opts.maxAmount)) : 50000;
     const minCount = Number.isFinite(Number(opts.minCount)) ? Math.max(1, Math.floor(Number(opts.minCount))) : 3;
-    const q = this._eligibleTransactions(range);
+    const q = opts._eligible || this._eligibleTransactions(range);
     const rows = q.rows.filter(({ tx }) => {
       const amount = Number(tx.amount);
       return tx.type === 'expense' && Number.isFinite(amount) && amount > 0 && amount <= maxAmount;
@@ -179,7 +181,7 @@ const FinancialAuditEngine = {
 
   duplicateDiagnostics(range, options) {
     const opts = options || {};
-    const q = this._eligibleTransactions(range);
+    const q = opts._eligible || this._eligibleTransactions(range);
     const byId = new Map();
     const byBusiness = new Map();
     const byNear = new Map();
@@ -270,7 +272,7 @@ const FinancialAuditEngine = {
     const allowed = new Set(['Kebutuhan', 'Keinginan', 'Masa depan', 'Perlu ditinjau']);
     const groups = new Map([...allowed].map(name => [name, { group: name, amount: 0, count: 0, categories: [] }]));
     const categorySeen = new Map();
-    this._eligibleTransactions(range).rows.forEach(({ tx }) => {
+    (opts._eligible || this._eligibleTransactions(range)).rows.forEach(({ tx }) => {
       if (tx.type !== 'expense') return;
       const amount = Number(tx.amount);
       if (!Number.isFinite(amount) || amount <= 0) return;
@@ -302,16 +304,20 @@ const FinancialAuditEngine = {
     return { from, to };
   },
 
-  comparison(range) {
-    const current = this.summary(range);
-    const previousRange = this.previousRange(range);
-    const previous = this.summary(previousRange);
+  comparison(range, options) {
+    const opts = options || {};
+    const normalized = this._normalizeRange(range);
+    const currentQ = opts._eligible || this._eligibleTransactions(normalized);
+    const current = opts._summary || this.summary(normalized, { _eligible: currentQ, _dataQuality: opts._dataQuality, skipDataQuality: !opts._dataQuality });
+    const previousRange = this.previousRange(normalized);
+    const previousQ = this._eligibleTransactions(previousRange);
+    const previous = this.summary(previousRange, { _eligible: previousQ, skipDataQuality: true });
     const delta = (a, b) => ({
       amount: a - b,
       pct: b !== 0 ? (a - b) / Math.abs(b) : null,
     });
     return {
-      current: { ...current, range: this._normalizeRange(range) },
+      current: { ...current, range: normalized },
       previous: { ...previous, range: previousRange },
       income: delta(current.income, previous.income),
       expense: delta(current.expense, previous.expense),
@@ -328,7 +334,7 @@ const FinancialAuditEngine = {
     const opts = options || {};
     const minOccurrences = Number.isFinite(Number(opts.minOccurrences)) ? Math.max(2, Math.floor(Number(opts.minOccurrences))) : 2;
     const tolerancePct = Number.isFinite(Number(opts.tolerancePct)) ? Math.max(0, Number(opts.tolerancePct)) : 0.05;
-    const q = this._eligibleTransactions(range);
+    const q = opts._eligible || this._eligibleTransactions(range);
     const groups = new Map();
     q.rows.forEach(({ tx, date }) => {
       if (tx.type !== 'expense' || tx.billLinkId) return;
@@ -369,25 +375,49 @@ const FinancialAuditEngine = {
     }).sort((a, b) => b.occurrences - a.occurrences || (b.avgAmount - a.avgAmount));
   },
 
+  dashboardInsight(range, options) {
+    const opts = options || {};
+    const normalized = this._normalizeRange(range);
+    // Dashboard only needs the compact signals it can display. Do not run
+    // recurring-candidate or expense-group analysis here; those belong to the
+    // full 30-minute audit and are intentionally kept out of the Hub path.
+    const eligible = this._eligibleTransactions(normalized);
+    const duplicates = this.duplicateDiagnostics(normalized, { ...(opts.duplicates || {}), _eligible: eligible });
+    const dataQuality = this.dataQuality(normalized, { _eligible: eligible, _duplicates: duplicates });
+    const summary = this.summary(normalized, { _eligible: eligible, _dataQuality: dataQuality });
+    const topCategories = this.topCategories(normalized, opts.topLimit || 1, { _eligible: eligible });
+    const smallLeakages = this.smallLeakages(normalized, { maxAmount: opts.maxSmallAmount, minCount: opts.minSmallCount, _eligible: eligible });
+    const comparison = this.comparison(normalized, { _eligible: eligible, _summary: summary, _dataQuality: dataQuality });
+    return { range: normalized, summary, topCategories, smallLeakages, comparison, duplicates, dataQuality };
+  },
+
   audit(range, options) {
     const opts = options || {};
     const normalized = this._normalizeRange(range);
-    const summary = this.summary(normalized);
-    const top = this.topCategories(normalized, opts.topLimit || 3);
-    const leak = this.smallLeakages(normalized, { maxAmount: opts.maxSmallAmount, minCount: opts.minSmallCount });
-    const comparison = this.comparison(normalized);
-    const recurring = this.recurringCandidates(normalized, opts.recurring);
-    const duplicates = this.duplicateDiagnostics(normalized, opts.duplicates);
-    const expenseGroups = this.expenseGroups(normalized, opts.expenseGroups);
-    return { range: normalized, summary, topCategories: top, expenseGroups, smallLeakages: leak, comparison, recurringCandidates: recurring, duplicates, dataQuality: summary.dataQuality };
+    // S1876+ performance hardening: one eligibility scan is shared by all
+    // current-period audit sections. The previous implementation rescanned
+    // D.transactions for summary/top/leak/recurring/duplicates/groups and
+    // then rescanned again through dataQuality/comparison.
+    const eligible = this._eligibleTransactions(normalized);
+    const duplicateOptions = { ...(opts.duplicates || {}), _eligible: eligible };
+    const duplicates = this.duplicateDiagnostics(normalized, duplicateOptions);
+    const dataQuality = this.dataQuality(normalized, { _eligible: eligible, _duplicates: duplicates });
+    const summary = this.summary(normalized, { _eligible: eligible, _dataQuality: dataQuality });
+    const top = this.topCategories(normalized, opts.topLimit || 3, { _eligible: eligible });
+    const leak = this.smallLeakages(normalized, { maxAmount: opts.maxSmallAmount, minCount: opts.minSmallCount, _eligible: eligible });
+    const comparison = this.comparison(normalized, { _eligible: eligible, _summary: summary, _dataQuality: dataQuality });
+    const recurring = this.recurringCandidates(normalized, { ...(opts.recurring || {}), _eligible: eligible });
+    const expenseGroups = this.expenseGroups(normalized, { ...(opts.expenseGroups || {}), _eligible: eligible });
+    return { range: normalized, summary, topCategories: top, expenseGroups, smallLeakages: leak, comparison, recurringCandidates: recurring, duplicates, dataQuality };
   },
 
-  dataQuality(range) {
-    const q = this._eligibleTransactions(range);
+  dataQuality(range, options) {
+    const opts = options || {};
+    const q = opts._eligible || this._eligibleTransactions(range);
     const uncategorizedCount = q.rows.filter(({ tx }) =>
       tx.type === 'expense' && !String(tx.category || '').trim()
     ).length;
-    const duplicates = this.duplicateDiagnostics(range);
+    const duplicates = opts._duplicates || this.duplicateDiagnostics(range, { _eligible: q });
     const warning = [];
     if (q.stats.totalRecords === 0) warning.push('Belum ada transaksi tercatat.');
     if (q.stats.invalidDateCount > 0) warning.push(`${q.stats.invalidDateCount} transaksi memiliki tanggal tidak valid dan tidak dihitung.`);

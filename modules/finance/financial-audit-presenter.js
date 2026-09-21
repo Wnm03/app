@@ -12,16 +12,81 @@ function _financialAuditPct(pct) {
   return `${pct >= 0 ? '+' : ''}${Math.round(Number(pct) * 100)}%`;
 }
 function _financialAuditEscape(v) { return typeof escapeHtml === 'function' ? escapeHtml(String(v == null ? '' : v)) : String(v == null ? '' : v); }
+function _financialAuditNow() { return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now(); }
+function _financialAuditDuration(start) {
+  const ms = Math.max(0, _financialAuditNow() - start);
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  return `${(ms / 1000).toFixed(2).replace('.', ',')} detik`;
+}
 
 const FinancialAuditPresenter = {
   _range() { return typeof FinancialAuditEngine !== 'undefined' ? FinancialAuditEngine.default30Days() : null; },
+
+  // Dashboard Hub Insight — ringkasan ringan dari engine Audit 30 Menit.
+  // Hanya presenter: tidak membuat rumus audit baru dan tidak mengubah data.
+  renderDashboardInsight() {
+    const body = document.getElementById('financialAuditInsightBody');
+    if (!body || typeof FinancialAuditEngine === 'undefined') return;
+    const range = this._range();
+    const settings = typeof FinancialAuditAnnotations !== 'undefined'
+      ? FinancialAuditAnnotations.settings()
+      : { smallLeakMaxAmount: 50000, smallLeakMinCount: 3, recurringMinOccurrences: 2, recurringTolerancePct: 0.05, expenseGroupMap: {} };
+    const auditStartedAt = _financialAuditNow();
+    const audit = FinancialAuditEngine.dashboardInsight(range, {
+      maxSmallAmount: settings.smallLeakMaxAmount,
+      minSmallCount: settings.smallLeakMinCount,
+      recurring: { minOccurrences: settings.recurringMinOccurrences, tolerancePct: settings.recurringTolerancePct },
+      expenseGroups: { categoryMap: settings.expenseGroupMap },
+      duplicates: { maxGroups: 50 },
+    });
+    const auditDuration = _financialAuditDuration(auditStartedAt);
+    const summary = audit.summary || {};
+    const comparison = audit.comparison || {};
+    const top = audit.topCategories && audit.topCategories[0];
+    const leak = audit.smallLeakages || {};
+    const dup = audit.duplicates || {};
+    const quality = audit.dataQuality || { warnings: [] };
+    const money = (n) => _financialAuditEscape(_financialAuditMoney(n));
+    const period = `${_financialAuditEscape(_financialAuditDate(range.from))} – ${_financialAuditEscape(_financialAuditDate(range.to))}`;
+
+    if (!summary.txCount) {
+      body.innerHTML = `<div class="u-hint10">Belum ada transaksi yang memenuhi aturan audit pada ${period}.</div><button class="btn btn-ghost btn-sm u-mt8" data-action="openFinancialAudit30Menit">Buka audit lengkap</button>`;
+      return;
+    }
+
+    let insight = '';
+    if (dup.exactBusinessDuplicateCount || dup.exactIdDuplicateCount) {
+      insight = `⚠️ Terdeteksi ${Number(dup.exactBusinessDuplicateCount || 0) + Number(dup.exactIdDuplicateCount || 0)} duplikasi pasti. Periksa sumber data sebelum memakai hasil audit sebagai dasar tindakan.`;
+    } else if (quality.warnings && quality.warnings.length) {
+      insight = `⚠️ Kualitas data perlu ditinjau: ${_financialAuditEscape(quality.warnings[0])}`;
+    } else if (leak.qualifies) {
+      insight = `🪙 ${leak.count} transaksi kecil berjumlah ${money(leak.total)} memenuhi ambang audit.`;
+    } else if (top) {
+      insight = `🔎 Pengeluaran terbesar: ${_financialAuditEscape(top.category)} ${money(top.amount)} (${Math.round(Number(top.pct || 0) * 100)}%).`;
+    } else {
+      insight = '✅ Tidak ada sinyal audit utama yang perlu ditonjolkan dari periode ini.';
+    }
+
+    const expenseDelta = comparison.expense || {};
+    const deltaText = Number.isFinite(Number(expenseDelta.amount))
+      ? `Pengeluaran ${Number(expenseDelta.amount) > 0 ? 'naik' : Number(expenseDelta.amount) < 0 ? 'turun' : 'tetap'} ${money(Math.abs(Number(expenseDelta.amount)))} vs 30 hari sebelumnya.`
+      : '';
+
+    body.innerHTML = `<div class="card u-mb8" style="border-left:3px solid var(--accent)">
+      <div class="u-flex u-flex-between u-gap8"><div><div class="u-fw700">🔎 Audit Keuangan Cepat · 30 hari terakhir</div><div class="u-hint10">${period} · ${summary.txCount} transaksi · ${auditDuration}</div></div><button class="btn btn-ghost btn-sm" data-action="openFinancialAudit30Menit">Buka</button></div>
+      <div class="u-hint10 u-mt8">${insight}</div>
+      <div class="u-hint10 u-mt4">Pengeluaran ${money(summary.expense)} · Pemasukan ${money(summary.income)}${deltaText ? ` · ${_financialAuditEscape(deltaText)}` : ''}</div>
+    </div>`;
+  },
 
   render() {
     const body = document.getElementById('financialAudit30Body');
     if (!body || typeof FinancialAuditEngine === 'undefined') return;
     const range = this._range();
     const settings = typeof FinancialAuditAnnotations !== 'undefined' ? FinancialAuditAnnotations.settings() : { smallLeakMaxAmount: 50000, smallLeakMinCount: 3, recurringMinOccurrences: 2, recurringTolerancePct: 0.05, expenseGroupMap: {} };
+    const auditStartedAt = _financialAuditNow();
     const audit = FinancialAuditEngine.audit(range, { maxSmallAmount: settings.smallLeakMaxAmount, minSmallCount: settings.smallLeakMinCount, recurring: { minOccurrences: settings.recurringMinOccurrences, tolerancePct: settings.recurringTolerancePct }, expenseGroups: { categoryMap: settings.expenseGroupMap }, duplicates: { maxGroups: 50 } });
+    const auditDuration = _financialAuditDuration(auditStartedAt);
     const plan = typeof FinancialAuditAnnotations !== 'undefined' ? FinancialAuditAnnotations.activePlan() : null;
     const warningHtml = audit.dataQuality.warnings.length
       ? `<div class="u-hint10 u-mb12" style="border-left:3px solid var(--warning);padding-left:10px">⚠️ ${audit.dataQuality.warnings.map(_financialAuditEscape).join('<br>')}</div>`
@@ -55,6 +120,7 @@ const FinancialAuditPresenter = {
     const planHtml = plan ? `<div class="card u-mb12" style="border-left:3px solid var(--accent)"><div class="u-fw700">🎯 Rencana aktif</div><div class="u-hint10">${_financialAuditEscape(plan.title)}${plan.target ? ' · ' + _financialAuditEscape(plan.target) : ''}</div><div class="u-flex u-gap8 u-mt8"><button class="btn btn-ghost btn-sm" data-action="FinancialAuditPresenter.completePlan">Selesai</button></div></div>` : '';
     body.innerHTML = `
       <div class="card u-mb12"><div class="u-hint10">Periode audit</div><div class="u-fw700">${_financialAuditEscape(_financialAuditDate(range.from))} – ${_financialAuditEscape(_financialAuditDate(range.to))}</div>
+        <div class="u-hint10 u-mt4">Waktu audit: ${_financialAuditEscape(auditDuration)}</div>
         <div class="u-mt8">Pengeluaran <b>${_financialAuditEscape(_financialAuditMoney(audit.summary.expense))}</b> dari ${audit.summary.txCount} transaksi yang tercatat dan memenuhi aturan audit.</div>
         <div class="u-hint10 u-mt4">Pemasukan ${_financialAuditEscape(_financialAuditMoney(audit.summary.income))} · Selisih ${_financialAuditEscape(_financialAuditMoney(audit.summary.net))}</div></div>
       ${warningHtml}
@@ -195,7 +261,7 @@ function openFinancialAudit30Menit() {
   let modal = document.getElementById('financialAudit30Modal');
   if (!modal) {
     modal = document.createElement('div'); modal.className = 'overlay'; modal.id = 'financialAudit30Modal'; modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true');
-    modal.innerHTML = `<div class="modal" style="display:flex;flex-direction:column;overflow-y:hidden"><div class="modal-handle" style="flex-shrink:0"></div><div class="modal-title" style="flex-shrink:0"><span>💡 Audit Keuangan 30 Menit</span><button class="modal-close" data-action="closeModal" data-args='["financialAudit30Modal"]' aria-label="Tutup">✕</button></div><div id="financialAudit30Body" style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div></div>`;
+    modal.innerHTML = `<div class="modal" style="display:flex;flex-direction:column;overflow-y:hidden"><div class="modal-handle" style="flex-shrink:0"></div><div class="modal-title" style="flex-shrink:0"><span>💡 Audit Keuangan Cepat</span><button class="modal-close" data-action="closeModal" data-args='["financialAudit30Modal"]' aria-label="Tutup">✕</button></div><div id="financialAudit30Body" style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"></div></div>`;
     document.body.appendChild(modal);
   }
   FinancialAuditPresenter.render();
