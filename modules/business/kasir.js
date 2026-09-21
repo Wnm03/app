@@ -81,7 +81,10 @@ lbl.textContent=cb.checked?'✅ Sudah diserahkan ke pelanggan':'📦 Belum diser
 },
 onSearch(v){
 Kasir.search=(v||'').toLowerCase().trim();
-Kasir.renderGrid();
+if(typeof PWAUX!=='undefined'&&PWAUX.debounce){
+  if(!Kasir._debouncedRenderGrid)Kasir._debouncedRenderGrid=PWAUX.debounce(function(){Kasir.renderGrid();},140);
+  Kasir._debouncedRenderGrid();
+}else Kasir.renderGrid();
 },
 setPriceType(type,el){
 Kasir.priceType=type;
