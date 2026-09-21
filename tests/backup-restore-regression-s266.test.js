@@ -150,7 +150,7 @@ test('runBackup() (Backup Custom) — semua domain utama ikut saat semua modul d
   class BlobStub { constructor(parts, opts) { capturedBlob = { parts, type: opts && opts.type }; } }
   const documentStub = {
     getElementById: (id) => (id in elValues ? { value: elValues[id] } : stubEl()),
-    createElement: () => ({ set href(v) {}, get href() { return ''; }, set download(v) {}, click() {} }),
+    createElement: () => ({ set href(v) {}, get href() { return ''; }, set download(v) {}, click() {}, remove() {}, parentNode: { removeChild() {} } }),
   };
   const ctx2 = loadSource([FILE], Object.assign(baseGlobals(D).globals, {
     document: documentStub, Blob: BlobStub, URL: { createObjectURL: () => 'blob:x' },
@@ -187,7 +187,7 @@ test('runBackup() — modul yang di-nonaktifkan tidak ikut ke payload (per-modul
   class BlobStub { constructor(parts, opts) { capturedBlob = { parts, type: opts && opts.type }; } }
   const documentStub = {
     getElementById: (id) => (id in elValues ? { value: elValues[id] } : stubEl()),
-    createElement: () => ({ set href(v) {}, get href() { return ''; }, set download(v) {}, click() {} }),
+    createElement: () => ({ set href(v) {}, get href() { return ''; }, set download(v) {}, click() {}, remove() {}, parentNode: { removeChild() {} } }),
   };
   const ctx2 = loadSource([FILE], Object.assign(baseGlobals(D).globals, {
     document: documentStub, Blob: BlobStub, URL: { createObjectURL: () => 'blob:x' },

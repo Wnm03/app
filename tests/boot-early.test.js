@@ -198,14 +198,15 @@ test('window.__showRuntimeErrorBanner(msg): banner cuma tampil SEKALI walau dipa
   assert.match(bodyAppended[0].textContent, /error pertama/);
 });
 
-test("listener window 'error' global -> log console.error & panggil __showRuntimeErrorBanner dgn pesan+lokasi", () => {
+test("listener window 'error' global -> log lokasi lengkap ke console, banner tetap tersanitasi", () => {
   const { listeners, consoleErrors, bodyAppended } = loadBootEarly();
   assert.equal(typeof listeners.error, 'function', "listener 'error' harus ter-register");
   listeners.error({ message: 'Boom meledak', filename: 'app-bootstrap.js', lineno: 42, error: new Error('x') });
   assert.equal(consoleErrors.length, 1);
   assert.equal(bodyAppended.length, 1);
   assert.match(bodyAppended[0].textContent, /Boom meledak/);
-  assert.match(bodyAppended[0].textContent, /app-bootstrap\.js:42/);
+  assert.doesNotMatch(bodyAppended[0].textContent, /app-bootstrap\.js:42/);
+  assert.match(consoleErrors[0][1], /app-bootstrap\.js:42/);
 });
 
 test("listener window 'unhandledrejection' -> log console.error & panggil __showRuntimeErrorBanner dgn pesan reject", () => {
