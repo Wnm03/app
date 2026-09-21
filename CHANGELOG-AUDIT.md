@@ -1,5 +1,17 @@
 # CHANGELOG-AUDIT.md — Log implementasi hasil audit ke dokumentasi
 
+## 2026-09-21 — S1879: PWA UI Structural Redesign + Cumulative Audit Closeout
+
+- **UI redesign:** menambahkan `pwa-ui-layer.css` sebagai presentation layer struktural, bukan sekadar theme: mobile single-column + bottom navigation, desktop/tablet sidebar dari nav yang sama, dashboard metric/action grid, touch-target hardening, modal/list/form density, dan pengurangan backdrop blur untuk PWA ringan. Tidak menambah framework/dependency dan tidak mengubah business logic/IndexedDB/data-action hooks.
+- **PWA offline:** `pwa-ui-layer.css` masuk `sw.js` precache; standalone preview dan performance budget ikut diperbarui.
+- **Retired artifact:** `pro-ui-layer.css` dihapus kembali karena kontrak `DELETE-FILES.txt`/rollback test mewajibkan file tersebut tidak ada.
+- **Release version:** `node scripts/build.js` berhasil; version/cache/query dibump dari 1878 → 1879, HTML mirror sinkron, bundle syntax valid, FILE-MAP/COVERAGE diregenerasi. Bundle tetap unminified karena `esbuild` belum tersedia.
+- **Regression:** full test runner menggunakan 32 shard menghasilkan **7202/7202 PASS**, 0 fail/cancelled/skipped/todo. Integrity gates SOT, architecture, persistence, PWA recovery, feature regression, patch integrity/contamination, window expose, dan performance budget PASS.
+- **Release blockers yang masih environment/toolchain, bukan bug runtime:** `eslint` tidak terpasang; `esbuild` tidak terpasang sehingga bundle belum minified. `verify-release-hardening.js` juga menandai `app-bundle-b.min.js` melewati fixed release budget dalam kondisi unminified; minifikasi release wajib diselesaikan sebelum APK/production ZIP final.
+- **Cumulative rule:** patch sebelumnya dipertahankan; patch baru harus diterapkan di atas baseline kumulatif, tidak mengganti atau menghapus perbaikan terdahulu.
+
+---
+
 ## 2026-09-20 — Sesi Audit Kumulatif: SA-F → SA-I follow-up
 
 - **Baseline:** `app-main (7)` + `PATCH-AKUMULASI-SEMUA-PERBAIKAN-APP-MAIN-7-SA-H.zip`. Patch lama dipertahankan dan diterapkan lebih dulu.
@@ -567,3 +579,11 @@ lama yang dihapus.
 - Memperbaiki adapter Vehicle Model SOT agar membaca API produksi `DatabaseAPI.vehicleModel.getAll()` sebelum fallback lama, sehingga resolusi model dapat dipakai oleh template engine.
 - Targeted S1868: 4/4 PASS untuk engine + production-shape model registry; regression S1863–S1867 dan parser/import PDF tetap PASS.
 - Build `s1868-dynamic-vehicle-maintenance-template-1871` PASS; bundle syntax PASS. `esbuild` tidak tersedia sehingga bundle belum diminify.
+
+## S1880 — PWA UI + Residual Release/Regression Hardening (2026-09-21)
+- Menutup regression yang ditemukan saat full-suite pasca UI redesign: `tests/dashboard-slim-performance-regression.test.js` masih mengunci marker lama `v1878`, sementara runtime sudah konsisten pada `?v=1879` / `kw-cache-v1879`. Marker inline `dashboard-slim-v1878` pada `index.html` dan `app_production.html` disinkronkan menjadi `dashboard-slim-v1879`.
+- Menambahkan `tests/pwa-ui-responsive-contract.test.js` untuk mengunci kontrak structural UI: breakpoint mobile/desktop, touch target, safe-area, dependency-free CSS, link/precache PWA UI layer, preservation of existing `data-action`, dan retired Pro UI absence.
+- Full regression setelah perbaikan: **7206/7206 PASS**, 0 fail/cancelled/skipped/todo.
+- Structural/runtime release firewall: **10/10 PASS**. SOT, architecture, persistence, PWA recovery, feature regression, patch integrity/contamination, version, bundle freshness, runtime/listener lifecycle, reproducible build: PASS.
+- Browser visual smoke-test tidak dapat dieksekusi di sandbox karena navigation Chromium ke `localhost`/`file://` diblokir oleh environment (`ERR_BLOCKED_BY_ADMINISTRATOR`); status visual browser tetap VERIFICATION-REQUIRED, bukan diasumsikan PASS.
+- ESLint dan esbuild tetap unavailable di environment; production release gate tetap BLOCKED sampai toolchain tersedia atau ada release override yang terdokumentasi.
