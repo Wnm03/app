@@ -428,7 +428,11 @@ window._modalEpoch=(window._modalEpoch||0)+1;
 // terhitung sebagai "modal lain yang masih terbuka".
 const _stacked=!!document.querySelector('.overlay.open');
 const _modalInner=(typeof el.querySelector==='function')?el.querySelector('.modal'):null;
-if(_modalInner)_modalInner.classList.toggle('no-anim',_stacked);
+if(_modalInner){
+  _modalInner.classList.toggle('no-anim',_stacked);
+  if(typeof PWAUX!=='undefined'&&PWAUX&&typeof PWAUX.resetOverlayGeometry==='function')PWAUX.resetOverlayGeometry(el);
+  else{_modalInner.style.transform='';_modalInner.style.transition='';}
+}
 el.classList.remove('closing');
 el.classList.add('open');
 // FIX (audit opacity-stuck-0, laporan user "vehicleModal keluar tapi opacity 0
@@ -609,6 +613,8 @@ if(_swipeDismissCleanupByHandle){
 function openQS(id){
 _dialogSelfHeal();
 const el=document.getElementById(id);
+if(typeof PWAUX!=='undefined'&&PWAUX&&typeof PWAUX.resetOverlayGeometry==='function')PWAUX.resetOverlayGeometry(el);
+else{const sheet=el&&el.querySelector?el.querySelector('.qs-modal'):null;if(sheet){sheet.style.transform='';sheet.style.transition='';}}
 el.classList.add('open');
 void el.offsetWidth; // FIX opacity-stuck-0: pola sama persis openModal(), lihat komentar lengkap di sana
 _syncNavVisibilityForModals();
