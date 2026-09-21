@@ -66,6 +66,7 @@ document.getElementById('pajakTab-zakat').classList.toggle('u-dnone', tab!=='zak
 document.getElementById('pajakTab-zakat').style.display='';
 document.getElementById('pajakTab-pajak').classList.toggle('u-dnone', tab!=='pajak');
 document.getElementById('pajakTab-pajak').style.display='';
+if(typeof PWAUX!=='undefined'&&PWAUX.markRendered)PWAUX.markRendered(document.getElementById('pajakTab-'+tab));
 }
 // 2026-07-17 (bagian ke-4): split tab 🧾 Pajak (PPh 21) (dalam page-pajak)
 // jadi 2 sub-tab (PPh 21 / PBB & UMKM) — pola SAMA PERSIS dgn

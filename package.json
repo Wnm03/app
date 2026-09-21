@@ -42,7 +42,8 @@
     "audit:patch-contamination": "node scripts/verify-patch-contamination.js",
     "verify:reproducible-build": "node scripts/verify-reproducible-build.js",
     "audit:app-wide": "node scripts/s1860-app-wide-hardening-gate.js",
-    "audit:performance-budget": "node scripts/performance-budget.js"
+    "audit:performance-budget": "node scripts/performance-budget.js",
+    "release:ui-gate": "node scripts/release-ui-gate.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

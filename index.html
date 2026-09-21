@@ -55,7 +55,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=1880"
+      -> `<script src="modules/shared/modal-write.js?v=1884"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -67,7 +67,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=1880`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=1884`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -180,17 +180,17 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=1880">
-<link rel="stylesheet" href="modern-ui-layer.css?v=1880">
-<link rel="stylesheet" href="minimal-ui-theme.css?v=1880">
-<link rel="stylesheet" href="pwa-ui-layer.css?v=1880">
-<script src="nav-scroll.js?v=1880" defer></script>
-<script src="modules/shared/boot-early.js?v=1880"></script>
+<link rel="stylesheet" href="styles.css?v=1884">
+<link rel="stylesheet" href="modern-ui-layer.css?v=1884">
+<link rel="stylesheet" href="minimal-ui-theme.css?v=1884">
+<link rel="stylesheet" href="pwa-ui-layer.css?v=1884">
+<script src="nav-scroll.js?v=1884" defer></script>
+<script src="modules/shared/boot-early.js?v=1884"></script>
 
 
 
-<script src="modules/shared/bundle-load-guard.js?v=1880" data-guard-src="app-bundle-a.min.js?v=1880" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=1880" defer></script>
+<script src="modules/shared/bundle-load-guard.js?v=1884" data-guard-src="app-bundle-a.min.js?v=1884" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=1884" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 
 <style id="dashboard-slim-v1879">
@@ -1188,14 +1188,16 @@
 <div class="page" id="page-shop">
   <div class="page-settings-btn">
     <div class="page-title">🪨 Bisnis Shop</div>
+  <div class="pwa-domain-page pwa-domain-shop">
     <button class="qs-btn" data-action="openQS" data-args='["qsShop"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Atur</button>
   </div>
+  <section class="pwa-domain-hero" aria-labelledby="shopDomainTitle"><div class="pwa-domain-hero-main"><div class="pwa-domain-eyebrow">SHOP · OPERASIONAL TOKO</div><h1 id="shopDomainTitle">Kelola penjualan, stok, pelanggan, dan laporan.</h1><p>Satu workspace untuk kasir, etalase, supplier, pelanggan, dan analitik—tetap memakai data lokal aplikasi.</p><div class="pwa-domain-status-row"><span class="pwa-status-pill" data-pwa-status>Online • tersimpan lokal</span><span class="pwa-status-pill">Offline ready</span></div></div><div class="pwa-domain-hero-actions"><button class="pwa-action-card pwa-action-primary" type="button" data-action="shopFabOpenOrder"><span>🛒</span><b>Transaksi baru</b><small>Mulai kasir</small></button><button class="pwa-action-card" type="button" data-action="shopFabOpenProduct"><span>📦</span><b>Tambah produk</b><small>Kelola stok</small></button><button class="pwa-action-card" type="button" data-action="exportShopSemuaXLSX"><span>📊</span><b>Export data</b><small>Excel Shop</small></button></div></section>
     <div class="card u-mb12 u-dnone" id="shopInsightCard">
       <div class="card-title">💡 Insight Shop</div>
       <div id="shopInsightBody"></div>
     </div>
 
-  <div class="shop-grid">
+  <div class="shop-grid pwa-domain-kpis">
     <div class="shop-stat clickable" data-action="goToList" data-args='["shopList", null, null, "riwayat"]'><div class="shop-val" id="cTrip">0</div><div class="shop-lbl">Transaksi</div></div>
     <div class="shop-stat clickable" data-action="goToList" data-args='["shopList", null, null, "riwayat"]'><div class="shop-val u-fs14" id="cSet">Rp 0</div><div class="shop-lbl">Omzet</div></div>
     <div class="shop-stat clickable" data-action="goToList" data-args='["shopList", null, null, "riwayat"]'><div class="shop-val u-fs14" id="cUntung">Rp 0</div><div class="shop-lbl">Total Untung</div></div>
@@ -1246,53 +1248,7 @@
 
   <!-- KASIR AI (baru, v127; redesign tampilan profesional di v196, kw196-kasir-pro-redesign) -->
   <div id="shopTab-kasir" class="kasir-wrap">
-    <div class="kasir-toolbar">
-      <div class="search-wrap u-mb10">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-        <input class="fi" id="kasirSearch" style="padding-left:38px" placeholder="Cari produk..." data-oninput="Kasir.onSearch" data-oninput-args='["$value"]' autocomplete="off">
-      </div>
-      <div class="u-flex u-gap8" style="align-items:center">
-        <div class="u-flex u-gap8 u-flex1" id="kasirPriceToggle">
-          <button type="button" class="chip-btn active u-flex1" data-action="Kasir.setPriceType" data-args='["jual", "$el"]'>Harga Jual</button>
-          <button type="button" class="chip-btn u-flex1" data-action="Kasir.setPriceType" data-args='["reseller", "$el"]'>Harga Reseller</button>
-        </div>
-        <div class="u-flex u-gap6 kasir-view-toggle" id="kasirViewToggle">
-          <button type="button" class="chip-btn active" data-view="grid" data-action="Kasir.setViewMode" data-args='["grid", "$el"]' title="Tampilan grid" aria-label="Tampilan grid">▦</button>
-          <button type="button" class="chip-btn" data-view="list" data-action="Kasir.setViewMode" data-args='["list", "$el"]' title="Tampilan list ringkas" aria-label="Tampilan list ringkas">☰</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="kasir-kat-chips" id="kasirKategoriChips" style="display:none"></div>
-
-    <div class="kasir-grid" id="kasirGrid"></div>
-
-    <div class="card u-mt12" id="kasirAiCard" style="display:none">
-      <div class="card-title">🤖 Saran AI Kasir</div>
-      <div id="kasirAiBody"></div>
-    </div>
-
-    <div class="kasir-cart-card u-mt12" id="kasirCheckoutSection">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">🛒 Keranjang <button type="button" class="card-setting-btn" data-action="Kasir.aiSuggest">🤖 Saran AI</button></div>
-      <div id="kasirCartList" class="u-mb10"></div>
-
-      <div class="kasir-cart-fields">
-        <div class="u-grid2">
-          <div class="fg"><label class="fl">Diskon (Rp)</label><input type="number" class="fi" id="kasirDiskon" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div>
-          <div class="fg"><label class="fl">Ongkos Kirim (Rp)</label><input type="number" class="fi" id="kasirOngkir" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div>
-        </div>
-        <div class="fg"><label class="fl">Nama Pembeli (opsional)</label><input type="text" class="fi" id="kasirCustName" placeholder="Bu Rina" autocomplete="off"></div>
-        <div class="fg"><label class="fl">No. HP (opsional)</label><input type="text" class="fi" id="kasirCustPhone" placeholder="08xx" autocomplete="off"></div>
-        <!-- kw-kasir-audit-1: Alamat opsional — dulu Kasir selalu kirim address:'' kosong ke recordShopSale(), beda dari Order yang punya field ini (oCustAddr). Additive, tidak mengubah recordShopSale(). -->
-        <div class="fg"><label class="fl">Alamat (opsional)</label><input type="text" class="fi" id="kasirCustAddr" placeholder="Alamat kirim" autocomplete="off"></div>
-        <div class="fg"><label class="fl">Uang Masuk ke Akun</label><select class="fs" id="kasirAcc" data-onchange="Kasir.onAccSelectChange"></select></div>
-        <!-- kw-kasir-audit-2: Toggle "sudah diserahkan" — dulu Kasir selalu hardcode delivered:true. Sama pola dgn oDelivered di orderModal. -->
-        <div class="setting-item" style="padding:10px 0">
-          <div id="kasirDeliveredLbl" style="font-size:12px;font-weight:600">✅ Sudah diserahkan ke pelanggan</div>
-          <label class="tgl-switch"><input type="checkbox" id="kasirDelivered" checked data-onchange="toggleKasirDeliveredField"><span class="tgl-track"></span></label>
-        </div>
-        <!-- kw-kasir-audit-3: DP/Uang Diterima — dulu Kasir selalu dianggap lunas penuh, beda dari Order (oDP) yang sisa Total-DP-nya otomatis tercatat sbg Piutang. -->
-        <div class="fg"><label class="fl">Uang Diterima / DP (Rp) <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(opsional, kosongkan kalau lunas penuh)</span></label><input type="number" class="fi" id="kasirDP" placeholder="Kosongkan = lunas penuh" inputmode="numeric"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kalau diisi lebih kecil dari Total Tagihan, sisanya otomatis tercatat sbg Piutang.</div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Kasir AI</h2><p>Transaksi cepat dengan pencarian produk, keranjang, dan pembayaran.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="kasir-toolbar"><div class="search-wrap u-mb10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--text3)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="fi" id="kasirSearch" style="padding-left:38px" placeholder="Cari produk..." data-oninput="Kasir.onSearch" data-oninput-args='["$value"]' autocomplete="off"></div><div class="u-flex u-gap8" style="align-items:center"><div class="u-flex u-gap8 u-flex1" id="kasirPriceToggle"><button type="button" class="chip-btn active u-flex1" data-action="Kasir.setPriceType" data-args='["jual", "$el"]'>Harga Jual</button><button type="button" class="chip-btn u-flex1" data-action="Kasir.setPriceType" data-args='["reseller", "$el"]'>Harga Reseller</button></div><div class="u-flex u-gap6 kasir-view-toggle" id="kasirViewToggle"><button type="button" class="chip-btn active" data-view="grid" data-action="Kasir.setViewMode" data-args='["grid", "$el"]' title="Tampilan grid" aria-label="Tampilan grid">▦</button><button type="button" class="chip-btn" data-view="list" data-action="Kasir.setViewMode" data-args='["list", "$el"]' title="Tampilan list ringkas" aria-label="Tampilan list ringkas">☰</button></div></div></div><div class="kasir-kat-chips" id="kasirKategoriChips" style="display:none"></div><div class="kasir-grid" id="kasirGrid"></div><div class="card u-mt12" id="kasirAiCard" style="display:none"><div class="card-title">🤖 Saran AI Kasir</div><div id="kasirAiBody"></div></div><div class="kasir-cart-card u-mt12" id="kasirCheckoutSection"><div class="card-title" style="display:flex;justify-content:space-between;align-items:center">🛒 Keranjang <button type="button" class="card-setting-btn" data-action="Kasir.aiSuggest">🤖 Saran AI</button></div><div id="kasirCartList" class="u-mb10"></div><div class="kasir-cart-fields"><div class="u-grid2"><div class="fg"><label class="fl">Diskon (Rp)</label><input type="number" class="fi" id="kasirDiskon" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div><div class="fg"><label class="fl">Ongkos Kirim (Rp)</label><input type="number" class="fi" id="kasirOngkir" placeholder="0" inputmode="numeric" data-oninput="Kasir.renderCart"></div></div><div class="fg"><label class="fl">Nama Pembeli (opsional)</label><input type="text" class="fi" id="kasirCustName" placeholder="Bu Rina" autocomplete="off"></div><div class="fg"><label class="fl">No. HP (opsional)</label><input type="text" class="fi" id="kasirCustPhone" placeholder="08xx" autocomplete="off"></div><!-- kw-kasir-audit-1: Alamat opsional — dulu Kasir selalu kirim address:'' kosong ke recordShopSale(), beda dari Order yang punya field ini (oCustAddr). Additive, tidak mengubah recordShopSale(). --><div class="fg"><label class="fl">Alamat (opsional)</label><input type="text" class="fi" id="kasirCustAddr" placeholder="Alamat kirim" autocomplete="off"></div><div class="fg"><label class="fl">Uang Masuk ke Akun</label><select class="fs" id="kasirAcc" data-onchange="Kasir.onAccSelectChange"></select></div><!-- kw-kasir-audit-2: Toggle "sudah diserahkan" — dulu Kasir selalu hardcode delivered:true. Sama pola dgn oDelivered di orderModal. --><div class="setting-item" style="padding:10px 0"><div id="kasirDeliveredLbl" style="font-size:12px;font-weight:600">✅ Sudah diserahkan ke pelanggan</div><label class="tgl-switch"><input type="checkbox" id="kasirDelivered" checked data-onchange="toggleKasirDeliveredField"><span class="tgl-track"></span></label></div><!-- kw-kasir-audit-3: DP/Uang Diterima — dulu Kasir selalu dianggap lunas penuh, beda dari Order (oDP) yang sisa Total-DP-nya otomatis tercatat sbg Piutang. --><div class="fg"><label class="fl">Uang Diterima / DP (Rp) <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(opsional, kosongkan kalau lunas penuh)</span></label><input type="number" class="fi" id="kasirDP" placeholder="Kosongkan = lunas penuh" inputmode="numeric"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kalau diisi lebih kecil dari Total Tagihan, sisanya otomatis tercatat sbg Piutang.</div></div>
         <div class="fg u-mb0"><label class="fl">Catatan (opsional)</label><input type="text" class="fi" id="kasirNote" placeholder="Catatan tambahan..."></div>
       </div>
 
@@ -1324,52 +1280,12 @@
 
   <!-- TRANSAKSI / JUAL (manual, cara lama — tetap ada sbg fallback) -->
   <div id="shopTab-jual" class="u-dnone">
-    <button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openOrderModal" aria-label="Edit/Buka">+ Transaksi Baru</button>
-    <div class="card"><div class="card-title">⚡ Transaksi Terakhir</div><div id="shopRecentList"><div class="empty"><div class="empty-icon">🪨</div><div class="empty-text">Belum ada transaksi</div></div></div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Transaksi Manual</h2><p>Fallback transaksi dengan alur input yang sederhana.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openOrderModal" aria-label="Edit/Buka">+ Transaksi Baru</button><div class="card"><div class="card-title">⚡ Transaksi Terakhir</div><div id="shopRecentList"><div class="empty"><div class="empty-icon">🪨</div><div class="empty-text">Belum ada transaksi</div></div></div></div>
   </div>
 
   <!-- ETALASE -->
   <div id="shopTab-etalase" class="u-dnone">
-    <button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openProductModal" aria-label="Edit/Buka">+ Tambah Produk</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportKatalogModal">📋 Import Katalog & Harga</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="exportShopEtalaseXLSX">📤 Export Excel (Etalase)</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportShopExcelModal" data-args='["etalase"]'>📥 Import Excel (Etalase)</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openShopCsvImportModal">📊 Import CSV</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="ShopPdfImportUI.open">📄 Import PDF (Supplier)</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="ShopScanUI.scanCamera">📷 Scan Nota/Struk Supplier</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openShopJsonModal">🗂️ Import/Export JSON (Shop)</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="Etalase.openMergeModal">🔗 Gabungkan Harga Produk</button>
-    <div class="u-fs12 u-t2 u-mb8">💡 Stok juga otomatis bertambah kalau kamu catat pengeluaran kategori "Bisnis" sub "Shop" di tab Keuangan — 2 arah, tetap sinkron.</div>
-    <div class="card" id="priceRekoWidgetCard" style="display:none">
-      <div class="card-title">🤖 Rekomendasi Harga Jual AI <span class="card-collapse-toggle" id="priceRekoWidgetCard-chev" data-action="toggleCardCollapse" data-args='["priceRekoWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-      <div class="card-collapse-body" id="priceRekoWidgetCard-cbody">
-        <div class="u-fs12 u-t2 u-mb8">Estimasi cepat & gratis (rule-based, dari margin rata-rata produk sekategori + biaya transport BBM) — bukan hasil AI+web search. Tap 🔍 di produk yang ditandai buat verifikasi ke harga pasar sungguhan via AI.</div>
-        <div class="u-fs12 u-t2 u-mb6">🧮 Atau hitung ulang Harga Jual SEMUA produk sekaligus (bukan cuma yang ditandai) pakai Harga Beli masing-masing + Transport & Target Margin di bawah ini:</div>
-        <div class="u-grid2 u-mb8">
-          <div class="fg u-mb0"><label class="fl">Transport (Rp)</label><input type="number" class="fi" id="priceRekoBulkTransport" placeholder="0" inputmode="numeric"></div>
-          <div class="fg u-mb0"><label class="fl">Target Margin (%)</label><input type="number" class="fi" id="priceRekoBulkMargin" placeholder="50" inputmode="numeric"></div>
-        </div>
-        <button class="btn btn-primary btn-full btn-sm u-mb8" id="priceRekoWidgetApplyAll" data-action="PriceRekoWidget.applyBulk" aria-label="Terapkan ke Semua Produk">🧮 Terapkan ke Semua Produk (<span id="priceRekoWidgetCount">0</span>)</button>
-        <div id="priceRekoWidgetList"></div>
-      </div>
-    </div>
-    <div class="card" id="stockRekoWidgetCard" style="display:none">
-      <div class="card-title">📦 Rekomendasi Restock AI <span class="card-collapse-toggle" id="stockRekoWidgetCard-chev" data-action="toggleCardCollapse" data-args='["stockRekoWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-      <div class="card-collapse-body" id="stockRekoWidgetCard-cbody">
-        <div class="u-fs12 u-t2 u-mb8">Estimasi cepat & gratis (rule-based, dari kecepatan jual histori Penjualan Shop) — produk yang stoknya diperkirakan habis dalam ≤14 hari ditandai di sini, lengkap saran jumlah tambahan.</div>
-        <button class="btn btn-ghost btn-full btn-sm u-mb8 u-dnone" id="stockRekoWidgetApplyAll" data-action="StockRekoWidget.applyAll" aria-label="Tambah Semua Stok">➕ Tambah Semua Stok (<span id="stockRekoWidgetCount">0</span>)</button>
-        <div id="stockRekoWidgetList"></div>
-      </div>
-    </div>
-    <div class="card" id="weightBulkWidgetCard" style="display:none">
-      <div class="card-title">⚖️ Isi Berat Massal <span class="card-collapse-toggle" id="weightBulkWidgetCard-chev" data-action="toggleCardCollapse" data-args='["weightBulkWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-      <div class="card-collapse-body" id="weightBulkWidgetCard-cbody">
-        <div class="u-fs12 u-t2 u-mb8">Produk yang berat per unit-nya belum diisi (Etalase) — isi angkanya per baris (kg) lalu tap ✅ satu-satu, atau isi beberapa baris sekaligus lalu tap "Simpan Semua" di bawah. Boleh dicicil, tidak perlu isi semuanya sekaligus.</div>
-        <button class="btn btn-primary btn-full btn-sm u-mb8" id="weightBulkWidgetApplyAll" data-action="WeightBulkWidget.applyBulk" aria-label="Simpan Semua Berat">⚖️ Simpan Semua yang Sudah Diisi (<span id="weightBulkWidgetCount">0</span> produk)</button>
-        <div id="weightBulkWidgetList"></div>
-      </div>
-    </div>
-    <div class="card"><div class="card-title">📦 Etalase Produk</div><div id="productList" class="shop-product-grid"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div></div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Etalase Produk</h2><p>Produk, kategori, harga, stok, import, dan rekomendasi.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openProductModal" aria-label="Edit/Buka">+ Tambah Produk</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportKatalogModal">📋 Import Katalog & Harga</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="exportShopEtalaseXLSX">📤 Export Excel (Etalase)</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportShopExcelModal" data-args='["etalase"]'>📥 Import Excel (Etalase)</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openShopCsvImportModal">📊 Import CSV</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="ShopPdfImportUI.open">📄 Import PDF (Supplier)</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="ShopScanUI.scanCamera">📷 Scan Nota/Struk Supplier</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openShopJsonModal">🗂️ Import/Export JSON (Shop)</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="Etalase.openMergeModal">🔗 Gabungkan Harga Produk</button><div class="u-fs12 u-t2 u-mb8">💡 Stok juga otomatis bertambah kalau kamu catat pengeluaran kategori "Bisnis" sub "Shop" di tab Keuangan — 2 arah, tetap sinkron.</div><div class="card" id="priceRekoWidgetCard" style="display:none"><div class="card-title">🤖 Rekomendasi Harga Jual AI <span class="card-collapse-toggle" id="priceRekoWidgetCard-chev" data-action="toggleCardCollapse" data-args='["priceRekoWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="priceRekoWidgetCard-cbody"><div class="u-fs12 u-t2 u-mb8">Estimasi cepat & gratis (rule-based, dari margin rata-rata produk sekategori + biaya transport BBM) — bukan hasil AI+web search. Tap 🔍 di produk yang ditandai buat verifikasi ke harga pasar sungguhan via AI.</div><div class="u-fs12 u-t2 u-mb6">🧮 Atau hitung ulang Harga Jual SEMUA produk sekaligus (bukan cuma yang ditandai) pakai Harga Beli masing-masing + Transport & Target Margin di bawah ini:</div><div class="u-grid2 u-mb8"><div class="fg u-mb0"><label class="fl">Transport (Rp)</label><input type="number" class="fi" id="priceRekoBulkTransport" placeholder="0" inputmode="numeric"></div><div class="fg u-mb0"><label class="fl">Target Margin (%)</label><input type="number" class="fi" id="priceRekoBulkMargin" placeholder="50" inputmode="numeric"></div></div><button class="btn btn-primary btn-full btn-sm u-mb8" id="priceRekoWidgetApplyAll" data-action="PriceRekoWidget.applyBulk" aria-label="Terapkan ke Semua Produk">🧮 Terapkan ke Semua Produk (<span id="priceRekoWidgetCount">0</span>)</button><div id="priceRekoWidgetList"></div></div></div><div class="card" id="stockRekoWidgetCard" style="display:none"><div class="card-title">📦 Rekomendasi Restock AI <span class="card-collapse-toggle" id="stockRekoWidgetCard-chev" data-action="toggleCardCollapse" data-args='["stockRekoWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="stockRekoWidgetCard-cbody"><div class="u-fs12 u-t2 u-mb8">Estimasi cepat & gratis (rule-based, dari kecepatan jual histori Penjualan Shop) — produk yang stoknya diperkirakan habis dalam ≤14 hari ditandai di sini, lengkap saran jumlah tambahan.</div><button class="btn btn-ghost btn-full btn-sm u-mb8 u-dnone" id="stockRekoWidgetApplyAll" data-action="StockRekoWidget.applyAll" aria-label="Tambah Semua Stok">➕ Tambah Semua Stok (<span id="stockRekoWidgetCount">0</span>)</button><div id="stockRekoWidgetList"></div></div></div><div class="card" id="weightBulkWidgetCard" style="display:none"><div class="card-title">⚖️ Isi Berat Massal <span class="card-collapse-toggle" id="weightBulkWidgetCard-chev" data-action="toggleCardCollapse" data-args='["weightBulkWidgetCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="weightBulkWidgetCard-cbody"><div class="u-fs12 u-t2 u-mb8">Produk yang berat per unit-nya belum diisi (Etalase) — isi angkanya per baris (kg) lalu tap ✅ satu-satu, atau isi beberapa baris sekaligus lalu tap "Simpan Semua" di bawah. Boleh dicicil, tidak perlu isi semuanya sekaligus.</div><button class="btn btn-primary btn-full btn-sm u-mb8" id="weightBulkWidgetApplyAll" data-action="WeightBulkWidget.applyBulk" aria-label="Simpan Semua Berat">⚖️ Simpan Semua yang Sudah Diisi (<span id="weightBulkWidgetCount">0</span> produk)</button><div id="weightBulkWidgetList"></div></div></div><div class="card"><div class="card-title">📦 Etalase Produk</div><div id="productList" class="shop-product-grid" data-pwa-large-list-target data-pwa-large-list-threshold="120"><div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div></div></div>
     <div class="card">
       <div class="card-title">🏷️ Kategori Produk</div>
       <div class="u-fs12 u-t2 u-mb8">Kategori dipakai buat menandai produk di Etalase & filter Rekomendasi Harga. Hapus kategori tidak menghapus produknya, cuma mengosongkan tag kategori di produk terkait.</div>
@@ -1384,95 +1300,17 @@
 
   <!-- PRODUSEN -->
   <div id="shopTab-produsen" class="u-dnone">
-    <button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openProdusenModal" aria-label="Edit/Buka">+ Tambah Produsen</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="exportShopProdusenXLSX">📤 Export Excel (Produsen)</button>
-    <button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportShopExcelModal" data-args='["produsen"]'>📥 Import Excel (Produsen)</button>
-    <div class="u-fs12 u-t2 u-mb8">💡 Harga beli tiap produsen bisa beda-beda untuk produk yang sama. Atur harga per produsen lewat tombol "💰 Atur Harga".</div>
-    <div class="card"><div class="card-title">🏭 Daftar Produsen / Supplier</div><div id="produsenList"><div class="empty"><div class="empty-icon">🏭</div><div class="empty-text">Belum ada produsen</div></div></div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Produsen & Supplier</h2><p>Kelola sumber pembelian dan harga per supplier.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><button class="btn btn-primary btn-full" style="padding:14px;margin:12px 0" data-action="openProdusenModal" aria-label="Edit/Buka">+ Tambah Produsen</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="exportShopProdusenXLSX">📤 Export Excel (Produsen)</button><button class="btn btn-ghost btn-full btn-sm u-mb8" data-action="openImportShopExcelModal" data-args='["produsen"]'>📥 Import Excel (Produsen)</button><div class="u-fs12 u-t2 u-mb8">💡 Harga beli tiap produsen bisa beda-beda untuk produk yang sama. Atur harga per produsen lewat tombol "💰 Atur Harga".</div><div class="card"><div class="card-title">🏭 Daftar Produsen / Supplier</div><div id="produsenList" data-pwa-large-list-target data-pwa-large-list-threshold="120"><div class="empty"><div class="empty-icon">🏭</div><div class="empty-text">Belum ada produsen</div></div></div></div>
   </div>
 
   <!-- RIWAYAT -->
   <div id="shopTab-riwayat" class="u-dnone">
-    <div class="filter-scroll u-mt12" id="shopPeriodeChips">
-      <button class="chip-btn" data-action="setShopPeriode" data-args='["hari", "$el"]'>Harian</button>
-      <button class="chip-btn" data-action="setShopPeriode" data-args='["minggu", "$el"]'>Mingguan</button>
-      <button class="chip-btn" data-action="setShopPeriode" data-args='["bulan", "$el"]'>Bulanan</button>
-      <button class="chip-btn" data-action="setShopPeriode" data-args='["tahun", "$el"]'>Tahunan</button>
-      <button class="chip-btn active" data-action="setShopPeriode" data-args='["selamanya", "$el"]'>Selamanya</button>
-      <button class="chip-btn" data-action="setShopPeriode" data-args='["custom", "$el"]'>Custom</button>
-    </div>
-    <div class="u-dnone u-mb10" id="shopCustomRange">
-      <div class="u-grid2">
-        <div><label class="fl">Dari</label><input type="date" class="fi" id="shopFrom" data-onchange="renderShop"></div>
-        <div><label class="fl">Sampai</label><input type="date" class="fi" id="shopTo" data-onchange="renderShop"></div>
-      </div>
-    </div>
-    <div class="card u-mt12">
-      <div class="card-title">📈 Tren Penjualan 6 Bulan</div>
-      <div class="grafik-bar-wrap" id="shopGrafikBars"></div>
-      <div class="u-fs12 u-t2 u-mt6">Jumlah set terjual per bulan & estimasi margin keuntungan (%)</div>
-    </div>
-    <div class="card u-mt12"><div class="card-title">📋 Riwayat Transaksi <button class="card-setting-btn" data-action="exportShopRiwayatXLSX">📤 Excel</button><button class="card-setting-btn" data-action="openQS" data-args='["qsShop"]'>⚙️ Atur</button></div><div id="shopList"><div class="empty"><div class="empty-icon">🪨</div><div class="empty-text">Belum ada transaksi</div></div></div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Riwayat Penjualan</h2><p>Telusuri transaksi berdasarkan periode dan tren.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="filter-scroll u-mt12" id="shopPeriodeChips"><button class="chip-btn" data-action="setShopPeriode" data-args='["hari", "$el"]'>Harian</button><button class="chip-btn" data-action="setShopPeriode" data-args='["minggu", "$el"]'>Mingguan</button><button class="chip-btn" data-action="setShopPeriode" data-args='["bulan", "$el"]'>Bulanan</button><button class="chip-btn" data-action="setShopPeriode" data-args='["tahun", "$el"]'>Tahunan</button><button class="chip-btn active" data-action="setShopPeriode" data-args='["selamanya", "$el"]'>Selamanya</button><button class="chip-btn" data-action="setShopPeriode" data-args='["custom", "$el"]'>Custom</button></div><div class="u-dnone u-mb10" id="shopCustomRange"><div class="u-grid2"><div><label class="fl">Dari</label><input type="date" class="fi" id="shopFrom" data-onchange="renderShop"></div><div><label class="fl">Sampai</label><input type="date" class="fi" id="shopTo" data-onchange="renderShop"></div></div></div><div class="card u-mt12"><div class="card-title">📈 Tren Penjualan 6 Bulan</div><div class="grafik-bar-wrap" id="shopGrafikBars"></div><div class="u-fs12 u-t2 u-mt6">Jumlah set terjual per bulan & estimasi margin keuntungan (%)</div></div><div class="card u-mt12"><div class="card-title">📋 Riwayat Transaksi <button class="card-setting-btn" data-action="exportShopRiwayatXLSX">📤 Excel</button><button class="card-setting-btn" data-action="openQS" data-args='["qsShop"]'>⚙️ Atur</button></div><div id="shopList" data-pwa-large-list-target data-pwa-large-list-threshold="120"><div class="empty"><div class="empty-icon">🪨</div><div class="empty-text">Belum ada transaksi</div></div></div></div>
   </div>
 
   <!-- PELANGGAN -->
   <div id="shopTab-pelanggan" class="u-dnone">
-    <div class="card u-mt12">
-      <div class="card-title">👤 Daftar Pelanggan <button class="card-setting-btn" data-action="exportShopPelangganXLSX">📤 Excel</button></div>
-      <div class="u-hint10">Pelanggan dengan 3x order atau lebih otomatis ditandai 🌟 Langganan. Tap untuk lihat riwayat harga per produk.</div>
-      <div id="customerList"></div>
-    </div>
-  </div>
-
-  <!-- LAPORAN (kw-shop-laporan-tab): tab & UI-nya sebelumnya belum pernah
-       dibangun walau logic-nya (Laporan.renderTab()/topProdukAgg()/
-       renderTopProduk()/renderTopPelanggan()/setPeriodeLap()/getRangeLap()
-       di cobek-order.js, exportLaporanShopXLSX() di cobek-io.js) sudah ada
-       sejak lama — setShopTab() (cobek-io.js, tidak disentuh) sudah
-       memanggil Laporan.renderTab() saat t==='laporan', hanya markup-nya
-       yang baru ditambahkan di sini. Filter periode (lapPeriodeChips/
-       lapCustomRange) TERPISAH dari filter periode tab Riwayat
-       (shopPeriodeChips/shopCustomRange) — lihat catatan Laporan.periodeLap
-       di cobek-order.js. Kartu stat pakai reuse .grid2/.stat-box/.stat-val/
-       .stat-label yang sudah ada (pola sama dgn cfIncAvg/cfExpAvg di tab
-       Laporan Keuangan) supaya bisa 4 kartu tanpa bikin class grid-4 baru
-       (.shop-grid yang ada cuma utk 3 kolom). Grafik pakai .grafik-bar-wrap
-       yang sama dgn tab Riwayat (Laporan.renderGrafik() generik, sudah
-       menerima elId). -->
-  <div id="shopTab-laporan" class="u-dnone">
-    <!-- FAB Laporan Shop: kontekstual, ditaruh DI DALAM #shopTab-laporan
-         (pola sama dgn #laporanFab di #keuanganTab-laporan, REPORTS-2.0.md)
-         supaya hanya tampil saat tab Laporan aktif, otomatis ikut ter-
-         toggle 'u-dnone' oleh setShopTab() yang sudah ada tanpa JS baru.
-         #shopFab (Sprint 2 Tahap 2) tidak diubah — tetap tampil di semua
-         tab Shop termasuk tab ini. 100% reuse class CSS `.keu-fab*` &
-         fungsi export yang sudah ada (exportLaporanShopXLSX()/
-         exportShopSemuaXLSX(), cobek-io.js, tidak diubah). -->
-    <div class="keu-fab" id="shopLaporanFab">
-      <div class="keu-fab-actions">
-        <button type="button" class="keu-fab-action" data-action="shopLaporanFabExportXLSX" aria-label="Export Laporan Excel"><span class="keu-fab-action-icon">📤</span><span class="keu-fab-action-label">Export Laporan</span></button>
-        <button type="button" class="keu-fab-action" data-action="shopLaporanFabExportSemua" aria-label="Export Semua Data Shop"><span class="keu-fab-action-icon">📊</span><span class="keu-fab-action-label">Export Semua Data</span></button>
-      </div>
-      <button type="button" class="keu-fab-main" id="shopLaporanFabMain" data-action="shopLaporanFabToggleMain" data-args='["$el"]' aria-label="Aksi cepat Laporan Shop" aria-expanded="false"><span class="keu-fab-main-icon">＋</span></button>
-    </div>
-
-    <div class="filter-scroll u-mt12" id="lapPeriodeChips">
-      <button class="chip-btn" data-action="setLaporanPeriode" data-args='["hari", "$el"]'>Harian</button>
-      <button class="chip-btn" data-action="setLaporanPeriode" data-args='["minggu", "$el"]'>Mingguan</button>
-      <button class="chip-btn" data-action="setLaporanPeriode" data-args='["bulan", "$el"]'>Bulanan</button>
-      <button class="chip-btn" data-action="setLaporanPeriode" data-args='["tahun", "$el"]'>Tahunan</button>
-      <button class="chip-btn active" data-action="setLaporanPeriode" data-args='["selamanya", "$el"]'>Selamanya</button>
-      <button class="chip-btn" data-action="setLaporanPeriode" data-args='["custom", "$el"]'>Custom</button>
-    </div>
-    <div class="u-dnone u-mb10" id="lapCustomRange">
-      <div class="u-grid2">
-        <div><label class="fl">Dari</label><input type="date" class="fi" id="lapFrom" data-onchange="renderShopLaporan"></div>
-        <div><label class="fl">Sampai</label><input type="date" class="fi" id="lapTo" data-onchange="renderShopLaporan"></div>
-      </div>
-    </div>
-
-    <div class="grid2">
-      <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapTrip">0</div><div class="stat-label">Transaksi</div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Pelanggan</h2><p>Ringkasan pelanggan dan riwayat pembelian.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mt12"><div class="card-title">👤 Daftar Pelanggan <button class="card-setting-btn" data-action="exportShopPelangganXLSX">📤 Excel</button></div><div class="u-hint10">Pelanggan dengan 3x order atau lebih otomatis ditandai 🌟 Langganan. Tap untuk lihat riwayat harga per produk.</div><div id="customerList" data-pwa-large-list-target data-pwa-large-list-threshold="120"></div></div></div><!-- LAPORAN (kw-shop-laporan-tab): tab & UI-nya sebelumnya belum pernah dibangun walau logic-nya (Laporan.renderTab()/topProdukAgg()/ renderTopProduk()/renderTopPelanggan()/setPeriodeLap()/getRangeLap() di cobek-order.js, exportLaporanShopXLSX() di cobek-io.js) sudah ada sejak lama — setShopTab() (cobek-io.js, tidak disentuh) sudah memanggil Laporan.renderTab() saat t==='laporan', hanya markup-nya yang baru ditambahkan di sini. Filter periode (lapPeriodeChips/ lapCustomRange) TERPISAH dari filter periode tab Riwayat (shopPeriodeChips/shopCustomRange) — lihat catatan Laporan.periodeLap di cobek-order.js. Kartu stat pakai reuse .grid2/.stat-box/.stat-val/ .stat-label yang sudah ada (pola sama dgn cfIncAvg/cfExpAvg di tab Laporan Keuangan) supaya bisa 4 kartu tanpa bikin class grid-4 baru (.shop-grid yang ada cuma utk 3 kolom). Grafik pakai .grafik-bar-wrap yang sama dgn tab Riwayat (Laporan.renderGrafik() generik, sudah menerima elId). --><div id="shopTab-laporan" class="u-dnone"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Laporan Shop</h2><p>Ringkasan performa penjualan dan pelanggan.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><!-- FAB Laporan Shop: kontekstual, ditaruh DI DALAM #shopTab-laporan (pola sama dgn #laporanFab di #keuanganTab-laporan, REPORTS-2.0.md) supaya hanya tampil saat tab Laporan aktif, otomatis ikut ter- toggle 'u-dnone' oleh setShopTab() yang sudah ada tanpa JS baru. #shopFab (Sprint 2 Tahap 2) tidak diubah — tetap tampil di semua tab Shop termasuk tab ini. 100% reuse class CSS `.keu-fab*` & fungsi export yang sudah ada (exportLaporanShopXLSX()/ exportShopSemuaXLSX(), cobek-io.js, tidak diubah). --><div class="keu-fab" id="shopLaporanFab"><div class="keu-fab-actions"><button type="button" class="keu-fab-action" data-action="shopLaporanFabExportXLSX" aria-label="Export Laporan Excel"><span class="keu-fab-action-icon">📤</span><span class="keu-fab-action-label">Export Laporan</span></button><button type="button" class="keu-fab-action" data-action="shopLaporanFabExportSemua" aria-label="Export Semua Data Shop"><span class="keu-fab-action-icon">📊</span><span class="keu-fab-action-label">Export Semua Data</span></button></div><button type="button" class="keu-fab-main" id="shopLaporanFabMain" data-action="shopLaporanFabToggleMain" data-args='["$el"]' aria-label="Aksi cepat Laporan Shop" aria-expanded="false"><span class="keu-fab-main-icon">＋</span></button></div><div class="filter-scroll u-mt12" id="lapPeriodeChips"><button class="chip-btn" data-action="setLaporanPeriode" data-args='["hari", "$el"]'>Harian</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["minggu", "$el"]'>Mingguan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["bulan", "$el"]'>Bulanan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["tahun", "$el"]'>Tahunan</button><button class="chip-btn active" data-action="setLaporanPeriode" data-args='["selamanya", "$el"]'>Selamanya</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["custom", "$el"]'>Custom</button></div><div class="u-dnone u-mb10" id="lapCustomRange"><div class="u-grid2"><div><label class="fl">Dari</label><input type="date" class="fi" id="lapFrom" data-onchange="renderShopLaporan"></div><div><label class="fl">Sampai</label><input type="date" class="fi" id="lapTo" data-onchange="renderShopLaporan"></div></div></div><div class="grid2"><div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapTrip">0</div><div class="stat-label">Transaksi</div></div>
       <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapOmzet">Rp 0</div><div class="stat-label">Omzet</div></div>
     </div>
     <div class="grid2">
@@ -1562,56 +1400,7 @@
        Beranda (lihat DASHBOARD-DEDUP.md fix #1) SUDAH DIHAPUS dari
        styles.css supaya sekarang tampil normal di tab ini. -->
   <div id="shopTab-bi" class="u-dnone">
-    <div class="dashhub-wrap card u-mb12" id="shopBusinessEngineWrap">
-      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]'>
-        <div class="dashhub-cat-icon">🪨</div>
-        <div>
-          <div class="dashhub-cat-label">Shop Business Engine</div>
-          <div class="dashhub-cat-desc">Nilai stok, rencana restock &amp; margin Shop bulan ini — dari data yang sudah ada</div>
-        </div>
-        <span class="card-collapse-toggle" id="shopBusinessEngineWrap-chev" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-      </div>
-      <div class="card-collapse-body" id="shopBusinessEngineWrap-cbody">
-      <div class="findash-grid" id="shopBusinessEngineGrid"></div>
-      </div>
-    </div>
-    <div class="dashhub-wrap card u-mb12" id="tripPresenterWrap">
-      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]'>
-        <div class="dashhub-cat-icon">🚚</div>
-        <div>
-          <div class="dashhub-cat-label">Pengiriman Shop</div>
-          <div class="dashhub-cat-desc">Jumlah trip, ongkir &amp; margin pengiriman bulan ini — dari data yang sudah ada</div>
-        </div>
-        <span class="card-collapse-toggle" id="tripPresenterWrap-chev" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-      </div>
-      <div class="card-collapse-body" id="tripPresenterWrap-cbody">
-      <div class="findash-grid" id="tripPresenterGrid"></div>
-      </div>
-    </div>
-    <div class="dashhub-wrap card u-mb12" id="businessFlowWrap">
-      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]'>
-        <div class="dashhub-cat-icon">🔁</div>
-        <div>
-          <div class="dashhub-cat-label">Alur Bisnis Shop</div>
-          <div class="dashhub-cat-desc">Purchase → Trip → Stock → Sale — dari data yang sudah ada</div>
-        </div>
-        <span class="card-collapse-toggle" id="businessFlowWrap-chev" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-      </div>
-      <div class="card-collapse-body" id="businessFlowWrap-cbody">
-      <div class="findash-grid" id="businessFlowGrid"></div>
-      <div id="businessFlowTransferList" class="u-mt10"></div>
-      <div id="businessFlowPurchaseOrderBatchList" class="u-mt10"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- CAR NOTES -->
-<div class="page" id="page-carnotes">
-  <div class="page-settings-btn">
-    <div class="page-title">🏍️ Car Notes</div>
-    <button class="qs-btn" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-  </div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Business Intelligence</h2><p>Insight operasional tanpa memenuhi layar dengan dashboard berat.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="dashhub-wrap card u-mb12" id="shopBusinessEngineWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]'><div class="dashhub-cat-icon">🪨</div><div><div class="dashhub-cat-label">Shop Business Engine</div><div class="dashhub-cat-desc">Nilai stok, rencana restock &amp; margin Shop bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="shopBusinessEngineWrap-chev" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="shopBusinessEngineWrap-cbody"><div class="findash-grid" id="shopBusinessEngineGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="tripPresenterWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]'><div class="dashhub-cat-icon">🚚</div><div><div class="dashhub-cat-label">Pengiriman Shop</div><div class="dashhub-cat-desc">Jumlah trip, ongkir &amp; margin pengiriman bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="tripPresenterWrap-chev" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="tripPresenterWrap-cbody"><div class="findash-grid" id="tripPresenterGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="businessFlowWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]'><div class="dashhub-cat-icon">🔁</div><div><div class="dashhub-cat-label">Alur Bisnis Shop</div><div class="dashhub-cat-desc">Purchase → Trip → Stock → Sale — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="businessFlowWrap-chev" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="businessFlowWrap-cbody"><div class="findash-grid" id="businessFlowGrid"></div><div id="businessFlowTransferList" class="u-mt10"></div><div id="businessFlowPurchaseOrderBatchList" class="u-mt10"></div></div></div></div></div></div><!-- CAR NOTES --><div class="page" id="page-carnotes"><div class="page-settings-btn"><div class="page-title">🏍️ Car Notes</div><div class="pwa-domain-page pwa-domain-car"><button class="qs-btn" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></div><section class="pwa-domain-hero" aria-labelledby="carDomainTitle"><div class="pwa-domain-hero-main"><div class="pwa-domain-eyebrow">UANG MOBIL · KENDARAAN</div><h1 id="carDomainTitle">Semua biaya kendaraan dalam satu ruang kerja.</h1><p>Pantau kendaraan aktif, BBM, servis, pajak & SIM, perjalanan, dan insight biaya tanpa meninggalkan mode offline.</p><div class="pwa-domain-status-row"><span class="pwa-status-pill" data-pwa-status>Online • tersimpan lokal</span><span class="pwa-status-pill">Konteks kendaraan aktif</span></div></div><div class="pwa-domain-hero-actions"><button class="pwa-action-card pwa-action-primary" type="button" data-action="openVehicleModal"><span>🚗</span><b>Tambah kendaraan</b><small>Kelola armada</small></button><button class="pwa-action-card" type="button" data-action="openKmModal"><span>📏</span><b>Update KM</b><small>Odometer terbaru</small></button><button class="pwa-action-card" type="button" data-action="VehicleCatalogUI.open"><span>🧰</span><b>Katalog part</b><small>Komponen servis</small></button></div></section>
     <div class="card u-mb12 u-dnone" id="mobilInsightCard">
       <div class="card-title">💡 Insight Mobil</div>
       <div id="mobilInsightBody"></div>
@@ -1664,340 +1453,7 @@
        renderCnTab() apa adanya (data selalu fresh, murni DOM visibility
        yang berubah lewat setCnTab()). -->
   <div id="cnTab-insight" class="u-dnone">
-  <!-- Vehicle Dashboard/Insight/Brief/Alert/Insight Feed/Analytics/
-       Decision/Automation (Sesi 77-83, Batch 7) — DIPINDAH ke sini
-       (Sesi 133, permintaan eksplisit user "pindahkan insight AI ke
-       tab masing-masing fitur") dari sub-tab "insight" Dashboard Hub.
-       TIDAK ADA perubahan logic/rumus/presenter — murni lokasi
-       container HTML dipindah, diisi render() yang sama persis
-       (sekarang dipanggil dari renderCnTab(), modules/shared/
-       modules-render.js, bukan lagi dari DashboardHub.render()). -->
-  <!-- Sesi 158 (permintaan eksplisit user): tab Insight AI dipecah lagi
-       jadi 2 sub-tab bersarang (Ringkasan / Rekomendasi & Tren) — pola
-       SAMA PERSIS dgn setPjkTab/setLaporanTab/setKelolaTab (sub-tab
-       nested di dalam satu tab cn-tab). Class BARU .cni-subtab(s),
-       BUKAN reuse .cn-tab/.pjk-subtab/dst — alasan sama persis komentar
-       di styles.css utk class subtab lain: cegah tabrakan query
-       `#page-carnotes .cn-tab` (dipakai setCnTab()) & query subtab page
-       lain. Grouping: "Ringkasan" = 3 card ringkasan angka cepat
-       (vehdashWrap/vehinsightWrap/vehBriefWrap, 100% reuse render()
-       yang sudah ada); "Rekomendasi & Tren" = 4 card actionable/detail
-       (vehAttentionWrap/vehAnalyticsWrap/vehAutomationWrap/vehSpecCard).
-       TIDAK ADA render/rumus baru — murni reorganisasi DOM + toggle
-       visibility (pola sama persis setPjkTab()), render() card tetap
-       dipanggil apa adanya dari renderCnTab() terlepas dari sub-tab mana
-       yang aktif (sama seperti renderPajakZakat() mengisi kedua sub-tab
-       Pajak sekaligus). Vehicle selector + Odometer TETAP di luar (di
-       atas tab #cnTab-insight ini) supaya konteks multi-kendaraan tetap
-       kelihatan di kedua sub-tab, tidak berubah. -->
-  <div class="cn-tabs cni-subtabs">
-    <button type="button" class="cni-subtab active" data-action="setCnInsightTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button>
-    <button type="button" class="cni-subtab" data-action="setCnInsightTab" data-args='["rekomendasi", "$el"]'>🧭 Rekomendasi &amp; Tren</button>
-  </div>
-  <div class="page-breadcrumb">🧠 Insight AI › <span class="pb-current" id="cniBreadcrumbSub">Ringkasan</span></div>
-
-  <div id="cniTab-ringkasan">
-  <!-- VEHICLE DASHBOARD FOUNDATION (Sesi 77, Batch 7). Section di dalam
-       Dashboard Hub, sama seperti #findashWrap di atas — diisi oleh
-       VehicleDashboard.render() (dipanggil dari DashboardHub.render() di
-       dashboard-hub.js), 100% reuse VehicleIntelligence.summary() (Sesi 76).
-       UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru —
-       reuse penuh class findash-grid/findash-card (grid generik). -->
-  <div class="dashhub-wrap card u-mb12" id="vehdashWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]'>
-      <div class="dashhub-cat-icon">🚗</div>
-      <div>
-        <div class="dashhub-cat-label">Vehicle Dashboard</div>
-        <div class="dashhub-cat-desc">Total kendaraan, servis lewat jatuh tempo & skor kesehatan armada — dari data yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle" id="vehdashWrap-chev" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="vehdashWrap-cbody">
-    <div class="findash-grid" id="vehdashGrid"></div>
-    </div>
-  </div>
-  <!-- VEHICLE AI HOOK FOUNDATION (Sesi 79, Batch 7). Section di dalam
-       Dashboard Hub, sama seperti #vehdashWrap di atas — diisi oleh
-       VehicleInsightPresenter.render() (dipanggil dari DashboardHub.render()
-       di dashboard-hub.js), 100% reuse VehicleAIHook.fleetSummary() (Sesi
-       79, gabungan VehicleIntelligence.summary() Sesi 76 + VehicleReminder.
-       summary() Sesi 78). UI hanya presenter, tidak ada rumus baru di sini.
-       CSS TIDAK baru — reuse penuh class findash-grid/findash-card (grid
-       generik). -->
-  <div class="dashhub-wrap card u-mb12" id="vehinsightWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]'>
-      <div class="dashhub-cat-icon">🔔</div>
-      <div>
-        <div class="dashhub-cat-label">Vehicle Insight</div>
-        <div class="dashhub-cat-desc">Reminder servis, pajak & BBM kendaraan — dari data yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle" id="vehinsightWrap-chev" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="vehinsightWrap-cbody">
-    <div class="findash-grid" id="vehinsightGrid"></div>
-    </div>
-  </div>
-  <!-- VEHICLE AI DASHBOARD INTEGRATION (Sesi 80, Batch 7). 3 section di
-       dalam Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi
-       oleh VehicleDailyBrief.render()/VehicleAlertPanel.render()/
-       VehicleInsightFeed.render() (dipanggil dari DashboardHub.render() di
-       dashboard-hub.js), 100% reuse VehicleAIHook.fleetSummary() (Sesi
-       79). UI hanya presenter, tidak ada rumus baru di sini. Ketiganya
-       SILENT (body dikosongkan) kalau tidak ada apa pun buat ditampilkan
-       (pola sama AIDailyBriefingCard/AIStatusCard di ai-chat.js) — beda
-       dari #vehdashWrap/#vehinsightWrap yang selalu tampilkan angka
-       ringkasan.
-       KONSOLIDASI (Sesi 156d, permintaan eksplisit user): section "Fuel
-       Briefing" 1 kendaraan yang dulu ditambahkan di sini oleh
-       VehicleDailyBrief (TASK-151B) DIPINDAH ke #fuelIntelWrap di bawah
-       (FuelCard) — dua-duanya sama-sama soal BBM kendaraan aktif, jadi
-       digabung jadi SATU card, bukan 2 card berurutan. #vehBriefBody
-       sekarang HANYA berisi ringkasan armada harian (jumlah kendaraan,
-       skor kesehatan, reminder aktif).
-       DISEMBUNYIKAN (Sesi 171, temuan audit): angka2 di atas 100% presentasi
-       ganda dari #vehdashWrap/#vehinsightWrap (sumber sama, VehicleAIHook.
-       fleetSummary()) — VehicleDailyBrief.render() sudah tidak dipanggil lagi
-       (lihat modules-render.js renderCnTab()), wrap ini disembunyikan via CSS
-       supaya tidak nongol sbg card kosong. Markup TIDAK dihapus. -->
-  <div class="dashhub-wrap card u-mb12" id="vehBriefWrap" style="display:none">
-    <div id="vehBriefBody"></div>
-  </div>
-  </div>
-  <!-- /Sesi 158: sub-tab "Ringkasan" (#cniTab-ringkasan) selesai di sini. -->
-
-  <div id="cniTab-rekomendasi" class="u-dnone">
-  <!-- VEHICLE ATTENTION CARD (Sesi 156b, permintaan eksplisit user:
-       gabungkan Alert Panel (#vehAlertWrap) + Insight Feed
-       (#vehInsightFeedWrap) + Decision (#vehDecisionWrap, DIPINDAH ke sini
-       dari bawah #vehAutomationWrap) jadi SATU card ranked "🧭 Perlu
-       Perhatian" — satu daftar/satu prioritas, bukan 3 versi beda dari
-       info yang sama. Diisi oleh VehicleAttentionPresenter.render()
-       (modules/vehicle/vehicle-attention-presenter.js, BARU), 100% reuse
-       VehicleRecommendationEngine/VehiclePriorityScoring/
-       VehicleActionRecommendation (dulu dipakai VehicleDecisionPresenter)
-       + VehicleAIHook (dulu dipakai VehicleAlertPanel/VehicleInsightFeed)
-       — TIDAK ada rumus/skoring baru. VehicleAlertPanel.render()/
-       VehicleInsightFeed.render()/VehicleDecisionPresenter.render() (file
-       lama) TIDAK dihapus tapi TIDAK LAGI dipanggil dari renderCnTab()
-       (lihat modules-render.js) supaya tidak dobel isi container yang
-       sudah tidak ada. Silent kalau tidak ada apa pun buat ditampilkan
-       (pola sama persis panel lama). -->
-  <div class="dashhub-wrap card u-mb12" id="vehAttentionWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]'>
-      <div class="dashhub-cat-icon">🧭</div>
-      <div>
-        <div class="dashhub-cat-label">Vehicle Attention</div>
-        <div class="dashhub-cat-desc">Servis/pajak/BBM &amp; insight yang perlu perhatian — dari rekomendasi yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle" id="vehAttentionWrap-chev" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="vehAttentionWrap-cbody">
-    <div id="vehAttentionBody"></div>
-    </div>
-  </div>
-  <!-- VEHICLE ANALYTICS FOUNDATION (Sesi 81, Batch 7). Section di dalam
-       Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi oleh
-       VehicleAnalyticsPresenter.render() (dipanggil dari DashboardHub.
-       render() di dashboard-hub.js), 100% reuse VehicleCostSummary.
-       summary() (Sesi 81, sendiri 100% reuse VehicleTrendAPI) +
-       VehicleIntelligence.fleetSummary() (Sesi 76). UI hanya presenter,
-       tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class
-       findash-grid/findash-card (grid generik). -->
-  <div class="dashhub-wrap card u-mb12" id="vehAnalyticsWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAnalyticsCard","$event"]'>
-      <div class="dashhub-cat-icon">📊</div>
-      <div class="u-flex1">
-        <div class="dashhub-cat-label">Vehicle Analytics</div>
-        <div class="dashhub-cat-desc">Tren biaya BBM &amp; servis bulanan kendaraan — dari data yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle collapsed" id="vehAnalyticsCard-chev" data-action="toggleCardCollapse" data-args='["vehAnalyticsCard","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body collapsed" id="vehAnalyticsCard-cbody">
-    <div id="vehicleServiceAnalyticsFilter" class="u-mb10"></div><div id="vehicleServiceAnalyticsResult" class="u-mb10"></div><div class="findash-grid" id="vehanalyticsGrid"></div>
-    </div>
-  </div>
-  <!-- Sesi 157 (permintaan eksplisit user): #fuelIntelWrap/#fuelDashWrap/
-       #fuelCompareWrap/#fuelTrendWrap DIPINDAH dari sini ke tab ⛽ BBM
-       (#cnTab-bbm di bawah) — 4-4nya soal BBM, jadi digabung satu tempat
-       dgn tab BBM, bukan dipisah dari card BBM lain di tab Insight AI.
-       TIDAK ADA perubahan markup/id/render() card itu sendiri, murni
-       lokasi container yang pindah. -->
-  <!-- VEHICLE AUTOMATION FOUNDATION (Sesi 83, Batch 7). Section di dalam
-       Dashboard Hub, sama seperti #vehAnalyticsWrap di atas — diisi oleh
-       VehicleAutomationPresenter.render() (dipanggil dari DashboardHub.
-       render() di dashboard-hub.js), 100% reuse VehicleReminderScheduler.
-       summary() + VehicleMaintenanceAutomation.plan() +
-       VehicleTaxDocumentAutomation.plan() (sesi ini, sendiri 100% reuse
-       VehicleAutomationAPI -> VehicleRecommendationEngine/
-       VehiclePriorityScoring/VehicleActionRecommendation, pipeline
-       Decision Engine Sesi 82). UI hanya presenter, tidak ada rumus baru
-       di sini. CSS TIDAK baru — reuse penuh class findash-grid/
-       findash-card (grid generik). -->
-  <div class="dashhub-wrap card u-mb12" id="vehAutomationWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]'>
-      <div class="dashhub-cat-icon">🤖</div>
-      <div>
-        <div class="dashhub-cat-label">Vehicle Automation</div>
-        <div class="dashhub-cat-desc">Jadwal servis &amp; pajak/dokumen otomatis — dari rekomendasi yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle" id="vehAutomationWrap-chev" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="vehAutomationWrap-cbody">
-    <div class="findash-grid" id="vehAutomationGrid"></div>
-    </div>
-  </div>
-
-  <div class="card u-mb12" id="fuelPriceRefSummaryCard"></div>
-  <div class="card u-mb12" id="vehSpecCard"></div>
-  </div>
-  <!-- /Sesi 158: sub-tab "Rekomendasi & Tren" (#cniTab-rekomendasi) selesai di sini. -->
-  </div>
-  <!-- /INSIGHT AI TAB (Sesi 157) -->
-
-  <!-- PAJAK & SIM TAB (Sesi 157) — dulu selalu tampil di bawah vehSpecCard,
-       sekarang tab sendiri (🚦 Pajak & SIM) supaya tidak ikut menambah
-       panjang tab BBM/Servis. TIDAK ADA perubahan markup/id/render()
-       card itu sendiri (renderVehTaxSim() tetap dipanggil apa adanya dari
-       renderCnTab()), murni lokasi container yang pindah. -->
-  <div id="cnTab-pajak" class="u-dnone">
-  <div class="card u-mb12">
-    <div class="card-title">🚦 Pajak Kendaraan &amp; SIM <span class="card-collapse-toggle" id="cnPajakSimCard-chev" data-action="toggleCardCollapse" data-args='["cnPajakSimCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-    <div class="card-collapse-body" id="cnPajakSimCard-cbody">
-    <div class="u-hint10">Pantau masa berlaku STNK Tahunan, ganti plat 5 Tahunan, dan SIM biar nggak kelewat jatuh tempo.</div>
-    <div id="vehTaxList" class="u-mb10"></div>
-    <div style="height:1px;background:var(--border);margin:10px 0"></div>
-    <div class="u-flex u-aic u-jcb u-mb8">
-      <span class="u-fs13 u-fw700">🪪 Masa Berlaku SIM</span>
-      <button class="card-setting-btn" data-action="openSimModal" aria-label="Edit/Buka">＋ Tambah SIM</button>
-    </div>
-    <div id="simList"></div>
-    </div>
-  </div>
-  </div>
-  <!-- /PAJAK & SIM TAB (Sesi 157) -->
-
-  <!-- JALAN (RIDE) TAB (Sesi 532, fix audit: tab 'jalan' sudah lama ada
-       di setCnTab() (vehicle-core.js) & RideUI (S525) sudah lengkap
-       dikoding+ditest, tapi pane #cnTab-jalan ini sendiri belum pernah
-       dibuat -- makanya tab tidak pernah muncul di Car Notes (dead id,
-       lihat catatan "WIRING STATUS" di header ride-ui.js). Pane ini
-       0 logic baru -- 100% markup DOM murni; tombol Start/Pause/Resume/
-       Stop/Discard reuse data-action="RideUI.*" (pola sama semua tombol
-       lain di app ini), field id (rideStatusText/rideDistanceText/dst)
-       mengikuti PERSIS yang sudah dibaca RideUI.render() (lihat file
-       tsb) -- 0 perubahan ke RideUI/RideGpsRecorder/RideStorage/
-       RideActivityMetrics. RideUI.render() sendiri SELALU guard
-       getElementById null, jadi aman ditambah tanpa menyentuh modul
-       Ride sama sekali. RE-APPLIED (Sesi 543, audit): wiring ini sempat
-       hilang lagi di build v1266-1267 (Sesi 538) karena index.html/
-       app_production.html ter-rebuild dari base lama sebelum Sesi 532 —
-       dipasang ulang persis sama seperti versi Sesi 532 asli. -->
-  <div id="cnTab-jalan" class="u-dnone">
-    <div class="card u-mb12">
-      <div class="card-title">🚴 Rekam Perjalanan</div>
-      <div class="u-flex u-jcb u-aic u-mb8">
-        <span class="u-fs13 u-fw700" id="rideStatusText">Siap merekam</span>
-      </div>
-      <div class="u-fs11" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px">
-        <span class="u-t2">Jarak</span><span class="u-fw700" id="rideDistanceText">0.00 km</span>
-        <span class="u-t2">Durasi</span><span class="u-fw700" id="rideDurationText">0 dtk</span>
-        <span class="u-t2">Kecepatan Rata-rata</span><span class="u-fw700" id="rideAvgSpeedText">0.0 km/j</span>
-        <span class="u-t2">Kecepatan Maks</span><span class="u-fw700" id="rideMaxSpeedText">0.0 km/j</span>
-      </div>
-      <div class="u-fs11 red u-mt6" id="rideErrorText"></div>
-      <div class="u-flex u-gap6 u-mt10" style="flex-wrap:wrap">
-        <button type="button" class="btn btn-primary btn-sm" id="rideStartBtn" data-action="RideUI.start" aria-label="Mulai rekam perjalanan">▶️ Mulai</button>
-        <button type="button" class="btn btn-ghost btn-sm u-dnone" id="ridePauseBtn" data-action="RideUI.pause" aria-label="Jeda rekaman">⏸ Jeda</button>
-        <button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideResumeBtn" data-action="RideUI.resume" aria-label="Lanjutkan rekaman">▶️ Lanjut</button>
-        <button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideStopBtn" data-action="RideUI.stop" aria-label="Selesai &amp; simpan rekaman">⏹ Selesai</button>
-        <button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideDiscardBtn" data-action="RideUI.discard" aria-label="Buang rekaman">🗑️ Buang</button>
-      </div>
-    </div>
-  </div>
-  <!-- /JALAN (RIDE) TAB (Sesi 532, re-applied Sesi 543) -->
-
-  <!-- Sesi 157: periode chips ini cuma relevan buat tab BBM/Servis (filter
-       renderBbmList()/renderServisList() lewat cnPeriode) — dibungkus
-       #cnPeriodeWrap, toggle visibility di setCnTab() (tampil kalau tab
-       aktif bbm/servis, sembunyi kalau insight/pajak). Isi/id chip di
-       dalamnya TIDAK berubah sama sekali. -->
-  <div id="cnPeriodeWrap">
-  <div class="filter-scroll" id="cnPeriodeChips">
-    <button class="chip-btn" data-action="setCnPeriode" data-args='["hari", "$el"]'>Harian</button>
-    <button class="chip-btn" data-action="setCnPeriode" data-args='["minggu", "$el"]'>Mingguan</button>
-    <button class="chip-btn" data-action="setCnPeriode" data-args='["bulan", "$el"]'>Bulanan</button>
-    <button class="chip-btn" data-action="setCnPeriode" data-args='["tahun", "$el"]'>Tahunan</button>
-    <button class="chip-btn active" data-action="setCnPeriode" data-args='["selamanya", "$el"]'>Selamanya</button>
-    <button class="chip-btn" data-action="setCnPeriode" data-args='["custom", "$el"]'>Custom</button>
-  </div>
-  <div class="u-dnone u-mb10" id="cnCustomRange">
-    <div class="u-grid2">
-      <div><label class="fl">Dari</label><input type="date" class="fi" id="cnFrom" data-onchange="renderCnTab"></div>
-      <div><label class="fl">Sampai</label><input type="date" class="fi" id="cnTo" data-onchange="renderCnTab"></div>
-    </div>
-  </div>
-  </div>
-
-  <!-- Sprint 2 Tahap 3: FAB Car Notes, menyamakan standar UI dgn Finance 2.0
-       (Sprint 2 Tahap 1) & Shop FAB (Sprint 2 Tahap 2). Reuse PENUH komponen
-       CSS `.keu-fab*` yang sudah ada di styles.css (tidak ada class CSS baru
-       & tidak ada override posisi — halaman Car Notes tidak punya elemen
-       fixed lain seperti `.kasir-floatbar` di Shop, jadi posisi default
-       `.keu-fab` sudah aman dipakai apa adanya). Aksi FAB reuse
-       openBbmModal()/openServisModal() yang sudah ada (vehicle-core.js/
-       sparepart-servis.js, tidak disentuh). Ditaruh di luar #cnTab-bbm dan
-       #cnTab-servis supaya tetap tampil di kedua tab Car Notes (pola sama
-       dgn #keuFab di #page-keuangan & #shopFab di #page-shop, tidak
-       menyentuh setCnTab()). -->
-  <div class="keu-fab" id="carNotesFab">
-    <div class="keu-fab-actions">
-      <button type="button" class="keu-fab-action" data-action="carNotesFabOpenBbm" aria-label="Catat Isi BBM"><span class="keu-fab-action-icon">⛽</span><span class="keu-fab-action-label">Isi BBM</span></button>
-      <button type="button" class="keu-fab-action" data-action="carNotesFabOpenServis" aria-label="Catat Servis/Sparepart"><span class="keu-fab-action-icon">🔧</span><span class="keu-fab-action-label">Servis</span></button>
-    </div>
-    <button type="button" class="keu-fab-main" id="carNotesFabMain" data-action="carNotesFabToggleMain" data-args='["$el"]' aria-label="Aksi cepat Car Notes" aria-expanded="false"><span class="keu-fab-main-icon">＋</span></button>
-  </div>
-
-  <!-- BBM TAB -->
-  <div id="cnTab-bbm">
-    <!-- Sesi 158 (permintaan eksplisit user): tab BBM dipecah lagi jadi 2
-         sub-tab bersarang (Ringkasan / Analisis Lanjutan) — pola SAMA
-         PERSIS sub-tab Insight AI (.cni-subtab) di atas & setPjkTab/
-         setLaporanTab/setKelolaTab (nested sub-tab). Class BARU
-         .cnb-subtab(s) (Car Notes BBM), alasan sama: cegah tabrakan
-         query `#page-carnotes .cn-tab`/`.cni-subtab`. Grouping:
-         "Ringkasan" = Fuel Intelligence + 3 angka cepat + tren mini +
-         tombol catat + riwayat (yang paling sering dibuka); "Analisis
-         Lanjutan" = 3 card detail/perbandingan (Fuel Dashboard/Compare/
-         Trend, ketiganya SUDAH default collapsed dari Sesi 157, tetap
-         collapsed di sini) — TIDAK ADA render/rumus baru, murni
-         reorganisasi DOM + toggle visibility, render() card tetap
-         dipanggil apa adanya dari renderCnTab() terlepas sub-tab aktif. -->
-    <div class="cn-tabs cnb-subtabs">
-      <button type="button" class="cnb-subtab active" data-action="setCnBbmTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button>
-      <button type="button" class="cnb-subtab" data-action="setCnBbmTab" data-args='["analisis", "$el"]'>📈 Analisis Lanjutan</button>
-    </div>
-    <div class="page-breadcrumb">⛽ BBM › <span class="pb-current" id="cnbBreadcrumbSub">Ringkasan</span></div>
-
-    <div id="cnbTab-ringkasan">
-    <!-- FUEL INTELLIGENCE CARD (TASK-141) — DIPINDAH ke sini (Sesi 157,
-         permintaan eksplisit user) dari tab Insight AI, 100% reuse
-         FuelCard.render()/FuelIntelligenceEngine.vehicleInsight(). Silent
-         (disembunyikan) kalau belum ada kendaraan aktif/data. -->
-    <div class="dashhub-wrap card u-mb12" id="fuelIntelWrap">
-      <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]'>
-        <div class="dashhub-cat-icon">⛽</div>
-        <div>
-          <div class="dashhub-cat-label">Fuel Intelligence</div>
-          <div class="dashhub-cat-desc">Estimasi BBM real-time &amp; rekomendasi kendaraan aktif — dari data yang sudah ada</div>
-        </div>
-        <span class="card-collapse-toggle" id="fuelIntelWrap-chev" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-      </div>
-      <div class="card-collapse-body" id="fuelIntelWrap-cbody">
-      <div id="fuelIntelBody"></div>
-      </div>
-    </div>
-    <div class="bbm-stat-grid">
-      <div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val" id="bbmAvgKmL">0</div><div class="bbm-lbl">Rata² km/liter</div></div>
+  <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">KENDARAAN</span><h2>Insight AI</h2><p>Ringkasan biaya, kesehatan kendaraan, rekomendasi, dan tren.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><!-- Vehicle Dashboard/Insight/Brief/Alert/Insight Feed/Analytics/ Decision/Automation (Sesi 77-83, Batch 7) — DIPINDAH ke sini (Sesi 133, permintaan eksplisit user "pindahkan insight AI ke tab masing-masing fitur") dari sub-tab "insight" Dashboard Hub. TIDAK ADA perubahan logic/rumus/presenter — murni lokasi container HTML dipindah, diisi render() yang sama persis (sekarang dipanggil dari renderCnTab(), modules/shared/ modules-render.js, bukan lagi dari DashboardHub.render()). --><!-- Sesi 158 (permintaan eksplisit user): tab Insight AI dipecah lagi jadi 2 sub-tab bersarang (Ringkasan / Rekomendasi & Tren) — pola SAMA PERSIS dgn setPjkTab/setLaporanTab/setKelolaTab (sub-tab nested di dalam satu tab cn-tab). Class BARU .cni-subtab(s), BUKAN reuse .cn-tab/.pjk-subtab/dst — alasan sama persis komentar di styles.css utk class subtab lain: cegah tabrakan query `#page-carnotes .cn-tab` (dipakai setCnTab()) & query subtab page lain. Grouping: "Ringkasan" = 3 card ringkasan angka cepat (vehdashWrap/vehinsightWrap/vehBriefWrap, 100% reuse render() yang sudah ada); "Rekomendasi & Tren" = 4 card actionable/detail (vehAttentionWrap/vehAnalyticsWrap/vehAutomationWrap/vehSpecCard). TIDAK ADA render/rumus baru — murni reorganisasi DOM + toggle visibility (pola sama persis setPjkTab()), render() card tetap dipanggil apa adanya dari renderCnTab() terlepas dari sub-tab mana yang aktif (sama seperti renderPajakZakat() mengisi kedua sub-tab Pajak sekaligus). Vehicle selector + Odometer TETAP di luar (di atas tab #cnTab-insight ini) supaya konteks multi-kendaraan tetap kelihatan di kedua sub-tab, tidak berubah. --><div class="cn-tabs cni-subtabs"><button type="button" class="cni-subtab active" data-action="setCnInsightTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button><button type="button" class="cni-subtab" data-action="setCnInsightTab" data-args='["rekomendasi", "$el"]'>🧭 Rekomendasi &amp; Tren</button></div><div class="page-breadcrumb">🧠 Insight AI › <span class="pb-current" id="cniBreadcrumbSub">Ringkasan</span></div><div id="cniTab-ringkasan"><!-- VEHICLE DASHBOARD FOUNDATION (Sesi 77, Batch 7). Section di dalam Dashboard Hub, sama seperti #findashWrap di atas — diisi oleh VehicleDashboard.render() (dipanggil dari DashboardHub.render() di dashboard-hub.js), 100% reuse VehicleIntelligence.summary() (Sesi 76). UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class findash-grid/findash-card (grid generik). --><div class="dashhub-wrap card u-mb12" id="vehdashWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]'><div class="dashhub-cat-icon">🚗</div><div><div class="dashhub-cat-label">Vehicle Dashboard</div><div class="dashhub-cat-desc">Total kendaraan, servis lewat jatuh tempo & skor kesehatan armada — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="vehdashWrap-chev" data-action="toggleCardCollapse" data-args='["vehdashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="vehdashWrap-cbody"><div class="findash-grid" id="vehdashGrid"></div></div></div><!-- VEHICLE AI HOOK FOUNDATION (Sesi 79, Batch 7). Section di dalam Dashboard Hub, sama seperti #vehdashWrap di atas — diisi oleh VehicleInsightPresenter.render() (dipanggil dari DashboardHub.render() di dashboard-hub.js), 100% reuse VehicleAIHook.fleetSummary() (Sesi 79, gabungan VehicleIntelligence.summary() Sesi 76 + VehicleReminder. summary() Sesi 78). UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class findash-grid/findash-card (grid generik). --><div class="dashhub-wrap card u-mb12" id="vehinsightWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]'><div class="dashhub-cat-icon">🔔</div><div><div class="dashhub-cat-label">Vehicle Insight</div><div class="dashhub-cat-desc">Reminder servis, pajak & BBM kendaraan — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="vehinsightWrap-chev" data-action="toggleCardCollapse" data-args='["vehinsightWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="vehinsightWrap-cbody"><div class="findash-grid" id="vehinsightGrid"></div></div></div><!-- VEHICLE AI DASHBOARD INTEGRATION (Sesi 80, Batch 7). 3 section di dalam Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi oleh VehicleDailyBrief.render()/VehicleAlertPanel.render()/ VehicleInsightFeed.render() (dipanggil dari DashboardHub.render() di dashboard-hub.js), 100% reuse VehicleAIHook.fleetSummary() (Sesi 79). UI hanya presenter, tidak ada rumus baru di sini. Ketiganya SILENT (body dikosongkan) kalau tidak ada apa pun buat ditampilkan (pola sama AIDailyBriefingCard/AIStatusCard di ai-chat.js) — beda dari #vehdashWrap/#vehinsightWrap yang selalu tampilkan angka ringkasan. KONSOLIDASI (Sesi 156d, permintaan eksplisit user): section "Fuel Briefing" 1 kendaraan yang dulu ditambahkan di sini oleh VehicleDailyBrief (TASK-151B) DIPINDAH ke #fuelIntelWrap di bawah (FuelCard) — dua-duanya sama-sama soal BBM kendaraan aktif, jadi digabung jadi SATU card, bukan 2 card berurutan. #vehBriefBody sekarang HANYA berisi ringkasan armada harian (jumlah kendaraan, skor kesehatan, reminder aktif). DISEMBUNYIKAN (Sesi 171, temuan audit): angka2 di atas 100% presentasi ganda dari #vehdashWrap/#vehinsightWrap (sumber sama, VehicleAIHook. fleetSummary()) — VehicleDailyBrief.render() sudah tidak dipanggil lagi (lihat modules-render.js renderCnTab()), wrap ini disembunyikan via CSS supaya tidak nongol sbg card kosong. Markup TIDAK dihapus. --><div class="dashhub-wrap card u-mb12" id="vehBriefWrap" style="display:none"><div id="vehBriefBody"></div></div></div><!-- /Sesi 158: sub-tab "Ringkasan" (#cniTab-ringkasan) selesai di sini. --><div id="cniTab-rekomendasi" class="u-dnone"><!-- VEHICLE ATTENTION CARD (Sesi 156b, permintaan eksplisit user: gabungkan Alert Panel (#vehAlertWrap) + Insight Feed (#vehInsightFeedWrap) + Decision (#vehDecisionWrap, DIPINDAH ke sini dari bawah #vehAutomationWrap) jadi SATU card ranked "🧭 Perlu Perhatian" — satu daftar/satu prioritas, bukan 3 versi beda dari info yang sama. Diisi oleh VehicleAttentionPresenter.render() (modules/vehicle/vehicle-attention-presenter.js, BARU), 100% reuse VehicleRecommendationEngine/VehiclePriorityScoring/ VehicleActionRecommendation (dulu dipakai VehicleDecisionPresenter) + VehicleAIHook (dulu dipakai VehicleAlertPanel/VehicleInsightFeed) — TIDAK ada rumus/skoring baru. VehicleAlertPanel.render()/ VehicleInsightFeed.render()/VehicleDecisionPresenter.render() (file lama) TIDAK dihapus tapi TIDAK LAGI dipanggil dari renderCnTab() (lihat modules-render.js) supaya tidak dobel isi container yang sudah tidak ada. Silent kalau tidak ada apa pun buat ditampilkan (pola sama persis panel lama). --><div class="dashhub-wrap card u-mb12" id="vehAttentionWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]'><div class="dashhub-cat-icon">🧭</div><div><div class="dashhub-cat-label">Vehicle Attention</div><div class="dashhub-cat-desc">Servis/pajak/BBM &amp; insight yang perlu perhatian — dari rekomendasi yang sudah ada</div></div><span class="card-collapse-toggle" id="vehAttentionWrap-chev" data-action="toggleCardCollapse" data-args='["vehAttentionWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="vehAttentionWrap-cbody"><div id="vehAttentionBody"></div></div></div><!-- VEHICLE ANALYTICS FOUNDATION (Sesi 81, Batch 7). Section di dalam Dashboard Hub, sama seperti #vehinsightWrap di atas — diisi oleh VehicleAnalyticsPresenter.render() (dipanggil dari DashboardHub. render() di dashboard-hub.js), 100% reuse VehicleCostSummary. summary() (Sesi 81, sendiri 100% reuse VehicleTrendAPI) + VehicleIntelligence.fleetSummary() (Sesi 76). UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class findash-grid/findash-card (grid generik). --><div class="dashhub-wrap card u-mb12" id="vehAnalyticsWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAnalyticsCard","$event"]'><div class="dashhub-cat-icon">📊</div><div class="u-flex1"><div class="dashhub-cat-label">Vehicle Analytics</div><div class="dashhub-cat-desc">Tren biaya BBM &amp; servis bulanan kendaraan — dari data yang sudah ada</div></div><span class="card-collapse-toggle collapsed" id="vehAnalyticsCard-chev" data-action="toggleCardCollapse" data-args='["vehAnalyticsCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body collapsed" id="vehAnalyticsCard-cbody"><div id="vehicleServiceAnalyticsFilter" class="u-mb10"></div><div id="vehicleServiceAnalyticsResult" class="u-mb10"></div><div class="findash-grid" id="vehanalyticsGrid"></div></div></div><!-- Sesi 157 (permintaan eksplisit user): #fuelIntelWrap/#fuelDashWrap/ #fuelCompareWrap/#fuelTrendWrap DIPINDAH dari sini ke tab ⛽ BBM (#cnTab-bbm di bawah) — 4-4nya soal BBM, jadi digabung satu tempat dgn tab BBM, bukan dipisah dari card BBM lain di tab Insight AI. TIDAK ADA perubahan markup/id/render() card itu sendiri, murni lokasi container yang pindah. --><!-- VEHICLE AUTOMATION FOUNDATION (Sesi 83, Batch 7). Section di dalam Dashboard Hub, sama seperti #vehAnalyticsWrap di atas — diisi oleh VehicleAutomationPresenter.render() (dipanggil dari DashboardHub. render() di dashboard-hub.js), 100% reuse VehicleReminderScheduler. summary() + VehicleMaintenanceAutomation.plan() + VehicleTaxDocumentAutomation.plan() (sesi ini, sendiri 100% reuse VehicleAutomationAPI -> VehicleRecommendationEngine/ VehiclePriorityScoring/VehicleActionRecommendation, pipeline Decision Engine Sesi 82). UI hanya presenter, tidak ada rumus baru di sini. CSS TIDAK baru — reuse penuh class findash-grid/ findash-card (grid generik). --><div class="dashhub-wrap card u-mb12" id="vehAutomationWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]'><div class="dashhub-cat-icon">🤖</div><div><div class="dashhub-cat-label">Vehicle Automation</div><div class="dashhub-cat-desc">Jadwal servis &amp; pajak/dokumen otomatis — dari rekomendasi yang sudah ada</div></div><span class="card-collapse-toggle" id="vehAutomationWrap-chev" data-action="toggleCardCollapse" data-args='["vehAutomationWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="vehAutomationWrap-cbody"><div class="findash-grid" id="vehAutomationGrid"></div></div></div><div class="card u-mb12" id="fuelPriceRefSummaryCard"></div><div class="card u-mb12" id="vehSpecCard"></div></div><!-- /Sesi 158: sub-tab "Rekomendasi & Tren" (#cniTab-rekomendasi) selesai di sini. --></div><!-- /INSIGHT AI TAB (Sesi 157) --><!-- PAJAK & SIM TAB (Sesi 157) — dulu selalu tampil di bawah vehSpecCard, sekarang tab sendiri (🚦 Pajak & SIM) supaya tidak ikut menambah panjang tab BBM/Servis. TIDAK ADA perubahan markup/id/render() card itu sendiri (renderVehTaxSim() tetap dipanggil apa adanya dari renderCnTab()), murni lokasi container yang pindah. --><div id="cnTab-pajak" class="u-dnone"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">KENDARAAN</span><h2>Pajak & SIM</h2><p>Pantau jatuh tempo STNK, plat, dan SIM.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mb12"><div class="card-title">🚦 Pajak Kendaraan &amp; SIM <span class="card-collapse-toggle" id="cnPajakSimCard-chev" data-action="toggleCardCollapse" data-args='["cnPajakSimCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="cnPajakSimCard-cbody"><div class="u-hint10">Pantau masa berlaku STNK Tahunan, ganti plat 5 Tahunan, dan SIM biar nggak kelewat jatuh tempo.</div><div id="vehTaxList" class="u-mb10" data-pwa-large-list-target data-pwa-large-list-threshold="120"></div><div style="height:1px;background:var(--border);margin:10px 0"></div><div class="u-flex u-aic u-jcb u-mb8"><span class="u-fs13 u-fw700">🪪 Masa Berlaku SIM</span><button class="card-setting-btn" data-action="openSimModal" aria-label="Edit/Buka">＋ Tambah SIM</button></div><div id="simList" data-pwa-large-list-target data-pwa-large-list-threshold="120"></div></div></div></div><!-- /PAJAK & SIM TAB (Sesi 157) --><!-- JALAN (RIDE) TAB (Sesi 532, fix audit: tab 'jalan' sudah lama ada di setCnTab() (vehicle-core.js) & RideUI (S525) sudah lengkap dikoding+ditest, tapi pane #cnTab-jalan ini sendiri belum pernah dibuat -- makanya tab tidak pernah muncul di Car Notes (dead id, lihat catatan "WIRING STATUS" di header ride-ui.js). Pane ini 0 logic baru -- 100% markup DOM murni; tombol Start/Pause/Resume/ Stop/Discard reuse data-action="RideUI.*" (pola sama semua tombol lain di app ini), field id (rideStatusText/rideDistanceText/dst) mengikuti PERSIS yang sudah dibaca RideUI.render() (lihat file tsb) -- 0 perubahan ke RideUI/RideGpsRecorder/RideStorage/ RideActivityMetrics. RideUI.render() sendiri SELALU guard getElementById null, jadi aman ditambah tanpa menyentuh modul Ride sama sekali. RE-APPLIED (Sesi 543, audit): wiring ini sempat hilang lagi di build v1266-1267 (Sesi 538) karena index.html/ app_production.html ter-rebuild dari base lama sebelum Sesi 532 — dipasang ulang persis sama seperti versi Sesi 532 asli. --><div id="cnTab-jalan" class="u-dnone"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">KENDARAAN</span><h2>Jalan</h2><p>Catat perjalanan dan metrik jarak kendaraan.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mb12"><div class="card-title">🚴 Rekam Perjalanan</div><div class="u-flex u-jcb u-aic u-mb8"><span class="u-fs13 u-fw700" id="rideStatusText">Siap merekam</span></div><div class="u-fs11" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px"><span class="u-t2">Jarak</span><span class="u-fw700" id="rideDistanceText">0.00 km</span><span class="u-t2">Durasi</span><span class="u-fw700" id="rideDurationText">0 dtk</span><span class="u-t2">Kecepatan Rata-rata</span><span class="u-fw700" id="rideAvgSpeedText">0.0 km/j</span><span class="u-t2">Kecepatan Maks</span><span class="u-fw700" id="rideMaxSpeedText">0.0 km/j</span></div><div class="u-fs11 red u-mt6" id="rideErrorText"></div><div class="u-flex u-gap6 u-mt10" style="flex-wrap:wrap"><button type="button" class="btn btn-primary btn-sm" id="rideStartBtn" data-action="RideUI.start" aria-label="Mulai rekam perjalanan">▶️ Mulai</button><button type="button" class="btn btn-ghost btn-sm u-dnone" id="ridePauseBtn" data-action="RideUI.pause" aria-label="Jeda rekaman">⏸ Jeda</button><button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideResumeBtn" data-action="RideUI.resume" aria-label="Lanjutkan rekaman">▶️ Lanjut</button><button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideStopBtn" data-action="RideUI.stop" aria-label="Selesai &amp; simpan rekaman">⏹ Selesai</button><button type="button" class="btn btn-ghost btn-sm u-dnone" id="rideDiscardBtn" data-action="RideUI.discard" aria-label="Buang rekaman">🗑️ Buang</button></div></div></div><!-- /JALAN (RIDE) TAB (Sesi 532, re-applied Sesi 543) --><!-- Sesi 157: periode chips ini cuma relevan buat tab BBM/Servis (filter renderBbmList()/renderServisList() lewat cnPeriode) — dibungkus #cnPeriodeWrap, toggle visibility di setCnTab() (tampil kalau tab aktif bbm/servis, sembunyi kalau insight/pajak). Isi/id chip di dalamnya TIDAK berubah sama sekali. --><div id="cnPeriodeWrap"><div class="filter-scroll" id="cnPeriodeChips"><button class="chip-btn" data-action="setCnPeriode" data-args='["hari", "$el"]'>Harian</button><button class="chip-btn" data-action="setCnPeriode" data-args='["minggu", "$el"]'>Mingguan</button><button class="chip-btn" data-action="setCnPeriode" data-args='["bulan", "$el"]'>Bulanan</button><button class="chip-btn" data-action="setCnPeriode" data-args='["tahun", "$el"]'>Tahunan</button><button class="chip-btn active" data-action="setCnPeriode" data-args='["selamanya", "$el"]'>Selamanya</button><button class="chip-btn" data-action="setCnPeriode" data-args='["custom", "$el"]'>Custom</button></div><div class="u-dnone u-mb10" id="cnCustomRange"><div class="u-grid2"><div><label class="fl">Dari</label><input type="date" class="fi" id="cnFrom" data-onchange="renderCnTab"></div><div><label class="fl">Sampai</label><input type="date" class="fi" id="cnTo" data-onchange="renderCnTab"></div></div></div></div><!-- Sprint 2 Tahap 3: FAB Car Notes, menyamakan standar UI dgn Finance 2.0 (Sprint 2 Tahap 1) & Shop FAB (Sprint 2 Tahap 2). Reuse PENUH komponen CSS `.keu-fab*` yang sudah ada di styles.css (tidak ada class CSS baru & tidak ada override posisi — halaman Car Notes tidak punya elemen fixed lain seperti `.kasir-floatbar` di Shop, jadi posisi default `.keu-fab` sudah aman dipakai apa adanya). Aksi FAB reuse openBbmModal()/openServisModal() yang sudah ada (vehicle-core.js/ sparepart-servis.js, tidak disentuh). Ditaruh di luar #cnTab-bbm dan #cnTab-servis supaya tetap tampil di kedua tab Car Notes (pola sama dgn #keuFab di #page-keuangan & #shopFab di #page-shop, tidak menyentuh setCnTab()). --><div class="keu-fab" id="carNotesFab"><div class="keu-fab-actions"><button type="button" class="keu-fab-action" data-action="carNotesFabOpenBbm" aria-label="Catat Isi BBM"><span class="keu-fab-action-icon">⛽</span><span class="keu-fab-action-label">Isi BBM</span></button><button type="button" class="keu-fab-action" data-action="carNotesFabOpenServis" aria-label="Catat Servis/Sparepart"><span class="keu-fab-action-icon">🔧</span><span class="keu-fab-action-label">Servis</span></button></div><button type="button" class="keu-fab-main" id="carNotesFabMain" data-action="carNotesFabToggleMain" data-args='["$el"]' aria-label="Aksi cepat Car Notes" aria-expanded="false"><span class="keu-fab-main-icon">＋</span></button></div><!-- BBM TAB --><div id="cnTab-bbm"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">KENDARAAN</span><h2>BBM</h2><p>Riwayat pengisian, konsumsi, dan biaya bahan bakar.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><!-- Sesi 158 (permintaan eksplisit user): tab BBM dipecah lagi jadi 2 sub-tab bersarang (Ringkasan / Analisis Lanjutan) — pola SAMA PERSIS sub-tab Insight AI (.cni-subtab) di atas & setPjkTab/ setLaporanTab/setKelolaTab (nested sub-tab). Class BARU .cnb-subtab(s) (Car Notes BBM), alasan sama: cegah tabrakan query `#page-carnotes .cn-tab`/`.cni-subtab`. Grouping: "Ringkasan" = Fuel Intelligence + 3 angka cepat + tren mini + tombol catat + riwayat (yang paling sering dibuka); "Analisis Lanjutan" = 3 card detail/perbandingan (Fuel Dashboard/Compare/ Trend, ketiganya SUDAH default collapsed dari Sesi 157, tetap collapsed di sini) — TIDAK ADA render/rumus baru, murni reorganisasi DOM + toggle visibility, render() card tetap dipanggil apa adanya dari renderCnTab() terlepas sub-tab aktif. --><div class="cn-tabs cnb-subtabs"><button type="button" class="cnb-subtab active" data-action="setCnBbmTab" data-args='["ringkasan", "$el"]'>📊 Ringkasan</button><button type="button" class="cnb-subtab" data-action="setCnBbmTab" data-args='["analisis", "$el"]'>📈 Analisis Lanjutan</button></div><div class="page-breadcrumb">⛽ BBM › <span class="pb-current" id="cnbBreadcrumbSub">Ringkasan</span></div><div id="cnbTab-ringkasan"><!-- FUEL INTELLIGENCE CARD (TASK-141) — DIPINDAH ke sini (Sesi 157, permintaan eksplisit user) dari tab Insight AI, 100% reuse FuelCard.render()/FuelIntelligenceEngine.vehicleInsight(). Silent (disembunyikan) kalau belum ada kendaraan aktif/data. --><div class="dashhub-wrap card u-mb12" id="fuelIntelWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]'><div class="dashhub-cat-icon">⛽</div><div><div class="dashhub-cat-label">Fuel Intelligence</div><div class="dashhub-cat-desc">Estimasi BBM real-time &amp; rekomendasi kendaraan aktif — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="fuelIntelWrap-chev" data-action="toggleCardCollapse" data-args='["fuelIntelWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="fuelIntelWrap-cbody"><div id="fuelIntelBody"></div></div></div><div class="bbm-stat-grid"><div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val" id="bbmAvgKmL">0</div><div class="bbm-lbl">Rata² km/liter</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val" id="bbmTotalL" style="font-size:15px">0 L</div><div class="bbm-lbl">Total liter</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["bbmList"]'><div class="bbm-val u-fs13" id="bbmTotalCost">Rp 0</div><div class="bbm-lbl">Total biaya</div></div>
     </div>
@@ -2038,9 +1494,7 @@
 
   <!-- SERVIS TAB -->
   <div id="cnTab-servis" class="u-dnone">
-    <div class="card u-mb12" id="servisReminderCard"></div>
-    <div class="bbm-stat-grid">
-      <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val" id="servisCount" style="font-size:15px">0</div><div class="bbm-lbl">Jumlah Servis</div></div>
+  <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">KENDARAAN</span><h2>Servis</h2><p>Riwayat servis, komponen, biaya, dan pengingat.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mb12" id="servisReminderCard"></div><div class="bbm-stat-grid"><div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val" id="servisCount" style="font-size:15px">0</div><div class="bbm-lbl">Jumlah Servis</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val u-fs13" id="servisTotalCost">Rp 0</div><div class="bbm-lbl">Total Biaya</div></div>
       <div class="bbm-stat clickable" data-action="goToList" data-args='["servisList"]'><div class="bbm-val u-fs13" id="servisLastKm">-</div><div class="bbm-lbl">KM Terakhir</div></div>
     </div>
@@ -2091,13 +1545,16 @@
     </details>
   </div>
 
+  </div>
 </div>
 
 <!-- PAJAK & ZAKAT -->
 <div class="page" id="page-pajak">
   <div class="page-settings-btn">
     <div class="page-title">🕌 Pajak &amp; Zakat</div>
+  <div class="pwa-domain-page pwa-domain-tax">
   </div>
+  <section class="pwa-domain-hero" aria-labelledby="taxDomainTitle"><div class="pwa-domain-hero-main"><div class="pwa-domain-eyebrow">PAJAK · ZAKAT</div><h1 id="taxDomainTitle">Kelola kewajiban dan pembayaran dengan jelas.</h1><p>Estimasi, pengingat, pembayaran, dan referensi tetap terpisah per workflow agar halaman tidak terasa seperti formulir panjang.</p><div class="pwa-domain-status-row"><span class="pwa-status-pill" data-pwa-status>Online • tersimpan lokal</span><span class="pwa-status-pill">Referensi dapat diperbarui</span></div></div><div class="pwa-domain-hero-actions"><button class="pwa-action-card pwa-action-primary" type="button" data-action="PWAUX.openDomainTab" data-args='["page-pajak","zakat"]'><span>🕌</span><b>Buka Zakat</b><small>Hitung & catat</small></button><button class="pwa-action-card" type="button" data-action="PWAUX.openDomainTab" data-args='["page-pajak","pajak"]'><span>🧾</span><b>Buka Pajak</b><small>PPh 21 & PBB</small></button><button class="pwa-action-card" type="button" data-action="setPajakTab" data-args='["pajak", "$el"]'><span>⚙️</span><b>Referensi</b><small>Pengaturan nilai</small></button></div></section>
 
     <div class="card u-mb12 u-dnone" id="pajakInsightCard">
       <div class="card-title">💡 Insight Pajak &amp; Zakat</div>
@@ -2116,14 +1573,7 @@
 
   <!-- ZAKAT TAB -->
   <div id="pajakTab-zakat">
-
-
-    <div class="card u-mb12">
-      <div class="card-title">💼 Zakat Penghasilan (Profesi) <span class="u-flexc8"><span class="card-setting-btn u-pointer" data-action="hitungZakatPenghasilan">🔄 Hitung dari Transaksi</span><span class="card-collapse-toggle" id="pzZakatPenghasilanCard-chev" data-action="toggleCardCollapse" data-args='["pzZakatPenghasilanCard","$event"]' aria-label="Buka/tutup bagian">▾</span></span></div>
-      <div class="card-collapse-body" id="pzZakatPenghasilanCard-cbody">
-      <div class="u-hint10">Dihitung otomatis dari total transaksi <b>Pemasukan</b> bulan berjalan. Kadar 2,5% jika penghasilan ≥ nisab bulanan.</div>
-      <div class="grid2 u-mb10">
-        <div class="stat-box clickable" data-action="showFilteredTx" data-args='["dashboard", "income", "\ud83d\udc9a Penghasilan Bulan Ini (dasar Zakat Penghasilan)"]'><div class="stat-label">Penghasilan Bulan Ini</div><div class="stat-val green" id="zpIncomeBulan">Rp 0</div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">PAJAK & ZAKAT</span><h2>Zakat</h2><p>Penghasilan, maal, fitrah, status, dan riwayat pembayaran.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mb12"><div class="card-title">💼 Zakat Penghasilan (Profesi) <span class="u-flexc8"><span class="card-setting-btn u-pointer" data-action="hitungZakatPenghasilan">🔄 Hitung dari Transaksi</span><span class="card-collapse-toggle" id="pzZakatPenghasilanCard-chev" data-action="toggleCardCollapse" data-args='["pzZakatPenghasilanCard","$event"]' aria-label="Buka/tutup bagian">▾</span></span></div><div class="card-collapse-body" id="pzZakatPenghasilanCard-cbody"><div class="u-hint10">Dihitung otomatis dari total transaksi <b>Pemasukan</b> bulan berjalan. Kadar 2,5% jika penghasilan ≥ nisab bulanan.</div><div class="grid2 u-mb10"><div class="stat-box clickable" data-action="showFilteredTx" data-args='["dashboard", "income", "\ud83d\udc9a Penghasilan Bulan Ini (dasar Zakat Penghasilan)"]'><div class="stat-label">Penghasilan Bulan Ini</div><div class="stat-val green" id="zpIncomeBulan">Rp 0</div></div>
         <div class="stat-box"><div class="stat-label" title="Nisab = batas minimal penghasilan bulanan yang mewajibkan zakat (setara 85 gram emas / 12 bulan)">Nisab / Bulan ℹ️</div><div class="stat-val" id="zpNisabBulan">Rp 0</div></div>
       </div>
       <div class="u-r12 u-mb10" id="zpStatusBox" style="padding:12px;background:var(--surface3)">
@@ -2160,120 +1610,12 @@
       </div>
     </div>
 
-    <div class="card"><div class="card-title">📜 Riwayat Pembayaran Zakat <span class="card-collapse-toggle" id="pzRiwayatZakatCard-chev" data-action="toggleCardCollapse" data-args='["pzRiwayatZakatCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="pzRiwayatZakatCard-cbody"><div id="zakatLogList"><div class="empty"><div class="empty-icon">🕌</div><div class="empty-text">Belum ada riwayat</div></div></div></div></div>
+    <div class="card"><div class="card-title">📜 Riwayat Pembayaran Zakat <span class="card-collapse-toggle" id="pzRiwayatZakatCard-chev" data-action="toggleCardCollapse" data-args='["pzRiwayatZakatCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="pzRiwayatZakatCard-cbody"><div id="zakatLogList" data-pwa-large-list-target data-pwa-large-list-threshold="120"><div class="empty"><div class="empty-icon">🕌</div><div class="empty-text">Belum ada riwayat</div></div></div></div></div>
   </div>
 
   <!-- PAJAK TAB -->
   <div id="pajakTab-pajak" class="u-dnone">
-    <div class="card u-mb12 u-dnone" id="pajakRekomendasiCard">
-      <div class="u-fs12 u-lh16" id="pajakRekomendasiText"></div>
-    </div>
-    <div class="cn-tabs pjk-subtabs">
-      <button class="pjk-subtab active" data-action="setPjkTab" data-args='["pph21", "$el"]'>🧾 PPh 21</button>
-      <button class="pjk-subtab" data-action="setPjkTab" data-args='["pbb", "$el"]'>🏛️ PBB &amp; UMKM</button>
-    </div>
-    <div class="page-breadcrumb">🧾 Pajak › <span class="pb-current" id="pjkBreadcrumbSub">PPh 21</span></div>
-    <!-- 2026-07-17 (bagian ke-4): split tab 🧾 Pajak (PPh 21) (page-pajak) jadi 2
-         sub-tab (PPh 21 / PBB & UMKM) — pola SAMA PERSIS dgn split Laporan/
-         Kelola (Keuangan) & Aset di atas, murni reorganisasi DOM lewat
-         setPjkTab() (features-sheets-pwa-selftest.js), TIDAK ADA business
-         logic baru. pajakRekomendasiCard SENGAJA ditaruh DI LUAR kedua
-         sub-tab (di atas nav sub-tab ini) krn kontennya lintas sub-tab
-         (merujuk baik kalkulator PPh 21 maupun PPh Final UMKM sekaligus —
-         lihat renderPajakRekomendasi() di modules-render.js). Urutan kartu
-         direorganisasi (PPh 21 + Tabel Referensi PTKP&Tarif jadi satu
-         sub-tab, PBB + UMKM jadi sub-tab lain) — sebelumnya PBB ada DI
-         ANTARA PPh 21 & tabel referensinya di DOM. -->
-    <div id="pjkTab-pph21">
-    <div class="card u-mb12">
-      <div class="card-title">🧾 Estimasi PPh 21 (Orang Pribadi) <span class="card-collapse-toggle" id="pjPPh21Card-chev" data-action="toggleCardCollapse" data-args='["pjPPh21Card","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-      <div class="card-collapse-body" id="pjPPh21Card-cbody">
-      <div class="u-hint10">Estimasi tahunan pakai tarif progresif Pasal 17 UU HPP. Untuk potongan bulanan riil, kantor/pemberi kerja memakai skema TER (PP 58/2023) yang hasilnya bisa sedikit berbeda tiap bulan.</div>
-      <div class="u-flex u-jcb u-aic u-fs12 u-r10 u-mb8" style="padding:8px 10px;background:var(--surface3)"><span class="u-t2">📅 Lapor SPT Tahunan (batas 31 Maret)</span><span id="pphSptBadge" class="u-fw700">-</span></div>
-      <button class="btn btn-ghost btn-full btn-sm u-mb4" data-action="ikatSptTagihan">🔔 Ikat ke Tagihan</button>
-      <div class="u-fs11 u-t2 u-mb10 u-lh15" id="sptBillStatus"></div>
-      <div class="fg u-mb8"><label class="fl">Penghasilan Bruto / Bulan <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphBruto" placeholder="0" data-oninput="hitungPPh21"></div>
-      <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanReceipt" data-args='["pphBruto", null, null]'>📷 Scan Bukti Potong (1721-A1)</button>
-      <button class="btn btn-ghost btn-sm btn-full u-mb10" data-action="isiPPhDariTransaksi">🔄 Isi dari Rata-rata Pemasukan</button>
-      <div class="fg u-mb8"><label class="fl">Status PTKP</label>
-        <select class="fs" id="pphStatus" data-onchange="hitungPPh21">
-          <option value="TK0">TK/0 — Belum Kawin, 0 Tanggungan</option>
-          <option value="TK1">TK/1 — Belum Kawin, 1 Tanggungan</option>
-          <option value="TK2">TK/2 — Belum Kawin, 2 Tanggungan</option>
-          <option value="TK3">TK/3 — Belum Kawin, 3 Tanggungan</option>
-          <option value="K0">K/0 — Kawin, 0 Tanggungan</option>
-          <option value="K1">K/1 — Kawin, 1 Tanggungan</option>
-          <option value="K2">K/2 — Kawin, 2 Tanggungan</option>
-          <option value="K3">K/3 — Kawin, 3 Tanggungan</option>
-        </select>
-      </div>
-      <div class="fg u-mb10"><label class="fl">Iuran Pensiun/JHT Ditanggung Sendiri (opsional, /bulan) <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphIuran" placeholder="0" data-oninput="hitungPPh21"></div>
-
-      <div class="hr-divider"></div>
-      <div id="pphResultBox">
-        <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Penghasilan Bruto Setahun</span><span id="pphBrutoSetahun" class="u-fw700">Rp 0</span></div>
-        <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Biaya Jabatan (5%, maks 6jt/th)</span><span id="pphBiayaJabatan" class="u-fw700">Rp 0</span></div>
-        <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Iuran Pensiun Setahun</span><span id="pphIuranSetahun" class="u-fw700">Rp 0</span></div>
-        <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Penghasilan Neto Setahun</span><span id="pphNeto" class="u-fw700">Rp 0</span></div>
-        <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">PTKP (<span id="pphStatusLabel">TK/0</span>)</span><span id="pphPTKP" class="u-fw700">Rp 0</span></div>
-        <div class="u-flex u-jcb u-fs13 u-mb10" style="padding-top:6px;border-top:1px solid var(--border)"><span class="u-ctext">Penghasilan Kena Pajak (PKP)</span><span class="u-fw800" id="pphPKP">Rp 0</span></div>
-        <div class="u-fs11 u-t2 u-mb10 u-lh16" id="pphBracketDetail"></div>
-        <div class="u-r12" style="padding:12px;background:var(--surface3)">
-          <div class="u-flex u-jcb u-aic u-mb4"><span class="u-fs12t2">PPh 21 Terutang / Tahun</span><span id="pphSetahun" class="stat-val red u-fs16">Rp 0</span></div>
-          <div class="u-flex u-jcb u-aic"><span class="u-fs12t2">≈ Per Bulan</span><span id="pphPerBulan" class="stat-val u-fs14">Rp 0</span></div>
-        </div>
-      </div>
-      </div>
-    </div>
-
-    <details class="card u-p0">
-      <summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">📖 Tabel Referensi PTKP &amp; Tarif</span></summary>
-      <div class="u-fs12 u-t2" style="padding:0 16px 16px;line-height:1.8">
-        <b class="u-ctext">PTKP (PMK 101/2016)</b><br>
-        TK/0: Rp54.000.000 · TK/1 &amp; K/0: Rp58.500.000<br>
-        TK/2 &amp; K/1: Rp63.000.000 · TK/3 &amp; K/2: Rp67.500.000 · K/3: Rp72.000.000
-        <div style="height:1px;background:var(--border);margin:10px 0"></div>
-        <b class="u-ctext">Tarif Progresif Pasal 17 UU HPP</b><br>
-        5% s.d. Rp60jt · 15% Rp60jt–Rp250jt · 25% Rp250jt–Rp500jt · 30% Rp500jt–Rp5M · 35% &gt;Rp5M
-      </div>
-    </details>
-
-    </div>
-
-    <div id="pjkTab-pbb" class="u-dnone">
-    <div class="card u-mb12">
-      <div class="card-title">🏛️ PBB (Pajak Bumi &amp; Bangunan) <span class="card-collapse-toggle" id="pjPBBCard-chev" data-action="toggleCardCollapse" data-args='["pjPBBCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-      <div class="card-collapse-body" id="pjPBBCard-cbody">
-      <div class="u-hint10">Dihitung dari <b>NJOP</b> (Nilai Jual Objek Pajak) tanah + bangunan, dikurangi <b>NJOPTKP</b>, dikali tarif PBB-P2. Sejak UU HKPD, tarif ditetapkan Pemda masing-masing (maks 0,5%) — cek Perda/SPPT setempat untuk angka pasti.</div>
-      <div class="fg u-mb10">
-        <label class="fl">Isi Otomatis dari Buku Aset (opsional)</label>
-        <select class="fs" id="pbbAssetPick" data-onchange="pilihAsetPBB">
-          <option value="">— Pilih aset Tanah/Rumah —</option>
-        </select>
-      </div>
-      <button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanTanggalDariFoto" data-args='["pbbJatuhTempo"]'>📷 Scan Tanggal Jatuh Tempo (SPPT)</button>
-      <div class="fg u-mb8"><label class="fl" title="NJOP = Nilai Jual Objek Pajak, dasar perhitungan PBB berdasarkan harga pasar tanah/bangunan versi pemerintah">NJOP Bumi (Tanah) ℹ️</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBumi" placeholder="0" data-oninput="hitungPBB"></div>
-      <div class="fg u-mb8"><label class="fl">NJOP Bangunan (opsional, kosongkan jika tanah kosong)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBangunan" placeholder="0" data-oninput="hitungPBB"></div>
-      <div class="fg u-mb8"><label class="fl">NJOPTKP (Nilai Tidak Kena Pajak)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjoptkp" placeholder="0" data-oninput="hitungPBB"></div>
-      <div class="fg u-mb10"><label class="fl">Tarif PBB-P2 (%, cek Perda daerah — umumnya 0,1%–0,5%)</label><input type="text" inputmode="decimal" class="fi" id="pbbTarif" placeholder="0.5" data-oninput="hitungPBB"></div>
-      <div class="hr-divider"></div>
-      <div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">NJOP Total</span><span id="pbbNjopTotal" class="u-fw700">Rp 0</span></div>
-      <div class="u-flex u-jcb u-fs13 u-mb10" style="padding-top:6px;border-top:1px solid var(--border)"><span class="u-ctext">NJOP Kena Pajak</span><span class="u-fw800" id="pbbNjopKenaPajak">Rp 0</span></div>
-      <div class="u-r12" style="padding:12px;background:var(--surface3)">
-        <div class="u-flex u-jcb u-aic"><span class="u-fs12t2">PBB Terutang / Tahun</span><span id="pbbTerutang" class="stat-val red u-fs16">Rp 0</span></div>
-      </div>
-      <div class="hr-divider"></div>
-      <div class="fg u-mb10"><label class="fl">Tanggal Jatuh Tempo PBB (cek SPPT, umumnya sebelum akhir Agustus)</label><input type="date" class="fi" id="pbbJatuhTempo"></div>
-      <button class="btn btn-primary btn-full btn-sm" data-action="ikatPBBTagihan">🔔 Ikat ke Tagihan Tahunan</button>
-      <div class="u-fs11 u-t2 u-mt8 u-lh15" id="pbbBillStatus"></div>
-      </div>
-    </div>
-
-    <details class="card u-p0" id="umkmDetails">
-      <summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">🏪 Pajak Bisnis Shop (UMKM)</span></summary>
-      <div class="summary-body-pad">
-        <div class="u-fs12 u-t2 u-mb10 u-lh16">Untuk UMKM perorangan dengan omzet ≤ Rp4,8 M/tahun, tarif PPh Final UMKM adalah <b>0,5% dari omzet bruto per bulan</b> (PP 55/2022), berlaku maksimal 7 tahun sejak terdaftar.</div>
-        <div class="stat-box u-mb8"><div class="stat-label">Omzet Shop Bulan Ini</div><div class="stat-val" id="umkmOmzet">Rp 0</div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">PAJAK & ZAKAT</span><h2>Pajak</h2><p>PPh 21, PBB, UMKM, tagihan, dan referensi.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mb12 u-dnone" id="pajakRekomendasiCard"><div class="u-fs12 u-lh16" id="pajakRekomendasiText"></div></div><div class="cn-tabs pjk-subtabs"><button class="pjk-subtab active" data-action="setPjkTab" data-args='["pph21", "$el"]'>🧾 PPh 21</button><button class="pjk-subtab" data-action="setPjkTab" data-args='["pbb", "$el"]'>🏛️ PBB &amp; UMKM</button></div><div class="page-breadcrumb">🧾 Pajak › <span class="pb-current" id="pjkBreadcrumbSub">PPh 21</span></div><!-- 2026-07-17 (bagian ke-4): split tab 🧾 Pajak (PPh 21) (page-pajak) jadi 2 sub-tab (PPh 21 / PBB & UMKM) — pola SAMA PERSIS dgn split Laporan/ Kelola (Keuangan) & Aset di atas, murni reorganisasi DOM lewat setPjkTab() (features-sheets-pwa-selftest.js), TIDAK ADA business logic baru. pajakRekomendasiCard SENGAJA ditaruh DI LUAR kedua sub-tab (di atas nav sub-tab ini) krn kontennya lintas sub-tab (merujuk baik kalkulator PPh 21 maupun PPh Final UMKM sekaligus — lihat renderPajakRekomendasi() di modules-render.js). Urutan kartu direorganisasi (PPh 21 + Tabel Referensi PTKP&Tarif jadi satu sub-tab, PBB + UMKM jadi sub-tab lain) — sebelumnya PBB ada DI ANTARA PPh 21 & tabel referensinya di DOM. --><div id="pjkTab-pph21"><div class="card u-mb12"><div class="card-title">🧾 Estimasi PPh 21 (Orang Pribadi) <span class="card-collapse-toggle" id="pjPPh21Card-chev" data-action="toggleCardCollapse" data-args='["pjPPh21Card","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="pjPPh21Card-cbody"><div class="u-hint10">Estimasi tahunan pakai tarif progresif Pasal 17 UU HPP. Untuk potongan bulanan riil, kantor/pemberi kerja memakai skema TER (PP 58/2023) yang hasilnya bisa sedikit berbeda tiap bulan.</div><div class="u-flex u-jcb u-aic u-fs12 u-r10 u-mb8" style="padding:8px 10px;background:var(--surface3)"><span class="u-t2">📅 Lapor SPT Tahunan (batas 31 Maret)</span><span id="pphSptBadge" class="u-fw700">-</span></div><button class="btn btn-ghost btn-full btn-sm u-mb4" data-action="ikatSptTagihan">🔔 Ikat ke Tagihan</button><div class="u-fs11 u-t2 u-mb10 u-lh15" id="sptBillStatus"></div><div class="fg u-mb8"><label class="fl">Penghasilan Bruto / Bulan <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphBruto" placeholder="0" data-oninput="hitungPPh21"></div><button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanReceipt" data-args='["pphBruto", null, null]'>📷 Scan Bukti Potong (1721-A1)</button><button class="btn btn-ghost btn-sm btn-full u-mb10" data-action="isiPPhDariTransaksi">🔄 Isi dari Rata-rata Pemasukan</button><div class="fg u-mb8"><label class="fl">Status PTKP</label><select class="fs" id="pphStatus" data-onchange="hitungPPh21"><option value="TK0">TK/0 — Belum Kawin, 0 Tanggungan</option><option value="TK1">TK/1 — Belum Kawin, 1 Tanggungan</option><option value="TK2">TK/2 — Belum Kawin, 2 Tanggungan</option><option value="TK3">TK/3 — Belum Kawin, 3 Tanggungan</option><option value="K0">K/0 — Kawin, 0 Tanggungan</option><option value="K1">K/1 — Kawin, 1 Tanggungan</option><option value="K2">K/2 — Kawin, 2 Tanggungan</option><option value="K3">K/3 — Kawin, 3 Tanggungan</option></select></div><div class="fg u-mb10"><label class="fl">Iuran Pensiun/JHT Ditanggung Sendiri (opsional, /bulan) <span class="u-fw400 u-t2">(tersimpan otomatis)</span></label><input type="text" inputmode="numeric" class="fi" id="pphIuran" placeholder="0" data-oninput="hitungPPh21"></div><div class="hr-divider"></div><div id="pphResultBox"><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Penghasilan Bruto Setahun</span><span id="pphBrutoSetahun" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Biaya Jabatan (5%, maks 6jt/th)</span><span id="pphBiayaJabatan" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Iuran Pensiun Setahun</span><span id="pphIuranSetahun" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">Penghasilan Neto Setahun</span><span id="pphNeto" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">PTKP (<span id="pphStatusLabel">TK/0</span>)</span><span id="pphPTKP" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs13 u-mb10" style="padding-top:6px;border-top:1px solid var(--border)"><span class="u-ctext">Penghasilan Kena Pajak (PKP)</span><span class="u-fw800" id="pphPKP">Rp 0</span></div><div class="u-fs11 u-t2 u-mb10 u-lh16" id="pphBracketDetail"></div><div class="u-r12" style="padding:12px;background:var(--surface3)"><div class="u-flex u-jcb u-aic u-mb4"><span class="u-fs12t2">PPh 21 Terutang / Tahun</span><span id="pphSetahun" class="stat-val red u-fs16">Rp 0</span></div><div class="u-flex u-jcb u-aic"><span class="u-fs12t2">≈ Per Bulan</span><span id="pphPerBulan" class="stat-val u-fs14">Rp 0</span></div></div></div></div></div><details class="card u-p0"><summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">📖 Tabel Referensi PTKP &amp; Tarif</span></summary><div class="u-fs12 u-t2" style="padding:0 16px 16px;line-height:1.8"><b class="u-ctext">PTKP (PMK 101/2016)</b><br> TK/0: Rp54.000.000 · TK/1 &amp; K/0: Rp58.500.000<br> TK/2 &amp; K/1: Rp63.000.000 · TK/3 &amp; K/2: Rp67.500.000 · K/3: Rp72.000.000 <div style="height:1px;background:var(--border);margin:10px 0"></div><b class="u-ctext">Tarif Progresif Pasal 17 UU HPP</b><br> 5% s.d. Rp60jt · 15% Rp60jt–Rp250jt · 25% Rp250jt–Rp500jt · 30% Rp500jt–Rp5M · 35% &gt;Rp5M </div></details></div><div id="pjkTab-pbb" class="u-dnone"><div class="card u-mb12"><div class="card-title">🏛️ PBB (Pajak Bumi &amp; Bangunan) <span class="card-collapse-toggle" id="pjPBBCard-chev" data-action="toggleCardCollapse" data-args='["pjPBBCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="pjPBBCard-cbody"><div class="u-hint10">Dihitung dari <b>NJOP</b> (Nilai Jual Objek Pajak) tanah + bangunan, dikurangi <b>NJOPTKP</b>, dikali tarif PBB-P2. Sejak UU HKPD, tarif ditetapkan Pemda masing-masing (maks 0,5%) — cek Perda/SPPT setempat untuk angka pasti.</div><div class="fg u-mb10"><label class="fl">Isi Otomatis dari Buku Aset (opsional)</label><select class="fs" id="pbbAssetPick" data-onchange="pilihAsetPBB"><option value="">— Pilih aset Tanah/Rumah —</option></select></div><button class="btn btn-ghost btn-full btn-sm u-mb10" data-action="scanTanggalDariFoto" data-args='["pbbJatuhTempo"]'>📷 Scan Tanggal Jatuh Tempo (SPPT)</button><div class="fg u-mb8"><label class="fl" title="NJOP = Nilai Jual Objek Pajak, dasar perhitungan PBB berdasarkan harga pasar tanah/bangunan versi pemerintah">NJOP Bumi (Tanah) ℹ️</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBumi" placeholder="0" data-oninput="hitungPBB"></div><div class="fg u-mb8"><label class="fl">NJOP Bangunan (opsional, kosongkan jika tanah kosong)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjopBangunan" placeholder="0" data-oninput="hitungPBB"></div><div class="fg u-mb8"><label class="fl">NJOPTKP (Nilai Tidak Kena Pajak)</label><input type="text" inputmode="numeric" class="fi" id="pbbNjoptkp" placeholder="0" data-oninput="hitungPBB"></div><div class="fg u-mb10"><label class="fl">Tarif PBB-P2 (%, cek Perda daerah — umumnya 0,1%–0,5%)</label><input type="text" inputmode="decimal" class="fi" id="pbbTarif" placeholder="0.5" data-oninput="hitungPBB"></div><div class="hr-divider"></div><div class="u-flex u-jcb u-fs12 u-mb6"><span class="u-t2">NJOP Total</span><span id="pbbNjopTotal" class="u-fw700">Rp 0</span></div><div class="u-flex u-jcb u-fs13 u-mb10" style="padding-top:6px;border-top:1px solid var(--border)"><span class="u-ctext">NJOP Kena Pajak</span><span class="u-fw800" id="pbbNjopKenaPajak">Rp 0</span></div><div class="u-r12" style="padding:12px;background:var(--surface3)"><div class="u-flex u-jcb u-aic"><span class="u-fs12t2">PBB Terutang / Tahun</span><span id="pbbTerutang" class="stat-val red u-fs16">Rp 0</span></div></div><div class="hr-divider"></div><div class="fg u-mb10"><label class="fl">Tanggal Jatuh Tempo PBB (cek SPPT, umumnya sebelum akhir Agustus)</label><input type="date" class="fi" id="pbbJatuhTempo"></div><button class="btn btn-primary btn-full btn-sm" data-action="ikatPBBTagihan">🔔 Ikat ke Tagihan Tahunan</button><div class="u-fs11 u-t2 u-mt8 u-lh15" id="pbbBillStatus"></div></div></div><details class="card u-p0" id="umkmDetails"><summary class="u-pointer u-flex u-aic u-jcb summary-toggle"><span class="card-title u-mb0">🏪 Pajak Bisnis Shop (UMKM)</span></summary><div class="summary-body-pad"><div class="u-fs12 u-t2 u-mb10 u-lh16">Untuk UMKM perorangan dengan omzet ≤ Rp4,8 M/tahun, tarif PPh Final UMKM adalah <b>0,5% dari omzet bruto per bulan</b> (PP 55/2022), berlaku maksimal 7 tahun sejak terdaftar.</div><div class="stat-box u-mb8"><div class="stat-label">Omzet Shop Bulan Ini</div><div class="stat-val" id="umkmOmzet">Rp 0</div></div>
         <div class="stat-box"><div class="stat-label">Estimasi PPh Final (0,5%)</div><div class="stat-val orange" id="umkmPajak">Rp 0</div></div>
       </div>
     </details>
@@ -2293,9 +1635,10 @@
       <div class="u-fs11 u-ctext3 u-mt8 u-lh14">ℹ️ NJOPTKP &amp; Tarif PBB-P2 (di kartu Estimasi PBB) <b>tidak</b> ikut dicek AI — nilainya beda tiap daerah, cek Perda/SPPT setempat sendiri.</div>
     </div>
   </details>
+  </div>
 </div>
 
-<script src="modules/shared/modal-write.js?v=1880" data-modal-range="0-102"></script>
+<script src="modules/shared/modal-write.js?v=1884" data-modal-range="0-102"></script>
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
 <!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
@@ -4265,6 +3608,6 @@
 <!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
 <!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=1880" data-guard-src="app-bundle-b.min.js?v=1880" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=1884" data-guard-src="app-bundle-b.min.js?v=1884" data-guard-id="appBundleBScript"></script>
 </body>
 </html>
