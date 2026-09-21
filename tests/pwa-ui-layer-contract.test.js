@@ -11,7 +11,7 @@ test('PWA UI layer is structural, dependency-free, and loaded by both runtime HT
   const index = read('index.html');
   const prod = read('app_production.html');
   assert.match(css, /body\[data-theme\]/);
-  assert.match(css, /@media \(min-width: 900px\)/);
+  assert.match(css, /@media\s*\(min-width:\s*900px\)/);
   assert.match(css, /flex-direction:\s*column/);
   assert.match(css, /grid-template-columns:\s*repeat\(4/);
   assert.doesNotMatch(css, /@import\s+url\(/i);
@@ -40,4 +40,16 @@ test('PWA UI layer is included in offline precache and standalone preview toolin
   assert.match(sw, /['"]\.\/pwa-ui-layer\.css['"]/);
   assert.match(preview, /pwa-ui-layer\.css/);
   assert.match(budget, /['"]pwa-ui-layer\.css['"]:\s*15_000/);
+});
+
+test('S1881 implements a real presentation composition, not only theme overrides', () => {
+  const css = read('pwa-ui-layer.css');
+  assert.match(css, /#page-dashboard-hub\.page\.active\s*\{[\s\S]*grid-template-areas:/);
+  assert.match(css, /grid-area:\s*hero/);
+  assert.match(css, /grid-area:\s*actions/);
+  assert.match(css, /grid-area:\s*main/);
+  assert.match(css, /dashhub-hero[\s\S]*grid-template-areas:/);
+  assert.match(css, /dashhub-qa-btn::after/);
+  assert.match(css, /dashhub-feature-card/);
+  assert.match(css, /S1881.*TRUE PRESENTATION REDESIGN/);
 });

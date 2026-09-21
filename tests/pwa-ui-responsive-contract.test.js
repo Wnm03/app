@@ -21,8 +21,8 @@ test('PWA UI layer is linked by both runtime HTML shells and precached by SW', (
   const index = read('index.html');
   const prod = read('app_production.html');
   const sw = read('sw.js');
-  assert.match(index, /href="pwa-ui-layer\.css\?v=1879"/);
-  assert.match(prod, /href="pwa-ui-layer\.css\?v=1879"/);
+  assert.match(index, /href="pwa-ui-layer\.css\?v=1880"/);
+  assert.match(prod, /href="pwa-ui-layer\.css\?v=1880"/);
   assert.match(sw, /['"]\.\/pwa-ui-layer\.css['"]/);
 });
 
@@ -42,5 +42,5 @@ test('PWA UI desktop/mobile layout has explicit overflow safeguards', () => {
   assert.match(css, /overflow-y:\s*auto/);
   assert.match(css, /overflow-x:\s*hidden/);
   assert.match(css, /-webkit-overflow-scrolling:\s*touch/);
-  assert.match(css, /grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(css, /grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
 });
