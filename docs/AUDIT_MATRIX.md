@@ -18,16 +18,18 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2275 |
-| JavaScript | 1369 |
-| Tests | 890 |
-| Markdown | 764 |
+| Total files | 2271 |
+| JavaScript | 1371 |
+| Tests | 894 |
+| Markdown | 766 |
 | HTML | 7 |
-| JSON | 45 |
+| JSON | 37 |
 | CSS | 4 |
 | Module families | 17 |
 
 
+
+_Baseline disinkronkan pada S1883 (2026-09-21) setelah UI performance hardening: Total files 2271, JavaScript 1371, Tests 894, Markdown 766, HTML 7, JSON 37, CSS 4, Module families 17. Angka mengikuti walker build (exclude `node_modules/`, `.git/`, `backups/`). `pwa-ui-layer.css` dipadatkan untuk memenuhi budget 15 KB; tidak ada perubahan business logic/IndexedDB/data-action. Build menghasilkan runtime v1880.
 _Baseline disinkronkan kembali pada S1879 (2026-09-21) setelah redesign structural PWA UI dan rebuild: Total files 2275, JavaScript 1369, Tests 890, Markdown 764, HTML 7, JSON 45, CSS 4, Module families 17. `backups/`, `node_modules/`, dan `.git/` dikecualikan sesuai walker build; `.test-checkpoints/` termasuk snapshot test lokal dan tidak dibawa ke patch aplikasi. Perubahan UI bersifat presentation-layer/CSS + shell layout; business logic, IndexedDB, data-action hooks, dan runtime source manifest dipertahankan.
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
