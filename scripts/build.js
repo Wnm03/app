@@ -73,6 +73,7 @@ const { computeGroupHash, markerLine } = require('./bundle-hash');
 const ROOT = path.join(__dirname, '..');
 
 const GROUP_A = [
+  'modules/shared/pwa-ux-performance.js',
   'modules/shared/modules-render.js',
   // Audit ukuran file (lanjutan S589/s644): modules-render.js dipecah jadi 2 file agar
   // di bawah OVERSIZED_FILE_LINE_THRESHOLD. Separuh keduanya (renderDashboard()/
