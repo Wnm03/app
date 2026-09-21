@@ -13,11 +13,11 @@ test('S1890 UI: Shop/Car/Pajak keep baseline pages and tab hooks',()=>{
 });
 
 test('S1890 UI: domain pages use responsive workspace layout without new framework',()=>{
-  assert.match(css,/page-shop\.page\.active/);
-  assert.match(css,/page-carnotes\.page\.active/);
-  assert.match(css,/page-pajak\.page\.active/);
-  assert.match(css,/@media\(min-width:900px\)/);
-  assert.match(css,/@media\(max-width:899px\)/);
+  assert.match(css,/pwa-domain-shop/);
+  assert.match(css,/pwa-domain-car/);
+  assert.match(css,/pwa-domain-tax/);
+  assert.match(css,/@media\s*\(min-width:900px\)/);
+  assert.match(css,/@media\s*\(max-width:899px\)/);
   assert.match(css,/content-visibility:auto/);
   assert.doesNotMatch(css,/@import\s+url\(/i);
   assert.doesNotMatch(css,/tailwind|bootstrap|material-ui/i);

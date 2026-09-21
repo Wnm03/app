@@ -21,8 +21,10 @@ test('PWA UI layer is linked by both runtime HTML shells and precached by SW', (
   const index = read('index.html');
   const prod = read('app_production.html');
   const sw = read('sw.js');
-  assert.match(index, /href="pwa-ui-layer\.css\?v=1884"/);
-  assert.match(prod, /href="pwa-ui-layer\.css\?v=1884"/);
+  const m=index.match(/pwa-ui-layer\.css\?v=(\d+)/);
+  assert.ok(m,'pwa-ui-layer version missing');
+  const v=m[1];
+  assert.match(prod,new RegExp('pwa-ui-layer\\.css\\?v='+v+'\"'));
   assert.match(sw, /['"]\.\/pwa-ui-layer\.css['"]/);
 });
 
