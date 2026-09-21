@@ -43,7 +43,11 @@
     "verify:reproducible-build": "node scripts/verify-reproducible-build.js",
     "audit:app-wide": "node scripts/s1860-app-wide-hardening-gate.js",
     "audit:performance-budget": "node scripts/performance-budget.js",
-    "release:ui-gate": "node scripts/release-ui-gate.js"
+    "release:ui-gate": "node scripts/release-ui-gate.js",
+    "release:final-gate": "node scripts/release-final-gate.js",
+    "audit:production-readiness": "node scripts/audit-production-readiness.js",
+    "test:full:fast": "TEST_SHARDS=64 TEST_CONCURRENCY=8 TEST_SHARD_TIMEOUT_MS=90000 node scripts/run-full-test.js",
+    "audit:backup-integrity": "node --test tests/s1901-backup-integrity-and-error-safety.test.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

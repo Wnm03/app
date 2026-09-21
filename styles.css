@@ -2012,3 +2012,18 @@ summary:focus-visible {
   }
 }
 
+/* S1893 — mobile visual integrity: contain domain shells, long tabs, grids and landscape/keyboard states. */
+@media (max-width:899px){
+  .page{width:100%;max-width:100%;min-width:0;margin:0;overflow-x:clip;}
+  .page-settings-btn{min-width:0;flex-wrap:wrap;}
+  .pwa-domain-page{min-width:0;max-width:100%;width:100%;overflow-x:clip;}
+  .pwa-domain-page>*{min-width:0;max-width:100%;box-sizing:border-box;}
+  .pwa-domain-page .cn-tabs,.pwa-domain-page .vehicle-select,.pwa-domain-page .filter-scroll{max-width:100%;min-width:0;}
+}
+@media (orientation:landscape) and (max-width:899px){
+  .page{padding:8px 12px 18px;}
+  .pwa-domain-page .pwa-domain-hero{grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr);padding:13px;}
+  .pwa-domain-page .pwa-domain-hero-actions{grid-template-columns:repeat(3,minmax(0,1fr));}
+  .pwa-domain-page .pwa-domain-hero h1{font-size:21px;}
+}
+.pwa-keyboard-open .keu-fab,.pwa-keyboard-open .kasir-floatbar{transform:translateY(140%);opacity:0;pointer-events:none;}

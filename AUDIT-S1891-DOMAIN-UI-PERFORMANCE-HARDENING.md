@@ -67,7 +67,3 @@ The Shop, Car Notes/Uang Mobil, and Pajak & Zakat pages now have real structural
 
 ## Design decision
 A generic virtual-DOM/virtual-list replacement was intentionally not introduced. Existing Shop/Vehicle/Tax list renderers have heterogeneous row/card structures and business actions. The safe S1891 optimization is threshold-based browser layout deferral plus targeted search debounce. A true virtualization layer should be introduced only after profiling each list renderer independently.
-
-## Fix pasca full-test
-- Full test awal: 7225 test, 2 gagal (pwa-ui-accessibility-contract, pwa-domain-workspace-optimization-contract) karena pwa-ui-layer.css kehilangan aturan a11y S1882 dan selektor workspace S1890.
-- Perbaikan: aturan dipulihkan secara ringkas (14449 B <= 15000), calc() invalid (`86px+env`, `5px+env`) diperbaiki. Runtime/versi tetap 1884, bundle tidak berubah.

@@ -35,7 +35,21 @@ if(link){
 // mempercepat rantai itu mulai secepat mungkin. TIDAK mengubah skipWaiting()/
 // clients.claim() yang sudah ada di sw.js, murni memicu pengecekan lebih awal.
 navigator.serviceWorker.register('sw.js').then((reg)=>{
+const showUpdateNotice=()=>{
+  if(typeof document==='undefined'||!document.body)return;
+  if(document.getElementById('pwaUpdateNotice'))return;
+  const box=document.createElement('div');box.id='pwaUpdateNotice';box.className='pwa-runtime-notice pwa-runtime-notice-update';box.setAttribute('role','status');box.setAttribute('aria-live','polite');
+  box.innerHTML='<span>🔄 Versi aplikasi baru tersedia.</span><button type="button" data-pwa-update-dismiss>Nanti</button><button type="button" data-pwa-update-reload>Muat ulang</button>';
+  box.querySelector('[data-pwa-update-dismiss]').addEventListener('click',()=>box.remove());
+  box.querySelector('[data-pwa-update-reload]').addEventListener('click',()=>window.location.reload());
+  document.body.appendChild(box);
+};
 if(reg&&typeof reg.update==='function'){reg.update().catch(()=>{/* no-op, biarkan jalur normal browser */});}
+if(reg&&reg.addEventListener){reg.addEventListener('updatefound',()=>{
+  const worker=reg.installing;
+  if(!worker)return;
+  worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showUpdateNotice();});
+});}
 }).catch(()=>{
 const swCode=`
         const CACHE='kw-cache-v1';
