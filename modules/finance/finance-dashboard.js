@@ -87,6 +87,7 @@ const FinanceDashboard = {
       this._cashFlowCard(hook.cashflow),
       this._budgetCard(hook.budget),
       this._healthCard(hook.healthScore),
+      this._auditCard(),
       ...this._sparepartCards(),
     ];
 
@@ -100,6 +101,18 @@ const FinanceDashboard = {
         </div>
       </div>
     `).join('');
+  },
+
+  // _auditCard() — entry point Audit Keuangan 30 Menit Phase A.
+  // Hanya navigasi ke presenter read-only; tidak menghitung angka di sini.
+  _auditCard() {
+    return {
+      icon: '🔎',
+      label: 'Audit Keuangan 30 Menit',
+      value: 'Mulai audit',
+      sub: 'Ringkasan 30 hari · top kategori · transaksi kecil',
+      onClick: { action: 'openFinancialAudit30Menit', args: [] },
+    };
   },
 
   // _sparepartCards() — Tahap 8D: integrasi Dashboard Keuangan + Sparepart.
