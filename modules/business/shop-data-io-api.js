@@ -302,10 +302,14 @@ const ShopDataIO = {
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = 'shop-backup-' + new Date().toISOString().split('T')[0] + '.json';
     a.click();
+    if (typeof a.remove === 'function') a.remove();
+    else if (a.parentNode && typeof a.parentNode.removeChild === 'function') a.parentNode.removeChild(a);
+    if (typeof URL.revokeObjectURL === 'function') setTimeout(() => URL.revokeObjectURL(url), 0);
     return payload;
   },
 
