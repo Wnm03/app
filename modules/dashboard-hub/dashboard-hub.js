@@ -713,8 +713,8 @@ const DashboardHub = {
       try { fn(); } catch (e) { console.warn('DashboardHub: section presenter "' + name + '" gagal dirender:', e); }
     };
     if (tab === 'ringkasan') {
-      safe('DashboardHubSummary', () => { if (typeof DashboardHubSummary !== 'undefined') DashboardHubSummary.render(); });
-      safe('DashboardHubAnalytics', () => { if (typeof DashboardHubAnalytics !== 'undefined') DashboardHubAnalytics.render(); });
+      // Slim mode: Hero + Ticker sudah menjadi financial header. Summary/Analytics
+      // hanya mengulang angka yang sama, sehingga tidak dirender di Dashboard Hub.
       safe('DashboardHubOwnershipSummary', () => { if (typeof DashboardHubOwnershipSummary !== 'undefined') DashboardHubOwnershipSummary.render(); });
       return;
     }
@@ -735,14 +735,25 @@ const DashboardHub = {
       return;
     }
     if (tab === 'insight') {
-      safe('LifeOSHome', () => { if (typeof LifeOSHome !== 'undefined') LifeOSHome.render(); });
-      safe('ShopMiniSummary', () => { if (typeof ShopMiniSummary !== 'undefined') ShopMiniSummary.render(); });
+      // Slim Insight: hanya presenter lintas-domain yang punya fungsi unik di
+      // Dashboard Hub. LifeOS/Shop/EIE/UnifiedDashboardHome tetap tersedia di
+      // modul masing-masing tetapi tidak dihitung ulang saat tab Insight dibuka.
       safe('CrossDashboardCard', () => { if (typeof CrossDashboardCard !== 'undefined') CrossDashboardCard.render(); });
       safe('CrossInsightPresenter', () => { if (typeof CrossInsightPresenter !== 'undefined') CrossInsightPresenter.render(); });
       safe('UnifiedBriefingPresenter', () => { if (typeof UnifiedBriefingPresenter !== 'undefined') UnifiedBriefingPresenter.render(); });
-      safe('UnifiedDashboardHome', () => { if (typeof UnifiedDashboardHome !== 'undefined') UnifiedDashboardHome.render(); });
+      safe('FinancialAuditDashboardInsight', () => {
+        if (typeof FinancialAuditPresenter !== 'undefined' && typeof FinancialAuditPresenter.renderDashboardInsight === 'function') {
+          FinancialAuditPresenter.renderDashboardInsight();
+        }
+      });
+      // Decision Center adalah satu-satunya sumber prioritas/rekomendasi yang
+      // dipertahankan di Hub. Presenter lain yang mengulang data prioritas tidak
+      // dijalankan di sini.
       safe('DecisionCenterHome', () => { if (typeof DecisionCenterHome !== 'undefined') DecisionCenterHome.render(); });
-      safe('EIEDashboard', () => { if (typeof EIEDashboard !== 'undefined') EIEDashboard.render(); });
+      // Briefing bersifat sekunder: default collapsed, tetapi preferensi user
+      // yang tersimpan tetap dihormati.
+      if (typeof applyOneCardCollapsePref === 'function') applyOneCardCollapsePref('crossBriefWrap');
+      return;
     }
   },
 
@@ -933,7 +944,9 @@ const DashboardHub = {
   // SENGAJA tidak masuk daftar manapun di bawah — tetap selalu tampil.
   applySectionTab(tab) {
     const SECTION_GROUPS = {
-      ringkasan: ['dashHubSummaryGrid', 'dashHubAnalyticsRow', 'dashHubOwnershipSummaryCard'],
+      // Summary/Analytics adalah duplikat Hero/Ticker. Tetap dibiarkan di DOM
+      // untuk kompatibilitas lama, tetapi tidak ditampilkan atau dirender.
+      ringkasan: ['dashHubSummaryGrid', 'dashHubOwnershipSummaryCard'],
       fitur: ['dashHubFavoritSection', 'dashHubMainGridCard'],
       widget: ['dashboardHubPinnedWrap'],
       // Sesi 133: findashWrap/forecastWrap/budgetRecoWrap/cashflowProjWrap/
@@ -953,13 +966,21 @@ const DashboardHub = {
       // di grup ini SUDAH PINDAH ke tab "Manajemen" #page-aset (lihat
       // catatan migrasi di render(), atas), jadi dihapus dari daftar —
       // bukan lagi bagian dari Dashboard Hub sama sekali.
-      insight: ['lifeOSWrap', 'eieWrap', 'shopMiniSummaryWrap', 'crossDashWrap', 'crossBriefWrap', 'crossInsightWrap', 'personalOverviewWrap', 'crossWidgetsWrap', 'lifePriorityWrap', 'recommendationPanelWrap', 'actionQueueWrap'],
+      insight: ['crossDashWrap', 'crossBriefWrap', 'crossInsightWrap', 'financialAuditInsightWrap', 'recommendationPanelWrap', 'actionQueueWrap'],
     };
     Object.keys(SECTION_GROUPS).forEach((t) => {
       SECTION_GROUPS[t].forEach((id) => {
         const el = document.getElementById(id);
         if (el) { el.classList.toggle('u-dnone', t !== tab); el.style.display = ''; }
       });
+    });
+
+    // Slim mode: Analytics lama + presenter Insight yang tidak lagi menjadi
+    // canonical home tetap tersembunyi agar stale DOM tidak bocor saat tab
+    // berpindah. Engine/halaman aslinya tetap tersedia.
+    ['dashHubAnalyticsRow','lifeOSWrap','eieWrap','shopMiniSummaryWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) { el.classList.add('u-dnone'); el.style.display = ''; }
     });
 
     // Update tombol aktif.
