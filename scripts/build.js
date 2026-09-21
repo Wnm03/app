@@ -678,6 +678,10 @@ const GROUP_B = [
   'self-test.js',
   'pajak-aset-ui-wrappers.js',
   'modules/finance/finance-intelligence.js',
+  // Sesi Audit Keuangan 30 Menit — Phase A: pure engine + presenter read-only.
+  'modules/finance/financial-audit-engine.js',
+  'modules/finance/financial-audit-presenter.js',
+  'modules/finance/financial-audit-annotations.js',
   'modules/finance/finance-dashboard.js',
 
   // Sesi 91 (Batch 10): Financial Forecast Foundation — ditaruh SETELAH
@@ -1006,6 +1010,8 @@ const GROUP_B = [
   // renderDashboard()/renderSettings()/DashboardHub.render()), jadi aman
   // ditaruh di titik manapun SETELAH dependency-nya.
   'modules/dashboard-hub/dashboard-hub-settings.js',
+  // Dashboard Insight Dedup: presentation-only consolidation; keeps source engines/APIs intact.
+  'modules/dashboard-hub/dashboard-insight-dedup.js',
   'modules/ai/ai-command-center.js',
   'modules/self-reward/self-reward-engine.js',
   'modules/self-reward/self-reward-view.js',
