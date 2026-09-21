@@ -878,6 +878,7 @@ if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
 const cnBc=document.getElementById('cnBreadcrumbSub');
 if(cnBc)cnBc.textContent=CN_TAB_LABEL[t]||t;
 if(typeof _cnUpdateOfflineStatus==='function')_cnUpdateOfflineStatus();
+if(typeof PWAUX!=='undefined'&&PWAUX.markRendered)PWAUX.markRendered(document.getElementById('cnTab-'+t));
 ['beranda','insight','bbm','servis','pajak','jalan'].forEach(x=>{
 const elx=document.getElementById('cnTab-'+x);
 if(elx){ elx.classList.toggle('u-dnone', x!==t); elx.style.display=''; }

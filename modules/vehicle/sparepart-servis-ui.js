@@ -382,7 +382,10 @@ renderStockFilters(beforeEl){
 },
 onStockSearchInput(value){
 Sparepart._stockSearchQuery=String(value||'');
-Sparepart.renderStockList();
+if(typeof PWAUX!=='undefined'&&PWAUX.debounce){
+  if(!Sparepart._debouncedRenderStockList)Sparepart._debouncedRenderStockList=PWAUX.debounce(function(){Sparepart.renderStockList();},160);
+  Sparepart._debouncedRenderStockList();
+}else Sparepart.renderStockList();
 },
 renderStockList(){
 Sparepart.renderDashboard();
