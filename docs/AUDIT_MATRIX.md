@@ -18,14 +18,24 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2248 |
-| JavaScript | 1374 |
-| Tests | 890 |
-| Markdown | 765 |
+| Total files | 2272 |
+| JavaScript | 1389 |
+| Tests | 907 |
+| Markdown | 774 |
 | HTML | 7 |
 | JSON | 12 |
 | CSS | 4 |
 | Module families | 17 |
+
+> **S1901 production hardening:** added SHA-256 backup sealing/verification (legacy backups remain compatible), user-facing error-path sanitization, a dedicated backup-integrity gate, and release-final-gate integration; runtime synchronized to 1894.
+
+> **S1900 production readiness:** added import/export preflight validation, object-URL cleanup, 1K–100K performance contracts, real-device visual matrix, SW update/recovery contracts, security/recovery contracts, and fast full-test sharding. Runtime synchronized to 1893; real-device/browser visual PASS remains a manual gate.
+
+> **S1893 Mobile Visual Integrity:** baseline refreshed after adding the mobile visual integrity regression contract and viewport/modal hardening; runtime version synchronized to 1888.
+
+**S1894 baseline note:** completed final PWA hardening: storage quota warning, non-forced SW update UX, Android WebView-safe domain CSS, large-list threshold contract, unified release gate, and regression/security contracts; runtime synchronized to 1889.
+
+**S1892 baseline note:** fixed malformed Shop/Uang Mobil/Pajak workspace nesting that trapped entire mobile pages inside the legacy `page-settings-btn` flex wrapper; added width containment and accessibility/safe-area guards plus regression contracts.
 
 **S1891 baseline note:** domain UI redesign (Shop/Uang Mobil/Pajak), PWA performance helpers, debounced expensive searches, large-list rendering deferral, and release UI gate added without framework dependencies or business-logic replacement.
 
