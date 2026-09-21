@@ -20,7 +20,8 @@ const now=Date.now();
 if(now-_lastErrorToastAt<3000)return;
 _lastErrorToastAt=now;
 try{
-const detail=msg?(': '+String(msg).slice(0,120)):'';
+const safeMsg=(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sanitizeErrorMessage==='function')?PWAProductionHardening.sanitizeErrorMessage(msg):String(msg==null?'':msg).slice(0,120);
+const detail=safeMsg?(': '+safeMsg):'';
 if(typeof toast==='function'){
 toast('⚠️ Ada error kecil, coba ulangi aksi terakhir'+detail,5000);
 }else{

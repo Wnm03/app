@@ -109,7 +109,7 @@ function scannerSessionPauseUI() {
   // FAB (.keu-fab) TIDAK lagi di-snapshot/di-hide di sini — ditangani CSS
   // (`_scannerSessionEnsureStyle()`) via class body.scanner-session-active,
   // di-toggle di baris berikut.
-  document.body.classList.add('scanner-session-active');
+  if(document.body&&document.body.classList)document.body.classList.add('scanner-session-active');
 }
 
 // resumeUI() — kebalikan pauseUI(), dipanggil SESUDAH scanner engine teardown
@@ -123,7 +123,7 @@ function scannerSessionResumeUI() {
     if (header) header.style.display = _scannerSessionPrevChrome.headerDisplay || '';
   }
   _scannerSessionPrevChrome = null;
-  document.body.classList.remove('scanner-session-active');
+  if(document.body&&document.body.classList)document.body.classList.remove('scanner-session-active');
 }
 
 // enter() — satu-satunya titik masuk Exclusive Scanner Mode. Guard anti-

@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s1877-selftest-persistence-fix-1884';
+const MODULE_RENDER_VERSION='s1908-cumulative-regression-hardening-1903';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -830,14 +830,12 @@ const now=new Date(),m=now.getMonth(),y=now.getFullYear();
 const whThisMonth=D.workDays.filter(w=>{const d=new Date(w.date);return d.getMonth()===m&&d.getFullYear()===y;});
 const cycleEl=document.getElementById('ldrCycle');
 if(cycleEl) cycleEl.textContent=`📋 ${whThisMonth.length} hari kerja tercatat bulan ini`;
-if(!D.nextPulang){document.getElementById('ldrNum').textContent='?';document.getElementById('ldrSub').textContent='Atur tanggal pulang berikutnya';return;}
+if(!D.nextPulang){const num=document.getElementById('ldrNum');const sub=document.getElementById('ldrSub');if(num)num.textContent='?';if(sub)sub.textContent='Atur tanggal pulang berikutnya';return;}
 const today=new Date();today.setHours(0,0,0,0);
 const pulang=new Date(D.nextPulang);
 const diff=Math.ceil((pulang-today)/(1000*60*60*24));
-if(diff<=0){document.getElementById('ldrNum').textContent='🏠';document.getElementById('ldrUnit').textContent='';document.getElementById('ldrSub').textContent='Sudah pulang ke Pekalongan!';document.getElementById('ldrFill').style.width='100%';return;}
-document.getElementById('ldrNum').textContent=diff;
-document.getElementById('ldrUnit').textContent='hari';
-document.getElementById('ldrSub').textContent='lagi pulang ke Pekalongan 💙';
+if(diff<=0){const num=document.getElementById('ldrNum');const unit=document.getElementById('ldrUnit');const sub=document.getElementById('ldrSub');const fill=document.getElementById('ldrFill');if(num)num.textContent='🏠';if(unit)unit.textContent='';if(sub)sub.textContent='Sudah pulang ke Pekalongan!';if(fill)fill.style.width='100%';return;}
+const num=document.getElementById('ldrNum');const unit=document.getElementById('ldrUnit');const sub=document.getElementById('ldrSub');if(num)num.textContent=diff;if(unit)unit.textContent='hari';if(sub)sub.textContent='lagi pulang ke Pekalongan 💙';
 const cycleStart=D.ldrCycleStart?new Date(D.ldrCycleStart):null;
 let pct=0;
 if(cycleStart && pulang>cycleStart){
@@ -847,8 +845,8 @@ pct=(elapsed/totalCycle)*100;
 } else {
 pct=100-(diff/14)*100;
 }
-document.getElementById('ldrFill').style.width=Math.max(0,Math.min(100,pct))+'%';
-document.getElementById('ldrDate').textContent=pulang.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
+const fill=document.getElementById('ldrFill');const dateEl=document.getElementById('ldrDate');if(fill)fill.style.width=Math.max(0,Math.min(100,pct))+'%';
+if(dateEl)dateEl.textContent=pulang.toLocaleDateString('id-ID',{day:'numeric',month:'short'});
 }
 
 // Sesi 197 (Ownership Sync — Dashboard): TAMBAH 1 filter

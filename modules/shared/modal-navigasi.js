@@ -335,7 +335,7 @@ _openOverlays.forEach(o=>{
 o.classList.remove('open');
 o.classList.remove('closing');
 });
-document.body.classList.remove('has-open-modal');
+if(document.body&&document.body.classList)document.body.classList.remove('has-open-modal');
 // BUGFIX (audit video user -- lihat komentar dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi dari halaman sebelumnya bisa
 // tetap tampil/mengantre & menutupi tombol di halaman/tab baru. Titik ini
@@ -391,7 +391,7 @@ renderPageContent(active.id.replace('page-',''));
 }
 function _syncNavVisibilityForModals(){
 const anyOpen=document.querySelector('.overlay.open,.qs-modal-overlay.open,.calc-overlay.open');
-document.body.classList.toggle('has-open-modal',!!anyOpen);
+if(document.body&&document.body.classList)document.body.classList.toggle('has-open-modal',!!anyOpen);
 }
 // FOCUS TRAP (audit UI/UX aksesibilitas keyboard, Agustus 2026): sebelum ini,
 // Tab/Shift+Tab masih bisa "bocor" dari dalam modal ke elemen di belakang
@@ -573,6 +573,8 @@ if(_modalInner)_modalInner.classList.toggle('no-anim',_stacked);
 el.classList.remove('closing');
 _modalHistoryPush(id);
 el.classList.add('open');
+void el.offsetWidth;
+if(typeof PWAUX!=='undefined'&&PWAUX&&typeof PWAUX.resetOverlayGeometry==='function')PWAUX.resetOverlayGeometry(el);
 // FIX (audit opacity-stuck-0, laporan user "vehicleModal keluar tapi opacity 0
 // permanen walau display:flex & class .open benar, prefers-reduced-motion OFF"):
 // .overlay.open melakukan 2 perubahan sekaligus dlm 1 rule yg sama, dipicu 1
@@ -587,7 +589,7 @@ el.classList.add('open');
 // menggabungkan 2 perubahan itu. void sengaja dipakai supaya linter/minifier
 // tidak membuang baris ini krn dikira "unused expression" -- efek sampingnya
 // (memaksa reflow) yg memang dibutuhkan, bukan nilainya.
-void el.offsetWidth;
+// Reflow sudah dipaksa tepat setelah classList.add('open') di atas.
 _proModalEditSnapshot={id:String(id),snapshot:_proModalSnapshot(el)};
 _syncNavVisibilityForModals();
 _focusTrapActivate(el);
@@ -758,11 +760,13 @@ if(_swipeDismissCleanupByHandle){
 function openQS(id){
 _dialogSelfHeal();
 const el=document.getElementById(id);
+if(typeof PWAUX!=='undefined'&&PWAUX&&typeof PWAUX.resetOverlayGeometry==='function')PWAUX.resetOverlayGeometry(el);
+else{const sheet=el&&el.querySelector?el.querySelector('.qs-modal'):null;if(sheet){sheet.style.transform='';sheet.style.transition='';}}
 el.classList.add('open');
 void el.offsetWidth; // FIX opacity-stuck-0: pola sama persis openModal(), lihat komentar lengkap di sana
 _syncNavVisibilityForModals();
 }
-function closeQS(id){document.getElementById(id).classList.remove('open');_syncNavVisibilityForModals();}
+function closeQS(id){const el=document.getElementById(id);if(!el||!el.classList)return false;el.classList.remove('open');_syncNavVisibilityForModals();return true;}
 
 // SARAN (dari review sebelumnya): dukung tombol Escape utk nutup modal, tidak cuma tap ✕/backdrop.
 // Urutan prioritas: kalkulator popup (di atas modal lain) -> quick-switcher (qsXxx) -> modal

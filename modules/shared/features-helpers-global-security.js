@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1877-selftest-persistence-fix-1884';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1877-selftest-persistence-fix-1884';
+const APP_BUILD_VERSION = 's1908-cumulative-regression-hardening-1903';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1908-cumulative-regression-hardening-1903';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -1210,12 +1210,11 @@ if(body)body.classList.add('collapsed');
 if(chev)chev.classList.add('collapsed');
 }
 function showMain(){
-document.getElementById('onboard').style.display='none';
-document.getElementById('pinScreen').style.display='none';
-document.getElementById('pinScreen').classList.add('u-dnone');
-const mh=document.getElementById('mainHeader');mh.classList.remove('u-dnone');mh.style.display='flex';
-const ma=document.getElementById('mainApp');ma.classList.remove('u-dnone');ma.style.display='block';
-const mn=document.getElementById('mainNav');mn.classList.remove('u-dnone');mn.style.display='flex';
+const onboard=document.getElementById('onboard'); if(onboard) onboard.style.display='none';
+const pinScreen=document.getElementById('pinScreen'); if(pinScreen){pinScreen.style.display='none';pinScreen.classList.add('u-dnone');}
+const mh=document.getElementById('mainHeader'); if(mh){mh.classList.remove('u-dnone');mh.style.display='flex';}
+const ma=document.getElementById('mainApp'); if(ma){ma.classList.remove('u-dnone');ma.style.display='block';}
+const mn=document.getElementById('mainNav'); if(mn){mn.classList.remove('u-dnone');mn.style.display='flex';}
 document.getElementById('hNama').textContent=D.profile.nama||'W';
 applyEffectiveTheme();
 applyCardCollapsePrefs();

@@ -25,6 +25,15 @@ function _reportCsvCell(v){
 const s=(v===null||v===undefined)?'':String(v);
 return /[\",\n\r]/.test(s)?'\"'+s.replace(/\"/g,'\"\"')+'\"':s;
 }
+function _downloadBackupBlob(blob,name){
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.downloadBlob==='function')return PWAProductionHardening.downloadBlob(blob,name);
+if(!blob||typeof document==='undefined')return false;
+const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name||'download';a.rel='noopener';document.body&&document.body.appendChild(a);a.click();if(typeof a.remove==='function')a.remove();else if(a.parentNode&&typeof a.parentNode.removeChild==='function')a.parentNode.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),0);return true;
+}
+function _sanitizeBackupError(err){
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sanitizeErrorMessage==='function')return PWAProductionHardening.sanitizeErrorMessage(err);
+return String(err&&err.message!=null?err.message:err==null?'':err).slice(0,120);
+}
 function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
@@ -34,14 +43,14 @@ const accName=D.accounts.find(a=>a.id===t.accountId)?.name||'';
 return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||''];
 })];
 const blob=new Blob([rows.map(r=>r.map(_reportCsvCell).join(',')).join('\n')],{type:'text/csv'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laporan-W-'+new Date().toISOString().split('T')[0]+'.csv';a.click();
+_downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.csv');
 }
 function exportJSON(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
 const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
 const blob=new Blob([JSON.stringify(txs,null,2)],{type:'application/json'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laporan-W-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+_downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.json');
 }
 async function buildBackupPayload(){
 const backupD={...D,chatHistory:[]};
@@ -81,12 +90,13 @@ try{
 const hondaPdfImportStore=await IDBStore.get('honda-pdf-import:store');
 if(hondaPdfImportStore)backupD._hondaPdfImportStore=hondaPdfImportStore;
 }catch(e){console.warn('Backup: gagal baca honda-pdf-import:store dari IndexedDB (dilewati):',e);}
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sealBackupPayload==='function')return await PWAProductionHardening.sealBackupPayload(backupD);
 return backupD;
 }
 async function exportData(){
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+_downloadBackupBlob(blob,'backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json');
 D.lastBackup=new Date().toISOString();
 document.getElementById('lastBackup').textContent=new Date().toLocaleDateString('id-ID');
 document.getElementById('backupBadge').textContent='💾 Backup';
@@ -116,14 +126,14 @@ try{
 try{
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json';a.click();
+_downloadBackupBlob(blob,'backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json');
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup'); if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
 const bn=document.getElementById('backupBanner'); if(bn)bn.classList.add('hidden');
 done.push('File lokal (JSON)');
 }catch(e){
 console.error('Backup file lokal gagal:',e);
-errors.push('File lokal: '+(e.message||e));
+errors.push('File lokal: '+_sanitizeBackupError(e));
 }
 if(gdriveAccessToken){
 try{
@@ -131,7 +141,7 @@ const ok=await _uploadBackupToDriveInner(true);
 if(ok)done.push('Google Drive'); else skipped.push('Google Drive (dilewati, lihat notifikasi)');
 }catch(e){
 console.error('Backup Drive gagal:',e);
-errors.push('Google Drive: '+(e.message||e));
+errors.push('Google Drive: '+_sanitizeBackupError(e));
 }
 } else {
 skipped.push('Google Drive (belum terhubung)');
@@ -142,7 +152,7 @@ const ok=await _sheetsSyncInner(true);
 if(ok)done.push('Google Sheets'); else skipped.push('Google Sheets (dilewati, lihat notifikasi)');
 }catch(e){
 console.error('Sync Sheets gagal:',e);
-errors.push('Google Sheets: '+(e.message||e));
+errors.push('Google Sheets: '+_sanitizeBackupError(e));
 }
 } else {
 skipped.push('Google Sheets (belum terhubung)');
@@ -176,11 +186,11 @@ btn.textContent=done.includes('File lokal (JSON)')?'💾 Backup':(btnOriginal||'
 let backupModules={keuangan:true,carnotes:true,shop:true,aset:true,renov:true,pensiunZakat:true,habit:true,lain:true};
 function openBackupModal(){
 document.getElementById('bPeriode').value='selamanya';
-document.getElementById('bCustomRange').style.display='none';
+const customRange=document.getElementById('bCustomRange'); if(customRange) customRange.style.display='none';
 document.getElementById('bTipe').value='semua';
 document.getElementById('bFormat').value='json';
 backupModules={keuangan:true,carnotes:true,shop:true,aset:true,renov:true,pensiunZakat:true,habit:true,lain:true};
-['bModKeuangan','bModCarnotes','bModShop','bModAset','bModRenov','bModPensiunZakat','bModHabit','bModLain'].forEach(id=>document.getElementById(id).classList.add('active'));
+['bModKeuangan','bModCarnotes','bModShop','bModAset','bModRenov','bModPensiunZakat','bModHabit','bModLain'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('active');});
 openModal('backupModal');
 }
 function toggleBackupModule(mod,el){
@@ -188,7 +198,7 @@ backupModules[mod]=!backupModules[mod];
 el.classList.toggle('active',backupModules[mod]);
 }
 function onBackupPeriodeChange(){
-document.getElementById('bCustomRange').style.display=document.getElementById('bPeriode').value==='custom'?'block':'none';
+const customRange=document.getElementById('bCustomRange'); const periode=document.getElementById('bPeriode'); if(customRange&&periode) customRange.style.display=periode.value==='custom'?'block':'none';
 }
 function getBackupRange(){
 const p=document.getElementById('bPeriode').value;
@@ -293,7 +303,7 @@ if(!Object.keys(out).length){toast('⚠️ Pilih minimal 1 modul');return;}
 const dateTag=new Date().toISOString().split('T')[0];
 if(format==='json'){
 const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-W-'+dateTag+'.json';a.click();
+_downloadBackupBlob(blob,'backup-W-'+dateTag+'.json');
 } else {
 const csvParts=[];
 const toCSVRow=arr=>arr.map(v=>{v=(v===null||v===undefined)?'':String(v);return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');
@@ -399,7 +409,7 @@ csvParts.push(toCSVRow(['Tanggal','Catatan']));
 (out.catatan.anak||[]).forEach(c=>csvParts.push(toCSVRow([c.date,c.text||''])));
 }
 const blob=new Blob([csvParts.join('\n')],{type:'text/csv'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-W-'+dateTag+'.csv';a.click();
+_downloadBackupBlob(blob,'backup-W-'+dateTag+'.csv');
 }
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup');if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
@@ -530,6 +540,7 @@ return stats;
 async function applyRestoredData(imp){
 const _shape=_validateRestoreShape(imp);
 if(!_shape.ok){await showAlertModal('File backup ditolak: '+_shape.msg,{icon:'❌',title:'Backup Tidak Valid'});return false;}
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.verifyBackupPayload==='function'){const _integrity=await PWAProductionHardening.verifyBackupPayload(imp);if(!_integrity.ok){await showAlertModal('File backup ditolak: '+_integrity.msg,{icon:'❌',title:'Integritas Backup Gagal'});return false;}}
 const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios'];
 if(!knownKeys.some(k=>imp[k]!==undefined)){await showAlertModal('File ini sepertinya bukan file backup aplikasi ini. Restore dibatalkan.',{icon:'❌',title:'Backup Tidak Valid'});return false;}
 const backupVersion=imp.schemaVersion||0;
@@ -575,6 +586,7 @@ const _restoredVehicleCatalogStore=imp._vehicleCatalogStore;
 const _restoredHondaPdfImportStore=imp._hondaPdfImportStore;
 try{
 D={...D,...imp};
+delete D._integrity;
 delete D._lifeosStore;
 delete D._eieStore;
 delete D._hondaPdfImportStore;
@@ -695,6 +707,7 @@ const file=e.target.files[0];if(!file)return;
 // disable input itu sendiri (klik label ke input disabled = no-op native
 // browser, 0 guard tambahan diperlukan spt dispatcher data-action).
 const inputEl=e.target;
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);inputEl.value='';return;}}
 const labelEl=inputEl.labels&&inputEl.labels[0];
 if(labelEl)_scanBtnBusy(labelEl,'Me-restore...');
 inputEl.disabled=true;
@@ -780,6 +793,7 @@ return{ok:true};
 }
 function handleImport(e){
 const file=e.target.files[0];if(!file)return;
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json','.csv']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);e.target.value='';return;}}
 const r=new FileReader();
 r.onload=async ev=>{
 try{
@@ -837,6 +851,7 @@ r.readAsText(file);
 }
 function importCarData(e){
 const file=e.target.files[0]; if(!file)return;
+if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json','.csv']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);e.target.value='';return;}}
 const resultEl=document.getElementById('carImportResult');
 resultEl.innerHTML='⏳ Memproses file...';
 const reader=new FileReader();

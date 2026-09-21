@@ -120,7 +120,10 @@ const dateTag=new Date().toISOString().split('T')[0];
 if(format==='json'){
 const out={schemaVersion:SCHEMA_VERSION,archivedAt:new Date().toISOString(),archivedYears:Array.from(years).sort(),...data};
 const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='arsip-W-'+yearsTag+'-'+dateTag+'.json';a.click();
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');a.href=url;a.download='arsip-W-'+yearsTag+'-'+dateTag+'.json';a.click();
+if(typeof a.remove==='function')a.remove();else if(a.parentNode&&typeof a.parentNode.removeChild==='function')a.parentNode.removeChild(a);
+if(typeof URL.revokeObjectURL==='function')setTimeout(()=>URL.revokeObjectURL(url),0);
 } else {
 const csvParts=[];
 const toCSVRow=arr=>arr.map(v=>{v=(v===null||v===undefined)?'':String(v);return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');
@@ -133,7 +136,10 @@ arr.forEach(it=>csvParts.push(toCSVRow([it.id,it.date,JSON.stringify(it)])));
 csvParts.push('');
 });
 const blob=new Blob([csvParts.join('\n')],{type:'text/csv'});
-const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='arsip-W-'+yearsTag+'-'+dateTag+'.csv';a.click();
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');a.href=url;a.download='arsip-W-'+yearsTag+'-'+dateTag+'.csv';a.click();
+if(typeof a.remove==='function')a.remove();else if(a.parentNode&&typeof a.parentNode.removeChild==='function')a.parentNode.removeChild(a);
+if(typeof URL.revokeObjectURL==='function')setTimeout(()=>URL.revokeObjectURL(url),0);
 }
 archiveExportedYears=years;
 document.getElementById('archiveStep1').style.display='none';

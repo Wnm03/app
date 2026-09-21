@@ -149,7 +149,7 @@ try{
 var msg=(ev&&ev.message)?ev.message:'Unknown error';
 var loc=(ev&&ev.filename)?(' ('+ev.filename+':'+ev.lineno+')'):'';
 console.error('[Global Error]',msg+loc,ev&&ev.error);
-window.__showRuntimeErrorBanner(msg+loc);
+window.__showRuntimeErrorBanner(msg);
 }catch(_e){void _e;}
 });
 window.addEventListener('unhandledrejection',function(ev){
