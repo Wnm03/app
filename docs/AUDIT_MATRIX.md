@@ -18,14 +18,17 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2209 |
-| JavaScript | 1349 |
-| Tests | 880 |
-| Markdown | 752 |
+| Total files | 2275 |
+| JavaScript | 1369 |
+| Tests | 890 |
+| Markdown | 764 |
 | HTML | 7 |
-| JSON | 11 |
+| JSON | 45 |
 | CSS | 4 |
-| Module families | 18 |
+| Module families | 17 |
+
+
+_Baseline disinkronkan kembali pada S1879 (2026-09-21) setelah redesign structural PWA UI dan rebuild: Total files 2275, JavaScript 1369, Tests 890, Markdown 764, HTML 7, JSON 45, CSS 4, Module families 17. `backups/`, `node_modules/`, dan `.git/` dikecualikan sesuai walker build; `.test-checkpoints/` termasuk snapshot test lokal dan tidak dibawa ke patch aplikasi. Perubahan UI bersifat presentation-layer/CSS + shell layout; business logic, IndexedDB, data-action hooks, dan runtime source manifest dipertahankan.
 
 **Important:** Structural inventory is complete for the uploaded ZIP (`kw_release_v992_s331-coverage-per-module.zip`, cross-checked against the patch ZIP). Counts exclude `backups/` (historical snapshots, not live app code) and `node_modules/`/`.git/`. This is **not** a claim that every runtime behavior has already passed QA. These numbers are now auto-checked by `scripts/build.js` (`lintDocsBaselineCountDrift()`, non-fatal warning) — update this table whenever the warning fires and the change is intentional.
 
@@ -583,3 +586,18 @@ remains environment-limited because `esbuild` is unavailable; the generated
 bundles are syntactically valid but intentionally unminified. The release gate
 therefore correctly remains blocking for a production ZIP until a minifier is
 available or an explicit release override with a documented reason is supplied.
+
+# 5. SA-FINAL — PWA UI / Release Residual Hardening S1880 (2026-09-21)
+
+| Area | Verification | Result |
+|---|---|---|
+| PWA structural UI | responsive contract, shell preservation, touch/safe-area/overflow checks | PASS |
+| Runtime version/cache | HTML v1879, SW kw-cache-v1879, dashboard marker v1879 | PASS |
+| Full regression | 32-shard full suite | 7206/7206 PASS |
+| Data/persistence gates | SOT, architecture, persistence, lifecycle, PWA recovery | PASS |
+| Runtime/security structural gates | release firewall, window expose, source-size, bundle freshness | PASS |
+| Patch integrity | apply-file fingerprint + contamination gate | PASS |
+| Visual browser smoke | Chromium localhost/file navigation | BLOCKED BY SANDBOX (`ERR_BLOCKED_BY_ADMINISTRATOR`) |
+| Release toolchain | ESLint + esbuild | BLOCKED — unavailable in environment |
+
+No new confirmed application bug was opened in S1880. The v1878/v1879 test drift was a confirmed regression in release synchronization and was repaired without changing business logic.
