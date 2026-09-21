@@ -21,7 +21,7 @@ const INLINE_FILES = ['app-bundle-a.min.js', 'modules/shared/smoke-test.js', 'ap
 // path relatif yg valid, jadi tampil polos tanpa styling sama sekali
 // (BUG yg ditemukan manual dari screenshot preview tanpa CSS, 2026-07-17).
 // Urutan HARUS sama dgn urutan <link rel="stylesheet" href=...> di index.html.
-const INLINE_CSS_FILES = ['styles.css', 'modern-ui-layer.css'];
+const INLINE_CSS_FILES = ['styles.css', 'modern-ui-layer.css', 'minimal-ui-theme.css', 'pwa-ui-layer.css'];
 
 function main() {
   let html = fs.readFileSync(SRC_HTML, 'utf8');
