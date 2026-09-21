@@ -1,0 +1,2 @@
+# S1905 baseline cleanup — file must be deleted from deployment/repository
+pro-ui-layer.css
