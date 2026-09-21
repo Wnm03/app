@@ -312,10 +312,14 @@ _downloadFile(filename, content, mime) {
   if (typeof Blob === 'undefined' || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return false;
   try {
     const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = filename;
     a.click();
+    if (typeof a.remove === 'function') a.remove();
+    else if (a.parentNode && typeof a.parentNode.removeChild === 'function') a.parentNode.removeChild(a);
+    if (typeof URL.revokeObjectURL === 'function') setTimeout(() => URL.revokeObjectURL(url), 0);
     return true;
   } catch (e) {
     return false;

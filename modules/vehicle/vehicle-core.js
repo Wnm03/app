@@ -926,10 +926,10 @@ let _activeBtn=el;
 if(el) el.classList.add('active');
 else { const idx=CNI_SUBTAB_ORDER.indexOf(t); const btn=cniSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
-document.getElementById('cniTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
-document.getElementById('cniTab-ringkasan').style.display='';
-document.getElementById('cniTab-rekomendasi').classList.toggle('u-dnone', t!=='rekomendasi');
-document.getElementById('cniTab-rekomendasi').style.display='';
+const cniRingkasanEl=document.getElementById('cniTab-ringkasan');
+if(cniRingkasanEl){cniRingkasanEl.classList.toggle('u-dnone',t!=='ringkasan');cniRingkasanEl.style.display='';}
+const cniRekomendasiEl=document.getElementById('cniTab-rekomendasi');
+if(cniRekomendasiEl){cniRekomendasiEl.classList.toggle('u-dnone',t!=='rekomendasi');cniRekomendasiEl.style.display='';}
 // AUDIT UI/UX 2026-08 (breadcrumb): pola SAMA PERSIS setKelolaTab/setLaporanTab
 // (tx-list-cashflow.js) — murni label teks, tidak ada navigasi/logic baru.
 const cniBc=document.getElementById('cniBreadcrumbSub');
@@ -945,10 +945,10 @@ let _activeBtn=el;
 if(el) el.classList.add('active');
 else { const idx=CNB_SUBTAB_ORDER.indexOf(t); const btn=cnbSubtabBtns[idx>=0?idx:0]; if(btn){btn.classList.add('active');_activeBtn=btn;} }
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
-document.getElementById('cnbTab-ringkasan').classList.toggle('u-dnone', t!=='ringkasan');
-document.getElementById('cnbTab-ringkasan').style.display='';
-document.getElementById('cnbTab-analisis').classList.toggle('u-dnone', t!=='analisis');
-document.getElementById('cnbTab-analisis').style.display='';
+const cnbRingkasanEl=document.getElementById('cnbTab-ringkasan');
+if(cnbRingkasanEl){cnbRingkasanEl.classList.toggle('u-dnone',t!=='ringkasan');cnbRingkasanEl.style.display='';}
+const cnbAnalisisEl=document.getElementById('cnbTab-analisis');
+if(cnbAnalisisEl){cnbAnalisisEl.classList.toggle('u-dnone',t!=='analisis');cnbAnalisisEl.style.display='';}
 const cnbBc=document.getElementById('cnbBreadcrumbSub');
 if(cnbBc)cnbBc.textContent=CNB_SUBTAB_LABEL[t]||t;
 }
@@ -1170,9 +1170,8 @@ cnPeriode=p;
 // security.js) supaya BBM & Servis tidak lagi berbagi 1 state periode --
 // lihat sinkronisasi baliknya di setCnTab() di bawah.
 if(typeof cnPeriodeByTab==='object'&&cnPeriodeByTab&&(curCnTab==='bbm'||curCnTab==='servis'))cnPeriodeByTab[curCnTab]=p;
-document.querySelectorAll('#cnPeriodeChips .chip-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
-document.getElementById('cnCustomRange').classList.toggle('u-dnone', p!=='custom');
-document.getElementById('cnCustomRange').style.display='';
+document.querySelectorAll('#cnPeriodeChips .chip-btn').forEach(b=>b.classList.remove('active'));if(el)el.classList.add('active');
+const customRange=document.getElementById('cnCustomRange');if(customRange){customRange.classList.toggle('u-dnone', p!=='custom');customRange.style.display='';}
 renderCnTab();
 }
 function getCnRange(){

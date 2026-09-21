@@ -205,6 +205,14 @@ function hondaPdfImportPickFiles() {
  * di vehicle-catalog-ui.js, TANPA downscaleImage() krn ini PDF bukan foto). */
 function hondaPdfImportFileToDataUrl(file) {
   return new Promise((resolve, reject) => {
+    if (!file || file.type !== 'application/pdf') {
+      reject(new Error('File harus berformat PDF.'));
+      return;
+    }
+    if (typeof FileReader !== 'function') {
+      reject(new Error('Browser tidak mendukung pembacaan file.'));
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
     reader.onerror = () => reject(reader.error || new Error('Gagal membaca file'));
