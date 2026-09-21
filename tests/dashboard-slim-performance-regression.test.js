@@ -6,13 +6,13 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
-test('runtime version/cache is synchronized at v1878', () => {
+test('runtime version/cache is synchronized at v1879', () => {
   const index = read('index.html');
   const prod = read('app_production.html');
   const sw = read('sw.js');
-  assert.match(index, /v1878/);
-  assert.match(prod, /v1878/);
-  assert.match(sw, /kw-cache-v1878/);
+  assert.match(index, /v1879/);
+  assert.match(prod, /v1879/);
+  assert.match(sw, /kw-cache-v1879/);
   assert.doesNotMatch(index, /v1877/);
   assert.doesNotMatch(prod, /v1877/);
   assert.doesNotMatch(sw, /kw-cache-v1877/);
