@@ -156,6 +156,7 @@ if(t==='riwayat'){renderShop();renderShopGrafik();}
 if(t==='jual')renderShopRecent();
 if(t==='pelanggan')renderCustomerList();
 if(t==='laporan')Laporan.renderTab();
+if(typeof PWAUX!=='undefined'&&PWAUX.markRendered)PWAUX.markRendered(document.getElementById('shopTab-'+t));
 // Sesi 250 (Business Intelligence tab): panggil ulang render() 3 presenter
 // yang SUDAH ADA (100% reuse, 0 rumus baru) supaya kartu-nya SELALU
 // ter-refresh tiap kali tab ini dibuka — sama seperti sebelumnya sudah
