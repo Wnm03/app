@@ -28,7 +28,9 @@ test('Dashboard Hub only renders section-specific presenters for the active sect
   assert.match(hub,/if \(tab === 'insight'\)/);
   assert.match(hub,/const activeSection = this\._currentSectionTab\(\);/);
   assert.match(hub,/this\.renderSection\(activeSection\);/);
-  assert.match(hub,/safe\('EIEDashboard',/);
+  // v1877 slim Insight: EIE tidak lagi dirender di Hub (modul canonical tetap ada); yang dirender hanya insight audit.
+  assert.doesNotMatch(hub,/safe\('EIEDashboard',/);
+  assert.match(hub,/safe\('FinancialAuditDashboardInsight',/);
 });
 
 test('Dashboard Hub month aggregate uses a single pass and mutation-aware cache',()=>{

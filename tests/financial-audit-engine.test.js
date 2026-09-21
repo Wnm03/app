@@ -173,3 +173,47 @@ test('dataQuality() memasukkan diagnosis duplicate tanpa mengubah transaksi', ()
   assert.ok(out.warnings.some(x => /data bisnis identik/i.test(x)));
   assert.equal(JSON.stringify(tx), before);
 });
+
+test('audit() berbagi eligibility scan dan tidak mengulang pemindaian periode aktif', () => {
+  const ctx = makeCtx([
+    { id: 'e1', accountId: 'a1', type: 'expense', amount: 100000, date: '2026-09-01', category: 'Makan' },
+    { id: 'e2', accountId: 'a1', type: 'expense', amount: 50000, date: '2026-09-02', category: 'Transportasi' },
+  ]);
+  const engine = ctx.FinancialAuditEngine;
+  const original = engine._eligibleTransactions;
+  let calls = 0;
+  engine._eligibleTransactions = function (...args) {
+    calls++;
+    return original.apply(this, args);
+  };
+  try {
+    const out = engine.audit(range);
+    assert.equal(out.summary.expense, 150000);
+    // One scan for the current period + one scan for the comparison period.
+    assert.equal(calls, 2);
+  } finally {
+    engine._eligibleTransactions = original;
+  }
+});
+
+test('dashboardInsight() tidak menjalankan analisis full-audit yang tidak ditampilkan di Hub', () => {
+  const ctx = makeCtx([
+    { id: 'e1', accountId: 'a1', type: 'expense', amount: 100000, date: '2026-09-01', category: 'Makan' },
+  ]);
+  const engine = ctx.FinancialAuditEngine;
+  let recurringCalls = 0;
+  let groupCalls = 0;
+  const recurring = engine.recurringCandidates;
+  const groups = engine.expenseGroups;
+  engine.recurringCandidates = (...args) => { recurringCalls++; return recurring.apply(engine, args); };
+  engine.expenseGroups = (...args) => { groupCalls++; return groups.apply(engine, args); };
+  try {
+    const out = engine.dashboardInsight(range);
+    assert.equal(out.summary.expense, 100000);
+    assert.equal(recurringCalls, 0);
+    assert.equal(groupCalls, 0);
+  } finally {
+    engine.recurringCandidates = recurring;
+    engine.expenseGroups = groups;
+  }
+});
