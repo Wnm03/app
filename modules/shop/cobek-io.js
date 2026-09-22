@@ -137,15 +137,20 @@ function openStockRekoWidgetDetail(id,restockQty){return StockRekoWidget.openDet
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const SHOP_TAB_LABEL={kasir:'Kasir AI',jual:'Manual',etalase:'Etalase',produsen:'Produsen',riwayat:'Riwayat',pelanggan:'Pelanggan',laporan:'Laporan',bi:'Business Intelligence'};
 function setShopTab(t,el){
+const _SHOP_TAB_ORDER=['kasir','jual','etalase','produsen','riwayat','pelanggan','laporan','bi'];
+if(!_SHOP_TAB_ORDER.includes(t))t='kasir';
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi (mis. dari Kasir AI habis
 // simpan transaksi) bisa nyangkut menutupi tombol di sub-tab Shop lain
 // begitu user ganti sub-tab. Pola sama persis dgn setAsetTab(), lihat
 // CHANGELOG-S620.md.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
-document.querySelectorAll('#page-shop .cn-tab').forEach(b=>b.classList.remove('active'));
-el.classList.add('active');
-if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(el);
+const _shopTabBtns=document.querySelectorAll('#page-shop .cn-tab');
+_shopTabBtns.forEach(b=>b.classList.remove('active'));
+let _activeBtn=el;
+if(el) el.classList.add('active');
+else { const _idx=_SHOP_TAB_ORDER.indexOf(t); const _btn=_shopTabBtns[_idx>=0?_idx:0]; if(_btn){_btn.classList.add('active');_activeBtn=_btn;} }
+if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 const shopBc=document.getElementById('shopBreadcrumbSub');
 if(shopBc)shopBc.textContent=SHOP_TAB_LABEL[t]||t;
 ['kasir','jual','etalase','produsen','riwayat','pelanggan','laporan','bi'].forEach(x=>{const elx=document.getElementById('shopTab-'+x);if(elx){elx.classList.toggle('u-dnone', x!==t);elx.style.display='';}});
