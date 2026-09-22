@@ -20,16 +20,16 @@ test('S1925: every primary page has a concrete DOM destination and a render rout
   assert.match(html, /data-action="showPage"/);
 });
 
-test('S1925: already-active navigation is a true no-render path after cleanup', () => {
+test('S1925/S1931: already-active navigation stays a true no-render path and normal navigation uses atomic pending state', () => {
   const detect = nav.indexOf('const _sameActiveNav=');
   const detectPageActive = nav.indexOf("pageEl.classList.contains('active')", detect);
-  const cleanupScan = nav.indexOf("document.querySelectorAll('.page').forEach(p=>");
-  const cleanup = nav.indexOf("p.classList.remove('active')", cleanupScan);
-  const guard = nav.indexOf('if(_sameActiveNav){', cleanup);
+  const guard = nav.indexOf('if(_sameActiveNav){', detect);
+  const pending = nav.indexOf("pageEl.classList.add('nav-transition-pending')", guard);
   const render = nav.indexOf('renderPageContent(name)', guard);
-  assert.ok(detect >= 0 && detectPageActive > detect && cleanupScan > detect && cleanup > cleanupScan, 'guard must be captured before active cleanup');
-  assert.ok(guard > cleanup, 'guard must restore active state after cleanup');
-  assert.ok(render < 0 || render > guard + 100, 'already-active branch must return before render');
+  assert.ok(detect >= 0 && detectPageActive > detect && guard > detect, 'same-active guard must be captured before transition mutation');
+  assert.ok(pending > guard, 'normal navigation must enter pending visual state after the no-op guard');
+  assert.ok(render > pending, 'destination must be prepared before its renderer runs');
+  assert.ok(render > guard, 'already-active branch must return before render');
 });
 
 test('S1925: navigation 4xx/5xx can fall back to cached SPA shell', () => {

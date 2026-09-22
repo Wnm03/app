@@ -31,9 +31,9 @@ test('S1930: Service Worker revalidates static assets online and keeps offline c
 
 test('S1930: mobile page transitions cannot leave a composited blank/ghost frame',()=>{
   const css=read('styles.css');
-  assert.match(css,/S1930 — Android mobile visual\/scroll stabilization/);
+  assert.match(css,/S1931 — atomic mobile page\/nav commit; no transition fade/);
   assert.match(css,/@media \(max-width:899px\)\{[\s\S]*?\.page\{animation:none!important;opacity:1!important;transform:none!important;\}/);
   assert.match(css,/@media \(max-width:899px\)\{[\s\S]*?\.page\.active\{display:block!important;visibility:visible!important;opacity:1!important;transform:none!important;animation:none!important;pointer-events:auto;\}/);
   assert.match(css,/@media \(max-width:899px\)\{[\s\S]*?\.page:not\(\.active\)\{visibility:hidden;pointer-events:none;\}/);
-  assert.match(css,/@media \(max-width:899px\)\{[\s\S]*?#scrollRoot\{[^}]*overflow-y:auto/);
+  assert.match(css,/#scrollRoot\{[^}]*overflow-y:auto/);
 });
