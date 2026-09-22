@@ -100,7 +100,9 @@ const STG_EXTERNAL_SETTINGS_INDEX=[
 {label:'🛒 Katalog Sparepart per Kendaraan (Shop)',keywords:'katalog sparepart kendaraan shop dinamis interval servis',action:'openShopKatalogDinamis'},
 {label:'🕌 Harga Emas, Nisab & PBB → Pajak & Zakat',keywords:'emas nisab zakat pbb pajak njoptkp tarif referensi harga emas',page:'pajak'},
 {label:'🎁 Level & Toleransi → Self Reward',keywords:'self reward hadiah level toleransi telat',action:'SelfRewardView.open'},
-{label:'📊 Pengaturan Anggaran → Keuangan (tab Budget)',keywords:'budget anggaran atur anggaran',page:'keuangan'}
+{label:'📊 Pengaturan Anggaran → Keuangan (tab Budget)',keywords:'budget anggaran atur anggaran',page:'keuangan'},
+{label:'🏍️ Kendaraan, BBM, Servis, Pajak & SIM → Car Notes',keywords:'kendaraan bbm servis pajak sim mobil motor car notes',page:'carnotes'},
+{label:'🧭 Dashboard Hub / Beranda → Dashboard Hub',keywords:'dashboard hub beranda tampilan dashboard',page:'dashboard-hub'}
 ];
 function _stgOpenExternal(item){
 if(item.action){
