@@ -1,4 +1,3 @@
-
 [data-theme="dark"] {  --bg:#08090c;--surface:#0e0f13;--surface2:#131418;--surface3:#191b20;--surface4:#22242b;  --accent:#c9a35f;--accent-soft:rgba(201,163,95,0.14);  --accent2:#e8756a;--accent2-soft:rgba(232,117,106,0.13);  --accent3:#3fcf8e;--accent3-soft:rgba(63,207,142,0.13);  --accent4:#dcb56e;--accent4-soft:rgba(220,181,110,0.12);  --text:#f3f1ec;--text2:#84868d;--text3:#888a92;  --border:rgba(255,255,255,0.045);--border2:rgba(255,255,255,0.09);  --header-bg:rgba(8,9,12,0.82);--shadow-card:0 16px 40px rgba(0,0,0,0.5);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 [data-theme="ocean"] {  --bg:#050f1a;--surface:#0a1828;--surface2:#0f2035;--surface3:#152840;--surface4:#1a3050;  --accent:#38bdf8;--accent-soft:rgba(56,189,248,0.15);  --accent2:#f472b6;--accent2-soft:rgba(244,114,182,0.15);  --accent3:#4ade80;--accent3-soft:rgba(74,222,128,0.12);  --accent4:#fb923c;--accent4-soft:rgba(251,146,60,0.12);  --text:#e0f0ff;--text2:#5c8dae;--text3:#6886c2;  --border:rgba(56,189,248,0.08);--border2:rgba(56,189,248,0.15);  --header-bg:rgba(5,15,26,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.4);  --money-pos:var(--accent3);--money-neg:var(--accent2);
@@ -11,22 +10,14 @@
 }
 [data-theme="mono"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f2f2f2;--surface3:#e8e8e8;--surface4:#dcdcdc;  --accent:#171717;--accent-soft:rgba(23,23,23,0.08);  --accent2:#b3554a;--accent2-soft:rgba(179,85,74,0.1);  --accent3:#5c8a6b;--accent3-soft:rgba(92,138,107,0.1);  --accent4:#a8874a;--accent4-soft:rgba(168,135,74,0.1);  --text:#171717;--text2:#6b6b6b;--text3:#6e6e6e;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(250,250,250,0.92);--shadow-card:0 6px 18px rgba(0,0,0,0.08);
 }
-
 [data-theme="sand"] {  --bg:#f8f6f2;--surface:#ffffff;--surface2:#f1ede4;--surface3:#e8e1d3;--surface4:#ddd3bf;  --accent:#a8927a;--accent-soft:rgba(168,146,122,0.12);  --accent2:#c1685a;--accent2-soft:rgba(193,104,90,0.12);  --accent3:#7a9b6e;--accent3-soft:rgba(122,155,110,0.12);  --accent4:#c4954a;--accent4-soft:rgba(196,149,74,0.12);  --text:#2b2620;--text2:#72695c;--text3:#756b56;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(248,246,242,0.92);--shadow-card:0 6px 20px rgba(120,90,60,0.08);
 }
-
 [data-theme="ink"] {  --bg:#0a0a0a;--surface:#141414;--surface2:#1c1c1c;--surface3:#242424;--surface4:#2e2e2e;  --accent:#e5e5e5;--accent-soft:rgba(229,229,229,0.1);  --accent2:#d4726a;--accent2-soft:rgba(212,114,106,0.15);  --accent3:#6fbf8a;--accent3-soft:rgba(111,191,138,0.13);  --accent4:#d9a75c;--accent4-soft:rgba(217,167,92,0.13);  --text:#f0f0f0;--text2:#8a8a8a;--text3:#848484;  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);  --header-bg:rgba(10,10,10,0.92);--shadow-card:0 6px 20px rgba(0,0,0,0.4);
 }
-
 [data-theme="fresh"] {  --bg:#f4f6fb;--surface:#ffffff;--surface2:#eef1fa;--surface3:#e6eaf6;--surface4:#dde2f2;  --accent:#6c7fee;--accent-soft:rgba(108,127,238,0.12);  --accent2:#ff8a80;--accent2-soft:rgba(255,138,128,0.12);  --accent3:#4fc9a8;--accent3-soft:rgba(79,201,168,0.12);  --accent4:#ffb454;--accent4-soft:rgba(255,180,84,0.12);  --text:#292d45;--text2:#646a92;--text3:#5b6089;  --border:rgba(41,45,69,0.08);--border2:rgba(41,45,69,0.13);  --header-bg:rgba(244,246,251,0.85);--shadow-card:0 8px 24px rgba(99,102,241,0.10);
 }
 [data-theme="sage"] {  --bg:#f6f7f4;--surface:#ffffff;--surface2:#eef0ea;--surface3:#e3e6dc;--surface4:#d5d9cb;  --accent:#7a8b6f;--accent-soft:rgba(122,139,111,0.12);  --accent2:#bc6a5e;--accent2-soft:rgba(188,106,94,0.12);  --accent3:#5f9670;--accent3-soft:rgba(95,150,112,0.12);  --accent4:#bf9552;--accent4-soft:rgba(191,149,82,0.12);  --text:#2a2e26;--text2:#646d5c;--text3:#68705c;  --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.1);  --header-bg:rgba(246,247,244,0.92);--shadow-card:0 6px 20px rgba(80,100,70,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
-/* RENCANA-MODERNISASI-UI s635: tema ke-11, fondasi "Minimal" (flat, aksen
-   tunggal, shadow tipis) + kesiapan pola "Ledger Pro" (font mono via
-   --font-mono di bawah, dipakai scoped ke elemen angka -- lihat aturan
-   [data-theme="modern"] .stat-val, ... setelah blok 
-/* THEME-CONSISTENCY-S1807: preview colors are derived from the same palette tokens as the active theme. */
 .theme-card-preview{color:var(--text)!important;border:1px solid var(--border2);}
 .theme-card[data-t="dark"] .theme-card-preview{background:#08090c!important;color:#c9a35f!important;}
 .theme-card[data-t="ocean"] .theme-card-preview{background:#050f1a!important;color:#38bdf8!important;}
@@ -41,42 +32,18 @@
 [data-theme] .green{color:var(--money-pos,var(--accent3))!important;}
 [data-theme] .red{color:var(--money-neg,var(--accent2))!important;}
 [data-theme] .orange{color:var(--accent4)!important;}
-
 :root). Sesi ini MURNI
    variabel + 1 aturan scoped tambahan, 0 markup disentuh; tema lama (10
    blok di atas) 0 dampak. Belum didaftarkan ke pemilihan tema di UI --
    itu scope sesi s636+ sesuai rencana bertahap. */
-/* FIX (akumulasi v1575+, audit UI/UX): blok token di bawah SEBELUMNYA berisi
-   nilai GELAP (--bg:#0b0b0c dst), padahal theme-card "modern" di index.html
-   (didaftarkan sesi s640) eksplisit berlabel "Terang flat & ringan (Minimal)"
-   dengan preview background #fafafa + teks aksen biru #2f6fed (lihat
-   LAPORAN-AUDIT-S640-TEMA-MODERN.md §3: "representatif thd tampilan asli").
-   Audit s640 memvalidasi PENDAFTARAN tema (card/test/sync), TAPI tidak
-   membandingkan literal nilai warna blok ini terhadap preview -- jadi
-   mismatch ini lolos tanpa terdeteksi. Akibat nyata: user pilih "Modern"
-   mengharap tampilan terang, yang muncul tema nyaris hitam. Fix: nilai
-   token diganti jadi terang, dgn aksen biru #2f6fed persis sesuai preview
-   card & teks "Terang" -- 0 file lain disentuh, 0 dampak ke 10 tema lama
-   (pola sama dgn s635: murni custom property, scoped ke [data-theme=
-   "modern"]). accent2/3/4 dipertahankan dari palet lama (nuansa
-   merah/hijau/kuning yg sama) supaya makna semantik uang (+/-) & status
-   tidak berubah, hanya base terang/gelap & --accent yang dikoreksi. */
 [data-theme="modern"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f2f2f2;--surface3:#e8e8e8;--surface4:#dcdcdc;  --accent:#2f6fed;--accent-soft:rgba(47,111,237,0.10);  --accent2:#b3554a;--accent2-soft:rgba(179,85,74,0.1);  --accent3:#5c8a6b;--accent3-soft:rgba(92,138,107,0.1);  --accent4:#a8874a;--accent4-soft:rgba(168,135,74,0.1);  --text:#18181a;--text2:#6b6b6b;--text3:#6e6e6e;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(250,250,250,0.92);--shadow-card:0 6px 20px rgba(47,111,237,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 :root {  --z-chrome:100; --z-dropdown:150; --z-overlay:200; --z-overlay-qs:300; --z-overlay-calc:400; --z-security:900; --z-onboard:950; --z-scanner:970; --z-toast:999;  --money-pos:#16a34a;--money-neg:#dc2626;--alert:#ff5050;--alert-soft:rgba(255,80,80,.15);  --sp-1: 4px; --sp-2: 6px; --sp-3: 8px; --sp-4: 10px; --sp-5: 14px;  --sp-6: 16px; --sp-7: 18px; --sp-8: 20px; --sp-9: 24px; --sp-10: 28px; --sp-11: 36px;  --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 16px; --r-xl: 18px;  --r-2xl: 20px; --r-pill: 24px; --r-full: 999px;  --fs-caption: 11px; --fs-label: 12px; --fs-body: 13px; --fs-body-lg: 14px;  --fs-title-sm: 15px; --fs-icon: 16px; --fs-title: 17px; --fs-icon-lg: 18px; --fs-stat: 20px;
   --dur-fast: 100ms; --dur-base: 150ms; --dur-moderate: 200ms; --dur-slow: 250ms; --dur-slower: 300ms;
   --ease-standard: cubic-bezier(.2,0,0,1); --ease-emphasized: cubic-bezier(.3,0,.1,1); --ease-emphasized-accel: cubic-bezier(.3,0,.8,.15);
-  /* === Polish pass (kw-visual-refresh): sistem elevasi 2-lapis (ambient + contact) & gradient
-     bersama. Sengaja diturunkan dari --accent/--accent3/--shadow-card yg SUDAH per-tema (bukan
-     hex baru), jadi otomatis konsisten & tetap kontras di ke-10 tema tanpa perlu sentuh
-     blok [data-theme=...] satu-satu. */
   --shadow-xs: 0 2px 6px rgba(0,0,0,0.04);
   --shadow-sm: 0 4px 14px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-elevated: 0 2px 6px rgba(0,0,0,0.03), var(--shadow-card, 0 12px 32px rgba(0,0,0,0.10));
-  /* Sprint 2 Tahap 17 -- ROADMAP-v1.1.md Item 5 (Medium Priority, shadow token
-     migration). Value-preserving: token berisi nilai literal yang sama persis
-     dengan sebelumnya, cuma dipindah ke custom property biar konsisten
-     dengan pola migrasi border-radius/font-size/duration yang sudah ada. */
   --shadow-tap: 0 1px 2px rgba(0,0,0,.05);
   --shadow-hover-sm: 0 2px 8px rgba(0,0,0,.08);
   --shadow-panel-up: 0 8px 24px rgba(0,0,0,0.04);
@@ -101,38 +68,13 @@
   --shadow-toggle-thumb: 0 1px 3px rgba(0,0,0,.3);
   --grad-accent: linear-gradient(135deg, var(--accent), var(--accent3));
   --grad-accent-diag: linear-gradient(120deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, var(--accent3)) 100%);
-  /* RENCANA-MODERNISASI-UI s635: stack font mono system-native (zero
-     network request, tidak perlu Google Fonts) -- disiapkan sbg token
-     global tapi baru DIPAKAI scoped ke tema "modern" (aturan di bawah),
-     jadi 0 dampak visual ke 10 tema lama. */
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 }
-/* Fokus keyboard yg konsisten & terlihat di semua tema (skala aksesibilitas, bukan cuma estetika) */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-xs); }
-/* Angka uang/statistik pakai tabular numerals -- digit sejajar rapi antar baris, ciri khas UI finansial yg matang */
 .stat-val, .tx-amount, .shop-price-final, .shop-price-strike, .ldr-days, .ldr-fill, .money, .card-val { font-variant-numeric: tabular-nums; }
-/* RENCANA-MODERNISASI-UI s635: pola "Ledger Pro" (font mono utk angka)
-   scoped KHUSUS ke [data-theme="modern"] -- selector sama persis dgn
-   aturan tabular-nums di atas, jadi cakupannya konsisten. Tema lain tidak
-   kena karena font-family masih di-hardcode 'Space Grotesk'/'Plus Jakarta
-   Sans' langsung di masing-masing selector (lihat rule .stat-val dkk di
-   bawah). Override ini menang otomatis tanpa !important krn specificity
-   lebih tinggi (attribute+class = 2 selector vs 1 pada rule aslinya),
-   jadi tidak bergantung urutan file. */
 [data-theme="modern"] .stat-val, [data-theme="modern"] .tx-amount, [data-theme="modern"] .shop-price-final, [data-theme="modern"] .shop-price-strike, [data-theme="modern"] .ldr-days, [data-theme="modern"] .money, [data-theme="modern"] .card-val { font-family: var(--font-mono); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
-  /* BUGFIX (audit modal-not-visible, keluarga-w): memaksa animation-duration ke .01ms
-     di atas SUDAH cukup utk menonaktifkan gerakan overlayIn/slideUp secara visual, tapi
-     tetap membiarkan .overlay.open dkk MENJALANKAN keyframe overlayIn (from opacity:0 ->
-     to opacity:1) dalam jendela waktu ~0ms itu. Kalau kode lain sempat membaca
-     getComputedStyle(...).opacity tepat di frame itu (sebelum browser sempat
-     menyelesaikan animasi super-singkat ini), yang terbaca adalah opacity:0 dari
-     keyframe "from" -- modal jadi computed-invisible walau class .open & display:flex
-     sudah benar. Fix: matikan animasinya SAMA SEKALI (bukan cuma dipercepat) khusus utk
-     overlay/modal entrance, & pertahankan opacity:1 statis -- tidak ada lagi keyframe yg
-     bisa dibaca di tengah jalan, jadi modal langsung tampil penuh tanpa race, sekaligus
-     tetap menghormati preferensi reduced-motion (nol animasi, bukan animasi super-cepat). */
   .overlay.open, .calc-overlay.open, .qs-modal-overlay.open { animation: none !important; opacity: 1 !important; }
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -147,64 +89,12 @@ body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); colo
 .header-sub { font-size:var(--fs-label); color: var(--text2); margin-top: 1px; }
 .header-badge { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: var(--r-pill); padding: 4px 10px; font-size:var(--fs-label); color: var(--accent); font-weight: 600; cursor: pointer; transition: transform var(--dur-base) var(--ease-standard), box-shadow var(--dur-base) var(--ease-standard); }
 .header-badge:active { transform: scale(0.94); }
-/* FIX (audit UI/UX 2026-08, Ronde 7): spinner kecil generik untuk tombol scan
-   (OCR)/Backup yang sedang memproses -- dipasang lewat _scanBtnBusy()
-   (modules/shared/scan-ocr.js), dipakai ulang persis sama di backup-restore.js.
-   1 komponen visual, disuntik ke innerHTML tombol apa pun (button/header-badge),
-   bukan style khusus per tombol. */
 .btn-spinner { display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; vertical-align:-2px; animation:btn-spinner-spin .6s linear infinite; opacity:.85; }
 @keyframes btn-spinner-spin { to { transform:rotate(360deg); } }
 button:disabled[aria-busy="true"], .header-badge[aria-busy="true"] { cursor:progress; opacity:.85; }
 .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--header-bg); backdrop-filter: blur(24px) saturate(140%); border-top: 1px solid var(--border); box-shadow: var(--shadow-panel-down); display: flex; z-index: var(--z-chrome); padding: 8px 2px 16px; overflow-x:auto; }
-/* BUGFIX: #scrollRoot pakai position:fixed tanpa z-index sendiri, jadi ikut membentuk
-   stacking context "level 0" di root -- akibatnya SEMUA modal/bottom-sheet di dalamnya
-   (termasuk .qs-modal-overlay z-index:300) selalu ketutup/ketimpa .nav (z-index:100),
-   walau angka z-index-nya lebih kecil dari modal, karena .nav ada DI LUAR #scrollRoot.
-   Solusi paling aman tanpa mengubah struktur DOM: sembunyikan nav selama ada modal/sheet
-   yang terbuka (ditandai body.has-open-modal, di-toggle dari openModal/closeModal/openQS/closeQS). */
-/* FIX (S590, laporan user: tombol Hapus di menu aksi aset ketutup nav
-   bawah walau modal SUDAH terbuka): rule display:none di atas TIDAK
-   `!important`, jadi kalah lawan inline style `mn.style.display='flex'`
-   yang di-set showMain() (features-helpers-global-security.js) SEKALI
-   saat app pertama dibuka/PIN benar. Inline style SELALU menang lawan
-   selector class apa pun kecuali diberi !important -- akibatnya sejak
-   showMain() pernah jalan sekali, class body.has-open-modal TIDAK PERNAH
-   benar-benar menyembunyikan nav lagi (class-nya toggle benar, tapi CSS
-   effect-nya kalah), walau _syncNavVisibilityForModals() sudah jalan
-   sempurna. Fix murni CSS: !important di sini, TIDAK menyentuh showMain()
-   / inline style-nya sama sekali (0 risiko ke titik lain yang bergantung
-   ke display:flex awal itu). */
 body.has-open-modal .nav { display: none !important; }
-/* FIX (navbar melebar krn nav-fab ke-7): dulu 6 nav-item x min-width 56px
-   = 336px + padding .nav pas di batas viewport kecil. Sekarang ada +1
-   child (.nav-fab, lihat bawah) sehingga total lebih lebar dari layar &
-   overflow-x:auto .nav diam-diam mengaktifkan scroll horizontal (tab
-   Pajak/FAB bisa ketutup/perlu discroll tanpa indikator). Base min-width
-   diturunkan dari 56px->48px & font dari 12px->11px supaya 6 nav-item +
-   1 nav-fab tetap pas TANPA scroll di lebar layar umum (360-414px),
-   murni pengecilan, 0 perubahan struktur/perilaku. */
 .nav-item { flex: 1; min-width: 48px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 6px 1px; border: none; background: none; color: var(--text3); font-size: 11px; font-weight: 600; font-family: 'Plus Jakarta Sans', sans-serif; transition: all var(--dur-moderate); letter-spacing: 0.2px; }
-/* FIX (audit UI/UX, Agustus 2026): label nav sebelumnya var(--fs-caption)
-   = 11px, ambang bawah keterbacaan nyaman utk teks yg dibaca terus-menerus
-   sbg navigasi utama (beda dgn caption/badge kecil lain yg cuma sesekali
-   dilihat). Dinaikkan ke 12px FIXED (bukan ubah token --fs-caption global
-   -- token itu dipakai 30+ selector lain, termasuk badge ukuran pas spt
-   .kasir-tile-badge yg beresiko teks kepotong kalau ikut naik; scoping ke
-   .nav-item saja menghindari itu). Di layar sangat sempit (<360px, lihat
-   media query di bawah) dikembalikan ke 11px supaya tidak menambah resiko
-   overflow di kondisi yg sudah paling ketat.
-   (Update: base sekarang sudah 11px sejak fix navbar 7-child di atas,
-   jadi breakpoint sempit di bawah diturunkan lagi ke 10px.) */
-/* FIX (audit UI/UX, Agustus 2026): 7 child (6 nav-item + 1 nav-fab)
-   MELEBIHI lebar viewport layar sangat kecil (mis. iPhone SE 320px) --
-   .nav punya overflow-x:auto sbg fallback, jadi bukan patah layout, TAPI
-   tab terakhir (Pajak) diam-diam terpotong/perlu discroll horizontal
-   tanpa ada indikator visual bahwa masih ada tab lain, pengguna bisa
-   tidak sadar. Breakpoint 359px dipakai (konsisten dgn breakpoint sempit
-   lain yg sudah ada di file ini, mis. .dashhub-hero-stats) -- turunkan
-   min-width & svg lagi, plus nav-fab ikut mengecil (lihat .nav-fab-icon
-   di bawah), supaya 7 child pas tanpa scroll di layar sekecil apa pun,
-   murni pengecilan, 0 perubahan struktur/perilaku. */
 @media (max-width:359px){
   .nav-item{min-width:40px;padding:6px 0;font-size:10px;}
   .nav-item svg{width:17px;height:17px;}
@@ -216,12 +106,6 @@ body.has-open-modal .nav { display: none !important; }
 .nav-dot { width: 4px; height: 4px; border-radius: var(--r-full); background: var(--grad-accent); display: none; transition: width var(--dur-moderate) var(--ease-standard); }
 .nav-item.active .nav-dot { display: block; width: 14px; }
 .page { display: none; padding: 14px 16px; animation: fadeIn var(--dur-moderate) var(--ease-standard); }
-/* Sprint 2 Tahap 15 (ROADMAP-v1.1.md item #10) — container max-width
-   konsisten utk SEMUA .page di layar >=1024px, bukan hanya
-   #page-dashboard-hub. Reuse nilai 1080px yang sudah ada (Tahap 5) agar
-   harmonis. Murni aditif: #page-dashboard-hub tetap dikendalikan rule
-   ID-nya sendiri (specificity ID > class, nilai sama 1080px jadi tidak
-   ada perbedaan visual di halaman itu). */
 @media (min-width:1024px){
   .page{max-width:1080px;margin-left:auto;margin-right:auto;}
 }
@@ -242,18 +126,7 @@ body.has-open-modal .nav { display: none !important; }
 .stg-group-body-inner { padding: 0 12px 12px; }
 .stg-group-body-inner .card { margin-bottom: 10px; }
 .stg-group-body-inner .card:last-child { margin-bottom: 0; }
-
-/* Tab panel dipakai KHUSUS 6 seksi utama #page-settings (lihat setSettingsTab() di
-   pengaturan-search.js) — dulu accordion .stg-group, sekarang jadi split-tab lewat .cn-tabs.
-   Class ini SENGAJA terpisah dari .stg-group (yang masih dipakai apa adanya sbg accordion di
-   dashSecondaryGroup/pzPiutangUtangGroup, bukan bagian dari perubahan ini). Cukup pakai utility
-   u-dnone utk toggle tampil/sembunyi, tidak butuh CSS max-height/transition seperti accordion. */
 .stg-tabpanel .stg-group-body-inner { padding: 0; }
-
-/* S1920 — Settings mobile navigation:
-   The seven Settings sections are real split-tabs, not a single long form.
-   Keep the tab rail visible while scrolling so users do not have to return to
-   the top of a long profile/backup/diagnostic panel to change sections. */
 @media(max-width:899px){
   #page-settings > .cn-tabs{
     position:sticky;
@@ -272,11 +145,6 @@ body.has-open-modal .nav { display: none !important; }
     white-space:nowrap;
   }
 }
-
-/* S1920 — Dashboard Hub mobile:
-   Five quick actions across are cramped around 360px and make labels
-   unreadable. Use a 3-column launcher at the narrowest common phone widths;
-   the 5-column layout remains unchanged above 380px. */
 @media(max-width:380px){
   #page-dashboard-hub .dashhub-qa-row{
     grid-template-columns:repeat(3,minmax(0,1fr));
@@ -290,25 +158,10 @@ body.has-open-modal .nav { display: none !important; }
     font-size:10px;
   }
 }
-
-/* S1920 — Canonical primary dashboard blocks must never collapse into a
-   blank spacer if a stale class/style leaks from a previous runtime. */
 #page-dashboard-hub #dashHubHeroCard,
 #page-dashboard-hub #dashHubQuickActions{
   visibility:visible;
 }
-
-/* Collapse per-kartu (beda dari .stg-group yg collapse per-grup) — dipakai kartu tunggal yg
-   isinya panjang, mis. "Kartu di Beranda" di Pengaturan, supaya bisa dilipat sendiri tanpa
-   melipat seluruh grup. Sistem ini SENGAJA terpisah dari sistem toggleCardCollapse() di bawah
-   (dipakai ~40+ kartu lain) — beda mekanisme toggle (classList.toggle('open') di wrapper
-   .card-collapse, bukan key+'-chev'/key+'-cbody' + localStorage cardCollapsePrefs) & beda
-   skema HTML (1 wrapper .card-collapse, bukan pasangan id terpisah).
-   FIX v1.0-stabilization: class body-nya diganti jadi .single-collapse-body (sebelumnya
-   sama-sama bernama .card-collapse-body dgn sistem toggleCardCollapse() di bawah — 2 definisi
-   .card-collapse-body yg beda default max-height/mekanisme collapse saling tabrakan di cascade
-   CSS, walau kebetulan tidak menimbulkan bug nyata krn urutan sumber). Jangan pakai nama
-   .card-collapse-body lagi di sini — itu milik sistem toggleCardCollapse(). */
 .card-collapse-head { cursor: pointer; user-select: none; }
 .card-collapse-chevron { font-size: var(--fs-label); color: var(--text2); transition: transform var(--dur-moderate) ease; flex-shrink: 0; }
 .card-collapse.open .card-collapse-chevron { transform: rotate(180deg); }
@@ -319,11 +172,6 @@ details.card summary{list-style:none}
 details.card summary::after{content:'▾';float:right;color:var(--text2);transition:transform var(--dur-moderate)}
 details.card[open] summary::after{transform:rotate(180deg)}
 .card-title { font-size:var(--fs-label); font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
-/* Sistem collapse standar dipakai ~40+ kartu (dashboard, keuangan, laporan, car notes, pajak/zakat,
-   dst) lewat data-action="toggleCardCollapse" (modal-navigasi.js) dgn skema id key+'-chev'/
-   key+'-cbody' & persist ke localStorage cardCollapsePrefs. Ini SATU-SATUNYA pemilik nama class
-   .card-collapse-body/.card-collapse-toggle — lihat catatan di .single-collapse-body di atas utk
-   kartu "Kartu di Beranda" yg SENGAJA pakai sistem terpisah. */
 .card-collapse-toggle{cursor:pointer;font-size:var(--fs-body);color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);flex-shrink:0;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;line-height:1;transition:transform var(--dur-slow) ease,background var(--dur-base) ease;}
 .card-collapse-toggle:active{background:var(--accent-soft)}
 .card-collapse-toggle.collapsed{transform:rotate(-90deg)}
@@ -332,43 +180,18 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
 .stat-box { background: var(--surface2); border-radius: var(--r-md); padding: 14px 12px; border: 1px solid var(--border); }
-/* S336: reuse token yang PERSIS sama dgn .dashhub-analytics-card--warn
-   (Dashboard Hub) supaya "bahasa visual" kartu peringatan seragam di
-   seluruh app, bukan cuma di 1 halaman — dipakai di kartu "Bersih" pada
-   Laporan Keuangan (#lapNetBox) saat Bersih<0. */
 .stat-box--warn { background: var(--accent2-soft); border-color: var(--accent2); }
-/* AUDIT-UIUX-VISUAL-2026-08 TEMUAN 1: badge "⚠️ Kurang/Rugi"
-   (.dashhub-analytics-badge, position:absolute top:6px right:6px) menimpa
-   digit angka .stat-val saat kartu dlm status --warn (lapNetBox/lapUntungBox,
-   padding kartu diperkecil jadi 12px 8px lewat inline style). Fix minimal-
-   risiko: beri ruang di ATAS .stat-val hanya saat kartu berstatus --warn
-   (kondisi sama persis dgn classList.toggle('stat-box--warn', ...) yg sudah
-   ada di modules-render.js & cobek-order.js) — 0 dampak ke kartu lain. */
 .stat-box--warn .stat-val { margin-top: 14px; }
 .stat-box.clickable, .cobek-stat.clickable, .bbm-stat.clickable, .budget-sum-box.clickable, .budget-item.clickable { cursor:pointer; transition:transform var(--dur-base),box-shadow var(--dur-base); }
 .budget-item.clickable:active { transform:scale(0.98); }
 .stat-box.clickable:active, .cobek-stat.clickable:active, .bbm-stat.clickable:active, .budget-sum-box.clickable:active { transform:scale(0.96); }
-/* Bill stat pills (S299 UI polish pt.3) — alternatif ringan utk grid3 stat-box yg makan
-   tempat vertikal: 1 baris pill horizontal-scroll, CSS-only, id elemen di dalamnya TETAP
-   sama (keuBillMonthTotal dkk) jadi updateBillStatGrid() di tagihan-kalender.js 0 perubahan. */
 .bill-stat-pills { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 2px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .bill-stat-pills::-webkit-scrollbar { display: none; }
 .bill-stat-pill { flex: 0 0 auto; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-pill); padding: 6px 14px; display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .bill-stat-pill .stat-label { margin-bottom: 0; font-size: var(--fs-caption); }
 .bill-stat-pill .stat-val { font-size: var(--fs-body-lg); }
-/* RENCANA-MODERNISASI-UI s636: pilot ticker strip ringkasan di Beranda
-   (Dashboard Hub Hero), digate KHUSUS ke tema "modern" (s635) — tema lama
-   0 dampak. Container & item 100% REUSE .bill-stat-pills/.bill-stat-pill
-   yang sudah ada (bukan komponen baru dari nol), isi angka pakai class
-   .stat-val yang sudah ada juga -- otomatis kebagian font-family
-   var(--font-mono) lewat aturan [data-theme="modern"] .stat-val yang
-   ditambahkan di s635, 0 CSS numeric baru dibutuhkan di sini. */
 .dashhub-ticker { display: none; }
 [data-theme="modern"] .dashhub-ticker { display: flex; }
-/* SESI 2C — Riwayat Servis responsive/mobile UX.
-   Presentation-only: tidak mengubah data, SSOT, filter, pagination, atau event flow.
-   Desktop tetap memakai struktur .tx-item yang sama; mobile memecah informasi menjadi
-   title + metadata utama + badge agar tidak menjadi satu baris metadata panjang. */
 .servis-history-item { align-items: center; }
 .servis-history-info { min-width: 0; }
 .servis-history-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -400,106 +223,39 @@ details.card[open] summary::after{transform:rotate(180deg)}
   #servisListLoadMoreWrap { padding-bottom: 4px; }
   #servisListLoadMoreWrap .btn { width: 100%; min-height: 40px; }
 }
-
-/* [data-theme="modern"] ticker — visual restyle only (mockup Ledger Pro:
-   strip dgn pemisah garis vertikal), REUSE markup .bill-stat-pill 100%
-   apa adanya (0 HTML/JS diubah, 0 test s636/s640 disentuh). */
 [data-theme="modern"] .dashhub-ticker.bill-stat-pills { gap: 0; overflow-x: auto; }
 [data-theme="modern"] .bill-stat-pill { background: none; border: none; border-right: 1px solid var(--border); border-radius: 0; padding: 0 14px; flex-direction: column; align-items: flex-start; gap: 2px; }
 [data-theme="modern"] .bill-stat-pill:last-child { border-right: none; }
 [data-theme="modern"] .bill-stat-pill .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); }
 [data-theme="modern"] .bill-stat-pill .stat-val { font-family: var(--font-mono); font-weight: 600; }
-/* [data-theme="modern"] Dana Titipan — restyle .titipan-holding-row jadi
-   baris tabel padat (mockup Ledger Pro .holding-row): divider tipis +
-   padding lebih kecil. REUSE markup apa adanya (0 HTML diubah, 0 test
-   s540-D/s631/s632/s633 disentuh). */
 [data-theme="modern"] .titipan-holding-row { padding: 6px 0; margin-bottom: 0 !important; border-bottom: 1px solid var(--border); }
 [data-theme="modern"] .titipan-holding-row:last-child { border-bottom: none; }
-/* [data-theme="modern"] Dana Titipan — daftar holding per instrumen SEKARANG
-   JUGA reuse .tx-tbl* (S637/s642), lewat _holdingsTableHtmlModern()
-   (dana-titipan-portfolio-render.js). 0 CSS baru (tx-tbl* generik, cukup
-   utk kolom Instrumen/Nilai/Porsi). Hanya nama tombol instrumen & baris
-   header grup kustodian yang butuh 2 aturan tambahan berikut. */
 [data-theme="modern"] .tx-tbl-name-btn { background: none; border: none; padding: 0; margin: 0; color: inherit; text-decoration: underline dotted; cursor: pointer; font: inherit; text-align: left; }
 .titipan-tbl-group-row td { background: var(--surface2); color: var(--text2); font-size: 10px; }
-/* [data-theme="modern"] Dana Titipan — SESI s645 (lanjutan s642/s644):
-   list ringkasan per-owner ("👤 nama Pokok→Kini") SEKARANG JUGA dibungkus
-   <table class="tx-tbl"> lewat _ownerListHtmlModern()
-   (dana-titipan-portfolio-render.js), 1 <tr><td colspan="3"> per owner
-   (kartu <details> owner TETAP utuh 0 diubah -- tidak dipecah 3 <td>
-   sungguhan krn butuh lebar penuh utk expand/tombol/dropdown/holdings
-   bersarang). Cuma 1 aturan tambahan: <td> pembungkusnya kehilangan
-   padding besar default .tx-tbl td (8px) supaya <details> di dalamnya
-   rapat spt kartu biasa, bukan double-padded. */
 .titipan-tbl-owner-cell { padding: 6px 8px !important; }
-
-/* MOCKUP-ALIGN (audit tampilan vs mockup-ledgerpro.html/mockup-minimal.html,
-   Agustus 2026 — laporan user "tampilan masih belum sesuai mockup"). Beda
-   sebelumnya: layar Dana Titipan (dana-titipan-portfolio-render.js) memakai
-   class titipan-pool-summary/titipan-owner-card/titipan-over-badge/dst yang
-   0 CSS-nya sama sekali (murni border dashed inline + flex polos) -- jauh
-   dari kartu bulat + avatar bulat + angka hero yang jadi ciri khas KEDUA
-   mockup. Aturan berikut TIDAK di-gate [data-theme="modern"] (beda dari
-   blok titipan-holding-row/tx-tbl* di atas) supaya style kartu ini jadi
-   default di SEMUA tema (screenshot user memakai tema default/gelap,
-   bukan "modern") -- 0 HTML/JS lain diubah, murni styling utk class yang
-   sudah/baru ditambahkan di dana-titipan-portfolio-render.js. */
-
 .titipan-card { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px; }
-
-/* Kartu ringkasan pool ("👥 Sudah Dialokasikan" dst) & kartu footer "Total
-   Teralokasi" — angka utama jadi besar (pola .hero-amt mockup-minimal),
-   baris sekunder rapi lewat titipan-pool-row (pola .tick mockup-ledgerpro). */
 .titipan-card-hero { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .titipan-pool-lbl { font-size: var(--fs-caption); color: var(--text2); font-weight: 500; }
 .titipan-pool-amt { font-size: 22px; font-weight: 700; letter-spacing: -.3px; font-variant-numeric: tabular-nums; color: var(--text); }
 .titipan-pool-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-top: 1px solid var(--border); font-size: var(--fs-label); }
 .titipan-pool-row:first-of-type { border-top: none; }
-
-/* Badge alokasi berlebih ("⚠️ Rp X") — sebelumnya teks polos, sekarang
-   pil merah spt .titipan-over-badge dipakai kedua tempat (pool summary &
-   rincian audit). */
 .titipan-over-badge { background: var(--accent2-soft); border: 1px solid var(--accent2); border-radius: var(--r-pill); padding: 2px 10px; font-weight: 700; font-size: var(--fs-label); white-space: nowrap; }
-
-/* Kartu owner per pemilik — bulat + avatar inisial (pola .owner-tbl/.tcard
-   kedua mockup). <details> summary jadi head kartu, isi (holdings/tombol)
-   jadi body -- struktur <details> lama (id/data-action) 0 diubah. */
 .titipan-owner-card { padding: 0; overflow: hidden; margin-bottom: 8px !important; }
 .titipan-owner-card > summary { padding: 12px 14px; margin: 0; list-style: none; gap: 10px; }
 .titipan-owner-card > summary::-webkit-details-marker { display: none; }
 .titipan-owner-card > summary::after { content: '▸'; color: var(--text2); font-size: 11px; transition: transform var(--dur-base) ease; margin-left: 6px; }
 .titipan-owner-card[open] > summary::after { transform: rotate(90deg); }
 .titipan-owner-card > summary > *:not(.titipan-owner-avatar):not(:last-child) { flex: 1; }
-/* FIX (2026-08-17, laporan user: tabel Dana Titipan tidak rapi -- baris
-   "Pokok Rp X → Kini Rp Y +Rp Z" patah di TENGAH angka, mis. "...→ Kini"
-   lanjut baris baru "Rp X +Rp 0"). ROOT CAUSE: <summary> pakai
-   `.u-flex.u-jcb` (display:flex; justify-content:space-between) tanpa
-   flex-wrap, avatar+nama+blok-angka dipaksa muat 1 baris; begitu ruang
-   kurang (nama panjang / layar sempit), blok angka (child TERAKHIR,
-   0 flex-basis) kena shrink oleh browser sampai teks di dalamnya
-   text-wrap apa adanya -- termasuk di TENGAH "Kini"/nominal, bukan di
-   sela kata. FIX MURNI CSS (0 HTML/JS/teks diubah): izinkan summary wrap
-   ke 2 baris (avatar+nama tetap 1 baris atas; blok Pokok→Kini→± turun
-   jadi baris bawah PENUH, rata kanan) supaya SETIAP potongan teks
-   (span "Pokok"/nominal/"Kini"/nominal/±) tetap utuh sebagai unit yang
-   boleh pindah baris kalau perlu, tidak pernah lagi patah di tengah
-   angka. */
 .titipan-owner-card > summary { flex-wrap: wrap; row-gap: 4px; }
 .titipan-owner-card > summary > *:last-child { flex: 1 1 100%; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: baseline; gap: 2px 6px; text-align: right; }
 .titipan-owner-card > *:not(summary) { padding: 0 14px 12px; }
 .titipan-owner-card.titipan-owner-alert { border-color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2-soft); }
 .titipan-owner-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border2); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto !important; font-size: 11px; font-weight: 700; color: var(--text2); }
 .titipan-owner-avatar::before { content: attr(data-owner-initial); }
-
-/* Rincian audit/rekonsiliasi (Total Pokok Dikomit/Majoris/Estimasi Belum
-   Teralokasi/Kelebihan Alokasi) — collapsed by default, tipografi muted
-   supaya angka ringkasan ("Total Teralokasi") yang paling relevan tidak
-   tenggelam, pola sama .titipan-detail-toggle per-owner (S632). */
 .titipan-detail-toggle { font-size: var(--fs-label); }
 .titipan-detail-toggle > summary { list-style: none; padding: 4px 0; color: var(--text2); }
 .titipan-detail-toggle > summary::-webkit-details-marker { display: none; }
 .titipan-audit-toggle { border-top: 1px dashed var(--border2); padding-top: 6px; }
-
 @keyframes flashHi { 0%{box-shadow:0 0 0 3px var(--accent);background:var(--accent-soft);} 100%{box-shadow:0 0 0 0 transparent;} }
 .flash-highlight { animation: flashHi 1.1s ease-out; border-radius:var(--r-lg); }
 .stat-label { font-size:var(--fs-label); color: var(--text2); margin-bottom: 5px; font-weight: 500; }
@@ -539,8 +295,6 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .tx-meta { font-size:var(--fs-label); color: var(--text2); margin-top: 1px; }
 .tx-amount { font-family: 'Space Grotesk', sans-serif; font-size:var(--fs-body-lg); font-weight: 700; white-space: nowrap; }
 .tx-del { background: none; border: none; color: var(--text3); cursor: pointer; padding: 4px; font-size:var(--fs-body-lg); flex-shrink: 0; }
-
-/* === Bisnis Shop — ringkasan atas (fix: class dipakai di HTML tapi belum ada CSS-nya, kw190-shop-ui-fix) === */
 .shop-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); margin-bottom: var(--sp-5); }
 .shop-stat { background: var(--surface2); border-radius: var(--r-lg); padding: var(--sp-6) var(--sp-3); text-align: center; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; }
 .shop-stat.clickable { cursor: pointer; transition: transform var(--dur-base) ease, background var(--dur-base) ease; }
@@ -549,8 +303,6 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .shop-lbl { font-size: 10.5px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; }
 .shop-stat:nth-child(2) .shop-val { color: var(--accent4); }
 .shop-stat:nth-child(3) .shop-val { color: var(--accent3); }
-
-/* === Etalase Produk — kartu profesional (kw86-etalase-redesign) === */
 .shop-product-grid { display: flex; flex-direction: column; gap: 10px; }
 .shop-product-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); padding: 13px 14px 13px 17px; position: relative; overflow: hidden; }
 .shop-product-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent3); }
@@ -577,14 +329,6 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .shop-product-actions { display: flex; gap: 6px; }
 .shop-product-actions button { background: var(--surface3); border: none; width: 29px; height: 29px; border-radius: var(--r-sm); font-size: var(--fs-body); cursor: pointer; color: var(--text2); }
 .acc-chip { font-size:var(--fs-label); padding: 2px 7px; border-radius: var(--r-md); background: var(--surface3); color: var(--text2); margin-left: 5px; }
-/* S637 (RENCANA-MODERNISASI-UI.md, Ledger Pro): tabel #allTx tema "modern".
-   Class BARU semua (.tx-tbl*), TIDAK menyentuh .tx-item/.tx-icon/.tx-name
-   dkk yang dipakai txHTML() kartu utk 10 tema lama -- 0 risiko efek samping
-   ke tema lain karena markup ini hanya pernah dirender saat
-   D.profile.theme==='modern' (lihat renderKeuangan(), modules-render.js).
-   .tx-amount/.num dipakai ulang di sel Nominal & Saldo supaya otomatis
-   kebagian tabular-nums + font-mono lewat aturan [data-theme="modern"]
-   .tx-amount yang sudah ada (s635) -- 0 aturan font baru. */
 .tx-tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .tx-tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-label); }
 .tx-tbl th { text-align: left; padding: 6px 8px; color: var(--text2); font-weight: 600; border-bottom: 1px solid var(--border2); white-space: nowrap; }
@@ -629,32 +373,8 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .u-rel { position:relative; }
 .u-mt8 { margin-top:8px; }
 .u-dnone { display:none; }
-/* FIX (2026-08-17, laporan user: loading awal terlihat berat/kelip putih->
-   hitam sebelum layar utama muncul). ROOT CAUSE: `.u-dnone{display:none}`
-   di atas KALAH oleh aturan `display:flex` milik `.onboard` (styles.css,
-   lebih jauh di bawah file ini) & `.pin-screen` (idem) karena spesifisitas
-   CSS keduanya SAMA (1 class) -- pada spesifisitas sama, urutan DEKLARASI
-   di file yang menang, BUKAN urutan class di HTML. `.onboard`/`.pin-screen`
-   didefinisikan SETELAH `.u-dnone` di file ini, jadi `display:flex` mereka
-   menimpa `display:none` di atas walau elemennya punya class "u-dnone" di
-   HTML (lihat <div class="onboard u-dnone" id="onboard"> & <div
-   class="pin-screen u-dnone" id="pinScreen"> di app_production.html/
-   index.html). Akibatnya, SEBELUM JS (init(), app-bundle-b.min.js) sempat
-   jalan & eksplisit set style.display='none', layar Onboarding/PIN
-   ke-paint browser dalam kondisi TERBUKA (bg terang, sebelum tema gelap
-   sempat diterapkan applyEffectiveTheme()) -- inilah kilatan
-   putih-lalu-hitam yang dilaporkan, BUKAN karena bundle JS berat semata.
-   FIX MURNI CSS, 0 markup/JS diubah: naikkan spesifisitas SATU tingkat
-   (2 class digabung) khusus utk kombinasi elemen ini supaya SELALU menang
-   terlepas dari urutan deklarasi manapun -- lebih aman & terlokalisir
-   drpd `!important` blanket di `.u-dnone` (yang dipakai 150+ tempat lain
-   di app ini utk show/hide, lihat audit sebelum patch ini). Semua jalur
-   JS yang MENAMPILKAN elemen ini (init(), showPinScreen(), dst) sudah
-   `classList.remove('u-dnone')` dulu sebelum set style.display -- jadi
-   0 risiko elemen jadi tidak bisa dimunculkan lagi setelah fix ini. */
 .onboard.u-dnone,
 .pin-screen.u-dnone { display: none; }
-/* ==== Utility classes tambahan (auto-generated dari audit inline style, Jul 2026) ==== */
 .u-fs10 { font-size:10px; }
 .u-fs11 { font-size:var(--fs-caption); }
 .u-fs12 { font-size:var(--fs-label); }
@@ -671,9 +391,6 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .u-cacc4 { color:var(--accent4); }
 .u-lh14 { line-height:1.4; }
 .u-lh15 { line-height:1.5; }
-/* S337 — FeatureInsightUI.renderInto() (modules/ai/feature-insights.js),
-   ROADMAP-v1.1.md #3 / KNOWN-ISSUES.md §4.1 "widget AI". Flex row supaya
-   ikon SVG 14px tetap sejajar baris pertama walau teks wrap multi-baris. */
 .fi-insight-row { display:flex; align-items:flex-start; gap:6px; }
 .fi-insight-icon { flex-shrink:0; line-height:1; margin-top:1px; }
 .fi-insight-icon svg { display:block; }
@@ -714,28 +431,12 @@ details.card[open] summary::after{transform:rotate(180deg)}
 @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 .modal { background: var(--surface); border-radius: 26px 26px 0 0; padding: 20px 18px calc(32px + env(safe-area-inset-bottom, 0px)); width: 100%; max-width:100vw; box-sizing:border-box; max-height: 90vh; max-height: 90dvh; overflow-y: auto; overflow-x:hidden; border-top: 1px solid var(--border); box-shadow: var(--shadow-sheet); animation: slideUp var(--dur-slow) var(--ease-emphasized); }
 @keyframes slideUp { from { transform: translateY(40px); opacity:.4; } to { transform: translateY(0); opacity:1; } }
-/* FIX (audit "dropdown Pilih Pemilik tidak bisa dipilih", laporan user Agustus 2026):
-   .modal di atas dianimasikan pakai CSS `transform` (slideUp). Saat modal ini dibuka
-   SEBAGAI TUMPUKAN di atas modal lain yang masih terbuka (mis. assetOwnersModal
-   dibuka dari dalam assetModal yang masih terbuka -- lihat Aset.openOwnersModal()),
-   sejumlah WebView Android (termasuk WebView yang dipakai Brave) menyisakan
-   compositing layer dari `transform` milik modal PERTAMA yang belum sempat
-   didemosikan sebelum modal KEDUA mulai animasi -- akibatnya <select> native
-   (mis. dropdown "Pilih pemilik" di _ownerNameFieldHtml()) yang dirender di dalam
-   modal KEDUA salah hitung koordinat popup opsinya: opsi termuat & terlihat, TAPI
-   tap di opsi selain yang sedang aktif tidak terdaftar (radio tidak pernah
-   berpindah). Fix: modal yang dibuka sebagai tumpukan (class `.no-anim`,
-   dipasang oleh openModal() di modal-navigasi.js saat sudah ada `.overlay.open`
-   lain) tidak dianimasikan pakai transform sama sekali -- modal langsung tampil di
-   posisi akhir, menghindari compositing layer tambahan yang jadi pemicu bug ini.
-   0 perubahan pada modal yang dibuka sendirian (tanpa tumpukan) -- animasi slideUp
-   tetap seperti semula. */
 .modal.no-anim { animation: none; transform: none; }
 .modal-handle { width: 40px; height: 4px; background: var(--surface4); border-radius: 2px; margin: 0 auto 18px; }
 .modal-handle.swipeable { touch-action: none; cursor: grab; }
 .modal-title { font-family: 'Space Grotesk', sans-serif; font-size:var(--fs-title); font-weight: 700; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
-.modal-close { background: var(--surface3); border: none; color: var(--text2); width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size:var(--fs-body-lg); display: flex; align-items: center; justify-content: center; transition: background var(--dur-base); }
-.modal-close:active { background: var(--surface4); }
+.modal-close{background:radial-gradient(circle 15px at center,var(--surface3) 0 100%,transparent 100%);border:0;color:var(--text2);width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;cursor:pointer;font-size:var(--fs-body-lg);display:flex;align-items:center;justify-content:center;transition:background var(--dur-base);-webkit-tap-highlight-color:transparent}
+.modal-close:active{background:radial-gradient(circle 15px at center,var(--surface4) 0 100%,transparent 100%)}
 .fg { margin-bottom: 16px; }
 .fl { font-size:var(--fs-label); color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; display: block; }
 .fi, .fs { width: 100%; padding: 12px 14px; background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--r-md); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; font-size:var(--fs-body-lg); transition: border-color var(--dur-moderate), box-shadow var(--dur-moderate); box-shadow: var(--shadow-inset-xs); }
@@ -792,27 +493,13 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .prog-fill.orange { background: linear-gradient(90deg, var(--accent4), var(--accent2)); }
 .prog-fill.red { background: var(--accent2); }
 .filter-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; margin-bottom: 12px; }
-/* AUDIT-UIUX-VISUAL-2026-08 TEMUAN 3: scrollbar disembunyikan (aturan
-   ::-webkit-scrollbar di bawah) tanpa pengganti sinyal "masih ada opsi di
-   luar layar". Fade gradient CSS-only di tepi kanan, selalu aktif saat konten
-   overflow (tidak butuh JS/deteksi scrollWidth) — 1 titik CSS, otomatis
-   menular ke semua pemakai .filter-scroll (Laporan, filter Shop, chip
-   periode Car Notes, dst). Fade dibatasi ke area scroll saja lewat mask,
-   jadi tidak memotong chip terakhir kalau memang pas muat tanpa overflow
-   (mask transparan di ujung tetap membiarkan konten asli terlihat penuh,
-   cukup melembutkan potongan visualnya). */
 .filter-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); }
 .filter-scroll::-webkit-scrollbar { display: none; }
-/* Tanpa flex-shrink:0, chip² ini ikut MENYUSUT (bukan overflow+scroll) kalau jumlahnya banyak &
-   kontainer sempit di layar HP -- teksnya "Minggu Ini"/"Selamanya" jadi kepotong/kegencet & terlihat
-   tidak center, padahal maksudnya scroll ke samping. flex-shrink:0 memaksa tiap chip pertahankan
-   lebar aslinya (sesuai teks), kelebihannya baru discroll lewat overflow-x:auto di .filter-scroll. */
 .filter-scroll .chip-btn { flex-shrink: 0; text-align: center; }
 .chip-btn { padding: 11px 14px; border-radius: var(--r-pill); border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-size: var(--fs-label); font-weight: 600; cursor: pointer; white-space: nowrap; transition: all var(--dur-moderate); }
 .chip-btn:active { transform: scale(0.94); }
 #tEmergencySuggestBadge:active{transform:scale(0.98)}
 .chip-btn.active { background: var(--accent); color: white; border-color: var(--accent); box-shadow: 0 4px 12px var(--accent-soft); }
-/* Fuel gauge segmen visual (modal Koreksi BBM #fbcBarPicker + mini-gauge FuelCard) — blok terisi/kosong, warna beda utk area cadangan. Reuse var warna tema yg sudah ada (--accent2/3, --surface3), 0 warna hardcode baru. */
 .fbc-seg { display: flex; align-items: center; justify-content: flex-end; height: 30px; border-radius: 5px; border: 1px solid var(--border2); padding: 0 8px; cursor: pointer; background: var(--surface3); transition: all var(--dur-moderate); }
 .fbc-seg:active { transform: scale(0.97); }
 .fbc-seg-label { font-size: 10px; font-weight: 700; color: var(--text2); }
@@ -825,13 +512,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .fuelcard-gauge-seg { flex: 1; height: 10px; border-radius: 3px; background: var(--surface3); }
 .fuelcard-gauge-seg.fbc-seg-fill { background: var(--accent3); }
 .fuelcard-gauge-seg.fbc-seg-reserve { background: var(--accent2); }
-
-/* fuel-intelligence-ui.js (TASK-144) — bar picker #fbcBarPicker. Tombol
-   dasarnya 100% reuse .chip-btn di atas (0 style baru utk warna/hover/
-   active); aturan di bawah cuma menata full-width + kepadatan vertikal
-   yang khusus dibutuhkan tampilan gauge (satu tombol per baris, makin ke
-   atas makin dekat status "penuh" — urutan DOM diatur di JS, wrapper-nya
-   sendiri sudah flex-direction:column-reverse dari markup). */
 #fbcBarPicker .fbc-bar-btn { width: 100%; text-align: center; padding: 10px 14px; }
 .ms-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .ms-item:last-child { border-bottom: none; }
@@ -909,14 +589,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .onboard-sub { color: var(--text2); font-size:var(--fs-body-lg); text-align: center; margin-bottom: 28px; }
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translate(-50%, 10px); background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--r-pill); padding: 10px 20px; font-size: var(--fs-body); font-weight: 600; z-index: var(--z-toast); opacity: 0; pointer-events: none; transition: opacity var(--dur-moderate) var(--ease-standard), transform var(--dur-moderate) var(--ease-emphasized); white-space: normal; max-width: 90vw; text-align: center; line-height: 1.4; color: var(--text); }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
-/* SESI TAMBAHAN (audit UI/UX "konfirmasi hapus tanpa undo") — varian toast dgn
-   tombol "Urungkan" (lihat toastUndo(), format-tema.js). Class `toast--action`
-   cuma ditoggle saat toast PUNYA undoFn — toast() biasa (900+ pemanggil
-   existing, teks polos) tidak pernah kena class ini, jadi style `.toast` di
-   atas 100% tidak berubah utk kasus lama. `pointer-events` di-override jadi
-   `auto` HANYA saat class ini aktif & toast sedang `.show` — toast biasa tetap
-   `pointer-events:none` (tidak menghalangi tap ke elemen di baliknya) persis
-   spt sebelum sesi ini. */
 .toast--action { text-align: left; display: flex; align-items: center; gap: 10px; padding-right: 10px; }
 .toast--action.show { pointer-events: auto; }
 .toast-msg { flex: 1; }
@@ -960,16 +632,10 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .bill-item { display:flex; align-items:center; gap:var(--sp-4); padding:var(--sp-4) 0; border-bottom:1px solid var(--border); }
 .bill-item:last-child { border-bottom:none; }
 .bill-due-badge { font-size:var(--fs-label); padding:2px 7px; border-radius:var(--r-md); font-weight:700; flex-shrink:0; }
-/* Urgensi 3-tier (S299 UI polish pt.2): urgent (<=3 hari/lewat, merah) > soon (4-7 hari,
-   oranye — REPURPOSE dari merah krn dulu cuma 2 tier) > far (>7 hari, abu-abu netral,
-   biar mata langsung fokus ke yg beneran urgent). Reuse var warna tema yg sudah ada. */
 .bill-due-urgent { background: var(--accent2-soft); color: var(--accent2); }
 .bill-due-soon { background: var(--accent4-soft); color: var(--accent4); }
 .bill-due-far { background: var(--surface3); color: var(--text2); font-weight: 500; }
 .bill-due-ok { background: var(--accent3-soft); color: var(--accent3); }
-/* Accordion per-kartu (S301 UI polish pt.5) — default collapsed (max-height:0), buka
-   via chevron terpisah (.bill-card-chevron, TIDAK rebut tap kartu yg sudah dipakai
-   buka Edit). Cuma dirender kalau kartu punya detail (progress cicilan/catatan anomali). */
 .bill-card-detail { max-height:0; overflow:hidden; opacity:0; transition:max-height var(--dur-slower) ease, opacity var(--dur-slow) ease, margin-top var(--dur-slower) ease; }
 .bill-item.bill-card-expanded .bill-card-detail { max-height:300px; opacity:1; margin-top:8px; }
 .bill-card-chevron { cursor:pointer; font-size:var(--fs-label); color:var(--text2); flex-shrink:0; padding:2px 6px; transition:transform var(--dur-slower) ease; }
@@ -982,61 +648,25 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .cn-tabs { display:flex; gap:var(--sp-2); margin-bottom:var(--sp-5); overflow-x:auto; flex-wrap:nowrap; scroll-snap-type:x proximity; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
 .cn-tabs::-webkit-scrollbar { display:none; }
 .cn-tabs { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent 100%); }
-/* AUDIT UI/UX 2026-08 (slide-tab): semua grup tab digeser jadi horizontal-scroll
-   agar label tidak lagi wrap/kepepet saat jumlah tab banyak (mis. Pengaturan 7 tab).
-   Pola: flex:0 0 auto + white-space:nowrap pada tombol, overflow-x:auto pada wadah. */
-/* Breadcrumb kecil untuk navigasi 3-lapis (page -> tab -> subtab), mis.
-   Keuangan -> Laporan -> Ringkasan/Aruskas/Transaksi. Murni label teks,
-   ditulis oleh setLaporanTab()/setKelolaTab()/setPjkTab() lewat textContent
-   ke span di dalamnya — tidak ada navigasi/logic baru, cuma penanda posisi
-   supaya user tidak "nyasar" setelah 2-3 tap masuk. */
 .page-breadcrumb{font-size:var(--fs-caption);color:var(--text3);margin:-6px 0 10px;padding:0 2px;}
 .page-breadcrumb .pb-current{color:var(--text2);font-weight:600;}
 .cn-tab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-4) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cn-tab.active { background:var(--accent); color:white; border-color:var(--accent); }
-/* 2026-07-17: sub-tab nav utk split tab Laporan (Keuangan) — class SENGAJA
-   beda dari .cn-tab (bukan cuma varian) supaya query `#page-keuangan .cn-tab`
-   yang dipakai setKeuanganTab()/KEU_TAB_IDX/self-test TIDAK ikut menangkap
-   tombol sub-tab bersarang ini (lihat pola sama persis di .budget-tab-btn). */
 .lap-subtabs { margin-bottom:var(--sp-4); }
 .lap-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .lap-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
-/* 2026-07-17 (bagian ke-3): sub-tab nav utk split tab Kelola (Keuangan) —
-   class terpisah lagi dari .cn-tab MAUPUN .lap-subtab (pola sama, alasan
-   sama dgn .lap-subtab di atas: cegah tabrakan query per-page). */
 .kel-subtabs { margin-bottom:var(--sp-4); }
 .kel-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .kel-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
-/* 2026-07-17 (bagian ke-4): sub-tab nav utk split tab 🧾 Pajak (PPh 21)
-   (page-pajak) — class terpisah lagi dari .cn-tab/.lap-subtab/.kel-subtab
-   (pola sama, alasan sama: cegah tabrakan query per-page, khususnya
-   `#page-pajak .cn-tab` yang dipakai setPajakTab()/PAJAK_TAB_IDX/self-test
-   utk tab Zakat/Pajak tingkat atas). */
 .pjk-subtabs { margin-bottom:var(--sp-4); }
 .pjk-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .pjk-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
-
-/* Sesi 158 (permintaan eksplisit user): sub-tab nav utk split tab
-   🧠 Insight AI (page-carnotes, Ringkasan/Rekomendasi & Tren) — class
-   terpisah lagi dari .cn-tab/.lap-subtab/.kel-subtab/.pjk-subtab/
-   .dhb-subtab, alasan sama: cegah tabrakan query `#page-carnotes .cn-tab`
-   yang dipakai setCnTab() utk tab Insight AI/BBM/Servis/Pajak & SIM
-   tingkat atas. */
 .cni-subtabs { margin-bottom:var(--sp-4); }
 .cni-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cni-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
-
-/* Sesi 158: sub-tab nav utk split tab ⛽ BBM (page-carnotes,
-   Ringkasan/Analisis Lanjutan) — class terpisah lagi, alasan sama persis
-   .cni-subtab di atas. */
 .cnb-subtabs { margin-bottom:var(--sp-4); }
 .cnb-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .cnb-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
-
-/* Sub-tab Dashboard Hub (landing page, Fase 1 — lihat CLAUDE.md "Split tab
-   🧭 Dashboard Hub") — class terpisah lagi dari .cn-tab/.lap-subtab/
-   .kel-subtab/.pjk-subtab, alasan sama: cegah tabrakan query
-   #page-dashboard-hub .cn-tab kalau nanti ada .cn-tab lain di page ini. */
 .dhb-subtabs { margin-bottom:var(--sp-4); }
 .dhb-subtab { flex:0 0 auto; white-space:nowrap; scroll-snap-align:start; padding:var(--sp-3) var(--sp-1); border-radius:var(--r-md); border:1px solid var(--border); background:var(--surface2); color:var(--text2); font-size:var(--fs-label); font-weight:700; cursor:pointer; text-align:center; }
 .dhb-subtab.active { background:var(--accent); color:white; border-color:var(--accent); }
@@ -1109,31 +739,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .budget-progress-ring svg { transform:rotate(-90deg); }
 .budget-progress-ring .ring-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:var(--fs-label); font-weight:800; }
 .budget-catlist { max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--r-md); padding:var(--sp-2); margin-bottom:var(--sp-4); display:flex; flex-direction:column; gap:1px; }
-/* BUGFIX: .card-collapse-body punya overflow:hidden + max-height:2000px permanen (dipakai utk animasi
-   collapse/expand di banyak kartu). Untuk daftar hasil tes yg bisa jadi panjang (100+ baris), total
-   tingginya bisa lebih dari 2000px & konten yg kelebihan itu KEPOTONG TANPA SCROLLBAR sama sekali
-   (bukan cuma ke-collapse). Class ini kasih daftarnya area scroll sendiri yg jauh di bawah 2000px,
-   supaya parent-nya tidak pernah kepotong & isinya tetap bisa dijangkau via scroll internal. */
 .result-list-scroll { max-height:360px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
-/* Sama seperti .result-list-scroll di atas -- daftar riwayat ini juga hidup di dalam
-   .card-collapse-body (overflow:hidden + max-height:2000px tetap). Kalau daftar sendiri
-   (BBM/Servis per kendaraan, Transaksi Keuangan, Laporan, Riwayat Zakat) sudah pernah
-   dimuat banyak (mis. TX_PAGE_SIZE=50 entri x ~60px = ~3000px), tingginya lebih dari 2000px
-   & KEPOTONG TANPA SCROLLBAR di parent-nya. Kasih area scroll sendiri yg jauh di bawah 2000px. */
-/* BUGFIX (fix "Aset/Personal terpotong" di kartu "Semua Fitur" Dashboard Hub):
-   #dashHubMainGrid-cbody adalah .card-collapse-body pembungkus SELURUH
-   FEATURE_REGISTRY (10 kategori: Dashboard, Keuangan, Bisnis, Kendaraan,
-   Pajak & Zakat, Aset, Personal, AI, Backup, Pengaturan — lihat
-   dashboard-hub-registry.js) sekaligus, sama seperti #bbmList/#allTx dkk di
-   bawah. Kalau beberapa kategori dibuka bersamaan, total tinggi gabungan
-   semua kategori gampang lebih dari max-height:2000px generik
-   .card-collapse-body -> sisanya KEPOTONG TANPA SCROLLBAR (overflow:hidden),
-   persis kategori yang urutannya di bawah (mis. sisa grid Aset/Personal)
-   hilang begitu saja walau collapse-nya sendiri "terbuka". Beda dari
-   #bbmList dkk yang dikasih scroll internal sendiri (di sini TIDAK dikasih
-   scroll internal krn tiap kategori sudah collapsible sendiri-sendiri —
-   cukup naikkan cap wrapper ini jauh di atas kemungkinan total tinggi
-   gabungan semua kategori sekaligus terbuka). 0 perubahan HTML/JS. */
 #dashHubMainGrid-cbody {
   max-height: 20000px;
 }
@@ -1227,15 +833,9 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .trs-part-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border2);flex-shrink:0;margin-top:1px;display:none;align-items:center;justify-content:center;font-size:var(--fs-label);color:#fff;cursor:pointer;}
 .trs-part-check.show{display:flex;}
 .trs-part-check.checked{background:var(--accent3);border-color:var(--accent3);}
-/* Kasir AI (v127, kw81-kasir-ai-pos) — grid produk tap-to-add di tab baru "🧠 Kasir AI".
-   Redesign tampilan profesional di v196 (kw196-kasir-pro-redesign): toolbar sticky, tile
-   dgn aksen level-stok (selaras bahasa desain .shop-product-card di Etalase), kartu keranjang
-   terangkat + rincian struk (subtotal/diskon/ongkir), qty stepper pill, & floating summary
-   bar di bawah supaya total keranjang selalu kelihatan sambil scroll pilih produk. */
 .kasir-wrap{position:relative;padding-bottom:8px;}
 .kasir-toolbar{margin-bottom:10px;}
 .kasir-toolbar .search-wrap{margin-bottom:8px;}
-
 .kasir-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:4px;}
 .kasir-tile{position:relative;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent3);border-radius:var(--r-lg);padding:11px 12px 10px;cursor:pointer;user-select:none;box-shadow:var(--shadow-outline-b);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;}
 .kasir-tile:active{transform:scale(0.97);box-shadow:var(--shadow-tap);}
@@ -1250,7 +850,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .kasir-tile.stock-out .kasir-tile-stock{color:var(--accent2);}
 .kasir-tile-badge{position:absolute;top:-7px;right:-7px;background:var(--accent);color:#fff;border-radius:50%;min-width:21px;height:21px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-caption);font-weight:800;padding:0 4px;box-shadow:var(--shadow-btn-dark-a);}
 .kasir-tile-pricewarn{position:absolute;top:-7px;left:-7px;background:var(--surface);border:1px solid var(--border2);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-label);line-height:1;cursor:pointer;box-shadow:var(--shadow-btn-dark-b);padding:0;}
-/* kw198-kasir-viewtoggle: toggle grid/list + varian tile ringkas 1 baris utk mode list */
 .kasir-view-toggle .chip-btn{padding:6px 11px;font-size:var(--fs-body);line-height:1;}
 .kasir-grid.kasir-grid-list{display:flex;flex-direction:column;gap:6px;}
 .kasir-tile-row{display:flex;align-items:center;gap:10px;padding:9px 12px;}
@@ -1260,12 +859,9 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .kasir-tile-row .kasir-tile-price{white-space:nowrap;flex-shrink:0;}
 .kasir-tile-pricewarn-inline{position:static;flex-shrink:0;width:auto;height:auto;background:transparent;border:none;box-shadow:none;padding:0 1px;}
 .kasir-tile-badge-inline{position:static;flex-shrink:0;box-shadow:none;margin-left:1px;}
-/* kw199-kasir-kategori-chip: baris filter kategori (scroll horizontal) di atas grid produk */
 .kasir-kat-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;margin-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
 .kasir-kat-chips::-webkit-scrollbar{display:none;}
 .kasir-kat-chips .chip-btn{flex-shrink:0;}
-
-/* Kartu keranjang & checkout — diangkat jadi 1 panel jelas, terpisah dari grid produk */
 .kasir-cart-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-2xl);padding:16px;scroll-margin-top:12px;}
 .kasir-cart-item{padding:11px 0;}
 .kasir-cart-fields{border-top:1px dashed var(--border);margin-top:2px;padding-top:12px;}
@@ -1273,8 +869,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .kasir-qty-pill button{width:28px;height:28px;border:none;background:none;color:var(--accent);font-size:var(--fs-title-sm);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;}
 .kasir-qty-pill button:active{background:var(--accent-soft);}
 .kasir-qty-pill span{min-width:20px;text-align:center;font-size:var(--fs-body);font-weight:800;}
-
-/* Rincian struk (subtotal/diskon/ongkir/total) — gaya nota, konsisten dgn .shop-product-prices */
 .kasir-receipt{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-md);padding:14px 16px;margin:14px 0;}
 .kasir-receipt-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text2);padding:3px 0;}
 .kasir-receipt-row span:last-child{font-weight:700;color:var(--text);}
@@ -1282,8 +876,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .kasir-receipt-total span:first-child{font-size:var(--fs-label);color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
 .kasir-receipt-total span:last-child{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:800;color:var(--accent3);}
 .kasir-receipt-profit{font-size:11.5px;color:var(--text2);margin-top:4px;}
-
-/* Floating summary bar — total keranjang tetap kelihatan saat scroll pilih produk, tap = lompat ke checkout */
 .kasir-floatbar{position:fixed;left:14px;right:14px;bottom:0;transform:translateY(120%);opacity:0;pointer-events:none;z-index:90;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent);color:#fff;border-radius:var(--r-2xl);padding:13px 18px;box-shadow:var(--shadow-modal-dark2);cursor:pointer;transition:transform .22s ease,opacity .22s ease;margin-bottom:calc(70px + env(safe-area-inset-bottom,0px));}
 .kasir-floatbar.kasir-floatbar-show{transform:translateY(0);opacity:1;pointer-events:auto;}
 .kasir-floatbar:active{transform:scale(0.98);}
@@ -1291,22 +883,12 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .kasir-floatbar-count{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.85;}
 .kasir-floatbar-total{font-family:'Space Grotesk',sans-serif;font-size:var(--fs-icon);font-weight:800;}
 .kasir-floatbar-cta{font-size:var(--fs-body);font-weight:800;white-space:nowrap;}
-
-/* Dashboard Hub (Tahap 1, blueprint-dashboard-hub.md §5) — CSS MINIMAL supaya
-   grid kategori/fitur dari DashboardHub.render() bisa dirender dgn benar.
-   Styling final Design System (ikon SVG per kategori, warna per kategori,
-   badge/notif indicator §3, breakpoint responsif §4/§5) BELUM dikerjakan di
-   sini — menunggu Tahap 5. Token lama tidak diubah/dihapus. */
 .dashhub-wrap{padding-bottom:8px;}
 .dashhub-cat{margin-bottom:22px;}
 .dashhub-cat-head{display:flex;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer;}
 .dashhub-cat-head>div{flex:1;min-width:0;}
 .dashhub-cat-icon{width:40px;height:40px;border-radius:var(--r-xl);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
 .dashhub-cat-label{font-size:var(--fs-body-lg);font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px;}
-/* Tahap 4 — badge bulat kecil di sebelah label kategori, menampilkan jumlah
-   fitur (murni tampilan dari panjang array yang sudah dirender, BUKAN data
-   baru/FEATURE_REGISTRY baru). Pola sama seperti .header-badge yang sudah
-   ada di file ini, cuma dikecilkan supaya pas di baris label. */
 .dashhub-cat-badge{font-size:10px;font-weight:700;color:var(--text2);background:var(--surface3);border-radius:var(--r-pill);padding:1px 8px;line-height:1.6;flex-shrink:0;}
 .dashhub-cat-desc{font-size:var(--fs-caption);color:var(--text2);margin-top:2px;}
 .dashhub-feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4);}
@@ -1314,43 +896,18 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .dashhub-feature-card:active{transform:scale(0.97);box-shadow:var(--shadow-tap-sm);}
 .dashhub-feature-name{font-size:12.5px;font-weight:700;line-height:1.35;margin-bottom:4px;padding-right:22px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;letter-spacing:.1px;}
 .dashhub-feature-desc{font-size:var(--fs-caption);color:var(--text2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-/* Icon grid mode — "full icon dengan label nama dibawah": setiap fitur
-   ditampilkan sbg ubin ikon besar (emoji per-fitur, FEATURE_REGISTRY.icon)
-   dgn nama singkat di bawahnya, mirip grid app-launcher. Dipakai lewat
-   class tambahan --icon (lihat DashboardHub.render() di dashboard-hub.js)
-   — TIDAK menghapus/collision dgn .dashhub-feature-grid/-card lama yang
-   masih dipakai Search & Favorit view. */
 .dashhub-feature-grid--icon{grid-template-columns:repeat(3,1fr);gap:var(--sp-3);}
 .dashhub-feature-card--icon{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:var(--sp-4) var(--sp-2) var(--sp-3);gap:6px;}
 .dashhub-feature-icon{width:48px;height:48px;border-radius:var(--r-xl);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
 .dashhub-feature-card--icon .dashhub-feature-name{font-size:11.5px;font-weight:600;text-align:center;margin-bottom:0;padding-right:0;-webkit-line-clamp:2;letter-spacing:0;}
 .dashhub-feature-card--icon .dashhub-fav-star{top:4px;right:4px;width:20px;height:20px;line-height:20px;font-size:var(--fs-label);}
 .dashhub-feature-count{font-size:10.5px;color:var(--text2);line-height:1.3;margin-top:1px;}
-/* Breakpoint 600px/1024px tablet/desktop sudah diatur oleh rule
-   "#page-dashboard-hub .dashhub-feature-grid{...}" (Tahap 5, di bawah file
-   ini) yang otomatis berlaku juga di sini krn elemen tetap punya class
-   dasar .dashhub-feature-grid — tidak perlu breakpoint duplikat. */
-
-/* Favorit (Tahap 3, ADR-001) — tombol toggle bintang di pojok kartu fitur,
-   dipakai ulang di grid Hub biasa, hasil Search, DAN section Favorit itu
-   sendiri (satu class, tiga tempat pakai — tidak ada style baru per tempat).
-   Tahap 4: dijadikan chip bulat kecil (gaya Material 3 icon-button) supaya
-   target tap lebih jelas & kontras dgn kartu, bukan cuma teks bintang polos. */
 .dashhub-fav-star{width:24px;height:24px;line-height:24px;text-align:center;font-size:var(--fs-body);color:var(--text2);opacity:.6;cursor:pointer;flex-shrink:0;border-radius:var(--r-full);background:var(--surface3);transition:transform .12s ease, background .12s ease, opacity .12s ease;}
 .dashhub-fav-star:active{transform:scale(0.88);}
 .dashhub-fav-star.is-fav{color:#f5a623;opacity:1;background:rgba(245,166,35,0.14);}
 .dashhub-feature-card .dashhub-fav-star{position:absolute;top:8px;right:8px;}
-
-/* Feature Search (Tahap 2 — blueprint-dashboard-hub.md §2/§4). Styling
-   minimum, belum final (belum ada animasi) — cukup buat container,
-   dropdown hasil, empty-state, & item aktif bisa dipakai/dites. */
 .dashhub-search-wrap{position:relative;margin-bottom:14px;}
 .dashhub-search-results{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);max-height:320px;overflow-y:auto;}
-/* Discoverability fix (audit "Bottom nav cuma 6 slot"): chip pintas ke section
-   "Semua Fitur" (#dashHubMainGridCard), tepat di bawah search bar. Murni
-   tambahan visual, tidak menyentuh markup/CSS yang sudah ada di atasnya —
-   lihat dashHubOpenAllFeatures() di dashboard-hub.js untuk logic klik. */
 .dashhub-explore-link{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;padding:9px 12px;border-radius:var(--r-pill);border:1px dashed var(--border2);background:transparent;color:var(--text2);font-size:var(--fs-label);font-weight:600;cursor:pointer;font-family:inherit;width:100%;}
 .dashhub-explore-link:active{transform:scale(0.97);}
 @media (min-width:600px){.dashhub-explore-link:hover{border-color:var(--accent);color:var(--accent);}}
@@ -1361,12 +918,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .dashhub-search-item-label{font-size:12.5px;font-weight:700;line-height:1.3;}
 .dashhub-search-item-desc{font-size:var(--fs-caption);color:var(--text2);line-height:1.3;}
 .dashhub-search-empty{padding:12px;font-size:var(--fs-caption);color:var(--text2);text-align:center;}
-
-/* ===== HERO CARD (Sprint 1 Tahap 2 — Dashboard 2.0, lihat HERO-CARD.md) =====
-   Elemen pertama setelah header di #page-dashboard-hub. Murni tambahan CSS
-   baru, scoped ke .dashhub-hero* — tidak ada deklarasi .dashhub-* yang sudah
-   ada di atas yang diubah. Semua nilai ukuran/radius/spacing/warna pakai
-   token yang SUDAH ADA (--r-*/--sp-*/--fs-*/--accent*), kecuali box-shadow
+--sp-*/--fs-*/--accent*), kecuali box-shadow
    (literal, sama seperti pola .kasir-tile/.dashhub-feature-card:hover yang
    sudah ada di file ini — bukan token baru, lihat ROADMAP-v1.1.md item 5
    utk migrasi token shadow di masa depan). Gaya mengacu Material Design 3 /
@@ -1390,56 +942,16 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .dashhub-hero-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-5);margin-top:var(--sp-7);padding-top:var(--sp-6);border-top:1px solid var(--border);}
 .dashhub-hero-stat-label{font-size:var(--fs-caption);color:var(--text2);margin-bottom:2px;}
 .dashhub-hero-stat-val{font-size:var(--fs-title-sm);font-weight:700;color:var(--text);}
-/* Hero Card: baris "Pemasukan/Pengeluaran Bulan Ini" (.dashhub-hero-stats)
-   disembunyikan — 100% duplikat dgn "Total Pemasukan"/"Total Pengeluaran" di
-   Analytics Row (Tahap 7) yang tampil tepat di bawahnya. Ini kelanjutan dari
-   dedup Summary Cards (lihat DASHBOARD-DEDUP.md) yang sebelumnya belum
-   menutup duplikasi ini — Hero dulu dibiarkan krn Saldo Semua Akun-nya unik,
-   tapi baris stats di bawah saldo itu sendiri tetap dobel dgn Analytics Row.
-   Saldo Semua Akun (.dashhub-hero-balance) TIDAK disembunyikan, tetap tampil
-   apa adanya. DashboardHubHero.render() TETAP dipanggil tanpa perubahan JS. */
 .dashhub-hero-stats{display:none!important;}
 @media (max-width:359px){
-  /* Layar sangat kecil (mis. iPhone SE 320px) — 2 stat berdampingan jadi
-     sempit banget, ditumpuk vertikal supaya angka tidak terpotong. */
   .dashhub-hero-stats{grid-template-columns:1fr;}
 }
 @media (min-width:600px){
   #page-dashboard-hub .dashhub-hero{padding:var(--sp-10) var(--sp-9);}
   #page-dashboard-hub .dashhub-hero-balance-val{font-size:36px;}
 }
-
-/* QUICK ACTIONS (Sprint 1 Tahap 3 — Dashboard 2.0, lihat QUICK-ACTIONS.md).
-   Baris tombol kartu kecil (pill) gaya Material 3/Material You, scoped
-   seluruhnya ke class .dashhub-qa* (tidak ada deklarasi lama yang diubah).
-   Token yang dipakai semuanya SUDAH ADA di :root (sama seperti Hero Card di
-   atas) — tidak ada token baru. */
-/* Summary Cards (Tahap 5) disembunyikan — datanya (Pemasukan/Pengeluaran/
-   Bersih Bulan Ini/Jumlah Transaksi) 100% duplikat dgn Analytics Row
-   (Tahap 7) yang tampil tepat di bawahnya dan sudah mencakup angka yang
-   sama plus rasio %. DashboardHubSummary.render() TETAP dipanggil (tidak
-   diubah di JS, tidak menyentuh test dashboard-hub-summary.test.js) —
-   cuma outputnya disembunyikan lewat display:none supaya tidak dobel
-   secara visual di layar. Lihat DASHBOARD-DEDUP.md. */
 .dashhub-summary-grid{display:none!important;}
-/* Dedup (permintaan user "cek dashboard dobel"): 4 widget ini 100% sama
-   dgn yang sudah tampil di tab Shop -> Laporan/Statistik
-   (Laporan.renderTab(), modules/shop/cobek-order.js). Container tetap ada
-   di HTML, cuma disembunyikan — pola sama persis .dashhub-summary-grid di
-   atas (lihat DASHBOARD-DEDUP.md). */
 #danaKelolaanWrap{display:none!important;}
-/* Dedup Fix #3 (audit "informatif + saran" tab Insight, permintaan user):
-   #lifePriorityWrap (LifePriorityPanel) menampilkan item yang 100% SAMA
-   dgn #actionQueueWrap (ActionQueue) -- keduanya konsumen murni
-   PriorityEngine.getItems() yang sama persis, cuma beda presentasi (list
-   tanpa nomor vs list bernomor + total count). Action Queue dipertahankan
-   krn lebih informatif (ada total item) & juga dipakai AI Chat
-   (actionQueueChatContext(), ai-chat.js) -- Life Priority TIDAK dipakai
-   konsumen lain manapun selain DashboardHub sendiri. Container tetap ada
-   di HTML, LifePriorityPanel.render() TETAP dipanggil (tidak diubah di
-   JS, tidak menyentuh tests/decision-center-presenters-s286.test.js) --
-   cuma outputnya disembunyikan lewat display:none, pola sama persis Fix
-   #1/#2 di atas. Lihat DASHBOARD-DEDUP.md. */
 #lifePriorityWrap{display:none!important;}
 .dashhub-qa-row{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp-3);margin-bottom:var(--sp-6);}
 .dashhub-qa-btn{
@@ -1456,19 +968,12 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .dashhub-qa-icon{font-size:var(--fs-icon-lg);line-height:1;}
 .dashhub-qa-label{font-size:10px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 @media (max-width:359px){
-  /* Layar sangat kecil — 5 kolom terlalu sempit, ditumpuk jadi 2 baris (3+2)
-     supaya label tidak terpotong, pola sama dgn stack Hero Card di atas. */
   .dashhub-qa-row{grid-template-columns:repeat(3,1fr);}
 }
 @media (min-width:600px){
   #page-dashboard-hub .dashhub-qa-btn:hover{border-color:var(--accent);background:var(--surface3);}
 }
-
-/* SUMMARY CARDS (Sprint 1 Tahap 5 — Dashboard 2.0, lihat DASHBOARD-SUMMARY.md).
-   Baris kartu ringkas kecil, tepat di bawah Quick Actions. Murni tambahan CSS
-   baru, scoped seluruhnya ke class .dashhub-summary* (tidak ada deklarasi
-   .dashhub-* yang sudah ada di atas yang diubah). Semua nilai pakai token
-   yang SUDAH ADA (--r-*/--sp-*/--fs-*), warna angka pakai utility .green/.red
+--sp-*/--fs-*), warna angka pakai utility .green/.red
    yang sudah ada (lihat baris ".green"/".red" di atas file ini) — bukan
    token/warna baru. */
 .dashhub-summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-6);}
@@ -1478,22 +983,10 @@ textarea.fi { resize: vertical; min-height: 80px; }
 @media (min-width:600px){
   .dashhub-summary-grid{grid-template-columns:repeat(4,1fr);}
 }
-
-/* DASHBOARD ANALYTICS (Sprint 1 Tahap 7 — Dashboard 2.0, lihat
-   DASHBOARD-ANALYTICS.md). Baris kartu horizontal kecil, tepat di bawah
-   Summary Cards. Murni tambahan CSS baru, scoped seluruhnya ke class
-   .dashhub-analytics* (tidak ada deklarasi .dashhub-* yang sudah ada di
-   atas yang diubah). Pola scroll horizontal SAMA dgn yang sudah dipakai di
-   tempat lain (mis. .trs-chip-row/.kasir-kat-chips) — bukan pola baru.
-   Semua nilai pakai token yang SUDAH ADA (--r-*/--sp-*/--fs-*), warna
+--sp-*/--fs-*), warna
    angka pakai utility .green/.red yang sudah ada — bukan token/warna
    baru. */
-/* UX (sesi ini, lihat DASHBOARD-DEDUP.md/ADR terkait): baris ini semula
-   .display:flex + overflow-x:auto (chip horizontal, perlu geser 1-1 utk
-   lihat semua 5 kartu -> scroll halaman jadi panjang & sebagian kartu
-   ketutup). Diganti jadi CSS grid 2 kolom, pola SAMA PERSIS dgn
-   .dashhub-summary-grid di atas (grid-template-columns:repeat(2,1fr),
-   token --sp-*/--r-* yang sudah ada) -- bukan token/layout baru, cuma
+--r-* yang sudah ada) -- bukan token/layout baru, cuma
    dipakai ulang di komponen ini. Kartu ke-5 ("Pemasukan vs Pengeluaran")
    otomatis sendirian di baris terakhir (5 item ganjil di grid 2 kolom),
    ini disengaja/aman, bukan bug. */
@@ -1504,35 +997,19 @@ textarea.fi { resize: vertical; min-height: 80px; }
 @media (min-width:600px){
   .dashhub-analytics-row{grid-template-columns:repeat(3,1fr);}
 }
-/* Varian peringatan kartu "Saldo Bersih" saat negatif (pengeluaran >
-   pemasukan bulan berjalan) -- 100% reuse token warna yang SUDAH ADA
-   (--accent2/--accent2-soft), pola sama persis dgn .bill-banner di atas
-   file ini. Bukan warna/token baru. */
 .dashhub-analytics-card--warn{background:var(--accent2-soft);border-color:var(--accent2);}
 .dashhub-analytics-sub{font-size:var(--fs-label);color:var(--accent2);margin-top:4px;line-height:1.4;}
-/* UX (audit tampilan): badge kecil "⚠️ Kurang" di kartu Saldo Bersih saat
-   negatif + progress bar 2-warna di kartu "Pemasukan vs Pengeluaran" --
-   murni CSS baru, scoped ke class ".dashhub-analytics-badge"/".dashhub-analytics-bar*",
-   semua token (--r-*/--accent2/warna hijau-merah) reuse yang sudah ada di
+--accent2/warna hijau-merah) reuse yang sudah ada di
    file ini, tidak ada warna/token baru. */
 .dashhub-analytics-label-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
 .dashhub-analytics-badge{font-size:9.5px;font-weight:700;color:#fff;background:var(--accent2);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;flex-shrink:0;}
 .dashhub-analytics-bar{display:flex;height:6px;border-radius:var(--r-full);overflow:hidden;margin-top:8px;background:var(--surface3);}
 .dashhub-analytics-bar-inc{background:var(--accent3);height:100%;}
 .dashhub-analytics-bar-exp{background:var(--accent2);height:100%;}
-/* Varian POSITIF kartu "Saldo Bersih" saat surplus & layak self-reward
-   (SelfReward.evaluate().eligible) -- pola PERSIS sama dgn --warn di atas,
-   cuma reuse token hijau yang SUDAH ADA (--accent3/--accent3-soft), bukan
-   warna/token baru. */
 .dashhub-analytics-card--good{background:var(--accent3-soft);border-color:var(--accent3);}
 .dashhub-analytics-sub--good{color:var(--accent3);}
 .dashhub-analytics-badge--good{background:var(--accent3);}
-
-/* FINANCE DASHBOARD & AI HOOK FOUNDATION (Sesi 75, Batch 6). Grid kartu di
-   dalam #findashWrap, tepat sama pola dgn .dashhub-summary-grid/
-   .dashhub-analytics-card di atas — murni tambahan CSS baru, scoped
-   seluruhnya ke class .findash-*. Semua nilai pakai token yang SUDAH ADA
-   (--r-*/--sp-*/--fs-*), warna angka pakai utility .green/.red/.orange
+--sp-*/--fs-*), warna angka pakai utility .green/.red/.orange
    yang sudah ada (lihat baris ".green"/".red"/".orange" di atas file ini)
    — bukan token/warna baru. */
 .findash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);}
@@ -1545,17 +1022,7 @@ textarea.fi { resize: vertical; min-height: 80px; }
 @media (min-width:600px){
   .findash-grid{grid-template-columns:repeat(4,1fr);}
 }
-
-/* PINNED WIDGETS MODERN (Sprint 1 Tahap 6, lihat PINNED-WIDGETS.md). Murni
-   modernisasi visual widget LAMA di dalam #dashboardHubPinnedWrap
-   (advisorCard, lifeBalanceCard, refleksiCard, dashFiCard, dashPensiunCard,
-   dashAbsensiCard) — isi/urutan/event/data widget TIDAK disentuh, hanya
-   bungkusnya. SEMUA aturan di sini di-scope lewat descendant selector
-   "#dashboardHubPinnedWrap ..." supaya base .card/.card-title yang dipakai
-   ~40+ kartu lain di seluruh app (lihat baris ".card {" di atas file ini)
-   TIDAK ikut berubah — halaman lain di luar Dashboard Hub sama sekali
-   tidak terdampak. Token yang dipakai semuanya SUDAH ADA
-   (--r-2xl/--sp-*/--fs-body-lg/--dur-moderate/--ease-standard, transisi
+--fs-body-lg/--dur-moderate/--ease-standard, transisi
    box-shadow/border-color bawaan .card), mengikuti bahasa visual Material
    Design 3 yang sama dengan Hero Card/Quick Actions/Summary Cards/
    Dashboard Grid (Tahap 2-5). */
@@ -1577,8 +1044,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
   border-bottom:1px solid var(--border);
 }
 @media (min-width:600px){
-  /* 2 kolom di tablet, kartu mengalir mengikuti urutan DOM asli (grid
-     auto-flow baris) — urutan widget TIDAK berubah, hanya posisi visual. */
   #dashboardHubPinnedWrap{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-6);align-items:start;}
   #dashboardHubPinnedWrap > .dashhub-cat-head{grid-column:1/-1;}
   #dashboardHubPinnedWrap .card{margin-bottom:0;}
@@ -1587,44 +1052,19 @@ textarea.fi { resize: vertical; min-height: 80px; }
   #dashboardHubPinnedWrap{grid-template-columns:repeat(3,1fr);}
 }
 @media (hover:hover) and (pointer:fine){
-  /* Elevation lebih terasa saat hover, di atas .card:hover global yang
-     sudah ada (baris ".card:hover{box-shadow:...}" di bawah file ini) —
-     ditambah border-color aksen supaya kartu pinned terasa "premium",
-     tidak menghapus/mengubah rule .card:hover yang lama. */
   #dashboardHubPinnedWrap .card:hover{border-color:var(--accent);box-shadow:var(--shadow-card-hover-a);}
 }
-
-/* Dashboard Hub — Tahap 5 (Responsive & UI Polish, blueprint-dashboard-hub.md
-   §4/§5). Breakpoint 600px/1024px dipakai persis seperti tabel §4 (mobile
-   <600, tablet 600-1023 -> 3 kolom grid, desktop >=1024 -> 5 kolom grid).
-   Scope HANYA elemen di dalam #page-dashboard-hub / .dashhub-* -- tidak
-   menyentuh .nav/.header/.page global supaya tidak berdampak ke halaman
-   lain (di luar scope Tahap 5). Belum ada sidebar (blueprint §6
-   sidebar-nav.js belum dibuat) jadi tidak ada perubahan pola navigasi di
-   sini, murni lebar grid & container. */
 @media (min-width:600px){
   #page-dashboard-hub .dashhub-feature-grid{grid-template-columns:repeat(3,1fr);}
 }
 @media (min-width:1024px){
-  /* Halaman hub dibatasi lebar (belum pernah ada container/max-width di
-     project ini sama sekali) supaya card fitur & baris pencarian tidak
-     melebar penuh-layar di desktop (temuan audit: tanpa ini kartu jadi
-     kotak kosong raksasa, lihat catatan kerja Tahap 5 di CLAUDE.md). */
   #page-dashboard-hub{max-width:1080px;margin-left:auto;margin-right:auto;}
   #page-dashboard-hub .dashhub-feature-grid{grid-template-columns:repeat(5,1fr);}
 }
-/* Hover hanya utk perangkat yg benar2 punya mouse/pointer halus (desktop) --
-   sengaja TIDAK dipasang tanpa guard supaya tidak jadi "sticky hover" yg
-   nyangkut abu-abu di layar sentuh (mobile/tablet) setelah tap. */
 @media (hover:hover) and (pointer:fine){
   .dashhub-feature-card:hover{border-color:var(--accent);background:var(--surface3);box-shadow:var(--shadow-card-hover-b);transform:translateY(-1px);}
   .dashhub-cat-icon{transition:background .12s ease;}
   .card:hover{box-shadow:var(--shadow-hover-sm);}
-  /* Sprint 2 Tahap 16 (ROADMAP-v1.1.md item #11) — hover elevation utk
-     tap-target sekunder lain, reuse nilai shadow persis sama dgn
-     .card:hover di atas (sengaja disamakan biar konsisten, bukan token
-     baru). Tidak menghapus/mengubah rule .clickable:active yang sudah
-     ada (baris terpisah di atas). */
   .stat-box.clickable:hover, .cobek-stat.clickable:hover, .bbm-stat.clickable:hover, .budget-sum-box.clickable:hover, .budget-item.clickable:hover{box-shadow:var(--shadow-hover-sm);}
   .kasir-tile:hover{box-shadow:var(--shadow-tile-hover);border-color:var(--accent3);}
   .btn:hover{filter:brightness(1.06);}
@@ -1636,31 +1076,8 @@ textarea.fi { resize: vertical; min-height: 80px; }
   .nav-item:hover{color:var(--accent);}
   .customer-card:hover{border-color:var(--accent);}
   .bill-action-row:hover{border-color:var(--accent);}
-  /* Sesi 278 — lanjutan Sprint 2 Tahap 16 di atas: .shop-stat.clickable
-     kelewat waktu itu (komponen sejenis .stat-box dkk, tapi hidup di file
-     terpisah, baris 210 atas). Reuse pola feedback :active milik komponen
-     ini SENDIRI (background var(--surface3), BUKAN box-shadow seperti
-     .stat-box dkk -- .shop-stat.clickable:active sudah pakai background,
-     jadi hover disamakan biar konsisten dgn active-nya sendiri, bukan
-     token/pola baru). 0 perubahan ke rule .shop-stat.clickable:active. */
   .shop-stat.clickable:hover{background:var(--surface3);}
 }
-
-/* S129 — Pengaturan Dashboard (Dashboard Settings): Compact Mode & Card
-   Density. Presenter CSS murni di atas token spacing yang SUDAH ADA
-   (--sp-1..11, lihat :root) — TIDAK ada custom property/nilai baru
-   ditambahkan, cuma override nilai token yang sudah ada, DI-SCOPE ke
-   #page-dashboard-hub supaya halaman lain di luar Dashboard Hub sama
-   sekali tidak terdampak (pola sama persis dgn Tahap 5 di atas). Class
-   'dash-compact'/'dash-density-*' ditoggle oleh
-   DashboardSettings.applyDashDisplayPrefs() (modules/dashboard-hub/
-   dashboard-hub-settings.js).
-   - dash-density-rapat / dash-density-nyaman: 3 level kepadatan (gap grid
-     & padding kartu). 'normal' TIDAK override apa pun -- itu nilai default
-     token asli, dipertahankan apa adanya.
-   - dash-compact: mode ringkas TERPISAH dari density -- menyembunyikan teks
-     deskripsi sekunder (kategori/hint) supaya lebih banyak konten muat di
-     layar, bukan mengubah spacing. */
 #page-dashboard-hub.dash-density-rapat .dashhub-feature-grid{gap:var(--sp-2);}
 #page-dashboard-hub.dash-density-rapat .dashhub-summary-grid{gap:var(--sp-2);}
 #page-dashboard-hub.dash-density-rapat .dashhub-analytics-row{gap:var(--sp-2);}
@@ -1670,15 +1087,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 #page-dashboard-hub.dash-density-nyaman .card{padding:var(--sp-9);margin-bottom:var(--sp-7);}
 #page-dashboard-hub.dash-compact .dashhub-cat-desc{display:none;}
 #page-dashboard-hub.dash-compact .u-hint10{display:none;}
-
-/* ==========================================================
-   TAHAP 7 — MICRO INTERACTION & MOTION SYSTEM
-   Tambahan murni aditif: focus-visible (a11y) + ripple CSS-only
-   pada tap-target utama. Tidak ada layout/size/spacing/warna/
-   typography/icon yang diubah — hanya kualitas interaksi.
-   ========================================================== */
-
-/* --- Focus-visible (keyboard/a11y ring), tidak mengambil ruang layout --- */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
@@ -1688,10 +1096,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
-
-/* --- Ripple effect berbasis CSS (pulse dari tengah, tanpa JS) ---
-   Diterapkan hanya pada tap-target primer yang aman (tanpa anak
-   ber-posisi absolut yang bisa terklip oleh overflow:hidden). */
 .btn, .chip-btn, .type-btn, .pm-btn, .qs-action, .bill-action-row,
 .card-collapse-toggle, .pin-key, .theme-card, .qs-btn, .kasir-tile,
 .dashhub-feature-card, .customer-card {
@@ -1706,10 +1110,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  /* ROADMAP-v1.1.md item #8: posisi pulsa ripple sekarang mengikuti titik sentuh/klik asli
-     lewat custom property --ripple-x/--ripple-y (di-set oleh modules/shared/ripple-position.js
-     sesaat sebelum :active). Fallback 50%/50% (tengah, perilaku Tahap 7 lama) dipertahankan
-     untuk aktivasi via keyboard (Enter/Space) yang tidak punya titik koordinat. */
   background: radial-gradient(circle, currentColor 10%, transparent 10.5%) var(--ripple-x,50%) var(--ripple-y,50%)/0% 0% no-repeat;
   opacity: 0;
   pointer-events: none;
@@ -1724,66 +1124,28 @@ textarea.fi { resize: vertical; min-height: 80px; }
   opacity: .1;
   transition: background-size var(--dur-slow) var(--ease-emphasized), opacity var(--dur-fast) var(--ease-standard);
 }
-
-/* Catatan: closing/exit animation untuk .overlay/.modal tidak
-   ditambahkan di Tahap 7 karena show/hide overlay dikontrol lewat
-   toggle class + display oleh JS (modals.js), bukan transisi CSS —
-   menambah animasi keluar memerlukan penundaan display:none via JS
-   (mis. animationend/setTimeout), yang berada di luar batas
-   "tidak mengubah JavaScript" pada tahap ini. Dicatat sebagai
-   rekomendasi Tahap 8, lalu diimplementasikan di Tahap 9 (lihat
-   ROADMAP-v1.1.md item #2 & closeModal() di modal-navigasi.js).
-   Class `.closing` ditambahkan JS sesaat sebelum `.open` dilepas,
-   dipakai animasi keluar di bawah ini (reverse dari overlayIn/slideUp,
-   token durasi & easing sama persis), lalu JS melepas `.open`+`.closing`
-   setelah animationend (atau fallback setTimeout, lihat closeModal()). */
 @keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
 @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(40px); opacity: .4; } }
 .overlay.closing, .calc-overlay.closing { animation: overlayOut var(--dur-moderate) var(--ease-standard) forwards; }
 .overlay.closing .modal, .calc-overlay.closing .calc-modal { animation: slideDown var(--dur-slow) var(--ease-emphasized) forwards; }
-
-/* ===== Vehicle Catalog — Tahap 2: Scanner kamera fullscreen (Barcode/QR/
-   DataMatrix, ZXing-JS) =====
-   Aditif murni, pakai token yang sudah ada (--z-scanner/--sp-*/--r-*/
+--r-*/
    --fs-*/--accent/--surface3/--border2/--dur-*/--ease-*). Tidak ada
    selector lama yang diubah. Dibuat dinamis lewat JS (vehicle-scanner.js),
    bukan markup statis index.html — konsisten dengan pola elemen dinamis
    lain (mis. input file di scan-ocr.js). */
-/* AUDIT: elemen ini WAJIB position:fixed + inset:0 + z-index:var(--z-scanner)
-   + background solid #000 + opacity:1, TANPA filter/backdrop-filter/
-   mix-blend-mode — kombinasi apa pun dari 3 properti terakhir bisa bikin
-   dashboard di belakangnya "tembus" (filter/backdrop-filter membentuk
-   containing block baru utk descendant fixed & bisa mengubah compositing;
-   mix-blend-mode mencampur warna dgn layer di bawahnya). Diverifikasi TIDAK
-   ada satupun dari 3 properti itu di rule ini maupun di ancestor-nya
-   (document.body langsung, tidak ada wrapper ber-transform/filter di
-   antaranya) — overlay ini SELALU opaque penuh selama scanner aktif. */
 .vehicle-scanner-fullscreen{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;background:#000;opacity:1;z-index:var(--z-scanner);display:flex;flex-direction:column;}
 .vehicle-scanner-video{flex:1;width:100%;height:100%;object-fit:cover;background:#000;}
 .vehicle-scanner-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(78vw,320px);height:min(48vw,200px);border:3px solid var(--accent);border-radius:var(--r-lg);box-shadow:0 0 0 2000px rgba(0,0,0,0.45);pointer-events:none;}
 .vehicle-scanner-hint{position:absolute;top:calc(50% + min(28vw,116px));left:50%;transform:translateX(-50%);color:#fff;font-size:var(--fs-body);font-weight:600;text-align:center;text-shadow:0 1px 4px rgba(0,0,0,0.6);padding:0 var(--sp-6);}
 .vehicle-scanner-close{position:absolute;top:calc(var(--sp-9) + env(safe-area-inset-top,0px));right:var(--sp-9);width:40px;height:40px;border-radius:var(--r-full);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:var(--fs-icon-lg);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);}
 .vehicle-scanner-close:active{transform:scale(0.92);}
-/* Tombol Flash/Torch (Target Implementasi #7 — Torch Capability) — token &
-   pola SAMA PERSIS .vehicle-scanner-close, ditempatkan di kiri atas supaya
-   tidak tumpuk dgn tombol tutup. display:none default di JS (overlay
-   builder), hanya ditampilkan kalau track kamera punya kapabilitas torch. */
 .vehicle-scanner-flash{position:absolute;top:calc(var(--sp-9) + env(safe-area-inset-top,0px));left:var(--sp-9);width:40px;height:40px;border-radius:var(--r-full);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:var(--fs-icon-lg);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);}
 .vehicle-scanner-flash:active{transform:scale(0.92);}
 .vehicle-scanner-flash.active{background:rgba(255,214,10,0.35);border-color:rgba(255,214,10,0.6);}
-
-/* ===== Finance 2.0 — Sprint 2 Tahap 1: FAB Halaman Keuangan =====
-   Aditif murni, 100% pakai token yang sudah ada (--sp-*/--r-full/--r-lg/
+--r-full/--r-lg/
    --fs-*/--z-dropdown/--dur-*/--ease-*/--accent/--surface3/--border2).
    Tidak ada selector lama yang diubah nilainya. */
 .keu-fab{position:fixed;left:50%;transform:translateX(-50%);right:auto;bottom:84px;z-index:var(--z-dropdown);display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);}
-/* FIX (hapus 5x FAB "+" kanan-bawah per-halaman, gabung ke 1 tombol
-   terpusat di TENGAH nav bawah -- #navFabMain, lihat markup di index.html
-   & navFabToggle() di modules/shared/action-wrappers.js). Tombol "+" LAMA
-   per-halaman (.keu-fab-main) tetap disembunyikan (sudah digantikan
-   #navFabMain, bukan dihapus dari DOM -- 0 breakage). Actions (.keu-fab-
-   actions) kembali disembunyikan default & muncul lewat class .open, supaya
-   tidak lagi menumpuk permanen di kanan-bawah tiap halaman. */
 .keu-fab-main{display:none;}
 .keu-fab-main-icon{line-height:1;}
 .keu-fab-actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:var(--sp-3);max-width:min(86vw,360px);max-height:0;opacity:0;pointer-events:none;overflow:hidden;transition:opacity var(--dur-moderate) var(--ease-standard),max-height var(--dur-moderate) var(--ease-standard);}
@@ -1791,14 +1153,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .keu-fab-action{display:flex;align-items:center;justify-content:center;gap:var(--sp-3);border:1px solid var(--border2);background:var(--surface3);color:var(--text);border-radius:var(--r-pill);padding:var(--sp-3) var(--sp-6);box-shadow:var(--shadow-card-hover-dark2);cursor:pointer;font-size:var(--fs-body);font-weight:600;white-space:nowrap;}
 .keu-fab-action:active{transform:scale(0.95);}
 .keu-fab-action-icon{font-size:var(--fs-icon);}
-
-/* ===== FAB terpusat di nav bawah (gantikan 5x .keu-fab kanan-bawah lama) =====
-   Aditif murni, reuse token yang sudah ada. Tombol "+" dibikin lebih besar &
-   "naik" dari garis nav (margin-top negatif + border supaya kelihatan
-   mengambang keluar nav, pola umum bottom-nav-FAB di app mobile).
-   FIX (navbar melebar): min-width & ukuran ikon diturunkan supaya 6
-   nav-item + 1 nav-fab tetap pas di lebar layar umum tanpa scroll
-   horizontal (selaras dgn pengecilan .nav-item di atas). */
 .nav-fab{position:relative;flex:0 0 auto;min-width:44px;}
 .nav-fab-icon{display:flex;align-items:center;justify-content:center;width:38px;height:38px;margin-top:-19px;border-radius:var(--r-full);background:var(--grad-accent);color:#fff;font-size:21px;line-height:1;box-shadow:var(--shadow-card-hover-dark2);border:3px solid var(--header-bg);transition:transform var(--dur-fast) var(--ease-standard);}
 .nav-fab:active .nav-fab-icon{transform:scale(0.9);}
@@ -1808,57 +1162,22 @@ textarea.fi { resize: vertical; min-height: 80px; }
   .nav-fab{min-width:36px;}
   .nav-fab-icon{width:33px;height:33px;margin-top:-16px;font-size:18px;}
 }
-
-/* ===== Sprint 2 Tahap 2: FAB Shop — reuse penuh .keu-fab* (Finance 2.0),
-   TIDAK ada class baru. Hanya 1 override posisi vertikal supaya tidak
-   tumpang tindih dgn .kasir-floatbar (yang muncul saat tab Kasir AI aktif
-   & keranjang terisi, lihat kasir-floatbar di atas). */
 #page-shop .keu-fab{bottom:150px;}
-
-/* ===== Sprint 2 Tahap 4: FAB Laporan — reuse penuh .keu-fab* (Finance 2.0),
-   TIDAK ada class baru. FAB Laporan (#laporanFab) ditaruh DI DALAM
-   #keuanganTab-laporan supaya kontekstual (hanya tampil saat tab Laporan
-   aktif). #keuFab (Tahap 1) tetap tampil di kedua tab Keuangan — 1 override
-   posisi vertikal supaya #laporanFab tidak tumpang tindih dgn #keuFab saat
-   tab Laporan aktif. */
 #keuanganTab-laporan .keu-fab{bottom:170px;}
-
-/* ===== Laporan Shop FAB — reuse penuh .keu-fab* (Finance 2.0), TIDAK ada
-   class baru. FAB Laporan Shop (#shopLaporanFab) ditaruh DI DALAM
-   #shopTab-laporan supaya kontekstual (hanya tampil saat tab Laporan Shop
-   aktif). #shopFab (Sprint 2 Tahap 2) tetap tampil di semua tab Shop — 1
-   override posisi vertikal aditif (offset sama seperti #laporanFab vs
-   #keuFab, +86px) supaya #shopLaporanFab tidak tumpang tindih dgn #shopFab
-   saat tab Laporan Shop aktif. */
 #shopTab-laporan .keu-fab{bottom:236px;}
-
-
-/* ===== FIX: Life OS panels (Today/Goals/Projects/Review/Knowledge) — sebelumnya
-   TIDAK PUNYA styling sama sekali (semua class .lifeos-* dipakai di
-   lifeos/ui/*.js tapi tidak pernah didefinisikan di sini), jadi tampil sebagai
-   teks mentah tanpa card/spacing/tombol. Styling di bawah dibuat konsisten
-   dengan pola .card/.dashhub-feature-card/.btn yang sudah ada di file ini. */
 .lifeos-panel{margin-top:var(--sp-5);}
-
-/* --- Today --- */
 .lifeos-today-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-3);display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);}
 .lifeos-today-label{font-size:var(--fs-body);font-weight:600;color:var(--text);}
 .lifeos-today-due{font-size:var(--fs-caption);color:var(--text2);white-space:nowrap;flex-shrink:0;}
-
-/* --- Goals --- */
 .lifeos-goals-grid,#lifeOSGoalsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4);}
 .lifeos-goal-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-6) var(--sp-5);text-align:center;}
 .lifeos-goal-emoji{font-size:22px;margin-bottom:var(--sp-2);}
 .lifeos-goal-name{font-size:var(--fs-body);font-weight:700;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .lifeos-goal-progress{font-size:var(--fs-label);font-weight:700;color:var(--accent);}
-
-/* --- Projects --- */
 .lifeos-project-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-3);cursor:pointer;transition:transform var(--dur-base),border-color var(--dur-base);}
 .lifeos-project-card:active{transform:scale(0.97);}
 .lifeos-project-name{font-size:var(--fs-body);font-weight:700;color:var(--text);margin-bottom:3px;}
 .lifeos-project-meta{font-size:var(--fs-caption);color:var(--text2);}
-
-/* --- Review --- */
 .lifeos-review-nudge{display:flex;flex-direction:column;gap:var(--sp-3);margin-bottom:var(--sp-5);}
 .lifeos-review-nudge:empty{display:none;}
 .lifeos-review-badge{background:var(--accent2-soft);color:var(--accent2);border:1px solid rgba(240,98,146,0.25);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);font-size:var(--fs-body);font-weight:700;}
@@ -1866,20 +1185,14 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .lifeos-review-snapshot:empty{display:none;}
 #lifeOSReviewPanel button[data-action="LifeOSReview.startWeekly"]{width:100%;padding:12px 16px;border-radius:var(--r-md);border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:var(--fs-body);font-weight:700;background:var(--accent);color:#fff;box-shadow:0 4px 16px var(--accent-soft);}
 #lifeOSReviewPanel button[data-action="LifeOSReview.startWeekly"]:active{transform:scale(0.96);}
-
-/* --- Knowledge --- */
 .lifeos-knowledge-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-5) var(--sp-6);margin-bottom:var(--sp-3);}
 .lifeos-knowledge-title{font-size:var(--fs-body);font-weight:700;color:var(--text);margin-bottom:3px;}
 .lifeos-knowledge-tags{font-size:var(--fs-caption);color:var(--text2);}
-
-/* --- Area Summary (Sesi 39) --- */
 .lifeos-areas-grid,#lifeOSAreasGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-4);}
 .lifeos-area-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-6) var(--sp-5);text-align:center;}
 .lifeos-area-icon{font-size:22px;margin-bottom:var(--sp-2);}
 .lifeos-area-name{font-size:var(--fs-body);font-weight:700;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .lifeos-area-count{font-size:var(--fs-label);font-weight:700;color:var(--accent);}
-
-/* ===== Tangga Keuangan (fitur baru, murni additive) ===== */
 .tk-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);}
 .tk-row:last-child{border-bottom:none;}
 .tk-mark{font-size:var(--fs-body);line-height:1.5;flex-shrink:0;}
@@ -1889,8 +1202,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .tk-note{font-size:var(--fs-caption);color:#d8d8d8;margin-top:1px;}
 .tk-current .tk-title{color:#ffd76a;}
 .tk-pending{opacity:.55;}
-
-/* ===== Data Management Core: Backup Health & Backup History (fitur baru, murni additive) ===== */
 .bh-health{border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);border:1px solid var(--border);background:var(--surface2);}
 .bh-health-label{font-size:var(--fs-body);font-weight:700;color:var(--text);}
 .bh-health-sub{font-size:var(--fs-caption);color:var(--text2);margin-top:2px;}
@@ -1904,12 +1215,8 @@ textarea.fi { resize: vertical; min-height: 80px; }
 .bh-row:last-child{border-bottom:none;}
 .bh-row-icon{font-size:var(--fs-body-lg);line-height:1.5;flex-shrink:0;}
 .bh-row-body{flex:1;min-width:0;}
-
-/* Sesi 2A3: warning kategori checklist — read-only, ringkas, aman di mobile. */
 .sc-cat-warning{display:inline-block;margin-left:6px;padding:2px 6px;border:1px solid var(--border2);border-radius:999px;font-size:10px;font-weight:600;line-height:1.2;vertical-align:middle;white-space:nowrap;opacity:.9}
 @media(max-width:600px){.sc-cat-warning{display:block;width:max-content;max-width:100%;margin:4px 0 0}}
-
-/* UI REFRESH — Graphite: dark, neutral gray, minimal/no-green palette. */
 [data-theme="graphite"] {
   --bg:#111315;--surface:#17191c;--surface2:#1d2024;--surface3:#25282c;--surface4:#2d3136;
   --accent:#d1d5da;--accent-soft:rgba(209,213,218,0.10);
@@ -1922,7 +1229,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
   --money-pos:#b8bdc3;--money-neg:#d1847d;
   --grad-accent:linear-gradient(135deg,var(--accent),var(--accent3));
 }
-/* Graphite structural polish: less rounded, flatter elevation, calmer controls. */
 [data-theme="graphite"] .card,
 [data-theme="graphite"] .stg-group,
 [data-theme="graphite"] .ldr-card { border-radius:16px; box-shadow:var(--shadow-card); }
@@ -1935,8 +1241,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 [data-theme="graphite"] .chip-btn,
 [data-theme="graphite"] .qs-btn,
 [data-theme="graphite"] .btn-ghost { background:var(--surface3); }
-
-/* CAR NOTES — CLASSIC POLISH 2.0 (2026-09): presentation-only, scoped. */
 #page-carnotes{--cn-radius:16px;}
 #page-carnotes .page-settings-btn{margin-bottom:10px}
 #page-carnotes .page-title{letter-spacing:-.35px}
@@ -1990,12 +1294,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 @media (max-width:380px){#page-carnotes .cn-summary-metrics{grid-template-columns:minmax(0,1fr) 58px 58px}#page-carnotes .cn-summary-action{min-width:58px;padding-left:5px;padding-right:5px}#page-carnotes .cn-km-value{font-size:17px}}
 @media (min-width:700px){#page-carnotes .cn-vehicle-summary{padding:15px}#page-carnotes .cn-summary-metrics{grid-template-columns:minmax(0,1fr) 110px 110px}#page-carnotes .cn-summary-action{flex-direction:row;gap:6px}}
 @media (prefers-reduced-motion:reduce){#page-carnotes *{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
-
-
-/* BUTTON-CONTRAST-S1809: complete interaction/accessibility hardening.
-   S1808 fixed the main filled controls; S1809 extends the same contract to
-   semantic/compact controls, the navigation FAB, active states, and keyboard focus.
-   No business logic is changed. */
 [data-theme="dark"],
 [data-theme="ocean"],
 [data-theme="slate"],
@@ -2004,8 +1302,6 @@ textarea.fi { resize: vertical; min-height: 80px; }
 [data-theme="graphite"] { --on-accent:#17181b; }
 [data-theme="light"],
 [data-theme="modern"] { --on-accent:#ffffff; }
-
-/* Filled/active controls: foreground is chosen for the actual accent family. */
 .btn-primary,
 .chip-btn.active,
 .cn-tab.active,
@@ -2014,20 +1310,12 @@ textarea.fi { resize: vertical; min-height: 80px; }
 #lifeOSReviewPanel button[data-action="LifeOSReview.startWeekly"] {
   color:var(--on-accent)!important;
 }
-
-/* Soft semantic surfaces need normal theme text, not the same accent used by the
-   background. Accent meaning remains visible through borders/icons/status styling. */
 .btn-income, .type-btn.ai { color:var(--text)!important; }
 .btn-expense, .btn-danger, .type-btn.ae { color:var(--text)!important; }
 .btn-transfer, .type-btn.at { color:var(--text)!important; }
 .header-badge { color:var(--text)!important; }
 .pin-key:active, .qs-btn:active, .kasir-qty-pill button:active { color:var(--text)!important; }
-
-/* Important filled actions retain a comfortable touch target without resizing compact
-   chips, tabs, table controls, or quantity steppers. */
 .btn-primary, .btn-income, .btn-expense, .btn-transfer, .btn-danger { min-height:44px; }
-
-/* Keyboard/focus contract: never let focus disappear on filled or compact controls. */
 button, [role="button"], summary { text-shadow:none; }
 button:disabled, [role="button"][aria-disabled="true"] { text-shadow:none; }
 .btn:focus-visible, .chip-btn:focus-visible, .cn-tab:focus-visible,
@@ -2038,17 +1326,11 @@ summary:focus-visible {
   outline:3px solid color-mix(in srgb, var(--accent) 72%, var(--text) 28%);
   outline-offset:2px;
 }
-
-/* Keyboard-operable div[role=button] controls must visibly accept focus. */
 [role="button"][tabindex="0"] { cursor:pointer; }
-
-/* Respect reduced-motion while preserving interaction state feedback. */
 @media (prefers-reduced-motion:reduce) {
   .btn, .chip-btn, .cn-tab, .kel-subtab, .type-btn, .qs-btn,
   .pin-key, .nav-fab-icon { transition:none!important; }
 }
-
-/* S1817: reduce expensive compositing on touch/mobile surfaces. */
 @media (hover: none) and (pointer: coarse) {
   .header,
   .nav {
@@ -2059,28 +1341,18 @@ summary:focus-visible {
     filter: none;
   }
 }
-
 /* S1893 — mobile visual integrity: contain domain shells, long tabs, grids and landscape/keyboard states. */
 @supports not (height:100dvh){
   #scrollRoot{height:100vh;max-height:100vh;}
 }
 @media (max-width:899px){
   html{scroll-behavior:auto;}
-  /* S1929 — Android/WebView scroll hardening: the page shell itself must be
-     the single native vertical scroller. Fixed viewport roots combined with
-     body/html overflow:hidden can intermittently swallow touch scrolling in
-     older Android WebViews after a visual-layer update. Keep the body locked,
-     but make #scrollRoot an absolute, explicit-height scroll container. */
   #scrollRoot{position:absolute;height:100dvh;min-height:0;max-height:100dvh;scroll-behavior:auto;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));}
   .page{min-width:0;max-width:100%;overflow-x:hidden;}
   .pwa-domain-page{overflow-x:hidden;}
   .pwa-domain-page>.cn-tabs{min-width:0;max-width:100%;}
-  /* Shop's five workflow tabs used an inline nowrap/overflow rail. On a
-     narrow phone that rail clips the rightmost actions and looks broken;
-     make it a wrapping grid like the other primary domain rails. */
   #page-shop>.pwa-domain-page>.cn-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;overflow:visible;flex-wrap:unset;padding:2px 1px 5px;}
   #page-shop>.pwa-domain-page>.cn-tabs .cn-tab{min-width:0;width:100%;min-height:44px;padding:8px 6px;white-space:normal;line-height:1.15;}
-
   .page{width:100%;max-width:100%;min-width:0;margin:0;overflow-x:clip;}
   .page-settings-btn{min-width:0;flex-wrap:wrap;}
   .pwa-domain-page{min-width:0;max-width:100%;width:100%;overflow-x:clip;}
@@ -2094,14 +1366,7 @@ summary:focus-visible {
   .pwa-domain-page .pwa-domain-hero h1{font-size:21px;}
 }
 .pwa-keyboard-open .keu-fab,.pwa-keyboard-open .kasir-floatbar{transform:translateY(140%);opacity:0;pointer-events:none;}
-
-/* S1921 — mobile Car Notes top-level tabs: 3-col grid so BBM/Servis stay visible; presentation-only. */
 @media(max-width:560px){
-  /* S1923 — APP-WIDE TOP-LEVEL TAB VISIBILITY. Car Notes exposed the same
-     mobile problem that can affect Keuangan/Shop/Aset/Pajak/Settings: a long
-     horizontal rail can place valid pages outside the first viewport. Keep
-     nested sub-tabs horizontal where useful, but make each page's PRIMARY
-     tab rail a wrapping grid so every workflow is directly reachable. */
   #page-keuangan > .cn-tabs,
   #page-shop > .cn-tabs,
   #page-aset > .cn-tabs,
@@ -2137,8 +1402,6 @@ summary:focus-visible {
   #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
   #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab{min-width:0}
 }
-
-
 /* S1931 — atomic mobile page/nav commit; no transition fade. */
 @media(max-width:899px){
   .page{animation:none!important;opacity:1!important;transform:none!important;}
@@ -2147,4 +1410,4 @@ summary:focus-visible {
   .page.nav-transition-hold{display:block!important;visibility:visible!important;pointer-events:none!important;}
   .page.nav-transition-pending{visibility:hidden!important;pointer-events:none!important;}
 }
-
+.tx-touch-target{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center;background:radial-gradient(circle 13px at center,var(--surface3) 0 100%,transparent 100%)!important;border:0;border-radius:50%;box-sizing:border-box;-webkit-tap-highlight-color:transparent}.tx-touch-target:active{background:radial-gradient(circle 13px at center,var(--surface4) 0 100%,transparent 100%)!important}.touch-target-remove-photo{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;border:0!important;border-radius:50%;box-sizing:border-box;color:#fff;font-size:13px;line-height:1;text-align:center;cursor:pointer;background:radial-gradient(circle 13px at center,var(--accent2) 0 100%,transparent 100%)!important;-webkit-tap-highlight-color:transparent}.touch-target-remove-photo:active{background:radial-gradient(circle 13px at center,color-mix(in srgb,var(--accent2) 82%,#000 18%) 0 100%,transparent 100%)!important}
