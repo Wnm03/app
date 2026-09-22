@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1930-mobile-ui-cache-hardening-1930';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1930-mobile-ui-cache-hardening-1930';
+const APP_BUILD_VERSION = 's1930-mobile-ui-cache-hardening-1931';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1930-mobile-ui-cache-hardening-1931';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -678,6 +678,62 @@ const path = el.dataset.action.split('.');
 let owner = window, fn = window;
 for(const p of path){ owner = fn; fn = fn ? fn[p] : undefined; }
 if(typeof fn !== 'function'){
+// FIX (real E2E / lazy-module race): Renov & SewaKios sengaja lazy-load.
+// Saat user mengetuk tombol segera setelah masuk ke sub-tab Aset/Proyek, render
+// sudah bisa menampilkan markup lebih dulu sementara module promise masih pending.
+// Dispatcher lama menganggap action hilang permanen -> toast "belum berfungsi".
+// Retry tepat sekali setelah loader modul selesai, tanpa mengubah kontrak
+// data-action dan tanpa membuat module eager-load kembali.
+const lazyOwnerLoaders={
+  Renov: typeof ensureRenov==='function'?ensureRenov:null,
+  SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null
+};
+const lazyLoader=path.length>1?lazyOwnerLoaders[path[0]]:null;
+if(lazyLoader&&!el.dataset.lazyActionPending){
+  el.dataset.lazyActionPending='1';
+  Promise.resolve().then(()=>lazyLoader()).then(()=>{
+    delete el.dataset.lazyActionPending;
+    let retryOwner=window, retryFn=window;
+    for(const p of path){ retryOwner=retryFn; retryFn=retryFn?retryFn[p]:undefined; }
+    if(typeof retryFn!=='function'){
+      console.error('data-action tetap tidak ditemukan setelah lazy-load:',el.dataset.action);
+      if(typeof toast==='function') toast('⚠️ Tombol belum siap ('+el.dataset.action+'). Coba lagi.',5000);
+      return;
+    }
+    let retryArgs=[];
+    if(el.dataset.args){
+      try{ retryArgs=JSON.parse(el.dataset.args); }
+      catch(err){ console.error('data-args JSON tidak valid:',el.dataset.args,err); return; }
+    }
+    retryArgs=retryArgs.map(a=>{
+      if(a==='$el')return el;
+      if(a==='$event')return e;
+      if(typeof a==='string'&&a.indexOf('$nav:')===0){
+        const navItems=document.querySelectorAll('.nav-item');
+        return navItems[Number(a.slice(5))]||null;
+      }
+      return a;
+    });
+    try{
+      const retryResult=retryFn.apply(retryOwner,retryArgs);
+      if(retryResult&&typeof retryResult.catch==='function'){
+        el.dataset.pendingAction='1';
+        retryResult.catch(err=>{
+          console.error('[data-action] lazy retry async handler error:',el.dataset.action,err);
+          if(typeof toast==='function') toast('⚠️ Gagal menjalankan "'+el.dataset.action+'": '+(err&&err.message?err.message:'error tidak diketahui'),5000);
+        }).finally(()=>{delete el.dataset.pendingAction;});
+      }
+    }catch(err){
+      console.error('[data-action] lazy retry handler error:',el.dataset.action,err);
+      if(typeof toast==='function') toast('⚠️ Terjadi error saat memproses tombol.',4000);
+    }
+  }).catch(err=>{
+    delete el.dataset.lazyActionPending;
+    console.error('[data-action] lazy module load failed:',el.dataset.action,err);
+    if(typeof toast==='function') toast('⚠️ Modul fitur belum dapat dimuat. Coba lagi.',5000);
+  });
+  return;
+}
 console.error('data-action tidak ditemukan/bukan fungsi:', el.dataset.action);
 if(typeof toast==='function') toast('⚠️ Tombol ini belum berfungsi ('+el.dataset.action+'). Tolong laporkan ke pengembang.',5000);
 return;
