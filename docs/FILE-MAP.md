@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-22T01:27:39.807Z
+Terakhir digenerate: 2026-09-22T02:27:44.062Z
 Total file source: 391 · Total identifier global: 2902
 
 ## 1. Urutan load & ringkasan tiap file
@@ -26,7 +26,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 3 | `modules/shared/modules-render.js` | 1590 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 4 | `modules/shared/modules-render-b.js` | 1341 | _(tidak ada komentar header)_ |
 | 5 | `modules/shared/modals.js` | 8 | Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 6 | `modules/shared/modules-calc.js` | 1201 | _(tidak ada komentar header)_ |
+| 6 | `modules/shared/modules-calc.js` | 1239 | _(tidak ada komentar header)_ |
 | 7 | `modules/shop/cobek-etalase.js` | 906 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 8 | `modules/shop/cobek-pricing.js` | 897 | Domain Shop bagian rekomendasi harga & ongkir: PriceReko (kalkulator Dipindah ke modules/shop/cobek-pricing.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 9 | `modules/shop/cobek-order.js` | 957 | Domain Shop bagian order & pelanggan: Produsen (supplier), SiapPulang Dipindah ke modules/shop/cobek-order.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
@@ -48,7 +48,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 25 | `modules/asset/aset-reports.js` | 510 | Domain Aset & Kekayaan (LAPORAN): Penyusutan (estimasi nilai buku aset yg menurun: Garis Lurus/Saldo Menurun/Manual), PajakAset (estimasi PBB properti & Zakat Maal per aset zakatable), LaporanAset (Laporan Aset … |
 | 26 | `modules/asset/aset-misc.js` | 909 | Domain Aset & Kekayaan (LAIN-LAIN): ALOKASI_PRESETS/AlokasiAset (rekomendasi alokasi dana), isAssetOwnershipSelf & helper migrasi Investasi, AssetInsight (insight kepemilikan aset), … |
 | 27 | `modules/asset/aset-keluarga.js` | 101 | Laporan gabungan lintas-modul: 🏠 Aset Keluarga Dipindah ke modules/asset/aset-keluarga.js (Sesi 9 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
-| 28 | `modules/ai/feature-insights.js` | 447 | Kartu "💡 Insight ..." di PALING ATAS/dekat 7 fitur (Keuangan, Pajak & Dipindah ke modules/ai/feature-insights.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 28 | `modules/ai/feature-insights.js` | 448 | Kartu "💡 Insight ..." di PALING ATAS/dekat 7 fitur (Keuangan, Pajak & Dipindah ke modules/ai/feature-insights.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 29 | `modules/asset/invest-ai-widget.js` | 205 | Widget "🤖 Rekomendasi AI" otomatis di kartu 🧭 Dipindah ke modules/asset/invest-ai-widget.js (Sesi 9 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 30 | `modules/asset/penyusutan-ai-widget.js` | 166 | Widget "🤖 Rekomendasi AI" utk kartu 📉 Penyusutan Dipindah ke modules/asset/penyusutan-ai-widget.js (Sesi 9 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 31 | `modules/asset/aset-emas-impor.js` | 411 | FITUR BARU: GoldImport (impor massal nota emas via paste teks ATAU Dipindah ke modules/asset/aset-emas-impor.js (Sesi 9 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
