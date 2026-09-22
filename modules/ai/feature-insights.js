@@ -32,7 +32,8 @@ const box=document.getElementById(bodyId);
 if(!card||!box)return;
 if(!hasData){card.classList.add('u-dnone');return;}
 card.classList.remove('u-dnone');
-box.innerHTML=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${escapeHtml(x.icon)} ${escapeHtml(x.text)}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${escapeHtml(emptyMsg)}</div>`;
+const safeInsightText=(value)=>{const escaped=escapeHtml(value);return escaped.replace(/&lt;b&gt;/g,'<strong>').replace(/&lt;\/b&gt;/g,'</strong>');};
+box.innerHTML=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${escapeHtml(x.icon)} ${safeInsightText(x.text)}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${safeInsightText(emptyMsg)}</div>`;
 }
 };
 
@@ -54,7 +55,7 @@ const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((
 const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 // (1) Defisit bulan berjalan (pengeluaran > pemasukan bulan ini)
 if(inc>0&&exp>inc){
-out.push({id:'defisit',level:'danger',icon:'🔴',text:`Bulan ini pengeluaran (${fmtFull(exp)}) sudah melebihi pemasukan (${fmtFull(inc)}) — defisit ${fmtFull(exp-inc)}.`,action:{label:'Cek Laporan',page:'keuangan',navIdx:1}});
+out.push({id:'defisit',level:'danger',icon:'🔴',text:`Bulan ini pengeluaran (${fmtFull(exp)}) sudah melebihi pemasukan (${fmtFull(inc)}) — defisit ${fmtFull(exp-inc)}.`,action:{label:'Cek Laporan',page:'keuangan',navIdx:1,tab:'laporan'}});
 }
 // (2) Anggaran paling parah (>=80% terpakai), ambil yang paling tinggi persennya
 try{
@@ -70,7 +71,7 @@ return{b,pct};
 }).filter(r=>r.pct>=80).sort((a,b)=>b.pct-a.pct);
 if(rows.length){
 const r=rows[0],over=r.pct>=100;
-out.push({id:'budget-'+r.b.id,level:over?'danger':'warning',icon:over?'🔴':'🟠',text:`Anggaran "${escapeHtml(r.b.name)}" sudah ${r.pct}% terpakai${over?' (OVER)':''}${rows.length>1?` (+${rows.length-1} anggaran lain juga ketat)`:''}.`,action:{label:'Lihat Anggaran',page:'keuangan',navIdx:1}});
+out.push({id:'budget-'+r.b.id,level:over?'danger':'warning',icon:over?'🔴':'🟠',text:`Anggaran "${r.b.name}" sudah ${r.pct}% terpakai${over?' (OVER)':''}${rows.length>1?` (+${rows.length-1} anggaran lain juga ketat)`:''}.`,action:{label:'Lihat Anggaran',page:'keuangan',navIdx:1,tab:'budget'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 }
 }catch(e){console.warn('KeuanganInsight: gagal cek anggaran',e);}
@@ -101,7 +102,7 @@ if(incomeBulan>0&&nisabBulan>0&&incomeBulan>=nisabBulan){
 const sudahBayar=(pz.zakatLog||[]).some(l=>l.jenis==='penghasilan'&&(()=>{const d=new Date(l.tanggal);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();})());
 if(!sudahBayar){
 const zakat=Math.round(incomeBulan*0.025);
-out.push({id:'pajak-zakat-penghasilan',level:'info',icon:'🕌',text:`Pemasukan bulan ini (${fmtFull(incomeBulan)}) sudah di atas nisab — estimasi Zakat Penghasilan <b>${fmtFull(zakat)}</b>, belum dicatat dibayar bulan ini.`,action:{label:'Lihat Zakat',page:'pajak',navIdx:5}});
+out.push({id:'pajak-zakat-penghasilan',level:'info',icon:'🕌',text:`Pemasukan bulan ini (${fmtFull(incomeBulan)}) sudah di atas nisab — estimasi Zakat Penghasilan <b>${fmtFull(zakat)}</b>, belum dicatat dibayar bulan ini.`,action:{label:'Lihat Zakat',page:'pajak',navIdx:5,tab:'zakat'}});
 }
 }
 }catch(e){console.warn('PajakInsight: gagal cek zakat penghasilan',e);}
@@ -113,7 +114,7 @@ const d=daysUntilDate(bill.nextDue);
 if(d!==null&&d<=30){
 const late=d<0;
 const kapan=late?`sudah lewat ${Math.abs(d)} hari dari jatuh tempo`:(d===0?'jatuh tempo hari ini':`jatuh tempo ${d} hari lagi`);
-out.push({id:'pajak-pbb-due',level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`PBB ${kapan} — estimasi ${fmtFull(bill.amount)}.`,action:{label:'Lihat PBB',page:'pajak',navIdx:5}});
+out.push({id:'pajak-pbb-due',level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`PBB ${kapan} — estimasi ${fmtFull(bill.amount)}.`,action:{label:'Lihat PBB',page:'pajak',navIdx:5,tab:'pajak',subtab:'pbb'}});
 }
 }
 }catch(e){console.warn('PajakInsight: gagal cek PBB',e);}
@@ -123,7 +124,7 @@ if(pz.haulMaalMulai){
 const mulai=new Date(pz.haulMaalMulai);
 const hariBerjalan=Math.floor((now-mulai)/86400000);
 if(hariBerjalan>=354){
-out.push({id:'pajak-zakat-maal-haul',level:'info',icon:'🕌',text:`Zakat Maal sudah mencapai haul (≥354 hari sejak ${fmtDateID(pz.haulMaalMulai)}) — cek halaman Zakat Maal untuk hitung & catat kewajiban.`,action:{label:'Lihat Zakat Maal',page:'pajak',navIdx:5}});
+out.push({id:'pajak-zakat-maal-haul',level:'info',icon:'🕌',text:`Zakat Maal sudah mencapai haul (≥354 hari sejak ${fmtDateID(pz.haulMaalMulai)}) — cek halaman Zakat Maal untuk hitung & catat kewajiban.`,action:{label:'Lihat Zakat Maal',page:'pajak',navIdx:5,tab:'zakat'}});
 }
 }
 }catch(e){console.warn('PajakInsight: gagal cek haul zakat maal',e);}
@@ -155,7 +156,7 @@ const d=daysUntilDate(p.jatuhTempo);
 if(d===null||d>7)return;
 const late=d<0;
 const kapan=late?`sudah lewat ${Math.abs(d)} hari dari`:(d===0?'jatuh tempo hari ini untuk':`jatuh tempo ${d} hari lagi untuk`);
-out.push({id:'piutang-due-'+p.id,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`Piutang "${escapeHtml(p.name)}" (${fmtFull(p.nilai)}) ${kapan} ditagih.`,action:{label:'Lihat Piutang',page:'pajak',navIdx:5}});
+out.push({id:'piutang-due-'+p.id,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`Piutang "${p.name}" (${fmtFull(p.nilai)}) ${kapan} ditagih.`,action:{label:'Lihat Piutang',page:'keuangan',navIdx:1,tab:'utangpiutang'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 });
 }catch(e){console.warn('PiutangUtangInsight: gagal cek piutang',e);}
 // (2) Utang jatuh tempo dekat (<=7 hari)/lewat, belum lunas — sama seperti FinCoach lama #6.
@@ -172,7 +173,7 @@ const soonBill=billCicilan.filter(b=>b.nextDue).map(b=>({id:'debt-due-bill-'+b.i
 const soon=soonDebt.concat(soonBill).filter(x=>x.diff!==null&&x.diff<=7).sort((a,b)=>a.diff-b.diff);
 if(soon.length){
 const x=soon[0],late=x.diff<0;
-out.push({id:x.id,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`Utang "${escapeHtml(x.name)}" (${fmtFull(x.nilai)}) ${late?'sudah lewat '+Math.abs(x.diff)+' hari dari':x.diff===0?'jatuh tempo hari ini':x.diff+' hari lagi ke'} tanggal jatuh tempo.`,action:{label:'Lihat Utang',page:'pajak',navIdx:5}});
+out.push({id:x.id,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`Utang "${x.name}" (${fmtFull(x.nilai)}) ${late?'sudah lewat '+Math.abs(x.diff)+' hari dari':x.diff===0?'jatuh tempo hari ini':x.diff+' hari lagi ke'} tanggal jatuh tempo.`,action:{label:'Lihat Utang',page:'keuangan',navIdx:1,tab:'utangpiutang'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 }catch(e){console.warn('PiutangUtangInsight: gagal cek utang',e);}
 // (3) DSR (beban cicilan/bulan dibanding rata-rata pemasukan) sudah berat (>=35%).
@@ -180,7 +181,7 @@ try{
 if(typeof DebtStrategy!=='undefined'&&typeof WorthIt!=='undefined'){
 const dsr=DebtStrategy.computeDSR();
 if(dsr.pct!=null&&dsr.pct>=PiutangUtangInsight.DSR_WARN_PCT){
-out.push({id:'debt-dsr-tinggi',level:dsr.pct>=50?'danger':'warning',icon:dsr.pct>=50?'🔴':'🟠',text:`Beban cicilan bulanan (DSR) sudah ${Math.round(dsr.pct)}% dari rata-rata pemasukan (${fmtFull(dsr.totalCicilan)}/bln) — idealnya di bawah ${PiutangUtangInsight.DSR_WARN_PCT}%.`,action:{label:'Lihat Strategi Utang',page:'keuangan',navIdx:1}});
+out.push({id:'debt-dsr-tinggi',level:dsr.pct>=50?'danger':'warning',icon:dsr.pct>=50?'🔴':'🟠',text:`Beban cicilan bulanan (DSR) sudah ${Math.round(dsr.pct)}% dari rata-rata pemasukan (${fmtFull(dsr.totalCicilan)}/bln) — idealnya di bawah ${PiutangUtangInsight.DSR_WARN_PCT}%.`,action:{label:'Lihat Strategi Utang',page:'keuangan',navIdx:1,tab:'utangpiutang'}});
 }
 }
 }catch(e){console.warn('PiutangUtangInsight: gagal cek DSR',e);}
@@ -209,8 +210,8 @@ const products=(D.products||[]).filter(prodSelfFilter);
 // (1) Stok menipis (<=2, sama dgn ambang badge "Menipis" di Etalase.renderList()).
 const menipis=products.filter(p=>(p.stock||0)<=2);
 if(menipis.length){
-const contoh=menipis.slice(0,2).map(p=>escapeHtml(p.name)).join(', ');
-out.push({id:'shop-stok-menipis',level:'warning',icon:'🟠',text:`${menipis.length} produk stoknya menipis (≤2)${menipis.length?': <b>'+contoh+'</b>'+(menipis.length>2?` +${menipis.length-2} lainnya`:''):''} — pertimbangkan restock.`,action:{label:'Lihat Shop',page:'shop',navIdx:2}});
+const contoh=menipis.slice(0,2).map(p=>p.name).join(', ');
+out.push({id:'shop-stok-menipis',level:'warning',icon:'🟠',text:`${menipis.length} produk stoknya menipis (≤2)${menipis.length?': <b>'+contoh+'</b>'+(menipis.length>2?` +${menipis.length-2} lainnya`:''):''} — pertimbangkan restock.`,action:{label:'Lihat Shop',page:'shop',navIdx:2,tab:'etalase'}});
 }
 // (2) Margin profit bulan ini turun jauh dari bulan lalu (min. 3 transaksi biar tidak false-positive).
 try{
@@ -226,7 +227,7 @@ const cobPrev=cobek.filter(t=>{const d=new Date(t.date);return d.getMonth()===pr
 const marginOf=rows=>{const omzet=rows.reduce((s,t)=>s+(t.total||0),0);const profit=rows.reduce((s,t)=>s+(t.profit||0),0);return omzet>0?profit/omzet:null;};
 const mThis=marginOf(cobThis),mPrev=marginOf(cobPrev);
 if(mThis!=null&&mPrev!=null&&mPrev>0&&mThis<mPrev*ShopInsight.MARGIN_DROP_RATIO&&cobThis.length>=3){
-out.push({id:'shop-margin',level:'warning',icon:'🟠',text:`Margin profit Shop bulan ini turun ke ${Math.round(mThis*100)}% (bulan lalu ${Math.round(mPrev*100)}%) — cek lagi harga modal/jual produk terbaru.`,action:{label:'Lihat Shop',page:'shop',navIdx:2}});
+out.push({id:'shop-margin',level:'warning',icon:'🟠',text:`Margin profit Shop bulan ini turun ke ${Math.round(mThis*100)}% (bulan lalu ${Math.round(mPrev*100)}%) — cek lagi harga modal/jual produk terbaru.`,action:{label:'Lihat Shop',page:'shop',navIdx:2,tab:'etalase'}});
 }
 }catch(e){console.warn('ShopInsight: gagal cek margin',e);}
 // (3) Produk terlaris bulan ini (penguat positif, bukan cuma peringatan).
@@ -240,7 +241,7 @@ const perProduk={};
 cobThis.forEach(t=>{(t.items||[]).forEach(it=>{const key=it.productId||it.name;if(!key)return;perProduk[key]=(perProduk[key]||{name:it.name,qty:0});perProduk[key].qty+=(it.qty||1);});});
 const sorted=Object.values(perProduk).sort((a,b)=>b.qty-a.qty);
 if(sorted.length){
-out.push({id:'shop-terlaris',level:'good',icon:'🟢',text:`Produk terlaris bulan ini: <b>${escapeHtml(sorted[0].name)}</b> (${sorted[0].qty}x terjual).`});
+out.push({id:'shop-terlaris',level:'good',icon:'🟢',text:`Produk terlaris bulan ini: <b>${sorted[0].name}</b> (${sorted[0].qty}x terjual).`}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 }
 }catch(e){console.warn('ShopInsight: gagal cek produk terlaris',e);}
@@ -257,7 +258,7 @@ if(typeof ShopBusinessEnginePresenter!=='undefined'){
 const s=ShopBusinessEnginePresenter.summary();
 if(s.purchase&&s.purchase.ok&&s.purchase.itemCount>0){
 const money=typeof fmt==='function'?fmt:(n=>'Rp '+Math.round(n||0));
-out.push({id:'shop-restock-modal',level:'warning',icon:'🟠',text:`${s.purchase.itemCount} produk direkomendasikan direstock — estimasi modal ${money(s.purchase.totalCost)}.`,action:{label:'Lihat Shop',page:'shop',navIdx:2}});
+out.push({id:'shop-restock-modal',level:'warning',icon:'🟠',text:`${s.purchase.itemCount} produk direkomendasikan direstock — estimasi modal ${money(s.purchase.totalCost)}.`,action:{label:'Lihat Shop',page:'shop',navIdx:2,tab:'etalase'}});
 }
 }
 }catch(e){console.warn('ShopInsight: gagal cek estimasi modal restock',e);}
@@ -270,7 +271,7 @@ try{
 if(typeof TripEngine!=='undefined'){
 const withDims=products.filter(p=>(p.beratPerUnit>0)||(p.panjang>0&&p.lebar>0&&p.tinggi>0));
 if(withDims.length>0){
-out.push({id:'shop-delivery-plan',level:'info',icon:'🚚',text:`${withDims.length} produk sudah punya data berat/dimensi — pakai 🚚 Rencana Pengiriman di form Transaksi Baru buat cek ongkir & kapasitas kendaraan sebelum kirim pesanan besar.`,action:{label:'Lihat Shop',page:'shop',navIdx:2}});
+out.push({id:'shop-delivery-plan',level:'info',icon:'🚚',text:`${withDims.length} produk sudah punya data berat/dimensi — pakai 🚚 Rencana Pengiriman di form Transaksi Baru buat cek ongkir & kapasitas kendaraan sebelum kirim pesanan besar.`,action:{label:'Lihat Shop',page:'shop',navIdx:2,tab:'etalase'}});
 }
 }
 }catch(e){console.warn('ShopInsight: gagal cek rencana pengiriman',e);}
@@ -284,7 +285,7 @@ try{
 if(typeof TripPresenter!=='undefined'){
 const s=TripPresenter.summary();
 if(s.ok&&s.thinMarginCount>0){
-out.push({id:'shop-trip-thin-margin',level:'warning',icon:'🟠',text:`${s.thinMarginCount} dari ${s.trips} pengiriman bulan ini bermargin tipis (di bawah ${s.thinThreshold}%).`,action:{label:'Lihat Shop',page:'shop',navIdx:2}});
+out.push({id:'shop-trip-thin-margin',level:'warning',icon:'🟠',text:`${s.thinMarginCount} dari ${s.trips} pengiriman bulan ini bermargin tipis (di bawah ${s.thinThreshold}%).`,action:{label:'Lihat Shop',page:'shop',navIdx:2,tab:'etalase'}});
 }
 }
 }catch(e){console.warn('ShopInsight: gagal cek margin tipis pengiriman',e);}
@@ -345,7 +346,7 @@ return selisihHari>=-30&&selisihHari<=45;
 if(sudahDibayar)return;
 const late=d<0;
 const kapan=late?`sudah lewat ${Math.abs(d)} hari dari`:(d===0?'jatuh tempo hari ini untuk':`jatuh tempo ${d} hari lagi untuk`);
-out.push({id:'mobil-tax-'+v.id+'-'+key,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`${cfg.label} ${escapeHtml(v.name)} ${kapan.includes('hari ini')?kapan:kapan+' tanggal jatuh tempo'}.`,action:{label:'Lihat Pajak Kendaraan',page:'carnotes',navIdx:4}});
+out.push({id:'mobil-tax-'+v.id+'-'+key,level:late?'danger':'warning',icon:late?'🔴':'🟠',text:`${cfg.label} ${v.name} ${kapan.includes('hari ini')?kapan:kapan+' tanggal jatuh tempo'}.`,action:{label:'Lihat Pajak Kendaraan',page:'carnotes',navIdx:4,tab:'pajak'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 });
 });
@@ -356,7 +357,7 @@ if(d===null)return;
 if(d<=30){
 const late=d<0;
 const kapan=late?`sudah lewat ${Math.abs(d)} hari dari masa berlaku`:(d===0?'jatuh tempo hari ini':`jatuh tempo ${d} hari lagi`);
-out.push({id:'mobil-sim-'+s.id,level:late?'danger':'warning',icon:'🪪',text:`SIM ${escapeHtml(s.nama)} (${s.jenis}) ${kapan}.`,action:{label:'Lihat SIM',page:'carnotes',navIdx:4}});
+out.push({id:'mobil-sim-'+s.id,level:late?'danger':'warning',icon:'🪪',text:`SIM ${s.nama} (${s.jenis}) ${kapan}.`,action:{label:'Lihat SIM',page:'carnotes',navIdx:4,tab:'pajak'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 });
 return out;
@@ -383,7 +384,7 @@ const sejak=log.length?log[log.length-1].tanggal:u.mulai;
 if(!sejak)return;
 const hari=Math.floor((now-new Date(sejak))/86400000);
 if(hari>=SewaKiosRenovInsight.KOSONG_LAMA_HARI){
-out.push({id:'sewakios-kosong-'+u.id,level:'warning',icon:'🟠',text:`Unit "${escapeHtml(u.name)}" sudah kosong ${hari} hari — pertimbangkan turunkan harga sewa atau promosikan lagi.`,action:{label:'Lihat Sewa Kios',page:'keuangan',navIdx:1}});
+out.push({id:'sewakios-kosong-'+u.id,level:'warning',icon:'🟠',text:`Unit "${u.name}" sudah kosong ${hari} hari — pertimbangkan turunkan harga sewa atau promosikan lagi.`,action:{label:'Lihat Sewa Kios',page:'keuangan',navIdx:1,tab:'asetproyek'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 });
 }catch(e){console.warn('SewaKiosRenovInsight: gagal cek unit kosong',e);}
@@ -395,7 +396,7 @@ const nt=SewaKios.nextTagih(u);
 if(!nt||nt.diffDays>5)return;
 const late=nt.diffDays<0;
 const kapan=late?`sudah lewat ${Math.abs(nt.diffDays)} hari dari`:(nt.diffDays===0?'jatuh tempo hari ini untuk':`jatuh tempo ${nt.diffDays} hari lagi untuk`);
-out.push({id:'sewakios-tagih-'+u.id,level:late?'danger':'warning',icon:late?'🔴':'🔔',text:`Sewa unit "${escapeHtml(u.name)}"${u.penyewa?' ('+escapeHtml(u.penyewa)+')':''} ${kapan} penagihan bulan ini.`,action:{label:'Lihat Sewa Kios',page:'keuangan',navIdx:1}});
+out.push({id:'sewakios-tagih-'+u.id,level:late?'danger':'warning',icon:late?'🔴':'🔔',text:`Sewa unit "${u.name}"${u.penyewa?' ('+u.penyewa+')':''} ${kapan} penagihan bulan ini.`,action:{label:'Lihat Sewa Kios',page:'keuangan',navIdx:1,tab:'asetproyek'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 });
 }
 }catch(e){console.warn('SewaKiosRenovInsight: gagal cek tagihan sewa',e);}
@@ -407,7 +408,7 @@ const t=Renov.totals(p);
 if(t.sisa<=0||!p.createdAt)return;
 const hari=Math.floor((now-new Date(p.createdAt))/86400000);
 if(hari>=SewaKiosRenovInsight.RENOV_MANDEK_HARI){
-out.push({id:'renov-mandek-'+p.id,level:'info',icon:'🛠️',text:`Proyek renovasi "${escapeHtml(p.name)}" sudah ${hari} hari berjalan, masih sisa ${fmtFull(t.sisa)} (${t.paidCount}/${t.count} item lunas).`,action:{label:'Lihat Renovasi',page:'keuangan',navIdx:1}});
+out.push({id:'renov-mandek-'+p.id,level:'info',icon:'🛠️',text:`Proyek renovasi "${p.name}" sudah ${hari} hari berjalan, masih sisa ${fmtFull(t.sisa)} (${t.paidCount}/${t.count} item lunas).`,action:{label:'Lihat Renovasi',page:'keuangan',navIdx:1,tab:'asetproyek'}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 });
 }
@@ -431,9 +432,9 @@ try{
 const c=EduFund.calc(f);
 if(c.kekurangan<=0)return; // sudah cukup/lebih, tidak perlu insight
 if(c.n<=0){
-out.push({id:'edufund-lewat-'+f.id,level:'danger',icon:'🔴',text:`Target dana pendidikan "${escapeHtml(f.name)}" tahun ${f.tahunTarget} sudah lewat/tahun ini — masih kurang ${fmtFull(c.kekurangan)}.`,action:{label:'Lihat Dana Pendidikan',page:'settings',navIdx:6}});
+out.push({id:'edufund-lewat-'+f.id,level:'danger',icon:'🔴',text:`Target dana pendidikan "${f.name}" tahun ${f.tahunTarget} sudah lewat/tahun ini — masih kurang ${fmtFull(c.kekurangan)}.`,action:{label:'Lihat Dana Pendidikan',page:'settings',navIdx:6}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }else if(c.n<=EduFundInsight.MEPET_TAHUN){
-out.push({id:'edufund-mepet-'+f.id,level:'warning',icon:'🟠',text:`Target dana pendidikan "${escapeHtml(f.name)}" tinggal ${c.n} tahun lagi, masih kurang ${fmtFull(c.kekurangan)} — perlu nabung ≈${fmtFull(c.pmtBulanan)}/bulan.`,action:{label:'Lihat Dana Pendidikan',page:'settings',navIdx:6}});
+out.push({id:'edufund-mepet-'+f.id,level:'warning',icon:'🟠',text:`Target dana pendidikan "${f.name}" tinggal ${c.n} tahun lagi, masih kurang ${fmtFull(c.kekurangan)} — perlu nabung ≈${fmtFull(c.pmtBulanan)}/bulan.`,action:{label:'Lihat Dana Pendidikan',page:'settings',navIdx:6}}); // lint-ok-no-escape: text is escaped once by FeatureInsightUI.renderInto() after safeInsightText converts only intentional bold tokens.
 }
 }catch(e){console.warn('EduFundInsight: gagal hitung',f&&f.name,e);}
 });
