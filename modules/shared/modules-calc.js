@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s1908-cumulative-regression-hardening-1905';
+const MODULE_CALC_VERSION='s1908-cumulative-regression-hardening-1908';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -873,11 +873,49 @@ body.innerHTML=top.map(x=>{
 const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(x.icon,{size:14}):(x.icon||'');
 return `
       <div class="u-flex u-gap8 u-mb8" style="align-items:flex-start;border-left:3px solid ${colFor[x.level]};padding-left:8px">
-        <div class="fi-insight-row u-flex1 u-fs12 u-lh15"><span class="fi-insight-icon">${iconHtml}</span><span>${x.text}${x.action?` <span class="u-cacc u-pointer u-fw700" data-action="showPage" data-args='["${x.action.page}","$nav:${x.action.navIdx}"]'>${escapeHtml(x.action.label)} →</span>`:''}</span></div>
+        <div class="fi-insight-row u-flex1 u-fs12 u-lh15"><span class="fi-insight-icon">${iconHtml}</span><span>${x.text}${x.action?` <span class="u-cacc u-pointer u-fw700" data-action="FinCoach.openAction" data-args="${escapeHtml(JSON.stringify([x.action]))}">${escapeHtml(x.action.label)} →</span>`:''}</span></div>
         <span class="u-fs11 u-pointer" style="color:var(--text3)" data-stop="1" data-action="FinCoach.dismiss" data-args="${escapeHtml(JSON.stringify([x.id]))}" title="Sembunyikan" aria-label="Sembunyikan">✕</span>
       </div>`;
 }).join('')
 +(insights.length>top.length?`<div class="u-fs12 u-cacc u-tar u-pointer" data-action="FinCoach.showAll">Lihat semua (${insights.length}) →</div>`:'');
+},
+openAction(action){
+if(!action||!action.page||typeof showPage!=='function')return false;
+try{
+const navItems=document.querySelectorAll('.nav-item');
+const navEl=Number.isInteger(action.navIdx)?(navItems[action.navIdx]||null):null;
+showPage(action.page,navEl);
+const pick=(selector,index)=>{
+const els=document.querySelectorAll(selector);
+return Number.isInteger(index)?(els[index]||null):null;
+};
+if(action.page==='keuangan'&&action.tab&&typeof setKeuanganTab==='function'){
+const idx={kelola:0,tagihan:1,budget:2,utangpiutang:3,asetproyek:4,laporan:5}[action.tab];
+setKeuanganTab(action.tab,pick('#page-keuangan .cn-tab',idx));
+if(action.tab==='laporan'&&action.subtab&&typeof setLaporanTab==='function'){
+const si={ringkasan:0,aruskas:1,transaksi:2,titipan:3}[action.subtab];
+setLaporanTab(action.subtab,pick('#keuanganTab-laporan .lap-subtab',si));
+}
+if(action.tab==='kelola'&&action.subtab&&typeof setKelolaTab==='function'){
+const si={ringkasan:0,transaksi:1,pengaturan:2}[action.subtab];
+setKelolaTab(action.subtab,pick('#keuanganTab-kelola .kel-subtab',si));
+}
+}else if(action.page==='shop'&&action.tab&&typeof setShopTab==='function'){
+const idx={kasir:0,jual:1,etalase:2,produsen:3,riwayat:4,pelanggan:5,laporan:6,bi:7}[action.tab];
+setShopTab(action.tab,pick('#page-shop .cn-tab',idx));
+}else if(action.page==='carnotes'&&action.tab&&typeof setCnTab==='function'){
+const idx={insight:0,bbm:1,servis:2,pajak:3}[action.tab];
+setCnTab(action.tab,pick('#page-carnotes .cn-tab',idx));
+}else if(action.page==='pajak'&&action.tab&&typeof setPajakTab==='function'){
+const idx={zakat:0,pajak:1}[action.tab];
+setPajakTab(action.tab,pick('#page-pajak .cn-tab',idx));
+if(action.tab==='pajak'&&action.subtab&&typeof setPjkTab==='function'){
+const si={pph21:0,pbb:1}[action.subtab];
+setPjkTab(action.subtab,pick('#pajakTab-pajak .pjk-subtab',si));
+}
+}
+return true;
+}catch(e){console.warn('FinCoach: gagal membuka tujuan insight',e);if(typeof toast==='function')toast('⚠️ Tujuan halaman tidak dapat dibuka.');return false;}
 },
 showAll(){
 const insights=FinCoach.compute().filter(x=>!FinCoach.dismissedIds().includes(x.id));
