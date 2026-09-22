@@ -1411,3 +1411,116 @@ summary:focus-visible {
   .page.nav-transition-pending{visibility:hidden!important;pointer-events:none!important;}
 }
 .tx-touch-target{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center;background:radial-gradient(circle 13px at center,var(--surface3) 0 100%,transparent 100%)!important;border:0;border-radius:50%;box-sizing:border-box;-webkit-tap-highlight-color:transparent}.tx-touch-target:active{background:radial-gradient(circle 13px at center,var(--surface4) 0 100%,transparent 100%)!important}.touch-target-remove-photo{width:44px!important;min-width:44px!important;height:44px!important;min-height:44px!important;padding:0!important;border:0!important;border-radius:50%;box-sizing:border-box;color:#fff;font-size:13px;line-height:1;text-align:center;cursor:pointer;background:radial-gradient(circle 13px at center,var(--accent2) 0 100%,transparent 100%)!important;-webkit-tap-highlight-color:transparent}.touch-target-remove-photo:active{background:radial-gradient(circle 13px at center,color-mix(in srgb,var(--accent2) 82%,#000 18%) 0 100%,transparent 100%)!important}
+
+/* S1932 — reusable segmented control for audited 2–4 option groups.
+   Presentation-only: existing data-action handlers and active-state logic remain untouched. */
+.segmented-control {
+  display:flex;
+  align-items:stretch;
+  gap:3px;
+  padding:3px;
+  margin-bottom:var(--sp-4);
+  border:1px solid var(--border);
+  border-radius:var(--r-pill);
+  background:var(--surface3);
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  scroll-snap-type:x proximity;
+  -webkit-mask-image:none;
+  mask-image:none;
+  box-sizing:border-box;
+}
+.segmented-control::-webkit-scrollbar{display:none}
+.segmented-control > button,
+.segmented-control > .chip-btn,
+.segmented-control > .cn-tab,
+.segmented-control > .kel-subtab,
+.segmented-control > .lap-subtab,
+.segmented-control > .pjk-subtab,
+.segmented-control > .cni-subtab,
+.segmented-control > .budget-tab-btn {
+  flex:1 0 max-content;
+  min-width:104px;
+  min-height:42px;
+  margin:0;
+  padding:8px 13px;
+  border:1px solid transparent;
+  border-radius:var(--r-pill);
+  background:transparent;
+  color:var(--text2);
+  box-shadow:none;
+  white-space:nowrap;
+  scroll-snap-align:start;
+  transition:background var(--dur-moderate),color var(--dur-moderate),border-color var(--dur-moderate),box-shadow var(--dur-moderate);
+}
+.segmented-control > button:hover:not(:disabled),
+.segmented-control > .chip-btn:hover:not(:disabled),
+.segmented-control > .cn-tab:hover:not(:disabled),
+.segmented-control > .kel-subtab:hover:not(:disabled),
+.segmented-control > .lap-subtab:hover:not(:disabled),
+.segmented-control > .pjk-subtab:hover:not(:disabled),
+.segmented-control > .cni-subtab:hover:not(:disabled),
+.segmented-control > .budget-tab-btn:hover:not(:disabled){
+  background:var(--surface2);
+}
+.segmented-control > .active,
+.segmented-control > .chip-btn.active,
+.segmented-control > .cn-tab.active,
+.segmented-control > .kel-subtab.active,
+.segmented-control > .lap-subtab.active,
+.segmented-control > .pjk-subtab.active,
+.segmented-control > .cni-subtab.active,
+.segmented-control > .budget-tab-btn.active {
+  background:var(--surface);
+  color:var(--text);
+  border-color:var(--border2);
+  box-shadow:var(--shadow-outline-a,0 1px 2px rgba(0,0,0,.12));
+}
+.segmented-control > .budget-tab-btn.active{color:var(--text)!important}
+.segmented-control:focus-within{border-color:color-mix(in srgb,var(--accent) 45%,var(--border) 55%)}
+@media(max-width:560px){
+  .segmented-control{width:100%;max-width:100%;margin-bottom:10px}
+  .segmented-control > button,
+  .segmented-control > .chip-btn,
+  .segmented-control > .cn-tab,
+  .segmented-control > .kel-subtab,
+  .segmented-control > .lap-subtab,
+  .segmented-control > .pjk-subtab,
+  .segmented-control > .cni-subtab,
+  .segmented-control > .budget-tab-btn{min-height:44px;padding:8px 12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .segmented-control > button{transition:none!important}
+}
+
+/* S1934 — audited field/card segmented controls. Existing handlers/state remain the SOT. */
+.segmented-control.is-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:hidden}
+.segmented-control.is-grid.seg-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.segmented-control.is-grid.seg-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.segmented-control > .segmented-choice{appearance:none;border:0;background:transparent;color:var(--text2);font:inherit;font-weight:700;min-height:44px;padding:10px 8px;border-radius:inherit;cursor:pointer;transition:background var(--dur-fast),color var(--dur-fast),box-shadow var(--dur-fast)}
+.segmented-control > .segmented-choice.active{background:var(--surface4);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.16)}
+.segmented-control.tx-type-segment > .type-btn.ai,.segmented-control.tx-type-segment > .type-btn.ae,.segmented-control.tx-type-segment > .type-btn.at{background:transparent;color:var(--text2);border-color:transparent}
+.segmented-control.tx-type-segment > .type-btn.ai{color:var(--accent3);background:var(--accent3-soft);border-color:rgba(77,217,172,.3)}
+.segmented-control.tx-type-segment > .type-btn.ae{color:var(--accent2);background:var(--accent2-soft);border-color:rgba(240,98,146,.3)}
+.segmented-control.tx-type-segment > .type-btn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:420px){.segmented-control > .segmented-choice{font-size:12px;padding-left:6px;padding-right:6px}.segmented-control.is-grid.seg-3 > .segmented-choice{font-size:11.5px}}
+
+/* S1934 — interaction/accessibility hardening. */
+.segmented-control > [role="tab"],
+.segmented-control > [role="button"]{outline:none;-webkit-tap-highlight-color:transparent}
+.segmented-control > [role="tab"]:focus-visible,
+.segmented-control > [role="button"]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;z-index:2}
+.segmented-control > [aria-disabled="true"],
+.segmented-control > :disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+.segmented-control.is-grid > *{min-width:0}
+.segmented-control.is-grid > *:not(:last-child){border-right-color:transparent}
+@media(max-width:560px){
+  .segmented-control.is-grid > button,
+  .segmented-control.is-grid > [role="button"],
+  .segmented-control.is-grid > [role="tab"]{min-width:0;padding-left:8px;padding-right:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .segmented-control{scroll-behavior:auto!important;scroll-snap-type:none}
+}
