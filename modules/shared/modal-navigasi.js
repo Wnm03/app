@@ -368,16 +368,22 @@ if(typeof dismissAllToasts==='function')dismissAllToasts();
 // S1926: ScannerSession self-heal is intentionally performed at the start of
 // showPage(), before the page-not-found guard. Do not duplicate the call here;
 // one deterministic invocation avoids duplicate recovery side effects.
-document.querySelectorAll('.page').forEach(p=>{if(p&&p.classList&&typeof p.classList.remove==='function')p.classList.remove('active');});
-document.querySelectorAll('.nav-item').forEach(n=>{if(n&&n.classList&&typeof n.classList.remove==='function')n.classList.remove('active');if(n&&typeof n.setAttribute==='function')n.setAttribute('aria-current','false');});
+const _currentPage=document.querySelector('.page.active');
+// S1931: render destination before committing page/nav state; keep old page painted during slow presenters.
 if(_sameActiveNav){
   if(el&&el.classList&&typeof el.classList.add==='function')el.classList.add('active');
   if(el&&typeof el.setAttribute==='function')el.setAttribute('aria-current','page');
   return;
 }
-if(pageEl.classList&&typeof pageEl.classList.add==='function')pageEl.classList.add('active');
+if(_currentPage&&_currentPage!==pageEl&&_currentPage.classList&&typeof _currentPage.classList.add==='function'){
+  _currentPage.classList.add('nav-transition-hold');
+  _currentPage.classList.remove('active');
+}
+if(pageEl.classList&&typeof pageEl.classList.add==='function'){
+  pageEl.classList.add('active');
+  pageEl.classList.add('nav-transition-pending');
+}
 const activeBtn=el||document.querySelector(`.nav-item[onclick*="'${name}'"]`);
-if(activeBtn){if(activeBtn.classList&&typeof activeBtn.classList.add==='function')activeBtn.classList.add('active');if(typeof activeBtn.setAttribute==='function')activeBtn.setAttribute('aria-current','page');}
 // A previous render failure must not become a permanent false alarm.
 // Remove the recovery card before a fresh render attempt; if this attempt
 // fails again, the catch block below recreates it with the current error state.
@@ -399,6 +405,24 @@ try{
     box.innerHTML='<div class="card-title">⚠️ Halaman belum selesai dimuat</div><div class="u-fs12 u-t2">Coba buka halaman ini lagi. Data lokal tidak dihapus.</div>';
     pageEl.insertBefore(box,pageEl.firstChild||null);
   }
+}
+// S1931: reveal destination and commit bottom-nav only after render completes.
+if(_currentPage&&_currentPage!==pageEl&&_currentPage.classList&&typeof _currentPage.classList.remove==='function'){
+  _currentPage.classList.remove('nav-transition-hold');
+}
+if(pageEl.classList&&typeof pageEl.classList.remove==='function'){
+  pageEl.classList.remove('nav-transition-pending');
+}
+document.querySelectorAll('.page').forEach(p=>{
+  if(p!==pageEl&&p&&p.classList&&typeof p.classList.remove==='function')p.classList.remove('active');
+});
+document.querySelectorAll('.nav-item').forEach(n=>{
+  if(n&&n.classList&&typeof n.classList.remove==='function')n.classList.remove('active');
+  if(n&&typeof n.setAttribute==='function')n.setAttribute('aria-current','false');
+});
+if(activeBtn){
+  if(activeBtn.classList&&typeof activeBtn.classList.add==='function')activeBtn.classList.add('active');
+  if(typeof activeBtn.setAttribute==='function')activeBtn.setAttribute('aria-current','page');
 }
 const sr=document.getElementById('scrollRoot');
 if(sr&&('scrollTop' in sr))sr.scrollTop=0;
