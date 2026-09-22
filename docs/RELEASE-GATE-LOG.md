@@ -727,3 +727,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: sandbox: eslint unavailable
 - **unminified-bundle**: override dipakai. Alasan: sandbox: esbuild unavailable
+
+## 2026-09-22T10:49:50.476Z — versi s1932-segmented-control-ui-1936
+
+- **lint-unavailable**: override dipakai. Alasan: Environment sandbox tidak menyediakan eslint dan tidak ada akses jaringan untuk memasangnya.
+- **unminified-bundle**: override dipakai. Alasan: Environment sandbox tidak menyediakan esbuild; bundle hasil build sudah lolos syntax dan bundle-freshness.
