@@ -308,6 +308,29 @@ if(typeof window!=='undefined'&&typeof window.addEventListener==='function'&&!wi
   });
 }
 function showPage(name,el,opts){
+// S1926 REGRESSION HARDENING: ScannerSession self-heal MUST happen before
+// the destination-exists guard. S1907-era behavior deliberately lets the
+// self-heal run even for a stale/invalid page target, because the navigation
+// attempt itself is a safe recovery point. Keep this ordering stable before
+// any page lookup/early return.
+if(typeof ScannerSession!=='undefined' && ScannerSession && typeof ScannerSession.isActive==='function'){
+ScannerSession.isActive();
+}
+// S1923 BASELINE NAV SAFETY: resolve the destination BEFORE clearing the
+// current page/nav state. Previously an invalid/missing page id caused
+// showPage() to remove every `.active` class and then return, leaving the app
+// with no visible page. A bad deep-link or stale FEATURE_REGISTRY target could
+// therefore look like a completely blank/broken application. Validation is
+// side-effect free; only a real page may trigger navigation cleanup.
+const pageEl=document.getElementById('page-'+name);
+if(!pageEl){
+  console.warn(`showPage: halaman #page-${name} tidak ditemukan di DOM -- navigasi dibatalkan tanpa mengosongkan halaman aktif.`);
+  return false;
+}
+// Capture the no-op navigation guard before any cleanup removes active classes.
+// The guard is limited to an actual nav-item tap; programmatic showPage()
+// calls must continue to refresh the destination normally.
+const _sameActiveNav=!!(pageEl.classList&&typeof pageEl.classList.contains==='function'&&pageEl.classList.contains('active')&&el&&el.classList&&typeof el.classList.contains==='function'&&el.classList.contains('nav-item')&&el.classList.contains('active'));
 if(!_mainAppNavPopInProgress&&!(opts&&opts.fromHistory)&&el){
   _mainAppNavPush(name);
 }
@@ -332,8 +355,7 @@ _openOverlays.forEach(o=>{
 // manapun, jadi aman ditutup paksa tanpa animasi (bukan closeModal() biasa,
 // supaya tidak nunggu 260ms/animationend & tidak konflik state modal lain).
 _openOverlays.forEach(o=>{
-o.classList.remove('open');
-o.classList.remove('closing');
+if(o&&o.classList&&typeof o.classList.remove==='function'){o.classList.remove('open');o.classList.remove('closing');}
 });
 if(document.body&&document.body.classList)document.body.classList.remove('has-open-modal');
 // BUGFIX (audit video user -- lihat komentar dismissAllToasts() di
@@ -343,45 +365,43 @@ if(document.body&&document.body.classList)document.body.classList.remove('has-op
 // overlay yg nyangkut di atas -- pindah tab = keluar dari konteks toast lama,
 // aman dibersihkan tanpa animasi.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
-// BUGFIX (audit "semua tombol Car Notes & Tagihan tidak respon, 0 toast",
-// laporan user): ScannerSession bisa nyangkut _scannerSessionActive=true
-// permanen kalau proses tutup kamera terputus (app di-minimize saat prompt
-// izin kamera, tab di-suspend, dll) -- lihat modules/shared/scanner-session.js.
-// Selama itu, body.scanner-session-active nempel & CSS
-// (_scannerSessionEnsureStyle) men-display:none SEMUA .overlay/.qs-modal-
-// overlay/.calc-overlay/.keu-fab/#toast SELAMANYA -- termasuk toast error
-// dispatcher sendiri, jadi tombol kelihatan "mati total" tanpa jejak apa pun.
-// Self-heal (_scannerSessionSelfHeal) sebelumnya CUMA jalan lewat
-// ScannerSession.enter()/isActive(), yang cuma dipanggil saat user coba buka
-// scanner LAGI -- kalau user cuma pindah tab (showPage(), seperti di laporan
-// ini), state nyangkut ini tidak pernah ke-heal. Fix: panggil isActive() di
-// sini juga -- pindah tab = titik aman utk self-heal (bukan lagi dalam
-// konteks scanner manapun), 0 perubahan API ScannerSession, 0 breaking
-// change ke pemanggil existing.
-if(typeof ScannerSession!=='undefined' && ScannerSession && typeof ScannerSession.isActive==='function'){
-ScannerSession.isActive();
-}
-document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-document.querySelectorAll('.nav-item').forEach(n=>{n.classList.remove('active');n.setAttribute('aria-current','false');});
-const pageEl=document.getElementById('page-'+name);
-if(!pageEl){
-console.warn(`showPage: halaman #page-${name} tidak ditemukan di DOM -- cek nama page/id (mis. typo, atau halaman belum dirender).`);
-return;
-}
-// PERF NAV: tap ulang nav item yang sudah aktif tidak perlu merender seluruh halaman lagi.
-// Hanya berlaku untuk navigation chrome; programmatic showPage(name) tetap refresh penuh.
-const _sameActiveNav=pageEl.classList.contains('active')&&el&&el.classList&&el.classList.contains('nav-item');
+// S1926: ScannerSession self-heal is intentionally performed at the start of
+// showPage(), before the page-not-found guard. Do not duplicate the call here;
+// one deterministic invocation avoids duplicate recovery side effects.
+document.querySelectorAll('.page').forEach(p=>{if(p&&p.classList&&typeof p.classList.remove==='function')p.classList.remove('active');});
+document.querySelectorAll('.nav-item').forEach(n=>{if(n&&n.classList&&typeof n.classList.remove==='function')n.classList.remove('active');if(n&&typeof n.setAttribute==='function')n.setAttribute('aria-current','false');});
 if(_sameActiveNav){
-  el.classList.add('active');
-  el.setAttribute('aria-current','page');
+  if(el&&el.classList&&typeof el.classList.add==='function')el.classList.add('active');
+  if(el&&typeof el.setAttribute==='function')el.setAttribute('aria-current','page');
   return;
 }
-pageEl.classList.add('active');
+if(pageEl.classList&&typeof pageEl.classList.add==='function')pageEl.classList.add('active');
 const activeBtn=el||document.querySelector(`.nav-item[onclick*="'${name}'"]`);
-if(activeBtn){activeBtn.classList.add('active');activeBtn.setAttribute('aria-current','page');}
-renderPageContent(name);
+if(activeBtn){if(activeBtn.classList&&typeof activeBtn.classList.add==='function')activeBtn.classList.add('active');if(typeof activeBtn.setAttribute==='function')activeBtn.setAttribute('aria-current','page');}
+// A previous render failure must not become a permanent false alarm.
+// Remove the recovery card before a fresh render attempt; if this attempt
+// fails again, the catch block below recreates it with the current error state.
+const _staleRenderError=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
+if(_staleRenderError&&typeof _staleRenderError.remove==='function')_staleRenderError.remove();
+if(pageEl.dataset)delete pageEl.dataset.renderError;
+try{
+  renderPageContent(name);
+}catch(err){
+  // Keep the destination visible and provide a recoverable diagnostic instead
+  // of silently leaving a half-rendered/blank page after a presenter exception.
+  console.error('[showPage] renderPageContent gagal:',err);
+  if(pageEl.dataset)pageEl.dataset.renderError='1';
+  let box=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
+  if(!box&&typeof pageEl.insertBefore==='function'&&typeof document.createElement==='function'){
+    box=document.createElement('div');
+    box.className='page-render-error card';
+    box.setAttribute('role','status');
+    box.innerHTML='<div class="card-title">⚠️ Halaman belum selesai dimuat</div><div class="u-fs12 u-t2">Coba buka halaman ini lagi. Data lokal tidak dihapus.</div>';
+    pageEl.insertBefore(box,pageEl.firstChild||null);
+  }
+}
 const sr=document.getElementById('scrollRoot');
-if(sr)sr.scrollTop=0;
+if(sr&&('scrollTop' in sr))sr.scrollTop=0;
 }
 /* moved to modules-render.js: renderPageContent */
 function refreshCurrentPage(){

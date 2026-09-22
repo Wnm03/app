@@ -36,6 +36,7 @@
 const SETTINGS_TAB_ORDER=['profil','keuangan','pengingat','notifbackup','keamanan','kepemilikan','diagnostik'];
 const SETTINGS_TAB_LABEL={profil:'Profil',keuangan:'Keuangan',pengingat:'Pengingat',notifbackup:'Notif&Backup',keamanan:'Keamanan',kepemilikan:'Kepemilikan',diagnostik:'Diagnostik'};
 function setSettingsTab(tab,el){
+if(!SETTINGS_TAB_ORDER.includes(tab))tab='profil';
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js & setAsetTab() di modules/asset/aset-misc.js):
 // toast basi dari halaman/aksi sebelumnya bisa nyangkut menutupi tombol di
