@@ -10,8 +10,9 @@ test('S1930: release/cache version is bumped together so stale Android assets ca
   const source=read('modules/shared/features-helpers-global-security.js');
   const m=source.match(/const APP_BUILD_VERSION = '([^']+)'/);
   assert.ok(m,'APP_BUILD_VERSION missing');
-  assert.match(m[1],/^s1930-mobile-ui-cache-hardening-1930$/);
-  const n=m[1].match(/-(\d+)$/)[1];
+  assert.match(m[1],/^s\d+-[a-z0-9-]+-\d+$/);
+  const n=Number(m[1].match(/-(\d+)$/)[1]);
+  assert.ok(Number.isInteger(n) && n>0,'build identity must end in a positive numeric version');
   for(const f of ['modules/shared/modules-render.js','modules/shared/modals.js','modules/shared/modules-calc.js','chat-action-handlers.js','app-bundle-a.min.js','app-bundle-b.min.js']){
     assert.match(read(f),new RegExp(m[1].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')),f+' stale build identity');
   }

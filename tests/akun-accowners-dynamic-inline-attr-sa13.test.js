@@ -165,7 +165,7 @@ test('SA13: checkbox "Ini saya" baris ke-1 berisi data-onchange-args dgn token $
   assert.match(html, /data-onchange="AccOwners\.onIsSelfToggle" data-onchange-args='\[1,"\$checked"\]'/);
 });
 
-test('SA13: panel rebalance — select pemilik manual & 3 radio metode pakai data-onchange, bukan onchange=', () => {
+test('SA13: panel rebalance — metode memakai segmented-control dengan data-action, bukan data-onchange', () => {
   const D = baseD();
   const dom = makeStatefulDom();
   const ctx = makeCtx(D, dom);
@@ -175,11 +175,12 @@ test('SA13: panel rebalance — select pemilik manual & 3 radio metode pakai dat
   ctx.AccOwners._renderRebalancePanel();
   const html = dom.getElementById('accountOwnersRebalanceBox').innerHTML;
   assert.match(html, /data-onchange="AccOwners\.setRebalanceManualOwner" data-onchange-args='\["\$value"\]'/);
-  assert.match(html, /value="proporsional"[^>]*data-onchange="AccOwners\.setRebalanceMethod" data-onchange-args='\["\$value"\]'/);
-  assert.match(html, /value="largest"[^>]*data-onchange="AccOwners\.setRebalanceMethod" data-onchange-args='\["\$value"\]'/);
-  assert.match(html, /value="manual"[^>]*data-onchange="AccOwners\.setRebalanceMethod" data-onchange-args='\["\$value"\]'/);
+  assert.match(html, /class=\"segmented-control is-grid seg-3 u-mb10\"[^>]*data-segmented-control=\"account-rebalance\"/);
+  for (const method of ['proporsional','largest','manual']) {
+    assert.ok(html.includes(`data-action=\"AccOwners.setRebalanceMethod\" data-args='[\"${method}\"]'`));
+  }
+  assert.doesNotMatch(html, /data-onchange="AccOwners\.setRebalanceMethod"/);
 });
-
 test('SA13 end-to-end: dispatcher ASLI + dataset persis hasil migrasi -> onNameInput(1,val) benar-benar terpanggil, draft ter-update', () => {
   const D = baseD();
   const dom = makeStatefulDom();

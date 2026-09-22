@@ -63,7 +63,7 @@ test('SA12 gate: 0 atribut event inline (onclick=/onchange=/oninput=/dst) tersis
 
 test('SA12 gate: tepat 10 titik data-onX="InvestmentUI...." di file ini (cocok jumlah audit S1588)', () => {
   const matches = SRC.match(/data-on(click|change|input)="InvestmentUI\./g) || [];
-  assert.equal(matches.length, 10);
+  assert.equal(matches.length, 7);
 });
 
 // ---- Lapis B: markup nyata + dispatcher asli end-to-end ----
@@ -191,11 +191,14 @@ test('SA12: select "Status Dana" (settlement) baris non-SELF berisi data-onchang
   assert.match(html, /data-onchange="InvestmentUI\.onOwnerSettlementChange" data-onchange-args='\[1,"\$value"\]'/);
 });
 
-test('SA12: 3 radio metode rebalance (proporsional/largest/manual) berisi data-onchange yang benar', () => {
-  const matches = SRC.match(/data-onchange="InvestmentUI\.setRebalanceMethod" data-onchange-args=\\'\["\$value"\]\\'/g) || [];
-  assert.equal(matches.length, 3);
+test('SA12: metode rebalance memakai segmented-control dengan data-action, bukan radio data-onchange', () => {
+  assert.match(SRC, /data-segmented-control="investment-rebalance"/);
+  for (const method of ['proporsional','largest','manual']) {
+    assert.ok(SRC.includes('data-action=\"InvestmentUI.setRebalanceMethod\"'), method + ' action missing');
+    assert.ok(SRC.includes(`data-args=\\'[\"${method}\"]\\'`), method + ' args missing');
+  }
+  assert.doesNotMatch(SRC, /data-onchange="InvestmentUI\.setRebalanceMethod"/);
 });
-
 test('SA12 end-to-end: dispatcher ASLI + dataset persis hasil migrasi -> onOwnerNameInput(1,val) benar-benar terpanggil, draft ter-update', () => {
   const dom = makeStatefulDom();
   const ctx = makeCtx(dom, baseHolding());
