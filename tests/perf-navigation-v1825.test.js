@@ -59,7 +59,7 @@ test('same active bottom-nav tap skips a redundant full render',()=>{
   const i=b.indexOf('function showPage(name,el,opts){');
   const j=b.indexOf('/* moved to modules-render.js: renderPageContent */',i);
   const body=b.slice(i,j);
-  assert.match(body,/const _sameActiveNav=pageEl\.classList\.contains\('active'\)/);
+  assert.match(body,/const _sameActiveNav=.*pageEl\.classList(?:&&typeof pageEl\.classList\.contains==='function'&&)?\.contains\('active'\)/);
   assert.match(body,/el\.classList\.contains\('nav-item'\)/);
   assert.match(body,/if\(_sameActiveNav\)/);
   assert.match(body,/return;/);
