@@ -6,8 +6,13 @@ const ROOT = path.resolve(__dirname, '..');
 
 test('S27: FeatureInsightUI escapes icon/text/empty message before innerHTML', () => {
   const s = fs.readFileSync(path.join(ROOT, 'modules/ai/feature-insights.js'), 'utf8');
-  assert.match(s, /\$\{escapeHtml\(x\.icon\)\} \$\{escapeHtml\(x\.text\)\}/);
-  assert.match(s, /\$\{escapeHtml\(emptyMsg\)\}/);
+  // text/emptyMsg go through safeInsightText(), which escapes everything via
+  // escapeHtml() and then selectively restores only the app's own intentional
+  // <b>...</b> bold tokens (see S1929) -- still a single escape pass over any
+  // user/data-controlled content, never raw interpolation.
+  assert.match(s, /const safeInsightText=\(value\)=>\{const escaped=escapeHtml\(value\);/);
+  assert.match(s, /\$\{escapeHtml\(x\.icon\)\} \$\{safeInsightText\(x\.text\)\}/);
+  assert.match(s, /\$\{safeInsightText\(emptyMsg\)\}/);
   assert.doesNotMatch(s, /\$\{x\.icon\} \$\{x\.text\}/);
 });
 

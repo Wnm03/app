@@ -5,12 +5,12 @@ const fs=require('node:fs');
 const path=require('node:path');
 const ROOT=path.join(__dirname,'..');
 const read=r=>fs.readFileSync(path.join(ROOT,r),'utf8');
-const V='s1908-cumulative-regression-hardening-1903';
-
 test('S1906 cumulative canonical source version is internally consistent',()=>{
   const s=read('modules/shared/features-helpers-global-security.js');
-  assert.match(s,new RegExp("APP_BUILD_VERSION\\s*=\\s*'"+V.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+"'"));
-  assert.match(s,new RegExp("PRODUCTION_BUILD_SYNCED_VERSION\\s*=\\s*'"+V.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&')+"'"));
+  const m=s.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
+  assert.ok(m,'APP_BUILD_VERSION constant not found');
+  const V=m[1];
+  assert.match(s,new RegExp("PRODUCTION_BUILD_SYNCED_VERSION\\s*=\\s*'"+V.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"'"));
 });
 
 test('S1905 PWA viewport source guards document.body before classList',()=>{

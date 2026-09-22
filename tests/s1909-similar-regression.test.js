@@ -51,16 +51,24 @@ test('S1909: Honda PDF menolak non-PDF sebelum FileReader dipanggil', async () =
   assert.equal(readerCalls, 0);
 });
 
-test('S1909: release identity sinkron ke 1903', () => {
+test('S1909: release identity sinkron', () => {
+  const security = read('modules/shared/features-helpers-global-security.js');
+  const vMatch = security.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
+  assert.ok(vMatch, 'APP_BUILD_VERSION constant not found');
+  const V = vMatch[1];
+  const vRe = new RegExp(V.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const numMatch = V.match(/-(\d+)$/);
+  assert.ok(numMatch, 'APP_BUILD_VERSION does not end in a numeric build id');
+  const N = numMatch[1];
   const joined = [
     read('modules/shared/modules-render.js'),
     read('modules/shared/modals.js'),
     read('modules/shared/modules-calc.js'),
     read('chat-action-handlers.js'),
-    read('modules/shared/features-helpers-global-security.js'),
+    security,
   ].join('\n');
-  assert.match(joined, /s1908-cumulative-regression-hardening-1903/);
-  assert.match(read('sw.js'), /kw-cache-v1903/);
-  assert.match(read('index.html'), /\?v=1903/);
-  assert.match(read('app_production.html'), /\?v=1903/);
+  assert.match(joined, vRe);
+  assert.match(read('sw.js'), new RegExp('kw-cache-v' + N));
+  assert.match(read('index.html'), new RegExp('\\?v=' + N));
+  assert.match(read('app_production.html'), new RegExp('\\?v=' + N));
 });

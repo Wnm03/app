@@ -9,8 +9,8 @@ test('v23 dynamic innerHTML surfaces use HTML escaping for identified user/data-
   const checks = [
     ['car-notes.js', '${escapeHtml(emptyText)}'],
     ['modules/shop/business-intelligence-presenter.js', '${escapeHtml(x.icon)} ${escapeHtml(x.text)}'],
-    ['modules/ai/feature-insights.js', '${escapeHtml(x.icon)} ${escapeHtml(x.text)}'],
-    ['modules/ai/feature-insights.js', '${escapeHtml(emptyMsg)}'],
+    ['modules/ai/feature-insights.js', '${escapeHtml(x.icon)} ${safeInsightText(x.text)}'],
+    ['modules/ai/feature-insights.js', '${safeInsightText(emptyMsg)}'],
     ['modules/shop/modules-render.js', '${escapeHtml(D.googleSheets.spreadsheetId)}'],
     ['modules/shop/modules-render.js', '${escapeHtml(D.googleSheets.spreadsheetId)}'],
   ];

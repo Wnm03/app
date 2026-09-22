@@ -32,12 +32,22 @@ const checks=[
 ];
 for(const [file,items] of checks){const s=read(file);for(const [needle,msg] of items)if(needle instanceof RegExp) assert(needle.test(s),`${file}: ${msg}`); else assert(s.includes(needle),`${file}: ${msg}`);}
 
+// Version markers are checked for mutual consistency rather than a hardcoded
+// literal, so this test doesn't go stale every time the build version bumps.
+const versionSrc=read('modules/shared/features-helpers-global-security.js');
+const vMatch=versionSrc.match(/APP_BUILD_VERSION\s*=\s*'([^']+)'/);
+assert(vMatch,'APP_BUILD_VERSION constant not found in source');
+const V=vMatch[1];
+const vRe=new RegExp(V.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));
+const numMatch=V.match(/-(\d+)$/);
+assert(numMatch,'APP_BUILD_VERSION does not end in a numeric build id');
+const N=numMatch[1];
 for(const f of ['app-bundle-a.min.js','app-bundle-b.min.js']){
  const s=read(f);
- assert(/s1908-cumulative-regression-hardening-1903/.test(s),`${f}: current release version marker missing`);
+ assert(vRe.test(s),`${f}: current release version marker missing`);
 }
 for(const f of ['index.html','app_production.html']){
- const s=read(f);assert(!/\?v=1898\b/.test(s),`${f}: stale v1898 cache-bust remains`);assert(/\?v=1903\b/.test(s),`${f}: v1903 cache-bust missing`);
+ const s=read(f);assert(new RegExp('\\?v='+N+'\\b').test(s),`${f}: v${N} cache-bust missing`);
 }
-const sw=read('sw.js');assert(sw.includes("kw-cache-v1903"),'sw.js: current cache name missing');
+const sw=read('sw.js');assert(sw.includes(`kw-cache-v${N}`),'sw.js: current cache name missing');
 console.log('S1906 runtime null-guard regression: PASS');
