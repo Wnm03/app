@@ -250,6 +250,54 @@ body.has-open-modal .nav { display: none !important; }
    u-dnone utk toggle tampil/sembunyi, tidak butuh CSS max-height/transition seperti accordion. */
 .stg-tabpanel .stg-group-body-inner { padding: 0; }
 
+/* S1920 — Settings mobile navigation:
+   The seven Settings sections are real split-tabs, not a single long form.
+   Keep the tab rail visible while scrolling so users do not have to return to
+   the top of a long profile/backup/diagnostic panel to change sections. */
+@media(max-width:899px){
+  #page-settings > .cn-tabs{
+    position:sticky;
+    top:0;
+    z-index:calc(var(--z-chrome) - 1);
+    margin:0 -12px var(--sp-4);
+    padding:6px 12px 8px;
+    background:var(--bg);
+    border-bottom:1px solid var(--border);
+    box-shadow:0 4px 12px rgba(0,0,0,.04);
+    scroll-padding-inline:12px;
+  }
+  #page-settings > .cn-tabs .cn-tab{
+    flex:0 0 auto;
+    min-height:44px;
+    white-space:nowrap;
+  }
+}
+
+/* S1920 — Dashboard Hub mobile:
+   Five quick actions across are cramped around 360px and make labels
+   unreadable. Use a 3-column launcher at the narrowest common phone widths;
+   the 5-column layout remains unchanged above 380px. */
+@media(max-width:380px){
+  #page-dashboard-hub .dashhub-qa-row{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:var(--sp-3);
+  }
+  #page-dashboard-hub .dashhub-qa-btn{
+    min-height:58px;
+    padding:var(--sp-4) var(--sp-2);
+  }
+  #page-dashboard-hub .dashhub-qa-label{
+    font-size:10px;
+  }
+}
+
+/* S1920 — Canonical primary dashboard blocks must never collapse into a
+   blank spacer if a stale class/style leaks from a previous runtime. */
+#page-dashboard-hub #dashHubHeroCard,
+#page-dashboard-hub #dashHubQuickActions{
+  visibility:visible;
+}
+
 /* Collapse per-kartu (beda dari .stg-group yg collapse per-grup) — dipakai kartu tunggal yg
    isinya panjang, mis. "Kartu di Beranda" di Pengaturan, supaya bisa dilipat sendiri tanpa
    melipat seluruh grup. Sistem ini SENGAJA terpisah dari sistem toggleCardCollapse() di bawah
@@ -2027,3 +2075,32 @@ summary:focus-visible {
   .pwa-domain-page .pwa-domain-hero h1{font-size:21px;}
 }
 .pwa-keyboard-open .keu-fab,.pwa-keyboard-open .kasir-floatbar{transform:translateY(140%);opacity:0;pointer-events:none;}
+
+/* S1921 — MOBILE CAR NOTES TAB VISIBILITY HARDENING.
+   On narrow Android screens the 5 top-level Car Notes tabs (Insight/BBM/Servis/
+   Pajak & SIM/Jalan) were a horizontal rail. The labels could be outside the
+   initial viewport, making BBM/Servis look missing even though their panes and
+   renderers existed. Keep the desktop rail, but make the top-level rail a
+   3-column wrapping grid on small screens so BBM + Servis are always directly
+   visible/tappable. This is presentation-only; setCnTab()/pane IDs stay SoT. */
+@media(max-width:560px){
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs){
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    overflow:visible;
+    flex-wrap:unset;
+    scroll-snap-type:none;
+    -webkit-mask-image:none;
+    mask-image:none;
+    padding:2px 1px 5px;
+  }
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab{
+    min-width:0;
+    width:100%;
+    min-height:44px;
+    padding:8px 6px;
+    white-space:normal;
+    line-height:1.15;
+  }
+}
