@@ -983,9 +983,11 @@ const InvestmentUI = {
       + '<div style="font-size:12.5px;font-weight:700;color:var(--accent2);margin-bottom:4px">⚖️ Porsi melebihi 100%</div>'
       + '<div style="font-size:11.5px;color:var(--text2);line-height:1.5;margin-bottom:10px">Porsi pemilik lama akan disesuaikan otomatis agar total kembali menjadi 100%.</div>'
       + '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Cara menyesuaikan porsi</div>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="proporsional"' + (pending.method === 'proporsional' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Proporsional</label>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="largest"' + (pending.method === 'largest' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Kurangi dari pemilik terbesar</label>'
-      + '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="investmentRebalanceMethod" value="manual"' + (pending.method === 'manual' ? ' checked' : '') + ' data-onchange="InvestmentUI.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Pilih pemilik manual</label>'
+      + '<div class="segmented-control is-grid seg-3 u-mb10" data-segmented-control="investment-rebalance" aria-label="Cara menyesuaikan porsi">'
+      + '<button type="button" class="segmented-choice' + (pending.method === 'proporsional' ? ' active' : '') + '" data-action="InvestmentUI.setRebalanceMethod" data-args=\'["proporsional"]\'>Proporsional</button>'
+      + '<button type="button" class="segmented-choice' + (pending.method === 'largest' ? ' active' : '') + '" data-action="InvestmentUI.setRebalanceMethod" data-args=\'["largest"]\'>Terbesar</button>'
+      + '<button type="button" class="segmented-choice' + (pending.method === 'manual' ? ' active' : '') + '" data-action="InvestmentUI.setRebalanceMethod" data-args=\'["manual"]\'>Manual</button>'
+      + '</div>'
       + manualSelectHtml
       + '<div style="font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Penyesuaian porsi</div>'
       + body

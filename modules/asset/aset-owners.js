@@ -572,9 +572,11 @@ const manualSelect=pending.method==='manual'
 :'';
 box.innerHTML='<div style="margin:10px 0;padding:12px;background:var(--surface3);border-radius:12px;border:1px solid var(--accent2)">'
 +'<div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:8px">⚖️ Porsi melebihi 100% -- pilih cara menyesuaikan:</div>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="proporsional"'+(pending.method==='proporsional'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Proporsional</label>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="largest"'+(pending.method==='largest'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Kurangi dari pemilik terbesar</label>'
-+'<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer"><input type="radio" name="assetRebalanceMethod" value="manual"'+(pending.method==='manual'?' checked':'')+' data-onchange="Aset.setRebalanceMethod" data-onchange-args=\'["$value"]\'> Pilih pemilik manual</label>'
++'<div class=\"segmented-control is-grid seg-3 u-mb10\" data-segmented-control=\"asset-rebalance\" aria-label=\"Cara menyesuaikan porsi\">'
++'<button type=\"button\" class=\"segmented-choice\"'+(pending.method==='proporsional'?' active':'')+' data-action=\"Aset.setRebalanceMethod\" data-args=\'[\"proporsional\"]\'>Proporsional</button>'
++'<button type=\"button\" class=\"segmented-choice\"'+(pending.method==='largest'?' active':'')+' data-action=\"Aset.setRebalanceMethod\" data-args=\'[\"largest\"]\'>Terbesar</button>'
++'<button type=\"button\" class=\"segmented-choice\"'+(pending.method==='manual'?' active':'')+' data-action=\"Aset.setRebalanceMethod\" data-args=\'[\"manual\"]\'>Manual</button>'
++'</div>'+
 +manualSelect
 +'<div style="margin:6px 0 10px">'+previewHtml+'</div>'
 +'<div class="u-flex u-gap8">'
