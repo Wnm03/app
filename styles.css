@@ -2065,12 +2065,13 @@ summary:focus-visible {
   #scrollRoot{height:100vh;max-height:100vh;}
 }
 @media (max-width:899px){
+  html{scroll-behavior:auto;}
   /* S1929 — Android/WebView scroll hardening: the page shell itself must be
      the single native vertical scroller. Fixed viewport roots combined with
      body/html overflow:hidden can intermittently swallow touch scrolling in
      older Android WebViews after a visual-layer update. Keep the body locked,
      but make #scrollRoot an absolute, explicit-height scroll container. */
-  #scrollRoot{position:absolute;height:100dvh;min-height:0;max-height:100dvh;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));}
+  #scrollRoot{position:absolute;height:100dvh;min-height:0;max-height:100dvh;scroll-behavior:auto;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom,0px));}
   .page{min-width:0;max-width:100%;overflow-x:hidden;}
   .pwa-domain-page{overflow-x:hidden;}
   .pwa-domain-page>.cn-tabs{min-width:0;max-width:100%;}
@@ -2094,13 +2095,7 @@ summary:focus-visible {
 }
 .pwa-keyboard-open .keu-fab,.pwa-keyboard-open .kasir-floatbar{transform:translateY(140%);opacity:0;pointer-events:none;}
 
-/* S1921 — MOBILE CAR NOTES TAB VISIBILITY HARDENING.
-   On narrow Android screens the 5 top-level Car Notes tabs (Insight/BBM/Servis/
-   Pajak & SIM/Jalan) were a horizontal rail. The labels could be outside the
-   initial viewport, making BBM/Servis look missing even though their panes and
-   renderers existed. Keep the desktop rail, but make the top-level rail a
-   3-column wrapping grid on small screens so BBM + Servis are always directly
-   visible/tappable. This is presentation-only; setCnTab()/pane IDs stay SoT. */
+/* S1921 — mobile Car Notes top-level tabs: 3-col grid so BBM/Servis stay visible; presentation-only. */
 @media(max-width:560px){
   /* S1923 — APP-WIDE TOP-LEVEL TAB VISIBILITY. Car Notes exposed the same
      mobile problem that can affect Keuangan/Shop/Aset/Pajak/Settings: a long
@@ -2139,42 +2134,17 @@ summary:focus-visible {
   #page-settings > .cn-tabs .cn-tab{
     min-height:46px;
   }
-
-  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs){
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:7px;
-    overflow:visible;
-    flex-wrap:unset;
-    scroll-snap-type:none;
-    -webkit-mask-image:none;
-    mask-image:none;
-    padding:2px 1px 5px;
-  }
-  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab{
-    min-width:0;
-    width:100%;
-    min-height:44px;
-    padding:8px 6px;
-    white-space:normal;
-    line-height:1.15;
-  }
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab{min-width:0}
 }
 
 
-/* S1930 — Android mobile visual/scroll stabilization.
-   The 2026-09-22 device recording shows page-transition ghosting and long
-   blank intervals while switching Dashboard/Asset/Car/Pajak. The existing
-   .page fade animation is presentation-only but can leave a stale composited
-   frame on older Android/WebView while the synchronous page renderer is
-   working. The same recording also shows content already present after the
-   transition, so the repair is to remove the transition race on phones,
-   keep exactly one active page paintable, and let #scrollRoot remain the
-   single native vertical scroller. No business logic or page markup changes. */
-@media (max-width:899px){
-  html{scroll-behavior:auto;}
-  #scrollRoot{scroll-behavior:auto;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;}
+/* S1931 — atomic mobile page/nav commit; no transition fade. */
+@media(max-width:899px){
   .page{animation:none!important;opacity:1!important;transform:none!important;}
   .page.active{display:block!important;visibility:visible!important;opacity:1!important;transform:none!important;animation:none!important;pointer-events:auto;}
   .page:not(.active){visibility:hidden;pointer-events:none;}
+  .page.nav-transition-hold{display:block!important;visibility:visible!important;pointer-events:none!important;}
+  .page.nav-transition-pending{visibility:hidden!important;pointer-events:none!important;}
 }
+
