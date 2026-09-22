@@ -686,7 +686,7 @@ const trend=WorthIt.PW.trend(it.entries);
 const v=WorthIt.PW.verdict(trend,finance);
 const entriesHtml=(it.entries||[]).slice().reverse().map(e=>`<div class="u-flex u-jcb u-fs11 u-t2" style="padding:3px 0">
         <span>${e.date}${e.source==='scan'?' 📷':''}</span><span>${fmtFull(e.price)}</span>
-        <span class="tx-del" style="width:20px;height:20px" data-action="WorthIt.PW.removeEntry" data-args="${escapeHtml(JSON.stringify([it.id,e.id]))}" aria-label="Hapus">🗑</span>
+        <span class="tx-del tx-touch-target" data-action="WorthIt.PW.removeEntry" data-args="${escapeHtml(JSON.stringify([it.id,e.id]))}" aria-label="Hapus">🗑</span>
       </div>`).join('')||'<div class="u-fs11 u-t2" style="padding:3px 0">Belum ada histori harga.</div>';
 return `<div class="card u-mb10" style="padding:14px">
       <div class="u-flex u-jcb u-aifs u-gap8 u-mb6">

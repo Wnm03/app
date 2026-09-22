@@ -654,6 +654,88 @@ checkReturnVsAccountLiability() {
   return out;
 },
 
+// checkSyncInvariants() — S1934 Dana Titipan Sync Hardening.
+// PURE audit: tidak menulis D dan tidak menggantikan check()/checkAccounts().
+// Tujuan: mengunci invariant lintas-channel yang mudah rusak bila jalur baru
+// ditambahkan: satu sumber tidak boleh punya debt ganda lintas linkedAssetId /
+// linkedAccountId, tidak boleh ada linkedAccountId stale, dan nominal akun
+// berdiri-sendiri harus tetap sama dengan saldo akun TERKINI x porsi.
+// Return channelChecks juga menjadi bukti eksplisit bahwa return tidak dihitung
+// sebagai expense: rumusnya divalidasi lewat checkReturnVsLiability* yang sudah
+// menjadi sub-check checkAll().
+checkSyncInvariants() {
+  if (typeof D === 'undefined' || !Array.isArray(D.debts)) {
+    return { ok: true, duplicateLinks: [], staleLinks: [], balanceMismatches: [], mixedChannel: [] };
+  }
+  const duplicateLinks = [];
+  const staleLinks = [];
+  const balanceMismatches = [];
+  const mixedChannel = [];
+  const seen = new Map();
+  const assets = Array.isArray(D.assets) ? D.assets : [];
+  const investments = Array.isArray(D.investments) ? D.investments : [];
+  const accounts = Array.isArray(D.accounts) ? D.accounts : [];
+  const assetIds = new Set(assets.filter(Boolean).map(a => String(a.id)));
+  const investmentIds = new Set(investments.filter(Boolean).map(h => String(h.id)));
+  const accountById = new Map(accounts.filter(a => a && a.id != null).map(a => [String(a.id), a]));
+  const assetLinkedAccounts = new Set(assets.filter(a => a && a.accountId != null).map(a => String(a.accountId)));
+
+  (D.debts || []).forEach((d) => {
+    if (!d) return;
+    const hasAsset = d.linkedAssetId != null;
+    const hasInvestment = d.linkedInvestmentId != null;
+    const hasAccount = d.linkedAccountId != null;
+    if ((hasAsset ? 1 : 0) + (hasInvestment ? 1 : 0) + (hasAccount ? 1 : 0) > 1) {
+      mixedChannel.push({ debtId: d.id, linkedAssetId: d.linkedAssetId, linkedInvestmentId: d.linkedInvestmentId, linkedAccountId: d.linkedAccountId });
+    }
+    if (hasAsset && !assetIds.has(String(d.linkedAssetId))) staleLinks.push({ debtId: d.id, channel: 'asset', linkedId: d.linkedAssetId });
+    if (hasInvestment && !investmentIds.has(String(d.linkedInvestmentId))) staleLinks.push({ debtId: d.id, channel: 'investment', linkedId: d.linkedInvestmentId });
+    if (hasAccount && !accountById.has(String(d.linkedAccountId))) staleLinks.push({ debtId: d.id, channel: 'account', linkedId: d.linkedAccountId });
+    let channel = null, sourceId = null;
+    if (hasAsset) { channel = 'asset'; sourceId = d.linkedAssetId; }
+    else if (hasInvestment) { channel = 'investment'; sourceId = d.linkedInvestmentId; }
+    else if (hasAccount) { channel = 'account'; sourceId = d.linkedAccountId; }
+    if (channel && d.linkedOwnerId != null) {
+      const key = channel + '::' + String(sourceId) + '::' + String(d.linkedOwnerId);
+      if (seen.has(key)) duplicateLinks.push({ key, debtId: d.id, previousDebtId: seen.get(key) });
+      else seen.set(key, d.id);
+    }
+    if (hasAccount && accountById.has(String(d.linkedAccountId)) && !assetLinkedAccounts.has(String(d.linkedAccountId)) &&
+        typeof recalcAccBalance === 'function' && typeof MultiOwnerEngine !== 'undefined' && typeof MultiOwnerEngine.getOwners === 'function') {
+      const acc = accountById.get(String(d.linkedAccountId));
+      let res = null;
+      try { res = MultiOwnerEngine.getOwners(acc); } catch (e) { res = null; }
+      const owner = res && res.ok && Array.isArray(res.owners)
+        ? res.owners.find(o => o && !o.isSelf && String(o.ownerId) === String(d.linkedOwnerId) && o.porsi > 0)
+        : null;
+      if (owner) {
+        let balance = null;
+        try { balance = Number(recalcAccBalance(acc.id)); } catch (e) { balance = null; }
+        const expected = Number(balance) * (Number(owner.porsi) / 100);
+        const actual = Number(d.nilai) || 0;
+        if (Number.isFinite(expected) && Math.abs(expected - actual) > 1) {
+          balanceMismatches.push({ debtId: d.id, accountId: acc.id, ownerId: owner.ownerId, expected, actual, balance, porsi: owner.porsi });
+        }
+      }
+    }
+  });
+
+  // A linked account that is now an Asset source must never retain its old
+  // standalone-account debt. This is the classic account+asset double-count path.
+  (D.debts || []).forEach((d) => {
+    if (d && d.linkedAccountId != null && assetLinkedAccounts.has(String(d.linkedAccountId))) {
+      staleLinks.push({ debtId: d.id, channel: 'account-linked-to-asset', linkedId: d.linkedAccountId });
+    }
+  });
+  return {
+    ok: duplicateLinks.length === 0 && staleLinks.length === 0 && balanceMismatches.length === 0 && mixedChannel.length === 0,
+    duplicateLinks,
+    staleLinks,
+    balanceMismatches,
+    mixedChannel,
+  };
+},
+
 // checkAll() — Rekomendasi #2 lanjutan (S583 sesi-6). check()/
 // checkOwnerIdConsistency()/checkDebtNameStaleness() sudah ADA dari sesi
 // sebelumnya, tapi masing-masing masih dipanggil terpisah (belum ada 1
@@ -725,8 +807,9 @@ checkAll() {
   const returnVsAccountLiability = this.checkReturnVsAccountLiability();
   const pendingOwnerReview = this.checkPendingOwnerReview();
   const ownerIdConflicts = this.checkOwnerIdConflicts();
+  const syncInvariants = this.checkSyncInvariants();
   return {
-    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok && poolCommitment.ok && returnVsLiability.ok && returnVsAccountLiability.ok && pendingOwnerReview.ok && ownerIdConflicts.ok,
+    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok && poolCommitment.ok && returnVsLiability.ok && returnVsAccountLiability.ok && pendingOwnerReview.ok && ownerIdConflicts.ok && syncInvariants.ok,
     sync,
     ownerIdConsistency,
     debtNameStaleness,
@@ -738,6 +821,7 @@ checkAll() {
     returnVsAccountLiability,
     pendingOwnerReview,
     ownerIdConflicts,
+    syncInvariants,
   };
 },
 
