@@ -868,9 +868,10 @@ function setCnTab(t,el){
 // di tab Car Notes lain begitu user ganti tab. Pola sama persis dgn
 // setAsetTab(), lihat CHANGELOG-S620.md.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
-// Sesi 157 (permintaan eksplisit user): page-carnotes sekarang 4 tab
-// (insight/bbm/servis/pajak) — dulu cuma bbm/servis. 'jalan' ditinggal
-// apa adanya (dead id, sudah begitu sebelum sesi ini, tidak disentuh).
+// Sesi 157+ (audit S1922): page-carnotes sekarang 5 tab top-level
+// (insight/bbm/servis/pajak/jalan). Semua pane memiliki wiring runtime;
+// jangan menganggap 'jalan' sebagai dead id karena pane #cnTab-jalan + RideUI
+// sudah menjadi bagian dari kontrak Car Notes.
 curCnTab=t;
 document.querySelectorAll('#page-carnotes .cn-tab').forEach(b=>b.classList.remove('active'));
 if(el) el.classList.add('active');
