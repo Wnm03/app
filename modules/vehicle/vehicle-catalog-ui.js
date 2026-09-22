@@ -376,7 +376,7 @@ function catalogUiRenderPhotos() {
   el.innerHTML = _catPhotos.map((src, i) => (
     '<div style="position:relative">'
     + '<img src="' + src + '" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--border)" alt="">'
-    + '<button type="button" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--accent2);color:#fff;font-size:11px;line-height:1;cursor:pointer" data-action="VehicleCatalogUI.removePhoto" data-args="' + escapeHtml(JSON.stringify([i])) + '" aria-label="Hapus foto">✕</button>'
+    + '<button type="button" class="touch-target-remove-photo" style="position:absolute;top:-6px;right:-6px" data-action="VehicleCatalogUI.removePhoto" data-args="' + escapeHtml(JSON.stringify([i])) + '" aria-label="Hapus foto">✕</button>'
     + '</div>'
   )).join('');
 }
