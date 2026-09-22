@@ -863,6 +863,7 @@ function _cnInstallOfflineStatus(){
 _cnInstallOfflineStatus();
 
 function setCnTab(t,el){
+if(!['beranda','insight','bbm','servis','pajak','jalan'].includes(t))t='bbm';
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
 // di tab Car Notes lain begitu user ganti tab. Pola sama persis dgn
@@ -918,6 +919,7 @@ const CNI_SUBTAB_LABEL={ringkasan:'Ringkasan',rekomendasi:'Rekomendasi & Tren'};
 const CNB_SUBTAB_ORDER=['ringkasan','analisis'];
 const CNB_SUBTAB_LABEL={ringkasan:'Ringkasan',analisis:'Analisis Lanjutan'};
 function setCnInsightTab(t,el){
+if(!CNI_SUBTAB_ORDER.includes(t))t='ringkasan';
 // BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
 // setCnTab() di atas / modules/shared/format-tema.js.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
@@ -937,6 +939,7 @@ const cniBc=document.getElementById('cniBreadcrumbSub');
 if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
 }
 function setCnBbmTab(t,el){
+if(!CNB_SUBTAB_ORDER.includes(t))t='ringkasan';
 // BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
 // setCnTab() di atas / modules/shared/format-tema.js.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
