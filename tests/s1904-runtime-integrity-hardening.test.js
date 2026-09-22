@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const ROOT=path.join(__dirname,'..'); const read=r=>fs.readFileSync(path.join(ROOT,r),'utf8');
-const RELEASE_VERSION=(read('modules/shared/features-helpers-global-security.js').match(/s190\d+-[a-z0-9-]+-\d+/)||[])[0];
+const RELEASE_VERSION=(read('modules/shared/features-helpers-global-security.js').match(/s\d+-[a-z0-9-]+-\d+/)||[])[0];
 assert.ok(RELEASE_VERSION);
 test('S1904 canonical release version remains consistent across source and bundles',()=>{
  for(const f of ['modules/shared/features-helpers-global-security.js','modules/shared/modules-render.js','modules/shared/modals.js','modules/shared/modules-calc.js','chat-action-handlers.js','app-bundle-a.min.js','app-bundle-b.min.js']) assert.match(read(f),new RegExp(RELEASE_VERSION.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
