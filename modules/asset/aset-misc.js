@@ -635,6 +635,7 @@ renderWealthSnapshots();
 }
 
 function setAsetTab(t,el){
+if(!ASET_TAB_ORDER.includes(t))t='ringkasan';
 let _prevAsetTab=null;
 const asetTabBtns=document.querySelectorAll('#page-aset .cn-tab');
 if(asetTabBtns?.forEach)asetTabBtns.forEach(b=>{
