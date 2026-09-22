@@ -758,6 +758,18 @@ const DashboardHub = {
   },
 
   render() {
+    // S1920 — Mobile dashboard shell integrity: the Hero + Quick Actions are
+    // canonical always-visible blocks. If a stale class/style/hidden attribute
+    // leaked from an older render or cached DOM snapshot, repair it before any
+    // section-specific renderer runs. This is idempotent and presentation-only.
+    ['dashHubHeroCard', 'dashHubQuickActions'].forEach(id => {
+      const primary = document.getElementById(id);
+      if (!primary) return;
+      primary.classList.remove('u-dnone');
+      primary.style.removeProperty('display');
+      primary.removeAttribute('hidden');
+    });
+
     const activeSection = this._currentSectionTab();
     const el = document.getElementById('dashboardHubGrid');
     if (!el) return;
