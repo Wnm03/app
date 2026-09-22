@@ -1,6 +1,6 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v1904';
+const CACHE_NAME = 'kw-cache-v1905';
 const PRECACHE_URLS = [
   './index.html',
   './app_production.html',
@@ -54,10 +54,17 @@ self.addEventListener('fetch', (event) => {
   // HTML navigations should prefer the newest deployed shell while online.
   if (isNavigation(request)) {
     event.respondWith(
-      fetch(request).then((response) => {
+      fetch(request).then(async (response) => {
         if (response.ok) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+          return response;
+        }
+        // SPA deep-link/reload hardening: a hosting layer may answer an app
+        // route with HTTP 404/5xx even though the cached shell is valid.
+        if (response.status >= 400) {
+          const shell = await caches.match('./index.html');
+          if (shell) return shell;
         }
         return response;
       }).catch(async () => {

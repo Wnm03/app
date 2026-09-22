@@ -52,6 +52,7 @@ return n;
 // KEU_TAB_LABEL (tx-list-cashflow.js).
 const PAJAK_TAB_LABEL={zakat:'Zakat',pajak:'Pajak (PPh 21)'};
 function setPajakTab(tab,el){
+if(!Object.prototype.hasOwnProperty.call(PAJAK_TAB_LABEL,tab))tab='zakat';
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
 // di tab Pajak/Zakat lain begitu user ganti tab. Pola sama persis dgn
@@ -78,6 +79,7 @@ if(typeof PWAUX!=='undefined'&&PWAUX.markRendered)PWAUX.markRendered(document.ge
 const PJK_SUBTAB_ORDER=['pph21','pbb'];
 const PJK_SUBTAB_LABEL={pph21:'PPh 21',pbb:'PBB & UMKM'};
 function setPjkTab(t,el){
+if(!PJK_SUBTAB_ORDER.includes(t))t='pph21';
 // BUGFIX (audit bug serupa S619): lihat komentar dismissAllToasts() di
 // setPajakTab() di atas / modules/shared/format-tema.js.
 if(typeof dismissAllToasts==='function')dismissAllToasts();

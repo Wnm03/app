@@ -2084,6 +2084,44 @@ summary:focus-visible {
    3-column wrapping grid on small screens so BBM + Servis are always directly
    visible/tappable. This is presentation-only; setCnTab()/pane IDs stay SoT. */
 @media(max-width:560px){
+  /* S1923 — APP-WIDE TOP-LEVEL TAB VISIBILITY. Car Notes exposed the same
+     mobile problem that can affect Keuangan/Shop/Aset/Pajak/Settings: a long
+     horizontal rail can place valid pages outside the first viewport. Keep
+     nested sub-tabs horizontal where useful, but make each page's PRIMARY
+     tab rail a wrapping grid so every workflow is directly reachable. */
+  #page-keuangan > .cn-tabs,
+  #page-shop > .cn-tabs,
+  #page-aset > .cn-tabs,
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs),
+  #page-pajak > .cn-tabs,
+  #page-settings > .cn-tabs{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:7px;
+    overflow:visible;
+    flex-wrap:unset;
+    scroll-snap-type:none;
+    -webkit-mask-image:none;
+    mask-image:none;
+    padding:2px 1px 5px;
+  }
+  #page-keuangan > .cn-tabs .cn-tab,
+  #page-shop > .cn-tabs .cn-tab,
+  #page-aset > .cn-tabs .cn-tab,
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab,
+  #page-pajak > .cn-tabs .cn-tab,
+  #page-settings > .cn-tabs .cn-tab{
+    min-width:0;
+    width:100%;
+    min-height:44px;
+    padding:8px 6px;
+    white-space:normal;
+    line-height:1.15;
+  }
+  #page-settings > .cn-tabs .cn-tab{
+    min-height:46px;
+  }
+
   #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs){
     display:grid;
     grid-template-columns:repeat(3,minmax(0,1fr));
