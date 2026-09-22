@@ -664,6 +664,7 @@ const KEU_TAB_ORDER=['kelola','tagihan','budget','utangpiutang','asetproyek','la
 // Laporan/Kelola (lihat setLaporanTab/setKelolaTab di bawah).
 const KEU_TAB_LABEL={kelola:'Kelola',tagihan:'Tagihan & Cicilan',budget:'Budget',utangpiutang:'Piutang & Utang',asetproyek:'Aset & Proyek',laporan:'Laporan',akun:'Akun'};
 function setKeuanganTab(t,el){
+if(!KEU_TAB_ORDER.includes(t))t='kelola';
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi bisa nyangkut menutupi tombol
 // di sub-tab baru begitu user ganti sub-tab Keuangan. Pola sama persis dgn
