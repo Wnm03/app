@@ -1,6 +1,6 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v1908';
+const CACHE_NAME = 'kw-cache-v1930';
 const PRECACHE_URLS = [
   './index.html',
   './app_production.html',
@@ -81,21 +81,25 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Immutable/versioned assets are cache-first; successful network responses
-  // refresh the cache when the browser misses locally.
+  // S1930 — online update hardening: do NOT let an old cached JS/CSS asset
+  // survive a deployment that accidentally reuses the same query version.
+  // Fetch the newest same-origin static asset first (with HTTP-cache
+  // revalidation), then refresh the SW cache. If offline, fall back to the
+  // cached copy so the PWA remains usable without a network.
   event.respondWith(
-    caches.match(request).then((cached) => {
+    fetch(request, { cache: 'no-cache' }).then((response) => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+      }
+      return response;
+    }).catch(async () => {
+      const cached = await caches.match(request);
       if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
-        }
-        return response;
-      }).catch(() => new Response('Resource tidak tersedia', {
+      return new Response('Resource tidak tersedia', {
         status: 503,
         statusText: 'Service Unavailable'
-      }));
+      });
     })
   );
 });

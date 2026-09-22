@@ -2160,3 +2160,21 @@ summary:focus-visible {
     line-height:1.15;
   }
 }
+
+
+/* S1930 — Android mobile visual/scroll stabilization.
+   The 2026-09-22 device recording shows page-transition ghosting and long
+   blank intervals while switching Dashboard/Asset/Car/Pajak. The existing
+   .page fade animation is presentation-only but can leave a stale composited
+   frame on older Android/WebView while the synchronous page renderer is
+   working. The same recording also shows content already present after the
+   transition, so the repair is to remove the transition race on phones,
+   keep exactly one active page paintable, and let #scrollRoot remain the
+   single native vertical scroller. No business logic or page markup changes. */
+@media (max-width:899px){
+  html{scroll-behavior:auto;}
+  #scrollRoot{scroll-behavior:auto;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;}
+  .page{animation:none!important;opacity:1!important;transform:none!important;}
+  .page.active{display:block!important;visibility:visible!important;opacity:1!important;transform:none!important;animation:none!important;pointer-events:auto;}
+  .page:not(.active){visibility:hidden;pointer-events:none;}
+}
