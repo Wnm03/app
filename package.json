@@ -51,7 +51,8 @@
     "audit:system-integrity": "node scripts/system-integrity-audit.js",
     "audit:safe-recommendations": "node scripts/safe-recommendation-audit.js",
     "audit:release-closure": "node scripts/release-gate-closure-audit.js",
-    "audit:document-status": "node scripts/document-status-audit.js"
+    "audit:document-status": "node scripts/document-status-audit.js",
+    "audit:carnotes-advanced": "node scripts/service-advanced-integrity-gate.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",
