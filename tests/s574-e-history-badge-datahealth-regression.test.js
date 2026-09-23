@@ -339,6 +339,13 @@ test('S574-E [11b/15]: badge owner tetap resolve lewat getAccOwners() kalau ters
 // ===========================================================================
 // 12. riwayat tanpa owner tidak menampilkan badge (S574-E BARU)
 // ===========================================================================
+test('S1942 [Owner Resolver Audit-9]: badge owner resolves from linked asset source', () => {
+  const D={accounts:[{id:'acc-linked',name:'Rekening Tertaut',emoji:'🏦'}],assets:[{id:'asset-1',accountId:'acc-linked',owners:[{ownerId:'o1',ownerName:'Budi',porsi:50},{ownerId:'o2',ownerName:'Ani',porsi:50}]}],transactions:[],products:[],cobek:[]};
+  const ctx=makeTxListCtx(D,{getAccOwners:()=>({ok:true,owners:[],isMultiOwner:false}),resolveOwnerDefaultForAccount:(id)=>id==='acc-linked'?{ok:true,source:'asset',owners:D.assets[0].owners}:{ok:true,source:'none',owners:[]}});
+  const t={id:'t-s1942',type:'expense',amount:100000,category:'Belanja',date:'2026-08-01',accountId:'acc-linked',deductionOwnerId:'o2'};
+  assert.match(ctx.txHTML(t),/👤 Ditanggung: Ani/);
+});
+
 test('S574-E [12/15]: txHTML() TIDAK menampilkan badge owner kalau t.deductionOwnerId kosong/tidak ada (transaksi lama)', () => {
   const D = { accounts: [{ id: 'acc-single', name: 'Cash', emoji: '💵', owners: [{ ownerId: 'SELF', ownerName: 'Milik Sendiri' }] }], transactions: [], products: [], cobek: [] };
   const ctx = makeTxListCtx(D);
