@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-23T13:42:31.351Z
+Terakhir digenerate: 2026-09-23T22:04:46.012Z
 Total file source: 399 · Total identifier global: 2911
 
 ## 1. Urutan load & ringkasan tiap file
@@ -195,10 +195,10 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 172 | `modules/vehicle/vehicle-maintenance-template-engine.js` | 119 | _(tidak ada komentar header)_ |
 | 173 | `modules/vehicle/honda-pdf-catalog-auto-import.js` | 43 | _(tidak ada komentar header)_ |
 | 174 | `modules/vehicle/sparepart-servis-b.js` | 830 | modules/vehicle/sparepart-servis-b.js — lanjutan modules/vehicle/sparepart-servis.js (Audit ukuran file, lanjutan sesi split modules-render.js): file sparepart-servis.js dipecah jadi 2 supaya di bawah … |
-| 175 | `modules/vehicle/servis-checklist.js` | 596 | _(tidak ada komentar header)_ |
+| 175 | `modules/vehicle/servis-checklist.js` | 633 | _(tidak ada komentar header)_ |
 | 176 | `modules/vehicle/service-input-catalog.js` | 83 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
-| 177 | `modules/vehicle/servis.js` | 1772 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
-| 178 | `modules/vehicle/service-history-bulk-identity-editor.js` | 136 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
+| 177 | `modules/vehicle/servis.js` | 1799 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 178 | `modules/vehicle/service-history-bulk-identity-editor.js` | 224 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 179 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 180 | `modules/vehicle/service-maintenance-repository.js` | 13 | _(tidak ada komentar header)_ |
 | 181 | `modules/vehicle/servis-b.js` | 453 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
