@@ -102,7 +102,7 @@ test('setEditTab reminder hanya mengganti presenter panel dan tidak menyimpan da
 });
 
 
-test('tab Riwayat menampilkan countdown hanya pada baseline interval terbaru',()=>{
+test('tab Riwayat hanya menampilkan evidence riwayat dan tidak menampilkan countdown Pengingat',()=>{
   const D={vehicles:[{id:'v1',name:'Vario'}],sparepartCats:[{id:'catOil',name:'Oli Mesin',intervalKm:1500}],partsStock:[],servisLogs:[
     {id:'s3',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-08-13',km:18554,actionType:'ganti',checklist:[]},
     {id:'s2',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-07-18',km:17686,actionType:'periksa',checklist:[]},
@@ -110,17 +110,21 @@ test('tab Riwayat menampilkan countdown hanya pada baseline interval terbaru',()
   ]};
   const els=baseEls(); els.servisHistoryPanel={style:{},innerHTML:''}; els.servisEditTabHistory={classList:makeClassList()};
   const ctx=makeCtx({D,els}); ctx.Servis.editId='s3'; ctx.Servis.renderEditHistoryTab(); const html=els.servisHistoryPanel.innerHTML;
-  assert.match(html,/Riwayat Oli Mesin/); assert.match(html,/Reminder aktif/); assert.match(html,/Sisa 1\.000 km/);
-  assert.equal((html.match(/Sisa 1\.000 km/g)||[]).length,1,'countdown hanya boleh muncul satu kali');
+  assert.match(html,/Riwayat Servis/);
+  assert.doesNotMatch(html,/Reminder aktif/);
+  assert.doesNotMatch(html,/Sisa 1\.000 km/);
+  assert.doesNotMatch(html,/Jatuh tempo servis/);
   assert.match(html,/18\.554 km/); assert.match(html,/17\.686 km/); assert.match(html,/16\.900 km/);
 });
 
-test('tab Riwayat lama tidak mempertahankan countdown lama ketika ada reset terbaru',()=>{
+test('tab Riwayat lama tidak mempertahankan countdown lama karena countdown memang milik Pengingat',()=>{
   const D={vehicles:[{id:'v1',name:'Vario'}],sparepartCats:[{id:'catOil',name:'Oli Mesin',intervalKm:1500}],partsStock:[],servisLogs:[
     {id:'new',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-08-13',km:18554,actionType:'ganti',checklist:[]},
     {id:'old',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-06-13',km:17000,actionType:'ganti',checklist:[]},
   ]};
   const els=baseEls(); els.servisHistoryPanel={style:{},innerHTML:''}; els.servisEditTabHistory={classList:makeClassList()};
   const ctx=makeCtx({D,els}); ctx.Servis.editId='new'; ctx.Servis.renderEditHistoryTab(); const html=els.servisHistoryPanel.innerHTML;
-  assert.equal((html.match(/Reminder aktif/g)||[]).length,1); assert.equal((html.match(/Sisa 1\.000 km/g)||[]).length,1);
+  assert.equal((html.match(/Reminder aktif/g)||[]).length,0);
+  assert.equal((html.match(/Sisa 1\.000 km/g)||[]).length,0);
+  assert.match(html,/2026-08-13/); assert.match(html,/2026-06-13/);
 });

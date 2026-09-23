@@ -133,3 +133,56 @@ console.error('Bulk history identity edit failed:',e);toast('⚠️ Gagal menyim
 };
 Object.assign(Servis,BulkHistoryIdentityEditor);
 })();
+
+// S1974: Job Type editor kept in the already-loaded bulk extension so no new
+// runtime bundle entry is required. Job Type is service-level classification;
+// Package remains a separate reference/group layer.
+(function(){
+if(typeof Servis==='undefined')return;
+const JobTypeEditorS1974={
+_selectedHistoryJobTypeIds(){
+ const panel=document.getElementById('servisHistoryPanel');
+ return panel?Array.from(panel.querySelectorAll('input[data-service-audit-id]:checked')).map(x=>String(x.getAttribute('data-service-audit-id')||'')).filter(Boolean):[];
+},
+openHistoryJobTypeEditor(){
+ const ids=JobTypeEditorS1974._selectedHistoryJobTypeIds();
+ if(!ids.length){toast('⚠️ Pilih minimal 1 riwayat terlebih dahulu');return;}
+ if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per operasi.');return;}
+ const jobs=typeof ServiceSessionSOT!=='undefined'&&Array.isArray(ServiceSessionSOT.JOB_TYPES)?ServiceSessionSOT.JOB_TYPES:[];
+ const box=document.getElementById('serviceHistoryJobTypeEditor');if(box)box.remove();
+ const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId)||null;
+ const common=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
+ const commonType=common.length&&common.every(x=>String(x.serviceJobType||'')===String(common[0].serviceJobType||''))?String(common[0].serviceJobType||''):'';
+ box=document.createElement('div');box.id='serviceHistoryJobTypeEditor';box.className='overlay open';box.style.cssText='z-index:440;position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;';
+ box.innerHTML=`<div class="modal" style="width:100%;max-width:520px;box-sizing:border-box;margin:0 auto;max-height:100dvh;overflow-y:auto"><div class="modal-title"><span>🔧 Tetapkan Jenis Pekerjaan</span><button class="modal-close" data-action="Servis.closeHistoryJobTypeEditor">✕</button></div><div class="u-fs11 u-t2" style="margin-bottom:10px">${ids.length} riwayat dipilih. Jenis pekerjaan adalah klasifikasi service-level; tidak mengubah kategori/komponen SOT dan tidak membuat paket.</div><div class="fg"><label class="fl">Jenis Pekerjaan</label><select class="fs" id="serviceHistoryJobType"><option value="">— Hapus jenis pekerjaan —</option>${jobs.map(j=>`<option value="${escapeHtml(String(j.id))}"${String(j.id)===commonType?' selected':''}>${escapeHtml(j.label||j.name||j.id)}</option>`).join('')}</select></div><div class="u-fs11 u-t2" style="margin:8px 0 12px;line-height:1.5">KM, tanggal, biaya, checklist, kategori, komponen, part, dan reminder interval tidak ikut berubah.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-ghost" data-action="Servis.closeHistoryJobTypeEditor">Batal</button><button type="button" class="btn btn-primary" data-action="Servis.commitHistoryJobTypeEditor">Simpan</button></div></div>`;
+ document.body.appendChild(box);
+},
+closeHistoryJobTypeEditor(){const box=document.getElementById('serviceHistoryJobTypeEditor');if(box)box.remove();},
+commitHistoryJobTypeEditor(){
+ const ids=JobTypeEditorS1974._selectedHistoryJobTypeIds();const jobId=document.getElementById('serviceHistoryJobType')?.value||'';
+ if(!ids.length)return;
+ if(typeof ServiceSessionSOT==='undefined'||typeof ServiceSessionSOT.jobType!=='function'||typeof ServiceSessionSOT.setJobType!=='function'){toast('⚠️ ServiceSessionSOT belum siap');return;}
+ const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
+ if(logs.length!==ids.length){toast('⚠️ Sebagian riwayat tidak ditemukan');return;}
+ if(jobId&&!ServiceSessionSOT.jobType(jobId)){toast('⚠️ Jenis pekerjaan tidak valid');return;}
+ const before=logs.map(x=>({id:x.id,serviceJobType:x.serviceJobType||null,serviceJobLabel:x.serviceJobLabel||null,serviceJobEvidence:x.serviceJobEvidence||null}));
+ try{
+   if(jobId){
+     for(const log of logs){const r=ServiceSessionSOT.setJobType(log,jobId,'manual');if(!r||!r.ok)throw new Error(r&&r.code||'job_type_rejected');}
+   }else{
+     logs.forEach(log=>{log.serviceJobType=null;log.serviceJobLabel=null;log.serviceJobEvidence=null;});
+   }
+   if(typeof save==='function')save({domain:'servis',financeMutation:false});
+ }catch(err){
+   logs.forEach((log,i)=>Object.assign(log,before[i]));
+   toast('⚠️ Jenis pekerjaan tidak disimpan');
+   console.warn('S1974 history job type rollback',err);
+   return;
+ }
+ toast(`✅ Jenis pekerjaan diperbarui untuk ${logs.length} riwayat`);
+ JobTypeEditorS1974.closeHistoryJobTypeEditor();
+ Servis.renderEditHistoryTab();
+}
+};
+Object.assign(Servis,JobTypeEditorS1974);
+})();

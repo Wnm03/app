@@ -74,3 +74,6 @@ test('kontrak implementasi menghapus ketergantungan class-only untuk tombol edit
   assert.match(src,/btn\.style\.color=active\?'#fff'/);
   assert.match(src,/_normalizeEditModalGeometry\(\)/);
 });
+
+const servisSrc=fs.readFileSync(path.join(__dirname,'../modules/vehicle/servis.js'),'utf8');
+test('S1974: geometry Pengingat full viewport untuk WebView Android',()=>{assert.match(servisSrc,/modal\.style\.width='100%'/);assert.match(servisSrc,/modal\.style\.height='100dvh'/);assert.match(servisSrc,/overlay\.style\.position='fixed'/);});

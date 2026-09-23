@@ -1,0 +1,11 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const src=fs.readFileSync(path.join(__dirname,'../modules/vehicle/service-history-bulk-identity-editor.js'),'utf8');
+const checklist=fs.readFileSync(path.join(__dirname,'../modules/vehicle/servis-checklist.js'),'utf8');
+const servis=fs.readFileSync(path.join(__dirname,'../modules/vehicle/servis.js'),'utf8');
+test('S1974: jenis pekerjaan terpisah dari paket',()=>{assert.match(src,/openHistoryJobTypeEditor/);assert.match(src,/ServiceSessionSOT\.setJobType/);assert.match(servis,/Jadikan Paket Pekerjaan/);});
+test('S1974: checklist memiliki edit identitas SOT per item',()=>{assert.match(checklist,/_identityOverrides/);assert.match(checklist,/setItemIdentity/);assert.match(servis,/openServiceChecklistIdentityEditor/);});
+test('S1974: Riwayat tidak merender reminder countdown/status',()=>{assert.match(servis,/Halaman ini adalah bukti riwayat saja/);assert.doesNotMatch(servis,/Reminder aktif.*Riwayat/);});
+console.log('S1974 service history/checklist workflow: PASS');

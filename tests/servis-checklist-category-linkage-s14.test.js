@@ -24,7 +24,8 @@ test('all 102 checklist items (50 legacy + 52 catalog expansion) carry canonical
 });
 
 test('checklist payload writes masterCategoryId for every checked item',()=>{
-  assert.match(src,/masterCategoryId: found\.item\.masterCategoryId \|\| found\.group\.masterCategoryId \|\| null/);
+  assert.match(src,/masterCategoryId: identity\.masterCategoryId \|\| found\.item\.masterCategoryId \|\| found\.group\.masterCategoryId \|\| null/);
+  assert.match(src,/serviceComponentId: identity\.serviceComponentId \|\| null/);
 });
 
 test('categoryId is runtime-only and only emitted from a concrete vehicle-scoped category',()=>{

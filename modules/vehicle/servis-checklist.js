@@ -163,6 +163,9 @@ const ServisChecklist = {
   _results: {},
   _conditionNotes: {},
   _notApplicable: {},
+  // Per-log identity override: checklist master item remains canonical, while
+  // a saved service record may correct its category/component identity.
+  _identityOverrides: {},
 
   // open(vehicleId) — mulai sesi checklist baru: reset _checked jadi {}
   // & simpan vehicleId aktif. Dipanggil tiap modal Servis Checklist
@@ -175,6 +178,7 @@ const ServisChecklist = {
     this._results = {};
     this._conditionNotes = {};
     this._notApplicable = {};
+    this._identityOverrides = {};
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
@@ -199,11 +203,13 @@ const ServisChecklist = {
       const found = this.findItemById(itemId);
       if (!found) return null;
       const category = this.resolveCategoryForItem(found.item, this._vehicleId);
+      const identity = this._identityOverrides[itemId] || {};
       const row = {
         itemId,
         itemName: found.item.name,
         group: found.group.group,
-        masterCategoryId: found.item.masterCategoryId || found.group.masterCategoryId || null,
+        masterCategoryId: identity.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
+        serviceComponentId: identity.serviceComponentId || null,
         actionType: this._checked[itemId],
         conditionResult: this._results[itemId] || null,
         conditionNote: this._conditionNotes[itemId] || '',
@@ -224,6 +230,7 @@ const ServisChecklist = {
     this._results = {};
     this._conditionNotes = {};
     this._notApplicable = {};
+    this._identityOverrides = {};
     if (!log) return { ok: true, count: 0 };
     (Array.isArray(log.checklistNotApplicable)?log.checklistNotApplicable:[]).forEach(id=>{ if(this.findItemById(id)) this._notApplicable[id]=true; });
     if (!Array.isArray(log.checklist)) return { ok: true, count: 0 };
@@ -237,8 +244,38 @@ const ServisChecklist = {
       if (row.conditionResult) this._results[row.itemId] = row.conditionResult;
       if (row.conditionNote) this._conditionNotes[row.itemId] = String(row.conditionNote);
       if (row.notApplicable === true) this._notApplicable[row.itemId] = true;
+      if (row.masterCategoryId || row.serviceComponentId) {
+        this._identityOverrides[row.itemId] = {
+          masterCategoryId: row.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
+          serviceComponentId: row.serviceComponentId || null
+        };
+      }
     });
     return { ok: true, count: Object.keys(this._checked).length };
+  },
+
+  getItemIdentity(itemId) {
+    const found = this.findItemById(itemId);
+    if (!found) return null;
+    const o = this._identityOverrides[itemId] || {};
+    return {
+      masterCategoryId: o.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
+      serviceComponentId: o.serviceComponentId || null
+    };
+  },
+
+  setItemIdentity(itemId, masterCategoryId, serviceComponentId) {
+    const found = this.findItemById(itemId);
+    if (!found) return { ok:false, reason:'Item checklist tidak ditemukan' };
+    const master = String(masterCategoryId || '');
+    const component = String(serviceComponentId || '');
+    if (!master) return { ok:false, reason:'Kategori servis wajib dipilih' };
+    if (component && typeof ServiceInputCatalog !== 'undefined' && typeof ServiceInputCatalog.itemById === 'function') {
+      const hit = ServiceInputCatalog.itemById(component);
+      if (!hit || !hit.group || String(hit.group.masterCategoryId) !== master) return { ok:false, reason:'Komponen tidak cocok dengan kategori' };
+    }
+    this._identityOverrides[itemId] = { masterCategoryId: master, serviceComponentId: component || null };
+    return { ok:true, itemId, masterCategoryId:master, serviceComponentId:component||null };
   },
 
   toNotApplicablePayload() { return Object.keys(this._notApplicable||{}).filter(id=>this._notApplicable[id]===true && this.findItemById(id)).map(id=>id); },
