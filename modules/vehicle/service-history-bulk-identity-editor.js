@@ -4,7 +4,7 @@
 if(typeof Servis==='undefined')return;
 const BulkHistoryIdentityEditor={
 _selectedHistoryAuditIds(){
-const panel=document.getElementById('servisHistoryPanel');
+const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');
 if(!panel)return[];
 return Array.from(panel.querySelectorAll('input[data-service-audit-id]:checked')).map(x=>String(x.getAttribute('data-service-audit-id')||'')).filter(Boolean);
 },
@@ -132,6 +132,28 @@ console.error('Bulk history identity edit failed:',e);toast('⚠️ Gagal menyim
 }
 };
 Object.assign(Servis,BulkHistoryIdentityEditor);
+
+// S1974+: Audit/Package surface is kept with the bulk-history extension so
+// servis.js remains below the source-size guard. Riwayat stays evidence-only.
+(function(){
+if(typeof Servis==='undefined')return;
+Servis.renderEditAuditTab=function(){
+const panel=document.getElementById('servisAuditPanel');
+if(!panel||Servis.editId===null)return;
+const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId);
+if(!current){panel.innerHTML='<div class="empty"><div class="empty-text">Data riwayat servis tidak ditemukan.</div></div>';return;}
+const vehicleId=current.vehicleId||curVehicleId;
+const history=(D.servisLogs||[]).filter(x=>x&&x.vehicleId===vehicleId).slice().sort((a,b)=>{if(typeof compareServiceHistoryRecency==='function')return compareServiceHistoryRecency(b,a);return String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0);});
+const pkgApi=typeof ServiceHistoryAuditPackage!=='undefined'?ServiceHistoryAuditPackage:null;
+const packages=pkgApi&&typeof pkgApi.listByVehicle==='function'?pkgApi.listByVehicle(vehicleId):typeof pkgApi?.forVehicle==='function'?pkgApi.forVehicle(vehicleId):[];
+const packageRows=packages.length?packages.map(p=>{const title=p.title||'Paket Pekerjaan';const count=Array.isArray(p.sourceServiceIds)?p.sourceServiceIds.length:0;return `<div style="padding:8px 0;border-top:1px solid var(--border2)"><div class="u-flex u-jcb u-aic"><div><div class="u-fw700 u-fs11">📦 ${escapeHtml(title)}</div><div class="u-fs10 u-t2">${escapeHtml(p.typeLabel||p.typeId||'Pekerjaan Lainnya')} · ${count} sumber</div></div><div style="display:flex;gap:5px;flex-wrap:wrap"><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.openHistoryAuditPackage" data-args="${escapeHtml(JSON.stringify([p.id]))}">Audit</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.editHistoryAuditPackage" data-args="${escapeHtml(JSON.stringify([p.id]))}">Edit</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.removeHistoryAuditPackage" data-args="${escapeHtml(JSON.stringify([p.id]))}">Hapus</button></div></div></div>`;}).join(''):'<div class="u-fs11 u-t2">Belum ada paket pekerjaan.</div>';
+const candidates=typeof ServiceSessionSOT!=='undefined'&&typeof ServiceSessionSOT.candidateGroups==='function'?ServiceSessionSOT.candidateGroups(vehicleId):[];
+const candidateRows=candidates.length?candidates.map((c,i)=>`<div style="padding:8px 0;border-top:1px dashed var(--border)"><div class="u-flex u-jcb u-aic"><div class="u-fs11"><b>Kandidat ${i+1}</b> · ${c.logs.length} riwayat · ${escapeHtml(c.reason||'')}</div><button type="button" class="btn btn-ghost btn-sm" data-action="ServiceSessionSOT.openMerge" data-args="${escapeHtml(JSON.stringify([c.ids]))}">Tinjau</button></div><div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(c.logs.map(x=>x.item||'Tanpa nama').slice(0,4).join(', '))}</div></div>`).join(''):'<div class="u-fs11 u-t2">Tidak ada kandidat sesi otomatis.</div>';
+const typeOptions=(pkgApi&&Array.isArray(pkgApi.TYPES)?pkgApi.TYPES:[]).map(t=>`<option value="${escapeHtml(t.id)}">${escapeHtml(t.label)}</option>`).join('');
+const selectionRows=history.map(log=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border2);font-size:11px"><input type="checkbox" data-service-audit-id="${escapeHtml(String(log.id))}"><span><b>${escapeHtml(log.item||'Tanpa nama')}</b><br><span class="u-t2">${escapeHtml(log.date||'')} · ${log.km==null?'':Number(log.km).toLocaleString('id-ID')+' km'} · Rp ${Number(log.cost||0).toLocaleString('id-ID')}</span></span></label>`).join('');
+panel.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">📦 Audit & Paket Pekerjaan</div><div class="u-fs11 u-t2" style="margin-top:4px">Operasi audit/bulk dipisahkan dari Riwayat. Riwayat asli tetap menjadi sumber kebenaran.</div></div><div class="fg"><div class="u-flex u-jcb u-aic"><label class="fl">Riwayat kendaraan ini</label><span id="serviceAuditSelectionCount" class="u-fs11 u-t2">0 dipilih</span></div><div style="max-height:280px;overflow:auto;border:1px solid var(--border2);border-radius:10px;padding:0 10px">${selectionRows||'<div class="u-fs11 u-t2" style="padding:10px 0">Belum ada riwayat.</div>'}</div><div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap"><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.selectAllHistoryAudit">Pilih Semua</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.clearHistoryAuditSelection">Kosongkan</button><button type="button" class="btn btn-primary btn-sm" id="serviceBulkHistoryEditBtn" data-action="Servis.openBulkHistoryIdentityEditor">✏️ Edit Kategori/Komponen SOT</button><button type="button" class="btn btn-ghost btn-sm" id="serviceBulkHistoryJobTypeBtn" data-action="Servis.openHistoryJobTypeEditor">🔧 Jenis Pekerjaan</button></div><div class="u-fs11 u-t2">Maksimal 100 riwayat per operasi. KM/tanggal/checklist/biaya/foto/part tidak ikut berubah.</div></div><div class="fg"><label class="fl">Nama paket</label><input class="fi" id="serviceAuditPackageTitle" placeholder="Contoh: Servis Besar September"></div><div class="fg"><label class="fl">Jenis paket</label><select class="fs" id="serviceAuditPackageType">${typeOptions}</select></div><button type="button" class="btn btn-primary btn-full" data-action="Servis.createHistoryAuditPackage">📦 Jadikan Paket Pekerjaan</button><div class="fg"><label class="fl">Paket tersimpan</label>${packageRows}</div><div class="fg"><div class="u-fw700 u-fs12">🔎 Kandidat Sesi</div><div class="u-fs11 u-t2" style="margin-top:4px">Kandidat hanya bahan review; aplikasi tidak menyimpulkan jenis pekerjaan tanpa konfirmasi.</div>${candidateRows}</div>`;
+panel.querySelectorAll('input[data-service-audit-id]').forEach(el=>el.addEventListener('change',()=>{Servis.updateHistoryAuditSelection();}));
+};
 })();
 
 // S1974: Job Type editor kept in the already-loaded bulk extension so no new
@@ -141,7 +163,7 @@ Object.assign(Servis,BulkHistoryIdentityEditor);
 if(typeof Servis==='undefined')return;
 const JobTypeEditorS1974={
 _selectedHistoryJobTypeIds(){
- const panel=document.getElementById('servisHistoryPanel');
+ const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');
  return panel?Array.from(panel.querySelectorAll('input[data-service-audit-id]:checked')).map(x=>String(x.getAttribute('data-service-audit-id')||'')).filter(Boolean):[];
 },
 openHistoryJobTypeEditor(){
@@ -158,21 +180,32 @@ openHistoryJobTypeEditor(){
  document.body.appendChild(box);
 },
 closeHistoryJobTypeEditor(){const box=document.getElementById('serviceHistoryJobTypeEditor');if(box)box.remove();},
-commitHistoryJobTypeEditor(){
+async commitHistoryJobTypeEditor(){
  const ids=JobTypeEditorS1974._selectedHistoryJobTypeIds();const jobId=document.getElementById('serviceHistoryJobType')?.value||'';
  if(!ids.length)return;
  if(typeof ServiceSessionSOT==='undefined'||typeof ServiceSessionSOT.jobType!=='function'||typeof ServiceSessionSOT.setJobType!=='function'){toast('⚠️ ServiceSessionSOT belum siap');return;}
+ if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per operasi.');return;}
  const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
  if(logs.length!==ids.length){toast('⚠️ Sebagian riwayat tidak ditemukan');return;}
+ const vehicles=new Set(logs.map(x=>String(x.vehicleId||'')).filter(Boolean));
+ if(vehicles.size>1){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}
  if(jobId&&!ServiceSessionSOT.jobType(jobId)){toast('⚠️ Jenis pekerjaan tidak valid');return;}
- const before=logs.map(x=>({id:x.id,serviceJobType:x.serviceJobType||null,serviceJobLabel:x.serviceJobLabel||null,serviceJobEvidence:x.serviceJobEvidence||null}));
+ const before=logs.map(x=>({id:x.id,serviceJobType:x.serviceJobType||null,serviceJobLabel:x.serviceJobLabel||null,serviceJobEvidence:x.serviceJobEvidence||null,serviceSessionSotVersion:x.serviceSessionSotVersion||null,masterCategoryId:x.masterCategoryId||null,editHistory:Array.isArray(x.editHistory)?x.editHistory.slice():x.editHistory}));
+ const type=jobId?ServiceSessionSOT.jobType(jobId):null;
+ const label=type?type.label:'Tanpa jenis pekerjaan';
+ if(typeof askConfirm==='function'&&!await askConfirm(`Tetapkan “${label}” untuk ${logs.length} riwayat? KM, tanggal, biaya, checklist, part, dan interval reminder tidak diubah.`))return;
  try{
-   if(jobId){
-     for(const log of logs){const r=ServiceSessionSOT.setJobType(log,jobId,'manual');if(!r||!r.ok)throw new Error(r&&r.code||'job_type_rejected');}
-   }else{
-     logs.forEach(log=>{log.serviceJobType=null;log.serviceJobLabel=null;log.serviceJobEvidence=null;});
+   const now=new Date().toISOString();
+   for(const log of logs){
+     const old={serviceJobType:log.serviceJobType||null,serviceJobLabel:log.serviceJobLabel||null,serviceJobEvidence:log.serviceJobEvidence||null};
+     if(jobId){const r=ServiceSessionSOT.setJobType(log,jobId,'manual');if(!r||!r.ok)throw new Error(r&&r.code||'job_type_rejected');}
+     else{log.serviceJobType=null;log.serviceJobLabel=null;log.serviceJobEvidence=null;}
+     if(!Array.isArray(log.editHistory))log.editHistory=[];
+     log.editHistory.push({changedAt:now,changedBy:'self',source:'history-job-type-editor-s1974',fields:['serviceJobType'],before:old,after:{serviceJobType:log.serviceJobType||null,serviceJobLabel:log.serviceJobLabel||null,serviceJobEvidence:log.serviceJobEvidence||null}});
+     if(log.editHistory.length>50)log.editHistory=log.editHistory.slice(-50);
    }
-   if(typeof save==='function')save({domain:'servis',financeMutation:false});
+   const saved=typeof save==='function'?await Promise.resolve(save({domain:'servis',financeMutation:false})):true;
+   if(saved===false)throw new Error('persistence_failed');
  }catch(err){
    logs.forEach((log,i)=>Object.assign(log,before[i]));
    toast('⚠️ Jenis pekerjaan tidak disimpan');
@@ -181,8 +214,10 @@ commitHistoryJobTypeEditor(){
  }
  toast(`✅ Jenis pekerjaan diperbarui untuk ${logs.length} riwayat`);
  JobTypeEditorS1974.closeHistoryJobTypeEditor();
- Servis.renderEditHistoryTab();
+ Servis.renderEditAuditTab();
 }
 };
 Object.assign(Servis,JobTypeEditorS1974);
+})();
+
 })();
