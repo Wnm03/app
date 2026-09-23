@@ -570,7 +570,45 @@ try{
 }
 function _proClearModalEditSnapshot(id){if(_proModalEditSnapshot&&_proModalEditSnapshot.id===String(id))_proModalEditSnapshot=null;}
 
+// S1960 SHOP MODAL ROUTING: modal Shop harus selalu dibuka di workspace/tab yang
+// menjadi konteks modalnya. Ini hanya mengubah halaman/tab Shop, bukan menutup
+// modal lain yang sedang terbuka; penting untuk modal bertumpuk seperti
+// produsen -> harga atau BI -> drill-down. Jika Shop belum aktif, pindah ke Shop
+// lebih dulu; setelah Shop aktif, setShopTab() cukup mengganti sub-tab tanpa
+// merusak modal stack. Modal yang tidak termasuk daftar ini tidak disentuh.
+const SHOP_MODAL_TAB={
+  orderModal:'jual',
+  productModal:'etalase',
+  produsenModal:'produsen',
+  produsenHargaModal:'produsen',
+  customerDetailModal:'pelanggan',
+  importKatalogModal:'etalase',
+  importShopExcelModal:'etalase',
+  shopCsvImportModal:'etalase',
+  shopPdfImportModal:'produsen',
+  shopScanModal:'produsen',
+  shopJsonModal:'etalase',
+  mergeProductModal:'etalase',
+  shopKatalogDinamisModal:'etalase',
+  inventoryTransferModal:'etalase',
+  purchaseOrderBatchModal:'produsen',
+  deliveryPlanModal:'jual',
+  biDrillDownModal:'bi'
+};
+function _routeShopModal(id){
+  const tab=SHOP_MODAL_TAB[String(id)];
+  if(!tab)return;
+  try{
+    const shopPage=document.getElementById('page-shop');
+    if(!shopPage)return;
+    if(!shopPage.classList.contains('active')){
+      if(typeof showPage==='function')showPage('shop');
+    }
+    if(typeof setShopTab==='function')setShopTab(tab,null);
+  }catch(e){ console.warn('[ShopModalRouting] gagal mengarahkan modal',id,e); }
+}
 function openModal(id){
+_routeShopModal(id);
 const el=document.getElementById(id);
 if(!el){
 console.warn(`Modal #${id} tidak ditemukan di DOM — cek document.write index (lihat modals.js MODAL_HTML[] vs document.write(MODAL_HTML[i]) di index.html/app_production.html, urutan/jumlahnya harus persis sama).`);

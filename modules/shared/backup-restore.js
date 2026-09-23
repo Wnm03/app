@@ -695,6 +695,9 @@ if(!D.notifSettings)D.notifSettings={enabled:false,billDays:3,ldrDays:3};
 if(!D.googleDrive)D.googleDrive={clientId:'',fileId:null,lastSync:null,autoSync:false};
 if(!D.wealthSnapshots)D.wealthSnapshots=[];
 if(!D.wishlist)D.wishlist=[];
+// S1959: Service History Audit / Work Package is a reference-only SOT layer. Preserve it through backup/restore; never fabricate missing source rows.
+if(!Array.isArray(D.serviceAuditGroups))D.serviceAuditGroups=[];
+if(typeof ServiceHistoryAuditPackage!=='undefined'&&ServiceHistoryAuditPackage&&typeof ServiceHistoryAuditPackage.normalize==='function')D.serviceAuditGroups=D.serviceAuditGroups.filter(x=>x&&x.vehicleId).map(x=>ServiceHistoryAuditPackage.normalize(x));
 D.cobek.forEach(c=>{if(c.delivered===undefined)c.delivered=true;});
 }
 async function importData(e){
