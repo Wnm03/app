@@ -207,7 +207,8 @@ const ServisChecklist = {
         actionType: this._checked[itemId],
         conditionResult: this._results[itemId] || null,
         conditionNote: this._conditionNotes[itemId] || '',
-        notApplicable: this._notApplicable[itemId] === true
+        notApplicable: this._notApplicable[itemId] === true,
+        state: (typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.checklistState==='function') ? ServiceEventSOT.checklistState({actionType:this._checked[itemId],conditionResult:this._results[itemId]||null,notApplicable:this._notApplicable[itemId]===true}) : (this._checked[itemId]==='ganti'?'REPLACED':(this._results[itemId]?'INSPECTED':'PENDING'))
       };
       // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
       // ditemukan untuk kendaraan aktif. Jangan pernah mengarang ID.
@@ -419,25 +420,50 @@ const ServisChecklist = {
     return { ok: true, id: item.id, actionType: type };
   },
 
+  findCheckedItemForService(componentId,itemName) {
+    const cid=String(componentId||''); const name=String(itemName||'').trim().toLowerCase();
+    for(let gi=0;gi<SERVICE_CHECKLIST_GROUPS.length;gi++){
+      const group=SERVICE_CHECKLIST_GROUPS[gi]; const items=this.itemsOfGroup(group);
+      for(let ii=0;ii<items.length;ii++){const it=items[ii]; if(this._checked[it.id]===undefined)continue; if((cid&&String(it.id)===cid)||(name&&String(it.name||'').trim().toLowerCase()===name))return {groupIdx:gi,itemIdx:ii,item:it};}
+    }
+    return null;
+  },
+
+  setActionTypeByItemId(itemId,type) {
+    const found=this.findItemById(itemId);
+    return found?this.setActionType(found.groupIdx,found.itemIdx,type):{ok:false,reason:'Item tidak ditemukan'};
+  },
+
+  setConditionResultByItemId(itemId,result) {
+    const found=this.findItemById(itemId);
+    return found?this.setConditionResult(found.groupIdx,found.itemIdx,result):{ok:false,reason:'Item tidak ditemukan'};
+  },
+
   setConditionResult(groupIdx, itemIdx, result) {
     const item = this._item(groupIdx, itemIdx);
     if (!item || this._checked[item.id] === undefined) return { ok:false, reason:'Item belum dicentang' };
+    if (!result) { delete this._results[item.id]; return { ok:true, id:item.id, conditionResult:undefined }; }
     if (typeof validServiceCondition === 'function' && !validServiceCondition(result)) return { ok:false, reason:'Hasil pemeriksaan tidak valid' };
     this._results[item.id] = result;
     return { ok:true, id:item.id, conditionResult:result };
   },
 
+  setConditionNoteByItemId(itemId,note) {
+    const found=this.findItemById(itemId);
+    return found?this.setConditionNote(found.groupIdx,found.itemIdx,note):{ok:false,reason:'Item tidak ditemukan'};
+  },
+
   setConditionNote(groupIdx,itemIdx,note){
     const item=this._item(groupIdx,itemIdx);
     if(!item||this._checked[item.id]===undefined)return {ok:false,reason:'Item belum dicentang'};
-    this._conditionNotes[item.id]=String(note||'').slice(0,500);
+    const clean=String(note||'').slice(0,500); if(clean)this._conditionNotes[item.id]=clean; else delete this._conditionNotes[item.id];
     return {ok:true,id:item.id,conditionNote:this._conditionNotes[item.id]};
   },
 
   setNotApplicable(groupIdx, itemIdx, value=true) {
     const item = this._item(groupIdx, itemIdx);
     if (!item) return { ok:false, reason:'Item tidak ditemukan' };
-    if (value) { this._notApplicable[item.id] = true; delete this._checked[item.id]; delete this._results[item.id]; }
+    if (value) { this._notApplicable[item.id] = true; delete this._checked[item.id]; delete this._results[item.id]; delete this._conditionNotes[item.id]; }
     else delete this._notApplicable[item.id];
     return { ok:true, id:item.id, notApplicable:!!value };
   },

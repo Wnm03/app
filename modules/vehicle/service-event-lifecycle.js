@@ -12,8 +12,8 @@
   }
   g.ServiceEventLifecycle={
     emit,
-    create:s=>emit('create',s),
-    update:(s,extra)=>emit('update',s,extra),
+    create:s=>{if(typeof g.ServiceEventSOT!=='undefined'&&s){const r=g.ServiceEventSOT.normalize(s,{persist:false});if(r&&r.ok&&r.changed&&typeof g.save==='function')g.save({domain:'servis',financeMutation:false});}emit('create',s);},
+    update:(s,extra)=>{if(typeof g.ServiceEventSOT!=='undefined'&&s){const r=g.ServiceEventSOT.normalize(s,{persist:false});if(r&&r.ok&&r.changed&&typeof g.save==='function')g.save({domain:'servis',financeMutation:false});}emit('update',s,extra);},
     remove:(s,extra)=>emit('delete',s,extra),
     unlink:(s,extra)=>emit('unlink',s,extra)
   };

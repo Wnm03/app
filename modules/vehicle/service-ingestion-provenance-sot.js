@@ -1,0 +1,9 @@
+'use strict';
+/* S1916 — preview-first import/OCR/workshop adapter. Never writes by itself. */
+(function(root){
+ const TYPES=Object.freeze(['import','ocr','workshop','external']);const arr=v=>Array.isArray(v)?v:[];
+ function normalize(input={},sourceType='import'){const t=TYPES.includes(String(sourceType).toLowerCase())?String(sourceType).toLowerCase():'import';return{sourceType:t,sourceRef:input.sourceRef?String(input.sourceRef).slice(0,200):null,sourceCapturedAt:input.sourceCapturedAt?String(input.sourceCapturedAt):null};}
+ function preview(raw={},meta={}){const r=raw&&typeof raw==='object'?raw:{};const p=normalize(meta,meta.sourceType||'import');const candidate={date:r.date||r.tanggal||null,km:r.km!=null?r.km:null,item:r.item||r.service||r.description||null,cost:r.cost!=null?r.cost:r.amount!=null?r.amount:null,serviceComponentId:r.serviceComponentId||null,catalogPartId:r.catalogPartId||null,sourceType:p.sourceType,sourceRef:p.sourceRef,sourceCapturedAt:p.sourceCapturedAt};const missing=['date','item'].filter(k=>candidate[k]==null||String(candidate[k]).trim()==='');return{ok:missing.length===0,candidate,missing,requiresConfirmation:true,readOnly:true};}
+ function toServiceEvent(candidate,confirm=false){if(!confirm)return{ok:false,code:'CONFIRMATION_REQUIRED',event:null};const c=candidate||{};return{ok:true,event:{date:c.date||null,km:c.km==null?null:Number(c.km),item:c.item||'',cost:c.cost==null?0:Number(c.cost),serviceComponentId:c.serviceComponentId||null,catalogPartId:c.catalogPartId||null,sourceType:c.sourceType||'import',sourceRef:c.sourceRef||null,sourceCapturedAt:c.sourceCapturedAt||null}};}
+ const api={version:'S1916-V1',TYPES,normalize,preview,toServiceEvent};if(root)root.ServiceIngestionProvenanceSOT=api;if(typeof globalThis!=='undefined')globalThis.ServiceIngestionProvenanceSOT=api;if(typeof module!=='undefined')module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);

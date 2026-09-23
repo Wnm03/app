@@ -60,6 +60,152 @@ if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer===
 }
 return null;
 },
+resolveServiceSOT(log,opts){
+  const row=log||{};
+  const selection=Servis.resolveCanonicalServiceSelection(row);
+  const vehicleId=(opts&&opts.vehicleId)||row.vehicleId||(typeof curVehicleId!=='undefined'?curVehicleId:null);
+  const result={
+    vehicleId:vehicleId||null,
+    masterCategoryId:selection.masterCategoryId||null,
+    categoryName:selection.group&&selection.group.group?selection.group.group:null,
+    serviceComponentId:selection.serviceComponentId||null,
+    componentName:selection.component&&selection.component.name?selection.component.name:null,
+    catalogPartId:row.catalogPartId||null,
+    part:null,
+    partCandidates:[],
+    partResolution:'none'
+  };
+  // Part identity is ID-first. Never infer a catalog part from a similar name.
+  if(result.catalogPartId&&typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function'){
+    const finish=(items)=>{
+      const all=Array.isArray(items)?items:[];
+      const hit=all.find(it=>it&&String(it.id)===String(result.catalogPartId));
+      if(!hit){result.catalogPartId=null;result.partResolution='invalid';return result;}
+      const compatible=typeof VehicleCatalog.filterForVehicle==='function'
+        ?VehicleCatalog.filterForVehicle([hit],vehicleId)
+        :[hit];
+      if(!compatible.length){result.catalogPartId=null;result.partResolution='invalid-scope';return result;}
+      result.part=hit;result.partResolution='linked';return result;
+    };
+    const all=VehicleCatalog.getAll();
+    if(all&&typeof all.then==='function')return all.then(finish);
+    return finish(all);
+  }
+  return result;
+},
+resolveServiceSOTPartCandidates(items,vehicleId,serviceComponentId){
+  const list=Array.isArray(items)?items:[];
+  const cid=String(serviceComponentId||'');
+  if(!cid)return [];
+  const scoped=typeof VehicleCatalog!=='undefined'&&typeof VehicleCatalog.filterForVehicle==='function'
+    ?VehicleCatalog.filterForVehicle(list,vehicleId):list;
+  return scoped.filter(it=>{
+    const ids=Array.isArray(it&&it.serviceComponentIds)?it.serviceComponentIds:(Array.isArray(it&&it.componentIds)?it.componentIds:[]);
+    return ids.some(id=>String(id)===cid)||String(it&&it.serviceComponentId||'')===cid;
+  });
+},
+validateServiceSOTIntegrity(log,opts){
+  const row=log||{};
+  const selection=Servis.resolveCanonicalServiceSelection(row);
+  const issues=[];
+  if(row.serviceComponentId&&selection.serviceComponentId!==String(row.serviceComponentId))issues.push('service-component-invalid');
+  if(row.masterCategoryId&&selection.masterCategoryId&&String(row.masterCategoryId)!==String(selection.masterCategoryId))issues.push('master-category-component-mismatch');
+  if(row.catalogPartId&&typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function'){
+    const vehicleId=(opts&&opts.vehicleId)||row.vehicleId||(typeof curVehicleId!=='undefined'?curVehicleId:null);
+    const check=(items)=>{
+      const hit=(Array.isArray(items)?items:[]).find(it=>it&&String(it.id)===String(row.catalogPartId));
+      if(!hit)issues.push('catalog-part-missing');
+      else if(typeof VehicleCatalog.filterForVehicle==='function'&&!VehicleCatalog.filterForVehicle([hit],vehicleId).length)issues.push('catalog-part-out-of-scope');
+      return {ok:issues.length===0,issues};
+    };
+    const items=VehicleCatalog.getAll();
+    if(items&&typeof items.then==='function')return items.then(check);
+    return check(items);
+  }
+  return {ok:issues.length===0,issues};
+},
+resolveCanonicalServiceSelection(s){
+const log=s||{};
+let master=log.masterCategoryId||'';
+let component=log.serviceComponentId||'';
+let hit=null;
+if(component&&typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'){
+  hit=ServiceInputCatalog.itemById(component);
+  if(hit&&hit.group)master=hit.group.masterCategoryId;
+}
+if((!master||!component)&&typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'){
+  const inf=ServiceInputCatalog.infer(log.item||'');
+  if(inf){if(!master&&inf.group)master=inf.group.masterCategoryId;if(!component&&inf.item)component=inf.item.id;if(!hit&&inf.item)hit=inf;}
+}
+return {masterCategoryId:master||'',serviceComponentId:component||'',component:hit&&hit.item?hit.item:null,group:hit&&hit.group?hit.group:null};
+},
+setEditCanonicalSelection(masterCategoryId,componentId){
+const master=String(masterCategoryId||'');
+const component=String(componentId||'');
+Servis._editSotMasterCategoryId=master;
+Servis._editSotServiceComponentId=component;
+},
+syncVisibleServiceSotSelectors(){
+if(typeof ServiceInputCatalog==='undefined')return;
+const hiddenCat=document.getElementById('servisCategory');
+const hiddenComp=document.getElementById('servisComponent');
+const cat=document.getElementById('servisCategorySot');
+const comp=document.getElementById('servisComponentSot');
+if(!cat||!comp)return;
+ServiceInputCatalog.populateCategorySelect(cat,hiddenCat?.value||'');
+ServiceInputCatalog.populateComponentSelect(comp,hiddenCat?.value||'',hiddenComp?.value||'');
+},
+onServiceCategorySotChange(){
+const visible=document.getElementById('servisCategorySot');
+const hidden=document.getElementById('servisCategory');
+if(hidden)hidden.value=visible?.value||'';
+Servis.onServiceCategoryChange();
+},
+onServiceComponentSotChange(){
+const visible=document.getElementById('servisComponentSot');
+const hidden=document.getElementById('servisComponent');
+if(hidden)hidden.value=visible?.value||'';
+Servis.onServiceComponentChange();
+},
+renderEditCanonicalSelectors(panel,selection,opts){
+if(!panel||typeof ServiceInputCatalog==='undefined')return '';
+opts=opts||{};
+const sel=selection||{};
+const master=String(sel.masterCategoryId||'');
+const component=String(sel.serviceComponentId||'');
+const groups=ServiceInputCatalog.groups()||[];
+const g=master?ServiceInputCatalog.groupById(master):null;
+const comps=g?(g.items||[]):[];
+const disabled=opts.disabled===true;
+const prefix=opts.prefix||'servisEditSot';
+return `<div class="fg" id="${prefix}Wrap"><label class="fl">Kategori Servis <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(SOT)</span></label><select class="fs" id="${prefix}Category" ${disabled?'disabled':''}><option value="">— Pilih kategori servis —</option>${groups.map(x=>`<option value="${escapeHtml(x.masterCategoryId)}"${x.masterCategoryId===master?' selected':''}>${escapeHtml(x.group)}</option>`).join('')}</select><label class="fl" style="margin-top:8px">Komponen Servis <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(SOT)</span></label><select class="fs" id="${prefix}Component" ${disabled?'disabled':''}><option value="">${master?'— Pilih komponen servis —':'Pilih kategori dulu'}</option>${comps.map(x=>`<option value="${escapeHtml(x.id)}"${x.id===component?' selected':''}>${escapeHtml(x.name)}</option>`).join('')}</select></div>`;
+},
+_applyDetailSotSelection(masterCategoryId,componentId){
+const catEl=document.getElementById('servisCategory');
+const compEl=document.getElementById('servisComponent');
+const itemEl=document.getElementById('servisItem');
+if(typeof ServiceInputCatalog==='undefined')return;
+const master=String(masterCategoryId||'');
+const component=String(componentId||'');
+ServiceInputCatalog.populateCategorySelect(catEl,master);
+ServiceInputCatalog.populateComponentSelect(compEl,master,component);
+if(component)ServiceInputCatalog.onComponentChange(compEl,catEl,itemEl);
+else if(itemEl&&master&&!component)itemEl.value='';
+Servis._serviceChecklistMasterCategoryIds=master?[master]:[];
+const first=master&&typeof ServisChecklist!=='undefined'?ServisChecklist.findGroupByMasterCategoryId(master):null;
+Servis._serviceChecklistGroupIdx=first?first.groupIdx:null;
+Servis.setEditCanonicalSelection(master,component);
+Servis.renderServiceMasterCategoryChips();
+Servis.renderServiceChecklist();
+Servis.syncServiceActionType(document.getElementById('servisActionType')?.value||'');
+Servis.onItemAutofillInterval();
+},
+_currentCheckedChecklistItem(){
+if(typeof ServisChecklist==='undefined'||typeof ServisChecklist.findCheckedItemForService!=='function')return null;
+const compId=document.getElementById('servisComponent')?.value||'';
+const item=document.getElementById('servisItem')?.value||'';
+return ServisChecklist.findCheckedItemForService(compId,item);
+},
 setMasterCategoryFilter(id){
 Servis.activeMasterCategoryFilter=id||null;
 Servis.activeServiceComponentFilter=null;
@@ -150,12 +296,16 @@ sel.value='';
 Servis.onCatalogPartChange();
 return;
 }
-VehicleCatalog.getAll().then(items=>{
+VehicleCatalog.getAll().then(async items=>{
 const filtered=VehicleCatalog.filterForVehicle(items,typeof curVehicleId!=='undefined'?curVehicleId:null);
 const list=(filtered||[]).some(it=>it.id===selectedCatalogId)||!selectedCatalogId?filtered:filtered.concat((items||[]).filter(it=>it.id===selectedCatalogId));
 const opts=(list||[]).map(it=>`<option value="${escapeHtml(it.id)}" data-oem="${escapeHtml(it.oemCode||'')}" data-name="${escapeHtml(it.partName||'')}">${escapeHtml(it.partName||'(Tanpa nama)')}${it.oemCode?' — '+escapeHtml(it.oemCode):''}</option>`).join('');
 sel.innerHTML='<option value="">Tidak pakai part katalog</option>'+opts;
 sel.value=selectedCatalogId||'';
+if(typeof VehiclePartSOT!=='undefined'&&VehiclePartSOT&&typeof VehiclePartSOT.enhanceServiceCatalogSelect==='function'){
+  try{await VehiclePartSOT.enhanceServiceCatalogSelect();}catch(_e){console.warn('VehiclePartSOT service picker enhancement skipped',_e);}
+  if(selectedCatalogId&&Array.from(sel.options||[]).some(o=>String(o.value)===String(selectedCatalogId)))sel.value=selectedCatalogId;
+}
 Servis.onCatalogPartChange();
 }).catch(()=>{
 sel.innerHTML='<option value="">Tidak pakai part katalog</option>';
@@ -317,6 +467,45 @@ if(hit&&hit.item&&typeof ServisChecklist!=='undefined'&&typeof ServisChecklist._
 // Free-text/non-standard service items remain fully manual.
 return ['periksa','bersih','ganti'];
 },
+syncServiceFormFromChecklist(itemId,opts){
+const found=typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.findItemById==='function'?ServisChecklist.findItemById(itemId):null;
+if(!found||!ServisChecklist._checked||ServisChecklist._checked[itemId]===undefined)return false;
+const result=ServisChecklist._results&&ServisChecklist._results[itemId]||'';
+const note=ServisChecklist._conditionNotes&&ServisChecklist._conditionNotes[itemId]||'';
+const condEl=document.getElementById('servisConditionResult');
+const noteEl=document.getElementById('servisConditionNote');
+if(!opts||!opts.noteOnly){
+  if(condEl)condEl.value=result;
+  Servis.syncServiceActionType(ServisChecklist._checked[itemId]||'');
+}
+if(noteEl)noteEl.value=note;
+return true;
+},
+syncChecklistFromServiceForm(kind){
+const found=Servis._currentCheckedChecklistItem();
+if(!found||typeof ServisChecklist==='undefined')return false;
+const itemId=found.item.id;
+let changed=false;
+if(kind==='action'||!kind){
+  const action=document.getElementById('servisActionType')?.value||'';
+  if(action&&ServisChecklist._checked[itemId]!==action){
+    const r=ServisChecklist.setActionTypeByItemId(itemId,action);
+    changed=changed||(!!(r&&r.ok));
+  }
+}
+if(kind==='condition'||!kind){
+  const result=document.getElementById('servisConditionResult')?.value||'';
+  const r=ServisChecklist.setConditionResultByItemId(itemId,result);
+  changed=changed||(!!(r&&r.ok));
+}
+if(kind==='note'||!kind){
+  const note=document.getElementById('servisConditionNote')?.value||'';
+  const r=ServisChecklist.setConditionNoteByItemId(itemId,note);
+  changed=changed||(!!(r&&r.ok));
+}
+if(changed&&kind!=='note')Servis.renderServiceChecklist();
+return changed;
+},
 syncServiceActionType(selected){
 const wrap=document.getElementById('servisActionTypeWrap');
 const sel=document.getElementById('servisActionType');
@@ -341,19 +530,81 @@ sel.value=types.includes(wanted)?wanted:types[0];
 wrap.style.display='block';
 if(hint){ const cond=document.getElementById('servisConditionResult')?.value||null; hint.textContent=recommended ? `💡 Rekomendasi: ${recommended==='periksa'?'Periksa':recommended==='bersih'?'Bersihkan':'Ganti'} — Anda tetap bisa mengganti tindakan secara manual.${cond&&typeof serviceConditionLabel==='function'?` Hasil terakhir: ${serviceConditionLabel(cond)}.`:''}` : 'Pilih tindakan aktual secara manual.'; }
 },
-onServiceActionTypeChange(){},
-onServiceConditionResultChange(){Servis.syncServiceActionType(document.getElementById('servisActionType')?.value||'');},
+onServiceActionTypeChange(){
+const selected=document.getElementById('servisActionType')?.value||'';
+Servis.syncChecklistFromServiceForm('action');
+Servis.syncServiceActionType(selected);
+const el=document.getElementById('servisActionType'); if(el&&selected)el.value=selected;
+},
+onServiceConditionResultChange(){
+Servis.syncChecklistFromServiceForm('condition');
+Servis.syncServiceActionType(document.getElementById('servisActionType')?.value||'');
+},
+onServiceConditionNoteChange(){
+Servis.syncChecklistFromServiceForm('note');
+},
 onServiceCategoryChange(){
 if(typeof ServiceInputCatalog==='undefined')return;
-ServiceInputCatalog.onCategoryChange(document.getElementById('servisCategory'),document.getElementById('servisComponent'),document.getElementById('servisItem'));
+const catEl=document.getElementById('servisCategory');
+const compEl=document.getElementById('servisComponent');
+const itemEl=document.getElementById('servisItem');
+ServiceInputCatalog.onCategoryChange(catEl,compEl,itemEl);
+const master=catEl?.value||'';
+Servis._serviceChecklistMasterCategoryIds=master?[master]:[];
+const first=master&&typeof ServisChecklist!=='undefined'?ServisChecklist.findGroupByMasterCategoryId(master):null;
+Servis._serviceChecklistGroupIdx=first?first.groupIdx:null;
+Servis.setEditCanonicalSelection(master,'');
+Servis.renderServiceMasterCategoryChips();
+Servis.renderServiceChecklist();
+Servis.populateCatalogPartSelect('');
 Servis.syncServiceActionType();
 Servis.onItemAutofillInterval();
+if(typeof Servis.syncVisibleServiceSotSelectors==='function')Servis.syncVisibleServiceSotSelectors();
 },
 onServiceComponentChange(){
 if(typeof ServiceInputCatalog==='undefined')return;
-ServiceInputCatalog.onComponentChange(document.getElementById('servisComponent'),document.getElementById('servisCategory'),document.getElementById('servisItem'));
+const compEl=document.getElementById('servisComponent');
+const catEl=document.getElementById('servisCategory');
+const itemEl=document.getElementById('servisItem');
+const hit=ServiceInputCatalog.onComponentChange(compEl,catEl,itemEl);
+const master=catEl?.value||hit?.group?.masterCategoryId||'';
+const component=compEl?.value||hit?.item?.id||'';
+Servis._serviceChecklistMasterCategoryIds=master?[master]:[];
+const first=master&&typeof ServisChecklist!=='undefined'?ServisChecklist.findGroupByMasterCategoryId(master):null;
+Servis._serviceChecklistGroupIdx=first?first.groupIdx:null;
+Servis.setEditCanonicalSelection(master,component);
+Servis.renderServiceMasterCategoryChips();
+Servis.renderServiceChecklist();
 Servis.syncServiceActionType();
 Servis.onItemAutofillInterval();
+Servis.populateCatalogPartSelect('');
+if(typeof Servis.syncVisibleServiceSotSelectors==='function')Servis.syncVisibleServiceSotSelectors();
+},
+ensureServiceJobTypeUI(selectedJobType){
+  if(typeof document==='undefined')return;
+  const catEl=document.getElementById('servisCategory');
+  if(!catEl||!catEl.parentElement)return;
+  let wrap=document.getElementById('servisJobTypeWrap');
+  if(!wrap){
+    wrap=document.createElement('div'); wrap.id='servisJobTypeWrap'; wrap.className='fg';
+    wrap.innerHTML='<label class="fl">Jenis Pekerjaan</label><select class="fs" id="servisJobType" data-onchange="Servis.onServiceJobTypeChange"></select><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Overhaul/Turun Mesin adalah jenis pekerjaan di bawah Servis Mesin, bukan komponen. Checklist hanya mencatat komponen yang benar-benar dikerjakan.</div>';
+    catEl.parentElement.insertAdjacentElement('beforebegin',wrap);
+  }
+  const sel=document.getElementById('servisJobType');
+  const jobs=(typeof ServiceSessionSOT!=='undefined'&&Array.isArray(ServiceSessionSOT.JOB_TYPES))?ServiceSessionSOT.JOB_TYPES:[];
+  if(sel){sel.innerHTML='<option value="">— Pilih bila relevan —</option>'+jobs.map(j=>`<option value="${escapeHtml(j.id)}">${escapeHtml(j.label)}</option>`).join('');sel.value=selectedJobType||'';}
+},
+onServiceJobTypeChange(){
+  const sel=document.getElementById('servisJobType'); const id=sel?sel.value:'';
+  if(!id)return;
+  const job=typeof ServiceSessionSOT!=='undefined'?ServiceSessionSOT.jobType(id):null;
+  if(job&&job.masterCategoryId){
+    const cat=document.getElementById('servisCategory');
+    if(cat){cat.value=job.masterCategoryId; Servis._serviceChecklistMasterCategoryIds=[job.masterCategoryId]; Servis._serviceChecklistGroupIdx=typeof ServisChecklist!=='undefined'&&ServisChecklist.findGroupByMasterCategoryId(job.masterCategoryId)?ServisChecklist.findGroupByMasterCategoryId(job.masterCategoryId).groupIdx:null;}
+    const comp=document.getElementById('servisComponent'); if(comp)comp.value='';
+    if(typeof Servis.renderServiceMasterCategoryChips==='function')Servis.renderServiceMasterCategoryChips();
+    if(typeof Servis.renderServiceChecklist==='function')Servis.renderServiceChecklist();
+  }
 },
 renderServiceInputSelectors(selectedMasterId,selectedComponentId,selectedActionType){
 if(typeof ServiceInputCatalog==='undefined')return;
@@ -472,7 +723,10 @@ if(!s)return;
 if(typeof ServisChecklist!=='undefined'){ ServisChecklist.open(s.vehicleId||curVehicleId); ServisChecklist.loadFromLog(s); Servis._serviceChecklistGroupIdx=ServisChecklist.firstCheckedGroup(); const legacyIds=s.masterCategoryId?[s.masterCategoryId]:[]; const payloadIds=(s.checklist||[]).map(r=>r&&r.masterCategoryId).filter(Boolean); const componentHit=s.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(s.serviceComponentId):null; const inferredGroup=componentHit&&componentHit.group?componentHit.group.masterCategoryId:null; Servis._serviceChecklistMasterCategoryIds=[...new Set(legacyIds.concat(payloadIds).concat(inferredGroup?[inferredGroup]:[]))].filter(id=>ServisChecklist.findGroupByMasterCategoryId(id)); Servis._serviceChecklistGroupIdx=Servis._serviceChecklistMasterCategoryIds.length?ServisChecklist.findGroupByMasterCategoryId(Servis._serviceChecklistMasterCategoryIds[0]).groupIdx:null; }
 document.getElementById('servisDate').value=s.date;
 document.getElementById('servisItem').value=s.item;
+if(typeof ServiceHistorySOTReview!=='undefined'&&ServiceHistorySOTReview&&s.serviceSotStatus==='LEGACY_UNMAPPED')ServiceHistorySOTReview.render(document.getElementById('servisList'),s.vehicleId||curVehicleId);
+if(typeof ServiceHistorySOTReview!=='undefined'&&ServiceHistorySOTReview&&typeof ServiceHistorySOTReview.renderEditNotice==='function')ServiceHistorySOTReview.renderEditNotice(document.getElementById('servisDetailPanel'),s);
 Servis.renderServiceInputSelectors(s.masterCategoryId||'',s.serviceComponentId||'',s.actionType||'ganti');
+Servis.ensureServiceJobTypeUI(s.serviceJobType||'');
 document.getElementById('servisKm').value=s.km||'';
 document.getElementById('servisCost').value=s.cost;
 document.getElementById('servisNote').value=s.note||'';
@@ -499,6 +753,7 @@ if(typeof ServisChecklist!=='undefined'){ ServisChecklist.open(curVehicleId); Se
 document.getElementById('servisDate').value=new Date().toISOString().split('T')[0];
 ['servisItem','servisCost','servisNote'].forEach(id=>document.getElementById(id).value='');
 Servis.renderServiceInputSelectors();
+Servis.ensureServiceJobTypeUI('');
 document.getElementById('servisKm').value=getVehicleKm(curVehicleId)||'';
 if(intervalEl)intervalEl.value='';
 Servis.populatePartSelect('');
@@ -811,6 +1066,9 @@ let matched=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVe
 let masterCategoryId=document.getElementById('servisCategory')?.value||null;
 let serviceComponentId=document.getElementById('servisComponent')?.value||null;
 if(typeof resolveServiceCategoryComponent==='function'){const svcLink=resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,item);masterCategoryId=svcLink.masterCategoryId;serviceComponentId=svcLink.serviceComponentId;}
+const serviceJobTypeId=document.getElementById('servisJobType')?.value||null;
+const serviceJob=serviceJobTypeId&&typeof ServiceSessionSOT!=='undefined'?ServiceSessionSOT.jobType(serviceJobTypeId):null;
+if(serviceJob&&serviceJob.masterCategoryId){masterCategoryId=serviceJob.masterCategoryId;}
 const note=document.getElementById('servisNote').value;
 const accId=document.getElementById('servisAcc')?document.getElementById('servisAcc').value:D.accounts[0]?.id;
 const kmRaw=document.getElementById('servisKm').value.trim();
@@ -906,7 +1164,7 @@ const _historicalFieldsChanged=kmChanged||dateChanged;
 const _metadataOnlyEdit=!_historicalFieldsChanged;
 const _nextSnapshotEdit=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:s.vehicleId||curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:s.actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
 const _preserveHistoricalSnapshot=_metadataOnlyEdit;
-Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,actionType,km,cost,note,accountId:accId,intervalKmAtService:_preserveHistoricalSnapshot?s.intervalKmAtService:_ivSnapshot,intervalBulanAtService:_preserveHistoricalSnapshot?s.intervalBulanAtService:_ibSnapshot,nextDueKm:_preserveHistoricalSnapshot?s.nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_preserveHistoricalSnapshot?s.nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_preserveHistoricalSnapshot?s.nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
+Object.assign(s,{date,item,categoryId:catIdForLog||s.categoryId,masterCategoryId:masterCategoryId||s.masterCategoryId||null,serviceComponentId:serviceComponentId||s.serviceComponentId||null,serviceJobType:serviceJobTypeId||s.serviceJobType||null,serviceJobLabel:serviceJob?serviceJob.label:(s.serviceJobLabel||null),serviceJobEvidence:serviceJobTypeId?'manual':(s.serviceJobEvidence||null),actionType,km,cost,note,accountId:accId,intervalKmAtService:_preserveHistoricalSnapshot?s.intervalKmAtService:_ivSnapshot,intervalBulanAtService:_preserveHistoricalSnapshot?s.intervalBulanAtService:_ibSnapshot,nextDueKm:_preserveHistoricalSnapshot?s.nextDueKm:_nextSnapshotEdit.nextDueKm,nextDueDate:_preserveHistoricalSnapshot?s.nextDueDate:_nextSnapshotEdit.nextDueDate,nextDueAxis:_preserveHistoricalSnapshot?s.nextDueAxis:_nextSnapshotEdit.nextDueAxis,usedPartId:usedPartId||null,usedPartQty:usedPartId?usedPartQty:0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartId?catalogPartQty:0,catalogPartOemCode:catalogPartId?catalogPartOemCode:'',catalogPartLinkedStockId:catalogLinkedStockId||null,foto:Servis._photoDraft.slice(),checklist:checklistPayload});
 s.checklistNotApplicable=checklistNotApplicable; s.conditionResult=conditionResult; s.conditionNote=conditionNote;
 
 if(_metadataOnlyEdit){
@@ -997,7 +1255,7 @@ _rowsToPersist.forEach((_row,_rowIdx)=>{
   const _rowIv=(typeof getEffectiveIntervalKm==='function'&&_rowCat)?getEffectiveIntervalKm(curVehicleId,_rowCat):(_rowCat&&_rowCat.intervalKm>0?_rowCat.intervalKm:null);
   const _rowIb=(typeof getEffectiveIntervalBulan==='function'&&_rowCat)?getEffectiveIntervalBulan(_rowCat,curVehicleId):(_rowCat&&_rowCat.intervalBulan>0?_rowCat.intervalBulan:null);
   const _rowNext=(typeof buildServiceNextDueSnapshot==='function'&&_rowCat)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_rowCat,serviceKm:km,serviceDate:date,actionType:_rowActionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
-  D.servisLogs.push({id:_rowIdx===0?servisId:uid(),sessionId:_serviceSessionId,vehicleId:curVehicleId,date,item:_rowItem,categoryId:_rowCategoryId,masterCategoryId:_rowMasterCategoryId,serviceComponentId:_row.serviceComponentId||null,actionType:_rowActionType,km,cost:_rowIdx===0?cost:0,note,accountId:accId,txLinkId:_rowIdx===0?txId:null,intervalKmAtService:_rowIv,intervalBulanAtService:_rowIb,nextDueKm:_rowNext.nextDueKm,nextDueDate:_rowNext.nextDueDate,nextDueAxis:_rowNext.nextDueAxis,usedPartId:_rowIdx===0?(usedPartId||null):null,usedPartQty:_rowIdx===0?(usedPartId?usedPartQty:0):0,catalogPartId:_rowIdx===0?(catalogPartId||null):null,catalogPartQty:_rowIdx===0?(catalogPartId?catalogPartQty:0):0,catalogPartOemCode:_rowIdx===0?(catalogPartId?catalogPartOemCode:''):'',catalogPartLinkedStockId:_rowIdx===0?(catalogLinkedStockId||null):null,foto:_rowIdx===0?Servis._photoDraft.slice():[],checklist:[_row],checklistNotApplicable,conditionResult:_rowIdx===0?conditionResult:null,conditionNote:_rowIdx===0?conditionNote:''});
+  D.servisLogs.push({id:_rowIdx===0?servisId:uid(),sessionId:_serviceSessionId,vehicleId:curVehicleId,date,item:_rowItem,categoryId:_rowCategoryId,masterCategoryId:_rowMasterCategoryId,serviceComponentId:_row.serviceComponentId||null,serviceJobType:serviceJobTypeId||null,serviceJobLabel:serviceJob?serviceJob.label:null,serviceJobEvidence:serviceJobTypeId?'manual':null,actionType:_rowActionType,km,cost:_rowIdx===0?cost:0,note,accountId:accId,txLinkId:_rowIdx===0?txId:null,intervalKmAtService:_rowIv,intervalBulanAtService:_rowIb,nextDueKm:_rowNext.nextDueKm,nextDueDate:_rowNext.nextDueDate,nextDueAxis:_rowNext.nextDueAxis,usedPartId:_rowIdx===0?(usedPartId||null):null,usedPartQty:_rowIdx===0?(usedPartId?usedPartQty:0):0,catalogPartId:_rowIdx===0?(catalogPartId||null):null,catalogPartQty:_rowIdx===0?(catalogPartId?catalogPartQty:0):0,catalogPartOemCode:_rowIdx===0?(catalogPartId?catalogPartOemCode:''):'',catalogPartLinkedStockId:_rowIdx===0?(catalogLinkedStockId||null):null,foto:_rowIdx===0?Servis._photoDraft.slice():[],checklist:[_row],checklistNotApplicable,conditionResult:_rowIdx===0?conditionResult:null,conditionNote:_rowIdx===0?conditionNote:'',costBreakdown:{total:_rowIdx===0?cost:0,labor:null,parts:null,consumables:null,other:null,source:'service_entry'},serviceEvidence:{vehicleId:curVehicleId,transactionId:_rowIdx===0?txId:null,sessionId:_serviceSessionId,reminderPackageId:null,odometer:km,date,photos:_rowIdx===0?Servis._photoDraft.slice():[]}});
 });
 
 save({domain:'servis',financeMutation:!!txId,accountIds:txId?[accId]:[]});
@@ -1056,6 +1314,7 @@ if(reminderBtn)reminderBtn.classList.toggle('active',next==='reminder');
 if(next==='reminder')Servis.renderEditReminderTab();
 Servis._editTab=next;
 },
+// S1904 contract: renderEditCanonicalSelectors(panel,reminderSelection,{disabled:true,prefix:'servisReminderSot'})
 renderEditReminderTab(){
 const panel=document.getElementById('servisReminderPanel');
 if(!panel||Servis.editId===null)return;
@@ -1106,6 +1365,64 @@ ${Servis._renderEditHistoryHtml(s)}
 <div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori/komponen → interval efektif → reminder → riwayat</b>. Mengubah interval dilakukan melalui pengaturan kategori/override kendaraan, bukan membuat field interval baru di riwayat.</div>`;
 },
 
+renderEditHistoryTab(){
+const panel=document.getElementById('servisHistoryPanel');
+if(!panel||Servis.editId===null)return;
+const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId);
+if(!current){panel.innerHTML='<div class="empty"><div class="empty-text">Data riwayat servis tidak ditemukan.</div></div>';return;}
+const vehicleId=current.vehicleId||curVehicleId;
+const vehicle=(D.vehicles||[]).find(v=>v&&v.id===vehicleId);
+const resolveCat=(log)=>{
+  const preferred=log&&log.categoryId?(D.sparepartCats||[]).find(c=>c&&c.id===log.categoryId&&(!c.vehicleId||c.vehicleId===vehicleId)):null;
+  return preferred||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(log&&log.item||'',vehicleId):null);
+};
+const currentCat=resolveCat(current);
+const currentComponentId=current.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(current):null);
+const sameComponent=(log)=>{
+  if(!log||log.vehicleId!==vehicleId)return false;
+  const logComponent=log.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):null);
+  if(currentComponentId&&logComponent)return String(currentComponentId)===String(logComponent);
+  if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
+  return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
+};
+const history=(D.servisLogs||[]).filter(sameComponent).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
+const resetFilter=currentCat&&typeof resolveResetActionTypeFilter==='function'?resolveResetActionTypeFilter(currentCat):null;
+const matchesReset=(log)=>typeof Servis._matchesActionTypeForReset==='function'?Servis._matchesActionTypeForReset(log,currentCat,resetFilter,true):(!resetFilter||(log.actionType||'ganti')===resetFilter);
+const activeLog=history.find(matchesReset)||history[0]||null;
+const urgency=currentCat&&(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId,cat:currentCat,curKm:typeof getVehicleKm==='function'?getVehicleKm(vehicleId):null,kmPerDay:typeof estimateKmPerDay==='function'?estimateKmPerDay(vehicleId):null}):null;
+const dueHtml=urgency&&urgency.status&&urgency.status!=='aman'||urgency&&((urgency.sisaKm!=null)||(urgency.sisaBulan!=null)||(urgency.sisaHari!=null))?(()=>{
+  const late=urgency.status==='terlewat'||urgency.status==='jatuh_tempo';
+  if(late){
+    const lateKm=urgency.sisaKm!=null&&urgency.sisaKm<0?` · lewat ${Math.abs(Math.round(urgency.sisaKm)).toLocaleString('id-ID')} km`:'';
+    return `<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--accent2-soft,rgba(220,70,70,.08));color:var(--accent2,#b44);font-size:11px;font-weight:700">🔴 Jatuh tempo servis${lateKm}</div>`;
+  }
+  const parts=[];
+  if(urgency.sisaKm!=null)parts.push(`Sisa ${Math.max(0,Math.round(urgency.sisaKm)).toLocaleString('id-ID')} km`);
+  if(urgency.sisaBulan!=null)parts.push(`~${Math.max(0,Math.round(urgency.sisaBulan))} bln`);
+  if(urgency.sisaHari!=null)parts.push(`${Math.max(0,Math.round(urgency.sisaHari))} hari`);
+  if(urgency.estDateISO)parts.push(new Date(urgency.estDateISO+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}));
+  return parts.length?`<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--accent-soft);color:var(--accent);font-size:11px;font-weight:700">🟢 ${escapeHtml(parts.join(' · '))}</div>`:'';
+})():'';
+const summary=history.length?`${history.length} riwayat tercatat`:'Belum ada riwayat tercatat';
+const latestLabel=history[0]&&history[0].date?`${history[0].date}${history[0].km?' · '+Number(history[0].km).toLocaleString('id-ID')+' km':''}`:'-';
+const componentLabel=currentComponentId&&typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'?(ServiceInputCatalog.itemById(currentComponentId)||{}).item?.name:null;
+const title=componentLabel||current.item||currentCat&&currentCat.name||'Komponen servis';
+const condition=(log)=>log&&log.conditionResult&&typeof serviceConditionLabel==='function'?`<div class="u-fs11" style="margin-top:5px">${typeof serviceConditionIcon==='function'?serviceConditionIcon(log.conditionResult):'🩺'} ${escapeHtml(serviceConditionLabel(log.conditionResult))}</div>`:'';
+const note=(log)=>log&&log.conditionNote?`<div class="u-fs11 u-t2" style="margin-top:4px">🩺 ${escapeHtml(log.conditionNote)}</div>`:(log&&log.note?`<div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(log.note)}</div>`:'');
+const action=(log)=>log&&log.actionType?`<div class="u-fs12 u-fw700" style="margin-top:6px">${log.actionType==='ganti'?'🔧 Ganti':log.actionType==='bersih'?'🧹 Bersihkan':log.actionType==='periksa'?'🔍 Periksa':'📝 '+escapeHtml(log.actionType)}</div>`:'';
+const rows=history.map((log,idx)=>{
+  const isActive=activeLog&&log.id===activeLog.id;
+  const badge=isActive?'<span style="padding:4px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:10px;font-weight:700">● Reminder aktif</span>':`<span style="padding:4px 8px;border-radius:999px;background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700">${idx===0?'Terbaru':'Sebelumnya'}</span>`;
+  return `<div style="background:var(--surface3);border-radius:14px;padding:12px;margin-bottom:8px;border:1px solid ${isActive?'var(--accent)':'var(--border)'}"><div class="u-flex u-jcb u-aic" style="gap:8px"><div class="u-fw700 u-fs12">📅 ${escapeHtml(log.date||'-')}${log.km?' · '+Number(log.km).toLocaleString('id-ID')+' km':''}</div>${badge}</div>${action(log)}${condition(log)}${note(log)}${isActive?dueHtml:''}</div>`;
+}).join('');
+const sotSelectors=Servis.renderEditCanonicalSelectors(panel,Servis.resolveCanonicalServiceSelection(current),{disabled:true,prefix:'servisHistorySot'});
+const currentCatalogId=current.catalogPartId||'';
+const catalogInfo=currentCatalogId?`<div class="fg"><label class="fl">Part Katalog (SOT)</label><div id="servisHistoryCatalogPart" data-catalog-part-id="${escapeHtml(currentCatalogId)}" style="background:var(--surface3);border-radius:12px;padding:10px 12px">Memuat part katalog…</div></div>`:'';
+panel.innerHTML=`<div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">📋 Riwayat ${escapeHtml(title)}</div><div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(summary)} · terakhir ${escapeHtml(latestLabel)}</div><div class="u-fs11 u-t2" style="margin-top:4px">Hanya baseline interval terbaru yang menjalankan countdown. Riwayat lama tidak menjalankan countdown lagi.</div></div>${sotSelectors}${catalogInfo}<div class="fg"><label class="fl">Riwayat Servis</label>${rows||'<div class="u-fs12t2">Belum ada riwayat untuk komponen ini.</div>'}</div><div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori servis → komponen servis → part katalog → riwayat</b>. Pengingat aktif tetap hanya baseline terbaru.</div>`;
+if(currentCatalogId&&typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getById==='function'){
+  VehicleCatalog.getById(currentCatalogId).then(it=>{const el=document.getElementById('servisHistoryCatalogPart');if(!el)return;el.textContent=it?(it.partName||'(Tanpa nama)')+(it.oemCode?' — '+it.oemCode:''):'Part katalog tidak ditemukan';}).catch(()=>{const el=document.getElementById('servisHistoryCatalogPart');if(el)el.textContent='Part katalog tidak dapat dimuat';});
+}
+},
 _renderEditHistoryHtml(s){
 const hist=Array.isArray(s&&s.editHistory)?s.editHistory:[];
 if(!hist.length)return'';

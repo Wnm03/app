@@ -1,0 +1,8 @@
+'use strict';
+/* S1915 — descriptive maintenance intelligence; never auto-decides service. */
+(function(root){
+ const arr=v=>Array.isArray(v)?v:[];const n=v=>{const x=Number(v);return Number.isFinite(x)?x:null};
+ function analyze(rows,vehicleId,componentId){const r=arr(rows).filter(x=>x&&(!vehicleId||String(x.vehicleId)===String(vehicleId))&&(!componentId||String(x.serviceComponentId)===String(componentId))).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||((n(a.km)??Infinity)-(n(b.km)??Infinity)));if(r.length<2)return{ok:true,count:r.length,observation:'insufficient',rateKmPerEvent:null,daysBetween:null,lastKm:r.length?n(r[r.length-1].km):null,source:'D.servisLogs',readOnly:true};const first=r[0],last=r[r.length-1],dk=(n(last.km)!=null&&n(first.km)!=null)?n(last.km)-n(first.km):null,dd=(first.date&&last.date)?(new Date(last.date+'T00:00:00')-new Date(first.date+'T00:00:00'))/86400000:null;return{ok:true,count:r.length,observation:'historical-descriptive',rateKmPerEvent:dk!=null?(dk/(r.length-1)):null,daysBetween:dd!=null?dd/(r.length-1):null,lastKm:n(last.km),lastDate:last.date||null,source:'D.servisLogs',readOnly:true};}
+ function forVehicle(rows,vehicleId){const ids=new Set(arr(rows).filter(r=>r&&String(r.vehicleId)===String(vehicleId)&&r.serviceComponentId).map(r=>String(r.serviceComponentId)));return [...ids].map(id=>({serviceComponentId:id,...analyze(rows,vehicleId,id)}));}
+ const api={version:'S1915-V2',analyze,forVehicle};if(root)root.MaintenanceIntelligenceV2=api;if(typeof globalThis!=='undefined')globalThis.MaintenanceIntelligenceV2=api;if(typeof module!=='undefined')module.exports=api;
+})(typeof window!=='undefined'?window:globalThis);
