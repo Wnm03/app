@@ -1255,6 +1255,7 @@ servisVehSelEdit.value=linkedServisLog.vehicleId;
 const servisItemEditEl=document.getElementById('txServisItem');
 if(servisItemEditEl)servisItemEditEl.value=linkedServisLog.item||'';
 if(typeof renderTxServisSelectors==='function')renderTxServisSelectors(linkedServisLog.masterCategoryId||'',linkedServisLog.serviceComponentId||'');
+if(linkedServisLog.reminderPackageId&&typeof populateTxServisReminderPackages==='function'){populateTxServisReminderPackages(linkedServisLog.reminderPackageId);if(typeof applyTxServisReminderPackage==='function')applyTxServisReminderPackage(linkedServisLog.reminderPackageId);}
 const servisKmEditEl=document.getElementById('txServisKm');
 if(servisKmEditEl)servisKmEditEl.value=(linkedServisLog.km!=null)?linkedServisLog.km:'';
 }

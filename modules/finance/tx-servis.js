@@ -72,7 +72,7 @@ const chk=document.getElementById('txSyncServis');
 const fields=document.getElementById('txServisFields');
 if(!chk||!fields)return;
 fields.style.display=chk.checked?'block':'none';
-if(chk.checked){populateTxServisVehicleSelect();renderTxServisSelectors();}
+if(chk.checked){populateTxServisVehicleSelect();if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages();renderTxServisSelectors();if(typeof renderTxServisReminderPackage==='function')renderTxServisReminderPackage();}
 }
 function renderTxServisSelectors(selectedMasterId,selectedComponentId){
 const catEl=document.getElementById('txServisCategory');
@@ -90,7 +90,9 @@ ServiceInputCatalog.populateCategorySelect(catEl,selectedMasterId||'');
 const master=selectedMasterId||catEl&&catEl.value||'';
 ServiceInputCatalog.populateComponentSelect(compEl,master,selectedComponentId||'');
 if(itemEl&&itemEl.value)ServiceInputCatalog.sync(catEl,compEl,itemEl);
+if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages((typeof window!=='undefined'&&window.__txServisReminderPackageId)||null);
 renderTxServisChecklist();
+if(typeof renderTxServisReminderPackage==='function')renderTxServisReminderPackage();
 }
 function onTxServisCategoryChange(){
 if(typeof ServiceInputCatalog==='undefined')return;
@@ -258,7 +260,8 @@ Object.assign(s,{
   vehicleId,
   masterCategoryId:masterCategoryId||s.masterCategoryId||null,
   serviceComponentId:componentId||s.serviceComponentId||null,
-  checklist:checklist.length?checklist:s.checklist||[]
+  checklist:checklist.length?checklist:s.checklist||[],
+  reminderPackageId:opts.reminderPackageId||s.reminderPackageId||null
 });
 if(catIdForLog)s.categoryId=catIdForLog;
 const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
@@ -357,8 +360,52 @@ let box=document.getElementById('txServisChecklistPanel');
 if(!box){box=document.createElement('div');box.id='txServisChecklistPanel';fields.appendChild(box);}
 return box;
 }
+function getTxServisPackageState(){
+return {id:(typeof window!=='undefined'&&window.__txServisReminderPackageId)||null,targets:(typeof window!=='undefined'&&Array.isArray(window.__txServisReminderTargets)?window.__txServisReminderTargets:[])};
+}
+function clearTxServisReminderPackage(){
+if(typeof window!=='undefined'){window.__txServisReminderPackageId=null;window.__txServisReminderTargets=[];}
+const sel=document.getElementById('txServisReminderPackage'); if(sel)sel.value='';
+renderTxServisChecklist();
+}
+function applyTxServisReminderPackage(packageId){
+if(typeof window==='undefined'||typeof ServiceReminderPackageSOT==='undefined')return;
+const p=ServiceReminderPackageSOT.byId(packageId);
+if(!p){clearTxServisReminderPackage();return;}
+const vehicle=document.getElementById('txServisVehicle')?.value||'';
+if(vehicle&&p.vehicleId&&String(vehicle)!==String(p.vehicleId)){toast('⚠️ Paket Pengingat berasal dari kendaraan lain');return;}
+window.__txServisReminderPackageId=p.id;
+window.__txServisReminderTargets=Array.isArray(p.targets)?p.targets.map(t=>Object.assign({},t)):[];
+const itemEl=document.getElementById('txServisItem');
+if(itemEl&&!itemEl.value.trim())itemEl.value=p.title||p.serviceJobLabel||'Servis';
+const catIds=[...new Set(window.__txServisReminderTargets.map(t=>t.masterCategoryId).filter(Boolean))];
+const compIds=[...new Set(window.__txServisReminderTargets.map(t=>t.serviceComponentId).filter(Boolean))];
+if(catIds.length===1){const catEl=document.getElementById('txServisCategory');if(catEl){catEl.value=catIds[0];onTxServisCategoryChange();}}
+if(compIds.length===1){const compEl=document.getElementById('txServisComponent');if(compEl){compEl.value=compIds[0];onTxServisComponentChange();}}
+renderTxServisChecklist();
+}
+function populateTxServisReminderPackages(selectedId){
+const sel=document.getElementById('txServisReminderPackage'); if(!sel)return;
+const vehicle=document.getElementById('txServisVehicle')?.value||'';
+const list=typeof ServiceReminderPackageSOT!=='undefined'&&typeof ServiceReminderPackageSOT.get==='function'?ServiceReminderPackageSOT.get(vehicle):[];
+const active=list.filter(p=>p&&p.status!=='DISMISSED');
+sel.innerHTML='<option value="">— Tanpa Paket Pengingat —</option>'+active.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.title||'Paket Servis')} · ${p.targets?.length||0} komponen${p.dueMode==='RECOMMENDED_REVIEW'?' · review':''}</option>`).join('');
+sel.value=selectedId&&active.some(p=>String(p.id)===String(selectedId))?selectedId:'';
+}
+function renderTxServisReminderPackage(){
+const box=document.getElementById('txServisReminderPackageInfo'); if(!box)return;
+const st=getTxServisPackageState();
+if(!st.id||!st.targets.length){box.innerHTML='';return;}
+const cats=new Set(st.targets.map(t=>t.masterCategoryId||t.categoryId).filter(Boolean));
+box.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border2);border-radius:10px;padding:10px;margin-top:8px"><div class="u-fw700 u-fs12">📦 Paket Pengingat aktif</div><div class="u-fs11 u-t2">${st.targets.length} komponen · ${cats.size} kategori. Semua target disimpan di checklist Service Event yang sama.</div><div style="margin-top:6px">${st.targets.map(t=>`<span style="display:inline-block;padding:3px 7px;border:1px solid var(--border2);border-radius:999px;margin:2px;font-size:10px">${escapeHtml(t.componentName||t.categoryName||'Komponen')}</span>`).join('')}</div><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px" data-action="TxServis.clearReminderPackage">Lepas Paket</button></div>`;
+}
 function renderTxServisChecklist(){
 const box=ensureTxServisChecklistPanel(); if(!box)return;
+const st=getTxServisPackageState();
+if(st.id&&st.targets.length){
+ box.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-top:10px"><div class="u-fw700 u-fs12">☑️ Checklist Paket Servis</div><div class="u-fs11 u-t2" style="margin:3px 0 8px">Target paket berasal dari SOT Reminder Package. Kategori tiap komponen dipertahankan.</div>${st.targets.map(t=>`<div style="padding:7px 0;border-bottom:1px solid var(--border2)"><div class="u-fw700 u-fs12">${escapeHtml(t.componentName||t.categoryName||'Komponen')}</div><div class="u-fs11 u-t2">${escapeHtml(t.categoryName||t.masterCategoryId||'Kategori tidak dicantumkan')}</div></div>`).join('')}</div>`;
+ return;
+}
 const masterId=document.getElementById('txServisCategory')?.value||'';
 const found=typeof ServisChecklist.findGroupByMasterCategoryId==='function'?ServisChecklist.findGroupByMasterCategoryId(masterId):null;
 if(!found){box.innerHTML='<div style="font-size:11px;color:var(--text2);padding:10px 0">Pilih Kategori Servis untuk menampilkan checklist komponennya.</div>';return;}
@@ -370,6 +417,9 @@ box.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--bor
 const TxServis=typeof window!=='undefined'?(window.TxServis=window.TxServis||{}):{};
 TxServis.toggleChecklist=function(groupIdx,itemIdx){if(typeof ServisChecklist==='undefined')return;ServisChecklist.toggleItem(Number(groupIdx),Number(itemIdx));renderTxServisChecklist();};
 TxServis.setChecklistAction=function(groupIdx,itemIdx,type){if(typeof ServisChecklist==='undefined')return;ServisChecklist.setActionType(Number(groupIdx),Number(itemIdx),type);renderTxServisChecklist();};
+TxServis.applyReminderPackage=function(packageId){applyTxServisReminderPackage(packageId);};
+TxServis.clearReminderPackage=function(){clearTxServisReminderPackage();};
+TxServis.onVehicleChange=function(){if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages();if(typeof clearTxServisReminderPackage==='function')clearTxServisReminderPackage();};
 async function applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx){
 const run=async()=>{
 const chk=document.getElementById('txSyncServis');
@@ -382,6 +432,8 @@ if(autoService){
   _ensureAutoServisFields();
 }
 const vehicleId=document.getElementById('txServisVehicle').value;
+if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages((typeof window!=='undefined'&&window.__txServisReminderPackageId)||null);
+if(typeof renderTxServisReminderPackage==='function')renderTxServisReminderPackage();
 // P14 — vehicle isolation: a Finance transaction that already has a vehicle
 // identity must never be linked to a service event for another vehicle.
 const txVehicleId=tx&&tx.vehicleId!=null?tx.vehicleId:(existingTx&&existingTx.vehicleId!=null?existingTx.vehicleId:null);
@@ -404,9 +456,17 @@ if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk transaksi servis');return
 const existingServisId=(existingTx&&existingTx.servisLinkId)?existingTx.servisLinkId:null;
 const purchasedPartId=(tx&&tx.partStockId)?tx.partStockId:null;
 const purchasedPartQty=purchasedPartId?(tx.partStockQty||0):0;
-const checklist=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
-const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist});
+let checklist=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
+const pkgState=getTxServisPackageState();
+if(pkgState.id&&pkgState.targets.length){
+  checklist=pkgState.targets.map(t=>({itemId:t.serviceComponentId||null,itemName:t.componentName||t.categoryName||item,group:t.categoryName||null,masterCategoryId:t.masterCategoryId||null,categoryId:t.categoryId||null,serviceComponentId:t.serviceComponentId||null,actionType:'periksa',conditionResult:null,conditionNote:'',notApplicable:false,targetKey:[t.categoryId||'',t.masterCategoryId||'',t.serviceComponentId||'',t.catalogPartId||''].join('|'),reminderPackageId:pkgState.id}));
+}
+const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist,reminderPackageId:pkgState.id});
 if(tx)tx.servisLinkId=servisId;
+if(pkgState.id&&typeof ServiceReminderPackageSOT!=='undefined'&&typeof ServiceReminderPackageSOT.completeFromHistory==='function'){
+  const completed=ServiceReminderPackageSOT.completeFromHistory(pkgState.id,[servisId]);
+  if(!completed.ok)console.warn('S1945: reminder package completion deferred',completed);
+}
 if(typeof Sparepart!=='undefined'&&Sparepart.renderStockList)Sparepart.renderStockList();
 if(typeof Sparepart!=='undefined'&&Sparepart.renderCatList)Sparepart.renderCatList();
 if(typeof renderCnTab==='function')renderCnTab();
