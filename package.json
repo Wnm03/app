@@ -47,7 +47,11 @@
     "release:final-gate": "node scripts/release-final-gate.js",
     "audit:production-readiness": "node scripts/audit-production-readiness.js",
     "test:full:fast": "TEST_SHARDS=64 TEST_CONCURRENCY=8 TEST_SHARD_TIMEOUT_MS=90000 node scripts/run-full-test.js",
-    "audit:backup-integrity": "node --test tests/s1901-backup-integrity-and-error-safety.test.js"
+    "audit:backup-integrity": "node --test tests/s1901-backup-integrity-and-error-safety.test.js",
+    "audit:system-integrity": "node scripts/system-integrity-audit.js",
+    "audit:safe-recommendations": "node scripts/safe-recommendation-audit.js",
+    "audit:release-closure": "node scripts/release-gate-closure-audit.js",
+    "audit:document-status": "node scripts/document-status-audit.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

@@ -60,6 +60,8 @@ Prioritas tertinggi PALING ATAS. Satu item = target 1 sesi.
 > referensi sesi/test masing-masing. Tidak ada perubahan logic/behavior
 > sesi ini — murni sinkronisasi dokumentasi ke source.
 
+> **S1942 STATUS RECONCILIATION:** `docs/PROJECT-STATUS-REGISTRY.md` adalah SOT status pekerjaan. `TODO.md` dipertahankan sebagai sejarah roadmap. Frasa historis **BELUM/TODO/NEXT SESSION** bukan backlog aktif kecuali diregistrasikan ulang. `docs/KNOWN-ISSUES-REGISTRY.md` memisahkan limitation, environment limitation, dan backlog.
+
 ## Bill/Piutang/Debt — dari Sesi Audit 2026-08-01
 
 Diimplementasikan dari hasil audit eksternal (`docs/BUG_REGISTRY.md` §0a).
