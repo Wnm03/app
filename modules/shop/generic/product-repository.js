@@ -302,14 +302,20 @@ const ProductRepository = {
   // sekali (bukan partial write).
   // Return {ok:true, stock} (stock SUDAH ditulis) atau {ok:false, reason}
   // (stock TIDAK berubah).
-  mutateStockDelta(product, delta) {
+  mutateStockDelta(product, delta, meta = {}) {
     if (!product || typeof product !== 'object' || Array.isArray(product)) {
       return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
     }
     const v = this.validateStockDelta(product.stock, delta);
     if (!v.ok) return v;
+    if (meta && meta.idempotencyKey && typeof ShopInventoryLedger !== 'undefined' && ShopInventoryLedger.hasIdempotencyKey(meta.idempotencyKey)) {
+      return { ok: true, stock: Number(product.stock)||0, duplicate: true };
+    }
+    const before = Number(product.stock)||0;
     product.stock = v.value;
-    return { ok: true, stock: v.value };
+    let ledger = null;
+    if (typeof ShopInventoryLedger !== 'undefined') ledger = ShopInventoryLedger.record(Object.assign({}, meta, { productId: product.id, before, after:v.value, delta:v.value-before }));
+    return { ok: true, stock: v.value, ledger };
   },
 
   // mutateSetStock(product, value) — GATE utk SET stok absolut in-place,
@@ -317,14 +323,20 @@ const ProductRepository = {
   // (shop-data-io-api.js/cobek-io.js) yang sebelumnya nulis
   // `product.stock = r.stock` mentah tanpa validasi apapun (bisa NaN kalau
   // file import korup/kolom kosong ke-parse jadi NaN).
-  mutateSetStock(product, value) {
+  mutateSetStock(product, value, meta = {}) {
     if (!product || typeof product !== 'object' || Array.isArray(product)) {
       return { ok: false, reason: 'Produk tidak valid — harus berupa object' };
     }
     const v = this.validateStockValue(value);
     if (!v.ok) return v;
+    if (meta && meta.idempotencyKey && typeof ShopInventoryLedger !== 'undefined' && ShopInventoryLedger.hasIdempotencyKey(meta.idempotencyKey)) {
+      return { ok: true, stock: Number(product.stock)||0, duplicate: true };
+    }
+    const before = Number(product.stock)||0;
     product.stock = v.value;
-    return { ok: true, stock: v.value };
+    let ledger = null;
+    if (typeof ShopInventoryLedger !== 'undefined' && before !== v.value) ledger = ShopInventoryLedger.record(Object.assign({}, meta, { productId: product.id, before, after:v.value, delta:v.value-before }));
+    return { ok: true, stock: v.value, ledger };
   },
 
   // === Modul 4 (sesi ini): Price Mutation Gate ==============================
