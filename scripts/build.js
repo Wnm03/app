@@ -395,7 +395,7 @@ const GROUP_B = [
   'modules/vehicle/vehicle-catalog-certification-sot.js',
   'modules/vehicle/vehicle-part-sot.js',
   'modules/vehicle/vehicle-service-sot.js',
-  'modules/vehicle/vehicle-service-reminder-sot.js',
+  'modules/vehicle/vehicle-service-reminder-sot.js','modules/vehicle/service-reminder-package-sot.js',
   'modules/vehicle/vehicle-sot-fleet-integrity.js',
   'modules/vehicle/vehicle-category-sot.js',
   'modules/vehicle/vehicle-stock-sot.js',
@@ -627,6 +627,11 @@ const GROUP_B = [
   // The DB adapter reuses the existing IDBStore key/value architecture; no second DB wrapper.
   'modules/vehicle/service-master-data.generated.js',
   'modules/vehicle/service-master-database.js',
+  // Service History SOT normalizer: deterministic legacy cleanup; no catalog/price requirement.
+  'modules/vehicle/service-history-sot-normalizer.js',
+  'modules/vehicle/service-history-sot-review.js',
+  'modules/vehicle/service-session-sot.js',
+  'modules/vehicle/service-event-sot.js',
   'modules/vehicle/parts-catalog-database.js',
   'modules/vehicle/vehicle-maintenance-template-engine.js',
   'modules/vehicle/honda-pdf-catalog-auto-import.js',
@@ -1186,6 +1191,7 @@ const GROUP_B = [
   // ownership) di blok yang sama — 0 forward-reference. SAMA POLA Tahap 1-3:
   // pure wrapper, additive, BELUM dihubungkan ke UI/Etalase.save()/modul
   // lain mana pun sesi ini (lihat LAPORAN-TAHAP4-GENERIC-SHOP-ENGINE.md).
+  'modules/shop/shop-inventory-ledger.js',
   'modules/shop/generic/product-repository.js',
 
   // S203 (Continue — Delivery Plan UI): DeliveryPlanUI, presenter yang
