@@ -45,12 +45,24 @@ if(boxEl)boxEl.classList.add('u-dnone');
 toast('✅ Interval diisi '+km.toLocaleString('id-ID')+' km, cek dulu sebelum simpan');
 },
 async deleteFromModal(){
-if(Sparepart.catEditIdx===null)return;
+const editId=Sparepart.catEditId;
+if(editId===null||editId===undefined)return;
+const idx=D.sparepartCats.findIndex(c=>c&&String(c.id)===String(editId));
+if(idx<0)return;
 const before=D.sparepartCats.length;
-await Sparepart.delCat(Sparepart.catEditIdx);
+await Sparepart.delCat(idx);
 if(D.sparepartCats.length<before) closeModal('sparepartModal');
 },
 saveCat(){
+// S1965: ID is canonical; catEditIdx remains a backward-compatible bridge for
+// older callers/tests that still seed the legacy index state directly.
+let editId=Sparepart.catEditId;
+if(editId===null||editId===undefined){
+  const legacyIdx=Sparepart.catEditIdx;
+  if(Number.isInteger(legacyIdx)&&legacyIdx>=0&&legacyIdx<D.sparepartCats.length&&D.sparepartCats[legacyIdx])editId=String(D.sparepartCats[legacyIdx].id);
+}
+const editMode=editId!==null&&editId!==undefined;
+if(editMode)Sparepart.catEditId=String(editId);
 const name=document.getElementById('sparepartName').value.trim();
 const interval=parseFloat(document.getElementById('sparepartInterval').value);
 const bulanEl=document.getElementById('sparepartIntervalBulan');
@@ -82,7 +94,7 @@ masterCategoryId=linkage.masterCategoryId; serviceComponentId=linkage.serviceCom
 // populateVehicleSelect()), jadi baca LANGSUNG dari select, bukan dipaksa
 // curVehicleId lagi.
 let vehicleId;
-if(Sparepart.catEditIdx!==null){
+if(editMode){
 const selEl=document.getElementById('sparepartVehicleId');
 const selVal=selEl?selEl.value:'';
 vehicleId=(selVal&&D.vehicles.some(v=>v.id===selVal))?selVal:null;
@@ -101,8 +113,10 @@ vehicleId=(vid622&&D.vehicles.some(v=>v.id===vid622))?vid622:null;
 // kedua baru dianggap sinyal reset eksplisit dari user.
 const groupSelEl=document.getElementById('sparepartGroupId');
 const groupSelVal=groupSelEl?groupSelEl.value:'';
-if(Sparepart.catEditIdx!==null){
-const editCat=D.sparepartCats[Sparepart.catEditIdx];
+if(editMode){
+const editIdx=D.sparepartCats.findIndex(c=>c&&String(c.id)===String(editId));
+const editCat=editIdx>=0?D.sparepartCats[editIdx]:null;
+if(!editCat){toast('⚠️ Kategori sparepart sudah tidak tersedia');return;}
 // FITUR BARU (audit lanjutan grouping, sesi lalu v1641): kalau nama ATAU
 // kendaraan berubah, `group`/`groupIcon` tersimpan ikut direcompute lewat
 // resolveCatGroup() -- 2 hal itu satu-satunya input match TORSI_DB (lihat

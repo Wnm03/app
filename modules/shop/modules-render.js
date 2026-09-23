@@ -1316,9 +1316,6 @@ if(typeof OwnershipSettingsPresenter!=='undefined')OwnershipSettingsPresenter.re
 if(typeof BackupHealthPresenter!=='undefined')BackupHealthPresenter.render();
 if(typeof BackupHistoryPresenter!=='undefined')BackupHistoryPresenter.render();
 renderAccGrid();
-renderCatList();
-renderSparepartCatList();
-renderStockList();
 renderBillList();
 renderTarget();
 EduFund.render();

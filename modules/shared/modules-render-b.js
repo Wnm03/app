@@ -5,6 +5,11 @@
 function getActivePageTab(pageId,defaultTab){
   try{
     const page=document.getElementById(pageId);
+    // S1963: halaman menyimpan state tab canonical agar presenter dan
+    // highlight tombol selalu membaca sumber yang sama. Fallback ke DOM
+    // active dipertahankan untuk backward compatibility/first boot.
+    const dataTab=page&&page.dataset&&page.dataset.activeShopTab;
+    if(pageId==='page-shop'&&dataTab)return dataTab;
     const buttons=page&&page.querySelectorAll?page.querySelectorAll('.cn-tab'):null;
     if(buttons){
       for(const btn of buttons){
@@ -855,6 +860,15 @@ if(activeTab==='insight'){
   if(typeof renderServiceIntegrityCard==='function')_cnProfile('carnotes.render.serviceIntegrity',renderServiceIntegrityCard,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
   if(typeof Servis!=='undefined'&&typeof Servis.renderReminder==='function')_cnProfile('carnotes.render.serviceReminder',Servis.renderReminder,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
   _cnProfile('carnotes.render.serviceList',()=>renderServisList({skipReminder:true}),{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
+  // S1970: Sparepart UI is a Car Notes/Servis concern, but it must be lazy at
+  // the top-level tab boundary. Previously the canonical category/stock
+  // presenters were rendered from unrelated Settings/legacy paths only, so
+  // Car Notes could show stale/empty DOM or force a later refresh. Render the
+  // existing SOT presenters ONLY while the Servis tab is active. The stock
+  // presenter already renders the Dashboard Sparepart from the same filtered
+  // vehicle scope, so no second dashboard data path is introduced.
+  if(typeof renderSparepartCatList==='function')_cnProfile('carnotes.render.sparepartCategories',renderSparepartCatList,{rows:Array.isArray(D.sparepartCats)?D.sparepartCats.length:0});
+  if(typeof renderStockList==='function')_cnProfile('carnotes.render.sparepartStock',renderStockList,{rows:Array.isArray(D.partsStock)?D.partsStock.length:0});
   if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.auditCurrent==='function'){
     const audit=_cnProfile('carnotes.audit.service',CarNotesPerformance.auditCurrent,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
     const auditEl=document.getElementById('serviceIntegrityCard');
@@ -1111,9 +1125,6 @@ if(typeof GhostAssetCleanupUI!=='undefined')GhostAssetCleanupUI.render();
 if(typeof BackupHealthPresenter!=='undefined')BackupHealthPresenter.render();
 if(typeof BackupHistoryPresenter!=='undefined')BackupHistoryPresenter.render();
 renderAccGrid();
-renderCatList();
-renderSparepartCatList();
-renderStockList();
 renderBillList();
 renderTarget();
 EduFund.render();

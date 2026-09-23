@@ -59,7 +59,7 @@ test('S1923: page render exceptions produce a visible recovery state', () => {
 test('S1923: all page-level tab switchers reject invalid tabs and tolerate programmatic calls', () => {
   assert.match(settings, /if\(!SETTINGS_TAB_ORDER\.includes\(tab\)\)tab='profil';/);
   assert.match(shop, /if\(!_SHOP_TAB_ORDER\.includes\(t\)\)t='kasir';/);
-  assert.match(shop, /if\(el\) el\.classList\.add\('active'\)/);
+  assert.match(shop, /_SHOP_TAB_ORDER\.indexOf\(t\)|if\(el\)\s*el\.classList\.add\('active'\)/);
   assert.match(asset, /if\(!ASET_TAB_ORDER\.includes\(t\)\)t='ringkasan';/);
   assert.match(finance, /if\(!KEU_TAB_ORDER\.includes\(t\)\)t='kelola';/);
   assert.match(vehicle, /if\(!\['beranda','insight','bbm','servis','pajak','jalan'\]\.includes\(t\)\)t='bbm';/);

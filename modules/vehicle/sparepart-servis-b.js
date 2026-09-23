@@ -93,6 +93,7 @@ function autoFillSparepartCode(){return Sparepart.autoFillCatCode();}
 function populateSparepartDatalist(){return Sparepart.populateDatalist();}
 /* moved to modules-render.js: renderSparepartCatList */
 function openSparepartModal(idx){return Sparepart.openCatModal(idx);}
+function openSparepartModalById(catId){return typeof Sparepart.openCatModalById==='function'?Sparepart.openCatModalById(catId):Sparepart.openCatModal((D.sparepartCats||[]).findIndex(c=>c&&String(c.id)===String(catId)));}
 function saveSparepart(){return Sparepart.saveCat();}
 function delSparepart(i){return Sparepart.delCat(i);}
 function populateStockCatSelect(){return Sparepart.populateStockCatSelect();}

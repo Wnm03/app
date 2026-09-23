@@ -648,6 +648,8 @@ const GROUP_B = [
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
   'modules/vehicle/servis.js',
+  // S1972: bulk category/component identity editor for selected service-history records.
+  'modules/vehicle/service-history-bulk-identity-editor.js',
   'modules/vehicle/service-maintenance-engine.js',
   'modules/vehicle/service-maintenance-repository.js',
   // S1812: lower-level service history/reminder methods split from servis.js.

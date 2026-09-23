@@ -173,3 +173,38 @@ test("setActionTypeFilter(null) -- kembali ke 'Semua', semua entry tampil lagi",
   ctx.Servis.setActionTypeFilter(null);
   assert.equal(documentStub.elements.servisCount.textContent, 4);
 });
+
+
+test('action filter normalizes only the 3 canonical actions; invalid values fall back to Semua', () => {
+  const D = makeD();
+  D.servisLogs.push({ id: 's5', vehicleId: 'v1', date: '2026-09-05', item: 'Legacy', categoryId: 'c1', km: 15000, cost: 0, note: '', actionType: 'legacy-action' });
+  const documentStub = makeDocumentStub();
+  const ctx = makeCtx({ D, documentStub });
+  assert.equal(ctx.Servis.normalizeActionTypeFilter('PERIKSA'), 'periksa');
+  assert.equal(ctx.Servis.normalizeActionTypeFilter('bersih'), 'bersih');
+  assert.equal(ctx.Servis.normalizeActionTypeFilter('ganti'), 'ganti');
+  assert.equal(ctx.Servis.normalizeActionTypeFilter('unknown'), null);
+  assert.equal(ctx.Servis.effectiveHistoryActionType({actionType:'legacy-action'}), 'ganti');
+  ctx.Servis.setActionTypeFilter('unknown');
+  assert.equal(ctx.Servis.activeActionTypeFilter, null);
+  assert.equal(documentStub.elements.servisCount.textContent, 5);
+});
+
+test('semua 4 filter benar-benar memisahkan action canonical tanpa stale hasil render/cache', () => {
+  const D = makeD();
+  const documentStub = makeDocumentStub();
+  const ctx = makeCtx({ D, documentStub });
+  ctx.Servis.setActionTypeFilter('periksa');
+  assert.equal(documentStub.elements.servisCount.textContent, 1);
+  ctx.Servis.setActionTypeFilter('bersih');
+  assert.equal(documentStub.elements.servisCount.textContent, 1);
+  ctx.Servis.setActionTypeFilter('ganti');
+  assert.equal(documentStub.elements.servisCount.textContent, 2);
+  ctx.Servis.setActionTypeFilter(null);
+  assert.equal(documentStub.elements.servisCount.textContent, 4);
+  const html = documentStub.elements.servisActionTypeChipRow.innerHTML;
+  assert.match(html, /data-action="Servis\.setActionTypeFilter"/);
+  assert.match(html, /Diperiksa/);
+  assert.match(html, /Dibersihkan/);
+  assert.match(html, /Diganti/);
+});

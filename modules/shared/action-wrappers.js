@@ -162,9 +162,9 @@ function qsKeuDanaPendidikan(){ closeQS('qsKeuangan'); EduFund.openModal(); }
 function qsKeuExportCSV(){ closeQS('qsKeuangan'); exportCSV(); }
 
 function qsShopTambahProduk(){ closeQS('qsShop'); openProductModal(); }
-function qsShopLihatEtalase(){ closeQS('qsShop'); setShopTab('etalase',document.querySelectorAll('#page-shop .cn-tab')[1]); }
+function qsShopLihatEtalase(){ closeQS('qsShop'); setShopTab('etalase'); }
 function qsShopTransaksiBaru(){ closeQS('qsShop'); openOrderModal(); }
-function qsShopRiwayat(){ closeQS('qsShop'); setShopTab('riwayat',document.querySelectorAll('#page-shop .cn-tab')[3]); }
+function qsShopRiwayat(){ closeQS('qsShop'); setShopTab('riwayat'); }
 function qsShopBackup(){ closeQS('qsShop'); openBackupModal(); }
 function qsShopSetelanLanjutan(){ closeQS('qsShop'); showPage('settings'); }
 function qsShopKatalogDinamis(){ closeQS('qsShop'); openShopKatalogDinamis(); }

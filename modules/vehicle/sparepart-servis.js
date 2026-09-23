@@ -897,6 +897,7 @@ boxEl.innerHTML=`<div class="u-fs12" style="line-height:1.5"><b>🤖 Rekomendasi
 }
 const Sparepart={
 catEditIdx:null,
+catEditId:null,
 stockEditIdx:null,
 _catalogNameCache:[],
 // activeMasterCategoryFilter — BARU (Sesi D-lanjutan3, ROADMAP-KONSOLIDASI-
@@ -1287,7 +1288,7 @@ const veh=c.vehicleId?D.vehicles.find(v=>v.id===c.vehicleId):null;
 const vehBadge=c.vehicleId
 ?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="Kategori khusus kendaraan ini">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name):'🏍️ Kendaraan lain'}</span>`
 :`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Berlaku semua kendaraan">🌐 Semua kendaraan</span>`;
-return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(c.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(c.code||codeFromName(c.name))}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${metaText}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(c.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(c.code||codeFromName(c.name))}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${metaText}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModalById" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 Sparepart.populateDatalist();
 Sparepart.populateStockCatSelect();
@@ -1371,7 +1372,7 @@ const cat=D.sparepartCats.find(c=>c.id===catId);
 if(!cat)return;
 if(!(cat.intervalKm>0)){
 toast('⚠️ Isi dulu Interval Servis (KM) kategori ini sebelum ditampilkan di Pengingat');
-Sparepart.openCatModal(D.sparepartCats.findIndex(c=>c.id===catId));
+Sparepart.openCatModalById(catId);
 return;
 }
 cat.showInReminder=cat.showInReminder===false?true:false;
@@ -1464,10 +1465,27 @@ known.push({group:currentGroup,icon:iconForGroupName(currentGroup)});
 sel.innerHTML='<option value="">🤖 Otomatis</option>'
 +known.map(g=>`<option value="${escapeHtml(g.group)}">${g.icon} ${escapeHtml(g.group)}</option>`).join('');
 sel.value=currentGroup||'';
+const clearTransient=()=>{if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}};
+sel.onfocus=clearTransient;
+sel.onpointerdown=clearTransient;
 },
 openCatModal(idx){
-Sparepart.catEditIdx=(typeof idx==='number')?idx:null;
-const isEdit=Sparepart.catEditIdx!==null;
+if(typeof idx==='number'&&idx>=0&&idx<D.sparepartCats.length){
+  return Sparepart.openCatModalById(D.sparepartCats[idx].id);
+}
+return Sparepart.openCatModalById(null);
+},
+openCatModalById(catId){
+// S1905 hardening: setiap pembukaan editor harus memutus state autocomplete/rekomendasi dari modal sebelumnya.
+const staleSuggestIds=['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'];
+staleSuggestIds.forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='';if(id==='sparepartAiSuggestBox')el.classList.add('u-dnone');}});
+if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}
+const normalizedId=catId===null||catId===undefined||catId===''?null:String(catId);
+const idx=normalizedId===null?null:D.sparepartCats.findIndex(c=>c&&String(c.id)===normalizedId);
+if(normalizedId!==null&&idx<0){toast('⚠️ Kategori sparepart tidak ditemukan');return false;}
+Sparepart.catEditId=normalizedId;
+Sparepart.catEditIdx=idx;
+const isEdit=normalizedId!==null;
 document.getElementById('sparepartModalTitle').textContent=isEdit?'Edit Kategori Sparepart':'Tambah Kategori Sparepart';
 document.getElementById('sparepartName').value=isEdit?D.sparepartCats[Sparepart.catEditIdx].name:'';
 const codeEl=document.getElementById('sparepartCode');

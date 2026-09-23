@@ -139,17 +139,25 @@ const SHOP_TAB_LABEL={kasir:'Kasir AI',jual:'Manual',etalase:'Etalase',produsen:
 function setShopTab(t,el){
 const _SHOP_TAB_ORDER=['kasir','jual','etalase','produsen','riwayat','pelanggan','laporan','bi'];
 if(!_SHOP_TAB_ORDER.includes(t))t='kasir';
+// S1963 SHOP TAB SOT: `t` adalah satu-satunya sumber kebenaran untuk tab.
+// Caller boleh mengirim elemen tombol lama/salah index, tetapi tombol aktif
+// WAJIB di-resolve ulang dari `t` supaya highlight tidak pernah berbeda dari
+// pane yang ditampilkan. State canonical juga disimpan di #page-shop.dataset
+// agar renderPageContent() membaca state yang sama, bukan menebak dari DOM.
+const _shopPage=document.getElementById('page-shop');
+const _shopTabBtns=document.querySelectorAll('#page-shop .cn-tab');
+const _canonicalIdx=_SHOP_TAB_ORDER.indexOf(t);
+const _canonicalBtn=_shopTabBtns[_canonicalIdx>=0?_canonicalIdx:0]||null;
+if(_shopPage&&_shopPage.dataset)_shopPage.dataset.activeShopTab=t;
 // BUGFIX (audit bug serupa S619 -- lihat dismissAllToasts() di
 // modules/shared/format-tema.js): toast basi (mis. dari Kasir AI habis
 // simpan transaksi) bisa nyangkut menutupi tombol di sub-tab Shop lain
 // begitu user ganti sub-tab. Pola sama persis dgn setAsetTab(), lihat
 // CHANGELOG-S620.md.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
-const _shopTabBtns=document.querySelectorAll('#page-shop .cn-tab');
 _shopTabBtns.forEach(b=>b.classList.remove('active'));
-let _activeBtn=el;
-if(el) el.classList.add('active');
-else { const _idx=_SHOP_TAB_ORDER.indexOf(t); const _btn=_shopTabBtns[_idx>=0?_idx:0]; if(_btn){_btn.classList.add('active');_activeBtn=_btn;} }
+const _activeBtn=_canonicalBtn;
+if(_activeBtn) _activeBtn.classList.add('active');
 if(typeof scrollTabBarIntoView==='function') scrollTabBarIntoView(_activeBtn);
 const shopBc=document.getElementById('shopBreadcrumbSub');
 if(shopBc)shopBc.textContent=SHOP_TAB_LABEL[t]||t;

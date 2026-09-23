@@ -753,6 +753,7 @@ _syncNavVisibilityForModals();
 }
 function onAnimEnd(e){ if(e.target===el)finish(); }
 if(el.addEventListener)el.addEventListener('animationend',onAnimEnd);
+if(opts.instant){finish();return;}
 setTimeout(finish,260);
 }
 // V25 MODAL LIFECYCLE HARDENING: bind swipe listeners idempotently per handle.
