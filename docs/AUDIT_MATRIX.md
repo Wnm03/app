@@ -18,12 +18,12 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2301 |
-| JavaScript | 1391 |
-| Tests | 907 |
-| Markdown | 775 |
+| Total files | 2321 |
+| JavaScript | 1422 |
+| Tests | 935 |
+| Markdown | 787 |
 | HTML | 7 |
-| JSON | 12 |
+| JSON | 13 |
 | CSS | 4 |
 | Module families | 17 |
 

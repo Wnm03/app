@@ -1,6 +1,6 @@
 # AUDIT-8-11-OWNER-RESOLVER-POST-DL-NEXT-1.md
 
-Status: **AUDIT, 0 kode diubah.** Dilakukan terhadap snapshot v1308
+Status: **RECONCILED S1942.** Audit historis terhadap v1308 tetap dipertahankan sebagai bukti; status terkini diverifikasi terhadap source/test terbaru. Dilakukan terhadap snapshot v1308
 (S578, sesudah DL-Next-1 diimplementasi). Referensi:
 `DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md`,
 `AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md`,
@@ -43,23 +43,7 @@ sejak fix S578), badge riwayat **tidak akan menemukan nama ownernya**
 (`ownerMatch` selalu `undefined` di kedua cabang lookup) → baris badge
 kosong, walau `deductionOwnerId` tersimpan benar.
 
-**Sifat temuan:** ini **bukan regresi S578** — gap ini sudah ada sejak
-S574-E dibuat (consumer ini tidak pernah tahu soal aset tertaut). Tapi
-S578 (dgn benar) membuat lebih banyak transaksi valid tersimpan lewat
-jalur `source:'asset'`, sehingga gap tampilan ini jadi **lebih sering
-terlihat** dibanding sebelumnya (`deductionOwnerId` lebih jarang gagal
-tersimpan, tapi begitu tersimpan lewat sumber aset, nama tidak muncul).
-
-**Risiko:** Rendah — murni tampilan (nama kosong, bukan data salah/hilang).
-`deductionOwnerId` yang tersimpan tetap benar & bisa dibaca ulang penuh
-saat transaksi dibuka utk edit (baris 888, `editTx()` baca `t.
-deductionOwnerId` langsung, tidak lewat `getAccOwners()`).
-
-**Rekomendasi:** Untuk sesi lanjutan (bukan sekarang) — ganti basis lookup
-nama owner di `tx-list-cashflow.js:86-96` dari `getAccOwners()` ke
-`resolveOwnerDefaultForAccount()` (sumber sama, pola sama persis DL-Next-1).
-**Ini kandidat DL-Next-6 baru**, belum di-lock — perlu keputusan eksplisit
-terpisah sebelum dikerjakan, sesuai disiplin "1 sesi 1 fokus".
+**Status reconciliation:** temuan historis di atas sudah ditutup oleh implementasi S579. Risiko aktif dari Audit-9 = **0** pada source terbaru; regression S1942 memastikan source `asset` tetap menampilkan nama owner.
 
 ---
 
@@ -111,11 +95,11 @@ yang genuinely single-owner (baik lama maupun baru) 0 terdampak.
 | # | Audit | Status |
 |---|---|---|
 | 8 | Regresi Dana Titipan | **PASS** — 0 coupling, 335/335 test |
-| 9 | Consumer owner (`tx-list-cashflow.js` badge) | **GAP DITEMUKAN** — risiko rendah, murni tampilan, kandidat DL-Next-6 (belum di-lock) |
+| 9 | Consumer owner (`tx-list-cashflow.js` badge) | **CLOSED S579/S1942** — resolver sudah menjadi basis lookup + regression proof |
 | 10 | Recalculation CREATE/EDIT/DELETE | **PASS** — 1 choke-point, 10 cabang konsisten, DELETE tidak relevan |
 | 11 | Backward compatibility | **PASS** — transaksi lama & akun single-owner 0 terdampak |
 
-**Kesimpulan:** S578 (DL-Next-1) **aman untuk rilis**, tidak ada regresi.
-Satu temuan baru (Audit-9) bersifat opsional/kosmetik, direkomendasikan
-jadi item Design Lock terpisah (DL-Next-6) kalau mau dikerjakan — **tidak
-memblokir apa pun**, tidak wajib dikerjakan sekarang.
+**Kesimpulan terkini S1942:** Audit-8, Audit-9, Audit-10, dan Audit-11
+sudah tertutup. Audit-9 yang dulu berupa gap kosmetik telah diperbaiki di
+S579 dan sekarang memiliki regression proof tambahan. Tidak ada DL-Next-6
+terbuka dari audit ini.

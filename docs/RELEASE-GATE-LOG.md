@@ -732,3 +732,10 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Environment sandbox tidak menyediakan eslint dan tidak ada akses jaringan untuk memasangnya.
 - **unminified-bundle**: override dipakai. Alasan: Environment sandbox tidak menyediakan esbuild; bundle hasil build sudah lolos syntax dan bundle-freshness.
+
+## 2026-09-22 — S1942 document-status reconciliation
+- **Scope:** rekonsiliasi dokumen historis terhadap source/test terbaru; tidak mengubah business logic. Ditambahkan `PROJECT-STATUS-REGISTRY.md`, `KNOWN-ISSUES-REGISTRY.md`, document-status audit gate, regression proof Owner Resolver Audit-9, dan hardening kontras `--text3` pada minimal theme.
+- **Owner Resolver:** Audit-8/9/10/11 direklasifikasi CLOSED; Audit-9 sudah ditutup oleh resolver-first lookup S579 dan regression S1942. `baseBalance/ownership` unlink tetap KNOWN-LIMITATION sesuai design lock.
+- **UI/documentation:** desktop 1080px max-width sudah VERIFIED, tidak perlu patch. Historical TODO/BELUM/NEXT SESSION tidak dihapus; sekarang difence oleh status registry.
+- **Gates:** document-status PASS; system-integrity PASS; safe-recommendations PASS; release-firewall 11/11 PASS; release-final-gate PASS; reproducible-build PASS; bundle freshness/version/SOT/architecture/persistence/PWA/feature gates PASS.
+- **Environment boundary:** esbuild tidak tersedia sehingga bundle valid tetapi belum diminify; full-suite runner kembali timeout pada sandbox dan tidak diklaim green; browser/device visual smoke tetap manual gate.
