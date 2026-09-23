@@ -603,6 +603,7 @@ runDataMigrations(backupVersion);
 // records receive canonical category/component + next-due/idempotency fields
 // without overwriting existing snapshots or replaying Finance/stock effects.
 if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
+if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer&&typeof ServiceHistorySOTNormalizer.apply==='function')ServiceHistorySOTNormalizer.apply();
 delete D._vehicleCatalogStore;
 // P11: setelah seluruh migration selesai, rapikan linkage servis↔Finance dan
 // backfill snapshot lama sebelum data persisten disimpan / UI di-init.
