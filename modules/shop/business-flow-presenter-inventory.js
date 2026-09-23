@@ -24,7 +24,7 @@
 // Object.assign() di file itu punya BusinessFlowPresenterInventoryMixin
 // yang sudah terisi.
 const BusinessFlowPresenterInventoryMixin = {
-  createPurchaseOrder({ productId, qty } = {}) {
+  createPurchaseOrder({ productId, qty, unitCost, supplierId, supplier } = {}) {
     if (typeof D === 'undefined' || !D.products) return { ok: false, reason: 'D belum dimuat' };
     if (!D.purchaseOrders) D.purchaseOrders = [];
     const product = D.products.find((p) => p.id === productId);
@@ -38,6 +38,10 @@ const BusinessFlowPresenterInventoryMixin = {
       status: 'ORDERED',
       createdDate: new Date().toISOString(),
       receivedDate: null,
+      receivedQty: 0,
+      orderedUnitCost: Number.isFinite(Number(unitCost)) && Number(unitCost) >= 0 ? Number(unitCost) : Math.max(0, Number(product.hargaBeli)||0),
+      supplierId: supplierId || '',
+      supplier: (supplier || '').trim(),
     };
     D.purchaseOrders.push(purchase);
     if (typeof save === 'function') save();
@@ -52,17 +56,43 @@ const BusinessFlowPresenterInventoryMixin = {
   // TANPA menimpa ulang receivedDate. TIDAK PERNAH menyentuh
   // D.products[idx].stock (stok tetap ditambah lewat alur restock yang
   // SUDAH ADA — PO ini murni penanda status/lokasi, bukan input stok baru).
-  receivePurchaseOrder(purchaseId) {
+  receivePurchaseOrder(purchaseId, qty) {
     if (typeof D === 'undefined' || !D.purchaseOrders) return { ok: false };
     const purchase = D.purchaseOrders.find((p) => p.id === purchaseId);
     if (!purchase) return { ok: false, reason: 'Purchase Order tidak ditemukan' };
-    if (purchase.status === 'RECEIVED') return { ok: true, purchase, alreadyReceived: true };
-    purchase.status = 'RECEIVED';
+    const product = (D.products || []).find(p => p.id === purchase.productId);
+    if (!product) return { ok:false, reason:'Produk PO tidak ditemukan' };
+    const ordered = Math.max(0, Number(purchase.qty)||0);
+    const already = Math.max(0, Number(purchase.receivedQty)||0);
+    if (already >= ordered || purchase.status === 'RECEIVED') return { ok: true, purchase, alreadyReceived: true };
+    const remaining = Math.max(0, ordered - already);
+    const requested = qty === undefined ? remaining : Number(qty);
+    if (!Number.isFinite(requested) || requested <= 0) return {ok:false, reason:'Qty penerimaan harus lebih dari 0'};
+    if (requested > remaining) return {ok:false, reason:`Penerimaan melebihi sisa PO (${remaining})`};
+    const receiveQty = requested;
+    const movementKey = `po-receive:${purchase.id}:${already + receiveQty}`;
+    const r = (typeof ProductRepository !== 'undefined')
+      ? ProductRepository.mutateStockDelta(product, receiveQty, {source:'purchase-receiving',reason:'PO barang diterima',refType:'purchaseOrder',refId:purchase.id,idempotencyKey:movementKey})
+      : (() => { product.stock = Math.max(0, (Number(product.stock)||0) + receiveQty); return {ok:true,stock:product.stock,ledger:null}; })();
+    if (!r.ok) return r;
+    purchase.receivedQty = already + receiveQty;
+    purchase.status = purchase.receivedQty >= ordered ? 'RECEIVED' : 'PARTIAL';
     purchase.receivedDate = new Date().toISOString();
+    if (!Array.isArray(purchase.receipts)) purchase.receipts = [];
+    const unitCost = Math.max(0, Number.isFinite(Number(purchase.orderedUnitCost)) ? Number(purchase.orderedUnitCost) : (Number(product.hargaBeli)||0));
+    const receipt = {id:'por_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),qty:receiveQty,unitCost,date:purchase.receivedDate,ledgerId:r.ledger&&r.ledger.entry?r.ledger.entry.id:null};
+    purchase.receipts.push(receipt);
+    if (unitCost > 0 && D.transactions) {
+      const txKey = `po-cost:${purchase.id}:${purchase.receivedQty}`;
+      if (!D.transactions.some(t => t && t.shopPurchaseId === purchase.id && t.stockQty === receiveQty && t.shopPurchaseReceiptKey === txKey)) {
+        const accId = (D.accounts || [])[0]?.id;
+        D.transactions.push({id:'tx_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),type:'expense',amount:receiveQty*unitCost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Penerimaan PO ${product.name||purchase.productId} x${receiveQty} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:receiveQty,shopPurchaseId:purchase.id,shopPurchaseReceiptKey:txKey});
+      }
+    }
     if (typeof save === 'function') save();
     this.renderMovement(purchase.productId);
-    if (typeof toast === 'function') toast(`✅ Barang sampai Magelang — ${purchase.qty} pcs diterima dari Supplier`);
-    return { ok: true, purchase };
+    if (typeof toast === 'function') toast(`✅ Barang diterima — ${receiveQty} pcs ${product.name || ''}`);
+    return { ok:true, purchase, receivedQty:receiveQty, ledger:r.ledger||null };
   },
 
   // createPurchaseOrderBatch({items,note,supplier}) (Sesi 381, +supplier
@@ -80,7 +110,7 @@ const BusinessFlowPresenterInventoryMixin = {
   // PERSIS logic createPurchaseOrder() (produk harus ada di Etalase, qty
   // >0/finite) — item invalid di-skip (bukan gagalkan seluruh batch),
   // batch gagal total hanya kalau TIDAK ADA satupun item valid.
-  createPurchaseOrderBatch({ items, note, supplier } = {}) {
+  createPurchaseOrderBatch({ items, note, supplier, supplierId } = {}) {
     if (typeof D === 'undefined' || !D.products) return { ok: false, reason: 'D belum dimuat' };
     if (!D.purchaseOrders) D.purchaseOrders = [];
     if (!Array.isArray(items) || !items.length) return { ok: false, reason: 'Tidak ada produk di keranjang' };
@@ -100,6 +130,8 @@ const BusinessFlowPresenterInventoryMixin = {
         receivedDate: null,
         batchId,
         supplier: supplierName,
+        supplierId: supplierId || '',
+        orderedUnitCost: Number.isFinite(Number(it.unitCost)) && Number(it.unitCost) >= 0 ? Number(it.unitCost) : Math.max(0, Number(product.hargaBeli)||0),
       };
       D.purchaseOrders.push(purchase);
       created.push(purchase);

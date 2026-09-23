@@ -218,11 +218,11 @@ if(existingTx){
 if(existingTx.stockItems&&existingTx.stockItems.length){
 existingTx.stockItems.forEach(si=>{
 const prevP=D.products.find(p=>p.id===si.productId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0));else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0),{source:'sale-edit-rollback',reason:'restore previous sale before edit',refType:'shopSale',refId:existingTx.id,idempotencyKey:'sale-edit-restore:'+existingTx.id+':'+prevP.id});else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
 });
 } else if(existingTx.stockProductId){
 const prevP=D.products.find(p=>p.id===existingTx.stockProductId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(existingTx.stockQty||0));else prevP.stock=Math.max(0,(prevP.stock||0)-(existingTx.stockQty||0));}
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(existingTx.stockQty||0),{source:'sale-edit-rollback',reason:'restore previous transaction stock',refType:'transaction',refId:existingTx.id,idempotencyKey:'tx-edit-restore:'+existingTx.id+':'+prevP.id});else prevP.stock=Math.max(0,(prevP.stock||0)-(existingTx.stockQty||0));}
 }
 }
 const resultItems=[];
@@ -281,7 +281,7 @@ if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(produ
 }
 }
 if(!product)return;
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty);else product.stock=(product.stock||0)+it.qty;
+if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty,{source:'stock-receipt',reason:'new stock entered from transaction input',refType:'transaction',refId:txId,idempotencyKey:'tx-stock-receipt:'+txId+':'+product.id});else product.stock=(product.stock||0)+it.qty;
 if(it.hargaBeli>0){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(product,'hargaBeli',it.hargaBeli);else product.hargaBeli=it.hargaBeli;}
 if(it.produsenId){
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'produsenId',it.produsenId);else product.produsenId=it.produsenId;
@@ -466,7 +466,7 @@ const addon=Etalase.bundleAddonShape(product);
 if(!addon)return;
 const bracket=Etalase.bracketRange(product);
 const base=(D.products||[]).find(q=>q.id!==product.id&&Etalase.bracketRange(q)===bracket&&!Etalase.bundleAddonShape(q));
-if(base){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(base,sign*qty);else base.stock=Math.max(0,(base.stock||0)+sign*qty);}
+if(base){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(base,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else base.stock=Math.max(0,(base.stock||0)+sign*qty);}
 const addonCandidates=(D.products||[]).filter(q=>{
 const parsed=Etalase.parseSizeName(q.name);
 if(addon==='alu')return parsed&&parsed.shape==='alu';
@@ -474,7 +474,7 @@ if(addon==='muntu')return(parsed&&(parsed.shape==='muntu'||parsed.shape==='munth
 return false;
 });
 const addonProduct=sign<0?(addonCandidates.find(q=>(q.stock||0)>=qty)||addonCandidates[0]):addonCandidates[0];
-if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(addonProduct,sign*qty);else addonProduct.stock=Math.max(0,(addonProduct.stock||0)+sign*qty);}
+if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(addonProduct,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else addonProduct.stock=Math.max(0,(addonProduct.stock||0)+sign*qty);}
 }
 // rollbackShopItems (kw-sales-mutation-fix, Modul 2) — SATU-SATUNYA implementasi
 // yang boleh mengubah stok produk (+base+addon alu/muntu) utk jalur Sales
@@ -495,7 +495,7 @@ const q=Number(it.qty);
 if(!Number.isFinite(q)||q<=0)return;
 const p=D.products.find(x=>x.id===it.productId);
 if(!p)return;
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,sign*q);else p.stock=Math.max(0,(p.stock||0)+sign*q);
+if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,sign*q,{source:sign<0?'sale':'sale-rollback',reason:sign<0?'sale stock consumption':'sale stock restore',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else p.stock=Math.max(0,(p.stock||0)+sign*q);
 applyBundleLinkedStock(p,q,sign);
 });
 }
@@ -512,7 +512,13 @@ if(!it||!it.productId)return{ok:false,message:'Produk tidak valid'};
 const q=Number(it.qty);
 if(!Number.isFinite(q)||q<=0)return{ok:false,message:'Jumlah tidak valid'};
 }
-const items=rawItems.filter(it=>it&&it.productId&&Number(it.qty)>0);
+const items=rawItems.filter(it=>it&&it.productId&&Number(it.qty)>0).map(it=>{
+const p=D.products.find(x=>x.id===it.productId);
+const previous=D.cobek&&opts.existingShopId?D.cobek.find(x=>x.id===opts.existingShopId):null;
+const previousItem=previous&&previous.items?previous.items.find(x=>x&&x.productId===it.productId):null;
+const historicalCost=Number.isFinite(Number(it.unitCost))?Number(it.unitCost):(previousItem&&Number.isFinite(Number(previousItem.unitCost))?Number(previousItem.unitCost):Number(p&&p.hargaBeli)||0);
+return Object.assign({},it,{unitCost:historicalCost,cogs:historicalCost*Number(it.qty)});
+});
 if(!items.length)return{ok:false,message:'Keranjang masih kosong'};
 let prevShop=null;
 if(opts.existingShopId){
@@ -551,7 +557,7 @@ if(prevShop){
 Object.assign(prevShop,{
 date:opts.date,items,priceType:opts.priceType||prevShop.priceType||'normal',
 customer,subtotal:opts.subtotal,diskon:opts.diskon||0,ongkir:opts.ongkir||0,
-total:opts.total,profit:opts.profit,accountId:opts.accountId,
+total:opts.total,profit:opts.profit,totalCogs:items.reduce((s,it)=>s+(Number(it.cogs)||0),0),accountId:opts.accountId,
 delivered:opts.delivered!==undefined?opts.delivered:prevShop.delivered,
 note:opts.note!==undefined?(opts.note||prevShop.note):prevShop.note
 });
