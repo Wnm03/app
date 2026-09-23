@@ -25,7 +25,7 @@ test('S1971: checklist tetap tersedia sebagai bukti read-only di tab Riwayat',()
   assert.ok(historyStart>=0&&historyEnd>historyStart);
   assert.match(history,/const checklistInfo=\(log\)=>/);
   assert.match(history,/summaryFromLog/);
-  assert.match(history,/Checklist di tab ini hanya bukti riwayat \(read-only\)/);
+  assert.match(history,/Checklist yang tersimpan ditampilkan sebagai bukti read-only/);
   assert.match(history,/checklistInfo\(log\)/);
   assert.doesNotMatch(history,/data-action="Servis\.toggleServiceChecklistItem"/);
   assert.doesNotMatch(history,/data-action="Servis\.setServiceChecklistAction"/);

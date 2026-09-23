@@ -14,7 +14,7 @@ test('S1972: bulk editor hanya tersedia dari Riwayat dan memakai selector SOT ca
   assert.match(bulk,/serviceHistoryBulkCategory/);
   assert.match(bulk,/serviceHistoryBulkComponent/);
   assert.match(bulk,/Servis\.resolveCanonicalServiceSelection\(log\)/);
-  assert.match(servis,/data-action="Servis\.openBulkHistoryIdentityEditor"/);
+  assert.match(src,/data-action="Servis\.openBulkHistoryIdentityEditor"/); // S1974: tombol di tab Audit
 });
 
 test('S1972: bulk edit tidak mengubah KM/tanggal/checklist/finance fields',()=>{
@@ -63,7 +63,7 @@ test('S1972: checklist tetap read-only di Riwayat, bulk editor bukan editor chec
   assert.match(history,/checklistInfo\(log\)/);
   assert.doesNotMatch(history,/toggleServiceChecklistItem/);
   assert.doesNotMatch(history,/setServiceChecklistAction/);
-  assert.match(servis,/Edit Kategori\/Komponen SOT/);
+  assert.match(src,/Edit Kategori\/Komponen SOT/);
   assert.doesNotMatch(bulk,/\.checklist\s*=/);
 });
 

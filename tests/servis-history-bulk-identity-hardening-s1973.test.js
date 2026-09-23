@@ -12,7 +12,7 @@ describe('S1973 — bulk history identity hardening',()=>{
    assert.match(bulk,/schemaVersion:'S1973'/);
    assert.match(bulk,/bulkId/);
    assert.match(bulk,/before,after/);
-   assert.doesNotMatch(bulk,/\.km\s*=/);
+   assert.doesNotMatch(bulk,/\.km\s*=(?!=)/);
    assert.doesNotMatch(bulk,/\.date\s*=/);
    assert.doesNotMatch(bulk,/\.checklist\s*=/);
    assert.doesNotMatch(bulk,/\.cost\s*=/);

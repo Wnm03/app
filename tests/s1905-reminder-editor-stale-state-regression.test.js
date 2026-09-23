@@ -30,7 +30,7 @@ test('S1905: Grup Komponen menutup suggestion lama saat focus/pointerdown',()=>{
 
 test('S1905: setEditTab memiliki 3 state dan merender History canonical',()=>{
  const s=fs.readFileSync(path.join(root,'modules/vehicle/servis.js'),'utf8');
- assert.match(s,/const next=tab==='reminder'\?'reminder':tab==='history'\?'history':'detail'/);
+ assert.match(s,/const next=tab==='reminder'\?'reminder':tab==='history'\?'history':tab==='audit'\?'audit':'detail'/);
  assert.match(s,/const history=document\.getElementById\('servisHistoryPanel'\)/);
  assert.match(s,/if\(next==='history'\)Servis\.renderEditHistoryTab\(\)/);
 });
