@@ -1,0 +1,5 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');
+const src=fs.readFileSync('modules/vehicle/service-provenance-sot.js','utf8');
+function api(){const c={console};vm.createContext(c);vm.runInContext(src,c);return c.ServiceProvenanceSOT;}
+test('S1909 provenance contract normalizes known source types and is additive',()=>{const a=api();const r={id:'s1'};a.attach(r,'reminder','cat-1','2026-09-23');assert.deepEqual(r,{id:'s1',sourceType:'reminder',sourceRef:'cat-1',sourceCapturedAt:'2026-09-23'});const legacy={id:'old'};a.attach(legacy,null,null,null);assert.equal(legacy.sourceType,'manual');});
+test('S1909 provenance audit rejects invalid types without mutating data',()=>{const a=api();const rows=[{id:'1',sourceType:'manual'},{id:'2',sourceType:'hacker'}];const before=JSON.stringify(rows);const out=a.audit(rows);assert.equal(out.ok,false);assert.equal(out.issues[0].type,'invalid_source_type');assert.equal(JSON.stringify(rows),before);});

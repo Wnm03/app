@@ -1,0 +1,10 @@
+const assert=require('assert');
+const fs=require('fs');const vm=require('vm');
+const code=fs.readFileSync(require('path').join(__dirname,'../modules/vehicle/service-reminder-package-sot.js'),'utf8');
+const ctx={console,D:{servisLogs:[],serviceReminderPackages:[]},__SERVICE_MASTER_DATA__:[{group:'Mesin',masterCategoryId:'servis-mesin',items:[{id:'klep',name:'Celah Klep',masterCategoryId:'servis-mesin'}]}],save(){}};ctx.globalThis=ctx;vm.createContext(ctx);vm.runInContext(code,ctx);
+const A=ctx.ServiceReminderPackageSOT;
+let r=A.create({vehicleId:'v1',title:'Servis Mesin + CVT',targets:[{serviceComponentId:'klep'},{masterCategoryId:'cvt',categoryId:'cvt',componentName:'CVT'}]});assert(r.ok);assert.equal(r.package.targets.length,2);assert.equal(r.package.checklist.length,2);
+assert.equal(A.audit('v1').multiCategory,1);
+let r2=A.create({vehicleId:'v1',serviceJobType:'overhaul_turun_mesin',targets:[{masterCategoryId:'servis-mesin'}],intervalKm:10000});assert.equal(r2.package.dueMode,'RECOMMENDED_REVIEW');assert.equal(r2.package.intervalKm,null);
+ctx.D.servisLogs=[{id:'a',vehicleId:'v1',item:'Cek klep'},{id:'b',vehicleId:'v1',item:'CVT'}];let done=A.completeFromHistory(r.package.id,['a','b']);assert(done.ok);assert(done.sessionId);assert.equal(ctx.D.servisLogs[0].sessionId,done.sessionId);assert.equal(A.byId(r.package.id).status,'COMPLETED');
+console.log('S1944 package SOT 4/4 PASS');

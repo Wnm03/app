@@ -100,3 +100,27 @@ test('setEditTab reminder hanya mengganti presenter panel dan tidak menyimpan da
   assert.equal(els.servisEditTabReminder.classList.active,true);
   assert.equal(JSON.stringify(D.servisLogs),before);
 });
+
+
+test('tab Riwayat menampilkan countdown hanya pada baseline interval terbaru',()=>{
+  const D={vehicles:[{id:'v1',name:'Vario'}],sparepartCats:[{id:'catOil',name:'Oli Mesin',intervalKm:1500}],partsStock:[],servisLogs:[
+    {id:'s3',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-08-13',km:18554,actionType:'ganti',checklist:[]},
+    {id:'s2',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-07-18',km:17686,actionType:'periksa',checklist:[]},
+    {id:'s1',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-06-20',km:16900,actionType:'periksa',checklist:[]},
+  ]};
+  const els=baseEls(); els.servisHistoryPanel={style:{},innerHTML:''}; els.servisEditTabHistory={classList:makeClassList()};
+  const ctx=makeCtx({D,els}); ctx.Servis.editId='s3'; ctx.Servis.renderEditHistoryTab(); const html=els.servisHistoryPanel.innerHTML;
+  assert.match(html,/Riwayat Oli Mesin/); assert.match(html,/Reminder aktif/); assert.match(html,/Sisa 1\.000 km/);
+  assert.equal((html.match(/Sisa 1\.000 km/g)||[]).length,1,'countdown hanya boleh muncul satu kali');
+  assert.match(html,/18\.554 km/); assert.match(html,/17\.686 km/); assert.match(html,/16\.900 km/);
+});
+
+test('tab Riwayat lama tidak mempertahankan countdown lama ketika ada reset terbaru',()=>{
+  const D={vehicles:[{id:'v1',name:'Vario'}],sparepartCats:[{id:'catOil',name:'Oli Mesin',intervalKm:1500}],partsStock:[],servisLogs:[
+    {id:'new',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-08-13',km:18554,actionType:'ganti',checklist:[]},
+    {id:'old',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',serviceComponentId:'oil',date:'2026-06-13',km:17000,actionType:'ganti',checklist:[]},
+  ]};
+  const els=baseEls(); els.servisHistoryPanel={style:{},innerHTML:''}; els.servisEditTabHistory={classList:makeClassList()};
+  const ctx=makeCtx({D,els}); ctx.Servis.editId='new'; ctx.Servis.renderEditHistoryTab(); const html=els.servisHistoryPanel.innerHTML;
+  assert.equal((html.match(/Reminder aktif/g)||[]).length,1); assert.equal((html.match(/Sisa 1\.000 km/g)||[]).length,1);
+});
