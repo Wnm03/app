@@ -118,7 +118,7 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     loadFiles.unshift('modules/vehicle/service-master-data.generated.js');
   }
   if (loadFiles.includes('car-notes.js') || loadFiles.includes('modules/vehicle/servis.js')) {
-    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js','modules/vehicle/servis-b.js']) {
+    for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/service-condition-intelligence-sot.js','modules/vehicle/service-provenance-sot.js','modules/vehicle/service-condition-timeline-sot.js','modules/vehicle/service-part-compatibility-sot.js','modules/vehicle/service-event-idempotency-sot.js','modules/vehicle/service-ingestion-provenance-sot.js','modules/vehicle/service-evidence-pack-sot.js','modules/vehicle/service-roundtrip-sot.js','modules/vehicle/vehicle-isolation-audit-sot.js','modules/vehicle/maintenance-intelligence-v2-sot.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js','modules/vehicle/servis-b.js']) {
       if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);
     }
   } else if (loadFiles.includes('modules/vehicle/sparepart-servis.js')) {
