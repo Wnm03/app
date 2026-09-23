@@ -739,3 +739,8 @@
 - **UI/documentation:** desktop 1080px max-width sudah VERIFIED, tidak perlu patch. Historical TODO/BELUM/NEXT SESSION tidak dihapus; sekarang difence oleh status registry.
 - **Gates:** document-status PASS; system-integrity PASS; safe-recommendations PASS; release-firewall 11/11 PASS; release-final-gate PASS; reproducible-build PASS; bundle freshness/version/SOT/architecture/persistence/PWA/feature gates PASS.
 - **Environment boundary:** esbuild tidak tersedia sehingga bundle valid tetapi belum diminify; full-suite runner kembali timeout pada sandbox dan tidak diklaim green; browser/device visual smoke tetap manual gate.
+
+## 2026-09-23T09:12:58.968Z — versi s1956-service-history-audit-package-1962
+
+- **lint-unavailable**: override dipakai. Alasan: sandbox tanpa akses jaringan, eslint tidak terpasang
+- **unminified-bundle**: override dipakai. Alasan: sandbox tanpa akses jaringan, esbuild tidak terpasang
