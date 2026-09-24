@@ -54,18 +54,26 @@
     if(vehicles.size>1)return {ok:false,code:'vehicle_mismatch'};
     if(found.some(s=>s.sessionId))return {ok:false,code:'already_sessionized'};
     const sid='svc_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    const before=found.map(s=>({s,sessionId:s.sessionId||null,serviceJobType:s.serviceJobType||null,serviceJobLabel:s.serviceJobLabel||null,serviceJobEvidence:s.serviceJobEvidence||null,serviceSessionSotVersion:s.serviceSessionSotVersion||null}));
     found.forEach(s=>{s.sessionId=sid;s.serviceJobType=type.id;s.serviceJobLabel=type.label;s.serviceJobEvidence='manual';s.serviceSessionSotVersion=VERSION;});
-    if(typeof global.save==='function')global.save({domain:'vehicle'});
+    try{
+      const saved=typeof global.save==='function'?global.save({domain:'servis',financeMutation:false}):true;
+      if(saved===false)throw new Error('persistence_failed');
+      if(typeof global.saveFlush==='function'&&global.saveFlush()===false)throw new Error('persistence_flush_failed');
+    }catch(err){
+      before.forEach(x=>{x.s.sessionId=x.sessionId;x.s.serviceJobType=x.serviceJobType;x.s.serviceJobLabel=x.serviceJobLabel;x.s.serviceJobEvidence=x.serviceJobEvidence;x.s.serviceSessionSotVersion=x.serviceSessionSotVersion;});
+      return {ok:false,code:'persistence_failed'};
+    }
     return {ok:true,sessionId:sid,ids:wanted,jobType:type};
   }
   function setJobType(log,jobTypeId,evidence){
     if(!log)return {ok:false,code:'record_not_found'};
     const type=jobType(jobTypeId); if(!type)return {ok:false,code:'invalid_job_type'};
-    if(type.id==='overhaul_turun_mesin' && type.masterCategoryId && log.masterCategoryId && log.masterCategoryId!==type.masterCategoryId){
-      return {ok:false,code:'category_mismatch'};
-    }
+    // S1983/S1984: Job Type is service-level metadata. It must NEVER reject
+    // or rewrite an existing SOT masterCategoryId/serviceComponentId. A legacy
+    // record may legitimately classify its SOT identity differently from the
+    // confirmed work type (e.g. Overhaul on a mixed/legacy category).
     log.serviceJobType=type.id; log.serviceJobLabel=type.label; log.serviceJobEvidence=evidence||'manual'; log.serviceSessionSotVersion=VERSION;
-    if(type.masterCategoryId&&!log.masterCategoryId)log.masterCategoryId=type.masterCategoryId;
     return {ok:true,jobType:type};
   }
   function renderReview(container,vehicleId){

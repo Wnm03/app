@@ -7,7 +7,7 @@
  * Servis CVT Besar, Perbaikan, or a user-defined title.
  */
 (function(global){
-  const VERSION='SERVICE-HISTORY-AUDIT-PACKAGE-SOT-2';
+  const VERSION='SERVICE-HISTORY-AUDIT-PACKAGE-SOT-3';
   const MAX_SOURCE_RECORDS=100;
   const STATUS=Object.freeze([{id:'draft',label:'Draft'},{id:'active',label:'Aktif'},{id:'done',label:'Selesai'},{id:'archived',label:'Arsip'}]);
   const TYPES=Object.freeze([
@@ -29,7 +29,12 @@
   function id(){return typeof global.uid==='function'?global.uid():'sag_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
   function type(idOrLabel){const s=str(idOrLabel);return TYPES.find(x=>x.id===s||x.label===s)||null;}
   function status(idOrLabel){const s=str(idOrLabel)||'active';return STATUS.find(x=>x.id===s||x.label===s)||STATUS[1];}
-  function saveVehicle(){return typeof global.save==='function'?global.save({domain:'vehicle'}):true;}
+  function saveVehicle(){
+    const saved=typeof global.save==='function'?global.save({domain:'vehicle',financeMutation:false}):true;
+    if(saved===false)return false;
+    if(typeof global.saveFlush==='function'&&global.saveFlush()===false)return false;
+    return true;
+  }
   function snapshotGroups(){return groups().map(p=>JSON.parse(JSON.stringify(p)));}
   function restoreGroups(snapshot){global.D.serviceAuditGroups=snapshot.map(p=>JSON.parse(JSON.stringify(p)));}
   function jobTypeFor(log){if(!log)return null;const id=str(log.serviceJobType),label=str(log.serviceJobLabel);return id||label?{id:id||label,label:label||id}:null;}
@@ -92,6 +97,7 @@
     out.sourceCount=out.sourceServiceIds.length; const st=status(out.status||'active'); out.status=st.id; out.statusLabel=st.label;
     out.createdAt=out.createdAt||new Date().toISOString();
     out.updatedAt=out.updatedAt||out.createdAt;
+    out.changeLog=Array.isArray(out.changeLog)?out.changeLog.slice(-50):[];
     out.sotVersion=VERSION;
     return out;
   }
@@ -103,7 +109,8 @@
     if(rows.some(s=>str(s.vehicleId)!==vehicleId))return{ok:false,code:'vehicle_mismatch'};
     const t=type(input.typeId||input.type)||TYPES.find(x=>x.id==='other');
     const existing=findExistingBySources(vehicleId,ids); if(existing)return{ok:false,code:'duplicate_source_package',package:normalize(existing),summary:summarize(existing)};
-    const p=normalize({id:id(),vehicleId,title:input.title,typeId:t.id,typeLabel:t.label,status:input.status||'active',sourceServiceIds:ids,createdAt:new Date().toISOString()});
+    const now=new Date().toISOString();
+    const p=normalize({id:id(),vehicleId,title:input.title,typeId:t.id,typeLabel:t.label,status:input.status||'active',sourceServiceIds:ids,createdAt:now,changeLog:[{changedAt:now,action:'create',fields:['title','typeId','status','sourceServiceIds']}]});
     const before=snapshotGroups(); groups().push(p); try{const saved=saveVehicle(); if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}
     return{ok:true,package:p,summary:summarize(p)};
   }
@@ -124,6 +131,9 @@
     const before=snapshotGroups(); const t=patch&&patch.typeId!==undefined?type(patch.typeId):type(p.typeId); const st=patch&&patch.status!==undefined?status(patch.status):status(p.status);
     if(patch&&patch.title!==undefined)p.title=str(patch.title)||'Paket Pekerjaan'; if(t){p.typeId=t.id;p.typeLabel=t.label;} if(st){p.status=st.id;p.statusLabel=st.label;}
     p.sourceServiceIds=ids;p.sourceCount=ids.length;p.updatedAt=new Date().toISOString();p.sotVersion=VERSION;
+    if(!Array.isArray(p.changeLog))p.changeLog=[];
+    p.changeLog.push({changedAt:p.updatedAt,action:'update',fields:Object.keys(patch||{}).filter(k=>['title','typeId','status','sourceServiceIds'].includes(k))});
+    if(p.changeLog.length>50)p.changeLog=p.changeLog.slice(-50);
     try{const saved=saveVehicle(); if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}
     return{ok:true,package:normalize(p),summary:summarize(p)};
   }

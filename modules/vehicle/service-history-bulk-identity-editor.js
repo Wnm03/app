@@ -124,8 +124,11 @@ changes.forEach(x=>{
   x.log.editHistory.push({changedAt:now,changedBy:'self',source:'bulk-history-identity-editor-s1972',schemaVersion:'S1973',bulkId,fields:x.fields,before,after});
   if(x.log.editHistory.length>50)x.log.editHistory=x.log.editHistory.slice(-50);
 });
-const saved=save({domain:'servis',financeMutation:false});
+const saved=typeof save==='function'?await Promise.resolve(save({domain:'servis',financeMutation:false})):true;
 if(saved===false)throw new Error('persistence_stale');
+if(typeof saveFlush==='function'&&saveFlush()===false)throw new Error('persistence_flush_failed');
+const verify=(D.servisLogs||[]);
+if(changes.some(x=>{const live=verify.find(r=>r&&String(r.id)===String(x.log.id));return !live||String(live.masterCategoryId||'')!==String(x.nextMaster||'')||String(live.serviceComponentId||'')!==String(x.nextComponent||'');}))throw new Error('persistence_verify_failed');
 Servis.closeBulkHistoryIdentityEditor();
 if(typeof refreshCarNotesAfterMutation==='function')refreshCarNotesAfterMutation({});
 Servis.renderList();
@@ -220,6 +223,9 @@ async commitHistoryJobTypeEditor(){
    }
    const saved=typeof save==='function'?await Promise.resolve(save({domain:'servis',financeMutation:false})):true;
    if(saved===false)throw new Error('persistence_failed');
+   if(typeof saveFlush==='function'&&saveFlush()===false)throw new Error('persistence_flush_failed');
+   const verify=D.servisLogs||[];
+   if(logs.some(log=>{const live=verify.find(r=>r&&String(r.id)===String(log.id));return !live||String(live.serviceJobType||'')!==String(log.serviceJobType||'')||String(live.serviceJobLabel||'')!==String(log.serviceJobLabel||'');}))throw new Error('persistence_verify_failed');
  }catch(err){
    logs.forEach((log,i)=>Object.assign(log,before[i]));
    toast('⚠️ Jenis pekerjaan tidak disimpan');
