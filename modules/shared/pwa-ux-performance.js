@@ -58,6 +58,29 @@
     const sheets=overlay.querySelectorAll('.modal,.qs-modal,.calc-modal');
     sheets.forEach(function(sheet){if(!sheet||!sheet.style)return;sheet.style.transform='';sheet.style.transition='';});
   };
+  // S1987: reusable modal geometry isolation. Opt-in callers can restore the
+  // canonical modal/overlay flow geometry after a specialized mode (e.g. an
+  // Edit sheet) has written inline height/overflow/flex values. This helper is
+  // deliberately explicit about panel IDs so ordinary modals with intentional
+  // inline scroll contracts are never touched.
+  PWAUX.restoreReusableModalGeometry=function(overlay,panelIds){
+    if(!overlay||!overlay.querySelector)return;
+    PWAUX.resetOverlayGeometry(overlay);
+    const modal=overlay.querySelector('.modal');
+    if(modal&&modal.style){
+      ['width','maxWidth','minWidth','height','maxHeight','margin','boxSizing','overflowX','overflowY','display','flexDirection'].forEach(function(k){modal.style[k]='';});
+      modal.style.transform='';
+      modal.style.transition='';
+    }
+    if(overlay.style){
+      ['position','inset','width','maxWidth','height','left','right','bottom','top','padding','boxSizing'].forEach(function(k){overlay.style[k]='';});
+    }
+    (Array.isArray(panelIds)?panelIds:[]).forEach(function(id){
+      const panel=document.getElementById(id);
+      if(!panel||!panel.style)return;
+      ['flex','minHeight','overflowY','overflowX'].forEach(function(k){panel.style[k]='';});
+    });
+  };
   PWAUX.installStatus=function(){
     if(typeof window==='undefined'||window.__pwaUxStatusInstalled)return;
     window.__pwaUxStatusInstalled=true;
