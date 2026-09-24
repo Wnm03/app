@@ -611,7 +611,7 @@ const GROUP_B = [
   'modules/vehicle/service-interval-sot.js',
   // S2005: canonical history ↔ reminder identity reconciliation. Must load
   // before sparepart-servis.js so the matcher is available to all reminder consumers.
-  'modules/vehicle/service-history-reminder-reconciliation-sot.js',
+  'modules/vehicle/service-history-reminder-reconciliation-sot.js', 'modules/vehicle/service-category-sot-reconciliation-s2007.js',
   'modules/vehicle/sparepart-servis.js',
   'modules/vehicle/sparepart-servis-ui.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
@@ -660,7 +660,6 @@ const GROUP_B = [
   // S1812: lower-level service history/reminder methods split from servis.js.
   // Must load immediately after servis.js; public Servis API is preserved.
   'modules/vehicle/servis-b.js',
-  // S2006: read-only component/work-type explorer over existing service history.
   'modules/vehicle/service-history-component-explorer-s2006.js',
   // S1811: condition/result/history/recommendation guidance layer. Loaded after
   // checklist + servis so it can consume their runtime APIs without becoming a second SoT.
@@ -700,7 +699,6 @@ const GROUP_B = [
   'modules/finance/financial-audit-presenter.js',
   'modules/finance/financial-audit-annotations.js',
   'modules/finance/finance-dashboard.js',
-
   // Sesi 91 (Batch 10): Financial Forecast Foundation — ditaruh SETELAH
   // finance-dashboard.js (dependency: FinancialForecastAPI butuh
   // FinanceDashboard.getAIHook() sudah dimuat lebih dulu), sebelum modul
@@ -1586,6 +1584,7 @@ function main() {
   } catch (e) {
     console.log(`\n⚠️  COVERAGE-PER-MODULE.md gagal digenerate ulang (non-fatal, build tetap lanjut): ${e.message}`);
   }
+
   if (!resA.minified) {
     console.log(
       '\nCatatan: esbuild belum terpasang di environment ini, jadi bundle di atas belum diminify\n' +
@@ -1596,4 +1595,5 @@ function main() {
     );
   }
 }
+
 main();
