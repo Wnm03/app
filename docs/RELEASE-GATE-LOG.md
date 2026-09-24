@@ -749,3 +749,8 @@
 
 - **lint-unavailable**: override dipakai. Alasan: esbuild/eslint tidak tersedia di sandbox tanpa jaringan
 - **unminified-bundle**: override dipakai. Alasan: esbuild tidak tersedia di sandbox
+
+## 2026-09-24T09:22:28.896Z — versi s1956-service-history-audit-package-1986
+
+- **lint-unavailable**: override dipakai. Alasan: esbuild/eslint tidak tersedia di sandbox tanpa jaringan
+- **unminified-bundle**: override dipakai. Alasan: esbuild tidak tersedia di sandbox
