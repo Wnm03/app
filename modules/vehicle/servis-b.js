@@ -506,9 +506,16 @@ const nextDueDate=u&&u.nextDueDate?u.nextDueDate:null;
 const dueLabel=nextDueKm!==null&&nextDueDate?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km / ${fmtDateID(nextDueDate)}`:nextDueKm!==null?`Berikutnya: ${nextDueKm.toLocaleString('id-ID')} km`:nextDueDate?`Berikutnya: ${fmtDateID(nextDueDate)}`:'';
 
 const historyLogsForSummary=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId&&servisLogMatchesCat(s,cat)):[];
+// S2008: distinguish "history exists" from "history eligible to reset the
+// reminder". The old UI said "Belum pernah dicatat" whenever lastKm was null,
+// even when one or more canonical history rows existed but the current reset
+// policy intentionally excluded their action type. That made the card look
+// unsynchronized. No data is changed; only the wording follows the same SOT.
 const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.length} riwayat tercatat`:'Belum ada riwayat tercatat';
+const hasHistoryButNoResetBaseline=historyLogsForSummary.length>0&&effectiveLastKm===null;
+const historyBaselineLabel=hasHistoryButNoResetBaseline?'Belum ada riwayat yang mereset interval':(effectiveLastKm===null?'Belum pernah dicatat':`Terakhir di ${effectiveLastKm.toLocaleString('id-ID')} km`);
 const legacyReminderFields={nextDueKm,nextDueDate,dueLabel,status};
-return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult};
+return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,historyBaselineLabel,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult};
 }).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
 const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length};
 const rfSeverity=Servis.activeReminderSeverityFilter;
@@ -528,7 +535,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminder
         ${r.dueLabel?`<div class="u-fs11 u-t2" style="margin-top:2px">📅 ${escapeHtml(r.dueLabel)}</div>`:''}
         <div class="u-fs11 u-t2" style="margin-top:2px">🧾 ${escapeHtml(r.historySummary)}</div>
         <div class="u-flex u-jcb u-aic" style="margin-top:3px">
-          <div class="u-fs12t2">${r.lastKm===null?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km'} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
+          <div class="u-fs12t2">${r.historyBaselineLabel||((r.lastKm===null)?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km')} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
           <div class="u-flex" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="Servis.openHistoryFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id,r.cat.serviceComponentId||null]))}">🧾 Riwayat</button>
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:3px 10px" data-stop="1" data-action="Servis.chooseReminderAction" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">✅ ${r.nextAction&&r.nextAction!=='event_based'?`Pilih tindakan · ${r.nextAction==='periksa'?'Periksa':r.nextAction==='bersih'?'Bersihkan':'Ganti'}`:'Pilih tindakan'}</button>
@@ -623,6 +630,7 @@ document.getElementById('servisLastKm').textContent=lastKm?lastKm.toLocaleString
 const el=document.getElementById('servisList');
 Servis.renderOdometerIntegrityBadge(el);
 Servis.renderActionTypeChips(el);
+if(typeof Servis.renderHistoryViewModeChips==='function')Servis.renderHistoryViewModeChips(el);
 
 Servis.renderMasterCategoryChips(el);
 Servis.renderServiceComponentFilter(el);
@@ -633,6 +641,7 @@ const emptyText=Servis.activeMasterCategoryFilter?'Tidak ada catatan servis utk 
 el.innerHTML=`<div class="empty"><div class="empty-icon">🔧</div><div class="empty-text">${escapeHtml(emptyText)}</div></div>`;
 return;
 }
+if(Servis.activeHistoryViewMode==='component'&&typeof Servis.renderComponentExplorer==='function'){Servis.renderComponentExplorer(logs,el);const auditToolbar=document.getElementById('servisHistoryAuditToolbar');if(auditToolbar)auditToolbar.style.display='none';return;}
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
 const selectionScope=Servis._historySelectionVehicleId();

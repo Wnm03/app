@@ -52,18 +52,21 @@ function serviceComponentIdForCategory(cat){
   return resolveCanonicalServiceComponent(cat.name,cat.serviceComponentId||null);
 }
 function dedupeServiceCategoriesForVehicle(categories,vehicleId){
+  // S2007/S2008: canonical category projection. It NEVER invents a mapping;
+  // exact-name legacy rows with interval conflicts remain visible/reviewable,
+  // while duplicate canonical component rows collapse deterministically to
+  // the strongest category (canonical name + vehicle scope + matching rule).
+  if(typeof ServiceCategorySOTReconciliationS2007!=='undefined'&&ServiceCategorySOTReconciliationS2007&&typeof ServiceCategorySOTReconciliationS2007.canonicalReminderProjection==='function'){
+    return ServiceCategorySOTReconciliationS2007.canonicalReminderProjection(categories,vehicleId);
+  }
   const out=[],seen=new Set();
   const list=(categories||[]).slice().sort((a,b)=>{
     const av=a&&a.vehicleId===vehicleId?0:1, bv=b&&b.vehicleId===vehicleId?0:1;
     return av-bv;
   });
-  const canonicalIds=new Set();
-  list.forEach(c=>{const cid=serviceComponentIdForCategory(c);if(cid)canonicalIds.add(cid);});
   list.forEach(c=>{
     if(!c)return;
     const cid=serviceComponentIdForCategory(c);
-    const n=String(c.name||'').trim().toLowerCase();
-    if(!cid && n==='kampas rem' && (canonicalIds.has('kampas-rem-depan')||canonicalIds.has('kampas-rem-belakang'))) return;
     const key=cid||('legacy:'+String(c.id||c.name||'').toLowerCase());
     if(seen.has(key))return;
     seen.add(key); out.push(c);
