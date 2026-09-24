@@ -103,6 +103,18 @@ function main() {
     if (!src.includes('if(s){')) fail('event upsert path missing');
   }, results);
 
+  check('S2005 HISTORY ↔ REMINDER canonical reconciliation', () => {
+    const sot = read('modules/vehicle/service-history-reminder-reconciliation-sot.js');
+    const reminder = read('modules/vehicle/sparepart-servis.js');
+    const maintenance = read('modules/vehicle/service-maintenance-engine.js');
+    if (!sot.includes('CHECKLIST_CANONICAL_MATCH')) fail('S2005 checklist canonical match code missing');
+    if (!sot.includes('VEHICLE_MISMATCH')) fail('S2005 vehicle isolation code missing');
+    if (!sot.includes('function latest(')) fail('S2005 deterministic latest resolver missing');
+    if (!reminder.includes('ServiceHistoryReminderReconciliationSOT.match')) fail('reminder matcher is not delegated to S2005 SOT');
+    if (!reminder.includes('sourceHistoryId')) fail('reminder baseline does not expose source history identity');
+    if (!maintenance.includes('ServiceHistoryReminderReconciliationSOT.latest')) fail('maintenance engine does not consume the same latest-history resolver');
+  }, results);
+
   check('HISTORY/REMINDER consume the same service-log fact', () => {
     // FIX (sesi perbaikan release-gate): dulu "history" dibaca dari
     // car-notes.js, tapi sejak sesi refactor arsitektur Servis (lihat

@@ -609,6 +609,9 @@ const GROUP_B = [
   // itu diam-diam selalu jatuh ke fallback di produksi. Ditaruh SEBELUM
   // sparepart-servis.js (consumer-nya) sesuai urutan dependency.
   'modules/vehicle/service-interval-sot.js',
+  // S2005: canonical history ↔ reminder identity reconciliation. Must load
+  // before sparepart-servis.js so the matcher is available to all reminder consumers.
+  'modules/vehicle/service-history-reminder-reconciliation-sot.js',
   'modules/vehicle/sparepart-servis.js',
   'modules/vehicle/sparepart-servis-ui.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
@@ -657,6 +660,8 @@ const GROUP_B = [
   // S1812: lower-level service history/reminder methods split from servis.js.
   // Must load immediately after servis.js; public Servis API is preserved.
   'modules/vehicle/servis-b.js',
+  // S2006: read-only component/work-type explorer over existing service history.
+  'modules/vehicle/service-history-component-explorer-s2006.js',
   // S1811: condition/result/history/recommendation guidance layer. Loaded after
   // checklist + servis so it can consume their runtime APIs without becoming a second SoT.
   'modules/vehicle/service-maintenance-guidance.js',
@@ -1581,7 +1586,6 @@ function main() {
   } catch (e) {
     console.log(`\n⚠️  COVERAGE-PER-MODULE.md gagal digenerate ulang (non-fatal, build tetap lanjut): ${e.message}`);
   }
-
   if (!resA.minified) {
     console.log(
       '\nCatatan: esbuild belum terpasang di environment ini, jadi bundle di atas belum diminify\n' +
@@ -1592,5 +1596,4 @@ function main() {
     );
   }
 }
-
 main();

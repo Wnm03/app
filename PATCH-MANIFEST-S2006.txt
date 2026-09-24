@@ -1,0 +1,54 @@
+S2006 — CUMULATIVE SERVICE PATCH + IDENTITY TOAST FIX
+Baseline: cumulative S2005 release / app-main (18) + S2005 atomic overlay
+Release build: s1956-service-history-audit-package-2002
+
+S2005 retained files:
+- modules/vehicle/service-history-reminder-reconciliation-sot.js
+- modules/vehicle/sparepart-servis.js
+- modules/vehicle/service-maintenance-engine.js
+- scripts/build.js
+- scripts/service-sot-integrity-gate.js
+- tests/service-history-reminder-reconciliation-s2005.test.js
+- AUDIT-S2005-FINAL-CUMULATIVE-S2000-S2005.md
+- PATCH-MANIFEST-S2005.txt
+
+S2006 added/changed:
+- modules/vehicle/service-history-component-explorer-s2006.js
+- modules/vehicle/servis.js — const -> let in identity editor; fixes generic error toast
+- chat-action-handlers.js — version synchronization prerequisite discovered during build
+- tests/service-history-component-explorer-s2006.test.js
+- tests/service-checklist-identity-editor-s2006.test.js
+- AUDIT-S2006-FINAL-CUMULATIVE-S2000-S2006.md
+- PATCH-MANIFEST-S2006.txt
+
+Build artifacts:
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- index.html
+- app_production.html
+- sw.js
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md
+- modules/shared/modules-render.js
+- modules/shared/modules-calc.js
+- modules/shared/modals.js
+- modules/shared/features-helpers-global-security.js
+
+Verification:
+- focused cumulative: 25/25 PASS
+- S2005 reconciliation: 8/8 PASS
+- S2006 explorer/identity: 6/6 PASS
+- build: PASS
+- bundle syntax/freshness: PASS
+- window expose: 83/83 PASS
+- service SOT structural gate: PASS (full-regression substep skipped)
+- Car Notes integrity: PASS
+- architecture integrity: PASS
+- persistence integrity: PASS
+- strict source-size: PASS with existing servis.js warning
+- full repository: NOT COMPLETE due execution timeout; 2 pre-existing Minimal-theme assertions observed
+
+No service-history migration.
+No second reminder store.
+No interval field added to history.
+No prior S2000–S2005 session removed.

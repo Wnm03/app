@@ -356,26 +356,32 @@ const hit=collectKnownGroups().find(g=>g.group===name);
 return hit?hit.icon:'📦';
 }
 function servisLogMatchesCat(s,cat){
-const catComponent=serviceComponentIdForCategory(cat);
-if(catComponent&&s&&s.serviceComponentId&&String(s.serviceComponentId)===String(catComponent)) return true;
-if(s.categoryId){
-const linked=D.sparepartCats.find(c=>c&&c.id===s.categoryId);
-if(!linked)return false;
-if(linked.vehicleId&&linked.vehicleId!==s.vehicleId)return false;
-const linkedComponent=serviceComponentIdForCategory(linked);
-if(catComponent&&linkedComponent) return linkedComponent===catComponent;
-return s.categoryId===cat.id;
-}
-const cn=cat.name.toLowerCase();
-const item=(s.item||'').toLowerCase().trim();
-if(!item)return false;
-if(item===cn) return true;
-if(item.includes(cn)) return true;
-if(cn.includes(item)&&item.length>=4){
-const ambiguous=D.sparepartCats.some(c=>c.id!==cat.id&&c.name.toLowerCase().includes(item));
-if(!ambiguous) return true;
-}
-return false;
+  // S2005: canonical history↔reminder reconciliation is centralized. The
+  // legacy branch remains as a compatibility fallback for isolated tests or
+  // older bundles where the SOT is not loaded yet.
+  if(typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'){
+    return ServiceHistoryReminderReconciliationSOT.match(s,cat,{vehicleId:s&&s.vehicleId}).ok;
+  }
+  const catComponent=serviceComponentIdForCategory(cat);
+  if(catComponent&&s&&s.serviceComponentId&&String(s.serviceComponentId)===String(catComponent)) return true;
+  if(s.categoryId){
+    const linked=D.sparepartCats.find(c=>c&&c.id===s.categoryId);
+    if(!linked)return false;
+    if(linked.vehicleId&&linked.vehicleId!==s.vehicleId)return false;
+    const linkedComponent=serviceComponentIdForCategory(linked);
+    if(catComponent&&linkedComponent) return linkedComponent===catComponent;
+    return s.categoryId===cat.id;
+  }
+  const cn=cat.name.toLowerCase();
+  const item=(s.item||'').toLowerCase().trim();
+  if(!item)return false;
+  if(item===cn) return true;
+  if(item.includes(cn)) return true;
+  if(cn.includes(item)&&item.length>=4){
+    const ambiguous=D.sparepartCats.some(c=>c.id!==cat.id&&c.name.toLowerCase().includes(item));
+    if(!ambiguous) return true;
+  }
+  return false;
 }
 function normalizeMaintenanceRuleKey(v){
 return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
@@ -719,15 +725,18 @@ const candidates=[];
 const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   const hasKm=intervalKm>0, hasMonths=intervalMonths>0, hasDays=intervalDays>0;
   if(!hasKm&&!hasMonths&&!hasDays)return;
-  let lastKm=null,lastDate=null;
+  let lastKm=null,lastDate=null,latestHistory=null;
   let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
+  if(hasKm||hasMonths||hasDays){
+    if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+  }
   if(hasKm){
-    lastKm=getLastServiceKmForCat(vehicleId,cat,lastFilter,true);
+    lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):getLastServiceKmForCat(vehicleId,cat,lastFilter,true);
     const traveled=lastKm===null?currentKm:currentKm-lastKm;
     remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
   }
   if(hasMonths||hasDays){
-    lastDate=getLastServiceDateForCat(vehicleId,cat,lastFilter,true);
+    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:getLastServiceDateForCat(vehicleId,cat,lastFilter,true);
     const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):0;
     if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
     if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
@@ -736,7 +745,7 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   if(score==null){limitingAxis=hasMonths?'bulan':'hari';score=hasMonths?fracMonths:fracDays;}
   if(fracMonths!=null&&fracMonths<score){limitingAxis='bulan';score=fracMonths;}
   if(fracDays!=null&&fracDays<score){limitingAxis='hari';score=fracDays;}
-  candidates.push({action,intervalKm:hasKm?intervalKm:null,lastKm,sisaKm:remainingKm,fracRemainKm:fracKm,intervalBulan:hasMonths?intervalMonths:null,sisaBulan:remainingMonths,fracRemainBulan:fracMonths,intervalHari:hasDays?intervalDays:null,sisaHari:remainingDays,fracRemainHari:fracDays,limitingAxis,score,lastDate});
+  candidates.push({action,intervalKm:hasKm?intervalKm:null,lastKm,sisaKm:remainingKm,fracRemainKm:fracKm,intervalBulan:hasMonths?intervalMonths:null,sisaBulan:remainingMonths,fracRemainBulan:fracMonths,intervalHari:hasDays?intervalDays:null,sisaHari:remainingDays,fracRemainHari:fracDays,limitingAxis,score,lastDate,sourceHistoryId:latestHistory&&latestHistory.id||null,reconciliationCode:latestHistory&&typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'?ServiceHistoryReminderReconciliationSOT.match(latestHistory,cat,{vehicleId}).code:null});
 };
 if(schedule){
   const type=schedule.maintenanceType;

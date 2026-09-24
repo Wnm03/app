@@ -463,7 +463,7 @@ const found=ServisChecklist._item(Number(groupIdx),Number(itemIdx));
 if(!found)return;
 const identity=ServisChecklist.getItemIdentity(found.id)||{};
 const groups=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.groups==='function'?ServiceInputCatalog.groups():[];
-const box=document.getElementById('serviceChecklistIdentityEditor');if(box)box.remove();
+let box=document.getElementById('serviceChecklistIdentityEditor');if(box)box.remove();
 const catOptions=groups.map(g=>`<option value="${escapeHtml(String(g.masterCategoryId))}"${String(g.masterCategoryId)===String(identity.masterCategoryId||'')?' selected':''}>${escapeHtml(g.group||g.masterCategoryId)}</option>`).join('');
 const comps=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.groupById==='function'&&identity.masterCategoryId?(ServiceInputCatalog.groupById(identity.masterCategoryId)?.items||[]):[];
 const compOptions=()=>`<option value="">— Pilih komponen servis —</option>${comps.map(c=>`<option value="${escapeHtml(String(c.id))}"${String(c.id)===String(identity.serviceComponentId||'')?' selected':''}>${escapeHtml(c.name||c.label||c.id)}</option>`).join('')}`;

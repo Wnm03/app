@@ -1,0 +1,48 @@
+S2005 — CANONICAL SERVICE HISTORY ↔ REMINDER RECONCILIATION
+Baseline: app-main (18).zip
+Release build: v2000
+
+PURPOSE
+Close the bug class where a checklist service history is saved but the reminder
+cannot recognize that latest history row as the reset baseline.
+
+CORE CHANGES
+- modules/vehicle/service-history-reminder-reconciliation-sot.js
+- modules/vehicle/sparepart-servis.js
+- modules/vehicle/service-maintenance-engine.js
+- scripts/build.js
+- scripts/service-sot-integrity-gate.js
+- tests/service-history-reminder-reconciliation-s2005.test.js
+- AUDIT-S2005-FINAL-CUMULATIVE-S2000-S2005.md
+
+BUILD ARTIFACTS
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- index.html
+- app_production.html
+- sw.js
+- chat-action-handlers.js
+- modules/shared/modules-render.js
+- modules/shared/modules-calc.js
+- modules/shared/modals.js
+- modules/shared/features-helpers-global-security.js
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md
+
+VERIFICATION
+- S2005 focused: 8/8 PASS
+- cumulative selected service tests: 37/37 PASS
+- service/Car Notes focused regression: 582/582 PASS
+- verify-bundle: PASS
+- verify-window-expose: PASS
+- service-sot-integrity-gate (structural, full-regression substep skipped): PASS
+- Car Notes integrity: PASS
+- patch integrity: PASS
+- architecture integrity: PASS
+- persistence integrity: PASS
+
+IMPORTANT
+No service-history migration was performed.
+No second reminder store/database was introduced.
+No interval field was added to history.
+Existing S2000–S2004 artifacts remain in the repository.
