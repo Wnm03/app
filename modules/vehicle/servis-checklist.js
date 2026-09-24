@@ -166,6 +166,9 @@ const ServisChecklist = {
   // Per-log identity override: checklist master item remains canonical, while
   // a saved service record may correct its category/component identity.
   _identityOverrides: {},
+  // Per-component canonical cost state. null = belum diketahui; 0 = sengaja nol.
+  // Keyed by checklist itemId so state mengikuti komponen, bukan service-level total.
+  _costs: {},
 
   // open(vehicleId) — mulai sesi checklist baru: reset _checked jadi {}
   // & simpan vehicleId aktif. Dipanggil tiap modal Servis Checklist
@@ -179,6 +182,7 @@ const ServisChecklist = {
     this._conditionNotes = {};
     this._notApplicable = {};
     this._identityOverrides = {};
+    this._costs = {};
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
@@ -198,6 +202,76 @@ const ServisChecklist = {
     return cat && cat.id ? cat : null;
   },
 
+  _normalizeCostField(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  },
+
+  getItemCost(itemId) {
+    const found = this.findItemById(itemId);
+    if (!found) return null;
+    const raw = this._costs && this._costs[itemId] ? this._costs[itemId] : {};
+    const labor = this._normalizeCostField(raw.labor);
+    const parts = this._normalizeCostField(raw.parts);
+    const consumables = this._normalizeCostField(raw.consumables);
+    const other = this._normalizeCostField(raw.other);
+    const total = [labor, parts, consumables, other].reduce((n, v) => n + (v == null ? 0 : v), 0);
+    return { labor, parts, consumables, other, total, source: 'component' };
+  },
+
+  setItemCost(itemId, patch) {
+    const found = this.findItemById(itemId);
+    if (!found) return { ok: false, reason: 'Item checklist tidak ditemukan' };
+    const next = Object.assign({}, this._costs[itemId] || {});
+    ['labor', 'parts', 'consumables', 'other'].forEach(key => {
+      if (Object.prototype.hasOwnProperty.call(patch || {}, key)) {
+        const raw = patch[key];
+        if (raw !== null && raw !== undefined && raw !== '' && (!Number.isFinite(Number(raw)) || Number(raw) < 0)) {
+          throw new Error('Biaya ' + key + ' harus 0 atau lebih');
+        }
+        next[key] = this._normalizeCostField(raw);
+      }
+    });
+    this._costs[itemId] = next;
+    return { ok: true, itemId, costBreakdown: this.getItemCost(itemId) };
+  },
+
+  setItemCostField(groupIdx, itemIdx, field, value) {
+    const item = this._item(groupIdx, itemIdx);
+    if (!item || !['labor', 'parts', 'consumables', 'other'].includes(String(field))) {
+      return { ok: false, reason: 'Field biaya tidak valid' };
+    }
+    const result = this.setItemCost(item.id, { [String(field)]: value });
+    if (result.ok && typeof Servis !== 'undefined' && typeof Servis.syncServiceCostSummary === 'function') {
+      Servis.syncServiceCostSummary();
+    }
+    return result;
+  },
+
+  costSummary() {
+    const rows = Object.keys(this._checked || {}).map(itemId => {
+      const found = this.findItemById(itemId);
+      if (!found) return null;
+      return {
+        itemId,
+        itemName: found.item.name,
+        serviceComponentId: (this.getItemIdentity(itemId) || {}).serviceComponentId || found.item.id || null,
+        costBreakdown: this.getItemCost(itemId),
+        cost: this.getItemCost(itemId).total
+      };
+    }).filter(Boolean);
+    const summary = rows.reduce((acc, row) => {
+      const b = row.costBreakdown || {};
+      ['labor', 'parts', 'consumables', 'other'].forEach(k => { acc[k] += b[k] == null ? 0 : Number(b[k]); });
+      return acc;
+    }, { labor: 0, parts: 0, consumables: 0, other: 0 });
+    summary.total = summary.labor + summary.parts + summary.consumables + summary.other;
+    summary.source = 'component';
+    summary.byComponent = rows;
+    return summary;
+  },
+
   toLogPayload() {
     return Object.keys(this._checked).map(itemId => {
       const found = this.findItemById(itemId);
@@ -214,7 +288,9 @@ const ServisChecklist = {
         conditionResult: this._results[itemId] || null,
         conditionNote: this._conditionNotes[itemId] || '',
         notApplicable: this._notApplicable[itemId] === true,
-        state: (typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.checklistState==='function') ? ServiceEventSOT.checklistState({actionType:this._checked[itemId],conditionResult:this._results[itemId]||null,notApplicable:this._notApplicable[itemId]===true}) : (this._checked[itemId]==='ganti'?'REPLACED':(this._results[itemId]?'INSPECTED':'PENDING'))
+        state: (typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.checklistState==='function') ? ServiceEventSOT.checklistState({actionType:this._checked[itemId],conditionResult:this._results[itemId]||null,notApplicable:this._notApplicable[itemId]===true}) : (this._checked[itemId]==='ganti'?'REPLACED':(this._results[itemId]?'INSPECTED':'PENDING')),
+        costBreakdown: this.getItemCost(itemId),
+        cost: this.getItemCost(itemId).total
       };
       // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
       // ditemukan untuk kendaraan aktif. Jangan pernah mengarang ID.
@@ -231,6 +307,7 @@ const ServisChecklist = {
     this._conditionNotes = {};
     this._notApplicable = {};
     this._identityOverrides = {};
+    this._costs = {};
     if (!log) return { ok: true, count: 0 };
     (Array.isArray(log.checklistNotApplicable)?log.checklistNotApplicable:[]).forEach(id=>{ if(this.findItemById(id)) this._notApplicable[id]=true; });
     if (!Array.isArray(log.checklist)) return { ok: true, count: 0 };
@@ -248,6 +325,14 @@ const ServisChecklist = {
         this._identityOverrides[row.itemId] = {
           masterCategoryId: row.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
           serviceComponentId: row.serviceComponentId || null
+        };
+      }
+      if (row.costBreakdown && typeof row.costBreakdown === 'object' && row.costBreakdown.source === 'component') {
+        this._costs[row.itemId] = {
+          labor: this._normalizeCostField(row.costBreakdown.labor),
+          parts: this._normalizeCostField(row.costBreakdown.parts),
+          consumables: this._normalizeCostField(row.costBreakdown.consumables),
+          other: this._normalizeCostField(row.costBreakdown.other)
         };
       }
     });

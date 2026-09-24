@@ -4,7 +4,7 @@
  * completion, component/part evidence, cost breakdown and vehicle health.
  */
 (function(g){'use strict';
-  const VERSION='SERVICE-EVENT-SOT-2';
+  const VERSION='SERVICE-EVENT-SOT-3';
   const STATES=Object.freeze(['PENDING','INSPECTED','OK','NEEDS_REPAIR','REPLACED','DEFERRED','NOT_APPLICABLE']);
   const HEALTH=Object.freeze(['OK','PERLU_DIPERIKSA','JATUH_TEMPO','TERTUNDA','BELUM_ADA_DATA']);
   const str=v=>v==null?'':String(v).trim();
@@ -33,15 +33,46 @@
     });
   }
   function normalizeCost(log){
-    const total=Number.isFinite(Number(log&&log.cost))?Number(log.cost):0;
-    const b=log&&log.costBreakdown&&typeof log.costBreakdown==='object'?Object.assign({},log.costBreakdown):{};
-    const out={labor:b.labor==null?null:Number(b.labor),parts:b.parts==null?null:Number(b.parts),consumables:b.consumables==null?null:Number(b.consumables),other:b.other==null?null:Number(b.other),total,source:b.source||'historical_total'};
+    const rawBreakdown=log&&log.costBreakdown&&typeof log.costBreakdown==='object'?log.costBreakdown:{};
+    const n=v=>v==null||v===''?null:(Number.isFinite(Number(v))&&Number(v)>=0?Number(v):null);
+    const totalRaw=rawBreakdown.source==='component'&&rawBreakdown.total!==undefined?rawBreakdown.total:(log&&log.cost);
+    const total=n(totalRaw);
+    const b=Object.assign({},rawBreakdown);
+    const out={labor:n(b.labor),parts:n(b.parts),consumables:n(b.consumables),other:n(b.other),total:total==null?0:total,source:b.source||'historical_total'};
     const nums=['labor','parts','consumables','other'];
-    nums.forEach(k=>{if(out[k]!=null&&!Number.isFinite(out[k]))out[k]=null;});
     const known=nums.reduce((s,k)=>s+(out[k]==null?0:out[k]),0);
     if(nums.every(k=>out[k]!=null)&&Math.abs(known-total)>0.005) return Object.assign(out,{reconciled:false});
     return Object.assign(out,{reconciled:nums.every(k=>out[k]!=null)?Math.abs(known-total)<=0.005:false});
   }
+  function normalizeComponentCost(row){
+    const b=row&&row.costBreakdown&&typeof row.costBreakdown==='object'?row.costBreakdown:{};
+    const n=v=>v==null||v===''?null:(Number.isFinite(Number(v))&&Number(v)>=0?Number(v):null);
+    const labor=n(b.labor),parts=n(b.parts),consumables=n(b.consumables),other=n(b.other);
+    const total=(labor==null?0:labor)+(parts==null?0:parts)+(consumables==null?0:consumables)+(other==null?0:other);
+    return {itemId:row&&row.itemId||null,itemName:row&&row.itemName||'',serviceComponentId:row&&row.serviceComponentId||row&&row.itemId||null,labor,parts,consumables,other,total,subtotal:total,source:'component'};
+  }
+  function normalizeServiceCost(log){
+    const existing=log&&log.serviceCost&&typeof log.serviceCost==='object'?log.serviceCost:null;
+    const rows=arr(log&&log.checklist).filter(r=>r&&r.costBreakdown&&r.costBreakdown.source==='component').map(normalizeComponentCost);
+    if(!existing&&!rows.length)return null;
+    const components=rows.length?rows:(existing&&Array.isArray(existing.components)?existing.components.map(normalizeComponentCost):[]);
+    const sums=components.reduce((a,c)=>{a.labor+=c.labor==null?0:c.labor;a.parts+=c.parts==null?0:c.parts;a.consumables+=c.consumables==null?0:c.consumables;a.other+=c.other==null?0:c.other;return a;},{labor:0,parts:0,consumables:0,other:0});
+    const total=sums.labor+sums.parts+sums.consumables+sums.other;
+    return {components,labor:sums.labor,parts:sums.parts,consumables:sums.consumables,other:sums.other,total,source:'component'};
+  }
+
+  function costForSession(sessionId, vehicleId){
+    const rows=logs().filter(s=>s&&(!sessionId||String(s.sessionId)===String(sessionId))&&(!vehicleId||String(s.vehicleId)===String(vehicleId)));
+    if(!rows.length)return null;
+    const first=rows.find(s=>s.serviceCost)||rows[0];
+    if(first&&first.serviceCost)return first.serviceCost;
+    const components=[];
+    rows.forEach(s=>arr(s.checklist).forEach(r=>{if(r&&r.costBreakdown&&r.costBreakdown.source==='component')components.push(normalizeComponentCost(r));}));
+    if(!components.length)return normalizeCost(rows[0]);
+    const totals=components.reduce((a,c)=>{a.labor+=c.labor||0;a.parts+=c.parts||0;a.consumables+=c.consumables||0;a.other+=c.other||0;return a;},{labor:0,parts:0,consumables:0,other:0});
+    return Object.assign({components,source:'component'},totals,{total:totals.labor+totals.parts+totals.consumables+totals.other});
+  }
+
   function evidence(log){
     if(!log)return{};
     return {vehicleId:log.vehicleId||null,transactionId:log.txLinkId||null,sessionId:log.sessionId||null,reminderPackageId:log.reminderPackageId||null,odometer:log.km==null?null:Number(log.km),date:log.date||null,photos:arr(log.foto).length,photoRefs:arr(log.foto).slice(),catalogPartId:log.catalogPartId||null,catalogPartOemCode:log.catalogPartOemCode||null,usedPartId:log.usedPartId||null};
@@ -58,6 +89,11 @@
     log.checklist=normalizeChecklist(log.checklist);
     log.serviceEventSotVersion=VERSION;
     log.costBreakdown=normalizeCost(log);
+    const serviceCost=normalizeServiceCost(log);
+    if(serviceCost){
+      log.serviceCost=serviceCost;
+      log.costBreakdown={labor:serviceCost.labor,parts:serviceCost.parts,consumables:serviceCost.consumables,other:serviceCost.other,total:serviceCost.total,source:'component',reconciled:true};
+    }
     log.serviceEvidence=evidence(log);
     log.nextDueSnapshot=nextDue(log);
     if(log.reminderPackageId){
@@ -124,7 +160,7 @@
     rows.forEach(s=>{if(s.reminderPackageId&&g.ServiceReminderPackageSOT&&g.ServiceReminderPackageSOT.byId){const p=g.ServiceReminderPackageSOT.byId(s.reminderPackageId);if(!p)issues.push({id:s.id,code:'ORPHAN_REMINDER_PACKAGE'});}if(s.serviceComponentId&&!canonical(s.serviceComponentId))issues.push({id:s.id,code:'UNKNOWN_COMPONENT'});if(s.txLinkId&&g.D&&Array.isArray(g.D.transactions)&&!g.D.transactions.some(t=>t&&t.id===s.txLinkId))issues.push({id:s.id,code:'ORPHAN_TRANSACTION'});});
     return{version:VERSION,total:rows.length,sessions:new Set(rows.map(s=>s.sessionId).filter(Boolean)).size,withReminder:rows.filter(s=>s.reminderPackageId).length,withEvidence:rows.filter(s=>arr(s.foto).length||s.txLinkId||s.catalogPartId||s.usedPartId).length,issues};
   }
-  const api={VERSION,STATES,HEALTH,checklistState,normalizeChecklist,normalizeCost,evidence,nextDue,normalize,createSession,completeReminder,maintenanceHealth,audit};
+  const api={VERSION,STATES,HEALTH,checklistState,normalizeChecklist,normalizeCost,normalizeComponentCost,normalizeServiceCost,costForSession,evidence,nextDue,normalize,createSession,completeReminder,maintenanceHealth,audit};
   g.ServiceEventSOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

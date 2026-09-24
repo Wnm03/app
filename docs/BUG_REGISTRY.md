@@ -1769,3 +1769,95 @@ Status: **BY DESIGN**
 - Regression: `tests/sa-e-cross-vehicle-stock-isolation.test.js`, `tests/sa-c-category-csv-vehicle-scope.test.js`.
 - Verification: targeted cumulative gate 15/15 PASS; syntax checks PASS.
 - Status: FIXED (2026-09-20 cumulative audit).
+
+## BUG-021
+
+- Severity: P1 High
+- Domain: Vehicle/Service — multi-component service edit + Finance
+- Requirement ID: S1989-D / S1993-F2
+- File: `modules/vehicle/servis.js`, `modules/vehicle/servis-b.js`
+- Function/component: service edit modal / session edit bridge
+- Trigger: Open any non-first component row belonging to a `sessionId` and save it.
+- Actual: The editor previously loaded only that row's checklist. The existing Finance bridge could overwrite the session transaction with one component's cost or create an additional transaction when the selected row had no `txLinkId`.
+- Expected: Editing any component row of a multi-component session must preserve the session as one financial event: all session components remain represented, the canonical session total is retained, and exactly one Finance transaction remains linked to the session.
+- Root cause: Edit path was record-centric while create path was session-centric; `sessionId` was not used to hydrate the editor or reconcile Finance on save.
+- Impact: Wrong Finance amount and possible duplicate Finance transaction.
+- Fix: **DIPERBAIKI Sesi 1993.** `servis-b.js` now builds a session edit context, hydrates the editor from the complete session checklist, reuses the first transaction as the session transaction, and reconciles all session rows after save. `servis.js` delegates edit-cost resolution to the session bridge.
+- Regression test: `tests/s1993-service-edit-finance-regression.test.js` — non-first component edit keeps one transaction and recomputes session total.
+- Verification: Targeted service regression 9/9 PASS; bundle freshness PASS; window-expose PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**
+
+## BUG-022
+
+- Severity: P1 High
+- Domain: Vehicle/Service — legacy cost + Finance
+- Requirement ID: S1989-G / S1993-F1
+- File: `modules/vehicle/servis.js`, `modules/vehicle/servis-b.js`
+- Function/component: legacy service edit cost resolution
+- Trigger: Edit a historical service record that has checklist rows but no component-level `costBreakdown.source === 'component'`.
+- Actual: Checklist presence forced cost calculation through the component aggregator, producing zero for legacy records; the Finance branch could then delete the linked transaction.
+- Expected: Legacy total remains authoritative until explicit component costs exist; `cost`, `txLinkId`, and Finance amount remain unchanged on a metadata-only edit.
+- Root cause: `_hasChecklistCostRows` was treated as equivalent to “component-cost rows exist”.
+- Impact: Historical service cost could become Rp0 and its Finance transaction could disappear.
+- Fix: **DIPERBAIKI Sesi 1993.** Edit cost resolution distinguishes checklist presence from component-cost presence and preserves the session's legacy cost; the edit bridge also restores the canonical transaction link.
+- Regression test: `tests/s1993-service-edit-finance-regression.test.js` — legacy checklist without component cost preserves cost and Finance link.
+- Verification: Targeted service regression 9/9 PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**
+
+## BUG-023
+
+- Severity: P2 Medium
+- Domain: Vehicle/Service — Service Event SOT
+- Requirement ID: S1989-A / S1993-F3
+- File: `modules/vehicle/service-event-sot.js`
+- Function/component: `normalizeServiceCost()`
+- Trigger: A log contains both checklist component costs and a conflicting pre-existing `serviceCost.components` projection.
+- Actual: The previous implementation preferred `serviceCost.components`, so a stale projection could override the checklist cost source.
+- Expected: Checklist component `costBreakdown` is the canonical input when present; `serviceCost` is a projection.
+- Fix: **DIPERBAIKI Sesi 1993.** `normalizeServiceCost()` prefers component rows from the checklist whenever they exist.
+- Regression test: `tests/s1993-service-edit-finance-regression.test.js`.
+- Verification: Targeted service regression 9/9 PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**
+
+## BUG-024
+
+- Severity: P3 Low
+- Domain: Vehicle/Service — cost normalization
+- Requirement ID: S1989-A / S1993-F4
+- File: `modules/vehicle/service-event-sot.js`
+- Function/component: `normalizeCost()`
+- Trigger: Negative or empty cost breakdown fields at service-log level.
+- Actual: Negative values could survive normalization and empty strings could become numeric zero.
+- Expected: Invalid negative/empty values are represented as unknown (`null`); explicit zero remains zero.
+- Fix: **DIPERBAIKI Sesi 1993.** Service-log cost normalization now rejects negative values and preserves null-vs-zero semantics, while component normalization remains non-negative.
+- Regression test: `tests/s1993-service-edit-finance-regression.test.js`.
+- Verification: Targeted service regression 9/9 PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**
+
+## BUG-025
+
+- Severity: P3 Low
+- Domain: Vehicle/Service — history presenter
+- Requirement ID: S1989-E/F / S1993-F5
+- File: `modules/vehicle/servis-b.js`
+- Function/component: history component row cost breakdown
+- Trigger: A multi-component session contains rows after the first row without their own `serviceCost` projection.
+- Actual: History item rendering fell back to `costForSession()`, showing the full session breakdown on individual rows whose nominal cost was zero.
+- Expected: Individual rows show only their own canonical `serviceCost`; session-wide breakdown belongs to the session header.
+- Fix: **DIPERBAIKI Sesi 1993.** History item rendering no longer falls back to session-wide cost for a component row.
+- Verification: Source inspection + targeted service regression 9/9 PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**
+
+## BUG-026
+
+- Severity: P3 Low
+- Domain: Vehicle/Service — canonical cost validation
+- Requirement ID: S1989-A / S1993-F6
+- File: `modules/vehicle/servis-b.js`
+- Function/component: `validateCanonicalServiceCost()`
+- Trigger: A malformed `byComponent` projection whose component sum disagrees with the declared service total.
+- Actual: Validation only compared aggregate fields that were themselves produced from the same source, so the check could become tautological.
+- Expected: Validation checks both aggregate fields and the component-row projection against the declared total.
+- Fix: **DIPERBAIKI Sesi 1993.** Validation now independently reconciles `byComponent` against `total` in addition to checking aggregate fields.
+- Verification: Targeted service regression 9/9 PASS; service-SOT gate PASS after build.
+- Status: **FIXED (Sesi 1993)**

@@ -16,6 +16,6 @@ test('Servis Stage 2B: multi-record session renders one expandable card with com
   assert.match(src,/g\.logs\.map\(renderHistoryItem\)\.join\(''\)/);
 });
 test('Servis Stage 2B: grouped total cost is display-only and sums member records',()=>{
-  assert.match(src,/const first=g\.logs\[0\], total=g\.logs\.reduce\(\(n,x\)=>n\+\(x\.cost\|\|0\),0\)/);
+  assert.match(src,/const first=g\.logs\[0\],[^\n]*total=.*g\.logs\.reduce\(\(n,x\)=>n\+\(x\.cost\|\|0\),0\)/);
   assert.match(src,/fmt\(total\)/);
 });

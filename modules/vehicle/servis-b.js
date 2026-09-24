@@ -3,6 +3,64 @@
 
 if (typeof Servis === "undefined") throw new Error("Servis must load before servis-b.js");
 Object.assign(Servis, {
+/* S1993 cumulative hardening: a multi-component service is one editable
+ * financial session. Opening any component row loads the whole session;
+ * saving keeps one Finance transaction and one canonical session cost. */
+_buildServiceSessionEditContext(editId){
+  if(!editId||!globalThis.D||!Array.isArray(D.servisLogs))return null;
+  const selected=D.servisLogs.find(x=>x&&x.id===editId);
+  if(!selected||!selected.sessionId)return null;
+  const rows=D.servisLogs.filter(x=>x&&String(x.sessionId)===String(selected.sessionId)&&String(x.vehicleId||'')===String(selected.vehicleId||''));
+  if(rows.length<2)return null;
+  const first=rows.find(x=>x.txLinkId)||rows[0];
+  const clone=v=>{try{return JSON.parse(JSON.stringify(v));}catch(_){return Object.assign({},v);}};
+  const merged=[];const seen=new Set();
+  rows.forEach(r=>Array.isArray(r.checklist)&&r.checklist.forEach(c=>{if(!c)return;const key=String(c.itemId||c.serviceComponentId||c.itemName||'');if(key&&!seen.has(key)){seen.add(key);merged.push(clone(c));}}));
+  return {editId,sessionId:selected.sessionId,vehicleId:selected.vehicleId,selected,rows,first,originalRows:rows.map(clone),mergedChecklist:merged,legacyCost:Number.isFinite(Number(first.cost))?Number(first.cost):0,txId:first.txLinkId||null};
+},
+_resolveServiceEditCost(ctx,hasChecklistCostRows,summary,legacyCost){
+  if(ctx&&ctx.sessionId&&!ctx.originalRows.some(r=>Array.isArray(r.checklist)&&r.checklist.some(c=>c&&c.costBreakdown&&c.costBreakdown.source==='component')))return ctx.legacyCost;
+  return hasChecklistCostRows?Number(summary&&summary.total||0):legacyCost;
+},
+_restoreServiceSessionAfterEdit(ctx,edited){
+  if(!ctx||!ctx.sessionId||!Array.isArray(ctx.rows)||!edited)return false;
+  const rows=ctx.rows,clone=v=>{try{return JSON.parse(JSON.stringify(v));}catch(_){return Object.assign({},v);}};
+  const merged=Array.isArray(edited.checklist)?edited.checklist:[];
+  const byKey=new Map(merged.map(c=>[String(c&&(c.itemId||c.serviceComponentId||c.itemName)||''),c]));
+  rows.forEach((r,i)=>{
+    const orig=ctx.originalRows[i]||{};const isSelected=r===ctx.selected;
+    if(!isSelected)Object.keys(orig).forEach(k=>{r[k]=clone(orig[k]);});
+    const origKeys=(Array.isArray(orig.checklist)?orig.checklist:[]).map(c=>String(c&&(c.itemId||c.serviceComponentId||c.itemName)||'')).filter(Boolean);
+    r.checklist=origKeys.map(k=>clone(byKey.get(k)||((Array.isArray(orig.checklist)?orig.checklist:[]).find(c=>String(c&&(c.itemId||c.serviceComponentId||c.itemName)||'')===k)))).filter(Boolean);
+  });
+  const first=rows.find(r=>r.id===ctx.first.id)||rows[0];
+  const costRows=rows.flatMap(r=>Array.isArray(r.checklist)?r.checklist:[]).filter(c=>c&&c.costBreakdown&&c.costBreakdown.source==='component');
+  const totals=costRows.reduce((a,c)=>{const b=c.costBreakdown||{};['labor','parts','consumables','other'].forEach(k=>a[k]+=Number(b[k])||0);return a;},{labor:0,parts:0,consumables:0,other:0});
+  const total=totals.labor+totals.parts+totals.consumables+totals.other;
+  if(costRows.length){
+    const components=costRows.map(c=>({itemId:c.itemId||null,itemName:c.itemName||'',serviceComponentId:c.serviceComponentId||c.itemId||null,costBreakdown:clone(c.costBreakdown)}));
+    first.cost=total;first.costBreakdown={...totals,total,source:'component',reconciled:true};first.serviceCost={...totals,total,source:'component',components};
+  }else{
+    first.cost=ctx.legacyCost;
+    const origFirst=ctx.originalRows.find(r=>r.id===ctx.first.id)||ctx.originalRows[0]||{};
+    first.costBreakdown=origFirst.costBreakdown===undefined?first.costBreakdown:clone(origFirst.costBreakdown);
+    first.serviceCost=clone(origFirst.serviceCost||null);
+  }
+  rows.forEach(r=>{if(r!==first){r.cost=0;r.txLinkId=null;r.serviceCost=null;r.costBreakdown=(r.checklist||[]).find(c=>c&&c.costBreakdown&&c.costBreakdown.source==='component')?.costBreakdown||{total:0,labor:null,parts:null,consumables:null,other:null,source:'service_entry'};}});
+  if(first.txLinkId&&Array.isArray(D.transactions)){const tx=D.transactions.find(t=>t&&t.id===first.txLinkId);if(tx)tx.amount=first.cost;else first.txLinkId=null;}
+  if(typeof save==='function')save({domain:'servis',financeMutation:false});
+  return {ok:true,total:first.cost,transactionId:first.txLinkId||null,hasComponent:costRows.length>0};
+},
+// S1992: sisa jarak/waktu pengingat. Nilai negatif = terlewat (bukan "Sisa -10.637 km").
+_formatReminderRemaining(urgency){
+  if(!urgency)return '';
+  const fmtNum=(v)=>Math.abs(Math.round(v)).toLocaleString('id-ID');
+  const part=(v,unit,over,left)=>{
+    if(v==null||v===''||!Number.isFinite(Number(v)))return null;
+    return Math.round(Number(v))<0?over+' '+fmtNum(Number(v))+' '+unit:left+' '+fmtNum(Number(v))+' '+unit;
+  };
+  return [part(urgency.sisaKm,'km','Terlewat','Sisa'),part(urgency.sisaBulan,'bln','terlewat','sisa')].filter(Boolean).join(' · ');
+},
 openPhotoLightbox(src,alt='Foto servis'){
 if(typeof document==='undefined'||!src)return false;
 Servis._closePhotoLightbox();
@@ -45,9 +103,11 @@ getCanonicalServiceCost(){
 validateCanonicalServiceCost(summary){
   const s=summary||Servis.getCanonicalServiceCost();
   const sum=['labor','parts','consumables','other'].reduce((n,k)=>n+(Number(s[k])||0),0);
+  const componentSum=Array.isArray(s.byComponent)?s.byComponent.reduce((n,row)=>{const b=row&&row.costBreakdown||{};return n+['labor','parts','consumables','other'].reduce((m,k)=>m+(Number(b[k])||0),0);},0):sum;
   const total=Number(s.total)||0;
-  const ok=Math.abs(sum-total)<0.005 && ['labor','parts','consumables','other','total'].every(k=>Number.isFinite(Number(s[k]))&&Number(s[k])>=0);
-  return {ok,total,componentsSum:sum,difference:total-sum,code:ok?'OK':'SERVICE_COST_TOTAL_MISMATCH'};
+  const fieldsOk=['labor','parts','consumables','other','total'].every(k=>Number.isFinite(Number(s[k]))&&Number(s[k])>=0);
+  const ok=fieldsOk&&Math.abs(sum-total)<0.005&&Math.abs(componentSum-total)<0.005;
+  return {ok,total,componentsSum:componentSum,difference:total-componentSum,code:ok?'OK':'SERVICE_COST_TOTAL_MISMATCH'};
 },
 syncServiceContextFromChecklist(){
 if(typeof ServisChecklist==='undefined'||!ServisChecklist._checked)return false;
@@ -613,6 +673,8 @@ const jobBadge=s.serviceJobLabel?`<span class="servis-history-badge" title="Jeni
 const legacyMappingBadge=(!s.serviceComponentId&&['Kampas Rem','Pembersihan Rem','Servis Rem','Ganti Kampas','Cek Rem'].includes(String(s.item||'').trim()))?`<span class="servis-history-badge servis-history-reminder-missing" title="Riwayat lama belum dipetakan ke komponen canonical. Buka Edit untuk memilih komponen.">⚠️ Perlu pemetaan komponen</span>`:'';
 const conditionBadge=s.conditionResult&&typeof serviceConditionLabel==='function'?`<span class="servis-history-badge">${typeof serviceConditionIcon==='function'?serviceConditionIcon(s.conditionResult):'🩺'} ${escapeHtml(serviceConditionLabel(s.conditionResult))}</span>`:'';
 const conditionNoteHtml=s.conditionNote?`<div class="servis-history-note">🩺 ${escapeHtml(s.conditionNote)}</div>`:'';
+const _historyCost=s.serviceCost||null;
+const costBreakdownInfo=_historyCost&&_historyCost.source==='component'?`<div class="servis-history-note" title="Rincian berasal dari biaya per komponen pada Service Event canonical">💰 Jasa ${fmt(_historyCost.labor||0)} · Part ${fmt(_historyCost.parts||0)} · Bahan ${fmt(_historyCost.consumables||0)} · Lain ${fmt(_historyCost.other||0)}</div>`:'';
 const fotoInfo=s.foto&&s.foto.length?`<span class="servis-history-badge servis-history-photo">📷 ${s.foto.length}</span>`:'';
 const linkedCat=(s.categoryId&&catsById.get(s.categoryId)&&(!catsById.get(s.categoryId).vehicleId||catsById.get(s.categoryId).vehicleId===curVehicleId)?catsById.get(s.categoryId):null)||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,curVehicleId):null);
 const linkedIntervalKm=linkedCat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(curVehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null);
@@ -621,16 +683,16 @@ const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-hist
 const fotoThumb=s.foto&&s.foto.length?`<button type="button" class="servis-history-photo-thumb" data-stop="1" data-action="Servis.openHistoryPhoto" data-args="${escapeHtml(JSON.stringify([s.id,0]))}" aria-label="Buka foto servis"><img src="${s.foto[0]}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0"></button>`:'';
 const fotoOrIcon=fotoThumb||`<div class="tx-icon u-bgaccsoft">🔧</div>`;
 const _selected=Servis._selectedHistoryIds.has(String(s.id));
-return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><label data-stop="1" class="u-flexc8" style="align-self:flex-start;padding-top:3px;flex-shrink:0" title="Pilih riwayat untuk audit"><input type="checkbox" ${_selected?'checked':''} data-action="Servis.toggleHistorySelection" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Pilih riwayat ${escapeHtml(s.item||'servis')} untuk audit"></label>${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}${conditionNoteHtml}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${jobBadge}${actionBadge}${conditionBadge}${legacyMappingBadge}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
+return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><label data-stop="1" class="u-flexc8" style="align-self:flex-start;padding-top:3px;flex-shrink:0" title="Pilih riwayat untuk audit"><input type="checkbox" ${_selected?'checked':''} data-action="Servis.toggleHistorySelection" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Pilih riwayat ${escapeHtml(s.item||'servis')} untuk audit"></label>${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}${conditionNoteHtml}${costBreakdownInfo}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${jobBadge}${actionBadge}${conditionBadge}${legacyMappingBadge}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 };
 if(typeof ServiceSessionSOT!=='undefined'&&typeof ServiceSessionSOT.renderReview==='function')ServiceSessionSOT.renderReview(el,curVehicleId);
 el.innerHTML=historyGroups.map(g=>{
   if(g.logs.length===1)return renderHistoryItem(g.logs[0]);
-  const first=g.logs[0], total=g.logs.reduce((n,x)=>n+(x.cost||0),0);
+  const first=g.logs[0], sessionCost=(first&&first.serviceCost)||(typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.costForSession==='function'?ServiceEventSOT.costForSession(g.sessionId,curVehicleId):null), total=sessionCost&&Number.isFinite(Number(sessionCost.total))?Number(sessionCost.total):g.logs.reduce((n,x)=>n+(x.cost||0),0);
   const names=g.logs.map(x=>x.item).filter(Boolean);
   const summary=names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:'');
   const groupId=`servis-session-${escapeHtml(String(g.sessionId).replace(/[^a-zA-Z0-9_-]/g,'_'))}`;
-  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span></div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
+  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${sessionCost&&sessionCost.source==='component'?`<span class="servis-history-badge">💰 Jasa ${fmt(sessionCost.labor||0)} · Part ${fmt(sessionCost.parts||0)}</span>`:''}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
 }).join('');
 let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
 if(!servisMoreWrap){
@@ -646,4 +708,30 @@ servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banya
 } else servisMoreWrap.style.display='none';
 }
 
+
 });
+/* Loaded after servis.js: install the session-edit bridge without a second SOT. */
+(function installServiceSessionEditHardening(){
+  const originalOpen=Servis.openModal;
+  if(typeof originalOpen==='function'&&!Servis._s1993OpenWrapped){
+    Servis.openModal=function(editId,prefillItem){
+      const ctx=Servis._buildServiceSessionEditContext(editId);Servis._s1993EditContext=ctx;
+      if(ctx){const selected=ctx.selected,original=selected.checklist;selected.checklist=ctx.mergedChecklist;try{return originalOpen.call(this,editId,prefillItem);}finally{selected.checklist=original;}}
+      return originalOpen.call(this,editId,prefillItem);
+    };Servis._s1993OpenWrapped=true;
+  }
+  const originalSave=Servis._saveInner;
+  if(typeof originalSave==='function'&&!Servis._s1993SaveWrapped){
+    Servis._saveInner=async function(){
+      const ctx=Servis._s1993EditContext;
+      if(ctx&&Servis.editId===ctx.editId){
+        const hasComponent=ctx.originalRows.some(r=>Array.isArray(r.checklist)&&r.checklist.some(c=>c&&c.costBreakdown&&c.costBreakdown.source==='component'));
+        const costEl=typeof document!=='undefined'?document.getElementById('servisCost'):null;if(costEl&&!hasComponent)costEl.value=String(ctx.legacyCost);
+        if(ctx.txId&&!ctx.selected.txLinkId)ctx.selected.txLinkId=ctx.txId;
+        try{const result=await originalSave.call(this);Servis._restoreServiceSessionAfterEdit(ctx,ctx.selected);return result;}finally{Servis._s1993EditContext=null;}
+      }
+      return originalSave.call(this);
+    };Servis._s1993SaveWrapped=true;
+  }
+})();
+

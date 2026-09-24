@@ -15,7 +15,7 @@ test('Sesi 2A: create servis menyimpan snapshot checklist ke entry D.servisLogs 
 });
 
 test('Sesi 2A: edit servis tetap memperbarui checklist pada entry yang sama', () => {
-  assert.match(carNotes, /Object\.assign\(s,\{date,item,categoryId:catIdForLog\|\|s\.categoryId[\s\S]*checklist:checklistPayload\}\);/);
+  assert.match(carNotes, /Object\.assign\(s,\{date,item,categoryId:catIdForLog\|\|s\.categoryId[\s\S]*checklist:checklistPayload,serviceCost:/);
 });
 
 test('Sesi 2A: snapshot checklist hanya berisi item tercentang + actionType dari satu SoT', () => {
@@ -30,7 +30,7 @@ test('Sesi 2A: edit memulihkan checklist lama secara backward-compatible', () =>
 });
 
 test('Sesi 2A: modal servis merender checklist inline dan sinkron saat dibuka', () => {
-  const modals = fs.readFileSync(path.join(root, 'modules/modals.js'), 'utf8');
+  const modals = fs.readFileSync(path.join(root, 'modules/shared/modals.js'), 'utf8');
   assert.match(modals, /id=\\?"servisChecklistPanel\\?"/);
   assert.match(carNotes, /Servis\.syncServiceChecklist\(\);\s*openModal\('servisModal'\)/);
 });
