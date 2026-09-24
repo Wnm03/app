@@ -1,0 +1,11 @@
+const assert=require('assert');
+const S=require('../modules/vehicle/service-checklist-execution-sot.js');
+const fs=require('fs');
+const checklist=fs.readFileSync(require.resolve('../modules/vehicle/servis-checklist.js'),'utf8');
+const event=fs.readFileSync(require.resolve('../modules/vehicle/service-event-sot.js'),'utf8');
+function test(name,fn){try{fn();console.log('PASS',name);}catch(e){console.error('FAIL',name,e.message);process.exitCode=1;}}
+test('S2004 state set is exact',()=>assert.deepStrictEqual(S.STATES,['PLANNED','COMPLETED','SKIPPED']));
+test('S2004 legacy inference stays backward compatible',()=>{assert.equal(S.infer({notApplicable:true}),'SKIPPED');assert.equal(S.infer({actionType:'periksa'}),'COMPLETED');assert.equal(S.infer({}),'PLANNED');});
+test('S2004 transition guard',()=>{assert.equal(S.transition('PLANNED','COMPLETED').ok,true);assert.equal(S.transition('PLANNED','SKIPPED').ok,true);assert.equal(S.transition('COMPLETED','SKIPPED').ok,false);});
+test('S2004 checklist persists executionStatus and exposes cycle UI',()=>{assert(checklist.includes('executionStatus:'));assert(checklist.includes('cycleExecutionStatusAndRender'));assert(checklist.includes("'SKIPPED'"));});
+test('S2004 service event normalizes execution status',()=>assert(event.includes('ServiceChecklistExecutionSOT.normalizeRows')));

@@ -1,0 +1,28 @@
+PATCH S2000 — CHECKLIST SERVICE → CATALOG PART → REMINDER → HISTORY
+Build: 1997
+
+LOGIC:
+modules/vehicle/servis-checklist.js
+modules/vehicle/servis.js
+
+automated test:
+tests/service-checklist-component-catalog-session-s2000.test.js
+
+BUILD OUTPUT:
+app-bundle-a.min.js
+app-bundle-b.min.js
+index.html
+app_production.html
+sw.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+chat-action-handlers.js
+docs/FILE-MAP.md
+docs/COVERAGE-PER-MODULE.md
+
+Audit:
+AUDIT-S2000-CHECKLIST-SERVICE-CATALOG-REMINDER-HISTORY-FINAL.md
+
+Do NOT include backups/ or .test-checkpoints/ in deployment patch.

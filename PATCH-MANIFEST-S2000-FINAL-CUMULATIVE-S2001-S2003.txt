@@ -1,0 +1,35 @@
+PATCH S2000 FINAL CUMULATIVE S2001-S2003
+Baseline: app-main (11).zip
+Build: v1999
+
+KEPT FROM S2000:
+- AUDIT-S2000-CHECKLIST-SERVICE-CATALOG-REMINDER-HISTORY-FINAL.md
+- PATCH-MANIFEST-S2000.txt
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- app_production.html
+- chat-action-handlers.js
+- docs/COVERAGE-PER-MODULE.md
+- docs/FILE-MAP.md
+- index.html
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- modules/vehicle/servis-checklist.js
+- modules/vehicle/servis.js
+- sw.js
+- tests/service-checklist-component-catalog-session-s2000.test.js
+
+ADDED/UPDATED HARDENING:
+- modules/vehicle/service-event-idempotency-sot.js
+- modules/vehicle/service-checklist-integrity-sot.js
+- scripts/build.js
+- tests/service-checklist-hardening-s2001-s2003.test.js
+- AUDIT-S2000-FINAL-CUMULATIVE-S2001-S2003.md
+- PATCH-MANIFEST-S2000-FINAL-CUMULATIVE-S2001-S2003.txt
+
+Excluded from patch:
+- backups/
+- .test-checkpoints/
+- temporary/generated test artifacts not required for deployment

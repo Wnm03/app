@@ -1,0 +1,15 @@
+S2004 — Checklist Execution Status SOT
+Baseline: cumulative S2000-S2003 (v1999)
+
+Changed runtime/build/test files:
+- app-bundle-b.min.js
+- docs/COVERAGE-PER-MODULE.md
+- docs/FILE-MAP.md
+- modules/vehicle/service-checklist-execution-sot.js
+- modules/vehicle/service-event-sot.js
+- modules/vehicle/servis-checklist.js
+- scripts/build.js
+- tests/service-checklist-execution-s2004.test.js
+
+No S2000-S2003 files are deleted or replaced as a session history artifact.
+Build version intentionally remains s1956-service-history-audit-package-1999.

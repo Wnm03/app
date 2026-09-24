@@ -9,6 +9,7 @@ _photoDraft:[],
 activeActionTypeFilter:null,
 activeMasterCategoryFilter:null,
 activeServiceComponentFilter:null,
+serviceHistorySessionFilter:null,serviceHistoryComponentFilter:null,
 _masterCategoryFilterPrefsLoaded:false,
 _masterCategoryFilterStorageKey:'servisMasterCategoryFilterPrefs',
 _loadMasterCategoryFilterPrefsOnce(){
@@ -456,7 +457,6 @@ if(typeof ServisChecklist==='undefined')return;
 ServisChecklist.setNotApplicable(Number(groupIdx),Number(itemIdx),!!value);
 Servis.renderServiceChecklist();
 },
-
 openServiceChecklistIdentityEditor(groupIdx,itemIdx){
 if(typeof ServisChecklist==='undefined')return;
 const found=ServisChecklist._item(Number(groupIdx),Number(itemIdx));
@@ -1253,24 +1253,35 @@ const _ivSnapshot=(typeof getEffectiveIntervalKm==='function'&&_catForSnapshot)?
 const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapshot)?getEffectiveIntervalBulan(_catForSnapshot,curVehicleId):(_catForSnapshot&&_catForSnapshot.intervalBulan>0?_catForSnapshot.intervalBulan:null);
 const _nextSnapshot=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
 const _rowsToPersist=_hasChecklistRows?_checkedServiceRows:[{itemName:_effectiveItem,categoryId:catIdForLog||null,masterCategoryId:masterCategoryId||null,actionType,serviceComponentId:serviceComponentId||null}];
+const _rowIdempotencyKeys=_rowsToPersist.map(_row=>{const ids=[_row.serviceComponentId||_row.itemId||serviceComponentId||masterCategoryId||catIdForLog||_row.itemName].filter(Boolean).map(String);const refs=Array.isArray(_row.catalogPartRefs)?_row.catalogPartRefs.map(r=>String(r.catalogId||'')).filter(Boolean).sort().join(','):'';return typeof ServiceEventIdempotencySOT!=='undefined'&&ServiceEventIdempotencySOT&&typeof ServiceEventIdempotencySOT.key==='function'?ServiceEventIdempotencySOT.key({vehicleId:curVehicleId,componentIds:ids,date,km,actionType:_row.actionType||actionType,fingerprint:refs}):null;});
+if(_rowIdempotencyKeys.some(k=>k&&typeof ServiceEventIdempotencySOT!=='undefined'&&ServiceEventIdempotencySOT.find&&ServiceEventIdempotencySOT.find(D.servisLogs||[],k,curVehicleId))){toast('⚠️ Pengerjaan servis yang sama sudah tersimpan; penyimpanan duplikat dibatalkan');return;}
 _rowsToPersist.forEach((_row,_rowIdx)=>{
   const _rowCategoryId=_row.categoryId||(_row.itemId&&typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.findItemById==='function'&&(()=>{const f=ServisChecklist.findItemById(_row.itemId);return f&&typeof ServisChecklist.resolveCategoryForItem==='function'?(ServisChecklist.resolveCategoryForItem(f.item,curVehicleId)||{}).id||null:null;})())||null;
   const _rowMasterCategoryId=_row.masterCategoryId||masterCategoryId||null;
   const _rowActionType=_row.actionType||actionType;
   const _rowItem=String(_row.itemName||_effectiveItem).trim();
   const _rowCat=_rowCategoryId?(D.sparepartCats||[]).find(c=>c&&c.id===_rowCategoryId):null;
-  const _rowIv=(typeof getEffectiveIntervalKm==='function'&&_rowCat)?getEffectiveIntervalKm(curVehicleId,_rowCat):(_rowCat&&_rowCat.intervalKm>0?_rowCat.intervalKm:null);
-  const _rowIb=(typeof getEffectiveIntervalBulan==='function'&&_rowCat)?getEffectiveIntervalBulan(_rowCat,curVehicleId):(_rowCat&&_rowCat.intervalBulan>0?_rowCat.intervalBulan:null);
+  const _rowMaster=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.getMasterComponent==='function'&&_row.itemId)?ServisChecklist.getMasterComponent(_row.itemId):null;
+  const _rowIv=_rowMaster&&Number.isFinite(Number(_rowMaster.intervalKm))?Number(_rowMaster.intervalKm):((typeof getEffectiveIntervalKm==='function'&&_rowCat)?getEffectiveIntervalKm(curVehicleId,_rowCat):(_rowCat&&_rowCat.intervalKm>0?_rowCat.intervalKm:null));
+  const _rowIb=_rowMaster&&Number.isFinite(Number(_rowMaster.intervalTimeMonths))?Number(_rowMaster.intervalTimeMonths):((typeof getEffectiveIntervalBulan==='function'&&_rowCat)?getEffectiveIntervalBulan(_rowCat,curVehicleId):(_rowCat&&_rowCat.intervalBulan>0?_rowCat.intervalBulan:null));
   const _rowNext=(typeof buildServiceNextDueSnapshot==='function'&&_rowCat)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_rowCat,serviceKm:km,serviceDate:date,actionType:_rowActionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   const _rowCostBreakdown=_row.costBreakdown&&_row.costBreakdown.source==='component'?_row.costBreakdown:{total:_rowIdx===0?cost:0,labor:null,parts:null,consumables:null,other:null,source:'service_entry'};
-  D.servisLogs.push({id:_rowIdx===0?servisId:uid(),sessionId:_serviceSessionId,vehicleId:curVehicleId,date,item:_rowItem,categoryId:_rowCategoryId,masterCategoryId:_rowMasterCategoryId,serviceComponentId:_row.serviceComponentId||null,serviceJobType:serviceJobTypeId||null,serviceJobLabel:serviceJob?serviceJob.label:null,serviceJobEvidence:serviceJobTypeId?'manual':null,actionType:_rowActionType,km,cost:_rowIdx===0?cost:0,note,accountId:accId,txLinkId:_rowIdx===0?txId:null,intervalKmAtService:_rowIv,intervalBulanAtService:_rowIb,nextDueKm:_rowNext.nextDueKm,nextDueDate:_rowNext.nextDueDate,nextDueAxis:_rowNext.nextDueAxis,usedPartId:_rowIdx===0?(usedPartId||null):null,usedPartQty:_rowIdx===0?(usedPartId?usedPartQty:0):0,catalogPartId:_rowIdx===0?(catalogPartId||null):null,catalogPartQty:_rowIdx===0?(catalogPartId?catalogPartQty:0):0,catalogPartOemCode:_rowIdx===0?(catalogPartId?catalogPartOemCode:''):'',catalogPartLinkedStockId:_rowIdx===0?(catalogLinkedStockId||null):null,foto:_rowIdx===0?Servis._photoDraft.slice():[],checklist:[_row],checklistNotApplicable,conditionResult:_rowIdx===0?conditionResult:null,conditionNote:_rowIdx===0?conditionNote:'',costBreakdown:_rowCostBreakdown,serviceCost:_rowIdx===0?_serviceCostProjection:null,serviceEvidence:{vehicleId:curVehicleId,transactionId:_rowIdx===0?txId:null,sessionId:_serviceSessionId,reminderPackageId:null,odometer:km,date,photos:_rowIdx===0?Servis._photoDraft.slice():[]}});
+  const _rowCatalogRefs=Array.isArray(_row.catalogPartRefs)?_row.catalogPartRefs.map(r=>({catalogId:String(r.catalogId),qty:Number(r.qty)>0?Number(r.qty):1})):[];
+  D.servisLogs.push({id:_rowIdx===0?servisId:uid(),sessionId:_serviceSessionId,serviceJobId:_serviceSessionId,checklistItemId:_row.itemId||null,vehicleId:curVehicleId,date,item:_rowItem,categoryId:_rowCategoryId,masterCategoryId:_rowMasterCategoryId,serviceComponentId:_row.serviceComponentId||(_row.itemId||null),serviceComponentNameSnapshot:_rowItem,serviceJobType:serviceJobTypeId||null,serviceJobLabel:serviceJob?serviceJob.label:null,serviceJobEvidence:serviceJobTypeId?'manual':null,actionType:_rowActionType,km,cost:_rowIdx===0?cost:0,note,accountId:accId,txLinkId:_rowIdx===0?txId:null,intervalKmAtService:_rowIv,intervalBulanAtService:_rowIb,reminderIntervalSource:_rowMaster?'service-master':'legacy-category',nextDueKm:_rowNext.nextDueKm,nextDueDate:_rowNext.nextDueDate,nextDueAxis:_rowNext.nextDueAxis,usedPartId:_rowIdx===0?(usedPartId||null):null,usedPartQty:_rowIdx===0?(usedPartId?usedPartQty:0):0,catalogPartId:_rowIdx===0?(_rowCatalogRefs[0]?.catalogId||catalogPartId||null):null,catalogPartQty:_rowIdx===0?(_rowCatalogRefs[0]?.qty||(catalogPartId?catalogPartQty:0)):0,catalogPartRefs:_rowCatalogRefs,catalogPartOemCode:_rowIdx===0?(catalogPartId?catalogPartOemCode:''):'',catalogPartLinkedStockId:_rowIdx===0?(catalogLinkedStockId||null):null,foto:_rowIdx===0?Servis._photoDraft.slice():[],checklist:[_row],checklistNotApplicable,conditionResult:_rowIdx===0?conditionResult:null,conditionNote:_rowIdx===0?conditionNote:'',costBreakdown:_rowCostBreakdown,serviceCost:_rowIdx===0?_serviceCostProjection:null,source:'CHECKLIST',serviceEvidence:{vehicleId:curVehicleId,transactionId:_rowIdx===0?txId:null,sessionId:_serviceSessionId,serviceJobId:_serviceSessionId,reminderPackageId:null,odometer:km,date,photos:_rowIdx===0?Servis._photoDraft.slice():[]}});
 });
+// S2001: freeze catalog identity/label at service time; missing parts remain null (never fabricated).
+if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getById==='function'){
+  for(const _savedRow of D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId)){const _refs=Array.isArray(_savedRow.catalogPartRefs)?_savedRow.catalogPartRefs:[]; _savedRow.catalogPartSnapshots=[];
+    for(const _ref of _refs){try{const _part=await VehicleCatalog.getById(_ref.catalogId);_savedRow.catalogPartSnapshots.push({catalogId:String(_ref.catalogId),qty:Number(_ref.qty)>0?Number(_ref.qty):1,name:_part&&(_part.partName||_part.name)||null,oemCode:_part&&(_part.oemCode||null),category:_part&&(_part.category||null),vehicleId:_part&&(_part.compatibleVehicleIds)?null:null});}catch(_snapErr){_savedRow.catalogPartSnapshots.push({catalogId:String(_ref.catalogId),qty:Number(_ref.qty)>0?Number(_ref.qty):1,name:null,oemCode:null,category:null,vehicleId:null});}}
+    const _rowIndex=D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId).indexOf(_savedRow);if(_rowIndex>=0&&_rowIndex<_rowIdempotencyKeys.length)_savedRow.idempotencyKey=_rowIdempotencyKeys[_rowIndex];
+  }
+}
 save({domain:'servis',financeMutation:!!txId,accountIds:txId?[accId]:[]});
 const _newServisLog=D.servisLogs[D.servisLogs.length-1];
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(_newServisLog);}catch(_lifecycleCreateErr){console.error('V25: post-commit service create lifecycle failed; reconciliation required',_lifecycleCreateErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:_newServisLog});}}
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
-  try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);}
-  catch(_catalogErr){console.error('V24: post-commit catalog service link failed; queued for reconciliation',_catalogErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:servisId,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
+  try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);const _savedRows=D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId&&x.id!==servisId);_savedRows.forEach(r=>VehicleCatalogServisLink.attachToServis(r.id,Array.isArray(r.catalogPartRefs)?r.catalogPartRefs:[]));
+  }catch(_catalogErr){console.error('V24: post-commit catalog service link failed; queued for reconciliation',_catalogErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:servisId,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
 }
 if(txId&&typeof AIBus!=="undefined"){
   const _createFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
@@ -1423,6 +1434,8 @@ ${componentHtml}
 ${Servis._renderEditHistoryHtml(s)}
 <div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">SoT: <b>kategori/komponen → interval efektif → reminder → riwayat</b>. Mengubah interval dilakukan melalui pengaturan kategori/override kendaraan, bukan membuat field interval baru di riwayat.</div>`;
 },
+setServiceHistorySessionFilter(sessionId){Servis.serviceHistorySessionFilter=String(sessionId||'');Servis.renderEditHistoryTab();return Servis.serviceHistorySessionFilter;},
+setServiceHistoryComponentFilter(componentId){Servis.serviceHistoryComponentFilter=String(componentId||'');Servis.renderEditHistoryTab();return Servis.serviceHistoryComponentFilter;},
 renderEditHistoryTab(){
 const panel=document.getElementById('servisHistoryPanel');
 if(!panel||Servis.editId===null)return;
@@ -1443,7 +1456,9 @@ const sameComponent=(log)=>{
   if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
   return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
 };
-const history=(D.servisLogs||[]).filter(sameComponent).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
+const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...new Map((D.servisLogs||[]).filter(x=>x&&x.vehicleId===vehicleId&&(x.sessionId||x.serviceJobId)).map(x=>[String(x.sessionId||x.serviceJobId),x])).values()].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));if(!Servis.serviceHistorySessionFilter)Servis.serviceHistorySessionFilter=String(sessionId||'');
+const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&x.vehicleId===vehicleId&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).map(x=>x.serviceComponentId||x.checklistItemId).filter(Boolean).map(String))];const effectiveComponentFilter=Servis.serviceHistoryComponentFilter&&componentIds.includes(String(Servis.serviceHistoryComponentFilter))?String(Servis.serviceHistoryComponentFilter):'';Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
+const history=(D.servisLogs||[]).filter(log=>{if(!log||log.vehicleId!==vehicleId)return false;const sid=String(log.sessionId||log.serviceJobId||'');if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;if(effectiveComponentFilter&&String(log.serviceComponentId||log.checklistItemId||'')!==effectiveComponentFilter)return false;return true;}).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
 const activeLog=null;
 const dueHtml='';
 const summary=history.length?`${history.length} riwayat tercatat`:'Belum ada riwayat tercatat';
@@ -1467,6 +1482,8 @@ const checklistInfo=(log)=>{
   const n=Array.isArray(log&&log.checklist)?log.checklist.length:0;
   return n?`<div class="u-fs11 u-t2" style="margin-top:5px">☑️ ${n} komponen checklist tercatat</div>`:'';
 };
+const sessionOptions=`<option value="">Semua pengerjaan</option>${sessions.map(x=>{const sid=String(x.sessionId||x.serviceJobId||'');const label=(x.serviceJobLabel||x.serviceJobType||'Pengerjaan Checklist')+' · '+(x.date||'-')+(x.km!=null?' · '+Number(x.km).toLocaleString('id-ID')+' km':'');return `<option value="${escapeHtml(sid)}"${sid===String(Servis.serviceHistorySessionFilter)?' selected':''}>${escapeHtml(label)}</option>`}).join('')}`;const componentOptions=`<option value="">Semua komponen</option>${componentIds.map(cid=>{const hit=Servis.resolveCanonicalServiceSelection({serviceComponentId:cid});const label=hit.component&&hit.component.name||cid;return `<option value="${escapeHtml(cid)}"${cid===effectiveComponentFilter?' selected':''}>${escapeHtml(label)}</option>`}).join('')}`;
+const historyFilters=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0"><div><label class="fl">Pengerjaan</label><select class="fs" data-onchange="Servis.setServiceHistorySessionFilter" data-onchange-args='["$value"]'>${sessionOptions}</select></div><div><label class="fl">Komponen</label><select class="fs" data-onchange="Servis.setServiceHistoryComponentFilter" data-onchange-args='["$value"]'>${componentOptions}</select></div></div>`;
 const rows=history.map((log,idx)=>{
   const badge=`<span style="padding:4px 8px;border-radius:999px;background:var(--surface3);color:var(--text2);font-size:10px;font-weight:700">${idx===0?'Terbaru':'Riwayat'}</span>`;
   const job=log.serviceJobLabel||log.serviceJobType||'';
@@ -1474,10 +1491,9 @@ const rows=history.map((log,idx)=>{
   const identityText=[identity.group&&identity.group.group,identity.component&&identity.component.name].filter(Boolean).join(' → ');
   return `<div style="background:var(--surface3);border-radius:14px;padding:12px;margin-bottom:8px;border:1px solid var(--border)"><div class="u-flex u-jcb u-aic" style="gap:8px"><div class="u-fw700 u-fs12">📅 ${escapeHtml(log.date||'-')}${log.km?' · '+Number(log.km).toLocaleString('id-ID')+' km':''}</div>${badge}</div>${job?`<div class="u-fs11" style="margin-top:5px">🔧 Jenis pekerjaan: <b>${escapeHtml(job)}</b></div>`:''}${identityText?`<div class="u-fs11 u-t2" style="margin-top:4px">SOT: ${escapeHtml(identityText)}</div>`:''}${action(log)}${checklistInfo(log)}${condition(log)}${note(log)}</div>`;
 }).join('');
-
 const currentCatalogId=current.catalogPartId||'';
 const catalogInfo=currentCatalogId?`<div class="fg"><label class="fl">Part Katalog (SOT)</label><div id="servisHistoryCatalogPart" data-catalog-part-id="${escapeHtml(currentCatalogId)}" style="background:var(--surface3);border-radius:12px;padding:10px 12px">Memuat part katalog…</div></div>`:'';
-panel.innerHTML=`<div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">📋 Riwayat Servis</div><div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(summary)} · terakhir ${escapeHtml(latestLabel)}</div><div class="u-fs11 u-t2" style="margin-top:4px">Halaman ini hanya menampilkan bukti riwayat. Pengingat dan Audit/Paket berada di tab masing-masing.</div></div>${catalogInfo}<div class="fg"><label class="fl">Riwayat Servis</label>${rows||'<div class="u-fs12t2">Belum ada riwayat untuk komponen ini.</div>'}</div><div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">Checklist yang tersimpan ditampilkan sebagai bukti read-only. Perubahan identitas checklist dilakukan dari tab Detail.</div>`;
+panel.innerHTML=`<div style="background:var(--accent-soft);border:1px solid var(--accent);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">📋 Riwayat Servis</div>${historyFilters}<div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(summary)} · terakhir ${escapeHtml(latestLabel)}</div><div class="u-fs11 u-t2" style="margin-top:4px">Halaman ini hanya menampilkan bukti riwayat. Pengingat dan Audit/Paket berada di tab masing-masing.</div></div>${catalogInfo}<div class="fg"><label class="fl">Riwayat Servis</label>${rows||'<div class="u-fs12t2">Belum ada riwayat untuk komponen ini.</div>'}</div><div class="u-fs11 u-t2" style="line-height:1.5;padding:8px 0">Checklist yang tersimpan ditampilkan sebagai bukti read-only. Perubahan identitas checklist dilakukan dari tab Detail.</div>`;
 if(currentCatalogId&&typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getById==='function'){
   VehicleCatalog.getById(currentCatalogId).then(it=>{const el=document.getElementById('servisHistoryCatalogPart');if(!el)return;el.textContent=it?(it.partName||'(Tanpa nama)')+(it.oemCode?' — '+it.oemCode:''):'Part katalog tidak ditemukan';}).catch(()=>{const el=document.getElementById('servisHistoryCatalogPart');if(el)el.textContent='Part katalog tidak dapat dimuat';});
 }
@@ -1643,7 +1659,6 @@ Servis._markServicedInFlight.add(_markGuardKey);
 const _clearMarkGuard=()=>Servis._markServicedInFlight.delete(_markGuardKey);
 const curKm=getVehicleKm(curVehicleId);
 const actLabel=actionType==='periksa'?'diperiksa':(actionType==='bersih'?'dibersihkan':'diservis');
-
 const willReset=!(cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&(actionType||'ganti')==='ganti');
 if(actionType==='ganti'&&!opts.skipEarlyGuard){
 const early=Servis._checkTooEarlyGanti(cat,curVehicleId,curKm);
@@ -1660,7 +1675,6 @@ let cost;
 if(opts.presetCost!==undefined&&opts.presetCost!==null){
 cost=parseFloat(opts.presetCost)||0;
 }else if(actionType==='periksa'||actionType==='bersih'){
-
 cost=0;
 }else{
 const costStr=await showPromptModal({title:'Biaya Servis',message:'Biaya servis ini (opsional, boleh dikosongkan/0):',icon:'💵',inputType:'number',defaultValue:0});

@@ -87,6 +87,7 @@
     if(!log)return{ok:false,code:'record_required'};
     const before=JSON.stringify(log);
     log.checklist=normalizeChecklist(log.checklist);
+    if(g.ServiceChecklistExecutionSOT&&typeof g.ServiceChecklistExecutionSOT.normalizeRows==='function')log.checklist=g.ServiceChecklistExecutionSOT.normalizeRows(log.checklist);
     log.serviceEventSotVersion=VERSION;
     log.costBreakdown=normalizeCost(log);
     const serviceCost=normalizeServiceCost(log);

@@ -163,12 +163,16 @@ const ServisChecklist = {
   _results: {},
   _conditionNotes: {},
   _notApplicable: {},
+  _executionStatus: {},
   // Per-log identity override: checklist master item remains canonical, while
   // a saved service record may correct its category/component identity.
   _identityOverrides: {},
   // Per-component canonical cost state. null = belum diketahui; 0 = sengaja nol.
   // Keyed by checklist itemId so state mengikuti komponen, bukan service-level total.
   _costs: {},
+  // Per-component catalog references. Kept inside checklist state until save;
+  // each saved history row receives only its own refs.
+  _catalogPartRefs: {},
 
   // open(vehicleId) — mulai sesi checklist baru: reset _checked jadi {}
   // & simpan vehicleId aktif. Dipanggil tiap modal Servis Checklist
@@ -181,8 +185,10 @@ const ServisChecklist = {
     this._results = {};
     this._conditionNotes = {};
     this._notApplicable = {};
+    this._executionStatus = {};
     this._identityOverrides = {};
     this._costs = {};
+    this._catalogPartRefs = {};
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
@@ -207,6 +213,80 @@ const ServisChecklist = {
     const n = Number(value);
     return Number.isFinite(n) && n >= 0 ? n : null;
   },
+
+  getMasterComponent(itemId) {
+    const found = this.findItemById(itemId);
+    if (!found) return null;
+    const componentId = (this.getItemIdentity(itemId) || {}).serviceComponentId || found.item.id || null;
+    if (!componentId) return null;
+    try {
+      if (typeof ServiceMasterDB !== 'undefined' && ServiceMasterDB && typeof ServiceMasterDB.getStore === 'function') {
+        const store = ServiceMasterDB.getStore();
+        const hit = store && Array.isArray(store.components) ? store.components.find(c => c && String(c.componentId) === String(componentId) && !c.deprecated) : null;
+        if (hit) return hit;
+      }
+    } catch (_e) { /* IDB/master runtime belum tersedia; fallback ke generated checklist tetap valid. */ }
+    return {
+      componentId,
+      masterCategoryId: found.item.masterCategoryId || found.group.masterCategoryId || null,
+      componentName: found.item.name,
+      intervalKm: found.item.intervalKm == null ? null : Number(found.item.intervalKm),
+      intervalTimeMonths: found.item.intervalTimeMonths == null ? null : Number(found.item.intervalTimeMonths),
+      resetType: found.item.resetType || null,
+      gantiResetsInterval: found.item.gantiResetsInterval == null ? null : !!found.item.gantiResetsInterval,
+      intervalLabel: found.item.intervalLabel || ''
+    };
+  },
+
+  getCatalogPartRefs(itemId) {
+    const refs = this._catalogPartRefs && Array.isArray(this._catalogPartRefs[itemId]) ? this._catalogPartRefs[itemId] : [];
+    return refs.map(r => ({ catalogId: String(r.catalogId), qty: Number(r.qty) > 0 ? Number(r.qty) : 1 }));
+  },
+
+  setCatalogPartRefs(itemId, refs) {
+    const found = this.findItemById(itemId);
+    if (!found) return { ok:false, reason:'Item checklist tidak ditemukan' };
+    const normalized = Array.isArray(refs) ? refs.filter(r => r && r.catalogId != null && String(r.catalogId).trim()).map(r => ({catalogId:String(r.catalogId).trim(), qty:Number(r.qty)>0?Number(r.qty):1})) : [];
+    this._catalogPartRefs[itemId] = normalized;
+    return {ok:true,itemId,catalogPartRefs:this.getCatalogPartRefs(itemId)};
+  },
+
+  setCatalogPart(itemId, catalogId, qty=1) {
+    return this.setCatalogPartRefs(itemId, catalogId ? [{catalogId, qty}] : []);
+  },
+
+  async openCatalogPicker(itemId) {
+    const found = this.findItemById(itemId);
+    if (!found) return {ok:false,reason:'Item checklist tidak ditemukan'};
+    if (typeof VehicleCatalog === 'undefined' || !VehicleCatalog || typeof VehicleCatalog.getAll !== 'function') {
+      if (typeof toast === 'function') toast('⚠️ Katalog suku cadang belum tersedia');
+      return {ok:false,reason:'catalog_unavailable'};
+    }
+    let items=[];
+    try { items=await VehicleCatalog.getAll(); } catch (_e) {
+      if (typeof toast === 'function') toast('⚠️ Gagal membaca katalog suku cadang');
+      return {ok:false,reason:'catalog_read_failed'};
+    }
+    const componentId=(this.getItemIdentity(itemId)||{}).serviceComponentId||found.item.id;
+    const candidates=typeof ServicePartCompatibilitySOT!=='undefined'&&ServicePartCompatibilitySOT&&typeof ServicePartCompatibilitySOT.candidates==='function'
+      ?ServicePartCompatibilitySOT.candidates(items,this._vehicleId,componentId) : [];
+    if (typeof document === 'undefined') return {ok:true,candidates};
+    const old=document.getElementById('servisChecklistCatalogPicker'); if(old) old.remove();
+    const box=document.createElement('div'); box.id='servisChecklistCatalogPicker'; box.className='overlay open'; box.style.zIndex='430';
+    const current=this.getCatalogPartRefs(itemId);
+    box.innerHTML=`<div class="modal" style="max-width:520px;width:100%;max-height:90dvh;overflow:auto"><div class="modal-title"><span>📦 Part Katalog — ${escapeHtml(found.item.name)}</span><button class="modal-close" data-action="ServisChecklist.closeCatalogPicker">✕</button></div><div class="u-fs11 u-t2" style="line-height:1.5;margin-bottom:10px">Hanya part yang memiliki hubungan ID kompatibilitas dengan komponen ini yang ditampilkan. Tidak ada fuzzy matching.</div>${candidates.length?candidates.map(it=>{const selected=current.some(r=>String(r.catalogId)===String(it.id));return `<button type="button" class="btn btn-ghost btn-full" style="text-align:left;margin-bottom:7px" data-action="ServisChecklist.setCatalogPartAndClose" data-args="${escapeHtml(JSON.stringify([itemId,it.id,1]))}">${selected?'✓ ':''}${escapeHtml(it.partName||it.name||it.id)}${it.oemCode?' — '+escapeHtml(it.oemCode):''}</button>`}).join(''):'<div class="u-fs12t2" style="padding:12px 0">Belum ada part katalog yang terpetakan ke komponen ini.</div>'}<button type="button" class="btn btn-ghost btn-full" data-action="ServisChecklist.setCatalogPartAndClose" data-args="${escapeHtml(JSON.stringify([itemId,null,1]))}">Hapus pilihan part</button></div>`;
+    document.body.appendChild(box);
+    return {ok:true,candidates};
+  },
+
+  setCatalogPartAndClose(itemId,catalogId,qty=1) {
+    const result=this.setCatalogPart(itemId,catalogId,qty);
+    this.closeCatalogPicker();
+    this.render();
+    return result;
+  },
+
+  closeCatalogPicker() { const box=typeof document!=='undefined'?document.getElementById('servisChecklistCatalogPicker'):null; if(box)box.remove(); },
 
   getItemCost(itemId) {
     const found = this.findItemById(itemId);
@@ -258,7 +338,12 @@ const ServisChecklist = {
         itemName: found.item.name,
         serviceComponentId: (this.getItemIdentity(itemId) || {}).serviceComponentId || found.item.id || null,
         costBreakdown: this.getItemCost(itemId),
-        cost: this.getItemCost(itemId).total
+        cost: this.getItemCost(itemId).total,
+        catalogPartRefs: this.getCatalogPartRefs(itemId),
+        intervalKmAtService: (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
+        intervalBulanAtService: (this.getMasterComponent(itemId)||{}).intervalTimeMonths ?? null,
+        reminderIntervalSource: this.getMasterComponent(itemId) ? 'service-master' : 'legacy-category',
+        checklistItemId: itemId
       };
     }).filter(Boolean);
     const summary = rows.reduce((acc, row) => {
@@ -277,7 +362,7 @@ const ServisChecklist = {
       const found = this.findItemById(itemId);
       if (!found) return null;
       const category = this.resolveCategoryForItem(found.item, this._vehicleId);
-      const identity = this._identityOverrides[itemId] || {};
+      const identity = this.getItemIdentity(itemId) || {};
       const row = {
         itemId,
         itemName: found.item.name,
@@ -288,9 +373,15 @@ const ServisChecklist = {
         conditionResult: this._results[itemId] || null,
         conditionNote: this._conditionNotes[itemId] || '',
         notApplicable: this._notApplicable[itemId] === true,
+        executionStatus: (typeof ServiceChecklistExecutionSOT!=='undefined'&&typeof ServiceChecklistExecutionSOT.infer==='function') ? ServiceChecklistExecutionSOT.infer({executionStatus:this._executionStatus[itemId],notApplicable:this._notApplicable[itemId]===true,actionType:this._checked[itemId],conditionResult:this._results[itemId]||null}) : (this._notApplicable[itemId]===true?'SKIPPED':(this._checked[itemId]!==undefined?'COMPLETED':'PLANNED')),
         state: (typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.checklistState==='function') ? ServiceEventSOT.checklistState({actionType:this._checked[itemId],conditionResult:this._results[itemId]||null,notApplicable:this._notApplicable[itemId]===true}) : (this._checked[itemId]==='ganti'?'REPLACED':(this._results[itemId]?'INSPECTED':'PENDING')),
         costBreakdown: this.getItemCost(itemId),
-        cost: this.getItemCost(itemId).total
+        cost: this.getItemCost(itemId).total,
+        catalogPartRefs: this.getCatalogPartRefs(itemId),
+        intervalKmAtService: (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
+        intervalBulanAtService: (this.getMasterComponent(itemId)||{}).intervalTimeMonths ?? null,
+        reminderIntervalSource: this.getMasterComponent(itemId) ? 'service-master' : 'legacy-category',
+        checklistItemId: itemId
       };
       // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
       // ditemukan untuk kendaraan aktif. Jangan pernah mengarang ID.
@@ -306,8 +397,10 @@ const ServisChecklist = {
     this._results = {};
     this._conditionNotes = {};
     this._notApplicable = {};
+    this._executionStatus = {};
     this._identityOverrides = {};
     this._costs = {};
+    this._catalogPartRefs = {};
     if (!log) return { ok: true, count: 0 };
     (Array.isArray(log.checklistNotApplicable)?log.checklistNotApplicable:[]).forEach(id=>{ if(this.findItemById(id)) this._notApplicable[id]=true; });
     if (!Array.isArray(log.checklist)) return { ok: true, count: 0 };
@@ -321,12 +414,15 @@ const ServisChecklist = {
       if (row.conditionResult) this._results[row.itemId] = row.conditionResult;
       if (row.conditionNote) this._conditionNotes[row.itemId] = String(row.conditionNote);
       if (row.notApplicable === true) this._notApplicable[row.itemId] = true;
+      if (typeof ServiceChecklistExecutionSOT!=='undefined'&&typeof ServiceChecklistExecutionSOT.normalizeState==='function'&&ServiceChecklistExecutionSOT.normalizeState(row.executionStatus)) this._executionStatus[row.itemId]=ServiceChecklistExecutionSOT.normalizeState(row.executionStatus);
       if (row.masterCategoryId || row.serviceComponentId) {
         this._identityOverrides[row.itemId] = {
           masterCategoryId: row.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
           serviceComponentId: row.serviceComponentId || null
         };
       }
+      if (Array.isArray(row.catalogPartRefs)) this._catalogPartRefs[row.itemId] = row.catalogPartRefs.map(r => ({catalogId:String(r.catalogId),qty:Number(r.qty)>0?Number(r.qty):1}));
+      else if (row.catalogPartId) this._catalogPartRefs[row.itemId] = [{catalogId:String(row.catalogPartId),qty:Number(row.catalogPartQty)>0?Number(row.catalogPartQty):1}];
       if (row.costBreakdown && typeof row.costBreakdown === 'object' && row.costBreakdown.source === 'component') {
         this._costs[row.itemId] = {
           labor: this._normalizeCostField(row.costBreakdown.labor),
@@ -345,7 +441,7 @@ const ServisChecklist = {
     const o = this._identityOverrides[itemId] || {};
     return {
       masterCategoryId: o.masterCategoryId || found.item.masterCategoryId || found.group.masterCategoryId || null,
-      serviceComponentId: o.serviceComponentId || null
+      serviceComponentId: o.serviceComponentId || found.item.id || null
     };
   },
 
@@ -582,6 +678,23 @@ const ServisChecklist = {
     return {ok:true,id:item.id,conditionNote:this._conditionNotes[item.id]};
   },
 
+  setExecutionStatus(groupIdx,itemIdx,status){
+    const item=this._item(groupIdx,itemIdx);
+    if(!item)return {ok:false,reason:'Item tidak ditemukan'};
+    const next=typeof ServiceChecklistExecutionSOT!=='undefined'&&ServiceChecklistExecutionSOT.normalizeState?ServiceChecklistExecutionSOT.normalizeState(status):null;
+    if(!next)return {ok:false,reason:'Status eksekusi tidak valid'};
+    const current=this._executionStatus[item.id]||'PLANNED';
+    const result=typeof ServiceChecklistExecutionSOT!=='undefined'&&ServiceChecklistExecutionSOT.transition?ServiceChecklistExecutionSOT.transition(current,next):{ok:true,to:next};
+    if(!result.ok)return result;
+    this._executionStatus[item.id]=next;
+    return {ok:true,id:item.id,executionStatus:next};
+  },
+
+  setExecutionStatusByItemId(itemId,status){
+    const found=this.findItemById(itemId);
+    return found?this.setExecutionStatus(found.groupIdx,found.itemIdx,status):{ok:false,reason:'Item tidak ditemukan'};
+  },
+
   setNotApplicable(groupIdx, itemIdx, value=true) {
     const item = this._item(groupIdx, itemIdx);
     if (!item) return { ok:false, reason:'Item tidak ditemukan' };
@@ -649,7 +762,13 @@ const ServisChecklist = {
         const choiceHtml = choices.length > 1 && isChecked
           ? `<div class="sc-action-toggle" role="group" aria-label="Tindakan ${escapeHtml(item.name)}">${choices.map(type => `<button type="button" class="sc-action-btn${action === type ? ' active' : ''}" data-action="ServisChecklist.setActionTypeAndRender" data-args='[${gi},${ii},"${type}"]'>${this._actionLabel(type)}</button>`).join('')}</div>`
           : `<span class="sc-action-fixed">${this._actionLabel(isChecked ? action : this._defaultActionType(item))}</span>`;
-        return `<div class="sc-item${isChecked ? ' is-checked' : ''}"><button type="button" class="sc-check${isChecked ? ' checked' : ''}" role="checkbox" aria-checked="${isChecked ? 'true' : 'false'}" data-action="ServisChecklist.toggleItemAndRender" data-args='[${gi},${ii}]'>${isChecked ? '✓' : ''}</button><div class="sc-item-main"><div class="sc-item-name">${escapeHtml(item.name)}</div><div class="sc-item-meta">${escapeHtml(item.intervalLabel || 'Tanpa interval rutin')}</div>${choiceHtml}</div></div>`;
+        const partRefs=this.getCatalogPartRefs(item.id);
+        const partLabel=partRefs.length?`<div class="sc-item-meta">📦 ${partRefs.length} part katalog terpilih</div>`:'';
+        const partButton=isChecked?`<button type="button" class="btn btn-ghost btn-sm" data-action="ServisChecklist.openCatalogPicker" data-args='["${escapeHtml(item.id)}"]'>📦 ${partRefs.length?'Ubah part':'Pilih part'}</button>`:'';
+        const execStatus=isChecked?(this._executionStatus[item.id]||'COMPLETED'):null;
+        const execLabel=execStatus==='PLANNED'?'⏳ Rencana':execStatus==='SKIPPED'?'⏭️ Dilewati':'✅ Selesai';
+        const execButton=isChecked?`<button type="button" class="btn btn-ghost btn-sm" data-action="ServisChecklist.cycleExecutionStatusAndRender" data-args='[${gi},${ii}]'>${execLabel}</button>`:'';
+        return `<div class="sc-item${isChecked ? ' is-checked' : ''}"><button type="button" class="sc-check${isChecked ? ' checked' : ''}" role="checkbox" aria-checked="${isChecked ? 'true' : 'false'}" data-action="ServisChecklist.toggleItemAndRender" data-args='[${gi},${ii}]'>${isChecked ? '✓' : ''}</button><div class="sc-item-main"><div class="sc-item-name">${escapeHtml(item.name)}</div><div class="sc-item-meta">${escapeHtml(item.intervalLabel || 'Tanpa interval rutin')}</div>${choiceHtml}${execButton}${partLabel}<div style="margin-top:5px">${partButton}</div></div></div>`;
       }).join('');
       return `<details class="sc-group" id="sc-group-${gi}"${gi === 0 ? ' open' : ''}><summary><span>${escapeHtml(group.group)}</span><span class="sc-group-badge">${count}/${this.itemsOfGroup(group).length}</span></summary><div class="sc-group-body">${items}</div></details>`;
     }).join('');
@@ -675,6 +794,13 @@ const ServisChecklist = {
     const result = this.setActionType(groupIdx, itemIdx, type);
     this.render();
     return result;
+  },
+
+  cycleExecutionStatusAndRender(groupIdx,itemIdx){
+    const item=this._item(groupIdx,itemIdx); if(!item)return {ok:false,reason:'Item tidak ditemukan'};
+    const current=this._executionStatus[item.id]||'COMPLETED';
+    const next=current==='COMPLETED'?'PLANNED':current==='PLANNED'?'SKIPPED':'COMPLETED';
+    const result=this.setExecutionStatus(groupIdx,itemIdx,next); this.render(); return result;
   },
 
   groupOptions() {

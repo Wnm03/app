@@ -633,6 +633,8 @@ const GROUP_B = [
   'modules/vehicle/service-session-sot.js',
   'modules/vehicle/service-history-audit-package.js',
   'modules/vehicle/service-event-sot.js',
+  'modules/vehicle/service-checklist-execution-sot.js',
+  'modules/vehicle/service-checklist-integrity-sot.js',
   'modules/vehicle/parts-catalog-database.js',
   'modules/vehicle/vehicle-maintenance-template-engine.js',
   'modules/vehicle/honda-pdf-catalog-auto-import.js',
