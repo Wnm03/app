@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's1956-service-history-audit-package-1974';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's1956-service-history-audit-package-1974';
+const APP_BUILD_VERSION = 's1956-service-history-audit-package-1984';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's1956-service-history-audit-package-1984';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -672,6 +672,10 @@ if(!el) return;
 // tests/data-action-dispatcher-toast.test.js: elemen tiruan cuma py
 // dataset+closest()).
 if(el.dataset&&el.dataset.scanBusy==='1') return;
+// S1984: disabled action controls must never dispatch, even when a WebView
+// or synthetic click reaches the document listener. aria-disabled covers
+// non-button controls that intentionally expose a disabled state.
+if(el.disabled===true || (el.getAttribute&&el.getAttribute('aria-disabled')==='true')) return;
 if(el.dataset.stop) e.stopPropagation();
 {
 const path = el.dataset.action.split('.');
