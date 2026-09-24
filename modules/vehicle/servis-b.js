@@ -3,6 +3,82 @@
 
 if (typeof Servis === "undefined") throw new Error("Servis must load before servis-b.js");
 Object.assign(Servis, {
+openPhotoLightbox(src,alt='Foto servis'){
+if(typeof document==='undefined'||!src)return false;
+Servis._closePhotoLightbox();
+const box=document.createElement('div');
+box.id='servisPhotoLightbox';
+box.setAttribute('role','dialog');
+box.setAttribute('aria-modal','true');
+box.setAttribute('aria-label',alt||'Foto servis');
+box.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.86);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;cursor:zoom-out';
+const img=document.createElement('img');
+img.src=src;
+img.alt=alt||'Foto servis';
+img.decoding='async';
+img.style.cssText='max-width:96vw;max-height:88vh;width:auto;height:auto;object-fit:contain;border-radius:12px;box-shadow:0 8px 40px rgba(0,0,0,.45);cursor:default';
+const close=document.createElement('button');
+close.type='button';
+close.textContent='✕';
+close.setAttribute('aria-label','Tutup foto');
+close.style.cssText='position:absolute;top:12px;right:12px;width:42px;height:42px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:22px;cursor:pointer';
+box.appendChild(img);box.appendChild(close);
+box.addEventListener('click',(e)=>{if(e.target===box||e.target===close)Servis._closePhotoLightbox();});
+document.body.appendChild(box);
+Servis._photoLightboxKeyHandler=(e)=>{if(e.key==='Escape')Servis._closePhotoLightbox();};
+document.addEventListener('keydown',Servis._photoLightboxKeyHandler);
+close.focus();
+return true;
+},
+// S1990 split: canonical service-cost/context helpers moved out of servis.js (source-size cap 1800).
+_parseLegacyServiceCost(costRaw){
+  const cost=costRaw===''?0:Number(costRaw);
+  return cost;
+},
+getCanonicalServiceCost(){
+  if(typeof ServisChecklist==='undefined'||typeof ServisChecklist.costSummary!=='function')return {labor:0,parts:0,consumables:0,other:0,total:0,source:'service_entry',byComponent:[]};
+  const summary=ServisChecklist.costSummary()||{};
+  const rows=typeof ServisChecklist.toLogPayload==='function'?ServisChecklist.toLogPayload():[];
+  const byComponent=rows.map(r=>({itemId:r.itemId||null,itemName:r.itemName||'',serviceComponentId:r.serviceComponentId||null,costBreakdown:r.costBreakdown||{labor:0,parts:0,consumables:0,other:0,total:0}}));
+  return {labor:Number(summary.labor)||0,parts:Number(summary.parts)||0,consumables:Number(summary.consumables)||0,other:Number(summary.other)||0,total:Number(summary.total)||0,source:'component',byComponent};
+},
+validateCanonicalServiceCost(summary){
+  const s=summary||Servis.getCanonicalServiceCost();
+  const sum=['labor','parts','consumables','other'].reduce((n,k)=>n+(Number(s[k])||0),0);
+  const total=Number(s.total)||0;
+  const ok=Math.abs(sum-total)<0.005 && ['labor','parts','consumables','other','total'].every(k=>Number.isFinite(Number(s[k]))&&Number(s[k])>=0);
+  return {ok,total,componentsSum:sum,difference:total-sum,code:ok?'OK':'SERVICE_COST_TOTAL_MISMATCH'};
+},
+syncServiceContextFromChecklist(){
+if(typeof ServisChecklist==='undefined'||!ServisChecklist._checked)return false;
+const ids=Object.keys(ServisChecklist._checked);
+const firstId=ids[0];
+const found=firstId&&typeof ServisChecklist.findItemById==='function'?ServisChecklist.findItemById(firstId):null;
+if(!found)return false;
+const item=found.item||found;
+const itemName=String(item.name||item.label||'').trim();
+const identity=typeof ServisChecklist.getItemIdentity==='function'?ServisChecklist.getItemIdentity(firstId)||{}:{};
+const masterCategoryId=identity.masterCategoryId||found.group?.masterCategoryId||(typeof ServisChecklist.resolveCategoryForItem==='function'?(ServisChecklist.resolveCategoryForItem(item,ServisChecklist._vehicleId||curVehicleId)||{}).masterCategoryId||'':'');
+const serviceComponentId=identity.serviceComponentId||item.id||'';
+const itemEl=document.getElementById('servisItem');if(itemEl&&itemName)itemEl.value=itemName;
+const catEl=document.getElementById('servisCategory');if(catEl&&masterCategoryId)catEl.value=masterCategoryId;
+const compEl=document.getElementById('servisComponent');if(compEl&&serviceComponentId)compEl.value=serviceComponentId;
+const catSot=document.getElementById('servisCategorySot');if(catSot&&masterCategoryId)catSot.value=masterCategoryId;
+const compSot=document.getElementById('servisComponentSot');if(compSot&&serviceComponentId)compSot.value=serviceComponentId;
+const action=ServisChecklist._checked[firstId]||'';
+const actionEl=document.getElementById('servisActionType');if(actionEl&&action)actionEl.value=action;
+const resultEl=document.getElementById('servisConditionResult');if(resultEl)resultEl.value=(ServisChecklist._results&&ServisChecklist._results[firstId])||'';
+const noteEl=document.getElementById('servisConditionNote');if(noteEl)noteEl.value=(ServisChecklist._conditionNotes&&ServisChecklist._conditionNotes[firstId])||'';
+if(masterCategoryId)Servis.setEditCanonicalSelection(masterCategoryId,serviceComponentId);
+if(typeof Servis.syncVisibleServiceSotSelectors==='function')Servis.syncVisibleServiceSotSelectors();
+return true;
+},
+setManualServiceItemVisible(visible,focus=false){
+const wrap=document.getElementById('servisManualItemWrap');if(wrap)wrap.style.display=visible?'':'none';
+const btn=document.getElementById('servisManualItemBtn');if(btn)btn.textContent=visible?'↩️ Sembunyikan item manual':'＋ Item manual/non-standar';
+if(visible&&focus){const el=document.getElementById('servisItem');if(el){el.focus();el.scrollIntoView({behavior:'smooth',block:'center'});}}
+},
+toggleManualServiceItem(){const wrap=document.getElementById('servisManualItemWrap');Servis.setManualServiceItemVisible(!wrap||wrap.style.display==='none',true);},
 // S1987 split: save-rollback snapshot & create-modal geometry reset moved out of servis.js (source-size cap 1800).
 _captureSaveRollback(){
   const _originalService=Servis.editId&&Array.isArray(D.servisLogs)?D.servisLogs.find(x=>x&&x.id===Servis.editId):null;
