@@ -58,22 +58,69 @@ _selectedHistoryIds:new Set(),
 _selectedHistoryVehicleId:null,
 _historyAuditVisible:false,
 _historyAuditLogs:[],
+_ensureHistorySelectionScope(vehicleId){
+  const scope=String(vehicleId||curVehicleId||'');
+  if(Servis._selectedHistoryVehicleId!==scope){
+    Servis._selectedHistoryIds.clear();
+    Servis._selectedHistoryVehicleId=scope;
+  }
+  return scope;
+},
 setHistorySelection(id,checked){
   const key=String(id||'');
   if(!key)return;
-  if(Servis._selectedHistoryVehicleId!==curVehicleId){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=curVehicleId;}
+  Servis._ensureHistorySelectionScope(curVehicleId);
   if(checked===undefined)checked=!Servis._selectedHistoryIds.has(key);
-  if(checked)Servis._selectedHistoryIds.add(key);else Servis._selectedHistoryIds.delete(key);
+  if(checked){
+    if(Servis._selectedHistoryIds.size>=100&&!Servis._selectedHistoryIds.has(key)){toast('ℹ️ Maksimal 100 riwayat per operasi.');return;}
+    Servis._selectedHistoryIds.add(key);
+  }else Servis._selectedHistoryIds.delete(key);
   Servis._historyAuditVisible=false;
   Servis.renderList({skipReminder:true});
+},
+setHistoryAuditSelection(id,checked,vehicleId){
+  const key=String(id||'');
+  if(!key)return;
+  const scope=Servis._ensureHistorySelectionScope(vehicleId||curVehicleId);
+  const row=(D.servisLogs||[]).find(x=>x&&String(x.id)===key&&String(x.vehicleId||'')===scope);
+  if(!row)return;
+  if(checked===undefined)checked=!Servis._selectedHistoryIds.has(key);
+  if(checked){
+    if(Servis._selectedHistoryIds.size>=100&&!Servis._selectedHistoryIds.has(key)){
+      toast('ℹ️ Maksimal 100 riwayat per operasi.');
+      return false;
+    }
+    Servis._selectedHistoryIds.add(key);
+  }else Servis._selectedHistoryIds.delete(key);
+  Servis._historyAuditVisible=false;
+  return true;
+},
+getHistoryAuditSelectionIds(vehicleId){
+  const scope=Servis._ensureHistorySelectionScope(vehicleId||curVehicleId);
+  const valid=new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId||'')===scope).map(x=>String(x.id)));
+  const ids=[...Servis._selectedHistoryIds].filter(id=>valid.has(String(id))).slice(0,100);
+  if(Servis._selectedHistoryIds.size>ids.length){
+    Servis._selectedHistoryIds.clear();
+    ids.forEach(id=>Servis._selectedHistoryIds.add(id));
+  }
+  return ids;
 },
 toggleHistorySelection(id){return Servis.setHistorySelection(id);},
 clearHistorySelection(){Servis._selectedHistoryIds.clear();Servis._historyAuditVisible=false;Servis.renderList({skipReminder:true});},
 selectAllVisibleHistory(ids){
   const list=Array.isArray(ids)?ids.map(String).filter(Boolean):[];
-  if(Servis._selectedHistoryVehicleId!==curVehicleId){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=curVehicleId;}
+  Servis._ensureHistorySelectionScope(curVehicleId);
   const allSelected=list.length>0&&list.every(id=>Servis._selectedHistoryIds.has(id));
-  list.forEach(id=>allSelected?Servis._selectedHistoryIds.delete(id):Servis._selectedHistoryIds.add(id));
+  if(allSelected){
+    list.forEach(id=>Servis._selectedHistoryIds.delete(id));
+  }else{
+    let capacity=Math.max(0,100-Servis._selectedHistoryIds.size);
+    list.forEach(id=>{
+      if(Servis._selectedHistoryIds.has(id))return;
+      if(capacity>0){Servis._selectedHistoryIds.add(id);capacity--; }
+    });
+    if(list.some(id=>!Servis._selectedHistoryIds.has(id)))toast('ℹ️ Pilih semua dibatasi 100 riwayat agar operasi bulk tetap aman.');
+  }
   Servis._historyAuditVisible=false;
   Servis.renderList({skipReminder:true});
 },
@@ -114,9 +161,23 @@ hideHistoryAudit(){Servis._historyAuditVisible=false;Servis.renderList({skipRemi
 openHistoryAudit(logs){
   const selected=Servis._getSelectedHistoryLogs(logs);
   if(!selected.length){toast('⚠️ Centang minimal satu riwayat servis untuk diaudit');return;}
-  Servis._historyAuditVisible=true;
+  // S1976 cumulative: Audit is the full workflow surface. The checklist remains
+  // evidence in Riwayat; Audit owns SOT, job-type and package operations.
+  // Keep the shared transient selection intact and open the selected record's
+  // editor directly on Audit so no intermediate read-only screen can swallow
+  // the selection context.
+  Servis._historyAuditVisible=false;
+  try{
+    if(typeof Servis.openModal==='function'&&typeof Servis.setEditTab==='function'){
+      Servis.openModal(selected[0].id);
+      if(Servis.editId!==null)Servis.setEditTab('audit');
+      return;
+    }
+  }catch(err){
+    console.error('[S1976] openHistoryAudit failed',err);
+    if(typeof toast==='function')toast('⚠️ Audit tidak dapat dibuka. Pilihan riwayat tetap aman.',5000);
+  }
   Servis.renderList({skipReminder:true});
-  setTimeout(()=>{const box=document.getElementById('servisHistoryAuditSelection');if(box)box.scrollIntoView({behavior:'smooth',block:'nearest'});},0);
 },
 activeReminderSeverityFilter:null,
 setReminderMasterCategoryFilter(id){Servis.activeReminderMasterCategoryFilter=String(id||'');Servis.activeReminderComponentFilter='';Servis.renderReminder();},

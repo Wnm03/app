@@ -22,7 +22,7 @@ describe('S1973 — bulk history identity hardening',()=>{
  it('membatasi operasi bulk maksimal 100 riwayat dan Select All mengikuti batas',()=>{
    assert.match(bulk,/ids\.length>100/);
    assert.match(bulk,/changes\.length>100/);
-   assert.match(servis,/i<100/);
+   assert.match(fs.readFileSync(path.join(root,'modules/vehicle/servis-b.js'),'utf8'),/100-Servis\._selectedHistoryIds\.size/); // S1976: batas 100 global pindah ke servis-b
    assert.match(servis,/dibatasi 100 riwayat/);
  });
  it('memberi peringatan bila legacy categoryId menunjuk kategori lama yang berbeda, tanpa memindahkannya otomatis',()=>{

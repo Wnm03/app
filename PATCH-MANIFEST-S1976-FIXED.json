@@ -1,0 +1,28 @@
+{
+  "patch": "PATCH-S1976-CUMULATIVE-SERVICE-AUDIT-HARDENING-FIXED",
+  "baseline": "app-main (10).zip",
+  "full_test": "7524/7524 PASS",
+  "service_sot_gate": "PASS",
+  "bundle_freshness": "PASS",
+  "build_label": "s1956-service-history-audit-package-1974",
+  "version": "1974 (tidak di-bump; dikunci tes S1973)",
+  "esbuild": "tidak terpasang; bundle valid tapi belum diminify",
+  "fixes_vs_original_patch": [
+    "servis.js 1808 baris melewati cap guard 1800 -> blok S1975 dipadatkan (1800)",
+    "tes S1973 diselaraskan: batas 100 pindah ke servis-b (100-Servis._selectedHistoryIds.size)",
+    "bundle a/b di-rebuild dari source akhir"
+  ],
+  "files": 10,
+  "sha256": {
+    "app-bundle-b.min.js": "83deb2f9a2834eb592174b59efefc9fc9227e3e38aad28bef3e0dacf46be51a3",
+    "docs/COVERAGE-PER-MODULE.md": "a5391121bed8eaeb8ac2f836a683a280239b9c827982ec9022959279b721a872",
+    "docs/FILE-MAP.md": "a8f196d7a0484c0751787751e3f600151b29195e41faccc14e52ad4885bb9872",
+    "modules/vehicle/service-history-bulk-identity-editor.js": "8bfe7b8f2e06fb6a52829ad64ac77d4afcb73a474bec7a8723e95e270ba67ba7",
+    "modules/vehicle/servis-b.js": "d604a4de9b8c6cedd06d76f3adfbf4b455765897a5ccd7c82efe1f3daee9ea56",
+    "modules/vehicle/servis.js": "9dc09f58cf74bce1756d2cc857c95de991950e032bf512d7dafdc772cb62b64a",
+    "tests/service-history-audit-cumulative-s1976.test.js": "e59c50472d4012b1ce3427c1649edd6272de87c744242a5156cf1e3da9afa173",
+    "tests/service-history-audit-entry-s1975.test.js": "200a4d839cc07bf5b59f526ed9abe230487f0477b391f7e0bb8586b3f25bd426",
+    "tests/servis-history-audit-continuity-s1975.test.js": "37a6658d74827e52970cd7dd3421f8dfde62c1a37ffba0f3a48134e484cd85b7",
+    "tests/servis-history-bulk-identity-hardening-s1973.test.js": "a82a4445f191740f055e196e3617d922ebff6f684f81fec6a66474ee90c58fef"
+  }
+}

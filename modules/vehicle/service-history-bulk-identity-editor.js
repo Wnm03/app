@@ -5,6 +5,7 @@ if(typeof Servis==='undefined')return;
 const BulkHistoryIdentityEditor={
 _selectedHistoryAuditIds(){
 const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');
+if(typeof Servis.getHistoryAuditSelectionIds==='function')return Servis.getHistoryAuditSelectionIds(curVehicleId);
 if(!panel)return[];
 return Array.from(panel.querySelectorAll('input[data-service-audit-id]:checked')).map(x=>String(x.getAttribute('data-service-audit-id')||'')).filter(Boolean);
 },
@@ -50,6 +51,7 @@ const legacyWarning=legacyMismatch?`<div style="margin-top:5px;color:var(--accen
 out.innerHTML=`<div class="u-fw700">Pratinjau: ${ids.length} riwayat dipilih · ${changes.length} akan berubah</div><div class="u-fs11 u-t2" style="margin-top:4px">Tujuan: <b>${escapeHtml(target)}</b></div><div class="u-fs11 u-t2" style="margin-top:4px">Tidak mengubah <b>KM, tanggal, biaya, transaksi, foto, checklist, part, atau interval reminder</b>.</div>${legacyWarning}${limitWarning?`<div class="u-fs11" style="margin-top:5px">${escapeHtml(limitWarning)}</div>`:''}`;
 },
 async openBulkHistoryIdentityEditor(){
+try{
 const ids=Servis._selectedHistoryAuditIds();
 if(!ids.length){toast('⚠️ Pilih minimal 1 riwayat terlebih dahulu');return;}
 if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per perubahan agar aman. Kurangi pilihan terlebih dahulu.');return;}
@@ -70,6 +72,10 @@ const groups=ServiceInputCatalog.groups()||[];
 const catOptions=groups.map(x=>`<option value="${escapeHtml(String(x.masterCategoryId))}"${String(x.masterCategoryId)===commonMaster?' selected':''}>${escapeHtml(x.group||x.masterCategoryId)}</option>`).join('');
 box.innerHTML=`<div class="modal"><div class="modal-title"><span>✏️ Edit Kategori/Komponen SOT</span><button class="modal-close" data-action="Servis.closeBulkHistoryIdentityEditor">✕</button></div><div class="u-fs11 u-t2" style="margin-bottom:10px">${logs.length} riwayat dipilih. Editor ini hanya memperbaiki identitas SOT. KM dan tanggal bersifat immutable di sini.</div><div class="fg"><label class="fl">Kategori Servis (SOT)</label><select class="fs" id="serviceHistoryBulkCategory" onchange="Servis.syncBulkHistoryComponentOptions()"><option value="">— Pilih kategori servis —</option>${catOptions}</select></div><div class="fg"><label class="fl">Komponen Servis (SOT)</label><select class="fs" id="serviceHistoryBulkComponent" onchange="Servis.refreshBulkHistoryIdentityPreview()">${Servis._renderBulkHistoryComponentOptions(commonMaster,commonComponent)}</select></div><div id="serviceHistoryBulkPreview" style="background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:10px 0"></div><div class="u-fs11 u-t2" style="line-height:1.5;margin-bottom:10px">Checklist tetap menjadi bukti pekerjaan masing-masing riwayat dan tidak ditimpa. Tautan kategori Pengingat lama (categoryId) juga tidak diubah otomatis agar tidak memindahkan reminder secara diam-diam.</div><div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn btn-ghost" data-action="Servis.closeBulkHistoryIdentityEditor">Batal</button><button type="button" class="btn btn-primary" data-action="Servis.commitBulkHistoryIdentityEdit">Simpan ${logs.length} Riwayat</button></div>${logs.map(x=>'<input type="hidden" data-bulk-history-id="'+escapeHtml(String(x.id))+'">').join('')}</div>`;
 document.body.appendChild(box);Servis.refreshBulkHistoryIdentityPreview();
+}catch(err){
+ console.error('[S1976] openBulkHistoryIdentityEditor failed',err);
+ if(typeof toast==='function')toast('⚠️ Editor SOT tidak dapat dibuka. Pilihan riwayat tetap aman.',5000);
+}
 },
 syncBulkHistoryComponentOptions(){
 const cat=document.getElementById('serviceHistoryBulkCategory');
@@ -150,9 +156,11 @@ const packageRows=packages.length?packages.map(p=>{const title=p.title||'Paket P
 const candidates=typeof ServiceSessionSOT!=='undefined'&&typeof ServiceSessionSOT.candidateGroups==='function'?ServiceSessionSOT.candidateGroups(vehicleId):[];
 const candidateRows=candidates.length?candidates.map((c,i)=>`<div style="padding:8px 0;border-top:1px dashed var(--border)"><div class="u-flex u-jcb u-aic"><div class="u-fs11"><b>Kandidat ${i+1}</b> · ${c.logs.length} riwayat · ${escapeHtml(c.reason||'')}</div><button type="button" class="btn btn-ghost btn-sm" data-action="ServiceSessionSOT.openMerge" data-args="${escapeHtml(JSON.stringify([c.ids]))}">Tinjau</button></div><div class="u-fs11 u-t2" style="margin-top:4px">${escapeHtml(c.logs.map(x=>x.item||'Tanpa nama').slice(0,4).join(', '))}</div></div>`).join(''):'<div class="u-fs11 u-t2">Tidak ada kandidat sesi otomatis.</div>';
 const typeOptions=(pkgApi&&Array.isArray(pkgApi.TYPES)?pkgApi.TYPES:[]).map(t=>`<option value="${escapeHtml(t.id)}">${escapeHtml(t.label)}</option>`).join('');
-const selectionRows=history.map(log=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border2);font-size:11px"><input type="checkbox" data-service-audit-id="${escapeHtml(String(log.id))}"><span><b>${escapeHtml(log.item||'Tanpa nama')}</b><br><span class="u-t2">${escapeHtml(log.date||'')} · ${log.km==null?'':Number(log.km).toLocaleString('id-ID')+' km'} · Rp ${Number(log.cost||0).toLocaleString('id-ID')}</span></span></label>`).join('');
+const selectedIds=new Set(typeof Servis.getHistoryAuditSelectionIds==='function'?Servis.getHistoryAuditSelectionIds(vehicleId):[]);
+   const selectionRows=history.map(log=>`<label style="display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border2);font-size:11px"><input type="checkbox" ${selectedIds.has(String(log.id))?'checked':''} data-service-audit-id="${escapeHtml(String(log.id))}"><span><b>${escapeHtml(log.item||'Tanpa nama')}</b><br><span class="u-t2">${escapeHtml(log.date||'')} · ${log.km==null?'':Number(log.km).toLocaleString('id-ID')+' km'} · Rp ${Number(log.cost||0).toLocaleString('id-ID')}</span></span></label>`).join('');
 panel.innerHTML=`<div style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:12px;margin-bottom:12px"><div class="u-fw700 u-fs13">📦 Audit & Paket Pekerjaan</div><div class="u-fs11 u-t2" style="margin-top:4px">Operasi audit/bulk dipisahkan dari Riwayat. Riwayat asli tetap menjadi sumber kebenaran.</div></div><div class="fg"><div class="u-flex u-jcb u-aic"><label class="fl">Riwayat kendaraan ini</label><span id="serviceAuditSelectionCount" class="u-fs11 u-t2">0 dipilih</span></div><div style="max-height:280px;overflow:auto;border:1px solid var(--border2);border-radius:10px;padding:0 10px">${selectionRows||'<div class="u-fs11 u-t2" style="padding:10px 0">Belum ada riwayat.</div>'}</div><div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap"><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.selectAllHistoryAudit">Pilih Semua</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.clearHistoryAuditSelection">Kosongkan</button><button type="button" class="btn btn-primary btn-sm" id="serviceBulkHistoryEditBtn" data-action="Servis.openBulkHistoryIdentityEditor">✏️ Edit Kategori/Komponen SOT</button><button type="button" class="btn btn-ghost btn-sm" id="serviceBulkHistoryJobTypeBtn" data-action="Servis.openHistoryJobTypeEditor">🔧 Jenis Pekerjaan</button></div><div class="u-fs11 u-t2">Maksimal 100 riwayat per operasi. KM/tanggal/checklist/biaya/foto/part tidak ikut berubah.</div></div><div class="fg"><label class="fl">Nama paket</label><input class="fi" id="serviceAuditPackageTitle" placeholder="Contoh: Servis Besar September"></div><div class="fg"><label class="fl">Jenis paket</label><select class="fs" id="serviceAuditPackageType">${typeOptions}</select></div><button type="button" class="btn btn-primary btn-full" data-action="Servis.createHistoryAuditPackage">📦 Jadikan Paket Pekerjaan</button><div class="fg"><label class="fl">Paket tersimpan</label>${packageRows}</div><div class="fg"><div class="u-fw700 u-fs12">🔎 Kandidat Sesi</div><div class="u-fs11 u-t2" style="margin-top:4px">Kandidat hanya bahan review; aplikasi tidak menyimpulkan jenis pekerjaan tanpa konfirmasi.</div>${candidateRows}</div>`;
-panel.querySelectorAll('input[data-service-audit-id]').forEach(el=>el.addEventListener('change',()=>{Servis.updateHistoryAuditSelection();}));
+panel.querySelectorAll('input[data-service-audit-id]').forEach(el=>el.addEventListener('change',()=>{Servis.setEditHistoryAuditSelection(String(el.getAttribute('data-service-audit-id')||''),!!el.checked);}));
+Servis.updateHistoryAuditSelection();
 };
 })();
 
@@ -164,9 +172,11 @@ if(typeof Servis==='undefined')return;
 const JobTypeEditorS1974={
 _selectedHistoryJobTypeIds(){
  const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');
+ if(typeof Servis.getHistoryAuditSelectionIds==='function')return Servis.getHistoryAuditSelectionIds(curVehicleId);
  return panel?Array.from(panel.querySelectorAll('input[data-service-audit-id]:checked')).map(x=>String(x.getAttribute('data-service-audit-id')||'')).filter(Boolean):[];
 },
 openHistoryJobTypeEditor(){
+ try{
  const ids=JobTypeEditorS1974._selectedHistoryJobTypeIds();
  if(!ids.length){toast('⚠️ Pilih minimal 1 riwayat terlebih dahulu');return;}
  if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per operasi.');return;}
@@ -178,6 +188,10 @@ openHistoryJobTypeEditor(){
  box=document.createElement('div');box.id='serviceHistoryJobTypeEditor';box.className='overlay open';box.style.cssText='z-index:440;position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;';
  box.innerHTML=`<div class="modal" style="width:100%;max-width:520px;box-sizing:border-box;margin:0 auto;max-height:100dvh;overflow-y:auto"><div class="modal-title"><span>🔧 Tetapkan Jenis Pekerjaan</span><button class="modal-close" data-action="Servis.closeHistoryJobTypeEditor">✕</button></div><div class="u-fs11 u-t2" style="margin-bottom:10px">${ids.length} riwayat dipilih. Jenis pekerjaan adalah klasifikasi service-level; tidak mengubah kategori/komponen SOT dan tidak membuat paket.</div><div class="fg"><label class="fl">Jenis Pekerjaan</label><select class="fs" id="serviceHistoryJobType"><option value="">— Hapus jenis pekerjaan —</option>${jobs.map(j=>`<option value="${escapeHtml(String(j.id))}"${String(j.id)===commonType?' selected':''}>${escapeHtml(j.label||j.name||j.id)}</option>`).join('')}</select></div><div class="u-fs11 u-t2" style="margin:8px 0 12px;line-height:1.5">KM, tanggal, biaya, checklist, kategori, komponen, part, dan reminder interval tidak ikut berubah.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-ghost" data-action="Servis.closeHistoryJobTypeEditor">Batal</button><button type="button" class="btn btn-primary" data-action="Servis.commitHistoryJobTypeEditor">Simpan</button></div></div>`;
  document.body.appendChild(box);
+ }catch(err){
+  console.error('[S1976] openHistoryJobTypeEditor failed',err);
+  if(typeof toast==='function')toast('⚠️ Editor jenis pekerjaan tidak dapat dibuka. Pilihan riwayat tetap aman.',5000);
+ }
 },
 closeHistoryJobTypeEditor(){const box=document.getElementById('serviceHistoryJobTypeEditor');if(box)box.remove();},
 async commitHistoryJobTypeEditor(){
