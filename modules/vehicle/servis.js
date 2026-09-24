@@ -463,7 +463,7 @@ const found=ServisChecklist._item(Number(groupIdx),Number(itemIdx));
 if(!found)return;
 const identity=ServisChecklist.getItemIdentity(found.id)||{};
 const groups=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.groups==='function'?ServiceInputCatalog.groups():[];
-let box=document.getElementById('serviceChecklistIdentityEditor');if(box)box.remove();
+const box=document.getElementById('serviceChecklistIdentityEditor');if(box)box.remove();
 const catOptions=groups.map(g=>`<option value="${escapeHtml(String(g.masterCategoryId))}"${String(g.masterCategoryId)===String(identity.masterCategoryId||'')?' selected':''}>${escapeHtml(g.group||g.masterCategoryId)}</option>`).join('');
 const comps=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.groupById==='function'&&identity.masterCategoryId?(ServiceInputCatalog.groupById(identity.masterCategoryId)?.items||[]):[];
 const compOptions=()=>`<option value="">— Pilih komponen servis —</option>${comps.map(c=>`<option value="${escapeHtml(String(c.id))}"${String(c.id)===String(identity.serviceComponentId||'')?' selected':''}>${escapeHtml(c.name||c.label||c.id)}</option>`).join('')}`;
@@ -1047,7 +1047,7 @@ if(Number.isFinite(current)&&current>=0&&n>current)return{ok:false,code:'above_c
 const target={id:excludeId||'__service_validation_target__',vehicleId,km:n,date:d};
 const ordered=logs.slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?-compareServiceHistoryRecency(a,b):String(a.date||'').localeCompare(String(b.date||''))||Number(a.km||0)-Number(b.km||0));
 let prev=null,next=null;
-for(const row of ordered){if(typeof compareServiceHistoryRecency==='function'){const rel=compareServiceHistoryRecency(row,target);if(rel>0){next=row;break;}if(rel<0)prev=row;}else{const rd=String(row.date||'');if(rd<d||(rd===d&&Number(row.km||0)<=n))prev=row;else if(rd>d||(rd===d&&Number(row.km||0)>n)){next=row;break;}}}
+for(const row of ordered){if(typeof compareServiceHistoryRecency==='function'){const rel=compareServiceHistoryRecency(row,target);if(rel<0){next=row;break;}if(rel>0)prev=row;}else{const rd=String(row.date||'');if(rd<d||(rd===d&&Number(row.km||0)<=n))prev=row;else if(rd>d||(rd===d&&Number(row.km||0)>n)){next=row;break;}}}
 if(prev&&n<Number(prev.km)&&!excludeId)return{ok:false,code:'below_previous_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih rendah dari servis sebelumnya (${Number(prev.km).toLocaleString('id-ID')} km pada ${prev.date}).`};
 if(next&&n>Number(next.km))return{ok:false,code:'above_next_service',message:`KM servis (${n.toLocaleString('id-ID')}) lebih tinggi dari servis sesudahnya (${Number(next.km).toLocaleString('id-ID')} km pada ${next.date}).`};
 return{ok:true,currentKm:Number.isFinite(current)?current:null,previousKm:prev?Number(prev.km):null,nextKm:next?Number(next.km):null};
