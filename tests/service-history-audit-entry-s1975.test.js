@@ -19,7 +19,8 @@ test('S1975: Audit selection uses the same transient SoT as Riwayat',()=>{
  assert.match(b,/_selectedHistoryIds:new Set\(\)/);
  assert.match(s,/setEditHistoryAuditSelection\(id,checked\)/);
  assert.match(b,/setHistoryAuditSelection\(id,checked,vehicleId\)/);
- assert.match(bulk,/Servis\.getHistoryAuditSelectionIds\(curVehicleId\)/);
+ assert.match(bulk,/Servis\.getHistoryAuditSelectionIds\(/);
+ assert.match(bulk,/Servis\._historySelectionVehicleId\(\)/);
  assert.match(bulk,/data-service-audit-id/);
 });
 

@@ -8,7 +8,8 @@ test('S1906 riwayat servis punya selection state transient dan vehicle scoped',(
   assert.match(src,/_selectedHistoryIds:new Set\(\)/);
   assert.match(src,/_selectedHistoryVehicleId:null/);
   assert.match(src,/never persisted and never creates a new service record/);
-  assert.match(src,/if\(Servis\._selectedHistoryVehicleId!==curVehicleId\)\{Servis\._selectedHistoryIds\.clear\(\)/);
+  assert.match(src,/_historySelectionVehicleId\(\)/);
+  assert.match(src,/if\(Servis\._selectedHistoryVehicleId!==selectionScope\)\{Servis\._selectedHistoryIds\.clear\(\)/);
 });
 
 test('S1906 setiap row riwayat dapat dicentang tanpa membuka editor',()=>{

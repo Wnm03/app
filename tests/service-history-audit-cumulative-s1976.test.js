@@ -24,9 +24,11 @@ test('S1976: Audit bukan hanya checklist; operasi lanjutan tetap tersedia',()=>{
 });
 
 test('S1976: DOM checkbox hanya view; operasi bulk membaca shared selection SoT',()=>{
-  assert.match(bulk,/Servis\.getHistoryAuditSelectionIds\(curVehicleId\)/);
+  assert.match(bulk,/Servis\.getHistoryAuditSelectionIds\(/);
+  assert.match(bulk,/_historySelectionVehicleId\(\)/);
   assert.match(bulk,/Servis\._selectedHistoryAuditIds\(\)/);
-  assert.match(servis,/getHistoryAuditSelectionIds\(curVehicleId\)/);
+  assert.match(servis,/getHistoryAuditSelectionIds\(/);
+  assert.match(servis,/_historySelectionVehicleId\(\)/);
   assert.match(servis,/createHistoryAuditPackage\(\).*getHistoryAuditSelectionIds/s);
 });
 

@@ -57,10 +57,12 @@ test('S1975 selection Audit dibatasi 100 dan tidak merender ulang halaman utama'
 });
 
 test('S1975 bulk/job-type/package memakai canonical selection state, bukan checkbox DOM sebagai SoT',()=>{
-  assert.match(bulk,/getHistoryAuditSelectionIds\(curVehicleId\)/g);
-  assert.match(servis,/getHistoryAuditSelectionIds\(curVehicleId\)/g);
+  assert.match(bulk,/getHistoryAuditSelectionIds\(/g);
+  assert.match(bulk,/_historySelectionVehicleId\(\)/);
+  assert.match(servis,/getHistoryAuditSelectionIds\(/g);
+  assert.match(servis,/_historySelectionVehicleId\(\)/);
   assert.match(bulk,/setEditHistoryAuditSelection/);
-  assert.match(bulk,/selectedIds\.has\(String\(log\.id\)\)/);
+  assert.match(bulk,/selectedIds\.has\(key\)/);
 });
 
 test('S1975 modal servis dinormalisasi lagi setelah global openModal reset geometry',()=>{
