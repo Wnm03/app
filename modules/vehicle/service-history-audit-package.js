@@ -7,7 +7,9 @@
  * Servis CVT Besar, Perbaikan, or a user-defined title.
  */
 (function(global){
-  const VERSION='SERVICE-HISTORY-AUDIT-PACKAGE-SOT-1';
+  const VERSION='SERVICE-HISTORY-AUDIT-PACKAGE-SOT-2';
+  const MAX_SOURCE_RECORDS=100;
+  const STATUS=Object.freeze([{id:'draft',label:'Draft'},{id:'active',label:'Aktif'},{id:'done',label:'Selesai'},{id:'archived',label:'Arsip'}]);
   const TYPES=Object.freeze([
     {id:'routine',label:'Servis Rutin'},
     {id:'inspection',label:'Pemeriksaan'},
@@ -26,6 +28,11 @@
   }
   function id(){return typeof global.uid==='function'?global.uid():'sag_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
   function type(idOrLabel){const s=str(idOrLabel);return TYPES.find(x=>x.id===s||x.label===s)||null;}
+  function status(idOrLabel){const s=str(idOrLabel)||'active';return STATUS.find(x=>x.id===s||x.label===s)||STATUS[1];}
+  function saveVehicle(){return typeof global.save==='function'?global.save({domain:'vehicle'}):true;}
+  function snapshotGroups(){return groups().map(p=>JSON.parse(JSON.stringify(p)));}
+  function restoreGroups(snapshot){global.D.serviceAuditGroups=snapshot.map(p=>JSON.parse(JSON.stringify(p)));}
+  function jobTypeFor(log){if(!log)return null;const id=str(log.serviceJobType),label=str(log.serviceJobLabel);return id||label?{id:id||label,label:label||id}:null;}
   function validSourceIds(ids){
     const wanted=[...new Set(arr(ids).map(str).filter(Boolean))];
     return wanted.filter(x=>logs().some(s=>s&&str(s.id)===x));
@@ -60,9 +67,10 @@
   function summarize(group){
     const rows=sourceRows(group);
     const components=new Map(), categories=new Map(), parts=new Map();
-    let totalCost=0, kmMin=null, kmMax=null, inspections=0, services=0;
+    let totalCost=0, kmMin=null, kmMax=null, inspections=0, services=0,dateMin=null,dateMax=null; const jobTypes=new Map();
     rows.forEach(s=>{
       services++;
+      const date=str(s.date); if(date){dateMin=dateMin?(date<dateMin?date:dateMin):date;dateMax=dateMax?(date>dateMax?date:dateMax):date;} const jt=jobTypeFor(s); if(jt)jobTypes.set(jt.id,jt);
       const cost=Number(s.cost);
       if(Number.isFinite(cost))totalCost+=cost;
       const km=Number(s.km);
@@ -72,7 +80,7 @@
       const g=categoryFor(s); if(g){const k=typeof g==='object'?g.id:String(g);const n=typeof g==='object'?g.name:String(g);categories.set(k,n);}
       if(s.catalogPartId||s.usedPartId){const k=str(s.catalogPartId||s.usedPartId);if(k)parts.set(k,s.partName||s.item||k);}
     });
-    return {services,components:[...components].map(([id,name])=>({id,name})),categories:[...categories].map(([id,name])=>({id,name})),parts:[...parts].map(([id,name])=>({id,name})),inspections,totalCost,kmMin,kmMax};
+    return {services,dateMin,dateMax,jobTypes:[...jobTypes.values()],components:[...components].map(([id,name])=>({id,name})),categories:[...categories].map(([id,name])=>({id,name})),parts:[...parts].map(([id,name])=>({id,name})),inspections,totalCost,kmMin,kmMax};
   }
   function normalize(p){
     const out=Object.assign({},p||{});
@@ -81,7 +89,7 @@
     out.title=str(out.title)||'Paket Pekerjaan';
     const t=type(out.typeId||out.type); out.typeId=t?t.id:'other'; out.typeLabel=t?t.label:(str(out.typeLabel)||'Pekerjaan Lainnya');
     out.sourceServiceIds=[...new Set(arr(out.sourceServiceIds).map(str).filter(Boolean))];
-    out.sourceCount=out.sourceServiceIds.length;
+    out.sourceCount=out.sourceServiceIds.length; const st=status(out.status||'active'); out.status=st.id; out.statusLabel=st.label;
     out.createdAt=out.createdAt||new Date().toISOString();
     out.updatedAt=out.updatedAt||out.createdAt;
     out.sotVersion=VERSION;
@@ -90,13 +98,13 @@
   function create(input){
     input=input||{};
     const vehicleId=str(input.vehicleId); if(!vehicleId)return{ok:false,code:'vehicle_required'};
-    const ids=validSourceIds(input.sourceServiceIds); if(ids.length<2)return{ok:false,code:'need_two_source_records'};
+    const requested=[...new Set(arr(input.sourceServiceIds).map(str).filter(Boolean))]; if(requested.length>MAX_SOURCE_RECORDS)return{ok:false,code:'too_many_source_records',max:MAX_SOURCE_RECORDS}; const ids=validSourceIds(requested); if(ids.length<2)return{ok:false,code:'need_two_source_records'};
     const rows=logs().filter(s=>ids.includes(str(s.id)));
     if(rows.some(s=>str(s.vehicleId)!==vehicleId))return{ok:false,code:'vehicle_mismatch'};
     const t=type(input.typeId||input.type)||TYPES.find(x=>x.id==='other');
     const existing=findExistingBySources(vehicleId,ids); if(existing)return{ok:false,code:'duplicate_source_package',package:normalize(existing),summary:summarize(existing)};
-    const p=normalize({id:id(),vehicleId,title:input.title,typeId:t.id,typeLabel:t.label,sourceServiceIds:ids,createdAt:new Date().toISOString()});
-    groups().push(p); if(typeof global.save==='function')global.save({domain:'vehicle'});
+    const p=normalize({id:id(),vehicleId,title:input.title,typeId:t.id,typeLabel:t.label,status:input.status||'active',sourceServiceIds:ids,createdAt:new Date().toISOString()});
+    const before=snapshotGroups(); groups().push(p); try{const saved=saveVehicle(); if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}
     return{ok:true,package:p,summary:summarize(p)};
   }
   function byId(packageId){return groups().find(p=>p&&str(p.id)===str(packageId))||null;}
@@ -106,16 +114,18 @@
   function sameSourceSet(a,b){const x=[...new Set(arr(a).map(str).filter(Boolean))].sort(),y=[...new Set(arr(b).map(str).filter(Boolean))].sort();return x.length===y.length&&x.every((v,i)=>v===y[i]);}
   function update(packageId,patch){
     const p=byId(packageId); if(!p)return{ok:false,code:'not_found'};
-    const vehicleId=str(p.vehicleId); const ids=patch&&patch.sourceServiceIds!==undefined?validSourceIds(patch.sourceServiceIds):p.sourceServiceIds.slice();
+    const vehicleId=str(p.vehicleId); const requested=patch&&patch.sourceServiceIds!==undefined?[...new Set(arr(patch.sourceServiceIds).map(str).filter(Boolean))]:p.sourceServiceIds.slice();
+    if(requested.length>MAX_SOURCE_RECORDS)return{ok:false,code:'too_many_source_records',max:MAX_SOURCE_RECORDS};
+    const ids=patch&&patch.sourceServiceIds!==undefined?validSourceIds(requested):requested;
     if(ids.length<2)return{ok:false,code:'need_two_source_records'};
     const rows=logs().filter(s=>ids.includes(str(s.id))); if(rows.length!==ids.length)return{ok:false,code:'source_missing'};
     if(rows.some(s=>str(s.vehicleId)!==vehicleId))return{ok:false,code:'vehicle_mismatch'};
-    const duplicate=groups().find(x=>str(x.id)!==str(packageId)&&str(x.vehicleId)===vehicleId&&sameSourceSet(x.sourceServiceIds,ids));
-    if(duplicate)return{ok:false,code:'duplicate_source_package',package:normalize(duplicate)};
-    const t=patch&&patch.typeId!==undefined?type(patch.typeId):type(p.typeId);
-    if(patch&&patch.title!==undefined)p.title=str(patch.title)||'Paket Pekerjaan'; if(t){p.typeId=t.id;p.typeLabel=t.label;}
+    const duplicate=groups().find(x=>str(x.id)!==str(packageId)&&str(x.vehicleId)===vehicleId&&sameSourceSet(x.sourceServiceIds,ids)); if(duplicate)return{ok:false,code:'duplicate_source_package',package:normalize(duplicate)};
+    const before=snapshotGroups(); const t=patch&&patch.typeId!==undefined?type(patch.typeId):type(p.typeId); const st=patch&&patch.status!==undefined?status(patch.status):status(p.status);
+    if(patch&&patch.title!==undefined)p.title=str(patch.title)||'Paket Pekerjaan'; if(t){p.typeId=t.id;p.typeLabel=t.label;} if(st){p.status=st.id;p.statusLabel=st.label;}
     p.sourceServiceIds=ids;p.sourceCount=ids.length;p.updatedAt=new Date().toISOString();p.sotVersion=VERSION;
-    if(typeof global.save==='function')global.save({domain:'vehicle'}); return{ok:true,package:normalize(p),summary:summarize(p)};
+    try{const saved=saveVehicle(); if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}
+    return{ok:true,package:normalize(p),summary:summarize(p)};
   }
   function candidates(vehicleId,options){
     options=options||{};const maxDays=Number.isFinite(Number(options.maxDays))?Number(options.maxDays):2,maxKm=Number.isFinite(Number(options.maxKm))?Number(options.maxKm):100;
@@ -124,8 +134,8 @@
       if(!g){g={vehicleId:String(vehicleId),dateMin:date,dateMax:date,kmMin:Number.isFinite(km)?km:null,kmMax:Number.isFinite(km)?km:null,sessionIds:new Set(),categoryIds:new Set(),sourceServiceIds:[]};out.push(g);}g.dateMin=g.dateMin&&date?[g.dateMin,date].sort()[0]:date;g.dateMax=g.dateMax&&date?[g.dateMax,date].sort().slice(-1)[0]:date;if(Number.isFinite(km)){g.kmMin=g.kmMin==null?km:Math.min(g.kmMin,km);g.kmMax=g.kmMax==null?km:Math.max(g.kmMax,km);}if(session)g.sessionIds.add(session);if(cat)g.categoryIds.add(cat);g.sourceServiceIds.push(String(row.id));});
     return out.filter(g=>g.sourceServiceIds.length>=2&&!groups().some(p=>str(p.vehicleId)===str(vehicleId)&&sameSourceSet(p.sourceServiceIds,g.sourceServiceIds))).map(g=>({vehicleId:g.vehicleId,sourceServiceIds:g.sourceServiceIds,dateMin:g.dateMin,dateMax:g.dateMax,kmMin:g.kmMin,kmMax:g.kmMax,sourceCount:g.sourceServiceIds.length}));
   }
-  function remove(packageId){const before=groups().length;global.D.serviceAuditGroups=groups().filter(p=>str(p.id)!==str(packageId));if(global.D.serviceAuditGroups.length===before)return{ok:false,code:'not_found'};if(typeof global.save==='function')global.save({domain:'vehicle'});return{ok:true};}
-  const api={VERSION,TYPES,logs,groups,type,normalize,create,update,byId,forVehicle,audit,remove,summarize,sourceRows,integrity,findExistingBySources,candidates};
+  function remove(packageId){const before=snapshotGroups();const next=groups().filter(p=>str(p.id)!==str(packageId));if(next.length===before.length)return{ok:false,code:'not_found'};global.D.serviceAuditGroups=next;try{const saved=saveVehicle();if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}return{ok:true};}
+  const api={VERSION,TYPES,STATUS,MAX_SOURCE_RECORDS,logs,groups,type,status,normalize,create,update,byId,forVehicle,listByVehicle:forVehicle,audit,remove,summarize,sourceRows,integrity,findExistingBySources,candidates};
   global.ServiceHistoryAuditPackage=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

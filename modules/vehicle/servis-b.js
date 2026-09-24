@@ -442,7 +442,7 @@ const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
 if(Servis._selectedHistoryVehicleId!==curVehicleId){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=curVehicleId;Servis._historyAuditVisible=false;}
 const visibleCandidateIds=logs.map(s=>String(s.id));
-[...Servis._selectedHistoryIds].forEach(id=>{if(!visibleCandidateIds.includes(String(id)))Servis._selectedHistoryIds.delete(id);});
+// S1980: selection is operation state, not filter state. Never drop valid IDs merely because a filter hides them.
 let auditToolbar=document.getElementById('servisHistoryAuditToolbar')||Servis._historyAuditToolbar;
 if(!auditToolbar){auditToolbar=document.createElement('div');auditToolbar.id='servisHistoryAuditToolbar';Servis._historyAuditToolbar=auditToolbar;el.insertAdjacentElement('beforebegin',auditToolbar);}
 const visibleIds=visible.map(s=>String(s.id));
