@@ -42,6 +42,24 @@
     const wanted=[...new Set(arr(ids).map(str).filter(Boolean))];
     return wanted.filter(x=>logs().some(s=>s&&str(s.id)===x));
   }
+  function sourceIdentityAudit(ids,vehicleId){
+    const requested=arr(ids).map(str).filter(Boolean);
+    const wanted=[...new Set(requested)];
+    const all=logs();
+    const rowsById=new Map();
+    all.forEach(row=>{
+      const k=str(row&&row.id); if(!k)return;
+      if(!rowsById.has(k))rowsById.set(k,[]);
+      rowsById.get(k).push(row);
+    });
+    const duplicateSourceIds=wanted.filter(k=>(rowsById.get(k)||[]).length>1);
+    const missingSourceIds=wanted.filter(k=>!(rowsById.get(k)||[]).length);
+    const wrongVehicleSourceIds=wanted.filter(k=>{
+      const rows=rowsById.get(k)||[];
+      return rows.length>0&&rows.every(row=>str(row.vehicleId)!==str(vehicleId));
+    });
+    return {requestedCount:requested.length,uniqueRequestedCount:wanted.length,duplicateSourceIds,missingSourceIds,wrongVehicleSourceIds,ok:duplicateSourceIds.length===0&&missingSourceIds.length===0&&wrongVehicleSourceIds.length===0};
+  }
   function categoryFor(log){
     if(!log)return null;
     if(log.masterCategoryId&&global.ServiceInputCatalog&&typeof global.ServiceInputCatalog.groupById==='function'){
@@ -104,7 +122,7 @@
   function create(input){
     input=input||{};
     const vehicleId=str(input.vehicleId); if(!vehicleId)return{ok:false,code:'vehicle_required'};
-    const requested=[...new Set(arr(input.sourceServiceIds).map(str).filter(Boolean))]; if(requested.length>MAX_SOURCE_RECORDS)return{ok:false,code:'too_many_source_records',max:MAX_SOURCE_RECORDS}; const ids=validSourceIds(requested); if(ids.length<2)return{ok:false,code:'need_two_source_records'};
+    const requested=arr(input.sourceServiceIds).map(str).filter(Boolean); if(requested.length>MAX_SOURCE_RECORDS)return{ok:false,code:'too_many_source_records',max:MAX_SOURCE_RECORDS}; const identity=sourceIdentityAudit(requested,vehicleId); if(identity.duplicateSourceIds.length)return{ok:false,code:'duplicate_source_ids',details:identity}; if(identity.missingSourceIds.length)return{ok:false,code:'source_missing',details:identity}; if(identity.wrongVehicleSourceIds.length)return{ok:false,code:'vehicle_mismatch',details:identity}; const ids=[...new Set(requested)]; if(ids.length<2)return{ok:false,code:'need_two_source_records',details:identity};
     const rows=logs().filter(s=>ids.includes(str(s.id)));
     if(rows.some(s=>str(s.vehicleId)!==vehicleId))return{ok:false,code:'vehicle_mismatch'};
     const t=type(input.typeId||input.type)||TYPES.find(x=>x.id==='other');
@@ -123,8 +141,12 @@
     const p=byId(packageId); if(!p)return{ok:false,code:'not_found'};
     const vehicleId=str(p.vehicleId); const requested=patch&&patch.sourceServiceIds!==undefined?[...new Set(arr(patch.sourceServiceIds).map(str).filter(Boolean))]:p.sourceServiceIds.slice();
     if(requested.length>MAX_SOURCE_RECORDS)return{ok:false,code:'too_many_source_records',max:MAX_SOURCE_RECORDS};
-    const ids=patch&&patch.sourceServiceIds!==undefined?validSourceIds(requested):requested;
-    if(ids.length<2)return{ok:false,code:'need_two_source_records'};
+    const identity=sourceIdentityAudit(requested,vehicleId);
+    if(identity.duplicateSourceIds.length)return{ok:false,code:'duplicate_source_ids',details:identity};
+    if(identity.missingSourceIds.length)return{ok:false,code:'source_missing',details:identity};
+    if(identity.wrongVehicleSourceIds.length)return{ok:false,code:'vehicle_mismatch',details:identity};
+    const ids=patch&&patch.sourceServiceIds!==undefined?[...new Set(requested)]:requested;
+    if(ids.length<2)return{ok:false,code:'need_two_source_records',details:identity};
     const rows=logs().filter(s=>ids.includes(str(s.id))); if(rows.length!==ids.length)return{ok:false,code:'source_missing'};
     if(rows.some(s=>str(s.vehicleId)!==vehicleId))return{ok:false,code:'vehicle_mismatch'};
     const duplicate=groups().find(x=>str(x.id)!==str(packageId)&&str(x.vehicleId)===vehicleId&&sameSourceSet(x.sourceServiceIds,ids)); if(duplicate)return{ok:false,code:'duplicate_source_package',package:normalize(duplicate)};
@@ -145,7 +167,7 @@
     return out.filter(g=>g.sourceServiceIds.length>=2&&!groups().some(p=>str(p.vehicleId)===str(vehicleId)&&sameSourceSet(p.sourceServiceIds,g.sourceServiceIds))).map(g=>({vehicleId:g.vehicleId,sourceServiceIds:g.sourceServiceIds,dateMin:g.dateMin,dateMax:g.dateMax,kmMin:g.kmMin,kmMax:g.kmMax,sourceCount:g.sourceServiceIds.length}));
   }
   function remove(packageId){const before=snapshotGroups();const next=groups().filter(p=>str(p.id)!==str(packageId));if(next.length===before.length)return{ok:false,code:'not_found'};global.D.serviceAuditGroups=next;try{const saved=saveVehicle();if(saved===false)throw new Error('persistence_failed');}catch(err){restoreGroups(before);return{ok:false,code:'persistence_failed'};}return{ok:true};}
-  const api={VERSION,TYPES,STATUS,MAX_SOURCE_RECORDS,logs,groups,type,status,normalize,create,update,byId,forVehicle,listByVehicle:forVehicle,audit,remove,summarize,sourceRows,integrity,findExistingBySources,candidates};
+  const api={VERSION,TYPES,STATUS,MAX_SOURCE_RECORDS,logs,groups,type,status,normalize,create,update,byId,forVehicle,listByVehicle:forVehicle,audit,remove,summarize,sourceRows,integrity,findExistingBySources,candidates,sourceIdentityAudit};
   global.ServiceHistoryAuditPackage=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

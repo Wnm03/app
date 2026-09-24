@@ -3,6 +3,59 @@
 
 if (typeof Servis === "undefined") throw new Error("Servis must load before servis-b.js");
 Object.assign(Servis, {
+// S1987 split: save-rollback snapshot & create-modal geometry reset moved out of servis.js (source-size cap 1800).
+_captureSaveRollback(){
+  const _originalService=Servis.editId&&Array.isArray(D.servisLogs)?D.servisLogs.find(x=>x&&x.id===Servis.editId):null;
+  const _clone=(v)=>{
+    if(v==null)return v;
+    try{if(typeof structuredClone==='function')return structuredClone(v);}catch(_e){/* structuredClone tidak tersedia/gagal; fallback JSON di bawah. */}
+    try{return JSON.parse(JSON.stringify(v));}catch(_e){return v;}
+  };
+  const _originalTx=_originalService&&_originalService.txLinkId&&Array.isArray(D.transactions)?D.transactions.find(t=>t&&t.id===_originalService.txLinkId):null;
+  const _stockIds=new Set();
+  if(_originalService){[_originalService.usedPartId,_originalService.catalogPartLinkedStockId,_originalService.autoGantiStockId].filter(Boolean).forEach(id=>_stockIds.add(id));}
+  const _stockBefore=new Map();
+  for(const id of _stockIds){const row=Array.isArray(D.partsStock)?D.partsStock.find(x=>x&&x.id===id):null;if(row)_stockBefore.set(id,Number(row.qty)||0);}
+  const _catBefore=_originalService&&_originalService.categoryId&&Array.isArray(D.sparepartCats)?D.sparepartCats.find(c=>c&&c.id===_originalService.categoryId):null;
+  const snapshot={service:_clone(_originalService),tx:_clone(_originalTx),stock:_stockBefore,cat:_clone(_catBefore)};
+  const restore=()=>{
+    try{
+      if(snapshot.service){
+        const cur=(D.servisLogs||[]).find(x=>x&&x.id===snapshot.service.id);
+        if(cur)Object.assign(cur,_clone(snapshot.service));else D.servisLogs.push(_clone(snapshot.service));
+      }
+      if(snapshot.tx){
+        const cur=(D.transactions||[]).find(x=>x&&x.id===snapshot.tx.id);
+        if(cur)Object.assign(cur,_clone(snapshot.tx));else D.transactions.push(_clone(snapshot.tx));
+      }else if(snapshot.service&&snapshot.service.id){
+        D.transactions=(D.transactions||[]).filter(t=>!(t&&t.servisLinkId===snapshot.service.id));
+      }
+      for(const [id,qty] of snapshot.stock){const row=(D.partsStock||[]).find(x=>x&&x.id===id);if(row)row.qty=qty;}
+      if(snapshot.cat){const cur=(D.sparepartCats||[]).find(x=>x&&x.id===snapshot.cat.id);if(cur)Object.assign(cur,_clone(snapshot.cat));}
+      return true;
+    }catch(e){console.error('P16: service rollback failed',e);return false;}
+  };
+  return restore;
+},
+_restoreCreateModalGeometryFallback(overlay){
+// S1986 fallback: keep the reset local for isolated tests/older runtime shells
+// that expose resetOverlayGeometry but not the S1987 reusable-modal helper.
+if(typeof PWAUX!=='undefined'&&PWAUX&&typeof PWAUX.resetOverlayGeometry==='function')PWAUX.resetOverlayGeometry(overlay);
+const modal=overlay.querySelector?overlay.querySelector('.modal'):null;
+if(modal&&modal.style){
+  ['width','maxWidth','minWidth','height','maxHeight','margin','boxSizing','overflowX','overflowY','display','flexDirection'].forEach(k=>{modal.style[k]='';});
+  modal.style.transform='';
+  modal.style.transition='';
+}
+if(overlay.style){
+  ['position','inset','width','maxWidth','height','left','right','bottom','top','padding','boxSizing'].forEach(k=>{overlay.style[k]='';});
+}
+['servisDetailPanel','servisReminderPanel','servisHistoryPanel','servisAuditPanel'].forEach(id=>{
+  const panel=document.getElementById(id);
+  if(!panel||!panel.style)return;
+  ['flex','minHeight','overflowY','overflowX'].forEach(k=>{panel.style[k]='';});
+});
+},
 getServiceOdometerIntegrity(vehicleId){
   const allLogs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[];
   const incomplete=allLogs.filter(s=>s.km==null||s.km==='').map(s=>({type:'missing_km',id:s.id||null,date:s.date||null}));
@@ -57,9 +110,14 @@ activeReminderComponentFilter:'',
 _selectedHistoryIds:new Set(),
 _selectedHistoryVehicleId:null,
 _historyAuditVisible:false,
+_historySelectionVehicleId(){
+  const editId=Servis.editId;
+  const editRow=editId!==null&&editId!==undefined?(Array.isArray(D.servisLogs)?D.servisLogs.find(x=>x&&String(x.id)===String(editId)):null):null;
+  return String(editRow&&editRow.vehicleId||curVehicleId||'');
+},
 _historyAuditLogs:[],
 _ensureHistorySelectionScope(vehicleId){
-  const scope=String(vehicleId||curVehicleId||'');
+  const scope=String(vehicleId||Servis._historySelectionVehicleId()||'');
   if(Servis._selectedHistoryVehicleId!==scope){
     Servis._selectedHistoryIds.clear();
     Servis._selectedHistoryVehicleId=scope;
@@ -69,7 +127,7 @@ _ensureHistorySelectionScope(vehicleId){
 setHistorySelection(id,checked){
   const key=String(id||'');
   if(!key)return;
-  Servis._ensureHistorySelectionScope(curVehicleId);
+  Servis._ensureHistorySelectionScope(Servis._historySelectionVehicleId());
   if(checked===undefined)checked=!Servis._selectedHistoryIds.has(key);
   if(checked){
     if(Servis._selectedHistoryIds.size>=100&&!Servis._selectedHistoryIds.has(key)){toast('ℹ️ Maksimal 100 riwayat per operasi.');return;}
@@ -81,7 +139,7 @@ setHistorySelection(id,checked){
 setHistoryAuditSelection(id,checked,vehicleId){
   const key=String(id||'');
   if(!key)return;
-  const scope=Servis._ensureHistorySelectionScope(vehicleId||curVehicleId);
+  const scope=Servis._ensureHistorySelectionScope(vehicleId||Servis._historySelectionVehicleId());
   const row=(D.servisLogs||[]).find(x=>x&&String(x.id)===key&&String(x.vehicleId||'')===scope);
   if(!row)return;
   if(checked===undefined)checked=!Servis._selectedHistoryIds.has(key);
@@ -96,7 +154,7 @@ setHistoryAuditSelection(id,checked,vehicleId){
   return true;
 },
 getHistoryAuditSelectionIds(vehicleId){
-  const scope=Servis._ensureHistorySelectionScope(vehicleId||curVehicleId);
+  const scope=Servis._ensureHistorySelectionScope(vehicleId||Servis._historySelectionVehicleId());
   const valid=new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId||'')===scope).map(x=>String(x.id)));
   const ids=[...Servis._selectedHistoryIds].filter(id=>valid.has(String(id))).slice(0,100);
   if(Servis._selectedHistoryIds.size>ids.length){
@@ -109,7 +167,7 @@ toggleHistorySelection(id){return Servis.setHistorySelection(id);},
 clearHistorySelection(){Servis._selectedHistoryIds.clear();Servis._historyAuditVisible=false;Servis.renderList({skipReminder:true});},
 selectAllVisibleHistory(ids){
   const list=Array.isArray(ids)?ids.map(String).filter(Boolean):[];
-  Servis._ensureHistorySelectionScope(curVehicleId);
+  Servis._ensureHistorySelectionScope(Servis._historySelectionVehicleId());
   const allSelected=list.length>0&&list.every(id=>Servis._selectedHistoryIds.has(id));
   if(allSelected){
     list.forEach(id=>Servis._selectedHistoryIds.delete(id));
@@ -131,7 +189,8 @@ _renderHistoryAuditValue(v){
   return String(v);
 },
 _getSelectedHistoryLogs(logs){
-  const byId=new Map((Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(s=>s&&s.vehicleId===curVehicleId).map(s=>[String(s.id),s]));
+  const scope=Servis._historySelectionVehicleId();
+  const byId=new Map((Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(s=>s&&String(s.vehicleId||'')===scope).map(s=>[String(s.id),s]));
   const source=Array.isArray(logs)?logs:[];
   return [...Servis._selectedHistoryIds].map(id=>byId.get(String(id))).filter(Boolean).filter(s=>source.length?source.some(x=>String(x.id)===String(s.id)):true);
 },
@@ -440,7 +499,8 @@ return;
 }
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
-if(Servis._selectedHistoryVehicleId!==curVehicleId){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=curVehicleId;Servis._historyAuditVisible=false;}
+const selectionScope=Servis._historySelectionVehicleId();
+if(Servis._selectedHistoryVehicleId!==selectionScope){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=selectionScope;Servis._historyAuditVisible=false;}
 const visibleCandidateIds=logs.map(s=>String(s.id));
 // S1980: selection is operation state, not filter state. Never drop valid IDs merely because a filter hides them.
 let auditToolbar=document.getElementById('servisHistoryAuditToolbar')||Servis._historyAuditToolbar;
