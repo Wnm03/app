@@ -55,7 +55,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=2001"
+      -> `<script src="modules/shared/modal-write.js?v=2000"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -67,7 +67,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=2001`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=2000`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -180,18 +180,18 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=2001">
-<link rel="stylesheet" href="modern-ui-layer.css?v=2001">
-<link rel="stylesheet" href="minimal-ui-theme.css?v=2001">
-<link rel="stylesheet" href="pwa-ui-layer.css?v=2001">
-<script src="nav-scroll.js?v=2001" defer></script>
-<script src="modules/shared/boot-early.js?v=2001"></script>
+<link rel="stylesheet" href="styles.css?v=2000">
+<link rel="stylesheet" href="modern-ui-layer.css?v=2000">
+<link rel="stylesheet" href="minimal-ui-theme.css?v=2000">
+<link rel="stylesheet" href="pwa-ui-layer.css?v=2000">
+<script src="nav-scroll.js?v=2000" defer></script>
+<script src="modules/shared/boot-early.js?v=2000"></script>
 
 
 
-<script src="modules/shared/segmented-control.js?v=2001"></script>
-<script src="modules/shared/bundle-load-guard.js?v=2001" data-guard-src="app-bundle-a.min.js?v=2001" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=2001" defer></script>
+<script src="modules/shared/segmented-control.js?v=2000"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2000" data-guard-src="app-bundle-a.min.js?v=2000" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=2000" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 
 <style id="dashboard-slim-v1879">
@@ -1640,7 +1640,7 @@
   </div>
 </div>
 
-<script src="modules/shared/modal-write.js?v=2001" data-modal-range="0-102"></script>
+<script src="modules/shared/modal-write.js?v=2000" data-modal-range="0-102"></script>
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
 <!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
@@ -3610,6 +3610,6 @@
 <!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
 <!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=2001" data-guard-src="app-bundle-b.min.js?v=2001" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2000" data-guard-src="app-bundle-b.min.js?v=2000" data-guard-id="appBundleBScript"></script>
 </body>
 </html>
