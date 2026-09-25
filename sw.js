@@ -1,6 +1,6 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v2007';
+const CACHE_NAME = 'kw-cache-v2030';
 const PRECACHE_URLS = [
   './index.html',
   './app_production.html',
@@ -10,6 +10,20 @@ const PRECACHE_URLS = [
   './pwa-ui-layer.css',
   './app-bundle-a.min.js',
   './app-bundle-b.min.js',
+  './modules/vehicle/service-reminder-vehicle-scope-s2015.js',
+  './modules/vehicle/service-history-context-s2018.js',
+  './modules/vehicle/service-history-multichecklist-s2019.js',
+  './modules/vehicle/service-history-context-hardening-s2020.js',
+  './modules/vehicle/service-history-evidence-s2021.js',
+  './modules/vehicle/service-history-evidence-lifecycle-s2022.js',
+  './modules/vehicle/service-history-evidence-completeness-s2023.js',
+  './modules/vehicle/service-history-evidence-provenance-s2024.js',
+  './modules/vehicle/service-history-evidence-ux-s2025.js',
+  './modules/vehicle/service-history-reminder-component-s2026.js',
+  './modules/vehicle/service-history-reminder-history-roundtrip-s2027.js',
+  './modules/vehicle/service-history-history-reminder-audit-roundtrip-s2028.js',
+  './modules/vehicle/service-history-legacy-multicomponent-reload-s2029.js',
+  './modules/vehicle/service-history-final-e2e-s2030.js',
   './modules/shared/smoke-test.js',
   './manifest.json',
   './icon-192.svg',
