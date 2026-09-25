@@ -42,11 +42,13 @@ test('S1810: rekomendasi generik tidak lagi membuat komponen Kampas Rem generik'
   assert.ok(!b.match(/motor:\s*\[[^\]]*'Kampas Rem'[^\]]*\]/));
 });
 
-test('S1810: modal servis menyediakan tindakan yang terlihat untuk item standar maupun free-text',()=>{
+test('S1810: tindakan servis sekarang ditampilkan pada kartu checklist sebagai satu SOT',()=>{
   const fs=require('node:fs'),path=require('node:path');
-  const src=fs.readFileSync(path.join(__dirname,'..','modules/shared/modals.js'),'utf8');
-  assert.ok(src.includes('id=\\"servisActionTypeWrap\\"'));
-  assert.ok(src.includes('id=\\"servisActionType\\"'));
-  assert.ok(src.includes('Tindakan Servis'));
-  assert.ok(src.includes('id=\\"servisItem\\"'));
+  const modal=fs.readFileSync(path.join(__dirname,'..','modules/shared/modals.js'),'utf8');
+  const servis=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/servis.js'),'utf8');
+  assert.ok(modal.includes('id=\\"servisChecklistPanel\\"'));
+  assert.ok(servis.includes('data-action=\"Servis.setServiceChecklistAction\"'));
+  assert.ok(servis.includes("v==='periksa'?"));
+  assert.ok(servis.includes("v==='bersih'?"));
+  assert.ok(servis.includes('🔧 Ganti'));
 });

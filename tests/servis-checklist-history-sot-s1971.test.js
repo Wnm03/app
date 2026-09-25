@@ -33,7 +33,7 @@ test('S1971: checklist tetap tersedia sebagai bukti read-only di tab Riwayat',()
 
 test('S1971: data checklist lama tidak dihapus dari SOT servis',()=>{
   assert.match(src,/checklist:checklistPayload/);
-  assert.match(src,/ServisChecklist\.loadFromLog\(s\)/);
+  assert.match(src,/ServisChecklist\.loadFromLog\(combined\)/);
 });
 
 test('S1971/S1972: bulk editor extension dimuat setelah Servis dan tidak menjadi checklist SOT kedua',()=>{

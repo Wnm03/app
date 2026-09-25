@@ -57,6 +57,6 @@ test('multi-kategori: renderer melakukan loop semua kategori aktif dan semua act
 });
 
 test('multi-kategori: openModal memulihkan semua masterCategoryId dari record checklist saat edit', () => {
-  assert.match(servis, /const payloadIds=\(s\.checklist\|\|\[\]\)\.map\(r=>r&&r\.masterCategoryId\)/);
+  assert.match(servis, /sessionRows\.flatMap\(r=>Array\.isArray\(r\.checklist\)/);
   assert.match(servis, /Servis\._serviceChecklistMasterCategoryIds=\[\.\.\.new Set\(/);
 });

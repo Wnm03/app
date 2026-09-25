@@ -9,9 +9,11 @@ test('Servis split keeps finance linkage on one record only',()=>{
   assert.match(src,/cost:_rowIdx===0\?cost:0/);
 });
 
-test('Servis split keeps stock linkage on one record only',()=>{
-  assert.match(src,/usedPartId:_rowIdx===0\?\(usedPartId\|\|null\):null/);
+test('Servis split keeps component stock linkage in the component row while finance linkage stays on primary row',()=>{
+  assert.match(src,/usedPartId:_row\.usedPartId\|\|null/);
+  assert.match(src,/usedPartQty:_row\.usedPartId\?\(Number\(_row\.usedPartQty\)\|\|0\):0/);
   assert.match(src,/catalogPartLinkedStockId:_rowIdx===0\?\(catalogLinkedStockId\|\|null\):null/);
+  assert.match(src,/catalogPartRefs:_rowCatalogRefs/);
 });
 
 test('Session delete restores every member stock linkage before removing logs',()=>{

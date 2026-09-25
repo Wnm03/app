@@ -106,7 +106,7 @@ function extractMethodBody(source,name){
   const fn=vm.runInContext(`(function renderServiceChecklist(){${body}})`,ctx);
 
   assert.doesNotThrow(()=>{ fn.call(ctx.Servis); });
-  assert.ok(box.innerHTML.includes('akan muncul setelah memilih kategori'),
+  assert.ok(box.innerHTML.includes('Pilih kategori servis untuk membuka checklist komponen'),
     '0 kategori -> placeholder, bukan checklist kosong/error');
 
   console.log('PASS: renderServiceChecklist() placeholder aman saat 0 kategori dipilih');

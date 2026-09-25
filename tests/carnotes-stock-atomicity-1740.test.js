@@ -18,16 +18,17 @@ test('Servis stock usage is netted per physical stock id to prevent double deduc
 
 test('Servis create uses one aggregated stock mutation for legacy and catalog selectors',()=>{
   const src=servisSource();
-  assert.match(src,/if\(!await Servis\.applyStockUsages\(\[\s*\{partId:usedPartId,qty:usedPartQty\},\s*\{partId:catalogLinkedStockId,qty:catalogPartQty\}\s*\]\)\)return;/);
+  assert.match(src,/const _createStockEntries=/);
+  assert.match(src,/if\(!await Servis\.applyStockUsages\(_createStockEntries\)\)return;/);
 });
 
 test('Servis empty-input validation occurs before any stock or Finance mutation',()=>{
   const src=servisSource();
   const guard=src.indexOf('const _preSaveChecklistPayload=');
-  const stock=src.indexOf('if(!await Servis.applyStockUsages([');
+  const stock=src.indexOf('if(!await Servis.applyStockUsages(_createStockEntries))return;');
   const tx=src.indexOf('D.transactions.push({id:txId,type:\'expense\'');
   assert.ok(guard>=0 && stock>guard && tx>guard,'pre-save guard must precede stock and Finance writes');
-  assert.match(src,/if\(!_preSaveEffectiveItem\)\{toast\('⚠️ Pilih minimal satu komponen checklist atau isi jenis servis'\);return;\}/);
+  assert.match(src,/if\(!_preSaveEffectiveItem\)\{toast\('⚠️ Pilih minimal satu komponen checklist yang dikerjakan'\);return;\}/);
 });
 
 test('Bundle-B carries the same stock atomicity hardening',()=>{
@@ -35,7 +36,7 @@ test('Bundle-B carries the same stock atomicity hardening',()=>{
   assert.match(b,/async applyStockUsages\(entries\)\{/);
   assert.match(b,/async replaceStockUsages\(oldEntries,newEntries\)\{/);
   assert.match(b,/if\(!await Servis\.replaceStockUsages\(/);
-  assert.match(b,/if\(!await Servis\.applyStockUsages\(\[/);
+  assert.match(b,/if\(!await Servis\.applyStockUsages\(_createStockEntries\)/);
   assert.match(b,/const _preSaveEffectiveItem=/);
 });
 

@@ -25,5 +25,5 @@ test('Sesi 2B: Riwayat Servis menampilkan x/total + ringkasan tindakan tanpa mem
 
 test('Sesi 2B: edit catatan membuka kategori pertama yang berisi checklist tersimpan', () => {
   assert.match(checklist, /firstCheckedGroup\(\) \{/);
-  assert.match(carNotes, /ServisChecklist\.loadFromLog\(s\); Servis\._serviceChecklistGroupIdx=ServisChecklist\.firstCheckedGroup\(\);/);
+  assert.match(carNotes, /ServisChecklist\.loadFromLog\(combined\); Servis\._serviceChecklistGroupIdx=ServisChecklist\.firstCheckedGroup\(\);/);
 });

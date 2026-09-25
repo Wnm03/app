@@ -22,12 +22,12 @@ test('minimal theme tidak memakai hijau/teal sebagai warna positif', () => {
 test('index.html mendaftarkan tema Minimal tanpa mengubah tema lama', () => {
   assert.match(index, /data-args='\["minimal"\]' data-t="minimal"/);
   assert.match(index, /data-args='\["modern"\]' data-t="modern"/);
-  assert.match(index, /minimal-ui-theme\.css\?v=1/);
+  assert.match(index, /minimal-ui-theme\.css\?v=\d+/);
 });
 
 test('app_production.html memuat tema Minimal yang sama', () => {
   assert.match(prod, /data-args='\["minimal"\]' data-t="minimal"/);
-  assert.match(prod, /minimal-ui-theme\.css\?v=1/);
+  assert.match(prod, /minimal-ui-theme\.css\?v=\d+/);
 });
 
 test('komponen utama mockup memiliki override: card, tab, hero, nav', () => {

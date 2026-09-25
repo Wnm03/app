@@ -10,6 +10,6 @@ test('SA-L: restore must invalidate cached persistence snapshot before saveFlush
 
 test('SA-L: backup restore marks both commit and rollback as persistence mutations',()=>{
   const s=fs.readFileSync('modules/shared/backup-restore.js','utf8');
-  const matches=s.match(/if\(typeof _saveStateVersion!=='undefined'\)\{_saveStateVersion\+\+;_saveSnapshotVersion=-1;_saveSnapshotJson=null;\}\s*saveFlush\(\);/g)||[];
+  const matches=s.match(/if\(typeof _saveStateVersion!=='undefined'\)\{_saveStateVersion\+\+;_saveSnapshotVersion=-1;_saveSnapshotJson=null;\}\s*(?:__s2013SetStage\([^;]+\);\s*)?saveFlush\(\);/g)||[];
   assert.equal(matches.length,2,'restore commit + rollback harus sama-sama invalidasi snapshot');
 });

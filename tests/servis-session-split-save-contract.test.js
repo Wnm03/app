@@ -17,8 +17,9 @@ test('Servis 2A: create checklist multi-item memakai sessionId dan memecah menja
 test('Servis 2A: biaya dan linkage transaksi hanya masuk record pertama',()=>{
   assert.match(src,/cost:_rowIdx===0\?cost:0/);
   assert.match(src,/txLinkId:_rowIdx===0\?txId:null/);
-  assert.match(src,/usedPartId:_rowIdx===0\?/);
-  assert.match(src,/catalogPartId:_rowIdx===0\?/);
+  assert.match(src,/usedPartId:_row\.usedPartId\|\|null/);
+  assert.match(src,/catalogPartRefs:_rowCatalogRefs/);
+  assert.match(src,/catalogPartId:_rowIdx===0\?\(_rowCatalogRefs\[0\]\?\.catalogId\|\|catalogPartId\|\|null\):null/);
 });
 
 test('Servis 2A: interval/reminder dihitung per kategori hasil split',()=>{
@@ -29,6 +30,7 @@ test('Servis 2A: interval/reminder dihitung per kategori hasil split',()=>{
 });
 
 test('Servis 2A: checklist boleh menjadi sumber item saat Jenis Servis kosong',()=>{
-  assert.match(src,/const _effectiveItem=item\|\|\(_hasChecklistRows\?_checkedServiceRows\[0\]\.itemName/);
-  assert.match(src,/if\(!_effectiveItem\)\{toast\('⚠️ Pilih minimal satu komponen checklist atau isi jenis servis'\);return;\}/);
+  assert.match(src,/let _preSaveChecklistSeed=/);
+  assert.match(src,/const _preSaveEffectiveItem=item\|\|\(_preSaveChecklistPayload\.length>0/);
+  assert.match(src,/if\(!_preSaveEffectiveItem\)/);
 });
