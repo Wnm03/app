@@ -173,6 +173,9 @@ const ServisChecklist = {
   // Per-component catalog references. Kept inside checklist state until save;
   // each saved history row receives only its own refs.
   _catalogPartRefs: {},
+  _stockPartRefs: {},
+  _photoRefs: {},
+  _intervalOverrides: {},
 
   // open(vehicleId) — mulai sesi checklist baru: reset _checked jadi {}
   // & simpan vehicleId aktif. Dipanggil tiap modal Servis Checklist
@@ -189,6 +192,9 @@ const ServisChecklist = {
     this._identityOverrides = {};
     this._costs = {};
     this._catalogPartRefs = {};
+    this._stockPartRefs = {};
+    this._photoRefs = {};
+    this._intervalOverrides = {};
     return { ok: true, vehicleId: this._vehicleId, checked: this._checked };
   },
 
@@ -254,6 +260,14 @@ const ServisChecklist = {
   setCatalogPart(itemId, catalogId, qty=1) {
     return this.setCatalogPartRefs(itemId, catalogId ? [{catalogId, qty}] : []);
   },
+  getStockPartRef(itemId) { const r=this._stockPartRefs&&this._stockPartRefs[itemId]; return r&&r.partId?{partId:String(r.partId),qty:Number(r.qty)>0?Number(r.qty):1}:null; },
+  setStockPartRef(itemId, partId, qty=1) { const found=this.findItemById(itemId); if(!found)return {ok:false,reason:'Item checklist tidak ditemukan'}; if(!partId){delete this._stockPartRefs[itemId];return {ok:true,itemId,stockPart:null};} const q=Number(qty); if(!Number.isFinite(q)||q<=0)return {ok:false,reason:'Jumlah stok harus lebih dari 0'}; const part=(typeof D!=='undefined'&&Array.isArray(D.partsStock))?D.partsStock.find(p=>String(p.id)===String(partId)):null; if(!part)return {ok:false,reason:'Part stok tidak ditemukan'}; this._stockPartRefs[itemId]={partId:String(partId),qty:q}; return {ok:true,itemId,stockPart:this.getStockPartRef(itemId)}; },
+  getPhotos(itemId) { return this._photoRefs&&Array.isArray(this._photoRefs[itemId])?this._photoRefs[itemId].slice():[]; },
+  setPhotos(itemId, photos) { if(!this.findItemById(itemId))return {ok:false,reason:'Item checklist tidak ditemukan'}; this._photoRefs[itemId]=Array.isArray(photos)?photos.slice(0,5):[]; return {ok:true,itemId,photos:this.getPhotos(itemId)}; },
+  addPhoto(itemId, dataUrl) { const photos=this.getPhotos(itemId); if(photos.length>=5)return {ok:false,reason:'Maksimal 5 foto per komponen'}; if(typeof dataUrl!=='string'||!dataUrl.startsWith('data:image/'))return {ok:false,reason:'Foto tidak valid'}; photos.push(dataUrl); return this.setPhotos(itemId,photos); },
+  removePhoto(itemId,index) { const photos=this.getPhotos(itemId); if(index>=0&&index<photos.length)photos.splice(index,1); return this.setPhotos(itemId,photos); },
+  getIntervalOverride(itemId) { const v=this._intervalOverrides&&this._intervalOverrides[itemId]; return Number.isFinite(Number(v))&&Number(v)>0?Number(v):null; },
+  setIntervalOverride(itemId,value) { if(!this.findItemById(itemId))return {ok:false,reason:'Item checklist tidak ditemukan'}; if(value===null||value===''||value===undefined){delete this._intervalOverrides[itemId];return {ok:true,itemId,intervalKm:null};} const n=Number(value); if(!Number.isFinite(n)||n<=0)return {ok:false,reason:'Interval harus lebih dari 0 km'}; this._intervalOverrides[itemId]=n; return {ok:true,itemId,intervalKm:n}; },
 
   async openCatalogPicker(itemId) {
     const found = this.findItemById(itemId);
@@ -340,7 +354,10 @@ const ServisChecklist = {
         costBreakdown: this.getItemCost(itemId),
         cost: this.getItemCost(itemId).total,
         catalogPartRefs: this.getCatalogPartRefs(itemId),
-        intervalKmAtService: (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
+        stockPartRef: this.getStockPartRef(itemId),
+        photos: this.getPhotos(itemId),
+        intervalKmOverride: this.getIntervalOverride(itemId),
+        intervalKmAtService: this.getIntervalOverride(itemId) ?? (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
         intervalBulanAtService: (this.getMasterComponent(itemId)||{}).intervalTimeMonths ?? null,
         reminderIntervalSource: this.getMasterComponent(itemId) ? 'service-master' : 'legacy-category',
         checklistItemId: itemId
@@ -378,9 +395,17 @@ const ServisChecklist = {
         costBreakdown: this.getItemCost(itemId),
         cost: this.getItemCost(itemId).total,
         catalogPartRefs: this.getCatalogPartRefs(itemId),
-        intervalKmAtService: (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
+        stockPartRef: this.getStockPartRef(itemId),
+        usedPartId: (this.getStockPartRef(itemId)||{}).partId || null,
+        usedPartQty: (this.getStockPartRef(itemId)||{}).qty || 0,
+        catalogPartId: (this.getCatalogPartRefs(itemId)[0]||{}).catalogId || null,
+        catalogPartQty: (this.getCatalogPartRefs(itemId)[0]||{}).qty || 0,
+        photos: this.getPhotos(itemId),
+        foto: this.getPhotos(itemId),
+        intervalKmOverride: this.getIntervalOverride(itemId),
+        intervalKmAtService: this.getIntervalOverride(itemId) ?? (this.getMasterComponent(itemId)||{}).intervalKm ?? null,
         intervalBulanAtService: (this.getMasterComponent(itemId)||{}).intervalTimeMonths ?? null,
-        reminderIntervalSource: this.getMasterComponent(itemId) ? 'service-master' : 'legacy-category',
+        reminderIntervalSource: this.getIntervalOverride(itemId) ? 'component-override' : (this.getMasterComponent(itemId) ? 'service-master' : 'legacy-category'),
         checklistItemId: itemId
       };
       // categoryId hanya boleh ada bila kategori sparepart konkret benar-benar
@@ -401,9 +426,27 @@ const ServisChecklist = {
     this._identityOverrides = {};
     this._costs = {};
     this._catalogPartRefs = {};
+    this._stockPartRefs = {};
+    this._photoRefs = {};
+    this._intervalOverrides = {};
     if (!log) return { ok: true, count: 0 };
     (Array.isArray(log.checklistNotApplicable)?log.checklistNotApplicable:[]).forEach(id=>{ if(this.findItemById(id)) this._notApplicable[id]=true; });
-    if (!Array.isArray(log.checklist)) return { ok: true, count: 0 };
+    if (!Array.isArray(log.checklist) || !log.checklist.length) {
+      let legacyId=log.serviceComponentId||null;
+      if(!legacyId && typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'){const inf=ServiceInputCatalog.infer(log.item||'');legacyId=inf&&inf.item?inf.item.id:null;}
+      const legacy=legacyId?this.findItemById(legacyId):null;
+      if(legacy){
+        this._checked[legacy.item.id]=this._validActionTypesFor(legacy).includes(log.actionType)?log.actionType:this._defaultActionType(legacy);
+        if(log.conditionResult)this._results[legacy.item.id]=log.conditionResult;
+        if(log.conditionNote)this._conditionNotes[legacy.item.id]=String(log.conditionNote);
+        const stockRef=log.stockPartRef&&log.stockPartRef.partId?log.stockPartRef:(log.usedPartId?{partId:log.usedPartId,qty:log.usedPartQty}:null); if(stockRef)this._stockPartRefs[legacy.item.id]={partId:String(stockRef.partId),qty:Number(stockRef.qty)>0?Number(stockRef.qty):1};
+        const refs=Array.isArray(log.catalogPartRefs)?log.catalogPartRefs:(log.catalogPartId?[{catalogId:log.catalogPartId,qty:log.catalogPartQty||1}]:[]); if(refs.length)this._catalogPartRefs[legacy.item.id]=refs.map(r=>({catalogId:String(r.catalogId),qty:Number(r.qty)>0?Number(r.qty):1}));
+        const photos=Array.isArray(log.photos)?log.photos:(Array.isArray(log.foto)?log.foto:[]); if(photos.length)this._photoRefs[legacy.item.id]=photos.slice(0,5);
+        if(log.intervalKmAtService&&Number(log.intervalKmAtService)>0)this._intervalOverrides[legacy.item.id]=Number(log.intervalKmAtService);
+        return {ok:true,count:1,migratedLegacy:true};
+      }
+      return {ok:true,count:0,legacyUnmapped:true};
+    }
     (Array.isArray(log.checklist)?log.checklist:[]).forEach(row => {
       if (!row || !row.itemId) return;
       const found = this.findItemById(row.itemId);
@@ -423,6 +466,9 @@ const ServisChecklist = {
       }
       if (Array.isArray(row.catalogPartRefs)) this._catalogPartRefs[row.itemId] = row.catalogPartRefs.map(r => ({catalogId:String(r.catalogId),qty:Number(r.qty)>0?Number(r.qty):1}));
       else if (row.catalogPartId) this._catalogPartRefs[row.itemId] = [{catalogId:String(row.catalogPartId),qty:Number(row.catalogPartQty)>0?Number(row.catalogPartQty):1}];
+      const stockRef=row.stockPartRef&&row.stockPartRef.partId?row.stockPartRef:(row.usedPartId?{partId:row.usedPartId,qty:row.usedPartQty}:null); if(stockRef)this._stockPartRefs[row.itemId]={partId:String(stockRef.partId),qty:Number(stockRef.qty)>0?Number(stockRef.qty):1};
+      const rowPhotos=Array.isArray(row.photos)?row.photos:(Array.isArray(row.foto)?row.foto:[]); if(rowPhotos.length)this._photoRefs[row.itemId]=rowPhotos.slice(0,5);
+      if(row.intervalKmOverride&&Number(row.intervalKmOverride)>0)this._intervalOverrides[row.itemId]=Number(row.intervalKmOverride);
       if (row.costBreakdown && typeof row.costBreakdown === 'object' && row.costBreakdown.source === 'component') {
         this._costs[row.itemId] = {
           labor: this._normalizeCostField(row.costBreakdown.labor),

@@ -133,6 +133,7 @@ if(masterCategoryId)Servis.setEditCanonicalSelection(masterCategoryId,serviceCom
 if(typeof Servis.syncVisibleServiceSotSelectors==='function')Servis.syncVisibleServiceSotSelectors();
 return true;
 },
+onReceiptScanCostInput(value){const n=Number(value);if(!Number.isFinite(n)||n<0)return;const ids=typeof ServisChecklist!=='undefined'?Object.keys(ServisChecklist._checked||{}):[];if(ids.length===1&&ServisChecklist.setItemCost){ServisChecklist.setItemCost(ids[0],{other:n});const info=document.getElementById('servisReceiptScanInfo');if(info)info.textContent=`Nominal scan Rp ${n.toLocaleString('id-ID')} dialokasikan ke biaya komponen yang aktif.`;if(Servis.renderServiceChecklist)Servis.renderServiceChecklist();}else if(ids.length>1){const info=document.getElementById('servisReceiptScanInfo');if(info)info.textContent=`Nominal scan Rp ${n.toLocaleString('id-ID')} terdeteksi. Alokasikan manual pada biaya tiap komponen.`;}},
 setManualServiceItemVisible(visible,focus=false){
 const wrap=document.getElementById('servisManualItemWrap');if(wrap)wrap.style.display=visible?'':'none';
 const btn=document.getElementById('servisManualItemBtn');if(btn)btn.textContent=visible?'↩️ Sembunyikan item manual':'＋ Item manual/non-standar';
@@ -148,24 +149,19 @@ _captureSaveRollback(){
     try{return JSON.parse(JSON.stringify(v));}catch(_e){return v;}
   };
   const _originalTx=_originalService&&_originalService.txLinkId&&Array.isArray(D.transactions)?D.transactions.find(t=>t&&t.id===_originalService.txLinkId):null;
-  const _stockIds=new Set();
-  if(_originalService){[_originalService.usedPartId,_originalService.catalogPartLinkedStockId,_originalService.autoGantiStockId].filter(Boolean).forEach(id=>_stockIds.add(id));}
-  const _stockBefore=new Map();
-  for(const id of _stockIds){const row=Array.isArray(D.partsStock)?D.partsStock.find(x=>x&&x.id===id):null;if(row)_stockBefore.set(id,Number(row.qty)||0);}
+  const _sessionKey=_originalService&&(_originalService.sessionId||_originalService.serviceJobId||_originalService.id);
+  const _sessionRows=_sessionKey?(D.servisLogs||[]).filter(x=>x&&x.vehicleId===_originalService.vehicleId&&String(x.sessionId||x.serviceJobId||x.id)===String(_sessionKey)):[_originalService].filter(Boolean);
+  const _stockIds=new Set();_sessionRows.forEach(r=>{[r.usedPartId,r.catalogPartLinkedStockId,r.autoGantiStockId].filter(Boolean).forEach(id=>_stockIds.add(id));});
+  const _stockBefore=new Map();for(const id of _stockIds){const row=Array.isArray(D.partsStock)?D.partsStock.find(x=>x&&x.id===id):null;if(row)_stockBefore.set(id,Number(row.qty)||0);}
   const _catBefore=_originalService&&_originalService.categoryId&&Array.isArray(D.sparepartCats)?D.sparepartCats.find(c=>c&&c.id===_originalService.categoryId):null;
-  const snapshot={service:_clone(_originalService),tx:_clone(_originalTx),stock:_stockBefore,cat:_clone(_catBefore)};
+  const snapshot={service:_clone(_originalService),sessionRows:_clone(_sessionRows),tx:_clone(_originalTx),stock:_stockBefore,cat:_clone(_catBefore)};
   const restore=()=>{
     try{
-      if(snapshot.service){
-        const cur=(D.servisLogs||[]).find(x=>x&&x.id===snapshot.service.id);
-        if(cur)Object.assign(cur,_clone(snapshot.service));else D.servisLogs.push(_clone(snapshot.service));
-      }
+      if(Array.isArray(snapshot.sessionRows)&&snapshot.sessionRows.length){const ids=new Set(snapshot.sessionRows.map(x=>String(x.id)));D.servisLogs=(D.servisLogs||[]).filter(x=>!ids.has(String(x.id)));snapshot.sessionRows.forEach(row=>D.servisLogs.push(_clone(row)));}else if(snapshot.service){const cur=(D.servisLogs||[]).find(x=>x&&x.id===snapshot.service.id);if(cur)Object.assign(cur,_clone(snapshot.service));else D.servisLogs.push(_clone(snapshot.service));}
       if(snapshot.tx){
         const cur=(D.transactions||[]).find(x=>x&&x.id===snapshot.tx.id);
         if(cur)Object.assign(cur,_clone(snapshot.tx));else D.transactions.push(_clone(snapshot.tx));
-      }else if(snapshot.service&&snapshot.service.id){
-        D.transactions=(D.transactions||[]).filter(t=>!(t&&t.servisLinkId===snapshot.service.id));
-      }
+      }else if(Array.isArray(snapshot.sessionRows)&&snapshot.sessionRows.length){const ids=new Set(snapshot.sessionRows.map(x=>String(x.id)));D.transactions=(D.transactions||[]).filter(t=>!(t&&ids.has(String(t.servisLinkId))));}else if(snapshot.service&&snapshot.service.id){D.transactions=(D.transactions||[]).filter(t=>!(t&&t.servisLinkId===snapshot.service.id));}
       for(const [id,qty] of snapshot.stock){const row=(D.partsStock||[]).find(x=>x&&x.id===id);if(row)row.qty=qty;}
       if(snapshot.cat){const cur=(D.sparepartCats||[]).find(x=>x&&x.id===snapshot.cat.id);if(cur)Object.assign(cur,_clone(snapshot.cat));}
       return true;
