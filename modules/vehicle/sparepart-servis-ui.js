@@ -170,6 +170,15 @@ const grpNew=(groupSelEl&&groupSelVal)
 D.sparepartCats.push({id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
+// VehicleCatalog owns canonical service interval metadata for linked parts.
+// Keep D.sparepartCats as the compatibility index, then asynchronously mirror
+// the edit into the catalog and refresh reminder consumers after the write.
+const _savedCat=editMode?D.sparepartCats.find(c=>c&&String(c.id)===String(editId)):D.sparepartCats[D.sparepartCats.length-1];
+if(_savedCat&&typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function'){
+  Promise.resolve(VehicleServiceSOT.syncCategoryRule(_savedCat,vehicleId)).then(res=>{
+    if(res&&res.ok){save();if(typeof Servis!=='undefined'&&Servis&&typeof Servis.renderReminder==='function')Servis.renderReminder();if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();}
+  }).catch(e=>{if(typeof console!=='undefined'&&console&&typeof console.warn==='function')console.warn('[VehicleServiceSOT] sync kategori servis gagal:',e&&e.message?e.message:e);});
+}
 },
 async delCat(i){
 const cat=D.sparepartCats[i];

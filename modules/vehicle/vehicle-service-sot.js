@@ -107,21 +107,64 @@ async function vehicleServiceSotSyncCategoryRule(cat,vehicleId){
 /** Sync projection used by reminder/prediction consumers. The identity remains
  * the legacy category id for historical compatibility; catalogPartId and all
  * category labels/intervals are sourced from VehicleCatalog when linked. */
+function vehicleServiceSotResolveReminderRule(cat,vehicleId){
+  const category=cat&&typeof cat==='object'?cat:{};
+  const item=vehicleServiceSotFindCatalogForCat(category,vehicleId);
+  const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
+  // VehicleCatalog is the canonical owner of component/part service metadata
+  // once a category has an unambiguous catalog link. D.sparepartCats remains
+  // the compatibility index and is only the fallback for legacy/unlinked rows.
+  let intervalKm=item?num(item.serviceIntervalKm):null;
+  let intervalBulan=item?num(item.serviceIntervalMonths):null;
+  if(intervalKm===null)intervalKm=num(category.intervalKm);
+  if(intervalBulan===null)intervalBulan=num(category.intervalBulan);
+  // Per-vehicle KM override is an explicit user exception to the canonical
+  // catalog rule. There is intentionally no reuse of the KM override as a
+  // month interval; intervalBulan remains the category/catalog SOT.
+  const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
+  const override=num(vehicle&&vehicle.intervalOverrides&&vehicle.intervalOverrides[category.id]);
+  if(override!==null)intervalKm=override;
+  const componentId=(item&&item.serviceComponentId)||category.serviceComponentId||category.componentId||null;
+  const masterCategoryId=(category.masterCategoryId)||(item&&item.masterCategoryId)||null;
+  return {
+    categoryId:category.id||null,
+    catalogPartId:item&&item.id||category.catalogPartId||null,
+    serviceComponentId:componentId||null,
+    masterCategoryId:masterCategoryId||null,
+    categoryName:category.name||item&&item.partName||null,
+    componentName:item&&item.partName||category.name||null,
+    intervalKm,
+    intervalBulan,
+    intervalOverridden:override!==null,
+    source:item?'catalog':'category',
+    catalog:item||null
+  };
+}
+
 function getReminderCategoriesForVehicle(vehicleId){
   const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
   const legacyCats=(D.sparepartCats||[]).filter(c=>typeof catVisibleForVehicle==='function'?catVisibleForVehicle(c,vehicleId):true);
   const provisioned=(vehicle&&vehicle.sot&&Array.isArray(vehicle.sot.serviceSchedules))?vehicle.sot.serviceSchedules:[];
-  const cats=provisioned.length?provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder})):legacyCats;
+  const cats=provisioned.length?provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null})):legacyCats;
   const items=vehicleServiceSotVehicleItems(vehicleId);
   return cats.map(cat=>{
     const item=cat.catalogPartId?items.find(x=>String(x.id)===String(cat.catalogPartId)):vehicleServiceSotFindCatalogForCat(cat,vehicleId);
-    if(!item)return cat;
-    const out=Object.assign({},cat,{catalogPartId:item.id,catalogCategory:item.category||'',catalogSubcategory:item.subcategory||null});
-    if(Number.isFinite(Number(item.serviceIntervalKm))&&Number(item.serviceIntervalKm)>0)out.intervalKm=Number(item.serviceIntervalKm);
-    if(Number.isFinite(Number(item.serviceIntervalMonths))&&Number(item.serviceIntervalMonths)>0)out.intervalBulan=Number(item.serviceIntervalMonths);
-    if(item.serviceShowInReminder!==undefined)out.showInReminder=item.serviceShowInReminder!==false;
-    out.catalogPartName=item.partName||'';
-    out.catalogPartCode=item.oemCode||'';
+    const out=Object.assign({},cat);
+    if(item){
+      out.catalogPartId=item.id;
+      out.catalogCategory=item.category||'';
+      out.catalogSubcategory=item.subcategory||null;
+      out.catalogPartName=item.partName||'';
+      out.catalogPartCode=item.oemCode||'';
+      if(item.serviceShowInReminder!==undefined)out.showInReminder=item.serviceShowInReminder!==false;
+    }
+    const rule=vehicleServiceSotResolveReminderRule(out,vehicleId);
+    if(rule.serviceComponentId&&!out.serviceComponentId)out.serviceComponentId=rule.serviceComponentId;
+    if(rule.masterCategoryId&&!out.masterCategoryId)out.masterCategoryId=rule.masterCategoryId;
+    if(rule.intervalKm!==null)out.intervalKm=rule.intervalKm;
+    if(rule.intervalBulan!==null)out.intervalBulan=rule.intervalBulan;
+    out._serviceIntervalSource=rule.source;
+    out._serviceIntervalOverridden=rule.intervalOverridden;
     return out;
   });
 }
@@ -138,6 +181,7 @@ const VehicleServiceSOT={
   isReady:vehicleServiceSotIsReady,
   getReminderCategoriesForVehicle,
   resolvePart:vehicleServiceSotResolvePart,
+  resolveReminderRule:vehicleServiceSotResolveReminderRule,
   syncCategoryRule:vehicleServiceSotSyncCategoryRule,
 };
 if(typeof window!=='undefined')window.VehicleServiceSOT=VehicleServiceSOT;

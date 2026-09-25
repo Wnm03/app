@@ -497,6 +497,10 @@ function getServiceLinkage(catOrPart,vehicleId){
   return resolved;
 }
 function getEffectiveIntervalKm(vehicleId,cat){
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id];
 if(typeof resolveCanonicalInterval==='function'){
@@ -517,10 +521,14 @@ return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
 // (cat.intervalBulan). Backward compatible: null/undefined/0 berarti
 // kategori ini TIDAK pakai interval waktu (perilaku lama, murni km).
 function getEffectiveIntervalBulan(cat,vehicleId){
-const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
-const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat&&cat.id];
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
+// KM intervalOverrides are intentionally NOT reused as months. Time interval
+// stays owned by the category/catalog SOT; legacy fallback reads cat.intervalBulan.
 if(typeof resolveCanonicalInterval==='function'){
-  return resolveCanonicalInterval(cat,{intervalBulan:ov}).intervalBulan;
+  return resolveCanonicalInterval(cat,{}).intervalBulan;
 }
 return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 }

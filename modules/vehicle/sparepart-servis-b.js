@@ -600,10 +600,12 @@ if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
 // sejak awal -- predictService() cuma belum ikut ditempel. Disamakan di sini
 // supaya predictService()/maintenanceForecast()/_vehicleOverdueCheck() (yang
 // semuanya menghitung hal yang sama) konsisten dgn renderReminder().
-const remindable=(D.sparepartCats||[]).filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(vehicleId,c))));
+const reminderPool=(typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(vehicleId):(D.sparepartCats||[]);
+const remindableRaw=(reminderPool||[]).filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,vehicleId)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(vehicleId,c))));
+const remindable=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(remindableRaw,vehicleId):remindableRaw;
 const conditionItems=(typeof getMaintenanceConditionProjection==='function')?getMaintenanceConditionProjection(vehicleId):[];
 const cats=categoryId
-? remindable.filter((c)=>c.id===categoryId)
+? remindable.filter((c)=>String(c.id)===String(categoryId)||String(c.catalogPartId||'')===String(categoryId))
 : remindable;
 if(!cats.length&&!conditionItems.length)return{ok:false,reason:categoryId?'Kategori sparepart tidak ditemukan':'Belum ada kategori sparepart terdaftar'};
 const curKm=getVehicleKm(vehicleId);
