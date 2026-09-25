@@ -636,6 +636,7 @@ const GROUP_B = [
   'modules/vehicle/service-session-sot.js',
   'modules/vehicle/service-history-audit-package.js',
   'modules/vehicle/service-event-sot.js',
+  'modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js',
   'modules/vehicle/service-checklist-execution-sot.js',
   'modules/vehicle/service-checklist-integrity-sot.js',
   'modules/vehicle/parts-catalog-database.js',

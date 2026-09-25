@@ -1,0 +1,10 @@
+--- /mnt/data/audit_app14/app-main/scripts/build.js	2026-09-25 12:16:39.462171339 +0000
++++ /mnt/data/finalpatch/scripts/build.js	2026-09-25 12:30:52.884257948 +0000
+@@ -636,6 +636,7 @@
+   'modules/vehicle/service-session-sot.js',
+   'modules/vehicle/service-history-audit-package.js',
+   'modules/vehicle/service-event-sot.js',
++  'modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js',
+   'modules/vehicle/service-checklist-execution-sot.js',
+   'modules/vehicle/service-checklist-integrity-sot.js',
+   'modules/vehicle/parts-catalog-database.js',
