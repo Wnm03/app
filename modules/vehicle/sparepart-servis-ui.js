@@ -63,7 +63,7 @@ if(editId===null||editId===undefined){
 }
 const editMode=editId!==null&&editId!==undefined;
 if(editMode)Sparepart.catEditId=String(editId);
-const name=document.getElementById('sparepartName').value.trim();
+let name=document.getElementById('sparepartName').value.trim();
 const interval=parseFloat(document.getElementById('sparepartInterval').value);
 const bulanEl=document.getElementById('sparepartIntervalBulan');
 const intervalBulanRaw=bulanEl?parseFloat(bulanEl.value):NaN;
@@ -86,6 +86,9 @@ let masterCategoryId=document.getElementById('sparepartMasterCategoryId')?.value
 let serviceComponentId=document.getElementById('sparepartServiceComponentId')?.value||catInfer?.item?.id||null;
 const linkage=resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,name);
 masterCategoryId=linkage.masterCategoryId; serviceComponentId=linkage.serviceComponentId;
+// S2034 P2: canonical component identity owns the saved display name.
+if(linkage.componentName) name=String(linkage.componentName).trim();
+if(!name){toast('⚠️ Pilih nama/komponen servis yang valid');return;}
 // vehicleId: TAMBAH baru tetap dikunci ikut curVehicleId (S629, perilaku
 // lama tidak berubah -- dropdown disabled saat tambah baru, .value-nya
 // kadang tidak reliable dibaca di semua browser/WebView, jadi tetap ambil
@@ -170,15 +173,6 @@ const grpNew=(groupSelEl&&groupSelVal)
 D.sparepartCats.push({id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
-// VehicleCatalog owns canonical service interval metadata for linked parts.
-// Keep D.sparepartCats as the compatibility index, then asynchronously mirror
-// the edit into the catalog and refresh reminder consumers after the write.
-const _savedCat=editMode?D.sparepartCats.find(c=>c&&String(c.id)===String(editId)):D.sparepartCats[D.sparepartCats.length-1];
-if(_savedCat&&typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function'){
-  Promise.resolve(VehicleServiceSOT.syncCategoryRule(_savedCat,vehicleId)).then(res=>{
-    if(res&&res.ok){save();if(typeof Servis!=='undefined'&&Servis&&typeof Servis.renderReminder==='function')Servis.renderReminder();if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();}
-  }).catch(e=>{if(typeof console!=='undefined'&&console&&typeof console.warn==='function')console.warn('[VehicleServiceSOT] sync kategori servis gagal:',e&&e.message?e.message:e);});
-}
 },
 async delCat(i){
 const cat=D.sparepartCats[i];
@@ -219,7 +213,23 @@ this.populateServiceComponentSelect('stockServiceComponentId',master,cat&&cat.se
 },
 syncCategoryServiceComponent(){
 const master=document.getElementById('sparepartMasterCategoryId')?.value||'';
-this.populateServiceComponentSelect('sparepartServiceComponentId',master,document.getElementById('sparepartServiceComponentId')?.value||'');
+const compEl=document.getElementById('sparepartServiceComponentId');
+const current=compEl?.value||'';
+this.populateServiceComponentSelect('sparepartServiceComponentId',master,current);
+if(compEl&&compEl.value!==current)compEl.value='';
+},
+// S2034 P2: component is canonical identity; selecting it backfills master/name.
+syncCategoryComponentIdentity(){
+const compEl=document.getElementById('sparepartServiceComponentId');
+const masterEl=document.getElementById('sparepartMasterCategoryId');
+const nameEl=document.getElementById('sparepartName');
+const codeEl=document.getElementById('sparepartCode');
+const id=compEl?.value||'';
+if(!id||typeof ServiceInputCatalog==='undefined'||typeof ServiceInputCatalog.itemById!=='function')return;
+const hit=ServiceInputCatalog.itemById(id);if(!hit||!hit.item)return;
+const item=hit.item,group=hit.group||null,master=group?.masterCategoryId||item.masterCategoryId||'';
+if(masterEl&&master)masterEl.value=master;
+if(nameEl&&item.name){nameEl.value=item.name;if(codeEl&&codeEl.dataset.manual!=='1')codeEl.value=codeFromName(item.name);}
 },
 populateStockCatSelect(selectedId){
 const sel=document.getElementById('stockCatId');

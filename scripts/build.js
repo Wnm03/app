@@ -612,6 +612,8 @@ const GROUP_B = [
   // S2005: canonical history ↔ reminder identity reconciliation. Must load
   // before sparepart-servis.js so the matcher is available to all reminder consumers.
   'modules/vehicle/service-history-reminder-reconciliation-sot.js', 'modules/vehicle/service-category-sot-reconciliation-s2007.js',
+  // S2034 P2 read-only category/component/interval + existing-history audit.
+  'modules/vehicle/service-category-component-history-audit-s2034.js',
   'modules/vehicle/sparepart-servis.js',
   'modules/vehicle/sparepart-servis-ui.js',
   // Audit ukuran file (sesi split lanjutan): sparepart-servis.js dipecah jadi 2
