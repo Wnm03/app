@@ -631,6 +631,9 @@ const GROUP_B = [
   'modules/vehicle/service-master-data.generated.js',
   'modules/vehicle/service-master-database.js',
   // Service History SOT normalizer: deterministic legacy cleanup; no catalog/price requirement.
+  // S2017/S2018 compatibility runtime: canonical taxonomy must load before history context consumers.
+  'modules/vehicle/service-taxonomy-sot.js',
+  'modules/vehicle/service-history-context-s2018.js',
   'modules/vehicle/service-history-sot-normalizer.js',
   'modules/vehicle/service-history-sot-review.js',
   'modules/vehicle/service-session-sot.js',

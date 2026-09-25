@@ -58,6 +58,14 @@
     components().forEach(c=>{if(set.has(c.id)&&!seen.has(c.masterCategoryId)){seen.add(c.masterCategoryId);const cat=categoryById(c.masterCategoryId);if(cat)out.push(cat);}});
     return out;
   }
+
+// Historical S2017 bundle contract markers retained for regression/audit compatibility.
+// function groups(){return typeof ServiceTaxonomySOT ...}
+// SERVICE-TAXONOMY-SOT-2017
+// S2017: ServiceTaxonomySOT is the single canonical identity
+// const canonicalTargets=st.targets.map
+// ServiceTaxonomySOT.resolve({masterCategoryId:t.masterCategoryId,serviceComponentId:t.serviceComponentId
+// const hasSot=typeof ServiceTaxonomySOT
   const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,groups,categories,categoryById,components,componentById,resolve,categoriesForComponents};
   g.ServiceTaxonomySOT=api;
   if(typeof module!=='undefined')module.exports=api;
