@@ -1041,7 +1041,7 @@ save(){return withSaveGuardAsync('servis','servisModal',()=>{
 validateServiceOdometer({vehicleId,km,date,excludeId}={}){
 const n=Number(km);if(!Number.isFinite(n)||n<0)return{ok:false,code:'invalid_km',message:'KM servis harus berupa angka 0 atau lebih.'};
 const d=String(date||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||Number.isNaN(Date.parse(d+'T00:00:00')))return{ok:false,code:'invalid_date',message:'Tanggal servis tidak valid.'};
-const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId&&s.id!==excludeId&&Number.isFinite(Number(s.km))&&Number(s.km)>=0):[];
+const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId&&s.id!==excludeId&&s.km!=null&&s.km!==''&&Number.isFinite(Number(s.km))&&Number(s.km)>=0):[];
 const current=typeof getVehicleKm==='function'?Number(getVehicleKm(vehicleId)):NaN;
 if(Number.isFinite(current)&&current>=0&&n>current)return{ok:false,code:'above_current_odometer',message:`KM servis (${n.toLocaleString('id-ID')}) melebihi odometer kendaraan saat ini (${current.toLocaleString('id-ID')}).`};
 const target={id:excludeId||'__service_validation_target__',vehicleId,km:n,date:d};
