@@ -645,6 +645,7 @@ console.warn('Restore service integrity reconciled:',_serviceRestoreIntegrity);
 }
 __s2013SetStage('odometer-validation');
 const _p23RestoreValidation=validateServiceOdometerImportIntegrity(D.servisLogs||[]);
+try{window.__S2014_ODOMETER_DIAGNOSTIC={checked:_p23RestoreValidation.checked||0,invalidCount:Array.isArray(_p23RestoreValidation.invalid)?_p23RestoreValidation.invalid.length:0,invalid:Array.isArray(_p23RestoreValidation.invalid)?_p23RestoreValidation.invalid.slice(0,100):[],skipped:!!_p23RestoreValidation.skipped,at:new Date().toISOString()};}catch(_s2014diag){}
 if(!_p23RestoreValidation.ok)throw new Error('Restore dibatalkan: integritas odometer servis tidak valid ('+_p23RestoreValidation.invalid.length+' record).');
 // V37: ownership conflicts are a restore-invalid state; never guess an owner.
 __s2013SetStage('ownership-validation');
