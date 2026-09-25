@@ -660,6 +660,8 @@ const GROUP_B = [
   'modules/vehicle/service-input-catalog.js',
   'modules/vehicle/service-history-component-identity-sot.js',
   'modules/vehicle/servis.js',
+  // S2036: reconcile checklist edits across session rows + component reminder projection.
+  'modules/vehicle/service-history-checklist-edit-s2036.js',
   // S1972: bulk category/component identity editor for selected service-history records.
   'modules/vehicle/service-history-bulk-identity-editor.js',
   'modules/vehicle/service-maintenance-engine.js',
