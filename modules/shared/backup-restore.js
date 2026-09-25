@@ -538,11 +538,33 @@ return stats;
 }
 
 async function applyRestoredData(imp){
+// S2013 DIAGNOSTIC: preserve the exact restore stage/error before rollback
+// converts the native Error into the generic UI "Error {}" representation.
+let __s2013Stage='start';
+const __s2013Diag={startedAt:new Date().toISOString(),stage:__s2013Stage};
+const __s2013SetStage=(stage)=>{__s2013Stage=stage;__s2013Diag.stage=stage;__s2013Diag.updatedAt=new Date().toISOString();};
+const __s2013SerializeError=(e)=>({
+  name:e&&e.name||'Error',
+  message:e&&e.message?String(e.message):String(e??''),
+  code:e&&e.code!=null?String(e.code):null,
+  stack:e&&e.stack?String(e.stack):null,
+  string:String(e??'')
+});
+const __s2013Fail=(e)=>{
+  const detail={...__s2013Diag,stage:__s2013Stage,error:__s2013SerializeError(e),
+    hasImp:!!imp,servisLogs:imp&&Array.isArray(imp.servisLogs)?imp.servisLogs.length:null};
+  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){}
+  console.error('S2013 RESTORE DIAGNOSTIC',detail,e);
+  return detail;
+};
+__s2013SetStage('shape-validation');
 const _shape=_validateRestoreShape(imp);
 if(!_shape.ok){await showAlertModal('File backup ditolak: '+_shape.msg,{icon:'❌',title:'Backup Tidak Valid'});return false;}
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.verifyBackupPayload==='function'){const _integrity=await PWAProductionHardening.verifyBackupPayload(imp);if(!_integrity.ok){await showAlertModal('File backup ditolak: '+_integrity.msg,{icon:'❌',title:'Integritas Backup Gagal'});return false;}}
+__s2013SetStage('backup-shape-known-keys');
 const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios'];
 if(!knownKeys.some(k=>imp[k]!==undefined)){await showAlertModal('File ini sepertinya bukan file backup aplikasi ini. Restore dibatalkan.',{icon:'❌',title:'Backup Tidak Valid'});return false;}
+__s2013SetStage('backup-version');
 const backupVersion=imp.schemaVersion||0;
 if(backupVersion>SCHEMA_VERSION){
 const lanjut=await askConfirm('⚠️ File backup ini dibuat dari versi aplikasi yang LEBIH BARU dari yang sedang dipakai sekarang. Me-restore-nya mungkin membuat sebagian data tidak terbaca dengan benar.\n\nTetap lanjutkan restore?',{title:'Versi Backup Lebih Baru',okText:'Ya, Tetap Restore'});
@@ -558,11 +580,13 @@ snapJson=JSON.stringify(D);
 }
 safeSetItem('kw_v4_prerestore',snapJson);
 }catch(e){console.error('Gagal simpan snapshot pengaman:',e);}
+__s2013SetStage('snapshot-current-data');
 const prevD=JSON.parse(JSON.stringify(D));
 // V24 G10: snapshot every external IndexedDB domain before restore. D itself
 // can be rolled back synchronously, but the auxiliary stores need their own
 // compensating rollback if a later store write fails.
 let _prevLifeosStore,_prevEieStore,_prevVehicleCatalogStore,_prevHondaPdfImportStore;
+__s2013SetStage('snapshot-auxiliary-idb');
 try{
   _prevLifeosStore=await IDBStore.get('lifeos:store');
   _prevEieStore=await IDBStore.get('eie:store');
@@ -576,6 +600,7 @@ try{
 // BUGFIX-INTEGRASI: `_lifeosStore`/`_eieStore` (lihat buildBackupPayload())
 // adalah titipan data IndexedDB, BUKAN properti D — disimpan dulu sebelum
 // merge, lalu dihapus dari D supaya tidak nyangkut sbg field liar di D.
+__s2013SetStage('prepare-restored-auxiliary-idb');
 const _restoredLifeosStore=imp._lifeosStore;
 const _restoredEieStore=imp._eieStore;
 // Vehicle Catalog (Milestone 0 Phase 1) — titipan sama seperti
@@ -584,12 +609,14 @@ const _restoredVehicleCatalogStore=imp._vehicleCatalogStore;
 // Honda PDF Import (Tahap 7D-1) — titipan sama seperti
 // _lifeosStore/_eieStore/_vehicleCatalogStore di atas, BUKAN properti D.
 const _restoredHondaPdfImportStore=imp._hondaPdfImportStore;
+__s2013SetStage('merge-backup-into-state');
 try{
 D={...D,...imp};
 delete D._integrity;
 delete D._lifeosStore;
 delete D._eieStore;
 delete D._hondaPdfImportStore;
+__s2013SetStage('apply-restored-data-migrations');
 applyRestoredDataMigrations();
 // BUGFIX (audit backup, lanjutan toVersion:8 dedupe): D._vehicleCatalogStore
 // SENGAJA belum dihapus di sini (beda dari _lifeosStore/_eieStore/
@@ -598,25 +625,34 @@ applyRestoredDataMigrations();
 // kosong (part hasil scan katalog dari SEBELUM fix SOT vehicleId). Dihapus
 // SETELAH migrasi selesai di bawah, supaya tidak nyangkut sbg field liar di
 // D permanen (pola sama persis 3 store lain, cuma titik hapusnya digeser).
+__s2013SetStage('run-data-migrations');
 runDataMigrations(backupVersion);
 // P13: normalize legacy service logs after all schema migrations so old
 // records receive canonical category/component + next-due/idempotency fields
 // without overwriting existing snapshots or replaying Finance/stock effects.
+__s2013SetStage('normalize-legacy-service-logs');
 if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
+__s2013SetStage('service-history-sot-normalizer');
 if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer&&typeof ServiceHistorySOTNormalizer.apply==='function')ServiceHistorySOTNormalizer.apply();
+__s2013SetStage('remove-temporary-vehicle-catalog');
 delete D._vehicleCatalogStore;
 // P11: setelah seluruh migration selesai, rapikan linkage servis↔Finance dan
 // backfill snapshot lama sebelum data persisten disimpan / UI di-init.
+__s2013SetStage('reconcile-service-integrity');
 const _serviceRestoreIntegrity=reconcileRestoredServiceIntegrity();
 if(_serviceRestoreIntegrity.conflicts||_serviceRestoreIntegrity.clearedServiceLinks||_serviceRestoreIntegrity.clearedTxLinks){
 console.warn('Restore service integrity reconciled:',_serviceRestoreIntegrity);
 }
+__s2013SetStage('odometer-validation');
 const _p23RestoreValidation=validateServiceOdometerImportIntegrity(D.servisLogs||[]);
 if(!_p23RestoreValidation.ok)throw new Error('Restore dibatalkan: integritas odometer servis tidak valid ('+_p23RestoreValidation.invalid.length+' record).');
 // V37: ownership conflicts are a restore-invalid state; never guess an owner.
+__s2013SetStage('ownership-validation');
 if(typeof getServiceFinanceOwnershipIntegrity==='function'){const _own=getServiceFinanceOwnershipIntegrity();if(_own&&_own.issues&&_own.issues.length)throw new Error('Restore dibatalkan: konflik ownership servis↔Finance ('+_own.issues.length+' issue).');}
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
+__s2013SetStage('save-flush-init');
 saveFlush();init();
+__s2013SetStage('restore-auxiliary-idb');
 try{
 if(_restoredLifeosStore!==undefined){
 await IDBStore.set('lifeos:store',_restoredLifeosStore);
@@ -646,7 +682,8 @@ if(typeof hondaPdfImportInvalidateCache==='function')hondaPdfImportInvalidateCac
 }
 return true;
 }catch(e){
-console.error('Restore gagal, mengembalikan data sebelumnya:',e);
+const __s2013Detail=__s2013Fail(e);
+console.error('Restore gagal, mengembalikan data sebelumnya:',__s2013Detail,e);
 D=prevD;
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
 saveFlush();init();
@@ -656,7 +693,7 @@ try{
   if(_prevVehicleCatalogStore!==undefined)await IDBStore.set('vehicle-catalog:store',_prevVehicleCatalogStore);
   if(_prevHondaPdfImportStore!==undefined)await IDBStore.set('honda-pdf-import:store',_prevHondaPdfImportStore);
 }catch(_idbRollbackErr){console.error('V24: restore rollback auxiliary IndexedDB gagal',_idbRollbackErr);}
-await showAlertModal('Terjadi error saat restore, seluruh domain yang dapat dikembalikan sudah dipulihkan ke sebelum restore. Detail error ada di console.',{icon:'❌',title:'Restore Gagal'});
+await showAlertModal('Restore gagal pada tahap: '+__s2013Stage+'\nError: '+(__s2013Detail.error.message||__s2013Detail.error.string||'Unknown error')+'\n\nData sebelumnya sudah dipulihkan. Detail lengkap tersimpan di window.__S2013_RESTORE_DIAGNOSTIC dan console.',{icon:'❌',title:'Restore Gagal'});
 return false;
 }
 }
