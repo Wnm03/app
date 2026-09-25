@@ -57,17 +57,20 @@ if(!linkedCat)return null;
 const r=resolveCatGroup(linkedCat,vehicleId);
 return r?r.masterCategoryId:null;
 },
-resolveLogServiceComponentId(s){
+resolveLogServiceComponentIds(s){
+if(typeof ServiceHistoryComponentIdentitySOT!=='undefined'&&ServiceHistoryComponentIdentitySOT&&typeof ServiceHistoryComponentIdentitySOT.ids==='function')return ServiceHistoryComponentIdentitySOT.ids(s);
+const out=[]; if(s&&s.serviceComponentId)out.push(String(s.serviceComponentId));
+(Array.isArray(s&&s.checklist)?s.checklist:[]).forEach(r=>{const id=r&&(r.serviceComponentId||r.itemId);if(id&&!out.includes(String(id)))out.push(String(id));});
+return out;
+},
+resolveLogServiceComponentId(s,requestedComponentId){
+if(typeof ServiceHistoryComponentIdentitySOT!=='undefined'&&ServiceHistoryComponentIdentitySOT&&typeof ServiceHistoryComponentIdentitySOT.resolve==='function'){
+  const r=ServiceHistoryComponentIdentitySOT.resolve(s,{componentId:requestedComponentId});
+  return r&&r.serviceComponentId?r.serviceComponentId:null;
+}
 if(!s)return null;
+if(requestedComponentId&&Array.isArray(s.checklist)){const hit=s.checklist.find(r=>r&&(r.serviceComponentId||r.itemId)&&String(r.serviceComponentId||r.itemId)===String(requestedComponentId));if(hit)return String(hit.serviceComponentId||hit.itemId);}
 if(s.serviceComponentId)return s.serviceComponentId;
-if(Array.isArray(s.checklist)){
-  const row=s.checklist.find(r=>r&&r.itemId);
-  if(row&&row.itemId)return row.itemId;
-}
-if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function'){
-  const hit=ServiceInputCatalog.infer(s.item||'');
-  if(hit&&hit.item&&hit.item.id)return hit.item.id;
-}
 return null;
 },
 resolveServiceSOT(log,opts){
@@ -1429,8 +1432,8 @@ const currentCat=resolveCat(current);
 const currentComponentId=current.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(current):null);
 const sameComponent=(log)=>{
   if(!log||String(log.vehicleId)===''||String(log.vehicleId)!==vehicleKey)return false;
-  const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):(log.serviceComponentId||log.checklistItemId||null);
-  if(currentComponentId&&logComponent)return String(currentComponentId)===String(logComponent);
+  const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log,currentComponentId):(log.serviceComponentId||log.checklistItemId||null);
+  if(currentComponentId)return !!logComponent&&String(currentComponentId)===String(logComponent);
   if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
   return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
 };
@@ -1438,7 +1441,7 @@ const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...n
 // Component options are built from the SAME canonical component resolver used by history rows.
 // Do not narrow this list to the current session: Reminder → Riwayat intentionally means
 // the selected component across all sessions for the active vehicle.
-const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).map(x=>typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(x):(x.serviceComponentId||x.checklistItemId||null)).filter(Boolean).map(String))];
+const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).flatMap(x=>typeof Servis.resolveLogServiceComponentIds==='function'?Servis.resolveLogServiceComponentIds(x):[x.serviceComponentId||x.checklistItemId||null]).filter(Boolean).map(String))];
 const requestedComponentFilter=String(Servis.serviceHistoryComponentFilter||'');
 const effectiveComponentFilter=requestedComponentFilter&&componentIds.includes(requestedComponentFilter)?requestedComponentFilter:'';
 Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
@@ -1447,7 +1450,7 @@ const history=(D.servisLogs||[]).filter(log=>{
   const sid=String(log.sessionId||log.serviceJobId||'');
   if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;
   if(effectiveComponentFilter){
-    const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):(log.serviceComponentId||log.checklistItemId||null);
+    const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log,effectiveComponentFilter):(log.serviceComponentId||log.checklistItemId||null);
     if(String(logComponent||'')!==effectiveComponentFilter)return false;
   }
   return true;

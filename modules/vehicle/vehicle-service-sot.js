@@ -111,7 +111,7 @@ function getReminderCategoriesForVehicle(vehicleId){
   const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
   const legacyCats=(D.sparepartCats||[]).filter(c=>typeof catVisibleForVehicle==='function'?catVisibleForVehicle(c,vehicleId):true);
   const provisioned=(vehicle&&vehicle.sot&&Array.isArray(vehicle.sot.serviceSchedules))?vehicle.sot.serviceSchedules:[];
-  const cats=legacyCats.length?legacyCats:provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder}));
+  const cats=provisioned.length?provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder})):legacyCats;
   const items=vehicleServiceSotVehicleItems(vehicleId);
   return cats.map(cat=>{
     const item=cat.catalogPartId?items.find(x=>String(x.id)===String(cat.catalogPartId)):vehicleServiceSotFindCatalogForCat(cat,vehicleId);

@@ -656,6 +656,7 @@ const GROUP_B = [
   // jalan supaya tidak perlu geser urutan lagi di sesi berikutnya).
   'modules/vehicle/servis-checklist.js',
   'modules/vehicle/service-input-catalog.js',
+  'modules/vehicle/service-history-component-identity-sot.js',
   'modules/vehicle/servis.js',
   // S1972: bulk category/component identity editor for selected service-history records.
   'modules/vehicle/service-history-bulk-identity-editor.js',

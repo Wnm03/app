@@ -381,9 +381,12 @@
     root.catVisibleForVehicle=catVisibleForVehicleS2015;
     root.serviceComponentIdForCategory=function(cat){return componentId(cat);};
     root.dedupeServiceCategoriesForVehicle=dedupeServiceCategoriesForVehicleS2015;
-    root.getReminderCategoriesForVehicle=getReminderCategoriesForVehicleS2015;
-    if(root.VehicleServiceSOT&&typeof root.VehicleServiceSOT==='object'){
-      root.VehicleServiceSOT.getReminderCategoriesForVehicle=getReminderCategoriesForVehicleS2015;
+    // S2015 is compatibility-only: the current VehicleServiceSOT owns the
+    // canonical reminder projection. Never overwrite its resolver.
+    if(root.VehicleServiceSOT&&typeof root.VehicleServiceSOT.getReminderCategoriesForVehicle==='function'){
+      root.getReminderCategoriesForVehicle=function(vehicleId){return root.VehicleServiceSOT.getReminderCategoriesForVehicle(vehicleId);};
+    }else{
+      root.getReminderCategoriesForVehicle=getReminderCategoriesForVehicleS2015;
     }
     root.ServiceReminderVehicleScopeS2014={
       version:'S2015-V1',
