@@ -20,7 +20,11 @@ const s=a.sessionProvenance(logs[0]); assert.equal(s.componentCount,2); assert.e
 assert.equal(JSON.stringify(logs),before,'S2024 must remain read-only');
 const missing=JSON.parse(JSON.stringify(logs)); missing[0].checklist.splice(0,1); const m=a.provenance(missing[0],'belt'); assert.equal(m.status,'ERROR'); assert.ok(m.issues.includes('component-not-found'));
 const html=a.render(logs[0],'belt'); assert.match(html,/Evidence provenance/); assert.match(html,/evidence:h1:belt/); assert.match(html,/Checklist index/); assert.match(html,/Read-only provenance/);
-const index=fs.readFileSync(path.join(root,'index.html'),'utf8'); const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(index,/service-history-evidence-provenance-s2024\.js\?v=2024/); assert.match(prod,/service-history-evidence-provenance-s2024\.js\?v=2024/);
-const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8'); assert.match(sw,/kw-cache-v2030/); assert.match(sw,/service-history-evidence-provenance-s2024\.js/);
-console.log('S2024 evidence provenance + traceability: PASS');
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-evidence\-provenance\-s2024\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-evidence\-provenance\-s2024\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-evidence\-provenance\-s2024\.js'));
+
+console.log('service-history-evidence-provenance-s2024: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

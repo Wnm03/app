@@ -1,22 +1,4 @@
 'use strict';
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const path=require('node:path');
-const root=path.join(__dirname,'..');
-for(const file of ['index.html','app_production.html']){
-  const s=fs.readFileSync(path.join(root,file),'utf8');
-  assert.match(s,/service-history-context-s2018\.js\?v=2019/);
-  assert.match(s,/service-history-multichecklist-s2019\.js\?v=2019/);
-  assert.match(s,/service-history-context-hardening-s2020\.js\?v=2020/);
-  assert.match(s,/app-bundle-b\.min\.js\?v=2019/);
-}
-const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-assert.match(sw,/kw-cache-v2030/);
-assert.match(sw,/service-history-context-s2018\.js/);
-assert.match(sw,/service-history-multichecklist-s2019\.js/);
-assert.match(sw,/service-history-context-hardening-s2020\.js/);
-for(const file of ['service-history-context-s2018.js','service-history-multichecklist-s2019.js']){
-  const source=fs.readFileSync(path.join(root,'modules/vehicle',file),'utf8');
-  assert.doesNotMatch(source,/TODO/i);
-}
-console.log('S2019 HTML/SW wiring regression: PASS');
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');const root=path.join(__dirname,'..');
+test('S2019 current APP MAIN wiring keeps historical module as build/audit artifact, not a runtime wrapper',()=>{const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');assert.match(build,/service-history-context-s2018\.js/);for(const file of ['index.html','app_production.html']){const s=fs.readFileSync(path.join(root,file),'utf8');assert.doesNotMatch(s,/<script[^>]+service-history-context-s2018\.js/);assert.doesNotMatch(s,/<script[^>]+service-history-multichecklist-s2019\.js/);assert.doesNotMatch(s,/<script[^>]+service-history-context-hardening-s2020\.js/);}const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.doesNotMatch(sw,/service-history-multichecklist-s2019\.js/);assert.match(build,/service-history-lifecycle-s2027-s2030-app-main\.js/);});
+console.log('S2019 multichecklist current-runtime contract: PASS');

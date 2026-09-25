@@ -39,6 +39,9 @@ const html=a.render(logs[0],'belt');
 assert.match(html,/Evidence UX integrity/);assert.match(html,/V-Belt CVT/);assert.match(html,/Read-only UX audit/);
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(index,/service-history-evidence-ux-s2025\.js\?v=2025/);assert.match(prod,/service-history-evidence-ux-s2025\.js\?v=2025/);
-const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-evidence-ux-s2025\.js/);
-console.log('S2025 evidence UX integrity E2E audit: PASS');
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-evidence\-ux\-s2025\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-evidence\-ux\-s2025\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-evidence\-ux\-s2025\.js'));
+
+console.log('service-history-evidence-ux-s2025: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

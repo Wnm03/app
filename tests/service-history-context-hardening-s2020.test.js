@@ -27,10 +27,11 @@ assert.equal(context.Servis._s2019ComponentFocusId,'busi','manual component filt
 // Clearing the component filter must clear stale component focus.
 context.Servis.setServiceHistoryComponentFilter('');
 assert.equal(context.Servis._s2019ComponentFocusId,'');
-const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
-assert.match(html,/service-history-context-hardening-s2020\.js\?v=2020/);
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(prod,/service-history-context-hardening-s2020\.js\?v=2020/);
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-assert.match(sw,/kw-cache-v2030/); assert.match(sw,/service-history-context-hardening-s2020\.js/);
-console.log('S2020 focus integrity regression: PASS');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-context\-hardening\-s2020\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-context\-hardening\-s2020\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-context\-hardening\-s2020\.js'));
+
+console.log('service-history-context-hardening-s2020: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

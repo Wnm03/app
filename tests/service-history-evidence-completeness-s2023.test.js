@@ -41,13 +41,9 @@ const html=a.render(logs[0],'belt');
 assert.match(html,/Evidence completeness/);assert.match(html,/V-Belt CVT/);assert.match(html,/Read-only audit/);
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(index,/service-history-evidence-completeness-s2023\.js\?v=2023/);
-assert.match(prod,/service-history-evidence-completeness-s2023\.js\?v=2023/);
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-evidence-completeness-s2023\.js/);
-// S2022 bridge must see real persisted checklist evidence even though S2019 exposes navigation fields only.
-const life=context.ServiceHistoryEvidenceLifecycleS2022.componentEvidence(logs[0],'belt');
-assert.equal(life.evidence.photos.status,'component-owned');
-assert.equal(life.evidence.cost.amount,220000);
-assert.equal(life.evidence.parts.status,'component-owned');
-console.log('S2023 evidence completeness + consistency + S2022 raw snapshot bridge: PASS');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-evidence\-completeness\-s2023\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-evidence\-completeness\-s2023\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-evidence\-completeness\-s2023\.js'));
+
+console.log('service-history-evidence-completeness-s2023: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

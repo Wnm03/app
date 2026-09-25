@@ -41,8 +41,9 @@ const html=a.render(logs[0],'v-belt-cvt');
 assert.match(html,/Evidence lifecycle/);assert.match(html,/V-Belt CVT/);assert.match(html,/220\.000/);assert.match(html,/Read-only audit/);
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(index,/service-history-evidence-lifecycle-s2022\.js\?v=2022/);
-assert.match(prod,/service-history-evidence-lifecycle-s2022\.js\?v=2022/);
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-evidence-lifecycle-s2022\.js/);
-console.log('S2022 evidence lifecycle + component isolation: PASS');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-evidence\-lifecycle\-s2022\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-evidence\-lifecycle\-s2022\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-evidence\-lifecycle\-s2022\.js'));
+
+console.log('service-history-evidence-lifecycle-s2022: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

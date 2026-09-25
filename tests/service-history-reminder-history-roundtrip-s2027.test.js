@@ -23,5 +23,14 @@ const legacy=[{id:'legacy-1',vehicleId:'v1',date:'2024-01-01',serviceComponentId
 context.D.servisLogs=legacy;const legacyAudit=api.roundTrip(null,'belt','v1',()=>({historyId:'legacy-1',componentId:'belt',vehicleId:'v1'}));assert.equal(legacyAudit.status,'OK');assert.equal(legacyAudit.expected.historyCount,1);assert.equal(legacyAudit.historyUnchanged,true);
 context.D.servisLogs=[{id:'none',vehicleId:'v1',date:'2026-01-01',item:'Other',checklist:[{itemId:'oil',itemName:'Oli',serviceComponentId:'oli'}]}];const none=api.expected(null,'belt','v1');assert.equal(none.historyId,null);assert.equal(none.historyCount,0);const noneAudit=api.audit(null,'belt','v1',null);assert.equal(noneAudit.status,'OK');assert.ok(noneAudit.issues.some(x=>x.code==='no-history-for-component'));
 const s2019=fs.readFileSync(path.join(root,'modules/vehicle/service-history-multichecklist-s2019.js'),'utf8');assert.match(s2019,/openHistoryFromReminder/);assert.match(s2019,/componentMatch/);
-const index=fs.readFileSync(path.join(root,'index.html'),'utf8');const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.match(index,/service-history-reminder-history-roundtrip-s2027\.js\?v=2027/);assert.match(prod,/service-history-reminder-history-roundtrip-s2027\.js\?v=2027/);assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-reminder-history-roundtrip-s2027\.js/);
-console.log('S2027 Reminder → History round-trip regression: PASS');
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-reminder\-history\-roundtrip\-s2027\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-reminder\-history\-roundtrip\-s2027\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-reminder\-history\-roundtrip\-s2027\.js'));
+
+const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
+assert.match(build,/service-history-lifecycle-s2027-s2030-app-main\.js/);
+
+console.log('service-history-reminder-history-roundtrip-s2027: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

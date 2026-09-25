@@ -23,5 +23,14 @@ const legacy=api.resolve('legacy','belt','v1');assert.equal(legacy.legacy,true);
 const noComponent=api.audit('legacy','roller','v1',null);assert.equal(noComponent.status,'ERROR');assert.ok(noComponent.issues.some(x=>x.code==='component-not-found'));
 context.D.servisLogs=[{id:'unscoped',vehicleId:'v1',date:'2020-01-01'}];const un=api.resolve('unscoped','belt','v1');assert.equal(un.rowType,'unscoped');const ua=api.audit('unscoped','belt','v1',{historyId:'unscoped',vehicleId:'v1'});assert.equal(ua.status,'WARNING');assert.ok(ua.issues.some(x=>x.code==='unscoped-history'));
 const s2019=fs.readFileSync(path.join(root,'modules/vehicle/service-history-multichecklist-s2019.js'),'utf8');assert.match(s2019,/componentMatch/);assert.match(s2019,/sessionComponents/);assert.match(s2019,/openServiceComponentHistoryS2019/);
-const index=fs.readFileSync(path.join(root,'index.html'),'utf8');const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.match(index,/service-history-legacy-multicomponent-reload-s2029\.js\?v=2029/);assert.match(prod,/service-history-legacy-multicomponent-reload-s2029\.js\?v=2029/);assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-legacy-multicomponent-reload-s2029\.js/);
-console.log('S2029 Legacy + Multi-Component + Reload integrity regression: PASS');
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-legacy\-multicomponent\-reload\-s2029\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-legacy\-multicomponent\-reload\-s2029\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-legacy\-multicomponent\-reload\-s2029\.js'));
+
+const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
+assert.match(build,/service-history-lifecycle-s2027-s2030-app-main\.js/);
+
+console.log('service-history-legacy-multicomponent-reload-s2029: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

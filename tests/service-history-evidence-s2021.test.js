@@ -26,8 +26,9 @@ const html=a.render(logs[0],'v-belt-cvt');
 assert.match(html,/V-Belt CVT/); assert.match(html,/evidence:h1:v-belt-cvt/);
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
-assert.match(index,/service-history-evidence-s2021\.js\?v=2021/);
-assert.match(prod,/service-history-evidence-s2021\.js\?v=2021/);
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
-assert.match(sw,/kw-cache-v2030/); assert.match(sw,/service-history-evidence-s2021\.js/);
-console.log('S2021 evidence identity regression: PASS');
+assert.doesNotMatch(index,new RegExp('<script[^>]+service\-history\-evidence\-s2021\.js'));
+assert.doesNotMatch(prod,new RegExp('<script[^>]+service\-history\-evidence\-s2021\.js'));
+assert.doesNotMatch(sw,new RegExp('service\-history\-evidence\-s2021\.js'));
+
+console.log('service-history-evidence-s2021: PASS — historical module remains test/audit artifact, current APP MAIN runtime uses canonical SOT/compatibility layer');

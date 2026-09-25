@@ -11,7 +11,7 @@ test('S1969 Riwayat pada Pengingat memilih service-log SOT lalu membuka editor y
   assert.match(src,/openHistoryFromReminder\(categoryId,componentId\)\{/);
   assert.match(src,/const history=logs\.filter\(sameTarget\)\.slice\(\)\.sort/);
   assert.match(src,/const target=history\.find\(matchesReset\)\|\|history\[0\]\|\|null/);
-  assert.match(src,/Servis\.openModal\(target\.id\);\s*Servis\.setEditTab\('history'\);/);
+  assert.match(src,/Servis\.openModal\(target\.id\);\s*Servis\.serviceHistorySessionFilter='';\s*Servis\.serviceHistoryComponentFilter=String\(componentId\|\|''\);\s*Servis\.setEditTab\('history'\);/);
 });
 
 test('S1969 routing mempertahankan identity komponen canonical dan tidak membuat SOT riwayat baru',()=>{
