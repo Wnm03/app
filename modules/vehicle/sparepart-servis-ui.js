@@ -133,8 +133,9 @@ const vehChanged=editCat.vehicleId!==vehicleId;
 if(groupSelEl&&groupSelVal){
 // Override manual dari dropdown MENANG mutlak (Sesi 2) -- bahkan atas
 // rule recompute-by-rename di atas, walau nama/kendaraan ikut berubah.
+const sameStoredGroup=String(editCat.group||'')===String(groupSelVal||'');
 editCat.group=groupSelVal;
-editCat.groupIcon=(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦';
+editCat.groupIcon=(sameStoredGroup&&editCat.groupIcon)?editCat.groupIcon:((typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦');
 } else if(nameChanged||vehChanged){
 const grpEdit=(typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:editCat.group,icon:editCat.groupIcon};
 editCat.group=grpEdit.group;

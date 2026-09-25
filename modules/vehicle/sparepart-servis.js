@@ -328,47 +328,27 @@ const gmap=_genericGroupByName();
 if(n&&gmap[n])return _withMasterCategory(Object.assign({},gmap[n]),cat);
 return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
 }
-// collectKnownGroups()/iconForGroupName() -- FITUR BARU sesi v1642 (Sesi 1 dari
-// 2, backlog "override grup manual" sejak v1638): kumpulkan daftar SEMUA nama
-// grup komponen yg "dikenal" aplikasi -- gabungan unik dari cat.cat di setiap
-// entri TORSI_DB (semua kendaraan, bukan cuma kendaraan aktif, supaya dropdown
-// override tetap konsisten walau user lagi buka kategori kendaraan lain) +
-// GENERIC_GROUP_BY_NAME (fallback estimasi). Dipakai Sparepart.populateGroupSelect()
-// utk isi dropdown "Grup Komponen" di modal Kategori Sparepart -- 0 rumus
-// grouping baru, murni pengumpulan nama grup yg SUDAH ADA.
-// Database API Fase 1 lanjutan (sesi v1645): sumber entri TORSI_DB sekarang
-// lewat _allTorsiEntries() (modules/vehicle/sparepart-servis-b.js -- fungsi
-// itu sendiri sudah baca DatabaseAPI.vehicle.getAll() kalau termuat, fallback
-// literal TORSI_DB kalau belum), BUKAN baca TORSI_DB literal langsung lagi.
-// _allTorsiEntries() dideklarasikan di sparepart-servis-b.js yg dimuat
-// SETELAH file ini (lihat urutan resmi di scripts/build.js) -- aman krn
-// collectKnownGroups() cuma DIPANGGIL saat runtime (buka modal Kategori
-// Sparepart), bukan di top-level saat file ini pertama dieksekusi, jadi
-// _allTorsiEntries() sudah terdaftar di scope global saat dipanggil (pola
-// sama persis seperti resolveCatGroup() di atas yg sudah lebih dulu panggil
-// findTorsiDb(), juga didefinisikan di sparepart-servis-b.js). Guard typeof
-// dipertahankan supaya tetap aman kalau sparepart-servis-b.js belum termuat
-// sama sekali (mis. test terisolasi yg cuma load file ini sendirian) --
-// fallback ke TORSI_DB literal langsung, IDENTIK perilaku lama.
+// S2035: collectKnownGroups() is the canonical taxonomy projection for the
+// Sparepart category dropdown. Legacy TORSI/GENERIC labels remain resolver
+// compatibility data but are not allowed to create taxonomy options.
 function collectKnownGroups(){
+// S2035: dropdown taxonomy memakai satu SOT; legacy TORSI/GENERIC bukan sumber opsi.
+// Grup manual yang sudah tersimpan tetap boleh tampil sebagai opsi transient saat edit.
 const map=new Map();
+const add=(id,name,icon)=>{
+  const key=String(id||name||'').trim();
+  const label=String(name||'').trim();
+  if(!key||!label||map.has(key))return;
+  map.set(key,{group:label,icon:icon||'📦'});
+};
 if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function'){
-  (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c&&c.name&&!map.has(c.name))map.set(c.name,c.icon||'📦');});
+  (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c)add(c.id,c.name,c.icon);});
 }
-const torsiEntries=(typeof _allTorsiEntries==='function')
-?_allTorsiEntries()
-:((typeof TORSI_DB!=='undefined'&&Array.isArray(TORSI_DB))?TORSI_DB:[]);
-torsiEntries.forEach(veh=>{
-(veh&&Array.isArray(veh.cats)?veh.cats:[]).forEach(cg=>{
-if(cg&&cg.cat&&!map.has(cg.cat))map.set(cg.cat,cg.icon||'📦');
-});
-});
-const gmap=_genericGroupByName();
-Object.keys(gmap).forEach(k=>{
-const g=gmap[k];
-if(g&&g.group&&!map.has(g.group))map.set(g.group,g.icon||'📦');
-});
-return Array.from(map.entries()).map(([group,icon])=>({group,icon}));
+// Fallback isolated loader tetap berasal dari canonical ServiceInputCatalog.
+if(!map.size&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.groups==='function'){
+  (ServiceInputCatalog.groups()||[]).forEach(g=>{if(g)add(g.masterCategoryId,g.group,g.icon);});
+}
+return Array.from(map.values());
 }
 function iconForGroupName(name){
 if(!name)return'📦';
@@ -1466,23 +1446,15 @@ const host=anchor.closest('.u-mt8')||anchor.parentNode;
 host.parentNode.insertBefore(wrap,host.nextSibling);
 return document.getElementById('sparepartIntervalBulan');
 },
-// populateGroupSelect() -- FITUR BARU sesi ini (Sesi 1 dari 2, backlog
-// "override grup manual" sejak v1638): isi dropdown "Grup Komponen" di modal
-// Kategori Sparepart -- opsi 🤖 Otomatis (nilai '', biarkan resolveCatGroup()
-// yg tentukan spt perilaku lama) + semua grup dikenal dari collectKnownGroups()
-// + grup KUSTOM kategori yg lagi diedit kalau grup itu tersimpan tapi TIDAK
-// ada di daftar dikenal (mis. dulu di-set manual/lewat cara lain) supaya tidak
-// hilang dari dropdown & tidak keliru kelihatan seolah "Otomatis". Nilai awal
-// dropdown = cat.group tersimpan (atau 🤖 Otomatis kalau kosong/kategori baru).
-// Sesi ini CUMA populate & tampilkan -- saveCat() BELUM baca dropdown ini
-// (backlog Sesi 2), jadi pilihan apa pun di sini belum berpengaruh ke data
-// tersimpan.
-populateGroupSelect(currentGroup){
+// S2035: dropdown = Otomatis + 13 kategori canonical. Legacy/custom group yang
+// sudah tersimpan pada kategori edit tetap ditampilkan transient agar data lama
+// tidak hilang dari editor; save path tetap mempertahankan override manual.
+populateGroupSelect(currentGroup,currentIcon){
 const sel=document.getElementById('sparepartGroupId');
 if(!sel)return;
 const known=collectKnownGroups();
 if(currentGroup&&!known.some(g=>g.group===currentGroup)){
-known.push({group:currentGroup,icon:iconForGroupName(currentGroup)});
+known.push({group:currentGroup,icon:currentIcon||iconForGroupName(currentGroup)});
 }
 sel.innerHTML='<option value="">🤖 Otomatis</option>'
 +known.map(g=>`<option value="${escapeHtml(g.group)}">${g.icon} ${escapeHtml(g.group)}</option>`).join('');
@@ -1519,7 +1491,7 @@ document.getElementById('sparepartInterval').value=(curCat&&curCat.intervalKm>0)
 const bulanEl=Sparepart.ensureIntervalBulanField();
 if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
 Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
-Sparepart.populateGroupSelect(curCat?curCat.group:null);
+Sparepart.populateGroupSelect(curCat?curCat.group:null,curCat?curCat.groupIcon:null);
 const catMasterEl=document.getElementById('sparepartMasterCategoryId');
 const catCompEl=document.getElementById('sparepartServiceComponentId');
 if(catMasterEl&&typeof ServiceInputCatalog!=='undefined'){const groups=ServiceInputCatalog.groups()||[];catMasterEl.innerHTML='<option value="">— Pilih kategori servis —</option>'+groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}">${escapeHtml(g.group)}</option>`).join('');}
