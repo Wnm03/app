@@ -262,6 +262,12 @@ openHistoryFromReminder(categoryId,componentId){
   Servis.activeActionTypeFilter=null;
   Servis.activeMasterCategoryFilter=masterId||null;
   Servis.activeServiceComponentFilter=componentId||null;
+  // Component-scoped navigation must carry both SOT identities into the
+  // single history presenter. Never leave a previous session/component
+  // filter active: that can make the clicked component show another
+  // component's history or an empty session.
+  Servis.serviceHistorySessionFilter=String((target&& (target.sessionId||target.serviceJobId))||'');
+  Servis.serviceHistoryComponentFilter=String(componentId||'');
   Servis.listPage=1;
   if(!target){
     if(typeof toast==='function')toast('ℹ️ Belum ada riwayat servis untuk komponen ini.');

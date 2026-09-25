@@ -399,63 +399,40 @@ if(db&&db.id==='vario-125')return true;
 const hay=(String(veh.name||'')+' '+String(veh.modelId||'')).toLowerCase();
 return /vario\s*125|kzr/.test(hay);
 }
+function overlayPersistedMaintenanceIntervals(base,cat,componentId,componentName){
+ const r=Object.assign({},base||{}),km=Number.isFinite(Number(cat&&cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null,mo=Number.isFinite(Number(cat&&cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null,rep=Number(r.replaceKm)>0||Number(r.replaceMonths)>0||Number(r.replaceDays)>0,ins=Number(r.inspectKm)>0||Number(r.inspectMonths)>0||Number(r.inspectDays)>0;
+ if(rep){if(km!==null)r.replaceKm=km;if(mo!==null)r.replaceMonths=mo;}else if(ins){if(km!==null)r.inspectKm=km;if(mo!==null)r.inspectMonths=mo;}else{if(km!==null)r.replaceKm=km;if(mo!==null)r.replaceMonths=mo;}
+ r.serviceComponentId=cat&&cat.serviceComponentId||componentId||r.serviceComponentId||null;r.componentName=cat&&cat.name||componentName||r.componentName||null;return r;
+}
 function resolveMaintenanceRule(vehicleId,cat){
 if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
 if(!cat)return null;
-// V37+: persisted category intervals remain authoritative for the replacement
-// axis, but must not erase an explicit inspection axis from the maintenance registry.
-const persistedKm=Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null;
-const persistedMonths=Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null;
 const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
-if(direct&&SERVICE_MAINTENANCE_RULES[direct]){
-  const base=SERVICE_MAINTENANCE_RULES[direct];
-  return Object.assign({},base,{
-    serviceComponentId:cat.serviceComponentId||direct,
-    componentName:cat.name||base.componentName||null,
-    replaceKm:persistedKm!==null?persistedKm:base.replaceKm,
-    replaceMonths:persistedMonths!==null?persistedMonths:base.replaceMonths
-  });
-}
-if(persistedKm||persistedMonths)return{serviceComponentId:cat.serviceComponentId||cat.id||null,componentName:cat.name||null,replaceKm:persistedKm,replaceMonths:persistedMonths,maintenanceType:cat.maintenanceType||'periodic'};
+if(direct&&SERVICE_MAINTENANCE_RULES[direct])return overlayPersistedMaintenanceIntervals(SERVICE_MAINTENANCE_RULES[direct],cat,direct,cat.name);
 const n=normalizeMaintenanceRuleKey(cat.name);
-if(n&&SERVICE_MAINTENANCE_RULES[n]){
-  const base=SERVICE_MAINTENANCE_RULES[n];
-  return Object.assign({},base,{
-    serviceComponentId:cat.serviceComponentId||n,
-    componentName:cat.name||base.componentName||null,
-    replaceKm:persistedKm!==null?persistedKm:base.replaceKm,
-    replaceMonths:persistedMonths!==null?persistedMonths:base.replaceMonths
-  });
-}
+if(n&&SERVICE_MAINTENANCE_RULES[n])return overlayPersistedMaintenanceIntervals(SERVICE_MAINTENANCE_RULES[n],cat,n,cat.name);
 if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'){
 for(const g of ServiceInputCatalog.groups()||[]){
 for(const it of g.items||[]){
 if(normalizeMaintenanceRuleKey(it.id)===n||normalizeMaintenanceRuleKey(it.name)===n){
 const r=SERVICE_MAINTENANCE_RULES[it.id];
-if(r)return Object.assign({serviceComponentId:it.id,componentName:it.name},r,{
-  replaceKm:persistedKm!==null?persistedKm:r.replaceKm,
-  replaceMonths:persistedMonths!==null?persistedMonths:r.replaceMonths
-});
+if(r)return overlayPersistedMaintenanceIntervals(r,cat,it.id,it.name);
 }
 }
 }
 }
+const persistedKm=Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null;
+const persistedMonths=Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null;
+if(persistedKm!==null||persistedMonths!==null)return overlayPersistedMaintenanceIntervals({},cat,cat.serviceComponentId||cat.id||null,cat.name||null);
 return null;
 }
 function getMaintenanceSchedule(vehicleId,cat){
 const rule=resolveMaintenanceRule(vehicleId,cat);
 if(!rule)return null;
-return {
- rule,
- inspectKm:Number.isFinite(rule.inspectKm)&&rule.inspectKm>0?rule.inspectKm:null,
- replaceKm:Number.isFinite(rule.replaceKm)&&rule.replaceKm>0?rule.replaceKm:null,
- inspectMonths:Number.isFinite(rule.inspectMonths)&&rule.inspectMonths>0?rule.inspectMonths:null,
- replaceMonths:Number.isFinite(rule.replaceMonths)&&rule.replaceMonths>0?rule.replaceMonths:null,
- inspectDays:Number.isFinite(rule.inspectDays)&&rule.inspectDays>0?rule.inspectDays:null,
- replaceDays:Number.isFinite(rule.replaceDays)&&rule.replaceDays>0?rule.replaceDays:null,
- maintenanceType:rule.maintenanceType||'periodic',
- condition:rule.condition||null
- };
+const schedule={rule:Object.assign({},rule),inspectKm:Number.isFinite(rule.inspectKm)&&rule.inspectKm>0?rule.inspectKm:null,replaceKm:Number.isFinite(rule.replaceKm)&&rule.replaceKm>0?rule.replaceKm:null,inspectMonths:Number.isFinite(rule.inspectMonths)&&rule.inspectMonths>0?rule.inspectMonths:null,replaceMonths:Number.isFinite(rule.replaceMonths)&&rule.replaceMonths>0?rule.replaceMonths:null,inspectDays:Number.isFinite(rule.inspectDays)&&rule.inspectDays>0?rule.inspectDays:null,replaceDays:Number.isFinite(rule.replaceDays)&&rule.replaceDays>0?rule.replaceDays:null,inspectAction:rule.inspectAction||'periksa',replaceAction:rule.replaceAction||'ganti',maintenanceType:rule.maintenanceType||'periodic',condition:rule.condition||null};
+const ov=(D.vehicles||[]).find(v=>v&&v.id===vehicleId)?.intervalOverrides?.[cat&&cat.id],n=Number(ov);
+if(Number.isFinite(n)&&n>0){const rep=!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays),ins=!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);if(rep){schedule.replaceKm=n;schedule.rule.replaceKm=n;schedule.intervalOverrideAxis='replace';}else if(ins){schedule.inspectKm=n;schedule.rule.inspectKm=n;schedule.intervalOverrideAxis='inspect';}else{schedule.replaceKm=n;schedule.rule.replaceKm=n;schedule.intervalOverrideAxis='replace';}schedule.vehicleIntervalOverride=n;}
+return schedule;
 }
 function hasMaintenanceReminderSchedule(vehicleId,cat){
 const s=getMaintenanceSchedule(vehicleId,cat);
@@ -693,8 +670,10 @@ return days==null?null:days/30.4368;
 // berubah/regresi).
 function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
   if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
-  const intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
-  const intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+  const schedule=getMaintenanceSchedule(vehicleId,cat);
+  let intervalKm=null,intervalBulan=null;
+  if(schedule){const act=String(actionType||'').trim().toLowerCase(),im=act&&act===String(schedule.inspectAction||'periksa').toLowerCase(),rm=act&&act===String(schedule.replaceAction||'ganti').toLowerCase();intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:schedule.replaceKm||schedule.inspectKm||null;intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:schedule.replaceMonths||schedule.inspectMonths||null;}
+  else{intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);}
   const km=Number(serviceKm);
   const baseDate=parseServiceDateOnly(serviceDate||new Date());
   const nextDueKm=intervalKm>0&&Number.isFinite(km)?km+intervalKm:null;
@@ -752,12 +731,16 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
 };
 if(schedule){
   const type=schedule.maintenanceType;
-  const override=getEffectiveIntervalKm(vehicleId,cat);
-  const hasOverride=hasIntervalOverride(vehicleId,cat);
   const inspectKm=schedule.inspectKm;
-  const replaceKm=hasOverride&&override>0?override:schedule.replaceKm;
-  if((inspectKm||schedule.inspectMonths||schedule.inspectDays) && (type==='periodic'||type==='periodic_or_condition')) addCandidate('periksa',inspectKm,'periksa',schedule.inspectMonths,schedule.inspectDays);
-  if(type!=='event_based' && (replaceKm||schedule.replaceMonths||schedule.replaceDays)) addCandidate('ganti',replaceKm,'ganti',schedule.replaceMonths,schedule.replaceDays);
+  const replaceKm=schedule.replaceKm;
+  if((inspectKm||schedule.inspectMonths||schedule.inspectDays) && (type==='periodic'||type==='periodic_or_condition')) {
+    const inspectAction=schedule.inspectAction||'periksa';
+    addCandidate(inspectAction,inspectKm,inspectAction,schedule.inspectMonths,schedule.inspectDays);
+  }
+  if(type!=='event_based' && (replaceKm||schedule.replaceMonths||schedule.replaceDays)) {
+    const replaceAction=schedule.replaceAction||'ganti';
+    addCandidate(replaceAction,replaceKm,replaceAction,schedule.replaceMonths,schedule.replaceDays);
+  }
 } else {
   const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
   const intervalBulan=getEffectiveIntervalBulan(cat,vehicleId);
