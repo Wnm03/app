@@ -957,7 +957,8 @@ const id=parsed&&parsed.activeMasterCategoryFilter;
 if(id===null)return;
 if(typeof id!=='string')return;
 const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
-const validIds=hasSot?(ServiceTaxonomySOT.categories()||[]).map(c=>c.id):[];
+const hasDb=typeof DatabaseAPI!=='undefined'&&DatabaseAPI&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+const validIds=hasSot?(ServiceTaxonomySOT.categories()||[]).map(c=>c.id):(hasDb?(DatabaseAPI.masterCategory.getAll()||[]).map(c=>c&&c.id).filter(Boolean):[]);
 if(id===UNCATEGORIZED_FILTER_ID||validIds.indexOf(id)!==-1){
 Sparepart.activeMasterCategoryFilter=id;
 }
@@ -1070,7 +1071,8 @@ Sparepart.renderCatList();
 // atas).
 renderMasterCategoryChips(beforeEl){
 const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
-if(!hasSot)return;
+const hasDb=typeof DatabaseAPI!=='undefined'&&DatabaseAPI&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+if(!hasSot&&!hasDb)return;
 let row=document.getElementById('sparepartMasterCatChipRow');
 if(!row){
 row=document.createElement('div');
@@ -1079,7 +1081,7 @@ row.className='u-flex u-fs12 u-mb10';
 row.style.cssText='gap:6px;flex-wrap:wrap';
 beforeEl.insertAdjacentElement('beforebegin',row);
 }
-const cats=ServiceTaxonomySOT.categories()||[];
+const cats=hasSot?(ServiceTaxonomySOT.categories()||[]):(DatabaseAPI.masterCategory.getAll()||[]);
 // Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" DITAMBAHKAN di UJUNG (setelah
 // 13 kategori master, sebelum -- 0 di antara -- opsi "Semua"), pakai
 // UNCATEGORIZED_FILTER_ID (sentinel murni UI, lihat komentar di deklarasinya
