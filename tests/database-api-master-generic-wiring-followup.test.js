@@ -118,11 +118,12 @@ test('resolveCatGroup(): DENGAN DatabaseAPI.master ter-override -> MEMBACA lewat
   assert.equal(g.group, 'GRUP OVERRIDE TEST');
 });
 
-test('collectKnownGroups(): DENGAN DatabaseAPI.master ter-override -> grup override ikut muncul', () => {
-  const ctx = loadSource([DB_API_FILE, SERVIS_A_FILE], {}, ['DatabaseAPI']);
+test('collectKnownGroups(): DatabaseAPI.master override TIDAK boleh bocor ke taxonomy dropdown S2035', () => {
+  const canonical = { categories: () => [{ id: 'servis-mesin', name: 'Servis Mesin', icon: '🔧' }] };
+  const ctx = loadSource([DB_API_FILE, SERVIS_A_FILE], { ServiceTaxonomySOT: canonical }, ['DatabaseAPI', 'collectKnownGroups']);
   ctx.DatabaseAPI.master.getGenericGroupByName = () => ({ 'x': { group: 'GRUP KNOWN OVERRIDE', icon: '🧪' } });
   const groups = ctx.collectKnownGroups();
-  assert.ok(groups.some((g) => g.group === 'GRUP KNOWN OVERRIDE'));
+  assert.deepEqual(groups.map(g => g.group), ['Servis Mesin']);
 });
 
 test('_genericRecommendNames(): DENGAN DatabaseAPI.master ter-override -> MEMBACA lewat DatabaseAPI', () => {

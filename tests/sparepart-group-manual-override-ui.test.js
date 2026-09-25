@@ -5,8 +5,7 @@
 // sesi terpisah (diminta user) — file test ini mencakup KEDUANYA.
 //
 // Sesi 1 — lapisan UI/populate saja:
-//   1) collectKnownGroups() — kumpulkan grup unik dari TORSI_DB (semua
-//      kendaraan) + GENERIC_GROUP_BY_NAME.
+//   1) collectKnownGroups() — canonical ServiceTaxonomySOT saja (13 kategori).
 //   2) iconForGroupName() — cari icon utk 1 nama grup dari daftar di atas.
 //   3) Sparepart.populateGroupSelect() — isi dropdown #sparepartGroupId:
 //      opsi "🤖 Otomatis" (value kosong) + semua grup dikenal + grup KUSTOM
@@ -89,6 +88,21 @@ function makeCtx(D, curVehicleId, extraEls) {
       codeFromName: (s) => String(s).slice(0, 3).toUpperCase(),
       escapeHtml: (s) => (s === null || s === undefined) ? '' : String(s),
       MY_WRENCH: {},
+      ServiceTaxonomySOT: { categories: () => [
+        { id: 'servis-mesin', name: 'Servis Mesin', icon: '🔧' },
+        { id: 'servis-cvt', name: 'Servis CVT', icon: '🔗' },
+        { id: 'sistem-injeksi-pgmfi', name: 'Sistem Injeksi PGM-FI', icon: '💉' },
+        { id: 'sistem-bahan-bakar', name: 'Sistem Bahan Bakar', icon: '⛽' },
+        { id: 'sistem-pendingin', name: 'Sistem Pendingin', icon: '🌡️' },
+        { id: 'sistem-pengereman', name: 'Sistem Pengereman', icon: '🛑' },
+        { id: 'suspensi', name: 'Suspensi', icon: '🌀' },
+        { id: 'sistem-kemudi', name: 'Sistem Kemudi', icon: '🎯' },
+        { id: 'kelistrikan', name: 'Kelistrikan', icon: '🔌' },
+        { id: 'roda', name: 'Roda', icon: '⚙️' },
+        { id: 'filter-udara', name: 'Filter Udara', icon: '💨' },
+        { id: 'final-gear', name: 'Final Gear', icon: '⚙️' },
+        { id: 'body-kontrol', name: 'Body & Kontrol', icon: '🎛️' },
+      ] },
     },
     ['Sparepart', 'collectKnownGroups', 'iconForGroupName']
   );
@@ -96,23 +110,23 @@ function makeCtx(D, curVehicleId, extraEls) {
   return ctx;
 }
 
-test('collectKnownGroups() — kumpulkan grup unik dari semua entri TORSI_DB + GENERIC_GROUP_BY_NAME, tanpa duplikat', () => {
+test('S2035 collectKnownGroups() — hanya 13 kategori canonical, tanpa legacy duplicate', () => {
   const D = baseD();
   const ctx = makeCtx(D, 'veh1');
   const groups = ctx.collectKnownGroups();
   const names = groups.map((g) => g.group);
-  assert.ok(names.includes('Sistem Rem'));
-  assert.ok(names.includes('Perawatan Berkala'));
-  // Perawatan Berkala muncul di lebih dari 1 entri TORSI_DB (beda kendaraan)
-  // dan juga di GENERIC_GROUP_BY_NAME -- harus tetap 1 entri saja di hasil.
-  assert.equal(names.filter((n) => n === 'Perawatan Berkala').length, 1);
+  assert.equal(names.length, 13);
+  assert.ok(names.includes('Sistem Pengereman'));
+  assert.ok(names.includes('Sistem Kemudi'));
+  assert.equal(names.includes('Sistem Rem'), false);
+  assert.equal(names.includes('Perawatan Berkala'), false);
   groups.forEach((g) => assert.ok(g.icon, `grup "${g.group}" harus punya icon`));
 });
 
 test('iconForGroupName() — balikin icon grup yang dikenal, fallback 📦 utk grup tak dikenal', () => {
   const D = baseD();
   const ctx = makeCtx(D, 'veh1');
-  assert.equal(ctx.iconForGroupName('Sistem Rem'), '🛑');
+  assert.equal(ctx.iconForGroupName('Sistem Pengereman'), '🛑');
   assert.equal(ctx.iconForGroupName('Grup Yang Tidak Ada'), '📦');
   assert.equal(ctx.iconForGroupName(''), '📦');
 });
@@ -124,7 +138,9 @@ test('populateGroupSelect() — isi dropdown dgn opsi Otomatis + semua grup dike
   const sel = ctx._els.sparepartGroupId;
   assert.ok(sel.innerHTML.includes('🤖 Otomatis'));
   assert.equal(sel.value, '');
-  assert.ok(sel.innerHTML.includes('Sistem Rem'));
+  assert.ok(sel.innerHTML.includes('Sistem Pengereman'));
+  assert.ok(sel.innerHTML.includes('Sistem Kemudi'));
+  assert.equal(sel.innerHTML.includes('Perawatan Berkala'), false);
 });
 
 test('populateGroupSelect() — grup kustom (belum ada di daftar dikenal) tetap dimasukkan & jadi nilai terpilih', () => {
