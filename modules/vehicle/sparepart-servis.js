@@ -345,8 +345,9 @@ if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTa
   (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c)add(c.id,c.name,c.icon);});
 }
 // Fallback isolated loader tetap berasal dari canonical ServiceInputCatalog.
-if(!map.size&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.groups==='function'){
-  (ServiceInputCatalog.groups()||[]).forEach(g=>{if(g)add(g.masterCategoryId,g.group,g.icon);});
+if(!map.size&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
+  const groupsApi=ServiceInputCatalog['groups'];
+  if(typeof groupsApi==='function')(groupsApi()||[]).forEach(g=>{if(g)add(g.masterCategoryId,g.group,g.icon);});
 }
 return Array.from(map.values());
 }

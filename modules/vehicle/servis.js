@@ -70,7 +70,12 @@ if(typeof ServiceHistoryComponentIdentitySOT!=='undefined'&&ServiceHistoryCompon
 }
 if(!s)return null;
 if(requestedComponentId&&Array.isArray(s.checklist)){const hit=s.checklist.find(r=>r&&(r.serviceComponentId||r.itemId)&&String(r.serviceComponentId||r.itemId)===String(requestedComponentId));if(hit)return String(hit.serviceComponentId||hit.itemId);}
-if(s.serviceComponentId)return s.serviceComponentId;
+if(s.serviceComponentId)return String(s.serviceComponentId);
+if(Array.isArray(s.checklist)){const first=s.checklist.find(r=>r&&(r.serviceComponentId||r.itemId));if(first)return String(first.serviceComponentId||first.itemId);}
+if(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
+  if(typeof ServiceInputCatalog.infer==='function'){try{const hit=ServiceInputCatalog.infer(s.item||'');if(hit&&hit.item&&hit.item.id)return String(hit.item.id);}catch(_){/* legacy inference is optional */}}
+  if(typeof ServiceInputCatalog.groups==='function'){const q=String(s.item||'').trim().toLowerCase();if(q){let found=null;for(const g of ServiceInputCatalog.groups()||[]){for(const it of g.items||[]){if(String(it.name||'').trim().toLowerCase()===q){if(found)return null;found=it.id;}}}if(found)return String(found);}}
+}
 return null;
 },
 resolveServiceSOT(log,opts){
@@ -1434,7 +1439,7 @@ const currentCat=resolveCat(current);
 const currentComponentId=current.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(current):null);
 const sameComponent=(log)=>{
   if(!log||String(log.vehicleId)===''||String(log.vehicleId)!==vehicleKey)return false;
-  const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log,currentComponentId):(log.serviceComponentId||log.checklistItemId||null);
+  const resolvedLogComponent=Servis.resolveLogServiceComponentId(log); const logComponent=currentComponentId?Servis.resolveLogServiceComponentId(log,currentComponentId):resolvedLogComponent;
   if(currentComponentId)return !!logComponent&&String(currentComponentId)===String(logComponent);
   if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
   return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
@@ -1443,7 +1448,7 @@ const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...n
 // Component options are built from the SAME canonical component resolver used by history rows.
 // Do not narrow this list to the current session: Reminder → Riwayat intentionally means
 // the selected component across all sessions for the active vehicle.
-const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).flatMap(x=>typeof Servis.resolveLogServiceComponentIds==='function'?Servis.resolveLogServiceComponentIds(x):[x.serviceComponentId||x.checklistItemId||null]).filter(Boolean).map(String))];
+const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).flatMap(x=>{const resolved=Servis.resolveLogServiceComponentId(x);const ids=typeof Servis.resolveLogServiceComponentIds==='function'?Servis.resolveLogServiceComponentIds(x):[x.serviceComponentId||x.checklistItemId||null];return resolved?[resolved,...ids]:ids;}).filter(Boolean).map(String))];
 const requestedComponentFilter=String(Servis.serviceHistoryComponentFilter||'');
 const effectiveComponentFilter=requestedComponentFilter&&componentIds.includes(requestedComponentFilter)?requestedComponentFilter:'';
 Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
@@ -1452,7 +1457,7 @@ const history=(D.servisLogs||[]).filter(log=>{
   const sid=String(log.sessionId||log.serviceJobId||'');
   if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;
   if(effectiveComponentFilter){
-    const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log,effectiveComponentFilter):(log.serviceComponentId||log.checklistItemId||null);
+    const resolvedLogComponent=Servis.resolveLogServiceComponentId(log); const logComponent=effectiveComponentFilter?Servis.resolveLogServiceComponentId(log,effectiveComponentFilter):resolvedLogComponent;
     if(String(logComponent||'')!==effectiveComponentFilter)return false;
   }
   return true;
