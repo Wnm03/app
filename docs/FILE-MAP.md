@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-25T04:42:22.379Z
-Total file source: 404 · Total identifier global: 2911
+Terakhir digenerate: 2026-09-25T07:38:12.365Z
+Total file source: 404 · Total identifier global: 2912
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -183,7 +183,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 160 | `modules/vehicle/service-interval-sot.js` | 16 | _(tidak ada komentar header)_ |
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 161 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
-| 163 | `modules/vehicle/sparepart-servis.js` | 1591 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
+| 163 | `modules/vehicle/sparepart-servis.js` | 1574 | Domain Sparepart & Servis kendaraan: kategori & stok sparepart (Sparepart), catatan servis (wrapper ke Servis di car-notes.js), interval servis per-kategori & override per-kendaraan, katalog referensi … |
 | 164 | `modules/vehicle/sparepart-servis-ui.js` | 896 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 165 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 166 | `modules/vehicle/service-master-data.generated.js` | 9 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. |
@@ -201,7 +201,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 178 | `modules/vehicle/sparepart-servis-b.js` | 830 | modules/vehicle/sparepart-servis-b.js — lanjutan modules/vehicle/sparepart-servis.js (Audit ukuran file, lanjutan sesi split modules-render.js): file sparepart-servis.js dipecah jadi 2 supaya di bawah … |
 | 179 | `modules/vehicle/servis-checklist.js` | 890 | _(tidak ada komentar header)_ |
 | 180 | `modules/vehicle/service-input-catalog.js` | 83 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
-| 181 | `modules/vehicle/servis.js` | 1768 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 181 | `modules/vehicle/servis.js` | 1774 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
 | 182 | `modules/vehicle/service-history-bulk-identity-editor.js` | 246 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 183 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 184 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
@@ -2138,6 +2138,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `openWaShare` | `reminder-notif.js` |
 | `openWeeklyResetManual` | `modules/business/reset-gaji-mingguan.js` |
 | `Order` | `modules/shop/cobek-order.js` |
+| `overlayPersistedMaintenanceIntervals` | `modules/vehicle/sparepart-servis.js` |
 | `ownerMismatch` | `modules/shared/multi-owner-engine.js` |
 | `OwnerRegistry` | `modules/shared/owner-registry.js` |
 | `OwnerRegistrySettingsUI` | `modules/shared/owner-registry-settings-ui.js` |
