@@ -662,6 +662,10 @@ const GROUP_B = [
   'modules/vehicle/servis.js',
   // S2036: reconcile checklist edits across session rows + component reminder projection.
   'modules/vehicle/service-history-checklist-edit-s2036.js',
+  // S2037: keep multi-category checklist sessions visible in History and Reminder.
+  'modules/vehicle/service-history-multicategory-sync-s2037.js',
+  // S2045: global session/checklist/history/reminder integrity gate; safe compatibility-index repair only.
+  'modules/vehicle/service-session-integrity-s2045.js',
   // S1972: bulk category/component identity editor for selected service-history records.
   'modules/vehicle/service-history-bulk-identity-editor.js',
   'modules/vehicle/service-maintenance-engine.js',
