@@ -262,7 +262,15 @@ const GENERIC_GROUP_BY_NAME={
 // namespace masterCategory di database-api.js).
 function _withMasterCategory(result,cat){
 let mc=null;
-if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory){
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.resolve==='function'){
+  const hit=ServiceTaxonomySOT.resolve({
+    masterCategoryId:cat&&cat.masterCategoryId,
+    serviceComponentId:cat&&cat.serviceComponentId,
+    name:cat&&cat.name
+  });
+  if(hit&&hit.category)mc={id:hit.category.id,name:hit.category.name,icon:hit.category.icon};
+}
+if(!mc&&typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory){
   if(cat&&cat.masterCategoryId&&typeof DatabaseAPI.masterCategory.getAll==='function'){
     mc=DatabaseAPI.masterCategory.getAll().find(c=>c&&c.id===cat.masterCategoryId)||null;
   }
@@ -294,6 +302,12 @@ return result;
 const UNCATEGORIZED_FILTER_ID='__uncategorized__';
 function resolveCatGroup(cat,vehicleId){
 if(!cat)return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.resolve==='function'){
+  const canonical=ServiceTaxonomySOT.resolve({masterCategoryId:cat.masterCategoryId,serviceComponentId:cat.serviceComponentId,name:cat.name});
+  if(canonical&&canonical.category){
+    return _withMasterCategory({group:canonical.category.name,icon:canonical.category.icon||'📦',canonical:true,serviceComponentId:canonical.serviceComponentId||null},cat);
+  }
+}
 if(cat.group)return _withMasterCategory({group:cat.group,icon:cat.groupIcon||'📦'},cat);
 const n=(cat.name||'').trim().toLowerCase();
 if(n&&vehicleId&&typeof findTorsiDb==='function'&&typeof D!=='undefined'&&D.vehicles){
@@ -338,6 +352,9 @@ return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
 // fallback ke TORSI_DB literal langsung, IDENTIK perilaku lama.
 function collectKnownGroups(){
 const map=new Map();
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function'){
+  (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c&&c.name&&!map.has(c.name))map.set(c.name,c.icon||'📦');});
+}
 const torsiEntries=(typeof _allTorsiEntries==='function')
 ?_allTorsiEntries()
 :((typeof TORSI_DB!=='undefined'&&Array.isArray(TORSI_DB))?TORSI_DB:[]);
@@ -939,8 +956,8 @@ const parsed=JSON.parse(raw);
 const id=parsed&&parsed.activeMasterCategoryFilter;
 if(id===null)return;
 if(typeof id!=='string')return;
-const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
-const validIds=hasApi?(DatabaseAPI.masterCategory.getAll()||[]).map(c=>c.id):[];
+const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
+const validIds=hasSot?(ServiceTaxonomySOT.categories()||[]).map(c=>c.id):[];
 if(id===UNCATEGORIZED_FILTER_ID||validIds.indexOf(id)!==-1){
 Sparepart.activeMasterCategoryFilter=id;
 }
@@ -1052,8 +1069,8 @@ Sparepart.renderCatList();
 // fitur Sesi D (dashReminderMasterCatBadgeHTML/updateMasterCatBadge di
 // atas).
 renderMasterCategoryChips(beforeEl){
-const hasApi=typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
-if(!hasApi)return;
+const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
+if(!hasSot)return;
 let row=document.getElementById('sparepartMasterCatChipRow');
 if(!row){
 row=document.createElement('div');
@@ -1062,7 +1079,7 @@ row.className='u-flex u-fs12 u-mb10';
 row.style.cssText='gap:6px;flex-wrap:wrap';
 beforeEl.insertAdjacentElement('beforebegin',row);
 }
-const cats=DatabaseAPI.masterCategory.getAll()||[];
+const cats=ServiceTaxonomySOT.categories()||[];
 // Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" DITAMBAHKAN di UJUNG (setelah
 // 13 kategori master, sebelum -- 0 di antara -- opsi "Semua"), pakai
 // UNCATEGORIZED_FILTER_ID (sentinel murni UI, lihat komentar di deklarasinya

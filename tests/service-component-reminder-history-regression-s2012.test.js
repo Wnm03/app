@@ -63,7 +63,7 @@ test('S2012 regression: component-scoped reminder navigation carries session + c
   const end=src.indexOf('\nrenderServiceComponentFilter(beforeEl){',start);
   assert.ok(start>=0&&end>start);
   const fn=src.slice(start,end);
-  assert.match(fn,/Servis\.serviceHistorySessionFilter=String\(\(target&& \(target\.sessionId\|\|target\.serviceJobId\)\)\|\|''\);/);
+  assert.match(fn,/Servis\.serviceHistorySessionFilter='';/);
   assert.match(fn,/Servis\.serviceHistoryComponentFilter=String\(componentId\|\|''\);/);
   assert.match(fn,/Servis\.openModal\(target\.id\);/);
   assert.match(fn,/Servis\.setEditTab\('history'\);/);
@@ -76,13 +76,13 @@ test('S2012 regression: History presenter filters the displayed rows by the sele
   assert.ok(start>=0&&end>start);
   const fn=src.slice(start,end);
   assert.match(fn,/effectiveComponentFilter/);
-  assert.match(fn,/String\(log\.serviceComponentId\|\|log\.checklistItemId\|\|''\)!==effectiveComponentFilter/);
+  assert.match(fn,/Servis\.resolveLogServiceComponentId\(log\)/);
 });
 
 test('S2012 bundle parity: production bundle contains both component-reminder and history-focus fixes',()=>{
   const bundle=fs.readFileSync(path.join(__dirname,'../app-bundle-b.min.js'),'utf8');
   assert.match(bundle,/inspectAction=schedule\.inspectAction\|\|'periksa'/);
-  assert.match(bundle,/serviceHistorySessionFilter=String\(\(target&& \(target\.sessionId\|\|target\.serviceJobId\)\)\|\|''\)/);
+  assert.match(bundle,/serviceHistorySessionFilter=''/);
   assert.match(bundle,/serviceHistoryComponentFilter=String\(componentId\|\|''\)/);
 });
 

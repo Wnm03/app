@@ -1,0 +1,53 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const root=path.join(__dirname,'..');
+const source=fs.readFileSync(path.join(root,'modules/vehicle/service-history-evidence-completeness-s2023.js'),'utf8');
+const lifecycle=fs.readFileSync(path.join(root,'modules/vehicle/service-history-evidence-lifecycle-s2022.js'),'utf8');
+const logs=[{id:'h1',vehicleId:'v1',sessionId:'s1',cost:450000,txLinkId:'tx1',checklist:[
+ {itemId:'belt',itemName:'V-Belt CVT',serviceComponentId:'belt',actionType:'replace',conditionResult:'aus',conditionNote:'retak',photos:['belt.jpg'],cost:220000,costBreakdown:{labor:100000,parts:120000,consumables:0,other:0,total:220000,source:'component'},catalogPartRefs:[{catalogId:'belt-part',qty:1}],serviceEvidence:{transactionId:'tx1',photos:['belt.jpg']}},
+ {itemId:'roller',itemName:'Roller CVT',serviceComponentId:'roller',actionType:'inspect',conditionResult:'baik',conditionNote:'normal',photos:['roller.jpg'],cost:230000,costBreakdown:{labor:50000,parts:180000,consumables:0,other:0,total:230000,source:'component'},usedPartId:'stock-roller',usedPartQty:1,serviceEvidence:{transactionId:null,photos:['roller.jpg']}}
+]}];
+const context={console,D:{servisLogs:logs},Servis:{_s2019ComponentFocusId:'belt',editId:'h1'},ServiceHistoryMultiChecklistS2019:{componentsOf(log){return (log.checklist||[]).map(x=>({...x,serviceComponentId:x.serviceComponentId||x.itemId,checklistItemId:x.itemId,componentName:x.itemName,key:x.itemId}));},sessionRows(log){return [log];},sessionComponents(log){return this.componentsOf(log);}},ServiceHistoryEvidenceS2021:{identity(log,c){return {evidenceId:`evidence:${log.id}:${c.itemId}`};}},escapeHtml:x=>String(x==null?'':x)};
+context.window=context;vm.createContext(context);vm.runInContext(lifecycle,context,{filename:'service-history-evidence-lifecycle-s2022.js'});vm.runInContext(source,context,{filename:'service-history-evidence-completeness-s2023.js'});
+const a=context.ServiceHistoryEvidenceCompletenessS2023;
+const before=JSON.stringify(logs);
+const belt=a.completeness(logs[0],'belt');
+assert.equal(belt.status,'OK');
+assert.equal(belt.evidenceSource,'checklist-snapshot');
+assert.equal(belt.derived.costBreakdownTotal,220000);
+assert.equal(belt.derived.breakdownSum,220000);
+assert.equal(belt.derived.photoCount,1);
+assert.equal(belt.derived.partRefCount,1);
+assert.equal(belt.issues.some(x=>x.code==='cost-breakdown-mismatch'),false);
+const session=a.sessionCompleteness(logs[0]);
+assert.equal(session.derived.componentCostTotal,450000);
+assert.equal(session.status,'OK');
+assert.equal(JSON.stringify(logs),before,'S2023 must remain read-only');
+const bad=JSON.parse(JSON.stringify(logs));
+bad[0].checklist[0].costBreakdown.total=999;
+bad[0].checklist[0].conditionResult=null;
+bad[0].checklist[0].conditionNote='retak';
+const badAudit=a.completeness(bad[0],'belt');
+assert.equal(badAudit.status,'ERROR');
+assert.ok(badAudit.issues.some(x=>x.code==='cost-breakdown-mismatch'));
+assert.ok(badAudit.issues.some(x=>x.code==='condition-note-without-result'));
+const ambiguous={id:'h2',vehicleId:'v1',sessionId:'s2',cost:300000,foto:['history.jpg'],checklist:[{itemId:'a',itemName:'A',serviceComponentId:'a'},{itemId:'b',itemName:'B',serviceComponentId:'b'}]};
+const amb=a.completeness(ambiguous,'a');
+assert.ok(amb.issues.some(x=>x.code==='cost-is-history-row-scoped')||amb.issues.some(x=>x.code==='cost-is-row-level'));
+const html=a.render(logs[0],'belt');
+assert.match(html,/Evidence completeness/);assert.match(html,/V-Belt CVT/);assert.match(html,/Read-only audit/);
+const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
+const prod=fs.readFileSync(path.join(root,'app_production.html'),'utf8');
+assert.match(index,/service-history-evidence-completeness-s2023\.js\?v=2023/);
+assert.match(prod,/service-history-evidence-completeness-s2023\.js\?v=2023/);
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+assert.match(sw,/kw-cache-v2030/);assert.match(sw,/service-history-evidence-completeness-s2023\.js/);
+// S2022 bridge must see real persisted checklist evidence even though S2019 exposes navigation fields only.
+const life=context.ServiceHistoryEvidenceLifecycleS2022.componentEvidence(logs[0],'belt');
+assert.equal(life.evidence.photos.status,'component-owned');
+assert.equal(life.evidence.cost.amount,220000);
+assert.equal(life.evidence.parts.status,'component-owned');
+console.log('S2023 evidence completeness + consistency + S2022 raw snapshot bridge: PASS');

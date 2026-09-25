@@ -262,12 +262,8 @@ openHistoryFromReminder(categoryId,componentId){
   Servis.activeActionTypeFilter=null;
   Servis.activeMasterCategoryFilter=masterId||null;
   Servis.activeServiceComponentFilter=componentId||null;
-  // Component-scoped navigation must carry both SOT identities into the
-  // single history presenter. Never leave a previous session/component
-  // filter active: that can make the clicked component show another
-  // component's history or an empty session.
-  Servis.serviceHistorySessionFilter=String((target&& (target.sessionId||target.serviceJobId))||'');
-  Servis.serviceHistoryComponentFilter=String(componentId||'');
+  // Component-scoped navigation is applied after openModal(), so stale view-state
+  // from a previously opened record can never narrow this component's history.
   Servis.listPage=1;
   if(!target){
     if(typeof toast==='function')toast('ℹ️ Belum ada riwayat servis untuk komponen ini.');
@@ -278,8 +274,11 @@ openHistoryFromReminder(categoryId,componentId){
     return null;
   }
   // SOT navigation: Pengingat hanya memilih service-log sumber yang canonical.
-  // Presenter/editor tetap satu: Edit Catatan Servis → tab Riwayat.
+  // Riwayat dari Reminder bersifat component-scoped lintas sesi, bukan session-scoped.
+  // openModal() boleh me-reset state filter lama; filter tujuan dipasang SETELAH modal dibuka.
   Servis.openModal(target.id);
+  Servis.serviceHistorySessionFilter='';
+  Servis.serviceHistoryComponentFilter=String(componentId||'');
   Servis.setEditTab('history');
   return target.id;
 },
@@ -748,6 +747,9 @@ if(wrap){wrap.classList.add('u-dnone');wrap.style.display='none';}
 openModal(editId,prefillItem){
 Sparepart.populateDatalist();
 Servis.editId=(typeof editId!=='undefined')?editId:null;
+// History filters are view state, never carry them across independently opened records.
+Servis.serviceHistorySessionFilter='';
+Servis.serviceHistoryComponentFilter='';
 Servis._editTab='detail';
 Servis._serviceChecklistGroupIdx=null;
 Servis._serviceChecklistMasterCategoryIds=[];
@@ -1417,23 +1419,39 @@ if(!panel||Servis.editId===null)return;
 const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId);
 if(!current){panel.innerHTML='<div class="empty"><div class="empty-text">Data riwayat servis tidak ditemukan.</div></div>';return;}
 const vehicleId=current.vehicleId||curVehicleId;
-const vehicle=(D.vehicles||[]).find(v=>v&&v.id===vehicleId);
+const vehicleKey=String(vehicleId==null?'':vehicleId);
+const vehicle=(D.vehicles||[]).find(v=>v&&String(v.id)===vehicleKey);
 const resolveCat=(log)=>{
-  const preferred=log&&log.categoryId?(D.sparepartCats||[]).find(c=>c&&c.id===log.categoryId&&(!c.vehicleId||c.vehicleId===vehicleId)):null;
+  const preferred=log&&log.categoryId?(D.sparepartCats||[]).find(c=>c&&String(c.id)===String(log.categoryId)&&(!c.vehicleId||String(c.vehicleId)===vehicleKey)):null;
   return preferred||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(log&&log.item||'',vehicleId):null);
 };
 const currentCat=resolveCat(current);
 const currentComponentId=current.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(current):null);
 const sameComponent=(log)=>{
-  if(!log||log.vehicleId!==vehicleId)return false;
-  const logComponent=log.serviceComponentId||(typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):null);
+  if(!log||String(log.vehicleId)===''||String(log.vehicleId)!==vehicleKey)return false;
+  const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):(log.serviceComponentId||log.checklistItemId||null);
   if(currentComponentId&&logComponent)return String(currentComponentId)===String(logComponent);
   if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
   return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
 };
-const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...new Map((D.servisLogs||[]).filter(x=>x&&x.vehicleId===vehicleId&&(x.sessionId||x.serviceJobId)).map(x=>[String(x.sessionId||x.serviceJobId),x])).values()].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));if(!Servis.serviceHistorySessionFilter)Servis.serviceHistorySessionFilter=String(sessionId||'');
-const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&x.vehicleId===vehicleId&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).map(x=>x.serviceComponentId||x.checklistItemId).filter(Boolean).map(String))];const effectiveComponentFilter=Servis.serviceHistoryComponentFilter&&componentIds.includes(String(Servis.serviceHistoryComponentFilter))?String(Servis.serviceHistoryComponentFilter):'';Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
-const history=(D.servisLogs||[]).filter(log=>{if(!log||log.vehicleId!==vehicleId)return false;const sid=String(log.sessionId||log.serviceJobId||'');if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;if(effectiveComponentFilter&&String(log.serviceComponentId||log.checklistItemId||'')!==effectiveComponentFilter)return false;return true;}).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
+const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...new Map((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(x.sessionId||x.serviceJobId)).map(x=>[String(x.sessionId||x.serviceJobId),x])).values()].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+// Component options are built from the SAME canonical component resolver used by history rows.
+// Do not narrow this list to the current session: Reminder → Riwayat intentionally means
+// the selected component across all sessions for the active vehicle.
+const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).map(x=>typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(x):(x.serviceComponentId||x.checklistItemId||null)).filter(Boolean).map(String))];
+const requestedComponentFilter=String(Servis.serviceHistoryComponentFilter||'');
+const effectiveComponentFilter=requestedComponentFilter&&componentIds.includes(requestedComponentFilter)?requestedComponentFilter:'';
+Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
+const history=(D.servisLogs||[]).filter(log=>{
+  if(!log||String(log.vehicleId)!==vehicleKey)return false;
+  const sid=String(log.sessionId||log.serviceJobId||'');
+  if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;
+  if(effectiveComponentFilter){
+    const logComponent=typeof Servis.resolveLogServiceComponentId==='function'?Servis.resolveLogServiceComponentId(log):(log.serviceComponentId||log.checklistItemId||null);
+    if(String(logComponent||'')!==effectiveComponentFilter)return false;
+  }
+  return true;
+}).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
 const activeLog=null;
 const dueHtml='';
 const summary=history.length?`${history.length} riwayat tercatat`:'Belum ada riwayat tercatat';
