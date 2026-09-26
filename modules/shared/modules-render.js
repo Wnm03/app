@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2031-service-history-component-sot-2031';
+const MODULE_RENDER_VERSION='s2031-service-history-component-sot-2043';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -894,7 +894,8 @@ const rows=[];
 vehicles.forEach(veh=>{
 const curKm=getVehicleKm(veh.id);
 const kmPerDay=estimateKmPerDay(veh.id);
-const remindableCats=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(veh.id,c))));
+const remindableCatsRaw=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(veh.id,c))));
+const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(remindableCatsRaw,veh.id):remindableCatsRaw;
 remindableCats.forEach(cat=>{
 // Sesi 3D — Dashboard wajib memakai SoT urgency yang sama dgn kartu
 // Pengingat Servis utama. Dulu widget ini menghitung ulang pure-KM sendiri,
@@ -944,10 +945,13 @@ card.innerHTML=`<div class="card-title">🔧 Pengingat Servis <span class="acc-c
 // kosong nambah tinggi kartu saat badge '' (kasus paling umum sebelum
 // user isi lebih banyak kategori item lewat classifier).
 const mcBadge=(typeof Sparepart!=='undefined'&&typeof Sparepart.dashReminderMasterCatBadgeHTML==='function')?Sparepart.dashReminderMasterCatBadgeHTML(r.cat,r.veh.id):'';
+const dashComponentMeta=(typeof ServiceInputCatalog!=='undefined'&&r.cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(r.cat.serviceComponentId):null;
+const dashComponentName=dashComponentMeta&&dashComponentMeta.item?dashComponentMeta.item.name:(r.cat.componentName||r.cat.name||'');
+const dashCategoryName=dashComponentMeta&&dashComponentMeta.group?dashComponentMeta.group.group:(r.cat.group||r.cat.categoryName||'');
 return`
     <div class="u-mb10 u-pointer" data-action="goToServisFromDash" data-args="${escapeHtml(JSON.stringify([r.veh.id]))}">
       <div class="u-flex u-jcb u-aic u-fs12 u-mb4">
-        <span class="u-fw700">${r.veh.emoji||'🏍️'} ${escapeHtml(r.veh.name)} · ${escapeHtml(r.cat.name)}${mcBadge}</span>
+        <span class="u-fw700">${r.veh.emoji||'🏍️'} ${escapeHtml(r.veh.name)} · ${escapeHtml(dashCategoryName||'Kategori Servis')} · ${escapeHtml(dashComponentName)}${mcBadge}</span>
         <span class="${r.col} u-fw700">${r.msg}</span>
       </div>
       <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
