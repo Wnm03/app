@@ -143,7 +143,6 @@
     ctx._s2047MutationInFlight=(async()=>{
     const journal=ctx._s2047PreMutationState||snapshotState();
     if(g.ServiceSessionRecoveryS2050&&typeof g.ServiceSessionRecoveryS2050.persistPrepared==='function')g.ServiceSessionRecoveryS2050.persistPrepared(ctx,payload);
-    if(g.ServiceSessionRecoveryS2050&&typeof g.ServiceSessionRecoveryS2050.persistPrepared==='function')g.ServiceSessionRecoveryS2050.persistPrepared(ctx,payload);
     try{
     const oldPayload=(ctx.originalRows||[]).flatMap(r=>Array.isArray(r.checklist)?r.checklist:[]);
     const desiredPayload=Array.isArray(payload)?payload:[];
@@ -186,6 +185,19 @@
       try{if(typeof g.Servis.renderReminder==='function')g.Servis.renderReminder();}catch(_reminderErr){void _reminderErr;}
       try{if(typeof g.renderDashboardServisReminder==='function')g.renderDashboardServisReminder();}catch(_dashboardReminderErr){void _dashboardReminderErr;}
     }
+    // S2052: remove only generated compatibility reminder projections that no
+    // longer have a component anywhere in this vehicle's service history.
+    const removedComponentIds=new Set((classification.removed||[]).map(x=>str(x.componentId||x.key)).filter(Boolean));
+    if(removedComponentIds.size&&g.D&&Array.isArray(g.D.sparepartCats)){
+      const vehicleId=str(ctx.vehicleId);
+      g.D.sparepartCats=g.D.sparepartCats.filter(cat=>{
+        if(!cat||str(cat.vehicleId||vehicleId)!==vehicleId)return true;
+        const cid=str(cat.serviceComponentId); if(!removedComponentIds.has(cid))return true;
+        const stillUsed=(g.D.servisLogs||[]).some(r=>r&&str(r.vehicleId)===vehicleId&&str(r.serviceComponentId||r.checklistItemId||r.itemId)===cid);
+        return stillUsed||!str(cat.id).startsWith('sp_component_');
+      });
+      if(removedComponentIds.size&&g.save)g.save({domain:'servis',financeMutation:false,accountIds:[]});
+    }
     const result={ok:true,classification,rows:rowResult.rows,removedRows:rowResult.removedRows,finance,oldStock,currentStock,recovery:'committed'};
     ctx._s2047MutationFingerprint=fp;
     return result;
@@ -197,5 +209,40 @@
     })();
     try{return await ctx._s2047MutationInFlight;}finally{ctx._s2047MutationInFlight=null;}
   }
-  g.ServiceSessionMutationS2047={VERSION,classify,reconcileAfterSave,stockEntriesFromRows};
+  function componentIdOf(row){return str(row&&(row.serviceComponentId||row.itemId||row.checklistItemId||row.itemName));}
+  function payloadFromRowsExcluding(rows,excluded){
+    const drop=new Set((Array.isArray(excluded)?excluded:[excluded]).map(str).filter(Boolean));
+    const payload=[];const seen=new Set();
+    (Array.isArray(rows)?rows:[]).forEach(r=>(Array.isArray(r&&r.checklist)&&r.checklist.length?r.checklist:[r]).forEach(c=>{
+      const id=componentIdOf(c);
+      if(!id||drop.has(id)||seen.has(id))return;
+      seen.add(id);payload.push(clone(c));
+    }));
+    return payload;
+  }
+  async function removeComponents(ctx,componentIds){
+    if(!ctx||!ctx.sessionId)return {ok:false,reason:'no-session'};
+    const ids=(Array.isArray(componentIds)?componentIds:[componentIds]).map(str).filter(Boolean);
+    if(!ids.length)return {ok:false,reason:'no-component'};
+    const rows=(ctx.originalRows||[]).filter(Boolean);
+    const payload=payloadFromRowsExcluding(rows,ids);
+    if(!payload.length)return {ok:false,reason:'empty-session',needsSessionDelete:true};
+    const nextCtx=Object.assign({},ctx,{originalRows:rows,txId:ctx.txId||rows.find(r=>r&&r.txLinkId)?.txLinkId||null});
+    return reconcileAfterSave(nextCtx,payload);
+  }
+  async function removeComponent(ctx,componentId){return removeComponents(ctx,componentId);}
+  async function removeCategory(ctx,masterCategoryId){
+    if(!ctx||!ctx.sessionId)return {ok:false,reason:'no-session'};
+    const mid=str(masterCategoryId);if(!mid)return {ok:false,reason:'no-category'};
+    const rows=(ctx.originalRows||[]).filter(Boolean);
+    const ids=[];
+    rows.forEach(r=>(Array.isArray(r&&r.checklist)&&r.checklist.length?r.checklist:[r]).forEach(c=>{
+      const cid=componentIdOf(c);
+      const cmid=str(c&&(c.masterCategoryId||c.groupId)||r&&(r.masterCategoryId||r.groupId));
+      if(cid&&cmid===mid)ids.push(cid);
+    }));
+    if(!ids.length)return {ok:false,reason:'category-empty'};
+    return removeComponents(ctx,ids);
+  }
+  g.ServiceSessionMutationS2047={VERSION,classify,reconcileAfterSave,removeComponent,removeComponents,removeCategory,stockEntriesFromRows};
 })(typeof globalThis!=='undefined'?globalThis:window);

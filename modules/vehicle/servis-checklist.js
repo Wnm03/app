@@ -657,6 +657,15 @@ const ServisChecklist = {
     if (!item) return { ok: false, reason: 'Item tidak ditemukan' };
     if (this._checked[item.id] !== undefined) {
       delete this._checked[item.id];
+      // Removing a checklist component must remove its transient component
+      // state as well. Otherwise a later re-check can resurrect an old
+      // condition/cost/stock/photo/reminder override that is no longer part
+      // of the selected Service Event. The key absence remains the checklist
+      // SoT for "not selected".
+      ['_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus'].forEach(store=>{
+        if(this[store]&&typeof this[store]==='object')delete this[store][item.id];
+      });
+      // removed: true is an internal mutation outcome; legacy API shape remains stable.
       return { ok: true, id: item.id, checked: false, actionType: null };
     }
     const actionType = this._defaultActionType(item);

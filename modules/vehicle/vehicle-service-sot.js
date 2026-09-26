@@ -143,19 +143,24 @@ function vehicleServiceSotResolveReminderRule(cat,vehicleId){
 
 function getReminderCategoriesForVehicle(vehicleId){
   const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
-  const legacyCats=(D.sparepartCats||[]).filter(c=>typeof catVisibleForVehicle==='function'?catVisibleForVehicle(c,vehicleId):true);
-  const provisioned=(vehicle&&vehicle.sot&&Array.isArray(vehicle.sot.serviceSchedules))?vehicle.sot.serviceSchedules:[];
-  const cats=provisioned.length?provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null})):legacyCats;
+  const canonical=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function')
+    ?VehicleCarNotesSOT.getServiceCategories(vehicleId):[];
+  let cats=canonical.slice();
+  if(!cats.length){
+    const legacy=(D.sparepartCats||[]).filter(c=>typeof catVisibleForVehicle==='function'?catVisibleForVehicle(c,vehicleId):true);
+    if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.upsertServiceCategory==='function'){
+      legacy.forEach(c=>{if(c&&String(c.vehicleId||vehicleId)===String(vehicleId))VehicleCarNotesSOT.upsertServiceCategory(vehicleId,c);});
+      cats=VehicleCarNotesSOT.getServiceCategories(vehicleId)||[];
+    }else cats=legacy;
+  }
+  const provisioned=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vehicleId):[];
+  if(!cats.length&&provisioned.length)cats=provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null}));
   const items=vehicleServiceSotVehicleItems(vehicleId);
   return cats.map(cat=>{
     const item=cat.catalogPartId?items.find(x=>String(x.id)===String(cat.catalogPartId)):vehicleServiceSotFindCatalogForCat(cat,vehicleId);
     const out=Object.assign({},cat);
     if(item){
-      out.catalogPartId=item.id;
-      out.catalogCategory=item.category||'';
-      out.catalogSubcategory=item.subcategory||null;
-      out.catalogPartName=item.partName||'';
-      out.catalogPartCode=item.oemCode||'';
+      out.catalogPartId=item.id; out.catalogCategory=item.category||''; out.catalogSubcategory=item.subcategory||null; out.catalogPartName=item.partName||''; out.catalogPartCode=item.oemCode||'';
       if(item.serviceShowInReminder!==undefined)out.showInReminder=item.serviceShowInReminder!==false;
     }
     const rule=vehicleServiceSotResolveReminderRule(out,vehicleId);
@@ -163,8 +168,7 @@ function getReminderCategoriesForVehicle(vehicleId){
     if(rule.masterCategoryId&&!out.masterCategoryId)out.masterCategoryId=rule.masterCategoryId;
     if(rule.intervalKm!==null)out.intervalKm=rule.intervalKm;
     if(rule.intervalBulan!==null)out.intervalBulan=rule.intervalBulan;
-    out._serviceIntervalSource=rule.source;
-    out._serviceIntervalOverridden=rule.intervalOverridden;
+    out._serviceIntervalSource=rule.source; out._serviceIntervalOverridden=rule.intervalOverridden;
     return out;
   });
 }

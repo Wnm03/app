@@ -13,7 +13,7 @@
 // dari file ini) & features-aiwidget-reminder-gdrive-search.js (yang memanggil getVehicleKm() dst
 // dari file ini).
 /* moved to modules-render.js: renderVehicleSelect */
-function selectVehicle(id){curVehicleId=id;renderVehicleSelect();renderCnTab();}
+function selectVehicle(id){const r=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.setActive)?VehicleScopedSOT.setActive(id):{ok:!!id};if(!r.ok)return;curVehicleId=r.vehicleId;renderVehicleSelect();renderCnTab();}
 // isVehicleOwnershipSelf(vehicleId) — helper REUSE dari OwnershipEngine (Sesi 196,
 // Ownership Sync Vehicle/Car Notes/Fuel/Servis/Reminder/Dashboard/Report/AI).
 // Balikin true kalau kepemilikan EFEKTIF kendaraan ini SELF (termasuk kendaraan
@@ -519,7 +519,7 @@ function populateKmVehicleSelect(){
 const sel=document.getElementById('kmVehicle');
 if(!sel||!D.vehicles)return;
 sel.innerHTML=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
-sel.value=(D.vehicles.find(v=>v.id===curVehicleId))?curVehicleId:(D.vehicles[0]&&D.vehicles[0].id);
+if(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)VehicleScopedSOT.ensureActive();sel.value=(D.vehicles.find(v=>v.id===curVehicleId))?curVehicleId:'';
 }
 function onKmVehicleChange(){
 const sel=document.getElementById('kmVehicle');

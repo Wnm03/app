@@ -492,6 +492,9 @@ const action=(severity&&typeof VehicleActionRecommendation!=='undefined')?Vehicl
 const nextAction=u&&u.status!=='aman'&&u.nextAction&&u.nextAction!=='event_based'?u.nextAction:null;
 const condition=u&&u.condition?u.condition:null;
 const componentMeta=(typeof ServiceInputCatalog!=='undefined'&&cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const canonicalComponentName=componentMeta&&componentMeta.item?componentMeta.item.name:(cat.componentName||cat.name||'');
+const canonicalCategoryName=componentMeta&&componentMeta.group?componentMeta.group.group:(cat.group||cat.categoryName||'');
+const canonicalMasterCategoryId=componentMeta&&componentMeta.group?componentMeta.group.masterCategoryId:(cat.masterCategoryId||null);
 const rec=typeof recommendServiceAction==='function'&&((u&&u.status!=='aman')||latestInspectionResult)?recommendServiceAction({item:componentMeta&&componentMeta.item,cat,urgency:u,conditionResult:latestInspectionResult}):null;
 const recommendedAction=rec&&rec.action?rec.action:nextAction;
 const recommendationReason=rec&&rec.reason?rec.reason:'';
@@ -511,7 +514,7 @@ const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.lengt
 const hasHistoryButNoResetBaseline=historyLogsForSummary.length>0&&effectiveLastKm===null;
 const historyBaselineLabel=hasHistoryButNoResetBaseline?'Belum ada riwayat yang mereset interval':(effectiveLastKm===null?'Belum pernah dicatat':`Terakhir di ${effectiveLastKm.toLocaleString('id-ID')} km`);
 const legacyReminderFields={nextDueKm,nextDueDate,dueLabel,status};
-return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,historyBaselineLabel,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult};
+return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,historyBaselineLabel,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult,canonicalComponentName,canonicalCategoryName,canonicalMasterCategoryId};
 }).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
 const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length};
 const rfSeverity=Servis.activeReminderSeverityFilter;
@@ -523,7 +526,7 @@ const reminderBadgeHtml=reminderBadgeParts.length?` <span class="red u-fw700 u-f
 card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminderBadgeHtml} <span class="card-collapse-toggle" id="servisReminderCard-chev" data-action="toggleCardCollapse" data-args='["servisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="servisReminderCard-cbody">`+(kmPerDay?`<div class="u-fs11 u-t2 u-mb10">📊 Estimasi tanggal dihitung dari rata-rata pemakaian ~${kmPerDay.toFixed(1)} km/hari (histori Catatan KM & BBM).</div>`:'')+(rows.length?Servis.reminderSeverityChipsHtml(reminderSeverityCounts):'')+(rfSeverity&&!displayRows.length&&rows.length?`<div class="u-fs12 u-t2" style="padding:8px 0">Tidak ada part dengan status ini pada kategori yang dipilih.</div>`:'')+`<div class="servis-reminder-list">`+displayRows.map(r=>`
       <div class="u-mb12">
         <div class="u-flex u-jcb u-aic u-fs12 u-mb4 u-pointer" data-action="editSparepartFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Tap untuk edit kategori (berlaku semua kendaraan)">
-          <span class="u-fw700">${escapeHtml(r.cat.name)} <span class="u-fs11 u-t2">✏️</span></span>
+          <span class="u-fw700">${escapeHtml(r.canonicalCategoryName||'Kategori Servis')} · ${escapeHtml(r.canonicalComponentName||r.cat.name)} <span class="u-fs11 u-t2">✏️</span></span>
           <span class="${r.col} u-fw700">${r.msg}${r.estLabel}</span>
         </div>
         <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
@@ -697,7 +700,7 @@ el.innerHTML=historyGroups.map(g=>{
   const names=g.logs.map(x=>x.item).filter(Boolean);
   const summary=names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:'');
   const groupId=`servis-session-${escapeHtml(String(g.sessionId).replace(/[^a-zA-Z0-9_-]/g,'_'))}`;
-  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${sessionCost&&sessionCost.source==='component'?`<span class="servis-history-badge">💰 Jasa ${fmt(sessionCost.labor||0)} · Part ${fmt(sessionCost.parts||0)}</span>`:''}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session" data-stop="1" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([first.id]))}" aria-label="Edit Checklist Sesi Servis" title="Edit Checklist Sesi Servis">✏️ Edit Checklist Sesi</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
+  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${sessionCost&&sessionCost.source==='component'?`<span class="servis-history-badge">💰 Jasa ${fmt(sessionCost.labor||0)} · Part ${fmt(sessionCost.parts||0)}</span>`:''}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session" data-stop="1" data-action="Servis.openHistorySessionEditor" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Edit Sesi" title="Edit Sesi">✏️ Edit Sesi</button><button type="button" class="btn btn-ghost btn-sm servis-history-add-session" data-stop="1" data-action="Servis.addHistorySessionComponent" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Tambah Komponen">➕ Tambah</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
 }).join('');
 let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
 if(!servisMoreWrap){
@@ -740,3 +743,5 @@ servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banya
   }
 })();
 
+
+// S2052/S2053 cumulative session UI contract: openHistorySessionEditor, addHistorySessionComponent, removeHistorySessionComponent, Edit Sesi, Tambah Komponen, Hapus.

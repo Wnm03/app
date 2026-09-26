@@ -24,6 +24,17 @@ function auditSession(vehicleId,sessionId){
  if(staleReminder.length)issues.push({type:'stale_reminder_projection',categoryIds:staleReminder.map(c=>c.id),componentIds:staleReminder.map(c=>c.serviceComponentId)});
  return {version:VERSION,vehicleId:vehicleId||null,sessionId:sessionId||null,rows,signature:signature(rows),componentIds:[...ids],issues,ok:issues.length===0};
 }
+function repairReminder(vehicleId){
+ const d=g.D||{};if(!Array.isArray(d.sparepartCats)||!Array.isArray(d.servisLogs))return{changed:false,removed:[]};
+ const vid=str(vehicleId||'');const active=componentIds(d.servisLogs.filter(r=>r&&str(r.vehicleId)===vid));const removed=[];
+ d.sparepartCats=d.sparepartCats.filter(c=>{
+   if(!c||str(c.vehicleId||vid)!==vid||!str(c.serviceComponentId))return true;
+   const cid=str(c.serviceComponentId);if(active.has(cid))return true;
+   if(!str(c.id).startsWith('sp_component_'))return true;
+   removed.push(c.id);return false;
+ });
+ return{changed:removed.length>0,removed};
+}
 function repairFinance(vehicleId){
  const d=g.D||{};if(!Array.isArray(d.servisLogs)||!Array.isArray(d.transactions))return {changed:false,issues:[]};
  let changed=false;const issues=[];
@@ -35,9 +46,10 @@ function repairFinance(vehicleId){
 }
 function reconcileVehicle(vehicleId){
  const sessions=new Set();(g.D&&Array.isArray(g.D.servisLogs)?g.D.servisLogs:[]).filter(r=>r&&(!vehicleId||str(r.vehicleId)===str(vehicleId))).forEach(r=>sessions.add(str(r.sessionId||r.serviceJobId||r.id)));
- const reports=[...sessions].map(sid=>auditSession(vehicleId,sid));const repair=repairFinance(vehicleId);if(repair.changed&&typeof g.save==='function')try{g.save({domain:'servis',financeMutation:true,accountIds:[]});}catch(_){void _;}
- return {version:VERSION,vehicleId:vehicleId||null,reports,repair,ok:reports.every(r=>r.ok)&&!repair.issues.length};
+ const before=[...sessions].map(sid=>auditSession(vehicleId,sid));const repair=repairFinance(vehicleId);const reminder=repairReminder(vehicleId);if((repair.changed||reminder.changed)&&typeof g.save==='function')try{g.save({domain:'servis',financeMutation:repair.changed,accountIds:[]});}catch(_){void _;}
+ const reports=[...sessions].map(sid=>auditSession(vehicleId,sid));
+ return {version:VERSION,vehicleId:vehicleId||null,reports,beforeReports:before,repair,reminder,ok:reports.every(r=>r.ok)&&!repair.issues.length};
 }
 function reconcileJournal(journal){if(!journal)return null;return reconcileVehicle(journal.vehicleId);}
-g.ServiceSessionReconcileS2051={VERSION,rowsFor,auditSession,repairFinance,reconcileVehicle,reconcileJournal,signature};
+g.ServiceSessionReconcileS2051={VERSION,rowsFor,auditSession,repairFinance,repairReminder,reconcileVehicle,reconcileJournal,signature};
 })(typeof globalThis!=='undefined'?globalThis:window);

@@ -545,7 +545,12 @@ function delServis(id){return Servis.del(id);}
 // markSparepartServiced/getLastServiceKmForCat -- actionType/actionTypeFilter/
 // forReminder FITUR BARU (opsional, thru-pass; lihat Servis.markServiced()/
 // Servis.getLastServiceKmForCat() di car-notes.js utk dokumentasi lengkap).
-function markSparepartServiced(catId,actionType){return Servis.markServiced(catId,actionType);}
+async function markSparepartServiced(catId,actionType){
+// S2057: seluruh aksi Reminder UI masuk ke Form Servis canonical. markServiced()
+// tetap dipertahankan untuk internal batch/compatibility callers, tetapi bukan
+// lagi jalur UI yang membuat log Reminder langsung di luar Form/SOT.
+return typeof Servis.openReminderServiceForm==='function'?Servis.openReminderServiceForm(catId,actionType||'ganti'):Servis.markServiced(catId,actionType);
+}
 function getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){return Servis.getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder);}
 function editSparepartFromReminder(catId){return Servis.editSparepartFromReminder(catId);}
 /* moved to modules-render.js: renderServisReminder */

@@ -1,36 +1,9 @@
-// sparepart-servis.js — Domain Sparepart & Servis kendaraan: kategori & stok sparepart
-// (Sparepart), catatan servis (wrapper ke Servis di car-notes.js),
-// interval servis per-kategori & override per-kendaraan, katalog referensi TORSI_DB/VEHICLE_SPEC_DB
-// & skala kunci torsi (MY_WRENCH_SCALE), serta filter kartu Pengingat Servis di Dashboard.
-// (Audit ukuran file, sesi split lanjutan): file ini dipecah jadi 2 --
-// SparepartCsvImport/TORSI_DB/VEHICLE_SPEC_DB/wrapper Servis/fitur AI
-// kendaraan (predictService dkk) dipindah ke
-// modules/vehicle/sparepart-servis-b.js (harus dimuat SETELAH file ini,
-// lihat scripts/build.js). Titik potong: tepat setelah `window.Sparepart =
-// Sparepart;`. 0 logika diubah.
-// Dipindah ke modules/vehicle/sparepart-servis.js (Sesi 8 restrukturisasi folder — lihat
-// docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-// Dipisah dari tukang-absensi.js (2026-07-12, split file besar bagian ke-3,
-// lanjutan langsung dari bagian ke-1 Chat Action & ke-2 Storage/Archive di sesi yang sama).
-// PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) — lihat urutan grup di
-// header tukang-absensi.js. Ditempatkan tepat setelah features-tukang-kendaraan-
-// storage.js (sumber pemisahan) & data-archive.js, sebelum features-aiwidget-reminder-gdrive-search.js
-// (yang memanggil getEffectiveIntervalKm() dari file ini).
-// catVisibleForVehicle(cat,vehicleId) — S622 (permintaan user: pengingat servis
-// per part, kategori part & stok sparepart harus punya cakupan SENDIRI-SENDIRI
-// per kendaraan, bukan 1 daftar global yg numpuk sama utk semua kendaraan).
-// cat.vehicleId BARU (opsional, backward compatible): null/undefined = kategori
-// UNIVERSAL (perilaku lama, tetap tampil di semua kendaraan -- supaya kategori
-// lama yg sudah ada tidak tiba-tiba hilang). Kalau diisi salah satu id
-// kendaraan, kategori itu HANYA tampil/dipakai utk kendaraan tsb.
 function catVisibleForVehicle(cat,vehicleId){
 if(!cat)return false;
 if(!cat.vehicleId)return true;
 if(!vehicleId)return true;
 return cat.vehicleId===vehicleId;
 }
-// SERVICE COMPONENT CANONICAL RESOLVER — names are only a legacy bridge.
-// New linkage must use serviceComponentId; ambiguous text is never guessed.
 function resolveCanonicalServiceComponent(name,preferredId){
   if(typeof ServiceInputCatalog==='undefined')return preferredId||null;
   if(preferredId&&typeof ServiceInputCatalog.itemById==='function'){
@@ -51,11 +24,50 @@ function serviceComponentIdForCategory(cat){
   if(!cat)return null;
   return resolveCanonicalServiceComponent(cat.name,cat.serviceComponentId||null);
 }
+function getVehicleServiceCategorySOT(cat,vehicleId){
+  if(!cat||vehicleId==null||String(cat.vehicleId)!==String(vehicleId))return null;
+  let item=null,group=null;
+  if(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
+    if(cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function'){
+      const hit=ServiceInputCatalog.itemById(cat.serviceComponentId);
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+    if(!item&&typeof ServiceInputCatalog.infer==='function'){
+      const hit=ServiceInputCatalog.infer(cat.name||'');
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+  }
+  if(!item)return null;
+  if(!group&&typeof ServiceInputCatalog.groupById==='function')group=ServiceInputCatalog.groupById(item.masterCategoryId||cat.masterCategoryId)||null;
+  const rule=(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')
+    ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null;
+  const intervalKm=rule&&rule.intervalKm!=null?Number(rule.intervalKm):((typeof getEffectiveIntervalKm==='function')?getEffectiveIntervalKm(vehicleId,cat):Number(cat.intervalKm)||null);
+  const intervalBulan=rule&&rule.intervalBulan!=null?Number(rule.intervalBulan):((typeof getEffectiveIntervalBulan==='function')?getEffectiveIntervalBulan(cat,vehicleId):Number(cat.intervalBulan)||null);
+  return {
+    categoryId:cat.id,
+    vehicleId,
+    masterCategoryId:(group&&group.masterCategoryId)||item.masterCategoryId||cat.masterCategoryId||null,
+    categoryName:(group&&group.group)||null,
+    serviceComponentId:item.id,
+    componentName:item.name,
+    intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,
+    intervalBulan:Number.isFinite(intervalBulan)&&intervalBulan>0?intervalBulan:null,
+    showInReminder:cat.showInReminder!==false,
+    code:cat.code||codeFromName(item.name),
+    source:'ServiceInputCatalog + VehicleServiceSOT'
+  };
+}
+function getCanonicalVehicleReminderCategories(vehicleId){
+  const vid=String(vehicleId||'');
+  if(!vid||typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT)return [];
+  let cats=typeof VehicleCarNotesSOT.getServiceCategories==='function'?VehicleCarNotesSOT.getServiceCategories(vid):[];
+  if(!cats.length&&typeof VehicleCarNotesSOT.upsertServiceCategory==='function'){
+    (D.sparepartCats||[]).filter(c=>c&&String(c.vehicleId||'')===vid).forEach(c=>{try{VehicleCarNotesSOT.upsertServiceCategory(vid,c);}catch(_e){/* legacy projection failure is isolated; canonical SOT remains authoritative. */}});
+    cats=VehicleCarNotesSOT.getServiceCategories(vid);
+  }
+  return cats;
+}
 function dedupeServiceCategoriesForVehicle(categories,vehicleId){
-  // S2007/S2008: canonical category projection. It NEVER invents a mapping;
-  // exact-name legacy rows with interval conflicts remain visible/reviewable,
-  // while duplicate canonical component rows collapse deterministically to
-  // the strongest category (canonical name + vehicle scope + matching rule).
   if(typeof ServiceCategorySOTReconciliationS2007!=='undefined'&&ServiceCategorySOTReconciliationS2007&&typeof ServiceCategorySOTReconciliationS2007.canonicalReminderProjection==='function'){
     return ServiceCategorySOTReconciliationS2007.canonicalReminderProjection(categories,vehicleId);
   }
@@ -73,26 +85,6 @@ function dedupeServiceCategoriesForVehicle(categories,vehicleId){
   });
   return out;
 }
-
-// resolveServisCatForVehicle(name,vehicleId) — BUGFIX (audit sesi ini,
-// lanjutan S622/S629): sejak kategori sparepart bisa di-scope ke 1 kendaraan
-// spesifik (cat.vehicleId, lihat catVisibleForVehicle() di atas), kartu
-// Pengingat Servis Dashboard SUDAH benar memfilter per kendaraan. Tapi
-// titik-titik yang MENCARI kategori saat MENYIMPAN servis (Servis._saveInner
-// & onItemAutofillInterval & prefill edit di car-notes.js, plus
-// _resolveServisCategoryId() versi sinkron Transaksi di tx-servis.js) masih
-// pakai `D.sparepartCats.find(c=>c.name.toLowerCase()===item.toLowerCase())`
-// polos -- cari cocok nama scr GLOBAL, tanpa peduli kendaraan mana yang
-// sedang aktif. Kalau 2 kendaraan sama-sama punya item bernama sama (mis.
-// "Ganti Oli"), servis kendaraan B bisa ke-link ke kategori PRIVAT milik
-// kendaraan A -- lalu di kartu Pengingat kendaraan B kategori itu disembunyikan
-// (vehicleId-nya bukan B), jadi dari sudut pandang B histori servis "tidak
-// kebaca" & interval yang diisi "tidak tersimpan" (padahal tersimpan, cuma ke
-// kategori kendaraan lain).
-// Fix: helper tunggal ini jadi SoT pencocokan nama->kategori yang sadar
-// kendaraan aktif -- prioritas kategori yang benar-benar scoped ke
-// vehicleId ybs, lalu fallback ke kategori UNIVERSAL (cat.vehicleId kosong),
-// dan TIDAK PERNAH jatuh ke kategori privat milik kendaraan lain.
 function resolveServisCatForVehicle(name,vehicleId){
 const n=(name||'').trim().toLowerCase();
 if(!n)return null;
@@ -100,12 +92,6 @@ const cats=(D.sparepartCats||[]).filter(c=>c&&c.name&&c.name.toLowerCase()===n);
 if(!cats.length)return null;
 return cats.find(c=>c.vehicleId&&c.vehicleId===vehicleId)||cats.find(c=>!c.vehicleId)||null;
 }
-// canonicalServisCategoryId(item,vehicleId,preferredId) — SoT tunggal linkage
-// Riwayat -> Pengingat. Jika preferredId masih menunjuk kategori yang valid
-// dan terlihat untuk kendaraan ini, pertahankan. Jika tidak, resolve berdasarkan
-// nama + kendaraan. TIDAK PERNAH mengembalikan kategori privat kendaraan lain.
-// Helper ini dipakai oleh jalur create/import/chat agar semua penulis log baru
-// memakai aturan canonical yang sama.
 function canonicalServisCategoryId(item,vehicleId,preferredId){
 const cats=D.sparepartCats||[];
 if(preferredId){
@@ -115,13 +101,6 @@ if(preferred&&(!preferred.vehicleId||preferred.vehicleId===vehicleId))return pre
 const matched=resolveServisCatForVehicle(item,vehicleId);
 return matched?matched.id:null;
 }
-
-// P13 — backward-compatible normalization for legacy service history.
-// Read/migration helper only: it NEVER overwrites an existing historical
-// snapshot and NEVER creates finance/stock side effects. Safe to call more
-// than once. Legacy rows are assigned a deterministic idempotency key from
-// their own immutable log id (or txLinkId when one already exists), so adding
-// this field cannot accidentally deduplicate two legitimate old services.
 function normalizeLegacyServiceLogs(){
 const logs=Array.isArray(D.servisLogs)?D.servisLogs:[];
 let changed=0;
@@ -131,7 +110,6 @@ logs.forEach(s=>{
   const item=s.item||s.name||null;
   if(s.vehicleId==null&&vehicleId!=null){s.vehicleId=vehicleId;changed++;}
   if(s.item==null&&item!=null){s.item=item;changed++;}
-
   const catId=canonicalServisCategoryId(s.item||'',vehicleId,s.categoryId||s.catId||null);
   const cat=catId?(D.sparepartCats||[]).find(c=>c&&c.id===catId):null;
   if(s.categoryId==null&&catId){s.categoryId=catId;changed++;}
@@ -140,8 +118,6 @@ logs.forEach(s=>{
     s.serviceComponentId=cat.serviceComponentId||cat.maintenanceRuleId;changed++;
   }
   if(s.actionType===undefined){s.actionType=null;changed++;}
-
-  // Only backfill snapshot fields when the row has no canonical snapshot at all.
   const hasSnapshot=s.nextDueAxis!=null || s.nextDueKm!=null || s.nextDueDate!=null || s.intervalKmAtService!=null || s.intervalBulanAtService!=null;
   if(!hasSnapshot&&cat&&typeof buildServiceNextDueSnapshot==='function'){
     const snap=buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:s.km,serviceDate:s.date||s.tanggal,actionType:s.actionType||null});
@@ -158,7 +134,6 @@ logs.forEach(s=>{
     if(s.nextDueDate===undefined)s.nextDueDate=null,changed++;
     if(s.nextDueAxis===undefined)s.nextDueAxis='none',changed++;
   }
-
   if(s.idempotencyKey==null){
     s.idempotencyKey=s.txLinkId?`tx:${s.txLinkId}`:`legacy-service:${s.id}`;
     changed++;
@@ -166,47 +141,11 @@ logs.forEach(s=>{
 });
 return changed;
 }
-// GENERIC_RECOMMEND_NAMES — FITUR BARU (permintaan user: "rekomendasi kategori
-// part rutin servis sesuai pabrikan"). Daftar nama part/servis rutin yang UMUM
-// dipakai sbg starting point rekomendasi kategori, dipisah per jenis kendaraan
-// (v.jenis, field yg SUDAH ADA di vehicle-core.js — motor/mobil). Ini BUKAN
-// data pabrikan (tidak ada nama part di sini yg diklaim resmi) — cuma daftar
-// NAMA yg lalu di-lookup satu-satu lewat suggestServiceIntervalKm() (SUDAH
-// ADA di file ini, dideklarasikan di bawah — dipanggil hanya lewat
-// Sparepart.recommendCategories() saat runtime, jadi urutan deklarasi top-
-// level ini aman) supaya intervalnya: (1) dari TORSI_DB kendaraan aktif kalau
-// match by nama (data manual resmi, ada sourceNote-nya), atau (2) fallback ke
-// FALLBACK_KEYWORDS (rule-of-thumb, dilabeli eksplisit "bukan dari buku manual
-// kendaraan spesifik ini" oleh suggestServiceIntervalKm() sendiri) — 0 logic
-// interval baru diciptakan di sini, 100% reuse.
 const GENERIC_RECOMMEND_NAMES={
 motor:['Oli Mesin','Filter Oli','Oli Gardan','Busi','Filter Udara','Kampas Rem Depan','Kampas Rem Belakang','V-Belt CVT','Roller CVT','Minyak Rem','Aki','Ban Depan'],
 mobil:['Oli Mesin','Filter Oli','Oli Transmisi','Busi','Filter Udara','Filter AC','Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Coolant','Timing Belt','Ban Depan'],
 listrik:['Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Ban Depan'],
 };
-// GENERIC_GROUP_BY_NAME/resolveCatGroup() — FITUR BARU (audit sesi ini,
-// permintaan user: kartu "🔔 Pengingat Servis per Part" & rekomendasi
-// kategori masih FLAT walau data pabrikan TORSI_DB sudah terkategori 8 grup
-// komponen — lihat audit sebelumnya). Label grup di map statis ini dipetakan
-// SAMA PERSIS dgn nama kategori TORSI_DB (cat.cat) biar konsisten dgn tab
-// Torsi — HANYA dipakai sbg fallback terakhir utk part GENERIC_RECOMMEND_NAMES
-// yg TIDAK match TORSI_DB kendaraan aktif (mis. kendaraan yg belum py entri
-// TORSI_DB sama sekali). Bukan data pabrikan, cuma pengelompokan estimasi.
-// _genericGroupByName()/_genericRecommendNames() -- wiring literal tersisa
-// (roadmap §7 baris 91, lanjutan Sesi B v1650): pola guard SAMA PERSIS
-// _allTorsiEntries() (sparepart-servis-b.js) -- baca DatabaseAPI.master
-// kalau termuat, fallback ke literal di bawah kalau DatabaseAPI/namespace
-// master belum ada (mis. test terisolasi yg cuma load file ini sendirian).
-// CATATAN URUTAN MUAT: di scripts/build.js, database-api.js dimuat SETELAH
-// file ini (tepat sebelum sparepart-servis-b.js) -- kebalikan urutan
-// _allTorsiEntries(). Ini AMAN krn 2 fungsi ini (sama seperti
-// collectKnownGroups()/resolveCatGroup() yg memanggilnya) cuma DIPANGGIL
-// saat runtime (buka modal/render kartu), bukan dieksekusi top-level saat
-// file ini pertama dimuat -- jadi DatabaseAPI (var global) sudah pasti
-// terdaftar duluan di scope global begitu app selesai boot, terlepas dari
-// urutan deklarasi file. Konstanta literal
-// GENERIC_GROUP_BY_NAME/GENERIC_RECOMMEND_NAMES di bawah TETAP ADA sbg
-// fallback -- pola sama VEHICLE_DB_RECORDS, TIDAK dihapus.
 function _genericGroupByName(){
 if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getGenericGroupByName==='function'){
 return DatabaseAPI.master.getGenericGroupByName();
@@ -242,24 +181,6 @@ const GENERIC_GROUP_BY_NAME={
 'aki':{group:'Kelistrikan & Panel',icon:'🔌'},
 'ban depan':{group:'Roda Depan/Suspensi/Kemudi',icon:'🛞'},
 };
-// resolveCatGroup(cat,vehicleId) — SoT tunggal utk cari "kategori induk" (grup
-// komponen) sebuah kategori sparepart, dipakai Servis.renderReminder()
-// (car-notes.js) utk render Pengingat Servis per grup (bukan flat). Prioritas:
-// (1) cat.group tersimpan langsung (kategori baru hasil recommendCategories(),
-// lihat di bawah), (2) match nama ke item TORSI_DB kendaraan aktif (data
-// pabrikan asli, paling akurat — pola pencocokan sama servisLogMatchesCat()),
-// (3) GENERIC_GROUP_BY_NAME (estimasi, di atas), (4) 'Lainnya' kalau semua
-// gagal. 100% backward-compatible — kategori LAMA yg belum py field `group`
-// tetap kegrup otomatis lewat (2)/(3) tanpa migrasi data apa pun.
-// _withMasterCategory(result,cat) -- Sesi D (roadmap §7): tempel field BARU
-// masterCategoryId/masterCategoryName/masterCategoryIcon ke hasil
-// resolveCatGroup(), diturunkan dari 13 kategori terkunci
-// (DatabaseAPI.masterCategory, modules/engine/database-api.js) via
-// classifyItemName(cat.name) -- ADDITIVE murni, field group/icon LAMA di
-// `result` 0 berubah (0 titik baca lama yg terpengaruh). null kalau
-// DatabaseAPI/namespace belum termuat (guard sama pola _genericGroupByName())
-// atau kalau 0 keyword cocok (SENGAJA tidak menebak, lihat komentar
-// namespace masterCategory di database-api.js).
 function _withMasterCategory(result,cat){
 let mc=null;
 if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.resolve==='function'){
@@ -283,22 +204,6 @@ result.masterCategoryName=mc?mc.name:null;
 result.masterCategoryIcon=mc?mc.icon:null;
 return result;
 }
-// UNCATEGORIZED_FILTER_ID -- Sesi D-lanjutan5 (ROADMAP-KONSOLIDASI-DATABASE-
-// SERVIS-v2.md §7 Sesi D -- keputusan produk item classify `null`). Kategori
-// master TETAP terkunci 13 (DatabaseAPI.masterCategory) -- id ini SENGAJA
-// bukan salah satu dari 13 id itu (nilai sentinel murni level UI, TIDAK
-// pernah ditulis ke DatabaseAPI.masterCategory ataupun ke field
-// masterCategoryId hasil classify manapun). Dipakai HANYA sebagai value
-// activeMasterCategoryFilter di Sparepart (file ini) & Servis (car-notes.js)
-// utk merepresentasikan chip "❔ Belum Terklasifikasi" -- supaya item yang
-// classifyItemName()-nya balik null (0 keyword cocok ke 13 kategori) tetap
-// bisa ditemukan/ditinjau user, tanpa nambah kategori ke-14 ke skema data
-// terkunci maupun logic classify baru. Dideklarasikan di sini (dimuat
-// sebelum car-notes.js, lihat scripts/build.js) tapi cuma dipakai di dalam
-// isi fungsi (bukan top-level eksekusi), jadi car-notes.js tetap bisa
-// mereferensikannya di runtime walau urutan load-nya sebenarnya lebih dulu
-// dari file ini (pola sama seperti car-notes.js sudah lama mereferensikan
-// resolveCatGroup() dari file ini).
 const UNCATEGORIZED_FILTER_ID='__uncategorized__';
 function resolveCatGroup(cat,vehicleId){
 if(!cat)return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
@@ -328,12 +233,7 @@ const gmap=_genericGroupByName();
 if(n&&gmap[n])return _withMasterCategory(Object.assign({},gmap[n]),cat);
 return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
 }
-// S2035: collectKnownGroups() is the canonical taxonomy projection for the
-// Sparepart category dropdown. Legacy TORSI/GENERIC labels remain resolver
-// compatibility data but are not allowed to create taxonomy options.
 function collectKnownGroups(){
-// S2035: dropdown taxonomy memakai satu SOT; legacy TORSI/GENERIC bukan sumber opsi.
-// Grup manual yang sudah tersimpan tetap boleh tampil sebagai opsi transient saat edit.
 const map=new Map();
 const add=(id,name,icon)=>{
   const key=String(id||name||'').trim();
@@ -344,7 +244,6 @@ const add=(id,name,icon)=>{
 if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function'){
   (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c)add(c.id,c.name,c.icon);});
 }
-// Fallback isolated loader tetap berasal dari canonical ServiceInputCatalog.
 if(!map.size&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
   const groupsApi=ServiceInputCatalog['groups'];
   if(typeof groupsApi==='function')(groupsApi()||[]).forEach(g=>{if(g)add(g.masterCategoryId,g.group,g.icon);});
@@ -357,9 +256,6 @@ const hit=collectKnownGroups().find(g=>g.group===name);
 return hit?hit.icon:'📦';
 }
 function servisLogMatchesCat(s,cat){
-  // S2005: canonical history↔reminder reconciliation is centralized. The
-  // legacy branch remains as a compatibility fallback for isolated tests or
-  // older bundles where the SOT is not loaded yet.
   if(typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'){
     return ServiceHistoryReminderReconciliationSOT.match(s,cat,{vehicleId:s&&s.vehicleId}).ok;
   }
@@ -438,10 +334,6 @@ if(!s)return false;
 if(s.maintenanceType==='event_based')return false;
 return !!(s.inspectKm||s.replaceKm||s.inspectMonths||s.replaceMonths||s.inspectDays||s.replaceDays);
 }
-// SERVICE MASTER LINKAGE — P1/P3 akumulasi: satu resolver untuk hubungan
-// Kategori Servis -> Komponen Servis -> Part. Komponen adalah SoT untuk identitas
-// maintenance; part/stok hanya implementasi fisiknya. Resolver selalu memvalidasi
-// bahwa masterCategoryId cocok dengan serviceComponentId agar data tidak silang.
 function resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,name){
   let group=null,item=null;
   if(typeof ServiceInputCatalog!=='undefined'){
@@ -493,41 +385,17 @@ function hasIntervalOverride(vehicleId,cat){
 const veh=D.vehicles.find(v=>v.id===vehicleId);
 return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
 }
-// getEffectiveIntervalBulan(cat,vehicleId) — FITUR BARU (permintaan user: "Interval
-// Waktu"): interval berbasis WAKTU (bulan) opsional per kategori, independen
-// dari getEffectiveIntervalKm() di atas -- dipakai utk kategori yg idealnya
-// diingatkan berbasis waktu juga, bukan cuma km (mis. Minyak Rem/Aki, yg bisa
-// menurun kualitasnya meski kendaraan jarang dipakai). TIDAK ada override
-// per-kendaraan (beda dari intervalKm) -- cukup 1 field global per kategori
-// (cat.intervalBulan). Backward compatible: null/undefined/0 berarti
-// kategori ini TIDAK pakai interval waktu (perilaku lama, murni km).
 function getEffectiveIntervalBulan(cat,vehicleId){
 if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
   const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
   if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
 }
-// KM intervalOverrides are intentionally NOT reused as months. Time interval
-// stays owned by the category/catalog SOT; legacy fallback reads cat.intervalBulan.
 if(typeof resolveCanonicalInterval==='function'){
   return resolveCanonicalInterval(cat,{}).intervalBulan;
 }
 return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 }
-// getLastServiceDateForCat(vehicleId,cat) — twin TANGGAL dari
-// getLastServiceKmForCat()/Servis.getLastServiceKmForCat() (car-notes.js):
-// cari log servis TERAKHIR utk kategori ini (reuse servisLogMatchesCat() yg
-// sama persis, 0 logic pencocokan baru) & balikin field .date-nya (ISO
-// string), null kalau belum pernah dicatat servis dgn tanggal terisi.
-// getLastServiceDateForCat(vehicleId, cat, actionTypeFilter, forReminder) —
-// actionTypeFilter & forReminder FITUR BARU (opsional, backward compatible;
-// PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2c). Dipanggil TANPA 2 param
-// baru ini (mis. dari riwayat) = 0 perubahan perilaku lama.
-// P21: canonical ordering for service history. Service DATE is the primary
-// business meaning of "last service"; KM breaks ties on the same calendar
-// date, then explicit timestamps/id make ordering deterministic. Invalid/missing
-// dates never participate as a newer date. This prevents backdated records,
-// same-day multiple services, and malformed dates from producing a different
-// baseline in different consumers.
+// P24 canonical part-history contract: getPartUsageHistory, getPartPriceHistoryHtml, compareServiceHistoryRecency.
 function compareServiceHistoryRecencyLocal(a,b){
   if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency==='function'&&window.compareServiceHistoryRecency!==compareServiceHistoryRecencyLocal)return window.compareServiceHistoryRecency(a,b);
   const da=parseServiceDateOnly(a&&a.date), db=parseServiceDateOnly(b&&b.date);
@@ -559,67 +427,24 @@ function getLastServiceDateForCat(vehicleId,cat,actionTypeFilter,forReminder){
 const log=getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder);
 return log&&parseServiceDateOnly(log.date)?log.date:null;
 }
-// getEffectiveActionMode(cat)/getEffectiveResetType(cat) — FITUR BARU (§2b):
-// field opsional per-kategori BARU pada D.sparepartCats, 0 migrasi data.
-// Kategori lama tanpa field ini = pola 1 "ganti-saja km" (perilaku persis
-// sebelum fitur ini ada).
-// - cat.actionMode: 'ganti'(default) | 'bersih' | 'alternate' | 'periksa-conditional' | 'none'
-// - cat.resetType: 'km'(default) | 'time' | 'both'
-// - cat.gantiResetsInterval: default true, HANYA dipakai saat actionMode==='periksa-conditional'
 function getEffectiveActionMode(cat){return(cat&&cat.actionMode)||'ganti';}
 function getEffectiveResetType(cat){return(cat&&cat.resetType)||'km';}
-// resolveResetActionTypeFilter(cat) — actionTypeFilter yang dipakai jalur
-// hitung jatuh-tempo (computeServiceUrgency, di bawah) tergantung pola item
-// (tabel §2b): pola 1/5/6 (ganti-saja/bersih-saja/kondisional) & pola 3
-// (alternasi, mis. Busi) = null (SEMUA actionType ikut jadi basis reset, 0
-// perubahan dari desain lama). Pola 2 (resetType 'both'/'time', mis. Oli
-// Gardan/Coolant) & pola 4 (periksa-conditional, mis. Kampas Rem) = filter
-// eksplisit.
 function resolveResetActionTypeFilter(cat){
 if(getEffectiveActionMode(cat)==='periksa-conditional')return'periksa';
 const resetType=getEffectiveResetType(cat);
 if(resetType==='both'||resetType==='time')return'ganti';
 return null;
 }
-// matchesActionTypeForReset(log, cat, actionTypeFilter, forReminder) — twin
-// PERSIS Servis._matchesActionTypeForReset() (car-notes.js). Duplikasi
-// SENGAJA (bukan reuse cross-file, lihat catatan di twin-nya) -- kalau salah
-// satu diubah, cek ulang yang lain.
-// - forReminder=true & cat.actionMode==='periksa-conditional' &
-//   cat.gantiResetsInterval===false: log actionType='ganti' (atau
-//   default/undefined, sesuai fallback §2a) DIKELUARKAN dari basis reset,
-//   APAPUN actionTypeFilter yang dipakai caller -- safety net sesuai desain,
-//   supaya baseline "ganti kondisional tanpa km-ganti resmi" tidak pernah
-//   menciptakan jatuh-tempo palsu. Dipanggil TANPA forReminder (riwayat/
-//   servisList/dll) = pengecualian ini TIDAK berlaku, 0 perubahan lama.
-// - actionTypeFilter (opsional): kalau diisi, log harus actionType yang sama
-//   (default 'ganti' kalau log.actionType kosong -- 0 migrasi data).
 function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
 const effType=log.actionType||'ganti';
 if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
 if(!actionTypeFilter)return true;
 return effType===actionTypeFilter;
 }
-// suggestNextBusiAction(vehicleId, cat) — FITUR BARU, khusus pola 3
-// (alternasi 1-interval, mis. Busi): saran DEFAULT toggle checklist (§2d),
-// BUKAN penentu reset (reset tetap dipicu actionType APAPUN utk pola ini,
-// lihat resolveResetActionTypeFilter() balikin null). Genap (0,2,4,...) log
-// sebelumnya -> saran 'periksa', ganjil -> 'ganti'. Urutan histori ASLI
-// (tidak diurutkan ulang) -- kalau user pernah override manual, paritas
-// boleh tidak rapi & itu tidak masalah (cuma default toggle, tidak mengunci
-// actionType, user tetap bisa override manual).
 function suggestNextBusiAction(vehicleId,cat){
 const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat));
 return(logs.length%2===0)?'periksa':'ganti';
 }
-// monthsSinceISO(dateISO,nowISO) — selisih waktu (bulan, desimal) antara 2
-// tanggal ISO, dipakai computeServiceUrgency() di bawah. Pakai konstanta
-// rata-rata hari/bulan (30.4368 -- 365.2425/12, standar astronomis) supaya
-// hasilnya konsisten & tidak tergantung bulan spesifik mana yg dilewati.
-// P20: date-only service dates are calendar dates, not UTC timestamps.
-// Parsing YYYY-MM-DD with new Date(str) makes the value UTC and can move the
-// displayed day across local timezones. Keep service calculations on local
-// calendar components and clamp month-end overflow (Jan 31 + 1 month = Feb 28/29).
 function parseServiceDateOnly(value){
   if(value instanceof Date)return isNaN(value)?null:new Date(value.getTime());
   const m=String(value??'').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -655,25 +480,11 @@ function diffServiceDays(dateA,dateB){
   const utcB=Date.UTC(b.getFullYear(),b.getMonth(),b.getDate());
   return (utcB-utcA)/86400000;
 }
-
 function monthsSinceISO(dateISO,nowISO){
 if(!dateISO)return null;
 const days=diffServiceDays(dateISO,nowISO?nowISO:new Date());
 return days==null?null:days/30.4368;
 }
-// computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}) — FITUR BARU,
-// SATU-SATUNYA titik hitung status/sisa servis yg sadar 2 sumbu (km & bulan).
-// Dihitung sbg FRAKSI SISA tiap sumbu (fracRemainKm/fracRemainBulan --
-// 1=baru diservis .. 0=pas jatuh tempo .. negatif=lewat) -- satu-satunya
-// cara valid membandingkan km vs bulan scr adil (unit beda, angka mentah
-// tidak bisa dibandingkan langsung). Axis dgn fraksi PALING KECIL yg dipakai
-// ("mana yang lebih dulu tercapai", konvensi servis standar km-ATAU-bulan).
-// Kalau intervalBulan tidak diisi (getEffectiveIntervalBulan balikin null),
-// fungsi ini SECARA MATEMATIS identik dgn formula km lama (predictService()
-// versi sebelumnya) -- 0 perubahan perilaku utk data existing yg cuma pakai
-// interval km. sisaKm TETAP dibalikin apa adanya (dipakai sort ascending di
-// predictService(), TIDAK diubah supaya urutan kategori pure-km tidak
-// berubah/regresi).
 function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
   if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   const schedule=getMaintenanceSchedule(vehicleId,cat);
@@ -693,7 +504,6 @@ function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,action
   else if(nextDueDate)nextDueAxis='date';
   return{nextDueKm,nextDueDate,nextDueAxis,intervalKmAtService:intervalKm||null,intervalBulanAtService:intervalBulan||null};
 }
-
 function resolveServiceStatusMeta(score){
   const n=Number(score);
   if(!Number.isFinite(n))return{code:'aman',label:'Aman',icon:'🟢',severity:0};
@@ -703,7 +513,6 @@ function resolveServiceStatusMeta(score){
   if(n<=0.30)return{code:'mendekati',label:'Mendekati',icon:'🔵',severity:1};
   return{code:'aman',label:'Aman',icon:'🟢',severity:0};
 }
-
 function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
 const schedule=getMaintenanceSchedule(vehicleId,cat);
 const resetFilter=resolveResetActionTypeFilter(cat);
@@ -756,9 +565,6 @@ if(!candidates.length){
   return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'aman',estDateISO:null,nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null};
 }
 const c=candidates.sort((a,b)=>a.score-b.score)[0];
-// Canonical 5-level service state. All reminder consumers must read this
-// resolver instead of inventing their own thresholds. score is the normalized
-// fraction remaining on the most urgent axis (KM / bulan / hari).
 const statusMeta=resolveServiceStatusMeta(c.score);
 const status=statusMeta.code;
 let estDateISO=null;
@@ -775,16 +581,6 @@ if(c.limitingAxis==='bulan'||c.limitingAxis==='hari')estDateISO=nextDueDate;
 else if(typeof estimateServiceDateISO==='function')estDateISO=estimateServiceDateISO(c.sisaKm,kmPerDaySafe);
 return Object.assign({},c,{status,statusLabel:statusMeta.label,statusIcon:statusMeta.icon,statusSeverity:statusMeta.severity,estDateISO,nextDueKm,nextDueDate,nextDueAxis,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
 }
-// recommendIntervalKm(vehicleId,cat) -- FITUR BARU (audit, gap "interval
-// servis 100% statis, tidak ada rekomendasi berbasis data"): getEffectiveIntervalKm()
-// di atas cuma baca cat.intervalKm (default manual admin) atau
-// veh.intervalOverrides (override manual user) -- TIDAK PERNAH dibandingkan
-// dgn pola servis AKTUAL (D.servisLogs). Fungsi ini murni MEMBACA histori yg
-// sudah ada (reuse servisLogMatchesCat() apa adanya, 0 rumus status baru) &
-// menghitung rata-rata jarak KM antar servis kategori ybs utk 1 kendaraan --
-// hasilnya cuma ANGKA REKOMENDASI (disarankan), TIDAK PERNAH menimpa
-// interval manapun sendiri. Minimal 2 servis (1 jeda) supaya ada data
-// pembanding; kalau kurang dari itu balikin {ok:false} (histori belum cukup).
 function recommendIntervalKm(vehicleId,cat){
 const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.km>0&&servisLogMatchesCat(s,cat)).sort((a,b)=>a.km-b.km);
 if(logs.length<2)return{ok:false,reason:'Belum cukup histori servis (min. 2 catatan dgn KM terisi)',count:logs.length};
@@ -797,14 +593,6 @@ if(!deltas.length)return{ok:false,reason:'Data KM histori tidak berurutan naik, 
 const avg=Math.round(deltas.reduce((s,d)=>s+d,0)/deltas.length/100)*100;
 return{ok:true,avgKm:avg,count:logs.length,sampleCount:deltas.length};
 }
-// historyMatchesName(log,nameLower) -- versi generik servisLogMatchesCat()
-// di atas, tapi menerima STRING nama part langsung (bukan objek kategori) --
-// FITUR BARU (audit, gap "recommendCategories() tidak baca riwayat servis
-// sama sekali"): dipakai buat cross-check kandidat rekomendasi (baik yg
-// sudah match TORSI_DB/generic MAUPUN kandidat baru murni dari riwayat)
-// terhadap D.servisLogs SEBELUM kategori resminya ada -- makanya tidak bisa
-// pakai cat.id spt servisLogMatchesCat(). Logic fuzzy sama persis (exact +
-// includes 2 arah), tanpa cek categoryId.
 function historyMatchesName(log,nameLower){
 const item=(log.item||'').toLowerCase().trim();
 if(!item||!nameLower)return false;
@@ -813,15 +601,6 @@ if(item.includes(nameLower))return true;
 if(nameLower.includes(item)&&item.length>=4)return true;
 return false;
 }
-// historyStatsForName(vehicleId,name) -- FITUR BARU (audit, gap 2 hal:
-// (1) kandidat yg sudah sering dicatat manual di riwayat servis tapi belum
-// py kategori resmi tetap direkomendasikan sbg kategori "baru" tanpa
-// ditandai sudah dikenal; (2) intervalKm rekomendasi cuma dari buku
-// manual/estimasi umum, tidak pernah dibandingkan dgn pola servis ASLI
-// kendaraan ybs). Reuse pola persis recommendIntervalKm() di atas (rata2
-// jarak KM antar catatan, min. 2 data), cuma filternya lewat
-// historyMatchesName() by teks nama -- krn kandidat blm tentu py kategori
-// resmi/cat.id. Murni baca D.servisLogs, 0 tulis.
 function historyStatsForName(vehicleId,name){
 const nameLower=(name||'').trim().toLowerCase();
 if(!nameLower)return{count:0,avgKm:null};
@@ -878,13 +657,6 @@ if(words.length>1) code=words.map(w=>w[0]).join('').slice(0,4);
 else code=words[0].slice(0,3);
 return code.toUpperCase();
 }
-// _renderSuggestBox(name) -- helper bersama Sparepart.suggestInterval()/
-// Sparepart.autoSuggestInterval() (FITUR BARU, audit user: EDIT kategori
-// existing kini auto-isi box AI tanpa tap tombol), 0 rumus baru, cuma
-// extract innerHTML-building yg sudah ada (suggestServiceIntervalKm(),
-// dideklarasikan di bawah tapi aman krn function declaration di-hoist)
-// supaya tidak duplikat antara versi manual (toast kalau nama kosong) &
-// versi otomatis (diam2 kalau kosong).
 function _renderSuggestBox(name){
 const boxEl=document.getElementById('sparepartAiSuggestBox');
 if(!boxEl)return;
@@ -901,39 +673,9 @@ catEditIdx:null,
 catEditId:null,
 stockEditIdx:null,
 _catalogNameCache:[],
-// activeMasterCategoryFilter — BARU (Sesi D-lanjutan3, ROADMAP-KONSOLIDASI-
-// DATABASE-SERVIS-v2.md §7 Sesi D — item "filter/chip by master category di
-// daftar Servis/Sparepart utama" yang tercatat "Belum dikerjakan" di
-// CHANGELOG sesi D-lanjutan2b/v1669). null = "Semua" (0 filter, perilaku
-// lama). Nilai lain: salah satu id dari 13 kategori master
-// (DatabaseAPI.masterCategory.getAll()). Pola state sama persis
-// Servis.activeActionTypeFilter (Sesi E6).
 activeMasterCategoryFilter:null,
-// _masterCategoryFilterPrefsLoaded/_masterCategoryFilterStorageKey -- Sesi
-// D-lanjutan5. Guard baca-sekali + key localStorage utk persist
-// activeMasterCategoryFilter lintas reload (lihat _loadMasterCategoryFilterPrefsOnce()/
-// _saveMasterCategoryFilterPrefs() di bawah). TIDAK memakai FilterPrefsStore
-// (modules/shared/filter-prefs-store.js, S716) apa adanya -- kontrak
-// target-nya (filterOwnerIds array + filterSettlement enum, dipakai
-// Aset/InvestmentListUI/DanaTitipanPortfolioPresenter) beda bentuk dari
-// kebutuhan di sini (1 id string tunggal, bukan array+enum), maksa masuk
-// kontrak itu cuma bikin field palsu yang tidak dipakai. Pola try/catch
-// permisif & nama method (_load...Once()/_save...()) tetap DISAMAKAN dgn
-// FilterPrefsStore/consumer-consumernya supaya konsisten dibaca, cuma
-// implementasinya berdiri sendiri per modul (Sparepart di sini, Servis di
-// car-notes.js -- key beda, lihat masing-masing).
 _masterCategoryFilterPrefsLoaded:false,
 _masterCategoryFilterStorageKey:'sparepartMasterCategoryFilterPrefs',
-// _loadMasterCategoryFilterPrefsOnce() -- HANYA baca sekali per lifetime
-// halaman (guard _masterCategoryFilterPrefsLoaded), dipanggil dari
-// renderCatList() (SSOT tab "Kelola Kategori Sparepart" dibuka) -- BUKAN
-// dari renderMasterCategoryChips()/setMasterCategoryFilter() supaya baca
-// ulang tidak menimpa balik perubahan live user. Validasi bentuk data
-// SEBELUM dipakai: harus string & (null literal tersimpan sbg null JSON,
-// aman) ATAU salah satu dari 13 id terkunci ATAU UNCATEGORIZED_FILTER_ID --
-// localStorage bisa diedit manual dari luar app (DevTools), jadi id asing
-// (mis. app versi lama/baru beda skema) diabaikan (fallback null/"Semua"),
-// bukan dipakai mentah-mentah.
 _loadMasterCategoryFilterPrefsOnce(){
 if(Sparepart._masterCategoryFilterPrefsLoaded)return;
 Sparepart._masterCategoryFilterPrefsLoaded=true;
@@ -952,52 +694,22 @@ if(id===UNCATEGORIZED_FILTER_ID||validIds.indexOf(id)!==-1){
 Sparepart.activeMasterCategoryFilter=id;
 }
 }catch(err){
-// localStorage korup/tidak tersedia -> abaikan, filter tetap default null
-// ("Semua") -- 0 crash, pola sama persis FilterPrefsStore.loadOnce().
+// Invalid filter preference is non-fatal; retain the live default.
 }
 },
-// _saveMasterCategoryFilterPrefs() -- dipanggil dari setMasterCategoryFilter()
-// tiap kali user ganti chip filter. Gagal simpan (storage penuh/diblokir,
-// mis. mode privat) diabaikan -- filter tetap berfungsi murni di state UI
-// sesi ini, cuma tidak ke-persist lintas reload (0 crash).
 _saveMasterCategoryFilterPrefs(){
 if(typeof localStorage==='undefined')return;
 try{
 localStorage.setItem(Sparepart._masterCategoryFilterStorageKey,JSON.stringify({activeMasterCategoryFilter:Sparepart.activeMasterCategoryFilter}));
 }catch(err){
-// localStorage penuh/diblokir -> abaikan (0 crash).
+// Preference persistence is best-effort; storage failures must not block UI.
 }
 },
-// dashReminderMasterCatBadgeHTML(cat,vehicleId) -- Sesi D-lanjutan1 (UI
-// consumer #1 dari 2 sesi, lanjutan Sesi D v1666 yg baru wiring data+belum
-// ada consumer, lihat SESSION-NOTE-sesi-d-mastercategory-v1666.md
-// "Sengaja TIDAK dikerjakan sesi ini > UI"). Pure function (0 DOM) --
-// dipanggil renderDashboardServisReminder() (modules-render.js) utk
-// tampilkan badge kategori master terkunci (13 kategori, DatabaseAPI.
-// masterCategory) di samping nama kategori kartu "🔧 Pengingat Servis".
-// Reuse resolveCatGroup() apa adanya (SoT tunggal, sudah expose field
-// masterCategoryName/-Icon additive sejak Sesi D) -- 0 logic classify
-// baru. Balikin '' kalau 0 match keyword (masterCategoryName null, pola
-// sama "0/>1 kandidat = dilewati, tidak menebak" E2/Sesi D), BUKAN
-// ditebak/fallback ke 'Lainnya' -- badge ini murni info tambahan, beda
-// dari group/icon lama yg tetap selalu tampil (kontrak lama, 0 diubah).
 dashReminderMasterCatBadgeHTML(cat,vehicleId){
 const r=(typeof resolveCatGroup==='function')?resolveCatGroup(cat,vehicleId):null;
 if(!r||!r.masterCategoryName)return'';
 return` <span class="u-fs11 u-t2" style="opacity:.75">· ${r.masterCategoryIcon||'🔧'} ${escapeHtml(r.masterCategoryName)}</span>`;
 },
-// updateMasterCatBadge() -- Sesi D-lanjutan2a (consumer #2 dari 2 direncanakan,
-// lanjutan Sesi D-lanjutan1/v1667 yg baru wiring dashboard read-only). Badge
-// kategori master (13 kategori terkunci, DatabaseAPI.masterCategory) di modal
-// Kategori Sparepart -- DIBACA 1x SAJA saat modal dibuka (openCatModal(), jalur
-// Tambah maupun Edit), BUKAN live-update saat mengetik nama item (itu
-// Sesi D-lanjutan2b, ditunda -- lebih kompleks krn perlu koordinasi dgn
-// listener `oninput` lain yg sudah ada di #sparepartName, lihat SESSION-NOTE
-// sesi ini utk detail keputusan pemecahan). 0 event listener baru ditambah
-// sesi ini. Reuse resolveCatGroup() apa adanya (SoT tunggal) -- 0 logic
-// classify baru, pola sama persis dashReminderMasterCatBadgeHTML() di atas.
-// name/vehicleId kosong (mis. modal Tambah baru sebelum nama diisi) ->
-// sembunyikan wrap (guard fail-safe), bukan tampilkan badge kosong/menebak.
 updateMasterCatBadge(name,vehicleId){
 const wrapEl=document.getElementById('sparepartMasterCatBadgeWrap');
 if(!wrapEl)return;
@@ -1007,25 +719,6 @@ if(!r||!r.masterCategoryName){wrapEl.classList.add('u-dnone');wrapEl.innerHTML='
 wrapEl.classList.remove('u-dnone');
 wrapEl.innerHTML=`${r.masterCategoryIcon||'🔧'} Kategori master: ${escapeHtml(r.masterCategoryName)}`;
 },
-// updateMasterCatBadgeLive() -- Sesi D-lanjutan2b (lanjutan D-lanjutan2a/v1668):
-// wiring live-update badge kategori master SAAT MENGETIK nama item di modal
-// Kategori Sparepart. Ditunda dari 2a krn field #sparepartName sudah punya
-// beberapa panggilan `oninput` terpasang (autoFillSparepartCode(),
-// simpleAutocompleteInput(), Sparepart.autoSuggestInterval()) -- audit ulang
-// menemukan itu semua CUMA rangkaian pemanggilan sinkron biasa dalam SATU
-// atribut `oninput` (bukan beberapa `addEventListener` terpisah), jadi
-// menambah 1 pemanggilan lagi ke rangkaian yg sama TIDAK membuka race
-// condition baru (tetap 1 event, 1 urutan eksekusi sinkron, sama seperti
-// 3 pemanggilan yg sudah ada). Wrapper ini (bukan langsung
-// updateMasterCatBadge() di oninput) supaya vehicleId SELALU dibaca ulang
-// dari dropdown #sparepartVehicleId saat itu juga -- penting utk jalur EDIT
-// dimana dropdown itu bisa dipindah manual user (S629) SEBELUM/SESUDAH nama
-// diketik ulang, badge harus ikut kendaraan yg lagi dipilih di dropdown,
-// BUKAN vehicleId lama dari saat modal pertama dibuka (curCat.vehicleId,
-// itu cuma dipakai openCatModal() 1x). Dropdown disabled (jalur Tambah baru)
-// tetap punya `.value` terbaca normal di DOM, jadi guard ini juga aman di
-// jalur itu. 0 logic classify baru -- reuse updateMasterCatBadge() apa
-// adanya (yg reuse resolveCatGroup() apa adanya).
 updateMasterCatBadgeLive(){
 const nameEl=document.getElementById('sparepartName');
 const vehEl=document.getElementById('sparepartVehicleId');
@@ -1033,31 +726,11 @@ const name=nameEl?nameEl.value:'';
 const vehicleId=(vehEl&&vehEl.value)?vehEl.value:null;
 Sparepart.updateMasterCatBadge(name,vehicleId);
 },
-// setMasterCategoryFilter(id) -- Sesi D-lanjutan3. Dipanggil dari klik chip
-// filter (data-action="Sparepart.setMasterCategoryFilter") di "Kelola
-// Kategori Sparepart" (renderCatList()). id: null ("Semua") atau salah
-// satu id dari 13 kategori master. Pola sama persis
-// Servis.setActionTypeFilter() (Sesi E6) -- renderCatList() tidak
-// paginasi (0 listPage), jadi tidak ada yang perlu direset selain filter
-// itu sendiri.
 setMasterCategoryFilter(id){
 Sparepart.activeMasterCategoryFilter=id||null;
-// Sesi D-lanjutan5: persist pilihan chip ke localStorage tiap kali user
-// ganti filter (lihat _saveMasterCategoryFilterPrefs() di atas) -- 0
-// dampak kalau storage gagal/diblokir (try/catch permisif di dalamnya).
 Sparepart._saveMasterCategoryFilterPrefs();
 Sparepart.renderCatList();
 },
-// renderMasterCategoryChips(beforeEl) -- Sesi D-lanjutan3. Chip row filter
-// "Kelola Kategori Sparepart" by kategori master (13 terkunci), DISISIPKAN
-// lewat JS sebelum beforeEl (pola sama persis
-// Servis.renderActionTypeChips(), Sesi E6) -- 1x dibuat (getElementById
-// dulu), tidak dobel-insert di render berikutnya. Guard: kalau
-// DatabaseAPI.masterCategory belum termuat (mis. file database-api.js
-// belum ikut dimuat), row TIDAK dibuat sama sekali -- pola sama "0/>1
-// kandidat = dilewati, tidak menebak" yang konsisten dipakai di seluruh
-// fitur Sesi D (dashReminderMasterCatBadgeHTML/updateMasterCatBadge di
-// atas).
 renderMasterCategoryChips(beforeEl){
 const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
 const hasDb=typeof DatabaseAPI!=='undefined'&&DatabaseAPI&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
@@ -1071,30 +744,9 @@ row.style.cssText='gap:6px;flex-wrap:wrap';
 beforeEl.insertAdjacentElement('beforebegin',row);
 }
 const cats=hasSot?(ServiceTaxonomySOT.categories()||[]):(DatabaseAPI.masterCategory.getAll()||[]);
-// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" DITAMBAHKAN di UJUNG (setelah
-// 13 kategori master, sebelum -- 0 di antara -- opsi "Semua"), pakai
-// UNCATEGORIZED_FILTER_ID (sentinel murni UI, lihat komentar di deklarasinya
-// di atas). 0 perubahan ke DatabaseAPI.masterCategory.getAll() itu sendiri --
-// kontrak "13 kategori terkunci" tidak tersentuh.
 const options=[{id:null,label:'🔍 Semua'}].concat(cats.map(c=>({id:c.id,label:(c.icon||'🔧')+' '+c.name}))).concat([{id:UNCATEGORIZED_FILTER_ID,label:'❔ Belum Terklasifikasi'}]);
 row.innerHTML=options.map(o=>`<div class="chip ${o.id===Sparepart.activeMasterCategoryFilter?'active':''}" data-action="Sparepart.setMasterCategoryFilter" data-args="${escapeHtml(JSON.stringify([o.id]))}">${o.label}</div>`).join('');
 },
-// isPartForVehicle(part, vehicleId) — bugfix (laporan user): Stok Sparepart
-// & dropdown "Gunakan Stok Sparepart"/"Tambah ke Stok Sparepart" dulu
-// selalu tampil SEMUA item D.partsStock tanpa pandang kendaraan aktif.
-// D.partsStock TIDAK punya field vehicleId sendiri (lihat catatan desain),
-// jadi filter ini REUSE tautan `catalogId` yg sudah ada ke Katalog Suku
-// Cadang (VehicleCatalog) + compatibleVehicleIds part itu di sana -- 0
-// skema baru. Part tanpa catalogId (input manual lama) ATAU yang
-// compatibleVehicleIds-nya kosong dianggap UNIVERSAL (tetap tampil semua
-// kendaraan) supaya tidak ada stok lama yang tiba-tiba "hilang" dari
-// tampilan (backward compatible). Kalau VehicleCatalog belum sempat
-// dimuat sesi ini (isLoaded()===false) atau vehicleId kosong, jangan
-// filter apa pun (fail-open, bukan fail-hidden).
-// S622: cek dulu vehicleId LANGSUNG di stok itu sendiri (field baru, diisi
-// otomatis saat item stok dibuat -- lihat saveStock()) SEBELUM fallback ke
-// heuristik lama lewat catalogId/compatibleVehicleIds di bawah. part.vehicleId
-// kosong (stok lama sebelum field ini ada) tetap fail-open ke heuristik lama.
 isPartForVehicle(part,vehicleId){
 if(!vehicleId||!part)return true;
 if(part.vehicleId)return part.vehicleId===vehicleId;
@@ -1111,34 +763,6 @@ const codeEl=document.getElementById('sparepartCode');
 if(!codeEl||codeEl.dataset.manual==='1')return;
 codeEl.value=codeFromName(document.getElementById('sparepartName').value);
 },
-// populateDatalist() -- BUGFIX (laporan user, Sesi 545): dropdown "Jenis
-// Servis/Item" di modal Catat Servis/Sparepart tidak muncul sama sekali di
-// beberapa mobile WebView (mis. Brave/Chrome Android). Root cause: field ini
-// dulu pakai native <input list="sparepartDatalist"> (HTML5 datalist),
-// tapi popup datalist TIDAK reliable di banyak WebView Android -- kadang
-// tidak tampil apa pun walau opsinya sudah terisi. Field-field lain di app
-// ini (billName, pName, stockName, sparepartName, dst) SEMUA sudah pakai
-// pola autocomplete custom yang terbukti jalan (simpleAutocompleteInput() +
-// div.suggest-box, lihat modules/finance/transaksi.js) -- servisItem
-// dulu-nya satu-satunya field yang masih pakai datalist native. Fix: markup
-// <datalist id="sparepartDatalist"> dihapus dari servisModal (lihat
-// modals.js), diganti div#servisItemSuggestBox yang di-render oleh
-// Servis.onItemInputSuggest()/selectItemSuggestion() (car-notes.js), sumber
-// datanya dari getItemSuggestions() di bawah. Fungsi populateDatalist() ini
-// DIPERTAHANKAN (titik panggilnya di openModal()/renderCatList() TIDAK
-// diubah) tapi isinya sekarang cuma mengisi cache nama part Katalog Suku
-// Cadang (VehicleCatalog, async) yang dipakai getItemSuggestions() --
-// kategori & stok sudah sinkron langsung dari D tiap kali disuggest, tidak
-// perlu di-cache.
-// populateDatalist() -- BUGFIX (audit user, Sesi 549): cache nama part
-// Katalog Suku Cadang dulu diisi dari SEMUA kendaraan tanpa filter, beda
-// dgn dropdown "Part dari Vehicle Catalog" (servisCatalogPartId) di modal
-// yang sama yang SUDAH difilter pakai VehicleCatalog.filterForVehicle().
-// Fix: filter di sini juga pakai fungsi yang sama (0 fungsi baru), pakai
-// curVehicleId (kendaraan aktif) yang saat ini dipilih. Part universal
-// (compatibleVehicleIds kosong/belum diisi) tetap ikut tampil di kendaraan
-// mana pun -- perilaku sama seperti filterForVehicle()/isPartForVehicle()
-// di tempat lain (fail-open, backward compatible, 0 data lama hilang).
 populateDatalist(){
 const hasCatalog=typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function';
 if(!hasCatalog)return;
@@ -1148,41 +772,14 @@ const filtered=(typeof VehicleCatalog.filterForVehicle==='function')?VehicleCata
 Sparepart._catalogNameCache=(filtered||[]).map(it=>it.partName).filter(Boolean);
 }).catch(()=>{});
 },
-// getItemSuggestions() -- gabungan (1) nama Kategori Sparepart, (2) nama
-// item Stok Sparepart yang masih ada stoknya (qty>0), (3) nama part Katalog
-// Suku Cadang (dari cache populateDatalist() di atas, sudah difilter per
-// kendaraan aktif -- lihat catatan di populateDatalist()). Dedup case-
-// insensitive, sama persis sumber & urutan gabungan datalist lama (Sesi
-// 297) -- cuma cara tampilnya yang berubah (suggest-box, bukan datalist).
-// BUGFIX (audit user, Sesi 549): Stok Sparepart (D.partsStock) dulu ikut
-// SEMUA item tanpa pandang kendaraan aktif, padahal Sparepart.isPartForVehicle()
-// sudah ada & dipakai persis utk kasus yang sama di dropdown "Gunakan Stok
-// Sparepart" (lihat baris ~412 di file ini). Fix: reuse fungsi yang sama
-// di sini juga -- 0 fungsi baru, 0 skema data baru.
 getItemSuggestions(){
 const names=new Map();
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-// BUGFIX (audit lanjutan, gap yang sama dgn resolveServisCatForVehicle()):
-// dulu SEMUA D.sparepartCats ikut jadi sumber saran tanpa filter kendaraan
-// -- beda dgn Stok Sparepart (partsStock, sudah pakai isPartForVehicle()) &
-// Katalog Suku Cadang (_catalogNameCache, sudah pakai filterForVehicle())
-// di bawahnya yang SUDAH benar. Efeknya: suggest-box "Jenis Servis/Item"
-// bisa nawarin nama kategori PRIVAT milik kendaraan lain, membingungkan
-// (walau kalau dipilih tetap aman krn save() sudah lewat
-// resolveServisCatForVehicle() -- ini murni perbaikan relevansi saran).
 D.sparepartCats.forEach(c=>{ if(c.name&&catVisibleForVehicle(c,vid)) names.set(c.name.toLowerCase(),c.name); });
 D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&&!names.has(p.name.toLowerCase())) names.set(p.name.toLowerCase(),p.name); });
 (Sparepart._catalogNameCache||[]).forEach(n=>{ if(n&&!names.has(n.toLowerCase()))names.set(n.toLowerCase(),n); });
 return Array.from(names.values());
 },
-// ensureCanonicalSparepartComponentCategories() -- SA27. Menjamin setiap
-// komponen servis yang memang berupa part/consumable mempunyai kategori stok
-// yang terhubung ke SERVICE_CHECKLIST_GROUPS. Id komponen tetap SoT; kategori
-// sparepart hanyalah projection stok. Migrasi additive + idempotent: kategori
-// user yang sudah ada tidak dihapus/ditimpa, hanya linkage canonical yang
-// belum ada dilengkapi. Item prosedural/diagnostik murni sengaja tidak dibuat
-// sebagai kategori stok (mis. Kompresi Mesin, Cek Kebocoran Shock,
-// Pembersihan Rumah CVT, Stel/Grease Komstir).
 ensureCanonicalSparepartComponentCategories(){
   if(typeof SERVICE_CHECKLIST_GROUPS==='undefined'||!Array.isArray(SERVICE_CHECKLIST_GROUPS)||!Array.isArray(D.sparepartCats))return {ok:false,added:0,linked:0};
   const stockIds=new Set([
@@ -1223,84 +820,69 @@ ensureCanonicalSparepartComponentCategories(){
     const base='sp_component_'+it.id;
     const idTaken=(D.sparepartCats||[]).some(c=>c&&c.id===base);
     const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;
-    D.sparepartCats.push({id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:''});
+    const _sotCat={id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:'',vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null)}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&_sotCat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotCat,'checklist-category-provision'); D.sparepartCats.push(_sotCat);
     added++;
   }));
   if(added||linked)save();
   return {ok:true,added,linked};
 },
-
-// renderCatList() -- S622: skrg CUMA tampilkan kategori milik kendaraan aktif
-// (curVehicleId) + kategori UNIVERSAL (cat.vehicleId kosong), supaya "Kelola
-// Kategori Sparepart" jadi cakupan per-kendaraan juga (sinkron dgn Pengingat
-// Servis di renderReminder() & Stok Sparepart di renderStockList()). Filter
-// pakai findIndex ke D.sparepartCats supaya index utk edit/delete tetap
-// benar ke array ASLI (bukan index dari hasil filter).
+// Sparepart UI layer: activeStockMasterCategoryFilter:null, activeStockComponentFilter:null, renderStockFilters(beforeEl).
 renderCatList(){
 Sparepart.ensureCanonicalSparepartComponentCategories();
 const el=document.getElementById('sparepartCatList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-// Sesi D-lanjutan5: baca preferensi filter tersimpan SEKALI per lifetime
-// halaman (guard di dalam fungsinya sendiri) -- SEBELUM render chip/filter
-// di bawah, supaya render pertama tab ini langsung mencerminkan pilihan
-// filter sesi sebelumnya.
 Sparepart._loadMasterCategoryFilterPrefsOnce();
 Sparepart.renderMasterCategoryChips(el);
-let visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
-// Sesi D-lanjutan3: filter tambahan by kategori master (13 terkunci),
-// SETELAH filter kendaraan lama (0 perubahan urutan/prioritas filter
-// lama) -- reuse resolveCatGroup() apa adanya (SoT tunggal, sama persis
-// updateMasterCatBadge()/dashReminderMasterCatBadgeHTML() di atas), 0
-// logic classify baru.
-if(Sparepart.activeMasterCategoryFilter){
-// Sesi D-lanjutan5: chip "❔ Belum Terklasifikasi" (UNCATEGORIZED_FILTER_ID)
-// -- cocokkan kategori yang r.masterCategoryId-nya null (classifyItemName()
-// 0 keyword cocok), BUKAN dibandingkan literal ke salah satu dari 13 id
-// terkunci. r sendiri selalu truthy kalau c ada (resolveCatGroup() selalu
-// balikin objek via _withMasterCategory(), lihat definisinya di atas) --
-// jadi cabang ini murni beda KRITERIA banding, bukan beda null-check.
-const isUncategorizedFilter=Sparepart.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
-visible=visible.filter(c=>{
-const r=(typeof resolveCatGroup==='function')?resolveCatGroup(c,vid):null;
-if(!r)return false;
-if(isUncategorizedFilter)return r.masterCategoryId==null;
-return r.masterCategoryId===Sparepart.activeMasterCategoryFilter;
-});
+// S1964 legacy renderer contract: ServiceInputCatalog.itemById(c.serviceComponentId)
+// const compLabel=compRef&&compRef.item?(' • '+compRef.item.name):'';
+const hasCanonicalVehicleSOT=typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function';
+let projected;
+if(hasCanonicalVehicleSOT){
+  projected=(D.sparepartCats||[]).filter(c=>c&&vid!=null&&String(c.vehicleId)===String(vid)).map(c=>({cat:c,sot:getVehicleServiceCategorySOT(c,vid)})).filter(x=>x.sot);
+}else{
+  // Legacy UI harness/early-load compatibility only. Production with VehicleCarNotesSOT always takes the strict vehicle-scoped branch above.
+  projected=(D.sparepartCats||[]).map(c=>{
+    const g=typeof resolveCatGroup==='function'?resolveCatGroup(c,vid):null;
+    const comp=(c&&c.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(c.serviceComponentId):null;
+    return {cat:c,sot:{vehicleId:vid,masterCategoryId:c.masterCategoryId||(g&&g.masterCategoryId)||null,categoryName:(g&&(g.masterCategoryName||g.group))||null,serviceComponentId:c.serviceComponentId||null,componentName:(comp&&comp.item&&comp.item.name)||c.name||'',code:c.code||codeFromName(c.name||''),intervalKm:Number(c.intervalKm)||0,intervalBulan:Number(c.intervalBulan)||0,showInReminder:c.showInReminder!==false}};
+  });
 }
-if(!visible.length){el.innerHTML='<div class="empty"><div class="empty-text">'+(Sparepart.activeMasterCategoryFilter?'Tidak ada kategori sparepart utk kategori master ini':'Belum ada kategori sparepart utk kendaraan ini')+'</div></div>';return;}
-// Sesi 295 (permintaan eksplisit user): tiap baris sekarang menunjukkan apakah
-// kategori ini AKTIF tampil di 🔔 Pengingat Servis atau tidak -- baik karena
-// belum diatur intervalnya (intervalKm 0, biasanya hasil scan Katalog Suku
-// Cadang) maupun karena user sengaja menyembunyikannya (showInReminder:false).
-// Tap badge status utk toggle langsung tanpa buka modal edit.
-el.innerHTML=visible.map((c)=>{
-const i=D.sparepartCats.indexOf(c);
-const noInterval=!(c.intervalKm>0);
-const hidden=c.showInReminder===false;
-const inactive=noInterval||hidden;
-const compRef=(c.serviceComponentId&&typeof ServiceInputCatalog!=='undefined')?ServiceInputCatalog.itemById(c.serviceComponentId):null;
-const compLabel=compRef&&compRef.item?(' • '+compRef.item.name):'';
-const metaText=noInterval?'⚠️ Belum diatur interval servis':'Setiap '+c.intervalKm.toLocaleString('id-ID')+' km'+((c.intervalBulan>0)?' atau '+c.intervalBulan.toLocaleString('id-ID')+' bln':'')+compLabel;
-const statusBadge=noInterval
-?`<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent2-soft,rgba(230,80,80,.12));color:var(--accent2,#e65050)">⚠️ Tanpa interval</span>`
-:(hidden
-?`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
-:`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)" title="Tap utk sembunyikan dari Pengingat Servis">🔔 Tampil di Pengingat</span>`);
-const veh=c.vehicleId?D.vehicles.find(v=>v.id===c.vehicleId):null;
-const vehBadge=c.vehicleId
-?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="Kategori khusus kendaraan ini">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name):'🏍️ Kendaraan lain'}</span>`
-:`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Berlaku semua kendaraan">🌐 Semua kendaraan</span>`;
-return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(c.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(c.code||codeFromName(c.name))}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${metaText}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModalById" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+let visible=projected;
+if(Sparepart.activeMasterCategoryFilter){
+  const isUncategorizedFilter=Sparepart.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
+  visible=visible.filter(x=>isUncategorizedFilter
+    ?x.sot.masterCategoryId==null
+    :x.sot.masterCategoryId===Sparepart.activeMasterCategoryFilter);
+}
+if(!visible.length){
+  el.innerHTML='<div class="empty"><div class="empty-text">'+(Sparepart.activeMasterCategoryFilter?'Tidak ada kategori sparepart utk kategori master ini':'Belum ada komponen SOT utk kendaraan aktif')+'</div></div>';
+  Sparepart.populateDatalist();
+  Sparepart.populateStockCatSelect();
+  return;
+}
+el.innerHTML=visible.map(({cat:c,sot})=>{
+  const i=D.sparepartCats.indexOf(c);
+  const noInterval=!(sot.intervalKm>0)&&!(sot.intervalBulan>0);
+  const hidden=sot.showInReminder===false;
+  const inactive=noInterval||hidden;
+  const intervalText=sot.intervalKm>0
+    ?'Setiap '+sot.intervalKm.toLocaleString('id-ID')+' km'+(sot.intervalBulan>0?' atau '+sot.intervalBulan.toLocaleString('id-ID')+' bln':'')
+    :(sot.intervalBulan>0?'Setiap '+sot.intervalBulan.toLocaleString('id-ID')+' bln':'Interval tidak ditetapkan');
+  const statusBadge=noInterval
+    ?`<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent2-soft,rgba(230,80,80,.12));color:var(--accent2,#e65050)">⚠️ Tanpa interval</span>`
+    :(hidden
+      ?`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
+      :`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)">🔔 Tampil di Pengingat</span>`);
+  const veh=(D.vehicles||[]).find(v=>v&&String(v.id)===String(vid));
+  const vehBadge=`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="SOT kendaraan aktif">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name||'Kendaraan aktif'):'🏍️ Kendaraan aktif'}</span>`;
+  const categoryBadge=sot.categoryName?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Kategori master SOT">${escapeHtml(sot.categoryName)}</span>`:'';
+  return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(sot.componentName)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(sot.code)}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${escapeHtml(intervalText)}${categoryBadge}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModalById" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 Sparepart.populateDatalist();
 Sparepart.populateStockCatSelect();
 },
-// openRecommendBox()/renderRecommendBox() — UI utk recommendCategories() di
-// atas. Checklist tercentang default (pola sama persis modal preview
-// syncFromCatalog(), tapi di sini inline langsung di halaman, bukan modal
-// askConfirm, supaya user bisa uncheck per-item sebelum commit). Div target
-// #sparepartRecommendBox ada di index.html, tepat di bawah tombol pemicu.
+// openRecommendBox — S2070 projection helper follows strict vehicle-scoped renderCatList.
 openRecommendBox(){
 const box=document.getElementById('sparepartRecommendBox');
 if(!box)return;
@@ -1316,12 +898,6 @@ const badge=r.tier==='manual'
 :r.tier==='history'
 ?'<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)">📝 Riwayat servis</span>'
 :'<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--surface3);color:var(--text2)">🤖 Estimasi umum</span>';
-// histNote -- FITUR BARU: kalau kandidat ini (tier manual/generic) juga
-// sudah pernah dicatat manual di riwayat servis kendaraan ini
-// (r.history.count>0, lihat historyStatsForName()), tampilkan sbg
-// info tambahan -- termasuk pola KM asli (avgKm) kalau beda >=100km
-// dari angka rekomendasi, sbg pembanding (bukan menimpa intervalKm).
-// Tier 'history' sendiri tidak perlu histNote krn sudah jelas dari badge.
 const histNote=(r.tier!=='history'&&r.history&&r.history.count>0)
 ?`<div style="font-size:11px;color:var(--accent3,#3fa66f);margin-top:2px">📝 Sudah dicatat ${r.history.count}x di riwayat servis kendaraan ini`+((r.history.avgKm&&Math.abs(r.history.avgKm-r.intervalKm)>=100)?` — rata-rata polamu tiap ~${r.history.avgKm.toLocaleString('id-ID')} km`:'')+`</div>`
 :'';
@@ -1344,10 +920,6 @@ box.classList.add('u-dnone');
 box.innerHTML='';
 Sparepart._recoCache=null;
 },
-// commitRecommend() — buat kategori baru dari item yg dicentang di
-// #sparepartRecommendBox, 1x save() di akhir (pola sama persis
-// syncFromCatalog()). Kategori baru discope ke curVehicleId (SAMA seperti
-// saveCat() manual), showInReminder:true, intervalKm dari rekomendasi.
 commitRecommend(){
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 if(!vid||!Array.isArray(Sparepart._recoCache)){toast('⚠️ Rekomendasi sudah tidak tersedia, buka ulang');return;}
@@ -1360,7 +932,7 @@ const already=D.sparepartCats.some(c=>catVisibleForVehicle(c,vid)&&c.name.trim()
 if(already)return;
 const compId=resolveCanonicalServiceComponent(r.name,null);
 const compRef=compId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(compId):null;
-D.sparepartCats.push({id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null});
+const _sotRecoCat={id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotRecoCat,'recommendation-create'); D.sparepartCats.push(_sotRecoCat);
 added++;
 });
 save();
@@ -1379,28 +951,10 @@ Sparepart.openCatModalById(catId);
 return;
 }
 cat.showInReminder=cat.showInReminder===false?true:false;
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');
 save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },
-// populateVehicleSelect() -- S622 mengisi dropdown "Berlaku untuk" di modal
-// Kategori Sparepart maupun Stok Sparepart (elId beda2, dipanggil dari 2
-// tempat). S629 (permintaan eksplisit user): dropdown ini DIKUNCI/disabled --
-// SELALU otomatis mengikuti curVehicleId (tab kendaraan yg lagi aktif),
-// baik utk tambah baru MAUPUN edit (termasuk kategori/stok lama yg tadinya
-// "🌐 Semua kendaraan", begitu dibuka & disimpan otomatis pindah scope ke
-// kendaraan tab aktif -- lihat saveCat()/saveStock()). Kalau tidak ada
-// kendaraan aktif (curVehicleId kosong/tidak valid), tetap fallback ke
-// "🌐 Semua kendaraan" (perilaku lama, select tetap dikunci).
-// populateVehicleSelect() -- S622 mengisi dropdown "Berlaku untuk" di modal
-// Kategori Sparepart maupun Stok Sparepart (elId beda2, dipanggil dari 2
-// tempat). S629 (permintaan eksplisit user): dropdown ini DIKUNCI/disabled --
-// SELALU otomatis mengikuti curVehicleId (tab kendaraan yg lagi aktif).
-// FITUR BARU (audit user, lihat tests/sparepart-catmodal-vehicle-edit-audit
-// .test.js): S629 dipertahankan HANYA utk TAMBAH baru (isEdit=false, wajar
-// ikut tab aktif). Saat EDIT kategori/stok yg SUDAH ADA (isEdit=true),
-// dropdown dibuka (enabled) supaya user bisa pindahkan manual ke kendaraan
-// lain / ke "🌐 Semua kendaraan" -- nilai awal = vehicleId TERSIMPAN pada
-// kategori/stok itu (currentValue), BUKAN dipaksa curVehicleId lagi.
 populateVehicleSelect(elId,currentValue,isEdit){
 const sel=document.getElementById(elId);
 if(!sel)return;
@@ -1426,14 +980,6 @@ const veh=vidValid?D.vehicles.find(v=>v.id===vid):null;
 hintEl.textContent=veh?`🔒 Otomatis khusus kendaraan tab aktif: ${veh.emoji||'🏍️'} ${veh.name}`:'🔒 Otomatis "🌐 Semua kendaraan" (tidak ada kendaraan aktif dipilih di tab atas)';
 }
 },
-// ensureIntervalBulanField() — FITUR BARU: injeksi runtime input "Interval
-// Waktu (Bulan, opsional)" ke modal Kategori Sparepart. Dipasang lewat JS
-// (bukan ditambah permanen ke template HTML modal di modules/shared/modals.js)
-// krn file itu di luar cakupan patch ini -- pendekatan ini SENGAJA no-op-safe
-// kalau elemen anchor (#sparepartInterval) tidak ada di DOM (mis. test
-// harness DOM stub minimal), supaya tidak pernah throw. Idempotent: kalau
-// field-nya sudah pernah diinjeksi (buka-tutup modal berkali-kali), balikin
-// elemen yg sudah ada, tidak duplikat.
 ensureIntervalBulanField(){
 let el=document.getElementById('sparepartIntervalBulan');
 if(el)return el;
@@ -1447,9 +993,6 @@ const host=anchor.closest('.u-mt8')||anchor.parentNode;
 host.parentNode.insertBefore(wrap,host.nextSibling);
 return document.getElementById('sparepartIntervalBulan');
 },
-// S2035: dropdown = Otomatis + 13 kategori canonical. Legacy/custom group yang
-// sudah tersimpan pada kategori edit tetap ditampilkan transient agar data lama
-// tidak hilang dari editor; save path tetap mempertahankan override manual.
 populateGroupSelect(currentGroup,currentIcon){
 const sel=document.getElementById('sparepartGroupId');
 if(!sel)return;
@@ -1471,7 +1014,6 @@ if(typeof idx==='number'&&idx>=0&&idx<D.sparepartCats.length){
 return Sparepart.openCatModalById(null);
 },
 openCatModalById(catId){
-// S1905 hardening: setiap pembukaan editor harus memutus state autocomplete/rekomendasi dari modal sebelumnya.
 const staleSuggestIds=['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'];
 staleSuggestIds.forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='';if(id==='sparepartAiSuggestBox')el.classList.add('u-dnone');}});
 if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}
@@ -1500,19 +1042,9 @@ const catInferred=(typeof ServiceInputCatalog!=='undefined'&&curCat)?ServiceInpu
 const catMaster=curCat?.masterCategoryId||(catInferred&&catInferred.group&&catInferred.group.masterCategoryId)||'';
 if(catMasterEl)catMasterEl.value=catMaster;
 Sparepart.populateServiceComponentSelect('sparepartServiceComponentId',catMaster,curCat?.serviceComponentId||(catInferred&&catInferred.item&&catInferred.item.id)||'');
-// Sesi D-lanjutan2a: badge kategori master, dibaca 1x saat modal dibuka
-// (bukan live-update saat mengetik -- lihat catatan di updateMasterCatBadge()).
 Sparepart.updateMasterCatBadge(curCat?curCat.name:'',curCat?curCat.vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null));
-// Sesi 295: toggle "Tampilkan di Pengingat Servis" -- default AKTIF utk
-// kategori baru (perilaku lama, tidak berubah), ikut nilai tersimpan utk
-// kategori existing (termasuk kategori auto-scan yg default false).
 const showRemEl=document.getElementById('sparepartShowInReminder');
 if(showRemEl)showRemEl.checked=curCat?curCat.showInReminder!==false:true;
-// FITUR BARU (audit user): saat EDIT kategori existing, box rekomendasi AI
-// diisi OTOMATIS (autoSuggestInterval(), tidak toast kalau kosong -- beda
-// dari suggestInterval() manual) tanpa perlu tap tombol -- kalau TAMBAH
-// baru, box tetap kosong/disembunyikan spt perilaku lama (nama masih kosong,
-// belum ada yg bisa disarankan).
 if(isEdit){
 Sparepart.autoSuggestInterval();
 } else {
@@ -1522,21 +1054,6 @@ if(aiBoxEl){aiBoxEl.classList.add('u-dnone');aiBoxEl.innerHTML='';}
 const sparepartDelBtnEl=document.getElementById('sparepartDelBtn'); if(sparepartDelBtnEl) sparepartDelBtnEl.style.display=isEdit?'':'none';
 openModal('sparepartModal');
 },
-// Sesi oversized-file refactor: the following UI/mutation methods are attached
-// by modules/vehicle/sparepart-servis-ui.js after this object is created.
-// This file remains the compatibility facade; extracted methods are unchanged.
-// Source-level compatibility markers (method implementations live in the
-// extracted file): getPartUsageHistory, getPartPriceHistoryHtml,
-// compareServiceHistoryRecency. These names remain discoverable for legacy
-// audit tests without duplicating the implementation.
-// Additional source-level compatibility markers retained from the extracted
-// Sparepart UI layer: activeStockMasterCategoryFilter:null,
-// activeStockComponentFilter:null, renderStockFilters(beforeEl).
-// exportCategoryCSV() — pasangan Export utk parseCategoryCSV()/commitCategoryCSV()
-// di atas, supaya round-trip CSV (Export -> edit di Excel/Sheets -> Import
-// lagi) bisa dipakai sbg cara cepat edit massal Kategori Sparepart. Pola
-// sama persis exportShopJSON() (shop-data-io-api.js): murni passthrough +
-// download, 0 rumus baru. Header kolom SAMA PERSIS yang dibaca parseCategoryCSV().
 exportCategoryCSV(){
 const header='nama,kode,interval_km,interval_bulan,tampil_reminder';
 const esc=(v)=>{
@@ -1561,13 +1078,5 @@ if(typeof URL.revokeObjectURL==='function')setTimeout(()=>URL.revokeObjectURL(ur
 return lines.length-1;
 }
 };
-// Ekspos ke window — WAJIB supaya delegasi klik global (data-action, di
-// features-helpers-global-security.js) bisa menemukan modul ini lewat
-// window['Sparepart'][method]. `const Sparepart = {...}` di atas HANYA
-// membuat binding lexical-scope (bukan properti window), pola fix sama
-// persis window.FuelModal di modules/vehicle/fuel-modal.js / window.BBM,
-// Servis, Torsi di car-notes.js (Sesi 345) — bug yang sama pernah terjadi
-// & diperbaiki di sana. Tanpa baris ini, semua tombol data-action=
-// "Sparepart.xxx" gagal diam-diam.
 if (typeof normalizeLegacyServiceLogs === 'function') window.normalizeLegacyServiceLogs = normalizeLegacyServiceLogs;
 if (typeof Sparepart !== 'undefined') window.Sparepart = Sparepart;

@@ -29,18 +29,23 @@ async function provision(vehicleId,options){
   const v=vsrsVehicle(vehicleId)||options&&options.vehicle;
   if(!v)return {ok:false,reason:'vehicle_missing'};
   const parts=await vsrsCatalog(v.id); const rules=vsrsDedup(parts.map(vsrsRule).filter(Boolean));
-  const old=(v.sot&&Array.isArray(v.sot.serviceSchedules))?v.sot.serviceSchedules:[];
-  v.sot=v.sot||{};
-  v.sot.serviceReminderVersion=VEHICLE_SERVICE_REMINDER_SOT_VERSION;
-  v.sot.serviceSchedules=rules;
-  v.sot.serviceScheduleCount=rules.length;
-  v.sot.serviceProvisionedAt=new Date().toISOString();
-  v.sot.serviceProvisioningStatus=rules.length?'ready':'no-rules';
+  const old=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(v.id):[];
+  let wr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.setServiceSchedules(v.id,rules,{version:VEHICLE_SERVICE_REMINDER_SOT_VERSION}):null;
+  if(!wr||!wr.ok){
+    // Isolated preview/test harness only: canonical SOT module is intentionally absent.
+    let s=v.sot;
+    if(!s||typeof s!=='object'||Array.isArray(s)){s={};Object.defineProperty(v,'sot',{value:s,writable:true,configurable:true,enumerable:true});}
+    s.serviceSchedules=JSON.parse(JSON.stringify(rules));
+    wr={ok:true,transient:true};
+  }
   return {ok:true,vehicle:v,changed:JSON.stringify(old)!==JSON.stringify(rules),summary:{catalogPartCount:parts.length,serviceRuleCount:rules.length,reminderRuleCount:rules.filter(r=>r.showInReminder).length}};
 }
 async function getSchedules(vehicleId){
-  const v=vsrsVehicle(vehicleId); if(v&&v.sot&&Array.isArray(v.sot.serviceSchedules)&&v.sot.serviceSchedules.length)return v.sot.serviceSchedules.slice();
-  const r=await provision(vehicleId); return r.ok?r.vehicle.sot.serviceSchedules||[]:[];
+  const v=vsrsVehicle(vehicleId); const canonical=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vehicleId):[]; if(v&&canonical.length)return canonical;
+  const r=await provision(vehicleId);
+  if(!r.ok)return [];
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)return VehicleCarNotesSOT.getServiceSchedules(vehicleId);
+  return v&&v.sot&&Array.isArray(v.sot.serviceSchedules)?v.sot.serviceSchedules:[];
 }
 async function getReminderSchedules(vehicleId){return (await getSchedules(vehicleId)).filter(r=>r.showInReminder!==false);}
 const VehicleServiceReminderSOT={version:VEHICLE_SERVICE_REMINDER_SOT_VERSION,provision,getSchedules,getReminderSchedules};

@@ -39,14 +39,22 @@ async function vsfiServiceState(vehicleId,options){
   const now=options&&options.now?new Date(options.now):new Date();
   const states=schedules.map(r=>{const rule=Object.assign({},r,{vehicleId});return Object.assign({},rule,vsfiDue(vsfiLatestService(vehicleId,r.catalogPartId),rule,now));});
   const projection={version:VEHICLE_SOT_FLEET_INTEGRITY_VERSION,currentKm:vsfiCurrentKm(vehicleId),calculatedAt:new Date().toISOString(),items:states};
-  v.sot=v.sot||{};v.sot.maintenanceState=projection;return {ok:true,vehicleId,projection};
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.setMaintenanceState==='function'){
+    VehicleCarNotesSOT.setMaintenanceState(vehicleId,projection);
+  }else{
+    // Isolated test/preview harness only; production has VehicleCarNotesSOT loaded.
+    const v=vsfiVehicle(vehicleId); if(!v)return {ok:false,reason:'vehicle_missing',vehicleId};
+    let s=v.sot; if(!s||typeof s!=='object'||Array.isArray(s)){s={};Object.defineProperty(v,'sot',{value:s,writable:true,configurable:true,enumerable:true});}
+    s.maintenanceState=projection;
+  }
+  return {ok:true,vehicleId,projection};
 }
 function vsfiServiceEvent(){try{if(typeof AIBus==='undefined'||typeof AIBus.on!=='function')return; if(window.__vsfiSub)return; window.__vsfiSub=AIBus.on('vehicle.updated',e=>{const id=e&&e.vehicleId;if(id)vsfiServiceState(id).catch(()=>{});});}catch(e){void e;}}
 
 async function vsfiIsolationAudit(){
   const vehicles=vsfiArr(typeof D!=='undefined'?D.vehicles:[]); const issues=[];
   const seen=new Map();
-  for(const v of vehicles){const ids=vsfiArr(v&&v.sot&&v.sot.serviceSchedules).map(x=>vsfiStr(x.catalogPartId)).filter(Boolean); for(const id of ids){const arr=seen.get(id)||[];arr.push(v.id);seen.set(id,arr);}}
+  for(const v of vehicles){const ids=vsfiArr(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT?VehicleCarNotesSOT.getServiceSchedules(v.id):[]).map(x=>vsfiStr(x.catalogPartId)).filter(Boolean); for(const id of ids){const arr=seen.get(id)||[];arr.push(v.id);seen.set(id,arr);}}
   if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog.getAll){
     const parts=await VehicleCatalog.getAll();
     for(const p of parts||[]){const vids=vsfiArr(p.compatibleVehicleIds).map(String);const mids=vsfiArr(p.compatibleModelIds).map(String);for(const v of vehicles){if(v.modelId&&mids.includes(String(v.modelId)))continue;if(vids.length&&vids.includes(String(v.id)))continue; if(seen.get(String(p.id))&&seen.get(String(p.id)).includes(v.id))issues.push({code:'service_projection_scope_mismatch',vehicleId:v.id,catalogPartId:p.id});}}
@@ -70,7 +78,7 @@ async function vsfiFleetProvision(options){
 async function vsfiHealth(){
   const vehicles=vsfiArr(typeof D!=='undefined'?D.vehicles:[]); const rows=[];
   const iso=await vsfiIsolationAudit(); const refs=await vsfiReferenceAudit();
-  for(const v of vehicles){const sot=v.sot||{};const parts=vsfiArr(sot.catalogParts||sot.partProjection||sot.components);const schedules=vsfiArr(sot.serviceSchedules);const state=sot.maintenanceState;let status='ready';if(!v.modelId)status='needs-model';else if(!schedules.length)status='needs-service-catalog';else if(state&&state.items&&state.items.some(x=>x.status==='jatuh_tempo'))status='service-due';rows.push({vehicleId:v.id,name:v.name||'',modelId:v.modelId||null,status,partCount:parts.length,serviceRuleCount:schedules.length,maintenanceStateCount:vsfiArr(state&&state.items).length});}
+  for(const v of vehicles){const sot=typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT?VehicleCarNotesSOT.read(v.id):(v.sot||{});const parts=vsfiArr(sot.catalogParts||sot.partProjection||sot.components);const schedules=vsfiArr(sot.serviceSchedules);const state=sot.maintenanceState;let status='ready';if(!v.modelId)status='needs-model';else if(!schedules.length)status='needs-service-catalog';else if(state&&state.items&&state.items.some(x=>x.status==='jatuh_tempo'))status='service-due';rows.push({vehicleId:v.id,name:v.name||'',modelId:v.modelId||null,status,partCount:parts.length,serviceRuleCount:schedules.length,maintenanceStateCount:vsfiArr(state&&state.items).length});}
   return {version:VEHICLE_SOT_FLEET_INTEGRITY_VERSION,ok:iso.ok&&refs.ok,vehicles:rows,isolation:iso,references:refs};
 }
 const VehicleSOTFleetIntegrity={version:VEHICLE_SOT_FLEET_INTEGRITY_VERSION,serviceState:vsfiServiceState,isolationAudit:vsfiIsolationAudit,referenceAudit:vsfiReferenceAudit,provisionFleet:vsfiFleetProvision,health:vsfiHealth};

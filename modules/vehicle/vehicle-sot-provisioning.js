@@ -68,14 +68,37 @@ function vspsFindCatalogPartsForVehicle(vehicle,model){
     return list;
   }).catch(()=>[]);
 }
+function vspsTransientSOT(vehicle){
+  // Unit-test/preview compatibility only: real app vehicles live in D.vehicles
+  // and are always written through VehicleCarNotesSOT. This detached-object
+  // fallback is not persisted and cannot create a second runtime SOT store.
+  if(!vehicle||typeof vehicle!=='object')return null;
+  let s=vehicle.sot;
+  if(!s||typeof s!=='object'||Array.isArray(s)){
+    s={};
+    Object.defineProperty(vehicle,'sot',{value:s,writable:true,configurable:true,enumerable:true});
+  }
+  s.owner='VehicleCarNotesSOT';
+  s.vehicleId=String(vehicle.id||'');
+  s.vehicleType=String(vehicle.vehicleType||vehicle.jenis||vehicle.type||'')||null;
+  return s;
+}
+function vspsSetProvisioning(vehicle,payload){
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vehicle&&vehicle.id){
+    try{return VehicleCarNotesSOT.setProvisioning(vehicle.id,payload);}catch(_e){/* isolated harness may omit D.vehicles */}
+  }
+  const s=vspsTransientSOT(vehicle); if(!s)return {ok:false,code:'vehicle_missing'};
+  Object.keys(payload||{}).forEach(k=>{if(payload[k]!==undefined)s[k]=JSON.parse(JSON.stringify(payload[k]));});
+  return {ok:true,transient:true,sot:s};
+}
 async function vspsProvisionVehicle(vehicle,options){
   options=options||{};
   if(!vehicle)return {ok:false,reason:'vehicle_missing'};
   const ident=(typeof VehicleModelResolverSOT!=='undefined'&&VehicleModelResolverSOT.resolve)?VehicleModelResolverSOT.resolve({modelId:vehicle.modelId,name:vehicle.name,year:vehicle.modelYear,variant:vehicle.modelVariant,cc:vehicle.modelEngineCc}):vspsFindModel({modelId:vehicle.modelId,name:vehicle.name});
-  if(ident.status==='year-conflict'){ vehicle.sot={status:'year-conflict',version:VEHICLE_SOT_PROVISIONING_VERSION,modelId:ident.model&&ident.model.id||null,year:ident.year,expectedRange:ident.profile&&ident.profile.yearRange||null}; return {ok:true,vehicle,identification:ident,summary:{categoryCount:0,vehicleDatabaseItems:0,catalogPartCount:0}}; }
+  if(ident.status==='year-conflict'){ if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'}; vspsSetProvisioning(vehicle,{status:'year-conflict',version:VEHICLE_SOT_PROVISIONING_VERSION,modelId:ident.model&&ident.model.id||null,year:ident.year,expectedRange:ident.profile&&ident.profile.yearRange||null}); return {ok:true,vehicle,identification:ident,summary:{categoryCount:0,vehicleDatabaseItems:0,catalogPartCount:0}}; }
   if(ident.confidence==='ambiguous'||ident.status==='ambiguous'){
     delete vehicle.modelId; delete vehicle.manufacturerId; delete vehicle.modelDisplayName;
-    vehicle.sot={status:'needs-confirmation',version:VEHICLE_SOT_PROVISIONING_VERSION,candidates:ident.candidates.map(m=>m.id)};
+    if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'}; vspsSetProvisioning(vehicle,{status:'needs-confirmation',version:VEHICLE_SOT_PROVISIONING_VERSION,candidates:ident.candidates.map(m=>m.id)});
     return {ok:true,vehicle,identification:ident,summary:{categoryCount:0,vehicleDatabaseItems:0,catalogPartCount:0}};
   }
   const model=ident.model;
@@ -85,7 +108,7 @@ async function vspsProvisionVehicle(vehicle,options){
     if(meta&&meta.manufacturer)vehicle.manufacturerId=meta.manufacturer.id;else delete vehicle.manufacturerId;
     if(meta&&meta.vehicleType){vehicle.vehicleType=meta.vehicleType;if(!vehicle.jenis||vehicle.jenis==='motor'&&meta.vehicleType==='mobil')vehicle.jenis=meta.vehicleType;}
     if(meta&&meta.bodyType)vehicle.bodyType=meta.bodyType;else delete vehicle.bodyType;
-    vehicle.sot={status:'needs-catalog',version:VEHICLE_SOT_PROVISIONING_VERSION,autoDetected:meta||null};
+    if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'}; vspsSetProvisioning(vehicle,{status:'needs-catalog',version:VEHICLE_SOT_PROVISIONING_VERSION,autoDetected:meta||null});
     return {ok:true,vehicle,identification:Object.assign({},ident,{meta}),summary:{categoryCount:0,vehicleDatabaseItems:0,catalogPartCount:0}};
   }
   const profile=ident.profile||(typeof VehicleModelRegistrySOT!=='undefined'&&VehicleModelRegistrySOT.profile?VehicleModelRegistrySOT.profile(model):null);
@@ -100,7 +123,8 @@ async function vspsProvisionVehicle(vehicle,options){
   const dbSummary=vspsComponentSummary(model,vehicle);
   let catalogParts=[];
   if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function')catalogParts=await vspsFindCatalogPartsForVehicle(vehicle,model);
-  vehicle.sot={
+  if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'};
+  vspsSetProvisioning(vehicle,{
     status:catalogParts.length||String(model.id)==='vario-125'?'ready':'partial',
     version:VEHICLE_SOT_PROVISIONING_VERSION,
     profileId:'vehicle-model:'+model.id,
@@ -115,7 +139,7 @@ async function vspsProvisionVehicle(vehicle,options){
     catalogModelId:String(model.id),
     vehicleDatabaseItems:dbSummary.vehicleDatabaseItems,
     provisionedAt:new Date().toISOString()
-  };
+  });
   return {ok:true,vehicle,identification:ident,summary:Object.assign({},dbSummary,{catalogPartCount:catalogParts.length}),catalogParts};
 }
 function vspsPreview(input){

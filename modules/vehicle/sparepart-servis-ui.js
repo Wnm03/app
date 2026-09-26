@@ -130,6 +130,7 @@ if(!editCat){toast('⚠️ Kategori sparepart sudah tidak tersedia');return;}
 // dibiarkan apa adanya -- 0 risiko menimpa niat manual tanpa alasan.
 const nameChanged=editCat.name!==name;
 const vehChanged=editCat.vehicleId!==vehicleId;
+const oldVehicleId=editCat.vehicleId||null;
 if(groupSelEl&&groupSelVal){
 // Override manual dari dropdown MENANG mutlak (Sesi 2) -- bahkan atas
 // rule recompute-by-rename di atas, walau nama/kendaraan ikut berubah.
@@ -161,6 +162,8 @@ editCat.masterCategoryId=masterCategoryId||null;
 editCat.serviceComponentId=serviceComponentId||null;
 editCat.showInReminder=wantShow;
 editCat.vehicleId=vehicleId;
+if(vehChanged&&oldVehicleId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(editCat.id,oldVehicleId);
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
 } else {
 // FITUR BARU (audit lanjutan grouping, sesi lalu): kategori baru dari form
 // manual ini mewarisi group/groupIcon -- override dropdown manual (Sesi 2)
@@ -171,7 +174,7 @@ editCat.vehicleId=vehicleId;
 const grpNew=(groupSelEl&&groupSelVal)
 ?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
 :((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
-D.sparepartCats.push({id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon});
+const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_newCat,'manual-create'); D.sparepartCats.push(_newCat);
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -190,6 +193,7 @@ msg=`⚠️ Kategori "${cat.name}" masih dipakai oleh ${parts.join(' & ')}. Kala
 if(!await askConfirm(msg,{title:'Hapus Kategori Sparepart',icon:'🗑'}))return;
 linkedStock.forEach(p=>{p.catId=null;});
 linkedVeh.forEach(v=>{if(v.intervalOverrides)delete v.intervalOverrides[cat.id];});
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(cat.id,cat.vehicleId||curVehicleId);
 D.sparepartCats.splice(i,1);save();Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
 toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
 },
@@ -694,11 +698,12 @@ if(!cat){
 // (bukan partName) tetap dipakai sbg cat.name, 0 perilaku lama berubah.
 const grpSync=(typeof resolveCatGroup==='function')?resolveCatGroup({name:it.partName||catName},curVehicleId):{group:'Lainnya',icon:'📦'};
 cat={id:_spCatId(String(idx)),name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0,group:grpSync.group,groupIcon:grpSync.icon,vehicleId:curVehicleId};
-D.sparepartCats.push(cat);
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-create'); D.sparepartCats.push(cat);
 addedCat++;
 } else if(r.intervalKm>0&&(!cat.intervalKm||cat.intervalKm<=0)){
 cat.intervalKm=r.intervalKm;
 cat.showInReminder=true;
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-update');
 }
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
@@ -749,6 +754,7 @@ if(r.kode)cat.code=r.kode;
 if(r.intervalKm!==undefined&&r.intervalKm!==null&&r.intervalKm>0)cat.intervalKm=r.intervalKm;
 if(r.intervalBulan!==undefined&&r.intervalBulan!==null&&r.intervalBulan>0)cat.intervalBulan=r.intervalBulan;
 if(r.showInReminder!==undefined&&r.showInReminder!==null)cat.showInReminder=r.showInReminder;
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'csv-update');
 updated++;
 } else {
 const code=r.kode||codeFromName(nama);
@@ -762,7 +768,7 @@ const showInReminder=(r.showInReminder!==undefined&&r.showInReminder!==null)?r.s
 // jatuh ke GENERIC_GROUP_BY_NAME/'Lainnya' tanpa match TORSI_DB spesifik).
 const grpCsv=(typeof resolveCatGroup==='function')?resolveCatGroup({name:nama},vidCsv):{group:'Lainnya',icon:'📦'};
 const vehicleIdCsv=(vidCsv&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidCsv))?vidCsv:null;
-D.sparepartCats.push({id:_spCatId(created+'_'+updated),name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon,vehicleId:vehicleIdCsv});
+const _csvCat={id:_spCatId(created+'_'+updated),name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon,vehicleId:vehicleIdCsv}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vehicleIdCsv&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_csvCat,'csv-create'); D.sparepartCats.push(_csvCat);
 created++;
 }
 });
