@@ -1,0 +1,29 @@
+S2061-S2069 — Vehicle-Scoped SOT / Active Vehicle Isolation cumulative patch
+
+Base: app-main (29).zip
+Cumulative: includes S2060 Checklist Toggle CRUD + S2056-S2059 Reminder round-trip changes already present in the base overlay, plus S2061-S2069 vehicle-scoped SOT hardening.
+
+Core contract:
+- Each vehicle owns an independent SOT/data namespace.
+- vehicleId is the primary partition key for vehicle-bound domains.
+- Vehicle type (vehicleType/jenis) is metadata/compatibility inside that vehicle partition.
+- Switching active vehicle changes the active partition; it does not merge/copy data between vehicles.
+- Same serviceComponentId may exist in multiple vehicles, but remains independent because vehicleId differs.
+- Invalid/stale active vehicle IDs are repaired to a valid vehicle without reading the old vehicle's data.
+
+Implemented S2061-S2069:
+- Central VehicleScopedSOT context, scope/read/write guards and audit APIs.
+- Active vehicle selection routed through VehicleScopedSOT.
+- Vehicle/KM/BBM selectors no longer fall back independently to a hardcoded first vehicle when active context exists.
+- Cross-vehicle leakage and vehicle-type mismatch audit tests.
+- Independent per-vehicle component/session identity tests.
+- Build ordering and bundle version synchronized to 2037.
+
+Validation:
+- 136 targeted Service History/Reminder/Session/Vehicle-SOT tests passed.
+- Build passed; both bundles syntax-valid.
+- index.html and app_production.html synchronized.
+- sw.js CACHE_NAME = kw-cache-v2037.
+- Service Master: 13 categories / 102 components.
+
+Warnings (non-blocking): esbuild unavailable, so bundles are not minified; docs/AUDIT_MATRIX.md has stale repository counts; servis.js and scripts/build.js exceed the 1600-line advisory threshold.

@@ -1,0 +1,39 @@
+S2056–S2059 — Reminder round-trip final hardening (cumulative PATCH-ONLY)
+Base: app-main (29).zip
+
+Scope:
+- S2056: Save/Reload round-trip retains canonical masterCategoryId + serviceComponentId.
+- S2057: all Reminder UI completion actions route through the existing Servis form/SOT; direct markServiced remains only for internal compatibility/batch callers.
+- S2058: Reminder and Dashboard projections dedupe canonical service components per vehicle and Dashboard displays canonical category/component names.
+- S2059: component-scoped Reminder → History navigation remains canonical and regression-tested.
+
+Validation on cumulative working tree:
+- Targeted Service History/Reminder/SOT/session suite: 135/135 PASS.
+- Build: PASS.
+- Bundle syntax: PASS.
+- index.html / app_production.html synchronized: PASS.
+- Service Worker cache synchronized: kw-cache-v2033.
+- Service master: 13 categories / 102 components.
+
+Build note:
+- esbuild unavailable in this environment, so bundles are valid but not minified.
+- Build warnings only: docs/AUDIT_MATRIX.md stale counts; servis.js 1865 lines; build.js 1617 lines.
+
+Changed files in this patch:
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- app_production.html
+- chat-action-handlers.js
+- index.html
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- modules/vehicle/servis-b.js
+- modules/vehicle/servis.js
+- modules/vehicle/sparepart-servis-b.js
+- sw.js
+- tests/service-reminder-form-sot-s2055.test.js
+- tests/service-reminder-roundtrip-s2056-s2059.test.js
+
+Excluded build backups and documentation-only generated files.

@@ -1,0 +1,35 @@
+S2072-S2079 — CAR NOTES DEEP SOT OWNERSHIP / VEHICLE PARTITION HARDENING
+Base: app-main (29).zip
+Cumulative overlay: S2055–S2071 chain plus S2072–S2079 audit/fixes.
+
+CANONICAL CONTRACT
+- Exactly one persisted Car Notes SOT root per vehicle: D.vehicles[].sot.
+- VehicleCarNotesSOT is the only canonical owner of vehicle.sot service state.
+- Each vehicle owns an independent serviceCategories + serviceSchedules partition.
+- vehicleId is the hard partition boundary; vehicleType is validated metadata.
+- ServiceTaxonomySOT / ServiceInputCatalog / VehicleCatalog remain global reference masters only.
+- D.sparepartCats remains compatibility/projection data, never an authoritative Car Notes SOT.
+
+S2072-S2079 WORK
+1. Mapped Car Notes SOT ownership and added source-level ownership gates.
+2. Added canonical per-vehicle serviceCategories under VehicleCarNotesSOT.
+3. Migrated existing vehicle-scoped legacy categories into canonical SOT on first ensure.
+4. Routed vehicle-specific category creation/edit/delete/toggle/provision paths through canonical SOT before legacy projection.
+5. Prevented category identity duplication by serviceComponentId within a vehicle.
+6. Hardened vehicle moves so old vehicle SOT ownership is removed before new vehicle ownership.
+7. Added deep Car Notes SOT tests S2072–S2079.
+8. Rebuilt bundle/version/SW/index synchronously.
+
+VERIFICATION
+- S2072-S2079 targeted: 8/8 PASS.
+- Combined Car Notes + Service History + Session + Vehicle SOT suite: 159/159 PASS.
+- Build: PASS, version 2041.
+- Bundle syntax: PASS.
+- index.html / app_production.html synchronized.
+- SW cache: kw-cache-v2041.
+- Full repository runner was not claimed PASS because previous full runner exceeded the execution limit.
+- esbuild unavailable; valid unminified bundles were produced.
+
+NON-BLOCKING BUILD WARNINGS
+- docs/AUDIT_MATRIX.md coverage counts stale.
+- modules/vehicle/servis.js and scripts/build.js exceed 1600 lines.

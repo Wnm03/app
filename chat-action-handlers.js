@@ -3,7 +3,7 @@
 // Isi: MODULE_FEATURES_VERSION (konstanta versi, dicek sinkron oleh diagnostik-versi.js) + CHAT_ACTION_LABELS (label tombol usul per tipe aksi) + CHAT_ACTION_HANDLERS (eksekusi nyata tiap tipe aksi ke D.*, dipanggil dari chat-action.js via chatActionInnerHTML/extractChatAction) + CHAT_ACTION_EDIT_FIELDS (skema field utk form edit usulan sebelum dieksekusi).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah car-notes.js, sebelum edukasi-dana.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
-const MODULE_FEATURES_VERSION='s2031-service-history-component-sot-2031';
+const MODULE_FEATURES_VERSION='s2031-service-history-component-sot-2043';
 const CHAT_ACTION_LABELS={add_transaksi:'💸 Usul: Tambah Transaksi',add_tagihan:'🧾 Usul: Tambah Tagihan/Cicilan',add_servis:'🔧 Usul: Catat Servis Kendaraan',add_target:'🎯 Usul: Tambah Target Tabungan',add_catatan_anak:'👶 Usul: Catat soal Anak',add_wishlist:'📋 Usul: Tambah ke Prioritas Belanja'};
 const CHAT_ACTION_HANDLERS={
 add_transaksi(data){
@@ -44,7 +44,7 @@ const _chatKm=data.km==null||data.km===''?null:Number(data.km);
 if(_chatKm!==null&&(!Number.isFinite(_chatKm)||_chatKm<0))throw new Error('KM servis tidak valid');
 if(typeof Servis!=='undefined'&&typeof Servis.validateServiceOdometer==='function'){const _chatOdo=Servis.validateServiceOdometer({vehicleId:veh.id,km:_chatKm,date,excludeId:null});if(_chatOdo&&_chatOdo.ok===false)throw new Error(_chatOdo.message||'KM servis tidak konsisten dengan histori kendaraan');}
 const _chatSnap=(_chatCat&&typeof buildServiceNextDueSnapshot==='function')?buildServiceNextDueSnapshot({vehicleId:veh.id,cat:_chatCat,serviceKm:_chatKm,serviceDate:date,actionType:data.actionType||null}):{};
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:servisItem+' - '+veh.name,date,servisLinkId:servisId});
+D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:servisItem+' - '+veh.name,date,servisLinkId:servisId,vehicleId:veh.id});
 const _chatServiceLog={id:servisId,vehicleId:veh.id,date,item:servisItem,categoryId:canonicalCatId,km:_chatKm,cost,note:data.note||'',accountId:accId,txLinkId:txId,intervalKmAtService:_chatSnap.intervalKmAtService||null,intervalBulanAtService:_chatSnap.intervalBulanAtService||null,nextDueKm:_chatSnap.nextDueKm??null,nextDueDate:_chatSnap.nextDueDate||null,nextDueAxis:_chatSnap.nextDueAxis||'none',idempotencyKey:idem};
 D.servisLogs.push(_chatServiceLog);
 save();

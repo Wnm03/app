@@ -1,0 +1,28 @@
+S2080 — Real Car Notes Flow Audit: Finance → History → Reminder
+Base: app-main (29).zip
+Cumulative: includes the S2072–S2079 Car Notes Deep SOT patch content plus S2080 real-flow hardening.
+
+Canonical rule:
+  1 vehicle = 1 VehicleCarNotesSOT = D.vehicles[].sot
+  Finance service transaction ↔ Service History uses the same vehicleId.
+  Reminder is a vehicle-scoped projection, not a second SOT.
+
+S2080 fixes:
+- Finance service transactions now carry vehicleId.
+- Finance → Service sync no longer silently falls back to the first vehicle.
+- Existing Service linked to Finance cannot be moved across vehicles through Finance edit.
+- Service-created categories explicitly carry vehicleId.
+- Reminder category reads now migrate vehicle-scoped legacy projections into VehicleCarNotesSOT before rendering; D.sparepartCats is not the reminder source after migration.
+- Added VehicleCarNotesSOT.auditFinanceHistoryReminder(vehicleId).
+- Added focused Finance → History → Reminder tests.
+
+Changed files:
+- modules/finance/tx-servis.js
+- modules/vehicle/servis.js
+- modules/vehicle/vehicle-car-notes-s2071.js
+- modules/vehicle/sparepart-servis.js
+- app-bundle-b.min.js
+- tests/car-notes-finance-history-reminder-s2080.test.js
+- AUDIT-S2080-FINANCE-HISTORY-REMINDER.md
+
+This patch is cumulative with S2072–S2079 files included in this ZIP.

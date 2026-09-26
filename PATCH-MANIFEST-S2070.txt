@@ -1,0 +1,53 @@
+S2070 — Active Vehicle Category/Component/Interval = One Vehicle Service SOT
+Base: app-main (29).zip
+Cumulative: includes S2055, S2056–S2059, S2060, S2061–S2069 changes already present in this cumulative tree.
+
+Scope:
+- Kelola Kategori Sparepart & Interval now renders ONLY records whose vehicleId exactly matches the active vehicle.
+- Universal/"Semua kendaraan" legacy rows are no longer mixed into the active vehicle UI.
+- Display identity is canonicalized through ServiceInputCatalog: master category name + service component name + serviceComponentId.
+- Service interval is resolved through VehicleServiceSOT, the same interval source used by Reminder/History; per-vehicle KM override remains respected.
+- Edit/delete actions still target the original category record by ID, while the displayed identity is canonical SOT.
+- Same component IDs may exist independently for different vehicles; vehicleId remains the partition boundary.
+- Added regression tests for universal-row exclusion, canonical identity/interval, and cross-vehicle isolation.
+
+Validation:
+- Targeted Service History/Session/Reminder + S2070 suite: 144/144 PASS.
+- Build: PASS, version 2038.
+- Bundle syntax: PASS.
+- index.html / app_production.html synchronized: PASS.
+- sw.js CACHE_NAME: kw-cache-v2038.
+- Build warnings retained: esbuild unavailable (bundles not minified); docs/AUDIT_MATRIX.md stale counts; servis.js and build.js oversized warnings.
+
+Changed files are patch-only relative to app-main (29).zip.
+
+
+Files (28):
+- app-bundle-b.min.js
+- sw.js
+- index.html
+- app_production.html
+- PATCH-MANIFEST-S2060.txt
+- app-bundle-a.min.js
+- chat-action-handlers.js
+- tests/service-reminder-form-sot-s2055.test.js
+- tests/service-checklist-toggle-session-s2060.test.js
+- tests/vehicle-scoped-sot-s2061.test.js
+- tests/service-category-active-vehicle-sot-s2070.test.js
+- tests/service-reminder-roundtrip-s2056-s2059.test.js
+- scripts/build.js
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md
+- modules/finance/tx-bbm.js
+- modules/vehicle/vehicle-active-sot-s2061.js
+- modules/vehicle/servis.js
+- modules/vehicle/servis-b.js
+- modules/vehicle/sparepart-servis.js
+- modules/vehicle/sparepart-servis-b.js
+- modules/vehicle/vehicle-core.js
+- modules/vehicle/servis-checklist.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- modules/shared/features-helpers-global-security.js
+- PATCH-MANIFEST-S2070.txt

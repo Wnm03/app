@@ -1,0 +1,22 @@
+S2060 — Checklist Toggle CRUD + Session/Reminder/History SOT
+Base: app-main (29).zip
+Scope:
+- Tombol checklist adalah toggle CRUD sederhana: ○ Cek = tambah; ✓ Selesai = aktif; klik lagi = kembali Cek dan melepas komponen.
+- Melepas komponen membersihkan seluruh transient state komponen agar tidak resurrect saat dipilih lagi.
+- Edit Service History untuk session checklist memakai ServiceSessionMutationS2047 sebagai satu mutation SOT.
+- Partial removal: komponen yang dilepas dihapus dari session History dan projection Reminder; Finance owner dipindahkan ke komponen yang tersisa bila perlu.
+- Empty checklist: seluruh session History + transaksi Finance terkait + projection Reminder dihapus melalui mutation SOT.
+- Save/Reload mempertahankan masterCategoryId + serviceComponentId canonical.
+- Reminder tetap memakai Form Servis yang sama.
+- Accessibility: tombol toggle diberi aria-pressed dan instruksi title.
+
+Validation:
+- Targeted Service History/Session/Reminder suite: 140/140 PASS.
+- Build: PASS, version 2035.
+- Bundle syntax: PASS.
+- index.html / app_production.html synchronized: PASS.
+- sw.js CACHE_NAME: kw-cache-v2035.
+- esbuild unavailable: bundle generated without minification.
+- Build warnings retained: docs/AUDIT_MATRIX.md stale counts; servis.js 1885 lines; build.js 1617 lines.
+
+Changed files are patch-only relative to app-main (29).zip.

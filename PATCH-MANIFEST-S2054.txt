@@ -1,0 +1,20 @@
+PATCH S2054 — REMINDER → SERVICE FORM SOT
+Base: app-main (29).zip
+
+Tujuan:
+- Pengingat Servis memakai satu canonical ServiceInputCatalog SOT untuk kategori + komponen.
+- Nama kategori dan nama komponen ditampilkan dari identitas SOT yang sama.
+- Aksi "Pilih tindakan" dari Pengingat membuka satu formulir Servis yang sama, bukan membuat jalur history/reminder paralel.
+- Action type dan hasil pemeriksaan diprefill ke formulir; persistence tetap melalui jalur Servis/SOT yang ada.
+- Mismatch kategori-komponen canonical terdeteksi; tidak dibuat identitas kedua.
+
+Validasi:
+- Targeted service/reminder/session suite: 55/55 PASS.
+- audit:carnotes: PASS (scanned=462, forbidden=0, duplicateIds=0/0, ServisDeclarations=1)
+- audit:sot: PASS (runtimeSources=416, version=s2031-service-history-component-sot-2033, html=2033, sw=2033)
+- audit:persistence: PASS
+- audit:pwa: PASS (kw-cache-v2033)
+- Build: PASS; kedua bundle node --check PASS; index.html/app_production.html sinkron.
+- Full suite belum dijadikan klaim PASS.
+
+File patch: hanya file yang berubah untuk implementasi + build/version synchronization.

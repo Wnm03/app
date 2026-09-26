@@ -1,0 +1,22 @@
+S2055 — Reminder → 1 Formulir / 1 SOT / 1 Kategori / 1 Komponen
+
+Base: app-main (29).zip
+Target: Reminder round-trip hardening
+
+Changed files:
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- app_production.html
+- chat-action-handlers.js
+- index.html
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- modules/vehicle/service-master-data.generated.js
+- modules/vehicle/servis-b.js
+- modules/vehicle/servis.js
+- sw.js
+- tests/service-reminder-form-sot-s2055.test.js
+
+Deterministic content digest: 5ebe20d9d71a77b10e6e574940fce470141c026d1ade325b48ceb6d80086cc76

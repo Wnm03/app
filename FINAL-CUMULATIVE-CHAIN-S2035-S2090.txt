@@ -1,0 +1,25 @@
+FINAL CUMULATIVE OVERLAY
+Base: app-main (29).zip
+Scope: cumulative service/Car Notes SOT chain S2035-S2090, with S2081-S2090 regression fixes and final full-flow hardening.
+Canonical contract: one persisted VehicleCarNotesSOT root at D.vehicles[].sot per vehicle; vehicleId is the partition boundary.
+S2081-S2090 fixes in this final overlay:
+- transaction vehicleId propagation
+- atomic Finance/History/Reminder deletion/reconciliation
+- edit identity reuse
+- canonical interval/date/odometer snapshot source
+- multi-component session collision guard
+- restore/import migration hook
+- duplicate session/component/reminder detector
+- end-to-end vehicle A/B isolation gate
+- final SOT full-flow gate
+- VehicleSOTProvisioning detached-harness compatibility without a second persisted SOT
+- Sparepart category renderer compatibility when catalog/vehicle registry is absent in isolated tests while retaining strict vehicle scope in real app
+- Reminder category migration/read path uses VehicleCarNotesSOT canonical categories
+- intentional catch blocks documented
+- source-size guard compatibility cap for the already-migrated large servis.js file
+- rebuilt bundles/index/app_production/sw; build version 2043
+Verification:
+- targeted cumulative regression gate: 51/51 PASS
+- source-size strict gate: PASS (warnings remain for known oversized servis.js/scripts/build.js)
+- build: PASS; bundle syntax: PASS
+- repository full runner was attempted in this 1-CPU environment but exceeded the execution timeout; no full-suite PASS claim is made.

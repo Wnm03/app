@@ -1,0 +1,21 @@
+S2081–S2090 — Car Notes Full Flow / Final SOT Gate
+Base: patch-s2080-finance-history-reminder-cumulative.zip
+Cumulative overlay: includes all S2080 files plus the S2081–S2090 hardening.
+
+Changed / added:
+- modules/finance/tx-servis.js
+- modules/vehicle/servis.js
+- modules/vehicle/vehicle-car-notes-sot-s2071.js
+- chat-action-handlers.js
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- tests/car-notes-s2081-s2090-full-flow-gate.test.js
+- AUDIT-S2081-S2090-FULL-FLOW.md
+- PATCH-MANIFEST-S2081-S2090.txt
+
+SOT rules:
+- vehicleId is mandatory for service Finance/History linkage.
+- canonical per-vehicle state is D.vehicles[].sot via VehicleCarNotesSOT.
+- ServiceInputCatalog/taxonomy is reference master only.
+- D.sparepartCats is compatibility/projection only.
+- Finance ↔ History ↔ Reminder must remain within the same vehicle boundary.

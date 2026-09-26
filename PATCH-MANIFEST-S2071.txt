@@ -1,0 +1,35 @@
+S2071 — CAR NOTES VEHICLE-SCOPED SINGLE SOT HARDENING
+Base: app-main (29).zip
+Cumulative overlay: includes S2055–S2070 changes already present in the supplied cumulative baseline/patch chain, plus S2071 canonical VehicleCarNotesSOT ownership hardening.
+
+ARCHITECTURE CONTRACT
+- Exactly one persisted Car Notes SOT root per vehicle: D.vehicles[].sot.
+- Canonical owner: VehicleCarNotesSOT.
+- vehicleId is the partition boundary; vehicleType is validated metadata inside that partition.
+- VehicleCatalog and ServiceTaxonomySOT are global reference masters, not alternate per-vehicle SOT stores.
+- D.sparepartCats remains a legacy compatibility index only; it must not become a second authoritative Car Notes SOT.
+- VehicleServiceSOT, VehicleServiceReminderSOT, VehicleSOTProvisioning and VehicleSOTFleetIntegrity are adapters/provisioners/auditors and no longer directly own vehicle.sot service state.
+
+S2071 FIXES
+1. Added modules/vehicle/vehicle-car-notes-sot-s2071.js as the canonical per-vehicle SOT owner.
+2. Routed service reminder schedule writes/reads through VehicleCarNotesSOT.
+3. Routed service provisioning writes through VehicleCarNotesSOT without replacing the whole SOT object.
+4. Routed maintenanceState writes/reads through VehicleCarNotesSOT.
+5. Removed direct vehicle.sot writers from legacy service SOT adapters.
+6. Added per-vehicle/type/duplicate-rule audit.
+7. Added build-order guard and regression tests.
+8. Rebuilt bundles/version/SW/index synchronously.
+
+VERIFICATION
+- S2071 targeted suite: 6/6 PASS.
+- Combined Car Notes/Vehicle/SOT/Service History/Session targeted suite: 158/158 PASS.
+- Build: PASS, version 2040.
+- Bundle syntax: PASS.
+- index.html and app_production.html synchronized.
+- SW cache: kw-cache-v2040.
+- Full repository runner was attempted but exceeded the 300-second execution limit; therefore no full-suite PASS claim is made.
+- esbuild unavailable; build used valid unminified bundles.
+
+KNOWN NON-BLOCKING BUILD WARNINGS
+- docs/AUDIT_MATRIX.md counts are stale versus repository file counts.
+- modules/vehicle/servis.js and scripts/build.js exceed 1600 lines.

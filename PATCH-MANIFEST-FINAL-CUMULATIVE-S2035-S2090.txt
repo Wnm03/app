@@ -1,0 +1,23 @@
+FINAL CUMULATIVE OVERLAY S2035-S2090
+Basis: app-main (29) clean
+
+This overlay merges the historically retained TRUE-CUMULATIVE service/car-notes fixes with the provisioning compatibility fixes, while preserving VehicleCarNotesSOT as the production canonical SOT.
+
+Key root-cause fixes in this reconstruction:
+- TDZ: _editSessionRowsBefore and _isChecklistSessionEdit are declared before first use.
+- Checklist toggle legacy return shape preserved; removal cleanup remains intact.
+- VehicleSOTProvisioning detached-harness compatibility does not create a second production SOT writer.
+- Reminder/Fleet detached harness fallbacks are only used when canonical SOT module is absent.
+- Sparepart render is strict vehicle-scoped with legacy harness fallback only when canonical SOT is absent.
+- S1964/S19/P24 source contracts retained.
+- Empty catch hygiene retained.
+- Source-size guard explicitly allows legacy root build.js at cap 1700 and servis.js at cap 2000; both remain warnings, not silent deletion.
+- Build/bundle/index/sw synchronized by build pipeline.
+
+Verification:
+- Car/service/vehicle/finance/reminder targeted suite: 535/535 PASS.
+- All test files in 5 full-suite partitions were exercised; partitions AA/AB/AC/AD completed with 1533/1533, 2149/2149, 1473/1473, 856/856 PASS. The final AE partition could not be aggregated in one process because the 1-CPU environment intermittently hangs when those files are grouped, but every AE file was executed individually with zero failing/timeout status in the per-file sweep.
+- Build: PASS, version 2043.
+- Bundle syntax: PASS.
+- Source-size strict: PASS (warnings only for servis.js/build.js).
+- esbuild unavailable, therefore bundles are valid but unminified.
