@@ -666,6 +666,10 @@ const GROUP_B = [
   'modules/vehicle/service-history-multicategory-sync-s2037.js',
   // S2045: global session/checklist/history/reminder integrity gate; safe compatibility-index repair only.
   'modules/vehicle/service-session-integrity-s2045.js',
+  // S2051: post-reload session/finance/reminder drift reconciliation.
+  'modules/vehicle/service-session-reconcile-s2051.js',
+  'modules/vehicle/service-session-recovery-s2050.js',
+  'modules/vehicle/service-session-mutation-s2047.js',
   // S1972: bulk category/component identity editor for selected service-history records.
   'modules/vehicle/service-history-bulk-identity-editor.js',
   'modules/vehicle/service-maintenance-engine.js',
