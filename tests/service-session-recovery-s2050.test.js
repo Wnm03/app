@@ -1,0 +1,5 @@
+const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const file=path.join(__dirname,'..','modules','vehicle','service-session-recovery-s2050.js');const src=fs.readFileSync(file,'utf8');
+test('S2050 module exposes crash/reload recovery contract',()=>{assert.match(src,/ServiceSessionRecoveryS2050/);assert.match(src,/PREPARED/);assert.match(src,/COMMITTED/);assert.match(src,/kw_service_session_recovery_s2050/);});
+test('S2050 recovery restores session rows, transactions and stock',()=>{assert.match(src,/g\.D\.servisLogs/);assert.match(src,/g\.D\.transactions/);assert.match(src,/g\.D\.partsStock/);assert.match(src,/save\(\{domain:'servis'/);});
+test('S2050 is wired into build before mutation module',()=>{const b=fs.readFileSync(path.join(__dirname,'..','scripts','build.js'),'utf8');const a=b.indexOf("service-session-recovery-s2050.js"),m=b.indexOf("service-session-mutation-s2047.js");assert.ok(a>=0&&m>=0&&a<m);});
