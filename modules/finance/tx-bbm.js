@@ -17,7 +17,7 @@ const sel=document.getElementById('txBbmVehicle');
 if(!sel||!D.vehicles)return;
 const cur=sel.value;
 sel.innerHTML=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
-const fallback=(typeof curVehicleId!=='undefined'&&D.vehicles.find(v=>v.id===curVehicleId))?curVehicleId:(D.vehicles[0]&&D.vehicles[0].id);
+const fallback=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)?((VehicleScopedSOT.ensureActive()||{}).id||''):(typeof curVehicleId!=='undefined'&&D.vehicles.find(v=>v.id===curVehicleId)?curVehicleId:'');
 sel.value=cur&&D.vehicles.find(v=>v.id===cur)?cur:fallback;
 }
 function toggleTxBbmFields(){
@@ -238,7 +238,7 @@ if(!km||!liter){toast('⚠️ Isi KM & Liter BBM dulu, atau hilangkan centang si
 const spbu=document.getElementById('txBbmSpbu').value.trim();
 const fullTank=document.getElementById('txBbmFull').checked;
 const vehSel=document.getElementById('txBbmVehicle');
-const vehicleId=vehSel&&vehSel.value?vehSel.value:((typeof curVehicleId!=='undefined'&&curVehicleId)||(D.vehicles[0]&&D.vehicles[0].id));
+const vehicleId=vehSel&&vehSel.value?vehSel.value:((typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)?((VehicleScopedSOT.ensureActive()||{}).id||''):(typeof curVehicleId!=='undefined'&&curVehicleId)||'');
 const jenisEl=document.getElementById('txBbmJenis');
 const jenis=jenisEl?jenisEl.value:undefined;
 const result=recordBbmLog({

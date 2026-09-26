@@ -1,11 +1,3 @@
-// tx-servis.js — logika panel "Sinkron ke Catatan Servis juga?" pada txModal
-// (Tambah/Edit Transaksi Keuangan). Dipisah dari transaksi.js (Sesi ini,
-// "sync sparepart -> servis"), pola SAMA PERSIS tx-bbm.js (populateTxBbmVehicleSelect/
-// toggleTxBbmFields/applyTxBbmFromTx): panel Transaksi cuma bikin D.servisLogs
-// yang TERTAUT ke transaksi yang SUDAH ADA (txId), TIDAK bikin transaksi baru
-// -- beda arah dari Servis._saveInner (car-notes.js) yang justru transaksi-nya
-// yang dibuat dari situ. Kedua arah tetap saling kompatibel karena SAMA-SAMA
-// memakai field `servisLinkId` (di D.transactions) <-> `txLinkId` (di
 // D.servisLogs) -- lihat catatan existingTx.servisLinkId di _saveTxInner()
 // (transaksi.js) yang SUDAH lebih dulu menyinkronkan cost/date/accountId utk
 // tx yang dibuat lewat Servis, sebelum sesi ini ada.
@@ -64,8 +56,8 @@ const sel=document.getElementById('txServisVehicle');
 if(!sel)return;
 const cur=sel.value;
 sel.innerHTML=(D.vehicles||[]).map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
-const fallback=(typeof curVehicleId!=='undefined'&&curVehicleId&&D.vehicles.some(v=>v.id===curVehicleId))?curVehicleId:(D.vehicles[0]&&D.vehicles[0].id);
-sel.value=cur&&D.vehicles.some(v=>v.id===cur)?cur:(fallback||'');
+const active=(typeof curVehicleId!=='undefined'&&curVehicleId&&D.vehicles.some(v=>v.id===curVehicleId))?curVehicleId:'';
+sel.value=cur&&D.vehicles.some(v=>v.id===cur)?cur:active;
 }
 function toggleTxServisFields(){
 const chk=document.getElementById('txSyncServis');
@@ -264,7 +256,15 @@ Object.assign(s,{
   reminderPackageId:opts.reminderPackageId||s.reminderPackageId||null
 });
 if(catIdForLog)s.categoryId=catIdForLog;
-const _catForSnapshot=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+const _catForSnapshot=(()=>{
+  const vid=String(vehicleId||'');
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vid&&typeof VehicleCarNotesSOT.getServiceCategories==='function'){
+    const canonical=VehicleCarNotesSOT.getServiceCategories(vid)||[];
+    const hit=canonical.find(c=>c&&((catIdForLog&&String(c.id)===String(catIdForLog))||(componentId&&String(c.serviceComponentId||'')===String(componentId))));
+    if(hit)return hit;
+  }
+  return catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+})();
 // V24 G4: an idempotent retry with identical service payload must NOT
 // recalculate historical snapshot fields from today's master interval.
 // A genuine Finance edit (date/item/KM/cost/note/account/category/component/checklist change)
@@ -311,7 +311,15 @@ const log={
   catalogPartLinkedStockId:null,
   autoLinkedPartStock:false
 };
-const _catForSnapshotNew=catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+const _catForSnapshotNew=(()=>{
+  const vid=String(vehicleId||'');
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vid&&typeof VehicleCarNotesSOT.getServiceCategories==='function'){
+    const canonical=VehicleCarNotesSOT.getServiceCategories(vid)||[];
+    const hit=canonical.find(c=>c&&((catIdForLog&&String(c.id)===String(catIdForLog))||(componentId&&String(c.serviceComponentId||'')===String(componentId))));
+    if(hit)return hit;
+  }
+  return catIdForLog?(D.sparepartCats||[]).find(c=>c&&c.id===catIdForLog):null;
+})();
 if(_catForSnapshotNew&&typeof buildServiceNextDueSnapshot==='function'){
   const _snap=buildServiceNextDueSnapshot({vehicleId,cat:_catForSnapshotNew,serviceKm:opts.km,serviceDate:opts.date,actionType:opts.actionType||null});
   log.intervalKmAtService=_snap.intervalKmAtService; log.intervalBulanAtService=_snap.intervalBulanAtService;
@@ -454,6 +462,11 @@ if(km!==null&&typeof Servis!=='undefined'&&typeof Servis.validateServiceOdometer
 }
 if(!item){toast('⚠️ Isi Jenis Servis/Item dulu utk transaksi servis');return null;}
 const existingServisId=(existingTx&&existingTx.servisLinkId)?existingTx.servisLinkId:null;
+const existingServis=existingServisId?(D.servisLogs||[]).find(s=>s&&s.id===existingServisId):null;
+if(existingServis&&existingServis.vehicleId&&String(existingServis.vehicleId)!==String(vehicleId)){
+  toast('⚠️ Catatan Servis sudah dimiliki kendaraan lain — pindah kendaraan dibatalkan');
+  return null;
+}
 const purchasedPartId=(tx&&tx.partStockId)?tx.partStockId:null;
 const purchasedPartQty=purchasedPartId?(tx.partStockQty||0):0;
 let checklist=(typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.toLogPayload==='function')?ServisChecklist.toLogPayload():[];
@@ -462,7 +475,7 @@ if(pkgState.id&&pkgState.targets.length){
   checklist=pkgState.targets.map(t=>({itemId:t.serviceComponentId||null,itemName:t.componentName||t.categoryName||item,group:t.categoryName||null,masterCategoryId:t.masterCategoryId||null,categoryId:t.categoryId||null,serviceComponentId:t.serviceComponentId||null,actionType:'periksa',conditionResult:null,conditionNote:'',notApplicable:false,targetKey:[t.categoryId||'',t.masterCategoryId||'',t.serviceComponentId||'',t.catalogPartId||''].join('|'),reminderPackageId:pkgState.id}));
 }
 const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist,reminderPackageId:pkgState.id});
-if(tx)tx.servisLinkId=servisId;
+if(tx){tx.servisLinkId=servisId;tx.vehicleId=vehicleId;}
 if(pkgState.id&&typeof ServiceReminderPackageSOT!=='undefined'&&typeof ServiceReminderPackageSOT.completeFromHistory==='function'){
   const completed=ServiceReminderPackageSOT.completeFromHistory(pkgState.id,[servisId]);
   if(!completed.ok)console.warn('S1945: reminder package completion deferred',completed);
@@ -500,3 +513,4 @@ if(t.vehicleId&&s.vehicleId&&t.vehicleId!==s.vehicleId){toast('⚠️ Link Servi
 closeModal('txModal');
 if(typeof Servis!=='undefined'&&Servis.openModal)Servis.openModal(s.id);
 }
+

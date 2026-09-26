@@ -236,6 +236,7 @@ if(!cat){
 // dgn kategori hasil input manual.
 const vehicleIdCatSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
 cat={id:'sp_'+_genId(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create');
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(catName);
@@ -417,6 +418,7 @@ let cat=(typeof resolveServisCatForVehicle==='function')
 if(!cat){
 const vehicleIdNewCat=(vidNewCat&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNewCat))?vidNewCat:null;
 cat={id:'sp_'+_genId(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create');
 D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(name);
