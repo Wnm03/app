@@ -430,7 +430,19 @@ const id=String(masterCategoryId||'');
 if(!id||!ServisChecklist.findGroupByMasterCategoryId(id))return;
 const ids=Array.isArray(Servis._serviceChecklistMasterCategoryIds)?Servis._serviceChecklistMasterCategoryIds.slice():[];
 const idx=ids.indexOf(id);
-if(idx>=0)ids.splice(idx,1);else ids.push(id);
+if(idx>=0){
+  ids.splice(idx,1);
+  // S2051: category OFF means its checklist components are OFF as well.
+  // Clear all transient component state so toLogPayload() cannot resurrect
+  // a removed category during session edit/save.
+  const groupFound=ServisChecklist.findGroupByMasterCategoryId(id);
+  const group=groupFound&&groupFound.group;
+  const items=group&&typeof ServisChecklist.itemsOfGroup==='function'?ServisChecklist.itemsOfGroup(group):[];
+  items.forEach(item=>{
+    const cid=item&&item.id;if(!cid)return;
+    ['_checked','_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus'].forEach(store=>{if(ServisChecklist[store]&&typeof ServisChecklist[store]==='object')delete ServisChecklist[store][cid];});
+  });
+}else ids.push(id);
 Servis._serviceChecklistMasterCategoryIds=ids;
 const first=ids[0]&&ServisChecklist.findGroupByMasterCategoryId(ids[0]);
 Servis._serviceChecklistGroupIdx=first?first.groupIdx:null;
