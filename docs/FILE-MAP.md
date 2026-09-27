@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-26T12:22:02.002Z
-Total file source: 417 · Total identifier global: 2917
+Terakhir digenerate: 2026-09-27T12:35:54.819Z
+Total file source: 417 · Total identifier global: 2922
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -70,7 +70,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 47 | `modules/shared/ghost-asset-cleanup-ui.js` | 81 | Sesi 592 (lanjutan patch PATCH-ghost-asset-migrated-investment.md). Patch S591/ghost-asset sudah menyaring record ber-flag `_migratedToInvestmentId` dari dropdown "Kaitkan ke Aset Multi-Owner" (getMultiOwnerAssets(), … |
 | 48 | `modules/shared/custodian-registry.js` | 130 | Custodian Registry (Sesi S540-A, Tahap 1/4 DESIGN-S540-CUSTODIAN-GROUPING.md, Design Lock disetujui user dengan keputusan final: Opsi A/registry, seed kosong, 0 backfill, assign manual, build() tidak berubah untuk … |
 | 49 | `modules/asset/asset-ownership-split-presenter.js` | 100 | Sesi 391: split keuntungan aset per pemilik berdasarkan porsi (lanjutan Sesi 390, Multi-Owner Engine). Target eksplisit user: "hitung otomatis keuntungan berdasarkan porsi". PRINSIP SESI INI (sama disiplin dgn … |
-| 50 | `modules/shared/features-helpers-global-security.js` | 1344 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 50 | `modules/shared/features-helpers-global-security.js` | 1402 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 51 | `modules/shared/action-wrappers.js` | 239 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 52 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
 | 53 | `modules/shared/format-tema.js` | 241 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
@@ -130,9 +130,9 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 107 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 108 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 109 | `modules/vehicle/car-notes-performance.js` | 94 | _(tidak ada komentar header)_ |
-| 110 | `modules/vehicle/vehicle-car-notes-sot-s2071.js` | 159 | _(tidak ada komentar header)_ |
+| 110 | `modules/vehicle/vehicle-car-notes-sot-s2071.js` | 289 | _(tidak ada komentar header)_ |
 | 111 | `modules/vehicle/vehicle-active-sot-s2061.js` | 98 | _(tidak ada komentar header)_ |
-| 112 | `modules/vehicle/vehicle-core.js` | 1285 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
+| 112 | `modules/vehicle/vehicle-core.js` | 1307 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 113 | `modules/vehicle/fuel-price-ref.js` | 231 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
 | 114 | `modules/vehicle/vehicle-catalog.js` | 630 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 115 | `modules/vehicle/vehicle-catalog-write-sot.js` | 65 | canonical write gate for part identity. SOT-3C: all feature write paths that create a part should resolve/create through VehicleCatalog first. Legacy D.partsStock/D.sparepartCats remain compatibility … |
@@ -144,7 +144,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 121 | `modules/vehicle/vehicle-catalog-identity-sot.js` | 51 | _(tidak ada komentar header)_ |
 | 122 | `modules/vehicle/vehicle-catalog-certification-sot.js` | 30 | _(tidak ada komentar header)_ |
 | 123 | `modules/vehicle/vehicle-part-sot.js` | 149 | _(tidak ada komentar header)_ |
-| 124 | `modules/vehicle/vehicle-service-sot.js` | 193 | _(tidak ada komentar header)_ |
+| 124 | `modules/vehicle/vehicle-service-sot.js` | 214 | _(tidak ada komentar header)_ |
 | 125 | `modules/vehicle/vehicle-service-reminder-sot.js` | 55 | SOT-4F — automatic service + reminder provisioning per vehicle model. VehicleCatalog remains the canonical part/service-rule source; vehicle.sot stores a deterministic projection for the selected vehicle/model. |
 | 126 | `modules/vehicle/service-reminder-package-sot.js` | 138 | _(tidak ada komentar header)_ |
 | 127 | `modules/vehicle/vehicle-sot-fleet-integrity.js` | 88 | _(tidak ada komentar header)_ |
@@ -181,13 +181,13 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 158 | `modules/ai/chat-action.js` | 84 | Parsing & UI blok [[ACTION]] dari balasan AI Chat (RefAI), murni ekstraksi/format teks, Dipindah ke modules/ai/chat-action.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 159 | `modules/shared/data-archive.js` | 168 | Storage usage estimate & Archive (export lalu hapus data lama per tahun). Dipindah ke modules/shared/data-archive.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 160 | `modules/vehicle/category-canonical-ref.js` | 23 | _(tidak ada komentar header)_ |
-| 161 | `modules/vehicle/service-interval-policy.js` | 52 | _(tidak ada komentar header)_ |
-| 162 | `modules/vehicle/service-interval-sot.js` | 16 | _(tidak ada komentar header)_ |
+| 161 | `modules/vehicle/service-interval-policy.js` | 16 | _(tidak ada komentar header)_ |
+| 162 | `modules/vehicle/service-interval-sot.js` | 214 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 161 | _(tidak ada komentar header)_ |
 | 164 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 166 | `modules/vehicle/sparepart-servis.js` | 1083 | _(tidak ada komentar header)_ |
-| 167 | `modules/vehicle/sparepart-servis-ui.js` | 922 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
+| 166 | `modules/vehicle/sparepart-servis.js` | 1147 | _(tidak ada komentar header)_ |
+| 167 | `modules/vehicle/sparepart-servis-ui.js` | 948 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 168 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 169 | `modules/vehicle/service-master-data.generated.js` | 9 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. |
 | 170 | `modules/vehicle/service-master-database.js` | 56 | _(tidak ada komentar header)_ |
@@ -208,9 +208,9 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 185 | `modules/vehicle/servis-checklist.js` | 899 | _(tidak ada komentar header)_ |
 | 186 | `modules/vehicle/service-input-catalog.js` | 83 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 187 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
-| 188 | `modules/vehicle/servis.js` | 1965 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
-| 189 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 96 | _(tidak ada komentar header)_ |
-| 190 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 125 | _(tidak ada komentar header)_ |
+| 188 | `modules/vehicle/servis.js` | 1963 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 189 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 95 | _(tidak ada komentar header)_ |
+| 190 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 123 | _(tidak ada komentar header)_ |
 | 191 | `modules/vehicle/service-session-integrity-s2045.js` | 98 | _(tidak ada komentar header)_ |
 | 192 | `modules/vehicle/service-session-reconcile-s2051.js` | 56 | _(tidak ada komentar header)_ |
 | 193 | `modules/vehicle/service-session-recovery-s2050.js` | 27 | _(tidak ada komentar header)_ |
@@ -219,7 +219,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 196 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 197 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
 | 198 | `modules/vehicle/servis-b.js` | 748 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
-| 199 | `modules/vehicle/service-history-component-explorer-s2006.js` | 106 | _(tidak ada komentar header)_ |
+| 199 | `modules/vehicle/service-history-component-explorer-s2006.js` | 105 | _(tidak ada komentar header)_ |
 | 200 | `modules/vehicle/service-maintenance-guidance.js` | 155 | _(tidak ada komentar header)_ |
 | 201 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
 | 202 | `modules/vehicle/shop-katalog-dinamis-presenter.js` | 83 | modules/vehicle/shop-katalog-dinamis-presenter.js — Shop Katalog Sparepart Dinamis Presenter. 100% REUSE ShopKatalogDinamisAPI (modules/vehicle/shop-katalog-dinamis-api.js) — TIDAK ada query/hitungan baru di sini, murni … |
@@ -518,6 +518,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_catSelectMode` | `modules/vehicle/vehicle-catalog-ui.js` |
 | `_choiceModalAnswer` | `modules/shared/modal-navigasi.js` |
 | `_choiceStore` | `modules/shared/modal-navigasi.js` |
+| `_chooseRecoverySnapshot` | `modules/shared/features-helpers-global-security.js` |
 | `_cleanupSwipeDismissForOverlay` | `modules/shared/modal-navigasi.js` |
 | `_clearSwipeDismissCloseTimer` | `modules/shared/modal-navigasi.js` |
 | `_clone` | `modules/vehicle/parts-catalog-database.js` |
@@ -804,6 +805,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_smdSame` | `modules/vehicle/service-master-database.js` |
 | `_smdSameCat` | `modules/vehicle/service-master-database.js` |
 | `_smdSource` | `modules/vehicle/service-master-database.js` |
+| `_snapshotDataHealth` | `modules/shared/features-helpers-global-security.js` |
+| `_snapshotLooksSparse` | `modules/shared/features-helpers-global-security.js` |
 | `_sparepartOcrCatalogAddSetSaveAction` | `modules/vehicle/sparepart-ocr-catalog-add.js` |
 | `_sparepartOcrCatalogAddStr` | `modules/vehicle/sparepart-ocr-catalog-add.js` |
 | `_sparepartOcrCatalogAddWritePrefill` | `modules/vehicle/sparepart-ocr-catalog-add.js` |
@@ -2482,7 +2485,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `resetTxShopSaleCart` | `modules/shop/cobek-tx-cart.js` |
 | `resolveAccOwnershipBadgeState` | `modules/finance/akun.js` |
 | `resolveAliasValue` | `modules/shop/cobek-io.js` |
-| `resolveCanonicalInterval` | `modules/vehicle/service-interval-sot.js` |
 | `resolveCanonicalServiceComponent` | `modules/vehicle/sparepart-servis.js` |
 | `resolveCatGroup` | `modules/vehicle/sparepart-servis.js` |
 | `resolveElement` | `modules/vehicle/ride-map.js` |
@@ -3249,10 +3251,12 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `vehicleServiceSotApplyLegacyRuleToCatalog` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotEnsureReady` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotFindCatalogForCat` | `modules/vehicle/vehicle-service-sot.js` |
+| `vehicleServiceSotFindServiceMasterForCategory` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotIsReady` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotNormalizeCode` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotResolvePart` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotResolveReminderRule` | `modules/vehicle/vehicle-service-sot.js` |
+| `vehicleServiceSotSetServiceInterval` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotSyncCategoryRule` | `modules/vehicle/vehicle-service-sot.js` |
 | `vehicleServiceSotVehicleItems` | `modules/vehicle/vehicle-service-sot.js` |
 | `VehicleServiceTrendSummary` | `modules/vehicle/vehicle-service-trend.js` |
@@ -3273,6 +3277,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `VehicleTrendAPI` | `modules/vehicle/vehicle-trend-api.js` |
 | `vehicleWebImportFetchHtml` | `modules/vehicle/vehicle-catalog-web-import.js` |
 | `vehicleWebImportParseCatalogHtml` | `modules/vehicle/vehicle-catalog-web-import.js` |
+| `vehIntervalSotValue` | `modules/vehicle/vehicle-core.js` |
 | `vehJenisFieldsHtml` | `modules/vehicle/vehicle-core.js` |
 | `vehMetaText` | `modules/vehicle/vehicle-core.js` |
 | `VEHTAX_INPUT_IDS` | `car-notes.js` |
