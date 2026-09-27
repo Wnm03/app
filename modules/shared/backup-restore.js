@@ -703,8 +703,8 @@ if(!D.categories)D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.inc
 if(!D.accounts||!D.accounts.length)D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.bills)D.bills=[];
 if(!D.billsArchive)D.billsArchive=[];
-if(!D.vehicles||!D.vehicles.length)D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}];
-D.vehicles.forEach(v=>{if(!v.serviceIntervalKm)v.serviceIntervalKm=3000;});
+if(!D.vehicles||!D.vehicles.length)D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️'}];
+
 if(!D.bbmLogs)D.bbmLogs=[];
 if(!D.servisLogs)D.servisLogs=[];
 if(!D.jalanLogs)D.jalanLogs=[];
@@ -901,7 +901,7 @@ reader.onload=function(ev){
 const _v26ImportSnapshot={bbmLogs:JSON.stringify(D.bbmLogs||[]),servisLogs:JSON.stringify(D.servisLogs||[]),transactions:JSON.stringify(D.transactions||[]),partsStock:JSON.stringify(D.partsStock||[]),sparepartCats:JSON.stringify(D.sparepartCats||[])};
 try{
 const content=ev.target.result;
-if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}];
+if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️'}];
 const selectedVehId=document.getElementById('carImportVehicle')?document.getElementById('carImportVehicle').value:'';
 const vehId=(selectedVehId&&D.vehicles.find(v=>v.id===selectedVehId))?selectedVehId:D.vehicles[0].id;
 let bbmCount=0, servisCount=0, skipCount=0, autoDetectCount=0, vehColDetected=false;

@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2031-service-history-component-sot-2043';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2031-service-history-component-sot-2043';
+const APP_BUILD_VERSION = 's2031-service-history-component-sot-2046';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2031-service-history-component-sot-2046';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -133,7 +133,7 @@ nextPulang:'',lastBackup:null,lastResetPromptDate:null,
 profile:{nama:'W',gajiPokok:65000,kiriman:500000,theme:'dark',lemburMultiplier:1.5,tarifMinggu:139000,tanggalLahir:null,statusKawin:false,tanggungan:0,statusPekerjaan:null,targetGajiBulanan:null,insightMingguanAktif:true},
 categories:{income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))},
 accounts:JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS)),
-vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000,modelId:'vario-125'}],
+vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️',modelId:'vario-125'}],
 simList:[],
 bbmLogs:[],servisLogs:[],jalanLogs:[],kmLogs:[],workDays:[],gajiMingguanHistory:[],
 tukangBorHargaMemory:{},
@@ -1148,8 +1148,8 @@ if(D.profile&&D.profile.tanggungan===undefined) D.profile.tanggungan=0;
 if(D.profile&&D.profile.statusPekerjaan===undefined) D.profile.statusPekerjaan=null;
 if(!D.bills) D.bills=[];
 if(!D.billsArchive) D.billsArchive=[];
-if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000,modelId:'vario-125'}];
-D.vehicles.forEach(v=>{if(!v.serviceIntervalKm)v.serviceIntervalKm=3000;});
+if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',modelId:'vario-125'}];
+
 if(!D.torsiChecklist||typeof D.torsiChecklist!=='object'||Array.isArray(D.torsiChecklist)) D.torsiChecklist={};
 // Sesi "Revisi migrasi" (torsi-vehicle-selector, Bagian A): migrasi jaring
 // pengaman D.torsiChecklist flat->per-kendaraan SUDAH ditangani otomatis
