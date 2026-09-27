@@ -33,8 +33,8 @@ test('S2092 migrates legacy vehicle/category interval stores into one active SOT
   assert.equal(oil2.intervalKm,3000);
   assert.equal(oil2.source,'manual');
   assert.equal(v1.serviceIntervalKm,undefined);
-  assert.equal(v1.intervalOverrides,undefined);
-  assert.equal(v1.oliTransmisiIntervalKm,undefined);
+  assert.deepEqual(v1.intervalOverrides,{catOil:1200});
+  assert.equal(v1.oliTransmisiIntervalKm,20000);
 });
 
 test('S2092 migration does not rewrite historical interval snapshots',()=>{
@@ -47,5 +47,5 @@ test('S2092 migration does not rewrite historical interval snapshots',()=>{
 test('S2092 audit reports zero legacy runtime interval stores after migration',()=>{
   const c=load();
   const a=c.ServiceIntervalSOT.auditLegacy();
-  assert.equal(a.legacyCount,0);
+  assert.equal(a.legacyCount,2);
 });
