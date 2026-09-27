@@ -39,10 +39,14 @@ function getVehicleServiceCategorySOT(cat,vehicleId){
   }
   if(!item)return null;
   if(!group&&typeof ServiceInputCatalog.groupById==='function')group=ServiceInputCatalog.groupById(item.masterCategoryId||cat.masterCategoryId)||null;
-  const rule=(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')
-    ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null;
-  const intervalKm=rule&&rule.intervalKm!=null?Number(rule.intervalKm):((typeof getEffectiveIntervalKm==='function')?getEffectiveIntervalKm(vehicleId,cat):Number(cat.intervalKm)||null);
-  const intervalBulan=rule&&rule.intervalBulan!=null?Number(rule.intervalBulan):((typeof getEffectiveIntervalBulan==='function')?getEffectiveIntervalBulan(cat,vehicleId):Number(cat.intervalBulan)||null);
+  const rule=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')
+    ?ServiceIntervalSOT.active(cat,vehicleId)
+    :((typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')
+      ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null);
+  const effKm=(typeof getEffectiveIntervalKm==='function')?getEffectiveIntervalKm(vehicleId,cat):null;
+  const effMo=(typeof getEffectiveIntervalBulan==='function')?getEffectiveIntervalBulan(cat,vehicleId):null;
+  const intervalKm=rule&&Number(rule.intervalKm)>0?Number(rule.intervalKm):(Number(effKm)>0?Number(effKm):(Number(cat.intervalKm)>0?Number(cat.intervalKm):null));
+  const intervalBulan=rule&&Number(rule.intervalBulan)>0?Number(rule.intervalBulan):(Number(effMo)>0?Number(effMo):(Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null));
   return {
     categoryId:cat.id,
     vehicleId,
@@ -343,8 +347,8 @@ const schedule={rule:Object.assign({},rule),inspectKm:Number.isFinite(rule.inspe
 // S2091-r1: the active interval comes from ONE VehicleCarNotesSOT record.
 // Maintenance rules provide only action semantics (inspect/replace); they do
 // not own a competing interval value.
-const active=typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'
-  ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null;
+const active=typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'
+  ?ServiceIntervalSOT.active(cat,vehicleId):null;
 if(active&&((active.intervalKm||0)>0||(active.intervalBulan||0)>0)){
   const km=Number(active.intervalKm)>0?Number(active.intervalKm):null;
   const mo=Number(active.intervalBulan)>0?Number(active.intervalBulan):null;
@@ -404,16 +408,21 @@ function getServiceLinkage(catOrPart,vehicleId){
   return resolved;
 }
 function getEffectiveIntervalKm(vehicleId,cat){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const rule=ServiceIntervalSOT.active(cat,vehicleId);
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
 if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
   const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
   if(rule&&rule.intervalKm!==null)return rule.intervalKm;
 }
-if(typeof resolveCanonicalInterval==='function'){
-  return resolveCanonicalInterval(cat,{vehicleId}).intervalKm;
-}
-return(cat&&cat.intervalKm>0)?cat.intervalKm:null;
+return(cat&&Number(cat.intervalKm)>0)?Number(cat.intervalKm):null;
 }
 function hasIntervalOverride(vehicleId,cat){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const r=ServiceIntervalSOT.active(cat,vehicleId);
+  return !!(r&&r.source==='manual');
+}
 if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
   const r=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
   return !!(r&&r.source==='manual');
@@ -421,14 +430,15 @@ if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServ
 return false;
 }
 function getEffectiveIntervalBulan(cat,vehicleId){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const rule=ServiceIntervalSOT.active(cat,vehicleId);
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
 if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
   const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
   if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
 }
-if(typeof resolveCanonicalInterval==='function'){
-  return resolveCanonicalInterval(cat,{vehicleId}).intervalBulan;
-}
-return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
+return(cat&&Number(cat.intervalBulan)>0)?Number(cat.intervalBulan):null;
 }
 // P24 canonical part-history contract: getPartUsageHistory, getPartPriceHistoryHtml, compareServiceHistoryRecency.
 function compareServiceHistoryRecencyLocal(a,b){
@@ -659,7 +669,7 @@ const veh=D.vehicles.find(v=>v.id===curVehicleId);
 if(!veh){toast('⚠️ Pilih kendaraan dulu');return;}
 const current=getEffectiveIntervalKm(curVehicleId,cat);
 const reko=recommendIntervalKm(curVehicleId,cat);
-const sourceNow=(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')?VehicleServiceSOT.resolveReminderRule(cat,curVehicleId):null;
+const sourceNow=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(cat,curVehicleId):null;
 const sourceLabel=sourceNow&&sourceNow.source==='ai-rekomendasi'?'AI rekomendasi':sourceNow&&sourceNow.source==='manual'?'manual':'pedoman';
 const rekoLine=(reko.ok&&Math.abs(reko.avgKm-current)>=100)?`\n\n💡 AI/rekomendasi pola riwayat: ~${reko.avgKm.toLocaleString('id-ID')} km (${reko.count} catatan). Ini hanya saran — pilih dengan tombol rekomendasi atau isi angka manual.`:'';
 const val=await showPromptModal({title:'Interval Servis '+veh.name,message:`Interval aktif: ${current?current.toLocaleString('id-ID')+' km':'belum ditetapkan'} · sumber: ${sourceLabel}.\n\nSimpan angka manual untuk menjadikannya SOT kendaraan. Kosongkan/0 untuk kembali ke pedoman standar. ${rekoLine}`,icon:'🔧',inputType:'number',defaultValue:current});
@@ -670,16 +680,18 @@ if(val===''||isNaN(num)||num<=0){
   const master=typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
   const baseKm=Number(master&&master.item&&master.item.intervalKm)>0?Number(master.item.intervalKm):Number(cat.intervalKm)>0?Number(cat.intervalKm):0;
   const baseMo=Number(master&&master.item&&master.item.intervalTimeMonths)>0?Number(master.item.intervalTimeMonths):Number(cat.intervalBulan)>0?Number(cat.intervalBulan):0;
-  if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.setServiceInterval==='function')result=VehicleServiceSOT.setServiceInterval(curVehicleId,cat,{intervalKm:baseKm,intervalBulan:baseMo,source:'pedoman'});
+  if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setGuideline==='function')result=ServiceIntervalSOT.setGuideline(cat,curVehicleId,baseKm,baseMo,{from:'manual-reset'});
   toast('✅ Kembali ke interval pedoman standar');
 } else {
-  if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.setServiceInterval==='function')result=VehicleServiceSOT.setServiceInterval(curVehicleId,cat,{intervalKm:num,intervalBulan:0,source:'manual'});
+  if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function')result=ServiceIntervalSOT.setManual(cat,curVehicleId,num,0);
   toast('✅ Interval SOT manual disimpan: '+num.toLocaleString('id-ID')+' km');
 }
 if(result&&result.ok){
-  const resolved=VehicleServiceSOT.resolveReminderRule(cat,curVehicleId);
+  const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(cat,curVehicleId):VehicleServiceSOT.resolveReminderRule(cat,curVehicleId);
   cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;
   if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');
+  Sparepart._recoCache=null;
+  Sparepart._catalogNameCache=[];
   save();Servis.renderReminder();renderDashboardServisReminder();
 }
 }
@@ -867,7 +879,7 @@ ensureCanonicalSparepartComponentCategories(){
     const _sotCat={id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:'',vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null)}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&_sotCat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotCat,'checklist-category-provision'); D.sparepartCats.push(_sotCat);
     added++;
   }));
-  if(added||linked)save();
+  if(added||linked){Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();}
   return {ok:true,added,linked};
 },
 // Sparepart UI layer: activeStockMasterCategoryFilter:null, activeStockComponentFilter:null, renderStockFilters(beforeEl).
@@ -996,7 +1008,7 @@ return;
 }
 cat.showInReminder=cat.showInReminder===false?true:false;
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');
-save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
+Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },
 populateVehicleSelect(elId,currentValue,isEdit){
@@ -1078,7 +1090,7 @@ codeEl.value=isEdit?(D.sparepartCats[Sparepart.catEditIdx].code||codeFromName(D.
 codeEl.dataset.manual=isEdit?'1':'0';
 codeEl.oninput=()=>{codeEl.dataset.manual='1';};
 const curCat=isEdit?D.sparepartCats[Sparepart.catEditIdx]:null;
-const activeInterval=(isEdit&&typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')?VehicleServiceSOT.resolveReminderRule(curCat,curCat.vehicleId||((typeof curVehicleId!=='undefined')?curVehicleId:null)):null;
+const activeInterval=(isEdit&&typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(curCat,curCat.vehicleId||((typeof curVehicleId!=='undefined')?curVehicleId:null)):null;
 Sparepart._intervalSource=activeInterval&&activeInterval.source||null;
 Sparepart._intervalInitialKm=activeInterval&&activeInterval.intervalKm||((curCat&&curCat.intervalKm>0)?curCat.intervalKm:0);
 Sparepart._intervalInitialMonths=activeInterval&&activeInterval.intervalBulan||((curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:0);

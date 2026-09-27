@@ -170,10 +170,25 @@ if(vehChanged&&oldVehicleId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCar
   if(typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(editCat.id,oldVehicleId);
   if(typeof VehicleCarNotesSOT.removeServiceInterval==='function')VehicleCarNotesSOT.removeServiceInterval(oldVehicleId,editCat);
 }
-if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function')VehicleServiceSOT.syncCategoryRule(editCat,vehicleId,{source:intervalSource});
-if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
-  const resolved=VehicleServiceSOT.resolveReminderRule(editCat,vehicleId);editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;
+let result=null;
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT){
+  if(intervalSource==='ai-rekomendasi'&&typeof ServiceIntervalSOT.setAiRecommendation==='function'){
+    result=ServiceIntervalSOT.setAiRecommendation(editCat,vehicleId,intervalKm,intervalBulan,{from:'category-edit'});
+  }else if(intervalSource==='manual'&&typeof ServiceIntervalSOT.setManual==='function'){
+    result=ServiceIntervalSOT.setManual(editCat,vehicleId,intervalKm,intervalBulan);
+  }else if(typeof ServiceIntervalSOT.setGuideline==='function'){
+    result=ServiceIntervalSOT.setGuideline(editCat,vehicleId,intervalKm,intervalBulan,{from:'category-edit'});
+  }
+}else if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function'){
+  // Isolated early-load compatibility: VehicleServiceSOT itself delegates to
+  // VehicleCarNotesSOT and does not own interval state.
+  result=VehicleServiceSOT.syncCategoryRule(editCat,vehicleId,{source:intervalSource});
 }
+const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')
+  ?ServiceIntervalSOT.active(editCat,vehicleId)
+  :(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'
+    ?VehicleServiceSOT.resolveReminderRule(editCat,vehicleId):null);
+if(result&&result.ok&&resolved){editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;}
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
 } else {
 // FITUR BARU (audit lanjutan grouping, sesi lalu): kategori baru dari form

@@ -183,6 +183,16 @@ function getReminderCategoriesForVehicle(vehicleId){
   });
 }
 
+// Compatibility writer: legacy callers may still address VehicleServiceSOT,
+// but the write is delegated to the single active-interval SOT. No interval
+// state is owned here.
+function vehicleServiceSotSetServiceInterval(vehicleId,cat,payload){
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.setServiceInterval==='function'){
+    return VehicleCarNotesSOT.setServiceInterval(vehicleId,cat,payload||{});
+  }
+  return {ok:false,reason:'vehicle-sot-unavailable'};
+}
+
 function vehicleServiceSotResolvePart(catOrId,vehicleId){
   const cat=typeof catOrId==='object'?catOrId:(D.sparepartCats||[]).find(c=>String(c.id)===String(catOrId));
   const item=vehicleServiceSotFindCatalogForCat(cat,vehicleId);
@@ -197,6 +207,7 @@ const VehicleServiceSOT={
   resolvePart:vehicleServiceSotResolvePart,
   resolveReminderRule:vehicleServiceSotResolveReminderRule,
   syncCategoryRule:vehicleServiceSotSyncCategoryRule,
+  setServiceInterval:vehicleServiceSotSetServiceInterval,
 };
 if(typeof window!=='undefined')window.VehicleServiceSOT=VehicleServiceSOT;
 

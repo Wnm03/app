@@ -195,14 +195,8 @@ function vehIntervalSotValue(v,componentId,name){
       if(r&&Number(r.intervalKm)>0)return Number(r.intervalKm);
     }
   }catch(_e){/* interval UI remains usable if SOT is unavailable during bootstrap */}
-  // Isolated legacy harness/early-load compatibility only. In production the
-  // canonical VehicleCarNotesSOT path above is present and authoritative.
-  if(!(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT)){
-    const legacy=componentId==='oli-mesin'?v&&v.serviceIntervalKm:
-      (name&&/oli\s+transmisi/i.test(String(name))?v&&v.oliTransmisiIntervalKm:null);
-    const n=Number(legacy);
-    if(Number.isFinite(n)&&n>0)return n;
-  }
+  // No legacy vehicle-level interval fallback: the active interval belongs
+  // exclusively to the new ServiceIntervalSOT -> VehicleCarNotesSOT chain.
   return null;
 }
 

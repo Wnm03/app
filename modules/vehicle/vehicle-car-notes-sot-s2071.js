@@ -93,13 +93,87 @@
     const vid=str(id||ref&&ref.vehicleId||activeId()); if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
     const rec=normalizeInterval(payload,ref), key=rec.key;
     if(!key||(rec.intervalKm<=0&&rec.intervalBulan<=0))return {ok:false,code:'interval_missing'};
-    return mutate(vid,s=>{if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};s.serviceIntervals[key]=rec;});
+    return mutate(vid,s=>{
+      if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};
+      const targetComponent=str(rec.serviceComponentId)||null;
+      const targetIdentity=targetComponent||((str(rec.masterCategoryId)||'')+'::'+str(ref&&ref.name||'').toLowerCase())||key;
+      Object.keys(s.serviceIntervals).forEach(existingKey=>{
+        if(existingKey===key)return;
+        const existing=normalizeInterval(s.serviceIntervals[existingKey],s.serviceIntervals[existingKey]||{});
+        const existingIdentity=str(existing.serviceComponentId)||((str(existing.masterCategoryId)||'')+'::'+str(existing.name||'').toLowerCase())||existingKey;
+        if(existingIdentity===targetIdentity)delete s.serviceIntervals[existingKey];
+      });
+      s.serviceIntervals[key]=rec;
+    });
   }
   function setServiceIntervalSource(id,ref,source){
     const cur=getServiceInterval(id,ref); if(!cur)return {ok:false,code:'interval_not_found'};
     return setServiceInterval(id,ref,Object.assign({},cur,{source}));
   }
 
+  function auditServiceIntervals(id){
+    const vid=str(id||activeId()), s=ensure(vid), rows=[], byComponent=new Map(), issues=[];
+    if(!s)return {ok:false,vehicleId:vid||null,issues:[{code:'VEHICLE_NOT_FOUND'}],rows:[]};
+    const store=s.serviceIntervals&&typeof s.serviceIntervals==='object'&&!Array.isArray(s.serviceIntervals)?s.serviceIntervals:{};
+    Object.keys(store).forEach(key=>{
+      const r=normalizeInterval(store[key],store[key]||{}), component=str(r.serviceComponentId), identity=component||str(r.masterCategoryId)+'::'+str(r.name).toLowerCase()||key;
+      const row={key,componentId:component||null,identity,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,source:r.source,updatedAt:r.updatedAt||null};
+      rows.push(row);
+      const arr=byComponent.get(identity)||[]; arr.push(row); byComponent.set(identity,arr);
+    });
+    byComponent.forEach((arr,identity)=>{
+      if(arr.length<2)return;
+      const values=new Set(arr.map(r=>`${r.intervalKm}|${r.intervalBulan}`));
+      issues.push({code:'DUPLICATE_ACTIVE_INTERVAL',identity,count:arr.length,conflict:values.size>1,keys:arr.map(r=>r.key)});
+    });
+    return {ok:issues.length===0,vehicleId:vid,intervalCount:rows.length,duplicateCount:issues.length,issues,rows};
+  }
+  function repairServiceIntervals(id){
+    const vid=str(id||activeId()), s=ensure(vid);
+    if(!s)return {ok:false,vehicleId:vid||null,changed:0,issues:[{code:'VEHICLE_NOT_FOUND'}]};
+    if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};
+    const groups=new Map(), removed=[];
+    Object.keys(s.serviceIntervals).forEach(key=>{
+      const raw=s.serviceIntervals[key]||{}, r=normalizeInterval(raw,raw), identity=str(r.serviceComponentId)||((str(r.masterCategoryId)||'')+'::'+str(raw.name||'').toLowerCase())||key;
+      const arr=groups.get(identity)||[]; arr.push({key,raw:r}); groups.set(identity,arr);
+    });
+    let changed=0;
+    const rank={pedoman:1,'ai-rekomendasi':2,manual:3};
+    groups.forEach((arr,identity)=>{
+      if(arr.length===1){
+        const only=arr[0], canonicalKey=only.raw.serviceComponentId||only.key;
+        if(canonicalKey!==only.key){s.serviceIntervals[canonicalKey]=only.raw;delete s.serviceIntervals[only.key];changed++;}
+        return;
+      }
+      arr.sort((a,b)=>{
+        const pr=(rank[b.raw.source]||0)-(rank[a.raw.source]||0); if(pr)return pr;
+        return String(b.raw.updatedAt||'').localeCompare(String(a.raw.updatedAt||''));
+      });
+      const winner=arr[0], canonicalKey=winner.raw.serviceComponentId||winner.key;
+      s.serviceIntervals[canonicalKey]=winner.raw;
+      arr.slice(1).forEach(x=>{if(x.key!==canonicalKey){delete s.serviceIntervals[x.key];removed.push(x.key);changed++;}});
+      if(winner.key!==canonicalKey){delete s.serviceIntervals[winner.key];changed++;}
+    });
+    if(changed){s.intervalSotRevision=Number(s.intervalSotRevision||0)+1;s.intervalSotRepairedAt=new Date().toISOString();}
+    return {ok:true,vehicleId:vid,changed,removedKeys:removed,intervalCount:Object.keys(s.serviceIntervals).length};
+  }
+  function auditServiceIntervals(id){
+    const vid=str(id||activeId()), s=ensure(vid), rows=[], byComponent=new Map(), issues=[];
+    if(!s)return {ok:false,vehicleId:vid||null,issues:[{code:'VEHICLE_NOT_FOUND'}],rows:[]};
+    const store=s.serviceIntervals&&typeof s.serviceIntervals==='object'&&!Array.isArray(s.serviceIntervals)?s.serviceIntervals:{};
+    Object.keys(store).forEach(key=>{const r=normalizeInterval(store[key],store[key]||{}), component=str(r.serviceComponentId), identity=component||(str(r.masterCategoryId)+'::'+str(r.name||'').toLowerCase())||key;const row={key,componentId:component||null,identity,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,source:r.source,updatedAt:r.updatedAt||null};rows.push(row);const arr=byComponent.get(identity)||[];arr.push(row);byComponent.set(identity,arr);});
+    byComponent.forEach((arr,identity)=>{if(arr.length<2)return;const values=new Set(arr.map(r=>`${r.intervalKm}|${r.intervalBulan}`));issues.push({code:'DUPLICATE_ACTIVE_INTERVAL',identity,count:arr.length,conflict:values.size>1,keys:arr.map(r=>r.key)});});
+    return {ok:issues.length===0,vehicleId:vid,intervalCount:rows.length,duplicateCount:issues.length,issues,rows};
+  }
+  function repairServiceIntervals(id){
+    const vid=str(id||activeId()), s=ensure(vid); if(!s)return {ok:false,vehicleId:vid||null,changed:0,issues:[{code:'VEHICLE_NOT_FOUND'}]};
+    if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};
+    const groups=new Map(),removed=[];Object.keys(s.serviceIntervals).forEach(key=>{const raw=s.serviceIntervals[key]||{},r=normalizeInterval(raw,raw),identity=str(r.serviceComponentId)||((str(r.masterCategoryId)||'')+'::'+str(raw.name||'').toLowerCase())||key;const arr=groups.get(identity)||[];arr.push({key,raw:r});groups.set(identity,arr);});
+    let changed=0;const rank={pedoman:1,'ai-rekomendasi':2,manual:3};
+    groups.forEach(arr=>{arr.sort((a,b)=>{const pr=(rank[b.raw.source]||0)-(rank[a.raw.source]||0);if(pr)return pr;return String(b.raw.updatedAt||'').localeCompare(String(a.raw.updatedAt||''));});const winner=arr[0],canonicalKey=winner.raw.serviceComponentId||winner.key;s.serviceIntervals[canonicalKey]=winner.raw;arr.forEach(x=>{if(x.key!==canonicalKey){delete s.serviceIntervals[x.key];removed.push(x.key);changed++;}});});
+    if(changed){s.intervalSotRevision=Number(s.intervalSotRevision||0)+1;s.intervalSotRepairedAt=new Date().toISOString();}
+    return {ok:true,vehicleId:vid,changed,removedKeys:removed,intervalCount:Object.keys(s.serviceIntervals).length};
+  }
   function removeServiceInterval(id,ref){
     const vid=str(id||activeId()), key=intervalKey(ref);
     if(!vid||!key||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
@@ -207,7 +281,7 @@
     const base=auditFinanceHistoryReminder(vid);issues.push(...(base.issues||[]));
     return {ok:issues.length===0,vehicleId:vid,sessionCount:seenSessions.size,serviceCount:scopedLogs.length,financeServiceCount:scopedTx.filter(x=>str(x.vehicleId)===vid).length,reminderCount:reminders.length,issues};
   }
-  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
+  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
   root.VehicleCarNotesSOT=api;
   if(typeof window!=='undefined')window.VehicleCarNotesSOT=api;
   try{for(const v of vehicles())ensure(v.id);}catch(e){/* provisioning must remain fail-safe during bootstrap. */}

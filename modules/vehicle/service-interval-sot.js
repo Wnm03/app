@@ -124,6 +124,22 @@
     (d&&Array.isArray(d.vehicles)?d.vehicles:[]).forEach(v=>out.push(migrateVehicle(v.id,options||{})));
     return {version:VERSION,ok:true,vehicles:out};
   }
+  function auditActiveSot(vehicleId){
+    if(typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT||typeof VehicleCarNotesSOT.auditServiceIntervals!=='function')return {ok:false,vehicleId:vehicleId||null,issues:[{code:'vehicle-sot-unavailable'}]};
+    return VehicleCarNotesSOT.auditServiceIntervals(vehicleId);
+  }
+  function repairActiveSot(vehicleId){
+    if(typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT||typeof VehicleCarNotesSOT.repairServiceIntervals!=='function')return {ok:false,vehicleId:vehicleId||null,changed:0,issues:[{code:'vehicle-sot-unavailable'}]};
+    return VehicleCarNotesSOT.repairServiceIntervals(vehicleId);
+  }
+  function auditAllSot(){
+    const d=typeof D!=='undefined'?D:root.D, vs=d&&Array.isArray(d.vehicles)?d.vehicles:[];
+    return {version:VERSION,vehicles:vs.map(v=>auditActiveSot(v.id)),legacy:auditLegacy()};
+  }
+  function repairAllSot(){
+    const d=typeof D!=='undefined'?D:root.D, vs=d&&Array.isArray(d.vehicles)?d.vehicles:[];
+    return {version:VERSION,vehicles:vs.map(v=>repairActiveSot(v.id))};
+  }
   function auditLegacy(){
     const d=typeof D!=='undefined'?D:root.D, out=[];
     (d&&Array.isArray(d.vehicles)?d.vehicles:[]).forEach(v=>{
@@ -138,8 +154,8 @@
   // Boot migration: convert legacy interval stores into the new SOT without
   // changing historical service snapshots. Legacy fields remain only when a
   // conflict/unmapped component prevents a safe conversion.
-  try{if(typeof D!=='undefined'&&Array.isArray(D.vehicles))migrateAll({purgeLegacy:true});}catch(_e){/* boot migration is fail-safe; next load retries from legacy shadow */}
-  const api={version:VERSION,resolveCanonicalInterval,resolveCanonicalIntervalDetailed,active,setManual,setAiRecommendation,setGuideline,migrateVehicle,migrateAll,auditLegacy,refFor};
+  try{if(typeof D!=='undefined'&&Array.isArray(D.vehicles)){migrateAll({purgeLegacy:true});repairAllSot();}}catch(_e){/* boot migration/repair is fail-safe; next load retries */}
+  const api={version:VERSION,resolveCanonicalInterval,resolveCanonicalIntervalDetailed,active,setManual,setAiRecommendation,setGuideline,migrateVehicle,migrateAll,auditLegacy,auditActiveSot,repairActiveSot,auditAllSot,repairAllSot,refFor};
   root.ServiceIntervalSOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);
