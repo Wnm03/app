@@ -1,0 +1,70 @@
+PATCH S2093 — GLOBAL SOT OWNERSHIP HARDENING + LEGACY INTERVAL REINTRODUCTION BLOCK
+
+Base: app-main (30).zip
+Cumulative: S2091 + S2092 + S2093
+
+SCOPE
+- Continue the SOT migration after S2092 beyond interval resolution.
+- Remove runtime bootstrap/restore paths that could recreate legacy
+  vehicle.serviceIntervalKm as a second runtime authority.
+- Keep historical interval snapshots (intervalKmAtService / nextDue*) untouched.
+- Keep legacy interval fields readable only by the explicit S2092 migration
+  module; no production consumer may write them back.
+- Update Shop Katalog vehicle-specific interval test to consume the canonical
+  VehicleCarNotesSOT active interval instead of vehicle.intervalOverrides.
+- Keep vehicle management UI compatible with isolated legacy test/early-load
+  harnesses: when VehicleCarNotesSOT/ServiceIntervalSOT is unavailable, the UI
+  may read the old value transiently; production runtime remains SOT-first.
+- Preserve S2092 cumulative changes and rebuild production bundles.
+
+IMPLEMENTED
+1. Legacy interval bootstrap purge
+   - Removed serviceIntervalKm=3000 seeds/self-heal from shared/Shop/Finance/Asset
+     fallback initializers and backup/restore migration.
+   - Restore of an old backup remains compatible without recreating the legacy
+     field as runtime authority.
+2. SOT ownership gate
+   - Added S2093 test enforcing that legacy interval assignment is isolated to
+     modules/vehicle/service-interval-sot.js migration logic.
+   - Added regression proving active interval remains in VehicleCarNotesSOT.
+3. Vehicle UI compatibility
+   - vehIntervalSotValue() is SOT-first.
+   - Legacy vehicle interval values are read only when the SOT module itself is
+     unavailable (isolated harness/early-load compatibility).
+4. Shop catalog SOT migration
+   - Updated the legacy override regression test to model an active manual
+     VehicleCarNotesSOT record.
+   - Runtime no longer depends on vehicle.intervalOverrides.
+5. Release
+   - Build version: 2046.
+   - index.html/app_production.html cache version: 2046.
+   - sw.js CACHE_NAME: kw-cache-v2046.
+   - Both bundles pass node --check.
+   - esbuild unavailable; bundles are valid but not minified.
+
+TESTS
+- S2091/S2092/S2093 targeted interval + backup gates: PASS.
+- Full test suite: 7,785 / 7,785 PASS; 0 fail; 0 cancelled.
+- Full suite executed in 20 serial shards to avoid sandbox process contention.
+- Source legacy-assignment scan: PASS.
+- Production hardening/build checks: PASS.
+- Source-size warnings remain existing: modules/vehicle/servis.js and build.js.
+
+ARCHITECTURE AFTER S2093
+Active interval:
+  VehicleCarNotesSOT.serviceIntervals
+       -> Reminder / History / Servis / Finance linkage / UI
+
+Legacy interval fields:
+  vehicle.intervalOverrides
+  vehicle.serviceIntervalKm
+  vehicle.oliTransmisiIntervalKm
+       -> migration input only; never runtime authority
+
+Historical:
+  intervalKmAtService / nextDue*
+       -> immutable execution snapshots; never active interval authority
+
+PATCH CONTENT
+- 36 cumulative entries (S2092 + S2093 changes)
+- No backup snapshots or generated inventory docs included.
