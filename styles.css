@@ -3088,3 +3088,241 @@ input.fi[type="month"] {
     padding-inline: 12px;
   }
 }
+
+/* S2129 — Service History mobile action containment.
+   Fixes the rendered 320–430px layout where edit/add controls were squeezed
+   into a narrow right-hand grid track and clipped by the card boundary.
+   Presentation-only: no data, SOT, markup or runtime behavior changes. */
+.servis-history-item > .servis-history-edit,
+.servis-history-item > .servis-history-edit-session,
+.servis-history-item > .servis-history-add-session,
+.servis-history-session-summary > .servis-history-edit-session,
+.servis-history-session-summary > .servis-history-add-session {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 430px) {
+  .servis-history-item {
+    grid-template-columns: 28px 32px minmax(0, 1fr);
+    grid-template-areas:
+      "select icon info"
+      "select icon amount"
+      "select icon edit"
+      "select icon del";
+    column-gap: 7px;
+    row-gap: 5px;
+  }
+
+  .servis-history-item > .tx-amount {
+    justify-self: end;
+    max-width: 100%;
+  }
+
+  .servis-history-item > .servis-history-edit,
+  .servis-history-item > .servis-history-edit-session,
+  .servis-history-item > .servis-history-add-session {
+    justify-self: stretch;
+    width: 100%;
+    white-space: nowrap;
+  }
+
+  .servis-history-session-summary {
+    grid-template-columns: 36px minmax(0, 1fr);
+    grid-template-areas:
+      "icon info"
+      "icon amount"
+      "icon edit"
+      "icon add"
+      "icon del";
+    column-gap: 7px;
+    row-gap: 5px;
+  }
+
+  .servis-history-session-summary > .servis-history-edit-session,
+  .servis-history-session-summary > .servis-history-add-session {
+    justify-self: stretch;
+    width: 100%;
+    white-space: nowrap;
+  }
+
+  .servis-history-session-summary > .servis-history-delete {
+    justify-self: end;
+  }
+}
+
+/* S2130 — Parts Catalog mobile action containment.
+   Mirrors the Service History fix for the Catalog list: long part names/meta
+   must not squeeze Edit/Delete controls outside the card at 320–430px.
+   Presentation-only: no data, SOT, markup or runtime logic changes. */
+#catalogList .tx-item {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#catalogList .tx-item .tx-info {
+  min-width: 0;
+  max-width: 100%;
+}
+#catalogList .tx-item .tx-name,
+#catalogList .tx-item .tx-meta {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#catalogList .tx-item .tx-del {
+  box-sizing: border-box;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0 !important;
+}
+@media (max-width: 430px) {
+  #catalogList .tx-item {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 36px 36px;
+    grid-template-areas: "thumb info edit del";
+    column-gap: 7px;
+    row-gap: 5px;
+    align-items: start;
+  }
+  #catalogList .tx-item > .tx-info { grid-area: info; }
+  #catalogList .tx-item > .tx-del:first-of-type { grid-area: edit; }
+  #catalogList .tx-item > .tx-del:last-of-type { grid-area: del; }
+  #catalogList .tx-item > img,
+  #catalogList .tx-item > .tx-icon { grid-area: thumb; }
+  #catalogList .tx-item .tx-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    white-space: normal;
+    line-height: 1.35;
+  }
+  #catalogList .tx-item .tx-meta {
+    line-height: 1.35;
+  }
+}
+@media (max-width: 359px) {
+  #catalogList .tx-item {
+    grid-template-columns: 36px minmax(0, 1fr) 34px 34px;
+    column-gap: 6px;
+  }
+  #catalogList .tx-item .tx-del {
+    flex-basis: 34px;
+    width: 34px;
+    min-width: 34px;
+    min-height: 34px;
+  }
+}
+
+/* S2131 — Global card/list action containment audit.
+   Applies the same mobile action-space contract found in Service History and
+   Parts Catalog to other reusable card/list primitives without changing
+   markup, data, SOT, business logic, or theme definitions. */
+.tx-item > .tx-del,
+.aset-item > button,
+.card > .acc-card-edit,
+.card > .acc-card-del,
+.shop-product-actions > button {
+  box-sizing: border-box;
+  min-width: 36px;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+
+.tx-item > .tx-del {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.shop-product-actions {
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+@media (max-width: 430px) {
+  /* Keep list content shrinkable while preserving every action control. */
+  .tx-item {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tx-item > .tx-del {
+    min-width: 36px;
+    min-height: 36px;
+    margin-right: 0 !important;
+  }
+
+  /* Product cards: action buttons move within their own bounded row instead
+     of competing with long names, stock pills, or price content. */
+  .shop-product-card .shop-product-head,
+  .shop-product-card .shop-product-prices {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .shop-product-card .shop-product-head {
+    align-items: flex-start;
+  }
+  .shop-product-card .shop-product-right {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .shop-product-card .shop-product-actions {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .shop-product-card .shop-product-actions > button {
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Account/list cards: long labels and values may shrink/wrap without
+     pushing action controls beyond the card edge. */
+  .aset-item {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .aset-item > .tx-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .aset-item > .tx-amount {
+    max-width: 42%;
+  }
+
+  .acc-card-edit,
+  .acc-card-del {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 359px) {
+  .tx-item > .tx-del,
+  .shop-product-card .shop-product-actions > button,
+  .acc-card-edit,
+  .acc-card-del {
+    min-width: 34px;
+    min-height: 34px;
+    width: 34px;
+    height: 34px;
+  }
+  .aset-item > .tx-amount {
+    max-width: 38%;
+  }
+}

@@ -1,0 +1,14 @@
+S2131 — Global Card/List Action Containment Audit
+
+Purpose:
+- Apply the same mobile action-space contract found in Service History and Parts Catalog to other reusable card/list primitives.
+- Prevent long content from squeezing Edit/Delete/action controls outside their card boundaries at 320–430px.
+
+Changed files:
+- styles.css — presentation-only action containment for tx-item, aset-item, account-card actions, and shop-product-actions; 430px and 359px mobile calibration.
+- tests/s2131-global-card-list-actions.test.js — regression contract for the global action audit.
+- PATCH-MANIFEST-S2131.txt — records this cumulative stage.
+
+Safety:
+- No data, SOT, storage, persistence, business logic, runtime JS, or theme definitions changed.
+- No dependency added.

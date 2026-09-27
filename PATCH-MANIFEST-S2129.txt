@@ -1,0 +1,17 @@
+S2129 — Service History Mobile Layout Repair
+
+Purpose:
+- Fix the rendered Service History mobile layout shown in the 27 Sep 2026 screenshot.
+- Prevent Edit Checklist / Tambah Komponen controls from being squeezed into a narrow right-side grid track and clipped.
+- Keep all service-history content contained within the card at <=430px viewport widths.
+
+Changed files:
+- styles.css — presentation-only responsive grid/action containment fix.
+- tests/s2129-service-history-mobile-layout.test.js — regression coverage for the narrow-phone layout contract.
+
+Safety:
+- No data changes.
+- No SOT changes.
+- No runtime JavaScript changes.
+- No theme definitions changed.
+- No new dependency.

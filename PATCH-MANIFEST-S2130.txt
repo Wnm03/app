@@ -1,0 +1,14 @@
+S2130 — Parts Catalog Mobile Action Containment
+
+Purpose:
+- Fix the same mobile clipping/squeezing pattern found in Service History, now scoped to the Parts Catalog list.
+- Keep long part names/OEM/category metadata readable while Edit/Delete controls remain inside the row at 320–430px.
+
+Changed files:
+- styles.css — scoped responsive Catalog row/action containment rules.
+- tests/s2130-catalog-mobile-action-containment.test.js — regression contract.
+- PATCH-MANIFEST-S2130.txt — provenance.
+
+Safety:
+- No SOT, data, storage, persistence, business logic, runtime JS, theme definitions, or dependencies changed.
+- No bundle rebuild required because this is CSS-only.
