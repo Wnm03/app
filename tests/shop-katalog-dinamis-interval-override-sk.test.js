@@ -1,15 +1,7 @@
 'use strict';
-// tests/shop-katalog-dinamis-interval-override-sk.test.js — cakupan fix
-// S/K: ShopKatalogDinamisAPI.katalogUntuk() (modules/vehicle/
-// shop-katalog-dinamis-api.js) sebelumnya SELALU pakai
-// kategori.intervalKm (interval GLOBAL) walau kendaraan yang dipilih
-// punya interval KHUSUS (v.intervalOverrides, diatur lewat
-// editVehicleIntervalOverride() di 🔧 Pengingat Servis,
-// modules/vehicle/sparepart-servis.js) — akibatnya status
-// aman/perlu-ganti di "Katalog Sparepart per Kendaraan" (Shop) bisa
-// salah utk kendaraan yang sudah diset interval khususnya lewat
-// Pengingat Servis. Fix: _effectiveIntervalKm() reuse
-// getEffectiveIntervalKm() APA ADANYA (0 rumus baru).
+// S2093: ShopKatalogDinamisAPI must consume the canonical
+// VehicleCarNotesSOT active interval. Legacy vehicle.intervalOverrides is
+// migration-only and must not be the runtime owner.
 //
 // Sesuai pola tests/sparepart-dashboard.test.js: load source ASLI lewat
 // loadSource() (bukan re-implement logic), sparepart-servis.js dimuat
@@ -24,7 +16,10 @@ function makeD() {
   return {
     vehicles: [
       { id: 'v1', name: 'Vario 125', jenis: 'motor', kmAwal: 20000 },
-      { id: 'v2', name: 'Vario 110', jenis: 'motor', kmAwal: 20000, intervalOverrides: { cat_oli: 5000 } },
+      { id: 'v2', name: 'Vario 110', jenis: 'motor', kmAwal: 20000,
+        sot: { serviceIntervals: {
+          'cat_oli': { key:'cat_oli', categoryId:'cat_oli', serviceComponentId:null, intervalKm:5000, intervalBulan:0, source:'manual' }
+        } } },
     ],
     sparepartCats: [
       { id: 'cat_oli', name: 'Oli Mesin', intervalKm: 2000, showInReminder: true },
@@ -46,6 +41,8 @@ function makeD() {
 function makeCtx(D) {
   return loadSource(
     [
+      'modules/vehicle/vehicle-car-notes-sot-s2071.js',
+      'modules/vehicle/vehicle-service-sot.js',
       'modules/vehicle/sparepart-servis.js',
       'modules/vehicle/shop-katalog-dinamis-api.js',
     ],
@@ -68,12 +65,12 @@ test('katalogUntuk() — kendaraan TANPA override: intervalKm = global (perilaku
   assert.equal(res.items[0].status, 'perlu-ganti');
 });
 
-test('katalogUntuk() — kendaraan DENGAN override: intervalKm ikut interval khusus, bukan global (FIX)', () => {
+test('S2093 katalogUntuk() — kendaraan DENGAN active SOT manual: intervalKm ikut SOT, bukan global', () => {
   const ctx = makeCtx(makeD());
   const res = ctx.ShopKatalogDinamisAPI.katalogUntuk('v2');
   assert.equal(res.ok, true);
   assert.equal(res.items.length, 1);
-  // Sebelum fix ini akan 2000 (global) walau v2.intervalOverrides.cat_oli=5000.
+  // Active SOT manual = 5000; legacy intervalOverrides tidak diperlukan lagi.
   assert.equal(res.items[0].intervalKm, 5000);
   assert.equal(res.items[0].intervalOverridden, true);
   // kmSejakServis (3000) < intervalKm khusus (5000) -> aman (BEDA dari v1 di atas).

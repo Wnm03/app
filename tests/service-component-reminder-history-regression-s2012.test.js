@@ -21,6 +21,9 @@ function makeCtx(){
   };
   return loadSource([
     'modules/vehicle/service-input-catalog.js',
+    'modules/vehicle/vehicle-car-notes-sot-s2071.js',
+    'modules/vehicle/vehicle-service-sot.js',
+    'modules/vehicle/service-interval-sot.js',
     'modules/vehicle/service-history-reminder-reconciliation-sot.js',
     'modules/vehicle/sparepart-servis.js',
     'modules/vehicle/sparepart-servis-b.js'
@@ -88,8 +91,8 @@ test('S2012 bundle parity: production bundle contains both component-reminder an
 
 test('S2013 regression: vehicle interval override stays on inspect axis for clean-only registry components',()=>{
   const ctx=makeCtx();
-  ctx.D.vehicles[0].intervalOverrides={"c-throttle":5000};
   const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:5000,source:'manual'});
   const schedule=ctx.getMaintenanceSchedule('v1',cat);
   assert.equal(schedule.inspectKm,5000);
   assert.equal(schedule.replaceKm,null);
@@ -101,8 +104,8 @@ test('S2013 regression: vehicle interval override stays on inspect axis for clea
 
 test('S2013 regression: service next-due snapshot follows clean-only action axis and vehicle override',()=>{
   const ctx=makeCtx();
-  ctx.D.vehicles[0].intervalOverrides={"c-throttle":5000};
   const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:5000,source:'manual'});
   const snap=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:20237,serviceDate:'2026-09-24',actionType:'bersih'});
   assert.equal(snap.nextDueKm,25237);
   assert.equal(snap.intervalKmAtService,5000);

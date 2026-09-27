@@ -24,7 +24,7 @@ function makeCtx({D,els}){
       return (D.sparepartCats||[]).find(c=>c.name.toLowerCase()===n&&(!c.vehicleId||c.vehicleId===vid))||null;
     },
     getCanonicalServiceInterval:(cat,ov)=>({
-      intervalKm:Number.isFinite(ov.intervalKm)&&ov.intervalKm>0?ov.intervalKm:(cat.intervalKm>0?cat.intervalKm:null),
+      intervalKm:cat.id==='catOil'?10000:(cat.intervalKm>0?cat.intervalKm:null),
       intervalBulan:cat.intervalBulan>0?cat.intervalBulan:null,
     }),
     getEffectiveIntervalKm:(vid,cat)=>cat.intervalKm,
@@ -56,9 +56,9 @@ test('modal source memiliki tab Pengingat + panel terpisah tanpa mengubah SoT da
   assert.match(src,/id=\\"servisReminderPanel\\"/);
 });
 
-test('render tab membaca interval kategori + override kendaraan, bukan field reminder baru',()=>{
+test('render tab membaca interval SOT tunggal, bukan vehicle.intervalOverrides',()=>{
   const D={
-    vehicles:[{id:'v1',name:'Vario',intervalOverrides:{catOil:10000}}],
+    vehicles:[{id:'v1',name:'Vario'}],
     sparepartCats:[{id:'catOil',name:'Oli Mesin',intervalKm:8000,intervalBulan:6}],
     partsStock:[],servisLogs:[{id:'s1',vehicleId:'v1',item:'Oli Mesin',categoryId:'catOil',date:'2026-08-01',km:9000,cost:50000,checklist:[]}],
   };
@@ -85,7 +85,7 @@ test('komponen stok ditampilkan dan ditautkan kembali ke kategori SoT yang sama'
   ctx.Servis.renderEditReminderTab();
   assert.match(els.servisReminderPanel.innerHTML,/Komponen\/Stok yang dipakai/);
   assert.match(els.servisReminderPanel.innerHTML,/Oli Mesin/);
-  assert.match(els.servisReminderPanel.innerHTML,/8\.000 km/);
+  assert.match(els.servisReminderPanel.innerHTML,/10\.000 km/);
 });
 
 test('setEditTab reminder hanya mengganti presenter panel dan tidak menyimpan data',()=>{

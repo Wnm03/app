@@ -66,7 +66,7 @@ test('S1992 renderEditReminderTab: kasus screenshot (interval 4.000 km, sisa -10
   assert.ok(!html.includes('Sisa -10'),'tidak ada "Sisa -10.637 km"');
   assert.ok(!/Sisa\s*-\d/.test(html),'tidak ada "Sisa" + angka negatif');
   assert.ok(html.includes('interval 4.000 km'),'interval berlabel eksplisit');
-  assert.ok(html.includes('sumber: Kategori'));
+  assert.ok(html.includes('sumber: Pedoman'));
 });
 
 test('S1992 renderEditReminderTab: tanpa urgency tidak merender baris sisa kosong',()=>{

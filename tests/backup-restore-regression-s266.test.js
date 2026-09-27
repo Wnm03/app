@@ -301,12 +301,12 @@ test('applyRestoredDataMigrations() — backup lama tanpa koleksi baru (mis. wis
   assert.deepEqual(JSON.parse(JSON.stringify(D.reminders)), []);
 });
 
-test('applyRestoredDataMigrations() — vehicle tanpa serviceIntervalKm (backup lama) di-default-kan, TANPA menghapus field ownership', () => {
+test('S2093 applyRestoredDataMigrations() — vehicle tanpa serviceIntervalKm tidak lagi di-default-kan, ownership tetap utuh', () => {
   const D = makeD();
   delete D.vehicles[0].serviceIntervalKm;
   const { ctx } = makeCtx(D);
   ctx.applyRestoredDataMigrations();
-  assert.equal(D.vehicles[0].serviceIntervalKm, 3000);
+  assert.equal(D.vehicles[0].serviceIntervalKm, undefined);
   assert.equal(D.vehicles[0].ownership, 'CUSTOMER', 'migrasi default TIDAK BOLEH menyentuh field ownership yang sudah ada');
 });
 
@@ -505,5 +505,5 @@ test('Restore backup lama yang PUNYA ownership di beberapa field TAPI tidak di f
   const finalD = ctx.D; // live — jangan pakai `D` scope test (stale setelah rebind)
   assert.equal(finalD.transactions.find((t) => t.id === 'old2').ownership, 'FAMILY');
   assert.equal(finalD.vehicles.find((v) => v.id === 'veh_old').ownership, 'CUSTOMER', 'ownership lama harus tetap ada setelah migrasi mengisi field baru');
-  assert.equal(finalD.vehicles.find((v) => v.id === 'veh_old').serviceIntervalKm, 3000, 'field baru (serviceIntervalKm) tetap di-default tanpa menghapus ownership');
+  assert.equal(finalD.vehicles.find((v) => v.id === 'veh_old').serviceIntervalKm, undefined, 'S2093: legacy serviceIntervalKm tidak boleh direintroduksi saat restore');
 });
