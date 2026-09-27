@@ -194,7 +194,7 @@ details.card[open] summary::after{transform:rotate(180deg)}
 [data-theme="modern"] .dashhub-ticker { display: flex; }
 .servis-history-item { align-items: center; }
 .servis-history-info { min-width: 0; }
-.servis-history-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.servis-history-title { min-width: 0; overflow-wrap: anywhere; word-break: break-word; line-height: 1.3; }
 .servis-history-primary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .servis-history-note { font-size: var(--fs-label); color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .servis-history-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; min-width: 0; }
@@ -205,13 +205,14 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .servis-history-amount { margin-left: auto; }
 .servis-history-delete { margin-left: 0; }
 @media (max-width: 600px) {
-  .servis-history-item { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "icon info amount" "icon info del"; column-gap: 8px; row-gap: 2px; align-items: start; padding: 11px 0; }
+  .servis-history-item { display: grid; grid-template-columns: 28px 36px minmax(0, 1fr) auto; grid-template-areas: "select icon info amount" "select icon info del"; column-gap: 7px; row-gap: 2px; align-items: start; padding: 11px 0; }
+  .servis-history-item > label { grid-area: select; }
   .servis-history-item > .tx-icon { grid-area: icon; }
   .servis-history-item > .tx-info { grid-area: info; min-width: 0; }
   .servis-history-item > .tx-amount { grid-area: amount; align-self: start; margin: 0; font-size: var(--fs-label); max-width: 34vw; overflow: hidden; text-overflow: ellipsis; }
   .servis-history-item > .servis-history-delete { grid-area: del; justify-self: end; align-self: end; padding: 4px 2px; min-width: 28px; min-height: 28px; }
   .servis-history-item > img { width: 36px !important; height: 36px !important; grid-area: icon; align-self: start; }
-  .servis-history-title { font-size: var(--fs-body); }
+  .servis-history-title { font-size: var(--fs-body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
   .servis-history-primary { margin-top: 2px; font-size: 10px; }
   .servis-history-note { max-width: 100%; font-size: 10px; }
   .servis-history-badges { gap: 4px; margin-top: 5px; padding-right: 2px; }
