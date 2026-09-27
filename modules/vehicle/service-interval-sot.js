@@ -113,16 +113,57 @@
     // Legacy containers are deleted only after their values have been migrated
     // into the new SOT. They are not runtime authorities anymore.
     if(options&&options.purgeLegacy){
-      if(Object.prototype.hasOwnProperty.call(v,'intervalOverrides')){delete v.intervalOverrides;report.removedLegacy++;}
-      if(Object.prototype.hasOwnProperty.call(v,'serviceIntervalKm')){delete v.serviceIntervalKm;report.removedLegacy++;}
-      if(Object.prototype.hasOwnProperty.call(v,'oliTransmisiIntervalKm')){delete v.oliTransmisiIntervalKm;report.removedLegacy++;}
+      const store=(VehicleCarNotesSOT.read(v.id)||{}).serviceIntervals||{};
+      const hasComponent=(ref)=>{
+ const c=refFor(ref,v.id),k=c.serviceComponentId||c.id;
+ if(k&&store[k])return true;
+ const target=str(c.serviceComponentId||'').toLowerCase();
+ const name=str(c.name||ref&&ref.name||'').toLowerCase();
+ return Object.values(store).some(r=>{
+   const x=r||{};
+   return (target&&str(x.serviceComponentId).toLowerCase()===target) ||
+     (name&&str(x.name||'').toLowerCase()===name);
+ });
+};
+      // Never delete a legacy field unless its value has a canonical SOT target.
+      if(Object.prototype.hasOwnProperty.call(v,'intervalOverrides')){
+        const keys=Object.keys(v.intervalOverrides||{});
+        const safe=keys.every(k=>hasComponent({id:k,serviceComponentId:k})||Object.keys(store).some(sk=>String(sk)===String(k)));
+        if(safe){delete v.intervalOverrides;report.removedLegacy++;}
+      }
+      if(Object.prototype.hasOwnProperty.call(v,'serviceIntervalKm')&&hasComponent({serviceComponentId:'oli-mesin',name:'Oli Mesin'})){
+        delete v.serviceIntervalKm;report.removedLegacy++;
+      }
+      if(Object.prototype.hasOwnProperty.call(v,'oliTransmisiIntervalKm')&&hasComponent({name:'Oli Transmisi'})){
+        delete v.oliTransmisiIntervalKm;report.removedLegacy++;
+      }
     }
     return report;
   }
+  function _migrationCheckpoint(){
+    // One-time, non-destructive safety checkpoint before SOT migration mutates
+    // legacy fields. Prefer IndexedDB so large datasets are not constrained by
+    // localStorage quota. Never overwrite an existing checkpoint.
+    try{
+      const idb=typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.get==='function'&&typeof IDBStore.set==='function'?IDBStore:null;
+      const d=typeof D!=='undefined'?D:root.D;
+      if(!idb||!d)return;
+      const key='kw_v4_pre_sot_migration';
+      idb.get(key).then(existing=>{
+        if(existing)return;
+        let snap;
+        if(d.profile&&Object.prototype.hasOwnProperty.call(d.profile,'apiKey')){const pr={...d.profile};delete pr.apiKey;snap={...d,profile:pr};}
+        else snap=d;
+        return idb.set(key,JSON.stringify(snap));
+      }).catch(()=>{});
+    }catch(_e){}
+  }
   function migrateAll(options){
     const d=typeof D!=='undefined'?D:root.D, out=[];
+    _migrationCheckpoint();
     (d&&Array.isArray(d.vehicles)?d.vehicles:[]).forEach(v=>out.push(migrateVehicle(v.id,options||{})));
-    return {version:VERSION,ok:true,vehicles:out};
+    const changed=out.reduce((n,r)=>n+Number(r&&r.created||0)+Number(r&&r.removedLegacy||0),0);
+    return {version:VERSION,ok:true,changed,vehicles:out};
   }
   function auditActiveSot(vehicleId){
     if(typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT||typeof VehicleCarNotesSOT.auditServiceIntervals!=='function')return {ok:false,vehicleId:vehicleId||null,issues:[{code:'vehicle-sot-unavailable'}]};
@@ -154,7 +195,18 @@
   // Boot migration: convert legacy interval stores into the new SOT without
   // changing historical service snapshots. Legacy fields remain only when a
   // conflict/unmapped component prevents a safe conversion.
-  try{if(typeof D!=='undefined'&&Array.isArray(D.vehicles)){migrateAll({purgeLegacy:true});repairAllSot();}}catch(_e){/* boot migration/repair is fail-safe; next load retries */}
+  try{
+    if(typeof D!=='undefined'&&Array.isArray(D.vehicles)){
+      const migration=migrateAll({purgeLegacy:true});
+      const repair=repairAllSot();
+      const repaired=Array.isArray(repair&&repair.vehicles)?repair.vehicles.reduce((n,r)=>n+Number(r&&r.changed||0),0):0;
+      // Persist only when migration/repair actually changed the in-memory state.
+      // This makes SOT boot migration durable without creating a needless startup write.
+      if((migration&&migration.changed)||repaired){
+        if(typeof save==='function')save({domain:'servis',financeMutation:false});
+      }
+    }
+  }catch(_e){/* boot migration/repair is fail-safe; next load retries */}
   const api={version:VERSION,resolveCanonicalInterval,resolveCanonicalIntervalDetailed,active,setManual,setAiRecommendation,setGuideline,migrateVehicle,migrateAll,auditLegacy,auditActiveSot,repairActiveSot,auditAllSot,repairAllSot,refFor};
   root.ServiceIntervalSOT=api;
   if(typeof module!=='undefined')module.exports=api;
