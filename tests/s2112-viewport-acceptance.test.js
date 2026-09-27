@@ -1,0 +1,10 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+const s2112 = css.slice(css.lastIndexOf('S2112'));
+test('S2112 covers audited mobile viewport bands', () => { assert.match(s2112, /@media \(max-width: 320px\)/); assert.match(s2112, /@media \(min-width: 321px\) and \(max-width: 359px\)/); assert.match(s2112, /@media \(min-width: 360px\) and \(max-width: 389px\)/); assert.match(s2112, /@media \(min-width: 390px\) and \(max-width: 430px\)/); });
+test('S2112 keeps content width-contained', () => { assert.match(s2112, /\.page \{[\s\S]*?padding-left: 8px/); assert.match(s2112, /\.pwa-domain-page > \* \{[\s\S]*?max-inline-size: 100%/); assert.match(s2112, /\.card, \.tx-item[\s\S]*?min-inline-size: 0/); });
+test('S2112 has a desktop containment breakpoint', () => { assert.match(s2112, /@media \(min-width: 900px\)/); });
+test('S2112 remains presentation-only', () => { assert.doesNotMatch(s2112, /addEventListener|localStorage|indexedDB|fetch\s*\(|setInterval|requestAnimationFrame/); });
