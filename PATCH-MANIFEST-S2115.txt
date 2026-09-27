@@ -1,0 +1,5 @@
+S2115 — Empty/loading/error feedback states
+- Hardened existing empty-state containers and feedback text against clipping/overflow.
+- Added presentation-only progress/status contracts using existing aria-busy/role markup.
+- No runtime logic, theme, data, SOT, storage or dependency changes.
+- Regression tests: tests/s2115-feedback-states.test.js

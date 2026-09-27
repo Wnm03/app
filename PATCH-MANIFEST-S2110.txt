@@ -1,0 +1,11 @@
+S2110 — Visual accessibility hardening
+
+Cumulative overlay: S2103 → S2104 → S2105 → S2106 → S2107 → S2108 → S2109 → S2110.
+
+Changes:
+- Adds visible focus-visible outlines for keyboard/accessibility navigation.
+- Adds prefers-reduced-motion guardrails for transitions/animations.
+- Adds narrow-screen/text-zoom containment for labels, cards, transaction rows and modal/domain action rows.
+- Adds forced-colors focus fallback.
+- Presentation/CSS only; no theme definitions, business logic, data, storage,
+  navigation handlers, SOT, dependencies, or runtime listeners changed.

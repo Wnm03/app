@@ -198,6 +198,113 @@ a:focus-visible {
   }
 }
 
+/* S2103 — neutral UI design system primitives.
+   Presentation-only: reuses existing theme tokens and existing DOM/icon assets.
+   No new dependency, JS, render cycle, or palette. */
+:root {
+  --ui-icon-size: 40px;
+  --ui-icon-radius: 12px;
+  --ui-control-min: 44px;
+  --ui-card-gap: 12px;
+}
+.ui-icon,
+.dashhub-cat-icon,
+.qs-action-icon,
+.keu-fab-action-icon,
+.nav-fab-icon,
+.empty-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--ui-icon-size);
+  height: var(--ui-icon-size);
+  min-width: var(--ui-icon-size);
+  min-height: var(--ui-icon-size);
+  border-radius: var(--ui-icon-radius);
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  line-height: 1;
+  text-align: center;
+  overflow: hidden;
+}
+.dashhub-cat-icon,
+.qs-action-icon,
+.keu-fab-action-icon { font-size: 20px; }
+.nav-fab-icon { font-size: 21px; }
+.empty-icon { font-size: 20px; }
+.ui-icon > svg,
+.dashhub-cat-icon > svg,
+.qs-action-icon > svg,
+.keu-fab-action-icon > svg,
+.nav-fab-icon > svg { width: 20px; height: 20px; max-width: 100%; }
+
+/* One compact action rhythm across existing controls. */
+.ui-actions,
+.btn-row,
+.btn-row3 { min-width: 0; }
+.ui-actions > .btn,
+.btn-row > .btn,
+.btn-row3 > .btn { min-width: 0; }
+.btn { min-height: var(--ui-control-min); box-sizing: border-box; }
+.chip-btn,
+.kel-subtab,
+.lap-subtab,
+.pjk-subtab,
+.cni-subtab,
+.cnb-subtab,
+.budget-tab-btn { min-height: 40px; box-sizing: border-box; }
+
+/* Compact card hierarchy without changing existing card semantics. */
+.ui-card-header,
+.dashhub-cat-head { min-width: 0; }
+.ui-card-header > :first-child,
+.dashhub-cat-head > :nth-child(2) { min-width: 0; }
+.dashhub-cat-label,
+.dashhub-cat-desc,
+.card-title { overflow-wrap: anywhere; }
+
+/* Mobile: never let icon columns force text columns below a usable width. */
+@media (max-width: 600px) {
+  .ui-icon,
+  .dashhub-cat-icon,
+  .qs-action-icon,
+  .keu-fab-action-icon,
+  .nav-fab-icon,
+  .empty-icon {
+    --ui-icon-size: 36px;
+    width: var(--ui-icon-size);
+    height: var(--ui-icon-size);
+    min-width: var(--ui-icon-size);
+    min-height: var(--ui-icon-size);
+  }
+  .card { min-width: 0; }
+  .card > * { min-width: 0; max-width: 100%; box-sizing: border-box; }
+  .btn-row3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 360px) {
+  .ui-icon,
+  .dashhub-cat-icon,
+  .qs-action-icon,
+  .keu-fab-action-icon,
+  .nav-fab-icon,
+  .empty-icon {
+    --ui-icon-size: 32px;
+  }
+  .card { padding-left: 14px; padding-right: 14px; }
+  .btn-row,
+  .btn-row3 { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-icon,
+  .dashhub-cat-icon,
+  .qs-action-icon,
+  .keu-fab-action-icon,
+  .nav-fab-icon,
+  .empty-icon { transition: none !important; }
+}
+
 /* =========================================================================
    KELUARGA W — GRAPHITE MOCKUP SYSTEM V3
    Full visual pass based on the supplied mobile mockup.

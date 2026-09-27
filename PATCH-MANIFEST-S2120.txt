@@ -1,0 +1,11 @@
+S2120 — Floating feedback / transient UI viewport hardening
+
+Changed:
+- styles.css: toast and kasir floating-bar width containment, safe-area spacing,
+  long-content wrapping, action-toast touch target, and 430/359px mobile rules.
+- tests/s2120-floating-feedback-ui.test.js: regression contracts for S2120.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

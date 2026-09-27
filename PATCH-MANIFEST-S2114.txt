@@ -1,0 +1,5 @@
+S2114 — Typography & density consistency
+- Normalized heading, section, card and secondary-text line-height/wrapping.
+- Added mobile density calibration without changing business logic.
+- No theme, data, SOT, storage, dependency or runtime changes.
+- Regression tests: tests/s2114-typography-density.test.js

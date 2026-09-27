@@ -1,0 +1,15 @@
+S2117 — Data-Dense UI / Table Responsive Hardening
+
+Changed:
+- styles.css
+  - Scoped .tx-tbl/.tx-tbl-wrap hardening for dense financial/asset/holding tables.
+  - Preserves all columns and data on mobile via controlled horizontal scrolling.
+  - Allows long descriptions/metadata to wrap safely.
+  - Keeps date and numeric cells readable with nowrap + tabular numerals.
+  - Adds 599px and 359px responsive density adjustments.
+- tests/s2117-data-dense-ui.test.js
+  - Regression coverage for table containment, mobile preservation, wrapping and numeric readability.
+
+Scope:
+- Visual/responsive CSS only.
+- No SOT, storage, business logic, theme system, dependency, or runtime JS changes.

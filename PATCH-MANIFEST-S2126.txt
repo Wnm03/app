@@ -1,0 +1,12 @@
+S2126 — Final fixed-layer collision/viewport acceptance
+
+Changed:
+- styles.css: final viewport/safe-area containment for toast, Kasir floating bar,
+  Keuangan FAB/action and Dashboard floating search results; narrow 430/359px
+  spacing and touch-safe action sizing.
+- tests/s2126-fixed-layer-acceptance.test.js: regression contracts for S2126.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

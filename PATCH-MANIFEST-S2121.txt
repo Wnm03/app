@@ -1,0 +1,13 @@
+S2121 — Dropdown/Suggest/Popover + floating-layer viewport hardening
+
+Changed:
+- styles.css: suggest/autocomplete surfaces are width-contained, horizontally safe,
+  dynamically height-limited, and long suggestion text wraps without clipping.
+- styles.css: Keuangan FAB action pills retain 44px touch targets, wrap long labels,
+  remain contained on narrow screens, and respect mobile safe-area spacing.
+- tests/s2121-floating-layer-ui.test.js: regression contract for S2121.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

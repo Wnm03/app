@@ -1,0 +1,18 @@
+S2127 — Cumulative Chain Repair / Regression-Test Continuity
+
+Purpose:
+- Repair the cumulative patch chain so S2103–S2106 regression contracts and their manifests are present again after the later v16–v35 overlays.
+- Restore the S2103 modern-ui-layer.css artifact required by its regression contract.
+
+Changed files:
+- modern-ui-layer.css — restored S2103 neutral UI design-system layer from the last known cumulative S2106 artifact.
+- tests/s2103-ui-design-system.test.js — restored S2103 regression contract.
+- tests/s2104-transaction-list-responsive.test.js — restored S2104 regression contract.
+- tests/s2105-sparepart-ui-responsive.test.js — restored S2105 regression contract.
+- tests/s2106-modal-form-ui.test.js — restored S2106 regression contract.
+- PATCH-MANIFEST-S2103.txt through PATCH-MANIFEST-S2106.txt — restored chain provenance.
+- PATCH-MANIFEST-S2127.txt — records this chain repair.
+
+Safety:
+- No SOT, data, storage, persistence, business logic, runtime JS, theme definitions, or dependencies changed.
+- Existing S2126 styles.css and S2107–S2126 tests/manifests are preserved unchanged.

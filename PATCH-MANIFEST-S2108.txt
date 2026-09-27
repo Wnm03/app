@@ -1,0 +1,15 @@
+S2108 — Car Notes Responsive UI Hardening
+
+Cumulative overlay: S2103 → S2104 → S2105 → S2106 → S2107 → S2108.
+
+Changed files:
+- styles.css: scoped Car Notes responsive hardening for vehicle summary,
+  tabs, dashboard cards, BBM/Fuel Intelligence presentation, and narrow
+  screens. No business logic or data-flow changes.
+- tests/s2108-carnotes-ui.test.js: regression coverage for S2108 UI rules.
+
+Scope:
+- UI/layout/CSS only.
+- Preserves Car Notes business logic, BBM, Fuel Intelligence, Servis, Peta,
+  interval SOT, storage, and navigation logic.
+- No new runtime listeners, dependencies, or theme definitions.

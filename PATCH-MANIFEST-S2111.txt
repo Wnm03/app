@@ -1,0 +1,10 @@
+S2111 — Cross-module visual component consistency
+Base: S2110 cumulative
+Scope:
+- Normalize primary .btn touch target to 44px while preserving .btn-sm compact exception.
+- Normalize global .modal-close to a 44px touch target without theme-specific selectors.
+- Add shared min-width/max-width overflow containment for cards, transaction rows, modals and domain pages.
+- Protect transaction info/name/meta from cross-module clipping.
+- Presentation-only: no theme, data, SOT, storage, navigation logic, dependencies or runtime listeners changed.
+- Fixed cumulative S2107/S2108 section-bound test slicing so later S2111 selectors do not contaminate earlier section assertions.
+Tests: S2107 + S2108 + S2109 + S2110 + S2111 = 20/20 PASS.

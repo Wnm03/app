@@ -1,0 +1,12 @@
+S2119 — Modal/Dialog mobile viewport + keyboard-safe visual hardening
+
+Changed:
+- styles.css: modal/calc-modal/qs-modal overscroll containment, touch scrolling,
+  width containment, title wrapping, control max-width, dynamic viewport height,
+  and safe-area-aware mobile padding.
+- tests/s2119-modal-dialog-ui.test.js: regression contract for S2119.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

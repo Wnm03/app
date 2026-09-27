@@ -1,0 +1,11 @@
+S2124 — Final cross-app visual consistency acceptance
+
+Changed:
+- styles.css: final width-containment, shared flex-child, long-content wrapping,
+  responsive header/action rhythm, and image containment contracts.
+- tests/s2124-final-visual-consistency.test.js: regression contract for S2124.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

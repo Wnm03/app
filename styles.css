@@ -192,11 +192,12 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .bill-stat-pill .stat-val { font-size: var(--fs-body-lg); }
 .dashhub-ticker { display: none; }
 [data-theme="modern"] .dashhub-ticker { display: flex; }
-.servis-history-item { align-items: center; }
+.servis-history-item { align-items: center; min-width: 0; }
 .servis-history-info { min-width: 0; }
 .servis-history-title { min-width: 0; overflow-wrap: anywhere; word-break: break-word; line-height: 1.3; }
 .servis-history-primary { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
 .servis-history-note { min-width: 0; font-size: var(--fs-label); color: var(--text2); margin-top: 2px; overflow-wrap: anywhere; word-break: break-word; }
+.servis-history-cost { min-width: 0; font-size: 10px; color: var(--text2); margin-top: 2px; line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; }
 .servis-history-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; min-width: 0; }
 .servis-history-badge { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; min-height: 20px; box-sizing: border-box; padding: 2px 7px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface3); color: var(--text2); font-size: 10px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 .servis-history-check { color: var(--text); font-weight: 700; }
@@ -205,13 +206,13 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .servis-history-amount { margin-left: auto; }
 .servis-history-delete { margin-left: 0; }
 @media (max-width: 600px) {
-  .servis-history-item { display: grid; grid-template-columns: 28px 36px minmax(0, 1fr) minmax(118px, 34%); grid-template-areas: "select icon info amount" "select icon info edit" "select icon info del"; column-gap: 7px; row-gap: 5px; align-items: start; padding: 11px 0; }
+  .servis-history-item { display: grid; grid-template-columns: 28px 36px minmax(0, 1fr) max-content; grid-template-areas: "select icon info amount" "select icon edit del"; column-gap: 7px; row-gap: 4px; align-items: start; padding: 10px 0; }
   .servis-history-item > label { grid-area: select; }
   .servis-history-item > .tx-icon { grid-area: icon; }
   .servis-history-item > .tx-info { grid-area: info; min-width: 0; }
-  .servis-history-item > .tx-amount { grid-area: amount; align-self: start; justify-self: end; margin: 0; font-size: var(--fs-label); max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .servis-history-item > .tx-amount { grid-area: amount; align-self: start; justify-self: end; margin: 0; font-size: var(--fs-label); max-width: 92px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .servis-history-item > .servis-history-edit,
-  .servis-history-item > .servis-history-edit-session { grid-area: edit; justify-self: end; align-self: start; min-width: 0; max-width: 100%; white-space: nowrap; }
+  .servis-history-item > .servis-history-edit-session { grid-area: edit; justify-self: start; align-self: start; min-width: 0; max-width: 100%; white-space: nowrap; }
   .servis-history-session-summary { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(118px, 34%); grid-template-areas: "icon info amount" "icon info edit" "icon info add" "icon info del"; column-gap: 7px; row-gap: 5px; align-items: start; padding: 11px 0; }
   .servis-history-session-summary > .tx-icon { grid-area: icon; }
   .servis-history-session-summary > .tx-info { grid-area: info; min-width: 0; }
@@ -225,9 +226,10 @@ details.card[open] summary::after{transform:rotate(180deg)}
   /* S2099: at narrow phones keep service content readable instead of squeezing it into the action column. */
   .servis-history-item > .servis-history-edit,
   .servis-history-item > .servis-history-edit-session,
-  .servis-history-item > .servis-history-add-session { font-size: var(--fs-label); padding-inline: 10px; }
+  .servis-history-item > .servis-history-add-session { font-size: 11px; padding: 6px 9px; line-height: 1.2; }
   .servis-history-primary { margin-top: 2px; font-size: 10px; }
   .servis-history-note { max-width: 100%; font-size: 10px; }
+  .servis-history-cost { max-width: 100%; }
   .servis-history-badges { gap: 4px; margin-top: 5px; padding-right: 2px; }
   .servis-history-badge { max-width: 100%; padding: 3px 6px; font-size: 9.5px; }
   .servis-history-part { max-width: 100%; }
@@ -1591,5 +1593,1498 @@ summary:focus-visible {
     max-width: 32px;
     max-height: 32px;
     flex-basis: 32px;
+  }
+}
+
+/* S2104: transaction/list responsive polish — scoped to finance list containers.
+ * Keep the global .tx-name contract unchanged because the same primitive is reused
+ * by assets, debts, shop, vehicle, BBM and other modules.
+ */
+@media (max-width: 600px) {
+  #allTx .tx-item,
+  #filterTxList .tx-item {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 0;
+  }
+
+  #allTx .tx-icon,
+  #filterTxList .tx-icon {
+    width: 36px;
+    height: 36px;
+    font-size: var(--fs-icon);
+    flex: 0 0 36px;
+  }
+
+  #allTx .tx-info,
+  #filterTxList .tx-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  #allTx .tx-name,
+  #filterTxList .tx-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  #allTx .tx-meta,
+  #filterTxList .tx-meta {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.35;
+  }
+
+  #allTx .tx-amount,
+  #filterTxList .tx-amount {
+    flex: 0 0 auto;
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #allTx .tx-del,
+  #filterTxList .tx-del {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 5px;
+  }
+
+  #filterTxList .tx-tbl-wrap {
+    margin-inline: -2px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  #filterTxList .tx-tbl th,
+  #filterTxList .tx-tbl td {
+    padding: 7px 6px;
+  }
+
+  #filterTxList .tx-tbl-desc {
+    min-width: 145px;
+  }
+}
+
+@media (max-width: 360px) {
+  #allTx .tx-item,
+  #filterTxList .tx-item { gap: 6px; }
+  #allTx .tx-icon,
+  #filterTxList .tx-icon { width: 32px; height: 32px; flex-basis: 32px; }
+  #allTx .tx-amount,
+  #filterTxList .tx-amount { max-width: 31vw; font-size: var(--fs-label); }
+  #filterTxList .tx-tbl th,
+  #filterTxList .tx-tbl td { padding: 6px 5px; }
+}
+
+/* S2105: Sparepart UI compact/mobile polish — scoped to Sparepart dashboard/list.
+ * No JS/runtime work; preserves the existing tx-item primitive used elsewhere.
+ */
+@media (max-width: 600px) {
+  #sparepartDashboard .bbm-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  #sparepartDashboard .bbm-stat {
+    min-width: 0;
+    padding: 10px 8px;
+    border-radius: 12px;
+  }
+
+  #sparepartDashboard .bbm-val {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  #stockServiceFilterWrap {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  #stockServiceFilterWrap .fs {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+  }
+
+  #stockList .tx-item {
+    align-items: flex-start;
+    gap: 7px;
+    padding: 9px 0;
+  }
+
+  #stockList .tx-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-radius: 10px;
+    font-size: 15px;
+  }
+
+  #stockList .tx-info {
+    min-width: 0;
+  }
+
+  #stockList .tx-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  #stockList .tx-meta {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.35;
+  }
+
+  #stockList .tx-del {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 5px;
+    flex: 0 0 32px;
+  }
+}
+
+@media (max-width: 360px) {
+  #sparepartDashboard .bbm-stat {
+    padding: 9px 7px;
+  }
+
+  #stockServiceFilterWrap {
+    grid-template-columns: 1fr;
+  }
+
+  #stockList .tx-item {
+    gap: 5px;
+  }
+
+  #stockList .tx-icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+  }
+
+  #stockList .tx-del {
+    min-width: 30px;
+    min-height: 30px;
+    flex-basis: 30px;
+  }
+}
+
+/* S2106: Modal/Form UI hierarchy + mobile hardening (no theme/logic changes) */
+.modal,
+.calc-modal {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.modal > *,
+.calc-modal > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modal-title {
+  min-width: 0;
+  gap: 10px;
+  line-height: 1.25;
+}
+
+.modal-title > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.modal .fg {
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.modal .fl {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.modal .fi,
+.modal .fs,
+.modal textarea.fi {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+}
+
+.modal textarea.fi {
+  min-height: 88px;
+}
+
+.modal .btn-row,
+.modal .btn-row3 {
+  min-width: 0;
+  align-items: stretch;
+}
+
+.modal .btn-row > .btn,
+.modal .btn-row3 > .btn {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+
+.modal .type-toggle,
+.modal .type-toggle3,
+.modal .amt-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.modal .amt-wrap .fi {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .modal {
+    padding: 16px 14px calc(24px + env(safe-area-inset-bottom, 0px));
+    border-radius: 22px 22px 0 0;
+  }
+
+  .modal-title {
+    font-size: max(15px, var(--fs-title));
+    margin-bottom: 14px;
+  }
+
+  .modal .fg {
+    margin-bottom: 12px;
+  }
+
+  .modal .fl {
+    margin-bottom: 6px;
+  }
+
+  .modal .btn-row3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .modal {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .modal .btn-row,
+  .modal .btn-row3 {
+    gap: 6px;
+  }
+
+  .modal .btn-row > .btn,
+  .modal .btn-row3 > .btn {
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: var(--fs-label);
+  }
+
+  .modal .type-toggle3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================================
+   S2107 — Navigation + Bottom Nav/FAB responsive hardening
+   Scoped to navigation chrome only. No navigation logic/markup changes.
+   ========================================================================= */
+.nav {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding-left: max(2px, env(safe-area-inset-left, 0px));
+  padding-right: max(2px, env(safe-area-inset-right, 0px));
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav-item {
+  flex: 1 1 0;
+  min-width: 44px;
+  min-height: 44px;
+  min-inline-size: 44px;
+  max-width: 140px;
+  min-inline-size: 0;
+  overflow: hidden;
+}
+.nav-item > span,
+.nav-item > .nav-label {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-fab {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.nav-fab-icon {
+  flex: 0 0 auto;
+}
+.keu-fab-action {
+  min-height: 44px;
+}
+
+@media (max-width: 599px) {
+  .nav {
+    padding-top: 6px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    gap: 0;
+  }
+  .nav-item {
+    min-width: 44px;
+    min-inline-size: 44px;
+    padding-left: 2px;
+    padding-right: 2px;
+    font-size: 10px;
+  }
+  .nav-item svg { width: 18px; height: 18px; }
+  .nav-fab { min-width: 44px; }
+  .nav-fab-icon { width: 36px; height: 36px; margin-top: -17px; }
+}
+
+@media (max-width: 359px) {
+  .nav-item {
+    min-width: 44px;
+    min-inline-size: 44px;
+    font-size: 9px;
+  }
+  .nav-fab { min-width: 44px; }
+  .nav-fab-icon { width: 34px; height: 34px; margin-top: -15px; font-size: 18px; }
+}
+
+@media (min-width: 900px) {
+  .nav {
+    overflow-x: hidden;
+  }
+  .nav-item { max-width: 160px; }
+}
+
+/* =========================================================================
+   S2108 — Car Notes responsive UI hardening
+   Scoped to #page-carnotes. Visual/layout only; preserves existing modules,
+   business logic, interval SOT, BBM, Fuel Intelligence, Servis and Peta.
+   ========================================================================= */
+#page-carnotes .cn-vehicle-summary,
+#page-carnotes .dashhub-wrap,
+#page-carnotes .card { min-width: 0; box-sizing: border-box; }
+#page-carnotes .cn-vehicle-summary-head,
+#page-carnotes .cn-summary-metric,
+#page-carnotes .cn-summary-action,
+#page-carnotes .dashhub-cat-head { min-width: 0; }
+#page-carnotes .cn-vehicle-summary-head > * { min-width: 0; }
+#page-carnotes .cn-summary-link { flex: 0 0 auto; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#page-carnotes .cn-summary-metric-label,
+#page-carnotes .cn-summary-metric-source,
+#page-carnotes .dashhub-cat-desc { overflow-wrap: anywhere; word-break: break-word; }
+#page-carnotes .cn-summary-metrics { grid-template-columns: minmax(0, 1fr) repeat(2, minmax(62px, 82px)); }
+#page-carnotes .cn-tabs { min-width: 0; }
+#page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+#page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs)::-webkit-scrollbar { display: none; }
+#page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab { flex: 0 0 auto; white-space: nowrap; }
+#page-carnotes .cn-primary-action { width: 100%; max-width: 100%; box-sizing: border-box; }
+#page-carnotes .bbm-stat { min-width: 0; overflow: hidden; }
+#page-carnotes .bbm-val,
+#page-carnotes .bbm-lbl { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+#page-carnotes .fuelcard-gauge { min-width: 0; }
+
+@media (max-width: 599px) {
+  #page-carnotes .cn-vehicle-summary { padding: 11px; margin-bottom: 10px; }
+  #page-carnotes .cn-vehicle-summary-head { margin-bottom: 7px; }
+  #page-carnotes .cn-summary-metrics { grid-template-columns: minmax(0, 1fr) repeat(2, minmax(58px, 76px)); gap: 6px; }
+  #page-carnotes .cn-summary-metric { padding: 8px; border-radius: 10px; }
+  #page-carnotes .cn-summary-action { min-width: 58px; min-height: 58px; padding: 6px; border-radius: 10px; }
+  #page-carnotes .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) { gap: 5px; }
+  #page-carnotes > .cn-tabs:not(.cni-subtabs):not(.cnb-subtabs) .cn-tab { min-height: 40px; padding: 8px 11px; }
+  #page-carnotes .card { border-radius: 13px; }
+  #page-carnotes .dashhub-cat-head { padding: 9px 10px; }
+  #page-carnotes .bbm-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  #page-carnotes .bbm-stat { min-height: 64px; padding: 8px 5px; }
+}
+
+@media (max-width: 379px) {
+  #page-carnotes .cn-summary-metrics { grid-template-columns: minmax(0, 1fr) repeat(2, 58px); gap: 5px; }
+  #page-carnotes .cn-summary-metric { padding: 7px; }
+  #page-carnotes .cn-summary-action { min-width: 54px; min-height: 54px; font-size: 9px; }
+  #page-carnotes .cn-summary-link { max-width: 38%; padding-inline: 9px; }
+  #page-carnotes .bbm-stat-grid { gap: 5px; }
+  #page-carnotes .bbm-stat { min-height: 60px; padding-inline: 4px; }
+  #page-carnotes .bbm-val { font-size: 15px; }
+}
+
+@media (max-width: 319px) {
+  #page-carnotes .cn-summary-metrics { grid-template-columns: 1fr 54px 54px; }
+  #page-carnotes .cn-summary-action { min-width: 50px; min-height: 50px; }
+  #page-carnotes .cn-summary-action span { max-width: 100%; overflow-wrap: anywhere; }
+  #page-carnotes .bbm-stat-grid { grid-template-columns: 1fr; }
+  #page-carnotes .bbm-stat { min-height: 52px; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+}
+
+/* =========================================================================
+   S2109 — Final visual acceptance hardening
+   Presentation-only guardrails found in the cross-module mobile pass.
+   No theme, data, navigation logic, SOT or runtime behavior changes.
+   ========================================================================= */
+@media (max-width: 599px) {
+  /* Keep the audited navigation touch target contract intact. */
+  .nav-item {
+    min-inline-size: 44px;
+    min-width: 44px;
+    box-sizing: border-box;
+  }
+
+  /* Prevent the dashboard feature grid from becoming cramped on very small phones. */
+  .dashhub-feature-grid--icon {
+    min-width: 0;
+  }
+  .dashhub-feature-grid--icon > * {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 359px) {
+  .dashhub-feature-grid--icon {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+  }
+
+  .dashhub-feature-grid--icon .dashhub-feature-card--icon {
+    min-width: 0;
+  }
+
+  .dashhub-feature-grid--icon .dashhub-feature-card--icon h3,
+  .dashhub-feature-grid--icon .dashhub-feature-card--icon p {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 320px) {
+  /* Final narrow-screen containment: preserve content width without hiding text. */
+  .pwa-domain-page > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .pwa-domain-page .btn-row,
+  .pwa-domain-page .btn-row3 {
+    min-width: 0;
+  }
+
+  .pwa-domain-page .btn-row > .btn,
+  .pwa-domain-page .btn-row3 > .btn {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+
+/* =========================================================================
+   S2110 — Visual accessibility hardening
+   Focus visibility, reduced-motion safety and narrow text-zoom containment.
+   Presentation-only; no theme, data, SOT or runtime behavior changes.
+   ========================================================================= */
+:where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(*, *::before, *::after) {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (max-width: 599px) {
+  /* Let long labels survive browser text zoom without forcing page overflow. */
+  .nav-item,
+  .btn,
+  .modal-title,
+  .fl,
+  .tx-name,
+  .tx-meta {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .nav-item,
+  .btn {
+    overflow-wrap: anywhere;
+  }
+
+  .modal,
+  .card,
+  .tx-item,
+  .dashhub-feature-card--icon {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 320px) {
+  .modal .btn-row,
+  .modal .btn-row3,
+  .pwa-domain-page .btn-row,
+  .pwa-domain-page .btn-row3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .modal .btn-row > .btn,
+  .modal .btn-row3 > .btn,
+  .pwa-domain-page .btn-row > .btn,
+  .pwa-domain-page .btn-row3 > .btn {
+    width: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, [role="button"], [tabindex]):focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
+  }
+}
+
+
+/* =========================================================================
+   S2111 — Cross-module visual component consistency
+   Shared presentation contracts only. No theme, data, SOT or runtime logic.
+   ========================================================================= */
+
+/* Keep the primary action hierarchy consistent across modules.
+   Compact .btn-sm remains intentionally smaller where explicitly requested. */
+.btn:not(.btn-sm) {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.modal-close {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+}
+
+.card,
+.tx-item,
+.modal,
+.pwa-domain-page {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.card > *,
+.tx-item > *,
+.modal > *,
+.pwa-domain-page > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tx-item .tx-info {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.tx-item .tx-name,
+.tx-item .tx-meta {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.tx-item .tx-amount {
+  flex: 0 0 auto;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 599px) {
+  .modal-close {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .card {
+    overflow-wrap: anywhere;
+  }
+
+  .tx-item {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 320px) {
+  .btn:not(.btn-sm) {
+    min-height: 44px;
+  }
+}
+
+
+/* =========================================================================
+   S2112 — Viewport acceptance calibration: 320 / 360 / 390 / 430 / desktop
+   Final presentation guardrails only. Keeps content visible and contained
+   without changing module logic, theme definitions, data or SOT behavior.
+   ========================================================================= */
+@media (max-width: 320px) {
+  #scrollRoot { padding-left: 0; padding-right: 0; }
+  .page { padding-left: 8px; padding-right: 8px; }
+  .pwa-domain-page { padding-left: 0; padding-right: 0; }
+  .card, .tx-item, .modal, .pwa-domain-page { max-inline-size: 100%; }
+  .btn-row, .btn-row3 { min-inline-size: 0; }
+}
+@media (min-width: 321px) and (max-width: 359px) {
+  .page { padding-left: 9px; padding-right: 9px; }
+  .card, .tx-item, .pwa-domain-page { min-inline-size: 0; max-inline-size: 100%; }
+}
+@media (min-width: 360px) and (max-width: 389px) {
+  .page { padding-left: 10px; padding-right: 10px; }
+  .pwa-domain-page > * { min-inline-size: 0; max-inline-size: 100%; }
+}
+@media (min-width: 390px) and (max-width: 430px) {
+  .page { padding-left: 12px; padding-right: 12px; }
+  .pwa-domain-page > * { min-inline-size: 0; max-inline-size: 100%; }
+  .card, .tx-item { min-inline-size: 0; }
+}
+@media (min-width: 900px) {
+  .page, .pwa-domain-page { min-inline-size: 0; max-inline-size: 100%; }
+  .card, .tx-item { min-inline-size: 0; }
+}
+
+/* =========================================================================
+   S2113 — Rendered control/icon consistency
+   Normalizes visible icon controls already used by the app. No new icons,
+   markup, dependencies, theme definitions, data, SOT or runtime logic.
+   ========================================================================= */
+.nav-item {
+  /* S2107 declared the 44px floor twice; keep the interactive floor as the
+     final value instead of allowing a later min-inline-size:0 to cancel it. */
+  min-inline-size: 44px;
+}
+
+.header-badge {
+  min-width: 36px;
+  min-height: 36px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.month-nav-btn {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.card-setting-btn {
+  min-height: 36px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-collapse-toggle {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.qs-btn svg,
+.month-nav-btn svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 359px) {
+  .header-badge { min-width: 34px; min-height: 34px; }
+  .card-setting-btn { min-height: 34px; }
+}
+
+/* =========================================================================
+   S2114 — Typography & density consistency
+   Shared type hierarchy only. No theme, data, SOT or runtime logic.
+   ========================================================================= */
+.page > h1, .page > h2, .page > h3,
+.section-title, .section-head, .card-title {
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.page > h1, .page > h2, .section-title {
+  letter-spacing: -0.01em;
+}
+
+.section-subtitle, .section-sub, .card-subtitle, .card-meta,
+.tx-meta, .form-hint, .muted, .text-muted {
+  line-height: 1.45;
+}
+
+.card-title { min-width: 0; }
+.card-subtitle, .card-meta { min-width: 0; max-width: 100%; }
+
+@media (max-width: 599px) {
+  .page > h1, .page > h2 { line-height: 1.28; }
+  .card { padding: 16px; }
+  .section-title { line-height: 1.3; }
+}
+
+@media (max-width: 359px) {
+  .card { padding: 14px; }
+  .page > h1, .page > h2 { letter-spacing: 0; }
+}
+
+/* =========================================================================
+   S2115 — Empty/loading/error feedback states
+   Presentation contract for already-rendered states. No runtime logic.
+   ========================================================================= */
+.empty,
+.budget-empty,
+.dashhub-search-empty,
+.suggest-empty {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.empty-icon,
+.budget-empty-icon {
+  line-height: 1;
+}
+
+.empty-text,
+.budget-empty-text {
+  max-width: 42rem;
+  margin-inline: auto;
+  line-height: 1.5;
+}
+
+[aria-busy="true"] {
+  cursor: progress;
+}
+
+button[aria-busy="true"] .btn-spinner {
+  vertical-align: middle;
+}
+
+.pwa-domain-page [role="alert"],
+.pwa-domain-page [role="status"] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+@media (max-width: 599px) {
+  .empty,
+  .budget-empty { padding-inline: 12px; }
+  .empty-text,
+  .budget-empty-text { max-width: 34rem; }
+}
+
+@media (max-width: 359px) {
+  .empty,
+  .budget-empty { padding-inline: 8px; }
+}
+
+
+/* =========================================================================
+   S2116 — Interaction-state consistency
+   Normalizes already-rendered hover/active/disabled/selected states.
+   Presentation-only: no theme, data, SOT or runtime logic changes.
+   ========================================================================= */
+:where(button, .btn, [role="button"]):not(:disabled):not([aria-disabled="true"]):hover {
+  filter: brightness(0.98);
+}
+
+:where(button, .btn, [role="button"]):not(:disabled):not([aria-disabled="true"]):active {
+  transform: translateY(1px);
+}
+
+:where(button, .btn, [role="button"]):disabled,
+:where(button, .btn, [role="button"])[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+:where([aria-pressed="true"], [aria-selected="true"], .active) {
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, .btn, [role="button"]):not(:disabled):not([aria-disabled="true"]):active {
+    transform: none;
+  }
+}
+
+@media (hover: none) {
+  :where(button, .btn, [role="button"]):not(:disabled):not([aria-disabled="true"]):hover {
+    filter: none;
+  }
+}
+
+/* S2117 — data-dense table visual hardening.
+ * Keep all table columns available; mobile uses controlled horizontal scrolling
+ * instead of shrinking readable text or hiding data.
+ */
+.tx-tbl-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tx-tbl {
+  min-width: 100%;
+  max-width: none;
+  table-layout: auto;
+}
+
+.tx-tbl td,
+.tx-tbl th {
+  box-sizing: border-box;
+}
+
+.tx-tbl-desc {
+  min-width: 160px;
+  max-width: 42rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.tx-tbl-desc .tx-name,
+.tx-tbl-desc .tx-meta {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.tx-tbl .tx-amount,
+.tx-tbl .tx-tbl-saldo,
+.tx-tbl .tx-tbl-date {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 599px) {
+  .tx-tbl-wrap {
+    margin-inline: 0;
+    padding-bottom: 2px;
+  }
+
+  .tx-tbl {
+    min-width: 560px;
+  }
+
+  .tx-tbl th,
+  .tx-tbl td {
+    padding: 7px 6px;
+  }
+
+  .tx-tbl-desc {
+    min-width: 190px;
+  }
+}
+
+@media (max-width: 359px) {
+  .tx-tbl {
+    min-width: 540px;
+    font-size: var(--fs-caption);
+  }
+
+  .tx-tbl th,
+  .tx-tbl td {
+    padding: 6px 5px;
+  }
+
+  .tx-tbl-desc {
+    min-width: 180px;
+  }
+}
+
+/* S2118 — form/input/select mobile interaction hardening.
+ * Presentation-only: preserve existing handlers, values, SOT and business logic.
+ * Keep fields readable and touchable without introducing runtime dependencies.
+ */
+.fi,
+.fs,
+.modal .fi,
+.modal .fs,
+.pwa-domain-page .fi,
+.pwa-domain-page .fs {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+}
+
+.fi,
+.fs,
+.chat-input {
+  line-height: 1.35;
+}
+
+textarea.fi {
+  min-height: 88px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+input.fi[type="text"],
+input.fi[type="search"],
+input.fi[type="email"],
+input.fi[type="tel"],
+input.fi[type="number"],
+input.fi[type="date"],
+input.fi[type="time"],
+input.fi[type="datetime-local"],
+input.fi[type="month"] {
+  font-size: 16px;
+}
+
+.type-toggle,
+.type-toggle3,
+.amt-wrap {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.type-toggle > *,
+.type-toggle3 > * {
+  min-width: 0;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.amt-wrap .fi {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.chat-input-row {
+  min-width: 0;
+}
+
+.chat-input {
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 359px) {
+  .fg { margin-bottom: 12px; }
+  .fl { margin-bottom: 6px; }
+  .fi, .fs { padding-inline: 11px; }
+  .type-toggle, .type-toggle3 { gap: 6px; }
+  .type-toggle > *, .type-toggle3 > * { padding-inline: 7px; }
+}
+
+@media (min-width: 600px) {
+  .fi, .fs { min-height: 44px; }
+}
+
+/* S2119 — mobile modal/dialog viewport + keyboard-safe scrolling. */
+.modal, .calc-modal, .qs-modal {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  min-width: 0;
+}
+.modal-title { min-width: 0; }
+.modal-title > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.modal > form, .modal > .form, .modal > .form-grid, .calc-modal > form, .qs-modal > form {
+  min-width: 0;
+}
+.modal button, .modal input, .modal select, .modal textarea,
+.calc-modal button, .calc-modal input, .calc-modal select, .calc-modal textarea,
+.qs-modal button, .qs-modal input, .qs-modal select, .qs-modal textarea {
+  max-width: 100%;
+}
+@media (max-width: 599px) {
+  .modal, .calc-modal, .qs-modal {
+    max-height: min(90dvh, 90vh);
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+  .modal-title { gap: 8px; }
+}
+@media (max-width: 359px) {
+  .modal, .calc-modal, .qs-modal {
+    padding-left: 14px;
+    padding-right: 14px;
+    max-height: min(92dvh, 92vh);
+  }
+}
+
+/* S2120 — floating feedback / transient UI viewport hardening. */
+.toast {
+  min-width: 0;
+  width: max-content;
+  max-width: min(90vw, 520px);
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+}
+.toast--action { min-width: 0; max-width: min(94vw, 560px); }
+.toast-msg { min-width: 0; overflow-wrap: anywhere; }
+.toast-undo-btn { min-width: 44px; min-height: 36px; }
+.kasir-floatbar {
+  min-width: 0;
+  max-width: calc(100vw - 28px);
+  box-sizing: border-box;
+}
+.kasir-floatbar-info { min-width: 0; }
+.kasir-floatbar-total, .kasir-floatbar-cta { overflow-wrap: anywhere; }
+@media (max-width: 430px) {
+  .toast { bottom: calc(96px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 24px); }
+  .toast--action { width: calc(100vw - 24px); padding-left: 12px; padding-right: 8px; gap: 8px; }
+  .kasir-floatbar { left: 12px; right: 12px; max-width: none; padding-left: 14px; padding-right: 14px; }
+}
+@media (max-width: 359px) {
+  .toast { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); padding: 9px 12px; }
+  .toast--action { align-items: flex-start; flex-wrap: wrap; }
+  .toast-undo-btn { margin-left: auto; }
+  .kasir-floatbar { gap: 8px; padding: 11px 12px; }
+  .kasir-floatbar-cta { max-width: 42%; text-align: right; }
+}
+
+/* S2121 — dropdown/suggest/popover + floating-layer viewport hardening. */
+.suggest-box {
+  min-width: 0;
+  max-width: 100%;
+  max-height: min(220px, 40dvh, 220px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+}
+.suggest-item, .suggest-empty {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.keu-fab-actions {
+  min-width: 0;
+  max-width: min(86vw, 360px);
+  padding-inline: max(0px, env(safe-area-inset-left, 0px));
+}
+.keu-fab-action {
+  min-width: 44px;
+  min-height: 44px;
+  max-width: min(100%, 360px);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+@media (max-width: 430px) {
+  .suggest-box {
+    max-height: min(220px, 36dvh, 220px);
+  }
+  .keu-fab {
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  }
+  .keu-fab-actions {
+    max-width: calc(100vw - 24px);
+    padding-inline: 4px;
+  }
+  .keu-fab-action {
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (max-width: 359px) {
+  .suggest-box {
+    max-height: min(200px, 34dvh, 200px);
+  }
+  .keu-fab-actions {
+    gap: 6px;
+    max-width: calc(100vw - 20px);
+  }
+  .keu-fab-action {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+}
+
+/* S2122 — cross-module visual hierarchy + spacing rhythm.
+   Presentation-only calibration; preserves existing density modes and module logic. */
+.page-settings-btn {
+  min-width: 0;
+  gap: var(--sp-4);
+}
+.page-settings-btn > * { min-width: 0; }
+.page-title { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.section-title,
+.section-head {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.section-title { margin-bottom: var(--sp-4); }
+.section-subtitle,
+.section-sub { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.grid2,
+.grid3,
+.findash-grid,
+.qs-grid2 { min-width: 0; }
+.card:last-child,
+.stg-group:last-child { margin-bottom: 0; }
+@media (max-width: 599px) {
+  .page-settings-btn { align-items: flex-start; flex-wrap: wrap; row-gap: 8px; }
+  .page-title { flex: 1 1 180px; }
+  .grid2 { gap: 10px; }
+  .grid3 { gap: 8px; }
+  .section-title { margin-bottom: 10px; }
+}
+@media (max-width: 359px) {
+  .page-settings-btn { gap: 6px; }
+  .page-title { flex-basis: 150px; }
+  .grid2 { gap: 8px; }
+  .grid3 { gap: 6px; }
+}
+
+/* S2123 — per-module visual consistency calibration.
+   Presentation-only: aligns card internals, gaps, and long-content containment
+   across Dashboard, Keuangan, Pajak, Aset, Shop, and Car Notes. */
+#page-dashboard-hub .dashhub-feature-card,
+#page-dashboard-hub .dashhub-summary-card,
+#page-dashboard-hub .dashhub-analytics-card,
+#page-keuangan .findash-card,
+#page-pajak .card,
+#page-aset .card,
+#page-shop .shop-product-card,
+#page-carnotes .dashhub-feature-card,
+#page-carnotes .cn-vehicle-summary {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#page-dashboard-hub .dashhub-feature-card h3,
+#page-dashboard-hub .dashhub-feature-card p,
+#page-dashboard-hub .dashhub-summary-label,
+#page-dashboard-hub .dashhub-analytics-label,
+#page-keuangan .findash-card-body,
+#page-keuangan .findash-card-label,
+#page-keuangan .findash-card-val,
+#page-keuangan .findash-card-sub,
+#page-shop .shop-product-name,
+#page-shop .shop-product-head,
+#page-shop .shop-product-right,
+#page-carnotes .dashhub-feature-card h3,
+#page-carnotes .dashhub-feature-card p {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+#page-aset .aset-item,
+#page-pajak .card,
+#page-shop .shop-product-card {
+  overflow: hidden;
+}
+#page-aset .aset-item > *,
+#page-shop .shop-product-right,
+#page-keuangan .findash-card-body {
+  min-width: 0;
+}
+@media (max-width: 599px) {
+  #page-dashboard-hub .dashhub-feature-grid,
+  #page-keuangan .findash-grid,
+  #page-shop .shop-product-grid {
+    gap: 10px;
+  }
+  #page-dashboard-hub .dashhub-feature-card,
+  #page-keuangan .findash-card,
+  #page-shop .shop-product-card {
+    padding: 12px;
+  }
+  #page-aset .aset-item { gap: 8px; padding-block: 9px; }
+  #page-carnotes .dashhub-feature-card { padding-inline: 11px; }
+}
+@media (max-width: 359px) {
+  #page-dashboard-hub .dashhub-feature-grid,
+  #page-keuangan .findash-grid,
+  #page-shop .shop-product-grid {
+    gap: 8px;
+  }
+  #page-dashboard-hub .dashhub-feature-card,
+  #page-keuangan .findash-card,
+  #page-shop .shop-product-card {
+    padding: 10px;
+  }
+  #page-aset .aset-item { gap: 7px; padding-block: 8px; }
+}
+
+/* S2124 — final cross-app visual consistency acceptance.
+   Shared layout contracts only; no theme, data, SOT or runtime behavior. */
+.page,
+.pwa-domain-page,
+.page > *,
+.pwa-domain-page > * {
+  min-width: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.page > .section-head,
+.page > .page-settings-btn,
+.pwa-domain-page > .section-head,
+.pwa-domain-page > .page-settings-btn {
+  min-width: 0;
+  max-inline-size: 100%;
+}
+
+.section-head > *,
+.page-settings-btn > *,
+.card-header > *,
+.card-head > *,
+.form-row > *,
+.form-actions > * {
+  min-width: 0;
+  max-inline-size: 100%;
+}
+
+.card,
+.tx-item,
+.shop-product-card,
+.findash-card,
+.dashhub-feature-card,
+.dashhub-summary-card,
+.dashhub-analytics-card,
+.cn-vehicle-summary {
+  overflow-wrap: anywhere;
+}
+
+.card img,
+.tx-item img,
+.shop-product-card img,
+.dashhub-feature-card img,
+.dashhub-summary-card img,
+.cn-vehicle-summary img {
+  max-inline-size: 100%;
+  height: auto;
+}
+
+@media (max-width: 599px) {
+  .section-head,
+  .card-header,
+  .card-head,
+  .form-actions {
+    min-width: 0;
+    max-inline-size: 100%;
+  }
+}
+
+@media (max-width: 359px) {
+  .section-head,
+  .card-header,
+  .card-head,
+  .form-actions {
+    gap: 6px;
+  }
+}
+
+/* S2125 — viewport acceptance contracts for the shared visual system.
+   Keeps common controls/card internals bounded at 320–430px and desktop widths. */
+.page-title,
+.section-title,
+.section-subtitle,
+.section-head,
+.card-header,
+.card-head,
+.form-row,
+.form-actions,
+.modal-title,
+.tx-item,
+.shop-product-card,
+.findash-card,
+.dashhub-feature-card,
+.dashhub-summary-card,
+.dashhub-analytics-card,
+.cn-vehicle-summary {
+  min-width: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
+}
+
+.page-title,
+.section-title,
+.section-subtitle,
+.section-head,
+.card-header,
+.card-head,
+.tx-item,
+.shop-product-card,
+.findash-card,
+.dashhub-feature-card,
+.dashhub-summary-card,
+.dashhub-analytics-card,
+.cn-vehicle-summary {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.form-row > *,
+.form-actions > *,
+.card-header > *,
+.card-head > *,
+.section-head > * {
+  min-width: 0;
+  max-inline-size: 100%;
+}
+
+@media (max-width: 430px) {
+  .page-title { line-height: 1.22; }
+  .section-head,
+  .card-header,
+  .card-head,
+  .form-row,
+  .form-actions {
+    max-inline-size: calc(100vw - 24px);
+  }
+}
+
+@media (max-width: 359px) {
+  .page-title { line-height: 1.2; }
+  .section-head,
+  .card-header,
+  .card-head,
+  .form-row,
+  .form-actions {
+    max-inline-size: calc(100vw - 20px);
+  }
+}
+
+/* S2126 — final fixed-layer collision/viewport safety.
+   Shared presentation contracts only; no theme, data, SOT or runtime behavior. */
+.toast,
+.kasir-floatbar,
+.keu-fab,
+.keu-fab-action {
+  box-sizing: border-box;
+  max-inline-size: calc(100vw - 24px);
+}
+
+.toast {
+  left: 50%;
+  right: auto;
+  margin-inline: 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.kasir-floatbar {
+  max-inline-size: calc(100vw - 28px);
+  padding-bottom: calc(13px + env(safe-area-inset-bottom, 0px));
+}
+
+.keu-fab {
+  max-inline-size: calc(100vw - 24px);
+}
+
+.keu-fab-action {
+  min-width: 44px;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+
+.dashhub-search-results {
+  max-inline-size: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 430px) {
+  .toast {
+    max-inline-size: calc(100vw - 24px);
+    padding-inline: 14px;
+  }
+  .kasir-floatbar {
+    left: 12px;
+    right: 12px;
+    max-inline-size: none;
+    gap: 8px;
+    padding-inline: 14px;
+  }
+  .keu-fab-action {
+    max-inline-size: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+@media (max-width: 359px) {
+  .toast {
+    max-inline-size: calc(100vw - 20px);
+    padding-inline: 12px;
+  }
+  .kasir-floatbar {
+    left: 10px;
+    right: 10px;
+    gap: 6px;
+    padding-inline: 12px;
+  }
+  .keu-fab {
+    max-inline-size: calc(100vw - 20px);
+  }
+  .keu-fab-action {
+    max-inline-size: calc(100vw - 20px);
+    min-height: 44px;
+    padding-inline: 12px;
   }
 }

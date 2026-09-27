@@ -1,0 +1,15 @@
+S2103 — Neutral UI Design System
+
+Cumulative overlay based on app-main (33) + S2094 cumulative v11.
+
+Changed files:
+- styles.css — carried cumulative S2094/v11 Riwayat Compact UI state.
+- modern-ui-layer.css — adds neutral, token-based UI/icon rhythm and mobile-safe control sizing.
+- tests/s2103-ui-design-system.test.js — regression guards for dependency-free presentation layer, icon rhythm, touch sizing, and runtime/data isolation.
+
+Scope:
+- UI presentation only.
+- Reuses existing CSS tokens and existing DOM/icon classes.
+- No new JS, dependency, storage, SOT, persistence, or business-logic changes.
+- Mobile icon sizing: 40px base, 36px <=600px, 32px <=360px.
+- Existing graphite mockup section remains ordered after the neutral layer so theme-specific rules can continue to override it.

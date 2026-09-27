@@ -1,0 +1,12 @@
+S2125 — Final viewport acceptance contracts
+
+Changed:
+- styles.css: final shared page/card/form/header containment and wrapping contracts,
+  with explicit 430px and 359px viewport bounds.
+- tests/s2125-viewport-acceptance-final.test.js: regression contracts for the
+  final cross-app viewport hardening.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  HTML structure, or dependencies changed.

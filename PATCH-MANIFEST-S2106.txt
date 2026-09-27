@@ -1,0 +1,16 @@
+S2106 — Modal/Form UI Hierarchy + Mobile Hardening
+
+Scope:
+- Global modal component presentation: spacing, title hierarchy, field sizing, action-button layout, and narrow-screen density.
+- Prevent modal/form children from forcing horizontal overflow.
+- Keep close controls, inputs, selects, textareas, and action buttons usable on touch devices.
+- <=600px: tighter modal padding and 2-column action rows.
+- <=360px: further compact spacing and 2-column 3-way toggle layout.
+
+Safety:
+- CSS-only; no runtime JS, persistence, SOT, data model, business logic, or dependency changes.
+- No theme definitions or theme-specific color changes.
+- Reuses existing .modal/.fg/.fi/.fs/.btn-row primitives.
+
+Regression:
+- Added tests/s2106-modal-form-ui.test.js.

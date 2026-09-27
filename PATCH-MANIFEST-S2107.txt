@@ -1,0 +1,13 @@
+S2107 — Navigation + Bottom Nav/FAB Responsive UI
+
+Cumulative overlay: S2103 → S2104 → S2105 → S2106 → S2107.
+
+Changed files:
+- styles.css: navigation chrome responsive hardening, 44px touch targets,
+  safe-area handling, compact mobile spacing, scrollbar chrome suppression.
+- tests/s2107-navigation-ui.test.js: regression coverage for the UI-only rules.
+
+Scope:
+- UI/layout/CSS only.
+- No navigation logic, SOT, storage, data model, dependency, or theme definition changes.
+- No new runtime listeners or JavaScript.

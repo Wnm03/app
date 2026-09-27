@@ -1,0 +1,4 @@
+S2112 — Viewport acceptance calibration
+- Covers 320/360/390/430px mobile bands and desktop containment.
+- Presentation-only CSS; no JS, data, SOT, storage, theme or dependency changes.
+- Cumulative overlay from S2111.

@@ -1,0 +1,13 @@
+S2105 — Sparepart UI Responsive/Compact
+
+Scope:
+- Mobile visual polish for Sparepart Dashboard and Stock list.
+- Dashboard stats: 2-column readable grid on <=600px; tighter <=360px.
+- Service filter selects: responsive grid; prevent fixed min-width overflow.
+- Stock rows: compact icon/action targets; wrap/clamp long part names and metadata.
+- All selectors are scoped to #sparepartDashboard, #stockServiceFilterWrap, and #stockList.
+
+Safety:
+- CSS-only; no runtime JS, persistence, SOT, data model, or dependency changes.
+- Global .tx-name primitive is intentionally untouched.
+- No new library/dependency.

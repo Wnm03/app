@@ -1,0 +1,12 @@
+S2109 — Final Visual Acceptance Hardening
+
+Cumulative overlay: S2103 → S2104 → S2105 → S2106 → S2107 → S2108 → S2109.
+
+Changes:
+- Final mobile visual hardening for navigation touch-target sizing.
+- Prevents Dashboard feature-card grid from becoming cramped below 360px.
+- Adds narrow-screen containment for domain-page action rows at <=320px.
+- Presentation/CSS only; no theme definitions, business logic, data, storage,
+  navigation handlers, SOT, dependencies, or runtime listeners changed.
+- Existing S2108 Car Notes, S2107 Navigation, S2106 Modal/Form,
+  S2105 Sparepart, and S2104 Transaction styles remain cumulative.

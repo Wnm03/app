@@ -1,0 +1,5 @@
+S2113 — Rendered control/icon consistency
+- Normalized existing icon-control containers: header badge, month navigation, card settings, collapse toggle.
+- Fixed S2107 nav-item min-inline-size override so the 44px interaction floor remains effective.
+- No new icons, libraries, JS, theme definitions, data, SOT, storage, or business logic.
+- Regression tests: tests/s2113-rendered-controls.test.js

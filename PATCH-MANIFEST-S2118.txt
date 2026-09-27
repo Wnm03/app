@@ -1,0 +1,12 @@
+S2118 — Form/Input/Select Mobile Interaction Hardening
+
+Changed:
+- styles.css: normalized form/select/input containment and 44px touch targets.
+- styles.css: readable 16px mobile text for common input types.
+- styles.css: hardened segmented form controls and amount/chat input rows.
+- styles.css: compact spacing at <=359px without hiding content.
+- tests/s2118-form-input-ui.test.js: regression coverage for the above rules.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data, storage, business logic, runtime listeners, or dependencies changed.

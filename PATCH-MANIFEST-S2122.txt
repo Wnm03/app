@@ -1,0 +1,13 @@
+S2122 — Cross-module visual hierarchy + spacing rhythm
+
+Changed:
+- styles.css: page-title/settings containment, section heading wrapping,
+  consistent grid rhythm at mobile widths, and removal of trailing spacing
+  on terminal cards/groups.
+- tests/s2122-visual-hierarchy-spacing.test.js: regression contract.
+
+Scope:
+- Presentation/responsive CSS only.
+- Preserves existing density modes and module behavior.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners,
+  or dependencies changed.

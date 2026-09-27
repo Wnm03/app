@@ -1,0 +1,9 @@
+S2123 — Per-module visual consistency calibration
+
+Changed:
+- styles.css: scoped visual containment, wrapping, and spacing calibration for Dashboard, Keuangan, Pajak, Aset, Shop, and Car Notes.
+- tests/s2123-module-visual-consistency.test.js: regression contract for module-specific UI consistency.
+
+Scope:
+- Presentation/responsive CSS only.
+- No theme definitions, SOT, data/storage, business logic, runtime listeners, or dependencies changed.

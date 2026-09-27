@@ -1,0 +1,5 @@
+S2116 — Interaction-state consistency
+- Normalize existing hover/active/disabled/selected/pressed visual states.
+- Respect reduced-motion and touch-pointer behavior.
+- Presentation-only; no theme, data, SOT, storage, business logic, dependency, or runtime listener changes.
+- Added tests/s2116-interaction-states.test.js.

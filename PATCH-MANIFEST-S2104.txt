@@ -1,0 +1,15 @@
+S2104 — Transaction/List Responsive UI
+
+Scope:
+- Finance transaction cards: #allTx and #filterTxList.
+- Mobile title/meta wrapping without changing the shared global .tx-name contract.
+- Preserve transaction amounts/actions as visible, compact controls.
+- Keep transaction tables horizontally scrollable; no column removal.
+
+Implementation:
+- CSS-only, scoped responsive rules in styles.css.
+- No JS, data, SOT, persistence, business logic, or dependency changes.
+- No new icon library or runtime cost.
+
+Regression:
+- Added tests/s2104-transaction-list-responsive.test.js.
