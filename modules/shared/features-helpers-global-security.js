@@ -984,6 +984,36 @@ if(t.type==='expense'&&t.category===oldName){t.category='Bisnis';if(!t.subcatego
 }
 }
 }
+
+// S2096 — persistence safety: a syntactically valid but incomplete snapshot
+// must not silently replace a richer snapshot from the other persistence medium.
+function _snapshotDataHealth(p){
+ if(!p||typeof p!=='object'||Array.isArray(p))return {score:-1,shape:0,records:0};
+ const arrayKeys=['transactions','accounts','vehicles','servisLogs','sparepartCats','partsStock','bbmLogs','jalanLogs','kmLogs','bills','billsArchive','gajiMingguanHistory','products','tukangWorkers','tukangAbsensi','workDays','simList'];
+ const objectKeys=['profile','categories','pajakZakat','fuelPriceRef','notifSettings'];
+ let score=0,shape=0,records=0;
+ arrayKeys.forEach(k=>{if(Array.isArray(p[k])){shape++;score+=Math.min(p[k].length,500);records+=p[k].length;}});
+ objectKeys.forEach(k=>{if(p[k]&&typeof p[k]==='object'&&!Array.isArray(p[k])){shape++;score+=Math.min(Object.keys(p[k]).length,30);}});
+ return {score,shape,records};
+}
+function _snapshotLooksSparse(p){
+ if(!p||typeof p!=='object'||Array.isArray(p))return true;
+ const h=_snapshotDataHealth(p);
+ // A real install should at minimum retain the vehicle/account containers.
+ // Treat only a materially empty/partial snapshot as unsafe to prefer.
+ const hasVehicles=Array.isArray(p.vehicles)&&p.vehicles.length>0;
+ const hasAccounts=Array.isArray(p.accounts)&&p.accounts.length>0;
+ const hasAnyDomainRecords=h.records>0;
+ return !hasVehicles || !hasAccounts || (!hasAnyDomainRecords&&h.shape<5);
+}
+function _chooseRecoverySnapshot(a,b){
+ if(!a)return b;
+ if(!b)return a;
+ const aSparse=_snapshotLooksSparse(a), bSparse=_snapshotLooksSparse(b);
+ if(aSparse&&!bSparse)return b;
+ if(bSparse&&!aSparse)return a;
+ return a;
+}
 async function load(){
 try{
 let s=null, fromIdb=false, idbRaw=null, lsRaw=null;
@@ -1024,7 +1054,24 @@ if(!p&&lsRaw){
  }
 }
 if(idbRaw&&lsRaw){
- try{const _pm=_readSavePersistMeta();if(_pm.localTs>_pm.idbTs){const _lp=_parseStoredSnapshot(lsRaw,'localStorage-newer');if(_lp){p=_lp;s=lsRaw;fromIdb=false;}}}catch(e){void e;}
+ try{
+  const _pm=_readSavePersistMeta();
+  if(_pm.localTs>_pm.idbTs){
+   const _lp=_parseStoredSnapshot(lsRaw,'localStorage-newer');
+   // A newer synchronous snapshot can still be an interrupted/partial write.
+   // Never let timestamp alone promote a materially sparse snapshot over a
+   // richer IDB snapshot.
+   if(_lp){
+    if(!_snapshotLooksSparse(_lp) || _snapshotLooksSparse(p)){p=_lp;s=lsRaw;fromIdb=false;}
+   }
+  }else{
+   const _lp=_parseStoredSnapshot(lsRaw,_pm.localTs===_pm.idbTs?'localStorage-same-age':'localStorage-fallback');
+   if(_lp){
+    const _chosen=_chooseRecoverySnapshot(p,_lp);
+    if(_chosen===_lp){p=_lp;s=lsRaw;fromIdb=false;}
+   }
+  }
+ }catch(e){void e;}
 }
 if(!p){
  if(idbRaw||lsRaw){
@@ -1035,6 +1082,17 @@ if(!p){
  return;
 }
 if(p){
+ // S2096: re-check both valid sources immediately before merge.
+ // A stale/partial IDB mirror must never replace a materially richer LS snapshot.
+ if(idbRaw&&lsRaw){
+  const _idbP=_parseStoredSnapshot(idbRaw,'IndexedDB-guard');
+  const _lsP=_parseStoredSnapshot(lsRaw,'localStorage-guard');
+  const _best=_chooseRecoverySnapshot(_idbP,_lsP);
+  if(_best&&_best!==p){
+   const _bestIsLs=_best===_lsP;
+   p=_best;s=_bestIsLs?lsRaw:null;fromIdb=!_bestIsLs;
+  }
+ }
 D={...D,...p};
 if(!fromIdb) IDBStore.set('kw_v4_mirror',s||lsRaw).catch(e=>console.error('Gagal memulihkan mirror IndexedDB dari localStorage:',e));
 // Sesi B (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §4 Fase 1 poin 2):
