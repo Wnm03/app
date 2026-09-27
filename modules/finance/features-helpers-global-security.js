@@ -77,7 +77,7 @@ nextPulang:'',lastBackup:null,lastResetPromptDate:null,
 profile:{nama:'W',gajiPokok:65000,kiriman:500000,theme:'dark',lemburMultiplier:1.5,tarifMinggu:139000,tanggalLahir:null,statusKawin:false,tanggungan:0,statusPekerjaan:null,targetGajiBulanan:null,insightMingguanAktif:true},
 categories:{income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))},
 accounts:JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS)),
-vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}],
+vehicles:[{id:'veh_1',name:'Vario 125',emoji:'🏍️'}],
 simList:[],
 bbmLogs:[],servisLogs:[],jalanLogs:[],kmLogs:[],workDays:[],gajiMingguanHistory:[],
 tukangBorHargaMemory:{},
@@ -574,8 +574,8 @@ if(D.profile&&D.profile.tanggungan===undefined) D.profile.tanggungan=0;
 if(D.profile&&D.profile.statusPekerjaan===undefined) D.profile.statusPekerjaan=null;
 if(!D.bills) D.bills=[];
 if(!D.billsArchive) D.billsArchive=[];
-if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',serviceIntervalKm:3000}];
-D.vehicles.forEach(v=>{if(!v.serviceIntervalKm)v.serviceIntervalKm=3000;});
+if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️'}];
+
 if(!D.torsiChecklist||typeof D.torsiChecklist!=='object'||Array.isArray(D.torsiChecklist)) D.torsiChecklist={};
 // Sesi "Revisi migrasi" (torsi-vehicle-selector, Bagian A): migrasi jaring
 // pengaman D.torsiChecklist flat->per-kendaraan SUDAH ditangani otomatis
