@@ -31,13 +31,12 @@
       if(g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')g.VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'checklist-projection');
       g.D.sparepartCats.push(cat);
     }else if(cat){
-      const vehicle=(g.D.vehicles||[]).find(v=>v&&str(v.id)===vid);
-      const categoryOverride=vehicle&&vehicle.intervalOverrides&&Number(vehicle.intervalOverrides[cat.id])>0?Number(vehicle.intervalOverrides[cat.id]):null;
+      const categoryOverride=null;
       if(cid&&!cat.serviceComponentId)cat.serviceComponentId=cid;
       if(masterCategoryId&&!cat.masterCategoryId)cat.masterCategoryId=masterCategoryId;
       if(name&&!cat.name)cat.name=name;
       if(master&&master.group){if(!cat.group)cat.group=master.group.group||null;if(!cat.groupIcon)cat.groupIcon=master.group.icon||'';}
-      if(intervalKm&&!categoryOverride)cat.intervalKm=intervalKm;
+      if(intervalKm)cat.intervalKm=intervalKm;
       if(masterMonths)cat.intervalBulan=masterMonths;
       if(intervalKm||masterMonths)cat.showInReminder=true;
     }

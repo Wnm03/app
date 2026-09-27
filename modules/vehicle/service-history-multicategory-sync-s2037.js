@@ -76,9 +76,7 @@
     if(!cat&&component&&component.categoryId)cat=cats.find(c=>c&&str(c.id)===str(component.categoryId)&&(!c.vehicleId||str(c.vehicleId)===vid));
     if(!cat&&typeof g.resolveServisCatForVehicle==='function')cat=g.resolveServisCatForVehicle(component&&component.name||'',vid)||null;
     if(!cat)return {active:false,category:null,intervalKm:null,intervalBulan:null};
-    const vehicle=(g.D&&Array.isArray(g.D.vehicles)?g.D.vehicles.find(v=>v&&str(v.id)===vid):null);
-    const override=vehicle&&vehicle.intervalOverrides&&cat?Number(vehicle.intervalOverrides[cat.id])||null:null;
-    const canonicalInterval=typeof g.getCanonicalServiceInterval==='function'?g.getCanonicalServiceInterval(cat,{intervalKm:override,vehicleId:vid}):{intervalKm:override||Number(cat.intervalKm)||null,intervalBulan:Number(cat.intervalBulan)||null};
+    const canonicalInterval=typeof g.getCanonicalServiceInterval==='function'?g.getCanonicalServiceInterval(cat,{vehicleId:vid}):{intervalKm:Number(cat.intervalKm)||null,intervalBulan:Number(cat.intervalBulan)||null};
     return {active:cat.showInReminder!==false&&!!(canonicalInterval.intervalKm||canonicalInterval.intervalBulan),category:cat,intervalKm:canonicalInterval.intervalKm||null,intervalBulan:canonicalInterval.intervalBulan||null};
   }
 

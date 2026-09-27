@@ -42,23 +42,26 @@ function vehicleServiceSotFindCatalogForCat(cat,vehicleId){
   return null;
 }
 
-function vehicleServiceSotApplyLegacyRuleToCatalog(item,cat){
-  if(!item||!cat)return false;
-  let changed=false;
-  const km=Number(cat.intervalKm);
-  const months=Number(cat.intervalBulan);
-  if(item.serviceIntervalKm===undefined && Number.isFinite(km) && km>0){item.serviceIntervalKm=km;changed=true;}
-  if(item.serviceIntervalMonths===undefined && Number.isFinite(months) && months>0){item.serviceIntervalMonths=months;changed=true;}
-  if(item.serviceShowInReminder===undefined){item.serviceShowInReminder=cat.showInReminder!==false;changed=true;}
-  return changed;
+function vehicleServiceSotFindServiceMasterForCategory(cat){
+  if(typeof ServiceInputCatalog==='undefined'||!ServiceInputCatalog)return null;
+  const cid=cat&& (cat.serviceComponentId||cat.componentId||cat.maintenanceRuleId);
+  if(cid&&typeof ServiceInputCatalog.itemById==='function'){
+    const hit=ServiceInputCatalog.itemById(cid);
+    if(hit&&hit.item)return hit;
+  }
+  if(cat&&cat.name&&typeof ServiceInputCatalog.infer==='function'){
+    const hit=ServiceInputCatalog.infer(cat.name);
+    if(hit&&hit.item)return hit;
+  }
+  return null;
 }
+function vehicleServiceSotApplyLegacyRuleToCatalog(item,cat){ return false; }
 
 async function vehicleServiceSotEnsureReady(){
   if(_vehicleServiceSotReady)return {ok:true,changed:0};
   if(_vehicleServiceSotLoading)return _vehicleServiceSotLoading;
   _vehicleServiceSotLoading=(async()=>{
     let changed=0;
-    const dirtyCatalogIds=new Set();
     if(typeof VehicleCatalog==='undefined'||!VehicleCatalog||typeof VehicleCatalog.getAll!=='function')return{ok:false,changed:0,reason:'VehicleCatalog belum tersedia'};
     const items=await VehicleCatalog.getAll();
     if(!Array.isArray(D.sparepartCats))D.sparepartCats=[];
@@ -68,15 +71,8 @@ async function vehicleServiceSotEnsureReady(){
       if(String(cat.catalogPartId||'')!==String(item.id)){cat.catalogPartId=item.id;changed++;}
       if(cat.catalogCategory===undefined||cat.catalogCategory!==item.category){cat.catalogCategory=item.category||'';changed++;}
       if(cat.catalogSubcategory===undefined||cat.catalogSubcategory!==(item.subcategory||null)){cat.catalogSubcategory=item.subcategory||null;changed++;}
-      if(vehicleServiceSotApplyLegacyRuleToCatalog(item,cat)){changed++;dirtyCatalogIds.add(String(item.id));}
-    }
-    // Persist only catalog metadata; D remains owned by the normal save cycle.
-    if(dirtyCatalogIds.size&&typeof VehicleCatalog.update==='function'){
-      for(const item of items){
-        if(item&&dirtyCatalogIds.has(String(item.id))){
-          await VehicleCatalog.update(item.id,{serviceIntervalKm:item.serviceIntervalKm,serviceIntervalMonths:item.serviceIntervalMonths,serviceShowInReminder:item.serviceShowInReminder});
-        }
-      }
+      // Interval values are no longer written into VehicleCatalog: the active
+      // interval belongs exclusively to VehicleCarNotesSOT.
     }
     _vehicleServiceSotReady=true;
     return{ok:true,changed};
@@ -89,55 +85,69 @@ function vehicleServiceSotIsReady(){return _vehicleServiceSotReady;}
 // Push a user-edited legacy service rule into its linked catalog part.
 // D.sparepartCats remains a compatibility index; VehicleCatalog is the
 // canonical owner of service metadata once a category has an unambiguous link.
-async function vehicleServiceSotSyncCategoryRule(cat,vehicleId){
-  if(!cat||typeof VehicleCatalog==='undefined'||!VehicleCatalog||typeof VehicleCatalog.getAll!=='function'||typeof VehicleCatalog.update!=='function')return {ok:false,reason:'catalog-unavailable'};
-  try{
-    const items=await VehicleCatalog.getAll();
-    const item=vehicleServiceSotFindCatalogForCat(cat,vehicleId);
-    if(!item)return {ok:false,reason:'unlinked'};
-    const patch={serviceIntervalKm:(Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0)?Number(cat.intervalKm):0,serviceIntervalMonths:(Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0)?Number(cat.intervalBulan):0,serviceShowInReminder:cat.showInReminder!==false};
-    await VehicleCatalog.update(item.id,patch);
-    cat.catalogPartId=item.id;
-    cat.catalogCategory=item.category||'';
-    cat.catalogSubcategory=item.subcategory||null;
-    return {ok:true,item,patch};
-  }catch(e){return {ok:false,reason:'update-failed',error:e};}
+async function vehicleServiceSotSyncCategoryRule(cat,vehicleId,meta){
+  const vid=vehicleId||cat&&cat.vehicleId;
+  if(!cat||!vid)return {ok:false,reason:'invalid-category'};
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.setServiceInterval==='function'){
+    const source=(meta&&meta.source)||cat._serviceIntervalSource||'manual';
+    const r=VehicleCarNotesSOT.setServiceInterval(vid,cat,{intervalKm:cat.intervalKm,intervalBulan:cat.intervalBulan,source});
+    if(r&&r.ok)return Object.assign({ok:true,source},r);
+    return r||{ok:false,reason:'sot-write-failed'};
+  }
+  // Isolated legacy harness compatibility: without the canonical vehicle SOT,
+  // the old catalog API remains usable for tests/early-load adapters only.
+  if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function'&&typeof VehicleCatalog.update==='function'){
+    try{
+      const item=vehicleServiceSotFindCatalogForCat(cat,vid); if(!item)return {ok:false,reason:'unlinked'};
+      const patch={serviceIntervalKm:Number(cat.intervalKm)>0?Number(cat.intervalKm):0,serviceIntervalMonths:Number(cat.intervalBulan)>0?Number(cat.intervalBulan):0,serviceShowInReminder:cat.showInReminder!==false};
+      await VehicleCatalog.update(item.id,patch); return {ok:true,item,patch,projectionOnly:true};
+    }catch(e){return {ok:false,reason:'update-failed',error:e};}
+  }
+  return {ok:false,reason:'vehicle-sot-unavailable'};
 }
 
-/** Sync projection used by reminder/prediction consumers. The identity remains
- * the legacy category id for historical compatibility; catalogPartId and all
- * category labels/intervals are sourced from VehicleCatalog when linked. */
+/** Resolve the ONE active interval SOT for a vehicle/component.
+ * Pedoman/catalog/AI are inputs to the SOT; only VehicleCarNotesSOT's active
+ * record is authoritative after initialization or explicit user selection. */
 function vehicleServiceSotResolveReminderRule(cat,vehicleId){
   const category=cat&&typeof cat==='object'?cat:{};
   const item=vehicleServiceSotFindCatalogForCat(category,vehicleId);
   const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
-  // VehicleCatalog is the canonical owner of component/part service metadata
-  // once a category has an unambiguous catalog link. D.sparepartCats remains
-  // the compatibility index and is only the fallback for legacy/unlinked rows.
-  let intervalKm=item?num(item.serviceIntervalKm):null;
-  let intervalBulan=item?num(item.serviceIntervalMonths):null;
-  if(intervalKm===null)intervalKm=num(category.intervalKm);
-  if(intervalBulan===null)intervalBulan=num(category.intervalBulan);
-  // Per-vehicle KM override is an explicit user exception to the canonical
-  // catalog rule. There is intentionally no reuse of the KM override as a
-  // month interval; intervalBulan remains the category/catalog SOT.
+  const master=vehicleServiceSotFindServiceMasterForCategory(category);
+  const masterKm=num(master&&master.item&&master.item.intervalKm);
+  const masterMonths=num(master&&master.item&&master.item.intervalTimeMonths);
+  const catalogKm=num(item&&item.serviceIntervalKm);
+  const catalogMonths=num(item&&item.serviceIntervalMonths);
+  const seedKm=masterKm!==null?masterKm:(catalogKm!==null?catalogKm:num(category.intervalKm));
+  const seedMonths=masterMonths!==null?masterMonths:(catalogMonths!==null?catalogMonths:num(category.intervalBulan));
+  const seedSource=masterKm!==null||masterMonths!==null?'pedoman':(category.intervalSource||'pedoman');
+  const ref=Object.assign({},category,{intervalKm:seedKm||0,intervalBulan:seedMonths||0,intervalSource:seedSource});
+  let active=null;
+  const hasCanonicalSot=typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceInterval==='function';
+  if(hasCanonicalSot)active=VehicleCarNotesSOT.getServiceInterval(vehicleId,ref);
+  // Legacy isolated harness only: catalog remains a compatibility source when
+  // the canonical VehicleCarNotesSOT module is genuinely absent.
+  const legacyCatalogKm=!hasCanonicalSot?catalogKm:null;
+  const legacyCatalogMonths=!hasCanonicalSot?catalogMonths:null;
   const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
-  const override=num(vehicle&&vehicle.intervalOverrides&&vehicle.intervalOverrides[category.id]);
-  if(override!==null)intervalKm=override;
+  const intervalKm=hasCanonicalSot?(num(active&&active.intervalKm)??seedKm):(legacyCatalogKm??seedKm);
+  const intervalBulan=hasCanonicalSot?(num(active&&active.intervalBulan)??seedMonths):(legacyCatalogMonths??seedMonths);
   const componentId=(item&&item.serviceComponentId)||category.serviceComponentId||category.componentId||null;
   const masterCategoryId=(category.masterCategoryId)||(item&&item.masterCategoryId)||null;
   return {
     categoryId:category.id||null,
     catalogPartId:item&&item.id||category.catalogPartId||null,
-    serviceComponentId:componentId||null,
-    masterCategoryId:masterCategoryId||null,
+    serviceComponentId:(active&&active.serviceComponentId)||componentId||null,
+    masterCategoryId:(active&&active.masterCategoryId)||masterCategoryId||null,
     categoryName:category.name||item&&item.partName||null,
     componentName:item&&item.partName||category.name||null,
     intervalKm,
     intervalBulan,
-    intervalOverridden:override!==null,
-    source:item?'catalog':'category',
-    catalog:item||null
+    intervalOverridden:hasCanonicalSot?!!(active&&active.source==='manual'):false,
+    source:hasCanonicalSot?(active&&active.source||seedSource):(legacyCatalogKm!==null?'catalog':seedSource),
+    intervalSot:active||null,
+    catalog:item||null,
+    serviceMaster:master&&master.item?master.item:null
   };
 }
 

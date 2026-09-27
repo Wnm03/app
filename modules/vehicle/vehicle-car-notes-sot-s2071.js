@@ -49,6 +49,62 @@
     if(c.showInReminder==null)c.showInReminder=!!(c.intervalKm||c.intervalBulan);
     return c;
   }
+
+  // S2091-r1: one authoritative service-interval SOT per vehicle/component.
+  // The active interval may originate from a documented guideline (pedoman),
+  // an explicitly accepted AI recommendation, or a manual edit. Recommendations
+  // are inputs only; they never compete with the active interval once selected.
+  function intervalKey(ref){
+    const r=ref||{};
+    return str(r.serviceComponentId||r.componentId)||str(r.id)||[str(r.masterCategoryId),str(r.name).toLowerCase()].filter(Boolean).join('::');
+  }
+  function normalizeInterval(rec,ref){
+    const r=clone(rec||{}), k=intervalKey(ref);
+    const km=Number(r.intervalKm), mo=Number(r.intervalBulan);
+    const validSource=['pedoman','ai-rekomendasi','manual'];
+    r.intervalKm=Number.isFinite(km)&&km>0?km:0;
+    r.intervalBulan=Number.isFinite(mo)&&mo>0?mo:0;
+    r.source=validSource.includes(str(r.source))?str(r.source):'manual';
+    r.serviceComponentId=str(r.serviceComponentId||ref&&ref.serviceComponentId)||null;
+    r.masterCategoryId=str(r.masterCategoryId||ref&&ref.masterCategoryId)||null;
+    r.categoryId=str(r.categoryId||ref&&ref.id)||null;
+    r.updatedAt=r.updatedAt||new Date().toISOString();
+    return Object.assign({key:k},r);
+  }
+  function getServiceInterval(id,ref){
+    const vid=str(id||activeId()), s=ensure(vid);
+    if(!s)return null;
+    if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};
+    const key=intervalKey(ref); if(!key)return null;
+    let rec=s.serviceIntervals[key];
+    // S2092: legacy vehicle.intervalOverrides is migration-only and is never
+    // consulted here. If no active record exists, seed exactly one record from
+    // the canonical resolver inputs supplied by the caller (normally Pedoman).
+    if(!rec){
+      const km=Number(ref&&ref.intervalKm), mo=Number(ref&&ref.intervalBulan);
+      if((Number.isFinite(km)&&km>0)||(Number.isFinite(mo)&&mo>0)){
+        rec=normalizeInterval({intervalKm:km,intervalBulan:mo,source:(ref&&ref.intervalSource)||'pedoman'},ref);
+      }
+      if(rec)s.serviceIntervals[key]=rec;
+    }
+    return rec?clone(rec):null;
+  }
+  function setServiceInterval(id,ref,payload){
+    const vid=str(id||ref&&ref.vehicleId||activeId()); if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
+    const rec=normalizeInterval(payload,ref), key=rec.key;
+    if(!key||(rec.intervalKm<=0&&rec.intervalBulan<=0))return {ok:false,code:'interval_missing'};
+    return mutate(vid,s=>{if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};s.serviceIntervals[key]=rec;});
+  }
+  function setServiceIntervalSource(id,ref,source){
+    const cur=getServiceInterval(id,ref); if(!cur)return {ok:false,code:'interval_not_found'};
+    return setServiceInterval(id,ref,Object.assign({},cur,{source}));
+  }
+
+  function removeServiceInterval(id,ref){
+    const vid=str(id||activeId()), key=intervalKey(ref);
+    if(!vid||!key||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
+    return mutate(vid,s=>{if(s.serviceIntervals&&typeof s.serviceIntervals==='object')delete s.serviceIntervals[key];});
+  }
   function categoryKey(cat){return str(cat&&cat.serviceComponentId)||str(cat&&cat.id)||[str(cat&&cat.name).toLowerCase()].filter(Boolean).join('::');}
   function getServiceCategories(id){
     const s=ensure(id);
@@ -151,7 +207,7 @@
     const base=auditFinanceHistoryReminder(vid);issues.push(...(base.issues||[]));
     return {ok:issues.length===0,vehicleId:vid,sessionCount:seenSessions.size,serviceCount:scopedLogs.length,financeServiceCount:scopedTx.filter(x=>str(x.vehicleId)===vid).length,reminderCount:reminders.length,issues};
   }
-  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
+  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
   root.VehicleCarNotesSOT=api;
   if(typeof window!=='undefined')window.VehicleCarNotesSOT=api;
   try{for(const v of vehicles())ensure(v.id);}catch(e){/* provisioning must remain fail-safe during bootstrap. */}

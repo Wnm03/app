@@ -188,6 +188,24 @@ let vehEditIdx=null;
 // dipisah 2 field. Listrik: tidak ada oli mesin sama sekali, field interval KM diganti Kapasitas
 // Baterai (kWh) — dipakai kartu Vehicle Intelligence/estimasi jarak tempuh, bukan reminder ganti oli.
 const VEH_JENIS_DEFAULT_INTERVAL={motor:3000,mobil:5000};
+function vehIntervalSotValue(v,componentId,name){
+  try{
+    if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+      const r=ServiceIntervalSOT.active({serviceComponentId:componentId||null,name:name||''},v&&v.id);
+      if(r&&Number(r.intervalKm)>0)return Number(r.intervalKm);
+    }
+  }catch(_e){/* interval UI remains usable if SOT is unavailable during bootstrap */}
+  // Isolated legacy harness/early-load compatibility only. In production the
+  // canonical VehicleCarNotesSOT path above is present and authoritative.
+  if(!(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT)){
+    const legacy=componentId==='oli-mesin'?v&&v.serviceIntervalKm:
+      (name&&/oli\s+transmisi/i.test(String(name))?v&&v.oliTransmisiIntervalKm:null);
+    const n=Number(legacy);
+    if(Number.isFinite(n)&&n>0)return n;
+  }
+  return null;
+}
+
 // _vehCapacityFieldsHtml(v) — 2 field opsional "Kapasitas Angkut Maksimal (kg)"
 // & "Kapasitas Volume Box/Bagasi (m³)", khusus kendaraan operasional Shop
 // (jenis motor/mobil, TIDAK wajib diisi). Dipakai TripEngine.vehicleCapacity()
@@ -205,14 +223,14 @@ return '<div class="u-grid2"><div class="fg u-mb0"><label class="fl">Kapasitas A
 function vehJenisFieldsHtml(jenis,v){
 v=v||{};
 if(jenis==='mobil'){
-return '<div class="fg"><label class="fl">Interval Servis Oli Mesin (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="5000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>'
-+'<div class="fg"><label class="fl">Interval Servis Oli Transmisi (KM)</label><input type="number" class="fi" id="vehOliTransInterval" placeholder="20000" inputmode="numeric" value="'+(v.oliTransmisiIntervalKm||'')+'"></div>'
+return '<div class="fg"><label class="fl">Interval Servis Oli Mesin (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="5000" inputmode="numeric" value="'+(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||'')+'"></div>'
++'<div class="fg"><label class="fl">Interval Servis Oli Transmisi (KM)</label><input type="number" class="fi" id="vehOliTransInterval" placeholder="20000" inputmode="numeric" value="'+(vehIntervalSotValue(v,null,'Oli Transmisi')||'')+'"></div>'
 +_vehCapacityFieldsHtml(v);
 }
 if(jenis==='listrik'){
 return '<div class="fg"><label class="fl">Kapasitas Baterai (kWh)</label><input type="number" step="0.1" class="fi" id="vehBatteryCapacity" placeholder="5.5" inputmode="decimal" value="'+(v.batteryCapacityKwh||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kendaraan listrik tidak ganti oli, jadi tidak ada interval servis KM — kapasitas baterai dipakai buat estimasi jarak tempuh & pengingat servis berkala lain (rem/ban/aki).</div></div>';
 }
-return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(v.serviceIntervalKm||'')+'"></div>'
+return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||'')+'"></div>'
 +_vehCapacityFieldsHtml(v);
 }
 let _vehMaintenanceTemplateRenderToken=0;
@@ -414,8 +432,7 @@ const linkedAsset=vehAssetLinkEl?resolveVehicleAssetLink(vehAssetLinkEl.value):n
 if(vehEditIdx!==null&&vehEditIdx!==undefined){
 const v=D.vehicles[vehEditIdx];
 if(!v){vehEditIdx=null;return;}
-v.name=name;v.emoji=emoji;v.jenis=jenis;v.serviceIntervalKm=interval;v.ownership=ownership;
-if(jenis==='mobil'&&oliTrans)v.oliTransmisiIntervalKm=oliTrans;else delete v.oliTransmisiIntervalKm;
+v.name=name;v.emoji=emoji;v.jenis=jenis;v.ownership=ownership;
 if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else delete v.batteryCapacityKwh;
 if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
 if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
@@ -437,6 +454,11 @@ if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
 // atas) -- itu tetap prioritas eksplisit user.
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(v);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(v.id,{vehicle:v});
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function'&&jenis!=='listrik'){
+  const oilCat=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'&&ServiceInputCatalog.itemById('oli-mesin'));
+  if(oilCat&&oilCat.item&&interval>0)ServiceIntervalSOT.setManual({serviceComponentId:'oli-mesin',masterCategoryId:oilCat.item.masterCategoryId,name:oilCat.item.name},v.id,interval,null);
+  if(jenis==='mobil'&&oliTrans>0){const tx=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.infer==='function'&&ServiceInputCatalog.infer('Oli Transmisi'));ServiceIntervalSOT.setManual(tx&&tx.item?tx.item:{name:'Oli Transmisi'},v.id,oliTrans,null);}
+}
 _autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
 save();
@@ -453,8 +475,8 @@ return;
 const kmAwalEl=document.getElementById('vehKmAwal');
 const kmAwal=kmAwalEl?parseFloat(kmAwalEl.value):NaN;
 const newId='veh_'+Date.now();
-const newVeh={id:newId,name,emoji,jenis,serviceIntervalKm:interval,intervalOverrides:{},ownership};
-if(jenis==='mobil'&&oliTrans)newVeh.oliTransmisiIntervalKm=oliTrans;
+const newVeh={id:newId,name,emoji,jenis,ownership};
+
 if(jenis==='listrik'&&batteryCapacity)newVeh.batteryCapacityKwh=batteryCapacity;
 if(capacityKg)newVeh.capacityKg=capacityKg;
 if(capacityM3)newVeh.capacityM3=capacityM3;
@@ -463,14 +485,19 @@ const selectedTemplateNew=_readVehMaintenanceTemplateSelection();
 if(selectedTemplateNew)newVeh.maintenanceTemplate=selectedTemplateNew;
 else if(typeof VehicleMaintenanceTemplateEngine!=='undefined')newVeh.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:newVeh.modelId,modelName:newVeh.modelDisplayName||name,year:newVeh.modelYear,variant:newVeh.modelVariant,engineCc:newVeh.modelEngineCc,catalogId:newVeh.catalogId||null,vehicleId:newVeh.id});
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
+D.vehicles.push(newVeh);
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function'&&jenis!=='listrik'){
+  const oilCat=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'&&ServiceInputCatalog.itemById('oli-mesin'));
+  if(oilCat&&oilCat.item&&interval>0)ServiceIntervalSOT.setManual({serviceComponentId:'oli-mesin',masterCategoryId:oilCat.item.masterCategoryId,name:oilCat.item.name},newVeh.id,interval,null);
+  if(jenis==='mobil'&&oliTrans>0){const tx=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.infer==='function'&&ServiceInputCatalog.infer('Oli Transmisi'));ServiceIntervalSOT.setManual(tx&&tx.item?tx.item:{name:'Oli Transmisi'},newVeh.id,oliTrans,null);}
+}
 // Opsi A — auto-create Asset (lihat komentar lengkap di _autoCreateVehicleAsset()
 // & AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-ASET.md): kendaraan BARU dgn
 // ownership SELF & TANPA link manual (linkedAsset kosong) otomatis dapat 1
 // entry Buku Aset baru, jadi langsung ikut Total Aset/Net Worth sejak awal.
 _autoCreateVehicleAsset(newVeh,ownership);
-D.vehicles.push(newVeh);
 if(!isNaN(kmAwal)&&kmAwal>0){
 D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
@@ -506,14 +533,15 @@ const capTag=(usedInDelivery&&!v.capacityKg&&!v.capacityM3)?' <span class="acc-c
 // ownDetail) TIDAK berubah — murni tambahan additive.
 const assetBridge=vehAssetBridgeHtml(v);
 if(jenis==='mobil'){
-const mesin=(v.serviceIntervalKm||5000).toLocaleString('id-ID');
-const trans=v.oliTransmisiIntervalKm?(v.oliTransmisiIntervalKm.toLocaleString('id-ID')+' km'):'belum diisi';
+const mesin=(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||5000).toLocaleString('id-ID');
+const transVal=vehIntervalSotValue(v,null,'Oli Transmisi');
+const trans=transVal?(transVal.toLocaleString('id-ID')+' km'):'belum diisi';
 return 'Oli mesin: '+mesin+' km · Oli transmisi: '+trans+ownText+capTag+ownDetail+assetBridge;
 }
 if(jenis==='listrik'){
 return (v.batteryCapacityKwh?('Kapasitas baterai: '+v.batteryCapacityKwh+' kWh'):'Kapasitas baterai belum diisi')+ownText+capTag+ownDetail+assetBridge;
 }
-return 'Interval servis: '+(v.serviceIntervalKm||3000).toLocaleString('id-ID')+' km'+ownText+capTag+ownDetail+assetBridge;
+return 'Interval servis: '+(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||3000).toLocaleString('id-ID')+' km'+ownText+capTag+ownDetail+assetBridge;
 }
 function populateKmVehicleSelect(){
 const sel=document.getElementById('kmVehicle');

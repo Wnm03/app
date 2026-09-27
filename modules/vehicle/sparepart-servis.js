@@ -301,16 +301,32 @@ function overlayPersistedMaintenanceIntervals(base,cat,componentId,componentName
 function resolveMaintenanceRule(vehicleId,cat){
 if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
 if(!cat)return null;
+const masterHit=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const master=masterHit&&masterHit.item?masterHit.item:null;
+const canonicalKm=typeof getCanonicalServiceInterval==='function'?getCanonicalServiceInterval(cat,{vehicleId}).intervalKm:(master&&Number(master.intervalKm)>0?Number(master.intervalKm):null);
+const applyRule=(base,id,name)=>{
+  if(!base)return null;
+  const r=overlayPersistedMaintenanceIntervals(base,cat,id,name);
+  // The master explicitly declares a single replacement interval (e.g.
+  // Oli Mesin: "Ganti tiap 4.000 km"). In that case the older additive
+  // maintenance-rule registry must not reintroduce its provisional 2.000/
+  // 2.500 km schedule. The master is the reminder SOT; vehicle override is
+  // already resolved by getCanonicalServiceInterval().
+  if(master&&master.needsReview===false&&canonicalKm>0&&master.actionMode==='periksa-conditional'&&/^Ganti\s+tiap\b/i.test(String(master.intervalLabel||''))){
+    r.inspectKm=null;r.inspectMonths=null;r.inspectDays=null;r.replaceKm=canonicalKm;r.replaceMonths=null;r.replaceDays=null;r.replaceAction='ganti';
+  }
+  return r;
+};
 const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
-if(direct&&SERVICE_MAINTENANCE_RULES[direct])return overlayPersistedMaintenanceIntervals(SERVICE_MAINTENANCE_RULES[direct],cat,direct,cat.name);
+if(direct&&SERVICE_MAINTENANCE_RULES[direct])return applyRule(SERVICE_MAINTENANCE_RULES[direct],direct,cat.name);
 const n=normalizeMaintenanceRuleKey(cat.name);
-if(n&&SERVICE_MAINTENANCE_RULES[n])return overlayPersistedMaintenanceIntervals(SERVICE_MAINTENANCE_RULES[n],cat,n,cat.name);
+if(n&&SERVICE_MAINTENANCE_RULES[n])return applyRule(SERVICE_MAINTENANCE_RULES[n],n,cat.name);
 if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'){
 for(const g of ServiceInputCatalog.groups()||[]){
 for(const it of g.items||[]){
 if(normalizeMaintenanceRuleKey(it.id)===n||normalizeMaintenanceRuleKey(it.name)===n){
 const r=SERVICE_MAINTENANCE_RULES[it.id];
-if(r)return overlayPersistedMaintenanceIntervals(r,cat,it.id,it.name);
+if(r)return applyRule(r,it.id,it.name);
 }
 }
 }
@@ -324,8 +340,26 @@ function getMaintenanceSchedule(vehicleId,cat){
 const rule=resolveMaintenanceRule(vehicleId,cat);
 if(!rule)return null;
 const schedule={rule:Object.assign({},rule),inspectKm:Number.isFinite(rule.inspectKm)&&rule.inspectKm>0?rule.inspectKm:null,replaceKm:Number.isFinite(rule.replaceKm)&&rule.replaceKm>0?rule.replaceKm:null,inspectMonths:Number.isFinite(rule.inspectMonths)&&rule.inspectMonths>0?rule.inspectMonths:null,replaceMonths:Number.isFinite(rule.replaceMonths)&&rule.replaceMonths>0?rule.replaceMonths:null,inspectDays:Number.isFinite(rule.inspectDays)&&rule.inspectDays>0?rule.inspectDays:null,replaceDays:Number.isFinite(rule.replaceDays)&&rule.replaceDays>0?rule.replaceDays:null,inspectAction:rule.inspectAction||'periksa',replaceAction:rule.replaceAction||'ganti',maintenanceType:rule.maintenanceType||'periodic',condition:rule.condition||null};
-const ov=(D.vehicles||[]).find(v=>v&&v.id===vehicleId)?.intervalOverrides?.[cat&&cat.id],n=Number(ov);
-if(Number.isFinite(n)&&n>0){const rep=!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays),ins=!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);if(rep){schedule.replaceKm=n;schedule.rule.replaceKm=n;schedule.intervalOverrideAxis='replace';}else if(ins){schedule.inspectKm=n;schedule.rule.inspectKm=n;schedule.intervalOverrideAxis='inspect';}else{schedule.replaceKm=n;schedule.rule.replaceKm=n;schedule.intervalOverrideAxis='replace';}schedule.vehicleIntervalOverride=n;}
+// S2091-r1: the active interval comes from ONE VehicleCarNotesSOT record.
+// Maintenance rules provide only action semantics (inspect/replace); they do
+// not own a competing interval value.
+const active=typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'
+  ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null;
+if(active&&((active.intervalKm||0)>0||(active.intervalBulan||0)>0)){
+  const km=Number(active.intervalKm)>0?Number(active.intervalKm):null;
+  const mo=Number(active.intervalBulan)>0?Number(active.intervalBulan):null;
+  const rep=!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays);
+  const ins=!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
+  if(rep||(!ins&&active.source)){
+    schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;
+    schedule.inspectKm=null;schedule.inspectMonths=null;schedule.inspectDays=null;
+    schedule.intervalSotSource=active.source;
+  }else{
+    schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;
+    schedule.intervalSotSource=active.source;
+  }
+  schedule.serviceIntervalSot=active.intervalSot||null;
+}
 return schedule;
 }
 function hasMaintenanceReminderSchedule(vehicleId,cat){
@@ -374,16 +408,17 @@ if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServ
   const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
   if(rule&&rule.intervalKm!==null)return rule.intervalKm;
 }
-const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
-const ov=veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id];
 if(typeof resolveCanonicalInterval==='function'){
-  return resolveCanonicalInterval(cat,{intervalKm:ov}).intervalKm;
+  return resolveCanonicalInterval(cat,{vehicleId}).intervalKm;
 }
-return(ov!=null&&ov>0)?ov:(cat&&cat.intervalKm>0?cat.intervalKm:null);
+return(cat&&cat.intervalKm>0)?cat.intervalKm:null;
 }
 function hasIntervalOverride(vehicleId,cat){
-const veh=D.vehicles.find(v=>v.id===vehicleId);
-return!!(veh&&veh.intervalOverrides&&veh.intervalOverrides[cat.id]>0);
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const r=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  return !!(r&&r.source==='manual');
+}
+return false;
 }
 function getEffectiveIntervalBulan(cat,vehicleId){
 if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
@@ -391,7 +426,7 @@ if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServ
   if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
 }
 if(typeof resolveCanonicalInterval==='function'){
-  return resolveCanonicalInterval(cat,{}).intervalBulan;
+  return resolveCanonicalInterval(cat,{vehicleId}).intervalBulan;
 }
 return(cat&&cat.intervalBulan>0)?cat.intervalBulan:null;
 }
@@ -624,19 +659,28 @@ const veh=D.vehicles.find(v=>v.id===curVehicleId);
 if(!veh){toast('⚠️ Pilih kendaraan dulu');return;}
 const current=getEffectiveIntervalKm(curVehicleId,cat);
 const reko=recommendIntervalKm(curVehicleId,cat);
-const rekoLine=(reko.ok&&Math.abs(reko.avgKm-current)>=100)?`\n\n💡 Dari ${reko.sampleCount} jeda servis terakhir (${reko.count} catatan), rata-rata kamu servis tiap ~${reko.avgKm.toLocaleString('id-ID')} km -- beda dari interval saat ini (${current.toLocaleString('id-ID')} km). Ini cuma saran, isi angka manapun yang kamu mau.`:'';
-const val=await showPromptModal({title:'Interval Khusus '+veh.name,message:`Interval "${cat.name}" khusus untuk ${veh.emoji||'🏍️'} ${veh.name} (KM). Kosongkan/0 untuk pakai default global (${cat.intervalKm.toLocaleString('id-ID')} km, dipakai semua kendaraan lain).${rekoLine}`,icon:'🔧',inputType:'number',defaultValue:current});
+const sourceNow=(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')?VehicleServiceSOT.resolveReminderRule(cat,curVehicleId):null;
+const sourceLabel=sourceNow&&sourceNow.source==='ai-rekomendasi'?'AI rekomendasi':sourceNow&&sourceNow.source==='manual'?'manual':'pedoman';
+const rekoLine=(reko.ok&&Math.abs(reko.avgKm-current)>=100)?`\n\n💡 AI/rekomendasi pola riwayat: ~${reko.avgKm.toLocaleString('id-ID')} km (${reko.count} catatan). Ini hanya saran — pilih dengan tombol rekomendasi atau isi angka manual.`:'';
+const val=await showPromptModal({title:'Interval Servis '+veh.name,message:`Interval aktif: ${current?current.toLocaleString('id-ID')+' km':'belum ditetapkan'} · sumber: ${sourceLabel}.\n\nSimpan angka manual untuk menjadikannya SOT kendaraan. Kosongkan/0 untuk kembali ke pedoman standar. ${rekoLine}`,icon:'🔧',inputType:'number',defaultValue:current});
 if(val===null)return;
-if(!veh.intervalOverrides)veh.intervalOverrides={};
 const num=parseFloat(val);
+let result=null;
 if(val===''||isNaN(num)||num<=0){
-delete veh.intervalOverrides[catId];
-save();Servis.renderReminder();renderDashboardServisReminder();
-toast('✅ Kembali pakai default global ('+cat.intervalKm.toLocaleString('id-ID')+' km)');
+  const master=typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+  const baseKm=Number(master&&master.item&&master.item.intervalKm)>0?Number(master.item.intervalKm):Number(cat.intervalKm)>0?Number(cat.intervalKm):0;
+  const baseMo=Number(master&&master.item&&master.item.intervalTimeMonths)>0?Number(master.item.intervalTimeMonths):Number(cat.intervalBulan)>0?Number(cat.intervalBulan):0;
+  if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.setServiceInterval==='function')result=VehicleServiceSOT.setServiceInterval(curVehicleId,cat,{intervalKm:baseKm,intervalBulan:baseMo,source:'pedoman'});
+  toast('✅ Kembali ke interval pedoman standar');
 } else {
-veh.intervalOverrides[catId]=num;
-save();Servis.renderReminder();renderDashboardServisReminder();
-toast('✅ Interval khusus '+veh.name+' disimpan: '+num.toLocaleString('id-ID')+' km');
+  if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.setServiceInterval==='function')result=VehicleServiceSOT.setServiceInterval(curVehicleId,cat,{intervalKm:num,intervalBulan:0,source:'manual'});
+  toast('✅ Interval SOT manual disimpan: '+num.toLocaleString('id-ID')+' km');
+}
+if(result&&result.ok){
+  const resolved=VehicleServiceSOT.resolveReminderRule(cat,curVehicleId);
+  cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');
+  save();Servis.renderReminder();renderDashboardServisReminder();
 }
 }
 function getLastServiceKm(vehicleId){
@@ -1022,6 +1066,10 @@ const idx=normalizedId===null?null:D.sparepartCats.findIndex(c=>c&&String(c.id)=
 if(normalizedId!==null&&idx<0){toast('⚠️ Kategori sparepart tidak ditemukan');return false;}
 Sparepart.catEditId=normalizedId;
 Sparepart.catEditIdx=idx;
+Sparepart._intervalSource=null;
+Sparepart._intervalSuggestedKm=null;
+Sparepart._intervalInitialKm=0;
+Sparepart._intervalInitialMonths=0;
 const isEdit=normalizedId!==null;
 document.getElementById('sparepartModalTitle').textContent=isEdit?'Edit Kategori Sparepart':'Tambah Kategori Sparepart';
 document.getElementById('sparepartName').value=isEdit?D.sparepartCats[Sparepart.catEditIdx].name:'';
@@ -1030,7 +1078,11 @@ codeEl.value=isEdit?(D.sparepartCats[Sparepart.catEditIdx].code||codeFromName(D.
 codeEl.dataset.manual=isEdit?'1':'0';
 codeEl.oninput=()=>{codeEl.dataset.manual='1';};
 const curCat=isEdit?D.sparepartCats[Sparepart.catEditIdx]:null;
-document.getElementById('sparepartInterval').value=(curCat&&curCat.intervalKm>0)?curCat.intervalKm:'';
+const activeInterval=(isEdit&&typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')?VehicleServiceSOT.resolveReminderRule(curCat,curCat.vehicleId||((typeof curVehicleId!=='undefined')?curVehicleId:null)):null;
+Sparepart._intervalSource=activeInterval&&activeInterval.source||null;
+Sparepart._intervalInitialKm=activeInterval&&activeInterval.intervalKm||((curCat&&curCat.intervalKm>0)?curCat.intervalKm:0);
+Sparepart._intervalInitialMonths=activeInterval&&activeInterval.intervalBulan||((curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:0);
+document.getElementById('sparepartInterval').value=(Sparepart._intervalInitialKm>0)?Sparepart._intervalInitialKm:'';
 const bulanEl=Sparepart.ensureIntervalBulanField();
 if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
 Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);

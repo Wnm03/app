@@ -40,9 +40,11 @@ _renderSuggestBox(name);
 applyIntervalSuggestion(km){
 const el=document.getElementById('sparepartInterval');
 if(el)el.value=km;
+Sparepart._intervalSource='ai-rekomendasi';
+Sparepart._intervalSuggestedKm=Number(km);
 const boxEl=document.getElementById('sparepartAiSuggestBox');
 if(boxEl)boxEl.classList.add('u-dnone');
-toast('✅ Interval diisi '+km.toLocaleString('id-ID')+' km, cek dulu sebelum simpan');
+toast('✅ Rekomendasi AI diisi '+km.toLocaleString('id-ID')+' km — cek dulu lalu Simpan untuk menjadikannya SOT');
 },
 async deleteFromModal(){
 const editId=Sparepart.catEditId;
@@ -81,6 +83,8 @@ if(clash){toast(`⚠️ "${name}" adalah nama kendaraan, bukan nama part/servis.
 if(!code) code=codeFromName(name);
 const intervalKm=(interval&&interval>0)?interval:0;
 const intervalBulan=(intervalBulanRaw&&intervalBulanRaw>0)?intervalBulanRaw:0;
+const intervalChanged=Number(intervalKm)!==Number(Sparepart._intervalInitialKm||0)||Number(intervalBulan)!==Number(Sparepart._intervalInitialMonths||0);
+const intervalSource=(Sparepart._intervalSuggestedKm!=null&&Number(Sparepart._intervalSuggestedKm)===Number(intervalKm))?'ai-rekomendasi':(editMode&&!intervalChanged?(Sparepart._intervalSource||'pedoman'):'manual');
 const catInfer=(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog.infer)?ServiceInputCatalog.infer(name):null;
 let masterCategoryId=document.getElementById('sparepartMasterCategoryId')?.value||catInfer?.group?.masterCategoryId||null;
 let serviceComponentId=document.getElementById('sparepartServiceComponentId')?.value||catInfer?.item?.id||null;
@@ -162,7 +166,14 @@ editCat.masterCategoryId=masterCategoryId||null;
 editCat.serviceComponentId=serviceComponentId||null;
 editCat.showInReminder=wantShow;
 editCat.vehicleId=vehicleId;
-if(vehChanged&&oldVehicleId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(editCat.id,oldVehicleId);
+if(vehChanged&&oldVehicleId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT){
+  if(typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(editCat.id,oldVehicleId);
+  if(typeof VehicleCarNotesSOT.removeServiceInterval==='function')VehicleCarNotesSOT.removeServiceInterval(oldVehicleId,editCat);
+}
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function')VehicleServiceSOT.syncCategoryRule(editCat,vehicleId,{source:intervalSource});
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const resolved=VehicleServiceSOT.resolveReminderRule(editCat,vehicleId);editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;
+}
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
 } else {
 // FITUR BARU (audit lanjutan grouping, sesi lalu): kategori baru dari form
@@ -174,7 +185,7 @@ if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCa
 const grpNew=(groupSelEl&&groupSelVal)
 ?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
 :((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
-const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_newCat,'manual-create'); D.sparepartCats.push(_newCat);
+const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon}; D.sparepartCats.push(_newCat); if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function')VehicleServiceSOT.syncCategoryRule(_newCat,vehicleId,{source:intervalSource}); if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_newCat,'manual-create');
 }
 save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
@@ -182,7 +193,7 @@ async delCat(i){
 const cat=D.sparepartCats[i];
 if(!cat)return;
 const linkedStock=D.partsStock.filter(p=>p.catId===cat.id);
-const linkedVeh=D.vehicles.filter(v=>v.intervalOverrides&&v.intervalOverrides[cat.id]>0);
+const linkedVeh=[];
 let msg='Hapus kategori sparepart ini? Riwayat servis terkait tetap ada.';
 if(linkedStock.length||linkedVeh.length){
 const parts=[];
@@ -192,7 +203,7 @@ msg=`⚠️ Kategori "${cat.name}" masih dipakai oleh ${parts.join(' & ')}. Kala
 }
 if(!await askConfirm(msg,{title:'Hapus Kategori Sparepart',icon:'🗑'}))return;
 linkedStock.forEach(p=>{p.catId=null;});
-linkedVeh.forEach(v=>{if(v.intervalOverrides)delete v.intervalOverrides[cat.id];});
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeServiceInterval==='function')VehicleCarNotesSOT.removeServiceInterval(curVehicleId,cat);
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(cat.id,cat.vehicleId||curVehicleId);
 D.sparepartCats.splice(i,1);save();Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
 toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');

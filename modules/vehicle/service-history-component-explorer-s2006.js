@@ -64,8 +64,7 @@
       const vehicleId=log.vehicleId||curVehicleId;
       const cat=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(log.item||'',vehicleId):null;
       if(!cat)return '';
-      const ov=(D.vehicles||[]).find(v=>v&&v.id===vehicleId)?.intervalOverrides?.[cat.id];
-      const iv=typeof getCanonicalServiceInterval==='function'?getCanonicalServiceInterval(cat,{intervalKm:ov,vehicleId}):{intervalKm:cat.intervalKm||null,intervalBulan:cat.intervalBulan||null};
+      const iv=typeof getCanonicalServiceInterval==='function'?getCanonicalServiceInterval(cat,{vehicleId}):{intervalKm:cat.intervalKm||null,intervalBulan:cat.intervalBulan||null};
       const parts=[];
       if(iv&&iv.intervalKm)parts.push(Number(iv.intervalKm).toLocaleString('id-ID')+' km');
       if(iv&&iv.intervalBulan)parts.push(Number(iv.intervalBulan).toLocaleString('id-ID')+' bulan');
