@@ -195,34 +195,57 @@ details.card[open] summary::after{transform:rotate(180deg)}
 .servis-history-item { align-items: center; }
 .servis-history-info { min-width: 0; }
 .servis-history-title { min-width: 0; overflow-wrap: anywhere; word-break: break-word; line-height: 1.3; }
-.servis-history-primary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.servis-history-note { font-size: var(--fs-label); color: var(--text2); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.servis-history-primary { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.servis-history-note { min-width: 0; font-size: var(--fs-label); color: var(--text2); margin-top: 2px; overflow-wrap: anywhere; word-break: break-word; }
 .servis-history-badges { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 5px; min-width: 0; }
-.servis-history-badge { display: inline-flex; align-items: center; max-width: 100%; min-height: 20px; box-sizing: border-box; padding: 2px 7px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface3); color: var(--text2); font-size: 10px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.servis-history-badge { display: inline-flex; align-items: center; max-width: 100%; min-width: 0; min-height: 20px; box-sizing: border-box; padding: 2px 7px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface3); color: var(--text2); font-size: 10px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 .servis-history-check { color: var(--text); font-weight: 700; }
 .servis-history-reminder { font-weight: 700; }
 .servis-history-reminder-missing { font-weight: 700; }
 .servis-history-amount { margin-left: auto; }
 .servis-history-delete { margin-left: 0; }
 @media (max-width: 600px) {
-  .servis-history-item { display: grid; grid-template-columns: 28px 36px minmax(0, 1fr) auto; grid-template-areas: "select icon info amount" "select icon info del"; column-gap: 7px; row-gap: 2px; align-items: start; padding: 11px 0; }
+  .servis-history-item { display: grid; grid-template-columns: 28px 36px minmax(0, 1fr) minmax(118px, 34%); grid-template-areas: "select icon info amount" "select icon info edit" "select icon info del"; column-gap: 7px; row-gap: 5px; align-items: start; padding: 11px 0; }
   .servis-history-item > label { grid-area: select; }
   .servis-history-item > .tx-icon { grid-area: icon; }
   .servis-history-item > .tx-info { grid-area: info; min-width: 0; }
-  .servis-history-item > .tx-amount { grid-area: amount; align-self: start; margin: 0; font-size: var(--fs-label); max-width: 34vw; overflow: hidden; text-overflow: ellipsis; }
+  .servis-history-item > .tx-amount { grid-area: amount; align-self: start; justify-self: end; margin: 0; font-size: var(--fs-label); max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .servis-history-item > .servis-history-edit,
+  .servis-history-item > .servis-history-edit-session { grid-area: edit; justify-self: end; align-self: start; min-width: 0; max-width: 100%; white-space: nowrap; }
+  .servis-history-session-summary { display: grid; grid-template-columns: 36px minmax(0, 1fr) minmax(118px, 34%); grid-template-areas: "icon info amount" "icon info edit" "icon info add" "icon info del"; column-gap: 7px; row-gap: 5px; align-items: start; padding: 11px 0; }
+  .servis-history-session-summary > .tx-icon { grid-area: icon; }
+  .servis-history-session-summary > .tx-info { grid-area: info; min-width: 0; }
+  .servis-history-session-summary > .tx-amount { grid-area: amount; justify-self: end; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+  .servis-history-session-summary > .servis-history-edit-session { grid-area: edit; justify-self: end; min-width: 0; max-width: 100%; white-space: nowrap; }
+  .servis-history-session-summary > .servis-history-add-session { grid-area: add; justify-self: end; min-width: 0; max-width: 100%; white-space: nowrap; }
+  .servis-history-session-summary > .servis-history-delete { grid-area: del; justify-self: end; min-width: 28px; min-height: 28px; }
   .servis-history-item > .servis-history-delete { grid-area: del; justify-self: end; align-self: end; padding: 4px 2px; min-width: 28px; min-height: 28px; }
   .servis-history-item > img { width: 36px !important; height: 36px !important; grid-area: icon; align-self: start; }
-  .servis-history-title { font-size: var(--fs-body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .servis-history-title { font-size: var(--fs-body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; min-width: 0; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+  /* S2099: at narrow phones keep service content readable instead of squeezing it into the action column. */
+  .servis-history-item > .servis-history-edit,
+  .servis-history-item > .servis-history-edit-session,
+  .servis-history-item > .servis-history-add-session { font-size: var(--fs-label); padding-inline: 10px; }
   .servis-history-primary { margin-top: 2px; font-size: 10px; }
   .servis-history-note { max-width: 100%; font-size: 10px; }
   .servis-history-badges { gap: 4px; margin-top: 5px; padding-right: 2px; }
-  .servis-history-badge { max-width: 100%; padding: 2px 6px; font-size: 9.5px; }
+  .servis-history-badge { max-width: 100%; padding: 3px 6px; font-size: 9.5px; }
   .servis-history-part { max-width: 100%; }
   #servisActionTypeChipRow, #servisMasterCategoryChipRow { overflow-x: auto; flex-wrap: nowrap !important; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px; }
   #servisActionTypeChipRow::-webkit-scrollbar, #servisMasterCategoryChipRow::-webkit-scrollbar { display: none; }
   #servisActionTypeChipRow .chip, #servisMasterCategoryChipRow .chip { flex: 0 0 auto; }
   #servisListLoadMoreWrap { padding-bottom: 4px; }
   #servisListLoadMoreWrap .btn { width: 100%; min-height: 40px; }
+}
+@media (max-width: 380px) {
+  .servis-history-item { grid-template-columns: 28px 32px minmax(0, 1fr); grid-template-areas: "select icon amount" "select icon info" "select icon edit" "select icon del"; }
+  .servis-history-item > .tx-amount { max-width: 100%; }
+  .servis-history-item > .servis-history-edit,
+  .servis-history-item > .servis-history-edit-session { justify-self: stretch; width: 100%; }
+  .servis-history-item > .servis-history-delete { justify-self: end; }
+  .servis-history-session-summary { grid-template-columns: 36px minmax(0, 1fr); grid-template-areas: "icon amount" "icon info" "icon edit" "icon add" "icon del"; }
+  .servis-history-session-summary > .servis-history-edit-session,
+  .servis-history-session-summary > .servis-history-add-session { justify-self: stretch; width: 100%; }
 }
 [data-theme="modern"] .dashhub-ticker.bill-stat-pills { gap: 0; overflow-x: auto; }
 [data-theme="modern"] .bill-stat-pill { background: none; border: none; border-right: 1px solid var(--border); border-radius: 0; padding: 0 14px; flex-direction: column; align-items: flex-start; gap: 2px; }
@@ -1524,4 +1547,49 @@ summary:focus-visible {
 }
 @media(prefers-reduced-motion:reduce){
   .segmented-control{scroll-behavior:auto!important;scroll-snap-type:none}
+}
+
+/* S2101: history photo thumb is a first-class grid icon; prevent it from creating an implicit mobile column. */
+@media (max-width: 600px) {
+  .servis-history-item > .servis-history-photo-thumb {
+    grid-area: icon;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  .servis-history-item > .servis-history-photo-thumb img {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px;
+    max-height: 36px;
+    display: block;
+    flex: 0 0 36px;
+  }
+}
+@media (max-width: 380px) {
+  .servis-history-item > .servis-history-photo-thumb {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
+  }
+  .servis-history-item > .servis-history-photo-thumb img {
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px;
+    max-height: 32px;
+    flex-basis: 32px;
+  }
 }
