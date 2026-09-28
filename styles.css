@@ -3326,3 +3326,262 @@ input.fi[type="month"] {
     max-width: 38%;
   }
 }
+
+
+/* S2140 — Screenshot-driven mobile layout repair: Service sessions + sparepart stock.
+   Presentation-only CSS. Keeps existing markup, actions, data, reminder links and calculations intact. */
+@media (max-width: 600px) {
+  /* Service session summary: do not reserve a large fixed action column that squeezes
+     the service description into a narrow strip on phones. */
+  #servisList .servis-history-session-summary,
+  .servis-history-session-summary {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "icon info"
+      "icon amount"
+      "icon edit"
+      "icon add"
+      "icon del" !important;
+    align-items: start;
+    column-gap: 9px;
+    row-gap: 7px;
+    padding: 12px 0;
+    min-width: 0;
+  }
+
+  .servis-history-session-summary > .tx-icon { grid-area: icon; }
+  .servis-history-session-summary > .tx-info {
+    grid-area: info;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .servis-history-session-summary > .tx-amount {
+    grid-area: amount;
+    justify-self: start;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    margin: 0;
+  }
+  .servis-history-session-summary > .servis-history-edit-session,
+  .servis-history-session-summary > .servis-history-add-session {
+    justify-self: start;
+    width: min(100%, 230px);
+    max-width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+    white-space: normal;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  .servis-history-session-summary > .servis-history-edit-session { grid-area: edit; }
+  .servis-history-session-summary > .servis-history-add-session { grid-area: add; }
+  .servis-history-session-summary > .servis-history-delete {
+    grid-area: del;
+    justify-self: end;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* Sparepart inventory rows: dedicate stable tracks to icon and action buttons;
+     long names, codes, source labels and stock warnings wrap only in the info track. */
+  #stockList .tx-item {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px 36px;
+    grid-template-areas: "icon info edit del";
+    align-items: start;
+    column-gap: 7px;
+    row-gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 12px 0;
+    box-sizing: border-box;
+  }
+  #stockList .tx-item > .tx-icon {
+    grid-area: icon;
+    width: 36px;
+    height: 36px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #stockList .tx-item > .tx-info {
+    grid-area: info;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  #stockList .tx-item > .tx-del {
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    padding: 4px;
+    margin: 0 !important;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+  }
+  #stockList .tx-item > .tx-del:nth-last-child(2) { grid-area: edit; }
+  #stockList .tx-item > .tx-del:last-child { grid-area: del; }
+  #stockList .tx-item .tx-name {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.35;
+  }
+  #stockList .tx-item .tx-name > span {
+    display: inline-block;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+    margin: 2px 3px 2px 0;
+    box-sizing: border-box;
+  }
+  #stockList .tx-item .tx-meta {
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.45;
+    margin-top: 4px;
+  }
+}
+
+@media (max-width: 380px) {
+  #servisList .servis-history-session-summary,
+  .servis-history-session-summary {
+    grid-template-columns: 32px minmax(0, 1fr) !important;
+    column-gap: 7px;
+  }
+  #stockList .tx-item {
+    grid-template-columns: 32px minmax(0, 1fr) 32px 32px;
+    column-gap: 5px;
+  }
+  #stockList .tx-item > .tx-icon {
+    width: 32px;
+    height: 32px;
+  }
+  #stockList .tx-item > .tx-del {
+    width: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    height: 32px;
+  }
+}
+
+/* S2141 — Cumulative UI hardening: stock/status hierarchy, badges, dashboard and touch states.
+   Presentation-only; keeps existing data and action handlers unchanged. */
+@media (max-width: 600px) {
+  /* Service-history details: keep reminder/status badges readable and independently wrapped. */
+  #servisList .servis-history-badges,
+  .servis-history-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 5px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #servisList .servis-history-badge,
+  .servis-history-badge {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.35;
+    box-sizing: border-box;
+  }
+  #servisList .servis-history-primary,
+  #servisList .servis-history-note,
+  #servisList .servis-history-cost,
+  #servisList .servis-history-part {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.45;
+  }
+
+  /* Sparepart list: prevent inline catalog/code chips from colliding with names and status. */
+  #stockList .tx-item .tx-name {
+    line-height: 1.4;
+  }
+  #stockList .tx-item .tx-name > span {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 3px 4px 2px 0 !important;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+  }
+  #stockList .tx-item .tx-meta {
+    display: block;
+    margin-top: 6px;
+    padding: 2px 0;
+    overflow-wrap: anywhere;
+    line-height: 1.5;
+  }
+  #stockList .tx-item .tx-meta[style*="color"] {
+    border-left: 3px solid var(--accent2);
+    padding-left: 8px;
+    border-radius: 2px;
+  }
+
+  /* Dashboard metrics: stable sizing and readable long labels/numbers on small screens. */
+  #sparepartDashboard,
+  #sparepartDashboard .bbm-stat-grid,
+  #sparepartDashboard .bbm-stat {
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  #sparepartDashboard .bbm-stat {
+    overflow-wrap: anywhere;
+  }
+  #sparepartDashboard .bbm-stat .bbm-val,
+  #sparepartDashboard .bbm-val {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* Touch targets and visible keyboard focus without changing action behavior. */
+  #stockList .tx-item > .tx-del,
+  .servis-history-session-summary > .servis-history-delete {
+    touch-action: manipulation;
+  }
+  #stockList .tx-item > .tx-del:focus-visible,
+  .servis-history-session-summary button:focus-visible,
+  .servis-history-item button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 380px) {
+  #servisList .servis-history-badge,
+  .servis-history-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  #sparepartDashboard .bbm-stat-grid {
+    gap: 5px;
+  }
+  #sparepartDashboard .bbm-stat {
+    padding-inline: 5px;
+  }
+}
+
