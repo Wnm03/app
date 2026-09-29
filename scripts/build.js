@@ -170,10 +170,14 @@ const GROUP_B = [
   'modules/vehicle/category-canonical-ref.js',
   'modules/vehicle/service-interval-policy.js',
   'modules/vehicle/service-interval-sot.js',
+  // S2040: existing/legacy motorcycles only; no new-bike/KPB logic.
+  'modules/vehicle/service-legacy-maintenance.js',
   'modules/vehicle/service-history-reminder-reconciliation-sot.js', 'modules/vehicle/service-category-sot-reconciliation-s2007.js',
   'modules/vehicle/service-category-component-history-audit-s2034.js',
   'modules/vehicle/sparepart-servis.js',
   'modules/vehicle/sparepart-servis-ui.js',
+  // S2041.1: Part CRUD + PartPicker compatibility layer (legacy motorcycles only; no KPB). Bundled so PWA/offline/gates see it.
+  'modules/vehicle/part-crud-s2041.js',
   'modules/engine/database-api.js',
   'modules/vehicle/service-master-data.generated.js',
   'modules/vehicle/service-master-database.js',
