@@ -224,7 +224,9 @@ return '<div class="fg"><label class="fl">Interval Servis Oli Mesin (KM)</label>
 if(jenis==='listrik'){
 return '<div class="fg"><label class="fl">Kapasitas Baterai (kWh)</label><input type="number" step="0.1" class="fi" id="vehBatteryCapacity" placeholder="5.5" inputmode="decimal" value="'+(v.batteryCapacityKwh||'')+'"><div style="font-size:11px;color:var(--text2);margin-top:4px">Kendaraan listrik tidak ganti oli, jadi tidak ada interval servis KM — kapasitas baterai dipakai buat estimasi jarak tempuh & pengingat servis berkala lain (rem/ban/aki).</div></div>';
 }
+const legacyChecked=v&&v.serviceMaintenanceProfile&&v.serviceMaintenanceProfile.mode==='legacy'?' checked':'';
 return '<div class="fg"><label class="fl">Interval Servis (KM)</label><input type="number" class="fi" id="vehInterval" placeholder="3000" inputmode="numeric" value="'+(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||'')+'"></div>'
++'<label style="display:flex;align-items:flex-start;gap:8px;margin:-2px 0 12px;cursor:pointer"><input type="checkbox" id="vehLegacyServiceMode"'+legacyChecked+'><span><b>🛠️ Motor lama — mode maintenance Car Notes</b><span style="display:block;font-size:10px;color:var(--text2);margin-top:2px;line-height:1.45">Pakai riwayat servis + KM aktual sebagai baseline. Tidak membuat jadwal KPB motor baru.</span></span></label>'
 +_vehCapacityFieldsHtml(v);
 }
 let _vehMaintenanceTemplateRenderToken=0;
@@ -392,6 +394,7 @@ if(!name){toast('⚠️ Isi nama kendaraan');return;}
 // Ownership (S231) — dibaca dari dropdown, divalidasi/dinormalisasi via OwnershipEngine.
 const ownRawV=document.getElementById('vehOwnership')?.value;
 const ownership=(typeof OwnershipEngine!=='undefined'&&OwnershipEngine.isValidType(ownRawV))?OwnershipEngine.normalize(ownRawV):(typeof OwnershipEngine!=='undefined'?OwnershipEngine.DEFAULT:'SELF');
+const legacyServiceMode=jenis==='motor'&&!!document.getElementById('vehLegacyServiceMode')?.checked;
 let interval,oliTrans=null,batteryCapacity=null;
 // Kapasitas angkut (kg/m3) — cuma ada di DOM utk jenis motor/mobil (lihat
 // _vehCapacityFieldsHtml() di atas), TIDAK ADA utk listrik. Opsional: kosong
@@ -427,6 +430,8 @@ if(vehEditIdx!==null&&vehEditIdx!==undefined){
 const v=D.vehicles[vehEditIdx];
 if(!v){vehEditIdx=null;return;}
 v.name=name;v.emoji=emoji;v.jenis=jenis;v.ownership=ownership;
+if(jenis==='motor'&&legacyServiceMode&&typeof ServiceLegacyMaintenance!=='undefined')ServiceLegacyMaintenance.activate(v.id,{source:'vehicle-edit'});
+if((jenis!=='motor'||!legacyServiceMode)&&v.serviceMaintenanceProfile&&v.serviceMaintenanceProfile.mode==='legacy')delete v.serviceMaintenanceProfile;
 if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else delete v.batteryCapacityKwh;
 if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
 if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
@@ -480,6 +485,7 @@ if(selectedTemplateNew)newVeh.maintenanceTemplate=selectedTemplateNew;
 else if(typeof VehicleMaintenanceTemplateEngine!=='undefined')newVeh.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:newVeh.modelId,modelName:newVeh.modelDisplayName||name,year:newVeh.modelYear,variant:newVeh.modelVariant,engineCc:newVeh.modelEngineCc,catalogId:newVeh.catalogId||null,vehicleId:newVeh.id});
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
 D.vehicles.push(newVeh);
+if(jenis==='motor'&&legacyServiceMode&&typeof ServiceLegacyMaintenance!=='undefined')ServiceLegacyMaintenance.activate(newId,{source:'vehicle-create'});
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
 if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function'&&jenis!=='listrik'){

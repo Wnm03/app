@@ -559,6 +559,35 @@ function resolveServiceStatusMeta(score){
   return{code:'aman',label:'Aman',icon:'🟢',severity:0};
 }
 function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
+// S2040: existing/legacy motorcycle mode uses actual action history as the
+// baseline. New-bike/KPB milestones are intentionally outside Car Notes.
+if(typeof ServiceLegacyMaintenance!=='undefined'&&ServiceLegacyMaintenance&&typeof ServiceLegacyMaintenance.isLegacy==='function'&&ServiceLegacyMaintenance.isLegacy(vehicleId)){
+  const cid=cat&&(cat.serviceComponentId||cat.componentId||cat.id)||null;
+  if(cid&&typeof ServiceLegacyMaintenance.evaluateComponent==='function'){
+    const legacy=ServiceLegacyMaintenance.evaluateComponent(vehicleId,cid,cat,{now:nowISO||new Date(),vehicle:{id:vehicleId,currentOdometer:Number.isFinite(curKm)?curKm:null}});
+    if(legacy&&legacy.ok&&legacy.states&&legacy.states.length){
+      const due=legacy.states.filter(x=>x.status==='DUE');
+      const baseline=legacy.states.filter(x=>x.status==='BASELINE_REQUIRED');
+      const candidates=(due.length?due:legacy.states.filter(x=>x.status!=='BASELINE_REQUIRED')).slice().sort((a,b)=>{
+        const ar=a.remainingKm==null?Number.POSITIVE_INFINITY:a.remainingKm;
+        const br=b.remainingKm==null?Number.POSITIVE_INFINITY:b.remainingKm;
+        return ar-br;
+      });
+      const c=candidates[0]||baseline[0];
+      if(c){
+        const intervalKm=Number(c.nextDueKm)-Number(c.lastServiceKm);
+        const remain=c.remainingKm;
+        let status='aman',statusLabel='Aman',severity=0;
+        if(c.status==='DUE'){status=remain!=null&&remain<0?'terlewat':'jatuh_tempo';statusLabel=remain!=null&&remain<0?'Terlewat':'Jatuh tempo';severity=remain!=null&&remain<0?4:3;}
+        else if(c.status==='BASELINE_REQUIRED'){status='mendekati';statusLabel='Baseline perlu dilengkapi';severity=1;}
+        else if(Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null){const f=remain/intervalKm;if(f<=.15){status='segera';statusLabel='Segera';severity=2;}else if(f<=.30){status='mendekati';statusLabel='Mendekati';severity=1;}}
+        const dueDate=c.nextDueDate||null;
+        const frac=Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null?remain/intervalKm:null;
+        return {action:c.action,intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,lastKm:c.lastServiceKm??null,sisaKm:remain??null,fracRemainKm:frac,intervalBulan:null,sisaBulan:null,fracRemainBulan:null,intervalHari:null,sisaHari:null,fracRemainHari:null,limitingAxis:c.trigger==='time'?'bulan':'km',score:frac??(c.status==='BASELINE_REQUIRED'?1:0),lastDate:c.lastServiceDate||null,sourceHistoryId:c.lastServiceId||null,status,statusLabel,statusIcon:status==='terlewat'?'⚫':status==='jatuh_tempo'?'🔴':status==='segera'?'🟡':status==='mendekati'?'🔵':'🟢',statusSeverity:severity,estDateISO:dueDate,nextDueKm:c.nextDueKm??null,nextDueDate:dueDate,nextDueAxis:dueDate&&c.nextDueKm!=null?'km_or_date':(c.nextDueKm!=null?'km':(dueDate?'date':'none')),nextAction:c.action,maintenanceType:'legacy',condition:null,baselineRequired:c.status==='BASELINE_REQUIRED'};
+      }
+    }
+  }
+}
 const schedule=getMaintenanceSchedule(vehicleId,cat);
 const resetFilter=resolveResetActionTypeFilter(cat);
 const currentKm=Number.isFinite(curKm)?curKm:0;
