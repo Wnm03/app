@@ -3585,3 +3585,68 @@ input.fi[type="month"] {
   }
 }
 
+
+
+/* S2142 — Compact service-history cards on mobile.
+   Keep the existing fields/actions intact while preventing notes and status chips
+   from expanding each history row into a long vertical block. */
+@media (max-width: 600px) {
+  #servisList .servis-history-info,
+  .servis-history-item .servis-history-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+  #servisList .servis-history-primary,
+  .servis-history-item .servis-history-primary {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.35;
+  }
+  #servisList .servis-history-note,
+  .servis-history-item .servis-history-note {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    line-height: 1.35;
+    max-height: 2.7em;
+  }
+  #servisList .servis-history-cost,
+  .servis-history-item .servis-history-cost {
+    -webkit-line-clamp: 2;
+    line-height: 1.3;
+    max-height: 2.6em;
+  }
+  #servisList .servis-history-badges,
+  .servis-history-item .servis-history-badges {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1px 0 3px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+  #servisList .servis-history-badges > .servis-history-badge,
+  .servis-history-item .servis-history-badges > .servis-history-badge {
+    flex: 0 0 auto;
+    max-width: min(220px, 78vw);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  #servisList .servis-history-item,
+  .servis-history-item {
+    row-gap: 3px;
+  }
+}
