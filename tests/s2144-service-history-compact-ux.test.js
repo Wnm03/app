@@ -87,7 +87,9 @@ test('S2144 release: cache/build versions stay in sync', () => {
   const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
   const idx = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   const sec = fs.readFileSync(path.join(root, 'modules/shared/features-helpers-global-security.js'), 'utf8');
-  assert.match(sw, /kw-cache-v2142/);
-  assert.match(idx, /styles\.css\?v=2142/);
-  assert.match(sec, /APP_BUILD_VERSION = '[^']*-2142'/);
+  // Versi diturunkan dari sw.js (bukan di-hardcode) supaya tes ini tidak patah tiap build naik versi.
+  const ver = (/kw-cache-v(\d+)/.exec(sw) || [])[1];
+  assert.ok(ver, 'sw.js harus punya kw-cache-vNNNN');
+  assert.match(idx, new RegExp('styles\\.css\\?v=' + ver));
+  assert.match(sec, new RegExp("APP_BUILD_VERSION = '[^']*-" + ver + "'"));
 });
