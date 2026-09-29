@@ -297,6 +297,18 @@ getHistoryAuditSelectionIds(vehicleId){
 },
 toggleHistorySelection(id){return Servis.setHistorySelection(id);},
 clearHistorySelection(){Servis._selectedHistoryIds.clear();Servis._historyAuditVisible=false;Servis.renderList({skipReminder:true});},
+toggleHistorySelectMode(){
+  const active=!!Servis._historySelectMode||Servis._selectedHistoryIds.size>0;
+  if(active){Servis._selectedHistoryIds.clear();Servis._historyAuditVisible=false;Servis._historySelectMode=false;}
+  else Servis._historySelectMode=true;
+  Servis.renderList({skipReminder:true});
+},
+toggleHistoryMonth(key){
+  if(!(Servis._openMonths instanceof Set))Servis._openMonths=new Set();
+  const k=String(key);
+  if(Servis._openMonths.has(k))Servis._openMonths.delete(k);else Servis._openMonths.add(k);
+  Servis.renderList({skipReminder:true});
+},
 selectAllVisibleHistory(ids){
   const list=Array.isArray(ids)?ids.map(String).filter(Boolean):[];
   Servis._ensureHistorySelectionScope(Servis._historySelectionVehicleId());
@@ -644,7 +656,7 @@ if(Servis.activeHistoryViewMode==='component'&&typeof Servis.renderComponentExpl
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
 const visible=logs.slice(0,visibleCount);
 const selectionScope=Servis._historySelectionVehicleId();
-if(Servis._selectedHistoryVehicleId!==selectionScope){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=selectionScope;Servis._historyAuditVisible=false;}
+if(Servis._selectedHistoryVehicleId!==selectionScope){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=selectionScope;Servis._historyAuditVisible=false;Servis._historySelectMode=false;}
 const visibleCandidateIds=logs.map(s=>String(s.id));
 // S1980: selection is operation state, not filter state. Never drop valid IDs merely because a filter hides them.
 let auditToolbar=document.getElementById('servisHistoryAuditToolbar')||Servis._historyAuditToolbar;
@@ -652,8 +664,10 @@ if(!auditToolbar){auditToolbar=document.createElement('div');auditToolbar.id='se
 const visibleIds=visible.map(s=>String(s.id));
 const selectedCount=Servis._selectedHistoryIds.size;
 const allVisibleSelected=visibleIds.length>0&&visibleIds.every(id=>Servis._selectedHistoryIds.has(id));
-auditToolbar.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 10px';
-auditToolbar.innerHTML=`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.selectAllVisibleHistory" data-args="${escapeHtml(JSON.stringify([visibleIds]))}">${allVisibleSelected?'☐ Batalkan pilih semua':'☑️ Pilih semua tampil'}</button><span class="u-fs11 u-t2">${selectedCount} dipilih</span>${selectedCount?`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.openHistoryAudit">📋 Audit Riwayat Terpilih</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.clearHistorySelection">Bersihkan</button>`:''}`;
+const selectMode=!!Servis._historySelectMode||selectedCount>0;
+if(el.classList&&typeof el.classList.toggle==='function')el.classList.toggle('servis-select-mode',selectMode);
+auditToolbar.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px';
+auditToolbar.innerHTML=selectMode?`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.selectAllVisibleHistory" data-args="${escapeHtml(JSON.stringify([visibleIds]))}">${allVisibleSelected?'☐ Batalkan pilih semua':'☑️ Pilih semua tampil'}</button><span class="u-fs11 u-t2">${selectedCount} dipilih</span>${selectedCount?`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.openHistoryAudit">📋 Audit Riwayat Terpilih</button><button type="button" class="btn btn-ghost btn-sm" data-action="Servis.clearHistorySelection">Bersihkan</button>`:''}<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.toggleHistorySelectMode">✕ Selesai</button>`:`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.toggleHistorySelectMode" aria-label="Aktifkan mode pilih riwayat untuk audit">☑️ Pilih</button>`;
 let auditBox=document.getElementById('servisHistoryAuditSelection')||Servis._historyAuditSelection;
 if(!auditBox){auditBox=document.createElement('div');auditBox.id='servisHistoryAuditSelection';Servis._historyAuditSelection=auditBox;el.insertAdjacentElement('afterend',auditBox);}
 Servis.renderSelectedHistoryAudit(logs);
@@ -671,6 +685,7 @@ if(_cacheKey&&!_partsById)Servis._renderListPartsCache={key:_perfRev,map:partsBy
 const _catsById=(_cacheKey&&Servis._renderListCatsCache&&Servis._renderListCatsCache.key===_perfRev)?Servis._renderListCatsCache.map:null;
 const catsById=_catsById||new Map((Array.isArray(D.sparepartCats)?D.sparepartCats:[]).filter(Boolean).map(c=>[c.id,c]));
 if(_cacheKey&&!_catsById)Servis._renderListCatsCache={key:_perfRev,map:catsById};
+const _costChips=c=>{if(!c)return '';return [['Jasa',c.labor],['Part',c.parts],['Bahan',c.consumables],['Lain',c.other]].filter(x=>Number(x[1])>0).map(x=>x[0]+' '+fmt(x[1])).join(' · ');};
 const renderHistoryItem=s=>{
 const part=s.usedPartId?partsById.get(s.usedPartId):null;
 const partInfo=part?` · 📦 ${s.usedPartQty}${part.unit?' '+escapeHtml(part.unit):''} ${escapeHtml(part.name)}`:'';
@@ -682,26 +697,39 @@ const legacyMappingBadge=(!s.serviceComponentId&&['Kampas Rem','Pembersihan Rem'
 const conditionBadge=s.conditionResult&&typeof serviceConditionLabel==='function'?`<span class="servis-history-badge">${typeof serviceConditionIcon==='function'?serviceConditionIcon(s.conditionResult):'🩺'} ${escapeHtml(serviceConditionLabel(s.conditionResult))}</span>`:'';
 const conditionNoteHtml=s.conditionNote?`<div class="servis-history-note">🩺 ${escapeHtml(s.conditionNote)}</div>`:'';
 const _historyCost=s.serviceCost||null;
-const costBreakdownInfo=_historyCost&&_historyCost.source==='component'?`<div class="servis-history-note" title="Rincian berasal dari biaya per komponen pada Service Event canonical">💰 Jasa ${fmt(_historyCost.labor||0)} · Part ${fmt(_historyCost.parts||0)} · Bahan ${fmt(_historyCost.consumables||0)} · Lain ${fmt(_historyCost.other||0)}</div>`:'';
+const _costTxt=_historyCost&&_historyCost.source==='component'?_costChips(_historyCost):'';
+const costBreakdownInfo=_costTxt?`<div class="servis-history-note" title="Rincian berasal dari biaya per komponen pada Service Event canonical">💰 ${_costTxt}</div>`:'';
 const fotoInfo=s.foto&&s.foto.length?`<span class="servis-history-badge servis-history-photo">📷 ${s.foto.length}</span>`:'';
 const linkedCat=(s.categoryId&&catsById.get(s.categoryId)&&(!catsById.get(s.categoryId).vehicleId||catsById.get(s.categoryId).vehicleId===curVehicleId)?catsById.get(s.categoryId):null)||(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(s.item,curVehicleId):null);
 const linkedIntervalKm=linkedCat&&typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(curVehicleId,linkedCat):(linkedCat&&linkedCat.intervalKm>0?linkedCat.intervalKm:null);
 const linkedIntervalBulan=linkedCat&&typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(linkedCat,curVehicleId):(linkedCat&&linkedCat.intervalBulan>0?linkedCat.intervalBulan:null);
-const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-history-badge servis-history-reminder" title="Terhubung ke Pengingat Servis: kategori dan interval dibaca dari sumber yang sama">🔔 ${escapeHtml(linkedCat.name)} · ${linkedIntervalKm.toLocaleString('id-ID')} km${linkedIntervalBulan?` / ${linkedIntervalBulan.toLocaleString('id-ID')} bln`:''}</span>`:(s.categoryId?`<span class="servis-history-badge servis-history-reminder-missing" title="Kategori servis ada, tetapi interval Pengingat belum aktif untuk kendaraan ini">⚠️ Pengingat belum aktif</span>`:'');
+const _remSameName=!!linkedCat&&String(linkedCat.name||'').trim().toLowerCase()===String(s.item||'').trim().toLowerCase();
+const linkedReminderInfo=linkedCat&&linkedIntervalKm>0?`<span class="servis-history-badge servis-history-reminder" title="Terhubung ke Pengingat Servis (${escapeHtml(linkedCat.name)}): kategori dan interval dibaca dari sumber yang sama">🔔 ${_remSameName?'':escapeHtml(linkedCat.name)+' · '}${linkedIntervalKm.toLocaleString('id-ID')} km${linkedIntervalBulan?` / ${linkedIntervalBulan.toLocaleString('id-ID')} bln`:''}</span>`:(s.categoryId?`<span class="servis-history-badge servis-history-reminder-missing" title="Kategori servis ada, tetapi interval Pengingat belum aktif untuk kendaraan ini">⚠️ Pengingat belum aktif</span>`:'');
 const fotoThumb=s.foto&&s.foto.length?`<button type="button" class="servis-history-photo-thumb" data-stop="1" data-action="Servis.openHistoryPhoto" data-args="${escapeHtml(JSON.stringify([s.id,0]))}" aria-label="Buka foto servis"><img src="${s.foto[0]}" alt="" loading="lazy" decoding="async" width="38" height="38" style="width:38px;height:38px;object-fit:cover;border-radius:var(--r-lg);border:1px solid var(--border2);flex-shrink:0"></button>`:'';
 const fotoOrIcon=fotoThumb||`<div class="tx-icon u-bgaccsoft">🔧</div>`;
 const _selected=Servis._selectedHistoryIds.has(String(s.id));
-return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><label data-stop="1" class="u-flexc8" style="align-self:flex-start;padding-top:3px;flex-shrink:0" title="Pilih riwayat untuk audit"><input type="checkbox" ${_selected?'checked':''} data-action="Servis.toggleHistorySelection" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Pilih riwayat ${escapeHtml(s.item||'servis')} untuk audit"></label>${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}${conditionNoteHtml}${costBreakdownInfo}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${jobBadge}${actionBadge}${conditionBadge}${legacyMappingBadge}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit" data-stop="1" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Edit Checklist Sesi Servis" title="Edit Checklist Sesi Servis">✏️ Edit Checklist</button><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
+return `<div class="tx-item servis-history-item ${s.sessionId?'servis-history-session-item':''} u-pointer" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}"><label data-stop="1" class="u-flexc8" style="align-self:flex-start;padding-top:3px;flex-shrink:0" title="Pilih riwayat untuk audit"><input type="checkbox" ${_selected?'checked':''} data-action="Servis.toggleHistorySelection" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Pilih riwayat ${escapeHtml(s.item||'servis')} untuk audit"></label>${fotoOrIcon}<div class="tx-info servis-history-info"><div class="tx-name servis-history-title">${escapeHtml(s.item)}</div><div class="tx-meta servis-history-primary">${s.date}${s.km?' · '+s.km.toLocaleString('id-ID')+' km':''}</div>${s.note?`<div class="servis-history-note">${escapeHtml(s.note)}</div>`:''}${conditionNoteHtml}${costBreakdownInfo}<div class="servis-history-badges">${partInfo?`<span class="servis-history-badge servis-history-part">${partInfo.replace(/^ · /,'')}</span>`:''}${s.batchId?`<span class="servis-history-badge servis-history-batch">🔗 batch</span>`:''}${linkedReminderInfo}${jobBadge}${actionBadge}${conditionBadge}${legacyMappingBadge}${checklistInfo}${fotoInfo}</div></div><div class="tx-amount red servis-history-amount">${fmt(s.cost)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit servis-history-icon-btn" data-stop="1" data-action="openServisModal" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Edit Checklist Sesi Servis" title="Edit Checklist Sesi Servis">✏️</button><button class="tx-del servis-history-delete" data-stop="1" data-action="delServis" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 };
 if(typeof ServiceSessionSOT!=='undefined'&&typeof ServiceSessionSOT.renderReview==='function')ServiceSessionSOT.renderReview(el,curVehicleId);
-el.innerHTML=historyGroups.map(g=>{
+const renderGroup=g=>{
   if(g.logs.length===1)return renderHistoryItem(g.logs[0]);
   const first=g.logs[0], sessionCost=(first&&first.serviceCost)||(typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.costForSession==='function'?ServiceEventSOT.costForSession(g.sessionId,curVehicleId):null), total=sessionCost&&Number.isFinite(Number(sessionCost.total))?Number(sessionCost.total):g.logs.reduce((n,x)=>n+(x.cost||0),0);
   const names=g.logs.map(x=>x.item).filter(Boolean);
   const summary=names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:'');
   const groupId=`servis-session-${escapeHtml(String(g.sessionId).replace(/[^a-zA-Z0-9_-]/g,'_'))}`;
-  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${sessionCost&&sessionCost.source==='component'?`<span class="servis-history-badge">💰 Jasa ${fmt(sessionCost.labor||0)} · Part ${fmt(sessionCost.parts||0)}</span>`:''}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session" data-stop="1" data-action="Servis.openHistorySessionEditor" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Edit Sesi" title="Edit Sesi">✏️ Edit Sesi</button><button type="button" class="btn btn-ghost btn-sm servis-history-add-session" data-stop="1" data-action="Servis.addHistorySessionComponent" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Tambah Komponen">➕ Tambah</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
-}).join('');
+  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${(()=>{const t=sessionCost&&sessionCost.source==='component'?_costChips(sessionCost):'';return t?`<span class="servis-history-badge">💰 ${t}</span>`:'';})()}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session servis-history-icon-btn" data-stop="1" data-action="Servis.openHistorySessionEditor" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Edit Sesi" title="Edit Sesi">✏️</button><button type="button" class="btn btn-ghost btn-sm servis-history-add-session servis-history-icon-btn" data-stop="1" data-action="Servis.addHistorySessionComponent" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Tambah Komponen" title="Tambah Komponen">➕</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
+};
+const _MONTHS_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const _monthKey=g=>{const m=/^(\d{4})-(\d{2})/.exec(String((g.logs[0]&&g.logs[0].date)||''));return m?m[1]+'-'+m[2]:'none';};
+const _monthLabel=k=>{if(k==='none')return 'Tanpa tanggal';const p=k.split('-');return (_MONTHS_ID[Number(p[1])-1]||p[1])+' '+p[0];};
+if(logs.length<=8){
+  el.innerHTML=historyGroups.map(renderGroup).join('');
+}else{
+  const months=[];const monthMap=new Map();
+  historyGroups.forEach(g=>{const k=_monthKey(g);let b=monthMap.get(k);if(!b){b={key:k,groups:[],count:0,total:0};monthMap.set(k,b);months.push(b);}b.groups.push(g);b.count+=g.logs.length;b.total+=g.logs.reduce((n,x)=>n+(Number(x.cost)||0),0);});
+  if(Servis._openMonthsScope!==selectionScope||!(Servis._openMonths instanceof Set)){Servis._openMonths=new Set(months.length?[months[0].key]:[]);Servis._openMonthsScope=selectionScope;}
+  el.innerHTML=months.map(b=>{const open=selectMode||Servis._openMonths.has(b.key);return `<div class="servis-history-month${open?' is-open':''}"><button type="button" class="servis-history-month-head" data-action="Servis.toggleHistoryMonth" data-args="${escapeHtml(JSON.stringify([b.key]))}" aria-expanded="${open?'true':'false'}"><span class="servis-history-month-caret">${open?'▾':'▸'}</span><span class="servis-history-month-title">${escapeHtml(_monthLabel(b.key))}</span><span class="servis-history-month-meta">${b.count} servis · ${fmt(b.total)}</span></button><div class="servis-history-month-body"${open?'':' hidden'}>${b.groups.map(renderGroup).join('')}</div></div>`;}).join('');
+}
 let servisMoreWrap=document.getElementById('servisListLoadMoreWrap');
 if(!servisMoreWrap){
 servisMoreWrap=document.createElement('div');
