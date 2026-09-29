@@ -1,0 +1,24 @@
+PATCH-S2144-CUMULATIVE-SERVIS-HISTORY-COMPACT-UX
+Basis: app-main__37_.zip (S2143 dari sesi sebelumnya digantikan oleh S2144). Salin/timpa file di bawah ke root app-main.
+Sudah termasuk build resmi (bundle a/b, versi 2142 sinkron di HTML/sw/source).
+Full test: 7927 tests, 7920 pass, 7 fail (semua pre-existing di baseline).
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+docs/SESSION-NOTE-S2144-SERVIS-HISTORY-COMPACT-UX.md
+index.html
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/servis-b.js
+styles.css
+sw.js
+tests/s2142-service-history-compact-layout.test.js
+tests/s2144-service-history-compact-ux.test.js
+tests/servis-history-interaction-sesi2d.test.js
+tests/servis-history-mobile-grid-s2098.test.js
+tests/servis-history-responsive-sesi2c.test.js
