@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-09-29T04:10:49.009Z
-Total file source: 417 · Total identifier global: 2922
+Terakhir digenerate: 2026-09-29T05:17:02.254Z
+Total file source: 417 · Total identifier global: 2925
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -70,7 +70,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 47 | `modules/shared/ghost-asset-cleanup-ui.js` | 81 | Sesi 592 (lanjutan patch PATCH-ghost-asset-migrated-investment.md). Patch S591/ghost-asset sudah menyaring record ber-flag `_migratedToInvestmentId` dari dropdown "Kaitkan ke Aset Multi-Owner" (getMultiOwnerAssets(), … |
 | 48 | `modules/shared/custodian-registry.js` | 130 | Custodian Registry (Sesi S540-A, Tahap 1/4 DESIGN-S540-CUSTODIAN-GROUPING.md, Design Lock disetujui user dengan keputusan final: Opsi A/registry, seed kosong, 0 backfill, assign manual, build() tidak berubah untuk … |
 | 49 | `modules/asset/asset-ownership-split-presenter.js` | 100 | Sesi 391: split keuntungan aset per pemilik berdasarkan porsi (lanjutan Sesi 390, Multi-Owner Engine). Target eksplisit user: "hitung otomatis keuntungan berdasarkan porsi". PRINSIP SESI INI (sama disiplin dgn … |
-| 50 | `modules/shared/features-helpers-global-security.js` | 1402 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 50 | `modules/shared/features-helpers-global-security.js` | 1414 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 51 | `modules/shared/action-wrappers.js` | 239 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 52 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
 | 53 | `modules/shared/format-tema.js` | 241 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
@@ -745,12 +745,15 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_resolveServisCategoryId` | `modules/finance/tx-servis.js` |
 | `_rippleTrackingDocs` | `modules/shared/ripple-position.js` |
 | `_routeShopModal` | `modules/shared/modal-navigasi.js` |
+| `_SAVE_DEBOUNCE_MS` | `modules/shared/features-helpers-global-security.js` |
+| `_SAVE_MAX_WAIT_MS` | `modules/shared/features-helpers-global-security.js` |
 | `_saveAccInner` | `modules/finance/akun.js` |
 | `_saveBillInner` | `modules/finance/tagihan-kalender.js` |
 | `_saveDebounceTimer` | `modules/shared/features-helpers-global-security.js` |
 | `_saveErrorShown` | `modules/shared/features-helpers-global-security.js` |
 | `_saveGuards` | `modules/shared/features-helpers-global-security.js` |
 | `_saveImmediate` | `modules/shared/features-helpers-global-security.js` |
+| `_savePendingSince` | `modules/shared/features-helpers-global-security.js` |
 | `_savePersistChain` | `modules/shared/features-helpers-global-security.js` |
 | `_savePersistMetaKey` | `modules/shared/features-helpers-global-security.js` |
 | `_savePersistSeq` | `modules/shared/features-helpers-global-security.js` |
