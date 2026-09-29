@@ -10,7 +10,7 @@ assert(js.includes('servis-history-delete'),'delete class missing');
 assert(js.includes('ServisChecklist.summaryFromLog(s)'),'summary still comes from checklist SoT');
 assert(css.includes('@media (max-width: 600px)'),'mobile breakpoint missing');
 assert(css.includes('#servisActionTypeChipRow, #servisMasterCategoryChipRow'),'filter mobile rule missing');
-assert(css.includes('grid-template-areas: "select icon info amount" "select icon info del"'),'mobile selection column must be explicit');
+assert(css.includes('grid-template-areas: "select icon info amount" "select icon edit del"'),'mobile selection column must be explicit');
 assert(css.includes('grid-area: select'),'history audit checkbox must have its own mobile grid area');
 assert(css.includes('-webkit-line-clamp: 2'),'history title must remain readable up to two lines on mobile');
 assert(css.includes('#servisListLoadMoreWrap .btn'),'load-more mobile rule missing');

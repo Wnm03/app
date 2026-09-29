@@ -5,7 +5,7 @@ const path = require('node:path');
 const css = fs.readFileSync(path.join(__dirname,'..','styles.css'),'utf8');
 
 test('S2098 history mobile grid assigns explicit action areas so buttons cannot create implicit columns',()=>{
-  assert.match(css,/\.servis-history-item\s*\{[^}]*grid-template-areas:\s*"select icon info amount"\s*"select icon info edit"\s*"select icon info del"/s);
+  assert.match(css,/\.servis-history-item\s*\{[^}]*grid-template-areas:\s*"select icon info amount"\s*"select icon edit del"/s);
   assert.match(css,/\.servis-history-item\s*>\s*\.servis-history-edit[^\n]*\{?[^}]*grid-area:\s*edit/s);
   });
 
