@@ -3624,29 +3624,133 @@ input.fi[type="month"] {
   #servisList .servis-history-badges,
   .servis-history-item .servis-history-badges {
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 1px 0 3px;
-    overscroll-behavior-x: contain;
-    scrollbar-width: thin;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
+    padding: 0;
   }
   #servisList .servis-history-badges > .servis-history-badge,
   .servis-history-item .servis-history-badges > .servis-history-badge {
-    flex: 0 0 auto;
-    max-width: min(220px, 78vw);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    overflow-wrap: normal;
+    flex: 0 1 auto;
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
     word-break: normal;
   }
   #servisList .servis-history-item,
   .servis-history-item {
     row-gap: 3px;
   }
+}
+
+
+/* S2144 — Service History mobile: compact, never clipped (cumulative of S2143 + suggestions 1-5).
+   - info column gets full width; amount top-right; icon-only edit/delete share the right column (no extra row)
+   - audit checkbox column only exists in select mode (#servisList.servis-select-mode)
+   - status chips wrap (no hidden sideways scroll); month headers collapse long lists
+   Presentation-only; overrides S2098/S2129/S2141/S2142. */
+.servis-history-month-body[hidden] { display: none; }
+.servis-history-month-head { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: 36px; padding: 6px 4px; margin: 0; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--text); font: inherit; font-size: var(--fs-label); font-weight: 700; text-align: left; cursor: pointer; touch-action: manipulation; }
+.servis-history-month-caret { flex: 0 0 auto; width: 14px; color: var(--text2); }
+.servis-history-month-title { flex: 1 1 auto; min-width: 0; }
+.servis-history-month-meta { flex: 0 0 auto; font-weight: 500; color: var(--text2); font-variant-numeric: tabular-nums; }
+.servis-history-month-head:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  #servisList .servis-history-item,
+  .servis-history-item {
+    display: grid;
+    grid-template-columns: 28px 36px minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "select icon info amount amount"
+      "select icon info edit del";
+    column-gap: 8px;
+    row-gap: 2px;
+    align-items: start;
+    padding: 9px 0;
+    overflow: hidden;
+  }
+  #servisList:not(.servis-select-mode) .servis-history-item {
+    grid-template-columns: 36px minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "icon info amount amount"
+      "icon info edit del";
+  }
+  #servisList:not(.servis-select-mode) .servis-history-item > label { display: none; }
+
+  #servisList .servis-history-item > .tx-amount,
+  .servis-history-item > .tx-amount {
+    grid-area: amount;
+    justify-self: end;
+    align-self: start;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    padding-right: 2px;
+  }
+  #servisList .servis-history-item > .servis-history-edit,
+  .servis-history-item > .servis-history-edit {
+    grid-area: edit;
+    justify-self: end;
+    align-self: center;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+  }
+  #servisList .servis-history-item > .servis-history-delete,
+  .servis-history-item > .servis-history-delete {
+    grid-area: del;
+    justify-self: end;
+    align-self: center;
+  }
+  .servis-history-icon-btn {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 4px 8px;
+    font-size: 14px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: visible;
+  }
+  #servisList .servis-history-item > .servis-history-delete { min-width: 34px; min-height: 34px; padding: 4px 6px; }
+
+  #servisList .servis-history-primary,
+  .servis-history-item .servis-history-primary { white-space: normal; overflow: visible; text-overflow: clip; }
+  #servisList .servis-history-note,
+  .servis-history-item .servis-history-note { -webkit-line-clamp: 1; max-height: 1.4em; }
+  #servisList .servis-history-cost,
+  .servis-history-item .servis-history-cost { -webkit-line-clamp: 1; max-height: 1.35em; }
+  #servisList .servis-history-badges,
+  .servis-history-item .servis-history-badges { margin-top: 4px; gap: 4px; }
+
+  /* Session summary: info + amount on top, icon actions in the right column. */
+  #servisList .servis-history-session-summary,
+  .servis-history-session-summary {
+    grid-template-columns: 36px minmax(0, 1fr) auto auto auto;
+    grid-template-areas:
+      "icon info amount amount amount"
+      "icon info edit add del";
+    column-gap: 6px;
+    row-gap: 2px;
+  }
+  .servis-history-session-summary > .tx-amount {
+    grid-area: amount;
+    justify-self: end;
+    align-self: start;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .servis-history-session-summary > .servis-history-edit-session,
+  .servis-history-session-summary > .servis-history-add-session {
+    justify-self: end;
+    align-self: center;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+  }
+  .servis-history-session-summary > .servis-history-delete { grid-area: del; justify-self: end; align-self: center; }
 }
