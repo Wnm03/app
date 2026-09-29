@@ -3336,13 +3336,8 @@ input.fi[type="month"] {
   #servisList .servis-history-session-summary,
   .servis-history-session-summary {
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) !important;
-    grid-template-areas:
-      "icon info"
-      "icon amount"
-      "icon edit"
-      "icon add"
-      "icon del" !important;
+    /* S2145: susunan kolom/area tombol sesi dipindah ke blok final "S2145" di akhir file
+       (sebelumnya !important di sini memaksa edit/add/del menumpuk vertikal). */
     align-items: start;
     column-gap: 9px;
     row-gap: 7px;
@@ -3462,7 +3457,6 @@ input.fi[type="month"] {
 @media (max-width: 380px) {
   #servisList .servis-history-session-summary,
   .servis-history-session-summary {
-    grid-template-columns: 32px minmax(0, 1fr) !important;
     column-gap: 7px;
   }
   #stockList .tx-item {
@@ -3753,4 +3747,46 @@ input.fi[type="month"] {
     overflow: visible;
   }
   .servis-history-session-summary > .servis-history-delete { grid-area: del; justify-self: end; align-self: center; }
+}
+
+/* S2145 — Riwayat servis (sesi multi-komponen): tombol Edit/Tambah/Hapus sejajar satu baris.
+   Sumber tunggal layout .servis-history-session-summary; blok lama di atas tidak lagi mengatur
+   grid-template (tanpa !important) supaya tidak saling menimpa. Hanya CSS — markup/aksi tetap. */
+#servisList .servis-history-session-summary {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto auto;
+  grid-template-areas:
+    "icon info info info amount"
+    "icon .    edit add del";
+  column-gap: 6px;
+  row-gap: 6px;
+  align-items: start;
+  min-width: 0;
+}
+#servisList .servis-history-session-summary > .tx-icon { grid-area: icon; }
+#servisList .servis-history-session-summary > .tx-info { grid-area: info; min-width: 0; }
+#servisList .servis-history-session-summary > .tx-amount {
+  grid-area: amount; justify-self: end; align-self: start; margin: 0;
+  max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap;
+}
+#servisList .servis-history-session-summary > .servis-history-edit-session { grid-area: edit; }
+#servisList .servis-history-session-summary > .servis-history-add-session { grid-area: add; }
+#servisList .servis-history-session-summary > .servis-history-delete { grid-area: del; }
+#servisList .servis-history-session-summary > .servis-history-edit-session,
+#servisList .servis-history-session-summary > .servis-history-add-session,
+#servisList .servis-history-session-summary > .servis-history-delete {
+  justify-self: end; align-self: center; width: auto; max-width: none;
+  min-width: 36px; min-height: 36px; margin: 0; overflow: visible; white-space: nowrap;
+}
+
+/* S2145b — Ukuran tombol aksi riwayat servis diseragamkan (Edit/Tambah/Hapus = 36×36, sama untuk
+   baris tunggal & baris sesi) supaya ✏️ tidak berbentuk pil tinggi di samping 🗑️. Hanya tampilan. */
+#servisList .servis-history-item > .servis-history-edit,
+#servisList .servis-history-item > .servis-history-delete,
+#servisList .servis-history-session-summary > .servis-history-edit-session,
+#servisList .servis-history-session-summary > .servis-history-add-session,
+#servisList .servis-history-session-summary > .servis-history-delete {
+  box-sizing: border-box; width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+  padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 15px; line-height: 1;
 }
