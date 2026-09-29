@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2031-service-history-component-sot-2142';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2031-service-history-component-sot-2142';
+const APP_BUILD_VERSION = 's2031-service-history-component-sot-2145';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2031-service-history-component-sot-2145';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -257,6 +257,14 @@ return false;
 }
 let _bigDataWarnShown=false;
 let _saveDebounceTimer=null;
+// FIX starvation debounce: kalau ada proses yang memanggil save() lebih sering dari jeda debounce
+// (400ms) terus-menerus, timer selalu di-reset dan _saveImmediate() TIDAK PERNAH jalan -> data
+// baru cuma bertahan di memori sampai saveFlush() (tutup/background app). Batas tunggu maksimum
+// ini memastikan tulis ke IndexedDB tetap terjadi paling lambat _SAVE_MAX_WAIT_MS sejak save()
+// pertama yang belum tertulis. Coalescing tetap jalan (burst cepat tetap digabung jadi 1 tulis).
+const _SAVE_DEBOUNCE_MS=400;
+const _SAVE_MAX_WAIT_MS=1500;
+let _savePendingSince=0;
 // S1850 PERF: mutation-versioned persistence snapshot. Lifecycle events on mobile can
 // fire visibilitychange -> pagehide -> beforeunload in quick succession. Reusing the
 // exact snapshot for the same save version avoids repeated full JSON.stringify(D) work.
@@ -570,8 +578,11 @@ const _tKB=(typeof performance!=='undefined'&&performance.now)?performance.now()
 renderKekayaanBersih();
 if(_tKB)_perfMark('save:KekayaanBersih',_tKB);
 }
+const _nowMs=Date.now();
+if(!_saveDebounceTimer||!_savePendingSince)_savePendingSince=_nowMs;
 if(_saveDebounceTimer)clearTimeout(_saveDebounceTimer);
-_saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},400);
+const _saveDelay=Math.max(0,Math.min(_SAVE_DEBOUNCE_MS,_SAVE_MAX_WAIT_MS-(_nowMs-_savePendingSince)));
+_saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_savePendingSince=0;_saveImmediate();},_saveDelay);
 }
 // saveFlush(): dipakai di titik KRITIS (tutup/background app, sebelum import/reset, sebelum
 // upload backup Drive). Beda dari save() biasa: di sini localStorage['kw_v4'] TETAP ditulis
@@ -580,6 +591,7 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 function saveFlush(){
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
+_savePendingSince=0;
 // S1843 PERF: build the critical snapshot ONCE. Previously _saveImmediate() serialized D,
 // then _buildSaveJson() ran a second full JSON.stringify(D) immediately for localStorage.
 // Keep both durability paths, but reuse the exact same snapshot bytes.
