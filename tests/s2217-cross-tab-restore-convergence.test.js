@@ -1,0 +1,14 @@
+const assert = require('assert');
+const fs = require('fs');
+const src = fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8');
+const restore = fs.readFileSync('modules/shared/backup-restore.js','utf8');
+assert(src.includes('_persistAtomicSnapshotWithAux'));
+assert(src.includes('_announcePersistenceWrite();'));
+const idx = src.indexOf('async function _persistAtomicSnapshotWithAux');
+const end = src.indexOf('function _saveImmediate', idx);
+const block = src.slice(idx,end);
+assert(block.indexOf('_crossTabWriterToken=next;') < block.indexOf('_announcePersistenceWrite();'));
+assert(block.includes('IDBStore.setManyIfCurrent'));
+assert(restore.includes('_persistAtomicSnapshotWithAux(_restorePersistJson,_restoreAuxEntries)'));
+assert(restore.includes('CROSS_TAB_RESTORE_CONFLICT'));
+console.log('S2217 cross-tab restore convergence: 5/5 PASS');

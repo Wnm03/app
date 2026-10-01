@@ -29,5 +29,5 @@ ok(forecast.includes('parseServiceDateOnly')&&forecast.includes('addServiceMonth
 ok(spare.includes('compareServiceHistoryRecency')&&spare.includes('getPartUsageHistory'),'part usage uses canonical history comparator');
 ok(spare.includes('getPartPriceHistoryHtml')&&spare.slice(spare.indexOf('getPartPriceHistoryHtml')).includes('compareServiceHistoryRecency'),'price history uses canonical comparator');
 ok(backup.includes('_prevLifeosStore')&&backup.includes('_prevEieStore')&&backup.includes('_prevVehicleCatalogStore')&&backup.includes('_prevHondaPdfImportStore'),'restore snapshots all auxiliary IDB stores');
-ok(backup.includes('compensating rollback')&&backup.includes("IDBStore.set('lifeos:store',_prevLifeosStore)"),'restore has auxiliary IDB compensating rollback');
+ok(backup.includes('_persistAtomicSnapshotWithAux(snapJson,_rollbackAuxEntries)')&&backup.includes('_restoreAtomicCommitted'),'restore uses the atomic snapshot rollback boundary');
 console.log('P24 G1-G10 static hardening: 11/11 PASS');

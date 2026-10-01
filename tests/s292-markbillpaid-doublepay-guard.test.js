@@ -32,6 +32,10 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'modules', 'finance', 'tagihan-kalender.js'),
   'utf8'
 );
+const WRITER_SRC = fs.readFileSync(
+  path.join(__dirname, '..', 'modules', 'finance', 'bill-debt-piutang-canonical-writer.js'),
+  'utf8'
+);
 
 function extractFnSource(fnName) {
   const asyncMarker = `async function ${fnName}(`;
@@ -79,6 +83,9 @@ function loadSandbox(D, { confirmQueue = [], promptDefault = true } = {}) {
     hitungZakatMaal: () => {},
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-cross-entity-atomic.js'), 'utf8'), context, { filename: 'finance-cross-entity-atomic.js' });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-tx-sot.js'), 'utf8'), context, { filename: 'finance-tx-sot.js' });
+  vm.runInContext(WRITER_SRC, context, { filename: 'bill-debt-piutang-canonical-writer.js' });
   const snippet = `${extractFnSource('_amc015')}
 ${extractFnSource('_billTxDateMs')}
 ${extractFnSource('getBillPaidThisPeriodInfo')}

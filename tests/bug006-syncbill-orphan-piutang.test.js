@@ -24,6 +24,10 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'modules', 'finance', 'piutang-utang.js'),
   'utf8'
 );
+const WRITER_SRC = fs.readFileSync(
+  path.join(__dirname, '..', 'modules', 'finance', 'bill-debt-piutang-canonical-writer.js'),
+  'utf8'
+);
 
 function extractFnSource(fnName) {
   const marker = `function ${fnName}(`;
@@ -71,6 +75,7 @@ function loadSandbox(D) {
     sameId: (a, b) => a === b,
   };
   vm.createContext(context);
+  vm.runInContext(WRITER_SRC, context, { filename: 'bill-debt-piutang-canonical-writer.js' });
   const snippet = `${extractFnSource('removeOrphanedAutoPiutangForBill')}
 ${extractSyncBill()}
 this.syncBill = syncBill;

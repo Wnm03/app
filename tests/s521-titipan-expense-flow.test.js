@@ -22,6 +22,7 @@ function makeCtx(D) {
       'modules/finance/piutang-utang.js',
       'modules/finance/transaksi.js',
       'modules/finance/tx-list-cashflow.js',
+      'modules/finance/finance-cross-entity-atomic.js',
       'modules/finance/titipan-expense-flow.js',
     ],
     {
@@ -463,4 +464,52 @@ test('20. tanggal kosong: validate()/submit() ditolak, 0 transaksi', () => {
   const res = ctx.TitipanExpenseFlow.submit(baseInput({ date: '' }));
   assert.equal(res.ok, false);
   assert.equal(D.transactions.length, 0);
+});
+
+
+// ============================================================
+// S2197 — atomicity lintas Transaction <-> Piutang/Utang
+// ============================================================
+test('S2197.1: linkage gagal -> transaksi dan piutang/utang rollback total', () => {
+  const D = baseD({
+    debts: [{ id: 'd-existing', linkedOwnerId: 'cici', nilai: 50000 }],
+    piutang: [{ id: 'p-existing', autoTxId: 'old', nilai: 25000 }],
+  });
+  const ctx = makeCtx(D);
+  const before = JSON.stringify({ transactions: D.transactions, debts: D.debts, piutang: D.piutang });
+  const original = ctx.applyTxTitipanLinkageOnSave;
+  ctx.applyTxTitipanLinkageOnSave = function () { throw new Error('forced linkage failure'); };
+
+  assert.throws(() => ctx.TitipanExpenseFlow.submit(baseInput({ talangan: true })), /forced linkage failure/);
+  assert.equal(JSON.stringify({ transactions: D.transactions, debts: D.debts, piutang: D.piutang }), before);
+  ctx.applyTxTitipanLinkageOnSave = original;
+  assert.equal(ctx._saveCalls(), 0);
+});
+
+test('S2197.2: save gagal setelah linkage -> seluruh cross-entity state rollback', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  const before = JSON.stringify({ transactions: D.transactions, debts: D.debts, piutang: D.piutang });
+  ctx.save = function () { throw new Error('forced save failure'); };
+  assert.throws(() => ctx.TitipanExpenseFlow.submit(baseInput({ talangan: true })), /forced save failure/);
+  assert.equal(JSON.stringify({ transactions: D.transactions, debts: D.debts, piutang: D.piutang }), before);
+});
+
+test('S2197.3: retry setelah rollback berhasil tepat sekali', () => {
+  const D = baseD();
+  const ctx = makeCtx(D);
+  const original = ctx.applyTxTitipanLinkageOnSave;
+  let fail = true;
+  ctx.applyTxTitipanLinkageOnSave = function (tx, prev) {
+    if (fail) { fail = false; throw new Error('first-attempt failure'); }
+    return original(tx, prev);
+  };
+  assert.throws(() => ctx.TitipanExpenseFlow.submit(baseInput({ talangan: true })), /first-attempt failure/);
+  assert.equal(D.transactions.length, 0);
+  assert.equal(D.piutang.length, 0);
+  ctx.applyTxTitipanLinkageOnSave = original;
+  const res = ctx.TitipanExpenseFlow.submit(baseInput({ talangan: true }));
+  assert.equal(res.ok, true);
+  assert.equal(D.transactions.length, 1);
+  assert.equal(D.piutang.filter((p) => p && p.autoTxId === res.txIds[0]).length, 1);
 });

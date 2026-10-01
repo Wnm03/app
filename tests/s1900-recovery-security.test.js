@@ -10,7 +10,8 @@ test('S1900 restore has preflight shape, newer-schema confirmation and compensat
  assert.match(s,/const _shape=_validateRestoreShape\(imp\)/);
  assert.match(s,/backupVersion>SCHEMA_VERSION/);
  assert.match(s,/compensating rollback/);
- assert.match(s,/saveFlush\(\);init\(\)/);
+ assert.match(s,/__s2013SetStage\('atomic-restore-persist'\)/);
+ assert.match(s,/D=prevD;[\s\S]*?_persistAtomicSnapshotWithAux\(snapJson,_rollbackAuxEntries\)/);
 });
 
 test('S1900 restore validates critical array fields',()=>{

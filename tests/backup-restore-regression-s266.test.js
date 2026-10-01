@@ -77,7 +77,7 @@ function makeD(overrides = {}) {
 
 // --- stub global minimal yang dibutuhkan backup-restore.js di luar cakupan modulnya sendiri ---
 function baseGlobals(D, extra = {}) {
-  const calls = { showAlertModal: [], askConfirm: [], safeSetItem: [], idbSet: [] };
+  const calls = { showAlertModal: [], askConfirm: [], safeSetItem: [], idbSet: [], atomicPersist: [] };
   return {
     globals: Object.assign({
       D,
@@ -99,8 +99,14 @@ function baseGlobals(D, extra = {}) {
       showAlertModal: (msg, opts) => { calls.showAlertModal.push({ msg, opts }); return Promise.resolve(); },
       askConfirm: (msg, opts) => { calls.askConfirm.push({ msg, opts }); return Promise.resolve(true); },
       safeSetItem: (k, v) => { calls.safeSetItem.push({ k, v }); },
+      _persistAtomicSnapshotWithAux: async (json, entries) => { calls.atomicPersist.push({ json, entries }); for (const [k, v] of (entries || [])) calls.idbSet.push({ k, v }); },
       IDBStore: {
         get: async () => undefined,
+        getMany: async (keys) => {
+          const out = {};
+          for (const k of keys || []) out[k] = undefined;
+          return out;
+        },
         set: async (k, v) => { calls.idbSet.push({ k, v }); },
       },
     }, extra),
@@ -133,7 +139,7 @@ test('buildBackupPayload() — apiKey terhapus, chatHistory dikosongkan, D asli 
 test('buildBackupPayload() — store IndexedDB terpisah (lifeos/eie/vehicle-catalog/honda-pdf-import) ikut kalau ada, dilewati kalau tidak', async () => {
   const D = makeD();
   const stores = { 'lifeos:store': { projects: ['p1'] }, 'vehicle-catalog:store': { catalog: ['v1'] } };
-  const { ctx } = makeCtx(D, { IDBStore: { get: async (k) => stores[k], set: async () => {} } });
+  const { ctx } = makeCtx(D, { IDBStore: { get: async (k) => stores[k], getMany: async (keys) => Object.fromEntries((keys || []).map((k) => [k, stores[k]])), set: async () => {} } });
   const backupD = await ctx.buildBackupPayload();
   assert.deepEqual(backupD._lifeosStore, { projects: ['p1'] });
   assert.deepEqual(backupD._vehicleCatalogStore, { catalog: ['v1'] });

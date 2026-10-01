@@ -15,10 +15,10 @@ test('S1851 filter report keeps isolated loadSource tests safe without getAllCat
   assert.match(fl,/const _ftxCats=typeof getAllCats==='function'\?getAllCats\(\):\[\];/);
 });
 
-test('S1851 persistence race contract uses the serialized queue rather than fixed write counts',()=>{
+test('S1851 persistence race contract uses atomic batch persistence rather than fixed write counts',()=>{
   const s=fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8');
-  assert.match(s,/let _savePersistChain=Promise\.resolve\(\);/);
-  assert.match(s,/_savePersistChain=_savePersistChain\.then\(\(\)=>IDBStore\.set\('kw_v4_mirror',json\)/);
+  assert.match(s,/IDBStore\.setMany(?:IfCurrent)?/);
+  assert.match(s,/kw_v4_mirror/);
   assert.match(s,/function saveFlush\(\)\{/);
   assert.match(s,/function _saveImmediate\(snapshotJson\)/);
 });

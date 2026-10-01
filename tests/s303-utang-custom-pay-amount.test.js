@@ -24,6 +24,10 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'modules', 'finance', 'tagihan-kalender.js'),
   'utf8'
 );
+const WRITER_SRC = fs.readFileSync(
+  path.join(__dirname, '..', 'modules', 'finance', 'bill-debt-piutang-canonical-writer.js'),
+  'utf8'
+);
 
 function extractFnSource(fnName) {
   const asyncMarker = `async function ${fnName}(`;
@@ -70,6 +74,9 @@ function loadSandbox(D, { promptAmount, promptDate = '2026-07-31' } = {}) {
     hitungZakatMaal: () => {},
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-cross-entity-atomic.js'), 'utf8'), context, { filename: 'finance-cross-entity-atomic.js' });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-tx-sot.js'), 'utf8'), context, { filename: 'finance-tx-sot.js' });
+  vm.runInContext(WRITER_SRC, context, { filename: 'bill-debt-piutang-canonical-writer.js' });
   const snippet = `${extractFnSource('_amc015')}
 ${extractFnSource('getBillPaidThisPeriodInfo')}
 ${extractFnSource('advanceBillNextDue')}
@@ -152,6 +159,9 @@ test('markBillPaid() kind lain (tagihan biasa) — TIDAK menampilkan prompt Juml
     renderDebtList: () => {}, renderKekayaanBersih: () => {}, hitungZakatMaal: () => {},
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-cross-entity-atomic.js'), 'utf8'), context, { filename: 'finance-cross-entity-atomic.js' });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-tx-sot.js'), 'utf8'), context, { filename: 'finance-tx-sot.js' });
+  vm.runInContext(WRITER_SRC, context, { filename: 'bill-debt-piutang-canonical-writer.js' });
   const snippet = `${extractFnSource('_amc015')}
 ${extractFnSource('getBillPaidThisPeriodInfo')}
 ${extractFnSource('advanceBillNextDue')}

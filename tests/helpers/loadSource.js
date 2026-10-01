@@ -66,6 +66,21 @@ function makePermissiveStub(name) {
  *   yang otomatis jadi properti context) — jadi harus diminta eksplisit.
  */
 function loadSource(files, extraGlobals = {}, expose = []) {
+  // S2186: finance Bill/Debt/Piutang modules now depend on one canonical
+  // mutation boundary. Keep isolated VM tests compatible by loading that
+  // dependency automatically when any affected source is requested.
+  const _files = Array.from(files || []);
+  const _needsBillDebtPiutangWriter = _files.some((f) => [
+    'modules/finance/piutang-utang.js',
+    'modules/finance/tagihan-kalender.js',
+    'modules/finance/transaksi-b.js',
+    'modules/finance/pajak-pbb-zakat.js',
+    'modules/finance/titipan-sync.js',
+    'modules/finance/titipan-reconcile.js',
+  ].includes(f));
+  if (_needsBillDebtPiutangWriter && !_files.includes('modules/finance/bill-debt-piutang-canonical-writer.js')) {
+    _files.unshift('modules/finance/bill-debt-piutang-canonical-writer.js');
+  }
   const sandbox = {
     console,
     Date,
@@ -113,7 +128,7 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   // monolith. Runtime build order remains controlled by scripts/build.js;
   // this harness transparently loads the split Servis sources once, avoiding
   // duplicate lexical declarations when a caller already lists them.
-  const loadFiles = [...files];
+  const loadFiles = [..._files];
   // P4 stock-write authority: isolated source tests that exercise modules
   // migrated to StockCommandSOT must load the canonical mutation gateway first.
   // Runtime build order remains controlled by scripts/build.js; this is only
@@ -141,9 +156,47 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     'modules/vehicle/vehicle-catalog-import-stock-push.js',
     'modules/vehicle/vehicle-catalog-migration-sot.js',
     'modules/vehicle/vehicle-stock-sot.js',
+    'modules/finance/tx-transfer.js',
+    'modules/finance/piutang-utang.js',
+    'modules/finance/tagihan-kalender.js',
+    'modules/finance/pajak-pbb-zakat.js',
+    'modules/finance/titipan-sync.js',
+    'modules/finance/titipan-reconcile.js',
+    'modules/asset/investasi.js',
+    'modules/asset/aset.js',
+    'modules/asset/aset-owners.js',
+    'modules/vehicle/vehicle-core.js',
+    'modules/shop/cobek-order.js',
+    'modules/shop/cobek-tx-cart.js',
+    'modules/business/kasir.js',
+    'modules/shared/scan-ocr.js',
   ]);
   if (loadFiles.some(f => sotDependentFiles.has(f)) && !loadFiles.includes('modules/vehicle/stock-command-sot.js')) {
     loadFiles.unshift('modules/vehicle/stock-command-sot.js');
+  }
+  const billDebtPiutangDependentFiles = new Set([
+    'modules/finance/piutang-utang.js','modules/finance/tagihan-kalender.js','modules/finance/transaksi-b.js',
+    'modules/finance/pajak-pbb-zakat.js','modules/finance/titipan-sync.js','modules/finance/titipan-reconcile.js',
+    'modules/asset/investasi.js','modules/asset/aset.js','modules/asset/aset-owners.js','modules/vehicle/vehicle-core.js',
+    'modules/shop/cobek-order.js','modules/shop/cobek-tx-cart.js','modules/business/kasir.js','modules/shared/scan-ocr.js','modules/shared/owner-registry.js',
+  ]);
+  if (loadFiles.some(f => billDebtPiutangDependentFiles.has(f)) && !loadFiles.includes('modules/finance/bill-debt-piutang-canonical-writer.js')) {
+    loadFiles.unshift('modules/finance/bill-debt-piutang-canonical-writer.js');
+  }
+  if (loadFiles.some(f => f === 'modules/finance/tx-transfer.js' || f === 'modules/finance/piutang-utang.js' || f === 'modules/finance/tagihan-kalender.js' || f === 'modules/finance/titipan-expense-flow.js') && !loadFiles.includes('modules/finance/finance-tx-sot.js')) {
+    loadFiles.unshift('modules/finance/finance-tx-sot.js');
+  }
+  // S2196+: isolated tests that execute cross-entity mutation/delete paths must
+  // receive the canonical atomic boundary just like the production build.
+  // Runtime order remains controlled by scripts/build.js; this is harness wiring only.
+  const atomicDependentFiles = new Set([
+    'modules/finance/tx-list-cashflow.js',
+    'modules/shared/owner-registry.js',
+    'modules/finance/tagihan-kalender.js',
+    'modules/finance/titipan-expense-flow.js',
+  ]);
+  if (loadFiles.some(f => atomicDependentFiles.has(f)) && !loadFiles.includes('modules/finance/finance-cross-entity-atomic.js')) {
+    loadFiles.unshift('modules/finance/finance-cross-entity-atomic.js');
   }
   if (loadFiles.includes('modules/vehicle/servis-checklist.js') && !loadFiles.includes('modules/vehicle/service-master-data.generated.js')) {
     loadFiles.unshift('modules/vehicle/service-master-data.generated.js');

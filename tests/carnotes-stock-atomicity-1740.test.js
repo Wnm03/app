@@ -25,10 +25,11 @@ test('Servis create uses one aggregated stock mutation for legacy and catalog se
 test('Servis empty-input validation occurs before any stock or Finance mutation',()=>{
   const src=servisSource();
   const guard=src.indexOf('const _preSaveChecklistPayload=');
-  const stock=src.indexOf('if(!await Servis.applyStockUsages(_createStockEntries))return;');
-  const tx=src.indexOf('D.transactions.push({id:txId,type:\'expense\'');
-  assert.ok(guard>=0 && stock>guard && tx>guard,'pre-save guard must precede stock and Finance writes');
-  assert.match(src,/if\(!_preSaveEffectiveItem\)\{toast\('⚠️ Pilih minimal satu komponen checklist yang dikerjakan'\);return;\}/);
+  const guardCheck=src.indexOf("if(!_preSaveEffectiveItem&&!_isChecklistSessionEdit)",guard);
+  const stock=src.indexOf('if(!await Servis.applyStockUsages(_createStockEntries))return;',guard);
+  const tx=src.indexOf('if(cost>0){',stock);
+  assert.ok(guard>=0 && guardCheck>guard && stock>guardCheck && tx>stock,'pre-save guard must precede create-path stock and Finance writes');
+  assert.match(src,/if\(!_preSaveEffectiveItem&&!_isChecklistSessionEdit\)\{toast\('⚠️ Pilih minimal satu komponen checklist yang dikerjakan'\);return;\}/);
 });
 
 test('Bundle-B carries the same stock atomicity hardening',()=>{

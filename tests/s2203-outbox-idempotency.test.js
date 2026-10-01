@@ -1,0 +1,11 @@
+const assert=require('assert');
+const fs=require('fs');
+const vm=require('vm');
+const outbox=fs.readFileSync('modules/finance/finance-event-outbox.js','utf8');
+function load(){const store=new Map();const ctx={console,localStorage:{getItem:k=>store.get('ls:'+k)||null,setItem:(k,v)=>store.set('ls:'+k,v),removeItem:k=>store.delete('ls:'+k)},IDBStore:{async get(k){return store.get('idb:'+k)},async set(k,v){store.set('idb:'+k,v);return true},async setMany(es){for(const [k,v] of es)store.set('idb:'+k,v);return true}},setTimeout:()=>{},clearTimeout(){}};ctx.globalThis=ctx;vm.createContext(ctx);vm.runInContext(outbox,ctx);return {ctx,store};}
+async function main(){let pass=0,total=0;async function t(name,fn){total++;try{await fn();pass++;console.log('PASS',name)}catch(e){console.error('FAIL',name,e);process.exitCode=1;}}
+await t('stable eventId survives normalization and replay metadata',async()=>{const x=load();let meta=null;x.ctx.AIBus={emit:(type,p,m)=>{meta=m}};assert(x.ctx.FinanceEventOutbox.enqueue('finance.updated',{id:1}));assert.strictEqual(await x.ctx.FinanceEventOutbox.replay(),true);assert(meta&&meta.eventId);assert.strictEqual(meta.source,'finance-event-outbox');});
+await t('duplicate replay carries same eventId after handler-side crash',async()=>{const x=load();let ids=[];x.ctx.AIBus={emit:(type,p,m)=>{ids.push(m.eventId);if(ids.length===1)throw new Error('crash-after-handler')}};assert(x.ctx.FinanceEventOutbox.enqueue('finance.updated',{id:2}));assert.strictEqual(await x.ctx.FinanceEventOutbox.replay(),false);assert.strictEqual(x.ctx.FinanceEventOutbox.pending().length,1);x.ctx.AIBus={emit:(type,p,m)=>ids.push(m.eventId)};assert.strictEqual(await x.ctx.FinanceEventOutbox.replay(),true);assert.strictEqual(ids.length,2);assert.strictEqual(ids[0],ids[1]);});
+await t('eventId is not marked delivered before handler',async()=>{const x=load();let seen=false;x.ctx.AIBus={emit:(type,p,m)=>{seen=!!m.eventId;throw new Error('fail')}};x.ctx.FinanceEventOutbox.enqueue('finance.updated',{id:3});await x.ctx.FinanceEventOutbox.replay();assert.strictEqual(seen,true);assert.strictEqual(x.ctx.FinanceEventOutbox.pending().length,1);});
+console.log(`${pass}/${total} PASS`);if(pass!==total)process.exitCode=1;}
+main();

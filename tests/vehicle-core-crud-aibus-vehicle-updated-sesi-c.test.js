@@ -45,7 +45,7 @@ function makeCtx(D, domValues, extra) {
   };
   const aibusEvents = [];
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/vehicle/vehicle-core.js'],
+    ['modules/shared/ownership-engine.js', 'modules/vehicle/vehicle-canonical-writer.js', 'modules/vehicle/vehicle-core.js'],
     Object.assign({
       D,
       document: { getElementById: getEl },

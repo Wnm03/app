@@ -30,6 +30,9 @@ function sandbox(D){
    escapeHtml:s=>s,fmtFull:n=>String(n),maybeCreateSharedPiutangFromBill:()=>{},
  };
  vm.createContext(ctx);
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','finance-cross-entity-atomic.js'),'utf8'),ctx,{filename:'finance-cross-entity-atomic.js'});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','finance-tx-sot.js'),'utf8'),ctx,{filename:'finance-tx-sot.js'});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','bill-debt-piutang-canonical-writer.js'),'utf8'),ctx,{filename:'bill-debt-piutang-canonical-writer.js'});
  vm.runInContext(`${extractFnSource('_amc015')}\n${extractFnSource('advanceBillNextDue')}\n${extractFnSource('markBillPaid')}\nthis.markBillPaid=markBillPaid;`,ctx);
  ctx.releasePrompt=()=>resolver&&resolver('2026-09-12');
  return ctx;

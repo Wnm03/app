@@ -34,7 +34,7 @@ test('S1843 saveFlush serializes the critical snapshot only once',()=>{
   assert.match(body,/_saveImmediate\(json\)/);
   assert.match(snapshotHelper,/_buildSaveJson\(\)/);
   assert.match(s,/function _saveImmediate\(snapshotJson\)/);
-  assert.match(s,/IDBStore\.set\('kw_v4_mirror',json\)/);
+  assert.match(s,/IDBStore\.setMany(?:IfCurrent)?/);
   assert.match(body,/_writeLocalSnapshot\(json\)/);
 });
 
