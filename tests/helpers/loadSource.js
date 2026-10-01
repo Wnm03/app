@@ -114,6 +114,37 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   // this harness transparently loads the split Servis sources once, avoiding
   // duplicate lexical declarations when a caller already lists them.
   const loadFiles = [...files];
+  // P4 stock-write authority: isolated source tests that exercise modules
+  // migrated to StockCommandSOT must load the canonical mutation gateway first.
+  // Runtime build order remains controlled by scripts/build.js; this is only
+  // test-harness dependency wiring so legacy loadSource() tests do not fail
+  // merely because they omit a newly-required runtime dependency.
+  const sotDependentFiles = new Set([
+    'data-health-check.js',
+    'chat-action-handlers.js',
+    'modules/finance/transaksi-b.js',
+    'modules/finance/tx-stok-sparepart.js',
+    'modules/finance/tx-servis.js',
+    'modules/shared/backup-restore.js',
+    'modules/shared/features-helpers-global-security.js',
+    'modules/shared/self-test-cases-a.js',
+    'modules/shared/self-test-cases-b.js',
+    'modules/shop/features-helpers-global-security.js',
+    'modules/asset/features-helpers-global-security.js',
+    'modules/vehicle/service-session-mutation-s2047.js',
+    'modules/vehicle/service-session-recovery-s2050.js',
+    'modules/vehicle/part-crud-s2041.js',
+    'modules/vehicle/sparepart-servis.js',
+    'modules/vehicle/sparepart-servis-ui.js',
+    'modules/vehicle/servis-b.js',
+    'modules/vehicle/servis.js',
+    'modules/vehicle/vehicle-catalog-import-stock-push.js',
+    'modules/vehicle/vehicle-catalog-migration-sot.js',
+    'modules/vehicle/vehicle-stock-sot.js',
+  ]);
+  if (loadFiles.some(f => sotDependentFiles.has(f)) && !loadFiles.includes('modules/vehicle/stock-command-sot.js')) {
+    loadFiles.unshift('modules/vehicle/stock-command-sot.js');
+  }
   if (loadFiles.includes('modules/vehicle/servis-checklist.js') && !loadFiles.includes('modules/vehicle/service-master-data.generated.js')) {
     loadFiles.unshift('modules/vehicle/service-master-data.generated.js');
   }
@@ -121,6 +152,12 @@ function loadSource(files, extraGlobals = {}, expose = []) {
     for (const splitFile of ['modules/vehicle/servis-checklist.js','modules/vehicle/service-input-catalog.js','modules/vehicle/service-condition-intelligence-sot.js','modules/vehicle/service-provenance-sot.js','modules/vehicle/service-condition-timeline-sot.js','modules/vehicle/service-part-compatibility-sot.js','modules/vehicle/service-event-idempotency-sot.js','modules/vehicle/service-ingestion-provenance-sot.js','modules/vehicle/service-evidence-pack-sot.js','modules/vehicle/service-roundtrip-sot.js','modules/vehicle/vehicle-isolation-audit-sot.js','modules/vehicle/maintenance-intelligence-v2-sot.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js','modules/vehicle/servis.js','modules/vehicle/servis-b.js']) {
       if (!loadFiles.includes(splitFile)) loadFiles.push(splitFile);
     }
+  // The car-notes compatibility expansion above can append SOT-dependent
+  // service modules after the first dependency check. Re-check after expansion
+  // so legacy tests loading only car-notes.js still receive the canonical SOT.
+  if (loadFiles.some(f => sotDependentFiles.has(f)) && !loadFiles.includes('modules/vehicle/stock-command-sot.js')) {
+    loadFiles.unshift('modules/vehicle/stock-command-sot.js');
+  }
   } else if (loadFiles.includes('modules/vehicle/sparepart-servis.js')) {
     // Sesi oversized-file S2: Sparepart UI methods live in a post-object
     // compatibility layer. Load it automatically for isolated source tests.
