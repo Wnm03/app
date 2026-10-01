@@ -657,7 +657,7 @@ if(_serviceMutationTouched){
   try{
     if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
     if(_serviceEditSnapshot.transactions!==null)D.transactions=JSON.parse(_serviceEditSnapshot.transactions);
-    if(_serviceEditSnapshot.partsStock!==null)D.partsStock=JSON.parse(_serviceEditSnapshot.partsStock);
+    if(_serviceEditSnapshot.partsStock!==null){const _stockSnap=JSON.parse(_serviceEditSnapshot.partsStock);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok transaksi servis');StockCommandSOT.replaceSnapshot(_stockSnap);}
     if(_serviceEditSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_serviceEditSnapshot.sparepartCats);
   }catch(_serviceRollbackErr){console.error('V25: Finance->Service rollback failed',_serviceRollbackErr);}
 }

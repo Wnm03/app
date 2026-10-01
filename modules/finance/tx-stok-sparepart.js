@@ -21,6 +21,8 @@
 // sendiri (mis. test unit lewat loadSource() yg tidak inject uid()) -- 0
 // regresi utk pemanggil lama, TIDAK ada lagi Date.now() mentah dipakai jadi id.
 let _genIdLocalLast = 0;
+function txPartsStockRead(){return (typeof CarNotesSOT!=='undefined'&&CarNotesSOT&&typeof CarNotesSOT.partsStock==='function')?CarNotesSOT.partsStock():(D.partsStock||[]);}
+
 function _genId(){
 if(typeof uid==='function')return uid();
 let n=Date.now();
@@ -71,54 +73,12 @@ return n;
 // sebelum menyentuh priceHistory/txRefs sama sekali).
 function revertStockPurchase(partId,qty,txId){
 if(!partId||!qty)return;
-const p=D.partsStock.find(x=>x.id===partId);
-if(!p)return;
-p.qty=Math.max(0,(p.qty||0)-qty);
-// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
-// revertStockPurchase()/applyStockPurchase() SEBELUMNYA 0% emit AIBus.
-// Ditaruh SEGERA setelah p.qty dimutasi (baris di atas) -- titik ini
-// dijalankan di SEMUA jalur fungsi (baik txId ada maupun tidak / entry
-// priceHistory ketemu atau tidak), jadi 1 emit di sini sudah cukup
-// mewakili "stok direvert" tanpa duplikasi di tiap early-return di bawah.
-// kind:"stok-sparepart" (domain baru dalam event finance.updated yang
-// sama, bukan event baru) -- konsisten dgn kind:"transaksi"/"target" di
-// sesi-sesi sebelumnya. 0 logic revert lain diubah.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"stok-sparepart",action:"purchase-revert",partId,qty,txId:txId||null});
-if(!txId||!Array.isArray(p.priceHistory))return;
-const idx=p.priceHistory.findIndex(h=>h&&h.txId===txId);
-if(idx===-1){
-// tidak ada entry priceHistory yg cocok (mis. sudah pernah direvert, atau
-// data lama sebelum priceHistory ada) -- tetap bersihkan referensi txRefs
-// basi kalau ada, sisanya no-op (tidak menebak-nebak avgPrice).
-if(Array.isArray(p.txRefs))p.txRefs=p.txRefs.filter(id=>id!==txId);
-if(p.lastTxId===txId)p.lastTxId=null;
-return;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
+const r=StockCommandSOT.revertPurchase(partId,qty,txId,{saveNow:false});
+return !!r.ok;
 }
-const entry=p.priceHistory[idx];
-const after=p.priceHistory.slice(idx+1);
-p.priceHistory.splice(idx,1);
-if(Array.isArray(p.txRefs))p.txRefs=p.txRefs.filter(id=>id!==txId);
-if(p.lastTxId===txId){
-const last=p.priceHistory[p.priceHistory.length-1];
-p.lastTxId=last?(last.txId||null):null;
-}
-if(typeof entry.qtyBefore==='number'){
-let curQty=entry.qtyBefore;
-let curAvg=(typeof entry.avgPriceBefore==='number'&&entry.avgPriceBefore>0)?entry.avgPriceBefore:null;
-after.forEach(h=>{
-const hq=(h&&typeof h.qty==='number')?h.qty:0;
-const hp=(h&&typeof h.price==='number')?h.price:0;
-const newQty=curQty+hq;
-if(hp>0){
-const prevAvgEff=(typeof curAvg==='number'&&curAvg>0)?curAvg:hp;
-curAvg=newQty>0?(((prevAvgEff*curQty)+(hp*hq))/newQty):hp;
-}
-curQty=newQty;
-});
-if(typeof curAvg==='number'&&curAvg>0){p.avgPrice=curAvg;p.price=curAvg;}
-}
-}
-// applyStockPurchase(p,qty,unitPrice,purchaseDate,txId) — Tahap 8A: satu titik
+
+// // applyStockPurchase(p,qty,unitPrice,purchaseDate,txId) — Tahap 8A: satu titik
 // tunggal utk update field pembelian di item D.partsStock (dipanggil dari
 // applyTxStockFromTx di bawah, integrasi Keuangan -> Inventaris/Vehicle
 // Catalog/Car Notes). TIDAK mengubah cara qty ditambah (masih p.qty+=qty,
@@ -139,48 +99,13 @@ if(typeof curAvg==='number'&&curAvg>0){p.avgPrice=curAvg;p.price=curAvg;}
 // di bawah, cuma merekam nilai yang sudah dihitung inline sebagai `prevAvg`
 // (skrg `prevAvgEffective`) SEBELUM p.qty/p.avgPrice dimutasi.
 function applyStockPurchase(p,qty,unitPrice,purchaseDate,txId){
-const prevQty=p.qty||0;
-const prevAvgEffective=(typeof p.avgPrice==='number'&&p.avgPrice>0)?p.avgPrice:((p.price>0)?p.price:null);
-p.qty=prevQty+qty;
-if(unitPrice>0){
-p.lastPrice=unitPrice;
-const prevAvg=(typeof prevAvgEffective==='number')?prevAvgEffective:unitPrice;
-const totalQtyForAvg=prevQty+qty;
-p.avgPrice=totalQtyForAvg>0?(((prevAvg*prevQty)+(unitPrice*qty))/totalQtyForAvg):unitPrice;
-p.price=p.avgPrice;
+if(!p||!p.id)return false;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
+const r=StockCommandSOT.applyPurchase(p.id,qty,unitPrice,purchaseDate,txId,{saveNow:false});
+return !!r.ok;
 }
-p.lastPurchaseDate=purchaseDate;
-if(!Array.isArray(p.priceHistory))p.priceHistory=[];
-// BUGFIX (S713, audit lanjutan temuan user "dobel stok sparepart"): txRefs
-// tepat di bawah SUDAH dijaga anti-dobel lewat includes() check, tapi
-// priceHistory.push() di sini TIDAK -- kalau applyStockPurchase() ini
-// somehow kepanggil 2x utk txId yang SAMA tanpa revertStockPurchase() di
-// antaranya (mis. double-submit/double-click tombol Simpan sebelum debounce,
-// bukan jalur edit normal yang selalu revert-lalu-reapply), priceHistory
-// numpuk 2 entri identik persis (root cause dugaan di balik backup lama yg
-// ditemukan user: "ban belakang 90/90"/"pentil tubles"). Fix: pola SAMA
-// PERSIS dgn guard txRefs.includes() di bawah -- kalau txId ini SUDAH ada
-// entry-nya di priceHistory, skip push (silent, bukan error) drpd nambah
-// duplikat. qty/avgPrice/price di atas TETAP dihitung apa adanya (tidak
-// disentuh sesi ini) -- guard ini MURNI di titik tulis log riwayat, 0
-// perubahan ke rumus qty/harga yang sudah ada.
-const alreadyLogged=(txId!=null)&&p.priceHistory.some(h=>h&&h.txId===txId);
-if(!alreadyLogged){
-p.priceHistory.push({date:purchaseDate,qty,price:unitPrice||0,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvgEffective});
-}
-if(txId){
-if(!Array.isArray(p.txRefs))p.txRefs=[];
-if(!p.txRefs.includes(txId))p.txRefs.push(txId);
-p.lastTxId=txId;
-}
-// Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
-// pola sama persis revertStockPurchase() di atas -- 1 emit di akhir fungsi
-// (setelah semua field p.qty/avgPrice/priceHistory/txRefs sudah dimutasi),
-// bukan event baru, kind:"stok-sparepart" di payload finance.updated yang
-// sama. 0 logic apply lain diubah.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"stok-sparepart",action:"purchase-apply",partId:p.id,qty,unitPrice,txId:txId||null});
-}
-// syncPartsStockFromCatalog(catalogItem) — Tahap 9 (Jembatan Vehicle
+
+// // syncPartsStockFromCatalog(catalogItem) — Tahap 9 (Jembatan Vehicle
 // Catalog <-> Stok Sparepart Keuangan): cari-atau-buat 1 baris D.partsStock
 // yang TERHUBUNG (field `catalogId`) ke 1 part di VehicleCatalog (katalog
 // suku cadang, IDBStore terpisah — lihat modules/vehicle/vehicle-catalog.js).
@@ -202,7 +127,7 @@ const catalogVisible=catalogRows.filter(p=>{
 });
 const existing=catalogVisible.find(p=>p.vehicleId&&String(p.vehicleId)===String(vidCatalog))||catalogVisible[0]||null;
 if(existing){
-if(catalogItem.partName&&existing.name!==catalogItem.partName)existing.name=catalogItem.partName;
+if(catalogItem.partName&&existing.name!==catalogItem.partName){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function')throw new Error('StockCommandSOT wajib tersedia untuk sinkron stok katalog');const ur=StockCommandSOT.update(existing.id,{name:catalogItem.partName});if(!ur.ok)throw new Error(ur.code||'STOCK_CATALOG_UPDATE_FAILED');return ur.part;}
 return existing;
 }
 const catName=(catalogItem.category||'Umum').trim()||'Umum';
@@ -256,8 +181,10 @@ const vehicleIdSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id
 // bulk-import katalog), banyak part ke-generate di milidetik sama -> id tabrakan.
 // Ganti ke uid() (SOT anti-tabrakan app, sudah dipakai di tempat lain).
 const np={id:'st_'+_genId(),name:catalogItem.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:catalogItem.price||0,note:'Terhubung dari Katalog Suku Cadang (scan)',catalogId:catalogItem.id,vehicleId:vehicleIdSync};
-D.partsStock.push(np);
-return np;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
+const cr=StockCommandSOT.create(np);
+if(!cr.ok)throw new Error(cr.code||'STOCK_CATALOG_CREATE_FAILED');
+return cr.part;
 }
 // txStockScanPartVia(adapterName) — inti bersama tombol "📷 Scan Kode Part"
 // (adapter 'camera') & "🖼️ Scan dari Galeri" (adapter 'gallery') di
@@ -345,7 +272,7 @@ const cur=sel.value;
 // Sparepart.isPartForVehicle() (sama dipakai Stok Sparepart & dropdown
 // servis), di-scope ke curVehicleId (kendaraan aktif Car Notes saat ini).
 const vid=typeof curVehicleId!=='undefined'?curVehicleId:null;
-const list=D.partsStock.filter(p=>p.id===cur||Sparepart.isPartForVehicle(p,vid));
+const list=txPartsStockRead().filter(p=>p.id===cur||Sparepart.isPartForVehicle(p,vid));
 sel.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.value=cur&&list.find(p=>p.id===cur)?cur:'__new__';
 onTxStockItemChange();
@@ -357,7 +284,7 @@ if(!added)return;
 const sel2=document.getElementById('txStockItem');
 if(!sel2)return; // modal sudah ditutup / elemen sudah tidak ada
 const cur2=sel2.value;
-const list2=D.partsStock.filter(p=>p.id===cur2||Sparepart.isPartForVehicle(p,vid));
+const list2=txPartsStockRead().filter(p=>p.id===cur2||Sparepart.isPartForVehicle(p,vid));
 sel2.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list2.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel2.value=cur2&&list2.find(p=>p.id===cur2)?cur2:cur2;
 onTxStockItemChange();
@@ -400,7 +327,8 @@ const qty=parseFloat(document.getElementById('txStockQty').value)||0;
 const unit=document.getElementById('txStockUnit').value.trim()||'pcs';
 if(qty<=0){toast('⚠️ Jumlah stok yang ditambah harus lebih dari 0');return;}
 if(existingTx&&existingTx.partStockId){
-revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id);
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.revertPurchaseForTransaction==='function')StockCommandSOT.revertPurchaseForTransaction(existingTx.id,{saveNow:false});
+else revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id);
 }
 const unitPrice=(priceBasis>0)?(priceBasis/qty):0;
 const purchaseDate=date||new Date().toISOString().split('T')[0];
@@ -435,8 +363,9 @@ targetPart=existing;
 const vidNew=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 const vehicleIdNew=(vidNew&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNew))?vidNew:null;
 const np={id:'st_'+_genId(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
-D.partsStock.push(np);
-applyStockPurchase(np,qty,unitPrice,purchaseDate,txId);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function'||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
+StockCommandSOT.create(np);
+StockCommandSOT.applyPurchase(np.id,qty,unitPrice,purchaseDate,txId);
 targetPart=np;
 // Tahap 9: part baru yg diketik manual di Keuangan JUGA otomatis dibuatkan
 // entri di Vehicle Catalog (best-effort, tidak menunggu/tidak memblokir

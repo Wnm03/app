@@ -112,9 +112,12 @@ ServiceInputCatalog.sync(document.getElementById('txServisCategory'),document.ge
 // dijamin cukup & tidak perlu tanya konfirmasi ke user.
 function _servisAutoLinkAdjustStock(partId,deltaQty){
 if(!partId||!deltaQty)return;
-const p=(D.partsStock||[]).find(x=>x.id===partId);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk sinkron stok servis-transaksi');
+const p=StockCommandSOT.find(partId);
 if(!p)return;
-p.qty=(p.qty||0)+deltaQty;
+const next=(Number(p.qty)||0)+Number(deltaQty);
+const r=StockCommandSOT.setQty(partId,next,{reason:'service-purchase-auto-link',source:'tx-servis',journal:false,saveNow:false});
+if(!r.ok)throw new Error(r.code||'STOCK_AUTO_LINK_MUTATION_FAILED');
 }
 // _syncServisUsedPartFromPurchase(log,purchasedPartId,purchasedPartQty) —
 // satu titik tunggal yang menjaga usedPartId/usedPartQty 1 baris D.servisLogs
