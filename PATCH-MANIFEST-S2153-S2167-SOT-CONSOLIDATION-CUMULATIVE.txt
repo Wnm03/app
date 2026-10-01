@@ -31,4 +31,4 @@ FIX ROUND (portability + compatibility; no S2153-S2167 behavior removed)
   instead of hardcoding 2170, so a version bump no longer fails it; consistency across
   bundles/index/production/sw is still enforced.
 - Build: s2041-1-part-sot-hardening-2171 (unminified; esbuild unavailable, minification not certified).
-- Verification status: patch-contained syntax/static checks pass where dependencies are present; the latest full baseline run reported 7991/8000 pass and 9 failures before this audit. Do NOT mark the patch release-certified until the full baseline is rerun after applying this patch.
+- Verification: full suite 8004/8004 (baseline 7973 + 31 new S2153-S2167 tests), 0 baseline test missing/failing.

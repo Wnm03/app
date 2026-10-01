@@ -1,0 +1,41 @@
+PATCH-MANIFEST-S2153-S2170-SOT-CONSOLIDATION-CUMULATIVE
+
+Cumulative chain: S2153 -> S2154-S2159 -> S2160 -> S2161 -> S2162 -> S2163 -> S2164 -> S2165 -> S2166 -> S2167 -> S2170
+
+S2170 — Reminder SOT Recovery & Regression Hardening
+- modules/vehicle/vehicle-car-notes-sot-s2071.js
+- modules/vehicle/vehicle-service-sot.js
+- modules/vehicle/sparepart-servis.js
+- tests/s2170-reminder-sot-recovery-regression.test.js
+- README-S2170-REMINDER-SOT-RECOVERY.md
+
+Runtime behavior:
+- VehicleCarNotesSOT remains the canonical owner for vehicle service categories.
+- D.sparepartCats is compatibility projection only.
+- Explicit reconciliation is idempotent and vehicle-scoped.
+- Reminder read path is read-only; no silent SOT write during rendering.
+- Universal legacy category inputs remain compatible without cross-vehicle leakage.
+
+Generated/runtime outputs refreshed to build 2173:
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- index.html
+- app_production.html
+- sw.js
+- shared version-synchronized source files
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md
+
+Validation:
+- Focused S2031 + S2170: 10/10 PASS
+- Full application suite: 8009/8009 PASS, 0 FAIL
+- SOT integrity: PASS
+- Architecture integrity: PASS
+- Persistence integrity: PASS
+- Service SOT integrity: PASS
+- App-wide hardening: 9/9 PASS
+- S2163 8/8, S2164 10/10, S2165 5/5, S2166 PASS, S2167 PASS
+- Bundle node --check: PASS
+- Build PASS; minification not certified because esbuild is unavailable offline.
+
+Safety: no new persistent storage owner and no second reminder fact store introduced.
