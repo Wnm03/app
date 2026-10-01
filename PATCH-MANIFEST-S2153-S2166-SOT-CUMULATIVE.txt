@@ -1,0 +1,15 @@
+SOT CUMULATIVE PATCH S2153-S2166
+
+S2153-S2165: preserved from previous cumulative baseline.
+S2166 additions:
+- modules/vehicle/service-runtime-projection-sot-s2166.js
+- scripts/s2166-runtime-projection-sync-gate.js
+- tests/s2166-runtime-projection-sync.test.js
+- docs/S2166-RUNTIME-PROJECTION-SYNC.md
+- README-S2166-RUNTIME-PROJECTION.md
+- package.json: audit:sot-runtime-projection
+
+Architecture rule:
+ONE FACT -> ONE OWNER -> ONE WRITE AUTHORITY -> MANY READERS
+Runtime projection is read-only; no new storage owner is introduced.
+Production bundle wiring is intentionally not claimed by S2166 until build-loader inclusion is verified.

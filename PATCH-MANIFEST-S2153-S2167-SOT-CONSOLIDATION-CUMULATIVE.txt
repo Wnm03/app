@@ -1,0 +1,34 @@
+PATCH-MANIFEST-S2153-S2167-SOT-CONSOLIDATION-CUMULATIVE
+
+Cumulative chain: S2153 -> S2154-S2159 -> S2160 -> S2161 -> S2162 -> S2163 -> S2164 -> S2165 -> S2166 -> S2167
+
+S2167 — Production Runtime Wiring & UI Projection Gate
+- scripts/s2167-production-runtime-wiring-gate.js
+- tests/s2167-production-runtime-wiring.test.js
+- docs/S2167-PRODUCTION-RUNTIME-WIRING.md
+- README-S2167-PRODUCTION-RUNTIME-WIRING.md
+- package.json (audit:sot-production-wiring)
+- scripts/build.js (production bundle wiring)
+- modules/vehicle/service-runtime-projection-sot-s2166.js (read-only projection + reminder catalog)
+- modules/vehicle/servis-b.js (Reminder + History consumers wired through projection)
+
+Safety:
+- no new persistent storage owner
+- no mutation authority added
+- active vehicle scope enforced at projection boundary
+- duplicate reminder component targets collapsed by canonical identity
+- production minification not certified without esbuild
+
+FIX ROUND (portability + compatibility; no S2153-S2167 behavior removed)
+- Path portability: removed hardcoded 'app-main/...' prefixes (double-prefix when repo root is app-main) from
+  scripts/s2163, s2165, s2166, s2167 and tests/s2165, s2167; all paths now resolve from __dirname/root.
+- S2080 contract: modules/vehicle/vehicle-service-sot.js getReminderCategoriesForVehicle() normalizes
+  vehicleId to the scoped id and calls getServiceCategories(vehicleId)/upsertServiceCategory(vehicleId,c) again.
+  Active-vehicle scope, canonical taxonomy and dedupe from S2153-S2167 are unchanged.
+- Build artifacts: tests/s2152-p4-5, tests/s2152-p4-6, tests/service-empty-catch-v22 and
+  scripts/audit-duplicate-dead-code.js now skip backups/ and .test-checkpoints/ (generated, not source).
+- Final gate: tests/s2152-p4-7-final-gate.test.js derives the expected build number from the bundle
+  instead of hardcoding 2170, so a version bump no longer fails it; consistency across
+  bundles/index/production/sw is still enforced.
+- Build: s2041-1-part-sot-hardening-2171 (unminified; esbuild unavailable, minification not certified).
+- Verification status: patch-contained syntax/static checks pass where dependencies are present; the latest full baseline run reported 7991/8000 pass and 9 failures before this audit. Do NOT mark the patch release-certified until the full baseline is rerun after applying this patch.

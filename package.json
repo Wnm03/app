@@ -52,7 +52,17 @@
     "audit:safe-recommendations": "node scripts/safe-recommendation-audit.js",
     "audit:release-closure": "node scripts/release-gate-closure-audit.js",
     "audit:document-status": "node scripts/document-status-audit.js",
-    "audit:carnotes-advanced": "node scripts/service-advanced-integrity-gate.js"
+    "audit:carnotes-advanced": "node scripts/service-advanced-integrity-gate.js",
+    "audit:sot-map": "node scripts/s2153-sot-architecture-map-audit.js",
+    "audit:sot-consolidation": "node scripts/s2154-s2159-sot-consolidation-audit.js",
+    "audit:sot-drift": "node scripts/s2160-sot-drift-orphan-gate.js",
+    "audit:sot-reconciliation": "node scripts/s2161-existing-data-sot-reconciliation.js",
+    "audit:sot-migration": "node scripts/s2162-sot-migration-gate.js",
+    "audit:sot-legacy-map": "node scripts/s2163-legacy-mapping-gate.js",
+    "audit:sot-reviewed-migration": "node scripts/s2164-reviewed-mapping-migration-gate.js",
+    "audit:sot-post-migration": "node scripts/s2165-post-migration-reconciliation-gate.js",
+    "audit:sot-runtime-projection": "node scripts/s2166-runtime-projection-sync-gate.js",
+    "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",
