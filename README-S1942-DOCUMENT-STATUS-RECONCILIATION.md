@@ -6,7 +6,7 @@ Menyelaraskan dokumen historis dengan kondisi source/test terbaru tanpa menghapu
 ## Implementasi
 - `docs/PROJECT-STATUS-REGISTRY.md` menjadi SOT status pekerjaan.
 - `docs/KNOWN-ISSUES-REGISTRY.md` memisahkan bug aktif, limitation, environment boundary, dan backlog.
-- `scripts/document-status-audit.js` menjadi release gate.
+- `docs/PROJECT-STATUS-REGISTRY.md` menjadi sumber status; command audit khusus S1942 tidak dipertahankan karena script historisnya tidak lagi ada di baseline.
 - `tests/s1942-document-status-registry.test.js` mengunci kontrak dokumentasi.
 - Owner Resolver Audit-9 mendapat regression proof untuk sumber owner dari linked asset.
 - `minimal-ui-theme.css` memperkuat `--text3` agar memenuhi target kontras normal-text yang diaudit.
