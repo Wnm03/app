@@ -90,8 +90,14 @@ function main() {
     if (!src.includes('function getEffectiveIntervalKm')) fail('KM interval entry point missing');
     if (!src.includes('function getEffectiveIntervalBulan')) fail('month interval entry point missing');
     const policy = read('modules/vehicle/service-interval-policy.js');
-    if (!policy.includes('vehicleOverride.intervalKm') || !policy.includes('category.intervalKm')) fail('KM precedence missing');
-    if (!policy.includes('vehicleOverride.intervalBulan') || !policy.includes('category.intervalBulan')) fail('month precedence missing');
+    // S2092+: presedensi interval (manual > pedoman) dimiliki ServiceIntervalSOT;
+    // service-interval-policy.js hanyalah facade kompatibilitas yang mendelegasikan
+    // ke sana (fallback pedoman: category.intervalKm/intervalBulan). Gate memeriksa
+    // delegasi + pemilik presedensi, bukan lagi string vehicleOverride.* yang sudah dihapus.
+    const intervalSot = read('modules/vehicle/service-interval-sot.js');
+    if (!policy.includes('ServiceIntervalSOT.resolveCanonicalInterval') || !/function resolveCanonicalInterval|resolveCanonicalInterval\s*[:=(]/.test(intervalSot)) fail('KM precedence missing');
+    if (!policy.includes('category.intervalKm') || !policy.includes('category.intervalBulan')) fail('month precedence missing');
+    if (!/source:\s*o\.source\|\|c\.intervalSource\|\|'pedoman'/.test(intervalSot)) fail('manual/pedoman source precedence missing in ServiceIntervalSOT');
     if (policy.includes('checklist.interval')) fail('checklist became an interval authority');
   }, results);
 

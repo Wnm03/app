@@ -137,6 +137,8 @@ const GROUP_B = [
   'modules/vehicle/vehicle-sot-fleet-integrity.js',
   'modules/vehicle/vehicle-category-sot.js',
   'modules/vehicle/vehicle-stock-sot.js',
+  'modules/vehicle/car-notes-sot.js',
+  'modules/vehicle/stock-command-sot.js',
   'modules/vehicle/vehicle-model-registry-sot.js',
   'modules/vehicle/vehicle-model-resolver-sot.js',
   'modules/vehicle/vehicle-sot-provisioning.js',
@@ -188,6 +190,7 @@ const GROUP_B = [
   'modules/vehicle/service-session-sot.js',
   'modules/vehicle/service-history-audit-package.js',
   'modules/vehicle/service-event-sot.js',
+  // S2152 P2: canonical consumer facade; delegates to existing domain SOT owners.
   'modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js',
   'modules/vehicle/service-checklist-execution-sot.js',
   'modules/vehicle/service-checklist-integrity-sot.js',
