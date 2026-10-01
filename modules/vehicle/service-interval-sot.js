@@ -156,7 +156,7 @@
         else snap=d;
         return idb.set(key,JSON.stringify(snap));
       }).catch(()=>{});
-    }catch(_e){}
+    }catch(_e){void _e;}
   }
   function migrateAll(options){
     const d=typeof D!=='undefined'?D:root.D, out=[];

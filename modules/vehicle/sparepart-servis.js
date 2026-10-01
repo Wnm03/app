@@ -408,6 +408,10 @@ function getServiceLinkage(catOrPart,vehicleId){
   return resolved;
 }
 function getEffectiveIntervalKm(vehicleId,cat){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.resolveCanonicalInterval==='function'){
+  const rule=ServiceIntervalSOT.resolveCanonicalInterval(cat,{vehicleId});
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
 if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
   const rule=ServiceIntervalSOT.active(cat,vehicleId);
   if(rule&&rule.intervalKm!==null)return rule.intervalKm;
@@ -430,6 +434,10 @@ if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServ
 return false;
 }
 function getEffectiveIntervalBulan(cat,vehicleId){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.resolveCanonicalInterval==='function'){
+  const rule=ServiceIntervalSOT.resolveCanonicalInterval(cat,{vehicleId});
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
 if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
   const rule=ServiceIntervalSOT.active(cat,vehicleId);
   if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;

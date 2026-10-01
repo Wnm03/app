@@ -129,7 +129,7 @@
     if(!s||!g.D)return false;
     g.D.servisLogs=clone(s.servisLogs||[]);
     g.D.transactions=clone(s.transactions||[]);
-    g.D.partsStock=clone(s.partsStock||[]);
+    if(!g.StockCommandSOT||typeof g.StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok servis');g.StockCommandSOT.replaceSnapshot(s.partsStock||[]);
     if(Array.isArray(s.sparepartCats))g.D.sparepartCats=clone(s.sparepartCats);
     try{if(typeof g.save==='function')g.save({domain:'servis',financeMutation:true,accountIds:[]});}catch(_saveRollbackErr){void _saveRollbackErr;}
     return true;

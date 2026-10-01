@@ -1,4 +1,5 @@
 // P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu
+function servisPartsStockRead(){return (typeof CarNotesSOT!=='undefined'&&CarNotesSOT&&typeof CarNotesSOT.partsStock==='function')?CarNotesSOT.partsStock():(D.partsStock||[]);}
 const Servis={
 editId:null,
 listPage:1,
@@ -321,7 +322,7 @@ row.innerHTML=`<label style="font-size:11px;color:var(--text2);font-weight:700;w
 populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
-const list=D.partsStock.filter(p=>p.id===selectedPartId||Sparepart.isPartForVehicle(p,typeof curVehicleId!=='undefined'?curVehicleId:null));
+const list=servisPartsStockRead().filter(p=>p.id===selectedPartId||Sparepart.isPartForVehicle(p,typeof curVehicleId!=='undefined'?curVehicleId:null));
 const opts=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (sisa ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.innerHTML='<option value="">Tidak pakai stok</option>'+opts;
 sel.value=selectedPartId||'';
@@ -510,7 +511,7 @@ const current=document.getElementById('servisJobType')?.value||'';Servis.ensureS
 renderServiceChecklist(){
 const box=document.getElementById('servisChecklistPanel');if(!box||typeof ServisChecklist==='undefined')return;const ids=Array.isArray(Servis._serviceChecklistMasterCategoryIds)?Servis._serviceChecklistMasterCategoryIds.slice():[];const groups=ids.map(id=>ServisChecklist.findGroupByMasterCategoryId(id)).filter(Boolean);
 if(!groups.length){box.innerHTML='<div style="background:var(--surface3);border:1px dashed var(--border2);border-radius:12px;padding:12px;color:var(--text2);font-size:11px;line-height:1.6">☑️ Pilih kategori servis untuk membuka checklist komponen. Semua detail pekerjaan diisi langsung pada kartu komponen.</div>';if(typeof Servis.ensureServiceJobTypeUI==='function')Servis.ensureServiceJobTypeUI(document.getElementById('servisJobType')?.value||'');return;}
-const vehicleId=ServisChecklist._vehicleId||curVehicleId;const stockOptions=id=>'<option value="">Tidak pakai stok</option>'+(D.partsStock||[]).filter(p=>p&&p.id&&(!p.vehicleId||String(p.vehicleId)===String(vehicleId))).map(p=>`<option value="${escapeHtml(p.id)}"${String(p.id)===String(id||'')?' selected':''}>${escapeHtml(p.name||p.id)} · sisa ${Number(p.qty||0).toLocaleString('id-ID')}</option>`).join('');
+const vehicleId=ServisChecklist._vehicleId||curVehicleId;const stockOptions=id=>'<option value="">Tidak pakai stok</option>'+servisPartsStockRead().filter(p=>p&&p.id&&(!p.vehicleId||String(p.vehicleId)===String(vehicleId))).map(p=>`<option value="${escapeHtml(p.id)}"${String(p.id)===String(id||'')?' selected':''}>${escapeHtml(p.name||p.id)} · sisa ${Number(p.qty||0).toLocaleString('id-ID')}</option>`).join('');
 const cards=groups.map(found=>{const group=found.group,gi=found.groupIdx;const items=ServisChecklist.itemsOfGroup(group);const rows=items.map((it,ii)=>{const linkedCat=it.linkCat===true;const resolvedCat=typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(it.name,ServisChecklist._vehicleId||curVehicleId):null;const missingCatBadge=linkedCat&&!resolvedCat;const checked=ServisChecklist._checked[it.id]!==undefined,na=ServisChecklist._notApplicable&&ServisChecklist._notApplicable[it.id]===true,action=ServisChecklist._checked[it.id],result=ServisChecklist._results&&ServisChecklist._results[it.id]||null,cost=checked?ServisChecklist.getItemCost(it.id):null,stock=checked?ServisChecklist.getStockPartRef(it.id):null,photos=checked?ServisChecklist.getPhotos(it.id):[],refs=checked?ServisChecklist.getCatalogPartRefs(it.id):[],iv=checked?ServisChecklist.getIntervalOverride(it.id):null,master=ServisChecklist.getMasterComponent(it.id),valid=ServisChecklist._validActionTypesFor(it);const actions=checked&&valid.length>1?valid.map(v=>`<button type="button" class="btn btn-ghost btn-sm ${action===v?'active':''}" data-action="Servis.setServiceChecklistAction" data-args="${escapeHtml(JSON.stringify([gi,ii,v]))}">${v==='periksa'?'🔍 Periksa':v==='bersih'?'🧹 Bersih':v==='catat'?'📝 Catat':'🔧 Ganti'}</button>`).join(''):'';const results=checked?`<div class="u-fs10 u-t2" style="margin-top:7px">Hasil pemeriksaan</div><div style="display:flex;gap:5px;flex-wrap:wrap">${(typeof SERVICE_CONDITION_RESULTS!=='undefined'?SERVICE_CONDITION_RESULTS:[]).map(r=>`<button type="button" class="btn btn-ghost btn-sm ${result===r.id?'active':''}" data-action="Servis.setServiceChecklistCondition" data-args="${escapeHtml(JSON.stringify([gi,ii,r.id]))}">${r.icon} ${escapeHtml(r.label)}</button>`).join('')}</div><input type="text" class="fi" style="margin-top:7px;font-size:11px" value="${escapeHtml(ServisChecklist._conditionNotes&&ServisChecklist._conditionNotes[it.id]||'')}" placeholder="Catatan kondisi komponen (opsional)" data-oninput="Servis.setServiceChecklistConditionNote" data-oninput-args="${escapeHtml(JSON.stringify([gi,ii]))}">`:'';const costs=checked?`<details style="margin-top:8px"><summary style="cursor:pointer;font-size:11px;font-weight:700">💰 Biaya komponen · Rp ${Number(cost?.total||0).toLocaleString('id-ID')}</summary><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:7px 0">${['labor','parts','consumables','other'].map(f=>`<input type="number" min="0" class="fi" value="${cost&&cost[f]!=null?escapeHtml(String(cost[f])):''}" placeholder="${f}" data-oninput="Servis.setServiceChecklistCost" data-oninput-args="${escapeHtml(JSON.stringify([gi,ii,f,'$value']))}">`).join('')}</div></details>`:'';const stockHtml=checked?`<div style="margin-top:7px"><select class="fs" data-onchange="Servis.setServiceChecklistStock" data-onchange-args="${escapeHtml(JSON.stringify([gi,ii,'$value']))}">${stockOptions(stock?.partId)}</select>${stock?`<input type="number" min="0.01" step="any" class="fi" style="margin-top:5px" value="${stock.qty}" data-oninput="Servis.setServiceChecklistStockQty" data-oninput-args="${escapeHtml(JSON.stringify([gi,ii,'$value']))}">`:''}</div>`:'';const catalog=checked?`<button type="button" class="btn btn-ghost btn-sm" style="margin-top:7px" data-action="ServisChecklist.openCatalogPicker" data-args="${escapeHtml(JSON.stringify([it.id]))}">📦 Part katalog${refs.length?' · '+refs.length:''}</button>`:'';const photo=checked?`<div style="margin-top:7px"><span class="u-fs10 u-t2">📷 Foto (${photos.length}/5)</span> <button type="button" class="btn btn-ghost btn-sm" data-action="Servis.pickServiceChecklistPhoto" data-args="${escapeHtml(JSON.stringify([it.id]))}">Tambah</button>${photos.map((x,n)=>`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.removeServiceChecklistPhoto" data-args="${escapeHtml(JSON.stringify([it.id,n]))}">✕ ${n+1}</button>`).join('')}</div>`:'';const reminder=checked?`<details style="margin-top:7px"><summary style="cursor:pointer;font-size:11px;font-weight:700">🔔 Pengingat${iv?' · '+Number(iv).toLocaleString('id-ID')+' km':''}</summary><div class="u-fs10 u-t2" style="padding:6px 0">Master: ${escapeHtml(master?.intervalLabel||'Tanpa interval rutin')}</div><input type="number" min="1" class="fi" placeholder="Override interval KM" value="${iv||''}" data-oninput="Servis.setServiceChecklistInterval" data-oninput-args="${escapeHtml(JSON.stringify([gi,ii,'$value']))}"></details>`:'';return `<div style="padding:10px 0;border-bottom:1px solid var(--border2)"><div style="display:flex;gap:8px;align-items:flex-start"><button type="button" class="btn ${checked?'btn-primary':'btn-ghost'} btn-sm" data-action="Servis.toggleServiceChecklistItem" data-args="${escapeHtml(JSON.stringify([gi,ii]))}" aria-pressed="${checked?'true':'false'}" title="${checked?'Klik lagi untuk melepas komponen dari checklist, Riwayat, dan Pengingat saat disimpan.':'Klik untuk menambahkan komponen ke checklist.'}">${checked?'✓ Selesai':'○ Cek'}</button><div style="flex:1"><div class="u-fw700 u-fs12">${escapeHtml(it.name)}</div><div class="u-fs10 u-t2">${escapeHtml(group.group)} · ${escapeHtml(it.intervalLabel||'Tanpa interval rutin')}</div>${missingCatBadge?'<span class="sc-cat-warning">⚠️ kategori belum ada</span>':''}${checked&&action?`<div class="u-fs11 u-cacc">Tindakan: <b>${escapeHtml(action)}</b></div>`:''}${results}${costs}${stockHtml}${catalog}${photo}${reminder}<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${actions}${checked?`<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.openServiceChecklistIdentityEditor" data-args="${escapeHtml(JSON.stringify([gi,ii]))}">✏️ Identitas SOT</button>`:''}<button type="button" class="btn btn-ghost btn-sm" data-action="Servis.setServiceChecklistNotApplicable" data-args="${escapeHtml(JSON.stringify([gi,ii,!na]))}">${na?'↩️ Berlaku':'⊘ Tidak berlaku'}</button></div></div></div></div>`;}).join('');return `<details open style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:0 12px;margin-bottom:10px"><summary style="cursor:pointer;padding:11px 0;font-weight:700;display:flex;justify-content:space-between"><span>${escapeHtml(group.group)}</span><span class="chip active">${ServisChecklist.checkedCount(gi)}/${items.length}</span></summary>${rows}</details>`;}).join('');const checked=Object.keys(ServisChecklist._checked||{}).length,total=groups.reduce((n,g)=>n+ServisChecklist.itemsOfGroup(g.group).length,0),sum=ServisChecklist.costSummary();box.innerHTML=`<div style="margin-bottom:8px"><div class="u-fw700 u-fs12">☑️ Checklist Komponen Servis</div><div class="u-fs11 u-t2">${groups.length} kategori aktif · ${checked}/${total} dikerjakan. Semua detail pekerjaan disimpan pada kartu komponen.</div><div id="servisChecklistCostSummary" style="margin-top:7px">💰 <b>Total Rp ${Number(sum.total||0).toLocaleString('id-ID')}</b></div></div>${cards}`;if(typeof Servis.ensureServiceJobTypeUI==='function')Servis.ensureServiceJobTypeUI(document.getElementById('servisJobType')?.value||'');if(typeof Servis.syncServiceCostSummary==='function')Servis.syncServiceCostSummary();
 },
 setServiceChecklistStock(gi,ii,partId){const item=ServisChecklist._item(Number(gi),Number(ii));if(!item)return;const old=ServisChecklist.getStockPartRef(item.id);const r=ServisChecklist.setStockPartRef(item.id,partId,old?.qty||1);if(!r.ok)toast('⚠️ '+r.reason);Servis.renderServiceChecklist();},
@@ -831,7 +832,7 @@ if(prefillItem){
 document.getElementById('servisItem').value=prefillItem;
 Servis.onItemAutofillInterval();
 const vehicleIdPrefill=curVehicleId;
-const visibleStock=(D.partsStock||[]).filter(p=>{
+const visibleStock=servisPartsStockRead().filter(p=>{
   if(!(p&&p.name))return false;
   if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleIdPrefill);
   return !p.vehicleId||String(p.vehicleId)===String(vehicleIdPrefill);
@@ -883,63 +884,21 @@ hint.textContent=isEdit?'✏️ Mode edit: KM boleh dikoreksi lebih rendah dari 
 revertStockUsage(partId,qty){
 const n=Number(qty);
 if(!partId||!Number.isFinite(n)||n<=0)return;
-const p=D.partsStock.find(x=>x.id===partId);
-if(p)p.qty=(Number(p.qty)||0)+n;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.adjustQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk restore stok servis');
+const r=StockCommandSOT.adjustQty(partId,n,{reason:'service-usage-revert',source:'servis',journal:false});
+if(!r.ok)throw new Error(r.code||'SERVICE_STOCK_REVERT_FAILED');
 },
 async applyStockUsages(entries){
 const net=new Map();
-(Array.isArray(entries)?entries:[]).forEach(e=>{
-  const id=e&&e.partId;
-  const qty=Number(e&&e.qty);
-  if(!id||!Number.isFinite(qty)||qty<=0)return;
-  net.set(id,(net.get(id)||0)+qty);
-});
-const before=new Map();
-for(const [id] of net){
-  const p=D.partsStock.find(x=>x.id===id);
-  if(p)before.set(id,Number(p.qty)||0);
-}
-for(const [id,qty] of net){
-  if(!await Servis.applyStockUsage(id,qty)){
-    for(const [restoreId,restoreQty] of before){
-      const p=D.partsStock.find(x=>x.id===restoreId);
-      if(p)p.qty=restoreQty;
-    }
-    return false;
-  }
-}
-return true;
+(Array.isArray(entries)?entries:[]).forEach(e=>{const id=e&&e.partId;const qty=Number(e&&e.qty);if(!id||!Number.isFinite(qty)||qty<=0)return;net.set(id,(net.get(id)||0)+qty);});
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.applyDeltas!=='function')throw new Error('StockCommandSOT wajib tersedia untuk pemakaian stok servis');
+return !!StockCommandSOT.applyDeltas([...net].map(([id,qty])=>({id,delta:-qty})),{reason:'service-usage',source:'servis'}).ok;
 },
 async replaceStockUsages(oldEntries,newEntries){
-const net=new Map();
-const add=(entries,sign)=>{
-  (Array.isArray(entries)?entries:[]).forEach(e=>{
-    const id=e&&e.partId;
-    const qty=Number(e&&e.qty);
-    if(!id||!Number.isFinite(qty)||qty<=0)return;
-    net.set(id,(net.get(id)||0)+(sign*qty));
-  });
-};
-add(oldEntries,-1); add(newEntries,1);
-const before=new Map();
-for(const [id] of net){
-  const p=D.partsStock.find(x=>x.id===id);
-  if(p)before.set(id,Number(p.qty)||0);
-}
-for(const [id,delta] of net){
-  if(delta>0){
-    if(!await Servis.applyStockUsage(id,delta)){
-      for(const [restoreId,restoreQty] of before){
-        const p=D.partsStock.find(x=>x.id===restoreId);
-        if(p)p.qty=restoreQty;
-      }
-      return false;
-    }
-  }else if(delta<0){
-    Servis.revertStockUsage(id,-delta);
-  }
-}
-return true;
+const net=new Map();const add=(entries,sign)=>(Array.isArray(entries)?entries:[]).forEach(e=>{const id=e&&e.partId;const qty=Number(e&&e.qty);if(!id||!Number.isFinite(qty)||qty<=0)return;net.set(id,(net.get(id)||0)+(sign*qty));});
+add(oldEntries,-1);add(newEntries,1);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.applyDeltas!=='function')throw new Error('StockCommandSOT wajib tersedia untuk replace pemakaian stok servis');
+return !!StockCommandSOT.applyDeltas([...net].map(([id,delta])=>({id,delta:-delta})),{reason:'service-usage-replace',source:'servis'}).ok;
 },
 findMatchingStockByCatalogId(catalogId,vehicleId){
 if(!catalogId)return null;
@@ -981,8 +940,9 @@ if(!p)return true;
 if(p.qty<qty){
 if(!await askConfirm(`⚠️ Stok "${escapeHtml(p.name)}" cuma sisa ${p.qty}${p.unit?' '+p.unit:''}, dipakai ${qty}. Tetap lanjut & stok jadi minus?`,{danger:false,okText:'Ya, Lanjut'}))return false;
 }
-p.qty=(p.qty||0)-qty;
-return true;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.consume!=='function')throw new Error('StockCommandSOT wajib tersedia untuk pemakaian stok servis');
+const r=StockCommandSOT.consume(partId,qty,{reason:'service-usage',source:'servis',allowNegative:true});
+return !!r.ok;
 },
 pickPhoto(){
 const el=document.getElementById('servisPhotoInput');
@@ -1668,7 +1628,7 @@ const _runDeleteSession=async()=>{
     try{
       for(const row of beforeLogs){const cur=(D.servisLogs||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else D.servisLogs.push(_cloneSession(row));}
       for(const row of beforeTx){const cur=(D.transactions||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else D.transactions.push(_cloneSession(row));}
-      for(const [sid,qty] of beforeStock){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)row.qty=qty;}
+      if(beforeStock&&beforeStock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok sesi servis');const sr=StockCommandSOT.setQtyMap(beforeStock,{reason:'service-session-delete-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_SESSION_STOCK_ROLLBACK_FAILED');}
     }catch(restoreErr){console.error('P17: session service delete rollback failed',restoreErr);}
     console.error('P17: session service delete failed',err);
     toast('⚠️ Penghapusan sesi servis dibatalkan karena proses gagal');
@@ -1711,7 +1671,7 @@ try{
   try{
     const cur=(D.servisLogs||[]).find(x=>x&&x.id===beforeService.id);if(cur)Object.assign(cur,_cloneDelete(beforeService));else D.servisLogs.push(_cloneDelete(beforeService));
     if(beforeTxRow){const tx=(D.transactions||[]).find(x=>x&&x.id===beforeTxRow.id);if(tx)Object.assign(tx,_cloneDelete(beforeTxRow));else D.transactions.push(_cloneDelete(beforeTxRow));}
-    for(const [sid,qty] of beforeStock){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)row.qty=qty;}
+    if(beforeStock&&beforeStock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok sesi servis');const sr=StockCommandSOT.setQtyMap(beforeStock,{reason:'service-session-delete-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_SESSION_STOCK_ROLLBACK_FAILED');}
   }catch(restoreErr){console.error('P17: service delete rollback failed',restoreErr);}
   console.error('P17: service delete failed',err);
   toast('⚠️ Penghapusan servis dibatalkan karena proses gagal');
@@ -1854,7 +1814,7 @@ const _restoreMarkDomain=(servisId)=>{
   try{
     D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.id===servisId));
     D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId===servisId));
-    for(const [sid,qty] of _markStockBefore){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)row.qty=qty;}
+    if(_markStockBefore&&_markStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback pengingat servis');const sr=StockCommandSOT.setQtyMap(_markStockBefore,{reason:'service-reminder-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_REMINDER_STOCK_ROLLBACK_FAILED');}
   }catch(_markRollbackErr){console.error('V25: markServiced rollback failed',_markRollbackErr);}
 };
 const _runMarkMutation=async()=>{
@@ -1877,8 +1837,10 @@ let autoGantiStock=null;
 if(actionType==='ganti'){
 autoGantiStock=Servis._findAutoGantiStock(cat,curVehicleId);
 if(autoGantiStock&&(autoGantiStock.qty||0)>=1){
-autoGantiStock.qty=autoGantiStock.qty-1;
-entry.autoGantiStockId=autoGantiStock.id;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.consume!=='function')throw new Error('StockCommandSOT wajib tersedia untuk pemotongan stok pengingat servis');
+const sr=StockCommandSOT.consume(autoGantiStock.id,1,{reason:'service-reminder-ganti',source:'servis',journal:false,saveNow:false});
+if(sr.ok)entry.autoGantiStockId=autoGantiStock.id;
+else autoGantiStock=null;
 }else{
 autoGantiStock=null;
 }
@@ -1918,7 +1880,7 @@ const restoreBatch=()=>{
     const batchIds=new Set((D.servisLogs||[]).filter(x=>x&&x.batchId===batchId).map(x=>x.id));
     D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.batchId===batchId));
     D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId&&batchIds.has(x.servisLinkId)));
-    for(const [sid,qty] of batchStockBefore){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)row.qty=qty;}
+    if(batchStockBefore&&batchStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback batch servis');const sr=StockCommandSOT.setQtyMap(batchStockBefore,{reason:'service-batch-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_BATCH_STOCK_ROLLBACK_FAILED');}
   }catch(e){console.error('V26: batch rollback failed',e);}
 };
 const runBatch=async()=>{

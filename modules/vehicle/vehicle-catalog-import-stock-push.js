@@ -52,7 +52,9 @@ function vehicleCatalogImportStockPushRun(items, qty) {
     if (!p) continue;
     pushed++;
     if (addQty > 0) {
-      p.qty = (p.qty || 0) + addQty;
+      if (typeof StockCommandSOT === 'undefined' || !StockCommandSOT || typeof StockCommandSOT.adjustQty !== 'function') throw new Error('StockCommandSOT wajib tersedia untuk penambahan stok hasil import katalog');
+      const sr = StockCommandSOT.adjustQty(p.id, addQty, {reason:'catalog-import-initial-stock', source:'vehicle-catalog-import', journal:false, saveNow:false});
+      if (!sr.ok) throw new Error(sr.code || 'CATALOG_IMPORT_STOCK_MUTATION_FAILED');
       totalQtyAdded += addQty;
     }
   }

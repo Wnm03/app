@@ -84,13 +84,14 @@
      if(!row||row.catalogPartId||row.catalogId)return;
      const r=resolve(row,list,row.vehicleId||vehicleId,domain==='stock'?null:stockById);
      if(r.status!=='linked')return;
-     row.catalogPartId=r.item.id;
-     // Compatibility alias only; identity remains catalogPartId.
-     row.catalogId=r.item.id;
-     row.catalogPartName=r.item.partName||row.catalogPartName||'';
-     row.catalogPartOemCode=r.item.oemCode||row.catalogPartOemCode||'';
-     row.catalogCategory=r.item.category||row.catalogCategory||'';
-     row.catalogSubcategory=r.item.subcategory||row.catalogSubcategory||null;
+     const patch={catalogPartId:r.item.id,catalogId:r.item.id,catalogPartName:r.item.partName||row.catalogPartName||'',catalogPartOemCode:r.item.oemCode||row.catalogPartOemCode||'',catalogCategory:r.item.category||row.catalogCategory||'',catalogSubcategory:r.item.subcategory||null};
+     if(domain==='stock'){
+       if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function')throw new Error('StockCommandSOT wajib tersedia untuk migrasi identitas katalog stok');
+       const sr=StockCommandSOT.update(row.id,patch,{saveNow:false});
+       if(!sr.ok)throw new Error(sr.code||'STOCK_CATALOG_MIGRATION_FAILED');
+     }else{
+       Object.keys(patch).forEach(k=>{row[k]=patch[k];});
+     }
      changed.push({domain,index,catalogPartId:r.item.id,method:r.method}); applied++;
    });
    return applied;

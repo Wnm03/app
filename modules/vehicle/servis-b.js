@@ -162,7 +162,7 @@ _captureSaveRollback(){
         const cur=(D.transactions||[]).find(x=>x&&x.id===snapshot.tx.id);
         if(cur)Object.assign(cur,_clone(snapshot.tx));else D.transactions.push(_clone(snapshot.tx));
       }else if(Array.isArray(snapshot.sessionRows)&&snapshot.sessionRows.length){const ids=new Set(snapshot.sessionRows.map(x=>String(x.id)));D.transactions=(D.transactions||[]).filter(t=>!(t&&ids.has(String(t.servisLinkId))));}else if(snapshot.service&&snapshot.service.id){D.transactions=(D.transactions||[]).filter(t=>!(t&&t.servisLinkId===snapshot.service.id));}
-      for(const [id,qty] of snapshot.stock){const row=(D.partsStock||[]).find(x=>x&&x.id===id);if(row)row.qty=qty;}
+      if(snapshot.stock&&snapshot.stock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok servis');const sr=StockCommandSOT.setQtyMap(snapshot.stock,{reason:'service-edit-rollback',source:'servis-b'});if(!sr.ok)throw new Error(sr.code||'SERVICE_STOCK_ROLLBACK_FAILED');}
       if(snapshot.cat){const cur=(D.sparepartCats||[]).find(x=>x&&x.id===snapshot.cat.id);if(cur)Object.assign(cur,_clone(snapshot.cat));}
       return true;
     }catch(e){console.error('P16: service rollback failed',e);return false;}

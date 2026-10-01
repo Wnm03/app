@@ -7,6 +7,8 @@
 
 function _spCatId(suffix){const base=(typeof uid==='function')?uid():(Date.now()+'_'+Math.random().toString(36).slice(2,8));return 'sp_'+base+(suffix?'_'+suffix:'');}
 
+function _partsStockRead(){return (typeof CarNotesSOT!=='undefined'&&CarNotesSOT&&typeof CarNotesSOT.partsStock==='function')?CarNotesSOT.partsStock():(Array.isArray(D.partsStock)?D.partsStock:[]);}
+
 Object.assign(Sparepart,{
 // suggestInterval() (Sesi 295, permintaan eksplisit user "tambahkan ai
 // rekomendasi interval pergantian sparepart sesuai panduan pengguna"): isi
@@ -401,7 +403,7 @@ if(!el)return;
 // membingungkan (angka ringkasan tidak sinkron dgn daftar yg dilihat).
 // Fix: filter dulu pakai pola SAMA PERSIS renderStockList().
 const vidDash=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const partsStockDash=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vidDash));
+const partsStockDash=_partsStockRead().filter(p=>Sparepart.isPartForVehicle(p,vidDash));
 const servisLogsDash=vidDash?D.servisLogs.filter(s=>s.vehicleId===vidDash):D.servisLogs;
 const stats=Sparepart.calcDashboardStats(partsStockDash,servisLogsDash);
 const{low,habis,topPart,topCount,nilaiPersediaan,avgPrice,lastPurchase,chartData}=stats;
@@ -456,7 +458,7 @@ Sparepart.renderDashboard();
 const el=document.getElementById('stockList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-let list=D.partsStock.filter(p=>Sparepart.isPartForVehicle(p,vid));
+let list=_partsStockRead().filter(p=>Sparepart.isPartForVehicle(p,vid));
 const filterAnchor=document.getElementById('stockList');
 Sparepart.renderStockFilters(filterAnchor);
 const masterFilter=Sparepart.activeStockMasterCategoryFilter;
@@ -486,7 +488,7 @@ el.innerHTML=q
 return;
 }
 el.innerHTML=list.map((p)=>{
-const i=D.partsStock.indexOf(p);
+const i=_partsStockRead().indexOf(p);
 const cat=D.sparepartCats.find(c=>c.id===p.catId);
 const low=p.minStock>0&&p.qty<=p.minStock;
 const partLinkage=getServiceLinkage(p,vid);
@@ -595,10 +597,14 @@ const vid622s=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 vehicleId=(vid622s&&D.vehicles.some(v=>v.id===vid622s))?vid622s:null;
 }
 if(Sparepart.stockEditIdx!==null){
-Object.assign(D.partsStock[Sparepart.stockEditIdx],{name,catId,code,qty,unit,minStock,price,note,vehicleId,masterCategoryId,serviceComponentId});
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function')throw new Error('StockCommandSOT wajib tersedia untuk update stok');
+StockCommandSOT.update(D.partsStock[Sparepart.stockEditIdx].id,{name,catId,code,qty,unit,minStock,price,note,vehicleId,masterCategoryId,serviceComponentId});
 } else {
 const np={id:'st_'+Date.now(),name,catId,code,qty,unit,minStock,price,note,vehicleId,masterCategoryId,serviceComponentId};
-D.partsStock.push(np);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function')throw new Error('StockCommandSOT wajib tersedia untuk create stok');
+const createResult=StockCommandSOT.create(np);
+if(!createResult.ok)throw new Error(createResult.code||'STOCK_CREATE_FAILED');
+const createdStock=createResult.part;
 // Tahap 10 (lanjutan Tahap 9, jembatan Vehicle Catalog <-> Stok Sparepart):
 // part baru yang ditambah manual di sini (⚙️ Atur -> Stok Sparepart) JUGA
 // otomatis dibuatkan entri di Vehicle Catalog (best-effort, tidak
@@ -612,7 +618,7 @@ D.partsStock.push(np);
 if(typeof VehicleCatalogWriteSOT!=='undefined'&&VehicleCatalogWriteSOT&&typeof VehicleCatalogWriteSOT.ensurePart==='function'){
 const cat=D.sparepartCats.find(c=>c.id===catId);
 VehicleCatalogWriteSOT.ensurePart({partName:name,oemCode:code,category:(cat&&cat.name)||'Umum'},vehicleId).then(ci=>{
-if(ci){np.catalogPartId=ci.id;np.catalogId=ci.id;if(typeof VehicleStockSOT!=='undefined'&&VehicleStockSOT.apply)VehicleStockSOT.apply(np,ci);if(typeof save==='function')save();}
+if(ci){const patch={catalogPartId:ci.id,catalogId:ci.id};const ur=StockCommandSOT.update(createdStock.id,patch);if(!ur.ok)throw new Error(ur.code||'STOCK_CATALOG_LINK_FAILED');if(typeof VehicleStockSOT!=='undefined'&&VehicleStockSOT.apply)VehicleStockSOT.apply(createdStock,ci);if(typeof save==='function')save();}
 }).catch(err=>{
 if(typeof console!=='undefined'&&console&&typeof console.warn==='function')console.warn('[VehicleCatalogWriteSOT] saveStock ensurePart gagal:',err&&err.message?err.message:err);
 });
@@ -624,7 +630,8 @@ save();closeModal('stockModal');Sparepart.renderStockList();toast('✅ Stok spar
 },
 async delStock(i){
 if(!await askConfirm('Hapus item stok sparepart ini?'))return;
-D.partsStock.splice(i,1);save();Sparepart.renderStockList();toast('🗑 Dihapus');
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.remove!=='function')throw new Error('StockCommandSOT wajib tersedia untuk delete stok');
+StockCommandSOT.remove(D.partsStock[i]?.id);save();Sparepart.renderStockList();toast('🗑 Dihapus');
 },
 // removeAllStockConfirm() — fitur baru (rekomendasi audit S331, pola SAMA
 // PERSIS fix S331b utk VehicleCatalogUI.removeAllConfirm()/vehicle-catalog-ui.js):
@@ -655,7 +662,8 @@ const msg=scoped
 const ok=await askConfirm(msg,{icon:'⚠️',title:scoped?'Hapus Stok yang Tampil':'Hapus Semua Stok',okText:scoped?'Ya, Hapus':'Ya, Hapus Semua',danger:true});
 if(!ok)return;
 const removeIds=new Set(list.map(p=>p.id));
-D.partsStock=D.partsStock.filter(p=>!removeIds.has(p.id));
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk bulk delete stok');
+StockCommandSOT.replaceSnapshot(D.partsStock.filter(p=>!removeIds.has(p.id)));
 save();
 toast(scoped?('🗑 '+list.length+' item stok dihapus'):'🗑 Semua stok dihapus');
 Sparepart.renderStockList();
@@ -734,7 +742,9 @@ if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCa
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 const code=(it.barcode||it.oemCode||(prefix+'-'+String(seq).padStart(3,'0')));
-D.partsStock.push({id:'st_'+Date.now()+'_'+idx,name:it.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:it.price||0,note:'Disinkron dari Katalog Suku Cadang',catalogId:it.id,vehicleId:curVehicleId});
+const syncedStock={id:'st_'+Date.now()+'_'+idx,name:it.partName||'Part dari Katalog',catId:cat.id,code,qty:0,unit:'pcs',minStock:1,price:it.price||0,note:'Disinkron dari Katalog Suku Cadang',catalogId:it.id,vehicleId:curVehicleId};
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function')throw new Error('StockCommandSOT wajib tersedia untuk sinkron stok katalog');
+StockCommandSOT.create(syncedStock);
 addedStock++;
 });
 save();

@@ -15,6 +15,7 @@ let pendingContext=null;   // set by picker, consumed once by openStockModal
 let activeContext=null;    // context of the stock modal currently open (S2041.1: no stale leak)
 function d(id){return document.getElementById(id)}
 function vehicleId(){return typeof curVehicleId!=='undefined'?curVehicleId:null}
+function partsStockRead(){return (typeof CarNotesSOT!=='undefined'&&CarNotesSOT&&typeof CarNotesSOT.partsStock==='function')?CarNotesSOT.partsStock():(D.partsStock||[])}
 function esc(v){return typeof escapeHtml==='function'?escapeHtml(String(v??'')):String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function currentComponent(){
   return d('servisChecklistIdentityComponent')?.value || d('serviceChecklistIdentityComponent')?.value || d('stockServiceComponentId')?.value || '';
@@ -36,7 +37,7 @@ function partRows(context={}){
     if(typeof Sparepart!=='undefined'&&Sparepart&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vid);
     return !p.vehicleId||p.vehicleId===vid;
   };
-  return (D.partsStock||[]).filter(p=>p&&!p.isArchived)
+  return partsStockRead().filter(p=>p&&!p.isArchived)
     .filter(vehicleMatch)
     .filter(p=>!categoryId||(p.catId===categoryId)||(includeUnclassified&&!p.catId))
     .filter(p=>!componentId||(p.serviceComponentId===componentId)||(includeUnclassified&&!p.serviceComponentId))
@@ -57,7 +58,7 @@ function partLabel(p){
   const qty=Number(p.qty)||0;
   return `${p.name||p.partName||'Part'}${code?' · '+code:''}${Number.isFinite(qty)?' · stok '+qty:''}`;
 }
-function partById(id){return (D.partsStock||[]).find(p=>p&&p.id===id)||null}
+function partById(id){return partsStockRead().find(p=>p&&p.id===id)||null}
 function refreshSelect(selectId,context={}){
   const sel=d(selectId); if(!sel)return false;
   const selected=sel.value||'';
@@ -117,7 +118,7 @@ function injectPicker(selectId,context){
   });
   addButtonAfter(d(selectId+'_addPart'),selectId+'_editPart','✏️ Edit Part',()=>{
     const id=sel.value; if(!id||typeof Sparepart==='undefined'||!Sparepart.openStockModal)return;
-    const i=(D.partsStock||[]).findIndex(p=>p&&p.id===id); if(i>=0)Sparepart.openStockModal(i);
+    const i=partsStockRead().findIndex(p=>p&&p.id===id); if(i>=0)Sparepart.openStockModal(i);
   });
   if(selectId==='txStockItem') injectTxFilters();
 }
@@ -194,10 +195,10 @@ api.PartPicker={
   available:(context={})=>partRows({...context,onlyAvailable:true}),
   context:()=>({vehicleId:vehicleId(),categoryId:currentCategory(),componentId:currentComponent(),strict:true,includeUnclassified:false}),
   openAdd:(context={})=>{pendingContext={...api.PartPicker.context(),...context};if(typeof Sparepart!=='undefined'&&Sparepart.openStockModal)Sparepart.openStockModal(null)},
-  openEdit:(partId)=>{const i=(D.partsStock||[]).findIndex(p=>p&&p.id===partId);if(i>=0&&typeof Sparepart!=='undefined'&&Sparepart.openStockModal)Sparepart.openStockModal(i)},
+  openEdit:(partId)=>{const i=partsStockRead().findIndex(p=>p&&p.id===partId);if(i>=0&&typeof Sparepart!=='undefined'&&Sparepart.openStockModal)Sparepart.openStockModal(i)},
   audit:()=>({source:'D.partsStock',sotVersion:'S2041',archivedExcluded:true,relations:'category→component→part→vehicleCompatibility→stockStatus→purchase/usage',serviceAvailableDefault:true,purchaseAvailableDefault:false,strictFilters:true})
 };
-api.auditState=(partId)=>{const p=(D.partsStock||[]).find(x=>x&&x.id===partId);if(!p)return{ok:false,code:'PART_NOT_FOUND'};const usage=(D.servisLogs||[]).filter(s=>s&&(s.usedPartId===partId||s.catalogPartLinkedStockId===partId||s.autoGantiStockId===partId));return{ok:true,partId,qty:Number(p.qty)||0,purchaseCount:Array.isArray(p.priceHistory)?p.priceHistory.length:0,usageCount:usage.length,adjustmentCount:Array.isArray(p.adjustmentHistory)?p.adjustmentHistory.length:0,archived:!!p.isArchived,catalogLinked:!!(p.catalogPartId||p.catalogId)};};
+api.auditState=(partId)=>{const p=partsStockRead().find(x=>x&&x.id===partId);if(!p)return{ok:false,code:'PART_NOT_FOUND'};const usage=(D.servisLogs||[]).filter(s=>s&&(s.usedPartId===partId||s.catalogPartLinkedStockId===partId||s.autoGantiStockId===partId));return{ok:true,partId,qty:Number(p.qty)||0,purchaseCount:Array.isArray(p.priceHistory)?p.priceHistory.length:0,usageCount:usage.length,adjustmentCount:Array.isArray(p.adjustmentHistory)?p.adjustmentHistory.length:0,archived:!!p.isArchived,catalogLinked:!!(p.catalogPartId||p.catalogId)};};
 function isReferenced(p){
   return !!((Array.isArray(p.priceHistory)&&p.priceHistory.length)||(Array.isArray(p.txRefs)&&p.txRefs.length)||(Array.isArray(p.adjustmentHistory)&&p.adjustmentHistory.length)||p.catalogPartId||p.catalogId||(Array.isArray(D.servisLogs)&&D.servisLogs.some(s=>s&&(s.usedPartId===p.id||s.catalogPartLinkedStockId===p.id||s.autoGantiStockId===p.id)))||(Array.isArray(D.transactions)&&D.transactions.some(t=>t&&t.partStockId===p.id)));
 }
@@ -208,15 +209,18 @@ function journal(p,entry){
 }
 function archivePart(p,reason){
   if(!p||p.isArchived)return false;
-  const qb=Number(p.qty)||0;
-  journal(p,{qtyBefore:qb,qtyAfter:0,reason:'archive',source:'part-crud-s2041'});
-  p.archivedQtyBefore=qb;p.isArchived=true;p.archivedAt=new Date().toISOString();p.archivedReason=reason||'manual-delete-with-history';p.qty=0;
-  return true;
+  if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.archive!=='function')throw new Error('StockCommandSOT wajib tersedia untuk archive stok');
+  const r=StockCommandSOT.archive(p.id,reason||'manual-delete-with-history',{saveNow:false});
+  return !!r.ok;
 }
 function restorePart(id){
   const p=partById(id); if(!p||!p.isArchived)return false;
-  journal(p,{qtyBefore:Number(p.qty)||0,qtyAfter:Number(p.qty)||0,reason:'restore',source:'part-crud-s2041'});
-  p.isArchived=false;p.restoredAt=new Date().toISOString();
+  if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.restore!=='function'||typeof StockCommandSOT.setQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk restore stok');
+  const qty=Number(p.qty)||0;
+  const r=StockCommandSOT.restore(id,{saveNow:false});
+  if(!r.ok)throw new Error(r.code||'STOCK_RESTORE_FAILED');
+  const jr=StockCommandSOT.setQty(id,qty,{reason:'restore',source:'part-crud-s2041',journal:true,saveNow:false});
+  if(!jr.ok)throw new Error(jr.code||'STOCK_RESTORE_JOURNAL_FAILED');
   if(typeof save==='function')save();
   if(typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();
   api.refreshAll();
@@ -268,12 +272,23 @@ api.install=()=>{
    if(!nameOk)return r; // original rejected the save (validation); touch nothing
    const p=isEdit?D.partsStock[idx]:(D.partsStock||[]).find(x=>x&&!knownIds.has(x.id));
    if(p){
-     const oem=(d('stockOemCode')?.value||'').trim().toUpperCase();if(oem)p.oemCode=oem;
-     const componentId=d('stockServiceComponentId')?.value||activeContext?.componentId||p.serviceComponentId||'';if(componentId)p.serviceComponentId=componentId;
-     if(before&&Number(before.qty)!==Number(p.qty))journal(p,{qtyBefore:before.qty,qtyAfter:p.qty,reason:'manual-edit',source:'stock-modal'});
-     if(before&&Array.isArray(before.priceHistory)&&before.priceHistory.length){p.price=before.price;p.avgPrice=before.avgPrice;p.lastPrice=before.lastPrice;p.lastPurchaseDate=before.lastPurchaseDate;p.manualPriceNote='Harga dikendalikan oleh riwayat pembelian; ubah melalui transaksi pembelian.';}
+     if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function'||typeof StockCommandSOT.setQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk finalisasi edit stok');
+     const oem=(d('stockOemCode')?.value||'').trim().toUpperCase();
+     const componentId=d('stockServiceComponentId')?.value||activeContext?.componentId||p.serviceComponentId||'';
+     const patch={};
+     if(oem)patch.oemCode=oem;
+     if(componentId)patch.serviceComponentId=componentId;
+     if(before&&Array.isArray(before.priceHistory)&&before.priceHistory.length){
+       patch.price=before.price;patch.avgPrice=before.avgPrice;patch.lastPrice=before.lastPrice;patch.lastPurchaseDate=before.lastPurchaseDate;
+       patch.manualPriceNote='Harga dikendalikan oleh riwayat pembelian; ubah melalui transaksi pembelian.';
+     }
+     if(Object.keys(patch).length)StockCommandSOT.update(p.id,patch);
+     if(before&&Number(before.qty)!==Number(p.qty)){
+       const qr=StockCommandSOT.setQty(p.id,Number(p.qty)||0,{reason:'manual-edit',source:'stock-modal',journal:true,journalBeforeQty:Number(before.qty)||0,saveNow:false});
+       if(!qr.ok)throw new Error(qr.code||'STOCK_QTY_JOURNAL_FAILED');
+     }
      // New parts are already sent to the catalog by the original saveStock; only edits need a re-link here (no duplicate ensurePart).
-     if(isEdit&&typeof VehicleCatalogWriteSOT!=='undefined'&&VehicleCatalogWriteSOT.ensurePart){const cat=(D.sparepartCats||[]).find(c=>c&&c.id===p.catId);VehicleCatalogWriteSOT.ensurePart({partName:p.name,oemCode:oem||p.code,category:cat?.name||'Umum'},p.vehicleId||vehicleId()).then(ci=>{if(ci){p.catalogPartId=ci.id;p.catalogId=ci.id;if(typeof save==='function')save();api.refreshAll();}}).catch(()=>{});}
+     if(isEdit&&typeof VehicleCatalogWriteSOT!=='undefined'&&VehicleCatalogWriteSOT.ensurePart){const cat=(D.sparepartCats||[]).find(c=>c&&c.id===p.catId);VehicleCatalogWriteSOT.ensurePart({partName:p.name,oemCode:oem||p.code,category:cat?.name||'Umum'},p.vehicleId||vehicleId()).then(ci=>{if(ci){const r=StockCommandSOT.update(p.id,{catalogPartId:ci.id,catalogId:ci.id});if(r.ok&&typeof save==='function')save();api.refreshAll();}}).catch(()=>{});}
      if(typeof save==='function')save();
    }
    activeContext=null; pendingContext=null; api.refreshAll();
@@ -294,7 +309,7 @@ api.install=()=>{
    const snapshot=(D.partsStock||[]).map((p,i)=>({p,i})).filter(x=>x.p&&isReferenced(x.p));
    const r=await origRemoveAll.apply(this,arguments);
    let kept=0;
-   snapshot.forEach(x=>{if(!(D.partsStock||[]).includes(x.p)&&!(D.partsStock||[]).some(y=>y&&y.id===x.p.id)){archivePart(x.p,'bulk-delete-with-history');D.partsStock.push(x.p);kept++;}});
+   snapshot.forEach(x=>{if(!(D.partsStock||[]).includes(x.p)&&!(D.partsStock||[]).some(y=>y&&y.id===x.p.id)){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.restoreRows!=='function')throw new Error('StockCommandSOT wajib tersedia untuk restore stok ber-history');const rr=StockCommandSOT.restoreRows([x.p]);if(!rr.ok)throw new Error(rr.code||'STOCK_HISTORY_RESTORE_FAILED');const restored=partById(x.p.id);archivePart(restored||x.p,'bulk-delete-with-history');kept++;}});
    if(kept){if(typeof save==='function')save();if(typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();if(typeof toast==='function')toast('📦 '+kept+' part berhistory diarsipkan, tidak dihapus');api.refreshAll();}
    return r;
  };

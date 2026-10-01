@@ -23,13 +23,13 @@ function vehicleStockSotFind(stock,vehicleId,items){
 }
 function vehicleStockSotApply(stock,item){
  if(!stock||!item)return false;
- let changed=false;
- if(String(stock.catalogPartId||'')!==String(item.id)){stock.catalogPartId=item.id;changed=true;}
- // Legacy alias is intentionally preserved for old readers and migrations.
- if(String(stock.catalogId||'')!==String(item.id)){stock.catalogId=item.id;changed=true;}
- const fields={catalogPartName:item.partName||'',catalogPartOemCode:item.oemCode||'',catalogCategory:item.category||'',catalogSubcategory:item.subcategory||null};
- Object.keys(fields).forEach(k=>{if(stock[k]!==fields[k]){stock[k]=fields[k];changed=true;}});
- return changed;
+ const patch={catalogPartId:item.id,catalogId:item.id,catalogPartName:item.partName||'',catalogPartOemCode:item.oemCode||'',catalogCategory:item.category||'',catalogSubcategory:item.subcategory||null};
+ const changed=Object.keys(patch).some(k=>stock[k]!==patch[k]);
+ if(!changed)return false;
+ if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function')throw new Error('StockCommandSOT wajib tersedia untuk sinkronisasi katalog-stok');
+ const r=StockCommandSOT.update(stock.id,patch,{saveNow:false});
+ if(!r.ok)throw new Error(r.code||'STOCK_CATALOG_SYNC_FAILED');
+ return true;
 }
 async function vehicleStockSotEnsureReady(vehicleId){
  if(typeof VehicleCatalog==='undefined'||!VehicleCatalog||typeof VehicleCatalog.ensureLoaded!=='function'||typeof D==='undefined'||!Array.isArray(D.partsStock))return {ok:true,changed:0,linked:0,ambiguous:0,invalid:0};
