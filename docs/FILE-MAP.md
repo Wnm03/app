@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-01T08:27:03.953Z
+Terakhir digenerate: 2026-10-01T09:17:01.742Z
 Total file source: 422 · Total identifier global: 2928
 
 ## 1. Urutan load & ringkasan tiap file
@@ -130,7 +130,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 107 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 108 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 109 | `modules/vehicle/car-notes-performance.js` | 94 | _(tidak ada komentar header)_ |
-| 110 | `modules/vehicle/vehicle-car-notes-sot-s2071.js` | 289 | _(tidak ada komentar header)_ |
+| 110 | `modules/vehicle/vehicle-car-notes-sot-s2071.js` | 317 | _(tidak ada komentar header)_ |
 | 111 | `modules/vehicle/vehicle-active-sot-s2061.js` | 98 | _(tidak ada komentar header)_ |
 | 112 | `modules/vehicle/vehicle-core.js` | 1313 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 113 | `modules/vehicle/fuel-price-ref.js` | 231 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
@@ -144,7 +144,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 121 | `modules/vehicle/vehicle-catalog-identity-sot.js` | 51 | _(tidak ada komentar header)_ |
 | 122 | `modules/vehicle/vehicle-catalog-certification-sot.js` | 30 | _(tidak ada komentar header)_ |
 | 123 | `modules/vehicle/vehicle-part-sot.js` | 149 | _(tidak ada komentar header)_ |
-| 124 | `modules/vehicle/vehicle-service-sot.js` | 240 | _(tidak ada komentar header)_ |
+| 124 | `modules/vehicle/vehicle-service-sot.js` | 241 | _(tidak ada komentar header)_ |
 | 125 | `modules/vehicle/vehicle-service-reminder-sot.js` | 55 | SOT-4F — automatic service + reminder provisioning per vehicle model. VehicleCatalog remains the canonical part/service-rule source; vehicle.sot stores a deterministic projection for the selected vehicle/model. |
 | 126 | `modules/vehicle/service-reminder-package-sot.js` | 150 | _(tidak ada komentar header)_ |
 | 127 | `modules/vehicle/vehicle-sot-fleet-integrity.js` | 88 | _(tidak ada komentar header)_ |
@@ -189,7 +189,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 166 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 161 | _(tidak ada komentar header)_ |
 | 167 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 168 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 169 | `modules/vehicle/sparepart-servis.js` | 1184 | _(tidak ada komentar header)_ |
+| 169 | `modules/vehicle/sparepart-servis.js` | 1186 | _(tidak ada komentar header)_ |
 | 170 | `modules/vehicle/sparepart-servis-ui.js` | 958 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 171 | `modules/vehicle/part-crud-s2041.js` | 332 | _(tidak ada komentar header)_ |
 | 172 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
