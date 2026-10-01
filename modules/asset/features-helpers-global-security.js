@@ -653,7 +653,7 @@ if(!D.jalanLogs) D.jalanLogs=[];
 if(!D.kmLogs) D.kmLogs=[];
 if(!D.sparepartCats||!D.sparepartCats.length) D.sparepartCats=JSON.parse(JSON.stringify(DEFAULT_SPAREPARTS));
 D.sparepartCats.forEach(c=>{if(!c.code)c.code=codeFromName(c.name);});
-if(!D.partsStock) D.partsStock=[];
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.ensureStorage==='function')StockCommandSOT.ensureStorage();else if(!D.partsStock)throw new Error('StockCommandSOT wajib tersedia sebelum inisialisasi stok');
 if(!D.workDays) D.workDays=[];
 if(!D.payrollDismissedWeeks) D.payrollDismissedWeeks=[];
 if(!D.gajiMingguanHistory) D.gajiMingguanHistory=[];
