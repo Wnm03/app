@@ -7,7 +7,7 @@ const ROOT=path.join(__dirname,'..');
 const RUNTIME_EXCLUDE=new Set(['modules/vehicle/stock-command-sot.js']);
 function runtimeFiles(){
  const out=[];
- function walk(dir){for(const n of fs.readdirSync(dir)){const f=path.join(dir,n),r=path.relative(ROOT,f).replace(/\\/g,'/'); if(n==='tests'||n==='docs'||n==='node_modules'||n.endsWith('.min.js'))continue; const st=fs.statSync(f); if(st.isDirectory())walk(f); else if(n.endsWith('.js')&&!RUNTIME_EXCLUDE.has(r))out.push(r);}}
+ function walk(dir){for(const n of fs.readdirSync(dir)){const f=path.join(dir,n),r=path.relative(ROOT,f).replace(/\\/g,'/'); if(n==='tests'||n==='docs'||n==='node_modules'||n==='backups'||n==='.test-checkpoints'||n.endsWith('.min.js'))continue; const st=fs.statSync(f); if(st.isDirectory())walk(f); else if(n.endsWith('.js')&&!RUNTIME_EXCLUDE.has(r))out.push(r);}}
  walk(ROOT); return out;
 }
 function stripComments(s){return s.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|\s)\/\/.*$/gm,'$1');}

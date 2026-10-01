@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOT = path.resolve(__dirname, '..');
-const EXCLUDED_DIRS = new Set(['node_modules', '.git']);
+const EXCLUDED_DIRS = new Set(['node_modules', '.git', 'backups', '.test-checkpoints']);
 
 function collectJs(dir, out=[]) {
   for (const ent of fs.readdirSync(dir, {withFileTypes:true})) {

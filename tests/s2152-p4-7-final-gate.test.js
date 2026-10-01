@@ -26,9 +26,10 @@ pass('Service SOT ready API',/ensureReady:vehicleServiceSotEnsureReady/.test(B)&
 pass('Service interval writer delegates to SOT',/VehicleCarNotesSOT\.setServiceInterval\(vid,cat/.test(B));
 const versions=[...new Set((A+B+index+prod+sw).match(/s2041-1-part-sot-hardening-\d+/g)||[])];
 pass('single runtime build version',versions.length===1,versions.join(', '));
-pass('build version 2170',versions[0]==='s2041-1-part-sot-hardening-2170',versions.join(', '));
-pass('index cache bust 2170',!/\?v=(?!2170\b)\d+/.test(index));
-pass('production cache bust 2170',!/\?v=(?!2170\b)\d+/.test(prod));
+const buildNum=((versions[0]||'').match(/-(\d+)$/)||[])[1]||'';
+pass('build version has numeric suffix (version-agnostic, tolerates build bumps)',/^\d+$/.test(buildNum)&&Number(buildNum)>=2170,versions.join(', '));
+pass(`index cache bust matches build ${buildNum}`,!!buildNum&&!new RegExp('\\?v=(?!'+buildNum+'\\b)\\d+').test(index));
+pass(`production cache bust matches build ${buildNum}`,!!buildNum&&!new RegExp('\\?v=(?!'+buildNum+'\\b)\\d+').test(prod));
 pass('service master artifact present',fs.existsSync(path.join(root,'modules/vehicle/service-master-data.generated.js')));
 pass('P4.6 alias test present',fs.existsSync(path.join(root,'tests/s2152-p4-6-zero-alias-write.test.js')));
 const failed=checks.filter(x=>!x.ok);

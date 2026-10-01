@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const build=()=>fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');
+const projection=()=>fs.readFileSync(path.join(root,'modules/vehicle/service-runtime-projection-sot-s2166.js'),'utf8');
+const servisB=()=>fs.readFileSync(path.join(root,'modules/vehicle/servis-b.js'),'utf8');
+test('S2167 projection is included after taxonomy in production build',()=>{const s=build();assert.match(s,/service-runtime-projection-sot-s2166\.js/);assert.ok(s.indexOf('service-runtime-projection-sot-s2166.js')>s.indexOf('service-taxonomy-sot.js'));});
+test('S2167 projection remains read-only',()=>{const s=projection();assert.doesNotMatch(s,/D\.(serviceRuntimeProjection|runtimeProjection)\s*=/);assert.doesNotMatch(s,/D\.[A-Za-z0-9_]+\s*=|D\.[A-Za-z0-9_]+\.(?:push|splice|pop)\(/);});
+test('S2167 reminder UI consumes canonical vehicle-scoped projection',()=>{assert.match(servisB(),/ServiceRuntimeProjectionSOT\.reminderCatalog\(D,curVehicleId\)/);});
+test('S2167 history UI consumes canonical vehicle-scoped projection',()=>{assert.match(servisB(),/ServiceRuntimeProjectionSOT\.historyRows\(D,curVehicleId\)/);assert.match(servisB(),/ServiceRuntimeProjectionSOT\.historyRows\(D,vehicleId\)/);});
