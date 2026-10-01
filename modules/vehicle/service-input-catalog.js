@@ -2,7 +2,7 @@
 // Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru.
 // Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis.
 (function(){
-function groups(){return typeof SERVICE_CHECKLIST_GROUPS!=='undefined'?SERVICE_CHECKLIST_GROUPS:[];}
+function groups(){if(typeof SERVICE_CHECKLIST_GROUPS!=='undefined'&&Array.isArray(SERVICE_CHECKLIST_GROUPS))return SERVICE_CHECKLIST_GROUPS;const g=typeof globalThis!=='undefined'?globalThis:null;return g&&Array.isArray(g.__SERVICE_CHECKLIST_GROUPS__)?g.__SERVICE_CHECKLIST_GROUPS__:[];}
 function groupById(id){return groups().find(g=>g&&g.masterCategoryId===id)||null;}
 function itemById(id){
 for(const g of groups()){

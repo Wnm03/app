@@ -1,0 +1,33 @@
+S2172 REMINDER TAXONOMY BROWSER ADAPTER HARDENING
+
+BASELINE: app-main (44) / cumulative S2153-S2171
+PATCH: cumulative S2153-S2172
+BUILD: 2175
+
+ROOT CAUSE
+- S2171 fixed ServiceTaxonomySOT, but several other service/reminder consumers still read the non-exported SERVICE_CHECKLIST_GROUPS binding directly.
+- Generated master data exports canonical checklist groups as globalThis.__SERVICE_CHECKLIST_GROUPS__.
+- In a browser runtime without the direct lexical binding, those consumers could see an empty taxonomy and silently lose UI/projection data.
+
+IMPLEMENTED
+- Browser-safe canonical taxonomy fallback in five remaining consumers.
+- Added S2172 regression tests for browser-global runtime behavior.
+- Preserved one SOT; no second persistent storage owner added.
+- Accumulated all prior S2153-S2171 changes.
+
+VERIFICATION
+- Focused S2170-S2172: 12/12 PASS.
+- Full suite: 8016/8016 PASS.
+- Post-build full suite: 8016/8016 PASS.
+- SOT integrity: PASS.
+- Architecture integrity: PASS.
+- Persistence integrity: PASS.
+- S2163 legacy mapping: PASS 8/8.
+- S2165 post-migration reconciliation: PASS.
+- S2166 runtime projection: PASS.
+- S2167 production runtime wiring: PASS.
+- Build 2175: PASS.
+- app-bundle-a.min.js / app-bundle-b.min.js: node --check PASS.
+
+RELEASE CAVEAT
+- esbuild unavailable offline; bundles are valid but not minified.

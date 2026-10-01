@@ -34,7 +34,7 @@
       }
     }catch(_e){/* canonical catalog lookup unavailable; preserve legacy data */}
     try{
-      const groups=Array.isArray(global.SERVICE_CHECKLIST_GROUPS)?global.SERVICE_CHECKLIST_GROUPS:[];
+      const groups=Array.isArray(global.__SERVICE_CHECKLIST_GROUPS__)?global.__SERVICE_CHECKLIST_GROUPS__:(Array.isArray(global.SERVICE_CHECKLIST_GROUPS)?global.SERVICE_CHECKLIST_GROUPS:[]);
       for(const g of groups){
         for(const item of (Array.isArray(g&&g.items)?g.items:[])){
           if(item&&String(item.id)===String(id))return Object.assign({},item,{group:g,masterCategoryId:g.masterCategoryId});

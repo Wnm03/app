@@ -1,0 +1,15 @@
+S2173 BROWSER GLOBAL CONTRACT HARDENING
+
+BASELINE: cumulative S2153-S2172 / BUILD 2175
+PATCH: cumulative S2153-S2173
+
+PURPOSE
+- Prevent recurrence of the S2171/S2172 browser-global mismatch class.
+- Lock the generated taxonomy export contract and all known runtime taxonomy adapters.
+- Ensure ServiceRuntimeProjectionSOT remains read-only and does not become a second persistent owner.
+
+IMPLEMENTED
+- Added S2173 regression contract tests for generated taxonomy browser-global exposure.
+- Added a source-level guard covering all known taxonomy consumers.
+- Added a guard that the runtime projection remains a read-only facade.
+- No new persistent storage owner and no data migration introduced.

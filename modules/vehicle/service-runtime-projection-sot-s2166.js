@@ -46,11 +46,16 @@
     for(const raw of arr(source)){
       if(!raw||!inVehicle(raw,vid)) continue;
       const c=canonical(raw);
-      if(!c||!c.serviceComponentId) continue;
-      const key=[vid,c.masterCategoryId,c.serviceComponentId].join('|');
+      // S2171: an unresolved legacy reminder must not disappear silently.
+      // Keep it vehicle-scoped as a legacy projection; canonical identity is
+      // added when taxonomy can resolve it. This prevents data-loss-looking UI
+      // while preserving the single canonical owner for resolved components.
+      const key=c&&c.serviceComponentId
+        ?[vid,c.masterCategoryId,c.serviceComponentId].join('|')
+        :'legacy|'+vid+'|'+String(raw.id||raw.name||raw.item||'').trim().toLowerCase();
       if(seen.has(key)) continue;
       seen.add(key);
-      out.push(normalize(Object.assign({},raw,c),vid));
+      out.push(normalize(Object.assign({},raw,c||{}),vid));
     }
     return out;
   }

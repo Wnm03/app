@@ -873,7 +873,8 @@ D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&
 return Array.from(names.values());
 },
 ensureCanonicalSparepartComponentCategories(){
-  if(typeof SERVICE_CHECKLIST_GROUPS==='undefined'||!Array.isArray(SERVICE_CHECKLIST_GROUPS)||!Array.isArray(D.sparepartCats))return {ok:false,added:0,linked:0};
+  const runtimeGroups=(typeof SERVICE_CHECKLIST_GROUPS!=='undefined'&&Array.isArray(SERVICE_CHECKLIST_GROUPS))?SERVICE_CHECKLIST_GROUPS:((typeof globalThis!=='undefined'&&Array.isArray(globalThis.__SERVICE_CHECKLIST_GROUPS__))?globalThis.__SERVICE_CHECKLIST_GROUPS__:[]);
+  if(!runtimeGroups.length||!Array.isArray(D.sparepartCats))return {ok:false,added:0,linked:0};
   const stockIds=new Set([
     'oli-mesin','filter-oli','busi','rantai-keteng-tensioner','filter-kawat-oli-mesin','paking-knalpot',
     'v-belt-cvt','slide-piece-cvt','boss-pulley-drive-face','roller-cvt','kampas-kopling-ganda','mangkok-kopling-ganda','seal-driven-face','per-sentri','per-cvt','bearing-bak-cvt','busa-filter-cvt',
@@ -892,7 +893,7 @@ ensureCanonicalSparepartComponentCategories(){
     'aki':'Aki (cek/ganti)'
   };
   let added=0,linked=0;
-  SERVICE_CHECKLIST_GROUPS.forEach(g=>(g.items||[]).forEach(it=>{
+  runtimeGroups.forEach(g=>(g.items||[]).forEach(it=>{
     if(!it||!stockIds.has(it.id))return;
     let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id);
     if(!cat){

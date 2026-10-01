@@ -39,3 +39,11 @@ Validation:
 - Build PASS; minification not certified because esbuild is unavailable offline.
 
 Safety: no new persistent storage owner and no second reminder fact store introduced.
+
+
+S2171 follow-up:
+- modules/vehicle/service-taxonomy-sot.js — browser-global taxonomy fallback + legacy aliases.
+- modules/vehicle/service-runtime-projection-sot-s2166.js — preserve unresolved legacy reminder rows instead of silent drop.
+- tests/s2171-reminder-taxonomy-browser-global.test.js — browser-global and unresolved-category regression coverage.
+- Runtime bundles regenerated at build version 2174.
+- Verification: 8012/8012 full suite PASS before and after build; SOT/architecture/persistence gates PASS.

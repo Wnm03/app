@@ -1,0 +1,15 @@
+S2171 — Reminder Taxonomy Browser-Global Recovery
+
+Purpose:
+Restore canonical taxonomy visibility in the real browser bundle and prevent reminder rows from disappearing silently when legacy labels are unresolved.
+
+Canonical owner:
+ServiceTaxonomySOT -> VehicleCarNotesSOT -> ServiceRuntimeProjectionSOT -> Reminder UI
+
+No new persistent storage owner introduced.
+
+Validation:
+8012/8012 full suite PASS before build; 8012/8012 PASS after build.
+S2163/S2165/S2166/S2167 PASS.
+SOT/architecture/persistence PASS.
+Build 2174 PASS; esbuild minification not certified offline.

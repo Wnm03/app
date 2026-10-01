@@ -6,8 +6,9 @@
  */
 (function(g){'use strict';
   function rawGroups(){
-    return typeof g.SERVICE_CHECKLIST_GROUPS!=='undefined' && Array.isArray(g.SERVICE_CHECKLIST_GROUPS)
-      ? g.SERVICE_CHECKLIST_GROUPS : [];
+    if(Array.isArray(g.SERVICE_CHECKLIST_GROUPS)) return g.SERVICE_CHECKLIST_GROUPS;
+    if(Array.isArray(g.__SERVICE_CHECKLIST_GROUPS__)) return g.__SERVICE_CHECKLIST_GROUPS__;
+    return [];
   }
   function str(v){return v==null?'':String(v).trim();}
   function groups(){return rawGroups().slice();}
@@ -31,6 +32,11 @@
     'saringan udara':'filter-udara',
     'drive belt (v-belt cvt)':'v-belt-cvt',
     'drive belt v-belt cvt':'v-belt-cvt',
+    'v-belt (cvt)':'v-belt-cvt',
+    'v belt (cvt)':'v-belt-cvt',
+    'v-belt cvt':'v-belt-cvt',
+    'aki (cek/ganti)':'aki',
+    'aki cek/ganti':'aki',
     'cairan pendingin radiator (coolant)':'coolant',
     'oli gardan/transmisi':'oli-gardan',
     'oli gardan / transmisi':'oli-gardan'

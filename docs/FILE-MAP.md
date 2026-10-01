@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-01T09:17:01.742Z
+Terakhir digenerate: 2026-10-01T10:17:43.804Z
 Total file source: 422 · Total identifier global: 2928
 
 ## 1. Urutan load & ringkasan tiap file
@@ -189,14 +189,14 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 166 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 161 | _(tidak ada komentar header)_ |
 | 167 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 168 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 169 | `modules/vehicle/sparepart-servis.js` | 1186 | _(tidak ada komentar header)_ |
+| 169 | `modules/vehicle/sparepart-servis.js` | 1187 | _(tidak ada komentar header)_ |
 | 170 | `modules/vehicle/sparepart-servis-ui.js` | 958 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 171 | `modules/vehicle/part-crud-s2041.js` | 332 | _(tidak ada komentar header)_ |
 | 172 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 173 | `modules/vehicle/service-master-data.generated.js` | 9 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. |
 | 174 | `modules/vehicle/service-master-database.js` | 56 | _(tidak ada komentar header)_ |
-| 175 | `modules/vehicle/service-taxonomy-sot.js` | 93 | _(tidak ada komentar header)_ |
-| 176 | `modules/vehicle/service-runtime-projection-sot-s2166.js` | 93 | _(tidak ada komentar header)_ |
+| 175 | `modules/vehicle/service-taxonomy-sot.js` | 99 | _(tidak ada komentar header)_ |
+| 176 | `modules/vehicle/service-runtime-projection-sot-s2166.js` | 98 | _(tidak ada komentar header)_ |
 | 177 | `modules/vehicle/service-history-context-s2018.js` | 146 | _(tidak ada komentar header)_ |
 | 178 | `modules/vehicle/service-history-sot-normalizer.js` | 163 | _(tidak ada komentar header)_ |
 | 179 | `modules/vehicle/service-history-sot-review.js` | 90 | _(tidak ada komentar header)_ |

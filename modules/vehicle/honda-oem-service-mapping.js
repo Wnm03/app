@@ -3,7 +3,7 @@
 // Read-only adapter: tidak memutasi baris katalog. Mapping konservatif berbasis
 // nama part langsung; ambiguitas rem sengaja tidak ditebak.
 function _hondaRows(){
-  const C = (typeof SERVICE_CHECKLIST_GROUPS !== 'undefined') ? SERVICE_CHECKLIST_GROUPS : [];
+  const C = (typeof SERVICE_CHECKLIST_GROUPS !== 'undefined' && Array.isArray(SERVICE_CHECKLIST_GROUPS)) ? SERVICE_CHECKLIST_GROUPS : ((typeof globalThis !== 'undefined' && Array.isArray(globalThis.__SERVICE_CHECKLIST_GROUPS__)) ? globalThis.__SERVICE_CHECKLIST_GROUPS__ : []);
   const out=[]; C.forEach(g => (g.items||[]).forEach(it=>out.push(it))); return out;
 }
 function _norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}

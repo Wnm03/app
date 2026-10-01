@@ -296,7 +296,7 @@ let wrap=document.getElementById('servisComponentFilterWrap');
 if(!wrap){wrap=document.createElement('div');wrap.id='servisComponentFilterWrap';wrap.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px';beforeEl.insertAdjacentElement('beforebegin',wrap);}
 if(typeof ServisChecklist==='undefined'||typeof ServisChecklist.itemsForMasterCategory!=='function'){wrap.innerHTML='';return;}
 const mid=Servis.activeMasterCategoryFilter;
-const items=mid&&mid!==UNCATEGORIZED_FILTER_ID?ServisChecklist.itemsForMasterCategory(mid):(!mid?SERVICE_CHECKLIST_GROUPS.reduce((a,g)=>a.concat(ServisChecklist.itemsOfGroup(g)),[]):[]);
+const runtimeGroups=typeof SERVICE_CHECKLIST_GROUPS!=='undefined'&&Array.isArray(SERVICE_CHECKLIST_GROUPS)?SERVICE_CHECKLIST_GROUPS:((typeof globalThis!=='undefined'&&Array.isArray(globalThis.__SERVICE_CHECKLIST_GROUPS__))?globalThis.__SERVICE_CHECKLIST_GROUPS__:[]);const items=mid&&mid!==UNCATEGORIZED_FILTER_ID?ServisChecklist.itemsForMasterCategory(mid):(!mid?runtimeGroups.reduce((a,g)=>a.concat(ServisChecklist.itemsOfGroup(g)),[]):[]);
 const uniq=[];const seen=new Set();(items||[]).forEach(it=>{if(it&&it.id&&!seen.has(it.id)){seen.add(it.id);uniq.push(it);}});
 const selected=uniq.some(it=>it.id===Servis.activeServiceComponentFilter)?Servis.activeServiceComponentFilter:null;
 Servis.activeServiceComponentFilter=selected;
