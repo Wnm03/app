@@ -11,7 +11,7 @@ function bundleSource(){return read('app-bundle-b.min.js');}
 test('Servis stock usage is netted per physical stock id to prevent double deduction',()=>{
   const src=servisSource();
   assert.match(src,/async applyStockUsages\(entries\)\{[\s\S]*?const net=new Map\(\);/);
-  assert.match(src,/async replaceStockUsages\(oldEntries,newEntries\)\{[\s\S]*?add\(oldEntries,-1\); add\(newEntries,1\);/);
+  assert.match(src,/async replaceStockUsages\(oldEntries,newEntries\)\{[\s\S]*?add\(oldEntries,-1\);add\(newEntries,1\);[\s\S]*?StockCommandSOT\.applyDeltas/);
   assert.match(src,/if\(!await Servis\.replaceStockUsages\(\s*\[\s*\{partId:s\.usedPartId,qty:s\.usedPartQty\},\s*\{partId:s\.catalogPartLinkedStockId,qty:s\.catalogPartQty\}/);
   assert.doesNotMatch(src,/Servis\.revertStockUsage\(s\.usedPartId,s\.usedPartQty\);\s*Servis\.revertStockUsage\(s\.catalogPartLinkedStockId,s\.catalogPartQty\);\s*if\(usedPartId&&!await Servis\.applyStockUsage/);
 });

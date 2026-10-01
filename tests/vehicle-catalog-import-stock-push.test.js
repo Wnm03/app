@@ -13,9 +13,18 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 function makeCtx(extra) {
+  const globals = Object.assign({ D: { partsStock: [] } }, extra || {});
+  if (typeof globals.syncPartsStockFromCatalog === 'function') {
+    const originalSync = globals.syncPartsStockFromCatalog;
+    globals.syncPartsStockFromCatalog = (item) => {
+      const row = originalSync(item);
+      if (row && globals.D && Array.isArray(globals.D.partsStock) && !globals.D.partsStock.some(p => p && p.id === row.id)) globals.D.partsStock.push(row);
+      return row;
+    };
+  }
   return loadSource(
     ['modules/vehicle/vehicle-catalog-import-stock-push.js'],
-    Object.assign({}, extra || {}),
+    globals,
     ['VehicleCatalogImportStockPush']
   );
 }

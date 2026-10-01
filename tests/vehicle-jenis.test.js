@@ -11,10 +11,25 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
-function makeCtx() {
+// S2152: interval aktif kendaraan SEKARANG hanya dibaca dari ServiceIntervalSOT
+// (vehicle-core.js: "No legacy vehicle-level interval fallback"), bukan lagi dari
+// field legacy v.serviceIntervalKm / v.oliTransmisiIntervalKm. Test lama yang
+// meng-assert field legacy basi -> disesuaikan dgn menyuntik stub SOT kecil:
+// tabel key `${vehicleId}:${componentId||name}` -> intervalKm.
+function makeSotStub(table) {
+  return {
+    active(item, vehicleId) {
+      const key = vehicleId + ':' + ((item && (item.serviceComponentId || item.name)) || '');
+      const km = table[key];
+      return km ? { intervalKm: km } : null;
+    },
+  };
+}
+
+function makeCtx(table) {
   return loadSource(
     ['modules/vehicle/vehicle-core.js'],
-    {},
+    table ? { ServiceIntervalSOT: makeSotStub(table) } : {},
     ['vehJenisFieldsHtml', 'vehMetaText', 'VEH_JENIS_DEFAULT_INTERVAL']
   );
 }
@@ -45,8 +60,8 @@ test('vehJenisFieldsHtml() — listrik: field kapasitas baterai (vehBatteryCapac
 });
 
 test('vehJenisFieldsHtml() — mengisi ulang value dari data existing (mode edit)', () => {
-  const ctx = makeCtx();
-  const htmlMobil = ctx.vehJenisFieldsHtml('mobil', { serviceIntervalKm: 5000, oliTransmisiIntervalKm: 25000 });
+  const ctx = makeCtx({ 'v1:oli-mesin': 5000, 'v1:Oli Transmisi': 25000 });
+  const htmlMobil = ctx.vehJenisFieldsHtml('mobil', { id: 'v1' });
   assert.match(htmlMobil, /value="5000"/);
   assert.match(htmlMobil, /value="25000"/);
   const htmlListrik = ctx.vehJenisFieldsHtml('listrik', { batteryCapacityKwh: 8.2 });
@@ -67,16 +82,17 @@ test('VEH_JENIS_DEFAULT_INTERVAL — motor 3000km, mobil 5000km (beda wajar, sin
 // SEKALI, sekaligus mengizinkan penambahan additive S507.
 test('vehMetaText() — motor: format "Interval servis: X km", fallback 3000 kalau kosong', () => {
   const ctx = makeCtx();
-  const t1 = ctx.vehMetaText({ jenis: 'motor', serviceIntervalKm: 4000 });
+  const ctx1 = makeCtx({ 'v1:oli-mesin': 4000 });
+  const t1 = ctx1.vehMetaText({ id: 'v1', jenis: 'motor' });
   assert.match(t1, /^Interval servis: 4\.000 km/);
   assert.match(t1, /Belum terhubung ke Buku Aset/);
-  const t2 = ctx.vehMetaText({ serviceIntervalKm: 0 });
+  const t2 = ctx.vehMetaText({ id: 'v2' }); // tanpa nilai SOT -> fallback 3000
   assert.match(t2, /^Interval servis: 3\.000 km/);
 });
 
 test('vehMetaText() — mobil: tampilkan oli mesin & oli transmisi terpisah', () => {
-  const ctx = makeCtx();
-  const text = ctx.vehMetaText({ jenis: 'mobil', serviceIntervalKm: 5000, oliTransmisiIntervalKm: 20000 });
+  const ctx = makeCtx({ 'v1:oli-mesin': 5000, 'v1:Oli Transmisi': 20000 });
+  const text = ctx.vehMetaText({ id: 'v1', jenis: 'mobil' });
   assert.match(text, /^Oli mesin: 5\.000 km · Oli transmisi: 20\.000 km/);
   assert.match(text, /Belum terhubung ke Buku Aset/);
 });

@@ -30,6 +30,11 @@ function makeCtx(D, overrides = {}) {
     },
     ['applyStockPurchase', 'revertStockPurchase'],
   );
+  const apply = ctx.applyStockPurchase;
+  ctx.applyStockPurchase = (p, ...args) => {
+    if (p && !D.partsStock.some(x => x && x.id === p.id)) D.partsStock.push(p);
+    return apply(p, ...args);
+  };
   ctx.__aibusEvents = aibusEvents;
   return ctx;
 }

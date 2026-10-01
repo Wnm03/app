@@ -2,6 +2,7 @@
 // S2041.1 — behavior tests (fake DOM + vm) for part-crud-s2041.js. Covers audit findings C1,C2,C3,R1,R2,R3,W1,W2.
 const test=require('node:test');const assert=require('node:assert');const fs=require('fs');const vm=require('vm');const path=require('path');
 const SRC=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/part-crud-s2041.js'),'utf8');
+const STOCK_SOT_SRC=fs.readFileSync(path.join(__dirname,'..','modules/vehicle/stock-command-sot.js'),'utf8');
 
 function makeEnv(partsStock,extra){
   const els={},order=[],timers=[];
@@ -28,7 +29,7 @@ function makeEnv(partsStock,extra){
   const sb=Object.assign({D,document,console,setTimeout:(f)=>{timers.push(f);return 1},MutationObserver:function(){this.observe=()=>{};this.disconnect=()=>{}},
     curVehicleId:'v1',escapeHtml:s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'),
     save(){saves++},toast(){},askConfirm:async()=>true,Sparepart,Servis:{populatePartSelect(){}}},extra||{});
-  sb.window=sb;vm.createContext(sb);vm.runInContext(SRC,sb);
+  sb.window=sb;vm.createContext(sb);vm.runInContext(STOCK_SOT_SRC,sb);vm.runInContext(SRC,sb);
   const flush=async()=>{while(timers.length)timers.splice(0).forEach(f=>f());await Promise.resolve();};
   return{D,els,order,select,ensure,Sparepart,api:sb.PartCrudS2041,flush,sb,stats:()=>({ensureCalls,saves})};
 }

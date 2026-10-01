@@ -22,6 +22,11 @@ function makeCtx() {
     { D, codeFromName: () => 'SP', toast: () => {}, save: () => {}, escapeHtml: (s) => s },
     ['applyStockPurchase', 'revertStockPurchase']
   );
+  const apply = ctx.applyStockPurchase;
+  ctx.applyStockPurchase = (p, ...args) => {
+    if (p && !D.partsStock.some(x => x && x.id === p.id)) D.partsStock.push(p);
+    return apply(p, ...args);
+  };
   return { D, ctx };
 }
 

@@ -29,7 +29,7 @@ const NEG_TITLE = 'Stok sparepart minus';
 
 test('runDataHealthCheck: issue "Stok sparepart minus" sekarang menyertakan actions[] (Buka Stok + Koreksi ke 0)', () => {
   const D = makeD([{ id: 'st_1', name: 'Ban depan 80/90', qty: -1 }]);
-  const ctx = loadSource(['modules/shared/helper-teks.js', 'data-health-check.js'], { D, openModal: () => {} });
+  const ctx = loadSource(['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'], { D, openModal: () => {} });
   const issues = ctx.runDataHealthCheck();
   const found = issues.filter((i) => i.title === NEG_TITLE);
   assert.equal(found.length, 1);
@@ -47,7 +47,7 @@ test('runDataHealthCheck: idx di actions[] mengacu ke index ARRAY ASLI D.partsSt
     { id: 'st_ok', name: 'Oli (stok aman)', qty: 3 },
     { id: 'st_neg', name: 'ban belakang 90/90', qty: -1 },
   ]);
-  const ctx = loadSource(['modules/shared/helper-teks.js', 'data-health-check.js'], { D, openModal: () => {} });
+  const ctx = loadSource(['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'], { D, openModal: () => {} });
   const issues = ctx.runDataHealthCheck();
   const found = issues.find((i) => i.title === NEG_TITLE);
   assert.ok(found);
@@ -57,7 +57,7 @@ test('runDataHealthCheck: idx di actions[] mengacu ke index ARRAY ASLI D.partsSt
 
 test('runDataHealthCheck: TIDAK ada actions[] kalau qty tidak minus (regresi, 0 perubahan perilaku lama)', () => {
   const D = makeD([{ id: 'st_1', name: 'Kampas Rem', qty: 2 }]);
-  const ctx = loadSource(['modules/shared/helper-teks.js', 'data-health-check.js'], { D, openModal: () => {} });
+  const ctx = loadSource(['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'], { D, openModal: () => {} });
   const issues = ctx.runDataHealthCheck();
   assert.equal(issues.filter((i) => i.title === NEG_TITLE).length, 0);
 });
@@ -69,7 +69,7 @@ test('DataHealth.correctNegativeStock(idx): set qty jadi 0, panggil save() & run
   let rechecked = false;
   let rerendered = false;
   const ctx = loadSource(
-    ['modules/shared/helper-teks.js', 'data-health-check.js'],
+    ['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'],
     {
       D,
       openModal: () => {},
@@ -100,7 +100,7 @@ test('DataHealth.correctNegativeStock(idx): batal kalau askConfirm() ditolak use
   const D = makeD([{ id: 'st_1', name: 'Ban depan 80/90', qty: -1 }]);
   let saved = false;
   const ctx = loadSource(
-    ['modules/shared/helper-teks.js', 'data-health-check.js'],
+    ['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'],
     { D, openModal: () => {}, toast: () => {}, askConfirm: async () => false, save: () => { saved = true; } },
     ['DataHealth'],
   );
@@ -113,7 +113,7 @@ test('DataHealth.correctNegativeStock(idx): idx tidak ditemukan -> no-op (toast 
   const D = makeD([{ id: 'st_1', name: 'Ban depan 80/90', qty: -1 }]);
   let toasted = '';
   const ctx = loadSource(
-    ['modules/shared/helper-teks.js', 'data-health-check.js'],
+    ['modules/shared/helper-teks.js', 'modules/vehicle/stock-command-sot.js', 'data-health-check.js'],
     { D, openModal: () => {}, toast: (msg) => { toasted = msg; }, save: () => {} },
     ['DataHealth'],
   );

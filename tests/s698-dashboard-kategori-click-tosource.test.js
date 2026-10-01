@@ -55,22 +55,28 @@ function makeCtx(D) {
       escapeHtml: (s) => String(s),
       txHTML: (t) => `<div data-id="${t.id}"></div>`,
       openModal: () => {},
-      getRange: () => ({ from: new Date('2026-01-01'), to: new Date('2026-12-31') }),
+      getRange: () => ({ from: new Date('2000-01-01'), to: new Date('2100-12-31') }),
     },
     [],
   );
   return { ctx, els };
 }
 
-// Bulan berjalan (September 2026) — samakan dengan tanggal `now` sesungguhnya
-// dipakai showFilteredTx(scope='dashboard'), bukan hardcode bulan lampau.
+// Bulan berjalan dihitung dinamis dari tanggal `now` sesungguhnya yang dipakai
+// showFilteredTx(scope='dashboard') — TIDAK di-hardcode (S2152: test sebelumnya
+// gagal begitu bulan kalender berganti dari September 2026).
+const _now = new Date();
+const _pad = (n) => String(n).padStart(2, '0');
+const _ym = `${_now.getFullYear()}-${_pad(_now.getMonth() + 1)}`;
+const _prev = new Date(_now.getFullYear(), _now.getMonth() - 1, 5);
+const _prevDate = `${_prev.getFullYear()}-${_pad(_prev.getMonth() + 1)}-05`;
 const D_BASE = {
   accounts: [{ id: 'acc1', name: 'BCA' }],
   transactions: [
-    { id: 't1', accountId: 'acc1', type: 'expense', amount: 100000, date: '2026-09-05', category: 'Makan' },
-    { id: 't2', accountId: 'acc1', type: 'expense', amount: 50000, date: '2026-09-06', category: 'Transport' },
-    { id: 't3', accountId: 'acc1', type: 'income', amount: 200000, date: '2026-09-07', category: 'Makan' },
-    { id: 't4', accountId: 'acc1', type: 'expense', amount: 999000, date: '2026-08-05', category: 'Makan' },
+    { id: 't1', accountId: 'acc1', type: 'expense', amount: 100000, date: `${_ym}-01`, category: 'Makan' },
+    { id: 't2', accountId: 'acc1', type: 'expense', amount: 50000, date: `${_ym}-01`, category: 'Transport' },
+    { id: 't3', accountId: 'acc1', type: 'income', amount: 200000, date: `${_ym}-01`, category: 'Makan' },
+    { id: 't4', accountId: 'acc1', type: 'expense', amount: 999000, date: _prevDate, category: 'Makan' },
   ],
 };
 

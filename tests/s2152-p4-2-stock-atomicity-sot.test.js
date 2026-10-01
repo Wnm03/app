@@ -1,0 +1,6 @@
+'use strict';
+const test=require('node:test');const assert=require('node:assert/strict');const {loadSource}=require('./helpers/loadSource');
+function ctx(){const D={partsStock:[]};return loadSource(['modules/vehicle/stock-command-sot.js'],{D,save:()=>{}},['StockCommandSOT']);}
+test('P4.2 consume/revert use one command authority',()=>{const {D,StockCommandSOT}=ctx();StockCommandSOT.create({id:'s1',qty:5});let r=StockCommandSOT.consume('s1',2);assert.equal(r.ok,true);assert.equal(D.partsStock[0].qty,3);r=StockCommandSOT.adjustQty('s1',2,{reason:'service-revert'});assert.equal(r.ok,true);assert.equal(D.partsStock[0].qty,5);});
+test('P4.2 batch delta is atomic on missing part',()=>{const {D,StockCommandSOT}=ctx();StockCommandSOT.create({id:'s1',qty:5});const r=StockCommandSOT.applyDeltas([{id:'s1',delta:-2},{id:'missing',delta:-1}]);assert.equal(r.ok,false);assert.equal(r.rolledBack,false);assert.equal(D.partsStock[0].qty,5);});
+test('P4.2 batch delta rolls back a later insufficient stock mutation',()=>{const {D,StockCommandSOT}=ctx();StockCommandSOT.create({id:'a',qty:5});StockCommandSOT.create({id:'b',qty:1});const r=StockCommandSOT.applyDeltas([{id:'a',delta:-2},{id:'b',delta:-2}]);assert.equal(r.ok,false);assert.equal(r.rolledBack,true);assert.equal(D.partsStock[0].qty,5);assert.equal(D.partsStock[1].qty,1);});

@@ -21,7 +21,7 @@ test('SA-E: Finance→Stok __new__ lookup and creation stay vehicle-scoped', () 
 test('SA-E: Service prefill never selects stock outside active vehicle scope', () => {
   const src = read('modules/vehicle/servis.js');
   assert.match(src, /const vehicleIdPrefill=curVehicleId;/);
-  assert.match(src, /const visibleStock=\(D\.partsStock\|\|\[\]\)\.filter\(p=>\{/);
+  assert.match(src, /const visibleStock=(?:\(D\.partsStock\|\|\[\]\)|servisPartsStockRead\(\))\.filter\(p=>\{/);
   assert.match(src, /Sparepart\.isPartForVehicle\(p,vehicleIdPrefill\)/);
   assert.match(src, /!p\.vehicleId\|\|String\(p\.vehicleId\)===String\(vehicleIdPrefill\)/);
   assert.match(src, /const matchStock=visibleStock\.find\(/);

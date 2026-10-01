@@ -33,5 +33,5 @@ test('stock SOT — direct catalogPartId tidak berubah walau nama stock lama ber
  const hit=c.VehicleStockSOT.findCatalog(D.partsStock[0],'veh_1');assert.equal(hit.partName,'Nama Canonical');
 });
 test('stock SOT — apply mengisi snapshot taxonomy tanpa mengubah ledger qty/harga',()=>{
- const D=makeD();const c=ctx(D,[]);const p={id:'s1',qty:5,price:12000};const changed=c.VehicleStockSOT.apply(p,{id:'cat1',partName:'Roller',category:'CVT',subcategory:'Roller',oemCode:'22123-KZR-600'});assert.equal(changed,true);assert.equal(p.catalogPartId,'cat1');assert.equal(p.catalogCategory,'CVT');assert.equal(p.catalogSubcategory,'Roller');assert.equal(p.qty,5);assert.equal(p.price,12000);
+ const D=makeD();const c=ctx(D,[]);const p={id:'s1',qty:5,price:12000};D.partsStock.push(p);const changed=c.VehicleStockSOT.apply(p,{id:'cat1',partName:'Roller',category:'CVT',subcategory:'Roller',oemCode:'22123-KZR-600'});assert.equal(changed,true);assert.equal(p.catalogPartId,'cat1');assert.equal(p.catalogCategory,'CVT');assert.equal(p.catalogSubcategory,'Roller');assert.equal(p.qty,5);assert.equal(p.price,12000);
 });

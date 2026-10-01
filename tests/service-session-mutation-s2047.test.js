@@ -8,6 +8,7 @@ const root=path.join(__dirname,'..');
 function load(){
  const ctx={console,D:{servisLogs:[],transactions:[],vehicles:[{id:'v1',name:'V'}],partsStock:[]},uid:(()=>{let n=0;return()=>`id${++n}`})(),resolveVehicleTxCategory:()=> 'Servis',save:()=>{},ServiceEventLifecycle:{update(){},remove(){}}};
  ctx.Servis={replaceStockUsages:async()=>true};ctx.window=ctx;vm.createContext(ctx);
+ vm.runInContext(fs.readFileSync(path.join(root,'modules/vehicle/stock-command-sot.js'),'utf8'),ctx);
  vm.runInContext(fs.readFileSync(path.join(root,'modules/vehicle/service-session-mutation-s2047.js'),'utf8'),ctx);
  return ctx;
 }

@@ -29,8 +29,9 @@ function makePart(qty, price) {
 }
 
 test('CREATE — beli 5@80000 di atas stok awal 10@50000 -> qty 15, avgPrice 60000', () => {
-  const { ctx } = makeCtx();
+  const { D, ctx } = makeCtx();
   const p = makePart(10, 50000);
+  D.partsStock.push(p);
   ctx.applyStockPurchase(p, 5, 80000, '2026-08-01', 'tx1');
   assert.equal(p.qty, 15);
   assert.equal(p.avgPrice, 60000);
