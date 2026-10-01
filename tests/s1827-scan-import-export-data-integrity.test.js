@@ -31,10 +31,13 @@ test('S1827 katalog import: preview/commit melewati VehicleCatalogWriteSOT', () 
   assert.doesNotMatch(src, /VehicleCatalog\.create\(data\)/);
 });
 
-test('S1827 audit: import transaksi CSV belum idempotent (indikasi duplikasi bila file sama diimpor ulang)', () => {
+test('S1827 audit: import transaksi CSV memakai deterministic importIdempotencyKey dan deduplikasi batch', () => {
   const src = read(BACKUP);
   assert.match(src, /D\.transactions=\[\.\.\.D\.transactions,\.\.\.imported\]/);
-  assert.doesNotMatch(src, /idempotencyKey.*parseCSVImport|parseCSVImport.*idempotencyKey/);
+  assert.match(src, /tx\.importIdempotencyKey=`csv:/);
+  assert.match(src, /function _dedupeImportedTransactions\(imported\)/);
+  assert.match(src, /importIdempotencyKey/);
+  assert.match(src, /existingKeys\.has\(key\)\|\|acceptedKeys\.has\(key\)/);
 });
 
 test('S1827 audit: Shop JSON export memang subset, bukan full Shop ledger', () => {

@@ -32,7 +32,7 @@ test('S1900 import flows reject oversized/unsupported files before FileReader',(
 
 test('S1900 package exposes fast full-test and production gates',()=>{
  assert.equal(pkg.scripts['audit:production-readiness'],'node scripts/audit-production-readiness.js');
- assert.equal(pkg.scripts['test:full:fast'],'TEST_SHARDS=64 TEST_CONCURRENCY=8 TEST_SHARD_TIMEOUT_MS=90000 node scripts/run-full-test.js');
+ assert.equal(pkg.scripts['test:full:fast'],'node scripts/run-full-test.js');
 });
 
 test('S1900 release gate includes production readiness and new regression contracts',()=>{
