@@ -58,6 +58,26 @@
     components().forEach(c=>{if(set.has(c.id)&&!seen.has(c.masterCategoryId)){seen.add(c.masterCategoryId);const cat=categoryById(c.masterCategoryId);if(cat)out.push(cat);}});
     return out;
   }
+  function canonicalTarget(input){
+    const r=resolve(input||{});
+    if(!r)return null;
+    return {
+      masterCategoryId:str(r.masterCategoryId)||null,
+      serviceComponentId:str(r.serviceComponentId)||null,
+      categoryName:r.category&&str(r.category.name)||null,
+      componentName:r.component&&str(r.component.name)||null,
+      canonical:true,
+      alias:!!r.alias
+    };
+  }
+  function targetKey(input){
+    const r=canonicalTarget(input)||{};
+    return [str(r.masterCategoryId),str(r.serviceComponentId)].join('|');
+  }
+  function assertCanonical(input){
+    const r=canonicalTarget(input);
+    return {ok:!!r&&!!r.serviceComponentId,reason:r?'canonical':'unresolved',target:r};
+  }
 
 // Historical S2017 bundle contract markers retained for regression/audit compatibility.
 // function groups(){return typeof ServiceTaxonomySOT ...}
@@ -66,7 +86,7 @@
 // const canonicalTargets=st.targets.map
 // ServiceTaxonomySOT.resolve({masterCategoryId:t.masterCategoryId,serviceComponentId:t.serviceComponentId
 // const hasSot=typeof ServiceTaxonomySOT
-  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,groups,categories,categoryById,components,componentById,resolve,categoriesForComponents};
+  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,groups,categories,categoryById,components,componentById,resolve,canonicalTarget,targetKey,assertCanonical,categoriesForComponents};
   g.ServiceTaxonomySOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

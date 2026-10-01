@@ -96,6 +96,12 @@
   function componentId(cat){
     if(!cat)return null;
     const direct=cat.serviceComponentId||cat.componentId||cat.maintenanceRuleId;
+    // S2159: use the canonical taxonomy resolver whenever the production
+    // bundle has loaded it; local alias/infer logic remains compatibility-only.
+    if(root.ServiceTaxonomySOT&&typeof root.ServiceTaxonomySOT.canonicalTarget==='function'){
+      const canonical=root.ServiceTaxonomySOT.canonicalTarget({serviceComponentId:direct,name:cat.name,masterCategoryId:cat.masterCategoryId});
+      if(canonical&&canonical.serviceComponentId)return String(canonical.serviceComponentId);
+    }
     const hit=catalogIdentityByName(cat.name,direct);
     return hit?hit.id:(direct?String(direct):null);
   }

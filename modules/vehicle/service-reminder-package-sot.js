@@ -25,7 +25,19 @@
   }
   function canonicalTarget(t){
     const x=normalizeTarget(t);
-    // Canonical component is authoritative when present; never infer by fuzzy name.
+    // ServiceTaxonomySOT is the canonical identity resolver. The generated
+    // master-data fallback remains only for isolated/legacy test harnesses.
+    if(g.ServiceTaxonomySOT&&typeof g.ServiceTaxonomySOT.canonicalTarget==='function'){
+      const r=g.ServiceTaxonomySOT.canonicalTarget(x);
+      if(r){
+        x.serviceComponentId=r.serviceComponentId||x.serviceComponentId||null;
+        x.masterCategoryId=r.masterCategoryId||x.masterCategoryId||null;
+        x.componentName=x.componentName||r.componentName||null;
+        x.categoryName=x.categoryName||r.categoryName||null;
+        x.source='canonical';
+        return x;
+      }
+    }
     const masters=Array.isArray(g.__SERVICE_MASTER_DATA__)?g.__SERVICE_MASTER_DATA__:[];
     for(const group of masters){
       const items=Array.isArray(group.items)?group.items:[];

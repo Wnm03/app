@@ -213,7 +213,7 @@ getServiceFinanceOwnershipIntegrity(vehicleId){
 },
 
 getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
-const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+const logs=((typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.historyRows==='function')?ServiceRuntimeProjectionSOT.historyRows(D,vehicleId):(Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[])).filter(s=>s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
 logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
 return logs.length?logs[0].km:null;
 },
@@ -438,7 +438,7 @@ if(typeof ServiceHistorySOTReview!=='undefined'&&ServiceHistorySOTReview&&typeof
 const curKm=getVehicleKm(curVehicleId);
 const kmPerDay=estimateKmPerDay(curVehicleId);
 
-const reminderCategoryPool=(typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(curVehicleId):D.sparepartCats;
+const reminderCategoryPool=(typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.reminderCatalog==='function')?ServiceRuntimeProjectionSOT.reminderCatalog(D,curVehicleId):((typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(curVehicleId):D.sparepartCats);
 const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c)))),curVehicleId):reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c))));
 const rfMaster=Servis.activeReminderMasterCategoryFilter;
 const rfComp=Servis.activeReminderComponentFilter;
@@ -630,7 +630,7 @@ if(_cacheKey&&Servis._renderListCache&&Servis._renderListCache.key===_cacheKey)l
 if(!logs){
   const fromDay=new Date(from.getFullYear(),from.getMonth(),from.getDate());
   const toDay=new Date(to.getFullYear(),to.getMonth(),to.getDate());
-  logs=D.servisLogs.filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||Servis.effectiveHistoryActionType(s)===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+  logs=((typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.historyRows==='function')?ServiceRuntimeProjectionSOT.historyRows(D,curVehicleId):(Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId):[])).filter(s=>{const ds=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(s.date):null;return s.vehicleId===curVehicleId&&ds&&ds>=fromDay&&ds<=toDay&&(!Servis.activeActionTypeFilter||Servis.effectiveHistoryActionType(s)===Servis.activeActionTypeFilter)&&(!Servis.activeMasterCategoryFilter||(isUncategorizedFilter?Servis.resolveLogMasterCategoryId(s)==null:Servis.resolveLogMasterCategoryId(s)===Servis.activeMasterCategoryFilter))&&(!Servis.activeServiceComponentFilter||Servis.resolveLogServiceComponentId(s)===Servis.activeServiceComponentFilter);}).sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
   if(_cacheKey)Servis._renderListCache={key:_cacheKey,logs};
 }
 const totalCost=logs.reduce((s,x)=>s+(x.cost||0),0);

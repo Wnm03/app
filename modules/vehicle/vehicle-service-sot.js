@@ -152,35 +152,61 @@ function vehicleServiceSotResolveReminderRule(cat,vehicleId){
 }
 
 function getReminderCategoriesForVehicle(vehicleId){
-  const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
+  // VehicleScopedSOT is the single context boundary. Never interpret an
+  // omitted vehicleId as "all vehicles" for a vehicle-scoped reminder view.
+  const activeId=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT&&typeof VehicleScopedSOT.currentId==='function')
+    ?VehicleScopedSOT.currentId():((typeof curVehicleId!=='undefined'&&curVehicleId!=null)?String(curVehicleId):'');
+  const vid=String(vehicleId||activeId||'').trim();
+  if(!vid)return [];
+  // S2080 contract: SOT reads/migrations are keyed by `vehicleId`; normalize it to the
+  // scoped id so getServiceCategories(vehicleId)/upsertServiceCategory(vehicleId,c) stay valid.
+  vehicleId=vid;
+  const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===vid):null;
+  if(!vehicle)return [];
   const canonical=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function')
     ?VehicleCarNotesSOT.getServiceCategories(vehicleId):[];
   let cats=canonical.slice();
   if(!cats.length){
-    const legacy=(D.sparepartCats||[]).filter(c=>typeof catVisibleForVehicle==='function'?catVisibleForVehicle(c,vehicleId):true);
+    const legacy=(D.sparepartCats||[]).filter(c=>String(c&&c.vehicleId||'')===vid || !c?.vehicleId);
     if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.upsertServiceCategory==='function'){
-      legacy.forEach(c=>{if(c&&String(c.vehicleId||vehicleId)===String(vehicleId))VehicleCarNotesSOT.upsertServiceCategory(vehicleId,c);});
-      cats=VehicleCarNotesSOT.getServiceCategories(vehicleId)||[];
+      legacy.forEach(c=>{if(c&&(!c.vehicleId||String(c.vehicleId)===vid))VehicleCarNotesSOT.upsertServiceCategory(vehicleId,c);});
+      cats=VehicleCarNotesSOT.getServiceCategories(vid)||[];
     }else cats=legacy;
   }
-  const provisioned=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vehicleId):[];
-  if(!cats.length&&provisioned.length)cats=provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vehicleId,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null}));
-  const items=vehicleServiceSotVehicleItems(vehicleId);
-  return cats.map(cat=>{
-    const item=cat.catalogPartId?items.find(x=>String(x.id)===String(cat.catalogPartId)):vehicleServiceSotFindCatalogForCat(cat,vehicleId);
+  const provisioned=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vid):[];
+  if(!cats.length&&provisioned.length)cats=provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vid,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null}));
+  const items=vehicleServiceSotVehicleItems(vid);
+  const seen=new Map();
+  cats.map(cat=>{
     const out=Object.assign({},cat);
+    if(out.vehicleId&&String(out.vehicleId)!==vid)return null;
+    out.vehicleId=vid;
+    const item=out.catalogPartId?items.find(x=>String(x.id)===String(out.catalogPartId)):vehicleServiceSotFindCatalogForCat(out,vid);
     if(item){
       out.catalogPartId=item.id; out.catalogCategory=item.category||''; out.catalogSubcategory=item.subcategory||null; out.catalogPartName=item.partName||''; out.catalogPartCode=item.oemCode||'';
       if(item.serviceShowInReminder!==undefined)out.showInReminder=item.serviceShowInReminder!==false;
     }
-    const rule=vehicleServiceSotResolveReminderRule(out,vehicleId);
+    if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.canonicalTarget==='function'){
+      const target=ServiceTaxonomySOT.canonicalTarget(out);
+      if(target){
+        out.serviceComponentId=target.serviceComponentId||out.serviceComponentId||null;
+        out.masterCategoryId=target.masterCategoryId||out.masterCategoryId||null;
+        out.name=target.componentName||out.name;
+        out.canonicalTaxonomy=true;
+      }
+    }
+    const rule=vehicleServiceSotResolveReminderRule(out,vid);
     if(rule.serviceComponentId&&!out.serviceComponentId)out.serviceComponentId=rule.serviceComponentId;
     if(rule.masterCategoryId&&!out.masterCategoryId)out.masterCategoryId=rule.masterCategoryId;
     if(rule.intervalKm!==null)out.intervalKm=rule.intervalKm;
     if(rule.intervalBulan!==null)out.intervalBulan=rule.intervalBulan;
     out._serviceIntervalSource=rule.source; out._serviceIntervalOverridden=rule.intervalOverridden;
+    const key=(out.serviceComponentId?String(out.serviceComponentId):'legacy:'+String(out.id||out.name||'').trim().toLowerCase())+'|'+vid;
+    const prev=seen.get(key);
+    if(!prev||((out.vehicleId?100:0)+(out.catalogPartId?10:0)+(out.showInReminder!==false?2:0))>((prev.vehicleId?100:0)+(prev.catalogPartId?10:0)+(prev.showInReminder!==false?2:0)))seen.set(key,out);
     return out;
-  });
+  }).filter(Boolean);
+  return Array.from(seen.values());
 }
 
 // Compatibility writer: legacy callers may still address VehicleServiceSOT,
