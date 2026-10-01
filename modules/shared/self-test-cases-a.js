@@ -569,9 +569,12 @@ SewaKios.pendingUnitId=null;
 {name:'Stok Sparepart (Shop): tambah/hapus item tidak merusak D.partsStock (sementara, tidak disimpan)', fn:()=>{
 const before=D.partsStock.length;
 const dummy={id:'__selftest_stock__',name:'Tes Diagnostik',catId:null,code:'TEST-000',qty:5,unit:'pcs',minStock:1,price:1000,note:''};
-D.partsStock.push(dummy);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function'||typeof StockCommandSOT.remove!=='function')throw new Error('StockCommandSOT wajib tersedia untuk self-test stok');
+const created=StockCommandSOT.create(dummy,{saveNow:false});
+_selfTestAssert(created.ok,'StockCommandSOT harus dapat membuat item stok sementara');
 _selfTestAssert(D.partsStock.length===before+1,'D.partsStock harus bertambah 1 setelah item sementara ditambahkan');
-D.partsStock=D.partsStock.filter(p=>p.id!=='__selftest_stock__');
+const removed=StockCommandSOT.remove('__selftest_stock__',{saveNow:false});
+_selfTestAssert(removed.ok,'StockCommandSOT harus dapat menghapus item stok sementara');
 _selfTestAssert(D.partsStock.length===before,'D.partsStock harus kembali ke jumlah semula setelah item sementara dihapus');
 }},
 {name:'getBudgetUsed() & getBudgetEffectiveLimit(): agregasi anggaran total sesuai transaksi bulan berjalan', fn:()=>{

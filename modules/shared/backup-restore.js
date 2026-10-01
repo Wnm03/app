@@ -711,7 +711,7 @@ if(!D.jalanLogs)D.jalanLogs=[];
 if(!D.kmLogs)D.kmLogs=[];
 if(!D.sparepartCats||!D.sparepartCats.length)D.sparepartCats=JSON.parse(JSON.stringify(DEFAULT_SPAREPARTS));
 D.sparepartCats.forEach(c=>{if(!c.code)c.code=codeFromName(c.name);});
-if(!D.partsStock)D.partsStock=[];
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.ensureStorage==='function')StockCommandSOT.ensureStorage();else if(!D.partsStock)throw new Error('StockCommandSOT wajib tersedia sebelum inisialisasi stok');
 if(!D.workDays)D.workDays=[];
 if(!D.catatan)D.catatan={anak:[]};
 if(!D.milestones)D.milestones=[false,false,false,false,false];
@@ -1020,7 +1020,7 @@ resultEl.innerHTML=`✅ Import selesai untuk <b>${escapeHtml(vehName)}</b> (defa
 toast('✅ Import Car Notes selesai');
 }catch(err){
 // V26 G27: CSV import is atomic across both Car Notes domains.
-try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);D.transactions=JSON.parse(_v26ImportSnapshot.transactions);D.partsStock=JSON.parse(_v26ImportSnapshot.partsStock);D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
+try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);D.transactions=JSON.parse(_v26ImportSnapshot.transactions);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback import stok');StockCommandSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.partsStock));D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
 resultEl.innerHTML='❌ Gagal import: '+(err&&err.message?err.message:'format file tidak dikenali');
 }
 };

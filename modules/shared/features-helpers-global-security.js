@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2150';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2150';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2170';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2170';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -1235,7 +1235,7 @@ if(!D.jalanLogs) D.jalanLogs=[];
 if(!D.kmLogs) D.kmLogs=[];
 if(!D.sparepartCats||!D.sparepartCats.length) D.sparepartCats=JSON.parse(JSON.stringify(DEFAULT_SPAREPARTS));
 D.sparepartCats.forEach(c=>{if(!c.code)c.code=codeFromName(c.name);});
-if(!D.partsStock) D.partsStock=[];
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.ensureStorage==='function')StockCommandSOT.ensureStorage();else if(!D.partsStock)throw new Error('StockCommandSOT wajib tersedia sebelum inisialisasi stok');
 if(!D.workDays) D.workDays=[];
 if(!D.payrollDismissedWeeks) D.payrollDismissedWeeks=[];
 if(!D.gajiMingguanHistory) D.gajiMingguanHistory=[];

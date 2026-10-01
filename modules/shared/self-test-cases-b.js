@@ -110,16 +110,19 @@ D.bbmLogs=[{id:'__xss_bbm__',date:'2026-01-01',vehicleId:veh.id,km:100,liter:5,h
 renderBbmList();
 const bbmHtml=document.getElementById('bbmList')?document.getElementById('bbmList').innerHTML:'';
 _selfTestAssert(!bbmHtml.includes('<img'),'SPBU/catatan di daftar BBM harus di-escape');
-D.partsStock=[{id:'__xss_part__',name:payload,code:payload,note:payload,qty:5,unit:'pcs',minStock:1,price:0}];
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function'||typeof StockCommandSOT.remove!=='function')throw new Error('StockCommandSOT wajib tersedia untuk self-test XSS stok');
+StockCommandSOT.create({id:'__xss_part__',name:payload,code:payload,note:payload,qty:5,unit:'pcs',minStock:1,price:0},{saveNow:false});
 renderStockList();
 const stockHtml=document.getElementById('stockList')?document.getElementById('stockList').innerHTML:'';
 _selfTestAssert(!stockHtml.includes('<img'),'Nama/kode/catatan sparepart di daftar stok harus di-escape');
+StockCommandSOT.remove('__xss_part__',{saveNow:false});
 D.servisLogs=[{id:'__xss_servis__',date:'2026-01-01',vehicleId:veh.id,item:payload,note:payload,cost:1000}];
 renderServisList();
 const servisHtml=document.getElementById('servisList')?document.getElementById('servisList').innerHTML:'';
 _selfTestAssert(!servisHtml.includes('<img'),'Item/catatan servis di daftar servis kendaraan harus di-escape');
 } finally {
-D.bbmLogs=backupBbm; D.partsStock=backupParts; D.servisLogs=backupServis; curVehicleId=backupCurVeh;
+D.bbmLogs=backupBbm; D.servisLogs=backupServis; curVehicleId=backupCurVeh;
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.replaceSnapshot==='function')StockCommandSOT.replaceSnapshot(backupParts,{saveNow:false});
 renderBbmList(); renderStockList(); renderServisList();
 }
 }},
