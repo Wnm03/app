@@ -1,0 +1,18 @@
+{
+  "version": "S2153-SOT-OWNERSHIP-1",
+  "principles": ["one-owner-per-fact", "one-write-authority", "many-readers", "vehicle-scoped-by-default"],
+  "domains": [
+    {"domain":"vehicleIdentity","canonical":"Vehicle SOT","storage":"D.vehicles","writeAuthority":"Vehicle lifecycle/API","fact":true},
+    {"domain":"activeVehicleContext","canonical":"VehicleScopedSOT","storage":"runtime curVehicleId","writeAuthority":"VehicleScopedSOT.setActive","fact":false},
+    {"domain":"serviceTaxonomy","canonical":"ServiceTaxonomySOT + generated master","storage":"SERVICE_CHECKLIST_GROUPS / __SERVICE_MASTER_DATA__","writeAuthority":"master/build pipeline","fact":true},
+    {"domain":"serviceEvent","canonical":"ServiceEventSOT","storage":"D.servisLogs","writeAuthority":"service mutation path","fact":true},
+    {"domain":"serviceSession","canonical":"ServiceSessionSOT","storage":"D.servisLogs[].sessionId","writeAuthority":"service session mutation path","fact":true},
+    {"domain":"checklistExecution","canonical":"ServiceChecklistExecutionSOT","storage":"service event/session checklist fields","writeAuthority":"service/checklist mutation path","fact":true},
+    {"domain":"serviceInterval","canonical":"ServiceIntervalSOT","storage":"service master/policy fields","writeAuthority":"interval policy path","fact":true},
+    {"domain":"reminderPlan","canonical":"ServiceReminderPackageSOT","storage":"D.serviceReminderPackages","writeAuthority":"ServiceReminderPackageSOT","fact":true},
+    {"domain":"reminderDue","canonical":"derived projection","storage":"none","writeAuthority":"none","fact":false},
+    {"domain":"stock","canonical":"StockCommandSOT","storage":"D.partsStock","writeAuthority":"StockCommandSOT","fact":true},
+    {"domain":"financeTransaction","canonical":"finance transaction domain","storage":"D.transactions","writeAuthority":"finance transaction path","fact":true},
+    {"domain":"dashboard","canonical":"projection","storage":"none","writeAuthority":"none","fact":false}
+  ]
+}
