@@ -1,3 +1,4 @@
+var BillDebtPiutangCanonicalWriter=(typeof globalThis!=='undefined'&&globalThis.BillDebtPiutangCanonicalWriter)?globalThis.BillDebtPiutangCanonicalWriter:(typeof require==='function'?require('./bill-debt-piutang-canonical-writer.js'):null);
 // titipan-reconcile.js — Audit konsistensi Dana Titipan (Rekomendasi #2, S582
 // closeout; cabang Investasi ditambah S583 sesi-2; audit OwnerRegistry
 // cross-domain Rekomendasi #3 ditambah S583 sesi-4; audit staleness nama
@@ -892,7 +893,7 @@ repairOrphans() {
   const orphanKeys = new Set(this.check().orphan.map((o) => o.key));
   if (!orphanKeys.size) return { removed: 0, keys: [] };
   const before = D.debts.length;
-  D.debts = D.debts.filter((d) => {
+  const keptDebts = D.debts.filter((d) => {
     if (!d) return true;
     if (d.linkedAssetId != null && d.linkedOwnerId != null && orphanKeys.has(d.linkedAssetId + '::' + d.linkedOwnerId)) return false;
     if (d.linkedInvestmentId != null) {
@@ -901,7 +902,8 @@ repairOrphans() {
     }
     return true;
   });
-  return { removed: before - D.debts.length, keys: Array.from(orphanKeys) };
+  BillDebtPiutangCanonicalWriter.replace('debts', keptDebts);
+  return { removed: before - keptDebts.length, keys: Array.from(orphanKeys) };
 },
 
 // repairMissing() — S621, menutup gap SEBALIKNYA dari repairOrphans() (S595).
@@ -1050,7 +1052,7 @@ repairOwnerIdConsistency() {
       });
     });
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && others.includes(String(d.linkedOwnerId))) { d.linkedOwnerId = canonicalId; d.name = canonicalName; unified++; }
+      if (d && others.includes(String(d.linkedOwnerId))) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = canonicalId; d0.name = canonicalName; }); unified++; }
     });
   });
   if (unified && typeof save === 'function') save();
@@ -1077,7 +1079,7 @@ repairDebtNameStaleness() {
   D.debts.forEach((d) => {
     const key = d && String(d.id);
     if (d && Object.prototype.hasOwnProperty.call(registryNameByDebtId, key)) {
-      d.name = registryNameByDebtId[key];
+      BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.name = registryNameByDebtId[key]; });
       synced++;
     }
   });

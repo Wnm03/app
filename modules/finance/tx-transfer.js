@@ -59,8 +59,8 @@ if(!fromAcc||!toAcc){toast('⚠️ Akun asal/tujuan tidak valid — pilih ulang 
 const date=document.getElementById('trDate').value;
 const note=(document.getElementById('trNote').value||'').trim()||'Transfer';
 const transferPairId=uid();
-D.transactions.push({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`${note} → ${escapeHtml(toAcc.name)}`,date,accountId:from,transferPairId});
-D.transactions.push({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`${note} ← ${escapeHtml(fromAcc.name)}`,date,accountId:to,transferPairId});
+FinanceTxSOT.create({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`${note} → ${escapeHtml(toAcc.name)}`,date,accountId:from,transferPairId});
+FinanceTxSOT.create({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`${note} ← ${escapeHtml(fromAcc.name)}`,date,accountId:to,transferPairId});
 save();closeModal('transferModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 // Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
 // saveTransfer() SEBELUMNYA 0% emit AIBus -- beda dari saveTx()/

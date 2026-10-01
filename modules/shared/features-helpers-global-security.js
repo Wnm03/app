@@ -27,8 +27,8 @@ TorsiVehicleAPI._migrateFlatToPerVehicle(d);
 }},
 {toVersion:5,desc:'Lepas billLinkId dangling di D.transactions -- sebelum fix s353, delBillArchive() menghapus record arsip tanpa melepas billLinkId transaksi terkait, jadi transaksi lama bisa nyangkut nunjuk ke bill yang sudah tidak ada di D.bills maupun D.billsArchive. Transaksinya sendiri TIDAK dihapus, cuma link basi-nya dilepas (one-time cleanup, bill baru sejak s353 tidak akan kena ini lagi).',migrate(d){
 if(!Array.isArray(d.transactions)||!d.transactions.length)return;
-const liveIds=new Set([...(d.bills||[]),...(d.billsArchive||[])].map(b=>b.id));
-d.transactions.forEach(t=>{ if(t.billLinkId!=null&&!liveIds.has(t.billLinkId)) delete t.billLinkId; });
+const liveIds=new Set([...(d.bills||[]),...(d.billsArchive||[])].filter(b=>b&&b.id!=null).map(b=>String(b.id)));
+d.transactions.forEach(t=>{ if(t.billLinkId!=null&&!liveIds.has(String(t.billLinkId))) delete t.billLinkId; });
 }},
 {toVersion:6,desc:'GAP3-AUD-001 (Sesi 545/546, docs/BUG_REGISTRY.md): holding Investasi legacy fundSource==="titipan" yang belum pernah lewat Investment.setOwners() selalu balik ownerId literal "titipan_investor" dari Investment.getOwners() apa pun titipanOwner-nya -- 2 orang beda jadi 1 identitas kalau dibandingkan lintas holding/domain. Investment.migrateLegacyTitipanOwners() (Sesi 545) derive ownerId real per nama lewat OwnerRegistry.findOrCreate() (idempotent, 0 efek kalau dijalankan ulang -- guard di dalam fungsi itu sendiri lewat Array.isArray(h.owners), bukan lewat SCHEMA_VERSION di sini, jadi aman dipanggil lagi manual/lewat restore JSON versi lama). app-bootstrap.js dimuat PALING TERAKHIR (lihat komentar di file itu) jadi Investment/OwnerRegistry sudah pasti terdefinisi saat migrate() ini jalan.',migrate(d){
 if(typeof Investment!=='undefined'&&typeof Investment.migrateLegacyTitipanOwners==='function'){
@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2175';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2175';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2205';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2205';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -328,6 +328,20 @@ let _savePersistSeq=0;
 var _savePersistStamp=0;
 var _saveQueuedStamp=0;
 const _savePersistMetaKey='kw_v4_persist_meta';
+const _crossTabWriterGuardKey='kw_v4_writer_guard_v1';
+let _crossTabWriterToken=null;
+let _crossTabWriterTokenReady=null;
+function _newCrossTabWriterToken(){return _crossTabInstance+'|'+Date.now().toString(36)+'|'+Math.random().toString(36).slice(2);}
+async function _ensureCrossTabWriterToken(){
+ if(_crossTabWriterTokenReady)return _crossTabWriterTokenReady;
+ _crossTabWriterTokenReady=(async()=>{
+  try{
+   if(typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.get==='function')_crossTabWriterToken=await IDBStore.get(_crossTabWriterGuardKey)||null;
+  }catch(e){_crossTabWriterToken=null;}
+  return _crossTabWriterToken;
+ })();
+ return _crossTabWriterTokenReady;
+}
 function _readSavePersistMeta(){
 try{const raw=localStorage.getItem(_savePersistMetaKey);const m=raw?JSON.parse(raw):null;return m&&typeof m==='object'?{localTs:Number(m.localTs)||0,idbTs:Number(m.idbTs)||0}:{localTs:0,idbTs:0};}catch(e){return {localTs:0,idbTs:0};}
 }
@@ -355,6 +369,33 @@ _saveSnapshotVersion=-1;
 _saveSnapshotJson=null;
 return _saveStateVersion;
 }
+async function _persistAtomicSnapshotWithAux(snapshotJson,extraEntries){
+ const run=async()=>{
+  let atomicOutbox=null;
+  if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+   atomicOutbox=await FinanceEventOutbox.prepareAtomicPersistence();
+   if(atomicOutbox.overflow)throw new Error('Finance event outbox capacity exhausted; restore tidak dapat dipersist secara atomic');
+  }
+  const entries=[['kw_v4_mirror',snapshotJson]];
+  if(Array.isArray(extraEntries))extraEntries.forEach(e=>entries.push(e));
+  if(atomicOutbox)entries.push([FinanceEventOutbox.key,atomicOutbox.queue]);
+  await _ensureCrossTabWriterToken();
+  if(typeof IDBStore.setManyIfCurrent!=='function')throw new Error('IDBStore.setManyIfCurrent diperlukan untuk restore atomic');
+  const next=_newCrossTabWriterToken();
+  const ok=await IDBStore.setManyIfCurrent(entries,_crossTabWriterGuardKey,_crossTabWriterToken,next);
+  if(!ok){_markCrossTabStale();const e=new Error('Cross-tab restore conflict: writer token sudah berubah');e.code='CROSS_TAB_RESTORE_CONFLICT';throw e;}
+  _crossTabWriterToken=next;
+  if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function')FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
+  // Restore/import commits must notify other contexts just like ordinary save().
+  // CAS protects correctness; this announcement drives prompt stale-state convergence.
+  _announcePersistenceWrite();
+  return true;
+ };
+ if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')return FinanceEventOutbox.withPersistenceLock(run);
+ return run();
+}
+
+try{if(typeof globalThis!=='undefined')globalThis.__kwPersistAtomicSnapshotWithAux=_persistAtomicSnapshotWithAux;}catch(_e){ /* global export is optional in restricted runtimes */ }
 function _saveImmediate(snapshotJson){
 // S1877 TESTABILITY: optional, side-effect-free observer for diagnostic tests.
 // It observes an invocation without replacing the persistence function itself,
@@ -371,10 +412,48 @@ _saveQueuedVersion=version;
 const stamp=_nextSavePersistStamp();
 _saveQueuedStamp=stamp;
 const seq=++_savePersistSeq;
-_savePersistChain=_savePersistChain.then(()=>IDBStore.set('kw_v4_mirror',json)).then(()=>{_markSavePersistMeta('idb',stamp);_announcePersistenceWrite();}).catch(e=>{
+_savePersistChain=_savePersistChain.then(async()=>{
+const persist=async()=>{
+let atomicOutbox=null;
+if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+  atomicOutbox=await FinanceEventOutbox.prepareAtomicPersistence();
+}
+const entries=[['kw_v4_mirror',json]];
+if(atomicOutbox){
+  if(atomicOutbox.overflow)throw new Error('Finance event outbox capacity exhausted; replay pending events before persisting new atomic mutations');
+  entries.push([FinanceEventOutbox.key,atomicOutbox.queue]);
+}
+if(atomicOutbox&&typeof IDBStore.setManyIfCurrent!=='function')throw new Error('IDBStore.setManyIfCurrent diperlukan untuk multi-tab atomic persistence');
+await _ensureCrossTabWriterToken();
+const nextWriterToken=_newCrossTabWriterToken();
+const ok=typeof IDBStore.setManyIfCurrent==='function'
+  ?await IDBStore.setManyIfCurrent(entries,_crossTabWriterGuardKey,_crossTabWriterToken,nextWriterToken)
+  :false;
+if(!ok){_markCrossTabStale();throw new Error('Cross-tab persistence conflict: snapshot dibuat dari writer token lama');}
+_crossTabWriterToken=nextWriterToken;
+if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function'){
+  FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
+}
+_markSavePersistMeta('idb',stamp);_announcePersistenceWrite();
+};
+if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')
+  await FinanceEventOutbox.withPersistenceLock(persist);
+else await persist();
+// Delivery is intentionally outside the persistence lock. replay() acquires
+// the same lock itself, so a concurrent save can either finish before replay
+// reads the journal or after replay clears the already-delivered head; it can
+// no longer be erased by a stale replay clear.
+if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.replay==='function')
+  Promise.resolve(FinanceEventOutbox.replay()).catch(e=>console.error('Gagal replay finance outbox:',e));
+}).catch(e=>{
 console.error('Gagal menyimpan ke IndexedDB, fallback ke localStorage:',e);
-if(seq===_savePersistSeq){const fallbackOk=_writeLocalSnapshot(json);if(fallbackOk){_markSavePersistMeta('local',stamp);_announcePersistenceWrite();}else{_saveQueuedVersion=-1;_saveQueuedStamp=0;}}
-else console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
+// Bila ada event atomic yang masih staged, JANGAN fallback hanya mirror ke
+// localStorage: itu akan membuat state durable tanpa journal event-nya.
+// Biarkan keduanya belum committed agar retry berikutnya tetap atomic.
+const hasAtomicPending=typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.hasStaged==='function'&&FinanceEventOutbox.hasStaged();
+if(seq===_savePersistSeq&&!hasAtomicPending){const fallbackOk=_writeLocalSnapshot(json);if(fallbackOk){_markSavePersistMeta('local',stamp);_announcePersistenceWrite();}else{_saveQueuedVersion=-1;_saveQueuedStamp=0;}}
+else if(seq!==_savePersistSeq)console.warn('Fallback localStorage dilewati: snapshot IDB yang gagal sudah usang (seq '+seq+' < '+_savePersistSeq+').');
+else console.warn('Fallback localStorage dilewati: event atomic masih staged sehingga mirror dan outbox harus tetap satu commit.');
 });
 return stamp;
 }
@@ -602,8 +681,10 @@ try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal meny
 // _saveImmediate() once. Passing the already-built snapshot prevents a second
 // JSON.stringify(D) while preserving the existing persistence queue/dedupe.
 const persistStamp=_saveImmediate(json);
-const localOk=_writeLocalSnapshot(json);
-if(localOk)_markSavePersistMeta('local',persistStamp);
+// S2201: bila ada event atomic yang menunggu commit IDB, jangan menulis
+// mirror localStorage sendirian; itu dapat membuat data durable tanpa outbox.
+const _atomicPending=typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.hasStaged==='function'&&FinanceEventOutbox.hasStaged();
+if(!_atomicPending){const localOk=_writeLocalSnapshot(json);if(localOk)_markSavePersistMeta('local',persistStamp);}
 }
 // P29: flush the latest synchronous snapshot at mobile/page lifecycle boundaries.
 // visibilitychange is the primary signal on Android/iOS when an app is backgrounded;
@@ -1035,9 +1116,15 @@ let s=null, fromIdb=false, idbRaw=null, lsRaw=null;
 // Ini mencegah satu media penyimpanan rusak membuat data valid di media lain
 // tidak pernah dicoba.
 try{
-const idbVal=await IDBStore.get('kw_v4_mirror');
-if(idbVal) idbRaw=idbVal;
-}catch(e){ console.error('Gagal baca IndexedDB, coba localStorage:',e); }
+if(typeof IDBStore.getMany==='function'){
+ const _pair=await IDBStore.getMany(['kw_v4_mirror',_crossTabWriterGuardKey]);
+ if(_pair&&_pair.kw_v4_mirror) idbRaw=_pair.kw_v4_mirror;
+ if(_pair&&_pair[_crossTabWriterGuardKey]!==undefined&&_pair[_crossTabWriterGuardKey]!==null)_crossTabWriterToken=_pair[_crossTabWriterGuardKey];
+}else{
+ const idbVal=await IDBStore.get('kw_v4_mirror');
+ if(idbVal) idbRaw=idbVal;
+}
+}catch(e){ console.error('Gagal baca snapshot+writer token IndexedDB, coba localStorage:',e); }
 try{
 if(typeof localStorage!=='undefined') lsRaw=localStorage.getItem('kw_v4');
 }catch(e){ console.error('Gagal baca localStorage:',e); }
@@ -1094,6 +1181,23 @@ if(!p){
  return;
 }
 if(p){
+ // S2214: startup/load race guard. Re-read mirror + writer token in one
+ // readonly transaction immediately before applying D. A different tab may
+ // have committed after the first read; in that case prefer the fresh source
+ // and keep this context's writer token aligned so a later save cannot replay
+ // the stale startup snapshot over the winning writer.
+ if(typeof IDBStore.getMany==='function'){
+  try{
+   const _latest=await IDBStore.getMany(['kw_v4_mirror',_crossTabWriterGuardKey]);
+   const _latestRaw=_latest&&_latest.kw_v4_mirror;
+   const _latestToken=_latest&&_latest[_crossTabWriterGuardKey];
+   if(_latestRaw){
+    const _latestP=_parseStoredSnapshot(_latestRaw,'IndexedDB-startup-guard');
+    if(_latestP){p=_latestP;fromIdb=true;s=_latestRaw;}
+   }
+   if(_latestToken!==undefined&&_latestToken!==null)_crossTabWriterToken=_latestToken;
+  }catch(e){ console.error('Gagal guard startup snapshot+writer token:',e); }
+ }
  // S2096: re-check both valid sources immediately before merge.
  // A stale/partial IDB mirror must never replace a materially richer LS snapshot.
  if(idbRaw&&lsRaw){
@@ -1174,6 +1278,11 @@ if(D.pajakZakat.simTarifC2===undefined) D.pajakZakat.simTarifC2=75000;
 if(D.pajakZakat.simTarifD===undefined) D.pajakZakat.simTarifD=30000;
 if(!D.assets) D.assets=[];
 if(!D.piutang) D.piutang=[];
+// S2192: establish Bill collections BEFORE Debt.syncBill(). Legacy snapshots may
+// legitimately omit bills/billsArchive; Debt.syncBill() must be able to rebuild
+// the canonical installment bill instead of silently throwing and skipping sync.
+if(!D.bills) D.bills=[];
+if(!D.billsArchive) D.billsArchive=[];
 if(!D.inventoryTransfers) D.inventoryTransfers=[];
 if(!D.productMovementOverride) D.productMovementOverride={};
 // Sesi 378 — Purchase Order (record beli dari supplier, module Inventory
@@ -1183,7 +1292,9 @@ if(!D.purchaseOrders) D.purchaseOrders=[];
 // Pola migration guard SAMA PERSIS purchaseOrders di atas.
 if(!D.productStockCorrections) D.productStockCorrections=[];
 if(!D.debts) D.debts=[];
-D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){void e;}});
+// S2192: run the debt↔bill canonical reconciliation only after both collections
+// exist. Debt.syncBill() is idempotent and repairs the expected bill projection.
+D.debts.forEach(d=>{try{if(typeof Debt!=='undefined')Debt.syncBill(d);}catch(e){console.error('Startup Debt.syncBill gagal:',e);}});
 if(!D.renovProjects) D.renovProjects=[];
 if(!D.sewaKios) D.sewaKios={units:[]};
 if(!D.sewaKios.units) D.sewaKios.units=[];
@@ -1216,8 +1327,6 @@ if(D.profile&&D.profile.tanggalLahir===undefined) D.profile.tanggalLahir=null;
 if(D.profile&&D.profile.statusKawin===undefined) D.profile.statusKawin=false;
 if(D.profile&&D.profile.tanggungan===undefined) D.profile.tanggungan=0;
 if(D.profile&&D.profile.statusPekerjaan===undefined) D.profile.statusPekerjaan=null;
-if(!D.bills) D.bills=[];
-if(!D.billsArchive) D.billsArchive=[];
 if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',modelId:'vario-125'}];
 
 if(!D.torsiChecklist||typeof D.torsiChecklist!=='object'||Array.isArray(D.torsiChecklist)) D.torsiChecklist={};

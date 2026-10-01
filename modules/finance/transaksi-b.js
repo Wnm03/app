@@ -365,7 +365,7 @@ if(tenor===1){
 // sana). applyTxStockFromTx/applyTxShopStockFromTx/WorthIt.applyBuyLink() juga sengaja
 // TIDAK dipanggil di sini (belum ada transaksi nyata utk ditautkan) -- sama seperti alur
 // Tagihan biasa (bukan lewat form Transaksi), efek samping itu baru relevan saat dibayar.
-if(existingTx) D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
 const billId=uid();
 const txCicilanIsKprNewEl=document.getElementById('txCicilanIsKpr');
 const isKprNew=txCicilanIsKprNewEl?txCicilanIsKprNewEl.checked:false;
@@ -373,7 +373,7 @@ const txCicilanSharedOtherNameNewEl=document.getElementById('txCicilanSharedOthe
 const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAutoPiutang');
 const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
 const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
-D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan',sisaTenor:1,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan',sisaTenor:1,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
@@ -382,7 +382,7 @@ if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"c
 toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
 return;
 }
-if(existingTx) D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
 const billId=uid();
 const sisaTenor=tenor-1;
 if(sisaTenor>0){
@@ -396,12 +396,12 @@ const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAu
 const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
 const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
 // BUGFIX: sama seperti cabang edit di atas -- totalAmount = perBulan (total/periode), bukan total harga.
-D.bills.push({id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
 }
 const _cicilanNewTx={id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE cicilan (1/3).
 if(deductionOwnerIdVal)_cicilanNewTx.deductionOwnerId=deductionOwnerIdVal;
-D.transactions.push(_cicilanNewTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cicilanNewTx); else D.transactions.push(_cicilanNewTx);
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -431,16 +431,16 @@ const dueNext=new Date(due);
 if(freq==='bulanan')_amc015(dueNext,1); // BUG-015 (s406): clamp overflow tanggal
 else if(freq==='mingguan')dueNext.setDate(dueNext.getDate()+7);
 else if(freq==='tahunan')dueNext.setFullYear(dueNext.getFullYear()+1);
-if(existingTx) D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
 const billId=uid();
 const alreadyExists=D.bills.find(b=>b.name===nama&&b.kind==='langganan');
 if(!alreadyExists){
-D.bills.push({id:billId,name:nama,amount:amt,nextDue:dueNext.toISOString().split('T')[0],freq,sisaTenor:null,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'langganan'});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:amt,nextDue:dueNext.toISOString().split('T')[0],freq,sisaTenor:null,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'langganan'});
 }
 const _langgananNewTx={id:billId+1,type:'expense',amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'langganan',note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE langganan (2/3).
 if(deductionOwnerIdVal)_langgananNewTx.deductionOwnerId=deductionOwnerIdVal;
-D.transactions.push(_langgananNewTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_langgananNewTx); else D.transactions.push(_langgananNewTx);
 applyTxStockFromTx(nama,billId+1,date,amt,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -561,7 +561,7 @@ if(!hitungKasVal)newTx.hitungKas=false;
 // pertama (push newTx) supaya bisa di-rollback total kalau ADA side-effect
 // sesudahnya (langkah 4-13 audit s628) yang throw.
 _txCreateSnapshot=JSON.stringify(D);
-D.transactions.push(newTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(newTx); else D.transactions.push(newTx);
 applyTxTitipanLinkageOnSave(newTx,null);
 WorthIt.applyBuyLink(savedTxId);
 if(typeof SewaKios!=='undefined')SewaKios.applyPaymentLink(savedTxId);
@@ -656,7 +656,7 @@ const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.ser
 if(_serviceMutationTouched){
   try{
     if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
-    if(_serviceEditSnapshot.transactions!==null)D.transactions=JSON.parse(_serviceEditSnapshot.transactions);
+    if(_serviceEditSnapshot.transactions!==null){const _rows=JSON.parse(_serviceEditSnapshot.transactions);if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.replaceSnapshot(_rows); else D.transactions=_rows;}
     if(_serviceEditSnapshot.partsStock!==null){const _stockSnap=JSON.parse(_serviceEditSnapshot.partsStock);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok transaksi servis');StockCommandSOT.replaceSnapshot(_stockSnap);}
     if(_serviceEditSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_serviceEditSnapshot.sparepartCats);
   }catch(_serviceRollbackErr){console.error('V25: Finance->Service rollback failed',_serviceRollbackErr);}

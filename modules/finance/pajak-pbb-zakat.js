@@ -92,7 +92,7 @@ if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",actio
 refreshBillEverywhere(); PBB.renderBillStatus();
 toast('✅ Tagihan PBB diperbarui: '+fmtFull(jumlah)+' jatuh tempo '+due);
 } else {
-D.bills.push({id:uid(),name:nama,amount:jumlah,nextDue:due,freq:'tahunan',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Kalkulator PBB',kind:'tagihan',pbbLink:asset?asset.id:true});
+BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name:nama,amount:jumlah,nextDue:due,freq:'tahunan',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Kalkulator PBB',kind:'tagihan',pbbLink:asset?asset.id:true});
 const _newPbbBillId=D.bills[D.bills.length-1].id;
 save();
 if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"create",billId:_newPbbBillId,amount:jumlah,source:"pbb"});
@@ -180,7 +180,7 @@ const jumlah=parsePzNum(jumlahStr);
 if(jumlah<=0){toast('⚠️ Belum ada kewajiban zakat untuk dicatat');return;}
 if(!await askConfirm('Catat pembayaran zakat '+(jenis==='penghasilan'?'penghasilan':'maal')+' sebesar '+fmtFull(jumlah)+'? Otomatis tercatat sebagai pengeluaran di Keuangan.',{danger:false,okText:'Ya, Catat',icon:'🕌'}))return;
 D.pajakZakat.zakatLog.unshift({id:uid(),jenis,tanggal:new Date().toISOString().slice(0,10),jumlah});
-D.transactions.push({id:uid(),type:'expense',amount:jumlah,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:'Zakat '+(jenis==='penghasilan'?'Penghasilan':'Maal'),date:new Date().toISOString().slice(0,10)});
+const zakatTx={id:uid(),type:'expense',amount:jumlah,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:'Zakat '+(jenis==='penghasilan'?'Penghasilan':'Maal'),date:new Date().toISOString().slice(0,10)}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(zakatTx); else D.transactions.push(zakatTx);
 if(jenis==='maal')D.pajakZakat.haulMaalMulai=new Date().toISOString().slice(0,10);
 save();
 // Sesi C-lanjutan: catatDibayar() menulis D.pajakZakat.zakatLog + D.transactions

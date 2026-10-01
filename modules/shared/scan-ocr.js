@@ -885,7 +885,7 @@ const dueStr=due.toISOString().slice(0,10);
 const amtLabel=typeof fmt==='function'?fmt(amt):('Rp'+amt);
 const ok=await askConfirm('Terdeteksi metode bayar nanti/bulan depan ('+paylater.label+') senilai '+amtLabel+'. Tambahkan pengingat jatuh tempo '+dueStr+' ke 🧾 Tagihan?',{icon:'📅',okText:'✅ Ya, Tambahkan',cancelText:'Tidak Usah',danger:false});
 if(!ok)return;
-D.bills.push({id:uid(),name:'Bayar '+paylater.label,amount:Math.round(amt),nextDue:dueStr,freq:'sekali',category:'',subcategory:'',accountId:(D.accounts&&D.accounts[0])?D.accounts[0].id:null,note:'Otomatis dari hasil scan — cek nominal & tanggal sebelum jatuh tempo',kind:'tagihan',shared:false,sharedPct:null,totalAmount:null});
+BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name:'Bayar '+paylater.label,amount:Math.round(amt),nextDue:dueStr,freq:'sekali',category:'',subcategory:'',accountId:(D.accounts&&D.accounts[0])?D.accounts[0].id:null,note:'Otomatis dari hasil scan — cek nominal & tanggal sebelum jatuh tempo',kind:'tagihan',shared:false,sharedPct:null,totalAmount:null});
 save();
 if(typeof refreshBillEverywhere==='function')refreshBillEverywhere();
 toast('🔔 Pengingat tagihan bulan depan ditambahkan (🧾 Tagihan)');
@@ -1110,7 +1110,7 @@ importSelected(){
 const selected=this.items.filter(it=>it.checked);
 if(!selected.length){toast('⚠️ Pilih minimal 1 item dulu');return;}
 selected.forEach(it=>{
-D.bills.push({
+BillDebtPiutangCanonicalWriter.add('bills',{
 id:uid(),
 name:it.nama,
 amount:it.nominal,

@@ -427,30 +427,25 @@ oliTrans=transEl?(parseFloat(transEl.value)||null):null;
 const vehAssetLinkEl=document.getElementById('vehAssetId');
 const linkedAsset=vehAssetLinkEl?resolveVehicleAssetLink(vehAssetLinkEl.value):null;
 if(vehEditIdx!==null&&vehEditIdx!==undefined){
-const v=D.vehicles[vehEditIdx];
-if(!v){vehEditIdx=null;return;}
-v.name=name;v.emoji=emoji;v.jenis=jenis;v.ownership=ownership;
+if(typeof VehicleCanonicalWriter==='undefined')throw new Error('VehicleCanonicalWriter unavailable');
+const editIdx=vehEditIdx;
+const v=VehicleCanonicalWriter.updateByIndex(editIdx,current=>{
+if(!current)throw new Error('vehicle not found');
+current.name=name;current.emoji=emoji;current.jenis=jenis;current.ownership=ownership;
+if(jenis==='listrik'&&batteryCapacity)current.batteryCapacityKwh=batteryCapacity;else delete current.batteryCapacityKwh;
+if(capacityKg)current.capacityKg=capacityKg;else delete current.capacityKg;
+if(capacityM3)current.capacityM3=capacityM3;else delete current.capacityM3;
+if(fuelTankCapacityLiter)current.fuelTankCapacityLiter=fuelTankCapacityLiter;else delete current.fuelTankCapacityLiter;
+if(linkedAsset)current.assetId=linkedAsset.id;else delete current.assetId;
+return current;
+});
 if(jenis==='motor'&&legacyServiceMode&&typeof ServiceLegacyMaintenance!=='undefined')ServiceLegacyMaintenance.activate(v.id,{source:'vehicle-edit'});
 if((jenis!=='motor'||!legacyServiceMode)&&v.serviceMaintenanceProfile&&v.serviceMaintenanceProfile.mode==='legacy')delete v.serviceMaintenanceProfile;
-if(jenis==='listrik'&&batteryCapacity)v.batteryCapacityKwh=batteryCapacity;else delete v.batteryCapacityKwh;
-if(capacityKg)v.capacityKg=capacityKg;else delete v.capacityKg;
-if(capacityM3)v.capacityM3=capacityM3;else delete v.capacityM3;
-if(fuelTankCapacityLiter)v.fuelTankCapacityLiter=fuelTankCapacityLiter;else delete v.fuelTankCapacityLiter;
+// Opsi A — auto-create Asset (lihat AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-BUKU-ASET.md, keputusan produk "Opsi A"): kendaraan LAMA yang diedit & ownership-nya SELF tapi belum tertaut ke Buku Aset sama sekali otomatis dapat 1 entry Buku Aset baru juga, sama seperti kendaraan baru. Ini sekaligus jadi jalur backfill kendaraan lama tanpa migrasi massal. TIDAK auto-create kalau user barusan pilih link manual — itu tetap prioritas eksplisit user.
 const existingTemplate=v.maintenanceTemplate&&v.maintenanceTemplate.vehicleType===jenis?v.maintenanceTemplate:null;
 const selectedTemplate=_readVehMaintenanceTemplateSelection();
 if(selectedTemplate)v.maintenanceTemplate=selectedTemplate;else if(!existingTemplate&&typeof VehicleMaintenanceTemplateEngine!=='undefined')v.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:v.modelId,modelName:v.modelDisplayName||v.name,year:v.modelYear,variant:v.modelVariant,engineCc:v.modelEngineCc,catalogId:v.catalogId||null,vehicleId:v.id});
-if(linkedAsset)v.assetId=linkedAsset.id;else delete v.assetId;
-// Opsi A — auto-create Asset (lihat AUDIT-SYNC-ASET-KEPEMILIKAN-SENDIRI-KE-
-// BUKU-ASET.md, keputusan produk "Opsi A"): kendaraan LAMA yang diedit &
-// ownership-nya SELF tapi belum tertaut ke Buku Aset sama sekali (v.assetId
-// kosong setelah baris di atas -- termasuk kendaraan sebelum fitur ini ada)
-// otomatis dapat 1 entry Buku Aset baru juga, sama seperti kendaraan baru
-// (lihat blok sama persis di create branch di bawah). Ini SEKALIGUS jadi
-// jalur "backfill" kendaraan lama tanpa migrasi massal -- cukup buka &
-// simpan lagi modal Kelola Kendaraan (didorong lewat pengingat data-health-
-// check "Kendaraan SELF belum tercatat nilainya"). TIDAK auto-create kalau
-// user barusan pilih link manual (v.assetId sudah keisi dari linkedAsset di
-// atas) -- itu tetap prioritas eksplisit user.
+// Opsi A — auto-create Asset / provisioning tetap memakai vehicle object yang sudah canonicalized.
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(v);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(v.id,{vehicle:v});
 if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function'&&jenis!=='listrik'){
@@ -461,12 +456,7 @@ if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIn
 _autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
 save();
-// Sesi C (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7): CRUD kendaraan
-// sendiri belum emit 'vehicle.updated' sebelum sesi ini (event ini SUDAH
-// ada, dipancarkan dari sisi servis -- sparepart-servis-b.js/
-// Servis.markServiced() -- tapi tambah/edit/hapus kendaraan itu sendiri
-// belum). Pola & nama event REPLIKASI persis dari titik yang sudah ada,
-// 0 event baru diciptakan.
+// Sesi C (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7): CRUD kendaraan sendiri sudah emit 'vehicle.updated' pada create/edit/delete. Pola & nama event direplikasi dari titik servis yang sudah ada.
 if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"edit",vehicleId:v.id});
 renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
@@ -484,7 +474,8 @@ const selectedTemplateNew=_readVehMaintenanceTemplateSelection();
 if(selectedTemplateNew)newVeh.maintenanceTemplate=selectedTemplateNew;
 else if(typeof VehicleMaintenanceTemplateEngine!=='undefined')newVeh.maintenanceTemplate=await VehicleMaintenanceTemplateEngine.build({vehicleType:jenis,name,modelId:newVeh.modelId,modelName:newVeh.modelDisplayName||name,year:newVeh.modelYear,variant:newVeh.modelVariant,engineCc:newVeh.modelEngineCc,catalogId:newVeh.catalogId||null,vehicleId:newVeh.id});
 if(linkedAsset)newVeh.assetId=linkedAsset.id;
-D.vehicles.push(newVeh);
+if(typeof VehicleCanonicalWriter==='undefined')throw new Error('VehicleCanonicalWriter unavailable');
+VehicleCanonicalWriter.create(newVeh);
 if(jenis==='motor'&&legacyServiceMode&&typeof ServiceLegacyMaintenance!=='undefined')ServiceLegacyMaintenance.activate(newId,{source:'vehicle-create'});
 if(typeof VehicleSOTProvisioning!=='undefined')await VehicleSOTProvisioning.provisionVehicle(newVeh);
 if(typeof VehicleServiceReminderSOT!=='undefined')await VehicleServiceReminderSOT.provision(newVeh.id,{vehicle:newVeh});
@@ -580,7 +571,8 @@ async function delVehicle(i){
 if(D.vehicles.length<=1){toast('⚠️ Minimal 1 kendaraan');return;}
 if(!await askConfirm('Hapus kendaraan ini? Catatan BBM/servis terkait tetap ada.'))return;
 const deletedId=D.vehicles[i]&&D.vehicles[i].id;
-D.vehicles.splice(i,1);save();
+if(typeof VehicleCanonicalWriter==='undefined')throw new Error('VehicleCanonicalWriter unavailable');
+VehicleCanonicalWriter.removeAt(i);save();
 // Sesi C: jalur hapus kendaraan -- tandai deletedId (pola sama persis
 // AIBus.emit("asset.updated",{deletedId:id}) di modules/asset/aset.js).
 if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"delete",deletedId});
@@ -626,7 +618,7 @@ bill.nextDue=due;
 save();refreshBillEverywhere();renderSptLinkStatus();
 toast('✅ Reminder Tagihan SPT Tahunan diperbarui: batas lapor '+fmtDateID(due));
 } else {
-D.bills.push({id:uid(),name:'Lapor SPT Tahunan Orang Pribadi',amount:0,nextDue:due,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Estimasi PPh 21 — batas lapor, bukan pembayaran',kind:'tagihan',taxLink:{key}});
+BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name:'Lapor SPT Tahunan Orang Pribadi',amount:0,nextDue:due,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Estimasi PPh 21 — batas lapor, bukan pembayaran',kind:'tagihan',taxLink:{key}});
 save();refreshBillEverywhere();renderSptLinkStatus();
 toast('✅ Reminder Tagihan SPT Tahunan dibuat, batas lapor '+fmtDateID(due));
 }
@@ -721,7 +713,7 @@ bill.amount=biaya;bill.nextDue=due;bill.name=label+' - '+v.name;
 save();refreshBillEverywhere();renderVehTaxLinkStatus();
 toast('✅ Reminder Tagihan '+label+' diperbarui: '+fmtFull(biaya)+' jatuh tempo '+due);
 } else {
-D.bills.push({id:uid(),name:label+' - '+v.name,amount:biaya,nextDue:due,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Pajak Kendaraan',kind:'tagihan',taxLink:{key}});
+BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name:label+' - '+v.name,amount:biaya,nextDue:due,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Pajak Kendaraan',kind:'tagihan',taxLink:{key}});
 save();refreshBillEverywhere();renderVehTaxLinkStatus();
 toast('✅ Reminder Tagihan '+label+' dibuat, aktif di menu Tagihan');
 }
@@ -749,7 +741,7 @@ if(!v||!cfg)return;
 const biaya=v[cfg.biayaKey]||0;
 if(biaya<=0){toast('⚠️ Isi dulu estimasi biaya '+cfg.label+' lewat ✏️');return;}
 if(!await askConfirm('Bayar '+cfg.label+' untuk '+v.name+' sebesar '+fmtFull(biaya)+'? Otomatis tercatat sebagai pengeluaran di Keuangan & jadwal diperbarui.',{danger:false,okText:'Ya, Bayar',icon:'🚦'}))return;
-D.transactions.push({id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:new Date().toISOString().split('T')[0]});
+const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:new Date().toISOString().split('T')[0]}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else D.transactions.push(vehBillTx);
 const base=v[cfg.tglKey]?new Date(v[cfg.tglKey]):new Date();
 cfg.advance(base);
 v[cfg.tglKey]=base.toISOString().split('T')[0];
@@ -831,7 +823,7 @@ bill.amount=biaya;bill.nextDue=s.tglAkhir;bill.name=name;
 save();refreshBillEverywhere();renderSimLinkStatus();
 toast('✅ Reminder Tagihan SIM diperbarui, jatuh tempo '+s.tglAkhir);
 } else {
-D.bills.push({id:uid(),name,amount:biaya,nextDue:s.tglAkhir,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari data SIM',kind:'tagihan',taxLink:{key}});
+BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name,amount:biaya,nextDue:s.tglAkhir,freq:'sekali',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari data SIM',kind:'tagihan',taxLink:{key}});
 save();refreshBillEverywhere();renderSimLinkStatus();
 toast('✅ Reminder Tagihan SIM dibuat, aktif di menu Tagihan');
 }

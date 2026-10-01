@@ -82,7 +82,7 @@ const subMatch=gajiCat.subs.find(s=>/toko/i.test(s.name))||gajiCat.subs.find(s=>
 if(subMatch) subName=subMatch.name;
 }
 const payDate=_mgPayDate(now);
-D.transactions.push({id:uid(),type:'income',amount,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:'Gaji bulanan tetap',date:dateToISO(payDate)});
+FinanceTxSOT.create({id:uid(),type:'income',amount,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:'Gaji bulanan tetap',date:dateToISO(payDate)});
 D.profile.gajiBulananTetap=amount;
 D.profile.gajiBulananLastRecordedMonth=ym;
 save();

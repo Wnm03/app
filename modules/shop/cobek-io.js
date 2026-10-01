@@ -624,12 +624,12 @@ const cr=ProductRepository.createProduct({name:r.name,stock:r.stock,hargaBeli:r.
 if(cr.ok){
 const newProduct={...cr.product,id:'prod_'+Date.now()+'_'+uid()};
 const sr=ProductRepository.saveProduct(D.products,newProduct);
-if(sr.ok)D.products=sr.products;else D.products.push(newProduct);
+if(sr.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(sr.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');}else D.products=sr.products;}else if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.upsert(newProduct);if(!wr.ok)throw new Error(wr.reason||'Gagal menyimpan produk');}else D.products.push(newProduct);
 } else {
-D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
+if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.create({name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});if(!wr.ok)throw new Error(wr.reason||'Gagal membuat produk');}else D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
 }
 } else {
-D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
+if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.create({name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});if(!wr.ok)throw new Error(wr.reason||'Gagal membuat produk');}else D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
 }
 created++;
 }

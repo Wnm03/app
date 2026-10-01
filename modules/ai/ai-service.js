@@ -673,10 +673,11 @@ const AIService = {
   wireEvents() {
     if (this._wired) return;
     if (typeof AIBus === 'undefined' || typeof AIBus.on !== 'function') return;
-    const handle = (eventName) => (payload) => {
-      AIDecision.decide({ event: eventName, payload }).catch((e) => {
-        console.warn('[AIService] decide() gagal untuk event "' + eventName + '":', e);
-      });
+    const handle = (eventName) => (payload, meta) => {
+      // S2204: return the promise so durable outbox delivery can await the
+      // actual consumer completion. Swallowing the rejection here would make
+      // a failed async consumer look successfully delivered to the outbox.
+      return AIDecision.decide({ event: eventName, payload, eventMeta: meta });
     };
     [
       'finance.updated', 'asset.updated', 'vehicle.updated', 'delivery.created',

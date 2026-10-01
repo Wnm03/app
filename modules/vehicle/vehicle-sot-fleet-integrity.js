@@ -49,7 +49,7 @@ async function vsfiServiceState(vehicleId,options){
   }
   return {ok:true,vehicleId,projection};
 }
-function vsfiServiceEvent(){try{if(typeof AIBus==='undefined'||typeof AIBus.on!=='function')return; if(window.__vsfiSub)return; window.__vsfiSub=AIBus.on('vehicle.updated',e=>{const id=e&&e.vehicleId;if(id)vsfiServiceState(id).catch(()=>{});});}catch(e){void e;}}
+function vsfiServiceEvent(){try{if(typeof AIBus==='undefined'||typeof AIBus.on!=='function')return; if(window.__vsfiSub)return; window.__vsfiSub=AIBus.on('vehicle.updated',e=>{const id=e&&e.vehicleId;return id?vsfiServiceState(id):undefined;});}catch(e){void e;}}
 
 async function vsfiIsolationAudit(){
   const vehicles=vsfiArr(typeof D!=='undefined'?D.vehicles:[]); const issues=[];

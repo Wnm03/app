@@ -650,7 +650,7 @@ if(!await askConfirm('Hapus aset ini dari Buku Aset?',{okText:'Ya, Hapus'}))retu
 const a=D.assets.find(x=>sameId(x.id,id));
 const hadTitipanDebt=!!(a&&a.titipanDebtLinkId&&D.debts);
 if(hadTitipanDebt){
-D.debts=D.debts.filter(d=>String(d.id)!==String(a.titipanDebtLinkId));
+BillDebtPiutangCanonicalWriter.removeByPredicate('debts',d=>String(d.id)===String(a.titipanDebtLinkId));
 }
 // BUGFIX (orphan:2, TitipanReconcile.checkAll()): a.titipanDebtLinkId di atas
 // cuma pointer LEGACY (single-owner, sebelum Sesi B/AUD-008) -- selalu null utk
@@ -663,7 +663,7 @@ D.debts=D.debts.filter(d=>String(d.id)!==String(a.titipanDebtLinkId));
 // pola sama persis baris D.debts=D.debts.filter(...) di _syncOwnerDebts() (aset.js)
 // -- 0 rumus baru, cuma menyamakan cakupan cleanup dgn cakupan sync yang sudah ada.
 if(D.debts){
-D.debts=D.debts.filter(d=>!sameId(d.linkedAssetId,id));
+BillDebtPiutangCanonicalWriter.removeByPredicate('debts',d=>sameId(d.linkedAssetId,id));
 }
 D.assets=D.assets.filter(a=>!sameId(a.id,id));
 save();

@@ -367,11 +367,11 @@ const dpRaw=document.getElementById('kasirDP')?document.getElementById('kasirDP'
 const dpVal=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
 const sisa=Math.max(0,total-dpVal);
 const txNote=(customer.name?customer.name+' - ':'')+itemSummary;
-D.transactions.push({id:txId,type:'income',amount:dpVal,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId});
+FinanceTxSOT.create({id:txId,type:'income',amount:dpVal,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId});
 if(sisa>0){
 const piutangName=customer.name||'Pembeli Shop';
 const pid=uid();
-D.piutang.push({id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:'Sisa pembayaran shop: '+itemSummary,lunas:false});
+BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:'Sisa pembayaran shop: '+itemSummary,lunas:false});
 const shopRecord=D.cobek.find(c=>c.id===result.shopId);
 if(shopRecord)shopRecord.piutangLinkId=pid;
 }

@@ -53,45 +53,52 @@ const blob=new Blob([JSON.stringify(txs,null,2)],{type:'application/json'});
 _downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.json');
 }
 async function buildBackupPayload(){
-const backupD={...D,chatHistory:[]};
-if(backupD.profile){
-backupD.profile={...backupD.profile};
-delete backupD.profile.apiKey;
+// S2216: backup must capture D + auxiliary IndexedDB domains from a stable
+// persistence point. D is cloned synchronously, while all auxiliary stores are
+// read in ONE readonly transaction. If D mutates or the cross-tab writer token
+// changes during the async read, retry so the backup never mixes generations.
+const _backupAuxKeys=['lifeos:store','eie:store','vehicle-catalog:store','honda-pdf-import:store'];
+const _maxBackupSnapshotAttempts=3;
+let _lastBackupErr=null;
+for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
+  const _stateVersionBefore=(typeof _saveStateVersion==='number')?_saveStateVersion:null;
+  let backupD;
+  try{
+    backupD={...D,chatHistory:[]};
+    if(backupD.profile){backupD.profile={...backupD.profile};delete backupD.profile.apiKey;}
+  }catch(e){throw new Error('Backup gagal menyiapkan snapshot state: '+(e&&e.message?e.message:String(e)));
+  }
+  let _aux;
+  try{
+    if(typeof IDBStore==='undefined'||typeof IDBStore.getMany!=='function')throw new Error('IDBStore.getMany diperlukan untuk backup snapshot atomic');
+    _aux=await IDBStore.getMany(_backupAuxKeys.concat(['kw_v4_writer_guard_v1']));
+  }catch(e){
+    _lastBackupErr=e;
+    console.error('Backup: gagal membaca snapshot auxiliary IndexedDB secara batch:',e);
+    if(_attempt===_maxBackupSnapshotAttempts-1)throw new Error('Backup dibatalkan: snapshot IndexedDB tambahan tidak dapat dibaca secara konsisten.');
+    continue;
+  }
+  const _stateChanged=(typeof _saveStateVersion==='number'&&_stateVersionBefore!==null&&_saveStateVersion!==_stateVersionBefore);
+  if(_stateChanged){_lastBackupErr=new Error('State berubah selama backup snapshot');continue;}
+  let _guardNow;
+  try{
+    _guardNow=typeof IDBStore.get==='function'?await IDBStore.get('kw_v4_writer_guard_v1'):undefined;
+  }catch(e){
+    _lastBackupErr=e;
+    if(_attempt===_maxBackupSnapshotAttempts-1)throw new Error('Backup dibatalkan: writer guard tidak dapat diverifikasi.');
+    continue;
+  }
+  const _guardAtSnapshot=_aux['kw_v4_writer_guard_v1'];
+  if(String(_guardNow??'')!==String(_guardAtSnapshot??'')){_lastBackupErr=new Error('Writer berubah selama backup snapshot');continue;}
+
+  if(_aux['lifeos:store']!==undefined)backupD._lifeosStore=_aux['lifeos:store'];
+  if(_aux['eie:store']!==undefined)backupD._eieStore=_aux['eie:store'];
+  if(_aux['vehicle-catalog:store']!==undefined)backupD._vehicleCatalogStore=_aux['vehicle-catalog:store'];
+  if(_aux['honda-pdf-import:store']!==undefined)backupD._hondaPdfImportStore=_aux['honda-pdf-import:store'];
+  if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sealBackupPayload==='function')return await PWAProductionHardening.sealBackupPayload(backupD);
+  return backupD;
 }
-// BUGFIX-INTEGRASI: LifeOS (projects/reviewLog/knowledge) & EIE (macroCache/
-// insights/scoreHistory/notificationsEnabled/dst) disimpan di IndexedDB
-// terpisah dari D (key 'lifeos:store'/'eie:store', lihat lifeos-store.js/
-// eie-store.js) — sebelumnya TIDAK pernah ikut ke file backup sama sekali,
-// walau {...D} di atas terlihat lengkap. Field `_lifeosStore`/`_eieStore` di
-// bawah ini murni titipan utk restore, BUKAN properti D — jangan pernah
-// merge langsung `{...D,...imp}` tanpa menyaring 2 key ini (lihat
-// applyRestoredData()).
-try{
-const lifeosStore=await IDBStore.get('lifeos:store');
-if(lifeosStore)backupD._lifeosStore=lifeosStore;
-}catch(e){console.warn('Backup: gagal baca lifeos:store dari IndexedDB (dilewati):',e);}
-try{
-const eieStore=await IDBStore.get('eie:store');
-if(eieStore)backupD._eieStore=eieStore;
-}catch(e){console.warn('Backup: gagal baca eie:store dari IndexedDB (dilewati):',e);}
-// Vehicle Catalog (Milestone 0 Phase 1, key 'vehicle-catalog:store',
-// lihat modules/vehicle/vehicle-catalog.js & ACR-001) — pola SAMA PERSIS
-// lifeos:store/eie:store di atas: data terpisah dari D, wajib didaftarkan
-// manual di sini atau tidak akan ikut ter-backup (FOUNDATION_AUDIT.md §3).
-try{
-const vehicleCatalogStore=await IDBStore.get('vehicle-catalog:store');
-if(vehicleCatalogStore)backupD._vehicleCatalogStore=vehicleCatalogStore;
-}catch(e){console.warn('Backup: gagal baca vehicle-catalog:store dari IndexedDB (dilewati):',e);}
-// Honda PDF Import (Tahap 7D-1, key 'honda-pdf-import:store', lihat
-// modules/vehicle/honda-pdf-import.js) — pola SAMA PERSIS vehicle-catalog:store
-// di atas: data terpisah dari D, wajib didaftarkan manual di sini atau tidak
-// akan ikut ter-backup (FOUNDATION_AUDIT.md §3).
-try{
-const hondaPdfImportStore=await IDBStore.get('honda-pdf-import:store');
-if(hondaPdfImportStore)backupD._hondaPdfImportStore=hondaPdfImportStore;
-}catch(e){console.warn('Backup: gagal baca honda-pdf-import:store dari IndexedDB (dilewati):',e);}
-if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sealBackupPayload==='function')return await PWAProductionHardening.sealBackupPayload(backupD);
-return backupD;
+throw _lastBackupErr||new Error('Backup snapshot tidak stabil setelah beberapa percobaan.');
 }
 async function exportData(){
 const backupD=await buildBackupPayload();
@@ -570,8 +577,8 @@ if(backupVersion>SCHEMA_VERSION){
 const lanjut=await askConfirm('⚠️ File backup ini dibuat dari versi aplikasi yang LEBIH BARU dari yang sedang dipakai sekarang. Me-restore-nya mungkin membuat sebagian data tidak terbaca dengan benar.\n\nTetap lanjutkan restore?',{title:'Versi Backup Lebih Baru',okText:'Ya, Tetap Restore'});
 if(!lanjut)return false;
 }
-try{
 let snapJson;
+try{
 if(D.profile && Object.prototype.hasOwnProperty.call(D.profile,'apiKey')){
 const profileNoKey={...D.profile}; delete profileNoKey.apiKey;
 snapJson=JSON.stringify({...D,profile:profileNoKey});
@@ -650,50 +657,61 @@ if(!_p23RestoreValidation.ok)throw new Error('Restore dibatalkan: integritas odo
 // V37: ownership conflicts are a restore-invalid state; never guess an owner.
 __s2013SetStage('ownership-validation');
 if(typeof getServiceFinanceOwnershipIntegrity==='function'){const _own=getServiceFinanceOwnershipIntegrity();if(_own&&_own.issues&&_own.issues.length)throw new Error('Restore dibatalkan: konflik ownership servis↔Finance ('+_own.issues.length+' issue).');}
+// S2191: restore boundary wajib menolak state Bill/Debt/Piutang yang sudah
+// diketahui orphan/reciprocal-mismatch setelah seluruh migration selesai.
+// Reconciler bersifat read-only; rollback outer restore akan mengembalikan D
+// dan auxiliary stores bila validasi ini gagal.
+__s2013SetStage('bill-debt-piutang-reconciliation');
+if(typeof BillDebtPiutangReconciler!=='undefined'&&BillDebtPiutangReconciler&&typeof BillDebtPiutangReconciler.reconcile==='function'){
+  const _bdpRestoreCheck=BillDebtPiutangReconciler.reconcile(D);
+  if(_bdpRestoreCheck&&!_bdpRestoreCheck.ok){
+    const _codes=[...new Set((_bdpRestoreCheck.issues||[]).map(x=>x&&x.code).filter(Boolean))].slice(0,8).join(', ');
+    throw new Error('Restore dibatalkan: integritas Bill/Debt/Piutang tidak konsisten ('+(_bdpRestoreCheck.issues||[]).length+' issue'+(_codes?'; '+_codes:'')+').');
+  }
+}
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
-__s2013SetStage('save-flush-init');
-saveFlush();init();
-__s2013SetStage('restore-auxiliary-idb');
-try{
-if(_restoredLifeosStore!==undefined){
-await IDBStore.set('lifeos:store',_restoredLifeosStore);
-if(typeof lifeOSInvalidateCache==='function')lifeOSInvalidateCache();
-}
-if(_restoredEieStore!==undefined){
-await IDBStore.set('eie:store',_restoredEieStore);
-if(typeof eieInvalidateCache==='function')eieInvalidateCache();
-}
-if(_restoredVehicleCatalogStore!==undefined){
-await IDBStore.set('vehicle-catalog:store',_restoredVehicleCatalogStore);
-if(typeof vehicleCatalogInvalidateCache==='function')vehicleCatalogInvalidateCache();
-}
-if(_restoredHondaPdfImportStore!==undefined){
-await IDBStore.set('honda-pdf-import:store',_restoredHondaPdfImportStore);
-if(typeof hondaPdfImportInvalidateCache==='function')hondaPdfImportInvalidateCache();
-}
-}catch(e){
-  console.error('V24: Restore auxiliary IndexedDB gagal, memulai compensating rollback:',e);
-  try{
-    if(_prevLifeosStore!==undefined)await IDBStore.set('lifeos:store',_prevLifeosStore);
-    if(_prevEieStore!==undefined)await IDBStore.set('eie:store',_prevEieStore);
-    if(_prevVehicleCatalogStore!==undefined)await IDBStore.set('vehicle-catalog:store',_prevVehicleCatalogStore);
-    if(_prevHondaPdfImportStore!==undefined)await IDBStore.set('honda-pdf-import:store',_prevHondaPdfImportStore);
-  }catch(_idbRollbackErr){console.error('V24: compensating rollback auxiliary IndexedDB juga gagal',_idbRollbackErr);}
-  throw e;
-}
+__s2013SetStage('atomic-restore-persist');
+let _restorePersistJson;
+if(D.profile&&Object.prototype.hasOwnProperty.call(D.profile,'apiKey')){const _profileNoKey={...D.profile};delete _profileNoKey.apiKey;_restorePersistJson=JSON.stringify({...D,profile:_profileNoKey});}
+else _restorePersistJson=JSON.stringify(D);
+const _restoreAuxEntries=[];
+if(_restoredLifeosStore!==undefined)_restoreAuxEntries.push(['lifeos:store',_restoredLifeosStore]);
+if(_restoredEieStore!==undefined)_restoreAuxEntries.push(['eie:store',_restoredEieStore]);
+if(_restoredVehicleCatalogStore!==undefined)_restoreAuxEntries.push(['vehicle-catalog:store',_restoredVehicleCatalogStore]);
+if(_restoredHondaPdfImportStore!==undefined)_restoreAuxEntries.push(['honda-pdf-import:store',_restoredHondaPdfImportStore]);
+if(typeof _persistAtomicSnapshotWithAux!=='function')throw new Error('Restore atomic persistence helper tidak tersedia; restore dibatalkan untuk mencegah partial write');
+await _persistAtomicSnapshotWithAux(_restorePersistJson,_restoreAuxEntries);
+var _restoreAtomicCommitted=true;
+try{if(typeof localStorage!=='undefined')localStorage.setItem('kw_v4',_restorePersistJson);}catch(_lsErr){console.warn('Restore: localStorage fallback gagal',_lsErr);}
+if(typeof lifeOSInvalidateCache==='function'&&_restoredLifeosStore!==undefined)lifeOSInvalidateCache();
+if(typeof eieInvalidateCache==='function'&&_restoredEieStore!==undefined)eieInvalidateCache();
+if(typeof vehicleCatalogInvalidateCache==='function'&&_restoredVehicleCatalogStore!==undefined)vehicleCatalogInvalidateCache();
+if(typeof hondaPdfImportInvalidateCache==='function'&&_restoredHondaPdfImportStore!==undefined)hondaPdfImportInvalidateCache();
+init();
 return true;
 }catch(e){
 const __s2013Detail=__s2013Fail(e);
 console.error('Restore gagal, mengembalikan data sebelumnya:',__s2013Detail,e);
+if(e&&e.code==='CROSS_TAB_RESTORE_CONFLICT'){
+  try{await load();}catch(_reloadErr){console.error('Restore conflict: gagal memuat ulang state durable terbaru',_reloadErr);}
+  await showAlertModal('Restore dibatalkan karena data di tab lain berubah lebih dahulu. Data terbaru dipertahankan; silakan ulangi restore setelah memuat ulang.',{icon:'⚠️',title:'Restore Berkonflik'});
+  return false;
+}
 D=prevD;
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
-saveFlush();init();
 try{
-  if(_prevLifeosStore!==undefined)await IDBStore.set('lifeos:store',_prevLifeosStore);
-  if(_prevEieStore!==undefined)await IDBStore.set('eie:store',_prevEieStore);
-  if(_prevVehicleCatalogStore!==undefined)await IDBStore.set('vehicle-catalog:store',_prevVehicleCatalogStore);
-  if(_prevHondaPdfImportStore!==undefined)await IDBStore.set('honda-pdf-import:store',_prevHondaPdfImportStore);
-}catch(_idbRollbackErr){console.error('V24: restore rollback auxiliary IndexedDB gagal',_idbRollbackErr);}
+  if(typeof _restoreAtomicCommitted!=='undefined'&&_restoreAtomicCommitted&&typeof _persistAtomicSnapshotWithAux==='function'){
+    const _rollbackAuxEntries=[];
+    if(_restoredLifeosStore!==undefined)_rollbackAuxEntries.push(['lifeos:store',_prevLifeosStore]);
+    if(_restoredEieStore!==undefined)_rollbackAuxEntries.push(['eie:store',_prevEieStore]);
+    if(_restoredVehicleCatalogStore!==undefined)_rollbackAuxEntries.push(['vehicle-catalog:store',_prevVehicleCatalogStore]);
+    if(_restoredHondaPdfImportStore!==undefined)_rollbackAuxEntries.push(['honda-pdf-import:store',_prevHondaPdfImportStore]);
+    await _persistAtomicSnapshotWithAux(snapJson,_rollbackAuxEntries);
+  }else{
+    saveFlush();
+  }
+}catch(_atomicRollbackErr){console.error('Restore rollback atomic IndexedDB gagal',_atomicRollbackErr);}
+init();
 await showAlertModal('Restore gagal pada tahap: '+__s2013Stage+'\nError: '+(__s2013Detail.error.message||__s2013Detail.error.string||'Unknown error')+'\n\nData sebelumnya sudah dipulihkan. Detail lengkap tersimpan di window.__S2013_RESTORE_DIAGNOSTIC dan console.',{icon:'❌',title:'Restore Gagal'});
 return false;
 }

@@ -147,7 +147,7 @@ if(subMatch) subName=subMatch.name;
 // mengatribusikan minggu ke bulan tempat Sabtu-nya jatuh. Fix: pakai
 // dateToISO(end) -- tanggal Sabtu minggu yang di-"kunci" (_wrLastEnd/start
 // di atas), bukan tanggal hari ini.
-D.transactions.push({id:uid(),type:'income',amount:_wrLastTotal,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:`Gaji mingguan dari absensi (${_wrLastCount} hari kerja, ${dateToISO(start)} s/d ${dateToISO(end)})`,date:dateToISO(end)});
+FinanceTxSOT.create({id:uid(),type:'income',amount:_wrLastTotal,category:catName,subcategory:subName,accountId:accId,payMethod:'tunai',note:`Gaji mingguan dari absensi (${_wrLastCount} hari kerja, ${dateToISO(start)} s/d ${dateToISO(end)})`,date:dateToISO(end)});
 incomeSaved=true;
 }
 if(!Array.isArray(D.gajiMingguanHistory))D.gajiMingguanHistory=[];

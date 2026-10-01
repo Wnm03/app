@@ -203,13 +203,35 @@ const TitipanExpenseFlow = {
         return tx;
       });
 
-      // Step 3 (Design Lock §12): push semua transaksi secara synchronous.
-      txs.forEach((tx) => { D.transactions.push(tx); });
-      // Step 4: jalankan linkage S519 per transaksi (0 logic piutang baru
-      // ditulis di sini -- 100% delegasi ke primitive S519).
-      txs.forEach((tx) => { applyTxTitipanLinkageOnSave(tx, null); });
-      // Step 5: satu save() setelah seluruh data valid & siap.
-      save();
+      // S2197: boundary atomic lintas Transaction <-> Piutang/Utang.
+      // Linkage S519 dapat menambah/menghapus canonical Piutang/Utang setelah
+      // transaksi dibuat. Jika salah satu langkah atau save() gagal, tidak boleh
+      // ada transaksi yatim / linkage setengah jadi. Commit dilakukan SETELAH
+      // persistence sukses; event berada di luar transaction boundary karena
+      // kegagalan event tidak boleh membatalkan state yang sudah tersimpan.
+      const _atomic = typeof FinanceCrossEntityAtomic !== 'undefined'
+        ? FinanceCrossEntityAtomic.begin(['transactions', 'debts', 'piutang'])
+        : null;
+      let _atomicCommitted = false;
+      try {
+        // Step 3 (Design Lock §12): push semua transaksi secara synchronous.
+        if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.createMany(txs); else txs.forEach((tx) => { D.transactions.push(tx); });
+        // Step 4: jalankan linkage S519 per transaksi (0 logic piutang baru
+        // ditulis di sini -- 100% delegasi ke primitive S519).
+        txs.forEach((tx) => { applyTxTitipanLinkageOnSave(tx, null); });
+        // Step 5: stage event ke atomic boundary SEBELUM persistence.
+        // S2207: commit() hanya men-stage outbox; save() berikutnya yang
+        // mem-persist mirror + outbox dalam satu IDB transaction.
+        if (_atomic) { _atomic.commit(); _atomicCommitted = true; }
+        // Satu save() setelah canonical state + deferred events siap.
+        save();
+      } catch (e) {
+        if (_atomic) {
+          if (_atomicCommitted && typeof _atomic.rollbackAfterCommit === 'function') _atomic.rollbackAfterCommit();
+          else _atomic.rollback();
+        }
+        throw e;
+      }
       if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'expense', action: 'create', txIds: txs.map((t) => t.id) });
 
       return { ok: true, txIds: txs.map((t) => t.id), rows: v.rows, owners: v.owners };

@@ -53,18 +53,40 @@ const AIBus = {
     if (!this._listeners[eventName].length) delete this._listeners[eventName];
   },
 
-  emit(eventName, payload) {
+  emit(eventName, payload, meta) {
     const arr = this._listeners[eventName];
     if (!arr || !arr.length) return;
+    // S2203: optional delivery metadata carries a stable outbox eventId.
+    // Existing listeners tetap menerima payload yang sama; consumer baru dapat
+    // memakai meta.eventId untuk menerapkan idempotency pada boundary bisnisnya.
+    // AIBus sengaja TIDAK menandai delivered sebelum handler selesai karena itu
+    // dapat menghilangkan event bila proses crash di tengah handler.
     // Salin array supaya handler yang unsubscribe di tengah iterasi aman.
     arr.slice().forEach((handler) => {
       try {
-        handler(payload);
+        const result = handler(payload, meta);
+        // Normal emit remains fire-and-forget for compatibility, but async
+        // listener rejection must still be observed rather than becoming an
+        // unhandled rejection. Durable replay uses emitAsync() below.
+        if (result && typeof result.then === 'function') {
+          result.catch((e) => console.warn('[AICore] Async listener error untuk event "' + eventName + '":', e));
+        }
       } catch (e) {
         // AI Core tidak boleh menjatuhkan app utama kalau 1 listener error.
         console.warn('[AICore] Listener error untuk event "' + eventName + '":', e);
       }
     });
+  },
+
+  // S2204: durable outbox consumers may be async. Unlike emit(), this
+  // delivery primitive waits for every handler and rejects when a handler
+  // throws/rejects, so the outbox MUST NOT mark the event delivered early.
+  async emitAsync(eventName, payload, meta) {
+    const arr = this._listeners[eventName];
+    if (!arr || !arr.length) return;
+    for (const handler of arr.slice()) {
+      await handler(payload, meta);
+    }
   },
 };
 
@@ -79,13 +101,14 @@ let AIStore = {
   recommendations: [], // Recommendation[] — rekomendasi aktif (diisi Sesi 2)
   learningData: {},   // { [key]: any } — data pembelajaran ringan (diisi Sesi 2)
   ruleCooldowns: {},  // { [ruleId]: epochMsTerakhirTrigger } (diisi Sesi 2)
+  processedEventIds: [], // S2204: durable consumer idempotency ledger for outbox events
   lastRunAt: null,
 };
 
 const AI_STORE_KEY = 'ai:store';
 const AI_STORE_DEFAULT = {
   decisionLog: [], recommendations: [], learningData: {},
-  ruleCooldowns: {}, lastRunAt: null,
+  ruleCooldowns: {}, processedEventIds: [], lastRunAt: null,
 };
 
 async function aiLoad() {

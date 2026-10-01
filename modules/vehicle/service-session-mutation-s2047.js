@@ -100,13 +100,13 @@
     const owner=rows[0]||null;
     const tx=(oldTxId&&Array.isArray(g.D.transactions))?(g.D.transactions.find(t=>t&&t.id===oldTxId)||null):null;
     if(!owner){
-      if(oldTxId&&Array.isArray(g.D.transactions))g.D.transactions=g.D.transactions.filter(t=>t&&t.id!==oldTxId);
+      if(oldTxId&&Array.isArray(g.D.transactions)){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(oldTxId);else g.D.transactions=g.D.transactions.filter(t=>t&&t.id!==oldTxId);}
       return {txId:null,total:0};
     }
     if(!owner.txLinkId&&tx)owner.txLinkId=tx.id;
-    (g.D.transactions||[]).filter(t=>t&&linkedIds.has(t.id)&&t.id!==owner.txLinkId).forEach(t=>{g.D.transactions=g.D.transactions.filter(x=>x!==t);});
-    if(owner.txLinkId){const active=(g.D.transactions||[]).find(t=>t&&t.id===owner.txLinkId);if(active){if(total>0){active.amount=total;active.date=owner.date;active.accountId=owner.accountId;active.note=owner.item||'Servis';active.servisLinkId=owner.id;}else{g.D.transactions=g.D.transactions.filter(t=>t.id!==active.id);owner.txLinkId=null;}}else owner.txLinkId=null;}
-    if(total>0&&!owner.txLinkId){const id=typeof g.uid==='function'?g.uid():'tx_'+Date.now();g.D.transactions.push({id,type:'expense',amount:total,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((g.D.vehicles||[]).find(v=>v&&v.id===owner.vehicleId)):'Servis',subcategory:'Servis & Oli',accountId:owner.accountId||null,payMethod:'tunai',note:owner.item||'Servis',date:owner.date,servisLinkId:owner.id});owner.txLinkId=id;}
+    (g.D.transactions||[]).filter(t=>t&&linkedIds.has(t.id)&&t.id!==owner.txLinkId).forEach(t=>{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(t.id);else g.D.transactions=g.D.transactions.filter(x=>x!==t);});
+    if(owner.txLinkId){const active=(g.D.transactions||[]).find(t=>t&&t.id===owner.txLinkId);if(active){if(total>0){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.updateById(active.id,{amount:total,date:owner.date,accountId:owner.accountId,note:owner.item||'Servis',servisLinkId:owner.id});else{active.amount=total;active.date=owner.date;active.accountId=owner.accountId;active.note=owner.item||'Servis';active.servisLinkId=owner.id;}}else{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(active.id);else g.D.transactions=g.D.transactions.filter(t=>t.id!==active.id);owner.txLinkId=null;}}else owner.txLinkId=null;}
+    if(total>0&&!owner.txLinkId){const id=typeof g.uid==='function'?g.uid():'tx_'+Date.now();const tx={id,type:'expense',amount:total,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((g.D.vehicles||[]).find(v=>v&&v.id===owner.vehicleId)):'Servis',subcategory:'Servis & Oli',accountId:owner.accountId||null,payMethod:'tunai',note:owner.item||'Servis',date:owner.date,servisLinkId:owner.id};if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.create(tx);else g.D.transactions.push(tx);owner.txLinkId=id;}
     rows.forEach(r=>{if(r!==owner){r.cost=0;r.txLinkId=null;}});owner.cost=total;
     return {txId:owner.txLinkId||null,total};
   }
@@ -128,7 +128,7 @@
   function restoreState(s){
     if(!s||!g.D)return false;
     g.D.servisLogs=clone(s.servisLogs||[]);
-    g.D.transactions=clone(s.transactions||[]);
+    if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.replaceSnapshot(clone(s.transactions||[]));else g.D.transactions=clone(s.transactions||[]);
     if(!g.StockCommandSOT||typeof g.StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok servis');g.StockCommandSOT.replaceSnapshot(s.partsStock||[]);
     if(Array.isArray(s.sparepartCats))g.D.sparepartCats=clone(s.sparepartCats);
     try{if(typeof g.save==='function')g.save({domain:'servis',financeMutation:true,accountIds:[]});}catch(_saveRollbackErr){void _saveRollbackErr;}

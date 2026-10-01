@@ -112,7 +112,7 @@ const OwnerRegistry = {
     // checkDebtNameStaleness() (titipan-reconcile.js) nyala merah palsu
     // setiap kali owner registry di-rename tanpa ganti nama debt terkait.
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && String(d.linkedOwnerId) === String(id)) { d.name = trimmed; debts++; }
+      if (d && String(d.linkedOwnerId) === String(id)) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.name = trimmed; }); debts++; }
     });
     if (typeof save === 'function') save();
     return { ok: true, assets, investments, commitments, debts };
@@ -167,7 +167,7 @@ const OwnerRegistry = {
       if (c && String(c.ownerId) === String(sourceId)) { c.ownerId = targetId; c.ownerName = tgt.name; commitments++; }
     });
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && String(d.linkedOwnerId) === String(sourceId)) { d.linkedOwnerId = targetId; d.name = tgt.name; debts++; }
+      if (d && String(d.linkedOwnerId) === String(sourceId)) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = targetId; d0.name = tgt.name; }); debts++; }
     });
     D.ownerRegistry = D.ownerRegistry.filter((o) => String(o.id) !== String(sourceId));
     if (typeof save === 'function') save();

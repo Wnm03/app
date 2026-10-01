@@ -261,7 +261,7 @@ else product={id:'prod_'+Date.now()+'_'+uid(),name:it.name,stock:0,hargaBeli:it.
 }else{
 product={id:'prod_'+Date.now()+'_'+uid(),name:it.name,stock:0,hargaBeli:it.hargaBeli,hargaJual:it.hargaJual,hargaReseller:null,diskonPersen:0,kategoriId,produsenId:it.produsenId,hargaByProdusen:{}};
 }
-D.products.push(product);
+if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.upsert(product);if(!wr.ok)throw new Error(wr.reason||'Gagal menyimpan produk');product=wr.product;}else D.products.push(product);
 } else if(kategoriId){
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'kategoriId',kategoriId);else product.kategoriId=kategoriId;
 }
@@ -617,11 +617,11 @@ Object.assign(existingPiutang,{name:piutangName,nilai:sisa,tanggal:date,catatan:
 if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
 }else{
 const pid=uid();
-D.piutang.push({id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
+BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
 if(shopRecord)shopRecord.piutangLinkId=pid;
 }
 }else if(existingPiutangId){
-D.piutang=D.piutang.filter(p=>p.id!==existingPiutangId);
+BillDebtPiutangCanonicalWriter.removeById('piutang',existingPiutangId);
 if(shopRecord)shopRecord.piutangLinkId=null;
 }
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();

@@ -226,6 +226,13 @@ const AIDecision = {
   // ----------------------------------------------------------------------
   async decide(ctx = {}) {
     await aiEnsureLoaded();
+    const eventId = ctx && ctx.eventMeta && ctx.eventMeta.eventId ? String(ctx.eventMeta.eventId) : '';
+    const store = aiGetStore();
+    store.processedEventIds = Array.isArray(store.processedEventIds) ? store.processedEventIds : [];
+    if (eventId && store.processedEventIds.includes(eventId)) {
+      const existing = (store.decisionLog || []).filter((d) => d && d.eventId === eventId);
+      return { decisions: existing, triggered: [], recommendations: existing.map((d) => this.formatRecommendation(d)), simulated: false, duplicate: true };
+    }
     const triggered = this.rules.evaluate(ctx);
 
     if (ctx.simulated) {
@@ -242,10 +249,10 @@ const AIDecision = {
       return { decisions: [], triggered, recommendations: simDecisions.map((d) => this.formatRecommendation(d)), simulated: true };
     }
 
-    const store = aiGetStore();
     const now = Date.now();
     const decisions = triggered.map((t, i) => ({
       id: `dec_${now}_${i}_${t.ruleId}`,
+      eventId: eventId || null,
       ruleId: t.ruleId, category: t.category, severity: t.severity,
       message: t.message, recommendationId: t.recommendationId,
       // Sesi 11 — disimpan di decisionLog kalau rule menyediakan, supaya
@@ -257,6 +264,7 @@ const AIDecision = {
       createdAt: now, outcome: null,
     }));
     store.decisionLog = (store.decisionLog || []).concat(decisions).slice(-500);
+    if (eventId) store.processedEventIds = store.processedEventIds.concat(eventId).slice(-1000);
     store.lastRunAt = now;
     await aiSave();
 

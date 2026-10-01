@@ -310,7 +310,7 @@ toast(`📈 Transaksi investasi terkait ikut dihapus & holding disesuaikan`,2600
 // langsung (investasi-list-view.js) yang sudah emit. Pola payload SAMA PERSIS cascade
 // finance.updated di akhir delTx() (kind/action/deletedId), ditambah holdingId supaya
 // konsumen tahu holding mana yang ikut disesuaikan.
-if(typeof AIBus!=='undefined')AIBus.emit('investment.updated',{kind:'tx-cascade',action:'delete',deletedTxLinkId:linkedInvTx.id,holdingId:linkedInvTx.investmentId});
+if(typeof FinanceCrossEntityAtomic!=='undefined')FinanceCrossEntityAtomic.emit('investment.updated',{kind:'tx-cascade',action:'delete',deletedTxLinkId:linkedInvTx.id,holdingId:linkedInvTx.investmentId});
 }
 }
 }
@@ -359,7 +359,20 @@ pairedTx=D.transactions.find(x=>x.id!==id&&x.transferPairId===t.transferPairId);
 if(t&&(t.type==='transfer_out'||t.type==='transfer_in')&&!t.transferPairId){
 if(!await askConfirm('⚠️ Ini transfer lama (legacy) tanpa penanda pasangan otomatis. Sisi pasangannya TIDAK akan ikut terhapus dan tidak bisa dipastikan otomatis — cek & sesuaikan akun pasangan secara manual jika perlu. Tetap hapus transaksi ini?'))return;
 }
+// S2198: seluruh cascade DELETE transaksi harus atomic terhadap canonical collections.
+// Jika salah satu cascade gagal (stok/Shop/servis/investasi/titipan/tagihan), jangan
+// biarkan D.transactions sudah terhapus sementara domain terkait masih setengah berubah.
+let _deleteAtomicCommitted=false;
+const _deleteAtomic=(typeof FinanceCrossEntityAtomic!=='undefined')
+  ? FinanceCrossEntityAtomic.begin([
+      'transactions','bills','billsArchive','debts','piutang',
+      'bbmLogs','products','cobek','servisLogs','partsStock',
+      'investmentTx','renovProjects','sewaKios','tukangAbsensi'
+    ])
+  : null;
+try{
 runTxDeleteCascades(t);
+
 // Sesi 519 (LANJUTKAN-S519, Design Lock S518 §7 "tx-list-cashflow.js —
 // DELETE PATH", scope expansion resmi — DELETE cascade Dana Titipan
 // SENGAJA ditaruh di sini, BUKAN transaksi.js, krn delTx() ada di file
@@ -433,7 +446,8 @@ if(billRevert&&billRevert.restoredFromArchive)billRevertMsg=' (tagihan diaktifka
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='cicilan')billRevertMsg=' (sisa tenor dikembalikan)';
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang')billRevertMsg=' (sisa utang dikembalikan)';
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
-D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
+if(typeof FinanceTxSOT!=='undefined'){FinanceTxSOT.removeById(id);if(pairedTx)FinanceTxSOT.removeById(pairedTx.id);}else D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
+if(_deleteAtomic){_deleteAtomic.commit();_deleteAtomicCommitted=true;}
 save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});else{if(typeof renderDashboard==='function')renderDashboard();if(typeof renderKeuangan==='function')renderKeuangan();}renderCnTab();renderProductList();
 // Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
 // delTx() SEBELUMNYA 0% emit AIBus sama sekali -- cascade transfer/titipan/
@@ -444,9 +458,15 @@ save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboa
 // `t` (kalau ada) supaya konsumen event bisa filter tanpa lookup balik ke
 // D.transactions (yg saat ini dipanggil sudah tidak berisi baris ini lagi).
 // 0 cascade baru ditulis di sini -- murni penambahan 1 baris emit.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"transaksi",action:"delete",deletedId:id,category:t&&t.category,type:t&&t.type});
+if(typeof FinanceCrossEntityAtomic!=='undefined')FinanceCrossEntityAtomic.emit('finance.updated',{kind:'transaksi',action:'delete',deletedId:id,category:t&&t.category,type:t&&t.type});
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');
 else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
+}catch(_deleteErr){
+  if(_deleteAtomic){if(_deleteAtomicCommitted&&typeof _deleteAtomic.rollbackAfterCommit==='function')_deleteAtomic.rollbackAfterCommit();else _deleteAtomic.rollback();}
+  console.error('S2198: atomic transaction delete rollback',_deleteErr);
+  toast('⚠️ Penghapusan transaksi dibatalkan karena proses cascade gagal');
+  return;
+}
 }
 function changeMonth(dir){
 curMonth+=dir;

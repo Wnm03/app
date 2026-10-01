@@ -75,7 +75,7 @@ const ShopDataIO = {
             const rw = ProductRepository.updateProduct(product, { beratPerUnit: r.berat });
             if (rw.ok) {
               const pi = D.products.indexOf(product);
-              if (pi > -1) D.products[pi] = rw.product;
+              if (pi > -1) { if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.upsert(rw.product);if(!_wr.ok)throw new Error(_wr.reason||'Gagal memperbarui produk');} else D.products[pi] = rw.product; }
               product = rw.product;
             }
           } else {
@@ -130,7 +130,7 @@ const ShopDataIO = {
             // praktis tidak pernah terjadi krn uid() monotonic, tapi tetap
             // disediakan sesuai pola gate lain), fallback push mentah
             // supaya baris CSV ini tidak hilang / batch tidak berhenti.
-            if (sr.ok) D.products = sr.products; else D.products.push(newProduct);
+            if (sr.ok) { if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(sr.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');} else D.products = sr.products; } else if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.upsert(newProduct);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');} else D.products.push(newProduct);
             created++;
           } else {
             product = {
@@ -148,7 +148,7 @@ const ShopDataIO = {
               beratPerUnit: r.berat || 0,
               catatan: r.catatan || '',
             };
-            D.products.push(product);
+            if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.create(product);if(!_wr.ok)throw new Error(_wr.reason||'Gagal membuat produk');}else D.products.push(product);
             created++;
           }
         } else {
@@ -173,7 +173,7 @@ const ShopDataIO = {
           // berat_kg/catatan tetap 0 perubahan shape).
           if (r.berat) product.beratPerUnit = r.berat;
           if (r.catatan) product.catatan = r.catatan;
-          D.products.push(product);
+          if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.create(product);if(!_wr.ok)throw new Error(_wr.reason||'Gagal membuat produk');}else D.products.push(product);
           created++;
         }
       }
@@ -342,7 +342,7 @@ const ShopDataIO = {
     const products = Array.isArray(imp.products) ? imp.products : [];
     const produsenList = Array.isArray(imp.produsen) ? imp.produsen : [];
     if (mode === 'timpa') {
-      D.products = JSON.parse(JSON.stringify(products));
+      if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(JSON.parse(JSON.stringify(products)));if(!_wr.ok)throw new Error(_wr.reason||'Gagal memulihkan produk');}else D.products = JSON.parse(JSON.stringify(products));
       D.produsen = JSON.parse(JSON.stringify(produsenList));
       save();
       return { ok: true, mode: 'timpa', productCount: D.products.length, produsenCount: D.produsen.length };
@@ -424,12 +424,12 @@ const ShopDataIO = {
           if (cr.ok) {
             const newProduct = { ...cr.product, id: rawProduct.id };
             const sr = ProductRepository.saveProduct(D.products, newProduct);
-            if (sr.ok) D.products = sr.products; else D.products.push(newProduct);
+            if (sr.ok) { if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(sr.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');} else D.products = sr.products; } else if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.upsert(newProduct);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');} else D.products.push(newProduct);
           } else {
-            D.products.push(rawProduct);
+            if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.create(rawProduct);if(!_wr.ok)throw new Error(_wr.reason||'Gagal membuat produk');}else D.products.push(rawProduct);
           }
         } else {
-          D.products.push(rawProduct);
+          if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.create(rawProduct);if(!_wr.ok)throw new Error(_wr.reason||'Gagal membuat produk');}else D.products.push(rawProduct);
         }
         created++;
       }

@@ -543,13 +543,13 @@ if(billEditId!==null){
 // sudah lunas jadi aktif lagi tanpa disengaja.
 if(billEditFromArchive){
 const idx=(D.billsArchive||[]).findIndex(b=>b.id===billEditId);
-if(idx>-1)D.billsArchive[idx]={...D.billsArchive[idx],...data};
+if(idx>-1)BillDebtPiutangCanonicalWriter.updateById('billsArchive',D.billsArchive[idx].id,b=>Object.assign(b,data));
 } else {
 const idx=D.bills.findIndex(b=>b.id===billEditId);
-D.bills[idx]={...D.bills[idx],...data};
+if(idx>-1)BillDebtPiutangCanonicalWriter.updateById('bills',D.bills[idx].id,b=>Object.assign(b,data));
 }
 } else {
-D.bills.push({id:(_newBillIdSesiC=uid()),...data});
+BillDebtPiutangCanonicalWriter.add('bills',{id:(_newBillIdSesiC=uid()),...data});
 }
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): kalau tagihan yang DIEDIT (bukan
 // baru) masih shared+sharedAutoPiutang, sesuaikan piutang otomatis yang BELUM lunas ke
@@ -598,7 +598,7 @@ if(b&&b.kind==='utang'&&b.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,b.debtId));
 if(dbt&&sameId(dbt.billId,id))dbt.billId=null;
 }
-D.bills=D.bills.filter(b=>b.id!==id);
+BillDebtPiutangCanonicalWriter.removeById('bills',id);
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): bersihkan piutang otomatis
 // yang autoBillId-nya nunjuk ke tagihan yg baru dihapus -- lihat komentar lengkap di
 // removeOrphanedAutoPiutangForBill() (piutang-utang.js).
@@ -652,7 +652,7 @@ async function delBillArchive(id){
 const b=(D.billsArchive||[]).find(x=>x.id===id);
 if(!b)return;
 if(!await askConfirm(`Hapus permanen catatan arsip "${escapeHtml(b.name)}" dari Riwayat Tagihan Lunas? Riwayat pembayaran (transaksi) yang sudah tercatat TIDAK ikut terhapus.`,{title:'Hapus Arsip Tagihan',okText:'Ya, Hapus',icon:'🗑'}))return;
-D.billsArchive=D.billsArchive.filter(x=>x.id!==id);
+BillDebtPiutangCanonicalWriter.removeById('billsArchive',id);
 // FIX (audit s327): lepas billLinkId dari transaksi historis yang menunjuk ke arsip yang
 // baru dihapus -- transaksinya sendiri TETAP ada (catatan keuangan sah, sama seperti komentar
 // di atas), tapi billLinkId yang nyangkut ke arsip yang sudah tidak ada jadi dangling reference
@@ -803,8 +803,8 @@ const archIdx=(D.billsArchive||[]).findIndex(b=>b.id===t.billLinkId);
 if(archIdx>-1){
 linkedBill=D.billsArchive[archIdx];
 delete linkedBill.completedAt;
-D.billsArchive.splice(archIdx,1);
-D.bills.push(linkedBill);
+BillDebtPiutangCanonicalWriter.removeByPredicate('billsArchive',(x,i)=>i===archIdx);
+BillDebtPiutangCanonicalWriter.add('bills',linkedBill);
 restoredFromArchive=true;
 }
 }
@@ -866,7 +866,7 @@ linkedBill.nextDue=d.toISOString().split('T')[0];
 }
 }
 const beforePiutang=D.piutang?D.piutang.length:0;
-if(D.piutang&&D.piutang.length)D.piutang=D.piutang.filter(p=>p.autoTxId!==t.id);
+if(D.piutang&&D.piutang.length)BillDebtPiutangCanonicalWriter.removeByPredicate('piutang',p=>p.autoTxId!==undefined&&p.autoTxId!==t.id ? false : p.autoTxId===t.id);
 const removedPiutang=!!(D.piutang&&D.piutang.length<beforePiutang);
 return{linkedBill,isLatest,restoredFromArchive,removedPiutang};
 }
@@ -883,7 +883,7 @@ if(!await askConfirm('Hapus riwayat pembayaran ini? Kalau ini pembayaran TERAKHI
 // ikut mereaktivasi tagihan dari arsip walau bill itu memang sudah selesai.
 // (logic dipindah ke revertBillFromDeletedTx() -- lihat komentar di sana)
 const{linkedBill,isLatest,restoredFromArchive}=revertBillFromDeletedTx(t);
-D.transactions=D.transactions.filter(x=>x.id!==curBillHistoryEditTxId);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.id===curBillHistoryEditTxId); else D.transactions=D.transactions.filter(x=>x.id!==curBillHistoryEditTxId);
 curBillHistoryEditTxId=null;
 save();
 closeModal('billHistoryEditModal');
@@ -1043,7 +1043,10 @@ if(b.kind==='utang'&&b.debtId){
 const _dbtSnap=D.debts.find(x=>sameId(x.id,b.debtId));
 if(_dbtSnap)debtNilaiBefore=_dbtSnap.nilai||0;
 }
-D.transactions.push({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore});
+const _paymentAtomic=FinanceCrossEntityAtomic.begin(['transactions','bills','billsArchive','debts','piutang']);
+let _paymentAtomicCommitted=false;
+try{
+FinanceTxSOT.create({id:_payTxId,type:'expense',amount:payAmount,category:b.category||'Tagihan',subcategory:'',accountId:b.accountId||D.accounts[0]?.id||'',note:(advance?'Bayar (bulan depan): ':'Bayar: ')+b.name,date:payDate,payMethod:b.kind,billLinkId:b.id,billPrevNextDue:b.nextDue,debtNilaiBefore});
 // Ditanggung Bersama + auto-piutang (Sesi 341) -- lihat komentar helper di
 // piutang-utang.js. Dipanggil di sini (SETELAH transaksi pembayaran dibuat,
 // SEBELUM cabang kind-specific di bawah) supaya berlaku utk SEMUA jenis bill
@@ -1053,10 +1056,10 @@ if(typeof maybeCreateSharedPiutangFromBill==='function')maybeCreateSharedPiutang
 if(b.kind==='utang'&&b.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,b.debtId));
 if(dbt){
-dbt.nilai=Math.max(0,(dbt.nilai||0)-payAmount);
-if(dbt.nilai<=0){
-dbt.lunas=true;dbt.billId=null;
-if(!D.billsArchive)D.billsArchive=[];
+BillDebtPiutangCanonicalWriter.updateById('debts',dbt.id,dbt0=>{dbt0.nilai=Math.max(0,(dbt0.nilai||0)-payAmount);});
+if((D.debts.find(x=>sameId(x.id,dbt.id))||dbt).nilai<=0){
+BillDebtPiutangCanonicalWriter.updateById('debts',dbt.id,dbt0=>{dbt0.lunas=true;dbt0.billId=null;});
+BillDebtPiutangCanonicalWriter.ensure();
 // FIX ringkas (audit s306, saran #2): simpan payAmount AKTUAL (bisa beda dari
 // b.amount khusus kind==='utang', lihat prompt "Jumlah Pembayaran" di atas) di
 // entry arsip -- dipakai fallbackMatchAmount()/findFallbackBillPaymentTxId()
@@ -1065,39 +1068,51 @@ if(!D.billsArchive)D.billsArchive=[];
 // 3 titik push lain (cicilan tenor habis, tagihan sekali selesai) ikut disamakan
 // biar konsisten, walau di situ payAmount SELALU sama dgn b.amount (kind lain
 // tidak punya prompt edit nominal).
-D.billsArchive.push({...b,completedAt:payDate,actualPayAmount:payAmount});
-D.bills=D.bills.filter(x=>x.id!==id);
+BillDebtPiutangCanonicalWriter.add('billsArchive',{...b,completedAt:payDate,actualPayAmount:payAmount});
+BillDebtPiutangCanonicalWriter.removeById('bills',id);
+// S2207: stage event before persistence so mirror + outbox share one IDB transaction.
+_paymentAtomic.commit();
+_paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderDebtList();renderKekayaanBersih();hitungZakatMaal();
 toast('🎉 Utang '+dbt.name+' LUNAS!');return;
 }
 }
 }
 if(b.kind==='cicilan'&&b.sisaTenor!=null){
-b.sisaTenor-=1;
-if(b.sisaTenor<=0){
-if(!D.billsArchive)D.billsArchive=[];
-D.billsArchive.push({...b,completedAt:payDate,actualPayAmount:payAmount});
-D.bills=D.bills.filter(x=>x.id!==id);
+BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.sisaTenor=(b0.sisaTenor||0)-1;});
+if((D.bills.find(x=>sameId(x.id,b.id))||b).sisaTenor<=0){
+BillDebtPiutangCanonicalWriter.ensure();
+BillDebtPiutangCanonicalWriter.add('billsArchive',{...b,completedAt:payDate,actualPayAmount:payAmount});
+BillDebtPiutangCanonicalWriter.removeById('bills',id);
 // BUGFIX (S334 audit, BUG-018): pembayaran ini SAMA-SAMA membuat transaksi expense
 // yang mempengaruhi totalSaldoAkun()/currentNetWorth() seperti jalur kind==='utang'
 // (yang sudah benar di atas) -- kartu Kekayaan Bersih/Zakat Maal harus ikut refresh
 // di sini juga, bukan cuma nunggu reload halaman.
+// S2207: stage event before persistence so mirror + outbox share one IDB transaction.
+_paymentAtomic.commit();
+_paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
 toast('🎉 Cicilan '+b.name+' LUNAS!');return;
 }
 }
 if(b.freq!=='bulanan'&&b.freq!=='mingguan'&&b.freq!=='tahunan'){
-if(!D.billsArchive)D.billsArchive=[];
-D.billsArchive.push({...b,completedAt:payDate,actualPayAmount:payAmount});
-D.bills=D.bills.filter(x=>x.id!==id);
+BillDebtPiutangCanonicalWriter.ensure();
+BillDebtPiutangCanonicalWriter.add('billsArchive',{...b,completedAt:payDate,actualPayAmount:payAmount});
+BillDebtPiutangCanonicalWriter.removeById('bills',id);
 // BUGFIX (S334 audit, BUG-018): sama seperti di atas -- tagihan "sekali" yang
 // selesai juga membuat transaksi expense riil, kartu Kekayaan Bersih/Zakat Maal
 // harus ikut refresh.
+// S2207: stage event before persistence so mirror + outbox share one IDB transaction.
+_paymentAtomic.commit();
+_paymentAtomicCommitted=true;
 save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ Tagihan selesai & tercatat');return;
 }
 const d=advanceBillNextDue(b.nextDue,b.freq);
-b.nextDue=d.toISOString().split('T')[0];
+BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.nextDue=d.toISOString().split('T')[0];});
+// S2207: stage event before persistence so mirror + outbox share one IDB transaction.
+_paymentAtomic.commit();
+_paymentAtomicCommitted=true;
 save();refreshBillEverywhere();
 // BUGFIX (S334 audit, BUG-018): sebelumnya HANYA kind==='utang' yang refresh Kekayaan
 // Bersih/Zakat Maal di jalur "berulang lanjut ke periode berikutnya" ini -- padahal
@@ -1109,6 +1124,12 @@ if(b.kind==='utang')renderDebtList();
 renderKekayaanBersih();hitungZakatMaal();
 const sisaMsg=b.sisaTenor!=null?` Sisa ${b.sisaTenor}x lagi.`:'';
 toast('✅ Dibayar & dijadwalkan ulang.'+sisaMsg);
+}catch(_paymentAtomicErr){
+  if(_paymentAtomicCommitted&&typeof _paymentAtomic.rollbackAfterCommit==='function')_paymentAtomic.rollbackAfterCommit();
+  else _paymentAtomic.rollback();
+  console.error('S2196: atomic bill payment rollback',_paymentAtomicErr);
+  throw _paymentAtomicErr;
+}
   }finally{
     _kwLockRoot.__kwMarkBillPaidInFlight.delete(_billPaymentLockKey);
   }

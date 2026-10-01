@@ -1,3 +1,4 @@
+var BillDebtPiutangCanonicalWriter=(typeof globalThis!=='undefined'&&globalThis.BillDebtPiutangCanonicalWriter)?globalThis.BillDebtPiutangCanonicalWriter:(typeof require==='function'?require('./bill-debt-piutang-canonical-writer.js'):null);
 // titipan-sync.js — S583 Sesi 10a ("titipan-sync-single-gate", DESAIN AWAL).
 //
 // LATAR (Rekomendasi #1 dari 5 rekomendasi audit TitipanReconcile awal,
@@ -183,7 +184,7 @@ reconcileAccounts(opts) {
       const catatan = 'Dana titipan akun: ' + (acc.name || '');
       let debt = existingLinked.find((d) => String(d.linkedOwnerId) === String(o.ownerId));
       if (debt) {
-        Object.assign(debt, { name: o.ownerName, nilai: amount, catatan, lunas: amount <= 0 });
+        BillDebtPiutangCanonicalWriter.updateById('debts',debt.id,d0=>Object.assign(d0,{name:o.ownerName,nilai:amount,catatan,lunas:amount<=0}));
       } else {
         debt = {
           id: (typeof uid === 'function' ? uid() : Date.now()),
@@ -198,7 +199,7 @@ reconcileAccounts(opts) {
           linkedAccountId: acc.id,
           linkedOwnerId: o.ownerId,
         };
-        D.debts.push(debt);
+        BillDebtPiutangCanonicalWriter.add('debts', debt);
       }
       keepIds.add(String(o.ownerId));
       result.synced++;
@@ -217,7 +218,7 @@ reconcileAccounts(opts) {
   // Remove stale linked rows in one pass. This also covers deleted accounts and
   // accounts newly linked to an Asset, exactly as the previous final filter did.
   const beforeFinal = D.debts.length;
-  D.debts = D.debts.filter((d) => {
+  const keptDebts = D.debts.filter((d) => {
     if (removedDebtIds.has(d && d.id)) return false;
     if (d && d.linkedAccountId != null) {
       const key=String(d.linkedAccountId);
@@ -226,6 +227,7 @@ reconcileAccounts(opts) {
     }
     return true;
   });
+  BillDebtPiutangCanonicalWriter.replace('debts', keptDebts);
   // Rows removed by the final stale-account rule were not counted above.
   result.removed += beforeFinal - D.debts.length - removedDebtIds.size;
   return result;

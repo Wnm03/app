@@ -211,7 +211,7 @@ const Investment = {
       // Hapus SEMUA entry utang tertaut, bukan cuma h.debtLinkId (yang cuma kepakai
       // di kasus single-owner) — multi-owner (AUD-008) bisa punya >1 entry per
       // holding, ditandai `linkedInvestmentId` di tiap object utangnya sendiri.
-      D.debts = D.debts.filter((d) => d.linkedInvestmentId !== h.id && String(d.id) !== String(h.debtLinkId));
+      BillDebtPiutangCanonicalWriter.removeByPredicate('debts',(d)=>d.linkedInvestmentId === h.id || String(d.id) === String(h.debtLinkId));
     }
     const before = (D.investments || []).length;
     D.investments = (D.investments || []).filter((h) => String(h.id) !== String(id));
@@ -256,9 +256,18 @@ const Investment = {
     const h = Investment.getHolding(id);
     if (!h) throw new Error('Holding tidak ditemukan');
     if (typeof MultiOwnerEngine === 'undefined') throw new Error('MultiOwnerEngine belum dimuat');
-    const res = MultiOwnerEngine.setOwners(h, owners);
+    const writer = typeof OwnershipCanonicalWriter !== 'undefined' ? OwnershipCanonicalWriter : null;
+    const res = writer ? writer.set(h, owners) : MultiOwnerEngine.setOwners(h, owners);
     if (!res.ok) throw new Error(res.reason);
     const nextOwners = res.entity.owners;
+    if (res.remaps && res.remaps.length && h.ownerSettlement && typeof h.ownerSettlement === 'object') {
+      res.remaps.forEach((m) => {
+        if (Object.prototype.hasOwnProperty.call(h.ownerSettlement, m.oldId)) {
+          h.ownerSettlement[m.newId] = h.ownerSettlement[m.oldId];
+          delete h.ownerSettlement[m.oldId];
+        }
+      });
+    }
     if (nextOwners.length === 1 && nextOwners[0].isSelf) {
       delete h.owners;
       h.fundSource = 'sendiri';
@@ -367,14 +376,14 @@ const Investment = {
       const amount = cost * (o.porsi / 100);
       let debt = existingLinked.find((d) => (d.linkedOwnerId || 'titipan_investor') === ownerId);
       if (debt) {
-        Object.assign(debt, { name: o.ownerName, nilai: amount, catatan, lunas: amount <= 0, linkedInvestmentId: h.id, linkedOwnerId: ownerId });
+        BillDebtPiutangCanonicalWriter.updateById('debts',debt.id,d0=>Object.assign(d0,{name:o.ownerName,nilai:amount,catatan,lunas:amount<=0,linkedInvestmentId:h.id,linkedOwnerId:ownerId}));
       } else {
         debt = { id: _invUid(), name: o.ownerName, nilai: amount, bunga: 0, cicilanBulanan: 0, tanggal: _invToday(), jatuhTempo: '', catatan, lunas: amount <= 0, linkedInvestmentId: h.id, linkedOwnerId: ownerId };
-        D.debts.push(debt);
+        BillDebtPiutangCanonicalWriter.add('debts',debt);
       }
       keepIds.add(ownerId);
     });
-    D.debts = D.debts.filter((d) => !(d.linkedInvestmentId === h.id && !keepIds.has(d.linkedOwnerId || 'titipan_investor')));
+    BillDebtPiutangCanonicalWriter.removeByPredicate('debts',(d)=>d.linkedInvestmentId === h.id && !keepIds.has(d.linkedOwnerId || 'titipan_investor'));
     const linkedNow = D.debts.filter((d) => d.linkedInvestmentId === h.id);
     h.debtLinkId = linkedNow.length === 1 ? linkedNow[0].id : null;
   },
@@ -440,7 +449,7 @@ const Investment = {
       if (Array.isArray(D.debts)) {
         D.debts.forEach((d) => {
           if (d && d.linkedInvestmentId === h.id && (d.linkedOwnerId || 'titipan_investor') === 'titipan_investor') {
-            d.linkedOwnerId = ownerId;
+            BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedOwnerId=ownerId;});
           }
         });
       }
@@ -480,7 +489,7 @@ const Investment = {
       if (new Set(nonSelfResultIds).size !== nonSelfResultIds.length) { conflicts++; return; }
       plan.forEach(({ row, oldId, newId }) => {
         if (Array.isArray(D.debts)) {
-          D.debts.forEach((d) => { if (d && d.linkedInvestmentId === h.id && (d.linkedOwnerId || 'titipan_investor') === oldId) d.linkedOwnerId = newId; });
+          D.debts.forEach((d) => { if (d && d.linkedInvestmentId === h.id && (d.linkedOwnerId || 'titipan_investor') === oldId) BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedOwnerId=newId;}); });
         }
         row.ownerId = newId;
       });
@@ -591,7 +600,7 @@ const Investment = {
         date: txDate,
         investmentTxLinkId: tx.id,
       };
-      D.transactions.push(linked);
+      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(linked); else D.transactions.push(linked);
       tx.linkedTxId = linked.id;
     }
     D.investmentTx.push(tx);
@@ -604,7 +613,7 @@ const Investment = {
     const tx = (D.investmentTx || []).find((t) => String(t.id) === String(id));
     if (!tx) return false;
     if (tx.linkedTxId && typeof D !== 'undefined' && D.transactions) {
-      D.transactions = D.transactions.filter((t) => String(t.id) !== String(tx.linkedTxId));
+      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(t=>t&&String(t.id)===String(tx.linkedTxId)); else D.transactions = D.transactions.filter((t) => String(t.id) !== String(tx.linkedTxId));
     }
     D.investmentTx = (D.investmentTx || []).filter((t) => String(t.id) !== String(id));
     if (tx.type === 'beli' || tx.type === 'jual') Investment.recomputeHolding(tx.investmentId);

@@ -410,9 +410,9 @@ const txNote=(customer.name?customer.name+' - ':'')+itemSummary;
 if(isEdit&&existing&&existing.txLinkId){
 const tx=D.transactions.find(x=>x.id===existing.txLinkId);
 if(tx)Object.assign(tx,{amount:dp,accountId:accId,note:txNote,date,cobekLinkId:result.shopId});
-else D.transactions.push({id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId});
+else { const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else D.transactions.push(_orderTx); }
 } else {
-D.transactions.push({id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId});
+const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else D.transactions.push(_orderTx);
 }
 const existingPiutangId=(existing&&existing.piutangLinkId)?existing.piutangLinkId:null;
 const shopRecord=D.cobek.find(c=>c.id===result.shopId);
@@ -425,11 +425,11 @@ Object.assign(existingPiutang,{name:piutangName,nilai:sisa,tanggal:date,catatan:
 if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
 }else{
 const pid=uid();
-D.piutang.push({id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
+BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
 if(shopRecord)shopRecord.piutangLinkId=pid;
 }
 }else if(existingPiutangId){
-D.piutang=D.piutang.filter(p=>p.id!==existingPiutangId);
+BillDebtPiutangCanonicalWriter.removeById('piutang',existingPiutangId);
 if(shopRecord)shopRecord.piutangLinkId=null;
 }
 save();
@@ -547,11 +547,11 @@ const t=D.cobek.find(x=>x.id===id);
 // no-op, tidak mengembalikan stok 2x / tidak crash).
 if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
 if(t.items)rollbackShopItems(t.items,1);
-if(t.txLinkId)D.transactions=D.transactions.filter(tx=>tx.id!==t.txLinkId);
+if(t.txLinkId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(t.txLinkId); else D.transactions=D.transactions.filter(tx=>tx.id!==t.txLinkId);}
 // S209-210 (Wire Return->Refund): piutang terhubung (sisa tagihan yg belum
 // dibayar dari order ini) ikut dibersihkan saat order-nya diretur, reuse
 // PERSIS pola filter yg sudah ada di Order._saveInner() (bukan rumus baru).
-if(t&&t.piutangLinkId)D.piutang=D.piutang.filter(p=>p.id!==t.piutangLinkId);
+if(t&&t.piutangLinkId)BillDebtPiutangCanonicalWriter.removeById('piutang',t.piutangLinkId);
 D.cobek=D.cobek.filter(t=>t.id!==id);
 save();this.render();renderShopRecent();renderProductList();
 if(typeof ShopInsight!=='undefined')ShopInsight.render();

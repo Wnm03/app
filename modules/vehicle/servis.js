@@ -1174,7 +1174,7 @@ let _postCommitFinanceEvent=null;
 if(s.txLinkId){
 const tx=D.transactions.find(t=>t.id===s.txLinkId);
 if(cost===0){
-D.transactions=D.transactions.filter(t=>t.id!==s.txLinkId);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(t=>t&&t.id===s.txLinkId); else D.transactions=D.transactions.filter(t=>t.id!==s.txLinkId);
 s.txLinkId=null;
 _postCommitFinanceEvent={txId:null,deletedId:tx.id,category:tx.category,type:'expense',amount:0,kind:'servis'};
 }else if(tx){
@@ -1183,14 +1183,14 @@ _postCommitFinanceEvent={txId:tx.id,category:tx.category,type:'expense',amount:c
 }else if(cost>0){
 const repairTxId=uid();
 const repairTxCat=resolveVehicleTxCategory(veh);
-D.transactions.push({id:repairTxId,type:'expense',amount:cost,category:repairTxCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id,vehicleId:s.vehicleId||curVehicleId});
+const _repairTx={id:repairTxId,type:'expense',amount:cost,category:repairTxCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id,vehicleId:s.vehicleId||curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_repairTx); else D.transactions.push(_repairTx);
 s.txLinkId=repairTxId;
 _postCommitFinanceEvent={txId:repairTxId,category:repairTxCat,type:'expense',amount:cost,kind:'servis',action:'relink'};
 }
 }else if(cost>0){
 const txId=uid();
 const txCat=resolveVehicleTxCategory(veh);
-D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id,vehicleId:s.vehicleId||curVehicleId});
+const _serviceTx={id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:s.id,vehicleId:s.vehicleId||curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_serviceTx); else D.transactions.push(_serviceTx);
 s.txLinkId=txId;
 _postCommitFinanceEvent={txId,category:txCat,type:'expense',amount:cost,kind:'servis'};
 }
@@ -1225,7 +1225,7 @@ let txId=null;
 // arus uang nyata.
 if(cost>0){
  txId=uid();
- D.transactions.push({id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId,vehicleId:curVehicleId});
+ const _markTx={id:txId,type:'expense',amount:cost,category:txCat,subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:noteFull,date,servisLinkId:servisId,vehicleId:curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_markTx); else D.transactions.push(_markTx);
 }
 const checklistPayload=_preSaveChecklistPayload;
 const _serviceSessionId=uid();
@@ -1609,7 +1609,7 @@ const _runDeleteSession=async()=>{
   const beforeStock=new Map();
   for(const sid of _sessionStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
   try{
-    if(txIds.size)D.transactions=D.transactions.filter(tx=>!txIds.has(tx.id));
+    if(txIds.size){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(tx=>tx&&txIds.has(tx.id)); else D.transactions=D.transactions.filter(tx=>!txIds.has(tx.id));}
     logs.forEach(s=>{
       if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
       if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
@@ -1627,7 +1627,7 @@ const _runDeleteSession=async()=>{
   }catch(err){
     try{
       for(const row of beforeLogs){const cur=(D.servisLogs||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else D.servisLogs.push(_cloneSession(row));}
-      for(const row of beforeTx){const cur=(D.transactions||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else D.transactions.push(_cloneSession(row));}
+      for(const row of beforeTx){const cur=(D.transactions||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cloneSession(row)); else D.transactions.push(_cloneSession(row));}
       if(beforeStock&&beforeStock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok sesi servis');const sr=StockCommandSOT.setQtyMap(beforeStock,{reason:'service-session-delete-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_SESSION_STOCK_ROLLBACK_FAILED');}
     }catch(restoreErr){console.error('P17: session service delete rollback failed',restoreErr);}
     console.error('P17: session service delete failed',err);
@@ -1656,7 +1656,7 @@ const _deleteStockIds=[s.usedPartId,s.catalogPartLinkedStockId,s.autoGantiStockI
 const beforeStock=new Map();
 for(const sid of _deleteStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
 try{
-  if(deletedTxId)D.transactions=D.transactions.filter(tx=>tx.id!==deletedTxId);
+  if(deletedTxId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(deletedTxId); else D.transactions=D.transactions.filter(tx=>tx.id!==deletedTxId);}
   if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
   if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
   if(s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
@@ -1670,7 +1670,7 @@ try{
 }catch(err){
   try{
     const cur=(D.servisLogs||[]).find(x=>x&&x.id===beforeService.id);if(cur)Object.assign(cur,_cloneDelete(beforeService));else D.servisLogs.push(_cloneDelete(beforeService));
-    if(beforeTxRow){const tx=(D.transactions||[]).find(x=>x&&x.id===beforeTxRow.id);if(tx)Object.assign(tx,_cloneDelete(beforeTxRow));else D.transactions.push(_cloneDelete(beforeTxRow));}
+    if(beforeTxRow){const tx=(D.transactions||[]).find(x=>x&&x.id===beforeTxRow.id);if(tx)Object.assign(tx,_cloneDelete(beforeTxRow));else if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cloneDelete(beforeTxRow)); else D.transactions.push(_cloneDelete(beforeTxRow));}
     if(beforeStock&&beforeStock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok sesi servis');const sr=StockCommandSOT.setQtyMap(beforeStock,{reason:'service-session-delete-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_SESSION_STOCK_ROLLBACK_FAILED');}
   }catch(restoreErr){console.error('P17: service delete rollback failed',restoreErr);}
   console.error('P17: service delete failed',err);
@@ -1813,7 +1813,7 @@ for(const sid of _markStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===s
 const _restoreMarkDomain=(servisId)=>{
   try{
     D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.id===servisId));
-    D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId===servisId));
+    if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId===servisId); else D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId===servisId));
     if(_markStockBefore&&_markStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback pengingat servis');const sr=StockCommandSOT.setQtyMap(_markStockBefore,{reason:'service-reminder-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_REMINDER_STOCK_ROLLBACK_FAILED');}
   }catch(_markRollbackErr){console.error('V25: markServiced rollback failed',_markRollbackErr);}
 };
@@ -1824,7 +1824,7 @@ const _serviceSnapshot=(typeof buildServiceNextDueSnapshot==='function')?buildSe
 const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,masterCategoryId:cat.masterCategoryId||null,serviceComponentId:cat.serviceComponentId||null,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null,actionType:actionType||null,conditionResult:opts.conditionResult||null,batchId:opts.batchId||null,idempotencyKey:opts.idempotencyKey||(`reminder:${curVehicleId||''}:${cat.id}:${actionType||'default'}:${opts.batchId||servisId}`),intervalKmAtService:_serviceSnapshot.intervalKmAtService,intervalBulanAtService:_serviceSnapshot.intervalBulanAtService,nextDueKm:_serviceSnapshot.nextDueKm,nextDueDate:_serviceSnapshot.nextDueDate,nextDueAxis:_serviceSnapshot.nextDueAxis};
 if(cost>0){
 const txId=uid();
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId,vehicleId:curVehicleId});
+const _reminderTx={id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId,vehicleId:curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_reminderTx); else D.transactions.push(_reminderTx);
 entry.txLinkId=txId;
 }
 if(entry.idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
@@ -1879,7 +1879,7 @@ const restoreBatch=()=>{
   try{
     const batchIds=new Set((D.servisLogs||[]).filter(x=>x&&x.batchId===batchId).map(x=>x.id));
     D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.batchId===batchId));
-    D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId&&batchIds.has(x.servisLinkId)));
+    if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId&&batchIds.has(x.servisLinkId)); else D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId&&batchIds.has(x.servisLinkId)));
     if(batchStockBefore&&batchStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback batch servis');const sr=StockCommandSOT.setQtyMap(batchStockBefore,{reason:'service-batch-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_BATCH_STOCK_ROLLBACK_FAILED');}
   }catch(e){console.error('V26: batch rollback failed',e);}
 };

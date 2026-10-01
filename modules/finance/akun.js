@@ -268,10 +268,11 @@ function setAccOwners(accId,owners){
 const acc=D.accounts.find(a=>sameId(a.id,accId));
 if(!acc)return{ok:false,reason:'Akun tidak ditemukan'};
 if(typeof MultiOwnerEngine==='undefined')return{ok:false,reason:'MultiOwnerEngine belum dimuat'};
-const res=MultiOwnerEngine.setOwners(acc,owners);
+const writer=typeof OwnershipCanonicalWriter!=='undefined'?OwnershipCanonicalWriter:null;
+const res=writer?writer.set(acc,owners):MultiOwnerEngine.setOwners(acc,owners);
 if(!res.ok)return res;
 acc.owners=res.entity.owners;
-return{ok:true,owners:acc.owners};
+return{ok:true,owners:acc.owners,remaps:res.remaps||[]};
 }
 function populateAccFilters(){
 const opts=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
@@ -805,7 +806,8 @@ if(!res.ok){toast('⚠️ '+res.reason);return;}
 // MultiOwnerEngine.setOwners()/Aset._syncOwnerDebts() persis pola saveOwners().
 const linkedAsset=(D.assets||[]).find(a=>sameId(a.accountId,AccOwners._accId));
 if(linkedAsset&&!(typeof Aset!=='undefined'&&typeof Aset._resolveLinkedInvestment==='function'&&Aset._resolveLinkedInvestment(linkedAsset))){
-const assetRes=MultiOwnerEngine.setOwners(linkedAsset,res.owners);
+const writer=typeof OwnershipCanonicalWriter!=='undefined'?OwnershipCanonicalWriter:null;
+const assetRes=writer?writer.set(linkedAsset,res.owners):MultiOwnerEngine.setOwners(linkedAsset,res.owners);
 if(assetRes.ok){
 Object.assign(linkedAsset,{owners:assetRes.entity.owners});
 if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcile==='function'){TitipanSync.reconcile(linkedAsset);}else if(typeof Aset!=='undefined'&&typeof Aset._syncOwnerDebts==='function'){Aset._syncOwnerDebts(linkedAsset);}

@@ -601,7 +601,7 @@ if(!(val>0)){toast('⚠️ Isi dulu angka berat (kg) yang valid');return;}
 // mutateStockDelta() di restock() (baris ~532 file ini).
 if(typeof ProductRepository!=='undefined'){
 const r=ProductRepository.updateProduct(D.products[idx],{beratPerUnit:val});
-if(r.ok)D.products[idx]=r.product;
+if(r.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.upsert(r.product);if(!_wr.ok)throw new Error(_wr.reason||'Gagal memperbarui produk');}else D.products[idx]=r.product;}
 }else{
 D.products[idx].beratPerUnit=val;
 }
@@ -630,7 +630,7 @@ if(idx<0)return;
 // fallback raw PERSIS SAMA pola applyOne() di atas.
 if(typeof ProductRepository!=='undefined'){
 const r=ProductRepository.updateProduct(D.products[idx],{beratPerUnit:val});
-if(r.ok)D.products[idx]=r.product;
+if(r.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.upsert(r.product);if(!_wr.ok)throw new Error(_wr.reason||'Gagal memperbarui produk');}else D.products[idx]=r.product;}
 }else{
 D.products[idx].beratPerUnit=val;
 }

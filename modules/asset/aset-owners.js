@@ -143,7 +143,8 @@ Aset._renderOwnersList();
 _applyOwnersToAsset(a,owners){
 if(!a)throw new Error('Aset tidak ditemukan');
 if(typeof MultiOwnerEngine==='undefined')throw new Error('MultiOwnerEngine belum dimuat');
-const res=MultiOwnerEngine.setOwners(a,owners);
+const writer=typeof OwnershipCanonicalWriter!=='undefined'?OwnershipCanonicalWriter:null;
+const res=writer?writer.set(a,owners):MultiOwnerEngine.setOwners(a,owners);
 if(!res.ok)throw new Error(res.reason);
 Object.assign(a,{owners:res.entity.owners});
 if(a.titipanAmount>0){
@@ -676,9 +677,12 @@ return{ownerId,ownerName:o.ownerName.trim(),porsi:o.porsi,isSelf:!!o.isSelf};
 if(e&&e.message==='S607_OWNER_REGISTRY_UNAVAILABLE'){toast('⚠️ Fitur pemilik belum siap dimuat, coba lagi');return;}
 throw e;
 }
-const res=MultiOwnerEngine.setOwners(a,owners);
+const writer=typeof OwnershipCanonicalWriter!=='undefined'?OwnershipCanonicalWriter:null;
+const res=writer?writer.set(a,owners):MultiOwnerEngine.setOwners(a,owners);
 if(!res.ok){toast('⚠️ '+res.reason);return;}
 Object.assign(a,{owners:res.entity.owners});
+if(res.remaps&&res.remaps.length&&Array.isArray(D.debts)){res.remaps.forEach((m)=>D.debts.forEach((d)=>{if(d&&d.linkedAssetId===a.id&&String(d.linkedOwnerId)===String(m.oldId))BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedOwnerId=m.newId;});}));}
+if(res.remaps&&res.remaps.length&&a.ownerSettlement&&typeof a.ownerSettlement==='object'){res.remaps.forEach((m)=>{if(Object.prototype.hasOwnProperty.call(a.ownerSettlement,m.oldId)){a.ownerSettlement[m.newId]=a.ownerSettlement[m.oldId];delete a.ownerSettlement[m.oldId];}});}
 if(typeof Aset.setOwnerSettlement==='function'){
 owners.forEach((o)=>{
 if(o.isSelf)return;
@@ -791,14 +795,14 @@ const amount=nilai*(o.porsi/100);
 const catatan='Dana titipan aset: '+a.name;
 let debt=existingLinked.find(d=>d.linkedOwnerId===o.ownerId);
 if(debt){
-Object.assign(debt,{name:o.ownerName,nilai:amount,catatan,lunas:amount<=0});
+BillDebtPiutangCanonicalWriter.updateById('debts',debt.id,d0=>Object.assign(d0,{name:o.ownerName,nilai:amount,catatan,lunas:amount<=0}));
 }else{
 debt={id:uid(),name:o.ownerName,nilai:amount,bunga:0,cicilanBulanan:0,tanggal:todayStr(),jatuhTempo:'',catatan,lunas:amount<=0,linkedAssetId:a.id,linkedOwnerId:o.ownerId};
-D.debts.push(debt);
+BillDebtPiutangCanonicalWriter.add('debts',debt);
 }
 keepIds.add(o.ownerId);
 });
-D.debts=D.debts.filter(d=>!(d.linkedAssetId===a.id&&!keepIds.has(d.linkedOwnerId)));
+BillDebtPiutangCanonicalWriter.removeByPredicate('debts',d=>d.linkedAssetId===a.id&&!keepIds.has(d.linkedOwnerId));
 },
 migrateOwnersToRegistry(){
 if(typeof D==='undefined'||!Array.isArray(D.assets))return{migrated:0,skipped:0,conflicts:0};
@@ -821,7 +825,7 @@ const nonSelfResultIds=a.owners.map((o,i)=>({o,id:resultIds[i]})).filter(x=>x.o&
 if(new Set(nonSelfResultIds).size!==nonSelfResultIds.length){conflicts++;return;}
 plan.forEach(({row,oldId,newId})=>{
 if(Array.isArray(D.debts)){
-D.debts.forEach(d=>{ if(d&&d.linkedAssetId===a.id&&d.linkedOwnerId===oldId)d.linkedOwnerId=newId; });
+D.debts.forEach(d=>{ if(d&&d.linkedAssetId===a.id&&d.linkedOwnerId===oldId)BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedOwnerId=newId;}); });
 }
 row.ownerId=newId;
 });

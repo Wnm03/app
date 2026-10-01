@@ -269,7 +269,7 @@ const cloneResult=ProductRepository.cloneProduct(p);
 if(!cloneResult.ok){toast('⚠️ Gagal duplikat produk: '+cloneResult.reason);return;}
 const saveResult=ProductRepository.saveProduct(D.products,cloneResult.product);
 if(!saveResult.ok){toast('⚠️ Gagal menyimpan hasil duplikat: '+saveResult.reason);return;}
-D.products=saveResult.products;
+if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(saveResult.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');}else D.products=saveResult.products;
 save();
 this.renderList();
 toast(`✅ "${p.name}" diduplikat sbg "${cloneResult.product.name}" (stok 0)`);
@@ -530,8 +530,7 @@ if(typeof ProductRepository!=='undefined'){
 const hasil=ProductRepository.createProduct(fieldsBaru);
 if(hasil.ok)produkBaru=hasil.product;
 }
-product=produkBaru;
-D.products.push(product);
+if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.upsert(produkBaru);if(!wr.ok)throw new Error(wr.reason||'Gagal menyimpan produk');product=wr.product;}else{product=produkBaru;D.products.push(product);}
 }
 if(!product.hargaByProdusen)product.hargaByProdusen={};
 if(produsenId){
@@ -572,7 +571,7 @@ return;
 if(delta>0&&hargaBeli>0&&!isKoreksi){
 const cost=delta*hargaBeli;
 const txId=uid();
-D.transactions.push({id:txId,type:'expense',amount:cost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Beli stok ${name} x${delta}${kategoriLabel}${produsenLabel} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:delta,produsenId:produsenId||undefined,kategoriId:kategoriId||undefined});
+const _stockTx={id:txId,type:'expense',amount:cost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Beli stok ${name} x${delta}${kategoriLabel}${produsenLabel} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:delta,produsenId:produsenId||undefined,kategoriId:kategoriId||undefined}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_stockTx); else D.transactions.push(_stockTx);
 save();closeModal('productModal');this.renderList();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast(`✅ Produk disimpan, +${delta} stok tercatat sbg pengeluaran ${fmtFull(cost)}`);
 this.syncPairedPrice(product);
@@ -594,10 +593,11 @@ if(!await askConfirm('Hapus produk ini dari etalase?'))return;
 const p=D.products[i];
 if(p&&typeof ProductRepository!=='undefined'){
 const r=ProductRepository.mutateDelete(D.products,p.id);
-if(r.ok)D.products=r.products;
+if(r.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(r.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal memperbarui produk');}else D.products=r.products;}
+else if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.removeById(p.id);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menghapus produk');}
 else D.products.splice(i,1);
 }else{
-D.products.splice(i,1);
+if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.removeById(p.id);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menghapus produk');}else D.products.splice(i,1);
 }
 // Sesi 376 (Inventory Movement manual override): bersihkan override lokasi
 // manual punya produk yg dihapus, kalau ada — cegah D.productMovementOverride

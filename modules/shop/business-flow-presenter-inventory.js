@@ -86,7 +86,7 @@ const BusinessFlowPresenterInventoryMixin = {
       const txKey = `po-cost:${purchase.id}:${purchase.receivedQty}`;
       if (!D.transactions.some(t => t && t.shopPurchaseId === purchase.id && t.stockQty === receiveQty && t.shopPurchaseReceiptKey === txKey)) {
         const accId = (D.accounts || [])[0]?.id;
-        D.transactions.push({id:'tx_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),type:'expense',amount:receiveQty*unitCost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Penerimaan PO ${product.name||purchase.productId} x${receiveQty} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:receiveQty,shopPurchaseId:purchase.id,shopPurchaseReceiptKey:txKey});
+        const _poTx={id:'tx_'+Date.now()+'_'+Math.random().toString(36).slice(2,8),type:'expense',amount:receiveQty*unitCost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Penerimaan PO ${product.name||purchase.productId} x${receiveQty} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:receiveQty,shopPurchaseId:purchase.id,shopPurchaseReceiptKey:txKey}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_poTx); else D.transactions.push(_poTx);
       }
     }
     if (typeof save === 'function') save();

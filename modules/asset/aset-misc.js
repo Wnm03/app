@@ -454,6 +454,24 @@ req.onerror=()=>reject(req.error||new Error('Gagal membaca dari IndexedDB'));
 });
 },'get("'+key+'")',undefined);
 },
+async getMany(keys){
+return IDBStore._withRetry(async()=>{
+if(!Array.isArray(keys)||!keys.length)return {};
+const db=await IDBStore._open();
+return await new Promise((resolve,reject)=>{
+const tx=db.transaction(IDBStore.STORE,'readonly');
+const store=tx.objectStore(IDBStore.STORE);
+const out={};
+let pending=keys.length;
+let failed=false;
+keys.forEach(key=>{
+ const req=store.get(key);
+ req.onsuccess=()=>{out[key]=req.result;if(--pending===0&&!failed)resolve(out);};
+ req.onerror=()=>{if(failed)return;failed=true;reject(req.error||new Error('Gagal membaca batch dari IndexedDB'));};
+});
+});
+},'getMany()',undefined);
+},
 async set(key,value){
 return IDBStore._withRetry(async()=>{
 const db=await IDBStore._open();
@@ -464,6 +482,47 @@ tx.oncomplete=()=>resolve(true);
 tx.onerror=()=>reject(tx.error||new Error('Gagal menulis ke IndexedDB'));
 });
 },'set("'+key+'")',false);
+},
+async setMany(entries){
+return IDBStore._withRetry(async()=>{
+if(!Array.isArray(entries)||!entries.length)return true;
+const db=await IDBStore._open();
+return await new Promise((resolve,reject)=>{
+const tx=db.transaction(IDBStore.STORE,'readwrite');
+const store=tx.objectStore(IDBStore.STORE);
+try{entries.forEach(entry=>{if(!Array.isArray(entry)||entry.length<2)throw new Error('Invalid IDBStore.setMany entry');store.put(entry[1],entry[0]);});}
+catch(e){try{tx.abort();}catch(_){ /* abort may already be closed; preserve the original batch error */ }reject(e);return;}
+tx.oncomplete=()=>resolve(true);
+tx.onerror=()=>reject(tx.error||new Error('Gagal menulis batch ke IndexedDB'));
+tx.onabort=()=>reject(tx.error||new Error('Transaksi batch IndexedDB dibatalkan'));
+});
+},'setMany()',false);
+},
+async setManyIfCurrent(entries,guardKey,expectedValue,nextValue){
+return IDBStore._withRetry(async()=>{
+if(!Array.isArray(entries)||!entries.length)throw new Error('Invalid IDBStore.setManyIfCurrent entries');
+const db=await IDBStore._open();
+return await new Promise((resolve,reject)=>{
+const tx=db.transaction(IDBStore.STORE,'readwrite');
+const store=tx.objectStore(IDBStore.STORE);
+const req=store.get(guardKey);
+let matched=false;
+req.onerror=()=>reject(req.error||new Error('Gagal membaca writer token IndexedDB'));
+req.onsuccess=()=>{
+try{
+ const current=req.result;
+ const same=(current===undefined||current===null)?(expectedValue===undefined||expectedValue===null):String(current)===String(expectedValue);
+ if(!same){matched=false;try{tx.abort();}catch(_){ /* abort may already be closed */ }return;}
+ matched=true;
+ entries.forEach(entry=>{if(!Array.isArray(entry)||entry.length<2)throw new Error('Invalid IDBStore.setManyIfCurrent entry');store.put(entry[1],entry[0]);});
+ store.put(nextValue,guardKey);
+}catch(e){try{tx.abort();}catch(_){ /* abort may already be closed; preserve original error */ }reject(e);}
+};
+tx.oncomplete=()=>resolve(matched);
+tx.onerror=()=>reject(tx.error||new Error('Gagal menulis batch CAS ke IndexedDB'));
+tx.onabort=()=>{if(!matched)resolve(false);else reject(tx.error||new Error('Transaksi CAS IndexedDB dibatalkan'));};
+});
+},'setManyIfCurrent()',false);
 },
 // BARU (item "BELUM DIKERJAKAN" resetApp(): dulu resetApp() cuma localStorage.clear(),
 // tidak pernah menyentuh IndexedDB -- lihat docs/CATATAN-CEK-CLAUDE.md). Mengosongkan

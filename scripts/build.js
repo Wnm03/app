@@ -7,12 +7,18 @@ const { execSync } = require('child_process');
 const { computeGroupHash, markerLine } = require('./bundle-hash');
 const ROOT = path.join(__dirname, '..');
 const GROUP_A = [
+  'modules/finance/finance-tx-sot.js',
+  'modules/finance/finance-event-outbox.js',
+  'modules/finance/finance-cross-entity-atomic.js',
+  'modules/finance/bill-debt-piutang-canonical-writer.js',
+  'modules/finance/bill-debt-piutang-reconciler.js',
   'modules/shared/pwa-ux-performance.js',
   'modules/shared/pwa-production-hardening.js',
   'modules/shared/modules-render.js',
   'modules/shared/modules-render-b.js',
   'modules/shared/modals.js',
   'modules/shared/modules-calc.js',
+  'modules/shop/shop-canonical-writer.js',
   'modules/shop/cobek-etalase.js',
   'modules/shop/cobek-pricing.js',
   'modules/shop/cobek-order.js',
@@ -46,6 +52,7 @@ const GROUP_A = [
   'modules/asset/asset-maintenance-presenter.js',
   'modules/finance/worthit.js',
   'modules/shared/ripple-position.js',
+  'modules/shared/ownership-canonical-writer.js',
 ];
 const GROUP_B = [
   'modules/shared/data-default.js',
@@ -120,6 +127,7 @@ const GROUP_B = [
   'modules/vehicle/car-notes-performance.js',
   'modules/vehicle/vehicle-car-notes-sot-s2071.js',
   'modules/vehicle/vehicle-active-sot-s2061.js',
+  'modules/vehicle/vehicle-canonical-writer.js',
   'modules/vehicle/vehicle-core.js',
   'modules/vehicle/fuel-price-ref.js',
   'modules/vehicle/vehicle-catalog.js',
@@ -486,8 +494,25 @@ function preflightPatchManifest() {
   if(missing.length) throw new Error('PATCH PREFLIGHT FAILED — semua file manifest harus sudah diterapkan sebelum build/version bump.\n'+missing.map(x=>'  - '+x).join('\n'));
   console.log(`✓ Patch preflight: ${listed.length} manifest files present (${manifestPath})`);
 }
+function preflightRequiredMinifier() {
+  const required = process.argv.includes('--require-minify') || process.env.REQUIRE_MINIFY === '1';
+  if (!required) return;
+  try {
+    // eslint-disable-next-line global-require
+    require('esbuild');
+  } catch (e) {
+    const reason = e && e.message ? e.message : String(e);
+    throw new Error(
+      'BUILD PREFLIGHT GAGAL — --require-minify aktif tetapi esbuild tidak tersedia. ' +
+      'Build dihentikan sebelum generate/version bump agar repository tidak tertinggal dalam state parsial. ' +
+      `Detail: ${reason}`
+    );
+  }
+  console.log('✓ Build preflight: esbuild tersedia untuk required minification');
+}
 function main() {
   preflightPatchManifest();
+  preflightRequiredMinifier();
   execSync('node scripts/generate-service-master-data.js', { cwd: ROOT, stdio: 'inherit' });
   runLintRegistry(LINT_REGISTRY);
   const explicitVersion = process.argv.slice(2).find((a) => !a.startsWith('--'));
