@@ -165,13 +165,14 @@ function getReminderCategoriesForVehicle(vehicleId){
   if(!vehicle)return [];
   const canonical=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function')
     ?VehicleCarNotesSOT.getServiceCategories(vehicleId):[];
+  // S2170: this is a read/projection function. Never silently mutate the
+  // canonical SOT while rendering a reminder. If canonical rows are not
+  // available yet, use only vehicle-scoped legacy rows as a compatibility
+  // projection; explicit reconciliation is performed by the UI/migration
+  // boundary, not by this read.
   let cats=canonical.slice();
   if(!cats.length){
-    const legacy=(D.sparepartCats||[]).filter(c=>String(c&&c.vehicleId||'')===vid || !c?.vehicleId);
-    if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.upsertServiceCategory==='function'){
-      legacy.forEach(c=>{if(c&&(!c.vehicleId||String(c.vehicleId)===vid))VehicleCarNotesSOT.upsertServiceCategory(vehicleId,c);});
-      cats=VehicleCarNotesSOT.getServiceCategories(vid)||[];
-    }else cats=legacy;
+    cats=(D.sparepartCats||[]).filter(c=>c&&(!c.vehicleId||String(c.vehicleId)===vid));
   }
   const provisioned=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vid):[];
   if(!cats.length&&provisioned.length)cats=provisioned.map(r=>({id:'sot:'+r.catalogPartId,name:r.partName,code:r.oemCode,vehicleId:vid,catalogPartId:r.catalogPartId,catalogCategory:r.category,catalogSubcategory:r.subcategory,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,showInReminder:r.showInReminder,serviceComponentId:r.serviceComponentId||null,masterCategoryId:r.masterCategoryId||null}));

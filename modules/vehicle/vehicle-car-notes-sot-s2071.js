@@ -201,6 +201,34 @@
     const vid=str(id||activeId()); if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found',vehicleId:vid||null};
     return mutate(vid,s=>{if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];s.serviceCategories=s.serviceCategories.filter(c=>str(c&&c.id)!==str(categoryId));});
   }
+  // S2170: explicit, idempotent compatibility projection. Canonical service
+  // categories live in VehicleCarNotesSOT; D.sparepartCats is only a legacy
+  // projection needed by older UI/stock consumers. This function is the only
+  // place in the reminder/category read path allowed to materialize that
+  // projection. It never invents canonical facts and never copies another
+  // vehicle's row.
+  function reconcileLegacyCategoryProjection(id){
+    const vid=str(id||activeId());
+    if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found',vehicleId:vid||null,changed:0};
+    const d=data(); if(!d)return {ok:false,code:'data_unavailable',vehicleId:vid,changed:0};
+    if(!Array.isArray(d.sparepartCats))d.sparepartCats=[];
+    const s=ensure(vid);
+    const canonical=Array.isArray(s&&s.serviceCategories)?s.serviceCategories:[];
+    let changed=0;
+    canonical.forEach(raw=>{
+      const c=normalizeCategory(raw,vid);
+      const key=categoryKey(c);
+      if(!key)return;
+      const idx=d.sparepartCats.findIndex(x=>x&&String(x.vehicleId||'')===vid&&categoryKey(x)===key);
+      if(idx<0){d.sparepartCats.push(c);changed++;}
+      else {
+        const current=d.sparepartCats[idx];
+        const merged=Object.assign({},current,c,{vehicleId:vid});
+        if(JSON.stringify(current)!==JSON.stringify(merged)){d.sparepartCats[idx]=merged;changed++;}
+      }
+    });
+    return {ok:true,vehicleId:vid,changed,count:canonical.length};
+  }
   function syncLegacyCategoryProjection(cat,op){
     const c=normalizeCategory(cat); const vid=str(c.vehicleId);
     if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
@@ -281,7 +309,7 @@
     const base=auditFinanceHistoryReminder(vid);issues.push(...(base.issues||[]));
     return {ok:issues.length===0,vehicleId:vid,sessionCount:seenSessions.size,serviceCount:scopedLogs.length,financeServiceCount:scopedTx.filter(x=>str(x.vehicleId)===vid).length,reminderCount:reminders.length,issues};
   }
-  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
+  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,reconcileLegacyCategoryProjection,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
   root.VehicleCarNotesSOT=api;
   if(typeof window!=='undefined')window.VehicleCarNotesSOT=api;
   try{for(const v of vehicles())ensure(v.id);}catch(e){/* provisioning must remain fail-safe during bootstrap. */}

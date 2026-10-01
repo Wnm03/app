@@ -64,12 +64,11 @@ function getVehicleServiceCategorySOT(cat,vehicleId){
 function getCanonicalVehicleReminderCategories(vehicleId){
   const vid=String(vehicleId||'');
   if(!vid||typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT)return [];
-  let cats=typeof VehicleCarNotesSOT.getServiceCategories==='function'?VehicleCarNotesSOT.getServiceCategories(vid):[];
-  if(!cats.length&&typeof VehicleCarNotesSOT.upsertServiceCategory==='function'){
-    (D.sparepartCats||[]).filter(c=>c&&String(c.vehicleId||'')===vid).forEach(c=>{try{VehicleCarNotesSOT.upsertServiceCategory(vid,c);}catch(_e){/* legacy projection failure is isolated; canonical SOT remains authoritative. */}});
-    cats=VehicleCarNotesSOT.getServiceCategories(vid);
-  }
-  return cats;
+  // S2170: read-only accessor. Reconciliation belongs to an explicit boundary;
+  // a renderer must never create canonical facts as a side effect.
+  return typeof VehicleCarNotesSOT.getServiceCategories==='function'
+    ?(VehicleCarNotesSOT.getServiceCategories(vid)||[])
+    :[];
 }
 function dedupeServiceCategoriesForVehicle(categories,vehicleId){
   if(typeof ServiceCategorySOTReconciliationS2007!=='undefined'&&ServiceCategorySOTReconciliationS2007&&typeof ServiceCategorySOTReconciliationS2007.canonicalReminderProjection==='function'){
@@ -925,6 +924,9 @@ Sparepart.ensureCanonicalSparepartComponentCategories();
 const el=document.getElementById('sparepartCatList');
 if(!el)return;
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+if(vid&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.reconcileLegacyCategoryProjection==='function'){
+  VehicleCarNotesSOT.reconcileLegacyCategoryProjection(vid);
+}
 Sparepart._loadMasterCategoryFilterPrefsOnce();
 Sparepart.renderMasterCategoryChips(el);
 // S1964 legacy renderer contract: ServiceInputCatalog.itemById(c.serviceComponentId)
