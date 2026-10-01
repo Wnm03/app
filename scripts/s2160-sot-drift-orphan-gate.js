@@ -1,0 +1,22 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const ROOT=path.join(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
+const checks=[];
+const check=(name,ok,detail)=>checks.push({name,ok,detail});
+const taxonomy=read('modules/vehicle/service-taxonomy-sot.js');
+const reminder=read('modules/vehicle/service-reminder-package-sot.js');
+const vehicle=read('modules/vehicle/vehicle-service-sot.js');
+const scope=read('modules/vehicle/service-reminder-vehicle-scope-s2015.js');
+const matrix=JSON.parse(read('docs/SOT-OWNERSHIP-MATRIX-S2153.json'));
+check('canonical taxonomy resolver remains authoritative',/function canonicalTarget\(/.test(taxonomy)&&/function targetKey\(/.test(taxonomy));
+check('reminder targets resolve through taxonomy',/ServiceTaxonomySOT&&typeof g\.ServiceTaxonomySOT\.canonicalTarget/.test(reminder));
+check('vehicle scope has explicit active-context boundary',/VehicleScopedSOT/.test(vehicle)&&/activeId/.test(vehicle));
+check('reminder projection is vehicle-scoped and deduplicated',/seen=new Map\(\)/.test(vehicle)&&/vehicleId/.test(vehicle));
+check('legacy compatibility bridge delegates to canonical identity',/canonical taxonomy resolver/.test(scope));
+check('architecture matrix still forbids fact-store duplication',Array.isArray(matrix.domains)&&matrix.domains.some(d=>d.domain==='reminderDue'&&d.writeAuthority==='none')&&matrix.domains.some(d=>d.domain==='dashboard'&&d.writeAuthority==='none'));
+const failed=checks.filter(x=>!x.ok);
+for(const c of checks) console.log((c.ok?'✓':'✗')+' '+c.name+(c.detail?' — '+c.detail:''));
+if(failed.length){console.error(`S2160 SOT DRIFT/ORPHAN GATE: FAIL — ${failed.length}/${checks.length}`);process.exit(1);}
+console.log(`S2160 SOT DRIFT/ORPHAN GATE: PASS — ${checks.length}/${checks.length} checks`);

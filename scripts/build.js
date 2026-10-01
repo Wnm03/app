@@ -184,6 +184,8 @@ const GROUP_B = [
   'modules/vehicle/service-master-data.generated.js',
   'modules/vehicle/service-master-database.js',
   'modules/vehicle/service-taxonomy-sot.js',
+  // S2166/S2167: shared read-only runtime projection for Service/Reminder/History UI.
+  'modules/vehicle/service-runtime-projection-sot-s2166.js',
   'modules/vehicle/service-history-context-s2018.js',
   'modules/vehicle/service-history-sot-normalizer.js',
   'modules/vehicle/service-history-sot-review.js',

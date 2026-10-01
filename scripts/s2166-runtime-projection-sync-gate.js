@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..'); const load=r=>require(path.join(root,r));
+let master=null; try{master=load('modules/vehicle/service-master-data.generated.js');}catch(e){master=null;} global.SERVICE_CHECKLIST_GROUPS=master&&master.SERVICE_CHECKLIST_GROUPS||[{masterCategoryId:'servis-cvt',group:'Servis CVT',items:[{id:'slide-piece-cvt',name:'Slide Piece CVT'},{id:'coolant',name:'Coolant'}]}];
+global.ServiceTaxonomySOT=load('modules/vehicle/service-taxonomy-sot.js');
+const p=load('modules/vehicle/service-runtime-projection-sot-s2166.js');
+const fixture={vehicles:[{id:'v1',name:'Vario 125'},{id:'v2',name:'Scoopy'}],servisLogs:[{id:'s1',vehicleId:'v1',masterCategoryId:'servis-cvt',serviceComponentId:'slide-piece-cvt'}],serviceReminderPackages:[{id:'r1',vehicleId:'v1',targets:[{masterCategoryId:'servis-cvt',serviceComponentId:'slide-piece-cvt'},{masterCategoryId:'servis-cvt',serviceComponentId:'slide-piece-cvt'}]},{id:'r2',vehicleId:'v2',targets:[{masterCategoryId:'servis-cvt',serviceComponentId:'coolant'}]}]};
+const s=p.snapshot(fixture,'v1'), a=p.audit(fixture,'v1');
+const checks={canonicalShared:s.components.length===1&&s.components[0].serviceComponentId==='slide-piece-cvt',activeVehicleScope:s.pengingat.length===1&&s.pengingat.every(x=>x.vehicleId==='v1'),duplicateProjectionCollapsed:s.pengingat[0].targets.length===1,historyUsesSameIdentity:s.riwayat[0].serviceComponentId===s.servis[0].serviceComponentId,auditPass:a.pass};
+if(!Object.values(checks).every(Boolean)) throw new Error(JSON.stringify({checks,audit:a}));
+console.log(JSON.stringify({version:p.VERSION,pass:true,checks},null,2));
