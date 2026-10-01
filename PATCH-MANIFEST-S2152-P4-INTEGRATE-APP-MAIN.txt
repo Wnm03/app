@@ -1,0 +1,16 @@
+S2152 P4.1-P4.7 — APP-MAIN BASELINE INTEGRATION PATCH
+Base: app-main (41)
+Purpose: Complete the app-main baseline with the accumulated P4.1-P4.7 Stock SOT implementation.
+
+Includes:
+- StockCommandSOT source and build wiring.
+- P4.1-P4.5 stock/service/finance/recovery mutation consumers.
+- P4.6 zero-alias/catalog migration/self-test hardening.
+- P4.7 final bundles/build artifacts and final gate tests.
+- P4.1-P4.7 focused regression tests.
+
+Storage owner remains D.partsStock. No new storage/database is introduced.
+UI/layout is not rearranged.
+
+Apply over app-main (41). Do not delete unrelated baseline files.
+This is an integration patch, not a full project replacement.

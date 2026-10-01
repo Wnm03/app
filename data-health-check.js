@@ -783,7 +783,10 @@ const DataHealth={
 unlinkStockCatalog(idx){
 const p=(D.partsStock||[])[idx];
 if(!p){toast('⚠️ Item stok tidak ditemukan (mungkin sudah berubah urutannya, coba pindai ulang).');return;}
-delete p.catalogId;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.update!=='function')throw new Error('StockCommandSOT wajib tersedia untuk melepas tautan katalog stok');
+const r=StockCommandSOT.update(p.id,{catalogId:undefined},{saveNow:false});
+if(!r.ok)throw new Error(r.code||'STOCK_CATALOG_UNLINK_FAILED');
+delete r.part.catalogId;
 if(typeof save==='function')save();
 toast(`🔓 Tautan katalog utk "${p.name}" dilepas`);
 if(typeof runDataHealthCheck==='function')runDataHealthCheck();
@@ -809,7 +812,9 @@ if(typeof askConfirm==='function'){
 const ok=await askConfirm(`Koreksi stok "${p.name}" dari ${before} jadi 0? Riwayat pembelian/pemakaian TIDAK diubah, ini cuma koreksi jumlah fisik saat ini.`,{danger:false,okText:'Ya, Koreksi ke 0'});
 if(!ok)return;
 }
-p.qty=0;
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk koreksi stok');
+const sr=StockCommandSOT.setQty(p.id,0,{reason:'data-health-correct-negative',source:'data-health-check',journal:true,saveNow:false});
+if(!sr.ok)throw new Error(sr.code||'STOCK_CORRECTION_FAILED');
 if(typeof save==='function')save();
 toast(`0️⃣ Stok "${p.name}" dikoreksi dari ${before} jadi 0`);
 if(typeof runDataHealthCheck==='function')runDataHealthCheck();

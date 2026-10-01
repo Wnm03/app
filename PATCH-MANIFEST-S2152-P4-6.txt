@@ -1,0 +1,12 @@
+S2152 P4.6 — FULL MUTATION & REGRESSION AUDIT
+Base: UPDATE-S2152-P4-5-ZERO-DIRECT-WRITE-AUTHORITY-CUMULATIVE-P4-1-P4-5.zip
+
+Fixes:
+- VehicleStockSOT catalog-stock writes -> StockCommandSOT.update
+- VehicleCatalogMigrationSOT stock-domain writes -> StockCommandSOT.update
+- Data Health catalog unlink -> StockCommandSOT.update
+- bundled stock self-tests -> StockCommandSOT create/remove/replaceSnapshot
+- added zero-alias-write regression tests
+- rebuilt bundles and synchronized build artifacts to 2164
+
+Validation: see P4-6-SESSION-NOTE.md

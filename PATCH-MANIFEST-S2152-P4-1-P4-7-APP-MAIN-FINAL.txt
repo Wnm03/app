@@ -1,0 +1,28 @@
+S2152 P4.1-P4.7 FINAL APP-MAIN INTEGRATION PATCH
+Base: app-main (41)
+Final build: s2041-1-part-sot-hardening-2169
+Full regression: 7973 total / 7966 pass / 7 fail / 0 cancelled
+Baseline: 7947 total / 7940 pass / 7 fail
+New regression failures: 0
+P4 static gate: 25/25 PASS
+SOT integrity: PASS
+Architecture integrity: PASS
+Persistence integrity: PASS
+Feature regression: PASS
+Window expose: PASS
+Bundle freshness: PASS
+Production build: PASS (non-minified; esbuild unavailable)
+Lint: UNVERIFIED (eslint unavailable)
+Standalone Service-SOT gate: NOT GREEN because its embedded full-regression gate counts the 7 pre-existing baseline failures; interval SoT enforcement itself is fixed.
+
+Key integration additions/fixes:
+- P2 car-notes-sot.js restored
+- P4 StockCommandSOT dependency/test-harness wiring
+- SOT-aligned legacy assertions
+- manual stock edit journal correction
+- bulk archive/history SOT ordering correction
+- catalog-link SOT correction
+- catalog->stock canonical-row SOT correction
+- affected SOT test fixtures corrected
+- canonical interval resolver enforcement
+- build/version synchronized to 2169

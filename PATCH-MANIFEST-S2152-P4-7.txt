@@ -1,0 +1,14 @@
+S2152 P4.7 — FINAL RELEASE GATE
+Base: UPDATE-S2152-P4-6-FULL-MUTATION-REGRESSION-CUMULATIVE-P4-1-P4-6.zip
+
+Changes:
+- Added repeatable final static/release-integrity gate.
+- Added P4.7 final-gate documentation.
+- No runtime/UI behavior changes.
+
+Validation:
+- P4.7 final static gate: 25/25 PASS.
+- Full project suite: UNVERIFIED (parent manifest/test runner absent from cumulative package).
+- Service-SOT runtime gate: UNVERIFIED (requires complete parent test harness).
+- Production rebuild: UNVERIFIED from this patch-only package.
+- esbuild/minification: UNVERIFIED/unavailable in supplied environment.
