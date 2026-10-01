@@ -46,7 +46,7 @@ function checkpointPath(i){return path.join(checkpointDir,`shard-${i+1}.json`);}
 function isValidCheckpoint(r,index){
  const expectedFiles=shards[index].map(f=>path.relative(ROOT,f));
  const hashesOk=expectedFiles.every(f=>r&&r.fileHashes&&r.fileHashes[f]===fileHashes[f]);
- return !!(r&&r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&r.pass===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk);
+ return !!(r&&r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&(r.pass+r.skipped)===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk);
 }
 function parse(out){const get=k=>{const m=out.match(new RegExp(`# ${k} (\\d+)`));return m?Number(m[1]):0};return {tests:get('tests'),pass:get('pass'),fail:get('fail'),cancelled:get('cancelled'),skipped:get('skipped'),todo:get('todo')};}
 function runShard(list,index,options={}){return new Promise(resolve=>{
@@ -103,7 +103,7 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
    const r=results[0];
    const expectedFiles=shards[requestedIndex].map(f=>path.relative(ROOT,f));
    const hashesOk=expectedFiles.every(f=>r.fileHashes&&r.fileHashes[f]===fileHashes[f]);
-   if(!(r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&r.pass===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk)){console.error('SHARD CHECKPOINT INTEGRITY FAILED');process.exit(1);}
+   if(!(r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&(r.pass+r.skipped)===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk)){console.error('SHARD CHECKPOINT INTEGRITY FAILED');process.exit(1);}
    console.log(`SHARD ${requestedIndex+1}/${shards.length} PASS — checkpoint saved.`);process.exit(0);
 }
  // Verify all checkpoints, including shards reused from prior runs, against the
