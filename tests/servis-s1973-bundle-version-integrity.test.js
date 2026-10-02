@@ -21,7 +21,7 @@ test('S1974 bundle/version gate: source, HTML, SW, and runtime bundles are synch
   assert.match(sw,new RegExp('kw-cache-v'+version));
   assert.match(render,new RegExp(buildVersion.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
   assert.match(a,new RegExp(buildVersion.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
-  assert.match(b,/s2041-1-part-sot-hardening-2206/);
+  assert.match(b,new RegExp(buildVersion.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
   assert.match(b,/S1973/);
   assert.doesNotMatch(index,/\?v=1972/);
   assert.doesNotMatch(sw,/kw-cache-v1972/);
