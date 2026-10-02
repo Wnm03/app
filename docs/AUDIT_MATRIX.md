@@ -18,14 +18,16 @@
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2876 |
-| JavaScript | 1712 |
-| Tests | 935 |
-| Markdown | 967 |
+| Total files | 2903 |
+| JavaScript | 1726 |
+| Tests | 1150 |
+| Markdown | 980 |
 | HTML | 7 |
-| JSON | 16 |
+| JSON | 31 |
 | CSS | 4 |
 | Module families | 17 |
+
+> **S2269 baseline refresh:** inventory warning reconciled to the current canonical app tree: 2903 files, 1726 JavaScript, 1150 test files, 980 Markdown, 7 HTML, 31 JSON, 4 CSS. Excludes `backups/` and `node_modules/`; `.test-checkpoints/` is local test state and is not part of the application patch.
 
 > **S1901 production hardening:** added SHA-256 backup sealing/verification (legacy backups remain compatible), user-facing error-path sanitization, a dedicated backup-integrity gate, and release-final-gate integration; runtime synchronized to 1894.
 
