@@ -437,18 +437,44 @@ async function vehicleCatalogFindByCode(code) {
  *   adanya) -> { found:false, item, draft:true }.
  * - Kode kosong/whitespace -> tidak membuat apa pun,
  *   { found:false, item:null, error:'Kode kosong.' }. */
+// S2285: domain-level idempotency for concurrent scan/OCR calls targeting the
+// same canonical code. The UI dispatcher only deduplicates one DOM element;
+// two independent scanner/UI entry points can still reach this domain method
+// concurrently. Keep the lock here, immediately before the first await, so
+// both callers share the same find/create promise and only one draft is made.
+const _vehicleCatalogCodeInflight = new Map();
+
+function _vehicleCatalogCodeKey(code) {
+  return String(code == null ? '' : code).trim().toLowerCase();
+}
+
+function _vehicleCatalogEnsureDraftForCode(code, data) {
+  const key = _vehicleCatalogCodeKey(code);
+  if (!key) return Promise.resolve({ found: false, item: null, error: 'Kode kosong.' });
+  if (_vehicleCatalogCodeInflight.has(key)) return _vehicleCatalogCodeInflight.get(key);
+  const promise = (async () => {
+    const existing = await vehicleCatalogFindByCode(code);
+    if (existing) return { found: true, item: existing };
+    const res = await vehicleCatalogCreate(data);
+    return res && res.success
+      ? { found: false, item: res.item, draft: true }
+      : { found: false, item: null, error: (res && res.errors && res.errors[0]) || 'Gagal membuat draft katalog.' };
+  })();
+  _vehicleCatalogCodeInflight.set(key, promise);
+  return promise.finally(() => {
+    if (_vehicleCatalogCodeInflight.get(key) === promise) _vehicleCatalogCodeInflight.delete(key);
+  });
+}
+
 async function vehicleCatalogHandleScan(code) {
   const trimmed = (code || '').toString().trim();
   if (!trimmed) return { found: false, item: null, error: 'Kode kosong.' };
-  const existing = await vehicleCatalogFindByCode(trimmed);
-  if (existing) return { found: true, item: existing };
-  const res = await vehicleCatalogCreate({
+  return _vehicleCatalogEnsureDraftForCode(trimmed, {
     partName: 'Draft — belum diberi nama',
     category: 'Belum Dikategorikan',
     barcode: trimmed,
     isDraft: true,
   });
-  return { found: false, item: res.item, draft: true };
 }
 
 /** Lanjutan ringkas dari handleScan(): draft yg dibuat otomatis butuh cara
@@ -513,16 +539,13 @@ async function vehicleCatalogHandleOcrLabel(text) {
   const parsed = vehicleCatalogParseLabelText(text);
   const code = parsed.oemCode || parsed.barcode;
   if (!code) return { found: false, item: null, error: 'OEM Code/barcode tidak terdeteksi dari teks OCR.' };
-  const existing = await vehicleCatalogFindByCode(code);
-  if (existing) return { found: true, item: existing };
-  const res = await vehicleCatalogCreate({
+  return _vehicleCatalogEnsureDraftForCode(code, {
     partName: 'Draft — belum diberi nama',
     category: 'Belum Dikategorikan',
     oemCode: parsed.oemCode,
     barcode: parsed.barcode,
     isDraft: true,
   });
-  return { found: false, item: res.item, draft: true };
 }
 
 // ------------------------------------------------------------------------

@@ -1822,14 +1822,18 @@ const veh=D.vehicles.find(v=>v.id===curVehicleId);
 const servisId=uid();
 const _serviceSnapshot=(typeof buildServiceNextDueSnapshot==='function')?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat,serviceKm:curKm,serviceDate:date,actionType:actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null,intervalKmAtService:null,intervalBulanAtService:null};
 const entry={id:servisId,vehicleId:curVehicleId,date,item:cat.name,categoryId:cat.id,masterCategoryId:cat.masterCategoryId||null,serviceComponentId:cat.serviceComponentId||null,km:curKm,cost,note:'Ditandai selesai dari Pengingat Servis',accountId:accId,txLinkId:null,actionType:actionType||null,conditionResult:opts.conditionResult||null,batchId:opts.batchId||null,idempotencyKey:opts.idempotencyKey||(`reminder:${curVehicleId||''}:${cat.id}:${actionType||'default'}:${opts.batchId||servisId}`),intervalKmAtService:_serviceSnapshot.intervalKmAtService,intervalBulanAtService:_serviceSnapshot.intervalBulanAtService,nextDueKm:_serviceSnapshot.nextDueKm,nextDueDate:_serviceSnapshot.nextDueDate,nextDueAxis:_serviceSnapshot.nextDueAxis};
+// S2290: durable duplicate detection MUST precede every domain side effect.
+// A retry after a crash may re-enter markServiced after the in-memory guard is gone;
+// if the transaction were created before this lookup, the duplicate service row would
+// be harmlessly rejected but its finance side effect would already be duplicated.
+if(entry.idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
+const _dup=findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKey,entry.vehicleId);
+if(_dup){_clearMarkGuard();return _dup;}
+}
 if(cost>0){
 const txId=uid();
 const _reminderTx={id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId,vehicleId:curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_reminderTx); else D.transactions.push(_reminderTx);
 entry.txLinkId=txId;
-}
-if(entry.idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
-const _dup=findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKey,entry.vehicleId);
-if(_dup){_clearMarkGuard();return _dup;}
 }
 D.servisLogs.push(entry);
 

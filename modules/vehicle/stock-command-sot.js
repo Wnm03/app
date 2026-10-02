@@ -87,13 +87,19 @@
     const p=find(id); if(!p)return {ok:false,code:'PART_NOT_FOUND',id:str(id)};
     const q=Number(qty); if(!Number.isFinite(q)||q<=0)return {ok:false,code:'INVALID_QTY',id:p.id};
     const price=Number(unitPrice)||0, prevQty=Number(p.qty)||0;
+    if(!Array.isArray(p.priceHistory))p.priceHistory=[];
+    // S2296: a duplicate replay of the same finance transaction must not
+    // increment stock twice. The transaction id is the durable operation
+    // identity at this stock boundary; history is checked BEFORE mutation.
+    const already=txId!=null&&p.priceHistory.some(h=>h&&String(h.txId)===String(txId));
+    if(already){
+      return {ok:true,part:p,qtyAdded:0,duplicateHistory:true,alreadyApplied:true};
+    }
     const prevAvg=(typeof p.avgPrice==='number'&&p.avgPrice>0)?p.avgPrice:((Number(p.price)>0)?Number(p.price):null);
     p.qty=prevQty+q;
     if(price>0){p.lastPrice=price;p.avgPrice=(prevQty+q)>0?(((prevAvg==null?price:prevAvg)*prevQty)+(price*q))/(prevQty+q):price;p.price=p.avgPrice;}
     p.lastPurchaseDate=date;
-    if(!Array.isArray(p.priceHistory))p.priceHistory=[];
-    const already=txId!=null&&p.priceHistory.some(h=>h&&h.txId===txId);
-    if(!already)p.priceHistory.push({date,qty:q,price,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvg});
+    p.priceHistory.push({date,qty:q,price,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvg});
     if(txId){if(!Array.isArray(p.txRefs))p.txRefs=[];if(!p.txRefs.includes(txId))p.txRefs.push(txId);p.lastTxId=txId;}
     if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',{kind:'stok-sparepart',action:'purchase-apply',partId:p.id,qty:q,unitPrice:price,txId:txId||null});
     if(saveNow&&typeof save==='function')save();
@@ -102,6 +108,13 @@
   function revertPurchase(id,qty,txId,{saveNow=false}={}){
     const p=find(id); if(!p)return {ok:false,code:'PART_NOT_FOUND',id:str(id)};
     const q=Number(qty); if(!Number.isFinite(q)||q<=0)return {ok:false,code:'INVALID_QTY',id:p.id};
+    // S2296: duplicate purchase-revert replay must be a no-op. Check the
+    // durable purchase history before changing quantity; otherwise a second
+    // replay could subtract the same stock movement again.
+    if(txId!=null&&Array.isArray(p.priceHistory)){
+      const existingIdx=p.priceHistory.findIndex(h=>h&&String(h.txId)===String(txId));
+      if(existingIdx===-1)return {ok:true,part:p,qtyRemoved:0,replayed:false,alreadyReverted:true};
+    }
     p.qty=Math.max(0,(Number(p.qty)||0)-q);
     if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',{kind:'stok-sparepart',action:'purchase-revert',partId:p.id,qty:q,txId:txId||null});
     if(!txId||!Array.isArray(p.priceHistory)){

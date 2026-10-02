@@ -130,7 +130,32 @@ const ServiceEventOutbox = (()=>{
       while(q.length){
         const index=0;
         try{
-          handler(q[index]);
+          const result=handler(q[index]);
+          if(result&&typeof result.then==='function')throw new Error('Async handler requires drainAsync');
+          const removed=q.splice(index,1)[0];
+          if(!persist()){
+            q.splice(index,0,removed);
+            throw new Error('Outbox persistence failed after handler success');
+          }
+          n++;
+        }catch(err){
+          q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};
+          persist();
+          break;
+        }
+      }
+      return n;
+    },
+    async drainAsync(handler){
+      if(typeof handler!=='function')return 0;
+      let n=0;
+      // S2295: a durable replay is not successful until async consumers have
+      // completed. This closes the crash/rejection window where AIBus.emit()
+      // returned before AIDecision finished, causing the outbox to be cleared.
+      while(q.length){
+        const index=0;
+        try{
+          await handler(q[index]);
           const removed=q.splice(index,1)[0];
           if(!persist()){
             q.splice(index,0,removed);
@@ -146,14 +171,22 @@ const ServiceEventOutbox = (()=>{
       return n;
     },
     flush(){
-      return this.drain(evt=>{
+      return this.drainAsync(async evt=>{
         const p=evt.payload||{};
-        if(evt.type==='service.create'&&typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.create==='function')return ServiceEventLifecycle.create(p,evt.options||{});
-        if(evt.type==='service.update'&&typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.update==='function')return ServiceEventLifecycle.update(p,evt.options||{});
-        if(evt.type==='service.remove'&&typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.remove==='function')return ServiceEventLifecycle.remove(p,evt.options||{});
+        const eventMeta={eventId:String(evt.eventId||evt.id||''),source:'service-event-outbox'};
+        const options=Object.assign({},evt.options||{},eventMeta);
+        if(evt.type==='service.create'&&typeof ServiceEventLifecycle!=='undefined'){if(typeof ServiceEventLifecycle.createAsync==='function')return ServiceEventLifecycle.createAsync(p,options);if(typeof ServiceEventLifecycle.create==='function')return ServiceEventLifecycle.create(p,options);}
+        if(evt.type==='service.update'&&typeof ServiceEventLifecycle!=='undefined'){if(typeof ServiceEventLifecycle.updateAsync==='function')return ServiceEventLifecycle.updateAsync(p,options);if(typeof ServiceEventLifecycle.update==='function')return ServiceEventLifecycle.update(p,options);}
+        if(evt.type==='service.remove'&&typeof ServiceEventLifecycle!=='undefined'){if(typeof ServiceEventLifecycle.removeAsync==='function')return ServiceEventLifecycle.removeAsync(p,options);if(typeof ServiceEventLifecycle.remove==='function')return ServiceEventLifecycle.remove(p,options);}
         if(evt.type==='catalog.attach'&&typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function')return VehicleCatalogServisLink.attachToServis(p.servisId,p.links||[]);
-        if(evt.type==='finance.updated'&&typeof AIBus!=='undefined'&&typeof AIBus.emit==='function')return AIBus.emit('finance.updated',p);
-        if(evt.type==='vehicle.updated'&&typeof AIBus!=='undefined'&&typeof AIBus.emit==='function')return AIBus.emit('vehicle.updated',p);
+        if(evt.type==='finance.updated'&&typeof AIBus!=='undefined'){
+          if(typeof AIBus.emitAsync==='function')return AIBus.emitAsync('finance.updated',p,eventMeta);
+          return AIBus.emit('finance.updated',p,eventMeta);
+        }
+        if(evt.type==='vehicle.updated'&&typeof AIBus!=='undefined'){
+          if(typeof AIBus.emitAsync==='function')return AIBus.emitAsync('vehicle.updated',p,eventMeta);
+          return AIBus.emit('vehicle.updated',p,eventMeta);
+        }
         throw new Error('No handler available for '+evt.type);
       });
     },
