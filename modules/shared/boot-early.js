@@ -101,6 +101,32 @@ function ensureSewaKios(){return _loadScriptOnce('modules/business/sewakios.js?v
 // Dipanggil dari setShopTab() (cobek-io.js) saat tab Shop > Business
 // Intelligence pertama dibuka.
 function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/business-intelligence-presenter.js?v=1568');}
+// S2254: diagnostic test-case modules are lazy. self-test.js remains eager because it preserves the existing 2.5s diagnostic auto-run contract.
+function ensureDiagnosticCases(){
+  if(window.__kwDiagnosticCasesPromise) return window.__kwDiagnosticCasesPromise;
+  const v='2207';
+  window.__kwDiagnosticCasesPromise=_loadScriptOnce('modules/shared/self-test-cases-a.js?v='+v)
+    .then(()=>_loadScriptOnce('modules/shared/self-test-cases-b.js?v='+v))
+    .catch((err)=>{ window.__kwDiagnosticCasesPromise=null; throw err; });
+  return window.__kwDiagnosticCasesPromise;
+}
+// S2261: self-test.js sendiri adalah harness diagnostik, bukan runtime bisnis.
+// Lazy-load seluruh harness; case registry tetap lazy setelah harness tersedia.
+// Auto-run dipicu di sini agar kontrak lama (2.5s setelah bootstrap) tetap sama.
+function ensureSelfTest(){
+  if(window.__kwSelfTestPromise) return window.__kwSelfTestPromise;
+  const v='2207';
+  window.__kwSelfTestPromise=_loadScriptOnce('self-test.js?v='+v)
+    .catch((err)=>{ window.__kwSelfTestPromise=null; throw err; });
+  return window.__kwSelfTestPromise;
+}
+function ensureDiagnostics(){return ensureSelfTest();}
+setTimeout(()=>{
+  ensureSelfTest().then(()=>{
+    if(typeof autoRunSelfTestIfNeeded==='function') return autoRunSelfTestIfNeeded();
+  }).catch(()=>{});
+},2500);
+
 
 
 // ===== Blok 3/4: __moduleLoadFail & global runtime error banner =====

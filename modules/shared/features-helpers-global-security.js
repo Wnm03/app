@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2206';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2206';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2208';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2208';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -783,9 +783,17 @@ if(typeof fn !== 'function'){
 // data-action dan tanpa membuat module eager-load kembali.
 const lazyOwnerLoaders={
   Renov: typeof ensureRenov==='function'?ensureRenov:null,
-  SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null
+  SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null,
+  runSelfTest: typeof ensureSelfTest==='function'?ensureSelfTest:null,
+  copySelfTestResults: typeof ensureSelfTest==='function'?ensureSelfTest:null,
+  HondaPdfImportUI: typeof ensureHondaPdfImportScripts==='function'?ensureHondaPdfImportScripts:null,
+  runDataHealthCheck: typeof ensureDataHealthScripts==='function'?ensureDataHealthScripts:null,
+  DataHealth: typeof ensureDataHealthScripts==='function'?ensureDataHealthScripts:null,
+  exportLaporanPDF: typeof ensureLaporanExportScripts==='function'?ensureLaporanExportScripts:null,
+  exportLaporanImage: typeof ensureLaporanExportScripts==='function'?ensureLaporanExportScripts:null,
+  ShopPdfImportUI: typeof ensureShopPdfImportScripts==='function'?ensureShopPdfImportScripts:null
 };
-const lazyLoader=path.length>1?lazyOwnerLoaders[path[0]]:null;
+const lazyLoader=lazyOwnerLoaders[path[0]]||null;
 if(lazyLoader&&!el.dataset.lazyActionPending){
   el.dataset.lazyActionPending='1';
   Promise.resolve().then(()=>lazyLoader()).then(()=>{

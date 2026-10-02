@@ -131,7 +131,7 @@ function openCatModalQuick(){ openCatModal(undefined, curCatFilter==='income'?'i
 
 function renovCalcOpenNull(){ RenovCalc.open(null); }
 
-function laporanFabExportPDF(){ closeAllKeuFabs(); exportLaporanPDF(); }
+function laporanFabExportPDF(){ closeAllKeuFabs(); if(typeof ensureLaporanExportScripts==='function') return ensureLaporanExportScripts().then(()=>exportLaporanPDF()); return exportLaporanPDF(); }
 function laporanFabExportCSV(){ closeAllKeuFabs(); exportCSV(); }
 function laporanFabToggleMain(el){ const _o=document.getElementById('laporanFab').classList.toggle('open'); el.setAttribute('aria-expanded', _o?'true':'false'); }
 
