@@ -55,6 +55,12 @@ function validateAIRuleShape(rule) {
 }
 
 const AIDecision = {
+  // S2289: concurrent delivery of the same durable outbox event must share
+  // one in-flight domain decision. The persisted processedEventIds ledger
+  // alone cannot close the race because two callers can both read it before
+  // either caller finishes aiSave().
+  _eventIdInFlight: new Map(),
+
   // ----------------------------------------------------------------------
   // .rules — registry + evaluator IF-THEN generik. Domain-agnostic:
   // logistik/keuangan/aset/dll semua mendaftar lewat interface yang sama.
@@ -225,6 +231,24 @@ const AIDecision = {
   // (selaras aturan "engine/service = satu-satunya penulis" dari pola EIE).
   // ----------------------------------------------------------------------
   async decide(ctx = {}) {
+    const eventId = ctx && ctx.eventMeta && ctx.eventMeta.eventId ? String(ctx.eventMeta.eventId) : '';
+    if (!eventId) return this._decideOnce(ctx);
+
+    const existing = this._eventIdInFlight.get(eventId);
+    if (existing) return existing;
+
+    // Register the promise before the first async boundary inside _decideOnce,
+    // so concurrent consumers of the same outbox event converge here.
+    const promise = this._decideOnce(ctx);
+    this._eventIdInFlight.set(eventId, promise);
+    try {
+      return await promise;
+    } finally {
+      if (this._eventIdInFlight.get(eventId) === promise) this._eventIdInFlight.delete(eventId);
+    }
+  },
+
+  async _decideOnce(ctx = {}) {
     await aiEnsureLoaded();
     const eventId = ctx && ctx.eventMeta && ctx.eventMeta.eventId ? String(ctx.eventMeta.eventId) : '';
     const store = aiGetStore();
