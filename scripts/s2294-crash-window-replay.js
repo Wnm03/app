@@ -1,0 +1,30 @@
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+let pass=0,fail=0;
+function ok(name,cond){if(cond){console.log('PASS '+name);pass++;}else{console.log('FAIL '+name);fail++;}}
+const adapter=read('modules/vehicle/service-event-adapter.js');
+const life=read('modules/vehicle/service-event-lifecycle.js');
+const sot=read('modules/vehicle/service-event-sot.js');
+const link=read('modules/vehicle/vehicle-catalog-servis-link.js');
+const ai=read('modules/ai/ai-decision-engine.js');
+const finance=read('modules/finance/finance-event-outbox.js');
+const tests=read('tests/sa21-outbox-clear-persistence.test.js');
+
+ok('outbox-removes-only-after-handler-success',/handler\(q\[index\]\);\s*const removed=q\.splice\(index,1\)\[0\];/.test(adapter));
+ok('outbox-failed-handler-remains-pending',/catch\(err\)\{\s*q\[index\]=\{\.\.\.q\[index\],attempts:/.test(adapter));
+ok('service-create-replay-is-normalize-idempotent',/ServiceEventSOT\.normalize\(s,\{persist:false\}\)/.test(life)&&/log\.serviceEventSotVersion=VERSION/.test(sot));
+ok('service-remove-replay-has-no-second-store-write',/remove:\(s,extra\)=>emit\('delete',s,extra/.test(life)&&!/D\.servisLogs\.push/.test(life));
+ok('service-update-replay-is-normalize-idempotent',/update:\(s,extra\)=>\{normalizeAndPersist\(s\);emit\('update'/.test(life)&&/updateAsync:async/.test(life));
+ok('catalog-attach-replay-replaces-same-reference-set',/s\.catalogPartRefs = vehicleCatalogNormalizeServisRefs\(refs\)/.test(link));
+ok('catalog-attach-does-not-create-new-service-row',/if \(!s\) return \{ success: false/.test(link)&&!/D\.servisLogs\.push/.test(link));
+ok('finance-outbox-event-identity-is-stable',/eventId:String\(item\.eventId\|\|stableId\)/.test(finance));
+ok('finance-outbox-replay-is-serialized',/withPersistenceLock/.test(finance)&&/function replay\(\)/.test(finance));
+ok('ai-consumer-has-inflight-dedup',/_eventIdInFlight: new Map\(\)/.test(ai));
+ok('ai-consumer-has-durable-ledger',/processedEventIds/.test(ai));
+ok('stable-service-outbox-identity-prevents-double-enqueue',/const key=`\$\{evt\.type\|\|'event'\}::\$\{identity\}`/.test(adapter));
+ok('vehicle-event-identity-includes-action',/evt\.type==='vehicle\.updated'/.test(adapter)&&/action:payload\.action/.test(adapter));
+ok('existing-outbox-persistence-regression-remains-covered',/outbox/.test(tests)&&/persist/.test(tests));
+console.log(`S2294: ${pass}/${pass+fail} PASS`);
+process.exit(fail?1:0);

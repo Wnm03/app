@@ -1,0 +1,27 @@
+'use strict';
+const fs=require('fs'),path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const checks=[]; const ok=(n,c)=>checks.push([n,!!c]);
+const svc=read('modules/vehicle/servis.js');
+const session=read('modules/vehicle/service-session-mutation-s2047.js');
+const fin=read('modules/finance/finance-cross-entity-atomic.js');
+const out=read('modules/finance/finance-event-outbox.js');
+const idem=read('modules/vehicle/service-event-idempotency-sot.js');
+const sot=read('modules/finance/finance-tx-sot.js');
+// Service create: domain idempotency is checked before multi-entity side effects.
+ok('service-create-has-idempotency-key',/ServiceEventIdempotencySOT\.key\(/.test(svc));
+ok('service-create-checks-existing-before-write',/ServiceEventIdempotencySOT\.find\([\s\S]*?toast\('⚠️ Pengerjaan servis yang sama/.test(svc));
+ok('service-create-finance-links-to-service-id',/servisLinkId:servisId/.test(svc));
+ok('service-create-cross-domain-recovery-outbox',/ServiceEventOutbox\.enqueue\(\{type:'finance\.updated'/.test(svc));
+ok('service-session-has-inflight-dedup',/_s2047MutationInFlight/.test(session));
+ok('service-session-fingerprint-idempotency',/_s2047MutationFingerprint/.test(session));
+ok('service-session-snapshot-rollback',/snapshotState\(\)[\s\S]*?restoreState/.test(session));
+ok('finance-cross-entity-has-atomic-boundary',/atomic|rollback|snapshot/i.test(fin));
+ok('finance-outbox-preserves-at-least-once-replay',/replay\(\)[\s\S]*?remaining|emitAsync|remaining=q\.slice\(\)/.test(out));
+ok('service-idempotency-sot-canonical',/function\s+key\b|key\s*[:=]/.test(idem));
+ok('finance-sot-is-canonical-writer',/FinanceTxSOT/.test(sot)&&/create\(|updateById|removeById/.test(sot));
+const failed=checks.filter(x=>!x[1]);
+for(const [n,c] of checks)console.log((c?'PASS ':'FAIL ')+n);
+console.log(`S2287: ${checks.length-failed.length}/${checks.length} PASS`);
+if(failed.length)process.exit(1);

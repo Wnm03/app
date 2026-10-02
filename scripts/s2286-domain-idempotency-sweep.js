@@ -1,0 +1,30 @@
+'use strict';
+const fs=require('fs');
+const path=require('path');
+const root=path.resolve(__dirname,'..');
+const read=f=>fs.readFileSync(path.join(root,f),'utf8');
+const checks=[];
+function ok(name,cond){checks.push([name,!!cond]);}
+const vc=read('modules/vehicle/vehicle-catalog.js');
+const imp=read('modules/vehicle/vehicle-catalog-import.js');
+const stock=read('modules/finance/tx-stok-sparepart.js');
+const po=read('modules/shop/business-flow-presenter-inventory.js');
+const ledger=read('modules/shop/shop-inventory-ledger.js');
+const dispatcher=read('modules/shared/features-helpers-global-security.js');
+// Lazy write boundary: scanner/OCR reaches the same domain idempotency gate.
+ok('vehicle-catalog-has-domain-inflight-map',/_vehicleCatalogCodeInflight\s*=\s*new Map\(\)/.test(vc));
+ok('vehicle-catalog-key-normalizes-code',/function _vehicleCatalogCodeKey\(code\)[\s\S]*?trim\(\)\.toLowerCase\(\)/.test(vc));
+ok('vehicle-catalog-lock-before-await',/_vehicleCatalogCodeInflight\.has\(key\)[\s\S]*?const promise\s*=\s*\(async \(\) => \{[\s\S]*?await vehicleCatalogFindByCode/.test(vc));
+ok('vehicle-catalog-lock-cleans-on-settled',/return promise\.finally\(\(\) => \{[\s\S]*?_vehicleCatalogCodeInflight\.delete\(key\)/.test(vc));
+ok('import-commit-reuses-write-sot',/VehicleCatalogWriteSOT\.ensurePart\(data, vehicleId\)/.test(imp));
+ok('stock-catalog-sync-reuses-existing-row',/catalogRows=D\.partsStock\.filter[\s\S]*?const existing=catalogVisible\.find/.test(stock));
+ok('stock-catalog-create-uses-sot',/StockCommandSOT\.create\(np\)/.test(stock));
+ok('po-receive-has-already-received-guard',/if \(already >= ordered \|\| purchase\.status === 'RECEIVED'\) return \{ ok: true, purchase, alreadyReceived: true \}/.test(po));
+ok('po-receive-has-movement-idempotency-key',/idempotencyKey:movementKey/.test(po));
+ok('po-receive-transaction-has-receipt-key-guard',/shopPurchaseReceiptKey === txKey/.test(po));
+ok('shop-inventory-ledger-rejects-duplicate-key',/idempotencyKey.*already|already.*idempotencyKey|duplicate:true/.test(ledger));
+ok('lazy-dispatcher-keeps-domain-separate',/lazyOwnerLoaders[\s\S]*ShopPdfImportUI/.test(dispatcher)&&!/FinanceTxSOT/.test(dispatcher.slice(dispatcher.indexOf('const lazyOwnerLoaders'),dispatcher.indexOf('const lazyOwnerLoaders')+2500)));
+const failed=checks.filter(x=>!x[1]);
+for(const [n,c] of checks) console.log((c?'PASS ':'FAIL ')+n);
+console.log(`S2286: ${checks.length-failed.length}/${checks.length} PASS`);
+if(failed.length) process.exit(1);
