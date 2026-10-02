@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-02T02:24:57.682Z
-Total file source: 405 · Total identifier global: 2682
+Terakhir digenerate: 2026-10-02T03:30:14.994Z
+Total file source: 405 · Total identifier global: 2688
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -115,7 +115,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 92 | `modules/vehicle/fuel-integrity-reconciler.js` | 3 | _(tidak ada komentar header)_ |
 | 93 | `modules/vehicle/vehicle-tax-integrity-reconciler.js` | 3 | _(tidak ada komentar header)_ |
 | 94 | `modules/finance/tx-servis.js` | 520 | D.servisLogs) -- lihat catatan existingTx.servisLinkId di _saveTxInner() (transaksi.js) yang SUDAH lebih dulu menyinkronkan cost/date/accountId utk tx yang dibuat lewat Servis, sebelum sesi ini ada. "Tab edit servisnya" … |
-| 95 | `modules/finance/tx-stok-sparepart.js` | 396 | logika panel "Tambah ke Stok Sparepart juga?" pada Dipindah ke modules/finance/tx-stok-sparepart.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 95 | `modules/finance/tx-stok-sparepart.js` | 404 | logika panel "Tambah ke Stok Sparepart juga?" pada Dipindah ke modules/finance/tx-stok-sparepart.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 96 | `modules/finance/tx-renov.js` | 167 | logika panel "🔨 Catat juga ke Proyek Renovasi?" pada txModal (Tambah/Edit Transaksi Keuangan). Pola panel kondisional PERSIS SAMA dengan tx-stok-sparepart.js (lihat file itu utk pola aslinya "Tambah ke Stok Sparepart … |
 | 97 | `modules/finance/tx-transfer.js` | 75 | logika modal "⇄ Transfer Antar Akun" (transferModal). Dipindah ke modules/finance/tx-transfer.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 98 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
@@ -219,7 +219,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 196 | `modules/vehicle/torsi-vehicle-api.js` | 138 | modules/vehicle/torsi-vehicle-api.js — Torsi Vehicle Selector API (Sesi 1). Basis: DESIGN_torsi-vehicle-selector_shop-import-export.md, Bagian A. Batch: "ringan dulu" — cuma layer data (API) + migrasi, TIDAK ada … |
 | 197 | `ai-chat.js` | 1188 | Chat AI (RefAI): UI edit aksi chat, kirim pesan ke provider AI (sendChat/ callAIProviderRaw), Advisor (rule-based tips) & AIWidget (widget rekomendasi AI generik dipakai modul lain). Dipisah dari … |
 | 198 | `reminder-notif.js` | 175 | resetApp (reset total data, disatukan di sini krn tidak ada domain lain yang cocok & cuma 1 fungsi kecil), share ke WhatsApp (phoneToWaId/waShareLink/openWaShare), notifikasi browser … |
-| 199 | `gdrive-backup.js` | 293 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
+| 199 | `gdrive-backup.js` | 303 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
 | 200 | `global-search.js` | 58 | Pencarian DATA milik user lintas halaman (openGlobalSearch/runGlobalSearch), beda tujuan dari Feature Search (dashboard-hub-search.js) yang cari FITUR/MENU. Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi … |
 | 201 | `sheets-schema.js` | 228 | Skema kolom Google Sheets per modul (SHEETS_SCHEMAS/SHEETS_MODULES) & helper konversi item<->baris (sheetsHeaderFor/sheetsItemToCells/sheetsCellsToItem dst), dipakai oleh sheets-sync.js. Dipisah dari … |
 | 202 | `sheets-sync.js` | 239 | Integrasi Google Sheets: koneksi OAuth, sinkronisasi push/pull data D.* ke/dari Google Spreadsheet. Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 1/5 — lihat … |
@@ -1510,6 +1510,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `FuelTrendDashboard` | `modules/vehicle/fuel-trend-dashboard.js` |
 | `gantiPin` | `modules/shared/keamanan-pin.js` |
 | `GDRIVE_EMAIL_SCOPE` | `gdrive-backup.js` |
+| `gdriveAccessToken` | `gdrive-backup.js` |
 | `gdriveBackupNow` | `gdrive-backup.js` |
 | `gdriveConnectOnly` | `gdrive-backup.js` |
 | `gdriveConnStatusLabel` | `gdrive-backup.js` |
@@ -1519,12 +1520,17 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `gdriveFetchUserInfo` | `gdrive-backup.js` |
 | `gdriveHandleAuthSuccess` | `gdrive-backup.js` |
 | `gdriveInitTokenClient` | `gdrive-backup.js` |
+| `gdrivePendingAfterAuth` | `gdrive-backup.js` |
 | `gdriveResetTokenState` | `gdrive-backup.js` |
 | `gdriveRestoreNow` | `gdrive-backup.js` |
 | `gdriveSaveClientId` | `gdrive-backup.js` |
 | `gdriveThrowForFailedRes` | `gdrive-backup.js` |
 | `gdriveToggleAutoSync` | `gdrive-backup.js` |
+| `gdriveTokenClient` | `gdrive-backup.js` |
+| `gdriveTokenExpiresAt` | `gdrive-backup.js` |
+| `gdriveTokenScope` | `gdrive-backup.js` |
 | `gdriveTrySilentReconnectOnLoad` | `gdrive-backup.js` |
+| `gdriveUserEmail` | `gdrive-backup.js` |
 | `generateVirtualBillItemsForMonth` | `modules/finance/tagihan-kalender.js` |
 | `GENERIC_GROUP_BY_NAME` | `modules/vehicle/sparepart-servis.js` |
 | `GENERIC_GROUP_BY_NAME_RECORDS` | `modules/engine/database-api.js` |
