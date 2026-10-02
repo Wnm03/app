@@ -707,17 +707,23 @@ function renderWorkDays(){return Payroll.renderWorkDays();}
 function renderVehicleSelect(){
 const el=document.getElementById('vehicleSelect');if(!el)return;
 if(!D.vehicles.find(v=>v.id===curVehicleId)&&D.vehicles.length) curVehicleId=D.vehicles[0].id;
-el.innerHTML=D.vehicles.map(v=>`<div class="vehicle-chip ${v.id===curVehicleId?'active':''}" data-action="selectVehicle" data-args="${escapeHtml(JSON.stringify([v.id]))}">${v.emoji} ${escapeHtml(v.name)}</div>`).join('');
+const html=D.vehicles.map(v=>`<div class="vehicle-chip ${v.id===curVehicleId?'active':''}" data-action="selectVehicle" data-args="${escapeHtml(JSON.stringify([v.id]))}">${v.emoji} ${escapeHtml(v.name)}</div>`).join('');
+// S2332: avoid destroying/recreating identical chips on page hops. The spec card
+// still renders from its existing SoT; only redundant DOM replacement is skipped.
+if(el.innerHTML!==html)el.innerHTML=html;
 renderVehicleSpecCard();
 }
 
 function renderCarImportVehicleSelect(){
 const el=document.getElementById('carImportVehicle');if(!el)return;
-if(!D.vehicles||!D.vehicles.length){el.innerHTML='<option value="">Belum ada kendaraan</option>';return;}
+if(!D.vehicles||!D.vehicles.length){const empty='<option value="">Belum ada kendaraan</option>';if(el.innerHTML!==empty)el.innerHTML=empty;return;}
 const prevVal=el.value;
-el.innerHTML=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
-if(prevVal&&D.vehicles.find(v=>v.id===prevVal)) el.value=prevVal;
-else if(D.vehicles.find(v=>v.id===curVehicleId)) el.value=curVehicleId;
+const html=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
+// Preserve the native select's option nodes (and focus/selection state) whenever
+// the vehicle catalogue has not changed since the previous render.
+if(el.innerHTML!==html)el.innerHTML=html;
+if(prevVal&&D.vehicles.find(v=>v.id===prevVal)){if(el.value!==prevVal)el.value=prevVal;}
+else if(D.vehicles.find(v=>v.id===curVehicleId)&&el.value!==curVehicleId)el.value=curVehicleId;
 }
 
 function renderVehicleManageList(){

@@ -8,7 +8,7 @@ req(/event\.waitUntil\(/,'install/activate must use waitUntil');
 req(/cache\.addAll\(PRECACHE_URLS\)/,'install must precache declared core assets');
 req(/self\.clients\.claim\(\)/,'activate must claim clients');
 req(/caches\.keys\(\)/,'activate must enumerate old caches');
-req(/filter\(\(key\) => key !== CACHE_NAME\)/,'activate must retain only current cache');
+req(/filter\(\(key\) => key\.startsWith\(CACHE_PREFIX\) && key !== CACHE_NAME\)/,'activate must delete only older caches in the app namespace');
 req(/const cached = await caches\.match\(event\.request\)/,'offline path must check cache');
 req(/if \(cached\) return cached/,'offline path must return cached response');
 req(/new Response\(/,'offline cache miss must return a Response');

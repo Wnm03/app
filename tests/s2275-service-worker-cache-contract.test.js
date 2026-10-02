@@ -61,7 +61,7 @@ test('S2275: activate removes stale cache versions and claims clients', async ()
   let waited;
   h.listeners.activate({ waitUntil: p => { waited = p; } });
   await waited;
-  assert.deepEqual(h.cacheOps.filter(x => x[0] === 'delete').map(x => x[1]).sort(), ['kw-cache-v2209', 'other-cache']);
+  assert.deepEqual(h.cacheOps.filter(x => x[0] === 'delete').map(x => x[1]).sort(), ['kw-cache-v2209']);
   assert.ok(h.cacheOps.some(x => x[0] === 'clients.claim'));
 });
 

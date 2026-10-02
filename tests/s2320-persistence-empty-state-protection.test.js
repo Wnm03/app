@@ -15,7 +15,7 @@ test('S2320: failed startup persistence enters recovery protection instead of ac
 
 test('S2320: save and saveFlush are blocked while persistence recovery is required',()=>{
  assert.match(persistence,/__kwPersistenceRecoveryRequired===true[\s\S]{0,700}return false;/);
- assert.match(persistence,/function saveFlush\(\)[\s\S]{0,500}__kwPersistenceRecoveryRequired===true[\s\S]{0,500}return false;/);
+ assert.match(persistence,/function saveFlush\(\)[\s\S]{0,500}__kwPersistenceRecoveryRequired===true[\s\S]{0,500}return _blockSaveFlushOnRecovery\(\);/);
 });
 
 test('S2320: runtime boot stops before showMain when persistence recovery is required',()=>{

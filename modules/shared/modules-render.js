@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2213';
+const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2219';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -22,13 +22,13 @@ renderWealthSnapshots();
 }
 
 function renderPageContent(name){
-// PERF NAVIGATION GUARD: cache invalidation tetap dilakukan di titik ini untuk menjaga
-// correctness saat full-page refresh/restore, tetapi renderer berat hanya dijalankan untuk
-// tab yang benar-benar aktif. Tidak mengubah business logic; hanya mengubah KAPAN presenter UI
-// dipanggil. Sub-tab switcher masing-masing tetap menjadi SoT render saat tab dibuka.
-if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
-if(typeof invalidateCashflowForecastCache==='function')invalidateCashflowForecastCache();
-if(typeof FinanceIntelligence!=='undefined'&&typeof FinanceIntelligence.invalidateCache==='function')FinanceIntelligence.invalidateCache();
+// PERF NAVIGATION GUARD (S2331): navigation is a read/render operation, not a data
+// mutation boundary. Clearing finance caches here forced the next page to rebuild account
+// indexes, cash-flow forecasts, and Finance Intelligence even when data had not changed.
+// Their canonical mutation boundary is save() (features-helpers-global-security.js), which
+// invalidates the affected caches before post-save renderers run. Cross-tab stale state is
+// guarded and requires reload, so a page hop must not masquerade as a finance mutation.
+// Keep renderPageContent focused on the active page's visible presenter only.
 
 if(name==='dashboard')renderDashboard();
 if(name==='dashboard-hub'&&typeof DashboardHub!=='undefined')DashboardHub.render();
