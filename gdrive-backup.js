@@ -4,6 +4,16 @@
 // AUDIT-STRUKTUR-FOLDER.md) murni pengelompokan ulang file, BUKAN perubahan perilaku.
 
 const GDRIVE_EMAIL_SCOPE='https://www.googleapis.com/auth/userinfo.email';
+// S2271: Google Drive auth/session state belongs to the eager gdrive-backup
+// owner. It must not live in laporan-export.js because laporan-export is a
+// demand-loaded feature (S2264), while Drive settings/backup consumers are
+// eager and can run before the report feature is opened.
+let gdriveTokenClient=null;
+let gdriveAccessToken=null;
+let gdrivePendingAfterAuth=null;
+let gdriveTokenScope=null;
+let gdriveTokenExpiresAt=null;
+let gdriveUserEmail=null;
 let _gdriveSilentReconnectInProgress=false;
 function gdriveTrySilentReconnectOnLoad(){
 if(!D.googleDrive||!D.googleDrive.autoSync||!D.googleDrive.clientId)return;

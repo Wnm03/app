@@ -1,0 +1,23 @@
+S2303 — TEST CONTRACT RECONCILIATION
+Baseline: cumulative state BASE-48-THROUGH-S2302 / current S2302 working state
+Production code change: 0
+Test files changed: 2
+
+1. tests/tx-stok-sparepart-aibus-emit-sesi-c.test.js
+   Cause: S2296 makes duplicate applyPurchase(txId) a durable no-op BEFORE mutation/event emission.
+   Old expectation: duplicate invocation emits finance.updated twice.
+   Correct contract: duplicate invocation emits once; priceHistory remains one entry.
+
+2. tests/finance-servis-auto-sot-sync-s12.test.js
+   Cause: service-event-adapter hardening changed the vehicle.updated bridge to an emitAsync-aware fallback and event metadata.
+   Old expectation: exact source substring AIBus.emit('vehicle.updated',p).
+   Correct contract: vehicle.updated branch exists and supports emitAsync plus synchronous emit fallback with eventMeta.
+
+Verification:
+- target tests: 2 files, 15/15 assertions/tests PASS (7/7 + 8/8)
+- S2296 cross-domain identity ledger: PASS
+- service-hardening-v31: PASS
+- service-hardening-v34: PASS
+- service-hardening-v36: PASS
+- SA19 vehicle outbox dedupe: PASS (3/3)
+Production files touched: 0

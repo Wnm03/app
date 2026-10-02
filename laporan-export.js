@@ -137,9 +137,3 @@ if(wrap.parentNode) document.body.removeChild(wrap);
 toast('❌ Gagal membuat gambar: '+e.message);
 });
 }
-let gdriveTokenClient=null;
-let gdriveAccessToken=null;
-let gdrivePendingAfterAuth=null;
-let gdriveTokenScope=null;
-let gdriveTokenExpiresAt=null;
-let gdriveUserEmail=null;

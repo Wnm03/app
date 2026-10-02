@@ -1,0 +1,12 @@
+S2301 — Final Regression + Cross-Feature Matrix
+Baseline: app-main (48) + cumulative S2271–S2296
+Production code changes: 0
+Test-only files changed: 2
+
+1. tests/s2152-p4-1-stock-command-sot.test.js
+   Reconcile duplicate purchase expectation with S2296 no-op identity contract.
+
+2. tests/s2152-p4-5-zero-direct-write.test.js
+   Exclude scripts/ from runtime-source scan; audit scripts are fixtures/audit tooling, not runtime source.
+
+Audit: AUDIT-S2301-FINAL-REGRESSION-CROSS-FEATURE-MATRIX.md
