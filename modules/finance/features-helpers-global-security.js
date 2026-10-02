@@ -326,6 +326,7 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_saveImmediate();},40
 // upload backup Drive). Beda dari save() biasa: di sini localStorage['kw_v4'] TETAP ditulis
 // sinkron sebagai jaring pengaman, karena IndexedDB async-nya belum tentu sempat commit kalau
 // tab langsung ditutup/di-suspend setelah ini.
+var _largeLocalSnapshotWarnShown=false;
 function saveFlush(){
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
@@ -334,8 +335,14 @@ const version=_saveStateVersion;
 let json;
 try{json=_getSaveSnapshotForVersion(version);}catch(e){console.error('Gagal menyiapkan data untuk flush:',e);return false;}
 const persistStamp=_saveImmediate(json);
+const LOCAL_SNAPSHOT_MAX_CHARS=3*1024*1024;
+if(json.length<=LOCAL_SNAPSHOT_MAX_CHARS){
 const localOk=_writeLocalSnapshot(json);
 if(localOk)_markSavePersistMeta('local',persistStamp);
+}else if(!_largeLocalSnapshotWarnShown){
+_largeLocalSnapshotWarnShown=true;
+console.warn('[KW Persistence] Snapshot besar ('+(json.length/1048576).toFixed(2)+' MiB); localStorage mirror dilewati agar flush tidak memblokir UI. IndexedDB tetap dijadwalkan.');
+}
 return true;
 }
 

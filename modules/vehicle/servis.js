@@ -958,12 +958,16 @@ files.forEach(file=>{
 if(!file||!file.type||!file.type.startsWith('image/')){toast('⚠️ File bukan gambar, dilewati');return;}
 if(file.size>MAX_BYTES){toast(`⚠️ "${file.name}" terlalu besar (maks 5MB), dilewati`);return;}
 if(Servis._photoDraft.length>=MAX_PHOTOS){toast(`⚠️ Maksimal ${MAX_PHOTOS} foto per catatan servis`);return;}
+const prepare=(typeof downscaleImage==='function')?downscaleImage(file,1280):Promise.resolve(file);
+Promise.resolve(prepare).then((prepared)=>new Promise((resolve,reject)=>{
 const reader=new FileReader();
-reader.onload=()=>{
-if(typeof reader.result==='string')Servis._photoDraft.push(reader.result);
+reader.onload=()=>resolve(typeof reader.result==='string'?reader.result:null);
+reader.onerror=()=>reject(reader.error||new Error('Gagal membaca foto'));
+reader.readAsDataURL(prepared||file);
+})).then((dataUrl)=>{
+if(dataUrl)Servis._photoDraft.push(dataUrl);
 Servis._renderPhotoThumbs();
-};
-reader.readAsDataURL(file);
+}).catch((err)=>{console.warn('[Servis] kompresi/baca foto gagal:',err);toast('⚠️ Foto gagal diproses, silakan coba lagi');});
 });
 },
 removePhoto(idx){

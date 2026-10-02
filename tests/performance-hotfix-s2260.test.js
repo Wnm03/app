@@ -1,0 +1,10 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const read=(p)=>fs.readFileSync(path.join(root,p),'utf8');
+test('release build defaults to required minification; dev fallback is explicit',()=>{const pkg=JSON.parse(read('package.json'));assert.match(pkg.scripts.build,/--require-minify/);assert.equal(pkg.scripts['build:dev'],'node scripts/build.js');});
+test('service photo path downscales before DataURL conversion',()=>{const src=read('modules/vehicle/servis.js');const start=src.indexOf('addPhoto(event)');const end=src.indexOf('removePhoto(idx)',start);const body=src.slice(start,end);assert.match(body,/downscaleImage\(file,1280\)/);assert.ok(body.indexOf('downscaleImage(file,1280)')<body.indexOf('readAsDataURL(prepared||file)'));});
+test('critical flush avoids synchronous localStorage mirror for snapshots above 3 MiB',()=>{for(const file of ['modules/shared/features-helpers-global-security.js','modules/asset/features-helpers-global-security.js','modules/finance/features-helpers-global-security.js','modules/shop/features-helpers-global-security.js']){const src=read(file);const start=src.indexOf('function saveFlush(){');const end=src.indexOf('\n}',start)+2;const body=src.slice(start,end);assert.match(body,/LOCAL_SNAPSHOT_MAX_CHARS=3\*1024\*1024/,file);assert.match(body,/json.length<=LOCAL_SNAPSHOT_MAX_CHARS/,file);assert.match(body,/_saveImmediate\(json\)/,file);}});
+test('part CRUD body observer debounces refresh and performs final refresh on disconnect',()=>{const src=read('modules/vehicle/part-crud-s2041.js');assert.match(src,/const scheduleRefresh=\(\)=>/);assert.match(src,/},80\);/);assert.match(src,/obs.disconnect\(\);[\s\S]*api.refreshAll\(\);/);});

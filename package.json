@@ -5,7 +5,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "node scripts/build.js",
+    "build": "node scripts/build.js --require-minify",
     "build:safe": "node scripts/build-with-tests.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -61,7 +61,8 @@
     "audit:sot-post-migration": "node scripts/s2165-post-migration-reconciliation-gate.js",
     "audit:sot-runtime-projection": "node scripts/s2166-runtime-projection-sync-gate.js",
     "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js",
-    "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js"
+    "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js",
+    "build:dev": "node scripts/build.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",

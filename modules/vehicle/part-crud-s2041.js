@@ -324,7 +324,14 @@ api.install=()=>{
  const origPopulateTx=typeof populateTxStockSelect==='function'?populateTxStockSelect:null;if(origPopulateTx){window.populateTxStockSelect=function(){const r=origPopulateTx.apply(this,arguments);setTimeout(api.refreshAll,0);return r;};}
  return true;
 };
-function boot(){api.install();api.refreshAll();const obs=new MutationObserver(()=>{api.refreshAll()});obs.observe(document.body,{childList:true,subtree:true});window.setTimeout(()=>obs.disconnect(),120000);}
+function boot(){
+api.install();api.refreshAll();
+let refreshTimer=null;
+const scheduleRefresh=()=>{if(refreshTimer!==null)clearTimeout(refreshTimer);refreshTimer=window.setTimeout(()=>{refreshTimer=null;api.refreshAll();},80);};
+const obs=new MutationObserver(scheduleRefresh);
+obs.observe(document.body,{childList:true,subtree:true});
+window.setTimeout(()=>{obs.disconnect();if(refreshTimer!==null){clearTimeout(refreshTimer);refreshTimer=null;}api.refreshAll();},120000);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(boot,0));else setTimeout(boot,0);
 window.PartCrudS2041=api;
 window.PartPickerS2041=api.PartPicker;
