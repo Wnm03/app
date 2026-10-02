@@ -33,6 +33,10 @@ async function __kwInitRuntime(){
 // di blok controllerchange index.html soal bug "PIN muncul 2x".
 window.__kwBooted=true;
 await load();
+if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
+  console.warn('[KW] Boot dihentikan: persistence recovery diperlukan.');
+  return;
+}
 if(typeof AIService!=='undefined'&&typeof AIService.wireEvents==='function'){
 try{AIService.wireEvents();}catch(e){console.warn('[AIService] wireEvents gagal:',e);}
 }

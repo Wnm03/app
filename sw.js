@@ -1,6 +1,7 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v2212';
+const CACHE_NAME = 'kw-cache-v2213';
+const CACHE_PREFIX = 'kw-cache-';
 const PRECACHE_URLS = [
   './index.html',
   './app_production.html',
@@ -41,7 +42,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
-      keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      keys.filter((key) => key !== CACHE_NAME && key.startsWith(CACHE_PREFIX)).map((key) => caches.delete(key))
     )).then(() => self.clients.claim())
   );
 });

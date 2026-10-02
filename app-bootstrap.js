@@ -41,7 +41,9 @@ IDBStore,LinkTx,Bill,AIWidget,EduFund,PriceReko,OngkirCalc,PriceRekoWidget,Stock
 // TIDAK PERNAH jalan -- tidak ada banner, tidak ada console.error, tidak ada alert -- app
 // terlihat diam total (boot terhenti sebagian tanpa jejak). Fix: bungkus panggilannya supaya
 // rejection-nya benar2 ditangkap di sini juga.
-Promise.resolve(init()).catch(function(e){
+const __kwBootPromise=typeof __kwInitRuntime==='function'?__kwInitRuntime():Promise.reject(new Error('Runtime bootstrap __kwInitRuntime tidak tersedia'));
+const __kwBootWatchdog=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Bootstrap aplikasi terlalu lama (>15 detik). Kemungkinan storage/IndexedDB atau resource boot macet.'))},15000);});
+Promise.race([__kwBootPromise,__kwBootWatchdog]).catch(function(e){
 console.error('[app-bootstrap] init() gagal (async, tertangkap via Promise.catch):',e);
 if(typeof window.__showRuntimeErrorBanner==='function'){
 window.__showRuntimeErrorBanner('Gagal memulai aplikasi ('+(e&&e.message?e.message:e)+')');

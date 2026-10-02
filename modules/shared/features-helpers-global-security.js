@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2212';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2212';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2213';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2213';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -350,6 +350,40 @@ const m=_readSavePersistMeta();const now=Date.now();const stamp=Math.max(now,m.l
 }
 function _markSavePersistMeta(kind,stamp){
 if(!stamp)return false;try{const m=_readSavePersistMeta();if(kind==='local')m.localTs=Math.max(m.localTs,stamp);else if(kind==='idb')m.idbTs=Math.max(m.idbTs,stamp);localStorage.setItem(_savePersistMetaKey,JSON.stringify(m));return true;}catch(e){return false;}
+}
+
+// S2322: upgrade/recovery checkpoint + runtime diagnostics. The checkpoint is a
+// separate immutable snapshot so a failed schema migration can never leave the
+// in-memory state half-migrated and then persist that partial state.
+const _preMigrationBackupKey='kw_v4_pre_migration_backup';
+const _runtimeMetaKey='kw_v4_runtime_meta';
+async function _writePreMigrationCheckpoint(raw,fromSchema){
+ if(!raw)return false;
+ const payload=JSON.stringify({createdAt:new Date().toISOString(),build:(typeof APP_BUILD_VERSION!=='undefined'?APP_BUILD_VERSION:null),schemaVersion:Number(fromSchema)||0,raw:String(raw)});
+ let idbOk=false,lsOk=false;
+ try{if(typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.set==='function')idbOk=await IDBStore.set(_preMigrationBackupKey,payload)===true;}catch(e){console.warn('[KW Persistence] checkpoint IndexedDB gagal:',e);}
+ try{if(typeof localStorage!=='undefined'){localStorage.setItem(_preMigrationBackupKey,payload);lsOk=true;}}catch(e){console.warn('[KW Persistence] checkpoint localStorage gagal:',e);}
+ return idbOk||lsOk;
+}
+function _recordRuntimeMeta(extra){
+ try{
+  if(typeof localStorage==='undefined')return;
+  const prev=JSON.parse(localStorage.getItem(_runtimeMetaKey)||'null');
+  const current={build:(typeof APP_BUILD_VERSION!=='undefined'?APP_BUILD_VERSION:null),schema:SCHEMA_VERSION,origin:(typeof location!=='undefined'?location.origin:null),lastBootAt:new Date().toISOString(),previousBuild:prev&&prev.build||null,...(extra||{})};
+  localStorage.setItem(_runtimeMetaKey,JSON.stringify(current));
+  if(typeof window!=='undefined')window.__kwPersistenceDiagnostics=current;
+ }catch(e){
+  if(typeof window!=='undefined')window.__kwPersistenceDiagnostics={build:(typeof APP_BUILD_VERSION!=='undefined'?APP_BUILD_VERSION:null),schema:SCHEMA_VERSION,origin:(typeof location!=='undefined'?location.origin:null),metaWriteFailed:true};
+ }
+}
+function _setPersistenceRecoveryRequired(message,details){
+ if(typeof window!=='undefined'){
+  window.__kwPersistenceRecoveryRequired=true;
+  window.__kwPersistenceRecoveryReason=message;
+  window.__kwPersistenceDiagnostics={...(window.__kwPersistenceDiagnostics||{}),recoveryRequired:true,recoveryReason:message,...(details||{})};
+ }
+ console.error('[KW Persistence] '+message,details||'');
+ if(typeof showAlertModal==='function')showAlertModal(message,{icon:'🛡️',title:'Pemulihan Data Diperlukan'});
 }
 
 // S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
@@ -603,6 +637,11 @@ function refreshAfterMutation(opts){
 
 function save(opts){
 opts=opts||{};
+if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
+ const _msg='⚠️ Penyimpanan data lama belum berhasil dipulihkan. Simpan dinonaktifkan untuk mencegah data lama tertimpa state kosong. Pulihkan dari backup atau muat ulang aplikasi setelah storage kembali tersedia.';
+ if(typeof toast==='function')toast(_msg,7000); else console.warn(_msg);
+ return false;
+}
 _markPersistenceStateChanged();
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 const _saveDomain=opts.domain||null;
@@ -669,6 +708,11 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_savePendingSince=0;_
 // tab langsung ditutup/di-suspend setelah ini.
 var _largeLocalSnapshotWarnShown=false;
 function saveFlush(){
+if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
+ const _msg='⚠️ Flush penyimpanan diblokir karena snapshot data lama belum berhasil dipulihkan. Ini mencegah state kosong menimpa data lama.';
+ if(typeof toast==='function')toast(_msg,7000); else console.warn(_msg);
+ return false;
+}
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 _savePendingSince=0;
@@ -1196,10 +1240,12 @@ if(idbRaw&&lsRaw){
  }catch(e){void e;}
 }
 if(!p){
- if(idbRaw||lsRaw){
-  const msg='Data tersimpan di HP ini tidak dapat dibaca dari IndexedDB maupun localStorage (corrupt). Aplikasi akan dibuka dengan data kosong agar tidak error.\n\nKalau punya file backup (.json) dari menu Pengaturan → Backup, silakan import ulang lewat menu tersebut setelah aplikasi terbuka.';
-  console.error(msg);
-  showAlertModal(msg,{icon:'⚠️',title:'Data Tersimpan Rusak'});
+ let _existingInstall=false;
+ try{
+  _existingInstall=typeof localStorage!=='undefined'&&!!(localStorage.getItem('kw_setup')||localStorage.getItem('kw_pin'));
+ }catch(_e){void _e;}
+ if(idbRaw||lsRaw||_existingInstall){
+  _setPersistenceRecoveryRequired('Data aplikasi lama belum dapat dibaca dari IndexedDB maupun localStorage. Aplikasi masuk mode perlindungan agar state kosong TIDAK menimpa data lama. Jangan lakukan input/reset. Pulihkan dari backup (.json) atau perbaiki akses storage lalu muat ulang aplikasi.',{idbReadable:!!idbRaw,localStorageReadable:!!lsRaw,existingInstall:_existingInstall});
  }
  return;
 }
@@ -1254,7 +1300,27 @@ try{ await ServiceMasterDB.ensureLoaded(); }
 catch(e){ console.error('Gagal ensureLoaded ServiceMasterDB:',e); }
 }
 const _fromSchemaVersion=D.schemaVersion===undefined?0:D.schemaVersion;
-runDataMigrations(_fromSchemaVersion);
+if(Number(_fromSchemaVersion)>SCHEMA_VERSION){
+ _setPersistenceRecoveryRequired('Data menggunakan schema yang lebih baru daripada build aplikasi ini (v'+_fromSchemaVersion+' > v'+SCHEMA_VERSION+'). Boot dihentikan agar update/downgrade tidak menimpa data.',{fromSchemaVersion:_fromSchemaVersion,expectedSchemaVersion:SCHEMA_VERSION});
+ return;
+}
+const _preMigrationRaw=String(s||idbRaw||lsRaw||'');
+let _checkpointOk=true;
+if(Number(_fromSchemaVersion)<SCHEMA_VERSION){
+ _checkpointOk=await _writePreMigrationCheckpoint(_preMigrationRaw,_fromSchemaVersion);
+ if(!_checkpointOk){
+  _setPersistenceRecoveryRequired('Checkpoint migrasi data gagal dibuat. Boot dihentikan agar migrasi tidak berjalan tanpa cadangan rollback.',{fromSchemaVersion:_fromSchemaVersion});
+  return;
+ }
+}
+const _migrationResult=runDataMigrations(_fromSchemaVersion);
+if(Number(_migrationResult)<SCHEMA_VERSION){
+ try{D=JSON.parse(_preMigrationRaw);}
+ catch(_restoreErr){void _restoreErr;}
+ _setPersistenceRecoveryRequired('Migrasi data tidak selesai (schema v'+_migrationResult+' dari target v'+SCHEMA_VERSION+'). State hasil migrasi parsial dibatalkan; snapshot sebelum migrasi dipertahankan untuk recovery.',{fromSchemaVersion:_fromSchemaVersion,migrationResult:_migrationResult});
+ return;
+}
+_recordRuntimeMeta({loadedFrom:fromIdb?'indexeddb':'localstorage',fromSchemaVersion:_fromSchemaVersion,migrationApplied:Number(_migrationResult)>Number(_fromSchemaVersion)});
 if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
 if(!D.accounts || !D.accounts.length) D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.pajakZakat) D.pajakZakat={hargaEmasPerGram:2640000,nisabPenghasilanBulan:7640144,nisabPenghasilanTahun:91681728,zakatFitrahPerJiwa:37500,haulMaalMulai:null,zakatLog:[]};
