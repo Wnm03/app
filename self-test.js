@@ -110,6 +110,7 @@ const tabBadge=document.getElementById('stgTabBadgeDiag');
 if(tabBadge) tabBadge.classList.toggle('u-dnone',!hasFail);
 }
 async function runSelfTest(){
+if(typeof ensureDiagnosticCases==='function') await ensureDiagnosticCases();
 const _scrollRootEl=document.getElementById('scrollRoot');
 const _savedScrollTop=_scrollRootEl?_scrollRootEl.scrollTop:0;
 const data=await computeSelfTestResults();
@@ -121,6 +122,7 @@ return data;
 }
 window.runHeadlessSelfTest=computeSelfTestResults;
 async function copySelfTestResults(){
+if(typeof ensureDiagnosticCases==='function') await ensureDiagnosticCases();
 if(!_lastSelfTestData){toast('⚠️ Jalankan tes dulu sebelum menyalin hasil');return;}
 const d=_lastSelfTestData;
 const lines=[
@@ -491,7 +493,7 @@ call:()=>VehicleCatalogImportUI.open(),close:()=>closeModal('vehCatalogImportMod
 call:()=>{ SparepartOcrCatalogDetail.open({found:true,item:{partName:'(tes sweep)',oemCode:'',barcode:'',category:''},matchedBy:'oem'}); },
 close:()=>closeModal('sparepartOcrDetailModal')},
 {label:'HondaPdfImportUI.open()',id:'hondaPdfImportModal',
-call:()=>HondaPdfImportUI.open(),close:()=>closeModal('hondaPdfImportModal')},
+call:async()=>{await ensureHondaPdfImportScripts(); return HondaPdfImportUI.open();},close:()=>closeModal('hondaPdfImportModal')},
 {label:'VehicleCatalogWebImportUI.open()',id:'vehCatWebImportModal',
 call:()=>VehicleCatalogWebImportUI.open(),close:()=>closeModal('vehCatWebImportModal')},
 {label:'BusinessFlowPresenter.openTransferModal()',id:'inventoryTransferModal',
@@ -797,8 +799,8 @@ const onErr=(e)=>{ caughtErr=(e&&e.error&&e.error.message)||(e&&e.message)||Stri
 window.addEventListener('error',onErr);
 let pass=true,error=null,needsContext=false;
 try{
-if(spec.call) spec.call();
-else window[spec.fn](...(spec.args||[]));
+if(spec.call) await spec.call();
+else { const r=window[spec.fn](...(spec.args||[])); if(r&&typeof r.then==='function') await r; }
 await new Promise(r=>setTimeout(r,40));
 if(caughtErr){ pass=false; error=caughtErr; }
 else if(spec.verify){
@@ -937,6 +939,7 @@ toast('⚠️ Gagal menyalin, coba lagi');
 }
 }
 async function autoRunSelfTestIfNeeded(){
+if(typeof ensureDiagnosticCases==='function') await ensureDiagnosticCases();
 try{
 const lastBuild=localStorage.getItem('kw_selftest_build');
 if(lastBuild===APP_BUILD_VERSION){
@@ -949,7 +952,7 @@ return;
 // input yang sedang diisi user. Tunda & coba lagi nanti (self-test cuma jalan sekali per
 // build, jadi ditunda beberapa detik tidak masalah).
 if(document.querySelector('.overlay.open')){
-setTimeout(autoRunSelfTestIfNeeded,2500);
+// S2261: auto-run dijadwalkan oleh ensureSelfTest() di boot-early agar harness ini lazy-loaded.
 return;
 }
 // S622: bersihkan toast basi (mis. sisa dari aksi tepat sebelum boot selesai)

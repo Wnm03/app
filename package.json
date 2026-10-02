@@ -60,7 +60,8 @@
     "audit:sot-reviewed-migration": "node scripts/s2164-reviewed-mapping-migration-gate.js",
     "audit:sot-post-migration": "node scripts/s2165-post-migration-reconciliation-gate.js",
     "audit:sot-runtime-projection": "node scripts/s2166-runtime-projection-sync-gate.js",
-    "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js"
+    "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js",
+    "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js"
   },
   "devDependencies": {
     "eslint": "^9.19.0",
