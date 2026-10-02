@@ -734,7 +734,7 @@ _selfTestAssert(threw,'add_catatan_anak harus menolak teks kosong');
 _selfTestAssert(D.transactions.length===beforeTx&&D.bills.length===beforeBills&&(D.catatan.anak||[]).length===beforeAnak,'Validasi yang gagal TIDAK boleh menyisipkan data apa pun ke D');
 }},
 {name:'runDataHealthCheck(): mendeteksi transaksi Shop dengan produk terhapus & absensi dengan total tidak valid (sementara, dicadangkan & dikembalikan)', fn:()=>{
-if(typeof runDataHealthCheck!=='function'||typeof openModal!=='function')return;
+_selfTestAssert(typeof runDataHealthCheck==='function'&&typeof openModal==='function','Data Health lazy feature harus sudah dimuat sebelum self-test dijalankan');
 const backupShop=D.cobek,backupWorkDays=D.workDays;
 try{
 D.cobek=[{id:'__t_shop__',date:'2026-01-01',items:[{productId:'__nonexistent_product__',name:'Produk Hantu',qty:1}],customer:{name:'Tes'},accountId:'__nonexistent_acc__',txLinkId:'__nonexistent_tx__',total:1000,profit:100}];
@@ -780,7 +780,7 @@ _selfTestAssert(r.total===sumParts,'r.total harus sama dgn jumlah semua r.parts[
 _selfTestAssert(r.total>=0&&r.total<=100,'Skor total harus antara 0-100, dapat '+r.total);
 }},
 {name:'runDataHealthCheck(): mendeteksi ID/tanggal snapshot kekayaan duplikat & nilai tidak valid (sementara, dicadangkan & dikembalikan)', fn:()=>{
-if(typeof runDataHealthCheck!=='function')return;
+_selfTestAssert(typeof runDataHealthCheck==='function','Data Health lazy feature harus sudah dimuat sebelum self-test dijalankan');
 const backup=D.wealthSnapshots;
 try{
 D.wealthSnapshots=[
@@ -801,7 +801,7 @@ closeModal('dataHealthModal');
 }
 }},
 {name:'runDataHealthCheck(): mendeteksi ID/tanggal snapshot Skor Hidup Seimbang duplikat & nilai tidak valid (sementara, dicadangkan & dikembalikan)', fn:()=>{
-if(typeof runDataHealthCheck!=='function')return;
+_selfTestAssert(typeof runDataHealthCheck==='function','Data Health lazy feature harus sudah dimuat sebelum self-test dijalankan');
 const backup=D.lifeBalanceSnapshots;
 try{
 D.lifeBalanceSnapshots=[

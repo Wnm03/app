@@ -122,8 +122,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2208';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2208';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2211';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2211';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -796,7 +796,17 @@ const lazyOwnerLoaders={
 const lazyLoader=lazyOwnerLoaders[path[0]]||null;
 if(lazyLoader&&!el.dataset.lazyActionPending){
   el.dataset.lazyActionPending='1';
+  const lazyActionToken=String((Number(el.dataset.lazyActionToken||0)+1));
+  el.dataset.lazyActionToken=lazyActionToken;
+  const lazyActionName=el.dataset.action;
   Promise.resolve().then(()=>lazyLoader()).then(()=>{
+    // S2282: the loader may finish after the originating UI action became stale
+    // (element action changed, a newer dispatch superseded it, or the element
+    // was detached). Never invoke the old action after that boundary.
+    if(el.dataset.lazyActionToken!==lazyActionToken || el.dataset.action!==lazyActionName || el.isConnected===false){
+      if(el.dataset.lazyActionToken===lazyActionToken) delete el.dataset.lazyActionPending;
+      return;
+    }
     delete el.dataset.lazyActionPending;
     let retryOwner=window, retryFn=window;
     for(const p of path){ retryOwner=retryFn; retryFn=retryFn?retryFn[p]:undefined; }

@@ -2,7 +2,7 @@
 function __kwSelfTestCasesB(){
 return [
 {name:'runDataHealthCheck(): mendeteksi piutang tanpa nama, nilai tidak valid, & jatuh tempo tidak valid (sementara, dicadangkan & dikembalikan)', fn:()=>{
-if(typeof runDataHealthCheck!=='function')return;
+_selfTestAssert(typeof runDataHealthCheck==='function','Data Health lazy feature harus sudah dimuat sebelum self-test dijalankan');
 const backup=D.piutang;
 try{
 D.piutang=[
