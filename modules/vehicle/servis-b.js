@@ -431,9 +431,7 @@ renderReminder(){
 const card=document.getElementById('servisReminderCard');
 if(!card)return;
 Servis._loadReminderSeverityFilterPrefsOnce();
-const _legacyServiceMigrationChanged=typeof normalizeLegacyServiceLogs==='function'?normalizeLegacyServiceLogs():0;
-if(_legacyServiceMigrationChanged&&typeof save==='function')save();
-if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer&&typeof ServiceHistorySOTNormalizer.apply==='function')ServiceHistorySOTNormalizer.apply();
+// Render purity S2263: migration/normalization belongs to startup, import, or explicit repair paths.
 if(typeof ServiceHistorySOTReview!=='undefined'&&ServiceHistorySOTReview&&typeof ServiceHistorySOTReview.render==='function')ServiceHistorySOTReview.render(document.getElementById('servisList'),curVehicleId);
 const curKm=getVehicleKm(curVehicleId);
 const kmPerDay=estimateKmPerDay(curVehicleId);
@@ -613,7 +611,7 @@ row.innerHTML=options.map(o=>`<div class="chip ${o.v===Servis.activeActionTypeFi
 },
 renderList(opts){
 const _opts=opts||{};
-if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer&&typeof ServiceHistorySOTNormalizer.apply==='function')ServiceHistorySOTNormalizer.apply();
+// Render purity S2263: do not normalize or persist records from a list render.
 if(!_opts.skipReminder)Servis.renderReminder();
 
 Servis._loadMasterCategoryFilterPrefsOnce();

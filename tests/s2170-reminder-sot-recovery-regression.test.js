@@ -69,9 +69,16 @@ test('S2170 reminder source cannot perform a canonical upsert as a render side e
 
 test('S2170 Kelola Pengingat reconciles canonical SOT before rendering legacy consumer list',()=>{
   const src=read('modules/vehicle/sparepart-servis.js');
+  // S2265: reconcile dipindah dari presenter renderCatList() ke repairCategoryProjection() (render purity S2263),
+  // dan dipanggil dari branch Servis renderCnTab sebelum presenter.
+  const rpos=src.indexOf('repairCategoryProjection(){');
+  assert.ok(rpos>=0);
+  assert.match(src.slice(rpos,rpos+900),/VehicleCarNotesSOT\.reconcileLegacyCategoryProjection\(vid\)/);
   const pos=src.indexOf('renderCatList(){');
   assert.ok(pos>=0);
   const block=src.slice(pos,pos+2600);
-  assert.match(block,/VehicleCarNotesSOT\.reconcileLegacyCategoryProjection\(vid\)/);
   assert.match(block,/String\(c\.vehicleId\)===String\(vid\)/);
+  assert.doesNotMatch(block,/reconcileLegacyCategoryProjection/);
+  const entry=read('modules/shared/modules-render-b.js');
+  assert.match(entry,/repairCategoryProjection\(\)[\s\S]{0,300}renderSparepartCatList/);
 });

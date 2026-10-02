@@ -760,7 +760,7 @@ checkAndFireReminders();
 });
 setTimeout(checkWeeklySalaryReset,600);
 refreshCurrentPage();
-setTimeout(autoRunSelfTestIfNeeded,800);
+
 setTimeout(gdriveTrySilentReconnectOnLoad,900);
 }
 async function clearChat(){

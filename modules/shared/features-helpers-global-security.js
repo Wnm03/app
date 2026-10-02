@@ -2,9 +2,7 @@
 // Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // CATATAN: 3 konstanta default (DEFAULT_COBEK_KATEGORI/DEFAULT_ACCOUNTS/DEFAULT_SPAREPARTS) dipindah ke
 // data-default.js (v79) — file itu HARUS dimuat SEBELUM file ini karena dibaca langsung di `let D = {...}`.
-// PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
-
-const SCHEMA_VERSION = 11;
+// PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.jsconst SCHEMA_VERSION = 11;
 const DATA_MIGRATIONS=[
 {toVersion:2,desc:'Tambah kategori baku Investasi & Sedekah/Donasi (pengeluaran) utk user lama',migrate(d){
 if(!d.categories||!d.categories.expense)return;
@@ -350,9 +348,7 @@ const m=_readSavePersistMeta();const now=Date.now();const stamp=Math.max(now,m.l
 }
 function _markSavePersistMeta(kind,stamp){
 if(!stamp)return false;try{const m=_readSavePersistMeta();if(kind==='local')m.localTs=Math.max(m.localTs,stamp);else if(kind==='idb')m.idbTs=Math.max(m.idbTs,stamp);localStorage.setItem(_savePersistMetaKey,JSON.stringify(m));return true;}catch(e){return false;}
-}
-
-// S2322: upgrade/recovery checkpoint + runtime diagnostics. The checkpoint is a
+}// S2322: upgrade/recovery checkpoint + runtime diagnostics. The checkpoint is a
 // separate immutable snapshot so a failed schema migration can never leave the
 // in-memory state half-migrated and then persist that partial state.
 const _preMigrationBackupKey='kw_v4_pre_migration_backup';
@@ -384,9 +380,7 @@ function _setPersistenceRecoveryRequired(message,details){
  }
  console.error('[KW Persistence] '+message,details||'');
  if(typeof showAlertModal==='function')showAlertModal(message,{icon:'🛡️',title:'Pemulihan Data Diperlukan'});
-}
-
-// S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
+}// S1765: stale-fallback guard; only the newest failed IDB snapshot may fall back to localStorage.
 function _getSaveSnapshotForVersion(version){
 if(_saveSnapshotVersion===version&&_saveSnapshotJson!==null)return _saveSnapshotJson;
 const json=_buildSaveJson();
@@ -427,9 +421,7 @@ async function _persistAtomicSnapshotWithAux(snapshotJson,extraEntries){
  };
  if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')return FinanceEventOutbox.withPersistenceLock(run);
  return run();
-}
-
-try{if(typeof globalThis!=='undefined')globalThis.__kwPersistAtomicSnapshotWithAux=_persistAtomicSnapshotWithAux;}catch(_e){ /* global export is optional in restricted runtimes */ }
+}try{if(typeof globalThis!=='undefined')globalThis.__kwPersistAtomicSnapshotWithAux=_persistAtomicSnapshotWithAux;}catch(_e){ /* global export is optional in restricted runtimes */ }
 function _saveImmediate(snapshotJson){
 // S1877 TESTABILITY: optional, side-effect-free observer for diagnostic tests.
 // It observes an invocation without replacing the persistence function itself,
@@ -490,9 +482,7 @@ else if(seq!==_savePersistSeq)console.warn('Fallback localStorage dilewati: snap
 else console.warn('Fallback localStorage dilewati: event atomic masih staged sehingga mirror dan outbox harus tetap satu commit.');
 });
 return stamp;
-}
-
-// S1841: scoped post-mutation rendering.
+}// S1841: scoped post-mutation rendering.
 // save() remains the persistence/reconciliation gate, but callers must not redraw
 // unrelated domains after every mutation. On mobile this is especially important:
 // a single transaction/service save used to synchronously redraw Dashboard + Finance +
@@ -518,9 +508,7 @@ function getCachedTxDateMs(t){
     return ms;
   }
   return new Date(raw).getTime();
-}
-
-function _perfMark(name,start){
+}function _perfMark(name,start){
   if(typeof window==='undefined'||window.__APP_PERF_ENABLED!==true)return;
   try{
     const ms=performance.now()-start;
@@ -551,9 +539,7 @@ function _getPerfCategoryIndex(){
   }
   return _perfCategoryIndex.map;
 }
-function clearPerfIndexes(){_perfAccountIndex={src:null,len:-1,map:null};_perfCategoryIndex={src:null,len:-1,map:null};}
-
-function refreshCarNotesAfterMutation(opts){
+function clearPerfIndexes(){_perfAccountIndex={src:null,len:-1,map:null};_perfCategoryIndex={src:null,len:-1,map:null};}function refreshCarNotesAfterMutation(opts){
   opts=opts||{};
   const isVisible=(id)=>{
     if(typeof document==='undefined')return false;
@@ -583,9 +569,7 @@ function refreshCarNotesAfterMutation(opts){
   }
   if(tab==='bbm'&&opts.bbm&&typeof renderBbmList==='function')safe('bbmList',renderBbmList);
   else if(tab==='insight'&&opts.insight&&typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==='function')safe('insight',()=>CarNotesPerformance.render('insight'));
-}
-
-function refreshAfterMutation(opts){
+}function refreshAfterMutation(opts){
   opts=opts||{};
   const isVisible=(id)=>{
     if(typeof document==='undefined')return false;
@@ -633,9 +617,7 @@ function refreshAfterMutation(opts){
     safe('renderKeuangan',typeof renderKeuangan==='function'?renderKeuangan:null);
   if(opts.carNotes&&isVisible('page-carnotes')&&!isVisible('page-dashboard')&&!isVisible('page-keuangan'))
     safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
-}
-
-function save(opts){
+}function save(opts){
 opts=opts||{};
 if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
  const _msg='⚠️ Penyimpanan data lama belum berhasil dipulihkan. Simpan dinonaktifkan untuk mencegah data lama tertimpa state kosong. Pulihkan dari backup atau muat ulang aplikasi setelah storage kembali tersedia.';
@@ -707,13 +689,18 @@ _saveDebounceTimer=setTimeout(()=>{_saveDebounceTimer=null;_savePendingSince=0;_
 // sinkron sebagai jaring pengaman, karena IndexedDB async-nya belum tentu sempat commit kalau
 // tab langsung ditutup/di-suspend setelah ini.
 var _largeLocalSnapshotWarnShown=false;
-function saveFlush(){
-if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
- const _msg='⚠️ Flush penyimpanan diblokir karena snapshot data lama belum berhasil dipulihkan. Ini mencegah state kosong menimpa data lama.';
- if(typeof toast==='function')toast(_msg,7000); else console.warn(_msg);
- return false;
+function _blockSaveFlushOnRecovery(){
+const _msg='⚠️ Flush penyimpanan diblokir karena snapshot data lama belum berhasil dipulihkan. Ini mencegah state kosong menimpa data lama.';
+if(typeof toast==='function')toast(_msg,7000); else console.warn(_msg);
+return false;
 }
-if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
+function _blockSaveFlushOnCrossTab(){
+if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum flush.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}
+return false;
+}
+function saveFlush(){
+if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true)return _blockSaveFlushOnRecovery();
+if(_crossTabStateStale)return _blockSaveFlushOnCrossTab();
 if(_saveDebounceTimer){clearTimeout(_saveDebounceTimer);_saveDebounceTimer=null;}
 _savePendingSince=0;
 // S1843 PERF: build the critical snapshot ONCE. Previously _saveImmediate() serialized D,
@@ -1143,9 +1130,7 @@ if(t.type==='expense'&&t.category===oldName){t.category='Bisnis';if(!t.subcatego
 });
 }
 }
-}
-
-// S2096 — persistence safety: a syntactically valid but incomplete snapshot
+}// S2096 — persistence safety: a syntactically valid but incomplete snapshot
 // must not silently replace a richer snapshot from the other persistence medium.
 function _snapshotDataHealth(p){
  if(!p||typeof p!=='object'||Array.isArray(p))return {score:-1,shape:0,records:0};
@@ -1244,10 +1229,14 @@ if(!p){
  try{
   _existingInstall=typeof localStorage!=='undefined'&&!!(localStorage.getItem('kw_setup')||localStorage.getItem('kw_pin'));
  }catch(_e){void _e;}
- if(idbRaw||lsRaw||_existingInstall){
+ if(idbRaw||lsRaw){
   _setPersistenceRecoveryRequired('Data aplikasi lama belum dapat dibaca dari IndexedDB maupun localStorage. Aplikasi masuk mode perlindungan agar state kosong TIDAK menimpa data lama. Jangan lakukan input/reset. Pulihkan dari backup (.json) atau perbaiki akses storage lalu muat ulang aplikasi.',{idbReadable:!!idbRaw,localStorageReadable:!!lsRaw,existingInstall:_existingInstall});
- }
- return;
+  return;
+}
+if(_existingInstall){
+  _setPersistenceRecoveryRequired('Data aplikasi lama belum dapat dibaca dari IndexedDB maupun localStorage. Aplikasi masuk mode perlindungan agar state kosong TIDAK menimpa data lama. Jangan lakukan input/reset. Pulihkan dari backup (.json) atau perbaiki akses storage lalu muat ulang aplikasi.',{idbReadable:false,localStorageReadable:false,existingInstall:true});
+}
+return;
 }
 if(p){
  // S2214: startup/load race guard. Re-read mirror + writer token in one
@@ -1417,7 +1406,6 @@ if(D.profile&&D.profile.statusKawin===undefined) D.profile.statusKawin=false;
 if(D.profile&&D.profile.tanggungan===undefined) D.profile.tanggungan=0;
 if(D.profile&&D.profile.statusPekerjaan===undefined) D.profile.statusPekerjaan=null;
 if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️',modelId:'vario-125'}];
-
 if(!D.torsiChecklist||typeof D.torsiChecklist!=='object'||Array.isArray(D.torsiChecklist)) D.torsiChecklist={};
 // Sesi "Revisi migrasi" (torsi-vehicle-selector, Bagian A): migrasi jaring
 // pengaman D.torsiChecklist flat->per-kendaraan SUDAH ditangani otomatis
@@ -1598,7 +1586,7 @@ refreshCurrentPage();
 // S1811: diagnostic/self-test dan silent Google Drive reconnect dipindah keluar dari
 // critical first-second startup window. Keduanya tetap otomatis sekali per boot, tetapi
 // diberi jeda agar render awal, input PIN, dan first interaction mendapat prioritas.
-setTimeout(autoRunSelfTestIfNeeded,2500);
+
 setTimeout(gdriveTrySilentReconnectOnLoad,3000);
 }
 async function clearChat(){

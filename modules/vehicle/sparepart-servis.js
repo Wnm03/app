@@ -920,14 +920,23 @@ ensureCanonicalSparepartComponentCategories(){
   return {ok:true,added,linked};
 },
 // Sparepart UI layer: activeStockMasterCategoryFilter:null, activeStockComponentFilter:null, renderStockFilters(beforeEl).
-renderCatList(){
-Sparepart.ensureCanonicalSparepartComponentCategories();
-const el=document.getElementById('sparepartCatList');
-if(!el)return;
+repairCategoryProjection(){
+// S2265: langkah repair eksplisit (bukan presenter). Idempoten: dijalankan sekali per kendaraan/jumlah kategori, lalu di-memo.
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const key=String(vid)+':'+(Array.isArray(D.sparepartCats)?D.sparepartCats.length:0);
+if(Sparepart._catRepairKey===key)return false;
+Sparepart._catRepairKey=key;
+Sparepart.ensureCanonicalSparepartComponentCategories();
 if(vid&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.reconcileLegacyCategoryProjection==='function'){
   VehicleCarNotesSOT.reconcileLegacyCategoryProjection(vid);
 }
+return true;
+},
+renderCatList(){
+// Render purity S2263: category provisioning/reconciliation is an explicit repair/mutation task, never presentation.
+const el=document.getElementById('sparepartCatList');
+if(!el)return;
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 Sparepart._loadMasterCategoryFilterPrefsOnce();
 Sparepart.renderMasterCategoryChips(el);
 // S1964 legacy renderer contract: ServiceInputCatalog.itemById(c.serviceComponentId)

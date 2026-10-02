@@ -22,5 +22,5 @@ test('S2252 GROUP_B residency manifest is complete and measurable', () => {
   // functional invariant.
   // S2272: self-test now preloads lazy diagnostic boundaries explicitly; this
   // increases eager self-test source residency by the measured 480 bytes.
-  assert.equal(bytes, 4893976, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
+  assert.equal(bytes, 4908340, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
 });

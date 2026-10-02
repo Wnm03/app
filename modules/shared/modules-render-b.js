@@ -814,6 +814,25 @@ return `<div class="tx-item u-pointer" data-action="openSimModal" data-args="${e
 }).join('');
 }
 
+function renderServiceIntegrityCard(){
+  const el=document.getElementById('serviceIntegrityCard');
+  if(!el)return;
+  let result=null;
+  try{
+    if(typeof CarNotesPerformance!=='undefined'&&CarNotesPerformance&&typeof CarNotesPerformance.auditCurrent==='function')result=(typeof CarNotesPerformance.profile==='function')?CarNotesPerformance.profile('carnotes.audit.service',()=>CarNotesPerformance.auditCurrent(),{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0}):CarNotesPerformance.auditCurrent();
+    else if(typeof ServiceIntegrityReconciler!=='undefined'&&ServiceIntegrityReconciler&&typeof ServiceIntegrityReconciler.reconcile==='function')result={issues:(ServiceIntegrityReconciler.reconcile({services:Array.isArray(D.servisLogs)?D.servisLogs:[],transactions:Array.isArray(D.transactions)?D.transactions:[]}).issues||[])};
+  }catch(err){result={error:true,issues:[]};}
+  const issues=result&&Array.isArray(result.issues)?result.issues:[];
+  el.replaceChildren();
+  const title=document.createElement('div');title.className='u-fw700 u-mb4';
+  title.textContent=result&&result.error?'Integritas servis belum dapat diperiksa':issues.length?'⚠️ Integritas tautan servis perlu diperiksa':'✅ Integritas tautan servis & keuangan';
+  el.appendChild(title);
+  const detail=document.createElement('div');detail.className='u-fs11 u-t2';
+  detail.textContent=result&&result.error?'Pemeriksaan gagal. Coba buka kembali tab Servis.':issues.length?`${issues.length} temuan ditemukan. Periksa data servis dan transaksi tertaut.`:'Tidak ada masalah tautan yang terdeteksi pada pemeriksaan ini.';
+  el.appendChild(detail);
+  el.setAttribute('data-cn-audit-issues',String(issues.length));
+}
+
 function renderCnTab(){
 // CAR NOTES PERFORMANCE GUARD (audit 1751): the old pipeline rendered the
 // entire Vehicle + Fuel + Ride stack on EVERY tab switch. On low-end Android
@@ -831,10 +850,6 @@ return;
 curCnTab=defaultTab;
 }
 
-// SELF-HEAL (audit S444+): keep legacy fuelState referenceKm repair before
-// any fuel renderer that may read the estimate. This is idempotent and cheap.
-if(typeof healFuelStateReferenceKm==='function')healFuelStateReferenceKm();
-
 const activeTab=curCnTab||'bbm';
 if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==='function')CarNotesPerformance.render(activeTab);
 
@@ -843,18 +858,32 @@ if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.render==
 // analytics, ride, tax, or vehicle-intelligence cards are recomputed on every
 // unrelated tab switch.
 if(activeTab==='insight'){
-  if(typeof MobilInsight!=='undefined')MobilInsight.render();
-  if(typeof VehicleDashboard!=='undefined')VehicleDashboard.render();
-  if(typeof VehicleInsightPresenter!=='undefined')VehicleInsightPresenter.render();
-  if(typeof VehicleAttentionPresenter!=='undefined')VehicleAttentionPresenter.render();
-  if(typeof VehicleAnalyticsPresenter!=='undefined')VehicleAnalyticsPresenter.render();
-  if(typeof VehicleAutomationPresenter!=='undefined')VehicleAutomationPresenter.render();
+  const recommendationPane=document.getElementById('cniTab-rekomendasi');
+  const showingRecommendations=!!(recommendationPane&&!recommendationPane.classList.contains('u-dnone'));
+  if(!showingRecommendations){
+    if(typeof MobilInsight!=='undefined')MobilInsight.render();
+    if(typeof VehicleDashboard!=='undefined')VehicleDashboard.render();
+    if(typeof VehicleInsightPresenter!=='undefined')VehicleInsightPresenter.render();
+  }else{
+    if(typeof VehicleAttentionPresenter!=='undefined')VehicleAttentionPresenter.render();
+    if(typeof VehicleAnalyticsPresenter!=='undefined')VehicleAnalyticsPresenter.render();
+    if(typeof VehicleAutomationPresenter!=='undefined')VehicleAutomationPresenter.render();
+    if(typeof renderVehicleSpecCard==='function')renderVehicleSpecCard();
+  }
 }else if(activeTab==='bbm'){
-  if(typeof FuelCard!=='undefined')FuelCard.render();
-  if(typeof FuelDashboard!=='undefined')FuelDashboard.render();
-  if(typeof FuelCompare!=='undefined')FuelCompare.render();
-  if(typeof FuelTrendDashboard!=='undefined')FuelTrendDashboard.render();
-  renderBbmList();
+  // Repair legacy fuel state only when the BBM domain is active; unrelated
+  // Car Notes tabs must not trigger a fuel-domain mutation.
+  if(typeof healFuelStateReferenceKm==='function')healFuelStateReferenceKm();
+  const analysisPane=document.getElementById('cnbTab-analisis');
+  const showingFuelAnalysis=!!(analysisPane&&!analysisPane.classList.contains('u-dnone'));
+  if(showingFuelAnalysis){
+    if(typeof FuelDashboard!=='undefined')FuelDashboard.render();
+    if(typeof FuelCompare!=='undefined')FuelCompare.render();
+    if(typeof FuelTrendDashboard!=='undefined')FuelTrendDashboard.render();
+  }else{
+    if(typeof FuelCard!=='undefined')FuelCard.render();
+    renderBbmList();
+  }
 }else if(activeTab==='servis'){
   const _cnProfile=typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.profile==='function'?CarNotesPerformance.profile:(name,fn)=>fn();
   if(typeof renderServiceIntegrityCard==='function')_cnProfile('carnotes.render.serviceIntegrity',renderServiceIntegrityCard,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
@@ -867,15 +896,12 @@ if(activeTab==='insight'){
   // existing SOT presenters ONLY while the Servis tab is active. The stock
   // presenter already renders the Dashboard Sparepart from the same filtered
   // vehicle scope, so no second dashboard data path is introduced.
+  // S2265: repair eksplisit (idempoten, memo per kendaraan) sebelum presenter murni renderCatList().
+  if(typeof Sparepart!=='undefined'&&typeof Sparepart.repairCategoryProjection==='function')Sparepart.repairCategoryProjection();
   if(typeof renderSparepartCatList==='function')_cnProfile('carnotes.render.sparepartCategories',renderSparepartCatList,{rows:Array.isArray(D.sparepartCats)?D.sparepartCats.length:0});
   if(typeof renderStockList==='function')_cnProfile('carnotes.render.sparepartStock',renderStockList,{rows:Array.isArray(D.partsStock)?D.partsStock.length:0});
-  if(typeof CarNotesPerformance!=='undefined'&&typeof CarNotesPerformance.auditCurrent==='function'){
-    const audit=_cnProfile('carnotes.audit.service',CarNotesPerformance.auditCurrent,{rows:Array.isArray(D.servisLogs)?D.servisLogs.length:0});
-    const auditEl=document.getElementById('serviceIntegrityCard');
-    if(auditEl&&audit&&audit.issues&&audit.issues.length){
-      auditEl.setAttribute('data-cn-audit-issues',String(audit.issues.length));
-    }else if(auditEl){auditEl.setAttribute('data-cn-audit-issues','0');}
-  }
+  // renderServiceIntegrityCard already obtains the cached incremental audit;
+  // avoid invoking the same audit API a second time on every Servis render.
 }else if(activeTab==='pajak'){
   renderVehTaxSim();
 }else if(activeTab==='jalan'){
