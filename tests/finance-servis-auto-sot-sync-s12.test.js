@@ -6,7 +6,7 @@ const adapter=fs.readFileSync(path.join(__dirname,'..','modules/vehicle','servic
 const modal=fs.readFileSync(path.join(__dirname,'..','modules/shared','modals.js'),'utf8');
 if(!tx.includes('_isFinanceServiceTransaction'))throw new Error('auto service transaction detector missing');
 if(!tx.includes("if(!autoService&&(!chk||!chk.checked))return null;"))throw new Error('service sync still requires manual checkbox');
-if(!adapter.includes("AIBus.emit('vehicle.updated',p)"))throw new Error('vehicle/reminder event bridge missing');
+if(!adapter.includes("evt.type==='vehicle.updated'")||!adapter.includes("AIBus.emitAsync('vehicle.updated',p,eventMeta)")||!adapter.includes("AIBus.emit('vehicle.updated',p,eventMeta)"))throw new Error('vehicle/reminder event bridge missing');
 if(!tx.includes("Aset.renderList()")||!tx.includes("&&tx&&tx.assetId"))throw new Error('asset renderer bridge missing');
 if(!tx.includes("renderBillList()"))throw new Error('bill renderer bridge missing');
 if(!trx.includes("const showServis=showStock||(typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction());"))throw new Error('finance service panel auto activation missing');

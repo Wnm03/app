@@ -1759,6 +1759,18 @@ async function computeSelfTestResults(){
 let _lazyLoadFailNote='';
 try{ if(typeof ensureRenov==='function') await ensureRenov(); }catch(e){ _lazyLoadFailNote+=' | modules/home/renovasi.js gagal dimuat: '+(e&&e.message||e); }
 try{ if(typeof ensureSewaKios==='function') await ensureSewaKios(); }catch(e){ _lazyLoadFailNote+=' | modules/business/sewakios.js gagal dimuat: '+(e&&e.message||e); }
+// S2272: self-test cases also exercise intentionally lazy diagnostic/vehicle
+// modules. Preload them before the case registry so a cold-start self-test
+// cannot silently skip cases merely because their globals are not resident.
+try{ if(typeof ensureDataHealthScripts==='function') await ensureDataHealthScripts();
+  else _lazyLoadFailNote+=' | ensureDataHealthScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | data-health-check.js gagal dimuat: '+(e&&e.message||e); }
+try{ if(typeof ensureVehicleCatalogFeatureScripts==='function') await ensureVehicleCatalogFeatureScripts();
+  else _lazyLoadFailNote+=' | ensureVehicleCatalogFeatureScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | vehicle catalog feature scripts gagal dimuat: '+(e&&e.message||e); }
+try{ if(typeof ensureLaporanExportScripts==='function') await ensureLaporanExportScripts();
+  else _lazyLoadFailNote+=' | ensureLaporanExportScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | laporan-export.js gagal dimuat: '+(e&&e.message||e); }
 const cases=getSelfTestCases();
 const results=[];
 // S622: banyak test case di atas manggil FUNGSI ASLI aplikasi (mis.
@@ -1776,7 +1788,7 @@ for(const c of cases){
 try{ await c.fn(); results.push({name:c.name,pass:true}); }
 catch(e){
 let msg=e.message;
-if(_lazyLoadFailNote && /\b(Renov\w*|SewaKios)\b is not defined/.test(msg)) msg+=' — BUKAN bug kode: '+_lazyLoadFailNote.replace(/^ \| /,'');
+if(_lazyLoadFailNote && /\b(Renov\w*|SewaKios|runDataHealthCheck|VehicleCatalogImportUI|SparepartOcrCatalogDetail|VehicleCatalogWebImportUI|HondaPdfImportUI|ShopPdfImportUI|buildLaporanExportData)\b is not defined/.test(msg)) msg+=' — BUKAN bug kode: '+_lazyLoadFailNote.replace(/^ \| /,'');
 results.push({name:c.name,pass:false,error:msg});
 }
 }
@@ -2539,6 +2551,18 @@ const _savedScrollTop=_scrollRootEl?_scrollRootEl.scrollTop:0;
 let _lazyLoadFailNote='';
 try{ if(typeof ensureRenov==='function') await ensureRenov(); }catch(e){ _lazyLoadFailNote+=' | modules/home/renovasi.js gagal dimuat: '+(e&&e.message||e); }
 try{ if(typeof ensureSewaKios==='function') await ensureSewaKios(); }catch(e){ _lazyLoadFailNote+=' | modules/business/sewakios.js gagal dimuat: '+(e&&e.message||e); }
+// S2272: modal sweep must demand-load every lazy module represented by its
+// explicit opener specs before invoking them. Otherwise a cold-start sweep
+// can report false "is not defined" failures.
+try{ if(typeof ensureDataHealthScripts==='function') await ensureDataHealthScripts();
+  else _lazyLoadFailNote+=' | ensureDataHealthScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | data-health-check.js gagal dimuat: '+(e&&e.message||e); }
+try{ if(typeof ensureVehicleCatalogFeatureScripts==='function') await ensureVehicleCatalogFeatureScripts();
+  else _lazyLoadFailNote+=' | ensureVehicleCatalogFeatureScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | vehicle catalog feature scripts gagal dimuat: '+(e&&e.message||e); }
+try{ if(typeof ensureLaporanExportScripts==='function') await ensureLaporanExportScripts();
+  else _lazyLoadFailNote+=' | ensureLaporanExportScripts tidak tersedia';
+}catch(e){ _lazyLoadFailNote+=' | laporan-export.js gagal dimuat: '+(e&&e.message||e); }
 const results=[];
 const fnNames=computeModalSweepFnNames();
 for(const fn of fnNames){
@@ -2559,7 +2583,7 @@ try{ showPage(originalName); }catch(e){ /* best-effort balikin halaman semula; k
 if(_scrollRootEl) _scrollRootEl.scrollTop=_savedScrollTop;
 if(_lazyLoadFailNote){
 results.forEach(r=>{
-if(!r.pass && r.error && /\b(Renov\w*|SewaKios)\b is not defined/.test(r.error)){
+if(!r.pass && r.error && /\b(Renov\w*|SewaKios|runDataHealthCheck|VehicleCatalogImportUI|SparepartOcrCatalogDetail|VehicleCatalogWebImportUI|HondaPdfImportUI|ShopPdfImportUI)\b is not defined/.test(r.error)){
 r.error+=' — BUKAN bug kode: '+_lazyLoadFailNote.replace(/^ \| /,'');
 }
 });

@@ -70,7 +70,7 @@ test('applyStockPurchase(): dipanggil 2x txId sama (guard S713 anti-dobel) -> te
   ctx.applyStockPurchase(p, 5, 10000, '2026-08-01', 'tx1');
 
   assert.equal(p.priceHistory.length, 1, '0 regresi: guard anti-dobel priceHistory tetap berlaku');
-  assert.equal(ctx.__aibusEvents.filter((e) => e.name === 'finance.updated').length, 2, 'emit tetap terpanggil di tiap invocation, terlepas dari guard priceHistory');
+  assert.equal(ctx.__aibusEvents.filter((e) => e.name === 'finance.updated').length, 1, 'duplicate txId adalah no-op S2296 sehingga tidak emit ulang');
 });
 
 test('revertStockPurchase(): revert pembelian -> emit finance.updated {kind:"stok-sparepart",action:"purchase-revert",partId,qty,txId}', () => {

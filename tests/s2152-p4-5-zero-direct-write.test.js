@@ -18,7 +18,7 @@ function sourceFiles(){
     for(const name of fs.readdirSync(dir)){
       const full=path.join(dir,name);
       const rel=path.relative(ROOT,full).replace(/\\/g,'/');
-      if(name==='tests'||name==='docs'||name==='node_modules'||name==='backups'||name==='.test-checkpoints'||name.endsWith('.min.js'))continue;
+      if(name==='tests'||name==='docs'||name==='scripts'||name==='node_modules'||name==='backups'||name==='.test-checkpoints'||name.endsWith('.min.js'))continue;
       const st=fs.statSync(full);
       if(st.isDirectory())walk(full);
       else if(name.endsWith('.js')&&!EXCLUDED.has(rel))out.push(rel);

@@ -15,5 +15,12 @@ test('S2252 GROUP_B residency manifest is complete and measurable', () => {
   const missing = files.filter(f => !fs.existsSync(path.join(root, f)));
   assert.deepEqual(missing, [], 'GROUP_B source missing');
   const bytes = files.reduce((n, f) => n + fs.statSync(path.join(root, f)).size, 0);
-  assert.equal(bytes, 4893036, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
+  // S2271: gdrive session state is intentionally eager because gdrive-backup.js
+  // is an eager consumer while laporan-export.js is lazy (S2264). The added
+  // state is a correctness fix, so the residency contract moves with the
+  // measured source payload instead of treating the old measurement as a
+  // functional invariant.
+  // S2272: self-test now preloads lazy diagnostic boundaries explicitly; this
+  // increases eager self-test source residency by the measured 480 bytes.
+  assert.equal(bytes, 4893976, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
 });
