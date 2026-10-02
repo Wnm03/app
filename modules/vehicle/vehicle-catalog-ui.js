@@ -77,6 +77,13 @@ function _catPhotoToDataUrl(file) {
 
 async function catalogUiOpen() {
   await VehicleCatalog.ensureLoaded();
+  if (typeof ensureVehicleCatalogFeatureScripts === 'function') {
+    try { await ensureVehicleCatalogFeatureScripts(); }
+    catch (err) {
+      console.error('[VehicleCatalogUI] feature lazy-load gagal:', err);
+      toast('⚠️ Fitur Scan/Import belum siap dimuat — coba buka Katalog lagi.');
+    }
+  }
   catalogUiCloseForm();
   _catSelectMode = false;
   _catSelectedIds.clear();
