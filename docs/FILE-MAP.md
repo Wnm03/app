@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-02T03:30:14.994Z
-Total file source: 405 · Total identifier global: 2688
+Terakhir digenerate: 2026-10-02T09:38:54.356Z
+Total file source: 405 · Total identifier global: 2691
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -21,9 +21,9 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 
 | # | File | Baris | Ringkasan |
 |---|------|------:|-----------|
-| 1 | `modules/finance/finance-tx-sot.js` | 61 | Single Source of Truth mutation gateway for D.transactions. Design lock: storage/schema/transaction shape remain unchanged. This module only centralizes mutation authority; existing callers keep the same object … |
+| 1 | `modules/finance/finance-tx-sot.js` | 65 | Single Source of Truth mutation gateway for D.transactions. Design lock: storage/schema/transaction shape remain unchanged. This module only centralizes mutation authority; existing callers keep the same object … |
 | 2 | `modules/finance/finance-event-outbox.js` | 193 | S2200/S2201 — durable event outbox. S2201: event dari atomic mutation distage di memory lalu dipersist bersama kw_v4_mirror dalam SATU IndexedDB transaction. Event tidak boleh durable bila state utama belum durable, dan … |
-| 3 | `modules/finance/finance-cross-entity-atomic.js` | 125 | S2196 — atomic boundary for cross-entity Finance mutations. Storage/schema tetap; helper ini hanya snapshot/rollback koleksi D yang terlibat. |
+| 3 | `modules/finance/finance-cross-entity-atomic.js` | 132 | S2196 — atomic boundary for cross-entity Finance mutations. Storage/schema tetap; helper ini hanya snapshot/rollback koleksi D yang terlibat. |
 | 4 | `modules/finance/bill-debt-piutang-canonical-writer.js` | 61 | Canonical mutation boundary for Finance Bill/Debt/Piutang state. S2186: centralizes writes only; domain rules remain in existing modules. |
 | 5 | `modules/finance/bill-debt-piutang-reconciler.js` | 72 | Cross-feature read-only reconciler for Bill/Debt/Piutang state. S2188: verifies reciprocal references and orphan/duplicate invariants after canonical-writer consolidation. It NEVER mutates D. |
 | 6 | `modules/shared/pwa-ux-performance.js` | 136 | _(tidak ada komentar header)_ |
@@ -77,7 +77,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 54 | `modules/shared/ghost-asset-cleanup-ui.js` | 81 | Sesi 592 (lanjutan patch PATCH-ghost-asset-migrated-investment.md). Patch S591/ghost-asset sudah menyaring record ber-flag `_migratedToInvestmentId` dari dropdown "Kaitkan ke Aset Multi-Owner" (getMultiOwnerAssets(), … |
 | 55 | `modules/shared/custodian-registry.js` | 130 | Custodian Registry (Sesi S540-A, Tahap 1/4 DESIGN-S540-CUSTODIAN-GROUPING.md, Design Lock disetujui user dengan keputusan final: Opsi A/registry, seed kosong, 0 backfill, assign manual, build() tidak berubah untuk … |
 | 56 | `modules/asset/asset-ownership-split-presenter.js` | 100 | Sesi 391: split keuntungan aset per pemilik berdasarkan porsi (lanjutan Sesi 390, Multi-Owner Engine). Target eksplisit user: "hitung otomatis keuntungan berdasarkan porsi". PRINSIP SESI INI (sama disiplin dgn … |
-| 57 | `modules/shared/features-helpers-global-security.js` | 1531 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 57 | `modules/shared/features-helpers-global-security.js` | 1541 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 58 | `modules/shared/feature-lazy-loader.js` | 132 | S2253 safe residency loader. Feature-only vehicle scanner/catalog-import modules are loaded on demand. Uses the existing CSP-aware _loadScriptOnce() loader; no eval/import() and no new storage/SOT contract. Loading … |
 | 59 | `modules/shared/action-wrappers.js` | 239 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 60 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
@@ -101,8 +101,8 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 78 | `modules/business/gaji-bulanan.js` | 93 | Sesi "Bulanan Tetap" (D.profile.tipeGaji==='bulananTetap'): catat gaji bulanan flat (D.profile.gajiBulananTetap) sbg 1 transaksi income, tanggal dikunci ke tanggal gajian tetap (D.profile.gajiBulananTanggal, 1-31) bulan … |
 | 79 | `modules/finance/cicilan.js` | 141 | logika form Cicilan pada txModal (Tambah/Edit Transaksi Keuangan). Dipindah ke modules/finance/cicilan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 80 | `modules/finance/tx-bbm.js` | 254 | logika panel "Sinkron ke Catatan Mobil (BBM)" pada txModal Dipindah ke modules/finance/tx-bbm.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 81 | `modules/vehicle/service-event-lifecycle.js` | 21 | _(tidak ada komentar header)_ |
-| 82 | `modules/vehicle/service-event-adapter.js` | 168 | _(tidak ada komentar header)_ |
+| 81 | `modules/vehicle/service-event-lifecycle.js` | 42 | _(tidak ada komentar header)_ |
+| 82 | `modules/vehicle/service-event-adapter.js` | 201 | _(tidak ada komentar header)_ |
 | 83 | `modules/vehicle/service-history-integrity-audit.js` | 60 | _(tidak ada komentar header)_ |
 | 84 | `modules/vehicle/finance-service-adapter.js` | 8 | _(tidak ada komentar header)_ |
 | 85 | `modules/vehicle/service-photo-validator.js` | 6 | _(tidak ada komentar header)_ |
@@ -143,7 +143,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 120 | `modules/vehicle/vehicle-canonical-writer.js` | 33 | A-S2185: canonical mutation boundary for D.vehicles. Storage schema remains unchanged; this module only centralizes array mutation. |
 | 121 | `modules/vehicle/vehicle-core.js` | 1305 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 122 | `modules/vehicle/fuel-price-ref.js` | 231 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
-| 123 | `modules/vehicle/vehicle-catalog.js` | 630 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
+| 123 | `modules/vehicle/vehicle-catalog.js` | 653 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 124 | `modules/vehicle/vehicle-catalog-write-sot.js` | 65 | canonical write gate for part identity. SOT-3C: all feature write paths that create a part should resolve/create through VehicleCatalog first. Legacy D.partsStock/D.sparepartCats remain compatibility … |
 | 125 | `modules/vehicle/vehicle-catalog-health-sot.js` | 72 | SOT-3D read-only duplicate/identity audit. Tidak melakukan merge/delete/update otomatis. Tujuan: mendeteksi kandidat konflik identitas sebelum rekonsiliasi manual/terkonfirmasi. |
 | 126 | `modules/vehicle/vehicle-catalog-scope-sot.js` | 43 | _(tidak ada komentar header)_ |
@@ -155,12 +155,12 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 132 | `modules/vehicle/vehicle-part-sot.js` | 149 | _(tidak ada komentar header)_ |
 | 133 | `modules/vehicle/vehicle-service-sot.js` | 241 | _(tidak ada komentar header)_ |
 | 134 | `modules/vehicle/vehicle-service-reminder-sot.js` | 55 | SOT-4F — automatic service + reminder provisioning per vehicle model. VehicleCatalog remains the canonical part/service-rule source; vehicle.sot stores a deterministic projection for the selected vehicle/model. |
-| 135 | `modules/vehicle/service-reminder-package-sot.js` | 150 | _(tidak ada komentar header)_ |
+| 135 | `modules/vehicle/service-reminder-package-sot.js` | 151 | _(tidak ada komentar header)_ |
 | 136 | `modules/vehicle/vehicle-sot-fleet-integrity.js` | 88 | _(tidak ada komentar header)_ |
 | 137 | `modules/vehicle/vehicle-category-sot.js` | 64 | _(tidak ada komentar header)_ |
 | 138 | `modules/vehicle/vehicle-stock-sot.js` | 64 | _(tidak ada komentar header)_ |
 | 139 | `modules/vehicle/car-notes-sot.js` | 86 | _(tidak ada komentar header)_ |
-| 140 | `modules/vehicle/stock-command-sot.js` | 185 | _(tidak ada komentar header)_ |
+| 140 | `modules/vehicle/stock-command-sot.js` | 198 | _(tidak ada komentar header)_ |
 | 141 | `modules/vehicle/vehicle-model-registry-sot.js` | 64 | SOT-4B Registry metadata untuk identifikasi kendaraan. Tidak mengarang model/part; taxonomy komponen diambil dari sumber model/VehiclePartSOT yang memang ada. |
 | 142 | `modules/vehicle/vehicle-model-resolver-sot.js` | 46 | SOT-4D Memisahkan identitas kendaraan: manufacturer → model → generation → year → variant. Tidak menebak varian; field varian hanya diisi dari input eksplisit. |
 | 143 | `modules/vehicle/vehicle-sot-provisioning.js` | 155 | SOT-4A Identifikasi kendaraan + provisioning SOT berbasis model saat registrasi. Prinsip: auto-detect hanya dari registry/model database yang benar-benar ada; tidak mengarang part/category untuk model yang belum punya … |
@@ -191,7 +191,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 168 | `modules/vehicle/service-history-sot-review.js` | 90 | _(tidak ada komentar header)_ |
 | 169 | `modules/vehicle/service-session-sot.js` | 110 | _(tidak ada komentar header)_ |
 | 170 | `modules/vehicle/service-history-audit-package.js` | 174 | _(tidak ada komentar header)_ |
-| 171 | `modules/vehicle/service-event-sot.js` | 168 | _(tidak ada komentar header)_ |
+| 171 | `modules/vehicle/service-event-sot.js` | 169 | _(tidak ada komentar header)_ |
 | 172 | `modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js` | 62 | _(tidak ada komentar header)_ |
 | 173 | `modules/vehicle/service-checklist-execution-sot.js` | 38 | _(tidak ada komentar header)_ |
 | 174 | `modules/vehicle/service-checklist-integrity-sot.js` | 30 | _(tidak ada komentar header)_ |
@@ -201,13 +201,13 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 178 | `modules/vehicle/servis-checklist.js` | 899 | _(tidak ada komentar header)_ |
 | 179 | `modules/vehicle/service-input-catalog.js` | 83 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 180 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
-| 181 | `modules/vehicle/servis.js` | 1925 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
-| 182 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 95 | _(tidak ada komentar header)_ |
+| 181 | `modules/vehicle/servis.js` | 1929 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 182 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 96 | _(tidak ada komentar header)_ |
 | 183 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 123 | _(tidak ada komentar header)_ |
-| 184 | `modules/vehicle/service-session-integrity-s2045.js` | 98 | _(tidak ada komentar header)_ |
-| 185 | `modules/vehicle/service-session-reconcile-s2051.js` | 56 | _(tidak ada komentar header)_ |
-| 186 | `modules/vehicle/service-session-recovery-s2050.js` | 27 | _(tidak ada komentar header)_ |
-| 187 | `modules/vehicle/service-session-mutation-s2047.js` | 249 | _(tidak ada komentar header)_ |
+| 184 | `modules/vehicle/service-session-integrity-s2045.js` | 99 | _(tidak ada komentar header)_ |
+| 185 | `modules/vehicle/service-session-reconcile-s2051.js` | 57 | _(tidak ada komentar header)_ |
+| 186 | `modules/vehicle/service-session-recovery-s2050.js` | 28 | _(tidak ada komentar header)_ |
+| 187 | `modules/vehicle/service-session-mutation-s2047.js` | 250 | _(tidak ada komentar header)_ |
 | 188 | `modules/vehicle/service-history-bulk-identity-editor.js` | 246 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 189 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 190 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
@@ -385,7 +385,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 362 | `economic-intelligence/ui/eie-notif-settings.js` | 72 | ui/eie-notif-settings.js — Toggle notifikasi EIE di Pengaturan (fase 3). HANYA render + baca/tulis toggle lewat eie-store; tidak pernah menyentuh D (sama seperti ui/eie-dashboard.js & ui/eie-insight-feed.js). Menyalakan … |
 | 363 | `economic-intelligence/eie-registry.js` | 43 | Plugin registry EIE. Dimuat PALING AKHIR (lihat urutan load di scripts/build.js), supaya EIE_RULES bawaan (rules/rule-definitions.js) sudah tersedia untuk diregistrasi sbg default. - registerIndicator(): daftar sumber … |
 | 364 | `modules/ai/ai-core.js` | 340 | Smart Delivery Engine, Sesi 1/6: fondasi murni. Lihat RENCANA-SESI-RINGKAS.md (Smart Delivery Engine) untuk peta 6 sesi lengkap. Sesi ini CUMA fondasi (bus + storage + context) — TANPA fitur, TANPA … |
-| 365 | `modules/ai/ai-decision-engine.js` | 389 | Smart Delivery Engine, Sesi 2/6: "otak" AI. Lihat RENCANA-SESI-RINGKAS.md untuk peta 6 sesi. Sesi ini butuh Sesi 1 (ai-core.js: AIBus, AIStore/aiEnsureLoaded/aiGetStore/aiSave, AIContext) SUDAH dimuat lebih dulu — lihat … |
+| 365 | `modules/ai/ai-decision-engine.js` | 413 | Smart Delivery Engine, Sesi 2/6: "otak" AI. Lihat RENCANA-SESI-RINGKAS.md untuk peta 6 sesi. Sesi ini butuh Sesi 1 (ai-core.js: AIBus, AIStore/aiEnsureLoaded/aiGetStore/aiSave, AIContext) SUDAH dimuat lebih dulu — lihat … |
 | 366 | `modules/ai/ai-service.js` | 701 | Smart Delivery Engine, Sesi 2/6: facade tunggal. Lihat RENCANA-SESI-RINGKAS.md untuk peta 6 sesi. Butuh ai-core.js (Sesi 1) & ai-decision-engine.js (di atas, Sesi 2 ini) sudah dimuat lebih dulu — lihat urutan di … |
 | 367 | `modules/logistics/logistics-engine.js` | 415 | Smart Delivery Engine, Sesi 3/6: mesin hitung logistik. Lihat RENCANA-SESI-RINGKAS.md untuk peta 6 sesi. Sesi ini TIDAK butuh ai-core.js/ai-decision-engine.js/ai-service.js (Sesi 1-2) sama sekali — murni fungsi hitung … |
 | 368 | `modules/logistics/logistics-service.js` | 130 | Smart Delivery Engine, Sesi 3/6: facade logistik. Lihat RENCANA-SESI-RINGKAS.md untuk peta 6 sesi. Butuh logistics-engine.js (di atas, Sesi 3 ini) sudah dimuat lebih dulu — lihat urutan di scripts/build.js. Kenapa 1 … |
@@ -831,6 +831,9 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_vehCapacityFieldsHtml` | `modules/vehicle/vehicle-core.js` |
 | `_vehCnCurKmKeydown` | `modules/vehicle/vehicle-core.js` |
 | `_vehicleAIRulesRegistered` | `modules/vehicle/sparepart-servis-b.js` |
+| `_vehicleCatalogCodeInflight` | `modules/vehicle/vehicle-catalog.js` |
+| `_vehicleCatalogCodeKey` | `modules/vehicle/vehicle-catalog.js` |
+| `_vehicleCatalogEnsureDraftForCode` | `modules/vehicle/vehicle-catalog.js` |
 | `_vehicleCatalogFeatureLoadPromise` | `modules/shared/feature-lazy-loader.js` |
 | `_vehicleCatalogLoaded` | `modules/vehicle/vehicle-catalog.js` |
 | `_vehicleCatalogNormalize` | `modules/vehicle/vehicle-catalog.js` |

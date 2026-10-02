@@ -9,6 +9,7 @@
   g.__SERVICE_HISTORY_CHECKLIST_EDIT_S2036__=true;
   const VERSION='SERVICE-HISTORY-CHECKLIST-EDIT-S2036';
   const str=v=>v==null?'':String(v).trim();
+  const data=()=>typeof D!=='undefined'?D:g.D;
   function ensureProjection(row,vehicleId){
     const r=row||{}, vid=str(vehicleId||g.curVehicleId), cid=str(r.serviceComponentId||r.itemId||r.checklistItemId);
     let master=null;
@@ -16,8 +17,8 @@
       const hit=g.ServiceInputCatalog.itemById(cid);if(hit&&hit.item)master=hit;
     }
     const name=str(r.itemName||r.serviceComponentNameSnapshot||r.item||(master&&master.item&&master.item.name));
-    let cat=cid?(g.D.sparepartCats||[]).find(c=>c&&str(c.serviceComponentId)===cid&&(!c.vehicleId||str(c.vehicleId)===vid)):null;
-    if(!cat&&r.categoryId)cat=(g.D.sparepartCats||[]).find(c=>c&&str(c.id)===str(r.categoryId)&&(!c.vehicleId||str(c.vehicleId)===vid))||null;
+    let cat=cid?(data().sparepartCats||[]).find(c=>c&&str(c.serviceComponentId)===cid&&(!c.vehicleId||str(c.vehicleId)===vid)):null;
+    if(!cat&&r.categoryId)cat=(data().sparepartCats||[]).find(c=>c&&str(c.id)===str(r.categoryId)&&(!c.vehicleId||str(c.vehicleId)===vid))||null;
     const masterCategoryId=str(r.masterCategoryId||(master&&master.group&&master.group.masterCategoryId))||null;
     const masterInterval=master&&master.item&&Number(master.item.intervalKm)>0?Number(master.item.intervalKm):null;
     const masterMonths=master&&master.item&&Number(master.item.intervalTimeMonths)>0?Number(master.item.intervalTimeMonths):null;
@@ -25,11 +26,11 @@
     const intervalKm=override||masterInterval;
     if(!cat&&cid){
       const base='sp_component_'+cid;let id=base;
-      if((g.D.sparepartCats||[]).some(c=>c&&str(c.id)===id))id=base+'_'+vid;
+      if((data().sparepartCats||[]).some(c=>c&&str(c.id)===id))id=base+'_'+vid;
       cat={id,name:name||cid,code:typeof g.codeFromName==='function'?g.codeFromName(name||cid):cid.toUpperCase(),intervalKm:intervalKm||0,intervalBulan:masterMonths||0,masterCategoryId,serviceComponentId:cid,showInReminder:!!(intervalKm||masterMonths),group:master&&master.group&&master.group.group||null,groupIcon:master&&master.group&&master.group.icon||''};
       if(vid)cat.vehicleId=vid;
       if(g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')g.VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'checklist-projection');
-      g.D.sparepartCats.push(cat);
+      data().sparepartCats.push(cat);
     }else if(cat){
       const categoryOverride=null;
       if(cid&&!cat.serviceComponentId)cat.serviceComponentId=cid;
@@ -47,7 +48,7 @@
   function reconcile(s,checklistPayload,vehicleId,serviceDate,serviceKm){
     if(!s||!Array.isArray(checklistPayload)||!checklistPayload.length)return {rows:[],createdRows:[],added:0,updated:0,removed:0};
     const vid=str(vehicleId||s.vehicleId||g.curVehicleId),sid=str(s.sessionId||s.serviceJobId||s.id);
-    const sessionRows=(g.D.servisLogs||[]).filter(x=>x&&str(x.vehicleId)===vid&&str(x.sessionId||x.serviceJobId||x.id)===sid);
+    const sessionRows=(data().servisLogs||[]).filter(x=>x&&str(x.vehicleId)===vid&&str(x.sessionId||x.serviceJobId||x.id)===sid);
     const componentIdOf=row=>str(row&&(row.serviceComponentId||row.itemId||row.checklistItemId));
     const payloadById=new Map();checklistPayload.forEach(r=>{const id=componentIdOf(r);if(id&&!payloadById.has(id))payloadById.set(id,r);});
     const existingById=new Map();
@@ -71,22 +72,22 @@
       if(!owner){
         const id=typeof g.uid==='function'?g.uid():'servis_'+Date.now()+'_'+index;
         owner={id,sessionId:s.sessionId||s.serviceJobId||null,serviceJobId:s.serviceJobId||s.sessionId||null,vehicleId:vid,date:serviceDate,item:payload.itemName||cid,categoryId:null,masterCategoryId:payload.masterCategoryId||null,serviceComponentId:cid,serviceComponentNameSnapshot:payload.itemName||cid,serviceJobType:s.serviceJobType||null,serviceJobLabel:s.serviceJobLabel||null,serviceJobEvidence:s.serviceJobEvidence||null,actionType:payload.actionType||s.actionType||'ganti',km:serviceKm,cost:0,note:s.note||'',accountId:s.accountId||null,txLinkId:null,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartRefs:[],catalogPartOemCode:'',catalogPartLinkedStockId:null,foto:[],checklist:[],checklistNotApplicable:Array.isArray(s.checklistNotApplicable)?s.checklistNotApplicable.slice():[],conditionResult:null,conditionNote:'',costBreakdown:{labor:null,parts:null,consumables:null,other:null,total:0,source:'component'},serviceCost:null,source:'CHECKLIST-EDIT'};
-        g.D.servisLogs.push(owner);existingById.set(cid,owner);createdRows.push(owner);added++;
+        data().servisLogs.push(owner);existingById.set(cid,owner);createdRows.push(owner);added++;
       }
       owner.item=payload.itemName||owner.item;owner.actionType=payload.actionType||owner.actionType;owner.masterCategoryId=payload.masterCategoryId||owner.masterCategoryId||null;owner.serviceComponentId=cid;owner.checklist=[payload];owner.conditionResult=payload.conditionResult||null;owner.conditionNote=payload.conditionNote||'';makeSnapshot(owner,s);updated++;
     });
     s.checklist=checklistPayload.slice();
     const mainId=str(s.id),keepIds=new Set(createdRows.map(r=>str(r.id)));
     checklistPayload.forEach(payload=>{const id=componentIdOf(payload),owner=existingById.get(id);if(owner)keepIds.add(str(owner.id));});
-    const beforeLen=g.D.servisLogs.length;
-    g.D.servisLogs=g.D.servisLogs.filter(row=>{
+    const beforeLen=data().servisLogs.length;
+    data().servisLogs=data().servisLogs.filter(row=>{
       if(!row||str(row.id)===mainId)return true;
       if(str(row.vehicleId)!==vid||str(row.sessionId||row.serviceJobId||row.id)!==sid)return true;
       const cid=componentIdOf(row);if(!cid||payloadById.has(cid)||keepIds.has(str(row.id)))return true;
       return !(Number(row.cost||0)===0&&!row.txLinkId);
     });
-    removed=Math.max(0,beforeLen-g.D.servisLogs.length);
-    return {rows:g.D.servisLogs.filter(row=>row&&str(row.vehicleId)===vid&&str(row.sessionId||row.serviceJobId||row.id)===sid),createdRows,added,updated,removed};
+    removed=Math.max(0,beforeLen-data().servisLogs.length);
+    return {rows:data().servisLogs.filter(row=>row&&str(row.vehicleId)===vid&&str(row.sessionId||row.serviceJobId||row.id)===sid),createdRows,added,updated,removed};
   }
   const api={VERSION,ensureProjection,reconcile};
   g.ServiceHistoryChecklistEditS2036=api;

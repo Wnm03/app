@@ -347,7 +347,7 @@ txId,existingBbmId:isEdit?BBM.editId:null
 });
 if(isEdit){
 if(wasOrphan){
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin',accountId:accId,payMethod:'tunai',note:noteFull,date,bbmLinkId:result.bbmId});
+FinanceTxSOT.create({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin',accountId:accId,payMethod:'tunai',note:noteFull,date,bbmLinkId:result.bbmId});
 const b=D.bbmLogs.find(x=>x.id===result.bbmId);
 if(b)b.txLinkId=txId;
 toast('✅ Catatan BBM diperbarui & disinkron ulang ke Keuangan');
@@ -357,7 +357,7 @@ if(tx)Object.assign(tx,{amount:cost,date,accountId:accId,note:noteFull});
 toast('✅ Catatan BBM diperbarui');
 }
 } else {
-D.transactions.push({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin',accountId:accId,payMethod:'tunai',note:noteFull,date,bbmLinkId:result.bbmId});
+FinanceTxSOT.create({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin',accountId:accId,payMethod:'tunai',note:noteFull,date,bbmLinkId:result.bbmId});
 toast('✅ Catatan BBM tersimpan & tersinkron ke Keuangan');
 }
 save();closeModal('bbmModal');renderCnTab();renderDashboard();renderKeuangan();

@@ -7,9 +7,10 @@
   const VERSION='SERVICE-REMINDER-PACKAGE-SOT-1';
   const STATES=['ACTIVE','COMPLETED','SNOOZED','DISMISSED','REQUIRES_INSPECTION'];
   const str=v=>v==null?'':String(v).trim();
+  const data=()=>typeof D!=='undefined'?D:g.D;
   const arr=v=>Array.isArray(v)?v:[];
-  function logs(){return g.D&&Array.isArray(g.D.servisLogs)?g.D.servisLogs:[];}
-  function packages(){if(!g.D)return[]; if(!Array.isArray(g.D.serviceReminderPackages))g.D.serviceReminderPackages=[]; return g.D.serviceReminderPackages;}
+  function logs(){return data()&&Array.isArray(data().servisLogs)?data().servisLogs:[];}
+  function packages(){if(!data())return[]; if(!Array.isArray(data().serviceReminderPackages))data().serviceReminderPackages=[]; return data().serviceReminderPackages;}
   function id(prefix){return typeof g.uid==='function'?g.uid():prefix+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
   function targetKey(t){return [str(t.categoryId),str(t.masterCategoryId),str(t.serviceComponentId),str(t.catalogPartId)].join('|');}
   function normalizeTarget(t){

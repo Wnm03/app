@@ -3,7 +3,14 @@
 (function(g){
   'use strict';
   const DEFAULT_KEYS=['transactions','bills','billsArchive','debts','piutang'];
-  function getD(){if(!g.D)throw new Error('FinanceCrossEntityAtomic: D belum tersedia');return g.D;}
+  function getD(){
+    // `D` adalah top-level lexical binding (`let D`), bukan properti globalThis.
+    // Gunakan lexical D lebih dulu; fallback g.D mempertahankan kompatibilitas
+    // dengan harness/test yang memang menyuntikkan globalThis.D.
+    const d=typeof D!=='undefined'?D:g.D;
+    if(!d)throw new Error('FinanceCrossEntityAtomic: D belum tersedia');
+    return d;
+  }
   function cloneValue(value){
     if(value===undefined)return undefined;
     if(value===null)return null;

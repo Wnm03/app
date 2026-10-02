@@ -17,7 +17,7 @@ test('Car Notes BBM edit orphan repairs the missing Finance side without duplica
   const src=read('car-notes.js');
   assert.match(src,/const wasOrphan=isEdit&&!existing\.txLinkId/);
   assert.match(src,/if\(wasOrphan\)\{/);
-  assert.match(src,/D\.transactions\.push\(\{id:txId,type:'expense'/);
+  assert.match(src,/(?:D\.transactions\.push|FinanceTxSOT\.create)\(\{id:txId,type:'expense'/); // S2319: S2309 mengganti push langsung dengan FinanceTxSOT.create
   assert.match(src,/bbmLinkId:result\.bbmId/);
   assert.match(src,/else\{\nconst tx=D\.transactions\.find\(t=>t\.id===txId\)/);
 });

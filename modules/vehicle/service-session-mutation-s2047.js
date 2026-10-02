@@ -8,6 +8,7 @@
   g.__SERVICE_SESSION_MUTATION_S2047__=true;
   const VERSION='SERVICE-SESSION-MUTATION-S2047-HARDENED';
   const str=v=>v==null?'':String(v).trim();
+  const data=()=>typeof D!=='undefined'?D:g.D;
   const clone=v=>{try{return JSON.parse(JSON.stringify(v));}catch(_){return v&&typeof v==='object'?Object.assign({},v):v;}};
   const cid=row=>str(row&&(row.serviceComponentId||row.itemId||row.checklistItemId||row.itemName));
   const key=row=>str(row&&(row.serviceComponentId||row.itemId||row.itemName));
@@ -77,7 +78,7 @@
     return rows.map((r,i)=>{if(i===0){const src=ctx.selected||firstOriginal;['foto','conditionResult','conditionNote','catalogPartId','catalogPartQty','catalogPartOemCode','catalogPartLinkedStockId','catalogPartRefs','usedPartId','usedPartQty'].forEach(k=>{if(r[k]==null&&src[k]!=null)r[k]=clone(src[k]);});}return r;});
   }
   function reconcileRows(ctx,payload){
-    const logs=Array.isArray(g.D&&g.D.servisLogs)?g.D.servisLogs:[];
+    const logs=Array.isArray(data()&&data().servisLogs)?data().servisLogs:[];
     const vid=str(ctx.vehicleId),sid=str(ctx.sessionId);
     const before=logs.filter(r=>r&&str(r.vehicleId)===vid&&str(r.sessionId||r.serviceJobId||r.id)===sid);
     const rows=desiredRows(ctx,payload);
@@ -85,10 +86,10 @@
     const keepIds=new Set(rows.map(r=>str(r.id)));
     const newKeys=new Set(rows.map(r=>key(r)));
     const removedRows=before.filter(r=>!newKeys.has(key(r)));
-    g.D.servisLogs=logs.filter(r=>!(r&&str(r.vehicleId)===vid&&str(r.sessionId||r.serviceJobId||r.id)===sid)||keepIds.has(str(r.id)));
+    data().servisLogs=logs.filter(r=>!(r&&str(r.vehicleId)===vid&&str(r.sessionId||r.serviceJobId||r.id)===sid)||keepIds.has(str(r.id)));
     rows.forEach((r,i)=>{
-      const idx=g.D.servisLogs.findIndex(x=>x&&str(x.id)===str(r.id));
-      if(idx>=0)g.D.servisLogs[idx]=r;else g.D.servisLogs.push(r);
+      const idx=data().servisLogs.findIndex(x=>x&&str(x.id)===str(r.id));
+      if(idx>=0)data().servisLogs[idx]=r;else data().servisLogs.push(r);
     });
     return {before,rows,removedRows,oldByKey};
   }
@@ -98,15 +99,15 @@
     const componentCosts=(Array.isArray(rows)?rows:[]).flatMap(r=>Array.isArray(r.checklist)?r.checklist:[]).filter(c=>c&&c.costBreakdown&&c.costBreakdown.source==='component');
     const total=componentCosts.length?componentCosts.reduce((n,c)=>n+Number(c.costBreakdown?.total||0),0):(rows.length?Number(ctx.legacyCost||0):0);
     const owner=rows[0]||null;
-    const tx=(oldTxId&&Array.isArray(g.D.transactions))?(g.D.transactions.find(t=>t&&t.id===oldTxId)||null):null;
+    const tx=(oldTxId&&Array.isArray(data().transactions))?(data().transactions.find(t=>t&&t.id===oldTxId)||null):null;
     if(!owner){
-      if(oldTxId&&Array.isArray(g.D.transactions)){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(oldTxId);else g.D.transactions=g.D.transactions.filter(t=>t&&t.id!==oldTxId);}
+      if(oldTxId&&Array.isArray(data().transactions)){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(oldTxId);else data().transactions=data().transactions.filter(t=>t&&t.id!==oldTxId);}
       return {txId:null,total:0};
     }
     if(!owner.txLinkId&&tx)owner.txLinkId=tx.id;
-    (g.D.transactions||[]).filter(t=>t&&linkedIds.has(t.id)&&t.id!==owner.txLinkId).forEach(t=>{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(t.id);else g.D.transactions=g.D.transactions.filter(x=>x!==t);});
-    if(owner.txLinkId){const active=(g.D.transactions||[]).find(t=>t&&t.id===owner.txLinkId);if(active){if(total>0){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.updateById(active.id,{amount:total,date:owner.date,accountId:owner.accountId,note:owner.item||'Servis',servisLinkId:owner.id});else{active.amount=total;active.date=owner.date;active.accountId=owner.accountId;active.note=owner.item||'Servis';active.servisLinkId=owner.id;}}else{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(active.id);else g.D.transactions=g.D.transactions.filter(t=>t.id!==active.id);owner.txLinkId=null;}}else owner.txLinkId=null;}
-    if(total>0&&!owner.txLinkId){const id=typeof g.uid==='function'?g.uid():'tx_'+Date.now();const tx={id,type:'expense',amount:total,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((g.D.vehicles||[]).find(v=>v&&v.id===owner.vehicleId)):'Servis',subcategory:'Servis & Oli',accountId:owner.accountId||null,payMethod:'tunai',note:owner.item||'Servis',date:owner.date,servisLinkId:owner.id};if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.create(tx);else g.D.transactions.push(tx);owner.txLinkId=id;}
+    (data().transactions||[]).filter(t=>t&&linkedIds.has(t.id)&&t.id!==owner.txLinkId).forEach(t=>{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(t.id);else data().transactions=data().transactions.filter(x=>x!==t);});
+    if(owner.txLinkId){const active=(data().transactions||[]).find(t=>t&&t.id===owner.txLinkId);if(active){if(total>0){if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.updateById(active.id,{amount:total,date:owner.date,accountId:owner.accountId,note:owner.item||'Servis',servisLinkId:owner.id});else{active.amount=total;active.date=owner.date;active.accountId=owner.accountId;active.note=owner.item||'Servis';active.servisLinkId=owner.id;}}else{if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.removeById(active.id);else data().transactions=data().transactions.filter(t=>t.id!==active.id);owner.txLinkId=null;}}else owner.txLinkId=null;}
+    if(total>0&&!owner.txLinkId){const id=typeof g.uid==='function'?g.uid():'tx_'+Date.now();const tx={id,type:'expense',amount:total,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((data().vehicles||[]).find(v=>v&&v.id===owner.vehicleId)):'Servis',subcategory:'Servis & Oli',accountId:owner.accountId||null,payMethod:'tunai',note:owner.item||'Servis',date:owner.date,servisLinkId:owner.id};if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.create(tx);else data().transactions.push(tx);owner.txLinkId=id;}
     rows.forEach(r=>{if(r!==owner){r.cost=0;r.txLinkId=null;}});owner.cost=total;
     return {txId:owner.txLinkId||null,total};
   }
@@ -117,7 +118,7 @@
     return {current,desired};
   }
   function snapshotState(){
-    const d=g.D||{};
+    const d=data()||{};
     return {
       servisLogs:clone(Array.isArray(d.servisLogs)?d.servisLogs:[]),
       transactions:clone(Array.isArray(d.transactions)?d.transactions:[]),
@@ -126,11 +127,11 @@
     };
   }
   function restoreState(s){
-    if(!s||!g.D)return false;
-    g.D.servisLogs=clone(s.servisLogs||[]);
-    if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.replaceSnapshot(clone(s.transactions||[]));else g.D.transactions=clone(s.transactions||[]);
+    if(!s||!data())return false;
+    data().servisLogs=clone(s.servisLogs||[]);
+    if(typeof g.FinanceTxSOT!=='undefined'&&g.FinanceTxSOT)g.FinanceTxSOT.replaceSnapshot(clone(s.transactions||[]));else data().transactions=clone(s.transactions||[]);
     if(!g.StockCommandSOT||typeof g.StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok servis');g.StockCommandSOT.replaceSnapshot(s.partsStock||[]);
-    if(Array.isArray(s.sparepartCats))g.D.sparepartCats=clone(s.sparepartCats);
+    if(Array.isArray(s.sparepartCats))data().sparepartCats=clone(s.sparepartCats);
     try{if(typeof g.save==='function')g.save({domain:'servis',financeMutation:true,accountIds:[]});}catch(_saveRollbackErr){void _saveRollbackErr;}
     return true;
   }
@@ -148,7 +149,7 @@
     const desiredPayload=Array.isArray(payload)?payload:[];
     const classification=classify(oldPayload,desiredPayload);
     const oldStock=stockEntriesFromRows(ctx.originalRows,ctx.vehicleId);
-    const currentBefore=(g.D.servisLogs||[]).filter(r=>r&&str(r.vehicleId)===str(ctx.vehicleId)&&str(r.sessionId||r.serviceJobId||r.id)===str(ctx.sessionId));
+    const currentBefore=(data().servisLogs||[]).filter(r=>r&&str(r.vehicleId)===str(ctx.vehicleId)&&str(r.sessionId||r.serviceJobId||r.id)===str(ctx.sessionId));
     const currentStock=stockEntriesFromRows(currentBefore,ctx.vehicleId);
     const desiredRowsPreview=desiredRows(ctx,desiredPayload);
     const desiredStock=stockEntriesFromRows(desiredRowsPreview,ctx.vehicleId);
@@ -176,7 +177,7 @@
     }
     if(g.save)g.save({domain:'servis',financeMutation:true,accountIds:[...new Set(rowResult.rows.map(r=>r.accountId).filter(Boolean))]});
     if(g.ServiceSessionRecoveryS2050&&typeof g.ServiceSessionRecoveryS2050.markCommitted==='function')g.ServiceSessionRecoveryS2050.markCommitted();
-    if(finance.txId&&g.AIBus&&typeof g.AIBus.emit==='function'){try{const owner=rowResult.rows[0];g.AIBus.emit('finance.updated',{txId:finance.txId,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((g.D.vehicles||[]).find(v=>v&&v.id===owner?.vehicleId)):'Servis',type:'expense',amount:finance.total,kind:'servis',action:'session-reconcile'});}catch(_){void _;}}
+    if(finance.txId&&g.AIBus&&typeof g.AIBus.emit==='function'){try{const owner=rowResult.rows[0];g.AIBus.emit('finance.updated',{txId:finance.txId,category:typeof g.resolveVehicleTxCategory==='function'?g.resolveVehicleTxCategory((data().vehicles||[]).find(v=>v&&v.id===owner?.vehicleId)):'Servis',type:'expense',amount:finance.total,kind:'servis',action:'session-reconcile'});}catch(_){void _;}}
     if(typeof g.refreshCarNotesAfterMutation==='function')try{g.refreshCarNotesAfterMutation({stock:true});}catch(_){void _;}
     if(typeof g.ServiceSessionIntegrityS2045!=='undefined'&&g.ServiceSessionIntegrityS2045&&rowResult.rows.length&&typeof g.ServiceSessionIntegrityS2045.repair==='function'){
       try{rowResult.rows.forEach(r=>g.ServiceSessionIntegrityS2045.repair(r));}catch(_integrityErr){void _integrityErr;}
@@ -188,12 +189,12 @@
     // S2052: remove only generated compatibility reminder projections that no
     // longer have a component anywhere in this vehicle's service history.
     const removedComponentIds=new Set((classification.removed||[]).map(x=>str(x.componentId||x.key)).filter(Boolean));
-    if(removedComponentIds.size&&g.D&&Array.isArray(g.D.sparepartCats)){
+    if(removedComponentIds.size&&data()&&Array.isArray(data().sparepartCats)){
       const vehicleId=str(ctx.vehicleId);
-      g.D.sparepartCats=g.D.sparepartCats.filter(cat=>{
+      data().sparepartCats=data().sparepartCats.filter(cat=>{
         if(!cat||str(cat.vehicleId||vehicleId)!==vehicleId)return true;
         const cid=str(cat.serviceComponentId); if(!removedComponentIds.has(cid))return true;
-        const stillUsed=(g.D.servisLogs||[]).some(r=>r&&str(r.vehicleId)===vehicleId&&str(r.serviceComponentId||r.checklistItemId||r.itemId)===cid);
+        const stillUsed=(data().servisLogs||[]).some(r=>r&&str(r.vehicleId)===vehicleId&&str(r.serviceComponentId||r.checklistItemId||r.itemId)===cid);
         return stillUsed||!str(cat.id).startsWith('sp_component_');
       });
       if(removedComponentIds.size&&g.save)g.save({domain:'servis',financeMutation:false,accountIds:[]});

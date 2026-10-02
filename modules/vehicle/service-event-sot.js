@@ -9,7 +9,8 @@
   const HEALTH=Object.freeze(['OK','PERLU_DIPERIKSA','JATUH_TEMPO','TERTUNDA','BELUM_ADA_DATA']);
   const str=v=>v==null?'':String(v).trim();
   const arr=v=>Array.isArray(v)?v:[];
-  const logs=()=>g.D&&Array.isArray(g.D.servisLogs)?g.D.servisLogs:[];
+  const data=()=>typeof D!=='undefined'?D:(g.D||{});
+  const logs=()=>{const d=data();return Array.isArray(d.servisLogs)?d.servisLogs:[];};
   function canonical(id){
     if(!id||!g.ServiceMasterDB)return null;
     try{return typeof g.ServiceMasterDB.getComponentSync==='function'?g.ServiceMasterDB.getComponentSync(id):null;}catch(_){return null;}
@@ -158,7 +159,7 @@
   function audit(vehicleId){
     const rows=logs().filter(s=>!vehicleId||String(s.vehicleId)===String(vehicleId));
     const issues=[];
-    rows.forEach(s=>{if(s.reminderPackageId&&g.ServiceReminderPackageSOT&&g.ServiceReminderPackageSOT.byId){const p=g.ServiceReminderPackageSOT.byId(s.reminderPackageId);if(!p)issues.push({id:s.id,code:'ORPHAN_REMINDER_PACKAGE'});}if(s.serviceComponentId&&!canonical(s.serviceComponentId))issues.push({id:s.id,code:'UNKNOWN_COMPONENT'});if(s.txLinkId&&g.D&&Array.isArray(g.D.transactions)&&!g.D.transactions.some(t=>t&&t.id===s.txLinkId))issues.push({id:s.id,code:'ORPHAN_TRANSACTION'});});
+    rows.forEach(s=>{if(s.reminderPackageId&&g.ServiceReminderPackageSOT&&g.ServiceReminderPackageSOT.byId){const p=g.ServiceReminderPackageSOT.byId(s.reminderPackageId);if(!p)issues.push({id:s.id,code:'ORPHAN_REMINDER_PACKAGE'});}if(s.serviceComponentId&&!canonical(s.serviceComponentId))issues.push({id:s.id,code:'UNKNOWN_COMPONENT'});if(s.txLinkId&&Array.isArray(data().transactions)&&!data().transactions.some(t=>t&&t.id===s.txLinkId))issues.push({id:s.id,code:'ORPHAN_TRANSACTION'});});
     return{version:VERSION,total:rows.length,sessions:new Set(rows.map(s=>s.sessionId).filter(Boolean)).size,withReminder:rows.filter(s=>s.reminderPackageId).length,withEvidence:rows.filter(s=>arr(s.foto).length||s.txLinkId||s.catalogPartId||s.usedPartId).length,issues};
   }
   const api={VERSION,STATES,HEALTH,checklistState,normalizeChecklist,normalizeCost,normalizeComponentCost,normalizeServiceCost,costForSession,evidence,nextDue,normalize,createSession,completeReminder,maintenanceHealth,audit};

@@ -4,9 +4,13 @@
 (function(g){
   'use strict';
   function getD(){
-    if(!g.D) throw new Error('FinanceTxSOT: D belum tersedia');
-    if(!Array.isArray(g.D.transactions)) g.D.transactions=[];
-    return g.D;
+    // `D` adalah top-level lexical binding (`let D`), bukan properti globalThis.
+    // Gunakan lexical D lebih dulu; fallback g.D mempertahankan kompatibilitas
+    // dengan harness/test yang memang menyuntikkan globalThis.D.
+    const d=typeof D!=='undefined'?D:g.D;
+    if(!d) throw new Error('FinanceTxSOT: D belum tersedia');
+    if(!Array.isArray(d.transactions)) d.transactions=[];
+    return d;
   }
   function normalizeId(id){ return id==null?'':String(id); }
   function create(tx){

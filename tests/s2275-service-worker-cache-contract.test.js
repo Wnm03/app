@@ -7,6 +7,8 @@ const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
 const swSource = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+// S2319: version-agnostic — cache name dibaca dari sw.js, tidak di-hardcode per build bump.
+const CUR = (swSource.match(/CACHE_NAME\s*=\s*'([^']+)'/) || [])[1];
 
 function makeHarness({ oldCaches = [], fetchImpl } = {}) {
   const listeners = {};
@@ -51,11 +53,11 @@ test('S2275: SW install precaches current cache and requests activation', async 
   assert.ok(waited);
   await waited;
   assert.ok(h.cacheOps.some(x => x[0] === 'skipWaiting'));
-  assert.ok(h.cacheOps.some(x => x[0] === 'addAll' && x[1] === 'kw-cache-v2210'));
+  assert.ok(h.cacheOps.some(x => x[0] === 'addAll' && x[1] === CUR));
 });
 
 test('S2275: activate removes stale cache versions and claims clients', async () => {
-  const h = makeHarness({ oldCaches: ['kw-cache-v2209', 'kw-cache-v2210', 'other-cache'] });
+  const h = makeHarness({ oldCaches: ['kw-cache-v2209', CUR, 'other-cache'] });
   let waited;
   h.listeners.activate({ waitUntil: p => { waited = p; } });
   await waited;
@@ -75,12 +77,12 @@ test('S2275: static asset fetch is network-first and refreshes SW cache', async 
   });
   const response = await responsePromise;
   assert.equal(response.status, 200);
-  assert.ok(h.cacheOps.some(x => x[0] === 'put' && x[1] === 'kw-cache-v2210'));
+  assert.ok(h.cacheOps.some(x => x[0] === 'put' && x[1] === CUR));
 });
 
 test('S2275: navigation prefers fresh network, then cached shell on offline/HTTP error', async () => {
   const h = makeHarness({ fetchImpl: async () => { throw new Error('offline'); } });
-  h.cacheData.set('kw-cache-v2210', new Map([['./index.html', new Response('cached shell', { status: 200 })]]));
+  h.cacheData.set(CUR, new Map([['./index.html', new Response('cached shell', { status: 200 })]]));
   let responsePromise;
   h.listeners.fetch({
     request: { method: 'GET', url: 'https://example.test/index.html', mode: 'navigate', headers: { get: name => name === 'accept' ? 'text/html' : '' } },
@@ -92,7 +94,7 @@ test('S2275: navigation prefers fresh network, then cached shell on offline/HTTP
 
 test('S2275: offline static asset falls back to cached asset, not stale cache when online', async () => {
   const h = makeHarness({ fetchImpl: async () => { throw new Error('offline'); } });
-  h.cacheData.set('kw-cache-v2210', new Map([['https://example.test/app-bundle-b.min.js', new Response('cached bundle', { status: 200 })]]));
+  h.cacheData.set(CUR, new Map([['https://example.test/app-bundle-b.min.js', new Response('cached bundle', { status: 200 })]]));
   let responsePromise;
   h.listeners.fetch({
     request: { method: 'GET', url: 'https://example.test/app-bundle-b.min.js', mode: 'no-cors', headers: { get: () => '' } },

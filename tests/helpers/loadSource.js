@@ -183,7 +183,7 @@ function loadSource(files, extraGlobals = {}, expose = []) {
   if (loadFiles.some(f => billDebtPiutangDependentFiles.has(f)) && !loadFiles.includes('modules/finance/bill-debt-piutang-canonical-writer.js')) {
     loadFiles.unshift('modules/finance/bill-debt-piutang-canonical-writer.js');
   }
-  if (loadFiles.some(f => f === 'modules/finance/tx-transfer.js' || f === 'modules/finance/piutang-utang.js' || f === 'modules/finance/tagihan-kalender.js' || f === 'modules/finance/titipan-expense-flow.js') && !loadFiles.includes('modules/finance/finance-tx-sot.js')) {
+  if (loadFiles.some(f => f === 'modules/finance/tx-transfer.js' || f === 'modules/finance/piutang-utang.js' || f === 'modules/finance/tagihan-kalender.js' || f === 'modules/finance/titipan-expense-flow.js' || f === 'car-notes.js' || f === 'chat-action-handlers.js') && !loadFiles.includes('modules/finance/finance-tx-sot.js')) {
     loadFiles.unshift('modules/finance/finance-tx-sot.js');
   }
   // S2196+: isolated tests that execute cross-entity mutation/delete paths must

@@ -87,7 +87,7 @@ test('S2036: edit path explicitly reconciles session rows and component-owned re
   assert.match(adapter,/function reconcile\(s,checklistPayload,vehicleId,serviceDate,serviceKm\)/);
   assert.match(adapter,/intervalKmAtService=projection\.intervalKm/);
   assert.match(adapter,/nextDueKm=snap\.nextDueKm/);
-  assert.match(adapter,/g\.D\.servisLogs\.push\(owner\)/);
+  assert.match(adapter,/data\(\)\.servisLogs\.push\(owner\)/);
 });
 
 console.log('S2036 checklist-edit session/reminder regression tests: PASS');

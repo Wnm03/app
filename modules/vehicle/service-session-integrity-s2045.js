@@ -8,9 +8,10 @@
   g.__SERVICE_SESSION_INTEGRITY_S2045__=true;
   const VERSION='SERVICE-SESSION-INTEGRITY-S2045';
   const str=v=>v==null?'':String(v).trim();
-  const logs=()=>g.D&&Array.isArray(g.D.servisLogs)?g.D.servisLogs:[];
-  const cats=()=>g.D&&Array.isArray(g.D.sparepartCats)?g.D.sparepartCats:[];
-  const vehicles=()=>g.D&&Array.isArray(g.D.vehicles)?g.D.vehicles:[];
+  const data=()=>typeof D!=='undefined'?D:g.D;
+  const logs=()=>data()&&Array.isArray(data().servisLogs)?data().servisLogs:[];
+  const cats=()=>data()&&Array.isArray(data().sparepartCats)?data().sparepartCats:[];
+  const vehicles=()=>data()&&Array.isArray(data().vehicles)?data().vehicles:[];
   const vidOf=r=>str(r&&r.vehicleId);
   const sidOf=r=>str(r&&(r.sessionId||r.serviceJobId));
   const cidOf=r=>str(r&&(r.serviceComponentId||r.itemId||r.checklistItemId));
