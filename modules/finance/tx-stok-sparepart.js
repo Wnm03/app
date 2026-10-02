@@ -199,6 +199,14 @@ return cr.part;
 // draft->resolveDraft->syncPartsStockFromCatalog->populate dropdown,
 // bedanya cuma nama adapter & ikon toast sukses (📷 vs 🖼️).
 async function txStockScanPartVia(adapterName){
+// S2272: this consumer is eager while SparepartScanner is intentionally lazy.
+// Demand-load the scanner feature before checking/using its global namespace so
+// cold-start calls from Finance -> Stok Sparepart do not falsely report
+// "Fitur scan belum tersedia". The existing loader deduplicates concurrent
+// requests and resets its promise on failure for later retry.
+if(typeof ensureVehicleCatalogFeatureScripts==='function'){
+  await ensureVehicleCatalogFeatureScripts();
+}
 if(typeof SparepartScanner==='undefined'||!SparepartScanner){toast('⚠️ Fitur scan belum tersedia');return;}
 const result=await SparepartScanner.scan(adapterName);
 if(!result)return;
