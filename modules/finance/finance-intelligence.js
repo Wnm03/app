@@ -50,12 +50,18 @@ invalidateCache() {
 // Toleran: transaksi tanpa accountId, atau accountId yg akunnya sudah
 // tidak ada di D.accounts, tetap dihitung (fallback dianggap SELF) —
 // SAMA prinsip toleran dgn OwnershipEngine.resolve() thd data lama.
-_isTxAccountSelf(t, accountMap) {
+_isTxAccountSelf(t, accountMap, ownershipCache) {
   if (typeof OwnershipEngine === 'undefined') return true;
   if (!t || !t.accountId) return true;
   const acc = accountMap instanceof Map ? accountMap.get(t.accountId) : (D.accounts || []).find((a) => a.id === t.accountId);
   if (!acc) return true;
-  return OwnershipEngine.resolve(acc).type === 'SELF';
+  // A render burst often contains many transactions per account. Resolve the
+  // immutable ownership classification once per account for this aggregation,
+  // without retaining it across calls or risking stale ownership after edits.
+  if (ownershipCache instanceof Map && ownershipCache.has(t.accountId)) return ownershipCache.get(t.accountId);
+  const isSelf = OwnershipEngine.resolve(acc).type === 'SELF';
+  if (ownershipCache instanceof Map) ownershipCache.set(t.accountId, isSelf);
+  return isSelf;
 },
 
 _resolveRange(range) {
@@ -78,15 +84,25 @@ incomeVsExpense(range) {
   if (!range && this._ivxCache !== undefined) return this._ivxCache;
   const { from, to } = this._resolveRange(range);
   const accountMap = new Map((D.accounts || []).map((a) => [a.id, a]));
-  const txs = (D.transactions || []).filter((t) => {
+  const ownershipCache = new Map();
+  // S2346: resolve ownership satu kali per akun dalam agregasi ini; tidak ada
+  // cache lintas-call, sehingga perubahan kepemilikan langsung tercermin.
+  // S2339: satu pemindaian menjaga filter tanggal/kepemilikan dan txCount
+  // (termasuk transaksi non-income/expense yang lolos filter) tetap identik.
+  // Hanya agregat income/expense yang dijumlahkan; transaksi sumber tidak diubah.
+  let income = 0;
+  let expense = 0;
+  let txCount = 0;
+  for (const t of (D.transactions || [])) {
     const d = new Date(t.date);
-    return d >= from && d <= to && this._isTxAccountSelf(t, accountMap);
-  });
-  const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expense = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    if (!(d >= from && d <= to && this._isTxAccountSelf(t, accountMap, ownershipCache))) continue;
+    txCount++;
+    if (t.type === 'income') income += t.amount;
+    else if (t.type === 'expense') expense += t.amount;
+  }
   const net = income - expense;
   const savingsRate = income > 0 ? net / income : 0;
-  const result = { from, to, income, expense, net, savingsRate, txCount: txs.length };
+  const result = { from, to, income, expense, net, savingsRate, txCount };
   if (!range) this._ivxCache = result;
   return result;
 },

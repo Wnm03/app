@@ -53,13 +53,28 @@
     let h=2166136261;for(let i=0;i<body.length;i++){h^=body.charCodeAt(i);h=Math.imul(h,16777619);}return list.length+'#'+(h>>>0).toString(16);
   }
   function domainSignatures(data){
-    const d=data||{};return {
-      service:arraySignature(d.services),
-      fuel:arraySignature(d.bbmLogs),
-      finance:arraySignature(d.transactions),
-      tax:arraySignature(d.vehicles)+'|'+arraySignature(d.taxRecords),
-      ride:arraySignature(d.rideLogs)||arraySignature(d.rides),
-      final:arraySignature(d.services)+'|'+arraySignature(d.bbmLogs)+'|'+arraySignature(d.transactions)+'|'+arraySignature(d.vehicles)+'|'+arraySignature(d.partsStock)+'|'+arraySignature(d.reminders)
+    const d=data||{};
+    // Each array fingerprint JSON-serializes and hashes its contents. Reuse the
+    // fingerprint across domains instead of serializing large histories again.
+    // Keep the legacy rideLogs-first selection and signature format unchanged.
+    const sig={
+      services:arraySignature(d.services),
+      bbmLogs:arraySignature(d.bbmLogs),
+      transactions:arraySignature(d.transactions),
+      vehicles:arraySignature(d.vehicles),
+      taxRecords:arraySignature(d.taxRecords),
+      rideLogs:arraySignature(d.rideLogs),
+      rides:arraySignature(d.rides),
+      partsStock:arraySignature(d.partsStock),
+      reminders:arraySignature(d.reminders)
+    };
+    return {
+      service:sig.services,
+      fuel:sig.bbmLogs,
+      finance:sig.transactions,
+      tax:sig.vehicles+'|'+sig.taxRecords,
+      ride:sig.rideLogs||sig.rides,
+      final:sig.services+'|'+sig.bbmLogs+'|'+sig.transactions+'|'+sig.vehicles+'|'+sig.partsStock+'|'+sig.reminders
     };
   }
   function runIncremental(input){

@@ -642,16 +642,21 @@ const avail=(typeof BudgetReko!=='undefined')?BudgetReko.monthsAvailable():0;
 const months=cfg.months||((typeof BudgetReko!=='undefined')?BudgetReko.effectiveMonths():3);
 const from=cfg.from||((typeof BudgetReko!=='undefined')?BudgetReko.rangeFrom():(()=>{const n=new Date();return new Date(n.getFullYear(),n.getMonth()-2,1);})());
 const now=new Date();
-let txs=(D.transactions||[]).filter(t=>{const d=new Date(_txPerfDateMs(t));return d>=from&&d<=now&&t.hitungKas!==false;});
-// Filter akun (cfg.accountId): 'semua'/kosong -> tidak difilter (perilaku
-// lama persis). Kalau diisi 1 id akun spesifik, incAvg/expAvg/saldoNow
-// SEMUA dihitung ulang dari sudut pandang akun itu saja -- guard
-// typeof recalcAccBalance sama pola guard lain di file ini.
+// S2366: satu pass transaksi untuk rentang tanggal, hitungKas, akun, income,
+// dan expense. Sebelumnya filter tanggal + filter akun + dua filter agregasi
+// memindai array berulang. Urutan penjumlahan per jenis dan semua guard tetap sama.
 const accountId=cfg.accountId;
 const accFiltered=accountId&&accountId!=='semua';
-if(accFiltered)txs=txs.filter(t=>t.accountId===accountId);
-const incAvg=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)/months;
-const expAvg=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)/months;
+let incTotal=0,expTotal=0;
+for(const t of (D.transactions||[])){
+const d=new Date(_txPerfDateMs(t));
+if(!(d>=from&&d<=now&&t.hitungKas!==false))continue;
+if(accFiltered&&t.accountId!==accountId)continue;
+if(t.type==='income')incTotal+=t.amount;
+else if(t.type==='expense')expTotal+=t.amount;
+}
+const incAvg=incTotal/months;
+const expAvg=expTotal/months;
 const saldoNow=(accFiltered&&typeof recalcAccBalance==='function')?recalcAccBalance(accountId):totalSaldoAkun();
 // Mode jendela tagihan (cfg.billWindowMode): '30hari' (default, PERSIS
 // perilaku lama) | 'kalender' (sisa bulan kalender berjalan, now s.d.

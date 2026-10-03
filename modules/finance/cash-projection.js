@@ -187,23 +187,31 @@ const billRangeMonth=useSiklus?cycleRange.to.getMonth():m;
 const billOccCount=(b)=>useSiklus
 ?(typeof getBillOccurrencesInRange==='function'?getBillOccurrencesInRange(b,cycleRange.from,cycleRange.to).length:0)
 :(typeof getBillOccurrencesInMonth==='function'?getBillOccurrencesInMonth(b,y,m).length:0);
-const billMonthTotal=useSiklus
-?(D.bills||[]).reduce((s,b)=>s+billOccCount(b)*(b.amount||0),0)
-:((typeof getBillStats==='function'?getBillStats(m,y).monthTotal:0)||0);
-const billPaidThisPeriod=(D.bills||[])
-.filter(b=>typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,billRangeMonth,billRangeYear)!=null)
-.reduce((s,b)=>s+(b.amount||0),0);
-// kewajibanItems — dikumpulkan BARENGAN loop sisaKewajiban di bawah (0 loop D.bills
-// tambahan), dipakai murni utk breakdown "Top-3 kontributor terbesar" di kartu UI
-// (Sesi audit-kartu-proyeksi-kas-insight, quick win #5) -- 0 logika hitung baru,
-// sekadar menyimpan {name,amount} tiap item yang SUDAH ikut kehitung sisaKewajiban.
+// S2340: memoize info per tagihan dan hitung occurrence hanya sekali per bill.
+// Perilaku billMonthTotal mode kalender tetap memakai getBillStats() sebagai SSOT;
+// mode siklus tetap menjumlahkan occurrence pada rentang siklus yang sama.
 const kewajibanItems=[];
-const sisaKewajibanTerjadwal=(D.bills||[]).reduce((s,b)=>{
-if(typeof getBillPaidThisPeriodInfo==='function'&&getBillPaidThisPeriodInfo(b,billRangeMonth,billRangeYear)!=null)return s;
-const amt=billOccCount(b)*(b.amount||0);
-if(amt>0)kewajibanItems.push({name:b.name||'(tagihan tanpa nama)',amount:amt});
-return s+amt;
-},0);
+let billMonthTotal=0;
+let billPaidThisPeriod=0;
+let sisaKewajibanTerjadwal=0;
+for (const b of (D.bills||[])) {
+  const paidInfo=(typeof getBillPaidThisPeriodInfo==='function')
+    ?getBillPaidThisPeriodInfo(b,billRangeMonth,billRangeYear):null;
+  const amount=(b.amount||0);
+  if(paidInfo!=null) {
+    billPaidThisPeriod+=amount;
+    // Mode siklus tetap butuh total bruto semua tagihan, termasuk yang lunas;
+    // mode kalender tidak perlu menghitung occurrence untuk tagihan yang diskip.
+    if(useSiklus) billMonthTotal+=billOccCount(b)*amount;
+    continue;
+  }
+  const occurrenceCount=billOccCount(b);
+  if(useSiklus) billMonthTotal+=occurrenceCount*amount;
+  const amt=occurrenceCount*amount;
+  if(amt>0) kewajibanItems.push({name:b.name||'(tagihan tanpa nama)',amount:amt});
+  sisaKewajibanTerjadwal+=amt;
+}
+if(!useSiklus) billMonthTotal=((typeof getBillStats==='function'?getBillStats(m,y).monthTotal:0)||0);
 // FIX GAP-CP-002 (audit-kartu-proyeksi-kas-insight): utang otomatis "Pinjam Dana
 // Titipan" (maybeCreateTitipanPinjamUtang(), piutang-utang.js, Sesi 714/719-720)
 // SENGAJA dibuat dgn cicilanBulanan:0 (lump-sum, tanpa jadwal cicilan tetap) --

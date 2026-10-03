@@ -56,26 +56,58 @@ return t.category===info.catName && t.subcategory===info.subName;
 return t.category===info.catName||t.category===catId||t.categoryId===catId;
 });
 },
-matchesPeriod(budget,t,month,year){
+// Build a transaction matcher once per getUsed() scan. Category definitions
+// are stable during a synchronous scan, so resolve IDs once instead of walking
+// D.categories for every matching expense transaction. This is deliberately
+// per-call (not a persistent cache) so edits are visible on the next render.
+_buildTxMatcher(budget){
+const ids=budget.catIds||(budget.catId?[budget.catId]:[]);
+if(ids.includes('__total__')) return t=>t.type==='expense';
+const resolved=ids.map(catId=>({catId,info:Budget.getCatInfoById(catId)}));
+return t=>t.type==='expense'&&resolved.some(({catId,info})=>{
+if(info.subName) return t.category===info.catName&&t.subcategory===info.subName;
+return t.category===info.catName||t.category===catId||t.categoryId===catId;
+});
+},
+_periodContext(budget,month,year,now){
 const period=budget.period||'bulanan';
 const m=month!=null?month:curMonth, y=year!=null?year:curYear;
-const d=new Date(t.date);
+const context={period,month:m,year:y,now:now||new Date()};
 if(period==='mingguan'){
-const now=new Date();
-const dow=(now.getDay()+6)%7;
-const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow);
-const sunday=new Date(monday.getFullYear(),monday.getMonth(),monday.getDate()+6,23,59,59,999);
-return d>=monday&&d<=sunday;
+const today=context.now;
+const dow=(today.getDay()+6)%7;
+context.weekStart=new Date(today.getFullYear(),today.getMonth(),today.getDate()-dow);
+context.weekEnd=new Date(context.weekStart.getFullYear(),context.weekStart.getMonth(),context.weekStart.getDate()+6,23,59,59,999);
+}else if(period==='sekali'){
+context.startDate=budget.createdAt?budget.createdAt.slice(0,10):null;
 }
-if(period==='tahunan') return d.getFullYear()===y;
-if(period==='sekali'){
-const startDate=budget.createdAt?budget.createdAt.slice(0,10):null;
-return !(startDate&&t.date<startDate);
-}
-return d.getMonth()===m&&d.getFullYear()===y;
+return context;
+},
+_matchesPeriodContext(budget,t,d,context){
+if(context.period==='mingguan') return d>=context.weekStart&&d<=context.weekEnd;
+if(context.period==='tahunan') return d.getFullYear()===context.year;
+if(context.period==='sekali') return !(context.startDate&&t.date<context.startDate);
+return d.getMonth()===context.month&&d.getFullYear()===context.year;
+},
+matchesPeriod(budget,t,month,year){
+const context=Budget._periodContext(budget,month,year);
+return Budget._matchesPeriodContext(budget,t,new Date(t.date),context);
 },
 getUsed(budget,month,year){
-return D.transactions.filter(t=>Budget.matchesPeriod(budget,t,month,year)&&Budget.matchesTx(budget,t)).reduce((s,t)=>s+t.amount,0);
+const transactions=Array.isArray(D.transactions)?D.transactions:[];
+const context=Budget._periodContext(budget,month,year);
+let total=0, matchesBudget=null;
+for(const t of transactions){
+if(!t)continue;
+const date=new Date(t.date);
+if(!Budget._matchesPeriodContext(budget,t,date,context))continue;
+// Preserve matchesTx's early type check and avoid resolving categories at all
+// when no in-period expense needs matching.
+if(t.type!=='expense')continue;
+if(!matchesBudget)matchesBudget=Budget._buildTxMatcher(budget);
+if(matchesBudget(t))total+=t.amount;
+}
+return total;
 },
 getEffectiveLimit(budget,month,year){
 const period=budget.period||'bulanan';
@@ -83,10 +115,17 @@ if(period!=='bulanan'||!budget.rollover) return budget.limit;
 const m=month!=null?month:curMonth, y=year!=null?year:curYear;
 const pm=m===0?11:m-1;
 const py=m===0?y-1:y;
-const prevUsed=D.transactions.filter(t=>{
+let prevUsed=0;
+let matchesBudget=null;
+for(const t of (Array.isArray(D.transactions)?D.transactions:[])){
+if(!t)continue;
 const d=new Date(t.date);
-return d.getMonth()===pm&&d.getFullYear()===py&&Budget.matchesTx(budget,t);
-}).reduce((s,t)=>s+t.amount,0);
+if(d.getMonth()!==pm||d.getFullYear()!==py||t.type!=='expense')continue;
+// S2358: avoid resolving category metadata for transactions outside the
+// previous-month rollover window; reuse one matcher for eligible expenses.
+if(!matchesBudget)matchesBudget=Budget._buildTxMatcher(budget);
+if(matchesBudget(t))prevUsed+=t.amount;
+}
 const sisa=budget.limit-prevUsed;
 return budget.limit+(sisa>0?sisa:0);
 },
@@ -424,13 +463,41 @@ const months=BudgetReko.effectiveMonths();
 const now=new Date();
 return new Date(now.getFullYear(),now.getMonth()-months+1,1);
 },
-incomeAvgPerMonth(){
+analyticsSnapshot(){
+// Reuse one render-local snapshot for recommendation metrics. The first pass
+// preserves the existing earliest-transaction month rule; the second pass
+// aggregates income and expense categories for the selected month window.
+const txs=Array.isArray(D.transactions)?D.transactions:[];
+if(!txs.length)return{available:0,months:1,incomeTotal:0,categories:[]};
+let earliest=null;
+txs.forEach(t=>{const d=new Date(t.date);if(!earliest||d<earliest)earliest=d;});
+if(!earliest)return{available:0,months:1,incomeTotal:0,categories:[]};
+const now=new Date();
+const available=Math.max(1,(now.getFullYear()-earliest.getFullYear())*12+(now.getMonth()-earliest.getMonth())+1);
+const {months:configuredMonths}=BudgetReko.getSettings();
+const months=Math.max(1,Math.min(configuredMonths,available||1));
+const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
+let incomeTotal=0;const map={};
+txs.forEach(t=>{
+const d=new Date(t.date);if(!(d>=from&&d<=now))return;
+if(t.type==='income'){incomeTotal+=t.amount;return;}
+if(t.type!=='expense')return;
+const key=t.category||'Lainnya';
+if(!map[key])map[key]={total:0,count:0};
+map[key].total+=t.amount;map[key].count++;
+});
+const categories=Object.entries(map).map(([name,v])=>({name,total:v.total,count:v.count,avgPerMonth:v.total/months})).sort((a,b)=>b.avgPerMonth-a.avgPerMonth);
+return{available,months,incomeTotal,categories};
+},
+incomeAvgPerMonth(snapshot){
+if(snapshot)return snapshot.incomeTotal/snapshot.months;
 const months=BudgetReko.effectiveMonths();
 const from=BudgetReko.rangeFrom(),now=new Date();
 const total=D.transactions.filter(t=>t.type==='income'&&new Date(t.date)>=from&&new Date(t.date)<=now).reduce((s,t)=>s+t.amount,0);
 return total/months;
 },
-computeCategoryAverages(){
+computeCategoryAverages(snapshot){
+if(snapshot)return snapshot.categories;
 const months=BudgetReko.effectiveMonths();
 const from=BudgetReko.rangeFrom(),now=new Date();
 const txs=D.transactions.filter(t=>t.type==='expense'&&new Date(t.date)>=from&&new Date(t.date)<=now);
@@ -494,14 +561,15 @@ if(!box)return;
 const {months,buffer}=BudgetReko.getSettings();
 document.querySelectorAll('#brMonthChips .chip-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.m)===months));
 document.querySelectorAll('#brBufferChips .chip-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.b)===buffer));
-const avail=BudgetReko.monthsAvailable();
+const snapshot=BudgetReko.analyticsSnapshot();
+const avail=snapshot.available;
 if(avail<2){
 box.innerHTML='<div class="empty"><div class="empty-icon">🎯</div><div class="empty-text">Belum cukup histori transaksi (minimal ~2 bulan) utk kasih rekomendasi yang masuk akal. Catat transaksi terus ya, nanti otomatis muncul di sini.</div></div>';
 BudgetReko._lastCats=[];
 return;
 }
-const incomeAvg=BudgetReko.incomeAvgPerMonth();
-const cats=BudgetReko.computeCategoryAverages().filter(c=>c.count>=2);
+const incomeAvg=BudgetReko.incomeAvgPerMonth(snapshot);
+const cats=BudgetReko.computeCategoryAverages(snapshot).filter(c=>c.count>=2);
 BudgetReko._lastCats=cats;
 const totalReko=cats.reduce((s,c)=>s+c.avgPerMonth,0);
 const pctOfIncome=incomeAvg>0?Math.round(totalReko/incomeAvg*100):null;

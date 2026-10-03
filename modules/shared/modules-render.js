@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2219';
+const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2225';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -537,9 +537,12 @@ const today=new Date();today.setHours(0,0,0,0);
 // ada & tetap tampil di tab Bayar seperti biasa (lihat getBillPaidThisPeriodInfo, dipisah
 // dari D.billsArchive/_lunas murni karena tagihannya sendiri masih aktif, belum benar2
 // selesai/tidak berulang lagi).
-const paidPeriodEntries=D.bills.map(b=>({b,info:getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun)})).filter(x=>x.info).map(({b,info})=>({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]}));
+// S2362: D.bills dipindai sekali (entri aktif + paid-period); urutan & bentuk objek tetap.
+const activeBillEntries=[];const paidPeriodEntries=[];
+for(const b of (D.bills||[])){activeBillEntries.push({...b,_lunas:false,_dateForFilter:b.nextDue});const info=getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun);
+if(info)paidPeriodEntries.push({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]});}
 let combined=[
-...D.bills.map(b=>({...b,_lunas:false,_dateForFilter:b.nextDue})),
+...activeBillEntries,
 ...(D.billsArchive||[]).map(b=>({...b,_lunas:true,_dateForFilter:b.completedAt||b.nextDue})),
 ...paidPeriodEntries
 ];
@@ -1458,9 +1461,11 @@ inc=ctx.inc;exp=ctx.exp;
 const now=new Date();
 const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
 const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
-const txM=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y;});
-inc=txM.filter(t=>t.type==='income'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
-exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+// S2361: agregasi income/expense satu pass; guard hitungKas & parsing tanggal tetap.
+const txList=D.transactions||[];inc=0;exp=0;
+for(const t of txList){const d=new Date(t.date);
+if(d.getMonth()!==m||d.getFullYear()!==y||t.hitungKas===false)continue;
+if(t.type==='income')inc+=t.amount;else if(t.type==='expense')exp+=t.amount;}
 }
 let surplusHtml='';
 if(typeof fiMonthlySurplus==='function'){

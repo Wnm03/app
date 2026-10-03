@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2219';
+const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2225';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -86,9 +86,14 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): "Catatan saja" (hitungKas:false)
 // difilter di titik konstruksi txs, jadi inc & exp SAMA-SAMA sudah bersih (bukan
 // difilter terpisah supaya tidak ada celah salah satu sisi kelewatan).
-const txs=D.transactions.filter(t=>{const d=new Date(_calcTxDateMs(t));return d>=from&&d<=now&&t.hitungKas!==false;});
-const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+// S2338: aggregate in one pass; preserve the same date window and hitungKas guard.
+let inc=0,exp=0;
+D.transactions.forEach(t=>{
+const d=new Date(_calcTxDateMs(t));
+if(d<from||d>now||t.hitungKas===false)return;
+if(t.type==='income')inc+=t.amount;
+else if(t.type==='expense')exp+=t.amount;
+});
 return (inc-exp)/months;
 },
 estimateMonthsToTarget(retOverride){
@@ -329,7 +334,13 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 // Guard hitungKas (Sesi Normalisasi hitungKas T4+): income "Catatan saja" tidak
 // masuk kas riil, jadi tidak boleh menaikkan rata-rata gaji bulanan yg dipakai
 // utk saran alokasi (Dana Darurat/Pensiun/dll).
-const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(_calcTxDateMs(t))>=from&&new Date(_calcTxDateMs(t))<=now).reduce((s,t)=>s+(t.amount||0),0);
+// S2338: parse each transaction date once while summing eligible income.
+let total=0;
+D.transactions.forEach(t=>{
+if(t.type!=='income'||t.hitungKas===false)return;
+const d=new Date(_calcTxDateMs(t));
+if(d>=from&&d<=now)total+=(t.amount||0);
+});
 return total/months;
 },
 suggest(){
@@ -358,15 +369,18 @@ const monthsAvail=Math.min(6,(typeof FI!=='undefined'?FI.monthsOfDataAvailable()
 let cv=null;
 if(monthsAvail>=3){
 const now=new Date();
-const monthlyIncomes=[];
-for(let i=0;i<monthsAvail;i++){
-const from=new Date(now.getFullYear(),now.getMonth()-i,1);
-const to=new Date(now.getFullYear(),now.getMonth()-i+1,0,23,59,59);
-// Guard hitungKas (Sesi Normalisasi hitungKas T4+): sama alasan spt SalaryAllocation
-// di atas -- income "Catatan saja" tidak boleh ikut hitungan volatilitas (CV) income
-// bulanan yg dipakai utk rekomendasi target Dana Darurat.
-const total=D.transactions.filter(t=>t.type==='income'&&t.hitungKas!==false&&new Date(_calcTxDateMs(t))>=from&&new Date(_calcTxDateMs(t))<=to).reduce((s,t)=>s+t.amount,0);
-monthlyIncomes.push(total);
+const monthlyIncomes=Array(monthsAvail).fill(0);
+const from=new Date(now.getFullYear(),now.getMonth()-monthsAvail+1,1);
+// S2337: satu pemindaian transaksi untuk seluruh bulan yang dibutuhkan.
+// Batas akhir tiap bulan tetap 23:59:59 (tanpa mengubah perilaku historis).
+for(const t of D.transactions){
+if(t.type!=='income'||t.hitungKas===false)continue;
+const d=new Date(_calcTxDateMs(t));
+if(d<from||d>now)continue;
+const monthOffset=(now.getFullYear()-d.getFullYear())*12+(now.getMonth()-d.getMonth());
+if(monthOffset<0||monthOffset>=monthsAvail)continue;
+const to=new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59);
+if(d<=to)monthlyIncomes[monthOffset]+=t.amount;
 }
 const mean=monthlyIncomes.reduce((a,b)=>a+b,0)/monthlyIncomes.length;
 if(mean>0){
@@ -465,9 +479,14 @@ const wantMonths=Math.max(1,Math.min(24,Number(p.rekoBulan)||3));
 const months=Math.max(1,Math.min(wantMonths,Pensiun.monthsOfDataAvailable()||1));
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
-const txs=(D.transactions||[]).filter(t=>{const d=new Date(_calcTxDateMs(t));return d>=from&&d<=now;});
-const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+// S2338: keep pension's historical inclusion rules, but aggregate in one scan.
+let inc=0,exp=0;
+(D.transactions||[]).forEach(t=>{
+const d=new Date(_calcTxDateMs(t));
+if(d<from||d>now)return;
+if(t.type==='income')inc+=t.amount;
+else if(t.type==='expense')exp+=t.amount;
+});
 return {surplus:(inc-exp)/months,months};
 },
 danaTerkumpul(){

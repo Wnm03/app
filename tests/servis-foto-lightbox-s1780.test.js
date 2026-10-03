@@ -52,3 +52,23 @@ test('S1783: siklus buka/tutup lightbox berulang tidak meninggalkan keydown list
   assert.equal(created,50);
   assert.equal(activeKeys,0,'tidak boleh ada keydown listener tersisa setelah 50 siklus');
 });
+
+
+test('S2359: menutup lightbox tetap melepas keydown listener bila overlay sudah hilang', () => {
+  const D={servisLogs:[{id:'s1',vehicleId:'v1',foto:['data:image/png;base64,AAA']} ]};
+  let activeKeys=0,currentBox=null;
+  const document={
+    body:{appendChild(n){currentBox=n;}},
+    createElement(){return {style:{},setAttribute(){},appendChild(){},addEventListener(){},focus(){},remove(){currentBox=null;}};},
+    getElementById(id){return id==='servisPhotoLightbox'?currentBox:null;},
+    addEventListener(type){if(type==='keydown')activeKeys++;},
+    removeEventListener(type){if(type==='keydown')activeKeys--;},
+  };
+  const ctx=ctxFor(D,document);
+  assert.equal(ctx.Servis.openHistoryPhoto('s1',0),true);
+  assert.equal(activeKeys,1);
+  currentBox=null; // Simulate another UI path removing the overlay first.
+  ctx.Servis._closePhotoLightbox();
+  assert.equal(activeKeys,0);
+  assert.equal(ctx.Servis._photoLightboxKeyHandler,null);
+});

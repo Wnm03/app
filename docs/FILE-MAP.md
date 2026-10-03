@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-02T20:51:52.907Z
+Terakhir digenerate: 2026-10-02T23:20:14.988Z
 Total file source: 405 · Total identifier global: 2695
 
 ## 1. Urutan load & ringkasan tiap file
@@ -26,12 +26,12 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 3 | `modules/finance/finance-cross-entity-atomic.js` | 132 | S2196 — atomic boundary for cross-entity Finance mutations. Storage/schema tetap; helper ini hanya snapshot/rollback koleksi D yang terlibat. |
 | 4 | `modules/finance/bill-debt-piutang-canonical-writer.js` | 61 | Canonical mutation boundary for Finance Bill/Debt/Piutang state. S2186: centralizes writes only; domain rules remain in existing modules. |
 | 5 | `modules/finance/bill-debt-piutang-reconciler.js` | 72 | Cross-feature read-only reconciler for Bill/Debt/Piutang state. S2188: verifies reciprocal references and orphan/duplicate invariants after canonical-writer consolidation. It NEVER mutates D. |
-| 6 | `modules/shared/pwa-ux-performance.js` | 136 | _(tidak ada komentar header)_ |
+| 6 | `modules/shared/pwa-ux-performance.js` | 149 | _(tidak ada komentar header)_ |
 | 7 | `modules/shared/pwa-production-hardening.js` | 70 | _(tidak ada komentar header)_ |
-| 8 | `modules/shared/modules-render.js` | 1594 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 8 | `modules/shared/modules-render.js` | 1599 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 9 | `modules/shared/modules-render-b.js` | 1384 | _(tidak ada komentar header)_ |
 | 10 | `modules/shared/modals.js` | 9 | S1904 compatibility contract: Kategori Servis (SOT) dan Komponen Servis (SOT) adalah selector canonical. Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js … |
-| 11 | `modules/shared/modules-calc.js` | 1240 | _(tidak ada komentar header)_ |
+| 11 | `modules/shared/modules-calc.js` | 1259 | _(tidak ada komentar header)_ |
 | 12 | `modules/shop/shop-canonical-writer.js` | 21 | ShopCanonicalWriter — A-S2184 Canonical mutation boundary for Shop product master. Keeps D.products schema unchanged and delegates validation/mutation semantics to ProductRepository. |
 | 13 | `modules/shop/cobek-etalase.js` | 906 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 14 | `modules/shop/cobek-pricing.js` | 897 | Domain Shop bagian rekomendasi harga & ongkir: PriceReko (kalkulator Dipindah ke modules/shop/cobek-pricing.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
@@ -43,7 +43,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 20 | `modules/finance/piutang-utang.js` | 1149 | Domain Piutang & Utang: catatan piutang (uang dipinjamkan), utang (uang dipinjam) beserta status lunas/cicilan, dan DebtStrategy (simulasi strategi pelunasan Avalanche/Snowball). Dipindah ke … |
 | 21 | `modules/finance/pajak-pbb-zakat.js` | 410 | Kalkulator Pajak Bumi & Bangunan (PBB), Zakat (penghasilan, maal, fitrah), Referensi AI (cek harga emas/nisab via AI), Pajak UMKM, dan PPh 21 (Orang Pribadi) Dipindah ke modules/finance/pajak-pbb-zakat.js (Sesi 16 … |
 | 22 | `modules/finance/zakat-reminder.js` | 160 | modules/finance/zakat-reminder.js — Zakat Reminder Foundation (sesi lanjutan, antrian AUDIT-DASHBOARD-INSIGHT-COVERAGE.md §2 "Zakat" — dikonfirmasi user: Penghasilan & Maal masuk sesi ini, Fitrah DITUNDA karena butuh … |
-| 23 | `budget.js` | 547 | Anggaran Budget (batas pengeluaran per kategori, tab List/Rekomendasi, drill-down transaksi). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian budget/laporan — lihat … |
+| 23 | `budget.js` | 615 | Anggaran Budget (batas pengeluaran per kategori, tab List/Rekomendasi, drill-down transaksi). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian budget/laporan — lihat … |
 | 24 | `car-notes.js` | 968 | _(tidak ada komentar header)_ |
 | 25 | `chat-action-handlers.js` | 125 | Aksi AI Chat/RefAI: label & handler eksekusi usulan aksi dari balasan AI (blok [[ACTION]]). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 7 restrukturisasi folder — file lama SELESAI dihapus total, … |
 | 26 | `modules/finance/edukasi-dana.js` | 185 | Dana Pendidikan (EduFund): kalkulator target biaya sekolah/kuliah & nabung/bulan Dipindah ke modules/finance/edukasi-dana.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
@@ -120,14 +120,14 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 97 | `modules/finance/tx-transfer.js` | 75 | logika modal "⇄ Transfer Antar Akun" (transferModal). Dipindah ke modules/finance/tx-transfer.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 98 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 99 | `modules/finance/tx-target.js` | 150 | domain "Target Tabungan" (modal tambah target, deteksi Dana |
-| 100 | `modules/finance/tx-list-cashflow.js` | 1041 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 100 | `modules/finance/tx-list-cashflow.js` | 1046 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 101 | `modules/finance/transaksi.js` | 1406 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 102 | `modules/finance/transaksi-b.js` | 789 | bagian KEDUA dari modules/finance/transaksi.js (audit ukuran file, sesi lanjutan setelah split modules/vehicle/sparepart-servis.js). Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (sisa deklarasi … |
 | 103 | `modules/shared/profil-pengaturan.js` | 136 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 104 | `modules/finance/kategori.js` | 171 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 105 | `modules/ai/kategorisasi-ai.js` | 196 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
 | 106 | `modules/finance/tagihan-kalender.js` | 1581 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo |
-| 107 | `modules/finance/cash-projection.js` | 718 | Sesi P1 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md, Track 2). Presenter READ-ONLY: 0 ubah Finance/Accounting Engine. Utang berjadwal (cicilanBulanan>0) sudah auto-sync jadi D.bills kind:'utang' lewat … |
+| 107 | `modules/finance/cash-projection.js` | 726 | Sesi P1 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md, Track 2). Presenter READ-ONLY: 0 ubah Finance/Accounting Engine. Utang berjadwal (cicilanBulanan>0) sudah auto-sync jadi D.bills kind:'utang' lewat … |
 | 108 | `modules/finance/deficit-notif-bridge.js` | 47 | Deficit Notification Bridge (Sesi S724, carry-forward S723 item "notifikasi proaktif defisit"). Pola SAMA PERSIS modules/vehicle/ vehicle-notif-bridge.js / fuel-notif-bridge.js — modul PURE, TIDAK PERNAH memanggil … |
 | 109 | `modules/shared/backup-restore.js` | 1205 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 110 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
@@ -137,7 +137,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 114 | `modules/business/payroll-absensi.js` | 551 | Payroll: Absensi Harian & Kalkulator Gaji Mingguan (const Payroll={...}) Dipindah ke modules/business/payroll-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 115 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 116 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
-| 117 | `modules/vehicle/car-notes-performance.js` | 94 | _(tidak ada komentar header)_ |
+| 117 | `modules/vehicle/car-notes-performance.js` | 109 | _(tidak ada komentar header)_ |
 | 118 | `modules/vehicle/vehicle-car-notes-sot-s2071.js` | 317 | _(tidak ada komentar header)_ |
 | 119 | `modules/vehicle/vehicle-active-sot-s2061.js` | 98 | _(tidak ada komentar header)_ |
 | 120 | `modules/vehicle/vehicle-canonical-writer.js` | 33 | A-S2185: canonical mutation boundary for D.vehicles. Storage schema remains unchanged; this module only centralizes array mutation. |
@@ -201,7 +201,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 178 | `modules/vehicle/servis-checklist.js` | 899 | _(tidak ada komentar header)_ |
 | 179 | `modules/vehicle/service-input-catalog.js` | 83 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 180 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
-| 181 | `modules/vehicle/servis.js` | 1933 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 181 | `modules/vehicle/servis.js` | 1934 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
 | 182 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 96 | _(tidak ada komentar header)_ |
 | 183 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 123 | _(tidak ada komentar header)_ |
 | 184 | `modules/vehicle/service-session-integrity-s2045.js` | 99 | _(tidak ada komentar header)_ |
@@ -226,7 +226,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 203 | `pwa-setup.js` | 76 | Setup PWA: registrasi manifest (via Blob kalau tidak di-hosting https) & service worker (sw.js, fallback inline Blob). Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 2/5 — lihat … |
 | 204 | `modules/shared/app-init-runtime.js` | 85 | App bootstrap runtime extracted from self-test.js. Kept separate so diagnostic tests do not own the application bootstrap. S1763: lifecycle/interval installation is explicitly idempotent. `init()` can be reached again … |
 | 205 | `pajak-aset-ui-wrappers.js` | 186 | Wrapper UI tipis: parser angka (parsePzNum/parseDecStr/ normalizeOcrNumber), ganti tab pajak/zakat (setPajakTab/setPjkTab/savePajakSettings), dan delegasi tipis ke modul … |
-| 206 | `modules/finance/finance-intelligence.js` | 239 | Finance Intelligence Foundation (Sesi 74, Batch 6). Target sesi: Cash Flow Summary, Budget Summary, Income vs Expense, Financial Health Score, Insight dasar — lihat docs/BATCH_PLAN.md § Batch 6. PRINSIP (RULE #1 sesi … |
+| 206 | `modules/finance/finance-intelligence.js` | 255 | Finance Intelligence Foundation (Sesi 74, Batch 6). Target sesi: Cash Flow Summary, Budget Summary, Income vs Expense, Financial Health Score, Insight dasar — lihat docs/BATCH_PLAN.md § Batch 6. PRINSIP (RULE #1 sesi … |
 | 207 | `modules/finance/financial-audit-engine.js` | 441 | modules/finance/financial-audit-engine.js — Audit Keuangan 30 Menit, Phase A. Pure/read-only: tidak mengubah D.transactions, tidak memanggil save(), dan tidak menyentuh DOM. Semua rentang harus eksplisit di API publik; … |
 | 208 | `modules/finance/financial-audit-presenter.js` | 272 | Financial Audit UI. Presenter only: calculations live in FinancialAuditEngine; annotations/plans live in FinancialAuditAnnotations and never mutate transactions. |
 | 209 | `modules/finance/financial-audit-annotations.js` | 119 | Financial Audit annotations & action plans. Data terpisah dari D.transactions; semua mutasi hanya ke D.financeAuditAnnotations. |

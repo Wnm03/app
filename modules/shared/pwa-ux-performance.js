@@ -35,6 +35,8 @@
     if(typeof window==='undefined'||window.__pwaViewportStateInstalled)return;
     window.__pwaViewportStateInstalled=true;
     const root=document.documentElement;
+    let viewportFrame=0;
+    let viewportTimer=0;
     const update=function(){
       const w=Math.max(0,Math.round(window.innerWidth||root.clientWidth||0));
       const h=Math.max(0,Math.round(window.innerHeight||root.clientHeight||0));
@@ -48,10 +50,21 @@
       body.classList.toggle('pwa-landscape',w>h&&w<900);
       body.classList.toggle('pwa-keyboard-open',keyboard);
     };
-    window.addEventListener('resize',update,{passive:true});
-    window.addEventListener('orientationchange',update,{passive:true});
-    if(window.visualViewport)window.visualViewport.addEventListener('resize',update,{passive:true});
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',update,{once:true});else update();
+    // Resize/orientation/keyboard events can burst on mobile WebView. Coalesce
+    // them to one visual update per frame instead of repeating style writes.
+    const scheduleUpdate=function(){
+      if(typeof requestAnimationFrame==='function'){
+        if(viewportFrame)return;
+        viewportFrame=requestAnimationFrame(function(){viewportFrame=0;update();});
+        return;
+      }
+      if(viewportTimer)return;
+      viewportTimer=setTimeout(function(){viewportTimer=0;update();},16);
+    };
+    window.addEventListener('resize',scheduleUpdate,{passive:true});
+    window.addEventListener('orientationchange',scheduleUpdate,{passive:true});
+    if(window.visualViewport)window.visualViewport.addEventListener('resize',scheduleUpdate,{passive:true});
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scheduleUpdate,{once:true});else update();
   };
   PWAUX.resetOverlayGeometry=function(overlay){
     if(!overlay||!overlay.querySelector)return;
