@@ -7,7 +7,7 @@ test('S2001 source: history stores catalog snapshots separately from live refs',
 });
 test('S2002 source: create path derives deterministic per-component idempotency keys and blocks duplicates',()=>{
  const s=fs.readFileSync('modules/vehicle/servis.js','utf8');
- assert.match(s,/_rowIdempotencyKeys/);assert.match(s,/ServiceEventIdempotencySOT\.find\(D\.servisLogs/);assert.match(s,/idempotencyKey=_rowIdempotencyKeys/);
+ assert.match(s,/_rowIdempotencyKeys/);assert.match(s,/const _existingIdempotencyKeys=new Set\(\)/);assert.match(s,/_existingIdempotencyKeys\.has/);assert.match(s,/idempotencyKey=_rowIdempotencyKeys/);
 });
 test('S2002 idempotency SOT supports multi-component identity',()=>{
  const S=require('../modules/vehicle/service-event-idempotency-sot.js');

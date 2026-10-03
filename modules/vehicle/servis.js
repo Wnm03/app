@@ -902,35 +902,31 @@ return !!StockCommandSOT.applyDeltas([...net].map(([id,delta])=>({id,delta:-delt
 },
 findMatchingStockByCatalogId(catalogId,vehicleId){
 if(!catalogId)return null;
-const rows=(D.partsStock||[]).filter(p=>p&&String(p.catalogPartId||p.catalogId||'')===String(catalogId));
-if(!rows.length)return null;
-const scoped=rows.filter(p=>{
-  if(!vehicleId)return true;
-  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleId);
-  return !p.vehicleId||p.vehicleId===vehicleId;
-});
-if(scoped.length===1)return scoped[0];
-if(scoped.length>1){
-  const exact=scoped.find(p=>p.vehicleId&&String(p.vehicleId)===String(vehicleId));
-  return exact||null;
+const _parts=(D.partsStock||[]);let _scopedCount=0,_singleScoped=null,_exactScoped=null;
+for(const p of _parts){
+  if(!p||String(p.catalogPartId||p.catalogId||'')!==String(catalogId))continue;
+  const _inScope=!vehicleId?true:(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):(!p.vehicleId||p.vehicleId===vehicleId));
+  if(!_inScope)continue;
+  _scopedCount++;if(_scopedCount===1)_singleScoped=p;
+  if(!_exactScoped&&p.vehicleId&&String(p.vehicleId)===String(vehicleId))_exactScoped=p;
 }
+if(_scopedCount===1)return _singleScoped;
+if(_scopedCount>1)return _exactScoped||null;
 return null;
 },
 findMatchingStockByName(name,vehicleId){
 const n=(name||'').trim().toLowerCase();
 if(!n)return null;
-const rows=(D.partsStock||[]).filter(p=>p&&String(p.name||'').trim().toLowerCase()===n);
-if(!rows.length)return null;
-const scoped=rows.filter(p=>{
-  if(!vehicleId)return true;
-  if(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function')return Sparepart.isPartForVehicle(p,vehicleId);
-  return !p.vehicleId||p.vehicleId===vehicleId;
-});
-if(scoped.length===1)return scoped[0];
-if(scoped.length>1){
-  const exact=scoped.find(p=>p.vehicleId&&String(p.vehicleId)===String(vehicleId));
-  return exact||null;
+const _parts=(D.partsStock||[]);let _scopedCount=0,_singleScoped=null,_exactScoped=null;
+for(const p of _parts){
+  if(!p||String(p.name||'').trim().toLowerCase()!==n)continue;
+  const _inScope=!vehicleId?true:(typeof Sparepart!=='undefined'&&typeof Sparepart.isPartForVehicle==='function'?Sparepart.isPartForVehicle(p,vehicleId):(!p.vehicleId||p.vehicleId===vehicleId));
+  if(!_inScope)continue;
+  _scopedCount++;if(_scopedCount===1)_singleScoped=p;
+  if(!_exactScoped&&p.vehicleId&&String(p.vehicleId)===String(vehicleId))_exactScoped=p;
 }
+if(_scopedCount===1)return _singleScoped;
+if(_scopedCount>1)return _exactScoped||null;
 return null;
 },
 async applyStockUsage(partId,qty){
@@ -1047,9 +1043,9 @@ const accId=document.getElementById('servisAcc')?document.getElementById('servis
 const kmRaw=document.getElementById('servisKm').value.trim();
 const km=kmRaw===''?null:Number(kmRaw);
 const date=document.getElementById('servisDate').value;
-const existingService=Servis.editId
-  ? (Array.isArray(D.servisLogs)?D.servisLogs.find(s=>s&&s.id===Servis.editId):null)
-  : null;
+// S2384: resolve the edited service row once and reuse it across edit preflight.
+const _editSessionSourceBefore=(Servis.editId!==null&&Array.isArray(D.servisLogs))?D.servisLogs.find(y=>y&&y.id===Servis.editId):null;
+const existingService=Servis.editId ? _editSessionSourceBefore : null;
 const originalKm=existingService&&existingService.km!==null&&existingService.km!==undefined&&existingService.km!==''
   ? Number(existingService.km) : null;
 const originalDate=existingService?String(existingService.date||''):'';
@@ -1074,12 +1070,13 @@ const catalogPartName=(catalogPartId&&catalogPartSelEl&&catalogPartSelEl.selecte
 const catalogStockMatch=catalogPartId?(Servis.findMatchingStockByCatalogId(catalogPartId,curVehicleId)||Servis.findMatchingStockByName(catalogPartName,curVehicleId)):null;
 const catalogLinkedStockId=catalogStockMatch?catalogStockMatch.id:null;
 const itemIsVehicleName=!!matchingVehicleName(item);
-const _editSessionRowsBefore=(Servis.editId!==null&&Array.isArray(D.servisLogs))?D.servisLogs.filter(x=>x&&String(x.vehicleId||curVehicleId)===String(curVehicleId)&&String(x.sessionId||x.serviceJobId||x.id)===String(Servis.editId===null?'':(D.servisLogs.find(y=>y&&y.id===Servis.editId)?.sessionId||D.servisLogs.find(y=>y&&y.id===Servis.editId)?.serviceJobId||Servis.editId))).map(x=>{try{return JSON.parse(JSON.stringify(x));}catch(_){return Object.assign({},x);}}):[];
+const _editSessionKeyBefore=String(Servis.editId===null?'':(_editSessionSourceBefore?.sessionId||_editSessionSourceBefore?.serviceJobId||Servis.editId));
+const _editSessionRowsBefore=(Servis.editId!==null&&Array.isArray(D.servisLogs))?D.servisLogs.filter(x=>x&&String(x.vehicleId||curVehicleId)===String(curVehicleId)&&String(x.sessionId||x.serviceJobId||x.id)===_editSessionKeyBefore).map(x=>{try{return JSON.parse(JSON.stringify(x));}catch(_){return Object.assign({},x);}}):[];
 const _isChecklistSessionEdit=Servis.editId!==null&&_editSessionRowsBefore.length>0&&_editSessionRowsBefore.some(x=>Array.isArray(x.checklist)&&x.checklist.length>0);
 if(!_hasCanonicalChecklist&&!_isChecklistSessionEdit){const legacyRefs=catalogPartId?[{catalogId:String(catalogPartId),qty:catalogPartQty||1}]:[];_preSaveChecklistSeed=[{itemId:serviceComponentId||null,itemName:item,group:'Legacy',masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,actionType,conditionResult,conditionNote,notApplicable:false,executionStatus:'COMPLETED',state:'COMPLETED',costBreakdown:{labor:null,parts:null,consumables:null,other:legacyCost,total:legacyCost,source:'service_entry'},cost:legacyCost,catalogPartRefs:legacyRefs,usedPartId:usedPartId||null,usedPartQty:usedPartQty||0,catalogPartId:catalogPartId||null,catalogPartQty:catalogPartQty||0,catalogPartOemCode:catalogPartOemCode||'',catalogPartLinkedStockId:catalogLinkedStockId||null,photos:Servis._photoDraft.slice(),foto:Servis._photoDraft.slice(),intervalKmOverride:intervalKm||null,intervalKmAtService:intervalKm||null,checklistItemId:serviceComponentId||null}];}
 let catIdForLog=matched?matched.id:null;
 if(Servis.editId!==null&&!matched){
-  const existing=D.servisLogs.find(x=>x.id===Servis.editId);
+  const existing=_editSessionSourceBefore;
   const oldCat=existing&&existing.categoryId?D.sparepartCats.find(c=>c&&c.id===existing.categoryId&&(!c.vehicleId||c.vehicleId===curVehicleId)):null;
   const sameItem=existing&&String(existing.item||'').trim().toLowerCase()===item.toLowerCase();
   if(oldCat&&sameItem)catIdForLog=oldCat.id;
@@ -1244,7 +1241,20 @@ const _ibSnapshot=(typeof getEffectiveIntervalBulan==='function'&&_catForSnapsho
 const _nextSnapshot=(typeof buildServiceNextDueSnapshot==='function'&&_catForSnapshot)?buildServiceNextDueSnapshot({vehicleId:curVehicleId,cat:_catForSnapshot,serviceKm:km,serviceDate:date,actionType:actionType||null}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
 const _rowsToPersist=_hasChecklistRows?_checkedServiceRows:[{itemName:_effectiveItem,categoryId:catIdForLog||null,masterCategoryId:masterCategoryId||null,actionType,serviceComponentId:serviceComponentId||null}];
 const _rowIdempotencyKeys=_rowsToPersist.map(_row=>{const ids=[_row.serviceComponentId||_row.itemId||serviceComponentId||masterCategoryId||catIdForLog||_row.itemName].filter(Boolean).map(String);const refs=Array.isArray(_row.catalogPartRefs)?_row.catalogPartRefs.map(r=>String(r.catalogId||'')).filter(Boolean).sort().join(','):'';return typeof ServiceEventIdempotencySOT!=='undefined'&&ServiceEventIdempotencySOT&&typeof ServiceEventIdempotencySOT.key==='function'?ServiceEventIdempotencySOT.key({vehicleId:curVehicleId,componentIds:ids,date,km,actionType:_row.actionType||actionType,fingerprint:refs}):null;});
-if(_rowIdempotencyKeys.some(k=>k&&typeof ServiceEventIdempotencySOT!=='undefined'&&ServiceEventIdempotencySOT.find&&ServiceEventIdempotencySOT.find(D.servisLogs||[],k,curVehicleId))){toast('⚠️ Pengerjaan servis yang sama sudah tersimpan; penyimpanan duplikat dibatalkan');return;}
+if(typeof ServiceEventIdempotencySOT!=='undefined'&&ServiceEventIdempotencySOT&&typeof ServiceEventIdempotencySOT.find==='function'){
+ const _keysToCheck=_rowIdempotencyKeys.filter(k=>k);
+ if(_keysToCheck.length){
+  const _existingIdempotencyKeys=new Set();
+  for(const _existingRow of (D.servisLogs||[])){
+   if(!_existingRow)continue;
+   const _existingKey=String(_existingRow.idempotencyKey==null?'':_existingRow.idempotencyKey).trim();
+   const _existingVehicle=String(_existingRow.vehicleId==null?'':_existingRow.vehicleId).trim();
+   _existingIdempotencyKeys.add(curVehicleId?_existingKey+'\u0000'+_existingVehicle:_existingKey);
+  }
+  if(_keysToCheck.some(_key=>_existingIdempotencyKeys.has(String(_key==null?'':_key).trim()+(curVehicleId?'\u0000'+String(curVehicleId==null?'':curVehicleId).trim():'')))){toast('⚠️ Pengerjaan servis yang sama sudah tersimpan; penyimpanan duplikat dibatalkan');return;}
+ }
+}
+const _newSessionLogStartIndex=(Array.isArray(D.servisLogs)?D.servisLogs.length:0);
 _rowsToPersist.forEach((_row,_rowIdx)=>{
   const _rowCategoryId=_row.categoryId||(_row.itemId&&typeof ServisChecklist!=='undefined'&&typeof ServisChecklist.findItemById==='function'&&(()=>{const f=ServisChecklist.findItemById(_row.itemId);return f&&typeof ServisChecklist.resolveCategoryForItem==='function'?(ServisChecklist.resolveCategoryForItem(f.item,curVehicleId)||{}).id||null:null;})())||null;
   const _rowMasterCategoryId=_row.masterCategoryId||masterCategoryId||null;
@@ -1261,16 +1271,17 @@ _rowsToPersist.forEach((_row,_rowIdx)=>{
 });
 // S2001: freeze catalog identity/label at service time; missing parts remain null (never fabricated).
 if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getById==='function'){
-  for(const _savedRow of D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId)){const _refs=Array.isArray(_savedRow.catalogPartRefs)?_savedRow.catalogPartRefs:[]; _savedRow.catalogPartSnapshots=[];
+  const _sessionRowsToSnapshot=D.servisLogs.slice(_newSessionLogStartIndex).filter(x=>x&&x.sessionId===_serviceSessionId);
+  for(let _rowIndex=0;_rowIndex<_sessionRowsToSnapshot.length;_rowIndex++){const _savedRow=_sessionRowsToSnapshot[_rowIndex];const _refs=Array.isArray(_savedRow.catalogPartRefs)?_savedRow.catalogPartRefs:[]; _savedRow.catalogPartSnapshots=[];
     for(const _ref of _refs){try{const _part=await VehicleCatalog.getById(_ref.catalogId);_savedRow.catalogPartSnapshots.push({catalogId:String(_ref.catalogId),qty:Number(_ref.qty)>0?Number(_ref.qty):1,name:_part&&(_part.partName||_part.name)||null,oemCode:_part&&(_part.oemCode||null),category:_part&&(_part.category||null),vehicleId:_part&&(_part.compatibleVehicleIds)?null:null});}catch(_snapErr){_savedRow.catalogPartSnapshots.push({catalogId:String(_ref.catalogId),qty:Number(_ref.qty)>0?Number(_ref.qty):1,name:null,oemCode:null,category:null,vehicleId:null});}}
-    const _rowIndex=D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId).indexOf(_savedRow);if(_rowIndex>=0&&_rowIndex<_rowIdempotencyKeys.length)_savedRow.idempotencyKey=_rowIdempotencyKeys[_rowIndex];
+    if(_rowIndex<_rowIdempotencyKeys.length)_savedRow.idempotencyKey=_rowIdempotencyKeys[_rowIndex];
   }
 }
 save({domain:'servis',financeMutation:!!txId,accountIds:txId?[accId]:[]});
 const _newServisLog=D.servisLogs[D.servisLogs.length-1];
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(_newServisLog);}catch(_lifecycleCreateErr){console.error('V25: post-commit service create lifecycle failed; reconciliation required',_lifecycleCreateErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:_newServisLog});}}
 if(typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function'){
-  try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);const _savedRows=D.servisLogs.filter(x=>x&&x.sessionId===_serviceSessionId&&x.id!==servisId);_savedRows.forEach(r=>VehicleCatalogServisLink.attachToServis(r.id,Array.isArray(r.catalogPartRefs)?r.catalogPartRefs:[]));
+  try{VehicleCatalogServisLink.attachToServis(servisId,catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]);const _savedRows=D.servisLogs.slice(_newSessionLogStartIndex).filter(x=>x&&x.sessionId===_serviceSessionId&&x.id!==servisId);_savedRows.forEach(r=>VehicleCatalogServisLink.attachToServis(r.id,Array.isArray(r.catalogPartRefs)?r.catalogPartRefs:[]));
   }catch(_catalogErr){console.error('V24: post-commit catalog service link failed; queued for reconciliation',_catalogErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'catalog.attach',payload:{servisId:servisId,links:catalogPartId?[{catalogId:catalogPartId,qty:catalogPartQty}]:[]}});}
 }
 if(txId&&typeof AIBus!=="undefined"){
@@ -1427,8 +1438,9 @@ _historySessionRows(sessionId){
 const sid=String(sessionId||'');if(!sid)return [];
 return (Array.isArray(D.servisLogs)?D.servisLogs:[]).filter(x=>x&&String(x.sessionId||x.serviceJobId||'')===sid);
 },
-_historySessionComponentEntries(sessionId){
-const rows=Servis._historySessionRows(sessionId);const out=[];const seen=new Set();
+_historySessionComponentEntries(sessionId,sourceRows){
+// S2386: reuse the session snapshot already captured by _historySessionContext.
+const rows=Array.isArray(sourceRows)?sourceRows:Servis._historySessionRows(sessionId);const out=[];const seen=new Set();
 rows.forEach(row=>{
  const list=Array.isArray(row&&row.checklist)&&row.checklist.length?row.checklist:[row];
  list.forEach(c=>{
@@ -1463,7 +1475,7 @@ addHistorySessionComponent(sessionId){return Servis.openHistorySessionEditor(ses
 editHistorySessionComponent(sessionId,componentId){return Servis.openHistorySessionEditor(sessionId,componentId);},
 async removeHistorySessionComponent(sessionId,componentId){
 const ctx=Servis._historySessionContext(sessionId);if(!ctx)return;
-const entry=Servis._historySessionComponentEntries(sessionId).find(x=>String(x.id)===String(componentId));
+const entry=Servis._historySessionComponentEntries(sessionId,ctx.originalRows).find(x=>String(x.id)===String(componentId));
 if(!entry)return;
 if(!await askConfirm(`Hapus komponen "${entry.componentName}" dari sesi ini? Komponen lain tetap dipertahankan.`))return;
 try{
@@ -1479,7 +1491,7 @@ try{
 },
 async removeHistorySessionCategory(sessionId,masterCategoryId,categoryName){
 const ctx=Servis._historySessionContext(sessionId);if(!ctx)return;
-const entries=Servis._historySessionComponentEntries(sessionId).filter(x=>String(x.masterCategoryId)===String(masterCategoryId));
+const entries=Servis._historySessionComponentEntries(sessionId,ctx.originalRows).filter(x=>String(x.masterCategoryId)===String(masterCategoryId));
 if(!entries.length){toast('⚠️ Kategori ini tidak memiliki komponen aktif pada sesi');return;}
 if(!await askConfirm(`Hapus kategori "${categoryName||masterCategoryId}" beserta ${entries.length} komponennya dari sesi ini?`))return;
 try{
@@ -1516,16 +1528,19 @@ const sameComponent=(log)=>{
   if(current.categoryId&&log.categoryId)return String(current.categoryId)===String(log.categoryId);
   return currentCat&&typeof servisLogMatchesCat==='function'?servisLogMatchesCat(log,currentCat):String(log.item||'').trim().toLowerCase()===String(current.item||'').trim().toLowerCase();
 };
-const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...new Map((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(x.sessionId||x.serviceJobId)).map(x=>[String(x.sessionId||x.serviceJobId),x])).values()].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+// Restrict subsequent session/options/history work to this vehicle once per render.
+// Keep the source array and all matching predicates read-only; only the local view is reused.
+const vehicleLogs=(D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey);
+const sessionId=current.sessionId||current.serviceJobId||'';const sessions=[...new Map(vehicleLogs.filter(x=>x.sessionId||x.serviceJobId).map(x=>[String(x.sessionId||x.serviceJobId),x])).values()].sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
 // Component options are built from the SAME canonical component resolver used by history rows.
 // Do not narrow this list to the current session: Reminder → Riwayat intentionally means
 // the selected component across all sessions for the active vehicle.
-const componentIds=[...new Set((D.servisLogs||[]).filter(x=>x&&String(x.vehicleId)===vehicleKey&&(!Servis.serviceHistorySessionFilter||String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter))).flatMap(x=>{const resolved=Servis.resolveLogServiceComponentId(x);const ids=typeof Servis.resolveLogServiceComponentIds==='function'?Servis.resolveLogServiceComponentIds(x):[x.serviceComponentId||x.checklistItemId||null];return resolved?[resolved,...ids]:ids;}).filter(Boolean).map(String))];
+const componentSourceRows=Servis.serviceHistorySessionFilter?vehicleLogs.filter(x=>String(x.sessionId||x.serviceJobId||'')===String(Servis.serviceHistorySessionFilter)):vehicleLogs;
+const componentIds=[...new Set(componentSourceRows.flatMap(x=>{const resolved=Servis.resolveLogServiceComponentId(x);const ids=typeof Servis.resolveLogServiceComponentIds==='function'?Servis.resolveLogServiceComponentIds(x):[x.serviceComponentId||x.checklistItemId||null];return resolved?[resolved,...ids]:ids;}).filter(Boolean).map(String))];
 const requestedComponentFilter=String(Servis.serviceHistoryComponentFilter||'');
 const effectiveComponentFilter=requestedComponentFilter&&componentIds.includes(requestedComponentFilter)?requestedComponentFilter:'';
 Servis.serviceHistoryComponentFilter=effectiveComponentFilter;
-const history=(D.servisLogs||[]).filter(log=>{
-  if(!log||String(log.vehicleId)!==vehicleKey)return false;
+const history=vehicleLogs.filter(log=>{
   const sid=String(log.sessionId||log.serviceJobId||'');
   if(Servis.serviceHistorySessionFilter&&sid!==String(Servis.serviceHistorySessionFilter))return false;
   if(effectiveComponentFilter){
@@ -1583,7 +1598,7 @@ async removeHistoryAuditPackage(packageId){const api=typeof ServiceHistoryAuditP
 openHistoryAuditPackage(packageId){const api=typeof ServiceHistoryAuditPackage!=='undefined'?ServiceHistoryAuditPackage:null,p=api&&api.byId(packageId);if(!p)return;const a=api.audit(packageId),sum=a.summary||{},rows=a.sourceRows||[],integ=a.integrity||{};let box=document.getElementById('serviceHistoryAuditDetail');if(box)box.remove();box=document.createElement('div');box.id='serviceHistoryAuditDetail';box.className='overlay open';box.style.zIndex='430';const warn=integ.ok?'':'<div style="padding:8px;margin-bottom:8px">⚠️ Sebagian sumber tidak ditemukan. Data yang hilang tidak dibuat-buat.</div>';box.innerHTML=`<div class="modal"><div class="modal-title"><span>📦 ${escapeHtml(p.title)}</span><button class="modal-close" data-action="Servis.closeHistoryAuditPackage">✕</button></div>${warn}<div class="fg"><label class="fl">JASA / JENIS PEKERJAAN</label><div class="u-fs11 u-t2">${sum.jobTypes&&sum.jobTypes.length?escapeHtml(sum.jobTypes.map(x=>x.label||x.id).join(', ')):'Belum ditetapkan'}</div></div><div class="fg"><label class="fl">PERIODE</label><div class="u-fs11 u-t2">${escapeHtml(sum.dateMin||'-')} → ${escapeHtml(sum.dateMax||'-')} · ${sum.kmMin==null?'':Number(sum.kmMin).toLocaleString('id-ID')+' km'}${sum.kmMax==null?'':' → '+Number(sum.kmMax).toLocaleString('id-ID')+' km'}</div></div><div class="fg"><label class="fl">STATUS</label><div class="u-fs11 u-t2">${escapeHtml(p.statusLabel||p.status||'Aktif')}</div></div><div class="fg"><label class="fl">KOMPONEN</label><div class="u-fs11 u-t2">${sum.components&&sum.components.length?escapeHtml(sum.components.map(x=>x.name).join(', ')):'-'}</div></div><div class="fg"><label class="fl">PEMERIKSAAN</label><div class="u-fs11 u-t2">${Number(sum.inspections||0)} riwayat pemeriksaan</div></div><div class="fg"><label class="fl">PART</label><div class="u-fs11 u-t2">${sum.parts&&sum.parts.length?escapeHtml(sum.parts.map(x=>x.name).join(', ')):'-'}</div></div><div class="fg"><label class="fl">BIAYA</label><div class="u-fs11 u-t2">Rp ${Number(sum.totalCost||0).toLocaleString('id-ID')}</div></div><div class="fg"><label class="fl">SUMBER</label><div>${rows.map(x=>`<div style="padding:6px 0;border-top:1px solid var(--border2)">${escapeHtml(x.item||'Tanpa nama')} <button type="button" class="btn btn-ghost btn-sm" data-action="Servis.openHistorySourceFromAudit" data-args="${escapeHtml(JSON.stringify([x.id]))}">Buka Sumber</button></div>`).join('')}</div></div></div>`;document.body.appendChild(box);},
 openHistorySourceFromAudit(serviceId){const box=document.getElementById('serviceHistoryAuditDetail');if(box)box.remove();if(typeof Servis.openModal==='function')Servis.openModal(serviceId);},
 closeHistoryAuditPackage(){const box=document.getElementById('serviceHistoryAuditDetail');if(box)box.remove();},
-createHistoryAuditPackage(){try{const api=typeof ServiceHistoryAuditPackage!=='undefined'?ServiceHistoryAuditPackage:null;if(!api)return;const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');if(!panel)return;const ids=typeof Servis.getHistoryAuditSelectionIds==='function'?Servis.getHistoryAuditSelectionIds(typeof Servis._historySelectionVehicleId==='function'?Servis._historySelectionVehicleId():curVehicleId):[...panel.querySelectorAll('input[data-service-audit-id]:checked')].map(x=>x.getAttribute('data-service-audit-id')).filter(Boolean).slice(0,100);if(ids.length<2){toast('⚠️ Pilih minimal 2 riwayat yang benar-benar satu pekerjaan');return;}const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===String(id))).filter(Boolean);if(logs.length!==ids.length){toast('⚠️ Sebagian riwayat pilihan tidak ditemukan');return;}const vehicles=new Set(logs.map(x=>String(x.vehicleId||curVehicleId)));if(vehicles.size>1){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}const current=(D.servisLogs||[]).find(x=>x&&String(x.id)===String(Servis.editId))||logs[0]||{};const packageVehicleId=String(current.vehicleId||((logs[0]||{}).vehicleId)||curVehicleId||'');if(!packageVehicleId){toast('⚠️ Kendaraan sumber tidak ditemukan');return;}if(logs.some(x=>String(x.vehicleId||'')!==packageVehicleId)){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}const typeId=document.getElementById('serviceAuditPackageType')?.value||'other';const title=(document.getElementById('serviceAuditPackageTitle')?.value||'').trim()||(typeId==='overhaul_turun_mesin'?'Overhaul / Turun Mesin':'Paket Pekerjaan');const result=api.create({vehicleId:packageVehicleId,title,typeId,sourceServiceIds:ids});if(!result.ok){toast('⚠️ Paket tidak dibuat: '+result.code);return;}toast('✅ Paket pekerjaan dibuat tanpa mengubah riwayat sumber');Servis.renderEditAuditTab();}catch(err){console.error('[S1976] createHistoryAuditPackage failed',err);toast('⚠️ Paket tidak dapat dibuat. Riwayat sumber tidak diubah.',5000);}},
+createHistoryAuditPackage(){try{const api=typeof ServiceHistoryAuditPackage!=='undefined'?ServiceHistoryAuditPackage:null;if(!api)return;const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');if(!panel)return;const ids=typeof Servis.getHistoryAuditSelectionIds==='function'?Servis.getHistoryAuditSelectionIds(typeof Servis._historySelectionVehicleId==='function'?Servis._historySelectionVehicleId():curVehicleId):[...panel.querySelectorAll('input[data-service-audit-id]:checked')].map(x=>x.getAttribute('data-service-audit-id')).filter(Boolean).slice(0,100);if(ids.length<2){toast('⚠️ Pilih minimal 2 riwayat yang benar-benar satu pekerjaan');return;}const _serviceLogs=Array.isArray(D.servisLogs)?D.servisLogs:[];const _serviceLogById=new Map();_serviceLogs.forEach(x=>{if(!x)return;const key=String(x.id);if(!_serviceLogById.has(key))_serviceLogById.set(key,x);});const logs=ids.map(id=>_serviceLogById.get(String(id))).filter(Boolean);if(logs.length!==ids.length){toast('⚠️ Sebagian riwayat pilihan tidak ditemukan');return;}const vehicles=new Set(logs.map(x=>String(x.vehicleId||curVehicleId)));if(vehicles.size>1){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}const current=_serviceLogById.get(String(Servis.editId))||logs[0]||{};const packageVehicleId=String(current.vehicleId||((logs[0]||{}).vehicleId)||curVehicleId||'');if(!packageVehicleId){toast('⚠️ Kendaraan sumber tidak ditemukan');return;}if(logs.some(x=>String(x.vehicleId||'')!==packageVehicleId)){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}const typeId=document.getElementById('serviceAuditPackageType')?.value||'other';const title=(document.getElementById('serviceAuditPackageTitle')?.value||'').trim()||(typeId==='overhaul_turun_mesin'?'Overhaul / Turun Mesin':'Paket Pekerjaan');const result=api.create({vehicleId:packageVehicleId,title,typeId,sourceServiceIds:ids});if(!result.ok){toast('⚠️ Paket tidak dibuat: '+result.code);return;}toast('✅ Paket pekerjaan dibuat tanpa mengubah riwayat sumber');Servis.renderEditAuditTab();}catch(err){console.error('[S1976] createHistoryAuditPackage failed',err);toast('⚠️ Paket tidak dapat dibuat. Riwayat sumber tidak diubah.',5000);}},
 _renderEditHistoryHtml(s){
 const hist=Array.isArray(s&&s.editHistory)?s.editHistory:[];
 if(!hist.length)return'';
@@ -1612,7 +1627,10 @@ const _runDeleteSession=async()=>{
   const _sessionStockIds=new Set();
   logs.forEach(x=>{[x.usedPartId,x.catalogPartLinkedStockId,x.autoGantiStockId].filter(Boolean).forEach(id=>_sessionStockIds.add(id));});
   const beforeStock=new Map();
-  for(const sid of _sessionStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
+  const _sessionStockRows=Array.isArray(D.partsStock)?D.partsStock:[];
+  const _sessionStockById=new Map();
+  _sessionStockRows.forEach(x=>{if(x&&x.id===x.id&&!_sessionStockById.has(x.id))_sessionStockById.set(x.id,x);});
+  for(const sid of _sessionStockIds){const row=_sessionStockById.get(sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
   try{
     if(txIds.size){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(tx=>tx&&txIds.has(tx.id)); else D.transactions=D.transactions.filter(tx=>!txIds.has(tx.id));}
     logs.forEach(s=>{
@@ -1630,9 +1648,15 @@ const _runDeleteSession=async()=>{
       }
     });
   }catch(err){
-    try{
-      for(const row of beforeLogs){const cur=(D.servisLogs||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else D.servisLogs.push(_cloneSession(row));}
-      for(const row of beforeTx){const cur=(D.transactions||[]).find(x=>x&&x.id===row.id);if(cur)Object.assign(cur,_cloneSession(row));else if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cloneSession(row)); else D.transactions.push(_cloneSession(row));}
+      try{
+      const _rollbackServiceRows=Array.isArray(D.servisLogs)?D.servisLogs:[];
+      const _rollbackServiceById=new Map();
+      _rollbackServiceRows.forEach(x=>{if(x&&!_rollbackServiceById.has(x.id))_rollbackServiceById.set(x.id,x);});
+      for(const row of beforeLogs){const cur=_rollbackServiceById.get(row.id);if(cur)Object.assign(cur,_cloneSession(row));else{const restored=_cloneSession(row);D.servisLogs.push(restored);_rollbackServiceById.set(row.id,restored);}}
+      const _rollbackTxRows=Array.isArray(D.transactions)?D.transactions:[];
+      const _rollbackTxById=new Map();
+      _rollbackTxRows.forEach(x=>{if(x&&!_rollbackTxById.has(x.id))_rollbackTxById.set(x.id,x);});
+      for(const row of beforeTx){const cur=_rollbackTxById.get(row.id);if(cur)Object.assign(cur,_cloneSession(row));else if(typeof FinanceTxSOT!=='undefined'){const restored=_cloneSession(row);FinanceTxSOT.create(restored);_rollbackTxById.set(row.id,restored);}else{const restored=_cloneSession(row);D.transactions.push(restored);_rollbackTxById.set(row.id,restored);}}
       if(beforeStock&&beforeStock.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok sesi servis');const sr=StockCommandSOT.setQtyMap(beforeStock,{reason:'service-session-delete-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_SESSION_STOCK_ROLLBACK_FAILED');}
     }catch(restoreErr){console.error('P17: session service delete rollback failed',restoreErr);}
     console.error('P17: session service delete failed',err);
@@ -1811,7 +1835,9 @@ const date=(typeof formatServiceDateOnly==='function'&&typeof parseServiceDateOn
 const accId=D.accounts[0]?.id;
 
 const _markStockIds=new Set();
-const _markCatStock=Servis._findAutoGantiStock(cat,curVehicleId);
+// Only replacement actions can mutate automatic stock; inspections/cleaning
+// need no stock snapshot for rollback.
+const _markCatStock=actionType==='ganti'?Servis._findAutoGantiStock(cat,curVehicleId):null;
 if(_markCatStock&&_markCatStock.id)_markStockIds.add(_markCatStock.id);
 const _markStockBefore=new Map();
 for(const sid of _markStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)_markStockBefore.set(sid,Number(row.qty)||0);}
@@ -1881,13 +1907,37 @@ async markServicedBatch(items){
 if(!Array.isArray(items)||!items.length)return[];
 
 const _batchStockIds=new Set();
-for(const it of items){const c=(D.sparepartCats||[]).find(x=>x&&x.id===it.catId);const st=c?Servis._findAutoGantiStock(c,curVehicleId):null;if(st&&st.id)_batchStockIds.add(st.id);}
+const _batchCategoryById=new Map();
+const _batchAutoStockByCatId=new Map();
+const _batchCategories=Array.isArray(D.sparepartCats)?D.sparepartCats:[];
+for(const it of items){
+  let c;
+  if(_batchCategoryById.has(it.catId))c=_batchCategoryById.get(it.catId);
+  else{c=_batchCategories.find(x=>x&&x.id===it.catId);_batchCategoryById.set(it.catId,c);}
+  let st=null;
+  // Preflight snapshots stock only for replacement actions that can consume it.
+  if(c&&it.actionType==='ganti'){
+    const _stockCacheKey=c.id;
+    if(_batchAutoStockByCatId.has(_stockCacheKey))st=_batchAutoStockByCatId.get(_stockCacheKey);
+    else{st=Servis._findAutoGantiStock(c,curVehicleId);_batchAutoStockByCatId.set(_stockCacheKey,st);}
+  }
+  if(st&&st.id)_batchStockIds.add(st.id);
+}
 const batchStockBefore=new Map();
-for(const sid of _batchStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)batchStockBefore.set(sid,Number(row.qty)||0);}
+const _batchStockRows=Array.isArray(D.partsStock)?D.partsStock:[];
+const _batchStockById=new Map();
+_batchStockRows.forEach(x=>{if(x&&x.id===x.id&&!_batchStockById.has(x.id))_batchStockById.set(x.id,x);});
+for(const sid of _batchStockIds){const row=_batchStockById.get(sid);if(row)batchStockBefore.set(sid,Number(row.qty)||0);}
 const restoreBatch=()=>{
   try{
-    const batchIds=new Set((D.servisLogs||[]).filter(x=>x&&x.batchId===batchId).map(x=>x.id));
-    D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.batchId===batchId));
+    const _rollbackLogs=Array.isArray(D.servisLogs)?D.servisLogs:[];
+    const batchIds=new Set();
+    const _keptRollbackLogs=[];
+    for(const _rollbackLog of _rollbackLogs){
+      if(_rollbackLog&&_rollbackLog.batchId===batchId)batchIds.add(_rollbackLog.id);
+      else _keptRollbackLogs.push(_rollbackLog);
+    }
+    D.servisLogs=_keptRollbackLogs;
     if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId&&batchIds.has(x.servisLinkId)); else D.transactions=(D.transactions||[]).filter(x=>!(x&&x.servisLinkId&&batchIds.has(x.servisLinkId)));
     if(batchStockBefore&&batchStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback batch servis');const sr=StockCommandSOT.setQtyMap(batchStockBefore,{reason:'service-batch-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_BATCH_STOCK_ROLLBACK_FAILED');}
   }catch(e){console.error('V26: batch rollback failed',e);}
@@ -1904,6 +1954,7 @@ const runBatch=async()=>{
 
     const _batchAccountIds=[...new Set(results.filter(e=>e&&e.txLinkId&&e.accountId!=null).map(e=>e.accountId))];
     save({domain:'servis',financeMutation:_batchAccountIds.length>0,accountIds:_batchAccountIds});
+    const _batchVehicleById=new Map();
     for(const entry of results){
       // V36: lifecycle and finance projections are independent post-commit effects.
       // A lifecycle failure must never skip the Finance event for the same committed item.
@@ -1912,7 +1963,10 @@ const runBatch=async()=>{
         else if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});
       }catch(e){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});else console.error('V36: batch service lifecycle failed',e);}
       if(entry.txLinkId&&typeof AIBus!=='undefined'){
-        const _batchFinancePayload={txId:entry.txLinkId,category:resolveVehicleTxCategory(D.vehicles.find(v=>v.id===entry.vehicleId)),type:'expense',amount:entry.cost||0,kind:'servis'};
+        let _batchVehicle;
+        if(_batchVehicleById.has(entry.vehicleId))_batchVehicle=_batchVehicleById.get(entry.vehicleId);
+        else{_batchVehicle=D.vehicles.find(v=>v.id===entry.vehicleId);_batchVehicleById.set(entry.vehicleId,_batchVehicle);}
+        const _batchFinancePayload={txId:entry.txLinkId,category:resolveVehicleTxCategory(_batchVehicle),type:'expense',amount:entry.cost||0,kind:'servis'};
         try{AIBus.emit('finance.updated',_batchFinancePayload);}
         catch(_batchFinanceEventErr){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_batchFinancePayload});else console.error('V36: batch finance event failed',_batchFinanceEventErr);}
       }

@@ -3,6 +3,12 @@
 (function(){
 if(typeof Servis==='undefined')return;
 const BulkHistoryIdentityEditor={
+_logsByIds(ids){
+const logs=Array.isArray(D.servisLogs)?D.servisLogs:[];
+const byId=new Map();
+for(const log of logs){if(!log)continue;const id=String(log.id);if(!byId.has(id))byId.set(id,log);}
+return (Array.isArray(ids)?ids:[]).map(id=>byId.get(String(id))).filter(Boolean);
+},
 _selectedHistoryAuditIds(){
 const panel=document.getElementById('servisAuditPanel')||document.getElementById('servisHistoryPanel');
 if(typeof Servis.getHistoryAuditSelectionIds==='function')return Servis.getHistoryAuditSelectionIds(typeof Servis._historySelectionVehicleId==='function'?Servis._historySelectionVehicleId():curVehicleId);
@@ -42,7 +48,7 @@ if(!out)return;
 const groups=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.groups==='function'?ServiceInputCatalog.groups():[];
 const g=groups.find(x=>String(x.masterCategoryId)===String(master));
 const comp=g&&Array.isArray(g.items)?g.items.find(x=>String(x.id)===String(component)):null;
-const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===String(id))).filter(Boolean);
+const logs=Servis._logsByIds(ids);
 const changes=logs.filter(log=>{const sel=Servis.resolveCanonicalServiceSelection(log);return String(sel.masterCategoryId||'')!==String(master||'')||String(sel.serviceComponentId||'')!==String(component||'');});
 const legacyMismatch=logs.filter(log=>Servis._bulkHistoryLegacyCategoryMismatch(log,master)).length;
 const target=(g?g.group:'—')+' → '+(comp?(comp.name||comp.label||comp.id):'— komponen kosong');
@@ -56,7 +62,7 @@ const ids=Servis._selectedHistoryAuditIds();
 if(!ids.length){toast('⚠️ Pilih minimal 1 riwayat terlebih dahulu');return;}
 if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per perubahan agar aman. Kurangi pilihan terlebih dahulu.');return;}
 const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId)||null;
-const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===String(id))).filter(Boolean);
+const logs=Servis._logsByIds(ids);
 if(!logs.length){toast('⚠️ Riwayat yang dipilih tidak ditemukan');return;}
 const vehicleId=current?.vehicleId||curVehicleId;
 if(logs.some(x=>String(x.vehicleId||vehicleId)!==String(vehicleId))){toast('⚠️ Pilihan harus berasal dari kendaraan yang sama');return;}
@@ -101,7 +107,7 @@ const items=Array.isArray(group.items)?group.items:[];
 if(component&&!items.some(x=>String(x.id)===component)){toast('⚠️ Komponen tidak cocok dengan kategori yang dipilih');return;}
 const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId)||null;
 const vehicleId=current?.vehicleId||curVehicleId;
-const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
+const logs=Servis._logsByIds(ids);
 if(logs.length!==ids.length||logs.some(x=>String(x.vehicleId||vehicleId)!==String(vehicleId))){toast('⚠️ Validasi kendaraan/riwayat gagal. Tidak ada perubahan disimpan.');return;}
 const plan=logs.map(log=>{const oldSel=Servis.resolveCanonicalServiceSelection(log);const nextMaster=master;const nextComponent=component||'';const fields=[];if(String(oldSel.masterCategoryId||'')!==nextMaster)fields.push('masterCategoryId');if(String(oldSel.serviceComponentId||'')!==nextComponent)fields.push('serviceComponentId');return {log,oldSel,nextMaster,nextComponent,fields};});
 const changes=plan.filter(x=>x.fields.length);
@@ -188,7 +194,7 @@ openHistoryJobTypeEditor(){
  const jobs=typeof ServiceSessionSOT!=='undefined'&&Array.isArray(ServiceSessionSOT.JOB_TYPES)?ServiceSessionSOT.JOB_TYPES:[];
  let box=document.getElementById('serviceHistoryJobTypeEditor');if(box)box.remove();
  const current=(D.servisLogs||[]).find(x=>x&&x.id===Servis.editId)||null;
- const common=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
+ const common=Servis._logsByIds(ids);
  const commonType=common.length&&common.every(x=>String(x.serviceJobType||'')===String(common[0].serviceJobType||''))?String(common[0].serviceJobType||''):'';
  box=document.createElement('div');box.id='serviceHistoryJobTypeEditor';box.className='overlay open';box.style.cssText='z-index:440;position:fixed;inset:0;width:100vw;height:100dvh;max-width:none;';
  box.innerHTML=`<div class="modal" style="width:100%;max-width:520px;box-sizing:border-box;margin:0 auto;max-height:100dvh;overflow-y:auto"><div class="modal-title"><span>🔧 Tetapkan Jenis Pekerjaan</span><button class="modal-close" data-action="Servis.closeHistoryJobTypeEditor">✕</button></div><div class="u-fs11 u-t2" style="margin-bottom:10px">${ids.length} riwayat dipilih. Jenis pekerjaan adalah klasifikasi service-level; tidak mengubah kategori/komponen SOT dan tidak membuat paket.</div><div class="fg"><label class="fl">Jenis Pekerjaan</label><select class="fs" id="serviceHistoryJobType"><option value="">— Hapus jenis pekerjaan —</option>${jobs.map(j=>`<option value="${escapeHtml(String(j.id))}"${String(j.id)===commonType?' selected':''}>${escapeHtml(j.label||j.name||j.id)}</option>`).join('')}</select></div><div class="u-fs11 u-t2" style="margin:8px 0 12px;line-height:1.5">KM, tanggal, biaya, checklist, kategori, komponen, part, dan reminder interval tidak ikut berubah.</div><div style="display:flex;gap:8px;justify-content:flex-end"><button type="button" class="btn btn-ghost" data-action="Servis.closeHistoryJobTypeEditor">Batal</button><button type="button" class="btn btn-primary" data-action="Servis.commitHistoryJobTypeEditor">Simpan</button></div></div>`;
@@ -204,7 +210,7 @@ async commitHistoryJobTypeEditor(){
  if(!ids.length)return;
  if(typeof ServiceSessionSOT==='undefined'||typeof ServiceSessionSOT.jobType!=='function'||typeof ServiceSessionSOT.setJobType!=='function'){toast('⚠️ ServiceSessionSOT belum siap');return;}
  if(ids.length>100){toast('⚠️ Maksimal 100 riwayat per operasi.');return;}
- const logs=ids.map(id=>(D.servisLogs||[]).find(x=>x&&String(x.id)===id)).filter(Boolean);
+ const logs=Servis._logsByIds(ids);
  if(logs.length!==ids.length){toast('⚠️ Sebagian riwayat tidak ditemukan');return;}
  const vehicles=new Set(logs.map(x=>String(x.vehicleId||'')).filter(Boolean));
  if(vehicles.size>1){toast('⚠️ Semua riwayat harus berasal dari kendaraan yang sama');return;}

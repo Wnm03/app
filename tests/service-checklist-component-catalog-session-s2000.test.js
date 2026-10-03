@@ -68,7 +68,7 @@ test('S2000: save path menggunakan catalogPartRefs per row dan satu sessionId',(
   assert.match(src,/serviceJobId:_serviceSessionId/);
   assert.match(src,/checklistItemId:_row\.itemId\|\|null/);
   assert.match(src,/catalogPartRefs:_rowCatalogRefs/);
-  assert.match(src,/const _savedRows=D\.servisLogs\.filter/);
+  assert.match(src,/const _savedRows=D\.servisLogs\.slice\(_newSessionLogStartIndex\)\.filter/);
 });
 
 test('S2000: history filter has explicit pengerjaan/session and component controls',()=>{

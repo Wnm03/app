@@ -11,7 +11,7 @@ const idem=read('modules/vehicle/service-event-idempotency-sot.js');
 const sot=read('modules/finance/finance-tx-sot.js');
 // Service create: domain idempotency is checked before multi-entity side effects.
 ok('service-create-has-idempotency-key',/ServiceEventIdempotencySOT\.key\(/.test(svc));
-ok('service-create-checks-existing-before-write',/ServiceEventIdempotencySOT\.find\([\s\S]*?toast\('⚠️ Pengerjaan servis yang sama/.test(svc));
+ok('service-create-checks-existing-before-write',/typeof ServiceEventIdempotencySOT\.find==='function'/.test(svc)&&/_existingIdempotencyKeys=new Set\(\)/.test(svc)&&/toast\('⚠️ Pengerjaan servis yang sama/.test(svc));
 ok('service-create-finance-links-to-service-id',/servisLinkId:servisId/.test(svc));
 ok('service-create-cross-domain-recovery-outbox',/ServiceEventOutbox\.enqueue\(\{type:'finance\.updated'/.test(svc));
 ok('service-session-has-inflight-dedup',/_s2047MutationInFlight/.test(session));

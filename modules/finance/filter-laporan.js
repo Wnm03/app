@@ -14,8 +14,18 @@ if(f.kat&&f.kat!=='semua'&&t.category!==f.kat)return false;
 if(f.sub&&f.sub!=='semua'&&(t.subcategory||'')!==f.sub)return false;
 if(f.acc&&f.acc!=='semua'&&t.accountId!==f.acc)return false;
 if(f.method&&f.method!=='semua'&&(t.payMethod||'tunai')!==f.method)return false;
-if(f.serviceCategory&&f.serviceCategory!=='semua'){ if(!t.servisLinkId) return false; const sl=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId); if(!sl || sl.masterCategoryId!==f.serviceCategory) return false; }
-if(f.serviceComponent&&f.serviceComponent!=='semua'){ if(!t.servisLinkId) return false; const sl=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId); if(!sl || !Array.isArray(sl.checklist) || !sl.checklist.some(x=>x&&x.itemId===f.serviceComponent)) return false; }
+// S2369 PERF: resolve the linked service record at most once when either
+// service filter is active. Previously both filters independently scanned
+// D.servisLogs for every transaction when category + component were selected.
+const _serviceCategoryActive=!!(f.serviceCategory&&f.serviceCategory!=='semua');
+const _serviceComponentActive=!!(f.serviceComponent&&f.serviceComponent!=='semua');
+if(_serviceCategoryActive||_serviceComponentActive){
+if(!t.servisLinkId)return false;
+const _serviceLog=(D.servisLogs||[]).find(x=>x&&x.id===t.servisLinkId);
+if(!_serviceLog)return false;
+if(_serviceCategoryActive&&_serviceLog.masterCategoryId!==f.serviceCategory)return false;
+if(_serviceComponentActive&&(!Array.isArray(_serviceLog.checklist)||!_serviceLog.checklist.some(x=>x&&x.itemId===f.serviceComponent)))return false;
+}
 return true;
 }
 function populateCatFilter(){

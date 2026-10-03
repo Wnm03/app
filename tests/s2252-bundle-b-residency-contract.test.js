@@ -23,5 +23,6 @@ test('S2252 GROUP_B residency manifest is complete and measurable', () => {
   // S2272: self-test now preloads lazy diagnostic boundaries explicitly; this
   // increases eager self-test source residency by the measured 480 bytes.
   // S2366: tx-list-cashflow.js shrank 26 bytes (single-pass forecast aggregation); pin refreshed to measured payload.
-  assert.equal(bytes, 4910023, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
+  // S2391: cumulative service optimizations changed GROUP_B payload; refresh the measured pin.
+  assert.equal(bytes, 4914176, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
 });

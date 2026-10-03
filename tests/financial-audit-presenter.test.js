@@ -5,7 +5,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 test('presenter render tidak terkena TDZ settings dan tetap read-only', () => {
   const body = { innerHTML: '' };
-  const D = { transactions: [{ id: 'tx1', accountId: 'a1', type: 'expense', amount: 10000, date: '2026-09-01', category: 'Makan' }], accounts: [{ id: 'a1', ownership: 'SELF' }] };
+  const D = { transactions: [{ id: 'tx1', accountId: 'a1', type: 'expense', amount: 10000, date: '2026-09-20', category: 'Makan' }], accounts: [{ id: 'a1', ownership: 'SELF' }] };
   const document = { getElementById(id) { return id === 'financialAudit30Body' ? body : null; } };
   const ctx = loadSource([
     'modules/finance/financial-audit-engine.js',
@@ -32,8 +32,8 @@ test('dashboard insight menampilkan ringkasan audit tanpa mengubah transaksi', (
   const D = {
     transactions: [
       { id: 'tx1', accountId: 'a1', type: 'expense', amount: 10000, date: '2026-09-01', category: 'Makan' },
-      { id: 'tx2', accountId: 'a1', type: 'expense', amount: 20000, date: '2026-09-02', category: 'Makan' },
-      { id: 'tx3', accountId: 'a1', type: 'income', amount: 100000, date: '2026-09-03', category: 'Gaji' },
+      { id: 'tx2', accountId: 'a1', type: 'expense', amount: 20000, date: '2026-09-21', category: 'Makan' },
+      { id: 'tx3', accountId: 'a1', type: 'income', amount: 100000, date: '2026-09-22', category: 'Gaji' },
     ],
     accounts: [{ id: 'a1', ownership: 'SELF' }],
   };

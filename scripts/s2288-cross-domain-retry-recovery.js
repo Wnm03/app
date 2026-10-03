@@ -16,7 +16,7 @@ ok('outbox-replay-retains-failed-event',/catch\(e\)\{[\s\S]*?durableCache=remain
 ok('outbox-replay-preserves-stable-event-id',/eventId:String\(item\.eventId\|\|stableId\)/.test(outbox));
 ok('outbox-replay-serialized',/withPersistenceLock\(async\(\)=>/.test(outbox));
 ok('atomic-save-persists-outbox-with-state',/prepareAtomicPersistence\(\)[\s\S]*?markAtomicPersisted\(atomicOutbox\.queue,atomicOutbox\.stagedCount\)/.test(helpers));
-ok('service-retry-has-idempotency-boundary',/ServiceEventIdempotencySOT\.key\(/.test(svc)&&/ServiceEventIdempotencySOT\.find\(/.test(svc));
+ok('service-retry-has-idempotency-boundary',/ServiceEventIdempotencySOT\.key\(/.test(svc)&&/typeof ServiceEventIdempotencySOT\.find==='function'/.test(svc)&&/_existingIdempotencyKeys=new Set\(\)/.test(svc));
 ok('service-finance-link-uses-idempotent-tx-key',/idempotencyKey:`tx:\$\{txId\}`/.test(txsvc));
 for(const [n,c] of checks)console.log((c?'PASS ':'FAIL ')+n);
 const failed=checks.filter(x=>!x[1]);console.log(`S2288: ${checks.length-failed.length}/${checks.length} PASS`);if(failed.length)process.exit(1);

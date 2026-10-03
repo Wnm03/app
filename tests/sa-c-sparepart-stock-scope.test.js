@@ -12,15 +12,16 @@ const txStock=fs.readFileSync(path.join(root,'modules/finance/tx-stok-sparepart.
 
 test('SA-C: catalog-linked stock matching is vehicle-scoped',()=>{
   assert.match(servis,/findMatchingStockByCatalogId\(catalogId,vehicleId\)/);
-  assert.match(servis,/String\(p\.catalogPartId\|\|p\.catalogId\|\|'\'\)===String\(catalogId\)/);
+  assert.match(servis,/String\(p\.catalogPartId\|\|p\.catalogId\|\|'\'\)!==String\(catalogId\)/);
+  assert.match(servis,/_scopedCount\+\+;if\(_scopedCount===1\)_singleScoped=p/);
   assert.match(servis,/Sparepart\.isPartForVehicle\(p,vehicleId\)/);
   assert.match(servis,/findMatchingStockByCatalogId\(catalogPartId,curVehicleId\)\|\|Servis\.findMatchingStockByName\(catalogPartName,curVehicleId\)/);
 });
 
 test('SA-C: name fallback is also vehicle-scoped and ambiguous matches are not guessed',()=>{
   assert.match(servis,/findMatchingStockByName\(name,vehicleId\)/);
-  assert.match(servis,/const rows=\(D\.partsStock\|\|\[\]\)\.filter\(p=>p&&String\(p\.name\|\|'\'\)\.trim\(\)\.toLowerCase\(\)===n\)/);
-  assert.match(servis,/if\(scoped\.length>1\)\{\s*const exact=scoped\.find\(p=>p\.vehicleId&&String\(p\.vehicleId\)===String\(vehicleId\)\);\s*return exact\|\|null;/);
+  assert.match(servis,/String\(p\.name\|\|'\'\)\.trim\(\)\.toLowerCase\(\)!==n/);
+  assert.match(servis,/_scopedCount>1\)return _exactScoped\|\|null/);
 });
 
 test('SA-C: editing stock preserves an existing hidden/private category instead of silently clearing catId',()=>{
