@@ -1,0 +1,105 @@
+# S2369 — shared service-log lookup for finance filters
+M modules/finance/filter-laporan.js
+A tests/s2369-finance-service-filter-single-lookup.test.js
+A AUDIT-S2369-FINANCE-SERVICE-FILTER-PERFORMANCE.md
+
+# S2370 — one index for bulk service-history identity resolution
+M modules/vehicle/service-history-bulk-identity-editor.js
+A tests/s2370-service-history-bulk-lookup-once.test.js
+A AUDIT-S2370-BULK-HISTORY-LOOKUP.md
+
+# S2371 — resolve edit-session source once
+M modules/vehicle/servis.js
+A tests/s2371-service-edit-session-scan-once.test.js
+A AUDIT-S2371-SERVICE-EDIT-SESSION-SCAN.md
+
+# S2372 — one session snapshot scan and indexed idempotency mapping
+M modules/vehicle/servis.js
+A tests/s2372-service-session-snapshot-single-scan.test.js
+A AUDIT-S2372-SERVICE-SESSION-SNAPSHOT-SCAN.md
+
+# S2373 — local Set for checklist idempotency membership
+M modules/vehicle/servis.js
+A tests/s2373-service-idempotency-single-index.test.js
+A AUDIT-S2373-IDEMPOTENCY-INDEX.md
+
+# S2374 — scan only appended service-log tail for new-session linking
+M modules/vehicle/servis.js
+A tests/s2374-service-session-tail-scan.test.js
+A AUDIT-S2374-SESSION-APPEND-TAIL-SCAN.md
+
+# S2375 — one ID index for history audit package creation
+M modules/vehicle/servis.js
+A tests/s2375-history-audit-package-single-index.test.js
+A AUDIT-S2375-HISTORY-AUDIT-PACKAGE-INDEX.md
+
+# S2376 — local indexes for session-delete rollback
+M modules/vehicle/servis.js
+A tests/s2376-session-delete-rollback-single-index.test.js
+A AUDIT-S2376-SESSION-DELETE-ROLLBACK-INDEX.md
+
+# S2377 — first-match stock snapshot index for session deletion
+M modules/vehicle/servis.js
+A tests/s2377-session-stock-snapshot-single-index.test.js
+A AUDIT-S2377-SESSION-STOCK-SNAPSHOT-INDEX.md
+
+# S2378 — first-match stock snapshot index for batch rollback
+M modules/vehicle/servis.js
+A tests/s2378-batch-service-stock-snapshot-single-index.test.js
+A AUDIT-S2378-BATCH-SERVICE-STOCK-SNAPSHOT-INDEX.md
+
+# S2379 — combine batch rollback ID collection and retained-log filtering
+M modules/vehicle/servis.js
+A tests/s2379-batch-rollback-single-log-pass.test.js
+A AUDIT-S2379-BATCH-ROLLBACK-SINGLE-LOG-PASS.md
+
+# S2380 — cache vehicle lookup in batch finance projection
+M modules/vehicle/servis.js
+A tests/s2380-batch-finance-vehicle-lookup-cache.test.js
+A AUDIT-S2380-BATCH-FINANCE-VEHICLE-LOOKUP-CACHE.md
+
+# S2381 — cache category resolution in service batch preflight
+M modules/vehicle/servis.js
+A tests/s2381-batch-category-lookup-cache.test.js
+A AUDIT-S2381-BATCH-CATEGORY-LOOKUP-CACHE.md
+
+# S2382 — cache automatic stock candidate per category
+M modules/vehicle/servis.js
+M tests/s2381-batch-category-lookup-cache.test.js
+A tests/s2382-batch-stock-candidate-cache.test.js
+A AUDIT-S2382-BATCH-STOCK-CANDIDATE-CACHE.md
+
+# S2383 — single-pass stock matching resolvers
+M modules/vehicle/servis.js
+A tests/s2383-stock-match-single-pass.test.js
+A AUDIT-S2383-STOCK-MATCH-SINGLE-PASS.md
+
+# S2384 — resolve source service-history row once in edit preflight
+M modules/vehicle/servis.js
+A tests/s2384-service-edit-source-single-lookup.test.js
+A AUDIT-S2384-SERVICE-EDIT-SOURCE-LOOKUP.md
+
+# S2385 — stock snapshots only for replacement actions
+M modules/vehicle/servis.js
+A tests/s2385-stock-snapshot-only-for-replacement.test.js
+A AUDIT-S2385-STOCK-SNAPSHOT-ONLY-ON-REPLACEMENT.md
+
+# S2386 — reuse history session snapshot for component entries
+M modules/vehicle/servis.js
+A tests/s2386-history-session-snapshot-reuse.test.js
+A AUDIT-S2386-HISTORY-SESSION-SNAPSHOT-REUSE.md
+
+# S2387 — reuse vehicle-scoped rows in history rendering
+M modules/vehicle/servis.js
+A tests/s2387-history-render-vehicle-snapshot.test.js
+A AUDIT-S2387-HISTORY-RENDER-VEHICLE-SNAPSHOT.md
+
+# S2388 — audit and repair cumulative-chain manifest/readme completeness
+M PATCH-MANIFEST-S2369-S2387-CUMULATIVE.txt
+M PATCH-README-S2369-S2387-CUMULATIVE-PERFORMANCE.md
+A AUDIT-S2388-CUMULATIVE-CHAIN-AUDIT.md
+A tests/s2388-cumulative-chain-manifest-completeness.test.js
+
+# S2389 — cumulative regression audit; no runtime changes
+A tests/s2389-cumulative-regression-audit-record.test.js
+A AUDIT-S2389-CUMULATIVE-REGRESSION-AUDIT.md
