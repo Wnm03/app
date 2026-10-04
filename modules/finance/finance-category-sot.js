@@ -110,53 +110,16 @@ function resolve(input){
  return {ok:!!cat,type,categoryId,subcategoryId,categoryName:cat&&cat.name||null,subcategoryName:sub&&sub.name||null,classification,source:sub?'subcategory':cat?'category':'unresolved'};
 }
 const SEVEN_CLASSES=Object.freeze(['POKOK','WAJIB','RUTIN','KEINGINAN','BISNIS','INVESTASI','SOSIAL']);
-function reconcileLegacyTransactionTaxonomy(rows){
- const list=Array.isArray(rows)?rows:[];
- const changed=[];
- const issues=[];
- const ensureLegacyCategory=(name)=>{
-   let c=findByName(TYPE.EXPENSE,name);
-   if(c)return c;
-   if(norm(name)==='dana titipan'){
-     c={id:'cat_dana_titipan_legacy',name:'Dana Titipan',emoji:'📦',subs:[],classification:'NON_BELANJA',legacyAlias:'restore-legacy-finance-taxonomy'};
-     cats(TYPE.EXPENSE).push(c);
-     changed.push({kind:'category-created',name:c.name,id:c.id});
-     return c;
-   }
-   return null;
- };
- const ensureLegacySubcategory=(cat,name)=>{
-   if(!cat)return null;
-   let s=findSub(cat,name);
-   if(s)return s;
-   if(norm(cat.name)==='tagihan & biaya'&&norm(name)==='pulsa/kuota'){
-     s={id:'sub_tagihan_biaya_pulsa_kuota_legacy',name:'Pulsa/Kuota',classification:'RUTIN',legacyAlias:'restore-legacy-finance-taxonomy'};
-     if(!Array.isArray(cat.subs))cat.subs=[];
-     cat.subs.push(s);
-     changed.push({kind:'subcategory-created',categoryId:String(cat.id),categoryName:cat.name,name:s.name,id:s.id});
-     return s;
-   }
-   return null;
- };
- list.forEach((tx,index)=>{
-   if(!tx||!validType(tx.type)||tx.type!==TYPE.EXPENSE)return;
-   const rawCategory=String(tx.category==null?'':tx.category).trim();
-   const rawSub=String(tx.subcategory==null?'':tx.subcategory).trim();
-   if(norm(rawCategory)==='dana titipan'){
-     const c=ensureLegacyCategory('Dana Titipan');
-     if(!c)issues.push({code:'LEGACY_FINANCE_CATEGORY_UNRESOLVED',index,id:tx.id,category:rawCategory});
-   }
-   if(norm(rawCategory)==='tagihan'&&norm(rawSub)==='pulsa/kuota'){
-     const c=findByName(TYPE.EXPENSE,'Tagihan');
-     const s=ensureLegacySubcategory(c,'Pulsa/Kuota');
-     if(!s)issues.push({code:'LEGACY_FINANCE_SUBCATEGORY_UNRESOLVED',index,id:tx.id,category:rawCategory,subcategory:rawSub});
-   }
- });
- return {ok:issues.length===0,changed,issues};
-}
 function resolveSeven(input){
  const classification=resolve(input||{}).classification;
  return SEVEN_CLASSES.includes(classification)?classification:null;
+}
+function reconcileLegacyTransactionTaxonomy(rows){
+ const list=Array.isArray(rows)?rows:[],changed=[],issues=[];
+ const ensureLegacyCategory=name=>{let c=findByName(TYPE.EXPENSE,name);if(c)return c;if(norm(name)==='dana titipan'){c={id:'cat_dana_titipan_legacy',name:'Dana Titipan',emoji:'📦',subs:[],classification:'NON_BELANJA',legacyAlias:'restore-legacy-finance-taxonomy'};cats(TYPE.EXPENSE).push(c);changed.push({kind:'category-created',name:c.name,id:c.id});return c;}return null;};
+ const ensureLegacySubcategory=(cat,name)=>{if(!cat)return null;let s=findSub(cat,name);if(s)return s;if(norm(cat.name)==='tagihan & biaya'&&norm(name)==='pulsa/kuota'){s={id:'sub_tagihan_biaya_pulsa_kuota_legacy',name:'Pulsa/Kuota',classification:'RUTIN',legacyAlias:'restore-legacy-finance-taxonomy'};if(!Array.isArray(cat.subs))cat.subs=[];cat.subs.push(s);changed.push({kind:'subcategory-created',categoryId:String(cat.id),categoryName:cat.name,name:s.name,id:s.id});return s;}return null;};
+ list.forEach((tx,index)=>{if(!tx||!validType(tx.type)||tx.type!==TYPE.EXPENSE)return;const rawCategory=String(tx.category==null?'':tx.category).trim(),rawSub=String(tx.subcategory==null?'':tx.subcategory).trim();if(norm(rawCategory)==='dana titipan'){if(!ensureLegacyCategory('Dana Titipan'))issues.push({code:'LEGACY_FINANCE_CATEGORY_UNRESOLVED',index,id:tx.id,category:rawCategory});}if(norm(rawCategory)==='tagihan'&&norm(rawSub)==='pulsa/kuota'){const c=findByName(TYPE.EXPENSE,'Tagihan');if(!ensureLegacySubcategory(c,'Pulsa/Kuota'))issues.push({code:'LEGACY_FINANCE_SUBCATEGORY_UNRESOLVED',index,id:tx.id,category:rawCategory,subcategory:rawSub});}});
+ return {ok:issues.length===0,changed,issues};
 }
 function classify(input){return resolve(input||{}).classification;}
 function matches(input,classification){return classify(input)===classification;}
