@@ -97,9 +97,14 @@
       const rows=arr(d.sparepartCats).filter(c=>c&&str(c.vehicleId)===vid);
       return rows.find(c=>str(c.serviceComponentId)===str(identity))||null;
     };
-    const reconcileRef=(row,domain,index)=>{
-      if(!row||!str(row.vehicleId))return;
-      const vid=str(row.vehicleId);
+    const pathLabel=(domain,index)=>String(domain||'unknown')+(index!==''?'.'+String(index):'');
+    const reconcileRef=(row,domain,index,forcedVehicleId)=>{
+      if(!row)return;
+      const vid=str(forcedVehicleId||row.vehicleId);
+      if(!vid)return;
+      // Nested checklist/projection rows inherit vehicle ownership from their parent
+      // service log; do not persist a synthetic vehicleId into the nested row.
+      const diagnosticPath=String(index==null?'':index);
       if(!byVid.has(vid)){issues.push({code:'RECORD_UNKNOWN_VEHICLE',domain,index,id:str(row.id),vehicleId:vid});return;}
       const rows=canonicalByVid.get(vid)||[];
       let hit=null;
@@ -134,7 +139,7 @@
               }
             }catch(_){/* remain unresolved */}
           }
-          if(!hit)issues.push({code:'CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED',domain,index,id:str(row.id),vehicleId:vid,categoryId:id,foreignVehicleId:str(foreign.vehicleId),serviceComponentId:canonicalId||null});
+          if(!hit)issues.push({code:'CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED',domain,index:pathLabel(domain,diagnosticPath),id:str(row.id),vehicleId:vid,categoryId:id,foreignVehicleId:str(foreign.vehicleId),serviceComponentId:canonicalId||null});
         }
       }
       if(!hit){const r=canon(row);if(r)hit=rows.find(c=>str(c.serviceComponentId)===r.serviceComponentId);}
@@ -149,7 +154,18 @@
       }
     };
     arr(d.partsStock).forEach((r,i)=>reconcileRef(r,'partsStock',i));
-    arr(d.servisLogs).forEach((r,i)=>reconcileRef(r,'servisLogs',i));
+    arr(d.servisLogs).forEach((r,i)=>{
+      const vid=str(r&&r.vehicleId);
+      reconcileRef(r,'servisLogs',i);
+      // S2461: checklist component rows are first-class history references.
+      // They inherit the parent service vehicle and may carry a legacy/foreign
+      // categoryId even when the top-level service log is canonical. Reconcile
+      // them through the exact same vehicle-scoped SOT path.
+      arr(r&&r.checklist).forEach((c,j)=>reconcileRef(c,'servisLogs.checklist',i+'.'+j,vid));
+      // Service-cost component projections occasionally carry category identity
+      // in older backups; repair them when a deterministic component exists.
+      arr(r&&r.serviceCost&&r.serviceCost.components).forEach((c,j)=>reconcileRef(c,'servisLogs.serviceCost.components',i+'.'+j,vid));
+    });
     if(issues.some(x=>x.code==='CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED'||x.code==='CATEGORY_UNKNOWN_VEHICLE'||x.code==='RECORD_UNKNOWN_VEHICLE')){
       return {ok:false,version:VERSION,changed,issues,vehicles:vehicles.length};
     }

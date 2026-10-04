@@ -81,3 +81,44 @@ test('S2455 repairs a canonical cross-vehicle projection by provisioning a local
 });
 
 console.log('S2451/S2455 PASS');
+
+
+test('S2461 reconciles nested checklist category references using parent vehicle ownership',()=>{
+  const D={vehicles:[
+    {id:'v1',sot:{serviceCategories:[{id:'v1-aki',name:'Aki',vehicleId:'v1',masterCategoryId:'kelistrikan',serviceComponentId:'aki'}]}},
+    {id:'v2',sot:{serviceCategories:[]}}
+  ],sparepartCats:[{id:'v1-aki',name:'Aki',vehicleId:'v1',masterCategoryId:'kelistrikan',serviceComponentId:'aki'}],partsStock:[],servisLogs:[{id:'s1',vehicleId:'v2',item:'Aki',serviceComponentId:'aki',categoryId:'v1-aki',checklist:[{itemId:'aki',itemName:'Aki',serviceComponentId:'aki',categoryId:'v1-aki'}]}]};
+  const c=loadSource(['modules/vehicle/service-category-restore-reconciler-s2451.js'],{
+    D,
+    ServiceTaxonomySOT:{resolve(x){if(String(x&&x.serviceComponentId||'')==='aki'||String(x&&x.name||x&&x.item||'').toLowerCase()==='aki')return {masterCategoryId:'kelistrikan',serviceComponentId:'aki'};return null;}},
+    VehicleCarNotesSOT:{
+      getServiceCategories(vid){return (D.vehicles.find(v=>v.id===vid).sot.serviceCategories)||[];},
+      syncLegacyCategoryProjection(cat){const v=D.vehicles.find(v=>v.id===cat.vehicleId);const row=Object.assign({},cat,{id:'v2-aki',vehicleId:cat.vehicleId});v.sot.serviceCategories.push(row);D.sparepartCats.push(row);return {ok:true};},
+      reconcileLegacyCategoryProjection(){}
+    }
+  },['ServiceCategoryRestoreReconcilerS2451']);
+  const r=c.ServiceCategoryRestoreReconcilerS2451.reconcile(D);
+  assert.equal(r.ok,true);
+  assert.equal(D.servisLogs[0].checklist[0].categoryId,'v2-aki');
+  assert.equal(r.issues.length,0);
+});
+
+test('S2461 restore diagnostic payload preserves reconciliation issues for UI export',()=>{
+  const src=fs.readFileSync(path.join(root,'modules/shared/backup-restore.js'),'utf8');
+  assert.match(src,/window\.__S2013_RESTORE_DIAGNOSTIC=detail/);
+  assert.match(src,/kw_restore_diagnostic_s2013/);
+  assert.match(src,/categoryComponentReconciliation/);
+  assert.match(src,/copyS2013RestoreDiagnostic/);
+  assert.match(src,/downloadS2013RestoreDiagnostic/);
+  assert.match(src,/clearS2013RestoreDiagnostic/);
+});
+
+test('S2461 auto self-test lazy loader failure is inside the guarded bootstrap',()=>{
+  const self=fs.readFileSync(path.join(root,'self-test.js'),'utf8');
+  const boot=fs.readFileSync(path.join(root,'modules/shared/boot-early.js'),'utf8');
+  const start=self.indexOf('async function autoRunSelfTestIfNeeded()');
+  const tryPos=self.indexOf('try{',start);
+  const lazyPos=self.indexOf('await ensureDiagnosticCases()',start);
+  assert.ok(start>=0&&tryPos>start&&lazyPos>tryPos);
+  assert.match(boot,/Auto self-test bootstrap gagal/);
+});

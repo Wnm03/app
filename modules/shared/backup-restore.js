@@ -34,6 +34,50 @@ function _sanitizeBackupError(err){
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sanitizeErrorMessage==='function')return PWAProductionHardening.sanitizeErrorMessage(err);
 return String(err&&err.message!=null?err.message:err==null?'':err).slice(0,120);
 }
+
+// S2461: restore diagnostics must be retrievable without DevTools/eval.
+// Eruda is intentionally CSP-constrained, so production diagnostics are exposed
+// through ordinary application event handlers instead of console evaluation.
+(function(){
+  const g=typeof window!=='undefined'?window:globalThis;
+  function read(){
+    try{
+      if(g.__S2013_RESTORE_DIAGNOSTIC)return g.__S2013_RESTORE_DIAGNOSTIC;
+      const raw=typeof localStorage!=='undefined'?localStorage.getItem('kw_restore_diagnostic_s2013'):null;
+      return raw?JSON.parse(raw):null;
+    }catch(_){return null;}
+  }
+  function text(){
+    const d=read();
+    if(!d)return 'Belum ada diagnostic restore S2013.';
+    return JSON.stringify(d,null,2);
+  }
+  async function copy(){
+    const value=text();
+    try{
+      if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(value);
+      else {const ta=document.createElement('textarea');ta.value=value;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+      if(typeof toast==='function')toast('📋 Detail Restore Diagnostic disalin');
+      return true;
+    }catch(e){if(typeof toast==='function')toast('⚠️ Gagal menyalin diagnostic — gunakan Simpan JSON');return false;}
+  }
+  function download(){
+    const value=text();
+    try{
+      const blob=new Blob([value],{type:'application/json'});
+      _downloadBackupBlob(blob,'restore-diagnostic-s2013-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json');
+      if(typeof toast==='function')toast('💾 Diagnostic Restore disimpan');
+      return true;
+    }catch(e){if(typeof toast==='function')toast('⚠️ Gagal menyimpan diagnostic');return false;}
+  }
+  function clear(){
+    try{delete g.__S2013_RESTORE_DIAGNOSTIC; if(typeof localStorage!=='undefined')localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_){}
+  }
+  g.getS2013RestoreDiagnostic=read;
+  g.copyS2013RestoreDiagnostic=copy;
+  g.downloadS2013RestoreDiagnostic=download;
+  g.clearS2013RestoreDiagnostic=clear;
+})();
 function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
@@ -591,10 +635,14 @@ const __s2013SerializeError=(e)=>({
 const __s2013Fail=(e)=>{
   const detail={...__s2013Diag,stage:__s2013Stage,error:__s2013SerializeError(e),
     hasImp:!!imp,servisLogs:imp&&Array.isArray(imp.servisLogs)?imp.servisLogs.length:null};
-  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){ /* diagnostic storage may be unavailable */ }
+  try{
+    window.__S2013_RESTORE_DIAGNOSTIC=detail;
+    safeSetItem('kw_restore_diagnostic_s2013',JSON.stringify(detail));
+  }catch(_){ /* diagnostic storage may be unavailable */ }
   console.error('S2013 RESTORE DIAGNOSTIC',detail,e);
   return detail;
 };
+try{if(typeof clearS2013RestoreDiagnostic==='function')clearS2013RestoreDiagnostic();}catch(_){}
 __s2013SetStage('shape-validation');
 const _shape=_validateRestoreShape(imp);
 if(!_shape.ok){await showAlertModal('File backup ditolak: '+_shape.msg,{icon:'❌',title:'Backup Tidak Valid'});return false;}
@@ -691,9 +739,16 @@ __s2013SetStage('category-component-sot-reconciliation');
 if(typeof ServiceCategoryRestoreReconcilerS2451!=='undefined'&&ServiceCategoryRestoreReconcilerS2451&&typeof ServiceCategoryRestoreReconcilerS2451.reconcile==='function'){
   const _catRestore=ServiceCategoryRestoreReconcilerS2451.reconcile(D);
   if(!_catRestore.ok){
+    __s2013Diag.categoryComponentReconciliation={
+      ok:false,
+      issueCount:Array.isArray(_catRestore.issues)?_catRestore.issues.length:0,
+      issues:Array.isArray(_catRestore.issues)?_catRestore.issues.slice(0,200):[],
+      changed:Array.isArray(_catRestore.changed)?_catRestore.changed.slice(0,200):[]
+    };
     const _catCodes=[...new Set((_catRestore.issues||[]).map(x=>x&&x.code).filter(Boolean))].slice(0,8).join(', ');
     throw new Error('Restore dibatalkan: integritas kategori/komponen Car Notes tidak konsisten ('+(_catRestore.issues||[]).length+' issue'+(_catCodes?'; '+_catCodes:'')+').');
   }
+  __s2013Diag.categoryComponentReconciliation={ok:true,issueCount:0,issues:[],changed:Array.isArray(_catRestore.changed)?_catRestore.changed.slice(0,200):[]};
 }
 __s2013SetStage('remove-temporary-vehicle-catalog');
 delete D._vehicleCatalogStore;
@@ -760,6 +815,7 @@ if(typeof lifeOSInvalidateCache==='function'&&_restoredLifeosStore!==undefined)l
 if(typeof eieInvalidateCache==='function'&&_restoredEieStore!==undefined)eieInvalidateCache();
 if(typeof vehicleCatalogInvalidateCache==='function'&&_restoredVehicleCatalogStore!==undefined)vehicleCatalogInvalidateCache();
 if(typeof hondaPdfImportInvalidateCache==='function'&&_restoredHondaPdfImportStore!==undefined)hondaPdfImportInvalidateCache();
+try{if(typeof clearS2013RestoreDiagnostic==='function')clearS2013RestoreDiagnostic();}catch(_){}
 init();
 return true;
 }catch(e){

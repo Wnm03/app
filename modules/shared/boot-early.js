@@ -136,7 +136,9 @@ function ensureDiagnostics(){return ensureSelfTest();}
 setTimeout(()=>{
   ensureSelfTest().then(()=>{
     if(typeof autoRunSelfTestIfNeeded==='function') return autoRunSelfTestIfNeeded();
-  }).catch(()=>{});
+  }).catch((err)=>{
+    console.error('[S2261] Auto self-test bootstrap gagal:',err);
+  });
 },2500);
 
 

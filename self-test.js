@@ -963,8 +963,12 @@ toast('⚠️ Gagal menyalin, coba lagi');
 }
 }
 async function autoRunSelfTestIfNeeded(){
-if(typeof ensureDiagnosticCases==='function') await ensureDiagnosticCases();
 try{
+// S2461: lazy diagnostic residency is part of the guarded bootstrap. A rejected
+// loader must never escape before the try/catch, otherwise the UI only reports
+// the opaque "Auto self-test gagal jalan: ReferenceError {}" and loses the
+// actual transport/module error.
+if(typeof ensureDiagnosticCases==='function') await ensureDiagnosticCases();
 const lastBuild=localStorage.getItem('kw_selftest_build');
 if(lastBuild===APP_BUILD_VERSION){
 const raw=localStorage.getItem('kw_selftest_last');
