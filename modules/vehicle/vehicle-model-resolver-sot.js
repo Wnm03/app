@@ -12,7 +12,11 @@ function vmrs4dResolve(input={}){
  const year=Number(input.year||input.modelYear||input.tahun||0)||vmrs4dYear(name)||null;
  const engineCc=Number(input.engineCc||input.cc||input.modelCc||0)||vmrs4dCc(name)||null;
  const variant=String(input.variant||input.modelVariant||'').trim()||null;
- const base=vmrs4dModel({modelId:input.modelId,name});
+ const baseInput={modelId:input.modelId,name};
+ const cache=input&&input._baseModelCache;
+ const cacheKey=String(input.modelId||'')+'|'+vmrs4dNorm(name);
+ let base=cache&&typeof cache.get==='function'?cache.get(cacheKey):null;
+ if(!base){base=vmrs4dModel(baseInput);if(cache&&typeof cache.set==='function')cache.set(cacheKey,base);}
  if(base.confidence==='ambiguous')return {status:'ambiguous',confidence:'ambiguous',candidates:base.candidates||[],year,engineCc,variant};
  if(!base.model)return {status:'unknown',confidence:base.confidence||'none',model:null,profile:null,year,engineCc,variant};
  const p=base.profile||{};

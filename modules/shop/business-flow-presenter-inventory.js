@@ -987,7 +987,7 @@ const BusinessFlowPresenterInventoryMixin = {
       if (!s.ok) return '';
       const itemsLabel = s.items.map((it) => `${escapeHtml(it.name)} × ${it.qty}`).join(', ');
       const receiveBtn = (s.status === 'ON_TRIP')
-        ? `<button type="button" class="btn btn-sm u-mt6" data-action="BusinessFlowPresenter.receiveTransferFromUI" data-args='["${s.id}"]'>📥 Terima</button>`
+        ? `<button type="button" class="btn btn-sm u-mt6" data-action="BusinessFlowPresenter.receiveTransferFromUI" data-args='["${escapeHtml(s.id)}"]'>📥 Terima</button>`
         : '';
       return `<div class="findash-card" style="margin-bottom:8px">
         <div class="findash-card-body">

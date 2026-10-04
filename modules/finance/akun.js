@@ -275,7 +275,7 @@ acc.owners=res.entity.owners;
 return{ok:true,owners:acc.owners,remaps:res.remaps||[]};
 }
 function populateAccFilters(){
-const opts=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+const opts=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 const fAcc=document.getElementById('fAcc');
 if(fAcc) fAcc.innerHTML='<option value="semua">Semua Akun</option>'+opts;
 const txAcc=document.getElementById('txAcc');

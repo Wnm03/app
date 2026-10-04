@@ -1181,7 +1181,7 @@ if(stockSelEdit){
 // "asli" begitu populateTxStockSelect() (lewat toggleTxStockFields() di
 // bawah) membaca ulang cur=sel.value & merender ulang seluruh dropdown.
 if(stockSelEdit.options&&!Array.from(stockSelEdit.options).some(o=>o.value===linkedStockPart.id)){
-stockSelEdit.insertAdjacentHTML('beforeend',`<option value="${linkedStockPart.id}"></option>`);
+stockSelEdit.insertAdjacentHTML('beforeend',`<option value="${escapeHtml(linkedStockPart.id)}"></option>`);
 }
 stockSelEdit.value=linkedStockPart.id;
 }

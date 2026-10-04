@@ -349,7 +349,7 @@ renderSelectedHistoryAudit(logs){
     const history=Array.isArray(s.editHistory)?s.editHistory:[];
     const audit=history.slice(-5).reverse().map(h=>{
       const changes=Array.isArray(h&&h.changes)?h.changes:[];
-      const fields=changes.length?changes.map(ch=>`${esc(ch.label||ch.field)}: ${esc(ch.from)} → ${esc(ch.to)}`).join(' · '):(Array.isArray(h&&h.fields)?h.fields.join(', '):'perubahan tercatat');
+      const fields=changes.length?changes.map(ch=>`${esc(ch.label||ch.field)}: ${esc(ch.from)} → ${esc(ch.to)}`).join(' · '):(Array.isArray(h&&h.fields)?h.fields.map(x=>esc(x)).join(', '):'perubahan tercatat');
       const when=h&&h.changedAt?new Date(h.changedAt):null;
       const whenText=when&&!isNaN(when)?when.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}):'waktu tidak tercatat';
       return `<div style="padding:6px 0;border-top:1px dashed var(--border)"><b>${esc(whenText)}</b><div class="u-fs11 u-t2">${fields}</div></div>`;
@@ -435,6 +435,12 @@ Servis._loadReminderSeverityFilterPrefsOnce();
 if(typeof ServiceHistorySOTReview!=='undefined'&&ServiceHistorySOTReview&&typeof ServiceHistorySOTReview.render==='function')ServiceHistorySOTReview.render(document.getElementById('servisList'),curVehicleId);
 const curKm=getVehicleKm(curVehicleId);
 const kmPerDay=estimateKmPerDay(curVehicleId);
+// S2394: prepare one vehicle-scoped history snapshot for all reminder rows.
+// The snapshot is read-only and is passed through to the canonical urgency
+// calculation so each category does not rebuild the same vehicle history.
+const reminderHistoryRows=(typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.historyRows==='function')
+  ?(ServiceRuntimeProjectionSOT.historyRows(D,curVehicleId)||[])
+  :(Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===curVehicleId):[]);
 
 const reminderCategoryPool=(typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.reminderCatalog==='function')?ServiceRuntimeProjectionSOT.reminderCatalog(D,curVehicleId):((typeof getReminderCategoriesForVehicle==='function')?getReminderCategoriesForVehicle(curVehicleId):D.sparepartCats);
 const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c)))),curVehicleId):reminderCategoryPool.filter(c=>c.showInReminder!==false&&catVisibleForVehicle(c,curVehicleId)&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(curVehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(curVehicleId,c))));

@@ -43,27 +43,53 @@ function vspsCategoriesForModel(model,vehicle){
   if(model&&model.torsi&&Array.isArray(model.torsi.cats))model.torsi.cats.forEach(c=>add(c&&c.cat,'vehicle-database',c&&c.icon));
   return out;
 }
-function vspsComponentSummary(model,vehicle){
-  const cats=vspsCategoriesForModel(model,vehicle);
+function vspsComponentSummary(model,vehicle,precomputedCats){
+  const rows=model&&model.torsi&&Array.isArray(model.torsi.cats)?model.torsi.cats:[];
+  const cats=Array.isArray(precomputedCats)?precomputedCats:vspsCategoriesForModel(model,vehicle);
   let torqueItems=0;
-  if(model&&model.torsi&&Array.isArray(model.torsi.cats))model.torsi.cats.forEach(c=>{torqueItems+=(Array.isArray(c&&c.items)?c.items.length:0);});
+  if(rows.length){
+    // When the caller already has the category projection, avoid rebuilding it.
+    // The item count is independent of category de-duplication and stays exact.
+    for(const c of rows)torqueItems+=Array.isArray(c&&c.items)?c.items.length:0;
+  }
   return {categoryCount:cats.length,categoryNames:cats.map(c=>c.name),vehicleDatabaseItems:torqueItems};
 }
-function vspsFindCatalogPartsForVehicle(vehicle,model){
+function vspsFindCatalogPartsForVehicle(vehicle,model,options){
   if(typeof VehicleCatalog==='undefined'||!VehicleCatalog)return Promise.resolve([]);
-  return VehicleCatalog.getAll().then(all=>{
+  const opts=options&&typeof options==='object'?options:null;
+  const cache=opts&&opts._catalogCache&&typeof opts._catalogCache==='object'?opts._catalogCache:null;
+  let allPromise=cache&&cache.allPromise;
+  if(!allPromise){
+    allPromise=VehicleCatalog.getAll();
+    if(cache)cache.allPromise=allPromise;
+  }
+  return Promise.resolve(allPromise).then(all=>{
+    let index=cache&&cache.index;
+    if(!index){
+      const byVehicle=new Map();
+      const byModel=new Map();
+      for(const it of all||[]){
+        if(!it||it.isDraft)continue;
+        const add=(map,key)=>{const k=String(key||'');if(!k)return;const arr=map.get(k);if(arr)arr.push(it);else map.set(k,[it]);};
+        for(const id of Array.isArray(it.compatibleVehicleIds)?it.compatibleVehicleIds:[])add(byVehicle,id);
+        for(const id of Array.isArray(it.compatibleModelIds)?it.compatibleModelIds:[])add(byModel,id);
+      }
+      index={byVehicle,byModel};
+      if(cache)cache.index=index;
+    }
     const vid=String(vehicle&&vehicle.id||'');
-    let list=(all||[]).filter(it=>it&&!it.isDraft&&Array.isArray(it.compatibleVehicleIds)&&it.compatibleVehicleIds.some(id=>String(id)===vid));
+    const list=(index.byVehicle.get(vid)||[]).slice();
     // Model-level SOT is the canonical projection for every unit of the same
     // model. Do not duplicate catalog parts per vehicle; read the shared model
     // compatibility instead. Vehicle-level compatibility remains a valid
-    // explicit override/backward-compatible projection.
+    // explicit override/backward-compatible projection. Preserve the previous
+    // ordering: vehicle matches first, then model-only matches; duplicate IDs
+    // retain the vehicle position while receiving the model row value.
     const mid=model&&model.id?String(model.id):String(vehicle&&vehicle.modelId||'');
     if(mid){
-      const modelList=(all||[]).filter(it=>it&&!it.isDraft&&Array.isArray(it.compatibleModelIds)&&it.compatibleModelIds.some(id=>String(id)===mid));
       const byId=new Map(list.map(it=>[String(it.id),it]));
-      modelList.forEach(it=>byId.set(String(it.id),it));
-      list=Array.from(byId.values());
+      for(const it of index.byModel.get(mid)||[])byId.set(String(it.id),it);
+      return Array.from(byId.values());
     }
     return list;
   }).catch(()=>[]);
@@ -94,7 +120,9 @@ function vspsSetProvisioning(vehicle,payload){
 async function vspsProvisionVehicle(vehicle,options){
   options=options||{};
   if(!vehicle)return {ok:false,reason:'vehicle_missing'};
-  const ident=(typeof VehicleModelResolverSOT!=='undefined'&&VehicleModelResolverSOT.resolve)?VehicleModelResolverSOT.resolve({modelId:vehicle.modelId,name:vehicle.name,year:vehicle.modelYear,variant:vehicle.modelVariant,cc:vehicle.modelEngineCc}):vspsFindModel({modelId:vehicle.modelId,name:vehicle.name});
+  const identInput={modelId:vehicle.modelId,name:vehicle.name,year:vehicle.modelYear,variant:vehicle.modelVariant,cc:vehicle.modelEngineCc};
+  if(options&&options._baseModelCache)identInput._baseModelCache=options._baseModelCache;
+  const ident=(typeof VehicleModelResolverSOT!=='undefined'&&VehicleModelResolverSOT.resolve)?VehicleModelResolverSOT.resolve(identInput):vspsFindModel({modelId:vehicle.modelId,name:vehicle.name});
   if(ident.status==='year-conflict'){ if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'}; vspsSetProvisioning(vehicle,{status:'year-conflict',version:VEHICLE_SOT_PROVISIONING_VERSION,modelId:ident.model&&ident.model.id||null,year:ident.year,expectedRange:ident.profile&&ident.profile.yearRange||null}); return {ok:true,vehicle,identification:ident,summary:{categoryCount:0,vehicleDatabaseItems:0,catalogPartCount:0}}; }
   if(ident.confidence==='ambiguous'||ident.status==='ambiguous'){
     delete vehicle.modelId; delete vehicle.manufacturerId; delete vehicle.modelDisplayName;
@@ -118,11 +146,19 @@ async function vspsProvisionVehicle(vehicle,options){
   vehicle.modelDisplayName=(profile&&profile.name)||model.name||model.displayName||vehicle.name;
   if(profile){vehicle.vehicleType=profile.vehicleType||vehicle.jenis;vehicle.bodyType=profile.bodyType||undefined;if(!vehicle.bodyType)delete vehicle.bodyType;vehicle.modelGeneration=profile.generation||undefined;vehicle.modelYearRange=profile.yearRange||undefined;}
   if(typeof VehicleModelResolverSOT!=='undefined'&&VehicleModelResolverSOT.apply)VehicleModelResolverSOT.apply(vehicle,ident);
-  const cats=vspsCategoriesForModel(model,vehicle);
-  const taxonomy=(typeof VehicleModelRegistrySOT!=='undefined'&&VehicleModelRegistrySOT.taxonomy)?VehicleModelRegistrySOT.taxonomy(model):cats.map(c=>({name:c.name,source:c.source,subcategories:[],components:[]}));
-  const dbSummary=vspsComponentSummary(model,vehicle);
+  const categoryCache=options&&options._categoryCache;
+  let cats=null;
+  const categoryKey=String(model.id||'');
+  if(categoryCache&&typeof categoryCache.get==='function'&&typeof categoryCache.set==='function'){
+    cats=categoryCache.get(categoryKey);
+    if(!cats){cats=vspsCategoriesForModel(model,vehicle);categoryCache.set(categoryKey,cats);}
+  }else cats=vspsCategoriesForModel(model,vehicle);
+  const taxonomyCache=options&&options._taxonomyCache;
+  let taxonomy=null;
+  if(taxonomyCache&&typeof taxonomyCache.get==='function'&&typeof taxonomyCache.set==='function'){const key=String(model.id||'');taxonomy=taxonomyCache.get(key);if(!taxonomy){taxonomy=(typeof VehicleModelRegistrySOT!=='undefined'&&VehicleModelRegistrySOT.taxonomy)?VehicleModelRegistrySOT.taxonomy(model):cats.map(c=>({name:c.name,source:c.source,subcategories:[],components:[]}));taxonomyCache.set(key,taxonomy);}}else taxonomy=(typeof VehicleModelRegistrySOT!=='undefined'&&VehicleModelRegistrySOT.taxonomy)?VehicleModelRegistrySOT.taxonomy(model):cats.map(c=>({name:c.name,source:c.source,subcategories:[],components:[]}));
+  const dbSummary=vspsComponentSummary(model,vehicle,cats);
   let catalogParts=[];
-  if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function')catalogParts=await vspsFindCatalogPartsForVehicle(vehicle,model);
+  if(typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function')catalogParts=await vspsFindCatalogPartsForVehicle(vehicle,model,options);
   if(typeof VehicleCarNotesSOT==='undefined'&&!vehicle)return {ok:false,reason:'car-notes-sot-unavailable'};
   vspsSetProvisioning(vehicle,{
     status:catalogParts.length||String(model.id)==='vario-125'?'ready':'partial',

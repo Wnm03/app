@@ -204,7 +204,7 @@ const CashFlowProjectionPresenter = {
     const s = CashflowProjSettings.get();
     const escape = (typeof escapeHtml === 'function') ? escapeHtml : (x) => x;
     const accOpts = (typeof D !== 'undefined' && Array.isArray(D.accounts))
-      ? D.accounts.map((a) => `<option value="${a.id}"${s.accountId === a.id ? ' selected' : ''}>${a.emoji || ''} ${escape(a.name)}</option>`).join('')
+      ? D.accounts.map((a) => `<option value="${escapeHtml(a.id)}"${s.accountId === a.id ? ' selected' : ''}>${a.emoji || ''} ${escape(a.name)}</option>`).join('')
       : '';
     const monthsOpts = [3, 6, 12].map((m) => `<option value="${m}"${s.months === m ? ' selected' : ''}>${m} bulan</option>`).join('');
     const modeBtn = (mode, label) => `<button class="chip-btn${s.billWindowMode === mode ? ' active' : ''}" data-action="CashFlowProjectionPresenter._setBillWindowMode" data-args='["${mode}"]'>${label}</button>`;

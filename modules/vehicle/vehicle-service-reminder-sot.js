@@ -5,15 +5,25 @@ const VEHICLE_SERVICE_REMINDER_SOT_VERSION='SOT-SERVICE-REMINDER-V1';
 function vsrsNorm(v){return String(v==null?'':v).trim().toLowerCase();}
 function vsrsVehicle(vehicleId){return (typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;}
 function vsrsModelId(vehicle){return String(vehicle&&vehicle.modelId||'').trim()||null;}
-async function vsrsCatalog(vehicleId){
+async function vsrsCatalog(vehicleId,options){
   if(typeof VehicleCatalog==='undefined'||!VehicleCatalog||typeof VehicleCatalog.getAll!=='function')return [];
   const v=vsrsVehicle(vehicleId)||{}; const vid=String(v.id||vehicleId||''); const mid=vsrsModelId(v);
-  try{const all=await VehicleCatalog.getAll();return (all||[]).filter(p=>{
+  const cache=options&&options._catalogCache&&typeof options._catalogCache==='object'?options._catalogCache:null;
+  try{
+    if(cache&&cache.index){
+      const byVehicle=cache.index.byVehicle&&cache.index.byVehicle.get(vid)||[];
+      const byModel=mid&&cache.index.byModel&&cache.index.byModel.get(mid)||[];
+      const seen=new Set(); const merged=[];
+      for(const p of byVehicle.concat(byModel)){if(!p||p.isDraft||seen.has(String(p.id)))continue;seen.add(String(p.id));merged.push(p);}
+      return merged;
+    }
+    const all=await VehicleCatalog.getAll();return (all||[]).filter(p=>{
     if(!p||p.isDraft)return false;
     const byV=Array.isArray(p.compatibleVehicleIds)&&p.compatibleVehicleIds.some(id=>String(id)===vid);
     const byM=!!mid&&Array.isArray(p.compatibleModelIds)&&p.compatibleModelIds.some(id=>String(id)===mid);
     return byV||byM;
-  });}catch(e){return []}
+    });
+  }catch(e){return []}
 }
 function vsrsRule(p){
   const km=Number(p&&p.serviceIntervalKm), mo=Number(p&&p.serviceIntervalMonths);
@@ -28,7 +38,7 @@ function vsrsDedup(rules){
 async function provision(vehicleId,options){
   const v=vsrsVehicle(vehicleId)||options&&options.vehicle;
   if(!v)return {ok:false,reason:'vehicle_missing'};
-  const parts=await vsrsCatalog(v.id); const rules=vsrsDedup(parts.map(vsrsRule).filter(Boolean));
+  const parts=await vsrsCatalog(v.id,options); const rules=vsrsDedup(parts.map(vsrsRule).filter(Boolean));
   const old=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(v.id):[];
   let wr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.setServiceSchedules(v.id,rules,{version:VEHICLE_SERVICE_REMINDER_SOT_VERSION}):null;
   if(!wr||!wr.ok){
@@ -40,14 +50,14 @@ async function provision(vehicleId,options){
   }
   return {ok:true,vehicle:v,changed:JSON.stringify(old)!==JSON.stringify(rules),summary:{catalogPartCount:parts.length,serviceRuleCount:rules.length,reminderRuleCount:rules.filter(r=>r.showInReminder).length}};
 }
-async function getSchedules(vehicleId){
+async function getSchedules(vehicleId,options){
   const v=vsrsVehicle(vehicleId); const canonical=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(vehicleId):[]; if(v&&canonical.length)return canonical;
-  const r=await provision(vehicleId);
+  const r=await provision(vehicleId,options);
   if(!r.ok)return [];
   if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)return VehicleCarNotesSOT.getServiceSchedules(vehicleId);
   return v&&v.sot&&Array.isArray(v.sot.serviceSchedules)?v.sot.serviceSchedules:[];
 }
-async function getReminderSchedules(vehicleId){return (await getSchedules(vehicleId)).filter(r=>r.showInReminder!==false);}
+async function getReminderSchedules(vehicleId,options){return (await getSchedules(vehicleId,options)).filter(r=>r.showInReminder!==false);}
 const VehicleServiceReminderSOT={version:VEHICLE_SERVICE_REMINDER_SOT_VERSION,provision,getSchedules,getReminderSchedules};
 if(typeof window!=='undefined')window.VehicleServiceReminderSOT=VehicleServiceReminderSOT;
 if(typeof globalThis!=='undefined')globalThis.VehicleServiceReminderSOT=VehicleServiceReminderSOT;

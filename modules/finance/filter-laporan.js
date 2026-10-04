@@ -55,7 +55,7 @@ function populateKeuFilters(){
 populateCatSelect('kfKat');
 populateSubSelect('kfSub','kfKat');
 populateServiceFilterSelects();
-const opts=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+const opts=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji)} ${escapeHtml(a.name)}</option>`).join('');
 const kfAcc=document.getElementById('kfAcc');
 if(kfAcc){const cur=kfAcc.value;kfAcc.innerHTML='<option value="semua">Semua Akun</option>'+opts;kfAcc.value=[...kfAcc.options].some(o=>o.value===cur)?cur:'semua';}
 }

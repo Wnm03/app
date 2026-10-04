@@ -31,7 +31,7 @@ if(params.get('debug')==='1') localStorage.setItem('kw_debug_console','1');
 if(params.get('debug')==='0') localStorage.removeItem('kw_debug_console');
 if(localStorage.getItem('kw_debug_console')==='1'){
 var s=document.createElement('script');
-s.src='https://cdn.jsdelivr.net/npm/eruda';
+s.src='https://cdn.jsdelivr.net/npm/eruda@3.4.3';
 s.onload=function(){ try{ eruda.init(); }catch(e){void e;} };
 (document.head||document.documentElement).appendChild(s);
 }
@@ -80,10 +80,13 @@ return p;
 function ensureTesseract(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',false,'sha512-mpQLT7yiRJ06RkhNTYhVnvvr3c71il3h+wEI16ICc+fnFHxrBRoJrMmDJ8iBY04+U/FgTj7xah5Vbltq5pg+aQ==');}
 function ensureJsPDF(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',false,'sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==');}
 function ensureHtml2Canvas(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',false,'sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==');}
+// Google Identity Services is an intentional external-script exception: Google publishes
+// the client at a non-versioned URL, so a static SRI digest cannot be safely pinned
+// without replacing the supported GSI delivery contract. Keep this exception explicit.
 function ensureGoogleGSI(){return _loadScriptOnce('https://accounts.google.com/gsi/client');}
 function ensureXLSX(){return _loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',false,'sha512-r22gChDnGvBylk90+2e/ycr3RVrDi8DIOkIGNhJlKfuyQM4tIRAI062MaV8sfjQKYVGjOBaZBOA87z+IhZE9DA==');}
-// ZXing remains version-pinned but intentionally has no guessed SRI hash; a verified
-// digest must be generated from the exact CDN bytes before enabling it.
+// ZXing remains version-pinned. SRI is intentionally deferred until the exact CDN
+// bytes can be retrieved and verified; never insert a guessed digest.
 function ensureZXing(){return _loadScriptOnce('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js');}
 // Sesi 13 Tahap 1b (lazy-load internal module, DESIGN_lazy-load-modules.md):
 // renovasi.js dikeluarkan dari app-bundle-a.min.js (scripts/build.js GROUP_A),

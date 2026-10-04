@@ -31,18 +31,18 @@ const DeliveryPlanUI = {
     const prodSel = document.getElementById('dpProduct');
     if (prodSel) {
       prodSel.innerHTML = (D.products || [])
-        .map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
+        .map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`)
         .join('');
     }
     const produsenSel = document.getElementById('dpProdusen');
     if (produsenSel) {
       produsenSel.innerHTML = '<option value="">— Tanpa produsen —</option>'
-        + (D.produsen || []).map((pr) => `<option value="${pr.id}">${escapeHtml(pr.name)}</option>`).join('');
+        + (D.produsen || []).map((pr) => `<option value="${escapeHtml(pr.id)}">${escapeHtml(pr.name)}</option>`).join('');
     }
     const vehSel = document.getElementById('dpVehicle');
     if (vehSel) {
       vehSel.innerHTML = '<option value="">— Tanpa kendaraan —</option>'
-        + (D.vehicles || []).map((v) => `<option value="${v.id}">${v.emoji || ''} ${escapeHtml(v.name)}</option>`).join('');
+        + (D.vehicles || []).map((v) => `<option value="${escapeHtml(v.id)}">${v.emoji || ''} ${escapeHtml(v.name)}</option>`).join('');
     }
     const qtyEl = document.getElementById('dpQty');
     if (qtyEl) qtyEl.value = 1;

@@ -55,7 +55,7 @@ function populateTxServisVehicleSelect(){
 const sel=document.getElementById('txServisVehicle');
 if(!sel)return;
 const cur=sel.value;
-sel.innerHTML=(D.vehicles||[]).map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
+sel.innerHTML=(D.vehicles||[]).map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji||'🏍️')} ${escapeHtml(v.name)}</option>`).join('');
 const active=(typeof curVehicleId!=='undefined'&&curVehicleId&&D.vehicles.some(v=>v.id===curVehicleId))?curVehicleId:'';
 sel.value=cur&&D.vehicles.some(v=>v.id===cur)?cur:active;
 }

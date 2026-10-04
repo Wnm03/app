@@ -139,7 +139,7 @@ const harga=(p.hargaByProdusen&&p.hargaByProdusen[produsenId]!==undefined)?p.har
 // lewat PricingService.getRetail() kalau dimuat — hargaByProdusen sendiri
 // TIDAK disentuh (tetap manual, itu input harga beli dari produsen ybs).
 const hargaJualDisp=(typeof PricingService!=='undefined')?PricingService.getRetail(p):p.hargaJual;
-return`<div class="fg"><label class="fl">${escapeHtml(p.name)} <span class="u-t2">(harga jual ${fmt(hargaJualDisp)})</span></label><input type="number" class="fi" data-prod-id="${p.id}" placeholder="Harga beli dari ${escapeHtml(pr.name)}" value="${harga}"></div>`;
+return`<div class="fg"><label class="fl">${escapeHtml(p.name)} <span class="u-t2">(harga jual ${fmt(hargaJualDisp)})</span></label><input type="number" class="fi" data-prod-id="${escapeHtml(p.id)}" placeholder="Harga beli dari ${escapeHtml(pr.name)}" value="${harga}"></div>`;
 }).join('');
 }
 openModal('produsenHargaModal');
@@ -226,7 +226,7 @@ editId:null,
 populateProductSelect(){
 const sel=document.getElementById('oProductSelect');
 if(!sel)return;
-sel.innerHTML=D.products.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.stock})</option>`).join('')||'<option value="">Belum ada produk di etalase</option>';
+sel.innerHTML=D.products.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.stock})</option>`).join('')||'<option value="">Belum ada produk di etalase</option>';
 },
 openModal(){
 if(!D.products.length){toast('⚠️ Tambah produk di Etalase dulu');return;}
@@ -241,7 +241,7 @@ document.getElementById('oPriceType').value='jual';
 const oCustHintEl=document.getElementById('oCustHint'); if(oCustHintEl){oCustHintEl.style.display='none';oCustHintEl.innerHTML='';}
 const oDeliveredEl=document.getElementById('oDelivered'); if(oDeliveredEl){oDeliveredEl.checked=true;toggleOrderDeliveredField();}
 const oAccEl=document.getElementById('oAcc');
-if(oAccEl) oAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(oAccEl) oAccEl.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 Order.populateProductSelect();
 Order.renderItems();
 const titleEl=document.getElementById('orderModalTitle');if(titleEl)titleEl.textContent='Transaksi Baru';
@@ -280,7 +280,7 @@ document.getElementById('oPriceType').value=t.priceType==='reseller'?'reseller':
 const oCustHintEl=document.getElementById('oCustHint'); if(oCustHintEl){oCustHintEl.style.display='none';oCustHintEl.innerHTML='';}
 const oDeliveredEl=document.getElementById('oDelivered'); if(oDeliveredEl){oDeliveredEl.checked=t.delivered!==false;toggleOrderDeliveredField();}
 const oAccEl=document.getElementById('oAcc');
-if(oAccEl){oAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');if(t.accountId)oAccEl.value=t.accountId;}
+if(oAccEl){oAccEl.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');if(t.accountId)oAccEl.value=t.accountId;}
 Order.populateProductSelect();
 Order.renderItems();
 const titleEl=document.getElementById('orderModalTitle');if(titleEl)titleEl.textContent='Edit Transaksi';

@@ -54,9 +54,9 @@ function vmrsInferMeta(input={}){
   };
 }
 function vmrsTaxonomy(model){
- const cats=[];const seen=new Set();const add=(name,sub,source)=>{const c=String(name||'').trim();if(!c)return;const k=vmrsNorm(c);let row=cats.find(x=>x.key===k);if(!row){row={key:k,name:c,source:source||'model',subcategories:[],components:[]};cats.push(row);}const s=String(sub||'').trim();if(s&&!row.subcategories.includes(s))row.subcategories.push(s);};
- if(model&&String(model.id)==='vario-125'&&typeof VehiclePartSOT!=='undefined'&&Array.isArray(VehiclePartSOT.seed)){VehiclePartSOT.seed.forEach(x=>{add(x.category,x.subcategory,'catalog-seed');if(x.partName){const row=cats.find(y=>y.key===vmrsNorm(x.category));if(row&&!row.components.includes(x.partName))row.components.push(x.partName);}});}
- if(!cats.length&&model&&model.torsi&&Array.isArray(model.torsi.cats))model.torsi.cats.forEach(c=>{add(c&&c.cat,null,'vehicle-database');const row=cats[cats.length-1];(c.items||[]).forEach(i=>{if(i&&i.name&&!row.components.includes(i.name))row.components.push(i.name);});});
+ const cats=[];const catByKey=new Map();const seen=new Set();const add=(name,sub,source)=>{const c=String(name||'').trim();if(!c)return;const k=vmrsNorm(c);let row=catByKey.get(k);if(!row){row={key:k,name:c,source:source||'model',subcategories:[],components:[]};catByKey.set(k,row);cats.push(row);}const s=String(sub||'').trim();if(s&&!row.subcategories.includes(s))row.subcategories.push(s);return row;};
+ if(model&&String(model.id)==='vario-125'&&typeof VehiclePartSOT!=='undefined'&&Array.isArray(VehiclePartSOT.seed)){VehiclePartSOT.seed.forEach(x=>{const row=add(x.category,x.subcategory,'catalog-seed');if(row&&x.partName&&!row.components.includes(x.partName))row.components.push(x.partName);});}
+ if(!cats.length&&model&&model.torsi&&Array.isArray(model.torsi.cats))model.torsi.cats.forEach(c=>{const row=add(c&&c.cat,null,'vehicle-database');(c.items||[]).forEach(i=>{if(i&&i.name&&!row.components.includes(i.name))row.components.push(i.name);});});
  return cats.map(({key,...x})=>x);
 }
 const VehicleModelRegistrySOT={version:VEHICLE_MODEL_REGISTRY_SOT_VERSION,normalize:vmrsNorm,find:vmrsFind,inferMeta:vmrsInferMeta,profile:vmrsProfile,taxonomy:vmrsTaxonomy,getAll:()=>vmrsModels().map(vmrsProfile),manufacturers:()=>VEHICLE_MANUFACTURER_HINTS.slice()};

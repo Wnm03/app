@@ -40,7 +40,7 @@ document.getElementById('eduReturn').value=f?f.returnAsumsi:8;
 document.getElementById('eduTerkumpul').value=f&&!f.accountId?f.terkumpul:'';
 const accSel=document.getElementById('eduAcc');
 if(accSel){
-accSel.innerHTML='<option value="">— Tidak terkait akun, isi manual —</option>'+D.accounts.map(a=>`<option value="${a.id}">${escapeHtml(a.emoji||'')} ${escapeHtml(a.name)}</option>`).join('');
+accSel.innerHTML='<option value="">— Tidak terkait akun, isi manual —</option>'+D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji||'')} ${escapeHtml(a.name)}</option>`).join('');
 accSel.value=f&&f.accountId?String(f.accountId):'';
 }
 EduFund.updatePreview();

@@ -14,18 +14,45 @@
 
 ---
 
+# S2428 — Current Coverage Snapshot
+
+> Snapshot taken from a clean replay of `app-main (53)` with the canonical repair chain through S2427. Counts exclude `backups/`, `node_modules/`, `.git/`, and `.test-checkpoints/`.
+
+| Metric | Current replay |
+|---|---:|
+| Total files | 3198 |
+| JavaScript | 1860 |
+| Tests (`*.test.js`) | 1255 |
+| Markdown | 1134 |
+| HTML | 7 |
+| JSON | 16 |
+| CSS | 4 |
+| Top-level module directories | 14 |
+
+### Release-governance status at S2428
+
+- Bundle-B freshness: **BLOCK** — embedded source fingerprint is stale.
+- Dependency lockfile: **BLOCK** — neither `package-lock.json` nor `npm-shrinkwrap.json` is present.
+- ESLint: **BLOCK** in the current execution environment (`eslint` unavailable).
+- esbuild/minified production build: **BLOCK** in the current execution environment (`esbuild` unavailable).
+- CI workflow: **PRESENT** after S2428; it intentionally fails early when no lockfile exists, then uses `npm ci` and `npm run check`.
+
+This section supersedes older coverage-count snapshots above for the current app-main (53) replay state through S2428.
+
 # 1. Coverage Baseline
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 2903 |
-| JavaScript | 1726 |
-| Tests | 1150 |
-| Markdown | 980 |
+| Total files | 3169 |
+| JavaScript | 1841 |
+| Tests | 1245 |
+| Markdown | 1119 |
 | HTML | 7 |
-| JSON | 31 |
+| JSON | 21 |
 | CSS | 4 |
 | Module families | 17 |
+
+> **S2416 coverage snapshot:** current canonical tree inventory: 3169 files, 1841 JavaScript, 1245 test files, 1119 Markdown, 7 HTML, 21 JSON, 4 CSS, 17 module families. Counts exclude `backups/`, `node_modules/`, and `.git/`; test count is the number of `*.test.js` files and is informational (not part of the generic build-lint labels).
 
 > **S2269 baseline refresh:** inventory warning reconciled to the current canonical app tree: 2903 files, 1726 JavaScript, 1150 test files, 980 Markdown, 7 HTML, 31 JSON, 4 CSS. Excludes `backups/` and `node_modules/`; `.test-checkpoints/` is local test state and is not part of the application patch.
 

@@ -13,9 +13,9 @@ const u=SewaKios.editUnitId!=null?D.sewaKios.units.find(x=>sameId(x.id,SewaKios.
 document.getElementById('sewaKiosUnitModalTitle').textContent=u?'Edit Unit Kios':'Unit Kios Baru';
 document.getElementById('skDelBtn').style.display=u?'flex':'none';
 const projSel=document.getElementById('skRenovProject');
-projSel.innerHTML='<option value="">— Tidak ditautkan —</option>'+D.renovProjects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+projSel.innerHTML='<option value="">— Tidak ditautkan —</option>'+D.renovProjects.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
 const accSel=document.getElementById('skAccount');
-accSel.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+accSel.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 document.getElementById('skName').value=u?u.name:'';
 projSel.value=u&&u.renovProjectId!=null?String(u.renovProjectId):'';
 document.getElementById('skStatus').value=u?u.status:'kosong';

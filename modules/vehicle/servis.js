@@ -323,7 +323,7 @@ populatePartSelect(selectedPartId){
 const sel=document.getElementById('servisPartId');
 if(!sel)return;
 const list=servisPartsStockRead().filter(p=>p.id===selectedPartId||Sparepart.isPartForVehicle(p,typeof curVehicleId!=='undefined'?curVehicleId:null));
-const opts=list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (sisa ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
+const opts=list.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (sisa ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.innerHTML='<option value="">Tidak pakai stok</option>'+opts;
 sel.value=selectedPartId||'';
 Servis.onPartChange();
@@ -780,7 +780,7 @@ document.getElementById('servisModalTitle').textContent=isEdit?'Edit Catatan Ser
 document.getElementById('servisDelBtn').style.display=isEdit?'flex':'none';
 const conditionResultEl=document.getElementById('servisConditionResult'); if(conditionResultEl)conditionResultEl.value=''; const conditionNoteEl=document.getElementById('servisConditionNote'); if(conditionNoteEl)conditionNoteEl.value='';
 const servisAccEl=document.getElementById('servisAcc');
-if(servisAccEl) servisAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(servisAccEl) servisAccEl.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji)} ${escapeHtml(a.name)}</option>`).join('');
 const intervalEl=document.getElementById('servisInterval');
 if(intervalEl)intervalEl.dataset.manual='0';
 Servis.dismissPartialCatalogMatch();

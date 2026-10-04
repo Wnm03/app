@@ -238,9 +238,9 @@ openModal('fiSettingsModal');
 renderCatOptions(selected){
 let html=`<label class="budget-cat-opt total"><input type="checkbox" id="fiCatTotal" data-onchange="onFiCatTotalToggle" data-onchange-args='["$el"]'> 🎯 Total Pengeluaran (semua kategori)</label>`;
 D.categories.expense.forEach(c=>{
-html+=`<label class="budget-cat-opt"><input type="checkbox" class="fiCatChk" value="${c.id}"> ${c.icon||''} ${escapeHtml(c.name)}</label>`;
+html+=`<label class="budget-cat-opt"><input type="checkbox" class="fiCatChk" value="${escapeHtml(c.id)}"> ${c.icon||''} ${escapeHtml(c.name)}</label>`;
 (c.subs||[]).forEach(s=>{
-html+=`<label class="budget-cat-opt sub"><input type="checkbox" class="fiCatChk" value="${s.id}"> ↳ ${s.icon||''} ${escapeHtml(s.name)}</label>`;
+html+=`<label class="budget-cat-opt sub"><input type="checkbox" class="fiCatChk" value="${escapeHtml(s.id)}"> ↳ ${s.icon||''} ${escapeHtml(s.name)}</label>`;
 });
 });
 document.getElementById('fiCatList').innerHTML=html;
@@ -567,7 +567,7 @@ el.innerHTML=`
 openSettings(){
 const p=D.pensiun||(D.pensiun={aktif:false,usiaSekarang:null,usiaPensiun:58,targetDana:0,returnTahunan:6,accId:'',kontribusiBulanan:0,rekoPersen:20,rekoBulan:3,riwayatKontribusi:[]});
 const accSel=document.getElementById('pensAcc');
-accSel.innerHTML='<option value="">— Pilih akun tabungan pensiun —</option>'+D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+accSel.innerHTML='<option value="">— Pilih akun tabungan pensiun —</option>'+D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 document.getElementById('pensUsiaSekarang').value=p.usiaSekarang||'';
 document.getElementById('pensUsiaPensiun').value=p.usiaPensiun||58;
 document.getElementById('pensTarget').value=p.targetDana||'';

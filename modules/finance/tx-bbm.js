@@ -16,7 +16,7 @@ function populateTxBbmVehicleSelect(){
 const sel=document.getElementById('txBbmVehicle');
 if(!sel||!D.vehicles)return;
 const cur=sel.value;
-sel.innerHTML=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
+sel.innerHTML=D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</option>`).join('');
 const fallback=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)?((VehicleScopedSOT.ensureActive()||{}).id||''):(typeof curVehicleId!=='undefined'&&D.vehicles.find(v=>v.id===curVehicleId)?curVehicleId:'');
 sel.value=cur&&D.vehicles.find(v=>v.id===cur)?cur:fallback;
 }

@@ -30,7 +30,7 @@ function populateCatSelect(id){
 const sel=document.getElementById(id);
 if(!sel)return;
 const cur=sel.value;
-sel.innerHTML='<option value="semua">Semua</option>'+uniqueCatList().map(([name,emoji])=>`<option value="${escapeHtml(name)}">${emoji} ${escapeHtml(name)}</option>`).join('');
+sel.innerHTML='<option value="semua">Semua</option>'+uniqueCatList().map(([name,emoji])=>`<option value="${escapeHtml(name)}">${escapeHtml(emoji)} ${escapeHtml(name)}</option>`).join('');
 sel.value=[...sel.options].some(o=>o.value===cur)?cur:'semua';
 }
 function populateSubSelect(subId,katId){

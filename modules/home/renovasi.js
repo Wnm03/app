@@ -226,7 +226,7 @@ if(!p)return;
 const it=itemId?p.items.find(x=>sameId(x.id,itemId)):null;
 const cats=getCatsByType('expense');
 document.getElementById('renovItemCat').innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.name)}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
-document.getElementById('renovItemAcc').innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+document.getElementById('renovItemAcc').innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 document.getElementById('renovItemModalTitle').textContent=it?'Edit Item Biaya':'Tambah Item Biaya';
 document.getElementById('renovItemName').value=it?it.name:'';
 document.getElementById('renovItemUkuran').value=it?(it.ukuran||''):'';

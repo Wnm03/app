@@ -183,7 +183,7 @@ el.innerHTML=list.map(p=>{
 const checked=this.mergeSelectedIds.has(p.id)?'checked':'';
 const groupInfo=p.priceGroupId?` <span style="color:var(--accent);font-size:11px;font-weight:700">🔗 sudah gabung (${this.groupSiblings(p).length+1} produk)</span>`:'';
 return`<label style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer">
-<input type="checkbox" ${checked} data-action="Etalase.toggleMergeSelect" data-args='["${p.id}","$el"]' style="width:18px;height:18px;flex-shrink:0">
+<input type="checkbox" ${checked} data-action="Etalase.toggleMergeSelect" data-args='["${escapeHtml(p.id)}","$el"]' style="width:18px;height:18px;flex-shrink:0">
 <div style="flex:1"><div style="font-size:13px;font-weight:600">${escapeHtml(p.name)}${groupInfo}</div><div style="font-size:11px;color:var(--text2)">${fmt(p.hargaJual)}</div></div>
 </label>`;
 }).join('');
@@ -321,7 +321,7 @@ document.getElementById('pKategori').value=p?(pKatObj?pKatObj.name:shopKategoriN
 document.getElementById('pKategoriList').innerHTML=D.cobekKategori.map(k=>`<option value="${escapeHtml(k.name)}">`).join('');
 const pProdusenEl=document.getElementById('pProdusen');
 if(pProdusenEl){
-pProdusenEl.innerHTML='<option value="">— Tanpa produsen —</option>'+D.produsen.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.name)}</option>`).join('')+'<option value="__new__">➕ Produsen Baru</option>';
+pProdusenEl.innerHTML='<option value="">— Tanpa produsen —</option>'+D.produsen.map(pr=>`<option value="${escapeHtml(pr.id)}">${escapeHtml(pr.name)}</option>`).join('')+'<option value="__new__">➕ Produsen Baru</option>';
 pProdusenEl.value=p&&p.produsenId?p.produsenId:'';
 }
 // Tahap 11 (Generic Shop Engine — audit sisa hardcode Product UI): 3 field
@@ -352,7 +352,7 @@ const val=(typeof AttributeStore!=='undefined')?AttributeStore.getAttribute(p||{
 if(el)el.value=val?val:'';
 });
 const pAccEl=document.getElementById('pAcc');
-if(pAccEl) pAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(pAccEl) pAccEl.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji||'')} ${escapeHtml(a.name)}</option>`).join('');
 const hint=document.getElementById('pAccHint');
 if(hint) hint.textContent=isEdit?'Hanya dipakai kalau angka Stok di atas kamu naikkan (tambah stok) — selisihnya tercatat otomatis sebagai pengeluaran modal.':'Stok awal akan tercatat otomatis sebagai pengeluaran modal dari akun ini.';
 // Ownership (Product Ownership Foundation) — dropdown pakai OwnershipEngine.TYPES,
@@ -361,7 +361,7 @@ if(hint) hint.textContent=isEdit?'Hanya dipakai kalau angka Stok di atas kamu na
 const pOwnSel=document.getElementById('pOwnership');
 if(pOwnSel){
 if(typeof OwnershipEngine!=='undefined'){
-pOwnSel.innerHTML=OwnershipEngine.TYPES.map(t=>'<option value="'+t+'">'+escapeHtml(OwnershipEngine.label(t))+'</option>').join('');
+pOwnSel.innerHTML=OwnershipEngine.TYPES.map(t=>'<option value="'+escapeHtml(t)+'">'+escapeHtml(OwnershipEngine.label(t))+'</option>').join('');
 pOwnSel.value=OwnershipEngine.resolve(p||{}).type;
 }else{
 pOwnSel.innerHTML='<option value="SELF">Milik Sendiri</option>';
@@ -435,7 +435,7 @@ np={id:'prd_'+Date.now(),name:name.trim(),contact:'',note:''};
 }
 D.produsen.push(np);
 save();
-sel.innerHTML='<option value="">— Tanpa produsen —</option>'+D.produsen.map(pr=>`<option value="${pr.id}">${escapeHtml(pr.name)}</option>`).join('')+'<option value="__new__">➕ Produsen Baru</option>';
+sel.innerHTML='<option value="">— Tanpa produsen —</option>'+D.produsen.map(pr=>`<option value="${escapeHtml(pr.id)}">${escapeHtml(pr.name)}</option>`).join('')+'<option value="__new__">➕ Produsen Baru</option>';
 sel.value=np.id;
 } else { sel.value=''; }
 }

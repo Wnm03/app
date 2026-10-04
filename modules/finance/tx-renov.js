@@ -47,7 +47,7 @@ sel.disabled=true;
 return;
 }
 sel.disabled=false;
-sel.innerHTML=D.renovProjects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+sel.innerHTML=D.renovProjects.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
 if(cur&&D.renovProjects.find(p=>sameId(p.id,cur)))sel.value=cur;
 }
 function setTxRenovStatus(status){

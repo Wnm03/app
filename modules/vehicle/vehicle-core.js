@@ -537,7 +537,7 @@ return 'Interval servis: '+(vehIntervalSotValue(v,'oli-mesin','Oli Mesin')||3000
 function populateKmVehicleSelect(){
 const sel=document.getElementById('kmVehicle');
 if(!sel||!D.vehicles)return;
-sel.innerHTML=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
+sel.innerHTML=D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</option>`).join('');
 if(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)VehicleScopedSOT.ensureActive();sel.value=(D.vehicles.find(v=>v.id===curVehicleId))?curVehicleId:'';
 }
 function onKmVehicleChange(){

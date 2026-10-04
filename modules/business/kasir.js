@@ -26,7 +26,7 @@ populateAccSelect(){
 const el=document.getElementById('kasirAcc');
 if(!el)return;
 const cur=el.value;
-el.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('')+'<option value="__new__">➕ Akun Baru</option>';
+el.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('')+'<option value="__new__">➕ Akun Baru</option>';
 el.value=(cur&&[...el.options].some(o=>o.value===cur))?cur:(D.accounts[0]?D.accounts[0].id:'');
 if(el.value!=='__new__')el.dataset.prevValue=el.value;
 },
@@ -133,7 +133,7 @@ return;
 }
 wrap.style.display='flex';
 wrap.innerHTML=`<button type="button" class="chip-btn kasir-kat-chip${Kasir.categoryFilter?'':' active'}" data-action="Kasir.setCategoryFilter" data-args='[""]'>Semua (${D.products.length})</button>`
-+cats.map(c=>`<button type="button" class="chip-btn kasir-kat-chip${Kasir.categoryFilter===c.id?' active':''}" data-action="Kasir.setCategoryFilter" data-args='["${c.id}"]'>${escapeHtml(c.name)} (${c.count})</button>`).join('');
++cats.map(c=>`<button type="button" class="chip-btn kasir-kat-chip${Kasir.categoryFilter===c.id?' active':''}" data-action="Kasir.setCategoryFilter" data-args='["${escapeHtml(c.id)}"]'>${escapeHtml(c.name)} (${c.count})</button>`).join('');
 },
 // setViewMode (kw198-kasir-viewtoggle): grid 2 kolom bagus utk sedikit produk (lebih visual),
 // list 1 kolom ringkas (nama+harga+stok 1 baris) mempercepat cari kalau produk banyak. Pilihan
@@ -173,7 +173,7 @@ const priceChk=(typeof PriceRekoWidget!=='undefined')?PriceRekoWidget.checkOne(p
 const warnCls=isList?'kasir-tile-pricewarn kasir-tile-pricewarn-inline':'kasir-tile-pricewarn';
 const priceWarn=priceChk?`<button type="button" class="${warnCls}" data-action="Kasir.openPriceReko" data-args='${escapeHtml(JSON.stringify([p.id]))}' title="${priceChk.diffPct<0?'Harga di bawah':'Harga di atas'} estimasi Etalase (reko ${fmtFull(priceChk.reko)}) — tap utk detail" aria-label="Peringatan harga">${priceChk.diffPct<0?'⬇️':'⬆️'}</button>`:'';
 const stockLvl=habis?'stock-out':((p.stock||0)<=3?'stock-low':'stock-ok');
-const rowAttrs=`${habis?'':` data-action="Kasir.addToCart" data-args='["${p.id}"]'`}`;
+const rowAttrs=`${habis?'':` data-action="Kasir.addToCart" data-args='["${escapeHtml(p.id)}"]'`}`;
 if(isList){
 const badge=inCart?`<div class="kasir-tile-badge kasir-tile-badge-inline">${inCart.qty}</div>`:'';
 return`<div class="kasir-tile kasir-tile-row ${stockLvl}${habis?' kasir-tile-disabled':''}${inCart?' kasir-tile-active':''}"${rowAttrs}>

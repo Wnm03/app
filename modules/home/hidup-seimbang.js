@@ -185,7 +185,7 @@ return x+','+y;
 });
 const dots=asc.map((s,i)=>{
 const [x,y]=pts[i].split(',');
-return `<circle cx="${x}" cy="${y}" r="2.5" fill="var(--accent3)"><title>${s.date}: ${s.score}</title></circle>`;
+return `<circle cx="${x}" cy="${y}" r="2.5" fill="var(--accent3)"><title>${escapeHtml(s.date)}: ${s.score}</title></circle>`;
 }).join('');
 chartEl.innerHTML=`<svg class="u-w100" viewBox="0 0 ${W} ${H}" style="height:70px;display:block">
         <polyline points="${pts.join(' ')}" fill="none" stroke="var(--accent3)" stroke-width="2"/>

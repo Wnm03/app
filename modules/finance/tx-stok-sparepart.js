@@ -281,7 +281,7 @@ const cur=sel.value;
 // servis), di-scope ke curVehicleId (kendaraan aktif Car Notes saat ini).
 const vid=typeof curVehicleId!=='undefined'?curVehicleId:null;
 const list=txPartsStockRead().filter(p=>p.id===cur||Sparepart.isPartForVehicle(p,vid));
-sel.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
+sel.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.value=cur&&list.find(p=>p.id===cur)?cur:'__new__';
 onTxStockItemChange();
 // Best-effort: kalau ada part di Katalog Suku Cadang yang belum tertaut
@@ -293,7 +293,7 @@ const sel2=document.getElementById('txStockItem');
 if(!sel2)return; // modal sudah ditutup / elemen sudah tidak ada
 const cur2=sel2.value;
 const list2=txPartsStockRead().filter(p=>p.id===cur2||Sparepart.isPartForVehicle(p,vid));
-sel2.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list2.map(p=>`<option value="${p.id}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
+sel2.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list2.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel2.value=cur2&&list2.find(p=>p.id===cur2)?cur2:cur2;
 onTxStockItemChange();
 });

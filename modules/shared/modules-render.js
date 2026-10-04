@@ -282,7 +282,7 @@ const titipanGapLine=(!linked&&titipanGapAccIds.has(String(a.id)))?'<div class="
 return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAccTxHistory" data-args="${escapeHtml(JSON.stringify([a.id]))}">
       <button class="acc-card-edit" data-stop="1" data-action="openAccModal" data-args="${escapeHtml(JSON.stringify([i]))}" title="Edit" aria-label="Edit">✏️</button>
       <button class="acc-card-del" data-stop="1" data-action="delAcc" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
-      <div class="acc-card-icon">${a.emoji}</div>
+      <div class="acc-card-icon">${escapeHtml(a.emoji)}</div>
       <div class="acc-card-name">${escapeHtml(a.name)}${badge}${jenisBadge}${ownText}</div>
       ${ownDetail}
       ${invDetailLine}
@@ -302,7 +302,7 @@ if(!D.accounts.length){el.innerHTML='<div class="empty"><div class="empty-text">
 const visible=D.accounts.filter(a=>a.includeInBalance!==false);
 el.innerHTML=(visible.length?visible:D.accounts).map(a=>{
 const bal=recalcAccBalance(a.id);
-return`<div class="aset-item"><div class="tx-icon u-bgaccsoft">${a.emoji}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}</div></div><div class="tx-amount ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div></div>`;
+return`<div class="aset-item"><div class="tx-icon u-bgaccsoft">${escapeHtml(a.emoji)}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}</div></div><div class="tx-amount ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div></div>`;
 }).join('');
 const tEl=document.getElementById('dashAccTotal');
 if(tEl){const t=totalSaldoAkun();tEl.textContent=(t<0?'-':'')+fmt(Math.abs(t));tEl.className='stat-val '+(t<0?'red':'green');}
@@ -318,7 +318,7 @@ const off=a.includeInBalance===false;
 const linked=!off&&isAccLinkedToAsset(a.id);
 const badge=off?' <span class="u-fs12t2">(tidak dihitung)</span>':(linked?' <span class="u-fs12t2">(sudah dihitung via 📋 Buku Aset)</span>':'');
 return`<div class="aset-item" style="${off?'opacity:.5':''};cursor:pointer" data-action="quickToggleInclude" data-args="${escapeHtml(JSON.stringify([a.id]))}">
-      <div class="tx-icon u-bgaccsoft">${a.emoji}</div>
+      <div class="tx-icon u-bgaccsoft">${escapeHtml(a.emoji)}</div>
       <div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}${badge}</div></div>
       <div class="tx-amount ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>
     </div>`;
@@ -333,7 +333,7 @@ if(!el)return;
 if(!amt||!catName){el.style.display='none';el.innerHTML='';return;}
 const lines=[];
 lines.push(`<div class="u-fw700 u-mb4">💡 Insight Otomatis</div>`);
-lines.push(`<div>${guessedCat?guessedCat.emoji||'📦':'📦'} Kategori terdeteksi: <b>${escapeHtml(catName)}</b></div>`);
+lines.push(`<div>${escapeHtml(guessedCat?guessedCat.emoji||'📦':'📦')} Kategori terdeteksi: <b>${escapeHtml(catName)}</b></div>`);
 const hist=(D.transactions||[]).filter(t=>t.type==='expense'&&t.category&&t.category.trim().toLowerCase()===catName.trim().toLowerCase());
 if(hist.length){
 const avg=hist.reduce((s,t)=>s+t.amount,0)/hist.length;
@@ -398,7 +398,7 @@ const hasSubs=c.subs&&c.subs.length>0;
 html+=`<div class="cat-group">
         <div class="cat-group-head">
           ${hasSubs?`<span class="cat-group-toggle" id="arrow_${c.id}" data-action="toggleCatGroup" data-args="${escapeHtml(JSON.stringify([c.id]))}" role="button" tabindex="0" aria-label="Tampilkan/sembunyikan subkategori ${escapeHtml(c.name)}">▶</span>`:'<span style="width:11px;display:inline-block"></span>'}
-          <div class="cat-emoji" data-action="openCatModal" data-args="${escapeHtml(JSON.stringify([idx, type]))}" aria-label="Edit kategori ${escapeHtml(c.name)}">${c.emoji}</div>
+          <div class="cat-emoji" data-action="openCatModal" data-args="${escapeHtml(JSON.stringify([idx, type]))}" aria-label="Edit kategori ${escapeHtml(c.name)}">${escapeHtml(c.emoji)}</div>
           <div class="cat-name" data-action="openCatModal" data-args="${escapeHtml(JSON.stringify([idx, type]))}">${escapeHtml(c.name)}</div>
           <span class="cat-type-badge ${type==='income'?'cat-type-in':'cat-type-out'}">${type==='income'?'Masuk':'Keluar'}</span>
           <button class="tx-del" data-action="openSubCatModal" data-args="${escapeHtml(JSON.stringify([c.id, type]))}" title="Tambah subkategori" aria-label="Tambah subkategori">➕</button>
@@ -619,7 +619,7 @@ curGroup.items.push(b);
 html=groups.map(g=>{
 const groupTotal=g.items.reduce((s,b)=>s+(b.amount||0),0);
 return `<div class="u-flex u-jcb u-aic u-mt10 u-mb4" style="padding:0 2px">
-      <span class="u-fs12 u-fw700 u-t2" style="text-transform:uppercase;letter-spacing:.5px">${g.label}</span>
+      <span class="u-fs12 u-fw700 u-t2" style="text-transform:uppercase;letter-spacing:.5px">${escapeHtml(g.label)}</span>
       <span class="u-fs12 u-fw700 u-cacc3">${fmt(groupTotal)}</span>
     </div>`+g.items.map(b=>renderBillItemHtml(b,today,icons)).join('');
 }).join('');
@@ -868,7 +868,7 @@ dashServisVehFilter='semua';
 safeSetItem('kw_dashServisVehFilter','semua');
 }
 if(selfVehicles.length<2)return'';
-const chips=[{id:'semua',label:'Semua'},...selfVehicles.map(v=>({id:v.id,label:`${v.emoji||'🏍️'} ${escapeHtml(v.name)}`}))];
+const chips=[{id:'semua',label:'Semua'},...selfVehicles.map(v=>({id:v.id,label:`${escapeHtml(v.emoji||'🏍️')} ${escapeHtml(v.name)}`}))];
 return `<div class="u-flex u-gap6 u-mb10" style="overflow-x:auto;padding-bottom:2px">`
 +chips.map(c=>`<button class="chip-btn${dashServisVehFilter===c.id?' active':''}" data-action="setDashServisVehFilter" data-args="${escapeHtml(JSON.stringify([c.id]))}">${escapeHtml(c.label)}</button>`).join('')
 +`</div>`;
@@ -954,7 +954,7 @@ const dashCategoryName=dashComponentMeta&&dashComponentMeta.group?dashComponentM
 return`
     <div class="u-mb10 u-pointer" data-action="goToServisFromDash" data-args="${escapeHtml(JSON.stringify([r.veh.id]))}">
       <div class="u-flex u-jcb u-aic u-fs12 u-mb4">
-        <span class="u-fw700">${r.veh.emoji||'🏍️'} ${escapeHtml(r.veh.name)} · ${escapeHtml(dashCategoryName||'Kategori Servis')} · ${escapeHtml(dashComponentName)}${mcBadge}</span>
+        <span class="u-fw700">${escapeHtml(r.veh.emoji||'🏍️')} ${escapeHtml(r.veh.name)} · ${escapeHtml(dashCategoryName||'Kategori Servis')} · ${escapeHtml(dashComponentName)}${mcBadge}</span>
         <span class="${r.col} u-fw700">${r.msg}</span>
       </div>
       <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
@@ -1444,7 +1444,7 @@ const saldoHtml=(r.saldoKasSekarang!=null)?`
 </div>`:'';
 // topKewajiban (quick win #5) -- Top-3 kontributor Sisa Kewajiban terbesar.
 const topKewajibanHtml=(r.topKewajiban&&r.topKewajiban.length)?`
-<div class="u-fs11 u-t2 u-tac u-mt6">Kontributor terbesar: ${r.topKewajiban.map(k=>`${k.name} (${fmtFull(k.amount)})`).join(', ')}</div>`:'';
+<div class="u-fs11 u-t2 u-tac u-mt6">Kontributor terbesar: ${r.topKewajiban.map(k=>`${escapeHtml(k.name)} (${fmtFull(k.amount)})`).join(', ')}</div>`:'';
 // sparkline tren beberapa bulan (item besar-effort #9) — dipanggil di sini (bukan di
 // dalam blok Detail yang di-toggle) supaya trennya kelihatan tanpa perlu expand dulu.
 const sparklineHtml=(typeof _dashCashProjSparklineHtml==='function')?_dashCashProjSparklineHtml(ctx,cfg):'';

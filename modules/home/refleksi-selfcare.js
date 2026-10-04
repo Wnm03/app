@@ -325,7 +325,7 @@ if(!list.length){
 listEl.innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div class="empty-text">Belum ada catatan privat</div></div>';
 return;
 }
-listEl.innerHTML=list.map(n=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔒</div><div class="tx-info"><div class="tx-name">${n.date}</div><div class="tx-meta u-lh14" id="refNoteBody_${n.id}">•••• (Terenkripsi — tap 👁 utk lihat)</div></div><button class="tx-del" id="refNoteEyeBtn_${n.id}" data-action="Refleksi.toggleNoteView" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Lihat">👁</button><button class="tx-del" data-action="Refleksi.editNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Edit" style="color:var(--accent)">✏️</button><button class="tx-del" data-action="Refleksi.deleteNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
+listEl.innerHTML=list.map(n=>`<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔒</div><div class="tx-info"><div class="tx-name">${escapeHtml(n.date)}</div><div class="tx-meta u-lh14" id="refNoteBody_${escapeHtml(n.id)}">•••• (Terenkripsi — tap 👁 utk lihat)</div></div><button class="tx-del" id="refNoteEyeBtn_${escapeHtml(n.id)}" data-action="Refleksi.toggleNoteView" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Lihat">👁</button><button class="tx-del" data-action="Refleksi.editNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Edit" style="color:var(--accent)">✏️</button><button class="tx-del" data-action="Refleksi.deleteNote" data-args="${escapeHtml(JSON.stringify([n.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
 },
 // ===== KARTU RINGKASAN DI DASHBOARD =====
 renderDashCard(){

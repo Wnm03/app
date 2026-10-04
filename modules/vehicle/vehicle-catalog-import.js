@@ -78,7 +78,7 @@ async function vehicleImportExtractPdfText(file) {
   const buf = await file.arrayBuffer();
   let pdf;
   try {
-    pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   } catch (err) {
     throw new Error('File PDF rusak atau tidak valid, coba file lain.');
   }

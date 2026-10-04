@@ -34,7 +34,7 @@ updateDebugConsoleBtn();
 return;
 }
 const s=document.createElement('script');
-s.src='https://cdn.jsdelivr.net/npm/eruda';
+s.src='https://cdn.jsdelivr.net/npm/eruda@3.4.3';
 s.async=true;
 s.onload=function(){
 try{eruda.init();toast('🐞 Debug console diaktifkan');}

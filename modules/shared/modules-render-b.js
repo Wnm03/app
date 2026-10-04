@@ -684,7 +684,7 @@ daruratInfo=`<div class="u-fs11 u-t2 u-mt6" style="padding-top:6px;border-top:1p
 }
 }
 return`<div class="tgt-item">
-      <div class="tgt-head"><div class="tgt-name">${t.emoji} ${escapeHtml(t.name)}${linkTag}${daruratTag}</div><div class="tgt-pct">${pct}%</div></div>
+      <div class="tgt-head"><div class="tgt-name">${escapeHtml(t.emoji)} ${escapeHtml(t.name)}${linkTag}${daruratTag}</div><div class="tgt-pct">${pct}%</div></div>
       <div class="prog-bar"><div class="prog-fill ${col}" style="width:${pct}%"></div></div>
       <div class="tgt-vals"><span>${fmtFull(saved)} terkumpul</span><span>Target ${fmtFull(t.amount)}</span></div>
       ${daruratInfo}
@@ -707,7 +707,7 @@ function renderWorkDays(){return Payroll.renderWorkDays();}
 function renderVehicleSelect(){
 const el=document.getElementById('vehicleSelect');if(!el)return;
 if(!D.vehicles.find(v=>v.id===curVehicleId)&&D.vehicles.length) curVehicleId=D.vehicles[0].id;
-const html=D.vehicles.map(v=>`<div class="vehicle-chip ${v.id===curVehicleId?'active':''}" data-action="selectVehicle" data-args="${escapeHtml(JSON.stringify([v.id]))}">${v.emoji} ${escapeHtml(v.name)}</div>`).join('');
+const html=D.vehicles.map(v=>`<div class="vehicle-chip ${v.id===curVehicleId?'active':''}" data-action="selectVehicle" data-args="${escapeHtml(JSON.stringify([v.id]))}">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</div>`).join('');
 // S2332: avoid destroying/recreating identical chips on page hops. The spec card
 // still renders from its existing SoT; only redundant DOM replacement is skipped.
 if(el.innerHTML!==html)el.innerHTML=html;
@@ -718,7 +718,7 @@ function renderCarImportVehicleSelect(){
 const el=document.getElementById('carImportVehicle');if(!el)return;
 if(!D.vehicles||!D.vehicles.length){const empty='<option value="">Belum ada kendaraan</option>';if(el.innerHTML!==empty)el.innerHTML=empty;return;}
 const prevVal=el.value;
-const html=D.vehicles.map(v=>`<option value="${v.id}">${v.emoji} ${escapeHtml(v.name)}</option>`).join('');
+const html=D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</option>`).join('');
 // Preserve the native select's option nodes (and focus/selection state) whenever
 // the vehicle catalogue has not changed since the previous render.
 if(el.innerHTML!==html)el.innerHTML=html;
@@ -741,7 +741,7 @@ if(vehOwnFiltered.ok)vehList=vehOwnFiltered.items;
 }
 el.innerHTML=vehList.map((v)=>{
 const i=D.vehicles.indexOf(v);
-return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">${v.emoji}</div><div class="tx-info"><div class="tx-name">${escapeHtml(v.name)}</div><div class="tx-meta">${vehMetaText(v)}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="editVehicle" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit">✏️</button><button class="tx-del" data-action="delVehicle" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">${escapeHtml(v.emoji)}</div><div class="tx-info"><div class="tx-name">${escapeHtml(v.name)}</div><div class="tx-meta">${vehMetaText(v)}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="editVehicle" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit">✏️</button><button class="tx-del" data-action="delVehicle" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 }
 
@@ -749,7 +749,7 @@ function renderSptLinkStatus(){
 const el=document.getElementById('sptBillStatus');
 if(!el)return;
 const bill=D.bills.find(b=>b.taxLink&&b.taxLink.key==='spt');
-el.innerHTML=bill?('🔔 Terikat ke Tagihan: batas lapor <b>'+bill.nextDue+'</b>. Setelah lapor &amp; di-tandai lunas di Tagihan, tap tombol ini lagi tahun depan.'):'Belum diikat ke Tagihan. Tap tombol di atas supaya batas lapor SPT muncul sebagai reminder di menu Tagihan.';
+el.innerHTML=bill?('🔔 Terikat ke Tagihan: batas lapor <b>'+escapeHtml(bill.nextDue)+'</b>. Setelah lapor &amp; di-tandai lunas di Tagihan, tap tombol ini lagi tahun depan.'):'Belum diikat ke Tagihan. Tap tombol di atas supaya batas lapor SPT muncul sebagai reminder di menu Tagihan.';
 }
 
 function renderVehTaxSim(){
@@ -765,13 +765,13 @@ const rows=Object.entries(VEHTAX_ITEMS).map(([key,cfg])=>{
 const st=dateStatusBadge(v[cfg.tglKey]);
 const biaya=v[cfg.biayaKey]||0;
 return `<div class="tx-meta u-flex u-jcb u-aic u-mt2">
-        <span>${cfg.label}: <span class="${st.col} u-fw700">${st.label}</span></span>
+        <span>${escapeHtml(cfg.label)}: <span class="${escapeHtml(st.col)} u-fw700">${escapeHtml(st.label)}</span></span>
         <button class="btn btn-ghost btn-sm u-fs11" style="padding:2px 8px" data-stop="1" data-action="bayarPajakKendaraan" data-args="${escapeHtml(JSON.stringify([v.id, key]))}" ${biaya<=0?'title="Isi dulu estimasi biaya lewat ✏️"':''} aria-label="Isi dulu estimasi biaya lewat ✏️">✅ Bayar</button>
       </div>`;
 }).join('');
 return `<div class="tx-item u-aifs u-pointer u-fdcol u-gap6" data-action="openVehTaxModal" data-args="${escapeHtml(JSON.stringify([v.id]))}">
       <div class="u-flex u-aic u-w100">
-        <div class="tx-icon u-bgaccsoft">${v.emoji}</div>
+        <div class="tx-icon u-bgaccsoft">${escapeHtml(v.emoji)}</div>
         <div class="tx-info"><div class="tx-name">${escapeHtml(v.name)}</div></div>
         <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openVehTaxModal" data-args="${escapeHtml(JSON.stringify([v.id]))}" aria-label="Edit/Buka">✏️</button>
       </div>
@@ -789,7 +789,7 @@ const el=document.getElementById('vehTaxLinkStatus_'+jenis);
 if(!el)return;
 const key='vehtax:'+vehicleId+':'+jenis;
 const bill=D.bills.find(b=>b.taxLink&&b.taxLink.key===key);
-el.innerHTML=bill?('🔔 Terikat ke Tagihan: jatuh tempo <b>'+bill.nextDue+'</b>, '+fmtFull(bill.amount)+'. Setelah lunas &amp; siklus baru dimulai, isi tanggal baru lalu tap tombol lagi.'):'Belum diikat ke Tagihan.';
+el.innerHTML=bill?('🔔 Terikat ke Tagihan: jatuh tempo <b>'+escapeHtml(bill.nextDue)+'</b>, '+fmtFull(bill.amount)+'. Setelah lunas &amp; siklus baru dimulai, isi tanggal baru lalu tap tombol lagi.'):'Belum diikat ke Tagihan.';
 });
 }
 
@@ -799,7 +799,7 @@ if(!el)return;
 if(!editSimId){el.innerHTML='Simpan data SIM ini dulu untuk bisa diikat ke Tagihan.';return;}
 const key='sim:'+editSimId;
 const bill=D.bills.find(b=>b.taxLink&&b.taxLink.key===key);
-el.innerHTML=bill?('🔔 Terikat ke Tagihan: jatuh tempo <b>'+bill.nextDue+'</b>, '+fmtFull(bill.amount)):'Belum diikat ke Tagihan. Tap tombol di atas supaya reminder aktif di menu Tagihan.';
+el.innerHTML=bill?('🔔 Terikat ke Tagihan: jatuh tempo <b>'+escapeHtml(bill.nextDue)+'</b>, '+fmtFull(bill.amount)):'Belum diikat ke Tagihan. Tap tombol di atas supaya reminder aktif di menu Tagihan.';
 }
 
 function renderSimList(){
@@ -812,8 +812,8 @@ const st=dateStatusBadge(s.tglAkhir);
 return `<div class="tx-item u-pointer" data-action="openSimModal" data-args="${escapeHtml(JSON.stringify([s.id]))}">
       <div class="tx-icon u-bgaccsoft">🪪</div>
       <div class="tx-info">
-        <div class="tx-name">${escapeHtml(s.nama)} <span class="u-fs11 u-t2 u-fw400">· ${s.jenis}</span></div>
-        <div class="tx-meta"><span class="${st.col} u-fw700">${st.label}</span></div>
+        <div class="tx-name">${escapeHtml(s.nama)} <span class="u-fs11 u-t2 u-fw400">· ${escapeHtml(s.jenis)}</span></div>
+        <div class="tx-meta"><span class="${escapeHtml(st.col)} u-fw700">${escapeHtml(st.label)}</span></div>
       </div>
       <button class="tx-del" data-stop="1" data-action="delSim" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button>
     </div>`;
@@ -1207,7 +1207,7 @@ stEl.textContent=gdriveConnStatusLabel(true)+' · '+syncLabel;
 }
 const dcBtn=document.getElementById('gsDisconnectBtn'); if(dcBtn) dcBtn.style.display=gdriveAccessToken?'':'none';
 const linkEl=document.getElementById('gsLink');
-if(linkEl) linkEl.innerHTML=D.googleSheets.spreadsheetId? `<a class="u-cacc4" href="https://docs.google.com/spreadsheets/d/${D.googleSheets.spreadsheetId}" target="_blank">🔗 Buka Spreadsheet</a><br><span class="u-ctext3">🕘 Riwayat versi: di dalam Sheets, buka menu <b>File → Riwayat versi → Lihat riwayat versi</b> (atau tekan Ctrl+Alt+Shift+H)</span>` : '';
+if(linkEl) linkEl.innerHTML=D.googleSheets.spreadsheetId? `<a class="u-cacc4" href="https://docs.google.com/spreadsheets/d/${escapeHtml(D.googleSheets.spreadsheetId)}" target="_blank">🔗 Buka Spreadsheet</a><br><span class="u-ctext3">🕘 Riwayat versi: di dalam Sheets, buka menu <b>File → Riwayat versi → Lihat riwayat versi</b> (atau tekan Ctrl+Alt+Shift+H)</span>` : '';
 const cntEl=document.getElementById('gsLocalCount');
 if(cntEl){
 const perModul=SHEETS_MODULES.map(m=>`${m}:${(D[m]||[]).length}`).join(', ');

@@ -10,7 +10,7 @@ const sel=document.getElementById('pbbAssetPick');
 if(!sel)return;
 const cur=sel.value;
 const eligible=(D.assets||[]).filter(a=>a.jenis==='Tanah'||a.jenis==='Rumah/Bangunan');
-sel.innerHTML='<option value="">— Pilih aset Tanah/Rumah —</option>'+eligible.map(a=>`<option value="${a.id}">${escapeHtml(a.name)} (${a.jenis}) — ${fmt(a.nilai)}</option>`).join('');
+sel.innerHTML='<option value="">— Pilih aset Tanah/Rumah —</option>'+eligible.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)} (${escapeHtml(a.jenis)}) — ${fmt(a.nilai)}</option>`).join('');
 if(eligible.some(a=>a.id===cur))sel.value=cur;
 const pbbDefault=D.pajakZakat.pbb;
 const asset=cur?D.assets.find(a=>sameId(a.id,cur)):null;
@@ -35,7 +35,7 @@ const el=document.getElementById('pbbBillStatus');
 if(!el)return;
 const asset=PBB.currentAsset();
 const bill=D.bills.find(b=>b.pbbLink&&(asset?sameId(b.pbbLink,asset.id):b.pbbLink===true));
-el.innerHTML=bill?('🔔 Terikat ke tagihan tahunan: jatuh tempo <b>'+bill.nextDue+'</b>, jumlah '+fmtFull(bill.amount)+'. Update kalkulator lalu tap tombol lagi untuk menyesuaikan.'):'Belum diikat ke tagihan. Isi tanggal jatuh tempo lalu tap tombol di atas supaya PBB muncul sebagai reminder tahunan di menu Tagihan.';
+el.innerHTML=bill?('🔔 Terikat ke tagihan tahunan: jatuh tempo <b>'+escapeHtml(bill.nextDue)+'</b>, jumlah '+fmtFull(bill.amount)+'. Update kalkulator lalu tap tombol lagi untuk menyesuaikan.'):'Belum diikat ke tagihan. Isi tanggal jatuh tempo lalu tap tombol di atas supaya PBB muncul sebagai reminder tahunan di menu Tagihan.';
 },
 pilihAset(){
 const id=document.getElementById('pbbAssetPick').value;
@@ -197,7 +197,7 @@ const el=document.getElementById('zakatLogList');
 if(!el)return;
 const log=D.pajakZakat.zakatLog||[];
 if(!log.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕌</div><div class="empty-text">Belum ada riwayat</div></div>';return;}
-el.innerHTML=log.slice(0,20).map(l=>`<div class="tx-item"><div class="tx-icon" style="background:var(--accent3-soft)">🕌</div><div class="tx-info"><div class="tx-name">Zakat ${l.jenis==='penghasilan'?'Penghasilan':'Maal'}</div><div class="tx-meta">${l.tanggal}</div></div><div class="tx-amount green">${fmtFull(l.jumlah)}</div><button class="tx-del" data-action="delZakatLog" data-args="${escapeHtml(JSON.stringify([l.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
+el.innerHTML=log.slice(0,20).map(l=>`<div class="tx-item"><div class="tx-icon" style="background:var(--accent3-soft)">🕌</div><div class="tx-info"><div class="tx-name">Zakat ${l.jenis==='penghasilan'?'Penghasilan':'Maal'}</div><div class="tx-meta">${escapeHtml(l.tanggal)}</div></div><div class="tx-amount green">${fmtFull(l.jumlah)}</div><button class="tx-del" data-action="delZakatLog" data-args="${escapeHtml(JSON.stringify([l.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
 },
 async delLog(id){
 if(!await askConfirm('Hapus catatan zakat ini?',{okText:'Ya, Hapus'}))return;

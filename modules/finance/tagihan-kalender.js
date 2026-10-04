@@ -366,8 +366,8 @@ if(b.kind==='cicilan'&&!cicilanBelumPernahDibayar){
 }
 }
 const cats=getCatsByType('expense');
-document.getElementById('billCat').innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.name)}">${c.emoji} ${escapeHtml(c.name)}</option>`).join('');
-document.getElementById('billAcc').innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+document.getElementById('billCat').innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</option>`).join('');
+document.getElementById('billAcc').innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji)} ${escapeHtml(a.name)}</option>`).join('');
 if(billEditId!==null){
 const b=billEditFromArchive?(D.billsArchive||[]).find(x=>x.id===billEditId):D.bills.find(x=>x.id===billEditId);
 document.getElementById('billModalTitle').textContent=billEditFromArchive?'✏️ Edit Tagihan (Lunas)':'Edit Tagihan';

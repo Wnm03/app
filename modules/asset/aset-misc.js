@@ -634,11 +634,11 @@ const durLabel=r.monthsNeeded!=null?`${yrs?yrs+' th ':''}${bln} bln lagi (mulai 
 // mode edit-by-id di S692.
 const ROW_CLICK_ACTION={renov:'Renov.openDetail',target:'openTargetModal'};
 const rowClickAction=ROW_CLICK_ACTION[r.kind];
-const rowClickAttr=rowClickAction?` data-action="${rowClickAction}" data-args='${JSON.stringify([r.id])}'`:'';
+const rowClickAttr=rowClickAction?` data-action="${rowClickAction}" data-args='${escapeHtml(JSON.stringify([r.id]))}'`:'';
 const rowClass=rowClickAction?' u-pointer':'';
 return `<div class="${rowClass}" style="display:flex;gap:10px;margin-bottom:${i===rows.length-1&&!pensiunAda?'0':'12px'}"${rowClickAttr}>
         <div class="u-flex u-fdcol u-aic">
-          <div class="u-bgaccsoft u-flex u-aic u-jcc u-fs13" style="width:26px;height:26px;border-radius:50%">${r.emoji}</div>
+          <div class="u-bgaccsoft u-flex u-aic u-jcc u-fs13" style="width:26px;height:26px;border-radius:50%">${escapeHtml(r.emoji||'')}</div>
           ${(i<rows.length-1||pensiunAda)?'<div class="u-flex1 u-mt2" style="width:2px;background:var(--border)"></div>':''}
         </div>
         <div class="u-flex1" style="padding-bottom:2px">

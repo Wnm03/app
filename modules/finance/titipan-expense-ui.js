@@ -148,7 +148,7 @@ const TitipanExpenseUI = {
     // pertama tiap open(), pola SAMA PERSIS billAcc (tagihan-kalender.js).
     const accEl = document.getElementById('titipanExpenseAcc');
     if (accEl && typeof D !== 'undefined' && D && Array.isArray(D.accounts)) {
-      accEl.innerHTML = D.accounts.map((a) => `<option value="${a.id}">${a.emoji || ''} ${escapeHtml(a.name)}</option>`).join('');
+      accEl.innerHTML = D.accounts.map((a) => `<option value="${escapeHtml(a.id)}">${a.emoji || ''} ${escapeHtml(a.name)}</option>`).join('');
       accEl.value = D.accounts[0] ? D.accounts[0].id : '';
     }
     this.setDirection('biasa');

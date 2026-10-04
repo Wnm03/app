@@ -40,16 +40,16 @@ const paidLock=!!a.paidTxId;
 const dateLabel=new Date(a.date+'T00:00:00').toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'});
 const detail=a.mode==='borongan'?`📦 Borongan ${fmtFull(a.borTotal)}÷${a.borJumlah} tukang`:`⏰ ${a.masuk}–${a.pulang} (${a.jamKerja} jam${a.jamLembur>0?', lembur '+a.jamLembur+' jam':''})`;
 const lockNote=paidLock?' · 💸 sudah dibayar':(locked?' · 🔒 dipakai di Renovasi':'');
-return `<div class="wh-day-item${locked?'':' u-pointer'}" ${locked?'':`data-tk-hist-edit="1" data-tk-hist-worker="${w.id}" data-tk-hist-date="${a.date}"`}>
+return `<div class="wh-day-item${locked?'':' u-pointer'}" ${locked?'':`data-tk-hist-edit="1" data-tk-hist-worker="${escapeHtml(w.id)}" data-tk-hist-date="${escapeHtml(a.date)}"`}>
         <div class="wh-day-info">
           <div class="wh-day-date">${dateLabel}${locked?'':' <span class="u-fs10 u-t2 u-fw400">✏️</span>'}</div>
           <div class="wh-day-time">${detail}${lockNote}</div>
         </div>
         <div class="wh-day-pay">${fmtFull(a.upah)}</div>
-        ${locked?'':`<button class="tx-del" data-stop="1" data-tk-hist-del="${a.id}" aria-label="Hapus">🗑</button>`}
+        ${locked?'':`<button class="tx-del" data-stop="1" data-tk-hist-del="${escapeHtml(a.id)}" aria-label="Hapus">🗑</button>`}
       </div>`;
 }).join(''):'<div class="empty"><div class="empty-text">Belum ada absensi dicatat untuk pekerja ini</div></div>';
-return `<div class="u-flex u-jcb u-aic u-pointer" data-tk-hist-toggle="${w.id}" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
+return `<div class="u-flex u-jcb u-aic u-pointer" data-tk-hist-toggle="${escapeHtml(w.id)}" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">
         <span class="u-fs11 u-fw700 u-t2" style="text-transform:uppercase;letter-spacing:.5px">📋 Riwayat Absensi (${entries.length})</span>
         <span class="u-fs11 u-t2">${isOpen?'▲ Tutup':'▼ Lihat'}</span>
       </div>
@@ -279,7 +279,7 @@ const locked=!!(entry&&(entry.renovItemLinkId||entry.paidTxId));
 const lockNote=locked?(entry.paidTxId?' — 🔒 sudah dibayar':' — 🔒 sudah dipakai di item Renovasi'):'';
 return `
       <label style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);${locked?'opacity:0.5':''}">
-        <input type="checkbox" class="tkBorWorkerChk" value="${w.id}" data-onchange="Tukang.calcSharedBorongan" ${locked?'disabled':'checked'}>
+        <input type="checkbox" class="tkBorWorkerChk" value="${escapeHtml(w.id)}" data-onchange="Tukang.calcSharedBorongan" ${locked?'disabled':'checked'}>
         <span class="u-fs13 u-fw600">${escapeHtml(w.name)}${lockNote?'<span class="u-fw600 u-t2">'+lockNote+'</span>':''}</span>
       </label>`;
 }).join('');
@@ -475,7 +475,7 @@ const name=w?w.name:'(pekerja dihapus)';
 const d=new Date(a.date+'T00:00:00');
 const dateLabel=d.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'});
 const lockNote=a.paidTxId?' · 💸 sudah dibayar':(a.renovItemLinkId?' · 🔒 dipakai di item Renovasi':'');
-return `<div class="tx-item u-pointer" data-action="Tukang.viewBorHistoryDetail" data-args='["${a.id}"]'>
+return `<div class="tx-item u-pointer" data-action="Tukang.viewBorHistoryDetail" data-args='["${escapeHtml(a.id)}"]'>
         <div class="u-minw0"><div class="tx-name">${escapeHtml(name)}</div><div class="tx-meta">${dateLabel} · ${fmtFull(a.borTotal)} ÷ ${a.borJumlah} tukang${lockNote}</div></div>
         <div class="tx-amount">${fmtFull(a.upah)}</div>
       </div>`;
@@ -555,7 +555,7 @@ const jamLabel=a.masuk&&a.pulang?(a.masuk+'–'+a.pulang):'';
 let jamDetail=(a.jamKerja||0)+' jam kerja';
 if(a.jamLembur>0)jamDetail+=' + '+a.jamLembur+' jam lembur';
 const lockNote=a.paidTxId?' · 💸 sudah dibayar':(a.renovItemLinkId?' · 🔒 dipakai di item Renovasi':'');
-return `<div class="tx-item u-pointer" data-action="Tukang.viewJamHistoryDetail" data-args='["${a.id}"]'>
+return `<div class="tx-item u-pointer" data-action="Tukang.viewJamHistoryDetail" data-args='["${escapeHtml(a.id)}"]'>
         <div class="u-minw0"><div class="tx-name">${escapeHtml(name)}</div><div class="tx-meta">${dateLabel} · ${jamLabel} · ${jamDetail}${lockNote}</div></div>
         <div class="tx-amount">${fmtFull(a.upah)}</div>
       </div>`;
@@ -638,7 +638,7 @@ const locked=!!(entry&&(entry.renovItemLinkId||entry.paidTxId));
 const paidLock=!!(entry&&entry.paidTxId);
 const jamLabel=entry&&entry.mode==='borongan'?` borongan ${fmtFull(entry.borTotal)}÷${entry.borJumlah}`:(entry&&entry.masuk&&entry.pulang?` ${entry.masuk}–${entry.pulang}`:'');
 const lockNote=paidLock?' (sudah dibayar)':(locked?' (sudah dipakai di item Renovasi)':'');
-return `<div ${locked?'':`data-tk-day="1" data-tk-worker="${w.id}" data-tk-date="${iso}"`} class="wh-day-box" style="cursor:${locked?'default':'pointer'}" title="${dowShort[d.getDay()]} ${iso}${jamLabel}${lockNote}">
+return `<div ${locked?'':`data-tk-day="1" data-tk-worker="${escapeHtml(w.id)}" data-tk-date="${escapeHtml(iso)}"`} class="wh-day-box" style="cursor:${locked?'default':'pointer'}" title="${dowShort[d.getDay()]} ${iso}${jamLabel}${lockNote}">
 <div class="wh-day-box-dow">${dowShort[d.getDay()]}</div>
 <div class="wh-day-box-date">${d.getDate()}</div>
 <div class="wh-day-box-status" style="background:${bg};color:${color}">${label}</div>
@@ -649,8 +649,8 @@ return `<div class="tx-item u-fdcol u-gap8" style="align-items:stretch">
         <div class="u-flex u-jcb u-aic u-gap8">
           <div class="u-minw0"><div class="tx-name">${escapeHtml(w.name)}</div><div class="tx-meta">${fmtFull(w.upahJam)}/jam · lembur ${fmtFull(w.upahLemburJam)}/jam</div></div>
           <div class="u-tar" style="flex-shrink:0"><div class="tx-amount">${fmtFull(weekTotal)}</div><div class="u-fs11 u-t2">minggu ini</div></div>
-          <button class="tx-del" data-tk-edit="${w.id}" aria-label="Edit" style="color:var(--accent)">✏️</button>
-          <button class="tx-del" data-tk-del="${w.id}" aria-label="Hapus">🗑</button>
+          <button class="tx-del" data-tk-edit="${escapeHtml(w.id)}" aria-label="Edit" style="color:var(--accent)">✏️</button>
+          <button class="tx-del" data-tk-del="${escapeHtml(w.id)}" aria-label="Hapus">🗑</button>
         </div>
         <div class="u-flex u-gap4">${chips}</div>
         ${Tukang.renderWorkerHistory(w)}

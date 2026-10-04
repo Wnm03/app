@@ -276,7 +276,7 @@ const visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
 // kendaraan lain tidak ditawarkan sebagai opsi baru.
 const selectedCat=cur?(D.sparepartCats||[]).find(c=>c&&c.id===cur):null;
 const cats=selectedCat&&!visible.some(c=>c.id===selectedCat.id)?[selectedCat,...visible]:visible;
-sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${c.id}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}${selectedCat&&c.id===selectedCat.id&&!catVisibleForVehicle(c,vid)?' — kategori kendaraan lain':''}</option>`).join('');
+sel.innerHTML='<option value="">Tanpa kategori</option>'+cats.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.code||codeFromName(c.name))} — ${escapeHtml(c.name)}${selectedCat&&c.id===selectedCat.id&&!catVisibleForVehicle(c,vid)?' — kategori kendaraan lain':''}</option>`).join('');
 if(cur&&cats.some(c=>c.id===cur)) sel.value=cur;
 // FITUR BARU (audit, gap "dropdown kategori tanpa pencarian"): reset kotak
 // cari tiap kali dropdown dimuat ulang (buka modal baru/ganti kendaraan),

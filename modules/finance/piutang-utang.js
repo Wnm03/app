@@ -82,7 +82,7 @@ const sel=document.getElementById(selId);
 if(!sel)return;
 let assets=getMultiOwnerAssets();
 if(excludeAssetId)assets=assets.filter(a=>!sameId(a.id,excludeAssetId));
-sel.innerHTML='<option value="">— Tidak dikaitkan —</option>'+assets.map(a=>`<option value="${a.id}">${escapeHtml(a.name)}</option>`).join('');
+sel.innerHTML='<option value="">— Tidak dikaitkan —</option>'+assets.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`).join('');
 sel.value=(curAssetId&&assets.some(a=>sameId(a.id,curAssetId)))?curAssetId:'';
 }
 // isPiutangOwnershipSelf(p) — helper REUSE dari OwnershipEngine (Sesi 255,
@@ -373,7 +373,7 @@ return D.debts.length<before;
 function populateSyncTxAccSelect(selId){
 const el=document.getElementById(selId);
 if(!el)return;
-el.innerHTML=(D.accounts||[]).map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+el.innerHTML=(D.accounts||[]).map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 }
 // togglePiutangSyncTxFields()/toggleDebtSyncTxFields() — tampil/sembunyi
 // wrap Akun sesuai toggle "🧾 Catat juga sebagai transaksi arus kas"

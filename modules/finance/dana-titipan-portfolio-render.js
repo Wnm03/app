@@ -383,7 +383,7 @@ const DanaTitipanPortfolioPresenter = {
               <td class="tx-tbl-date">${r.returnDate ? escapeHtml(r.returnDate) : '—'}</td>
               <td>${r.notes ? escapeHtml(r.notes) : ''}</td>
               <td class="num tx-amount money">↩️ ${this._money(r.amount)}</td>
-              <td class="tx-tbl-del"><button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${r.id}"]' aria-label="Hapus riwayat pengembalian">🗑️</button></td>
+              <td class="tx-tbl-del"><button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${escapeHtml(r.id)}"]' aria-label="Hapus riwayat pengembalian">🗑️</button></td>
             </tr>
           `).join('')}
           </tbody></table></div>`;
@@ -393,7 +393,7 @@ const DanaTitipanPortfolioPresenter = {
           ${list.map((r) => `
             <div class="u-flex u-jcb u-fs11 u-mb2 u-ml10">
               <span>↩️ ${this._money(r.amount)}${r.returnDate ? ` <span class="u-t2">(${escapeHtml(r.returnDate)})</span>` : ''}${r.notes ? ` <span class="u-t2">— ${escapeHtml(r.notes)}</span>` : ''}</span>
-              <button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${r.id}"]' aria-label="Hapus riwayat pengembalian">🗑️</button>
+              <button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${escapeHtml(r.id)}"]' aria-label="Hapus riwayat pengembalian">🗑️</button>
             </div>
           `).join('')}`;
   },

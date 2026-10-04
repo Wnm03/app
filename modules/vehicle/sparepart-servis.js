@@ -565,7 +565,7 @@ function resolveServiceStatusMeta(score){
   if(n<=0.30)return{code:'mendekati',label:'Mendekati',icon:'🔵',severity:1};
   return{code:'aman',label:'Aman',icon:'🟢',severity:0};
 }
-function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO}={}){
+function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO,historyRows}={}){
 // S2040: existing/legacy motorcycle mode uses actual action history as the
 // baseline. New-bike/KPB milestones are intentionally outside Car Notes.
 if(typeof ServiceLegacyMaintenance!=='undefined'&&ServiceLegacyMaintenance&&typeof ServiceLegacyMaintenance.isLegacy==='function'&&ServiceLegacyMaintenance.isLegacy(vehicleId)){
@@ -606,7 +606,9 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   let lastKm=null,lastDate=null,latestHistory=null;
   let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
   if(hasKm||hasMonths||hasDays){
-    if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+    if(Array.isArray(historyRows)){
+      latestHistory=historyRows.filter(s=>s&&s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,lastFilter,true)).sort(compareServiceHistoryRecencyLocal)[0]||null;
+    }else if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
   }
   if(hasKm){
     lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):getLastServiceKmForCat(vehicleId,cat,lastFilter,true);
@@ -1063,7 +1065,7 @@ toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Penging
 populateVehicleSelect(elId,currentValue,isEdit){
 const sel=document.getElementById(elId);
 if(!sel)return;
-sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${v.id}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
+sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
 const hintId=elId==='sparepartVehicleId'?'sparepartVehicleHint':'stockVehicleHint';
 const hintEl=document.getElementById(hintId);
 if(isEdit){

@@ -55,7 +55,7 @@ kat.value='semua';
 }
 const akun=document.getElementById('linkTxAkun');
 if(akun){
-akun.innerHTML='<option value="semua">Semua Akun</option>'+(D.accounts||[]).map(a=>`<option value="${a.id}">${a.emoji||''} ${escapeHtml(a.name)}</option>`).join('');
+akun.innerHTML='<option value="semua">Semua Akun</option>'+(D.accounts||[]).map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji||''} ${escapeHtml(a.name)}</option>`).join('');
 akun.value='semua';
 }
 LinkTx.onKatChange();
