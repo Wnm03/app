@@ -151,8 +151,17 @@ let _txAccManuallySet=false;
 let _txAssetManuallySet=false;
 let _txCatLearnSource=null;
 let _saveGuards={};
+function _financeMutationBlockedByStaleState(){
+if(typeof _crossTabStateStale!=='undefined'&&_crossTabStateStale){
+const _msg='⚠️ Data aplikasi berubah di tab lain. Muat ulang aplikasi sebelum menyimpan perubahan Finance agar data lama tidak menimpa data terbaru.';
+if(typeof toast==='function')toast(_msg,6500);else if(typeof console!=='undefined'&&console.warn)console.warn(_msg);
+return true;
+}
+return false;
+}
 function withSaveGuard(key,modalId,fn){
 if(_saveGuards[key])return;
+if(_financeMutationBlockedByStaleState())return false;
 const modalEl=modalId?document.getElementById(modalId):null;
 if(modalEl && !modalEl.classList.contains('open'))return;
 _saveGuards[key]=true;
@@ -164,6 +173,7 @@ _saveGuards[key]=false;
 }
 async function withSaveGuardAsync(key,modalId,fn){
 if(_saveGuards[key])return;
+if(_financeMutationBlockedByStaleState())return false;
 const modalEl=modalId?document.getElementById(modalId):null;
 if(modalEl && !modalEl.classList.contains('open'))return;
 _saveGuards[key]=true;
@@ -366,6 +376,14 @@ var _crossTabStateStale=false;
 var _crossTabWarnShown=false;
 var _crossTabChannel=null;
 var _crossTabInstance='mirror_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
+function _financeMutationBlockedByStaleState(){
+if(typeof _crossTabStateStale!=='undefined'&&_crossTabStateStale){
+  if(typeof _crossTabWarnShown!=='undefined'&&!_crossTabWarnShown){_crossTabWarnShown=true;}
+  if(typeof toast==='function')toast('⚠️ Data Finance sudah berubah dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.',6500);
+  return true;
+}
+return false;
+}
 function _markCrossTabStale(){
 if(_crossTabStateStale)return;
 _crossTabStateStale=true;

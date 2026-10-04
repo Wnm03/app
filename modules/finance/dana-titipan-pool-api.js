@@ -83,6 +83,7 @@ _validateAmount(amount) {
 // tidak punya identity alami untuk di-upsert, tiap submit = 1 transaksi
 // baru, sama seperti pola `D.transactions`/`D.investmentTx`).
 _addEntry(type, input) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   const params = input || {};
   const amount = this._validateAmount(params.amount);
   D.titipanPool = D.titipanPool || [];
@@ -95,8 +96,14 @@ _addEntry(type, input) {
     createdAt: Date.now(),
   };
   D.titipanPool.push(record);
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'pool', action: type, entryId: record.id });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanPool.pop();
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'pool', action: type, entryId: record.id });
   return record;
 },
 
@@ -113,6 +120,7 @@ _addEntry(type, input) {
 // Return: record yang tersimpan (`{id, amount, date, notes, type:
 //   'opening_balance', createdAt}`).
 addOpeningBalance(params) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   return this._addEntry('opening_balance', params);
 },
 
@@ -121,6 +129,7 @@ addOpeningBalance(params) {
 // Return: record yang tersimpan (`{id, amount, date, notes, type:
 //   'deposit', createdAt}`).
 addDeposit(params) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   return this._addEntry('deposit', params);
 },
 
@@ -135,13 +144,21 @@ addDeposit(params) {
 // apa-apa soal itu (MASTER_HANDOFF §6: "belumDialokasikan harus derived
 // murni ... setiap kali dipanggil, tidak ada caching/field tersimpan").
 deleteEntry(id) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   if (!(D && Array.isArray(D.titipanPool))) return false;
   if (!id) return false;
   const idx = D.titipanPool.findIndex((e) => e && e.id === id);
   if (idx === -1) return false;
+  const beforePool = D.titipanPool.slice();
   D.titipanPool.splice(idx, 1);
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'pool', action: 'delete', entryId: id });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanPool = beforePool;
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'pool', action: 'delete', entryId: id });
   return true;
 },
 

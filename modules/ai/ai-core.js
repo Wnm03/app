@@ -34,6 +34,56 @@
 // default. Tidak ada notifikasi/toast yang terpasang di file ini. Modul
 // lain baru aktif kalau di-subscribe eksplisit (Sesi 2+).
 // ------------------------------------------------------------------------
+const AI_EVENT_OUTBOX_KEY = 'ai:event-outbox:v1';
+let _aiEventOutboxWrite = Promise.resolve();
+let _aiEventOutboxSeq = 0;
+
+async function _aiEventOutboxRead() {
+  if (typeof IDBStore === 'undefined' || typeof IDBStore.get !== 'function') return [];
+  const q = await IDBStore.get(AI_EVENT_OUTBOX_KEY);
+  return Array.isArray(q) ? q : [];
+}
+
+function _aiEventOutboxEnqueue(eventName, payload, meta, error) {
+  const eventId = meta && meta.eventId ? String(meta.eventId) : `ai-recovery-${Date.now()}-${++_aiEventOutboxSeq}`;
+  _aiEventOutboxWrite = _aiEventOutboxWrite.then(async () => {
+    if (typeof IDBStore === 'undefined' || typeof IDBStore.set !== 'function') return false;
+    const q = await _aiEventOutboxRead();
+    if (q.some(x => x && String(x.eventId) === eventId)) return true;
+    q.push({eventId, type:String(eventName), payload:payload || {}, meta:{...(meta || {}), eventId}, attempts:0, lastError:String(error && error.message || error || '')});
+    return IDBStore.set(AI_EVENT_OUTBOX_KEY, q);
+  }).catch(() => false);
+  return _aiEventOutboxWrite;
+}
+
+function aiReplayEventOutbox() {
+  _aiEventOutboxWrite = _aiEventOutboxWrite.then(async () => {
+    if (typeof IDBStore === 'undefined' || typeof IDBStore.set !== 'function') return 0;
+    const q = await _aiEventOutboxRead();
+    if (!q.length) return 0;
+    const pending = q.slice();
+    let delivered = 0;
+    while (pending.length) {
+      const item = pending[0];
+      try {
+        await AIBus.emitAsync(item.type, item.payload, item.meta);
+        pending.shift(); delivered++;
+        await IDBStore.set(AI_EVENT_OUTBOX_KEY, pending);
+      } catch (e) {
+        item.attempts = Number(item.attempts || 0) + 1;
+        item.lastError = String(e && e.message || e || '');
+        await IDBStore.set(AI_EVENT_OUTBOX_KEY, pending);
+        break;
+      }
+    }
+    return delivered;
+  }).catch(() => 0);
+  return _aiEventOutboxWrite;
+}
+
+// S2473: normal AIBus.emit() is intentionally fire-and-forget for legacy
+// callers, but a failed async AI consumer must not silently lose the business
+// event. The failed event is journaled durably and replayed after boot.
 const AIBus = {
   _listeners: Object.create(null),
 
@@ -69,9 +119,13 @@ const AIBus = {
         // listener rejection must still be observed rather than becoming an
         // unhandled rejection. Durable replay uses emitAsync() below.
         if (result && typeof result.then === 'function') {
-          result.catch((e) => console.warn('[AICore] Async listener error untuk event "' + eventName + '":', e));
+          result.catch((e) => {
+            _aiEventOutboxEnqueue(eventName, payload, meta, e);
+            console.warn('[AICore] Async listener error untuk event "' + eventName + '":', e);
+          });
         }
       } catch (e) {
+        _aiEventOutboxEnqueue(eventName, payload, meta, e);
         // AI Core tidak boleh menjatuhkan app utama kalau 1 listener error.
         console.warn('[AICore] Listener error untuk event "' + eventName + '":', e);
       }
@@ -152,6 +206,9 @@ function aiGetStore() {
 function aiInvalidateCache() {
   _aiLoaded = false;
 }
+
+if (typeof globalThis !== 'undefined') globalThis.aiReplayEventOutbox = aiReplayEventOutbox;
+if (typeof globalThis !== 'undefined') globalThis.aiEventOutboxFlush = () => _aiEventOutboxWrite;
 
 // ------------------------------------------------------------------------
 // AIContext — pembaca READ-ONLY ringkasan state app yang relevan buat AI

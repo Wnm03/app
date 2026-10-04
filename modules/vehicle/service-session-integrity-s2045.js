@@ -55,7 +55,8 @@
     if(!cat){
       cat={id,name:component.name||cid,code:typeof g.codeFromName==='function'?g.codeFromName(component.name||cid):cid.toUpperCase(),intervalKm,intervalBulan:intervalBulan,masterCategoryId:component.masterCategoryId||null,serviceComponentId:cid,showInReminder:!!(intervalKm||intervalBulan),group:group&&group.group||null,groupIcon:group&&group.icon||''};
       if(vid)cat.vehicleId=vid;
-      cats().push(cat);
+      if(vid&&g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')g.VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'session-integrity-create');
+      else cats().push(cat);
     }
     return cat;
   }

@@ -30,16 +30,20 @@
       cat={id,name:name||cid,code:typeof g.codeFromName==='function'?g.codeFromName(name||cid):cid.toUpperCase(),intervalKm:intervalKm||0,intervalBulan:masterMonths||0,masterCategoryId,serviceComponentId:cid,showInReminder:!!(intervalKm||masterMonths),group:master&&master.group&&master.group.group||null,groupIcon:master&&master.group&&master.group.icon||''};
       if(vid)cat.vehicleId=vid;
       if(g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')g.VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'checklist-projection');
-      data().sparepartCats.push(cat);
+      if(!(g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'))data().sparepartCats.push(cat);
     }else if(cat){
-      const categoryOverride=null;
-      if(cid&&!cat.serviceComponentId)cat.serviceComponentId=cid;
-      if(masterCategoryId&&!cat.masterCategoryId)cat.masterCategoryId=masterCategoryId;
-      if(name&&!cat.name)cat.name=name;
-      if(master&&master.group){if(!cat.group)cat.group=master.group.group||null;if(!cat.groupIcon)cat.groupIcon=master.group.icon||'';}
-      if(intervalKm)cat.intervalKm=intervalKm;
-      if(masterMonths)cat.intervalBulan=masterMonths;
-      if(intervalKm||masterMonths)cat.showInReminder=true;
+      const patch={};
+      if(cid&&!cat.serviceComponentId)patch.serviceComponentId=cid;
+      if(masterCategoryId&&!cat.masterCategoryId)patch.masterCategoryId=masterCategoryId;
+      if(name&&!cat.name)patch.name=name;
+      if(master&&master.group){if(!cat.group)patch.group=master.group.group||null;if(!cat.groupIcon)patch.groupIcon=master.group.icon||'';}
+      if(intervalKm)patch.intervalKm=intervalKm;
+      if(masterMonths)patch.intervalBulan=masterMonths;
+      if(intervalKm||masterMonths)patch.showInReminder=true;
+      if(Object.keys(patch).length&&g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.updateServiceCategory==='function'){
+        const ur=g.VehicleCarNotesSOT.updateServiceCategory(vid,cat.id,patch);
+        if(ur&&ur.ok){const updated=(g.VehicleCarNotesSOT.getServiceCategories(vid)||[]).find(c=>str(c&&c.id)===str(cat.id));if(updated)cat=Object.assign(cat,updated);}
+      }else if(Object.keys(patch).length)Object.assign(cat,patch);
     }
     const effectiveKm=cat&&typeof g.getEffectiveIntervalKm==='function'?g.getEffectiveIntervalKm(vid,cat):(cat&&Number(cat.intervalKm)>0?Number(cat.intervalKm):intervalKm);
     const effectiveMonths=cat&&typeof g.getEffectiveIntervalBulan==='function'?g.getEffectiveIntervalBulan(cat,vid):(cat&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):masterMonths);

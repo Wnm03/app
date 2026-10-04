@@ -19,6 +19,7 @@
 
 async function saveTx(){
 if(_txSaving)return;
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const modalEl=document.getElementById('txModal');
 if(modalEl && !modalEl.classList.contains('open'))return;
 _txSaving=true;
@@ -134,6 +135,7 @@ const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===exis
 // cabang-cabang itu, catch di bawah cuma throw ulang (0 perubahan perilaku,
 // scope sesi ini murni Bug B/CREATE generik, tidak menyentuh Bug A/C/D/E).
 let _txCreateSnapshot=null;
+let _txAtomicMutationStarted=false;
 let _serviceCommitMeta=null;
 const _serviceEditSnapshot={servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null};
 try{
@@ -203,7 +205,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});renderDebtList();renderKekayaanBersih();hitungZakatMaal();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"utang"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"utang"});
 toast(isLatestInstallment?('✅ Pembayaran utang diperbarui'+debtSyncedMsg):'ℹ️ Ini pembayaran utang lama — hanya catatan transaksi ini yang diubah, sisa utang tidak ikut disesuaikan (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
 return;
 }
@@ -234,7 +236,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"tagihan"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"tagihan"});
 toast(isLatestTagihan?('✅ Pembayaran tagihan diperbarui'+(archiveSynced?' (tanggal arsip ikut disinkron)':'')):'ℹ️ Ini pembayaran tagihan lama — hanya catatan transaksi ini yang diubah, tanggal arsip tidak ikut berubah (ubah lewat 📋 Riwayat Pembayaran kalau perlu).');
 return;
 }
@@ -338,7 +340,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-lama"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"cicilan-lama"});
 if(isLatestInstallment)toast('✅ Cicilan/tagihan diperbarui');
 return;
 }
@@ -378,7 +380,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-baru"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"cicilan-baru"});
 toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
 return;
 }
@@ -419,7 +421,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"cicilan-baru"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"cicilan-baru"});
 toast(cicilanShared?`✅ Cicilan ${nama} ${tenor}x dimulai! Porsi kamu ${fmtFull(perBulanMine)}/bulan (total ${fmtFull(perBulan)}/bulan)`:`✅ Cicilan ${nama} ${tenor}x dimulai! ${fmtFull(perBulan)}/bulan`);
 return;
 }
@@ -448,7 +450,7 @@ txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{category:cat,kind:"langganan"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"langganan"});
 toast(`✅ ${nama} dicatat & dijadwalkan ${freq}`);
 return;
 }
@@ -567,7 +569,8 @@ WorthIt.applyBuyLink(savedTxId);
 if(typeof SewaKios!=='undefined')SewaKios.applyPaymentLink(savedTxId);
 Tukang.applyPendingPayment(savedTxId);
 }
-applyTxStockFromTx(note,savedTxId,date,amt,existingTx);
+_txAtomicMutationStarted=true;
+applyTxStockFromTx(note,savedTxId,date,amt,existingTx,{deferEvents:true});
 // Sesi ini (sync sparepart -> servis, permintaan user): dipanggil SETELAH
 // applyTxStockFromTx() persis di atas (bukan menggantikan) -- kalau checkbox
 // "Tambah ke Stok Sparepart" & "Sinkron ke Servis" dicentang bersamaan,
@@ -627,6 +630,15 @@ if(_serviceCommitMeta&&typeof ServiceEventLifecycle!=='undefined'){
     }
   }
 }
+// S2449: txModal can temporarily have stockModal stacked above it when the
+// user opens "Tambah Stok Sparepart" from the transaction flow. Never leave
+// that child overlay alive while closing its parent; otherwise the saved
+// sparepart form can reappear behind/after the transaction modal is dismissed
+// (especially on Android where close animation is asynchronous).
+if(typeof document!=='undefined'){
+  const _stockModal=document.getElementById('stockModal');
+  if(_stockModal&&_stockModal.classList&&_stockModal.classList.contains('open')&&typeof closeModal==='function')closeModal('stockModal',{instant:true});
+}
 closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance',carNotes:true});
 const _financePostCommitPayload={txId:savedTxId,category:cat,type:curTxType,amount:amt};
 try{if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",_financePostCommitPayload);}
@@ -647,13 +659,12 @@ const txAssetSplitMsg='';
 // toast pesan panjang lain, mis. error-handler.js/features-helpers.js).
 toast((existingTx?'✅ Transaksi diperbarui':'✅ Transaksi tersimpan')+txAssetSplitMsg+(txRenovMsg?' — '+txRenovMsg:''),txRenovMsg?4000:2200);
 } catch(_txSaveErr){
-// ERROR path (S629 Bug B): rollback HANYA kalau ini jalur CREATE generik
-// (_txCreateSnapshot terisi di titik BEGIN di atas). Cabang lain (EDIT/
-// cicilan/tagihan/langganan/utang) tidak pernah mengisi snapshot ini, jadi
-// exception di cabang-cabang itu langsung throw ulang tanpa rollback --
-// persis perilaku sebelum s629 (di luar scope Bug B, lihat AUDIT s628).
+// ERROR path: once a Finance side-effect has started, restore the pre-save
+// cross-domain snapshot on both CREATE and EDIT. S2455 extends the old
+// service-only rollback so a failed Sparepart mutation cannot leave a half-
+// edited Finance row (or a reverted old stock purchase) behind.
 const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.servisLinkId));
-if(_serviceMutationTouched){
+if(_txAtomicMutationStarted||_serviceMutationTouched){
   try{
     if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
     if(_serviceEditSnapshot.transactions!==null){const _rows=JSON.parse(_serviceEditSnapshot.transactions);if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.replaceSnapshot(_rows); else D.transactions=_rows;}
@@ -678,6 +689,7 @@ throw _txSaveErr;
 }
 }
 function saveCatatan(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const text=document.getElementById('catatanText').value;
 if(!text){toast('⚠️ Tulis catatan dulu');return;}
 if(!D.catatan[curCatatan])D.catatan[curCatatan]=[];
@@ -734,19 +746,22 @@ renderCatatanAnakList();
 toast('🗑 Catatan dihapus');
 }
 function saveReminder(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const title=document.getElementById('rTitle').value;
 if(!title){toast('⚠️ Isi judul');return;}
 D.reminders.push({id:uid(),title,desc:document.getElementById('rDesc').value,color:document.getElementById('rColor').value});
 save();closeModal('reminderModal');renderSettings();toast('✅ Pengingat tersimpan');
 }
-function saveLDR(){D.nextPulang=document.getElementById('nextPulang').value;D.ldrCycleStart=new Date().toISOString().slice(0,10);save();renderLDR();}
+function saveLDR(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;D.nextPulang=document.getElementById('nextPulang').value;D.ldrCycleStart=new Date().toISOString().slice(0,10);save();renderLDR();}
 
 // (v94): toggleMs/delReminder dipindah dari backup-restore.js — domain
 // Milestone/Reminder di Pengaturan, gabung bareng saveCatatan/saveReminder/
 // saveLDR di atas yang sudah lebih dulu ada di sini sejak v83.
 // (showTargetAccountTx/addTarget/delTarget, juga awalnya gabung di sini,
 // sudah dipindah lagi ke tx-target.js -- lihat catatan di atas openCatatan.)
-function toggleMs(i){D.milestones[i]=!D.milestones[i];save();renderMs();}
+function toggleMs(i){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;D.milestones[i]=!D.milestones[i];save();renderMs();}
 /* moved to modules-render.js: renderMs */
 /* moved to modules-render.js: renderTarget */
 /* moved to modules-render.js: renderReminder */
@@ -762,6 +777,7 @@ function toggleMs(i){D.milestones[i]=!D.milestones[i];save();renderMs();}
 // index SEMULA (`splice(i,0,removed)`, bukan cuma `push()` ke akhir array
 // -- urutan reminder lain tetap sama persis spt sebelum dihapus).
 function delReminder(i){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const removed=D.reminders[i];
 D.reminders.splice(i,1);
 save();

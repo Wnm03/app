@@ -74,7 +74,7 @@ return n;
 function revertStockPurchase(partId,qty,txId){
 if(!partId||!qty)return;
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
-const r=StockCommandSOT.revertPurchase(partId,qty,txId,{saveNow:false});
+const r=StockCommandSOT.revertPurchase(partId,qty,txId,{saveNow:false,emitEvent:false});
 return !!r.ok;
 }
 
@@ -101,7 +101,7 @@ return !!r.ok;
 function applyStockPurchase(p,qty,unitPrice,purchaseDate,txId){
 if(!p||!p.id)return false;
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
-const r=StockCommandSOT.applyPurchase(p.id,qty,unitPrice,purchaseDate,txId,{saveNow:false});
+const r=StockCommandSOT.applyPurchase(p.id,qty,unitPrice,purchaseDate,txId,{saveNow:false,emitEvent:false});
 return !!r.ok;
 }
 
@@ -144,6 +144,13 @@ const vidSync=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 let cat=(typeof resolveServisCatForVehicle==='function')
 ?resolveServisCatForVehicle(catName,vidSync)
 :D.sparepartCats.find(c=>c.name.toLowerCase()===catName.toLowerCase());
+// S2459: a global legacy category is never reused as a vehicle-owned category.
+// Materialize a vehicle-scoped projection instead; the global row remains intact.
+if(cat&&vidSync&&String(cat.vehicleId||'')!==String(vidSync)){
+  cat=Object.assign({},cat,{id:'sp_'+_genId(),vehicleId:vidSync});
+  const sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-catalog-scope'):null;
+  if(!sr||!sr.ok)D.sparepartCats.push(cat);
+}
 if(!cat){
 // Sesi 295 (bugfix, permintaan eksplisit user): kategori auto dari scan
 // Katalog Suku Cadang ini TUJUANNYA cuma pengelompokan stok (biar
@@ -161,8 +168,8 @@ if(!cat){
 // dgn kategori hasil input manual.
 const vehicleIdCatSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
 cat={id:'sp_'+_genId(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create');
-D.sparepartCats.push(cat);
+const _catSotResult=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
+if(!_catSotResult||!_catSotResult.ok)D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
@@ -335,8 +342,10 @@ const qty=parseFloat(document.getElementById('txStockQty').value)||0;
 const unit=document.getElementById('txStockUnit').value.trim()||'pcs';
 if(qty<=0){toast('⚠️ Jumlah stok yang ditambah harus lebih dari 0');return;}
 if(existingTx&&existingTx.partStockId){
-if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.revertPurchaseForTransaction==='function')StockCommandSOT.revertPurchaseForTransaction(existingTx.id,{saveNow:false});
-else revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id);
+let rr=null;
+if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.revertPurchaseForTransaction==='function')rr=StockCommandSOT.revertPurchaseForTransaction(existingTx.id,{saveNow:false});
+else rr={ok:!!revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id)};
+if(!rr||rr.ok===false)throw new Error((rr&&rr.code)||'STOCK_PURCHASE_REVERT_FAILED');
 }
 const unitPrice=(priceBasis>0)?(priceBasis/qty):0;
 const purchaseDate=date||new Date().toISOString().split('T')[0];
@@ -351,18 +360,24 @@ const vidNewCat=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 let cat=(typeof resolveServisCatForVehicle==='function')
 ?resolveServisCatForVehicle(name,vidNewCat)
 :D.sparepartCats.find(c=>c.name.toLowerCase()===name.toLowerCase());
+// S2459: never mutate/reuse a global category as the active vehicle's owner.
+if(cat&&vidNewCat&&String(cat.vehicleId||'')!==String(vidNewCat)){
+  cat=Object.assign({},cat,{id:'sp_'+_genId(),vehicleId:vidNewCat});
+  const sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-transaction-scope'):null;
+  if(!sr||!sr.ok)D.sparepartCats.push(cat);
+}
 if(!cat){
 const vehicleIdNewCat=(vidNewCat&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNewCat))?vidNewCat:null;
 cat={id:'sp_'+_genId(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create');
-D.sparepartCats.push(cat);
+const _catSotResult=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
+if(!_catSotResult||!_catSotResult.ok)D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
 const code=prefix+'-'+String(seq).padStart(3,'0');
 const existing=D.partsStock.find(p=>p.catId===cat.id&&p.name.toLowerCase()===name.toLowerCase()&&(!p.vehicleId||String(p.vehicleId)===String(vidNewCat)));
 if(existing){
-applyStockPurchase(existing,qty,unitPrice,purchaseDate,txId);
+if(!applyStockPurchase(existing,qty,unitPrice,purchaseDate,txId))throw new Error('STOCK_PURCHASE_APPLY_FAILED');
 targetPart=existing;
 } else {
 // AUDIT SOT (permintaan user, lanjutan fix syncPartsStockFromCatalog di
@@ -372,8 +387,10 @@ const vidNew=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 const vehicleIdNew=(vidNew&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNew))?vidNew:null;
 const np={id:'st_'+_genId(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function'||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
-StockCommandSOT.create(np);
-StockCommandSOT.applyPurchase(np.id,qty,unitPrice,purchaseDate,txId);
+const cr=StockCommandSOT.create(np);
+if(!cr.ok)throw new Error(cr.code||'STOCK_CREATE_FAILED');
+const ar=StockCommandSOT.applyPurchase(np.id,qty,unitPrice,purchaseDate,txId,{saveNow:false,emitEvent:false});
+if(!ar.ok)throw new Error(ar.code||'STOCK_PURCHASE_APPLY_FAILED');
 targetPart=np;
 // Tahap 9: part baru yg diketik manual di Keuangan JUGA otomatis dibuatkan
 // entri di Vehicle Catalog (best-effort, tidak menunggu/tidak memblokir
@@ -390,7 +407,7 @@ toast(`📦 Kategori & stok "${name}" otomatis dibuat (+${qty} ${unit})`);
 } else {
 const p=D.partsStock.find(x=>x.id===itemSel);
 if(p){
-applyStockPurchase(p,qty,unitPrice,purchaseDate,txId);
+if(!applyStockPurchase(p,qty,unitPrice,purchaseDate,txId))throw new Error('STOCK_PURCHASE_APPLY_FAILED');
 targetPart=p;
 toast(`📦 Stok "${escapeHtml(p.name)}" bertambah +${qty} ${unit}`);
 }

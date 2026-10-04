@@ -51,6 +51,7 @@ toast('✅ NJOP diisi dari "'+a.name+'" — sesuaikan lagi kalau perlu (nilai as
 PBB.render();
 },
 hitung(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const njopBumi=parsePzNum(document.getElementById('pbbNjopBumi').value);
 const njopBangunan=parsePzNum(document.getElementById('pbbNjopBangunan').value);
 const njoptkp=parsePzNum(document.getElementById('pbbNjoptkp').value);
@@ -72,6 +73,7 @@ document.getElementById('pbbNjopKenaPajak').textContent=fmtFull(njopKenaPajak);
 document.getElementById('pbbTerutang').textContent=fmtFull(terutang);
 },
 ikatTagihan(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const jumlah=parsePzNum(document.getElementById('pbbTerutang').textContent);
 if(jumlah<=0){toast('⚠️ Belum ada PBB terutang untuk diikat ke tagihan');return;}
 const due=document.getElementById('pbbJatuhTempo').value;
@@ -82,20 +84,20 @@ const asset=PBB.currentAsset();
 let bill=D.bills.find(b=>b.pbbLink&&(asset?sameId(b.pbbLink,asset.id):b.pbbLink===true));
 const nama='PBB (Pajak Bumi & Bangunan)'+(asset?(' — '+asset.name):'');
 if(bill){
-bill.amount=jumlah; bill.nextDue=due; bill.freq='tahunan'; bill.name=nama;
+BillDebtPiutangCanonicalWriter.updateById('bills',bill.id,b=>{b.amount=jumlah; b.nextDue=due; b.freq='tahunan'; b.name=nama;});
 save();
 // Sesi C-lanjutan (Zakat/PBB, Prioritas Sedang audit): PBB.ikatTagihan()
 // menulis D.bills langsung (di luar tagihan-kalender.js) tanpa pernah emit
 // -- pola sama persis kind:"tagihan" yang sudah ada di tagihan-kalender.js
 // (_saveBillInner), field source:"pbb" supaya konsumen bisa bedakan asal.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"edit",billId:bill.id,amount:jumlah,source:"pbb"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"tagihan",action:"edit",billId:bill.id,amount:jumlah,source:"pbb"});
 refreshBillEverywhere(); PBB.renderBillStatus();
 toast('✅ Tagihan PBB diperbarui: '+fmtFull(jumlah)+' jatuh tempo '+due);
 } else {
 BillDebtPiutangCanonicalWriter.add('bills',{id:uid(),name:nama,amount:jumlah,nextDue:due,freq:'tahunan',category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||null,note:'Otomatis dari Kalkulator PBB',kind:'tagihan',pbbLink:asset?asset.id:true});
-const _newPbbBillId=D.bills[D.bills.length-1].id;
+const _newPbbBillId=D.bills.find(b=>b&&b.pbbLink&&(asset?sameId(b.pbbLink,asset.id):b.pbbLink===true)&&b.name===nama&&b.nextDue===due)?.id||null;
 save();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"create",billId:_newPbbBillId,amount:jumlah,source:"pbb"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"tagihan",action:"create",billId:_newPbbBillId,amount:jumlah,source:"pbb"});
 refreshBillEverywhere(); PBB.renderBillStatus();
 toast('✅ Tagihan tahunan PBB dibuat, reminder aktif di menu Tagihan');
 }
@@ -175,6 +177,7 @@ const jiwa=Math.max(1,parseInt(document.getElementById('zfJiwa').value)||1);
 document.getElementById('zfTotal').textContent=fmtFull(jiwa*D.pajakZakat.zakatFitrahPerJiwa);
 },
 async catatDibayar(jenis){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const jumlahStr=jenis==='penghasilan'?document.getElementById('zpJumlah').textContent:document.getElementById('zmJumlah').textContent;
 const jumlah=parsePzNum(jumlahStr);
 if(jumlah<=0){toast('⚠️ Belum ada kewajiban zakat untuk dicatat');return;}
@@ -186,7 +189,7 @@ save();
 // Sesi C-lanjutan: catatDibayar() menulis D.pajakZakat.zakatLog + D.transactions
 // (baris pengeluaran zakat) tanpa pernah emit -- kind BARU "zakat" (belum ada
 // presedennya, konsisten skema kind:"tagihan"/"piutang"/"transaksi" dst).
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"zakat",action:"create",jenis,amount:jumlah});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"zakat",action:"create",jenis,amount:jumlah});
 Zakat.renderLog();
 Zakat.hitungMaal();
 if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
@@ -200,10 +203,11 @@ if(!log.length){el.innerHTML='<div class="empty"><div class="empty-icon">🕌</d
 el.innerHTML=log.slice(0,20).map(l=>`<div class="tx-item"><div class="tx-icon" style="background:var(--accent3-soft)">🕌</div><div class="tx-info"><div class="tx-name">Zakat ${l.jenis==='penghasilan'?'Penghasilan':'Maal'}</div><div class="tx-meta">${escapeHtml(l.tanggal)}</div></div><div class="tx-amount green">${fmtFull(l.jumlah)}</div><button class="tx-del" data-action="delZakatLog" data-args="${escapeHtml(JSON.stringify([l.id]))}" aria-label="Hapus">🗑</button></div>`).join('');
 },
 async delLog(id){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 if(!await askConfirm('Hapus catatan zakat ini?',{okText:'Ya, Hapus'}))return;
 D.pajakZakat.zakatLog=D.pajakZakat.zakatLog.filter(l=>!sameId(l.id,id));
 save();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"zakat",action:"delete",deletedId:id});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"zakat",action:"delete",deletedId:id});
 Zakat.renderLog();
 },
 renderDashMini(incomeBulan){
@@ -314,6 +318,7 @@ return `<div class="u-r10 u-mb8" style="padding:10px;background:var(--surface3)"
 const applyBtn=document.getElementById('refAiApplyBtn'); if(applyBtn)applyBtn.disabled=!anyValid;
 },
 applySelected(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 if(!RefAI._draft){toast('⚠️ Belum ada hasil cek');return;}
 const pz=D.pajakZakat;
 const checked=[...document.querySelectorAll('#refAiBody input[type=checkbox]:checked')];
@@ -382,6 +387,7 @@ PPh21.hitung();
 toast('✅ Diisi rata-rata pemasukan/bulan tahun '+y);
 },
 hitung(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const brutoBulan=parsePzNum(document.getElementById('pphBruto').value);
 const status=document.getElementById('pphStatus').value;
 const iuranBulan=parsePzNum(document.getElementById('pphIuran').value);

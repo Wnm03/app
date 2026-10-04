@@ -456,8 +456,10 @@ if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIn
 _autoCreateVehicleAsset(v,ownership);
 vehEditIdx=null;
 save();
-// Sesi C (ROADMAP-KONSOLIDASI-DATABASE-SERVIS-v2.md §7): CRUD kendaraan sendiri sudah emit 'vehicle.updated' pada create/edit/delete. Pola & nama event direplikasi dari titik servis yang sudah ada.
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"edit",vehicleId:v.id});
+// S2471: post-commit vehicle event must survive consumer failure.
+const _vehicleEditEvent={kind:"vehicle",action:"edit",vehicleId:v.id};
+try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleEditEvent);}
+catch(_vehicleEditEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleEditEvent});}
 renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
 }
@@ -493,8 +495,10 @@ if(!isNaN(kmAwal)&&kmAwal>0){
 D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
 save();
-// Sesi C: sama seperti cabang edit di atas -- replikasi pola vehicle.updated.
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"create",vehicleId:newId});
+// S2471: durable reconciliation for post-commit vehicle create event.
+const _vehicleCreateEvent={kind:"vehicle",action:"create",vehicleId:newId};
+try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleCreateEvent);}
+catch(_vehicleCreateEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleCreateEvent});}
 renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';const vehTplWrap=document.getElementById('vehMaintenanceTemplateWrap');if(vehTplWrap){vehTplWrap.innerHTML='';vehTplWrap.dataset.templateJson='';}toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
 }
 // Teks ringkasan servis per kendaraan di daftar Kelola Kendaraan — beda per jenis (KW-165).
@@ -562,9 +566,10 @@ if(km<curKm){if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakh
 D.kmLogs.push({id:uid(),vehicleId,date:document.getElementById('kmDate').value,km,note:document.getElementById('kmNote').value});
 if(vehicleId!==curVehicleId){curVehicleId=vehicleId;renderVehicleSelect();}
 save();
-// Sesi C: update KM juga bagian dari 'vehicle.updated' (mengubah state
-// kendaraan yang sama relevan-nya buat konsumen event ini spt CRUD).
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"km",vehicleId});
+// S2471: KM update is post-commit; retain event if a consumer throws.
+const _vehicleKmEvent={kind:"km",vehicleId};
+try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleKmEvent);}
+catch(_vehicleKmEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleKmEvent});}
 closeModal('kmModal');renderCnTab();renderDashboardServisReminder();toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
 }
 async function delVehicle(i){
@@ -573,9 +578,10 @@ if(!await askConfirm('Hapus kendaraan ini? Catatan BBM/servis terkait tetap ada.
 const deletedId=D.vehicles[i]&&D.vehicles[i].id;
 if(typeof VehicleCanonicalWriter==='undefined')throw new Error('VehicleCanonicalWriter unavailable');
 VehicleCanonicalWriter.removeAt(i);save();
-// Sesi C: jalur hapus kendaraan -- tandai deletedId (pola sama persis
-// AIBus.emit("asset.updated",{deletedId:id}) di modules/asset/aset.js).
-if(typeof AIBus!=="undefined")AIBus.emit("vehicle.updated",{kind:"vehicle",action:"delete",deletedId});
+// S2471: durable reconciliation for post-commit vehicle delete event.
+const _vehicleDeleteEvent={kind:"vehicle",action:"delete",deletedId};
+try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleDeleteEvent);}
+catch(_vehicleDeleteEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleDeleteEvent});}
 renderVehicleManageList();renderVehicleSelect();renderCnTab();renderDashboardServisReminder();toast('🗑 Dihapus');
 }
 function daysUntilDate(dateStr){

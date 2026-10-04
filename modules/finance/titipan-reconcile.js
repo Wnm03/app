@@ -17,6 +17,20 @@ var BillDebtPiutangCanonicalWriter=(typeof globalThis!=='undefined'&&globalThis.
 // (linkedAssetId/linkedInvestmentId + linkedOwnerId), supaya gap seperti
 // BUG-OWN-002 (entry point baru lupa panggil sync) ketahuan otomatis, bukan
 // lewat audit manual tiap sesi.
+function _titipanReconcileClone(v){try{return JSON.parse(JSON.stringify(v));}catch(_){return v;}}
+function _titipanReconcileSnapshot(keys){
+  if(typeof D==='undefined')return null;
+  const snap={}; (keys||[]).forEach(k=>{snap[k]=_titipanReconcileClone(D[k]);}); return snap;
+}
+function _titipanReconcileRestore(snap){
+  if(!snap||typeof D==='undefined')return; Object.keys(snap).forEach(k=>{D[k]=snap[k];});
+}
+function _titipanReconcilePersistOrRollback(snap){
+  try{if(typeof save!=='function')return {ok:true}; const r=save(); if(r===false){_titipanReconcileRestore(snap);return {ok:false};} return {ok:true};}
+  catch(_){_titipanReconcileRestore(snap);return {ok:false};}
+}
+
+// persistence failure contract: code: 'PERSISTENCE_FAILED'
 const TitipanReconcile = {
 
 // _expectedFromAssets() — {key: amount} yang SEHARUSNYA ada di Buku Utang,
@@ -1017,6 +1031,8 @@ repairOwnerIdConsistency() {
   if (typeof D === 'undefined') return { unified: 0, conflicts: [] };
   const divergent = this.checkOwnerIdConsistency().divergent;
   if (!divergent.length) return { unified: 0, conflicts: [] };
+  const _repairSnapshot = {assets:JSON.stringify(D.assets),investments:JSON.stringify(D.investments),debts:JSON.stringify(D.debts)};
+  const snapshot = _titipanReconcileSnapshot(['assets','investments','debts']);
   const registry = Array.isArray(D.ownerRegistry) ? D.ownerRegistry : [];
   let unified = 0;
   const conflicts = [];
@@ -1055,8 +1071,16 @@ repairOwnerIdConsistency() {
       if (d && others.includes(String(d.linkedOwnerId))) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = canonicalId; d0.name = canonicalName; }); unified++; }
     });
   });
-  if (unified && typeof save === 'function') save();
-  if (unified && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-owner-id', unified });
+  if (unified) {
+    const persisted=_titipanReconcilePersistOrRollback(snapshot);
+    if(!persisted.ok){
+      D.assets = JSON.parse(_repairSnapshot.assets);
+      D.investments = JSON.parse(_repairSnapshot.investments);
+      D.debts = JSON.parse(_repairSnapshot.debts);
+      return {unified:0,conflicts,reason:'persistence-failed',code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (unified && typeof FinanceEventOutbox !== 'undefined' && typeof FinanceEventOutbox.emitOrEnqueue === 'function') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'reconcile', action: 'repair-owner-id', unified });
   return { unified, conflicts };
 },
 
@@ -1073,6 +1097,9 @@ repairDebtNameStaleness() {
   if (typeof D === 'undefined' || !Array.isArray(D.debts)) return { synced: 0 };
   const stale = this.checkDebtNameStaleness().stale;
   if (!stale.length) return { synced: 0 };
+  const _repairSnapshot = JSON.stringify(D.debts);
+  const _repairSnapshotData = {debts:_repairSnapshot};
+  const snapshot = _titipanReconcileSnapshot(['debts']);
   const registryNameByDebtId = {};
   stale.forEach((s) => { registryNameByDebtId[String(s.debtId)] = s.registryName; });
   let synced = 0;
@@ -1083,8 +1110,11 @@ repairDebtNameStaleness() {
       synced++;
     }
   });
-  if (synced && typeof save === 'function') save();
-  if (synced && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-debt-name', synced });
+  if (synced) {
+    const persisted=_titipanReconcilePersistOrRollback(snapshot);
+    if(!persisted.ok){ D.debts = JSON.parse(_repairSnapshotData.debts); return {synced:0,reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
+  }
+  if (synced && typeof FinanceEventOutbox !== 'undefined' && typeof FinanceEventOutbox.emitOrEnqueue === 'function') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'reconcile', action: 'repair-debt-name', synced });
   return { synced };
 },
 
@@ -1115,6 +1145,9 @@ repairTransactionOwnerRefs() {
   if (typeof resolveOwnerDefaultForAccount !== 'function') return { fixed: 0, cleared: 0, unresolved: [] };
   const orphan = this.checkTransactionOwnerRefs().orphan;
   if (!orphan.length) return { fixed: 0, cleared: 0, unresolved: [] };
+  const _repairSnapshot = JSON.stringify(D.transactions);
+  const _repairSnapshotData = {transactions:_repairSnapshot};
+  const snapshot = _titipanReconcileSnapshot(['transactions']);
   const orphanTxIds = new Set(orphan.map((o) => String(o.txId)));
   let fixed = 0, cleared = 0;
   const unresolved = [];
@@ -1133,8 +1166,11 @@ repairTransactionOwnerRefs() {
       unresolved.push(t.id);
     }
   });
-  if ((fixed || cleared) && typeof save === 'function') save();
-  if ((fixed || cleared) && typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'reconcile', action: 'repair-tx-owner-refs', fixed, cleared });
+  if (fixed || cleared) {
+    const persisted=_titipanReconcilePersistOrRollback(snapshot);
+    if(!persisted.ok){ D.transactions = JSON.parse(_repairSnapshot); return {fixed:0,cleared:0,unresolved:[],reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
+  }
+  if ((fixed || cleared) && typeof FinanceEventOutbox !== 'undefined' && typeof FinanceEventOutbox.emitOrEnqueue === 'function') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'reconcile', action: 'repair-tx-owner-refs', fixed, cleared });
   return { fixed, cleared, unresolved };
 },
 

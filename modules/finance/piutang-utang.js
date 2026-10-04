@@ -143,7 +143,7 @@ if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 // Sesi C (cascade): emit finance.updated -- kind:"piutang" SAMA dgn CRUD
 // manual (sesi #7), auto:true+source membedakan ini piutang OTOMATIS dari
 // cascade bill shared, bukan input user langsung.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:sisa,auto:true,source:"bill-shared"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:sisa,auto:true,source:"bill-shared"});
 }
 // removeOrphanedAutoPiutangForBill(billId) — FIX (audit user, sync 2 arah "Ditanggung
 // Bersama"): dulu hapus TAGIHAN itu sendiri (delBill/delBillArchive, tagihan-kalender.js)
@@ -157,7 +157,7 @@ if(!billId||!D.piutang||!D.piutang.length)return false;
 const before=D.piutang.length;
 BillDebtPiutangCanonicalWriter.removeByPredicate('piutang',p=>p.autoBillId===billId);
 const _removed=before-D.piutang.length;
-if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"bill-removed",billId,deletedCount:_removed});
+if(_removed>0&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"bill-removed",billId,deletedCount:_removed});
 return D.piutang.length<before;
 }
 // syncOutstandingSharedPiutang(billId,newSisa) — FIX (audit user, sync 2 arah "Ditanggung
@@ -182,7 +182,7 @@ const outstanding=D.piutang.filter(p=>p.autoBillId===billId&&!p.lunas);
 if(!outstanding.length)return 0;
 const latest=outstanding.reduce((a,b)=>((b.autoTxId||0)>(a.autoTxId||0)?b:a));
 BillDebtPiutangCanonicalWriter.updateById('piutang',latest.id,p0=>{p0.nilai=sisa;});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:latest.id,amount:sisa,auto:true,source:"bill-edit-sync"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"edit",piutangId:latest.id,amount:sisa,auto:true,source:"bill-edit-sync"});
 return 1;
 }
 // getAutoPiutangIdForBill(billId,piutangList) — FIX ringkas (audit lanjutan user, laporan
@@ -216,7 +216,7 @@ if(!txId||!D.piutang||!D.piutang.length)return false;
 const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!p)return false;
 BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{p0.nilai=Math.max(0,Math.round((p0.nilai||0)+(oldAmount||0)-(newAmount||0)));});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"payment-edit-sync"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"payment-edit-sync"});
 return true;
 }
 // syncDebtBalanceOnPaymentEdit(bill,oldAmount,newAmount) — FIX (audit user, item #4 dari
@@ -238,7 +238,7 @@ if(!bill||bill.kind!=='utang'||!bill.debtId)return false;
 const dbt=D.debts.find(x=>sameId(x.id,bill.debtId));
 if(!dbt)return false;
 BillDebtPiutangCanonicalWriter.updateById('debts',dbt.id,d0=>{d0.nilai=Math.max(0,(d0.nilai||0)+(oldAmount||0)-(newAmount||0));});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"edit",debtId:dbt.id,amount:dbt.nilai,auto:true,source:"payment-edit-sync"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"edit",debtId:dbt.id,amount:dbt.nilai,auto:true,source:"payment-edit-sync"});
 return true;
 }
 // maybeCreateTitipanTalanganPiutang(tx) — Sesi 519 (LANJUTKAN-S519, Design
@@ -271,7 +271,7 @@ autoTxId:tx.id,
 autoTitipanOwnerId:tx.titipanLinkId
 });
 BillDebtPiutangCanonicalWriter.add('piutang',_entrySesiCascade);
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-talangan"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"create",piutangId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-talangan"});
 }
 // syncTitipanTalanganPiutangOnEdit(txId,oldAmount,newAmount) — Sesi 519,
 // pola SAMA PERSIS syncSharedPiutangOnPaymentEdit() (di atas) tapi dicari
@@ -285,7 +285,7 @@ if(!txId||!D.piutang||!D.piutang.length)return false;
 const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!p)return false;
 BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{p0.nilai=Math.max(0,(p0.nilai||0)+(oldAmount||0)-(newAmount||0));});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"titipan-talangan-edit"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"titipan-talangan-edit"});
 return true;
 }
 // removeUnpaidTitipanTalanganPiutangForTx(txId) — Sesi 519. Hapus piutang
@@ -301,7 +301,7 @@ if(!txId||!D.piutang||!D.piutang.length)return false;
 const before=D.piutang.length;
 BillDebtPiutangCanonicalWriter.removeByPredicate('piutang',p=>p.autoTxId===txId&&!p.lunas);
 const _removed=before-D.piutang.length;
-if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"titipan-talangan-removed",deletedTxId:txId});
+if(_removed>0&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"delete",auto:true,source:"titipan-talangan-removed",deletedTxId:txId});
 return D.piutang.length<before;
 }
 // maybeCreateTitipanPinjamUtang(tx) — Sesi 714 (lanjutan rencana "arah dana
@@ -340,7 +340,7 @@ autoTxId:tx.id,
 autoTitipanOwnerId:tx.titipanLinkId
 });
 BillDebtPiutangCanonicalWriter.add('debts',_entrySesiCascade);
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"create",debtId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-pinjam"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"create",debtId:_entrySesiCascade.id,amount:tx.amount,auto:true,source:"titipan-pinjam"});
 }
 // syncTitipanPinjamUtangOnEdit(txId,oldAmount,newAmount) — Sesi 714, pola
 // SAMA PERSIS syncTitipanTalanganPiutangOnEdit() (di atas) tapi dicari di
@@ -350,7 +350,7 @@ if(!txId||!D.debts||!D.debts.length)return false;
 const d=D.debts.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!d)return false;
 BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.nilai=Math.max(0,(d0.nilai||0)+(oldAmount||0)-(newAmount||0));});
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"edit",debtId:d.id,amount:d.nilai,auto:true,source:"titipan-pinjam-edit"});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"edit",debtId:d.id,amount:d.nilai,auto:true,source:"titipan-pinjam-edit"});
 return true;
 }
 // removeUnpaidTitipanPinjamUtangForTx(txId) — Sesi 714. Hapus utang
@@ -364,7 +364,7 @@ if(!txId||!D.debts||!D.debts.length)return false;
 const before=D.debts.length;
 BillDebtPiutangCanonicalWriter.removeByPredicate('debts',d=>d.autoTxId===txId&&!d.lunas);
 const _removed=before-D.debts.length;
-if(_removed>0&&typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"delete",auto:true,source:"titipan-pinjam-removed",deletedTxId:txId});
+if(_removed>0&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"delete",auto:true,source:"titipan-pinjam-removed",deletedTxId:txId});
 return D.debts.length<before;
 }
 // populateSyncTxAccSelect(selId) — AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1:
@@ -394,6 +394,19 @@ if(on)populateSyncTxAccSelect('debtSyncTxAcc');
 // tagihan-kalender.js:1014/kasir.js:367 -- 0 generator baru). Nilai dicatat
 // PENUH (100%, TIDAK ikut logic porsi assetId -- keputusan §6.4) ke akun
 // yang dipilih user. Balikin tx.id yang baru dibuat.
+function _bdpAtomicSnapshot(keys){
+const out={};
+(keys||[]).forEach(k=>{const v=D[k];out[k]=typeof structuredClone==='function'?structuredClone(v||[]):JSON.parse(JSON.stringify(v||[]));});
+return out;
+}
+function _bdpAtomicRestore(snap){
+Object.keys(snap||{}).forEach(k=>{
+  const rows=snap[k];
+  if(k==='transactions'&&typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.replaceSnapshot==='function') FinanceTxSOT.replaceSnapshot(rows);
+  else if(typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.replace==='function'&&['bills','billsArchive','debts','piutang'].includes(k)) BillDebtPiutangCanonicalWriter.replace(k,rows);
+  else D[k]=rows;
+});
+}
 function createPiutangUtangAutoTx(type,amount,accountId,category,note,date){
 const tx={id:uid(),type,amount,category,subcategory:'',accountId,payMethod:'tunai',note,date:date||todayStr()};
 FinanceTxSOT.create(tx);
@@ -432,8 +445,10 @@ const btn=document.getElementById('piutangLunasBtn');
 btn.textContent=Piutang._lunasState?'✓ Lunas':'Belum Lunas';
 btn.className='chip-btn'+(Piutang._lunasState?' active':'');
 },
-save(){return withSaveGuard('piutang','piutangModal',Piutang._saveInner);},
+save(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('piutang','piutangModal',Piutang._saveInner);},
 _saveInner(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
+const _snap=_bdpAtomicSnapshot(['piutang','transactions']);
 const name=document.getElementById('piutangName').value.trim();
 if(!name){toast('⚠️ Nama peminjam wajib diisi');return;}
 const nilai=parsePzNum(document.getElementById('piutangNilai').value);
@@ -471,13 +486,14 @@ if(!p){toast('⚠️ Piutang tidak ditemukan, coba tutup dan buka lagi');return;
 // di atas) -- sekali dibuat, edit ulang tidak pernah nyipta transaksi
 // pelunasan kedua.
 const becameLunas=!p.lunas&&Piutang._lunasState;
-if(becameLunas&&p.linkedTxId&&!p.linkedPayoffTxId){
+let linkedPayoffTxId=p.linkedPayoffTxId||null;
+if(becameLunas&&p.linkedTxId&&!linkedPayoffTxId){
 const origTx=D.transactions.find(t=>sameId(t.id,p.linkedTxId));
-if(origTx){
-p.linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piutang','Piutang lunas: '+name,todayStr());
+if(origTx)linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piutang','Piutang lunas: '+name,todayStr());
 }
-}
-Object.assign(p,{name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState});
+const _patch={name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
+if(linkedPayoffTxId)_patch.linkedPayoffTxId=linkedPayoffTxId;
+BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,_patch);
 _savedPiutangIdSesiC=p.id;
 } else {
 const newP={id:uid(),name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
@@ -485,10 +501,11 @@ if(linkedTxId)newP.linkedTxId=linkedTxId;
 BillDebtPiutangCanonicalWriter.add('piutang',newP);
 _savedPiutangIdSesiC=newP.id;
 }
-save();
+const _persistOk=save();
+if(_persistOk===false){_bdpAtomicRestore(_snap);toast('⚠️ Piutang tidak disimpan karena state sudah berubah. Data dikembalikan; muat ulang lalu coba lagi.');return false;}
 closeModal('piutangModal');
 Piutang.renderList();renderKekayaanBersih();hitungZakatMaal();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:(Piutang.editId?"edit":"create"),piutangId:_savedPiutangIdSesiC,amount:nilai});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:(Piutang.editId?"edit":"create"),piutangId:_savedPiutangIdSesiC,amount:nilai});
 toast('✅ Piutang tersimpan');
 },
 // FIX (BUG-DEL-TITIPAN lanjutan, audit 2026-08 — bug SERUPA ditemukan di sisi
@@ -511,6 +528,7 @@ toast('✅ Piutang tersimpan');
 // toast jelaskan cara benarnya -- edit/batalkan dari transaksi atau tagihan
 // sumbernya (bukan dari baris piutang ini langsung).
 async delete(id){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const p=D.piutang.find(x=>sameId(x.id,id));
 // AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: reuse guard yang sama -- piutang
 // yang punya `linkedTxId` (dibuat lewat toggle §5.1) juga tidak bisa
@@ -521,10 +539,12 @@ if(typeof toast==='function')toast('Piutang ini tercatat otomatis dari transaksi
 return;
 }
 if(!await askConfirm('Hapus catatan piutang ini?',{okText:'Ya, Hapus'}))return;
+const _snap=_bdpAtomicSnapshot(['piutang']);
 BillDebtPiutangCanonicalWriter.removeById('piutang',id);
-save();
+const _persistOk=save();
+if(_persistOk===false){_bdpAtomicRestore(_snap);toast('⚠️ Piutang tidak dihapus karena state sudah berubah. Data dikembalikan; muat ulang lalu coba lagi.');return false;}
 Piutang.renderList();renderKekayaanBersih();hitungZakatMaal();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"piutang",action:"delete",deletedId:id,amount:p&&p.nilai});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"delete",deletedId:id,amount:p&&p.nilai});
 },
 // totalValue() — Sesi 255 (Ownership Sync): TAMBAH 1 filter
 // isPiutangOwnershipSelf(p) di atas filter lunas yang sudah ada (pola
@@ -690,8 +710,10 @@ const btn=document.getElementById('debtLunasBtn');
 btn.textContent=Debt._lunasState?'✓ Lunas':'Belum Lunas';
 btn.className='chip-btn'+(Debt._lunasState?' active':'');
 },
-save(){return withSaveGuard('debt','debtModal',Debt._saveInner);},
+save(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('debt','debtModal',Debt._saveInner);},
 _saveInner(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
+const _snap=_bdpAtomicSnapshot(['debts','bills','billsArchive','piutang','transactions']);
 const name=document.getElementById('debtName').value.trim();
 if(!name){toast('⚠️ Nama pemberi pinjaman wajib diisi');return;}
 const jenis=document.getElementById('debtJenis').value||'lainnya';
@@ -751,11 +773,12 @@ d={id:uid(),name,jenis,nilai,bunga,cicilanBulanan,tanggal,jatuhTempo,catatan,ass
 if(dLinkedTxId)d.linkedTxId=dLinkedTxId;
 BillDebtPiutangCanonicalWriter.add('debts',d);
 }
-Debt.syncBill(d);
-save();
+try{Debt.syncBill(d);}catch(e){_bdpAtomicRestore(_snap);throw e;}
+const _persistOk=save();
+if(_persistOk===false){_bdpAtomicRestore(_snap);toast('⚠️ Utang tidak disimpan karena state sudah berubah. Data dikembalikan; muat ulang lalu coba lagi.');return false;}
 closeModal('debtModal');
 Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:(Debt.editId?"edit":"create"),debtId:d.id,amount:nilai});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:(Debt.editId?"edit":"create"),debtId:d.id,amount:nilai});
 toast('✅ Utang tersimpan');
 },
 syncBill(d){
@@ -805,6 +828,7 @@ BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.billId=bill.id;})
 // sync yang sama. Konsisten dgn tombol 🗑 yang sudah disembunyikan utk baris
 // ini di renderList() (lihat komentar di sana).
 async delete(id){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const d=D.debts.find(x=>sameId(x.id,id));
 if(d&&(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountId)){
 if(typeof toast==='function')toast('Entri ini tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan, tidak bisa dihapus langsung. Ubah porsi kepemilikannya ke 0% atau lepas tautannya di menu Aset/Akun/Investasi terkait.',3600);
@@ -819,11 +843,13 @@ if(typeof toast==='function')toast('Utang ini tercatat otomatis ke transaksi aru
 return;
 }
 if(!await askConfirm('Hapus catatan utang ini?',{okText:'Ya, Hapus'}))return;
+const _snap=_bdpAtomicSnapshot(['debts','bills','piutang']);
 if(d&&d.billId){BillDebtPiutangCanonicalWriter.removeById('bills',d.billId);}
 BillDebtPiutangCanonicalWriter.removeById('debts',id);
-save();
+const _persistOk=save();
+if(_persistOk===false){_bdpAtomicRestore(_snap);toast('⚠️ Utang tidak dihapus karena state sudah berubah. Data dikembalikan; muat ulang lalu coba lagi.');return false;}
 Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"utang",action:"delete",deletedId:id,amount:d&&d.nilai});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"delete",deletedId:id,amount:d&&d.nilai});
 },
 // totalValue()/totalCicilanBulanan() — Sesi 255 (Ownership Sync): TAMBAH 1
 // filter isDebtOwnershipSelf(d) di atas filter lunas yang sudah ada (pola

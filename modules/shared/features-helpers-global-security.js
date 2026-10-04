@@ -400,13 +400,19 @@ return _saveStateVersion;
 async function _persistAtomicSnapshotWithAux(snapshotJson,extraEntries){
  const run=async()=>{
   let atomicOutbox=null;
-  if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+  let serviceOutbox=null;
+  const suppliedKeys=new Set(Array.isArray(extraEntries)?extraEntries.map(e=>e&&e[0]).filter(Boolean):[]);
+  if(!suppliedKeys.has('kw_finance_event_outbox_v1')&&typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
    atomicOutbox=await FinanceEventOutbox.prepareAtomicPersistence();
    if(atomicOutbox.overflow)throw new Error('Finance event outbox capacity exhausted; restore tidak dapat dipersist secara atomic');
+  }
+  if(!suppliedKeys.has('service-event-outbox:v1')&&typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.prepareAtomicPersistence==='function'){
+   serviceOutbox=await ServiceEventOutbox.prepareAtomicPersistence();
   }
   const entries=[['kw_v4_mirror',snapshotJson]];
   if(Array.isArray(extraEntries))extraEntries.forEach(e=>entries.push(e));
   if(atomicOutbox)entries.push([FinanceEventOutbox.key,atomicOutbox.queue]);
+  if(serviceOutbox)entries.push([ServiceEventOutbox.key,serviceOutbox.queue]);
   await _ensureCrossTabWriterToken();
   if(typeof IDBStore.setManyIfCurrent!=='function')throw new Error('IDBStore.setManyIfCurrent diperlukan untuk restore atomic');
   const next=_newCrossTabWriterToken();
@@ -414,6 +420,7 @@ async function _persistAtomicSnapshotWithAux(snapshotJson,extraEntries){
   if(!ok){_markCrossTabStale();const e=new Error('Cross-tab restore conflict: writer token sudah berubah');e.code='CROSS_TAB_RESTORE_CONFLICT';throw e;}
   _crossTabWriterToken=next;
   if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function')FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
+  if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox.queue);
   // Restore/import commits must notify other contexts just like ordinary save().
   // CAS protects correctness; this announcement drives prompt stale-state convergence.
   _announcePersistenceWrite();
@@ -441,14 +448,19 @@ const seq=++_savePersistSeq;
 _savePersistChain=_savePersistChain.then(async()=>{
 const persist=async()=>{
 let atomicOutbox=null;
-if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+let serviceOutbox=null;
+if(!suppliedKeys.has('kw_finance_event_outbox_v1')&&typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
   atomicOutbox=await FinanceEventOutbox.prepareAtomicPersistence();
+}
+if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.prepareAtomicPersistence==='function'){
+  serviceOutbox=await ServiceEventOutbox.prepareAtomicPersistence();
 }
 const entries=[['kw_v4_mirror',json]];
 if(atomicOutbox){
   if(atomicOutbox.overflow)throw new Error('Finance event outbox capacity exhausted; replay pending events before persisting new atomic mutations');
   entries.push([FinanceEventOutbox.key,atomicOutbox.queue]);
 }
+if(serviceOutbox)entries.push([ServiceEventOutbox.key,serviceOutbox.queue]);
 if(atomicOutbox&&typeof IDBStore.setManyIfCurrent!=='function')throw new Error('IDBStore.setManyIfCurrent diperlukan untuk multi-tab atomic persistence');
 await _ensureCrossTabWriterToken();
 const nextWriterToken=_newCrossTabWriterToken();
@@ -460,6 +472,7 @@ _crossTabWriterToken=nextWriterToken;
 if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function'){
   FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
 }
+if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox.queue);
 _markSavePersistMeta('idb',stamp);_announcePersistenceWrite();
 };
 if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')

@@ -265,6 +265,7 @@ const mismatch=owners.length>0&&isAllSelf===false&&isDefault===true;
 return{ok:true,owners,source,isAllSelf,isDefault,mismatch};
 }
 function setAccOwners(accId,owners){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return{ok:false,reason:'stale-write'};
 const acc=D.accounts.find(a=>sameId(a.id,accId));
 if(!acc)return{ok:false,reason:'Akun tidak ditemukan'};
 if(typeof MultiOwnerEngine==='undefined')return{ok:false,reason:'MultiOwnerEngine belum dimuat'};
@@ -416,7 +417,10 @@ if(!btn)return;
 btn.classList.toggle('active',accIncludeState);
 btn.textContent=accIncludeState?'✓ Aktif':'✕ Nonaktif';
 }
-function saveAcc(){return withSaveGuard('acc','accModal',_saveAccInner);}
+function saveAcc(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('acc','accModal',_saveAccInner);}
+function _accountMutationSnapshot(){try{return JSON.parse(JSON.stringify({accounts:D.accounts,assets:D.assets,investments:D.investments,titipanCommitments:D.titipanCommitments,debts:D.debts}));}catch(_){return {accounts:(D.accounts||[]).slice(),assets:(D.assets||[]).slice(),investments:(D.investments||[]).slice(),titipanCommitments:(D.titipanCommitments||[]).slice(),debts:(D.debts||[]).slice()};}}
+function _accountMutationRollback(s){if(!s)return;D.accounts=s.accounts;D.assets=s.assets;D.investments=s.investments;D.titipanCommitments=s.titipanCommitments;D.debts=s.debts;}
+function _accountPersistOrRollback(s){const r=save();if(r===false){_accountMutationRollback(s);return false;}return true;}
 function _saveAccInner(){
 const name=document.getElementById('accName').value.trim();
 const emoji=document.getElementById('accEmoji').value||'💰';
@@ -432,17 +436,18 @@ const targetTanggalBuka=jenis==='dikunci'?(document.getElementById('accTargetTan
 const ownRaw=document.getElementById('accOwnership')?.value;
 const ownership=(typeof OwnershipEngine!=='undefined'&&OwnershipEngine.isValidType(ownRaw))?OwnershipEngine.normalize(ownRaw):(typeof OwnershipEngine!=='undefined'?OwnershipEngine.DEFAULT:'SELF');
 if(!name){toast('⚠️ Isi nama akun');return;}
+const _snap=_accountMutationSnapshot();
 if(editAccIdx>=0){
 const a=D.accounts[editAccIdx];
 a.name=name;a.emoji=emoji;a.includeInBalance=accIncludeState;a.jenis=jenis;a.platform=platform;a.targetTanggalBuka=targetTanggalBuka;a.ownership=ownership;
 const txDelta=recalcAccBalance(a.id)-(a.baseBalance!==undefined?a.baseBalance:(a.balance||0));
 a.baseBalance=nominal-txDelta;
 a.balance=nominal;
-save();
+if(!_accountPersistOrRollback(_snap))return false;
 // Sesi C-lanjutan (Prioritas Tinggi #4, AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md):
 // CRUD Akun sebelumnya 0% emit -- replikasi pola vehicle.updated/asset.updated.
 // Nama event: account.updated (keputusan diambil sesi ini, belum ada presedennya).
-if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"edit",accountId:a.id});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("account.updated",{kind:"account",action:"edit",accountId:a.id});
 closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun diperbarui');
 if(accModalCallback){
 const cb=accModalCallback; accModalCallback=null;
@@ -451,8 +456,8 @@ cb(a);
 } else {
 const newAcc={id:'acc_'+Date.now(),name,emoji,baseBalance:nominal,balance:nominal,includeInBalance:accIncludeState,jenis,platform,targetTanggalBuka,ownership};
 D.accounts.push(newAcc);
-save();
-if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"create",accountId:newAcc.id});
+if(!_accountPersistOrRollback(_snap))return false;
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("account.updated",{kind:"account",action:"create",accountId:newAcc.id});
 closeModal('accModal');renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();toast('✅ Akun ditambahkan');
 if(accModalCallback){
 const cb=accModalCallback; accModalCallback=null;
@@ -556,17 +561,48 @@ let confirmMsg=hasLinkedData
 :`Hapus akun "${acc.name}"? Akun ini tidak punya data transaksi terkait.`;
 if(linkedTitipanDebtCount>0)confirmMsg+=` ⚠️ ${linkedTitipanDebtCount} baris "Dana Titipan Akun" di Buku Utang milik akun ini akan IKUT TERHAPUS (porsi kepemilikannya tidak bisa dipindah ke akun lain secara otomatis).`;
 if(!await askConfirm(confirmMsg))return;
-D.accounts.splice(i,1);
-D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
-(D.bills||[]).forEach(b=>{if(b.accountId===acc.id)b.accountId=target.id;});
-(D.bbmLogs||[]).forEach(b=>{if(b.accountId===acc.id)b.accountId=target.id;});
-(D.servisLogs||[]).forEach(s=>{if(s.accountId===acc.id)s.accountId=target.id;});
-(D.targets||[]).forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
-(D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
-(D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
-(D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
-save();
-if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"delete",deletedId:acc.id,migratedToAccountId:target.id});
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
+const _accountDeleteSnapshot={
+  accounts:JSON.stringify(D.accounts||[]),
+  transactions:JSON.stringify(D.transactions||[]),
+  bills:JSON.stringify(D.bills||[]),
+  bbmLogs:JSON.stringify(D.bbmLogs||[]),
+  servisLogs:JSON.stringify(D.servisLogs||[]),
+  targets:JSON.stringify(D.targets||[]),
+  assets:JSON.stringify(D.assets||[]),
+  investments:JSON.stringify(D.investments||[]),
+  cobek:JSON.stringify(D.cobek||[])
+};
+try{
+  D.accounts.splice(i,1);
+  if(typeof FinanceTxSOT!=='undefined'){
+    (D.transactions||[]).filter(t=>t&&t.accountId===acc.id).forEach(t=>FinanceTxSOT.updateById(t.id,{accountId:target.id}));
+  }else D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
+  if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter||typeof BillDebtPiutangCanonicalWriter.updateById!=='function')throw new Error('BillDebtPiutangCanonicalWriter wajib tersedia untuk migrasi tagihan saat hapus akun');
+  (D.bills||[]).filter(b=>b.accountId===acc.id).forEach(b=>BillDebtPiutangCanonicalWriter.updateById('bills',b.id,{accountId:target.id}));
+  (D.bbmLogs||[]).forEach(b=>{if(b.accountId===acc.id)b.accountId=target.id;});
+  (D.servisLogs||[]).forEach(s=>{if(s.accountId===acc.id)s.accountId=target.id;});
+  (D.targets||[]).forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
+  (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
+  (D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
+  (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
+  const _saved=save();
+  if(_saved===false)throw new Error('save() menolak penghapusan akun');
+}catch(_accountDeleteErr){
+  D.accounts=JSON.parse(_accountDeleteSnapshot.accounts);
+  if(typeof FinanceTxSOT!=='undefined'&&typeof FinanceTxSOT.replaceSnapshot==='function')FinanceTxSOT.replaceSnapshot(JSON.parse(_accountDeleteSnapshot.transactions));else D.transactions=JSON.parse(_accountDeleteSnapshot.transactions);
+  D.bills=JSON.parse(_accountDeleteSnapshot.bills);
+  D.bbmLogs=JSON.parse(_accountDeleteSnapshot.bbmLogs);
+  D.servisLogs=JSON.parse(_accountDeleteSnapshot.servisLogs);
+  D.targets=JSON.parse(_accountDeleteSnapshot.targets);
+  D.assets=JSON.parse(_accountDeleteSnapshot.assets);
+  D.investments=JSON.parse(_accountDeleteSnapshot.investments);
+  D.cobek=JSON.parse(_accountDeleteSnapshot.cobek);
+  console.error('Hapus akun dibatalkan dan di-rollback:',_accountDeleteErr);
+  toast('❌ Penghapusan akun dibatalkan: data dikembalikan');
+  return false;
+}
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("account.updated",{kind:"account",action:"delete",deletedId:acc.id,migratedToAccountId:target.id});
 renderAccGrid();populateAccFilters();renderDashAccList();renderLapAccList();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});refreshBillEverywhere();renderCnTab();toast(hasLinkedData?`🗑 Akun dihapus, semua data terkait dipindah ke "${target.name}"`:`🗑 Akun "${acc.name}" dihapus`);
 }
 // --- S574-B: UI "⚖️ Porsi Kepemilikan" pada modal Akun (accountOwnersModal) -------------------
@@ -746,6 +782,7 @@ AccOwners._draft[i].isSelf=!!checked;
 // tanpa ownerId -> literal 'SELF' (S547 pattern, sama Aset.saveOwners()) supaya konsisten dgn
 // identitas SELF universal, bukan per-nama seperti OwnerRegistry.
 save(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 if(typeof MultiOwnerEngine==='undefined'){toast('⚠️ Fitur porsi kepemilikan belum siap dimuat');return;}
 if(!AccOwners._accId){toast('⚠️ Akun tidak ditemukan, coba tutup dan buka lagi');return;}
 // S604: jaring pengaman kedua -- open() SUDAH mengalihkan akun tertaut Holding ke
@@ -819,7 +856,7 @@ if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 save();
 // Sesi C-lanjutan: edit pemilik akun -- pola sama persis 2 titik edit owner
 // di aset-owners.js (asset.updated).
-if(typeof AIBus!=="undefined")AIBus.emit("account.updated",{kind:"account",action:"edit-owners",accountId:AccOwners._accId});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("account.updated",{kind:"account",action:"edit-owners",accountId:AccOwners._accId});
 AccOwners._draft=res.owners.map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
 AccOwners._renderList();
 if(typeof renderAccGrid==='function')renderAccGrid();

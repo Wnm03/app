@@ -67,6 +67,24 @@ if(editId===null||editId===undefined){
 }
 const editMode=editId!==null&&editId!==undefined;
 if(editMode)Sparepart.catEditId=String(editId);
+// S2460: category edit is a cross-domain mutation (Car Notes SOT + legacy
+// projection + optional vehicle move). Capture the durable boundary before
+// touching the legacy row so a failed canonical write/save cannot leave a
+// half-mutated projection behind.
+const _categoryEditAtomicSnapshot=editMode?{
+  sparepartCats:JSON.stringify(D.sparepartCats||[]),
+  partsStock:JSON.stringify(D.partsStock||[]),
+  vehicles:JSON.stringify((D.vehicles||[]).map(v=>({id:v&&v.id,sot:v&&v.sot?JSON.parse(JSON.stringify(v.sot)):null})))
+}:null;
+const _rollbackCategoryEdit=()=>{
+  if(!_categoryEditAtomicSnapshot)return;
+  try{
+    D.sparepartCats=JSON.parse(_categoryEditAtomicSnapshot.sparepartCats);
+    D.partsStock=JSON.parse(_categoryEditAtomicSnapshot.partsStock);
+    const _vs=JSON.parse(_categoryEditAtomicSnapshot.vehicles);
+    (D.vehicles||[]).forEach(v=>{const hit=_vs.find(x=>String(x.id)===String(v&&v.id));if(hit){if(hit.sot===null)delete v.sot;else v.sot=hit.sot;}});
+  }catch(_rb){console.error('S2460 category edit rollback failed',_rb);}
+};
 let name=document.getElementById('sparepartName').value.trim();
 const interval=parseFloat(document.getElementById('sparepartInterval').value);
 const bulanEl=document.getElementById('sparepartIntervalBulan');
@@ -191,7 +209,10 @@ const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typ
   :(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'
     ?VehicleServiceSOT.resolveReminderRule(editCat,vehicleId):null);
 if(result&&result.ok&&resolved){editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;}
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){
+  const _editSotResult=VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
+  if(!_editSotResult||!_editSotResult.ok){_rollbackCategoryEdit();throw new Error((_editSotResult&&_editSotResult.code)||'CATEGORY_SOT_UPDATE_FAILED');}
+}
 } else {
 // FITUR BARU (audit lanjutan grouping, sesi lalu): kategori baru dari form
 // manual ini mewarisi group/groupIcon -- override dropdown manual (Sesi 2)
@@ -202,14 +223,28 @@ if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCa
 const grpNew=(groupSelEl&&groupSelVal)
 ?{group:groupSelVal,icon:(typeof iconForGroupName==='function')?iconForGroupName(groupSelVal):'📦'}
 :((typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):{group:'Lainnya',icon:'📦'});
-const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon}; D.sparepartCats.push(_newCat); if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function')VehicleServiceSOT.syncCategoryRule(_newCat,vehicleId,{source:intervalSource}); if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_newCat,'manual-create');
+const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId:masterCategoryId||null,serviceComponentId:serviceComponentId||null,showInReminder:wantShow,vehicleId,group:grpNew.group,groupIcon:grpNew.icon}; if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function')VehicleServiceSOT.syncCategoryRule(_newCat,vehicleId,{source:intervalSource}); const _newCatSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(_newCat,'manual-create'):null; if(!_newCatSot||!_newCatSot.ok)D.sparepartCats.push(_newCat);
 }
-save();closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
+const _categoryEditSaveResult=save();
+if(editMode&&_categoryEditSaveResult===false){_rollbackCategoryEdit();throw new Error('CATEGORY_EDIT_SAVE_FAILED');}
+closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
 },
 async delCat(i){
-const cat=D.sparepartCats[i];
+// S2459: resolve by stable categoryId + vehicleId after confirmation; never
+// trust the original array index after an async confirm. This makes concurrent
+// double-click/delete idempotent and prevents A-delete followed by B-delete.
+const initial=D.sparepartCats[i];
+if(!initial)return;
+const targetId=String(initial.id||'');
+const targetVehicleId=String(initial.vehicleId||curVehicleId||'');
+if(!targetId)return;
+if(!Sparepart._categoryDeleteLocks)Sparepart._categoryDeleteLocks=new Set();
+if(Sparepart._categoryDeleteLocks.has(targetVehicleId+'::'+targetId))return;
+Sparepart._categoryDeleteLocks.add(targetVehicleId+'::'+targetId);
+try{
+let cat=D.sparepartCats.find(c=>c&&String(c.id||'')===targetId&&String(c.vehicleId||'')===targetVehicleId);
 if(!cat)return;
-const linkedStock=D.partsStock.filter(p=>p.catId===cat.id);
+const linkedStock=D.partsStock.filter(p=>p&&String(p.catId)===targetId&&(!targetVehicleId||!p.vehicleId||String(p.vehicleId)===targetVehicleId));
 const linkedVeh=[];
 let msg='Hapus kategori sparepart ini? Riwayat servis terkait tetap ada.';
 if(linkedStock.length||linkedVeh.length){
@@ -219,11 +254,42 @@ if(linkedVeh.length)parts.push(linkedVeh.length+' interval khusus kendaraan');
 msg=`⚠️ Kategori "${cat.name}" masih dipakai oleh ${parts.join(' & ')}. Kalau dihapus: item stok terkait jadi "Tanpa kategori" dan interval khusus itu ikut dihapus (kembali ke default global). Riwayat servis tetap ada. Lanjut hapus?`;
 }
 if(!await askConfirm(msg,{title:'Hapus Kategori Sparepart',icon:'🗑'}))return;
-linkedStock.forEach(p=>{p.catId=null;});
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeServiceInterval==='function')VehicleCarNotesSOT.removeServiceInterval(curVehicleId,cat);
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function')VehicleCarNotesSOT.removeLegacyCategoryProjection(cat.id,cat.vehicleId||curVehicleId);
-D.sparepartCats.splice(i,1);save();Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
-toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
+// S2459: confirmation is async; re-resolve by ID once more so a concurrent
+// delete cannot operate on a shifted array index.
+cat=D.sparepartCats.find(c=>c&&String(c.id||'')===targetId&&String(c.vehicleId||'')===targetVehicleId);
+if(!cat)return;
+const _sparepartCatsBefore=JSON.stringify(D.sparepartCats);
+const _partsStockBefore=JSON.stringify(D.partsStock);
+let _sotBefore=null;
+try{
+  const _v=Array.isArray(D.vehicles)?D.vehicles.find(v=>v&&String(v.id)===targetVehicleId):null;
+  _sotBefore=_v&&_v.sot?JSON.stringify(_v.sot):null;
+  for(const p of linkedStock){
+    let r=null;
+    if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.update==='function')r=StockCommandSOT.update(p.id,{catId:null},{saveNow:false});
+    else p.catId=null;
+    if(r&&r.ok===false)throw new Error(r.code||'STOCK_CATEGORY_DETACH_FAILED');
+  }
+  const _intervalVehicle=String(cat.vehicleId||targetVehicleId||'');
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeServiceInterval==='function'){
+    const r=VehicleCarNotesSOT.removeServiceInterval(_intervalVehicle,cat);
+    if(r&&r.ok===false)throw new Error(r.code||'SERVICE_INTERVAL_REMOVE_FAILED');
+  }
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.removeLegacyCategoryProjection==='function'){
+    const r=VehicleCarNotesSOT.removeLegacyCategoryProjection(cat.id,_intervalVehicle);
+    if(r&&r.ok===false)throw new Error(r.code||'CATEGORY_SOT_REMOVE_FAILED');
+  }
+  const _projectionVehicle=targetVehicleId;
+  D.sparepartCats=D.sparepartCats.filter(c=>!(c&&String(c.id||'')===targetId&&String(c.vehicleId||'')===_projectionVehicle));
+  const _saveResult=save(); if(_saveResult===false)throw new Error('CATEGORY_DELETE_SAVE_FAILED');
+  Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
+  toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
+}catch(_delErr){
+  try{D.sparepartCats=JSON.parse(_sparepartCatsBefore);D.partsStock=JSON.parse(_partsStockBefore);const _v=Array.isArray(D.vehicles)?D.vehicles.find(v=>v&&String(v.id)===targetVehicleId):null;if(_v&&_sotBefore!==null)_v.sot=JSON.parse(_sotBefore);}catch(_rbErr){console.error('S2459 category delete rollback failed',_rbErr);}
+  console.error('S2459 category delete failed',_delErr);
+  toast('⚠️ Kategori tidak dihapus; perubahan dibatalkan.',3000);
+}
+}finally{Sparepart._categoryDeleteLocks.delete(targetVehicleId+'::'+targetId);}
 },
 // populateStockCatSelect() -- S622: dropdown "Kategori" di modal Stok Sparepart
 // skrg cuma nawarin kategori yg RELEVAN ke kendaraan aktif (universal +
@@ -732,12 +798,10 @@ if(!cat){
 // (bukan partName) tetap dipakai sbg cat.name, 0 perilaku lama berubah.
 const grpSync=(typeof resolveCatGroup==='function')?resolveCatGroup({name:it.partName||catName},curVehicleId):{group:'Lainnya',icon:'📦'};
 cat={id:_spCatId(String(idx)),name:catName,code:codeFromName(catName),intervalKm:r.intervalKm||0,showInReminder:r.intervalKm>0,group:grpSync.group,groupIcon:grpSync.icon,vehicleId:curVehicleId};
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-create'); D.sparepartCats.push(cat);
+const _catSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-create'):null; if(!_catSot||!_catSot.ok)D.sparepartCats.push(cat);
 addedCat++;
 } else if(r.intervalKm>0&&(!cat.intervalKm||cat.intervalKm<=0)){
-cat.intervalKm=r.intervalKm;
-cat.showInReminder=true;
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-update');
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){const ur=VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{intervalKm:r.intervalKm,showInReminder:true});if(ur&&ur.ok){const rows=VehicleCarNotesSOT.getServiceCategories(curVehicleId)||[];const u=rows.find(x=>String(x.id)===String(cat.id));if(u)Object.assign(cat,u);}} else {cat.intervalKm=r.intervalKm;cat.showInReminder=true;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'catalog-sync-update');}
 }
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
@@ -785,12 +849,17 @@ if(!nama)return;
 const vidCsv=(typeof curVehicleId!=='undefined')?curVehicleId:null;
 let cat=(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===nama.toLowerCase()&&c.vehicleId&&String(c.vehicleId)===String(vidCsv))
   ||(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===nama.toLowerCase()&&!c.vehicleId);
+// S2459: CSV must never turn a global legacy projection into the active
+// vehicle's owner. Clone it into a vehicle-scoped canonical row first.
+if(cat&&vidCsv&&String(cat.vehicleId||'')!==String(vidCsv)){
+  cat=Object.assign({},cat,{id:_spCatId(nama+'_'+Date.now()),vehicleId:vidCsv});
+  const sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'csv-scope'):null;
+  if(!sr||!sr.ok)D.sparepartCats.push(cat);
+}
 if(cat){
 if(r.kode)cat.code=r.kode;
-if(r.intervalKm!==undefined&&r.intervalKm!==null&&r.intervalKm>0)cat.intervalKm=r.intervalKm;
-if(r.intervalBulan!==undefined&&r.intervalBulan!==null&&r.intervalBulan>0)cat.intervalBulan=r.intervalBulan;
-if(r.showInReminder!==undefined&&r.showInReminder!==null)cat.showInReminder=r.showInReminder;
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'csv-update');
+const patch={}; if(r.intervalKm!==undefined&&r.intervalKm!==null&&r.intervalKm>0)patch.intervalKm=r.intervalKm; if(r.intervalBulan!==undefined&&r.intervalBulan!==null&&r.intervalBulan>0)patch.intervalBulan=r.intervalBulan; if(r.showInReminder!==undefined&&r.showInReminder!==null)patch.showInReminder=r.showInReminder;
+if(Object.keys(patch).length&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){const ur=VehicleCarNotesSOT.updateServiceCategory(vidCsv,cat.id,patch);if(ur&&ur.ok){const rows=VehicleCarNotesSOT.getServiceCategories(vidCsv)||[];const u=rows.find(x=>String(x.id)===String(cat.id));if(u)Object.assign(cat,u);}} else {Object.assign(cat,patch);if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'csv-update');}
 updated++;
 } else {
 const code=r.kode||codeFromName(nama);
@@ -804,7 +873,7 @@ const showInReminder=(r.showInReminder!==undefined&&r.showInReminder!==null)?r.s
 // jatuh ke GENERIC_GROUP_BY_NAME/'Lainnya' tanpa match TORSI_DB spesifik).
 const grpCsv=(typeof resolveCatGroup==='function')?resolveCatGroup({name:nama},vidCsv):{group:'Lainnya',icon:'📦'};
 const vehicleIdCsv=(vidCsv&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidCsv))?vidCsv:null;
-const _csvCat={id:_spCatId(created+'_'+updated),name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon,vehicleId:vehicleIdCsv}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vehicleIdCsv&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_csvCat,'csv-create'); D.sparepartCats.push(_csvCat);
+const _csvCat={id:_spCatId(created+'_'+updated),name:nama,code,intervalKm,intervalBulan,showInReminder,group:grpCsv.group,groupIcon:grpCsv.icon,vehicleId:vehicleIdCsv}; const _csvCatSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vehicleIdCsv&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(_csvCat,'csv-create'):null; if(!_csvCatSot||!_csvCatSot.ok)D.sparepartCats.push(_csvCat);
 created++;
 }
 });

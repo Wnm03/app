@@ -28,6 +28,41 @@
 // `DanaTitipanPortfolioAPI.getCommitments()` (S485b) — getter TIDAK menulis
 // `D.ownerRegistry` kalau belum ada, cuma balikin array kosong.
 
+var BillDebtPiutangCanonicalWriter=(typeof globalThis!=='undefined'&&globalThis.BillDebtPiutangCanonicalWriter)?globalThis.BillDebtPiutangCanonicalWriter:(typeof require==='function'?require('../finance/bill-debt-piutang-canonical-writer.js'):null);
+
+function _ownerRegistryClone(value){
+  try{return JSON.parse(JSON.stringify(value));}catch(_){return value;}
+}
+function _ownerRegistrySnapshot(){
+  if(typeof D==='undefined')return null;
+  return {
+    ownerRegistry:_ownerRegistryClone(D.ownerRegistry),
+    assets:_ownerRegistryClone(D.assets),
+    investments:_ownerRegistryClone(D.investments),
+    titipanCommitments:_ownerRegistryClone(D.titipanCommitments),
+    debts:_ownerRegistryClone(D.debts),
+  };
+}
+function _ownerRegistryRestore(snapshot){
+  if(!snapshot||typeof D==='undefined')return;
+  D.ownerRegistry=snapshot.ownerRegistry;
+  D.assets=snapshot.assets;
+  D.investments=snapshot.investments;
+  D.titipanCommitments=snapshot.titipanCommitments;
+  D.debts=snapshot.debts;
+}
+function _ownerRegistrySaveOrRollback(snapshot){
+  try{
+    if(typeof save!=='function')return {ok:true};
+    const result=save();
+    if(result===false){_ownerRegistryRestore(snapshot);return {ok:false,reason:'persistence-failed'};}
+    return {ok:true};
+  }catch(error){
+    _ownerRegistryRestore(snapshot);
+    return {ok:false,reason:'persistence-failed',error};
+  }
+}
+
 const OwnerRegistry = {
 
   // listAll() — getter read-only. Balikin `D.ownerRegistry` apa adanya
@@ -62,8 +97,18 @@ const OwnerRegistry = {
     const existing = D.ownerRegistry.find((o) => o && typeof o.name === 'string' && o.name.trim().toLowerCase() === lower);
     if (existing) return String(existing.id);
     const id = String((typeof uid === 'function') ? uid() : ('owner_' + Date.now()));
+    const snapshot = _ownerRegistrySnapshot();
     D.ownerRegistry.push({ id, name: trimmed });
-    if (typeof save === 'function') save();
+    try {
+      if(typeof save==='function' && save()===false){
+        D.ownerRegistry.splice(D.ownerRegistry.length-1,1);
+        throw new Error('Gagal menyimpan owner registry');
+      }
+    } catch(error) {
+      if(error && error.message==='Gagal menyimpan owner registry') throw error;
+      D.ownerRegistry.splice(D.ownerRegistry.length-1,1);
+      throw new Error('Gagal menyimpan owner registry');
+    }
     return id;
   },
 
@@ -92,6 +137,7 @@ const OwnerRegistry = {
     if (!entry) return { ok: false, reason: 'Owner tidak ditemukan di registry' };
     const trimmed = (newName && String(newName).trim()) || '';
     if (!trimmed) return { ok: false, reason: 'Nama baru wajib diisi' };
+    const snapshot = _ownerRegistrySnapshot();
     entry.name = trimmed;
     let assets = 0, investments = 0, commitments = 0, debts = 0;
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
@@ -112,9 +158,10 @@ const OwnerRegistry = {
     // checkDebtNameStaleness() (titipan-reconcile.js) nyala merah palsu
     // setiap kali owner registry di-rename tanpa ganti nama debt terkait.
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && String(d.linkedOwnerId) === String(id)) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.name = trimmed; }); debts++; }
+      if (d && String(d.linkedOwnerId) === String(id)) { if(BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.updateById==='function') BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.name = trimmed; }); else d.name=trimmed; debts++; }
     });
-    if (typeof save === 'function') save();
+    const persisted = _ownerRegistrySaveOrRollback(snapshot);
+    if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
     return { ok: true, assets, investments, commitments, debts };
   },
 
@@ -142,6 +189,7 @@ const OwnerRegistry = {
     const src = D.ownerRegistry.find((o) => o && String(o.id) === String(sourceId));
     const tgt = D.ownerRegistry.find((o) => o && String(o.id) === String(targetId));
     if (!src || !tgt) return { ok: false, reason: 'sourceId atau targetId tidak ditemukan di registry' };
+    const snapshot = _ownerRegistrySnapshot();
     const conflicts = [];
     (Array.isArray(D.assets) ? D.assets : []).forEach((a) => {
       const ids = (Array.isArray(a && a.owners) ? a.owners : []).filter((o) => o && !o.isSelf).map((o) => String(o.ownerId));
@@ -167,10 +215,11 @@ const OwnerRegistry = {
       if (c && String(c.ownerId) === String(sourceId)) { c.ownerId = targetId; c.ownerName = tgt.name; commitments++; }
     });
     (Array.isArray(D.debts) ? D.debts : []).forEach((d) => {
-      if (d && String(d.linkedOwnerId) === String(sourceId)) { BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = targetId; d0.name = tgt.name; }); debts++; }
+      if (d && String(d.linkedOwnerId) === String(sourceId)) { if(BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.updateById==='function') BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{ d0.linkedOwnerId = targetId; d0.name = tgt.name; }); else { d.linkedOwnerId=targetId; d.name=tgt.name; } debts++; }
     });
     D.ownerRegistry = D.ownerRegistry.filter((o) => String(o.id) !== String(sourceId));
-    if (typeof save === 'function') save();
+    const persisted = _ownerRegistrySaveOrRollback(snapshot);
+    if(!persisted.ok)return {ok:false,reason:'persistence-failed'};
     return { ok: true, assets, investments, commitments, debts };
   },
 

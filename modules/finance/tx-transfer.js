@@ -48,19 +48,19 @@ openModal('transferModal');
 // lolos jadi note (bukan fallback 'Transfer') krn '   '||'Transfer' tetap
 // balikin '   ' (truthy, string kosong-spasi bukan falsy di JS).
 function saveTransfer(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const from=document.getElementById('trFrom').value;
 const to=document.getElementById('trTo').value;
 evalAmtExpr('trAmt');
 const amt=parseFloat(document.getElementById('trAmt').value);
-if(!amt||amt<=0){toast('⚠️ Masukkan jumlah valid');return;}
+if(!Number.isFinite(amt)||amt<=0||amt>999000000000){toast('⚠️ Masukkan jumlah valid (maks Rp 999.000.000.000)');return;}
 if(from===to){toast('⚠️ Akun asal dan tujuan harus berbeda');return;}
 const fromAcc=D.accounts.find(a=>a.id===from), toAcc=D.accounts.find(a=>a.id===to);
 if(!fromAcc||!toAcc){toast('⚠️ Akun asal/tujuan tidak valid — pilih ulang akunnya');return;}
 const date=document.getElementById('trDate').value;
 const note=(document.getElementById('trNote').value||'').trim()||'Transfer';
 const transferPairId=uid();
-FinanceTxSOT.create({id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`${note} → ${escapeHtml(toAcc.name)}`,date,accountId:from,transferPairId});
-FinanceTxSOT.create({id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`${note} ← ${escapeHtml(fromAcc.name)}`,date,accountId:to,transferPairId});
+FinanceTxSOT.createMany([{id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`${note} → ${escapeHtml(toAcc.name)}`,date,accountId:from,transferPairId},{id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`${note} ← ${escapeHtml(fromAcc.name)}`,date,accountId:to,transferPairId}]);
 save();closeModal('transferModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 // Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):
 // saveTransfer() SEBELUMNYA 0% emit AIBus -- beda dari saveTx()/
@@ -69,6 +69,6 @@ save();closeModal('transferModal');if(typeof refreshAfterMutation==='function')r
 // sesi sebelumnya): {kind,action,...}. transferPairId disertakan (bukan
 // deletedId) supaya konsumen event bisa tahu ini transfer berpasangan,
 // bukan transaksi tunggal. 0 logic transfer lain diubah, cuma 1 baris emit.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"transaksi",action:"create",transferPairId,fromAccountId:from,toAccountId:to,amount:amt});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"transaksi",action:"create",transferPairId,fromAccountId:from,toAccountId:to,amount:amt});
 toast('✅ Transfer berhasil');
 }

@@ -117,6 +117,7 @@ const GROUP_B = [
   'modules/finance/tagihan-kalender.js',
   'modules/finance/cash-projection.js',
   'modules/finance/deficit-notif-bridge.js',
+  'modules/vehicle/service-category-restore-reconciler-s2451.js',
   'modules/shared/backup-restore.js',
   'modules/shared/backup-history-api.js',
   'modules/shared/backup-health-api.js',

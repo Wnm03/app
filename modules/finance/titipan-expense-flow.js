@@ -155,8 +155,9 @@ const TitipanExpenseFlow = {
   //
   // opts.onBeforeCommit() — opsional, dipanggil SETELAH validasi lolos,
   // SEBELUM transaksi dibuat/di-push. Kalau callback ini melempar/return
-  // {abort:true}, submit dibatalkan tanpa menyentuh D.
+  // {
   submit(input, opts) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return { ok:false, code:'STALE_CROSS_TAB' };
     opts = opts || {};
     if (this._submitting) {
       return { ok: false, reason: 'Sedang memproses transaksi sebelumnya, coba lagi' };
@@ -224,7 +225,14 @@ const TitipanExpenseFlow = {
         // mem-persist mirror + outbox dalam satu IDB transaction.
         if (_atomic) { _atomic.commit(); _atomicCommitted = true; }
         // Satu save() setelah canonical state + deferred events siap.
-        save();
+        const persisted = save();
+        if (persisted === false) {
+          if (_atomic) {
+            if (_atomicCommitted && typeof _atomic.rollbackAfterCommit === 'function') _atomic.rollbackAfterCommit();
+            else _atomic.rollback();
+          }
+          return { ok: false, code: 'PERSISTENCE_FAILED' };
+        }
       } catch (e) {
         if (_atomic) {
           if (_atomicCommitted && typeof _atomic.rollbackAfterCommit === 'function') _atomic.rollbackAfterCommit();
@@ -232,7 +240,7 @@ const TitipanExpenseFlow = {
         }
         throw e;
       }
-      if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'expense', action: 'create', txIds: txs.map((t) => t.id) });
+      if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'expense', action: 'create', txIds: txs.map((t) => t.id) });
 
       return { ok: true, txIds: txs.map((t) => t.id), rows: v.rows, owners: v.owners };
     } finally {

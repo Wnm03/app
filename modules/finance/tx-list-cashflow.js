@@ -315,6 +315,7 @@ if(typeof FinanceCrossEntityAtomic!=='undefined')FinanceCrossEntityAtomic.emit('
 }
 }
 async function delTx(id){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 // S468b guard (defense in depth, lihat poin bahaya #2 di
 // s468-PLAN-virtual-bill-item-tx-list.md): id item virtual tagihan
 // (prefix 'vbill_', lihat txHTML()) BUKAN transaksi asli -- kalau
@@ -942,6 +943,7 @@ const v=D.profile&&D.profile.aiFinanceOverspendThresholdPct;
 return(typeof v==='number'&&v>=100)?v:AI_FINANCE_OVERSPEND_DEFAULT_PCT;
 }
 function setAIFinanceOverspendThreshold(pct){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const n=parseInt(pct,10);
 D.profile.aiFinanceOverspendThresholdPct=(Number.isFinite(n)&&n>=100)?n:AI_FINANCE_OVERSPEND_DEFAULT_PCT;
 return D.profile.aiFinanceOverspendThresholdPct;
@@ -988,6 +990,7 @@ const v=D.profile&&D.profile.aiFinanceLowBalanceMultiplier;
 return(typeof v==='number'&&v>=0.1&&v<=2)?v:AI_FINANCE_LOW_BALANCE_DEFAULT_MULTIPLIER;
 }
 function setAIFinanceLowBalanceMultiplier(mult){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 const n=parseFloat(mult);
 D.profile.aiFinanceLowBalanceMultiplier=(Number.isFinite(n)&&n>=0.1&&n<=2)?n:AI_FINANCE_LOW_BALANCE_DEFAULT_MULTIPLIER;
 return D.profile.aiFinanceLowBalanceMultiplier;

@@ -215,8 +215,12 @@
       const cid=componentId(cat);
       if(!cid)continue;
       const meta=catalogIdentityByName(cat.name,cat.serviceComponentId||cat.maintenanceRuleId||null);
-      if(meta&&cat.serviceComponentId!==meta.id){cat.serviceComponentId=meta.id;changed++;}
-      if(meta&&meta.group&&cat.masterCategoryId!==meta.group.masterCategoryId){cat.masterCategoryId=meta.group.masterCategoryId;changed++;}
+      if(meta&&(cat.serviceComponentId!==meta.id|| (meta.group&&cat.masterCategoryId!==meta.group.masterCategoryId))){
+        if(root.VehicleCarNotesSOT&&typeof root.VehicleCarNotesSOT.updateServiceCategory==='function'&&cat.vehicleId){
+          const patch={serviceComponentId:meta.id};if(meta.group)patch.masterCategoryId=meta.group.masterCategoryId;
+          const r=root.VehicleCarNotesSOT.updateServiceCategory(cat.vehicleId,cat.id,patch);if(r&&r.ok)changed++;
+        } else {if(meta&&cat.serviceComponentId!==meta.id){cat.serviceComponentId=meta.id;changed++;}if(meta&&meta.group&&cat.masterCategoryId!==meta.group.masterCategoryId){cat.masterCategoryId=meta.group.masterCategoryId;changed++;}}
+      }
     }
 
     const groups=new Map();

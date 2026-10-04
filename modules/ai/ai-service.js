@@ -686,6 +686,11 @@ const AIService = {
       this._subscriptions.push(AIBus.on(evt, handle(evt)));
     });
     this._wired = true;
+    // S2473: replay only after all AI consumers are wired; replaying before
+    // subscriptions exist would incorrectly clear a durable event.
+    if (typeof aiReplayEventOutbox === 'function') {
+      Promise.resolve(aiReplayEventOutbox()).catch(() => {});
+    }
   },
   unwireEvents() {
     this._subscriptions.splice(0).forEach((unsubscribe) => {

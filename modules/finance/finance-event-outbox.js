@@ -74,6 +74,31 @@
     })().finally(()=>{loadPromise=null;});
     return loadPromise;
   }
+  // S2470: post-commit event delivery must never silently disappear when a
+  // synchronous AIBus consumer throws. The state mutation has already passed
+  // persistence at this point, so queue the exact same event for durable retry.
+  function emitOrEnqueue(type,payload){
+    // S2472: AIBus.emit() intentionally swallows async listener rejections, so
+    // a post-commit consumer failure could previously look successful and never
+    // reach the durable outbox. Prefer emitAsync() when available and enqueue
+    // the exact event if any consumer throws/rejects. Callers historically do
+    // not await this API, therefore the rejection is always consumed here.
+    if(g.AIBus&&typeof g.AIBus.emitAsync==='function'){
+      return Promise.resolve().then(()=>g.AIBus.emitAsync(type,payload)).then(()=>true).catch(e=>{
+        try{if(g.console&&console.error)console.error('FinanceEventOutbox: async post-commit event failed; queued for retry',e);}catch(_){void _;}
+        return enqueue(type,payload);
+      });
+    }
+    try{
+      if(g.AIBus&&typeof g.AIBus.emit==='function'){
+        g.AIBus.emit(type,payload);
+        return true;
+      }
+    }catch(e){
+      try{if(g.console&&console.error)console.error('FinanceEventOutbox: post-commit event failed; queued for retry',e);}catch(_){void _;}
+    }
+    return enqueue(type,payload);
+  }
   function enqueue(type,payload){
     const item=normalize({type,payload});
     if(!item)return false;
@@ -180,7 +205,7 @@
     return order(durable.concat(staged));
   }
   g.FinanceEventOutbox=Object.freeze({
-    enqueue,enqueueBatch,stageBatch,replay,pending,prepareAtomicPersistence,markAtomicPersisted,discardStaged,withPersistenceLock,hasStaged:()=>staged.length>0,key:KEY
+    enqueue,enqueueBatch,stageBatch,replay,pending,prepareAtomicPersistence,markAtomicPersisted,discardStaged,withPersistenceLock,emitOrEnqueue,hasStaged:()=>staged.length>0,key:KEY
   });
   function scheduleReplay(){
     if(typeof g.setTimeout!=='function')return;

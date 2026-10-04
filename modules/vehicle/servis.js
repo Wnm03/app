@@ -1093,11 +1093,24 @@ if(!_preSaveEffectiveItem&&!_isChecklistSessionEdit){toast('⚠️ Pilih minimal
 let newCatCreated=false;
 if(intervalKm&&intervalKm>0){
 if(matched){
-matched.intervalKm=intervalKm;
+  // S2459: a global/other-vehicle compatibility category cannot be mutated
+  // as the active vehicle's owner. Materialize the vehicle-scoped canonical row first.
+  if(curVehicleId&&String(matched.vehicleId||'')!==String(curVehicleId)){
+    const _scoped=Object.assign({},matched,{id:'sp_'+Date.now(),vehicleId:curVehicleId});
+    const _scopeResult=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(_scoped,'service-entry-scope'):null;
+    if(!_scopeResult||!_scopeResult.ok)D.sparepartCats.push(_scoped);
+    matched=_scoped;
+    catIdForLog=matched.id;
+  }
+  // S2459: service-entry interval edits go through the canonical Car Notes SOT.
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){
+    const _intervalUpdate=VehicleCarNotesSOT.updateServiceCategory(curVehicleId,matched.id,{intervalKm});
+    if(!_intervalUpdate||!_intervalUpdate.ok)throw new Error((_intervalUpdate&&_intervalUpdate.code)||'SERVICE_CATEGORY_INTERVAL_UPDATE_FAILED');
+  } else matched.intervalKm=intervalKm;
 } else if(item&&!itemIsVehicleName){
 const newCat={id:'sp_'+Date.now(),name:item,code:codeFromName(item),intervalKm,vehicleId:curVehicleId};
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(newCat,'service-entry-category');
-D.sparepartCats.push(newCat);
+const _newCatSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(newCat,'service-entry-category'):null;
+if(!_newCatSot||!_newCatSot.ok)D.sparepartCats.push(newCat);
 matched=newCat;
 catIdForLog=newCat.id;
 newCatCreated=true;
@@ -1305,9 +1318,9 @@ if(await askConfirm(`"${item}" belum ada di daftar pengingat servis. Tambahkan s
 const interval=await showPromptModal({title:'Interval Servis',message:'Interval servis untuk "'+item+'" (KM):',icon:'🔧',inputType:'number',defaultValue:3000});
 const n=parseFloat(interval);
 if(n&&n>0){
-const newCat={id:'sp_'+Date.now(),name:item,code:codeFromName(item),intervalKm:n};
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(newCat,'service-entry-category');
-D.sparepartCats.push(newCat);
+const newCat={id:'sp_'+Date.now(),name:item,code:codeFromName(item),intervalKm:n,vehicleId:curVehicleId};
+const _newCatSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(newCat,'service-entry-category'):null;
+if(!_newCatSot||!_newCatSot.ok)D.sparepartCats.push(newCat);
 const s2=D.servisLogs.find(x=>x.id===servisId);
 if(s2)s2.categoryId=newCat.id;
 save({domain:'servis',financeMutation:false});Sparepart.renderCatList();Servis.renderList();toast('✅ Kategori pengingat ditambahkan');

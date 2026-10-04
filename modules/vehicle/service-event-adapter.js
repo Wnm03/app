@@ -95,78 +95,106 @@ if (typeof window !== 'undefined') {
 const ServiceEventOutbox = (()=>{
   const STORAGE_KEY='service-event-outbox:v1';
   let q=[];
+  let writeTail=Promise.resolve();
   try{const raw=typeof localStorage!=='undefined'?localStorage.getItem(STORAGE_KEY):null;q=raw?JSON.parse(raw):[];if(!Array.isArray(q))q=[];}catch(_){q=[];}
-  const persist=()=>{try{if(typeof localStorage==='undefined')return false;localStorage.setItem(STORAGE_KEY,JSON.stringify(q));return true;}catch(_){return false;}};
+  const clone=v=>{try{return JSON.parse(JSON.stringify(v));}catch(_){return v;}};
+  const persistLegacy=()=>{try{if(typeof localStorage==='undefined')return false;localStorage.setItem(STORAGE_KEY,JSON.stringify(q));return true;}catch(_){return false;}};
+  const persistDurable=()=>{
+    const snapshot=clone(q);
+    writeTail=writeTail.then(async()=>{
+      if(typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.set==='function'){
+        const ok=await IDBStore.set(STORAGE_KEY,snapshot);
+        if(ok!==false){persistLegacy();return true;}
+      }
+      return persistLegacy();
+    }).catch(()=>false);
+    return writeTail;
+  };
+  const flushPersistence=()=>writeTail;
+  // S2477: backup/save/restore may run in a different tab than the tab that
+  // enqueued the latest service event. The in-memory q is only a local cache;
+  // prepare must merge the durable IDB queue before exposing an atomic snapshot,
+  // otherwise a cross-tab event can be silently omitted or later overwritten.
+  const prepareAtomicPersistence=async()=>{
+    await writeTail;
+    let durable=[];
+    try{
+      if(typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.get==='function'){
+        const v=await IDBStore.get(STORAGE_KEY);
+        if(Array.isArray(v))durable=clone(v);
+      }
+    }catch(_){
+      throw new Error('Service event outbox durable snapshot tidak dapat dibaca');
+    }
+    const merged=[]; const seen=new Set();
+    [...durable,...q].forEach(item=>{
+      const key=item&&item.key!=null?String(item.key):JSON.stringify(item);
+      if(seen.has(key))return;
+      seen.add(key); merged.push(item);
+    });
+    q=clone(merged);
+    return {queue:clone(q)};
+  };
+  const markAtomicPersisted=(queue)=>{q=Array.isArray(queue)?clone(queue):[];persistLegacy();};
+  const adoptSnapshot=(queue)=>{q=Array.isArray(queue)?clone(queue):[];persistLegacy();};
+  const loadDurable=async()=>{
+    try{
+      if(typeof IDBStore!=='undefined'&&IDBStore&&typeof IDBStore.get==='function'){
+        const v=await IDBStore.get(STORAGE_KEY);
+        if(Array.isArray(v))q=clone(v);
+      }
+    }catch(_){/* retain last known queue; fail closed in atomic caller */}
+    return q;
+  };
   return {
     enqueue(evt){
       if(!evt)return false;
       const payload=evt.payload||{};
-      // V33: dedupe only by a stable event identity. Vehicle events keep action-aware
-// semantics and must not collapse distinct vehicle.updated operations.
-// outbox vehicle events use action-aware dedup key: (payload.action||'') and (payload.kind||'').
-// V33: dedupe only by a stable event identity. The old vehicle/action/kind
-      // fallback could collapse two legitimate events for the same vehicle.
       const stablePayloadId=payload.id||payload.servisId||payload.txLinkId||payload.deletedTxId||null;
       const fallback=JSON.stringify({vehicleId:payload.vehicleId||null,action:payload.action||'',kind:payload.kind||'',at:evt.at||null});
-      // Vehicle events are action-aware: the same entity may legitimately emit
-      // update/delete/unlink operations that must all survive in the outbox.
-      // Keep action/kind in the canonical identity for vehicle.updated instead
-      // of collapsing every event sharing the same payload id.
       const identity=evt.type==='vehicle.updated'
         ? JSON.stringify({id:stablePayloadId||null,vehicleId:payload.vehicleId||null,action:payload.action||'',kind:payload.kind||''})
         : String(stablePayloadId||fallback);
-      // V36: callers cannot override canonical event identity with a stale/custom key.
       const key=`${evt.type||'event'}::${identity}`;
-      if(!q.some(x=>x.key===key)){const entry={...evt,key,at:Date.now(),attempts:Number(evt.attempts)||0};q.push(entry);if(persist())return true;q.pop();return false;}
+      if(!q.some(x=>x.key===key)){
+        const entry={...evt,key,eventId:String(evt.eventId||evt.id||key),at:Date.now(),attempts:Number(evt.attempts)||0};
+        q.push(entry);
+        const before=q.length-1;
+        const pending=persistDurable();
+        // Enqueue is intentionally fire-and-forget for existing callers; the
+        // persistence tail is awaited by save/backup atomic boundaries.
+        void pending;
+        return true;
+      }
       return false;
     },
     pending(){return q.slice();},
     drain(handler){
       if(typeof handler!=='function')return 0;
       let n=0;
-      // Preserve causal order: create/update/delete events for the same entity
-      // must replay FIFO. On a failed head event, stop rather than replaying a
-      // later event against stale state.
       while(q.length){
         const index=0;
         try{
           const result=handler(q[index]);
           if(result&&typeof result.then==='function')throw new Error('Async handler requires drainAsync');
           const removed=q.splice(index,1)[0];
-          if(!persist()){
-            q.splice(index,0,removed);
-            throw new Error('Outbox persistence failed after handler success');
-          }
-          n++;
-        }catch(err){
-          q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};
-          persist();
-          break;
-        }
+          if(!persistLegacy()){q.splice(index,0,removed);throw new Error('Outbox persistence failed after handler success');}
+          void persistDurable(); n++;
+        }catch(err){q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};persistDurable();break;}
       }
       return n;
     },
     async drainAsync(handler){
       if(typeof handler!=='function')return 0;
       let n=0;
-      // S2295: a durable replay is not successful until async consumers have
-      // completed. This closes the crash/rejection window where AIBus.emit()
-      // returned before AIDecision finished, causing the outbox to be cleared.
       while(q.length){
         const index=0;
         try{
           await handler(q[index]);
           const removed=q.splice(index,1)[0];
-          if(!persist()){
-            q.splice(index,0,removed);
-            throw new Error('Outbox persistence failed after handler success');
-          }
-          n++;
-        }catch(err){
-          q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};
-          persist();
-          break;
-        }
+          if(!persistLegacy()){q.splice(index,0,removed);throw new Error('Outbox persistence failed after handler success');}
+          await persistDurable(); n++;
+        }catch(err){q[index]={...q[index],attempts:(Number(q[index].attempts)||0)+1,lastError:String(err&&err.message||err),lastAttemptAt:Date.now()};await persistDurable();break;}
       }
       return n;
     },
@@ -179,20 +207,16 @@ const ServiceEventOutbox = (()=>{
         if(evt.type==='service.update'&&typeof ServiceEventLifecycle!=='undefined'){if(typeof ServiceEventLifecycle.updateAsync==='function')return ServiceEventLifecycle.updateAsync(p,options);if(typeof ServiceEventLifecycle.update==='function')return ServiceEventLifecycle.update(p,options);}
         if(evt.type==='service.remove'&&typeof ServiceEventLifecycle!=='undefined'){if(typeof ServiceEventLifecycle.removeAsync==='function')return ServiceEventLifecycle.removeAsync(p,options);if(typeof ServiceEventLifecycle.remove==='function')return ServiceEventLifecycle.remove(p,options);}
         if(evt.type==='catalog.attach'&&typeof VehicleCatalogServisLink!=='undefined'&&VehicleCatalogServisLink&&typeof VehicleCatalogServisLink.attachToServis==='function')return VehicleCatalogServisLink.attachToServis(p.servisId,p.links||[]);
-        if(evt.type==='finance.updated'&&typeof AIBus!=='undefined'){
-          if(typeof AIBus.emitAsync==='function')return AIBus.emitAsync('finance.updated',p,eventMeta);
-          return AIBus.emit('finance.updated',p,eventMeta);
-        }
-        if(evt.type==='vehicle.updated'&&typeof AIBus!=='undefined'){
-          if(typeof AIBus.emitAsync==='function')return AIBus.emitAsync('vehicle.updated',p,eventMeta);
-          return AIBus.emit('vehicle.updated',p,eventMeta);
-        }
+        if(evt.type==='finance.updated'&&typeof AIBus!=='undefined')return typeof AIBus.emitAsync==='function'?AIBus.emitAsync('finance.updated',p,eventMeta):AIBus.emit('finance.updated',p,eventMeta);
+        if(evt.type==='vehicle.updated'&&typeof AIBus!=='undefined')return typeof AIBus.emitAsync==='function'?AIBus.emitAsync('vehicle.updated',p,eventMeta):AIBus.emit('vehicle.updated',p,eventMeta);
         throw new Error('No handler available for '+evt.type);
       });
     },
-    clear(){const previous=q;q=[];if(!persist())q=previous;return q.length===0;}
+    clear(){const previous=q;q=[];if(!persistLegacy()){q=previous;return false;}void persistDurable();return true;},
+    flushPersistence,prepareAtomicPersistence,markAtomicPersisted,adoptSnapshot,
+    loadDurable,key:STORAGE_KEY
   };
-})();
+})();;
 if(typeof window!=='undefined')window.ServiceEventOutbox=ServiceEventOutbox;
 if(typeof module!=='undefined')module.exports.ServiceEventOutbox=ServiceEventOutbox;
 

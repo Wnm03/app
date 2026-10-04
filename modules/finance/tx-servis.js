@@ -191,6 +191,19 @@ _servisAutoLinkAdjustStock(purchasedPartId,-purchasedPartQty);
 function _resolveServisCategoryId(item,purchasedPartId,vehicleId){
 const name=(item||'').trim().toLowerCase();
 if(name){
+// S2449: resolve category ownership from Car Notes canonical service
+// categories first. D.sparepartCats is only a compatibility projection and
+// may contain duplicate legacy rows (the Android native picker can otherwise
+// show the same component more than once).
+let canonicalComponentId=null;
+if(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.infer==='function'){
+  const inferred=ServiceInputCatalog.infer(item);
+  canonicalComponentId=inferred&&inferred.item&&inferred.item.id||null;
+}
+if(canonicalComponentId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function'){
+  const canonical=(VehicleCarNotesSOT.getServiceCategories(vehicleId)||[]).find(c=>c&&String(c.serviceComponentId||'')===String(canonicalComponentId));
+  if(canonical)return canonical.id;
+}
 const matched=typeof canonicalServisCategoryId==='function'
 ?canonicalServisCategoryId(item,vehicleId,null)
 :(typeof resolveServisCatForVehicle==='function'?resolveServisCatForVehicle(item,vehicleId):(D.sparepartCats||[]).find(c=>c&&c.name&&c.name.toLowerCase()===name));

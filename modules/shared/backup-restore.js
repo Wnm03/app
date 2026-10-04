@@ -53,11 +53,23 @@ const blob=new Blob([JSON.stringify(txs,null,2)],{type:'application/json'});
 _downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.json');
 }
 async function buildBackupPayload(){
+// S2475: wait for any in-flight AI recovery journal write before snapshotting.
+if(typeof aiEventOutboxFlush==='function'){try{await aiEventOutboxFlush();}catch(_aiFlushErr){throw new Error('Backup dibatalkan: penulisan AI recovery journal belum stabil.');}}
+// S2476: all durable cross-domain recovery journals must reach a stable
+// persistence point before the readonly auxiliary snapshot. Finance's
+// prepare step also merges legacy localStorage events into its durable view.
+if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.prepareAtomicPersistence==='function'){
+  try{await ServiceEventOutbox.prepareAtomicPersistence();}catch(_servicePrepareErr){throw new Error('Backup dibatalkan: service recovery journal belum stabil.');}
+}
+if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+  try{const _financePrepare=await FinanceEventOutbox.prepareAtomicPersistence();if(_financePrepare&&Number(_financePrepare.stagedCount||0)>0)throw new Error('Finance event masih staged dan belum committed');}catch(_financePrepareErr){throw new Error('Backup dibatalkan: Finance recovery journal belum committed.');}
+}
+
 // S2216: backup must capture D + auxiliary IndexedDB domains from a stable
 // persistence point. D is cloned synchronously, while all auxiliary stores are
 // read in ONE readonly transaction. If D mutates or the cross-tab writer token
 // changes during the async read, retry so the backup never mixes generations.
-const _backupAuxKeys=['lifeos:store','eie:store','vehicle-catalog:store','honda-pdf-import:store'];
+const _backupAuxKeys=['lifeos:store','eie:store','vehicle-catalog:store','honda-pdf-import:store','ai:event-outbox:v1','service-event-outbox:v1','kw_finance_event_outbox_v1'];
 const _maxBackupSnapshotAttempts=3;
 let _lastBackupErr=null;
 for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
@@ -95,6 +107,9 @@ for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
   if(_aux['eie:store']!==undefined)backupD._eieStore=_aux['eie:store'];
   if(_aux['vehicle-catalog:store']!==undefined)backupD._vehicleCatalogStore=_aux['vehicle-catalog:store'];
   if(_aux['honda-pdf-import:store']!==undefined)backupD._hondaPdfImportStore=_aux['honda-pdf-import:store'];
+  if(_aux['ai:event-outbox:v1']!==undefined)backupD._aiEventOutbox=_aux['ai:event-outbox:v1'];
+  if(_aux['service-event-outbox:v1']!==undefined)backupD._serviceEventOutbox=_aux['service-event-outbox:v1'];
+  if(_aux['kw_finance_event_outbox_v1']!==undefined)backupD._financeEventOutbox=_aux['kw_finance_event_outbox_v1'];
   if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sealBackupPayload==='function')return await PWAProductionHardening.sealBackupPayload(backupD);
   return backupD;
 }
@@ -592,13 +607,20 @@ const prevD=JSON.parse(JSON.stringify(D));
 // V24 G10: snapshot every external IndexedDB domain before restore. D itself
 // can be rolled back synchronously, but the auxiliary stores need their own
 // compensating rollback if a later store write fails.
-let _prevLifeosStore,_prevEieStore,_prevVehicleCatalogStore,_prevHondaPdfImportStore;
+let _prevLifeosStore,_prevEieStore,_prevVehicleCatalogStore,_prevHondaPdfImportStore,_prevAiEventOutbox,_prevServiceEventOutbox,_prevFinanceEventOutbox;
 __s2013SetStage('snapshot-auxiliary-idb');
+if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.flushPersistence==='function'){
+  try{await ServiceEventOutbox.flushPersistence();}catch(_serviceRestoreFlushErr){await showAlertModal('Snapshot service recovery journal gagal stabil. Restore dibatalkan agar tidak terjadi restore parsial.',{icon:'❌',title:'Restore Dibatalkan'});return false;}
+}
+if(typeof aiEventOutboxFlush==='function'){try{await aiEventOutboxFlush();}catch(_aiRestoreFlushErr){await showAlertModal('Snapshot AI recovery journal gagal stabil. Restore dibatalkan agar tidak terjadi restore parsial.',{icon:'❌',title:'Restore Dibatalkan'});return false;}}
 try{
   _prevLifeosStore=await IDBStore.get('lifeos:store');
   _prevEieStore=await IDBStore.get('eie:store');
   _prevVehicleCatalogStore=await IDBStore.get('vehicle-catalog:store');
   _prevHondaPdfImportStore=await IDBStore.get('honda-pdf-import:store');
+  _prevAiEventOutbox=await IDBStore.get('ai:event-outbox:v1');
+  _prevServiceEventOutbox=await IDBStore.get('service-event-outbox:v1');
+  _prevFinanceEventOutbox=await IDBStore.get('kw_finance_event_outbox_v1');
 }catch(_idbSnapshotErr){
   console.error('V24: gagal mengambil snapshot auxiliary IndexedDB sebelum restore',_idbSnapshotErr);
   await showAlertModal('Snapshot keamanan database tambahan gagal dibuat. Restore dibatalkan agar tidak terjadi restore parsial.',{icon:'❌',title:'Restore Dibatalkan'});
@@ -616,6 +638,9 @@ const _restoredVehicleCatalogStore=imp._vehicleCatalogStore;
 // Honda PDF Import (Tahap 7D-1) — titipan sama seperti
 // _lifeosStore/_eieStore/_vehicleCatalogStore di atas, BUKAN properti D.
 const _restoredHondaPdfImportStore=imp._hondaPdfImportStore;
+const _restoredAiEventOutbox=imp._aiEventOutbox;
+const _restoredServiceEventOutbox=imp._serviceEventOutbox;
+const _restoredFinanceEventOutbox=imp._financeEventOutbox;
 __s2013SetStage('merge-backup-into-state');
 try{
 D={...D,...imp};
@@ -623,6 +648,9 @@ delete D._integrity;
 delete D._lifeosStore;
 delete D._eieStore;
 delete D._hondaPdfImportStore;
+delete D._aiEventOutbox;
+delete D._serviceEventOutbox;
+delete D._financeEventOutbox;
 __s2013SetStage('apply-restored-data-migrations');
 applyRestoredDataMigrations();
 // BUGFIX (audit backup, lanjutan toVersion:8 dedupe): D._vehicleCatalogStore
@@ -641,6 +669,16 @@ __s2013SetStage('normalize-legacy-service-logs');
 if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
 __s2013SetStage('service-history-sot-normalizer');
 if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer&&typeof ServiceHistorySOTNormalizer.apply==='function')ServiceHistorySOTNormalizer.apply();
+// S2451: restore/import is a hard SOT boundary. Reconcile Car Notes category/component
+// identity and vehicle-scoped category references before any durable write.
+__s2013SetStage('category-component-sot-reconciliation');
+if(typeof ServiceCategoryRestoreReconcilerS2451!=='undefined'&&ServiceCategoryRestoreReconcilerS2451&&typeof ServiceCategoryRestoreReconcilerS2451.reconcile==='function'){
+  const _catRestore=ServiceCategoryRestoreReconcilerS2451.reconcile(D);
+  if(!_catRestore.ok){
+    const _catCodes=[...new Set((_catRestore.issues||[]).map(x=>x&&x.code).filter(Boolean))].slice(0,8).join(', ');
+    throw new Error('Restore dibatalkan: integritas kategori/komponen Car Notes tidak konsisten ('+(_catRestore.issues||[]).length+' issue'+(_catCodes?'; '+_catCodes:'')+').');
+  }
+}
 __s2013SetStage('remove-temporary-vehicle-catalog');
 delete D._vehicleCatalogStore;
 // P11: setelah seluruh migration selesai, rapikan linkage servis↔Finance dan
@@ -679,6 +717,9 @@ if(_restoredLifeosStore!==undefined)_restoreAuxEntries.push(['lifeos:store',_res
 if(_restoredEieStore!==undefined)_restoreAuxEntries.push(['eie:store',_restoredEieStore]);
 if(_restoredVehicleCatalogStore!==undefined)_restoreAuxEntries.push(['vehicle-catalog:store',_restoredVehicleCatalogStore]);
 if(_restoredHondaPdfImportStore!==undefined)_restoreAuxEntries.push(['honda-pdf-import:store',_restoredHondaPdfImportStore]);
+if(_restoredAiEventOutbox!==undefined)_restoreAuxEntries.push(['ai:event-outbox:v1',_restoredAiEventOutbox]);
+if(_restoredServiceEventOutbox!==undefined)_restoreAuxEntries.push(['service-event-outbox:v1',_restoredServiceEventOutbox]);
+if(_restoredFinanceEventOutbox!==undefined)_restoreAuxEntries.push(['kw_finance_event_outbox_v1',_restoredFinanceEventOutbox]);
 if(typeof _persistAtomicSnapshotWithAux!=='function')throw new Error('Restore atomic persistence helper tidak tersedia; restore dibatalkan untuk mencegah partial write');
 await _persistAtomicSnapshotWithAux(_restorePersistJson,_restoreAuxEntries);
 var _restoreAtomicCommitted=true;
@@ -706,6 +747,9 @@ try{
     if(_restoredEieStore!==undefined)_rollbackAuxEntries.push(['eie:store',_prevEieStore]);
     if(_restoredVehicleCatalogStore!==undefined)_rollbackAuxEntries.push(['vehicle-catalog:store',_prevVehicleCatalogStore]);
     if(_restoredHondaPdfImportStore!==undefined)_rollbackAuxEntries.push(['honda-pdf-import:store',_prevHondaPdfImportStore]);
+    if(_restoredAiEventOutbox!==undefined)_rollbackAuxEntries.push(['ai:event-outbox:v1',_prevAiEventOutbox]);
+    if(_restoredServiceEventOutbox!==undefined)_rollbackAuxEntries.push(['service-event-outbox:v1',_prevServiceEventOutbox]);
+    if(_restoredFinanceEventOutbox!==undefined)_rollbackAuxEntries.push(['kw_finance_event_outbox_v1',_prevFinanceEventOutbox]);
     await _persistAtomicSnapshotWithAux(snapJson,_rollbackAuxEntries);
   }else{
     saveFlush();
@@ -830,16 +874,25 @@ return [norm(t.date),norm(t.type),Number(t.amount)||0,norm(t.category),norm(t.su
 }
 function _dedupeImportedTransactions(imported){
 if(!Array.isArray(imported)||!imported.length)return[];
-// SA-H: dedupe against BOTH existing data and the current import batch.
-// Previously accepted rows were not added to existingKeys, so the same
-// transaction repeated twice in one file could be imported twice.
-const existingKeys=new Set((Array.isArray(D.transactions)?D.transactions:[]).map(t=>t&&t.importIdempotencyKey).filter(Boolean));
+// S2464: dedupe against BOTH stable import keys AND transaction IDs.
+// An imported row whose id already exists is an identity collision even when
+// its legacy row has no importIdempotencyKey; allowing it would create two
+// records with the same primary identity and make later update/remove by id
+// ambiguous. Also keep the current-batch ID set so duplicate rows in one
+// file cannot collide with each other.
+const existingRows=Array.isArray(D.transactions)?D.transactions:[];
+const existingKeys=new Set(existingRows.map(t=>t&&t.importIdempotencyKey).filter(Boolean));
+const existingIds=new Set(existingRows.map(t=>t&&t.id).filter(id=>id!=null&&String(id)!=='' ).map(String));
 const acceptedKeys=new Set();
+const acceptedIds=new Set();
 return imported.filter(t=>{
   const key=t&&t.importIdempotencyKey;
-  if(!key)return true;
-  if(existingKeys.has(key)||acceptedKeys.has(key))return false;
-  acceptedKeys.add(key);
+  const id=t&&t.id;
+  const sid=id==null?'':String(id);
+  if(key&&(existingKeys.has(key)||acceptedKeys.has(key)))return false;
+  if(sid&&(existingIds.has(sid)||acceptedIds.has(sid)))return false;
+  if(key)acceptedKeys.add(key);
+  if(sid)acceptedIds.add(sid);
   return true;
 }); 
 }
@@ -860,6 +913,19 @@ try{
 const content=ev.target.result;
 let imported=[];
 let taxonomySummary=null;
+// S2465: Cashew taxonomy creation is part of the same Finance import
+// transaction. Snapshot it before any speculative parsing so cancellation,
+// stale-state rejection, dedupe-to-zero, or persistence failure cannot leave
+// accounts/categories mutated while transactions were not imported.
+const _cashewTaxonomySnapshot=(curImportType==='cashew'&&typeof D!=='undefined')?{
+  accounts:Array.isArray(D.accounts)?D.accounts.map(x=>({...x})):[],
+  categories:D.categories?JSON.parse(JSON.stringify(D.categories)):null
+}:null;
+const _restoreCashewTaxonomySnapshot=()=>{
+  if(!_cashewTaxonomySnapshot)return;
+  D.accounts=_cashewTaxonomySnapshot.accounts.map(x=>({...x}));
+  D.categories=_cashewTaxonomySnapshot.categories?JSON.parse(JSON.stringify(_cashewTaxonomySnapshot.categories)):_cashewTaxonomySnapshot.categories;
+};
 if(file.name.endsWith('.json')){
 const parsed=JSON.parse(content);
 if(!Array.isArray(parsed)&&(!parsed||typeof parsed!=='object'))throw new Error('Format JSON transaksi tidak valid');
@@ -876,7 +942,11 @@ taxonomySummary=ensureCashewTaxonomy(content);
 imported=parseCSVImport(content,curImportType);
 }
 imported=_dedupeImportedTransactions(imported);
-if(imported.length===0){document.getElementById('importResult').innerHTML='<div class="u-cacc2 u-fs12" style="padding:8px">⚠️ Tidak ada transaksi baru. Data yang sama sudah pernah diimpor atau file kosong.</div>';return;}
+if(imported.length===0){
+_restoreCashewTaxonomySnapshot();
+document.getElementById('importResult').innerHTML='<div class="u-cacc2 u-fs12" style="padding:8px">⚠️ Tidak ada transaksi baru. Data yang sama sudah pernah diimpor atau file kosong.</div>';
+return;
+}
 let confirmMsg=`Ditemukan ${imported.length} transaksi baru setelah deduplikasi.`;
 if(taxonomySummary){
 const {newAccounts,newCats,newSubs}=taxonomySummary;
@@ -891,11 +961,35 @@ confirmMsg+=` Akan dicatat ke akun "${defAccName}" (bisa dipindah manual nanti).
 }
 const confirmed=await askConfirm(confirmMsg,{danger:false,okText:'Ya, Import',icon:'📥'});
 if(!confirmed){
+_restoreCashewTaxonomySnapshot();
 if(curImportType==='cashew') await load();
 return;
 }
-D.transactions=[...D.transactions,...imported];
-save();renderDashboard();
+// S2464: transaction import is a Finance-owned mutation boundary even
+// though the UI lives in shared backup/restore. Reject stale cross-tab state
+// before mutating, route the append through FinanceTxSOT, and rollback the
+// exact transaction snapshot if persistence refuses the write.
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState()){
+_restoreCashewTaxonomySnapshot();
+return;
+}
+const _importTxSnapshot=Array.isArray(D.transactions)?D.transactions.slice():[];
+try{
+  if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.createMany==='function') FinanceTxSOT.createMany(imported);
+  else { if(!Array.isArray(D.transactions))D.transactions=[]; D.transactions.push(...imported); }
+  const _importSaveOk=save();
+  if(_importSaveOk===false){
+    if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.replaceSnapshot==='function') FinanceTxSOT.replaceSnapshot(_importTxSnapshot);
+    else D.transactions.splice(0,D.transactions.length,..._importTxSnapshot);
+    throw new Error('Penyimpanan menolak import transaksi; perubahan dibatalkan.');
+  }
+}catch(_importErr){
+  if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.replaceSnapshot==='function') FinanceTxSOT.replaceSnapshot(_importTxSnapshot);
+  else { if(!Array.isArray(D.transactions))D.transactions=[]; D.transactions.splice(0,D.transactions.length,..._importTxSnapshot); }
+  _restoreCashewTaxonomySnapshot();
+  throw _importErr;
+}
+renderDashboard();
 let resultHTML=`<div class="u-cacc3 u-fs12 u-r8" style="padding:8px;background:var(--accent3-soft)">✅ Berhasil import ${imported.length} transaksi!`;
 if(taxonomySummary){
 const n=taxonomySummary.newAccounts.length+taxonomySummary.newCats.length+taxonomySummary.newSubs.length;

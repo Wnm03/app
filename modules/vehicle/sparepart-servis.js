@@ -726,8 +726,8 @@ if(val===''||isNaN(num)||num<=0){
 }
 if(result&&result.ok){
   const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(cat,curVehicleId):VehicleServiceSOT.resolveReminderRule(cat,curVehicleId);
-  cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;
-  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{intervalKm:resolved.intervalKm||0,intervalBulan:resolved.intervalBulan||0});const _rows=VehicleCarNotesSOT.getServiceCategories(curVehicleId)||[];const _u=_rows.find(c=>String(c.id)===String(cat.id));if(_u)Object.assign(cat,_u);}
+  else {cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');}
   Sparepart._recoCache=null;
   Sparepart._catalogNameCache=[];
   save();Servis.renderReminder();renderDashboardServisReminder();
@@ -897,25 +897,31 @@ ensureCanonicalSparepartComponentCategories(){
   let added=0,linked=0;
   runtimeGroups.forEach(g=>(g.items||[]).forEach(it=>{
     if(!it||!stockIds.has(it.id))return;
-    let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id);
+    const _vidProvision=(typeof curVehicleId!=='undefined'?curVehicleId:null);
+    let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id&&(!c.vehicleId||String(c.vehicleId)===String(_vidProvision)));
     if(!cat){
       const targetName=aliases[it.id]||it.name;
-      const exact=(D.sparepartCats||[]).find(c=>c&&String(c.name||'').trim().toLowerCase()===targetName.trim().toLowerCase());
+      const exact=(D.sparepartCats||[]).find(c=>c&&String(c.name||'').trim().toLowerCase()===targetName.trim().toLowerCase()&&(!c.vehicleId||String(c.vehicleId)===String(_vidProvision)));
       cat=exact||null;
     }
     if(cat){
+      if(_vidProvision&&String(cat.vehicleId||'')!==String(_vidProvision)){const _scoped=Object.assign({},cat,{id:_spCatId(String(it.id)),vehicleId:_vidProvision});const _sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(_scoped,'checklist-category-scope'):null;if(!_sr||!_sr.ok)D.sparepartCats.push(_scoped);cat=_scoped;}
       let changed=false;
-      if(cat.serviceComponentId!==it.id){cat.serviceComponentId=it.id;changed=true;}
-      if(cat.masterCategoryId!==g.masterCategoryId){cat.masterCategoryId=g.masterCategoryId;changed=true;}
+      if(cat.serviceComponentId!==it.id){changed=true;}
+      if(cat.masterCategoryId!==g.masterCategoryId){changed=true;}
       if(!cat.group)cat.group=g.group;
       if(!cat.groupIcon){const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;if(mc&&mc.icon)cat.groupIcon=mc.icon;}
-      if(changed)linked++;
+      if(changed){
+        if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{serviceComponentId:it.id,masterCategoryId:g.masterCategoryId,group:cat.group,groupIcon:cat.groupIcon});const _rows=VehicleCarNotesSOT.getServiceCategories(curVehicleId)||[];const _u=_rows.find(c=>String(c.id)===String(cat.id));if(_u)Object.assign(cat,_u);}
+        else {cat.serviceComponentId=it.id;cat.masterCategoryId=g.masterCategoryId;linked++;}
+        linked++;
+      }
       return;
     }
     const base='sp_component_'+it.id;
     const idTaken=(D.sparepartCats||[]).some(c=>c&&c.id===base);
     const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;
-    const _sotCat={id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:'',vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null)}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&_sotCat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotCat,'checklist-category-provision'); D.sparepartCats.push(_sotCat);
+    const _sotCat={id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:'',vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null)}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&_sotCat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){const _r=VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotCat,'checklist-category-provision');if(!_r||!_r.ok)D.sparepartCats.push(_sotCat);} else D.sparepartCats.push(_sotCat);
     added++;
   }));
   if(added||linked){Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();}
@@ -1039,7 +1045,7 @@ const already=D.sparepartCats.some(c=>catVisibleForVehicle(c,vid)&&c.name.trim()
 if(already)return;
 const compId=resolveCanonicalServiceComponent(r.name,null);
 const compRef=compId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(compId):null;
-const _sotRecoCat={id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotRecoCat,'recommendation-create'); D.sparepartCats.push(_sotRecoCat);
+const _sotRecoCat={id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){const _r=VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotRecoCat,'recommendation-create');if(!_r||!_r.ok)D.sparepartCats.push(_sotRecoCat);} else D.sparepartCats.push(_sotRecoCat);
 added++;
 });
 save();
@@ -1057,8 +1063,9 @@ toast('⚠️ Isi dulu Interval Servis (KM) kategori ini sebelum ditampilkan di 
 Sparepart.openCatModalById(catId);
 return;
 }
-cat.showInReminder=cat.showInReminder===false?true:false;
-if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');
+const _show=cat.showInReminder===false?true:false;
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{showInReminder:_show});cat.showInReminder=_show;}
+else {cat.showInReminder=_show;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');}
 Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },

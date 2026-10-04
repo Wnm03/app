@@ -590,6 +590,8 @@ this.render();
 importSelected(){
 const selected=this.items.filter(it=>it.checked);
 if(!selected.length){toast('⚠️ Pilih minimal 1 akun dulu');return;}
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
+const _snap=(()=>{try{return JSON.parse(JSON.stringify(D.accounts||[]));}catch(_){return (D.accounts||[]).slice();}})();
 const emoji=_universalScanEmoji(this.screenType);
 let created=0,updated=0;
 selected.forEach(it=>{
@@ -618,7 +620,8 @@ D.accounts.push(acc);
 created++;
 }
 });
-save();
+const _persisted=save();
+if(_persisted===false){D.accounts=_snap;return false;}
 closeModal('universalOcrModal');
 // BUGFIX (laporan user): accModal (tombol "📷 Scan Universal" ada DI DALAM modal
 // Tambah/Edit Akun ini) tidak pernah ditutup saat scan dibuka di atasnya -- akibatnya

@@ -41,8 +41,45 @@
     return {ok:true,changed:before!==JSON.stringify(s),vehicle:v,sot:s};
   }
   function clone(v){try{return JSON.parse(JSON.stringify(v));}catch(_){return v;}}
+  // S2450: category/component identity is canonicalized at the Car Notes SOT
+  // boundary. Older callers create D.sparepartCats from Finance, Service,
+  // catalog sync and CSV paths; requiring every caller to remember the same
+  // resolver had already produced observable drift. This enrichment is
+  // additive: genuinely custom/unknown categories remain legacy-only.
+  function canonicalizeCategoryIdentity(c){
+    const out=c||{};
+    let resolved=null;
+    try{
+      if(root.ServiceTaxonomySOT&&typeof root.ServiceTaxonomySOT.resolve==='function'){
+        resolved=root.ServiceTaxonomySOT.resolve({
+          masterCategoryId:out.masterCategoryId||null,
+          serviceComponentId:out.serviceComponentId||null,
+          name:out.name||out.item||out.componentName||''
+        });
+      }
+    }catch(_){resolved=null;}
+    if(!resolved){
+      try{
+        if(root.ServiceInputCatalog&&typeof root.ServiceInputCatalog.itemById==='function'&&out.serviceComponentId){
+          const hit=root.ServiceInputCatalog.itemById(out.serviceComponentId);
+          if(hit&&hit.item)resolved={masterCategoryId:hit.group&&hit.group.masterCategoryId||out.masterCategoryId||null,serviceComponentId:hit.item.id};
+        }
+        if(!resolved&&root.ServiceInputCatalog&&typeof root.ServiceInputCatalog.infer==='function'&&(out.name||out.item)){
+          const hit=root.ServiceInputCatalog.infer(out.name||out.item);
+          if(hit&&hit.item)resolved={masterCategoryId:hit.group&&hit.group.masterCategoryId||null,serviceComponentId:hit.item.id};
+        }
+      }catch(_){resolved=null;}
+    }
+    if(resolved&&resolved.serviceComponentId){
+      out.masterCategoryId=String(resolved.masterCategoryId||out.masterCategoryId||'')||null;
+      out.serviceComponentId=String(resolved.serviceComponentId);
+    }else if(out.masterCategoryId){
+      out.masterCategoryId=String(out.masterCategoryId);
+    }
+    return out;
+  }
   function normalizeCategory(cat,vehicleId){
-    const c=clone(cat||{}),vid=str(vehicleId||c.vehicleId||activeId());
+    const c=canonicalizeCategoryIdentity(clone(cat||{})),vid=str(vehicleId||c.vehicleId||activeId());
     if(vid)c.vehicleId=vid;
     if(c.intervalKm!=null)c.intervalKm=Number(c.intervalKm)||0;
     if(c.intervalBulan!=null)c.intervalBulan=Number(c.intervalBulan)||0;
@@ -184,6 +221,12 @@
     const s=ensure(id);
     if(!s)return [];
     if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];
+    // S2450: the taxonomy module is loaded after this SOT during the bundle
+    // bootstrap. Re-normalize existing persisted categories on read so rows
+    // migrated before the canonical taxonomy was available cannot remain a
+    // second, non-canonical identity indefinitely.
+    const normalized=s.serviceCategories.map(c=>normalizeCategory(c,id));
+    if(JSON.stringify(normalized)!==JSON.stringify(s.serviceCategories))s.serviceCategories=normalized;
     return clone(s.serviceCategories);
   }
   function upsertServiceCategory(id,cat){
@@ -193,13 +236,49 @@
     return mutate(vid,s=>{
       if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];
       const key=categoryKey(c),i=s.serviceCategories.findIndex(x=>categoryKey(x)===key);
-      if(i>=0)s.serviceCategories[i]=Object.assign({},s.serviceCategories[i],c,{vehicleId:vid});
+      if(i>=0){const survivorId=s.serviceCategories[i].id; s.serviceCategories[i]=Object.assign({},s.serviceCategories[i],c,{id:survivorId,vehicleId:vid}); if(cat&&typeof cat==='object')cat.id=survivorId;}
       else s.serviceCategories.push(Object.assign({},c,{vehicleId:vid}));
     });
   }
   function removeServiceCategory(id,categoryId){
     const vid=str(id||activeId()); if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found',vehicleId:vid||null};
-    return mutate(vid,s=>{if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];s.serviceCategories=s.serviceCategories.filter(c=>str(c&&c.id)!==str(categoryId));});
+    const sid=str(categoryId);
+    if(!sid)return {ok:false,code:'category_id_missing',vehicleId:vid};
+    const current=(getServiceCategories(vid)||[]).find(c=>str(c&&c.id)===sid)||null;
+    const result=mutate(vid,s=>{
+      if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];
+      s.serviceCategories=s.serviceCategories.filter(c=>str(c&&c.id)!==sid);
+    });
+    if(!result.ok)return result;
+    // S2453: deletion is a canonical mutation, so its compatibility projection
+    // must disappear in the same command. Otherwise a later read/reconcile can
+    // resurrect a deleted category as a ghost Sparepart/Reminder row. Match the
+    // canonical id first, then the canonical component identity to clean legacy
+    // duplicate projections without touching another vehicle.
+    const d=data(); let projectionRemoved=0;
+    if(d&&Array.isArray(d.sparepartCats)){
+      const componentId=str(current&&current.serviceComponentId);
+      const before=d.sparepartCats.length;
+      d.sparepartCats=d.sparepartCats.filter(c=>{
+        if(!c||str(c.vehicleId)!==vid)return true;
+        if(str(c.id)===sid)return false;
+        if(componentId&&str(c.serviceComponentId)===componentId)return false;
+        return true;
+      });
+      projectionRemoved=before-d.sparepartCats.length;
+    }
+    return Object.assign(result,{projectionRemoved});
+  }
+  // S2452: all category edits must mutate canonical Car Notes SOT first.
+  // Legacy D.sparepartCats is refreshed only as a compatibility projection.
+  function updateServiceCategory(id,categoryId,patch){
+    const vid=str(id||activeId()); if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found',vehicleId:vid||null};
+    const current=(getServiceCategories(vid)||[]).find(c=>str(c&&c.id)===str(categoryId));
+    if(!current)return {ok:false,code:'category_not_found',vehicleId:vid,categoryId:str(categoryId)};
+    const next=normalizeCategory(Object.assign({},current,patch||{}, {id:current.id,vehicleId:vid}),vid);
+    const result=upsertServiceCategory(vid,next);
+    if(result.ok)reconcileLegacyCategoryProjection(vid);
+    return result;
   }
   // S2170: explicit, idempotent compatibility projection. Canonical service
   // categories live in VehicleCarNotesSOT; D.sparepartCats is only a legacy
@@ -232,8 +311,39 @@
   function syncLegacyCategoryProjection(cat,op){
     const c=normalizeCategory(cat); const vid=str(c.vehicleId);
     if(!vid||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};
+    // S2459: collapse pre-existing same-vehicle canonical duplicates before
+    // accepting a new category projection. Component identity is the stable key.
+    const _v=vehicle(vid), _s=ensure(vid);
+    if(_s&&Array.isArray(_s.serviceCategories)){
+      const seen=new Map(), remap=new Map(), deduped=[];
+      _s.serviceCategories.forEach(raw=>{
+        const n=normalizeCategory(raw,vid), key=categoryKey(n);
+        if(!key){deduped.push(n);return;}
+        const prior=seen.get(key);
+        if(!prior){seen.set(key,n);deduped.push(n);}
+        else if(str(prior.id)!==str(n.id)){remap.set(str(n.id),str(prior.id));}
+      });
+      if(remap.size){
+        _s.serviceCategories=deduped;
+        const d=data();
+        const rewrite=row=>{if(!row||!row.categoryId)return;const to=remap.get(str(row.categoryId));if(to)row.categoryId=to;};
+        if(d){(Array.isArray(d.partsStock)?d.partsStock:[]).forEach(row=>{if(row&&row.catId){const to=remap.get(str(row.catId));if(to)row.catId=to;}});(Array.isArray(d.servisLogs)?d.servisLogs:[]).forEach(rewrite);}
+      }
+    }
+    // Propagate the canonicalized identity back to the caller object before it
+    // writes D.sparepartCats. This closes the subtle split where Car Notes SOT
+    // was canonical but the legacy projection still lacked component IDs.
+    if(cat&&typeof cat==='object')Object.assign(cat,c);
     const r=upsertServiceCategory(vid,c);
-    return Object.assign({projectionOnly:true,operation:op||'upsert'},r);
+    if(!r.ok)return Object.assign({projectionOnly:true,operation:op||'upsert'},r);
+    // S2459: successful canonical write must materialize/update the legacy
+    // projection; callers deliberately do not push a second row on success.
+    const projection=reconcileLegacyCategoryProjection(vid);
+    if(cat&&projection&&projection.ok){
+      const rows=getServiceCategories(vid)||[], survivor=rows.find(x=>categoryKey(x)===categoryKey(c));
+      if(survivor)Object.assign(cat,survivor);
+    }
+    return Object.assign({projectionOnly:true,operation:op||'upsert'},r,{projection});
   }
   function removeLegacyCategoryProjection(categoryId,vehicleId){return removeServiceCategory(vehicleId,categoryId);}
   function setServiceSchedules(id,rules,meta){return mutate(id,(s)=>{s.serviceSchedules=Array.isArray(rules)?clone(rules):[];s.serviceScheduleCount=s.serviceSchedules.length;s.serviceProvisionedAt=meta&&meta.at||new Date().toISOString();s.serviceProvisioningStatus=s.serviceSchedules.length?'ready':'no-rules';s.serviceReminderVersion=meta&&meta.version||s.serviceReminderVersion||null;});}
@@ -309,7 +419,7 @@
     const base=auditFinanceHistoryReminder(vid);issues.push(...(base.issues||[]));
     return {ok:issues.length===0,vehicleId:vid,sessionCount:seenSessions.size,serviceCount:scopedLogs.length,financeServiceCount:scopedTx.filter(x=>str(x.vehicleId)===vid).length,reminderCount:reminders.length,issues};
   }
-  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,reconcileLegacyCategoryProjection,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
+  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,updateServiceCategory,reconcileLegacyCategoryProjection,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
   root.VehicleCarNotesSOT=api;
   if(typeof window!=='undefined')window.VehicleCarNotesSOT=api;
   try{for(const v of vehicles())ensure(v.id);}catch(e){/* provisioning must remain fail-safe during bootstrap. */}

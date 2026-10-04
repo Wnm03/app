@@ -83,7 +83,7 @@
     if(saveNow&&typeof save==='function')save();
     return {ok:true,part:p,changed:true};
   }
-  function applyPurchase(id,qty,unitPrice,date,txId,{saveNow=false}={}){
+  function applyPurchase(id,qty,unitPrice,date,txId,{saveNow=false,emitEvent=true}={}){
     const p=find(id); if(!p)return {ok:false,code:'PART_NOT_FOUND',id:str(id)};
     const q=Number(qty); if(!Number.isFinite(q)||q<=0)return {ok:false,code:'INVALID_QTY',id:p.id};
     const price=Number(unitPrice)||0, prevQty=Number(p.qty)||0;
@@ -101,11 +101,11 @@
     p.lastPurchaseDate=date;
     p.priceHistory.push({date,qty:q,price,txId:txId||null,qtyBefore:prevQty,avgPriceBefore:prevAvg});
     if(txId){if(!Array.isArray(p.txRefs))p.txRefs=[];if(!p.txRefs.includes(txId))p.txRefs.push(txId);p.lastTxId=txId;}
-    if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',{kind:'stok-sparepart',action:'purchase-apply',partId:p.id,qty:q,unitPrice:price,txId:txId||null});
+    if(emitEvent){const _evt={kind:'stok-sparepart',action:'purchase-apply',partId:p.id,qty:q,unitPrice:price,txId:txId||null};try{if(typeof AIBus!=='undefined'&&AIBus&&typeof AIBus.emit==='function')AIBus.emit('finance.updated',_evt);}catch(_eventErr){if(typeof FinanceEventOutbox!=='undefined'&&typeof FinanceEventOutbox.enqueue==='function')FinanceEventOutbox.enqueue('finance.updated',_evt);else if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_evt});}}
     if(saveNow&&typeof save==='function')save();
     return {ok:true,part:p,qtyAdded:q,duplicateHistory:already};
   }
-  function revertPurchase(id,qty,txId,{saveNow=false}={}){
+  function revertPurchase(id,qty,txId,{saveNow=false,emitEvent=true}={}){
     const p=find(id); if(!p)return {ok:false,code:'PART_NOT_FOUND',id:str(id)};
     const q=Number(qty); if(!Number.isFinite(q)||q<=0)return {ok:false,code:'INVALID_QTY',id:p.id};
     // S2296: duplicate purchase-revert replay must be a no-op. Check the
@@ -115,8 +115,10 @@
       const existingIdx=p.priceHistory.findIndex(h=>h&&String(h.txId)===String(txId));
       if(existingIdx===-1)return {ok:true,part:p,qtyRemoved:0,replayed:false,alreadyReverted:true};
     }
-    p.qty=Math.max(0,(Number(p.qty)||0)-q);
-    if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',{kind:'stok-sparepart',action:'purchase-revert',partId:p.id,qty:q,txId:txId||null});
+    const beforeQty=Number(p.qty)||0;
+    if(beforeQty<q)return {ok:false,code:'INSUFFICIENT_STOCK_FOR_PURCHASE_REVERT',id:p.id,beforeQty,requestedQty:q};
+    p.qty=beforeQty-q;
+    if(emitEvent){const _evt={kind:'stok-sparepart',action:'purchase-revert',partId:p.id,qty:q,txId:txId||null};try{if(typeof AIBus!=='undefined'&&AIBus&&typeof AIBus.emit==='function')AIBus.emit('finance.updated',_evt);}catch(_eventErr){if(typeof FinanceEventOutbox!=='undefined'&&typeof FinanceEventOutbox.enqueue==='function')FinanceEventOutbox.enqueue('finance.updated',_evt);else if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_evt});}}
     if(!txId||!Array.isArray(p.priceHistory)){
       if(saveNow&&typeof save==='function')save();
       return {ok:true,part:p,qtyRemoved:q,replayed:false};
@@ -144,7 +146,7 @@
   function applyPurchaseToTransaction(txId,partId,qty,unitPrice,date,{saveNow=false}={}){
     const tx=typeof D!=='undefined'&&Array.isArray(D.transactions)?D.transactions.find(x=>x&&String(x.id)===String(txId)):null;
     if(!tx)return {ok:false,code:'TRANSACTION_NOT_FOUND',txId:String(txId||'')};
-    const r=applyPurchase(partId,qty,unitPrice,date,tx.id,{saveNow:false});
+    const r=applyPurchase(partId,qty,unitPrice,date,tx.id,{saveNow:false,emitEvent:false});
     if(!r.ok)return r;
     tx.partStockId=r.part.id;tx.partStockQty=Number(qty);tx.partStockUnit=tx.partStockUnit||'pcs';tx.partStockApplied=true;
     if(saveNow&&typeof save==='function')save();
@@ -154,7 +156,7 @@
     const tx=typeof D!=='undefined'&&Array.isArray(D.transactions)?D.transactions.find(x=>x&&String(x.id)===String(txId)):null;
     if(!tx)return {ok:false,code:'TRANSACTION_NOT_FOUND',txId:String(txId||'')};
     if(!tx.partStockId||!tx.partStockQty)return {ok:true,transaction:tx,changed:false};
-    const r=revertPurchase(tx.partStockId,tx.partStockQty,tx.id,{saveNow:false});
+    const r=revertPurchase(tx.partStockId,tx.partStockQty,tx.id,{saveNow:false,emitEvent:false});
     if(!r.ok)return r;
     tx.partStockApplied=false;
     if(saveNow&&typeof save==='function')save();

@@ -443,7 +443,7 @@ const pct=Math.min(99,Math.max(1,parseFloat(document.getElementById('billSharedP
 const porsi=Math.round(total*pct/100);
 previewEl.textContent=total>0?`👫 Porsi kamu: ${fmt(porsi)} dari total ${fmt(total)} (sisanya ${fmt(total-porsi)} ditanggung pihak lain)`:'';
 }
-function saveBill(){return withSaveGuard('bill','billModal',_saveBillInner);}
+function saveBill(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('bill','billModal',_saveBillInner);}
 function _saveBillInner(){
 const name=document.getElementById('billName').value.trim();
 const rawAmt=parseFloat(document.getElementById('billAmt').value);
@@ -512,7 +512,7 @@ if(archBForFallback&&countFallbackBillPaymentCandidates(archBForFallback,D.trans
 const fallbackTxId=findFallbackBillPaymentTxId(archBForFallback,D.transactions);
 if(fallbackTxId!==null){
 const ft=D.transactions.find(x=>x.id===fallbackTxId);
-if(ft){ft.billLinkId=billEditId;txId=fallbackTxId;}
+if(ft){if(typeof FinanceTxSOT!=='undefined')FinanceTxSOT.updateById(ft.id,{billLinkId:billEditId});else ft.billLinkId=billEditId;txId=fallbackTxId;}
 }
 }
 }
@@ -585,7 +585,7 @@ save();closeModal('billModal');refreshBillEverywhere();
 // bukan jenis event. 1 emit menutupi ke-3 jalur (create/edit
 // aktif/edit arsip) lewat ternary `action` & `billId`, 0 cascade
 // piutang/utang/renov lain di atas diubah.
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:billEditId!==null?(billEditFromArchive?"edit-archive":"edit"):"create",billId:billEditId!==null?billEditId:_newBillIdSesiC,billKind:data.kind,amount:data.amount});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"tagihan",action:billEditId!==null?(billEditFromArchive?"edit-archive":"edit"):"create",billId:billEditId!==null?billEditId:_newBillIdSesiC,billKind:data.kind,amount:data.amount});
 if(anyPiutangSynced){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 if(paymentDebtSynced){if(typeof renderDebtList==='function')renderDebtList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('✅ Tagihan tersimpan'+(anyPiutangSynced?' (piutang terkait ikut disesuaikan)':'')+(paymentDebtSynced?' (sisa utang ikut disesuaikan)':''));
@@ -604,7 +604,7 @@ BillDebtPiutangCanonicalWriter.removeById('bills',id);
 // removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
 save();refreshBillEverywhere();renderDebtList();
-if(typeof AIBus!=="undefined")AIBus.emit("finance.updated",{kind:"tagihan",action:"delete",deletedId:id,billKind:b&&b.kind});
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"tagihan",action:"delete",deletedId:id,billKind:b&&b.kind});
 if(removedPiutang){if(typeof Piutang!=='undefined')Piutang.renderList();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
 toast('🗑 Tagihan dihapus'+(removedPiutang?' (piutang otomatis terkait ikut dihapus)':''));
 }
@@ -658,7 +658,7 @@ BillDebtPiutangCanonicalWriter.removeById('billsArchive',id);
 // di atas), tapi billLinkId yang nyangkut ke arsip yang sudah tidak ada jadi dangling reference
 // (mis. openBillHistory()/editBillHistoryTx() bisa nyasar/error kalau nanti dibuka lewat jalur
 // lain yang masih baca billLinkId ini). Transaksi dgn billLinkId ke bill LAIN tidak disentuh.
-(D.transactions||[]).forEach(t=>{if(t.billLinkId===id)delete t.billLinkId;});
+(D.transactions||[]).filter(t=>t&&t.billLinkId===id).forEach(t=>{if(typeof FinanceTxSOT!=='undefined')FinanceTxSOT.updateById(t.id,{billLinkId:undefined});else delete t.billLinkId;});
 // FIX (audit user, sync 2 arah "Ditanggung Bersama"): sama seperti delBill() -- lihat
 // komentar lengkap di removeOrphanedAutoPiutangForBill() (piutang-utang.js).
 const removedPiutang=typeof removeOrphanedAutoPiutangForBill==='function'&&removeOrphanedAutoPiutangForBill(id);
@@ -710,9 +710,10 @@ return!ids.length||txId>=Math.max(...ids);
 // caller yang urus baca form/save()/closeModal/toast/render.
 function applyBillPaymentTxSync(t,tanggal,jumlah,catatan){
 const oldAmount=t.amount;
-t.date=tanggal;
-t.amount=jumlah;
-if(catatan!==undefined)t.note=catatan;
+const patch={date:tanggal,amount:jumlah};
+if(catatan!==undefined)patch.note=catatan;
+if(typeof FinanceTxSOT!=='undefined')FinanceTxSOT.updateById(t.id,patch);
+else{t.date=tanggal;t.amount=jumlah;if(catatan!==undefined)t.note=catatan;}
 // sync completedAt arsip tagihan ke tanggal baru (Sesi 287, fix s288: tambah cek
 // isLatestBillPaymentTx) — kalau transaksi ini pembayaran yg mengarsipkan tagihan
 // (lunas), completedAt arsip harus ikut berubah pas tanggal riwayatnya diedit, biar

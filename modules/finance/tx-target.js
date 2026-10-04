@@ -110,11 +110,13 @@ document.getElementById('tAmt').value=val;
 toast('✅ Target diisi dari saran otomatis');
 }
 function saveTarget(){
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const name=document.getElementById('tName').value;
 const amt=parseFloat(document.getElementById('tAmt').value);
-if(!name||!amt){toast('⚠️ Isi nama dan target');return;}
+if(!name||!Number.isFinite(amt)||amt<=0){toast('⚠️ Isi nama dan target dengan nilai lebih dari 0');return false;}
 const accId=document.getElementById('tAcc').value||null;
 const saved=accId?0:(parseFloat(document.getElementById('tSaved').value)||0);
+if(!Number.isFinite(saved)||saved<0||saved>amt){toast('⚠️ Tabungan terkumpul harus 0 sampai nilai target');return false;}
 const isDanaDarurat=document.getElementById('tDanaDarurat').checked;
 if(isDanaDarurat)D.targets.forEach(t=>{t.isDanaDarurat=false;});
 if(_editingTargetId){
@@ -145,5 +147,5 @@ const _targetRenderCtx={cats:_targetCats,catsByName:new Map(_targetCats.map(c=>[
 document.getElementById('filterTxList').innerHTML=txs.length?txs.slice(0,100).map(t=>txHTML(t,_targetRenderCtx)).join(''):'<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">Belum ada transaksi di akun ini</div></div>';
 openModal('filterTxModal');
 }
-async function addTarget(i){const addStr=await showPromptModal({title:'Tambah Tabungan',message:'Tambah berapa? (Rp)',icon:'🎯',inputType:'number'});if(addStr===null)return;const add=parseFloat(addStr);if(!add||isNaN(add))return;D.targets[i].saved+=add;save();renderSettings();toast('✅ Target diperbarui');}
+async function addTarget(i){const addStr=await showPromptModal({title:'Tambah Tabungan',message:'Tambah berapa? (Rp)',icon:'🎯',inputType:'number'});if(addStr===null)return;const add=parseFloat(addStr);if(!Number.isFinite(add)||add<=0){toast('⚠️ Jumlah tabungan harus lebih dari 0');return;}if(!D.targets[i])return;D.targets[i].saved+=add;save();renderSettings();toast('✅ Target diperbarui');}
 async function delTarget(i){if(!await askConfirm('Hapus target?'))return;D.targets.splice(i,1);save();renderSettings();toast('🗑 Target dihapus');}

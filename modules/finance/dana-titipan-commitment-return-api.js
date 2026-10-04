@@ -50,6 +50,7 @@ getCommitments() {
 // Return: record commitment yang tersimpan (`{id, ownerId, ownerName,
 //   principalAmount, committedDate, notes, createdAt, updatedAt}`).
 saveCommitment(input) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   const params = input || {};
   const ownerId = params.ownerId;
   if (!ownerId) throw new Error('Owner wajib dipilih');
@@ -93,6 +94,7 @@ saveCommitment(input) {
     }
   }
   // === POOL GUARD END ===
+  const beforeCommitments = JSON.stringify(Array.isArray(D.titipanCommitments) ? D.titipanCommitments : []);
   D.titipanCommitments = D.titipanCommitments || [];
   const ownerName = (params.ownerName && String(params.ownerName).trim()) || known.ownerName;
   const now = Date.now();
@@ -117,8 +119,14 @@ saveCommitment(input) {
     };
     D.titipanCommitments.push(record);
   }
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'commitment', action: isEditCommitment ? 'edit' : 'create', ownerId: record.ownerId });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanCommitments = JSON.parse(beforeCommitments);
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'commitment', action: isEditCommitment ? 'edit' : 'create', ownerId: record.ownerId });
   return record;
 },
 
@@ -134,13 +142,21 @@ saveCommitment(input) {
 // HANYA menyentuh `D.titipanCommitments` (+ `save()`), 0 sentuhan ke
 // `D.titipanReturns`/holding/aset/akun/transaksi lain.
 deleteCommitment(ownerId) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   if (!(D && Array.isArray(D.titipanCommitments))) return false;
   if (!ownerId) return false;
   const idx = D.titipanCommitments.findIndex((c) => c && c.ownerId === ownerId);
   if (idx === -1) return false;
+  const beforeCommitments = D.titipanCommitments.slice();
   D.titipanCommitments.splice(idx, 1);
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'commitment', action: 'delete', ownerId });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanCommitments = beforeCommitments;
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'commitment', action: 'delete', ownerId });
   return true;
 },
 
@@ -203,6 +219,7 @@ deleteCommitment(ownerId) {
 //   `false` kalau owner ini memang tidak punya commitment sama sekali
 //   (no-op aman, TIDAK throw — pola sama deleteCommitment()/deleteReturn()).
 removeOwnerLinkage(ownerId) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   return this.deleteCommitment(ownerId);
 },
 
@@ -241,6 +258,7 @@ getReturns(ownerId) {
 // Return: record pengembalian yang tersimpan (`{id, ownerId, ownerName,
 //   amount, returnDate, notes, createdAt}`).
 recordReturn(input) {
+    if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return {ok:false,code:'STALE_CROSS_TAB'};
   const params = input || {};
   const ownerId = params.ownerId;
   if (!ownerId) throw new Error('Owner wajib dipilih');
@@ -250,6 +268,7 @@ recordReturn(input) {
   if (!isFinite(amount) || amount < 0) {
     throw new Error('Nominal pengembalian harus berupa angka >= 0');
   }
+  const beforeReturns = JSON.stringify(Array.isArray(D.titipanReturns) ? D.titipanReturns : []);
   D.titipanReturns = D.titipanReturns || [];
   const ownerName = (params.ownerName && String(params.ownerName).trim()) || known.ownerName;
   const now = Date.now();
@@ -263,8 +282,14 @@ recordReturn(input) {
     createdAt: now,
   };
   D.titipanReturns.push(record);
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'return', action: 'create', returnId: record.id, ownerId: record.ownerId });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanReturns = JSON.parse(beforeReturns);
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'return', action: 'create', returnId: record.id, ownerId: record.ownerId });
   return record;
 },
 
@@ -274,12 +299,20 @@ recordReturn(input) {
 // read-only-safe lain di codebase ini). ISOLASI TOTAL: HANYA menyentuh
 // `D.titipanReturns`.
 deleteReturn(id) {
+  if (typeof _financeMutationBlockedByStaleState==='function' && _financeMutationBlockedByStaleState()) return false;
   if (!(D && Array.isArray(D.titipanReturns))) return false;
   const idx = D.titipanReturns.findIndex((r) => r && String(r.id) === String(id));
   if (idx === -1) return false;
+  const beforeReturns = D.titipanReturns.slice();
   D.titipanReturns.splice(idx, 1);
-  if (typeof save === 'function') save();
-  if (typeof AIBus !== 'undefined') AIBus.emit('titipan.updated', { kind: 'return', action: 'delete', returnId: id });
+  if (typeof save === 'function') {
+    const persisted = save();
+    if (persisted === false) {
+      D.titipanReturns = beforeReturns;
+      return {ok:false, code:'PERSISTENCE_FAILED'};
+    }
+  }
+  if (typeof AIBus !== 'undefined') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'return', action: 'delete', returnId: id });
   return true;
 },
 

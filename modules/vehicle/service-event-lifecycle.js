@@ -4,12 +4,23 @@
  */
 (function(g){
   function emit(action,s,extra,meta){
-    if(typeof AIBus==='undefined'||!AIBus||typeof AIBus.emit!=='function')return;
+    if(typeof AIBus==='undefined'||!AIBus)return;
     const payload=Object.assign({kind:'servis',action,servisId:s&&s.id||null,vehicleId:s&&s.vehicleId||null,txId:s&&s.txLinkId||null},extra||{});
     const deliveryMeta=(meta&&typeof meta==='object')?meta:null;
+    // S2472: emit() swallows async listener rejection. Use emitAsync when
+    // available and persist the exact post-commit event if a consumer fails.
+    if(typeof AIBus.emitAsync==='function'){
+      return Promise.resolve()
+        .then(()=>AIBus.emitAsync('service.updated',payload,deliveryMeta))
+        .then(()=>AIBus.emitAsync('vehicle.updated',payload,deliveryMeta))
+        .catch(err=>{
+          try{if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.enqueue==='function')ServiceEventOutbox.enqueue({type:'service.update',payload,options:deliveryMeta||{}});}catch(_){void _;}
+          return false;
+        });
+    }
     AIBus.emit('service.updated',payload,deliveryMeta);
-    // Backward-compatible bridge: existing reminder/AI listeners already consume vehicle.updated.
     AIBus.emit('vehicle.updated',payload,deliveryMeta);
+    return true;
   }
   async function emitAsync(action,s,extra,meta){
     if(typeof AIBus==='undefined'||!AIBus)return;
