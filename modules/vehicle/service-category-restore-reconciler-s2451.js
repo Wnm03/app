@@ -111,9 +111,30 @@
         const foreign=arr(d.sparepartCats).find(c=>c&&str(c.id)===id&&str(c.vehicleId)&&str(c.vehicleId)!==vid);
         if(local)hit=rows.find(c=>str(c.serviceComponentId)===str(local.serviceComponentId))||rows.find(c=>str(c.id)===id);
         else if(foreign){
+          // S2455: repair a historical cross-vehicle projection only when the
+          // record itself resolves to a canonical global component. Never copy
+          // the foreign projection; provision a fresh local Car Notes row.
           const foreignCanon=canon(foreign);
-          if(foreignCanon)hit=rows.find(c=>str(c.serviceComponentId)===foreignCanon.serviceComponentId);
-          if(!hit)issues.push({code:'CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED',domain,index,id:str(row.id),vehicleId:vid,categoryId:id,foreignVehicleId:str(foreign.vehicleId)});
+          const rowCanon=canon(row)||foreignCanon;
+          const canonicalId=rowCanon&&str(rowCanon.serviceComponentId);
+          const localCanonical=canonicalId&&rows.find(c=>str(c.serviceComponentId)===canonicalId);
+          if(localCanonical)hit=localCanonical;
+          else if(canonicalId&&g.VehicleCarNotesSOT&&typeof g.VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){
+            const canonicalCategory={id:'sp_component_'+canonicalId,name:str(row.name||row.item||row.componentName||foreign.name||canonicalId),vehicleId:vid,masterCategoryId:rowCanon.masterCategoryId||null,serviceComponentId:canonicalId,showInReminder:false,intervalKm:0,intervalBulan:0,group:(row.group||foreign.group||''),groupIcon:(row.groupIcon||foreign.groupIcon||'')};
+            try{
+              const provision=g.VehicleCarNotesSOT.syncLegacyCategoryProjection(canonicalCategory,'restore-cross-vehicle-repair');
+              if(provision&&provision.ok){
+                const refreshed=arr(g.VehicleCarNotesSOT.getServiceCategories(vid));
+                const repaired=refreshed.find(c=>str(c.serviceComponentId)===canonicalId);
+                if(repaired){
+                  canonicalByVid.set(vid,refreshed.map(x=>Object.assign({},x,{vehicleId:vid})));
+                  hit=repaired;
+                  changed.push({domain,index,id:str(row.id),vehicleId:vid,field:'crossVehicleCategoryRepaired',fromCategoryId:id,toCategoryId:str(repaired.id),serviceComponentId:canonicalId,foreignVehicleId:str(foreign.vehicleId)});
+                }
+              }
+            }catch(_){/* remain unresolved */}
+          }
+          if(!hit)issues.push({code:'CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED',domain,index,id:str(row.id),vehicleId:vid,categoryId:id,foreignVehicleId:str(foreign.vehicleId),serviceComponentId:canonicalId||null});
         }
       }
       if(!hit){const r=canon(row);if(r)hit=rows.find(c=>str(c.serviceComponentId)===r.serviceComponentId);}

@@ -44,4 +44,40 @@ test('S2451 build registers the reconciler before backup-restore',()=>{
   const b=src.indexOf('modules/shared/backup-restore.js');
   assert.ok(a>=0&&b>a);
 });
-console.log('S2451 4/4 PASS');
+
+test('S2455 repairs a canonical cross-vehicle projection by provisioning a local Car Notes category',()=>{
+  const D={vehicles:[
+    {id:'v1',sot:{serviceCategories:[{id:'foreign-throttle',name:'Throttle Body (bersihkan)',vehicleId:'v1',masterCategoryId:'sistem-injeksi-pgmfi',serviceComponentId:'throttle-body'}]}},
+    {id:'v2',sot:{serviceCategories:[]}}
+  ],sparepartCats:[
+    {id:'foreign-throttle',name:'Throttle Body (bersihkan)',vehicleId:'v1',masterCategoryId:'sistem-injeksi-pgmfi',serviceComponentId:'throttle-body'}
+  ],partsStock:[],servisLogs:[{id:'s1',vehicleId:'v2',categoryId:'foreign-throttle',item:'Throttle Body (bersihkan)',serviceComponentId:'throttle-body'}]};
+  const c=ctx(D);
+  const api=c.VehicleCarNotesSOT={
+    getServiceCategories(vid){return (D.vehicles.find(v=>v.id===vid).sot.serviceCategories)||[];},
+    syncLegacyCategoryProjection(cat){
+      const v=D.vehicles.find(v=>v.id===cat.vehicleId); if(!v)return {ok:false};
+      const row=Object.assign({},cat,{id:'local-throttle',vehicleId:cat.vehicleId});
+      v.sot.serviceCategories.push(row); D.sparepartCats.push(row); return {ok:true};
+    },
+    reconcileLegacyCategoryProjection(){}
+  };
+  // Re-load the reconciler against the explicit Car Notes mock so S2455 path is exercised.
+  const {loadSource}=require('./helpers/loadSource');
+  const ctx2=loadSource(['modules/vehicle/service-category-restore-reconciler-s2451.js'],{
+    D,
+    ServiceTaxonomySOT:{resolve(x){
+      if(String(x&&x.serviceComponentId||'')==='throttle-body'||String(x&&x.name||x&&x.item||'').toLowerCase().includes('throttle body'))return {masterCategoryId:'sistem-injeksi-pgmfi',serviceComponentId:'throttle-body'};
+      return null;
+    }},
+    VehicleCarNotesSOT:c.VehicleCarNotesSOT
+  },['ServiceCategoryRestoreReconcilerS2451']);
+  const r=ctx2.ServiceCategoryRestoreReconcilerS2451.reconcile(D);
+  assert.equal(r.ok,true);
+  assert.equal(D.servisLogs[0].categoryId,'local-throttle');
+  assert.equal(D.vehicles[1].sot.serviceCategories.some(x=>x.serviceComponentId==='throttle-body'),true);
+  assert.equal(D.sparepartCats.some(x=>x.vehicleId==='v2'&&x.serviceComponentId==='throttle-body'),true);
+  assert.equal(r.issues.some(x=>x.code==='CROSS_VEHICLE_CATEGORY_REFERENCE_UNRESOLVED'),false);
+});
+
+console.log('S2451/S2455 PASS');

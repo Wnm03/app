@@ -14,16 +14,22 @@ function loadSource(files,globals={},exports=[]){
     vm.runInContext(src,ctx,{filename:file});
   }
   if(exports.length){
-    const out={};
     for(const key of exports){
-      // Classic scripts may declare cross-file APIs with top-level `const`/`let`.
-      // Those bindings are global-lexical rather than window properties, so
-      // ctx[key] is undefined even though the binding is valid to later scripts.
-      // Resolve the binding through the VM global lexical environment first,
-      // then fall back to the property for ordinary `var`/window APIs.
-      try{ out[key]=vm.runInContext(key,ctx); }catch(_e){ out[key]=ctx[key]; }
+      // Only bridge top-level lexical bindings (let/const). Ordinary global
+      // function/var bindings already live on ctx; wrapping them would recurse.
+      if(Object.prototype.hasOwnProperty.call(ctx,key)) continue;
+      try {
+        const exists = vm.runInContext(`typeof ${key} !== 'undefined'`,ctx);
+        if(!exists) continue;
+        Object.defineProperty(ctx,key,{configurable:true,enumerable:true,
+          get(){ return vm.runInContext(key,ctx); },
+          set(v){ vm.runInContext(`${key}=v`,ctx); }
+        });
+      } catch {
+        // Ignore names that are not lexical bindings in this source.
+      }
     }
-    return Object.assign(ctx,out);
+    return ctx;
   }
   return ctx;
 }
