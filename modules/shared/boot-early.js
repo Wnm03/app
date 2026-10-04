@@ -57,10 +57,19 @@ s.async=true;
 if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
 let done=false;
 const timeoutId=setTimeout(()=>{
-if(done)return;done=true;
+if(done)return;done=true;clearTimeout(timeoutId);
 delete window._loadedScripts[src];
-reject(new Error('Timeout memuat '+src+' — cek koneksi internet, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
-},12000);
+// A timeout is a transport failure too. Sebelumnya timeout langsung reject
+// tanpa retry, padahal onerror sudah retry 1x. Pada mobile/PWA atau saat
+// service-worker/network sedang lambat, ini membuat file yang sebenarnya ada
+// tampak sebagai "gagal dimuat" dan memicu false-negative diagnostik.
+if(!_isRetry){
+// satu kali percobaan ulang otomatis sebelum melaporkan timeout
+_loadScriptOnce(src,true,integrity,crossOrigin).then(resolve).catch(reject);
+}else{
+reject(new Error('Timeout memuat '+src+' setelah retry — cek koneksi internet, cache/service worker, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
+}
+},15000);
 s.onload=()=>{if(done)return;done=true;clearTimeout(timeoutId);resolve();};
 s.onerror=()=>{
 if(done)return;done=true;clearTimeout(timeoutId);

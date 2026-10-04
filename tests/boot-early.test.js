@@ -130,6 +130,12 @@ test('_loadScriptOnce(): gagal di percobaan pertama -> retry otomatis 1x dgn cac
   await assert.doesNotReject(p);
 });
 
+test('_loadScriptOnce(): timeout punya retry 1x dgn cache-buster sebelum reject', () => {
+  assert.match(SRC, /const timeoutId=setTimeout\(\(\)=>\{/);
+  assert.match(SRC, /if\(!_isRetry\)\{\s*\/\/ satu kali percobaan ulang otomatis sebelum melaporkan timeout\s*_loadScriptOnce\(src,true,integrity,crossOrigin\)\.then\(resolve\)\.catch\(reject\);\s*\}else\{/);
+  assert.match(SRC, /Timeout memuat .*setelah retry/);
+});
+
 test('_loadScriptOnce(): gagal di percobaan pertama DAN retry -> reject dgn pesan "Gagal memuat ..."', async () => {
   const { sandbox, createdScripts } = loadBootEarly();
   const p = sandbox._loadScriptOnce('https://example.com/d.js');

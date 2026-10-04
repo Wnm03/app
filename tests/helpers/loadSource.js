@@ -15,7 +15,14 @@ function loadSource(files,globals={},exports=[]){
   }
   if(exports.length){
     const out={};
-    for(const key of exports)out[key]=ctx[key];
+    for(const key of exports){
+      // Classic scripts may declare cross-file APIs with top-level `const`/`let`.
+      // Those bindings are global-lexical rather than window properties, so
+      // ctx[key] is undefined even though the binding is valid to later scripts.
+      // Resolve the binding through the VM global lexical environment first,
+      // then fall back to the property for ordinary `var`/window APIs.
+      try{ out[key]=vm.runInContext(key,ctx); }catch(_e){ out[key]=ctx[key]; }
+    }
     return Object.assign(ctx,out);
   }
   return ctx;

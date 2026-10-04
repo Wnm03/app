@@ -63,7 +63,8 @@
     "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js",
     "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js",
     "build:dev": "node scripts/build.js",
-    "audit:release-contract": "node scripts/release-contract-audit.js"
+    "audit:release-contract": "node scripts/release-contract-audit.js",
+    "audit:deploy-data-continuity": "node scripts/deploy-data-continuity-gate.js"
   },
   "devDependencies": {
     "eslint": "9.19.0",

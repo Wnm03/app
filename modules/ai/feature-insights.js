@@ -306,6 +306,12 @@ const hasData=!!((D.products&&D.products.length)||(D.cobek&&D.cobek.length));
 FeatureInsightUI.renderInto('shopInsightCard','shopInsightBody',hasData,ShopInsight.compute(),'Belum ada insight khusus — data Shop kamu sejauh ini terlihat wajar.');
 }
 };
+// S2282: BusinessIntelligencePresenter is demand-loaded after this eager
+// module. Make the cross-script dependency explicit instead of relying on
+// classic-script global lexical lookup, which is fragile in VM/test harnesses
+// and nonstandard embedding contexts. ShopInsight remains the single source
+// of insight rules; this only publishes the existing object, no new logic.
+if(typeof window!=='undefined')window.ShopInsight=ShopInsight;
 
 const MobilInsight={
 compute(){

@@ -100,6 +100,40 @@ function baseGlobals(D, extra = {}) {
       askConfirm: (msg, opts) => { calls.askConfirm.push({ msg, opts }); return Promise.resolve(true); },
       safeSetItem: (k, v) => { calls.safeSetItem.push({ k, v }); },
       _persistAtomicSnapshotWithAux: async (json, entries) => { calls.atomicPersist.push({ json, entries }); for (const [k, v] of (entries || [])) calls.idbSet.push({ k, v }); },
+      // S2288: backup/restore tests must model the canonical finance-category SOT
+      // dependency used by applyRestoredDataMigrations(). Without this minimal
+      // contract the test harness falsely reports FINANCE_CATEGORY_SOT_REQUIRED
+      // for every legacy-backup case, masking the actual restore behavior.
+      FinanceCategorySOT: {
+        replaceSnapshot: ({ income = [], expense = [] } = {}) => {
+          D.categories = { income: JSON.parse(JSON.stringify(income)), expense: JSON.parse(JSON.stringify(expense)) };
+        },
+        addCategory: (kind, category) => {
+          if (!D.categories) D.categories = { income: [], expense: [] };
+          if (!Array.isArray(D.categories[kind])) D.categories[kind] = [];
+          if (!D.categories[kind].some(c => c && c.id === category.id)) D.categories[kind].push(JSON.parse(JSON.stringify(category)));
+          return D.categories[kind].find(c => c && c.id === category.id) || null;
+        },
+        findById: (kind, id) => (D.categories?.[kind] || []).find(c => c && c.id === id) || null,
+        findByName: (kind, name) => (D.categories?.[kind] || []).find(c => c && String(c.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase()) || null,
+        addSubcategory: (kind, id, sub) => {
+          const c = (D.categories?.[kind] || []).find(x => x && x.id === id);
+          if (!c) return null;
+          if (!Array.isArray(c.subs)) c.subs = [];
+          if (!c.subs.some(x => x && x.id === sub.id)) c.subs.push(JSON.parse(JSON.stringify(sub)));
+          return c.subs.find(x => x && x.id === sub.id);
+        },
+        ensureSubcategory: (kind, id, sub) => {
+          const c = (D.categories?.[kind] || []).find(x => x && x.id === id);
+          if (!c) return null;
+          if (!Array.isArray(c.subs)) c.subs = [];
+          if (!c.subs.some(x => x && x.id === sub.id)) c.subs.push(JSON.parse(JSON.stringify(sub)));
+          return c.subs.find(x => x && x.id === sub.id);
+        },
+      },
+      FinanceTxSOT: {
+        replaceSnapshot: (txs) => { D.transactions = Array.isArray(txs) ? JSON.parse(JSON.stringify(txs)) : []; },
+      },
       IDBStore: {
         get: async () => undefined,
         getMany: async (keys) => {

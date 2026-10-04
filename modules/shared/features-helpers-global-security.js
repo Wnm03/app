@@ -361,6 +361,64 @@ async function _writePreMigrationCheckpoint(raw,fromSchema){
  try{if(typeof localStorage!=='undefined'){localStorage.setItem(_preMigrationBackupKey,payload);lsOk=true;}}catch(e){console.warn('[KW Persistence] checkpoint localStorage gagal:',e);}
  return idbOk||lsOk;
 }
+// S2287: release-to-release data continuity sentinel. A same-origin deployment must
+// never silently turn a populated persisted dataset into an empty/near-empty dataset.
+// Compare only when the persisted runtime metadata proves this is a build transition;
+// this avoids treating ordinary in-app edits as a deployment failure. A drop-to-zero in
+// a previously populated critical collection is never auto-accepted: boot enters recovery
+// before any write can persist the damaged/partial state.
+const _continuityCollections=['transactions','vehicles','accounts','servisLogs','partsStock','bbmLogs','kmLogs','jalanLogs','archiveHistory'];
+const _continuityHighWaterKey='kw_v4_continuity_highwater_v1';
+function _continuityCount(v){
+ if(Array.isArray(v))return v.length;
+ if(v&&typeof v==='object')return Object.keys(v).length;
+ return 0;
+}
+function _continuityMetrics(state){
+ const out={};
+ _continuityCollections.forEach(k=>out[k]=_continuityCount(state&&state[k]));
+ return out;
+}
+function _readRuntimeMeta(){
+ try{
+  if(typeof localStorage==='undefined')return null;
+  const raw=localStorage.getItem(_runtimeMetaKey);
+  const m=raw?JSON.parse(raw):null;
+  return m&&typeof m==='object'?m:null;
+ }catch(e){return null;}
+}
+function _readContinuityHighWater(){
+ try{
+  if(typeof localStorage==='undefined')return null;
+  const raw=localStorage.getItem(_continuityHighWaterKey);
+  const m=raw?JSON.parse(raw):null;
+  return m&&typeof m==='object'?m:null;
+ }catch(e){return null;}
+}
+function _updateContinuityHighWater(metrics,build){
+ try{
+  if(typeof localStorage==='undefined')return false;
+  const prev=_readContinuityHighWater()||{};
+  const merged={};
+  _continuityCollections.forEach(k=>merged[k]=Math.max(Number(prev[k])||0,Number(metrics[k])||0));
+  localStorage.setItem(_continuityHighWaterKey,JSON.stringify({build:build||null,updatedAt:new Date().toISOString(),...merged}));
+  return true;
+ }catch(e){console.warn('[KW Persistence] gagal memperbarui continuity high-water:',e);return false;}
+}
+function _checkDeployContinuity(previousMeta,currentState,currentBuild){
+ if(!previousMeta||!previousMeta.metrics)return null;
+ const prevBuild=previousMeta.build;
+ if(!prevBuild||!currentBuild||String(prevBuild)===String(currentBuild))return null;
+ const now=_continuityMetrics(currentState);
+ const drops=[];
+ _continuityCollections.forEach(k=>{
+  const before=Number(previousMeta.metrics[k])||0;
+  const after=Number(now[k])||0;
+  if(before>0&&after===0)drops.push({key:k,before,after});
+ });
+ if(!drops.length)return null;
+ return {previousBuild:String(prevBuild),currentBuild:String(currentBuild),drops,metrics:now};
+}
 function _recordRuntimeMeta(extra){
  try{
   if(typeof localStorage==='undefined')return;
@@ -1180,6 +1238,16 @@ function _chooseRecoverySnapshot(a,b){
  return a;
 }
 async function load(){
+// S2284: startup persistence is a fail-closed boundary. A valid snapshot may
+// already have been selected and merged into D when a later migration/SOT
+// normalization step throws. The old catch only showed an alert and returned,
+// so __kwInitRuntime() continued into showMain() with the default/partial D;
+// a later save could then overwrite the real snapshot with that partial state.
+// Keep the pre-load state only as a rollback guard and NEVER expose a partially
+// loaded state to the rest of the app after an unexpected load exception.
+const __kwLoadDefaultState=typeof structuredClone==='function'
+  ? structuredClone(D)
+  : JSON.parse(JSON.stringify(D));
 try{
 let s=null, fromIdb=false, idbRaw=null, lsRaw=null;
 // P31: recovery source-by-source. Snapshot IDB yang corrupt TIDAK boleh
@@ -1329,7 +1397,19 @@ if(Number(_migrationResult)<SCHEMA_VERSION){
  _setPersistenceRecoveryRequired('Migrasi data tidak selesai (schema v'+_migrationResult+' dari target v'+SCHEMA_VERSION+'). State hasil migrasi parsial dibatalkan; snapshot sebelum migrasi dipertahankan untuk recovery.',{fromSchemaVersion:_fromSchemaVersion,migrationResult:_migrationResult});
  return;
 }
-_recordRuntimeMeta({loadedFrom:fromIdb?'indexeddb':'localstorage',fromSchemaVersion:_fromSchemaVersion,migrationApplied:Number(_migrationResult)>Number(_fromSchemaVersion)});
+const _continuityPreviousMeta=_readRuntimeMeta();
+const _continuityHighWater=_readContinuityHighWater();
+const _continuityBuild=(typeof APP_BUILD_VERSION!=='undefined'?APP_BUILD_VERSION:null);
+const _continuityBaseline=_continuityHighWater?{..._continuityPreviousMeta,metrics:_continuityHighWater}:_continuityPreviousMeta;
+const _continuityRegression=_checkDeployContinuity(_continuityBaseline,D,_continuityBuild);
+if(_continuityRegression){
+ _setPersistenceRecoveryRequired(
+  'Perlindungan kontinuitas deploy aktif: dataset kritis berubah menjadi kosong setelah pergantian build. Tidak ada penyimpanan ulang yang diizinkan. Pulihkan snapshot sebelum deploy atau verifikasi artifact/origin/storage sebelum melanjutkan.',
+  {phase:'deploy-continuity',..._continuityRegression}
+ );
+ return;
+}
+_recordRuntimeMeta({loadedFrom:fromIdb?'indexeddb':'localstorage',fromSchemaVersion:_fromSchemaVersion,migrationApplied:Number(_migrationResult)>Number(_fromSchemaVersion),metrics:_continuityMetrics(D)});
 if(!D.categories){if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');FinanceCategorySOT.replaceSnapshot({income:DEFAULT_CATS.income,expense:DEFAULT_CATS.expense});}
 if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 FinanceCategorySOT.normalizeMetadata();
@@ -1500,10 +1580,18 @@ if(!c.subs)c.subs=[];
 }
 });
 })();
+_updateContinuityHighWater(_continuityMetrics(D),_continuityBuild);
 }
 }catch(e){
 console.error('Gagal load data:',e);
-showAlertModal('Terjadi error saat membuka data tersimpan: '+(e&&e.message?e.message:'unknown'),{icon:'⚠️',title:'Gagal Membuka Data'});
+// S2284: fail closed. Do not let a post-read exception fall through to
+// showMain()/save(). Preserve the pristine in-memory defaults for diagnostics,
+// block every persistence write, and force an explicit recovery/restore path.
+try{D=__kwLoadDefaultState;}catch(_restoreDefaultErr){void _restoreDefaultErr;}
+_setPersistenceRecoveryRequired(
+  'Pembukaan data tersimpan gagal pada tahap '+((e&&e.message)?String(e.message):'unknown')+'. Aplikasi dihentikan agar data lama tidak tertimpa state kosong/parsial. Pulihkan dari backup (.json) atau perbaiki storage lalu muat ulang.',
+  {phase:'load-exception',errorName:e&&e.name?String(e.name):'Error',errorMessage:e&&e.message?String(e.message):String(e??''),existingInstall:true}
+);
 }
 }
 function todayStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
@@ -1539,6 +1627,16 @@ if(body)body.classList.add('collapsed');
 if(chev)chev.classList.add('collapsed');
 }
 function showMain(){
+// S2286: final UI/write safety boundary. Even if an older or partially patched
+// runtime forgets to stop immediately after load(), never expose the app with a
+// recovery-required persistence state. save()/saveFlush() are also blocked, but
+// this guard prevents the user from interacting with a default/partial D and
+// makes the fail-closed contract defensive at the last UI boundary.
+if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
+ const _msg='⚠️ Data lama belum berhasil dipulihkan. Aplikasi tetap dikunci agar data tidak tertimpa. Pulihkan backup atau perbaiki storage lalu muat ulang.';
+ if(typeof toast==='function')toast(_msg,7000); else console.warn(_msg);
+ return false;
+}
 const onboard=document.getElementById('onboard'); if(onboard) onboard.style.display='none';
 const pinScreen=document.getElementById('pinScreen'); if(pinScreen){pinScreen.style.display='none';pinScreen.classList.add('u-dnone');}
 const mh=document.getElementById('mainHeader'); if(mh){mh.classList.remove('u-dnone');mh.style.display='flex';}
