@@ -2,7 +2,7 @@
 // Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, filter-laporan.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
-function getAllCats(){return[...D.categories.income,...D.categories.expense];}
+function getAllCats(){if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.normalizeMetadata();return[...D.categories.income,...D.categories.expense];}
 function getCatsByType(type){return D.categories[type]||[];}
 function getCat(name){
 const all=getAllCats().filter(c=>c.name===name);
@@ -10,6 +10,7 @@ if(!all.length) return {name:'Lainnya',emoji:'📦',subs:[]};
 return all.reduce((best,c)=>((c.subs&&c.subs.length||0)>(best.subs&&best.subs.length||0)?c:best),all[0]);
 }
 function getCatByType(name,type){
+if(typeof FinanceCategorySOT!=='undefined'){const c=FinanceCategorySOT.findByName(type,name);if(c)return c;return null;}
 const cats=(D.categories[type]||[]).filter(c=>c.name===name);
 if(!cats.length) return null;
 return cats.reduce((best,c)=>((c.subs&&c.subs.length||0)>(best.subs&&best.subs.length||0)?c:best),cats[0]);
@@ -88,8 +89,8 @@ return {
 }
 function _rollbackCategoryFinanceMutation(snapshot){
 if(!snapshot)return;
-D.categories=snapshot.categories;
-D.transactions=snapshot.transactions;
+if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.replaceSnapshot==='function') FinanceCategorySOT.replaceSnapshot(snapshot.categories); else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(snapshot.transactions||[]);
 D.bills=snapshot.bills;
 }
 function _categoryNameExists(type,name,excludeId){
@@ -115,14 +116,12 @@ try{
 if(catEditIdx!==null&&catEditIdx!==undefined){
 const cat=D.categories[type][catEditIdx];
 if(!cat){toast('⚠️ Kategori tidak ditemukan');return false;}
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 const oldName=cat.name;
-cat.name=name;cat.emoji=emoji;
-if(oldName!==name){
-D.transactions.forEach(t=>{if(t&&t.type===type&&t.category===oldName){t.category=name;catRenameAffected++;}});
-if(type==='expense')(D.bills||[]).forEach(b=>{if(b&&b.category===oldName)b.category=name;});
-}
+FinanceCategorySOT.updateCategory(type,cat.id,{name,emoji});
+if(oldName!==name)catRenameAffected=D.transactions.filter(t=>t&&t.type===type&&t.category===name).length;
 }else{
-D.categories[type].push({id:'cat_'+Date.now(),name,emoji,subs:[]});
+if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.addCategory(type,{name,emoji});else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 }
 const saved=save();
 if(saved===false)throw new Error('CATEGORY_SAVE_REJECTED');
@@ -149,7 +148,7 @@ const usedCount=cat?D.transactions.filter(t=>t.category===cat.name).length:0;
 let warnMsg=usedCount?`Hapus kategori "${cat.name}"? ${usedCount} transaksi yg sudah pakai kategori ini TIDAK akan ikut terhapus, tapi kategorinya tidak akan muncul lagi di pilihan Input Transaksi.`:'Hapus kategori ini beserta subkategorinya?';
 if(isDefault)warnMsg=`⚠️ "${cat?cat.name:''}" adalah kategori bawaan (default) aplikasi. `+warnMsg;
 if(!await askConfirm(warnMsg))return;
-D.categories[type]=D.categories[type].filter(c=>c.id!==id);
+if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.removeCategory(type,id);else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 save();renderCatList();populateCatFilter();populateKeuFilters();refreshTxCatIfOpen();toast('🗑 Kategori dihapus');
 }
 function openSubCatModal(catId,type,subId){
@@ -184,13 +183,11 @@ if(subCatEditId){
 const sub=cat.subs.find(s=>s.id===subCatEditId);
 if(!sub){toast('⚠️ Subkategori tidak ditemukan');return false;}
 const oldName=sub.name;
-sub.name=name;
-if(oldName!==name){
-D.transactions.forEach(t=>{if(t&&t.type===subCatParentType&&t.category===cat.name&&t.subcategory===oldName){t.subcategory=name;subRenameAffected++;}});
-if(subCatParentType==='expense')(D.bills||[]).forEach(b=>{if(b&&b.category===cat.name&&b.subcategory===oldName)b.subcategory=name;});
-}
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+FinanceCategorySOT.updateSubcategory(subCatParentType,cat.id,sub.id,{name});
+if(oldName!==name)subRenameAffected=D.transactions.filter(t=>t&&t.type===subCatParentType&&t.category===cat.name&&t.subcategory===name).length;
 }else{
-cat.subs.push({id:'sub_'+Date.now(),name});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.addSubcategory(subCatParentType,cat.id,{name});
 }
 const saved=save();
 if(saved===false)throw new Error('SUBCATEGORY_SAVE_REJECTED');
@@ -208,7 +205,7 @@ async function delSubCat(catId,type,subId){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 if(!await askConfirm('Hapus subkategori ini?'))return;
 const cat=D.categories[type].find(c=>c.id===catId);
-cat.subs=cat.subs.filter(s=>s.id!==subId);
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.removeSubcategory(type,catId,subId);
 save();renderCatList();populateSubSelect('fSub','fKat');populateSubSelect('kfSub','kfKat');refreshTxCatIfOpen();toast('🗑 Subkategori dihapus');
 }
 function toggleCatGroup(catId){

@@ -24,7 +24,7 @@ test('Car Notes BBM edit orphan repairs the missing Finance side without duplica
 
 test('Car Notes BBM delete cascades to Finance and persists once',()=>{
   const src=read('car-notes.js');
-  assert.match(src,/if\(b&&b\.txLinkId\)D\.transactions=D\.transactions\.filter\(tx=>tx\.id!==b\.txLinkId\)/);
+  assert.match(src,/FinanceTxSOT\.removeById\(b\.txLinkId\)/);
   assert.match(src,/D\.bbmLogs=D\.bbmLogs\.filter\(b=>b\.id!==id\)/);
   assert.match(src,/save\(\);renderCnTab\(\);renderDashboard\(\);renderKeuangan\(\)/);
 });
@@ -40,7 +40,7 @@ test('Car Notes service edit/delete keep Finance linkage contract',()=>{
   assert.match(src,/P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu/);
   assert.match(src,/s\.txLinkId=repairTxId;/);
   assert.match(src,/const deletedTxId=s\.txLinkId/);
-  assert.match(src,/D\.transactions=D\.transactions\.filter\(tx=>tx\.id!==deletedTxId\)/);
+  assert.match(src,/FinanceTxSOT\.removeById\(deletedTxId\)/);
 });
 
 test('Car Notes data integrity reconcilers remain available for final audit',()=>{

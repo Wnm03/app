@@ -590,7 +590,7 @@ try{
   if(_saved===false)throw new Error('save() menolak penghapusan akun');
 }catch(_accountDeleteErr){
   D.accounts=JSON.parse(_accountDeleteSnapshot.accounts);
-  if(typeof FinanceTxSOT!=='undefined'&&typeof FinanceTxSOT.replaceSnapshot==='function')FinanceTxSOT.replaceSnapshot(JSON.parse(_accountDeleteSnapshot.transactions));else D.transactions=JSON.parse(_accountDeleteSnapshot.transactions);
+  if(typeof FinanceTxSOT!=='undefined'&&typeof FinanceTxSOT.replaceSnapshot==='function')FinanceTxSOT.replaceSnapshot(JSON.parse(_accountDeleteSnapshot.transactions));else throw new Error('FINANCE_TX_SOT_REQUIRED');
   D.bills=JSON.parse(_accountDeleteSnapshot.bills);
   D.bbmLogs=JSON.parse(_accountDeleteSnapshot.bbmLogs);
   D.servisLogs=JSON.parse(_accountDeleteSnapshot.servisLogs);

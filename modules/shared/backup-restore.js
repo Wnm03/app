@@ -38,9 +38,9 @@ function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
 const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
-const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah','Keterangan'],...txs.map(t=>{
+const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah','Keterangan','Category ID','Subcategory ID','Transaction ID','Import Idempotency Key'],...txs.map(t=>{
 const accName=D.accounts.find(a=>a.id===t.accountId)?.name||'';
-return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||''];
+return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||'',t.categoryId||'',t.subcategoryId||'',t.id||'',t.importIdempotencyKey||''];
 })];
 const blob=new Blob([rows.map(r=>r.map(_reportCsvCell).join(',')).join('\n')],{type:'text/csv'});
 _downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.csv');
@@ -81,9 +81,25 @@ for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
   }catch(e){throw new Error('Backup gagal menyiapkan snapshot state: '+(e&&e.message?e.message:String(e)));
   }
   let _aux;
+  let _backupAiEventOutbox=null;
+  let _aiOutboxRevisionBefore=null;
   try{
+    // S2494: the AI recovery journal has a separate fallback store and therefore
+    // cannot be made consistent by getMany() alone. Capture its revision before
+    // and after the auxiliary read; retry if a producer/replay changed the journal
+    // during the snapshot window so a backup never silently loses a recovery event.
+    if(typeof aiEventOutboxFlush==='function')await aiEventOutboxFlush();
+    if(typeof aiEventOutboxRevision==='function')_aiOutboxRevisionBefore=aiEventOutboxRevision();
     if(typeof IDBStore==='undefined'||typeof IDBStore.getMany!=='function')throw new Error('IDBStore.getMany diperlukan untuk backup snapshot atomic');
     _aux=await IDBStore.getMany(_backupAuxKeys.concat(['kw_v4_writer_guard_v1']));
+    if(typeof aiEventOutboxSnapshot==='function')_backupAiEventOutbox=await aiEventOutboxSnapshot();
+    if(typeof aiEventOutboxFlush==='function')await aiEventOutboxFlush();
+    const _aiOutboxRevisionAfter=typeof aiEventOutboxRevision==='function'?aiEventOutboxRevision():_aiOutboxRevisionBefore;
+    if(_aiOutboxRevisionBefore!==null&&_aiOutboxRevisionAfter!==_aiOutboxRevisionBefore){
+      _lastBackupErr=new Error('AI recovery journal changed during backup snapshot');
+      if(_attempt===_maxBackupSnapshotAttempts-1)throw _lastBackupErr;
+      continue;
+    }
   }catch(e){
     _lastBackupErr=e;
     console.error('Backup: gagal membaca snapshot auxiliary IndexedDB secara batch:',e);
@@ -107,7 +123,7 @@ for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
   if(_aux['eie:store']!==undefined)backupD._eieStore=_aux['eie:store'];
   if(_aux['vehicle-catalog:store']!==undefined)backupD._vehicleCatalogStore=_aux['vehicle-catalog:store'];
   if(_aux['honda-pdf-import:store']!==undefined)backupD._hondaPdfImportStore=_aux['honda-pdf-import:store'];
-  if(_aux['ai:event-outbox:v1']!==undefined)backupD._aiEventOutbox=_aux['ai:event-outbox:v1'];
+  if(_backupAiEventOutbox!==null)backupD._aiEventOutbox=_backupAiEventOutbox; else if(_aux['ai:event-outbox:v1']!==undefined)backupD._aiEventOutbox=_aux['ai:event-outbox:v1'];
   if(_aux['service-event-outbox:v1']!==undefined)backupD._serviceEventOutbox=_aux['service-event-outbox:v1'];
   if(_aux['kw_finance_event_outbox_v1']!==undefined)backupD._financeEventOutbox=_aux['kw_finance_event_outbox_v1'];
   if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.sealBackupPayload==='function')return await PWAProductionHardening.sealBackupPayload(backupD);
@@ -618,7 +634,7 @@ try{
   _prevEieStore=await IDBStore.get('eie:store');
   _prevVehicleCatalogStore=await IDBStore.get('vehicle-catalog:store');
   _prevHondaPdfImportStore=await IDBStore.get('honda-pdf-import:store');
-  _prevAiEventOutbox=await IDBStore.get('ai:event-outbox:v1');
+  _prevAiEventOutbox=typeof aiEventOutboxSnapshot==='function'?await aiEventOutboxSnapshot():await IDBStore.get('ai:event-outbox:v1');
   _prevServiceEventOutbox=await IDBStore.get('service-event-outbox:v1');
   _prevFinanceEventOutbox=await IDBStore.get('kw_finance_event_outbox_v1');
 }catch(_idbSnapshotErr){
@@ -708,6 +724,18 @@ if(typeof BillDebtPiutangReconciler!=='undefined'&&BillDebtPiutangReconciler&&ty
   }
 }
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
+__s2013SetStage('finance-category-sot-reconciliation');
+// S2487: restore is a canonical Finance transaction boundary. A backup may
+// contain legacy category/subcategory names, while a newer backup may already
+// contain canonical IDs. Re-run the transaction snapshot through FinanceTxSOT
+// only after the restored taxonomy has been loaded, so IDs resolve against the
+// restored FinanceCategorySOT and no second taxonomy is created.
+if(Array.isArray(D.transactions)){
+  if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT||typeof FinanceTxSOT.replaceSnapshot!=='function'){
+    throw new Error('FINANCE_TX_SOT_REQUIRED');
+  }
+  FinanceTxSOT.replaceSnapshot(D.transactions);
+}
 __s2013SetStage('atomic-restore-persist');
 let _restorePersistJson;
 if(D.profile&&Object.prototype.hasOwnProperty.call(D.profile,'apiKey')){const _profileNoKey={...D.profile};delete _profileNoKey.apiKey;_restorePersistJson=JSON.stringify({...D,profile:_profileNoKey});}
@@ -722,6 +750,10 @@ if(_restoredServiceEventOutbox!==undefined)_restoreAuxEntries.push(['service-eve
 if(_restoredFinanceEventOutbox!==undefined)_restoreAuxEntries.push(['kw_finance_event_outbox_v1',_restoredFinanceEventOutbox]);
 if(typeof _persistAtomicSnapshotWithAux!=='function')throw new Error('Restore atomic persistence helper tidak tersedia; restore dibatalkan untuk mencegah partial write');
 await _persistAtomicSnapshotWithAux(_restorePersistJson,_restoreAuxEntries);
+// S2494: the restored AI journal is now durable in IndexedDB. Remove only the
+// pre-restore local fallback after the atomic commit succeeds; otherwise the
+// next AI read would merge stale pre-restore events back into the restored queue.
+if(typeof aiEventOutboxClearFallback==='function')aiEventOutboxClearFallback();
 var _restoreAtomicCommitted=true;
 try{if(typeof localStorage!=='undefined')localStorage.setItem('kw_v4',_restorePersistJson);}catch(_lsErr){console.warn('Restore: localStorage fallback gagal',_lsErr);}
 if(typeof lifeOSInvalidateCache==='function'&&_restoredLifeosStore!==undefined)lifeOSInvalidateCache();
@@ -751,6 +783,7 @@ try{
     if(_restoredServiceEventOutbox!==undefined)_rollbackAuxEntries.push(['service-event-outbox:v1',_prevServiceEventOutbox]);
     if(_restoredFinanceEventOutbox!==undefined)_rollbackAuxEntries.push(['kw_finance_event_outbox_v1',_prevFinanceEventOutbox]);
     await _persistAtomicSnapshotWithAux(snapJson,_rollbackAuxEntries);
+     if(typeof aiEventOutboxClearFallback==='function')aiEventOutboxClearFallback();
   }else{
     saveFlush();
   }
@@ -761,7 +794,7 @@ return false;
 }
 }
 function applyRestoredDataMigrations(){
-if(!D.categories)D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
+if(!D.categories){if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');FinanceCategorySOT.replaceSnapshot({income:DEFAULT_CATS.income,expense:DEFAULT_CATS.expense});}
 if(!D.accounts||!D.accounts.length)D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.bills)D.bills=[];
 if(!D.billsArchive)D.billsArchive=[];
@@ -784,7 +817,8 @@ if(!D.produsen)D.produsen=[];
 if(!D.cobekKategori||!D.cobekKategori.length)D.cobekKategori=JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI));
 D.products.forEach(p=>{if(!p.hargaByProdusen)p.hargaByProdusen={};if(p.kategoriId===undefined)p.kategoriId='';if(p.produsenId===undefined)p.produsenId='';});
 if(!D.categories.expense.some(c=>c.id==='cat_cbb'||/^bisnis$/i.test(c.name))){
-D.categories.expense.push({id:'cat_cbb',name:'Bisnis',emoji:'🪨',subs:[{id:'sub_cbb_cobek',name:'Cobek'}]});
+if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.addCategory('expense',{id:'cat_cbb',name:'Bisnis',emoji:'🪨',classification:'BISNIS'});else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+if(typeof FinanceCategorySOT!=='undefined'){const _bc=FinanceCategorySOT.findById('expense','cat_cbb');if(_bc)FinanceCategorySOT.ensureSubcategory('expense',_bc.id,{id:'sub_cbb_cobek',name:'Cobek',classification:'BISNIS'});}
 }
 migrateShopCategory();
 if(!D.targets)D.targets=[];
@@ -870,7 +904,11 @@ const g=document.getElementById('importGuide'); if(g) g.innerHTML=guides[type];
 function _importTxFingerprint(t){
 if(!t||typeof t!=='object')return null;
 const norm=v=>String(v==null?'':v).trim().toLowerCase();
-return [norm(t.date),norm(t.type),Number(t.amount)||0,norm(t.category),norm(t.subcategory),norm(t.note),norm(t.accountId)].join('|');
+return [norm(t.date),norm(t.type),Number(t.amount)||0,norm(t.category),norm(t.subcategory),norm(t.note),norm(t.accountId),norm(t.payMethod)].join('|');
+}
+function _stableImportKey(type,t,occurrence){
+const fp=_importTxFingerprint(t)||'';
+return `import:v2:${String(type||'import').trim().toLowerCase()}:${fp}:${Number(occurrence)||0}`;
 }
 function _dedupeImportedTransactions(imported){
 if(!Array.isArray(imported)||!imported.length)return[];
@@ -924,15 +962,24 @@ const _cashewTaxonomySnapshot=(curImportType==='cashew'&&typeof D!=='undefined')
 const _restoreCashewTaxonomySnapshot=()=>{
   if(!_cashewTaxonomySnapshot)return;
   D.accounts=_cashewTaxonomySnapshot.accounts.map(x=>({...x}));
-  D.categories=_cashewTaxonomySnapshot.categories?JSON.parse(JSON.stringify(_cashewTaxonomySnapshot.categories)):_cashewTaxonomySnapshot.categories;
+  if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.replaceSnapshot==='function') FinanceCategorySOT.replaceSnapshot(_cashewTaxonomySnapshot.categories||{income:[],expense:[]}); else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 };
 if(file.name.endsWith('.json')){
 const parsed=JSON.parse(content);
 if(!Array.isArray(parsed)&&(!parsed||typeof parsed!=='object'))throw new Error('Format JSON transaksi tidak valid');
 imported=Array.isArray(parsed)?parsed:(parsed.transactions||[]);
+const fingerprintOccurrences=new Map();
 imported=Array.isArray(imported)?imported.map((t,i)=>{
   const row=(t&&typeof t==='object')?{...t}:t;
-  if(row&&typeof row==='object'&&!row.importIdempotencyKey){row.importIdempotencyKey=row.id?`json:${row.id}`:`json-row:${i}:${_importTxFingerprint(row)||''}`;}
+  if(row&&typeof row==='object'&&!row.importIdempotencyKey){
+  if(row.id!=null&&String(row.id)!=='') row.importIdempotencyKey=`json:${row.id}`;
+  else {
+    const _fp=_importTxFingerprint(row)||'';
+    const _occ=(fingerprintOccurrences.get(_fp)||0)+1;
+    fingerprintOccurrences.set(_fp,_occ);
+    row.importIdempotencyKey=`json:v2:${_fp}:${_occ}`;
+  }
+}
   return row;
 }):[];
 } else {
@@ -976,16 +1023,16 @@ return;
 const _importTxSnapshot=Array.isArray(D.transactions)?D.transactions.slice():[];
 try{
   if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.createMany==='function') FinanceTxSOT.createMany(imported);
-  else { if(!Array.isArray(D.transactions))D.transactions=[]; D.transactions.push(...imported); }
+  else { throw new Error('FINANCE_TX_SOT_REQUIRED'); }
   const _importSaveOk=save();
   if(_importSaveOk===false){
     if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.replaceSnapshot==='function') FinanceTxSOT.replaceSnapshot(_importTxSnapshot);
-    else D.transactions.splice(0,D.transactions.length,..._importTxSnapshot);
+    else throw new Error('FINANCE_TX_SOT_REQUIRED');
     throw new Error('Penyimpanan menolak import transaksi; perubahan dibatalkan.');
   }
 }catch(_importErr){
   if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.replaceSnapshot==='function') FinanceTxSOT.replaceSnapshot(_importTxSnapshot);
-  else { if(!Array.isArray(D.transactions))D.transactions=[]; D.transactions.splice(0,D.transactions.length,..._importTxSnapshot); }
+  else { throw new Error('FINANCE_TX_SOT_REQUIRED'); }
   _restoreCashewTaxonomySnapshot();
   throw _importErr;
 }
@@ -1132,7 +1179,7 @@ resultEl.innerHTML=`✅ Import selesai untuk <b>${escapeHtml(vehName)}</b> (defa
 toast('✅ Import Car Notes selesai');
 }catch(err){
 // V26 G27: CSV import is atomic across both Car Notes domains.
-try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);D.transactions=JSON.parse(_v26ImportSnapshot.transactions);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback import stok');StockCommandSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.partsStock));D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
+try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.transactions));if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback import stok');StockCommandSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.partsStock));D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
 resultEl.innerHTML='❌ Gagal import: '+(err&&err.message?err.message:'format file tidak dikenali');
 }
 };
@@ -1196,7 +1243,7 @@ const idxCat=headers.indexOf('category name');
 const idxSub=headers.indexOf('subcategory name');
 if(idxCat<0)return summary;
 const findAccByName=(n)=>D.accounts.find(a=>a.name.trim().toLowerCase()===n.trim().toLowerCase());
-const findCatByName=(type,n)=>D.categories[type].find(c=>c.name.trim().toLowerCase()===n.trim().toLowerCase());
+const findCatByName=(type,n)=>typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT.findByName(type,n):D.categories[type].find(c=>c.name.trim().toLowerCase()===n.trim().toLowerCase());
 const findSubByName=(cat,n)=>(cat.subs||[]).find(s=>s.name.trim().toLowerCase()===n.trim().toLowerCase());
 for(let i=1;i<lines.length;i++){
 const vals=splitCSVLine(lines[i]);
@@ -1213,14 +1260,14 @@ const catName=(idxCat>=0?vals[idxCat]:'').trim();
 if(!catName)continue;
 let cat=findCatByName(type,catName);
 if(!cat){
-cat={id:'cat_'+slugify(catName)+'_'+uid(),name:catName,emoji:guessCatEmoji(catName,type),subs:[]};
-D.categories[type].push(cat);
+cat=typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT.addCategory(type,{id:'cat_'+slugify(catName)+'_'+uid(),name:catName,emoji:guessCatEmoji(catName,type)}):{id:'cat_'+slugify(catName)+'_'+uid(),name:catName,emoji:guessCatEmoji(catName,type),subs:[]};
+if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 summary.newCats.push(`${cat.emoji} ${catName} (${type==='income'?'Pemasukan':'Pengeluaran'})`);
 }
 const subName=(idxSub>=0?vals[idxSub]:'').trim();
 if(subName && !findSubByName(cat,subName)){
 if(!cat.subs)cat.subs=[];
-cat.subs.push({id:'sub_'+slugify(subName)+'_'+uid(),name:subName});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.addSubcategory(type,cat.id,{id:'sub_'+slugify(subName)+'_'+uid(),name:subName});
 summary.newSubs.push(`${catName} → ${subName}`);
 }
 }
@@ -1242,6 +1289,7 @@ const lines=splitCSVRecords(content);
 if(lines.length<2)return[];
 const headers=splitCSVLine(lines[0]).map(h=>h.toLowerCase());
 const results=[];
+const fingerprintOccurrences=new Map();
 if(type==='cashew'){
 const idxDate=headers.indexOf('date');
 const idxAmt=headers.indexOf('amount');
@@ -1267,7 +1315,12 @@ const title=idxTitle>=0?vals[idxTitle]:'';
 const noteV=idxNote>=0?vals[idxNote]:'';
 const acc=idxAccount>=0?vals[idxAccount]:'';
 const matchedAcc=acc?D.accounts.find(a=>a.name.toLowerCase()===acc.toLowerCase()):null;
-results.push({id:uid(),date,type:isIncome?'income':'expense',amount,category,subcategory:sub,accountId:(matchedAcc?matchedAcc.id:D.accounts[0]?.id),payMethod:'tunai',note:[title,noteV].filter(Boolean).join(' - '),importIdempotencyKey:`csv:${type}:${i}:${vals.join('|')}`});
+const _tx={id:uid(),date,type:isIncome?'income':'expense',amount,category,subcategory:sub,accountId:(matchedAcc?matchedAcc.id:D.accounts[0]?.id),payMethod:'tunai',note:[title,noteV].filter(Boolean).join(' - ')};
+const _fp=_importTxFingerprint(_tx)||'';
+const _occ=(fingerprintOccurrences.get(_fp)||0)+1;
+fingerprintOccurrences.set(_fp,_occ);
+_tx.importIdempotencyKey=_stableImportKey(type,_tx,_occ);
+results.push(_tx);
 }
 return results;
 }
@@ -1285,12 +1338,30 @@ if(typeKey){const tv=row[typeKey].toLowerCase();tx.type=(tv.includes('income')||
 else tx.type='expense';
 const catKey=headers.find(h=>h.includes('categ')||h==='kategori');
 if(catKey&&row[catKey])tx.category=row[catKey];
+const subKey=headers.find(h=>h.includes('subcateg')||h==='subkategori');
+if(subKey&&row[subKey])tx.subcategory=row[subKey];
 const noteKey=headers.find(h=>h.includes('note')||h==='keterangan'||h==='deskripsi'||h==='memo'||h==='title');
 if(noteKey&&row[noteKey])tx.note=row[noteKey];
-tx.accountId=D.accounts[0]?.id;
-tx.payMethod='tunai';
-tx.importIdempotencyKey=`csv:${type}:${i}:${vals.join('|')}`;
-if(tx.amount>0)results.push(tx);
+const accountKey=headers.find(h=>h==='akun'||h==='account');
+if(accountKey&&row[accountKey]){const a=D.accounts.find(x=>x&&String(x.id)===String(row[accountKey])||x&&String(x.name||'').trim().toLowerCase()===String(row[accountKey]).trim().toLowerCase());if(a)tx.accountId=a.id;}
+if(!tx.accountId)tx.accountId=D.accounts[0]?.id;
+const payKey=headers.find(h=>h.includes('metode')||h==='paymethod'||h==='payment method');
+if(payKey&&row[payKey])tx.payMethod=row[payKey]; else tx.payMethod='tunai';
+const catIdKey=headers.find(h=>h==='category id'||h==='kategori id'||h==='categoryid');
+const subIdKey=headers.find(h=>h==='subcategory id'||h==='subkategori id'||h==='subcategoryid');
+if(catIdKey&&row[catIdKey])tx.categoryId=row[catIdKey];
+if(subIdKey&&row[subIdKey])tx.subcategoryId=row[subIdKey];
+const txIdKey=headers.find(h=>h==='transaction id'||h==='id'||h==='tx id');
+if(txIdKey&&row[txIdKey])tx.id=row[txIdKey];
+const keyKey=headers.find(h=>h==='import idempotency key'||h==='idempotency key'||h==='importidempotencykey');
+if(keyKey&&row[keyKey])tx.importIdempotencyKey=row[keyKey];
+if(tx.amount>0){
+  const _fp=_importTxFingerprint(tx)||'';
+  const _occ=(fingerprintOccurrences.get(_fp)||0)+1;
+  fingerprintOccurrences.set(_fp,_occ);
+  tx.importIdempotencyKey=_stableImportKey(type,tx,_occ);
+  results.push(tx);
+}
 }
 return results;
 }

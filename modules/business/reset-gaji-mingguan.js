@@ -53,8 +53,8 @@ function ensureGajiCategory(){
 const found=D.categories.income.find(c=>/gaji/i.test(c.name));
 if(found) return found;
 const created={id:'cat_gaji_'+uid(),name:'Gaji',emoji:'💼',subs:[]};
-D.categories.income.push(created);
-return created;
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+return FinanceCategorySOT.addCategory('income',created);
 }
 // FIX (gate jam sore): dulu popup "💰 Sabtu Gajian!" langsung muncul begitu app
 // dibuka hari Sabtu jam berapa pun (termasuk pagi/siang saat user kemungkinan

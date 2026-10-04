@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2225';
+const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2232';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -642,7 +642,7 @@ const date=new Date().toISOString().split('T')[0];
 const transferPairId=uid();
 const transferOut={id:uid(),type:'transfer_out',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun → ${escapeHtml(toAcc.name)}`,date,accountId:fromAcc.id,transferPairId};
 const transferIn={id:uid(),type:'transfer_in',amount:amt,category:'Transfer',note:`Kontribusi Dana Pensiun ← ${fromAcc.name}`,date,accountId:toAcc.id,transferPairId};
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.createMany([transferOut,transferIn]); else D.transactions.push(transferOut,transferIn);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.createMany([transferOut,transferIn]); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 if(!p.riwayatKontribusi) p.riwayatKontribusi=[];
 p.riwayatKontribusi.push({id:uid(),date,amount:amt,fromAcc:fromAcc.id});
 save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});

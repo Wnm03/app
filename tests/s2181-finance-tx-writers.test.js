@@ -9,7 +9,7 @@ function src(rel){return fs.readFileSync(path.join(ROOT,rel),'utf8');}
 
 test('S2181 — FinanceTxSOT runtime gateway preserves create semantics',()=>{
   const D={transactions:[]};
-  const c=loadSource(['modules/finance/finance-tx-sot.js'],{D},['FinanceTxSOT']);
+  const c=loadSource(['modules/finance/finance-category-sot.js','modules/finance/finance-tx-sot.js'],{D},['FinanceTxSOT']);
   const tx={id:'g1',type:'income',amount:123};
   assert.equal(c.FinanceTxSOT.create(tx),tx);
   assert.equal(D.transactions[0],tx);

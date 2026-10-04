@@ -447,7 +447,7 @@ if(billRevert&&billRevert.restoredFromArchive)billRevertMsg=' (tagihan diaktifka
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='cicilan')billRevertMsg=' (sisa tenor dikembalikan)';
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&billRevert.linkedBill.kind==='utang')billRevertMsg=' (sisa utang dikembalikan)';
 else if(billRevert&&billRevert.isLatest&&billRevert.linkedBill&&(billRevert.linkedBill.kind==='langganan'||billRevert.linkedBill.kind==='tagihan'))billRevertMsg=' (jatuh tempo dikembalikan)';
-if(typeof FinanceTxSOT!=='undefined'){FinanceTxSOT.removeById(id);if(pairedTx)FinanceTxSOT.removeById(pairedTx.id);}else D.transactions=D.transactions.filter(x=>x.id!==id&&(!pairedTx||x.id!==pairedTx.id));
+if(typeof FinanceTxSOT!=='undefined'){FinanceTxSOT.removeById(id);if(pairedTx)FinanceTxSOT.removeById(pairedTx.id);}else throw new Error('FINANCE_TX_SOT_REQUIRED');
 if(_deleteAtomic){_deleteAtomic.commit();_deleteAtomicCommitted=true;}
 save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});else{if(typeof renderDashboard==='function')renderDashboard();if(typeof renderKeuangan==='function')renderKeuangan();}renderCnTab();renderProductList();
 // Sesi C (lanjutan AUDIT-SESI-C-EVENTBUS-D-WRITES-NO-EMIT.md temuan #2):

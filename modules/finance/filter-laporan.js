@@ -14,6 +14,11 @@ if(f.kat&&f.kat!=='semua'&&t.category!==f.kat)return false;
 if(f.sub&&f.sub!=='semua'&&(t.subcategory||'')!==f.sub)return false;
 if(f.acc&&f.acc!=='semua'&&t.accountId!==f.acc)return false;
 if(f.method&&f.method!=='semua'&&(t.payMethod||'tunai')!==f.method)return false;
+if(f.classification&&f.classification!=='semua'){
+ const sot=typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT:null;
+ if(!sot||typeof sot.resolveSeven!=='function')return false;
+ if(sot.resolveSeven(t)!==f.classification)return false;
+}
 // S2369 PERF: resolve the linked service record at most once when either
 // service filter is active. Previously both filters independently scanned
 // D.servisLogs for every transaction when category + component were selected.
@@ -37,7 +42,7 @@ populateSubSelect('fSub','fKat');
 renderLaporan();
 }
 function resetLaporanFilter(){
-['fTipe','fKat','fSub','fAcc','fMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
+['fTipe','fClass','fKat','fSub','fAcc','fMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 populateSubSelect('fSub','fKat');
 renderLaporan();
 toast('↺ Filter laporan direset');
@@ -48,7 +53,8 @@ tipe:document.getElementById('fTipe')?.value||'semua',
 kat:document.getElementById('fKat')?.value||'semua',
 sub:document.getElementById('fSub')?.value||'semua',
 acc:document.getElementById('fAcc')?.value||'semua',
-method:document.getElementById('fMethod')?.value||'semua'
+method:document.getElementById('fMethod')?.value||'semua',
+classification:document.getElementById('fClass')?.value||'semua'
 };
 }
 function populateKeuFilters(){
@@ -81,7 +87,7 @@ if(show)populateKeuFilters();
 updateKfBadge();
 }
 function resetKeuFilter(){
-['kfTipe','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
+['kfTipe','kfClass','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 const s=document.getElementById('kfSearch');if(s)s.value='';
 populateSubSelect('kfSub','kfKat');
 saveKeuFilterPrefs();
@@ -106,6 +112,7 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+classification:document.getElementById('kfClass')?.value||'semua',
 serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
 serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
 search:(document.getElementById('kfSearch')?.value||'').trim().toLowerCase()
@@ -145,6 +152,7 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+classification:document.getElementById('kfClass')?.value||'semua',
 serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
 serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
 search:document.getElementById('kfSearch')?.value||'',
@@ -168,6 +176,7 @@ populateSubSelect('kfSub','kfKat');
 if(document.getElementById('kfSub'))document.getElementById('kfSub').value=prefs.sub||'semua';
 if(document.getElementById('kfAcc'))document.getElementById('kfAcc').value=prefs.acc||'semua';
 if(document.getElementById('kfMethod'))document.getElementById('kfMethod').value=prefs.method||'semua';
+if(document.getElementById('kfClass'))document.getElementById('kfClass').value=prefs.classification||'semua';
 populateServiceFilterSelects();
 if(document.getElementById('kfServiceCategory'))document.getElementById('kfServiceCategory').value=prefs.serviceCategory||'semua';
 populateServiceFilterSelects();
@@ -185,7 +194,7 @@ if(customRangeEl)customRangeEl.style.display=prefs.periode==='custom'?'block':'n
 if(prefs.from&&document.getElementById('txListFrom'))document.getElementById('txListFrom').value=prefs.from;
 if(prefs.to&&document.getElementById('txListTo'))document.getElementById('txListTo').value=prefs.to;
 }
-const hasActive=['tipe','kat','sub','acc','method'].some(k=>prefs[k]&&prefs[k]!=='semua')||prefs.search;
+const hasActive=['tipe','classification','kat','sub','acc','method'].some(k=>prefs[k]&&prefs[k]!=='semua')||prefs.search;
 if(hasActive){const panel=document.getElementById('keuFilterPanel');if(panel)panel.style.display='block';}
 }
 function updateKfBadge(){

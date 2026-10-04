@@ -486,7 +486,7 @@ if(incCat){
 const oldName=incCat.name;
 incCat.name='Bisnis';
 if(!incCat.subs)incCat.subs=[];
-if(!incCat.subs.find(s=>/^cobek$/i.test(s.name))) incCat.subs.push({id:'sub_cb_cobek',name:'Cobek'});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.updateCategory('income',incCat.id,{name:'Bisnis'}); FinanceCategorySOT.ensureSubcategory('income',incCat.id,{id:'sub_cb_cobek',name:'Cobek'});
 if(/^bisnis cobek$/i.test(oldName)){
 D.transactions.forEach(t=>{
 if(t.type==='income'&&t.category===oldName){t.category='Bisnis';if(!t.subcategory)t.subcategory='Cobek';}
@@ -498,7 +498,7 @@ if(expCat){
 const oldName=expCat.name;
 expCat.name='Bisnis';
 if(!expCat.subs)expCat.subs=[];
-if(!expCat.subs.find(s=>/^cobek$/i.test(s.name))) expCat.subs.push({id:'sub_cbb_cobek',name:'Cobek'});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.updateCategory('expense',expCat.id,{name:'Bisnis'}); FinanceCategorySOT.ensureSubcategory('expense',expCat.id,{id:'sub_cbb_cobek',name:'Cobek'});
 if(/^belanja stok cobek$/i.test(oldName)){
 D.transactions.forEach(t=>{
 if(t.type==='expense'&&t.category===oldName){t.category='Bisnis';if(!t.subcategory)t.subcategory='Cobek';}
@@ -532,7 +532,7 @@ D={...D,...p};
 if(!fromIdb) IDBStore.set('kw_v4_mirror',s).then(()=>_markSavePersistMeta('idb',_readSavePersistMeta().localTs)).catch(e=>console.error('Gagal migrasi awal ke IndexedDB:',e));
 const _fromSchemaVersion=D.schemaVersion===undefined?0:D.schemaVersion;
 runDataMigrations(_fromSchemaVersion);
-if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
+if(!D.categories){if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');FinanceCategorySOT.replaceSnapshot({income:DEFAULT_CATS.income,expense:DEFAULT_CATS.expense});}
 if(!D.accounts || !D.accounts.length) D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.pajakZakat) D.pajakZakat={hargaEmasPerGram:2640000,nisabPenghasilanBulan:7640144,nisabPenghasilanTahun:91681728,zakatFitrahPerJiwa:37500,haulMaalMulai:null,zakatLog:[]};
 // Sesi 749: referensi harga BBM nasional (1 angka per jenis) dipakai FuelPriceRef
@@ -629,7 +629,7 @@ if(!D.produsen) D.produsen=[];
 if(!D.cobekKategori||!D.cobekKategori.length) D.cobekKategori=JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI));
 D.products.forEach(p=>{if(!p.hargaByProdusen)p.hargaByProdusen={};if(p.kategoriId===undefined)p.kategoriId='';if(p.produsenId===undefined)p.produsenId='';});
 if(!D.categories.expense.some(c=>c.id==='cat_cbb'||/^bisnis$/i.test(c.name))){
-D.categories.expense.push({id:'cat_cbb',name:'Bisnis',emoji:'🪨',subs:[{id:'sub_cbb_cobek',name:'Cobek'}]});
+throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 }
 migrateShopCategory();
 if(!D.cobek) D.cobek=[];
@@ -663,10 +663,10 @@ seen[key].subs.push(s);
 seen[key]=c;
 }
 });
-D.categories[type]=Object.values(seen);
+if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.mergeDuplicates(type);
 });
 if(D.categories.expense.some(c=>c.id==='cat_kn')){
-D.categories.expense=D.categories.expense.filter(c=>c.id!=='cat_kn');
+if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.removeCategory('expense','cat_kn');
 }
 (function(){
 const vehNames=(D.vehicles||[]).map(v=>v.name.trim().toLowerCase());

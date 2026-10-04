@@ -28,21 +28,24 @@ safeSetItem(Budget.SETTINGS_KEY,JSON.stringify(s));
 },
 getCatNameById(catId){
 if(catId==='__total__') return '__total__';
-const all=[...D.categories.income,...D.categories.expense];
-for(const c of all){
-if(c.id===catId) return c.name;
-for(const s of (c.subs||[])){if(s.id===catId) return s.name;}
-}
-return catId;
+const info=Budget.getCatInfoById(catId);
+return info?(info.subName||info.catName):catId;
 },
 getCatInfoById(catId){
 if(catId==='__total__') return {catName:'__total__'};
-const all=[...D.categories.income,...D.categories.expense];
-for(const c of all){
-if(c.id===catId) return {catName:c.name};
-for(const s of (c.subs||[])){if(s.id===catId) return {catName:c.name,subName:s.name};}
+// S2485: Budget is a consumer of FinanceCategorySOT, not a second taxonomy resolver.
+// Budgets are expense-only, therefore resolve IDs only in the canonical expense taxonomy.
+if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT){
+  const c=FinanceCategorySOT.findById('expense',catId);
+  if(c) return {catName:c.name};
+  for(const ec of FinanceCategorySOT.list('expense')){
+    const s=FinanceCategorySOT.findSub(ec,catId);
+    if(s) return {catName:ec.name,subName:s.name};
+  }
+  return null;
 }
-return {catName:catId};
+// Fail closed before the canonical SOT is available; do not silently invent a second taxonomy.
+return null;
 },
 matchesTx(budget, t){
 if(t.type!=='expense') return false;
@@ -50,6 +53,7 @@ const ids=budget.catIds||(budget.catId?[budget.catId]:[]);
 if(ids.includes('__total__')) return true;
 return ids.some(catId=>{
 const info=Budget.getCatInfoById(catId);
+if(!info)return false;
 if(info.subName){
 return t.category===info.catName && t.subcategory===info.subName;
 }
@@ -63,10 +67,10 @@ return t.category===info.catName||t.category===catId||t.categoryId===catId;
 _buildTxMatcher(budget){
 const ids=budget.catIds||(budget.catId?[budget.catId]:[]);
 if(ids.includes('__total__')) return t=>t.type==='expense';
-const resolved=ids.map(catId=>({catId,info:Budget.getCatInfoById(catId)}));
+const resolved=ids.map(catId=>({catId,info:Budget.getCatInfoById(catId)})).filter(x=>x.info);
 return t=>t.type==='expense'&&resolved.some(({catId,info})=>{
-if(info.subName) return t.category===info.catName&&t.subcategory===info.subName;
-return t.category===info.catName||t.category===catId||t.categoryId===catId;
+if(info.subName) return (t.subcategoryId===catId)||(t.category===info.catName&&t.subcategory===info.subName);
+return t.categoryId===catId||t.category===info.catName;
 });
 },
 _periodContext(budget,month,year,now){
@@ -193,7 +197,8 @@ return txt.replace(/^[\s↳]+/,'').replace(/^[^\w\s]+\s*/,'').trim();
 },
 renderCatOptions(selected){
 let html=`<label class="budget-cat-opt total"><input type="checkbox" id="budgetCatTotal" data-onchange="onBudgetCatTotalToggle" data-onchange-args='["$el"]'> 🎯 Total Pengeluaran (semua kategori)</label>`;
-D.categories.expense.forEach(c=>{
+const expenseCats=(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT)?FinanceCategorySOT.list('expense'):(D.categories.expense||[]);
+expenseCats.forEach(c=>{
 html+=`<label class="budget-cat-opt"><input type="checkbox" class="budgetCatChk" value="${escapeHtml(c.id)}" data-onchange="onBudgetCatChildToggle"> ${escapeHtml(c.icon||'')} ${escapeHtml(c.name)}</label>`;
 (c.subs||[]).forEach(s=>{
 html+=`<label class="budget-cat-opt sub"><input type="checkbox" class="budgetCatChk" value="${escapeHtml(s.id)}" data-onchange="onBudgetCatChildToggle"> ↳ ${escapeHtml(s.icon||'')} ${escapeHtml(s.name)}</label>`;
@@ -511,7 +516,8 @@ map[key].count++;
 return Object.entries(map).map(([name,v])=>({name,total:v.total,count:v.count,avgPerMonth:v.total/months})).sort((a,b)=>b.avgPerMonth-a.avgPerMonth);
 },
 findCatIdByName(name){
-const cat=D.categories.expense.find(c=>c.name===name);
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT||typeof FinanceCategorySOT.findByName!=='function')return null;
+const cat=FinanceCategorySOT.findByName('expense',name);
 return cat?cat.id:null;
 },
 existingBudgetFor(catId){
@@ -541,7 +547,7 @@ existing.limit=limit;
 if(!existing.catIds||!existing.catIds.length)existing.catIds=[catId];
 delete existing.catId;
 }else{
-const catInfo=D.categories.expense.find(x=>x.id===catId);
+const catInfo=typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT?FinanceCategorySOT.findById('expense',catId):null;
 D.budgets.push({id:'bgt_'+uid(),name:c.name,limit,catIds:[catId],icon:catInfo?catInfo.emoji:'💰',note:'Otomatis dari Rekomendasi Anggaran',rollover:false,period:'bulanan',createdAt:new Date().toISOString()});
 }
 return true;
@@ -591,7 +597,7 @@ html+='<div class="empty"><div class="empty-icon">📋</div><div class="empty-te
 }else{
 html+=cats.map((c,i)=>{
 const catId=BudgetReko.findCatIdByName(c.name);
-const catInfo=catId?D.categories.expense.find(x=>x.id===catId):null;
+const catInfo=catId&&typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT?FinanceCategorySOT.findById('expense',catId):null;
 const existing=catId?BudgetReko.existingBudgetFor(catId):null;
 const reko=BudgetReko.roundLimit(c.avgPerMonth*(1+buffer/100));
 const sudahSesuai=existing&&existing.limit===reko;

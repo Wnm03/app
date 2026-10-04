@@ -600,7 +600,7 @@ const Investment = {
         date: txDate,
         investmentTxLinkId: tx.id,
       };
-      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(linked); else D.transactions.push(linked);
+      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(linked); else throw new Error('FINANCE_TX_SOT_REQUIRED');
       tx.linkedTxId = linked.id;
     }
     D.investmentTx.push(tx);
@@ -613,7 +613,7 @@ const Investment = {
     const tx = (D.investmentTx || []).find((t) => String(t.id) === String(id));
     if (!tx) return false;
     if (tx.linkedTxId && typeof D !== 'undefined' && D.transactions) {
-      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(t=>t&&String(t.id)===String(tx.linkedTxId)); else D.transactions = D.transactions.filter((t) => String(t.id) !== String(tx.linkedTxId));
+      if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(t=>t&&String(t.id)===String(tx.linkedTxId)); else throw new Error('FINANCE_TX_SOT_REQUIRED');
     }
     D.investmentTx = (D.investmentTx || []).filter((t) => String(t.id) !== String(id));
     if (tx.type === 'beli' || tx.type === 'jual') Investment.recomputeHolding(tx.investmentId);

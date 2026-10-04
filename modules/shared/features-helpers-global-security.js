@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2225';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2225';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2232';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2232';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -420,14 +420,19 @@ async function _persistAtomicSnapshotWithAux(snapshotJson,extraEntries){
   if(!ok){_markCrossTabStale();const e=new Error('Cross-tab restore conflict: writer token sudah berubah');e.code='CROSS_TAB_RESTORE_CONFLICT';throw e;}
   _crossTabWriterToken=next;
   if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function')FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
-  if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox.queue);
+  if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox);
   // Restore/import commits must notify other contexts just like ordinary save().
   // CAS protects correctness; this announcement drives prompt stale-state convergence.
   _announcePersistenceWrite();
   return true;
  };
- if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')return FinanceEventOutbox.withPersistenceLock(run);
- return run();
+ const runWithServiceLock=async()=>{
+  if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.flushPersistence==='function')await ServiceEventOutbox.flushPersistence();
+  if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.withPersistenceLock==='function')return ServiceEventOutbox.withPersistenceLock(run);
+  return run();
+ };
+ if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')return FinanceEventOutbox.withPersistenceLock(runWithServiceLock);
+ return runWithServiceLock();
 }try{if(typeof globalThis!=='undefined')globalThis.__kwPersistAtomicSnapshotWithAux=_persistAtomicSnapshotWithAux;}catch(_e){ /* global export is optional in restricted runtimes */ }
 function _saveImmediate(snapshotJson){
 // S1877 TESTABILITY: optional, side-effect-free observer for diagnostic tests.
@@ -449,7 +454,7 @@ _savePersistChain=_savePersistChain.then(async()=>{
 const persist=async()=>{
 let atomicOutbox=null;
 let serviceOutbox=null;
-if(!suppliedKeys.has('kw_finance_event_outbox_v1')&&typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
+if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.prepareAtomicPersistence==='function'){
   atomicOutbox=await FinanceEventOutbox.prepareAtomicPersistence();
 }
 if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.prepareAtomicPersistence==='function'){
@@ -472,12 +477,18 @@ _crossTabWriterToken=nextWriterToken;
 if(atomicOutbox&&typeof FinanceEventOutbox.markAtomicPersisted==='function'){
   FinanceEventOutbox.markAtomicPersisted(atomicOutbox.queue,atomicOutbox.stagedCount);
 }
-if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox.queue);
+if(serviceOutbox&&typeof ServiceEventOutbox.markAtomicPersisted==='function')ServiceEventOutbox.markAtomicPersisted(serviceOutbox);
 _markSavePersistMeta('idb',stamp);_announcePersistenceWrite();
 };
+const persistWithServiceLock=async()=>{
+  if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.flushPersistence==='function')await ServiceEventOutbox.flushPersistence();
+  if(typeof ServiceEventOutbox!=='undefined'&&ServiceEventOutbox&&typeof ServiceEventOutbox.withPersistenceLock==='function')
+    await ServiceEventOutbox.withPersistenceLock(persist);
+  else await persist();
+};
 if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.withPersistenceLock==='function')
-  await FinanceEventOutbox.withPersistenceLock(persist);
-else await persist();
+  await FinanceEventOutbox.withPersistenceLock(persistWithServiceLock);
+else await persistWithServiceLock();
 // Delivery is intentionally outside the persistence lock. replay() acquires
 // the same lock itself, so a concurrent save can either finish before replay
 // reads the journal or after replay clears the already-delivered head; it can
@@ -1122,9 +1133,7 @@ function migrateShopCategory(){
 let incCat=D.categories.income.find(c=>c.id==='cat_cb'||/^bisnis cobek$/i.test(c.name)||/^bisnis$/i.test(c.name));
 if(incCat){
 const oldName=incCat.name;
-incCat.name='Bisnis';
-if(!incCat.subs)incCat.subs=[];
-if(!incCat.subs.find(s=>/^cobek$/i.test(s.name))) incCat.subs.push({id:'sub_cb_cobek',name:'Cobek'});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.updateCategory('income',incCat.id,{name:'Bisnis'}); FinanceCategorySOT.ensureSubcategory('income',incCat.id,{id:'sub_cb_cobek',name:'Cobek'});
 if(/^bisnis cobek$/i.test(oldName)){
 D.transactions.forEach(t=>{
 if(t.type==='income'&&t.category===oldName){t.category='Bisnis';if(!t.subcategory)t.subcategory='Cobek';}
@@ -1134,9 +1143,7 @@ if(t.type==='income'&&t.category===oldName){t.category='Bisnis';if(!t.subcategor
 let expCat=D.categories.expense.find(c=>c.id==='cat_cbb'||/^belanja stok cobek$/i.test(c.name)||/^bisnis$/i.test(c.name));
 if(expCat){
 const oldName=expCat.name;
-expCat.name='Bisnis';
-if(!expCat.subs)expCat.subs=[];
-if(!expCat.subs.find(s=>/^cobek$/i.test(s.name))) expCat.subs.push({id:'sub_cbb_cobek',name:'Cobek'});
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.updateCategory('expense',expCat.id,{name:'Bisnis'}); FinanceCategorySOT.ensureSubcategory('expense',expCat.id,{id:'sub_cbb_cobek',name:'Cobek'});
 if(/^belanja stok cobek$/i.test(oldName)){
 D.transactions.forEach(t=>{
 if(t.type==='expense'&&t.category===oldName){t.category='Bisnis';if(!t.subcategory)t.subcategory='Cobek';}
@@ -1323,7 +1330,11 @@ if(Number(_migrationResult)<SCHEMA_VERSION){
  return;
 }
 _recordRuntimeMeta({loadedFrom:fromIdb?'indexeddb':'localstorage',fromSchemaVersion:_fromSchemaVersion,migrationApplied:Number(_migrationResult)>Number(_fromSchemaVersion)});
-if(!D.categories) D.categories={income:JSON.parse(JSON.stringify(DEFAULT_CATS.income)),expense:JSON.parse(JSON.stringify(DEFAULT_CATS.expense))};
+if(!D.categories){if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');FinanceCategorySOT.replaceSnapshot({income:DEFAULT_CATS.income,expense:DEFAULT_CATS.expense});}
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+FinanceCategorySOT.normalizeMetadata();
+['income','expense'].forEach(type=>FinanceCategorySOT.mergeDuplicates(type));
+if(Array.isArray(D.budgets))FinanceCategorySOT.reconcileBudgetReferences(D.budgets);
 if(!D.accounts || !D.accounts.length) D.accounts=JSON.parse(JSON.stringify(DEFAULT_ACCOUNTS));
 if(!D.pajakZakat) D.pajakZakat={hargaEmasPerGram:2640000,nisabPenghasilanBulan:7640144,nisabPenghasilanTahun:91681728,zakatFitrahPerJiwa:37500,haulMaalMulai:null,zakatLog:[]};
 // Sesi 749: referensi harga BBM nasional (1 angka per jenis) dipakai FuelPriceRef
@@ -1447,7 +1458,8 @@ if(!D.produsen) D.produsen=[];
 if(!D.cobekKategori||!D.cobekKategori.length) D.cobekKategori=JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI));
 D.products.forEach(p=>{if(!p.hargaByProdusen)p.hargaByProdusen={};if(p.kategoriId===undefined)p.kategoriId='';if(p.produsenId===undefined)p.produsenId='';});
 if(!D.categories.expense.some(c=>c.id==='cat_cbb'||/^bisnis$/i.test(c.name))){
-D.categories.expense.push({id:'cat_cbb',name:'Bisnis',emoji:'🪨',subs:[{id:'sub_cbb_cobek',name:'Cobek'}]});
+if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.addCategory('expense',{id:'cat_cbb',name:'Bisnis',emoji:'🪨',classification:'BISNIS'});else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+if(typeof FinanceCategorySOT!=='undefined'){const _bc=FinanceCategorySOT.findById('expense','cat_cbb');if(_bc)FinanceCategorySOT.ensureSubcategory('expense',_bc.id,{id:'sub_cbb_cobek',name:'Cobek',classification:'BISNIS'});}
 }
 migrateShopCategory();
 if(!D.cobek) D.cobek=[];
@@ -1468,23 +1480,15 @@ if(!D.lifeBalanceSnapshots) D.lifeBalanceSnapshots=[];
 D.cobek.forEach(c=>{if(c.delivered===undefined)c.delivered=true;});
 ['income','expense'].forEach(t=>{D.categories[t].forEach(c=>{if(!c.subs)c.subs=[];});});
 ['income','expense'].forEach(type=>{
-const seen={};
-D.categories[type].forEach(c=>{
-const key=c.name.trim().toLowerCase();
-if(seen[key]){
-(c.subs||[]).forEach(s=>{
-if(!seen[key].subs.find(x=>x.name.trim().toLowerCase()===s.name.trim().toLowerCase())){
-seen[key].subs.push(s);
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.mergeDuplicates(type);
+/* legacy fallback removed: taxonomy mutation must fail closed */
+if(false){
+const seen={};D.categories[type].forEach(c=>{const key=c.name.trim().toLowerCase();if(seen[key]){(c.subs||[]).forEach(s=>{if(!seen[key].subs.find(x=>x.name.trim().toLowerCase()===s.name.trim().toLowerCase()))seen[key].subs.push(s);});}else seen[key]=c;});throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 }
-});
-} else {
-seen[key]=c;
-}
-});
-D.categories[type]=Object.values(seen);
 });
 if(D.categories.expense.some(c=>c.id==='cat_kn')){
-D.categories.expense=D.categories.expense.filter(c=>c.id!=='cat_kn');
+if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.removeCategory('expense','cat_kn');
+else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 }
 (function(){
 const vehNames=(D.vehicles||[]).map(v=>v.name.trim().toLowerCase());
@@ -1492,11 +1496,7 @@ D.categories.expense.forEach(c=>{
 const nameLc=c.name.trim().toLowerCase();
 if(vehNames.includes(nameLc)||/^transport$/i.test(c.name)){
 if(!c.subs)c.subs=[];
-['Bensin','Servis & Oli','Pajak'].forEach(subName=>{
-if(!c.subs.find(s=>s.name.trim().toLowerCase()===subName.toLowerCase())){
-c.subs.push({id:'sub_'+subName.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+uid(),name:subName});
-}
-});
+['Bensin','Servis & Oli','Pajak'].forEach(subName=>{if(typeof FinanceCategorySOT!=='undefined')FinanceCategorySOT.ensureSubcategory('expense',c.id,{id:'sub_'+subName.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+uid(),name:subName});else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');});
 }
 });
 })();

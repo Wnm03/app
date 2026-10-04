@@ -654,9 +654,18 @@ const lower=String(text).toLowerCase();
 if(D.learnedItemCat){
 for(const key in D.learnedItemCat){
 if(key&&lower.includes(key)){
-const catName=D.learnedItemCat[key];
-const cat=D.categories.expense.find(c=>c.name===catName);
-if(cat)return cat;
+const learned=D.learnedItemCat[key];
+const categoryId=learned&&typeof learned==='object'?learned.categoryId:null;
+const subcategoryId=learned&&typeof learned==='object'?learned.subcategoryId:null;
+const catName=learned&&typeof learned==='object'?learned.categoryName:learned;
+let cat=(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&categoryId)
+  ? FinanceCategorySOT.findById('expense',categoryId):null;
+if(!cat&&typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&catName)cat=FinanceCategorySOT.findByName('expense',catName);
+if(!cat)cat=D.categories.expense.find(c=>c.name===catName);
+if(cat){
+  if(learned&&typeof learned!=='object')D.learnedItemCat[key]={categoryId:cat.id,subcategoryId:subcategoryId||null,categoryName:cat.name};
+  return cat;
+}
 }
 }
 }
@@ -685,12 +694,12 @@ function catLearnKey(name){
 const words=String(name).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>=4&&!/^\d+$/.test(w)&&!CAT_LEARN_KEY_BLOCKLIST.has(w));
 return words[0]||null;
 }
-function learnCatFromItemName(name,catName){
+function learnCatFromItemName(name,catName,categoryId,subcategoryId){
 if(!name||!catName)return;
 const key=catLearnKey(name);
 if(!key)return;
 if(!D.learnedItemCat)D.learnedItemCat={};
-D.learnedItemCat[key]=catName;
+D.learnedItemCat[key]={categoryId:categoryId||null,subcategoryId:subcategoryId||null,categoryName:catName};
 }
 function rememberLastAccForCat(catName,accId){
 if(!catName||!accId)return;

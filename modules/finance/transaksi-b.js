@@ -367,7 +367,7 @@ if(tenor===1){
 // sana). applyTxStockFromTx/applyTxShopStockFromTx/WorthIt.applyBuyLink() juga sengaja
 // TIDAK dipanggil di sini (belum ada transaksi nyata utk ditautkan) -- sama seperti alur
 // Tagihan biasa (bukan lewat form Transaksi), efek samping itu baru relevan saat dibayar.
-if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 const billId=uid();
 const txCicilanIsKprNewEl=document.getElementById('txCicilanIsKpr');
 const isKprNew=txCicilanIsKprNewEl?txCicilanIsKprNewEl.checked:false;
@@ -384,7 +384,7 @@ if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated"
 toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
 return;
 }
-if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 const billId=uid();
 const sisaTenor=tenor-1;
 if(sisaTenor>0){
@@ -403,7 +403,7 @@ BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanM
 const _cicilanNewTx={id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE cicilan (1/3).
 if(deductionOwnerIdVal)_cicilanNewTx.deductionOwnerId=deductionOwnerIdVal;
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cicilanNewTx); else D.transactions.push(_cicilanNewTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cicilanNewTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -433,7 +433,7 @@ const dueNext=new Date(due);
 if(freq==='bulanan')_amc015(dueNext,1); // BUG-015 (s406): clamp overflow tanggal
 else if(freq==='mingguan')dueNext.setDate(dueNext.getDate()+7);
 else if(freq==='tahunan')dueNext.setFullYear(dueNext.getFullYear()+1);
-if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else D.transactions=D.transactions.filter(t=>t.id!==existingTx.id);}
+if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 const billId=uid();
 const alreadyExists=D.bills.find(b=>b.name===nama&&b.kind==='langganan');
 if(!alreadyExists){
@@ -442,7 +442,7 @@ BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:amt,nextD
 const _langgananNewTx={id:billId+1,type:'expense',amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'langganan',note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE langganan (2/3).
 if(deductionOwnerIdVal)_langgananNewTx.deductionOwnerId=deductionOwnerIdVal;
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_langgananNewTx); else D.transactions.push(_langgananNewTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_langgananNewTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 applyTxStockFromTx(nama,billId+1,date,amt,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null);
 WorthIt.applyBuyLink(billId+1);
@@ -563,7 +563,7 @@ if(!hitungKasVal)newTx.hitungKas=false;
 // pertama (push newTx) supaya bisa di-rollback total kalau ADA side-effect
 // sesudahnya (langkah 4-13 audit s628) yang throw.
 _txCreateSnapshot=JSON.stringify(D);
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(newTx); else D.transactions.push(newTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(newTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 applyTxTitipanLinkageOnSave(newTx,null);
 WorthIt.applyBuyLink(savedTxId);
 if(typeof SewaKios!=='undefined')SewaKios.applyPaymentLink(savedTxId);
@@ -667,7 +667,7 @@ const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.ser
 if(_txAtomicMutationStarted||_serviceMutationTouched){
   try{
     if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
-    if(_serviceEditSnapshot.transactions!==null){const _rows=JSON.parse(_serviceEditSnapshot.transactions);if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.replaceSnapshot(_rows); else D.transactions=_rows;}
+    if(_serviceEditSnapshot.transactions!==null){const _rows=JSON.parse(_serviceEditSnapshot.transactions);if(typeof FinanceTxSOT==='undefined')throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(_rows);}
     if(_serviceEditSnapshot.partsStock!==null){const _stockSnap=JSON.parse(_serviceEditSnapshot.partsStock);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok transaksi servis');StockCommandSOT.replaceSnapshot(_stockSnap);}
     if(_serviceEditSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_serviceEditSnapshot.sparepartCats);
   }catch(_serviceRollbackErr){console.error('V25: Finance->Service rollback failed',_serviceRollbackErr);}

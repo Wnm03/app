@@ -753,14 +753,12 @@ if(cat&&vehId)cat.linkedVehicleId=vehId;
 }
 if(!cat) cat=D.categories.expense.find(c=>/^transport$/i.test(c.name));
 if(!cat){
-cat={id:'cat_'+slugify('Transport')+'_'+uid(),name:'Transport',emoji:'🏍️',subs:[]};
-D.categories.expense.push(cat);
+cat=typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT.addCategory('expense',{id:'cat_'+slugify('Transport')+'_'+uid(),name:'Transport',emoji:'🏍️'}):{id:'cat_'+slugify('Transport')+'_'+uid(),name:'Transport',emoji:'🏍️',subs:[]};
+if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 }
 if(!cat.subs)cat.subs=[];
 ['Bensin','Servis & Oli','Pajak'].forEach(subName=>{
-if(!cat.subs.find(s=>s.name.trim().toLowerCase()===subName.toLowerCase())){
-cat.subs.push({id:'sub_'+slugify(subName)+'_'+uid(),name:subName});
-}
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED'); FinanceCategorySOT.ensureSubcategory('expense',cat.id,{id:'sub_'+slugify(subName)+'_'+uid(),name:subName});
 });
 return cat.name;
 }

@@ -216,7 +216,7 @@ const TitipanExpenseFlow = {
       let _atomicCommitted = false;
       try {
         // Step 3 (Design Lock §12): push semua transaksi secara synchronous.
-        if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.createMany(txs); else txs.forEach((tx) => { D.transactions.push(tx); });
+        if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.createMany(txs); else throw new Error('FINANCE_TX_SOT_REQUIRED');
         // Step 4: jalankan linkage S519 per transaksi (0 logic piutang baru
         // ditulis di sini -- 100% delegasi ke primitive S519).
         txs.forEach((tx) => { applyTxTitipanLinkageOnSave(tx, null); });

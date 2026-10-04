@@ -410,9 +410,9 @@ const txNote=(customer.name?customer.name+' - ':'')+itemSummary;
 if(isEdit&&existing&&existing.txLinkId){
 const tx=D.transactions.find(x=>x.id===existing.txLinkId);
 if(tx)Object.assign(tx,{amount:dp,accountId:accId,note:txNote,date,cobekLinkId:result.shopId});
-else { const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else D.transactions.push(_orderTx); }
+else { const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else throw new Error('FINANCE_TX_SOT_REQUIRED'); }
 } else {
-const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else D.transactions.push(_orderTx);
+const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 }
 const existingPiutangId=(existing&&existing.piutangLinkId)?existing.piutangLinkId:null;
 const shopRecord=D.cobek.find(c=>c.id===result.shopId);
@@ -547,7 +547,7 @@ const t=D.cobek.find(x=>x.id===id);
 // no-op, tidak mengembalikan stok 2x / tidak crash).
 if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
 if(t.items)rollbackShopItems(t.items,1);
-if(t.txLinkId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(t.txLinkId); else D.transactions=D.transactions.filter(tx=>tx.id!==t.txLinkId);}
+if(t.txLinkId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(t.txLinkId); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 // S209-210 (Wire Return->Refund): piutang terhubung (sisa tagihan yg belum
 // dibayar dari order ini) ikut dibersihkan saat order-nya diretur, reuse
 // PERSIS pola filter yg sudah ada di Order._saveInner() (bukan rumus baru).

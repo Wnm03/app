@@ -49,12 +49,15 @@ function vpsEnsureVehicleFinanceSubs(items){
  const vid=typeof curVehicleId!=='undefined'?curVehicleId:null;
  const veh=Array.isArray(D.vehicles)?D.vehicles.find(v=>sameId(v.id,vid)):null;
  if(!vpsIsVarioVehicle(veh))return;
- let cat=D.categories.expense.find(c=>c.linkedVehicleId===vid)||D.categories.expense.find(c=>c.name&&c.name.trim().toLowerCase()===String(veh.name||'').trim().toLowerCase());
+ if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+ let cat=FinanceCategorySOT.findById('expense',vid&&D.categories.expense.find(c=>c&&c.linkedVehicleId===vid)?.id||'');
+ if(!cat)cat=D.categories.expense.find(c=>c&&c.linkedVehicleId===vid)||D.categories.expense.find(c=>c&&c.name&&c.name.trim().toLowerCase()===String(veh.name||'').trim().toLowerCase());
  if(!cat)return;
- cat.linkedVehicleId=vid;cat.subs=Array.isArray(cat.subs)?cat.subs:[];
+ FinanceCategorySOT.updateCategory('expense',cat.id,{linkedVehicleId:vid});
+ cat=FinanceCategorySOT.findById('expense',cat.id);
  const names=['Bensin','Servis & Oli','Pajak',...vpsCategoryList(items).map(x=>x.name)];
  let changed=false;
- names.forEach(name=>{if(!cat.subs.some(s=>String(s.name||'').trim().toLowerCase()===name.trim().toLowerCase())){cat.subs.push({id:'sub_'+slugify(name)+'_'+uid(),name});changed=true;}});
+ names.forEach(name=>{const before=(cat.subs||[]).length;FinanceCategorySOT.ensureSubcategory('expense',cat.id,{id:'sub_'+slugify(name)+'_'+uid(),name});changed=changed||((cat.subs||[]).length>before);});
  if(changed&&typeof save==='function')save();
 }
 function vpsPartLabel(it){return `${it.partName||'(Tanpa nama)'}${it.oemCode?' — '+it.oemCode:''}`;}

@@ -1168,7 +1168,7 @@ repairTransactionOwnerRefs() {
   });
   if (fixed || cleared) {
     const persisted=_titipanReconcilePersistOrRollback(snapshot);
-    if(!persisted.ok){ D.transactions = JSON.parse(_repairSnapshot); return {fixed:0,cleared:0,unresolved:[],reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
+    if(!persisted.ok){ if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED'); FinanceTxSOT.replaceSnapshot(JSON.parse(_repairSnapshot)); return {fixed:0,cleared:0,unresolved:[],reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
   }
   if ((fixed || cleared) && typeof FinanceEventOutbox !== 'undefined' && typeof FinanceEventOutbox.emitOrEnqueue === 'function') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'reconcile', action: 'repair-tx-owner-refs', fixed, cleared });
   return { fixed, cleared, unresolved };

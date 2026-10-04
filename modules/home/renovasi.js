@@ -368,13 +368,13 @@ if(!await askConfirm(`Tandai "${escapeHtml(it.name)}" lunas sebesar ${fmtFull(it
 const txId=uid();
 const newTx={id:txId,type:'expense',amount:it.harga,category:it.category||'Renovasi',subcategory:'',accountId:it.accountId||D.accounts[0]?.id||'',payMethod:'tunai',note:'Renovasi: '+p.name+' - '+it.name+(it.note?' ('+it.note+')':''),date:tglBayar,renovProjectLinkId:p.id,renovItemLinkId:it.id};
 if(it.deductionOwnerId)newTx.deductionOwnerId=it.deductionOwnerId;
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(newTx); else D.transactions.push(newTx);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(newTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 it.paid=true;it.txId=txId;it.paidDate=tglBayar;
 save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});Renov.render();Renov.renderDetail();
 toast('✅ Item ditandai lunas & transaksi tercatat di Keuangan');
 } else {
 if(!await askConfirm(`Batalkan status lunas "${escapeHtml(it.name)}"? Transaksi terkait di Keuangan akan ikut dihapus.`,{title:'Batalkan Lunas',okText:'Ya, Batalkan'}))return;
-if(it.txId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));}
+if(it.txId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 it.paid=false;it.txId=null;it.paidDate=null;
 save();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});Renov.render();Renov.renderDetail();
 toast('↺ Status lunas dibatalkan, transaksi terkait dihapus');
@@ -403,7 +403,7 @@ if(!await askConfirm(msg))return;
 if(it.paid&&it.txId){
 const linkedTx=D.transactions.find(x=>sameId(x.id,it.txId));
 if(linkedTx&&typeof runTxDeleteCascades==='function')runTxDeleteCascades(linkedTx,{skipRenovCascade:true});
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else D.transactions=D.transactions.filter(x=>!sameId(x.id,it.txId));
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(it.txId); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 }
 if(it.calcDetail&&it.calcDetail.type==='absensi')Tukang.releaseEntries(it.calcDetail.entryIds);
 p.items=p.items.filter(x=>!sameId(x.id,itemId));

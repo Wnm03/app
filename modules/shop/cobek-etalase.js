@@ -571,7 +571,7 @@ return;
 if(delta>0&&hargaBeli>0&&!isKoreksi){
 const cost=delta*hargaBeli;
 const txId=uid();
-const _stockTx={id:txId,type:'expense',amount:cost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Beli stok ${name} x${delta}${kategoriLabel}${produsenLabel} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:delta,produsenId:produsenId||undefined,kategoriId:kategoriId||undefined}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_stockTx); else D.transactions.push(_stockTx);
+const _stockTx={id:txId,type:'expense',amount:cost,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:`Beli stok ${name} x${delta}${kategoriLabel}${produsenLabel} (modal shop)`,date:new Date().toISOString().split('T')[0],stockProductId:product.id,stockQty:delta,produsenId:produsenId||undefined,kategoriId:kategoriId||undefined}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_stockTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 save();closeModal('productModal');this.renderList();if(typeof refreshAfterMutation==='function')if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
 toast(`✅ Produk disimpan, +${delta} stok tercatat sbg pengeluaran ${fmtFull(cost)}`);
 this.syncPairedPrice(product);

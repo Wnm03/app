@@ -884,7 +884,7 @@ if(!await askConfirm('Hapus riwayat pembayaran ini? Kalau ini pembayaran TERAKHI
 // ikut mereaktivasi tagihan dari arsip walau bill itu memang sudah selesai.
 // (logic dipindah ke revertBillFromDeletedTx() -- lihat komentar di sana)
 const{linkedBill,isLatest,restoredFromArchive}=revertBillFromDeletedTx(t);
-if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.id===curBillHistoryEditTxId); else D.transactions=D.transactions.filter(x=>x.id!==curBillHistoryEditTxId);
+if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.id===curBillHistoryEditTxId); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 curBillHistoryEditTxId=null;
 save();
 closeModal('billHistoryEditModal');

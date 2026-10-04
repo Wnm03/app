@@ -7,6 +7,7 @@ const { execSync } = require('child_process');
 const { computeGroupHash, markerLine } = require('./bundle-hash');
 const ROOT = path.join(__dirname, '..');
 const GROUP_A = [
+  'modules/finance/finance-category-sot.js',
   'modules/finance/finance-tx-sot.js',
   'modules/finance/finance-event-outbox.js',
   'modules/finance/finance-cross-entity-atomic.js',

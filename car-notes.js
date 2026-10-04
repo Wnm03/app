@@ -380,7 +380,7 @@ deleteFromModal(){if(BBM.editId===null)return;const id=BBM.editId;closeModal('bb
 async del(id){
 if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan dihapus.'))return;
 const b=D.bbmLogs.find(x=>x.id===id);
-if(b&&b.txLinkId)D.transactions=D.transactions.filter(tx=>tx.id!==b.txLinkId);
+if(b&&b.txLinkId){if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.removeById(b.txLinkId);}
 D.bbmLogs=D.bbmLogs.filter(b=>b.id!==id);
 save();renderCnTab();renderDashboard();renderKeuangan();toast('🗑 Catatan BBM dihapus');
 },

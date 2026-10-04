@@ -70,7 +70,9 @@ const AutoKat = {
     box.classList.add('u-dnone');
     box.innerHTML='';
     delete box.dataset.catName;
+    delete box.dataset.catId;
     delete box.dataset.subName;
+    delete box.dataset.subId;
     delete box.dataset.note;
   },
 
@@ -124,7 +126,9 @@ const AutoKat = {
 
     this.renderSuggest({
       categoryName: cat.name,
+      categoryId: cat.id,
       subName: sub ? sub.name : null,
+      subcategoryId: sub ? sub.id : null,
       emoji: cat.emoji,
       source: 'ai',
       reasoning: parsed.alasan || null,
@@ -139,7 +143,9 @@ const AutoKat = {
     const subTxt = info.subName ? ` → ${escapeHtml(info.subName)}` : '';
     const reasonTxt = info.reasoning ? `<div style="font-size:11px;color:var(--text2);margin-top:3px">${escapeHtml(info.reasoning)}</div>` : '';
     box.dataset.catName = info.categoryName;
+    box.dataset.catId = info.categoryId || '';
     box.dataset.subName = info.subName || '';
+    box.dataset.subId = info.subcategoryId || '';
     box.dataset.note = info.note || '';
     box.innerHTML = `<div><b>${label}:</b> ${escapeHtml(info.emoji||'📦')} ${escapeHtml(info.categoryName)}${subTxt}</div>`+
       reasonTxt+
@@ -154,7 +160,9 @@ const AutoKat = {
     const box = document.getElementById('txCatAiSuggest');
     if(!box || !box.dataset.catName) return;
     const catName = box.dataset.catName;
+    const catId = box.dataset.catId || '';
     const subName = box.dataset.subName;
+    const subId = box.dataset.subId || '';
     const note = box.dataset.note;
     if(typeof selectTxCat==='function') selectTxCat(catName);
     else { const el=document.getElementById('txCat'); if(el) el.value=catName; }
@@ -162,7 +170,7 @@ const AutoKat = {
       const subEl=document.getElementById('txSubCat'); if(subEl) subEl.value=subName;
       if(typeof selectTxSubCat==='function') selectTxSubCat(subName);
     }
-    this.learnFromNote(note, catName);
+    this.learnFromNote(note, catName, catId, subId);
     this.hideSuggest();
     toast('✅ Kategori'+(subName?' & subkategori':'')+' terisi dari saran AI');
   },
@@ -172,7 +180,7 @@ const AutoKat = {
   // Beda dari learnCatFromItemName() bawaan (scan-ocr.js) yang cuma ambil 1 kata pertama —
   // di sini ambil beberapa kata sekaligus & buang kata generik (STOPWORDS), supaya kata kunci yang
   // tersimpan lebih spesifik & tidak gampang salah nebak transaksi lain yg tidak nyambung.
-  learnFromNote(note, catName){
+  learnFromNote(note, catName, catId, subId){
     if(!note || !catName) return;
     const words = String(note).toLowerCase()
       .replace(/[^a-z0-9\s]/g,' ')
@@ -180,7 +188,7 @@ const AutoKat = {
       .filter(w=>w.length>=4 && !this.STOPWORDS.has(w) && !/^\d+$/.test(w));
     if(!words.length) return;
     if(!D.learnedItemCat) D.learnedItemCat={};
-    words.slice(0,4).forEach(w=>{ D.learnedItemCat[w]=catName; });
+    words.slice(0,4).forEach(w=>{ D.learnedItemCat[w]={categoryId:catId||null,subcategoryId:subId||null,categoryName:catName}; });
     if(typeof save==='function') save();
   }
 };

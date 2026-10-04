@@ -747,7 +747,7 @@ if(!v||!cfg)return;
 const biaya=v[cfg.biayaKey]||0;
 if(biaya<=0){toast('⚠️ Isi dulu estimasi biaya '+cfg.label+' lewat ✏️');return;}
 if(!await askConfirm('Bayar '+cfg.label+' untuk '+v.name+' sebesar '+fmtFull(biaya)+'? Otomatis tercatat sebagai pengeluaran di Keuangan & jadwal diperbarui.',{danger:false,okText:'Ya, Bayar',icon:'🚦'}))return;
-const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:new Date().toISOString().split('T')[0]}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else D.transactions.push(vehBillTx);
+const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:new Date().toISOString().split('T')[0]}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 const base=v[cfg.tglKey]?new Date(v[cfg.tglKey]):new Date();
 cfg.advance(base);
 v[cfg.tglKey]=base.toISOString().split('T')[0];
