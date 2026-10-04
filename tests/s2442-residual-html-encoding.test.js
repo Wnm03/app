@@ -1,0 +1,22 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+test('S2442 residual persisted-data HTML sinks remain encoded',()=>{
+ const b=read('modules/shared/modules-render-b.js');
+ const shared=read('modules/shared/modules-render.js');
+ const shop=read('modules/shop/modules-render.js');
+ const servis=read('modules/vehicle/servis-b.js');
+ assert.ok(b.includes('escapeHtml(bill.nextDue)'));
+ assert.ok(b.includes('escapeHtml(s.jenis)'));
+ assert.ok(b.includes('escapeHtml(cfg.label)'));
+ assert.ok(b.includes('class="${escapeHtml(st.col)} u-fw700">${escapeHtml(st.label)}'));
+ assert.ok(shared.includes('${escapeHtml(g.label)}</span>'));
+ assert.ok(shared.includes('${escapeHtml(k.name)} (${fmtFull(k.amount)})'));
+ assert.ok(shop.includes('${escapeHtml(g.label)}</span>'));
+ assert.ok(shop.includes('escapeHtml(cfg.label)'));
+ assert.ok(shop.includes('class="${escapeHtml(st.col)} u-fw700">${escapeHtml(st.label)}'));
+ assert.ok(servis.includes('h.fields.map(x=>esc(x)).join'));
+});

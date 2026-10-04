@@ -259,7 +259,7 @@ const isEdit=BBM.editId!==null;
 document.getElementById('bbmModalTitle').textContent=isEdit?'Edit Catatan BBM':'Catat Isi BBM';
 document.getElementById('bbmDelBtn').style.display=isEdit?'flex':'none';
 const bbmAccEl=document.getElementById('bbmAcc');
-if(bbmAccEl) bbmAccEl.innerHTML=D.accounts.map(a=>`<option value="${a.id}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
+if(bbmAccEl) bbmAccEl.innerHTML=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${a.emoji} ${escapeHtml(a.name)}</option>`).join('');
 if(typeof FuelPriceRef!=='undefined')FuelPriceRef.populateSelect('bbmJenis',curVehicleId);
 if(isEdit){
 const b=D.bbmLogs.find(x=>x.id===BBM.editId);

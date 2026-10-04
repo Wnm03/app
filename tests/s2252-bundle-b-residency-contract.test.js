@@ -24,5 +24,11 @@ test('S2252 GROUP_B residency manifest is complete and measurable', () => {
   // increases eager self-test source residency by the measured 480 bytes.
   // S2366: tx-list-cashflow.js shrank 26 bytes (single-pass forecast aggregation); pin refreshed to measured payload.
   // S2391: cumulative service optimizations changed GROUP_B payload; refresh the measured pin.
-  assert.equal(bytes, 4914176, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
+  // S2397: service master generated artifact now keeps checklist groups eager and reconstructs legacy master data lazily; refresh the measured pin.
+  // S2402: VehicleSOTProvisioning reuses one catalog read per fleet run; refresh measured GROUP_B payload.
+  // S2403: VehicleCatalog compatibility index; refresh measured GROUP_B payload.
+  // S2405: service-log latest index and per-run current-KM reuse; refresh measured GROUP_B payload.
+  // S2407: isolation-audit local compatibility index; refresh measured GROUP_B payload.
+  // S2410: fleet provisioning shares the per-run catalog cache with service-state reads; refresh measured payload.
+  assert.equal(bytes, 4864062, 'GROUP_B source size changed; refresh Bundle-B residency audit before changing residency');
 });

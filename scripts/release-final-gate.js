@@ -15,6 +15,9 @@ const jobs=[
  ['features','node',['scripts/feature-regression-gate.js']],
  ['release-firewall','node',['scripts/release-firewall.js']],
  ['bundle-freshness','node',['scripts/verify-bundle-freshness.js']],
+ // Final gate must subsume the strict release-readiness contract. No manual
+ // lint/minify overrides are supplied here; unavailable toolchain remains BLOCK.
+ ['release-readiness-strict','node',['scripts/verify-release-ready.js']],
  ['window-expose','node',['scripts/verify-window-expose.js']],
  ['runtime-io','node',['scripts/audit-runtime-io.js']],
  ['event-listeners','node',['scripts/audit-event-listeners.js']],

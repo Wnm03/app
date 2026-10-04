@@ -67,3 +67,25 @@ test('S1811 UI contracts expose date reminder, manual picker, result and per-com
   assert.match(servisAll,/conditionNote/);
   assert.match(servisAll,/checklistNotApplicable/);
 });
+
+test('S2394 computeServiceUrgency accepts vehicle history snapshot without rereading global history',()=>{
+  const ctx=vm.createContext({console,require,process,setTimeout,clearTimeout,Date,Map,Set,Number,String,Array,Math,Object,JSON});
+  ctx.window=ctx;
+  ctx.D={servisLogs:[{id:'global',vehicleId:'v1',date:'2026-01-01',km:1000,categoryId:'x',actionType:'ganti'}],sparepartCats:[]};
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules/vehicle/sparepart-servis.js'),'utf8')+'\nthis.computeServiceUrgency=computeServiceUrgency;',ctx);
+  ctx.getMaintenanceSchedule=()=>({maintenanceType:'periodic',replaceKm:5000,replaceAction:'ganti'});
+  ctx.resolveResetActionTypeFilter=()=>null;
+  ctx.servisLogMatchesCat=(s,c)=>s.categoryId===c.id;
+  ctx.matchesActionTypeForReset=()=>true;
+  ctx.compareServiceHistoryRecencyLocal=(a,b)=>String(b.date).localeCompare(String(a.date));
+  ctx.getLastServiceKmForCat=()=>{throw new Error('global history lookup must not run when snapshot is supplied');};
+  ctx.getLastServiceDateForCat=()=>{throw new Error('global history date lookup must not run when snapshot is supplied');};
+  ctx.resolveServiceStatusMeta=(score)=>({code:score<=0?'jatuh_tempo':'aman'});
+  ctx.parseServiceDateOnly=(x)=>new Date(x+'T00:00:00');
+  ctx.diffServiceDays=()=>0;
+  ctx.addServiceMonthsClamped=()=>null;
+  ctx.formatServiceDateOnly=()=>null;
+  const cat={id:'x'};
+  const u=ctx.computeServiceUrgency({vehicleId:'v1',cat,curKm:5500,kmPerDay:null,historyRows:[{id:'snap',vehicleId:'v1',date:'2026-02-01',km:3000,categoryId:'x',actionType:'ganti'}]});
+  assert.equal(u.lastKm,3000);
+});

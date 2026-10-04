@@ -1,0 +1,18 @@
+const fs = require('fs');
+const path = require('path');
+const assert = require('assert');
+const ROOT = path.resolve(__dirname, '..');
+const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
+const pbb = read('modules/finance/pajak-pbb-zakat.js');
+assert(pbb.includes('value="${escapeHtml(a.id)}"'), 'PBB asset option id must be HTML-encoded');
+assert(pbb.includes('escapeHtml(bill.nextDue)'), 'PBB bill due date must be HTML-encoded');
+assert(pbb.includes('${escapeHtml(l.tanggal)}'), 'Zakat log date must be HTML-encoded');
+const txServis = read('modules/finance/tx-servis.js');
+assert(txServis.includes('value="${escapeHtml(v.id)}"'), 'service vehicle id must be HTML-encoded');
+assert(txServis.includes('${escapeHtml(v.emoji||\'🏍️\')}'), 'service vehicle emoji must be HTML-encoded');
+const etalase = read('modules/shop/cobek-etalase.js');
+assert(etalase.includes('data-args=\'["${escapeHtml(p.id)}","$el"]\''), 'merge product id must be HTML-encoded');
+assert(etalase.includes('value="${escapeHtml(a.id)}"'), 'account id must be HTML-encoded');
+assert(etalase.includes("escapeHtml(a.emoji||'')"), 'account emoji must be HTML-encoded');
+assert(etalase.includes("escapeHtml(t)+'\">'+escapeHtml(OwnershipEngine.label(t))"), 'ownership type must be HTML-encoded');
+console.log('S2443 residual HTML encoding: PASS');

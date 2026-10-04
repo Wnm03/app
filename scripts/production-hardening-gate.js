@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const fs=require('fs'),path=require('path'),child=require('child_process');
-const root=process.cwd();
+const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const build=read('scripts/build.js');
 const car=read('car-notes.js');

@@ -74,7 +74,16 @@ else
 fi
 
 echo ""
-echo "2/4 — Menjalankan npm run check (lint + test + build)..."
+echo "2/4 — Memeriksa dependency graph release..."
+if [ ! -f package-lock.json ] && [ ! -f npm-shrinkwrap.json ]; then
+  echo "❌ Release diblokir: package-lock.json atau npm-shrinkwrap.json wajib tersedia."
+  echo "   Release membutuhkan dependency graph release yang terkunci; jangan membuat lockfile secara manual."
+  exit 1
+fi
+echo "✓ Dependency graph release terkunci"
+
+echo ""
+echo "3/4 — Menjalankan npm run check (lint + test + build)..."
 # REQUIRE_MINIFY=1 dibaca oleh build.js (npm run build = node build.js, tidak
 # lewat CLI flag --require-minify) -- pastikan rilis resmi SELALU gagal keras
 # kalau esbuild ternyata tidak terpasang, bukan diam-diam kirim bundle besar.
@@ -82,7 +91,7 @@ REQUIRE_MINIFY=1 npm run check
 echo "✓ npm run check lolos (termasuk cek wajib-minify)"
 
 echo ""
-echo "3/4 — Commit perubahan hasil build (versi/bundle/HTML/sw.js)..."
+echo "4/4 — Commit perubahan hasil build (versi/bundle/HTML/sw.js)..."
 if [ -n "$(git status --porcelain)" ]; then
   VERSION_AFTER="$(grep -oE "APP_BUILD_VERSION\s*=\s*'[^']+'" features-helpers-global-security.js | sed -E "s/.*'([^']+)'/\1/")"
   git add -A
@@ -93,7 +102,7 @@ else
 fi
 
 echo ""
-echo "4/4 — Membuat zip dari git archive (isi = persis commit ini, tidak mungkin ada file ketinggalan)..."
+echo "5/5 — Membuat zip dari git archive (isi = persis commit ini, tidak mungkin ada file ketinggalan)..."
 COMMIT_SHORT="$(git rev-parse --short HEAD)"
 VERSION="$(grep -oE "APP_BUILD_VERSION\s*=\s*'[^']+'" features-helpers-global-security.js | sed -E "s/.*'([^']+)'/\1/")"
 if [ -z "$OUT_NAME" ]; then

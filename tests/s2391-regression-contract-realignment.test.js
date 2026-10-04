@@ -13,7 +13,7 @@ test('S2391 GROUP_B pin is refreshed to the measured source payload', () => {
   const files = [...m[1].matchAll(/'([^']+\.js)'/g)].map(x => x[1]);
   assert.equal(files.length, 359);
   assert.equal(new Set(files).size, files.length);
-  assert.equal(files.reduce((n, f) => n + fs.statSync(path.join(root, f)).size, 0), 4914176);
+  assert.equal(files.reduce((n, f) => n + fs.statSync(path.join(root, f)).size, 0), 4864062);
 });
 
 test('S2391 stock lookup retains single-pass vehicle-scoped matching', () => {

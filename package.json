@@ -62,13 +62,16 @@
     "audit:sot-runtime-projection": "node scripts/s2166-runtime-projection-sync-gate.js",
     "audit:sot-production-wiring": "node scripts/s2167-production-runtime-wiring-gate.js",
     "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js",
-    "build:dev": "node scripts/build.js"
+    "build:dev": "node scripts/build.js",
+    "audit:release-contract": "node scripts/release-contract-audit.js"
   },
   "devDependencies": {
-    "eslint": "^9.19.0",
-    "esbuild": "^0.24.0"
+    "eslint": "9.19.0",
+    "esbuild": "0.24.0"
   },
   "engines": {
-    "node": ">=20"
-  }
+    "node": ">=20",
+    "npm": "10.9.2"
+  },
+  "packageManager": "npm@10.9.2"
 }
