@@ -191,6 +191,14 @@ test('deleteCommitment()/deleteReturn() id tidak ditemukan -- 0 emit', () => {
 // transaction-owner-refs.test.js -- global.D/global.save/global.AIBus)
 // ====================================================================
 const TitipanReconcile = require('../modules/finance/titipan-reconcile.js');
+// Source kini memancarkan event lewat FinanceEventOutbox.emitOrEnqueue() (bukan AIBus.emit langsung).
+// Shim tipis: teruskan ke AIBus.emit milik test supaya kontrak payload tetap diverifikasi.
+global.FinanceEventOutbox = {
+  emitOrEnqueue(name, payload) {
+    if (global.AIBus && typeof global.AIBus.emit === 'function') { global.AIBus.emit(name, payload); return true; }
+    return false;
+  },
+};
 
 function resetReconcileGlobals() {
   delete global.save;

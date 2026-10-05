@@ -74,7 +74,7 @@ return n;
 function revertStockPurchase(partId,qty,txId){
 if(!partId||!qty)return;
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
-const r=StockCommandSOT.revertPurchase(partId,qty,txId,{saveNow:false,emitEvent:false});
+const r=StockCommandSOT.revertPurchase(partId,qty,txId,{saveNow:false,emitEvent:true});
 return !!r.ok;
 }
 
@@ -101,7 +101,8 @@ return !!r.ok;
 function applyStockPurchase(p,qty,unitPrice,purchaseDate,txId){
 if(!p||!p.id)return false;
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
-const r=StockCommandSOT.applyPurchase(p.id,qty,unitPrice,purchaseDate,txId,{saveNow:false,emitEvent:false});
+// emitEvent:true -> kontrak S2296: finance.updated {kind:'stok-sparepart'} dipancarkan SOT; replay txId sama = no-op (tanpa emit ulang).
+const r=StockCommandSOT.applyPurchase(p.id,qty,unitPrice,purchaseDate,txId,{saveNow:false,emitEvent:true});
 return !!r.ok;
 }
 
@@ -149,7 +150,7 @@ let cat=(typeof resolveServisCatForVehicle==='function')
 if(cat&&vidSync&&String(cat.vehicleId||'')!==String(vidSync)){
   cat=Object.assign({},cat,{id:'sp_'+_genId(),vehicleId:vidSync});
   const sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-catalog-scope'):null;
-  if(!sr||!sr.ok)D.sparepartCats.push(cat);
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){if(!sr||!sr.ok)throw new Error((sr&&sr.code)||'CATEGORY_SOT_SCOPE_FAILED');}else D.sparepartCats.push(cat);
 }
 if(!cat){
 // Sesi 295 (bugfix, permintaan eksplisit user): kategori auto dari scan
@@ -168,8 +169,8 @@ if(!cat){
 // dgn kategori hasil input manual.
 const vehicleIdCatSync=(vidSync&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidSync))?vidSync:null;
 cat={id:'sp_'+_genId(),name:catName,code:codeFromName(catName),intervalKm:0,showInReminder:false,vehicleId:vehicleIdCatSync};
-const _catSotResult=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
-if(!_catSotResult||!_catSotResult.ok)D.sparepartCats.push(cat);
+const _hasCarNotesSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'); const _catSotResult=_hasCarNotesSot?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
+if(_hasCarNotesSot){if(!_catSotResult||!_catSotResult.ok)throw new Error((_catSotResult&&_catSotResult.code)||'CATEGORY_SOT_AUTO_CREATE_FAILED');}else D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(catName);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;
@@ -364,13 +365,13 @@ let cat=(typeof resolveServisCatForVehicle==='function')
 if(cat&&vidNewCat&&String(cat.vehicleId||'')!==String(vidNewCat)){
   cat=Object.assign({},cat,{id:'sp_'+_genId(),vehicleId:vidNewCat});
   const sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-transaction-scope'):null;
-  if(!sr||!sr.ok)D.sparepartCats.push(cat);
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){if(!sr||!sr.ok)throw new Error((sr&&sr.code)||'CATEGORY_SOT_SCOPE_FAILED');}else D.sparepartCats.push(cat);
 }
 if(!cat){
 const vehicleIdNewCat=(vidNewCat&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNewCat))?vidNewCat:null;
 cat={id:'sp_'+_genId(),name,code:codeFromName(name),intervalKm:0,vehicleId:vehicleIdNewCat};
-const _catSotResult=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
-if(!_catSotResult||!_catSotResult.ok)D.sparepartCats.push(cat);
+const _hasCarNotesSot=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&cat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'); const _catSotResult=_hasCarNotesSot?VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'stock-auto-create'):null;
+if(_hasCarNotesSot){if(!_catSotResult||!_catSotResult.ok)throw new Error((_catSotResult&&_catSotResult.code)||'CATEGORY_SOT_AUTO_CREATE_FAILED');}else D.sparepartCats.push(cat);
 }
 const prefix=cat.code||codeFromName(name);
 const seq=D.partsStock.filter(p=>p.code&&p.code.startsWith(prefix+'-')).length+1;

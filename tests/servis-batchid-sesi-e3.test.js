@@ -138,8 +138,15 @@ test('Servis.renderList() — entry dgn batchId ditandai "🔗 batch" di tx-meta
   ctx.Servis.renderList();
 
   assert.ok(elements.servisList.innerHTML.includes('🔗 batch'), 'entry dgn batchId harus muncul tanda batch');
-  const s1Block = elements.servisList.innerHTML.split('Cek Rem')[0];
+  // Urutan entri (tanggal sama) tidak dijamin -> ambil blok masing-masing entri dari posisi nama item,
+  // bukan dari asumsi s1 selalu tampil lebih dulu.
+  const html = elements.servisList.innerHTML;
+  const iOli = html.indexOf('Ganti Oli');
+  const iRem = html.indexOf('Cek Rem');
+  assert.ok(iOli >= 0 && iRem >= 0, 'kedua entri harus ter-render');
+  const blockOf = (start, other) => (start < other ? html.slice(start, other) : html.slice(start));
+  const s1Block = blockOf(iOli, iRem);
+  const s2Block = blockOf(iRem, iOli);
   assert.ok(s1Block.includes('🔗 batch'), 'tanda batch harus di blok entry s1 (Ganti Oli)');
-  const s2Block = elements.servisList.innerHTML.split('Cek Rem')[1];
   assert.ok(!s2Block.includes('🔗 batch'), 'entry s2 (Cek Rem, batchId null) TIDAK boleh ada tanda batch');
 });

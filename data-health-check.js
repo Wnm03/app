@@ -703,9 +703,11 @@ issues.push({level:'warn',title:'Barang Prioritas Belanja kemungkinan duplikat',
 }
 const errCount=issues.filter(i=>i.level==='error').length;
 const warnCount=issues.filter(i=>i.level==='warn').length;
-const summaryEl=document.getElementById('dataHealthSummary');
-const listEl=document.getElementById('dataHealthList');
-if(!issues.length){
+const summaryEl=typeof document!=='undefined'?document.getElementById('dataHealthSummary'):null;
+const listEl=typeof document!=='undefined'?document.getElementById('dataHealthList'):null;
+if(!summaryEl||!listEl){
+// DOM tidak tersedia (mis. harness tes / dipanggil headless): cukup kembalikan issues.
+} else if(!issues.length){
 summaryEl.innerHTML='✅ Tidak ditemukan masalah. Data terlihat sehat!';
 listEl.innerHTML='';
 } else {

@@ -31,7 +31,7 @@ function freshCtx() {
   const document = makeDocument();
   const D = { sparepartCats: [], servisLogs: [], vehicles: [], accounts: [], partsStock: [] };
   const ctx = loadSource(
-    ['modules/vehicle/service-master-data.generated.js','modules/vehicle/servis.js'],
+    ['modules/vehicle/service-master-data.generated.js','modules/vehicle/servis-checklist.js','modules/vehicle/servis.js'],
     {
       D,
       curVehicleId: 'veh-1',

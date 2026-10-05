@@ -84,6 +84,8 @@ function loadSandbox(D, { confirmQueue = [], promptDefault = true } = {}) {
   };
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-cross-entity-atomic.js'), 'utf8'), context, { filename: 'finance-cross-entity-atomic.js' });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-category-sot.js'), 'utf8'), context, { filename: 'finance-category-sot.js' });
+  require('./helpers/loadSource').installLenientTaxonomy(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'modules', 'finance', 'finance-tx-sot.js'), 'utf8'), context, { filename: 'finance-tx-sot.js' });
   vm.runInContext(WRITER_SRC, context, { filename: 'bill-debt-piutang-canonical-writer.js' });
   const snippet = `${extractFnSource('_amc015')}

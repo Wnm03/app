@@ -20,7 +20,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { loadSource, extractFunction } = require('./helpers/loadSource');
+const { loadSource, extractFunction, makePermissiveDocument } = require('./helpers/loadSource');
 
 // ================= 1) getBillActiveDateForFilter() =================
 
@@ -103,6 +103,7 @@ function makeOpenBillModalCtx(D, spies = {}) {
     ['modules/finance/tagihan-kalender.js'],
     {
       D,
+      document: makePermissiveDocument(),
       toast: spies.toast || (() => {}),
       goToList: spies.goToList || (() => {}),
       editTx: spies.editTx || (() => {}),

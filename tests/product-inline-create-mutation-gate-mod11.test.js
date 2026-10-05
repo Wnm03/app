@@ -42,6 +42,7 @@ function loadTxCart(D, extra = {}) {
   return loadSource(
     ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-tx-cart.js'],
     {
+      document: { getElementById: (id) => ({ checked: true, value: '', style: { display: 'block' }, classList: { add() {}, remove() {}, toggle() {} } }) }, 
       D,
       uid: extra.uid || (() => 'uid_' + Math.random().toString(36).slice(2)),
       toast: () => {},
@@ -134,7 +135,7 @@ test('fallback: tanpa ProductRepository, object literal mentah PERSIS sama seper
   const D = { products: [], cobekKategori: [], transactions: [{ id: 'tx1' }] };
   const ctx = loadSource(
     ['modules/shop/cobek-tx-cart.js'],
-    { D, uid: () => 'uidx', toast: () => {}, renderProductList: () => {}, fmtFull: (n) => String(n) },
+    { document: { getElementById: (id) => ({ checked: true, value: '', style: { display: 'block' }, classList: { add() {}, remove() {}, toggle() {} } }) }, D, uid: () => 'uidx', toast: () => {}, renderProductList: () => {}, fmtFull: (n) => String(n) },
     [],
   );
   setLetGlobal(ctx, 'curShopStockCart', [

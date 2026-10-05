@@ -576,20 +576,20 @@ return stats;
 }
 
 function clearS2013RestoreDiagnostic(){
-  try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){}
-  try{if(typeof window!=='undefined')delete window.__S2013_RESTORE_DIAGNOSTIC;}catch(_e){}
+  try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){void _e;}
+  try{if(typeof window!=='undefined')delete window.__S2013_RESTORE_DIAGNOSTIC;}catch(_e){void _e;}
 }
 function copyS2013RestoreDiagnostic(){
   let detail=null;
-  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){}
+  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){void _e;}
   if(!detail)return Promise.resolve(false);
   const text=JSON.stringify(detail,null,2);
-  try{if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function')return navigator.clipboard.writeText(text).then(()=>true).catch(()=>false);}catch(_e){}
+  try{if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function')return navigator.clipboard.writeText(text).then(()=>true).catch(()=>false);}catch(_e){void _e;}
   return Promise.resolve(false);
 }
 function downloadS2013RestoreDiagnostic(){
   let detail=null;
-  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){}
+  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){void _e;}
   if(!detail)return false;
   const blob=new Blob([JSON.stringify(detail,null,2)],{type:'application/json'});
   if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.downloadBlob==='function')return PWAProductionHardening.downloadBlob(blob,'restore-diagnostic.json');
@@ -598,7 +598,7 @@ function downloadS2013RestoreDiagnostic(){
 async function applyRestoredData(imp){
 // S2013 DIAGNOSTIC: preserve the exact restore stage/error before rollback
 // converts the native Error into the generic UI "Error {}" representation.
-try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){}
+try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){void _e;}
 let __s2013Stage='start';
 clearS2013RestoreDiagnostic();
 const __s2013Diag={startedAt:new Date().toISOString(),stage:__s2013Stage};
@@ -613,8 +613,8 @@ const __s2013SerializeError=(e)=>({
 const __s2013Fail=(e)=>{
   const detail={...__s2013Diag,stage:__s2013Stage,error:__s2013SerializeError(e),
     hasImp:!!imp,servisLogs:imp&&Array.isArray(imp.servisLogs)?imp.servisLogs.length:null};
-  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){}
-  try{safeSetItem('kw_restore_diagnostic_s2013',JSON.stringify(detail));}catch(_){}
+  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){void _;}
+  try{safeSetItem('kw_restore_diagnostic_s2013',JSON.stringify(detail));}catch(_){void _;}
   console.error('S2013 RESTORE DIAGNOSTIC',detail,e);
   return detail;
 };
@@ -770,6 +770,8 @@ if(Array.isArray(D.transactions)){
   }
   FinanceTxSOT.replaceSnapshot(D.transactions);
 }
+// Rekonsiliasi taksonomi di atas memutasi D setelah invalidasi pertama -> invalidasi lagi sebelum persist atomik.
+if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
 __s2013SetStage('atomic-restore-persist');
 let _restorePersistJson;
 if(D.profile&&Object.prototype.hasOwnProperty.call(D.profile,'apiKey')){const _profileNoKey={...D.profile};delete _profileNoKey.apiKey;_restorePersistJson=JSON.stringify({...D,profile:_profileNoKey});}

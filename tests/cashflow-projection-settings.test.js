@@ -73,8 +73,9 @@ test('billingCycleRange() -> cycleStartDay di luar 1-28 -> fallback ke 16', () =
 test('billingCycleRange() -> tanpa refDate -> pakai tanggal sekarang (tidak throw)', () => {
   const { billingCycleRange } = makeCtx();
   const r = billingCycleRange();
-  assert.ok(r.from instanceof Date);
-  assert.ok(r.to instanceof Date);
+  // Date berasal dari realm VM sandbox -> instanceof lintas-realm selalu false.
+  assert.equal(Object.prototype.toString.call(r.from), '[object Date]');
+  assert.equal(Object.prototype.toString.call(r.to), '[object Date]');
   assert.ok(r.from < r.to);
 });
 

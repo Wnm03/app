@@ -185,7 +185,7 @@ test('integrasi: cobek-tx-cart.js applyTxShopStockFromTx() — kategoriInput whi
   let uidN = 0;
   const ctx = loadSource(
     ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-tx-cart.js'],
-    { D, uid: () => 'uid_' + (++uidN), toast: () => {}, renderProductList: () => {}, fmtFull: (n) => String(n) },
+    { document: { getElementById: (id) => ({ checked: true, value: '', style: { display: 'block' }, classList: { add() {}, remove() {}, toggle() {} } }) }, D, uid: () => 'uid_' + (++uidN), toast: () => {}, renderProductList: () => {}, fmtFull: (n) => String(n) },
     ['ProductRepository'],
   );
   let fieldCalls = 0;

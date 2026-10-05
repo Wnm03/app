@@ -183,7 +183,7 @@ function updateSubcategory(type,catId,subId,patch){
  if(oldName!==name){
    const d=typeof D!=='undefined'?D:null;
    (Array.isArray(d&&d.transactions)?d.transactions:[]).forEach(tx=>{
-     if(tx&&tx.type===type&&String(tx.categoryId||'')===String(c.id)&&(String(tx.subcategoryId||'')===String(s.id)||norm(tx.subcategory)===norm(oldName)))tx.subcategory=name;
+     if(tx&&tx.type===type&&(tx.categoryId?String(tx.categoryId)===String(c.id):norm(tx.category)===norm(c.name))&&(String(tx.subcategoryId||'')===String(s.id)||norm(tx.subcategory)===norm(oldName)))tx.subcategory=name;
    });
    if(type==='expense')(Array.isArray(d&&d.bills)?d.bills:[]).forEach(b=>{if(b&&b.category===c.name&&b.subcategory===oldName)b.subcategory=name;});
  }

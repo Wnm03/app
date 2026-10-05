@@ -31,6 +31,8 @@ function sandbox(D){
  };
  vm.createContext(ctx);
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','finance-cross-entity-atomic.js'),'utf8'),ctx,{filename:'finance-cross-entity-atomic.js'});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','finance-category-sot.js'),'utf8'),ctx,{filename:'finance-category-sot.js'});
+ require('./helpers/loadSource').installLenientTaxonomy(ctx);
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','finance-tx-sot.js'),'utf8'),ctx,{filename:'finance-tx-sot.js'});
  vm.runInContext(fs.readFileSync(path.join(__dirname,'..','modules','finance','bill-debt-piutang-canonical-writer.js'),'utf8'),ctx,{filename:'bill-debt-piutang-canonical-writer.js'});
  vm.runInContext(`${extractFnSource('_amc015')}\n${extractFnSource('advanceBillNextDue')}\n${extractFnSource('markBillPaid')}\nthis.markBillPaid=markBillPaid;`,ctx);
