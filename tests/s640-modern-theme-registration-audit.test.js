@@ -29,7 +29,7 @@ const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const prodHtml = fs.readFileSync(path.join(ROOT, 'app_production.html'), 'utf8');
 const formatTemaSrc = fs.readFileSync(path.join(ROOT, 'modules/shared/format-tema.js'), 'utf8');
 
-const OLD_THEMES = ['dark', 'ocean', 'light', 'stone', 'slate', 'mono', 'sand', 'ink', 'sage', 'auto'];
+const CANONICAL_THEMES = ['dark', 'light', 'auto', 'modern', 'graphite'];
 
 test('index.html — theme-card "modern" terdaftar dgn data-action=setTheme & data-t="modern"', () => {
   assert.match(
@@ -38,24 +38,10 @@ test('index.html — theme-card "modern" terdaftar dgn data-action=setTheme & da
   );
 });
 
-for (const t of OLD_THEMES) {
-  test(`index.html — theme-card "${t}" (lama) masih ada apa adanya (0 regresi dari pendaftaran modern)`, () => {
-    const re = new RegExp(
-      `<div class="theme-card" data-action="setTheme" data-args='\\["${t}"\\]' data-t="${t}"`,
-    );
-    assert.match(indexHtml, re);
-  });
-}
-
-test('index.html — total theme-card = 14 (10 lama termasuk auto + modern + Graphite + Minimal/S749 + Pro Dark)', () => {
-  const matches = indexHtml.match(/class="theme-card"/g) || [];
-  assert.equal(matches.length, 14);
-});
-
-test('index.html — urutan 9 tema lama + auto tetap di atas "modern" (modern ditambah di akhir, bukan disisipkan)', () => {
-  const idxAuto = indexHtml.indexOf('data-t="auto"');
-  const idxModern = indexHtml.indexOf('data-t="modern"');
-  assert.ok(idxAuto > -1 && idxModern > -1 && idxAuto < idxModern);
+test('theme registry — hanya tema canonical yang shipped',()=>{
+  for(const t of CANONICAL_THEMES) assert.match(indexHtml,new RegExp(`data-t="${t}"`));
+  assert.equal((indexHtml.match(/class="theme-card"/g)||[]).length,CANONICAL_THEMES.length);
+  for(const t of ['ocean','stone','slate','mono','sand','ink','sage','minimal','pro']) assert.doesNotMatch(indexHtml,new RegExp(`data-t="${t}"`));
 });
 
 test('app_production.html — sinkron dgn index.html (gate html-sync), termasuk theme-card modern', () => {
@@ -75,14 +61,16 @@ test('app_production.html — theme-card "modern" ikut ter-sinkron', () => {
 
 // --- Keputusan go/no-go: opsi tambahan, BUKAN default baru -----------------
 
-test('index.html — default <body data-theme="fresh"> TIDAK diubah jadi "modern" (bukan default baru)', () => {
-  assert.match(indexHtml, /<body data-theme="fresh">/);
-  assert.doesNotMatch(indexHtml, /<body data-theme="modern">/);
+test('index.html — default body theme is canonical dark', () => {
+  assert.match(indexHtml, /<body data-theme="dark">/);
+  assert.doesNotMatch(indexHtml, /data-theme="fresh"/);
 });
 
-test('format-tema.js — applyEffectiveTheme() fallback "dark" TIDAK diubah jadi "modern" (bukan default baru)', () => {
-  assert.match(formatTemaSrc, /let t=D\.profile\.theme\|\|'dark';/);
+test('format-tema.js — canonicalization keeps dark fallback and rejects unknown themes', () => {
+  assert.match(formatTemaSrc, /let raw=D\.profile\.theme\|\|'dark';/);
+  assert.match(formatTemaSrc, /function canonicalizeTheme\(t\)/);
 });
+
 
 // --- Audit lintas modul (s635-s639) — gating tetap konsisten ---------------
 

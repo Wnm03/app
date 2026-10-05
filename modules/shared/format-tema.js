@@ -200,7 +200,15 @@ function toastUndo(msg,undoFn,dur=5000){
   while(_toastQueue.length>_TOAST_QUEUE_MAX)_toastQueue.shift();
   if(!_toastShowing&&!_toastGapTimer)_toastShowNext();
 }
+const THEME_ALIASES={ocean:'dark',stone:'light',slate:'graphite',mono:'light',sand:'light',ink:'graphite',sage:'light',fresh:'light',minimal:'modern',pro:'graphite'};
+const CANONICAL_THEMES=new Set(['dark','light','auto','modern','graphite']);
+function canonicalizeTheme(t){
+  t=String(t||'dark');
+  if(Object.prototype.hasOwnProperty.call(THEME_ALIASES,t)) return THEME_ALIASES[t];
+  return CANONICAL_THEMES.has(t)?t:'dark';
+}
 function setTheme(t){
+t=canonicalizeTheme(t);
 D.profile.theme=t; save();
 applyEffectiveTheme();
 document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.t===t));
@@ -220,7 +228,9 @@ if(typeof renderKeuangan==='function')renderKeuangan();
 if(typeof Aset!=='undefined'&&Aset&&typeof Aset.renderList==='function')Aset.renderList();
 }
 function applyEffectiveTheme(){
-let t=D.profile.theme||'dark';
+let raw=D.profile.theme||'dark';
+let t=canonicalizeTheme(raw);
+if(D.profile&&raw!==t)D.profile.theme=t;
 if(t==='auto'){
 const h=new Date().getHours();
 t=(h>=6&&h<18)?'light':'dark';

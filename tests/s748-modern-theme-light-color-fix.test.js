@@ -50,19 +50,15 @@ test('index.html — theme-card "modern" preview & label TIDAK berubah (masih "T
   assert.match(modern, /--accent:#2f6fed;/);
 });
 
-test('modern-ui-layer.css — "modern" ikut daftar scoping fix kontras onlight (krn base-nya sekarang terang, sama spt light/stone/mono/sand/sage/fresh)', () => {
+test('modern-ui-layer.css — Modern tetap mendapat scoping fix kontras onlight', () => {
   assert.match(modernUiCss, /\[data-theme="modern"\] \.shop-stock-pill\.ok, \[data-theme="modern"\] \.trs-tag-btn\.stok-ok \{\s*color: var\(--accent3-onlight\);/);
   assert.match(modernUiCss, /\[data-theme="modern"\] \.kasir-tile\.stock-low \.kasir-tile-stock \{\s*color: var\(--accent4-onlight\);/);
   assert.match(modernUiCss, /\[data-theme="modern"\] \.shop-stock-pill\.low, \[data-theme="modern"\] \.trs-tag-btn\.stok-low,\s*\n\[data-theme="light"\] \.kasir-tile\.stock-out/);
 });
 
-test('audit — 9 tema lama + auto TIDAK ikut disentuh oleh fix ini (0 regresi warna tema lain)', () => {
-  const OLD_THEMES_BG = {
-    dark: '#08090c', ocean: '#050f1a', light: '#f5f5fa', stone: '#f7f5f1',
-    slate: '#1c1c1e', mono: '#fafafa', sand: '#f8f6f2', ink: '#0a0a0a', sage: '#f6f7f4',
-  };
-  for (const [theme, bg] of Object.entries(OLD_THEMES_BG)) {
-    const re = new RegExp(`\\[data-theme="${theme}"\\] \\{[^}]*--bg:${bg.replace('#', '#')}`);
-    assert.match(stylesCss, re, `--bg tema "${theme}" seharusnya tetap ${bg}`);
+test('S2517 — Modern tetap canonical dan duplicate theme tokens retired', () => {
+  assert.match(stylesCss, /\[data-theme=\"modern\"\] \{[^}]*--bg:#fafafa;/);
+  for (const theme of ['ocean','stone','slate','mono','sand','ink','sage','fresh','minimal']) {
+    assert.doesNotMatch(stylesCss, new RegExp(`\\[data-theme=\"${theme}\"\\]\\s*\\{`));
   }
 });

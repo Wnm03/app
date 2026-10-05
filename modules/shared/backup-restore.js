@@ -575,10 +575,32 @@ txs.forEach(t=>{
 return stats;
 }
 
+function clearS2013RestoreDiagnostic(){
+  try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){}
+  try{if(typeof window!=='undefined')delete window.__S2013_RESTORE_DIAGNOSTIC;}catch(_e){}
+}
+function copyS2013RestoreDiagnostic(){
+  let detail=null;
+  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){}
+  if(!detail)return Promise.resolve(false);
+  const text=JSON.stringify(detail,null,2);
+  try{if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function')return navigator.clipboard.writeText(text).then(()=>true).catch(()=>false);}catch(_e){}
+  return Promise.resolve(false);
+}
+function downloadS2013RestoreDiagnostic(){
+  let detail=null;
+  try{detail=window.__S2013_RESTORE_DIAGNOSTIC||JSON.parse(localStorage.getItem('kw_restore_diagnostic_s2013')||'null');}catch(_e){}
+  if(!detail)return false;
+  const blob=new Blob([JSON.stringify(detail,null,2)],{type:'application/json'});
+  if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.downloadBlob==='function')return PWAProductionHardening.downloadBlob(blob,'restore-diagnostic.json');
+  try{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='restore-diagnostic.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);return true;}catch(_e){return false;}
+}
 async function applyRestoredData(imp){
 // S2013 DIAGNOSTIC: preserve the exact restore stage/error before rollback
 // converts the native Error into the generic UI "Error {}" representation.
+try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){}
 let __s2013Stage='start';
+clearS2013RestoreDiagnostic();
 const __s2013Diag={startedAt:new Date().toISOString(),stage:__s2013Stage};
 const __s2013SetStage=(stage)=>{__s2013Stage=stage;__s2013Diag.stage=stage;__s2013Diag.updatedAt=new Date().toISOString();};
 const __s2013SerializeError=(e)=>({
@@ -591,7 +613,8 @@ const __s2013SerializeError=(e)=>({
 const __s2013Fail=(e)=>{
   const detail={...__s2013Diag,stage:__s2013Stage,error:__s2013SerializeError(e),
     hasImp:!!imp,servisLogs:imp&&Array.isArray(imp.servisLogs)?imp.servisLogs.length:null};
-  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){ /* diagnostic storage may be unavailable */ }
+  try{window.__S2013_RESTORE_DIAGNOSTIC=detail;}catch(_){}
+  try{safeSetItem('kw_restore_diagnostic_s2013',JSON.stringify(detail));}catch(_){}
   console.error('S2013 RESTORE DIAGNOSTIC',detail,e);
   return detail;
 };
@@ -690,6 +713,7 @@ if(typeof ServiceHistorySOTNormalizer!=='undefined'&&ServiceHistorySOTNormalizer
 __s2013SetStage('category-component-sot-reconciliation');
 if(typeof ServiceCategoryRestoreReconcilerS2451!=='undefined'&&ServiceCategoryRestoreReconcilerS2451&&typeof ServiceCategoryRestoreReconcilerS2451.reconcile==='function'){
   const _catRestore=ServiceCategoryRestoreReconcilerS2451.reconcile(D);
+  __s2013Diag.categoryComponentReconciliation=_catRestore;
   if(!_catRestore.ok){
     const _catCodes=[...new Set((_catRestore.issues||[]).map(x=>x&&x.code).filter(Boolean))].slice(0,8).join(', ');
     throw new Error('Restore dibatalkan: integritas kategori/komponen Car Notes tidak konsisten ('+(_catRestore.issues||[]).length+' issue'+(_catCodes?'; '+_catCodes:'')+').');
