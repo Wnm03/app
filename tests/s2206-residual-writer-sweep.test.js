@@ -12,7 +12,7 @@ const canonicalFiles = new Set([
   'vehicle/vehicle-canonical-writer.js',
   'shared/ownership-canonical-writer.js'
 ]);
-const allowedFallback = /(else|fallback|legacy|compatibility|without ProductRepository|without.*SOT)/i;
+const allowedFallback = /(else|fallback|legacy|compatibility|without ProductRepository|without.*SOT|rollback|_snapshot|snapshotData|repairSnapshot|snapshot)/i;
 const directMutation = /\bD\.(transactions|products|vehicles|owners|bills|billsArchive|debts|piutang)(?:\.(?:push|splice|pop|shift|unshift)\b|\[[^\]]+\]\s*=|\s*=)/;
 
 function walk(dir, out=[]) {

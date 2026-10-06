@@ -80,9 +80,9 @@ const _rollbackCategoryEdit=()=>{
   if(!_categoryEditAtomicSnapshot)return;
   try{
     D.sparepartCats=JSON.parse(_categoryEditAtomicSnapshot.sparepartCats);
-    D.partsStock=JSON.parse(_categoryEditAtomicSnapshot.partsStock);
+    if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.replaceSnapshot==='function')StockCommandSOT.replaceSnapshot(JSON.parse(_categoryEditAtomicSnapshot.partsStock));
     const _vs=JSON.parse(_categoryEditAtomicSnapshot.vehicles);
-    (D.vehicles||[]).forEach(v=>{const hit=_vs.find(x=>String(x.id)===String(v&&v.id));if(hit){if(hit.sot===null)delete v.sot;else v.sot=hit.sot;}});
+    (D.vehicles||[]).forEach(v=>{const hit=_vs.find(x=>String(x.id)===String(v&&v.id));if(hit&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.restoreSnapshot==='function')VehicleCarNotesSOT.restoreSnapshot(v.id,hit.sot);});
   }catch(_rb){console.error('S2460 category edit rollback failed',_rb);}
 };
 let name=document.getElementById('sparepartName').value.trim();
@@ -285,7 +285,7 @@ try{
   Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
   toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
 }catch(_delErr){
-  try{D.sparepartCats=JSON.parse(_sparepartCatsBefore);D.partsStock=JSON.parse(_partsStockBefore);const _v=Array.isArray(D.vehicles)?D.vehicles.find(v=>v&&String(v.id)===targetVehicleId):null;if(_v&&_sotBefore!==null)_v.sot=JSON.parse(_sotBefore);}catch(_rbErr){console.error('S2459 category delete rollback failed',_rbErr);}
+  try{D.sparepartCats=JSON.parse(_sparepartCatsBefore);if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.replaceSnapshot==='function')StockCommandSOT.replaceSnapshot(JSON.parse(_partsStockBefore));const _v=Array.isArray(D.vehicles)?D.vehicles.find(v=>v&&String(v.id)===targetVehicleId):null;if(_v&&_sotBefore!==null&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.restoreSnapshot==='function')VehicleCarNotesSOT.restoreSnapshot(_v.id,JSON.parse(_sotBefore));}catch(_rbErr){console.error('S2459 category delete rollback failed',_rbErr);}
   console.error('S2459 category delete failed',_delErr);
   toast('⚠️ Kategori tidak dihapus; perubahan dibatalkan.',3000);
 }

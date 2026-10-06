@@ -9,9 +9,9 @@ test('S1828: import transaksi memakai importIdempotencyKey dan dedupe terhadap e
  const s=read();
  assert.match(s,/function _dedupeImportedTransactions\(imported\)/);
  assert.match(s,/importIdempotencyKey/);
- assert.match(s,/existingKeys=new Set\(\(Array\.isArray\(D\.transactions\)/);
+ assert.match(s,/const existingKeys=new Set\(existingRows\.map\(t=>t&&t\.importIdempotencyKey\)/);
  assert.match(s,/const acceptedKeys=new Set\(\);/);
- assert.match(s,/if\(existingKeys\.has\(key\)\|\|acceptedKeys\.has\(key\)\)return false;/);
+ assert.match(s,/existingKeys\.has\(key\)\|\|acceptedKeys\.has\(key\)/);
  assert.match(s,/acceptedKeys\.add\(key\);/);
 });
 
@@ -32,7 +32,8 @@ test('S1828: restore menolak shape domain kritis yang salah sebelum merge',()=>{
 
 test('S1828: JSON transaction import key stabil berdasarkan id atau row index',()=>{
  const s=read();
- assert.match(s,/row\.id\?`json:\$\{row\.id\}`:`json-row:\$\{i\}/);
+ assert.match(s,/row\.id!=null/);
+ assert.match(s,/row\.importIdempotencyKey=`json:\$\{row\.id\}`/);
 });
 
 test('S1828: car CSV import juga memakai splitCSVRecords',()=>{

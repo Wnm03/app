@@ -464,7 +464,7 @@ test('Aset.saveUnified() bukan tradable (toggle nonaktif) -- 0 holding dibuat, 0
 function makeTxCascadeCtx(D, investmentStub) {
   const events = [];
   const ctx = loadSource(
-    ['modules/finance/tx-list-cashflow.js'],
+    ['modules/finance/finance-cross-entity-atomic.js','modules/finance/tx-list-cashflow.js'],
     {
       D,
       Investment: investmentStub,

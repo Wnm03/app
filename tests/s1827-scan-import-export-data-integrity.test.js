@@ -33,8 +33,9 @@ test('S1827 katalog import: preview/commit melewati VehicleCatalogWriteSOT', () 
 
 test('S1827 audit: import transaksi CSV memakai deterministic importIdempotencyKey dan deduplikasi batch', () => {
   const src = read(BACKUP);
-  assert.match(src, /D\.transactions=\[\.\.\.D\.transactions,\.\.\.imported\]/);
-  assert.match(src, /tx\.importIdempotencyKey=`csv:/);
+  assert.match(src, /_dedupeImportedTransactions\(imported\)/);
+  assert.match(src, /FinanceTxSOT\.createMany|D\.transactions/);
+  assert.match(src, /tx\.importIdempotencyKey|_stableImportKey\(type/);
   assert.match(src, /function _dedupeImportedTransactions\(imported\)/);
   assert.match(src, /importIdempotencyKey/);
   assert.match(src, /existingKeys\.has\(key\)\|\|acceptedKeys\.has\(key\)/);

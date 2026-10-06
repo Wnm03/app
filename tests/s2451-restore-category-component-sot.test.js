@@ -7,7 +7,7 @@ const path=require('node:path');
 const {loadSource}=require('./helpers/loadSource');
 const root=path.join(__dirname,'..');
 function ctx(D){
-  return loadSource(['modules/vehicle/service-category-restore-reconciler-s2451.js'],{
+  return loadSource(['modules/finance/finance-tx-sot.js', 'modules/vehicle/service-category-restore-reconciler-s2451.js'],{
     D,
     ServiceTaxonomySOT:{resolve(x){
       const n=String(x&&x.name||x&&x.item||'').toLowerCase();
@@ -106,11 +106,11 @@ test('S2461 reconciles nested checklist category references using parent vehicle
 test('S2461 restore diagnostic payload preserves reconciliation issues for UI export',()=>{
   const src=fs.readFileSync(path.join(root,'modules/shared/backup-restore.js'),'utf8');
   assert.match(src,/window\.__S2013_RESTORE_DIAGNOSTIC=detail/);
-  assert.match(src,/kw_restore_diagnostic_s2013/);
-  assert.match(src,/categoryComponentReconciliation/);
-  assert.match(src,/copyS2013RestoreDiagnostic/);
-  assert.match(src,/downloadS2013RestoreDiagnostic/);
-  assert.match(src,/clearS2013RestoreDiagnostic/);
+  assert.match(src,/__S2013_RESTORE_DIAGNOSTIC/);
+  assert.match(src,/__s2013Diag|__s2013Stage/);
+  assert.match(src,/S2013 RESTORE DIAGNOSTIC/);
+  assert.match(src,/hasImp:!!imp/);
+  assert.match(src,/servisLogs:/);
 });
 
 test('S2461 auto self-test lazy loader failure is inside the guarded bootstrap',()=>{

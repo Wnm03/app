@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {loadSource}=require('./helpers/loadSource');
 function ctx(D,saveMode){
-  return loadSource(['modules/finance/titipan-reconcile.js'],{
+  return loadSource(['modules/finance/finance-tx-sot.js', 'modules/finance/bill-debt-piutang-canonical-writer.js', 'modules/finance/titipan-reconcile.js'],{
     D,
     save:()=>{if(saveMode==='false')return false;if(saveMode==='throw')throw new Error('save failed');return true;},
     AIBus:{emit:()=>{}},

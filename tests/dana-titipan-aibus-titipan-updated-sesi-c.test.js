@@ -28,7 +28,7 @@ function makePoolCtx(D) {
   let uidCounter = 0;
   const events = [];
   const ctx = loadSource(
-    ['modules/finance/dana-titipan-pool-api.js'],
+    ['modules/finance/finance-event-outbox.js', 'modules/finance/dana-titipan-pool-api.js'],
     {
       D,
       uid: () => 'p' + (++uidCounter),
@@ -83,7 +83,7 @@ test('DanaTitipanPoolAPI.deleteEntry() id tidak ditemukan -- 0 emit', () => {
 test('DanaTitipanPoolAPI: AIBus tidak ada (typeof AIBus==="undefined") -- tidak throw', () => {
   const D = { titipanPool: [] };
   const ctx = loadSource(
-    ['modules/finance/dana-titipan-pool-api.js'],
+    ['modules/finance/finance-event-outbox.js', 'modules/finance/dana-titipan-pool-api.js'],
     { D, uid: () => 'p1', save: () => {} },
     ['DanaTitipanPoolAPI'],
   );
@@ -96,7 +96,7 @@ test('DanaTitipanPoolAPI: AIBus tidak ada (typeof AIBus==="undefined") -- tidak 
 function makeCommitmentCtx(D) {
   const events = [];
   const ctx = loadSource(
-    ['modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
+    ['modules/finance/finance-event-outbox.js', 'modules/finance/finance-tx-sot.js', 'modules/finance/finance-category-sot.js', 'modules/shared/ownership-engine.js', 'modules/shared/multi-owner-engine.js', 'modules/asset/investasi.js', 'modules/finance/dana-titipan-aggregation-api.js', 'modules/finance/dana-titipan-commitment-return-api.js', 'modules/finance/dana-titipan-portfolio-render.js'],
     {
       D,
       uid: () => 'u' + (D._n = (D._n || 0) + 1),
@@ -191,14 +191,6 @@ test('deleteCommitment()/deleteReturn() id tidak ditemukan -- 0 emit', () => {
 // transaction-owner-refs.test.js -- global.D/global.save/global.AIBus)
 // ====================================================================
 const TitipanReconcile = require('../modules/finance/titipan-reconcile.js');
-// Source kini memancarkan event lewat FinanceEventOutbox.emitOrEnqueue() (bukan AIBus.emit langsung).
-// Shim tipis: teruskan ke AIBus.emit milik test supaya kontrak payload tetap diverifikasi.
-global.FinanceEventOutbox = {
-  emitOrEnqueue(name, payload) {
-    if (global.AIBus && typeof global.AIBus.emit === 'function') { global.AIBus.emit(name, payload); return true; }
-    return false;
-  },
-};
 
 function resetReconcileGlobals() {
   delete global.save;
@@ -299,6 +291,9 @@ function makeExpenseFlowCtx(D) {
   const events = [];
   const ctx = loadSource(
     [
+      'modules/finance/finance-event-outbox.js',
+      'modules/finance/finance-category-sot.js',
+      'modules/finance/finance-tx-sot.js',
       'modules/shared/ownership-engine.js',
       'modules/shared/multi-owner-engine.js',
       'modules/asset/investasi.js',
@@ -343,6 +338,15 @@ function baseExpenseD(overrides) {
     titipanReturns: [], transactions: [], piutang: [], assets: [],
   }, overrides || {});
 }
+
+// FinanceTxSOT is intentionally strict; provide the canonical Belanja taxonomy
+// in the isolated contract fixture rather than weakening the production guard.
+const _origBaseExpenseD=baseExpenseD;
+baseExpenseD=function(overrides){
+  const D=_origBaseExpenseD(overrides);
+  D.categories={income:[],expense:[{id:'cat-belanja',name:'Belanja',subs:[{id:'sub-belanja',name:'',classification:'BELANJA'}]}]};
+  return D;
+};
 
 test('TitipanExpenseFlow.submit() emit titipan.updated {kind:"expense",action:"create"}', () => {
   const D = baseExpenseD();

@@ -346,6 +346,19 @@
     return Object.assign({projectionOnly:true,operation:op||'upsert'},r,{projection});
   }
   function removeLegacyCategoryProjection(categoryId,vehicleId){return removeServiceCategory(vehicleId,categoryId);}
+  // S2560: canonical rollback primitive. Consumers must not assign vehicle.sot directly
+  // during cross-domain rollback; restoring the whole snapshot remains owned by
+  // VehicleCarNotesSOT so the persisted root cannot drift from SOT invariants.
+  function restoreSnapshot(id,snapshot){
+    const v=vehicle(id); if(!v)return {ok:false,code:'vehicle_not_found'};
+    const incoming=snapshot&&typeof snapshot==='object'?clone(snapshot):{};
+    const r=mutate(id,s=>{
+      Object.keys(s).forEach(k=>{delete s[k];});
+      Object.assign(s,incoming);
+      if(!Array.isArray(s.serviceCategories))s.serviceCategories=[];
+    });
+    return r&&r.ok!==false?{ok:true,vehicleId:id}:r;
+  }
   function setServiceSchedules(id,rules,meta){return mutate(id,(s)=>{s.serviceSchedules=Array.isArray(rules)?clone(rules):[];s.serviceScheduleCount=s.serviceSchedules.length;s.serviceProvisionedAt=meta&&meta.at||new Date().toISOString();s.serviceProvisioningStatus=s.serviceSchedules.length?'ready':'no-rules';s.serviceReminderVersion=meta&&meta.version||s.serviceReminderVersion||null;});}
   function getServiceSchedules(id){const s=ensure(id);return s&&Array.isArray(s.serviceSchedules)?clone(s.serviceSchedules):[];}
   function setMaintenanceState(id,state){return mutate(id,s=>{s.maintenanceState=state?JSON.parse(JSON.stringify(state)):null;});}
@@ -419,7 +432,7 @@
     const base=auditFinanceHistoryReminder(vid);issues.push(...(base.issues||[]));
     return {ok:issues.length===0,vehicleId:vid,sessionCount:seenSessions.size,serviceCount:scopedLogs.length,financeServiceCount:scopedTx.filter(x=>str(x.vehicleId)===vid).length,reminderCount:reminders.length,issues};
   }
-  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,updateServiceCategory,reconcileLegacyCategoryProjection,syncLegacyCategoryProjection,removeLegacyCategoryProjection,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
+  const api={version:VERSION,activeId,vehicle,ensure,read,mutate,setServiceSchedules,getServiceSchedules,getServiceCategories,upsertServiceCategory,removeServiceCategory,updateServiceCategory,reconcileLegacyCategoryProjection,syncLegacyCategoryProjection,removeLegacyCategoryProjection,restoreSnapshot,setMaintenanceState,getMaintenanceState,setProvisioning,getServiceInterval,setServiceInterval,setServiceIntervalSource,removeServiceInterval,auditServiceIntervals,repairServiceIntervals,audit,auditAll,assertRecord,auditFinanceHistoryReminder,auditFullFlow};
   root.VehicleCarNotesSOT=api;
   if(typeof window!=='undefined')window.VehicleCarNotesSOT=api;
   try{for(const v of vehicles())ensure(v.id);}catch(e){/* provisioning must remain fail-safe during bootstrap. */}
