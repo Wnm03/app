@@ -1,0 +1,96 @@
+PATCH-MANIFEST-S256AA — REAL UI/UX HARDENING
+============================================
+Baseline: app-main (9)(1).zip
+Scope: real UI findings from browser crawl + source/root-cause hardening
+Patch type: patch-only cumulative update (no full-source snapshot)
+
+GROUND TRUTH
+------------
+Full suite after S256AA:
+- TOTAL:   8530
+- PASS:    8529
+- FAIL:    0
+- SKIPPED: 1
+- CANCELLED: 0
+- SHARDS:  32/32
+
+Targeted S256AA regression tests: 3/3 PASS.
+node --check: PASS for modified JS test/source.
+Build fallback: PASS; app-bundle-a.min.js and app-bundle-b.min.js generated and syntax-checked.
+Minification: NOT VERIFIED / BLOCKED because esbuild is unavailable in this environment.
+
+REAL UI FINDINGS AND ROOT CAUSES
+--------------------------------
+1) [DEV] smoke-test banner covered the top application chrome.
+   Root cause: modules/shared/smoke-test.js positioned the diagnostic banner fixed at top:0,
+   covering the sticky header and its Backup/title area.
+   Fix: move the diagnostic surface to the lower non-critical area above bottom navigation;
+   make message wrapping safe; make close control a real 44x44 touch target.
+   Production behavior: smoke-test remains gated by its existing dev-mode detection; this
+   patch does not remove diagnostic capability. The visual overlap is eliminated.
+
+2) Car Notes mobile overflow.
+   Root cause: nested layout children could retain intrinsic width; several responsive rules
+   existed but were not consistently applied to all direct children/content blocks.
+   Fix: scoped min-width/max-width containment and safe wrapping for Car Notes headings,
+   summaries, metrics and descriptive content. Intentional inner horizontal scrolling for
+   list/tab containers is preserved; no global overflow-x:hidden workaround was introduced.
+
+3) AI mobile overflow.
+   Root cause: chat/content children did not have a complete intrinsic-width contract,
+   especially long AI/chat content and the input row.
+   Fix: scoped min-width/max-width rules, long-content wrapping, bounded chat bubbles,
+   bounded input row/input, and a 44x44 send button.
+
+4) Settings touch targets.
+   Root cause: compact controls such as card-setting actions, collapse toggles and switches
+   exposed hit areas below the desired mobile touch target size.
+   Fix: scoped #page-settings hit-area hardening to >=44px while keeping visual density compact;
+   toggle track remains visually compact inside the larger hit area.
+
+FILES CHANGED
+-------------
+- modules/shared/smoke-test.js
+  Dev diagnostic banner placement and touch-safe close control.
+- styles.css
+  Scoped Car Notes/AI responsive hardening and Settings touch-target hardening.
+- tests/s256aa-real-ui-hardening.test.js
+  3 regression contracts for banner, overflow containment, and Settings touch targets.
+- index.html
+- app_production.html
+- sw.js
+  Build/version synchronization to cache-bust the updated UI/bundles (2253 -> 2254).
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+  Fresh fallback bundles containing the UI fixes; syntax validated.
+- chat-action-handlers.js
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+  Version synchronization performed by the repository build pipeline (2253 -> 2254).
+  No functional logic change was introduced in these five source files.
+
+ACCUMULATION / ZIP INTEGRITY
+----------------------------
+The patch is derived from app-main (9)(1).zip and contains only the changed runtime/source/test
+files plus this manifest. It intentionally excludes:
+- full source snapshot
+- backups/
+- .test-checkpoints/
+- temporary logs
+- generated audit artifacts not required at runtime
+- absolute paths
+- ../ traversal entries
+
+VISUAL VERIFICATION STATUS
+--------------------------
+The supplied browser crawl identified the three real UI issues above. A separate Chromium
+headless verification attempt in this build environment was blocked by the environment policy
+(127.0.0.1 was blocked), so this environment does NOT claim a new browser visual PASS.
+
+NEXT RELEASE NOTE
+-----------------
+For a release-grade/minified production bundle, run the repository build with esbuild available.
+The fallback bundle is syntactically valid and was used for the full functional suite, but
+minification/size optimization is not claimed here.

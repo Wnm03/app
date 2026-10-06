@@ -2155,6 +2155,66 @@ flex: 0 0 auto;
 .header-badge { min-width: 34px; min-height: 34px; }
 .card-setting-btn { min-height: 34px; }
 }
+/* S256AA — Real UI responsive hardening (Car Notes / AI / Settings).
+   Root-cause containment only: preserve horizontal scrolling where it is an
+   intentional list affordance, but prevent child intrinsic sizes from widening
+   the document viewport. */
+#page-carnotes,
+#page-carnotes > .pwa-domain-page,
+#page-carnotes .pwa-domain-car,
+#page-ai {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#page-carnotes .pwa-domain-car > *,
+#page-carnotes .cn-vehicle-summary-head > *,
+#page-carnotes .cn-summary-metrics > *,
+#page-carnotes .dashhub-cat-head > *,
+#page-ai > *,
+#page-ai .card > *,
+#page-ai .chat-input-row > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+#page-carnotes .cn-summary-link,
+#page-carnotes .cn-summary-metric-label,
+#page-carnotes .cn-summary-metric-source,
+#page-carnotes .dashhub-cat-desc,
+#page-ai .chat-bubble {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+#page-ai .chat-bubble { max-inline-size: 86%; }
+#page-ai .chat-input-row { max-inline-size: 100%; }
+#page-ai .chat-input { min-inline-size: 0; max-inline-size: 100%; }
+#page-ai .chat-send { width:44px; height:44px; min-width:44px; min-height:44px; box-sizing:border-box; }
+#page-ai .ai-suggest { min-width:0; max-width:100%; }
+#page-ai .ai-q { flex:0 0 auto; }
+
+/* Settings: enlarge only the hit-area of compact controls; visual density stays compact. */
+#page-settings .card-setting-btn,
+#page-settings .card-collapse-toggle {
+  min-width:44px;
+  min-height:44px;
+  box-sizing:border-box;
+}
+#page-settings .card-setting-btn { padding:8px 10px; }
+#page-settings .card-collapse-toggle { width:44px; height:44px; }
+#page-settings .tgl-switch {
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  box-sizing:border-box;
+}
+#page-settings .tgl-track {
+  inset:10px 1px;
+  height:24px;
+}
+#page-settings .tgl-switch input:checked + .tgl-track::before { transform:translateX(18px); }
+
 /* S2114 — Typography & density consistency Shared type hierarc */
 .page > h1, .page > h2, .page > h3,
 .section-title, .section-head, .card-title {

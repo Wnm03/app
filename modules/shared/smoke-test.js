@@ -174,14 +174,23 @@
       if (old) old.remove();
       var b = document.createElement('div');
       b.setAttribute('data-smoke-test-banner', '1');
-      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;' +
-        'background:#c0392b;color:#fff;padding:9px 14px;' +
+      // Diagnostic dev-only banner must never cover the application chrome.
+      // Keep it in the non-critical bottom area and give the close affordance
+      // a proper touch target so visual QA itself does not create a usability bug.
+      b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:99999;' +
+        'background:#c0392b;color:#fff;padding:8px 10px;' +
         'font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
-        'box-shadow:0 2px 8px rgba(0,0,0,.3);';
-      b.textContent = text;
-      var closeBtn = document.createElement('span');
-      closeBtn.textContent = ' ✕';
-      closeBtn.style.cssText = 'cursor:pointer;margin-left:12px;font-weight:900;float:right;';
+        'box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px;' +
+        'box-sizing:border-box;max-width:calc(100vw - 24px);';
+      var msg = document.createElement('span');
+      msg.style.cssText = 'min-width:0;flex:1 1 auto;overflow-wrap:anywhere;';
+      msg.textContent = text;
+      b.appendChild(msg);
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.setAttribute('aria-label', 'Tutup diagnostik developer');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'cursor:pointer;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:900;display:inline-flex;align-items:center;justify-content:center;';
       closeBtn.onclick = function () { b.remove(); };
       b.appendChild(closeBtn);
       (document.body || document.documentElement).appendChild(b);
