@@ -308,7 +308,19 @@ if(typeof window!=='undefined'&&typeof window.addEventListener==='function'&&!wi
   });
 }
 let _kwNavRenderSeq=0;
-function _kwNavRenderKey(name,pageEl){return String(name||'')+'::'+String(pageEl&&pageEl.id||'');}
+// S256x PERF: reuse an already-rendered page during rapid tab hopping. The cache is
+// valid only while both the active sub-tab and the application mutation clock stay the same.
+function _kwNavSubtabKey(name,pageEl){
+  try{
+    if(typeof getActivePageTab==='function')return String(getActivePageTab(pageEl&&pageEl.id||('page-'+name),''));
+  }catch(e){void e;}
+  return '';
+}
+function _kwNavRenderKey(name,pageEl){return String(name||'')+'::'+String(pageEl&&pageEl.id||'')+'::'+_kwNavSubtabKey(name,pageEl);}
+function _kwNavRenderVersion(){
+  try{if(typeof getRuntimeRenderVersion==='function')return Number(getRuntimeRenderVersion())||0;}catch(e){void e;}
+  return 0;
+}
 function _kwNavSchedule(fn){if(typeof requestAnimationFrame==='function')requestAnimationFrame(fn);else if(typeof setTimeout==='function')setTimeout(fn,0);else fn();}
 function showPage(name,el,opts){
 // S1926 REGRESSION HARDENING: ScannerSession self-heal MUST happen before
@@ -401,9 +413,11 @@ if(pageEl.dataset)delete pageEl.dataset.renderError;
 const _renderNow=()=>{
   if(_navSeq!==_kwNavRenderSeq)return;
   if(pageEl.dataset&&pageEl.dataset.kwRenderKey!==_currentRenderKey)return;
-  try{
-    renderPageContent(name);
-  }catch(err){
+  const _renderVersion=_kwNavRenderVersion();
+  const _cachedVersion=pageEl.dataset?Number(pageEl.dataset.kwNavRenderedVersion):NaN;
+  const _cachedKey=pageEl.dataset?String(pageEl.dataset.kwNavRenderedKey||''):'';
+  if(_cachedKey===_currentRenderKey&&Number.isFinite(_cachedVersion)&&_cachedVersion===_renderVersion)return;
+  try{renderPageContent(name);}catch(err){
     console.error('[showPage] renderPageContent gagal:',err);
     if(pageEl.dataset)pageEl.dataset.renderError='1';
     let box=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
@@ -414,9 +428,13 @@ const _renderNow=()=>{
       box.innerHTML='<div class="card-title">⚠️ Halaman belum selesai dimuat</div><div class="u-fs12 u-t2">Coba buka halaman ini lagi. Data lokal tidak dihapus.</div>';
       pageEl.insertBefore(box,pageEl.firstChild||null);
     }
+    return;
   }
-};
-if(_isUserNav){_kwNavSchedule(_renderNow);}else{
+  if(pageEl.dataset){
+    pageEl.dataset.kwNavRenderedKey=_currentRenderKey;
+    pageEl.dataset.kwNavRenderedVersion=String(_kwNavRenderVersion());
+  }
+};if(_isUserNav){_kwNavSchedule(_renderNow);}else{
   _renderNow();
 }
 // S1931: reveal destination and commit bottom-nav only after render completes.

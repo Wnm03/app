@@ -267,6 +267,7 @@ let _savePendingSince=0;
 // fire visibilitychange -> pagehide -> beforeunload in quick succession. Reusing the
 // exact snapshot for the same save version avoids repeated full JSON.stringify(D) work.
 let _saveStateVersion=0;
+function getRuntimeRenderVersion(){return _saveStateVersion;}
 let _saveSnapshotVersion=-1;
 let _saveSnapshotJson=null;
 let _saveQueuedVersion=-1;

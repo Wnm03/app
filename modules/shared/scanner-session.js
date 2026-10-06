@@ -144,6 +144,8 @@ function scannerSessionEnter() {
     return false;
   }
   _scannerSessionActive = true;
+  _scannerSessionEnteredAt = Date.now();
+  _scannerSessionScheduleRecovery();
   scannerSessionPauseUI();
   if (typeof AIBus !== 'undefined' && AIBus && typeof AIBus.emit === 'function') {
     AIBus.emit('Scanner:opened', {});
@@ -169,6 +171,9 @@ function scannerSessionExit() {
     return false;
   }
   _scannerSessionActive = false;
+  _scannerSessionCancelRecovery();
+  _scannerSessionEnteredAt = null;
+  _scannerSessionHideRecoveryBanner();
   scannerSessionResumeUI();
   if (typeof AIBus !== 'undefined' && AIBus && typeof AIBus.emit === 'function') {
     AIBus.emit('Scanner:closed', {});
@@ -291,6 +296,7 @@ const RECOVERY_STUCK_MS = 10000; // 10 detik -- jauh di atas durasi wajar buka k
 const RECOVERY_POLL_MS = 3000;
 let _scannerSessionEnteredAt = null;
 let _scannerSessionRecoveryEl = null;
+let _scannerSessionRecoveryTimer = null;
 
 function _scannerSessionShowRecoveryBanner() {
   if (typeof document === 'undefined' || _scannerSessionRecoveryEl) return;
@@ -323,17 +329,31 @@ function _scannerSessionHideRecoveryBanner() {
 }
 
 function _scannerSessionRecoveryTick() {
+  _scannerSessionRecoveryTimer = null;
   if (!_scannerSessionActive) { _scannerSessionEnteredAt = null; _scannerSessionHideRecoveryBanner(); return; }
-  if (_scannerSessionEnteredAt === null) { _scannerSessionEnteredAt = Date.now(); return; }
+  if (_scannerSessionEnteredAt === null) _scannerSessionEnteredAt = Date.now();
   const stuckLongEnough = (Date.now() - _scannerSessionEnteredAt) >= RECOVERY_STUCK_MS;
   const overlayGone = !_scannerSessionHasLiveOverlay();
-  if (stuckLongEnough && overlayGone) _scannerSessionShowRecoveryBanner();
+  if (stuckLongEnough && overlayGone) {
+    _scannerSessionShowRecoveryBanner();
+    return;
+  }
+  _scannerSessionScheduleRecovery();
 }
 
-// Recovery watchdog sengaja memakai SATU interval ringan (3 detik) agar
-// lifecycle recovery tetap punya satu titik pemasangan yang dapat diaudit.
-// Tick sendiri no-op saat sesi tidak aktif, sehingga tidak melakukan DOM work
-// pada kondisi normal.
-if (typeof window !== 'undefined' && typeof window.setInterval === 'function') {
-  window.setInterval(_scannerSessionRecoveryTick, RECOVERY_POLL_MS);
+// S256Y: recovery watchdog dibuat on-demand. Tidak ada timer permanen saat
+// aplikasi hanya berpindah tab/idle; satu timeout dijadwalkan hanya selama
+// sesi scanner aktif, lalu dibatalkan saat exit(). Ini mempertahankan recovery
+// contract tanpa wake-up CPU periodik di jalur normal PWA.
+function _scannerSessionCancelRecovery() {
+  if (_scannerSessionRecoveryTimer !== null && typeof window !== 'undefined' && typeof window.clearTimeout === 'function') {
+    window.clearTimeout(_scannerSessionRecoveryTimer);
+  }
+  _scannerSessionRecoveryTimer = null;
+}
+function _scannerSessionScheduleRecovery() {
+  _scannerSessionCancelRecovery();
+  if (!_scannerSessionActive || typeof window === 'undefined' || typeof window.setTimeout !== 'function') return;
+  _scannerSessionRecoveryTimer = window.setTimeout(_scannerSessionRecoveryTick, RECOVERY_POLL_MS);
+  if (_scannerSessionRecoveryTimer && typeof _scannerSessionRecoveryTimer.unref === 'function') _scannerSessionRecoveryTimer.unref();
 }

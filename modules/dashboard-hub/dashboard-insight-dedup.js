@@ -215,9 +215,14 @@ const DashboardInsightDedup = {
     else setTimeout(run, 0);
   },
   observe() {
-    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined' || this._observer) return;
-    const root = document.body || document.documentElement;
-    if (!root) return;
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return;
+    const root = document.getElementById('page-dashboard-hub');
+    const active = !!(root && root.classList && root.classList.contains('active'));
+    if (!active || !root) {
+      this.disconnect();
+      return;
+    }
+    if (this._observer) return;
     this._observer = new MutationObserver(() => {
       clearTimeout(this._timer);
       this._timer = setTimeout(() => this.run(), 80);

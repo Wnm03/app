@@ -75,3 +75,14 @@ test('Dashboard preference mutations render only a visible dashboard target',()=
   const r=fs.readFileSync('modules/shared/modules-render.js','utf8');
   assert.doesNotMatch(r,/document\.querySelector\('\.page\.active'/);
 });
+
+
+test('Dashboard insight dedup observes only the active Dashboard Hub subtree',()=>{
+  const dedup=fs.readFileSync('modules/dashboard-hub/dashboard-insight-dedup.js','utf8');
+  assert.match(dedup,/const root = document\.getElementById\('page-dashboard-hub'\)/);
+  assert.match(dedup,/const active = !!\(root && root\.classList && root\.classList\.contains\('active'\)\)/);
+  assert.match(dedup,/if \(!active \|\| !root\) \{/);
+  assert.match(dedup,/this\.disconnect\(\);/);
+  assert.doesNotMatch(dedup,/const root = document\.body \|\| document\.documentElement/);
+  assert.match(dedup,/this\._observer\.observe\(root, \{ childList: true, subtree: true \}\)/);
+});

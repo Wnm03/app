@@ -1,0 +1,12 @@
+DELETE MANIFEST — S256Y PACKAGING CORRECTION
+
+The prior S256X ZIP incorrectly created these repository-root duplicates:
+- modal-navigasi.js
+- features-helpers-global-security.js
+
+Delete them if they exist after applying the old S256X artifact.
+The canonical runtime files are:
+- modules/shared/modal-navigasi.js
+- modules/shared/features-helpers-global-security.js
+
+Deleting the root duplicates is safe because they are not GROUP_A/GROUP_B runtime sources.

@@ -45,7 +45,8 @@ function makeRecoveryCtx(overlayLive, nowRef) {
   const body = makeEl('body');
   const head = makeEl('head');
   const byId = { mainNav: makeEl('mainNav'), mainHeader: makeEl('mainHeader') };
-  const intervalCallbacks = [];
+  const timeoutCallbacks = [];
+  const clearedTimeouts = new Set();
 
   const document = {
     body, head,
@@ -60,7 +61,8 @@ function makeRecoveryCtx(overlayLive, nowRef) {
   };
   const window = {
     addEventListener() {},
-    setInterval(fn) { intervalCallbacks.push(fn); return intervalCallbacks.length; },
+    setTimeout(fn) { timeoutCallbacks.push(fn); return timeoutCallbacks.length; },
+    clearTimeout(id) { clearedTimeouts.add(id); },
   };
   const FakeDate = { now: () => nowRef.value };
 
@@ -68,7 +70,10 @@ function makeRecoveryCtx(overlayLive, nowRef) {
   const context = vm.createContext(sandbox);
   new vm.Script(readSrc('modules/shared/scanner-session.js'), { filename: 'scanner-session.js' }).runInContext(context);
 
-  return { ctx: context, byId, document, tick: () => intervalCallbacks.forEach((fn) => fn()) };
+  return { ctx: context, byId, document, tick: () => {
+    const pending = timeoutCallbacks.splice(0);
+    pending.forEach((fn, i) => { if (!clearedTimeouts.has(i + 1)) fn(); });
+  }, timeoutCallbacks, clearedTimeouts };
 }
 
 test('banner TIDAK muncul segera setelah enter() (belum lewat ambang waktu)', () => {

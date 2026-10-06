@@ -1,0 +1,33 @@
+PATCH S256Z — CUMULATIVE PWA PERFORMANCE HARDENING
+Baseline: app-main (8)(1).zip
+Accumulated: S256X tab-render reuse + S256Y scanner watchdog + S256Z dashboard observer scoping.
+
+S256Z ROOT CAUSE
+- DashboardInsightDedup previously observed document.body for the entire app lifetime.
+- Any DOM mutation on unrelated pages could schedule dedup work (80ms debounce), even when Dashboard Hub was not active.
+
+S256Z FIX
+- Observer root is now #page-dashboard-hub only.
+- Observer is installed only while Dashboard Hub is active.
+- Observer is disconnected when Dashboard Hub is inactive.
+- Existing dedup logic, role rules, and 80ms debounce are preserved.
+- No storage/schema/SOT/API change.
+
+ACCUMULATED S256Y
+- ScannerSession recovery watchdog remains on-demand (no permanent setInterval).
+- exit() cancels recovery timer.
+- S256X navigation render cache remains mutation-aware.
+
+VALIDATION
+- Full suite: 8,527 total / 8,526 PASS / 0 FAIL / 1 skipped.
+- 32/32 shards PASS.
+- Targeted performance/scanner tests: 11/11 PASS.
+- Bundle freshness A+B: PASS.
+- Performance budget: PASS.
+- Event-listener audit: PASS.
+- JS syntax checks: PASS.
+- Bundle B: 4,923,772 bytes / 5,000,000 budget (98.5%).
+
+LIMITATION
+- esbuild is unavailable in this environment, so the bundle was synchronized from canonical source rather than minified by a fresh esbuild build.
+- Embedded source hash was refreshed and verify-bundle-freshness passes.
