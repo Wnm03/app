@@ -1,0 +1,13 @@
+PATCH S2428 — restore missing CI workflow on app-main (12)
+
+Root cause:
+- app-main (12) contained package-lock.json but omitted .github/workflows/ci.yml.
+- This caused 3 S2428 CI contract failures.
+
+Payload:
+- .github/workflows/ci.yml
+
+Verification:
+- S2428 contract: 3/3 PASS
+- Full suite: 8524 tests, 8523 pass, 0 fail, 1 skipped
+- Full suite: 32/32 shards
