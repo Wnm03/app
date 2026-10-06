@@ -132,11 +132,16 @@
         if(typeof est.usage==='number'&&typeof est.quota==='number'&&est.quota>0)render(est.usage,est.quota);
       }).catch(function(){ /* storage estimate unavailable; keep the PWA usable without the notice */ });
     };
-    const schedule=function(){clearTimeout(timer);timer=setTimeout(check,250);};
+    const PERIOD=300000;
+    const schedule=function(){clearTimeout(timer);timer=setTimeout(check,250);if(timer&&typeof timer.unref==='function')timer.unref();};
+    let periodicTimer=null;
+    const schedulePeriodic=function(){clearTimeout(periodicTimer);periodicTimer=setTimeout(function(){if(document.visibilityState==='hidden'){schedulePeriodic();return;}check();schedulePeriodic();},PERIOD);if(periodicTimer&&typeof periodicTimer.unref==='function')periodicTimer.unref();};
+    const onVisibility=function(){if(document.visibilityState==='visible')schedule();};
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',check,{once:true});else check();
     window.addEventListener('focus',schedule,{passive:true});
     window.addEventListener('online',schedule,{passive:true});
-    setInterval(check,60000);
+    document.addEventListener('visibilitychange',onVisibility,{passive:true});
+    schedulePeriodic();
   };
   PWAUX.markRendered=function(root){
     if(typeof requestAnimationFrame==='function')requestAnimationFrame(function(){PWAUX.refreshLargeLists(root);});

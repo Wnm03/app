@@ -169,7 +169,7 @@ test('_loadFilterPrefsOnce() membaca filterOwnerIds+filterSettlement tersimpan &
 
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
   ctx.DanaTitipanPortfolioPresenter._loadFilterPrefsOnce();
-  assert.deepEqual(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds, ['budi1', 'adik1']);
+  assert.deepEqual(Array.from(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), ['budi1', 'adik1']);
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterSettlement, 'titipan');
 });
 
@@ -181,11 +181,11 @@ test('_loadFilterPrefsOnce() dipanggil 2x -> baca localStorage HANYA sekali (tid
   const ctx = makeCtx(D, ls);
 
   ctx.DanaTitipanPortfolioPresenter._loadFilterPrefsOnce();
-  assert.deepEqual(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds, ['budi1']);
+  assert.deepEqual(Array.from(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), ['budi1']);
 
   ctx.DanaTitipanPortfolioPresenter.filterOwnerIds = ['adik1'];
   ctx.DanaTitipanPortfolioPresenter._loadFilterPrefsOnce();
-  assert.deepEqual(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds, ['adik1']);
+  assert.deepEqual(Array.from(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), ['adik1']);
 });
 
 test('data localStorage kosong/belum ada -> _loadFilterPrefsOnce() tidak melempar, filter tetap default kosong', () => {
@@ -269,7 +269,7 @@ test('renderInto("danaTitipanTabList") pertama kali -> filter tersimpan otomatis
 
   assert.equal(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds.length, 0);
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
-  assert.deepEqual(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds, ['budi1']);
+  assert.deepEqual(Array.from(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), ['budi1']);
   assert.match(elTab.innerHTML, /👤 Budi/);
   assert.doesNotMatch(elTab.innerHTML, /👤 Adik/);
 });
@@ -284,5 +284,5 @@ test('renderInto("danaTitipanPortfolioList") pertama kali (container LAIN) tetap
   ctx.document = { getElementById: () => elCard };
 
   ctx.DanaTitipanPortfolioPresenter.renderInto('danaTitipanPortfolioList');
-  assert.deepEqual(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds, ['adik1']);
+  assert.deepEqual(Array.from(ctx.DanaTitipanPortfolioPresenter.filterOwnerIds), ['adik1']);
 });

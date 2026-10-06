@@ -307,6 +307,9 @@ if(typeof window!=='undefined'&&typeof window.addEventListener==='function'&&!wi
     try{showPage(target,null,{fromHistory:true});}finally{_mainAppNavPopInProgress=false;}
   });
 }
+let _kwNavRenderSeq=0;
+function _kwNavRenderKey(name,pageEl){return String(name||'')+'::'+String(pageEl&&pageEl.id||'');}
+function _kwNavSchedule(fn){if(typeof requestAnimationFrame==='function')requestAnimationFrame(fn);else if(typeof setTimeout==='function')setTimeout(fn,0);else fn();}
 function showPage(name,el,opts){
 // S1926 REGRESSION HARDENING: ScannerSession self-heal MUST happen before
 // the destination-exists guard. S1907-era behavior deliberately lets the
@@ -369,7 +372,12 @@ if(typeof dismissAllToasts==='function')dismissAllToasts();
 // showPage(), before the page-not-found guard. Do not duplicate the call here;
 // one deterministic invocation avoids duplicate recovery side effects.
 const _currentPage=document.querySelector('.page.active');
-// S1931: render destination before committing page/nav state; keep old page painted during slow presenters.
+const _isUserNav=!!(el&&el.classList&&el.classList.contains('nav-item')&&!(opts&&opts.fromHistory));
+const _navSeq=++_kwNavRenderSeq;
+const _currentRenderKey=_kwNavRenderKey(name,pageEl);
+if(pageEl.dataset)pageEl.dataset.kwRenderKey=_currentRenderKey;
+// S1931/S2515: user navigation commits the destination first; expensive presenter work is scheduled.
+
 if(_sameActiveNav){
   if(el&&el.classList&&typeof el.classList.add==='function')el.classList.add('active');
   if(el&&typeof el.setAttribute==='function')el.setAttribute('aria-current','page');
@@ -390,21 +398,26 @@ const activeBtn=el||document.querySelector(`.nav-item[onclick*="'${name}'"]`);
 const _staleRenderError=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
 if(_staleRenderError&&typeof _staleRenderError.remove==='function')_staleRenderError.remove();
 if(pageEl.dataset)delete pageEl.dataset.renderError;
-try{
-  renderPageContent(name);
-}catch(err){
-  // Keep the destination visible and provide a recoverable diagnostic instead
-  // of silently leaving a half-rendered/blank page after a presenter exception.
-  console.error('[showPage] renderPageContent gagal:',err);
-  if(pageEl.dataset)pageEl.dataset.renderError='1';
-  let box=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
-  if(!box&&typeof pageEl.insertBefore==='function'&&typeof document.createElement==='function'){
-    box=document.createElement('div');
-    box.className='page-render-error card';
-    box.setAttribute('role','status');
-    box.innerHTML='<div class="card-title">⚠️ Halaman belum selesai dimuat</div><div class="u-fs12 u-t2">Coba buka halaman ini lagi. Data lokal tidak dihapus.</div>';
-    pageEl.insertBefore(box,pageEl.firstChild||null);
+const _renderNow=()=>{
+  if(_navSeq!==_kwNavRenderSeq)return;
+  if(pageEl.dataset&&pageEl.dataset.kwRenderKey!==_currentRenderKey)return;
+  try{
+    renderPageContent(name);
+  }catch(err){
+    console.error('[showPage] renderPageContent gagal:',err);
+    if(pageEl.dataset)pageEl.dataset.renderError='1';
+    let box=typeof pageEl.querySelector==='function'?pageEl.querySelector('.page-render-error'):null;
+    if(!box&&typeof pageEl.insertBefore==='function'&&typeof document.createElement==='function'){
+      box=document.createElement('div');
+      box.className='page-render-error card';
+      box.setAttribute('role','status');
+      box.innerHTML='<div class="card-title">⚠️ Halaman belum selesai dimuat</div><div class="u-fs12 u-t2">Coba buka halaman ini lagi. Data lokal tidak dihapus.</div>';
+      pageEl.insertBefore(box,pageEl.firstChild||null);
+    }
   }
+};
+if(_isUserNav){_kwNavSchedule(_renderNow);}else{
+  _renderNow();
 }
 // S1931: reveal destination and commit bottom-nav only after render completes.
 if(_currentPage&&_currentPage!==pageEl&&_currentPage.classList&&typeof _currentPage.classList.remove==='function'){

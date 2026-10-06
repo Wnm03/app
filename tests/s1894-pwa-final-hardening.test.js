@@ -31,7 +31,9 @@ test('S1894 storage monitor is browser-optional and thresholded at 80/90 percent
   assert.match(ux,/navigator\.storage\.estimate/);
   assert.match(ux,/pct<80/);
   assert.match(ux,/pct>=90\?'critical':'warn'/);
-  assert.match(ux,/setInterval\(check,60000\)/);
+  assert.doesNotMatch(ux,/setInterval\(check,60000\)/);
+  assert.match(ux,/PERIOD=300000/);
+  assert.match(ux,/visibilitychange/);
 });
 
 test('S1894 offline/update UX never forces an automatic reload',()=>{

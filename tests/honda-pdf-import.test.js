@@ -307,7 +307,7 @@ test('pickFiles() — resolve array file yang dipilih user (input multiple)', as
 test('pickFiles() — tidak ada file dipilih -> resolve array kosong', async () => {
   const { ctx } = makeCtx({ document: makeFakeDocument([]) });
   const files = await ctx.HondaPdfImport.pickFiles();
-  assert.deepEqual(files, []);
+  assert.deepEqual(Array.from(files), []);
 });
 
 function makeFileWithReader(name, size, type, dataUrl) {

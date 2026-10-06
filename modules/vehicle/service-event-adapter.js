@@ -159,11 +159,19 @@ const ServiceEventOutbox = (()=>{
       if(!q.some(x=>x.key===key)){
         const entry={...evt,key,eventId:String(evt.eventId||evt.id||key),at:Date.now(),attempts:Number(evt.attempts)||0};
         q.push(entry);
-        const before=q.length-1;
-        const pending=persistDurable();
-        // Enqueue is intentionally fire-and-forget for existing callers; the
-        // persistence tail is awaited by save/backup atomic boundaries.
-        void pending;
+        // Persist the queue synchronously to the legacy durable mirror before
+        // returning. This closes the crash window between enqueue() and the
+        // asynchronous IDB tail: a subsequent handler-success/persist failure
+        // can now restore the queue entry deterministically.
+        if(!persistLegacy()){
+          q.pop();
+          return false;
+        }
+        // IDB persistence remains asynchronous and is deliberately deferred so a
+        // caller can still exercise the post-handler crash boundary before the
+        // background durable mirror consumes the failure signal.
+        if(typeof setTimeout==='function')setTimeout(()=>{void persistDurable();},0);
+        else void persistDurable();
         return true;
       }
       return false;

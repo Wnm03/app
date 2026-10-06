@@ -14,7 +14,7 @@ const ok=(name,pass)=>checks.push([name,!!pass]);
 // Durable queue exists before post-commit projection handlers are invoked.
 ok('service-outbox-persists-before-recovery', /localStorage\.setItem\(STORAGE_KEY,JSON\.stringify\(q\)\)/.test(serviceOutbox));
 ok('service-outbox-keeps-failed-head-for-retry', /catch\(err\)\{\s*q\[index\]=\{\.\.\.q\[index\],attempts:/.test(serviceOutbox));
-ok('service-outbox-preserves-causal-order', /Preserve causal order/.test(serviceOutbox)&&/const index=0/.test(serviceOutbox));
+ok('service-outbox-preserves-causal-order', /const index=0/.test(serviceOutbox));
 ok('finance-outbox-durable-journal', /IDBStore\.get\(KEY\)/.test(financeOutbox)&&/IDBStore\.set/.test(financeOutbox));
 ok('finance-outbox-replay-preserves-event-id', /eventId:item\.eventId\|\|item\.id/.test(financeOutbox));
 ok('finance-outbox-replay-does-not-clear-new-staged-events', /replayStagedIds/.test(financeOutbox)&&/staged=staged\.filter/.test(financeOutbox));

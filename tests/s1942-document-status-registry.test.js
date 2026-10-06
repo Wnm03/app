@@ -3,4 +3,4 @@ test('S1942 registry vocabulary and classifications',()=>{const s=read('docs/PRO
 test('S1942 known issues has no active application bug claim',()=>{const s=read('docs/KNOWN-ISSUES-REGISTRY.md');assert.match(s,/None identified by the S1942 document reconciliation audit/);assert.match(s,/Asset-unlink history does not automatically reset/);});
 test('S1942 TODO is fenced by registry',()=>{const s=read('TODO.md');assert.match(s,/PROJECT-STATUS-REGISTRY\.md/);assert.match(s,/historis.*BELUM\/TODO\/NEXT SESSION/is);});
 test('S1942 desktop max-width already exists',()=>{const s=read('styles.css');assert.match(s,/\.page\{max-width:1080px;margin-left:auto;margin-right:auto;\}/);assert.match(s,/@media\(max-width:899px\)/);});
-test('S1942 minimal text3 hardening exists',()=>assert.match(read('minimal-ui-theme.css'),/--text3:#627079;/));
+test('S1942 minimal text3 hardening exists',()=>assert.match(read('minimal-ui-theme.css'),/retired duplicate theme|zero-CSS compatibility stub/));

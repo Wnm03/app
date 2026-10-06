@@ -178,7 +178,7 @@ test('commitCategoryCSV() — tanpa curVehicleId (konteks non-kendaraan) tetap a
 
 test('commitCategoryCSV() — baris UPDATE kategori existing tidak menimpa group yg sudah tersimpan (di luar scope sesi ini)', () => {
   const D = baseD({
-    sparepartCats: [{ id: 'sp_old', name: 'Busi', code: 'BUS', intervalKm: 6000, intervalBulan: 0, showInReminder: true, group: 'Grup Lama Manual', groupIcon: '🧩' }],
+    sparepartCats: [{ id: 'sp_old', name: 'Busi', code: 'BUS', intervalKm: 6000, intervalBulan: 0, showInReminder: true, vehicleId:'veh1', group: 'Grup Lama Manual', groupIcon: '🧩' }],
   });
   const calls = [];
   const ctx = makeCsvCtx({ D, curVehicleId: 'veh1', calls });

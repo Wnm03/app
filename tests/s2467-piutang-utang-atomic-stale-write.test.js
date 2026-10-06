@@ -33,6 +33,6 @@ test('S2467 Utang delete rolls back debt and generated bill on stale rejection',
 });
 
 test('S2467 Piutang edit uses canonical writer instead of direct row mutation',()=>{
-  assert.match(pi,/BillDebtPiutangCanonicalWriter\.updateById\('piutang',p\.id,_patch\)/);
+  assert.match(pi,/BillDebtPiutangCanonicalWriter\.updateById\('piutang',p\.id,p0=>Object\.assign\(p0,_patch\)\)/);
   assert.doesNotMatch(pi,/Object\.assign\(p,\{name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang\._lunasState\}\)/);
 });

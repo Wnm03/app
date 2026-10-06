@@ -493,7 +493,7 @@ if(origTx)linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accoun
 }
 const _patch={name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
 if(linkedPayoffTxId)_patch.linkedPayoffTxId=linkedPayoffTxId;
-BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,_patch);
+BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>Object.assign(p0,_patch));
 _savedPiutangIdSesiC=p.id;
 } else {
 const newP={id:uid(),name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};

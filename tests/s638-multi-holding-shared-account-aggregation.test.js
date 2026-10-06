@@ -148,7 +148,7 @@ test('resolveOwnerDefaultForAccount() — 3 holding tertaut ke 1 akun, owners ga
   assert.strictEqual(res.ok, true);
   assert.strictEqual(res.source, 'holding');
   const ownerIds = res.owners.map((o) => o.ownerId).sort();
-  assert.deepStrictEqual(ownerIds, ['aku', 'mas_sihab', 'renov']);
+  assert.deepStrictEqual(Array.from(ownerIds), ['aku', 'mas_sihab', 'renov']);
   // 3 owner -> tidak ada autoSelectId otomatis (butuh pilih manual, pola sama seperti 2+ owner biasa)
   assert.strictEqual(res.autoSelectId, null);
 });
@@ -178,7 +178,7 @@ test('resolveTxOwnerSplitForAccount() — 3 holding tertaut, field `holdings` (a
   assert.strictEqual(res.holdings.length, 3);
   assert.strictEqual(res.holding.id, 'h1');
   const ownerIds = res.owners.map((o) => o.ownerId).sort();
-  assert.deepStrictEqual(ownerIds, ['aku', 'mas_sihab', 'renov']);
+  assert.deepStrictEqual(Array.from(ownerIds), ['aku', 'mas_sihab', 'renov']);
 });
 
 test('resolveAccOwnershipBadgeState() — 3 holding tertaut, badge baca owners gabungan (source:holding)', () => {

@@ -95,6 +95,12 @@ function loadSource(files,globals={},exports=[]){
     loaded.add(file);
     ordered.push([file,src]);
   }
+  // S1990/S2000: tests exporting ServisChecklist must receive the consolidated
+  // checklist owner directly. Older snapshots assumed the module was implicit.
+  if(exports.includes('ServisChecklist') && !provided.has('ServisChecklist') && !loaded.has('modules/vehicle/servis-checklist.js')){
+    if(!loaded.has('modules/vehicle/service-master-data.generated.js')) addWithDeps('modules/vehicle/service-master-data.generated.js');
+    if(fs.existsSync(path.resolve(process.cwd(),'modules/vehicle/servis-checklist.js'))) addWithDeps('modules/vehicle/servis-checklist.js');
+  }
   // Generated checklist data is the canonical runtime input for servis-checklist.js.
   // Load it before the checklist module so the VM does not fall back to an empty
   // array merely because CommonJS `require()` is unavailable inside the sandbox.
@@ -113,11 +119,10 @@ function loadSource(files,globals={},exports=[]){
     addWithDeps('modules/vehicle/servis.js');
     for(const extra of [
       'modules/vehicle/sparepart-servis.js',
-      'modules/vehicle/servis-sot-identity-s2521.js',
       'modules/vehicle/service-runtime-projection-sot-s2166.js',
       'modules/vehicle/sparepart-servis-ui.js'
     ]){
-      if(!loaded.has(extra)) addWithDeps(extra);
+      if(!loaded.has(extra) && fs.existsSync(path.resolve(process.cwd(),extra))) addWithDeps(extra);
     }
   }
 
@@ -136,7 +141,7 @@ function loadSource(files,globals={},exports=[]){
     // isolated test harnesses so tests never exercise a half-loaded Servis API.
     if(file==='modules/vehicle/servis.js'){
       for(const extra of ['modules/vehicle/servis-ui-filters-parts-s2520.js','modules/vehicle/servis-checklist-ui-s2520.js','modules/vehicle/servis-b.js']){
-        if(files.includes(extra)) continue;
+        if(files.includes(extra) || !fs.existsSync(path.resolve(process.cwd(),extra))) continue;
         const extraSrc=fs.readFileSync(path.resolve(process.cwd(),extra),'utf8');
         vm.runInContext(extraSrc,ctx,{filename:extra});
       }

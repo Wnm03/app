@@ -8,7 +8,8 @@ const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
 test('S1924: showPage clears a stale render-recovery card before retrying a page',()=>{
   const src=read('modules/shared/modal-navigasi.js');
   const clear=src.indexOf("pageEl.querySelector('.page-render-error')");
-  const tryRender=src.indexOf('try{\n  renderPageContent(name);',clear);
+  const tryRenderMatch=/try\s*\{\s*renderPageContent\(name\);/.exec(src.slice(clear));
+  const tryRender=tryRenderMatch?clear+tryRenderMatch.index:-1;
   assert.ok(clear>=0,'showPage harus mencari recovery card lama');
   assert.ok(src.indexOf("_staleRenderError.remove()",clear)<tryRender,
     'recovery card lama harus dihapus sebelum retry render');

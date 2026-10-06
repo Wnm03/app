@@ -90,7 +90,7 @@ test('Laporan.topProdukAgg() — HANYA transaksi SELF yang masuk agregat produk 
   const inRangeSelf = D.cobek.filter(ctx.isCobekOwnershipSelf);
   const agg = ctx.Laporan.topProdukAgg(inRangeSelf);
   const names = agg.map((a) => a.name).sort();
-  assert.deepEqual(names, ['Produk A', 'Produk B'], 'Produk C (Investor)/Produk D (Titipan) harus dikecualikan');
+  assert.deepEqual(Array.from(names), ['Produk A', 'Produk B'], 'Produk C (Investor)/Produk D (Titipan) harus dikecualikan');
 });
 
 test('Laporan.topProdukAgg() — omzet & qty dihitung persis dari transaksi SELF saja', () => {

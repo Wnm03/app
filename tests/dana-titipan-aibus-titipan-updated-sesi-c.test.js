@@ -196,6 +196,7 @@ function resetReconcileGlobals() {
   delete global.save;
   delete global.AIBus;
   delete global.resolveOwnerDefaultForAccount;
+  delete global.FinanceEventOutbox;
 }
 
 test('repairOwnerIdConsistency() emit titipan.updated {kind:"reconcile",action:"repair-owner-id"} kalau ada yg diunify', () => {
@@ -229,6 +230,7 @@ test('repairDebtNameStaleness() emit titipan.updated {kind:"reconcile",action:"r
   const events = [];
   global.AIBus = { emit(name, payload) { events.push({ name, payload }); } };
   global.save = () => {};
+  global.FinanceEventOutbox = { emitOrEnqueue(name,payload) { events.push({ name, payload }); } };
   global.D = {
     ownerRegistry: [{ id: 'o1', name: 'Budi Baru' }],
     assets: [{ id: 'a1', owners: [{ ownerId: 'o1', ownerName: 'Budi Baru', isSelf: false }] }],
@@ -259,6 +261,7 @@ test('repairTransactionOwnerRefs() emit titipan.updated {kind:"reconcile",action
   const events = [];
   global.AIBus = { emit(name, payload) { events.push({ name, payload }); } };
   global.save = () => {};
+  global.FinanceEventOutbox = { emitOrEnqueue(name,payload) { events.push({ name, payload }); } };
   global.D = {
     assets: [], investments: [], debts: [],
     transactions: [{ id: 'tx1', accountId: 'acc1', deductionOwnerId: 'owner_lama' }],

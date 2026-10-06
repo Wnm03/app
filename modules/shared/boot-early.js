@@ -70,6 +70,7 @@ _loadScriptOnce(src,true,integrity,crossOrigin).then(resolve).catch(reject);
 reject(new Error('Timeout memuat '+src+' setelah retry — cek koneksi internet, cache/service worker, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
 }
 },15000);
+if(timeoutId&&typeof timeoutId.unref==='function')timeoutId.unref();
 s.onload=()=>{if(done)return;done=true;clearTimeout(timeoutId);resolve();};
 s.onerror=()=>{
 if(done)return;done=true;clearTimeout(timeoutId);

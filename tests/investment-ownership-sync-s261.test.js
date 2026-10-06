@@ -174,7 +174,7 @@ test('S261/s476b: InvestmentPlannerAPI.assetAllocation() — cascade, breakdown 
   const a = api.assetAllocation();
   assert.equal(a.ok, true);
   const types = a.allocation.map((r) => r.type).sort();
-  assert.deepEqual(types, ['Emas', 'Reksa Dana']);
+  assert.deepEqual(Array.from(types), ['Emas', 'Reksa Dana']);
   const emas = a.allocation.find((r) => r.type === 'Emas');
   assert.equal(emas.value, 1500000, 'Emas SELF cuma h1 (1.5jt), h4 (CUSTOMER, 2jt) dikecualikan');
 });

@@ -52,7 +52,7 @@ test('topCategories() mengagregasi total kategori, bukan transaksi tunggal', () 
     { accountId: 'a1', type: 'expense', amount: 50000, category: '', date: '2026-09-04' },
   ]);
   const out = ctx.FinancialAuditEngine.topCategories(range, 3);
-  assert.deepEqual(out.map(x => x.category), ['Makan', 'Transportasi', 'Perlu ditinjau']);
+  assert.deepEqual(Array.from(out, x => x.category), ['Makan', 'Transportasi', 'Perlu ditinjau']);
   assert.equal(out[0].amount, 250000);
   assert.equal(out[0].count, 2);
 });

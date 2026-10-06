@@ -49,7 +49,7 @@ function makeD(overrides) {
     budgets: [],
     workDays: [],
     finansialFreedom: {},
-    categories: { income: [], expense: [] }, // Budget.getCatInfoById() baca ini
+    categories: { income: [], expense: [{ id: 'cat1', name: 'cat1', subs: [] }] }, // Budget.getCatInfoById() baca fixture canonical cat1
   }, overrides);
 }
 

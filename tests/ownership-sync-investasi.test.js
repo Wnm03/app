@@ -90,7 +90,7 @@ test('Investment.assetAllocation() — HANYA holding SELF yang masuk breakdown p
   const ctx = makeCtx(D);
   const res = ctx.Investment.assetAllocation();
   const types = res.map((r) => r.type).sort();
-  assert.deepEqual(types, ['Reksa Dana', 'Saham']);
+  assert.deepEqual(Array.from(types), ['Reksa Dana', 'Saham']);
   const saham = res.find((r) => r.type === 'Saham');
   assert.equal(saham.value, 1500000, 'Saham SELF cuma h1 (1.5jt), h3 (INVESTOR) dikecualikan');
 });

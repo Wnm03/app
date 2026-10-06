@@ -29,7 +29,7 @@ test('S2035 collectKnownGroups() — tepat 13 kategori canonical dari ServiceTax
   const ctx = loadSource(['modules/vehicle/sparepart-servis.js'], { D: makeD(), ServiceTaxonomySOT: sot() }, ['collectKnownGroups']);
   const groups = ctx.collectKnownGroups();
   assert.equal(groups.length, 13);
-  assert.deepEqual(groups.map(g=>g.group), CANONICAL.map(x=>x[1]));
+  assert.deepEqual(Array.from(groups, g=>g.group), CANONICAL.map(x=>x[1]));
   groups.forEach(g => assert.ok(g.icon, `grup "${g.group}" harus punya icon`));
 });
 
@@ -48,7 +48,7 @@ test('S2035 collectKnownGroups() — legacy TORSI/GENERIC tidak lagi bocor ke ta
 
 test('S2035 collectKnownGroups() — isolated fallback tetap aman bila SOT belum tersedia', () => {
   const ctx = loadSource(['modules/vehicle/sparepart-servis.js'], { D: makeD() }, ['collectKnownGroups']);
-  assert.deepEqual(ctx.collectKnownGroups(), []);
+  assert.deepEqual(Array.from(ctx.collectKnownGroups()), []);
 });
 
 test('S2035 DatabaseAPI/TORSI tidak mempengaruhi hasil taxonomy canonical', () => {

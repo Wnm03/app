@@ -16,6 +16,12 @@ function loadBudget(transactions, DateImpl = Date) {
     uid: () => 'test-id', curMonth: new Date().getMonth(), curYear: new Date().getFullYear(),
     daysInMonth: 30, scrollTabBarIntoView() {}
   };
+  context.FinanceCategorySOT={
+    list:()=>context.D.categories.expense,
+    findById:(domain,id)=>{for(const c of context.D.categories.expense||[]){if(c.id===id)return {id:c.id,name:c.name,subs:c.subs||[]};}return null;},
+    findSub:(c,id)=>(c&&c.subs||[]).find(s=>s.id===id)||null,
+    findByName:(domain,name)=>{for(const c of context.D.categories.expense||[]){if(c.name===name)return c;const sub=(c.subs||[]).find(x=>x.name===name);if(sub)return {id:sub.id,name:sub.name,parentId:c.id,parentName:c.name};}return null;}
+  };
   vm.createContext(context);
   vm.runInContext(source, context, { timeout: 1000 });
   return context.__Budget;

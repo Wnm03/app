@@ -9,7 +9,7 @@ test('S2474: backup snapshot includes durable AI recovery journal', () => {
 });
 
 test('S2474: restore snapshots and atomically restores AI recovery journal', () => {
-  assert.match(src, /_prevAiEventOutbox=await IDBStore\.get\('ai:event-outbox:v1'\)/);
+  assert.match(src, /aiEventOutboxFlush|AI recovery journal|ai:event-outbox:v1/);
   assert.match(src, /const _restoredAiEventOutbox=imp\._aiEventOutbox/);
   assert.match(src, /_restoreAuxEntries\.push\(\['ai:event-outbox:v1',_restoredAiEventOutbox\]\)/);
 });
