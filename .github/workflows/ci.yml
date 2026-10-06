@@ -1,1 +1,28 @@
+name: CI
 
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Require npm lockfile
+        shell: bash
+        run: |
+          if [[ ! -f package-lock.json && ! -f npm-shrinkwrap.json ]]; then
+            echo "CI BLOCKED: package-lock.json or npm-shrinkwrap.json is required"
+            exit 1
+          fi
+      - name: Locked install
+        run: npm ci
+      - name: Release-grade check
+        run: npm run check
