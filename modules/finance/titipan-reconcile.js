@@ -1076,7 +1076,7 @@ repairOwnerIdConsistency() {
     if(!persisted.ok){
       D.assets = JSON.parse(_repairSnapshot.assets);
       D.investments = JSON.parse(_repairSnapshot.investments);
-      D.debts = JSON.parse(_repairSnapshot.debts);
+      BillDebtPiutangCanonicalWriter.replace('debts', JSON.parse(_repairSnapshot.debts));
       return {unified:0,conflicts,reason:'persistence-failed',code:'PERSISTENCE_FAILED'};
     }
   }
@@ -1112,7 +1112,7 @@ repairDebtNameStaleness() {
   });
   if (synced) {
     const persisted=_titipanReconcilePersistOrRollback(snapshot);
-    if(!persisted.ok){ D.debts = JSON.parse(_repairSnapshotData.debts); return {synced:0,reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
+    if(!persisted.ok){ BillDebtPiutangCanonicalWriter.replace('debts', JSON.parse(_repairSnapshotData.debts)); return {synced:0,reason:'persistence-failed',code:'PERSISTENCE_FAILED'}; }
   }
   if (synced && typeof FinanceEventOutbox !== 'undefined' && typeof FinanceEventOutbox.emitOrEnqueue === 'function') FinanceEventOutbox.emitOrEnqueue('titipan.updated', { kind: 'reconcile', action: 'repair-debt-name', synced });
   return { synced };

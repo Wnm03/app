@@ -11,6 +11,7 @@ test('S2466 account delete has stale preflight and atomic snapshot rollback',()=
 test('S2466 account delete rolls back every migrated accountId domain',()=>{
  for(const k of ['accounts','transactions','bills','bbmLogs','servisLogs','targets','assets','investments','cobek']){
   if(k==='transactions') assert.match(src,/FinanceTxSOT\.replaceSnapshot\(JSON\.parse\(_accountDeleteSnapshot\.transactions\)\)/);
+  else if(k==='bills') assert.match(src,/BillDebtPiutangCanonicalWriter\.replace\('bills', JSON\.parse\(_accountDeleteSnapshot\.bills\)\)/);
   else assert.match(src,new RegExp(`D\\.${k}=JSON\\.parse\\(_accountDeleteSnapshot\\.${k}\\)`));
  }
 });

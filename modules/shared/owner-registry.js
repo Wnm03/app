@@ -49,7 +49,7 @@ function _ownerRegistryRestore(snapshot){
   D.assets=snapshot.assets;
   D.investments=snapshot.investments;
   D.titipanCommitments=snapshot.titipanCommitments;
-  D.debts=snapshot.debts;
+  if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter||typeof BillDebtPiutangCanonicalWriter.replace!=='function') throw new Error('BILL_DEBT_CANONICAL_WRITER_REQUIRED'); BillDebtPiutangCanonicalWriter.replace('debts',snapshot.debts);
 }
 function _ownerRegistrySaveOrRollback(snapshot){
   try{

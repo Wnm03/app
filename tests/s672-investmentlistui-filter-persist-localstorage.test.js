@@ -154,7 +154,7 @@ test('render() di halaman/context BARU membaca filter tersimpan dari localStorag
 
   assert.equal(ctx2.InvestmentListUI.filterOwnerIds.length, 0); // sebelum render()
   ctx2.InvestmentListUI.render();
-  assert.deepEqual(ctx2.InvestmentListUI.filterOwnerIds, ['istri1']);
+  assert.deepEqual(Array.from(ctx2.InvestmentListUI.filterOwnerIds), ['istri1']);
 
   const html = dom2.getElementById('investmentHoldingList').innerHTML;
   assert.match(html, /Emas Istri/);
@@ -172,16 +172,16 @@ test('render() dipanggil 2x -> baca localStorage HANYA sekali (tidak menimpa per
   seedTiga(ctx);
 
   ctx.InvestmentListUI.render();
-  assert.deepEqual(ctx.InvestmentListUI.filterOwnerIds, ['istri1']);
+  assert.deepEqual(Array.from(ctx.InvestmentListUI.filterOwnerIds), ['istri1']);
 
   // User ganti filter secara live (bukan dari storage) SEBELUM render() ke-2.
   ctx.InvestmentListUI.onFilterOwnerToggle('anak1');
-  assert.deepEqual(ctx.InvestmentListUI.filterOwnerIds.sort(), ['anak1', 'istri1']);
+  assert.deepEqual(Array.from(ctx.InvestmentListUI.filterOwnerIds).sort(), ['anak1', 'istri1']);
 
   ctx.InvestmentListUI.render();
   // Kalau render() ke-2 baca ulang localStorage, filterOwnerIds akan balik ke
   // ['istri1'] (nilai lama sebelum toggle anak1) -- harus TETAP ['anak1','istri1'].
-  assert.deepEqual(ctx.InvestmentListUI.filterOwnerIds.sort(), ['anak1', 'istri1']);
+  assert.deepEqual(Array.from(ctx.InvestmentListUI.filterOwnerIds).sort(), ['anak1', 'istri1']);
 });
 
 test('data localStorage kosong/belum ada -> render() tidak melempar, filter tetap default kosong', () => {

@@ -132,7 +132,7 @@ test('_loadFilterPrefsOnce() membaca filterOwnerIds+filterSettlement tersimpan &
 
   assert.equal(ctx.Aset.filterOwnerIds.length, 0); // sebelum load
   ctx.Aset._loadFilterPrefsOnce();
-  assert.deepEqual(ctx.Aset.filterOwnerIds, ['istri1', 'anak1']);
+  assert.deepEqual(Array.from(ctx.Aset.filterOwnerIds), ['istri1', 'anak1']);
   assert.equal(ctx.Aset.filterSettlement, 'titipan');
 });
 
@@ -144,14 +144,14 @@ test('_loadFilterPrefsOnce() dipanggil 2x -> baca localStorage HANYA sekali (tid
   const ctx = makeCtx(D, ls);
 
   ctx.Aset._loadFilterPrefsOnce();
-  assert.deepEqual(ctx.Aset.filterOwnerIds, ['istri1']);
+  assert.deepEqual(Array.from(ctx.Aset.filterOwnerIds), ['istri1']);
 
   // User ganti filter secara live (bukan dari storage) SEBELUM load ke-2.
   ctx.Aset.filterOwnerIds = ['anak1'];
   ctx.Aset._loadFilterPrefsOnce();
   // Kalau load ke-2 baca ulang localStorage, filterOwnerIds akan balik ke
   // ['istri1'] -- harus TETAP ['anak1'].
-  assert.deepEqual(ctx.Aset.filterOwnerIds, ['anak1']);
+  assert.deepEqual(Array.from(ctx.Aset.filterOwnerIds), ['anak1']);
 });
 
 test('renderList() memanggil _loadFilterPrefsOnce() (source-check wiring)', () => {

@@ -123,7 +123,7 @@ test('collectKnownGroups(): DatabaseAPI.master override TIDAK boleh bocor ke tax
   const ctx = loadSource([DB_API_FILE, SERVIS_A_FILE], { ServiceTaxonomySOT: canonical }, ['DatabaseAPI', 'collectKnownGroups']);
   ctx.DatabaseAPI.master.getGenericGroupByName = () => ({ 'x': { group: 'GRUP KNOWN OVERRIDE', icon: '🧪' } });
   const groups = ctx.collectKnownGroups();
-  assert.deepEqual(groups.map(g => g.group), ['Servis Mesin']);
+  assert.deepEqual(Array.from(groups, g => g.group), ['Servis Mesin']);
 });
 
 test('_genericRecommendNames(): DENGAN DatabaseAPI.master ter-override -> MEMBACA lewat DatabaseAPI', () => {

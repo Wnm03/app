@@ -123,8 +123,8 @@ test('calcFinanceStats() — kosong: semua field default aman', () => {
   assert.equal(stats.totalNilaiStok, 0);
   assert.equal(stats.totalNilaiTerpakai, 0);
   assert.equal(stats.biayaServisSparepart, 0);
-  assert.deepEqual(stats.trenPembelianBulanan, []);
-  assert.deepEqual(stats.trenPemakaianBulanan, []);
+  assert.deepEqual(Array.from(stats.trenPembelianBulanan), []);
+  assert.deepEqual(Array.from(stats.trenPemakaianBulanan), []);
 });
 
 test('calcFinanceStats() — totalPembelian dari priceHistory lintas semua part', () => {
@@ -193,9 +193,9 @@ test('calcFinanceStats() — trenPembelianBulanan & trenPemakaianBulanan dikelom
     { date: '2026-07-01', usedPartId: 'p1', usedPartQty: 2, cost: 40000 },
   ];
   const stats = ctx.Sparepart.calcFinanceStats(partsStock, servisLogs);
-  assert.deepEqual(stats.trenPembelianBulanan.map((t) => t.month), ['2026-05', '2026-07']);
+  assert.deepEqual(Array.from(stats.trenPembelianBulanan).map((t) => t.month), ['2026-05', '2026-07']);
   assert.equal(stats.trenPembelianBulanan[1].total, 2 * 10000 + 1 * 10000);
-  assert.deepEqual(stats.trenPemakaianBulanan.map((t) => t.month), ['2026-06', '2026-07']);
+  assert.deepEqual(Array.from(stats.trenPemakaianBulanan).map((t) => t.month), ['2026-06', '2026-07']);
   assert.equal(stats.trenPemakaianBulanan[1].total, 2 * 10000);
 });
 

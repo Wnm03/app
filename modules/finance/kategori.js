@@ -91,7 +91,7 @@ function _rollbackCategoryFinanceMutation(snapshot){
 if(!snapshot)return;
 if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.replaceSnapshot==='function') FinanceCategorySOT.replaceSnapshot(snapshot.categories); else throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
 if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(snapshot.transactions||[]);
-D.bills=snapshot.bills;
+BillDebtPiutangCanonicalWriter.replace('bills', snapshot.bills);
 }
 function _categoryNameExists(type,name,excludeId){
 const n=String(name||'').trim().toLocaleLowerCase();

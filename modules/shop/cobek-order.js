@@ -522,10 +522,10 @@ const inRange=D.cobek.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to;
 // hitung transaksi ownership SELF — shopList di bawah TETAP tampilkan semua
 // transaksi di periode ini apa adanya (pola sama Aset.renderList()/Buku Aset).
 const inRangeSelf=inRange.filter(isCobekOwnershipSelf);
-document.getElementById('cTrip').textContent=inRangeSelf.length;
+const cTripEl=document.getElementById('cTrip');if(cTripEl)cTripEl.textContent=inRangeSelf.length;
 const omzet=inRangeSelf.reduce((s,t)=>s+(t.total||0),0);
-document.getElementById('cSet').textContent=fmt(omzet);
-document.getElementById('cUntung').textContent=fmt(inRangeSelf.reduce((s,t)=>s+(t.profit||0),0));
+const cSetEl=document.getElementById('cSet');if(cSetEl)cSetEl.textContent=fmt(omzet);
+const cUntungEl=document.getElementById('cUntung');if(cUntungEl)cUntungEl.textContent=fmt(inRangeSelf.reduce((s,t)=>s+(t.profit||0),0));
 Etalase.renderModalStat();
 const sorted=[...inRange].sort((a,b)=>(b.id||0)-(a.id||0));
 const el=document.getElementById('shopList');

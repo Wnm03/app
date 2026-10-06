@@ -122,7 +122,7 @@ test('loadOnce() membaca balik filterOwnerIds+filterSettlement yang sudah tersim
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, ['istri1']);
+  assert.deepEqual(Array.from(target.filterOwnerIds), ['istri1']);
   assert.equal(target.filterSettlement, 'milik');
 });
 
@@ -140,7 +140,7 @@ test('loadOnce() HANYA membaca sekali per target (guard _filterPrefsLoaded) -- p
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
   assert.equal(target._filterPrefsLoaded, true);
 });
@@ -157,9 +157,9 @@ test('loadOnce() 2 target dgn _filterStorageKey berbeda TIDAK saling bocor (name
   ctx.FilterPrefsStore.loadOnce(targetA);
   ctx.FilterPrefsStore.loadOnce(targetB);
 
-  assert.deepEqual(targetA.filterOwnerIds, ['a1']);
+  assert.deepEqual(Array.from(targetA.filterOwnerIds), ['a1']);
   assert.equal(targetA.filterSettlement, 'milik');
-  assert.deepEqual(targetB.filterOwnerIds, ['b1', 'b2']);
+  assert.deepEqual(Array.from(targetB.filterOwnerIds), ['b1', 'b2']);
   assert.equal(targetB.filterSettlement, 'titipan');
 });
 
@@ -169,7 +169,7 @@ test('loadOnce() localStorage kosong (belum pernah disimpan) -> target tetap def
   const target = makeTarget('fakeFilterPrefs');
 
   assert.doesNotThrow(() => ctx.FilterPrefsStore.loadOnce(target));
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
 });
 
@@ -179,7 +179,7 @@ test('loadOnce() data JSON korup (bukan JSON valid) -> abaikan, target tetap def
   const target = makeTarget('fakeFilterPrefs');
 
   assert.doesNotThrow(() => ctx.FilterPrefsStore.loadOnce(target));
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
 });
 
@@ -192,7 +192,7 @@ test('loadOnce() filterOwnerIds bukan array (mis. diedit manual dari DevTools) -
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   // filterSettlement divalidasi TERPISAH lewat whitelist-nya sendiri
   // ('milik'/'titipan') -- valid di sini, jadi tetap dipakai TERLEPAS dari
   // filterOwnerIds gagal validasi. Guard "kosongkan filterSettlement kalau
@@ -210,7 +210,7 @@ test('loadOnce() filterSettlement bukan milik/titipan (whitelist) -> diabaikan j
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, ['a1']);
+  assert.deepEqual(Array.from(target.filterOwnerIds), ['a1']);
   assert.equal(target.filterSettlement, '');
 });
 
@@ -223,7 +223,7 @@ test('loadOnce() filterOwnerIds array kosong TAPI filterSettlement valid whiteli
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, 'titipan');
 });
 
@@ -236,7 +236,7 @@ test('loadOnce() filterOwnerIds kosong DAN filterSettlement TIDAK lolos whitelis
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
 });
 
@@ -249,7 +249,7 @@ test('loadOnce() filterOwnerIds berisi angka (bukan string) -> dikonversi ke Str
 
   ctx.FilterPrefsStore.loadOnce(target);
 
-  assert.deepEqual(target.filterOwnerIds, ['123', '456']);
+  assert.deepEqual(Array.from(target.filterOwnerIds), ['123', '456']);
 });
 
 test('loadOnce() localStorage tidak tersedia sama sekali (typeof undefined) -> tidak melempar, target tetap default, guard tetap ditandai loaded', () => {
@@ -261,7 +261,7 @@ test('loadOnce() localStorage tidak tersedia sama sekali (typeof undefined) -> t
   const target = makeTarget();
 
   assert.doesNotThrow(() => ctx.FilterPrefsStore.loadOnce(target));
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
   assert.equal(target._filterPrefsLoaded, true);
 });
@@ -275,7 +275,7 @@ test('loadOnce() localStorage.getItem() melempar (mis. diblokir mode privat) -> 
   const target = makeTarget();
 
   assert.doesNotThrow(() => ctx.FilterPrefsStore.loadOnce(target));
-  assert.deepEqual(target.filterOwnerIds, []);
+  assert.deepEqual(Array.from(target.filterOwnerIds), []);
   assert.equal(target.filterSettlement, '');
 });
 
@@ -301,6 +301,6 @@ test('save() lalu loadOnce() di target BARU (simulasi reload halaman) -> nilai p
   const after = makeTarget('fakeFilterPrefs');
   ctx.FilterPrefsStore.loadOnce(after);
 
-  assert.deepEqual(after.filterOwnerIds, ['a1', 'a2']);
+  assert.deepEqual(Array.from(after.filterOwnerIds), ['a1', 'a2']);
   assert.equal(after.filterSettlement, 'titipan');
 });

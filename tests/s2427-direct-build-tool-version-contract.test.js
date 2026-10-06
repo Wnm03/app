@@ -14,8 +14,11 @@ test('S2427 build tools are exact-pinned direct dependencies', () => {
   assert.doesNotMatch(pkg.devDependencies?.esbuild ?? '', /^[~^]/);
 });
 
-test('S2427 does not pretend direct pins replace the required lockfile', () => {
-  const hasLock = fs.existsSync(path.join(ROOT, 'package-lock.json')) ||
-    fs.existsSync(path.join(ROOT, 'npm-shrinkwrap.json'));
-  assert.equal(hasLock, false, 'fixture must reflect the current no-lockfile baseline');
+test('S2427 requires the reproducibility lockfile alongside direct pins', () => {
+  const lockPath = path.join(ROOT, 'package-lock.json');
+  assert.equal(fs.existsSync(lockPath), true, 'package-lock.json is required for reproducible npm ci');
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  assert.equal(lock.lockfileVersion, 3);
+  assert.equal(lock.packages?.['']?.devDependencies?.eslint, '9.19.0');
+  assert.equal(lock.packages?.['']?.devDependencies?.esbuild, '0.24.0');
 });

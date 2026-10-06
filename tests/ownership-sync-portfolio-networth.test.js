@@ -116,7 +116,7 @@ test('cascade — AssetPortfolioAPI.allocationBreakdown()/investmentAllocation()
   assert.equal(ab.totalValue, 500000 + 1000000 + 120000);
   const ia = ctx.AssetPortfolioAPI.investmentAllocation();
   assert.equal(ia.ok, true);
-  assert.deepEqual(ia.breakdown.map((r) => r.type), ['Saham']);
+  assert.deepEqual(Array.from(ia.breakdown).map((r) => r.type), ['Saham']);
   assert.equal(ia.breakdown[0].value, 120000, 'HANYA holding SELF (Saham 120000), holding FAMILY dikecualikan');
 });
 

@@ -16,8 +16,9 @@ test('S2431 keeps direct release tools exact-pinned', () => {
   assert.equal(pkg.devDependencies?.esbuild, '0.24.0');
 });
 
-test('S2431 does not treat package-manager pin as a lockfile substitute', () => {
-  const hasLock = fs.existsSync(path.join(ROOT, 'package-lock.json')) ||
-    fs.existsSync(path.join(ROOT, 'npm-shrinkwrap.json'));
-  assert.equal(hasLock, false, 'fixture should remain explicit about missing lockfile');
+test('S2431 requires a reproducibility lockfile in addition to package-manager pinning', () => {
+  const lockPath = path.join(ROOT, 'package-lock.json');
+  assert.equal(fs.existsSync(lockPath), true, 'package-lock.json is required for locked CI install');
+  const lock = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  assert.equal(lock.lockfileVersion, 3);
 });

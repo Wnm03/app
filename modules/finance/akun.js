@@ -419,7 +419,7 @@ btn.textContent=accIncludeState?'✓ Aktif':'✕ Nonaktif';
 }
 function saveAcc(){if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;return withSaveGuard('acc','accModal',_saveAccInner);}
 function _accountMutationSnapshot(){try{return JSON.parse(JSON.stringify({accounts:D.accounts,assets:D.assets,investments:D.investments,titipanCommitments:D.titipanCommitments,debts:D.debts}));}catch(_){return {accounts:(D.accounts||[]).slice(),assets:(D.assets||[]).slice(),investments:(D.investments||[]).slice(),titipanCommitments:(D.titipanCommitments||[]).slice(),debts:(D.debts||[]).slice()};}}
-function _accountMutationRollback(s){if(!s)return;D.accounts=s.accounts;D.assets=s.assets;D.investments=s.investments;D.titipanCommitments=s.titipanCommitments;D.debts=s.debts;}
+function _accountMutationRollback(s){if(!s)return;D.accounts=s.accounts;D.assets=s.assets;D.investments=s.investments;D.titipanCommitments=s.titipanCommitments;if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter||typeof BillDebtPiutangCanonicalWriter.replace!=='function') throw new Error('BILL_DEBT_CANONICAL_WRITER_REQUIRED'); BillDebtPiutangCanonicalWriter.replace('debts',s.debts);}
 function _accountPersistOrRollback(s){const r=save();if(r===false){_accountMutationRollback(s);return false;}return true;}
 function _saveAccInner(){
 const name=document.getElementById('accName').value.trim();
@@ -579,7 +579,7 @@ try{
     (D.transactions||[]).filter(t=>t&&t.accountId===acc.id).forEach(t=>FinanceTxSOT.updateById(t.id,{accountId:target.id}));
   }else D.transactions.forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
   if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter||typeof BillDebtPiutangCanonicalWriter.updateById!=='function')throw new Error('BillDebtPiutangCanonicalWriter wajib tersedia untuk migrasi tagihan saat hapus akun');
-  (D.bills||[]).filter(b=>b.accountId===acc.id).forEach(b=>BillDebtPiutangCanonicalWriter.updateById('bills',b.id,{accountId:target.id}));
+  (D.bills||[]).filter(b=>b.accountId===acc.id).forEach(b=>BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.accountId=target.id;}));
   (D.bbmLogs||[]).forEach(b=>{if(b.accountId===acc.id)b.accountId=target.id;});
   (D.servisLogs||[]).forEach(s=>{if(s.accountId===acc.id)s.accountId=target.id;});
   (D.targets||[]).forEach(t=>{if(t.accountId===acc.id)t.accountId=target.id;});
@@ -591,7 +591,7 @@ try{
 }catch(_accountDeleteErr){
   D.accounts=JSON.parse(_accountDeleteSnapshot.accounts);
   if(typeof FinanceTxSOT!=='undefined'&&typeof FinanceTxSOT.replaceSnapshot==='function')FinanceTxSOT.replaceSnapshot(JSON.parse(_accountDeleteSnapshot.transactions));else throw new Error('FINANCE_TX_SOT_REQUIRED');
-  D.bills=JSON.parse(_accountDeleteSnapshot.bills);
+  BillDebtPiutangCanonicalWriter.replace('bills', JSON.parse(_accountDeleteSnapshot.bills));
   D.bbmLogs=JSON.parse(_accountDeleteSnapshot.bbmLogs);
   D.servisLogs=JSON.parse(_accountDeleteSnapshot.servisLogs);
   D.targets=JSON.parse(_accountDeleteSnapshot.targets);
