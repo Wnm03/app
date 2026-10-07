@@ -64,7 +64,9 @@ function loadSandbox(D, billCalYear, billCalMonth, billCalSelectedDate) {
     // Stub minimal: bill tunggal jatuh tempo tanggal 10 bulan yang diuji.
     getBillOccurrencesInMonth: (b, year, month) => {
       if (b.id !== 'billX') return [];
-      return [new Date(year, month, 10)];
+      // UTC midnight = bentuk nyata occurrence (nextDue 'YYYY-MM-DD' di-parse UTC); local-midnight
+      // akan mundur sehari di zona waktu positif (WIB) karena renderBillCalendar memakai toISOString().
+      return [new Date(Date.UTC(year, month, 10))];
     },
   };
   vm.createContext(context);

@@ -1,4 +1,5 @@
 'use strict';
+const { localIso } = require('./helpers/localIso');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -10,7 +11,7 @@ function loadCalc(D) {
 }
 const dateAtMonth = offset => {
   const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + offset, 1).toISOString().slice(0, 10);
+  return localIso(new Date(now.getFullYear(), now.getMonth() + offset, 1));
 };
 
 test('S2338 FI monthlySurplus preserves cash-only income/expense totals and excludes transfers', () => {

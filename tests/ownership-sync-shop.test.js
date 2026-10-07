@@ -1,4 +1,5 @@
 'use strict';
+const { localIso } = require('./helpers/localIso');
 // tests/ownership-sync-shop.test.js — cakupan Sesi 194 (Ownership Sync
 // Shop). Reuse OwnershipEngine (Sesi 191) mengikuti pola PERSIS sesi
 // sebelumnya (S192 akun/keuangan, S193 asset/investasi).
@@ -135,15 +136,15 @@ test('FinCoach.compute() — insight margin Shop (Dashboard) HANYA hitung transa
     piutang: [],
     cobek: [
       // Bulan ini (SELF): margin 10% (omzet 300rb, profit 30rb)
-      { id: 1, date: new Date(y, m, 1).toISOString().split('T')[0], total: 100000, profit: 10000 },
-      { id: 2, date: new Date(y, m, 2).toISOString().split('T')[0], total: 100000, profit: 10000 },
-      { id: 3, date: new Date(y, m, 3).toISOString().split('T')[0], total: 100000, profit: 10000 },
+      { id: 1, date: localIso(new Date(y, m, 1)), total: 100000, profit: 10000 },
+      { id: 2, date: localIso(new Date(y, m, 2)), total: 100000, profit: 10000 },
+      { id: 3, date: localIso(new Date(y, m, 3)), total: 100000, profit: 10000 },
       // Bulan lalu (SELF): margin 50%
-      { id: 4, date: new Date(prevD.getFullYear(), prevD.getMonth(), 1).toISOString().split('T')[0], total: 100000, profit: 50000 },
-      { id: 5, date: new Date(prevD.getFullYear(), prevD.getMonth(), 2).toISOString().split('T')[0], total: 100000, profit: 50000 },
-      { id: 6, date: new Date(prevD.getFullYear(), prevD.getMonth(), 3).toISOString().split('T')[0], total: 100000, profit: 50000 },
+      { id: 4, date: localIso(new Date(prevD.getFullYear(), prevD.getMonth(), 1)), total: 100000, profit: 50000 },
+      { id: 5, date: localIso(new Date(prevD.getFullYear(), prevD.getMonth(), 2)), total: 100000, profit: 50000 },
+      { id: 6, date: localIso(new Date(prevD.getFullYear(), prevD.getMonth(), 3)), total: 100000, profit: 50000 },
       // Noise non-SELF bulan ini dgn margin 100% — HARUS dikecualikan, kalau tidak insight tidak akan muncul
-      { id: 7, date: new Date(y, m, 4).toISOString().split('T')[0], total: 100, profit: 100, ownership: 'INVESTOR' },
+      { id: 7, date: localIso(new Date(y, m, 4)), total: 100, profit: 100, ownership: 'INVESTOR' },
     ],
   };
   const ctx = loadSource(
@@ -165,9 +166,9 @@ test('FinCoach.compute() — kalau isCobekOwnershipSelf tidak ada, fallback hitu
   const D = {
     transactions: [], targets: [], gajiMingguanHistory: [], workDays: [], accounts: [], bills: [], debts: [], piutang: [],
     cobek: [
-      { id: 1, date: new Date(y, m, 1).toISOString().split('T')[0], total: 100000, profit: 10000 },
-      { id: 2, date: new Date(y, m, 2).toISOString().split('T')[0], total: 100000, profit: 10000 },
-      { id: 3, date: new Date(y, m, 3).toISOString().split('T')[0], total: 100000, profit: 10000 },
+      { id: 1, date: localIso(new Date(y, m, 1)), total: 100000, profit: 10000 },
+      { id: 2, date: localIso(new Date(y, m, 2)), total: 100000, profit: 10000 },
+      { id: 3, date: localIso(new Date(y, m, 3)), total: 100000, profit: 10000 },
     ],
   };
   const ctx = loadSource(['modules/shared/modules-calc.js'], { D, fmtFull: (x) => String(x) }, ['FinCoach']);
@@ -189,7 +190,7 @@ test('ShopInsight.compute() — "Produk terlaris" HANYA hitung transaksi ownersh
   const now = new Date();
   const m = now.getMonth();
   const y = now.getFullYear();
-  const iso = (d) => new Date(y, m, d).toISOString().split('T')[0];
+  const iso = (d) => localIso(new Date(y, m, d));
   const D = {
     products: [], produsen: [], accounts: [], transactions: [],
     cobek: [
@@ -213,8 +214,8 @@ test('ShopInsight.compute() — insight margin turun HANYA hitung transaksi owne
   const m = now.getMonth();
   const y = now.getFullYear();
   const prevD = new Date(y, m - 1, 1);
-  const isoThis = (d) => new Date(y, m, d).toISOString().split('T')[0];
-  const isoPrev = (d) => new Date(prevD.getFullYear(), prevD.getMonth(), d).toISOString().split('T')[0];
+  const isoThis = (d) => localIso(new Date(y, m, d));
+  const isoPrev = (d) => localIso(new Date(prevD.getFullYear(), prevD.getMonth(), d));
   const D = {
     products: [], produsen: [], accounts: [], transactions: [],
     cobek: [

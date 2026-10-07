@@ -1,4 +1,5 @@
 'use strict';
+const { localIso } = require('./helpers/localIso');
 // tests/piutang-utang-reminder.test.js — Regression test untuk
 // modules/finance/piutang-utang-reminder.js (sesi lanjutan Fix #3
 // DASHBOARD-DEDUP.md, "Poin 1": perluasan cakupan saran Dashboard Hub).
@@ -13,7 +14,7 @@ function isoDaysFromToday(days) {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localIso(d);
 }
 
 // daysUntilDate() ASLI (vehicle-core.js) TIDAK di-load di sini (pola sama

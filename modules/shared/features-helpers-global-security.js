@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2254';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2254';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2272';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2272';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -1187,6 +1187,21 @@ document.addEventListener('keydown', _dataActionInputChangeHandler, true);
 // field yg konversi ke data-onfocus= kehilangan trigger buka-dropdown saat
 // pertama kali di-tap (cuma jalan saat mulai ngetik lewat data-oninput=).
 document.addEventListener('focus', _dataActionInputChangeHandler, true);
+// S256AF: keyboard activation for non-native controls. <div>/<span role="button" data-action>
+// were focusable but Enter/Space did nothing. Bubble phase (after data-onkeydown handlers);
+// only when focus is on the control itself, never for native button/a/input/select/textarea.
+function _dataActionKeyActivate(e){
+try{
+if(e.key!=='Enter'&&e.key!==' '&&e.key!=='Spacebar') return;
+if(e.defaultPrevented||e.isComposing||e.repeat) return;
+const el=e.target;
+if(!el||!el.matches||!el.matches('[role="button"][data-action]')) return;
+if(/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(el.tagName)||el.isContentEditable) return;
+e.preventDefault();
+el.click();
+}catch(err){ if(typeof console!=='undefined'&&console.debug) console.debug('[app] keyboard activate gagal:', err&&err.message); }
+}
+document.addEventListener('keydown', _dataActionKeyActivate);
 if(typeof console!=='undefined' && console.debug) console.debug('[app] data-oninput/data-onchange/data-onblur/data-onkeydown/data-onfocus dispatcher terpasang (capture phase).');
 function migrateShopCategory(){
 let incCat=D.categories.income.find(c=>c.id==='cat_cb'||/^bisnis cobek$/i.test(c.name)||/^bisnis$/i.test(c.name));

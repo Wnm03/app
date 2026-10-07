@@ -138,7 +138,11 @@ test('verify-release-ready (end-to-end) — eslint TIDAK TERSEDIA + override val
   const beforeContent = existedBefore ? fs.readFileSync(logFile, 'utf8') : '';
   try {
     // PATH sengaja TIDAK diberi eslint palsu -> "command not found" (127) -> unavailable.
-    const strippedPath = `${path.dirname(process.execPath)}${path.delimiter}/usr/bin:/bin`; // PATH minim tanpa node_modules/.bin manapun
+    // S256AV: folder node bisa memuat eslint global (mis. /opt/node22/bin) -> pakai folder sementara
+    // yang HANYA berisi symlink ke node supaya eslint benar-benar tidak ditemukan.
+    const nodeOnlyDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'nodeonly-'));
+    fs.symlinkSync(process.execPath, path.join(nodeOnlyDir, 'node'));
+    const strippedPath = `${nodeOnlyDir}${path.delimiter}/usr/bin:/bin`;
     const result = runGate({
       PATH: strippedPath,
       CONFIRM_LINT_UNAVAILABLE_REASON: 'test-otomatis: sengaja simulasi eslint tidak tersedia',

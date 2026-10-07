@@ -985,8 +985,8 @@ el.innerHTML=visible.map(({cat:c,sot})=>{
   const statusBadge=noInterval
     ?`<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent2-soft,rgba(230,80,80,.12));color:var(--accent2,#e65050)">⚠️ Tanpa interval</span>`
     :(hidden
-      ?`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
-      :`<span class="u-fs11 u-fw700 u-r6 u-pointer" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)">🔔 Tampil di Pengingat</span>`);
+      ?`<span class="u-fs11 u-fw700 u-r6 u-pointer sv-tap" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
+      :`<span class="u-fs11 u-fw700 u-r6 u-pointer sv-tap" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)">🔔 Tampil di Pengingat</span>`);
   const veh=(D.vehicles||[]).find(v=>v&&String(v.id)===String(vid));
   const vehBadge=`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="SOT kendaraan aktif">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name||'Kendaraan aktif'):'🏍️ Kendaraan aktif'}</span>`;
   const categoryBadge=sot.categoryName?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Kategori master SOT">${escapeHtml(sot.categoryName)}</span>`:'';

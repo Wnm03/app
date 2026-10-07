@@ -1,0 +1,67 @@
+# CUMULATIVE PATCH MANIFEST — S256AV (menggantikan S256AU/AT; kumulatif di atas S256AP)
+# Baseline: app-main (13) [cache v2254, patch terakhir S256AA]. Rantai: S256AB..AP (dibawa), S256AQ (anggaran CSS), S256AR (census strict opsional),
+# S256AS (census AL kini bisa gagal + guard AB/AL/AM), S256AT (rekonstruksi AB..AN + guard reminder Servis),
+# S256AU (FILE-HASHES-SHA256.txt disinkronkan + skrip refresh + test),
+# S256AV (15 test gagal di WIB/eslint-global diperbaiki di sisi test; lihat AUDIT-S256AV-TZ-STABLE-TESTS.md).
+# Payload patch-only (56 file): 32 file baru + 24 overwrite; tidak ada file baseline dihapus.
+# !! BUNDLE B BELUM DIBANGUN ULANG (esbuild tidak tersedia). Wajib `npm run build` + upload ulang bundle sebelum deploy.
+BEGIN_APPLY_FILES
+AUDIT-S256AB-AN-RECONSTRUCTED.md
+AUDIT-S256AT-ACCUMULATION-CHAIN.md
+AUDIT-S256AV-TZ-STABLE-TESTS.md
+FILE-HASHES-SHA256.txt
+PATCH-MANIFEST-S256AP.txt
+PATCH-MANIFEST-S256AT-CUMULATIVE.txt
+PATCH-MANIFEST-S256AV-CUMULATIVE.txt
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+index.html
+modern-ui-layer.css
+modules/shared/a11y-action-controls.js
+modules/shared/a11y-expanded-toggles.js
+modules/shared/a11y-pressed-native.js
+modules/shared/a11y-pressed-state.js
+modules/shared/a11y-tabs-worthit.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/fuel-price-ref.js
+modules/vehicle/servis-b.js
+modules/vehicle/sparepart-servis.js
+scripts/a11y-runtime-census-modals.py
+scripts/a11y-runtime-census-pages.py
+scripts/a11y-runtime-census.py
+scripts/build.js
+scripts/refresh-file-hashes.py
+sw.js
+tests/bill-calendar-day-aria-label-s591.test.js
+tests/helpers/localIso.js
+tests/ownership-sync-shop.test.js
+tests/piutang-utang-reminder.test.js
+tests/s2338-financial-projection-single-pass.test.js
+tests/s256ac-touch-targets.test.js
+tests/s256ad-touch-targets-pages.test.js
+tests/s256ae-servis-tap-rows.test.js
+tests/s256af-keyboard-activate.test.js
+tests/s256ag-action-control-a11y.test.js
+tests/s256ah-pressed-state.test.js
+tests/s256ai-pressed-native.test.js
+tests/s256aj-worthit-tabs.test.js
+tests/s256ak-expanded-toggles.test.js
+tests/s256an-modal-census-guard.test.js
+tests/s256ao-fuelpriceref-first-session.test.js
+tests/s256ar-census-strict-first-session.test.js
+tests/s256as-census-and-chip-guards.test.js
+tests/s256at-servis-reminder-ui-guards.test.js
+tests/s256au-file-hashes-sync.test.js
+tests/s256av-tz-stable-fixtures.test.js
+tests/service-master-database-s1863.test.js
+tests/shop-business-engine-integration.test.js
+tests/tagihan-reminder.test.js
+tests/verify-release-ready-s424.test.js
+END_APPLY_FILES
+BEGIN_DELETE_FILES
+END_DELETE_FILES

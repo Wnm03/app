@@ -1,0 +1,20 @@
+PATCH-MANIFEST-S256AP — cek select kendaraan dinamis + gerbang diperketat (kumulatif di atas S256AO; menggantikannya)
+(Isi S256AO di bawah dibawa utuh: fix FuelPriceRef._ensureStore + bundle BELUM dibangun ulang, wajib npm run build sebelum deploy.)
+
+TAMBAHAN S256AP di scripts/a11y-runtime-census-modals.py: (1) tiap <select> berisi id kendaraan di 8 halaman harus memuat SEMUA kendaraan (hasil: carImportVehicle 2/2 opsi); select terlihat dipilih sungguhan, select tersembunyi hanya diperiksa isinya (carImportVehicle tersembunyi di carnotes -> hanya isi yang teruji); (2) GATE DIPERKETAT: jalur exception select_option sebelumnya tercatat tapi exit code tetap 0, kini exit 1. Kontrol negatif: opsi kendaraan dihapus -> missing terdeteksi, exit 1. Guard test 4/4 lulus.
+CATATAN: wadah vehCatImportVehiclePicker/vehCatWebImportVehiclePicker di modals.js tidak diisi kode mana pun (tidak ada referensi selain markup) -> bukan grup hidup. Tidak ada perubahan source/bundle di S256AP; full suite tidak dijalankan ulang (hanya skrip Python berubah; guard test lulus).
+
+--- S256AO ---
+Baseline: app-main (13) + S256AB..AN. Tidak ada perubahan data/storage/data-action/schema.
+
+BUG (ketemu S256AN): D.fuelPriceRef hanya di-seed di load(); pengguna baru yang selesai onboarding memakai app tanpa reload (finishOnboard = save()+showMain()), jadi FuelPriceRef.onSelectChange() melempar TypeError "Cannot set properties of undefined (setting 'lastType')" saat modal BBM dibuka. Setelah reload normal.
+FIX modules/vehicle/fuel-price-ref.js: method baru FuelPriceRef._ensureStore() (wadah kosong {lastType, lastTypeByVehicle, lastCheckedAt, refSources} hanya bila D.fuelPriceRef belum ada), dipanggil di 2 writer: onSelectChange() dan lastCheckedAt di blok finally cek-harga-AI. Angka seed (10000/6800) SENGAJA tidak diduplikasi: load() berikutnya mengisinya lewat blok migrasi "user lama" (field null + tanpa refSources), jadi tidak menambah titik seed ke-4 (lihat REMINDER-UPDATE-HARGA-SUBSIDI-BBM.md).
+BARU tests/s256ao-fuelpriceref-first-session.test.js (3 tes): tidak throw saat undefined + pilihan tersimpan per kendaraan; wadah darurat tanpa angka seed; data existing tidak ditimpa. Terbukti gagal tanpa fix (2 lulus/1 gagal) dan lulus dengan fix.
+
+!! BUNDLE BELUM DIBANGUN ULANG !! Sandbox tanpa esbuild/npm registry: node scripts/build.js --require-minify berhenti di preflight sebelum mengubah apa pun. app-bundle-a/b.min.js, sw.js, versi/cache tetap 2272 dan identik dengan S256AN. verify-bundle-freshness: bundle A segar, bundle B BASI (source fuel-price-ref.js berubah). WAJIB jalankan `npm run build` lalu upload ulang bundle sebelum deploy; setelah itu tes "S2511 baseline bundle freshness gate" kembali lulus.
+
+HASIL (source): tes terkait FuelPriceRef 70/70 lulus. Full suite: 8586 / PASS 8584 / FAIL 1 / SKIPPED 1. Satu-satunya gagal = S2511 baseline bundle freshness gate (konsekuensi bundle basi di atas, bukan regresi logika).
+BELUM TERVERIFIKASI
+  - Perilaku di browser setelah bundle dibangun ulang (reproduksi finishOnboard()+openBbmModal() di scripts/a11y-runtime-census-modals.py: field firstSessionBbm harus menjadi 'ok'); belum dijalankan karena bundle lama masih memuat bug.
+  - Pengguna baru sesi pertama belum punya harga seed Pertalite/Solar sampai reload (tidak lebih buruk dari sebelumnya; sebelumnya modal error).
+CARRIED: semua isi S256AN.

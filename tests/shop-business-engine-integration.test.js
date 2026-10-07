@@ -1,4 +1,5 @@
 'use strict';
+const { localIso } = require('./helpers/localIso');
 // tests/shop-business-engine-integration.test.js — cakupan Sesi 199
 // (Finalisasi Integrasi Shop). Menguji ShopBusinessEnginePresenter
 // (modules/shop/shop-business-engine-presenter.js) yang menutup gap S198
@@ -113,7 +114,7 @@ test('summary() — profit HANYA hitung transaksi ownership SELF bulan berjalan 
   const now = new Date();
   const m = now.getMonth();
   const y = now.getFullYear();
-  const iso = (d) => new Date(y, m, d).toISOString().split('T')[0];
+  const iso = (d) => localIso(new Date(y, m, d));
   const D = baseD({
     cobek: [
       { id: 1, date: iso(1), total: 100000, profit: 20000 },
@@ -134,7 +135,7 @@ test('summary() — profit fallback hitung semua transaksi kalau isCobekOwnershi
   const now = new Date();
   const m = now.getMonth();
   const y = now.getFullYear();
-  const iso = (d) => new Date(y, m, d).toISOString().split('T')[0];
+  const iso = (d) => localIso(new Date(y, m, d));
   const D = baseD({
     cobek: [
       { id: 1, date: iso(1), total: 100000, profit: 20000, ownership: 'INVESTOR' },

@@ -1,22 +1,4 @@
-/* =========================================================================
-   MODERN-UI-LAYER.CSS
-   Lapisan tambahan ringan (murni CSS, ~3KB) di atas styles.css yang sudah
-   ada. TIDAK mengubah 1 baris pun JavaScript/Business Logic, TIDAK menambah
-   dependency/framework baru, TIDAK menimpa nilai token warna (kontras yang
-   sudah diperbaiki di Tahap 9 tetap utuh). Hanya memakai ulang token yang
-   SUDAH ada di styles.css (--shadow-*, --dur-*, --r-*, --accent, --ease-*)
-   untuk beberapa micro-interaction & polish modern:
-     1. Kaca buram (glass blur) pada header & bottom-nav saat discroll
-     2. Elevation & lift halus saat hover/tap pada .card, tombol, nav-item
-     3. Focus ring aksesibel yang lebih jelas (keyboard nav)
-     4. Scrollbar tipis modern (desktop) - tetap none di mobile (unchanged)
-     5. Font smoothing supaya render teks lebih tajam di layar retina
-   Cara pakai di app asli: tambah SATU baris
-     <link rel="stylesheet" href="modern-ui-layer.css">
-   tepat setelah <link rel="stylesheet" href="styles.css?v=337"> di index.html
-   & app_production.html. Tidak perlu rebuild app-bundle-a/b.min.js karena
-   file ini murni CSS terpisah, jadi resiko regresi ke 1228 test JS = nol.
-   ========================================================================= */
+/* MODERN-UI-LAYER.CSS Lapisan tambahan ringan (murni CSS, ~3KB) di atas styles.css yang sudah ada. */
 
 /* 1. Font rendering lebih tajam, tanpa biaya performa */
 html {
@@ -25,12 +7,7 @@ html {
   text-rendering: optimizeLegibility;
 }
 
-/* 2. Header & bottom-nav: glass blur modern saat konten discroll di baliknya.
-      FIX (audit konsistensi tema): token --surface1 di bawah ini TIDAK ADA
-      di styles.css manapun (cuma ada --surface/--surface2/3/4), jadi fallback
-      var(--bg) selalu diam-diam aktif di ke-10 tema. Ganti ke --header-bg
-      yang memang sudah didefinisikan & di-tuning opacity-nya per tema
-      (0.82-0.92) khusus untuk elemen chrome ini. */
+/* 2. */
 #mainHeader.header,
 nav.nav#mainNav {
   backdrop-filter: saturate(160%) blur(14px);
@@ -90,15 +67,7 @@ a:focus-visible {
       Override posisi .nav dari edge-to-edge (styles.css) jadi mengambang
       dengan margin, radius besar, dan safe-area untuk PWA standalone.
       Tidak menyentuh .nav-item/JS sama sekali - murni reposisi container. */
-/* 9. Kontras badge status stok di tema bersurface terang (light, stone, sage). Audit kontras WCAG AA menemukan teks pill --accentN
-      di atas --accentN-soft hanya 1.5-3.5:1 di 3 tema ini (accent3/accent4
-      terutama). Fix: gelapkan warna teks via color-mix 55% black KHUSUS di
-      badge/status text, background pill tetap sama. Tema dark/graphite tidak disentuh - sudah lolos AA.
-      FIX (akumulasi v1575+): "modern" ditambahkan ke daftar scoping di bawah
-      krn base-nya baru saja dikoreksi dari gelap jadi terang (lihat FIX di
-      styles.css [data-theme="modern"]) -- sekarang punya masalah kontras
-      terang yang sama persis dgn 3 tema lama ini (accent3/accent4 di atas
-      -soft), jadi perlu ikut fix onlight yang sama. */
+/* 9. */
  :root {
   --accent2-onlight: color-mix(in srgb, var(--accent2) 55%, black);
   --accent3-onlight: color-mix(in srgb, var(--accent3) 55%, black);
@@ -135,23 +104,7 @@ a:focus-visible {
   .nav.nav-hidden {
     transform: translateY(calc(100% + 24px + env(safe-area-inset-bottom, 0px)));
   }
-  /* FIX (2026-07-30): #mainApp DIHAPUS dari rule ini -- BUKAN redundant text,
-     tapi bug nyata. #mainApp di index.html cuma membungkus #page-keuangan (lihat
-     struktur HTML: tag penutup #mainApp ketutup persis setelah page-keuangan,
-     SEMUA halaman lain -- termasuk #page-dashboard-hub/Beranda yang jadi
-     landing page default -- adalah SIBLING dari #mainApp di #scrollRoot, BUKAN
-     anak di dalamnya). Akibatnya padding-bottom 88px di #mainApp bukan reserve
-     ruang di ujung scroll (tujuan asal rule ini), tapi jadi kotak kosong 88px
-     yang nangkring DI TENGAH alur halaman -- persis di atas judul "Dashboard
-     Hub" -- karena kotak #mainApp sendiri (isinya cuma page-keuangan yang
-     display:none saat Beranda aktif) tetap mempertahankan padding-bottom-nya
-     sendiri walau 0 konten terlihat di dalamnya. User lihat ini sbg "gap
-     kosong aneh" persis di bawah header. #scrollRoot (kontainer scroll yang
-     SEBENARNYA membungkus SEMUA halaman) sudah py padding-bottom sendiri
-     (styles.css baris ~72, 90px, + rule mobile di bawah) yang cukup utk
-     reserve ruang di atas nav bawah utk halaman APAPUN yang sedang aktif --
-     jadi padding #mainApp ini 100% redundan sekaligus jadi sumber bug, aman
-     dihapus tanpa kehilangan proteksi anti-overlap nav. */
+  /* FIX (2026-07-30): */
   #scrollRoot {
     padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
@@ -294,13 +247,7 @@ a:focus-visible {
   .empty-icon { transition: none !important; }
 }
 
-/* =========================================================================
-   KELUARGA W — GRAPHITE MOCKUP SYSTEM V3
-   Full visual pass based on the supplied mobile mockup.
-   Scope: [data-theme="graphite"] only. No business logic/data changes.
-   Goals: one visual language, four card archetypes, clear number hierarchy,
-   lighter density, consistent controls, modal/empty-state/nav polish.
-   ========================================================================= */
+/* KELUARGA W — GRAPHITE MOCKUP SYSTEM V3 Full visual pass based on the supplied mobile mockup. */
 [data-theme="graphite"] {
   --ui-card-radius: 16px;
   --ui-control-radius: 12px;
@@ -538,11 +485,7 @@ a:focus-visible {
   [data-theme="graphite"] #page-dashboard-hub .dashhub-search-wrap { margin-bottom: 10px; }
 }
 
-/* =========================================================================
-   KELUARGA W — MOCKUP LAYOUT SYSTEM V4
-   Responsive layout/component pass for every registered theme.
-   Theme colors remain owned by styles.css; this layer only consumes tokens.
-   ========================================================================= */
+/* KELUARGA W — MOCKUP LAYOUT SYSTEM V4 Responsive layout/component pass for every registered theme. */
 :root {
   --mockup-page-max: 1180px;
   --mockup-radius-card: 18px;
@@ -920,3 +863,72 @@ label { line-height: 1.35; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* S256AB: compact domain hero (mobile). Presentation only: intro paragraph and status pills are
+   secondary/diagnostic; Update KM + Katalog already exist in .cn-vehicle-summary on the car page. */
+@media (max-width:768px){
+html body[data-theme] .pwa-domain-page .pwa-domain-hero{padding:12px;gap:10px}
+html body[data-theme] .pwa-domain-page .pwa-domain-hero h1{font-size:18px;line-height:1.25;margin:0}
+html body[data-theme] .pwa-domain-page .pwa-domain-hero-main>p,
+html body[data-theme] .pwa-domain-page .pwa-domain-status-row{display:none}
+html body[data-theme] .pwa-domain-car .pwa-domain-hero-actions .pwa-action-card:not(:first-child){display:none}
+html body[data-theme] .pwa-domain-car .pwa-domain-hero-actions{grid-template-columns:1fr}
+html body[data-theme] .pwa-domain-page .pwa-action-card{min-height:44px}
+html body[data-theme] .pwa-domain-page .pwa-action-card small{display:none}
+}
+
+/* S256AB: canonical chip. `.chip` (servis severity/action/category filters) had no CSS at all and
+   rendered as bare text next to styled `.chip-btn` filters. Same tokens as `.chip-btn`. */
+.chip{display:inline-flex;align-items:center;min-height:40px;box-sizing:border-box;padding:10px 13px;border-radius:var(--r-pill);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent,#fff)}
+
+/* S256AC: touch targets >=44px on mobile (Settings audit). Presentation only; data-action names unchanged.
+   Hit area is grown with padding + equal negative margin where a layout shift would be unwanted
+   (header badges, collapsible card titles). */
+@media (max-width:768px){
+html body[data-theme] .chip-btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box}
+html body[data-theme] .kasir-view-toggle .chip-btn{min-height:0}
+html body[data-theme] .header-badge{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;box-sizing:border-box;margin:-3px -2px}
+html body[data-theme] .card-collapse-head{min-height:44px;box-sizing:border-box;align-items:center}
+html body[data-theme] .setting-item>.u-flex>.btn-sm{min-width:44px}
+}
+
+/* S256AC: touch targets, other pages (tabs, quick-search, collapse toggle, AI quick prompts, vehicle chip). */
+@media (max-width:768px){
+html body[data-theme] .dhb-subtab,
+html body[data-theme] .kel-subtab,
+html body[data-theme] .cn-tab,
+html body[data-theme] .cn-summary-link,
+html body[data-theme] .cn-km-value,
+html body[data-theme] .tx-del,
+html body[data-theme] .ai-q,
+html body[data-theme] .vehicle-chip{display:inline-flex;align-items:center;justify-content:center;min-height:44px;box-sizing:border-box}
+html body[data-theme] .qs-btn{min-width:44px;min-height:44px}
+html body[data-theme] .tx-del{min-width:44px}
+html body[data-theme] .card-collapse-toggle{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin:-6px}
+}
+
+/* S256AC: car page (#page-carnotes) rules are more specific, so repeat the 44px floor there. */
+@media (max-width:768px){
+html body[data-theme] #page-carnotes .qs-btn{min-width:44px;flex-shrink:0}
+html body[data-theme] #page-carnotes .cn-summary-link{min-height:44px}
+html body[data-theme] #page-carnotes .cn-vehicle-summary .vehicle-chip{min-height:44px}
+html body[data-theme] #page-carnotes .cni-subtab,
+html body[data-theme] #page-carnotes .cnb-subtab{min-height:44px}
+html body[data-theme] #page-carnotes .card-collapse-toggle{min-width:44px;min-height:44px}
+}
+
+/* S256AC: car sub-tabs (BBM, Pajak, Jalan) action buttons and Servis .chip filters reach 44px. */
+@media (max-width:768px){
+html body[data-theme] #page-carnotes .btn-sm,
+html body[data-theme] .chip{min-height:44px}
+}
+
+/* S256AD: reminder/catalog tap rows and inline pills (Servis) get a 44px tap height. Class hook `sv-tap`. */
+@media (max-width:768px){
+html body[data-theme] .sv-tap{min-height:44px;box-sizing:border-box}
+html body[data-theme] span.sv-tap{display:inline-flex;align-items:center}
+}
+
+/* S256AG: visible keyboard focus for non-native action controls (role=button). */
+html body[data-theme] [role="button"][data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

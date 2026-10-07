@@ -84,6 +84,7 @@ FuelPriceRef.renderDraft();
 document.getElementById('fuelRefBody').innerHTML=`<div class="empty"><div class="empty-icon">⚠️</div><div class="empty-text">Gagal cek: ${escapeHtml(e.message||String(e))}</div></div>`;
 }finally{
 if(btn){btn.disabled=false;btn.textContent='🔄 Cek Update Harga BBM via AI';}
+FuelPriceRef._ensureStore();
 D.fuelPriceRef.lastCheckedAt=todayStr();
 save();
 }
@@ -205,11 +206,21 @@ el.insertBefore(opt,el.firstChild);
 }
 el.value='';
 },
+// S256AO: D.fuelPriceRef baru di-seed di load(), sedangkan pengguna baru yg selesai onboarding langsung memakai app tanpa reload
+// (finishOnboard hanya save()+showMain()) -> D.fuelPriceRef undefined -> TypeError 'lastType' saat modal BBM dibuka (ketemu S256AN).
+// Guard ini hanya menyiapkan wadah kosong; load() berikutnya tetap menyeed pertalite/solar lewat blok migrasi "user lama"
+// (field null + tanpa refSources), jadi angka seed TIDAK diduplikasi di sini.
+_ensureStore(){
+if(typeof D==='undefined'||!D)return null;
+if(!D.fuelPriceRef||typeof D.fuelPriceRef!=='object')D.fuelPriceRef={lastType:'pertalite',lastTypeByVehicle:{},lastCheckedAt:null,refSources:{}};
+return D.fuelPriceRef;
+},
 onSelectChange(selectId,hargaId,vehicleId){
 const sel=document.getElementById(selectId);
 if(!sel)return;
 const type=sel.value;
 if(!FuelPriceRef.ITEMS.find(it=>it.key===type))return;
+FuelPriceRef._ensureStore();
 D.fuelPriceRef.lastType=type;
 if(vehicleId){
 D.fuelPriceRef.lastTypeByVehicle=D.fuelPriceRef.lastTypeByVehicle||{};
