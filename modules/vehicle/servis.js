@@ -1642,7 +1642,7 @@ const _runDeleteSession=async()=>{
   const beforeStock=new Map();
   const _sessionStockRows=Array.isArray(D.partsStock)?D.partsStock:[];
   const _sessionStockById=new Map();
-  _sessionStockRows.forEach(x=>{if(x&&x.id===x.id&&!_sessionStockById.has(x.id))_sessionStockById.set(x.id,x);});
+  _sessionStockRows.forEach(x=>{if(x&&x.id!=null&&!_sessionStockById.has(x.id))_sessionStockById.set(x.id,x);});
   for(const sid of _sessionStockIds){const row=_sessionStockById.get(sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
   try{
     if(txIds.size){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(tx=>tx&&txIds.has(tx.id)); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
@@ -1939,9 +1939,9 @@ for(const it of items){
 const batchStockBefore=new Map();
 const _batchStockRows=Array.isArray(D.partsStock)?D.partsStock:[];
 const _batchStockById=new Map();
-_batchStockRows.forEach(x=>{if(x&&x.id===x.id&&!_batchStockById.has(x.id))_batchStockById.set(x.id,x);});
+_batchStockRows.forEach(x=>{if(x&&x.id!=null&&!_batchStockById.has(x.id))_batchStockById.set(x.id,x);});
 for(const sid of _batchStockIds){const row=_batchStockById.get(sid);if(row)batchStockBefore.set(sid,Number(row.qty)||0);}
-const restoreBatch=()=>{
+const restoreBatch=(batchId)=>{
   try{
     const _rollbackLogs=Array.isArray(D.servisLogs)?D.servisLogs:[];
     const batchIds=new Set();
@@ -1987,7 +1987,7 @@ const runBatch=async()=>{
     toast(`✅ ${results.length} item servis ditandai selesai`);
     return results;
   }catch(err){
-    restoreBatch();
+    restoreBatch(batchId);
     throw err;
   }
 };

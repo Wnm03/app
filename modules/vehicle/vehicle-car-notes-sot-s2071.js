@@ -194,23 +194,6 @@
     if(changed){s.intervalSotRevision=Number(s.intervalSotRevision||0)+1;s.intervalSotRepairedAt=new Date().toISOString();}
     return {ok:true,vehicleId:vid,changed,removedKeys:removed,intervalCount:Object.keys(s.serviceIntervals).length};
   }
-  function auditServiceIntervals(id){
-    const vid=str(id||activeId()), s=ensure(vid), rows=[], byComponent=new Map(), issues=[];
-    if(!s)return {ok:false,vehicleId:vid||null,issues:[{code:'VEHICLE_NOT_FOUND'}],rows:[]};
-    const store=s.serviceIntervals&&typeof s.serviceIntervals==='object'&&!Array.isArray(s.serviceIntervals)?s.serviceIntervals:{};
-    Object.keys(store).forEach(key=>{const r=normalizeInterval(store[key],store[key]||{}), component=str(r.serviceComponentId), identity=component||(str(r.masterCategoryId)+'::'+str(r.name||'').toLowerCase())||key;const row={key,componentId:component||null,identity,intervalKm:r.intervalKm,intervalBulan:r.intervalBulan,source:r.source,updatedAt:r.updatedAt||null};rows.push(row);const arr=byComponent.get(identity)||[];arr.push(row);byComponent.set(identity,arr);});
-    byComponent.forEach((arr,identity)=>{if(arr.length<2)return;const values=new Set(arr.map(r=>`${r.intervalKm}|${r.intervalBulan}`));issues.push({code:'DUPLICATE_ACTIVE_INTERVAL',identity,count:arr.length,conflict:values.size>1,keys:arr.map(r=>r.key)});});
-    return {ok:issues.length===0,vehicleId:vid,intervalCount:rows.length,duplicateCount:issues.length,issues,rows};
-  }
-  function repairServiceIntervals(id){
-    const vid=str(id||activeId()), s=ensure(vid); if(!s)return {ok:false,vehicleId:vid||null,changed:0,issues:[{code:'VEHICLE_NOT_FOUND'}]};
-    if(!s.serviceIntervals||typeof s.serviceIntervals!=='object'||Array.isArray(s.serviceIntervals))s.serviceIntervals={};
-    const groups=new Map(),removed=[];Object.keys(s.serviceIntervals).forEach(key=>{const raw=s.serviceIntervals[key]||{},r=normalizeInterval(raw,raw),identity=str(r.serviceComponentId)||((str(r.masterCategoryId)||'')+'::'+str(raw.name||'').toLowerCase())||key;const arr=groups.get(identity)||[];arr.push({key,raw:r});groups.set(identity,arr);});
-    let changed=0;const rank={pedoman:1,'ai-rekomendasi':2,manual:3};
-    groups.forEach(arr=>{arr.sort((a,b)=>{const pr=(rank[b.raw.source]||0)-(rank[a.raw.source]||0);if(pr)return pr;return String(b.raw.updatedAt||'').localeCompare(String(a.raw.updatedAt||''));});const winner=arr[0],canonicalKey=winner.raw.serviceComponentId||winner.key;s.serviceIntervals[canonicalKey]=winner.raw;arr.forEach(x=>{if(x.key!==canonicalKey){delete s.serviceIntervals[x.key];removed.push(x.key);changed++;}});});
-    if(changed){s.intervalSotRevision=Number(s.intervalSotRevision||0)+1;s.intervalSotRepairedAt=new Date().toISOString();}
-    return {ok:true,vehicleId:vid,changed,removedKeys:removed,intervalCount:Object.keys(s.serviceIntervals).length};
-  }
   function removeServiceInterval(id,ref){
     const vid=str(id||activeId()), key=intervalKey(ref);
     if(!vid||!key||!vehicle(vid))return {ok:false,code:'vehicle_not_found'};

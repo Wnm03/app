@@ -376,14 +376,7 @@ var _crossTabStateStale=false;
 var _crossTabWarnShown=false;
 var _crossTabChannel=null;
 var _crossTabInstance='mirror_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);
-function _financeMutationBlockedByStaleState(){
-if(typeof _crossTabStateStale!=='undefined'&&_crossTabStateStale){
-  if(typeof _crossTabWarnShown!=='undefined'&&!_crossTabWarnShown){_crossTabWarnShown=true;}
-  if(typeof toast==='function')toast('⚠️ Data Finance sudah berubah dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.',6500);
-  return true;
-}
-return false;
-}
+
 function _markCrossTabStale(){
 if(_crossTabStateStale)return;
 _crossTabStateStale=true;

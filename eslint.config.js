@@ -69,6 +69,12 @@ const browserGlobals = {
   screen: 'readonly',
   getComputedStyle: 'readonly',
   structuredClone: 'readonly',
+  BroadcastChannel: 'readonly',
+  IDBKeyRange: 'readonly',
+  TextEncoder: 'readonly',
+  TextDecoder: 'readonly',
+  Response: 'readonly',
+  queueMicrotask: 'readonly',
   // Service worker (sw.js) only:
   clients: 'readonly',
   registration: 'readonly',
@@ -82,9 +88,15 @@ const browserGlobals = {
   // External/lazy browser libraries and browser APIs used by feature modules.
   ZXing: 'readonly',
   pdfjsLib: 'readonly',
+  Tesseract: 'readonly',
+  eruda: 'readonly',
+  XLSX: 'readonly',
   FileReader: 'readonly',
   // Intentional runtime global from the service-history SOT/lazy module.
   compareServiceHistoryRecency: 'readonly',
+  // Optional legacy hooks intentionally referenced behind typeof guards.
+  resolveTxAssetSplit: 'readonly',
+  getServiceFinanceOwnershipIntegrity: 'readonly',
 };
 
 const appGlobals = collectAppGlobals();
@@ -96,7 +108,7 @@ module.exports = [
       'backups/**',
       'app-bundle-a.min.js',
       'app-bundle-b.min.js',
-      '*.min.js',
+      '**/*.min.js',
       'archive/**',
       '*.html',
     ],
@@ -131,7 +143,8 @@ module.exports = [
     },
   },
   {
-    // build.js / bump-version.sh helper & scripts/ jalan di Node, bukan browser
+    // Node globals for repository tests/scripts and the service worker.
+    files: ['sw.js', 'docs/sw.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
     files: ['build.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
@@ -145,6 +158,7 @@ module.exports = [
         process: 'readonly',
         console: 'readonly',
         Buffer: 'readonly',
+        setImmediate: 'readonly',
       },
     },
   },

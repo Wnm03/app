@@ -63,7 +63,22 @@ function getAllSourceFiles() {
         let lm;
         while ((lm = re.exec(loaderSrc))) lazyLoaderPaths.push(lm[1]);
       }
-      return [...new Set([...files, ...lazyLoaderPaths])];
+      // The runtime also contains lazy modules that are not enumerated in
+      // GROUP_A/GROUP_B (some are reached through feature routers/data-action
+      // wiring). They are still classic-script globals once loaded. Include
+      // every source module so the lint manifest cannot silently fall behind
+      // the actual runtime module graph. Tests/scripts/docs remain excluded.
+      const moduleFiles = [];
+      const walkModules = (dir) => {
+        if (!fs.existsSync(dir)) return;
+        for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+          const fp = path.join(dir, ent.name);
+          if (ent.isDirectory()) walkModules(fp);
+          else if (ent.isFile() && ent.name.endsWith('.js') && !ent.name.endsWith('.min.js')) moduleFiles.push(path.relative(ROOT, fp).replaceAll('\\', '/'));
+        }
+      };
+      walkModules(path.join(ROOT, 'modules'));
+      return [...new Set([...files, ...lazyLoaderPaths, ...moduleFiles])];
     }
   } catch (e) {
     // fallthrough ke fallback
@@ -163,6 +178,14 @@ function collectFromFile(file) {
     names.add(m[1]);
   }
 
+  // Legacy source occasionally places a top-level declaration immediately
+  // after a block comment on the same physical line (e.g. `*/ const X=...`).
+  // Recognize only declarations preceded by a line boundary or a closed
+  // comment/block so we do not turn nested code into globals.
+  const TOPLEVEL_INLINE_VAR_RE = /(?:^|\*\/|})\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/gm;
+  TOPLEVEL_INLINE_VAR_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_INLINE_VAR_RE.exec(src))) names.add(m[1]);
+
   // Collect additional declarators in compact declarations such as
   // `let a=null, b=null, c=null;`. The primary fallback intentionally only
   // captures the first name; this pass stays anchored to a declaration and
@@ -187,7 +210,7 @@ function collectFromFile(file) {
   // lives inside an IIFE/module wrapper (the classic-global architecture uses
   // this pattern deliberately). Only recognize explicit window/globalThis/g
   // assignments; do not infer arbitrary nested identifiers.
-  const GLOBAL_EXPORT_RE = /\b(?:globalThis|window|g)\.([A-Za-z_$][\w$]*)\s*=/gm;
+  const GLOBAL_EXPORT_RE = /\b(?:globalThis|window|g|root|global)\.([A-Za-z_$][\w$]*)\s*=/gm;
   GLOBAL_EXPORT_RE.lastIndex = 0;
   while ((m = GLOBAL_EXPORT_RE.exec(src))) {
     names.add(m[1]);

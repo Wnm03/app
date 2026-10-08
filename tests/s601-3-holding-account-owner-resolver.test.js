@@ -54,7 +54,7 @@ test('2. updateHolding() -- accountId ditulis dengan pola falsy->null PERSIS SAM
   ctx.Investment.updateHolding(h.id, { accountId: '' });
   assert.equal(ctx.Investment.getHolding(h.id).accountId, null);
   ctx.Investment.updateHolding(h.id, { accountId: 'acc2' });
-  ctx.Investment.updateHolding(h.id, { accountId: '__unlinked__' === '__unlinked__' ? '' : 'acc2' });
+  ctx.Investment.updateHolding(h.id, { accountId: '' });
   assert.equal(ctx.Investment.getHolding(h.id).accountId, null);
 });
 

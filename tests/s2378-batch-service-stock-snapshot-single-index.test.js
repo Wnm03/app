@@ -20,7 +20,7 @@ test('S2378: batch service rollback snapshots stock through one first-match inde
 test('S2378: batch stock index preserves strict IDs, first duplicate and quantity fallback', () => {
   const rows = [{ id: 'p1', qty: 4, marker: 'first' }, { id: 'p1', qty: 11, marker: 'duplicate' }, { id: 1, qty: 7 }, { id: NaN, qty: 8 }, null];
   const index = new Map();
-  rows.forEach(x => { if (x && x.id === x.id && !index.has(x.id)) index.set(x.id, x); });
+  rows.forEach(x => { if (x && x.id != null && !Number.isNaN(x.id) && !index.has(x.id)) index.set(x.id, x); });
   assert.equal(index.get('p1').marker, 'first');
   assert.equal(index.get('p1').qty, 4);
   assert.equal(index.get(1).qty, 7);

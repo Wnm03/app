@@ -20,7 +20,7 @@ test('S2377: session delete snapshots stock through one first-match index', () =
 test('S2377: stock index preserves first strict-ID match and ignores NaN IDs', () => {
   const rows = [{id:'p1',qty:2,marker:'first'},{id:'p1',qty:9,marker:'duplicate'},{id:NaN,qty:8}];
   const index = new Map();
-  rows.forEach(x => { if (x && x.id === x.id && !index.has(x.id)) index.set(x.id, x); });
+  rows.forEach(x => { if (x && x.id != null && !Number.isNaN(x.id) && !index.has(x.id)) index.set(x.id, x); });
   assert.equal(index.get('p1').marker, 'first');
   assert.equal(index.get('p1').qty, 2);
   assert.equal(index.has(NaN), false);
