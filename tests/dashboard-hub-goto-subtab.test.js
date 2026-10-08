@@ -153,14 +153,14 @@ test('_dashHubResolveGoToSection: naik lewat beberapa level ancestor (aiRecommen
   assert.equal(context._dashHubResolveGoToSection('aiRecommendBody'), 'widget');
 });
 
-test('_dashHubResolveGoToSection: lifeOSWrap -> "insight"', () => {
+test('_dashHubResolveGoToSection: lifeOSWrap sudah dipensiunkan dari peta goTo (N2) -> null', () => {
   const { context } = loadSandbox();
-  assert.equal(context._dashHubResolveGoToSection('lifeOSWrap'), 'insight');
+  assert.equal(context._dashHubResolveGoToSection('lifeOSWrap'), null);
 });
 
-test('_dashHubResolveGoToSection: dashHubSummaryGrid -> "ringkasan", dashHubMainGridCard -> "fitur"', () => {
+test('_dashHubResolveGoToSection: dashHubSummaryGrid dipensiunkan (N6) -> null, dashHubMainGridCard -> "fitur"', () => {
   const { context } = loadSandbox();
-  assert.equal(context._dashHubResolveGoToSection('dashHubSummaryGrid'), 'ringkasan');
+  assert.equal(context._dashHubResolveGoToSection('dashHubSummaryGrid'), null);
   assert.equal(context._dashHubResolveGoToSection('dashHubMainGridCard'), 'fitur');
 });
 
@@ -186,12 +186,11 @@ test('dashHubNavigateToFeature: klik kartu "Penasihat AI" (goTo:advisorCard) mem
   assert.equal(dom.byId.dashboardHubPinnedWrap.classList.contains('u-dnone'), false);
 });
 
-test('dashHubNavigateToFeature: klik kartu "Life OS" (goTo:lifeOSWrap) memanggil setSectionTab("insight")', async () => {
-  const { context, dom, setSectionTabCalls } = loadSandbox();
+test('dashHubNavigateToFeature: goTo:lifeOSWrap (kartu Life OS dipensiunkan, N2) tidak lagi memicu pindah sub-tab', async () => {
+  const { context, setSectionTabCalls } = loadSandbox();
   context.dashHubNavigateToFeature({ page: 'dashboard-hub', goTo: 'lifeOSWrap' });
   await wait(200);
-  assert.deepEqual(setSectionTabCalls, ['insight']);
-  assert.equal(dom.lifeOSWrap.scrollIntoViewCalls, 1);
+  assert.deepEqual(setSectionTabCalls, []);
 });
 
 test('dashHubNavigateToFeature: goTo yang TIDAK butuh pindah tab (mis. Hero Card / target di luar SECTION_GROUPS) -> setSectionTab TIDAK dipanggil sama sekali, tetap scroll ke elemennya', async () => {

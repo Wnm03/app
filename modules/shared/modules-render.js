@@ -713,45 +713,6 @@ return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="$
     </div>`;
 }
 
-function renderDashCashflowForecast(){
-const card=document.getElementById('cashflowForecastCard');
-if(!card)return;
-if(!D.bills||!D.bills.length){card.style.display='none';return;}
-const today=new Date();today.setHours(0,0,0,0);
-const rangeEnd=new Date(today);rangeEnd.setDate(rangeEnd.getDate()+30);
-const curBalance=totalSaldoAkun();
-let running=curBalance;
-let dangerDate=null;
-const events=[];
-D.bills.forEach(b=>{
-getBillOccurrencesInRange(b,today,rangeEnd).forEach(d=>events.push({date:d,amount:b.amount,name:b.name}));
-});
-events.sort((a,b)=>a.date-b.date);
-events.forEach(e=>{
-running-=e.amount;
-if(running<0&&!dangerDate)dangerDate=e.date;
-});
-const total30=events.reduce((s,e)=>s+e.amount,0);
-if(!events.length){card.style.display='none';return;}
-card.classList.remove('u-dnone');card.style.display='block';
-const safe=running>=0;
-card.innerHTML=`
-    <div class="card-title">📉 Proyeksi Arus Kas (30 Hari) <span class="card-collapse-toggle" id="cashflowForecastCard-chev" data-action="toggleCardCollapse" data-args='["cashflowForecastCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div>
-    <div class="card-collapse-body" id="cashflowForecastCard-cbody">
-    <div class="u-fs12 u-t2 u-mb10">Saldo sekarang ${fmt(curBalance)} dikurangi ${events.length} tagihan/cicilan/langganan (total ${fmt(total30)}) yang jatuh tempo dalam 30 hari ke depan.</div>
-    ${safe
-?`<div class="u-r10 u-cacc3 u-fs13 u-fw600" style="padding:10px;background:var(--accent3-soft)">✅ Aman — proyeksi saldo tetap positif: ${fmt(running)}</div>`
-:(()=>{
-const daysToDanger=Math.max(1,Math.round((dangerDate-today)/86400000));
-return `<div class="u-r10 u-cacc2 u-fs13 u-fw600" style="padding:10px;background:var(--accent2-soft)">⚠️ Berpotensi MINUS ${fmt(Math.abs(running))} sekitar ${dangerDate.toLocaleDateString('id-ID',{day:'numeric',month:'long'})} kalau tidak ada pemasukan tambahan.
-        <div class="u-fw400 u-mt6 u-fs12">${cashflowActionSuggestion(Math.abs(running),daysToDanger)}</div></div>`;
-})()}
-    <div class="u-fs12 u-cacc u-tar u-mt8 u-pointer" data-action="openBillCalendar">📅 Lihat Tagihan yang Dihitung →</div>
-    </div>
-  `;
-applyOneCardCollapsePref('cashflowForecastCard');
-}
-
 function renderBillCalendar(){
 const labelEl=document.getElementById('billCalLabel');
 const gridEl=document.getElementById('billCalGrid');
@@ -772,14 +733,14 @@ const totalCount=Object.values(byDate).flat().length;
 totalEl.textContent=totalCount?`${totalCount} jatuh tempo bulan ini · Total ${fmt(monthTotal)}`:'Tidak ada tagihan jatuh tempo bulan ini';
 const firstDow=new Date(billCalYear,billCalMonth,1).getDay();
 const daysInMonth=new Date(billCalYear,billCalMonth+1,0).getDate();
-const todayStr=new Date().toISOString().split('T')[0];
+const todayStrLocal=typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0];
 let html='';
 for(let i=0;i<firstDow;i++)html+='<div class="billcal-day empty"></div>';
 for(let day=1;day<=daysInMonth;day++){
 const dateStr=`${billCalYear}-${String(billCalMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
 const hasBill=!!byDate[dateStr];
 const cls=['billcal-day'];
-if(dateStr===todayStr)cls.push('today');
+if(dateStr===todayStrLocal)cls.push('today');
 if(hasBill)cls.push('has-bill');
 if(dateStr===billCalSelectedDate)cls.push('selected');
 const ariaLbl=`Tanggal ${day}${hasBill?', ada tagihan jatuh tempo':''}`;
@@ -807,25 +768,7 @@ dayListEl.innerHTML=`<div class="u-fs12 u-t2 u-mb8">${dLabel} · ${selList.lengt
 }
 }
 
-function renderDashboardBills(billStats){
-const card=document.getElementById('dashBillCard');if(!card)return;
-if(!D.bills.length){card.style.display='none';return;}
-card.classList.remove('u-dnone');card.style.display='block';
-const s=billStats||getBillStats();
-document.getElementById('dashBillMonthTotal').textContent=fmt(s.monthTotal);
-document.getElementById('dashBillUpcomingCount').textContent=s.soonCount;
-document.getElementById('dashBillOutstanding').textContent=fmt(s.outstanding);
-const badge=document.getElementById('dashBillOverdueBadge');
-if(s.overdueCount>0){badge.classList.remove('u-dnone');badge.style.display='inline-block';badge.textContent=s.overdueCount+' Terlambat';}else{badge.style.display='none';}
-const icons={tagihan:'🧾',cicilan:'💳',langganan:'🔁'};
-document.getElementById('dashBillMiniList').innerHTML=s.nearest.map(({b,diff})=>`
-    <div class="u-flex u-aic u-gap8" style="padding:8px 0;border-top:1px solid var(--border)">
-      <div class="tx-icon u-bgaccsoft" style="width:32px;height:32px;font-size:15px">${icons[b.kind]||'🔔'}</div>
-      <div class="tx-info"><div class="tx-name" style="font-size:var(--fs-body)">${escapeHtml(b.name)}</div><div class="tx-meta">${diff<0?'Lewat '+Math.abs(diff)+' hari':diff===0?'Hari ini':diff+' hari lagi'}</div></div>
-      <div class="tx-amount red u-fs13">${fmt(b.amount)}</div>
-      <button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
-    </div>`).join('');
-}
+
 
 function renderLDR(){
 if(D.nextPulang)document.getElementById('nextPulang').value=D.nextPulang;
@@ -994,31 +937,6 @@ applyOneCardCollapsePref('dashSewaKiosReminderCard');
 // total. Bukan wajib/blocking, cuma pengingat.
 const BACKUP_REMINDER_DISMISS_KEY='kw_backup_reminder_dismissed';
 const BACKUP_REMINDER_DATA_THRESHOLD=30; // total catatan (transaksi+bbm+servis+shop) sebelum dianggap "udah lumayan banyak"
-function renderDashboardBackupReminder(){
-const card=document.getElementById('dashBackupReminderCard');
-if(!card)return;
-if(localStorage.getItem(BACKUP_REMINDER_DISMISS_KEY)==='1'){card.style.display='none';return;}
-const everSynced=!!(D.googleDrive&&D.googleDrive.lastSync)||!!(D.googleSheets&&D.googleSheets.lastSync);
-if(everSynced){card.style.display='none';return;}
-const totalCatatan=(D.transactions?D.transactions.length:0)+(D.bbmLogs?D.bbmLogs.length:0)+(D.servisLogs?D.servisLogs.length:0)+((D.cobek||[]).length);
-if(totalCatatan<BACKUP_REMINDER_DATA_THRESHOLD){card.style.display='none';return;}
-card.classList.remove('u-dnone');card.style.display='block';
-card.innerHTML=`<div class="card-title">☁️ Backup Belum Aktif <span class="card-collapse-toggle" id="dashBackupReminderCard-chev" data-action="toggleCardCollapse" data-args='["dashBackupReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="dashBackupReminderCard-cbody">
-  <div class="u-fs12 u-t2 u-lh15 u-mb10">Sudah ada <b>${totalCatatan} catatan</b> tersimpan, tapi semuanya cuma di penyimpanan lokal HP ini. Kalau HP hilang, rusak, atau app-nya ke-uninstall/data ke-clear tanpa backup, <b>semua data ini bisa hilang total</b> & tidak bisa dipulihkan.</div>
-  <div class="u-flex u-gap8">
-    <button class="btn btn-primary btn-sm u-flex1" data-action="showPage" data-args='["settings","$nav:6"]'>☁️ Aktifkan Backup</button>
-    <button class="btn btn-ghost btn-sm" data-action="dismissBackupReminder">Sudah Paham</button>
-  </div>
-</div>`;
-applyOneCardCollapsePref('dashBackupReminderCard');
-}
-function dismissBackupReminder(){
-safeSetItem(BACKUP_REMINDER_DISMISS_KEY,'1');
-const card=document.getElementById('dashBackupReminderCard');
-if(card)card.style.display='none';
-toast('Oke, tidak akan diingatkan lagi. Kamu tetap bisa aktifkan backup kapan saja lewat Pengaturan.');
-}
-
 // Daftar card Dashboard yang BOLEH disembunyikan user lewat Pengaturan → Tampilan → Kartu di
 // Beranda. Ini satu-satunya sumber data buat checklist di Pengaturan (renderDashCardPrefsUI) DAN
 // buat renderDashboard() memutuskan mana yang di-skip. Card "inti" (Penasihat, Skor Hidup

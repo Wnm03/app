@@ -140,12 +140,9 @@ function _dashHubCallAction(name) {
 // DashboardHub.applySectionTab() -- kalau salah satu daftar itu berubah,
 // peta ini WAJIB disamakan lagi.
 const DASHHUB_GOTO_SECTION_MAP = {
-  dashHubSummaryGrid: 'ringkasan',
-  dashHubAnalyticsRow: 'ringkasan',
   dashHubFavoritSection: 'fitur',
   dashHubMainGridCard: 'fitur',
   dashboardHubPinnedWrap: 'widget',
-  lifeOSWrap: 'insight',
   eieWrap: 'insight',
   crossDashWrap: 'insight',
   crossBriefWrap: 'insight',
@@ -254,7 +251,7 @@ function dashHubNavigateToFeature(target) {
 //   - totalSaldoAkun() (akun.js) dipakai APA ADANYA, tanpa duplikasi logic saldo.
 //   - Agregasi pemasukan/pengeluaran bulan berjalan memakai pola yang SAMA
 //     PERSIS dengan yang sudah dipakai berulang di app ini (mis.
-//     renderDashboard()/renderDashLaporanMini() di modules-render.js,
+//     renderDashboard() di modules/shared/modules-render-b.js,
 //     FinCoach.renderDash() di features-aiwidget-reminder-gdrive-search.js):
 //     filter D.transactions ke bulan+tahun berjalan, jumlahkan per type. Ini
 //     BUKAN aturan bisnis baru — cuma baca ulang data yang sudah dihitung
@@ -433,149 +430,48 @@ function __kwDashHubSetHTMLIfChanged(el, html){
   return true;
 }
 
-// ================== SUMMARY CARDS (Sprint 1 Tahap 5, lihat DASHBOARD-SUMMARY.md) ==================
-// DashboardHubSummary — MURNI TAMPILAN, tidak ada business logic baru. Baris
-// kartu ringkas kecil tepat di bawah Quick Actions, menampilkan 4 angka yang
-// SUDAH dihitung dengan pola yang SAMA PERSIS di tempat lain (mis.
-// FinCoach.renderDash() di features-aiwidget-reminder-gdrive-search.js, yang
-// menampilkan persis "Pemasukan/Pengeluaran/Bersih/Jumlah transaksi" dari
-// D.transactions bulan berjalan). _dashHubSummaryMonthTx() SENGAJA
-// menduplikasi pola filter bulan berjalan yang sama dengan
-// _dashHubHeroMonthTx() (Hero Card, Tahap 2) alih-alih memodifikasi/mereuse
-// fungsi Hero secara langsung — supaya Hero Card (constraint: tidak diubah)
-// benar-benar tidak tersentuh sama sekali oleh Tahap 5. Semua akses ke
-// D/fmt di-guard pakai typeof check (pola sama dgn _dashHubIsFav()/
-// DashboardHubHero di atas) supaya file ini tetap aman dipakai
-// tests/dashboard-hub.test.js yang me-load dashboard-hub.js sendirian.
-function _dashHubSummaryMonthTx() {
-  return _dashHubMonthTxShared();
-}
-
-const DashboardHubSummary = {
-  render() {
-    const el = document.getElementById('dashHubSummaryGrid');
-    if (!el) return;
-
-    const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
-    const { inc, exp, count } = _dashHubSummaryMonthTx();
-    const net = inc - exp;
-
-    const cards = [
-      { label: 'Pemasukan Bulan Ini', value: money(inc), cls: 'green' },
-      { label: 'Pengeluaran Bulan Ini', value: money(exp), cls: 'red' },
-      { label: 'Bersih Bulan Ini', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green' },
-      { label: 'Jumlah Transaksi', value: String(count), cls: '' },
-    ];
-
-    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
-      <div class="dashhub-summary-card">
-        <div class="dashhub-summary-label">${escapeHtml(c.label)}</div>
-        <div class="dashhub-summary-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
-      </div>
-    `).join(''));
-  },
-};
-
-// ================== DASHBOARD ANALYTICS (Sprint 1 Tahap 7, lihat DASHBOARD-ANALYTICS.md) ==================
-// DashboardHubAnalytics — MURNI TAMPILAN, tidak ada business logic baru.
-// Baris kartu horizontal kecil tepat di bawah Summary Cards, menampilkan
-// angka yang SUDAH bisa dihitung dari D.transactions bulan berjalan dgn
-// pola filter bulan berjalan yang SAMA PERSIS dengan _dashHubHeroMonthTx()
-// (Hero Card, Tahap 2) dan _dashHubSummaryMonthTx() (Summary Cards, Tahap
-// 5). _dashHubAnalyticsMonthTx() SENGAJA menduplikasi pola tsb (alih-alih
-// memanggil fungsi Hero/Summary secara langsung) supaya kedua komponen itu
-// (constraint: tidak diubah) benar-benar tidak tersentuh oleh Tahap 7 ini
-// — pola sama persis dgn alasan _dashHubSummaryMonthTx() di Tahap 5 (lihat
-// komentar di atas DashboardHubSummary). Semua akses ke D/fmt di-guard
-// pakai typeof check (pola sama dgn DashboardHubHero/DashboardHubSummary
-// di atas) supaya file ini tetap aman dipakai
-// tests/dashboard-hub.test.js yang me-load dashboard-hub.js sendirian.
-function _dashHubAnalyticsMonthTx() {
-  return _dashHubMonthTxShared();
-}
-
-const DashboardHubAnalytics = {
-  render() {
-    const el = document.getElementById('dashHubAnalyticsRow');
-    if (!el) return;
-
-    const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
-    const { inc, exp, count } = _dashHubAnalyticsMonthTx();
-    const net = inc - exp;
-    const total = inc + exp;
-    // Persentase pemasukan vs pengeluaran — cuma bisa dihitung kalau ada
-    // nominal (total > 0), sesuai instruksi "jika sudah bisa dihitung".
-    const incPct = total > 0 ? Math.round((inc / total) * 100) : null;
-    const expPct = total > 0 ? Math.round((exp / total) * 100) : null;
-
-    // BUGFIX/UX (sesi ini): Saldo Bersih negatif (pengeluaran > pemasukan
-    // bulan berjalan) tadinya cuma dibedakan lewat warna teks (.red), sama
-    // rata secara visual dgn kartu netral lain -> mudah kelewat pas scroll.
-    // Ditambah 2 penanda, keduanya 100% REUSE pola yang SUDAH ADA di app:
-    // (1) varian background/border ".dashhub-analytics-card--warn" (pola
-    //     sama dgn .bill-banner: var(--accent2-soft)/var(--accent2), lihat
-    //     styles.css) supaya kartu ini menonjol tanpa warna baru;
-    // (2) 1 baris saran singkat dari cashflowActionSuggestion() yang SUDAH
-    //     ADA (modules/finance/tagihan-kalender.js, dipakai jg di
-    //     Proyeksi Arus Kas) -- 0 rumus/saran baru ditulis di sini. Guard
-    //     typeof supaya aman kalau tagihan-kalender.js belum di-load
-    //     (mis. tests/dashboard-hub.test.js yang me-load file ini sendirian).
-    const netNegatif = net < 0;
-    const netSaran = netNegatif && typeof cashflowActionSuggestion === 'function'
-      ? cashflowActionSuggestion(Math.abs(net), new Date().getDate())
-      : '';
-
-    // UX (sesi ini): saat Saldo Bersih POSITIF, kartu tadinya diam saja
-    // (cuma warna hijau) walau modul SelfReward (modules/self-reward/
-    // self-reward-engine.js) SUDAH ADA & bisa menilai apakah kondisi
-    // finansial cukup sehat utk self-reward. 0 rumus baru ditulis di sini —
-    // murni memanggil SelfReward.evaluate() (SUDAH ADA) & menyusun 1 baris
-    // saran singkat, pola PERSIS sama dgn netSaran/cashflowActionSuggestion
-    // di atas. Guard typeof + try/catch supaya dashboard tetap aman kalau
-    // self-reward-engine.js belum di-load (mis. test yang me-load
-    // dashboard-hub.js sendirian) atau evaluate() melempar error tak
-    // terduga — kartu ini TIDAK BOLEH bikin dashboard gagal render.
-    const netPositif = net > 0;
-    let rewardSaran = '';
-    if (netPositif && typeof SelfReward !== 'undefined' && typeof SelfReward.evaluate === 'function') {
-      try {
-        const sr = SelfReward.evaluate();
-        if (sr && sr.eligible && sr.maxReward > 0) {
-          rewardSaran = `🎉 Kondisi keuangan sehat — kamu layak self-reward hingga ${money(sr.maxReward)}. Buka fitur "Self Reward" untuk detail.`;
-        }
-      } catch (e) { /* aman: kartu ringkasan tidak boleh gagal gara-gara fitur opsional */ }
+// ================== READ-ONLY ATTENTION SUMMARY (N5) ==================
+// Presentation-only card. No new finance/service formula, no transaction scan,
+// and no persistence. Existing readers are consumed as-is.
+const DashboardAttentionReadOnly = {
+  _serviceCount() {
+    if (typeof D === 'undefined' || !Array.isArray(D.vehicles) || !Array.isArray(D.sparepartCats)
+      || typeof computeServiceUrgency !== 'function') return 0;
+    let count=0;
+    for (const v of D.vehicles) {
+      const cats=D.sparepartCats.filter(c=>c && (!c.vehicleId || String(c.vehicleId)===String(v.id)));
+      for (const cat of cats) {
+        try {
+          const u=computeServiceUrgency({vehicleId:v.id,cat});
+          if (u && (u.status==='terlewat'||u.status==='jatuh_tempo'||u.status==='segera')) count++;
+        } catch(e) { void e; }
+      }
     }
-
-    const cards = [
-      { label: 'Transaksi Bulan Ini', value: String(count), cls: '' },
-      { label: 'Total Pemasukan', value: money(inc), cls: 'green' },
-      { label: 'Total Pengeluaran', value: money(exp), cls: 'red' },
-      { label: 'Saldo Bersih', value: (net < 0 ? '-' : '') + money(Math.abs(net)), cls: net < 0 ? 'red' : 'green', warn: netNegatif, good: !!rewardSaran, sub: netSaran || rewardSaran, badge: netNegatif ? 'Kurang' : (rewardSaran ? 'Layak Reward' : '') },
-      { label: 'Pemasukan vs Pengeluaran', value: incPct === null ? '—' : (incPct + '% : ' + expPct + '%'), cls: '', bar: incPct === null ? null : { incPct, expPct } },
-    ];
-
-    // UX (sesi ini, audit tampilan): 2 tambahan MURNI presentasi, 0 rumus baru
-    // (reuse incPct/expPct/netNegatif yang sudah dihitung di atas):
-    // (1) badge kecil "⚠️ Kurang" di pojok kanan-atas kartu Saldo Bersih saat
-    //     negatif, supaya peringatan lebih cepat ketangkap mata (sebelumnya
-    //     cuma beda warna latar --warn + baris saran di bawah, tanpa penanda
-    //     tegas di judul kartu). Pola badge REUSE ".btn-danger"-style pill,
-    //     scoped baru ".dashhub-analytics-badge".
-    // (2) progress bar 2-warna (hijau/merah, lebar sesuai incPct/expPct) di
-    //     bawah kartu "Pemasukan vs Pengeluaran", supaya rasio lebih cepat
-    //     dibaca dibanding cuma teks "49% : 51%". Class baru murni CSS,
-    //     tidak ada kalkulasi tambahan.
-    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
-      <div class="dashhub-analytics-card${c.warn ? ' dashhub-analytics-card--warn' : ''}${c.good ? ' dashhub-analytics-card--good' : ''}">
-        <div class="dashhub-analytics-label-row">
-          <div class="dashhub-analytics-label">${escapeHtml(c.label)}</div>
-          ${c.badge ? '<span class="dashhub-analytics-badge' + (c.good ? ' dashhub-analytics-badge--good' : '') + '">' + (c.good ? '🎉 ' : '⚠️ ') + escapeHtml(c.badge) + '</span>' : ''}
-        </div>
-        <div class="dashhub-analytics-val${c.cls ? ' ' + c.cls : ''}">${escapeHtml(c.value)}</div>
-        ${c.sub ? '<div class="dashhub-analytics-sub' + (c.good ? ' dashhub-analytics-sub--good' : '') + '">' + (c.good ? '' : '⚠️ ') + escapeHtml(c.sub) + '</div>' : ''}
-        ${c.bar ? '<div class="dashhub-analytics-bar"><div class="dashhub-analytics-bar-inc" style="width:' + c.bar.incPct + '%"></div><div class="dashhub-analytics-bar-exp" style="width:' + c.bar.expPct + '%"></div></div>' : ''}
-      </div>
-    `).join(''));
+    return count;
+  },
+  read() {
+    const items=[];
+    if (typeof getBillStats==='function') {
+      try {
+        const b=getBillStats();
+        if (b && b.overdueCount>0) items.push(`🔴 ${b.overdueCount} tagihan lewat jatuh tempo`);
+        else if (b && b.soonCount>0) items.push(`🟡 ${b.soonCount} tagihan segera jatuh tempo`);
+      } catch(e) { void e; }
+    }
+    const serviceCount=this._serviceCount();
+    if(serviceCount>0)items.push(`🔧 ${serviceCount} item servis perlu perhatian`);
+    const hist=(typeof D!=='undefined'&&Array.isArray(D.backupHistory))?D.backupHistory:[];
+    const latest=hist[0];
+    if(latest && latest.status!=='success')items.push(`💾 Backup terakhir: ${latest.status}`);
+    return items;
+  },
+  render() {
+    const el=document.getElementById('dashHubAttentionBody');
+    const wrap=document.getElementById('dashHubAttentionWrap');
+    if(!el)return;
+    const items=this.read();
+    el.innerHTML=items.length?items.map(x=>`<div class="u-fs12 u-lh15 u-mb6">${escapeHtml(x)}</div>`).join(''):'<div class="u-fs12 u-t2">Tidak ada perhatian khusus saat ini.</div>';
+    if(wrap)wrap.style.display=items.length?'':'none';
   },
 };
 
@@ -648,52 +544,6 @@ const DashboardHubOwnershipSummary = {
     // di kartu ini (markup selalu mulai dari class "collapsed" apa pun pref
     // tersimpan). 0 mekanisme baru, guard typeof pola sama pemanggil lain.
     if (typeof applyOneCardCollapsePref === 'function') applyOneCardCollapsePref('dashHubOwnershipZero');
-  },
-};
-
-// ================== SHOP MINI SUMMARY (Sesi 250) ==================
-// ShopMiniSummary — MURNI TAMPILAN + navigasi, 0 rumus baru, 0 field D
-// baru. Menggantikan 3 wrap detail (#shopBusinessEngineWrap/
-// #tripPresenterWrap/#businessFlowWrap) yang DIPINDAH APA ADANYA ke tab
-// baru #shopTab-bi ("Business Intelligence") di #page-shop (lihat
-// index.html/app_production.html + cobek-io.js setShopTab()). Beranda
-// sekarang cukup menampilkan 3 angka ringkas (Omzet/Profit/Stok Menipis)
-// — 100% REUSE ShopBusinessEnginePresenter.summary() (S199, modules/shop/
-// shop-business-engine-presenter.js), yang sendiri sudah 100% delegasi ke
-// ProfitEngine.summarize() (omzet/untung, ownership SELF-only, pola Sesi
-// 194) & InventoryEngine.restockScan() (jumlah produk perlu direstock =
-// "Stok Menipis") — TIDAK membaca D langsung, TIDAK menghitung ulang apa
-// pun. Guard typeof (pola sama persis DashboardHubOwnershipSummary di
-// atas) supaya aman dipakai standalone di tests tanpa D/ShopBusinessEnginePresenter.
-const ShopMiniSummary = {
-  _money(n) {
-    return (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
-  },
-  render() {
-    const el = document.getElementById('shopMiniSummaryGrid');
-    if (!el) return;
-    if (typeof ShopBusinessEnginePresenter === 'undefined') {
-      el.innerHTML = '<div class="u-hint10">Shop Business Engine belum tersedia.</div>';
-      return;
-    }
-    const s = ShopBusinessEnginePresenter.summary();
-    const omzet = (s.profit && s.profit.ok) ? s.profit.omzet : 0;
-    const untung = (s.profit && s.profit.ok) ? s.profit.untung : 0;
-    const stokMenipis = (s.purchase && s.purchase.ok) ? s.purchase.itemCount : 0;
-    const esc = typeof escapeHtml === 'function' ? escapeHtml : String;
-    const cards = [
-      { label: 'Omzet Bulan Ini', value: this._money(omzet), cls: '' },
-      { label: 'Profit Bulan Ini', value: this._money(untung), cls: untung < 0 ? 'red' : 'green' },
-      { label: 'Stok Menipis', value: String(stokMenipis), cls: stokMenipis > 0 ? 'red' : '' },
-    ];
-    __kwDashHubSetHTMLIfChanged(el, cards.map((c) => `
-      <div class="findash-card">
-        <div class="findash-card-body">
-          <div class="findash-card-label">${esc(c.label)}</div>
-          <div class="findash-card-val${c.cls ? ' ' + c.cls : ''}">${esc(c.value)}</div>
-        </div>
-      </div>
-    `).join(''));
   },
 };
 
@@ -805,6 +655,7 @@ const DashboardHub = {
     // Visibilitas 100% didelegasikan ke CSS (lihat komentar di atas
     // DashboardHubTickerModern), jadi dipanggil selalu tanpa cek tema.
     if (typeof DashboardHubTickerModern !== 'undefined') DashboardHubTickerModern.render();
+    if (typeof DashboardAttentionReadOnly !== 'undefined') DashboardAttentionReadOnly.render();
 
     // Render only the active Hub section. Hidden Insight/Widget presenters are
     // intentionally lazy and will be populated when the user opens that tab.
@@ -966,7 +817,7 @@ const DashboardHub = {
     const SECTION_GROUPS = {
       // Summary/Analytics adalah duplikat Hero/Ticker. Tetap dibiarkan di DOM
       // untuk kompatibilitas lama, tetapi tidak ditampilkan atau dirender.
-      ringkasan: ['dashHubSummaryGrid', 'dashHubOwnershipSummaryCard'],
+      ringkasan: ['dashHubOwnershipSummaryCard'],
       fitur: ['dashHubFavoritSection', 'dashHubMainGridCard'],
       widget: ['dashboardHubPinnedWrap'],
       // Sesi 133: findashWrap/forecastWrap/budgetRecoWrap/cashflowProjWrap/
@@ -998,7 +849,7 @@ const DashboardHub = {
     // Slim mode: Analytics lama + presenter Insight yang tidak lagi menjadi
     // canonical home tetap tersembunyi agar stale DOM tidak bocor saat tab
     // berpindah. Engine/halaman aslinya tetap tersedia.
-    ['dashHubAnalyticsRow','eieWrap','shopMiniSummaryWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
+    ['eieWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) { el.classList.add('u-dnone'); el.style.display = ''; }
     });
@@ -1022,17 +873,6 @@ const DashboardHub = {
   // keduanya keputusan sesi lampau — cuma switch tab (via setSectionTab()
   // publik, yang memang sudah PERSIST pilihan sama seperti klik tombol
   // subtab manapun) + reuse toggleCardCollapse kalau memang sedang tertutup.
-  openAllFeatures() {
-    this.setSectionTab('fitur');
-    const body = document.getElementById('dashHubMainGrid-cbody');
-    if (body && body.classList.contains('collapsed')) {
-      toggleCardCollapse('dashHubMainGrid');
-    }
-    const card = document.getElementById('dashHubMainGridCard');
-    if (card && typeof card.scrollIntoView === 'function') {
-      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  },
 
   // Kontrak resolusi ADR-001 §4 — SATU-SATUNYA entry point publik navigasi.
   // Urutan (kategori dulu baru leaf) dipilih krn kategori himpunan lebih

@@ -1193,7 +1193,7 @@ const blob=new Blob([lines.join('\n')],{type:'text/csv'});
 const url=URL.createObjectURL(blob);
 const a=document.createElement('a');
 a.href=url;
-a.download='kategori-sparepart-'+new Date().toISOString().split('T')[0]+'.csv';
+a.download='kategori-sparepart-'+(typeof todayStr==='function'?todayStr():'')+'.csv';
 a.click();
 if(typeof a.remove==='function')a.remove();else if(a.parentNode&&typeof a.parentNode.removeChild==='function')a.parentNode.removeChild(a);
 if(typeof URL.revokeObjectURL==='function')setTimeout(()=>URL.revokeObjectURL(url),0);

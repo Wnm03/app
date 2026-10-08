@@ -55,6 +55,11 @@ function loadSandbox() {
 
   const context = {
     console,
+    readDashboardHubSectionTab() {
+      const allowed = ['ringkasan', 'fitur', 'widget', 'insight'];
+      try { const raw = localStorageStore.dashHubSectionTab || null; return allowed.includes(raw) ? raw : 'ringkasan'; }
+      catch (_) { return 'ringkasan'; }
+    },
     document: {
       getElementById(id) { return Object.prototype.hasOwnProperty.call(dom, id) ? dom[id] : null; },
     },

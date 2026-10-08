@@ -31,9 +31,12 @@ test('Dashboard Slim keeps heavy analytics out of default Dashboard Hub render',
   assert.doesNotMatch(section, /DashboardHubAnalytics\.render\(\)/);
 });
 
-test('Dashboard Slim CSS hides duplicate Analytics instead of deleting its compatibility DOM', () => {
+test('Dashboard Slim no longer keeps the retired duplicate Summary/Analytics DOM', () => {
   const html = read('index.html');
-  assert.match(html, /#page-dashboard-hub #dashHubAnalyticsRow\{display:none!important;\}/);
+  const hub = html.slice(html.indexOf('<div class="page active" id="page-dashboard-hub">'));
+  assert.doesNotMatch(hub, /id="dashHubSummaryGrid"/);
+  assert.doesNotMatch(hub, /id="dashHubAnalyticsRow"/);
+  assert.doesNotMatch(hub, /dashboard-slim-v1879/);
 });
 
 test('stale bundle-B preload is not present', () => {

@@ -39,8 +39,9 @@ const FuelDashboard = {
 
 curVehicleId: null,
 
+// S2530: per-kendaraan Car Notes TIDAK boleh disaring ownership (kendaraan non-SELF tetap harus tampil di tab BBM; lihat komentar isVehicleOwnershipSelf di vehicle-core.js).
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
 },
 
 // render(vehicleId?) — API publik satu-satunya utk menggambar dashboard.
@@ -176,7 +177,8 @@ _body(vid, vehicles, summary) {
     <div class="btn-row" style="margin-bottom:0">
       <button class="btn btn-ghost btn-sm" data-action="FuelModal.open" data-args="${escapeHtml(JSON.stringify([vid]))}">📊 Lihat Detail</button>
       <button class="btn btn-ghost btn-sm" data-action="FuelBarCorrection.open" data-args="${escapeHtml(JSON.stringify([vid]))}" aria-label="Koreksi estimasi BBM dengan speedometer">⚙️ Koreksi</button>
-      <button class="btn btn-ghost btn-sm" data-action="FuelDashboard.exportVehicleHTML" data-args="${escapeHtml(JSON.stringify([vid]))}" aria-label="Export Fuel Dashboard kendaraan ini">⬇️ Export</button>
+      <button class="btn btn-ghost btn-sm" data-action="FuelDashboard.exportVehicleHTML" data-args="${escapeHtml(JSON.stringify([vid]))}" aria-label="Export Fuel Dashboard kendaraan ini">⬇️ Export HTML</button>
+      <button class="btn btn-ghost btn-sm" data-action="FuelDashboard.exportVehicleJSON" data-args="${escapeHtml(JSON.stringify([vid]))}" aria-label="Export JSON Fuel Dashboard kendaraan ini">🗂️ JSON</button>
     </div>
   `;
 },
@@ -223,7 +225,7 @@ _buildExportData(vid) {
 
 // _dateTag()/_slug() — helper murni format nama file, 0 logic bisnis.
 _dateTag() {
-  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0]);
+  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 },
 
 _slug(name) {

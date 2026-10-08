@@ -581,10 +581,20 @@ saveSettings(){
 const p=D.pensiun||(D.pensiun={});
 const usiaSekarang=parseInt(document.getElementById('pensUsiaSekarang').value);
 const usiaPensiun=parseInt(document.getElementById('pensUsiaPensiun').value);
-const target=parseFloat((document.getElementById('pensTarget').value||'0').toString().replace(/[^0-9.]/g,''));
+const targetRaw=String(document.getElementById('pensTarget').value||'').trim();
+const kontribusiRaw=String(document.getElementById('pensKontribusi').value||'').trim();
+const parsePensionAmount=(raw,label)=>{
+  if(!raw)return 0;
+  if(/[^0-9\s.,+]/.test(raw)||raw.includes('-')){toast('⚠️ '+label+' harus berupa angka yang valid');return null;}
+  const n=parsePzNum(raw);
+  if(!isFinite(n)||n<0){toast('⚠️ '+label+' harus berupa angka yang valid dan tidak negatif');return null;}
+  return n;
+};
+const target=parsePensionAmount(targetRaw,'Target Dana Pensiun');
 const accId=document.getElementById('pensAcc').value;
 const ret=parseFloat((document.getElementById('pensReturn').value||'').toString().replace(',','.'));
-const kontribusi=parseFloat((document.getElementById('pensKontribusi').value||'0').toString().replace(/[^0-9.]/g,''));
+const kontribusi=parsePensionAmount(kontribusiRaw,'Kontribusi Bulanan');
+if(target===null||kontribusi===null)return;
 if(!isFinite(usiaSekarang)||usiaSekarang<15||usiaSekarang>90){toast('⚠️ Isi usia sekarang yang valid (15-90)');return;}
 if(!isFinite(usiaPensiun)||usiaPensiun<=usiaSekarang||usiaPensiun>90){toast('⚠️ Usia target pensiun harus lebih besar dari usia sekarang');return;}
 if(!accId){toast('⚠️ Pilih akun tabungan dana pensiun dulu');return;}

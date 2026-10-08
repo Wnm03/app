@@ -194,18 +194,6 @@
 <script src="modules/shared/smoke-test.js?v=2272" defer></script>
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 
-<style id="dashboard-slim-v1879">
-/* Dashboard Hub Slim: hierarchy lebih pendek tanpa mengubah halaman domain. */
-#page-dashboard-hub .dashhub-wrap.card.u-mb12{margin-bottom:8px;}
-#page-dashboard-hub .dashhub-cat-head{padding:9px 11px;}
-#page-dashboard-hub .dashhub-cat-desc{font-size:11px;line-height:1.35;}
-#page-dashboard-hub .card-collapse-body{padding-top:7px;}
-#page-dashboard-hub #dashHubOwnershipSummaryCard{margin-bottom:8px;}
-#page-dashboard-hub #dashHubAnalyticsRow{display:none!important;}
-#page-dashboard-hub #financialAuditInsightWrap .card{margin-bottom:6px;}
-#page-dashboard-hub #crossInsightBody>div{padding:6px 0!important;font-size:12px!important;}
-#page-dashboard-hub .dashboard-slim-secondary{opacity:.92;}
-</style>
 </head>
 <body data-theme="dark">
 
@@ -2129,7 +2117,7 @@
 
       <div class="hr-divider"></div>
 
-      <div class="fg u-mb0"><label class="fl">Tab Default Dashboard Hub</label>
+      <div class="fg u-mb0"><label class="fl">Tab saat pertama dibuka</label>
         <select class="fs" id="dashDefaultTabSelect" data-onchange="DashboardSettings.setDefaultTab" data-onchange-args='["$value"]'>
           <option value="ringkasan">📊 Ringkasan</option>
           <option value="fitur">🧭 Semua Fitur</option>
@@ -2146,19 +2134,6 @@
 
       <div class="hr-divider"></div>
       <button type="button" class="btn btn-ghost btn-sm u-w100" data-action="DashboardSettings.resetDashboardLayout">↩️ Reset Tata Letak Dashboard</button>
-    </div>
-  </div>
-
-  <!-- Toggle tampil/sembunyi section Life OS di Dashboard Hub. Lihat
-       lifeos/ui/lifeos-home.js (LifeOSHome.isVisiblePref()/toggleVisibility()/
-       applyVisibility()) & #lifeOSWrap di bawah — preferensi tampilan murni
-       lewat localStorage, TIDAK menyentuh D atau LifeOSStore. -->
-  <div class="card">
-    <div class="card-title">🌱 Life OS di Dashboard Hub</div>
-    <div class="u-hint10">Section tambahan (Today / Goals / Projects / Review / Knowledge) yang muncul di halaman Dashboard Hub, dibangun di atas data yang sudah ada. Nonaktif secara default — aktifkan kalau mau mencobanya.</div>
-    <div class="setting-item">
-      <div class="setting-label">Tampilkan Life OS</div>
-      <label class="tgl-switch"><input type="checkbox" id="lifeOSVisibleToggle" data-onchange="LifeOSHome.toggleVisibility" data-onchange-args='["$checked"]'><span class="tgl-track"></span></label>
     </div>
   </div>
 
@@ -2660,7 +2635,7 @@
        tanpa perlu scroll melewati Hero/Quick Actions/Analytics/Ownership
        Summary dulu. Markup & id/DashboardHubSearch.render() TIDAK diubah
        sama sekali, murni dipindah posisinya di DOM -- section
-       dashHubSummaryGrid/dashHubAnalyticsRow/dashHubFavoritSection/dst yang
+       dashHubFavoritSection/dst yang
        dikelola DashboardHub.setSectionTab() tidak tersentuh krn search wrap
        ini bukan salah satu dari section tsb. -->
   <div class="dashhub-search-wrap">
@@ -2668,7 +2643,7 @@
     <div class="dashhub-search-results u-dnone" id="dashHubSearchResults"></div>
     <!-- Sesi 159: chip "Jelajahi Semua Fitur" dihapus — 100% redundan dgn
          tab "Fitur" (sama-sama nuju #dashHubMainGridCard, cuma beda entry
-         point). DashboardHub.openAllFeatures() di JS sengaja TIDAK dihapus
+         point). DashboardHub.openAllFeatures() sudah dihapus dari JS
          (dead code kecil, 0 risiko), cuma pemanggil satu-satunya (tombol
          ini) yang dicabut. -->
   </div>
@@ -2698,13 +2673,20 @@
       </div>
     </div>
   </div>
+  <div class="dashhub-wrap card u-mb12" id="dashHubAttentionWrap" style="display:none">
+    <div class="dashhub-cat-head">
+      <div class="dashhub-cat-icon">🧭</div>
+      <div><div class="dashhub-cat-label">Perlu Perhatian</div><div class="dashhub-cat-desc">Ringkasan read-only dari status tagihan, servis, dan backup</div></div>
+    </div>
+    <div class="card-collapse-body" id="dashHubAttentionBody"></div>
+  </div>
   <!-- TICKER STRIP MODERN (RENCANA-MODERNISASI-UI.md, Sesi s636 — pilot
        Beranda). Additive, di-gate lewat CSS ke [data-theme="modern"]
        SAJA (lihat .dashhub-ticker di styles.css, s635/s636) -- tema lama
        (dark/light/dst) 0 dampak, elemen ini selalu display:none di sana.
        Diisi oleh DashboardHubTickerModern.render() (dashboard-hub.js),
        yang 100% reuse pola _dashHubMonthTxShared() yang sudah ada (SAMA
-       PERSIS pola DashboardHubSummary/Analytics di bawah) -- 0 rumus
+       PERSIS pola Dashboard Hub ringkasan/analytics lama di bawah) -- 0 rumus
        baru. Container & item reuse class .bill-stat-pills/.bill-stat-pill
        yang sudah ada (bukan komponen baru). Tema "modern" ini SENDIRI
        belum terdaftar di pemilihan tema (lihat catatan s635), jadi
@@ -2735,35 +2717,6 @@
       <span class="dashhub-qa-icon">💼</span><span class="dashhub-qa-label">Titipan</span>
     </button>
   </div>
-  <!-- SUMMARY CARDS (Sprint 1 Tahap 5 — Dashboard 2.0, lihat DASHBOARD-SUMMARY.md).
-       Baris kartu ringkas kecil, tepat di bawah Quick Actions. Menampilkan angka
-       yang SUDAH ADA (pemasukan/pengeluaran/bersih/jumlah transaksi bulan
-       berjalan dari D.transactions, pola yang sama dipakai di banyak tempat
-       lain mis. FinCoach.renderDash()) — tidak ada business logic baru, tidak
-       menyentuh FEATURE_REGISTRY/ADR-001. Diisi oleh DashboardHubSummary.render()
-       (dipanggil dari DashboardHub.render() di dashboard-hub.js). Tambahan
-       murni, tidak mengubah baris lain di atas/bawahnya (Hero Card & Quick
-       Actions tidak tersentuh).
-
-       CATATAN DEDUP (lihat DASHBOARD-DEDUP.md): grid ini SENGAJA
-       disembunyikan lewat CSS (.dashhub-summary-grid{display:none} di
-       styles.css) karena 4 angkanya (Pemasukan/Pengeluaran/Bersih Bulan
-       Ini/Jumlah Transaksi) 100% duplikat dgn Analytics Row (Tahap 7) di
-       bawahnya. DashboardHubSummary.render() TETAP dipanggil apa adanya
-       (JS tidak diubah) supaya test lama tidak rusak — jangan hapus class
-       "dashhub-summary-grid" atau id "dashHubSummaryGrid" ini. -->
-  <div class="dashhub-summary-grid" id="dashHubSummaryGrid"></div>
-  <!-- DASHBOARD ANALYTICS (Sprint 1 Tahap 7 — Dashboard 2.0, lihat
-       DASHBOARD-ANALYTICS.md). Baris kartu horizontal kecil, tepat di bawah
-       Summary Cards & sebelum search bar. Menampilkan angka yang SUDAH bisa
-       dihitung dari D.transactions bulan berjalan (transaksi/pemasukan/
-       pengeluaran/saldo bersih/persentase pemasukan vs pengeluaran) — tidak
-       ada business logic baru, tidak menyentuh FEATURE_REGISTRY/ADR-001.
-       Diisi oleh DashboardHubAnalytics.render() (dipanggil dari
-       DashboardHub.render() di dashboard-hub.js). Tambahan murni, tidak
-       mengubah baris lain di atas/bawahnya (Hero Card, Quick Actions &
-       Summary Cards tidak tersentuh). -->
-  <div class="dashhub-analytics-row u-dnone" id="dashHubAnalyticsRow" aria-hidden="true"></div>
   <!-- OWNERSHIP SUMMARY (Sesi 236). Kartu kecil, reuse komponen .card/
        .setting-item yang sudah ada (pola sama persis Settings -> tab
        Kepemilikan, #ownershipSettingsList). Diisi oleh
@@ -2803,7 +2756,7 @@
        lihat dashboard-hub-quickactions.test.js/dashboard-hub-pinnedwidgets.
        test.js) — DashboardHub.setSectionTab()/applySectionTab() di
        dashboard-hub.js toggle class u-dnone LANGSUNG ke id section yang
-       sudah ada (dashHubSummaryGrid/dashHubAnalyticsRow/
+       sudah ada (dashHubFavoritSection/
        dashHubFavoritSection/dashHubMainGridCard/dashboardHubPinnedWrap/
        lifeOSWrap/eieWrap/findashWrap/vehdashWrap). Pilihan diingat lewat localStorage
        (key: dashHubSectionTab). -->
@@ -2946,34 +2899,6 @@
       <div class="card-title">💡 Insight Dana Kelolaan</div>
       <div id="danaKelolaanInsightBody"></div>
     </div>
-    </div>
-  </div>
-  <!-- SHOP MINI SUMMARY (Sesi 250, "Pindahkan Alur Bisnis Shop ke Shop >
-       Business Intelligence"). Beranda TIDAK LAGI menampilkan grid detail
-       Shop Business Engine/Pengiriman Shop/Alur Bisnis Shop — ketiganya
-       (id #shopBusinessEngineWrap/#tripPresenterWrap/#businessFlowWrap)
-       DIPINDAH APA ADANYA (markup/id/logic tidak berubah) ke tab baru
-       #shopTab-bi ("🧠 Business Intelligence") di #page-shop, lihat sana.
-       Sebagai gantinya, Beranda cukup menampilkan ringkasan tipis (Omzet/
-       Profit/Stok Menipis) + tombol "Buka Shop" — diisi oleh
-       ShopMiniSummary.render() (dashboard-hub.js), 100% reuse
-       ShopBusinessEnginePresenter.summary() (S199, sudah menghitung
-       omzet/untung dari ProfitEngine.summarize() + itemCount restock dari
-       InventoryEngine.restockScan()) — 0 rumus baru, 0 field D baru, 0
-       compute ulang. UI HANYA presenter + navigasi (showPage('shop')),
-       pola sama findash-grid/findash-card generik yang sudah ada. -->
-  <div class="dashhub-wrap card u-mb12" id="shopMiniSummaryWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopMiniSummaryWrap","$event"]'>
-      <div class="dashhub-cat-icon">🪨</div>
-      <div>
-        <div class="dashhub-cat-label">Shop</div>
-        <div class="dashhub-cat-desc">Ringkasan bisnis Shop bulan ini — detail lengkap ada di tab Business Intelligence</div>
-      </div>
-      <span class="card-collapse-toggle" id="shopMiniSummaryWrap-chev" data-action="toggleCardCollapse" data-args='["shopMiniSummaryWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="shopMiniSummaryWrap-cbody">
-    <div class="findash-grid" id="shopMiniSummaryGrid"></div>
-    <button class="btn btn-ghost btn-full btn-sm u-mt10" data-action="showPage" data-args='["shop"]'>🪨 Buka Shop</button>
     </div>
   </div>
   <!-- Rental Management/Asset Portfolio/Asset Maintenance — lihat catatan

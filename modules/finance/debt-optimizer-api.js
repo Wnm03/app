@@ -163,7 +163,7 @@ debtRecommendation() {
   }
   const p = this.payoffPlan();
   if (p.ok && p.simulation && p.simulation.months != null) {
-    out.push({ type: 'info', code: 'debt_payoff_estimate', message: `Estimasi lunas semua utang: ${p.simulation.months} bulan lagi, dengan total bunga ${Math.round(p.simulation.totalInterest).toLocaleString('id-ID')} (metode ${p.method}).` });
+    out.push({ type: 'info', code: 'debt_payoff_estimate', message: `Estimasi lunas semua utang (utang tanpa cicilan tidak dihitung): ${p.simulation.months} bulan lagi, dengan total bunga ${Math.round(p.simulation.totalInterest).toLocaleString('id-ID')} (metode ${p.method}).` });
   }
   return out;
 },

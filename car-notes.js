@@ -283,7 +283,7 @@ if(jenisEl)jenisEl.value=b.jenis;
 FuelPriceRef.selectUnknown('bbmJenis');
 }
 } else {
-document.getElementById('bbmDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('bbmDate').value=typeof todayStr==='function'?todayStr():'';
 ['bbmLiter','bbmHarga','bbmCost','bbmSpbu','bbmNote'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('bbmKm').value=getVehicleKm(curVehicleId)||'';
 document.getElementById('bbmFull').checked=true;

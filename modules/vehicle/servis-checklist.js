@@ -164,6 +164,9 @@ const ServisChecklist = {
   _conditionNotes: {},
   _notApplicable: {},
   _executionStatus: {},
+  // Cursor UI-only untuk memastikan tombol dapat melewati SKIPPED tanpa
+  // mengubah ServiceChecklistExecutionSOT atau state persisted.
+  _executionCycleCursor: {},
   // Per-log identity override: checklist master item remains canonical, while
   // a saved service record may correct its category/component identity.
   _identityOverrides: {},
@@ -189,6 +192,7 @@ const ServisChecklist = {
     this._conditionNotes = {};
     this._notApplicable = {};
     this._executionStatus = {};
+    this._executionCycleCursor = {};
     this._identityOverrides = {};
     this._costs = {};
     this._catalogPartRefs = {};
@@ -862,8 +866,18 @@ const ServisChecklist = {
   cycleExecutionStatusAndRender(groupIdx,itemIdx){
     const item=this._item(groupIdx,itemIdx); if(!item)return {ok:false,reason:'Item tidak ditemukan'};
     const current=this._executionStatus[item.id]||'PLANNED';
-    const next=current==='COMPLETED'?'PLANNED':current==='PLANNED'?'SKIPPED':'COMPLETED';
-    const result=this.setExecutionStatus(groupIdx,itemIdx,next); this.render(); return result;
+    const cursor=this._executionCycleCursor[item.id]||0;
+    // UI-only cycle: PLANNED -> COMPLETED -> PLANNED -> SKIPPED -> PLANNED.
+    // Every actual transition is still delegated to the canonical SOT guard.
+    const next = current==='COMPLETED' ? 'PLANNED'
+      : current==='SKIPPED' ? 'PLANNED'
+      : cursor===0 ? 'COMPLETED'
+      : 'SKIPPED';
+    const result=this.setExecutionStatus(groupIdx,itemIdx,next);
+    if(result.ok){
+      this._executionCycleCursor[item.id]=next==='COMPLETED'?1:next==='SKIPPED'?0:next==='PLANNED'?(cursor===1?2:cursor===2?0:cursor):cursor;
+    }
+    this.render(); return result;
   },
 
   groupOptions() {

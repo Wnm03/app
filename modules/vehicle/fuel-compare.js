@@ -224,7 +224,18 @@ render(sortKey) {
   if (sortKey) this.sortKey = sortKey;
 
   const vehicles = this._vehicles();
-  if (!vehicles.length) { wrap.style.display = 'none'; return; } // No vehicles
+  if (!vehicles.length) {
+    // S2531: bedakan "tidak ada kendaraan sama sekali" (sembunyikan) dari "ada kendaraan
+    // tapi semuanya non-SELF" (perbandingan armada hanya SELF -> jelaskan, jangan hilang diam-diam).
+    const hasAny = typeof D !== 'undefined' && Array.isArray(D.vehicles) && D.vehicles.length > 0;
+    if (hasAny) {
+      wrap.style.display = '';
+      body.innerHTML = '<div class="u-fs12 u-t2">Perbandingan armada hanya menampilkan kendaraan milik sendiri (SELF). Kendaraan keluarga/pihak lain tetap bisa dilihat per kendaraan di tab Ringkasan dan Analisis.</div>';
+      return;
+    }
+    wrap.style.display = 'none';
+    return; // No vehicles
+  }
 
   const rows = this._rows();
   if (!rows.length) { wrap.style.display = 'none'; return; } // semua kendaraan invalid/gagal
@@ -253,6 +264,7 @@ render(sortKey) {
     </div>
     <div class="btn-row" style="margin-bottom:10px">
       <button class="btn btn-ghost btn-sm" data-action="FuelCompare.exportFleetHTML" aria-label="Export perbandingan seluruh armada">⬇️ Export All</button>
+      <button class="btn btn-ghost btn-sm" data-action="FuelCompare.exportFleetJSON" aria-label="Export JSON perbandingan seluruh armada">🗂️ JSON</button>
     </div>
     <div class="u-flex u-gap6 u-mb10" style="overflow-x:auto;padding-bottom:2px">
       ${this._sortHeaderBtn('Nama', 'name', this.sortKey, this.sortDir)}
@@ -317,7 +329,7 @@ _buildFleetExportData() {
 // diekstrak jadi util bersama supaya kedua file tetap 100% independen,
 // sama persis alasan duplikasi yang sudah ada di file ini).
 _dateTag() {
-  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0]);
+  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 },
 
 _downloadFile(filename, content, mime) {

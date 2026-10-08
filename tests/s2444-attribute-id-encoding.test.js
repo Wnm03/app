@@ -3,7 +3,7 @@ const path = require('path');
 const assert = require('assert');
 const ROOT = path.resolve(__dirname, '..');
 const files = [
-  'car-notes.js','modules/shop/modules-render.js','modules/shop/cobek-tx-cart.js','modules/shop/cobek-etalase.js','modules/shop/cobek-order.js',
+  'car-notes.js','modules/shop/cobek-tx-cart.js','modules/shop/cobek-etalase.js','modules/shop/cobek-order.js',
   'modules/finance/tagihan-kalender.js','modules/finance/piutang-utang.js','modules/finance/tx-bbm.js','modules/finance/tx-renov.js','modules/finance/edukasi-dana.js','modules/finance/linktx.js','modules/finance/tx-stok-sparepart.js','modules/finance/titipan-expense-ui.js','modules/shared/modules-calc.js','modules/home/refleksi-selfcare.js','modules/home/renovasi.js','modules/business/sewakios.js','modules/business/kasir.js','modules/vehicle/servis.js','modules/vehicle/vehicle-core.js','modules/vehicle/sparepart-servis.js','modules/vehicle/sparepart-servis-ui.js'
 ];
 const patterns = [

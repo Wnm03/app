@@ -181,7 +181,11 @@ const DanaTitipanCommitmentUI = {
     const committedDate = (document.getElementById('titipanCommitDate') || {}).value || '';
     const notes = (document.getElementById('titipanCommitNotes') || {}).value || '';
     try {
-      DanaTitipanPortfolioAPI.saveCommitment({ ownerId, ownerName, principalAmount, committedDate, notes });
+      const result = DanaTitipanPortfolioAPI.saveCommitment({ ownerId, ownerName, principalAmount, committedDate, notes });
+      if (result === false || (result && result.ok === false)) {
+        if (typeof toast === 'function') toast('⚠️ Gagal menyimpan pokok dana titipan');
+        return;
+      }
     } catch (e) {
       if (typeof toast === 'function') toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal menyimpan pokok dana titipan'));
       return;
@@ -214,7 +218,11 @@ const DanaTitipanCommitmentUI = {
       const ok = await askConfirm('Hapus pokok dana titipan owner ini?', { okText: 'Ya, Hapus' });
       if (!ok) return;
     }
-    DanaTitipanPortfolioAPI.deleteCommitment(ownerId);
+    const result = DanaTitipanPortfolioAPI.deleteCommitment(ownerId);
+    if (result === false || (result && result.ok === false)) {
+      if (typeof toast === 'function') toast('⚠️ Gagal menghapus pokok dana titipan');
+      return;
+    }
     DanaTitipanCommitmentUI.editingOwnerId = null;
     if (typeof closeModal === 'function') closeModal('titipanCommitmentModal');
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
@@ -249,6 +257,10 @@ const DanaTitipanCommitmentUI = {
       if (!ok) return;
     }
     const removed = DanaTitipanPortfolioAPI.removeOwnerLinkage(ownerId);
+    if (removed === false || (removed && removed.ok === false)) {
+      if (typeof toast === 'function') toast('⚠️ Gagal melepas keterikatan Dana Titipan');
+      return;
+    }
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
     // FIX (audit tombol "Lepas Keterikatan"): sama seperti save()/
     // deleteCommitment() di atas (Sesi 550, FIX-S550-DANA-TITIPAN-TABLIST-
@@ -389,7 +401,11 @@ const DanaTitipanReturnUI = {
     const returnDate = (document.getElementById('titipanReturnDate') || {}).value || '';
     const notes = (document.getElementById('titipanReturnNotes') || {}).value || '';
     try {
-      DanaTitipanPortfolioAPI.recordReturn({ ownerId, ownerName, amount, returnDate, notes });
+      const result = DanaTitipanPortfolioAPI.recordReturn({ ownerId, ownerName, amount, returnDate, notes });
+      if (result === false || (result && result.ok === false)) {
+        if (typeof toast === 'function') toast('⚠️ Gagal mencatat pengembalian dana titipan');
+        return;
+      }
     } catch (e) {
       if (typeof toast === 'function') toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal mencatat pengembalian dana titipan'));
       return;
@@ -414,7 +430,11 @@ const DanaTitipanReturnUI = {
       const ok = await askConfirm('Hapus riwayat pengembalian ini?', { okText: 'Ya, Hapus' });
       if (!ok) return;
     }
-    DanaTitipanPortfolioAPI.deleteReturn(id);
+    const result = DanaTitipanPortfolioAPI.deleteReturn(id);
+    if (result === false || (result && result.ok === false)) {
+      if (typeof toast === 'function') toast('⚠️ Gagal menghapus riwayat pengembalian');
+      return;
+    }
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
     // FIX (audit lanjutan, bug sekelas — lihat catatan di save() di atas):
     // sync eksplisit ke #danaTitipanTabList, pola PERSIS sama.
@@ -523,10 +543,12 @@ const DanaTitipanPoolUI = {
     const date = (document.getElementById('titipanPoolDate') || {}).value || '';
     const notes = (document.getElementById('titipanPoolNotes') || {}).value || '';
     try {
-      if (DanaTitipanPoolUI._mode === 'deposit') {
-        DanaTitipanPoolAPI.addDeposit({ amount, date, notes });
-      } else {
-        DanaTitipanPoolAPI.addOpeningBalance({ amount, date, notes });
+      const result = DanaTitipanPoolUI._mode === 'deposit'
+        ? DanaTitipanPoolAPI.addDeposit({ amount, date, notes })
+        : DanaTitipanPoolAPI.addOpeningBalance({ amount, date, notes });
+      if (result === false || (result && result.ok === false)) {
+        if (typeof toast === 'function') toast('⚠️ Gagal menyimpan dana titipan');
+        return;
       }
     } catch (e) {
       if (typeof toast === 'function') toast('⚠️ ' + ((e && e.message) ? e.message : 'Gagal menyimpan dana titipan'));

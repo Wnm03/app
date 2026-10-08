@@ -262,7 +262,7 @@ function save(){
 _saveStateVersion++;
 if(_crossTabStateStale){if(!_crossTabWarnShown){_crossTabWarnShown=true;const _msg='⚠️ Tab ini memakai data lama setelah perubahan dari tab lain. Muat ulang aplikasi sebelum menyimpan lagi.';if(typeof toast==='function')toast(_msg,6500);else console.warn(_msg);}return false;}
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
-// (renderAccGrid/renderDashAccList/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
+// (renderAccGrid/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
 // tapi tiap fungsi di dalam burst yang sama tidak hitung ulang dari nol. Lihat akun.js.
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();

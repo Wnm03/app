@@ -11,8 +11,6 @@ test('v23 dynamic innerHTML surfaces use HTML escaping for identified user/data-
     ['modules/shop/business-intelligence-presenter.js', '${escapeHtml(x.icon)} ${escapeHtml(x.text)}'],
     ['modules/ai/feature-insights.js', '${escapeHtml(x.icon)} ${safeInsightText(x.text)}'],
     ['modules/ai/feature-insights.js', '${safeInsightText(emptyMsg)}'],
-    ['modules/shop/modules-render.js', '${escapeHtml(D.googleSheets.spreadsheetId)}'],
-    ['modules/shop/modules-render.js', '${escapeHtml(D.googleSheets.spreadsheetId)}'],
   ];
   for (const [file, needle] of checks) {
     const s = file==='car-notes.js' ? readCarNotesSource() : fs.readFileSync(path.join(ROOT, file), 'utf8');
@@ -21,7 +19,7 @@ test('v23 dynamic innerHTML surfaces use HTML escaping for identified user/data-
 });
 
 test('v23 targeted source scan reports the reviewed dynamic innerHTML patterns as hardened', () => {
-  const files = ['car-notes.js','modules/shop/modules-render.js','modules/shop/modules-render.js','modules/shop/business-intelligence-presenter.js','modules/ai/feature-insights.js'];
+  const files = ['car-notes.js','modules/shop/business-intelligence-presenter.js','modules/ai/feature-insights.js'];
   for (const file of files) {
     const s = fs.readFileSync(path.join(ROOT,file),'utf8');
     assert.equal(s.includes('${emptyText}') && file==='car-notes.js', false);

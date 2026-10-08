@@ -87,7 +87,7 @@ const hintEl=document.getElementById('whEditHint');
 if(hintEl)hintEl.style.display='none';
 const saveBtnEl=document.getElementById('whSaveBtn');
 if(saveBtnEl)saveBtnEl.textContent='+ Tambah ke Absensi Minggu Ini';
-document.getElementById('whDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('whDate').value=typeof todayStr==='function'?todayStr():'';
 document.getElementById('whGaji').value=D.profile.gajiPokok||'';
 const whIstMulaiEl=document.getElementById('whIstMulai'); if(whIstMulaiEl)whIstMulaiEl.value='12:00';
 const whIstSelesaiEl=document.getElementById('whIstSelesai'); if(whIstSelesaiEl)whIstSelesaiEl.value='13:00';

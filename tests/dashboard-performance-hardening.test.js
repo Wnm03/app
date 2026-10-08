@@ -71,7 +71,7 @@ test('Dashboard preference mutations render only a visible dashboard target',()=
   assert.match(settings,/function shouldRenderDashboardFromSettings\(\)/);
   assert.match(settings,/dashActive=!!dash\?\.classList\?\.contains\('active'\)/);
   assert.match(settings,/hubActive=!!hub\?\.classList\?\.contains\('active'\)/);
-  assert.match(settings,/localStorage\.getItem\('dashHubSectionTab'\)==='widget'/);
+  assert.match(settings,/readDashboardHubSectionTab\(\):'ringkasan'\)==='widget'/);
   const r=fs.readFileSync('modules/shared/modules-render.js','utf8');
   assert.doesNotMatch(r,/document\.querySelector\('\.page\.active'/);
 });

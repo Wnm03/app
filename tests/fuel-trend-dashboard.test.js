@@ -258,7 +258,7 @@ test('render() — remaining distance/next refuel/monthly usage tampil dari Fuel
   const html = els.fuelTrendBody.innerHTML;
   assert.match(html, /45 km/);
   assert.match(html, /2026-07-30 \(5 hari lagi\)/);
-  assert.match(html, /22 L \(Rp220\.000\)/);
+  assert.match(html, /Estimasi Pemakaian Bulanan<\/span><span class="u-fw700">22 L<\/span>/);
 });
 
 test('render() — FuelPredictionEngine belum dimuat -> section prediksi placeholder "-", section lain tetap render', () => {

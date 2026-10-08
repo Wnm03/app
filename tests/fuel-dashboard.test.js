@@ -271,7 +271,9 @@ test('render() — tombol CTA reuse FuelModal.open()/FuelBarCorrection.open() (0
   // TASK-155A: tombol Export ditambahkan di baris CTA yang sama -> 3 tombol
   // btn-ghost btn-sm (Lihat Detail / Koreksi / Export), bukan 2 lagi.
   assert.match(html, /data-action="FuelDashboard\.exportVehicleHTML" data-args="\[.*v1.*\]"/);
-  assert.equal((html.match(/class="btn btn-ghost btn-sm"/g) || []).length, 3);
+  // N16 (S2532): tombol Export JSON ditambahkan -> 4 tombol btn-ghost btn-sm.
+  assert.match(html, /data-action="FuelDashboard\.exportVehicleJSON" data-args="\[.*v1.*\]"/);
+  assert.equal((html.match(/class="btn btn-ghost btn-sm"/g) || []).length, 4);
 });
 
 // --- Refresh after refill (data berubah, render() ulang mencerminkan) -----------

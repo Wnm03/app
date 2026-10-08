@@ -21,7 +21,7 @@ if(!D.accounts||D.accounts.length<2){toast('⚠️ Butuh minimal 2 akun untuk tr
 populateAccFilters();
 document.getElementById('trAmt').value='';
 document.getElementById('trNote').value='';
-document.getElementById('trDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('trDate').value=typeof todayStr==='function'?todayStr():'';
 if(D.accounts.length>1) document.getElementById('trTo').selectedIndex=1;
 openModal('transferModal');
 }

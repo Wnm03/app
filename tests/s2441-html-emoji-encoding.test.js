@@ -6,7 +6,6 @@ const ROOT=path.resolve(__dirname,'..');
 const files=[
   'modules/finance/tx-list-cashflow.js',
   'modules/shared/modules-render.js',
-  'modules/shop/modules-render.js',
   'modules/vehicle/vehicle-core.js',
   'modules/vehicle/servis.js',
   'modules/finance/tagihan-kalender.js',

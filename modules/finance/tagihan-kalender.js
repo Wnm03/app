@@ -411,7 +411,7 @@ document.getElementById('billModalTitle').textContent='Tambah Tagihan/Langganan'
 document.getElementById('billDueWrap').style.display='block';
 document.getElementById('billName').value='';
 document.getElementById('billAmt').value='';
-document.getElementById('billDue').value=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
+document.getElementById('billDue').value=(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 document.getElementById('billFreq').value='bulanan';
 document.getElementById('billCat').value='';
 updateBillSubCatOptions();
@@ -1012,12 +1012,12 @@ validate:v=>{const n=parsePzNum(v);return n>0?null:'Jumlah harus lebih dari 0';}
 if(!amtVal)return;
 payAmount=parsePzNum(amtVal);
 }
-const _todayNow=new Date(); const todayStr=_todayNow.getFullYear()+'-'+String(_todayNow.getMonth()+1).padStart(2,'0')+'-'+String(_todayNow.getDate()).padStart(2,'0');
+const defaultPayDate=(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 const val=await showPromptModal({
 title:'Tanggal Pembayaran',
 message:`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(payAmount)}?`,
 inputType:'date',
-defaultValue:todayStr,
+defaultValue:defaultPayDate,
 okText:'Ya, Bayar',
 icon:'💸',
 validate:v=>v?null:'Tanggal wajib diisi'
@@ -1374,7 +1374,6 @@ const d=Math.max(1,Math.round(days||30));
 const perDay=deficitAmount/d;
 return `💡 Saran: kurangi pengeluaran non-wajib ≈${fmtFull(deficitAmount)} (≈${fmtFull(perDay)}/hari selama ${d} hari ke depan), atau geser/tunda sebagian tagihan/cicilan yang bisa ditunda.`;
 }
-/* moved to modules-render.js: renderDashCashflowForecast */
 function getBillOccurrencesInMonth(b,year,month){
 const monthStart=new Date(year,month,1);
 const monthEnd=new Date(year,month+1,0,23,59,59);
@@ -1440,7 +1439,7 @@ return out;
 function openBillCalendar(){
 const now=new Date();
 billCalYear=now.getFullYear();billCalMonth=now.getMonth();
-billCalSelectedDate=now.toISOString().split('T')[0];
+billCalSelectedDate=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
 renderBillCalendar();
 openModal('billCalendarModal');
 }
@@ -1564,7 +1563,6 @@ const pctChange=Math.round(((currentAmount-avgPrev)/avgPrev)*100);
 if(pctChange<BILL_ANOMALY_THRESHOLD_PCT)return null;
 return{avgPrev,pctChange,count:history.length};
 }
-/* moved to modules-render.js: renderDashboardBills */
 function checkBills(){
 const banner=document.getElementById('billBanner');
 if(!banner)return;

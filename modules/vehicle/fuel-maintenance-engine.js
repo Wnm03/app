@@ -133,11 +133,15 @@ _tirePressureRef(veh) {
 _relevantOverdueItems(items) {
   if (!Array.isArray(items)) return [];
   const out = [];
+  const seenMaintenanceItems = new Set();
   Object.keys(this.KEYWORD_GROUPS).forEach((part) => {
     const keywords = this.KEYWORD_GROUPS[part];
     items.forEach((it) => {
       const name = (it.categoryName || '').toLowerCase();
+      const key = String(it.id != null ? it.id : name).trim();
+      if (seenMaintenanceItems.has(key)) return;
       if (it.status !== 'aman' && keywords.some((k) => name.includes(k))) {
+        seenMaintenanceItems.add(key);
         out.push(Object.assign({ part }, it));
       }
     });
@@ -230,7 +234,11 @@ maintenanceRecommendation(vehicleId) {
   if (!impact.ok) return impact;
   const health = this.fuelEfficiencyHealth(vehicleId);
   const recommendations = [];
+  const seenMaintenanceItems = new Set();
   impact.overdueItems.forEach((it) => {
+    const key = String(it.categoryName || it.part || '').trim().toLocaleLowerCase('id-ID').replace(/\s+/g,' ');
+    if (seenMaintenanceItems.has(key)) return;
+    seenMaintenanceItems.add(key);
     const detail = (it.status === 'terlewat')
       ? `sudah lewat ${Math.abs(Math.round(it.sisaKm))} km dari jadwal`
       : `tersisa ${Math.round(it.sisaKm)} km lagi`;

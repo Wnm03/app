@@ -26,7 +26,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
-const RENDER_B_FILE = path.join(__dirname, '..', 'modules', 'shared', 'modules-render-b.js');
+const ROOT = path.resolve(__dirname, '..');
+const RENDER_B_FILE = path.join(ROOT, 'modules', 'shared', 'modules-render-b.js');
 const FUEL_ENGINE_FILE = 'modules/vehicle/fuel-maintenance-engine.js';
 
 // --- Gate statis: renderVehicleSpecCard() wajib kirim veh.modelId --------
@@ -107,8 +108,9 @@ test('fuel-maintenance-engine.js: _tirePressureRef() tetap jalan (modelId undefi
 
 // --- Gate statis: pastikan orphan (bukan live di FILES) tidak ikut disentuh, dan tidak dianggap gap ---
 
-test('modules/modules-render.js & modules/shop/modules-render.js: dikonfirmasi ORPHAN (tidak terdaftar di scripts/build.js FILES) -- bukan gap aktif', () => {
-  const buildSrc = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'build.js'), 'utf8');
+test('modules/modules-render.js & modules/shop/modules-render.js: tidak masuk build; shop renderer legacy dihapus', () => {
+  const buildSrc = fs.readFileSync(path.join(ROOT, 'scripts', 'build.js'), 'utf8');
   assert.doesNotMatch(buildSrc, /'modules\/modules-render\.js'/, 'modules/modules-render.js (top-level) tidak boleh terdaftar di FILES -- kalau ini gagal, file tsb sudah jadi live dan findVehicleSpec(veh.name) di dalamnya JADI gap aktif, perlu disambung modelId juga');
-  assert.doesNotMatch(buildSrc, /'modules\/shop\/modules-render\.js'/, 'modules/shop/modules-render.js tidak boleh terdaftar di FILES -- kalau ini gagal, file tsb sudah jadi live dan findVehicleSpec(veh.name) di dalamnya JADI gap aktif, perlu disambung modelId juga');
+  assert.doesNotMatch(buildSrc, /'modules\/shop\/modules-render\.js'/, 'legacy shop renderer tidak boleh masuk build');
+  assert.equal(fs.existsSync(path.join(ROOT,'modules/shop/modules-render.js')), false, 'legacy shop renderer harus sudah dihapus');
 });

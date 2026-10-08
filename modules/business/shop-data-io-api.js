@@ -305,7 +305,7 @@ const ShopDataIO = {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'shop-backup-' + new Date().toISOString().split('T')[0] + '.json';
+    a.download = 'shop-backup-' + (typeof todayStr==='function'?todayStr():'') + '.json';
     a.click();
     if (typeof a.remove === 'function') a.remove();
     else if (a.parentNode && typeof a.parentNode.removeChild === 'function') a.parentNode.removeChild(a);

@@ -7,7 +7,6 @@ const renderB=fs.readFileSync(path.join(root,'modules/shared/modules-render-b.js
 const vehicleCore=fs.readFileSync(path.join(root,'modules/vehicle/vehicle-core.js'),'utf8');
 const index=fs.readFileSync(path.join(root,'index.html'),'utf8');
 const actions=fs.readFileSync(path.join(root,'modules/shared/action-wrappers.js'),'utf8');
-const shopRender=fs.readFileSync(path.join(root,'modules/shop/modules-render.js'),'utf8');
 const catalogUi=fs.readFileSync(path.join(root,'modules/vehicle/vehicle-catalog-ui.js'),'utf8');
 const modals=fs.readFileSync(path.join(root,'modules/shared/modals.js'),'utf8');
 
@@ -22,9 +21,6 @@ describe('S1970 Car Notes — sparepart dashboard/stock lazy SOT + katalog singl
     const settingsBody=renderB.match(/function renderSettings\(\)\{([\s\S]*?)\n\}/);
     assert.ok(settingsBody,'renderSettings shared harus ada');
     assert.doesNotMatch(settingsBody[1],/renderSparepartCatList\(\)|renderStockList\(\)/);
-    const shopSettings=shopRender.match(/function renderSettings\(\)\{([\s\S]*?)\n\}/);
-    assert.ok(shopSettings,'renderSettings shop harus ada');
-    assert.doesNotMatch(shopSettings[1],/renderSparepartCatList\(\)|renderStockList\(\)/);
   });
 
   it('stok memakai renderer canonical yang sama dan dashboard berasal dari renderer stok, bukan daftar kedua',()=>{

@@ -54,8 +54,9 @@ _priorityIndex(priority) {
   return idx === -1 ? this._PRIORITY_ORDER.length : idx; // priority tidak dikenal -> dianggap paling rendah, tidak memblokir
 },
 
+// S2530: per-kendaraan Car Notes TIDAK boleh disaring ownership (kendaraan non-SELF tetap harus tampil di tab BBM; lihat komentar isVehicleOwnershipSelf di vehicle-core.js).
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
 },
 
 _activeVehicleId() {

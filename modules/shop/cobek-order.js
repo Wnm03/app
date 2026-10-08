@@ -232,7 +232,7 @@ openModal(){
 if(!D.products.length){toast('⚠️ Tambah produk di Etalase dulu');return;}
 Order.editId=null;
 Order.items=[];
-document.getElementById('oDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('oDate').value=typeof todayStr==='function'?todayStr():'';
 ['oCustName','oCustPhone','oCustAddr','oNote'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('oDiskon').value='';
 document.getElementById('oOngkir').value='';
@@ -263,7 +263,7 @@ if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
 if(!t.items||!t.items.length){toast('⚠️ Transaksi lama (format lama) belum bisa diedit di sini — hapus & catat ulang kalau perlu koreksi.');return;}
 Order.editId=id;
 Order.items=t.items.map(it=>({productId:it.productId,qty:it.qty,hargaOverride:(it.harga!=null?it.harga:null)}));
-document.getElementById('oDate').value=t.date||new Date().toISOString().split('T')[0];
+document.getElementById('oDate').value=t.date||(typeof todayStr==='function'?todayStr():'');
 document.getElementById('oCustName').value=(t.customer&&t.customer.name)||'';
 document.getElementById('oCustPhone').value=(t.customer&&t.customer.phone)||'';
 document.getElementById('oCustAddr').value=(t.customer&&t.customer.address)||'';

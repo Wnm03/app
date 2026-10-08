@@ -713,7 +713,7 @@ const _saveDomain=opts.domain||null;
 const _saveFinanceMutation=opts.financeMutation!==false;
 const _saveAccountIds=Array.isArray(opts.accountIds)?opts.accountIds.filter(Boolean):null;
 // KW perf fix: save() adalah titik tunggal yang selalu dipanggil SEBELUM burst render
-// (renderAccGrid/renderDashAccList/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
+// (renderAccGrid/renderLapAccList/dll) tiap ada mutasi data akun/transaksi.
 // Invalidate cache saldo akun di sini supaya burst render sesudahnya baca data akun terbaru,
 // tapi tiap fungsi di dalam burst yang sama tidak hitung ulang dari nol. Lihat akun.js.
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
@@ -1611,6 +1611,18 @@ _setPersistenceRecoveryRequired(
 }
 }
 function todayStr(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+
+// N1: Dashboard Hub section preference is UI-only localStorage. Keep one
+// allowlisted reader so malformed/unknown storage values never escape into
+// render routing. Storage access itself may throw in restricted contexts.
+function readDashboardHubSectionTab(){
+  const allowed=['ringkasan','fitur','widget','insight'];
+  try{
+    const raw=typeof localStorage!=='undefined'&&localStorage&&typeof localStorage.getItem==='function'
+      ?localStorage.getItem('dashHubSectionTab'):null;
+    return allowed.includes(raw)?raw:'ringkasan';
+  }catch(e){return 'ringkasan';}
+}
 // addMonthsClamped() — BUG-015 (s406): pengganti pola native `d.setMonth(d.getMonth()+n)` yang
 // dipakai di berbagai tempat untuk menghitung jatuh tempo bulanan berikutnya (cicilan/langganan/
 // tagihan/sewa). Masalahnya: Date.setMonth() TIDAK clamp -- kalau tanggal asal tidak ada di bulan

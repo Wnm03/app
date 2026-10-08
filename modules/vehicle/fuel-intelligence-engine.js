@@ -19,8 +19,9 @@ const FuelIntelligenceEngine = {
 
 // _vehicles() — baca D.vehicles apa adanya (array kosong kalau belum
 // ada), pola sama persis _vehicles() di VehicleIntelligence/VehicleReminder.
+// S2530: per-kendaraan Car Notes TIDAK boleh disaring ownership (kendaraan non-SELF tetap harus tampil di tab BBM; lihat komentar isVehicleOwnershipSelf di vehicle-core.js).
 _vehicles() {
-  return (typeof D !== 'undefined' && D.vehicles) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
+  return (typeof D !== 'undefined' && D.vehicles) ? D.vehicles : [];
 },
 
 // vehicleInsight(vehicleId) — gabungan tren biaya BBM (VehicleFuelTrendSummary,

@@ -75,8 +75,18 @@ receivableReminders() {
 debtReminders() {
   const out = [];
   const list = (typeof D !== 'undefined' && Array.isArray(D.debts)) ? D.debts : [];
+  const activeBillIds = new Set();
+  const activeBillDebtIds = new Set();
+  (typeof D !== 'undefined' && Array.isArray(D.bills) ? D.bills : []).forEach((b) => {
+    if (!b || b.id == null) return;
+    activeBillIds.add(String(b.id));
+    if (b.debtId != null) activeBillDebtIds.add(String(b.debtId));
+  });
   list.forEach((dbt) => {
     if (dbt.lunas || !dbt.jatuhTempo) return;
+    // Scheduled debt with an active Bill already has one canonical reminder
+    // in TagihanReminder. Do not show the same obligation twice.
+    if ((dbt.billId != null && activeBillIds.has(String(dbt.billId))) || activeBillDebtIds.has(String(dbt.id))) return;
     const d = this._daysUntil(dbt.jatuhTempo);
     if (d === null || d > 7) return;
     const severity = d < 0 ? 'overdue' : 'due-soon';

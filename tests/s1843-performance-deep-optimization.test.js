@@ -75,7 +75,7 @@ test('S1851 hard-flush mirrors call _saveImmediate exactly once with the same sn
 test('S1843 Dashboard month context uses one D.transactions pass',()=>{
   const s=read('modules/shared/modules-render-b.js');
   const start=s.indexOf('function renderDashboard(){');
-  const end=s.indexOf('\nfunction renderDashLaporanMini',start);
+  const end=s.indexOf('\n// ================== DASHBOARD HUB',start);
   const body=s.slice(start,end);
   assert.equal((body.match(/D\.transactions\.filter\(/g)||[]).length,0);
   assert.match(body,/for\(const t of D\.transactions\)/);

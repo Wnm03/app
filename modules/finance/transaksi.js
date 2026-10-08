@@ -886,7 +886,7 @@ const entry=list.find(function(e){return e.id===editId;});
 if(entry){
 _editingCatatanAnakId=editId;
 document.getElementById('catatanTitle').textContent='Edit Catatan Anak';
-document.getElementById('catatanDate').value=entry.date||new Date().toISOString().split('T')[0];
+document.getElementById('catatanDate').value=entry.date||(typeof todayStr==='function'?todayStr():'');
 document.getElementById('catatanText').value=entry.text||'';
 document.getElementById('catatanSaveBtn').textContent='💾 Update Catatan';
 document.getElementById('catatanCancelEditBtn').classList.remove('u-dnone');
@@ -896,7 +896,7 @@ return;
 }
 }
 document.getElementById('catatanTitle').textContent='Catatan Anak';
-document.getElementById('catatanDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('catatanDate').value=typeof todayStr==='function'?todayStr():'';
 document.getElementById('catatanText').value='';
 openModal('catatanModal');
 renderCatatanAnakList();
@@ -988,7 +988,7 @@ function onCicilanTenorSelectChange(){
 const tenorEl=document.getElementById('txCicilanTenor');
 const dueEl=document.getElementById('txCicilanDue');
 if(tenorEl&&dueEl&&parseInt(tenorEl.value)===1&&!txEditLinkedBillId){
-const todayStr=new Date().toISOString().split('T')[0];
+const todayStr=typeof globalThis.todayStr==='function'?globalThis.todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 if(!dueEl.value||dueEl.value===todayStr){
 const d=new Date(dueEl.value||todayStr);
 _amc015(d,1); // BUG-015 (s406): clamp overflow tanggal
@@ -1015,7 +1015,7 @@ const servisEditBtnNew=document.getElementById('txEditServisBtn');
 if(servisEditBtnNew)servisEditBtnNew.style.display='none';
 resetPayMethodLock();
 curTxType=type;
-document.getElementById('txDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('txDate').value=typeof todayStr==='function'?todayStr():'';
 document.getElementById('txAmt').value='';
 document.getElementById('txCat').value='';
 document.getElementById('txSubCat').value='';
@@ -1040,8 +1040,8 @@ const txCicilanSharedAutoPiutangEl=document.getElementById('txCicilanSharedAutoP
 cicilanSharedLastInput='pct';
 document.getElementById('txCicilanSharedWrap').style.display='none';
 const prevMineRowEl=document.getElementById('prevMineRow'); if(prevMineRowEl)prevMineRowEl.style.display='none';
-document.getElementById('txCicilanDue').value=new Date().toISOString().split('T')[0];
-document.getElementById('txLanggananDue').value=new Date().toISOString().split('T')[0];
+document.getElementById('txCicilanDue').value=typeof todayStr==='function'?todayStr():'';
+document.getElementById('txLanggananDue').value=typeof todayStr==='function'?todayStr():'';
 document.getElementById('txCicilanPreview').style.display='none';
 populateAccFilters();
 const txAssetIdResetEl=document.getElementById('txAssetId');if(txAssetIdResetEl)txAssetIdResetEl.value='';

@@ -306,7 +306,7 @@ _predictionInsight(vehicleId) {
   const yearly = (typeof FuelPredictionEngine.predictYearlyFuelUsage === 'function')
     ? FuelPredictionEngine.predictYearlyFuelUsage(vehicleId)
     : { ok: false };
-  let description = 'Perkiraan bulan depan: ' + monthly.estimatedLiter + ' liter (Rp'
+  let description = 'Estimasi pemakaian bulanan: ' + monthly.estimatedLiter + ' liter (Rp'
     + Math.round(monthly.estimatedCost).toLocaleString('id-ID') + ')';
   if (yearly.ok) {
     description += ', setahun: ' + yearly.estimatedLiter + ' liter (Rp'

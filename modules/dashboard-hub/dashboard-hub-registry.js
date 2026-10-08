@@ -117,7 +117,6 @@ const FEATURE_REGISTRY = [
       // Life OS di Dashboard Hub, default OFF) — goTo tetap valid begitu
       // section-nya ditampilkan user, pola sama dgn dash-fi/dash-refleksi
       // di atas yang juga menunjuk dashKey card yang bisa dimatikan.
-      { key: 'dash-lifeos', label: 'Life OS', icon: '🌱', desc: 'Today, Goals, Projects, Review & Knowledge personal', target: { page: 'dashboard-hub', goTo: 'lifeOSWrap' } },
     ],
   },
   {
@@ -237,8 +236,6 @@ const FEATURE_REGISTRY = [
     navIdx: 3,
     features: [
       { key: 'ai-chat', label: 'AI Asisten (chat)', icon: '💬', desc: 'Tanya jawab & aksi lewat chat AI', target: { page: 'ai', goTo: 'chatBox' } },
-      { key: 'ai-kategorisasi', label: 'Kategorisasi Transaksi Otomatis', icon: '🏷️', desc: 'Tebak kategori dari catatan bebas saat isi transaksi', target: { page: 'keuangan', tab: 'kelola', subtab: 'transaksi', action: 'openTxModal' } },
-      { key: 'ai-scan-ocr', label: 'Scan Struk/OCR', icon: '📸', desc: 'Scan struk belanja, transfer, odometer, portofolio aset', target: { page: 'keuangan', tab: 'kelola', subtab: 'transaksi', action: 'openTxModal' } },
     ],
   },
   {

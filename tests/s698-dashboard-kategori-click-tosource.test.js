@@ -12,13 +12,13 @@
 // skip.
 //
 // Fix 2b — modules/shared/modules-render-b.js: tiap baris kategori di
-// #dashLapKatMini (renderDashLaporanMini()) dibungkus data-action=
+// #dashLapKatMini legacy renderer sudah retired;
 // "showFilteredTx" + data-args escaped JSON berisi
 // ['dashboard','all','📁 <kategori>',null,'<kategori>'] — pola SAMA PERSIS
 // dgn #lapKat (Fix 1 / S694, sudah direlokasi ke file live yang sama di
 // S697). Dites secara STRUKTURAL (regex atas source asli, pola sama
 // tests/s694-laporan-kategori-click-tosource.test.js) karena
-// renderDashLaporanMini() dipanggil dari alur render Dashboard yang berat
+// dashboard render tidak lagi memiliki renderer legacy #dashLapKatMini
 // (banyak dependency lintas modul) — di luar cakupan wajar 1 sesi untuk
 // dijalankan terisolasi lewat loadSource.
 
@@ -113,15 +113,8 @@ test('showFilteredTx() scope dashboard — kode sumber punya guard filter by kat
     "scope dashboard harus filter tambahan by kat kalau diisi, pola sama scope laporan");
 });
 
-test('#dashLapKatMini (renderDashLaporanMini(), modules/shared/modules-render-b.js) — tiap baris kategori dibungkus data-action="showFilteredTx" + data-args ke dashboard/all/kat', () => {
+test('#dashLapKatMini legacy renderer retired when its DOM target is absent', () => {
   const src = fs.readFileSync(path.join(ROOT, 'modules', 'shared', 'modules-render-b.js'), 'utf8');
-  const idx = src.indexOf('function renderDashLaporanMini(');
-  assert.ok(idx >= 0, 'renderDashLaporanMini() tidak ditemukan');
-  const block = src.slice(idx, idx + 3000);
-  assert.match(block, /katEl\.innerHTML=ks\.length\?ks\.map/,
-    'blok render katEl (#dashLapKatMini) tidak ditemukan di dalam fungsi');
-  assert.match(block, /data-action="showFilteredTx"/,
-    'baris kategori dashboard harus punya data-action="showFilteredTx"');
-  assert.match(block, /data-args="\$\{escapeHtml\(JSON\.stringify\(\['dashboard','all','📁 '\+k,null,k\]\)\)\}"/,
-    "data-args harus JSON.stringify(['dashboard','all','📁 '+k,null,k]) yang di-escapeHtml, pola sama data-args #lapKat");
+  assert.equal(src.includes('function renderDashLaporanMini('), false,
+    'renderDashLaporanMini() harus sudah retired karena #dashLapKatMini tidak lagi dirender');
 });

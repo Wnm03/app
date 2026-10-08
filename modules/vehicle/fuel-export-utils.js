@@ -1,7 +1,7 @@
 // fuel-export-utils.js — shared presenter-only export helpers.
 // No domain/storage mutation. Local calendar date is used for filenames.
 const FuelExportUtils={
-  dateTag(){return typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0];},
+  dateTag(){return (typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());},
   downloadFile(filename,content,mime){
     if(typeof document==='undefined'||typeof document.createElement!=='function')return false;
     if(typeof Blob==='undefined'||typeof URL==='undefined'||typeof URL.createObjectURL!=='function')return false;

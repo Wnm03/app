@@ -35,7 +35,7 @@ function shouldRenderDashboardFromSettings(){
   const hub=document.getElementById('page-dashboard-hub');
   const dashActive=!!dash?.classList?.contains('active');
   const hubActive=!!hub?.classList?.contains('active');
-  return dashActive||(hubActive&&localStorage.getItem('dashHubSectionTab')==='widget');
+  return dashActive||(hubActive&&(typeof readDashboardHubSectionTab==='function'?readDashboardHubSectionTab():'ringkasan')==='widget');
 }
 
 const DashboardSettings = {
@@ -178,6 +178,7 @@ const DashboardSettings = {
     localStorage.removeItem(DASH_COMPACT_KEY);
     localStorage.removeItem(DASH_DENSITY_KEY);
     localStorage.removeItem(DASH_DEFAULT_TAB_KEY);
+    localStorage.removeItem('dashHubSectionTab');
     this.applyDashDisplayPrefs();
     this.renderSettingsUI();
     if(shouldRenderDashboardFromSettings())renderDashboard();

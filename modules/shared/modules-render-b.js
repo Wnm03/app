@@ -71,7 +71,7 @@ const options=(arguments[0]&&typeof arguments[0]==='object')?arguments[0]:{};
 const _activePage=(typeof document!=='undefined'&&typeof document.querySelector==='function')?document.querySelector('.page.active'):null;
 const _dashboardHubActive=!!(_activePage&&_activePage.id==='page-dashboard-hub');
 const _legacyDashboardActive=!!(_activePage&&_activePage.id==='page-dashboard');
-const _hubSection=(typeof localStorage!=='undefined'&&localStorage.getItem('dashHubSectionTab'))||'ringkasan';
+const _hubSection=typeof readDashboardHubSectionTab==='function'?readDashboardHubSectionTab():'ringkasan';
 // Dashboard Hub now owns the default landing page. Legacy Beranda widgets
 // only need rendering while the legacy page is visible or while the Hub's
 // Widget tab is visible. `force:true` preserves the diagnostic/self-test API.
@@ -85,7 +85,7 @@ if(_renderLegacyDashboard){
 LifeBalance.render();
 // Konteks bulan-berjalan dihitung SEKALI di sini (dulu FinCoach & dashBillCard hitung
 // txM/inc/exp/billStats sendiri-sendiri lagi walau datanya sama persis dengan yang dihitung di
-// bawah buat statistik atas). Dioper ke widget yang butuh (billStatsShared->renderDashboardBills,
+// bawah buat statistik atas). Dioper ke widget yang butuh (billStatsShared->shared bill stats,
 // dashCtx->FinCoach) supaya D.transactions/D.bills tidak di-scan ulang berkali-kali tiap 1x buka
 // Dashboard. Widget lain di bawah (LifeBalance/AIWidget/dst) sengaja TIDAK diikutkan dulu — masing2
 // hitung metrik yang beda (bukan cuma txM/inc/exp bulan ini), digabung nanti kalau memang kepakai bareng.
@@ -189,14 +189,14 @@ runDeferredOrNow(function(){
 const _hubRenderSection={
 DashboardHubHero:'always',
 DashboardHubTickerModern:'always',
-DashboardHubSummary:'ringkasan',DashboardHubAnalytics:'ringkasan',DashboardHubOwnershipSummary:'ringkasan',
+DashboardHubOwnershipSummary:'ringkasan',
 DashboardHubFavoritView:'fitur',
 // These presenters no longer belong to Dashboard Hub. Keep them explicitly
 // disabled here as a regression guard so future wiring cannot accidentally
 // bring their expensive domain renders back into this hot path.
 PropertyManagementPresenter:'never',RentalManagementPresenter:'never',AssetPortfolioPresenter:'never',AssetMaintenancePresenter:'never',
 ShopBusinessEnginePresenter:'never',TripPresenter:'never',BusinessFlowPresenter:'never',BusinessIntelligencePresenter:'never',
-ShopMiniSummary:'insight',CrossDashboardCard:'insight',CrossInsightPresenter:'insight',UnifiedBriefingPresenter:'insight',UnifiedDashboardHome:'insight',DecisionCenterHome:'insight',EIEDashboard:'insight'
+CrossDashboardCard:'insight',CrossInsightPresenter:'insight',UnifiedBriefingPresenter:'insight',UnifiedDashboardHome:'insight',DecisionCenterHome:'insight',EIEDashboard:'insight'
 };
 function _safeRender(name,fn){
 const section=_hubRenderSection[name];
@@ -205,8 +205,6 @@ try{fn();}catch(e){console.warn('renderDashboard: presenter "'+name+'" gagal dir
 }
 _safeRender('DashboardHubHero',function(){if(typeof DashboardHubHero!=='undefined')DashboardHubHero.render();});
 _safeRender('DashboardHubTickerModern',function(){if(typeof DashboardHubTickerModern!=='undefined')DashboardHubTickerModern.render();});
-_safeRender('DashboardHubSummary',function(){if(typeof DashboardHubSummary!=='undefined')DashboardHubSummary.render();});
-_safeRender('DashboardHubAnalytics',function(){if(typeof DashboardHubAnalytics!=='undefined')DashboardHubAnalytics.render();});
 _safeRender('DashboardHubOwnershipSummary',function(){if(typeof DashboardHubOwnershipSummary!=='undefined')DashboardHubOwnershipSummary.render();});
 // Finance Dashboard/Forecast/Budget Reko/Cashflow Proj/Financial Goal/Invest Planner/Debt
 // Optimizer/Retirement Planner/Health Score/Risk Dashboard (10 presenter) — DIHAPUS dari live-
@@ -232,11 +230,6 @@ _safeRender('BusinessFlowPresenter',function(){if(typeof BusinessFlowPresenter!=
 // — 100% reuse ShopBusinessEnginePresenter/TripPresenter/BusinessFlowPresenter
 // (3 baris di atas), pola _safeRender sama persis.
 _safeRender('BusinessIntelligencePresenter',function(){if(typeof BusinessIntelligencePresenter!=='undefined')BusinessIntelligencePresenter.render();});
-// Sesi 250 (Business Intelligence tab migration): ShopMiniSummary
-// (dashboard-hub.js) — kartu ringkas pengganti #shopBusinessEngineWrap/
-// #tripPresenterWrap/#businessFlowWrap di Beranda, 100% reuse
-// ShopBusinessEnginePresenter.summary(), 0 rumus baru.
-_safeRender('ShopMiniSummary',function(){if(typeof ShopMiniSummary!=='undefined')ShopMiniSummary.render();});
 // VehicleDashboard/VehicleInsightPresenter/VehicleDailyBrief/VehicleAlertPanel/
 // VehicleInsightFeed/VehicleAnalyticsPresenter/VehicleDecisionPresenter/
 // VehicleAutomationPresenter (8 presenter) — DIHAPUS dari live-wiring ini di Sesi 134
@@ -260,46 +253,6 @@ _safeRender('DecisionCenterHome',function(){if(typeof DecisionCenterHome!=='unde
 _safeRender('DashboardHubFavoritView',function(){if(typeof DashboardHubFavoritView!=='undefined')DashboardHubFavoritView.render();});
 _safeRender('EIEDashboard',function(){if(typeof EIEDashboard!=='undefined')EIEDashboard.render();});
 });
-}
-
-function renderDashLaporanMini(inc,exp,txM){
-const trendEl=document.getElementById('dashLapTrend');
-const katEl=document.getElementById('dashLapKatMini');
-if(!trendEl||!katEl)return;
-const net=inc-exp;
-const now=new Date();
-const prevM=new Date(now.getFullYear(),now.getMonth()-1,1);
-const txPrev=D.transactions.filter(t=>{const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));return d.getMonth()===prevM.getMonth()&&d.getFullYear()===prevM.getFullYear();});
-const incPrev=txPrev.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const expPrev=txPrev.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-const netPrev=incPrev-expPrev;
-if(!txM.length&&!txPrev.length){
-trendEl.innerHTML='Belum ada transaksi bulan ini.';
-} else if(netPrev===0){
-trendEl.innerHTML=`Saldo bersih bulan ini: <b style="color:${net>=0?'var(--accent3)':'var(--accent2)'}">${fmt(net)}</b> (belum ada data bulan lalu utk dibandingkan)`;
-} else {
-const selisih=net-netPrev;
-const pct=Math.round((Math.abs(selisih)/Math.abs(netPrev))*100);
-const naik=selisih>0;
-trendEl.innerHTML=`Saldo bersih bulan ini: <b style="color:${net>=0?'var(--accent3)':'var(--accent2)'}">${fmt(net)}</b> — <span style="color:${naik?'var(--accent3)':'var(--accent2)'}">${naik?'▲':'▼'} ${pct}%</span> vs bulan lalu (${fmt(netPrev)})`;
-}
-const km={};
-txM.forEach(t=>{if(t.type==='transfer_in'||t.type==='transfer_out')return;if(!km[t.category])km[t.category]={inc:0,exp:0,n:0};if(t.type==='income')km[t.category].inc+=t.amount;else km[t.category].exp+=t.amount;km[t.category].n++;});
-const ks=Object.entries(km).sort((a,b)=>(b[1].inc+b[1].exp)-(a[1].inc+a[1].exp)).slice(0,3);
-const maxV=Math.max(...ks.map(([,v])=>v.inc+v.exp),1);
-// Fix (audit lanjutan S697, item tertunda: "kategori di dashboard
-// ringkasan bisa dapat pola klik-ke-sumber yang sama seperti Fix 1") —
-// tiap baris kategori dibungkus data-action="showFilteredTx" + data-args,
-// pola SAMA PERSIS dgn #lapKat di renderLaporan() (lihat komentar di
-// fungsi itu). Tap kategori buka filterTxModal isi transaksi kategori itu
-// dalam scope 'dashboard' (bulan berjalan) — scope 'dashboard' di
-// showFilteredTx() (filter-laporan.js) ditambah guard `kat` yang sama
-// persis dgn scope 'laporan' utk fix ini. 0 perubahan visual/HTML lain.
-katEl.innerHTML=ks.length?ks.map(([k,v])=>{
-const val=v.inc+v.exp,pct=Math.round((val/maxV)*100);
-const col=v.inc>v.exp?'var(--accent3)':'var(--accent2)';
-return`<div class="cat-bar u-pointer" data-action="showFilteredTx" data-args="${escapeHtml(JSON.stringify(['dashboard','all','📁 '+k,null,k]))}"><div class="cat-bar-head"><span style="font-weight:500">${escapeHtml(k)} <span class="u-ctext3 u-fs12">(${v.n}x)</span></span><span style="font-weight:700;color:${col}">${fmt(val)}</span></div><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
-}).join(''):'<div class="u-fs12t2">Belum ada transaksi bulan ini.</div>';
 }
 
 function renderDashBudgetMini(){return Budget.renderDashMini();}
@@ -1122,7 +1075,7 @@ const aiAssetZakatMinEl=document.getElementById('sAIAssetZakatMin'); if(aiAssetZ
 const ocrMinConfEl=document.getElementById('sOcrMinConfidence'); if(ocrMinConfEl) ocrMinConfEl.value=typeof getOcrMinConfidence==='function'?getOcrMinConfidence():50;
 if(typeof renderKeamananSettings==='function')renderKeamananSettings();
 const whG=document.getElementById('whGaji'); if(whG) whG.value=D.profile.gajiPokok||65000;
-const whD=document.getElementById('whDate'); if(whD&&!whD.value) whD.value=new Date().toISOString().split('T')[0];
+const whD=document.getElementById('whDate'); if(whD&&!whD.value) whD.value=typeof todayStr==='function'?todayStr():'';
 renderWorkDays();
 document.querySelectorAll('.theme-card').forEach(c=>c.classList.toggle('active',c.dataset.t===(D.profile.theme||'dark')));
 renderDashCardPrefsUI();
@@ -1163,7 +1116,6 @@ EduFund.render();
 renderReminder();
 renderNotifSettings();
 if(typeof EIENotifSettings!=='undefined') EIENotifSettings.render();
-const lifeOSVisibleToggleEl=document.getElementById('lifeOSVisibleToggle'); if(lifeOSVisibleToggleEl && typeof LifeOSHome!=='undefined') lifeOSVisibleToggleEl.checked=LifeOSHome.isVisiblePref();
 renderGDriveSettings();
 renderSheetsSettings();
 setImportType(curImportType,document.querySelector('#importChips .chip-btn'));
@@ -1373,11 +1325,11 @@ if(!D.dashCardPrefs)D.dashCardPrefs={};
 DASH_CARD_DEFS.forEach(c=>{if(on)delete D.dashCardPrefs[c.key];else D.dashCardPrefs[c.key]=false;});
 save();
 renderDashCardPrefsUI();
-if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&localStorage.getItem('dashHubSectionTab')==='widget'))renderDashboard();
+if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&(typeof readDashboardHubSectionTab==='function'?readDashboardHubSectionTab():'ringkasan')==='widget'))renderDashboard();
 }
 function toggleDashCardPref(key,checked){
 if(!D.dashCardPrefs)D.dashCardPrefs={};
 if(checked)delete D.dashCardPrefs[key]; else D.dashCardPrefs[key]=false;
 save();
-if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&localStorage.getItem('dashHubSectionTab')==='widget'))renderDashboard();
+if((document.querySelector('.page.active')?.id==='page-dashboard')||(document.querySelector('.page.active')?.id==='page-dashboard-hub'&&(typeof readDashboardHubSectionTab==='function'?readDashboardHubSectionTab():'ringkasan')==='widget'))renderDashboard();
 }

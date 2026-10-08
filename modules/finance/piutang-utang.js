@@ -1130,7 +1130,7 @@ if(d.cicilanBulanan)meta.push('Cicilan '+fmt(d.cicilanBulanan)+'/bln');
 else meta.push('Belum ada cicilan/bulan diisi');
 return`<div class="u-flex u-aic u-gap10" style="padding:8px 0;border-bottom:1px solid var(--border)">
         <div class="u-bgaccsoft u-flex u-aic u-jcc u-fs12 u-fw700" style="width:24px;height:24px;border-radius:50%;flex-shrink:0">${i+1}</div>
-        <div class="u-flex1"><div class="u-fs13 u-fw600">${escapeHtml(d.name)}${d._isBillCicilan?' <span class="u-fs10 u-t2" style="border:1px solid var(--border);border-radius:6px;padding:1px 5px;margin-left:2px">🛒 Cicilan Barang</span>':''}</div><div class="u-fs11 u-t2">${meta.join(' · ')}</div></div>
+        <div class="u-flex1"><div class="u-fs13 u-fw600">${escapeHtml(d.name)}${d._isBillCicilan?' <span class="acc-chip">🛒 Cicilan Barang</span>':''}</div><div class="u-fs11 u-t2">${meta.join(' · ')}</div></div>
         <div class="u-fw700 u-fs13" style="white-space:nowrap;padding-left:8px">${fmt(d.nilai)}</div>
       </div>`;
 }).join('');
@@ -1145,7 +1145,7 @@ simHtml=order.every(d=>!(d.cicilanBulanan>0))?
 const years=Math.floor(sim.months/12),months=sim.months%12;
 const durText=years>0?(years+' thn '+months+' bln'):(months+' bln');
 simHtml=`<div class="u-mt12" style="padding-top:10px;border-top:1px dashed var(--border)">
-        <div class="u-fs12 u-lh16"><b>⏱️ Estimasi lunas semua: ${durText} lagi</b>${extra>0?' (dgn dana ekstra '+fmtFull(extra)+'/bln)':''}<br>💸 Estimasi total bunga yang masih akan dibayar: <b>${fmtFull(sim.totalInterest)}</b></div>
+        <div class="u-fs12 u-lh16"><b>⏱️ Estimasi lunas semua (utang tanpa cicilan tidak dihitung): ${durText} lagi</b>${extra>0?' (dgn dana ekstra '+fmtFull(extra)+'/bln)':''}<br>💸 Estimasi total bunga yang masih akan dibayar: <b>${fmtFull(sim.totalInterest)}</b></div>
       </div>`;
 const otherMethod=method==='avalanche'?'snowball':'avalanche';
 const otherOrder=DebtStrategy.computeOrder(active,otherMethod);

@@ -666,34 +666,11 @@ const style=getComputedStyle(el);
 _selfTestAssert(style.overflowY==='auto'||style.overflowY==='scroll','Daftar #'+id+' harus punya overflow-y:auto/scroll sendiri (bisa tumbuh panjang seiring waktu & hidup di dalam .card-collapse-body yg overflow:hidden) -- kalau aturan CSS-nya kehapus/berubah tanpa sadar, ini akan gagal.');
 });
 }},
-{name:'Kartu pengingat Backup (dashBackupReminderCard): muncul kalau belum pernah sync & data sudah banyak, sembunyi kalau sudah pernah sync/di-dismiss', fn:()=>{
-if(typeof renderDashboardBackupReminder!=='function'||typeof dismissBackupReminder!=='function')throw new Error('renderDashboardBackupReminder()/dismissBackupReminder() harus ada');
+{name:'Kartu pengingat Backup legacy retired (target DOM tidak ada)', fn:()=>{
 const card=document.getElementById('dashBackupReminderCard');
-if(!card)return; // halaman dashboard belum ke-render sama sekali, skip
-const backupGD=D.googleDrive, backupGS=D.googleSheets, backupTx=D.transactions;
-const backupDismissFlag=localStorage.getItem('kw_backup_reminder_dismissed');
-try{
-localStorage.removeItem('kw_backup_reminder_dismissed');
-D.googleDrive={clientId:'',fileId:null,lastSync:null,autoSync:false};
-D.googleSheets={spreadsheetId:'',lastSync:null};
-D.transactions=Array.from({length:35},(_,i)=>({id:'__selftest_backup_tx_'+i,type:'expense',amount:1000,category:'Tes',date:todayStr()}));
-renderDashboardBackupReminder();
-_selfTestAssert(card.style.display==='block','Kartu Backup harus MUNCUL kalau belum pernah sync & data sudah >= 30 catatan');
-D.googleDrive.lastSync=new Date().toISOString();
-renderDashboardBackupReminder();
-_selfTestAssert(card.style.display==='none','Kartu Backup harus SEMBUNYI kalau sudah pernah sync sekali lewat Drive/Sheets');
-D.googleDrive.lastSync=null;
-renderDashboardBackupReminder();
-_selfTestAssert(card.style.display==='block','Kartu Backup harus muncul lagi kalau lastSync di-reset (memastikan bukan ke-cache)');
-dismissBackupReminder();
-_selfTestAssert(card.style.display==='none','Kartu Backup harus SEMBUNYI setelah tombol "Sudah Paham" (dismiss) dipencet');
-_selfTestAssert(localStorage.getItem('kw_backup_reminder_dismissed')==='1','dismissBackupReminder() harus menyimpan flag dismiss ke localStorage');
-} finally {
-D.googleDrive=backupGD; D.googleSheets=backupGS; D.transactions=backupTx;
-if(backupDismissFlag===null) localStorage.removeItem('kw_backup_reminder_dismissed'); else localStorage.setItem('kw_backup_reminder_dismissed',backupDismissFlag);
-renderDashboardBackupReminder();
-}
-}},
+if(!card)return; // Legacy target sudah retired pada baseline dashboard saat ini.
+throw new Error('dashBackupReminderCard masih ada di DOM; legacy backup renderer harus diaudit ulang sebelum diaktifkan.');
+}},,
 {name:'UI: elemen interaktif (data-action) yang cuma berisi ikon/emoji/tanpa teks wajib punya aria-label (aksesibilitas screen reader)', fn:()=>{
 findMissingAriaLabels(document).forEach(msg=>_selfTestAssert(false,msg));
 }},

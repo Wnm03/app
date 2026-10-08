@@ -59,8 +59,9 @@ const FuelTrendDashboard = {
 
 curVehicleId: null,
 
+// S2530: per-kendaraan Car Notes TIDAK boleh disaring ownership (kendaraan non-SELF tetap harus tampil di tab BBM; lihat komentar isVehicleOwnershipSelf di vehicle-core.js).
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
 },
 
 // render(vehicleId?) — API publik satu-satunya utk menggambar dashboard.
@@ -196,13 +197,14 @@ _section(title, innerHtml) {
 // dibaca apa adanya, 0 rumus baru. Field yang datanya belum tersedia
 // tampil "-" (tidak memblokir baris lain).
 _costSectionHtml(trend) {
+  const show = (res, format) => res && res.ok ? format(res) : ('- · ' + escapeHtml(String((res && res.reason) || 'Data belum tersedia')));
   const rows = [
-    this._row('Bulan Ini (Aktual)', trend.monthlyCost&&trend.monthlyCost.ok ? this._rp(trend.monthlyCost.totalCost) : '-'),
-    this._row('Estimasi bulanan (rata-rata pola berkendara)', trend.projectedMonthlyCost&&trend.projectedMonthlyCost.ok ? this._rp(trend.projectedMonthlyCost.estimatedCost) : '-'),
-    this._row('Tahun Ini (Aktual)', trend.yearlyCost&&trend.yearlyCost.ok ? this._rp(trend.yearlyCost.totalCost) : '-'),
-    this._row('Proyeksi Tahun Berjalan', trend.projectedYearlyCost&&trend.projectedYearlyCost.ok ? this._rp(trend.projectedYearlyCost.estimatedCost) : '-'),
-    this._row('Rata-rata Harga BBM', trend.averageFuelPrice&&trend.averageFuelPrice.ok ? this._rp(trend.averageFuelPrice.averagePrice) + '/L' : '-'),
-    this._row('Frekuensi Isi BBM', trend.refillFrequency&&trend.refillFrequency.ok ? `${trend.refillFrequency.refillCount}x, rata-rata ${trend.refillFrequency.averageIntervalDays} hari` : '-'),
+    this._row('Bulan Ini (Aktual)', show(trend.monthlyCost, r => this._rp(r.totalCost))),
+    this._row('Estimasi bulanan (rata-rata pola berkendara)', show(trend.projectedMonthlyCost, r => this._rp(r.estimatedCost))),
+    this._row('Tahun Ini (Aktual)', show(trend.yearlyCost, r => this._rp(r.totalCost))),
+    this._row('Estimasi setahun (12 × bulanan)', show(trend.projectedYearlyCost, r => this._rp(r.estimatedCost))),
+    this._row('Rata-rata Harga BBM', show(trend.averageFuelPrice, r => this._rp(r.averagePrice) + '/L')),
+    this._row('Frekuensi Isi BBM', show(trend.refillFrequency, r => `${r.refillCount}x, rata-rata ${r.averageIntervalDays} hari`)),
   ].join('');
   return this._section('Biaya & Frekuensi BBM', rows);
 },
@@ -211,11 +213,12 @@ _costSectionHtml(trend) {
 // berikutnya/pemakaian bulan depan, 100% REUSE FuelPredictionEngine, 0
 // rumus baru.
 _predictionSectionHtml(trend) {
+  const show = (res, format) => res && res.ok ? format(res) : ('- · ' + escapeHtml(String((res && res.reason) || 'Data belum tersedia')));
   const rows = [
-    this._row('Estimasi Jarak Tersisa', trend.remainingDistance&&trend.remainingDistance.ok ? `${Math.round(trend.remainingDistance.remainingKm)} km` : '-'),
-    this._row('Prediksi Isi BBM Berikutnya', trend.nextRefuel&&trend.nextRefuel.ok ? `${trend.nextRefuel.estimatedDate || '-'} (${trend.nextRefuel.estimatedRemainingDays} hari lagi)` : '-'),
-this._row('Estimasi Pemakaian Bulanan', trend.monthlyUsage&&trend.monthlyUsage.ok ? `${trend.monthlyUsage.estimatedLiter} L (${this._rp(trend.monthlyUsage.estimatedCost)})` : '-'),
-      ].join('');
+    this._row('Estimasi Jarak Tersisa', show(trend.remainingDistance, r => `${Math.round(r.remainingKm)} km`)),
+    this._row('Prediksi Isi BBM Berikutnya', show(trend.nextRefuel, r => `${r.estimatedDate || '-'} (${r.estimatedRemainingDays} hari lagi)`)),
+    this._row('Estimasi Pemakaian Bulanan', show(trend.monthlyUsage, r => `${r.estimatedLiter} L`)),
+  ].join('');
   return this._section('Prediksi', rows);
 },
 
@@ -224,15 +227,15 @@ this._row('Estimasi Pemakaian Bulanan', trend.monthlyUsage&&trend.monthlyUsage.o
 // rekomendasi teks, 100% REUSE FuelMaintenanceEngine, 0 rumus baru.
 _maintenanceSectionHtml(trend) {
   const eff = trend.efficiencyHealth;
-  const effRows = eff
+  const effRows = eff && eff.ok
     ? [
         this._row('Status Efisiensi', eff.status === 'menurun' ? `Menurun (-${eff.dropPct}%)` : 'Baik'),
-        this._row('km/Liter Saat Ini', `${eff.kmPerLiter}`),
-        this._row('Rp/km Saat Ini', this._rp(eff.rpPerKm)),
+        this._row('km/Liter Saat Ini', eff.kmPerLiter == null ? '- · ' + escapeHtml(String(eff.reason || 'Data belum tersedia')) : String(eff.kmPerLiter)),
+        this._row('Rp/km Saat Ini', eff.rpPerKm == null ? '- · ' + escapeHtml(String(eff.reason || 'Data belum tersedia')) : this._rp(eff.rpPerKm)),
       ].join('')
-    : this._row('Status Efisiensi', '-');
+    : this._row('Status Efisiensi', '- · ' + escapeHtml(String((eff && eff.reason) || 'Data belum tersedia')));
   const risk = trend.maintenanceRisk;
-  const riskRow = this._row('Risiko Perawatan', risk ? risk.riskLevel : '-');
+  const riskRow = this._row('Risiko Perawatan', risk && risk.ok ? risk.riskLevel : ('- · ' + escapeHtml(String((risk && risk.reason) || 'Data belum tersedia'))));
   const recs = trend.maintenanceRecommendation && trend.maintenanceRecommendation.recommendations && trend.maintenanceRecommendation.recommendations.length
     ? `<ul class="u-fs12 u-t2" style="margin:6px 0 0;padding-left:18px">${trend.maintenanceRecommendation.recommendations.map((r) => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`
     : '';
