@@ -25,7 +25,7 @@ const HPC_ALIAS={
  'brake pad':'kampas-rem','brake shoe':'kampas-rem','front brake':'rem-depan','rear brake':'rem-belakang','battery':'aki','drive belt':'v-belt-cvt',
  'radiator':'radiator','coolant':'coolant','fuel pump':'pompa-bensin','injector':'injector','throttle body':'throttle-body','steering stem':'bearing-steering',
  'front fork':'shockbreaker-depan','rear cushion':'shockbreaker-belakang','front wheel':'ban-roda','rear wheel':'ban-roda','swingarm':'bearing-swingarm','headlight':'lampu-depan',
- 'meter':'speedometer','mirror':'spion','fuel tank':'tangki-bensin','air cleaner':'filter-udara'
+ 'meter':'speedometer','mirror':'spion','fuel tank':'tangki-bensin'
 };
 function _hpcMatchComponent(part,components){const hay=_hpcNorm((part.name||'')+' '+(part.category||'')+' '+(part.sectionName||''));if(!hay)return {componentId:null,confidence:'UNMAPPED',reason:'nama part kosong'};for(const [alias,id] of Object.entries(HPC_ALIAS)){if(hay.includes(alias)&&components.some(c=>String(c.componentId)===id))return {componentId:id,confidence:'HIGH',reason:'alias domain eksplisit'};}
  let best=null;for(const c of components){const ct=_hpcTokens(c.componentName);const ht=_hpcTokens(hay);let hit=0;ct.forEach(t=>{if(ht.has(t))hit++;});const score=ct.size?hit/ct.size:0;if(score>0&&( !best||score>best.score))best={componentId:c.componentId,confidence:score>=0.75?'HIGH':score>=0.5?'MEDIUM':'AMBIGUOUS',score,reason:'token overlap'};}

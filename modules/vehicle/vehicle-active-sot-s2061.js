@@ -16,24 +16,24 @@
   const findVehicle=id=>vehicles().find(v=>v&&same(v.id,id))||null;
   const vehicleType=v=>str(v&&(v.vehicleType||v.jenis||v.type)).toLowerCase()||null;
 
-  function currentId(){try{if(typeof curVehicleId!=='undefined')return str(curVehicleId);}catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */} return typeof root.curVehicleId!=='undefined'?str(root.curVehicleId):'';}
+  function currentId(){try{if(typeof curVehicleId!=='undefined')return str(curVehicleId);}catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */} return typeof root.curVehicleId!=='undefined'?str(root.curVehicleId):'';}
   function ensureActive(preferred){
     const list=vehicles();
-    if(!list.length){try{if(typeof curVehicleId!=='undefined')curVehicleId=null;}catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=null;return null;}
+    if(!list.length){try{if(typeof curVehicleId!=='undefined')curVehicleId=null;}catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=null;return null;}
     const id=str(preferred||currentId());
     const v=findVehicle(id)||list[0];
-    try{if(typeof curVehicleId!=='undefined')curVehicleId=v.id;}catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=v.id;
+    try{if(typeof curVehicleId!=='undefined')curVehicleId=v.id;}catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=v.id;
     return v;
   }
   function setActive(id,opts){
     const v=findVehicle(id);
     if(!v)return {ok:false,code:'vehicle_not_found',vehicleId:str(id)||null};
     const previous=currentId();
-    try{if(typeof curVehicleId!=='undefined')curVehicleId=v.id;}catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=v.id;
+    try{if(typeof curVehicleId!=='undefined')curVehicleId=v.id;}catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */};if(typeof root.curVehicleId!=='undefined')root.curVehicleId=v.id;
     const changed=!same(previous,v.id);
     if(!opts||opts.emit!==false){
-      try{ const bus=(typeof AIBus!=='undefined'?AIBus:root.AIBus); if(bus&&typeof bus.emit==='function')bus.emit('vehicle.context.changed',{vehicleId:v.id,vehicleType:vehicleType(v),previousVehicleId:previous||null}); }catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */}
-      try{ if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('vehicle-context-changed',{detail:{vehicleId:v.id,vehicleType:vehicleType(v),previousVehicleId:previous||null}})); }catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */}
+      try{ const bus=(typeof AIBus!=='undefined'?AIBus:root.AIBus); if(bus&&typeof bus.emit==='function')bus.emit('vehicle.context.changed',{vehicleId:v.id,vehicleType:vehicleType(v),previousVehicleId:previous||null}); }catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */}
+      try{ if(typeof document!=='undefined')document.dispatchEvent(new CustomEvent('vehicle-context-changed',{detail:{vehicleId:v.id,vehicleType:vehicleType(v),previousVehicleId:previous||null}})); }catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */}
     }
     return {ok:true,changed,vehicle:v,vehicleId:v.id,vehicleType:vehicleType(v)};
   }
@@ -93,5 +93,5 @@
 
   root.VehicleScopedSOT={version:VERSION,currentId,findVehicle,vehicleType,ensureActive,setActive,context,scopeRows,assertVehicle,assertWrite,auditRows,auditVehicle,auditAll};
   if(typeof window!=='undefined')window.VehicleScopedSOT=root.VehicleScopedSOT;
-  try{ensureActive();}catch(e){/* global lexical scope may be unavailable in isolated/test contexts; safe fallback */}
+  try{ensureActive();}catch(e){/* the lexical scope of globals may be unavailable in isolated/test contexts; safe fallback */}
 })(typeof window!=='undefined'?window:globalThis);
