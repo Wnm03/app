@@ -11,7 +11,6 @@ function makeCtx(){
   ServiceInputCatalog:{groups:()=>[],infer:()=>null,itemById:()=>null},
   closeModal:()=>{},openModal:()=>{},renderServisList:()=>{},renderDashboardServisReminder:()=>{},save:()=>{},
   _renderSuggestBox:()=>{},collectKnownGroups:()=>[],iconForGroupName:()=>'',resolveServiceCategoryComponent:(a,b)=>({masterCategoryId:a,serviceComponentId:b}),
-  ServiceInputCatalog:{groups:()=>[],infer:()=>null,itemById:()=>null},
  };
  ctx.globalThis=ctx;ctx.window=ctx;vm.createContext(ctx);return ctx;
 }

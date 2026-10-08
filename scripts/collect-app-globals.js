@@ -111,6 +111,39 @@ function collectFromFile(file) {
   while ((m = TOPLEVEL_FUNCTION_FALLBACK_RE.exec(src))) {
     names.add(m[1]);
   }
+  // A common compact style in the legacy source closes one top-level
+  // function and starts the next declaration on the same line (`}function
+  // save(...)`). Accept that exact column-1 form as well; nested functions
+  // normally have indentation and therefore cannot match this fallback.
+  const TOPLEVEL_COMPACT_FUNCTION_RE = /^}\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/gm;
+  TOPLEVEL_COMPACT_FUNCTION_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_COMPACT_FUNCTION_RE.exec(src))) {
+    names.add(m[1]);
+  }
+
+  // Compatibility fallback for top-level variable declarations. The
+  // lightweight depth masker can become conservative around complex
+  // template literals/object literals; the application convention keeps
+  // module-level declarations at column 1. Accept only column-1 declarations
+  // here so nested callbacks/blocks cannot become false globals.
+  const TOPLEVEL_VAR_FALLBACK_RE = /^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/gm;
+  TOPLEVEL_VAR_FALLBACK_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_VAR_FALLBACK_RE.exec(src))) {
+    names.add(m[1]);
+  }
+
+  // Some canonical SOT modules intentionally avoid a top-level `const`
+  // export and publish their API through the global object (for example
+  // FinanceCategorySOT). Treat only column-1 direct global assignments as
+  // declarations. This keeps the collector aligned with the app's classic
+  // script/global runtime model without inventing globals from arbitrary
+  // property writes.
+  const TOPLEVEL_GLOBAL_EXPORT_RE = /^(?:globalThis|window|g)\.([A-Za-z_$][\w$]*)\s*=/gm;
+  TOPLEVEL_GLOBAL_EXPORT_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_GLOBAL_EXPORT_RE.exec(src))) {
+    names.add(m[1]);
+  }
+
   return names;
 }
 
