@@ -1,0 +1,75 @@
+name: Keluarga W Production Release Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keluarga-w-production-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  production-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install release dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build production bundle (required minification)
+        run: npm run build:release
+
+      - name: Release readiness gate
+        run: npm run release-check
+
+      - name: Critical regression gate
+        run: npm run test:critical
+
+      - name: Deterministic full regression
+        run: npm run test:full
+        env:
+          TEST_SHARDS: 32
+          TEST_CONCURRENCY: 4
+          TEST_SHARD_TIMEOUT_MS: 120000
+          TEST_RECOVERY_TIMEOUT_MS: 120000
+
+      - name: System integrity gates
+        run: |
+          npm run audit:sot
+          npm run audit:architecture
+          npm run audit:persistence
+          npm run audit:pwa
+          npm run audit:features
+          npm run audit:patch-integrity
+          npm run audit:patch-contamination
+          npm run audit:release-closure
+          npm run audit:csp-inline-events
+          npm run verify:reproducible-build
+
+      - name: Upload production artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: keluarga-w-production
+          path: |
+            index.html
+            app_production.html
+            sw.js
+            app-bundle-a.min.js
+            app-bundle-b.min.js
+          if-no-files-found: error
+          retention-days: 14
