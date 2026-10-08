@@ -6,6 +6,7 @@
  * unchanged and receive their existing build dependencies through ctx.
  */
 module.exports = function createBuildLintRegistry(ctx) {
+  const { auditStartupLoadOrder } = require('./audit-startup-load-order');
   const {
     ROOT, HTML_FILES, ALL_SOURCE, readFile, fs, path, execSync,
   } = ctx;
@@ -718,7 +719,20 @@ function lintOversizedSourceFiles() {
 // guard`, severity 'warning' (banyak catch kosong pre-existing di codebase,
 // lihat komentar di lintEmptyCatchGuard()).
 // ============================================================================
+const lintStartupLoadOrder = () => auditStartupLoadOrder();
+
 const LINT_REGISTRY = [
+  {
+    name: 'startup-load-order-tdz',
+    severity: 'blocking',
+    checkingMsg: 'Mengecek startup IIFE terhadap const/let/class yang dideklarasikan setelahnya...',
+    successMsg: '✓ Tidak ada startup IIFE yang membaca lexical global sebelum deklarasinya\n',
+    run: lintStartupLoadOrder,
+    label: (n) => `ditemukan ${n} dependency startup yang berisiko TDZ/load-order:`,
+    advice:
+      '\nPerbaiki urutan GROUP_A/GROUP_B atau pindahkan eksekusi startup menjadi lazy/runtime. ' +
+      'Jangan menyiasati dengan mengubah const/let menjadi var; dependency order harus eksplisit.\n',
+  },
   {
     name: 'dnone-style-display-mismatch',
     severity: 'blocking',

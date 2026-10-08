@@ -26,5 +26,6 @@ test('S2388: every session has an audit document and test referenced in manifest
 });
 
 test('S2388: deletion manifest still preserves the historical CSS deletion', () => {
-  assert.equal(fs.readFileSync(path.join(root, 'DELETE-FILES.txt'), 'utf8').trim(), 'pro-ui-layer.css');
+  // S2537: manifest kumulatif boleh memuat path retired lain (mis. modules/shop/modules-render.js); yang dijaga: baris CSS historis tetap ada.
+  assert.ok(fs.readFileSync(path.join(root, 'DELETE-FILES.txt'), 'utf8').split('\n').map(l => l.trim()).includes('pro-ui-layer.css'));
 });
