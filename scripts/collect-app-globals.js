@@ -98,6 +98,19 @@ function collectFromFile(file) {
   while ((m = TOPLEVEL_DECL_RE.exec(masked))) {
     names.add(m[1] || m[2]);
   }
+
+  // Compatibility fallback for top-level function declarations that contain
+  // template literals with `${...}`. The lightweight masker intentionally
+  // does not parse template-expression nesting, so such a file can hide a
+  // legitimate column-1 function declaration from TOPLEVEL_DECL_RE. The
+  // application source convention keeps top-level declarations at column 1;
+  // only column-1 function declarations are accepted here to avoid collecting
+  // nested callbacks/handlers.
+  const TOPLEVEL_FUNCTION_FALLBACK_RE = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/gm;
+  TOPLEVEL_FUNCTION_FALLBACK_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_FUNCTION_FALLBACK_RE.exec(src))) {
+    names.add(m[1]);
+  }
   return names;
 }
 

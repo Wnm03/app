@@ -104,7 +104,7 @@ module.exports = [
       // --- Bug class nyata yang pernah kejadian di project ini -----------
       'no-undef': 'error', // pernah ada file lupa urutan load -> ReferenceError di prod
       'no-unused-vars': ['warn', { args: 'none', varsIgnorePattern: '^_' }],
-      'no-redeclare': 'error',
+      'no-redeclare': ['error', { builtinGlobals: false }],
       'no-dupe-keys': 'error',
       'no-dupe-args': 'error',
       'no-unreachable': 'error',
