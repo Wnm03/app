@@ -481,16 +481,26 @@ function preflightRequiredMinifier() {
   if (!required) return;
   try {
     // eslint-disable-next-line global-require
-    require('esbuild');
+    const esbuild = require('esbuild');
+    // Meresolve paket JS saja belum cukup: esbuild memuat binary platform-specific
+    // (@esbuild/linux-x64 pada GitHub Actions ubuntu-latest) saat transform pertama.
+    // Uji transform minimal di preflight supaya missing native binary TIDAK baru
+    // meledak di buildBundle() setelah version/cache mutation dimulai.
+    esbuild.transformSync('const __kw_build_preflight__ = 1;', {
+      minify: true,
+      loader: 'js',
+      target: 'es2019',
+    });
   } catch (e) {
     const reason = e && e.message ? e.message : String(e);
     throw new Error(
-      'BUILD PREFLIGHT GAGAL — --require-minify aktif tetapi esbuild tidak tersedia. ' +
-      'Build dihentikan sebelum generate/version bump agar repository tidak tertinggal dalam state parsial. ' +
-      `Detail: ${reason}`
+      'BUILD PREFLIGHT GAGAL — --require-minify aktif tetapi esbuild tidak siap untuk minifikasi. ' +
+      'Pastikan paket esbuild DAN binary platform-specific (@esbuild/linux-x64 pada ubuntu-latest) ' +
+      'terpasang dari lockfile. Build dihentikan sebelum generate/version bump agar repository tidak ' +
+      'tertinggal dalam state parsial. Detail: ' + reason
     );
   }
-  console.log('✓ Build preflight: esbuild tersedia untuk required minification');
+  console.log('✓ Build preflight: esbuild + native runtime siap untuk required minification');
 }
 function main() {
   preflightPatchManifest();

@@ -21,4 +21,10 @@ test('S2427 requires the reproducibility lockfile alongside direct pins', () => 
   assert.equal(lock.lockfileVersion, 3);
   assert.equal(lock.packages?.['']?.devDependencies?.eslint, '9.19.0');
   assert.equal(lock.packages?.['']?.devDependencies?.esbuild, '0.24.0');
+  assert.equal(lock.packages?.['']?.optionalDependencies?.['@esbuild/linux-x64'], '0.24.0');
+  const native = lock.packages?.['node_modules/@esbuild/linux-x64'];
+  assert.equal(native?.version, '0.24.0');
+  assert.equal(native?.optional, true);
+  assert.deepEqual(native?.cpu, ['x64']);
+  assert.deepEqual(native?.os, ['linux']);
 });

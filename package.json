@@ -75,5 +75,8 @@
     "node": ">=20",
     "npm": "10.9.2"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "optionalDependencies": {
+    "@esbuild/linux-x64": "0.24.0"
+  }
 }
