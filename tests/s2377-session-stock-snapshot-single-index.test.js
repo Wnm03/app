@@ -12,7 +12,7 @@ test('S2377: session delete snapshots stock through one first-match index', () =
   const method = source.slice(start, end);
   assert.match(method, /const _sessionStockRows=Array\.isArray\(D\.partsStock\)\?D\.partsStock:\[\]/);
   assert.match(method, /const _sessionStockById=new Map\(\)/);
-  assert.match(method, /_sessionStockRows\.forEach\(x=>\{if\(x&&x\.id===x\.id&&!_sessionStockById\.has\(x\.id\)\)_sessionStockById\.set\(x\.id,x\);\}\)/);
+  assert.match(method, /_sessionStockRows\.forEach\(x=>\{if\(x&&x\.id!=null&&!_sessionStockById\.has\(x\.id\)\)_sessionStockById\.set\(x\.id,x\);\}\)/);
   assert.match(method, /for\(const sid of _sessionStockIds\)\{const row=_sessionStockById\.get\(sid\);if\(row\)beforeStock\.set\(sid,Number\(row\.qty\)\|\|0\);\}/);
   assert.doesNotMatch(method, /\(D\.partsStock\|\|\[\]\)\.find\(/, 'no per-stock-ID full-array scan remains');
 });

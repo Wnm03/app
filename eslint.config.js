@@ -77,6 +77,7 @@ const browserGlobals = {
   queueMicrotask: 'readonly',
   globalThis: 'readonly',
   CSS: 'readonly',
+  event: 'readonly',
   // Service worker (sw.js) only:
   clients: 'readonly',
   registration: 'readonly',
@@ -116,7 +117,9 @@ module.exports = [
       'app-bundle-b.min.js',
       '**/*.min.js',
       'archive/**',
-      '*.html',
+      '**/*.html',
+      'docs/**',
+      'tests/fixtures/**',
     ],
   },
   {
@@ -150,7 +153,7 @@ module.exports = [
   },
   {
     // Node globals for repository tests/scripts and the service worker.
-    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
+    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'collect-app-globals.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
@@ -164,7 +167,28 @@ module.exports = [
         console: 'readonly',
         Buffer: 'readonly',
         setImmediate: 'readonly',
+        queueMicrotask: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        Response: 'readonly',
       },
     },
+  },
+  {
+    // Sebagian test memakai import/export ESM tetapi secara historis tercakup
+    // override commonjs di atas. Override ini sengaja diletakkan paling bawah
+    // agar sourceType: module menang atas commonjs tanpa mengubah runtime app.
+    files: [
+      'tests/accumulation-chain-replay-s2224.test.js',
+      'tests/audit-post-s2529.test.js',
+      'tests/car-notes-kzr2012-audit-v4.test.js',
+      'tests/mockup-layout-v2-ui-audit.test.js',
+      'tests/s2131-global-card-list-actions.test.js',
+      'tests/s2184-shop-canonical-writer.test.js',
+      'tests/s2206-residual-writer-sweep.test.js',
+      'tests/s2309-direct-write-sot-bypass.test.js',
+      'tests/s2310-event-outbox-duplicate-replay.test.js',
+    ],
+    languageOptions: { sourceType: 'module' },
   },
 ];

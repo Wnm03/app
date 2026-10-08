@@ -12,7 +12,7 @@ test('S2378: batch service rollback snapshots stock through one first-match inde
   const method = source.slice(start, end > start ? end : undefined);
   assert.match(method, /const _batchStockRows=Array\.isArray\(D\.partsStock\)\?D\.partsStock:\[\]/);
   assert.match(method, /const _batchStockById=new Map\(\)/);
-  assert.match(method, /_batchStockRows\.forEach\(x=>\{if\(x&&x\.id===x\.id&&!_batchStockById\.has\(x\.id\)\)_batchStockById\.set\(x\.id,x\);\}\)/);
+  assert.match(method, /_batchStockRows\.forEach\(x=>\{if\(x&&x\.id!=null&&!_batchStockById\.has\(x\.id\)\)_batchStockById\.set\(x\.id,x\);\}\)/);
   assert.match(method, /for\(const sid of _batchStockIds\)\{const row=_batchStockById\.get\(sid\);if\(row\)batchStockBefore\.set\(sid,Number\(row\.qty\)\|\|0\);\}/);
   assert.doesNotMatch(method, /\(D\.partsStock\|\|\[\]\)\.find\(/, 'no per-stock-ID scan remains in batch snapshot');
 });
