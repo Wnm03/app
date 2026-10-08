@@ -27,13 +27,44 @@ const ROOT = path.join(__dirname, '..');
 function getAllSourceFiles() {
   try {
     // eslint-disable-next-line global-require
-    const buildJs = fs.readFileSync(path.join(ROOT, 'scripts', 'build.js'), 'utf8');
     const groupARe = /const GROUP_A\s*=\s*\[([\s\S]*?)\];/;
     const groupBRe = /const GROUP_B\s*=\s*\[([\s\S]*?)\];/;
     const extractNames = (m) => (m ? m[1].match(/'([^']+)'/g).map((s) => s.slice(1, -1)) : []);
-    const groupA = extractNames(buildJs.match(groupARe));
-    const groupB = extractNames(buildJs.match(groupBRe));
-    if (groupA.length && groupB.length) return [...groupA, ...groupB];
+    const manifestFiles = [];
+    // build.js is the canonical source/build manifest.
+    const canonicalBuild = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
+    manifestFiles.push(...extractNames(canonicalBuild.match(groupARe)), ...extractNames(canonicalBuild.match(groupBRe)));
+
+    // scripts/build.js is the generated runtime manifest used by the deployed
+    // bundle. Keep its entries as a compatibility union because this project
+    // has historically accumulated SOT/lazy-loader entries there before the
+    // root build manifest was updated. Only existing files are accepted below.
+    const generatedBuildPath = path.join(ROOT, 'scripts', 'build.js');
+    if (fs.existsSync(generatedBuildPath)) {
+      const generatedBuild = fs.readFileSync(generatedBuildPath, 'utf8');
+      manifestFiles.push(...extractNames(generatedBuild.match(groupARe)), ...extractNames(generatedBuild.match(groupBRe)));
+    }
+
+    if (manifestFiles.length) {
+      const files = [...new Set(manifestFiles)].filter((file) => fs.existsSync(path.join(ROOT, file)));
+      // Lazy-loaded classic scripts are intentionally outside GROUP_A/B, but
+      // their top-level globals are still legitimate cross-file runtime globals.
+      // Discover them from the canonical loader instead of maintaining a second
+      // hard-coded list.
+      const lazyLoaderPaths = [];
+      const loaderFiles = [
+        path.join(ROOT, 'modules', 'shared', 'boot-early.js'),
+        path.join(ROOT, 'modules', 'shared', 'feature-lazy-loader.js'),
+      ];
+      for (const loaderFile of loaderFiles) {
+        if (!fs.existsSync(loaderFile)) continue;
+        const loaderSrc = fs.readFileSync(loaderFile, 'utf8');
+        const re = /['"](modules\/[^'"]+\.js)(?:\?[^'"]*)?['"]/g;
+        let lm;
+        while ((lm = re.exec(loaderSrc))) lazyLoaderPaths.push(lm[1]);
+      }
+      return [...new Set([...files, ...lazyLoaderPaths])];
+    }
   } catch (e) {
     // fallthrough ke fallback
   }
@@ -132,15 +163,33 @@ function collectFromFile(file) {
     names.add(m[1]);
   }
 
+  // Collect additional declarators in compact declarations such as
+  // `let a=null, b=null, c=null;`. The primary fallback intentionally only
+  // captures the first name; this pass stays anchored to a declaration and
+  // therefore does not turn arbitrary top-level calls into fake globals.
+  const TOPLEVEL_MULTI_VAR_RE = /^(?:const|let|var)\s+([^;\n]*)(?:;|$)/gm;
+  TOPLEVEL_MULTI_VAR_RE.lastIndex = 0;
+  while ((m = TOPLEVEL_MULTI_VAR_RE.exec(masked))) {
+    const declaration = m[1];
+    for (const part of declaration.split(',')) {
+      const dm = /^\s*([A-Za-z_$][\w$]*)\s*(?:=|$)/.exec(part);
+      if (dm) names.add(dm[1]);
+    }
+  }
+
   // Some canonical SOT modules intentionally avoid a top-level `const`
   // export and publish their API through the global object (for example
   // FinanceCategorySOT). Treat only column-1 direct global assignments as
   // declarations. This keeps the collector aligned with the app's classic
   // script/global runtime model without inventing globals from arbitrary
   // property writes.
-  const TOPLEVEL_GLOBAL_EXPORT_RE = /^(?:globalThis|window|g)\.([A-Za-z_$][\w$]*)\s*=/gm;
-  TOPLEVEL_GLOBAL_EXPORT_RE.lastIndex = 0;
-  while ((m = TOPLEVEL_GLOBAL_EXPORT_RE.exec(src))) {
+  // Explicit runtime global exports are valid even when the export statement
+  // lives inside an IIFE/module wrapper (the classic-global architecture uses
+  // this pattern deliberately). Only recognize explicit window/globalThis/g
+  // assignments; do not infer arbitrary nested identifiers.
+  const GLOBAL_EXPORT_RE = /\b(?:globalThis|window|g)\.([A-Za-z_$][\w$]*)\s*=/gm;
+  GLOBAL_EXPORT_RE.lastIndex = 0;
+  while ((m = GLOBAL_EXPORT_RE.exec(src))) {
     names.add(m[1]);
   }
 

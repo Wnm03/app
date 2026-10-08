@@ -77,6 +77,14 @@ const browserGlobals = {
   html2canvas: 'readonly',
   google: 'readonly',
   gapi: 'readonly',
+  require: 'readonly',
+  module: 'readonly',
+  // External/lazy browser libraries and browser APIs used by feature modules.
+  ZXing: 'readonly',
+  pdfjsLib: 'readonly',
+  FileReader: 'readonly',
+  // Intentional runtime global from the service-history SOT/lazy module.
+  compareServiceHistoryRecency: 'readonly',
 };
 
 const appGlobals = collectAppGlobals();
