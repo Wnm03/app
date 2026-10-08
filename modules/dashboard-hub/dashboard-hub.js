@@ -290,11 +290,11 @@ function _dashHubMonthTxShared() {
   }
   let inc = 0, exp = 0, count = 0;
   for (const t of D.transactions) {
+    if (t && t.hitungKas === false) continue;
     const d = new Date(t && t.date);
     if (d.getMonth() !== m || d.getFullYear() !== y) continue;
-    count++;
-    if (t.type === 'income') inc += Number(t.amount) || 0;
-    else if (t.type === 'expense') exp += Number(t.amount) || 0;
+    if (t.type === 'income') { inc += Number(t.amount) || 0; count++; }
+    else if (t.type === 'expense') { exp += Number(t.amount) || 0; count++; }
   }
   const value = { inc, exp, count };
   if (version !== null) _dashHubMonthTxCache = { version, src: D.transactions, month: m, year: y, value };
@@ -704,8 +704,13 @@ const DashboardHub = {
   },
 
   _currentSectionTab() {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('dashHubSectionTab') : null;
-    return saved || this._defaultSectionTab();
+    const allowed = ['ringkasan', 'fitur', 'widget', 'insight'];
+    try {
+      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('dashHubSectionTab') : null;
+      return allowed.includes(saved) ? saved : this._defaultSectionTab();
+    } catch (_e) {
+      return this._defaultSectionTab();
+    }
   },
 
   renderSection(tab) {
@@ -771,6 +776,9 @@ const DashboardHub = {
     });
 
     const activeSection = this._currentSectionTab();
+    if (typeof LifeOSHome !== 'undefined' && typeof LifeOSHome.render === 'function') {
+      Promise.resolve(LifeOSHome.render()).catch((e) => console.warn('DashboardHub: Life OS render gagal:', e));
+    }
     const el = document.getElementById('dashboardHubGrid');
     if (!el) return;
     if (typeof FEATURE_REGISTRY === 'undefined' || !FEATURE_REGISTRY.length) {
@@ -944,7 +952,7 @@ const DashboardHub = {
   setSectionTab(tab) {
     const allowed = ['ringkasan', 'fitur', 'widget', 'insight'];
     const next = allowed.includes(tab) ? tab : 'ringkasan';
-    localStorage.setItem('dashHubSectionTab', next);
+    try { localStorage.setItem('dashHubSectionTab', next); } catch (_e) { /* storage blocked: UI still changes */ }
     this.applySectionTab(next);
     this.renderSection(next);
   },
@@ -978,7 +986,7 @@ const DashboardHub = {
       // di grup ini SUDAH PINDAH ke tab "Manajemen" #page-aset (lihat
       // catatan migrasi di render(), atas), jadi dihapus dari daftar —
       // bukan lagi bagian dari Dashboard Hub sama sekali.
-      insight: ['crossDashWrap', 'crossBriefWrap', 'crossInsightWrap', 'financialAuditInsightWrap', 'recommendationPanelWrap', 'actionQueueWrap'],
+      insight: ['crossDashWrap', 'crossBriefWrap', 'crossInsightWrap', 'financialAuditInsightWrap', 'recommendationPanelWrap', 'actionQueueWrap', 'lifeOSWrap'],
     };
     Object.keys(SECTION_GROUPS).forEach((t) => {
       SECTION_GROUPS[t].forEach((id) => {
@@ -990,7 +998,7 @@ const DashboardHub = {
     // Slim mode: Analytics lama + presenter Insight yang tidak lagi menjadi
     // canonical home tetap tersembunyi agar stale DOM tidak bocor saat tab
     // berpindah. Engine/halaman aslinya tetap tersedia.
-    ['dashHubAnalyticsRow','lifeOSWrap','eieWrap','shopMiniSummaryWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
+    ['dashHubAnalyticsRow','eieWrap','shopMiniSummaryWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) { el.classList.add('u-dnone'); el.style.display = ''; }
     });

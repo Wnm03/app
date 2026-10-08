@@ -40,7 +40,7 @@ const FuelDashboard = {
 curVehicleId: null,
 
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
 },
 
 // render(vehicleId?) — API publik satu-satunya utk menggambar dashboard.
@@ -223,7 +223,7 @@ _buildExportData(vid) {
 
 // _dateTag()/_slug() — helper murni format nama file, 0 logic bisnis.
 _dateTag() {
-  return new Date().toISOString().split('T')[0];
+  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0]);
 },
 
 _slug(name) {

@@ -47,6 +47,7 @@ _profile(vehicleId) {
   if (typeof data.tankCapacityLiter !== 'number' || !isFinite(data.tankCapacityLiter) || data.tankCapacityLiter <= 0) {
     return { ok: false, reason: 'Kapasitas tangki belum diatur (isi profil tangki dulu)' };
   }
+  if (!Number.isInteger(data.fuelBarCount) || data.fuelBarCount < 1) return { ok:false, reason:'Jumlah bar indikator BBM tidak valid' };
   return { ok: true, data };
 },
 

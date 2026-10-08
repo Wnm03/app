@@ -20,7 +20,7 @@ const FuelIntelligenceEngine = {
 // _vehicles() — baca D.vehicles apa adanya (array kosong kalau belum
 // ada), pola sama persis _vehicles() di VehicleIntelligence/VehicleReminder.
 _vehicles() {
-  return (typeof D !== 'undefined' && D.vehicles) ? D.vehicles : [];
+  return (typeof D !== 'undefined' && D.vehicles) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
 },
 
 // vehicleInsight(vehicleId) — gabungan tren biaya BBM (VehicleFuelTrendSummary,

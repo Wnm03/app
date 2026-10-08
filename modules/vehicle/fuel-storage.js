@@ -23,7 +23,10 @@ logs(vehicleId) {
 // sortedByDate(vehicleId?) — logs() diurutkan tanggal terbaru dulu (desc).
 // Tidak mengubah array asli (slice sebelum sort).
 sortedByDate(vehicleId) {
-  return this.logs(vehicleId).slice().sort((a, b) => (a.date < b.date ? 1 : (a.date > b.date ? -1 : 0)));
+  return this.logs(vehicleId).slice().sort((a,b)=>{
+  if(a.date!==b.date)return a.date<b.date?1:-1;
+  return (Number(b.km)||0)-(Number(a.km)||0);
+});
 },
 
 // latest(vehicleId?) — 1 log BBM terbaru (atau null kalau belum ada).

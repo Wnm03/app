@@ -753,7 +753,15 @@ const ServisChecklist = {
   setNotApplicable(groupIdx, itemIdx, value=true) {
     const item = this._item(groupIdx, itemIdx);
     if (!item) return { ok:false, reason:'Item tidak ditemukan' };
-    if (value) { this._notApplicable[item.id] = true; delete this._checked[item.id]; delete this._results[item.id]; delete this._conditionNotes[item.id]; }
+    if (value) {
+      this._notApplicable[item.id] = true;
+      delete this._checked[item.id]; delete this._results[item.id]; delete this._conditionNotes[item.id];
+      delete this._executionStatus[item.id];
+      if (this._costs) delete this._costs[item.id];
+      if (this._costBreakdown) delete this._costBreakdown[item.id];
+      if (this._photos) delete this._photos[item.id];
+      if (this._parts) delete this._parts[item.id];
+    }
     else delete this._notApplicable[item.id];
     return { ok:true, id:item.id, notApplicable:!!value };
   },
@@ -853,7 +861,7 @@ const ServisChecklist = {
 
   cycleExecutionStatusAndRender(groupIdx,itemIdx){
     const item=this._item(groupIdx,itemIdx); if(!item)return {ok:false,reason:'Item tidak ditemukan'};
-    const current=this._executionStatus[item.id]||'COMPLETED';
+    const current=this._executionStatus[item.id]||'PLANNED';
     const next=current==='COMPLETED'?'PLANNED':current==='PLANNED'?'SKIPPED':'COMPLETED';
     const result=this.setExecutionStatus(groupIdx,itemIdx,next); this.render(); return result;
   },

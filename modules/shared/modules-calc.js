@@ -91,8 +91,8 @@ let inc=0,exp=0;
 D.transactions.forEach(t=>{
 const d=new Date(_calcTxDateMs(t));
 if(d<from||d>now||t.hitungKas===false)return;
-if(t.type==='income')inc+=t.amount;
-else if(t.type==='expense')exp+=t.amount;
+if(t.type==='income')inc+=Number(t.amount)||0;
+else if(t.type==='expense')exp+=Number(t.amount)||0;
 });
 return (inc-exp)/months;
 },
@@ -484,8 +484,8 @@ let inc=0,exp=0;
 (D.transactions||[]).forEach(t=>{
 const d=new Date(_calcTxDateMs(t));
 if(d<from||d>now)return;
-if(t.type==='income')inc+=t.amount;
-else if(t.type==='expense')exp+=t.amount;
+if(t.type==='income')inc+=Number(t.amount)||0;
+else if(t.type==='expense')exp+=Number(t.amount)||0;
 });
 return {surplus:(inc-exp)/months,months};
 },
@@ -496,7 +496,8 @@ return 0;
 },
 sisaBulan(){
 const p=D.pensiun||{};
-const usiaSekarang=Number(p.usiaSekarang), usiaPensiun=Number(p.usiaPensiun);
+const _num = (v) => typeof parsePzNum === 'function' ? parsePzNum(v) : Number(v);
+const usiaSekarang=_num(p.usiaSekarang), usiaPensiun=_num(p.usiaPensiun);
 if(!isFinite(usiaSekarang)||!isFinite(usiaPensiun)||usiaPensiun<=usiaSekarang) return 0;
 return Math.round((usiaPensiun-usiaSekarang)*12);
 },
@@ -630,7 +631,8 @@ if(idx===null) return;
 if(!sumberOptions[idx]){toast('⚠️ Pilihan akun tidak valid');return;}
 fromAcc=sumberOptions[idx];
 }
-const date=new Date().toISOString().split('T')[0];
+const _now=new Date();
+const date=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0');
 // S631 (Bug D fix, lihat AUDIT-s630-bugD-transfer-legacy-orphan.md §2.4):
 // jalur ini dulu push transfer_out/transfer_in TANPA transferPairId --
 // satu-satunya jalur CREATE transfer yang belum di-retrofit sejak Sesi 432

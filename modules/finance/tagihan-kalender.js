@@ -411,7 +411,7 @@ document.getElementById('billModalTitle').textContent='Tambah Tagihan/Langganan'
 document.getElementById('billDueWrap').style.display='block';
 document.getElementById('billName').value='';
 document.getElementById('billAmt').value='';
-document.getElementById('billDue').value=new Date().toISOString().split('T')[0];
+document.getElementById('billDue').value=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 document.getElementById('billFreq').value='bulanan';
 document.getElementById('billCat').value='';
 updateBillSubCatOptions();
@@ -1012,7 +1012,7 @@ validate:v=>{const n=parsePzNum(v);return n>0?null:'Jumlah harus lebih dari 0';}
 if(!amtVal)return;
 payAmount=parsePzNum(amtVal);
 }
-const todayStr=new Date().toISOString().split('T')[0];
+const _todayNow=new Date(); const todayStr=_todayNow.getFullYear()+'-'+String(_todayNow.getMonth()+1).padStart(2,'0')+'-'+String(_todayNow.getDate()).padStart(2,'0');
 const val=await showPromptModal({
 title:'Tanggal Pembayaran',
 message:`Bayar "${escapeHtml(b.name)}"${label}${sharedLabel} sebesar ${fmtFull(payAmount)}?`,

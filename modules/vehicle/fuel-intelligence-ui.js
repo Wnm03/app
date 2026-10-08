@@ -49,6 +49,10 @@ _vehicle(vehicleId) {
 _currentEstimate(vehicleId) {
   const veh = this._vehicle(vehicleId);
   if (!veh) return null;
+  if (typeof FuelStateEstimator!=='undefined' && typeof FuelStateEstimator.estimateCurrentLiter==='function') {
+    const live=FuelStateEstimator.estimateCurrentLiter(vehicleId);
+    if(live&&live.ok&&typeof live.liter==='number')return {liter:live.liter,source:'live'};
+  }
   if (veh.fuelState && typeof veh.fuelState.currentFuelLiter === 'number') {
     return { liter: veh.fuelState.currentFuelLiter, source: 'stored' };
   }
@@ -275,6 +279,8 @@ save() {
   if (!this.curVehicleId || this.selectedBar === null || this.selectedBar === undefined) return;
   const veh = this._vehicle(this.curVehicleId);
   if (!veh || typeof FuelGaugeEngine === 'undefined') return;
+  const previousFuelState=veh.fuelState?{...veh.fuelState}:null;
+  const previousHistory=Array.isArray(D.fuelStateHistory)?D.fuelStateHistory.slice():null;
 
   const literRes = FuelGaugeEngine.calculateFuelLiter(this.curVehicleId, this.selectedBar);
   if (!literRes.ok) {
@@ -306,8 +312,15 @@ save() {
   // Update): simpan snapshot fuelState yang barusan ditulis di atas.
   // Guard typeof -- diam kalau modul belum dimuat, TIDAK PERNAH
   // menggagalkan save() koreksi manual gara-gara histori opsional ini.
-  if (typeof FuelStateHistory !== 'undefined') FuelStateHistory.record(this.curVehicleId, veh.fuelState);
-  if (typeof save === 'function') save();
+  try {
+    if (typeof FuelStateHistory !== 'undefined') FuelStateHistory.record(this.curVehicleId, veh.fuelState);
+    if (typeof save === 'function') save();
+  } catch (err) {
+    if (previousFuelState) veh.fuelState=previousFuelState; else delete veh.fuelState;
+    if (previousHistory) D.fuelStateHistory=previousHistory; else delete D.fuelStateHistory;
+    if (typeof toast === 'function') toast('⚠️ Kalibrasi gagal disimpan: '+(err&&err.message?err.message:'error tidak diketahui'));
+    return;
+  }
 
   const vid = this.curVehicleId;
   if (typeof closeModal === 'function') closeModal('fuelBarCorrectionModal');

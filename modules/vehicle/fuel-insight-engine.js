@@ -150,7 +150,7 @@ _monthlyCostInsight(vehicleId) {
       type: 'Monthly Cost',
       priority: 'INFO',
       title: 'Biaya BBM bulan ini',
-      description: 'Total pengeluaran BBM bulan ' + actual.month + ': Rp'
+      description: 'Total pengeluaran BBM bulan ' + (function(m){const parts=String(m||'').split('-');if(parts.length===2&&/^\d{4}$/.test(parts[0])){const d=new Date(Number(parts[0]),Number(parts[1])-1,1);return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'});}return String(m||'-');})(actual.month) + ': Rp'
         + actual.totalCost.toLocaleString('id-ID') + ' untuk ' + actual.totalLiter
         + ' liter (rata-rata Rp' + actual.averagePrice.toLocaleString('id-ID') + '/liter).',
       recommendation: 'Bandingkan dengan bulan-bulan sebelumnya untuk melihat tren pengeluaran BBM.',
@@ -244,7 +244,7 @@ _reserveFuelInsight(vehicleId) {
   const liter = this._currentFuelLiter(vehicleId);
   if (liter === null) return null;
   const reserve = FuelGaugeEngine.getReserveStatus(vehicleId, liter);
-  if (!reserve.ok) return null;
+  if (!reserve.ok || !(Number(reserve.reserveLiter) > 0)) return null;
   if (reserve.inReserve) {
     return {
       id: 'reserve-fuel',

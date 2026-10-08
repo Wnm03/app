@@ -64,7 +64,8 @@
     "audit:bundle-b-residency": "node scripts/s2252-bundle-b-residency-audit.js",
     "build:dev": "node scripts/build.js",
     "audit:release-contract": "node scripts/release-contract-audit.js",
-    "audit:deploy-data-continuity": "node scripts/deploy-data-continuity-gate.js"
+    "audit:deploy-data-continuity": "node scripts/deploy-data-continuity-gate.js",
+    "audit:csp-inline-events": "node scripts/verify-no-inline-event-attrs.js"
   },
   "devDependencies": {
     "eslint": "9.19.0",

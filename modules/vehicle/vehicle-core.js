@@ -492,7 +492,7 @@ if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIn
 // entry Buku Aset baru, jadi langsung ikut Total Aset/Net Worth sejak awal.
 _autoCreateVehicleAsset(newVeh,ownership);
 if(!isNaN(kmAwal)&&kmAwal>0){
-D.kmLogs.push({id:uid(),vehicleId:newId,date:new Date().toISOString().split('T')[0],km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
+D.kmLogs.push({id:uid(),vehicleId:newId,date:(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()),km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
 save();
 // S2471: durable reconciliation for post-commit vehicle create event.
@@ -550,7 +550,7 @@ if(!sel)return;
 document.getElementById('kmVal').value=getVehicleKm(sel.value)||'';
 }
 function openKmModal(){
-document.getElementById('kmDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('kmDate').value=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 document.getElementById('kmNote').value='';
 populateKmVehicleSelect();
 document.getElementById('kmVal').value=getVehicleKm(curVehicleId)||'';
@@ -747,7 +747,7 @@ if(!v||!cfg)return;
 const biaya=v[cfg.biayaKey]||0;
 if(biaya<=0){toast('⚠️ Isi dulu estimasi biaya '+cfg.label+' lewat ✏️');return;}
 if(!await askConfirm('Bayar '+cfg.label+' untuk '+v.name+' sebesar '+fmtFull(biaya)+'? Otomatis tercatat sebagai pengeluaran di Keuangan & jadwal diperbarui.',{danger:false,okText:'Ya, Bayar',icon:'🚦'}))return;
-const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:new Date().toISOString().split('T')[0]}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
+const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 const base=v[cfg.tglKey]?new Date(v[cfg.tglKey]):new Date();
 cfg.advance(base);
 v[cfg.tglKey]=base.toISOString().split('T')[0];

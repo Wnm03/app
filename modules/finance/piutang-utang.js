@@ -1056,7 +1056,7 @@ return arr;
 },
 computeDSR(){
 const totalCicilanUtang=(typeof Debt!=='undefined')?Debt.totalCicilanBulanan():0;
-const totalCicilanLain=(D.bills||[]).filter(b=>b.kind==='cicilan'&&b.sisaTenor!=null).reduce((s,b)=>s+(b.amount||0),0);
+const totalCicilanLain=(D.bills||[]).filter(b=>b.kind==='cicilan'&&Number(b.sisaTenor)>0).reduce((s,b)=>s+(b.amount||0),0);
 const totalCicilan=totalCicilanUtang+totalCicilanLain;
 const incAvg=(typeof WorthIt!=='undefined')?WorthIt.incomeAvg():0;
 const pct=incAvg>0?(totalCicilan/incAvg)*100:null;

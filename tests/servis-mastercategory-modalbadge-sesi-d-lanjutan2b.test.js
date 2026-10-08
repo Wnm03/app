@@ -221,8 +221,11 @@ test('modals.js -- oninput #sparepartName memanggil Sparepart.updateMasterCatBad
   const idx = src.indexOf(marker);
   assert.ok(idx >= 0, 'field #sparepartName harus ditemukan di modals.js');
 
-  // ambil potongan sekitar field ini (cukup panjang utk mencakup atribut oninput)
-  const snippet = src.slice(idx, idx + 400);
+  // S2522-S2524 CSP: oninput inline -> data-oninput="_sparepartNameOnInput"; rangkaian 4 panggilan pindah ke wrapper bernama
+  assert.ok(src.slice(idx, idx + 400).includes('data-oninput=\\\"_sparepartNameOnInput\\\"'), 'field #sparepartName harus memakai data-oninput wrapper');
+  const fnIdx = src.indexOf('function _sparepartNameOnInput(){');
+  assert.ok(fnIdx >= 0, 'wrapper _sparepartNameOnInput harus ada');
+  const snippet = src.slice(fnIdx, src.indexOf('}', src.indexOf('updateMasterCatBadgeLive', fnIdx)) + 1);
 
   assert.ok(snippet.includes('autoFillSparepartCode()'), 'pemanggilan lama #1 harus tetap ada');
   assert.ok(

@@ -42,7 +42,9 @@ _vehicles() {
 get(vehicleId) {
   const veh = this._vehicles().find((v) => v.id === vehicleId);
   if (!veh) return null;
-  return Object.assign({}, this.DEFAULTS, veh.fuelTankProfile || {});
+  const merged=Object.assign({}, this.DEFAULTS, veh.fuelTankProfile || {});
+  if(!Number.isInteger(merged.fuelBarCount)||merged.fuelBarCount<1)merged.fuelBarCount=this.DEFAULTS.fuelBarCount;
+  return merged;
 },
 
 // validate(profile) — validasi PARTIAL (tiap field opsional & independen,
@@ -86,6 +88,12 @@ validate(profile) {
         || typeof p.percent !== 'number' || !isFinite(p.percent) || p.percent < 0 || p.percent > 100
       ));
       if (badPoint) errors.push('Setiap titik kurva kalibrasi harus {liter:angka>=0, percent:0-100}');
+      const curve=profile.calibrationCurve;
+      const cap=profile.tankCapacityLiter;
+      for(let i=1;i<curve.length;i++){
+        if(curve[i].liter<=curve[i-1].liter || curve[i].percent<curve[i-1].percent){errors.push('Kurva kalibrasi harus meningkat monoton pada liter dan persentase');break;}
+      }
+      if(typeof cap==='number'&&cap>0&&curve.some(p=>p.liter>cap))errors.push('Titik kurva kalibrasi tidak boleh melebihi kapasitas tangki');
     }
   }
   // tankShape nonLinear butuh kurva kalibrasi (linear cukup asumsi liter

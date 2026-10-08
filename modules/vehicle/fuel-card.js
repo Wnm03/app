@@ -104,6 +104,7 @@ render() {
   }
   wrap.style.display = '';
   el.innerHTML = this._body(insight);
+  this._installGaugeDelegation();
 },
 
 _money(n) {
@@ -359,7 +360,26 @@ _gaugeHtml(vehicleId) {
   // SAMA, jadi ditangani manual lewat pointerdown/up/leave (lihat
   // _fuelGaugePointerDown/Up/Cancel di bawah) -- dispatcher data-action
   // global cuma bisa 1 aksi per klik, tidak cukup di sini.
-  return `<div class="fuelcard-gauge" onpointerdown="FuelCard._gaugePointerDown(event,'${vehicleId}')" onpointerup="FuelCard._gaugePointerUp(event,'${vehicleId}')" onpointerleave="FuelCard._gaugePointerCancel()" onpointercancel="FuelCard._gaugePointerCancel()" role="button" tabindex="0" aria-label="Tap: koreksi estimasi BBM dengan speedometer. Tap lama: lihat diagnostic mentah." style="cursor:pointer">${segs}</div>`;
+  return `<div class="fuelcard-gauge" data-fuel-gauge-vehicle="${escapeHtml(String(vehicleId))}" role="button" tabindex="0" aria-label="Tap: koreksi estimasi BBM dengan speedometer. Tap lama: lihat diagnostic mentah." style="cursor:pointer">${segs}</div>`;
+},
+
+// _installGaugeDelegation — satu listener delegasi, dipasang sekali, menggantikan atribut onpointer*.
+_installGaugeDelegation() {
+  if (this._gaugeDelegationInstalled || typeof document === 'undefined' || !document.addEventListener) return;
+  this._gaugeDelegationInstalled = true;
+  document.addEventListener('pointerdown', (e) => {
+    const el = e.target && e.target.closest ? e.target.closest('[data-fuel-gauge-vehicle]') : null;
+    if (!el) return;
+    this._gaugePointerDown(e, el.getAttribute('data-fuel-gauge-vehicle'));
+  });
+  document.addEventListener('pointerup', (e) => {
+    const el = e.target && e.target.closest ? e.target.closest('[data-fuel-gauge-vehicle]') : null;
+    if (!el) return;
+    this._gaugePointerUp(e, el.getAttribute('data-fuel-gauge-vehicle'));
+  });
+  const cancel = () => this._gaugePointerCancel();
+  document.addEventListener('pointerleave', cancel, true);
+  document.addEventListener('pointercancel', cancel, true);
 },
 
 // _gaugePointerDown/Up/Cancel — long-press detector utk gauge di atas

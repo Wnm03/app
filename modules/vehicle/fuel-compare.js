@@ -71,7 +71,10 @@ _rows() {
     } catch (e) {
       continue; // tidak pernah throw ke pemanggil, lewati kendaraan ini
     }
-    if (!summary || !summary.ok) continue;
+    if (!summary || !summary.ok) {
+      if (typeof console!=='undefined'&&console.warn) console.warn('[FuelCompare] kendaraan dilewati:',veh.id,summary&&summary.reason||'summary tidak tersedia');
+      continue;
+    }
     out.push({ vehicle: veh, summary });
   }
   return out;
@@ -183,7 +186,7 @@ _rowHtml(row, priorityVehicleId) {
   const priorityBadge = (priorityVehicleId && veh.id === priorityVehicleId)
     ? `<span class="u-fs11 red" style="font-weight:700;margin-left:6px">⚠️ Prioritas Tertinggi</span>` : '';
   return `
-    <div class="u-flex u-jcb u-aic" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" data-action="FuelCompare.openVehicle" data-args="${escapeHtml(JSON.stringify([veh.id]))}">
+    <div class="u-flex u-jcb u-aic" style="padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer" role="button" tabindex="0" aria-label="Buka detail BBM ${escapeHtml(name)}" data-fuel-compare-vehicle="${escapeHtml(String(veh.id))}" data-action="FuelCompare.openVehicle" data-args="${escapeHtml(JSON.stringify([veh.id]))}">
       <div style="flex:1;min-width:0">
         <div class="u-fw700">${escapeHtml(name)}${priorityBadge}</div>
         <div class="u-fs12 u-t2" style="margin-top:2px">
@@ -207,6 +210,16 @@ render(sortKey) {
   const wrap = document.getElementById('fuelCompareWrap');
   const body = document.getElementById('fuelCompareBody');
   if (!wrap || !body) return;
+  if (!this._keyboardDelegationInstalled && typeof document !== 'undefined' && document.addEventListener) {
+    this._keyboardDelegationInstalled=true;
+    document.addEventListener('keydown',(e)=>{
+      if(e.key!=='Enter'&&e.key!==' ')return;
+      const el=e.target&&e.target.closest?e.target.closest('[data-fuel-compare-vehicle]'):null;
+      if(!el)return;
+      e.preventDefault();
+      this.openVehicle(el.getAttribute('data-fuel-compare-vehicle'));
+    });
+  }
 
   if (sortKey) this.sortKey = sortKey;
 
@@ -304,7 +317,7 @@ _buildFleetExportData() {
 // diekstrak jadi util bersama supaya kedua file tetap 100% independen,
 // sama persis alasan duplikasi yang sudah ada di file ini).
 _dateTag() {
-  return new Date().toISOString().split('T')[0];
+  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0]);
 },
 
 _downloadFile(filename, content, mime) {

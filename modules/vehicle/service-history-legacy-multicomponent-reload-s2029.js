@@ -61,9 +61,11 @@
   }
   function render(a){
     if(!a)return '';
+    const e=typeof escapeHtml==='function'?escapeHtml:(v)=>String(v==null?'':v);
     const icon=a.status==='OK'?'✅':a.status==='WARNING'?'⚠️':'❌';
-    const issues=a.issues&&a.issues.length?a.issues.map(x=>`<div style="margin-top:4px">${x.severity==='ERROR'?'❌':x.severity==='WARNING'?'⚠️':'ℹ️'} <b>${x.code}</b> · ${x.message}</div>`).join(''):'<div style="margin-top:4px">Context dapat direkonstruksi dengan vehicle + history + component identity.</div>';
-    return `<div id="s2029LegacyMultiReloadIntegrity" style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:11px"><b>🔄 Legacy · Multi-component · Reload integrity</b><div style="margin-top:5px">Status: <b>${icon} ${a.status}</b> · Component: <b>${a.expected&&a.expected.componentId||'—'}</b> · Vehicle: <b>${a.expected&&a.expected.vehicleId||'—'}</b></div><div style="margin-top:5px">Row: <b>${a.expected&&a.expected.rowType||'—'}</b> · Session rows: <b>${a.expected&&a.expected.sessionRowCount||0}</b> · Components: <b>${a.expected&&a.expected.sessionComponentCount||0}</b> · ${a.historyUnchanged===false?'⚠️ history berubah':'✅ history tetap'}</div><div style="margin-top:5px">${issues}</div><div style="margin-top:6px;color:var(--text2)">Read-only audit · reload tidak membuat history/reminder baru dan tidak mengubah finance/evidence.</div></div>`;
+    const issues=a.issues&&a.issues.length?a.issues.map(x=>`<div style="margin-top:4px">${x.severity==='ERROR'?'❌':x.severity==='WARNING'?'⚠️':'ℹ️'} <b>${e(x.code)}</b> · ${e(x.message)}</div>`).join(''):'<div style="margin-top:4px">Context dapat direkonstruksi dengan vehicle + history + component identity.</div>';
+    const expected=a.expected||{};
+    return `<div id="s2029LegacyMultiReloadIntegrity" style="background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:10px 12px;margin:0 0 12px;font-size:11px"><b>🔄 Legacy · Multi-component · Reload integrity</b><div style="margin-top:5px">Status: <b>${icon} ${e(a.status)}</b> · Component: <b>${e(expected.componentId||'—')}</b> · Vehicle: <b>${e(expected.vehicleId||'—')}</b></div><div style="margin-top:5px">Row: <b>${e(expected.rowType||'—')}</b> · Session rows: <b>${Number(expected.sessionRowCount)||0}</b> · Components: <b>${Number(expected.sessionComponentCount)||0}</b> · ${a.historyUnchanged===false?'⚠️ history berubah':'✅ history tetap'}</div><div style="margin-top:5px">${issues}</div><div style="margin-top:6px;color:var(--text2)">Read-only audit · reload tidak membuat history/reminder baru dan tidak mengubah finance/evidence.</div></div>`;
   }
   function install(){
     const s=g.Servis;if(!s)return;

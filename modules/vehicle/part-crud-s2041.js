@@ -216,7 +216,7 @@ function archivePart(p,reason){
 function restorePart(id){
   const p=partById(id); if(!p||!p.isArchived)return false;
   if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.restore!=='function'||typeof StockCommandSOT.setQty!=='function')throw new Error('StockCommandSOT wajib tersedia untuk restore stok');
-  const qty=Number(p.qty)||0;
+  const qty=Number(p.archivedQtyBefore!=null?p.archivedQtyBefore:p.qty)||0;
   const r=StockCommandSOT.restore(id,{saveNow:false});
   if(!r.ok)throw new Error(r.code||'STOCK_RESTORE_FAILED');
   const jr=StockCommandSOT.setQty(id,qty,{reason:'restore',source:'part-crud-s2041',journal:true,saveNow:false});

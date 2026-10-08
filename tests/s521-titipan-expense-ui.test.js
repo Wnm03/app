@@ -162,13 +162,17 @@ test('[gap-check] titipanExpenseModal: semua id yang dipakai TitipanExpenseUI me
 
 test('[gap-check] titipanExpenseAmt: oninput/onblur nyambung ke TitipanExpenseUI.onAmtInput (wiring S521-B2)', () => {
   const html = extractModalHtml();
-  assert.match(html, /id="titipanExpenseAmt"[^>]*oninput="[^"]*TitipanExpenseUI\.onAmtInput\(\)/);
-  assert.match(html, /id="titipanExpenseAmt"[^>]*onblur="[^"]*TitipanExpenseUI\.onAmtInput\(\)/);
+  // S2522-S2524 CSP: oninput/onblur inline diganti data-oninput/data-onblur -> wrapper bernama yang tetap memanggil onAmtInput()
+  assert.match(html, /id="titipanExpenseAmt"[^>]*data-oninput="_titipanExpenseAmtOnInput"/);
+  assert.match(html, /id="titipanExpenseAmt"[^>]*data-onblur="_titipanExpenseAmtOnBlur"/);
+  const modalsSrc = fs.readFileSync(path.join(ROOT, 'modules/shared/modals.js'), 'utf8');
+  assert.match(modalsSrc, /function _titipanExpenseAmtOnInput\(\)\{[^}]*TitipanExpenseUI\.onAmtInput\(\)/);
+  assert.match(modalsSrc, /function _titipanExpenseAmtOnBlur\(\)\{[^}]*TitipanExpenseUI\.onAmtInput\(\)/);
 });
 
 test('[gap-check] titipanExpenseNote: oninput nyambung ke TitipanExpenseUI.onNoteInput (auto-suggest owner)', () => {
   const html = extractModalHtml();
-  assert.match(html, /id="titipanExpenseNote"[^>]*oninput="[^"]*TitipanExpenseUI\.onNoteInput\(\)/);
+  assert.match(html, /id="titipanExpenseNote"[^>]*data-oninput="TitipanExpenseUI\.onNoteInput"/);
 });
 
 test('[gap-check] render() Dana Titipan tab: tombol pemicu TitipanExpenseUI.open ada', () => {

@@ -931,6 +931,7 @@ const GROUP_B = [
   // FuelBarCorrection.open() yang sudah ada. Mengelola kendaraan aktifnya
   // sendiri (this.curVehicleId) supaya TIDAK menyentuh FuelFleetSelector
   // ataupun FuelInsightEngine sama sekali (batasan task).
+  'modules/vehicle/fuel-export-utils.js',
   'modules/vehicle/fuel-dashboard.js',
   // TASK-154: Multi Vehicle Fuel Comparison — ditaruh SETELAH
   // fuel-dashboard.js (dependency: FuelInsightEngine.getSummary()/

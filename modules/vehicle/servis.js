@@ -816,7 +816,7 @@ if(editTabs)editTabs.style.display='flex';
 Servis.setEditTab('detail');
 } else {
 if(typeof ServisChecklist!=='undefined'){ ServisChecklist.open(curVehicleId); Servis._serviceChecklistMasterCategoryIds=[]; Servis._serviceChecklistGroupIdx=null; }
-document.getElementById('servisDate').value=new Date().toISOString().split('T')[0];
+document.getElementById('servisDate').value=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 ['servisItem','servisCost','servisNote'].forEach(id=>document.getElementById(id).value='');
 Servis.renderServiceInputSelectors();
 Servis.ensureServiceJobTypeUI('');
@@ -1844,7 +1844,7 @@ cost=0;
 const costStr=await showPromptModal({title:'Biaya Servis',message:'Biaya servis ini (opsional, boleh dikosongkan/0):',icon:'💵',inputType:'number',defaultValue:0});
 cost=parseFloat(costStr)||0;
 }
-const date=(typeof formatServiceDateOnly==='function'&&typeof parseServiceDateOnly==='function')?formatServiceDateOnly(parseServiceDateOnly(new Date())):new Date().toISOString().split('T')[0];
+const date=(typeof formatServiceDateOnly==='function'&&typeof parseServiceDateOnly==='function')?formatServiceDateOnly(parseServiceDateOnly(new Date())):(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 const accId=D.accounts[0]?.id;
 
 const _markStockIds=new Set();

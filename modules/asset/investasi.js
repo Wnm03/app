@@ -679,7 +679,7 @@ const Investment = {
   // dikecualikan dari kedua total itu juga.
   portfolioSummary() {
     const holdings = Investment.getHoldings().filter(isHoldingOwnershipSelf);
-    const totalValue = holdings.reduce((s, h) => s + Investment.holdingValue(h), 0);
+    const totalValue = holdings.reduce((s, h) => s + (typeof MultiOwnerEngine !== 'undefined' ? MultiOwnerEngine.selfOwnedValue(h, Investment.holdingValue(h)) : Investment.holdingValue(h)), 0);
     const totalCost = holdings.reduce((s, h) => s + Investment.holdingCost(h), 0);
     const totalGainLoss = totalValue - totalCost;
     const roiPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
@@ -720,7 +720,7 @@ const Investment = {
     const totalValue = holdings.reduce((s, h) => s + Investment.holdingValue(h), 0);
     const byType = new Map();
     for (const h of holdings) {
-      const v = Investment.holdingValue(h);
+      const v = typeof MultiOwnerEngine !== 'undefined' ? MultiOwnerEngine.selfOwnedValue(h, Investment.holdingValue(h)) : Investment.holdingValue(h);
       byType.set(h.type, (byType.get(h.type) || 0) + v);
     }
     return Array.from(byType.entries())

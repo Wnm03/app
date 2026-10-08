@@ -60,7 +60,7 @@ const FuelTrendDashboard = {
 curVehicleId: null,
 
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
 },
 
 // render(vehicleId?) — API publik satu-satunya utk menggambar dashboard.
@@ -119,13 +119,9 @@ switchVehicle(vehicleId) {
 // lain (pola sama semangatnya dgn guard per-field FuelInsightEngine.
 // getSummary()).
 _safeCall(fn) {
-  if (typeof fn !== 'function') return null;
-  try {
-    const res = fn();
-    return (res && res.ok) ? res : null;
-  } catch (e) {
-    return null;
-  }
+  if (typeof fn !== 'function') return {ok:false,reason:'Fungsi belum tersedia'};
+  try { const res=fn(); return res&&res.ok?res:{ok:false,reason:(res&&res.reason)||'Data belum tersedia'}; }
+  catch(e){ return {ok:false,reason:e&&e.message?e.message:'Gagal membaca data'}; }
 },
 
 // _buildTrendData(vid) — kumpulkan SELURUH field trend/proyeksi dari 4
@@ -201,12 +197,12 @@ _section(title, innerHtml) {
 // tampil "-" (tidak memblokir baris lain).
 _costSectionHtml(trend) {
   const rows = [
-    this._row('Bulan Ini (Aktual)', trend.monthlyCost ? this._rp(trend.monthlyCost.totalCost) : '-'),
-    this._row('Proyeksi Bulan Ini', trend.projectedMonthlyCost ? this._rp(trend.projectedMonthlyCost.estimatedCost) : '-'),
-    this._row('Tahun Ini (Aktual)', trend.yearlyCost ? this._rp(trend.yearlyCost.totalCost) : '-'),
-    this._row('Proyeksi Tahun Ini', trend.projectedYearlyCost ? this._rp(trend.projectedYearlyCost.estimatedCost) : '-'),
-    this._row('Rata-rata Harga BBM', trend.averageFuelPrice ? this._rp(trend.averageFuelPrice.averagePrice) + '/L' : '-'),
-    this._row('Frekuensi Isi BBM', trend.refillFrequency ? `${trend.refillFrequency.refillCount}x, rata-rata ${trend.refillFrequency.averageIntervalDays} hari` : '-'),
+    this._row('Bulan Ini (Aktual)', trend.monthlyCost&&trend.monthlyCost.ok ? this._rp(trend.monthlyCost.totalCost) : '-'),
+    this._row('Estimasi bulanan (rata-rata pola berkendara)', trend.projectedMonthlyCost&&trend.projectedMonthlyCost.ok ? this._rp(trend.projectedMonthlyCost.estimatedCost) : '-'),
+    this._row('Tahun Ini (Aktual)', trend.yearlyCost&&trend.yearlyCost.ok ? this._rp(trend.yearlyCost.totalCost) : '-'),
+    this._row('Proyeksi Tahun Berjalan', trend.projectedYearlyCost&&trend.projectedYearlyCost.ok ? this._rp(trend.projectedYearlyCost.estimatedCost) : '-'),
+    this._row('Rata-rata Harga BBM', trend.averageFuelPrice&&trend.averageFuelPrice.ok ? this._rp(trend.averageFuelPrice.averagePrice) + '/L' : '-'),
+    this._row('Frekuensi Isi BBM', trend.refillFrequency&&trend.refillFrequency.ok ? `${trend.refillFrequency.refillCount}x, rata-rata ${trend.refillFrequency.averageIntervalDays} hari` : '-'),
   ].join('');
   return this._section('Biaya & Frekuensi BBM', rows);
 },
@@ -216,10 +212,10 @@ _costSectionHtml(trend) {
 // rumus baru.
 _predictionSectionHtml(trend) {
   const rows = [
-    this._row('Estimasi Jarak Tersisa', trend.remainingDistance ? `${Math.round(trend.remainingDistance.remainingKm)} km` : '-'),
-    this._row('Prediksi Isi BBM Berikutnya', trend.nextRefuel ? `${trend.nextRefuel.estimatedDate || '-'} (${trend.nextRefuel.estimatedRemainingDays} hari lagi)` : '-'),
-    this._row('Proyeksi Pemakaian Bulan Depan', trend.monthlyUsage ? `${trend.monthlyUsage.estimatedLiter} L (${this._rp(trend.monthlyUsage.estimatedCost)})` : '-'),
-  ].join('');
+    this._row('Estimasi Jarak Tersisa', trend.remainingDistance&&trend.remainingDistance.ok ? `${Math.round(trend.remainingDistance.remainingKm)} km` : '-'),
+    this._row('Prediksi Isi BBM Berikutnya', trend.nextRefuel&&trend.nextRefuel.ok ? `${trend.nextRefuel.estimatedDate || '-'} (${trend.nextRefuel.estimatedRemainingDays} hari lagi)` : '-'),
+this._row('Estimasi Pemakaian Bulanan', trend.monthlyUsage&&trend.monthlyUsage.ok ? `${trend.monthlyUsage.estimatedLiter} L (${this._rp(trend.monthlyUsage.estimatedCost)})` : '-'),
+      ].join('');
   return this._section('Prediksi', rows);
 },
 
@@ -248,6 +244,14 @@ _maintenanceSectionHtml(trend) {
 // itu sendiri) — 0 logic sortir/prioritas baru ditulis di sini, pola sama
 // persis FuelDashboard._highestInsightHtml(). `null` -> baris ini
 // dilewati.
+_dataAvailabilityHint(trend) {
+  const fields=[trend.monthlyCost,trend.projectedMonthlyCost,trend.yearlyCost,trend.projectedYearlyCost,trend.averageFuelPrice,trend.refillFrequency,trend.remainingDistance,trend.nextRefuel,trend.monthlyUsage,trend.efficiencyHealth,trend.maintenanceRisk,trend.maintenanceRecommendation];
+  const failed=fields.filter((x)=>x&&x.ok===false);
+  if(!failed.length)return '';
+  const reason=failed.find((x)=>x.reason)?.reason;
+  return reason?`<div class="u-fs11 u-t2" style="margin:4px 0 10px;line-height:1.5">ℹ️ ${escapeHtml(String(reason))}</div>`:'';
+},
+
 _highestInsightHtml(insight) {
   if (!insight) return '';
   const col = this._priorityColor(insight.priority);
@@ -271,6 +275,7 @@ _body(vid, vehicles, summary, trend) {
       </div>
     </div>
     ${this._vehicleChips(vehicles, vid)}
+    ${this._dataAvailabilityHint(trend)}
     ${this._costSectionHtml(trend)}
     ${this._predictionSectionHtml(trend)}
     ${this._maintenanceSectionHtml(trend)}

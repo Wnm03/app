@@ -28,7 +28,7 @@ return true;
 // DAN oleh self-test (lihat features-sheets-pwa-selftest.js), supaya self-test cukup panggil fungsi
 // ini langsung tanpa perlu buka txModal asli / mengganggu form yang sedang diisi user.
 function calcCicilanPerBulanFromTotal(hargaPokok,tenor,bungaPct){
-const totalBayar=hargaPokok*(1+bungaPct/100);
+const totalBayar=Math.round(hargaPokok*(100+bungaPct)/100);
 return{perBulan:Math.ceil(totalBayar/tenor),totalBayar};
 }
 function calcCicilanTotalFromPerBulan(perBulan,tenor,bungaPct){

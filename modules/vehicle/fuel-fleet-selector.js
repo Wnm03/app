@@ -55,7 +55,7 @@ _priorityIndex(priority) {
 },
 
 _vehicles() {
-  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles : [];
+  return (typeof D !== 'undefined' && Array.isArray(D.vehicles)) ? D.vehicles.filter((v) => typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(v.id)) : [];
 },
 
 _activeVehicleId() {

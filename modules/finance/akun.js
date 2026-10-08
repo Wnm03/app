@@ -82,6 +82,7 @@ if(!acc)return result;
 let bal=acc.baseBalance!==undefined?acc.baseBalance:(acc.balance||0);
 const list=[...(_getTxByAccIndex().get(accId)||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
 list.forEach(t=>{
+if(t.hitungKas===false)return;
 if(t.type==='income')bal+=t.amount;
 else if(t.type==='expense')bal-=t.amount;
 else if(t.type==='transfer_out')bal-=t.amount;
