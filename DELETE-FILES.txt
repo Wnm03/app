@@ -1,3 +1,1 @@
-modules/shop/modules-render.js
-pro-ui-layer.css
 collect-app-globals.js

@@ -75,6 +75,8 @@ const browserGlobals = {
   TextDecoder: 'readonly',
   Response: 'readonly',
   queueMicrotask: 'readonly',
+  globalThis: 'readonly',
+  CSS: 'readonly',
   // Service worker (sw.js) only:
   clients: 'readonly',
   registration: 'readonly',
@@ -97,6 +99,10 @@ const browserGlobals = {
   // Optional legacy hooks intentionally referenced behind typeof guards.
   resolveTxAssetSplit: 'readonly',
   getServiceFinanceOwnershipIntegrity: 'readonly',
+  aiEventOutboxFlush: 'readonly',
+  aiEventOutboxRevision: 'readonly',
+  aiEventOutboxSnapshot: 'readonly',
+  aiEventOutboxClearFallback: 'readonly',
 };
 
 const appGlobals = collectAppGlobals();
@@ -144,8 +150,7 @@ module.exports = [
   },
   {
     // Node globals for repository tests/scripts and the service worker.
-    files: ['sw.js', 'docs/sw.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
-    files: ['build.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
+    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
