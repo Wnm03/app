@@ -5,10 +5,19 @@ const fs=require('fs');
 const {loadSource}=require('./helpers/loadSource');
 
 test('S2462 Finance save guards preflight stale cross-tab state',()=>{
-  const s=require('fs').readFileSync('modules/finance/features-helpers-global-security.js','utf8');
-  assert.match(s,/function _financeMutationBlockedByStaleState\(\)/);
-  assert.match(s,/function withSaveGuard\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
-  assert.match(s,/async function withSaveGuardAsync\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
+  const shared=require('fs').readFileSync('modules/shared/features-helpers-global-security.js','utf8');
+  const finance=require('fs').readFileSync('modules/finance/features-helpers-global-security.js','utf8');
+  assert.match(shared,/function _financeMutationBlockedByStaleState\(\)/);
+  assert.doesNotMatch(finance,/function _financeMutationBlockedByStaleState\(\)/);
+  assert.match(finance,/function withSaveGuard\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
+  assert.match(finance,/async function withSaveGuardAsync\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
+});
+
+test('S2462 stale-write guard is resident in production bundles',()=>{
+  for(const f of ['app-bundle-b.min.js']){
+    const bundle=fs.readFileSync(f,'utf8');
+    assert.match(bundle,/function _financeMutationBlockedByStaleState\(/,`${f}: canonical Finance stale-write guard missing from bundle`);
+  }
 });
 
 test('S2462 target rejects zero/negative target and trims name',()=>{
@@ -36,4 +45,5 @@ test('S2462 Finance mutation entrypoints contain stale-write preflight',()=>{
   assert.match(akun,/save\(\)\{\s*if\(typeof _financeMutationBlockedByStaleState/,'account-owner save must preflight stale state');
 });
 
-console.log('S2462 Finance stale-write/input guard gate: 3/3 PASS');
+// node:test reports the authoritative test totals; avoid a hard-coded PASS count
+// that could falsely claim success when the production-bundle contract fails.

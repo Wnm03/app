@@ -6,7 +6,7 @@ const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../modules/vehicle/servis.js'), 'utf8');
 
 test('S2379: batch rollback derives service IDs and retained logs in one pass', () => {
-  const start = source.indexOf('const restoreBatch=()=>');
+  const start = source.indexOf('const restoreBatch=(batchId)=>');
   const end = source.indexOf('\n};', start);
   assert.ok(start >= 0 && end > start, 'batch rollback function exists');
   const block = source.slice(start, end);

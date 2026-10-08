@@ -2,7 +2,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const pi=fs.readFileSync('modules/finance/piutang-utang.js','utf8');
-const helper=fs.readFileSync('modules/finance/features-helpers-global-security.js','utf8');
+const helper=fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8');
 
 test('S2467 Finance Piutang/Utang mutations preflight stale state',()=>{
   for(const fn of ["save(){if(typeof _financeMutationBlockedByStaleState", "async delete(id){"]){
