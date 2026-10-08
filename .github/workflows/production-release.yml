@@ -16,31 +16,19 @@ concurrency:
 
 jobs:
   production-gate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Install release dependencies
-        run: npm install --no-audit --no-fund --include=optional
-
-      - name: Ensure native esbuild runtime
-        run: npm install --no-save --package-lock=false --include=optional @esbuild/linux-x64@0.24.0
-
-      - name: Verify esbuild native runtime
-        run: |
-          node - <<'NODE'
-          const esbuild = require('esbuild');
-          const result = esbuild.transformSync('const answer = 1 + 2;', { minify: true });
-          if (!result.code) throw new Error('esbuild native transform returned empty output');
-          console.log(`esbuild ${esbuild.version}: native runtime PASS`);
-          NODE
+        run: npm ci --no-audit --no-fund
 
       - name: Build production bundle (required minification)
         run: npm run build:release
@@ -74,7 +62,7 @@ jobs:
 
       - name: Upload production artifact
         if: success()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: keluarga-w-production
           path: |
