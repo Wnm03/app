@@ -124,7 +124,7 @@ module.exports = [
   },
   {
     // build.js / bump-version.sh helper & scripts/ jalan di Node, bukan browser
-    files: ['eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
+    files: ['build.js', 'eslint.config.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
