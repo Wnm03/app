@@ -1,0 +1,24 @@
+PATCH V5 — CUMULATIVE ESLINT RELEASE-GATE RECONCILIATION
+
+Apply at repository ROOT (strip no directories):
+  package.json
+  package-lock.json
+  .github/workflows/ci.yml
+  .github/workflows/production-release.yml
+
+Preserved from V2/V3:
+- Ubuntu 24.04
+- Node.js 24
+- checkout@v7 / setup-node@v7 / upload-artifact@v7
+- release gate remains mandatory
+- no lint override/bypass
+
+V5 fixes:
+- explicit devDependency eslint-scope 8.2.0
+- lockfile records eslint-scope and its direct runtime dependencies
+- CI and production install with --package-lock=false because the legacy lock graph is incomplete
+- explicit require.resolve('eslint-scope') preflight before production release-check
+- corrected workflow YAML indentation/syntax
+
+Do NOT modify verify-release-ready.js.
+Do NOT disable or override the lint gate.
