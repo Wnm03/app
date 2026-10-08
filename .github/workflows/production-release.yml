@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Verify lockfile is complete
+        run: node scripts/verify-lockfile-complete.js
+
       - name: Install release dependencies
         run: npm ci --no-audit --no-fund
 

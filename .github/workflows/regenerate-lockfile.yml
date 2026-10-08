@@ -1,0 +1,43 @@
+name: Regenerate lockfile
+
+# Jalankan manual: Actions > Regenerate lockfile > Run workflow.
+# Menghasilkan package-lock.json ASLI dari npm (graf dependensi lengkap) lalu
+# meng-commit-nya ke branch yang dipilih. Setelah selesai, jalankan ulang CI.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Regenerate package-lock.json
+        run: |
+          rm -f package-lock.json
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Verify lockfile
+        run: node scripts/verify-lockfile-complete.js
+
+      - name: Commit lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json tidak berubah"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: regenerate package-lock.json (lockfile lengkap dari npm)"
+          git push
