@@ -1,0 +1,24 @@
+PATCH MANIFEST — CI / PRODUCTION RELEASE GATE — 2026-10-08
+
+BASELINE:
+app-main (3).zip
+
+CHANGED / REPAIRED FILES:
+.github/workflows/ci.yml
+.github/workflows/production-release.yml
+docs/RELEASE-GATE-LOG.md
+
+SUPPORTING FILES:
+DELETE-FILES.txt
+FIX-CI-RELEASE-GATE-20261008.md
+
+DELETION REQUIRED:
+modules/shop/modules-render.js
+
+IMPORTANT:
+- This ZIP intentionally contains ONLY the changed/supporting files for this fix.
+- `modules/shop/modules-render.js` is intentionally NOT included; it must be deleted
+  from the target tree because it is listed in DELETE-FILES.txt.
+- Do not replace or merge unrelated files from the full fixed ZIP.
+- Apply the changed files over the same app-main baseline, then enforce DELETE-FILES.txt.
+- Re-run the CI/release gates after applying the patch.
