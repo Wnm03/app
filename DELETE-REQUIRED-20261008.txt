@@ -1,0 +1,5 @@
+DELETE THIS FILE FROM THE REPOSITORY:
+modules/shop/modules-render.js
+
+Reason: it is a legacy file listed in DELETE-FILES.txt and its presence can
+trip the patch/delete-manifest integrity gate.

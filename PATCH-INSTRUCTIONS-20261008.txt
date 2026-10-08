@@ -1,0 +1,30 @@
+PATCH CI/PRODUCTION RELEASE GATE - 2026-10-08
+
+IMPORTANT: This ZIP is intentionally ROOT-RELATIVE. Extract it into the repository root.
+Do NOT upload the ZIP itself as a repository file.
+
+Changed files:
+  .github/workflows/ci.yml
+  .github/workflows/production-release.yml
+  docs/RELEASE-GATE-LOG.md
+
+Workflow changes:
+  - ubuntu-latest -> ubuntu-24.04
+  - actions/checkout@v4 -> @v7
+  - actions/setup-node@v4 -> @v7
+  - Node 20 -> Node 24
+  - actions/upload-artifact@v4 -> @v7
+  - npm install -> npm ci
+  - CI explicitly requires package-lock.json/npm-shrinkwrap.json
+
+REQUIRED DELETION (not representable by a normal ZIP patch):
+  modules/shop/modules-render.js
+
+The file above is listed by DELETE-FILES.txt and must be physically deleted
+from the repository. Do not replace it with a blank file.
+
+After applying, verify that the workflow files are exactly at:
+  .github/workflows/ci.yml
+  .github/workflows/production-release.yml
+
+Then commit/push the changes and rerun Actions.
