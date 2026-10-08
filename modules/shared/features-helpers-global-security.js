@@ -843,6 +843,14 @@ function _markCrossTabStale(){
   if(typeof toast==='function')toast(msg,6500); else console.warn(msg);
  }
 }
+
+// Canonical Finance cross-tab stale-write guard (single production definition).
+function _financeMutationBlockedByStaleState(){
+ if(typeof _crossTabStateStale==='undefined'||!_crossTabStateStale)return false;
+ const _msg='⚠️ Data aplikasi berubah di tab lain. Muat ulang aplikasi sebelum menyimpan perubahan Finance agar data lama tidak menimpa data terbaru.';
+ if(typeof toast==='function')toast(_msg,6500);else if(typeof console!=='undefined'&&console.warn)console.warn(_msg);
+ return true;
+}
 function _announcePersistenceWrite(){
  try{ if(typeof localStorage!=='undefined') localStorage.setItem('kw_v4_writer',_crossTabInstance+'|'+Date.now()); }catch(e){void e;}
  try{ if(_crossTabChannel) _crossTabChannel.postMessage({type:'kw-v4-write',source:_crossTabInstance,ts:Date.now()}); }catch(e){void e;}
