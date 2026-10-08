@@ -61,3 +61,12 @@ tests/service-reminder-form-sot-s2054.test.js
 tests/service-reminder-form-sot-s2055.test.js
 tests/service-reminder-roundtrip-s2056-s2059.test.js
 tests/vehicle-scoped-sot-s2061.test.js
+
+--- S2549 — A1/B7 finance stale-write guard + chain-integrity correction ---
+Patch identity: PATCH-MANIFEST-S2549-A1-B7-CHAIN-FIX.md
+Patch baseline: app-main (6).zip (the exact user-supplied archive used for this overlay).
+Supersedes for this baseline: PATCH-S2041-A1-B7-FOLLOWUP.zip (historical label retained only as provenance; do not treat S2041 as the current session number).
+Scope: 6 source/test/config files plus this chain record and the S2549 README/manifest.
+Integrity: use PATCH_MANIFEST=PATCH-MANIFEST-S2549-A1-B7-CHAIN-FIX.md npm run audit:patch-integrity (or invoke scripts/verify-patch-integrity.js with PATCH_MANIFEST set).
+Build/hash status: production bundle rebuild and FILE-HASHES-SHA256.txt refresh are intentionally pending until a successful minified build; do not treat this record as release-ready.
+Provenance caveat: older chain entries above stop at S2061. This S2549 entry records a direct overlay on app-main (6).zip; it does not claim that all intervening sessions S2062–S2548 have been reconstructed or individually verified. See AUDIT-CHAIN-RECONCILIATION-S2549.md.
