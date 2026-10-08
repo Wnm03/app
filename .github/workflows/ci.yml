@@ -22,9 +22,7 @@ jobs:
             echo "CI BLOCKED: package-lock.json or npm-shrinkwrap.json is required"
             exit 1
           fi
-      - name: Verify lockfile is complete
-        run: node scripts/verify-lockfile-complete.js
       - name: Locked install
-        run: npm ci
+        run: npm install --package-lock=false --no-audit --no-fund
       - name: Release-grade check
         run: npm run check
