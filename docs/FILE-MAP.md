@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-09T01:52:33.946Z
-Total file source: 487 · Total identifier global: 17053
+Terakhir digenerate: 2026-10-09T02:13:55.112Z
+Total file source: 487 · Total identifier global: 17055
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -284,7 +284,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 261 | `modules/vehicle/fuel-history.js` | 51 | Fuel History (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelStorage.recent() (sesi ini — sendiri 100% reuse D.bbmLogs apa adanya) utk daftar catatan isi BBM terbaru. Tap 1 baris membuka … |
 | 262 | `modules/vehicle/fuel-analytics.js` | 88 | Fuel Analytics (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE VehicleFuelTrendSummary.summary() (Sesi 81, Batch 7 — sendiri 100% reuse VehicleTrendAPI.monthlyCostTrend() utk histori biaya … |
 | 263 | `modules/vehicle/fuel-modal.js` | 44 | Fuel Modal (TASK-141, Fuel Intelligence Card). PRINSIP: orkestrasi TIPIS saja. Buka overlay #fuelIntelModal (markup di modals.js, sesi ini) & panggil FuelAnalytics.render()/FuelHistory.render() (sesi ini, keduanya 100% … |
-| 264 | `modules/vehicle/fuel-card.js` | 526 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
+| 264 | `modules/vehicle/fuel-card.js` | 540 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
 | 265 | `modules/vehicle/fuel-intelligence-ui.js` | 372 | Fuel Bar Correction (TASK-144). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelGaugeEngine (TASK-143, konversi bar<->liter<->persen) + FuelTankProfile (TASK-142, kapasitas tangki & jumlah bar) — TIDAK ada rumus … |
 | 266 | `modules/vehicle/fuel-tank-profile-ui.js` | 135 | Atur Tangki UI (companion untuk TASK-142 FuelTankProfile & TASK-144 FuelBarCorrection). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelTankProfile.get()/ validate()/save() (SUDAH ADA) — TIDAK ada rumus/validasi baru … |
 | 267 | `modules/vehicle/fuel-prediction-engine.js` | 257 | Fuel Consumption Prediction Engine (TASK-146). PRINSIP: engine-only, 0 UI, PURE (read-only, tidak pernah panggil save() atau menulis ke D). 100% REUSE modul fuel yang SUDAH ADA — 0 rumus bar/liter/persen/km/L/Rp per km … |
@@ -5945,6 +5945,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `endPage` | `modules/vehicle/honda-oem-catalog-master.js` |
 | `energy` | `economic-intelligence/domain/scoring-formulas.js` |
 | `engineCc` | `modules/vehicle/vehicle-model-resolver-sot.js` |
+| `engineReady` | `modules/vehicle/fuel-card.js` |
 | `ensureBusinessIntelligence` | `modules/shared/boot-early.js` |
 | `ensureCashewTaxonomy` | `modules/shared/backup-restore.js` |
 | `ensureCategory` | `modules/finance/finance-category-sot.js` |
@@ -9984,6 +9985,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `msg` | `ai-chat.js` |
 | `msg` | `sheets-sync.js` |
 | `msg` | `self-test.js` |
+| `msg` | `modules/vehicle/fuel-card.js` |
 | `msg` | `modules/asset/investasi-view.js` |
 | `msg` | `modules/asset/investasi-tx-view.js` |
 | `msg` | `modules/shared/boot-early.js` |

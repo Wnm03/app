@@ -4,7 +4,7 @@
 // Setiap elemen array persis sama dengan blok <div class="overlay" id="...">...</div> aslinya,
 // di-inject balik ke posisi yang sama persis via document.write saat HTML di-parse (lihat placeholder <script> di app_production.html).
 // Urutan array WAJIB sama dengan urutan pemanggilan document.write(MODAL_HTML[i]) di app_production.html -- jangan diubah manual.
-const MODAL_VERSION='s2041-1-part-sot-hardening-2275';
+const MODAL_VERSION='s2041-1-part-sot-hardening-2276';
 // S2522-S2523 CSP migration wrappers: preserve exact behavior of the two
 // inline assignment handlers without evaluating arbitrary inline JS.
 function _clearPromptModalError(){const el=document.getElementById('promptModalError');if(el)el.textContent='';}
