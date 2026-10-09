@@ -23,6 +23,6 @@ jobs:
             exit 1
           fi
       - name: Locked install
-        run: npm install --package-lock=false --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Release-grade check
         run: npm run check
