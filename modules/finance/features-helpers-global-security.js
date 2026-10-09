@@ -151,6 +151,14 @@ let _txAccManuallySet=false;
 let _txAssetManuallySet=false;
 let _txCatLearnSource=null;
 let _saveGuards={};
+function _financeMutationBlockedByStaleState(){
+if(typeof _crossTabStateStale!=='undefined'&&_crossTabStateStale){
+const _msg='⚠️ Data aplikasi berubah di tab lain. Muat ulang aplikasi sebelum menyimpan perubahan Finance agar data lama tidak menimpa data terbaru.';
+if(typeof toast==='function')toast(_msg,6500);else if(typeof console!=='undefined'&&console.warn)console.warn(_msg);
+return true;
+}
+return false;
+}
 function withSaveGuard(key,modalId,fn){
 if(_saveGuards[key])return;
 if(_financeMutationBlockedByStaleState())return false;

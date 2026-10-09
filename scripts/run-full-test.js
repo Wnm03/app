@@ -56,7 +56,7 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
  // A shard containing files MUST produce a non-zero test count. Retry that
  // specific transport/infrastructure anomaly once before marking the shard bad.
  const attempt=(retryEmpty,attemptTimeoutMs=timeoutMs)=>{
-  const child=spawn(process.execPath,['--test','--test-reporter=tap',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,['--test',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
   let out='',err='',timedOut=false; const timer=setTimeout(()=>{timedOut=true;child.kill('SIGTERM');setTimeout(()=>child.kill('SIGKILL'),3000)},attemptTimeoutMs);
   child.stdout.on('data',b=>out+=b); child.stderr.on('data',b=>err+=b);
   child.on('close',code=>{clearTimeout(timer);const stats=parse(out+err);
@@ -66,7 +66,19 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
    }
    const emptyTap=!timedOut&&code===0&&list.length&&stats.tests===0;
    const result={schema:CHECKPOINT_SCHEMA,manifestFingerprint,shard:index+1,status:(!timedOut&&code===0&&stats.tests>0&&stats.fail===0&&stats.cancelled===0)?'pass':'fail',code,timeout:timedOut,emptyTap,files:list.map(f=>path.relative(ROOT,f)),fileHashes:Object.fromEntries(list.map(f=>[path.relative(ROOT,f),fileHashes[path.relative(ROOT,f)]])),...stats};
-   atomicWrite(cp,JSON.stringify(result,null,2)+'\n');resolve(result);
+   atomicWrite(cp,JSON.stringify(result,null,2)+'\n');
+   // Preserve actionable diagnostics in CI logs. Previously the child TAP output
+   // was captured only to count tests, so a failed shard reported its exit code
+   // but hid the names/assertions/stack traces of the failing tests.
+   if(result.status!=='pass'){
+    const detail=[out.trim(),err.trim()].filter(Boolean).join('\n');
+    console.error(`\n===== FULL TEST FAILURE DETAILS: SHARD ${index+1}/${shards.length} =====`);
+    console.error(`Files in shard:\n${list.map(f=>' - '+path.relative(ROOT,f)).join('\n')}`);
+    if(detail) console.error(detail);
+    else console.error('No TAP output captured; inspect shard checkpoint and runner/environment diagnostics.');
+    console.error(`===== END FAILURE DETAILS: SHARD ${index+1}/${shards.length} =====\n`);
+   }
+   resolve(result);
   });
  };
  attempt(true,options.timeoutMs||timeoutMs);

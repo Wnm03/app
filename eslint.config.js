@@ -153,7 +153,7 @@ module.exports = [
   },
   {
     // Node globals for repository tests/scripts and the service worker.
-    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'collect-app-globals.js', 'scripts/**/*.js', 'tests/**/*.js', 's2228-accumulated-baseline-integrity.test.js', 'test-runner-checkpoint-integrity-s1777.test.js'],
+    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'collect-app-globals.js', 'scripts/**/*.js', 'tests/**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'commonjs',
