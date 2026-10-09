@@ -49,14 +49,15 @@ function makeCtx({
   );
 }
 
-test('render() — wrap disembunyikan kalau tidak ada curVehicleId', () => {
+test('render() — wrap TETAP tampil dgn keterangan kalau tidak ada curVehicleId', () => {
   const { doc, els } = makeFakeDoc(['fuelIntelWrap', 'fuelIntelBody']);
   const ctx = makeCtx({ document: doc, FuelIntelligenceEngine: {}, curVehicleId: null });
   ctx.FuelCard.render();
-  assert.equal(els.fuelIntelWrap.style.display, 'none');
+  assert.equal(els.fuelIntelWrap.style.display, '');
+  assert.match(els.fuelIntelBody.innerHTML, /Pilih kendaraan aktif/);
 });
 
-test('render() — wrap disembunyikan kalau vehicleInsight() {ok:false}', () => {
+test('render() — wrap TETAP tampil dgn keterangan kalau vehicleInsight() {ok:false}', () => {
   const { doc, els } = makeFakeDoc(['fuelIntelWrap', 'fuelIntelBody']);
   const ctx = makeCtx({
     document: doc,
@@ -64,7 +65,8 @@ test('render() — wrap disembunyikan kalau vehicleInsight() {ok:false}', () => 
     curVehicleId: 'v1',
   });
   ctx.FuelCard.render();
-  assert.equal(els.fuelIntelWrap.style.display, 'none');
+  assert.equal(els.fuelIntelWrap.style.display, '');
+  assert.match(els.fuelIntelBody.innerHTML, /tidak ditemukan/);
 });
 
 test('render() — kendaraan valid, overdue reminder -> status merah, wrap tampil', () => {
