@@ -963,6 +963,9 @@ if(cniRekomendasiEl){cniRekomendasiEl.classList.toggle('u-dnone',t!=='rekomendas
 // (tx-list-cashflow.js) — murni label teks, tidak ada navigasi/logic baru.
 const cniBc=document.getElementById('cniBreadcrumbSub');
 if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
+// S2263 membuat render per-sub-tab malas (renderCnTab cabang by pane terlihat);
+// ganti sub-tab HARUS memicu render supaya pane yang baru tampil terisi.
+if(typeof renderCnTab==='function')renderCnTab();
 }
 function setCnBbmTab(t,el){
 if(!CNB_SUBTAB_ORDER.includes(t))t='ringkasan';
@@ -981,6 +984,9 @@ const cnbAnalisisEl=document.getElementById('cnbTab-analisis');
 if(cnbAnalisisEl){cnbAnalisisEl.classList.toggle('u-dnone',t!=='analisis');cnbAnalisisEl.style.display='';}
 const cnbBc=document.getElementById('cnbBreadcrumbSub');
 if(cnbBc)cnbBc.textContent=CNB_SUBTAB_LABEL[t]||t;
+// Lihat catatan S2263 di setCnInsightTab: Fuel Intelligence (Ringkasan) &
+// Fuel Dashboard/Compare/Trend (Analisis Lanjutan) dirender malas.
+if(typeof renderCnTab==='function')renderCnTab();
 }
 function getVehicleKm(vehicleId){
 const kms=[
