@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2285';
+const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2289';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -21,7 +21,31 @@ AlokasiAset.init();
 renderWealthSnapshots();
 }
 
+// S2288 PERF — "render scope" cache. Render Car Notes/Dashboard memanggil predictService() dan
+// getLastServiceKmForCat() berulang kali dgn argumen sama dalam SATU render sinkron (getSummary,
+// getInsights, maintenanceRisk/Impact/Recommendation, computeServiceUrgency...). Di dalam scope ini
+// hasilnya di-memo per (kunci) dan otomatis dibuang saat scope terluar selesai ATAU save() dipanggil,
+// jadi TIDAK ada data basi di luar satu render (tes unit yg memanggil fungsi langsung tidak terpengaruh).
+let _kwScopeDepth=0,_kwScopeCache=null;
+function kwRenderScope(fn){
+_kwScopeDepth++;
+if(!_kwScopeCache)_kwScopeCache=new Map();
+try{return fn();}
+finally{_kwScopeDepth--;if(_kwScopeDepth<=0){_kwScopeDepth=0;_kwScopeCache=null;}}
+}
+function kwScopeMemo(key,compute){
+if(!_kwScopeCache)return compute();
+if(_kwScopeCache.has(key))return _kwScopeCache.get(key);
+const v=compute();
+_kwScopeCache.set(key,v);
+return v;
+}
+function kwScopeInvalidate(){if(_kwScopeCache)_kwScopeCache.clear();}
+
 function renderPageContent(name){
+return kwRenderScope(function(){return _renderPageContentImpl(name);});
+}
+function _renderPageContentImpl(name){
 // PERF NAVIGATION GUARD (S2331): navigation is a read/render operation, not a data
 // mutation boundary. Clearing finance caches here forced the next page to rebuild account
 // indexes, cash-flow forecasts, and Finance Intelligence even when data had not changed.
@@ -771,7 +795,7 @@ dayListEl.innerHTML=`<div class="u-fs12 u-t2 u-mb8">${dLabel} · ${selList.lengt
 
 
 function renderLDR(){
-if(D.nextPulang)document.getElementById('nextPulang').value=D.nextPulang;
+{const _np=document.getElementById('nextPulang');if(D.nextPulang&&_np)_np.value=D.nextPulang;} // S2288-d B4: elemen #nextPulang tidak ada di HTML manapun -> sebelumnya TypeError bila D.nextPulang terisi
 const now=new Date(),m=now.getMonth(),y=now.getFullYear();
 const whThisMonth=D.workDays.filter(w=>{const d=new Date(w.date);return d.getMonth()===m&&d.getFullYear()===y;});
 const cycleEl=document.getElementById('ldrCycle');

@@ -882,6 +882,19 @@ if(typeof DashboardInsightDedup!=='undefined'&&typeof DashboardInsightDedup.sche
 renderCarImportVehicleSelect();
 }
 
+// S2288 B1 PERF: interaksi sub-tab (setCnTab/setCnInsightTab/setCnBbmTab, Servis.renderList...) memanggil
+// renderCnTab() langsung, di luar renderPageContent -> memo predictService/getLastServiceKmForCat tidak aktif.
+// Dibungkus saat runtime SETELAH deklarasi (teks fungsi asli tidak diubah: banyak tes membaca source-nya).
+// kwRenderScope bersifat reentrant (hitung kedalaman), jadi aman dipanggil dari dalam renderPageContent.
+if(typeof window!=='undefined'&&typeof window.renderCnTab==='function'&&!window.renderCnTab.__kwScoped){
+  const _renderCnTabRaw=window.renderCnTab;
+  window.renderCnTab=function renderCnTabScoped(){
+    const self=this,args=arguments;
+    return (typeof kwRenderScope==='function')?kwRenderScope(function(){return _renderCnTabRaw.apply(self,args);}):_renderCnTabRaw.apply(self,args);
+  };
+  window.renderCnTab.__kwScoped=true;
+}
+
 function renderBbmList(){return BBM.renderList();}
 
 function renderSparepartCatList(){return Sparepart.renderCatList();}

@@ -753,7 +753,8 @@ D.reminders.push({id:uid(),title,desc:document.getElementById('rDesc').value,col
 save();closeModal('reminderModal');renderSettings();toast('✅ Pengingat tersimpan');
 }
 function saveLDR(){
-if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;D.nextPulang=document.getElementById('nextPulang').value;D.ldrCycleStart=new Date().toISOString().slice(0,10);save();renderLDR();}
+if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;{const _np=document.getElementById('nextPulang');if(!_np)return;D.nextPulang=_np.value;} // S2288-d B4: guard elemen yg tidak ada (cegah TypeError, tanpa mengubah D)
+D.ldrCycleStart=new Date().toISOString().slice(0,10);save();renderLDR();}
 
 // (v94): toggleMs/delReminder dipindah dari backup-restore.js — domain
 // Milestone/Reminder di Pengaturan, gabung bareng saveCatatan/saveReminder/

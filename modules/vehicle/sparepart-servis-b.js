@@ -592,8 +592,17 @@ goToList('servisReminderCard','carnotes',4,null,'servis');
 // Servis.renderReminder(). Dengan categoryId: balikin 1 objek prediksi
 // (bukan array) buat kategori itu saja. Balikin {ok:false} kalau kendaraan
 // tidak ditemukan atau belum ada kategori sparepart terdaftar.
-function predictService({vehicleId,categoryId}={}){
-if(typeof normalizeLegacyServiceLogs==='function')normalizeLegacyServiceLogs();
+function predictService(args){
+// S2288 PERF: memo per render scope (lihat kwRenderScope di modules-render.js). Di luar scope = perilaku lama.
+const a=args||{};
+if(typeof kwScopeMemo!=='function')return _predictServiceImpl(a);
+return kwScopeMemo('predict|'+String(a.vehicleId)+'|'+String(a.categoryId==null?'':a.categoryId),function(){return _predictServiceImpl(a);});
+}
+function _predictServiceImpl({vehicleId,categoryId}={}){
+if(typeof normalizeLegacyServiceLogs==='function'){
+  if(typeof kwScopeMemo==='function')kwScopeMemo('normalizeLegacyServiceLogs',function(){normalizeLegacyServiceLogs();return true;});
+  else normalizeLegacyServiceLogs();
+}
 const veh=(D.vehicles||[]).find(v=>v.id===vehicleId);
 if(!veh)return{ok:false,reason:'Kendaraan tidak ditemukan'};
 // BUGFIX (audit lanjutan Smart Delivery Engine): sebelumnya loop di sini

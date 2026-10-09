@@ -213,9 +213,20 @@ getServiceFinanceOwnershipIntegrity(vehicleId){
 },
 
 getLastServiceKmForCat(vehicleId,cat,actionTypeFilter,forReminder){
-const logs=((typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.historyRows==='function')?ServiceRuntimeProjectionSOT.historyRows(D,vehicleId):(Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[])).filter(s=>s.km&&servisLogMatchesCat(s,cat)&&Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
-logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
-return logs.length?logs[0].km:null;
+// S2288 PERF: satu lintasan O(n) mencari baris terbaru (sebelumnya filter -> alokasi array -> sort penuh
+// hanya utk mengambil elemen pertama); baris proyeksi per kendaraan di-memo per render scope.
+const rows=(typeof kwScopeMemo==='function')?kwScopeMemo('histRows|'+String(vehicleId),function(){return Servis._historyRowsForVehicle(vehicleId);}):Servis._historyRowsForVehicle(vehicleId);
+const cmp=typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||''));
+let best=null;
+for(let k=0;k<rows.length;k++){
+const s=rows[k];
+if(!s||!s.km||!servisLogMatchesCat(s,cat)||!Servis._matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder))continue;
+if(best===null||cmp(s,best)<0)best=s;
+}
+return best?best.km:null;
+},
+_historyRowsForVehicle(vehicleId){
+return (typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.historyRows==='function')?ServiceRuntimeProjectionSOT.historyRows(D,vehicleId):(Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId):[]);
 },
 
 _matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
@@ -777,3 +788,19 @@ servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banya
 
 
 // S2052/S2053 cumulative session UI contract: openHistorySessionEditor, addHistorySessionComponent, removeHistorySessionComponent, Edit Sesi, Tambah Komponen, Hapus.
+
+// S2288-d B1 PERF: Servis.renderList/renderReminder dipanggil langsung oleh handler sub-tab/riwayat (di luar
+// renderPageContent), sehingga memo predictService/getLastServiceKmForCat tidak aktif. Dibungkus saat runtime
+// SETELAH definisi (teks fungsi asli tidak diubah). kwRenderScope reentrant -> aman dipanggil dari dalam render halaman.
+(function(){
+  ['renderList','renderReminder'].forEach(function(k){
+    const raw=Servis[k];
+    if(typeof raw!=='function'||raw.__kwScoped)return;
+    const scoped=function(){
+      const self=this,args=arguments;
+      return (typeof kwRenderScope==='function')?kwRenderScope(function(){return raw.apply(self,args);}):raw.apply(self,args);
+    };
+    scoped.__kwScoped=true;
+    Servis[k]=scoped;
+  });
+})();

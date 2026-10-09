@@ -56,22 +56,20 @@ s.src=_isRetry?(src+(src.indexOf('?')>-1?'&':'?')+'_retry='+Date.now()):src;
 s.async=true;
 if(integrity){s.integrity=integrity;s.crossOrigin=crossOrigin||'anonymous';}
 let done=false;
-const timeoutId=setTimeout(()=>{
-if(done)return;done=true;clearTimeout(timeoutId);
+let _graceUsed=false;
+const timeoutId=setTimeout(function onTimeout(){
+if(done)return;
+// S2288: JANGAN memulai skrip ke-2 selagi skrip ke-1 masih bisa selesai -- keduanya akan dieksekusi dan
+// deklarasi top-level (const/let, mis. BusinessIntelligencePresenter) menjadi 'already been declared'
+// (global error banner palsu). Beri masa tunggu tambahan pada elemen yang SAMA; retry skrip baru hanya
+// terjadi lewat onerror (kegagalan transport nyata, skrip ke-1 pasti tidak dieksekusi).
+if(!_graceUsed){_graceUsed=true;setTimeout(onTimeout,15000);return;}
+done=true;
 delete window._loadedScripts[src];
-// A timeout is a transport failure too. Sebelumnya timeout langsung reject
-// tanpa retry, padahal onerror sudah retry 1x. Pada mobile/PWA atau saat
-// service-worker/network sedang lambat, ini membuat file yang sebenarnya ada
-// tampak sebagai "gagal dimuat" dan memicu false-negative diagnostik.
-if(!_isRetry){
-// satu kali percobaan ulang otomatis sebelum melaporkan timeout
-_loadScriptOnce(src,true,integrity,crossOrigin).then(resolve).catch(reject);
-}else{
-reject(new Error('Timeout memuat '+src+' setelah retry — cek koneksi internet, cache/service worker, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
-}
+reject(new Error('Timeout memuat '+src+' — cek koneksi internet, cache/service worker, atau kalau pakai Brave coba matikan Shields untuk situs ini, lalu coba lagi'));
 },15000);
 if(timeoutId&&typeof timeoutId.unref==='function')timeoutId.unref();
-s.onload=()=>{if(done)return;done=true;clearTimeout(timeoutId);resolve();};
+s.onload=()=>{if(done){window._loadedScripts[src]=Promise.resolve();return;}done=true;clearTimeout(timeoutId);resolve();};
 s.onerror=()=>{
 if(done)return;done=true;clearTimeout(timeoutId);
 delete window._loadedScripts[src];
@@ -134,7 +132,20 @@ function ensureSelfTest(){
   return window.__kwSelfTestPromise;
 }
 function ensureDiagnostics(){return ensureSelfTest();}
+// S2288 PERF/SAFETY: auto-run self-test sekarang OPT-IN. Dulu jalan otomatis 2.5s setelah boot di DATA ASLI
+// (menyapu semua sub-tab Car Notes, mengganti D.bbmLogs sementara, menyentuh kw_pin/kw_v4, menekan toast) tepat
+// saat user mulai memakai app -> beku & toast hilang. Aktifkan lewat ?selftest=1 (nempel) / ?selftest=0 (matikan),
+// atau localStorage.kw_selftest_auto='1'. Tes manual di Pengaturan > Diagnostik tetap berfungsi seperti biasa.
+function _kwSelfTestAutoEnabled(){
+  try{
+    var q=new URLSearchParams(location.search).get('selftest');
+    if(q==='1')localStorage.setItem('kw_selftest_auto','1');
+    if(q==='0')localStorage.removeItem('kw_selftest_auto');
+    return localStorage.getItem('kw_selftest_auto')==='1';
+  }catch(_e){return false;}
+}
 setTimeout(()=>{
+  if(!_kwSelfTestAutoEnabled())return;
   ensureSelfTest().then(()=>{
     if(typeof autoRunSelfTestIfNeeded==='function') return autoRunSelfTestIfNeeded();
   }).catch((err)=>{

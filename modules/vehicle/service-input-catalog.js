@@ -4,12 +4,17 @@
 (function(){
 function groups(){if(typeof SERVICE_CHECKLIST_GROUPS!=='undefined'&&Array.isArray(SERVICE_CHECKLIST_GROUPS))return SERVICE_CHECKLIST_GROUPS;const g=typeof globalThis!=='undefined'?globalThis:null;return g&&Array.isArray(g.__SERVICE_CHECKLIST_GROUPS__)?g.__SERVICE_CHECKLIST_GROUPS__:[];}
 function groupById(id){return groups().find(g=>g&&g.masterCategoryId===id)||null;}
+// S2288 PERF: itemById dipanggil per log servis saat render -- indeks Map (dibangun ulang hanya
+// bila array grup sumber berganti identitas/jumlah) menggantikan scan linear bersarang.
+let _idxSrc=null,_idxSig=-1,_idxMap=null;
 function itemById(id){
-for(const g of groups()){
-const it=(g.items||[]).find(x=>x&&x.id===id);
-if(it)return {item:it,group:g};
+const gs=groups();
+let sig=gs.length;for(let i=0;i<gs.length;i++)sig+=((gs[i]&&gs[i].items)||[]).length*31;
+if(gs!==_idxSrc||sig!==_idxSig){
+_idxSrc=gs;_idxSig=sig;_idxMap=new Map();
+for(const g of gs)for(const x of (g.items||[])){if(x&&x.id!==undefined&&!_idxMap.has(x.id))_idxMap.set(x.id,{item:x,group:g});}
 }
-return null;
+return _idxMap.get(id)||null;
 }
 function normalize(v){return String(v||'').trim().toLowerCase();}
 function infer(text){

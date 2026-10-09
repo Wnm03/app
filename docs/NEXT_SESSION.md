@@ -1,5 +1,11 @@
 # NEXT_SESSION.md — Target sesi berikutnya (update setiap sesi)
 
+> 🚀 **Update Sesi S2288 (2026-10-09) — Perbaikan performa:** Langkah 1,2,3,4,7a,7b dari rencana audit SELESAI
+> (Car Notes 9,2→0,5 dtk, Dashboard 2,3→0,01 dtk pada data sintetis 4×). **Target sesi berikutnya:** Backlog di
+> `docs/PERF-REMEDIATION-LOG.md` — mulai **B1** (scope sub-tab Car Notes) lalu **B2** (boot tidak memblokir render),
+> sambil mengumpulkan angka dari data nyata (B5). Log itu AKUMULATIF: tambahkan blok sesi baru, jangan menimpa.
+> Catatan basi di bawah ini dibiarkan (lihat catatan Sesi 429).
+
 > ⚠️ **Catatan Sesi 429 (lanjutan audit stale-doc S428)**: catatan
 > "Sync" teratas di bawah ini masih **Sesi 323** — BASI, repo sungguhan
 > sudah **Sesi 428, `v1142`** (105 sesi gap dari catatan sync terakhir).

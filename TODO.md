@@ -1,3 +1,5 @@
+> **[S2288] Prioritas performa (boot/navigasi/Dashboard/Car Notes):** lihat `docs/PERF-REMEDIATION-LOG.md` § Backlog (B1–B7) — log akumulatif per sesi.
+
 # TODO.md — Smart AI & Smart Logistics
 
 Prioritas tertinggi PALING ATAS. Satu item = target 1 sesi.

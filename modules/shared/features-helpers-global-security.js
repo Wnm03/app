@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2285';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2285';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2289';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2289';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -703,6 +703,7 @@ function clearPerfIndexes(){_perfAccountIndex={src:null,len:-1,map:null};_perfCa
   if(opts.carNotes&&isVisible('page-carnotes')&&!isVisible('page-dashboard')&&!isVisible('page-keuangan'))
     safe('renderCnTab',typeof renderCnTab==='function'?renderCnTab:null);
 }function save(opts){
+if(typeof kwScopeInvalidate==='function')kwScopeInvalidate();
 opts=opts||{};
 if(typeof window!=='undefined'&&window.__kwPersistenceRecoveryRequired===true){
  const _msg='⚠️ Penyimpanan data lama belum berhasil dipulihkan. Simpan dinonaktifkan untuk mencegah data lama tertimpa state kosong. Pulihkan dari backup atau muat ulang aplikasi setelah storage kembali tersedia.';
@@ -912,7 +913,7 @@ if(typeof fn !== 'function'){
 // data-action dan tanpa membuat module eager-load kembali.
 const lazyOwnerLoaders={
   Renov: typeof ensureRenov==='function'?ensureRenov:null,
-  SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null,
+  SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null, RenovCalc: typeof ensureRenov==='function'?ensureRenov:null, VehicleCatalogImportUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, VehicleCatalogWebImportUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, SparepartScannerUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, SparepartOcrCatalogAdd: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, // S2288 B4: loader modal lazy (klik diam)
   runSelfTest: typeof ensureSelfTest==='function'?ensureSelfTest:null,
   copySelfTestResults: typeof ensureSelfTest==='function'?ensureSelfTest:null,
   HondaPdfImportUI: typeof ensureHondaPdfImportScripts==='function'?ensureHondaPdfImportScripts:null,

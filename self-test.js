@@ -90,9 +90,9 @@ try{
 for(const c of cases){
 try{ await c.fn(); results.push({name:c.name,pass:true}); }
 catch(e){
-let msg=e.message;
+let msg=(e&&e.message)||String(e);
 if(_lazyLoadFailNote && /\b(Renov\w*|SewaKios|runDataHealthCheck|VehicleCatalogImportUI|SparepartOcrCatalogDetail|VehicleCatalogWebImportUI|HondaPdfImportUI|ShopPdfImportUI|buildLaporanExportData)\b is not defined/.test(msg)) msg+=' — BUKAN bug kode: '+_lazyLoadFailNote.replace(/^ \| /,'');
-results.push({name:c.name,pass:false,error:msg});
+results.push({name:(c&&c.name)||'(kasus tanpa nama)',pass:false,error:msg});
 }
 }
 }finally{
@@ -989,9 +989,11 @@ return;
 // sebelum fungsi ini dipanggil. Pola sama dgn dismissAllToasts() di
 // showPage()/setAsetTab() (S619/S621), cuma titik panggilnya beda.
 if(typeof dismissAllToasts==='function')dismissAllToasts();
+// S2288: tandai build ini SUDAH dicoba lebih dulu -- dulu penanda hanya ditulis bila seluruh run sukses,
+// sehingga satu crash membuat self-test (yg menyapu Car Notes di data asli) terulang di SETIAP boot.
+safeSetItem('kw_selftest_build',APP_BUILD_VERSION);
 const data=await computeSelfTestResults();
 saveSelfTestState(data);
-safeSetItem('kw_selftest_build',APP_BUILD_VERSION);
 if(data.failCount>0){
 toast('⚠️ Tes diagnostik otomatis: '+data.failCount+' dari '+data.total+' gagal setelah update. Cek Pengaturan → Diagnostik.',4500);
 }

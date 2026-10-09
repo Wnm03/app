@@ -12,22 +12,45 @@
   }
   function str(v){return v==null?'':String(v).trim();}
   function groups(){return rawGroups().slice();}
-  function categories(){return groups().map(x=>({
-    id:str(x&&x.masterCategoryId),
-    name:str(x&&x.group),
-    icon:x&&x.icon||'🔧',
-    source:x&&x.source||'SERVICE_CHECKLIST_GROUPS'
-  })).filter(x=>x.id);}
-  function categoryById(id){const k=str(id);return categories().find(x=>x.id===k)||null;}
+  // S2288 PERF: categories()/components()/componentById()/categoryById() dulu membangun ulang
+  // seluruh daftar (clone Object.assign per item) di SETIAP panggilan -- dipanggil per log servis
+  // x per kategori x per kendaraan saat render Car Notes/Dashboard (hotspot #1, lihat
+  // AUDIT-S2288-PERFORMA-BOOT-NAV-DASHBOARD-CARNOTES.md). Sekarang di-cache dan divalidasi lewat
+  // identitas array sumber + jumlah grup/item; invalidate() tersedia utk tes/mutasi eksplisit.
+  // Hasil cache dibagi-pakai (READ-ONLY) -- semua pemanggil existing hanya membaca (map/find/forEach).
+  let _src=null,_sig=-1,_cats=null,_catMap=null,_comps=null,_compMap=null;
+  function _signature(r){let n=r.length;for(let i=0;i<r.length;i++){const g=r[i];n+=(g&&Array.isArray(g.items)?g.items.length:0)*31+(g&&g.masterCategoryId?String(g.masterCategoryId).length:0);}return n;}
+  function _fresh(){
+    const r=rawGroups();const sig=_signature(r);
+    if(r!==_src||sig!==_sig){_src=r;_sig=sig;_cats=null;_catMap=null;_comps=null;_compMap=null;}
+  }
+  function invalidate(){_src=null;_sig=-1;_cats=null;_catMap=null;_comps=null;_compMap=null;}
+  function categories(){
+    _fresh();
+    if(_cats)return _cats;
+    _cats=groups().map(x=>({
+      id:str(x&&x.masterCategoryId),
+      name:str(x&&x.group),
+      icon:x&&x.icon||'🔧',
+      source:x&&x.source||'SERVICE_CHECKLIST_GROUPS'
+    })).filter(x=>x.id);
+    _catMap=new Map();_cats.forEach(c=>{if(!_catMap.has(c.id))_catMap.set(c.id,c);});
+    return _cats;
+  }
+  function categoryById(id){const k=str(id);categories();return _catMap.get(k)||null;}
   function components(){
+    _fresh();
+    if(_comps)return _comps;
     const out=[];
     groups().forEach(gp=>(Array.isArray(gp&&gp.items)?gp.items:[]).forEach(it=>{
       if(!it||!it.id)return;
       out.push(Object.assign({},it,{id:str(it.id),masterCategoryId:str(gp.masterCategoryId),masterCategoryName:str(gp.group),masterCategoryIcon:gp.icon||'🔧'}));
     }));
-    return out;
+    _comps=out;
+    _compMap=new Map();out.forEach(c=>{if(!_compMap.has(c.id))_compMap.set(c.id,c);});
+    return _comps;
   }
-  function componentById(id){const k=str(id);return components().find(x=>x.id===k)||null;}
+  function componentById(id){const k=str(id);components();return _compMap.get(k)||null;}
   const ALIASES=Object.freeze({
     'saringan udara':'filter-udara',
     'drive belt (v-belt cvt)':'v-belt-cvt',
@@ -92,7 +115,7 @@
 // const canonicalTargets=st.targets.map
 // ServiceTaxonomySOT.resolve({masterCategoryId:t.masterCategoryId,serviceComponentId:t.serviceComponentId
 // const hasSot=typeof ServiceTaxonomySOT
-  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,groups,categories,categoryById,components,componentById,resolve,canonicalTarget,targetKey,assertCanonical,categoriesForComponents};
+  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,invalidate,groups,categories,categoryById,components,componentById,resolve,canonicalTarget,targetKey,assertCanonical,categoriesForComponents};
   g.ServiceTaxonomySOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

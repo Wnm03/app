@@ -130,10 +130,13 @@ test('_loadScriptOnce(): gagal di percobaan pertama -> retry otomatis 1x dgn cac
   await assert.doesNotReject(p);
 });
 
-test('_loadScriptOnce(): timeout punya retry 1x dgn cache-buster sebelum reject', () => {
-  assert.match(SRC, /const timeoutId=setTimeout\(\(\)=>\{/);
-  assert.match(SRC, /if\(!_isRetry\)\{\s*\/\/ satu kali percobaan ulang otomatis sebelum melaporkan timeout\s*_loadScriptOnce\(src,true,integrity,crossOrigin\)\.then\(resolve\)\.catch\(reject\);\s*\}else\{/);
-  assert.match(SRC, /Timeout memuat .*setelah retry/);
+test('_loadScriptOnce(): timeout memberi masa tunggu tambahan pada elemen SAMA (tanpa skrip ke-2) lalu reject (S2288)', () => {
+  // S2288: retry-on-timeout dihapus -- skrip ke-1 yg lambat + skrip ke-2 sama-sama dieksekusi dan memicu
+  // "Identifier ... has already been declared". Retry baru hanya lewat onerror (transport gagal nyata).
+  assert.match(SRC, /const timeoutId=setTimeout\(function onTimeout\(\)\{/);
+  assert.match(SRC, /if\(!_graceUsed\)\{_graceUsed=true;setTimeout\(onTimeout,15000\);return;\}/);
+  assert.match(SRC, /Timeout memuat /);
+  assert.doesNotMatch(SRC, /Timeout memuat .*setelah retry/);
 });
 
 test('_loadScriptOnce(): gagal di percobaan pertama DAN retry -> reject dgn pesan "Gagal memuat ..."', async () => {

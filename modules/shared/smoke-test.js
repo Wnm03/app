@@ -168,7 +168,14 @@
     return missing;
   }
 
+  // S2288: banner merah hanya utk dev EKSPLISIT (?dev=1 / kw_dev=1). Dev implisit (localhost/file:)
+  // tetap menulis ke console, tapi tidak menutupi UI -- banner itu muncul di layar boot sebagai "error".
+  function explicitDev() {
+    try { return new URLSearchParams(location.search).get('dev') === '1' || localStorage.getItem('kw_dev') === '1'; }
+    catch (e) { return false; }
+  }
   function showBanner(text) {
+    if (!explicitDev()) return;
     try {
       var old = document.querySelector('[data-smoke-test-banner]');
       if (old) old.remove();
