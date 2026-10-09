@@ -93,18 +93,32 @@ render() {
   const el = document.getElementById('fuelIntelBody');
   if (!wrap || !el) return;
   const vid = (typeof curVehicleId !== 'undefined') ? curVehicleId : null;
-  if (typeof FuelIntelligenceEngine === 'undefined' || !vid) {
-    wrap.style.display = 'none';
+  // Kartu Fuel Intelligence TIDAK PERNAH disembunyikan (permintaan user):
+  // kalau engine/kendaraan/insight belum siap, tampilkan keterangan singkat
+  // supaya jelas kenapa isinya kosong, bukan menghilang diam-diam.
+  wrap.style.display = '';
+  const engineReady = (typeof FuelIntelligenceEngine !== 'undefined')
+    && FuelIntelligenceEngine && typeof FuelIntelligenceEngine.vehicleInsight === 'function';
+  if (!vid || !engineReady) {
+    el.innerHTML = this._emptyBody(!vid ? 'no-vehicle' : 'engine');
     return;
   }
   const insight = FuelIntelligenceEngine.vehicleInsight(vid);
-  if (!insight.ok) {
-    wrap.style.display = 'none';
+  if (!insight || !insight.ok) {
+    el.innerHTML = this._emptyBody('not-found');
     return;
   }
-  wrap.style.display = '';
   el.innerHTML = this._body(insight);
   this._installGaugeDelegation();
+},
+
+_emptyBody(reason) {
+  const msg = reason === 'no-vehicle'
+    ? 'Pilih kendaraan aktif untuk melihat estimasi BBM &amp; rekomendasi.'
+    : (reason === 'engine'
+      ? 'Mesin Fuel Intelligence belum siap dimuat. Muat ulang halaman.'
+      : 'Data kendaraan aktif tidak ditemukan. Pilih ulang kendaraan di Car Notes.');
+  return '<div class="u-fs12 u-t2">⛽ ' + msg + '</div>';
 },
 
 _money(n) {
