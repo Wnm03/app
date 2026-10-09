@@ -85,12 +85,16 @@ return `<div class="u-fw700 u-mb6">✏️ Edit ${CHAT_ACTION_LABELS[type]||''}</
       <button class="btn btn-ghost btn-sm" data-action="cancelChatActionEdit" data-args="${escapeHtml(JSON.stringify([actionId]))}">↩️ Batal Edit</button>
     </div>`;
 }
+// Dipanggil dinamis oleh dispatcher data-action; referensi string tidak terbaca sebagai pemakaian statis oleh ESLint.
+// eslint-disable-next-line no-unused-vars
 function editChatAction(actionId){
 const pending=_pendingChatActions[actionId];
 const el=document.getElementById('chatAction_'+actionId);
 if(!pending||!el)return;
 el.innerHTML=chatActionEditFormHTML(actionId,pending.type,pending.data);
 }
+// Dipanggil dinamis oleh dispatcher data-action; nama fungsi harus tetap cocok dengan atribut data-action.
+// eslint-disable-next-line no-unused-vars
 function saveChatActionEdit(actionId){
 const pending=_pendingChatActions[actionId];
 const el=document.getElementById('chatAction_'+actionId);
