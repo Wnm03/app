@@ -8,7 +8,7 @@ function ok(name,cond){assert.ok(cond,name);console.log('PASS',name)}
 ok('batch defers post-commit events', cn.includes('_batchDeferEvents') && cn.includes('for(const entry of results)'));
 // S1857: batch rollback moved from a whole-array JSON snapshot (batchSnapshot) to a
 // targeted restore filtered by batchId (see PATCH-README-S1857 point 5).
-ok('batch failure restores domain snapshot', cn.includes('restoreBatch();') && cn.includes('batchIds') && cn.includes('_rollbackLog.batchId===batchId'));
+ok('batch failure restores domain snapshot', cn.includes('restoreBatch(batchId)') && cn.includes('batchIds') && cn.includes('_rollbackLog.batchId===batchId'));
 ok('failed lifecycle uses outbox', cn.includes('ServiceEventOutbox.enqueue'));
 ok('service CSV exports canonical fields', br.includes('Service ID') && br.includes('Idempotency Key') && br.includes('Next Due Date'));
 ok('outbox available from service adapter', ad.includes('const ServiceEventOutbox') && ad.includes('pending()') && ad.includes('drain(handler)'));

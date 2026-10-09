@@ -56,7 +56,7 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
  // A shard containing files MUST produce a non-zero test count. Retry that
  // specific transport/infrastructure anomaly once before marking the shard bad.
  const attempt=(retryEmpty,attemptTimeoutMs=timeoutMs)=>{
-  const child=spawn(process.execPath,['--test',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,['--test','--test-reporter=tap',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
   let out='',err='',timedOut=false; const timer=setTimeout(()=>{timedOut=true;child.kill('SIGTERM');setTimeout(()=>child.kill('SIGKILL'),3000)},attemptTimeoutMs);
   child.stdout.on('data',b=>out+=b); child.stderr.on('data',b=>err+=b);
   child.on('close',code=>{clearTimeout(timer);const stats=parse(out+err);

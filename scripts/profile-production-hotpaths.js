@@ -54,7 +54,7 @@ console.log('performance-contract-tests:');
 let failed = false;
 for (const rel of contractTests) {
   const started = performance.now();
-  const r = spawnSync(process.execPath, ['--test', rel], {
+  const r = spawnSync(process.execPath, ['--test', '--test-reporter=tap', rel], {
     cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']
   });
   const elapsed = performance.now() - started;

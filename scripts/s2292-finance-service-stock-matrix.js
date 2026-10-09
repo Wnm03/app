@@ -19,7 +19,7 @@ ok('single-service-stock-rollback-captures-before-state',/_markStockBefore/.test
 const batch=servis.slice(servis.indexOf('async markServicedBatch('));
 ok('batch-shares-one-batch-id',/const batchId=uid\(\)/.test(batch)&&/batchId,_batchOwnedLock/.test(batch));
 ok('batch-defers-save-until-all-domain-effects',batch.indexOf('save({domain:\'servis\'')>batch.indexOf('for(const it of items)'));
-ok('batch-rollback-service-finance-stock',/restoreBatch\(\)/.test(batch)&&/batchIds/.test(batch)&&/setQtyMap\(batchStockBefore/.test(batch));
+ok('batch-rollback-service-finance-stock',/restoreBatch\(batchId\)/.test(batch)&&/batchIds/.test(batch)&&/setQtyMap\(batchStockBefore/.test(batch));
 ok('service-edit-rollback-restores-finance-stock',/restoreState\(journal\)/.test(session)&&/FinanceTxSOT\.replaceSnapshot/.test(session)&&/StockCommandSOT\.replaceSnapshot/.test(session));
 ok('finance-service-link-post-commit-lifecycle',/applyTxServisFromTx\(savedTxId/.test(tx)&&/ServiceEventLifecycle\.(create|update)/.test(tx));
 ok('service-outbox-dedup-key-present',/queueKey|dedup|idempot/.test(outbox));

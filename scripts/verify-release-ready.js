@@ -84,10 +84,15 @@ function checkLint() {
   // dependensi ke npx (yg di beberapa environment tetap mencoba fetch
   // dari registry walau --no-install, bikin sinyal "unavailable" vs
   // "gagal krn network" jadi rancu).
+  // KW_ESLINT_PATH_ONLY=1 (dipakai test end-to-end): jangan prepend
+  // node_modules/.bin, supaya eslint palsu/ketiadaan eslint di PATH test
+  // benar-benar dipakai walau di mesin/CI itu eslint nyata sudah terpasang.
   const binDir = path.join(ROOT, 'node_modules', '.bin');
-  const env = Object.assign({}, process.env, {
-    PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
-  });
+  const env = process.env.KW_ESLINT_PATH_ONLY === '1'
+    ? Object.assign({}, process.env)
+    : Object.assign({}, process.env, {
+      PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+    });
   try {
     execSync('eslint .', { cwd: ROOT, stdio: 'pipe', env });
     return { status: 'passed', detail: '0 error/warning.' };

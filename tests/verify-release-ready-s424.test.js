@@ -79,7 +79,7 @@ function runGate(env) {
   try {
     const out = execFileSync('node', [SCRIPT], {
       cwd: ROOT,
-      env: Object.assign({}, process.env, env),
+      env: Object.assign({}, process.env, { KW_ESLINT_PATH_ONLY: '1' }, env),
       encoding: 'utf8',
     });
     return { exitCode: 0, out };
