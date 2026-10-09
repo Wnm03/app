@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2279';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2279';
+const APP_BUILD_VERSION = 's2041-1-part-sot-hardening-2284';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2041-1-part-sot-hardening-2284';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -220,6 +220,7 @@ let _txCatLearnSource=null;
 let _saveGuards={};
 function withSaveGuard(key,modalId,fn){
 if(_saveGuards[key])return;
+if(_financeMutationBlockedByStaleState())return false; // S2462 (restored in S2041.5): live copy had lost this preflight; only the dead modules/finance copy had it
 const modalEl=modalId?document.getElementById(modalId):null;
 if(modalEl && !modalEl.classList.contains('open'))return;
 _saveGuards[key]=true;
@@ -231,6 +232,7 @@ _saveGuards[key]=false;
 }
 async function withSaveGuardAsync(key,modalId,fn){
 if(_saveGuards[key])return;
+if(_financeMutationBlockedByStaleState())return false; // S2462 (restored in S2041.5): live copy had lost this preflight; only the dead modules/finance copy had it
 const modalEl=modalId?document.getElementById(modalId):null;
 if(modalEl && !modalEl.classList.contains('open'))return;
 _saveGuards[key]=true;
@@ -847,7 +849,7 @@ function _markCrossTabStale(){
 // Canonical Finance cross-tab stale-write guard (single production definition).
 function _financeMutationBlockedByStaleState(){
  if(typeof _crossTabStateStale==='undefined'||!_crossTabStateStale)return false;
- const _msg='⚠️ Data aplikasi berubah di tab lain. Muat ulang aplikasi sebelum menyimpan perubahan Finance agar data lama tidak menimpa data terbaru.';
+ const _msg='⚠️ Data aplikasi berubah di tab lain. Muat ulang aplikasi sebelum menyimpan perubahan agar data lama tidak menimpa data terbaru.';
  if(typeof toast==='function')toast(_msg,6500);else if(typeof console!=='undefined'&&console.warn)console.warn(_msg);
  return true;
 }

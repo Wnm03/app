@@ -110,7 +110,9 @@ test('S256AH: no duplicate observer; one class-only observer on #themeGrid; no g
 });
 
 test('S256AH: S256AG hooks the single sync entry point (install + rAF run), keeps its own childList-only observer', () => {
-  assert.strictEqual((ag.match(/_a11yPressedSyncAll\(document\)/g) || []).length, 2);
+  // S2041.3: install sweeps document once; the observer pass sweeps only the parents of newly added elements (root var), never document.
+  assert.strictEqual((ag.match(/_a11yPressedSyncAll\(document\)/g) || []).length, 1);
+  assert.strictEqual((ag.match(/_a11yPressedSyncAll\(r\)/g) || []).length, 1);
   assert.ok(/observe\(document\.body,\{childList:true,subtree:true\}\)/.test(ag));
   assert.ok(ag.indexOf('_a11yEnhanceActionControls(document);\nif(typeof _a11yPressedSyncAll') > 0, 'sync runs after enhance');
 });

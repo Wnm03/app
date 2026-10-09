@@ -2,8 +2,11 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('fs');
-const a=fs.readFileSync('app-bundle-a.min.js','utf8');
-const b=fs.readFileSync('app-bundle-b.min.js','utf8');
+// S2041.5: contracts are asserted on SOURCE (readable, stable), not on the esbuild-minified bundles: minify rewrites
+// quotes ('->\"), renames locals (_sameAsetTab) and drops const, so these regexes only matched non-minified builds.
+// Bundle freshness (source == bundle) is enforced separately by scripts/verify-bundle-freshness.js.
+const a=['modules/shared/modules-render.js','modules/asset/aset-misc.js'].map(f=>fs.readFileSync(f,'utf8')).join('\n');
+const b=fs.readFileSync('modules/shared/modal-navigasi.js','utf8');
 
 test('Keuangan page navigation is top-tab scoped',()=>{
   const i=a.indexOf("if(name==='keuangan'){");

@@ -553,6 +553,7 @@ el.innerHTML=q
 : '<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada stok sparepart untuk kendaraan ini</div></div>';
 return;
 }
+const _usageIdx=Sparepart._buildPartUsageIndex();
 el.innerHTML=list.map((p)=>{
 const i=_partsStockRead().indexOf(p);
 const cat=D.sparepartCats.find(c=>c.id===p.catId);
@@ -560,7 +561,7 @@ const low=p.minStock>0&&p.qty<=p.minStock;
 const partLinkage=getServiceLinkage(p,vid);
 const partComponent=partLinkage.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(partLinkage.serviceComponentId):null;
 const meta=[`${p.qty}${p.unit?' '+p.unit:''}`,cat?cat.name:null,partLinkage.masterCategoryName||null,partComponent&&partComponent.item?partComponent.item.name:null,p.price?'Rata2 '+fmtFull(p.price):null,p.lastPrice?'Terakhir '+fmtFull(p.lastPrice):null,p.lastPurchaseDate?'Dibeli '+p.lastPurchaseDate:null].filter(Boolean).join(' • ');
-const history=Sparepart.getPartUsageHistory(p.id);
+const history=Sparepart.getPartUsageHistory(p.id,_usageIdx);
 const historyHtml=history.length?`<div class="u-mt4">${history.map(h=>`<div class="u-pointer" style="padding:6px 0 6px 4px;border-top:1px dashed var(--border)" data-action="Sparepart.openPartHistoryEntry" data-args="${escapeHtml(JSON.stringify([h.servisId,h.vehicleId]))}"><div class="tx-name u-fs12">🗓️ ${escapeHtml(h.item)} <span class="u-fs12t2">— ${escapeHtml(h.vehicleName)}</span></div><div class="tx-meta">${escapeHtml(h.date)}${h.km?' • '+h.km.toLocaleString('id-ID')+' km':''} • ${h.qty}${p.unit?' '+escapeHtml(p.unit):''} dipakai</div></div>`).join('')}</div>`:'';
 const priceHistoryHtml=Sparepart.getPartPriceHistoryHtml(p);
 // S622: badge kecil "khusus kendaraan X" kalau p.vehicleId terisi, supaya
@@ -572,9 +573,18 @@ const stockVehBadge=p.vehicleId?`<span class="u-fs12 u-fw700 u-r6 u-ml4" style="
 return `<div class="tx-item"><div class="tx-icon" style="background:${low?'rgba(255,80,80,.15)':'var(--accent-soft)'}">${low?'⚠️':'📦'}</div><div class="tx-info"><div class="tx-name">${escapeHtml(p.name)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(p.code||'-')}</span>${p.catalogId?'<span class="u-fs12 u-fw700 u-r6 u-ml4" style="padding:1px 6px;background:rgba(80,160,255,.15);color:#4a90e2" title="Tautan otomatis dari Katalog Suku Cadang (scan)">🔗 Katalog</span>':''}${stockVehBadge}</div><div class="tx-meta" style="${low?'color:#ff5050;font-weight:700':''}">${escapeHtml(meta)}${low?' • Stok menipis!':''}${p.note?' • '+escapeHtml(p.note):''}</div>${priceHistoryHtml}${historyHtml}</div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openStockModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delStock" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('');
 },
-getPartUsageHistory(partId){
+// S2041.7: one pass over D.servisLogs -> Map(partId -> logs in original order). renderStockList() used to call getPartUsageHistory() per row,
+// each doing a full D.servisLogs.filter (O(rows x logs): ~0.25 ms/row @4x CPU => 750 ms for 3000 rows). Same predicate/order as the filter below.
+_buildPartUsageIndex(){
+const idx=new Map();
+const add=(k,s)=>{ if(!k)return; let a=idx.get(k); if(!a){a=[];idx.set(k,a);} if(a[a.length-1]!==s)a.push(s); };
+(D.servisLogs||[]).forEach(s=>{ if(!s)return; add(s.usedPartId,s); add(s.catalogPartLinkedStockId,s); });
+return idx;
+},
+getPartUsageHistory(partId,usageIndex){
 if(!partId)return[];
-return D.servisLogs.filter(s=>s.usedPartId===partId||s.catalogPartLinkedStockId===partId).map(s=>{
+const src=usageIndex?(usageIndex.get(partId)||[]):D.servisLogs.filter(s=>s.usedPartId===partId||s.catalogPartLinkedStockId===partId);
+return src.map(s=>{
 const veh=D.vehicles.find(v=>v.id===s.vehicleId);
 const qty=(s.usedPartId===partId)?(s.usedPartQty||0):(s.catalogPartQty||0);
 return{servisId:s.id,vehicleId:s.vehicleId,vehicleName:veh?veh.name:'-',date:s.date,item:s.item,km:s.km||null,qty};

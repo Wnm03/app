@@ -61,6 +61,11 @@ function partLabel(p){
 function partById(id){return partsStockRead().find(p=>p&&p.id===id)||null}
 function refreshSelect(selectId,context={}){
   const sel=d(selectId); if(!sel)return false;
+  // S2041.2 (perf): di build produksi #servisPartId adalah <input type="hidden"> (modules/shared/modals.js), bukan <select>.
+  // Tanpa .options, currentHtml selalu '' sehingga nextHtml!==currentHtml terus benar -> sel.innerHTML ditulis ulang tiap
+  // refreshAll(), memicu MutationObserver body (boot()) lagi: loop ±11 mutasi/detik selama 120 dtk + sapuan a11y tiap mutasi.
+  // Elemen non-select tidak punya opsi untuk disegarkan, jadi lewati (perilaku <select> tidak berubah).
+  if(!sel.options)return false;
   const selected=sel.value||'';
   const rows=partRows({...pickerDefaults(selectId),...context});
   const oldOpts=Array.from(sel.options||[]);

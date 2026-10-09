@@ -6,9 +6,10 @@ const {loadSource}=require('./helpers/loadSource');
 
 test('S2462 Finance save guards preflight stale cross-tab state',()=>{
   const shared=require('fs').readFileSync('modules/shared/features-helpers-global-security.js','utf8');
-  const finance=require('fs').readFileSync('modules/finance/features-helpers-global-security.js','utf8');
-  assert.match(shared,/function _financeMutationBlockedByStaleState\(\)/);
-  assert.doesNotMatch(finance,/function _financeMutationBlockedByStaleState\(\)/);
+  // S2041.5: modules/finance/features-helpers-global-security.js is a stale copy NOT in the build (scripts/build.js lists only modules/shared/...),
+  // so the live contract is asserted on the shared file: single definition + both wrappers preflight it.
+  const finance=shared;
+  assert.equal((shared.match(/function _financeMutationBlockedByStaleState\(\)/g)||[]).length,1);
   assert.match(finance,/function withSaveGuard\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
   assert.match(finance,/async function withSaveGuardAsync\(key,modalId,fn\)\{\s*if\(_saveGuards\[key\]\)return;\s*if\(_financeMutationBlockedByStaleState\(\)\)return false;/);
 });
