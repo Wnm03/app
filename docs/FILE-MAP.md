@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-09T01:33:09.694Z
+Terakhir digenerate: 2026-10-09T01:52:33.946Z
 Total file source: 487 · Total identifier global: 17053
 
 ## 1. Urutan load & ringkasan tiap file
@@ -130,7 +130,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 107 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 108 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 109 | `modules/vehicle/car-notes-performance.js` | 109 | _(tidak ada komentar header)_ |
-| 110 | `modules/vehicle/vehicle-core.js` | 1311 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
+| 110 | `modules/vehicle/vehicle-core.js` | 1317 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 111 | `modules/vehicle/fuel-price-ref.js` | 242 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
 | 112 | `modules/vehicle/vehicle-catalog.js` | 653 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 113 | `modules/vehicle/vehicle-catalog-write-sot.js` | 65 | canonical write gate for part identity. SOT-3C: all feature write paths that create a part should resolve/create through VehicleCatalog first. Legacy D.partsStock/D.sparepartCats remain compatibility … |
