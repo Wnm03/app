@@ -48,7 +48,7 @@ function isValidCheckpoint(r,index){
  const hashesOk=expectedFiles.every(f=>r&&r.fileHashes&&r.fileHashes[f]===fileHashes[f]);
  return !!(r&&r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&(r.pass+r.skipped)===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk);
 }
-function parse(out){const get=k=>{const m=out.match(new RegExp(`# ${k} (\\d+)`));return m?Number(m[1]):0};return {tests:get('tests'),pass:get('pass'),fail:get('fail'),cancelled:get('cancelled'),skipped:get('skipped'),todo:get('todo')};}
+function parse(out){const get=k=>{const m=out.match(new RegExp(`(?:^|\\n)(?:#|ℹ) ${k} (\\d+)`));return m?Number(m[1]):0};return {tests:get('tests'),pass:get('pass'),fail:get('fail'),cancelled:get('cancelled'),skipped:get('skipped'),todo:get('todo')};}
 function runShard(list,index,options={}){return new Promise(resolve=>{
  const cp=checkpointPath(index); if(!force&&fs.existsSync(cp)){try{const old=JSON.parse(fs.readFileSync(cp,'utf8')); if(isValidCheckpoint(old,index))return resolve({...old,checkpoint:true});}catch(e){ console.warn(`Ignoring invalid checkpoint for shard ${index+1}: ${e.message}`); }}
  // S1766: under concurrent load, Node's test child can occasionally exit 0
@@ -56,7 +56,7 @@ function runShard(list,index,options={}){return new Promise(resolve=>{
  // A shard containing files MUST produce a non-zero test count. Retry that
  // specific transport/infrastructure anomaly once before marking the shard bad.
  const attempt=(retryEmpty,attemptTimeoutMs=timeoutMs)=>{
-  const child=spawn(process.execPath,['--test',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
+  const child=spawn(process.execPath,['--test','--test-reporter=tap',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
   let out='',err='',timedOut=false; const timer=setTimeout(()=>{timedOut=true;child.kill('SIGTERM');setTimeout(()=>child.kill('SIGKILL'),3000)},attemptTimeoutMs);
   child.stdout.on('data',b=>out+=b); child.stderr.on('data',b=>err+=b);
   child.on('close',code=>{clearTimeout(timer);const stats=parse(out+err);
