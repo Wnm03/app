@@ -11,7 +11,7 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-09T08:08:40.817Z
+Terakhir digenerate: 2026-10-09T10:41:32.652Z
 Total file source: 487 · Total identifier global: 17068
 
 ## 1. Urutan load & ringkasan tiap file
