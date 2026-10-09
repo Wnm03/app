@@ -101,7 +101,7 @@ test('S2016: history component list and rows use canonical resolver + normalized
 });
 
 test('S2016: production bundle contains the canonical history-navigation fix', () => {
-  const bundle = fs.readFileSync(path.join(root, 'app-bundle-b.min.js'), 'utf8');
+  const bundle = require('./helpers/bundleSource').source('b');
   assert.match(bundle, /serviceHistorySessionFilter=''/);
   assert.match(bundle, /resolveLogServiceComponentId/);
 });

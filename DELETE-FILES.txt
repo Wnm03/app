@@ -1,1 +1,4 @@
+# Manifest hapus KUMULATIF (S2551). Hanya boleh bertambah; apply-delete-manifest aman jika file sudah tidak ada.
+pro-ui-layer.css
+modules/shop/modules-render.js
 collect-app-globals.js

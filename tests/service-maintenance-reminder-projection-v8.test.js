@@ -4,8 +4,8 @@ const path=require('path');
 const root=path.resolve(__dirname,'..');
 const car=readCarNotesSource();
 const spare=fs.readFileSync(path.join(root,'modules/vehicle/sparepart-servis.js'),'utf8');
-const a=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
-const b=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
+const a=require('./helpers/bundleSource').source('a');
+const b=require('./helpers/bundleSource').source('b');
 let pass=0;
 function ok(cond,msg){if(!cond)throw new Error(msg);pass++;console.log('PASS',msg);}
 ok(car.includes('function getMaintenanceReminderProjection(vehicleId)'), 'source has maintenance reminder projection');

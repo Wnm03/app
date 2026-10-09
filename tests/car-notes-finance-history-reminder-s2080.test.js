@@ -61,7 +61,7 @@ test('S2080 runtime audit catches cross-vehicle Finance -> History leakage',()=>
 });
 
 test('S2080 reminder migration makes vehicle SOT the source after first legacy read',()=>{
-  const src=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
+  const src=require('./helpers/bundleSource').source('b');
   const pos=src.indexOf('function getReminderCategoriesForVehicle(vehicleId)');
   assert.ok(pos>=0);
   const block=src.slice(pos,pos+1800);

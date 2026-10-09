@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-09T02:13:55.112Z
-Total file source: 487 · Total identifier global: 17055
+Terakhir digenerate: 2026-10-09T02:44:41.002Z
+Total file source: 487 · Total identifier global: 17059
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -24,7 +24,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 1 | `modules/shared/pwa-ux-performance.js` | 154 | _(tidak ada komentar header)_ |
 | 2 | `modules/shared/pwa-production-hardening.js` | 70 | _(tidak ada komentar header)_ |
 | 3 | `modules/shared/modules-render.js` | 1517 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
-| 4 | `modules/shared/modules-render-b.js` | 1336 | _(tidak ada komentar header)_ |
+| 4 | `modules/shared/modules-render-b.js` | 1341 | _(tidak ada komentar header)_ |
 | 5 | `modules/shared/modals.js` | 33 | S1904 compatibility contract: Kategori Servis (SOT) dan Komponen Servis (SOT) adalah selector canonical. Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js … |
 | 6 | `modules/shared/modules-calc.js` | 1271 | _(tidak ada komentar header)_ |
 | 7 | `modules/shop/cobek-etalase.js` | 906 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -284,7 +284,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 261 | `modules/vehicle/fuel-history.js` | 51 | Fuel History (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelStorage.recent() (sesi ini — sendiri 100% reuse D.bbmLogs apa adanya) utk daftar catatan isi BBM terbaru. Tap 1 baris membuka … |
 | 262 | `modules/vehicle/fuel-analytics.js` | 88 | Fuel Analytics (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE VehicleFuelTrendSummary.summary() (Sesi 81, Batch 7 — sendiri 100% reuse VehicleTrendAPI.monthlyCostTrend() utk histori biaya … |
 | 263 | `modules/vehicle/fuel-modal.js` | 44 | Fuel Modal (TASK-141, Fuel Intelligence Card). PRINSIP: orkestrasi TIPIS saja. Buka overlay #fuelIntelModal (markup di modals.js, sesi ini) & panggil FuelAnalytics.render()/FuelHistory.render() (sesi ini, keduanya 100% … |
-| 264 | `modules/vehicle/fuel-card.js` | 540 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
+| 264 | `modules/vehicle/fuel-card.js` | 555 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
 | 265 | `modules/vehicle/fuel-intelligence-ui.js` | 372 | Fuel Bar Correction (TASK-144). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelGaugeEngine (TASK-143, konversi bar<->liter<->persen) + FuelTankProfile (TASK-142, kapasitas tangki & jumlah bar) — TIDAK ada rumus … |
 | 266 | `modules/vehicle/fuel-tank-profile-ui.js` | 135 | Atur Tangki UI (companion untuk TASK-142 FuelTankProfile & TASK-144 FuelBarCorrection). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelTankProfile.get()/ validate()/save() (SUDAH ADA) — TIDAK ada rumus/validasi baru … |
 | 267 | `modules/vehicle/fuel-prediction-engine.js` | 257 | Fuel Consumption Prediction Engine (TASK-146). PRINSIP: engine-only, 0 UI, PURE (read-only, tidak pernah panggil save() atau menulis ke D). 100% REUSE modul fuel yang SUDAH ADA — 0 rumus bar/liter/persen/km/L/Rp per km … |
@@ -335,7 +335,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 312 | `modules/dashboard-hub/dashboard-hub-favorit.js` | 40 | Favorit (Tahap 3, Langkah 6): storage + service Dipindah ke modules/dashboard-hub/dashboard-hub-favorit.js (Sesi 11 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 313 | `modules/dashboard-hub/dashboard-hub-favorit-view.js` | 114 | Favorit (Tahap 3, Langkah 7-8): render + Dipindah ke modules/dashboard-hub/dashboard-hub-favorit-view.js (Sesi 11 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 314 | `modules/dashboard-hub/dashboard-hub-settings.js` | 203 | S129: "Pengaturan Dashboard" (Dashboard Settings). Presenter layer MURNI di atas mekanisme yang SUDAH ADA — RULE #1 sesi ini: ZIP sesi lalu adalah source of truth, 100% reuse modul existing, ZERO formula/framework baru, … |
-| 315 | `modules/dashboard-hub/dashboard-insight-dedup.js` | 255 | modules/dashboard-hub/dashboard-insight-dedup.js Presentation-only consolidation + role-based dashboard visibility. Principle: one insight has one canonical home; each dashboard shows only information that belongs to … |
+| 315 | `modules/dashboard-hub/dashboard-insight-dedup.js` | 277 | modules/dashboard-hub/dashboard-insight-dedup.js Presentation-only consolidation + role-based dashboard visibility. Principle: one insight has one canonical home; each dashboard shows only information that belongs to … |
 | 316 | `modules/ai/ai-command-center.js` | 142 | Sprint 3 Tahap 3.1: AI Command Center Foundation. Dipindah ke modules/ai/ai-command-center.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 317 | `modules/self-reward/self-reward-engine.js` | 217 | Domain Self Reward Engine: cek kelayakan self reward Dipindah ke modules/self-reward/self-reward-engine.js (Sesi 12 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 318 | `modules/self-reward/self-reward-view.js` | 221 | UI layer untuk Self Reward Engine. Memisahkan render/DOM Dipindah ke modules/self-reward/self-reward-view.js (Sesi 12 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
@@ -1542,6 +1542,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_stacked` | `modules/shared/modal-navigasi.js` |
 | `_stacked` | `modules/asset/modal-navigasi.js` |
 | `_staleRenderError` | `modules/shared/modal-navigasi.js` |
+| `_startPageObserver` | `modules/dashboard-hub/dashboard-insight-dedup.js` |
 | `_stateChanged` | `modules/shared/backup-restore.js` |
 | `_stateVersionBefore` | `modules/shared/backup-restore.js` |
 | `_stgOpenExternal` | `modules/shared/pengaturan-search.js` |
@@ -1861,6 +1862,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `action` | `modules/vehicle/servis-checklist.js` |
 | `action` | `modules/vehicle/servis.js` |
 | `action` | `modules/vehicle/servis-b.js` |
+| `action` | `modules/vehicle/fuel-card.js` |
 | `action` | `modules/vehicle/service-legacy-maintenance.js` |
 | `action` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `actionBadge` | `modules/vehicle/servis-b.js` |
@@ -10400,6 +10402,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `nonSelfResultIds` | `modules/asset/aset-owners.js` |
 | `nonSelfResultIds` | `modules/asset/investasi.js` |
 | `nonSpend` | `modules/shared/scan-ocr-b.js` |
+| `noProfile` | `modules/vehicle/fuel-card.js` |
 | `norm` | `modules/asset/aset-owners.js` |
 | `norm` | `modules/shared/ownership-engine.js` |
 | `norm` | `modules/shared/scan-ocr-b.js` |
@@ -11329,6 +11332,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pageHideHandler` | `modules/vehicle/sparepart-scanner.js` |
 | `pageNames` | `self-test.js` |
 | `pages` | `modules/vehicle/honda-oem-catalog-master.js` |
+| `pages` | `modules/dashboard-hub/dashboard-insight-dedup.js` |
 | `pageTexts` | `modules/vehicle/vehicle-catalog-import.js` |
 | `pageW` | `laporan-export.js` |
 | `pageW` | `modules/business/sewakios.js` |

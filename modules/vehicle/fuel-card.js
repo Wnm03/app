@@ -377,6 +377,21 @@ _gaugeHtml(vehicleId) {
   return `<div class="fuelcard-gauge" data-fuel-gauge-vehicle="${escapeHtml(String(vehicleId))}" role="button" tabindex="0" aria-label="Tap: koreksi estimasi BBM dengan speedometer. Tap lama: lihat diagnostic mentah." style="cursor:pointer">${segs}</div>`;
 },
 
+// _gaugeEmptyHintHtml(vehicleId) — S2550: _gaugeHtml() sengaja '' kalau profil
+// tangki/estimasi belum ada; tanpa petunjuk, user mengira fuel bar "hilang".
+// Presenter murni (0 rumus), tombol reuse data-action yang sudah ada.
+_gaugeEmptyHintHtml(vehicleId) {
+  if (typeof FuelTankProfile === 'undefined' || typeof escapeHtml !== 'function') return '';
+  const profile = FuelTankProfile.get(vehicleId);
+  const noProfile = !profile || !profile.tankCapacityLiter;
+  const msg = noProfile
+    ? 'Fuel bar belum tampil: profil tangki kendaraan ini belum diatur.'
+    : 'Fuel bar belum tampil: belum ada estimasi. Koreksi bar dengan speedometer dulu.';
+  const action = noProfile ? 'FuelTankProfileUI.open' : 'FuelBarCorrection.open';
+  const label = noProfile ? 'Atur Tangki' : 'Koreksi Bar';
+  return `<div class="u-fs12 orange" data-fuel-gauge-hint="1" style="margin:6px 0 10px;line-height:1.5">${msg} <button type="button" class="btn btn-ghost btn-sm" data-action="${action}" data-args="${escapeHtml(JSON.stringify([vehicleId]))}">${label}</button></div>`;
+},
+
 // _installGaugeDelegation — satu listener delegasi, dipasang sekali, menggantikan atribut onpointer*.
 _installGaugeDelegation() {
   if (this._gaugeDelegationInstalled || typeof document === 'undefined' || !document.addEventListener) return;
@@ -521,7 +536,7 @@ _body(insight) {
       </div>
     </div>
     <div class="u-fs12${statusCls ? ' ' + statusCls : ''}" style="margin:6px 0 10px;line-height:1.5">${escapeHtml(statusText)}</div>
-    ${this._gaugeHtml(insight.vehicleId)}
+    ${this._gaugeHtml(insight.vehicleId) || this._gaugeEmptyHintHtml(insight.vehicleId)}
     ${this._sourceBadgeHtml(insight.vehicleId)}
     ${kmClampedHtml}
     ${partialFillDriftHtml}

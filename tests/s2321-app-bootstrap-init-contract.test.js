@@ -14,7 +14,7 @@ test('S2321 app bootstrap calls eager runtime facade, not lazy self-test init()'
 });
 
 test('S2321 rebuilt bundle contains the runtime bootstrap call and not the stale init() call', () => {
-  const bundle = read('app-bundle-b.min.js');
+  const bundle = require('./helpers/bundleSource').source('b');
   assert.match(bundle, /__kwInitRuntime==='function'\?__kwInitRuntime\(\)/);
   assert.doesNotMatch(bundle, /Promise\.resolve\(init\(\)\)/);
 });

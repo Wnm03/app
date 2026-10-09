@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
 
 const read = (f) => fs.readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
@@ -18,7 +20,7 @@ test('S2309: active finance writers do not bypass FinanceTxSOT with direct D.tra
 });
 
 test('S2309: Bundle-A mirrors the direct-write hardening', () => {
-  const bundle = read('app-bundle-a.min.js');
+  const bundle = require('./helpers/bundleSource').source('a');
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:uid\(\),type,amount/);
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory\(veh\),subcategory:'Bensin'/);
   assert.doesNotMatch(bundle, /D\.transactions\.push\(\{id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory\(veh\),subcategory:'Servis & Oli'/);

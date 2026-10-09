@@ -2,7 +2,7 @@ const { readServisSource } = require('./helpers/carNotesSource');
 // v13: Rp0 self-service is a valid Service Event, but must not create a fake Finance tx.
 const fs=require('fs'),assert=require('assert'),path=require('path');
 const car=readServisSource();
-const bundle=fs.readFileSync(path.join(__dirname,'..','app-bundle-b.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 function ok(c,m){assert.ok(c,m);console.log('PASS',m)}
 ok(car.includes("const cost=costRaw===''?0:Number(costRaw);"),'source accepts empty cost as 0 and parses numeric input explicitly');
 ok(car.includes("if(!Number.isFinite(cost)||cost<0)"),'source rejects invalid/negative cost, while allowing zero');

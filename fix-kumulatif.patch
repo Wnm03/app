@@ -1,0 +1,84 @@
+--- a/eslint.config.js
++++ b/eslint.config.js
+@@ -153,7 +153,7 @@
+   },
+   {
+     // Node globals for repository tests/scripts and the service worker.
+-    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'collect-app-globals.js', 'scripts/**/*.js', 'tests/**/*.js'],
++    files: ['sw.js', 'docs/sw.js', 'build.js', 'eslint.config.js', 'collect-app-globals.js', 'scripts/**/*.js', 'tests/**/*.js', 's2228-accumulated-baseline-integrity.test.js', 'test-runner-checkpoint-integrity-s1777.test.js'],
+     languageOptions: {
+       ecmaVersion: 2022,
+       sourceType: 'commonjs',
+--- a/scripts/run-full-test.js
++++ b/scripts/run-full-test.js
+@@ -48,7 +48,7 @@
+  const hashesOk=expectedFiles.every(f=>r&&r.fileHashes&&r.fileHashes[f]===fileHashes[f]);
+  return !!(r&&r.schema===CHECKPOINT_SCHEMA&&r.manifestFingerprint===manifestFingerprint&&r.status==='pass'&&r.tests>0&&(r.pass+r.skipped)===r.tests&&r.fail===0&&r.cancelled===0&&JSON.stringify(r.files||[])===JSON.stringify(expectedFiles)&&hashesOk);
+ }
+-function parse(out){const get=k=>{const m=out.match(new RegExp(`# ${k} (\\d+)`));return m?Number(m[1]):0};return {tests:get('tests'),pass:get('pass'),fail:get('fail'),cancelled:get('cancelled'),skipped:get('skipped'),todo:get('todo')};}
++function parse(out){const get=k=>{const m=out.match(new RegExp(`(?:^|\\n)(?:#|ℹ) ${k} (\\d+)`));return m?Number(m[1]):0};return {tests:get('tests'),pass:get('pass'),fail:get('fail'),cancelled:get('cancelled'),skipped:get('skipped'),todo:get('todo')};}
+ function runShard(list,index,options={}){return new Promise(resolve=>{
+  const cp=checkpointPath(index); if(!force&&fs.existsSync(cp)){try{const old=JSON.parse(fs.readFileSync(cp,'utf8')); if(isValidCheckpoint(old,index))return resolve({...old,checkpoint:true});}catch(e){ console.warn(`Ignoring invalid checkpoint for shard ${index+1}: ${e.message}`); }}
+  // S1766: under concurrent load, Node's test child can occasionally exit 0
+@@ -56,7 +56,7 @@
+  // A shard containing files MUST produce a non-zero test count. Retry that
+  // specific transport/infrastructure anomaly once before marking the shard bad.
+  const attempt=(retryEmpty,attemptTimeoutMs=timeoutMs)=>{
+-  const child=spawn(process.execPath,['--test',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
++  const child=spawn(process.execPath,['--test','--test-reporter=tap',...list],{cwd:ROOT,stdio:['ignore','pipe','pipe']});
+   let out='',err='',timedOut=false; const timer=setTimeout(()=>{timedOut=true;child.kill('SIGTERM');setTimeout(()=>child.kill('SIGKILL'),3000)},attemptTimeoutMs);
+   child.stdout.on('data',b=>out+=b); child.stderr.on('data',b=>err+=b);
+   child.on('close',code=>{clearTimeout(timer);const stats=parse(out+err);
+--- a/modules/vehicle/vehicle-core.js
++++ b/modules/vehicle/vehicle-core.js
+@@ -963,6 +963,9 @@
+ // (tx-list-cashflow.js) — murni label teks, tidak ada navigasi/logic baru.
+ const cniBc=document.getElementById('cniBreadcrumbSub');
+ if(cniBc)cniBc.textContent=CNI_SUBTAB_LABEL[t]||t;
++// S2263 membuat render per-sub-tab malas (renderCnTab cabang by pane terlihat);
++// ganti sub-tab HARUS memicu render supaya pane yang baru tampil terisi.
++if(typeof renderCnTab==='function')renderCnTab();
+ }
+ function setCnBbmTab(t,el){
+ if(!CNB_SUBTAB_ORDER.includes(t))t='ringkasan';
+@@ -981,6 +984,9 @@
+ if(cnbAnalisisEl){cnbAnalisisEl.classList.toggle('u-dnone',t!=='analisis');cnbAnalisisEl.style.display='';}
+ const cnbBc=document.getElementById('cnbBreadcrumbSub');
+ if(cnbBc)cnbBc.textContent=CNB_SUBTAB_LABEL[t]||t;
++// Lihat catatan S2263 di setCnInsightTab: Fuel Intelligence (Ringkasan) &
++// Fuel Dashboard/Compare/Trend (Analisis Lanjutan) dirender malas.
++if(typeof renderCnTab==='function')renderCnTab();
+ }
+ function getVehicleKm(vehicleId){
+ const kms=[
+--- /dev/null
++++ b/tests/s2550-carnotes-subtab-switch-renders.test.js
+@@ -0,0 +1,28 @@
++'use strict';
++// Regresi: sub-tab Insight AI / BBM dirender malas (S2263: renderCnTab hanya
++// mengisi pane yang terlihat). Pengganti sub-tab HARUS memicu renderCnTab(),
++// kalau tidak Fuel Intelligence / Analisis Lanjutan / Rekomendasi & Tren kosong.
++const test = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++
++const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'vehicle', 'vehicle-core.js'), 'utf8');
++
++function bodyOf(name) {
++  const start = src.indexOf(`function ${name}(`);
++  assert.ok(start >= 0, `${name} tidak ditemukan`);
++  const open = src.indexOf('{', start);
++  let depth = 0;
++  for (let i = open; i < src.length; i++) {
++    if (src[i] === '{') depth++;
++    else if (src[i] === '}' && --depth === 0) return src.slice(start, i + 1);
++  }
++  throw new Error(`${name}: kurung tidak seimbang`);
++}
++
++for (const fn of ['setCnInsightTab', 'setCnBbmTab']) {
++  test(`S2550 ${fn} memicu renderCnTab() setelah ganti sub-tab`, () => {
++    assert.match(bodyOf(fn), /renderCnTab\(\)/, `${fn} harus memanggil renderCnTab()`);
++  });
++}

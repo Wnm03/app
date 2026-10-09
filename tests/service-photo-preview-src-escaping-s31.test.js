@@ -11,6 +11,6 @@ test('S31 photo preview escapes FileReader data URL before placing it in img src
 });
 
 test('S31 bundle B contains the same photo preview escaping', () => {
-  const s = fs.readFileSync(path.join(ROOT, 'app-bundle-b.min.js'), 'utf8');
+  const s = require('./helpers/bundleSource').source('b');
   assert.ok(s.includes('_photoDraft.map((src,i)=>`') && s.includes('<img src="${escapeHtml(src)}"'), 'photo preview must escape FileReader data URL');
 });

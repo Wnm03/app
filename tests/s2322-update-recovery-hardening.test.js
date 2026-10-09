@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const src=fs.readFileSync(path.join(root,'modules/shared/features-helpers-global-security.js'),'utf8');
-const bundle=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 const bootstrap=fs.readFileSync(path.join(root,'app-bootstrap.js'),'utf8');
 const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
 

@@ -2,7 +2,7 @@ const { readServisSource } = require('./helpers/carNotesSource');
 // v12: prevent duplicate concurrent markServiced() from double-writing service/finance/stock.
 const fs=require('fs'),assert=require('assert'),path=require('path');
 const car=readServisSource();
-const bundle=fs.readFileSync(path.join(__dirname,'..','app-bundle-b.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 function ok(c,m){assert.ok(c,m);console.log('PASS',m)}
 ok(car.includes('Servis._markServicedInFlight=Servis._markServicedInFlight instanceof Set?Servis._markServicedInFlight:new Set();'),'source has in-flight Set');
 ok(car.includes('if(Servis._markServicedInFlight.has(_markGuardKey))return;'),'duplicate concurrent call is ignored');

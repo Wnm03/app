@@ -1,6 +1,6 @@
 const fs=require('fs');
 const src=fs.readFileSync('modules/shared/features-helpers-global-security.js','utf8');
-const bundle=fs.readFileSync('app-bundle-b.min.js','utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 function assert(c,m){if(!c)throw new Error(m)}
 for(const [name,text] of [['source',src],['Bundle-B',bundle]]){
  assert(text.includes("let _crossTabStateStale=false;"),name+' harus punya stale-state guard');

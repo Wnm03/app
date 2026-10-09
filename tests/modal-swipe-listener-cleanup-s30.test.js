@@ -25,7 +25,7 @@ test('S30 source swipe lifecycle has cleanup registry and closeModal cleanup hoo
 });
 
 test('S30 bundle B contains the same swipe cleanup hardening', () => {
-  const s = fs.readFileSync(path.join(ROOT, 'app-bundle-b.min.js'), 'utf8');
+  const s = require('./helpers/bundleSource').source('b');
   assert.match(s, /_swipeDismissCleanupByHandle=typeof WeakMap==='function'\?new WeakMap\(\):null;/);
   assert.match(s, /function _cleanupSwipeDismissForOverlay\(overlay\)/);
   assert.match(s, /if\(typeof _cleanupSwipeDismissForOverlay==='function'\)_cleanupSwipeDismissForOverlay\(el\);/);

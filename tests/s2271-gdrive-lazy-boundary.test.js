@@ -25,7 +25,7 @@ test('S2271: automatic self-test demand-loads the lazy laporan export feature',(
 });
 
 test('S2271: rebuilt Bundle-B contains the eager Google Drive state declarations',()=>{
-  const bundle=fs.readFileSync(path.join(root,'app-bundle-b.min.js'),'utf8');
+  const bundle=require('./helpers/bundleSource').source('b');
   const state=bundle.indexOf('let gdriveAccessToken=null');
   const driveFn=bundle.indexOf('function gdriveTrySilentReconnectOnLoad');
   assert.ok(state>=0,'Bundle-B harus mendefinisikan gdriveAccessToken');

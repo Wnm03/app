@@ -229,6 +229,23 @@ const DashboardInsightDedup = {
     });
     this._observer.observe(root, { childList: true, subtree: true });
   },
+  // S2550: role visibility sebelumnya hanya dijalankan dari DashboardHub.render() ->
+  // kartu yg di-hide role dashboard-hub (fuel*, findash*, cashflow*, shop*, dst) tetap
+  // hidden saat user pindah ke Car Notes/Keuangan/Shop/Aset/Pajak. Pantau perpindahan
+  // halaman (class .active pada .page) dan jalankan ulang HANYA kalau role berubah.
+  observePages() {
+    if (typeof MutationObserver === 'undefined' || typeof document === 'undefined' || this._pageObserver) return;
+    const pages = document.querySelectorAll('.page');
+    if (!pages.length) return;
+    this._lastRole = this._activeRole();
+    this._pageObserver = new MutationObserver(() => {
+      const role = this._activeRole();
+      if (role === this._lastRole) return;
+      this._lastRole = role;
+      this.schedule();
+    });
+    pages.forEach((pg) => this._pageObserver.observe(pg, { attributes: true, attributeFilter: ['class'] }));
+  },
   disconnect() {
     if (this._observer) this._observer.disconnect();
     this._observer = null;
@@ -252,3 +269,8 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   DashboardInsightDedup.schedule();
   DashboardInsightDedup.observe();
 }, { once: true });
+if (typeof document !== 'undefined') {
+  const _startPageObserver = () => { try { DashboardInsightDedup.observePages(); } catch (e) { console.warn('DashboardInsightDedup page observer gagal:', e); } };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _startPageObserver, { once: true });
+  else _startPageObserver();
+}

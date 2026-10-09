@@ -29,7 +29,7 @@ assert.match(spare,/ServiceTaxonomySOT\.resolve/);
 assert.match(spare,/ServiceTaxonomySOT\.categories\(\)/);
 assert.match(spare,/canonical:true/);
 
-const bundle=fs.readFileSync(path.join(__dirname,'..','app-bundle-b.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 assert.match(bundle,/SERVICE-TAXONOMY-SOT-2017/);
 assert.match(bundle,/function groups\(\)\{return typeof ServiceTaxonomySOT/);
 assert.match(bundle,/S2017: ServiceTaxonomySOT is the single canonical identity/);

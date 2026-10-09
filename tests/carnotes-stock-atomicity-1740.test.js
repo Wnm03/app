@@ -6,7 +6,7 @@ const ROOT=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
 
 function servisSource(){return read('modules/vehicle/servis.js');}
-function bundleSource(){return read('app-bundle-b.min.js');}
+function bundleSource(){return require('./helpers/bundleSource').source('b');}
 
 test('Servis stock usage is netted per physical stock id to prevent double deduction',()=>{
   const src=servisSource();

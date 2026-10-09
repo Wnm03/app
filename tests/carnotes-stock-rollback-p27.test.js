@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const ROOT=path.resolve(__dirname,'..');
 const src=fs.readFileSync(path.join(ROOT,'modules/vehicle/servis.js'),'utf8');
-const bundle=fs.readFileSync(path.join(ROOT,'app-bundle-b.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('b');
 
 test('P27 applyStockUsages now delegates atomic batch mutation to StockCommandSOT',()=>{
   assert.match(src,/async applyStockUsages\(entries\)\{[\s\S]*?const net=new Map\(\);[\s\S]*?StockCommandSOT\.applyDeltas\(\[\.\.\.net\]/);

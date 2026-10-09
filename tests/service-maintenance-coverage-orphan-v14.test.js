@@ -2,7 +2,7 @@ const fs=require('fs');
 const path=require('path');
 const root=path.resolve(__dirname,'..');
 const car=fs.readFileSync(path.join(root,'car-notes.js'),'utf8');
-const bundle=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('a');
 let pass=0;
 function ok(c,m){if(!c)throw new Error(m);pass++;console.log('PASS',m);}
 // S1863+: checklist adalah proyeksi Service Master (102 komponen = 50 legacy KZR + 52 katalog).

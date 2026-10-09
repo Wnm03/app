@@ -874,6 +874,11 @@ if(curKmEl&&!document.getElementById('cnCurKmInput')){
   curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
   if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
 }
+// S2550 (fuel bar/analisis hilang di Car Notes BBM): DashboardInsightDedup hanya
+// jalan saat DashboardHub.render() -> kartu yg di-hide role dashboard/keuangan/shop
+// (fuelIntelWrap/fuelDashWrap/fuelCompareWrap/fuelTrendWrap, veh*Wrap) tetap
+// hidden saat pindah ke Car Notes. Jadwalkan ulang HANYA kalau ada yg role-hidden.
+if(typeof DashboardInsightDedup!=='undefined'&&typeof DashboardInsightDedup.schedule==='function'&&document.querySelector('[data-dashboard-role-hidden="1"]'))DashboardInsightDedup.schedule();
 renderCarImportVehicleSelect();
 }
 

@@ -83,7 +83,7 @@ test('S2012 regression: History presenter filters the displayed rows by the sele
 });
 
 test('S2012 bundle parity: production bundle contains both component-reminder and history-focus fixes',()=>{
-  const bundle=fs.readFileSync(path.join(__dirname,'../app-bundle-b.min.js'),'utf8');
+  const bundle=require('./helpers/bundleSource').source('b');
   assert.match(bundle,/inspectAction=schedule\.inspectAction\|\|'periksa'/);
   assert.match(bundle,/serviceHistorySessionFilter=''/);
   assert.match(bundle,/serviceHistoryComponentFilter=String\(componentId\|\|''\)/);

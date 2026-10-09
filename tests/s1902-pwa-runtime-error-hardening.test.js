@@ -6,7 +6,7 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 const ux=fs.readFileSync(path.join(root,'modules/shared/pwa-ux-performance.js'),'utf8');
 const boot=fs.readFileSync(path.join(root,'modules/shared/boot-early.js'),'utf8');
-const bundle=fs.readFileSync(path.join(root,'app-bundle-a.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('a');
 
 function makeDocument(){
   const listeners={};

@@ -7,7 +7,7 @@ const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const navSrc = fs.readFileSync(path.join(root, 'modules/shared/modal-navigasi.js'), 'utf8');
 const vehicleSrc = fs.readFileSync(path.join(root, 'modules/vehicle/vehicle-core.js'), 'utf8');
-const bundleB = fs.readFileSync(path.join(root, 'app-bundle-b.min.js'), 'utf8');
+const bundleB = require('./helpers/bundleSource').source('b');
 
 test('Main App: all primary nav destinations exist and are wired to showPage', () => {
   const routes = ['dashboard-hub','keuangan','shop','aset','carnotes','pajak'];

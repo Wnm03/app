@@ -10,7 +10,7 @@ const ROOT=path.join(__dirname,'..');
 const modals=fs.readFileSync(path.join(ROOT,'modules/shared/modals.js'),'utf8');
 const tx=fs.readFileSync(path.join(ROOT,'modules/finance/transaksi.js'),'utf8');
 const dispatcher=fs.readFileSync(path.join(ROOT,'modules/shared/features-helpers-global-security.js'),'utf8');
-const bundle=fs.readFileSync(path.join(ROOT,'app-bundle-a.min.js'),'utf8');
+const bundle=require('./helpers/bundleSource').source('a');
 
 function fieldSnippet(src,id){
   const i=src.indexOf(`id=\\"${id}\\"`);
