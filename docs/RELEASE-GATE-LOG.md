@@ -759,3 +759,7 @@
 
 - **lint-unavailable**: override dipakai. Alasan: Local sandbox dependency install unavailable; GitHub CI performs npm ci before release gate.
 - **unminified-bundle**: override dipakai. Alasan: Local sandbox lacks pinned esbuild 0.24.0; production workflow runs npm ci and npm run build:release before release gate.
+
+## 2026-10-11T08:37:49.895Z — versi s2041-1-part-sot-hardening-2311
+
+- **lint-unavailable**: override dipakai. Alasan: ESLint tidak tersedia karena npm ci terhenti pada instalasi dependency di sandbox; seluruh source JS yang disentuh lolos node --check, tes UI/UX terarah 72/72 dan full suite 8789 tes lulus tanpa gagal.

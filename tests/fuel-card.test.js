@@ -391,12 +391,14 @@ test('render() — Fuel Briefing tampil di dalam card yang sama (bukan card terp
   });
   ctx.FuelCard.render();
   const html = els.fuelIntelBody.innerHTML;
-  assert.match(html, /Fuel Intelligence/);
-  assert.match(html, /📋 Fuel Briefing/);
+  assert.match(html, /data-fuel-active-vehicle="1"/);
+  assert.match(html, /📋 Ringkasan BBM/);
   assert.match(html, /Fuel Health 80\/100/);
   assert.match(html, /Sisa BBM 5\.5 L \(40%\)/);
   assert.match(html, /Estimasi jarak tersisa 120 km/);
   assert.match(html, /Risiko perawatan sedang/);
+  assert.equal((html.match(/data-action="FuelTankProfileUI\.open"/g) || []).length, 1, 'Atur Tangki hanya satu kali');
+  assert.equal((html.match(/class="dashhub-cat-head"/g) || []).length, 0, 'judul Fuel Intelligence berasal dari header card luar');
 });
 
 test('render() — insight title/description & recommendation Fuel Briefing tampil apa adanya', () => {
@@ -413,7 +415,7 @@ test('render() — insight title/description & recommendation Fuel Briefing tamp
   assert.match(html, /Segera isi BBM di SPBU terdekat\./);
 });
 
-test('render() — field kosong (fuel/remainingDistance/monthlyCost null) -> placeholder "—", tidak error', () => {
+test('render() — field ringkasan kosong tidak menghasilkan deretan placeholder dash', () => {
   const { doc, els } = makeFakeDoc(['fuelIntelWrap', 'fuelIntelBody']);
   const ctx = makeCtx({
     document: doc,
@@ -425,8 +427,7 @@ test('render() — field kosong (fuel/remainingDistance/monthlyCost null) -> pla
   });
   ctx.FuelCard.render();
   const html = els.fuelIntelBody.innerHTML;
-  assert.match(html, /Fuel Health —/);
-  assert.match(html, /Sisa BBM —/);
+  assert.doesNotMatch(html, /Fuel Health —|Sisa BBM —|Estimasi jarak tersisa —|Biaya BBM bulanan —|Risiko perawatan —/);
 });
 
 test('render() — FuelInsightEngine belum dimuat -> Fuel Briefing dilewati, card lain tetap tampil', () => {
@@ -439,8 +440,8 @@ test('render() — FuelInsightEngine belum dimuat -> Fuel Briefing dilewati, car
   });
   ctx.FuelCard.render();
   const html = els.fuelIntelBody.innerHTML;
-  assert.match(html, /Fuel Intelligence/);
-  assert.doesNotMatch(html, /Fuel Briefing/);
+  assert.doesNotMatch(html, /Fuel Intelligence/);
+  assert.doesNotMatch(html, /📋 Ringkasan BBM/);
 });
 
 test('render() — FuelInsightEngine.getSummary() {ok:false}/throw -> Fuel Briefing dilewati, tidak menggagalkan render', () => {
@@ -453,8 +454,8 @@ test('render() — FuelInsightEngine.getSummary() {ok:false}/throw -> Fuel Brief
   });
   ctx.FuelCard.render();
   const html = els.fuelIntelBody.innerHTML;
-  assert.match(html, /Fuel Intelligence/);
-  assert.doesNotMatch(html, /Fuel Briefing/);
+  assert.doesNotMatch(html, /Fuel Intelligence/);
+  assert.doesNotMatch(html, /📋 Ringkasan BBM/);
 });
 
 // --- SESI 416-lanjutan (FUEL-AUTOSYNC-06, "Sesi 3": auto-refresh gauge

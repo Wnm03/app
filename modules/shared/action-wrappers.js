@@ -100,6 +100,8 @@ function torsiSelectPartIfAllowed(noTorque, catName, name){ if(!noTorque) Torsi.
 // py 2 fab sekaligus terlihat, keuFab+laporanFab, lihat navFabToggle()).
 function closeAllKeuFabs(){
   document.querySelectorAll('.keu-fab.open').forEach(f=>f.classList.remove('open'));
+  const fallback=document.getElementById('navFabFallbackMenu');
+  if(fallback)fallback.hidden=true;
   const navFab=document.getElementById('navFabMain');
   if(navFab)navFab.setAttribute('aria-expanded','false');
 }
@@ -113,15 +115,29 @@ function closeAllKeuFabs(){
 // ancestor u-dnone) -- konsisten dgn pola cek visibility lain di codebase.
 function navFabToggle(el){
   const visibleFabs=Array.from(document.querySelectorAll('.keu-fab')).filter(f=>f.offsetParent!==null);
+  const fallback=document.getElementById('navFabFallbackMenu');
   if(!visibleFabs.length){
-    el.setAttribute('aria-expanded','false');
-    if(typeof toast==='function')toast('Tidak ada aksi cepat di halaman ini');
+    if(!fallback){el.setAttribute('aria-expanded','false');return;}
+    const willOpen=fallback.hidden;
+    fallback.hidden=!willOpen;
+    el.setAttribute('aria-expanded',willOpen?'true':'false');
     return;
   }
+  if(fallback)fallback.hidden=true;
   const willOpen=!visibleFabs[0].classList.contains('open');
   visibleFabs.forEach(f=>f.classList.toggle('open',willOpen));
   el.setAttribute('aria-expanded',willOpen?'true':'false');
 }
+function closeNavFabFallback(){
+  const menu=document.getElementById('navFabFallbackMenu');
+  if(menu)menu.hidden=true;
+  const trigger=document.getElementById('navFabMain');
+  if(trigger)trigger.setAttribute('aria-expanded','false');
+}
+function navQuickOpenIncome(){closeNavFabFallback();openTxModal('income');}
+function navQuickOpenExpense(){closeNavFabFallback();openTxModal('expense');}
+function navQuickOpenBbm(){closeNavFabFallback();openBbmModal();}
+function navQuickOpenServis(){closeNavFabFallback();openServisModal();}
 
 function keuFabOpenIncome(){ closeAllKeuFabs(); openTxModal('income'); }
 function keuFabOpenExpense(){ closeAllKeuFabs(); openTxModal('expense'); }

@@ -35,16 +35,18 @@ function ctxFor(vehicle) {
   }, ['FuelCard']);
 }
 
-test('S2550 hint fuel bar: profil tangki belum diatur -> tombol Atur Tangki', () => {
+test('S2550 hint fuel bar: profil tangki belum diatur -> arahkan ke CTA tunggal di bawah', () => {
   const html = ctxFor({ tankCapacityLiter: null }).FuelCard._gaugeEmptyHintHtml('v1');
   assert.match(html, /profil tangki/);
-  assert.match(html, /FuelTankProfileUI\.open/);
+  assert.match(html, /Gunakan tombol Atur Tangki di bawah/);
+  assert.doesNotMatch(html, /data-action/);
 });
 
-test('S2550 hint fuel bar: profil ada tapi belum ada estimasi -> tombol Koreksi Bar', () => {
+test('S2550 hint fuel bar: profil ada tapi belum ada estimasi -> arahkan ke CTA tunggal di bawah', () => {
   const html = ctxFor({ tankCapacityLiter: 5.5 }).FuelCard._gaugeEmptyHintHtml('v1');
   assert.match(html, /belum ada estimasi/);
-  assert.match(html, /FuelBarCorrection\.open/);
+  assert.match(html, /Gunakan tombol Koreksi/);
+  assert.doesNotMatch(html, /data-action/);
 });
 
 test('S2550 _body memakai hint hanya saat gauge kosong', () => {

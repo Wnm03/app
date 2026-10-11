@@ -45,10 +45,11 @@ itu scope sesi s636+ sesuai rencana bertahap. */
 --shadow-card-hover-dark2: 0 4px 12px rgba(0,0,0,0.22);
 --shadow-elevated-hi: 0 6px 16px rgba(0,0,0,0.05), 0 24px 48px rgba(0,0,0,0.14);
 --shadow-toggle-thumb: 0 1px 3px rgba(0,0,0,.3);
---grad-accent: linear-gradient(135deg, var(--accent), var(--accent3));
---grad-accent-diag: linear-gradient(120deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, var(--accent3)) 100%);
 --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
 }
+/* S2310: token gradient WAJIB di scope tema, bukan :root. --accent/--accent3 hanya ada di [data-theme] (body);
+   var() di :root jadi invalid-at-computed-value-time -> .btn-primary, .nav-fab-icon, .nav-dot, .header-brand span tanpa latar. */
+[data-theme] { --grad-accent: linear-gradient(135deg, var(--accent), var(--accent3)); --grad-accent-diag: linear-gradient(120deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 55%, var(--accent3)) 100%); }
 .stat-val, .tx-amount, .shop-price-final, .shop-price-strike, .ldr-days, .ldr-fill, .money, .card-val { font-variant-numeric: tabular-nums; }
 [data-theme="modern"] .stat-val, [data-theme="modern"] .tx-amount, [data-theme="modern"] .shop-price-final, [data-theme="modern"] .shop-price-strike, [data-theme="modern"] .ldr-days, [data-theme="modern"] .money, [data-theme="modern"] .card-val { font-family: var(--font-mono); }
 @media (prefers-reduced-motion: reduce) {
@@ -3425,4 +3426,69 @@ margin: 0; overflow: visible; white-space: nowrap;
 box-sizing: border-box; width: 36px; height: 36px; min-width: 36px; min-height: 36px;
 padding: 0; display: inline-flex; align-items: center; justify-content: center;
 font-size: 15px; line-height: 1;
+}
+
+
+/* S2311 UI/UX: keep the shared quick-action trigger legible and its menu adjacent to the bottom navigation. */
+.nav-fab { min-width:44px; position:relative; }
+.nav-fab-icon {
+  background:var(--accent, #4f46e5);
+  color:#fff;
+  border-color:var(--header-bg);
+  -webkit-text-fill-color:#fff;
+  text-shadow:0 1px 2px rgba(0,0,0,.25);
+}
+.nav-fab-label { display:none; }
+.nav-fab-menu {
+  position:fixed;
+  z-index:calc(var(--z-chrome) + 2);
+  left:50%;
+  bottom:calc(76px + env(safe-area-inset-bottom, 0px));
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  width:min(290px, calc(100vw - 24px));
+  padding:10px;
+  border:1px solid var(--border2);
+  border-radius:16px;
+  background:var(--surface, #fff);
+  color:var(--text, #171717);
+  box-shadow:0 10px 32px rgba(0,0,0,.28);
+}
+.nav-fab-menu[hidden] { display:none !important; }
+.nav-fab-menu button {
+  display:flex; align-items:center; gap:10px; width:100%; min-height:44px;
+  padding:10px 12px; border:1px solid var(--border); border-radius:11px;
+  background:var(--surface2); color:var(--text); text-align:left;
+  font:600 14px/1.25 'Plus Jakarta Sans',sans-serif; cursor:pointer;
+}
+.nav-fab-menu button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+/* Contextual page FABs are positioned just above the nav, not over page content/sub-tabs. */
+.keu-fab { bottom:calc(76px + env(safe-area-inset-bottom, 0px)); }
+.keu-fab-actions { gap:8px; max-width:min(92vw, 390px); }
+.keu-fab-action {
+  background:var(--surface2); color:var(--text); border-color:var(--border2);
+  box-shadow:0 6px 20px rgba(0,0,0,.22); min-height:44px;
+}
+/* Finance: one compact, horizontally scrollable row for the seven primary destinations. */
+#page-keuangan > .cn-tabs {
+  display:flex; flex-wrap:nowrap; gap:6px; overflow-x:auto; overflow-y:hidden;
+  white-space:nowrap; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  padding:2px 1px 6px; margin-bottom:6px; scroll-snap-type:x proximity;
+}
+#page-keuangan > .cn-tabs::-webkit-scrollbar { display:none; }
+#page-keuangan > .cn-tabs > .cn-tab { flex:0 0 auto; min-height:40px; padding:9px 12px; white-space:nowrap; scroll-snap-align:start; }
+#page-keuangan > .page-breadcrumb { display:none; }
+#page-keuangan #keuanganTab-kelola > .kel-subtabs { margin-bottom:6px; }
+#page-keuangan #keuanganTab-kelola > .page-breadcrumb { margin:0 0 8px; font-size:11px; }
+@media (min-width:768px) {
+  .nav-fab { gap:4px; min-width:76px; }
+  .nav-fab-icon { margin-top:0; width:32px; height:32px; font-size:20px; border-width:2px; }
+  .nav-fab-label { display:block; font-size:11px; line-height:1.1; color:var(--text); }
+  .nav-fab-menu { bottom:calc(82px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width:359px) {
+  #page-keuangan > .cn-tabs > .cn-tab { min-height:38px; padding:8px 10px; font-size:11px; }
+  .nav-fab-menu { width:calc(100vw - 20px); }
 }

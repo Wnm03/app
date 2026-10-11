@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-11T06:59:37.573Z
-Total file source: 487 · Total identifier global: 17123
+Terakhir digenerate: 2026-10-11T08:36:42.424Z
+Total file source: 487 · Total identifier global: 17131
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -71,7 +71,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 48 | `modules/shared/custodian-registry.js` | 130 | Custodian Registry (Sesi S540-A, Tahap 1/4 DESIGN-S540-CUSTODIAN-GROUPING.md, Design Lock disetujui user dengan keputusan final: Opsi A/registry, seed kosong, 0 backfill, assign manual, build() tidak berubah untuk … |
 | 49 | `modules/asset/asset-ownership-split-presenter.js` | 100 | Sesi 391: split keuntungan aset per pemilik berdasarkan porsi (lanjutan Sesi 390, Multi-Owner Engine). Target eksplisit user: "hitung otomatis keuntungan berdasarkan porsi". PRINSIP SESI INI (sama disiplin dgn … |
 | 50 | `modules/shared/features-helpers-global-security.js` | 1747 | Helper global (migrasi data, state D, save/load, event dispatcher) Dipindah ke modules/shared/features-helpers-global-security.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
-| 51 | `modules/shared/action-wrappers.js` | 239 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
+| 51 | `modules/shared/action-wrappers.js` | 255 | S264 Security Hardening — wrapper functions untuk eks data-onclick. Semua inline handler (data-onclick + new Function()) diganti data-action yang manggil fungsi bernama di sini. Tidak ada logic baru, cuma re-wrap kode … |
 | 52 | `diagnostik-versi.js` | 77 | Domain Diagnostik & Sinkronisasi Versi: snapshot HTML utk self-test (getHtmlSnapshotForSelfTest), cek status sinkron versi produksi vs master (computeProductionSyncStatus), cek status sinkron versi antar file modul … |
 | 53 | `modules/shared/format-tema.js` | 252 | Domain Format Angka & Tema: format rupiah singkat (fmt, mis. "Rp 1.5 jt"), Dipindah ke modules/shared/format-tema.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 54 | `modules/shared/error-handler.js` | 40 | Domain Error Handler Global: tangkap error tak tertangani (uncaught error & Dipindah ke modules/shared/error-handler.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
@@ -284,7 +284,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 261 | `modules/vehicle/fuel-history.js` | 51 | Fuel History (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelStorage.recent() (sesi ini — sendiri 100% reuse D.bbmLogs apa adanya) utk daftar catatan isi BBM terbaru. Tap 1 baris membuka … |
 | 262 | `modules/vehicle/fuel-analytics.js` | 88 | Fuel Analytics (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE VehicleFuelTrendSummary.summary() (Sesi 81, Batch 7 — sendiri 100% reuse VehicleTrendAPI.monthlyCostTrend() utk histori biaya … |
 | 263 | `modules/vehicle/fuel-modal.js` | 44 | Fuel Modal (TASK-141, Fuel Intelligence Card). PRINSIP: orkestrasi TIPIS saja. Buka overlay #fuelIntelModal (markup di modals.js, sesi ini) & panggil FuelAnalytics.render()/FuelHistory.render() (sesi ini, keduanya 100% … |
-| 264 | `modules/vehicle/fuel-card.js` | 555 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
+| 264 | `modules/vehicle/fuel-card.js` | 552 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
 | 265 | `modules/vehicle/fuel-intelligence-ui.js` | 372 | Fuel Bar Correction (TASK-144). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelGaugeEngine (TASK-143, konversi bar<->liter<->persen) + FuelTankProfile (TASK-142, kapasitas tangki & jumlah bar) — TIDAK ada rumus … |
 | 266 | `modules/vehicle/fuel-tank-profile-ui.js` | 135 | Atur Tangki UI (companion untuk TASK-142 FuelTankProfile & TASK-144 FuelBarCorrection). PRINSIP: UI/orkestrasi TIPIS saja, 100% REUSE FuelTankProfile.get()/ validate()/save() (SUDAH ADA) — TIDAK ada rumus/validasi baru … |
 | 267 | `modules/vehicle/fuel-prediction-engine.js` | 257 | Fuel Consumption Prediction Engine (TASK-146). PRINSIP: engine-only, 0 UI, PURE (read-only, tidak pernah panggil save() atau menulis ke D). 100% REUSE modul fuel yang SUDAH ADA — 0 rumus bar/liter/persen/km/L/Rp per km … |
@@ -1888,7 +1888,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `action` | `modules/vehicle/servis-checklist.js` |
 | `action` | `modules/vehicle/servis.js` |
 | `action` | `modules/vehicle/servis-b.js` |
-| `action` | `modules/vehicle/fuel-card.js` |
 | `action` | `modules/vehicle/service-legacy-maintenance.js` |
 | `action` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `actionBadge` | `modules/vehicle/servis-b.js` |
@@ -4248,6 +4247,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `closed` | `modules/finance/finance-cross-entity-atomic.js` |
 | `closeModal` | `modules/shared/modal-navigasi.js` |
 | `closeModal` | `modules/asset/modal-navigasi.js` |
+| `closeNavFabFallback` | `modules/shared/action-wrappers.js` |
 | `closeQS` | `modules/shared/modal-navigasi.js` |
 | `closeQS` | `modules/asset/modal-navigasi.js` |
 | `cls` | `modules/shared/modules-render.js` |
@@ -6368,6 +6368,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `fakeTx` | `modules/shared/modules-render.js` |
 | `fakeTxId` | `modules/shared/self-test-cases-a.js` |
 | `fakeTxId` | `modules/shared/self-test-cases-b.js` |
+| `fallback` | `modules/shared/action-wrappers.js` |
 | `fallback` | `modules/finance/tx-bbm.js` |
 | `fallback` | `modules/vehicle/service-event-adapter.js` |
 | `fallback` | `modules/vehicle/servis.js` |
@@ -9747,6 +9748,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `memNoteEl` | `modules/business/tukang-absensi.js` |
 | `menipis` | `modules/ai/feature-insights.js` |
 | `mentionsAny` | `ai-chat.js` |
+| `menu` | `modules/shared/action-wrappers.js` |
 | `merged` | `modules/shared/features-helpers-global-security.js` |
 | `merged` | `modules/vehicle/service-event-adapter.js` |
 | `merged` | `modules/vehicle/vehicle-catalog.js` |
@@ -10275,6 +10277,10 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `navItems` | `modules/asset/features-helpers-global-security.js` |
 | `navItems` | `modules/finance/features-helpers-global-security.js` |
 | `navItems` | `modules/shop/features-helpers-global-security.js` |
+| `navQuickOpenBbm` | `modules/shared/action-wrappers.js` |
+| `navQuickOpenExpense` | `modules/shared/action-wrappers.js` |
+| `navQuickOpenIncome` | `modules/shared/action-wrappers.js` |
+| `navQuickOpenServis` | `modules/shared/action-wrappers.js` |
 | `nd` | `modules/finance/tagihan-kalender.js` |
 | `near` | `modules/shared/modules-calc.js` |
 | `near` | `modules/shared/self-test-cases-a.js` |
@@ -10374,6 +10380,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `nextRow` | `modules/vehicle/vehicle-catalog-import.js` |
 | `nextRow` | `sheets-sync.js` |
 | `nextSourceRef` | `lifeos/services/life-object-service.js` |
+| `nextStep` | `modules/vehicle/fuel-card.js` |
 | `nextTrimmed` | `modules/vehicle/vehicle-catalog-import.js` |
 | `nextWriterToken` | `modules/shared/features-helpers-global-security.js` |
 | `nid` | `modules/shared/features-helpers-global-security.js` |
@@ -16154,6 +16161,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `trFrom` | `modules/finance/akun.js` |
 | `tries` | `modules/finance/finance-event-outbox.js` |
 | `tries` | `modules/vehicle/service-reminder-vehicle-scope-s2015.js` |
+| `trigger` | `modules/shared/action-wrappers.js` |
 | `trigger` | `modules/finance/financial-audit-presenter.js` |
 | `triggered` | `modules/vehicle/service-maintenance-engine.js` |
 | `triggered` | `economic-intelligence/engine/rule-engine.js` |

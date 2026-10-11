@@ -1,0 +1,42 @@
+PATCH S2311 — UI/UX PRIORITY FIXES (cumulative S2310 + UI/UX), basis app-main (11), build 2311
+
+Basis SHA-256: e5d7e7d3cdbd8b7b7793003287a7f48cc600dcfa259b09f1aed5a1404b741c98
+Versi: s2041-1-part-sot-hardening-2311 ↔ ?v=2311 ↔ kw-cache-v2311
+Urutan implementasi: (2) tombol + / FAB, (1) navigasi Uang, (3) Mobil/BBM.
+
+Akumulasi S2310 dipertahankan: scope token --grad-accent/--grad-accent-diag dipindah ke [data-theme], beserta build artifacts dan regression test.
+
+Verifikasi:
+- Tes terarah UI/UX + FuelCard + S2550: 72/72 lulus.
+- Full suite: 8.789 tes; 8.786 lulus, 0 gagal, 3 skipped, 0 cancelled/todo; seluruh 64 shard valid.
+- `node --check` source JS dan bundle: lulus.
+- `verify-bundle-freshness`: lulus; marker hash cocok dengan source.
+- `verify-release-ready`: lulus dengan override lint terdokumentasi karena ESLint tidak tersedia di sandbox. Gate minify, delete-manifest, version/SOT, lifecycle, HTML sync, service SOT, deep firewall, Car Notes, dan freshness lulus.
+- Screenshot browser otomatis tidak berhasil diselesaikan; visual smoke-test di perangkat/browser nyata masih diperlukan.
+
+Patch apply: ekstrak seluruh isi ZIP ke root `app-main`, timpa file yang ada.
+Delete: tidak ada file aplikasi yang dihapus. File `.test-checkpoints`, `node_modules`, `backups`, dan artefak sementara tidak disertakan.
+
+Daftar file payload (berubah/ditambahkan relatif terhadap basis):
+- ADDED: AUDIT-UIUX-S2311.md
+- MODIFIED: app-bundle-a.min.js
+- MODIFIED: app-bundle-b.min.js
+- MODIFIED: app_production.html
+- MODIFIED: chat-action-handlers.js
+- MODIFIED: docs/COVERAGE-PER-MODULE.md
+- MODIFIED: docs/FILE-MAP.md
+- MODIFIED: docs/RELEASE-GATE-LOG.md
+- MODIFIED: index.html
+- MODIFIED: modules/shared/action-wrappers.js
+- MODIFIED: modules/shared/features-helpers-global-security.js
+- MODIFIED: modules/shared/modals.js
+- MODIFIED: modules/shared/modules-calc.js
+- MODIFIED: modules/shared/modules-render.js
+- MODIFIED: modules/vehicle/fuel-card.js
+- MODIFIED: styles.css
+- MODIFIED: sw.js
+- MODIFIED: tests/fuel-card.test.js
+- ADDED: tests/grad-accent-token-scope.test.js
+- ADDED: tests/s2311-uiux-priority-fixes.test.js
+- MODIFIED: tests/s2550-fuel-visibility-carnotes.test.js
+- Manifest ini tidak memasukkan dirinya sendiri ke daftar payload.

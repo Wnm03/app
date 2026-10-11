@@ -58,7 +58,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=2309"
+      -> `<script src="modules/shared/modal-write.js?v=2311"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -70,7 +70,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=2309`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=2311`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -183,18 +183,18 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=2309">
-<link rel="stylesheet" href="modern-ui-layer.css?v=2309">
-<link rel="stylesheet" href="minimal-ui-theme.css?v=2309">
-<link rel="stylesheet" href="pwa-ui-layer.css?v=2309">
-<script src="nav-scroll.js?v=2309" defer></script>
-<script src="modules/shared/boot-early.js?v=2309"></script>
+<link rel="stylesheet" href="styles.css?v=2311">
+<link rel="stylesheet" href="modern-ui-layer.css?v=2311">
+<link rel="stylesheet" href="minimal-ui-theme.css?v=2311">
+<link rel="stylesheet" href="pwa-ui-layer.css?v=2311">
+<script src="nav-scroll.js?v=2311" defer></script>
+<script src="modules/shared/boot-early.js?v=2311"></script>
 
 
 
-<script src="modules/shared/segmented-control.js?v=2309"></script>
-<script src="modules/shared/bundle-load-guard.js?v=2309" data-guard-src="app-bundle-a.min.js?v=2309" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=2309" defer></script>
+<script src="modules/shared/segmented-control.js?v=2311"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2311" data-guard-src="app-bundle-a.min.js?v=2311" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=2311" defer></script>
 <link rel="icon" type="image/svg+xml" href="icon-192.svg">
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 
@@ -1634,7 +1634,7 @@
   </div>
 </div>
 
-<script src="modules/shared/modal-write.js?v=2309" data-modal-range="0-102"></script>
+<script src="modules/shared/modal-write.js?v=2311" data-modal-range="0-102"></script>
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
 <!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
@@ -3275,8 +3275,15 @@
        6 nav-item asli: Beranda,Uang,Shop | FAB | Aset,Mobil,Pajak) supaya
        visual "+"-nya benar-benar di tengah nav. -->
   <button class="nav-item nav-fab" id="navFabMain" data-action="navFabToggle" data-args='["$el"]' aria-label="Tambah cepat" aria-expanded="false" aria-haspopup="true">
-    <span class="nav-fab-icon">＋</span>
+    <span class="nav-fab-icon" aria-hidden="true">＋</span>
+    <span class="nav-fab-label">Tambah</span>
   </button>
+  <div class="nav-fab-menu" id="navFabFallbackMenu" role="group" aria-label="Aksi cepat" hidden>
+    <button type="button" data-action="navQuickOpenIncome"><span aria-hidden="true">💚</span> Pemasukan</button>
+    <button type="button" data-action="navQuickOpenExpense"><span aria-hidden="true">🔴</span> Pengeluaran</button>
+    <button type="button" data-action="navQuickOpenBbm"><span aria-hidden="true">⛽</span> Isi BBM</button>
+    <button type="button" data-action="navQuickOpenServis"><span aria-hidden="true">🔧</span> Servis</button>
+  </div>
   <button class="nav-item" aria-current="false" data-action="showPage" data-args='["aset", "$el"]' aria-label="Aset">
     <svg aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
     Aset<div class="nav-dot"></div>
@@ -3535,7 +3542,7 @@
 <!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
 <!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=2309" data-guard-src="app-bundle-b.min.js?v=2309" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2311" data-guard-src="app-bundle-b.min.js?v=2311" data-guard-id="appBundleBScript"></script>
 <!-- S2015-S2030 historical runtime wrappers removed from HTML. Native APP MAIN SOT + compatibility layer own production runtime; historical files remain audit/test artifacts. -->
 </body>
 </html>

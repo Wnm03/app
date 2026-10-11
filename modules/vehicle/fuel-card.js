@@ -303,14 +303,18 @@ _briefingHtml(vehicleId) {
   const insight = s.highestInsight || {};
 
   const rows = [];
-  rows.push(`Fuel Health ${s.healthScore != null ? s.healthScore + '/100' : '—'}`);
-  rows.push(`Sisa BBM ${fuel.remainingLiter != null ? fuel.remainingLiter.toFixed(1) + ' L' : '—'}${fuel.fuelPercent != null ? ` (${Math.round(fuel.fuelPercent)}%)` : ''}`);
-  rows.push(`Estimasi jarak tersisa ${s.remainingDistance != null ? Math.round(s.remainingDistance).toLocaleString('id-ID') + ' km' : '—'}`);
-  rows.push(`Biaya BBM bulanan ${s.monthlyCost != null ? this._money(s.monthlyCost) : '—'}`);
-  rows.push(`Risiko perawatan ${s.maintenanceRisk || '—'}`);
+  if (s.healthScore != null) rows.push(`Fuel Health ${s.healthScore}/100`);
+  if (fuel.remainingLiter != null) rows.push(`Sisa BBM ${fuel.remainingLiter.toFixed(1)} L${fuel.fuelPercent != null ? ` (${Math.round(fuel.fuelPercent)}%)` : ''}`);
+  if (s.remainingDistance != null) rows.push(`Estimasi jarak tersisa ${Math.round(s.remainingDistance).toLocaleString('id-ID')} km`);
+  if (s.monthlyCost != null) rows.push(`Biaya BBM bulanan ${this._money(s.monthlyCost)}`);
+  if (s.maintenanceRisk) rows.push(`Risiko perawatan ${s.maintenanceRisk}`);
+  // Data kosong bukan ringkasan: jangan tampilkan deretan tanda "—".
+  if (!rows.length && !insight.title && !insight.description && !insight.recommendation) return '';
 
-  let html = `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📋 Fuel Briefing</div>`
-    + `<div class="u-fs12 u-lh15 u-t2">${escapeHtml(rows.join(' · '))}.</div>`;
+  let html = rows.length
+    ? `<div class="u-fs11 u-fw700 u-t2 u-mb6 u-mt10">📋 Ringkasan BBM</div>`
+      + `<div class="u-fs12 u-lh15 u-t2">${escapeHtml(rows.join(' · '))}.</div>`
+    : '';
 
   if (insight.title || insight.description) {
     const insightText = [insight.title, insight.description].filter(Boolean).join(': ');
@@ -387,9 +391,8 @@ _gaugeEmptyHintHtml(vehicleId) {
   const msg = noProfile
     ? 'Fuel bar belum tampil: profil tangki kendaraan ini belum diatur.'
     : 'Fuel bar belum tampil: belum ada estimasi. Koreksi bar dengan speedometer dulu.';
-  const action = noProfile ? 'FuelTankProfileUI.open' : 'FuelBarCorrection.open';
-  const label = noProfile ? 'Atur Tangki' : 'Koreksi Bar';
-  return `<div class="u-fs12 orange" data-fuel-gauge-hint="1" style="margin:6px 0 10px;line-height:1.5">${msg} <button type="button" class="btn btn-ghost btn-sm" data-action="${action}" data-args="${escapeHtml(JSON.stringify([vehicleId]))}">${label}</button></div>`;
+  const nextStep = noProfile ? 'Gunakan tombol Atur Tangki di bawah untuk melengkapi profil.' : 'Gunakan tombol Koreksi untuk menyelaraskan estimasi.';
+  return `<div class="u-fs12 orange" data-fuel-gauge-hint="1" style="margin:6px 0 10px;line-height:1.5">${msg} ${nextStep}</div>`;
 },
 
 // _installGaugeDelegation — satu listener delegasi, dipasang sekali, menggantikan atribut onpointer*.
@@ -528,13 +531,7 @@ _body(insight) {
     ? `<div class="u-fs12 orange" style="margin:0 0 10px;line-height:1.5">⚠️ Estimasi belum mengurangi konsumsi km (butuh min. 2x catat "Isi Full Tank" dengan km naik). Liter di atas belum berkurang otomatis sampai data ini cukup.</div>`
     : '';
   return `
-    <div class="dashhub-cat-head">
-      <div class="dashhub-cat-icon">⛽</div>
-      <div>
-        <div class="dashhub-cat-label">Fuel Intelligence</div>
-        <div class="dashhub-cat-desc">${escapeHtml(insight.emoji ? insight.emoji + ' ' : '')}${escapeHtml(insight.name)} — ${escapeHtml(effText)}</div>
-      </div>
-    </div>
+    <div class="u-fs12 u-fw700 u-t2" data-fuel-active-vehicle="1" style="margin:0 0 6px;line-height:1.5">${escapeHtml(insight.emoji ? insight.emoji + ' ' : '')}${escapeHtml(insight.name)} <span class="u-t2">· ${escapeHtml(effText)}</span></div>
     <div class="u-fs12${statusCls ? ' ' + statusCls : ''}" style="margin:6px 0 10px;line-height:1.5">${escapeHtml(statusText)}</div>
     ${this._gaugeHtml(insight.vehicleId) || this._gaugeEmptyHintHtml(insight.vehicleId)}
     ${this._sourceBadgeHtml(insight.vehicleId)}
