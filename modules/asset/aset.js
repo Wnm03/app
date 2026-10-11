@@ -424,7 +424,7 @@ const sectionVisible=!!(section&&!section.classList.contains('u-dnone'));
 const wantAutoHolding=sectionVisible&&Aset._tradableState;
 const priceEl=document.getElementById('assetCurrentPrice');
 const currentPriceRaw=priceEl?priceEl.value:'';
-const currentPrice=currentPriceRaw!==''?parseDecStr(currentPriceRaw):null;
+const currentPrice=currentPriceRaw!==''?(typeof parseMoneyID==='function'?parseMoneyID(currentPriceRaw):parseDecStr(currentPriceRaw)):null;
 const savedAsset=Aset.save();
 if(!savedAsset)return savedAsset;// validasi gagal (mis. nama kosong) atau save guard aktif -- _saveInner() sudah toast sendiri, hentikan di sini, 0 side-effect tambahan.
 if(!wantAutoHolding)return savedAsset;
@@ -490,7 +490,8 @@ const nilai=parsePzNum(nilaiRaw);
 if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai aset harus lebih dari 0');return;}
 if(nilai>999000000000){toast('⚠️ Nilai aset maksimal Rp 999.000.000.000');return;}
 const modalInvestasi=parsePzNum(document.getElementById('assetModalInvestasi').value)||null;
-const hargaBeli=parseDecStr(document.getElementById('assetHargaBeli').value);
+const _hargaBeliRaw=document.getElementById('assetHargaBeli').value;
+const hargaBeli=typeof parseMoneyID==='function'?parseMoneyID(_hargaBeliRaw):parseDecStr(_hargaBeliRaw);
 const jumlahUnit=parseDecStr(document.getElementById('assetJumlahUnit').value);
 const tanggal=document.getElementById('assetTanggal').value||'';
 let accountId=document.getElementById('assetAccId').value||null;
@@ -1295,7 +1296,7 @@ rows.push([a.name,a.jenis,a.lokasi||'',a.nilai,a.modalInvestasi!=null?a.modalInv
 const wb=XLSX.utils.book_new();
 const ws=XLSX.utils.aoa_to_sheet(rows);
 XLSX.utils.book_append_sheet(wb,ws,'Buku Aset');
-XLSX.writeFile(wb,'aset-W-'+new Date().toISOString().split('T')[0]+'.xlsx');
+XLSX.writeFile(wb,'aset-W-'+todayStr()+'.xlsx');
 toast('✅ '+list.length+' aset di-export');
 },
 // BUGFIX-PROTECTIVE: accountId dari file yang di-import SENGAJA tidak dipakai

@@ -758,9 +758,9 @@ const InvestmentListUI = {
     const unitEl = document.getElementById('investUnit');
     const unit = (unitEl && unitEl.value !== '') ? parseDecStr(unitEl.value) : 0;
     const avgEl = document.getElementById('investAvgPrice');
-    const avgPrice = (avgEl && avgEl.value !== '') ? parseDecStr(avgEl.value) : 0;
+    const avgPrice = (avgEl && avgEl.value !== '') ? (typeof parseMoneyID === 'function' ? parseMoneyID(avgEl.value) : parseDecStr(avgEl.value)) : 0;
     const curEl = document.getElementById('investCurrentPrice');
-    const currentPrice = (curEl && curEl.value !== '') ? parseDecStr(curEl.value) : 0;
+    const currentPrice = (curEl && curEl.value !== '') ? (typeof parseMoneyID === 'function' ? parseMoneyID(curEl.value) : parseDecStr(curEl.value)) : 0;
     const notesEl = document.getElementById('investNotes');
     const notes = notesEl ? notesEl.value : '';
     const dateEl = document.getElementById('investPurchaseDate');

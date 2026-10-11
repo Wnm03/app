@@ -106,7 +106,8 @@ toast('✅ Tagihan tahunan PBB dibuat, reminder aktif di menu Tagihan');
 const Zakat={
 hitungPenghasilan(){
 const now=new Date();
-const incomeBulan=D.transactions.filter(t=>t.type==='income'&&(()=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();})()).reduce((s,t)=>s+(t.amount||0),0);
+const _ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+const incomeBulan=D.transactions.filter(t=>t.type==='income'&&String(t.date||'').slice(0,7)===_ym).reduce((s,t)=>s+(t.amount||0),0);
 const nisab=D.pajakZakat.nisabPenghasilanBulan;
 document.getElementById('zpIncomeBulan').textContent=fmtFull(incomeBulan);
 document.getElementById('zpNisabBulan').textContent=fmtFull(nisab);
@@ -153,7 +154,7 @@ const cukupNisab=totalHarta>=nisab;
 let haulOk=false, haulMsg='';
 if(cukupNisab){
 if(!pz.haulMaalMulai){
-pz.haulMaalMulai=new Date().toISOString().slice(0,10);
+pz.haulMaalMulai=todayStr();
 haulMsg='📅 Haul mulai dihitung hari ini ('+pz.haulMaalMulai+'). Zakat wajib jika harta masih ≥ nisab 1 tahun lagi.';
 } else {
 const mulai=new Date(pz.haulMaalMulai);
@@ -182,9 +183,9 @@ const jumlahStr=jenis==='penghasilan'?document.getElementById('zpJumlah').textCo
 const jumlah=parsePzNum(jumlahStr);
 if(jumlah<=0){toast('⚠️ Belum ada kewajiban zakat untuk dicatat');return;}
 if(!await askConfirm('Catat pembayaran zakat '+(jenis==='penghasilan'?'penghasilan':'maal')+' sebesar '+fmtFull(jumlah)+'? Otomatis tercatat sebagai pengeluaran di Keuangan.',{danger:false,okText:'Ya, Catat',icon:'🕌'}))return;
-D.pajakZakat.zakatLog.unshift({id:uid(),jenis,tanggal:new Date().toISOString().slice(0,10),jumlah});
-const zakatTx={id:uid(),type:'expense',amount:jumlah,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:'Zakat '+(jenis==='penghasilan'?'Penghasilan':'Maal'),date:new Date().toISOString().slice(0,10)}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(zakatTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
-if(jenis==='maal')D.pajakZakat.haulMaalMulai=new Date().toISOString().slice(0,10);
+D.pajakZakat.zakatLog.unshift({id:uid(),jenis,tanggal:todayStr(),jumlah});
+const zakatTx={id:uid(),type:'expense',amount:jumlah,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:'Zakat '+(jenis==='penghasilan'?'Penghasilan':'Maal'),date:todayStr()}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(zakatTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
+if(jenis==='maal')D.pajakZakat.haulMaalMulai=todayStr();
 save();
 // Sesi C-lanjutan: catatDibayar() menulis D.pajakZakat.zakatLog + D.transactions
 // (baris pengeluaran zakat) tanpa pernah emit -- kind BARU "zakat" (belum ada
@@ -347,7 +348,8 @@ render(){
 const elO=document.getElementById('umkmOmzet'), elP=document.getElementById('umkmPajak');
 if(!elO||!elP)return;
 const now=new Date();
-const omzetBulan=(D.cobek||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).reduce((s,t)=>s+(t.total||0),0);
+const _ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+const omzetBulan=(D.cobek||[]).filter(t=>String(t.date||'').slice(0,7)===_ym).reduce((s,t)=>s+(t.total||0),0);
 elO.textContent=fmtFull(omzetBulan);
 elP.textContent=fmtFull(Math.round(omzetBulan*0.005));
 }
@@ -377,9 +379,9 @@ return{pajak:Math.round(pajak),detail};
 isiDariTransaksi(){
 const now=new Date();
 const y=now.getFullYear();
-const incomeYear=D.transactions.filter(t=>t.type==='income'&&new Date(t.date).getFullYear()===y);
+const incomeYear=D.transactions.filter(t=>t.type==='income'&&String(t.date||'').slice(0,4)===String(y));
 if(!incomeYear.length){toast('⚠️ Belum ada data pemasukan tahun ini');return;}
-const monthsSet=new Set(incomeYear.map(t=>new Date(t.date).getMonth()));
+const monthsSet=new Set(incomeYear.map(t=>String(t.date).slice(5,7)));
 const totalYear=incomeYear.reduce((s,t)=>s+(t.amount||0),0);
 const avgBulan=Math.round(totalYear/Math.max(1,monthsSet.size));
 document.getElementById('pphBruto').value=avgBulan;

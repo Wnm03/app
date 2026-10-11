@@ -225,7 +225,7 @@ _buildExportData(vid) {
 
 // _dateTag()/_slug() — helper murni format nama file, 0 logic bisnis.
 _dateTag() {
-  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
+  if(typeof FuelExportUtils!=='undefined'&&FuelExportUtils&&typeof FuelExportUtils.dateTag==='function')return FuelExportUtils.dateTag();if(typeof todayStr==='function')return todayStr();const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
 },
 
 _slug(name) {

@@ -3,7 +3,7 @@
 // Isi: MODULE_FEATURES_VERSION (konstanta versi, dicek sinkron oleh diagnostik-versi.js) + CHAT_ACTION_LABELS (label tombol usul per tipe aksi) + CHAT_ACTION_HANDLERS (eksekusi nyata tiap tipe aksi ke D.*, dipanggil dari chat-action.js via chatActionInnerHTML/extractChatAction) + CHAT_ACTION_EDIT_FIELDS (skema field utk form edit usulan sebelum dieksekusi).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah car-notes.js, sebelum edukasi-dana.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
-const MODULE_FEATURES_VERSION='s2041-1-part-sot-hardening-2295';
+const MODULE_FEATURES_VERSION='s2041-1-part-sot-hardening-2309';
 const CHAT_ACTION_LABELS={add_transaksi:'💸 Usul: Tambah Transaksi',add_tagihan:'🧾 Usul: Tambah Tagihan/Cicilan',add_servis:'🔧 Usul: Catat Servis Kendaraan',add_target:'🎯 Usul: Tambah Target Tabungan',add_catatan_anak:'👶 Usul: Catat soal Anak',add_wishlist:'📋 Usul: Tambah ke Prioritas Belanja'};
 const CHAT_ACTION_HANDLERS={
 add_transaksi(data){
@@ -11,7 +11,7 @@ const type=(data.type==='income')?'income':'expense';
 const amount=Math.round(Number(data.amount));
 if(!amount||amount<=0)throw new Error('Nominal tidak valid');
 const accountId=(D.accounts.find(a=>data.accountName&&a.name&&a.name.toLowerCase().includes(String(data.accountName).toLowerCase()))||D.accounts[0])?.id;
-FinanceTxSOT.create({id:uid(),type,amount,category:data.category||'Lainnya',subcategory:data.subcategory||'',accountId,payMethod:'tunai',note:data.note||'',date:(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:new Date().toISOString().split('T')[0]});
+FinanceTxSOT.create({id:uid(),type,amount,category:data.category||'Lainnya',subcategory:data.subcategory||'',accountId,payMethod:'tunai',note:data.note||'',date:(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:todayStr()});
 save();refreshCurrentPage();
 return `Transaksi ${type==='income'?'pemasukan':'pengeluaran'} ${fmtFull(amount)} (${data.category||'Lainnya'}) tersimpan`;
 },
@@ -31,7 +31,7 @@ let veh=D.vehicles.find(v=>v.id===data.vehicleId);
 if(!veh&&data.vehicleName)veh=D.vehicles.find(v=>v.name.toLowerCase().includes(String(data.vehicleName).toLowerCase()));
 if(!veh&&D.vehicles.length===1)veh=D.vehicles[0];
 if(!veh)throw new Error('Kendaraan tidak dikenali, sebutkan namanya lebih jelas ya');
-const date=(data.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(data.date)))?String(data.date):new Date().toISOString().slice(0,10);
+const date=(data.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(data.date)))?String(data.date):todayStr();
 const accId=D.accounts[0]?.id||'';
 const servisItem=data.item||'Servis';
 const idem=data.idempotencyKey||('chat:servis:'+veh.id+':'+date+':'+String(servisItem).trim().toLowerCase()+':'+String(data.km??'')+':'+String(cost)+':'+String(data.note||'').trim().toLowerCase());
@@ -80,7 +80,7 @@ return `Barang "${name}" ${fmtFull(price)} ditambahkan ke Prioritas Belanja`+(du
 add_catatan_anak(data){
 if(!data.text||!String(data.text).trim())throw new Error('Isi catatan kosong');
 if(!D.catatan.anak)D.catatan.anak=[];
-D.catatan.anak.push({id:uid(),date:(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:new Date().toISOString().split('T')[0],text:String(data.text).trim()});
+D.catatan.anak.push({id:uid(),date:(data.date&&!isNaN(new Date(data.date).getTime()))?data.date:todayStr(),text:String(data.text).trim()});
 save();refreshCurrentPage();
 return `Catatan anak tersimpan: "${String(data.text).trim()}"`;
 }

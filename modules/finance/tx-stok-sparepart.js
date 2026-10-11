@@ -349,7 +349,7 @@ else rr={ok:!!revertStockPurchase(existingTx.partStockId,existingTx.partStockQty
 if(!rr||rr.ok===false)throw new Error((rr&&rr.code)||'STOCK_PURCHASE_REVERT_FAILED');
 }
 const unitPrice=(priceBasis>0)?(priceBasis/qty):0;
-const purchaseDate=date||new Date().toISOString().split('T')[0];
+const purchaseDate=date||todayStr();
 let targetPart=null;
 if(itemSel==='__new__'){
 const name=(document.getElementById('txStockNewName').value.trim())||note||'Sparepart Baru';

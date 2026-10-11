@@ -34,7 +34,7 @@ function vsfiDue(service,rule,now,currentKm){
   const nextDueKm=Number.isFinite(km)&&intervalKm>0?km+intervalKm:null;
   let nextDueDate=null;
   const months=Number(rule.intervalBulan);
-  if(months>0&&service.date){const d=new Date(service.date);if(!isNaN(d)){const day=d.getDate();d.setMonth(d.getMonth()+months);if(d.getDate()!==day)d.setDate(0);nextDueDate=d.toISOString().slice(0,10);}}
+  if(months>0&&service.date){const d=new Date(service.date);if(!isNaN(d)){const day=d.getDate();d.setMonth(d.getMonth()+months);if(d.getDate()!==day)d.setDate(0);nextDueDate=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));}}
   const cur=Number(Number.isFinite(Number(currentKm))?currentKm:vsfiCurrentKm(rule.vehicleId));
   const remainKm=nextDueKm==null||!Number.isFinite(cur)?null:nextDueKm-cur;
   const today=now||new Date(); const dueDate=nextDueDate?new Date(nextDueDate+'T23:59:59'):null;

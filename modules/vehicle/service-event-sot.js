@@ -149,7 +149,7 @@
         else if((st==='REPLACED'||st==='OK')&&x.status!=='PERLU_DIPERIKSA'&&x.status!=='TERTUNDA')x.status='OK';
         const currentKm=typeof g.getVehicleKm==='function'?Number(g.getVehicleKm(vid)):NaN;
         const dueKm=x.nextDueKm!=null?Number(x.nextDueKm):NaN;
-        const today=new Date().toISOString().slice(0,10);
+        const today=typeof g.todayStr==='function'?g.todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
         const dueDate=x.nextDueDate?String(x.nextDueDate).slice(0,10):'';
         if(x.status==='OK' && ((Number.isFinite(currentKm)&&Number.isFinite(dueKm)&&currentKm>=dueKm)||(dueDate&&today>=dueDate))) x.status='JATUH_TEMPO';
       });

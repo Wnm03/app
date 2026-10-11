@@ -492,7 +492,7 @@ if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIn
 // entry Buku Aset baru, jadi langsung ikut Total Aset/Net Worth sejak awal.
 _autoCreateVehicleAsset(newVeh,ownership);
 if(!isNaN(kmAwal)&&kmAwal>0){
-D.kmLogs.push({id:uid(),vehicleId:newId,date:(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()),km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
+D.kmLogs.push({id:uid(),vehicleId:newId,date:todayStr(),km:kmAwal,note:'KM awal saat kendaraan ditambahkan'});
 }
 save();
 // S2471: durable reconciliation for post-commit vehicle create event.
@@ -750,7 +750,7 @@ if(!await askConfirm('Bayar '+cfg.label+' untuk '+v.name+' sebesar '+fmtFull(bia
 const vehBillTx={id:uid(),type:'expense',amount:biaya,category:'Tagihan',subcategory:'',accountId:D.accounts[0]?.id||'',payMethod:'tunai',note:cfg.label.replace(/^\S+\s/,'')+' - '+v.name,date:typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(vehBillTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 const base=v[cfg.tglKey]?new Date(v[cfg.tglKey]):new Date();
 cfg.advance(base);
-v[cfg.tglKey]=base.toISOString().split('T')[0];
+v[cfg.tglKey]=(typeof localISO==='function'?localISO(base):(base.getFullYear()+'-'+String(base.getMonth()+1).padStart(2,'0')+'-'+String(base.getDate()).padStart(2,'0')));
 save();
 renderVehTaxList();
 if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});
@@ -793,7 +793,7 @@ const def=D.pajakZakat&&D.pajakZakat[simTarifKey(jenis)];
 if(def&&biayaEl&&!biayaEl.value.trim())biayaEl.value=def;
 if(tglEl&&!tglEl.value){
 const d=new Date();d.setFullYear(d.getFullYear()+SIM_MASA_BERLAKU_TAHUN);
-tglEl.value=d.toISOString().split('T')[0];
+tglEl.value=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 }
 if(wrap){
 const editing=(typeof editSimId!=='undefined'&&editSimId)?D.simList.find(x=>sameId(x.id,editSimId)):null;

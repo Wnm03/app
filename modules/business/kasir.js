@@ -241,8 +241,9 @@ return{...it,product:p,harga,hargaDefault,lineTotal};
 }).filter(Boolean);
 const diskon=parseFloat(document.getElementById('kasirDiskon')?.value)||0;
 const ongkir=parseFloat(document.getElementById('kasirOngkir')?.value)||0;
-const total=Math.max(0,subtotal-diskon)+ongkir;
-const profit=subtotal-modal-diskon;
+const effectiveDiskon=Math.min(Math.max(0,diskon),Math.max(0,subtotal));
+const total=Math.max(0,subtotal-effectiveDiskon)+ongkir;
+const profit=typeof calculateNetProfit==='function'?calculateNetProfit(subtotal,modal,diskon):Math.max(0,subtotal)-Math.min(Math.max(0,diskon),Math.max(0,subtotal))-modal;
 return{lines,subtotal,modal,diskon,ongkir,total,profit};
 },
 renderCart(){
@@ -275,7 +276,7 @@ if(diskonRow){diskonRow.style.display=diskon>0?'flex':'none';const dEl=document.
 const ongkirRow=document.getElementById('kasirOngkirRow');
 if(ongkirRow){ongkirRow.style.display=ongkir>0?'flex':'none';const oEl=document.getElementById('kasirOngkirDisplay');if(oEl)oEl.textContent='+ '+fmtFull(ongkir);}
 const totalEl=document.getElementById('kasirTotalDisplay');if(totalEl)totalEl.textContent=fmtFull(total);
-const profitEl=document.getElementById('kasirProfitDisplay');if(profitEl)profitEl.textContent='Estimasi untung: '+fmtFull(profit);
+const profitEl=document.getElementById('kasirProfitDisplay');if(profitEl)profitEl.textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
 const btn=document.getElementById('kasirCheckoutBtn');if(btn)btn.disabled=lines.length===0;
 const floatbar=document.getElementById('kasirFloatbar');
 if(floatbar){
@@ -350,7 +351,7 @@ const custAddr=(document.getElementById('kasirCustAddr')?.value||'').trim();
 const customer={name:custName,phone:custPhone,address:custAddr};
 // kw-kasir-audit-2: delivered sekarang ikut toggle di UI (dulu selalu true hardcoded).
 const delivered=document.getElementById('kasirDelivered')?document.getElementById('kasirDelivered').checked:true;
-const date=new Date().toISOString().split('T')[0];
+const date=todayStr();
 const note=(document.getElementById('kasirNote')?.value||'').trim();
 const txId=uid();
 const result=recordShopSale({

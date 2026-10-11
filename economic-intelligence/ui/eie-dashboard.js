@@ -23,7 +23,7 @@ const EIEDashboard = {
       // aman kalau dipanggil berkali-kali karena NotificationService.enable()
       // sudah guard `if(this._enabled)return`).
       if (typeof EIENotifSettings !== 'undefined') EIENotifSettings.bootstrap();
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayStr();
       let snapshot = await EIEScoringEngine.getLatestSnapshot();
       // Recompute paling banyak 1x/hari — bukan tiap buka Dashboard Hub,
       // supaya tidak jadi kerja berat berulang tiap render. syncAndRecompute()

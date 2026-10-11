@@ -401,8 +401,10 @@ const lineTotal=it.harga*it.qty;
 subtotal+=lineTotal;modal+=(p?(p.hargaBeli||0):0)*it.qty;
 return{...it,lineTotal};
 });
-const diskon=parseFloat(document.getElementById('txShopSaleDiskon')?.value)||0;
-const ongkir=parseFloat(document.getElementById('txShopSaleOngkir')?.value)||0;
+const _diskonN=parseFloat(document.getElementById('txShopSaleDiskon')?.value);
+// S2307 (B9): diskon dijepit ke [0, subtotal] -- sebelumnya diskon>subtotal membuat profit lebih rugi dari modal & diskon negatif menaikkan total
+const diskon=Number.isFinite(_diskonN)?Math.min(Math.max(0,_diskonN),Math.max(0,subtotal)):0;
+const _ongkirN=parseFloat(document.getElementById('txShopSaleOngkir')?.value);const ongkir=Number.isFinite(_ongkirN)?Math.max(0,_ongkirN):0; // S2307 (B9)
 const total=Math.max(0,subtotal-diskon)+ongkir;
 const profit=subtotal-modal-diskon;
 return{lines,subtotal,modal,diskon,ongkir,total,profit};

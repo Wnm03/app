@@ -38,7 +38,7 @@ const EIEScoringEngine = {
     const triggered = RuleEngine.evaluate(macro, user, { simulated: false });
 
     const store = eieGetStore();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayStr();
     const snapshot = { date: today, ...scores };
     // 1 entry per hari: kalau hari yang sama sudah ada, timpa (bukan duplikat).
     store.scoreHistory = (store.scoreHistory || []).filter((s) => s.date !== today);

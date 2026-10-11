@@ -824,7 +824,7 @@ linkedBill.nextDue=t.billPrevNextDue;
 } else {
 const d=new Date(linkedBill.nextDue);
 _amc015(d,-1); // BUG-015 (s406): clamp overflow tanggal saat mundur 1 bulan (batalkan pembayaran cicilan)
-linkedBill.nextDue=d.toISOString().split('T')[0];
+linkedBill.nextDue=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 }
 } else if(linkedBill.kind==='utang'&&linkedBill.debtId){
 const dbt=D.debts.find(x=>sameId(x.id,linkedBill.debtId));
@@ -852,7 +852,7 @@ linkedBill.nextDue=t.billPrevNextDue;
 } else {
 const d=new Date(linkedBill.nextDue);
 _amc015(d,-1); // BUG-015 (s406): clamp overflow tanggal saat mundur 1 bulan (batalkan pembayaran utang)
-linkedBill.nextDue=d.toISOString().split('T')[0];
+linkedBill.nextDue=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 }
 } else if((linkedBill.kind==='langganan'||linkedBill.kind==='tagihan')&&linkedBill.freq){
 if(hasSnapshot){
@@ -862,7 +862,7 @@ const d=new Date(linkedBill.nextDue);
 if(linkedBill.freq==='bulanan')_amc015(d,-1); // BUG-015 (s406): clamp overflow tanggal
 else if(linkedBill.freq==='mingguan')d.setDate(d.getDate()-7);
 else if(linkedBill.freq==='tahunan')d.setFullYear(d.getFullYear()-1);
-linkedBill.nextDue=d.toISOString().split('T')[0];
+linkedBill.nextDue=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 }
 }
 }
@@ -1110,7 +1110,7 @@ save();refreshBillEverywhere();renderKekayaanBersih();hitungZakatMaal();
 toast('✅ Tagihan selesai & tercatat');return;
 }
 const d=advanceBillNextDue(b.nextDue,b.freq);
-BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.nextDue=d.toISOString().split('T')[0];});
+BillDebtPiutangCanonicalWriter.updateById('bills',b.id,b0=>{b0.nextDue=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));});
 // S2207: stage event before persistence so mirror + outbox share one IDB transaction.
 _paymentAtomic.commit();
 _paymentAtomicCommitted=true;
@@ -1366,7 +1366,7 @@ const m=billFilterBulan!=='all'?parseInt(billFilterBulan):ref.getMonth();
 if(isNaN(y)||isNaN(m))return null;
 const occ=getBillOccurrencesInMonth(b,y,m);
 if(!occ.length)return null;
-return occ[0].toISOString().split('T')[0];
+return (typeof localISO==='function'?localISO(occ[0]):(occ[0].getFullYear()+'-'+String(occ[0].getMonth()+1).padStart(2,'0')+'-'+String(occ[0].getDate()).padStart(2,'0')));
 }
 function cashflowActionSuggestion(deficitAmount,days){
 if(!deficitAmount||deficitAmount<=0)return '';
@@ -1429,7 +1429,7 @@ virtual:true,
 name:b.name||'Tagihan',
 category:b.category||'',
 amount:b.amount||0,
-date:occ[0].toISOString().split('T')[0],
+date:(typeof localISO==='function'?localISO(occ[0]):(occ[0].getFullYear()+'-'+String(occ[0].getMonth()+1).padStart(2,'0')+'-'+String(occ[0].getDate()).padStart(2,'0'))),
 kind:b.kind||'',
 shared:!!b.shared
 });

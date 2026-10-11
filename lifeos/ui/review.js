@@ -24,7 +24,7 @@ const LifeOSReview = {
   },
 
   async startWeekly() {
-    const periodKey = `weekly-${new Date().toISOString().slice(0, 10)}`;
+    const periodKey = `weekly-${todayStr()}`;
     await reviewServiceStartSession('weekly', periodKey);
     LifeOSReview.render();
   },

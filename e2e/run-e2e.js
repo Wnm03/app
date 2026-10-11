@@ -20,6 +20,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const cp = require('node:child_process');
+const { findPolicyBlockedFailure } = require('./diagnostics');
 
 const ROOT = path.resolve(process.env.E2E_ROOT || path.join(__dirname, '..'));
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
@@ -76,13 +77,15 @@ async function connect(port) {
     if (!target) await sleep(100);
   }
   if (!target) throw new Error('Target halaman Chrome tidak ditemukan');
-  const ws = new WebSocket(target.webSocketDebuggerUrl);
+  const ws = new WebSocket(target.webSocketDebuggerUrl); const networkFailures = []; const requestUrls = new Map();
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = () => rej(new Error('WebSocket CDP gagal')); });
   let id = 0; const pending = new Map(); const pageErrors = [];
   ws.onmessage = (ev) => {
     const m = JSON.parse(ev.data);
     if (m.id && pending.has(m.id)) { const { res, rej } = pending.get(m.id); pending.delete(m.id); m.error ? rej(new Error(m.error.message)) : res(m.result); }
     else if (m.method === 'Runtime.exceptionThrown') pageErrors.push(String(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text).slice(0, 200));
+    else if (m.method === 'Network.requestWillBeSent') requestUrls.set(m.params.requestId, m.params.request.url);
+    else if (m.method === 'Network.loadingFailed') networkFailures.push({ requestId: m.params.requestId, url: requestUrls.get(m.params.requestId) || '', errorText: String(m.params.errorText || ''), type: m.params.type || '' });
   };
   const send = (method, params = {}) => new Promise((res, rej) => { const n = ++id; pending.set(n, { res, rej }); ws.send(JSON.stringify({ id: n, method, params })); });
   const evaluate = async (expr) => {
@@ -92,8 +95,9 @@ async function connect(port) {
   };
   await send('Runtime.enable');
   await send('Page.enable');
+  await send('Network.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 800, deviceScaleFactor: 2, mobile: true });
-  return { send, evaluate, pageErrors, close: () => ws.close() };
+  return { send, evaluate, pageErrors, networkFailures, close: () => ws.close() };
 }
 
 async function waitFor(fn, label, ms = 15000) {
@@ -151,7 +155,15 @@ async function main() {
   try {
     b = await connect(br.port);
     await b.send('Page.navigate', { url: base });
-    await waitFor(() => b.evaluate(`typeof D === 'object' && typeof showPage === 'function' && typeof FuelTankProfile !== 'undefined'`), 'app siap');
+    try {
+      await waitFor(() => b.evaluate(`typeof D === 'object' && typeof showPage === 'function' && typeof FuelTankProfile !== 'undefined'`), 'app siap');
+    } catch (error) {
+      const blocked = findPolicyBlockedFailure(b.networkFailures);
+      if (blocked) {
+        throw new Error(`E2E ENV BLOCKED — browser policy memblokir navigasi aplikasi (${blocked.errorText})${blocked.url ? `: ${blocked.url}` : ''}. Ini bukan bukti bug aplikasi; jalankan E2E di lingkungan browser yang mengizinkan origin lokal.`);
+      }
+      throw error;
+    }
     // Jalur masuk resmi: kw_setup + kw_v4 lalu muat ulang (bukan memaksa mainApp tampil).
     await b.evaluate(`(() => { localStorage.setItem('kw_v4', JSON.stringify(D)); localStorage.setItem('kw_setup', '1'); })()`);
     await b.send('Page.navigate', { url: base });
@@ -194,4 +206,8 @@ async function main() {
   process.exit(failed.length ? 1 : 0);
 }
 
-main().catch((e) => { console.error(`E2E ERROR — ${e.message}`); process.exit(2); });
+main().catch((e) => {
+  const envBlocked = String(e && e.message || '').startsWith('E2E ENV BLOCKED —');
+  console.error(`${envBlocked ? '' : 'E2E ERROR — '}${e.message}`);
+  process.exit(envBlocked ? 4 : 2);
+});

@@ -399,7 +399,7 @@ const sisaTenor=tenor-1;
 if(sisaTenor>0){
 const nextDueDate=new Date(due);
 _amc015(nextDueDate,1); // BUG-015 (s406): clamp overflow tanggal
-const nextDue=nextDueDate.toISOString().split('T')[0];
+const nextDue=(typeof localISO==='function'?localISO(nextDueDate):(nextDueDate.getFullYear()+'-'+String(nextDueDate.getMonth()+1).padStart(2,'0')+'-'+String(nextDueDate.getDate()).padStart(2,'0')));
 const txCicilanIsKprNewEl=document.getElementById('txCicilanIsKpr');
 const isKprNew=txCicilanIsKprNewEl?txCicilanIsKprNewEl.checked:false;
 const txCicilanSharedOtherNameNewEl=document.getElementById('txCicilanSharedOtherName');
@@ -446,7 +446,7 @@ if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(exi
 const billId=uid();
 const alreadyExists=D.bills.find(b=>b.name===nama&&b.kind==='langganan');
 if(!alreadyExists){
-BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:amt,nextDue:dueNext.toISOString().split('T')[0],freq,sisaTenor:null,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'langganan'});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:amt,nextDue:(typeof localISO==='function'?localISO(dueNext):(dueNext.getFullYear()+'-'+String(dueNext.getMonth()+1).padStart(2,'0')+'-'+String(dueNext.getDate()).padStart(2,'0'))),freq,sisaTenor:null,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'langganan'});
 }
 const _langgananNewTx={id:billId+1,type:'expense',amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:'langganan',note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE langganan (2/3).
@@ -763,7 +763,7 @@ save();closeModal('reminderModal');renderSettings();toast('✅ Pengingat tersimp
 }
 function saveLDR(){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;{const _np=document.getElementById('nextPulang');if(!_np)return;D.nextPulang=_np.value;} // S2288-d B4: guard elemen yg tidak ada (cegah TypeError, tanpa mengubah D)
-D.ldrCycleStart=new Date().toISOString().slice(0,10);save();renderLDR();}
+D.ldrCycleStart=todayStr();save();renderLDR();}
 
 // (v94): toggleMs/delReminder dipindah dari backup-restore.js — domain
 // Milestone/Reminder di Pengaturan, gabung bareng saveCatatan/saveReminder/

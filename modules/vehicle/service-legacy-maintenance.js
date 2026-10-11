@@ -73,7 +73,7 @@
     if(!applicable)return {action,axis:plan.axis||'maintenance',status:'CONDITION_ONLY',reason:'tidak ada interval tetap; gunakan kondisi/gejala',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null,lastServiceId:last.id||null};
     const triggered=kmTriggered||timeTriggered;
     const remainingKm=dueKm!=null&&kmNow!=null?dueKm-kmNow:null;
-    return {action,axis:plan.axis||'maintenance',status:triggered?'DUE':'NOT_DUE',trigger:kmTriggered?'km':(timeTriggered?'time':null),nextDueKm:dueKm,nextDueDate:dueDate?dueDate.toISOString().slice(0,10):null,remainingKm,remainingMonths:dueDate?Math.max(0,Math.ceil((dueDate-today)/(1000*60*60*24*30.4375))):null,lastServiceId:last.id||null,lastServiceKm:lastKm,lastServiceDate:last.date||null};
+    return {action,axis:plan.axis||'maintenance',status:triggered?'DUE':'NOT_DUE',trigger:kmTriggered?'km':(timeTriggered?'time':null),nextDueKm:dueKm,nextDueDate:dueDate?(typeof localISO==='function'?localISO(dueDate):(dueDate.getFullYear()+'-'+String(dueDate.getMonth()+1).padStart(2,'0')+'-'+String(dueDate.getDate()).padStart(2,'0'))):null,remainingKm,remainingMonths:dueDate?Math.max(0,Math.ceil((dueDate-today)/(1000*60*60*24*30.4375))):null,lastServiceId:last.id||null,lastServiceKm:lastKm,lastServiceDate:last.date||null};
   }
   function evaluateComponent(vehicleId,componentId,category,options){
     if(!isLegacy(vehicleId))return {ok:false,code:'legacy-profile-not-active',vehicleId,componentId};

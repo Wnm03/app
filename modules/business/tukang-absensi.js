@@ -402,17 +402,17 @@ const unit=document.getElementById('tkBorCalcSatuan').value;
 const hitungUkuran=document.getElementById('tkBorCalcHitungUkuran').checked&&(unit==='m2'||unit==='m3');
 let jumlah;
 if(hitungUkuran){
-const p=parsePzNum(document.getElementById('tkBorCalcP').value);
-const l=parsePzNum(document.getElementById('tkBorCalcL').value);
+const p=parseDecimalID(document.getElementById('tkBorCalcP').value);
+const l=parseDecimalID(document.getElementById('tkBorCalcL').value);
 if(unit==='m3'){
-const t=parsePzNum(document.getElementById('tkBorCalcT').value);
+const t=parseDecimalID(document.getElementById('tkBorCalcT').value);
 jumlah=p*l*t;
 } else {
 jumlah=p*l;
 }
 document.getElementById('tkBorCalcLuas').value=jumlah?String(Math.round(jumlah*100)/100):'';
 } else {
-jumlah=parsePzNum(document.getElementById('tkBorCalcLuas').value);
+jumlah=parseDecimalID(document.getElementById('tkBorCalcLuas').value);
 }
 const harga=parsePzNum(document.getElementById('tkBorCalcHarga').value);
 const total=Math.round(jumlah*harga);

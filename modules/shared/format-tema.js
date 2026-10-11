@@ -49,6 +49,7 @@
 function fmt(n){return fmtFull(n);}
 function fmtFull(n){return'Rp '+Math.round(Number(Math.abs(n||0))).toLocaleString('id-ID');}
 function fmtFullSigned(n){n=Number(n||0);return(n<0?'-':'')+'Rp '+Math.round(Math.abs(n)).toLocaleString('id-ID');}
+function calculateNetProfit(subtotal,modal,diskon){const revenue=Math.max(0,Number(subtotal)||0)-Math.min(Math.max(0,Number(diskon)||0),Math.max(0,Number(subtotal)||0));return revenue-(Number(modal)||0);}
 // BUGFIX (laporan user: toast pesan error scan sparepart "hilang"/tidak
 // kebaca): dulu tiap panggilan toast() bikin setTimeout sendiri TANPA
 // membatalkan timer dari panggilan sebelumnya -- kalau toast ke-2 (mis.

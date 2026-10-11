@@ -15,12 +15,46 @@ const n=Number(digits);
 if(isNaN(n))return 0;
 return negative?-n:n;
 }
+// Kontrak input uang: pemisah tunggal dengan tepat 3 digit di belakang dianggap
+// pemisah ribuan ('15.000' -> 15000); desimal gunakan koma dengan 1-2 digit
+// ('15,5' -> 15.5); awalan '0' berarti desimal ('0.500' -> 0.5). Jika titik & koma muncul bersama, pemisah paling kanan desimal.
+// Jangan gunakan untuk kuantitas/gram/unit atau tarif persen; gunakan parseDecStr().
+function parseMoneyID(v){
+if(v===null||v===undefined||String(v).trim()==='')return null;
+let s=String(v).trim().replace(/[^0-9.,+\-]/g,'');if(!s)return null;
+const negative=s.includes('-')&&!s.includes('+');s=s.replace(/[+\-]/g,'');
+const comma=s.lastIndexOf(','),dot=s.lastIndexOf('.');let normalized=s;
+if(comma>=0&&dot>=0){const i=Math.max(comma,dot);normalized=s.slice(0,i).replace(/[.,]/g,'')+'.'+s.slice(i+1).replace(/[.,]/g,'');}
+else if(comma>=0||dot>=0){const sep=comma>=0?',':'.';const count=s.split(sep).length-1;const after=s.length-s.lastIndexOf(sep)-1;const prefix=s.slice(0,s.lastIndexOf(sep)).replace(/[.,]/g,'');
+ if(count>1||(after===3&&prefix.length>=1&&prefix.length<=3&&prefix[0]!=='0'))normalized=s.replace(/[.,]/g,'');
+ else normalized=s.replace(sep,'.');
+}
+const n=Number(normalized);return Number.isFinite(n)?(negative?-n:n):null;
+}
+function parseDecimalID(v){
+if(v===null||v===undefined||String(v).trim()==='')return 0;
+let s=String(v).trim().replace(/[^0-9.,+\-]/g,'');if(!s)return 0;
+const neg=s.includes('-')&&!s.includes('+');s=s.replace(/[+\-]/g,'');
+const comma=s.lastIndexOf(','),dot=s.lastIndexOf('.');let decimalSep=null;
+if(comma>=0&&dot>=0)decimalSep=comma>dot?',':'.';
+else if(comma>=0)decimalSep=',';
+else if(dot>=0){const after=s.length-dot-1;const groups=s.split('.');if(!(after===3&&groups.length>2))decimalSep='.';}
+let normalized=s;
+if(decimalSep){const i=s.lastIndexOf(decimalSep);normalized=s.slice(0,i).replace(/[.,]/g,'')+'.'+s.slice(i+1).replace(/[.,]/g,'');}
+else normalized=s.replace(/[.,]/g,'');
+const n=Number(normalized);return Number.isFinite(n)?(neg?-n:n):0;
+}
 function parseDecStr(v){
 if(v===null||v===undefined||v==='')return null;
 let s=String(v).trim().replace(/[^0-9.,\-]/g,'');
 if(!s)return null;
-if(s.includes(',')&&!s.includes('.')) s=s.replace(',','.');
-else s=s.replace(/,/g,'');
+// S2306 (B5): pemisah terakhir = desimal bila titik & koma muncul bersamaan ('1.500,50'->1500.5,
+// '1,234.5'->1234.5); pemisah yg berulang tanpa lawannya = ribuan ('12.345.678', '1,234,567').
+const _nC=(s.match(/,/g)||[]).length,_nD=(s.match(/\./g)||[]).length;
+if(_nC&&_nD){const i=Math.max(s.lastIndexOf(','),s.lastIndexOf('.'));s=s.slice(0,i).replace(/[.,]/g,'')+'.'+s.slice(i+1).replace(/[.,]/g,'');}
+else if(_nC>1) s=s.replace(/,/g,'');
+else if(_nC===1) s=s.replace(',','.');
+else if(_nD>1) s=s.replace(/\./g,'');
 const n=parseFloat(s);
 return isNaN(n)?null:n;
 }

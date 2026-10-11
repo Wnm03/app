@@ -890,7 +890,7 @@ const amt=paylater.amount||fallbackAmt;
 if(!amt||amt<=0)return;
 const baseDate=fallbackDateStr&&!isNaN(new Date(fallbackDateStr).getTime())?new Date(fallbackDateStr):new Date();
 const due=new Date(baseDate);_amc015(due,1); // BUG-015 (s406): clamp overflow tanggal
-const dueStr=due.toISOString().slice(0,10);
+const dueStr=(typeof localISO==='function'?localISO(due):(due.getFullYear()+'-'+String(due.getMonth()+1).padStart(2,'0')+'-'+String(due.getDate()).padStart(2,'0')));
 const amtLabel=typeof fmt==='function'?fmt(amt):('Rp'+amt);
 const ok=await askConfirm('Terdeteksi metode bayar nanti/bulan depan ('+paylater.label+') senilai '+amtLabel+'. Tambahkan pengingat jatuh tempo '+dueStr+' ke 🧾 Tagihan?',{icon:'📅',okText:'✅ Ya, Tambahkan',cancelText:'Tidak Usah',danger:false});
 if(!ok)return;

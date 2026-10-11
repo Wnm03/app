@@ -99,7 +99,7 @@ incomeAvg(){
 const months=FI.effectiveMonths();
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
-const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=now;});
+const txs=D.transactions.filter(t=>{const ms=typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(String(t.date||'')+'T00:00:00').getTime();const d=new Date(ms);return d>=from&&d<=now;});
 return txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)/months;
 },
 hitung(){
@@ -501,7 +501,7 @@ const it=D.wishlist.find(x=>sameId(x.id,WorthIt.pendingBuyId));
 const t=D.transactions.find(x=>x.id===txId);
 if(it&&t){
 it.bought=true;
-it.boughtDate=t.date||new Date().toISOString().split('T')[0];
+it.boughtDate=t.date||todayStr();
 it.txId=txId;
 t.wishlistLinkId=it.id;
 }
@@ -592,7 +592,7 @@ return it;
 addEntry(itemId,price,date,source){
 const it=WorthIt.PW.findItem(itemId);
 if(!it||!(price>0))return null;
-const entry={id:uid(),price:Math.round(price),date:date||new Date().toISOString().slice(0,10),source:source||'manual'};
+const entry={id:uid(),price:Math.round(price),date:date||todayStr(),source:source||'manual'};
 it.entries.push(entry);
 it.entries.sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 return entry;

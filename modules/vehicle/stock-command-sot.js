@@ -63,7 +63,7 @@
     const journalBefore=journalBeforeQty==null?before:Number(journalBeforeQty);
     if(!Number.isFinite(after)||after<0)return {ok:false,code:'INVALID_QTY',id:p.id};
     p.qty=after;
-    if(journal){if(!Array.isArray(p.adjustmentHistory))p.adjustmentHistory=[];p.adjustmentHistory.push({id:'adj_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),date:new Date().toISOString().slice(0,10),at:new Date().toISOString(),qtyBefore:journalBefore,qtyAfter:after,delta:after-journalBefore,reason,source});}
+    if(journal){if(!Array.isArray(p.adjustmentHistory))p.adjustmentHistory=[];p.adjustmentHistory.push({id:'adj_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),date:(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()),at:new Date().toISOString(),qtyBefore:journalBefore,qtyAfter:after,delta:after-journalBefore,reason,source});}
     if(saveNow&&typeof save==='function')save();
     return {ok:true,part:p,beforeQty:before,afterQty:after,changed:before!==after};
   }

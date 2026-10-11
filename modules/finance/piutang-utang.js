@@ -585,7 +585,7 @@ const el=document.getElementById('piutangList');
 if(!el)return;
 const list=D.piutang||[];
 if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">🤝</div><div class="empty-text">Belum ada piutang tercatat</div></div>';return;}
-const today=new Date().toISOString().slice(0,10);
+const today=(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 const active=Piutang.sortedActive();
 const lunas=list.filter(p=>p.lunas);
 const topOverdueDays=active.length?Piutang.overdueDays(active[0]):0;
@@ -723,7 +723,8 @@ const nilai=parsePzNum(document.getElementById('debtNilai').value);
 // di atas (lihat komentar di sana).
 if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai utang harus lebih dari 0');return;}
 if(nilai>999000000000){toast('⚠️ Nilai utang maksimal Rp 999.000.000.000');return;}
-const bungaRaw=parseFloat(document.getElementById('debtBunga').value)||0;
+const _bgS=String(document.getElementById('debtBunga').value==null?'':document.getElementById('debtBunga').value).trim();
+const bungaRaw=_bgS===''?0:(typeof parseDecimalID==='function'?parseDecimalID(_bgS):(parseFloat(_bgS.replace(',','.'))||0));
 // FIX (BUG-FIN-002): guard bunga<0 -- sebelumnya parseFloat()||0 meloloskan
 // bunga NEGATIF (mis. input diawali "-") tanpa peringatan, lolos tersimpan &
 // langsung dipakai sbg suku bunga majemuk di Debt.simulate() (dipakai
@@ -798,8 +799,8 @@ if(bill){removeOrphanedAutoPiutangForBill(bill.id);BillDebtPiutangCanonicalWrite
 BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.billId=null;});
 return;
 }
-const today=new Date().toISOString().slice(0,10);
-const defaultNextDue=()=>{const dt=new Date();_amc015(dt,1);return dt.toISOString().split('T')[0];}; // BUG-015 (s406): clamp overflow tanggal
+const today=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
+const defaultNextDue=()=>{const dt=new Date();_amc015(dt,1);return typeof localISO==='function'?localISO(dt):dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');}; // BUG-015 (s406): clamp overflow tanggal
 if(bill){
 BillDebtPiutangCanonicalWriter.updateById('bills',bill.id,b0=>{
   b0.name='Cicilan: '+d.name;
@@ -914,7 +915,7 @@ const billBulanan=billCicilan.reduce((s,b)=>s+(b.amount||0),0);
 document.getElementById('debtTotalVal').textContent=fmtFull(Debt.totalValue()+billOutstanding);
 document.getElementById('debtCicilanVal').textContent=fmtFull(Debt.totalCicilanBulanan()+billBulanan);
 if(!list.length&&!billCicilan.length){el.innerHTML='<div class="empty"><div class="empty-icon">📕</div><div class="empty-text">Belum ada utang tercatat</div></div>';return;}
-const today=new Date().toISOString().slice(0,10);
+const today=(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
 const debtRowsHtml=list.map(d=>{
 // BUGFIX (audit pola sama S601 "0 reaksi"): try/catch per-utang, 1 baris error
 // tidak lagi menjatuhkan seluruh Buku Utang.

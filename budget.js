@@ -3,6 +3,7 @@
 // Isi: const Budget (CRUD anggaran, hitung pemakaian/limit efektif termasuk rollover, kartu ringkasan Beranda) + wrapper global tipis (getBudgetSettings, saveBudget, dst — dipakai HTML data-action & modules-render.js) + BudgetTabs (switch tab List/Rekomendasi) + BudgetReko (rekomendasi anggaran otomatis dari rata-rata transaksi N bulan terakhir).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah pajak-pbb-zakat.js, sebelum car-notes.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
+function _budgetTxDate(t){const raw=String(t&&t.date||'');return new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw)?raw+'T00:00:00':raw);}
 const Budget={
 editId:null,
 curIcon:'🍚',
@@ -95,7 +96,7 @@ return d.getMonth()===context.month&&d.getFullYear()===context.year;
 },
 matchesPeriod(budget,t,month,year){
 const context=Budget._periodContext(budget,month,year);
-return Budget._matchesPeriodContext(budget,t,new Date(t.date),context);
+return Budget._matchesPeriodContext(budget,t,_budgetTxDate(t),context);
 },
 getUsed(budget,month,year){
 const transactions=Array.isArray(D.transactions)?D.transactions:[];
@@ -103,7 +104,7 @@ const context=Budget._periodContext(budget,month,year);
 let total=0, matchesBudget=null;
 for(const t of transactions){
 if(!t)continue;
-const date=new Date(t.date);
+const date=_budgetTxDate(t);
 if(!Budget._matchesPeriodContext(budget,t,date,context))continue;
 // Preserve matchesTx's early type check and avoid resolving categories at all
 // when no in-period expense needs matching.
@@ -123,7 +124,7 @@ let prevUsed=0;
 let matchesBudget=null;
 for(const t of (Array.isArray(D.transactions)?D.transactions:[])){
 if(!t)continue;
-const d=new Date(t.date);
+const d=_budgetTxDate(t);
 if(d.getMonth()!==pm||d.getFullYear()!==py||t.type!=='expense')continue;
 // S2358: avoid resolving category metadata for transactions outside the
 // previous-month rollover window; reuse one matcher for eligible expenses.
@@ -454,7 +455,7 @@ BudgetReko.render();
 monthsAvailable(){
 if(!D.transactions||!D.transactions.length)return 0;
 let earliest=null;
-D.transactions.forEach(t=>{const d=new Date(t.date);if(!earliest||d<earliest)earliest=d;});
+D.transactions.forEach(t=>{const d=_budgetTxDate(t);if(!earliest||d<earliest)earliest=d;});
 if(!earliest)return 0;
 const now=new Date();
 return Math.max(1,(now.getFullYear()-earliest.getFullYear())*12+(now.getMonth()-earliest.getMonth())+1);
@@ -475,7 +476,7 @@ analyticsSnapshot(){
 const txs=Array.isArray(D.transactions)?D.transactions:[];
 if(!txs.length)return{available:0,months:1,incomeTotal:0,categories:[]};
 let earliest=null;
-txs.forEach(t=>{const d=new Date(t.date);if(!earliest||d<earliest)earliest=d;});
+txs.forEach(t=>{const d=_budgetTxDate(t);if(!earliest||d<earliest)earliest=d;});
 if(!earliest)return{available:0,months:1,incomeTotal:0,categories:[]};
 const now=new Date();
 const available=Math.max(1,(now.getFullYear()-earliest.getFullYear())*12+(now.getMonth()-earliest.getMonth())+1);
@@ -484,7 +485,7 @@ const months=Math.max(1,Math.min(configuredMonths,available||1));
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 let incomeTotal=0;const map={};
 txs.forEach(t=>{
-const d=new Date(t.date);if(!(d>=from&&d<=now))return;
+const d=_budgetTxDate(t);if(!(d>=from&&d<=now))return;
 if(t.type==='income'){incomeTotal+=t.amount;return;}
 if(t.type!=='expense')return;
 const key=t.category||'Lainnya';
@@ -498,14 +499,14 @@ incomeAvgPerMonth(snapshot){
 if(snapshot)return snapshot.incomeTotal/snapshot.months;
 const months=BudgetReko.effectiveMonths();
 const from=BudgetReko.rangeFrom(),now=new Date();
-const total=D.transactions.filter(t=>t.type==='income'&&new Date(t.date)>=from&&new Date(t.date)<=now).reduce((s,t)=>s+t.amount,0);
+const total=D.transactions.filter(t=>t.type==='income'&&_budgetTxDate(t)>=from&&_budgetTxDate(t)<=now).reduce((s,t)=>s+t.amount,0);
 return total/months;
 },
 computeCategoryAverages(snapshot){
 if(snapshot)return snapshot.categories;
 const months=BudgetReko.effectiveMonths();
 const from=BudgetReko.rangeFrom(),now=new Date();
-const txs=D.transactions.filter(t=>t.type==='expense'&&new Date(t.date)>=from&&new Date(t.date)<=now);
+const txs=D.transactions.filter(t=>t.type==='expense'&&_budgetTxDate(t)>=from&&_budgetTxDate(t)<=now);
 const map={};
 txs.forEach(t=>{
 const key=t.category||'Lainnya';

@@ -86,7 +86,7 @@ doc.setTextColor(t.type==='income'?20:210,t.type==='income'?140:60,t.type==='inc
 doc.text((t.type==='income'?'+':'-')+fmtFull(t.amount),colX[4]+2,y);
 y+=13;
 });
-doc.save('laporan-W-'+new Date().toISOString().split('T')[0]+'.pdf');
+doc.save('laporan-W-'+todayStr()+'.pdf');
 toast('✅ Laporan PDF berhasil dibuat');
 }
 async function exportLaporanImage(){
@@ -129,7 +129,7 @@ html2canvas(wrap,{scale:2,backgroundColor:'#ffffff'}).then(canvas=>{
 document.body.removeChild(wrap);
 const a=document.createElement('a');
 a.href=canvas.toDataURL('image/png');
-a.download='laporan-W-'+new Date().toISOString().split('T')[0]+'.png';
+a.download='laporan-W-'+todayStr()+'.png';
 a.click();
 toast('✅ Gambar laporan berhasil dibuat');
 }).catch(e=>{

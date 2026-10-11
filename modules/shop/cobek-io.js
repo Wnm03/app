@@ -301,7 +301,7 @@ sheets.forEach(s=>{
 const ws=XLSX.utils.aoa_to_sheet(s.rows);
 XLSX.utils.book_append_sheet(wb,ws,s.name.slice(0,31));
 });
-const dateStr=new Date().toISOString().split('T')[0];
+const dateStr=todayStr();
 XLSX.writeFile(wb,`${fileBase}-${dateStr}.xlsx`);
 toast('✅ File Excel berhasil diunduh');
 },

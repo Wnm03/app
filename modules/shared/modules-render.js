@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2295';
+const MODULE_RENDER_VERSION='s2041-1-part-sot-hardening-2309';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -564,7 +564,7 @@ const today=new Date();today.setHours(0,0,0,0);
 // S2362: D.bills dipindai sekali (entri aktif + paid-period); urutan & bentuk objek tetap.
 const activeBillEntries=[];const paidPeriodEntries=[];
 for(const b of (D.bills||[])){activeBillEntries.push({...b,_lunas:false,_dateForFilter:b.nextDue});const info=getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun);
-if(info)paidPeriodEntries.push({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:info.date.toISOString().split('T')[0]});}
+if(info)paidPeriodEntries.push({...b,_lunas:true,_paidPeriodOnly:true,_dateForFilter:(typeof localISO==='function'?localISO(info.date):(info.date.getFullYear()+'-'+String(info.date.getMonth()+1).padStart(2,'0')+'-'+String(info.date.getDate()).padStart(2,'0')))});}
 let combined=[
 ...activeBillEntries,
 ...(D.billsArchive||[]).map(b=>({...b,_lunas:true,_dateForFilter:b.completedAt||b.nextDue})),
@@ -747,7 +747,7 @@ labelEl.textContent=MONTHS_FULL[billCalMonth]+' '+billCalYear;
 const byDate={};
 D.bills.forEach(b=>{
 getBillOccurrencesInMonth(b,billCalYear,billCalMonth).forEach(d=>{
-const key=d.toISOString().split('T')[0];
+const key=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 if(!byDate[key])byDate[key]=[];
 byDate[key].push(b);
 });
@@ -757,7 +757,7 @@ const totalCount=Object.values(byDate).flat().length;
 totalEl.textContent=totalCount?`${totalCount} jatuh tempo bulan ini · Total ${fmt(monthTotal)}`:'Tidak ada tagihan jatuh tempo bulan ini';
 const firstDow=new Date(billCalYear,billCalMonth,1).getDay();
 const daysInMonth=new Date(billCalYear,billCalMonth+1,0).getDate();
-const todayStrLocal=typeof todayStr==='function'?todayStr():new Date().toISOString().split('T')[0];
+const todayStrLocal=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 let html='';
 for(let i=0;i<firstDow;i++)html+='<div class="billcal-day empty"></div>';
 for(let day=1;day<=daysInMonth;day++){

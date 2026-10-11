@@ -82,7 +82,7 @@ function _invSave() {
   if (typeof save === 'function') save();
 }
 function _invToday() {
-  return new Date().toISOString().slice(0, 10);
+  return typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 }
 
 const Investment = {

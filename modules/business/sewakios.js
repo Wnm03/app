@@ -250,7 +250,7 @@ doc.text(rw.tanggal+'  —  '+fmtFull(rw.jumlah),50,y);y+=12;
 }
 y+=16;
 });
-doc.save('laporan-sewakios-'+new Date().toISOString().split('T')[0]+'.pdf');
+doc.save('laporan-sewakios-'+todayStr()+'.pdf');
 toast('✅ Laporan Sewa Kios (PDF) berhasil dibuat');
 }
 };

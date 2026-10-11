@@ -125,9 +125,9 @@ const InvestmentWatchUI = {
     const jenisEl = document.getElementById('watchJenis');
     const type = jenisEl ? jenisEl.value : 'Lainnya';
     const lastEl = document.getElementById('watchLastPrice');
-    const lastPrice = (lastEl && lastEl.value !== '') ? parseDecStr(lastEl.value) : 0;
+    const lastPrice = (lastEl && lastEl.value !== '') ? (typeof parseMoneyID === 'function' ? parseMoneyID(lastEl.value) : parseDecStr(lastEl.value)) : 0;
     const targetEl = document.getElementById('watchTargetPrice');
-    const targetPrice = (targetEl && targetEl.value !== '') ? parseDecStr(targetEl.value) : 0;
+    const targetPrice = (targetEl && targetEl.value !== '') ? (typeof parseMoneyID === 'function' ? parseMoneyID(targetEl.value) : parseDecStr(targetEl.value)) : 0;
     const notesEl = document.getElementById('watchNotes');
     const notes = notesEl ? notesEl.value : '';
     let w;

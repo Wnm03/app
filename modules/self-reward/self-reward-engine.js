@@ -102,8 +102,8 @@ const SelfReward = {
   // lebih dari graceDaysUtang hari).
   checkUtangMacet() {
     const { graceDaysUtang } = SelfReward.getSettings();
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const today = new Date(todayStr + 'T00:00:00');
+    const todayDateISO = (typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
+    const today = new Date(todayDateISO + 'T00:00:00');
     const macetList = (D.debts || [])
       .filter((d) => !d.lunas && d.jatuhTempo)
       .map((d) => {
@@ -126,8 +126,8 @@ const SelfReward = {
       const stats = getBillStats();
       return { ok: (stats.overdueCount || 0) === 0, overdueCount: stats.overdueCount || 0 };
     }
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const today = new Date(todayStr + 'T00:00:00');
+    const todayDateISO = (typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
+    const today = new Date(todayDateISO + 'T00:00:00');
     const overdueList = (D.bills || [])
       .map((b) => {
         const due = new Date(b.nextDue + 'T00:00:00');

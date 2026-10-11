@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2295';
+const MODULE_CALC_VERSION='s2041-1-part-sot-hardening-2309';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -774,7 +774,7 @@ try{
 if(typeof fiMonthlySurplus==='function'&&D.transactions.length){
 const surplus=fiMonthlySurplus();
 if(surplus<0){
-out.push({id:'fi-surplus-neg',level:'warning',icon:'🟠',text:`Rata-rata surplus bulananmu negatif (${fmtFull(surplus)}) — kalau pola ini terus, progres Kebebasan Finansial bisa mundur.`});
+out.push({id:'fi-surplus-neg',level:'warning',icon:'🟠',text:`Rata-rata surplus bulananmu negatif (${(typeof fmtFullSigned==='function'?fmtFullSigned(surplus):(surplus<0?'-':'')+fmtFull(Math.abs(surplus)))}) — kalau pola ini terus, progres Kebebasan Finansial bisa mundur.`});
 }
 }
 }catch(e){console.warn('FinCoach: gagal cek surplus FI',e);}
@@ -1105,7 +1105,7 @@ const netWorth=saldoAkun+totalAset+totalInventori+totalPiutang-utang;
 // batal dieksekusi, membuat Kekayaan Bersih macet permanen di placeholder
 // statis "Rp 0" di HTML. Sekarang semua elemen di-guard sama rata, pola
 // sama dgn showDashCardEl() di modules-render.js.
-const saldoEl=document.getElementById('kbSaldoAkun');if(saldoEl)saldoEl.textContent=fmtFull(saldoAkun);
+const saldoEl=document.getElementById('kbSaldoAkun');if(saldoEl)saldoEl.textContent=(typeof fmtFullSigned==='function'?fmtFullSigned(saldoAkun):(saldoAkun<0?'-':'')+fmtFull(Math.abs(saldoAkun)));
 const asetEl=document.getElementById('kbTotalAset');if(asetEl)asetEl.textContent=fmtFull(totalAset);
 const invEl=document.getElementById('kbInventori');
 if(invEl)invEl.textContent=fmtFull(totalInventori);

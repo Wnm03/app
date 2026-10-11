@@ -311,7 +311,7 @@ if(!Order.items[idx])return;
 Order.items[idx].hargaOverride=(h>0)?h:null;
 const{total,profit}=Order.computeTotals();
 document.getElementById('oTotalDisplay').textContent=fmtFull(total);
-document.getElementById('oProfitDisplay').textContent='Estimasi untung: '+fmtFull(profit);
+document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
 },
 changeQty(idx,delta){
 Order.items[idx].qty+=delta;
@@ -340,9 +340,10 @@ subtotal+=lineTotal;modal+=hargaBeliP*it.qty;
 return{...it,product:p,harga,hargaDefault,lineTotal};
 }).filter(Boolean);
 const diskon=parseFloat(document.getElementById('oDiskon').value)||0;
-const ongkir=parseFloat(document.getElementById('oOngkir').value)||0;
-const total=Math.max(0,subtotal-diskon)+ongkir;
-const profit=subtotal-modal-diskon;
+const _ongkirN=parseFloat(document.getElementById('oOngkir').value);const ongkir=Number.isFinite(_ongkirN)?Math.max(0,_ongkirN):0; // S2307 (B9): ongkir negatif/Infinity tidak boleh memotong total
+const effectiveDiskon=Math.min(Math.max(0,diskon),Math.max(0,subtotal));
+const total=Math.max(0,subtotal-effectiveDiskon)+ongkir;
+const profit=typeof calculateNetProfit==='function'?calculateNetProfit(subtotal,modal,diskon):Math.max(0,subtotal)-Math.min(Math.max(0,diskon),Math.max(0,subtotal))-modal;
 return{lines,subtotal,modal,diskon,ongkir,total,profit};
 },
 renderItems(){
@@ -374,7 +375,7 @@ return`
       </div>`;
 }).join(''):'<div class="empty"><div class="empty-text">Keranjang masih kosong</div></div>';
 document.getElementById('oTotalDisplay').textContent=fmtFull(total);
-document.getElementById('oProfitDisplay').textContent='Estimasi untung: '+fmtFull(profit);
+document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
 },
 save(){return withSaveGuard('order','orderModal',Order._saveInner);},
 _saveInner(){
@@ -464,7 +465,7 @@ return`<div class="tx-item u-pointer" data-action="Order.openEditModal" data-arg
 return`<div class="tx-item">
       <div class="tx-icon u-bgaccsoft">🪨</div>
       <div class="tx-info"><div class="tx-name">${t.date} · ${t.sets} set (data lama)</div><div class="tx-meta">${escapeHtml(t.note||'Trip Shop')}</div></div>
-      <div class="tx-amount green">+${fmt(t.profit)}</div>
+      <div class="tx-amount ${Number(t.profit)<0?'red':'green'}">${Number(t.profit)<0?'':'+'}${fmtFullSigned(t.profit)}</div>
       <button class="tx-del" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
     </div>`;
 }

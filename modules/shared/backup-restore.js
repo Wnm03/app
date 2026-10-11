@@ -37,20 +37,20 @@ return String(err&&err.message!=null?err.message:err==null?'':err).slice(0,120);
 function exportCSV(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
-const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
+const txs=D.transactions.filter(t=>{const d=new Date(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(String(t.date||'')+'T00:00:00').getTime());return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
 const rows=[['Tanggal','Tipe','Kategori','Subkategori','Akun','Metode','Jumlah','Keterangan','Category ID','Subcategory ID','Transaction ID','Import Idempotency Key'],...txs.map(t=>{
 const accName=D.accounts.find(a=>a.id===t.accountId)?.name||'';
 return[t.date,t.type==='income'?'Pemasukan':'Pengeluaran',t.category,t.subcategory||'',accName,t.payMethod||'tunai',t.amount,t.note||'',t.categoryId||'',t.subcategoryId||'',t.id||'',t.importIdempotencyKey||''];
 })];
 const blob=new Blob([rows.map(r=>r.map(_reportCsvCell).join(',')).join('\n')],{type:'text/csv'});
-_downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.csv');
+_downloadBackupBlob(blob,'laporan-W-'+_backupTodayStr()+'.csv');
 }
 function exportJSON(){
 const {from,to}=getRange();
 const f=getLaporanFilters();
-const txs=D.transactions.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
+const txs=D.transactions.filter(t=>{const d=new Date(typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(String(t.date||'')+'T00:00:00').getTime());return d>=from&&d<=to&&t.type!=='transfer_in'&&t.type!=='transfer_out'&&txMatchesFilters(t,f);});
 const blob=new Blob([JSON.stringify(txs,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'laporan-W-'+new Date().toISOString().split('T')[0]+'.json');
+_downloadBackupBlob(blob,'laporan-W-'+_backupTodayStr()+'.json');
 }
 async function buildBackupPayload(){
 // S2475: wait for any in-flight AI recovery journal write before snapshotting.
@@ -134,7 +134,7 @@ throw _lastBackupErr||new Error('Backup snapshot tidak stabil setelah beberapa p
 async function exportData(){
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json');
+_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json');
 D.lastBackup=new Date().toISOString();
 document.getElementById('lastBackup').textContent=new Date().toLocaleDateString('id-ID');
 document.getElementById('backupBadge').textContent='💾 Backup';
@@ -164,7 +164,7 @@ try{
 try{
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'backup-keluarga-W-'+new Date().toISOString().split('T')[0]+'.json');
+_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json');
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup'); if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
 const bn=document.getElementById('backupBanner'); if(bn)bn.classList.add('hidden');
@@ -246,11 +246,13 @@ if(p==='bulan')return{from:new Date(now.getFullYear(),now.getMonth(),1),to:now};
 if(p==='tahun')return{from:new Date(now.getFullYear(),0,1),to:now};
 if(p==='custom'){
 const f=document.getElementById('bFrom').value,t=document.getElementById('bTo').value;
-return{from:f?new Date(f):new Date(0),to:t?new Date(t+'T23:59:59'):now};
+return{from:f?new Date(f+'T00:00:00'):new Date(0),to:t?new Date(t+'T23:59:59'):now};
 }
 return{from:new Date(0),to:now};
 }
-function inRange(dateStr,from,to){const d=new Date(dateStr);return d>=from&&d<=to;}
+function _backupLocalISO(date){const n=date instanceof Date?date:new Date(date);return Number.isFinite(n.getTime())?n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'):'';}
+function _backupTodayStr(){return typeof todayStr==='function'?todayStr():_backupLocalISO(new Date());}
+function inRange(dateStr,from,to){const d=String(dateStr==null?'':dateStr).slice(0,10);if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;const f=from instanceof Date?_backupLocalISO(from):String(from||'').slice(0,10);const t=to instanceof Date?_backupLocalISO(to):String(to||'').slice(0,10);return !!f&&!!t&&d>=f&&d<=t;}
 function runBackup(){
 const{from,to}=getBackupRange();
 const tipe=document.getElementById('bTipe').value;
@@ -265,7 +267,7 @@ out.billsArchive=(D.billsArchive||[]).filter(b=>inRange(b.tanggal||b.nextDue||b.
 // (cash-projection.js). Filter by month/year (bukan field `date` tunggal spt array lain
 // di sini) -- snapshot yang bulan/tahunnya jatuh di rentang from..to (dicek via tanggal
 // 1 bulan itu) ikut ter-backup, sisanya tidak (custom backup ini scoped by tanggal).
-out.cashProjSnapshots=(D.cashProjSnapshots||[]).filter(s=>inRange(new Date(s.year,s.month,1).toISOString().slice(0,10),from,to));
+out.cashProjSnapshots=(D.cashProjSnapshots||[]).filter(s=>inRange(_backupLocalISO(new Date(s.year,s.month,1)),from,to));
 }
 if(backupModules.carnotes){
 out.vehicles=D.vehicles;out.sparepartCats=D.sparepartCats;out.partsStock=D.partsStock;
@@ -338,7 +340,7 @@ out.favoritKeys=(typeof getFavoritKeys==='function'?getFavoritKeys():[])||[];
 out.dashCardPrefs=D.dashCardPrefs||{};
 }
 if(!Object.keys(out).length){toast('⚠️ Pilih minimal 1 modul');return;}
-const dateTag=new Date().toISOString().split('T')[0];
+const dateTag=_backupTodayStr();
 if(format==='json'){
 const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
 _downloadBackupBlob(blob,'backup-W-'+dateTag+'.json');
@@ -1317,7 +1319,7 @@ summary.newSubs.push(`${catName} → ${subName}`);
 return summary;
 }
 function parseCashewDate(raw){
-if(!raw)return new Date().toISOString().split('T')[0];
+if(!raw)return _backupTodayStr();
 raw=raw.trim();
 const isoMatch=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
 if(isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
@@ -1325,7 +1327,7 @@ if(raw.includes('/')){
 const p=raw.split(' ')[0].split('/');
 if(p.length===3) return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
 }
-return new Date().toISOString().split('T')[0];
+return _backupTodayStr();
 }
 function parseCSVImport(content,type){
 const lines=splitCSVRecords(content);
@@ -1373,7 +1375,7 @@ const row={};
 headers.forEach((h,j)=>row[h]=vals[j]||'');
 let tx={id:uid(),note:'',category:'Lainnya'};
 const dateKey=headers.find(h=>h.includes('date')||h==='tanggal'||h==='waktu');
-tx.date=dateKey?parseCashewDate(row[dateKey]):new Date().toISOString().split('T')[0];
+tx.date=dateKey?parseCashewDate(row[dateKey]):_backupTodayStr();
 const amtKey=headers.find(h=>h.includes('amount')||h.includes('jumlah')||h==='nilai'||h==='total');
 if(amtKey){const raw=row[amtKey].replace(/[^0-9.-]/g,'');tx.amount=Math.abs(parseFloat(raw)||0);}
 const typeKey=headers.find(h=>h.includes('type')||h==='tipe'||h==='income'||h==='jenis');

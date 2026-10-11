@@ -652,10 +652,10 @@ const pred=predictService({vehicleId});
 if(!pred.ok)return pred;
 // V24 G5: use the same service date-only calendar helpers as the canonical
 // reminder engine. Avoid `new Date(YYYY-MM-DD)` UTC parsing and timezone drift.
-const _forecastNowISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(new Date()):new Date().toISOString().slice(0,10);
+const _forecastNowISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(new Date()):todayStr();
 const _forecastNow=typeof parseServiceDateOnly==='function'?parseServiceDateOnly(_forecastNowISO):new Date();
 const batas=typeof addServiceMonthsClamped==='function'?addServiceMonthsClamped(_forecastNow,monthsAhead):new Date(_forecastNow.getFullYear(),_forecastNow.getMonth()+monthsAhead,_forecastNow.getDate());
-const batasISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(batas):batas.toISOString().slice(0,10);
+const batasISO=typeof formatServiceDateOnly==='function'?formatServiceDateOnly(batas):(typeof localISO==='function'?localISO(batas):(batas.getFullYear()+'-'+String(batas.getMonth()+1).padStart(2,'0')+'-'+String(batas.getDate()).padStart(2,'0')));
 const dueItems=pred.items.filter((r)=>r.status==='terlewat'||(r.estDateISO&&String(r.estDateISO).slice(0,10)<=batasISO));
 let totalBiaya=0;
 let totalBiayaLengkap=true;

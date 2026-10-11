@@ -50,13 +50,17 @@ updatePreview(){
 const accSel=document.getElementById('eduAcc');
 const savedWrap=document.getElementById('eduSavedWrap');
 if(savedWrap)savedWrap.style.display=(accSel&&accSel.value)?'none':'';
+// S2306 (B8): pratinjau memakai parser yg SAMA dgn save() -- sebelumnya string mentah
+// ('50.000.000' / '7,5') dilempar ke calc() yg parseFloat -> pratinjau 50 / 7, beda dari yg disimpan.
+const _pz=v=>typeof parsePzNum==='function'?parsePzNum(v):(parseFloat(String(v).replace(/[^0-9]/g,''))||0);
+const _pc=v=>{const r=String(v==null?'':v).trim();if(r==='')return 0;const n=typeof parseDecimalID==='function'?parseDecimalID(r):parseFloat(r.replace(',','.'));return Number.isFinite(n)?n:0;};
 const f={
-biayaHariIni:document.getElementById('eduBiayaHariIni').value,
+biayaHariIni:_pz(document.getElementById('eduBiayaHariIni').value),
 tahunTarget:document.getElementById('eduTahunTarget').value,
-inflasi:document.getElementById('eduInflasi').value,
-returnAsumsi:document.getElementById('eduReturn').value,
+inflasi:_pc(document.getElementById('eduInflasi').value),
+returnAsumsi:_pc(document.getElementById('eduReturn').value),
 accountId:accSel?accSel.value||null:null,
-terkumpul:document.getElementById('eduTerkumpul').value
+terkumpul:_pz(document.getElementById('eduTerkumpul').value)
 };
 const c=EduFund.calc(f);
 const box=document.getElementById('eduFundPreview');
@@ -74,8 +78,9 @@ if(!name){toast('⚠️ Nama anak/jenjang wajib diisi');return;}
 const biayaHariIni=parsePzNum(document.getElementById('eduBiayaHariIni').value);
 if(!biayaHariIni){toast('⚠️ Biaya hari ini wajib diisi');return;}
 const tahunTarget=parseInt(document.getElementById('eduTahunTarget').value)||new Date().getFullYear();
-const inflasi=parseFloat(document.getElementById('eduInflasi').value)||12;
-const returnAsumsi=parseFloat(document.getElementById('eduReturn').value)||8;
+const _eduPct=(id,def)=>{const raw=String(document.getElementById(id).value==null?'':document.getElementById(id).value).trim();if(raw==='')return def;const n=typeof parseDecimalID==='function'?parseDecimalID(raw):parseFloat(raw.replace(',','.'));return Number.isFinite(n)?n:def;};
+const inflasi=_eduPct('eduInflasi',12);
+const returnAsumsi=_eduPct('eduReturn',8);
 const accSel=document.getElementById('eduAcc');
 const accountId=accSel&&accSel.value?accSel.value:null;
 const terkumpul=accountId?0:parsePzNum(document.getElementById('eduTerkumpul').value);

@@ -59,7 +59,7 @@ const InvestmentTxUI = {
 
   _resetForm() {
     const dateEl = document.getElementById('investTxDate');
-    if (dateEl) dateEl.value = (typeof _invToday === 'function') ? _invToday() : new Date().toISOString().slice(0, 10);
+    if (dateEl) dateEl.value = (typeof _invToday === 'function') ? _invToday() : todayStr();
     const qtyEl = document.getElementById('investTxQty');
     if (qtyEl) qtyEl.value = '';
     const priceEl = document.getElementById('investTxPrice');
@@ -135,7 +135,7 @@ const InvestmentTxUI = {
     const dateEl = document.getElementById('investTxDate');
     const date = dateEl ? dateEl.value : '';
     const feeEl = document.getElementById('investTxFee');
-    const fee = (feeEl && feeEl.value !== '') ? parseDecStr(feeEl.value) : 0;
+    const fee = (feeEl && feeEl.value !== '') ? (typeof parseMoneyID === 'function' ? parseMoneyID(feeEl.value) : parseDecStr(feeEl.value)) : 0;
     const notesEl = document.getElementById('investTxNotes');
     const notes = notesEl ? notesEl.value : '';
     const accEl = document.getElementById('investTxAcc');
@@ -143,12 +143,12 @@ const InvestmentTxUI = {
     const payload = { investmentId: InvestmentTxUI.holdingId, type: InvestmentTxUI.type, date, fee, notes, accountId };
     if (InvestmentTxUI.type === 'dividen') {
       const amtEl = document.getElementById('investTxAmount');
-      payload.amount = amtEl ? parseDecStr(amtEl.value) : 0;
+      payload.amount = amtEl && amtEl.value !== '' ? (typeof parseMoneyID === 'function' ? parseMoneyID(amtEl.value) : parseDecStr(amtEl.value)) : 0;
     } else {
       const qtyEl = document.getElementById('investTxQty');
       const priceEl = document.getElementById('investTxPrice');
       payload.qty = qtyEl ? parseDecStr(qtyEl.value) : 0;
-      payload.price = priceEl ? parseDecStr(priceEl.value) : 0;
+      payload.price = priceEl && priceEl.value !== '' ? (typeof parseMoneyID === 'function' ? parseMoneyID(priceEl.value) : parseDecStr(priceEl.value)) : 0;
     }
     let tx;
     try {

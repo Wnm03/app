@@ -210,7 +210,7 @@ function isReferenced(p){
 function journal(p,entry){
   if(!Array.isArray(p.adjustmentHistory))p.adjustmentHistory=[];
   const qb=Number(entry.qtyBefore)||0,qa=Number(entry.qtyAfter)||0;
-  p.adjustmentHistory.push({id:'adj_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),date:new Date().toISOString().slice(0,10),at:new Date().toISOString(),qtyBefore:qb,qtyAfter:qa,delta:qa-qb,reason:entry.reason,source:entry.source||'part-crud-s2041'});
+  p.adjustmentHistory.push({id:'adj_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),date:(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})()),at:new Date().toISOString(),qtyBefore:qb,qtyAfter:qa,delta:qa-qb,reason:entry.reason,source:entry.source||'part-crud-s2041'});
 }
 function archivePart(p,reason){
   if(!p||p.isArchived)return false;

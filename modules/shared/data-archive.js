@@ -116,7 +116,7 @@ const total=Object.values(data).reduce((s,arr)=>s+arr.length,0);
 if(!total){ toast('⚠️ Tidak ada data di tahun terpilih'); return; }
 const format=document.getElementById('archiveFormat').value;
 const yearsTag=Array.from(years).sort().join('-');
-const dateTag=new Date().toISOString().split('T')[0];
+const dateTag=todayStr();
 if(format==='json'){
 const out={schemaVersion:SCHEMA_VERSION,archivedAt:new Date().toISOString(),archivedYears:Array.from(years).sort(),...data};
 const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});

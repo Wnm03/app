@@ -152,7 +152,7 @@ if(Renov.projEditId){
 const p=D.renovProjects.find(x=>sameId(x.id,Renov.projEditId));
 if(p){p.name=name;p.catatan=catatan;}
 } else {
-D.renovProjects.push({id:uid(),name,catatan,createdAt:new Date().toISOString().split('T')[0],items:[]});
+D.renovProjects.push({id:uid(),name,catatan,createdAt:todayStr(),items:[]});
 }
 Renov.projEditId=null;
 save();closeModal('renovProjectModal');Renov.render();

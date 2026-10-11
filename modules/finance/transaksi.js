@@ -992,7 +992,7 @@ const todayStr=typeof globalThis.todayStr==='function'?globalThis.todayStr():(()
 if(!dueEl.value||dueEl.value===todayStr){
 const d=new Date(dueEl.value||todayStr);
 _amc015(d,1); // BUG-015 (s406): clamp overflow tanggal
-dueEl.value=d.toISOString().split('T')[0];
+dueEl.value=(typeof localISO==='function'?localISO(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')));
 }
 }
 syncCicilanPreview();

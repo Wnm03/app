@@ -329,7 +329,7 @@ _buildFleetExportData() {
 // diekstrak jadi util bersama supaya kedua file tetap 100% independen,
 // sama persis alasan duplikasi yang sudah ada di file ini).
 _dateTag() {
-  return typeof FuelExportUtils!=='undefined'?FuelExportUtils.dateTag():(typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})());
+  if(typeof FuelExportUtils!=='undefined'&&FuelExportUtils&&typeof FuelExportUtils.dateTag==='function')return FuelExportUtils.dateTag();if(typeof todayStr==='function')return todayStr();const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
 },
 
 _downloadFile(filename, content, mime) {
