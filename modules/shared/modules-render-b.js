@@ -1208,7 +1208,7 @@ if(copyBtn) copyBtn.style.display=data.results.length?'block':'none';
 
 function renderSelfTestLastResult(){
 const summaryEl=document.getElementById('selfTestSummary');
-if(!summaryEl||_lastSelfTestData) return;
+if(!summaryEl||(typeof _lastSelfTestData!=='undefined'&&_lastSelfTestData)) return;
 try{
 const raw=localStorage.getItem('kw_selftest_last');
 if(!raw) return;

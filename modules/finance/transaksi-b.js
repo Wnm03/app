@@ -76,6 +76,15 @@ const hitungKasVal=txHitungKasSaveEl?txHitungKasSaveEl.checked:true;
 // luar scope perubahan ini) tetap kompatibel lewat fallback yang sudah
 // ada di sana.
 if(cat==='__add_new_cat__'){toast('⚠️ Pilih atau buat kategori dulu');return;}
+// Reject unknown free-typed categories for new transactions or when the
+// category is changed. Legacy transactions may reference a deleted category;
+// allow an unchanged legacy category so users can still edit other fields.
+const categoryExists=typeof getCatsByType!=='function'||getCatsByType(curTxType).some(c=>String(c.name||'').trim()===String(cat||'').trim());
+const editingLegacyCategory=!!txEditId&&!!D.transactions.find(t=>String(t.id)===String(txEditId)&&String(t.category||'').trim()===String(cat||'').trim());
+if(!categoryExists&&!editingLegacyCategory){
+  toast('⚠️ Pilih kategori dari daftar atau gunakan Tambah Kategori terlebih dahulu');
+  return;
+}
 // VALIDASI S574-D1 (basis diganti Sesi S578, DL-Next-1 / Audit-3A --
 // lihat DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
 // AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md §3A): akun multi-owner (2+ kandidat

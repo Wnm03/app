@@ -578,7 +578,7 @@ const DashboardHub = {
       // Own it exclusively from the active `fitur` section so opening or
       // refreshing Ringkasan/Widget/Insight does not rebuild dozens of cards
       // that are immediately hidden by CSS.
-      safe('DashboardHubFeatureGrid', () => this.renderFeatureGrid());
+      safe('DashboardHubFeatureGrid', () => { if(typeof DashboardHubHero!=='undefined'&&typeof DashboardHubHero.renderFeatureGrid==='function') DashboardHubHero.renderFeatureGrid(); });
       safe('DashboardHubFavoritView', () => { if (typeof DashboardHubFavoritView !== 'undefined') DashboardHubFavoritView.render(); });
       return;
     }

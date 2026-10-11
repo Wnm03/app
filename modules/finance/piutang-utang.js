@@ -456,7 +456,8 @@ const nilai=parsePzNum(document.getElementById('piutangNilai').value);
 // menghasilkan 0 (kosong/non-digit) atau NEGATIF (input diawali "-") tanpa
 // peringatan, lolos tersimpan & ikut ke Total Piutang/Net Worth. Pola sama
 // persis dgn save() lain se-codebase (mis. tagihan-kalender.js:683).
-if(!nilai||nilai<=0){toast('⚠️ Nilai piutang harus lebih dari 0');return;}
+if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai piutang harus lebih dari 0');return;}
+if(nilai>999000000000){toast('⚠️ Nilai piutang maksimal Rp 999.000.000.000');return;}
 const tanggal=document.getElementById('piutangTanggal').value||'';
 const jatuhTempo=document.getElementById('piutangJatuhTempo').value||'';
 const catatan=document.getElementById('piutangCatatan').value.trim();
@@ -720,7 +721,8 @@ const jenis=document.getElementById('debtJenis').value||'lainnya';
 const nilai=parsePzNum(document.getElementById('debtNilai').value);
 // FIX (BUG-FIN-001): guard nilai<=0 -- pola sama persis dgn Piutang.save()
 // di atas (lihat komentar di sana).
-if(!nilai||nilai<=0){toast('⚠️ Nilai utang harus lebih dari 0');return;}
+if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai utang harus lebih dari 0');return;}
+if(nilai>999000000000){toast('⚠️ Nilai utang maksimal Rp 999.000.000.000');return;}
 const bungaRaw=parseFloat(document.getElementById('debtBunga').value)||0;
 // FIX (BUG-FIN-002): guard bunga<0 -- sebelumnya parseFloat()||0 meloloskan
 // bunga NEGATIF (mis. input diawali "-") tanpa peringatan, lolos tersimpan &

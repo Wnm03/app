@@ -153,10 +153,28 @@
     return missing;
   }
 
-  function checkDataActionPaths(pathsMap) {
+  // Lazy owners are valid even before their feature scripts have been loaded.
+  // Parse the dispatcher's owner-loader registry from fetched source so dev
+  // smoke-test reports these as deferred checks instead of false missing-methods.
+  function extractLazyOwnerNames(src) {
+    var names = {};
+    // The runtime dispatcher is bundled/minified, so its local variable name
+    // (`lazyOwnerLoaders`) is not a stable marker. The property keys are kept
+    // because they are runtime data-action owners; recognize only entries whose
+    // value references an ensure* lazy loader to avoid classifying arbitrary
+    // object properties as deferred actions.
+    var re = /(?:^|[,\s{])([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*typeof\s+ensure[A-Za-z0-9_$]*/g;
+    var m;
+    while ((m = re.exec(src))) names[m[1]] = true;
+    return names;
+  }
+
+  function checkDataActionPaths(pathsMap, lazyOwners) {
     var missing = [];
+    var deferred = [];
     Object.keys(pathsMap).forEach(function (full) {
       var parts = pathsMap[full];
+      if (lazyOwners && lazyOwners[parts[0]]) { deferred.push(full); return; }
       var owner = window, fn = window, ok = true;
       for (var i = 0; i < parts.length; i++) {
         owner = fn;
@@ -165,7 +183,7 @@
       }
       if (!ok || typeof fn !== 'function') missing.push(full);
     });
-    return missing;
+    return { missing: missing, deferred: deferred };
   }
 
   // S2288: banner merah hanya utk dev EKSPLISIT (?dev=1 / kw_dev=1). Dev implisit (localhost/file:)
@@ -238,7 +256,7 @@
     var urls = collectSourceUrls();
 
     fetchAllSources(urls).then(function (src) {
-      var result = { domMissing: [], actionMissing: [], domChecked: 0, actionChecked: 0, skipped: false };
+      var result = { domMissing: [], actionMissing: [], actionDeferred: [], domChecked: 0, actionChecked: 0, skipped: false };
 
       if (src.failedCount === src.totalCount) {
         // Semua fetch gagal -- biasanya karena dibuka lewat file:// tanpa server lokal
@@ -262,7 +280,10 @@
       result.domChecked = ids.length;
       result.actionChecked = Object.keys(actionPaths).length;
       result.domMissing = checkDomIds(ids, definedIds);
-      result.actionMissing = checkDataActionPaths(actionPaths);
+      var lazyOwners = extractLazyOwnerNames(src.text);
+      var actionCheck = checkDataActionPaths(actionPaths, lazyOwners);
+      result.actionMissing = actionCheck.missing;
+      result.actionDeferred = actionCheck.deferred;
 
       return result;
     }).then(function (result) {
@@ -276,7 +297,8 @@
       if (problems === 0) {
         console.log(
           '%c✅ ' + LOG_PREFIX + ' OK — ' + result.domChecked + ' referensi getElementById() & ' +
-          result.actionChecked + ' data-action semuanya valid (' + dt + 'ms)',
+          (result.actionChecked - result.actionDeferred.length) + ' data-action runtime diperiksa, ' +
+          result.actionDeferred.length + ' aksi lazy ditunda sampai modul dimuat (' + dt + 'ms)',
           'color:#2ecc71;font-weight:700'
         );
         return;
@@ -295,6 +317,9 @@
           result.actionMissing
         );
         console.error('    (Tombol dengan data-action ini akan diam/error saat diklik. Cek apakah modulnya sudah masuk Object.assign(window,{...}) di akhir app_production.html.)');
+      }
+      if (result.actionDeferred.length) {
+        console.info(LOG_PREFIX + ' Aksi lazy-load ditunda pemeriksaannya sampai modul terkait dibuka (' + result.actionDeferred.length + '):', result.actionDeferred);
       }
 
       showBanner(

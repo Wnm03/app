@@ -321,10 +321,22 @@ const km=parseFloat(document.getElementById('bbmKm').value);
 const liter=parseFloat(document.getElementById('bbmLiter').value);
 let cost=parseFloat(document.getElementById('bbmCost').value);
 let harga=parseFloat(document.getElementById('bbmHarga').value);
-if(!km||!liter||!cost){toast('⚠️ Lengkapi KM, liter, dan biaya');return;}
+if(!Number.isFinite(km)||km<=0||!Number.isFinite(liter)||liter<=0||!Number.isFinite(cost)||cost<=0){toast('⚠️ KM, liter, dan biaya harus lebih dari 0');return;}
 const spbu=document.getElementById('bbmSpbu').value.trim();
 const fullTank=document.getElementById('bbmFull').checked;
 const date=document.getElementById('bbmDate').value;
+const todayLocal=new Date();
+const todayKey=todayLocal.getFullYear()+'-'+String(todayLocal.getMonth()+1).padStart(2,'0')+'-'+String(todayLocal.getDate()).padStart(2,'0');
+if(!date){toast('⚠️ Tanggal BBM wajib diisi');return;}
+if(date>todayKey){toast('⚠️ Tanggal BBM tidak boleh di masa depan');return;}
+// Validate odometer against the nearest dated neighbours, not the globally
+// newest log. This preserves legitimate backdated entries while preventing
+// the inserted/edited record from breaking chronological odometer order.
+const datedLogs=(D.bbmLogs||[]).filter(x=>String(x.vehicleId)===String(curVehicleId)&&(!BBM.editId||String(x.id)!==String(BBM.editId))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&Number.isFinite(Number(x.km))&&Number(x.km)>0);
+const prior=datedLogs.filter(x=>String(x.date)<String(date)).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+const next=datedLogs.filter(x=>String(x.date)>String(date)).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+if(prior&&km<Number(prior.km)){toast('⚠️ KM lebih kecil dari catatan BBM sebelumnya ('+Number(prior.km).toLocaleString('id-ID')+' km). Periksa kendaraan atau odometer.');return;}
+if(next&&km>Number(next.km)){toast('⚠️ KM melebihi catatan BBM setelah tanggal ini ('+Number(next.km).toLocaleString('id-ID')+' km). Periksa kendaraan atau odometer.');return;}
 const note=document.getElementById('bbmNote').value;
 const accId=document.getElementById('bbmAcc')?document.getElementById('bbmAcc').value:D.accounts[0]?.id;
 const veh=D.vehicles.find(v=>v.id===curVehicleId);

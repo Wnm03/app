@@ -637,8 +637,8 @@ const now=new Date();
 (D.bills||[]).forEach(b=>{
 const d=daysUntilDate(b.nextDue);
 if(d===null)return;
-if(d<0)items.push(`⚠️ ${b.name} (${b.kind}) sudah LEWAT jatuh tempo ${Math.abs(d)} hari — ${fmtFull(b.amount)}`);
-else if(d<=7)items.push(`🔔 ${b.name} (${b.kind}) jatuh tempo ${d===0?'HARI INI':'H-'+d}, siapin dana ${fmtFull(b.amount)} ya`);
+if(d<0)items.push(`⚠️ ${b.name} (${b.kind||'tagihan'}) sudah LEWAT jatuh tempo ${Math.abs(d)} hari — ${fmtFull(b.amount)}`);
+else if(d<=7)items.push(`🔔 ${b.name} (${b.kind||'tagihan'}) jatuh tempo ${d===0?'HARI INI':'H-'+d}, siapin dana ${fmtFull(b.amount)} ya`);
 });
 (D.vehicles||[]).forEach(v=>{
 Object.entries(VEHTAX_ITEMS).forEach(([,cfg])=>{

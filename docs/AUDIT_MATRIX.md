@@ -39,6 +39,20 @@
 
 This section supersedes older coverage-count snapshots above for the current app-main (53) replay state through S2428.
 
+### S2295 accumulated audit snapshot
+
+The canonical tree was recounted after the S2295 regression fixes. Counts exclude `backups/`, `node_modules/`, `.git/`, and `.test-checkpoints/`.
+
+| Metric | S2295 current |
+|---|---:|
+| Total files | 3442 |
+| JavaScript | 1979 |
+| Tests (`*.test.js`) | 1359 |
+| Markdown | 1234 |
+| HTML | 7 |
+| JSON | 17 |
+| CSS | 4 |
+
 # 1. Coverage Baseline
 
 | Metric | Baseline |

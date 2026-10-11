@@ -596,6 +596,13 @@ function downloadS2013RestoreDiagnostic(){
   try{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='restore-diagnostic.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);return true;}catch(_e){return false;}
 }
 async function applyRestoredData(imp){
+// init() belongs to the lazily-loaded diagnostic harness; load it explicitly before use.
+async function _restoreEnsureInit(){
+  if(typeof init==='function')return init();
+  if(typeof ensureSelfTest==='function')await ensureSelfTest();
+  if(typeof init!=='function')throw new Error('RESTORE_INIT_UNAVAILABLE');
+  return init();
+}
 // S2013 DIAGNOSTIC: preserve the exact restore stage/error before rollback
 // converts the native Error into the generic UI "Error {}" representation.
 try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){void _e;}
@@ -796,7 +803,7 @@ if(typeof lifeOSInvalidateCache==='function'&&_restoredLifeosStore!==undefined)l
 if(typeof eieInvalidateCache==='function'&&_restoredEieStore!==undefined)eieInvalidateCache();
 if(typeof vehicleCatalogInvalidateCache==='function'&&_restoredVehicleCatalogStore!==undefined)vehicleCatalogInvalidateCache();
 if(typeof hondaPdfImportInvalidateCache==='function'&&_restoredHondaPdfImportStore!==undefined)hondaPdfImportInvalidateCache();
-init();
+await _restoreEnsureInit();
 return true;
 }catch(e){
 const __s2013Detail=__s2013Fail(e);
@@ -824,7 +831,7 @@ try{
     saveFlush();
   }
 }catch(_atomicRollbackErr){console.error('Restore rollback atomic IndexedDB gagal',_atomicRollbackErr);}
-init();
+try{await _restoreEnsureInit();}catch(_restoreInitErr){console.error('Restore rollback init gagal; error restore asli dipertahankan',_restoreInitErr);}
 await showAlertModal('Restore gagal pada tahap: '+__s2013Stage+'\nError: '+(__s2013Detail.error.message||__s2013Detail.error.string||'Unknown error')+'\n\nData sebelumnya sudah dipulihkan. Detail lengkap tersimpan di window.__S2013_RESTORE_DIAGNOSTIC dan console.',{icon:'❌',title:'Restore Gagal'});
 return false;
 }

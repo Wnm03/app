@@ -42,7 +42,7 @@ test('Dashboard Hub month aggregate uses a single pass and mutation-aware cache'
 
 test('Dashboard Hub feature grid is lazy and owned only by the active Fitur section',()=>{
   assert.match(hub,/renderFeatureGrid\(\)/);
-  assert.match(hub,/safe\('DashboardHubFeatureGrid', \(\) => this\.renderFeatureGrid\(\)\)/);
+  assert.match(hub,/safe\('DashboardHubFeatureGrid', \(\) => \{ if\(typeof DashboardHubHero!=='undefined'&&typeof DashboardHubHero\.renderFeatureGrid==='function'\) DashboardHubHero\.renderFeatureGrid\(\); \}\)/);
   // Full FEATURE_REGISTRY.map() must not sit directly in DashboardHub.render().
   const renderStart=hub.indexOf('  render() {',hub.indexOf('const DashboardHub ='));
   const renderEnd=hub.indexOf('  // Ganti sub-tab aktif',renderStart);

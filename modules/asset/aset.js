@@ -485,7 +485,10 @@ const name=document.getElementById('assetName').value.trim();
 if(!name){toast('⚠️ Nama aset wajib diisi');return;}
 const jenis=document.getElementById('assetJenis').value;
 const lokasi=document.getElementById('assetLokasi').value.trim();
-const nilai=parsePzNum(document.getElementById('assetNilai').value);
+const nilaiRaw=document.getElementById('assetNilai').value;
+const nilai=parsePzNum(nilaiRaw);
+if(!Number.isFinite(nilai)||nilai<=0){toast('⚠️ Nilai aset harus lebih dari 0');return;}
+if(nilai>999000000000){toast('⚠️ Nilai aset maksimal Rp 999.000.000.000');return;}
 const modalInvestasi=parsePzNum(document.getElementById('assetModalInvestasi').value)||null;
 const hargaBeli=parseDecStr(document.getElementById('assetHargaBeli').value);
 const jumlahUnit=parseDecStr(document.getElementById('assetJumlahUnit').value);

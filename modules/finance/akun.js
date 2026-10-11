@@ -426,6 +426,7 @@ function _saveAccInner(){
 const name=document.getElementById('accName').value.trim();
 const emoji=document.getElementById('accEmoji').value||'💰';
 const nominal=parseFloat(document.getElementById('accBalance').value)||0;
+if(!Number.isFinite(nominal)||Math.abs(nominal)>999000000000){toast('⚠️ Saldo akun maksimal Rp 999.000.000.000');return;}
 const jenisEl=document.getElementById('accJenis');
 const jenis=jenisEl?jenisEl.value:'kas_bebas';
 // Field tambahan per jenis (KW-164) — hanya relevan salah satu tergantung jenis yang dipilih,

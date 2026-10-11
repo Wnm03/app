@@ -487,7 +487,8 @@ const el=document.getElementById(map.el);
 attrVals[map.field]=el?(parseFloat(el.value)||0):0;
 });
 const {diskonPersen,beratPerUnit,panjang,lebar,tinggi}=attrVals;
-if(!name||!hargaJual){toast('⚠️ Lengkapi nama & harga jual');return;}
+if(!name||!Number.isFinite(hargaJual)||hargaJual<=0){toast('⚠️ Nama wajib diisi dan harga jual harus lebih dari 0');return;}
+if(hargaJual>999000000000||hargaBeli>999000000000||(hargaReseller!==null&&hargaReseller>999000000000)){toast('⚠️ Harga maksimal Rp 999.000.000.000');return;}
 const accId=document.getElementById('pAcc')?document.getElementById('pAcc').value:D.accounts[0]?.id;
 const prevStock=this.editIdx!==null?(D.products[this.editIdx].stock||0):0;
 const delta=stock-prevStock;
