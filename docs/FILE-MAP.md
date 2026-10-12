@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-11T23:43:20.144Z
-Total file source: 487 · Total identifier global: 17142
+Terakhir digenerate: 2026-10-12T05:24:52.173Z
+Total file source: 487 · Total identifier global: 17165
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -126,7 +126,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 103 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
 | 104 | `modules/shared/backup-history-presenter.js` | 49 | modules/shared/backup-history-presenter.js — Backup History Presenter (Data Management Core). Lihat catatan lengkap di modules/shared/backup-history-api.js. PRINSIP: UI HANYA presenter. 100% REUSE … |
 | 105 | `modules/shared/backup-health-presenter.js` | 45 | modules/shared/backup-health-presenter.js — Backup Health Presenter (Data Management Core). Lihat catatan lengkap di modules/shared/backup-health-api.js. PRINSIP: UI HANYA presenter. 100% REUSE … |
-| 106 | `modules/business/payroll-absensi.js` | 551 | Payroll: Absensi Harian & Kalkulator Gaji Mingguan (const Payroll={...}) Dipindah ke modules/business/payroll-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 106 | `modules/business/payroll-absensi.js` | 692 | Payroll: Absensi Harian & Kalkulator Gaji Mingguan (const Payroll={...}) Dipindah ke modules/business/payroll-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 107 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 108 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 109 | `modules/vehicle/car-notes-performance.js` | 109 | _(tidak ada komentar header)_ |
@@ -2938,6 +2938,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `best` | `modules/shared/scan-ocr.js` |
 | `best` | `modules/shared/scan-ocr-b.js` |
 | `best` | `modules/finance/akun.js` |
+| `best` | `modules/business/payroll-absensi.js` |
 | `best` | `modules/vehicle/sparepart-ocr-parser.js` |
 | `best` | `modules/vehicle/vehicle-catalog-import.js` |
 | `best` | `modules/vehicle/honda-pdf-catalog-auto-import.js` |
@@ -3232,6 +3233,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `btn` | `modules/finance/akun.js` |
 | `btn` | `modules/finance/tagihan-kalender.js` |
 | `btn` | `modules/shared/backup-restore.js` |
+| `btn` | `modules/business/payroll-absensi.js` |
 | `btn` | `modules/business/tukang-absensi.js` |
 | `btn` | `modules/vehicle/fuel-price-ref.js` |
 | `btn` | `modules/vehicle/sparepart-ocr-catalog-add.js` |
@@ -4195,6 +4197,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `clampedLiter` | `modules/vehicle/fuel-gauge-engine.js` |
 | `clampedTitipan` | `modules/shared/multi-owner-engine.js` |
 | `clash` | `modules/shop/cobek-etalase.js` |
+| `clash` | `modules/business/payroll-absensi.js` |
 | `clash` | `modules/vehicle/sparepart-servis-ui.js` |
 | `CLASSES` | `modules/finance/finance-category-sot.js` |
 | `classification` | `modules/vehicle/service-session-mutation-s2047.js` |
@@ -4312,6 +4315,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cnPeriode` | `modules/finance/features-helpers-global-security.js` |
 | `cnPeriode` | `modules/shop/features-helpers-global-security.js` |
 | `cnPeriodeByTab` | `modules/shared/features-helpers-global-security.js` |
+| `cnt` | `modules/business/payroll-absensi.js` |
 | `cntEl` | `modules/shared/modules-render-b.js` |
 | `cobek` | `modules/ai/feature-insights.js` |
 | `cobek` | `modules/shop/shop-business-engine-presenter.js` |
@@ -5301,6 +5305,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `def` | `modules/dashboard-hub/dashboard-hub-settings.js` |
 | `def` | `modules/ai/ai-service.js` |
 | `def` | `modules/shop/generic/attribute-store.js` |
+| `DEF` | `modules/business/payroll-absensi.js` |
 | `defAccName` | `modules/shared/backup-restore.js` |
 | `DEFAULT_ACCOUNTS` | `modules/shared/data-default.js` |
 | `DEFAULT_CATALOG` | `modules/vehicle/parts-catalog-database.js` |
@@ -5539,6 +5544,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `dots` | `car-notes.js` |
 | `dots` | `modules/home/hidup-seimbang.js` |
 | `dow` | `budget.js` |
+| `dow` | `modules/business/payroll-absensi.js` |
 | `dOwnerAcc` | `data-health-check.js` |
 | `dOwnerList` | `data-health-check.js` |
 | `downloaded` | `modules/vehicle/fuel-dashboard.js` |
@@ -6192,6 +6198,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `execLabel` | `modules/vehicle/servis-checklist.js` |
 | `execSettled` | `modules/vehicle/ride-storage.js` |
 | `execStatus` | `modules/vehicle/servis-checklist.js` |
+| `exist` | `modules/business/payroll-absensi.js` |
 | `existing` | `modules/shared/modules-calc.js` |
 | `existing` | `modules/shop/cobek-order.js` |
 | `existing` | `modules/shop/cobek-tx-cart.js` |
@@ -6804,6 +6811,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `g` | `modules/home/refleksi-selfcare.js` |
 | `g` | `modules/shared/pengaturan-search.js` |
 | `g` | `modules/shared/backup-restore.js` |
+| `g` | `modules/business/payroll-absensi.js` |
 | `g` | `modules/vehicle/vehicle-catalog-lifecycle-sot.js` |
 | `g` | `modules/vehicle/vehicle-catalog-identity-sot.js` |
 | `g` | `modules/vehicle/sparepart-servis.js` |
@@ -7129,6 +7137,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `h` | `modules/asset/aset.js` |
 | `h` | `modules/shared/features-helpers-global-security.js` |
 | `h` | `modules/shared/format-tema.js` |
+| `h` | `modules/business/payroll-absensi.js` |
 | `h` | `modules/vehicle/car-notes-performance.js` |
 | `h` | `modules/vehicle/service-interval-sot.js` |
 | `h` | `modules/asset/investasi.js` |
@@ -7342,6 +7351,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hemat` | `modules/finance/worthit.js` |
 | `hematPersen` | `modules/finance/worthit.js` |
 | `hematRp` | `modules/finance/worthit.js` |
+| `hidden` | `modules/business/payroll-absensi.js` |
 | `hidden` | `modules/vehicle/sparepart-servis.js` |
 | `hidden` | `modules/vehicle/servis.js` |
 | `hidden` | `modules/dashboard-hub/dashboard-insight-dedup.js` |
@@ -7350,6 +7360,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hiddenCount` | `modules/vehicle/servis-b.js` |
 | `hiddenIds` | `modules/dashboard-hub/dashboard-insight-dedup.js` |
 | `hideDashCardEl` | `modules/shared/modules-render.js` |
+| `hideJam` | `modules/business/payroll-absensi.js` |
 | `hideSuggestBox` | `modules/finance/transaksi.js` |
 | `highestInsight` | `modules/vehicle/fuel-insight-engine.js` |
 | `highestProfit` | `modules/shop/business-flow-presenter.js` |
@@ -7362,6 +7373,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hint` | `modules/finance/tx-target.js` |
 | `hint` | `modules/finance/transaksi.js` |
 | `hint` | `modules/shared/profil-pengaturan.js` |
+| `hint` | `modules/business/payroll-absensi.js` |
 | `hint` | `modules/vehicle/vehicle-scanner.js` |
 | `hint` | `modules/vehicle/sparepart-scanner.js` |
 | `hint` | `modules/vehicle/servis.js` |
@@ -7555,6 +7567,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hook` | `modules/cross/unified-summary-api.js` |
 | `hook` | `lifeos/plugins/lifeos-plugin-runtime.js` |
 | `hookResult` | `lifeos/plugins/lifeos-plugin-runtime.js` |
+| `host` | `modules/business/payroll-absensi.js` |
 | `host` | `modules/vehicle/sparepart-servis.js` |
 | `hOwners` | `modules/finance/filter-laporan.js` |
 | `hOwners` | `modules/finance/akun.js` |
@@ -8459,6 +8472,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `jenisEl` | `modules/finance/akun.js` |
 | `jenisEl` | `modules/finance/tx-bbm.js` |
 | `jenisEl` | `modules/finance/transaksi.js` |
+| `jenisEl` | `modules/business/payroll-absensi.js` |
 | `jenisEl` | `modules/vehicle/vehicle-core.js` |
 | `jenisEl` | `modules/asset/investasi-list-view.js` |
 | `jenisEl` | `modules/asset/investasi-watch-view.js` |
@@ -8469,6 +8483,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `jiwa` | `modules/finance/pajak-pbb-zakat.js` |
 | `jiwa` | `modules/shared/self-test-cases-a.js` |
 | `jiwaEl` | `modules/shared/self-test-cases-a.js` |
+| `jn` | `modules/business/payroll-absensi.js` |
 | `job` | `modules/vehicle/service-reminder-package-sot.js` |
 | `job` | `modules/vehicle/service-event-sot.js` |
 | `job` | `modules/vehicle/servis.js` |
@@ -8508,6 +8523,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `jump` | `modules/finance/filter-laporan.js` |
 | `k` | `modules/shop/cobek-pricing.js` |
 | `k` | `modules/asset/aset.js` |
+| `k` | `modules/business/payroll-absensi.js` |
 | `k` | `modules/vehicle/vehicle-catalog-health-sot.js` |
 | `k` | `modules/vehicle/service-history-audit-package.js` |
 | `k` | `modules/vehicle/service-session-integrity-s2045.js` |
@@ -8955,6 +8971,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `lbIds` | `data-health-check.js` |
 | `lbl` | `modules/shop/cobek-order.js` |
 | `lbl` | `modules/business/kasir.js` |
+| `lbl` | `modules/business/payroll-absensi.js` |
 | `lbl` | `modules/home/renovasi.js` |
 | `lc` | `modules/shop/business-flow-presenter.js` |
 | `lc` | `modules/shop/business-intelligence-presenter.js` |
@@ -11889,6 +11906,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pollStart` | `modules/shared/self-test-cases-b.js` |
 | `poly` | `car-notes.js` |
 | `pool` | `modules/finance/piutang-utang.js` |
+| `pool` | `modules/business/payroll-absensi.js` |
 | `poolCommitment` | `modules/finance/titipan-reconcile.js` |
 | `poolMasukTotal` | `modules/finance/dana-titipan-commitment-return-api.js` |
 | `poolSummary` | `modules/finance/dana-titipan-portfolio-render.js` |
@@ -12455,6 +12473,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `qualityHint` | `modules/vehicle/vehicle-reminder.js` |
 | `queued` | `modules/shared/a11y-action-controls.js` |
 | `queueText` | `ai-chat.js` |
+| `quick` | `modules/business/payroll-absensi.js` |
 | `quickActionsHtml` | `modules/asset/aset.js` |
 | `quickActionsHtml` | `modules/asset/investasi-list-view.js` |
 | `quickActionsHtml` | `modules/finance/dana-titipan-portfolio-render.js` |
@@ -13481,6 +13500,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `rowClickAction` | `modules/asset/aset-misc.js` |
 | `rowClickAttr` | `modules/asset/aset-misc.js` |
 | `rowCost` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
+| `rowEl` | `modules/business/payroll-absensi.js` |
 | `rowInactive` | `modules/shared/keamanan-pin.js` |
 | `rowKey` | `modules/vehicle/service-history-multicategory-sync-s2037.js` |
 | `rowPhotos` | `modules/vehicle/servis-checklist.js` |
@@ -13500,6 +13520,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `rows` | `modules/finance/tx-servis.js` |
 | `rows` | `modules/finance/tagihan-kalender.js` |
 | `rows` | `modules/shared/backup-restore.js` |
+| `rows` | `modules/business/payroll-absensi.js` |
 | `rows` | `modules/vehicle/vehicle-catalog-e2e-sot.js` |
 | `rows` | `modules/vehicle/service-reminder-package-sot.js` |
 | `rows` | `modules/vehicle/vehicle-sot-fleet-integrity.js` |
@@ -13805,6 +13826,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `same` | `modules/vehicle/vehicle-active-sot-s2061.js` |
 | `same` | `modules/vehicle/service-reminder-vehicle-scope-s2015.js` |
 | `sameComponent` | `modules/vehicle/servis.js` |
+| `sameDow` | `modules/business/payroll-absensi.js` |
 | `sameId` | `modules/shared/features-helpers-global-security.js` |
 | `sameId` | `modules/asset/features-helpers-global-security.js` |
 | `sameId` | `modules/finance/features-helpers-global-security.js` |
@@ -14351,6 +14373,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `sessionRows` | `modules/vehicle/service-session-recovery-s2050.js` |
 | `sessionRows` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `sessions` | `modules/vehicle/service-session-reconcile-s2051.js` |
+| `set` | `modules/business/payroll-absensi.js` |
 | `set` | `modules/vehicle/service-taxonomy-sot.js` |
 | `set` | `modules/vehicle/ride-ui.js` |
 | `setAccOwners` | `modules/finance/akun.js` |
@@ -15408,6 +15431,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `t` | `modules/finance/transaksi.js` |
 | `t` | `modules/finance/tagihan-kalender.js` |
 | `t` | `modules/shared/backup-restore.js` |
+| `t` | `modules/business/payroll-absensi.js` |
 | `t` | `modules/business/tukang-absensi.js` |
 | `t` | `modules/vehicle/service-reminder-package-sot.js` |
 | `t` | `modules/vehicle/vehicle-catalog-import.js` |
@@ -15559,6 +15583,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `tarif` | `modules/shared/self-test-cases-a.js` |
 | `tarifEl` | `modules/asset/aset-reports.js` |
 | `tarifMinggu` | `modules/business/payroll-absensi.js` |
+| `tarifTxt` | `modules/business/payroll-absensi.js` |
 | `tasks` | `modules/vehicle/vehicle-maintenance-automation.js` |
 | `tasks` | `modules/vehicle/vehicle-tax-document-automation.js` |
 | `tax` | `modules/asset/property-management-api.js` |
@@ -16053,7 +16078,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `totalM3` | `modules/shop/cobek-etalase.js` |
 | `totalM3` | `modules/logistics/logistics-engine.js` |
 | `totalMasuk` | `modules/asset/aset-reports.js` |
-| `totalMinBersih` | `modules/business/payroll-absensi.js` |
 | `totalMinKotor` | `modules/business/payroll-absensi.js` |
 | `totalMinKotor` | `modules/business/tukang-absensi.js` |
 | `totalModal` | `modules/asset/aset.js` |
@@ -16469,7 +16493,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `upahJam` | `modules/business/tukang-absensi.js` |
 | `upahLemburInput` | `modules/business/tukang-absensi.js` |
 | `upahLemburJam` | `modules/business/tukang-absensi.js` |
-| `upahLemburPerJam` | `modules/business/payroll-absensi.js` |
 | `upcoming` | `modules/finance/tx-list-cashflow.js` |
 | `update` | `modules/shared/pwa-ux-performance.js` |
 | `update` | `modules/vehicle/ride-map.js` |
@@ -16541,6 +16564,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `usedInDelivery` | `modules/vehicle/vehicle-core.js` |
 | `usedInLogistics` | `modules/shop/cobek-etalase.js` |
 | `usedMap` | `modules/finance/dana-titipan-aggregation-api.js` |
+| `useDow` | `modules/business/payroll-absensi.js` |
 | `usedPart` | `modules/vehicle/servis.js` |
 | `usedPartId` | `modules/vehicle/servis.js` |
 | `usedPartId` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
@@ -17433,8 +17457,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `whenLabel` | `modules/vehicle/servis.js` |
 | `whenText` | `modules/vehicle/servis-b.js` |
 | `whG` | `modules/shared/modules-render-b.js` |
-| `whIstMulaiEl` | `modules/business/payroll-absensi.js` |
-| `whIstSelesaiEl` | `modules/business/payroll-absensi.js` |
 | `who` | `gdrive-backup.js` |
 | `whole` | `modules/vehicle/sparepart-servis.js` |
 | `whPotonganEl` | `modules/business/payroll-absensi.js` |
@@ -17558,6 +17580,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ws` | `modules/shop/cobek-io.js` |
 | `ws` | `modules/asset/aset.js` |
 | `ws` | `modules/asset/aset-emas-impor.js` |
+| `ws` | `modules/business/payroll-absensi.js` |
 | `wsIds` | `data-health-check.js` |
 | `x` | `modules/shared/modules-render.js` |
 | `x` | `car-notes.js` |

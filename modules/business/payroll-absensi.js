@@ -20,6 +20,156 @@ if(!w||w.jenis==='minggu'||w.jenis==='borongan')return 0;
 const totalJam=w.totalJam||0;
 return totalJam>0&&totalJam<7?Math.round((7-totalJam)*100)/100:0;
 },
+// ===== S-ABS1: Minggu otomatis + template jam dari rutinitas + simpan cepat + anti-timpa =====
+// Semua DERIVED dari D.workDays (tanpa field/migrasi baru, SSOT tetap D.workDays).
+_jamManual:false,
+_autoMinggu:false,
+isoDow(iso){const d=new Date(String(iso||'')+'T00:00:00');return isNaN(d.getTime())?-1:d.getDay();},
+autoJenisForDate(iso){return Payroll.isoDow(iso)===0?'minggu':'biasa';},
+// Kalkulasi murni (dipakai addWorkDay & pratinjau Simpan Cepat -> satu rumus, tidak bisa beda).
+hitungHari(jenis,masuk,pulang,istMulaiStr,istSelesaiStr,gajiHari){
+let totalMinKotor=Payroll.timeToMinutes(pulang)-Payroll.timeToMinutes(masuk);
+if(totalMinKotor<0)totalMinKotor+=24*60;
+const istMulai=Payroll.timeToMinutes(istMulaiStr);
+let istSelesai=Payroll.timeToMinutes(istSelesaiStr);
+if(istSelesai<istMulai)istSelesai+=24*60;
+const masukMin=Payroll.timeToMinutes(masuk);
+let pulangMin=Payroll.timeToMinutes(pulang);
+if(pulangMin<masukMin) pulangMin+=24*60;
+const overlapStart=Math.max(masukMin,istMulai);
+const overlapEnd=Math.min(pulangMin,istSelesai);
+const istirahatMin=Math.max(0,overlapEnd-overlapStart);
+const totalJam=(totalMinKotor-istirahatMin)/60;
+const lemburMx=D.profile.lemburMultiplier||1.5;
+const tarifMinggu=D.profile.tarifMinggu||139000;
+const jamLembur=jenis==='minggu'?0:Math.max(0,totalJam-7);
+// FIX (audit gaji Selasa/Rabu — jam kerja <7 jam sebelumnya tetap dibayar
+// gajiHari PENUH, sama seperti kerja 7 jam genap. Sekarang pokok diprorata
+// turun kalau totalJam<7, sejalan dgn lembur yg sudah diprorata naik kalau
+// totalJam>7. jenis 'minggu' tetap pakai tarifMinggu flat, tidak diprorata.
+const pokok=jenis==='minggu'?tarifMinggu:Math.round(gajiHari/7*Math.min(totalJam,7));
+const lembur=jenis==='minggu'?0:jamLembur*(gajiHari/7*lemburMx);
+return {istirahatMin,totalJam,jamLembur,pokok,lembur};
+},
+// Template jam: modus (jam yg paling sering) dari entri 'biasa' terbaru. Kalau hari yg sama (mis.
+// Sabtu) punya >=2 sampel terakhir -> pakai pola hari itu; selain itu pola umum 5 entri terakhir.
+// Entri Minggu/borongan TIDAK ikut (jamnya bukan rutinitas kerja). Seri -> yg paling baru menang.
+jamTemplate(iso){
+const DEF={masuk:'07:00',pulang:'15:00',istMulai:'12:00',istSelesai:'13:00',source:'default',n:0};
+const rows=(D.workDays||[]).filter(w=>w&&(w.jenis==='biasa'||!w.jenis)&&w.masuk&&w.pulang&&w.date!==iso)
+.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+if(!rows.length)return DEF;
+const dow=iso?Payroll.isoDow(iso):-1;
+const sameDow=dow>=0?rows.filter(w=>Payroll.isoDow(w.date)===dow).slice(0,3):[];
+const useDow=sameDow.length>=2;
+const pool=useDow?sameDow:rows.slice(0,5);
+const cnt={};
+pool.forEach((w,i)=>{
+const k=[w.masuk,w.pulang,w.istMulai||DEF.istMulai,w.istSelesai||DEF.istSelesai].join('|');
+if(!cnt[k])cnt[k]={n:0,first:i,w};
+cnt[k].n++;
+});
+const best=Object.values(cnt).sort((a,b)=>b.n-a.n||a.first-b.first)[0].w;
+return {masuk:best.masuk,pulang:best.pulang,istMulai:best.istMulai||DEF.istMulai,istSelesai:best.istSelesai||DEF.istSelesai,source:useDow?'hari':'umum',n:pool.length};
+},
+// Isi jenis (Minggu otomatis) + jam (template) utk tanggal baru. Semua field tetap bisa diedit.
+applyDateDefaults(iso){
+const jenis=Payroll.autoJenisForDate(iso);
+const t=Payroll.jamTemplate(iso);
+const set=(id,v)=>{const e=document.getElementById(id);if(e)e.value=v;};
+set('whJenisHari',jenis);
+set('whMasuk',t.masuk);set('whPulang',t.pulang);set('whIstMulai',t.istMulai);set('whIstSelesai',t.istSelesai);
+Payroll._jamManual=false;
+Payroll._autoMinggu=(jenis==='minggu');
+Payroll._tplSource=t.source;
+Payroll.onJenisHariChange();
+return {jenis,template:t};
+},
+toggleJamManual(){Payroll._jamManual=!Payroll._jamManual;Payroll.onJenisHariChange();},
+_ensureHost(id,afterEl){
+let host=document.getElementById(id);
+if(host&&host.parentNode)return host;
+if(!afterEl||!afterEl.parentNode||typeof document.createElement!=='function')return host||null;
+host=document.createElement('div');host.id=id;
+afterEl.parentNode.insertBefore(host,afterEl.nextSibling);
+return host;
+},
+// Hint Minggu/template + tombol Simpan Cepat (dibuat dinamis, tanpa ubah HTML modal 5 grup).
+renderAutoHint(){
+const g=id=>document.getElementById(id);
+const jenisEl=g('whJenisHari'),dateEl=g('whDate');
+if(!jenisEl)return;
+const jenis=jenisEl.value;
+const masuk=(g('whMasuk')||{}).value||'',pulang=(g('whPulang')||{}).value||'';
+const hint=Payroll._ensureHost('whAutoHint',jenisEl.parentNode);
+if(hint){
+hint.style.cssText='margin:-6px 0 10px;font-size:11px;color:var(--text2);line-height:1.5';
+if(jenis==='minggu'){
+const hidden=Payroll._autoMinggu===true&&!Payroll._jamManual;
+const tarifTxt='🔴 Tarif Minggu <b>'+fmtFull(D.profile.tarifMinggu||139000)+'</b> (flat, tanpa lembur) — ganti jenis di atas kalau borongan/biasa.';
+hint.innerHTML=Payroll._autoMinggu===true
+?tarifTxt+' Jam '+escapeHtml(masuk)+'–'+escapeHtml(pulang)+' dicatat otomatis · <span class="u-pointer" style="color:var(--accent);font-weight:600" data-action="Payroll.toggleJamManual">'+(hidden?'✏️ ubah jam':'🙈 sembunyikan jam')+'</span>'
+:tarifTxt;
+} else if(jenis==='biasa'&&Payroll._tplSource&&Payroll._tplSource!=='default'){
+hint.innerHTML='⏰ Jam diisi otomatis dari kebiasaanmu ('+(Payroll._tplSource==='hari'?'pola hari yang sama':'5 absensi terakhir')+') — bisa diubah.';
+} else hint.innerHTML='';
+}
+const rowEl=dateEl&&dateEl.parentNode&&dateEl.parentNode.parentNode;
+const quick=Payroll._ensureHost('whQuickBox',rowEl);
+if(quick){
+const iso=dateEl.value;
+const exist=iso&&(D.workDays||[]).find(w=>w.date===iso);
+if(Payroll.editId!==null||jenis==='borongan'||!iso){quick.innerHTML='';return;}
+const gajiHari=parseInt((g('whGaji')||{}).value)||D.profile.gajiPokok||65000;
+let label;
+if(exist){label='✏️ Sudah ada ('+fmtFull(exist.total)+') — ketuk untuk edit';}
+else{
+const t=Payroll.jamTemplate(iso);
+const jn=Payroll.autoJenisForDate(iso);
+const h=Payroll.hitungHari(jn,t.masuk,t.pulang,t.istMulai,t.istSelesai,gajiHari);
+label='⚡ Simpan cepat · '+(jn==='minggu'?'Minggu':t.masuk+'–'+t.pulang)+' · '+fmtFull(Math.round(h.pokok+h.lembur));
+}
+quick.innerHTML='<button type="button" class="btn btn-income btn-full btn-sm" style="margin:10px 0" data-action="Payroll.quickSave">'+label+'</button>';
+}
+},
+// Simpan 1 ketukan: jenis (Minggu otomatis) + jam template untuk tanggal terpilih.
+quickSave(){
+const dateEl=document.getElementById('whDate');
+const iso=dateEl&&dateEl.value;
+if(!iso){toast('⚠️ Pilih tanggal dulu');return;}
+const exist=(D.workDays||[]).find(w=>w.date===iso);
+if(exist&&Payroll.editId===null){Payroll.editWorkDay(exist.id);toast('📅 Sudah ada absensi tanggal ini — dibuka mode edit');return;}
+if(Payroll.editId===null){Payroll.showFormFields();Payroll.applyDateDefaults(iso);}
+Payroll.addWorkDay();
+},
+// Tanggal diganti manual di form: Minggu otomatis + template baru; tanggal terisi -> mode edit.
+onDateChange(){
+const dateEl=document.getElementById('whDate');
+const iso=dateEl&&dateEl.value;
+if(!iso)return;
+if(Payroll.editId!==null){
+const clash=(D.workDays||[]).find(w=>w.date===iso&&w.id!==Payroll.editId);
+if(clash)toast('⚠️ Tanggal itu sudah punya absensi lain — tidak bisa dipindah ke sana');
+return;
+}
+const exist=(D.workDays||[]).find(w=>w.date===iso);
+if(exist){Payroll.editWorkDay(exist.id);toast('📅 Tanggal ini sudah ada absensi — dibuka mode edit');return;}
+Payroll.selectedGridDate=iso;
+const ws=getWeekRange(new Date(iso+'T00:00:00')).start;
+if(ws.getTime()!==Payroll.weekStart.getTime()){Payroll.weekStart=ws;Payroll.renderWorkDays();}
+Payroll.applyDateDefaults(iso);
+Payroll.renderWeekGrid();
+},
+_enterOverwriteMode(entry){
+Payroll.editId=entry.id;
+const hintEl=document.getElementById('whEditHint');
+if(hintEl)hintEl.style.display='block';
+const lbl=document.getElementById('whEditDateLabel');
+if(lbl)lbl.textContent=new Date(entry.date).toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'});
+const btn=document.getElementById('whSaveBtn');
+if(btn)btn.textContent='💾 Timpa Absensi';
+toast('⚠️ Tanggal ini sudah ada absensi ('+fmtFull(entry.total)+'). Ketuk "Timpa Absensi" sekali lagi untuk menggantinya.');
+},
 // v1685: audit + koreksi data D.workDays LAMA yang tersimpan SEBELUM fix pokok-prorata (v1684).
 // Ciri entri lama yang masih flat: jenis biasa, totalJam<7, gajiHariInput tercatat, TAPI
 // pokok tersimpan == gajiHariInput penuh (bukan hasil prorata gajiHariInput/7*totalJam).
@@ -89,14 +239,18 @@ const saveBtnEl=document.getElementById('whSaveBtn');
 if(saveBtnEl)saveBtnEl.textContent='+ Tambah ke Absensi Minggu Ini';
 document.getElementById('whDate').value=typeof todayStr==='function'?todayStr():'';
 document.getElementById('whGaji').value=D.profile.gajiPokok||'';
-const whIstMulaiEl=document.getElementById('whIstMulai'); if(whIstMulaiEl)whIstMulaiEl.value='12:00';
-const whIstSelesaiEl=document.getElementById('whIstSelesai'); if(whIstSelesaiEl)whIstSelesaiEl.value='13:00';
 const whBorTotalEl=document.getElementById('whBorTotal'); if(whBorTotalEl)whBorTotalEl.value='';
 const whBorNoteEl=document.getElementById('whBorNote'); if(whBorNoteEl)whBorNoteEl.value='';
 const whPotonganEl=document.getElementById('whPotongan'); if(whPotonganEl)whPotonganEl.value='';
 const whTambahanEl=document.getElementById('whTambahan'); if(whTambahanEl)whTambahanEl.value='';
-document.getElementById('whJenisHari').value='biasa';
-Payroll.onJenisHariChange();
+{
+const whDateEl=document.getElementById('whDate');
+if(whDateEl&&typeof whDateEl.addEventListener==='function'&&!whDateEl._whDateBound){
+whDateEl._whDateBound=true;
+whDateEl.addEventListener('change',()=>Payroll.onDateChange());
+}
+Payroll.applyDateDefaults(whDateEl?whDateEl.value:'');
+}
 const targetEl=document.getElementById('pyTargetBulanan');
 if(targetEl)targetEl.value=D.profile.targetGajiBulanan||'';
 const rekoBoxEl=document.getElementById('pyRateRekoBox');
@@ -114,9 +268,14 @@ const isBorongan=jenis==='borongan';
 const jamWrap=document.getElementById('whJamFieldsWrap');
 const borWrap=document.getElementById('whBorFieldsWrap');
 const gajiWrap=document.getElementById('whGajiWrap');
-if(jamWrap)jamWrap.classList.toggle('u-dnone',isBorongan);
+// Jam disembunyikan HANYA utk Minggu yang terisi otomatis (applyDateDefaults). Minggu dipilih manual
+// dari dropdown / edit entri Minggu lama -> field jam tetap tampil persis seperti alur sebelumnya.
+if(jenis!=='minggu')Payroll._autoMinggu=false;
+const hideJam=isBorongan||(jenis==='minggu'&&Payroll._autoMinggu===true&&!Payroll._jamManual);
+if(jamWrap)jamWrap.classList.toggle('u-dnone',hideJam);
 if(borWrap)borWrap.classList.toggle('u-dnone',!isBorongan);
 if(gajiWrap)gajiWrap.classList.toggle('u-dnone',isBorongan);
+Payroll.renderAutoHint();
 },
 changeAbsensiWeek(dir){
 const d=new Date(Payroll.weekStart);
@@ -133,6 +292,13 @@ addWorkDay(){
 const date=document.getElementById('whDate').value;
 const jenis=document.getElementById('whJenisHari').value;
 if(!date){toast('⚠️ Lengkapi tanggal');return;}
+// S-ABS1 (anti-timpa): dulu entri di tanggal yang sama ditimpa diam-diam (mode tambah) atau malah
+// MENGHAPUS entri lain (mode edit + ganti tanggal ke tanggal yg sudah terisi). Sekarang dicegat.
+const clash=D.workDays.find(w=>w.date===date&&w.id!==Payroll.editId);
+if(clash){
+if(Payroll.editId!==null){toast('⚠️ Tanggal itu sudah punya absensi lain — pilih tanggal lain atau hapus dulu');return;}
+Payroll._enterOverwriteMode(clash);return;
+}
 if(jenis==='borongan'){
 const borNoteEl=document.getElementById('whBorNote');
 const borNote=borNoteEl?borNoteEl.value.trim():'';
@@ -160,29 +326,7 @@ const istMulaiStr=document.getElementById('whIstMulai').value||'12:00';
 const istSelesaiStr=document.getElementById('whIstSelesai').value||'13:00';
 const gajiHari=parseInt(document.getElementById('whGaji').value)||D.profile.gajiPokok||65000;
 if(!masuk||!pulang){toast('⚠️ Lengkapi tanggal & jam kerja');return;}
-let totalMinKotor=Payroll.timeToMinutes(pulang)-Payroll.timeToMinutes(masuk);
-if(totalMinKotor<0)totalMinKotor+=24*60;
-const istMulai=Payroll.timeToMinutes(istMulaiStr);
-let istSelesai=Payroll.timeToMinutes(istSelesaiStr);
-if(istSelesai<istMulai)istSelesai+=24*60;
-const masukMin=Payroll.timeToMinutes(masuk);
-let pulangMin=Payroll.timeToMinutes(pulang);
-if(pulangMin<masukMin) pulangMin+=24*60;
-const overlapStart=Math.max(masukMin,istMulai);
-const overlapEnd=Math.min(pulangMin,istSelesai);
-const istirahatMin=Math.max(0,overlapEnd-overlapStart);
-const totalMinBersih=totalMinKotor-istirahatMin;
-const totalJam=totalMinBersih/60;
-const lemburMx=D.profile.lemburMultiplier||1.5;
-const tarifMinggu=D.profile.tarifMinggu||139000;
-const jamLembur=jenis==='minggu'?0:Math.max(0,totalJam-7);
-// FIX (audit gaji Selasa/Rabu — jam kerja <7 jam sebelumnya tetap dibayar
-// gajiHari PENUH, sama seperti kerja 7 jam genap. Sekarang pokok diprorata
-// turun kalau totalJam<7, sejalan dgn lembur yg sudah diprorata naik kalau
-// totalJam>7. jenis 'minggu' tetap pakai tarifMinggu flat, tidak diprorata.
-const pokok=jenis==='minggu'?tarifMinggu:Math.round(gajiHari/7*Math.min(totalJam,7));
-const upahLemburPerJam=gajiHari/7*lemburMx;
-const lembur=jenis==='minggu'?0:jamLembur*upahLemburPerJam;
+const {istirahatMin,totalJam,jamLembur,pokok,lembur}=Payroll.hitungHari(jenis,masuk,pulang,istMulaiStr,istSelesaiStr,gajiHari);
 const potonganEl=document.getElementById('whPotongan');
 const potongan=potonganEl?(parsePzNum(potonganEl.value)||0):0;
 const tambahanEl=document.getElementById('whTambahan');
@@ -212,6 +356,7 @@ document.getElementById('whPulang').value=w.pulang||'15:00';
 document.getElementById('whIstMulai').value=w.istMulai||'12:00';
 document.getElementById('whIstSelesai').value=w.istSelesai||'13:00';
 document.getElementById('whJenisHari').value=w.jenis||'biasa';
+Payroll._autoMinggu=false;
 document.getElementById('whGaji').value=(w.gajiHariInput!=null?w.gajiHariInput:w.pokok)||D.profile.gajiPokok||'';
 const whBorTotalEl=document.getElementById('whBorTotal'); if(whBorTotalEl)whBorTotalEl.value=w.jenis==='borongan'?w.pokok:'';
 const whBorNoteEl=document.getElementById('whBorNote'); if(whBorNoteEl)whBorNoteEl.value=w.borNote||'';
@@ -228,19 +373,14 @@ Payroll.editId=null;
 document.getElementById('whEditHint').style.display='none';
 document.getElementById('whSaveBtn').textContent='+ Tambah ke Absensi Minggu Ini';
 document.getElementById('whGaji').value=D.profile.gajiPokok||'';
-document.getElementById('whMasuk').value='07:00';
-document.getElementById('whPulang').value='15:00';
-document.getElementById('whIstMulai').value='12:00';
-document.getElementById('whIstSelesai').value='13:00';
-document.getElementById('whJenisHari').value='biasa';
 const whBorTotalEl2=document.getElementById('whBorTotal'); if(whBorTotalEl2)whBorTotalEl2.value='';
 const whBorNoteEl2=document.getElementById('whBorNote'); if(whBorNoteEl2)whBorNoteEl2.value='';
 const whPotonganEl2=document.getElementById('whPotongan'); if(whPotonganEl2)whPotonganEl2.value='';
 const whTambahanEl2=document.getElementById('whTambahan'); if(whTambahanEl2)whTambahanEl2.value='';
-Payroll.onJenisHariChange();
 if(dateOverride){
 document.getElementById('whDate').value=dateOverride;
 Payroll.selectedGridDate=dateOverride;
+Payroll.applyDateDefaults(dateOverride);
 Payroll.renderWeekGrid();
 return;
 }
@@ -250,6 +390,7 @@ const isCurrentWeek=(Payroll.weekStart.getTime()===curStart.getTime());
 const newDate=isCurrentWeek?dateToISO(now):dateToISO(Payroll.weekStart);
 document.getElementById('whDate').value=newDate;
 Payroll.selectedGridDate=newDate;
+Payroll.applyDateDefaults(newDate);
 Payroll.renderWeekGrid();
 },
 async delWorkDay(id){
