@@ -232,7 +232,8 @@ function scrollTabBarIntoView(el){
 try{
 if(el && typeof el.scrollIntoView==='function'){
 const run=()=>{
-try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){void e;}
+// S2313 U-04: 'start' menggulung halaman ~539px saat render awal Mobil; 'nearest' hanya menggulung bila tab di luar layar.
+try{ el.scrollIntoView({behavior:'smooth',block:'nearest',inline:'nearest'}); }catch(e){void e;}
 try{
 if(el.classList && typeof el.classList.add==='function'){
 el.classList.remove('flash-highlight');

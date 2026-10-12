@@ -304,9 +304,12 @@
         return;
       }
 
-      console.error('❌ ' + LOG_PREFIX + ' Ditemukan ' + problems + ' masalah (' + dt + 'ms):');
+      // S2313 U-16: bila hanya ID DOM yang tak ditemukan (bisa ID dinamis/lazy yang sah) dan tidak ada
+      // data-action rusak, log turun ke console.debug agar konsol produksi tidak berisi error palsu.
+      var _logProblem = result.actionMissing.length === 0 ? console.debug : console.error;
+      _logProblem.call(console, (result.actionMissing.length === 0 ? '' : '❌ ') + LOG_PREFIX + ' Ditemukan ' + problems + ' masalah (' + dt + 'ms):');
       if (result.domMissing.length) {
-        console.error(
+        _logProblem.call(console,
           '  → ID dirujuk getElementById() tapi TIDAK ADA di HTML manapun (' + result.domMissing.length + '):',
           result.domMissing
         );

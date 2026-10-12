@@ -194,6 +194,33 @@ async function main() {
     check('kendaraan berprofil tangki: fuel bar atau petunjuk koreksi tampil', s.gauge > 0 || /belum ada estimasi/i.test(s.text), s.text.slice(0, 120));
     check('Car Notes (kunjungan ke-2): kartu fuel tetap hidden=false', s.fuelHidden.every((h) => h === false), JSON.stringify(s.fuelHidden));
 
+    // S2311 UI/UX: viewport mobile 390px; cek perilaku DOM/computed-style (bukan screenshot).
+    await b.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+    await gotoPage(b, 'dashboard-hub');
+    const fab = await b.evaluate(`(() => {
+      const btn = document.getElementById('navFabMain'); const menu = document.getElementById('navFabFallbackMenu');
+      const noPageFab = [...document.querySelectorAll('.keu-fab')].every((f) => f.offsetParent === null);
+      btn.click();
+      const r = menu.getBoundingClientRect(); const nav = btn.getBoundingClientRect();
+      const items = [...menu.querySelectorAll('button')];
+      return { noPageFab, hidden: menu.hidden, expanded: btn.getAttribute('aria-expanded'), n: items.length,
+        minH: Math.min(...items.map((e) => e.getBoundingClientRect().height)),
+        inView: r.left >= 0 && r.right <= window.innerWidth + 0.5, aboveNav: r.bottom <= nav.top + 1 };
+    })()`);
+    check('FAB "+" di Beranda: menu fallback terbuka, 4 aksi, tinggi tombol >= 44px', fab.noPageFab && fab.hidden === false && fab.expanded === 'true' && fab.n === 4 && fab.minH >= 43.5, JSON.stringify(fab));
+    check('FAB "+" di Beranda: menu di dalam viewport 390px dan di atas navigasi bawah', fab.inView && fab.aboveNav, JSON.stringify(fab));
+    const fab2 = await b.evaluate(`(() => { const btn = document.getElementById('navFabMain'); btn.click(); return { hidden: document.getElementById('navFabFallbackMenu').hidden, expanded: btn.getAttribute('aria-expanded') }; })()`);
+    check('FAB "+" di Beranda: klik kedua menutup menu', fab2.hidden === true && fab2.expanded === 'false', JSON.stringify(fab2));
+    await gotoPage(b, 'keuangan');
+    const tabs = await b.evaluate(`(() => {
+      const t = document.querySelector('#page-keuangan > .cn-tabs'); const bc = document.querySelector('#page-keuangan > .page-breadcrumb');
+      const kids = [...t.children].filter((e) => e.offsetParent !== null); const tops = kids.map((e) => Math.round(e.getBoundingClientRect().top));
+      const cs = getComputedStyle(t);
+      return { n: kids.length, oneRow: new Set(tops).size === 1, wrap: cs.flexWrap, overflowX: cs.overflowX, bc: bc ? getComputedStyle(bc).display : 'none', pageOverflow: document.documentElement.scrollWidth <= window.innerWidth + 1 };
+    })()`);
+    check('tab Uang di 390px: satu baris, tidak membungkus, dapat digeser', tabs.n >= 7 && tabs.oneRow && tabs.wrap === 'nowrap' && /auto|scroll/.test(tabs.overflowX), JSON.stringify(tabs));
+    check('tab Uang di 390px: breadcrumb ganda tersembunyi dan halaman tanpa scroll horizontal', tabs.bc === 'none' && tabs.pageOverflow, JSON.stringify(tabs));
+
     check('tidak ada pageerror selama skenario', b.pageErrors.length === 0, b.pageErrors.slice(0, 3).join(' | '));
   } finally {
     try { b && b.close(); } catch (_e) { void _e; }

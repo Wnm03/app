@@ -219,8 +219,22 @@ _maintenanceInsight(vehicleId) {
   const rec = (typeof FuelMaintenanceEngine.maintenanceRecommendation === 'function')
     ? FuelMaintenanceEngine.maintenanceRecommendation(vehicleId)
     : { ok: false };
+  // S2313 U-08: >=2 item "Cek/servis" digabung jadi 1 kalimat (maks. 3 nama + "+N lainnya") agar tidak
+  // mengulang "berpotensi memengaruhi konsumsi BBM" per item. Murni presentasi teks; engine tidak berubah.
+  const _compactRecs = (list) => {
+    const cek = [];
+    const other = [];
+    list.forEach((r) => {
+      const m = /^Cek\/servis "([^"]+)" — (.+), berpotensi memengaruhi konsumsi BBM\.$/.exec(String(r));
+      if (m) cek.push({ name: m[1], detail: m[2] }); else other.push(String(r));
+    });
+    if (cek.length < 2) return list.join(' ');
+    const shown = cek.slice(0, 3).map((c) => '"' + c.name + '" (' + c.detail + ')').join(', ');
+    const more = cek.length > 3 ? ', +' + (cek.length - 3) + ' lainnya' : '';
+    return 'Cek/servis ' + shown + more + ' — berpotensi memengaruhi konsumsi BBM.' + (other.length ? ' ' + other.join(' ') : '');
+  };
   const recommendation = (rec.ok && rec.recommendations.length)
-    ? rec.recommendations.join(' ')
+    ? _compactRecs(rec.recommendations)
     : 'Tidak ada rekomendasi tambahan saat ini.';
   const priorityMap = { tinggi: 'CRITICAL', sedang: 'MEDIUM', rendah: 'LOW' };
   return {

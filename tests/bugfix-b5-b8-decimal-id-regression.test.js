@@ -135,3 +135,18 @@ test('B5-B8 lanjutan: parseMoneyID memperlakukan awalan 0 sebagai desimal, bukan
   assert.equal(parseMoneyID('1.234'), 1234);
   assert.equal(parseMoneyID('0.500.000'), 500000);
 });
+
+test('B5-B8 lanjutan: parsePzNum tidak melipatgandakan desimal eksplisit, tampilan rupiah tetap utuh', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'pajak-aset-ui-wrappers.js'), 'utf8');
+  const a = src.indexOf('function parsePzNum'), b = src.indexOf('function parseDecimalID');
+  const { parsePzNum } = new Function(src.slice(a, b) + ';return {parsePzNum}')();
+  assert.equal(parsePzNum('Rp 1.234.567'), 1234567);
+  assert.equal(parsePzNum('1.500.000'), 1500000);
+  assert.equal(parsePzNum('15.000'), 15000);
+  assert.equal(parsePzNum('1500000,50'), 1500001);
+  assert.equal(parsePzNum('1.500.000,5'), 1500001);
+  assert.equal(parsePzNum('-2.500'), -2500);
+  assert.equal(parsePzNum('1500000'), 1500000);
+  assert.equal(parsePzNum(''), 0);
+  assert.equal(parsePzNum(null), 0);
+});

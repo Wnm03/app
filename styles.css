@@ -1296,6 +1296,17 @@ Tidak ada selector lama yang diubah nilainya. */
 #lifeOSReviewPanel button[data-action="LifeOSReview.startWeekly"] {
 color:var(--on-accent)!important;
 }
+/* S2313 U-02 */
+.segmented-control > .active,
+.segmented-control > .chip-btn.active,
+.segmented-control > .cn-tab.active,
+.segmented-control > .kel-subtab.active,
+.segmented-control > .lap-subtab.active,
+.segmented-control > .pjk-subtab.active,
+.segmented-control > .cni-subtab.active,
+.segmented-control > .budget-tab-btn.active {
+color:var(--text)!important;
+}
 .btn-income, .type-btn.ai { color:var(--text)!important; }
 .btn-expense, .btn-danger, .type-btn.ae { color:var(--text)!important; }
 .btn-transfer, .type-btn.at { color:var(--text)!important; }
@@ -3478,7 +3489,7 @@ font-size: 15px; line-height: 1;
   padding:2px 1px 6px; margin-bottom:6px; scroll-snap-type:x proximity;
 }
 #page-keuangan > .cn-tabs::-webkit-scrollbar { display:none; }
-#page-keuangan > .cn-tabs > .cn-tab { flex:0 0 auto; min-height:40px; padding:9px 12px; white-space:nowrap; scroll-snap-align:start; }
+#page-keuangan > .cn-tabs > .cn-tab { flex:0 0 auto; width:auto; min-width:max-content; min-height:40px; padding:9px 12px; white-space:nowrap; scroll-snap-align:start; }
 #page-keuangan > .page-breadcrumb { display:none; }
 #page-keuangan #keuanganTab-kelola > .kel-subtabs { margin-bottom:6px; }
 #page-keuangan #keuanganTab-kelola > .page-breadcrumb { margin:0 0 8px; font-size:11px; }

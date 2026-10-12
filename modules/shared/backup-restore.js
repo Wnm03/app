@@ -196,8 +196,14 @@ errors.push('Google Sheets: '+_sanitizeBackupError(e));
 skipped.push('Google Sheets (belum terhubung)');
 }
 if(!errors.length){
-let msg='✅ Backup semua berhasil: '+done.join(', ')+'.';
-if(skipped.length)msg+=' (Dilewati: '+skipped.join(', ')+')';
+// S2313 U-12: pesan ringkas (maks. 1-2 baris) agar tidak menimpa form; detail lengkap tetap ada di riwayat backup.
+let msg='✅ Backup berhasil: '+done.join(', ')+'.';
+if(skipped.length){
+const _belum=skipped.filter(x=>/belum terhubung/.test(x)).map(x=>x.replace(/\s*\(.*\)$/,''));
+const _lain=skipped.filter(x=>!/belum terhubung/.test(x));
+if(_belum.length)msg+=' '+_belum.join('/')+' belum terhubung.';
+if(_lain.length)msg+=' Dilewati: '+_lain.join(', ')+'.';
+}
 toast(msg,3200);
 }else{
 let msg='❌ Backup SEBAGIAN gagal. ';

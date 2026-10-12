@@ -10,6 +10,12 @@ function parsePzNum(v){
 if(v===null||v===undefined)return 0;
 const str=String(v);
 const negative=/-/.test(str);
+// Desimal eksplisit di akhir ('1500000,50', '1.500.000,5') dibulatkan ke rupiah utuh; sebelumnya semua pemisah dibuang sehingga hasilnya 100x/10x lipat.
+const compact=str.replace(/[^0-9.,]/g,'');
+if(/[.,]\d{1,2}$/.test(compact)&&/\d[.,]\d{1,2}$/.test(compact)){
+const m=parseMoneyID(compact);
+if(m!==null&&Number.isFinite(m)){const r=Math.round(m);return negative?-r:r;}
+}
 const digits=str.replace(/[^0-9]/g,'');
 const n=Number(digits);
 if(isNaN(n))return 0;
