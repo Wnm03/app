@@ -283,13 +283,15 @@ test('alur lama utuh: edit entri Minggu & pilih "Minggu" manual di hari biasa ->
 test('alur lama utuh: isi jam manual setelah template tetap dihormati; borongan & edit membersihkan Simpan Cepat', () => {
   const rows = [wd(1, '2026-10-05', '08:00', '16:00'), wd(2, '2026-10-06', '08:00', '16:00')];
   const { P, els, D } = setup(rows, {}, { whDate: '2026-10-12' });
-  P.cancelEditWorkDay();
+  // S2433.3-r2: cancelEditWorkDay() tanpa argumen mengisi whDate dengan HARI INI (jam sistem asli) -> tes ini
+  // dulu hanya lulus pada 2026-10-12. Tanggal uji sekarang eksplisit, tidak bergantung jam sistem.
+  P.cancelEditWorkDay('2026-10-12');
   els.whMasuk.value = '09:00'; els.whPulang.value = '17:00';
   P.addWorkDay();
   assert.equal(D.workDays.find((w) => w.date === '2026-10-12').masuk, '09:00');
   P.editWorkDay(D.workDays.find((w) => w.date === '2026-10-12').id);
   assert.equal(els.whQuickBox.innerHTML, '');
-  P.cancelEditWorkDay();
+  P.cancelEditWorkDay('2026-10-12');
   els.whJenisHari.value = 'borongan'; P.onJenisHariChange();
   assert.equal(els.whQuickBox.innerHTML, '');
 });

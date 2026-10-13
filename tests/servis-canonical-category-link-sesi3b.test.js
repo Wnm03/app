@@ -9,7 +9,7 @@ const backup=fs.readFileSync(require.resolve('../modules/shared/backup-restore.j
 
 test('Sesi 3B: canonical helper menjadi SoT linkage nama+kendaraan',()=>{
  assert.match(servis,/function canonicalServisCategoryId\(item,vehicleId,preferredId\)/);
- assert.match(servis,/preferred&&\(!preferred\.vehicleId\|\|preferred\.vehicleId===vehicleId\)/);
+ assert.match(servis,/preferred&&\(!preferred\.vehicleId\|\|String\(preferred\.vehicleId\)===String\(vehicleId\)\)/);
  assert.match(servis,/const matched=resolveServisCatForVehicle\(item,vehicleId\)/);
 });
 

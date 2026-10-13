@@ -28,12 +28,17 @@ test('presenter render tidak terkena TDZ settings dan tetap read-only', () => {
 
 
 test('dashboard insight menampilkan ringkasan audit tanpa mengubah transaksi', () => {
+  // S2433-3-r4: fixture relatif terhadap jam sistem (jendela audit = 30 hari terakhir), bukan tanggal literal.
+  const isoLokal = (offsetHari) => {
+    const d = new Date(); d.setDate(d.getDate() - offsetHari);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
   const body = { innerHTML: '' };
   const D = {
     transactions: [
-      { id: 'tx1', accountId: 'a1', type: 'expense', amount: 10000, date: '2026-09-01', category: 'Makan' },
-      { id: 'tx2', accountId: 'a1', type: 'expense', amount: 20000, date: '2026-09-21', category: 'Makan' },
-      { id: 'tx3', accountId: 'a1', type: 'income', amount: 100000, date: '2026-09-22', category: 'Gaji' },
+      { id: 'tx1', accountId: 'a1', type: 'expense', amount: 10000, date: isoLokal(20), category: 'Makan' },
+      { id: 'tx2', accountId: 'a1', type: 'expense', amount: 20000, date: isoLokal(5), category: 'Makan' },
+      { id: 'tx3', accountId: 'a1', type: 'income', amount: 100000, date: isoLokal(4), category: 'Gaji' },
     ],
     accounts: [{ id: 'a1', ownership: 'SELF' }],
   };

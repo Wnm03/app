@@ -12,7 +12,7 @@ const mutation=fs.readFileSync('modules/vehicle/service-session-mutation-s2047.j
 test('S2060 checklist toggle is true add/remove SoT and clears stale component state',()=>{
   assert.match(checklist,/if \(this\._checked\[item\.id\] !== undefined\) \{/);
   assert.match(checklist,/delete this\._checked\[item\.id\];/);
-  assert.match(checklist,/\['_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus'\]/);
+  assert.match(checklist,/\['_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus','_actionManual'\]/);
   assert.match(checklist,/removed: true/);
 });
 
