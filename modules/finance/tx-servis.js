@@ -231,7 +231,7 @@ const checklist=Array.isArray(opts.checklist)?opts.checklist:[];
 let s=null;
 if(opts.existingServisId){
 const candidate=(D.servisLogs||[]).find(x=>x.id===opts.existingServisId);
-if(candidate&&candidate.vehicleId===vehicleId)s=candidate;
+if(candidate&&candidate.vehicleId!=null&&vehicleId!=null?String(candidate.vehicleId)===String(vehicleId):candidate&&candidate.vehicleId===vehicleId)s=candidate; /* S2433.2: id campuran angka/string */
 }
 
 // Idempotency: retries of the same financial transaction must converge on
@@ -461,11 +461,11 @@ if(typeof renderTxServisReminderPackage==='function')renderTxServisReminderPacka
 // P14 — vehicle isolation: a Finance transaction that already has a vehicle
 // identity must never be linked to a service event for another vehicle.
 const txVehicleId=tx&&tx.vehicleId!=null?tx.vehicleId:(existingTx&&existingTx.vehicleId!=null?existingTx.vehicleId:null);
-if(txVehicleId&&vehicleId&&txVehicleId!==vehicleId){
+if(txVehicleId&&vehicleId&&String(txVehicleId)!==String(vehicleId)){
   toast('⚠️ Kendaraan transaksi berbeda dengan kendaraan servis — linkage dibatalkan');
   return null;
 }
-if(typeof ServisChecklist!=='undefined'&&ServisChecklist._vehicleId!==vehicleId)ServisChecklist.open(vehicleId);
+if(typeof ServisChecklist!=='undefined'&&String(ServisChecklist._vehicleId)!==String(vehicleId))ServisChecklist.open(vehicleId);
 const masterCategoryId=document.getElementById('txServisCategory')?.value||null;
 const componentId=document.getElementById('txServisComponent')?.value||null;
 const item=document.getElementById('txServisItem').value.trim();
@@ -525,7 +525,7 @@ const t=(D.transactions||[]).find(x=>x.id===txEditId);
 if(!t||!t.servisLinkId){toast('⚠️ Transaksi ini belum tertaut ke catatan Servis');return;}
 const s=(D.servisLogs||[]).find(x=>x.id===t.servisLinkId);
 if(!s){toast('⚠️ Catatan Servis tertaut sudah tidak ditemukan (mungkin sudah dihapus)');return;}
-if(t.vehicleId&&s.vehicleId&&t.vehicleId!==s.vehicleId){toast('⚠️ Link Servis tidak valid: kendaraan transaksi dan servis berbeda');return;}
+if(t.vehicleId&&s.vehicleId&&String(t.vehicleId)!==String(s.vehicleId)){toast('⚠️ Link Servis tidak valid: kendaraan transaksi dan servis berbeda');return;}
 closeModal('txModal');
 if(typeof Servis!=='undefined'&&Servis.openModal)Servis.openModal(s.id);
 }
