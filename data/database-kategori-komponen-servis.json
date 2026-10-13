@@ -87,7 +87,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: kapasitas 0,8 L; rekomendasi usia kendaraan >10 tahun 2.000–2.500 km (tidak mengganti canonical interval).",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -106,7 +111,12 @@
       "needsReview": false,
       "catatan": "Komponen tambahan. Jangan menebak interval dari rasio oli mesin/gardan; interval canonical tetap berasal dari category/vehicle override.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -125,7 +135,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Kode yang dicantumkan user: NGK CPR9EA-9 atau Denso U27EPR9.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -144,7 +159,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Spesifikasi mesin dingin dari daftar user: In 0,10 mm; Ex 0,24 mm.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -163,7 +183,14 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -182,7 +209,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -201,7 +233,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -220,7 +257,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -239,7 +281,16 @@
       "needsReview": true,
       "catatan": "Pola alternate vs 2-interval-independen belum diputuskan -- lihat PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b catatan pola 3. actionMode:\"ganti\" di sini SEMENTARA (perilaku lama, bukan keputusan final).",
       "catatanTambahan": "Daftar tambahan user: periksa 8.000 km, ganti 24.000 km untuk KZR 2012; kode sabuk KZR; berbeda dari metadata checklist existing 32.000 km dan tidak menimpa canonical SoT.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -258,7 +309,16 @@
       "needsReview": false,
       "catatan": "Klip plastik/guide pin pada blok pulley depan.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -277,7 +337,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: torsi mur pulley depan 59 N·m dan mur pulley belakang 49 N·m; hindari impact wrench berlebihan agar drat as tidak rusak.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -296,7 +365,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar user: periksa 8.000 km; standar KZR 18 g; substitusi 15 g disebut untuk akselerasi. Interval ganti 12.000–15.000 km versi user berbeda dari metadata existing ±24.000 km; tidak menimpa SoT.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -315,7 +393,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -334,7 +421,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -353,7 +449,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -372,7 +477,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -391,7 +505,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -410,7 +533,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -429,7 +561,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -448,7 +589,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -467,7 +617,16 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-injeksi-pgmfi",
@@ -486,7 +645,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: pembersihan throttle body 12.000 km; berbeda dari interval checklist saat ini 8.000 km, sehingga disimpan sebagai catatan dan tidak menimpa SoT.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-injeksi-pgmfi",
@@ -505,7 +669,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-injeksi-pgmfi",
@@ -524,7 +693,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: pembersihan setiap 12.000 km; metadata existing bersifat kondisional/±20.000 km dan tidak ditimpa.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-bahan-bakar",
@@ -543,7 +717,12 @@
       "needsReview": false,
       "catatan": "Tekanan bahan bakar yang disebut dalam daftar tambahan: sekitar 294 kPa.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-bahan-bakar",
@@ -562,7 +741,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -581,7 +765,12 @@
       "needsReview": true,
       "catatan": "linkCat sengaja tetap false ikut VERIFIKASI §4 -- naik jadi true kalau W tambah \"Coolant\" ke GENERIC_RECOMMEND_NAMES.motor (di luar scope checklist ini).",
       "catatanTambahan": "Daftar tambahan user: kuras/ganti 12.000–24.000 km atau maksimal 2 tahun; interval ini bersifat rekomendasi tambahan dan tidak menimpa canonical SoT.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -600,7 +789,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -619,7 +813,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -638,7 +837,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -657,7 +861,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user konsisten: ganti 24.000 km atau 2 tahun.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -676,7 +885,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Bersihkan area tromol belakang setiap mengganti ban atau oli gardan; ganti kampas sesuai hasil pemeriksaan.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -695,7 +909,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -714,7 +933,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -733,7 +957,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -752,7 +981,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -771,7 +1005,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -790,7 +1029,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -809,7 +1053,14 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -828,7 +1079,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-kemudi",
@@ -847,7 +1103,14 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: periksa kelancaran tiap 12.000 km; grease/ganti pelor bila berat atau jeduk.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -866,7 +1129,12 @@
       "needsReview": false,
       "catatan": "Daftar tambahan: 12V 5Ah; voltase normal 12,4–12,8V; periksa voltase tiap 4.000 km.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -885,7 +1153,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -904,7 +1177,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -923,7 +1201,12 @@
       "needsReview": true,
       "catatan": "Daftar tambahan: tekanan acuan Depan 29 psi, Belakang 33 psi; cek tekanan rutin tiap 2 minggu. linkCat bisa naik jadi true kapan saja (kategori \"Ban Depan\" sudah ada) -- lihat VERIFIKASI §4 poin a.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -942,7 +1225,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -961,7 +1249,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: cek kelancaran 12.000 km; ganti bila oblak atau gemuruh.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "filter-udara",
@@ -980,7 +1273,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: elemen kertas viscous berlapis oli; jangan dicuci atau disemprot kompresor.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "final-gear",
@@ -999,7 +1297,12 @@
       "needsReview": false,
       "catatan": "",
       "catatanTambahan": "Daftar tambahan user: kapasitas 120 ml; rasio praktis 3× ganti oli mesin : 1× ganti oli gardan.",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1018,7 +1321,12 @@
       "needsReview": false,
       "catatan": "Menggabungkan kabel gas + kabel rem belakang + standar tanpa membuat item kabel gas duplikat.",
       "catatanTambahan": "",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1039,7 +1347,12 @@
       "catatanTambahan": "Catalog refs: E-4",
       "catalogRefs": [
         "E-4"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1060,7 +1373,12 @@
       "catatanTambahan": "Catalog refs: E-4",
       "catalogRefs": [
         "E-4"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1081,7 +1399,12 @@
       "catatanTambahan": "Catalog refs: E-4",
       "catalogRefs": [
         "E-4"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1102,7 +1425,12 @@
       "catatanTambahan": "Catalog refs: E-6",
       "catalogRefs": [
         "E-6"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1123,7 +1451,12 @@
       "catatanTambahan": "Catalog refs: E-6",
       "catalogRefs": [
         "E-6"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -1144,7 +1477,12 @@
       "catatanTambahan": "Catalog refs: E-7",
       "catalogRefs": [
         "E-7"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -1165,7 +1503,16 @@
       "catatanTambahan": "Catalog refs: E-17",
       "catalogRefs": [
         "E-17"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -1186,7 +1533,16 @@
       "catatanTambahan": "Catalog refs: E-17",
       "catalogRefs": [
         "E-17"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -1207,7 +1563,16 @@
       "catatanTambahan": "Catalog refs: E-17",
       "catalogRefs": [
         "E-17"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -1228,7 +1593,16 @@
       "catatanTambahan": "Catalog refs: E-16",
       "catalogRefs": [
         "E-16"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -1249,7 +1623,16 @@
       "catatanTambahan": "Catalog refs: E-17",
       "catalogRefs": [
         "E-17"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": [
+        "matic"
+      ],
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-injeksi-pgmfi",
@@ -1271,7 +1654,12 @@
       "catalogRefs": [
         "E-4",
         "E-22"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-injeksi-pgmfi",
@@ -1293,7 +1681,12 @@
       "catalogRefs": [
         "E-9",
         "E-22"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-bahan-bakar",
@@ -1312,7 +1705,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-26",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-bahan-bakar",
@@ -1331,7 +1729,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-26",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -1352,7 +1755,12 @@
       "catatanTambahan": "Catalog refs: E-9",
       "catalogRefs": [
         "E-9"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -1373,7 +1781,12 @@
       "catatanTambahan": "Catalog refs: E-9",
       "catalogRefs": [
         "E-9"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pendingin",
@@ -1394,7 +1807,12 @@
       "catatanTambahan": "Catalog refs: E-9",
       "catalogRefs": [
         "E-9"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -1413,7 +1831,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-4",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -1432,7 +1855,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-4",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -1451,7 +1879,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-5",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "suspensi",
@@ -1470,7 +1903,14 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-7",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -1489,7 +1929,14 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-7",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -1508,7 +1955,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-8",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "suspensi",
@@ -1527,7 +1979,14 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-9",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-kemudi",
@@ -1548,7 +2007,14 @@
       "catatanTambahan": "Catalog refs: F-10",
       "catalogRefs": [
         "F-10"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "sistem-kemudi",
@@ -1569,7 +2035,14 @@
       "catatanTambahan": "Catalog refs: F-10",
       "catalogRefs": [
         "F-10"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1590,7 +2063,14 @@
       "catatanTambahan": "Catalog refs: E-10",
       "catalogRefs": [
         "E-10"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1609,7 +2089,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-12",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1630,7 +2115,14 @@
       "catatanTambahan": "Catalog refs: E-10",
       "catalogRefs": [
         "E-10"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1651,7 +2143,12 @@
       "catatanTambahan": "Catalog refs: E-10",
       "catalogRefs": [
         "E-10"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1670,7 +2167,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-38",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1689,7 +2191,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-40",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1708,7 +2215,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-38",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -1727,7 +2239,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-1",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -1746,7 +2263,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-6",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -1765,7 +2287,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-1, F-6",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "roda",
@@ -1784,7 +2311,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-1, F-6",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1803,7 +2335,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1822,7 +2359,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1841,7 +2383,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1860,7 +2407,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1879,7 +2431,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "final-gear",
@@ -1898,7 +2455,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: E-18",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1917,7 +2479,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-13",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1936,7 +2503,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-14",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "unverified"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1955,7 +2527,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-38",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1974,7 +2551,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-38",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -1993,7 +2575,12 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-38",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "body-kontrol",
@@ -2012,7 +2599,14 @@
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
       "catatanTambahan": "Catalog refs: F-15",
-      "catalogRefs": []
+      "catalogRefs": [],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -2033,7 +2627,12 @@
       "catatanTambahan": "",
       "catalogRefs": [
         "E-11"
-      ]
+      ],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
     },
     {
       "masterCategoryId": "suspensi",
@@ -2054,7 +2653,14 @@
       "catatanTambahan": "",
       "catalogRefs": [
         "F-23"
-      ]
+      ],
+      "vehicleTypeScope": [
+        "motor"
+      ],
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": false,
+      "scopeStatus": "confirmed"
     }
   ],
   "catalogSources": [
