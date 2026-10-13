@@ -17,7 +17,7 @@ const FuelStorage = {
 // VehicleReminder/VehicleTrendAPI).
 logs(vehicleId) {
   const all = (typeof D !== 'undefined' && D.bbmLogs) ? D.bbmLogs : [];
-  return vehicleId ? all.filter((b) => b.vehicleId === vehicleId) : all.slice();
+  return vehicleId ? all.filter((b) => b && (b.vehicleId != null ? String(b.vehicleId) === String(vehicleId) : b.vehicleId === vehicleId)) : all.slice();
 },
 
 // sortedByDate(vehicleId?) — logs() diurutkan tanggal terbaru dulu (desc).

@@ -13,7 +13,7 @@
 // dari file ini) & features-aiwidget-reminder-gdrive-search.js (yang memanggil getVehicleKm() dst
 // dari file ini).
 /* moved to modules-render.js: renderVehicleSelect */
-function selectVehicle(id){const r=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.setActive)?VehicleScopedSOT.setActive(id):{ok:!!id};if(!r.ok)return;curVehicleId=r.vehicleId;renderVehicleSelect();renderCnTab();}
+function selectVehicle(id){const r=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.setActive)?VehicleScopedSOT.setActive(id):{ok:!!id};if(!r.ok)return;curVehicleId=r.vehicleId;/* S2433: siapkan kategori kendaraan baru walau bukan tab Servis (idempoten, memo per kendaraan) */try{if(typeof Sparepart!=='undefined'&&typeof Sparepart.repairCategoryProjection==='function')Sparepart.repairCategoryProjection();}catch(_e){void _e;}renderVehicleSelect();renderCnTab();}
 // isVehicleOwnershipSelf(vehicleId) — helper REUSE dari OwnershipEngine (Sesi 196,
 // Ownership Sync Vehicle/Car Notes/Fuel/Servis/Reminder/Dashboard/Report/AI).
 // Balikin true kalau kepemilikan EFEKTIF kendaraan ini SELF (termasuk kendaraan

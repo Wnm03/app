@@ -150,6 +150,76 @@ const ServisChecklist = {
     return group && Array.isArray(group.items) ? group.items : [];
   },
 
+  // ---------------------------------------------------------------
+  // S2433.1 — KOMPATIBILITAS KOMPONEN PER KENDARAAN (proyeksi, aditif).
+  // Master (SERVICE_CHECKLIST_GROUPS) TIDAK dihapus/diubah: metadata
+  // vehicleTypeScope/bodyTypeScope/modelScope/universal/scopeStatus hanya
+  // dipakai untuk memproyeksikan komponen yang relevan bagi kendaraan aktif.
+  // Aturan konservatif: kendaraan/tipe tidak dikenal, scope kosong, atau
+  // scopeStatus 'unverified' => komponen TETAP tampil (tidak disembunyikan,
+  // tidak diklaim universal). Riwayat/state yang sudah ada selalu terbaca
+  // (lihat isItemVisible). Indeks groupIdx/itemIdx TIDAK berubah.
+  // ---------------------------------------------------------------
+  _vehicleProfile(vehicleId) {
+    const vid = vehicleId === undefined || vehicleId === null ? this._vehicleId : vehicleId;
+    const list = (typeof D !== 'undefined' && D && Array.isArray(D.vehicles)) ? D.vehicles : [];
+    const veh = vid === null || vid === undefined ? null : list.find(v => v && String(v.id) === String(vid));
+    if (!veh) return { known: false, type: null, body: null, modelId: null };
+    const norm = x => { const t = String(x == null ? '' : x).trim().toLowerCase(); return t || null; };
+    return {
+      known: true,
+      // S2433.2: `jenis` = field yang diedit user (form edit kendaraan) => MENANG atas
+      // `vehicleType` (turunan, hanya diisi provisioning & tidak ikut diperbarui saat edit).
+      // Bila jenis kosong/tak dikenal baru jatuh ke vehicleType lalu type.
+      type: norm(veh.jenis) || norm(veh.vehicleType) || norm(veh.type),
+      body: norm(veh.bodyType),
+      modelId: veh.modelId ? String(veh.modelId) : null
+    };
+  },
+
+  scopeOf(item) {
+    const arr = a => Array.isArray(a) && a.length ? a.map(x => String(x).toLowerCase()) : null;
+    return {
+      vehicleTypeScope: arr(item && item.vehicleTypeScope),
+      bodyTypeScope: arr(item && item.bodyTypeScope),
+      modelScope: item && Array.isArray(item.modelScope) && item.modelScope.length ? item.modelScope.map(String) : null,
+      universal: !!(item && item.universal === true),
+      scopeStatus: item && item.scopeStatus ? item.scopeStatus : 'unverified'
+    };
+  },
+
+  isItemApplicable(item, vehicleId) {
+    if (!item) return false;
+    const sc = this.scopeOf(item);
+    if (sc.universal || sc.scopeStatus !== 'confirmed') return true;
+    if (!sc.vehicleTypeScope && !sc.bodyTypeScope && !sc.modelScope) return true;
+    const p = this._vehicleProfile(vehicleId);
+    if (!p.known) return true;
+    // Hanya motor/mobil yang difilter; tipe lain/tidak dikenal => tampil semua.
+    if (p.type !== 'motor' && p.type !== 'mobil') return true;
+    if (sc.vehicleTypeScope && !sc.vehicleTypeScope.includes(p.type)) return false;
+    if (sc.bodyTypeScope && p.body && !sc.bodyTypeScope.includes(p.body)) return false;
+    if (sc.modelScope && p.modelId && !sc.modelScope.includes(p.modelId)) return false;
+    return true;
+  },
+
+  // Tampil bila kompatibel ATAU sudah punya state (dicentang/riwayat dimuat):
+  // data lama tidak pernah hilang dari layar hanya karena tipe kendaraan berubah.
+  isItemVisible(item, vehicleId) {
+    if (!item) return false;
+    if (this.isItemApplicable(item, vehicleId)) return true;
+    return !!(this._checked && this._checked[item.id] !== undefined);
+  },
+
+  visibleItemsOfGroup(group, vehicleId) {
+    return this.itemsOfGroup(group).filter(it => this.isItemVisible(it, vehicleId));
+  },
+
+  scopeKeyForVehicle(vehicleId) {
+    const p = this._vehicleProfile(vehicleId);
+    return p.known ? [p.type || '', p.body || '', p.modelId || ''].join('/') : 'unknown';
+  },
+
   // _vehicleId — kendaraan aktif utk sesi checklist ybs, diisi open().
   // Dipakai HANYA utk saran default Busi (_defaultActionType, pola
   // 'alternate') lewat suggestNextBusiAction() -- histori servis dicari
@@ -167,6 +237,9 @@ const ServisChecklist = {
   // Cursor UI-only untuk memastikan tombol dapat melewati SKIPPED tanpa
   // mengubah ServiceChecklistExecutionSOT atau state persisted.
   _executionCycleCursor: {},
+  // S2433: itemId -> true bila tindakan (periksa/ganti) dipilih MANUAL oleh user.
+  // Tanpa flag ini tindakan OTOMATIS mengikuti hasil kondisi (rusak => ganti).
+  _actionManual: {},
   // Per-log identity override: checklist master item remains canonical, while
   // a saved service record may correct its category/component identity.
   _identityOverrides: {},
@@ -193,6 +266,7 @@ const ServisChecklist = {
     this._notApplicable = {};
     this._executionStatus = {};
     this._executionCycleCursor = {};
+    this._actionManual = {};
     this._identityOverrides = {};
     this._costs = {};
     this._catalogPartRefs = {};
@@ -427,6 +501,7 @@ const ServisChecklist = {
     this._conditionNotes = {};
     this._notApplicable = {};
     this._executionStatus = {};
+    this._actionManual = {};
     this._identityOverrides = {};
     this._costs = {};
     this._catalogPartRefs = {};
@@ -441,6 +516,7 @@ const ServisChecklist = {
       const legacy=legacyId?this.findItemById(legacyId):null;
       if(legacy){
         this._checked[legacy.item.id]=this._validActionTypesFor(legacy).includes(log.actionType)?log.actionType:this._defaultActionType(legacy);
+        this._actionManual[legacy.item.id]=true;
         if(log.conditionResult)this._results[legacy.item.id]=log.conditionResult;
         if(log.conditionNote)this._conditionNotes[legacy.item.id]=String(log.conditionNote);
         const stockRef=log.stockPartRef&&log.stockPartRef.partId?log.stockPartRef:(log.usedPartId?{partId:log.usedPartId,qty:log.usedPartQty}:null); if(stockRef)this._stockPartRefs[legacy.item.id]={partId:String(stockRef.partId),qty:Number(stockRef.qty)>0?Number(stockRef.qty):1};
@@ -458,6 +534,7 @@ const ServisChecklist = {
       const valid = this._validActionTypesFor(found.item);
       const action = valid.includes(row.actionType) ? row.actionType : this._defaultActionType(found.item);
       this._checked[row.itemId] = action;
+      this._actionManual[row.itemId] = true;
       if (row.conditionResult) this._results[row.itemId] = row.conditionResult;
       if (row.conditionNote) this._conditionNotes[row.itemId] = String(row.conditionNote);
       if (row.notApplicable === true) this._notApplicable[row.itemId] = true;
@@ -579,7 +656,18 @@ const ServisChecklist = {
     return null;
   },
 
+  // S2433: periksa & ganti SELALU tersedia utk semua item (user boleh mencatat
+  // penggantian komponen yang rusak walau jadwalnya hanya 'periksa', dan
+  // sebaliknya). Urutan native dipertahankan; yang belum ada ditambahkan.
   _validActionTypesFor(item) {
+    const base = this._nativeActionTypesFor(item);
+    if (!item) return base;
+    const out = base.slice();
+    ['periksa', 'ganti'].forEach(t => { if (!out.includes(t)) out.push(t); });
+    return out;
+  },
+
+  _nativeActionTypesFor(item) {
     if (!item) return [];
     const rule = this._maintenanceRuleFor(item);
     const actions = [];
@@ -638,7 +726,8 @@ const ServisChecklist = {
       if (cat && typeof computeServiceUrgency === 'function') {
         const u = computeServiceUrgency({vehicleId: this._vehicleId, cat});
         const recommended = u && u.nextAction;
-        if (recommended && this._validActionTypesFor(item).includes(recommended)) return recommended;
+        // S2433: pakai daftar NATIVE (bukan yang diperluas) agar default saat centang tidak berubah.
+        if (recommended && this._nativeActionTypesFor(item).includes(recommended)) return recommended;
       }
     } catch (_e) { console.warn('Service default action recommendation failed', _e); }
     if (item.actionMode === 'periksa-conditional') return 'periksa';
@@ -666,7 +755,7 @@ const ServisChecklist = {
       // condition/cost/stock/photo/reminder override that is no longer part
       // of the selected Service Event. The key absence remains the checklist
       // SoT for "not selected".
-      ['_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus'].forEach(store=>{
+      ['_results','_conditionNotes','_notApplicable','_costs','_intervalOverrides','_catalogPartRefs','_stockPartRefs','_photoRefs','_executionStatus','_actionManual'].forEach(store=>{
         if(this[store]&&typeof this[store]==='object')delete this[store][item.id];
       });
       // removed: true is an internal mutation outcome; legacy API shape remains stable.
@@ -694,7 +783,31 @@ const ServisChecklist = {
       return { ok: false, reason: `actionType "${type}" tidak valid untuk item ini (valid: ${valid.join('/')})` };
     }
     this._checked[item.id] = type;
+    this._actionManual[item.id] = true;
     return { ok: true, id: item.id, actionType: type };
+  },
+
+  // S2433: tindakan otomatis dari hasil kondisi. rusak => ganti, baik => periksa,
+  // lainnya (mulai aus / aus / kosong) => default semula. Dipakai hanya bila
+  // user belum memilih tindakan secara manual.
+  _autoActionFor(item) {
+    const result = this._results[item.id];
+    const valid = this._validActionTypesFor(item);
+    if (result === 'rusak' && valid.includes('ganti')) return 'ganti';
+    if (result === 'baik' && valid.includes('periksa')) return 'periksa';
+    return this._defaultActionType(item);
+  },
+
+  actionMode(itemId) { return this._actionManual[itemId] === true ? 'manual' : 'auto'; },
+
+  // Kembalikan item ke mode otomatis (ikuti hasil kondisi).
+  setActionAuto(groupIdx, itemIdx) {
+    const item = this._item(groupIdx, itemIdx);
+    if (!item) return { ok: false, reason: 'Item tidak ditemukan' };
+    if (this._checked[item.id] === undefined) return { ok: false, reason: 'Item belum dicentang' };
+    delete this._actionManual[item.id];
+    this._checked[item.id] = this._autoActionFor(item);
+    return { ok: true, id: item.id, actionType: this._checked[item.id], mode: 'auto' };
   },
 
   findCheckedItemForService(componentId,itemName) {
@@ -719,10 +832,20 @@ const ServisChecklist = {
   setConditionResult(groupIdx, itemIdx, result) {
     const item = this._item(groupIdx, itemIdx);
     if (!item || this._checked[item.id] === undefined) return { ok:false, reason:'Item belum dicentang' };
-    if (!result) { delete this._results[item.id]; return { ok:true, id:item.id, conditionResult:undefined }; }
+    if (!result) {
+      delete this._results[item.id];
+      if (!this._actionManual[item.id]) this._checked[item.id] = this._autoActionFor(item);
+      return { ok:true, id:item.id, conditionResult:undefined, actionType:this._checked[item.id] };
+    }
     if (typeof validServiceCondition === 'function' && !validServiceCondition(result)) return { ok:false, reason:'Hasil pemeriksaan tidak valid' };
     this._results[item.id] = result;
-    return { ok:true, id:item.id, conditionResult:result };
+    let autoApplied = false;
+    if (!this._actionManual[item.id]) {
+      const next = this._autoActionFor(item);
+      autoApplied = next !== this._checked[item.id];
+      this._checked[item.id] = next;
+    }
+    return { ok:true, id:item.id, conditionResult:result, actionType:this._checked[item.id], autoApplied };
   },
 
   setConditionNoteByItemId(itemId,note) {

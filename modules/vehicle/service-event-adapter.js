@@ -5,6 +5,8 @@
  * D.servisLogs remains the persisted service-event store for backward
  * compatibility. These helpers do not create a second store.
  */
+/* S2433.2: id kendaraan campuran angka/string -> banding sebagai string (nullish tetap strict). */
+function _seaVidEq(a, b) { return a == null || b == null ? a === b : String(a) === String(b); }
 function toCanonicalServiceEvent(log = {}, category = null) {
   const masterCategoryId =
     log.masterCategoryId ??
@@ -42,21 +44,21 @@ function findServiceEventForTransaction(logs = [], txLinkId, vehicleId) {
   return logs.find((log) =>
     log &&
     log.txLinkId === txLinkId &&
-    log.vehicleId === vehicleId
+    _seaVidEq(log.vehicleId, vehicleId)
   ) || null;
 }
 
 /** Stable idempotency lookup for service writes. */
 function findServiceEventByIdempotencyKey(logs = [], key, vehicleId) {
   if (!key) return null;
-  return logs.find((log) => log && log.idempotencyKey === key && log.vehicleId === vehicleId) || null;
+  return logs.find((log) => log && log.idempotencyKey === key && _seaVidEq(log.vehicleId, vehicleId)) || null;
 }
 
 /**
  * Defensive vehicle isolation check for a service event.
  */
 function isServiceEventForVehicle(log = {}, vehicleId) {
-  return Boolean(log && vehicleId && log.vehicleId === vehicleId);
+  return Boolean(log && vehicleId && _seaVidEq(log.vehicleId, vehicleId));
 }
 
 /**

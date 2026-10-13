@@ -1,8 +1,10 @@
+/* S2433.2: id kendaraan bisa campuran angka/string (data lama/impor vs 'veh_<ts>'); banding sebagai string. Nullish dijaga: perilaku === lama dipertahankan bila salah satu null/undefined. */
+function _spVidEq(a,b){return a==null||b==null?a===b:String(a)===String(b);}
 function catVisibleForVehicle(cat,vehicleId){
 if(!cat)return false;
 if(!cat.vehicleId)return true;
 if(!vehicleId)return true;
-return cat.vehicleId===vehicleId;
+return _spVidEq(cat.vehicleId,vehicleId);
 }
 function resolveCanonicalServiceComponent(name,preferredId){
   if(typeof ServiceInputCatalog==='undefined')return preferredId||null;
@@ -93,13 +95,13 @@ const n=(name||'').trim().toLowerCase();
 if(!n)return null;
 const cats=(D.sparepartCats||[]).filter(c=>c&&c.name&&c.name.toLowerCase()===n);
 if(!cats.length)return null;
-return cats.find(c=>c.vehicleId&&c.vehicleId===vehicleId)||cats.find(c=>!c.vehicleId)||null;
+return cats.find(c=>c.vehicleId&&String(c.vehicleId)===String(vehicleId))||cats.find(c=>!c.vehicleId)||null;
 }
 function canonicalServisCategoryId(item,vehicleId,preferredId){
 const cats=D.sparepartCats||[];
 if(preferredId){
 const preferred=cats.find(c=>c&&c.id===preferredId);
-if(preferred&&(!preferred.vehicleId||preferred.vehicleId===vehicleId))return preferred.id;
+if(preferred&&(!preferred.vehicleId||String(preferred.vehicleId)===String(vehicleId)))return preferred.id;
 }
 const matched=resolveServisCatForVehicle(item,vehicleId);
 return matched?matched.id:null;
@@ -471,7 +473,7 @@ function compareServiceHistoryRecencyLocal(a,b){
 }
 if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency!=='function')window.compareServiceHistoryRecency=compareServiceHistoryRecencyLocal;
 function getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder){
-  const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+  const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
   logs.sort(compareServiceHistoryRecencyLocal);
   return logs.length?logs[0]:null;
 }
@@ -494,7 +496,7 @@ if(!actionTypeFilter)return true;
 return effType===actionTypeFilter;
 }
 function suggestNextBusiAction(vehicleId,cat){
-const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat));
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat));
 return(logs.length%2===0)?'periksa':'ganti';
 }
 function parseServiceDateOnly(value){
@@ -607,7 +609,7 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
   if(hasKm||hasMonths||hasDays){
     if(Array.isArray(historyRows)){
-      latestHistory=historyRows.filter(s=>s&&s.vehicleId===vehicleId&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,lastFilter,true)).sort(compareServiceHistoryRecencyLocal)[0]||null;
+      latestHistory=historyRows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,lastFilter,true)).sort(compareServiceHistoryRecencyLocal)[0]||null;
     }else if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
   }
   if(hasKm){
@@ -665,7 +667,7 @@ else if(typeof estimateServiceDateISO==='function')estDateISO=estimateServiceDat
 return Object.assign({},c,{status,statusLabel:statusMeta.label,statusIcon:statusMeta.icon,statusSeverity:statusMeta.severity,estDateISO,nextDueKm,nextDueDate,nextDueAxis,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
 }
 function recommendIntervalKm(vehicleId,cat){
-const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&s.km>0&&servisLogMatchesCat(s,cat)).sort((a,b)=>a.km-b.km);
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&s.km>0&&servisLogMatchesCat(s,cat)).sort((a,b)=>a.km-b.km);
 if(logs.length<2)return{ok:false,reason:'Belum cukup histori servis (min. 2 catatan dgn KM terisi)',count:logs.length};
 const deltas=[];
 for(let i=1;i<logs.length;i++){
@@ -687,7 +689,7 @@ return false;
 function historyStatsForName(vehicleId,name){
 const nameLower=(name||'').trim().toLowerCase();
 if(!nameLower)return{count:0,avgKm:null};
-const logs=(D.servisLogs||[]).filter(s=>s.vehicleId===vehicleId&&historyMatchesName(s,nameLower));
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&historyMatchesName(s,nameLower));
 const withKm=logs.filter(s=>s.km>0).sort((a,b)=>a.km-b.km);
 let avgKm=null;
 if(withKm.length>=2){
@@ -734,7 +736,7 @@ if(result&&result.ok){
 }
 }
 function getLastServiceKm(vehicleId){
-const logs=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&Number.isFinite(Number(s.km)));
+const logs=D.servisLogs.filter(s=>_spVidEq(s.vehicleId,vehicleId)&&Number.isFinite(Number(s.km)));
 logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
 return logs.length?Number(logs[0].km):0;
 }
@@ -843,7 +845,7 @@ row.innerHTML=options.map(o=>`<div class="chip ${o.id===Sparepart.activeMasterCa
 },
 isPartForVehicle(part,vehicleId){
 if(!vehicleId||!part)return true;
-if(part.vehicleId)return part.vehicleId===vehicleId;
+if(part.vehicleId)return _spVidEq(part.vehicleId,vehicleId);
 if(!part.catalogId)return true;
 if(typeof VehicleCatalog==='undefined'||typeof VehicleCatalog.isLoaded!=='function'||!VehicleCatalog.isLoaded())return true;
 const store=VehicleCatalog.getStore();
@@ -898,6 +900,8 @@ ensureCanonicalSparepartComponentCategories(){
   runtimeGroups.forEach(g=>(g.items||[]).forEach(it=>{
     if(!it||!stockIds.has(it.id))return;
     const _vidProvision=(typeof curVehicleId!=='undefined'?curVehicleId:null);
+    /* S2433.1: jangan proyeksikan komponen yang tidak kompatibel dengan kendaraan aktif (master & kategori lama tidak dihapus) */
+    if(typeof ServisChecklist!=='undefined'&&ServisChecklist&&typeof ServisChecklist.isItemApplicable==='function'&&!ServisChecklist.isItemApplicable(it,_vidProvision))return;
     let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id&&(!c.vehicleId||String(c.vehicleId)===String(_vidProvision)));
     if(!cat){
       const targetName=aliases[it.id]||it.name;
@@ -928,10 +932,11 @@ ensureCanonicalSparepartComponentCategories(){
   return {ok:true,added,linked};
 },
 // Sparepart UI layer: activeStockMasterCategoryFilter:null, activeStockComponentFilter:null, renderStockFilters(beforeEl).
+/* S2433.1: tipe/model kendaraan ikut kunci memo agar proyeksi dihitung ulang saat berubah */
 repairCategoryProjection(){
 // S2265: langkah repair eksplisit (bukan presenter). Idempoten: dijalankan sekali per kendaraan/jumlah kategori, lalu di-memo.
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const key=String(vid)+':'+(Array.isArray(D.sparepartCats)?D.sparepartCats.length:0);
+const key=String(vid)+':'+(Array.isArray(D.sparepartCats)?D.sparepartCats.length:0)+':'+(typeof ServisChecklist!=='undefined'?ServisChecklist.scopeKeyForVehicle(vid):'');
 if(Sparepart._catRepairKey===key)return false;
 Sparepart._catRepairKey=key;
 Sparepart.ensureCanonicalSparepartComponentCategories();
