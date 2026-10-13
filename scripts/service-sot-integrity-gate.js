@@ -142,7 +142,8 @@ function main() {
     const tx = read('modules/finance/tx-servis.js');
     const adapter = read('modules/vehicle/service-event-adapter.js');
     if (!tx.includes('candidate.vehicleId===vehicleId')) fail('cross-vehicle existing event mutation is possible');
-    if (!adapter.includes('log.vehicleId === vehicleId')) fail('canonical event vehicle boundary missing');
+    /* S2433.2: batas kendaraan boleh berupa === langsung ATAU pembanding ternormalisasi _seaVidEq (id campuran angka/string); keduanya tetap wajib membandingkan log.vehicleId dengan vehicleId. */
+    if (!adapter.includes('log.vehicleId === vehicleId') && !/_seaVidEq\(log\.vehicleId,\s*vehicleId\)/.test(adapter)) fail('canonical event vehicle boundary missing');
     if (!adapter.includes('log.txLinkId === txLinkId')) fail('transaction lookup is not scoped by txLinkId');
   }, results);
 
