@@ -9,34 +9,26 @@ const GDRIVE_EMAIL_SCOPE='https://www.googleapis.com/auth/userinfo.email';
 // demand-loaded feature (S2264), while Drive settings/backup consumers are
 // eager and can run before the report feature is opened.
 let gdriveTokenClient=null;
+let _gdriveTokenClientId=null;
 let gdriveAccessToken=null;
 let gdrivePendingAfterAuth=null;
 let gdriveTokenScope=null;
 let gdriveTokenExpiresAt=null;
 let gdriveUserEmail=null;
 let _gdriveSilentReconnectInProgress=false;
-function gdriveTrySilentReconnectOnLoad(){
-if(!D.googleDrive||!D.googleDrive.autoSync||!D.googleDrive.clientId)return;
+async function gdriveTrySilentReconnectOnLoad(){
+if(!D.googleDrive||!D.googleDrive.autoSync||!D.googleDrive.clientId||gdriveAccessToken)return;
+try{
+await ensureGoogleGSI();
 if(gdriveAccessToken)return;
-ensureGoogleGSI().catch(()=>{});
-let attemptsLeft=15;
-const tryNow=()=>{
-if(gdriveAccessToken)return;
-if(typeof google==='undefined'||!google.accounts||!google.accounts.oauth2){
-if(--attemptsLeft>0)setTimeout(tryNow,400);
-return;
-}
 const tc=gdriveInitTokenClient();
 if(!tc)return;
 _gdriveSilentReconnectInProgress=true;
-try{
 tc.requestAccessToken({prompt:''});
 }catch(e){
 _gdriveSilentReconnectInProgress=false;
-console.warn('Auto-reconnect Google Drive (diam-diam) gagal dipanggil:',e);
+console.warn('Auto-reconnect Google Drive (diam-diam) gagal:',e);
 }
-};
-tryNow();
 }
 function gdriveHandleAuthSuccess(resp,scopeLevel){
 gdriveAccessToken=resp.access_token;
@@ -93,7 +85,13 @@ expiryLabel=minsLeft>=1?(' (berlaku ±'+minsLeft+' menit lagi)'):(' (segera kada
 return '🔗 Terhubung'+who+expiryLabel;
 }
 function gdriveSaveClientId(){
-D.googleDrive.clientId=document.getElementById('gdClientId').value.trim();
+const nextId=document.getElementById('gdClientId').value.trim();
+if(nextId!==D.googleDrive.clientId){
+// OAuth clients are bound to the Client ID used at construction time. Never reuse a stale client.
+ gdriveTokenClient=null; _gdriveTokenClientId=null; sheetsTokenClient=null; _sheetsTokenClientId=null;
+ gdriveResetTokenState();
+}
+D.googleDrive.clientId=nextId;
 save();toast('✅ Client ID disimpan');
 }
 function gdriveInitTokenClient(){
@@ -108,6 +106,7 @@ toast('⚠️ Format Client ID sepertinya salah, harus diakhiri ".apps.googleuse
 return null;
 }
 if(typeof google==='undefined'||!google.accounts||!google.accounts.oauth2){toast('⚠️ Modul Google sedang dimuat, coba pencet lagi dalam 1-2 detik. Kalau tetap gagal dan pakai Brave, coba matikan Shields (ikon 🦁 di address bar) untuk situs ini, lalu reload. Bisa juga karena koneksi internet.');return null;}
+if(gdriveTokenClient && _gdriveTokenClientId!==D.googleDrive.clientId){gdriveTokenClient=null;}
 if(!gdriveTokenClient){
 gdriveTokenClient=google.accounts.oauth2.initTokenClient({
 client_id:D.googleDrive.clientId,
@@ -134,24 +133,27 @@ console.error('GSI error_callback:',err);
 toast('❌ Google Sign-In gagal dibuka: '+(err&&err.type?err.type:'unknown')+(err&&err.type==='popup_failed_to_open'?' — popup diblokir, cek pengaturan popup browser/Brave Shields':''));
 }
 });
+_gdriveTokenClientId=D.googleDrive.clientId;
 }
 return gdriveTokenClient;
 }
-function gdriveEnsureAuth(afterAuth){
-if(gdriveAccessToken){ if(afterAuth)afterAuth(); return; }
+async function gdriveEnsureAuth(afterAuth){
+if(gdriveAccessToken && (!gdriveTokenExpiresAt || Date.now()<gdriveTokenExpiresAt)){ if(afterAuth)afterAuth(); return; }
+try{
+if(location.protocol==='file:'){gdriveInitTokenClient();return;}
+await ensureGoogleGSI();
 const tc=gdriveInitTokenClient();
 if(!tc)return;
 gdrivePendingAfterAuth=afterAuth||null;
-try{
 tc.requestAccessToken();
 }catch(e){
 console.error('gdriveEnsureAuth error:',e);
 gdrivePendingAfterAuth=null;
-toast('❌ Gagal membuka Google Sign-In: '+e.message);
+toast('❌ Google Sign-In tidak siap: '+(e&&e.message?e.message:String(e)));
 }
 }
 function gdriveConnectOnly(){
-if(gdriveAccessToken){toast('✅ Sudah terhubung ke Google Drive');return;}
+if(gdriveAccessToken && (!gdriveTokenExpiresAt || Date.now()<gdriveTokenExpiresAt)){toast('✅ Sudah terhubung ke Google Drive');return;}
 gdriveEnsureAuth(null);
 }
 function gdriveBackupNow(){

@@ -7,12 +7,14 @@
 
 /* moved to modules-render.js: renderSheetsSettings */
 let sheetsTokenClient=null;
+let _sheetsTokenClientId=null;
 let sheetsPendingAfterAuth=null;
 function sheetsInitTokenClient(){
 if(!D.googleDrive.clientId){toast('⚠️ Isi Google OAuth Client ID dulu di kartu "Backup Otomatis ke Google Drive" di atas');return null;}
 ensureGoogleGSI().catch(()=>{});
 if(location.protocol==='file:'){toast('❌ App ini harus dibuka lewat https:// dulu (bukan file lokal) supaya Google Sign-In bisa jalan.');return null;}
 if(typeof google==='undefined'||!google.accounts||!google.accounts.oauth2){toast('⚠️ Modul Google sedang dimuat, coba pencet lagi dalam 1-2 detik. Cek koneksi internet atau matikan Brave Shields untuk situs ini kalau tetap gagal.');return null;}
+if(sheetsTokenClient && _sheetsTokenClientId!==D.googleDrive.clientId){sheetsTokenClient=null;}
 if(!sheetsTokenClient){
 sheetsTokenClient=google.accounts.oauth2.initTokenClient({
 client_id:D.googleDrive.clientId,
@@ -29,21 +31,30 @@ toast('❌ Google Sign-In gagal dibuka: '+(err&&err.type?err.type:'unknown'));
 sheetsAuthAborted();
 }
 });
+_sheetsTokenClientId=D.googleDrive.clientId;
 }
 return sheetsTokenClient;
 }
 let sheetsPendingOnAbort=null;
 function sheetsAuthAborted(){ const f=sheetsPendingOnAbort; sheetsPendingOnAbort=null; sheetsPendingAfterAuth=null; if(f){ try{f();}catch(e){void e;} } }
-function sheetsEnsureAuth(afterAuth,onAbort){
-if(gdriveAccessToken && gdriveTokenScope==='sheets'){ if(afterAuth)afterAuth(); return; }
-const tc=sheetsInitTokenClient();
-if(!tc){ if(onAbort)onAbort(); return; }
+async function sheetsEnsureAuth(afterAuth,onAbort){
 sheetsPendingAfterAuth=afterAuth||null; sheetsPendingOnAbort=onAbort||null;
-try{ tc.requestAccessToken(); }
-catch(e){ console.error('sheetsEnsureAuth error:',e); toast('❌ Gagal membuka Google Sign-In: '+e.message); sheetsAuthAborted(); }
+if(gdriveAccessToken && gdriveTokenScope==='sheets' && (!gdriveTokenExpiresAt || Date.now()<gdriveTokenExpiresAt)){ if(afterAuth)afterAuth(); return; }
+try{
+if(location.protocol==='file:'){sheetsInitTokenClient();if(onAbort)onAbort();return;}
+await ensureGoogleGSI();
+const tc=sheetsInitTokenClient();
+if(!tc){if(onAbort)onAbort();return;}
+sheetsPendingAfterAuth=afterAuth||null; sheetsPendingOnAbort=onAbort||null;
+tc.requestAccessToken();
+}catch(e){
+console.error('sheetsEnsureAuth error:',e);
+toast('❌ Google Sign-In tidak siap: '+(e&&e.message?e.message:String(e)));
+sheetsAuthAborted();
+}
 }
 function sheetsConnectOnly(){
-if(gdriveAccessToken && gdriveTokenScope==='sheets'){toast('✅ Sudah terhubung (scope Sheets)');return;}
+if(gdriveAccessToken && gdriveTokenScope==='sheets' && (!gdriveTokenExpiresAt || Date.now()<gdriveTokenExpiresAt)){toast('✅ Sudah terhubung (scope Sheets)');return;}
 sheetsEnsureAuth(()=>toast('✅ Terhubung ke Google Sheets'));
 }
 async function sheetsFetch(url,opts){
