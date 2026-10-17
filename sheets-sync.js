@@ -18,27 +18,29 @@ sheetsTokenClient=google.accounts.oauth2.initTokenClient({
 client_id:D.googleDrive.clientId,
 scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets '+GDRIVE_EMAIL_SCOPE,
 callback:(resp)=>{
-if(resp.error){toast('❌ Gagal hubungkan Google Sheets: '+resp.error);sheetsPendingAfterAuth=null;return;}
+if(resp.error){toast('❌ Gagal hubungkan Google Sheets: '+resp.error);sheetsAuthAborted();return;}
 gdriveHandleAuthSuccess(resp,'sheets');
-const fn=sheetsPendingAfterAuth;sheetsPendingAfterAuth=null;
+const fn=sheetsPendingAfterAuth;sheetsPendingAfterAuth=null;sheetsPendingOnAbort=null;
 if(fn)fn();
 },
 error_callback:(err)=>{
 console.error('GSI error_callback (sheets):',err);
 toast('❌ Google Sign-In gagal dibuka: '+(err&&err.type?err.type:'unknown'));
-sheetsPendingAfterAuth=null;
+sheetsAuthAborted();
 }
 });
 }
 return sheetsTokenClient;
 }
-function sheetsEnsureAuth(afterAuth){
+let sheetsPendingOnAbort=null;
+function sheetsAuthAborted(){ const f=sheetsPendingOnAbort; sheetsPendingOnAbort=null; sheetsPendingAfterAuth=null; if(f){ try{f();}catch(e){void e;} } }
+function sheetsEnsureAuth(afterAuth,onAbort){
 if(gdriveAccessToken && gdriveTokenScope==='sheets'){ if(afterAuth)afterAuth(); return; }
 const tc=sheetsInitTokenClient();
-if(!tc)return;
-sheetsPendingAfterAuth=afterAuth||null;
+if(!tc){ if(onAbort)onAbort(); return; }
+sheetsPendingAfterAuth=afterAuth||null; sheetsPendingOnAbort=onAbort||null;
 try{ tc.requestAccessToken(); }
-catch(e){ console.error('sheetsEnsureAuth error:',e); toast('❌ Gagal membuka Google Sign-In: '+e.message); sheetsPendingAfterAuth=null; }
+catch(e){ console.error('sheetsEnsureAuth error:',e); toast('❌ Gagal membuka Google Sign-In: '+e.message); sheetsAuthAborted(); }
 }
 function sheetsConnectOnly(){
 if(gdriveAccessToken && gdriveTokenScope==='sheets'){toast('✅ Sudah terhubung (scope Sheets)');return;}
@@ -100,7 +102,7 @@ toast('❌ Gagal sync ke Sheets: '+e.message);
 }finally{
 _saveGuards['sheetsSync']=false;
 }
-});
+},()=>{_saveGuards['sheetsSync']=false;});
 }catch(e){
 _saveGuards['sheetsSync']=false;
 toast('❌ Gagal sync ke Sheets: '+e.message);
@@ -200,7 +202,7 @@ await _sheetsPullInner();
 }
 catch(e){ console.error('sheetsPullNow error:',e); toast('❌ Gagal tarik dari Sheets: '+e.message); }
 finally{ _saveGuards['sheetsPull']=false; }
-});
+},()=>{_saveGuards['sheetsPull']=false;});
 }catch(e){
 _saveGuards['sheetsPull']=false;
 toast('❌ Gagal tarik dari Sheets: '+e.message);

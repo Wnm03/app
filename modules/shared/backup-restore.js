@@ -134,14 +134,18 @@ throw _lastBackupErr||new Error('Backup snapshot tidak stabil setelah beberapa p
 async function exportData(){
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json');
+if(!_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json')){
+toast('❌ Browser tidak dapat memulai unduhan backup lokal.');
+return false;
+}
 D.lastBackup=new Date().toISOString();
-document.getElementById('lastBackup').textContent=new Date().toLocaleDateString('id-ID');
-document.getElementById('backupBadge').textContent='💾 Backup';
+const _lastBackupEl=document.getElementById('lastBackup');if(_lastBackupEl)_lastBackupEl.textContent=new Date().toLocaleDateString('id-ID');
+const _backupBadgeEl=document.getElementById('backupBadge');if(_backupBadgeEl)_backupBadgeEl.textContent='💾 Backup';
 document.getElementById('backupBanner')?.classList.add('hidden');
 if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'local',status:'success',done:['File lokal (JSON)']});
 save();
 toast('✅ Backup berhasil!');
+return true;
 }
 async function runFullBackup(){
 if(_saveGuards['fullBackup']){toast('⏳ Backup sebelumnya masih berjalan...');return;}
@@ -164,7 +168,7 @@ try{
 try{
 const backupD=await buildBackupPayload();
 const blob=new Blob([JSON.stringify(backupD,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json');
+if(!_downloadBackupBlob(blob,'backup-keluarga-W-'+_backupTodayStr()+'.json'))throw new Error('Browser tidak dapat memulai unduhan backup lokal.');
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup'); if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
 const bn=document.getElementById('backupBanner'); if(bn)bn.classList.add('hidden');
@@ -349,7 +353,7 @@ if(!Object.keys(out).length){toast('⚠️ Pilih minimal 1 modul');return;}
 const dateTag=_backupTodayStr();
 if(format==='json'){
 const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
-_downloadBackupBlob(blob,'backup-W-'+dateTag+'.json');
+if(!_downloadBackupBlob(blob,'backup-W-'+dateTag+'.json')){toast('❌ Browser tidak dapat memulai unduhan backup.');return false;}
 } else {
 const csvParts=[];
 const toCSVRow=arr=>arr.map(v=>{v=(v===null||v===undefined)?'':String(v);return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(',');
@@ -455,7 +459,7 @@ csvParts.push(toCSVRow(['Tanggal','Catatan']));
 (out.catatan.anak||[]).forEach(c=>csvParts.push(toCSVRow([c.date,c.text||''])));
 }
 const blob=new Blob([csvParts.join('\n')],{type:'text/csv'});
-_downloadBackupBlob(blob,'backup-W-'+dateTag+'.csv');
+if(!_downloadBackupBlob(blob,'backup-W-'+dateTag+'.csv')){toast('❌ Browser tidak dapat memulai unduhan backup.');return false;}
 }
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup');if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
@@ -886,42 +890,57 @@ if(typeof ServiceHistoryAuditPackage!=='undefined'&&ServiceHistoryAuditPackage&&
 D.cobek.forEach(c=>{if(c.delivered===undefined)c.delivered=true;});
 }
 async function importData(e){
-const file=e.target.files[0];if(!file)return;
-// FIX (audit UI/UX 2026-08, Ronde 8): label "📥 Import / Restore (JSON)"
-// (bukan <button>, dipicu native <label for="restoreFileInput">) dulu 0
-// state busy -- applyRestoredData() bisa beberapa detik (tulis IndexedDB
-// LifeOS/EIE/Vehicle Catalog/Honda PDF dkk), tap ulang selagi proses jalan
-// bisa memicu 2 restore tumpang tindih. Reuse _scanBtnBusy/_scanBtnIdle
-// (scan-ocr.js, dimuat lebih dulu) lewat HTMLInputElement.labels -- +
-// disable input itu sendiri (klik label ke input disabled = no-op native
-// browser, 0 guard tambahan diperlukan spt dispatcher data-action).
+const file=e&&e.target&&e.target.files&&e.target.files[0];if(!file)return;
 const inputEl=e.target;
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);inputEl.value='';return;}}
 const labelEl=inputEl.labels&&inputEl.labels[0];
 if(labelEl)_scanBtnBusy(labelEl,'Me-restore...');
 inputEl.disabled=true;
 const r=new FileReader();
+let _finished=false;
+const _finishRestoreInput=()=>{
+if(_finished)return;
+_finished=true;
+try{inputEl.value='';}catch(_e){void _e;}
+if(labelEl)_scanBtnIdle(labelEl);
+inputEl.disabled=false;
+};
 r.onload=async ev=>{
 let imp;
 try{
-imp=JSON.parse(ev.target.result);
+imp=JSON.parse(ev&&ev.target?ev.target.result:'');
 }catch{
 toast('❌ File tidak valid / rusak (bukan JSON)!');
-inputEl.value='';
-if(labelEl)_scanBtnIdle(labelEl);
-inputEl.disabled=false;
+_finishRestoreInput();
 return;
 }
 try{
 const ok=await applyRestoredData(imp);
 if(ok)toast('✅ Data di-restore! (semua tab: keuangan, kendaraan, bisnis shop, dll)');
+}catch(err){
+console.error('Restore file gagal:',err);
+toast('❌ Restore gagal: '+_sanitizeBackupError(err));
 }finally{
-inputEl.value='';
-if(labelEl)_scanBtnIdle(labelEl);
-inputEl.disabled=false;
+_finishRestoreInput();
 }
 };
+r.onerror=()=>{
+const err=r.error||new Error('FileReader gagal membaca file backup.');
+console.error('Gagal membaca file backup:',err);
+toast('❌ Gagal membaca file backup. File tidak diubah; silakan coba lagi.');
+_finishRestoreInput();
+};
+r.onabort=()=>{
+toast('⚠️ Pembacaan file backup dibatalkan. Tidak ada perubahan data.');
+_finishRestoreInput();
+};
+try{
 r.readAsText(file);
+}catch(err){
+console.error('FileReader tidak dapat membaca backup:',err);
+toast('❌ File backup tidak dapat dibaca. Silakan pilih file lain.');
+_finishRestoreInput();
+}
 }
 let _autoBackupTriggered=false;
 function _autoBackupIfOverdue(){

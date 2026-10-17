@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-13T02:16:57.690Z
-Total file source: 487 · Total identifier global: 17182
+Terakhir digenerate: 2026-10-17T00:21:51.655Z
+Total file source: 487 · Total identifier global: 17196
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -121,7 +121,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 98 | `modules/finance/tagihan-kalender.js` | 1580 | Modul Tagihan/Bill (CRUD, riwayat, filter, arsip) & Kalender Jatuh Tempo |
 | 99 | `modules/finance/cash-projection.js` | 726 | Sesi P1 (RENCANA-KERJA-toggle-hitungkas-dan-proyeksi-kas.md, Track 2). Presenter READ-ONLY: 0 ubah Finance/Accounting Engine. Utang berjadwal (cicilanBulanan>0) sudah auto-sync jadi D.bills kind:'utang' lewat … |
 | 100 | `modules/finance/deficit-notif-bridge.js` | 47 | Deficit Notification Bridge (Sesi S724, carry-forward S723 item "notifikasi proaktif defisit"). Pola SAMA PERSIS modules/vehicle/ vehicle-notif-bridge.js / fuel-notif-bridge.js — modul PURE, TIDAK PERNAH memanggil … |
-| 101 | `modules/shared/backup-restore.js` | 1421 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
+| 101 | `modules/shared/backup-restore.js` | 1440 | Export/import/backup data (satu domain penuh: CSV/JSON export laporan, backup Dipindah ke modules/shared/backup-restore.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 102 | `modules/shared/backup-history-api.js` | 93 | modules/shared/backup-history-api.js — Backup History API (Data Management Core). Target: catat histori tiap kali proses backup dijalankan (sukses/sebagian/gagal), lalu sediakan API baca murni di atasnya. PRINSIP: REUSE … |
 | 103 | `modules/shared/backup-health-api.js` | 60 | modules/shared/backup-health-api.js — Backup Health API (Data Management Core). Target: status kesehatan backup (kapan terakhir, terlambat atau tidak) + keandalan (persentase sukses dari histori). PRINSIP: REUSE … |
 | 104 | `modules/shared/backup-history-presenter.js` | 49 | modules/shared/backup-history-presenter.js — Backup History Presenter (Data Management Core). Lihat catatan lengkap di modules/shared/backup-history-api.js. PRINSIP: UI HANYA presenter. 100% REUSE … |
@@ -181,7 +181,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 158 | `modules/vehicle/category-canonical-ref.js` | 23 | _(tidak ada komentar header)_ |
 | 159 | `modules/vehicle/service-interval-policy.js` | 16 | _(tidak ada komentar header)_ |
 | 160 | `modules/vehicle/service-interval-sot.js` | 214 | _(tidak ada komentar header)_ |
-| 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 161 | _(tidak ada komentar header)_ |
+| 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
 | 164 | `modules/vehicle/sparepart-servis.js` | 1210 | _(tidak ada komentar header)_ |
@@ -206,7 +206,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 183 | `modules/vehicle/servis-checklist.js` | 1044 | _(tidak ada komentar header)_ |
 | 184 | `modules/vehicle/service-input-catalog.js` | 88 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 185 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
-| 186 | `modules/vehicle/servis.js` | 2017 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 186 | `modules/vehicle/servis.js` | 2019 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
 | 187 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 100 | _(tidak ada komentar header)_ |
 | 188 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 123 | _(tidak ada komentar header)_ |
 | 189 | `modules/vehicle/service-reminder-form-sot-s2054.js` | 59 | _(tidak ada komentar header)_ |
@@ -226,11 +226,11 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 203 | `ai-chat.js` | 1192 | Chat AI (RefAI): UI edit aksi chat, kirim pesan ke provider AI (sendChat/ callAIProviderRaw), Advisor (rule-based tips) & AIWidget (widget rekomendasi AI generik dipakai modul lain). Dipisah dari … |
 | 204 | `reminder-notif.js` | 175 | resetApp (reset total data, disatukan di sini krn tidak ada domain lain yang cocok & cuma 1 fungsi kecil), share ke WhatsApp (phoneToWaId/waShareLink/openWaShare), notifikasi browser … |
 | 205 | `laporan-export.js` | 140 | Ekspor Laporan Keuangan ke PDF (exportLaporanPDF) & gambar (exportLaporanImage), plus builder data laporan (buildLaporanExportData: filter periode, total income/expense, breakdown per kategori). Dipisah dari … |
-| 206 | `gdrive-backup.js` | 303 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
+| 206 | `gdrive-backup.js` | 310 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
 | 207 | `data-health-check.js` | 841 | Cek integritas data lintas-domain (runDataHealthCheck): transaksi dengan akun/tanggal/jumlah tidak valid, ID duplikat, tagihan/aset/BBM dengan tautan akun atau kendaraan yang sudah dihapus, dll. Dipisah dari … |
 | 208 | `global-search.js` | 58 | Pencarian DATA milik user lintas halaman (openGlobalSearch/runGlobalSearch), beda tujuan dari Feature Search (dashboard-hub-search.js) yang cari FITUR/MENU. Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi … |
 | 209 | `sheets-schema.js` | 228 | Skema kolom Google Sheets per modul (SHEETS_SCHEMAS/SHEETS_MODULES) & helper konversi item<->baris (sheetsHeaderFor/sheetsItemToCells/sheetsCellsToItem dst), dipakai oleh sheets-sync.js. Dipisah dari … |
-| 210 | `sheets-sync.js` | 239 | Integrasi Google Sheets: koneksi OAuth, sinkronisasi push/pull data D.* ke/dari Google Spreadsheet. Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 1/5 — lihat … |
+| 210 | `sheets-sync.js` | 241 | Integrasi Google Sheets: koneksi OAuth, sinkronisasi push/pull data D.* ke/dari Google Spreadsheet. Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 1/5 — lihat … |
 | 211 | `pwa-setup.js` | 76 | Setup PWA: registrasi manifest (via Blob kalau tidak di-hosting https) & service worker (sw.js, fallback inline Blob). Dipisah dari features-sheets-pwa-selftest.js (Sesi 2 restrukturisasi folder, blok 2/5 — lihat … |
 | 212 | `modules/shared/app-init-runtime.js` | 85 | App bootstrap runtime extracted from self-test.js. Kept separate so diagnostic tests do not own the application bootstrap. S1763: lifecycle/interval installation is explicitly idempotent. `init()` can be reached again … |
 | 213 | `modules/shared/self-test-cases-a.js` | 866 | Self-test case registry part A. |
@@ -691,6 +691,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_b64FromBuf` | `modules/shared/keamanan-pin.js` |
 | `_backupAiEventOutbox` | `modules/shared/backup-restore.js` |
 | `_backupAuxKeys` | `modules/shared/backup-restore.js` |
+| `_backupBadgeEl` | `modules/shared/backup-restore.js` |
 | `_backupLocalISO` | `modules/shared/backup-restore.js` |
 | `_backupTodayStr` | `modules/shared/backup-restore.js` |
 | `_base` | `modules/shared/modules-render-b.js` |
@@ -965,6 +966,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_financialAuditMoney` | `modules/finance/financial-audit-presenter.js` |
 | `_financialAuditNow` | `modules/finance/financial-audit-presenter.js` |
 | `_financialAuditPct` | `modules/finance/financial-audit-presenter.js` |
+| `_finished` | `modules/shared/backup-restore.js` |
+| `_finishRestoreInput` | `modules/shared/backup-restore.js` |
 | `_focusTrapActivate` | `modules/shared/modal-navigasi.js` |
 | `_focusTrapActivate` | `modules/asset/modal-navigasi.js` |
 | `_focusTrapDeactivate` | `modules/shared/modal-navigasi.js` |
@@ -990,6 +993,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_fuelQuantile` | `modules/vehicle/vehicle-core.js` |
 | `_fuzzyAccountMatch` | `modules/shared/scan-ocr-b.js` |
 | `_gcLastTotal` | `modules/business/gaji-calc.js` |
+| `_gdriveAccountsAreOnlyDefaults` | `gdrive-backup.js` |
 | `_gdriveDownloadBackupInner` | `gdrive-backup.js` |
 | `_gdriveFindExistingBackupFileId` | `gdrive-backup.js` |
 | `_gdriveLocalDataLooksEmpty` | `gdrive-backup.js` |
@@ -1110,6 +1114,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_largeLocalSnapshotWarnShown` | `modules/asset/features-helpers-global-security.js` |
 | `_largeLocalSnapshotWarnShown` | `modules/finance/features-helpers-global-security.js` |
 | `_largeLocalSnapshotWarnShown` | `modules/shop/features-helpers-global-security.js` |
+| `_lastBackupEl` | `modules/shared/backup-restore.js` |
 | `_lastBackupErr` | `modules/shared/backup-restore.js` |
 | `_lastErrorToastAt` | `modules/shared/error-handler.js` |
 | `_lastModalSweepData` | `self-test.js` |
@@ -1882,6 +1887,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `accOwnFiltered` | `modules/shared/modules-render.js` |
 | `accOwnFilterEl` | `modules/shared/modules-render.js` |
 | `accOwnFilterVal` | `modules/shared/modules-render.js` |
+| `accs` | `gdrive-backup.js` |
 | `accSel` | `modules/shared/modules-calc.js` |
 | `accSel` | `modules/finance/edukasi-dana.js` |
 | `accSel` | `modules/asset/aset.js` |
@@ -3937,6 +3943,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cats` | `modules/vehicle/vehicle-model-registry-sot.js` |
 | `cats` | `modules/vehicle/vehicle-sot-provisioning.js` |
 | `cats` | `modules/vehicle/service-interval-sot.js` |
+| `cats` | `modules/vehicle/service-history-reminder-reconciliation-sot.js` |
 | `cats` | `modules/vehicle/sparepart-servis.js` |
 | `cats` | `modules/vehicle/sparepart-servis-ui.js` |
 | `cats` | `modules/vehicle/service-history-context-s2018.js` |
@@ -4168,6 +4175,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cicilanSharedPct` | `modules/finance/transaksi-b.js` |
 | `cid` | `modules/vehicle/vehicle-service-sot.js` |
 | `cid` | `modules/vehicle/service-interval-sot.js` |
+| `cid` | `modules/vehicle/service-history-reminder-reconciliation-sot.js` |
 | `cid` | `modules/vehicle/sparepart-servis.js` |
 | `cid` | `modules/vehicle/sparepart-servis-ui.js` |
 | `cid` | `modules/vehicle/service-history-context-s2018.js` |
@@ -5341,6 +5349,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `deferred` | `modules/shared/smoke-test.js` |
 | `DeficitNotifBridge` | `modules/finance/deficit-notif-bridge.js` |
 | `definedIds` | `modules/shared/smoke-test.js` |
+| `defs` | `gdrive-backup.js` |
 | `defTabEl` | `modules/dashboard-hub/dashboard-hub-settings.js` |
 | `degradationDetected` | `modules/vehicle/fuel-maintenance-engine.js` |
 | `delAcc` | `modules/finance/akun.js` |
@@ -6073,6 +6082,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `entry` | `modules/shop/shop-sot-governance.js` |
 | `eri` | `economic-intelligence/engine/scoring-engine.js` |
 | `err` | `modules/shared/modal-navigasi.js` |
+| `err` | `modules/shared/backup-restore.js` |
 | `err` | `modules/vehicle/vehicle-scanner.js` |
 | `err` | `modules/vehicle/sparepart-scanner.js` |
 | `err` | `modules/vehicle/ride-storage.js` |
@@ -8705,6 +8715,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `keys` | `modules/vehicle/service-interval-sot.js` |
 | `keys` | `modules/vehicle/service-session-integrity-s2045.js` |
 | `keys` | `modules/vehicle/torsi-vehicle-api.js` |
+| `keys` | `gdrive-backup.js` |
 | `keys` | `modules/vehicle/vehicle-trend-api.js` |
 | `keys` | `modules/asset/modal-navigasi.js` |
 | `keywords` | `modules/vehicle/fuel-maintenance-engine.js` |
@@ -14364,6 +14375,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `servisItemEditEl` | `modules/finance/transaksi.js` |
 | `servisKmEditEl` | `modules/finance/transaksi.js` |
 | `servisKms` | `modules/vehicle/vehicle-core.js` |
+| `servisLogMatchesCat` | `modules/vehicle/service-history-reminder-reconciliation-sot.js` |
 | `servisLogMatchesCat` | `modules/vehicle/sparepart-servis.js` |
 | `servisLogs` | `modules/shared/self-test-cases-a.js` |
 | `servisLogsDash` | `modules/vehicle/sparepart-servis-ui.js` |
@@ -14499,6 +14511,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `SHEETS_ROW_BUFFER` | `sheets-sync.js` |
 | `SHEETS_SCHEMAS` | `sheets-schema.js` |
 | `SHEETS_WRITE_CHUNK` | `sheets-sync.js` |
+| `sheetsAuthAborted` | `sheets-sync.js` |
 | `sheetsCellsToItem` | `sheets-schema.js` |
 | `sheetsColLetter` | `sheets-schema.js` |
 | `sheetsConnectOnly` | `sheets-sync.js` |
@@ -14512,6 +14525,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `sheetsItemToCells` | `sheets-schema.js` |
 | `sheetsLastColFor` | `sheets-schema.js` |
 | `sheetsPendingAfterAuth` | `sheets-sync.js` |
+| `sheetsPendingOnAbort` | `sheets-sync.js` |
 | `sheetsPullNow` | `sheets-sync.js` |
 | `sheetsSaveSpreadsheetId` | `sheets-schema.js` |
 | `sheetsSyncNow` | `sheets-sync.js` |

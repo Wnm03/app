@@ -176,10 +176,17 @@ await _uploadBackupToDriveInner(silent);
 _saveGuards['driveUpload']=false;
 }
 }
+function _gdriveAccountsAreOnlyDefaults(){
+// Akun bawaan (DEFAULT_ACCOUNTS, saldo 0) bukan data pengguna: device baru selalu punya 4 akun ini.
+const accs=D.accounts||[];
+const defs=(typeof DEFAULT_ACCOUNTS!=='undefined'&&Array.isArray(DEFAULT_ACCOUNTS))?DEFAULT_ACCOUNTS:[];
+return accs.every(a=>a&&!Number(a.balance)&&defs.some(d=>d.id===a.id&&d.name===a.name));
+}
 function _gdriveLocalDataLooksEmpty(){
-return (D.transactions||[]).length===0 && (D.accounts||[]).length===0 &&
-(D.products||[]).length===0 && (D.assets||[]).length===0 &&
-(D.bbmLogs||[]).length===0 && (D.servisLogs||[]).length===0;
+if(!_gdriveAccountsAreOnlyDefaults())return false;
+const keys=['transactions','products','assets','bbmLogs','servisLogs'];
+if(typeof SHEETS_MODULES!=='undefined'&&Array.isArray(SHEETS_MODULES))SHEETS_MODULES.forEach(m=>{if(keys.indexOf(m)<0)keys.push(m);});
+return keys.every(k=>!(D[k]||[]).length);
 }
 async function _gdriveFindExistingBackupFileId(){
 const q=encodeURIComponent("name='backup-keluarga-W.json' and trashed=false");

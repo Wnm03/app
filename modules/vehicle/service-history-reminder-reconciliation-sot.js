@@ -154,7 +154,18 @@
     const rows=Array.isArray(logs)?logs:[]; const result=rows.map(log=>({id:str(log&&log.id),match:match(log,target,opts)}));
     return {total:rows.length,matches:result.filter(x=>x.match.ok).length,mismatches:result.filter(x=>!x.match.ok).length,rows};
   }
-  const api={version:'S2005-1',CODES,targetIdentity,historyIdentityEvidence,match,compareRecency,latest,audit};
+  // S2601: SOT tunggal riwayat↔pengingat. Tab Riwayat per-komponen memanggil ini agar jumlah/isinya sama dengan kartu Pengingat
+  // (servisLogMatchesCat → match). Memakai kategori pengingat kendaraan bila ada, kalau tidak target komponen murni.
+  function ownsLog(log,componentId,vehicleId){
+    try{
+      const cid=str(componentId),vid=str(vehicleId||(log&&log.vehicleId));
+      const cats=(global.D&&Array.isArray(global.D.sparepartCats))?global.D.sparepartCats:[];
+      const cat=cats.find(c=>c&&str(c.serviceComponentId)===cid&&(!c.vehicleId||str(c.vehicleId)===vid))||null;
+      if(cat&&typeof global.servisLogMatchesCat==='function')return !!global.servisLogMatchesCat(log,cat);
+      return !!match(log,cat||{serviceComponentId:cid,vehicleId:vid},{vehicleId:vid}).ok;
+    }catch(_e){return false;}
+  }
+  const api={version:'S2601-1',CODES,targetIdentity,historyIdentityEvidence,match,compareRecency,latest,audit,ownsLog};
   global.ServiceHistoryReminderReconciliationSOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);
