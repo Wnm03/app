@@ -350,17 +350,35 @@ const schedule={rule:Object.assign({},rule),inspectKm:Number.isFinite(rule.inspe
 // not own a competing interval value.
 const active=typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'
   ?ServiceIntervalSOT.active(cat,vehicleId):null;
+const activeMasterHit=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const activeMaster=activeMasterHit&&activeMasterHit.item?activeMasterHit.item:null;
 if(active&&((active.intervalKm||0)>0||(active.intervalBulan||0)>0)){
   const km=Number(active.intervalKm)>0?Number(active.intervalKm):null;
   const mo=Number(active.intervalBulan)>0?Number(active.intervalBulan):null;
-  const rep=!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays);
-  const ins=!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
+  const masterPolicy=activeMaster;
+  // The component master is the canonical policy owner. Persisted category
+  // projections may be stale after a catalog policy change and must not shadow
+  // an explicit true/false value from the master.
+  const policyMode=String(masterPolicy&&masterPolicy.actionMode||cat.actionMode||'').trim().toLowerCase();
+  const replacementResets=masterPolicy&&typeof masterPolicy.gantiResetsInterval==='boolean'?masterPolicy.gantiResetsInterval:cat.gantiResetsInterval===true;
+  // A conditional inspection policy with an explicit replacement-reset flag
+  // owns a replacement-age interval even when the older registry stored that
+  // interval on its inspect axis. Otherwise replacing the component never
+  // becomes the new baseline in the reminder engine.
+  const isConditionalPolicy=policyMode==='periksa-conditional';
+  const conditionalReplacementAxis=isConditionalPolicy&&replacementResets===true;
+  const rep=isConditionalPolicy?conditionalReplacementAxis:!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays);
+  // A conditional inspection policy with gantiResetsInterval=false must not
+  // inherit a stale replace axis from the legacy schedule registry. Conversely,
+  // true must force the active SOT interval onto the replacement axis.
+  const ins=isConditionalPolicy?!conditionalReplacementAxis:!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
   if(rep||(!ins&&active.source)){
-    schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;
-    schedule.inspectKm=null;schedule.inspectMonths=null;schedule.inspectDays=null;
+    schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+    schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
     schedule.intervalSotSource=active.source;
   }else{
-    schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;
+    schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+    schedule.replaceKm=null;schedule.rule.replaceKm=null;schedule.replaceMonths=null;schedule.rule.replaceMonths=null;schedule.replaceDays=null;schedule.rule.replaceDays=null;
     schedule.intervalSotSource=active.source;
   }
   schedule.serviceIntervalSot=active.intervalSot||null;
@@ -481,10 +499,23 @@ function getLastServiceDateForCat(vehicleId,cat,actionTypeFilter,forReminder){
 const log=getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder);
 return log&&parseServiceDateOnly(log.date)?log.date:null;
 }
-function getEffectiveActionMode(cat){return(cat&&cat.actionMode)||'ganti';}
-function getEffectiveResetType(cat){return(cat&&cat.resetType)||'km';}
+function getCanonicalServiceActionPolicy(cat){
+  const componentId=cat&&(cat.serviceComponentId||cat.componentId);
+  if(componentId&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'){
+    try{const hit=ServiceInputCatalog.itemById(componentId);if(hit&&hit.item)return hit.item;}catch(_e){/* use category projection below */}
+  }
+  return null;
+}
+function getEffectiveActionMode(cat){const policy=getCanonicalServiceActionPolicy(cat);return(policy&&policy.actionMode)||(cat&&cat.actionMode)||'ganti';}
+function getEffectiveResetType(cat){const policy=getCanonicalServiceActionPolicy(cat);return(policy&&policy.resetType)||(cat&&cat.resetType)||'km';}
+function getEffectiveGantiResetsInterval(cat){const policy=getCanonicalServiceActionPolicy(cat);if(policy&&typeof policy.gantiResetsInterval==='boolean')return policy.gantiResetsInterval;return cat&&typeof cat.gantiResetsInterval==='boolean'?cat.gantiResetsInterval:null;}
 function resolveResetActionTypeFilter(cat){
-if(getEffectiveActionMode(cat)==='periksa-conditional')return'periksa';
+const mode=getEffectiveActionMode(cat);
+if(mode==='periksa-conditional'){
+  // A conditional inspection result is not a replacement event. The master
+  // component policy wins over a stale persisted category projection.
+  return getEffectiveGantiResetsInterval(cat)===true?'ganti':'periksa';
+}
 const resetType=getEffectiveResetType(cat);
 if(resetType==='both'||resetType==='time')return'ganti';
 return null;
@@ -508,15 +539,15 @@ if(actionTypeFilter){
   const wanted=normalizeServiceActionType(actionTypeFilter);
   const matched=wanted==='ganti'?isServiceIntervalResetAction(effType):effType===wanted;
   if(!matched)return false;
-  if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+  if(forReminder&&getEffectiveActionMode(cat)==='periksa-conditional'&&getEffectiveGantiResetsInterval(cat)===false&&effType==='ganti')return false;
   return true;
 }
-if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+if(forReminder&&getEffectiveActionMode(cat)==='periksa-conditional'&&getEffectiveGantiResetsInterval(cat)===false&&effType==='ganti')return false;
 if(!actionTypeFilter){
   if(!forReminder)return true;
   // Conditional reminders use the inspection axis when no explicit filter is supplied.
-  if(cat&&cat.actionMode==='periksa-conditional')return effType==='periksa';
-  const mode=cat&&normalizeServiceActionType(cat.actionMode);
+  if(getEffectiveActionMode(cat)==='periksa-conditional')return effType==='periksa';
+  const mode=normalizeServiceActionType(getEffectiveActionMode(cat));
   if(mode&&mode!=='ganti'&&mode!=='periksa'&&mode!=='alternate'&&mode!=='none'&&mode!=='periconditional')return effType===mode;
   return isServiceIntervalResetAction(effType);
 }
@@ -569,49 +600,72 @@ return days==null?null:days/30.4368;
 function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
   if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   const schedule=getMaintenanceSchedule(vehicleId,cat);
-  let intervalKm=null,intervalBulan=null;
-  if(schedule){const act=normalizeServiceActionType(actionType),inspect=normalizeServiceActionType(schedule.inspectAction||'periksa'),replace=normalizeServiceActionType(schedule.replaceAction||'ganti'),im=act===inspect,rm=act===replace;intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:schedule.replaceKm||schedule.inspectKm||null;intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:schedule.replaceMonths||schedule.inspectMonths||null;}
-  else{intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);}
   const action=normalizeServiceActionType(actionType);
   const inspectAction=normalizeServiceActionType(schedule&&schedule.inspectAction||'periksa');
   const replaceAction=normalizeServiceActionType(schedule&&schedule.replaceAction||'ganti');
   const hasInspectAxis=!!(schedule&&(Number(schedule.inspectKm)>0||Number(schedule.inspectMonths)>0||Number(schedule.inspectDays)>0));
   const hasReplaceAxis=!!(schedule&&(Number(schedule.replaceKm)>0||Number(schedule.replaceMonths)>0||Number(schedule.replaceDays)>0));
-  // A scheduled action resets only its own maintenance axis. E.g. cleaning a
-  // clean-only component resets its cleaning interval, but cleaning a filter
-  // must never reset the filter's replacement age.
-  const resetsOwnAxis=!!(schedule&&((hasInspectAxis&&action===inspectAction)||(hasReplaceAxis&&action===replaceAction))) || (!schedule&&isServiceIntervalResetAction(action));
+  const replacementEvent=isServiceIntervalResetAction(action);
+  // Keep the reset semantics shared with reminder history matching: ganti,
+  // pasang, and overhaul are replacement-family events even when the schedule
+  // labels its canonical replaceAction as only "ganti".
+  let resetAxis='';
+  if(schedule){
+    if(hasReplaceAxis&&(replacementEvent||action===replaceAction))resetAxis='replace';
+    else if(hasInspectAxis&&action===inspectAction&&!replacementEvent)resetAxis='inspect';
+  }else if(replacementEvent)resetAxis='replace';
+  const baselineAxis=resetAxis || (schedule&&hasInspectAxis&&action===inspectAction&&!replacementEvent?'inspect':(hasReplaceAxis?'replace':(hasInspectAxis?'inspect':'replace')));
+  let intervalKm=null,intervalBulan=null,intervalHari=null;
+  if(schedule){
+    const isInspect=baselineAxis==='inspect';
+    intervalKm=isInspect?schedule.inspectKm:schedule.replaceKm;
+    intervalBulan=isInspect?schedule.inspectMonths:schedule.replaceMonths;
+    intervalHari=isInspect?schedule.inspectDays:schedule.replaceDays;
+    // Legacy/persisted categories can carry an interval without a dedicated
+    // axis in the older schedule registry. Preserve that value as fallback.
+    if(!(Number(intervalKm)>0)&&!(Number(intervalBulan)>0)&&!(Number(intervalHari)>0)){
+      intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
+      intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+    }
+  }else{
+    intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
+    intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+    intervalHari=null;
+  }
   let baseKm=Number(serviceKm);
   let baseDate=parseServiceDateOnly(serviceDate||new Date());
-  if(!resetsOwnAxis){
-    // Select history from the same axis. Inspection/cleaning history is not a
-    // substitute for replacement history, and vice versa.
-    const axisAction= schedule&&hasInspectAxis&&action===inspectAction ? inspectAction : replaceAction;
+  if(!resetAxis){
+    // Snapshot actions that do not reset an axis must not move its baseline.
+    // Use the same component identity matcher and reset-family semantics as
+    // computeServiceUrgency(), not a raw action-string equality check.
+    const axisAction=baselineAxis==='inspect'?inspectAction:replaceAction;
     const prior=(Array.isArray(D.servisLogs)?D.servisLogs:[])
       .filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&(
-        axisAction==='ganti' ? isServiceIntervalResetAction(s.actionType) : normalizeServiceActionType(s.actionType)===axisAction
+        baselineAxis==='replace' ? isServiceIntervalResetAction(s.actionType) : normalizeServiceActionType(s.actionType)===axisAction
       ))
       .slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
     if(prior){
       baseKm=prior.km!=null&&Number.isFinite(Number(prior.km))?Number(prior.km):NaN;
       baseDate=parseServiceDateOnly(prior.date);
     }else{
-      // No reset history means there is no justified baseline to advance from.
       baseKm=NaN;
       baseDate=null;
     }
   }
-  const km=baseKm;
-  const nextDueKm=intervalKm>0&&Number.isFinite(km)?km+intervalKm:null;
+  const nextDueKm=Number(intervalKm)>0&&Number.isFinite(baseKm)?baseKm+Number(intervalKm):null;
   let nextDueDate=null;
-  if(intervalBulan>0&&baseDate){
-    const d=addServiceMonthsClamped(baseDate,intervalBulan); nextDueDate=formatServiceDateOnly(d);
+  if(Number(intervalBulan)>0&&baseDate){
+    const d=addServiceMonthsClamped(baseDate,Number(intervalBulan));
+    nextDueDate=formatServiceDateOnly(d);
+  }else if(Number(intervalHari)>0&&baseDate){
+    const d=parseServiceDateOnly(baseDate);
+    if(d){d.setDate(d.getDate()+Number(intervalHari));nextDueDate=formatServiceDateOnly(d);}
   }
   let nextDueAxis='none';
   if(nextDueKm!==null&&nextDueDate)nextDueAxis='km_or_date';
   else if(nextDueKm!==null)nextDueAxis='km';
   else if(nextDueDate)nextDueAxis='date';
-  return{nextDueKm,nextDueDate,nextDueAxis,intervalKmAtService:intervalKm||null,intervalBulanAtService:intervalBulan||null};
+  return{nextDueKm,nextDueDate,nextDueAxis,intervalKmAtService:Number(intervalKm)>0?Number(intervalKm):null,intervalBulanAtService:Number(intervalBulan)>0?Number(intervalBulan):null,intervalHariAtService:Number(intervalHari)>0?Number(intervalHari):null};
 }
 function resolveServiceStatusMeta(score){
   const n=Number(score);

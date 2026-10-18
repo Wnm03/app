@@ -1841,7 +1841,7 @@ Servis._markServicedInFlight.add(_markGuardKey);
 const _clearMarkGuard=()=>Servis._markServicedInFlight.delete(_markGuardKey);
 const curKm=getVehicleKm(curVehicleId);
 const actLabel=actionType==='periksa'?'diperiksa':(actionType==='bersih'?'dibersihkan':'diservis');
-const willReset=!(cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&(actionType||'ganti')==='ganti');
+const _effectiveActionMode=typeof getEffectiveActionMode==='function'?getEffectiveActionMode(cat):(cat.actionMode||'ganti'); const _effectiveGantiResets=typeof getEffectiveGantiResetsInterval==='function'?getEffectiveGantiResetsInterval(cat):cat.gantiResetsInterval; const willReset=!(_effectiveActionMode==='periksa-conditional'&&_effectiveGantiResets===false&&(actionType||'ganti')==='ganti');
 if(actionType==='ganti'&&!opts.skipEarlyGuard){
 const early=Servis._checkTooEarlyGanti(cat,curVehicleId,curKm);
 if(early){
