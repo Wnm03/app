@@ -112,6 +112,28 @@ test('S2013 regression: service next-due snapshot follows clean-only action axis
   assert.equal(snap.nextDueAxis,'km');
 });
 
+test('S2040 root fix: replacement-family aliases reset the canonical replacement axis',()=>{
+  const ctx=makeCtx({'throttle-body':{replaceKm:24000,replaceAction:'ganti',maintenanceType:'periodic'}});
+  const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:24000,source:'manual'});
+  for(const actionType of ['ganti','pasang','pasang baru','overhaul']){
+    const snap=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:22000,serviceDate:'2026-09-24',actionType});
+    assert.equal(snap.nextDueKm,46000,`${actionType} must reset the replacement interval from the current service KM`);
+    assert.equal(snap.intervalKmAtService,24000);
+  }
+});
+
+test('S2040 root fix: non-replacement actions cannot accidentally reset replacement snapshot',()=>{
+  const ctx=makeCtx({'throttle-body':{replaceKm:24000,replaceAction:'ganti',maintenanceType:'periodic'}});
+  const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:24000,source:'manual'});
+  ctx.D.servisLogs.push({id:'replacement-root',vehicleId:'v1',date:'2026-01-01',km:10000,categoryId:cat.id,masterCategoryId:cat.masterCategoryId,serviceComponentId:cat.serviceComponentId,actionType:'ganti'});
+  for(const actionType of ['bersih','periksa','setel']){
+    const snap=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:22000,serviceDate:'2026-09-24',actionType});
+    assert.equal(snap.nextDueKm,34000,`${actionType} must preserve the previous replacement baseline`);
+  }
+});
+
 test('S2038: cleaning resets a clean-only schedule interval',()=>{
   const ctx=makeCtx({'throttle-body':{inspectKm:5000,inspectAction:'bersih',maintenanceType:'periodic'}});
   const cat=ctx.D.sparepartCats[0];
