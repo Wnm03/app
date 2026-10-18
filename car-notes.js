@@ -16,7 +16,7 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'pelumasan-cvt-grease': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
   'bearing-bak-cvt': { maintenanceType: 'condition', condition: 'periksa dan beri grease bila bergemuruh' },
   'busa-filter-cvt': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
-  'filter-fuel-pump': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti 48.000 km atau bila tekanan bahan bakar turun' },
+  'filter-fuel-pump': { inspectKm: 12000, inspectAction: 'periksa', replaceKm: 48000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'ganti bila tekanan bahan bakar turun' },
   'oli-shockbreaker': { inspectKm: 15000, inspectAction: 'periksa', replaceAction: 'ganti', replaceKm: 15000, maintenanceType: 'periodic_or_condition', condition: 'ganti saat seal bocor atau kondisi oli menurun' },
   'engine-mounting-bushing-arm': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'ganti bila getas atau aus' },
   'saklar-sistem-penerangan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
@@ -26,7 +26,7 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'coolant': { inspectKm: 4000, inspectAction: 'periksa', replaceKm: 12000, replaceAction: 'ganti', replaceMonths: 24, maintenanceType: 'periodic' },
   'celah-klep': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
   'oli-gardan': { replaceKm: 8000, replaceAction: 'ganti', maintenanceType: 'periodic' },
-  'roller-cvt': { inspectKm: 8000, inspectAction: 'periksa', replaceKm: 12000, replaceAction: 'ganti', maintenanceType: 'periodic' },
+  'roller-cvt': { inspectKm: 12000, inspectAction: 'periksa', replaceKm: 24000, replaceAction: 'ganti', maintenanceType: 'periodic' },
   'v-belt-cvt': { inspectKm: 8000, inspectAction: 'periksa', replaceKm: 24000, replaceAction: 'ganti', maintenanceType: 'periodic' },
   'kampas-rem-depan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'aus' },
   'kampas-rem-belakang': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'aus' },
@@ -34,10 +34,10 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'kaliper-rem-depan': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'macet, bocor, atau gerak piston tidak normal' },
   'master-rem-reservoir': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'bocor, level/cairan bermasalah, atau tekanan rem tidak normal' },
   'tromol-rem-belakang': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'aus atau diameter di luar batas' },
-  'minyak-rem': { replaceKm: 24000, replaceAction: 'ganti', replaceMonths: 24, maintenanceType: 'periodic' },
+  'minyak-rem': { inspectKm: 4000, inspectAction: 'periksa', replaceKm: 24000, replaceAction: 'ganti', replaceMonths: 24, maintenanceType: 'periodic' },
   'stel-grease-komstir': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'setir berat/jeduk' },
   'bearing-roda': { inspectKm: 12000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'oblak atau gemuruh' },
-  'aki': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic' },
+  'aki': { inspectKm: 4000, inspectAction: 'periksa', replaceKm: 15000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'evaluasi usia pakai dan kondisi aki' },
   'kampas-kopling-ganda': { inspectKm: 8000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'aus' },
   'per-cvt': { inspectKm: 8000, inspectAction: 'periksa', replaceKm: 24000, replaceAction: 'ganti', maintenanceType: 'periodic_or_condition', condition: 'lemah' },
   'pembersihan-rumah-cvt': { inspectKm: 8000, inspectAction: 'bersih', maintenanceType: 'periodic' },
@@ -53,8 +53,8 @@ const SERVICE_MAINTENANCE_RULES = Object.freeze({
   'radiator-water-pump': { maintenanceType: 'condition', condition: 'kebocoran, overheat, atau sirkulasi coolant bermasalah' },
   'selang-rem': { inspectKm: 4000, inspectAction: 'periksa', maintenanceType: 'periodic_or_condition', condition: 'retak, getas, bocor, atau kerusakan fisik', replaceMonths: 48, replaceAction: 'ganti' },
   'kebocoran-shock': { maintenanceType: 'condition', condition: 'terdapat kebocoran oli pada seal shock' },
-  'ban-depan': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 29 psi' },
-  'ban-belakang': { inspectDays: 14, inspectAction: 'periksa', maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi' }
+  'ban-depan': { inspectKm: 4000, inspectAction: 'periksa', inspectDays: 14, maintenanceType: 'periodic', condition: 'tekanan acuan 29 psi' },
+  'ban-belakang': { inspectKm: 4000, inspectAction: 'periksa', inspectDays: 14, maintenanceType: 'periodic', condition: 'tekanan acuan 33 psi; ganti berdasarkan keausan/TWI, bukan interval baku' }
 });
 
 /** v17: normalize inspect-vs-replace semantics without changing existing intervals. */
@@ -77,13 +77,14 @@ if(typeof window!=='undefined'){
 function validateMaintenanceRuleRegistry(registry=SERVICE_MAINTENANCE_RULES,catalogGroups=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'?ServiceInputCatalog.groups():[]){
   const allowed=new Set(['periodic','condition','periodic_or_condition','event_based']);
   const ids=[];
-  for(const g of (catalogGroups||[])) for(const it of (g.items||[])) if(it&&it.id) ids.push(String(it.id));
-  const out={ok:true,missing:[],orphan:[],invalidType:[],invalidSchedule:[],missingCondition:[],invalidAction:[],missingAction:[]};
+  const out={ok:true,missing:[],orphan:[],duplicateCatalogId:[],invalidType:[],invalidSchedule:[],invalidInterval:[],missingCondition:[],invalidAction:[],missingAction:[]};
+  for(const g of (catalogGroups||[])) for(const it of (g.items||[])) if(it&&it.id){const id=String(it.id);if(ids.includes(id))out.duplicateCatalogId.push(id);else ids.push(id);}
   for(const id of ids) if(!registry||!registry[id]) out.missing.push(id);
   for(const id of Object.keys(registry||{})) if(!ids.includes(id)) out.orphan.push(id);
   for(const [id,r] of Object.entries(registry||{})){
     if(!r||!allowed.has(r.maintenanceType)) out.invalidType.push(id);
     const nums=['inspectKm','replaceKm','inspectMonths','replaceMonths','inspectDays','replaceDays'];
+    for(const k of nums){if(r[k]!==undefined&&r[k]!==null&&(!Number.isFinite(r[k])||r[k]<=0||!Number.isInteger(r[k])))out.invalidInterval.push(id+':'+k);}
     const scheduled=nums.some(k=>Number.isFinite(r[k])&&r[k]>0);
     if(r.maintenanceType!=='condition'&&r.maintenanceType!=='event_based'&&!scheduled) out.invalidSchedule.push(id);
     if((r.maintenanceType==='condition'||r.maintenanceType==='periodic_or_condition')&&!String(r.condition||'').trim()) out.missingCondition.push(id);

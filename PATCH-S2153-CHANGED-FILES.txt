@@ -1,0 +1,22 @@
+# S2153 cumulative overlay: S2145-S2152 preserved + S2153 hardening
+car-notes.js
+tests/service-maintenance-registry-integrity-s2153.test.js
+AUDIT-S2153-INTERVAL-REGISTRY-HARDENING.md
+PATCH-README-S2153.md
+MANIFEST-SHA256.txt
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+index.html
+sw.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modules-render.js
+modules/vehicle/service-master-data.generated.js
+chat-action-handlers.js
+docs/RELEASE-GATE-LOG.md
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+backups/app-bundle-a.min.s2033-reset-interval-chain-audit-2568.2026-10-18T22-29-02-591Z.js
+backups/app-bundle-b.min.s2033-reset-interval-chain-audit-2568.2026-10-18T22-29-02-720Z.js
