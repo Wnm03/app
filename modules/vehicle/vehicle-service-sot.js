@@ -57,6 +57,30 @@ function vehicleServiceSotFindServiceMasterForCategory(cat){
 }
 function vehicleServiceSotApplyLegacyRuleToCatalog(item,cat){ return false; }
 
+// A model/year override is applicable only when the vehicle year is explicit
+// and the model identifier or name matches. It never mutates manual/AI SOT.
+function vehicleServiceSotScopedGuidelineOverride(vehicle,masterItem){
+  if(!vehicle||!masterItem||!Array.isArray(masterItem.intervalGuidelineOverrides))return null;
+  const name=String(vehicle.name||'').toLowerCase();
+  const modelId=String(vehicle.modelId||'').trim().toLowerCase();
+  const hay=(name+' '+modelId).trim();
+  let year=Number(vehicle.modelYear||vehicle.year||vehicle.yearMade||0);
+  if(!(Number.isInteger(year)&&year>1900&&year<2200)){
+    const match=name.match(/\b(19\d{2}|20\d{2})\b/);
+    year=match?Number(match[1]):null;
+  }
+  if(!year)return null;
+  for(const policy of masterItem.intervalGuidelineOverrides){
+    if(!policy||!Array.isArray(policy.modelYears)||!policy.modelYears.includes(year))continue;
+    const ids=Array.isArray(policy.modelIds)?policy.modelIds.map(x=>String(x).toLowerCase()):[];
+    const patterns=Array.isArray(policy.modelNamePatterns)?policy.modelNamePatterns.map(x=>String(x).toLowerCase()):[];
+    const modelMatch=(modelId&&ids.includes(modelId))||patterns.some(p=>p&&hay.includes(p));
+    const km=Number(policy.intervalKm),months=Number(policy.intervalTimeMonths);
+    if(modelMatch&&((Number.isFinite(km)&&km>0)||(Number.isFinite(months)&&months>0)))return policy;
+  }
+  return null;
+}
+
 async function vehicleServiceSotEnsureReady(){
   if(_vehicleServiceSotReady)return {ok:true,changed:0};
   if(_vehicleServiceSotLoading)return _vehicleServiceSotLoading;
@@ -114,22 +138,37 @@ function vehicleServiceSotResolveReminderRule(cat,vehicleId){
   const item=vehicleServiceSotFindCatalogForCat(category,vehicleId);
   const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
   const master=vehicleServiceSotFindServiceMasterForCategory(category);
-  const masterKm=num(master&&master.item&&master.item.intervalKm);
-  const masterMonths=num(master&&master.item&&master.item.intervalTimeMonths);
+  const masterItem=master&&master.item||null;
+  const masterKm=num(masterItem&&masterItem.intervalKm);
+  const masterMonths=num(masterItem&&masterItem.intervalTimeMonths);
   const catalogKm=num(item&&item.serviceIntervalKm);
   const catalogMonths=num(item&&item.serviceIntervalMonths);
-  const seedKm=masterKm!==null?masterKm:(catalogKm!==null?catalogKm:num(category.intervalKm));
-  const seedMonths=masterMonths!==null?masterMonths:(catalogMonths!==null?catalogMonths:num(category.intervalBulan));
+  const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
+  const scopedGuideline=vehicleServiceSotScopedGuidelineOverride(vehicle,masterItem);
+  const scopedKm=scopedGuideline?num(scopedGuideline.intervalKm):null;
+  const scopedMonths=scopedGuideline?num(scopedGuideline.intervalTimeMonths):null;
+  const seedKm=scopedKm!==null?scopedKm:(masterKm!==null?masterKm:(catalogKm!==null?catalogKm:num(category.intervalKm)));
+  const seedMonths=scopedMonths!==null?scopedMonths:(masterMonths!==null?masterMonths:(catalogMonths!==null?catalogMonths:num(category.intervalBulan)));
   const seedSource=masterKm!==null||masterMonths!==null?'pedoman':(category.intervalSource||'pedoman');
   const ref=Object.assign({},category,{intervalKm:seedKm||0,intervalBulan:seedMonths||0,intervalSource:seedSource});
   let active=null;
   const hasCanonicalSot=typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceInterval==='function';
   if(hasCanonicalSot)active=VehicleCarNotesSOT.getServiceInterval(vehicleId,ref);
+  // Refresh stale guideline-seeded values only. Manual and AI choices are
+  // protected; the update is keyed to the canonical component SOT.
+  if(hasCanonicalSot&&scopedGuideline&&active&&active.source==='pedoman'&&
+     (num(active.intervalKm)!==seedKm||num(active.intervalBulan)!==seedMonths)&&
+     typeof VehicleCarNotesSOT.setServiceInterval==='function'){
+    const migrated=VehicleCarNotesSOT.setServiceInterval(vehicleId,ref,{
+      intervalKm:seedKm||0,intervalBulan:seedMonths||0,source:'pedoman',
+      guideline:{scope:'model-year',modelYears:scopedGuideline.modelYears,modelIds:scopedGuideline.modelIds,reason:scopedGuideline.reason||null}
+    });
+    if(migrated&&migrated.ok)active=VehicleCarNotesSOT.getServiceInterval(vehicleId,ref);
+  }
   // Legacy isolated harness only: catalog remains a compatibility source when
   // the canonical VehicleCarNotesSOT module is genuinely absent.
   const legacyCatalogKm=!hasCanonicalSot?catalogKm:null;
   const legacyCatalogMonths=!hasCanonicalSot?catalogMonths:null;
-  const vehicle=(typeof D!=='undefined'&&Array.isArray(D.vehicles))?D.vehicles.find(v=>String(v&&v.id)===String(vehicleId)):null;
   const intervalKm=hasCanonicalSot?(num(active&&active.intervalKm)??seedKm):(legacyCatalogKm??seedKm);
   const intervalBulan=hasCanonicalSot?(num(active&&active.intervalBulan)??seedMonths):(legacyCatalogMonths??seedMonths);
   const componentId=(item&&item.serviceComponentId)||category.serviceComponentId||category.componentId||null;
@@ -147,7 +186,8 @@ function vehicleServiceSotResolveReminderRule(cat,vehicleId){
     source:hasCanonicalSot?(active&&active.source||seedSource):(legacyCatalogKm!==null?'catalog':seedSource),
     intervalSot:active||null,
     catalog:item||null,
-    serviceMaster:master&&master.item?master.item:null
+    serviceMaster:master&&master.item?master.item:null,
+    guidelineScope:scopedGuideline?{modelYears:scopedGuideline.modelYears,modelIds:scopedGuideline.modelIds,reason:scopedGuideline.reason||null}:null
   };
 }
 

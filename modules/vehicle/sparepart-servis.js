@@ -311,7 +311,9 @@ const master=masterHit&&masterHit.item?masterHit.item:null;
 const canonicalKm=typeof getCanonicalServiceInterval==='function'?getCanonicalServiceInterval(cat,{vehicleId}).intervalKm:(master&&Number(master.intervalKm)>0?Number(master.intervalKm):null);
 const applyRule=(base,id,name)=>{
   if(!base)return null;
-  const r=overlayPersistedMaintenanceIntervals(base,cat,id,name);
+  const independentAxes=String(master&&master.intervalAxes||'').toLowerCase()==='independent';
+  const r=independentAxes?Object.assign({},base):overlayPersistedMaintenanceIntervals(base,cat,id,name);
+  if(independentAxes){r.serviceComponentId=cat&&cat.serviceComponentId||id||null;r.componentName=cat&&cat.name||name||null;}
   // The master explicitly declares a single replacement interval (e.g.
   // Oli Mesin: "Ganti tiap 4.000 km"). In that case the older additive
   // maintenance-rule registry must not reintroduce its provisional 2.000/
@@ -366,20 +368,35 @@ if(active&&((active.intervalKm||0)>0||(active.intervalBulan||0)>0)){
   // interval on its inspect axis. Otherwise replacing the component never
   // becomes the new baseline in the reminder engine.
   const isConditionalPolicy=policyMode==='periksa-conditional';
+  const independentAxes=String(masterPolicy&&masterPolicy.intervalAxes||'').toLowerCase()==='independent';
   const conditionalReplacementAxis=isConditionalPolicy&&replacementResets===true;
   const rep=isConditionalPolicy?conditionalReplacementAxis:!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays);
-  // A conditional inspection policy with gantiResetsInterval=false must not
-  // inherit a stale replace axis from the legacy schedule registry. Conversely,
-  // true must force the active SOT interval onto the replacement axis.
-  const ins=isConditionalPolicy?!conditionalReplacementAxis:!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
-  if(rep||(!ins&&active.source)){
+  // Most components intentionally have one active interval axis. A small
+  // explicitly declared independent-axis policy (e.g. V-Belt: inspect every
+  // 8,000 km, replace at the vehicle's active SOT interval) is different:
+  // retain the inspection cadence while the active per-vehicle SOT owns the
+  // replacement cadence. Never synthesize a second interval from stale
+  // category projections or overwrite a manual interval.
+  if(independentAxes){
     schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;schedule.replaceDays=null;schedule.rule.replaceDays=null;
-    schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+    if(!(Number(schedule.inspectKm)>0)&&!(Number(schedule.inspectMonths)>0)&&!(Number(schedule.inspectDays)>0)){
+      schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+    }
     schedule.intervalSotSource=active.source;
   }else{
-    schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;schedule.inspectDays=null;schedule.rule.inspectDays=null;
-    schedule.replaceKm=null;schedule.rule.replaceKm=null;schedule.replaceMonths=null;schedule.rule.replaceMonths=null;schedule.replaceDays=null;schedule.rule.replaceDays=null;
-    schedule.intervalSotSource=active.source;
+    // A conditional inspection policy with gantiResetsInterval=false must not
+    // inherit a stale replace axis from the legacy schedule registry. Conversely,
+    // true must force the active SOT interval onto the replacement axis.
+    const ins=isConditionalPolicy?!conditionalReplacementAxis:!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
+    if(rep||(!ins&&active.source)){
+      schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+      schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+      schedule.intervalSotSource=active.source;
+    }else{
+      schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+      schedule.replaceKm=null;schedule.rule.replaceKm=null;schedule.replaceMonths=null;schedule.rule.replaceMonths=null;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+      schedule.intervalSotSource=active.source;
+    }
   }
   schedule.serviceIntervalSot=active.intervalSot||null;
 }
