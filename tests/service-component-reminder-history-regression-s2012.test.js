@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const {loadSource}=require('./helpers/loadSource');
 
-function makeCtx(){
+function makeCtx(ruleOverride){
   const D={
     vehicles:[{id:'v1',name:'Vario 125'}],
     sparepartCats:[{
@@ -31,7 +31,7 @@ function makeCtx(){
     D,curVehicleId:'v1',
     MY_WRENCH:{minLbft:10,maxLbft:10},
     findTorsiDb:()=>({id:'vario-125'}),
-    SERVICE_MAINTENANCE_RULES:{
+    SERVICE_MAINTENANCE_RULES:ruleOverride||{
       'throttle-body':{inspectKm:12000,inspectAction:'bersih',maintenanceType:'periodic'}
     },
     Servis:{
@@ -110,4 +110,31 @@ test('S2013 regression: service next-due snapshot follows clean-only action axis
   assert.equal(snap.nextDueKm,25237);
   assert.equal(snap.intervalKmAtService,5000);
   assert.equal(snap.nextDueAxis,'km');
+});
+
+test('S2038: cleaning resets a clean-only schedule interval',()=>{
+  const ctx=makeCtx({'throttle-body':{inspectKm:5000,inspectAction:'bersih',maintenanceType:'periodic'}});
+  const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:5000,source:'manual'});
+  const clean=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:20237,serviceDate:'2026-09-24',actionType:'bersih'});
+  assert.equal(clean.nextDueKm,25237,'cleaning is the reset event for a clean-only component schedule');
+  assert.equal(clean.intervalKmAtService,5000);
+});
+
+test('S2038: good/worn inspection does not reset replacement baseline',()=>{
+  const ctx=makeCtx({'throttle-body':{replaceKm:24000,replaceAction:'ganti',maintenanceType:'periodic'}});
+  const cat=ctx.D.sparepartCats[0];
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:24000,source:'manual'});
+  ctx.D.servisLogs.push({id:'replacement',vehicleId:'v1',date:'2026-01-01',km:10000,categoryId:cat.id,masterCategoryId:cat.masterCategoryId,serviceComponentId:cat.serviceComponentId,actionType:'ganti'});
+  for(const conditionResult of ['baik','mulai-aus','aus']){
+    ctx.D.servisLogs.push({id:`inspect-${conditionResult}`,vehicleId:'v1',date:'2026-09-24',km:20237,categoryId:cat.id,masterCategoryId:cat.masterCategoryId,serviceComponentId:cat.serviceComponentId,actionType:'periksa',conditionResult});
+    const snap=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:20237,serviceDate:'2026-09-24',actionType:'periksa'});
+    assert.equal(snap.nextDueKm,34000,`${conditionResult} inspection does not move the replacement baseline`);
+    assert.equal(snap.intervalKmAtService,24000);
+    const urgency=ctx.computeServiceUrgency({vehicleId:'v1',cat,curKm:20237,kmPerDay:34.5});
+    assert.equal(urgency.lastKm,10000,`${conditionResult} inspection is not used as replacement baseline`);
+    assert.equal(urgency.nextDueKm,34000);
+  }
+  const clean=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:22000,serviceDate:'2026-09-25',actionType:'bersih'});
+  assert.equal(clean.nextDueKm,34000,'cleaning does not reset the replacement axis');
 });
