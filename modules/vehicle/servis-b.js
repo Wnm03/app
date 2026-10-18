@@ -230,10 +230,15 @@ return (typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjecti
 },
 
 _matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
-const effType=log.actionType||'ganti';
+const norm=value=>{const raw=String(value||'').trim().toLowerCase().replace(/[ _-]+/g,'');if(['ganti','diganti','replace','replacement'].includes(raw))return'ganti';if(['pasang','pasangbaru','install','installed'].includes(raw))return'pasang';if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return'overhaul';if(['periksa','cek','check','inspect','inspeksi'].includes(raw))return'periksa';if(['bersih','bersihkan','clean','cleaning'].includes(raw))return'bersih';if(['setel','setting','adjust','setelulang'].includes(raw))return'setel';return raw||'ganti';};
+const effType=norm(log&&log.actionType);const resets=['ganti','pasang','overhaul'].includes(effType);
+// S2033: honor an explicit action filter before applying conditional reset rules.
+if(actionTypeFilter){const wanted=norm(actionTypeFilter);const matched=wanted==='ganti'?resets:effType===wanted;if(!matched)return false;if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;return true;}
 if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
-if(!actionTypeFilter)return true;
-return effType===actionTypeFilter;
+if(!forReminder)return true;
+// Conditional reminders use the inspection axis when no explicit filter is supplied.
+if(cat&&cat.actionMode==='periksa-conditional')return effType==='periksa';
+const mode=cat&&norm(cat.actionMode);if(mode&&!['ganti','periksa','alternate','none','periconditional'].includes(mode))return effType===mode;return resets;
 },
 editSparepartFromReminder(catId){
 const exists=(D.sparepartCats||[]).some(c=>c&&String(c.id)===String(catId));

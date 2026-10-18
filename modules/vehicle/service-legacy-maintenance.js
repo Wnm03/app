@@ -13,7 +13,19 @@
   const VERSION='SERVICE-LEGACY-MAINTENANCE-S2040';
   const str=v=>String(v==null?'':v).trim();
   const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
-  const validAction=a=>['periksa','bersih','ganti','catat'].includes(str(a));
+  const normalizeAction=a=>{
+    const raw=str(a||'ganti').toLowerCase().replace(/[ _-]+/g,'');
+    if(['ganti','diganti','replace','replacement'].includes(raw))return 'ganti';
+    if(['pasang','pasangbaru','install','installed'].includes(raw))return 'pasang';
+    if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return 'overhaul';
+    if(['periksa','cek','check','inspect','inspeksi'].includes(raw))return 'periksa';
+    if(['bersih','bersihkan','clean','cleaning'].includes(raw))return 'bersih';
+    if(['setel','setting','adjust','setelulang'].includes(raw))return 'setel';
+    if(['catat','record','note'].includes(raw))return 'catat';
+    return raw;
+  };
+  const resetAction=a=>['ganti','pasang','overhaul'].includes(normalizeAction(a));
+  const validAction=a=>['periksa','bersih','ganti','pasang','overhaul','setel','catat'].includes(normalizeAction(a));
 
   function vehicle(vehicleId){
     const d=typeof D!=='undefined'?D:root.D;
@@ -35,7 +47,13 @@
     return rows;
   }
   function latestByAction(vehicleId,componentId,action){
-    return history(vehicleId,componentId).find(r=>str(r.actionType||'ganti')===str(action))||null;
+    const wanted=normalizeAction(action);
+    return history(vehicleId,componentId).find(r=>{
+      const actual=normalizeAction(r.actionType||'ganti');
+      // Replacement-age interval is reset by replacement, installation, or overhaul;
+      // inspection/cleaning/adjustment must never reset that age.
+      return wanted==='ganti'?resetAction(actual):actual===wanted;
+    })||null;
   }
   function currentKm(vehicleId,vehicleOverride){
     const v=vehicleOverride||vehicle(vehicleId);
@@ -55,11 +73,11 @@
       if(p&&p.length)return p;
     }
     const c=category||{}; const out=[];
-    if(num(c.intervalKm)>0||num(c.intervalTimeMonths)>0)out.push({axis:'replace',action:(c.actionMode==='periksa'?'periksa':'ganti'),intervalKm:num(c.intervalKm),intervalMonths:num(c.intervalTimeMonths)});
+    if(num(c.intervalKm)>0||num(c.intervalTimeMonths)>0)out.push({axis:(c.actionMode==='periksa'||c.actionMode==='periksa-conditional'?'inspect':'replace'),action:(c.actionMode==='periksa'||c.actionMode==='periksa-conditional'?'periksa':'ganti'),intervalKm:num(c.intervalKm),intervalMonths:num(c.intervalTimeMonths)});
     return out;
   }
   function evaluateAction(vehicleId,componentId,plan,now,vehicleOverride){
-    const action=validAction(plan&&plan.action)?plan.action:'periksa';
+    const action=validAction(plan&&plan.action)?normalizeAction(plan.action):'periksa';
     const last=latestByAction(vehicleId,componentId,action);
     if(!last)return {action,axis:plan.axis||'maintenance',status:'BASELINE_REQUIRED',reason:'belum ada riwayat tindakan ini',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null};
     const kmNow=currentKm(vehicleId,vehicleOverride); const lastKm=num(last.km);

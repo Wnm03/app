@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-18T06:02:53.301Z
-Total file source: 487 · Total identifier global: 17212
+Terakhir digenerate: 2026-10-18T08:35:18.987Z
+Total file source: 487 · Total identifier global: 17229
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1210 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1248 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -217,7 +217,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 194 | `modules/vehicle/service-history-bulk-identity-editor.js` | 252 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 195 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 196 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
-| 197 | `modules/vehicle/servis-b.js` | 807 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
+| 197 | `modules/vehicle/servis-b.js` | 812 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
 | 198 | `modules/vehicle/service-history-component-explorer-s2006.js` | 105 | _(tidak ada komentar header)_ |
 | 199 | `modules/vehicle/service-maintenance-guidance.js` | 155 | _(tidak ada komentar header)_ |
 | 200 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
@@ -458,7 +458,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 435 | `modules/vehicle/vehicle-canonical-writer.js` | 33 | A-S2185: canonical mutation boundary for D.vehicles. Storage schema remains unchanged; this module only centralizes array mutation. |
 | 436 | `modules/vehicle/car-notes-sot.js` | 86 | _(tidak ada komentar header)_ |
 | 437 | `modules/vehicle/stock-command-sot.js` | 200 | _(tidak ada komentar header)_ |
-| 438 | `modules/vehicle/service-legacy-maintenance.js` | 100 | _(tidak ada komentar header)_ |
+| 438 | `modules/vehicle/service-legacy-maintenance.js` | 118 | _(tidak ada komentar header)_ |
 | 439 | `modules/vehicle/part-crud-s2041.js` | 344 | _(tidak ada komentar header)_ |
 | 440 | `modules/vehicle/service-runtime-projection-sot-s2166.js` | 98 | _(tidak ada komentar header)_ |
 | 441 | `modules/shared/boot-early.js` | 246 | modules/shared/boot-early.js SA10a (v1568) — konsolidasi 4 blok <script> inline paling awal di index.html/app_production.html (sebelum <script src="...bundle-load- guard.js" data-guard-src="app-bundle-a.min.js">) jadi 1 … |
@@ -1905,6 +1905,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `acSpbuNames` | `modules/finance/transaksi.js` |
 | `acStockCodes` | `modules/finance/transaksi.js` |
 | `acStockNames` | `modules/finance/transaksi.js` |
+| `action` | `modules/vehicle/sparepart-servis.js` |
 | `action` | `modules/vehicle/servis-checklist.js` |
 | `action` | `modules/vehicle/servis.js` |
 | `action` | `modules/vehicle/servis-b.js` |
@@ -1978,6 +1979,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `actual` | `modules/shop/shop-inventory-ledger.js` |
 | `actual` | `modules/shop/business-flow-presenter.js` |
 | `actual` | `modules/finance/titipan-reconcile.js` |
+| `actual` | `modules/vehicle/service-legacy-maintenance.js` |
 | `actual` | `modules/vehicle/service-runtime-projection-sot-s2166.js` |
 | `actualAdd` | `modules/shared/realokasi-sisa-kuota.js` |
 | `actualPct` | `modules/asset/invest-ai-widget.js` |
@@ -4559,6 +4561,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cond` | `modules/vehicle/sparepart-servis-b.js` |
 | `cond` | `modules/vehicle/servis.js` |
 | `condEl` | `modules/vehicle/servis.js` |
+| `condition` | `modules/vehicle/sparepart-servis.js` |
 | `condition` | `modules/vehicle/servis.js` |
 | `condition` | `modules/vehicle/servis-b.js` |
 | `conditionBadge` | `modules/vehicle/servis-b.js` |
@@ -4567,6 +4570,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `conditionItems` | `modules/vehicle/sparepart-servis-b.js` |
 | `conditionNote` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `conditionNoteHtml` | `modules/vehicle/servis-b.js` |
+| `conditionOnly` | `modules/vehicle/sparepart-servis.js` |
 | `conditionResult` | `modules/vehicle/servis.js` |
 | `conditionResult` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `conditionResultEl` | `modules/vehicle/servis.js` |
@@ -5029,6 +5033,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `da` | `modules/vehicle/sparepart-servis.js` |
 | `daftarEl` | `modules/asset/aset-reports.js` |
 | `dailyWorkRate` | `modules/finance/cash-projection.js` |
+| `damaged` | `modules/vehicle/sparepart-servis.js` |
 | `dana` | `modules/asset/aset-misc.js` |
 | `danaDarurat` | `modules/self-reward/self-reward-engine.js` |
 | `DanaDaruratAI` | `modules/shared/modules-calc.js` |
@@ -8260,6 +8265,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `isSelf` | `modules/finance/finance-intelligence.js` |
 | `isServiceComponentNotApplicable` | `modules/vehicle/service-maintenance-guidance.js` |
 | `isServiceEventForVehicle` | `modules/vehicle/service-event-adapter.js` |
+| `isServiceIntervalResetAction` | `modules/vehicle/sparepart-servis.js` |
 | `isServis` | `modules/shared/backup-restore.js` |
 | `isShopStockCatName` | `modules/finance/tx-cobek.js` |
 | `isSparepartSubName` | `modules/finance/transaksi.js` |
@@ -8983,6 +8989,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `late` | `modules/ai/feature-insights.js` |
 | `latest` | `modules/finance/piutang-utang.js` |
 | `latest` | `modules/finance/worthit.js` |
+| `latest` | `modules/vehicle/sparepart-servis.js` |
 | `latest` | `modules/vehicle/service-maintenance-engine.js` |
 | `latest` | `modules/vehicle/fuel-intelligence-ui.js` |
 | `latest` | `modules/dashboard-hub/dashboard-hub.js` |
@@ -9965,6 +9972,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `modalNum` | `modules/shop/business-flow-presenter.js` |
 | `modalOk` | `diagnostik-versi.js` |
 | `modalV` | `diagnostik-versi.js` |
+| `mode` | `modules/vehicle/sparepart-servis.js` |
+| `mode` | `modules/vehicle/servis-b.js` |
 | `modeBtn` | `modules/shared/modules-render.js` |
 | `modeBtn` | `modules/finance/cashflow-projection-presenter.js` |
 | `model` | `modules/vehicle/vehicle-part-sot.js` |
@@ -10523,6 +10532,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `norm` | `modules/shared/backup-restore.js` |
 | `norm` | `modules/vehicle/service-category-sot-reconciliation-s2007.js` |
 | `norm` | `modules/vehicle/servis-checklist.js` |
+| `norm` | `modules/vehicle/servis-b.js` |
 | `norm` | `modules/asset/investasi.js` |
 | `norm` | `modules/finance/finance-category-sot.js` |
 | `norm` | `modules/vehicle/service-legacy-mapping-s2163.js` |
@@ -10530,6 +10540,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `normal` | `modules/finance/worthit.js` |
 | `normalize` | `modules/shared/backup-restore.js` |
 | `normalize` | `modules/vehicle/service-input-catalog.js` |
+| `normalizeAction` | `modules/vehicle/service-legacy-maintenance.js` |
 | `normalizeAmtToken` | `modules/shared/kalkulator-input.js` |
 | `normalized` | `modules/shared/multi-owner-engine.js` |
 | `normalized` | `modules/shared/backup-restore.js` |
@@ -10549,6 +10560,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `normalizeOcrNumber` | `pajak-aset-ui-wrappers.js` |
 | `normalizeOptions` | `modules/vehicle/ride-activity-metrics.js` |
 | `normalizer` | `modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js` |
+| `normalizeServiceActionType` | `modules/vehicle/sparepart-servis.js` |
 | `normalizeTrackpoint` | `modules/vehicle/ride-gps-recorder.js` |
 | `normType` | `modules/shared/multi-owner-engine.js` |
 | `notApplicable` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
@@ -12671,6 +12683,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `raw` | `modules/vehicle/ride-storage.js` |
 | `raw` | `modules/finance/finance-event-outbox.js` |
 | `raw` | `modules/vehicle/vehicle-car-notes-sot-s2071.js` |
+| `raw` | `modules/vehicle/service-legacy-maintenance.js` |
 | `raw` | `modules/vehicle/service-history-evidence-lifecycle-s2022.js` |
 | `raw` | `modules/vehicle/service-history-evidence-provenance-s2024.js` |
 | `raw` | `modules/vehicle/service-provenance-sot.js` |
@@ -13114,6 +13127,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `repairTxCat` | `modules/vehicle/servis.js` |
 | `repairTxId` | `modules/vehicle/servis.js` |
 | `replaceAction` | `modules/vehicle/sparepart-servis.js` |
+| `replaced` | `modules/vehicle/sparepart-servis.js` |
 | `replaced` | `modules/vehicle/servis-checklist.js` |
 | `replaceKm` | `modules/vehicle/sparepart-servis.js` |
 | `replacementPartNumber` | `modules/vehicle/vehicle-catalog-ui.js` |
@@ -13209,6 +13223,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `reserveRes` | `modules/vehicle/fuel-card.js` |
 | `reserveRes` | `modules/vehicle/fuel-intelligence-ui.js` |
 | `reserveRes` | `modules/vehicle/fuel-insight-engine.js` |
+| `resetAction` | `modules/vehicle/service-legacy-maintenance.js` |
 | `resetAllBudgetsConfirm` | `modules/shared/action-wrappers.js` |
 | `resetApp` | `reminder-notif.js` |
 | `resetBillFilter` | `modules/finance/tagihan-kalender.js` |
@@ -17431,10 +17446,12 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `wantAsetDetail` | `ai-chat.js` |
 | `wantAutoHolding` | `modules/asset/aset.js` |
 | `wanted` | `modules/vehicle/service-reminder-package-sot.js` |
+| `wanted` | `modules/vehicle/sparepart-servis.js` |
 | `wanted` | `modules/vehicle/service-session-sot.js` |
 | `wanted` | `modules/vehicle/service-history-audit-package.js` |
 | `wanted` | `modules/vehicle/service-event-sot.js` |
 | `wanted` | `modules/vehicle/servis.js` |
+| `wanted` | `modules/vehicle/service-legacy-maintenance.js` |
 | `wantMonths` | `modules/shared/modules-calc.js` |
 | `wantShopDetail` | `ai-chat.js` |
 | `wantShow` | `modules/vehicle/sparepart-servis-ui.js` |

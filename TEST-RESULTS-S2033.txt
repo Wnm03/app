@@ -1,0 +1,33 @@
+S2031–S2033 CUMULATIVE FINAL VALIDATION
+
+Baseline: app-main (20).zip
+Build: s2033-reset-interval-chain-audit-2553
+HTML cache-bust: 2553
+Service-worker cache: kw-cache-v2553
+
+TARGETED RESET/ACTION/CHAIN TESTS
+28 passed, 0 failed.
+Includes S2031 interval semantics, S2033 explicit action filters/legacy aliases, S2423 artifact propagation, S2152 P4.7 final static gate, and S2552 bundle parity.
+
+FULL REPOSITORY TEST SUITE
+8,888 tests, 8,887 pass, 0 fail, 0 cancelled, 1 skipped, 0 todo.
+Run used TEST_FORCE_RERUN=1; all shards reran against the final accumulated source.
+
+GATES
+PASS: service-sot-integrity-gate.js
+PASS: verify-bundle-freshness.js (A and B)
+PASS: verify-window-expose.js (83 modules)
+PASS: S2552 byte-parity (A and B against pinned esbuild)
+PASS: P4.7 final static gate (25/25)
+PASS: verify-release-hardening.js (npm toolchain PATH)
+PASS: verify-release-ready.js (service SOT, version/cache sync, bundle freshness, deep firewall)
+PASS: architecture-integrity-gate.js
+PASS: verify-patch-integrity.js
+PASS: verify-source-size.js --strict (known oversize warnings remain within configured caps)
+PASS: npm run lint (0 errors; 1,802 warnings)
+
+AUDIT FINDING FIXED
+The full suite exposed a no-filter periksa-conditional matcher regression: inspection logs were falling through to the generic replacement-reset family. Both sparepart-servis.js and servis-b.js now use the inspection axis for this mode. Regression test now passes.
+
+KNOWN EXECUTION LIMITATION
+npm run release:final-gate did not complete inside the execution window at its critical-integrity substep. It is not marked PASS. Full suite and individual release/SOT gates above completed separately.

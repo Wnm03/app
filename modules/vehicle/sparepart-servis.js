@@ -489,11 +489,38 @@ const resetType=getEffectiveResetType(cat);
 if(resetType==='both'||resetType==='time')return'ganti';
 return null;
 }
+function normalizeServiceActionType(value){
+const raw=String(value||'').trim().toLowerCase().replace(/[ _-]+/g,'');
+if(['ganti','diganti','replace','replacement'].includes(raw))return'ganti';
+if(['pasang','pasangbaru','install','installed'].includes(raw))return'pasang';
+if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return'overhaul';
+if(['periksa','cek','check','inspect','inspeksi'].includes(raw))return'periksa';
+if(['bersih','bersihkan','clean','cleaning'].includes(raw))return'bersih';
+if(['setel','setting','adjust','setelulang'].includes(raw))return'setel';
+return raw||'ganti';
+}
+function isServiceIntervalResetAction(value){return['ganti','pasang','overhaul'].includes(normalizeServiceActionType(value));}
 function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
-const effType=log.actionType||'ganti';
+const effType=normalizeServiceActionType(log&&log.actionType);
+// S2033: action filter is authoritative; conditional mode must not turn every
+// non-ganti action into a match for a requested 'periksa' baseline.
+if(actionTypeFilter){
+  const wanted=normalizeServiceActionType(actionTypeFilter);
+  const matched=wanted==='ganti'?isServiceIntervalResetAction(effType):effType===wanted;
+  if(!matched)return false;
+  if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
+  return true;
+}
 if(forReminder&&cat&&cat.actionMode==='periksa-conditional'&&cat.gantiResetsInterval===false&&effType==='ganti')return false;
-if(!actionTypeFilter)return true;
-return effType===actionTypeFilter;
+if(!actionTypeFilter){
+  if(!forReminder)return true;
+  // Conditional reminders use the inspection axis when no explicit filter is supplied.
+  if(cat&&cat.actionMode==='periksa-conditional')return effType==='periksa';
+  const mode=cat&&normalizeServiceActionType(cat.actionMode);
+  if(mode&&mode!=='ganti'&&mode!=='periksa'&&mode!=='alternate'&&mode!=='none'&&mode!=='periconditional')return effType===mode;
+  return isServiceIntervalResetAction(effType);
+}
+return true;
 }
 function suggestNextBusiAction(vehicleId,cat){
 const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat));
@@ -599,6 +626,17 @@ if(typeof ServiceLegacyMaintenance!=='undefined'&&ServiceLegacyMaintenance&&type
 }
 const schedule=getMaintenanceSchedule(vehicleId,cat);
 const resetFilter=resolveResetActionTypeFilter(cat);
+const conditionOnly=!!(cat&&(cat.conditionBased===true||cat.reminderMode==='condition'||cat.maintenanceMode==='condition')||schedule&&(schedule.maintenanceType==='condition'||schedule.rule&&schedule.rule.conditionBased===true));
+if(conditionOnly){
+  const rows=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:[]);
+  const latest=rows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)).slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
+  const action=normalizeServiceActionType(latest&&latest.actionType);
+  const condition=String(latest&&(latest.conditionResult||latest.conditionStatus)||'').toLowerCase();
+  const replaced=!!latest&&isServiceIntervalResetAction(action);
+  const damaged=!replaced&&['rusak','broken','damaged','gagal'].includes(condition);
+  const status=damaged?'rusak':'normal';
+  return {sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'condition',status,statusLabel:damaged?'Rusak':'Normal',statusIcon:damaged?'🔴':'🟢',statusSeverity:damaged?3:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:damaged?'perbaiki':'pantau',maintenanceType:'condition',condition:damaged?'rusak':'normal',sourceHistoryId:latest&&latest.id||null,lastKm:null,lastDate:latest&&latest.date||null};
+}
 const currentKm=Number.isFinite(curKm)?curKm:0;
 const kmPerDaySafe=Number.isFinite(kmPerDay)&&kmPerDay>0?kmPerDay:null;
 const candidates=[];
@@ -613,12 +651,12 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
     }else if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
   }
   if(hasKm){
-    lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):getLastServiceKmForCat(vehicleId,cat,lastFilter,true);
+    lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):(Array.isArray(historyRows)?null:getLastServiceKmForCat(vehicleId,cat,lastFilter,true));
     const traveled=lastKm===null?currentKm:currentKm-lastKm;
     remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
   }
   if(hasMonths||hasDays){
-    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:getLastServiceDateForCat(vehicleId,cat,lastFilter,true);
+    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:(Array.isArray(historyRows)?null:getLastServiceDateForCat(vehicleId,cat,lastFilter,true));
     const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):0;
     if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
     if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}

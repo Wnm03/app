@@ -24,7 +24,7 @@ pass('StockCommandSOT exposed',/g\.StockCommandSOT=api;/.test(B));
 pass('Service SOT exposed',/window\.VehicleServiceSOT=VehicleServiceSOT;/.test(B));
 pass('Service SOT ready API',/ensureReady:vehicleServiceSotEnsureReady/.test(B)&&/isReady:vehicleServiceSotIsReady/.test(B));
 pass('Service interval writer delegates to SOT',/VehicleCarNotesSOT\.setServiceInterval\(vid,cat/.test(B));
-const versions=[...new Set((A+B+index+prod+sw).match(/s2041-1-part-sot-hardening-\d+/g)||[])];
+const versions=[...new Set((A+B+index+prod+sw).match(/s\d+-[a-z0-9-]+-\d+/g)||[])];
 pass('single runtime build version',versions.length===1,versions.join(', '));
 const buildNum=((versions[0]||'').match(/-(\d+)$/)||[])[1]||'';
 pass('build version has numeric suffix (version-agnostic, tolerates build bumps)',/^\d+$/.test(buildNum)&&Number(buildNum)>=2170,versions.join(', '));

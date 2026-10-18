@@ -24,7 +24,7 @@ test('S2423 audit executes from an external CWD without depending on process.cwd
   const r = spawnSync(process.execPath, [script], { cwd: '/tmp', encoding: 'utf8' });
   assert.ok(r.status===0||r.status===1, 'audit harus selesai normal atau memblokir release; bukan crash/path error');
   const out = `${r.stdout || ''}${r.stderr || ''}`;
-  assert.match(out, /canonical=s2041-1-part-sot-hardening-\d+/);
+  assert.match(out, /canonical=[a-zA-Z0-9-]+-\d+ html=\d+ production=\d+ sw=\d+/);
   assert.match(out, /app-bundle-b\.min\.js/);
   assert.match(out, /S2423 ARTIFACT PROPAGATION: (PASS|BLOCKED)/);
 });
