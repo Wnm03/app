@@ -127,20 +127,21 @@
       "linkCat": true,
       "actionMode": "alternate",
       "resetType": "km",
-      "intervalKm": 4000,
+      "intervalKm": 8000,
       "intervalTimeMonths": null,
       "gantiResetsInterval": null,
-      "intervalLabel": "Periksa 4.000 km · Ganti 8.000 km (bergantian tiap 4.000 km)",
+      "intervalLabel": "Periksa 4.000 km · Ganti 8.000 km (aksi bergantian; sumbu pemeriksaan/penggantian terpisah)",
       "sumber": "TORSI_DB",
       "needsReview": false,
       "catatan": "",
-      "catatanTambahan": "Kode yang dicantumkan user: NGK CPR9EA-9 atau Denso U27EPR9.",
+      "catatanTambahan": "Interval replacement SOT 8.000 km; inspection cadence 4.000 km. Independent axes to preserve alternating action history.",
       "catalogRefs": [],
       "vehicleTypeScope": null,
       "bodyTypeScope": null,
       "modelScope": null,
       "universal": true,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "servis-mesin",
@@ -278,9 +279,9 @@
       "gantiResetsInterval": true,
       "intervalLabel": "Periksa 8.000 km · Ganti 32.000 km",
       "sumber": "TORSI_DB",
-      "needsReview": true,
-      "catatan": "Pola alternate vs 2-interval-independen belum diputuskan -- lihat PERBAIKAN-JENIS-TINDAKAN-CHECKLIST-SERVIS.md §2b catatan pola 3. actionMode:\"ganti\" di sini SEMENTARA (perilaku lama, bukan keputusan final).",
-      "catatanTambahan": "Daftar tambahan user: periksa 8.000 km, ganti 24.000 km untuk KZR 2012; kode sabuk KZR; berbeda dari metadata checklist existing 32.000 km dan tidak menimpa canonical SoT.",
+      "needsReview": false,
+      "catatan": "Policy S2151: interval sumbu independen. Pedoman penggantian 24.000 km hanya untuk Honda Vario Techno 125 KZR tahun 2012; model lain tetap mengikuti interval master/SOT. Interval manual tidak ditimpa.",
+      "catatanTambahan": "Daftar tambahan user: periksa 8.000 km, ganti 24.000 km untuk KZR 2012; aturan cakupan model/tahun khusus, tidak global.",
       "catalogRefs": [],
       "vehicleTypeScope": [
         "motor"
@@ -290,7 +291,26 @@
       ],
       "modelScope": null,
       "universal": false,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent",
+      "intervalGuidelineOverrides": [
+        {
+          "modelIds": [
+            "kzr"
+          ],
+          "modelNamePatterns": [
+            "kzr",
+            "vario techno 125"
+          ],
+          "modelYears": [
+            2012
+          ],
+          "intervalKm": 24000,
+          "intervalTimeMonths": null,
+          "source": "USER_ACCUMULATED_LIST_2026-09-12",
+          "reason": "KZR 2012 guideline: inspect 8,000 km; replace 24,000 km. Applies only when model/year match; manual SOT remains authoritative."
+        }
+      ]
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -299,12 +319,12 @@
       "componentId": "slide-piece-cvt",
       "componentName": "Slide Piece CVT",
       "linkCat": true,
-      "actionMode": "periksa",
+      "actionMode": "periksa-conditional",
       "resetType": "km",
       "intervalKm": 8000,
       "intervalTimeMonths": null,
-      "gantiResetsInterval": null,
-      "intervalLabel": "Periksa 8.000 km · ganti bersamaan dengan roller bila aus",
+      "gantiResetsInterval": true,
+      "intervalLabel": "Interval 8.000 km sejak penggantian; periksa berkala dan ganti bila aus",
       "sumber": "USER_ACCUMULATED_LIST_2026-09-12",
       "needsReview": false,
       "catatan": "Klip plastik/guide pin pada blok pulley depan.",
@@ -360,11 +380,11 @@
       "intervalKm": 24000,
       "intervalTimeMonths": null,
       "gantiResetsInterval": true,
-      "intervalLabel": "Ganti ±24.000 km",
-      "sumber": "FALLBACK_KEYWORDS",
+      "intervalLabel": "Periksa 12.000 km · Ganti 24.000 km (interval penggantian dapat diubah manual)",
+      "sumber": "USER_POLICY_S2152",
       "needsReview": false,
-      "catatan": "",
-      "catatanTambahan": "Daftar user: periksa 8.000 km; standar KZR 18 g; substitusi 15 g disebut untuk akselerasi. Interval ganti 12.000–15.000 km versi user berbeda dari metadata existing ±24.000 km; tidak menimpa SoT.",
+      "catatan": "Policy S2152: pemeriksaan terjadwal setiap 12.000 km; interval penggantian default 24.000 km mengikuti SOT kendaraan dan dapat diubah manual per kendaraan. Penggantian mereset baseline penggantian, bukan jadwal pemeriksaan.",
+      "catatanTambahan": "Interval sumbu independen: inspeksi 12.000 km; penggantian default 24.000 km; nilai manual pada SOT kendaraan tetap otoritatif.",
       "catalogRefs": [],
       "vehicleTypeScope": [
         "motor"
@@ -374,7 +394,8 @@
       ],
       "modelScope": null,
       "universal": false,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "servis-cvt",
@@ -439,12 +460,12 @@
       "componentId": "seal-driven-face",
       "componentName": "Seal Driven Face (O-Ring & Karet)",
       "linkCat": true,
-      "actionMode": "periksa",
+      "actionMode": "periksa-conditional",
       "resetType": "km",
       "intervalKm": 12000,
       "intervalTimeMonths": null,
-      "gantiResetsInterval": null,
-      "intervalLabel": "Periksa 12.000 km · ganti bila bocor/aus",
+      "gantiResetsInterval": true,
+      "intervalLabel": "Interval 12.000 km sejak penggantian; periksa berkala dan ganti bila bocor/aus",
       "sumber": "USER_ACCUMULATED_LIST_2026-09-12",
       "needsReview": false,
       "catatan": "",
@@ -709,20 +730,21 @@
       "linkCat": true,
       "actionMode": "periksa-conditional",
       "resetType": "km",
-      "intervalKm": 12000,
+      "intervalKm": 48000,
       "intervalTimeMonths": null,
-      "gantiResetsInterval": false,
-      "intervalLabel": "Periksa 12.000 km · ganti 48.000 km atau bila tekanan turun",
+      "gantiResetsInterval": true,
+      "intervalLabel": "Periksa 12.000 km · Ganti 48.000 km atau bila tekanan turun",
       "sumber": "USER_ACCUMULATED_LIST_2026-09-12",
       "needsReview": false,
-      "catatan": "Tekanan bahan bakar yang disebut dalam daftar tambahan: sekitar 294 kPa.",
+      "catatan": "Tekanan bahan bakar yang disebut dalam daftar tambahan: sekitar 294 kPa. Active SOT owns replacement interval; inspection cadence remains 12.000 km.",
       "catatanTambahan": "",
       "catalogRefs": [],
       "vehicleTypeScope": null,
       "bodyTypeScope": null,
       "modelScope": null,
       "universal": true,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "sistem-bahan-bakar",
@@ -853,10 +875,10 @@
       "linkCat": true,
       "actionMode": "periksa-conditional",
       "resetType": "both",
-      "intervalKm": 4000,
+      "intervalKm": 24000,
       "intervalTimeMonths": 24,
       "gantiResetsInterval": true,
-      "intervalLabel": "Periksa 4.000 km · Ganti 2 tahun",
+      "intervalLabel": "Periksa 4.000 km · Ganti 24.000 km atau 2 tahun",
       "sumber": "TORSI_DB",
       "needsReview": false,
       "catatan": "",
@@ -866,7 +888,8 @@
       "bodyTypeScope": null,
       "modelScope": null,
       "universal": true,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "sistem-pengereman",
@@ -1069,12 +1092,12 @@
       "componentId": "engine-mounting-bushing-arm",
       "componentName": "Engine Mounting & Bushing Arm",
       "linkCat": true,
-      "actionMode": "periksa",
+      "actionMode": "periksa-conditional",
       "resetType": "km",
       "intervalKm": 12000,
       "intervalTimeMonths": null,
-      "gantiResetsInterval": null,
-      "intervalLabel": "Periksa 12.000 km · ganti bila getas/aus",
+      "gantiResetsInterval": true,
+      "intervalLabel": "Interval 12.000 km sejak penggantian; periksa berkala dan ganti bila getas/aus",
       "sumber": "USER_ACCUMULATED_LIST_2026-09-12",
       "needsReview": false,
       "catatan": "",
@@ -1124,7 +1147,7 @@
       "intervalKm": 15000,
       "intervalTimeMonths": null,
       "gantiResetsInterval": null,
-      "intervalLabel": "Cek ulang usia pakai ±15.000 km",
+      "intervalLabel": "Periksa voltase tiap 4.000 km · evaluasi usia pakai sekitar 15.000 km",
       "sumber": "FALLBACK_KEYWORDS",
       "needsReview": false,
       "catatan": "Daftar tambahan: 12V 5Ah; voltase normal 12,4–12,8V; periksa voltase tiap 4.000 km.",
@@ -1134,7 +1157,8 @@
       "bodyTypeScope": null,
       "modelScope": null,
       "universal": true,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "kelistrikan",
@@ -1196,7 +1220,7 @@
       "intervalKm": 20000,
       "intervalTimeMonths": null,
       "gantiResetsInterval": null,
-      "intervalLabel": "Periksa kondisi/TWI tiap 4.000 km · usia pakai ±20.000 km",
+      "intervalLabel": "Periksa kondisi/TWI tiap 4.000 km · usia pakai ±20.000 km; tekanan tiap 2 minggu",
       "sumber": "Datanya lengkap (GENERIC+FALLBACK), sengaja false ikut RENCANA §3",
       "needsReview": true,
       "catatan": "Daftar tambahan: tekanan acuan Depan 29 psi, Belakang 33 psi; cek tekanan rutin tiap 2 minggu. linkCat bisa naik jadi true kapan saja (kategori \"Ban Depan\" sudah ada) -- lihat VERIFIKASI §4 poin a.",
@@ -1206,7 +1230,8 @@
       "bodyTypeScope": null,
       "modelScope": null,
       "universal": true,
-      "scopeStatus": "confirmed"
+      "scopeStatus": "confirmed",
+      "intervalAxes": "independent"
     },
     {
       "masterCategoryId": "roda",
@@ -1220,7 +1245,7 @@
       "intervalKm": null,
       "intervalTimeMonths": null,
       "gantiResetsInterval": null,
-      "intervalLabel": "Periksa kondisi/TWI tiap 4.000 km · usia pakai ±16.000–20.000 km (lebih cepat aus krn traksi CVT)",
+      "intervalLabel": "Periksa kondisi/TWI tiap 4.000 km · tekanan tiap 2 minggu; ganti berdasarkan keausan (perkiraan usia pakai 16.000–20.000 km, bukan interval baku)",
       "sumber": "Gap §2.3",
       "needsReview": false,
       "catatan": "",
