@@ -569,8 +569,20 @@ return days==null?null:days/30.4368;
 function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
   if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   const schedule=getMaintenanceSchedule(vehicleId,cat);
+  const action=normalizeServiceActionType(actionType||'ganti');
+  const inspectAction=normalizeServiceActionType(schedule&&schedule.inspectAction||'periksa');
+  const replaceAction=normalizeServiceActionType(schedule&&schedule.replaceAction||'ganti');
+  const hasInspectAxis=!!(schedule&&(Number(schedule.inspectKm)>0||Number(schedule.inspectMonths)>0||Number(schedule.inspectDays)>0));
+  const actionHasOwnAxis=!!(schedule&&hasInspectAxis&&action===inspectAction);
+  // Inspection/cleaning/condition notes must not become a new replacement baseline.
+  // Keep explicit inspection-only schedules (e.g. clean-only components) on their own axis.
+  if(!isServiceIntervalResetAction(action)&&!actionHasOwnAxis){
+    const previousReset=typeof getLatestServiceLogForCat==='function'?getLatestServiceLogForCat(vehicleId,cat,'ganti',true):null;
+    if(!previousReset)return{nextDueKm:null,nextDueDate:null,nextDueAxis:'none',intervalKmAtService:null,intervalBulanAtService:null};
+    return buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:previousReset.km,serviceDate:previousReset.date,actionType:previousReset.actionType||'ganti'});
+  }
   let intervalKm=null,intervalBulan=null;
-  if(schedule){const act=String(actionType||'').trim().toLowerCase(),im=act&&act===String(schedule.inspectAction||'periksa').toLowerCase(),rm=act&&act===String(schedule.replaceAction||'ganti').toLowerCase();intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:schedule.replaceKm||schedule.inspectKm||null;intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:schedule.replaceMonths||schedule.inspectMonths||null;}
+  if(schedule){const im=actionHasOwnAxis,rm=isServiceIntervalResetAction(action)||action===replaceAction;intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:(im?null:(schedule.replaceKm||null));intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:(im?null:(schedule.replaceMonths||null));}
   else{intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);}
   const km=Number(serviceKm);
   const baseDate=parseServiceDateOnly(serviceDate||new Date());

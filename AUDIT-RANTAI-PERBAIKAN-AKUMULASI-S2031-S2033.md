@@ -39,3 +39,8 @@ Status: **PATCH KUMULATIF LAYAK DIUJI/DIINTEGRASIKAN, DENGAN CATATAN FINAL-GATE 
 - Tidak ada backup pengguna yang dimodifikasi.
 - Perubahan dibatasi pada matcher reset interval, tes kontrak/regresi, audit build-version yang sebelumnya terlalu spesifik, bundle hasil build, cache/version, dan dokumentasi hasil.
 - Jangan mengunggah hanya HTML atau SW: seluruh file dalam ZIP patch harus diterapkan bersama agar source, bundle, dan cache tetap konsisten.
+
+
+## Addendum S2034 — Baseline interval action semantics
+
+Cleaning and a good-condition inspection must not reset the replacement interval. `buildServiceNextDueSnapshot()` now reuses the latest reset-action history for non-reset actions, while preserving explicit inspection/clean-only schedules. A new S2034 regression test covers cleaning, inspection with condition `baik`, and replacement. Targeted tests: 16/16 PASS; bundle freshness and window-expose gates PASS. Build version synchronized to `s2033-reset-interval-chain-audit-2554` / cache `kw-cache-v2554`.
