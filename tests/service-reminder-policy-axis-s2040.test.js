@@ -56,3 +56,17 @@ test('S2040 root: canonical conditional=true removes stale inspection axis and u
   assert.equal(u.nextDueKm,14000);
   assert.equal(u.nextAction,'ganti');
 });
+
+test('S2041 root: persisted checklist interval follows active SOT, not stale master interval',()=>{
+  const {ctx,cat}=contextFor('oli-mesin',{actionMode:'ganti',gantiResetsInterval:true},[
+    {date:'2026-10-13',km:235066,actionType:'ganti'}
+  ]);
+  // Reproduce real backup conflict: vehicle SOT/manual interval is 3000 km,
+  // while category/master projection still advertises 4000 km.
+  ctx.VehicleCarNotesSOT.setServiceInterval('v1',cat,{intervalKm:3000,source:'manual'});
+  assert.equal(ctx.getEffectiveIntervalKm('v1',cat),3000);
+  assert.equal(ctx.resolveServiceEventIntervalSnapshotValue('v1',cat,{intervalKm:4000},'km'),3000);
+  const snap=ctx.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:235066,serviceDate:'2026-10-13',actionType:'ganti'});
+  assert.equal(snap.nextDueKm,238066);
+  assert.equal(snap.intervalKmAtService,3000);
+});
