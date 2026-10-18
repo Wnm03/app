@@ -1,0 +1,23 @@
+PATCH S2040 — cumulative root-cause service interval fix
+Baseline: app-main (22).zip
+Build: 2560
+Files are overlay-only; no backups or test checkpoints included.
+SHA-256:
+e53827afac9138432e40c2abbddfdcd2027cecdb552e655ebe5f03f84c31a14b  PATCH-README-S2040.md
+b708c709d7566a1bc3c4d38659af1c667cd11964f9409c2b36239f14cea84e29  app-bundle-a.min.js
+2df048fa45908be77284a5e8cbfa1591313c4bbacfa5eb0ddc2e1d6b18e22f11  app-bundle-b.min.js
+4b945aec81fd1700765e7f5816fdfd39c80b8d5f72dc9ca482b051c3b0b5fb71  app_production.html
+78a663118d181adab719a20c03e5290f5173d3fbc55243968daef364d6aa59ab  chat-action-handlers.js
+2ebece49e1769135b4db2c27441101d28f47d59cb5340d4ab4653431033a5a12  docs/COVERAGE-PER-MODULE.md
+28c4f84a405ca078a7abda27e560a2aa4b6428ed69717b8975becd6aabfdfcb6  docs/FILE-MAP.md
+64dbd6664e91320df2a7ff3d5272fd68bacb1fc56210ec7265469ce5af86dac3  index.html
+d6284a16807c7a305f5c6bc80d8d5254fa1eb913007ebc2ad64268fe7fd1c483  modules/shared/features-helpers-global-security.js
+41b78edfcec1556c16b24412c2db31c79b6e325f38709f88e786e35773fe02d3  modules/shared/modals.js
+ec4cc787f7835a8aec5d5aa5e0cc46ee1ab500442e6e333d107efdb696d501e2  modules/shared/modules-calc.js
+fd85f4fd4121a37aaa89109b006cae47d0baa7bb8a20373be29f5d06d25a679e  modules/shared/modules-render.js
+77c53be984386f52aa35b75722a7d8a660d106ad538e620178c6e2e15a13e06c  modules/vehicle/servis.js
+ce19cc0da3f63b2944d0d911de3f6ffeb77aa3774ca0ff872f2e451bda932cd7  modules/vehicle/sparepart-servis.js
+756a45a9c48ab74a240533fe7fc261e93795c1c6152a840c2691e403ac656808  sw.js
+d2b7483483844a9462937102711bd278f78d2b98d6fc95f77626781515762b2c  tests/service-component-reminder-history-regression-s2012.test.js
+d4532dbaa125ea043de5eb9919ac2296fa6c1b3af20361bd1c0725eddba071e9  tests/service-reminder-policy-axis-s2040.test.js
+610649ff36decc43b84b46fd7df3e74dafd6218dc32aa4b002542a1eea5968da  tests/service-reminder-reset-action-s2033-regression.test.js
