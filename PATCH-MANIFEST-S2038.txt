@@ -1,0 +1,21 @@
+S2038 — INTERVAL SERVIS / PENGINGAT RESET SEMANTICS
+Baseline: app-main (22).zip
+Format: overlay-only patch; paths are relative to application root.
+
+PATCH-README-S2038.md	1759	sha256=59fe1f65210962d2d7405f8680719a30181b09d4cef89b574026b35f119c2cda
+app-bundle-a.min.js	1042349	sha256=18b69c85eda3ed1f8aacf9bf4caf605dc7320961d3198a8610a5f8522d961e51
+app-bundle-b.min.js	2479949	sha256=40d54a3fd26ee2a97f50fa05cf195d5b8eb3ed4a74ce73888a7901ab30e3e2dd
+app_production.html	315556	sha256=057178188efb4832d3b19bed176233b6d798f1db461078478d7a9b6d76748883
+chat-action-handlers.js	10562	sha256=9be00e86bc9fbb37c555e107c7654e90ab62e9f389c65e17eb00299f94e889b2
+docs/COVERAGE-PER-MODULE.md	1781	sha256=645f1277261904174ee21525c9c817c8b33c19682bc388b2e4a263a656701697
+docs/FILE-MAP.md	1090685	sha256=9f5c9a73344088a810047b29e381b3eaaea8bfac189c34698ab4650487c1e8c4
+index.html	315363	sha256=638c40b44424c78687b14c4f0df6c8230b5c5a0f7426642abf6d251d09a1d832
+modules/shared/features-helpers-global-security.js	109755	sha256=42bee6b83806ebfe8b2f71a13e664ecfe3dbf73ba68f65991540dc8465f14a84
+modules/shared/modals.js	308492	sha256=ffc681d19a809a22450b691f2f42723906b05e7de84448fff850507bbad5db54
+modules/shared/modules-calc.js	72729	sha256=267c7ac1b7b88c6fb9a82b602ce3adede4cef3632b002117d5ebb5d89f88f138
+modules/shared/modules-render.js	104861	sha256=15a72657b2b39ed9a6b93cf678ad86aa30b699156ed1cf87648066cea94fcb0c
+modules/vehicle/sparepart-servis.js	82090	sha256=33323c069c45f7740c9136b5557d7aff67f62fd318271949e676f3b1926d3d25
+sw.js	3631	sha256=2309e54d40bed2326359aa71c32b5f85e861471a565580e0e26318aa540878e9
+tests/service-component-reminder-history-regression-s2012.test.js	7481	sha256=ac8c0a7b56676be7dc0e015d5980be4b52f7cb5b351a90fb4a72a8d06be29afd
+
+Total payload files (including README, excluding this manifest): 15
