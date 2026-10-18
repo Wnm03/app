@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-18T10:58:45.869Z
-Total file source: 487 · Total identifier global: 17247
+Terakhir digenerate: 2026-10-18T11:27:57.454Z
+Total file source: 487 · Total identifier global: 17252
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1330 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1344 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -3881,6 +3881,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `categorySeen` | `modules/finance/financial-audit-engine.js` |
 | `categoryStitched` | `modules/vehicle/vehicle-catalog-import.js` |
 | `CategoryStore` | `modules/shop/generic/category-store.js` |
+| `categoryValue` | `modules/vehicle/sparepart-servis.js` |
 | `catEl` | `modules/finance/worthit.js` |
 | `catEl` | `modules/shared/scan-ocr.js` |
 | `catEl` | `modules/finance/filter-laporan.js` |
@@ -5779,6 +5780,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `eff` | `modules/vehicle/fuel-maintenance-engine.js` |
 | `eff` | `modules/vehicle/fuel-trend-dashboard.js` |
 | `eff` | `modules/ai/ai-core.js` |
+| `effective` | `modules/vehicle/sparepart-servis.js` |
 | `effectiveComponentFilter` | `modules/vehicle/servis.js` |
 | `effectiveDiskon` | `modules/shop/cobek-order.js` |
 | `effectiveDiskon` | `modules/business/kasir.js` |
@@ -9731,6 +9733,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `masterMonths` | `modules/vehicle/service-history-checklist-edit-s2036.js` |
 | `masterPolicy` | `modules/vehicle/sparepart-servis.js` |
 | `masters` | `modules/vehicle/service-reminder-package-sot.js` |
+| `masterValue` | `modules/vehicle/sparepart-servis.js` |
 | `masuk` | `modules/business/payroll-absensi.js` |
 | `masuk` | `modules/business/tukang-absensi.js` |
 | `masuk` | `modules/finance/dana-titipan-portfolio-render.js` |
@@ -10055,6 +10058,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `months` | `modules/finance/cash-projection.js` |
 | `months` | `modules/vehicle/vehicle-sot-fleet-integrity.js` |
 | `months` | `modules/vehicle/service-interval-policy.js` |
+| `months` | `modules/vehicle/sparepart-servis.js` |
 | `months` | `modules/vehicle/servis-b.js` |
 | `months` | `economic-intelligence/adapters/user-finance-adapter.js` |
 | `MONTHS` | `modules/shared/helper-teks.js` |
@@ -13302,6 +13306,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `resolveReminderCategory` | `car-notes.js` |
 | `resolveResetActionTypeFilter` | `modules/vehicle/sparepart-servis.js` |
 | `resolveServiceCategoryComponent` | `modules/vehicle/sparepart-servis.js` |
+| `resolveServiceEventIntervalSnapshotValue` | `modules/vehicle/sparepart-servis.js` |
 | `resolveServiceStatusMeta` | `modules/vehicle/sparepart-servis.js` |
 | `resolveServisCatForVehicle` | `modules/vehicle/sparepart-servis.js` |
 | `resolveServisCatForVehicle` | `modules/vehicle/service-history-context-s2018.js` |
