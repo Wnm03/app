@@ -573,13 +573,24 @@ function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,action
   if(schedule){const act=normalizeServiceActionType(actionType),inspect=normalizeServiceActionType(schedule.inspectAction||'periksa'),replace=normalizeServiceActionType(schedule.replaceAction||'ganti'),im=act===inspect,rm=act===replace;intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:schedule.replaceKm||schedule.inspectKm||null;intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:schedule.replaceMonths||schedule.inspectMonths||null;}
   else{intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);}
   const action=normalizeServiceActionType(actionType);
+  const inspectAction=normalizeServiceActionType(schedule&&schedule.inspectAction||'periksa');
+  const replaceAction=normalizeServiceActionType(schedule&&schedule.replaceAction||'ganti');
+  const hasInspectAxis=!!(schedule&&(Number(schedule.inspectKm)>0||Number(schedule.inspectMonths)>0||Number(schedule.inspectDays)>0));
+  const hasReplaceAxis=!!(schedule&&(Number(schedule.replaceKm)>0||Number(schedule.replaceMonths)>0||Number(schedule.replaceDays)>0));
+  // A scheduled action resets only its own maintenance axis. E.g. cleaning a
+  // clean-only component resets its cleaning interval, but cleaning a filter
+  // must never reset the filter's replacement age.
+  const resetsOwnAxis=!!(schedule&&((hasInspectAxis&&action===inspectAction)||(hasReplaceAxis&&action===replaceAction))) || (!schedule&&isServiceIntervalResetAction(action));
   let baseKm=Number(serviceKm);
   let baseDate=parseServiceDateOnly(serviceDate||new Date());
-  // Inspection/cleaning/condition checks must not move the replacement baseline.
-  // Derive the due snapshot from the latest actual reset event for this same component.
-  if(!isServiceIntervalResetAction(action)){
+  if(!resetsOwnAxis){
+    // Select history from the same axis. Inspection/cleaning history is not a
+    // substitute for replacement history, and vice versa.
+    const axisAction= schedule&&hasInspectAxis&&action===inspectAction ? inspectAction : replaceAction;
     const prior=(Array.isArray(D.servisLogs)?D.servisLogs:[])
-      .filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&isServiceIntervalResetAction(s.actionType))
+      .filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&(
+        axisAction==='ganti' ? isServiceIntervalResetAction(s.actionType) : normalizeServiceActionType(s.actionType)===axisAction
+      ))
       .slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
     if(prior){
       baseKm=prior.km!=null&&Number.isFinite(Number(prior.km))?Number(prior.km):NaN;
