@@ -10,7 +10,7 @@ test('S2397 generated master data preserves exact legacy shape lazily',()=>{
   const gen=require('../modules/vehicle/service-master-data.generated.js');
   assert.deepStrictEqual(gen.SERVICE_MASTER_DATA,src);
   assert.equal(gen.SERVICE_CHECKLIST_GROUPS.length,13);
-  assert.equal(gen.SERVICE_MASTER_CHECKSUM,'6149d6f1dc467ea334f9cd78a69b7850de19f41c5bbf1f0923a5f8b608898810');
+  assert.equal(gen.SERVICE_MASTER_CHECKSUM,'44e8bc240b84e5088a4be108078462e54366151d4a63ab01086b1a80f45efb69');
 });
 
 test('S2397 generated artifact exposes checklist groups eagerly but master payload lazily',()=>{

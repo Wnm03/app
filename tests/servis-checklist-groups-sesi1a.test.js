@@ -122,10 +122,10 @@ test('SERVICE_CHECKLIST_GROUPS: tiap item punya intervalLabel & sumber non-koson
   }
 });
 
-test('SERVICE_CHECKLIST_GROUPS: item bertanda needsReview pada cumulative master persis 5 -- V-Belt CVT, Coolant, Ban Depan, Oil Pump, Bearing Swingarm', () => {
+test('SERVICE_CHECKLIST_GROUPS: item needsReview hanya menandai kebijakan yang masih terbuka setelah S2152', () => {
   const items = flatten(GROUPS);
   const flagged = items.filter((it) => it.needsReview === true).map((it) => it.name).sort();
-  assert.deepEqual(flagged, ['Ban Depan', 'Bearing Swingarm', 'Coolant', 'Oil Pump', 'V-Belt CVT'].sort());
+  assert.deepEqual(flagged, ['Ban Depan', 'Bearing Swingarm', 'Coolant', 'Oil Pump'].sort());
 });
 
 test('SERVICE_CHECKLIST_GROUPS: urutan grup persis 13 sistem AUDIT-SERVICE-CHECKLIST-COVERAGE.md', () => {
