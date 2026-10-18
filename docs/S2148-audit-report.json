@@ -1,0 +1,113 @@
+{
+  "version": "S2148",
+  "mode": "read-only-audit",
+  "source": "data/database-kategori-komponen-servis.json",
+  "componentsScanned": 102,
+  "findings": [
+    {
+      "componentId": "busi",
+      "name": "Busi",
+      "declaredIntervalKm": 4000,
+      "mentionedIntervalsKm": [
+        4000,
+        8000
+      ],
+      "needsReview": false,
+      "source": "TORSI_DB",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "v-belt-cvt",
+      "name": "V-Belt CVT",
+      "declaredIntervalKm": 32000,
+      "mentionedIntervalsKm": [
+        8000,
+        32000,
+        24000
+      ],
+      "needsReview": true,
+      "source": "TORSI_DB",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "roller-cvt",
+      "name": "Roller CVT",
+      "declaredIntervalKm": 24000,
+      "mentionedIntervalsKm": [
+        24000,
+        8000
+      ],
+      "needsReview": false,
+      "source": "FALLBACK_KEYWORDS",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "filter-fuel-pump",
+      "name": "Filter Fuel Pump (Saringan Bensin)",
+      "declaredIntervalKm": 12000,
+      "mentionedIntervalsKm": [
+        12000,
+        48000
+      ],
+      "needsReview": false,
+      "source": "USER_ACCUMULATED_LIST_2026-09-12",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "minyak-rem",
+      "name": "Minyak Rem",
+      "declaredIntervalKm": 4000,
+      "mentionedIntervalsKm": [
+        4000,
+        24000
+      ],
+      "needsReview": false,
+      "source": "TORSI_DB",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "stel-grease-komstir",
+      "name": "Stel/Grease Bearing Komstir",
+      "declaredIntervalKm": null,
+      "mentionedIntervalsKm": [
+        12000
+      ],
+      "needsReview": false,
+      "source": "Gap — tidak ada di TORSI_DB sbg interval",
+      "reason": "interval-mentioned-but-not-canonicalized"
+    },
+    {
+      "componentId": "aki",
+      "name": "Aki",
+      "declaredIntervalKm": 15000,
+      "mentionedIntervalsKm": [
+        4000
+      ],
+      "needsReview": false,
+      "source": "FALLBACK_KEYWORDS",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "ban-depan",
+      "name": "Ban Depan",
+      "declaredIntervalKm": 20000,
+      "mentionedIntervalsKm": [
+        4000
+      ],
+      "needsReview": true,
+      "source": "Datanya lengkap (GENERIC+FALLBACK), sengaja false ikut RENCANA §3",
+      "reason": "interval-label-or-notes-conflict"
+    },
+    {
+      "componentId": "ban-belakang",
+      "name": "Ban Belakang",
+      "declaredIntervalKm": null,
+      "mentionedIntervalsKm": [
+        4000
+      ],
+      "needsReview": false,
+      "source": "Gap §2.3",
+      "reason": "interval-mentioned-but-not-canonicalized"
+    }
+  ]
+}
