@@ -1093,7 +1093,7 @@ return dateToISO(d);
 // Partial fill tanpa km valid tidak dapat dialokasikan ke segmen dan sengaja diabaikan.
 // Return [] bila belum ada minimal 2 full-tank anchor yang km-nya naik.
 function getFuelFullTankSegments(vehicleId){
-const all=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&isFinite(b.km)&&b.km>0&&b.liter>0);
+const all=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).map(b=>({...b,km:Number(b.km),liter:Number(b.liter),cost:Number(b.cost),harga:Number(b.harga)}));
 const full=all.filter(b=>b.fullTank).sort((a,b)=>a.km-b.km);
 if(full.length<2)return[];
 const segments=[];
@@ -1104,10 +1104,34 @@ if(km<=0)continue;
 const fills=all.filter(b=>b.km>start.km&&b.km<=end.km);
 const liters=fills.reduce((sum,b)=>sum+b.liter,0);
 if(liters<=0)continue;
-const cost=fills.reduce((sum,b)=>sum+(isFinite(b.cost)&&b.cost>0?b.cost:(isFinite(b.harga)&&b.harga>0?b.harga*b.liter:0)),0);
-segments.push({startKm:start.km,endKm:end.km,km,liter:liters,cost,kmPerLiter:km/liters,fillCount:fills.length});
+let cost=0,costedLiter=0;
+for(const b of fills){
+ if(Number.isFinite(b.cost)&&b.cost>0){cost+=b.cost;costedLiter+=b.liter;}
+ else if(Number.isFinite(b.harga)&&b.harga>0){cost+=b.harga*b.liter;costedLiter+=b.liter;}
+}
+segments.push({startKm:start.km,endKm:end.km,km,liter:liters,cost,costedLiter,kmPerLiter:km/liters,fillCount:fills.length});
 }
 return segments;
+}
+
+// getFuelConsumptionSummary — SSOT untuk semua tampilan konsumsi BBM.
+// Filter periode berdasarkan titik akhir segmen; anchor awal tetap berasal dari histori penuh.
+function getFuelConsumptionSummary(vehicleId, options){
+const opts=options||{};
+const from=opts.from?new Date(opts.from).getTime():-Infinity;
+const to=opts.to?new Date(opts.to).getTime():Infinity;
+const segments=getFuelFullTankSegments(vehicleId).filter(seg=>{
+const end=(D.bbmLogs||[]).find(b=>b.vehicleId===vehicleId&&Number(b.km)===seg.endKm&&b.fullTank);
+const t=end&&end.date?new Date(end.date).getTime():NaN;
+return !Number.isFinite(t)||(t>=from&&t<=to);
+});
+if(!segments.length)return null;
+const totalKm=segments.reduce((sum,x)=>sum+Number(x.km||0),0);
+const totalLiter=segments.reduce((sum,x)=>sum+Number(x.liter||0),0);
+if(!(totalKm>0&&totalLiter>0))return null;
+const totalCost=segments.reduce((sum,x)=>sum+(Number.isFinite(x.cost)&&x.cost>0?x.cost:0),0);
+const totalCostedLiter=segments.reduce((sum,x)=>sum+Number(x.costedLiter||0),0);
+return {kmPerLiter:totalKm/totalLiter,totalKm,totalLiter,totalCost,totalCostedLiter,segmentCount:segments.length,segments,method:'full-to-full-total-km-total-liter'};
 }
 
 // estimateRpPerKm — dipakai OngkirCalc.autoFillBiaya() utk isi otomatis "Ongkos/km".
@@ -1131,13 +1155,16 @@ return lo===hi?sorted[lo]:sorted[lo]+(sorted[hi]-sorted[lo])*(pos-lo);
 // diam-diam mengubah angka konsumsi. Outlier segmen tetap DIHITUNG ke SSOT.
 function getFuelDataQuality(vehicleId){
 const logs=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId);
-const valid=logs.filter(b=>Number.isFinite(b.km)&&b.km>0&&Number.isFinite(b.liter)&&b.liter>0);
+const valid=logs.filter(b=>Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0);
 const invalidCount=logs.length-valid.length;
 const ids=new Set(),duplicateIdCount=logs.reduce((n,b)=>{if(!b.id)return n; if(ids.has(b.id))return n+1; ids.add(b.id); return n;},0);
-const chronological=valid.slice().sort((a,b)=>{const da=a.date?new Date(a.date).getTime():0,db=b.date?new Date(b.date).getTime():0;return da-db||a.km-b.km;});
+const duplicateKeys=new Set();
+let possibleDuplicateCount=0;
+for(const b of logs){const km=Number(b.km),liter=Number(b.liter);if(!b.vehicleId||!b.date||!Number.isFinite(km)||km<=0||!Number.isFinite(liter)||liter<=0)continue;const key=[b.vehicleId,b.date,km,liter,Number(b.cost)||0,!!b.fullTank,String(b.spbu||'').trim().toLowerCase()].join('|');if(duplicateKeys.has(key))possibleDuplicateCount++;else duplicateKeys.add(key);}
+const chronological=valid.map(b=>({...b,km:Number(b.km)})).sort((a,b)=>{const da=a.date?new Date(a.date).getTime():0,db=b.date?new Date(b.date).getTime():0;return da-db||a.km-b.km;});
 let odometerBackstepCount=0;
 for(let i=1;i<chronological.length;i++)if(chronological[i].km<chronological[i-1].km)odometerBackstepCount++;
-const partialMissingKmCount=logs.filter(b=>!b.fullTank&&(!Number.isFinite(b.km)||b.km<=0)&&Number.isFinite(b.liter)&&b.liter>0).length;
+const partialMissingKmCount=logs.filter(b=>!b.fullTank&&(!Number.isFinite(Number(b.km))||Number(b.km)<=0)&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).length;
 const segments=getFuelFullTankSegments(vehicleId);
 const eff=segments.map(s=>s.kmPerLiter).filter(Number.isFinite);
 let outlierSegmentIndexes=[];
@@ -1146,16 +1173,17 @@ if(eff.length>=4){
  outlierSegmentIndexes=eff.map((v,i)=>(v<lo||v>hi)?i:-1).filter(i=>i>=0);
 }
 const vehicle=(D.vehicles||[]).find(v=>v.id===vehicleId);
-const capacity=(vehicle&&Number.isFinite(vehicle.fuelTankCapacityLiter)&&vehicle.fuelTankCapacityLiter>0)?vehicle.fuelTankCapacityLiter:null;
-const overCapacityFillCount=capacity?logs.filter(b=>b.fullTank&&Number.isFinite(b.liter)&&b.liter>capacity*1.1).length:0;
+const capacity=(vehicle&&Number.isFinite(Number(vehicle.fuelTankCapacityLiter))&&Number(vehicle.fuelTankCapacityLiter)>0)?Number(vehicle.fuelTankCapacityLiter):null;
+const overCapacityFillCount=capacity?logs.filter(b=>b.fullTank&&Number.isFinite(Number(b.liter))&&Number(b.liter)>capacity*1.1).length:0;
 const flags=[];
 if(invalidCount)flags.push('invalid-log');
 if(duplicateIdCount)flags.push('duplicate-id');
+if(possibleDuplicateCount)flags.push('possible-duplicate');
 if(odometerBackstepCount)flags.push('odometer-backstep');
 if(partialMissingKmCount)flags.push('partial-fill-missing-km');
 if(outlierSegmentIndexes.length)flags.push('segment-outlier');
 if(overCapacityFillCount)flags.push('full-fill-over-capacity');
-return{status:flags.length?'warning':'ok',flags,logCount:logs.length,validLogCount:valid.length,invalidCount,duplicateIdCount,odometerBackstepCount,partialMissingKmCount,segmentCount:segments.length,outlierSegmentIndexes,capacityLiter:capacity,overCapacityFillCount,method:segments.length?'full-to-full-total-km-total-liter':null};
+return{status:flags.length?'warning':'ok',flags,logCount:logs.length,validLogCount:valid.length,invalidCount,duplicateIdCount,possibleDuplicateCount,odometerBackstepCount,partialMissingKmCount,segmentCount:segments.length,outlierSegmentIndexes,capacityLiter:capacity,overCapacityFillCount,method:segments.length?'full-to-full-total-km-total-liter':null};
 }
 function estimateRpPerKm(vehicleId){
 const segments=getFuelFullTankSegments(vehicleId);
@@ -1164,10 +1192,15 @@ const totalKm=segments.reduce((s,x)=>s+x.km,0);
 const totalLiter=segments.reduce((s,x)=>s+x.liter,0);
 if(totalKm<=0||totalLiter<=0)return null;
 const totalCost=segments.reduce((s,x)=>s+x.cost,0);
+const totalCostedLiter=segments.reduce((s,x)=>s+Number(x.costedLiter||0),0);
 const kmPerLiter=totalKm/totalLiter;
-const avgHarga=totalCost>0?totalCost/totalLiter:null;
+// Harga per liter dihitung hanya dari volume yang memiliki biaya/harga valid;
+// estimasi Rp/km kemudian menggunakan harga terukur x konsumsi SSOT, bukan
+// membagi biaya parsial dengan seluruh liter (yang bias terlalu rendah).
+const avgHarga=totalCost>0&&totalCostedLiter>0?totalCost/totalCostedLiter:null;
 if(avgHarga===null)return null;
-return{rpPerKm:totalCost/totalKm,kmPerLiter,avgHarga,totalKm,totalLiter,segmentCount:segments.length,method:'full-to-full-total-km-total-liter',dataQuality:getFuelDataQuality(vehicleId)};
+const rpPerKm=totalCostedLiter===totalLiter?totalCost/totalKm:avgHarga/kmPerLiter;
+return{rpPerKm,kmPerLiter,avgHarga,totalKm,totalLiter,totalCost,totalCostedLiter,segmentCount:segments.length,method:'full-to-full-total-km-total-liter',dataQuality:getFuelDataQuality(vehicleId)};
 }
 // ---------------------------------------------------------------------------
 // Smart Delivery Engine, Sesi 5/6: fuelEfficiency() — fungsi prediktif

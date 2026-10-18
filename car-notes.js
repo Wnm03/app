@@ -340,6 +340,8 @@ if(next&&km>Number(next.km)){toast('⚠️ KM melebihi catatan BBM setelah tangg
 const note=document.getElementById('bbmNote').value;
 const accId=document.getElementById('bbmAcc')?document.getElementById('bbmAcc').value:D.accounts[0]?.id;
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
+const validation=typeof validateFuelLogInput==='function'?validateFuelLogInput({vehicleId:curVehicleId,date,km,liter,existingBbmId:BBM.editId}):{ok:true};
+if(!validation.ok){toast('⚠️ '+validation.reason);return;}
 const noteFull='BBM'+(veh?' '+veh.name:'')+(spbu?' - '+spbu:'')+(note?' - '+note:'');
 const isEdit=BBM.editId!==null;
 const existing=isEdit?D.bbmLogs.find(x=>x.id===BBM.editId):null;
@@ -357,6 +359,7 @@ const result=recordBbmLog({
 vehicleId:curVehicleId,date,km,liter,harga,cost,spbu,fullTank,note,accountId:accId,jenis,
 txId,existingBbmId:isEdit?BBM.editId:null
 });
+if(!result||result.ok===false){toast('⚠️ '+((result&&result.reason)||'Catatan BBM tidak valid'));return;}
 if(isEdit){
 if(wasOrphan){
 FinanceTxSOT.create({id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Bensin',accountId:accId,payMethod:'tunai',note:noteFull,date,bbmLinkId:result.bbmId});
@@ -467,22 +470,9 @@ if(filterSig!==BBM.lastFilterSig){BBM.listPage=1;BBM.lastFilterSig=filterSig;}
 const logs=D.bbmLogs.filter(b=>b.vehicleId===curVehicleId&&new Date(b.date)>=from&&new Date(b.date)<=to).sort((a,b)=>a.km-b.km);
 const totalL=logs.reduce((s,b)=>s+b.liter,0);
 const totalCost=logs.reduce((s,b)=>s+b.cost,0);
-let avgKmL=0;
-const fullIdx=logs.map((b,i)=>b.fullTank?i:-1).filter(i=>i>=0);
-if(fullIdx.length>=2){
-let totalKmDist=0,totalLiterUsed=0;
-for(let n=0;n<fullIdx.length-1;n++){
-const i=fullIdx[n],j=fullIdx[n+1];
-const kmDist=logs[j].km-logs[i].km;
-const literUsed=logs.slice(i+1,j+1).reduce((s,b)=>s+b.liter,0);
-if(kmDist>0&&literUsed>0){totalKmDist+=kmDist;totalLiterUsed+=literUsed;}
-}
-if(totalLiterUsed>0)avgKmL=totalKmDist/totalLiterUsed;
-} else if(logs.length>=2){
-const totalJarak=logs[logs.length-1].km-logs[0].km;
-const literTanpaAwal=logs.slice(1).reduce((s,b)=>s+b.liter,0);
-avgKmL=literTanpaAwal>0?(totalJarak/literTanpaAwal):0;
-}
+const fuelSummary=typeof getFuelConsumptionSummary==='function'
+  ?getFuelConsumptionSummary(curVehicleId,{from,to}):null;
+const avgKmL=fuelSummary?fuelSummary.kmPerLiter:0;
 document.getElementById('bbmAvgKmL').textContent=avgKmL?avgKmL.toFixed(1):'-';
 document.getElementById('bbmTotalL').textContent=totalL.toFixed(1)+' L';
 document.getElementById('bbmTotalCost').textContent=fmt(totalCost);
@@ -490,27 +480,33 @@ BBM.renderTrend(logs);
 const sorted=[...logs].sort((a,b)=>b.km-a.km);
 const el=document.getElementById('bbmList');
 if(!sorted.length){el.innerHTML='<div class="empty"><div class="empty-icon">⛽</div><div class="empty-text">Belum ada catatan BBM</div></div>';return;}
-const prevMap=new Map(), cumLiterMap=new Map();
-{
-let prevDistinct=null,cum=0,i=0;
-while(i<logs.length){
-let j=i,groupLiter=0;
-while(j<logs.length&&logs[j].km===logs[i].km){groupLiter+=(logs[j].liter||0);j++;}
-cum+=groupLiter;
-for(let k=i;k<j;k++){prevMap.set(logs[k].id,prevDistinct);cumLiterMap.set(logs[k].id,cum);}
-prevDistinct=logs[j-1];
-i=j;
-}
+// Konsumsi per pengisian hanya valid pada titik FULL TANK dan harus
+// dihitung dari FULL TANK sebelumnya, bukan dari catatan tepat sebelumnya.
+// Gunakan seluruh histori kendaraan sebagai anchor agar filter periode UI tidak
+// mengubah hasil konsumsi atau membuat badge memakai liter pengisian terakhir saja.
+const allVehicleLogs=(D.bbmLogs||[])
+  .filter(x=>x.vehicleId===curVehicleId&&Number.isFinite(Number(x.km))&&Number(x.km)>0&&Number.isFinite(Number(x.liter))&&Number(x.liter)>0)
+  .slice().sort((a,b)=>Number(a.km)-Number(b.km)||String(a.date||'').localeCompare(String(b.date||'')));
+const previousFullById=new Map();
+let lastFull=null;
+for(const x of allVehicleLogs){
+  if(x.fullTank){previousFullById.set(x.id,lastFull);lastFull=x;}
 }
 const visibleCount=Math.min(sorted.length,BBM.listPage*TX_PAGE_SIZE);
 const visible=sorted.slice(0,visibleCount);
 __kwBbmSetHTMLIfChanged(el,visible.map((b)=>{
-const prev=prevMap.get(b.id)||null;
+const prev=previousFullById.get(b.id)||null;
 let kmL=null;
 if(prev&&b.fullTank){
-const jarak=b.km-prev.km;
-const literSejak=cumLiterMap.get(b.id)-(prev?cumLiterMap.get(prev.id):0);
-kmL=(jarak>0&&literSejak>0)?(jarak/literSejak):null;
+  const startKm=Number(prev.km),endKm=Number(b.km);
+  const jarak=endKm-startKm;
+  // Semua pengisian setelah anchor awal sampai pengisian penuh akhir ikut
+  // dihitung. Catatan pada KM anchor awal tidak dihitung ulang.
+  const literSejak=allVehicleLogs.reduce((sum,x)=>{
+    const km=Number(x.km);
+    return km>startKm&&km<=endKm?sum+Number(x.liter):sum;
+  },0);
+  kmL=(jarak>0&&literSejak>0)?(jarak/literSejak):null;
 }
 return`<div class="tx-item u-pointer" data-action="openBbmModal" data-args="${escapeHtml(JSON.stringify([b.id]))}">
         <div class="tx-icon" style="background:var(--accent4-soft)">⛽</div>

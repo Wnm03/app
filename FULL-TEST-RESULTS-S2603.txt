@@ -1,0 +1,14 @@
+Full test runner: node scripts/run-full-test.js
+Configuration: TEST_SHARDS=32 TEST_CONCURRENCY=1 TEST_SHARD_TIMEOUT_MS=400000
+Result: FULL TEST ALL SHARDS: 8881 tests, 8880 pass, 0 fail, 0 cancelled, 1 skipped, 0 todo.
+Duration: 109 seconds.
+Focused BBM/prediction/finance integration/backup-restore: 62/62 pass.
+S1840 + S2601-S2603 regression: 13/13 pass after final numeric precision fix.
+Build: required minification PASS, version 2342.
+Bundle freshness: PASS.
+Window expose: PASS, 83 modules.
+SOT integrity: PASS, runtimeSources=412, version 2342.
+Architecture integrity: PASS.
+Persistence integrity: PASS.
+PWA recovery integrity: PASS.
+DELETE manifest: PASS, 3 paths already absent and verified.

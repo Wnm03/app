@@ -102,10 +102,30 @@ if(harga>0&&amt>0){
 literEl.value=(amt/harga).toFixed(2);
 }
 }
+// Gerbang validasi bersama untuk kedua jalur simpan BBM (Car Notes dan Transaksi).
+// Tidak mengubah data/SOT; duplikat persis tetap boleh disimpan demi kompatibilitas
+// historis, tetapi dicatat oleh getFuelDataQuality() sebagai possible-duplicate.
+function validateFuelLogInput(opts){
+const o=opts||{};
+const km=Number(o.km),liter=Number(o.liter);
+if(!Number.isFinite(km)||km<=0)return{ok:false,reason:'KM harus berupa angka lebih dari 0'};
+if(!Number.isFinite(liter)||liter<=0)return{ok:false,reason:'Liter harus berupa angka lebih dari 0'};
+if(liter>200)return{ok:false,reason:'Liter BBM melebihi batas kewajaran 200 L'};
+if(o.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.date))&&o.vehicleId){
+ const logs=(typeof D!=='undefined'&&Array.isArray(D.bbmLogs)?D.bbmLogs:[]).filter(x=>x&&String(x.vehicleId)===String(o.vehicleId)&&(!o.existingBbmId||String(x.id)!==String(o.existingBbmId))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&Number.isFinite(Number(x.km))&&Number(x.km)>0);
+ const prior=logs.filter(x=>String(x.date)<String(o.date)).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+ const next=logs.filter(x=>String(x.date)>String(o.date)).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0];
+ if(prior&&km<Number(prior.km))return{ok:false,reason:'KM lebih kecil dari catatan BBM sebelumnya ('+Number(prior.km).toLocaleString('id-ID')+' km)'};
+ if(next&&km>Number(next.km))return{ok:false,reason:'KM melebihi catatan BBM setelah tanggal ini ('+Number(next.km).toLocaleString('id-ID')+' km)'};
+}
+return{ok:true,km,liter};
+}
 // Fungsi murni (tidak baca/tulis DOM) -- dipakai baik dari applyTxBbmFromTx di
 // bawah (sinkron dari form Transaksi umum) maupun dari BBM._saveInner (modal
 // "Catat Isi BBM" khusus Car Notes, di file lain).
 function recordBbmLog(opts){
+const validation=validateFuelLogInput(opts);
+if(!validation.ok)return{ok:false,reason:validation.reason};
 let harga=opts.harga;
 if(!harga&&opts.liter)harga=Math.round(opts.cost/opts.liter);
 if(!D.bbmLogs)D.bbmLogs=[];
@@ -118,13 +138,13 @@ Object.assign(b,{date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost
 // belum tahu soal field ini), supaya jenis yg sudah tersimpan tidak hilang.
 if(opts.jenis!==undefined&&opts.jenis!==null&&opts.jenis!=='')b.jenis=opts.jenis;
 if(opts.fullTank)syncFuelStateFromFullTankBbm(opts.vehicleId||b.vehicleId);else syncFuelStateFromEstimator(opts.vehicleId||b.vehicleId);
-return{bbmId:b.id,isNew:false,harga};
+return{ok:true,bbmId:b.id,isNew:false,harga};
 }
 }
 const bbmId=uid();
 D.bbmLogs.push({id:bbmId,vehicleId:opts.vehicleId,date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost,spbu:opts.spbu,fullTank:opts.fullTank,note:opts.note,accountId:opts.accountId,jenis:opts.jenis||undefined,txLinkId:opts.txId});
 if(opts.fullTank)syncFuelStateFromFullTankBbm(opts.vehicleId);else syncFuelStateFromEstimator(opts.vehicleId);
-return{bbmId,isNew:true,harga};
+return{ok:true,bbmId,isNew:true,harga};
 }
 // syncFuelStateFromEstimator(vehicleId) — SESI 415b (FUEL-AUTOSYNC-05, Sesi 2
 // asli rencana "Fuel Estimation Auto-Update"): SSOT write hook di
@@ -241,10 +261,13 @@ const vehSel=document.getElementById('txBbmVehicle');
 const vehicleId=vehSel&&vehSel.value?vehSel.value:((typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)?((VehicleScopedSOT.ensureActive()||{}).id||''):(typeof curVehicleId!=='undefined'&&curVehicleId)||'');
 const jenisEl=document.getElementById('txBbmJenis');
 const jenis=jenisEl?jenisEl.value:undefined;
+const validation=validateFuelLogInput({vehicleId,date,km,liter,existingBbmId:(existingTx&&existingTx.bbmLinkId)?existingTx.bbmLinkId:null});
+if(!validation.ok){toast('⚠️ '+validation.reason);return false;}
 const result=recordBbmLog({
 vehicleId,date,km,liter,harga,cost:amt,spbu,fullTank,note,accountId:accId,jenis,
 txId,existingBbmId:(existingTx&&existingTx.bbmLinkId)?existingTx.bbmLinkId:null
 });
+if(!result||result.ok===false){toast('⚠️ '+((result&&result.reason)||'Catatan BBM tidak valid'));return false;}
 if(!existingTx||!existingTx.bbmLinkId){
 const tx=existingTx||D.transactions.find(t=>t.id===txId);
 if(tx)tx.bbmLinkId=result.bbmId;
