@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-18T09:26:33.193Z
-Total file source: 487 · Total identifier global: 17230
+Terakhir digenerate: 2026-10-18T10:25:47.863Z
+Total file source: 487 · Total identifier global: 17234
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1265 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1276 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -2692,6 +2692,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `avT` | `modules/vehicle/sparepart-servis.js` |
 | `aWrap` | `modules/business/payroll-absensi.js` |
 | `axis` | `modules/vehicle/service-maintenance-guidance.js` |
+| `axisAction` | `modules/vehicle/sparepart-servis.js` |
 | `b` | `modules/shared/modules-render.js` |
 | `b` | `modules/shared/modules-calc.js` |
 | `b` | `modules/shop/cobek-pricing.js` |
@@ -7306,6 +7307,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hasil` | `modules/asset/aset-misc.js` |
 | `hasil` | `modules/asset/penyusutan-ai-widget.js` |
 | `hasInspect` | `modules/vehicle/servis-checklist.js` |
+| `hasInspectAxis` | `modules/vehicle/sparepart-servis.js` |
 | `hasIntervalOverride` | `modules/vehicle/sparepart-servis.js` |
 | `hasInvestment` | `modules/finance/titipan-reconcile.js` |
 | `hasKm` | `modules/vehicle/vehicle-service-reminder-sot.js` |
@@ -7324,6 +7326,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hasPreset` | `modules/finance/titipan-expense-ui.js` |
 | `hasReminder` | `modules/vehicle/service-history-evidence-ux-s2025.js` |
 | `hasReplace` | `modules/vehicle/servis-checklist.js` |
+| `hasReplaceAxis` | `modules/vehicle/sparepart-servis.js` |
 | `hasRoute` | `modules/vehicle/ride-map.js` |
 | `hasSchedule` | `car-notes.js` |
 | `hasShopStock` | `modules/finance/transaksi.js` |
@@ -13241,6 +13244,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `resetPayMethodLock` | `modules/finance/transaksi.js` |
 | `resetRow` | `modules/shop/business-flow-presenter-inventory.js` |
 | `resetShopStockCart` | `modules/shop/cobek-tx-cart.js` |
+| `resetsOwnAxis` | `modules/vehicle/sparepart-servis.js` |
 | `resetTxPageAndRender` | `modules/finance/filter-laporan.js` |
 | `resetTxShopSaleCart` | `modules/shop/cobek-tx-cart.js` |
 | `resetType` | `modules/vehicle/sparepart-servis.js` |
