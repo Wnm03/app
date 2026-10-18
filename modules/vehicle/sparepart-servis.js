@@ -569,26 +569,31 @@ return days==null?null:days/30.4368;
 function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
   if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
   const schedule=getMaintenanceSchedule(vehicleId,cat);
-  const action=normalizeServiceActionType(actionType||'ganti');
-  const inspectAction=normalizeServiceActionType(schedule&&schedule.inspectAction||'periksa');
-  const replaceAction=normalizeServiceActionType(schedule&&schedule.replaceAction||'ganti');
-  const hasInspectAxis=!!(schedule&&(Number(schedule.inspectKm)>0||Number(schedule.inspectMonths)>0||Number(schedule.inspectDays)>0));
-  const actionHasOwnAxis=!!(schedule&&hasInspectAxis&&action===inspectAction);
-  // Inspection/cleaning/condition notes must not become a new replacement baseline.
-  // Keep explicit inspection-only schedules (e.g. clean-only components) on their own axis.
-  if(!isServiceIntervalResetAction(action)&&!actionHasOwnAxis){
-    const previousReset=typeof getLatestServiceLogForCat==='function'?getLatestServiceLogForCat(vehicleId,cat,'ganti',true):null;
-    if(!previousReset)return{nextDueKm:null,nextDueDate:null,nextDueAxis:'none',intervalKmAtService:null,intervalBulanAtService:null};
-    return buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:previousReset.km,serviceDate:previousReset.date,actionType:previousReset.actionType||'ganti'});
-  }
   let intervalKm=null,intervalBulan=null;
-  if(schedule){const im=actionHasOwnAxis,rm=isServiceIntervalResetAction(action)||action===replaceAction;intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:(im?null:(schedule.replaceKm||null));intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:(im?null:(schedule.replaceMonths||null));}
+  if(schedule){const act=normalizeServiceActionType(actionType),inspect=normalizeServiceActionType(schedule.inspectAction||'periksa'),replace=normalizeServiceActionType(schedule.replaceAction||'ganti'),im=act===inspect,rm=act===replace;intervalKm=im&&schedule.inspectKm?schedule.inspectKm:rm&&schedule.replaceKm?schedule.replaceKm:schedule.replaceKm||schedule.inspectKm||null;intervalBulan=im&&schedule.inspectMonths?schedule.inspectMonths:rm&&schedule.replaceMonths?schedule.replaceMonths:schedule.replaceMonths||schedule.inspectMonths||null;}
   else{intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);}
-  const km=Number(serviceKm);
-  const baseDate=parseServiceDateOnly(serviceDate||new Date());
+  const action=normalizeServiceActionType(actionType);
+  let baseKm=Number(serviceKm);
+  let baseDate=parseServiceDateOnly(serviceDate||new Date());
+  // Inspection/cleaning/condition checks must not move the replacement baseline.
+  // Derive the due snapshot from the latest actual reset event for this same component.
+  if(!isServiceIntervalResetAction(action)){
+    const prior=(Array.isArray(D.servisLogs)?D.servisLogs:[])
+      .filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&isServiceIntervalResetAction(s.actionType))
+      .slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
+    if(prior){
+      baseKm=prior.km!=null&&Number.isFinite(Number(prior.km))?Number(prior.km):NaN;
+      baseDate=parseServiceDateOnly(prior.date);
+    }else{
+      // No reset history means there is no justified baseline to advance from.
+      baseKm=NaN;
+      baseDate=null;
+    }
+  }
+  const km=baseKm;
   const nextDueKm=intervalKm>0&&Number.isFinite(km)?km+intervalKm:null;
   let nextDueDate=null;
-  if(intervalBulan>0&&!isNaN(baseDate)){
+  if(intervalBulan>0&&baseDate){
     const d=addServiceMonthsClamped(baseDate,intervalBulan); nextDueDate=formatServiceDateOnly(d);
   }
   let nextDueAxis='none';
