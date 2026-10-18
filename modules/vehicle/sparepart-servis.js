@@ -467,6 +467,20 @@ if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServ
 }
 return(cat&&Number(cat.intervalBulan)>0)?Number(cat.intervalBulan):null;
 }
+// S2041: every persisted service-event interval must use the same canonical
+// interval as the reminder calculation. Checklist/master values are fallback
+// only; they must not overwrite a vehicle-specific/manual SOT interval.
+function resolveServiceEventIntervalSnapshotValue(vehicleId,cat,master,axis){
+  const months=axis==='months';
+  const effective=months
+    ?(typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):null)
+    :(typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):null);
+  if(effective!==null&&effective!==undefined&&Number.isFinite(Number(effective)))return Number(effective);
+  const masterValue=months?(master&&(master.intervalTimeMonths??master.intervalBulan)):(master&&master.intervalKm);
+  if(masterValue!==null&&masterValue!==undefined&&Number.isFinite(Number(masterValue)))return Number(masterValue);
+  const categoryValue=months?(cat&&cat.intervalBulan):(cat&&cat.intervalKm);
+  return Number.isFinite(Number(categoryValue))&&Number(categoryValue)>0?Number(categoryValue):null;
+}
 // P24 canonical part-history contract: getPartUsageHistory, getPartPriceHistoryHtml, compareServiceHistoryRecency.
 function compareServiceHistoryRecencyLocal(a,b){
   if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency==='function'&&window.compareServiceHistoryRecency!==compareServiceHistoryRecencyLocal)return window.compareServiceHistoryRecency(a,b);
