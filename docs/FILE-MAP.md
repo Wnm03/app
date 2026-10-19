@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T05:37:59.788Z
-Total file source: 487 · Total identifier global: 17288
+Terakhir digenerate: 2026-10-19T08:36:24.527Z
+Total file source: 487 · Total identifier global: 17294
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 183 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1377 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1417 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -4500,6 +4500,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `component` | `modules/vehicle/vehicle-analytics-presenter.js` |
 | `componentBreakdown` | `modules/finance/financial-health-score-api.js` |
 | `componentCatalog` | `modules/vehicle/service-session-integrity-s2045.js` |
+| `componentCondition` | `modules/vehicle/sparepart-servis.js` |
 | `componentCosts` | `modules/vehicle/service-session-mutation-s2047.js` |
 | `componentFilter` | `modules/vehicle/sparepart-servis-ui.js` |
 | `componentHtml` | `modules/vehicle/servis.js` |
@@ -4587,6 +4588,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `conditionBadge` | `modules/vehicle/servis-b.js` |
 | `conditionCats` | `modules/vehicle/servis-b.js` |
 | `conditionEl` | `modules/vehicle/servis.js` |
+| `conditionFromChecklist` | `modules/vehicle/sparepart-servis.js` |
 | `conditionItems` | `modules/vehicle/sparepart-servis-b.js` |
 | `conditionNote` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `conditionNoteHtml` | `modules/vehicle/servis-b.js` |
@@ -9771,7 +9773,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `matched` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `matchedAcc` | `modules/shared/backup-restore.js` |
 | `matchedBudgets` | `modules/shared/modules-render.js` |
-| `matchedRow` | `modules/vehicle/sparepart-servis.js` |
 | `matchedStock` | `modules/vehicle/vehicle-catalog-ui.js` |
 | `matchedVeh` | `modules/shared/backup-restore.js` |
 | `matches` | `modules/shop/cobek-order.js` |
@@ -9779,6 +9780,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `matches` | `modules/shared/pengaturan-search.js` |
 | `matches` | `modules/shared/scan-ocr.js` |
 | `matches` | `modules/finance/transaksi.js` |
+| `matches` | `modules/vehicle/sparepart-servis.js` |
 | `matches` | `modules/vehicle/servis.js` |
 | `matches` | `modules/dashboard-hub/dashboard-hub-search.js` |
 | `matches` | `modules/shop/generic/product-repository.js` |
@@ -9789,6 +9791,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `matchesActionTypeForReset` | `modules/vehicle/sparepart-servis.js` |
 | `matchesBudget` | `budget.js` |
 | `matchesReset` | `modules/vehicle/servis.js` |
+| `matchingActions` | `modules/vehicle/sparepart-servis.js` |
+| `matchingRows` | `modules/vehicle/sparepart-servis.js` |
 | `matchingVehicleName` | `modules/vehicle/sparepart-servis.js` |
 | `matchStock` | `modules/vehicle/servis.js` |
 | `matchVehicleFromText` | `modules/shared/backup-restore.js` |
@@ -16560,6 +16564,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `unique` | `modules/finance/finance-event-outbox.js` |
 | `uniqueAllIds` | `self-test.js` |
 | `uniqueCatList` | `modules/finance/kategori.js` |
+| `uniqueMatchingActions` | `modules/vehicle/sparepart-servis.js` |
 | `unit` | `modules/asset/aset.js` |
 | `unit` | `modules/asset/aset-misc.js` |
 | `unit` | `modules/finance/tx-stok-sparepart.js` |
@@ -16848,6 +16853,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `value` | `modules/shared/realokasi-sisa-kuota.js` |
 | `value` | `modules/vehicle/vehicle-active-sot-s2061.js` |
 | `values` | `modules/finance/transaksi.js` |
+| `values` | `modules/vehicle/sparepart-servis.js` |
 | `values` | `modules/vehicle/vehicle-car-notes-sot-s2071.js` |
 | `valueSplit` | `modules/finance/dana-titipan-aggregation-api.js` |
 | `variance` | `modules/shared/modules-calc.js` |

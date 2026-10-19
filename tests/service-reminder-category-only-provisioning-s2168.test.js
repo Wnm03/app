@@ -58,3 +58,4 @@ test('S2168: matching checklist action overrides a conflicting legacy root actio
   assert.equal(urgency.lastKm,1000);
   assert.equal(urgency.nextDueKm,9000);
 });
+

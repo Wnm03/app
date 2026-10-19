@@ -577,8 +577,24 @@ const rowMatches=row=>{
   const category=String(row.categoryId||'');
   return !!((targetComponent&&component===String(targetComponent))||(targetCategory&&category===targetCategory));
 };
-const matchedRow=checklist.find(row=>rowMatches(row)&&row.actionType!=null&&String(row.actionType).trim()!=='');
-if(matchedRow)checklistAction=matchedRow.actionType;
+const matchingRows=checklist.filter(row=>rowMatches(row));
+const matchingActions=matchingRows.map(row=>row&&row.actionType).filter(value=>value!=null&&String(value).trim()!=='').map(normalizeServiceActionType);
+const uniqueMatchingActions=Array.from(new Set(matchingActions));
+// S2175: if a multi-component checklist exists but no row can be tied to this
+// reminder category, the session-level action is not evidence for this target.
+// This is especially important for legacy categoryId-only history rows: the
+// category link may establish which history record is related, but it cannot
+// prove which checklist component was replaced. Fail closed for reset/reminder
+// queries while preserving non-filtered history display and single-row legacy.
+if((actionTypeFilter||forReminder)&&checklist.length>1&&matchingRows.length===0)return false;
+// S2169: a component-scoped checklist is authoritative as a whole. Do not let
+// a stale log-level action reset a component when its own checklist row has no
+// action (common in multi-component/legacy rows), and do not pick arbitrarily
+// when duplicate matching rows disagree. A single-row legacy record may still
+// use the root action for backward compatibility.
+if(matchingRows.length>1&&uniqueMatchingActions.length>1)return false;
+if(matchingRows.length>0&&matchingActions.length===0&&checklist.length>1)return false;
+if(uniqueMatchingActions.length===1)checklistAction=uniqueMatchingActions[0];
 const effType=normalizeServiceActionType(checklistAction!=null?checklistAction:(log&&log.actionType));
 // S2033: action filter is authoritative; conditional mode must not turn every
 // non-ganti action into a match for a requested 'periksa' baseline.
@@ -759,9 +775,33 @@ const conditionOnly=!!(cat&&(cat.conditionBased===true||cat.reminderMode==='cond
 if(conditionOnly){
   const rows=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:[]);
   const latest=rows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)).slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
-  const action=normalizeServiceActionType(latest&&latest.actionType);
-  const condition=String(latest&&(latest.conditionResult||latest.conditionStatus)||'').toLowerCase();
-  const replaced=!!latest&&isServiceIntervalResetAction(action);
+  // S2177: saved multi-component sessions put condition results on each
+  // checklist row, while the legacy root conditionResult is only projected
+  // from the first row. Prefer the target component/category's own evidence;
+  // otherwise a damaged second component can be silently reported as normal.
+  const conditionFromChecklist=(log,target)=>{
+    const checklist=Array.isArray(log&&log.checklist)?log.checklist:[];
+    if(!checklist.length)return undefined;
+    const component=String(serviceComponentIdForCategory(target)||'');
+    const category=String(target&&target.id||'');
+    const matches=checklist.filter(row=>row&&((component&&String(row.serviceComponentId||row.itemId||'')===component)||(category&&String(row.categoryId||'')===category)));
+    const values=matches.map(row=>String(row.conditionResult||row.conditionStatus||'').trim().toLowerCase()).filter(Boolean);
+    if(values.some(value=>['rusak','broken','damaged','gagal'].includes(value)))return values.find(value=>['rusak','broken','damaged','gagal'].includes(value));
+    if(values.length)return values[0];
+    // No checklist match retains the legacy category-linked root evidence.
+    if(!matches.length)return undefined;
+    // Legacy root condition belongs to the first checklist item only. It is
+    // safe as fallback only when that item is the matched target.
+    if(checklist.length===1||matches.some(row=>row===checklist[0]))return String(log&& (log.conditionResult||log.conditionStatus)||'').toLowerCase();
+    return null;
+  };
+  const componentCondition=conditionFromChecklist(latest,cat);
+  const condition=componentCondition===null?'':(componentCondition===undefined?String(latest&&(latest.conditionResult||latest.conditionStatus)||'').toLowerCase():componentCondition);
+  // S2176: condition-only reminders must obey the same component-scoped action
+  // authority as interval reminders. A stale session-level `ganti` must not
+  // hide a damaged condition when a multi-component checklist does not prove
+  // replacement for this category.
+  const replaced=!!latest&&matchesActionTypeForReset(latest,cat,'ganti',true);
   const damaged=!replaced&&['rusak','broken','damaged','gagal'].includes(condition);
   const status=damaged?'rusak':'normal';
   return {sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'condition',status,statusLabel:damaged?'Rusak':'Normal',statusIcon:damaged?'🔴':'🟢',statusSeverity:damaged?3:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:damaged?'perbaiki':'pantau',maintenanceType:'condition',condition:damaged?'rusak':'normal',sourceHistoryId:latest&&latest.id||null,lastKm:null,lastDate:latest&&latest.date||null};
