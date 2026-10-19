@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T13:46:29.199Z
-Total file source: 487 · Total identifier global: 17318
+Terakhir digenerate: 2026-10-19T22:54:42.459Z
+Total file source: 487 · Total identifier global: 17324
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -217,7 +217,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 194 | `modules/vehicle/service-history-bulk-identity-editor.js` | 252 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 195 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 196 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
-| 197 | `modules/vehicle/servis-b.js` | 812 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
+| 197 | `modules/vehicle/servis-b.js` | 818 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
 | 198 | `modules/vehicle/service-history-component-explorer-s2006.js` | 105 | _(tidak ada komentar header)_ |
 | 199 | `modules/vehicle/service-maintenance-guidance.js` | 162 | _(tidak ada komentar header)_ |
 | 200 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
@@ -864,6 +864,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_csvCat` | `modules/vehicle/sparepart-servis-ui.js` |
 | `_csvFingerprint` | `modules/shared/backup-restore.js` |
 | `_csvIdemKey` | `modules/shared/backup-restore.js` |
+| `_currentKm` | `modules/vehicle/servis-b.js` |
 | `_currentPage` | `modules/shared/modal-navigasi.js` |
 | `_currentRenderKey` | `modules/shared/modal-navigasi.js` |
 | `_dashboardHubActive` | `modules/shared/modules-render-b.js` |
@@ -1122,6 +1123,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_lastBackupEl` | `modules/shared/backup-restore.js` |
 | `_lastBackupErr` | `modules/shared/backup-restore.js` |
 | `_lastErrorToastAt` | `modules/shared/error-handler.js` |
+| `_lastKm` | `modules/vehicle/servis-b.js` |
 | `_lastModalSweepData` | `self-test.js` |
 | `_lastNavSmokeData` | `self-test.js` |
 | `_lastSelfTestData` | `self-test.js` |
@@ -1315,6 +1317,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_pz` | `modules/finance/edukasi-dana.js` |
 | `_queueDialog` | `modules/shared/modal-navigasi.js` |
 | `_queueDialog` | `modules/asset/modal-navigasi.js` |
+| `_rawSisa` | `modules/vehicle/servis-b.js` |
 | `_rcMatHargaOnBlur` | `modules/shared/modals.js` |
 | `_readContinuityHighWater` | `modules/shared/features-helpers-global-security.js` |
 | `_readRuntimeMeta` | `modules/shared/features-helpers-global-security.js` |
@@ -7323,6 +7326,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `hasFilter` | `modules/shared/modules-render-b.js` |
 | `hasFilter` | `modules/vehicle/vehicle-service-trend.js` |
 | `hasFilter` | `modules/vehicle/vehicle-analytics-presenter.js` |
+| `hasFiniteKmRemaining` | `modules/vehicle/servis-b.js` |
 | `hash` | `modules/shared/pwa-production-hardening.js` |
 | `hasHarianIncome` | `modules/shared/modules-calc.js` |
 | `hashed` | `modules/shared/keamanan-pin.js` |
@@ -8840,6 +8844,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `kmProdusen` | `modules/shop/cobek-order.js` |
 | `kmRaw` | `modules/finance/tx-servis.js` |
 | `kmRaw` | `modules/vehicle/servis.js` |
+| `kmRemainingLabel` | `modules/vehicle/servis-b.js` |
 | `kms` | `modules/vehicle/vehicle-core.js` |
 | `kms` | `modules/shared/self-test-cases-a.js` |
 | `kmSejakServis` | `modules/vehicle/shop-katalog-dinamis-api.js` |
@@ -14844,6 +14849,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `sisaKewajiban` | `modules/finance/cash-projection.js` |
 | `sisaKewajibanTerjadwal` | `modules/finance/cash-projection.js` |
 | `sisaKm` | `modules/vehicle/vehicle-reminder.js` |
+| `sisaKmLabel` | `modules/vehicle/servis-b.js` |
 | `sisaLabel` | `modules/finance/tagihan-kalender.js` |
 | `sisaMsg` | `modules/finance/tagihan-kalender.js` |
 | `sisaRp` | `modules/asset/aset-owners.js` |
