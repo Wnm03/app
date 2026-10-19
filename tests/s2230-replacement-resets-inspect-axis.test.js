@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 function urgency(componentId, logs, curKm) {
-  const cat = { id: 'cat-x', vehicleId: 'v1', name: componentId, serviceComponentId: componentId };
+  const cat = { id: 'cat-x', vehicleId: 'v1', name: componentId, serviceComponentId: componentId, intervalKm: 12000 };
   const data = { vehicles: [{ id: 'v1', name: 'Honda Vario 125' }], sparepartCats: [cat], servisLogs: logs };
   const ctx = loadSource([
     'modules/vehicle/servis-checklist.js', 'car-notes.js', 'modules/vehicle/service-input-catalog.js',

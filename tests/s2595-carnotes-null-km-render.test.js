@@ -23,3 +23,16 @@ test('S2595 Car Notes current odometer renderer guards null KM source', () => {
   assert.match(source, /const currentKm=kmSrc&&kmSrc\.km!=null&&Number\.isFinite\(Number\(kmSrc\.km\)\)\?Number\(kmSrc\.km\):null/);
   assert.match(source, /currentKm===null\?'— km':currentKm\.toLocaleString\('id-ID'\)\+' km'/);
 });
+
+
+test('S2595 service reminder renderer handles missing effective KM interval', () => {
+  const source = fs.readFileSync(path.join(root, 'modules/vehicle/servis-b.js'), 'utf8');
+  assert.match(source, /const hasFiniteKmRemaining=sisa!==null&&sisa!==undefined&&sisa!==''&&Number\.isFinite\(Number\(sisa\)\)/);
+  assert.match(source, /const kmRemainingLabel=hasFiniteKmRemaining\?/);
+  assert.match(source, /'interval belum ditetapkan'/);
+  assert.doesNotMatch(source, /`Sisa \${sisa\.toLocaleString\('id-ID'\)} km`/);
+  assert.doesNotMatch(source, /`🔔 Sisa \${sisa\.toLocaleString\('id-ID'\)} km`/);
+  assert.match(source, /const hasFiniteKmRemaining=sisa!==null&&sisa!==undefined&&sisa!==''&&Number\.isFinite\(Number\(sisa\)\)/);
+  assert.match(source, /!hasFiniteKmRemaining\)\?null/);
+  assert.doesNotMatch(source, /estimateServiceDateISO\(sisa,kmPerDay\)/);
+});
