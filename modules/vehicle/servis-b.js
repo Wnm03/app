@@ -497,27 +497,33 @@ const history=typeof summarizeServiceHistory==='function'?summarizeServiceHistor
 const latestInspectionResult=history.lastInspected&&(history.lastInspected.conditionResult||history.lastInspected.conditionStatus)||null;
 const effectiveIntervalKm=u&&u.intervalKm>0?u.intervalKm:intervalKm;
 const effectiveLastKm=u&&u.lastKm!==undefined?u.lastKm:lastKm;
-const sisa=u&&u.sisaKm!=null?u.sisaKm:(effectiveIntervalKm>0?(effectiveIntervalKm-(effectiveLastKm===null?curKm:curKm-effectiveLastKm)):null);
+const _currentKm=curKm!=null&&curKm!==''&&Number.isFinite(Number(curKm))?Number(curKm):null;
+const _lastKm=effectiveLastKm!=null&&effectiveLastKm!==''&&Number.isFinite(Number(effectiveLastKm))?Number(effectiveLastKm):null;
+const _rawSisa=u&&u.sisaKm!=null?u.sisaKm:(effectiveIntervalKm>0&&_currentKm!==null?(effectiveIntervalKm-(_lastKm===null?_currentKm:_currentKm-_lastKm)):null);
+const sisa=_rawSisa!==null&&_rawSisa!==''&&Number.isFinite(Number(_rawSisa))?Number(_rawSisa):null;
+const sisaKmLabel=sisa===null?'Interval belum ditetapkan':sisa.toLocaleString('id-ID');
 const pct=effectiveIntervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((effectiveIntervalKm-sisa)/effectiveIntervalKm)*100))):0;
 const status=u?u.status:(sisa==null?'aman':(typeof resolveServiceStatusMeta==='function'?resolveServiceStatusMeta(effectiveIntervalKm>0?sisa/effectiveIntervalKm:1).code:(sisa<=0?'jatuh_tempo':(sisa<=effectiveIntervalKm*0.15?'segera':'aman'))));
 const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
 const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
-let col='green',msg=dayLimited?`Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`Sisa ${sisa.toLocaleString('id-ID')} km`,severity=null;
+const hasFiniteKmRemaining=sisa!==null&&sisa!==undefined&&sisa!==''&&Number.isFinite(Number(sisa));
+const kmRemainingLabel=hasFiniteKmRemaining?`${Number(sisa).toLocaleString('id-ID')} km`:'interval belum ditetapkan';
+let col='green',msg=dayLimited?`Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`Sisa ${kmRemainingLabel}`,severity=null;
 if(status==='terlewat'){
 col='red';severity='overdue';
-msg=dayLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Terlewat ${Math.abs(sisa).toLocaleString('id-ID')} km`;
+msg=dayLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Terlewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Terlewat ${hasFiniteKmRemaining?Math.abs(Number(sisa)).toLocaleString('id-ID'):'—'} km`;
 }else if(status==='jatuh_tempo'){
 col='red';severity='overdue';
 msg=dayLimited?'🔴 Jatuh tempo hari ini':monthLimited?'🔴 Jatuh tempo bulan ini':'🔴 Jatuh tempo servis';
 }else if(status==='segera'){
 col='orange';severity='due-soon';
-msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`;
+msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${kmRemainingLabel}`;
 }else if(status==='mendekati'){
 col='orange';severity='watch';
-msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`;
+msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${kmRemainingLabel}`;
 }
 
-const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
+const estDateISO=(monthLimited||!hasFiniteKmRemaining)?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(Number(sisa),kmPerDay));
 const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
 
 const action=(severity&&typeof VehicleActionRecommendation!=='undefined')?VehicleActionRecommendation.actionFor({type:'service',severity}).label:null;
@@ -544,7 +550,7 @@ const historyLogsForSummary=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s
 // unsynchronized. No data is changed; only the wording follows the same SOT.
 const historySummary=historyLogsForSummary.length?`${historyLogsForSummary.length} riwayat tercatat`:'Belum ada riwayat tercatat';
 const hasHistoryButNoResetBaseline=historyLogsForSummary.length>0&&effectiveLastKm===null;
-const historyBaselineLabel=hasHistoryButNoResetBaseline?'Belum ada riwayat yang mereset interval':(effectiveLastKm===null?'Belum pernah dicatat':`Terakhir di ${effectiveLastKm.toLocaleString('id-ID')} km`);
+const historyBaselineLabel=hasHistoryButNoResetBaseline?'Belum ada riwayat yang mereset interval':(effectiveLastKm==null||effectiveLastKm===''||!Number.isFinite(Number(effectiveLastKm))?'Belum pernah dicatat':`Terakhir di ${Number(effectiveLastKm).toLocaleString('id-ID')} km`);
 const legacyReminderFields={nextDueKm,nextDueDate,dueLabel,status};
 return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,historyBaselineLabel,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult,canonicalComponentName,canonicalCategoryName,canonicalMasterCategoryId};
 }).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
@@ -566,7 +572,7 @@ card.innerHTML=`<div class="card-title">🔔 Pengingat Servis per Part${reminder
         ${r.dueLabel?`<div class="u-fs11 u-t2" style="margin-top:2px">📅 ${escapeHtml(r.dueLabel)}</div>`:''}
         ${r.historySummary&&r.historySummary!=='Belum ada riwayat tercatat'?`<div class="u-fs11 u-t2" style="margin-top:2px">${escapeHtml(r.historySummary)}</div>`:''}
         <div class="u-flex u-jcb u-aic" style="margin-top:2px;gap:8px;flex-wrap:wrap">
-          <div class="u-fs12t2" style="flex:1 1 120px;min-width:0">${r.historyBaselineLabel||((r.lastKm===null)?'Belum pernah dicatat':'Terakhir di '+r.lastKm.toLocaleString('id-ID')+' km')} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer sv-tap">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
+          <div class="u-fs12t2" style="flex:1 1 120px;min-width:0">${r.historyBaselineLabel||((r.lastKm==null||r.lastKm===''||!Number.isFinite(Number(r.lastKm)))?'Belum pernah dicatat':'Terakhir di '+Number(r.lastKm).toLocaleString('id-ID')+' km')} · ${r.cat._maintenanceProjection?`<span title="Aturan maintenance canonical">${escapeHtml(r.scheduleLabel)}</span>`:`<span data-action="editVehicleIntervalOverride" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}" title="Set interval khusus kendaraan ini" class="u-pointer sv-tap">${escapeHtml(r.scheduleLabel)}${r.overridden?' <span class="u-cacc u-fw700">(khusus)</span>':''} 🔧</span>`}</div>
           <div class="u-flex" style="gap:6px;justify-content:flex-end;margin-left:auto;flex-wrap:nowrap">
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:0 12px;min-height:44px" data-stop="1" data-action="Servis.openHistoryFromReminder" data-args="${escapeHtml(JSON.stringify([r.cat.id,r.cat.serviceComponentId||null]))}">Riwayat</button>
           <button class="btn btn-ghost btn-sm u-fs12" style="padding:0 12px;min-height:44px" data-stop="1" data-action="Servis.chooseReminderAction" data-args="${escapeHtml(JSON.stringify([r.cat.id]))}">${r.nextAction&&r.nextAction!=='event_based'?`Pilih tindakan · ${r.nextAction==='periksa'?'Periksa':r.nextAction==='bersih'?'Bersihkan':'Ganti'}`:'Pilih tindakan'}</button>

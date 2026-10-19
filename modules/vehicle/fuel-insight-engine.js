@@ -144,7 +144,7 @@ _monthlyCostInsight(vehicleId) {
   const actual = (typeof FuelCostAnalytics.monthlyCost === 'function')
     ? FuelCostAnalytics.monthlyCost(vehicleId)
     : { ok: false, reason: 'FuelCostAnalytics.monthlyCost belum dimuat' };
-  if (actual.ok) {
+  if (actual.ok && Number.isFinite(Number(actual.totalCost)) && actual.totalCost != null && Number.isFinite(Number(actual.totalLiter)) && actual.totalLiter != null && Number.isFinite(Number(actual.averagePrice)) && actual.averagePrice != null) {
     return {
       id: 'monthly-cost',
       type: 'Monthly Cost',
