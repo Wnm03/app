@@ -988,12 +988,22 @@ if(cnbBc)cnbBc.textContent=CNB_SUBTAB_LABEL[t]||t;
 // Fuel Dashboard/Compare/Trend (Analisis Lanjutan) dirender malas.
 if(typeof renderCnTab==='function')renderCnTab();
 }
+function normalizeVehicleOdometerKm(value){
+// Empty/null/boolean/non-finite/negative values are not odometer readings.
+// Numeric strings remain supported for legacy data; explicit zero is valid.
+if(value===null||value===undefined||value===''||typeof value==='boolean')return null;
+const n=Number(value);
+return Number.isFinite(n)&&n>=0?n:null;
+}
 function getVehicleKm(vehicleId){
+// Normalize each source independently so one malformed legacy value cannot
+// poison Math.max() with NaN. Preserve the public legacy fallback of 0 when
+// no valid reading exists; callers needing unknown-vs-zero must use evidence.
 const kms=[
-...D.bbmLogs.filter(b=>b.vehicleId===vehicleId).map(b=>b.km),
-...D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km).map(s=>s.km),
-...D.kmLogs.filter(k=>k.vehicleId===vehicleId).map(k=>k.km)
-];
+...D.bbmLogs.filter(b=>b.vehicleId===vehicleId).map(b=>normalizeVehicleOdometerKm(b.km)),
+...D.servisLogs.filter(s=>s.vehicleId===vehicleId).map(s=>normalizeVehicleOdometerKm(s.km)),
+...D.kmLogs.filter(k=>k.vehicleId===vehicleId).map(k=>normalizeVehicleOdometerKm(k.km))
+].filter(n=>n!==null);
 return kms.length?Math.max(...kms):0;
 }
 // getVehicleKmSource() — rekomendasi tambahan audit S444 (belum dikerjakan
@@ -1009,9 +1019,9 @@ return kms.length?Math.max(...kms):0;
 // hasil km-nya identik/konsisten dengan getVehicleKm(), cuma nambah label
 // source di sampingnya. 0 field baru ditulis ke D, murni read-only.
 function getVehicleKmSource(vehicleId){
-const bbmKms=D.bbmLogs.filter(b=>b.vehicleId===vehicleId).map(b=>b.km);
-const servisKms=D.servisLogs.filter(s=>s.vehicleId===vehicleId&&s.km).map(s=>s.km);
-const manualKms=D.kmLogs.filter(k=>k.vehicleId===vehicleId).map(k=>k.km);
+const bbmKms=D.bbmLogs.filter(b=>b.vehicleId===vehicleId).map(b=>normalizeVehicleOdometerKm(b.km)).filter(n=>n!==null);
+const servisKms=D.servisLogs.filter(s=>s.vehicleId===vehicleId).map(s=>normalizeVehicleOdometerKm(s.km)).filter(n=>n!==null);
+const manualKms=D.kmLogs.filter(k=>k.vehicleId===vehicleId).map(k=>normalizeVehicleOdometerKm(k.km)).filter(n=>n!==null);
 const all=[...bbmKms,...servisKms,...manualKms];
 if(!all.length)return{km:0,source:null};
 const max=Math.max(...all);

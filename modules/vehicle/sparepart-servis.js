@@ -559,7 +559,8 @@ if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return'o
 if(['periksa','cek','check','inspect','inspeksi'].includes(raw))return'periksa';
 if(['bersih','bersihkan','clean','cleaning'].includes(raw))return'bersih';
 if(['setel','setting','adjust','setelulang'].includes(raw))return'setel';
-return raw||'ganti';
+// Missing/blank action evidence is ambiguous legacy data, not proof of replacement.
+return raw||'unknown';
 }
 function isServiceIntervalResetAction(value){return['ganti','pasang','overhaul'].includes(normalizeServiceActionType(value));}
 function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
@@ -695,7 +696,8 @@ function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,action
     intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
     intervalHari=null;
   }
-  let baseKm=Number(serviceKm);
+  // Null/empty odometer means unknown, not an actual 0 km reading.
+  let baseKm=serviceKm===null||serviceKm===undefined||serviceKm===''?NaN:Number(serviceKm);
   let baseDate=parseServiceDateOnly(serviceDate||new Date());
   if(!resetAxis){
     // Snapshot actions that do not reset an axis must not move its baseline.
@@ -732,9 +734,10 @@ function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,action
 }
 function resolveServiceStatusMeta(score){
   const n=Number(score);
-  if(!Number.isFinite(n))return{code:'aman',label:'Aman',icon:'🟢',severity:0};
-  if(n< -0.10)return{code:'terlewat',label:'Terlewat',icon:'⚫',severity:4};
-  if(n<=0)return{code:'jatuh_tempo',label:'Jatuh tempo',icon:'🔴',severity:3};
+  if(score===null||score===undefined||score===''||!Number.isFinite(n))return{code:'unknown',label:'Belum diketahui',icon:'⚪',severity:0};
+  // Shared boundary: any negative remaining interval is overdue; zero is due now.
+  if(n<0)return{code:'terlewat',label:'Terlambat',icon:'⚫',severity:4};
+  if(n===0)return{code:'jatuh_tempo',label:'Jatuh tempo',icon:'🔴',severity:3};
   if(n<=0.15)return{code:'segera',label:'Segera',icon:'🟡',severity:2};
   if(n<=0.30)return{code:'mendekati',label:'Mendekati',icon:'🔵',severity:1};
   return{code:'aman',label:'Aman',icon:'🟢',severity:0};
@@ -806,7 +809,7 @@ if(conditionOnly){
   const status=damaged?'rusak':'normal';
   return {sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'condition',status,statusLabel:damaged?'Rusak':'Normal',statusIcon:damaged?'🔴':'🟢',statusSeverity:damaged?3:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:damaged?'perbaiki':'pantau',maintenanceType:'condition',condition:damaged?'rusak':'normal',sourceHistoryId:latest&&latest.id||null,lastKm:null,lastDate:latest&&latest.date||null};
 }
-const currentKm=Number.isFinite(curKm)?curKm:0;
+const currentKm=curKm===null||curKm===undefined||curKm===''?null:(Number.isFinite(Number(curKm))&&Number(curKm)>=0?Number(curKm):null);
 const kmPerDaySafe=Number.isFinite(kmPerDay)&&kmPerDay>0?kmPerDay:null;
 const candidates=[];
 const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
@@ -824,17 +827,19 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
     const inspectAxis=normalizeServiceActionType(lastFilter)==='periksa';
     // A replacement logged above the current odometer is bad data and must not
     // become a baseline (it would yield negative distance travelled).
-    const replacementOk=(s)=>!(Number.isFinite(Number(s&&s.km))&&Number(s.km)>currentKm);
+    const replacementOk=(s)=>currentKm===null||!(s&&s.km!==null&&s.km!==undefined&&s.km!==''&&Number.isFinite(Number(s.km))&&Number(s.km)>currentKm);
     const pickLatest=(rows)=>{
       let best=null;
       rows.forEach(s=>{if(s&&(best===null||compareServiceHistoryRecencyLocal(s,best)<0))best=s;});
       return best;
     };
-    const pool=Array.isArray(historyRows)?historyRows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)):null;
+    const poolSource=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:null);
+    const pool=poolSource?poolSource.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)):null;
     if(pool){
-      latestHistory=pickLatest(pool.filter(s=>matchesActionTypeForReset(s,cat,lastFilter,true)||(inspectAxis&&replacementOk(s)&&matchesActionTypeForReset(s,cat,'ganti',true))));
+      latestHistory=pickLatest(pool.filter(s=>replacementOk(s)&&(matchesActionTypeForReset(s,cat,lastFilter,true)||(inspectAxis&&matchesActionTypeForReset(s,cat,'ganti',true)))));
     }else if(typeof getLatestServiceLogForCat==='function'){
       latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+      if(latestHistory&&!replacementOk(latestHistory))latestHistory=null;
       if(inspectAxis){
         const replaced=getLatestServiceLogForCat(vehicleId,cat,'ganti',true);
         if(replaced&&replacementOk(replaced)&&(!latestHistory||compareServiceHistoryRecencyLocal(replaced,latestHistory)<0))latestHistory=replaced;
@@ -842,20 +847,25 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
     }
   }
   if(hasKm){
-    lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):(Array.isArray(historyRows)?null:getLastServiceKmForCat(vehicleId,cat,lastFilter,true));
-    const traveled=lastKm===null?currentKm:currentKm-lastKm;
-    remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
+    lastKm=latestHistory&&latestHistory.km!==null&&latestHistory.km!==undefined&&latestHistory.km!==''&&Number.isFinite(Number(latestHistory.km))&&Number(latestHistory.km)>=0?Number(latestHistory.km):null;
+    // Never invent a 0-km baseline when no valid replacement/inspection event exists.
+    if(lastKm!==null&&currentKm!==null&&currentKm>=lastKm){
+      const traveled=currentKm-lastKm;
+      remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
+    }
   }
   if(hasMonths||hasDays){
-    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:(Array.isArray(historyRows)?null:getLastServiceDateForCat(vehicleId,cat,lastFilter,true));
-    const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):0;
-    if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
-    if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
+    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:null;
+    const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):null;
+    if(elapsedDays!==null&&elapsedDays>=0){
+      if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
+      if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
+    }
   }
   let limitingAxis='km',score=fracKm;
   if(score==null){limitingAxis=hasMonths?'bulan':'hari';score=hasMonths?fracMonths:fracDays;}
-  if(fracMonths!=null&&fracMonths<score){limitingAxis='bulan';score=fracMonths;}
-  if(fracDays!=null&&fracDays<score){limitingAxis='hari';score=fracDays;}
+  if(fracMonths!=null&&(score==null||fracMonths<score)){limitingAxis='bulan';score=fracMonths;}
+  if(fracDays!=null&&(score==null||fracDays<score)){limitingAxis='hari';score=fracDays;}
   candidates.push({action,intervalKm:hasKm?intervalKm:null,lastKm,sisaKm:remainingKm,fracRemainKm:fracKm,intervalBulan:hasMonths?intervalMonths:null,sisaBulan:remainingMonths,fracRemainBulan:fracMonths,intervalHari:hasDays?intervalDays:null,sisaHari:remainingDays,fracRemainHari:fracDays,limitingAxis,score,lastDate,sourceHistoryId:latestHistory&&latestHistory.id||null,reconciliationCode:latestHistory&&typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'?ServiceHistoryReminderReconciliationSOT.match(latestHistory,cat,{vehicleId}).code:null});
 };
 if(schedule){
@@ -876,9 +886,14 @@ if(schedule){
   addCandidate('ganti',intervalKm,resetFilter,intervalBulan,null);
 }
 if(!candidates.length){
-  return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'aman',estDateISO:null,nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null};
+  return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'unknown',statusLabel:'Belum diketahui',statusIcon:'⚪',statusSeverity:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null,baselineRequired:true};
 }
-const c=candidates.sort((a,b)=>a.score-b.score)[0];
+const knownCandidates=candidates.filter(candidate=>candidate.score!==null&&candidate.score!==undefined&&Number.isFinite(Number(candidate.score)));
+if(!knownCandidates.length){
+  const c=candidates[0];
+  return Object.assign({},c,{status:'unknown',statusLabel:'Belum diketahui',statusIcon:'⚪',statusSeverity:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null,baselineRequired:true});
+}
+const c=knownCandidates.sort((a,b)=>a.score-b.score)[0];
 const statusMeta=resolveServiceStatusMeta(c.score);
 const status=statusMeta.code;
 let estDateISO=null;

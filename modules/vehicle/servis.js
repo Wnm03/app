@@ -1839,10 +1839,15 @@ const _markGuardKey=`${curVehicleId||''}::${cat.id}::${actionType||'default'}`;
 if(Servis._markServicedInFlight.has(_markGuardKey))return;
 Servis._markServicedInFlight.add(_markGuardKey);
 const _clearMarkGuard=()=>Servis._markServicedInFlight.delete(_markGuardKey);
-const curKm=getVehicleKm(curVehicleId);
+// The guard spans every awaited prompt and the mutation itself. A single outer
+// finally is required so rejected dialogs, storage failures, and unexpected
+// exceptions cannot permanently suppress a legitimate retry.
+try{
+const _kmEvidence=typeof getVehicleKmSource==='function'?getVehicleKmSource(curVehicleId):null;
+const curKm=_kmEvidence?(_kmEvidence.source?_kmEvidence.km:null):getVehicleKm(curVehicleId);
 const actLabel=actionType==='periksa'?'diperiksa':(actionType==='bersih'?'dibersihkan':'diservis');
 const _effectiveActionMode=typeof getEffectiveActionMode==='function'?getEffectiveActionMode(cat):(cat.actionMode||'ganti'); const _effectiveGantiResets=typeof getEffectiveGantiResetsInterval==='function'?getEffectiveGantiResetsInterval(cat):cat.gantiResetsInterval; const willReset=!(_effectiveActionMode==='periksa-conditional'&&_effectiveGantiResets===false&&(actionType||'ganti')==='ganti');
-if(actionType==='ganti'&&!opts.skipEarlyGuard){
+if(actionType==='ganti'&&!opts.skipEarlyGuard&&Number.isFinite(curKm)){
 const early=Servis._checkTooEarlyGanti(cat,curVehicleId,curKm);
 if(early){
 const earlyMsg=`⚠️ "${cat.name}" baru diganti ${early.traveled.toLocaleString('id-ID')} km lalu (interval ${early.intervalKm.toLocaleString('id-ID')} km) -- kelihatannya masih terlalu dini. Tetap tandai ganti sekarang?`;
@@ -1850,7 +1855,7 @@ if(!await askConfirm(earlyMsg,{danger:true,okText:'Ya, Tetap Ganti',icon:'⚠️
 }
 }
 if(!opts.skipConfirm){
-const confirmMsg=`Tandai "${cat.name}" sudah ${actLabel} hari ini di KM ${curKm.toLocaleString('id-ID')}?`+(willReset?' Pengingat akan otomatis reset ke KM ini.':' (Item ini basis jatuh-temponya dari "periksa" -- catatan "ganti" ini TIDAK mereset pengingat.)');
+const confirmMsg=`Tandai "${cat.name}" sudah ${actLabel} hari ini`+(Number.isFinite(curKm)?` di KM ${curKm.toLocaleString('id-ID')}`:' (odometer belum tercatat)')+'?'+(willReset?' Pengingat akan otomatis reset ke KM ini.':' (Item ini basis jatuh-temponya dari "periksa" -- catatan "ganti" ini TIDAK mereset pengingat.)');
 if(!await askConfirm(confirmMsg,{danger:false,okText:'Ya, Tandai',icon:'✅'})){_clearMarkGuard();return;}
 }
 let cost;
@@ -1873,11 +1878,13 @@ if(_markCatStock&&_markCatStock.id)_markStockIds.add(_markCatStock.id);
 const _markStockBefore=new Map();
 for(const sid of _markStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)_markStockBefore.set(sid,Number(row.qty)||0);}
 const _restoreMarkDomain=(servisId)=>{
-  try{
-    D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.id===servisId));
-    if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId===servisId); else throw new Error('FINANCE_TX_SOT_REQUIRED');
-    if(_markStockBefore&&_markStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback pengingat servis');const sr=StockCommandSOT.setQtyMap(_markStockBefore,{reason:'service-reminder-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_REMINDER_STOCK_ROLLBACK_FAILED');}
-  }catch(_markRollbackErr){console.error('V25: markServiced rollback failed',_markRollbackErr);}
+  const _rollbackErrors=[];
+  try{D.servisLogs=(D.servisLogs||[]).filter(x=>!(x&&x.id===servisId));}catch(e){_rollbackErrors.push({step:'service-log',error:e});}
+  // Rollback legs are independent: a finance cleanup failure must not prevent
+  // an attempt to restore stock, and vice versa.
+  try{if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.removeWhere==='function')FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId===servisId);else throw new Error('FINANCE_TX_SOT_REQUIRED');}catch(e){_rollbackErrors.push({step:'finance',error:e});}
+  try{if(_markStockBefore&&_markStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback pengingat servis');const sr=StockCommandSOT.setQtyMap(_markStockBefore,{reason:'service-reminder-rollback',source:'servis'});if(!sr||!sr.ok)throw new Error(sr&&sr.code||'SERVICE_REMINDER_STOCK_ROLLBACK_FAILED');}}catch(e){_rollbackErrors.push({step:'stock',error:e});}
+  if(_rollbackErrors.length)console.error('V25: markServiced rollback incomplete; reconciliation required',_rollbackErrors);
 };
 const _runMarkMutation=async()=>{
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
@@ -1892,6 +1899,7 @@ if(entry.idempotencyKey&&typeof findServiceEventByIdempotencyKey==='function'){
 const _dup=findServiceEventByIdempotencyKey(D.servisLogs||[],entry.idempotencyKey,entry.vehicleId);
 if(_dup){_clearMarkGuard();return _dup;}
 }
+try{
 if(cost>0){
 const txId=uid();
 const _reminderTx={id:txId,type:'expense',amount:cost,category:resolveVehicleTxCategory(veh),subcategory:'Servis & Oli',accountId:accId,payMethod:'tunai',note:cat.name+(veh?' - '+veh.name:'')+' (tandai selesai)',date,servisLinkId:servisId,vehicleId:curVehicleId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_reminderTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
@@ -1911,16 +1919,28 @@ else autoGantiStock=null;
 autoGantiStock=null;
 }
 }
-try{
-if(!opts._batchDeferSave){save({domain:'servis',financeMutation:!!entry.txLinkId,accountIds:entry.txLinkId?[entry.accountId]:[]});if(typeof refreshCarNotesAfterMutation==='function')refreshCarNotesAfterMutation({stock:!!autoGantiStock});}
+if(!opts._batchDeferSave){
+const _saveAccepted=save({domain:'servis',financeMutation:!!entry.txLinkId,accountIds:entry.txLinkId?[entry.accountId]:[]});
+if(_saveAccepted===false)throw new Error('SERVICE_REMINDER_SAVE_REJECTED');
+// Rendering/projection refresh is post-commit work. A render exception must
+// not roll back domain mutations after save() has accepted the write.
+if(typeof refreshCarNotesAfterMutation==='function'){
+  try{refreshCarNotesAfterMutation({stock:!!autoGantiStock});}
+  catch(_refreshErr){console.error('Service reminder committed; refresh failed and requires rerender',_refreshErr);}
+}
+}
 
 if(!opts._batchDeferEvents){
+try{
 if(typeof ServiceEventLifecycle!=='undefined'){try{ServiceEventLifecycle.create(entry);}catch(_markLifecycleErr){console.error('V27: post-commit service lifecycle failed; queued for reconciliation',_markLifecycleErr);if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.create',payload:entry});}}
 else if(typeof AIBus!=="undefined"){try{AIBus.emit("vehicle.updated",{kind:"servis",action:"create",vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null});}catch(_markVehicleEventErr){console.error('V31: vehicle event failed after commit; queued for reconciliation',_markVehicleEventErr);if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:{kind:'servis',action:'create',vehicleId:entry.vehicleId,servisId:entry.id,txId:entry.txLinkId||null}});}}
 if(entry.txLinkId&&typeof AIBus!=="undefined"){try{AIBus.emit('finance.updated',{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'});}catch(_eventErr){console.error('V31: finance event failed after commit; queued for reconciliation',_eventErr);if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'finance.updated',payload:{txId:entry.txLinkId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'}});}}
+}catch(_postCommitEventErr){console.error('Service reminder committed; event projection failed and requires reconciliation',_postCommitEventErr);}
 }
-if(autoGantiStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function')Sparepart.renderStockList();
-if(!opts.skipConfirm)toast(`✅ ${cat.name} ditandai ${actLabel}, `+(willReset?'pengingat direset ke KM sekarang':'tercatat (pengingat tidak berubah)')+(autoGantiStock?` (stok "${autoGantiStock.name}" otomatis dipotong 1)`:''));
+if(!opts._batchDeferSave&&autoGantiStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function'){
+try{Sparepart.renderStockList();}catch(_stockRenderErr){console.error('Service reminder committed; stock render failed and requires rerender',_stockRenderErr);}
+}
+if(!opts.skipConfirm){try{toast(`✅ ${cat.name} ditandai ${actLabel}, `+(willReset?'pengingat direset ke KM sekarang':'tercatat (pengingat tidak berubah)')+(autoGantiStock?` (stok "${autoGantiStock.name}" otomatis dipotong 1)`:''));}catch(_toastErr){console.error('Service reminder committed; success notification failed',_toastErr);}}
 _clearMarkGuard();
 return entry;
 }catch(_markSaveErr){
@@ -1932,6 +1952,9 @@ return entry;
 }
 };
 return opts._batchOwnedLock?await _runMarkMutation():(typeof withServiceMutationLock==='function'?await withServiceMutationLock(_runMarkMutation):await _runMarkMutation());
+}finally{
+  _clearMarkGuard();
+}
 },
 
 async markServicedBatch(items){
@@ -1960,18 +1983,20 @@ const _batchStockById=new Map();
 _batchStockRows.forEach(x=>{if(x&&x.id!=null&&!_batchStockById.has(x.id))_batchStockById.set(x.id,x);});
 for(const sid of _batchStockIds){const row=_batchStockById.get(sid);if(row)batchStockBefore.set(sid,Number(row.qty)||0);}
 const restoreBatch=(batchId)=>{
+  const _rollbackErrors=[];
+  const batchIds=new Set();
   try{
     const _rollbackLogs=Array.isArray(D.servisLogs)?D.servisLogs:[];
-    const batchIds=new Set();
     const _keptRollbackLogs=[];
     for(const _rollbackLog of _rollbackLogs){
       if(_rollbackLog&&_rollbackLog.batchId===batchId)batchIds.add(_rollbackLog.id);
       else _keptRollbackLogs.push(_rollbackLog);
     }
     D.servisLogs=_keptRollbackLogs;
-    if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId&&batchIds.has(x.servisLinkId)); else throw new Error('FINANCE_TX_SOT_REQUIRED');
-    if(batchStockBefore&&batchStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback batch servis');const sr=StockCommandSOT.setQtyMap(batchStockBefore,{reason:'service-batch-rollback',source:'servis'});if(!sr.ok)throw new Error(sr.code||'SERVICE_BATCH_STOCK_ROLLBACK_FAILED');}
-  }catch(e){console.error('V26: batch rollback failed',e);}
+  }catch(e){_rollbackErrors.push({step:'service-log',error:e});}
+  try{if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.removeWhere==='function')FinanceTxSOT.removeWhere(x=>x&&x.servisLinkId&&batchIds.has(x.servisLinkId));else throw new Error('FINANCE_TX_SOT_REQUIRED');}catch(e){_rollbackErrors.push({step:'finance',error:e});}
+  try{if(batchStockBefore&&batchStockBefore.size){if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.setQtyMap!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback batch servis');const sr=StockCommandSOT.setQtyMap(batchStockBefore,{reason:'service-batch-rollback',source:'servis'});if(!sr||!sr.ok)throw new Error(sr&&sr.code||'SERVICE_BATCH_STOCK_ROLLBACK_FAILED');}}catch(e){_rollbackErrors.push({step:'stock',error:e});}
+  if(_rollbackErrors.length)console.error('V26: batch rollback incomplete; reconciliation required',_rollbackErrors);
 };
 const runBatch=async()=>{
   const batchId=uid();
@@ -1984,9 +2009,18 @@ const runBatch=async()=>{
     }
 
     const _batchAccountIds=[...new Set(results.filter(e=>e&&e.txLinkId&&e.accountId!=null).map(e=>e.accountId))];
-    save({domain:'servis',financeMutation:_batchAccountIds.length>0,accountIds:_batchAccountIds});
+    const _batchSaveAccepted=save({domain:'servis',financeMutation:_batchAccountIds.length>0,accountIds:_batchAccountIds});
+    if(_batchSaveAccepted===false)throw new Error('SERVICE_BATCH_SAVE_REJECTED');
+    const _batchHasStock=results.some(entry=>!!(entry&&entry.autoGantiStockId));
+    if(typeof refreshCarNotesAfterMutation==='function'){
+      try{refreshCarNotesAfterMutation({stock:_batchHasStock});}catch(e){console.error('Service batch committed; refresh failed and requires rerender',e);}
+    }
+    if(_batchHasStock&&typeof Sparepart!=='undefined'&&typeof Sparepart.renderStockList==='function'){
+      try{Sparepart.renderStockList();}catch(e){console.error('Service batch committed; stock render failed and requires rerender',e);}
+    }
     const _batchVehicleById=new Map();
     for(const entry of results){
+      try{
       // V36: lifecycle and finance projections are independent post-commit effects.
       // A lifecycle failure must never skip the Finance event for the same committed item.
       try{
@@ -2001,8 +2035,9 @@ const runBatch=async()=>{
         try{AIBus.emit('finance.updated',_batchFinancePayload);}
         catch(_batchFinanceEventErr){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'finance.updated',payload:_batchFinancePayload});else console.error('V36: batch finance event failed',_batchFinanceEventErr);}
       }
+      }catch(_batchPostCommitErr){console.error('Service batch committed; one event projection failed and requires reconciliation',_batchPostCommitErr);}
     }
-    toast(`✅ ${results.length} item servis ditandai selesai`);
+    try{toast(`✅ ${results.length} item servis ditandai selesai`);}catch(e){console.error('Service batch committed; success notification failed',e);}
     return results;
   }catch(err){
     restoreBatch(batchId);

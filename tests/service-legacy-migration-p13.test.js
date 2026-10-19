@@ -18,7 +18,7 @@ function assert(c,m){if(!c)throw new Error(m)}
  assert(s.masterCategoryId==='engine','masterCategoryId backfill failed');
  assert(s.serviceComponentId==='oil','serviceComponentId backfill failed');
  assert(s.intervalKmAtService===5000 && s.intervalBulanAtService===6,'interval snapshot failed');
- assert(s.nextDueKm===85000 && s.nextDueDate==='2027-03-01' && s.nextDueAxis==='km_or_date','next due snapshot failed');
+ assert(s.nextDueKm===null && s.nextDueDate===null && s.nextDueAxis==='none','ambiguous legacy action must not fabricate a replacement due snapshot');
  assert(s.idempotencyKey==='legacy-service:s1','legacy idempotency key failed');
  const n2=normalize(); assert(n2===0,'migration must be idempotent');
 }

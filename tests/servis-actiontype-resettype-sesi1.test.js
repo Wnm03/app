@@ -129,10 +129,10 @@ test('resolveResetActionTypeFilter() — pola 4 (periksa-conditional, mis. Kampa
 
 // --- matchesActionTypeForReset() ---
 
-test('matchesActionTypeForReset() — log lama tanpa actionType diperlakukan "ganti" (0 migrasi data)', () => {
+test('matchesActionTypeForReset() — log lama tanpa actionType tidak dianggap bukti "ganti"', () => {
   const ctx = makeSparepartCtx(baseD());
   const log = { actionType: undefined };
-  assert.equal(ctx.matchesActionTypeForReset(log, {}, 'ganti', false), true);
+  assert.equal(ctx.matchesActionTypeForReset(log, {}, 'ganti', false), false);
   assert.equal(ctx.matchesActionTypeForReset(log, {}, 'periksa', false), false);
   assert.equal(ctx.matchesActionTypeForReset(log, {}, null, false), true);
 });

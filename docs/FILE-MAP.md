@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T12:07:35.206Z
-Total file source: 487 · Total identifier global: 17305
+Terakhir digenerate: 2026-10-19T13:10:15.410Z
+Total file source: 487 · Total identifier global: 17314
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -23,7 +23,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 |---|------|------:|-----------|
 | 1 | `modules/shared/pwa-ux-performance.js` | 154 | _(tidak ada komentar header)_ |
 | 2 | `modules/shared/pwa-production-hardening.js` | 70 | _(tidak ada komentar header)_ |
-| 3 | `modules/shared/modules-render.js` | 1541 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
+| 3 | `modules/shared/modules-render.js` | 1543 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
 | 4 | `modules/shared/modules-render-b.js` | 1354 | _(tidak ada komentar header)_ |
 | 5 | `modules/shared/modals.js` | 33 | S1904 compatibility contract: Kategori Servis (SOT) dan Komponen Servis (SOT) adalah selector canonical. Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js … |
 | 6 | `modules/shared/modules-calc.js` | 1271 | _(tidak ada komentar header)_ |
@@ -130,7 +130,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 107 | `modules/business/tukang-absensi.js` | 773 | Domain Tukang (absensi/payroll harian & borongan) ONLY. Dipindah ke modules/business/tukang-absensi.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 108 | `modules/business/insight-target-mingguan.js` | 71 | S132: Insight Target Mingguan (kirim uang ke istri). Domain BARU, tapi 100% reuse data & fungsi yang sudah ada: - Target = D.profile.kiriman (field "Kiriman Mingguan (Rp)" yang SUDAH ADA di Pengaturan → Profil, dulu … |
 | 109 | `modules/vehicle/car-notes-performance.js` | 109 | _(tidak ada komentar header)_ |
-| 110 | `modules/vehicle/vehicle-core.js` | 1350 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
+| 110 | `modules/vehicle/vehicle-core.js` | 1360 | Domain Vehicle core: CRUD kendaraan, KM (log & estimasi konsumsi/rp-per-km), Pajak Kendaraan (STNK tahunan/5-tahunan + SPT Tahunan pribadi), SIM, proactive reminders (dashboard), dan Car Notes tab (filter periode, edit … |
 | 111 | `modules/vehicle/fuel-price-ref.js` | 242 | modules/vehicle/fuel-price-ref.js — Sesi 749: FuelPriceRef, referensi harga BBM nasional (1 angka per jenis, bukan per SPBU/wilayah) + tombol "Cek Update via AI", pola SAMA PERSIS RefAI … |
 | 112 | `modules/vehicle/vehicle-catalog.js` | 653 | Parts Catalog (Katalog Suku Cadang), Milestone 0 Phase 1: fondasi murni (storage + CRUD + validation + search + filter), TANPA UI/wiring page baru. PERUBAHAN SESI INI (TASK-007 — Tahap 3 OCR label kemasan, logic saja, … |
 | 113 | `modules/vehicle/vehicle-catalog-write-sot.js` | 65 | canonical write gate for part identity. SOT-3C: all feature write paths that create a part should resolve/create through VehicleCatalog first. Legacy D.partsStock/D.sparepartCats remain compatibility … |
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 118 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1439 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1454 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -206,7 +206,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 183 | `modules/vehicle/servis-checklist.js` | 1044 | _(tidak ada komentar header)_ |
 | 184 | `modules/vehicle/service-input-catalog.js` | 88 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 185 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
-| 186 | `modules/vehicle/servis.js` | 2019 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
+| 186 | `modules/vehicle/servis.js` | 2054 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
 | 187 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 100 | _(tidak ada komentar header)_ |
 | 188 | `modules/vehicle/service-history-multicategory-sync-s2037.js` | 123 | _(tidak ada komentar header)_ |
 | 189 | `modules/vehicle/service-reminder-form-sot-s2054.js` | 59 | _(tidak ada komentar header)_ |
@@ -700,6 +700,8 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_batchCategories` | `modules/vehicle/servis.js` |
 | `_batchCategoryById` | `modules/vehicle/servis.js` |
 | `_batchFinancePayload` | `modules/vehicle/servis.js` |
+| `_batchHasStock` | `modules/vehicle/servis.js` |
+| `_batchSaveAccepted` | `modules/vehicle/servis.js` |
 | `_batchStockById` | `modules/vehicle/servis.js` |
 | `_batchStockIds` | `modules/vehicle/servis.js` |
 | `_batchStockRows` | `modules/vehicle/servis.js` |
@@ -1098,6 +1100,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_keuFilterPrefsLoaded` | `modules/finance/filter-laporan.js` |
 | `_keysToCheck` | `modules/vehicle/servis.js` |
 | `_kfSearchDebounce` | `modules/finance/filter-laporan.js` |
+| `_kmEvidence` | `modules/vehicle/servis.js` |
 | `_kwLockRoot` | `modules/finance/tagihan-kalender.js` |
 | `_kwNavRenderKey` | `modules/shared/modal-navigasi.js` |
 | `_kwNavRenderSeq` | `modules/shared/modal-navigasi.js` |
@@ -1362,6 +1365,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_rollbackAuxEntries` | `modules/shared/backup-restore.js` |
 | `_rollbackCategoryEdit` | `modules/vehicle/sparepart-servis-ui.js` |
 | `_rollbackCategoryFinanceMutation` | `modules/finance/kategori.js` |
+| `_rollbackErrors` | `modules/vehicle/servis.js` |
 | `_rollbackLogs` | `modules/vehicle/servis.js` |
 | `_rollbackServiceById` | `modules/vehicle/servis.js` |
 | `_rollbackServiceRows` | `modules/vehicle/servis.js` |
@@ -1399,6 +1403,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_sanitizePinPrompt` | `modules/shared/modals.js` |
 | `_SAVE_DEBOUNCE_MS` | `modules/shared/features-helpers-global-security.js` |
 | `_SAVE_MAX_WAIT_MS` | `modules/shared/features-helpers-global-security.js` |
+| `_saveAccepted` | `modules/vehicle/servis.js` |
 | `_saveAccInner` | `modules/finance/akun.js` |
 | `_saveAccountIds` | `modules/shared/features-helpers-global-security.js` |
 | `_saveBillInner` | `modules/finance/tagihan-kalender.js` |
@@ -8860,6 +8865,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `known` | `modules/finance/titipan-expense-flow.js` |
 | `known` | `modules/finance/titipan-expense-ui.js` |
 | `knownBytes` | `modules/shared/modules-render-b.js` |
+| `knownCandidates` | `modules/vehicle/sparepart-servis.js` |
 | `knownIds` | `modules/vehicle/part-crud-s2041.js` |
 | `knownKeys` | `modules/shared/backup-restore.js` |
 | `knownLongLists` | `modules/shared/self-test-cases-b.js` |
@@ -10207,6 +10213,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `n` | `modules/shared/backup-restore.js` |
 | `n` | `modules/business/payroll-absensi.js` |
 | `n` | `modules/business/tukang-absensi.js` |
+| `n` | `modules/vehicle/vehicle-core.js` |
 | `n` | `modules/vehicle/fuel-price-ref.js` |
 | `n` | `modules/vehicle/vehicle-catalog-migration-sot.js` |
 | `n` | `modules/vehicle/vehicle-part-sot.js` |
@@ -10609,6 +10616,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `normalizer` | `modules/vehicle/service-history-lifecycle-s2027-s2030-app-main.js` |
 | `normalizeServiceActionType` | `modules/vehicle/sparepart-servis.js` |
 | `normalizeTrackpoint` | `modules/vehicle/ride-gps-recorder.js` |
+| `normalizeVehicleOdometerKm` | `modules/vehicle/vehicle-core.js` |
 | `normType` | `modules/shared/multi-owner-engine.js` |
 | `notApplicable` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `notDone` | `modules/self-reward/self-reward-engine.js` |
@@ -12008,6 +12016,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pool` | `modules/vehicle/sparepart-servis.js` |
 | `poolCommitment` | `modules/finance/titipan-reconcile.js` |
 | `poolMasukTotal` | `modules/finance/dana-titipan-commitment-return-api.js` |
+| `poolSource` | `modules/vehicle/sparepart-servis.js` |
 | `poolSummary` | `modules/finance/dana-titipan-portfolio-render.js` |
 | `populateAccFilters` | `modules/finance/akun.js` |
 | `populateBillFilterOptions` | `modules/finance/tagihan-kalender.js` |

@@ -16,7 +16,7 @@ assert.strictEqual(c.formatServiceDateOnly(c.addServiceMonthsClamped('2026-01-31
 assert.strictEqual(c.formatServiceDateOnly(c.addServiceMonthsClamped('2028-01-31',1)),'2028-02-29');
 assert.strictEqual(c.diffServiceDays('2026-09-13','2026-09-14'),1);
 const cat={id:'oil',name:'Oli',intervalKm:5000,intervalBulan:1};
-const snap=c.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:80000,serviceDate:'2026-01-31'});
+const snap=c.buildServiceNextDueSnapshot({vehicleId:'v1',cat,serviceKm:80000,serviceDate:'2026-01-31',actionType:'ganti'});
 assert.strictEqual(snap.nextDueKm,85000);
 assert.strictEqual(snap.nextDueDate,'2026-02-28');
 assert.strictEqual(snap.nextDueAxis,'km_or_date');

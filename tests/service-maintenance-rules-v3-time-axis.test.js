@@ -11,7 +11,7 @@ test('maintenance rule v3: tire-pressure inspection keeps day and KM axes withou
 test('maintenance rule v3: combined tire reminder is actionable without requiring kmPerDay',()=>{
  const d={vehicles:[{id:'v1',name:'Honda Vario 125',modelId:''}],sparepartCats:[{id:'c1',name:'Ban Depan',intervalKm:0,showInReminder:true}],servisLogs:[]};
  const c=ctxWith(d); const u=c.computeServiceUrgency({vehicleId:'v1',cat:d.sparepartCats[0],curKm:1000,kmPerDay:null,nowISO:'2026-09-12',historyRows:d.servisLogs});
- assert.equal(u.nextAction,'periksa'); assert.equal(u.intervalKm,4000); assert.equal(u.intervalHari,14); assert.equal(u.limitingAxis,'km'); assert.equal(u.status,'aman');
+ assert.equal(u.nextAction,'periksa'); assert.equal(u.intervalKm,4000); assert.equal(u.intervalHari,14); assert.equal(u.status,'unknown'); assert.equal(u.sisaKm,null); assert.equal(u.sisaHari,null);
 });
 test('maintenance rule v3: a prior inspection advances the day baseline',()=>{
  const d={vehicles:[{id:'v1',name:'Honda Vario 125',modelId:''}],sparepartCats:[{id:'c1',name:'Ban Depan',intervalKm:0,showInReminder:true}],servisLogs:[{id:'s1',vehicleId:'v1',date:'2026-09-01',item:'Ban Depan',categoryId:'c1',km:9000,actionType:'periksa'}]};

@@ -34,8 +34,9 @@ test('maintenance rule v2: inspection is the first due action, replacement remai
   const u=ctx.computeServiceUrgency({vehicleId:'v1',cat:data.sparepartCats[0],curKm:9000,kmPerDay:null});
   assert.equal(u.nextAction,'periksa');
   assert.equal(u.intervalKm,8000);
-  assert.equal(u.sisaKm,-1000);
-  assert.equal(u.status,'terlewat');
+  assert.equal(u.sisaKm,null);
+  assert.equal(u.status,'unknown');
+  assert.equal(u.statusLabel,'Belum diketahui');
 });
 
 test('maintenance rule v2: after inspection at 8k, next inspection is 16k while replacement remains 24k', () => {
