@@ -1806,6 +1806,29 @@ toast(data.failCount===0?'✅ Semua tes berhasil ('+data.passCount+'/'+data.tota
 return data;
 }
 window.runHeadlessSelfTest=computeSelfTestResults;
+// S2596: clipboard helper with verified legacy fallback. Clipboard API may exist
+// but reject in mobile browsers / embedded contexts; always try execCommand then.
+async function copyDiagnosticText(text){
+const value=String(text==null?'':text);
+if(!value)return false;
+try{
+if(typeof navigator!=='undefined'&&navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+try{await navigator.clipboard.writeText(value);return true;}catch(_clipboardError){/* try legacy fallback */}
+}
+}catch(_clipboardAccessError){/* try legacy fallback */}
+let ta=null;
+try{
+if(!document||!document.body||typeof document.createElement!=='function'||typeof document.execCommand!=='function')return false;
+ta=document.createElement('textarea');
+ta.value=value;ta.setAttribute('readonly','');
+ta.style.position='fixed';ta.style.left='-9999px';ta.style.top='0';ta.style.opacity='0';
+document.body.appendChild(ta);
+if(typeof ta.focus==='function')ta.focus();ta.select();
+if(typeof ta.setSelectionRange==='function')ta.setSelectionRange(0,ta.value.length);
+return document.execCommand('copy')===true;
+}catch(_fallbackError){return false;}
+finally{if(ta&&ta.parentNode)ta.parentNode.removeChild(ta);}
+}
 async function copySelfTestResults(){
 if(!_lastSelfTestData){toast('⚠️ Jalankan tes dulu sebelum menyalin hasil');return;}
 const d=_lastSelfTestData;
@@ -1818,18 +1841,9 @@ d.passCount+'/'+d.total+' berhasil'+(d.failCount>0?', '+d.failCount+' gagal':'')
 ];
 const text=lines.join('\n');
 try{
-if(navigator.clipboard&&navigator.clipboard.writeText){
-await navigator.clipboard.writeText(text);
-} else {
-const ta=document.createElement('textarea');
-ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-document.body.appendChild(ta); ta.select();
-document.execCommand('copy'); document.body.removeChild(ta);
-}
-toast('📋 Hasil tes disalin');
-}catch(e){
-toast('⚠️ Gagal menyalin, coba lagi');
-}
+if(await copyDiagnosticText(text))toast('📋 Hasil tes disalin');
+else toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');
+}catch(e){toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');}
 }
 // repairTitipanOrphans() — S595, awalnya cuma cabang `orphan`. Nama fungsi
 // (& data-action="repairTitipanOrphans" di app_production.html/index.html)
@@ -2113,18 +2127,9 @@ d.passCount+'/'+d.total+' halaman aman'+(d.failCount>0?', '+d.failCount+' bermas
 ];
 const text=lines.join('\n');
 try{
-if(navigator.clipboard&&navigator.clipboard.writeText){
-await navigator.clipboard.writeText(text);
-} else {
-const ta=document.createElement('textarea');
-ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-document.body.appendChild(ta); ta.select();
-document.execCommand('copy'); document.body.removeChild(ta);
-}
-toast('📋 Hasil tes navigasi disalin');
-}catch(e){
-toast('⚠️ Gagal menyalin, coba lagi');
-}
+if(await copyDiagnosticText(text))toast('📋 Hasil tes navigasi disalin');
+else toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');
+}catch(e){toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');}
 }
 // MODAL_SWEEP_MANUAL_OVERRIDE_FNS (S555): fungsi yang cocok pola regex
 // /^open[A-Z]\w*Modal$/ (jadi otomatis ke-tangkap computeModalSweepFnNames())
@@ -2621,18 +2626,9 @@ d.passCount+'/'+d.total+' modal aman'+(d.contextCount>0?', '+d.contextCount+' bu
 ];
 const text=lines.join('\n');
 try{
-if(navigator.clipboard&&navigator.clipboard.writeText){
-await navigator.clipboard.writeText(text);
-} else {
-const ta=document.createElement('textarea');
-ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
-document.body.appendChild(ta); ta.select();
-document.execCommand('copy'); document.body.removeChild(ta);
-}
-toast('📋 Hasil tes modal disalin');
-}catch(e){
-toast('⚠️ Gagal menyalin, coba lagi');
-}
+if(await copyDiagnosticText(text))toast('📋 Hasil tes modal disalin');
+else toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');
+}catch(e){toast('⚠️ Gagal menyalin otomatis. Coba lagi atau salin teks hasil tes secara manual.');}
 }
 async function autoRunSelfTestIfNeeded(){
 try{

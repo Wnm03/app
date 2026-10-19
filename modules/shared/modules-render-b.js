@@ -871,8 +871,11 @@ const curKmEl=document.getElementById('cnCurKm');
 const curKmSrcEl=document.getElementById('cnCurKmSrc');
 if(curKmEl&&!document.getElementById('cnCurKmInput')){
   const kmSrc=getVehicleKmSource(curVehicleId);
-  curKmEl.textContent=kmSrc.km.toLocaleString('id-ID')+' km';
-  if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc.source);
+  // S2595: kendaraan/BBM lama boleh memiliki KM null; jangan biarkan panel Car Notes
+  // crash saat render. Nilai 0 tetap valid dan ditampilkan sebagai 0 km.
+  const currentKm=kmSrc&&kmSrc.km!=null&&Number.isFinite(Number(kmSrc.km))?Number(kmSrc.km):null;
+  curKmEl.textContent=currentKm===null?'— km':currentKm.toLocaleString('id-ID')+' km';
+  if(curKmSrcEl)curKmSrcEl.textContent=kmSourceLabel(kmSrc&&kmSrc.source||'unknown');
 }
 // S2550 (fuel bar/analisis hilang di Car Notes BBM): DashboardInsightDedup hanya
 // jalan saat DashboardHub.render() -> kartu yg di-hide role dashboard/keuangan/shop

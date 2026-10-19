@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T13:10:15.410Z
-Total file source: 487 · Total identifier global: 17314
+Terakhir digenerate: 2026-10-19T13:46:29.199Z
+Total file source: 487 · Total identifier global: 17318
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -24,7 +24,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 1 | `modules/shared/pwa-ux-performance.js` | 154 | _(tidak ada komentar header)_ |
 | 2 | `modules/shared/pwa-production-hardening.js` | 70 | _(tidak ada komentar header)_ |
 | 3 | `modules/shared/modules-render.js` | 1543 | Fungsi render (85 fungsi) dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modules-render.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & … |
-| 4 | `modules/shared/modules-render-b.js` | 1354 | _(tidak ada komentar header)_ |
+| 4 | `modules/shared/modules-render-b.js` | 1357 | _(tidak ada komentar header)_ |
 | 5 | `modules/shared/modals.js` | 33 | S1904 compatibility contract: Kategori Servis (SOT) dan Komponen Servis (SOT) adalah selector canonical. Modal HTML dipisah dari app_production.html untuk pemerataan ukuran file. Dipindah ke modules/shared/modals.js … |
 | 6 | `modules/shared/modules-calc.js` | 1271 | _(tidak ada komentar header)_ |
 | 7 | `modules/shop/cobek-etalase.js` | 907 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -235,7 +235,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 212 | `modules/shared/app-init-runtime.js` | 85 | App bootstrap runtime extracted from self-test.js. Kept separate so diagnostic tests do not own the application bootstrap. S1763: lifecycle/interval installation is explicitly idempotent. `init()` can be reached again … |
 | 213 | `modules/shared/self-test-cases-a.js` | 866 | Self-test case registry part A. |
 | 214 | `modules/shared/self-test-cases-b.js` | 825 | Self-test case registry part B. |
-| 215 | `self-test.js` | 1011 | CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load & "gagal" kalau `node --test` dijalankan TANPA argumen di root. … |
+| 215 | `self-test.js` | 1007 | CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load & "gagal" kalau `node --test` dijalankan TANPA argumen di root. … |
 | 216 | `pajak-aset-ui-wrappers.js` | 226 | Wrapper UI tipis: parser angka (parsePzNum/parseDecStr/ normalizeOcrNumber), ganti tab pajak/zakat (setPajakTab/setPjkTab/savePajakSettings), dan delegasi tipis ke modul … |
 | 217 | `modules/finance/finance-intelligence.js` | 255 | Finance Intelligence Foundation (Sesi 74, Batch 6). Target sesi: Cash Flow Summary, Budget Summary, Income vs Expense, Financial Health Score, Insight dasar — lihat docs/BATCH_PLAN.md § Batch 6. PRINSIP (RULE #1 sesi … |
 | 218 | `modules/finance/financial-audit-engine.js` | 441 | modules/finance/financial-audit-engine.js — Audit Keuangan 30 Menit, Phase A. Pure/read-only: tidak mengubah D.transactions, tidak memanggil save(), dan tidak menyentuh DOM. Semua rentang harus eksplisit di API publik; … |
@@ -281,7 +281,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 258 | `modules/vehicle/fuel-intelligence-engine.js` | 83 | Fuel Engine (TASK-141, Fuel Intelligence Card). PRINSIP: 100% REUSE service yang SUDAH ADA — TIDAK ada rumus kmPerLiter/rpPerKm/estMonthlyCost baru (fuelEfficiency(), vehicle-core.js), TIDAK menghitung ulang tren biaya … |
 | 259 | `modules/vehicle/fuel-gauge-engine.js` | 273 | Fuel Gauge Engine (TASK-143). PRINSIP: 100% REUSE FuelTankProfile.get() (TASK-142, kalibrasi tangki per kendaraan) + fuelEfficiency() global (vehicle-core.js, SUDAH ADA, dipakai … |
 | 260 | `modules/vehicle/fuel-state-estimator.js` | 237 | FuelStateEstimator (Sesi 1 asli rencana "Fuel Estimation Auto-Update", FUEL-AUTOSYNC-04): estimateCurrentLiter(vehicleId) pure engine, fondasi Sesi 2-6 lanjutan rencana yang sama. TUJUAN: satu rumus terpusat "berapa … |
-| 261 | `modules/vehicle/fuel-history.js` | 51 | Fuel History (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelStorage.recent() (sesi ini — sendiri 100% reuse D.bbmLogs apa adanya) utk daftar catatan isi BBM terbaru. Tap 1 baris membuka … |
+| 261 | `modules/vehicle/fuel-history.js` | 53 | Fuel History (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelStorage.recent() (sesi ini — sendiri 100% reuse D.bbmLogs apa adanya) utk daftar catatan isi BBM terbaru. Tap 1 baris membuka … |
 | 262 | `modules/vehicle/fuel-analytics.js` | 88 | Fuel Analytics (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE VehicleFuelTrendSummary.summary() (Sesi 81, Batch 7 — sendiri 100% reuse VehicleTrendAPI.monthlyCostTrend() utk histori biaya … |
 | 263 | `modules/vehicle/fuel-modal.js` | 44 | Fuel Modal (TASK-141, Fuel Intelligence Card). PRINSIP: orkestrasi TIPIS saja. Buka overlay #fuelIntelModal (markup di modals.js, sesi ini) & panggil FuelAnalytics.render()/FuelHistory.render() (sesi ini, keduanya 100% … |
 | 264 | `modules/vehicle/fuel-card.js` | 552 | Fuel Card (TASK-141, Fuel Intelligence Card). PRINSIP: UI HANYA presenter. 100% REUSE FuelIntelligenceEngine.vehicleInsight() (sesi ini) utk kendaraan aktif (curVehicleId, SUDAH ADA — variabel yang sama dipakai … |
@@ -4659,6 +4659,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `copy` | `modules/shared/pwa-production-hardening.js` |
 | `copy` | `modules/finance/finance-tx-sot.js` |
 | `copyBtn` | `modules/shared/modules-render-b.js` |
+| `copyDiagnosticText` | `self-test.js` |
 | `copyFields` | `modules/business/shop-data-io-api.js` |
 | `copyModalSweepResults` | `self-test.js` |
 | `copyNavSmokeResults` | `self-test.js` |
@@ -4908,6 +4909,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `currentComponentId` | `modules/vehicle/servis.js` |
 | `currentGajiHari` | `modules/business/payroll-absensi.js` |
 | `currentHtml` | `modules/vehicle/part-crud-s2041.js` |
+| `currentKm` | `modules/shared/modules-render-b.js` |
 | `currentKm` | `modules/vehicle/vehicle-sot-fleet-integrity.js` |
 | `currentKm` | `modules/vehicle/sparepart-servis.js` |
 | `currentKm` | `modules/vehicle/service-event-sot.js` |
@@ -8846,6 +8848,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `kmSourceLabel` | `modules/vehicle/vehicle-core.js` |
 | `kmSrc` | `modules/shared/modules-render-b.js` |
 | `kmTriggered` | `modules/vehicle/service-legacy-maintenance.js` |
+| `kmValue` | `modules/vehicle/fuel-history.js` |
 | `kmWrap` | `modules/vehicle/vehicle-core.js` |
 | `knowledge` | `lifeos/ui/lifeos-home.js` |
 | `KNOWLEDGE_REF_SOURCE_BUILDERS` | `lifeos/adapters/knowledge-adapter.js` |
@@ -16862,6 +16865,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `vals` | `modules/shared/modules-render.js` |
 | `vals` | `car-notes.js` |
 | `vals` | `modules/shared/backup-restore.js` |
+| `value` | `self-test.js` |
 | `value` | `modules/vehicle/fuel-gauge-engine.js` |
 | `value` | `modules/dashboard-hub/dashboard-hub.js` |
 | `value` | `modules/asset/investasi.js` |

@@ -39,7 +39,9 @@ render(vehicleId) {
 // inline — hapus/edit didelegasikan ke bbmModal yang terbuka).
 _row(b) {
   const money = (typeof fmt === 'function') ? fmt(b.cost) : ('Rp ' + Math.round(b.cost || 0));
-  const km = (b.km != null) ? b.km.toLocaleString('id-ID') + ' km' : '(km tidak dicatat)';
+  // S2595: data BBM legacy dapat berisi null/string untuk KM. Format hanya angka valid.
+  const kmValue = b && b.km != null && b.km !== '' && Number.isFinite(Number(b.km)) ? Number(b.km) : null;
+  const km = kmValue !== null ? kmValue.toLocaleString('id-ID') + ' km' : '(km tidak dicatat)';
   return `<div class="tx-item u-pointer" data-action="openBbmModal" data-args="${escapeHtml(JSON.stringify([b.id]))}">
     <div class="tx-icon" style="background:var(--accent4-soft)">⛽</div>
     <div class="tx-info"><div class="tx-name">${km} · ${b.liter}L</div><div class="tx-meta">${escapeHtml(b.date)}${b.spbu ? ' · ' + escapeHtml(b.spbu) : ''}${b.fullTank ? ' · Full Tank' : ' · Isi sebagian'}</div></div>
