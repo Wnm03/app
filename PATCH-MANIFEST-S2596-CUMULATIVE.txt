@@ -1,0 +1,27 @@
+PATCH S2596 CUMULATIVE — Car Notes null.toLocaleString fix
+Base ZIP: app-main (30).zip
+Build version: 2596
+Changed files: 17
+
+Files:
+- AUDIT-FIX-S2595-CARNOTES-NULL-TOLOCALESTRING.md
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- app_production.html
+- chat-action-handlers.js
+- docs/COVERAGE-PER-MODULE.md
+- docs/FILE-MAP.md
+- index.html
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- modules/vehicle/servis-b.js
+- scripts/verify-source-size.js
+- sw.js
+- tests/s2230-replacement-resets-inspect-axis.test.js
+- tests/s2595-carnotes-null-km-render.test.js
+
+Verification: build PASS; verify-bundle PASS; targeted null-KM 3/3 PASS; permanent integrity gate 3/3 PASS.
+Full suite: attempted but timed out before all shards completed; not certified fully green.
+Known remaining failure: S2230 overdue test fixture returns canonical status unknown; investigate schedule fixture separately.

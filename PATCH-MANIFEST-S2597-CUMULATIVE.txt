@@ -1,0 +1,12 @@
+PATCH-S2597-CUMULATIVE — nullable vehicle renderer hardening
+Base: app-main (30).zip + PATCH-S2596-CARNOTES-NULL-TOLOCALESTRING-CUMULATIVE.zip
+Cumulative: includes all entries from S2596 and refreshes them against the S2597 build.
+New source changes:
+- modules/vehicle/servis-b.js
+- modules/vehicle/fuel-insight-engine.js
+- modules/vehicle/sparepart-servis-ui.js
+- tests/s2597-nullable-vehicle-renderers-regression.test.js
+- AUDIT-FIX-S2597-NULLABLE-VEHICLE-RENDERERS.md
+Build artifacts refreshed: app-bundle-a.min.js, app-bundle-b.min.js, index.html, app_production.html, sw.js and build-generated metadata/version sources.
+Version/cache: 2597
+Full regression: INCOMPLETE (120s timeout; targeted tests passed).
