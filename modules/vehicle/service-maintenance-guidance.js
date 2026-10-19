@@ -64,9 +64,16 @@ function formatServiceRecommendationReason({recommendation,urgency}={}){
 }
 
 function summarizeServiceHistory(vehicleId,cat){
-  const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&s.vehicleId===vehicleId&&(!cat||typeof servisLogMatchesCat!=='function'||servisLogMatchesCat(s,cat))):[];
+  // S2232: "Terakhir diperiksa/diganti" must follow the SAME component-scoped
+  // action authority as the reset engine (matchesActionTypeForReset). Reading
+  // only the root actionType made multi-component sessions show another part's
+  // replacement (e.g. Busi "diganti 17.686 km") while the interval used a
+  // different baseline. Vehicle ids compare as strings (number/string safe).
+  const same=(a,b)=>a==null||b==null?a===b:String(a)===String(b);
+  const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&same(s.vehicleId,vehicleId)&&(!cat||typeof servisLogMatchesCat!=='function'||servisLogMatchesCat(s,cat))):[];
+  const scoped=cat&&typeof matchesActionTypeForReset==='function';
   const by=(type)=>{
-    const xs=logs.filter(s=>String(s.actionType||'ganti')===type);
+    const xs=logs.filter(s=>scoped?matchesActionTypeForReset(s,cat,type,false):String(s.actionType||'ganti')===type);
     xs.sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0));
     return xs[0]||null;
   };

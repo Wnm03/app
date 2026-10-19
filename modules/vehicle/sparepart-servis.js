@@ -815,9 +815,31 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
   let lastKm=null,lastDate=null,latestHistory=null;
   let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
   if(hasKm||hasMonths||hasDays){
-    if(Array.isArray(historyRows)){
-      latestHistory=historyRows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,lastFilter,true)).sort(compareServiceHistoryRecencyLocal)[0]||null;
-    }else if(typeof getLatestServiceLogForCat==='function') latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+    // S2230: a replacement (ganti/pasang/overhaul) also restarts the
+    // inspection clock. Without this, an inspect axis with no 'periksa' log
+    // treated the whole odometer as "distance since last service" and flagged
+    // a part replaced today as overdue (Roller CVT: replaced at 21.311 km, shown
+    // "Terlewat 9.311 km"). Components whose policy says replacement does NOT
+    // reset (gantiResetsInterval=false) stay excluded by matchesActionTypeForReset.
+    const inspectAxis=normalizeServiceActionType(lastFilter)==='periksa';
+    // A replacement logged above the current odometer is bad data and must not
+    // become a baseline (it would yield negative distance travelled).
+    const replacementOk=(s)=>!(Number.isFinite(Number(s&&s.km))&&Number(s.km)>currentKm);
+    const pickLatest=(rows)=>{
+      let best=null;
+      rows.forEach(s=>{if(s&&(best===null||compareServiceHistoryRecencyLocal(s,best)<0))best=s;});
+      return best;
+    };
+    const pool=Array.isArray(historyRows)?historyRows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)):null;
+    if(pool){
+      latestHistory=pickLatest(pool.filter(s=>matchesActionTypeForReset(s,cat,lastFilter,true)||(inspectAxis&&replacementOk(s)&&matchesActionTypeForReset(s,cat,'ganti',true))));
+    }else if(typeof getLatestServiceLogForCat==='function'){
+      latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+      if(inspectAxis){
+        const replaced=getLatestServiceLogForCat(vehicleId,cat,'ganti',true);
+        if(replaced&&replacementOk(replaced)&&(!latestHistory||compareServiceHistoryRecencyLocal(replaced,latestHistory)<0))latestHistory=replaced;
+      }
+    }
   }
   if(hasKm){
     lastKm=latestHistory&&Number.isFinite(Number(latestHistory.km))?Number(latestHistory.km):(Array.isArray(historyRows)?null:getLastServiceKmForCat(vehicleId,cat,lastFilter,true));

@@ -631,7 +631,9 @@ const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveRese
 const lastKm=getLastServiceKmForCat(vehicleId,cat,resetFilter,true);
 const overridden=hasIntervalOverride(vehicleId,cat);
 const u=computeServiceUrgency({vehicleId,cat,curKm,kmPerDay});
-return{categoryId:cat.id,categoryName:cat.name,currentKm:curKm,lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,nextDueKm:u.nextDueKm,nextDueDate:u.nextDueDate,nextDueAxis:u.nextDueAxis,estDateISO:u.estDateISO,status:u.status,statusLabel:u.statusLabel,statusIcon:u.statusIcon,statusSeverity:u.statusSeverity};
+// S2231: expose the baseline the urgency engine actually used (inspect axis may
+// be reset by a replacement), not the replace-only baseline.
+return{categoryId:cat.id,categoryName:cat.name,currentKm:curKm,lastKm:(u&&u.lastKm!==undefined)?u.lastKm:lastKm,intervalKm:u.intervalKm,overridden,sisaKm:u.sisaKm,sisaBulan:u.sisaBulan,intervalBulan:u.intervalBulan,limitingAxis:u.limitingAxis,nextDueKm:u.nextDueKm,nextDueDate:u.nextDueDate,nextDueAxis:u.nextDueAxis,estDateISO:u.estDateISO,status:u.status,statusLabel:u.statusLabel,statusIcon:u.statusIcon,statusSeverity:u.statusSeverity};
 }).sort((a,b)=>{const av=a.sisaKm==null?Infinity:a.sisaKm;const bv=b.sisaKm==null?Infinity:b.sisaKm;return av-bv;});
 if(categoryId){
   if(rows.length)return{ok:true,vehicleId,curKm,kmPerDay,conditionItems,items:undefined,...rows[0]};

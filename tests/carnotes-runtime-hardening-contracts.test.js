@@ -11,7 +11,7 @@ test('Car Notes build manifest has no duplicate source entries',()=>{
  const dup=[...counts].filter(([,n])=>n>1);assert.deepEqual(dup,[]);
 });
 test('Car Notes reminder list has a bounded internal scroll container',()=>{
- const css=read('styles.css');assert.match(css,/servisReminderCard-cbody \.servis-reminder-list\s*\{[^}]*max-height\s*:\s*420px[^}]*overflow-y\s*:\s*auto/);
+ const css=read('styles.css');assert.match(css,/servisReminderCard-cbody \.servis-reminder-list\s*\{[^}]*max-height\s*:\s*max\(420px[^}]*overflow-y\s*:\s*auto/);
  const servis=read('modules/vehicle/servis.js')+'\n'+read('modules/vehicle/servis-b.js');assert.match(servis,/class=\\?"servis-reminder-list\\?"/);
 });
 test('Car Notes performance API is defined in source and registered before vehicle consumers',()=>{

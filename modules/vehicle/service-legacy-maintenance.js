@@ -78,7 +78,18 @@
   }
   function evaluateAction(vehicleId,componentId,plan,now,vehicleOverride){
     const action=validAction(plan&&plan.action)?normalizeAction(plan.action):'periksa';
-    const last=latestByAction(vehicleId,componentId,action);
+    let last=latestByAction(vehicleId,componentId,action);
+    // S2231: a replacement also restarts the inspection clock; otherwise a part
+    // replaced today with no prior 'periksa' log stays BASELINE_REQUIRED/overdue.
+    // Replacement rows above the current odometer are bad data and ignored.
+    if(action==='periksa'){
+      const rep=latestByAction(vehicleId,componentId,'ganti');
+      const kmCur=currentKm(vehicleId,vehicleOverride);
+      const repKm=rep?num(rep.km):null;
+      const repOk=!!rep&&!(repKm!=null&&kmCur!=null&&repKm>kmCur);
+      const newer=repOk&&(!last||(String(rep.date||'').localeCompare(String(last.date||''))||((repKm??-1)-(num(last.km)??-1)))>0);
+      if(newer)last=rep;
+    }
     if(!last)return {action,axis:plan.axis||'maintenance',status:'BASELINE_REQUIRED',reason:'belum ada riwayat tindakan ini',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null};
     const kmNow=currentKm(vehicleId,vehicleOverride); const lastKm=num(last.km);
     const intervalKm=num(plan.intervalKm); const intervalMonths=num(plan.intervalMonths);
