@@ -563,7 +563,23 @@ return raw||'ganti';
 }
 function isServiceIntervalResetAction(value){return['ganti','pasang','overhaul'].includes(normalizeServiceActionType(value));}
 function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
-const effType=normalizeServiceActionType(log&&log.actionType);
+// A history row may retain a legacy/session-level actionType that disagrees
+// with the component row in its checklist. For a component-scoped reminder,
+// the matching checklist action is the strongest evidence; otherwise one
+// component's replacement can incorrectly reset another component's interval.
+let checklistAction=null;
+const checklist=Array.isArray(log&&log.checklist)?log.checklist:[];
+const targetComponent=serviceComponentIdForCategory(cat);
+const targetCategory=String(cat&&cat.id||'');
+const rowMatches=row=>{
+  if(!row)return false;
+  const component=String(row.serviceComponentId||row.itemId||'');
+  const category=String(row.categoryId||'');
+  return !!((targetComponent&&component===String(targetComponent))||(targetCategory&&category===targetCategory));
+};
+const matchedRow=checklist.find(row=>rowMatches(row)&&row.actionType!=null&&String(row.actionType).trim()!=='');
+if(matchedRow)checklistAction=matchedRow.actionType;
+const effType=normalizeServiceActionType(checklistAction!=null?checklistAction:(log&&log.actionType));
 // S2033: action filter is authoritative; conditional mode must not turn every
 // non-ganti action into a match for a requested 'periksa' baseline.
 if(actionTypeFilter){

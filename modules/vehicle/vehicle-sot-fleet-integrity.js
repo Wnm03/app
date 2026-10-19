@@ -13,9 +13,17 @@ function vsfiCurrentKm(vehicleId){
 }
 function vsfiDate(v){const d=new Date(v);return isNaN(d)?null:d;}
 function vsfiServiceRank(a,b){return String(a&&a.date||'').localeCompare(String(b&&b.date||''))||Number(a&&a.km||-1)-Number(b&&b.km||-1);}
-function vsfiLatestService(vehicleId,partId,index){
-  if(index&&typeof index.get==='function')return index.get(vsfiStr(partId))||null;
-  const rows=vsfiArr(typeof D!=='undefined'?D.servisLogs:[]).filter(s=>s&&vsfiStr(s.vehicleId)===vsfiStr(vehicleId)&&vsfiStr(s.catalogPartId)===vsfiStr(partId));
+function vsfiLatestService(vehicleId,partId,index,rule){
+  const part=vsfiStr(partId||rule&&rule.catalogPartId);
+  if(part&&index&&typeof index.get==='function'&&index.get(part))return index.get(part);
+  const component=vsfiStr(rule&&rule.serviceComponentId),category=vsfiStr(rule&&rule.categoryId);
+  const rows=vsfiArr(typeof D!=='undefined'?D.servisLogs:[]).filter(s=>{
+    if(!s||vsfiStr(s.vehicleId)!==vsfiStr(vehicleId))return false;
+    if(part&&vsfiStr(s.catalogPartId)===part)return true;
+    if(category&&(vsfiStr(s.categoryId)===category||vsfiArr(s.checklist).some(c=>vsfiStr(c&&c.categoryId)===category)))return true;
+    if(component&&(vsfiStr(s.serviceComponentId)===component||vsfiArr(s.checklist).some(c=>vsfiStr(c&&(c.serviceComponentId||c.itemId))===component)))return true;
+    return false;
+  });
   rows.sort((a,b)=>-vsfiServiceRank(a,b));
   return rows[0]||null;
 }
@@ -50,7 +58,7 @@ async function vsfiServiceState(vehicleId,options){
   const now=options&&options.now?new Date(options.now):new Date();
   const serviceIndex=vsfiLatestServiceIndex(vehicleId);
   const currentKm=vsfiCurrentKm(vehicleId);
-  const states=schedules.map(r=>{const rule=Object.assign({},r,{vehicleId});return Object.assign({},rule,vsfiDue(vsfiLatestService(vehicleId,r.catalogPartId,serviceIndex),rule,now,currentKm));});
+  const states=schedules.map(r=>{const rule=Object.assign({},r,{vehicleId});return Object.assign({},rule,vsfiDue(vsfiLatestService(vehicleId,r.catalogPartId,serviceIndex,r),rule,now,currentKm));});
   const projection={version:VEHICLE_SOT_FLEET_INTEGRITY_VERSION,currentKm,calculatedAt:new Date().toISOString(),items:states};
   if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.setMaintenanceState==='function'){
     VehicleCarNotesSOT.setMaintenanceState(vehicleId,projection);

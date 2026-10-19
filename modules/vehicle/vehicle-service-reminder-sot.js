@@ -25,20 +25,66 @@ async function vsrsCatalog(vehicleId,options){
     });
   }catch(e){return []}
 }
-function vsrsRule(p){
-  const km=Number(p&&p.serviceIntervalKm), mo=Number(p&&p.serviceIntervalMonths);
+function vsrsRule(p,vehicleId,categories){
+  if(!p||!p.id)return null;
+  const rows=Array.isArray(categories)?categories:[];
+  const category=rows.find(c=>c&&String(c.catalogPartId||'')===String(p.id))||
+    rows.find(c=>c&&p.serviceComponentId&&String(c.serviceComponentId||c.componentId||'')===String(p.serviceComponentId))||null;
+  let km=Number(category&&category.intervalKm), mo=Number(category&&category.intervalBulan);
+  // Canonical vehicle/category projection wins over deprecated catalog intervals.
+  if((!Number.isFinite(km)||km<=0)&&(!Number.isFinite(mo)||mo<=0)&&
+     typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+    try{
+      const ref=category||{id:String(p.id),name:String(p.partName||''),catalogPartId:String(p.id),
+        serviceComponentId:p.serviceComponentId||null,masterCategoryId:p.masterCategoryId||null,vehicleId};
+      const active=VehicleServiceSOT.resolveReminderRule(ref,vehicleId);
+      if(active){km=Number(active.intervalKm);mo=Number(active.intervalBulan);}
+    }catch(_e){/* Keep compatibility fallback; provisioning must not crash. */}
+  }
+  // Legacy catalog fields are a fallback only if no canonical interval exists.
+  if((!Number.isFinite(km)||km<=0)&&(!Number.isFinite(mo)||mo<=0)){
+    km=Number(p.serviceIntervalKm);mo=Number(p.serviceIntervalMonths);
+  }
   const hasKm=Number.isFinite(km)&&km>0, hasMo=Number.isFinite(mo)&&mo>0;
   if(!hasKm&&!hasMo)return null;
-  return {catalogPartId:String(p.id),partName:String(p.partName||''),oemCode:String(p.oemCode||''),category:String(p.category||''),subcategory:p.subcategory==null?null:String(p.subcategory),intervalKm:hasKm?km:null,intervalBulan:hasMo?mo:null,showInReminder:p.serviceShowInReminder!==false};
+  return {catalogPartId:String(p.id),categoryId:category&&category.id||null,serviceComponentId:category&&category.serviceComponentId||p.serviceComponentId||null,masterCategoryId:category&&category.masterCategoryId||p.masterCategoryId||null,partName:String(p.partName||category&&category.name||''),oemCode:String(p.oemCode||category&&category.code||''),category:String(p.category||category&&category.group||''),subcategory:p.subcategory==null?(category&&category.subcategory!=null?String(category.subcategory):null):String(p.subcategory),intervalKm:hasKm?km:null,intervalBulan:hasMo?mo:null,showInReminder:category&&category.showInReminder!=null?category.showInReminder!==false:p.serviceShowInReminder!==false};
+}
+function vsrsCategoryRule(category,vehicleId){
+  if(!category||category.vehicleId&&String(category.vehicleId)!==String(vehicleId))return null;
+  let km=Number(category.intervalKm),mo=Number(category.intervalBulan);
+  if((!Number.isFinite(km)||km<=0)&&(!Number.isFinite(mo)||mo<=0)&&typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+    try{const active=VehicleServiceSOT.resolveReminderRule(category,vehicleId);if(active){km=Number(active.intervalKm);mo=Number(active.intervalBulan);}}catch(_e){/* A missing optional interval resolver must not block other canonical categories. */}
+  }
+  const hasKm=Number.isFinite(km)&&km>0,hasMo=Number.isFinite(mo)&&mo>0;
+  if(!hasKm&&!hasMo)return null;
+  const componentId=String(category.serviceComponentId||category.componentId||'').trim()||null;
+  const categoryId=String(category.id||category.categoryId||'').trim()||null;
+  if(!componentId&&!categoryId&&!category.catalogPartId)return null;
+  return {catalogPartId:category.catalogPartId?String(category.catalogPartId):null,categoryId,serviceComponentId:componentId,masterCategoryId:category.masterCategoryId||null,partName:String(category.name||category.partName||componentId||'Servis'),oemCode:String(category.code||category.oemCode||''),category:String(category.group||category.categoryName||''),subcategory:category.subcategory==null?null:String(category.subcategory),intervalKm:hasKm?km:null,intervalBulan:hasMo?mo:null,showInReminder:category.showInReminder!==false};
 }
 function vsrsDedup(rules){
-  const m=new Map(); (rules||[]).forEach(r=>{if(!r||!r.catalogPartId)return;const old=m.get(r.catalogPartId);if(!old)m.set(r.catalogPartId,r);});
+  const m=new Map(); (rules||[]).forEach(r=>{if(!r)return;const key=String(r.serviceComponentId||r.catalogPartId||r.categoryId||'').trim();if(!key)return;const old=m.get(key);if(!old)m.set(key,r);else if(!old.catalogPartId&&r.catalogPartId)m.set(key,r);});
   return Array.from(m.values()).sort((a,b)=>(a.category+a.subcategory+a.partName).localeCompare(b.category+b.subcategory+b.partName));
 }
 async function provision(vehicleId,options){
   const v=vsrsVehicle(vehicleId)||options&&options.vehicle;
   if(!v)return {ok:false,reason:'vehicle_missing'};
-  const parts=await vsrsCatalog(v.id,options); const rules=vsrsDedup(parts.map(vsrsRule).filter(Boolean));
+  const parts=await vsrsCatalog(v.id,options);
+  let categories=[];
+  if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.getReminderCategoriesForVehicle==='function'){
+    try{categories=VehicleServiceSOT.getReminderCategoriesForVehicle(v.id)||[];}catch(_e){categories=[];}
+  }
+  const catalogRules=parts.map(p=>vsrsRule(p,v.id,categories)).filter(Boolean);
+  const represented=new Set();
+  catalogRules.forEach(r=>{if(r.categoryId)represented.add('cat:'+String(r.categoryId));if(r.serviceComponentId)represented.add('component:'+String(r.serviceComponentId));});
+  // Legacy/vehicle SOT categories may be valid reminder rules without a linked
+  // VehicleCatalog part. Keep these canonical category rows instead of silently
+  // provisioning an empty schedule when the catalog has no component links.
+  const categoryRules=categories.filter(c=>c&&(!c.vehicleId||String(c.vehicleId)===String(v.id))).map(c=>{
+    if((c.id&&represented.has('cat:'+String(c.id)))||(c.serviceComponentId&&represented.has('component:'+String(c.serviceComponentId))))return null;
+    return vsrsCategoryRule(c,v.id);
+  }).filter(Boolean);
+  const rules=vsrsDedup(catalogRules.concat(categoryRules));
   const old=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.getServiceSchedules(v.id):[];
   let wr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT)?VehicleCarNotesSOT.setServiceSchedules(v.id,rules,{version:VEHICLE_SERVICE_REMINDER_SOT_VERSION}):null;
   if(!wr||!wr.ok){

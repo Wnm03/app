@@ -1,0 +1,29 @@
+S2168 changed files
+
+Production source:
+- modules/vehicle/vehicle-service-reminder-sot.js
+- modules/vehicle/vehicle-sot-fleet-integrity.js
+- modules/vehicle/sparepart-servis.js
+
+Regression tests:
+- tests/service-reminder-category-only-provisioning-s2168.test.js
+
+Generated build artifacts (version s2033-reset-interval-chain-audit-2577):
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- index.html
+- app_production.html
+- sw.js
+- modules/shared/modules-render.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- chat-action-handlers.js
+- modules/shared/features-helpers-global-security.js
+- FILE-MAP.md
+- COVERAGE-PER-MODULE.md
+
+Audit/manifest:
+- docs/AUDIT-S2168-BACKUP-CHAIN-AND-CATEGORY-PROVISIONING.md
+- PATCH-MANIFEST-S2168-ACTUAL-BACKUP-CATEGORY-PROVISIONING.txt
+- CHANGED-FILES-S2168.txt
+- CUMULATIVE-PATCH-MANIFEST-S2168.md
