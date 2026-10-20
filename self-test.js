@@ -87,7 +87,10 @@ const results=[];
 // krn dipanggil setelah suppress dimatikan lagi di finally.
 if(typeof setToastSuppressed==='function')setToastSuppressed(true);
 try{
-for(const c of cases){
+for(let _ci=0;_ci<cases.length;_ci++){
+const c=cases[_ci];
+// Guard: entri registry kosong/bukan {name,fn} (mis. typo koma ganda `},,` di array case) dilaporkan jelas, bukan TypeError samar "reading 'fn'".
+if(!c||typeof c.fn!=='function'){ results.push({name:(c&&c.name)||('(kasus #'+(_ci+1)+' tanpa nama)'),pass:false,error:'Entri test case #'+(_ci+1)+' kosong/invalid (tidak punya fn) — cek koma ganda atau entri undefined di self-test-cases-a/b.js'}); continue; }
 try{ await c.fn(); results.push({name:c.name,pass:true}); }
 catch(e){
 let msg=(e&&e.message)||String(e);

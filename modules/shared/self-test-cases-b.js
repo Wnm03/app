@@ -670,7 +670,7 @@ _selfTestAssert(style.overflowY==='auto'||style.overflowY==='scroll','Daftar #'+
 const card=document.getElementById('dashBackupReminderCard');
 if(!card)return; // Legacy target sudah retired pada baseline dashboard saat ini.
 throw new Error('dashBackupReminderCard masih ada di DOM; legacy backup renderer harus diaudit ulang sebelum diaktifkan.');
-}},,
+}},
 {name:'UI: elemen interaktif (data-action) yang cuma berisi ikon/emoji/tanpa teks wajib punya aria-label (aksesibilitas screen reader)', fn:()=>{
 findMissingAriaLabels(document).forEach(msg=>_selfTestAssert(false,msg));
 }},

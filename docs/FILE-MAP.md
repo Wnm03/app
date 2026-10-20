@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T23:54:51.943Z
-Total file source: 487 · Total identifier global: 17325
+Terakhir digenerate: 2026-10-20T03:25:00.677Z
+Total file source: 487 · Total identifier global: 17326
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -235,7 +235,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 212 | `modules/shared/app-init-runtime.js` | 85 | App bootstrap runtime extracted from self-test.js. Kept separate so diagnostic tests do not own the application bootstrap. S1763: lifecycle/interval installation is explicitly idempotent. `init()` can be reached again … |
 | 213 | `modules/shared/self-test-cases-a.js` | 866 | Self-test case registry part A. |
 | 214 | `modules/shared/self-test-cases-b.js` | 825 | Self-test case registry part B. |
-| 215 | `self-test.js` | 1007 | CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load & "gagal" kalau `node --test` dijalankan TANPA argumen di root. … |
+| 215 | `self-test.js` | 1010 | CATATAN (Sesi 297): file ini adalah runtime app (bukan file test Node), tapi namanya cocok pola default `node --test` (*-test.js) sehingga bisa ke-load & "gagal" kalau `node --test` dijalankan TANPA argumen di root. … |
 | 216 | `pajak-aset-ui-wrappers.js` | 226 | Wrapper UI tipis: parser angka (parsePzNum/parseDecStr/ normalizeOcrNumber), ganti tab pajak/zakat (setPajakTab/setPjkTab/savePajakSettings), dan delegasi tipis ke modul … |
 | 217 | `modules/finance/finance-intelligence.js` | 255 | Finance Intelligence Foundation (Sesi 74, Batch 6). Target sesi: Cash Flow Summary, Budget Summary, Income vs Expense, Financial Health Score, Insight dasar — lihat docs/BATCH_PLAN.md § Batch 6. PRINSIP (RULE #1 sesi … |
 | 218 | `modules/finance/financial-audit-engine.js` | 441 | modules/finance/financial-audit-engine.js — Audit Keuangan 30 Menit, Phase A. Pure/read-only: tidak mengubah D.transactions, tidak memanggil save(), dan tidak menyentuh DOM. Semua rentang harus eksplisit di API publik; … |
@@ -3477,6 +3477,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `c` | `modules/vehicle/service-reminder-form-sot-s2054.js` |
 | `c` | `modules/vehicle/service-maintenance-engine.js` |
 | `c` | `ai-chat.js` |
+| `c` | `self-test.js` |
 | `c` | `modules/finance/retirement-planner-api.js` |
 | `c` | `modules/self-reward/self-reward-ai-widget.js` |
 | `c` | `modules/ai/ai-decision-engine.js` |

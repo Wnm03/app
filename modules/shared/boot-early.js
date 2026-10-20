@@ -115,7 +115,7 @@ function ensureBusinessIntelligence(){return _loadScriptOnce('modules/shop/busin
 // S2254: diagnostic test-case modules are lazy. self-test.js remains eager because it preserves the existing 2.5s diagnostic auto-run contract.
 function ensureDiagnosticCases(){
   if(window.__kwDiagnosticCasesPromise) return window.__kwDiagnosticCasesPromise;
-  const v='2207';
+  const v='2208';
   window.__kwDiagnosticCasesPromise=_loadScriptOnce('modules/shared/self-test-cases-a.js?v='+v)
     .then(()=>_loadScriptOnce('modules/shared/self-test-cases-b.js?v='+v))
     .catch((err)=>{ window.__kwDiagnosticCasesPromise=null; throw err; });
@@ -126,7 +126,7 @@ function ensureDiagnosticCases(){
 // Auto-run dipicu di sini agar kontrak lama (2.5s setelah bootstrap) tetap sama.
 function ensureSelfTest(){
   if(window.__kwSelfTestPromise) return window.__kwSelfTestPromise;
-  const v='2207';
+  const v='2208';
   window.__kwSelfTestPromise=_loadScriptOnce('self-test.js?v='+v)
     .catch((err)=>{ window.__kwSelfTestPromise=null; throw err; });
   return window.__kwSelfTestPromise;
