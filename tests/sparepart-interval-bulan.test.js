@@ -110,7 +110,7 @@ test('getLastServiceDateForCat() — reuse servisLogMatchesCat(), balikin tangga
 test('computeServiceUrgency() — kategori TANPA intervalBulan identik dgn formula km lama', () => {
   const D = baseD({
     sparepartCats: [{ id: 'c1', name: 'Oli Mesin', intervalKm: 2000 }],
-    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2026-01-01', km: 8000 }],
+    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2026-01-01', km: 8000, actionType: 'ganti' }],
   });
   const ctx = makeCtx(D);
   const cat = D.sparepartCats[0];
@@ -124,7 +124,7 @@ test('computeServiceUrgency() — kategori TANPA intervalBulan identik dgn formu
 test('computeServiceUrgency() — axis bulan yang lebih mendesak MENANG (mis. Minyak Rem sudah lewat waktu walau km masih jauh)', () => {
   const D = baseD({
     sparepartCats: [{ id: 'c1', name: 'Minyak Rem', intervalKm: 20000, intervalBulan: 6 }],
-    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2025-01-01', km: 1000 }],
+    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2025-01-01', km: 1000, actionType: 'ganti' }],
   });
   const ctx = makeCtx(D);
   const cat = D.sparepartCats[0];
@@ -138,7 +138,7 @@ test('computeServiceUrgency() — axis bulan yang lebih mendesak MENANG (mis. Mi
 test('predictService() — kategori dgn intervalBulan mendesak ikut ditandai "lewat" walau sisaKm masih banyak', () => {
   const D = baseD({
     sparepartCats: [{ id: 'c1', name: 'Aki', intervalKm: 99999, intervalBulan: 6, showInReminder: true }],
-    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2025-01-01', km: 100 }],
+    servisLogs: [{ vehicleId: 'v1', categoryId: 'c1', date: '2025-01-01', km: 100, actionType: 'ganti' }],
     vehicles: [{ id: 'v1', name: 'Vario 125', jenis: 'motor', kmLogs: [], servisLogs: [] }],
   });
   const ctx = makeCtx(D, {

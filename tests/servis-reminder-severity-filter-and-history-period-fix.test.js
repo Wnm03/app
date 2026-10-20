@@ -2,7 +2,7 @@ const fs=require('fs');
 const path=require('path');
 const assert=require('assert');
 const {readServisSource}=require('./helpers/carNotesSource');
-const js=readServisSource();
+const js=readServisSource()+'\n'+fs.readFileSync(path.join(__dirname,'..','modules','vehicle','servis-b.js'),'utf8');
 const vehicleCoreJs=fs.readFileSync(path.join(__dirname,'..','modules','vehicle','vehicle-core.js'),'utf8');
 const helpersJs=fs.readFileSync(path.join(__dirname,'..','modules','shared','features-helpers-global-security.js'),'utf8');
 
@@ -28,15 +28,15 @@ let historyFnBody;
 // (Semua/Terlewat/Segera/Mendekati/Aman), bukan cuma filter kategori.
 assert(js.includes('activeReminderSeverityFilter:null,'),'state activeReminderSeverityFilter harus ada, default null (Semua)');
 assert(js.includes('reminderSeverityChipsHtml(counts){'),'reminderSeverityChipsHtml harus ada');
-['🔍 Semua','🔴 Terlewat','🟠 Segera','🔵 Mendekati','🟢 Aman'].forEach(label=>{
+['🔍 Semua','🔴 Terlewat/Rusak','🟠 Segera','🔵 Mendekati','🟢 Aman/Normal','⚪ Belum diketahui'].forEach(label=>{
   assert(js.includes(label),`chip status "${label}" harus ada di reminderSeverityChipsHtml`);
 });
 
 // renderReminder() harus menghitung counts, menerapkan filter severity ke
 // displayRows (bukan mengubah urutan/isi `rows` mentah -- 0 regresi kalau
 // chip baru tidak disentuh), dan menampilkan pesan kosong khusus.
-assert(js.includes('const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status===\'terlewat\'||r.status===\'jatuh_tempo\').length,segera:rows.filter(r=>r.status===\'segera\').length,mendekati:rows.filter(r=>r.status===\'mendekati\').length,aman:rows.filter(r=>r.status===\'aman\').length};'),'reminderSeverityCounts harus dihitung dari rows (setelah filter kategori, sebelum filter severity)');
-assert(js.includes("const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):r.status===rfSeverity);"),'displayRows harus hasil filter severity dari rows');
+assert(js.includes(`const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length,unknown:rows.filter(r=>!['terlewat','jatuh_tempo','segera','mendekati','aman'].includes(r.status)).length};`),'reminderSeverityCounts harus merekonsiliasi seluruh bucket status, termasuk unknown');
+assert(js.includes(`const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):rfSeverity==='unknown'?!['terlewat','jatuh_tempo','segera','mendekati','aman'].includes(r.status):r.status===rfSeverity);`),'displayRows harus hasil filter severity dari rows dan unknown');
 assert(js.includes('Tidak ada part dengan status ini pada kategori yang dipilih.'),'pesan empty state khusus filter severity harus ada');
 assert(js.includes('displayRows.map(r=>`'),'template kartu harus me-render displayRows (bukan lagi rows mentah)');
 
@@ -108,7 +108,7 @@ assert(js.includes('Servis._loadReminderSeverityFilterPrefsOnce();'),'renderRemi
   const start=js.indexOf('_loadReminderSeverityFilterPrefsOnce(){');
   const end=js.indexOf('\n},',start);
   const fnBody=js.slice(start,end);
-  assert(fnBody.includes("['lewat','segera','mendekati','aman']"),'_loadReminderSeverityFilterPrefsOnce harus hanya menerima 4 nilai severity yang valid (null/\"Semua\" tidak perlu disimpan)');
+  assert(fnBody.includes("['lewat','segera','mendekati','aman','unknown']"),'_loadReminderSeverityFilterPrefsOnce harus hanya menerima 4 nilai severity yang valid (null/\"Semua\" tidak perlu disimpan)');
   assert(fnBody.includes('catch(err){'),'_loadReminderSeverityFilterPrefsOnce harus fail-open (try/catch) kalau localStorage korup/tidak tersedia');
 }
 

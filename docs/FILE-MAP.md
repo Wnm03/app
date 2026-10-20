@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-19T22:54:42.459Z
-Total file source: 487 · Total identifier global: 17324
+Terakhir digenerate: 2026-10-19T23:54:51.943Z
+Total file source: 487 · Total identifier global: 17325
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -217,7 +217,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 194 | `modules/vehicle/service-history-bulk-identity-editor.js` | 252 | S1973: Bulk History Identity Editor hardening — bounded selection, before/after audit, stale-identity warning, atomic guard. S1972 behavior remains cumulative; this extension stays outside servis.js to respect … |
 | 195 | `modules/vehicle/service-maintenance-engine.js` | 25 | _(tidak ada komentar header)_ |
 | 196 | `modules/vehicle/service-maintenance-repository.js` | 38 | _(tidak ada komentar header)_ |
-| 197 | `modules/vehicle/servis-b.js` | 818 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
+| 197 | `modules/vehicle/servis-b.js` | 824 | S1812 split: lower-level service history/reminder methods extracted from servis.js. Loaded immediately after servis.js; public API remains Servis.* unchanged. |
 | 198 | `modules/vehicle/service-history-component-explorer-s2006.js` | 105 | _(tidak ada komentar header)_ |
 | 199 | `modules/vehicle/service-maintenance-guidance.js` | 162 | _(tidak ada komentar header)_ |
 | 200 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
@@ -12773,6 +12773,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `rawScore` | `modules/finance/finance-intelligence.js` |
 | `rawScore` | `modules/vehicle/vehicle-intelligence.js` |
 | `rawScore` | `modules/shop/business-intelligence-presenter.js` |
+| `rawStatus` | `modules/vehicle/servis-b.js` |
 | `rawSupplier` | `modules/shop/cobek-io.js` |
 | `rawSupplier` | `modules/business/shop-data-io-api.js` |
 | `rawTgl` | `modules/asset/aset-emas-impor.js` |

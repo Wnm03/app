@@ -415,7 +415,7 @@ if(!raw)return;
 const parsed=JSON.parse(raw);
 const v=parsed&&parsed.activeReminderSeverityFilter;
 if(v===null||v===undefined)return;
-const validValues=['lewat','segera','mendekati','aman'];
+const validValues=['lewat','segera','mendekati','aman','unknown'];
 if(validValues.indexOf(v)!==-1)Servis.activeReminderSeverityFilter=v;
 }catch(err){
 // Reminder filter persistence is best-effort; read failures must not break rendering.
@@ -432,7 +432,7 @@ localStorage.setItem(Servis._reminderSeverityFilterStorageKey,JSON.stringify({ac
 
 reminderSeverityChipsHtml(counts){
   const cur=Servis.activeReminderSeverityFilter;
-  const opts=[{v:null,label:'🔍 Semua'},{v:'lewat',label:'🔴 Terlewat'},{v:'segera',label:'🟠 Segera'},{v:'mendekati',label:'🔵 Mendekati'},{v:'aman',label:'🟢 Aman'}];
+  const opts=[{v:null,label:'🔍 Semua'},{v:'lewat',label:'🔴 Terlewat/Rusak'},{v:'segera',label:'🟠 Segera'},{v:'mendekati',label:'🔵 Mendekati'},{v:'aman',label:'🟢 Aman/Normal'},{v:'unknown',label:'⚪ Belum diketahui'}];
   return `<div class="u-flex u-fs12 u-mb10" style="gap:6px;flex-wrap:wrap">`+opts.filter(o=>o.v===null||o.v===cur||counts[o.v]>0).map(o=>{const n=o.v===null?counts.total:counts[o.v];return `<div class="chip ${o.v===cur?'active':''}" data-action="Servis.setReminderSeverityFilter" data-args="${escapeHtml(JSON.stringify([o.v]))}">${o.label} (${n})</div>`;}).join('')+`</div>`;
 },
 renderReminderFilters(card){
@@ -499,11 +499,14 @@ const effectiveIntervalKm=u&&u.intervalKm>0?u.intervalKm:intervalKm;
 const effectiveLastKm=u&&u.lastKm!==undefined?u.lastKm:lastKm;
 const _currentKm=curKm!=null&&curKm!==''&&Number.isFinite(Number(curKm))?Number(curKm):null;
 const _lastKm=effectiveLastKm!=null&&effectiveLastKm!==''&&Number.isFinite(Number(effectiveLastKm))?Number(effectiveLastKm):null;
-const _rawSisa=u&&u.sisaKm!=null?u.sisaKm:(effectiveIntervalKm>0&&_currentKm!==null?(effectiveIntervalKm-(_lastKm===null?_currentKm:_currentKm-_lastKm)):null);
+// ROOT-SOT: render must never reconstruct a countdown when the canonical urgency projection has no valid baseline.
+const _rawSisa=u&&u.sisaKm!=null?u.sisaKm:null;
 const sisa=_rawSisa!==null&&_rawSisa!==''&&Number.isFinite(Number(_rawSisa))?Number(_rawSisa):null;
 const sisaKmLabel=sisa===null?'Interval belum ditetapkan':sisa.toLocaleString('id-ID');
 const pct=effectiveIntervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((effectiveIntervalKm-sisa)/effectiveIntervalKm)*100))):0;
-const status=u?u.status:(sisa==null?'aman':(typeof resolveServiceStatusMeta==='function'?resolveServiceStatusMeta(effectiveIntervalKm>0?sisa/effectiveIntervalKm:1).code:(sisa<=0?'jatuh_tempo':(sisa<=effectiveIntervalKm*0.15?'segera':'aman'))));
+// ROOT-SOT: absence of a canonical result is unknown, never implicitly safe.
+const rawStatus=u&&u.status?u.status:'unknown';
+const status=rawStatus==='rusak'?'terlewat':rawStatus==='normal'?'aman':rawStatus;
 const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
 const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
 const hasFiniteKmRemaining=sisa!==null&&sisa!==undefined&&sisa!==''&&Number.isFinite(Number(sisa));
@@ -521,6 +524,9 @@ msg=dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimit
 }else if(status==='mendekati'){
 col='orange';severity='watch';
 msg=dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${kmRemainingLabel}`;
+}else if(status==='unknown'){
+col='gray';severity=null;
+msg='⚪ Baseline servis belum diketahui';
 }
 
 const estDateISO=(monthLimited||!hasFiniteKmRemaining)?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(Number(sisa),kmPerDay));
@@ -554,9 +560,9 @@ const historyBaselineLabel=hasHistoryButNoResetBaseline?'Belum ada riwayat yang 
 const legacyReminderFields={nextDueKm,nextDueDate,dueLabel,status};
 return{cat,lastKm:effectiveLastKm,intervalKm:effectiveIntervalKm,overridden,sisa,pct,col,msg,estLabel,action:actionText,nextAction:recommendedAction,condition,historySummary,historyBaselineLabel,scheduleLabel,...legacyReminderFields,recommendationReason,history,latestInspectionResult,canonicalComponentName,canonicalCategoryName,canonicalMasterCategoryId};
 }).sort((a,b)=>{const av=Number.isFinite(a.sisa)?a.sisa:Number.POSITIVE_INFINITY;const bv=Number.isFinite(b.sisa)?b.sisa:Number.POSITIVE_INFINITY;return av-bv;});
-const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length};
+const reminderSeverityCounts={total:rows.length,lewat:rows.filter(r=>r.status==='terlewat'||r.status==='jatuh_tempo').length,segera:rows.filter(r=>r.status==='segera').length,mendekati:rows.filter(r=>r.status==='mendekati').length,aman:rows.filter(r=>r.status==='aman').length,unknown:rows.filter(r=>!['terlewat','jatuh_tempo','segera','mendekati','aman'].includes(r.status)).length};
 const rfSeverity=Servis.activeReminderSeverityFilter;
-const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):r.status===rfSeverity);
+const displayRows=!rfSeverity?rows:rows.filter(r=>rfSeverity==='lewat'?(r.status==='terlewat'||r.status==='jatuh_tempo'):rfSeverity==='unknown'?!['terlewat','jatuh_tempo','segera','mendekati','aman'].includes(r.status):r.status===rfSeverity);
 const reminderBadgeParts=[];
 if(reminderSeverityCounts.lewat)reminderBadgeParts.push(`${reminderSeverityCounts.lewat} Terlewat`);
 if(reminderSeverityCounts.segera)reminderBadgeParts.push(`${reminderSeverityCounts.segera} Segera`);

@@ -30,9 +30,11 @@ test('S2230: replacement newer than last inspection becomes the baseline', () =>
   assert.notEqual(u.status, 'terlewat');
 });
 
-test('S2230: a genuinely overdue part with no history still shows overdue', () => {
+test('S2230: no history means baseline unknown, never infer overdue from odometer alone', () => {
   const u = urgency('roller-cvt', [], 30000);
-  assert.equal(u.status, 'terlewat');
+  assert.equal(u.status, 'unknown');
+  assert.equal(u.lastKm, null);
+  assert.equal(u.sisaKm, null);
 });
 
 test('S2231: predictService exposes the same baseline as the urgency engine', () => {
