@@ -234,7 +234,7 @@ test('importShopJSON() gabung — rollback SupplierStore.mutateCreate() menolak 
 
 function loadExcelIo(D, extra = {}) {
   return loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/supplier-store.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/shop/generic/supplier-store.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => '',

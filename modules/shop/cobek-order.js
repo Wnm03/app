@@ -47,13 +47,14 @@ if(!name){toast('⚠️ Nama produsen wajib diisi');return;}
 if(this.editId){
 const pr=D.produsen.find(x=>x.id===this.editId);
 if(pr){
-if(typeof SupplierStore!=='undefined')SupplierStore.mutateUpdate(pr,{name,contact,note});
+if(typeof SupplierStore!=='undefined'){const r=SupplierStore.mutateUpdate(pr,{name,contact,note});if(!r.ok){toast('⚠️ '+r.reason);return;}}
 else Object.assign(pr,{name,contact,note});
 }
 } else {
 if(typeof SupplierStore!=='undefined'){
 const r=SupplierStore.mutateCreate({name,contact,note});
-if(r.ok)D.produsen.push(r.supplier);
+if(!r.ok){toast('⚠️ '+r.reason);return;}
+D.produsen.push(r.supplier);
 } else {
 D.produsen.push({id:'prd_'+Date.now(),name,contact,note});
 }
@@ -220,6 +221,54 @@ applyOneCardCollapsePref('siapPulangCard');
 }
 };
 
+// Shared DP/piutang reconciliation for Kasir and Order. The helper keeps the
+// existing data contract (D.cobek.piutangLinkId, D.piutang.nilai/lunas and
+// FinanceTxSOT) while removing duplicated payment orchestration. It does not
+// calculate profit or mutate source order totals.
+function syncShopSalePayment(options){
+const o=options||{};
+const total=Number(o.total);
+if(!Number.isFinite(total)||total<0||!o.shopId||!o.txId) return {ok:false,reason:'PAYMENT_INPUT_INVALID'};
+const raw=String(o.dpRaw==null?'':o.dpRaw).trim();
+const dp=raw===''?total:Math.max(0,Math.min(Number.parseFloat(raw)||0,total));
+const sisa=Math.max(0,total-dp);
+const txNote=(o.customerName?o.customerName+' - ':'')+(o.itemSummary||'Penjualan Shop');
+const shopRecord=(D.cobek||[]).find(c=>c&&c.id===o.shopId);
+const existingPiutangId=o.existingPiutangId||null;
+const existingPiutang=existingPiutangId?(D.piutang||[]).find(p=>p&&p.id===existingPiutangId):null;
+// Jangan membuat piutang pengganti otomatis jika Order membawa tautan lama
+// tetapi record piutangnya hilang; kondisi ini ambigu dan perlu rekonsiliasi.
+if(sisa>0&&existingPiutangId&&!existingPiutang)return {ok:false,reason:'LINKED_RECEIVABLE_MISSING'};
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+const existingTxId=o.existingTxId||null;
+if(existingTxId){
+  const tx=FinanceTxSOT.findById?FinanceTxSOT.findById(existingTxId):(D.transactions||[]).find(t=>t&&t.id===existingTxId);
+  if(tx){if(!FinanceTxSOT.updateById)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.updateById(existingTxId,{amount:dp,accountId:o.accountId,note:txNote,date:o.date,cobekLinkId:o.shopId});}
+  else FinanceTxSOT.create({id:o.txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:o.accountId,payMethod:'tunai',note:txNote,date:o.date,cobekLinkId:o.shopId});
+}else{
+  FinanceTxSOT.create({id:o.txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:o.accountId,payMethod:'tunai',note:txNote,date:o.date,cobekLinkId:o.shopId});
+}
+if(sisa>0){
+  const piutangName=o.customerName||'Pembeli Shop';
+  const piutangCatatan='Sisa pembayaran shop: '+(o.itemSummary||'Penjualan Shop');
+  if(existingPiutang){
+    if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter.updateById)throw new Error('BILL_DEBT_PIUTANG_WRITER_REQUIRED');
+    BillDebtPiutangCanonicalWriter.updateById('piutang',existingPiutang.id,p=>Object.assign(p,{name:piutangName,nilai:sisa,tanggal:o.date,catatan:piutangCatatan,lunas:false}));
+    if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
+  }else{
+    const pid=uid();
+    if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter.add)throw new Error('BILL_DEBT_PIUTANG_WRITER_REQUIRED');
+    BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:o.date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
+    if(shopRecord)shopRecord.piutangLinkId=pid;
+  }
+}else if(existingPiutangId){
+  if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter.removeById)throw new Error('BILL_DEBT_PIUTANG_WRITER_REQUIRED');
+  BillDebtPiutangCanonicalWriter.removeById('piutang',existingPiutangId);
+  if(shopRecord)shopRecord.piutangLinkId=null;
+}
+return {ok:true,dp,sisa,txNote,piutangId:shopRecord&&shopRecord.piutangLinkId||null};
+}
+
 const Order={
 items:[],
 editId:null,
@@ -261,6 +310,8 @@ if(!D.products.length){toast('⚠️ Tambah produk di Etalase dulu');return;}
 const t=D.cobek.find(x=>x.id===id);
 if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
 if(!t.items||!t.items.length){toast('⚠️ Transaksi lama (format lama) belum bisa diedit di sini — hapus & catat ulang kalau perlu koreksi.');return;}
+const _missingHistoricalProducts=t.items.filter(it=>!D.products.some(p=>p.id===it.productId));
+if(_missingHistoricalProducts.length){const _snapshotNames=[...new Set(_missingHistoricalProducts.map(it=>it.name||it.productName||'Produk terhapus'))].join(', ');toast('⚠️ Riwayat tetap tersimpan: '+_snapshotNames+'. Pulihkan/tambahkan produk terkait sebelum mengedit transaksi ini.');return;}
 Order.editId=id;
 Order.items=t.items.map(it=>({productId:it.productId,qty:it.qty,hargaOverride:(it.harga!=null?it.harga:null)}));
 document.getElementById('oDate').value=t.date||(typeof todayStr==='function'?todayStr():'');
@@ -397,8 +448,12 @@ const txId=(existing&&existing.txLinkId)?existing.txLinkId:uid();
 // Piutang yg sudah ada, D.piutang — bukan ledger/rumus baru), linked via piutangLinkId spy bisa
 // disinkron ulang kalau transaksi ini diedit lagi nanti.
 const dpRaw=document.getElementById('oDP')?document.getElementById('oDP').value.trim():'';
-const dp=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
-const sisa=Math.max(0,total-dp);
+const dpPreflight=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
+const existingPiutangIdPreflight=existing&&existing.piutangLinkId;
+if(existingPiutangIdPreflight&&total-dpPreflight>0&&!(D.piutang||[]).some(p=>p&&p.id===existingPiutangIdPreflight)){
+  toast('⚠️ Piutang terkait Order tidak ditemukan. Transaksi tidak diubah; rekonsiliasi piutang terlebih dahulu.');return;
+}
+// Nilai DP dan sisa dihitung ulang oleh syncShopSalePayment() bersama Kasir.
 // kw-shop-edit: existingShopId->recordShopSale() (di cobek-tx-cart.js) yg kembalikan stok lama
 // & apply stok baru, engine sama persis dgn yg sudah dipakai applyTxShopSaleFromTx().
 const result=recordShopSale({
@@ -407,32 +462,9 @@ accountId:accId,txId,existingShopId:isEdit?Order.editId:null
 });
 if(!result.ok){toast('⚠️ '+result.message);return;}
 const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');
-const txNote=(customer.name?customer.name+' - ':'')+itemSummary;
-if(isEdit&&existing&&existing.txLinkId){
-const tx=D.transactions.find(x=>x.id===existing.txLinkId);
-if(tx)Object.assign(tx,{amount:dp,accountId:accId,note:txNote,date,cobekLinkId:result.shopId});
-else { const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else throw new Error('FINANCE_TX_SOT_REQUIRED'); }
-} else {
-const _orderTx={id:txId,type:'income',amount:dp,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId}; if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_orderTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
-}
-const existingPiutangId=(existing&&existing.piutangLinkId)?existing.piutangLinkId:null;
-const shopRecord=D.cobek.find(c=>c.id===result.shopId);
-if(sisa>0){
-const piutangName=customer.name||'Pembeli Shop';
-const piutangCatatan='Sisa pembayaran shop: '+itemSummary;
-const existingPiutang=existingPiutangId?D.piutang.find(p=>p.id===existingPiutangId):null;
-if(existingPiutang){
-Object.assign(existingPiutang,{name:piutangName,nilai:sisa,tanggal:date,catatan:piutangCatatan,lunas:false});
-if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
-}else{
-const pid=uid();
-BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:piutangCatatan,lunas:false});
-if(shopRecord)shopRecord.piutangLinkId=pid;
-}
-}else if(existingPiutangId){
-BillDebtPiutangCanonicalWriter.removeById('piutang',existingPiutangId);
-if(shopRecord)shopRecord.piutangLinkId=null;
-}
+const payment=syncShopSalePayment({shopId:result.shopId,txId,existingTxId:existing&&existing.txLinkId,existingPiutangId:existing&&existing.piutangLinkId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});
+if(!payment.ok){toast('⚠️ Pembayaran tidak tersinkron: '+payment.reason);return;}
+const dp=payment.dp,sisa=payment.sisa;
 save();
 const marginPct=total>0?(profit/total)*100:0;
 if(typeof AIBus!=="undefined")AIBus.emit("delivery.created",{orderId:txId,total,ongkir,delivered,date,marginPct});
@@ -455,9 +487,11 @@ rowHTML(t){
 if(t.items){
 const itemSummary=t.items.map(i=>i.name+' x'+i.qty).join(', ');
 const pendingBadge=t.delivered===false?' <span class="acc-chip u-cacc4" style="background:var(--accent4-soft)">📦 Belum diserahkan</span>':'';
+const _linkedReceivable=t.piutangLinkId?(D.piutang||[]).find(p=>p.id===t.piutangLinkId&&!p.lunas):null;
+const _paymentBadge=_linkedReceivable?' <span class="acc-chip u-cacc4" style="background:var(--accent4-soft)">💳 DP / belum lunas</span>':'';
 return`<div class="tx-item u-pointer" data-action="Order.openEditModal" data-args="${escapeHtml(JSON.stringify([t.id]))}">
         <div class="tx-icon u-bgaccsoft">🪨</div>
-        <div class="tx-info"><div class="tx-name">${t.customer&&t.customer.name?escapeHtml(t.customer.name):'Transaksi'} · ${escapeHtml(itemSummary)}${pendingBadge}</div><div class="tx-meta">${t.date}${t.customer&&t.customer.phone?' · '+escapeHtml(t.customer.phone):''} ${t.note?'· '+escapeHtml(t.note):''}</div></div>
+        <div class="tx-info"><div class="tx-name">${t.customer&&t.customer.name?escapeHtml(t.customer.name):'Transaksi'} · ${escapeHtml(itemSummary)}${pendingBadge}${_paymentBadge}</div><div class="tx-meta">${t.date}${t.customer&&t.customer.phone?' · '+escapeHtml(t.customer.phone):''} ${t.note?'· '+escapeHtml(t.note):''}</div></div>
         <div class="tx-amount green">${fmt(t.total)}</div>
         <button class="tx-del" data-stop="1" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
       </div>`;
@@ -499,6 +533,25 @@ return OwnershipEngine.resolve(t).type==='SELF';
 
 const Laporan={
 periode:'selamanya',
+// Default kompatibel dengan laporan lama. Pilihan hanya proyeksi runtime;
+// tidak disimpan ke transaksi dan tidak memutasi data sumber.
+omzetMode:'include-shipping',
+revenueAmount(t,mode){
+if(!t||typeof t!=='object')return 0;
+const total=Number(t.total);if(!Number.isFinite(total))return 0;
+const selected=mode||this.omzetMode;
+if(selected!=='exclude-shipping')return total;
+// Transaksi lama tanpa ongkir tidak dapat direkonstruksi secara aman; jangan
+// menebak. Pertahankan total lama sebagai fallback untuk record tersebut.
+if(t.ongkir===undefined||t.ongkir===null||t.ongkir==='')return total;
+const ongkir=Number(t.ongkir);return Number.isFinite(ongkir)?total-Math.max(0,ongkir):total;
+},
+setOmzetMode(mode,el){
+if(mode!=='include-shipping'&&mode!=='exclude-shipping')return;
+this.omzetMode=mode;
+document.querySelectorAll('[data-shop-revenue-mode]').forEach(b=>{const active=b.getAttribute('data-shop-revenue-mode')===mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',active?'true':'false');});
+this.render();this.renderTab();
+},
 setPeriode(p,el){
 this.periode=p;
 document.querySelectorAll('#shopPeriodeChips .chip-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');
@@ -524,7 +577,7 @@ const inRange=D.cobek.filter(t=>{const d=new Date(t.date);return d>=from&&d<=to;
 // transaksi di periode ini apa adanya (pola sama Aset.renderList()/Buku Aset).
 const inRangeSelf=inRange.filter(isCobekOwnershipSelf);
 const cTripEl=document.getElementById('cTrip');if(cTripEl)cTripEl.textContent=inRangeSelf.length;
-const omzet=inRangeSelf.reduce((s,t)=>s+(t.total||0),0);
+const omzet=inRangeSelf.reduce((s,t)=>s+this.revenueAmount(t),0);
 const cSetEl=document.getElementById('cSet');if(cSetEl)cSetEl.textContent=fmt(omzet);
 const cUntungEl=document.getElementById('cUntung');if(cUntungEl)cUntungEl.textContent=fmt(inRangeSelf.reduce((s,t)=>s+(t.profit||0),0));
 Etalase.renderModalStat();
@@ -599,7 +652,14 @@ const inRange=(D.cobek||[]).filter(t=>{const d=new Date(t.date);return d>=from&&
 // lapUntung/lapMargin) & Statistik (Top Produk/Top Pelanggan) HANYA hitung
 // transaksi ownership SELF.
 const inRangeSelf=inRange.filter(isCobekOwnershipSelf);
-const omzet=inRangeSelf.reduce((s,t)=>s+(t.total||0),0);
+const missingOngkir=inRangeSelf.filter(t=>t.ongkir===undefined||t.ongkir===null||t.ongkir==='').length;
+const revenueNote=document.getElementById('shopRevenueModeNote');
+if(revenueNote){
+  revenueNote.textContent=this.omzetMode==='exclude-shipping'&&missingOngkir
+    ?`Peringatan: ${missingOngkir} transaksi tidak memiliki rincian ongkir; total tersimpan dipakai apa adanya. Omzet tanpa ongkir untuk periode ini belum sepenuhnya dapat direkonstruksi.`
+    :'Pilihan ini hanya mengubah laporan; transaksi tersimpan tidak diubah.';
+}
+const omzet=inRangeSelf.reduce((s,t)=>s+this.revenueAmount(t),0);
 const untung=inRangeSelf.reduce((s,t)=>s+(t.profit||0),0);
 const elTrip=document.getElementById('lapTrip');if(elTrip)elTrip.textContent=inRangeSelf.length;
 const elOmzet=document.getElementById('lapOmzet');if(elOmzet)elOmzet.textContent=fmt(omzet);
@@ -685,7 +745,7 @@ const key=Pelanggan.key(t.customer);
 if(!key)return;
 if(!map[key])map[key]={name:(t.customer&&t.customer.name)||'(Tanpa nama)',orders:0,omzet:0};
 map[key].orders++;
-map[key].omzet+=t.total||0;
+map[key].omzet+=this.revenueAmount(t);
 });
 const list=Object.values(map).sort((a,b)=>b.omzet-a.omzet).slice(0,5);
 if(!list.length){el.innerHTML='<div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Belum ada data di periode ini</div></div>';return;}
@@ -734,10 +794,12 @@ D.cobek.forEach(c=>{
 if(!c.items) return;
 const key=this.key(c.customer);
 if(!key) return;
-if(!map[key]) map[key]={key,name:(c.customer&&c.customer.name)||'(Tanpa nama)',phone:(c.customer&&c.customer.phone)||'',address:(c.customer&&c.customer.address)||'',orders:[],totalOmzet:0,totalProfit:0};
+if(!map[key]) map[key]={key,name:(c.customer&&c.customer.name)||'(Tanpa nama)',phone:(c.customer&&c.customer.phone)||'',address:(c.customer&&c.customer.address)||'',orders:[],totalOmzet:0,totalProfit:0,totalPiutang:0};
 map[key].orders.push(c);
 map[key].totalOmzet+=c.total||0;
 map[key].totalProfit+=c.profit||0;
+const _outstanding=c.piutangLinkId?(D.piutang||[]).find(p=>p.id===c.piutangLinkId&&!p.lunas):null;
+if(_outstanding)map[key].totalPiutang+=Math.max(0,Number(_outstanding.nilai)||0);
 if(c.customer&&c.customer.name) map[key].name=c.customer.name;
 if(c.customer&&c.customer.phone) map[key].phone=c.customer.phone;
 });
@@ -773,7 +835,7 @@ el.innerHTML=visible.map(c=>`
           </div>
           <div class="u-tar">
             <div class="tx-amount green u-fs13">${fmt(c.totalOmzet)}</div>
-            <div class="u-fs12t2">untung ${fmt(c.totalProfit)}</div>
+            <div class="u-fs12 u-t2">untung ${fmt(c.totalProfit)}</div>${c.totalPiutang>0?`<div class="u-fs12 red">Sisa piutang ${fmt(c.totalPiutang)}</div>`:`<div class="u-fs12 u-t2">Piutang: lunas</div>`}
           </div>
         </div>
       </div>`).join('')+(list.length>CUSTOMER_SHOW_LIMIT?`<div class="u-tac u-fs12 u-t2" style="padding:8px 0">+${list.length-CUSTOMER_SHOW_LIMIT} pelanggan lain (urutan terbawah, order lebih jarang) tidak ditampilkan</div>`:'');

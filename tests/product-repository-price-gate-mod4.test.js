@@ -135,7 +135,7 @@ test('integrasi: cobek-io.js ImportShopExcel.commit() (Excel produk existing) SE
     produsen: [], cobekKategori: [],
   };
   const ctx = loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => '',
@@ -176,7 +176,7 @@ test('integrasi: cobek-io.js ImportShopExcel.commit() menolak harga korup (Infin
     produsen: [], cobekKategori: [],
   };
   const ctx = loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => '',

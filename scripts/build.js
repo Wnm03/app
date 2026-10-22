@@ -317,6 +317,7 @@ const GROUP_B = [
   'modules/shared/feature-icons.js',
   'modules/dashboard-hub/dashboard-hub-registry.js',
   'modules/dashboard-hub/dashboard-hub.js',
+  'modules/dashboard-hub/dashboard-hub-overview.js',
   'modules/dashboard-hub/dashboard-hub-search.js',
   'modules/dashboard-hub/dashboard-hub-favorit.js',
   'modules/dashboard-hub/dashboard-hub-favorit-view.js',

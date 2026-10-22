@@ -3464,3 +3464,6 @@ font-size: 15px; line-height: 1;
   #page-keuangan > .cn-tabs > .cn-tab { min-height:38px; padding:8px 10px; font-size:11px; }
   .nav-fab-menu { width:calc(100vw - 20px); }
 }
+
+/* S2617 — legacy per-page FABs are inert; central navigation FAB remains active. */
+#keuFab, #laporanFab { display: none !important; pointer-events: none !important; }

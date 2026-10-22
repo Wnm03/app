@@ -59,6 +59,14 @@ const ShopDataIO = {
           if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetStock(product, r.stok);
           else product.stock = r.stok;
         }
+        if (r.diskonPersen !== undefined && r.diskonPersen !== null) {
+          if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetDiskon(product, r.diskonPersen);
+          else product.diskonPersen = r.diskonPersen;
+        }
+        if (r.produsenId !== undefined && r.produsenId !== null) {
+          if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetField(product, 'produsenId', r.produsenId);
+          else product.produsenId = r.produsenId;
+        }
         if (r.satuan) {
           if (typeof ProductRepository !== 'undefined') ProductRepository.mutateSetField(product, 'satuan', r.satuan);
           else product.satuan = r.satuan;
@@ -115,9 +123,9 @@ const ShopDataIO = {
             hargaBeli: r.hargaBeli || 0,
             hargaJual: r.hargaJual || 0,
             hargaReseller: (r.hargaReseller !== undefined && r.hargaReseller !== null) ? r.hargaReseller : null,
-            diskonPersen: 0,
+            diskonPersen: (r.diskonPersen !== undefined && r.diskonPersen !== null) ? r.diskonPersen : 0,
             kategoriId,
-            produsenId: '',
+            produsenId: r.produsenId || '',
             hargaByProdusen: {},
             satuan: r.satuan || '',
             beratPerUnit: r.berat || 0,
@@ -140,9 +148,9 @@ const ShopDataIO = {
               hargaBeli: r.hargaBeli || 0,
               hargaJual: r.hargaJual || 0,
               hargaReseller: (r.hargaReseller !== undefined && r.hargaReseller !== null) ? r.hargaReseller : null,
-              diskonPersen: 0,
+              diskonPersen: (r.diskonPersen !== undefined && r.diskonPersen !== null) ? r.diskonPersen : 0,
               kategoriId,
-              produsenId: '',
+              produsenId: r.produsenId || '',
               hargaByProdusen: {},
               satuan: r.satuan || '',
               beratPerUnit: r.berat || 0,
@@ -159,9 +167,9 @@ const ShopDataIO = {
             hargaBeli: r.hargaBeli || 0,
             hargaJual: r.hargaJual || 0,
             hargaReseller: (r.hargaReseller !== undefined && r.hargaReseller !== null) ? r.hargaReseller : null,
-            diskonPersen: 0,
+            diskonPersen: (r.diskonPersen !== undefined && r.diskonPersen !== null) ? r.diskonPersen : 0,
             kategoriId,
-            produsenId: '',
+            produsenId: r.produsenId || '',
             hargaByProdusen: {},
             satuan: r.satuan || '',
           };

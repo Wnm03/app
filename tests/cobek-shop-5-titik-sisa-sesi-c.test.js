@@ -296,7 +296,7 @@ test('onTxShopStockProdusenChange() — dibatalkan (nama kosong) tidak emit apa 
 function makeIoCtx({ D, AIBus }) {
   const fakeDocument = { getElementById: () => null };
   const ctx = loadSource(
-    ['modules/shop/cobek-io.js'],
+    ['modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       document: fakeDocument,

@@ -98,6 +98,15 @@ const SupplierStore = {
   // "kontak/catatan boleh dikosongkan" TIDAK berubah. Bukan angka/objek ->
   // dianggap kosong (''), sama seperti `String(undefined).trim()` yang lama
   // akan meledak — versi ini fail-safe balik '' saja.
+  _normalizeName(value) {
+    return (typeof value === 'string' ? value : '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('id');
+  },
+
+  _duplicateName(name, exceptId) {
+    const key = this._normalizeName(name);
+    return key ? this.list().find((s) => s && s.id !== exceptId && this._normalizeName(s.name) === key) || null : null;
+  },
+
   _optionalText(value) {
     return (typeof value === 'string') ? value.trim() : '';
   },
@@ -128,6 +137,8 @@ const SupplierStore = {
     }
     const n = this._validateText(fields.name);
     if (!n.ok) return n;
+    const duplicate = this._duplicateName(n.value);
+    if (duplicate) return { ok: false, reason: `Nama produsen sudah digunakan: ${duplicate.name}` };
     const supplier = {
       id: 'prd_' + Date.now(),
       name: n.value,
@@ -156,6 +167,8 @@ const SupplierStore = {
     }
     const n = this._validateText(changes.name);
     if (!n.ok) return n;
+    const duplicate = this._duplicateName(n.value, supplier.id);
+    if (duplicate) return { ok: false, reason: `Nama produsen sudah digunakan: ${duplicate.name}` };
     supplier.name = n.value;
     if ('contact' in changes) supplier.contact = this._optionalText(changes.contact);
     if ('note' in changes) supplier.note = this._optionalText(changes.note);

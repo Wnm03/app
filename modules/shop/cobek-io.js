@@ -202,6 +202,7 @@ if(typeof window.__moduleLoadFail==='function')window.__moduleLoadFail('modules/
 // HTML lama + JS baru tetap berfungsi sampai service worker sempat menyegarkan HTML-nya juga.
 function setCobekTab(t,el){return setShopTab(t,el);}
 
+function openProdusenActionsMenu(id){return Produsen.openProdusenActionsMenu(id);}
 function openProdusenModal(id){return Produsen.openModal(id);}
 function saveProdusen(){return Produsen.save();}
 function delProdusen(id){return Produsen.delete(id);}
@@ -350,10 +351,11 @@ laporanRows(){
 // Laporan.periode milik tab Riwayat — lihat catatan di Laporan.periodeLap (cobek-order.js).
 const {from,to}=Laporan.getRangeLap();
 const inRange=(D.cobek||[]).filter(t=>{const d=new Date(t.date);return d>=from&&d<=to;});
-const omzet=inRange.reduce((s,t)=>s+(t.total||0),0);
-const untung=inRange.reduce((s,t)=>s+(t.profit||0),0);
-const ringkasan=[['Ringkasan Periode Ini'],['Jumlah Transaksi',inRange.length],['Total Omzet',omzet],['Total Untung',untung],['Margin Rata-rata (%)',omzet>0?Math.round((untung/omzet)*100):0],[],['🏆 Produk Terlaris'],['Nama Produk','Qty Terjual','Omzet']];
-Laporan.topProdukAgg(inRange).forEach(p=>ringkasan.push([p.name,p.qty,p.omzet]));
+const inRangeSelf=inRange.filter(isCobekOwnershipSelf);
+const omzet=inRangeSelf.reduce((s,t)=>s+Laporan.revenueAmount(t),0);
+const untung=inRangeSelf.reduce((s,t)=>s+(t.profit||0),0);
+const ringkasan=[['Ringkasan Periode Ini'],['Mode Omzet',Laporan.omzetMode==='exclude-shipping'?'Tanpa ongkir':'Termasuk ongkir'],['Jumlah Transaksi',inRangeSelf.length],['Total Omzet',omzet],['Total Untung',untung],['Margin Rata-rata (%)',omzet>0?Math.round((untung/omzet)*100):0],[],['🏆 Produk Terlaris'],['Nama Produk','Qty Terjual','Omzet']];
+Laporan.topProdukAgg(inRangeSelf).forEach(p=>ringkasan.push([p.name,p.qty,p.omzet]));
 return ringkasan;
 },
 async exportEtalase(){ if(!await this._ensureLib())return; this._download([{name:'Etalase Produk',rows:this.etalaseRows()}],'shop-etalase'); },
@@ -378,6 +380,7 @@ function exportShopPelangganXLSX(){return ShopExport.exportPelanggan();}
 function exportShopSemuaXLSX(){return ShopExport.exportSemua();}
 function exportLaporanShopXLSX(){return ShopExport.exportLaporan();}
 function setLaporanPeriode(p,el){return Laporan.setPeriodeLap(p,el);}
+function setShopRevenueMode(mode,el){return Laporan.setOmzetMode(mode,el);}
 
 // ImportShopExcel (kw210-shop-import-xlsx) — kebalikan dari ShopExport: baca file .xlsx yang
 // diupload user (idealnya hasil "Export Excel" dari tab yang sama, sudah diedit/ditambah baris),
@@ -595,45 +598,18 @@ save();closeModal('importShopExcelModal');renderProdusenList();
 if((created||updated)&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"import-excel",action:"produsen",created,updated});
 toast(`✅ Import Produsen selesai: ${created} baru, ${updated} diperbarui`);
 } else {
-this.parsedRows.forEach(r=>{
-let p=D.products.find(x=>x.name.toLowerCase()===r.name.toLowerCase());
-const kategoriId=r.kategori?resolveShopKategori(r.kategori):'';
-const produsenMatch=r.produsen?D.produsen.find(x=>x.name.toLowerCase()===r.produsen.toLowerCase()):null;
-if(p){
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetStock(p,r.stock);else p.stock=r.stock;
-if(typeof ProductRepository!=='undefined'){ProductRepository.mutateSetPrice(p,'hargaBeli',r.hargaBeli);ProductRepository.mutateSetPrice(p,'hargaJual',r.hargaJual);}else{p.hargaBeli=r.hargaBeli;p.hargaJual=r.hargaJual;}
-if(r.hargaReseller!=null){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(p,'hargaReseller',r.hargaReseller);else p.hargaReseller=r.hargaReseller;}
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetDiskon(p,r.diskonPersen);else p.diskonPersen=r.diskonPersen;
-if(kategoriId){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(p,'kategoriId',kategoriId);else p.kategoriId=kategoriId;}
-if(produsenMatch){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(p,'produsenId',produsenMatch.id);else p.produsenId=produsenMatch.id;}
-updated++;
-} else {
-// Modul 14 (sesi ini, "Import Excel Product Mutation Gate"): reroute
-// titik TULIS `D.products.push({...object literal...})` mentah (create
-// produk BARU saat Import Excel .xlsx target 'etalase') lewat
-// ProductRepository.createProduct()+saveProduct() (SSOT yang SUDAH ADA
-// sejak Tahap 4/6 — dipakai Etalase.save()/applyTxShopStockFromTx()
-// Modul 11/ShopDataIO.commitShopRows() Modul 13). Pola & fallback PERSIS
-// SAMA dgn Modul 13 (lihat shop-data-io-api.js): id TETAP pakai generator
-// LOKAL 'prod_'+Date.now()+'_'+uid() (bukan ProductRepository._genId()),
-// ditimpa SETELAH createProduct(); kalau ProductRepository belum dimuat
-// ATAU createProduct()/saveProduct() menolak, fallback ke object literal
-// mentah PERSIS spt sebelum Modul 14 supaya baris tidak pernah hilang.
-if(typeof ProductRepository!=='undefined'){
-const cr=ProductRepository.createProduct({name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
-if(cr.ok){
-const newProduct={...cr.product,id:'prod_'+Date.now()+'_'+uid()};
-const sr=ProductRepository.saveProduct(D.products,newProduct);
-if(sr.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(sr.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menyimpan produk');}else D.products=sr.products;}else if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.upsert(newProduct);if(!wr.ok)throw new Error(wr.reason||'Gagal menyimpan produk');}else D.products.push(newProduct);
-} else {
-if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.create({name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});if(!wr.ok)throw new Error(wr.reason||'Gagal membuat produk');}else D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
-}
-} else {
-if(typeof ShopCanonicalWriter!=='undefined'){const wr=ShopCanonicalWriter.create({name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});if(!wr.ok)throw new Error(wr.reason||'Gagal membuat produk');}else D.products.push({id:'prod_'+Date.now()+'_'+uid(),name:r.name,stock:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,hargaReseller:r.hargaReseller!=null?r.hargaReseller:null,diskonPersen:r.diskonPersen||0,kategoriId,produsenId:produsenMatch?produsenMatch.id:'',hargaByProdusen:{}});
-}
-created++;
-}
+// Excel memakai mekanisme commit kanonis yang sama dengan Paste/CSV/PDF/Scan.
+// Adapter ini mempertahankan semantik Excel: stok, harga, diskon, kategori,
+// dan produsen dipetakan eksplisit; kolom harga reseller yang kosong tidak
+// menimpa nilai lama.
+const rows=this.parsedRows.map(r=>{
+const produsenMatch=r.produsen?D.produsen.find(x=>String(x.name||'').toLowerCase()===String(r.produsen).toLowerCase()):null;
+return {nama:r.name,kategori:r.kategori,stok:r.stock,hargaBeli:r.hargaBeli,hargaJual:r.hargaJual,
+  hargaReseller:r.hargaReseller,diskonPersen:r.diskonPersen,produsenId:produsenMatch?produsenMatch.id:undefined};
 });
+const result=ShopDataIO.commitShopRows(rows);
+if(!result||result.ok===false){toast('⚠️ Import Excel tidak disimpan. Periksa data dan coba lagi.');return;}
+created=result.created||0;updated=result.updated||0;
 save();closeModal('importShopExcelModal');renderProductList();
 // Sesi C-lanjutan (§7 Sesi C): titik #5 "bulk import Excel" (cabang
 // etalase/produk) — 1 emit menutupi seluruh batch, pola sama cabang

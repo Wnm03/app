@@ -115,7 +115,7 @@ test('Etalase.renderList() — margin/marginPct (markup thd hargaBeli) TIDAK ber
   const { ctx, doc } = makeEtalaseCtx(D, true);
   ctx.Etalase.renderList();
   // margin=5000, marginPct=Math.round(5000/10000*100)=50 (markup thd hargaBeli)
-  assert.match(doc._store.productList.innerHTML, /\+Rp 5000 \(50%\)/);
+  assert.match(doc._store.productList.innerHTML, /\+Rp 5000 · markup 50%/);
 });
 
 test('Etalase.renderList() — finalHarga diskon TIDAK berubah (tetap Math.round(hargaJual*(1-diskonPersen/100)))', () => {

@@ -154,11 +154,11 @@ const REALIZATION_STATUSES = Object.freeze([
 // Sama pola persis REALIZATION_STATUSES (S242)/PAYMENT_STATUSES (S241) di
 // atas: MURNI daftar tampilan (data statis + label), TIDAK ADA rumus
 // bisnis baru. Transfer TIDAK PERNAH mengubah D.products[idx].stock (total
-// stok tetap) — cuma memindahkan qty antara 2 lokasi (Magelang<->Pekalongan)
+// stok tetap) — cuma memindahkan qty antara 2 lokasi (lokasi asal<->lokasi tujuan)
 // lewat status ON_TRIP/RECEIVED yang disimpan per-record D.inventoryTransfers.
 const INVENTORY_TRANSFER_STATUSES = Object.freeze([
   { key: 'ON_TRIP', label: 'On Trip' },
-  { key: 'RECEIVED', label: 'Diterima (Pekalongan)' },
+  { key: 'RECEIVED', label: 'Diterima di lokasi tujuan' },
 ]);
 
 // CARD_NAV_TARGETS (Sesi 250, diperbarui Sesi 251 — Business Flow
@@ -613,7 +613,7 @@ const BusinessFlowPresenter = {
     // Inventory Transfer aktif (Sesi 243, D.inventoryTransfers status
     // ON_TRIP) — Sesi 377 (audit sinkronisasi Purchase->Transfer->Sale):
     // sinyal fisik PALING LANGSUNG bahwa produk ini sedang di-rit
-    // Magelang->Pekalongan (dicatat createInventoryTransfer(), reuse APA
+    // lokasi asal->lokasi tujuan (dicatat createInventoryTransfer(), reuse APA
     // ADANYA — 0 field baru). Sebelum fix ini, currentLocation() TIDAK
     // PERNAH baca D.inventoryTransfers sama sekali, jadi produk yang
     // sedang di-rit tetap salah ditampilkan sbg SUPPLIER (stok 0) atau

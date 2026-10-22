@@ -46,6 +46,11 @@ const DeliveryPlanUI = {
     }
     const qtyEl = document.getElementById('dpQty');
     if (qtyEl) qtyEl.value = 1;
+    ['dpUnitCost', 'dpSellingPrice', 'dpDeliveryCost', 'dpSellerDiscount', 'dpMarketplaceFeePct', 'dpMarketplaceFixedFee', 'dpPaymentFeePct',
+      'dpSellerShippingSubsidy', 'dpOtherSellingCost', 'dpTaxExpense', 'dpTaxWithheld'].forEach((id) => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    const taxStatus = document.getElementById('dpTaxStatus'); if (taxStatus) taxStatus.value = 'UNKNOWN';
     this.metode = 'antar';
     const aiBox = document.getElementById('dpAiBox');
     if (aiBox) { aiBox.classList.add('u-dnone'); aiBox.innerHTML = ''; }
@@ -87,6 +92,63 @@ const DeliveryPlanUI = {
     this.calc();
   },
 
+  // _money / _val — nilai null = "belum diisi" (bukan Rp0); 0 eksplisit tetap Rp0.
+  _val(v) {
+    return (v === null || v === undefined) ? '<i>belum diisi</i>' : this._money(v);
+  },
+
+  // _renderNetProfit(productId, qty, deliveryPlan) — simulasi biaya/laba
+  // bersih lewat engine tunggal ProfitEngine.analyzeSale(). Semua kolom
+  // opsional: kosong dikirim sebagai undefined (tidak pernah jadi 0).
+  _renderNetProfit(productId, qty, deliveryPlan) {
+    const netBox = document.getElementById('dpNetProfitBox');
+    if (!netBox) return;
+    if (typeof ProfitEngine === 'undefined' || typeof ProfitEngine.analyzeSale !== 'function') {
+      netBox.innerHTML = 'Analisis laba bersih belum tersedia.';
+      return;
+    }
+    const read = (id) => {
+      const el = document.getElementById(id);
+      if (!el || el.value === '') return undefined;
+      const n = Number(el.value);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    const analysis = ProfitEngine.analyzeSale({
+      productId, qty, unitCost: read('dpUnitCost'), deliveryPlan,
+      sellingPrice: read('dpSellingPrice'), deliveryCost: read('dpDeliveryCost'),
+      sellerDiscount: read('dpSellerDiscount'),
+      marketplaceFeePct: read('dpMarketplaceFeePct'),
+      marketplaceFixedFee: read('dpMarketplaceFixedFee'),
+      paymentFeePct: read('dpPaymentFeePct'),
+      sellerShippingSubsidy: read('dpSellerShippingSubsidy'),
+      otherSellingCost: read('dpOtherSellingCost'),
+      taxExpense: read('dpTaxExpense'),
+      taxWithheld: read('dpTaxWithheld'),
+      taxStatus: document.getElementById('dpTaxStatus')?.value || 'UNKNOWN',
+    });
+    if (!analysis || !analysis.ok) {
+      netBox.innerHTML = escapeHtml((analysis && analysis.reason) || 'Analisis belum bisa dihitung.');
+      return;
+    }
+    const costLabel = analysis.costBasis === 'HISTORICAL_UNIT_COST' ? 'HPP historis' : analysis.costBasis === 'ESTIMATED_MASTER_COST' ? 'HPP estimasi (harga master)' : 'HPP';
+    const margin = analysis.marginPct === null ? '' : ` (${analysis.marginPct.toFixed(1)}%)`;
+    const labels = {
+      HARGA_JUAL: 'harga jual', KUANTITAS: 'kuantitas', HPP: 'HPP', DISKON: 'diskon', ONGKIR: 'ongkir',
+      BIAYA_MARKETPLACE: 'admin marketplace (%)', BIAYA_TETAP: 'biaya tetap', BIAYA_PEMBAYARAN: 'biaya pembayaran (%)',
+      SUBSIDI_ONGKIR: 'subsidi ongkir', BIAYA_LAIN: 'kemasan & biaya lain', PAJAK_BEBAN: 'pajak beban',
+      PAJAK_DIPUNGUT: 'pajak dipungut', STATUS_PAJAK: 'status pajak',
+    };
+    const missingText = analysis.missingInputs.map((k) => labels[k] || k).join(', ');
+    netBox.innerHTML = `<div><b>Estimasi laba bersih:</b> ${this._val(analysis.estimatedNetProfit)}${margin}</div>`
+      + `<div>Penjualan neto: ${this._val(analysis.netSales)} · ${escapeHtml(costLabel)}: ${this._val(analysis.cogs)}</div>`
+      + `<div>Biaya penjualan: ${analysis.sellingCosts === null ? (analysis.knownSellingCosts === null ? '<i>belum diisi</i>' : `<i>belum lengkap</i> (terisi sejauh ini ${this._money(analysis.knownSellingCosts)})`) : this._money(analysis.sellingCosts)} · Pajak beban: ${this._val(analysis.taxExpense)} · Pajak dipungut: ${this._val(analysis.taxWithheld)}</div>`
+      + `<div>Estimasi settlement: ${this._val(analysis.estimatedSettlement)}</div>`
+      + (analysis.missingInputs.length
+        ? `<div style="color:var(--warning,#b7791f);margin-top:6px"><b>Belum diisi:</b> ${escapeHtml(missingText)}. Kolom kosong tidak dihitung sebagai Rp0; isi 0 jika memang tidak ada biaya.</div>`
+        : '<div style="color:var(--success,#27804a);margin-top:6px">Input simulasi lengkap.</div>')
+      + (analysis.warnings.length ? `<ul style="padding-left:18px;margin:6px 0">${analysis.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>` : '');
+  },
+
   // calc() — orkestrator murni presenter: kumpulkan input form, panggil
   // TripEngine.plan() (delegasi PERSIS calculateSmartDelivery(), S198) utk
   // ongkir+harga+profit, & TripEngine.weight()/volume() (delegasi PERSIS
@@ -103,43 +165,54 @@ const DeliveryPlanUI = {
     }
     const productId = document.getElementById('dpProduct')?.value;
     const product = (D.products || []).find((p) => p.id === productId);
-    if (!product) {
-      box.innerHTML = 'Pilih produk untuk mulai.';
-      return;
-    }
-    const qty = Math.max(0, parseFloat(document.getElementById('dpQty')?.value) || 0);
+    // Kuantitas kosong = belum diisi (BUKAN 0). Hanya angka > 0 yang dipakai
+    // untuk rencana pengiriman; analisis laba tetap dirender sebagai "belum
+    // diisi" supaya kolom opsional tidak memblokir formulir.
+    const qtyRaw = document.getElementById('dpQty')?.value;
+    const qtyNum = (qtyRaw === undefined || qtyRaw === '') ? NaN : Number(qtyRaw);
+    const qtyKnown = Number.isFinite(qtyNum) && qtyNum > 0;
+    const qty = qtyKnown ? qtyNum : undefined;
     const produsenId = document.getElementById('dpProdusen')?.value || null;
     const kmKonsumen = document.getElementById('dpKmKonsumen')?.value;
     const biayaPerKmKonsumen = document.getElementById('dpBiayaKmKonsumen')?.value;
     const vehicleId = document.getElementById('dpVehicle')?.value || null;
     const marginPct = document.getElementById('dpMarginPct')?.value;
 
-    const plan = TripEngine.plan({
-      productId, qty, produsenId,
-      kmKonsumen: this.metode === 'antar' ? kmKonsumen : undefined,
-      biayaPerKmKonsumen: this.metode === 'antar' ? biayaPerKmKonsumen : undefined,
-      metode: this.metode, vehicleId,
-      marginPct: marginPct !== '' ? marginPct : undefined,
-    });
-
+    let plan = { ok: false };
     let html = '';
-    if (!plan.ok) {
-      box.innerHTML = escapeHtml(plan.reason || 'Belum bisa dihitung.');
-      return;
+    if (!product) {
+      html = 'Pilih produk untuk mulai.';
+    } else if (!qtyKnown) {
+      html = 'Kuantitas belum diisi — rencana pengiriman belum dihitung.';
+    } else {
+      plan = TripEngine.plan({
+        productId, qty, produsenId,
+        kmKonsumen: this.metode === 'antar' ? kmKonsumen : undefined,
+        biayaPerKmKonsumen: this.metode === 'antar' ? biayaPerKmKonsumen : undefined,
+        metode: this.metode, vehicleId,
+        marginPct: marginPct !== '' ? marginPct : undefined,
+      });
+      if (!plan.ok) {
+        html = escapeHtml(plan.reason || 'Belum bisa dihitung.');
+      } else {
+        html += `<div><b>${escapeHtml(plan.productName)}</b> · ${qty} pcs</div>`;
+        if (plan.plan && plan.plan.route && plan.plan.route.totalPerPcs !== undefined) {
+          html += `<div>Ongkir: ${this._money(plan.plan.route.totalPerPcs)} / pcs</div>`;
+        }
+        if (plan.plan && plan.plan.price && plan.plan.price.hargaJual !== undefined) {
+          html += `<div>Rekomendasi harga jual: ${this._money(plan.plan.price.hargaJual)}</div>`;
+        }
+        if (plan.plan && plan.plan.fuel && plan.plan.fuel.rpPerKm !== undefined) {
+          html += `<div>Estimasi BBM: ${this._money(plan.plan.fuel.rpPerKm)} / km</div>`;
+        }
+        if (plan.profit && plan.profit.ok !== false && plan.profit.untung !== undefined) {
+          html += `<div>Estimasi untung dasar: ${this._money(plan.profit.untung)}</div>`;
+        }
+      }
     }
-    html += `<div><b>${escapeHtml(plan.productName)}</b> · ${qty} pcs</div>`;
-    if (plan.plan && plan.plan.route && plan.plan.route.totalPerPcs !== undefined) {
-      html += `<div>Ongkir: ${this._money(plan.plan.route.totalPerPcs)} / pcs</div>`;
-    }
-    if (plan.plan && plan.plan.price && plan.plan.price.hargaJual !== undefined) {
-      html += `<div>Rekomendasi harga jual: ${this._money(plan.plan.price.hargaJual)}</div>`;
-    }
-    if (plan.plan && plan.plan.fuel && plan.plan.fuel.rpPerKm !== undefined) {
-      html += `<div>Estimasi BBM: ${this._money(plan.plan.fuel.rpPerKm)} / km</div>`;
-    }
-    if (plan.profit && plan.profit.ok !== false && plan.profit.untung !== undefined) {
-      html += `<div>Estimasi untung: ${this._money(plan.profit.untung)}</div>`;
-    }
+
+    this._renderNetProfit(productId, qty, plan && plan.ok ? plan.plan : undefined);
+    if (!product || !qtyKnown || !plan.ok) { box.innerHTML = html; return; }
 
     // Berat/volume muatan — hanya ditampilkan kalau produk sudah punya
     // data berat/dimensi (S203, field baru productModal). Reuse

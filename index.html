@@ -55,7 +55,7 @@
 
   Rincian 105 blok yang dipindah, jadi 2 file baru:
     - 101 blok `<script>document.write(MODAL_HTML[N]);</script>` (N=0..100)
-      -> `<script src="modules/shared/modal-write.js?v=2610"
+      -> `<script src="modules/shared/modal-write.js?v=2630"
          data-modal-index="N"></script>`. modal-write.js baca
       data-modal-index via document.currentScript, lalu document.write()
       MODAL_HTML[N] yang sama seperti sebelumnya -- posisi insert di DOM
@@ -67,7 +67,7 @@
     - 4 blok boot-time (debug console Eruda, _loadScriptOnce()+ensure*()
       lazy-load helper, __moduleLoadFail + global runtime error banner,
       anti-flash reload saat Service Worker controllerchange) -> digabung
-      1 file `modules/shared/boot-early.js?v=2610`, dipanggil lewat SATU
+      1 file `modules/shared/boot-early.js?v=2630`, dipanggil lewat SATU
       `<script src="...">` (tanpa defer/async) persis di posisi blok
       pertama; urutan relatif ke bundle-load-guard.js (harus tetap SEBELUM)
       tidak berubah.
@@ -180,18 +180,18 @@
 <link rel="preconnect" href="https://accounts.google.com" crossorigin>
 <link rel="dns-prefetch" href="https://accounts.google.com">
 <title>Keluarga W</title>
-<link rel="stylesheet" href="styles.css?v=2610">
-<link rel="stylesheet" href="modern-ui-layer.css?v=2610">
-<link rel="stylesheet" href="minimal-ui-theme.css?v=2610">
-<link rel="stylesheet" href="pwa-ui-layer.css?v=2610">
-<script src="nav-scroll.js?v=2610" defer></script>
-<script src="modules/shared/boot-early.js?v=2610"></script>
+<link rel="stylesheet" href="styles.css?v=2630">
+<link rel="stylesheet" href="modern-ui-layer.css?v=2630">
+<link rel="stylesheet" href="minimal-ui-theme.css?v=2630">
+<link rel="stylesheet" href="pwa-ui-layer.css?v=2630">
+<script src="nav-scroll.js?v=2630" defer></script>
+<script src="modules/shared/boot-early.js?v=2630"></script>
 
 
 
-<script src="modules/shared/segmented-control.js?v=2610"></script>
-<script src="modules/shared/bundle-load-guard.js?v=2610" data-guard-src="app-bundle-a.min.js?v=2610" data-guard-id="appBundleAScript"></script>
-<script src="modules/shared/smoke-test.js?v=2610" defer></script>
+<script src="modules/shared/segmented-control.js?v=2630"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2630" data-guard-src="app-bundle-a.min.js?v=2630" data-guard-id="appBundleAScript"></script>
+<script src="modules/shared/smoke-test.js?v=2630" defer></script>
 <link rel="icon" type="image/svg+xml" href="icon-192.svg">
 <link rel="manifest" id="pwaManifestLink" href="manifest.json">
 
@@ -1302,7 +1302,7 @@
 
   <!-- PELANGGAN -->
   <div id="shopTab-pelanggan" class="u-dnone">
-    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Pelanggan</h2><p>Ringkasan pelanggan dan riwayat pembelian.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mt12"><div class="card-title">👤 Daftar Pelanggan <button class="card-setting-btn" data-action="exportShopPelangganXLSX">📤 Excel</button></div><div class="u-hint10">Pelanggan dengan 3x order atau lebih otomatis ditandai 🌟 Langganan. Tap untuk lihat riwayat harga per produk.</div><div id="customerList" data-pwa-large-list-target data-pwa-large-list-threshold="120"></div></div></div><!-- LAPORAN (kw-shop-laporan-tab): tab & UI-nya sebelumnya belum pernah dibangun walau logic-nya (Laporan.renderTab()/topProdukAgg()/ renderTopProduk()/renderTopPelanggan()/setPeriodeLap()/getRangeLap() di cobek-order.js, exportLaporanShopXLSX() di cobek-io.js) sudah ada sejak lama — setShopTab() (cobek-io.js, tidak disentuh) sudah memanggil Laporan.renderTab() saat t==='laporan', hanya markup-nya yang baru ditambahkan di sini. Filter periode (lapPeriodeChips/ lapCustomRange) TERPISAH dari filter periode tab Riwayat (shopPeriodeChips/shopCustomRange) — lihat catatan Laporan.periodeLap di cobek-order.js. Kartu stat pakai reuse .grid2/.stat-box/.stat-val/ .stat-label yang sudah ada (pola sama dgn cfIncAvg/cfExpAvg di tab Laporan Keuangan) supaya bisa 4 kartu tanpa bikin class grid-4 baru (.shop-grid yang ada cuma utk 3 kolom). Grafik pakai .grafik-bar-wrap yang sama dgn tab Riwayat (Laporan.renderGrafik() generik, sudah menerima elId). --><div id="shopTab-laporan" class="u-dnone"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Laporan Shop</h2><p>Ringkasan performa penjualan dan pelanggan.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><!-- FAB Laporan Shop: kontekstual, ditaruh DI DALAM #shopTab-laporan (pola sama dgn #laporanFab di #keuanganTab-laporan, REPORTS-2.0.md) supaya hanya tampil saat tab Laporan aktif, otomatis ikut ter- toggle 'u-dnone' oleh setShopTab() yang sudah ada tanpa JS baru. #shopFab (Sprint 2 Tahap 2) tidak diubah — tetap tampil di semua tab Shop termasuk tab ini. 100% reuse class CSS `.keu-fab*` & fungsi export yang sudah ada (exportLaporanShopXLSX()/ exportShopSemuaXLSX(), cobek-io.js, tidak diubah). --><div class="keu-fab" id="shopLaporanFab"><div class="keu-fab-actions"><button type="button" class="keu-fab-action" data-action="shopLaporanFabExportXLSX" aria-label="Export Laporan Excel"><span class="keu-fab-action-icon">📤</span><span class="keu-fab-action-label">Export Laporan</span></button><button type="button" class="keu-fab-action" data-action="shopLaporanFabExportSemua" aria-label="Export Semua Data Shop"><span class="keu-fab-action-icon">📊</span><span class="keu-fab-action-label">Export Semua Data</span></button></div><button type="button" class="keu-fab-main" id="shopLaporanFabMain" data-action="shopLaporanFabToggleMain" data-args='["$el"]' aria-label="Aksi cepat Laporan Shop" aria-expanded="false"><span class="keu-fab-main-icon">＋</span></button></div><div class="filter-scroll u-mt12" id="lapPeriodeChips"><button class="chip-btn" data-action="setLaporanPeriode" data-args='["hari", "$el"]'>Harian</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["minggu", "$el"]'>Mingguan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["bulan", "$el"]'>Bulanan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["tahun", "$el"]'>Tahunan</button><button class="chip-btn active" data-action="setLaporanPeriode" data-args='["selamanya", "$el"]'>Selamanya</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["custom", "$el"]'>Custom</button></div><div class="u-dnone u-mb10" id="lapCustomRange"><div class="u-grid2"><div><label class="fl" for="lapFrom">Dari</label><input type="date" class="fi" id="lapFrom" data-onchange="renderShopLaporan"></div><div><label class="fl" for="lapTo">Sampai</label><input type="date" class="fi" id="lapTo" data-onchange="renderShopLaporan"></div></div></div><div class="grid2"><div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapTrip">0</div><div class="stat-label">Transaksi</div></div>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Pelanggan</h2><p>Ringkasan pelanggan dan riwayat pembelian.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mt12"><div class="card-title">👤 Daftar Pelanggan <button class="card-setting-btn" data-action="exportShopPelangganXLSX">📤 Excel</button></div><div class="u-hint10">Pelanggan dengan 3x order atau lebih otomatis ditandai 🌟 Langganan. Tap untuk lihat riwayat harga per produk.</div><div id="customerList" data-pwa-large-list-target data-pwa-large-list-threshold="120"></div></div></div><!-- LAPORAN (kw-shop-laporan-tab): tab & UI-nya sebelumnya belum pernah dibangun walau logic-nya (Laporan.renderTab()/topProdukAgg()/ renderTopProduk()/renderTopPelanggan()/setPeriodeLap()/getRangeLap() di cobek-order.js, exportLaporanShopXLSX() di cobek-io.js) sudah ada sejak lama — setShopTab() (cobek-io.js, tidak disentuh) sudah memanggil Laporan.renderTab() saat t==='laporan', hanya markup-nya yang baru ditambahkan di sini. Filter periode (lapPeriodeChips/ lapCustomRange) TERPISAH dari filter periode tab Riwayat (shopPeriodeChips/shopCustomRange) — lihat catatan Laporan.periodeLap di cobek-order.js. Kartu stat pakai reuse .grid2/.stat-box/.stat-val/ .stat-label yang sudah ada (pola sama dgn cfIncAvg/cfExpAvg di tab Laporan Keuangan) supaya bisa 4 kartu tanpa bikin class grid-4 baru (.shop-grid yang ada cuma utk 3 kolom). Grafik pakai .grafik-bar-wrap yang sama dgn tab Riwayat (Laporan.renderGrafik() generik, sudah menerima elId). --><div id="shopTab-laporan" class="u-dnone"><div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Laporan Shop</h2><p>Ringkasan performa penjualan dan pelanggan.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="card u-mt12"><div class="card-title">Basis penghitungan omzet</div><div class="u-fs12 u-t2 u-mb8" id="shopRevenueModeNote">Pilihan ini hanya mengubah laporan; transaksi tersimpan tidak diubah. Transaksi lama tanpa data ongkir ditandai agar hasil tidak dianggap pasti.</div><div class="filter-scroll segmented-control" id="shopRevenueModeToggle" data-segmented-control="shop-revenue-mode"><button type="button" class="chip-btn active" data-shop-revenue-mode="include-shipping" data-action="setShopRevenueMode" data-args='["include-shipping", "$el"]' aria-pressed="true">Termasuk ongkir</button><button type="button" class="chip-btn" data-shop-revenue-mode="exclude-shipping" data-action="setShopRevenueMode" data-args='["exclude-shipping", "$el"]' aria-pressed="false">Tanpa ongkir</button></div></div><!-- FAB Laporan Shop: kontekstual, ditaruh DI DALAM #shopTab-laporan (pola sama dgn #laporanFab di #keuanganTab-laporan, REPORTS-2.0.md) supaya hanya tampil saat tab Laporan aktif, otomatis ikut ter- toggle 'u-dnone' oleh setShopTab() yang sudah ada tanpa JS baru. #shopFab (Sprint 2 Tahap 2) tidak diubah — tetap tampil di semua tab Shop termasuk tab ini. 100% reuse class CSS `.keu-fab*` & fungsi export yang sudah ada (exportLaporanShopXLSX()/ exportShopSemuaXLSX(), cobek-io.js, tidak diubah). --><div class="keu-fab u-dnone" id="shopLaporanFab" aria-hidden="true" inert></div><div class="filter-scroll u-mt12" id="lapPeriodeChips"><button class="chip-btn" data-action="setLaporanPeriode" data-args='["hari", "$el"]'>Harian</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["minggu", "$el"]'>Mingguan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["bulan", "$el"]'>Bulanan</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["tahun", "$el"]'>Tahunan</button><button class="chip-btn active" data-action="setLaporanPeriode" data-args='["selamanya", "$el"]'>Selamanya</button><button class="chip-btn" data-action="setLaporanPeriode" data-args='["custom", "$el"]'>Custom</button></div><div class="u-dnone u-mb10" id="lapCustomRange"><div class="u-grid2"><div><label class="fl" for="lapFrom">Dari</label><input type="date" class="fi" id="lapFrom" data-onchange="renderShopLaporan"></div><div><label class="fl" for="lapTo">Sampai</label><input type="date" class="fi" id="lapTo" data-onchange="renderShopLaporan"></div></div></div><div class="grid2"><div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapTrip">0</div><div class="stat-label">Transaksi</div></div>
       <div class="stat-box u-tac"><div class="stat-val u-fs14" id="lapOmzet">Rp 0</div><div class="stat-label">Omzet</div></div>
     </div>
     <div class="grid2">
@@ -1392,7 +1392,7 @@
        Beranda (lihat DASHBOARD-DEDUP.md fix #1) SUDAH DIHAPUS dari
        styles.css supaya sekarang tampil normal di tab ini. -->
   <div id="shopTab-bi" class="u-dnone">
-    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Business Intelligence</h2><p>Insight operasional tanpa memenuhi layar dengan dashboard berat.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="dashhub-wrap card u-mb12" id="shopBusinessEngineWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]'><div class="dashhub-cat-icon">🪨</div><div><div class="dashhub-cat-label">Shop Business Engine</div><div class="dashhub-cat-desc">Nilai stok, rencana restock &amp; margin Shop bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="shopBusinessEngineWrap-chev" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="shopBusinessEngineWrap-cbody"><div class="findash-grid" id="shopBusinessEngineGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="tripPresenterWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]'><div class="dashhub-cat-icon">🚚</div><div><div class="dashhub-cat-label">Pengiriman Shop</div><div class="dashhub-cat-desc">Jumlah trip, ongkir &amp; margin pengiriman bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="tripPresenterWrap-chev" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="tripPresenterWrap-cbody"><div class="findash-grid" id="tripPresenterGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="businessFlowWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]'><div class="dashhub-cat-icon">🔁</div><div><div class="dashhub-cat-label">Alur Bisnis Shop</div><div class="dashhub-cat-desc">Purchase → Trip → Stock → Sale — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="businessFlowWrap-chev" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="businessFlowWrap-cbody"><div class="findash-grid" id="businessFlowGrid"></div><div id="businessFlowTransferList" class="u-mt10"></div><div id="businessFlowPurchaseOrderBatchList" class="u-mt10"></div></div></div></div></div></div><!-- CAR NOTES --><div class="page" id="page-carnotes"><div class="page-settings-btn"><div class="page-title">🏍️ Car Notes</div></div><div class="pwa-domain-page pwa-domain-car"><button class="qs-btn" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+    <div class="pwa-workspace-head"><div><span class="pwa-workspace-kicker">WORKSPACE</span><h2>Business Intelligence</h2><p>Insight operasional tanpa memenuhi layar dengan dashboard berat.</p></div><span class="pwa-workspace-dot" aria-hidden="true"></span></div><div class="dashhub-wrap card u-mb12" id="shopBusinessEngineWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]'><div class="dashhub-cat-icon">🪨</div><div><div class="dashhub-cat-label">Shop Business Engine</div><div class="dashhub-cat-desc">Nilai stok, rencana restock &amp; margin Shop bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="shopBusinessEngineWrap-chev" data-action="toggleCardCollapse" data-args='["shopBusinessEngineWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="shopBusinessEngineWrap-cbody"><div class="findash-grid" id="shopBusinessEngineGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="tripPresenterWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]'><div class="dashhub-cat-icon">🚚</div><div><div class="dashhub-cat-label">Pengiriman Shop</div><div class="dashhub-cat-desc">Jumlah trip, ongkir &amp; margin pengiriman bulan ini — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="tripPresenterWrap-chev" data-action="toggleCardCollapse" data-args='["tripPresenterWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="tripPresenterWrap-cbody"><div class="findash-grid" id="tripPresenterGrid"></div></div></div><div class="dashhub-wrap card u-mb12" id="businessFlowWrap"><div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]'><div class="dashhub-cat-icon">🔁</div><div><div class="dashhub-cat-label">Alur Bisnis Shop</div><div class="dashhub-cat-desc">Purchase → Trip → Stock → Sale — dari data yang sudah ada</div></div><span class="card-collapse-toggle" id="businessFlowWrap-chev" data-action="toggleCardCollapse" data-args='["businessFlowWrap","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="businessFlowWrap-cbody"><div class="findash-grid" id="businessFlowGrid"></div><div id="businessFlowTransferList" class="u-mt10"></div><div id="businessFlowPurchaseOrderBatchList" class="u-mt10"></div></div></div><div class="dashhub-wrap card u-mb12" id="biHealthScoreWrap"><div class="card-title">❤️ Business Health Score</div><div class="findash-grid" id="biHealthScoreGrid"></div></div><div class="dashhub-wrap card u-mb12" id="biDecisionPanelWrap"><div class="card-title">🧭 Keputusan Operasional</div><div class="findash-grid" id="biDecisionPanelGrid"></div></div><div class="dashhub-wrap card u-mb12" id="biTrendWrap"><div class="card-title">📈 Tren Shop</div><div class="findash-grid" id="biTrendGrid"></div></div><div class="dashhub-wrap card u-mb12" id="biExecutiveSummaryWrap"><div class="card-title">📋 Ringkasan Eksekutif</div><div class="findash-grid" id="biExecutiveSummaryGrid"></div></div><div class="dashhub-wrap card u-mb12" id="biAiInsightWrap"><div class="card-title">💡 Insight Shop</div><div id="biAiInsightBody"></div></div></div></div></div><!-- CAR NOTES --><div class="page" id="page-carnotes"><div class="page-settings-btn"><div class="page-title">🏍️ Car Notes</div></div><div class="pwa-domain-page pwa-domain-car"><button class="qs-btn" data-action="openQS" data-args='["qsCarnotes"]' aria-label="Buka menu cepat"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
   <section class="pwa-domain-hero" aria-labelledby="carDomainTitle"><div class="pwa-domain-hero-main"><div class="pwa-domain-eyebrow">UANG MOBIL · KENDARAAN</div><h1 id="carDomainTitle">Semua biaya kendaraan dalam satu ruang kerja.</h1><p>Pantau kendaraan aktif, BBM, servis, pajak & SIM, perjalanan, dan insight biaya tanpa meninggalkan mode offline.</p><div class="pwa-domain-status-row"><span class="pwa-status-pill" data-pwa-status>Online • tersimpan lokal</span><span class="pwa-status-pill">Konteks kendaraan aktif</span></div></div><div class="pwa-domain-hero-actions"><button class="pwa-action-card pwa-action-primary" type="button" data-action="openVehicleModal"><span>🚗</span><b>Tambah kendaraan</b><small>Kelola armada</small></button><button class="pwa-action-card" type="button" data-action="openKmModal"><span>📏</span><b>Update KM</b><small>Odometer terbaru</small></button><button class="pwa-action-card" type="button" data-action="VehicleCatalogUI.open"><span>🧰</span><b>Katalog part</b><small>Komponen servis</small></button></div></section>
     <div class="card u-mb12 u-dnone" id="mobilInsightCard">
       <div class="card-title">💡 Insight Mobil</div>
@@ -1631,7 +1631,7 @@
   </div>
 </div>
 
-<script src="modules/shared/modal-write.js?v=2610" data-modal-range="0-102"></script>
+<script src="modules/shared/modal-write.js?v=2630" data-modal-range="0-102"></script>
 <!-- MODAL: HASIL CEK REFERENSI VIA AI -->
 <!-- modal:refAiModal externalized to modals.js -->
 <!-- MODAL: RIWAYAT SKOR HIDUP SEIMBANG -->
@@ -2677,7 +2677,7 @@
   <div class="dashhub-wrap card u-mb12" id="dashHubAttentionWrap" style="display:none">
     <div class="dashhub-cat-head">
       <div class="dashhub-cat-icon">🧭</div>
-      <div><div class="dashhub-cat-label">Perlu Perhatian</div><div class="dashhub-cat-desc">Ringkasan read-only dari status tagihan, servis, dan backup</div></div>
+      <div><div class="dashhub-cat-label">Perlu Perhatian <span class="dashhub-cat-badge" id="dashHubAttentionBadge"></span></div><div class="dashhub-cat-desc">Gabungan semua domain: tagihan, utang/piutang, anggaran, kendaraan, stok, zakat, backup</div></div>
     </div>
     <div class="card-collapse-body" id="dashHubAttentionBody"></div>
   </div>
@@ -2724,10 +2724,6 @@
        DashboardHubOwnershipSummary.render() (dashboard-hub.js), yang 100%
        reuse OwnershipSettingsPresenter.summary() (S229-230) — 0 rumus/
        engine baru. Tidak mengubah baris lain di atas/bawahnya. -->
-  <div class="card u-mb12" id="dashHubOwnershipSummaryCard">
-    <div class="card-title">🏷️ Ownership Summary</div>
-    <div id="dashHubOwnershipSummaryList"></div>
-  </div>
   <!-- FAVORIT (Tahap 3, ADR-001). Diisi oleh DashboardHubFavoritView.render()
        (dipanggil dari DashboardHub.render() di dashboard-hub.js). Sengaja
        u-dnone secara default & disembunyikan total lewat JS saat
@@ -2787,6 +2783,18 @@
        ke tab baru "📌 Widget" di sampingnya. Lihat SECTION_GROUPS di
        DashboardHub.applySectionTab() (dashboard-hub.js) & tests/dashboard-
        hub-sectiontabs.test.js. -->
+  <!-- PANTAU DOMAIN (tab Ringkasan) — diisi DashboardHubOverview.renderTiles()
+       (modules/dashboard-hub/dashboard-hub-overview.js). Read-only. Ditaruh SETELAH
+       tab bar supaya bar tab tidak berpindah posisi antar tab. -->
+  <div id="dashHubOverviewWrap">
+    <div class="dhb-ov-title">📊 Pantau Domain</div>
+    <div class="dhb-ov-grid" id="dashHubOverviewTiles"></div>
+  </div>
+  <!-- LAPORAN TREN (tab Insight) — DashboardHubOverview.renderTrend(). -->
+  <div class="card u-mb12 u-dnone" id="dashHubTrendWrap">
+    <div class="card-title">📈 Tren Keuangan 6 Bulan</div>
+    <div id="dashHubTrendBody"></div>
+  </div>
   <div class="card u-mb12" id="dashHubMainGridCard">
     <div class="card-title">
       🗂️ Semua Fitur <span class="u-flexc8"><span class="dashhub-cat-badge" id="dashHubMainGridCount"></span><span class="card-collapse-toggle" id="dashHubMainGrid-chev" data-action="toggleCardCollapse" data-args='["dashHubMainGrid","$event"]' aria-label="Buka/tutup bagian">▾</span></span>
@@ -2919,25 +2927,6 @@
        penuh class findash-grid/findash-card (grid generik). Insight
        Presenter pola SILENT sama persis #vehAlertWrap/#vehInsightFeedWrap
        — body dikosongkan kalau tidak ada insight apa pun. -->
-  <!-- FIX DEDUP (lihat DASHBOARD-DEDUP.md § CrossDashboardCard): kartu
-       "Skor Kesehatan Finansial"/"Skor Kesehatan Armada" DIHAPUS dari
-       #crossDashGrid (cross-dashboard-card.js render()) karena 100%
-       duplikat dengan #findashWrap (tab Keuangan) & #vehdashWrap (tab
-       Car Notes). Yang tersisa cuma "Total Perhatian Gabungan", satu2nya
-       angka di sini yang belum ada di kartu lain. -->
-  <div class="dashhub-wrap card u-mb12" id="crossDashWrap">
-    <div class="dashhub-cat-head" data-action="toggleCardCollapse" data-args='["crossDashWrap","$event"]'>
-      <div class="dashhub-cat-icon">🔗</div>
-      <div>
-        <div class="dashhub-cat-label">Finance &amp; Vehicle Cross Summary</div>
-        <div class="dashhub-cat-desc">Total perhatian gabungan (anggaran lewat batas + servis/pajak/BBM lewat jatuh tempo) — dari data yang sudah ada</div>
-      </div>
-      <span class="card-collapse-toggle" id="crossDashWrap-chev" data-action="toggleCardCollapse" data-args='["crossDashWrap","$event"]' aria-label="Buka/tutup bagian">▾</span>
-    </div>
-    <div class="card-collapse-body" id="crossDashWrap-cbody">
-    <div class="findash-grid" id="crossDashGrid"></div>
-    </div>
-  </div>
   <!-- UNIFIED AI BRIEFING FOUNDATION (Sesi 88, Batch 8). Section di dalam
        Dashboard Hub, sama seperti #vehBriefWrap (Sesi 80) — diisi oleh
        UnifiedBriefingPresenter.render() (dipanggil dari DashboardHub.
@@ -3539,7 +3528,7 @@
 <!-- modal:monthlyGajiModal (FIX: modal hilang dari HTML, MODAL_HTML index drift) -->
 <!-- modal:fuelRefModal (S751, sesi 2/3 dari fitur Referensi Harga BBM via AI) -->
 
-<script src="modules/shared/bundle-load-guard.js?v=2610" data-guard-src="app-bundle-b.min.js?v=2610" data-guard-id="appBundleBScript"></script>
+<script src="modules/shared/bundle-load-guard.js?v=2630" data-guard-src="app-bundle-b.min.js?v=2630" data-guard-id="appBundleBScript"></script>
 <!-- S2015-S2030 historical runtime wrappers removed from HTML. Native APP MAIN SOT + compatibility layer own production runtime; historical files remain audit/test artifacts. -->
 </body>
 </html>

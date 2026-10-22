@@ -570,7 +570,9 @@ const DashboardHub = {
     if (tab === 'ringkasan') {
       // Slim mode: Hero + Ticker sudah menjadi financial header. Summary/Analytics
       // hanya mengulang angka yang sama, sehingga tidak dirender di Dashboard Hub.
-      safe('DashboardHubOwnershipSummary', () => { if (typeof DashboardHubOwnershipSummary !== 'undefined') DashboardHubOwnershipSummary.render(); });
+      // Pantau Domain: arus kas, kekayaan bersih, tagihan, anggaran, kesehatan
+      // finansial, kendaraan, shop, zakat (DashboardHubOverview, read-only).
+      safe('DashboardHubOverview', () => { if (typeof DashboardHubOverview !== 'undefined') DashboardHubOverview.renderTiles(); });
       return;
     }
     if (tab === 'fitur') {
@@ -593,7 +595,9 @@ const DashboardHub = {
       // Slim Insight: hanya presenter lintas-domain yang punya fungsi unik di
       // Dashboard Hub. LifeOS/Shop/EIE/UnifiedDashboardHome tetap tersedia di
       // modul masing-masing tetapi tidak dihitung ulang saat tab Insight dibuka.
-      safe('CrossDashboardCard', () => { if (typeof CrossDashboardCard !== 'undefined') CrossDashboardCard.render(); });
+      // CrossDashboardCard ("Total Perhatian Gabungan") DIHAPUS dari Hub: hanya menghitung anggaran+kendaraan
+      // sehingga angkanya kontradiktif dengan kartu "Perlu Perhatian" lintas-domain di atas.
+      safe('DashboardHubTrend', () => { if (typeof DashboardHubOverview !== 'undefined') DashboardHubOverview.renderTrend(); });
       safe('CrossInsightPresenter', () => { if (typeof CrossInsightPresenter !== 'undefined') CrossInsightPresenter.render(); });
       safe('UnifiedBriefingPresenter', () => { if (typeof UnifiedBriefingPresenter !== 'undefined') UnifiedBriefingPresenter.render(); });
       safe('FinancialAuditDashboardInsight', () => {
@@ -655,7 +659,10 @@ const DashboardHub = {
     // Visibilitas 100% didelegasikan ke CSS (lihat komentar di atas
     // DashboardHubTickerModern), jadi dipanggil selalu tanpa cek tema.
     if (typeof DashboardHubTickerModern !== 'undefined') DashboardHubTickerModern.render();
-    if (typeof DashboardAttentionReadOnly !== 'undefined') DashboardAttentionReadOnly.render();
+    // Pusat Perhatian lintas-domain (PriorityEngine, dikelompokkan per domain).
+    // Fallback ke kartu lama (tagihan/servis/backup) kalau presenter baru belum dimuat.
+    if (typeof DashboardHubOverview !== 'undefined') DashboardHubOverview.renderAttention();
+    else if (typeof DashboardAttentionReadOnly !== 'undefined') DashboardAttentionReadOnly.render();
 
     // Render only the active Hub section. Hidden Insight/Widget presenters are
     // intentionally lazy and will be populated when the user opens that tab.
@@ -817,7 +824,7 @@ const DashboardHub = {
     const SECTION_GROUPS = {
       // Summary/Analytics adalah duplikat Hero/Ticker. Tetap dibiarkan di DOM
       // untuk kompatibilitas lama, tetapi tidak ditampilkan atau dirender.
-      ringkasan: ['dashHubOwnershipSummaryCard'],
+      ringkasan: ['dashHubOverviewWrap'],
       fitur: ['dashHubFavoritSection', 'dashHubMainGridCard'],
       widget: ['dashboardHubPinnedWrap'],
       // Sesi 133: findashWrap/forecastWrap/budgetRecoWrap/cashflowProjWrap/
@@ -837,7 +844,7 @@ const DashboardHub = {
       // di grup ini SUDAH PINDAH ke tab "Manajemen" #page-aset (lihat
       // catatan migrasi di render(), atas), jadi dihapus dari daftar —
       // bukan lagi bagian dari Dashboard Hub sama sekali.
-      insight: ['crossDashWrap', 'crossBriefWrap', 'crossInsightWrap', 'financialAuditInsightWrap', 'recommendationPanelWrap', 'actionQueueWrap', 'lifeOSWrap'],
+      insight: ['dashHubTrendWrap', 'crossBriefWrap', 'crossInsightWrap', 'financialAuditInsightWrap', 'recommendationPanelWrap', 'actionQueueWrap', 'lifeOSWrap'],
     };
     Object.keys(SECTION_GROUPS).forEach((t) => {
       SECTION_GROUPS[t].forEach((id) => {
@@ -849,7 +856,7 @@ const DashboardHub = {
     // Slim mode: Analytics lama + presenter Insight yang tidak lagi menjadi
     // canonical home tetap tersembunyi agar stale DOM tidak bocor saat tab
     // berpindah. Engine/halaman aslinya tetap tersedia.
-    ['eieWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap'].forEach((id) => {
+    ['eieWrap','personalOverviewWrap','crossWidgetsWrap','lifePriorityWrap','crossDashWrap'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) { el.classList.add('u-dnone'); el.style.display = ''; }
     });

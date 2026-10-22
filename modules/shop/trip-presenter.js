@@ -67,7 +67,7 @@ const TripPresenter = {
       ? getAIDeliveryThinMarginThreshold() : 10;
 
     const deliveredThis = cobek
-      .filter((t) => t && t.delivered)
+      .filter((t) => t && t.delivered && Number(t.ongkir) > 0)
       .filter((t) => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; })
       .filter(selfFilter);
 

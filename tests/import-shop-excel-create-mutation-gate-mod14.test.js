@@ -38,7 +38,7 @@ const { loadSource } = require('./helpers/loadSource');
 
 function loadIo(D, extra = {}) {
   return loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: extra.resolveShopKategori || (() => ''),
@@ -233,7 +233,7 @@ test('rollback: saveProduct() menolak (simulasi id ganda) -> fallback push newPr
 test('fallback: tanpa ProductRepository, object literal mentah PERSIS sama seperti sebelum Modul 14', () => {
   const D = makeD();
   const ctx = loadSource(
-    ['modules/shop/cobek-io.js'],
+    ['modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => '',

@@ -1,0 +1,27 @@
+# S2619 files changed or added on top of S2618 cumulative patch
+app-main/index.html
+app-main/app_production.html
+app-main/app-bundle-a.min.js
+app-main/app-bundle-b.min.js
+app-main/sw.js
+app-main/modules/business/kasir.js
+app-main/modules/business/shop-data-io-api.js
+app-main/modules/shop/cobek-io.js
+app-main/modules/shop/cobek-order.js
+app-main/modules/shop/profit-engine.js
+app-main/tests/import-shop-excel-create-mutation-gate-mod14.test.js
+app-main/tests/s2619-cumulative-shop-targets.test.js
+app-main/docs/FILE-MAP.md
+app-main/docs/COVERAGE-PER-MODULE.md
+app-main/modules/shared/modules-render.js
+app-main/modules/shared/modals.js
+app-main/modules/shared/modules-calc.js
+app-main/modules/shared/features-helpers-global-security.js
+app-main/chat-action-handlers.js
+app-main/PATCH-S2619-CUMULATIVE-SHOP-v2623.md
+app-main/CHANGED-FILES-S2619.txt
+app-main/FILE-HASHES-SHA256.txt
+app-main/tests/cobek-shop-5-titik-sisa-sesi-c.test.js
+app-main/tests/product-repository-attribute-gate-mod5.test.js
+app-main/tests/product-repository-price-gate-mod4.test.js
+app-main/tests/shop-jsonimport-produsenexcel-mutation-gate-mod16.test.js

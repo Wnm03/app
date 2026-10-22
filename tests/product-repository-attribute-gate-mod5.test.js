@@ -240,7 +240,7 @@ test('integrasi: cobek-io.js ImportShopExcel.commit() SET hargaReseller/diskonPe
     produsen: [{ id: 'prd1', name: 'Toko Batu' }], cobekKategori: [],
   };
   const ctx = loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => 'kat_y',
@@ -286,7 +286,7 @@ test('integrasi: cobek-io.js ImportShopExcel.commit() menolak diskonPersen korup
     produsen: [], cobekKategori: [],
   };
   const ctx = loadSource(
-    ['modules/shop/generic/product-repository.js', 'modules/shop/cobek-io.js'],
+    ['modules/shop/generic/product-repository.js', 'modules/business/shop-data-io-api.js', 'modules/shop/cobek-io.js'],
     {
       D,
       resolveShopKategori: () => '',

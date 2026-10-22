@@ -12,7 +12,8 @@ test('S2391 GROUP_B pin is refreshed to the measured source payload', () => {
   assert.ok(m);
   const files = [...m[1].matchAll(/'([^']+\.js)'/g)].map(x => x[1]);
   // S2601: the read-only FinanceAllocationAPI is an intentional additional GROUP_B source.
-  assert.equal(files.length, 361);
+  // S2612: dashboard-hub-overview.js (Pusat Pantau Beranda, read-only presenter) is an intentional additional GROUP_B source.
+  assert.equal(files.length, 362);
   assert.equal(new Set(files).size, files.length);
   assert.ok(files.reduce((n, f) => n + fs.statSync(path.join(root, f)).size, 0) > 0);
 });

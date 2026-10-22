@@ -1027,3 +1027,43 @@ html body[data-theme] .card-collapse-toggle { min-width: 44px; min-height: 44px;
 html body[data-theme] .card-setting-btn { padding-inline: 8px; }
 html body[data-theme] .card-collapse-toggle { flex: 0 0 44px; }
 
+.dhb-tr-chart{display:flex;gap:8px;height:120px;margin:4px 0 6px}
+.dhb-tr-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.dhb-tr-bars{flex:1;width:100%;display:flex;gap:3px;align-items:flex-end}
+.dhb-tr-bars i{flex:1;min-height:2px;border-radius:3px 3px 0 0}
+.dhb-tr-col span{font-size:10px;color:var(--text2)}
+.dhb-tr-bars .in{background:var(--money-pos)}
+.dhb-tr-bars .out{background:var(--money-neg)}
+#financialAuditInsightWrap button{white-space:nowrap}
+
+
+/* S2617 — audit Finance UI: FAB halaman Uang/Laporan tidak terjangkau; 
+   Aksi tambah transaksi tersedia melalui tombol ＋ bawah dan tombol Masuk/Keluar;
+   export laporan tersedia di sub-tab laporan. Elemen lama dipertahankan di DOM agar
+   dispatcher lama tetap kompatibel, tetapi tidak mengambil ruang atau klik. */
+#keuFab, #laporanFab { display: none !important; pointer-events: none !important; }
+
+/* S2617/S2618 compatibility styles relocated from styles.css to preserve the source-size budget. */
+.kasir-wrap{position:relative;padding-bottom:calc(88px + env(safe-area-inset-bottom, 0px));}
+#shopTab-bi #shopBusinessEngineWrap,#shopTab-bi #tripPresenterWrap,#shopTab-bi #businessFlowWrap{display:none!important;}
+.dashhub-cat-head>.dashhub-cat-icon{flex:0 0 40px}
+.dhb-ov-title{font-size:var(--fs-label);font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:4px 2px 10px}
+.dhb-ov-grid{display:grid;gap:10px;margin-bottom:14px}
+@media(min-width:560px){.dhb-ov-grid{grid-template-columns:1fr 1fr}}
+.dhb-ov-tile{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:14px;cursor:pointer;min-width:0}
+.dhb-ov-tile-h{display:flex;gap:8px;font-size:var(--fs-body)}
+.dhb-ov-tile-h b{flex:1}
+.dhb-ov-main{font:700 24px 'Space Grotesk',sans-serif;margin:8px 0 6px;overflow-wrap:anywhere}
+.dhb-ov-main small{font:500 var(--fs-caption) sans-serif;color:var(--text2);margin-left:6px}
+.dhb-ov-row{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-caption);padding:4px 0;border-top:1px solid var(--border);color:var(--text2)}
+.dhb-ov-row span:last-child{color:var(--text);font-weight:600;text-align:right;overflow-wrap:anywhere}
+.dhb-ov-tile .pos,#dashHubTrendBody .pos{color:var(--money-pos)!important}
+.dhb-ov-tile .neg,#dashHubTrendBody .neg{color:var(--money-neg)!important}
+.dhb-ov-tile .warn{color:#d97706!important}
+.dhb-ov-hint,.dhb-ov-empty,.dhb-ov-ok{margin-top:8px;font-size:var(--fs-caption);color:var(--text2);line-height:1.4}
+.dhb-ov-att{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--surface3);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--r-md);padding:9px 10px;margin-bottom:8px;color:var(--text);cursor:pointer;font:inherit}
+.dhb-ov-danger{border-left-color:var(--money-neg)}
+.dhb-ov-att.dhb-ov-warn{border-left-color:#d97706}
+.dhb-ov-att-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dhb-ov-att-txt span{font-size:var(--fs-caption);color:var(--text2);overflow-wrap:anywhere}
+.dhb-ov-att-n{min-width:22px;height:22px;border-radius:11px;background:var(--surface4);font-size:var(--fs-caption);font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px}

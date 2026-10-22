@@ -488,6 +488,14 @@ attrVals[map.field]=el?(parseFloat(el.value)||0):0;
 });
 const {diskonPersen,beratPerUnit,panjang,lebar,tinggi}=attrVals;
 if(!name||!Number.isFinite(hargaJual)||hargaJual<=0){toast('⚠️ Nama wajib diisi dan harga jual harus lebih dari 0');return;}
+const _normProductName=(v)=>String(v||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('id');
+const _duplicateProduct=D.products.find((p,i)=>i!==this.editIdx&&_normProductName(p&&p.name)===_normProductName(name));
+if(_duplicateProduct){toast('⚠️ Nama produk sudah ada: '+_duplicateProduct.name+' — gunakan Edit/Gabung Harga bila memang produk yang sama.');return;}
+if(stock<0&&typeof confirm==='function'&&!confirm('Stok produk negatif ('+stock+'). Lanjutkan sebagai koreksi stok?'))return;
+const _stockBeforeWarning=this.editIdx!==null&&D.products[this.editIdx]?(Number(D.products[this.editIdx].stock)||0):0;
+if(stock>_stockBeforeWarning&&hargaBeli<=0&&typeof confirm==='function'&&!confirm('Harga beli/modal masih Rp 0. Stok bertambah tanpa biaya pembelian yang tercatat di Keuangan, sehingga laba dapat terlihat terlalu tinggi. Tetap simpan?'))return;
+if(hargaBeli>0&&hargaJual<hargaBeli&&typeof confirm==='function'&&!confirm('Harga jual lebih rendah daripada harga beli. Produk akan berpotensi rugi. Tetap simpan?'))return;
+if(hargaBeli>0&&hargaJual===hargaBeli&&typeof confirm==='function'&&!confirm('Harga jual sama dengan harga beli (belum menghitung biaya lain). Tetap simpan?'))return;
 if(hargaJual>999000000000||hargaBeli>999000000000||(hargaReseller!==null&&hargaReseller>999000000000)){toast('⚠️ Harga maksimal Rp 999.000.000.000');return;}
 const accId=document.getElementById('pAcc')?document.getElementById('pAcc').value:D.accounts[0]?.id;
 const prevStock=this.editIdx!==null?(D.products[this.editIdx].stock||0):0;
@@ -584,7 +592,13 @@ this.syncPairedPrice(product);
 if(this.modalCallback){const cb=this.modalCallback;this.modalCallback=null;cb(product);}
 },
 async delete(i){
-if(!await askConfirm('Hapus produk ini dari etalase?'))return;
+const _productToDelete=D.products[i];
+if(!_productToDelete)return;
+const _linkedRows=(D.cobek||[]).filter(t=>(t.items||[]).some(it=>it.productId===_productToDelete.id || (it.name||it.productName)===_productToDelete.name));
+const _deleteMessage=_linkedRows.length
+?`Produk "${escapeHtml(_productToDelete.name)}" tercatat di ${_linkedRows.length} transaksi. Riwayat transaksi dipertahankan sebagai snapshot; produk akan dihapus hanya dari etalase. Lanjutkan?`
+:`Hapus produk "${escapeHtml(_productToDelete.name)}" dari etalase?`;
+if(!await askConfirm(_deleteMessage,{title:'Hapus Produk',okText:'Hapus produk'}))return;
 // Modul 12 — hapus produk dialihkan lewat ProductRepository.mutateDelete()
 // (GATE BARU sesi ini, tidak ada gate delete produk sebelumnya, pola SAMA
 // PERSIS SupplierStore.mutateDelete()), guard typeof + fallback raw PERSIS
@@ -663,7 +677,10 @@ if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"kategori",acti
 return;
 }
 const _newKatIdSesiShop=resolveShopKategori(name);
-save();el.value='';this.renderKategoriList();toast('✅ Kategori ditambahkan');
+if(!_newKatIdSesiShop){toast('⚠️ Kategori tidak ditambahkan. Periksa nama dan coba lagi.');return;}
+const _createdKategori=D.cobekKategori.find(c=>c.id===_newKatIdSesiShop);
+const _wasExisting=!!(_createdKategori&&_createdKategori.name.toLocaleLowerCase('id')===name.toLocaleLowerCase('id')&&D.cobekKategori.filter(c=>c.name.toLocaleLowerCase('id')===name.toLocaleLowerCase('id')).length>1);
+save();el.value='';this.renderKategoriList();toast('✅ Kategori '+(_wasExisting?'sudah tersedia':'ditambahkan'));
 // Sesi C-lanjutan Shop/Cobek: tambah kategori baru SEBELUMNYA 0% emit AIBus.
 if(_newKatIdSesiShop&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"kategori",action:"create",categoryId:_newKatIdSesiShop,name});
 },
@@ -803,7 +820,7 @@ return`<div class="shop-product-card stock-${stockCls}">
             <div class="shop-price-sub">Modal ${fmt(hargaBeliDisp)}${p.hargaReseller?' · Reseller '+fmt(hargaResellerDisp):''}</div>
           </div>
           <div class="shop-product-right">
-            <div class="shop-margin-badge">+${fmt(margin)} (${marginPct}%)</div>
+            <div class="shop-margin-badge" title="Markup terhadap harga beli">+${fmt(margin)} · markup ${marginPct}%</div>
             <div class="shop-product-actions">
               ${p.priceGroupId?`<button data-action="Etalase.unlinkFromGroup" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Lepas dari grup harga" title="Lepas dari grup harga gabungan">🔓</button>`:''}
               <button data-action="openProductModal" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit/Buka">✏️</button>

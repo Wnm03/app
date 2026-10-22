@@ -47,7 +47,7 @@ openModal('transferModal');
 // note.trim() (BARU) -- sebelum sesi ini, note isi spasi kosong ('   ')
 // lolos jadi note (bukan fallback 'Transfer') krn '   '||'Transfer' tetap
 // balikin '   ' (truthy, string kosong-spasi bukan falsy di JS).
-function saveTransfer(){
+async function saveTransfer(){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return false;
 const from=document.getElementById('trFrom').value;
 const to=document.getElementById('trTo').value;
@@ -57,6 +57,16 @@ if(!Number.isFinite(amt)||amt<=0||amt>999000000000){toast('⚠️ Masukkan jumla
 if(from===to){toast('⚠️ Akun asal dan tujuan harus berbeda');return;}
 const fromAcc=D.accounts.find(a=>a.id===from), toAcc=D.accounts.find(a=>a.id===to);
 if(!fromAcc||!toAcc){toast('⚠️ Akun asal/tujuan tidak valid — pilih ulang akunnya');return;}
+// Peringatan lunak: transfer tetap diizinkan setelah konfirmasi, tetapi pengguna
+// diberi tahu sebelum saldo akun asal menjadi negatif. Pakai sumber saldo akun
+// kanonis yang sama dengan UI (recalcAccBalance), bukan acc.balance yang bisa stale.
+if(typeof recalcAccBalance==='function'){
+  const saldoAsal=recalcAccBalance(from);
+  if(Number.isFinite(saldoAsal)&&saldoAsal-amt<0){
+    const ok=await askConfirm(`⚠️ Transfer ini membuat saldo akun "${escapeHtml(fromAcc.name)}" menjadi minus (${fmtFull(saldoAsal-amt)}). Tetap lanjutkan?`,{title:'Saldo akan minus',okText:'Tetap transfer'});
+    if(!ok)return;
+  }
+}
 const date=document.getElementById('trDate').value;
 const note=(document.getElementById('trNote').value||'').trim()||'Transfer';
 const transferPairId=uid();

@@ -171,7 +171,7 @@ test('locationSummary() — kosong kalau belum ada transfer sama sekali (semua d
 test('transferStatus() — label utk ON_TRIP/RECEIVED, case-insensitive, fallback apa adanya', () => {
   const ctx = makeCtx(baseD());
   assert.equal(ctx.BusinessFlowPresenter.transferStatus('on_trip'), 'On Trip');
-  assert.equal(ctx.BusinessFlowPresenter.transferStatus('RECEIVED'), 'Diterima (Pekalongan)');
+  assert.equal(ctx.BusinessFlowPresenter.transferStatus('RECEIVED'), 'Diterima di lokasi tujuan');
   assert.equal(ctx.BusinessFlowPresenter.transferStatus('UNKNOWN'), 'UNKNOWN');
 });
 

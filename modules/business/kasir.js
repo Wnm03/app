@@ -360,22 +360,12 @@ accountId:accId,txId,existingShopId:null
 });
 if(!result.ok){toast('⚠️ '+result.message);return;}
 const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');
-// kw-kasir-audit-3: DP/Piutang — logic sama persis Order._saveInner() (cobek-order.js, kw-shop-dp),
-// diduplikasi (bukan diekstrak jadi helper bersama, sesuai keputusan opsi A) krn Kasir TIDAK PERNAH
-// mengedit entri lama (existingShopId selalu null di atas), jadi tidak perlu logic reconciliation
-// piutangLinkId lama seperti di Order. Kosong = dianggap lunas penuh (perilaku lama, tidak berubah).
+// Kasir dan Order memakai rekonsiliasi pembayaran kanonis yang sama.
 const dpRaw=document.getElementById('kasirDP')?document.getElementById('kasirDP').value.trim():'';
-const dpVal=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
-const sisa=Math.max(0,total-dpVal);
-const txNote=(customer.name?customer.name+' - ':'')+itemSummary;
-FinanceTxSOT.create({id:txId,type:'income',amount:dpVal,category:'Bisnis',subcategory:'Cobek',accountId:accId,payMethod:'tunai',note:txNote,date,cobekLinkId:result.shopId});
-if(sisa>0){
-const piutangName=customer.name||'Pembeli Shop';
-const pid=uid();
-BillDebtPiutangCanonicalWriter.add('piutang',{id:pid,name:piutangName,nilai:sisa,tanggal:date,jatuhTempo:'',catatan:'Sisa pembayaran shop: '+itemSummary,lunas:false});
-const shopRecord=D.cobek.find(c=>c.id===result.shopId);
-if(shopRecord)shopRecord.piutangLinkId=pid;
-}
+if(typeof syncShopSalePayment!=='function')throw new Error('SHOP_PAYMENT_RECONCILIATION_REQUIRED');
+const payment=syncShopSalePayment({shopId:result.shopId,txId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});
+if(!payment.ok){toast('⚠️ Pembayaran tidak tersinkron: '+payment.reason);return;}
+const dpVal=payment.dp,sisa=payment.sisa;
 save();
 renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();

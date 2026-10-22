@@ -26,11 +26,19 @@ test('S2181 — salary writers use FinanceTxSOT and keep legacy transaction shap
   assert.match(weekly,/Gaji mingguan dari absensi/);
 });
 
-test('S2181 — Kasir checkout uses FinanceTxSOT without changing DP/transaction fields',()=>{
+test('S2181/S2619 — Kasir delegates payment posting to shared Shop reconciliation and SOT writers',()=>{
   const s=src('modules/business/kasir.js');
-  assert.match(s,/FinanceTxSOT\.create\(\{id:txId,type:'income'/);
+  const order=src('modules/shop/cobek-order.js');
+  assert.match(s,/recordShopSale\(/);
+  assert.match(s,/syncShopSalePayment\(\{shopId:result\.shopId,txId,dpRaw,total,accountId:accId,customerName:customer\.name,date,itemSummary\}\)/);
+  assert.doesNotMatch(s,/FinanceTxSOT\.create\(\{id:txId,type:'income'/);
   assert.doesNotMatch(s,/D\.transactions\.push\(\{id:txId,type:'income'/);
-  for(const token of ['amount:dpVal','category:\'Bisnis\'','subcategory:\'Cobek\'','cobekLinkId:result.shopId']) assert.match(s,new RegExp(token.replace(/[.*+?^${}()|[\\]\\]/g,'\\$&')));
+  assert.match(order,/FinanceTxSOT\.create\(\{id:o\.txId,type:'income'/);
+  assert.match(order,/BillDebtPiutangCanonicalWriter\.add\('piutang'/);
+  assert.match(order,/amount:dp/);
+  assert.match(order,/category:'Bisnis'/);
+  assert.match(order,/subcategory:'Cobek'/);
+  assert.match(order,/cobekLinkId:o\.shopId/);
 });
 
 test('S2181 — actual runtime build loads FinanceTxSOT before writer modules',()=>{
