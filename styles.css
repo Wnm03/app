@@ -839,6 +839,7 @@ overflow-y: auto;
 .kasir-tile-badge{position:absolute;top:-7px;right:-7px;background:var(--accent);color:#fff;border-radius:50%;min-width:21px;height:21px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-caption);font-weight:800;padding:0 4px;box-shadow:var(--shadow-btn-dark-a);}
 .kasir-tile-pricewarn{position:absolute;top:-7px;left:-7px;background:var(--surface);border:1px solid var(--border2);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-label);line-height:1;cursor:pointer;box-shadow:var(--shadow-btn-dark-b);padding:0;}
 .kasir-view-toggle .chip-btn{padding:6px 11px;font-size:var(--fs-body);line-height:1;}
+.segmented-control.kasir-view-toggle{flex:0 0 96px;width:96px;margin-bottom:0}#kasirPriceToggle{min-width:0;margin-bottom:0}
 .kasir-grid.kasir-grid-list{display:flex;flex-direction:column;gap:6px;}
 .kasir-tile-row{display:flex;align-items:center;gap:10px;padding:9px 12px;}
 .kasir-tile-row .kasir-tile-row-main{flex:1;min-width:0;}

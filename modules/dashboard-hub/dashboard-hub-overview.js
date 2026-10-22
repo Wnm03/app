@@ -167,11 +167,21 @@ const DashboardHubOverview = {
       const c = (s.composition && s.composition.ok) ? s.composition : null;
       const rows = [];
       if (c) { rows.push(['Kas & akun', _dhoMoney(c.cashValue)]); rows.push(['Aset fisik', _dhoMoney(c.assetValue)]); if (c.investmentValue) rows.push(['Investasi', _dhoMoney(c.investmentValue)]); }
-      const debt = (s.netWorth.portfolioValue || 0) - (s.netWorth.netWorth || 0);
+      // Audit Beranda: angka utama = Kekayaan.currentNetWorth() (kas+aset+investasi+inventori bisnis+piutang-utang),
+      // tapi baris dulu hanya komposisi portofolio -> baris tidak menjumlah ke total & "debt" dihitung salah
+      // (portfolio-net bernilai negatif saat ada piutang/stok). Sekarang tiap komponen net worth dibaca dari SSOT-nya.
+      const _safe = (fn) => { try { return typeof fn === 'function' ? (Number(fn()) || 0) : 0; } catch (_e) { return 0; } };
+      const invBisnis = _safe(typeof totalInventoriBisnisValue === 'function' ? totalInventoriBisnisValue : null);
+      const piutang = _safe(typeof totalPiutangValue === 'function' ? totalPiutangValue : null);
+      const debt = _safe(typeof FI !== 'undefined' && FI && FI.totalDebt ? () => FI.totalDebt() : null);
+      if (invBisnis) rows.push(['Stok bisnis', _dhoMoney(invBisnis)]);
+      if (piutang) rows.push(['Piutang', _dhoMoney(piutang)]);
       if (debt > 0) rows.push(['Kewajiban/utang', _dhoMoney(debt), 'neg']);
       let hint = '';
-      const top = s.allocation && s.allocation.ok && Array.isArray(s.allocation.breakdown) ? s.allocation.breakdown.slice().sort((a, b) => b.pct - a.pct)[0] : null;
-      if (top && top.pct >= 70) hint = `${Math.round(top.pct)}% kekayaan ada di "${top.category}" — pertimbangkan diversifikasi.`;
+      const parts = [['Kas / Akun', c ? c.cashValue : 0], ['Aset Fisik', c ? c.assetValue : 0], ['Investasi', c ? c.investmentValue : 0], ['Stok bisnis', invBisnis], ['Piutang', piutang]];
+      const gross = parts.reduce((t, x) => t + (x[1] > 0 ? x[1] : 0), 0);
+      const top = gross > 0 ? parts.slice().sort((x, y) => y[1] - x[1])[0] : null;
+      if (top && (top[1] / gross) * 100 >= 70) hint = `${Math.round((top[1] / gross) * 100)}% kekayaan ada di "${top[0]}" — pertimbangkan diversifikasi.`;
       return { icon: '🏛️', title: 'Kekayaan Bersih', main: _dhoMoneySigned(s.netWorth.netWorth), mainCls: s.netWorth.netWorth < 0 ? 'neg' : '', rows, hint, target: { page: 'aset', tab: 'ringkasan' } };
     }, null));
 
@@ -207,7 +217,7 @@ const DashboardHubOverview = {
       if (!s || !s.ok) return null;
       const o = s.scoreOverview;
       const comps = (s.componentBreakdown && Array.isArray(s.componentBreakdown.items)) ? s.componentBreakdown.items : [];
-      const rows = comps.slice(0, 4).map((c) => [c.label || c.key, Math.round((c.pct || 0) * 100) + '%', (c.pct || 0) < 0.5 ? 'warn' : 'pos']);
+      const rows = comps.slice(0, 4).map((c) => [(c.label || c.key) + ' (skor)', Math.round((c.pct || 0) * 100) + '%', (c.pct || 0) < 0.5 ? 'warn' : 'pos']);
       const rec = (s.recommendation && s.recommendation[0]) ? (s.recommendation[0].message || s.recommendation[0].text || s.recommendation[0]) : '';
       return { icon: '🩺', title: 'Kesehatan Finansial', main: String(o.score), mainSub: '/100 · ' + o.label, mainCls: o.score >= 60 ? 'pos' : (o.score >= 40 ? 'warn' : 'neg'), rows, hint: typeof rec === 'string' ? rec : '', target: { page: 'keuangan', tab: 'laporan', subtab: 'ringkasan' } };
     }, null));
