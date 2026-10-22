@@ -87,6 +87,7 @@ const FinanceDashboard = {
       this._cashFlowCard(hook.cashflow),
       this._budgetCard(hook.budget),
       this._healthCard(hook.healthScore),
+      this._allocationCard(hook.cashflow),
       this._auditCard(),
       ...this._sparepartCards(),
     ];
@@ -101,6 +102,34 @@ const FinanceDashboard = {
         </div>
       </div>
     `).join('');
+  },
+
+  // _allocationCard() — satu presenter untuk Salary Protection & Surplus Allocation.
+  // API read-only; status berbasis proyeksi bulanan, bukan kas bebas aktual.
+  _allocationCard(cashflow) {
+    const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
+    if (typeof FinanceAllocationAPI === 'undefined' || typeof FinanceAllocationAPI.summary !== 'function') {
+      return { icon: '🛡️', label: 'Alokasi Dana Aman', value: 'Belum tersedia', sub: 'API rekomendasi belum dimuat' };
+    }
+    const result = FinanceAllocationAPI.summary(cashflow);
+    if (!result || !result.ok) {
+      return { icon: '🛡️', label: 'Alokasi Dana Aman', value: 'Data belum cukup', sub: (result && result.reason) || 'Periksa saldo, transaksi, dan tagihan' };
+    }
+    const labels = {
+      DEFICIT: { value: 'Defisit proyeksi', cls: 'red' },
+      NO_FREE_CASH: { value: 'Kas proyeksi impas', cls: 'orange' },
+      SURPLUS: { value: 'Surplus proyeksi', cls: 'green' },
+    };
+    const state = labels[result.status] || { value: 'Data belum cukup', cls: 'orange' };
+    const projected = Number.isFinite(result.projectedEndingBalance) ? `Saldo akhir proyeksi: ${money(result.projectedEndingBalance)}. ` : '';
+    const actual = result.actualFreeCashVerified
+      ? (result.investmentAllowed
+        ? `Kas setelah kewajiban dan cadangan: ${money(result.safeInvestableAmount)}. `
+        : `Nominal investasi aman: ${money(result.safeInvestableAmount || 0)}. `)
+      : `Investasi dikunci: ${result.actualCashReason || 'kas bebas aktual belum terverifikasi'}. `;
+    const first = Array.isArray(result.recommendations) ? result.recommendations[0] : null;
+    const sub = `${projected}${actual}${first ? first.title + ': ' + first.detail : 'Periksa data kas dan kewajiban.'} Investasi otomatis: tidak.`;
+    return { icon: '🛡️', label: 'Alokasi Dana Aman', value: state.value, cls: state.cls, sub };
   },
 
   // _auditCard() — entry point Audit Keuangan 30 Menit Phase A.

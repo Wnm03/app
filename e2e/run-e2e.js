@@ -212,6 +212,53 @@ async function main() {
     const fab2 = await b.evaluate(`(() => { const btn = document.getElementById('navFabMain'); btn.click(); return { hidden: document.getElementById('navFabFallbackMenu').hidden, expanded: btn.getAttribute('aria-expanded') }; })()`);
     check('FAB "+" di Beranda: klik kedua menutup menu', fab2.hidden === true && fab2.expanded === 'false', JSON.stringify(fab2));
     await gotoPage(b, 'keuangan');
+    // #findashWrap berada di tab Laporan (#keuanganTab-laporan, u-dnone secara default).
+    await b.evaluate(`setKeuanganTab('laporan')`); await sleep(1500);
+    await waitFor(() => b.evaluate(`(() => [...document.querySelectorAll('#findashGrid .findash-card')].some((e) => e.querySelector('.findash-card-label')?.textContent.trim() === 'Alokasi Dana Aman'))()`), 'kartu Alokasi Dana Aman dirender');
+    const allocationCard = await b.evaluate(`(() => {
+      const card = [...document.querySelectorAll('#findashGrid .findash-card')].find((e) => e.querySelector('.findash-card-label')?.textContent.trim() === 'Alokasi Dana Aman');
+      return card ? { visible: card.getBoundingClientRect().width > 0 && card.getBoundingClientRect().height > 0,
+        value: card.querySelector('.findash-card-val')?.textContent.trim() || '',
+        sub: card.querySelector('.findash-card-sub')?.textContent || '' } : null;
+    })()`);
+    check('Keuangan: kartu Alokasi Dana Aman dirender dan terlihat', !!allocationCard && allocationCard.visible, JSON.stringify(allocationCard));
+    check('Keuangan: kartu menyatakan investasi otomatis tidak dilakukan', !!allocationCard && /Investasi otomatis:\s*tidak\./i.test(allocationCard.sub), JSON.stringify(allocationCard));
+    check('Keuangan: kartu tidak membuka nominal investasi tanpa rekonsiliasi aktual', !!allocationCard && (/Investasi dikunci:|Nominal investasi aman:/i.test(allocationCard.sub) || /Data belum cukup|Defisit proyeksi|Kas proyeksi impas/.test(allocationCard.value)), JSON.stringify(allocationCard));
+    // S2617: state "nominal investasi aman" dan state terkunci akibat data rusak, diuji pada UI nyata.
+    // Fixture sintetis dibuat di dalam halaman, lalu dipulihkan agar cek berikutnya tidak terpengaruh.
+    const allocScenario = (label, mutate) => b.evaluate(`(() => {
+      const keep = { a: D.accounts, t: D.targets, bl: D.bills, db: D.debts, tx: D.transactions, k: D.profile && D.profile.kiriman };
+      try {
+        D.profile = D.profile || {}; D.profile.kiriman = 0;
+        D.accounts = [{ id: 'e2e_daily', name: 'Harian', emoji: '💵', baseBalance: 5000000, balance: 5000000, includeInBalance: true, jenis: 'tunai', ownership: { type: 'SELF' } },
+          { id: 'e2e_emerg', name: 'Darurat', emoji: '🛟', baseBalance: 2000000, balance: 2000000, includeInBalance: true, jenis: 'tunai', ownership: { type: 'SELF' } }];
+        D.targets = [{ id: 'e2e_t', name: 'Dana Darurat', isDanaDarurat: true, accountId: 'e2e_emerg', amount: 1000000, saved: 0 }];
+        D.bills = []; D.debts = []; D.transactions = [];
+        (${mutate})();
+        invalidateAccBalCache(); invalidateCashflowForecastCache();
+        const r = FinanceAllocationAPI.summary();
+        FinanceDashboard.render();
+        const card = [...document.querySelectorAll('#findashGrid .findash-card')].find((e) => e.querySelector('.findash-card-label')?.textContent.trim() === 'Alokasi Dana Aman');
+        return { label: ${JSON.stringify(label)}, ok: r.actualFreeCashVerified, safe: r.safeInvestableAmount, allowed: r.investmentAllowed, code: r.actualCashBlockCode || null,
+          txCount: D.transactions.length, accBal: D.accounts.map((a) => a.baseBalance),
+          val: card ? card.querySelector('.findash-card-val').textContent.trim() : null, sub: card ? card.querySelector('.findash-card-sub').textContent : '' };
+      } finally {
+        D.accounts = keep.a; D.targets = keep.t; D.bills = keep.bl; D.debts = keep.db; D.transactions = keep.tx; D.profile.kiriman = keep.k;
+        invalidateAccBalCache(); invalidateCashflowForecastCache(); FinanceDashboard.render();
+      }
+    })()`);
+    const safeS = await allocScenario('aman', '() => {}');
+    check('Alokasi (state aman): kas terverifikasi, nominal aman dibuka dan investasi diizinkan', safeS.ok === true && safeS.allowed === true && safeS.safe === 5000000 && /Surplus proyeksi/.test(safeS.val || ''), JSON.stringify(safeS));
+    check('Alokasi (state aman): kartu menampilkan nominal sebagai rekomendasi, bukan transaksi otomatis', /Nominal yang dapat dipertimbangkan/.test(safeS.sub) && /Investasi otomatis:\s*tidak\./i.test(safeS.sub) && !/Investasi dikunci/.test(safeS.sub), JSON.stringify(safeS));
+    check('Alokasi (state aman): tidak ada transaksi/saldo yang berubah akibat rekomendasi', safeS.txCount === 0 && safeS.accBal.join() === '5000000,2000000', JSON.stringify(safeS));
+    const debtS = await allocScenario('utang-rusak', "() => { D.debts = [{ id: 'e2e_d', name: 'Utang rusak', nilai: '   ', lunas: false, cicilanBulanan: 0 }]; }");
+    check('Alokasi (utang nominal spasi): investasi dikunci, nominal tidak dibuka', debtS.ok === false && debtS.allowed === false && debtS.safe === null && debtS.code === 'INVALID_ACTIVE_DEBT_AMOUNT' && /Investasi dikunci/.test(debtS.sub) && !/Nominal yang dapat dipertimbangkan/.test(debtS.sub), JSON.stringify(debtS));
+    const instS = await allocScenario('cicilan-rusak', "() => { D.debts = [{ id: 'e2e_d2', name: 'Cicilan rusak', nilai: 500000, lunas: false, cicilanBulanan: true }]; }");
+    check('Alokasi (cicilan boolean): investasi dikunci dengan kode cicilan tidak valid', instS.allowed === false && instS.safe === null && instS.code === 'INVALID_DEBT_INSTALLMENT' && /Investasi dikunci/.test(instS.sub), JSON.stringify(instS));
+    const billS = await allocScenario('tagihan-rusak', "() => { D.bills = [{ id: 'e2e_b', kind: 'tagihan', amount: false, nextDue: new Date(Date.now() + 864e5 * 3).toISOString().slice(0, 10), freq: 'bulanan' }]; }");
+    check('Alokasi (tagihan boolean false): investasi dikunci dengan kode tagihan tidak valid', billS.allowed === false && billS.safe === null && billS.code === 'INVALID_BILL_AMOUNT' && /Investasi dikunci/.test(billS.sub), JSON.stringify(billS));
+    const reserveS = await allocScenario('cadangan-kurang', "() => { D.accounts[1].baseBalance = 500000; D.accounts[1].balance = 500000; }");
+    check('Alokasi (cadangan darurat kurang dari target): nominal investasi tidak dibuka', reserveS.allowed === false && !/Nominal yang dapat dipertimbangkan/.test(reserveS.sub), JSON.stringify(reserveS));
     const tabs = await b.evaluate(`(() => {
       const t = document.querySelector('#page-keuangan > .cn-tabs'); const bc = document.querySelector('#page-keuangan > .page-breadcrumb');
       const kids = [...t.children].filter((e) => e.offsetParent !== null); const tops = kids.map((e) => Math.round(e.getBoundingClientRect().top));

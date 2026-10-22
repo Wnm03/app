@@ -11,7 +11,8 @@ test('S2391 GROUP_B pin is refreshed to the measured source payload', () => {
   const m = build.match(/const GROUP_B = \[(.*?)\n\];/s);
   assert.ok(m);
   const files = [...m[1].matchAll(/'([^']+\.js)'/g)].map(x => x[1]);
-  assert.equal(files.length, 360);
+  // S2601: the read-only FinanceAllocationAPI is an intentional additional GROUP_B source.
+  assert.equal(files.length, 361);
   assert.equal(new Set(files).size, files.length);
   assert.ok(files.reduce((n, f) => n + fs.statSync(path.join(root, f)).size, 0) > 0);
 });

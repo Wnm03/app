@@ -11,10 +11,6 @@
 [data-theme] .green{color:var(--money-pos,var(--accent3))!important;}
 [data-theme] .red{color:var(--money-neg,var(--accent2))!important;}
 [data-theme] .orange{color:var(--accent4)!important;}
-:root). Sesi ini MURNI
-variabel + 1 aturan scoped tambahan, 0 markup disentuh; tema lama (10
-blok di atas) 0 dampak. Belum didaftarkan ke pemilihan tema di UI --
-itu scope sesi s636+ sesuai rencana bertahap. */
 [data-theme="modern"] {  --bg:#fafafa;--surface:#ffffff;--surface2:#f2f2f2;--surface3:#e8e8e8;--surface4:#dcdcdc;  --accent:#2f6fed;--accent-soft:rgba(47,111,237,0.10);  --accent2:#b3554a;--accent2-soft:rgba(179,85,74,0.1);  --accent3:#5c8a6b;--accent3-soft:rgba(92,138,107,0.1);  --accent4:#a8874a;--accent4-soft:rgba(168,135,74,0.1);  --text:#18181a;--text2:#6b6b6b;--text3:#6e6e6e;  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);  --header-bg:rgba(250,250,250,0.92);--shadow-card:0 6px 20px rgba(47,111,237,0.08);  --money-pos:var(--accent3);--money-neg:var(--accent2);
 }
 :root {  --z-chrome:100; --z-dropdown:150; --z-overlay:200; --z-overlay-qs:300; --z-overlay-calc:400; --z-security:900; --z-onboard:950; --z-scanner:970; --z-toast:999;  --money-pos:#16a34a;--money-neg:#dc2626;--alert:#ff5050;--alert-soft:rgba(255,80,80,.15);  --sp-1: 4px; --sp-2: 6px; --sp-3: 8px; --sp-4: 10px; --sp-5: 14px;  --sp-6: 16px; --sp-7: 18px; --sp-8: 20px; --sp-9: 24px; --sp-10: 28px; --sp-11: 36px;  --r-xs: 8px; --r-sm: 10px; --r-md: 14px; --r-lg: 16px; --r-xl: 18px;  --r-2xl: 20px; --r-pill: 24px; --r-full: 999px;  --fs-caption: 11px; --fs-label: 12px; --fs-body: 13px; --fs-body-lg: 14px;  --fs-title-sm: 15px; --fs-icon: 16px; --fs-title: 17px; --fs-icon-lg: 18px; --fs-stat: 20px;
@@ -910,14 +906,6 @@ overflow-y: auto;
 .dashhub-search-item-label{font-size:12.5px;font-weight:700;line-height:1.3;}
 .dashhub-search-item-desc{font-size:var(--fs-caption);color:var(--text2);line-height:1.3;}
 .dashhub-search-empty{padding:12px;font-size:var(--fs-caption);color:var(--text2);text-align:center;}
---sp-*/--fs-*/--accent*), kecuali box-shadow
-(literal, sama seperti pola .kasir-tile/.dashhub-feature-card:hover yang
-sudah ada di file ini — bukan token baru, lihat ROADMAP-v1.1.md item 5
-utk migrasi token shadow di masa depan). Gaya mengacu Material Design 3 /
-Material You: radius besar (--r-2xl), elevation lewat shadow lembut,
-gradient aksen tipis (bukan warna solid penuh, mirip kartu ringkasan
-Google Wallet/Google Home), hierarki tipografi jelas (greeting > label >
-angka besar). */
 .dashhub-hero{
 background:linear-gradient(150deg,var(--surface3) 0%,var(--surface2) 55%,var(--surface2) 100%);
 border:1px solid var(--border2);
@@ -965,9 +953,6 @@ transition:transform .12s ease, border-color .12s ease, background .12s ease;
 @media (min-width:600px){
 #page-dashboard-hub .dashhub-qa-btn:hover{border-color:var(--accent);background:var(--surface3);}
 }
---sp-*/--fs-*), warna angka pakai utility .green/.red
-yang sudah ada (lihat baris ".green"/".red" di atas file ini) — bukan
-token/warna baru. */
 .dashhub-summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-6);}
 .dashhub-summary-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-5);}
 .dashhub-summary-label{font-size:var(--fs-caption);color:var(--text2);margin-bottom:2px;}
@@ -975,13 +960,6 @@ token/warna baru. */
 @media (min-width:600px){
 .dashhub-summary-grid{grid-template-columns:repeat(4,1fr);}
 }
---sp-*/--fs-*), warna
-angka pakai utility .green/.red yang sudah ada — bukan token/warna
-baru. */
---r-* yang sudah ada) -- bukan token/layout baru, cuma
-dipakai ulang di komponen ini. Kartu ke-5 ("Pemasukan vs Pengeluaran")
-otomatis sendirian di baris terakhir (5 item ganjil di grid 2 kolom),
-ini disengaja/aman, bukan bug. */
 .dashhub-analytics-row{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);margin-bottom:var(--sp-6);}
 .dashhub-analytics-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-4) var(--sp-5);}
 .dashhub-analytics-label{font-size:var(--fs-caption);color:var(--text2);margin-bottom:2px;}
@@ -991,8 +969,6 @@ ini disengaja/aman, bukan bug. */
 }
 .dashhub-analytics-card--warn{background:var(--accent2-soft);border-color:var(--accent2);}
 .dashhub-analytics-sub{font-size:var(--fs-label);color:var(--accent2);margin-top:4px;line-height:1.4;}
---accent2/warna hijau-merah) reuse yang sudah ada di
-file ini, tidak ada warna/token baru. */
 .dashhub-analytics-label-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
 .dashhub-analytics-badge{font-size:9.5px;font-weight:700;color:#fff;background:var(--accent2);border-radius:var(--r-pill);padding:2px 7px;white-space:nowrap;flex-shrink:0;}
 .dashhub-analytics-bar{display:flex;height:6px;border-radius:var(--r-full);overflow:hidden;margin-top:8px;background:var(--surface3);}
@@ -1001,9 +977,6 @@ file ini, tidak ada warna/token baru. */
 .dashhub-analytics-card--good{background:var(--accent3-soft);border-color:var(--accent3);}
 .dashhub-analytics-sub--good{color:var(--accent3);}
 .dashhub-analytics-badge--good{background:var(--accent3);}
---sp-*/--fs-*), warna angka pakai utility .green/.red/.orange
-yang sudah ada (lihat baris ".green"/".red"/".orange" di atas file ini)
-— bukan token/warna baru. */
 .findash-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-3);}
 .findash-card{display:flex;gap:var(--sp-3);align-items:flex-start;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-xl);padding:var(--sp-5);}
 .findash-card-icon{font-size:var(--fs-icon-lg);line-height:1;}
@@ -1014,10 +987,6 @@ yang sudah ada (lihat baris ".green"/".red"/".orange" di atas file ini)
 @media (min-width:600px){
 .findash-grid{grid-template-columns:repeat(4,1fr);}
 }
---fs-body-lg/--dur-moderate/--ease-standard, transisi
-box-shadow/border-color bawaan .card), mengikuti bahasa visual Material
-Design 3 yang sama dengan Hero Card/Quick Actions/Summary Cards/
-Dashboard Grid (Tahap 2-5). */
 #dashboardHubPinnedWrap .card{
 border-radius:var(--r-2xl);
 padding:var(--sp-8) var(--sp-7);
@@ -1120,11 +1089,6 @@ transition: background-size var(--dur-slow) var(--ease-emphasized), opacity var(
 @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(40px); opacity: .4; } }
 .overlay.closing, .calc-overlay.closing { animation: overlayOut var(--dur-moderate) var(--ease-standard) forwards; }
 .overlay.closing .modal, .calc-overlay.closing .calc-modal { animation: slideDown var(--dur-slow) var(--ease-emphasized) forwards; }
---r-*/
---fs-*/--accent/--surface3/--border2/--dur-*/--ease-*). Tidak ada
-selector lama yang diubah. Dibuat dinamis lewat JS (vehicle-scanner.js),
-bukan markup statis index.html — konsisten dengan pola elemen dinamis
-lain (mis. input file di scan-ocr.js). */
 .vehicle-scanner-fullscreen{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;background:#000;opacity:1;z-index:var(--z-scanner);display:flex;flex-direction:column;}
 .vehicle-scanner-video{flex:1;width:100%;height:100%;object-fit:cover;background:#000;}
 .vehicle-scanner-frame{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(78vw,320px);height:min(48vw,200px);border:3px solid var(--accent);border-radius:var(--r-lg);box-shadow:0 0 0 2000px rgba(0,0,0,0.45);pointer-events:none;}
@@ -1134,9 +1098,6 @@ lain (mis. input file di scan-ocr.js). */
 .vehicle-scanner-flash{position:absolute;top:calc(var(--sp-9) + env(safe-area-inset-top,0px));left:var(--sp-9);width:40px;height:40px;border-radius:var(--r-full);background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:var(--fs-icon-lg);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(6px);}
 .vehicle-scanner-flash:active{transform:scale(0.92);}
 .vehicle-scanner-flash.active{background:rgba(255,214,10,0.35);border-color:rgba(255,214,10,0.6);}
---r-full/--r-lg/
---fs-*/--z-dropdown/--dur-*/--ease-*/--accent/--surface3/--border2).
-Tidak ada selector lama yang diubah nilainya. */
 .keu-fab{position:fixed;left:50%;transform:translateX(-50%);right:auto;bottom:84px;z-index:var(--z-dropdown);display:flex;flex-direction:column;align-items:center;gap:var(--sp-4);}
 .keu-fab-main{display:none;}
 .keu-fab-main-icon{line-height:1;}

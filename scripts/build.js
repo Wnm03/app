@@ -240,6 +240,7 @@ const GROUP_B = [
   'modules/finance/investment-planner-api.js',
   'modules/finance/investment-planner-presenter.js',
   'modules/finance/debt-optimizer-api.js',
+  'modules/finance/finance-allocation-api.js',
   'modules/finance/debt-optimizer-presenter.js',
   'modules/finance/retirement-planner-api.js',
   'modules/finance/retirement-planner-presenter.js',
