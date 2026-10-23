@@ -140,7 +140,7 @@ _relevantOverdueItems(items) {
       const name = (it.categoryName || '').toLowerCase();
       const key = String(it.id != null ? it.id : name).trim();
       if (seenMaintenanceItems.has(key)) return;
-      if (it.status !== 'aman' && keywords.some((k) => name.includes(k))) {
+      if (['terlewat', 'jatuh_tempo', 'segera', 'mendekati'].includes(it.status) && keywords.some((k) => name.includes(k))) {
         seenMaintenanceItems.add(key);
         out.push(Object.assign({ part }, it));
       }

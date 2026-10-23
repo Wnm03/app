@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-23T08:42:01.998Z
-Total file source: 489 · Total identifier global: 17742
+Terakhir digenerate: 2026-10-23T11:08:25.742Z
+Total file source: 489 · Total identifier global: 17747
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -261,13 +261,13 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 238 | `modules/finance/financial-health-score-presenter.js` | 140 | modules/finance/financial-health-score-presenter.js — Financial Health Score Presenter (Sesi 98, Batch 10). Target sesi: Financial Health Score Foundation — lihat catatan lengkap di modules/finance/ … |
 | 239 | `modules/finance/financial-risk-dashboard-api.js` | 197 | modules/finance/financial-risk-dashboard-api.js — Financial Risk Dashboard API (Sesi 99, Batch 10). Target sesi: Financial Risk Dashboard — Risk Factors, Risk Level, Presenter. PRINSIP (RULE #1 sesi ini): 100% REUSE … |
 | 240 | `modules/finance/financial-risk-dashboard-presenter.js` | 151 | modules/finance/financial-risk-dashboard-presenter.js — Financial Risk Dashboard Presenter (Sesi 99, Batch 10). Target sesi: Financial Risk Dashboard — lihat catatan lengkap di modules/finance/ … |
-| 241 | `modules/vehicle/vehicle-intelligence.js` | 181 | Vehicle Intelligence Foundation (Sesi 76, Batch 7). Target sesi: lapisan agregasi domain VEHICLE — vehicle overview, health score per kendaraan, ringkasan armada (fleet), insight dasar — lihat docs/BATCH_PLAN.md § Batch … |
-| 242 | `modules/vehicle/vehicle-dashboard.js` | 142 | modules/vehicle/vehicle-dashboard.js — Vehicle Dashboard Foundation (Sesi 77, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleIntelligence.summary() … |
-| 243 | `modules/vehicle/vehicle-reminder.js` | 228 | Vehicle Reminder Foundation (Sesi 78, Batch 7). Target sesi: lapisan reminder domain VEHICLE — Service Reminder, Tax Reminder, Fuel Reminder, + Reminder Summary API. Lihat docs/BATCH_PLAN.md § Batch 7. Pola SAMA PERSIS … |
+| 241 | `modules/vehicle/vehicle-intelligence.js` | 190 | Vehicle Intelligence Foundation (Sesi 76, Batch 7). Target sesi: lapisan agregasi domain VEHICLE — vehicle overview, health score per kendaraan, ringkasan armada (fleet), insight dasar — lihat docs/BATCH_PLAN.md § Batch … |
+| 242 | `modules/vehicle/vehicle-dashboard.js` | 143 | modules/vehicle/vehicle-dashboard.js — Vehicle Dashboard Foundation (Sesi 77, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleIntelligence.summary() … |
+| 243 | `modules/vehicle/vehicle-reminder.js` | 238 | Vehicle Reminder Foundation (Sesi 78, Batch 7). Target sesi: lapisan reminder domain VEHICLE — Service Reminder, Tax Reminder, Fuel Reminder, + Reminder Summary API. Lihat docs/BATCH_PLAN.md § Batch 7. Pola SAMA PERSIS … |
 | 244 | `modules/vehicle/vehicle-notif-bridge.js` | 70 | Vehicle Notification Bridge (Sesi 84, Batch 7). Target sesi: **Vehicle Dashboard Final Integration** — menutup gap terakhir yang tercatat di docs/BATCH_PLAN.md Sesi 83 ("wiring … |
 | 245 | `modules/vehicle/vehicle-ai-hook.js` | 76 | modules/vehicle/vehicle-ai-hook.js — Vehicle AI Hook Foundation (Sesi 79, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): 100% REUSE, TIDAK ada rumus baru, TIDAK duplikasi logic, TIDAK mengubah … |
 | 246 | `modules/vehicle/vehicle-insight-presenter.js` | 124 | modules/vehicle/vehicle-insight-presenter.js — Vehicle Insight Presenter (Sesi 79, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleAIHook.fleetSummary() … |
-| 247 | `modules/vehicle/vehicle-daily-brief.js` | 68 | modules/vehicle/vehicle-daily-brief.js — Vehicle Daily Brief (Sesi 80, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleAIHook.fleetSummary() … |
+| 247 | `modules/vehicle/vehicle-daily-brief.js` | 69 | modules/vehicle/vehicle-daily-brief.js — Vehicle Daily Brief (Sesi 80, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleAIHook.fleetSummary() … |
 | 248 | `modules/vehicle/vehicle-alert-panel.js` | 51 | modules/vehicle/vehicle-alert-panel.js — Vehicle Alert Panel (Sesi 80, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleAIHook.fleetSummary() … |
 | 249 | `modules/vehicle/vehicle-insight-feed.js` | 71 | modules/vehicle/vehicle-insight-feed.js — Vehicle Insight Feed (Sesi 80, Batch 7). Lihat docs/BATCH_PLAN.md § Batch 7. PRINSIP (RULE #1 sesi ini): UI HANYA presenter. 100% REUSE VehicleAIHook.fleetSummary() … |
 | 250 | `modules/vehicle/vehicle-trend-api.js` | 134 | Vehicle Trend API Foundation (Sesi 81, Batch 7). Target sesi: Vehicle Analytics Foundation — Vehicle Trend API, Vehicle Cost Summary, Fuel Trend Summary, Service Trend Summary, Vehicle Analytics Presenter. Lihat … |
@@ -1590,6 +1590,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_smdCanonicalCategory` | `modules/vehicle/service-master-database.js` |
 | `_smdCanonicalComponent` | `modules/vehicle/service-master-database.js` |
 | `_smdClone` | `modules/vehicle/service-master-database.js` |
+| `_smdEnsureLoaded` | `modules/vehicle/service-master-database.js` |
 | `_smdImport` | `modules/vehicle/service-master-database.js` |
 | `_smdLoad` | `modules/vehicle/service-master-database.js` |
 | `_smdMeta` | `modules/vehicle/service-master-database.js` |
@@ -5364,6 +5365,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `daysOverdue` | `modules/self-reward/self-reward-engine.js` |
 | `daysSince` | `lifeos/adapters/review-adapter.js` |
 | `daysSinceEarliest` | `pajak-aset-ui-wrappers.js` |
+| `daysUntil` | `modules/vehicle/vehicle-reminder.js` |
 | `daysUntilDate` | `modules/vehicle/vehicle-core.js` |
 | `daysWithData` | `pajak-aset-ui-wrappers.js` |
 | `db` | `modules/asset/aset-misc.js` |
@@ -6212,7 +6214,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ensureLaporanExportScripts` | `modules/shared/feature-lazy-loader.js` |
 | `ensureLegacyCategory` | `modules/finance/finance-category-sot.js` |
 | `ensureLegacySubcategory` | `modules/finance/finance-category-sot.js` |
-| `ensureLoaded` | `modules/vehicle/service-master-database.js` |
 | `ensureLoaded` | `modules/vehicle/parts-catalog-database.js` |
 | `ensurePdfJs` | `modules/vehicle/vehicle-catalog-import.js` |
 | `ensureRenov` | `modules/shared/boot-early.js` |
@@ -7588,6 +7589,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `healthCol` | `modules/vehicle/fuel-compare.js` |
 | `healthScore` | `modules/finance/worthit.js` |
 | `healthScore` | `modules/vehicle/fuel-insight-engine.js` |
+| `healthText` | `modules/vehicle/vehicle-daily-brief.js` |
 | `height` | `economic-intelligence/ui/eie-dashboard.js` |
 | `hEl` | `modules/vehicle/fuel-price-ref.js` |
 | `hemat` | `modules/finance/worthit.js` |
@@ -9058,6 +9060,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `known` | `modules/vehicle/sparepart-servis.js` |
 | `known` | `modules/vehicle/service-event-sot.js` |
 | `known` | `modules/shared/self-test-cases-b.js` |
+| `known` | `modules/vehicle/vehicle-intelligence.js` |
 | `known` | `modules/finance/dana-titipan-commitment-return-api.js` |
 | `known` | `modules/finance/dana-titipan-portfolio-render-b.js` |
 | `known` | `modules/finance/titipan-expense-flow.js` |
@@ -14500,6 +14503,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `scored` | `modules/vehicle/vehicle-catalog.js` |
 | `scored` | `modules/vehicle/vehicle-sot-provisioning.js` |
 | `scored` | `ai-chat.js` |
+| `scoredRows` | `modules/vehicle/vehicle-intelligence.js` |
 | `scoreEl` | `modules/home/hidup-seimbang.js` |
 | `scoreMap` | `modules/vehicle/fuel-insight-engine.js` |
 | `scoreOverview` | `modules/finance/financial-health-score-api.js` |
@@ -17271,6 +17275,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `validIds` | `modules/vehicle/sparepart-servis.js` |
 | `validIds` | `modules/vehicle/servis-checklist.js` |
 | `validIds` | `modules/vehicle/servis.js` |
+| `validScore` | `modules/vehicle/vehicle-dashboard.js` |
 | `validServiceCondition` | `modules/vehicle/service-maintenance-guidance.js` |
 | `validSource` | `modules/vehicle/vehicle-car-notes-sot-s2071.js` |
 | `validTrack` | `modules/vehicle/ride-map.js` |

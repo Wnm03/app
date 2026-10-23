@@ -74,9 +74,13 @@ healthScore(vehicleId) {
   if (typeof predictService === 'function') {
     const pred = predictService({ vehicleId });
     if (pred.ok && Array.isArray(pred.items) && pred.items.length) {
-      const scores = pred.items.map((it) => (it.status === 'aman' ? 1 : it.status === 'segera' ? 0.5 : 0));
-      const avg = scores.reduce((s, x) => s + x, 0) / scores.length;
-      parts.push({ key: 'service', weight: 50, score: avg * 50 });
+      const known = pred.items.filter((it) => ['aman', 'segera', 'mendekati', 'terlewat', 'jatuh_tempo'].includes(it.status));
+      // Unknown/baseline-required items are missing evidence, not failed maintenance.
+      if (known.length) {
+        const scores = known.map((it) => (it.status === 'aman' ? 1 : it.status === 'mendekati' ? 0.75 : it.status === 'segera' ? 0.5 : 0));
+        const avg = scores.reduce((s, x) => s + x, 0) / scores.length;
+        parts.push({ key: 'service', weight: 50, score: avg * 50 });
+      }
     }
   }
   if (typeof fuelEfficiency === 'function') {
@@ -85,7 +89,7 @@ healthScore(vehicleId) {
   }
   const maxScore = parts.reduce((s, p) => s + p.weight, 0);
   const rawScore = parts.reduce((s, p) => s + p.score, 0);
-  const score = maxScore > 0 ? Math.round((rawScore / maxScore) * 100) : 0;
+  const score = maxScore > 0 ? Math.round((rawScore / maxScore) * 100) : null;
   const label = maxScore === 0
     ? 'Data Kurang'
     : (score >= 80 ? 'Sehat' : score >= 60 ? 'Cukup Sehat' : score >= 40 ? 'Waspada' : 'Perlu Perhatian');
@@ -120,7 +124,8 @@ fleetSummary() {
     return { vehicleId: v.id, name: v.name, healthScore: hs.score, healthLabel: hs.label, overdueCount };
   });
   const totalOverdue = rows.reduce((s, r) => s + r.overdueCount, 0);
-  const avgHealth = rows.length ? Math.round(rows.reduce((s, r) => s + r.healthScore, 0) / rows.length) : 0;
+  const scoredRows = rows.filter((r) => Number.isFinite(r.healthScore));
+  const avgHealth = scoredRows.length ? Math.round(scoredRows.reduce((s, r) => s + r.healthScore, 0) / scoredRows.length) : null;
   return { totalVehicles: vehicles.length, totalOverdue, avgHealth, vehicles: rows };
 },
 
@@ -148,7 +153,9 @@ insights(vehicleId) {
       out.push({ type: 'info', code: 'fuel_cost_estimate', message: `Estimasi biaya BBM ${ov.name} bulan ini \u2248 ${Math.round(ov.fuel.estMonthlyCost)}.` });
     }
     const hs = this.healthScore(vehicleId);
-    out.push({ type: 'info', code: 'health_score', message: `Skor kesehatan ${ov.name}: ${hs.score}/100 (${hs.label}).` });
+    out.push({ type: 'info', code: 'health_score', message: Number.isFinite(hs.score)
+      ? `Skor kesehatan ${ov.name}: ${hs.score}/100 (${hs.label}).`
+      : `Skor kesehatan ${ov.name} belum tersedia karena data perawatan/BBM belum memadai.` });
     return out;
   }
   const fleet = this.fleetSummary();
@@ -156,7 +163,9 @@ insights(vehicleId) {
     out.push({ type: 'warning', code: 'fleet_overdue', message: `${fleet.totalOverdue} item servis lewat jatuh tempo di seluruh kendaraan.` });
   }
   if (fleet.totalVehicles > 0) {
-    out.push({ type: 'info', code: 'fleet_health', message: `Rata-rata skor kesehatan armada: ${fleet.avgHealth}/100 dari ${fleet.totalVehicles} kendaraan.` });
+    out.push({ type: 'info', code: 'fleet_health', message: Number.isFinite(fleet.avgHealth)
+      ? `Rata-rata skor kesehatan armada: ${fleet.avgHealth}/100 dari ${fleet.vehicles.filter((v) => Number.isFinite(v.healthScore)).length} kendaraan dengan data memadai.`
+      : 'Skor kesehatan armada belum tersedia karena data perawatan/BBM belum memadai.' });
   }
   return out;
 },

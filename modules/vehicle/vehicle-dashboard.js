@@ -128,11 +128,12 @@ const VehicleDashboard = {
   // healthScore() seluruh kendaraan — 0 recompute di sini).
   _healthCard(fleet) {
     const score = fleet.avgHealth;
-    const cls = score >= 80 ? 'green' : score >= 60 ? '' : score >= 40 ? 'orange' : 'red';
+    const validScore = Number.isFinite(score);
+    const cls = !validScore ? '' : score >= 80 ? 'green' : score >= 60 ? '' : score >= 40 ? 'orange' : 'red';
     return {
       icon: '❤️',
-      label: 'Skor Kesehatan Armada',
-      value: `${score}/100`,
+      label: validScore ? 'Skor Kesehatan Armada' : 'Skor Kesehatan Armada · Data Kurang',
+      value: validScore ? `${score}/100` : '—',
       cls,
       onClick: { action: 'dashHubNavigateToFeature', args: [VEHICLE_DASHBOARD_NAV_TARGETS.health] },
     };

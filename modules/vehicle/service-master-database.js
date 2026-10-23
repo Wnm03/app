@@ -41,15 +41,15 @@ async function _smdLoad(){
   if(stored&&Array.isArray(stored.components)&&Array.isArray(stored.categories)&&stored.meta){_serviceMasterStore=stored;if(checksum&&stored.meta.checksum!==checksum)return _smdImport(source,checksum,'changed-version');return stored;}
   return _smdImport(source,checksum,'first-install');
 }
-async function ensureLoaded(){if(_serviceMasterLoaded)return _serviceMasterStore;if(!_serviceMasterLoadPromise)_serviceMasterLoadPromise=_smdLoad().finally(()=>{_serviceMasterLoaded=true;_serviceMasterLoadPromise=null;});return _serviceMasterLoadPromise;}
+async function _smdEnsureLoaded(){if(_serviceMasterLoaded)return _serviceMasterStore;if(!_serviceMasterLoadPromise)_serviceMasterLoadPromise=_smdLoad().finally(()=>{_serviceMasterLoaded=true;_serviceMasterLoadPromise=null;});return _serviceMasterLoadPromise;}
 function getStore(){return _serviceMasterStore;}
-async function getAllComponents(){const s=await ensureLoaded();return s.components.filter(x=>!x.deprecated).map(_smdClone);}
-async function getComponent(componentId){const s=await ensureLoaded();const x=s.components.find(c=>String(c.componentId)===String(componentId)&&!c.deprecated);return x?_smdClone(x):null;}
-async function getComponentsByCategory(masterCategoryId){const s=await ensureLoaded();return s.components.filter(c=>!c.deprecated&&String(c.masterCategoryId)===String(masterCategoryId)).map(_smdClone);}
-async function getAllCategories(){const s=await ensureLoaded();return s.categories.filter(x=>!x.deprecated).map(_smdClone);}
-async function getMasterVersion(){const s=await ensureLoaded();return _smdClone(s.meta);}
+async function getAllComponents(){const s=await _smdEnsureLoaded();return s.components.filter(x=>!x.deprecated).map(_smdClone);}
+async function getComponent(componentId){const s=await _smdEnsureLoaded();const x=s.components.find(c=>String(c.componentId)===String(componentId)&&!c.deprecated);return x?_smdClone(x):null;}
+async function getComponentsByCategory(masterCategoryId){const s=await _smdEnsureLoaded();return s.components.filter(c=>!c.deprecated&&String(c.masterCategoryId)===String(masterCategoryId)).map(_smdClone);}
+async function getAllCategories(){const s=await _smdEnsureLoaded();return s.categories.filter(x=>!x.deprecated).map(_smdClone);}
+async function getMasterVersion(){const s=await _smdEnsureLoaded();return _smdClone(s.meta);}
 async function importMasterData(input){const source=input&&input.components?input:_smdSource();if(!Array.isArray(source.components)||!Array.isArray(source.masterCategories))throw new Error('Master service data tidak valid');const checksum=source===_smdSource()&&typeof globalThis!=='undefined'?globalThis.__SERVICE_MASTER_CHECKSUM__:null;return _smdImport(source,checksum||'runtime-import','manual-import');}
-const ServiceMasterDB={key:SERVICE_MASTER_DB_KEY,schemaVersion:SERVICE_MASTER_DB_SCHEMA_VERSION,ensureLoaded,getStore,getAllComponents,getComponent,getComponentsByCategory,getAllCategories,getMasterVersion,importMasterData};
+const ServiceMasterDB={key:SERVICE_MASTER_DB_KEY,schemaVersion:SERVICE_MASTER_DB_SCHEMA_VERSION,ensureLoaded:_smdEnsureLoaded,getStore,getAllComponents,getComponent,getComponentsByCategory,getAllCategories,getMasterVersion,importMasterData};
 if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI)DatabaseAPI.serviceMaster=ServiceMasterDB;
 if(typeof globalThis!=='undefined')globalThis.ServiceMasterDB=ServiceMasterDB;
 if(typeof module!=='undefined')module.exports=ServiceMasterDB;

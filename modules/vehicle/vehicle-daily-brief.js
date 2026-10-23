@@ -48,7 +48,8 @@ const VehicleDailyBrief = {
     if (!fleet || !fleet.totalVehicles) { el.innerHTML = ''; return; }
 
     const parts = [];
-    parts.push(`${fleet.totalVehicles} kendaraan terpantau, skor kesehatan armada ${fleet.avgHealth}/100.`);
+    const healthText = Number.isFinite(fleet.avgHealth) ? `skor kesehatan armada ${fleet.avgHealth}/100` : 'skor kesehatan armada belum tersedia (data kurang)';
+    parts.push(`${fleet.totalVehicles} kendaraan terpantau, ${healthText}.`);
     if (fleet.totalOverdue > 0) {
       parts.push(`${fleet.totalOverdue} item servis sudah lewat jatuh tempo.`);
     }

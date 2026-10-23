@@ -65,7 +65,7 @@ serviceReminders(vehicleId) {
   this._vehicles(vehicleId).forEach((v) => {
     const pred = predictService({ vehicleId: v.id });
     if (!pred.ok || !Array.isArray(pred.items)) return;
-    pred.items.filter((it) => it.status !== 'aman').forEach((it) => {
+    pred.items.filter((it) => ['terlewat', 'jatuh_tempo', 'segera', 'mendekati'].includes(it.status)).forEach((it) => {
       const severity = (it.status === 'terlewat' || it.status === 'jatuh_tempo') ? 'overdue' : 'due-soon';
       const isMonthLimited = it.limitingAxis === 'bulan' && it.sisaBulan != null;
       const isDayLimited = it.limitingAxis === 'hari' && it.sisaHari != null;
@@ -123,6 +123,16 @@ taxReminders(vehicleId) {
         message: `${label} ${v.name} — ${badge.label}.`,
       });
     });
+  });
+  // SIM uses its existing D.simList SOT and the same date-status classifier;
+  // keep it in the unified reminder stream without duplicating/migrating data.
+  (typeof D !== 'undefined' && Array.isArray(D.simList) ? D.simList : []).forEach((sim) => {
+    if (!sim || !sim.tglAkhir) return;
+    const badge = dateStatusBadge(sim.tglAkhir);
+    if (badge.col !== 'red' && badge.col !== 'orange') return;
+    const severity = badge.col === 'red' ? 'overdue' : 'due-soon';
+    const daysUntil = daysUntilDate(sim.tglAkhir);
+    out.push({ type: 'tax', documentType: 'sim', vehicleId: sim.vehicleId || null, vehicleName: sim.nama || '', taxKey: 'sim:' + String(sim.id || sim.jenis || ''), label: 'SIM ' + (sim.jenis || ''), tgl: sim.tglAkhir, daysUntil, severity, message: 'SIM ' + (sim.jenis || '') + (sim.nama ? ' (' + sim.nama + ')' : '') + ' — ' + badge.label + '.' });
   });
   return out;
 },

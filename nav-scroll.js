@@ -46,4 +46,16 @@
       ticking = true;
     }
   }, { passive: true });
+
+  // A tab/action can replace the visible content while scrollRoot retains its
+  // previous scroll offset. Reveal navigation on intentional UI interaction so
+  // the next destination is never left below the viewport.
+  document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest
+      ? event.target.closest('.cn-tab, .cni-subtab, .cnb-subtab, .nav-item, [data-action="setCnTab"], [data-action="setCnInsightTab"], [data-action="setCnBbmTab"]')
+      : null;
+    if (!target) return;
+    nav.classList.remove('nav-hidden');
+    lastY = root.scrollTop;
+  }, true);
 })();

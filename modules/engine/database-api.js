@@ -743,7 +743,7 @@ const MASTER_SERVICE_CATEGORIES_RECORDS = [
     keywords: ['filter udara', 'saringan udara', 'air cleaner', 'elemen filter', 'box filter', 'saluran masuk udara'] },
   { id: 'final-gear', name: 'Final Gear', icon: '⚙️',
     keywords: ['final reduction', 'final gear', 'oli gardan', 'gardan', 'oli transmisi'] },
-  { id: 'body-kontrol', name: 'Body dan Kontrol', icon: '🧰',
+  { id: 'body-kontrol', name: 'Body & Kontrol', icon: '🧰',
     keywords: ['kabel gas', 'standar samping', 'standar tengah', 'engsel jok', 'kunci kontak', 'key shutter', 'baut bodi', 'baut-baut bodi'] },
 ];
 
