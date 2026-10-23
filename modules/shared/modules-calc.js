@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2595-carnotes-null-interval-guard-2651';
+const MODULE_CALC_VERSION='s2595-carnotes-null-interval-guard-2660';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -43,9 +43,11 @@ return {swr,ret,inf,avgMonths};
 },
 monthsOfDataAvailable(){
 if(!D.transactions||!D.transactions.length) return 0;
-let earliest=null;
-D.transactions.forEach(t=>{const d=new Date(_calcTxDateMs(t));if(!earliest||d<earliest)earliest=d;});
-if(!earliest) return 0;
+// S2705 PERF: bandingkan ms (angka) tanpa membuat objek Date per transaksi; hasil identik (Date dibandingkan lewat valueOf).
+let earliestMs=null;
+D.transactions.forEach(t=>{const ms=_calcTxDateMs(t);if(earliestMs===null||ms<earliestMs)earliestMs=ms;});
+if(earliestMs===null) return 0;
+const earliest=new Date(earliestMs);
 const now=new Date();
 return Math.max(1,(now.getFullYear()-earliest.getFullYear())*12+(now.getMonth()-earliest.getMonth())+1);
 },
@@ -64,9 +66,10 @@ const pseudoBudget={catIds};
 // hitungKas:false ("Catatan saja", 0 pengaruh ke kas/saldo) TIDAK BOLEH ikut
 // agregasi pengeluaran tahunan FI -- kalau tidak, target FI/SWR bisa salah
 // dihitung dari pengeluaran yg sebetulnya cuma catatan.
+const fromMs=from.getTime(),nowMs=now.getTime();
 const total=D.transactions.filter(t=>{
-const d=new Date(_calcTxDateMs(t));
-return d>=from&&d<=now&&t.hitungKas!==false&&budgetMatchesTx(pseudoBudget,t);
+const ms=_calcTxDateMs(t);
+return ms>=fromMs&&ms<=nowMs&&t.hitungKas!==false&&budgetMatchesTx(pseudoBudget,t);
 }).reduce((s,t)=>s+t.amount,0);
 return (total/months)*12;
 },

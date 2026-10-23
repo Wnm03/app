@@ -17,13 +17,62 @@ for(const g of gs)for(const x of (g.items||[])){if(x&&x.id!==undefined&&!_idxMap
 return _idxMap.get(id)||null;
 }
 function normalize(v){return String(v||'').trim().toLowerCase();}
+// S2703 PERF: infer() dipanggil per (log servis x kategori x kendaraan) lewat servisLogMatchesCat()
+// saat render Insight (13.600x per buka tab pada data besar, ±49 ms) dan tiap panggilan
+// menormalisasi ulang 102 nama item. Indeks nama-ternormalisasi + cache hasil per teks dibangun sekali
+// dan dipakai ulang selama "bentuk" katalog sama (referensi array groups, jumlah grup, referensi +
+// panjang items tiap grup -- pola sama S2702). Hasil tetap OBJEK BARU tiap panggilan (mutasi
+// pemanggil tidak mencemari panggilan berikutnya). Bentuk tak terduga (grup/item null, items bukan
+// array) memakai jalur lama tanpa cache -> perilaku lama (termasuk throw) tidak berubah.
+// Batasan: ubah-di-tempat field name item tanpa mengubah array/panjang tidak terdeteksi (katalog
+// bersifat generated/statis, tidak ada penulis runtime).
+let _infSrc=null,_infLen=-1,_infItemRefs=null,_infItemLens=null,_infIdx=null,_infCache=null,_infSane=false;
+const _INF_CACHE_MAX=2000;
+function _inferIndexFresh(gs){
+if(gs!==_infSrc||gs.length!==_infLen||!_infItemRefs)return false;
+for(let i=0;i<gs.length;i++){const g=gs[i];if(!g||g.items!==_infItemRefs[i]||((g.items&&g.items.length)||0)!==_infItemLens[i])return false;}
+return true;
+}
+function _inferIndex(){
+const gs=groups();
+if(!Array.isArray(gs))return null;
+if(_inferIndexFresh(gs))return _infSane?_infIdx:null;
+const idx=[],refs=[],lens=[];let sane=true;
+for(let i=0;i<gs.length;i++){
+const g=gs[i];
+if(!g||typeof g!=='object'){sane=false;refs.push(undefined);lens.push(0);continue;}
+const items=g.items;
+refs.push(items);lens.push((items&&items.length)||0);
+if(items===undefined||items===null)continue;
+if(!Array.isArray(items)){sane=false;continue;}
+for(let j=0;j<items.length;j++){const it=items[j];if(!it||typeof it!=='object'){sane=false;continue;}idx.push({g:g,it:it,n:normalize(it.name)});}
+}
+_infSrc=gs;_infLen=gs.length;_infItemRefs=refs;_infItemLens=lens;_infIdx=idx;_infSane=sane;_infCache=new Map();
+return sane?idx:null;
+}
 function infer(text){
 const q=normalize(text);
 if(!q)return null;
+const idx=_inferIndex();
+if(!idx)return _inferUncached(q);
+let hit=_infCache.get(q);
+if(hit===undefined){
+hit=null;
+for(let i=0;i<idx.length;i++){const e=idx[i];const n=e.n;if(q===n||q.includes(n)||n.includes(q)){hit={group:e.g,item:e.it};break;}}
+if(!hit){const r=_inferByRules(q);hit=r?{group:r.group,item:r.item}:null;}
+if(_infCache.size>=_INF_CACHE_MAX)_infCache.clear();
+_infCache.set(q,hit);
+}
+return hit?{group:hit.group,item:hit.item}:null;
+}
+function _inferUncached(q){
 for(const g of groups())for(const it of (g.items||[])){
 const n=normalize(it.name);
 if(q===n||q.includes(n)||n.includes(q))return {group:g,item:it};
 }
+return _inferByRules(q);
+}
+function _inferByRules(q){
 // Keyword inference hanya untuk memilih UI, bukan membuat kategori/interval baru.
 const rules=[
 [/\boli\b|filter oli|busi|klep|kompresi|keteng|tensioner/,'servis-mesin'],

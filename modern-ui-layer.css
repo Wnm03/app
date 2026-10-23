@@ -1333,3 +1333,27 @@ body.has-open-modal .toast {
 #shopScanPreview.sheet-section { margin:0; padding:6px 10px; }
 #orderItemList.sheet-section, #pobCartList.sheet-section { margin:0 0 10px; padding:8px 10px; }
 .sheet-renov-project-summary.kv-row { flex-wrap:wrap; }
+
+/* S2652 — Keuangan: kartu insight, filter dan teks bantuan ringkas (presentasi saja). */
+.kb-peek { display:none; margin-top:2px; font-size:12px; font-weight:700; line-height:1.35; color:var(--text); overflow-wrap:anywhere; }
+#keuanganTab-laporan [id$="Wrap"]:has(> .card-collapse-body.collapsed) .kb-peek { display:block; }
+#keuanganTab-laporan [id$="Wrap"]:has(> .card-collapse-body.collapsed) .dashhub-cat-desc { display:none; }
+#keuanganTab-laporan .dashhub-cat-desc, #keuanganTab-laporan .findash-card-label, #keuanganTab-laporan .findash-card-sub, #keuanganTab-laporan .stat-label, #keuanganTab-laporan .u-fs11 { font-size:12px !important; }
+.lap-filter-fold { margin:0 0 10px; border:1px solid var(--border2); border-radius:12px; background:var(--surface2); }
+.lap-filter-fold > summary { display:flex; align-items:center; min-height:44px; padding:0 12px; font-size:13px; font-weight:800; cursor:pointer; list-style:none; }
+.lap-filter-fold > summary::-webkit-details-marker { display:none; }
+.lap-filter-fold > summary::after { content:"▾"; margin-left:auto; color:var(--text2); }
+.lap-filter-fold[open] > summary::after { content:"▴"; }
+.lap-filter-fold[open] { padding:0 12px 6px; }
+.kb-hint-fold { margin:0 0 8px; }
+.kb-hint-fold > summary { display:flex; align-items:center; min-height:36px; font-size:12px; color:var(--text2); cursor:pointer; list-style:none; overflow:hidden; }
+.kb-hint-fold > summary::-webkit-details-marker { display:none; }
+
+/* S2652b — Laporan: kontrol laporan lebih dulu, kartu insight di bawah dengan judul sendiri. */
+#keuanganTab-laporan:not(.u-dnone) { display:flex; flex-direction:column; }
+#keuanganTab-laporan > * { min-width:0; }
+#keuanganTab-laporan > [id$="Wrap"], #keuanganTab-laporan > .kb-insight-head { order:5; }
+.kb-insight-head { display:flex; flex-direction:column; gap:2px; margin:6px 2px 8px; }
+.kb-insight-head b { font-size:15px; }
+.kb-insight-head span { font-size:12px; color:var(--text2); }
+#keuanganTab-laporan .pb-current, #keuanganTab-laporan .titipan-pool-lbl, #keuanganTab-laporan .u-fs10, #keuanganTab-laporan .btn-sm { font-size:12px !important; }

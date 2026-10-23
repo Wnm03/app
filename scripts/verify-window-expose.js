@@ -132,14 +132,24 @@ function verify() {
   const files = getAllScanFiles();
   const jsFiles = files.filter((f) => f.endsWith('.js'));
 
+  // Snapshot each source once per run. The previous implementation reopened
+  // every JS file for every candidate data-action module (O(names × files)
+  // filesystem reads). Keeping an immutable per-run snapshot preserves scan
+  // semantics while avoiding hundreds of thousands of repeated reads.
+  const sourceByFile = new Map();
+  for (const f of files) sourceByFile.set(f, fs.readFileSync(path.join(ROOT, f), 'utf8'));
+
   // Kumpulkan semua deklarasi top-level per nama -> file asalnya (nama
   // pertama menang; kalau ada duplikat nama di >1 file, itu isu terpisah
   // di luar scope gate ini, sudah pernah diaudit manual di s347/s348).
   const declaredIn = new Map(); // name -> relFile
   for (const f of jsFiles) {
     if (NON_MODULE_JS_BASENAMES.has(path.basename(f))) continue;
-    for (const name of findTopLevelObjectDecls(f)) {
-      if (!declaredIn.has(name)) declaredIn.set(name, f);
+    const masked = maskNonTopLevel(sourceByFile.get(f));
+    let match;
+    TOPLEVEL_OBJECT_DECL_RE.lastIndex = 0;
+    while ((match = TOPLEVEL_OBJECT_DECL_RE.exec(masked))) {
+      if (!declaredIn.has(match[1])) declaredIn.set(match[1], f);
     }
   }
 
@@ -147,7 +157,19 @@ function verify() {
   // seluruh file (js + html).
   const usedAsDataAction = new Set();
   for (const f of files) {
-    for (const name of findDataActionPrefixes(f)) usedAsDataAction.add(name);
+    const source = sourceByFile.get(f);
+    let match;
+    DATA_ACTION_RE.lastIndex = 0;
+    while ((match = DATA_ACTION_RE.exec(source))) usedAsDataAction.add(match[1]);
+  }
+
+  // Kompilasi pola expose sekali per nama, lalu periksa snapshot di memori.
+  // Pola dan urutan pencarian tetap identik dengan hasWindowExpose().
+  const exposedNames = new Set();
+  for (const name of usedAsDataAction) {
+    const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(String.raw`window(?:\.${esc}|\[['"]${esc}['"]\])\s*=\s*${esc}\b`);
+    if (jsFiles.some((f) => re.test(sourceByFile.get(f)))) exposedNames.add(name);
   }
 
   const checked = [];
@@ -156,10 +178,7 @@ function verify() {
     const declFile = declaredIn.get(name);
     if (!declFile) continue; // bukan const X={...} top-level -> di luar scope gate ini
     checked.push(name);
-    // window-expose bisa ada di file deklarasi ATAU file lain (jarang,
-    // tapi tidak dilarang) -- cek di SEMUA file .js, bukan cuma declFile.
-    const exposed = jsFiles.some((f) => hasWindowExpose(f, name));
-    if (!exposed) failures.push({ name, declFile });
+    if (!exposedNames.has(name)) failures.push({ name, declFile });
   }
 
   return { checked, failures, totalDeclared: declaredIn.size, totalScanned: files.length };

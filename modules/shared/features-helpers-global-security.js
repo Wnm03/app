@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2595-carnotes-null-interval-guard-2651';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2595-carnotes-null-interval-guard-2651';
+const APP_BUILD_VERSION = 's2595-carnotes-null-interval-guard-2660';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2595-carnotes-null-interval-guard-2660';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -584,11 +584,13 @@ return stamp;
 const _txDateCache=typeof WeakMap!=='undefined'?new WeakMap():null;
 function getCachedTxDateMs(t){
   if(!t)return NaN;
-  const raw=t.date,m=typeof raw==='string'?raw.match(/^(\d{4})-(\d{2})-(\d{2})$/):null;
-  const parse=()=>m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).getTime():new Date(raw).getTime();
-  if(!_txDateCache)return parse();
-  const hit=_txDateCache.get(t);if(hit&&hit.raw===raw)return hit.ms;
-  const ms=parse();_txDateCache.set(t,{raw,ms});return ms;
+  const raw=t.date;
+  // S2704 PERF: cek cache SEBELUM regex/closure (jalur panas: ratusan ribu panggilan per simpan data besar).
+  if(_txDateCache){const hit=_txDateCache.get(t);if(hit&&hit.raw===raw)return hit.ms;}
+  const m=typeof raw==='string'?raw.match(/^(\d{4})-(\d{2})-(\d{2})$/):null;
+  const ms=m?new Date(Number(m[1]),Number(m[2])-1,Number(m[3])).getTime():new Date(raw).getTime();
+  if(_txDateCache)_txDateCache.set(t,{raw,ms});
+  return ms;
 }function _perfMark(name,start){
   if(typeof window==='undefined'||window.__APP_PERF_ENABLED!==true)return;
   try{

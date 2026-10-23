@@ -1,0 +1,262 @@
+{
+ "patch": "S2708",
+ "baselineZipSha256": "e907ea71dc49c1febae6e461bf604b70841d92b6b0363e326d21c9ddc76777a6",
+ "files": {
+  "AUDIT-S2653-KEUANGAN-RINGKAS.md": {
+   "baseline": null,
+   "patch": "ebfc1dc0236a62ab8555719c9a295110b1fa92634df852da4d2dd17ae3888dc0"
+  },
+  "AUDIT-S2702-INSIGHT-CATALOG-LOOKUP.md": {
+   "baseline": null,
+   "patch": "2bd4a8b1592e9be665a3853952c924699c68f4202aa64bce2faa71153234f81d"
+  },
+  "AUDIT-S2703-INSIGHT-INFER-FUEL-CACHE.md": {
+   "baseline": null,
+   "patch": "175f9b4307eeb355479f77e3fa0be6f9612458ffe9bdf9642480b67f74e17059"
+  },
+  "AUDIT-S2704-SERVIS-LOG-MATCH-MEMO.md": {
+   "baseline": null,
+   "patch": "d63628fa240d4589a961df835b1286eb72de4807193387337940cb914c2309a0"
+  },
+  "AUDIT-S2705-TX-DATE-CACHE.md": {
+   "baseline": null,
+   "patch": "fdc39ed188567e007544fc8d958e46bb911cf70603bfecb4b2ab0459f11e6873"
+  },
+  "AUDIT-S2706-FI-ANNUAL-EXPENSE.md": {
+   "baseline": null,
+   "patch": "6159f8324e2d94f787fa2394426a31f40ed5a04617d045c76eee5b19a86b9897"
+  },
+  "AUDIT-S2708-RANTAI-AKUMULASI-PERBAIKAN.md": {
+   "baseline": null,
+   "patch": "740f8d5d72c60f6240de9afa282e533df939bf062200e02d536e396df3332dd2"
+  },
+  "CHANGED-FILES-S2701.txt": {
+   "baseline": null,
+   "patch": "c62ab395b17e27e631c6a3c0c38fa0dc190768160bc7509bf0297a5a673d6b57"
+  },
+  "CHANGED-FILES-S2702.txt": {
+   "baseline": null,
+   "patch": "fcef84c8661988e266ff7c407e6408e9c00ece27126c112a9ff6716e52541e35"
+  },
+  "CHANGED-FILES-S2703.txt": {
+   "baseline": null,
+   "patch": "1015a5d85bb36e51769e38c7de80bec6eae478465e937410d27df9cf32a1f532"
+  },
+  "CHANGED-FILES-S2704.txt": {
+   "baseline": null,
+   "patch": "f619ed9ea137364b63cc21619fcf6899a5017b20936047f8eccc3af9abc185ba"
+  },
+  "CHANGED-FILES-S2705.txt": {
+   "baseline": null,
+   "patch": "2af8f2ef47f6983455dd200d363c9ce9889a32fcc2c105e390e939453fd92749"
+  },
+  "CHANGED-FILES-S2706.txt": {
+   "baseline": null,
+   "patch": "ece6de34e7f7aba964ef0dabe736adbe7a5e2880dfa2fcdecd1c5e16e12f9edc"
+  },
+  "CHANGED-FILES-S2707.txt": {
+   "baseline": null,
+   "patch": "aaa612b7078970c52b5bd33e5dc259bad9e179c0268879fedf2a19e365602794"
+  },
+  "CHANGELOG.md": {
+   "baseline": "8aed69f612d9fcce957fe345c5f3119c21b801922aa64008cd9c0935e9136ba4",
+   "patch": "90aee9b0e34bca200d691831e07d4c1aae0fcddc0ae03a04be6b1984d988b47d"
+  },
+  "FILE-HASHES-SHA256.txt": {
+   "baseline": "913858c4ad670ce7ee0ed9bd4c66e2cbeb27abfcf5ed8437b1bc6ca4e3b3b7a9",
+   "patch": "4a60641c1f7401b63929fc2c5bf65f17fdaa3a024beb740ff7c34fd6ba420bee"
+  },
+  "PATCH-MANIFEST-S2701.md": {
+   "baseline": null,
+   "patch": "1e3be58dffe4f019257d7bcbe13542a0222d8587840d747230cb5259112ac294"
+  },
+  "PATCH-MANIFEST-S2702-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "c232296f11e0024da0c3b0fbe28591d955af96614fea9c6e897795b6c1917061"
+  },
+  "PATCH-MANIFEST-S2703-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "ace237c679d79d9ae95d3c6a223adcacd3359877b702dfb3370ddeec0d91d157"
+  },
+  "PATCH-MANIFEST-S2704-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "bf6d3ccebb1150714d999b13616a80308782f31bbd45e199dce689013ee27495"
+  },
+  "PATCH-MANIFEST-S2705-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "4b6e7f6c0b32dd56d9af3eeae10e2eecb94fe617d730d2f40d09e3bf48b9df96"
+  },
+  "PATCH-MANIFEST-S2706-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "91e1b28c1a86ab0c6d652c9423ca3bc64f1716376d61616215e6df46f9907362"
+  },
+  "PATCH-MANIFEST-S2707-AKUMULASI.md": {
+   "baseline": null,
+   "patch": "11e30102ca67101460d50ee6c96b6cd5d0c533eb9dde084981a0ff2c94feed66"
+  },
+  "TEST-RESULTS-S2701.md": {
+   "baseline": null,
+   "patch": "6ab0084b38ba6971a04ca2c414e1b63b84868ff21b421fdde7eaf5e683b146e9"
+  },
+  "TEST-RESULTS-S2703.md": {
+   "baseline": null,
+   "patch": "6888fdc7816928b1c9bd6ea3a3c651ce43665f7b1bcade5769eb7cbc1b053af6"
+  },
+  "TEST-RESULTS-S2704.md": {
+   "baseline": null,
+   "patch": "7e6f836a6547c613160ed5482c53bad43adcdbd2cebc3c5024ed1339345440df"
+  },
+  "TEST-RESULTS-S2705.md": {
+   "baseline": null,
+   "patch": "036f3ae9a2ede0427f93a7b8a7971b5ce62bab085090b6898b99a123e3ed1bab"
+  },
+  "TEST-RESULTS-S2706.md": {
+   "baseline": null,
+   "patch": "909f111ff3b96f4c4db3b00e7a9994daf6848d3baf57623e82b77d2b4a87593c"
+  },
+  "TEST-RESULTS-S2707.md": {
+   "baseline": null,
+   "patch": "7be78a5dbbf82a6fd2a222d74f8b78ca2d18f0bfcee223cd1928ddf3c4dfca50"
+  },
+  "TEST-RESULTS-S2708.md": {
+   "baseline": null,
+   "patch": "7fd6a623a2bd10cd84a2916e03aa4cc221191badf6a89a165375328e8d2b5675"
+  },
+  "app-bundle-a.min.js": {
+   "baseline": "aa3df7386d39c95aaf17b934e785e04df82c00004df9b03c78976544d003a39d",
+   "patch": "b73d02098abaf0702cf0538bd81b8a9ef5601581648b5ae4c403fa9c90b9a076"
+  },
+  "app-bundle-b.min.js": {
+   "baseline": "c53b52feda238ff545cd0b1ea1e01593b0558a715c37d008c19b4066b54f5fda",
+   "patch": "77c9ed1c15b3ba31fa44a5d880faf23175bad0c3bd643735b975f8e7fec6133b"
+  },
+  "app_production.html": {
+   "baseline": "df49cd7441ca41f65df83b9a36b4f00af3507680cec9778201e2ae39fabb7a64",
+   "patch": "5d3017ff84dd82243e32759d88d72563844706f85efe02e7191f6c31a7e50aa8"
+  },
+  "chat-action-handlers.js": {
+   "baseline": "b7b359b115cce9db7ef6e6763ad93dcaac5671768e98be402da8460c26a38e2c",
+   "patch": "e036a140b428bce472e20d63740808846891fb447217d1e65aaeb98a208ccdc1"
+  },
+  "docs/COVERAGE-PER-MODULE.md": {
+   "baseline": "13bae43ae4ddb5e4f779caf45ae464ded41f9a296b0bcb14cb522aae5d153fdc",
+   "patch": "e4644a10d94372a26b9e95001cf3375a9da8d113efa10466faaae7b7a8df9efb"
+  },
+  "docs/FILE-MAP.md": {
+   "baseline": "4f48d0b5adc31c8d85c072a539c6b670d8d00db256b5b4604ed3368c1464a99b",
+   "patch": "d70d3605f563bf5669d476cedd279ddc9dc7cdb53d509a42959a80361b9e0e4a"
+  },
+  "index.html": {
+   "baseline": "7795de54b8dd39f2b389bd08e5fbda91c02772aa56ceff9e695cf8948f734869",
+   "patch": "ee1956d521937db5a9239866e0a18c8e425d7e637748c2d790b02ce25589eeec"
+  },
+  "modern-ui-layer.css": {
+   "baseline": "8c47b271ca52335d7a5ccafe3e2d7abb6b3d0fd2ebe23c9dc41bcc219d0be3c6",
+   "patch": "96235430c25663402f581e6492ab0cd66103b887880179d47e72a7f54c3a4a2f"
+  },
+  "modules/shared/features-helpers-global-security.js": {
+   "baseline": "014c63105433e9d28e7afbd14dae63028ec0d1d32d279cae12d42dbefddb4907",
+   "patch": "ce6e5cde9d054a73ac9d81bc3a654072cef73f6ade13e608c2bf5ba9cd65f9cd"
+  },
+  "modules/shared/modals.js": {
+   "baseline": "88842ff120d56d4f8af104320ebeab1daad4acdf3ca19896e34332d574e6d141",
+   "patch": "7f5db3e842f492eba1166a5dff26b833568588aa6042ab7e55df2081eabbb1e4"
+  },
+  "modules/shared/modules-calc.js": {
+   "baseline": "15ff464e34a5e089ef2953e4836d71549a418bc4fac04a0db911f94264df36df",
+   "patch": "1534857e1d149736483a5735cbf600942cf547c5ee58215c6760878f56217b13"
+  },
+  "modules/shared/modules-render.js": {
+   "baseline": "1b227ba433e97b7d77b519cb8468633c3eefddc119869b10c92ef05178db7dfc",
+   "patch": "c041cffb0078a25725bb8d9cc0a569a4d7a7e3c4b4dabb8fe7fdf05b072074fe"
+  },
+  "modules/shared/pwa-ux-performance.js": {
+   "baseline": "fd9190576a0f039167e3fb21baa1725f9e0541dd963546c7dad044ed4b1ef64f",
+   "patch": "b0153e701f0395a1a9cfb3ad613d55cd66f52097f9c2c1aec9abf9987fd2eaf4"
+  },
+  "modules/vehicle/service-category-sot-reconciliation-s2007.js": {
+   "baseline": "4605518d428b0091ac069a27967cf0d76e1e81d3fa2f71ab868376168cf66a83",
+   "patch": "53177310996db792fce24324fb01143e9b8810fdf32b29e32e6b3206c22cc2ff"
+  },
+  "modules/vehicle/service-input-catalog.js": {
+   "baseline": "ef290c738b309f906dd032833a16a2fc97306317c8851fe503908ac6f999e9c9",
+   "patch": "b73131e76d48f01399adfc61745b142160ab20a023f2c1e3f019a12290aad934"
+  },
+  "modules/vehicle/sparepart-servis.js": {
+   "baseline": "98b4765151858e7f86fdb3535e0f0df2281c6b3958dbb7f24151d12b3bf9eeb0",
+   "patch": "11d6d0e18c9fa809379096d46260bb94e482191904c5860f64d9853c2083c21e"
+  },
+  "modules/vehicle/vehicle-core.js": {
+   "baseline": "06c9f6fa8dd3e47f353530fd4b67bfb69b57e28fa5f5fcdf19b6788cfb3169e0",
+   "patch": "a4c7f8cafa1133cf83e8adba662a6df285955a68692dc0139b718131d1c84e5b"
+  },
+  "scripts/apply-check.js": {
+   "baseline": null,
+   "patch": "017a8284e906f8b24fa98b797e81b39dbccd16d680d0ebe22048804717bcaac6"
+  },
+  "scripts/verify-window-expose.js": {
+   "baseline": "a3b3394d1621e4ae8933a148991b4b35fee025e5c6ff69b80b4c0427675e4d4c",
+   "patch": "de477004001f6ee0844ffcb023cf6bf233f90111ddcf3212b0069358e647d3e1"
+  },
+  "sw.js": {
+   "baseline": "4d2f628ccb6d8506ee03329009d018b766f7f461db9454cd78282381f81d3c78",
+   "patch": "c4f2c44e286e917a6c94e41621d59535b201f79275dfbbbdc2f11ed214b39501"
+  },
+  "tests/fixtures/s2007-reference-original.js": {
+   "baseline": null,
+   "patch": "4605518d428b0091ac069a27967cf0d76e1e81d3fa2f71ab868376168cf66a83"
+  },
+  "tests/fixtures/s2703-service-input-catalog-original.js": {
+   "baseline": null,
+   "patch": "ef290c738b309f906dd032833a16a2fc97306317c8851fe503908ac6f999e9c9"
+  },
+  "tests/fixtures/s2703-vehicle-core-fuel-original.js": {
+   "baseline": null,
+   "patch": "39d2e39b8f446fda31ade4737bab13fe7ba55d47283da7440a434c39cb1a66ea"
+  },
+  "tests/fixtures/s2704-features-helpers-original.js": {
+   "baseline": null,
+   "patch": "7833426b35d94fe3180af7e53de5a2f1b67fe147ff050af587c987adada2f2b9"
+  },
+  "tests/fixtures/s2704-sparepart-servis-original.js": {
+   "baseline": null,
+   "patch": "98b4765151858e7f86fdb3535e0f0df2281c6b3958dbb7f24151d12b3bf9eeb0"
+  },
+  "tests/fixtures/s2705-modules-calc-original.js": {
+   "baseline": null,
+   "patch": "aeefd2a49bfe92adf307b6fcf6f054bc1515761dbd9acf851017b4316b1c986f"
+  },
+  "tests/s2652-keuangan-ringkas.test.js": {
+   "baseline": null,
+   "patch": "a652795b32663f6ef4febb75a93f96f8cbee15e4528e211e25dda99e9eef8cd1"
+  },
+  "tests/s2702-catalog-lookup-cache.test.js": {
+   "baseline": null,
+   "patch": "cb6cebd320ed24917d084bac326d0556a78cca4157b8489f5a9cfa723108c4fb"
+  },
+  "tests/s2703-fuel-infer-cache.test.js": {
+   "baseline": null,
+   "patch": "f32609496a4d2b72359b380f395bb6fa2a73080b3214518599ceedf7915bfd70"
+  },
+  "tests/s2704-servis-log-match-memo.test.js": {
+   "baseline": null,
+   "patch": "f389c9b9fc84805475a85ebe87b4a996bcca5fcd1943f5b00c19a1d2df72f77f"
+  },
+  "tests/s2704-tx-date-cache.test.js": {
+   "baseline": null,
+   "patch": "eadb4a9da59bb3a87d4b2d5be19f0a1f146ee1e3af0f438ba4ddefe02c1f021e"
+  },
+  "tests/s2705-fi-annual-expense-alloc-free.test.js": {
+   "baseline": null,
+   "patch": "b91311687e988ef5779019990a702f84a665018bac1afc45bf2595db8ff04c80"
+  },
+  "tests/s2707-perf-budget.test.js": {
+   "baseline": null,
+   "patch": "b070328d38a6dcda62ef17cabaa110eedcdfec7a62c5efdcf182e7e32714beda"
+  },
+  "tests/s2708-apply-check.test.js": {
+   "baseline": null,
+   "patch": "9803b61501243e580c1d5cf1b81b1834550c29dbffba9c90287c3f98dd4ca3b1"
+  }
+ }
+}

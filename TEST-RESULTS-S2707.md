@@ -1,0 +1,3 @@
+- `node --test tests/*.test.js`: 9199 tes, 9198 pass, 0 fail.
+- `tests/s2707-perf-budget.test.js`: 4/4 pada kode sekarang; 3 gagal + 1 lulus (jam-dinding longgar) pada implementasi lama.
+- Tidak ada perubahan kode produksi; bundle/hash tidak berubah (basi=0).

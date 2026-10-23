@@ -22,16 +22,68 @@
   const norm=v=>str(v).toLowerCase().replace(/\s+/g,' ');
   const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
 
-  function catalogItems(){
-    try{
-      if(global.ServiceInputCatalog&&typeof global.ServiceInputCatalog.groups==='function'){
-        return (global.ServiceInputCatalog.groups()||[]).flatMap(g=>(g&&g.items)||[]).map(it=>Object.assign({},it,{masterCategoryId:it.masterCategoryId||(it.group&&it.group.masterCategoryId)||null}));
-      }
-    }catch(_e){ return []; }
-    return [];
+  // S2702 (perf, TANPA ubah kontrak): sebelumnya setiap catalogById()/
+  // exactNameCandidates() membangun ulang seluruh katalog (flatMap + salinan
+  // Object.assign per item). Satu render tab Insight memanggilnya ±3.000x
+  // (~350 ms). Kini snapshot + indeks id/nama dibangun SEKALI per "bentuk"
+  // katalog dan dipakai ulang; tiap pemanggil tetap menerima SALINAN BARU
+  // (mutasi hasil tidak bocor), urutan pencarian (pertama-cocok / urutan
+  // katalog) dan perilaku error (-> []) identik dengan implementasi lama.
+  // Invalidasi otomatis: signature = referensi array groups(), jumlah grup,
+  // serta referensi + panjang items tiap grup (13 langkah, murah).
+  function buildCatalogItems(gs){
+    return gs.flatMap(g=>(g&&g.items)||[]).map(it=>Object.assign({},it,{masterCategoryId:it.masterCategoryId||(it.group&&it.group.masterCategoryId)||null}));
   }
-  function catalogById(id){return catalogItems().find(it=>str(it.id)===str(id))||null;}
-  function exactNameCandidates(name){const q=norm(name);return q?catalogItems().filter(it=>norm(it.name)===q):[];}
+  let _snap=null;
+  function catalogSnapshot(){
+    const S=global.ServiceInputCatalog;
+    if(!(S&&typeof S.groups==='function'))return null;
+    let gs;
+    try{ gs=S.groups()||[]; }catch{ return {items:[],byId:new Map(),byName:new Map(),uncached:true}; }
+    if(!Array.isArray(gs)){
+      try{ const items=buildCatalogItems(gs); return {items,byId:null,byName:null,uncached:true}; }catch{ return {items:[],byId:new Map(),byName:new Map(),uncached:true}; }
+    }
+    const refs=new Array(gs.length), lens=new Array(gs.length); let simple=true;
+    for(let i=0;i<gs.length;i++){
+      const g=gs[i], arr=(g&&g.items)||[];
+      if(!Array.isArray(arr)){simple=false;break;}
+      refs[i]=arr; lens[i]=arr.length;
+    }
+    if(!simple){
+      try{ return {items:buildCatalogItems(gs),byId:null,byName:null,uncached:true}; }catch{ return {items:[],byId:new Map(),byName:new Map(),uncached:true}; }
+    }
+    const c=_snap;
+    if(c&&c.gs===gs&&c.n===gs.length){
+      let same=true;
+      for(let i=0;i<gs.length;i++){ if(c.refs[i]!==refs[i]||c.lens[i]!==lens[i]){same=false;break;} }
+      if(same)return c;
+    }
+    let items;
+    try{ items=buildCatalogItems(gs); }catch{ _snap=null; return {items:[],byId:new Map(),byName:new Map(),uncached:true}; }
+    const byId=new Map(), byName=new Map();
+    items.forEach(it=>{
+      const k=str(it.id); if(!byId.has(k))byId.set(k,it);
+      const q=norm(it.name); const a=byName.get(q); if(a)a.push(it); else byName.set(q,[it]);
+    });
+    _snap={gs,n:gs.length,refs,lens,items,byId,byName};
+    return _snap;
+  }
+  const copyItem=it=>Object.assign({},it);
+  function catalogItems(){
+    const sn=catalogSnapshot();
+    return sn?sn.items.map(copyItem):[];
+  }
+  function catalogById(id){
+    const sn=catalogSnapshot(); if(!sn)return null;
+    if(sn.byId){ const it=sn.byId.get(str(id)); return it?copyItem(it):null; }
+    const f=sn.items.find(it=>str(it.id)===str(id)); return f?copyItem(f):null;
+  }
+  function exactNameCandidates(name){
+    const q=norm(name); if(!q)return [];
+    const sn=catalogSnapshot(); if(!sn)return [];
+    if(sn.byName){ const a=sn.byName.get(q); return a?a.map(copyItem):[]; }
+    return sn.items.filter(it=>norm(it.name)===q).map(copyItem);
+  }
 
   function categoryIdentity(cat){
     const c=cat||{};

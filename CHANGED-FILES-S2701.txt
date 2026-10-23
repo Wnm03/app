@@ -1,0 +1,13 @@
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+chat-action-handlers.js
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+index.html
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+scripts/verify-window-expose.js
+sw.js

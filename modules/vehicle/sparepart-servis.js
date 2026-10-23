@@ -260,7 +260,20 @@ if(!name)return'📦';
 const hit=collectKnownGroups().find(g=>g.group===name);
 return hit?hit.icon:'📦';
 }
+// S2704 PERF: servisLogMatchesCat dipanggil ±25.600x per render Insight (log x kategori). Hasilnya murni terhadap
+// (log, kategori, D) dan D hanya berubah lewat save() yang membuang kwScopeMemo, jadi di dalam satu render-scope
+// hasilnya di-memo per pasangan objek (WeakMap, tanpa kebocoran). Di luar scope = perilaku lama (langsung hitung).
 function servisLogMatchesCat(s,cat){
+  if(typeof kwScopeMemo!=='function'||!s||!cat||typeof s!=='object'||typeof cat!=='object')return _servisLogMatchesCatImpl(s,cat);
+  const byCat=kwScopeMemo('slmc|byCat',function(){return new WeakMap();});
+  let byLog=byCat.get(cat);
+  if(!byLog){byLog=new WeakMap();byCat.set(cat,byLog);}
+  if(byLog.has(s))return byLog.get(s);
+  const r=_servisLogMatchesCatImpl(s,cat);
+  byLog.set(s,r);
+  return r;
+}
+function _servisLogMatchesCatImpl(s,cat){
   if(typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'){
     return ServiceHistoryReminderReconciliationSOT.match(s,cat,{vehicleId:s&&s.vehicleId}).ok;
   }

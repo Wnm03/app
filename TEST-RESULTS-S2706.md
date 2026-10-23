@@ -1,0 +1,4 @@
+- `node --test tests/*.test.js`: 9195 tes, 9194 pass, 0 fail.
+- `tests/s2705-fi-annual-expense-alloc-free.test.js`: 6/6 (mutation check: 4 gagal saat dirusak).
+- Build 2660, verify-bundle-freshness, verify-window-expose, hash (basi=0) lolos.
+- Tidak diuji di browser.

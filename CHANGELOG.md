@@ -1,3 +1,48 @@
+## S2708 (build 2660, tanpa perubahan kode produksi) — Hasil audit rantai: `apply-check`, manifest seragam, dokumen
+- Akumulasi di atas patch S2707. **Tidak ada file sumber produksi, bundle, HTML, atau sw.js yang berubah** (tetap build 2660; hash bundle tidak berubah).
+- Baru: `scripts/apply-check.js` — pemeriksaan BACA-SAJA sebelum overlay dipasang: membandingkan SHA-256 tiap file tujuan dengan `BASELINE-HASHES.json` (sama baseline = aman; sama patch = sudah terpasang; lainnya = KONFLIK) dan memeriksa isi folder patch tidak rusak. Tidak pernah menulis file. Tes: `tests/s2708-apply-check.test.js` (7 tes; mutation check terdeteksi).
+- Manifest `PATCH-MANIFEST-S2708-AKUMULASI.md` kembali memakai format S2703 (pemisahan berubah/baru + hash baseline → patch per file) dan memuat tabel rantai S2701–S2708. Nama berkas disesuaikan (menyebut S2701).
+- `docs/COVERAGE-PER-MODULE.md` dan `docs/FILE-MAP.md` dihasilkan ulang (basi 1 tes sejak S2707).
+- Catatan terbuka: tes replay rantai historis S2180–S2223 (`s2224`) tetap di-SKIP karena fixture tidak dibundel di baseline; zip asli S2653/S2701/S2702 tidak tersedia untuk verifikasi byte-per-byte. Detail: `AUDIT-S2708-RANTAI-AKUMULASI-PERBAIKAN.md`.
+
+## S2707 (build 2660, tanpa perubahan kode produksi) — Tes batas performa + perbaikan tes kosong S2704
+- Akumulasi di atas patch S2706. **Tidak ada file sumber produksi, bundle, HTML, atau sw.js yang berubah** (tetap build 2660); hanya tes dan dokumen.
+- Baru: `tests/s2707-perf-budget.test.js` — batas performa deterministik (menghitung operasi, bukan waktu): `getCachedTxDateMs` putaran kedua 0 regex/0 Date baru; `FI.annualExpense` ≤10 dan `monthsOfDataAvailable` ≤5 konstruksi Date untuk 5.000 transaksi; `infer` ≤4.000 `toLowerCase` untuk 2.000 panggilan; plus jam-dinding sangat longgar (<400 ms/25.000 transaksi). Terbukti GAGAL pada implementasi lama (10.003 Date; 93.200 toLowerCase; regex pada cache hit) lewat env `S2707_CALC/HELPERS/CATALOG` menunjuk ke fixture lama.
+- Perbaikan: tes "tidak parse ulang pada cache hit" di `tests/s2704-tx-date-cache.test.js` sebelumnya KOSONG (patch `String.prototype` di realm luar tidak terlihat dari dalam `vm`; implementasi lama pun lulus). Kini penghitung dipasang di dalam konteks vm dan terbukti gagal pada implementasi lama.
+- Tes penuh: 9199 tes, 9198 pass, 0 fail.
+
+## S2706 (build 2660) — Akumulasi S2653 + S2701–S2705 + `FI.annualExpense`/`monthsOfDataAvailable` tanpa alokasi Date
+- Akumulasi di atas patch S2705 (baseline `app-main (36)`). Bundle/HTML/sw dibangun ulang (2659 → 2660).
+- PERF (`modules/shared/modules-calc.js`): `FI.monthsOfDataAvailable()` dan `FI.annualExpense()` membuat `new Date()` per transaksi di setiap panggilan (rantai `goalSourceFI→annualExpense→targetNominal`, ±156 ms menurut profil S2703). Kini membandingkan ms (angka) langsung; hasil identik karena Date dibandingkan lewat `valueOf`. Urutan hubungan pendek (`hitungKas`, `budgetMatchesTx`) dan semua efek samping tidak berubah; tetap sinkron, tanpa cache baru, tanpa perubahan API.
+- Benchmark Node (25.000 transaksi): `annualExpense` ±40 ms → ±16 ms per panggilan.
+- Tes: `tests/s2705-fi-annual-expense-alloc-free.test.js` (6 tes diferensial vs `tests/fixtures/s2705-modules-calc-original.js`, termasuk tanggal tak valid/null; mutation check terdeteksi).
+- Sengaja TIDAK diubah: snapshot rollback `JSON.stringify(D)` di `_saveTxInner` (pengaman atomik transaksi) dan `_buildSaveJson` (sudah ber-cache per versi simpan) — mengubahnya berisiko mengubah alur.
+
+## S2705 (build 2659) — Akumulasi S2653 + S2701–S2704 + `getCachedTxDateMs` cek-cache-dulu
+- Akumulasi di atas patch S2704 (baseline `app-main (36)`). Bundle/HTML/sw dibangun ulang (2658 → 2659).
+- PERF (`modules/shared/features-helpers-global-security.js`): `getCachedTxDateMs()` menjalankan regex + membuat closure di SETIAP panggilan sebelum mengecek cache, padahal ia jalur panas (ratusan ribu panggilan per simpan data besar; ±164 ms menurut profil S2703). Kini cache dicek lebih dulu; parse hanya saat cache miss/`t.date` berubah. Nilai hasil identik. Benchmark Node (25.000 objek, 500.000 panggilan cache-hit): ±91–105 ms → ±29–36 ms.
+- Tes: `tests/s2704-tx-date-cache.test.js` (3 tes diferensial vs `tests/fixtures/s2704-features-helpers-original.js`).
+- Belum dikerjakan: rantai `goalSourceFI→annualExpense`, `_buildSaveJson` + snapshot `JSON.stringify(D)` di `_saveTxInner` (fungsi sangat besar, perlu uji browser), serta pengukuran browser end-to-end.
+
+## S2704 (build 2658) — Akumulasi S2653 + S2701 + S2702 + S2703 + memo `servisLogMatchesCat`
+- Akumulasi di atas baseline `app-main (36)` (SHA-256 `e907ea71…77a6`): seluruh isi patch S2703 + perbaikan S2704. Bundle/HTML/sw dibangun ulang dengan build resmi (2657 → 2658).
+- PERF: `servisLogMatchesCat()` (`modules/vehicle/sparepart-servis.js`) dipanggil ±25.600x per render Insight. Kini hasilnya di-memo per pasangan (log, kategori) di dalam render-scope (`kwScopeMemo` + WeakMap), dibuang saat scope selesai / `save()`. Di luar scope dan untuk argumen non-objek perilaku identik lama (fungsi lama menjadi `_servisLogMatchesCatImpl`, teks tidak diubah).
+- Tes: `tests/s2704-servis-log-match-memo.test.js` (5 tes diferensial vs implementasi lama di `tests/fixtures/s2704-sparepart-servis-original.js`). Full suite: 9186 tes, 9185 pass, 0 fail.
+- Belum dikerjakan: jalur simpan data besar (400–750 ms), batasan cache `infer` untuk ubah-di-tempat `name`, serta pengukuran browser untuk S2704 (sandbox ini tanpa Chromium; penghematan ±35 ms adalah perkiraan dari profil S2703, belum diukur ulang).
+
+## S2703 (build 2657) — Akumulasi S2653 + S2701 + S2702 + optimasi render Insight (infer katalog & hitungan BBM)
+- Akumulasi di atas baseline `app-main (36)` (SHA-256 `e907ea71…77a6`): seluruh isi patch S2702 + perbaikan S2703. Bundle/HTML/sw dibangun ulang dengan build resmi (2656 → 2657).
+- PERF (terukur di Chromium, 25.000 transaksi / 1.800 BBM / 1.200 servis / 3 kendaraan): `ServiceInputCatalog.infer()` dipanggil 13.600x per buka tab Insight (lewat `servisLogMatchesCat`) dan menormalisasi 102 nama item tiap panggilan (±49 ms). Kini indeks nama-ternormalisasi + cache hasil per teks dibangun sekali dengan invalidasi otomatis (pola S2702); hasil tetap objek baru per panggilan; bentuk katalog tak terduga memakai jalur lama.
+- PERF: `estimateKmPerDay()` (18x/render; komparator sort membuat 2 `Date` per perbandingan) dan `getFuelFullTankSegments()` (33x/render; filter bersarang O(n²)) di `modules/vehicle/vehicle-core.js` kini di-memo per render-scope (`kwScopeMemo`, dibuang saat scope selesai / `save()`); waktu titik dihitung sekali; segmen dikembalikan sebagai salinan. Di luar scope perilaku identik lama.
+- Hasil (browser yang sama): Insight sinkron pertama 118–156 → ±66 ms; berikutnya 96–129 → 46–54 ms; `infer` 49 → ±4 ms total.
+- Tes: `tests/s2703-fuel-infer-cache.test.js` (10 tes diferensial vs implementasi lama yang dibekukan di `tests/fixtures/s2703-*-original.js`; mutation check: invalidasi rusak & hilangnya salinan terdeteksi). Detail: `AUDIT-S2703-INSIGHT-INFER-FUEL-CACHE.md`.
+
+## S2702 (build 2656) — Akumulasi S2653 + S2701 + optimasi lookup katalog servis (tab Insight Beranda)
+- Akumulasi di atas baseline `app-main (36)` (SHA-256 `e907ea71…77a6`): patch S2653 (Keuangan ringkas) + S2701 (reset interval, optimasi gate window-expose). Sumber yang tumpang-tindih identik byte-per-byte; bundle/HTML/sw dibangun ulang dengan build resmi.
+- PERF (akar masalah terkonfirmasi di browser): `catalogById()`/`exactNameCandidates()` di `modules/vehicle/service-category-sot-reconciliation-s2007.js` membangun ulang seluruh katalog (102 item) tiap panggilan; satu render Insight memanggilnya ±2.958x → ±350 ms. Kini snapshot+indeks dibangun sekali dengan invalidasi otomatis; pemanggil tetap menerima salinan baru. Kontrak, urutan resolver, dan SOT tidak berubah.
+- Lint: `NodeFilter` di `modules/shared/pwa-ux-performance.js` (error lint dari S2653) dideklarasikan lewat komentar `/* global */` — tanpa perubahan runtime.
+- Tes: `tests/s2702-catalog-lookup-cache.test.js` (karakterisasi diferensial terhadap implementasi lama yang dibekukan di `tests/fixtures/s2007-reference-original.js`). Detail: `AUDIT-S2702-INSIGHT-CATALOG-LOOKUP.md`.
+
 ## S2548-FIX — Perbaikan kegagalan test (370 → 10; sisa = gate bundle, butuh rebuild)
 - Source: data-health-check.js (guard DOM), finance-category-sot.js (rename subkategori tx legacy), tx-stok-sparepart.js (emit stok-sparepart), backup-restore.js (invalidasi snapshot sebelum persist atomik).
 - Test: harness loadSource.js + 12 tes disesuaikan. Lihat PATCH-README-S2548-FIX-TEST-FAILURES.md.

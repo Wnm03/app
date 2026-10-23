@@ -1,4 +1,5 @@
 /* S1891 — PWA UX/performance helpers. Presentation/runtime-safe only. */
+/* global NodeFilter -- global DOM bawaan browser; hanya deklarasi lint (S2702), tanpa perubahan runtime. */
 (function(g){
   'use strict';
   const PWAUX=g.PWAUX=g.PWAUX||{};
@@ -554,6 +555,54 @@
       // Move period chips into the BBM Ringkasan sub-tab, and into Servis when Servis is active.
       const periodWrap=byId('cnPeriodeWrap'),bbmTab=byId('cnTab-bbm'),servisTab=byId('cnTab-servis'),bbmSummary=byId('cnbTab-ringkasan');
       if(periodWrap&&bbmTab&&servisTab&&bbmSummary){const movePeriodWrap=function(){if(!bbmTab.classList.contains('u-dnone')){if(periodWrap.parentElement!==bbmSummary)bbmSummary.insertBefore(periodWrap,bbmSummary.firstChild);}else if(!servisTab.classList.contains('u-dnone')){const head=servisTab.querySelector('.pwa-workspace-head');const target=head&&head.parentNode;if(target&&periodWrap.parentElement!==target){head.insertAdjacentElement('afterend',periodWrap);}}};movePeriodWrap();if(typeof MutationObserver==='function'){new MutationObserver(movePeriodWrap).observe(bbmTab,{attributes:true,attributeFilter:['class']});new MutationObserver(movePeriodWrap).observe(servisTab,{attributes:true,attributeFilter:['class']});}}
+      // S2652 — Keuangan (Laporan, Akun, Utang & Piutang, Aset): tampilan ringkas. Presentasi saja: hanya mengubah teks/kelas/pembungkus, id & data-action tetap.
+      (function(){
+        const KEU_TITLES={findashWrap:'Dasbor Keuangan',forecastWrap:'Perkiraan Keuangan',budgetRecoWrap:'Saran Anggaran',cashflowProjWrap:'Proyeksi Arus Kas',financialGoalWrap:'Target Keuangan',investPlannerWrap:'Rencana Investasi',debtOptimizerWrap:'Strategi Pelunasan Utang',retirementPlannerWrap:'Rencana Pensiun',financialHealthScoreWrap:'Skor Kesehatan Keuangan',financialRiskDashboardWrap:'Risiko Keuangan'};
+        const KEU_OPEN=[];
+        const OWN={SELF:'Milik sendiri',INVESTOR:'Investor',CUSTOMER:'Pelanggan',FAMILY:'Keluarga',THIRD_PARTY:'Pihak ketiga'};
+        const readPrefs=function(){try{return JSON.parse(localStorage.getItem('cardCollapsePrefs')||'{}')||{};}catch(e){void e;return {};}};
+        const setText=function(el,txt){if(el&&el.textContent!==txt)el.textContent=txt;};
+        const decorateInsight=function(key,prefs){
+          const wrap=byId(key);if(!wrap)return;
+          const label=wrap.querySelector('.dashhub-cat-label'),desc=wrap.querySelector('.dashhub-cat-desc'),body=byId(key+'-cbody'),chev=byId(key+'-chev');
+          setText(label,KEU_TITLES[key]);
+          if(desc){const d=String(desc.textContent||'').replace(' — dari data yang sudah ada','').replace(/\bDSR\b/g,'rasio cicilan');setText(desc,d);}
+          if(body&&!Object.prototype.hasOwnProperty.call(prefs,key)&&KEU_OPEN.indexOf(key)===-1){if(!body.classList.contains('collapsed'))body.classList.add('collapsed');if(chev&&!chev.classList.contains('collapsed'))chev.classList.add('collapsed');}
+          if(body&&desc&&desc.parentElement){let peek=wrap.querySelector('.kb-peek');if(!peek){peek=make('div','kb-peek');desc.parentElement.appendChild(peek);}
+            const cards=Array.from(body.querySelectorAll('.findash-card')).slice(0,2).map(function(c){const l=c.querySelector('.findash-card-label'),v=c.querySelector('.findash-card-val');return (l&&v)?(String(l.textContent).trim()+': '+String(v.textContent).trim()):'';}).filter(Boolean);
+            setText(peek,cards.join(' · ').slice(0,110));}
+        };
+        const foldFilters=function(){
+          const tab=byId('keuanganTab-laporan');if(!tab||byId('lapFilterFold'))return;
+          const sel=['fTipe','fClass','fKat','fSub','fAcc','fMethod'].map(byId);if(sel.some(function(x){return !x;}))return;
+          const g1=sel[0].closest('.u-grid2-nogap'),g2=sel[3].closest('.u-grid2-nogap'),fm=sel[5].closest('.fg'),cnt=byId('lapFilterCount'),rs=cnt&&cnt.closest('.u-flex');
+          if(!g1||!g2||!fm||!rs||g1.parentNode!==g2.parentNode||g1.parentNode!==fm.parentNode||g1.parentNode!==rs.parentNode)return;
+          const fold=make('details','lap-filter-fold');fold.id='lapFilterFold';const sum=make('summary','');const sumLbl=make('span','','Filter');const sumCnt=make('span','lap-filter-fold-count','');sum.appendChild(sumLbl);sum.appendChild(sumCnt);fold.appendChild(sum);
+          g1.parentNode.insertBefore(fold,g1);[g1,g2,fm,rs].forEach(function(n){fold.appendChild(n);});
+          const upd=function(){const n=sel.filter(function(x){return x.selectedIndex>0;}).length;setText(sumCnt,n?' ('+n+')':'');};
+          fold.addEventListener('change',upd);fold.addEventListener('click',function(){window.requestAnimationFrame(upd);});upd();if(sel.some(function(x){return x.selectedIndex>0;}))fold.open=true;
+        };
+        const foldHints=function(root){
+          if(!root)return;
+          Array.from(root.querySelectorAll('.u-hint10,.u-fs11.u-t2')).forEach(function(h){
+            if(h.closest('.kb-hint-fold,.findash-card,summary')||h.tagName==='SUMMARY')return;
+            const t=String(h.textContent||'').trim();if(t.length<110)return;
+            const d=make('details','kb-hint-fold');const sm=make('summary','','ⓘ '+t.replace(/^ℹ️\s*/,'').slice(0,44)+'…');d.appendChild(sm);h.parentNode.insertBefore(d,h);d.appendChild(h);
+          });
+        };
+        const relabelOwnership=function(root){
+          if(!root)return;
+          Array.from(root.querySelectorAll('option')).forEach(function(o){const t=String(o.textContent||'').trim();if(OWN[t])o.textContent=OWN[t];});
+          const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);const hits=[];let n;while((n=w.nextNode())){if(/\bOwnership\s+(SELF|INVESTOR|CUSTOMER|FAMILY|THIRD_PARTY)\b/.test(n.nodeValue))hits.push(n);}
+          Array.from(root.querySelectorAll('div')).forEach(function(d){if(d.hidden||d.children.length>1)return;if(/^Ownership(SELF|INVESTOR|CUSTOMER|FAMILY|THIRD_PARTY)$/.test(String(d.textContent||'').replace(/\s+/g,'')))d.hidden=true;});
+          hits.forEach(function(x){x.nodeValue=x.nodeValue.replace(/\s*\bOwnership\s+(SELF|INVESTOR|CUSTOMER|FAMILY|THIRD_PARTY)\b/g,'');});
+        };
+        let queued=false;
+        const runAll=function(){queued=false;const prefs=readPrefs();const fw=byId('findashWrap');if(fw&&!byId('kbInsightHead')){const hd=make('div','kb-insight-head');hd.id='kbInsightHead';const hb=make('b','','💡 Kartu Insight');const hs=make('span','','Ketuk kartu untuk melihat detail');hd.appendChild(hb);hd.appendChild(hs);fw.parentNode.insertBefore(hd,fw);}Object.keys(KEU_TITLES).forEach(function(k){decorateInsight(k,prefs);});foldFilters();['keuanganTab-laporan','keuanganTab-utangpiutang','keuanganTab-asetproyek'].forEach(function(id){foldHints(byId(id));});relabelOwnership(byId('keuanganTab-akun'));relabelOwnership(byId('keuanganTab-laporan'));};
+        const schedule=function(){if(queued)return;queued=true;window.requestAnimationFrame(runAll);};
+        if(typeof MutationObserver==='function'){['keuanganTab-laporan','keuanganTab-utangpiutang','keuanganTab-asetproyek','keuanganTab-akun'].forEach(function(id){const el=byId(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true});});}
+        schedule();
+      })();
       // P1-18: one scroll area for Scan Nota, accessible row controls and bulk selection.
       const scan=byId('shopScanModal'),scanPreview=byId('shopScanPreview'),scanStatus=byId('shopScanStatus');
       if(scan&&scanPreview){

@@ -1,0 +1,1453 @@
+/* S2433.2: id kendaraan bisa campuran angka/string (data lama/impor vs 'veh_<ts>'); banding sebagai string. Nullish dijaga: perilaku === lama dipertahankan bila salah satu null/undefined. */
+function _spVidEq(a,b){return a==null||b==null?a===b:String(a)===String(b);}
+function catVisibleForVehicle(cat,vehicleId){
+if(!cat)return false;
+if(!cat.vehicleId)return true;
+if(!vehicleId)return true;
+return _spVidEq(cat.vehicleId,vehicleId);
+}
+function resolveCanonicalServiceComponent(name,preferredId){
+  if(typeof ServiceInputCatalog==='undefined')return preferredId||null;
+  if(preferredId&&typeof ServiceInputCatalog.itemById==='function'){
+    const direct=ServiceInputCatalog.itemById(preferredId);
+    if(direct&&direct.item)return direct.item.id;
+  }
+  const q=String(name||'').trim().toLowerCase();
+  if(!q)return null;
+  const exact=[];
+  for(const g of ServiceInputCatalog.groups()||[]){
+    for(const it of g.items||[]){
+      if(String(it.name||'').trim().toLowerCase()===q)exact.push(it.id);
+    }
+  }
+  return exact.length===1?exact[0]:null;
+}
+function serviceComponentIdForCategory(cat){
+  if(!cat)return null;
+  return resolveCanonicalServiceComponent(cat.name,cat.serviceComponentId||null);
+}
+function getVehicleServiceCategorySOT(cat,vehicleId){
+  if(!cat||vehicleId==null||String(cat.vehicleId)!==String(vehicleId))return null;
+  let item=null,group=null;
+  if(typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
+    if(cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function'){
+      const hit=ServiceInputCatalog.itemById(cat.serviceComponentId);
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+    if(!item&&typeof ServiceInputCatalog.infer==='function'){
+      const hit=ServiceInputCatalog.infer(cat.name||'');
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+  }
+  if(!item)return null;
+  if(!group&&typeof ServiceInputCatalog.groupById==='function')group=ServiceInputCatalog.groupById(item.masterCategoryId||cat.masterCategoryId)||null;
+  const rule=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')
+    ?ServiceIntervalSOT.active(cat,vehicleId)
+    :((typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function')
+      ?VehicleServiceSOT.resolveReminderRule(cat,vehicleId):null);
+  const effKm=(typeof getEffectiveIntervalKm==='function')?getEffectiveIntervalKm(vehicleId,cat):null;
+  const effMo=(typeof getEffectiveIntervalBulan==='function')?getEffectiveIntervalBulan(cat,vehicleId):null;
+  const intervalKm=rule&&Number(rule.intervalKm)>0?Number(rule.intervalKm):(Number(effKm)>0?Number(effKm):(Number(cat.intervalKm)>0?Number(cat.intervalKm):null));
+  const intervalBulan=rule&&Number(rule.intervalBulan)>0?Number(rule.intervalBulan):(Number(effMo)>0?Number(effMo):(Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null));
+  return {
+    categoryId:cat.id,
+    vehicleId,
+    masterCategoryId:(group&&group.masterCategoryId)||item.masterCategoryId||cat.masterCategoryId||null,
+    categoryName:(group&&group.group)||null,
+    serviceComponentId:item.id,
+    componentName:item.name,
+    intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,
+    intervalBulan:Number.isFinite(intervalBulan)&&intervalBulan>0?intervalBulan:null,
+    showInReminder:cat.showInReminder!==false,
+    code:cat.code||codeFromName(item.name),
+    source:'ServiceInputCatalog + VehicleServiceSOT'
+  };
+}
+function getCanonicalVehicleReminderCategories(vehicleId){
+  const vid=String(vehicleId||'');
+  if(!vid||typeof VehicleCarNotesSOT==='undefined'||!VehicleCarNotesSOT)return [];
+  // S2170: read-only accessor. Reconciliation belongs to an explicit boundary;
+  // a renderer must never create canonical facts as a side effect.
+  return typeof VehicleCarNotesSOT.getServiceCategories==='function'
+    ?(VehicleCarNotesSOT.getServiceCategories(vid)||[])
+    :[];
+}
+function dedupeServiceCategoriesForVehicle(categories,vehicleId){
+  if(typeof ServiceCategorySOTReconciliationS2007!=='undefined'&&ServiceCategorySOTReconciliationS2007&&typeof ServiceCategorySOTReconciliationS2007.canonicalReminderProjection==='function'){
+    return ServiceCategorySOTReconciliationS2007.canonicalReminderProjection(categories,vehicleId);
+  }
+  const out=[],seen=new Set();
+  const list=(categories||[]).slice().sort((a,b)=>{
+    const av=a&&a.vehicleId===vehicleId?0:1, bv=b&&b.vehicleId===vehicleId?0:1;
+    return av-bv;
+  });
+  list.forEach(c=>{
+    if(!c)return;
+    const cid=serviceComponentIdForCategory(c);
+    const key=cid||('legacy:'+String(c.id||c.name||'').toLowerCase());
+    if(seen.has(key))return;
+    seen.add(key); out.push(c);
+  });
+  return out;
+}
+function resolveServisCatForVehicle(name,vehicleId){
+const n=(name||'').trim().toLowerCase();
+if(!n)return null;
+const cats=(D.sparepartCats||[]).filter(c=>c&&c.name&&c.name.toLowerCase()===n);
+if(!cats.length)return null;
+return cats.find(c=>c.vehicleId&&String(c.vehicleId)===String(vehicleId))||cats.find(c=>!c.vehicleId)||null;
+}
+function canonicalServisCategoryId(item,vehicleId,preferredId){
+const cats=D.sparepartCats||[];
+if(preferredId){
+const preferred=cats.find(c=>c&&c.id===preferredId);
+if(preferred&&(!preferred.vehicleId||String(preferred.vehicleId)===String(vehicleId)))return preferred.id;
+}
+const matched=resolveServisCatForVehicle(item,vehicleId);
+return matched?matched.id:null;
+}
+function normalizeLegacyServiceLogs(){
+const logs=Array.isArray(D.servisLogs)?D.servisLogs:[];
+let changed=0;
+logs.forEach(s=>{
+  if(!s||!s.id)return;
+  const vehicleId=s.vehicleId||s.vehicle||null;
+  const item=s.item||s.name||null;
+  if(s.vehicleId==null&&vehicleId!=null){s.vehicleId=vehicleId;changed++;}
+  if(s.item==null&&item!=null){s.item=item;changed++;}
+  const catId=canonicalServisCategoryId(s.item||'',vehicleId,s.categoryId||s.catId||null);
+  const cat=catId?(D.sparepartCats||[]).find(c=>c&&c.id===catId):null;
+  if(s.categoryId==null&&catId){s.categoryId=catId;changed++;}
+  if(s.masterCategoryId==null&&(s.categoryId&&cat?.masterCategoryId)){s.masterCategoryId=cat.masterCategoryId;changed++;}
+  if(s.serviceComponentId==null&&(cat?.serviceComponentId||cat?.maintenanceRuleId)){
+    s.serviceComponentId=cat.serviceComponentId||cat.maintenanceRuleId;changed++;
+  }
+  if(s.actionType===undefined){s.actionType=null;changed++;}
+  const hasSnapshot=s.nextDueAxis!=null || s.nextDueKm!=null || s.nextDueDate!=null || s.intervalKmAtService!=null || s.intervalBulanAtService!=null;
+  if(!hasSnapshot&&cat&&typeof buildServiceNextDueSnapshot==='function'){
+    const snap=buildServiceNextDueSnapshot({vehicleId,cat,serviceKm:s.km,serviceDate:s.date||s.tanggal,actionType:s.actionType||null});
+    s.intervalKmAtService=snap.intervalKmAtService??null;
+    s.intervalBulanAtService=snap.intervalBulanAtService??null;
+    s.nextDueKm=snap.nextDueKm??null;
+    s.nextDueDate=snap.nextDueDate??null;
+    s.nextDueAxis=snap.nextDueAxis||'none';
+    changed++;
+  } else {
+    if(s.intervalKmAtService===undefined)s.intervalKmAtService=null,changed++;
+    if(s.intervalBulanAtService===undefined)s.intervalBulanAtService=null,changed++;
+    if(s.nextDueKm===undefined)s.nextDueKm=null,changed++;
+    if(s.nextDueDate===undefined)s.nextDueDate=null,changed++;
+    if(s.nextDueAxis===undefined)s.nextDueAxis='none',changed++;
+  }
+  if(s.idempotencyKey==null){
+    s.idempotencyKey=s.txLinkId?`tx:${s.txLinkId}`:`legacy-service:${s.id}`;
+    changed++;
+  }
+});
+return changed;
+}
+const GENERIC_RECOMMEND_NAMES={
+motor:['Oli Mesin','Filter Oli','Oli Gardan','Busi','Filter Udara','Kampas Rem Depan','Kampas Rem Belakang','V-Belt CVT','Roller CVT','Minyak Rem','Aki','Ban Depan'],
+mobil:['Oli Mesin','Filter Oli','Oli Transmisi','Busi','Filter Udara','Filter AC','Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Coolant','Timing Belt','Ban Depan'],
+listrik:['Kampas Rem Depan','Kampas Rem Belakang','Minyak Rem','Aki','Ban Depan'],
+};
+function _genericGroupByName(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getGenericGroupByName==='function'){
+return DatabaseAPI.master.getGenericGroupByName();
+}
+return GENERIC_GROUP_BY_NAME;
+}
+function _genericRecommendNames(){
+if(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.master&&typeof DatabaseAPI.master.getGenericRecommendNames==='function'){
+return DatabaseAPI.master.getGenericRecommendNames();
+}
+return GENERIC_RECOMMEND_NAMES;
+}
+const GENERIC_GROUP_BY_NAME={
+'oli mesin':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter oli':{group:'Perawatan Berkala',icon:'🛠️'},
+'oli gardan':{group:'Perawatan Berkala',icon:'🛠️'},
+'oli transmisi':{group:'Perawatan Berkala',icon:'🛠️'},
+'busi':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter udara':{group:'Perawatan Berkala',icon:'🛠️'},
+'filter ac':{group:'Perawatan Berkala',icon:'🛠️'},
+'v-belt cvt':{group:'Perawatan Berkala',icon:'🛠️'},
+'minyak rem':{group:'Perawatan Berkala',icon:'🛠️'},
+'coolant':{group:'Perawatan Berkala',icon:'🛠️'},
+'roller cvt':{group:'Mesin — Kopling/Pulley/Final Drive',icon:'🔗'},
+'timing belt':{group:'Mesin — Cylinder Head/Valve',icon:'⚙️'},
+'kampas rem':{group:'Sistem Rem',icon:'🛑'},
+'kampas rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'kampas rem belakang':{group:'Sistem Pengereman',icon:'🛑'},
+'cakram rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'kaliper rem depan':{group:'Sistem Pengereman',icon:'🛑'},
+'master rem & reservoir':{group:'Sistem Pengereman',icon:'🛑'},
+'tromol rem belakang':{group:'Sistem Pengereman',icon:'🛑'},
+'aki':{group:'Kelistrikan & Panel',icon:'🔌'},
+'ban depan':{group:'Roda Depan/Suspensi/Kemudi',icon:'🛞'},
+};
+function _withMasterCategory(result,cat){
+let mc=null;
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.resolve==='function'){
+  const hit=ServiceTaxonomySOT.resolve({
+    masterCategoryId:cat&&cat.masterCategoryId,
+    serviceComponentId:cat&&cat.serviceComponentId,
+    name:cat&&cat.name
+  });
+  if(hit&&hit.category)mc={id:hit.category.id,name:hit.category.name,icon:hit.category.icon};
+}
+if(!mc&&typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory){
+  if(cat&&cat.masterCategoryId&&typeof DatabaseAPI.masterCategory.getAll==='function'){
+    mc=DatabaseAPI.masterCategory.getAll().find(c=>c&&c.id===cat.masterCategoryId)||null;
+  }
+  if(!mc&&typeof DatabaseAPI.masterCategory.classifyItemName==='function'){
+    mc=DatabaseAPI.masterCategory.classifyItemName(cat&&cat.name);
+  }
+}
+result.masterCategoryId=mc?mc.id:null;
+result.masterCategoryName=mc?mc.name:null;
+result.masterCategoryIcon=mc?mc.icon:null;
+return result;
+}
+const UNCATEGORIZED_FILTER_ID='__uncategorized__';
+function resolveCatGroup(cat,vehicleId){
+if(!cat)return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.resolve==='function'){
+  const canonical=ServiceTaxonomySOT.resolve({masterCategoryId:cat.masterCategoryId,serviceComponentId:cat.serviceComponentId,name:cat.name});
+  if(canonical&&canonical.category){
+    return _withMasterCategory({group:canonical.category.name,icon:canonical.category.icon||'📦',canonical:true,serviceComponentId:canonical.serviceComponentId||null},cat);
+  }
+}
+if(cat.group)return _withMasterCategory({group:cat.group,icon:cat.groupIcon||'📦'},cat);
+const n=(cat.name||'').trim().toLowerCase();
+if(n&&vehicleId&&typeof findTorsiDb==='function'&&typeof D!=='undefined'&&D.vehicles){
+const veh=D.vehicles.find(v=>v.id===vehicleId);
+const db=veh?findTorsiDb(veh.name,veh.modelId):null;
+if(db&&Array.isArray(db.cats)){
+for(const catGroup of db.cats){
+const hit=(catGroup.items||[]).some(it=>{
+const itn=(it.name||'').trim().toLowerCase();
+if(!itn)return false;
+return itn===n||itn.includes(n)||(n.includes(itn)&&itn.length>=4);
+});
+if(hit)return _withMasterCategory({group:catGroup.cat,icon:catGroup.icon||'📦'},cat);
+}
+}
+}
+const gmap=_genericGroupByName();
+if(n&&gmap[n])return _withMasterCategory(Object.assign({},gmap[n]),cat);
+return _withMasterCategory({group:'Lainnya',icon:'📦'},cat);
+}
+function collectKnownGroups(){
+const map=new Map();
+const add=(id,name,icon)=>{
+  const key=String(id||name||'').trim();
+  const label=String(name||'').trim();
+  if(!key||!label||map.has(key))return;
+  map.set(key,{group:label,icon:icon||'📦'});
+};
+if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function'){
+  (ServiceTaxonomySOT.categories()||[]).forEach(c=>{if(c)add(c.id,c.name,c.icon);});
+}
+if(!map.size&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog){
+  const groupsApi=ServiceInputCatalog['groups'];
+  if(typeof groupsApi==='function')(groupsApi()||[]).forEach(g=>{if(g)add(g.masterCategoryId,g.group,g.icon);});
+}
+return Array.from(map.values());
+}
+function iconForGroupName(name){
+if(!name)return'📦';
+const hit=collectKnownGroups().find(g=>g.group===name);
+return hit?hit.icon:'📦';
+}
+function servisLogMatchesCat(s,cat){
+  if(typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'){
+    return ServiceHistoryReminderReconciliationSOT.match(s,cat,{vehicleId:s&&s.vehicleId}).ok;
+  }
+  const catComponent=serviceComponentIdForCategory(cat);
+  if(catComponent&&s&&s.serviceComponentId&&String(s.serviceComponentId)===String(catComponent)) return true;
+  if(s.categoryId){
+    const linked=D.sparepartCats.find(c=>c&&c.id===s.categoryId);
+    if(!linked)return false;
+    if(linked.vehicleId&&linked.vehicleId!==s.vehicleId)return false;
+    const linkedComponent=serviceComponentIdForCategory(linked);
+    if(catComponent&&linkedComponent) return linkedComponent===catComponent;
+    return s.categoryId===cat.id;
+  }
+  const cn=cat.name.toLowerCase();
+  const item=(s.item||'').toLowerCase().trim();
+  if(!item)return false;
+  if(item===cn) return true;
+  if(item.includes(cn)) return true;
+  if(cn.includes(item)&&item.length>=4){
+    const ambiguous=D.sparepartCats.some(c=>c.id!==cat.id&&c.name.toLowerCase().includes(item));
+    if(!ambiguous) return true;
+  }
+  return false;
+}
+function normalizeMaintenanceRuleKey(v){
+return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+function vehicleMatchesMaintenanceRuleSet(vehicleId){
+const veh=(D.vehicles||[]).find(v=>v&&v.id===vehicleId);
+if(!veh)return false;
+if(typeof findTorsiDb==='function'){
+const db=findTorsiDb(veh.name,veh.modelId);
+if(db&&db.id==='vario-125')return true;
+}
+const hay=(String(veh.name||'')+' '+String(veh.modelId||'')).toLowerCase();
+return /vario\s*125|kzr/.test(hay);
+}
+function overlayPersistedMaintenanceIntervals(base,cat,componentId,componentName){
+ const r=Object.assign({},base||{}),km=Number.isFinite(Number(cat&&cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null,mo=Number.isFinite(Number(cat&&cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null,rep=Number(r.replaceKm)>0||Number(r.replaceMonths)>0||Number(r.replaceDays)>0,ins=Number(r.inspectKm)>0||Number(r.inspectMonths)>0||Number(r.inspectDays)>0;
+ if(rep){if(km!==null)r.replaceKm=km;if(mo!==null)r.replaceMonths=mo;}else if(ins){if(km!==null)r.inspectKm=km;if(mo!==null)r.inspectMonths=mo;}else{if(km!==null)r.replaceKm=km;if(mo!==null)r.replaceMonths=mo;}
+ r.serviceComponentId=cat&&cat.serviceComponentId||componentId||r.serviceComponentId||null;r.componentName=cat&&cat.name||componentName||r.componentName||null;return r;
+}
+function resolveMaintenanceRule(vehicleId,cat){
+if(!vehicleMatchesMaintenanceRuleSet(vehicleId)||typeof SERVICE_MAINTENANCE_RULES==='undefined')return null;
+if(!cat)return null;
+const masterHit=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const master=masterHit&&masterHit.item?masterHit.item:null;
+const canonicalKm=typeof getCanonicalServiceInterval==='function'?getCanonicalServiceInterval(cat,{vehicleId}).intervalKm:(master&&Number(master.intervalKm)>0?Number(master.intervalKm):null);
+const applyRule=(base,id,name)=>{
+  if(!base)return null;
+  const independentAxes=String(master&&master.intervalAxes||'').toLowerCase()==='independent';
+  const r=independentAxes?Object.assign({},base):overlayPersistedMaintenanceIntervals(base,cat,id,name);
+  if(independentAxes){r.serviceComponentId=cat&&cat.serviceComponentId||id||null;r.componentName=cat&&cat.name||name||null;}
+  // The master explicitly declares a single replacement interval (e.g.
+  // Oli Mesin: "Ganti tiap 4.000 km"). In that case the older additive
+  // maintenance-rule registry must not reintroduce its provisional 2.000/
+  // 2.500 km schedule. The master is the reminder SOT; vehicle override is
+  // already resolved by getCanonicalServiceInterval().
+  if(master&&master.needsReview===false&&canonicalKm>0&&master.actionMode==='periksa-conditional'&&/^Ganti\s+tiap\b/i.test(String(master.intervalLabel||''))){
+    r.inspectKm=null;r.inspectMonths=null;r.inspectDays=null;r.replaceKm=canonicalKm;r.replaceMonths=null;r.replaceDays=null;r.replaceAction='ganti';
+  }
+  return r;
+};
+const direct=normalizeMaintenanceRuleKey(cat.serviceComponentId||cat.maintenanceRuleId);
+if(direct&&SERVICE_MAINTENANCE_RULES[direct])return applyRule(SERVICE_MAINTENANCE_RULES[direct],direct,cat.name);
+const n=normalizeMaintenanceRuleKey(cat.name);
+if(n&&SERVICE_MAINTENANCE_RULES[n])return applyRule(SERVICE_MAINTENANCE_RULES[n],n,cat.name);
+if(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog['groups']==='function'){
+for(const g of ServiceInputCatalog.groups()||[]){
+for(const it of g.items||[]){
+if(normalizeMaintenanceRuleKey(it.id)===n||normalizeMaintenanceRuleKey(it.name)===n){
+const r=SERVICE_MAINTENANCE_RULES[it.id];
+if(r)return applyRule(r,it.id,it.name);
+}
+}
+}
+}
+const persistedKm=Number.isFinite(Number(cat.intervalKm))&&Number(cat.intervalKm)>0?Number(cat.intervalKm):null;
+const persistedMonths=Number.isFinite(Number(cat.intervalBulan))&&Number(cat.intervalBulan)>0?Number(cat.intervalBulan):null;
+if(persistedKm!==null||persistedMonths!==null)return overlayPersistedMaintenanceIntervals({},cat,cat.serviceComponentId||cat.id||null,cat.name||null);
+return null;
+}
+function getMaintenanceSchedule(vehicleId,cat){
+const rule=resolveMaintenanceRule(vehicleId,cat);
+if(!rule)return null;
+const schedule={rule:Object.assign({},rule),inspectKm:Number.isFinite(rule.inspectKm)&&rule.inspectKm>0?rule.inspectKm:null,replaceKm:Number.isFinite(rule.replaceKm)&&rule.replaceKm>0?rule.replaceKm:null,inspectMonths:Number.isFinite(rule.inspectMonths)&&rule.inspectMonths>0?rule.inspectMonths:null,replaceMonths:Number.isFinite(rule.replaceMonths)&&rule.replaceMonths>0?rule.replaceMonths:null,inspectDays:Number.isFinite(rule.inspectDays)&&rule.inspectDays>0?rule.inspectDays:null,replaceDays:Number.isFinite(rule.replaceDays)&&rule.replaceDays>0?rule.replaceDays:null,inspectAction:rule.inspectAction||'periksa',replaceAction:rule.replaceAction||'ganti',maintenanceType:rule.maintenanceType||'periodic',condition:rule.condition||null};
+// S2091-r1: the active interval comes from ONE VehicleCarNotesSOT record.
+// Maintenance rules provide only action semantics (inspect/replace); they do
+// not own a competing interval value.
+const active=typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'
+  ?ServiceIntervalSOT.active(cat,vehicleId):null;
+const activeMasterHit=typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+const activeMaster=activeMasterHit&&activeMasterHit.item?activeMasterHit.item:null;
+if(active&&((active.intervalKm||0)>0||(active.intervalBulan||0)>0)){
+  const km=Number(active.intervalKm)>0?Number(active.intervalKm):null;
+  const mo=Number(active.intervalBulan)>0?Number(active.intervalBulan):null;
+  const masterPolicy=activeMaster;
+  // The component master is the canonical policy owner. Persisted category
+  // projections may be stale after a catalog policy change and must not shadow
+  // an explicit true/false value from the master.
+  const policyMode=String(masterPolicy&&masterPolicy.actionMode||cat.actionMode||'').trim().toLowerCase();
+  const replacementResets=masterPolicy&&typeof masterPolicy.gantiResetsInterval==='boolean'?masterPolicy.gantiResetsInterval:cat.gantiResetsInterval===true;
+  // A conditional inspection policy with an explicit replacement-reset flag
+  // owns a replacement-age interval even when the older registry stored that
+  // interval on its inspect axis. Otherwise replacing the component never
+  // becomes the new baseline in the reminder engine.
+  const isConditionalPolicy=policyMode==='periksa-conditional';
+  const independentAxes=String(masterPolicy&&masterPolicy.intervalAxes||'').toLowerCase()==='independent';
+  const conditionalReplacementAxis=isConditionalPolicy&&replacementResets===true;
+  const rep=isConditionalPolicy?conditionalReplacementAxis:!!(schedule.replaceKm||schedule.replaceMonths||schedule.replaceDays);
+  // Most components intentionally have one active interval axis. A small
+  // explicitly declared independent-axis policy (e.g. V-Belt: inspect every
+  // 8,000 km, replace at the vehicle's active SOT interval) is different:
+  // retain the inspection cadence while the active per-vehicle SOT owns the
+  // replacement cadence. Never synthesize a second interval from stale
+  // category projections or overwrite a manual interval.
+  if(independentAxes){
+    schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+    if(!(Number(schedule.inspectKm)>0)&&!(Number(schedule.inspectMonths)>0)&&!(Number(schedule.inspectDays)>0)){
+      schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+    }
+    schedule.intervalSotSource=active.source;
+  }else{
+    // A conditional inspection policy with gantiResetsInterval=false must not
+    // inherit a stale replace axis from the legacy schedule registry. Conversely,
+    // true must force the active SOT interval onto the replacement axis.
+    const ins=isConditionalPolicy?!conditionalReplacementAxis:!!(schedule.inspectKm||schedule.inspectMonths||schedule.inspectDays);
+    if(rep||(!ins&&active.source)){
+      schedule.replaceKm=km;schedule.rule.replaceKm=km;schedule.replaceMonths=mo;schedule.rule.replaceMonths=mo;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+      schedule.inspectKm=null;schedule.rule.inspectKm=null;schedule.inspectMonths=null;schedule.rule.inspectMonths=null;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+      schedule.intervalSotSource=active.source;
+    }else{
+      schedule.inspectKm=km;schedule.rule.inspectKm=km;schedule.inspectMonths=mo;schedule.rule.inspectMonths=mo;schedule.inspectDays=null;schedule.rule.inspectDays=null;
+      schedule.replaceKm=null;schedule.rule.replaceKm=null;schedule.replaceMonths=null;schedule.rule.replaceMonths=null;schedule.replaceDays=null;schedule.rule.replaceDays=null;
+      schedule.intervalSotSource=active.source;
+    }
+  }
+  schedule.serviceIntervalSot=active.intervalSot||null;
+}
+return schedule;
+}
+function hasMaintenanceReminderSchedule(vehicleId,cat){
+const s=getMaintenanceSchedule(vehicleId,cat);
+if(!s)return false;
+if(s.maintenanceType==='event_based')return false;
+return !!(s.inspectKm||s.replaceKm||s.inspectMonths||s.replaceMonths||s.inspectDays||s.replaceDays);
+}
+function resolveServiceCategoryComponent(masterCategoryId,serviceComponentId,name){
+  let group=null,item=null;
+  if(typeof ServiceInputCatalog!=='undefined'){
+    if(serviceComponentId&&typeof ServiceInputCatalog.itemById==='function'){
+      const hit=ServiceInputCatalog.itemById(serviceComponentId);
+      if(hit&&hit.item){item=hit.item;group=hit.group||null;}
+    }
+    if(!item&&name&&typeof ServiceInputCatalog.infer==='function'){
+      const inf=ServiceInputCatalog.infer(name);
+      if(inf&&inf.item){item=inf.item;group=inf.group||null;}
+    }
+    if(!group&&masterCategoryId&&typeof ServiceInputCatalog.groupById==='function'){
+      group=ServiceInputCatalog.groupById(masterCategoryId)||null;
+    }
+  }
+  const finalMaster=group&&group.masterCategoryId?group.masterCategoryId:(masterCategoryId||null);
+  const finalComponent=item&&item.id?item.id:(serviceComponentId||null);
+  return {masterCategoryId:finalMaster,serviceComponentId:finalComponent,componentName:item?item.name:null,masterCategoryName:group?group.group:null};
+}
+function getServiceLinkage(catOrPart,vehicleId){
+  const x=catOrPart||{};
+  const linkedCat=x.catId?(D.sparepartCats||[]).find(c=>c&&c.id===x.catId):null;
+  const inferred=(typeof ServiceInputCatalog!=='undefined'&&typeof ServiceInputCatalog.infer==='function')
+    ?ServiceInputCatalog.infer([x.name,x.code].filter(Boolean).join(' ')):null;
+  const resolved=resolveServiceCategoryComponent(
+    x.masterCategoryId||linkedCat?.masterCategoryId||inferred?.group?.masterCategoryId||null,
+    x.serviceComponentId||linkedCat?.serviceComponentId||inferred?.item?.id||null,
+    x.name||linkedCat?.name||''
+  );
+  if(!resolved.masterCategoryId&&typeof resolveCatGroup==='function'&&(linkedCat||x.name)){
+    const rg=resolveCatGroup(linkedCat||x,vehicleId);
+    if(rg&&rg.masterCategoryId)resolved.masterCategoryId=rg.masterCategoryId;
+  }
+  return resolved;
+}
+function getEffectiveIntervalKm(vehicleId,cat){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.resolveCanonicalInterval==='function'){
+  const rule=ServiceIntervalSOT.resolveCanonicalInterval(cat,{vehicleId});
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const rule=ServiceIntervalSOT.active(cat,vehicleId);
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  if(rule&&rule.intervalKm!==null)return rule.intervalKm;
+}
+return(cat&&Number(cat.intervalKm)>0)?Number(cat.intervalKm):null;
+}
+function hasIntervalOverride(vehicleId,cat){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const r=ServiceIntervalSOT.active(cat,vehicleId);
+  return !!(r&&r.source==='manual');
+}
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const r=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  return !!(r&&r.source==='manual');
+}
+return false;
+}
+function getEffectiveIntervalBulan(cat,vehicleId){
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.resolveCanonicalInterval==='function'){
+  const rule=ServiceIntervalSOT.resolveCanonicalInterval(cat,{vehicleId});
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
+if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function'){
+  const rule=ServiceIntervalSOT.active(cat,vehicleId);
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
+if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'){
+  const rule=VehicleServiceSOT.resolveReminderRule(cat,vehicleId);
+  if(rule&&rule.intervalBulan!==null)return rule.intervalBulan;
+}
+return(cat&&Number(cat.intervalBulan)>0)?Number(cat.intervalBulan):null;
+}
+// S2041: every persisted service-event interval must use the same canonical
+// interval as the reminder calculation. Checklist/master values are fallback
+// only; they must not overwrite a vehicle-specific/manual SOT interval.
+function resolveServiceEventIntervalSnapshotValue(vehicleId,cat,master,axis){
+  const months=axis==='months';
+  const effective=months
+    ?(typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):null)
+    :(typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):null);
+  if(effective!==null&&effective!==undefined&&Number.isFinite(Number(effective)))return Number(effective);
+  const masterValue=months?(master&&(master.intervalTimeMonths??master.intervalBulan)):(master&&master.intervalKm);
+  if(masterValue!==null&&masterValue!==undefined&&Number.isFinite(Number(masterValue)))return Number(masterValue);
+  const categoryValue=months?(cat&&cat.intervalBulan):(cat&&cat.intervalKm);
+  return Number.isFinite(Number(categoryValue))&&Number(categoryValue)>0?Number(categoryValue):null;
+}
+// P24 canonical part-history contract: getPartUsageHistory, getPartPriceHistoryHtml, compareServiceHistoryRecency.
+function compareServiceHistoryRecencyLocal(a,b){
+  if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency==='function'&&window.compareServiceHistoryRecency!==compareServiceHistoryRecencyLocal)return window.compareServiceHistoryRecency(a,b);
+  const da=parseServiceDateOnly(a&&a.date), db=parseServiceDateOnly(b&&b.date);
+  const av=!!da,bv=!!db;
+  if(av!==bv)return av?-1:1;
+  if(av){
+    const d=db.getTime()-da.getTime();
+    if(d)return d;
+  }
+  const ak=Number(a&&a.km),bk=Number(b&&b.km);
+  const akv=Number.isFinite(ak),bkv=Number.isFinite(bk);
+  if(akv!==bkv)return akv?-1:1;
+  if(akv&&bk!==ak)return bk-ak;
+  const at=Date.parse(a&& (a.updatedAt||a.createdAt||a.timestamp));
+  const bt=Date.parse(b&& (b.updatedAt||b.createdAt||b.timestamp));
+  if(Number.isFinite(at)||Number.isFinite(bt)){
+    const avT=Number.isFinite(at)?at:-Infinity,bvT=Number.isFinite(bt)?bt:-Infinity;
+    if(bvT!==avT)return bvT-avT;
+  }
+  return String(b&&b.id||'').localeCompare(String(a&&a.id||''));
+}
+if(typeof window!=='undefined'&&typeof window.compareServiceHistoryRecency!=='function')window.compareServiceHistoryRecency=compareServiceHistoryRecencyLocal;
+function getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder){
+  const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&matchesActionTypeForReset(s,cat,actionTypeFilter,forReminder));
+  logs.sort(compareServiceHistoryRecencyLocal);
+  return logs.length?logs[0]:null;
+}
+function getLastServiceDateForCat(vehicleId,cat,actionTypeFilter,forReminder){
+const log=getLatestServiceLogForCat(vehicleId,cat,actionTypeFilter,forReminder);
+return log&&parseServiceDateOnly(log.date)?log.date:null;
+}
+function getCanonicalServiceActionPolicy(cat){
+  const componentId=cat&&(cat.serviceComponentId||cat.componentId);
+  if(componentId&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'){
+    try{const hit=ServiceInputCatalog.itemById(componentId);if(hit&&hit.item)return hit.item;}catch(_e){/* use category projection below */}
+  }
+  return null;
+}
+function getEffectiveActionMode(cat){const policy=getCanonicalServiceActionPolicy(cat);return(policy&&policy.actionMode)||(cat&&cat.actionMode)||'ganti';}
+function getEffectiveResetType(cat){const policy=getCanonicalServiceActionPolicy(cat);return(policy&&policy.resetType)||(cat&&cat.resetType)||'km';}
+function getEffectiveGantiResetsInterval(cat){const policy=getCanonicalServiceActionPolicy(cat);if(policy&&typeof policy.gantiResetsInterval==='boolean')return policy.gantiResetsInterval;return cat&&typeof cat.gantiResetsInterval==='boolean'?cat.gantiResetsInterval:null;}
+function resolveResetActionTypeFilter(cat){
+const mode=getEffectiveActionMode(cat);
+if(mode==='periksa-conditional'){
+  // A conditional inspection result is not a replacement event. The master
+  // component policy wins over a stale persisted category projection.
+  return getEffectiveGantiResetsInterval(cat)===true?'ganti':'periksa';
+}
+const resetType=getEffectiveResetType(cat);
+if(resetType==='both'||resetType==='time')return'ganti';
+return null;
+}
+function normalizeServiceActionType(value){
+const raw=String(value||'').trim().toLowerCase().replace(/[ _-]+/g,'');
+if(['ganti','diganti','replace','replacement'].includes(raw))return'ganti';
+if(['pasang','pasangbaru','install','installed'].includes(raw))return'pasang';
+if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return'overhaul';
+if(['periksa','cek','check','inspect','inspeksi'].includes(raw))return'periksa';
+if(['bersih','bersihkan','clean','cleaning'].includes(raw))return'bersih';
+if(['setel','setting','adjust','setelulang'].includes(raw))return'setel';
+// Missing/blank action evidence is ambiguous legacy data, not proof of replacement.
+return raw||'unknown';
+}
+function isServiceIntervalResetAction(value){return['ganti','pasang','overhaul'].includes(normalizeServiceActionType(value));}
+function matchesActionTypeForReset(log,cat,actionTypeFilter,forReminder){
+// A history row may retain a legacy/session-level actionType that disagrees
+// with the component row in its checklist. For a component-scoped reminder,
+// the matching checklist action is the strongest evidence; otherwise one
+// component's replacement can incorrectly reset another component's interval.
+let checklistAction=null;
+const checklist=Array.isArray(log&&log.checklist)?log.checklist:[];
+const targetComponent=serviceComponentIdForCategory(cat);
+const targetCategory=String(cat&&cat.id||'');
+const rowMatches=row=>{
+  if(!row)return false;
+  const component=String(row.serviceComponentId||row.itemId||'');
+  const category=String(row.categoryId||'');
+  return !!((targetComponent&&component===String(targetComponent))||(targetCategory&&category===targetCategory));
+};
+const matchingRows=checklist.filter(row=>rowMatches(row));
+const matchingActions=matchingRows.map(row=>row&&row.actionType).filter(value=>value!=null&&String(value).trim()!=='').map(normalizeServiceActionType);
+const uniqueMatchingActions=Array.from(new Set(matchingActions));
+// S2175: if a multi-component checklist exists but no row can be tied to this
+// reminder category, the session-level action is not evidence for this target.
+// This is especially important for legacy categoryId-only history rows: the
+// category link may establish which history record is related, but it cannot
+// prove which checklist component was replaced. Fail closed for reset/reminder
+// queries while preserving non-filtered history display and single-row legacy.
+if((actionTypeFilter||forReminder)&&checklist.length>1&&matchingRows.length===0)return false;
+// S2169: a component-scoped checklist is authoritative as a whole. Do not let
+// a stale log-level action reset a component when its own checklist row has no
+// action (common in multi-component/legacy rows), and do not pick arbitrarily
+// when duplicate matching rows disagree. A single-row legacy record may still
+// use the root action for backward compatibility.
+if(matchingRows.length>1&&uniqueMatchingActions.length>1)return false;
+if(matchingRows.length>0&&matchingActions.length===0&&checklist.length>1)return false;
+if(uniqueMatchingActions.length===1)checklistAction=uniqueMatchingActions[0];
+const effType=normalizeServiceActionType(checklistAction!=null?checklistAction:(log&&log.actionType));
+// S2033: action filter is authoritative; conditional mode must not turn every
+// non-ganti action into a match for a requested 'periksa' baseline.
+if(actionTypeFilter){
+  const wanted=normalizeServiceActionType(actionTypeFilter);
+  const matched=wanted==='ganti'?isServiceIntervalResetAction(effType):effType===wanted;
+  if(!matched)return false;
+  if(forReminder&&getEffectiveActionMode(cat)==='periksa-conditional'&&getEffectiveGantiResetsInterval(cat)===false&&effType==='ganti')return false;
+  return true;
+}
+if(forReminder&&getEffectiveActionMode(cat)==='periksa-conditional'&&getEffectiveGantiResetsInterval(cat)===false&&effType==='ganti')return false;
+if(!actionTypeFilter){
+  if(!forReminder)return true;
+  // Conditional reminders use the inspection axis when no explicit filter is supplied.
+  if(getEffectiveActionMode(cat)==='periksa-conditional')return effType==='periksa';
+  const mode=normalizeServiceActionType(getEffectiveActionMode(cat));
+  if(mode&&mode!=='ganti'&&mode!=='periksa'&&mode!=='alternate'&&mode!=='none'&&mode!=='periconditional')return effType===mode;
+  return isServiceIntervalResetAction(effType);
+}
+return true;
+}
+function suggestNextBusiAction(vehicleId,cat){
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat));
+return(logs.length%2===0)?'periksa':'ganti';
+}
+function parseServiceDateOnly(value){
+  if(value instanceof Date)return isNaN(value)?null:new Date(value.getTime());
+  const m=String(value??'').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m){
+    const y=Number(m[1]),mo=Number(m[2])-1,d=Number(m[3]);
+    const out=new Date(y,mo,d);
+    if(out.getFullYear()===y&&out.getMonth()===mo&&out.getDate()===d)return out;
+    return null;
+  }
+  const out=new Date(value);
+  return isNaN(out)?null:out;
+}
+function formatServiceDateOnly(date){
+  const d=parseServiceDateOnly(date);
+  if(!d)return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function addServiceMonthsClamped(date,months){
+  const d=parseServiceDateOnly(date);
+  const n=Number(months);
+  if(!d||!Number.isFinite(n))return null;
+  const whole=Math.trunc(n);
+  const targetMonth=d.getMonth()+whole;
+  const out=new Date(d.getFullYear(),targetMonth,1);
+  const lastDay=new Date(out.getFullYear(),out.getMonth()+1,0).getDate();
+  out.setDate(Math.min(d.getDate(),lastDay));
+  return out;
+}
+function diffServiceDays(dateA,dateB){
+  const a=parseServiceDateOnly(dateA),b=parseServiceDateOnly(dateB);
+  if(!a||!b)return null;
+  const utcA=Date.UTC(a.getFullYear(),a.getMonth(),a.getDate());
+  const utcB=Date.UTC(b.getFullYear(),b.getMonth(),b.getDate());
+  return (utcB-utcA)/86400000;
+}
+function monthsSinceISO(dateISO,nowISO){
+if(!dateISO)return null;
+const days=diffServiceDays(dateISO,nowISO?nowISO:new Date());
+return days==null?null:days/30.4368;
+}
+function buildServiceNextDueSnapshot({vehicleId,cat,serviceKm,serviceDate,actionType}={}){
+  if(!cat)return{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+  const schedule=getMaintenanceSchedule(vehicleId,cat);
+  const action=normalizeServiceActionType(actionType);
+  const inspectAction=normalizeServiceActionType(schedule&&schedule.inspectAction||'periksa');
+  const replaceAction=normalizeServiceActionType(schedule&&schedule.replaceAction||'ganti');
+  const hasInspectAxis=!!(schedule&&(Number(schedule.inspectKm)>0||Number(schedule.inspectMonths)>0||Number(schedule.inspectDays)>0));
+  const hasReplaceAxis=!!(schedule&&(Number(schedule.replaceKm)>0||Number(schedule.replaceMonths)>0||Number(schedule.replaceDays)>0));
+  const replacementEvent=isServiceIntervalResetAction(action);
+  // Keep the reset semantics shared with reminder history matching: ganti,
+  // pasang, and overhaul are replacement-family events even when the schedule
+  // labels its canonical replaceAction as only "ganti".
+  let resetAxis='';
+  if(schedule){
+    if(hasReplaceAxis&&(replacementEvent||action===replaceAction))resetAxis='replace';
+    else if(hasInspectAxis&&action===inspectAction&&!replacementEvent)resetAxis='inspect';
+  }else if(replacementEvent)resetAxis='replace';
+  const baselineAxis=resetAxis || (schedule&&hasInspectAxis&&action===inspectAction&&!replacementEvent?'inspect':(hasReplaceAxis?'replace':(hasInspectAxis?'inspect':'replace')));
+  let intervalKm=null,intervalBulan=null,intervalHari=null;
+  if(schedule){
+    const isInspect=baselineAxis==='inspect';
+    intervalKm=isInspect?schedule.inspectKm:schedule.replaceKm;
+    intervalBulan=isInspect?schedule.inspectMonths:schedule.replaceMonths;
+    intervalHari=isInspect?schedule.inspectDays:schedule.replaceDays;
+    // Legacy/persisted categories can carry an interval without a dedicated
+    // axis in the older schedule registry. Preserve that value as fallback.
+    if(!(Number(intervalKm)>0)&&!(Number(intervalBulan)>0)&&!(Number(intervalHari)>0)){
+      intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
+      intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+    }
+  }else{
+    intervalKm=typeof getEffectiveIntervalKm==='function'?getEffectiveIntervalKm(vehicleId,cat):(cat.intervalKm>0?cat.intervalKm:null);
+    intervalBulan=typeof getEffectiveIntervalBulan==='function'?getEffectiveIntervalBulan(cat,vehicleId):(cat.intervalBulan>0?cat.intervalBulan:null);
+    intervalHari=null;
+  }
+  // Null/empty odometer means unknown, not an actual 0 km reading.
+  let baseKm=serviceKm===null||serviceKm===undefined||serviceKm===''?NaN:Number(serviceKm);
+  let baseDate=parseServiceDateOnly(serviceDate||new Date());
+  if(!resetAxis){
+    // Snapshot actions that do not reset an axis must not move its baseline.
+    // Use the same component identity matcher and reset-family semantics as
+    // computeServiceUrgency(), not a raw action-string equality check.
+    const axisAction=baselineAxis==='inspect'?inspectAction:replaceAction;
+    const prior=(Array.isArray(D.servisLogs)?D.servisLogs:[])
+      .filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)&&(
+        baselineAxis==='replace' ? isServiceIntervalResetAction(s.actionType) : normalizeServiceActionType(s.actionType)===axisAction
+      ))
+      .slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
+    if(prior){
+      baseKm=prior.km!=null&&Number.isFinite(Number(prior.km))?Number(prior.km):NaN;
+      baseDate=parseServiceDateOnly(prior.date);
+    }else{
+      baseKm=NaN;
+      baseDate=null;
+    }
+  }
+  const nextDueKm=Number(intervalKm)>0&&Number.isFinite(baseKm)?baseKm+Number(intervalKm):null;
+  let nextDueDate=null;
+  if(Number(intervalBulan)>0&&baseDate){
+    const d=addServiceMonthsClamped(baseDate,Number(intervalBulan));
+    nextDueDate=formatServiceDateOnly(d);
+  }else if(Number(intervalHari)>0&&baseDate){
+    const d=parseServiceDateOnly(baseDate);
+    if(d){d.setDate(d.getDate()+Number(intervalHari));nextDueDate=formatServiceDateOnly(d);}
+  }
+  let nextDueAxis='none';
+  if(nextDueKm!==null&&nextDueDate)nextDueAxis='km_or_date';
+  else if(nextDueKm!==null)nextDueAxis='km';
+  else if(nextDueDate)nextDueAxis='date';
+  return{nextDueKm,nextDueDate,nextDueAxis,intervalKmAtService:Number(intervalKm)>0?Number(intervalKm):null,intervalBulanAtService:Number(intervalBulan)>0?Number(intervalBulan):null,intervalHariAtService:Number(intervalHari)>0?Number(intervalHari):null};
+}
+function resolveServiceStatusMeta(score){
+  const n=Number(score);
+  if(score===null||score===undefined||score===''||!Number.isFinite(n))return{code:'unknown',label:'Belum diketahui',icon:'⚪',severity:0};
+  // Shared boundary: any negative remaining interval is overdue; zero is due now.
+  if(n<0)return{code:'terlewat',label:'Terlambat',icon:'⚫',severity:4};
+  if(n===0)return{code:'jatuh_tempo',label:'Jatuh tempo',icon:'🔴',severity:3};
+  if(n<=0.15)return{code:'segera',label:'Segera',icon:'🟡',severity:2};
+  if(n<=0.30)return{code:'mendekati',label:'Mendekati',icon:'🔵',severity:1};
+  return{code:'aman',label:'Aman',icon:'🟢',severity:0};
+}
+function computeServiceUrgency({vehicleId,cat,curKm,kmPerDay,nowISO,historyRows}={}){
+// S2040: existing/legacy motorcycle mode uses actual action history as the
+// baseline. New-bike/KPB milestones are intentionally outside Car Notes.
+if(typeof ServiceLegacyMaintenance!=='undefined'&&ServiceLegacyMaintenance&&typeof ServiceLegacyMaintenance.isLegacy==='function'&&ServiceLegacyMaintenance.isLegacy(vehicleId)){
+  const cid=cat&&(cat.serviceComponentId||cat.componentId||cat.id)||null;
+  if(cid&&typeof ServiceLegacyMaintenance.evaluateComponent==='function'){
+    const legacy=ServiceLegacyMaintenance.evaluateComponent(vehicleId,cid,cat,{now:nowISO||new Date(),vehicle:{id:vehicleId,currentOdometer:Number.isFinite(curKm)?curKm:null}});
+    if(legacy&&legacy.ok&&legacy.states&&legacy.states.length){
+      const due=legacy.states.filter(x=>x.status==='DUE');
+      const baseline=legacy.states.filter(x=>x.status==='BASELINE_REQUIRED');
+      const candidates=(due.length?due:legacy.states.filter(x=>x.status!=='BASELINE_REQUIRED')).slice().sort((a,b)=>{
+        const ar=a.remainingKm==null?Number.POSITIVE_INFINITY:a.remainingKm;
+        const br=b.remainingKm==null?Number.POSITIVE_INFINITY:b.remainingKm;
+        return ar-br;
+      });
+      const c=candidates[0]||baseline[0];
+      if(c){
+        const intervalKm=Number(c.nextDueKm)-Number(c.lastServiceKm);
+        const remain=c.remainingKm;
+        let status='aman',statusLabel='Aman',severity=0;
+        if(c.status==='DUE'){status=remain!=null&&remain<0?'terlewat':'jatuh_tempo';statusLabel=remain!=null&&remain<0?'Terlewat':'Jatuh tempo';severity=remain!=null&&remain<0?4:3;}
+        else if(c.status==='BASELINE_REQUIRED'){status='mendekati';statusLabel='Baseline perlu dilengkapi';severity=1;}
+        else if(Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null){const f=remain/intervalKm;if(f<=.15){status='segera';statusLabel='Segera';severity=2;}else if(f<=.30){status='mendekati';statusLabel='Mendekati';severity=1;}}
+        const dueDate=c.nextDueDate||null;
+        const frac=Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null?remain/intervalKm:null;
+        return {action:c.action,intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,lastKm:c.lastServiceKm??null,sisaKm:remain??null,fracRemainKm:frac,intervalBulan:null,sisaBulan:null,fracRemainBulan:null,intervalHari:null,sisaHari:null,fracRemainHari:null,limitingAxis:c.trigger==='time'?'bulan':'km',score:frac??(c.status==='BASELINE_REQUIRED'?1:0),lastDate:c.lastServiceDate||null,sourceHistoryId:c.lastServiceId||null,status,statusLabel,statusIcon:status==='terlewat'?'⚫':status==='jatuh_tempo'?'🔴':status==='segera'?'🟡':status==='mendekati'?'🔵':'🟢',statusSeverity:severity,estDateISO:dueDate,nextDueKm:c.nextDueKm??null,nextDueDate:dueDate,nextDueAxis:dueDate&&c.nextDueKm!=null?'km_or_date':(c.nextDueKm!=null?'km':(dueDate?'date':'none')),nextAction:c.action,maintenanceType:'legacy',condition:null,baselineRequired:c.status==='BASELINE_REQUIRED'};
+      }
+    }
+  }
+}
+const schedule=getMaintenanceSchedule(vehicleId,cat);
+const resetFilter=resolveResetActionTypeFilter(cat);
+const conditionOnly=!!(cat&&(cat.conditionBased===true||cat.reminderMode==='condition'||cat.maintenanceMode==='condition')||schedule&&(schedule.maintenanceType==='condition'||schedule.rule&&schedule.rule.conditionBased===true));
+if(conditionOnly){
+  const rows=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:[]);
+  const latest=rows.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)).slice().sort(compareServiceHistoryRecencyLocal)[0]||null;
+  // S2177: saved multi-component sessions put condition results on each
+  // checklist row, while the legacy root conditionResult is only projected
+  // from the first row. Prefer the target component/category's own evidence;
+  // otherwise a damaged second component can be silently reported as normal.
+  const conditionFromChecklist=(log,target)=>{
+    const checklist=Array.isArray(log&&log.checklist)?log.checklist:[];
+    if(!checklist.length)return undefined;
+    const component=String(serviceComponentIdForCategory(target)||'');
+    const category=String(target&&target.id||'');
+    const matches=checklist.filter(row=>row&&((component&&String(row.serviceComponentId||row.itemId||'')===component)||(category&&String(row.categoryId||'')===category)));
+    const values=matches.map(row=>String(row.conditionResult||row.conditionStatus||'').trim().toLowerCase()).filter(Boolean);
+    if(values.some(value=>['rusak','broken','damaged','gagal'].includes(value)))return values.find(value=>['rusak','broken','damaged','gagal'].includes(value));
+    if(values.length)return values[0];
+    // No checklist match retains the legacy category-linked root evidence.
+    if(!matches.length)return undefined;
+    // Legacy root condition belongs to the first checklist item only. It is
+    // safe as fallback only when that item is the matched target.
+    if(checklist.length===1||matches.some(row=>row===checklist[0]))return String(log&& (log.conditionResult||log.conditionStatus)||'').toLowerCase();
+    return null;
+  };
+  const componentCondition=conditionFromChecklist(latest,cat);
+  const condition=componentCondition===null?'':(componentCondition===undefined?String(latest&&(latest.conditionResult||latest.conditionStatus)||'').toLowerCase():componentCondition);
+  // S2176: condition-only reminders must obey the same component-scoped action
+  // authority as interval reminders. A stale session-level `ganti` must not
+  // hide a damaged condition when a multi-component checklist does not prove
+  // replacement for this category.
+  const replaced=!!latest&&matchesActionTypeForReset(latest,cat,'ganti',true);
+  const damaged=!replaced&&['rusak','broken','damaged','gagal'].includes(condition);
+  const status=damaged?'rusak':'normal';
+  return {sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'condition',status,statusLabel:damaged?'Rusak':'Normal',statusIcon:damaged?'🔴':'🟢',statusSeverity:damaged?3:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:damaged?'perbaiki':'pantau',maintenanceType:'condition',condition:damaged?'rusak':'normal',sourceHistoryId:latest&&latest.id||null,lastKm:null,lastDate:latest&&latest.date||null};
+}
+const currentKm=curKm===null||curKm===undefined||curKm===''?null:(Number.isFinite(Number(curKm))&&Number(curKm)>=0?Number(curKm):null);
+const kmPerDaySafe=Number.isFinite(kmPerDay)&&kmPerDay>0?kmPerDay:null;
+const candidates=[];
+const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
+  const hasKm=intervalKm>0, hasMonths=intervalMonths>0, hasDays=intervalDays>0;
+  if(!hasKm&&!hasMonths&&!hasDays)return;
+  let lastKm=null,lastDate=null,latestHistory=null;
+  let remainingKm=null,fracKm=null,remainingMonths=null,fracMonths=null,remainingDays=null,fracDays=null;
+  if(hasKm||hasMonths||hasDays){
+    // S2230: a replacement (ganti/pasang/overhaul) also restarts the
+    // inspection clock. Without this, an inspect axis with no 'periksa' log
+    // treated the whole odometer as "distance since last service" and flagged
+    // a part replaced today as overdue (Roller CVT: replaced at 21.311 km, shown
+    // "Terlewat 9.311 km"). Components whose policy says replacement does NOT
+    // reset (gantiResetsInterval=false) stay excluded by matchesActionTypeForReset.
+    const inspectAxis=normalizeServiceActionType(lastFilter)==='periksa';
+    // A replacement logged above the current odometer is bad data and must not
+    // become a baseline (it would yield negative distance travelled).
+    const replacementOk=(s)=>currentKm===null||!(s&&s.km!==null&&s.km!==undefined&&s.km!==''&&Number.isFinite(Number(s.km))&&Number(s.km)>currentKm);
+    const pickLatest=(rows)=>{
+      let best=null;
+      rows.forEach(s=>{if(s&&(best===null||compareServiceHistoryRecencyLocal(s,best)<0))best=s;});
+      return best;
+    };
+    const poolSource=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:null);
+    const pool=poolSource?poolSource.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)):null;
+    if(pool){
+      latestHistory=pickLatest(pool.filter(s=>replacementOk(s)&&(matchesActionTypeForReset(s,cat,lastFilter,true)||(inspectAxis&&matchesActionTypeForReset(s,cat,'ganti',true)))));
+    }else if(typeof getLatestServiceLogForCat==='function'){
+      latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+      if(latestHistory&&!replacementOk(latestHistory))latestHistory=null;
+      if(inspectAxis){
+        const replaced=getLatestServiceLogForCat(vehicleId,cat,'ganti',true);
+        if(replaced&&replacementOk(replaced)&&(!latestHistory||compareServiceHistoryRecencyLocal(replaced,latestHistory)<0))latestHistory=replaced;
+      }
+    }
+  }
+  if(hasKm){
+    lastKm=latestHistory&&latestHistory.km!==null&&latestHistory.km!==undefined&&latestHistory.km!==''&&Number.isFinite(Number(latestHistory.km))&&Number(latestHistory.km)>=0?Number(latestHistory.km):null;
+    // Never invent a 0-km baseline when no valid replacement/inspection event exists.
+    if(lastKm!==null&&currentKm!==null&&currentKm>=lastKm){
+      const traveled=currentKm-lastKm;
+      remainingKm=intervalKm-traveled; fracKm=remainingKm/intervalKm;
+    }
+  }
+  if(hasMonths||hasDays){
+    lastDate=latestHistory&&parseServiceDateOnly(latestHistory.date)?latestHistory.date:null;
+    const elapsedDays=lastDate?diffServiceDays(lastDate,nowISO||new Date()):null;
+    if(elapsedDays!==null&&elapsedDays>=0){
+      if(hasMonths){remainingMonths=intervalMonths-(elapsedDays/30.4368);fracMonths=remainingMonths/intervalMonths;}
+      if(hasDays){remainingDays=intervalDays-elapsedDays;fracDays=remainingDays/intervalDays;}
+    }
+  }
+  let limitingAxis='km',score=fracKm;
+  if(score==null){limitingAxis=hasMonths?'bulan':'hari';score=hasMonths?fracMonths:fracDays;}
+  if(fracMonths!=null&&(score==null||fracMonths<score)){limitingAxis='bulan';score=fracMonths;}
+  if(fracDays!=null&&(score==null||fracDays<score)){limitingAxis='hari';score=fracDays;}
+  candidates.push({action,intervalKm:hasKm?intervalKm:null,lastKm,sisaKm:remainingKm,fracRemainKm:fracKm,intervalBulan:hasMonths?intervalMonths:null,sisaBulan:remainingMonths,fracRemainBulan:fracMonths,intervalHari:hasDays?intervalDays:null,sisaHari:remainingDays,fracRemainHari:fracDays,limitingAxis,score,lastDate,sourceHistoryId:latestHistory&&latestHistory.id||null,reconciliationCode:latestHistory&&typeof ServiceHistoryReminderReconciliationSOT!=='undefined'&&ServiceHistoryReminderReconciliationSOT&&typeof ServiceHistoryReminderReconciliationSOT.match==='function'?ServiceHistoryReminderReconciliationSOT.match(latestHistory,cat,{vehicleId}).code:null});
+};
+if(schedule){
+  const type=schedule.maintenanceType;
+  const inspectKm=schedule.inspectKm;
+  const replaceKm=schedule.replaceKm;
+  if((inspectKm||schedule.inspectMonths||schedule.inspectDays) && (type==='periodic'||type==='periodic_or_condition')) {
+    const inspectAction=schedule.inspectAction||'periksa';
+    addCandidate(inspectAction,inspectKm,inspectAction,schedule.inspectMonths,schedule.inspectDays);
+  }
+  if(type!=='event_based' && (replaceKm||schedule.replaceMonths||schedule.replaceDays)) {
+    const replaceAction=schedule.replaceAction||'ganti';
+    addCandidate(replaceAction,replaceKm,replaceAction,schedule.replaceMonths,schedule.replaceDays);
+  }
+} else {
+  const intervalKm=getEffectiveIntervalKm(vehicleId,cat);
+  const intervalBulan=getEffectiveIntervalBulan(cat,vehicleId);
+  addCandidate('ganti',intervalKm,resetFilter,intervalBulan,null);
+}
+if(!candidates.length){
+  return{sisaKm:null,intervalKm:null,sisaBulan:null,intervalBulan:null,sisaHari:null,intervalHari:null,limitingAxis:'none',status:'unknown',statusLabel:'Belum diketahui',statusIcon:'⚪',statusSeverity:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:schedule&&schedule.maintenanceType==='event_based'?'event_based':null,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null,baselineRequired:true};
+}
+const knownCandidates=candidates.filter(candidate=>candidate.score!==null&&candidate.score!==undefined&&Number.isFinite(Number(candidate.score)));
+if(!knownCandidates.length){
+  const c=candidates[0];
+  return Object.assign({},c,{status:'unknown',statusLabel:'Belum diketahui',statusIcon:'⚪',statusSeverity:0,estDateISO:null,nextDueKm:null,nextDueDate:null,nextDueAxis:'none',nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null,baselineRequired:true});
+}
+const c=knownCandidates.sort((a,b)=>a.score-b.score)[0];
+const statusMeta=resolveServiceStatusMeta(c.score);
+const status=statusMeta.code;
+let estDateISO=null;
+let nextDueKm=null,nextDueDate=null,nextDueAxis='none';
+if(c.lastKm!=null&&c.intervalKm>0)nextDueKm=c.lastKm+c.intervalKm;
+if(c.lastDate){
+  if(c.intervalBulan>0){const d=addServiceMonthsClamped(c.lastDate,c.intervalBulan);if(d)nextDueDate=formatServiceDateOnly(d);}
+  if(c.intervalHari>0&&!nextDueDate){const d=parseServiceDateOnly(c.lastDate);if(d){d.setDate(d.getDate()+c.intervalHari);nextDueDate=formatServiceDateOnly(d);}}
+}
+if(nextDueKm!==null&&nextDueDate)nextDueAxis='km_or_date';
+else if(nextDueKm!==null)nextDueAxis='km';
+else if(nextDueDate)nextDueAxis='date';
+if(c.limitingAxis==='bulan'||c.limitingAxis==='hari')estDateISO=nextDueDate;
+else if(typeof estimateServiceDateISO==='function')estDateISO=estimateServiceDateISO(c.sisaKm,kmPerDaySafe);
+return Object.assign({},c,{status,statusLabel:statusMeta.label,statusIcon:statusMeta.icon,statusSeverity:statusMeta.severity,estDateISO,nextDueKm,nextDueDate,nextDueAxis,nextAction:c.action,maintenanceType:schedule&&schedule.maintenanceType||null,condition:schedule&&schedule.condition||null});
+}
+function recommendIntervalKm(vehicleId,cat){
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&s.km>0&&servisLogMatchesCat(s,cat)).sort((a,b)=>a.km-b.km);
+if(logs.length<2)return{ok:false,reason:'Belum cukup histori servis (min. 2 catatan dgn KM terisi)',count:logs.length};
+const deltas=[];
+for(let i=1;i<logs.length;i++){
+const d=logs[i].km-logs[i-1].km;
+if(d>0)deltas.push(d);
+}
+if(!deltas.length)return{ok:false,reason:'Data KM histori tidak berurutan naik, tidak bisa dihitung',count:logs.length};
+const avg=Math.round(deltas.reduce((s,d)=>s+d,0)/deltas.length/100)*100;
+return{ok:true,avgKm:avg,count:logs.length,sampleCount:deltas.length};
+}
+function historyMatchesName(log,nameLower){
+const item=(log.item||'').toLowerCase().trim();
+if(!item||!nameLower)return false;
+if(item===nameLower)return true;
+if(item.includes(nameLower))return true;
+if(nameLower.includes(item)&&item.length>=4)return true;
+return false;
+}
+function historyStatsForName(vehicleId,name){
+const nameLower=(name||'').trim().toLowerCase();
+if(!nameLower)return{count:0,avgKm:null};
+const logs=(D.servisLogs||[]).filter(s=>_spVidEq(s.vehicleId,vehicleId)&&historyMatchesName(s,nameLower));
+const withKm=logs.filter(s=>s.km>0).sort((a,b)=>a.km-b.km);
+let avgKm=null;
+if(withKm.length>=2){
+const deltas=[];
+for(let i=1;i<withKm.length;i++){
+const d=withKm[i].km-withKm[i-1].km;
+if(d>0)deltas.push(d);
+}
+if(deltas.length)avgKm=Math.round(deltas.reduce((s,d)=>s+d,0)/deltas.length/100)*100;
+}
+return{count:logs.length,avgKm};
+}
+async function editVehicleIntervalOverride(catId){
+const cat=D.sparepartCats.find(c=>c.id===catId);
+if(!cat){toast('⚠️ Kategori sparepart tidak ditemukan');return;}
+const veh=D.vehicles.find(v=>v.id===curVehicleId);
+if(!veh){toast('⚠️ Pilih kendaraan dulu');return;}
+const current=getEffectiveIntervalKm(curVehicleId,cat);
+const reko=recommendIntervalKm(curVehicleId,cat);
+const sourceNow=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(cat,curVehicleId):null;
+const sourceLabel=sourceNow&&sourceNow.source==='ai-rekomendasi'?'AI rekomendasi':sourceNow&&sourceNow.source==='manual'?'manual':'pedoman';
+const rekoLine=(reko.ok&&Math.abs(reko.avgKm-current)>=100)?`\n\n💡 AI/rekomendasi pola riwayat: ~${reko.avgKm.toLocaleString('id-ID')} km (${reko.count} catatan). Ini hanya saran — pilih dengan tombol rekomendasi atau isi angka manual.`:'';
+const val=await showPromptModal({title:'Interval Servis '+veh.name,message:`Interval aktif: ${current?current.toLocaleString('id-ID')+' km':'belum ditetapkan'} · sumber: ${sourceLabel}.\n\nSimpan angka manual untuk menjadikannya SOT kendaraan. Kosongkan/0 untuk kembali ke pedoman standar. ${rekoLine}`,icon:'🔧',inputType:'number',defaultValue:current});
+if(val===null)return;
+const num=parseFloat(val);
+let result=null;
+if(val===''||isNaN(num)||num<=0){
+  const master=typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function'&&cat.serviceComponentId?ServiceInputCatalog.itemById(cat.serviceComponentId):null;
+  const baseKm=Number(master&&master.item&&master.item.intervalKm)>0?Number(master.item.intervalKm):Number(cat.intervalKm)>0?Number(cat.intervalKm):0;
+  const baseMo=Number(master&&master.item&&master.item.intervalTimeMonths)>0?Number(master.item.intervalTimeMonths):Number(cat.intervalBulan)>0?Number(cat.intervalBulan):0;
+  if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setGuideline==='function')result=ServiceIntervalSOT.setGuideline(cat,curVehicleId,baseKm,baseMo,{from:'manual-reset'});
+  toast('✅ Kembali ke interval pedoman standar');
+} else {
+  if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.setManual==='function')result=ServiceIntervalSOT.setManual(cat,curVehicleId,num,0);
+  toast('✅ Interval SOT manual disimpan: '+num.toLocaleString('id-ID')+' km');
+}
+if(result&&result.ok){
+  const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(cat,curVehicleId):VehicleServiceSOT.resolveReminderRule(cat,curVehicleId);
+  if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{intervalKm:resolved.intervalKm||0,intervalBulan:resolved.intervalBulan||0});const _rows=VehicleCarNotesSOT.getServiceCategories(curVehicleId)||[];const _u=_rows.find(c=>String(c.id)===String(cat.id));if(_u)Object.assign(cat,_u);}
+  else {cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');}
+  Sparepart._recoCache=null;
+  Sparepart._catalogNameCache=[];
+  save();Servis.renderReminder();renderDashboardServisReminder();
+}
+}
+function getLastServiceKm(vehicleId){
+const logs=D.servisLogs.filter(s=>_spVidEq(s.vehicleId,vehicleId)&&Number.isFinite(Number(s.km)));
+logs.sort(typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency:(a,b)=>String(b.date||'').localeCompare(String(a.date||''))||Number(b.km)-Number(a.km));
+return logs.length?Number(logs[0].km):0;
+}
+function matchingVehicleName(name){
+if(!name)return null;
+const n=name.trim().toLowerCase();
+return D.vehicles.find(v=>v.name.trim().toLowerCase()===n)||null;
+}
+function codeFromName(name){
+if(!name)return '';
+const words=name.replace(/[\/\(\)]/g,' ').trim().split(/\s+/).filter(Boolean);
+let code;
+if(words.length>1) code=words.map(w=>w[0]).join('').slice(0,4);
+else code=words[0].slice(0,3);
+return code.toUpperCase();
+}
+function _renderSuggestBox(name){
+const boxEl=document.getElementById('sparepartAiSuggestBox');
+if(!boxEl)return;
+const reko=(typeof suggestServiceIntervalKm==='function')?suggestServiceIntervalKm(name,curVehicleId):null;
+boxEl.classList.remove('u-dnone');
+if(!reko){
+boxEl.innerHTML=`<div class="u-fs12 u-t2">🤖 Belum ada rekomendasi pasti utk "${escapeHtml(name)}" di data buku panduan yang tersimpan. Isi manual sesuai buku servis kendaraanmu ya.</div>`;
+return;
+}
+boxEl.innerHTML=`<div class="u-fs12" style="line-height:1.5"><b>🤖 Rekomendasi: setiap ${reko.km.toLocaleString('id-ID')} km</b><br><span class="u-t2">Sumber: ${escapeHtml(reko.source)}</span></div><button type="button" class="btn btn-primary btn-sm u-mt6" data-action="applySparepartIntervalSuggestion" data-args="${escapeHtml(JSON.stringify([reko.km]))}">✅ Pakai Angka Ini</button>`;
+}
+const Sparepart={
+catEditIdx:null,
+catEditId:null,
+stockEditIdx:null,
+_catalogNameCache:[],
+activeMasterCategoryFilter:null,
+_masterCategoryFilterPrefsLoaded:false,
+_masterCategoryFilterStorageKey:'sparepartMasterCategoryFilterPrefs',
+_loadMasterCategoryFilterPrefsOnce(){
+if(Sparepart._masterCategoryFilterPrefsLoaded)return;
+Sparepart._masterCategoryFilterPrefsLoaded=true;
+if(typeof localStorage==='undefined')return;
+try{
+const raw=localStorage.getItem(Sparepart._masterCategoryFilterStorageKey);
+if(!raw)return;
+const parsed=JSON.parse(raw);
+const id=parsed&&parsed.activeMasterCategoryFilter;
+if(id===null)return;
+if(typeof id!=='string')return;
+const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
+const hasDb=typeof DatabaseAPI!=='undefined'&&DatabaseAPI&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+const validIds=hasSot?(ServiceTaxonomySOT.categories()||[]).map(c=>c.id):(hasDb?(DatabaseAPI.masterCategory.getAll()||[]).map(c=>c&&c.id).filter(Boolean):[]);
+if(id===UNCATEGORIZED_FILTER_ID||validIds.indexOf(id)!==-1){
+Sparepart.activeMasterCategoryFilter=id;
+}
+}catch(err){
+// Invalid filter preference is non-fatal; retain the live default.
+}
+},
+_saveMasterCategoryFilterPrefs(){
+if(typeof localStorage==='undefined')return;
+try{
+localStorage.setItem(Sparepart._masterCategoryFilterStorageKey,JSON.stringify({activeMasterCategoryFilter:Sparepart.activeMasterCategoryFilter}));
+}catch(err){
+// Preference persistence is best-effort; storage failures must not block UI.
+}
+},
+dashReminderMasterCatBadgeHTML(cat,vehicleId){
+const r=(typeof resolveCatGroup==='function')?resolveCatGroup(cat,vehicleId):null;
+if(!r||!r.masterCategoryName)return'';
+return` <span class="u-fs11 u-t2" style="opacity:.75">· ${r.masterCategoryIcon||'🔧'} ${escapeHtml(r.masterCategoryName)}</span>`;
+},
+updateMasterCatBadge(name,vehicleId){
+const wrapEl=document.getElementById('sparepartMasterCatBadgeWrap');
+if(!wrapEl)return;
+if(!name){wrapEl.classList.add('u-dnone');wrapEl.innerHTML='';return;}
+const r=(typeof resolveCatGroup==='function')?resolveCatGroup({name},vehicleId):null;
+if(!r||!r.masterCategoryName){wrapEl.classList.add('u-dnone');wrapEl.innerHTML='';return;}
+wrapEl.classList.remove('u-dnone');
+wrapEl.innerHTML=`${r.masterCategoryIcon||'🔧'} Kategori master: ${escapeHtml(r.masterCategoryName)}`;
+},
+updateMasterCatBadgeLive(){
+const nameEl=document.getElementById('sparepartName');
+const vehEl=document.getElementById('sparepartVehicleId');
+const name=nameEl?nameEl.value:'';
+const vehicleId=(vehEl&&vehEl.value)?vehEl.value:null;
+Sparepart.updateMasterCatBadge(name,vehicleId);
+},
+setMasterCategoryFilter(id){
+Sparepart.activeMasterCategoryFilter=id||null;
+Sparepart._saveMasterCategoryFilterPrefs();
+Sparepart.renderCatList();
+},
+renderMasterCategoryChips(beforeEl){
+const hasSot=typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.categories==='function';
+const hasDb=typeof DatabaseAPI!=='undefined'&&DatabaseAPI&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function';
+if(!hasSot&&!hasDb)return;
+let row=document.getElementById('sparepartMasterCatChipRow');
+if(!row){
+row=document.createElement('div');
+row.id='sparepartMasterCatChipRow';
+row.className='u-flex u-fs12 u-mb10';
+row.style.cssText='gap:6px;flex-wrap:wrap';
+beforeEl.insertAdjacentElement('beforebegin',row);
+}
+const cats=hasSot?(ServiceTaxonomySOT.categories()||[]):(DatabaseAPI.masterCategory.getAll()||[]);
+const options=[{id:null,label:'🔍 Semua'}].concat(cats.map(c=>({id:c.id,label:(c.icon||'🔧')+' '+c.name}))).concat([{id:UNCATEGORIZED_FILTER_ID,label:'❔ Belum Terklasifikasi'}]);
+row.innerHTML=options.map(o=>`<div class="chip ${o.id===Sparepart.activeMasterCategoryFilter?'active':''}" data-action="Sparepart.setMasterCategoryFilter" data-args="${escapeHtml(JSON.stringify([o.id]))}">${o.label}</div>`).join('');
+},
+isPartForVehicle(part,vehicleId){
+if(!vehicleId||!part)return true;
+if(part.vehicleId)return _spVidEq(part.vehicleId,vehicleId);
+if(!part.catalogId)return true;
+if(typeof VehicleCatalog==='undefined'||typeof VehicleCatalog.isLoaded!=='function'||!VehicleCatalog.isLoaded())return true;
+const store=VehicleCatalog.getStore();
+const catItem=(store&&Array.isArray(store.items))?store.items.find(it=>it.id===part.catalogId):null;
+if(!catItem)return true;
+if(!Array.isArray(catItem.compatibleVehicleIds)||!catItem.compatibleVehicleIds.length)return true;
+return catItem.compatibleVehicleIds.some(id=>String(id)===String(vehicleId));
+},
+autoFillCatCode(){
+const codeEl=document.getElementById('sparepartCode');
+if(!codeEl||codeEl.dataset.manual==='1')return;
+codeEl.value=codeFromName(document.getElementById('sparepartName').value);
+},
+populateDatalist(){
+const hasCatalog=typeof VehicleCatalog!=='undefined'&&VehicleCatalog&&typeof VehicleCatalog.getAll==='function';
+if(!hasCatalog)return;
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+VehicleCatalog.getAll().then(items=>{
+const filtered=(typeof VehicleCatalog.filterForVehicle==='function')?VehicleCatalog.filterForVehicle(items,vid):(items||[]);
+Sparepart._catalogNameCache=(filtered||[]).map(it=>it.partName).filter(Boolean);
+}).catch(()=>{});
+},
+getItemSuggestions(){
+const names=new Map();
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+D.sparepartCats.forEach(c=>{ if(c.name&&catVisibleForVehicle(c,vid)) names.set(c.name.toLowerCase(),c.name); });
+D.partsStock.forEach(p=>{ if(p.name&&p.qty>0&&Sparepart.isPartForVehicle(p,vid)&&!names.has(p.name.toLowerCase())) names.set(p.name.toLowerCase(),p.name); });
+(Sparepart._catalogNameCache||[]).forEach(n=>{ if(n&&!names.has(n.toLowerCase()))names.set(n.toLowerCase(),n); });
+return Array.from(names.values());
+},
+ensureCanonicalSparepartComponentCategories(){
+  const runtimeGroups=(typeof SERVICE_CHECKLIST_GROUPS!=='undefined'&&Array.isArray(SERVICE_CHECKLIST_GROUPS))?SERVICE_CHECKLIST_GROUPS:((typeof globalThis!=='undefined'&&Array.isArray(globalThis.__SERVICE_CHECKLIST_GROUPS__))?globalThis.__SERVICE_CHECKLIST_GROUPS__:[]);
+  if(!runtimeGroups.length||!Array.isArray(D.sparepartCats))return {ok:false,added:0,linked:0};
+  const stockIds=new Set([
+    'oli-mesin','filter-oli','busi','rantai-keteng-tensioner','filter-kawat-oli-mesin','paking-knalpot',
+    'v-belt-cvt','slide-piece-cvt','boss-pulley-drive-face','roller-cvt','kampas-kopling-ganda','mangkok-kopling-ganda','seal-driven-face','per-sentri','per-cvt','bearing-bak-cvt','busa-filter-cvt',
+    'throttle-body','isc','injector','filter-fuel-pump','selang-tutup-tangki','coolant','radiator-water-pump','thermostat',
+    'kampas-rem-depan','minyak-rem','kampas-rem-belakang','cakram-rem-depan','kaliper-rem-depan','master-rem-reservoir','tromol-rem-belakang','selang-rem',
+    'oli-shockbreaker','engine-mounting-bushing-arm','aki','saklar-sistem-penerangan','relay-sekring',
+    'ban-depan','ban-belakang','bearing-roda','filter-udara','oli-gardan','kabel-gas-standar-kunci'
+  ]);
+  const aliases={
+    'oli-gardan':'Oli Gardan/Transmisi',
+    'v-belt-cvt':'V-Belt (CVT)',
+    'kampas-rem-depan':'Kampas Rem Depan',
+    'kampas-rem-belakang':'Kampas Rem Belakang',
+    'minyak-rem':'Minyak Rem',
+    'filter-udara':'Filter Udara',
+    'aki':'Aki (cek/ganti)'
+  };
+  let added=0,linked=0;
+  runtimeGroups.forEach(g=>(g.items||[]).forEach(it=>{
+    if(!it||!stockIds.has(it.id))return;
+    const _vidProvision=(typeof curVehicleId!=='undefined'?curVehicleId:null);
+    /* S2433.1: jangan proyeksikan komponen yang tidak kompatibel dengan kendaraan aktif (master & kategori lama tidak dihapus) */
+    if(typeof ServisChecklist!=='undefined'&&ServisChecklist&&typeof ServisChecklist.isItemApplicable==='function'&&!ServisChecklist.isItemApplicable(it,_vidProvision))return;
+    let cat=(D.sparepartCats||[]).find(c=>c&&c.serviceComponentId===it.id&&(!c.vehicleId||String(c.vehicleId)===String(_vidProvision)));
+    if(!cat){
+      const targetName=aliases[it.id]||it.name;
+      const exact=(D.sparepartCats||[]).find(c=>c&&String(c.name||'').trim().toLowerCase()===targetName.trim().toLowerCase()&&(!c.vehicleId||String(c.vehicleId)===String(_vidProvision)));
+      cat=exact||null;
+    }
+    if(cat){
+      if(_vidProvision&&String(cat.vehicleId||'')!==String(_vidProvision)){const _scoped=Object.assign({},cat,{id:_spCatId(String(it.id)),vehicleId:_vidProvision});const _sr=(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')?VehicleCarNotesSOT.syncLegacyCategoryProjection(_scoped,'checklist-category-scope'):null;if(!_sr||!_sr.ok)D.sparepartCats.push(_scoped);cat=_scoped;}
+      let changed=false;
+      if(cat.serviceComponentId!==it.id){changed=true;}
+      if(cat.masterCategoryId!==g.masterCategoryId){changed=true;}
+      if(!cat.group)cat.group=g.group;
+      if(!cat.groupIcon){const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;if(mc&&mc.icon)cat.groupIcon=mc.icon;}
+      if(changed){
+        if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{serviceComponentId:it.id,masterCategoryId:g.masterCategoryId,group:cat.group,groupIcon:cat.groupIcon});const _rows=VehicleCarNotesSOT.getServiceCategories(curVehicleId)||[];const _u=_rows.find(c=>String(c.id)===String(cat.id));if(_u)Object.assign(cat,_u);}
+        else {cat.serviceComponentId=it.id;cat.masterCategoryId=g.masterCategoryId;linked++;}
+        linked++;
+      }
+      return;
+    }
+    const base='sp_component_'+it.id;
+    const idTaken=(D.sparepartCats||[]).some(c=>c&&c.id===base);
+    const mc=(typeof DatabaseAPI!=='undefined'&&DatabaseAPI.masterCategory&&typeof DatabaseAPI.masterCategory.getAll==='function')?(DatabaseAPI.masterCategory.getAll()||[]).find(x=>x.id===g.masterCategoryId):null;
+    const _sotCat={id:idTaken?base+'_'+Date.now():base,name:it.name,code:codeFromName(it.name),intervalKm:it.intervalKm||0,intervalBulan:it.intervalTimeMonths||0,masterCategoryId:g.masterCategoryId,serviceComponentId:it.id,showInReminder:(it.intervalKm>0||it.intervalTimeMonths>0),group:g.group,groupIcon:mc&&mc.icon?mc.icon:'',vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null)}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&_sotCat.vehicleId&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){const _r=VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotCat,'checklist-category-provision');if(!_r||!_r.ok)D.sparepartCats.push(_sotCat);} else D.sparepartCats.push(_sotCat);
+    added++;
+  }));
+  if(added||linked){Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();}
+  return {ok:true,added,linked};
+},
+// Sparepart UI layer: activeStockMasterCategoryFilter:null, activeStockComponentFilter:null, renderStockFilters(beforeEl).
+/* S2433.1: tipe/model kendaraan ikut kunci memo agar proyeksi dihitung ulang saat berubah */
+repairCategoryProjection(){
+// S2265: langkah repair eksplisit (bukan presenter). Idempoten: dijalankan sekali per kendaraan/jumlah kategori, lalu di-memo.
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const key=String(vid)+':'+(Array.isArray(D.sparepartCats)?D.sparepartCats.length:0)+':'+(typeof ServisChecklist!=='undefined'?ServisChecklist.scopeKeyForVehicle(vid):'');
+if(Sparepart._catRepairKey===key)return false;
+Sparepart._catRepairKey=key;
+Sparepart.ensureCanonicalSparepartComponentCategories();
+if(vid&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.reconcileLegacyCategoryProjection==='function'){
+  VehicleCarNotesSOT.reconcileLegacyCategoryProjection(vid);
+}
+return true;
+},
+renderCatList(){
+// Render purity S2263: category provisioning/reconciliation is an explicit repair/mutation task, never presentation.
+const el=document.getElementById('sparepartCatList');
+if(!el)return;
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+Sparepart._loadMasterCategoryFilterPrefsOnce();
+Sparepart.renderMasterCategoryChips(el);
+// S1964 legacy renderer contract: ServiceInputCatalog.itemById(c.serviceComponentId)
+// const compLabel=compRef&&compRef.item?(' • '+compRef.item.name):'';
+const hasCanonicalVehicleSOT=typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.getServiceCategories==='function';
+let projected;
+if(hasCanonicalVehicleSOT){
+  projected=(D.sparepartCats||[]).filter(c=>c&&vid!=null&&String(c.vehicleId)===String(vid)).map(c=>({cat:c,sot:getVehicleServiceCategorySOT(c,vid)})).filter(x=>x.sot);
+}else{
+  // Legacy UI harness/early-load compatibility only. Production with VehicleCarNotesSOT always takes the strict vehicle-scoped branch above.
+  projected=(D.sparepartCats||[]).map(c=>{
+    const g=typeof resolveCatGroup==='function'?resolveCatGroup(c,vid):null;
+    const comp=(c&&c.serviceComponentId&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(c.serviceComponentId):null;
+    return {cat:c,sot:{vehicleId:vid,masterCategoryId:c.masterCategoryId||(g&&g.masterCategoryId)||null,categoryName:(g&&(g.masterCategoryName||g.group))||null,serviceComponentId:c.serviceComponentId||null,componentName:(comp&&comp.item&&comp.item.name)||c.name||'',code:c.code||codeFromName(c.name||''),intervalKm:Number(c.intervalKm)||0,intervalBulan:Number(c.intervalBulan)||0,showInReminder:c.showInReminder!==false}};
+  });
+}
+let visible=projected;
+if(Sparepart.activeMasterCategoryFilter){
+  const isUncategorizedFilter=Sparepart.activeMasterCategoryFilter===UNCATEGORIZED_FILTER_ID;
+  visible=visible.filter(x=>isUncategorizedFilter
+    ?x.sot.masterCategoryId==null
+    :x.sot.masterCategoryId===Sparepart.activeMasterCategoryFilter);
+}
+if(!visible.length){
+  el.innerHTML='<div class="empty"><div class="empty-text">'+(Sparepart.activeMasterCategoryFilter?'Tidak ada kategori sparepart utk kategori master ini':'Belum ada komponen SOT utk kendaraan aktif')+'</div></div>';
+  Sparepart.populateDatalist();
+  Sparepart.populateStockCatSelect();
+  return;
+}
+el.innerHTML=visible.map(({cat:c,sot})=>{
+  const i=D.sparepartCats.indexOf(c);
+  const noInterval=!(sot.intervalKm>0)&&!(sot.intervalBulan>0);
+  const hidden=sot.showInReminder===false;
+  const inactive=noInterval||hidden;
+  const intervalText=sot.intervalKm>0
+    ?'Setiap '+sot.intervalKm.toLocaleString('id-ID')+' km'+(sot.intervalBulan>0?' atau '+sot.intervalBulan.toLocaleString('id-ID')+' bln':'')
+    :(sot.intervalBulan>0?'Setiap '+sot.intervalBulan.toLocaleString('id-ID')+' bln':'Interval tidak ditetapkan');
+  const statusBadge=noInterval
+    ?`<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent2-soft,rgba(230,80,80,.12));color:var(--accent2,#e65050)">⚠️ Tanpa interval</span>`
+    :(hidden
+      ?`<span class="u-fs11 u-fw700 u-r6 u-pointer sv-tap" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Tap utk tampilkan lagi di Pengingat Servis">🙈 Disembunyikan dari Pengingat</span>`
+      :`<span class="u-fs11 u-fw700 u-r6 u-pointer sv-tap" data-action="toggleSparepartShowInReminder" data-args="${escapeHtml(JSON.stringify([c.id]))}" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)">🔔 Tampil di Pengingat</span>`);
+  const veh=(D.vehicles||[]).find(v=>v&&String(v.id)===String(vid));
+  const vehBadge=`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)" title="SOT kendaraan aktif">${veh?(veh.emoji||'🏍️')+' '+escapeHtml(veh.name||'Kendaraan aktif'):'🏍️ Kendaraan aktif'}</span>`;
+  const categoryBadge=sot.categoryName?`<span class="u-fs11 u-fw700 u-r6 u-ml4" style="padding:2px 7px;background:var(--surface3);color:var(--text2)" title="Kategori master SOT">${escapeHtml(sot.categoryName)}</span>`:'';
+  return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">🔩</div><div class="tx-info"><div class="tx-name">${escapeHtml(sot.componentName)} <span class="u-fs12 u-fw700 u-cacc u-bgaccsoft u-r6 u-ml4" style="padding:1px 6px">${escapeHtml(sot.code)}</span></div><div class="tx-meta"${inactive?' style="color:var(--text3)"':''}>${escapeHtml(intervalText)}${categoryBadge}</div><div class="u-mt4">${statusBadge}${vehBadge}</div></div><button class="tx-del u-bgaccsoft u-cacc" style="margin-right:6px" data-action="openSparepartModalById" data-args="${escapeHtml(JSON.stringify([c.id]))}" aria-label="Edit/Buka">✏️</button><button class="tx-del" data-action="delSparepart" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button></div>`;
+}).join('');
+Sparepart.populateDatalist();
+Sparepart.populateStockCatSelect();
+},
+// openRecommendBox — S2070 projection helper follows strict vehicle-scoped renderCatList.
+openRecommendBox(){
+const box=document.getElementById('sparepartRecommendBox');
+if(!box)return;
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+if(!vid){toast('⚠️ Pilih kendaraan dulu di atas');return;}
+const reko=Sparepart.recommendCategories(vid);
+box.classList.remove('u-dnone');
+if(!reko.ok){box.innerHTML='<div class="u-fs12 u-t2">'+escapeHtml(reko.reason)+'</div>';return;}
+if(!reko.all.length){box.innerHTML='<div class="u-fs12 u-t2">🤖 Semua kategori rekomendasi utk "'+escapeHtml(reko.vehicleName)+'" sudah ada di daftar kategori kendaraan ini.</div>';return;}
+const rows=reko.all.map((r,i)=>{
+const badge=r.tier==='manual'
+?'<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent3-soft,rgba(80,180,120,.12));color:var(--accent3,#3fa66f)">📖 Buku manual</span>'
+:r.tier==='history'
+?'<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--accent-soft);color:var(--accent)">📝 Riwayat servis</span>'
+:'<span class="u-fs11 u-fw700 u-r6" style="padding:2px 7px;background:var(--surface3);color:var(--text2)">🤖 Estimasi umum</span>';
+const histNote=(r.tier!=='history'&&r.history&&r.history.count>0)
+?`<div style="font-size:11px;color:var(--accent3,#3fa66f);margin-top:2px">📝 Sudah dicatat ${r.history.count}x di riwayat servis kendaraan ini`+((r.history.avgKm&&Math.abs(r.history.avgKm-r.intervalKm)>=100)?` — rata-rata polamu tiap ~${r.history.avgKm.toLocaleString('id-ID')} km`:'')+`</div>`
+:'';
+return `<label style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">`
++`<input type="checkbox" class="sparepartRecoChk" data-idx="${i}" checked style="width:16px;height:16px;margin-top:2px;accent-color:var(--accent)">`
++`<span style="flex:1"><div style="font-size:13px;font-weight:600">${escapeHtml(r.name)} ${badge}</div>`
++`<div style="font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5">Setiap ${r.intervalKm.toLocaleString('id-ID')} km — ${escapeHtml(r.source||'')}</div>${histNote}</span>`
++`</label>`;
+}).join('');
+box.innerHTML=`<div class="u-fs12 u-t2 u-mb8">💡 Rekomendasi kategori servis rutin utk <b>${escapeHtml(reko.vehicleName)}</b>. Kategori dgn badge 📖 diambil dari buku manual pabrikan yg sudah tersimpan; badge 📝 berarti sudah sering dicatat manual di riwayat servis kendaraan ini (interval dihitung dari pola KM aslimu); badge 🤖 adalah estimasi umum (bukan data pabrikan spesifik) — sesuaikan lagi kalau ada data resminya. Uncheck yg tidak perlu, lalu tambahkan.</div>`
++`<div id="sparepartRecoList">${rows}</div>`
++`<button type="button" class="btn btn-primary btn-full btn-sm u-mt10" data-action="Sparepart.commitRecommend">✅ Tambahkan yang Dicentang</button>`
++`<button type="button" class="btn btn-ghost btn-full btn-sm u-mt8" data-action="Sparepart.closeRecommendBox">✕ Tutup</button>`;
+Sparepart._recoCache=reko.all;
+},
+closeRecommendBox(){
+const box=document.getElementById('sparepartRecommendBox');
+if(!box)return;
+box.classList.add('u-dnone');
+box.innerHTML='';
+Sparepart._recoCache=null;
+},
+commitRecommend(){
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+if(!vid||!Array.isArray(Sparepart._recoCache)){toast('⚠️ Rekomendasi sudah tidak tersedia, buka ulang');return;}
+const checks=Array.from(document.querySelectorAll('.sparepartRecoChk'));
+const chosen=checks.filter(c=>c.checked).map(c=>Sparepart._recoCache[parseInt(c.dataset.idx,10)]).filter(Boolean);
+if(!chosen.length){toast('⚠️ Belum ada yang dicentang');return;}
+let added=0;
+chosen.forEach((r,idx)=>{
+const already=D.sparepartCats.some(c=>catVisibleForVehicle(c,vid)&&c.name.trim().toLowerCase()===r.name.trim().toLowerCase());
+if(already)return;
+const compId=resolveCanonicalServiceComponent(r.name,null);
+const compRef=compId&&typeof ServiceInputCatalog!=='undefined'?ServiceInputCatalog.itemById(compId):null;
+const _sotRecoCat={id:'sp_'+Date.now()+'_reko_'+idx,name:r.name,code:codeFromName(r.name),intervalKm:r.intervalKm,showInReminder:true,vehicleId:vid,group:r.group,groupIcon:r.groupIcon,masterCategoryId:compRef&&compRef.group?compRef.group.masterCategoryId:null,serviceComponentId:compId||null}; if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){const _r=VehicleCarNotesSOT.syncLegacyCategoryProjection(_sotRecoCat,'recommendation-create');if(!_r||!_r.ok)D.sparepartCats.push(_sotRecoCat);} else D.sparepartCats.push(_sotRecoCat);
+added++;
+});
+save();
+Sparepart.closeRecommendBox();
+Sparepart.renderCatList();
+if(typeof renderServisList==='function')renderServisList();
+if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();
+toast('✅ '+added+' kategori rekomendasi ditambahkan');
+},
+toggleShowInReminder(catId){
+const cat=D.sparepartCats.find(c=>c.id===catId);
+if(!cat)return;
+if(!(cat.intervalKm>0)){
+toast('⚠️ Isi dulu Interval Servis (KM) kategori ini sebelum ditampilkan di Pengingat');
+Sparepart.openCatModalById(catId);
+return;
+}
+const _show=cat.showInReminder===false?true:false;
+if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{showInReminder:_show});cat.showInReminder=_show;}
+else {cat.showInReminder=_show;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');}
+Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
+toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
+},
+populateVehicleSelect(elId,currentValue,isEdit){
+const sel=document.getElementById(elId);
+if(!sel)return;
+sel.innerHTML='<option value="">🌐 Semua kendaraan</option>'+D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${v.emoji||'🏍️'} ${escapeHtml(v.name)}</option>`).join('');
+const hintId=elId==='sparepartVehicleId'?'sparepartVehicleHint':'stockVehicleHint';
+const hintEl=document.getElementById(hintId);
+if(isEdit){
+const curValid=currentValue&&D.vehicles.some(v=>v.id===currentValue);
+sel.value=curValid?currentValue:'';
+sel.disabled=false;
+if(hintEl){
+const veh=curValid?D.vehicles.find(v=>v.id===currentValue):null;
+hintEl.textContent=veh?`✏️ Khusus kendaraan: ${veh.emoji||'🏍️'} ${veh.name} — bisa dipindah manual`:'✏️ Berlaku "🌐 Semua kendaraan" — bisa dipindah manual ke kendaraan tertentu';
+}
+return;
+}
+const vid=(typeof curVehicleId!=='undefined')?curVehicleId:'';
+const vidValid=vid&&D.vehicles.some(v=>v.id===vid);
+sel.value=vidValid?vid:'';
+sel.disabled=true;
+if(hintEl){
+const veh=vidValid?D.vehicles.find(v=>v.id===vid):null;
+hintEl.textContent=veh?`🔒 Otomatis khusus kendaraan tab aktif: ${veh.emoji||'🏍️'} ${veh.name}`:'🔒 Otomatis "🌐 Semua kendaraan" (tidak ada kendaraan aktif dipilih di tab atas)';
+}
+},
+ensureIntervalBulanField(){
+let el=document.getElementById('sparepartIntervalBulan');
+if(el)return el;
+const anchor=document.getElementById('sparepartInterval');
+if(!anchor||!anchor.parentNode)return null;
+const wrap=document.createElement('div');
+wrap.className='u-mt8';
+wrap.innerHTML='<label class="u-fs12 u-t2 u-mb4" style="display:block">Interval Waktu (Bulan, opsional)</label>'
++'<input type="number" id="sparepartIntervalBulan" class="input" placeholder="mis. 6 (Minyak Rem, Aki, dll)" min="0">';
+const host=anchor.closest('.u-mt8')||anchor.parentNode;
+host.parentNode.insertBefore(wrap,host.nextSibling);
+return document.getElementById('sparepartIntervalBulan');
+},
+populateGroupSelect(currentGroup,currentIcon){
+const sel=document.getElementById('sparepartGroupId');
+if(!sel)return;
+const known=collectKnownGroups();
+if(currentGroup&&!known.some(g=>g.group===currentGroup)){
+known.push({group:currentGroup,icon:currentIcon||iconForGroupName(currentGroup)});
+}
+sel.innerHTML='<option value="">🤖 Otomatis</option>'
++known.map(g=>`<option value="${escapeHtml(g.group)}">${g.icon} ${escapeHtml(g.group)}</option>`).join('');
+sel.value=currentGroup||'';
+const clearTransient=()=>{if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}};
+sel.onfocus=clearTransient;
+sel.onpointerdown=clearTransient;
+},
+openCatModal(idx){
+if(typeof idx==='number'&&idx>=0&&idx<D.sparepartCats.length){
+  return Sparepart.openCatModalById(D.sparepartCats[idx].id);
+}
+return Sparepart.openCatModalById(null);
+},
+openCatModalById(catId){
+const staleSuggestIds=['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'];
+staleSuggestIds.forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='';if(id==='sparepartAiSuggestBox')el.classList.add('u-dnone');}});
+if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}
+const normalizedId=catId===null||catId===undefined||catId===''?null:String(catId);
+const idx=normalizedId===null?null:D.sparepartCats.findIndex(c=>c&&String(c.id)===normalizedId);
+if(normalizedId!==null&&idx<0){toast('⚠️ Kategori sparepart tidak ditemukan');return false;}
+Sparepart.catEditId=normalizedId;
+Sparepart.catEditIdx=idx;
+Sparepart._intervalSource=null;
+Sparepart._intervalSuggestedKm=null;
+Sparepart._intervalInitialKm=0;
+Sparepart._intervalInitialMonths=0;
+const isEdit=normalizedId!==null;
+document.getElementById('sparepartModalTitle').textContent=isEdit?'Edit Kategori Sparepart':'Tambah Kategori Sparepart';
+document.getElementById('sparepartName').value=isEdit?D.sparepartCats[Sparepart.catEditIdx].name:'';
+const codeEl=document.getElementById('sparepartCode');
+codeEl.value=isEdit?(D.sparepartCats[Sparepart.catEditIdx].code||codeFromName(D.sparepartCats[Sparepart.catEditIdx].name)):'';
+codeEl.dataset.manual=isEdit?'1':'0';
+codeEl.oninput=()=>{codeEl.dataset.manual='1';};
+const curCat=isEdit?D.sparepartCats[Sparepart.catEditIdx]:null;
+const activeInterval=(isEdit&&typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')?ServiceIntervalSOT.active(curCat,curCat.vehicleId||((typeof curVehicleId!=='undefined')?curVehicleId:null)):null;
+Sparepart._intervalSource=activeInterval&&activeInterval.source||null;
+Sparepart._intervalInitialKm=activeInterval&&activeInterval.intervalKm||((curCat&&curCat.intervalKm>0)?curCat.intervalKm:0);
+Sparepart._intervalInitialMonths=activeInterval&&activeInterval.intervalBulan||((curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:0);
+document.getElementById('sparepartInterval').value=(Sparepart._intervalInitialKm>0)?Sparepart._intervalInitialKm:'';
+const bulanEl=Sparepart.ensureIntervalBulanField();
+if(bulanEl)bulanEl.value=(curCat&&curCat.intervalBulan>0)?curCat.intervalBulan:'';
+Sparepart.populateVehicleSelect('sparepartVehicleId',curCat?curCat.vehicleId:null,isEdit);
+Sparepart.populateGroupSelect(curCat?curCat.group:null,curCat?curCat.groupIcon:null);
+const catMasterEl=document.getElementById('sparepartMasterCategoryId');
+const catCompEl=document.getElementById('sparepartServiceComponentId');
+if(catMasterEl&&typeof ServiceInputCatalog!=='undefined'){const groups=ServiceInputCatalog.groups()||[];catMasterEl.innerHTML='<option value="">— Pilih kategori servis —</option>'+groups.map(g=>`<option value="${escapeHtml(g.masterCategoryId)}">${escapeHtml(g.group)}</option>`).join('');}
+const catInferred=(typeof ServiceInputCatalog!=='undefined'&&curCat)?ServiceInputCatalog.infer(curCat.name):null;
+const catMaster=curCat?.masterCategoryId||(catInferred&&catInferred.group&&catInferred.group.masterCategoryId)||'';
+if(catMasterEl)catMasterEl.value=catMaster;
+Sparepart.populateServiceComponentSelect('sparepartServiceComponentId',catMaster,curCat?.serviceComponentId||(catInferred&&catInferred.item&&catInferred.item.id)||'');
+Sparepart.updateMasterCatBadge(curCat?curCat.name:'',curCat?curCat.vehicleId:(typeof curVehicleId!=='undefined'?curVehicleId:null));
+const showRemEl=document.getElementById('sparepartShowInReminder');
+if(showRemEl)showRemEl.checked=curCat?curCat.showInReminder!==false:true;
+if(isEdit){
+Sparepart.autoSuggestInterval();
+} else {
+const aiBoxEl=document.getElementById('sparepartAiSuggestBox');
+if(aiBoxEl){aiBoxEl.classList.add('u-dnone');aiBoxEl.innerHTML='';}
+}
+const sparepartDelBtnEl=document.getElementById('sparepartDelBtn'); if(sparepartDelBtnEl) sparepartDelBtnEl.style.display=isEdit?'':'none';
+openModal('sparepartModal');
+},
+exportCategoryCSV(){
+const header='nama,kode,interval_km,interval_bulan,tampil_reminder';
+const esc=(v)=>{
+const s=String(v==null?'':v);
+return /[",\n]/.test(s)?('"'+s.replace(/"/g,'""')+'"'):s;
+};
+const lines=[header].concat(D.sparepartCats.map(c=>[
+esc(c.name),
+esc(c.code||''),
+esc(c.intervalKm>0?c.intervalKm:''),
+esc(c.intervalBulan>0?c.intervalBulan:''),
+esc(c.showInReminder===false?'tidak':'ya'),
+].join(',')));
+const blob=new Blob([lines.join('\n')],{type:'text/csv'});
+const url=URL.createObjectURL(blob);
+const a=document.createElement('a');
+a.href=url;
+a.download='kategori-sparepart-'+(typeof todayStr==='function'?todayStr():'')+'.csv';
+a.click();
+if(typeof a.remove==='function')a.remove();else if(a.parentNode&&typeof a.parentNode.removeChild==='function')a.parentNode.removeChild(a);
+if(typeof URL.revokeObjectURL==='function')setTimeout(()=>URL.revokeObjectURL(url),0);
+return lines.length-1;
+}
+};
+if (typeof normalizeLegacyServiceLogs === 'function') window.normalizeLegacyServiceLogs = normalizeLegacyServiceLogs;
+if (typeof Sparepart !== 'undefined') window.Sparepart = Sparepart;

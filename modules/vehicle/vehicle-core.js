@@ -1078,11 +1078,19 @@ if(healed&&typeof save==='function')save();
 // Rule-based & gratis (bukan panggilan AI/web search) — kalau histori kurang (data <2 titik, atau
 // rentang tanggalnya <3 hari, atau km tidak pernah naik), balikin null & UI cukup tampilkan "sisa km"
 // spt biasa tanpa estimasi tanggal.
+// S2703 PERF: dipanggil 18x per render Insight (fuelEfficiency, computeServiceUrgency, ...) dan
+// komparator sort membuat 2 objek Date per perbandingan. (1) waktu dihitung SEKALI per titik
+// (komparator & hasil identik: selisih angka yang sama, sort stabil), (2) hasil di-memo per render-scope
+// (kwScopeMemo: dibuang saat scope selesai / save() dipanggil; di luar scope langsung hitung).
 function estimateKmPerDay(vehicleId){
+if(typeof kwScopeMemo==='function')return kwScopeMemo('kmPerDay:'+typeof vehicleId+':'+vehicleId,()=>_estimateKmPerDayRaw(vehicleId));
+return _estimateKmPerDayRaw(vehicleId);
+}
+function _estimateKmPerDayRaw(vehicleId){
 const points=[
 ...D.kmLogs.filter(k=>k.vehicleId===vehicleId&&k.date&&isFinite(k.km)).map(k=>({date:k.date,km:k.km})),
 ...D.bbmLogs.filter(b=>b.vehicleId===vehicleId&&b.date&&isFinite(b.km)&&b.km>0).map(b=>({date:b.date,km:b.km}))
-].sort((a,b)=>new Date(a.date)-new Date(b.date));
+].map(pt=>({date:pt.date,km:pt.km,_t:new Date(pt.date)})).sort((a,b)=>a._t-b._t);
 if(points.length<2)return null;
 const first=points[0],last=points[points.length-1];
 const days=(new Date(last.date)-new Date(first.date))/86400000;
@@ -1102,7 +1110,17 @@ return dateToISO(d);
 // Tidak ada tebakan dari nama/urutan transaksi: hanya log valid dengan vehicleId, km>0, liter>0.
 // Partial fill tanpa km valid tidak dapat dialokasikan ke segmen dan sengaja diabaikan.
 // Return [] bila belum ada minimal 2 full-tank anchor yang km-nya naik.
+// S2703 PERF: dipanggil 33x per render Insight; tiap panggilan = filter+map seluruh bbmLogs + filter
+// bersarang O(n^2). Memo per render-scope (kwScopeMemo, dibuang saat scope selesai / save()); pemanggil
+// selalu menerima SALINAN segmen (mutasi pemanggil tidak mencemari panggilan lain dalam scope).
 function getFuelFullTankSegments(vehicleId){
+if(typeof kwScopeMemo==='function'){
+const memo=kwScopeMemo('fuelSeg:'+typeof vehicleId+':'+vehicleId,()=>_getFuelFullTankSegmentsRaw(vehicleId));
+return memo.map(seg=>({...seg}));
+}
+return _getFuelFullTankSegmentsRaw(vehicleId);
+}
+function _getFuelFullTankSegmentsRaw(vehicleId){
 const all=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).map(b=>({...b,km:Number(b.km),liter:Number(b.liter),cost:Number(b.cost),harga:Number(b.harga)}));
 const full=all.filter(b=>b.fullTank).sort((a,b)=>a.km-b.km);
 if(full.length<2)return[];

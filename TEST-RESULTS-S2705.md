@@ -1,0 +1,4 @@
+- `node --test tests/*.test.js`: 9189 tes, 9188 pass, 0 fail.
+- `tests/s2704-tx-date-cache.test.js`: 3/3. `tests/s2704-servis-log-match-memo.test.js`: 5/5.
+- Build resmi 2659 sukses; verify-bundle-freshness, verify-window-expose, hash (basi=0) lolos.
+- Tidak diuji di browser (tanpa Chromium).
