@@ -390,7 +390,7 @@ rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
 save();closeModal('txModal');if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance'});
 if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{category:cat,kind:"cicilan-baru"});
-toast(`✅ Cicilan ${nama} dijadwalkan bayar bulan depan (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
+toast(`✅ Cicilan ${nama} dijadwalkan, bayar nanti (${due}). Belum tercatat sbg transaksi -- akan otomatis tercatat begitu ditandai Bayar di 🧾 Tagihan.`);
 return;
 }
 if(existingTx){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(existingTx.id); else throw new Error('FINANCE_TX_SOT_REQUIRED');}

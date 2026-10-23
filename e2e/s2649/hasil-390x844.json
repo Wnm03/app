@@ -1,0 +1,164 @@
+{
+ "viewport": "390x844",
+ "beranda_id_ada": {
+  "eieWrap": true,
+  "danaKelolaanWrap": true,
+  "personalOverviewWrap": true,
+  "crossWidgetsWrap": true,
+  "lifePriorityWrap": true,
+  "dashHubTickerModern": true,
+  "eieWatchlistCard": true,
+  "eieStatusCard": true,
+  "eieInsightFeed": true,
+  "danaKelolaanGrid": true,
+  "crossWidgetsGrid": true,
+  "lifePriorityBody": true,
+  "personalOverviewBody": true
+ },
+ "beranda_qa_cari_fitur": true,
+ "beranda_hscroll": 0,
+ "produk_modal": {
+  "open": true,
+  "w": 368,
+  "h": 760,
+  "left": 11,
+  "right": 379,
+  "sw": 0
+ },
+ "produk_hscroll": 0,
+ "produk_tersimpan": [
+  {
+   "name": "Produk Uji E2E",
+   "stock": 10
+  }
+ ],
+ "produk_modal_tertutup": true,
+ "order_modal": {
+  "open": true,
+  "w": 390,
+  "h": 760,
+  "left": 0,
+  "right": 390,
+  "sw": 0
+ },
+ "order_hscroll": 0,
+ "order_items": [
+  {
+   "qty": 2
+  }
+ ],
+ "order_total": "Rp 60.000",
+ "order_idle_mutations": 0,
+ "order_responsive_ms": 4,
+ "order_hscroll_after": 0,
+ "order_save_btn": {
+  "top": 776,
+  "bottom": 820,
+  "inView": true
+ },
+ "tx_modal": {
+  "open": true,
+  "w": 390,
+  "h": 760,
+  "left": 0,
+  "right": 390,
+  "sw": 0
+ },
+ "txCat_tag": "INPUT:Renovasi",
+ "renov_panel_tampil": "block",
+ "renov_select_disabled_sebelum": true,
+ "tombol_buat_proyek": {
+  "hiddenAttr": false,
+  "visible": true,
+  "h": 40,
+  "w": 92
+ },
+ "proyek_modal_di_atas": {
+  "open": true,
+  "z": 300,
+  "tz": 300
+ },
+ "simpan_proyek_ms": 1236,
+ "renov_select_sesudah": {
+  "disabled": false,
+  "val": "1792731158936",
+  "text": "Proyek Uji E2E"
+ },
+ "tx_hscroll": 0,
+ "toast_terakhir": "✅ Transaksi tersimpan — 🔨 Item \"Semen E2E\" otomatis dicatat & lunas di proyek \"Proyek Uji E2E\"",
+ "sebelum_reload": {
+  "tx": [
+   {
+    "amt": 250000,
+    "link": "1792731158936",
+    "item": "1792731160178",
+    "note": "Semen E2E"
+   }
+  ],
+  "proj": [
+   {
+    "id": "1792731158936",
+    "name": "Proyek Uji E2E",
+    "items": [
+     {
+      "id": "1792731160178",
+      "paid": true,
+      "txId": "1792731160174",
+      "amt": 250000
+     }
+    ]
+   }
+  ],
+  "nTx": 2
+ },
+ "setelah_reload": {
+  "tx": [
+   {
+    "amt": 250000,
+    "link": "1792731158936",
+    "item": "1792731160178",
+    "note": "Semen E2E"
+   }
+  ],
+  "proj": [
+   {
+    "id": "1792731158936",
+    "name": "Proyek Uji E2E",
+    "items": [
+     {
+      "id": "1792731160178",
+      "paid": true,
+      "txId": "1792731160174",
+      "amt": 250000
+     }
+    ]
+   }
+  ],
+  "nTx": 2
+ },
+ "semua_tx": [
+  {
+   "id": "1792731149782",
+   "cat": "Bisnis",
+   "sub": null,
+   "amt": 200000,
+   "type": "expense",
+   "note": "Beli stok Produk Uji E2E x10 (modal shop)"
+  },
+  {
+   "id": "1792731160174",
+   "cat": "Renovasi",
+   "sub": null,
+   "amt": 250000,
+   "type": "expense",
+   "note": "Semen E2E"
+  }
+ ],
+ "produk_setelah_reload": [
+  "Produk Uji E2E"
+ ],
+ "persistensi_identik": true,
+ "renovProjectLinkId_cocok": true,
+ "item_terhubung_tx": true,
+ "js_errors": []
+}

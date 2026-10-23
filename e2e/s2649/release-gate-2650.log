@@ -1,0 +1,21 @@
+Release Gate — mengecek kesiapan rilis sebelum ZIP dibuat (Sesi 424)...
+
+✓ GATE lint: lolos (0 error).
+✓ GATE minify: kedua bundle sudah diminify (esbuild terdeteksi jalan).
+✓ GATE delete-manifest: 3 path terverifikasi sudah terhapus.
+✓ GATE version-integrity: s2595-carnotes-null-interval-guard-2650 ↔ ?v=2650 ↔ kw-cache-v2650.
+SOT-INTEGRITY: PASS — runtimeSources=414, version=s2595-carnotes-null-interval-guard-2650, html=2650, sw=2650
+✓ GATE app-sot-integrity: canonical runtime manifest/version/HTML verified.
+✓ GATE runtime-lifecycle: singleton listener/timer & AIBus cleanup terverifikasi.
+✓ GATE html-sync: app_production.html sinkron dgn index.html.
+✓ GATE version-sync: index.html (?v=2650) & sw.js (CACHE_NAME) sinkron.
+✓ GATE service-sot-integrity: PASS.
+✓ GATE deep-release-firewall: S1787-S1793 hard gates PASS.
+✓ GATE car-notes-integrity: PASS — no retired Theme Pro layer, no duplicate IDs, canonical Servis/UI anchors intact.
+⚠ oversized source: modules/vehicle/servis.js (2054 lines > 1600; guard cap 2100)
+⚠ oversized source: modules/shared/features-helpers-global-security.js (1747 lines > 1600; guard cap 1750)
+⚠ oversized source: build.js (1620 lines > 1600; guard cap 1700)
+⚠ GATE source-size: 3 file melewati 1600 baris tetapi masih dalam guard cap allowlist (tidak memblokir).
+✓ GATE bundle-freshness: semua bundle segar (hash source cocok dgn marker di bundle).
+
+✅ RELEASE GATE LOLOS — aman untuk lanjut bikin ZIP.

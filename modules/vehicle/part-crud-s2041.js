@@ -164,7 +164,7 @@ function injectPartIdentityFields(){
   let comp=d('stockServiceComponentId');
   if(!comp){
     const wrap=document.createElement('div'); wrap.className='fg';
-    wrap.innerHTML='<label class="fl">Komponen Servis (SOT)</label><select class="fs" id="stockServiceComponentId"><option value="">— Tanpa komponen spesifik —</option></select><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Kategori → Komponen → Part memakai identity canonical yang sama.</div>';
+    wrap.innerHTML='<label class="fl" for="stockServiceComponentId">Komponen servis</label><select class="fs" id="stockServiceComponentId"><option value="">— Tanpa komponen spesifik —</option></select><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Pilihan ini menentukan pengingat servis dan riwayat.</div>';
     cat.closest('.fg')?.insertAdjacentElement('afterend',wrap); comp=d('stockServiceComponentId');
   }
   if(!d('stockOemCode')){

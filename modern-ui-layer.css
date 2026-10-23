@@ -1067,3 +1067,269 @@ html body[data-theme] .card-collapse-toggle { flex: 0 0 44px; }
 .dhb-ov-att-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .dhb-ov-att-txt span{font-size:var(--fs-caption);color:var(--text2);overflow-wrap:anywhere}
 .dhb-ov-att-n{min-width:22px;height:22px;border-radius:11px;background:var(--surface4);font-size:var(--fs-caption);font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 6px}
+
+/* S2638 -- Tagihan di layar sempit (390 px): tombol header tidak pecah di tengah kata, pil
+   ringkasan muat 3 kolom tanpa terpotong, nama kartu 2 baris, chip maks 2, tombol Bayar bertulisan.
+   Murni tampilan; tidak menyentuh data/SOT. */
+html body[data-theme] #keuanganTab-tagihan .card-setting-btn{white-space:nowrap;word-break:keep-all}
+@media (max-width:480px){
+  html body[data-theme] #keuanganTab-tagihan .card-title{flex-wrap:wrap;row-gap:6px}
+  html body[data-theme] #keuanganTab-tagihan .card-title > .u-flex{margin-left:auto;flex-wrap:nowrap}
+  html body[data-theme] #keuBillStatGrid.bill-stat-pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible}
+  html body[data-theme] #keuBillStatGrid .bill-stat-pill{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface2)}
+  html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-label{font-size:10px;white-space:nowrap}
+  html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-val{font-size:13px;white-space:nowrap}
+}
+html body[data-theme] .bill-item .tx-info{min-width:0}
+html body[data-theme] .bill-item .tx-name.bill-name{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+html body[data-theme] .bill-item .bill-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+html body[data-theme] .bill-item .bill-chips .acc-chip{margin-left:0}
+html body[data-theme] .bill-item .tx-del.bill-pay-btn{width:auto;min-width:44px;min-height:44px;padding:0 14px;font-size:13px;font-weight:700;color:var(--accent3);background:var(--accent3-soft,var(--surface2));border-radius:var(--r-md)}
+
+
+/* ==== S2641 — P0-6..P0-9 (tampilan saja; id, data-action, fungsi & SOT tidak diubah) ==== */
+
+/* P0-6: field fokus tidak berhenti di bawah tombol Simpan sticky (tinggi tombol + halo ≈ 72px). */
+@media (max-width: 899px) {
+  .modal { scroll-padding-bottom: 96px; }
+}
+
+/* P0-7: --kb-h diisi PWAUX.installKeyboardInset() (visual viewport). 0px bila keyboard tertutup / mode resizes-content,
+   jadi min() di bawah sama dengan 90dvh bawaan dan tidak terjadi pengangkatan ganda. */
+.overlay.open { padding-bottom: var(--kb-h, 0px); box-sizing: border-box; }
+.overlay.open .modal { max-height: min(90dvh, calc(100dvh - var(--kb-h, 0px) - 8px)); }
+
+/* P0-8 (L7): kontrol bawaan peramban (pemilih tanggal, daftar select, scrollbar) mengikuti tema. */
+[data-theme="dark"], [data-theme="graphite"] { color-scheme: dark; }
+[data-theme="light"], [data-theme="modern"] { color-scheme: light; }
+
+/* P0-8 (L4): placeholder ≥ 4.5:1 di semua tema (bawaan peramban #757575 ≈ 4.0:1). */
+input::placeholder, textarea::placeholder {
+  color: color-mix(in srgb, var(--text) 62%, var(--surface2));
+  opacity: 1;
+}
+
+/* P0-8 (L1, L2, L3, L5): hanya Light & Modern. Dark/Graphite tidak berubah. */
+[data-theme="light"] .gaji-result-main,
+[data-theme="modern"] .gaji-result-main { color: var(--accent3-onlight); }
+
+[data-theme="light"] .btn-primary,
+[data-theme="modern"] .btn-primary {
+  background: linear-gradient(120deg,
+    color-mix(in srgb, var(--accent) 78%, #1e3a8a) 0%,
+    color-mix(in srgb, color-mix(in srgb, var(--accent) 55%, var(--accent3)) 78%, #1e3a8a) 100%);
+}
+[data-theme="light"] .overlay .chip-btn.active,
+[data-theme="modern"] .overlay .chip-btn.active {
+  background: color-mix(in srgb, var(--accent) 78%, #1e3a8a);
+  color: #fff;
+}
+/* badge "(Nx)" pada chip PO memakai style inline color:var(--accent) -> perlu !important (hanya warna). */
+[data-theme="light"] #pobProductList .chip-btn b,
+[data-theme="modern"] #pobProductList .chip-btn b { color: color-mix(in srgb, var(--accent) 70%, black) !important; }
+
+/* P0-8 (L6): label kecil di kartu total Order (12px) — naikkan keterbacaan di Dark/Graphite. */
+#orderModal .gaji-result > div:not(.gaji-result-main) {
+  color: color-mix(in srgb, var(--text) 40%, var(--text2)) !important; /* hanya warna: teks asli memakai style inline */
+}
+
+/* P0-9: lipatan "Status & ringkasan untung" di modal Order (tertutup bawaan; dibuka otomatis saat edit). */
+.sheet-fold {
+  margin: 8px 0 0;
+  border: 1px solid var(--border2);
+  border-radius: var(--r-md, 12px);
+  background: var(--surface2);
+}
+.sheet-fold > summary {
+  list-style: none;
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+.sheet-fold > summary::-webkit-details-marker { display: none; }
+.sheet-fold > summary::after {
+  content: "\25BE";
+  margin-left: auto;
+  transition: transform .2s;
+}
+.sheet-fold[open] > summary::after { transform: rotate(180deg); }
+.sheet-fold-body { padding: 2px 14px 14px; }
+
+/* ==== S2643 — P1-11/P1-22 (font select), P1-12 (toast), P1-13 (footer Total + Simpan) ==== */
+
+/* P1-11/P1-22: kontrol pilihan di modal ≥ 16px (cegah zoom otomatis iOS; samakan tampilan). */
+.overlay select, .overlay select.fs, .overlay input[type="file"] { font-size: 16px; }
+
+/* P1-12: saat modal terbuka, toast turun ke atas tombol Simpan (bukan menutupi judul modal). */
+body.has-open-modal .toast {
+  top: auto;
+  bottom: calc(144px + env(safe-area-inset-bottom, 0px) + var(--kb-h, 0px));
+}
+
+/* P1-13: bilah "Total" menempel di atas tombol Simpan sticky (salinan teks sumber; tombol asli tidak digandakan). */
+.sheet-total-bar {
+  position: sticky;
+  bottom: 52px; /* diatur ulang helper = tinggi tombol Simpan + 8px */
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 40px;
+  margin: 4px 0 0;
+  padding: 6px 4px;
+  background: var(--surface);
+  border-top: 1px solid var(--border2);
+  font-size: 13px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--text) 40%, var(--text2));
+}
+.sheet-total-bar b { font-size: 16px; font-weight: 800; color: var(--text); white-space: nowrap; }
+
+
+/* S2645 P0-1..3: visible, non-blocking transaction-link hints. */
+.tx-link-warn { margin: 8px 0 10px; padding: 9px 11px; border: 1px solid color-mix(in srgb, #d97706 48%, var(--border)); border-radius: 10px; background: color-mix(in srgb, #f59e0b 13%, var(--surface2)); color: var(--text); font-size: 12px; line-height: 1.45; }
+.tx-link-warn[hidden], .tx-amt-hint[hidden], .tx-renov-create-project[hidden] { display: none !important; }
+.tx-amt-hint { margin-top: 5px; padding: 7px 9px; border-radius: 8px; background: var(--surface3); color: var(--text2); font-size: 12px; line-height: 1.45; }
+.tx-renov-create-project { margin-top: 7px; min-height: 40px; text-align: left; }
+
+/* S2646 — P1-14..17 / P1-20: compact accessible Order & PO presentation. */
+#orderModal .sheet-source-select { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important; }
+.sheet-product-search { width:100%; min-height:44px; font-size:16px !important; margin:0 0 8px; }
+.sheet-product-results { display:grid; gap:6px; margin:0 0 8px; }
+.sheet-product-result { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:44px; padding:8px 10px; text-align:left; border:1px solid var(--border2); border-radius:10px; color:var(--text); background:var(--surface2); }
+.sheet-product-name { min-width:0; font-size:13px; font-weight:700; overflow-wrap:anywhere; }
+.sheet-product-meta { flex-shrink:0; font-size:12px; color:var(--text2); text-align:right; }
+.sheet-row-subtotal { margin-top:4px; font-size:12px; font-weight:700; color:var(--text2); font-variant-numeric:tabular-nums; }
+.sheet-money-preview { margin-top:4px; min-height:16px; color:var(--text2); font-size:12px; font-variant-numeric:tabular-nums; }
+.sheet-section { margin:10px 0; padding:10px 12px 2px; border:1px solid var(--border2); border-radius:12px; background:var(--surface2); }
+.sheet-section-title { margin-bottom:8px; color:var(--text); font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; }
+.sheet-section .fg, .sheet-section .u-grid2 { margin-bottom:10px; }
+.hint-fold { margin:6px 0 10px; color:var(--text2); font-size:12px; line-height:1.45; }
+.hint-fold > summary { cursor:pointer; min-height:32px; display:flex; align-items:center; gap:6px; color:var(--text2); font-weight:600; list-style:none; }
+.hint-fold > summary::-webkit-details-marker { display:none; }
+.hint-fold[open] { padding:8px 10px; border-radius:10px; background:var(--surface3); }
+.hint-fold > :not(summary) { margin-top:6px; }
+#pobProductList .pob-chip-meta { display:block; margin-top:3px; font-size:11px; line-height:1.3; color:var(--text2); font-weight:600; }
+#pobProductList button[hidden] { display:none !important; }
+#pobCartList .btn-sm { min-width:40px !important; min-height:40px !important; }
+@media (max-width:380px) {
+  .sheet-product-result { align-items:flex-start; flex-direction:column; gap:2px; }
+  .sheet-product-meta { text-align:left; }
+  #orderModal .sheet-section { padding-left:9px; padding-right:9px; }
+}
+
+/* S2647 — P1-18/P1-19/P2-1/P2-2: scan preview and import guidance. */
+#shopScanPreview { max-height: none !important; overflow: visible !important; }
+#shopScanPreview .tx-item { display: grid !important; grid-template-columns: 44px minmax(0,1fr); align-items: start !important; gap: 8px !important; padding: 9px 0; }
+#shopScanPreview .tx-info { min-width: 0; width: 100%; }
+#shopScanPreview .tx-info > input[type="text"] { width: 100%; min-width: 0; min-height: 40px; font-size: 16px; }
+#shopScanPreview .tx-info .u-flex { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 6px; }
+#shopScanPreview .tx-info .u-flex .fi { width: 100%; min-width: 0; min-height: 40px; font-size: 16px; }
+#shopScanPreview .shop-scan-check-target { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; grid-row: 1; grid-column: 1; }
+#shopScanPreview .shop-scan-check-target input[type="checkbox"] { width: 20px !important; height: 20px !important; margin: 0 !important; }
+#shopScanPreview .tx-info > .u-fs11.u-t2 { display: inline-flex; align-items: center; min-height: 24px; margin-top: 5px !important; padding: 2px 7px; border-radius: 999px; background: var(--surface3); font-size: 12px !important; }
+.shop-scan-tools { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 7px 0; margin-bottom: 5px; background: var(--surface); border-bottom: 1px solid var(--border2); }
+.shop-scan-tools .btn { min-height: 40px; }
+.shop-scan-count { margin-left: auto; color: var(--text2); font-size: 12px; font-weight: 700; }
+#shopScanStatus.scan-busy { display: flex; align-items: center; gap: 6px; }
+#shopScanStatus.scan-busy::after { content: "•••"; letter-spacing: 2px; animation: sheet-scan-pulse 1s ease-in-out infinite; }
+@keyframes sheet-scan-pulse { 0%,100% { opacity:.3; } 50% { opacity:1; } }
+.sheet-file-source { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important; }
+.sheet-file-picker { display:flex; align-items:center; justify-content:center; min-height:44px; padding:9px 12px; margin:5px 0; border:1px solid var(--border2); border-radius:10px; background:var(--surface2); color:var(--text); font-size:14px; font-weight:700; cursor:pointer; }
+.sheet-file-picker:active { transform:scale(.99); }
+.sheet-file-picker:focus-visible, .fg:focus-within .sheet-file-picker { outline:2px solid var(--accent); outline-offset:2px; }
+.sheet-file-name { margin:3px 0 8px; color:var(--text2); font-size:12px; overflow-wrap:anywhere; }
+.sheet-empty-guidance { margin:6px 0 10px; padding:9px 10px; border-radius:9px; background:var(--surface3); color:var(--text2); font-size:12px; }
+.sheet-disabled-reason { margin:4px 0 6px; color:var(--text2); font-size:12px; line-height:1.4; }
+@media (max-width:380px) {
+  .shop-scan-tools { gap:4px; }
+  .shop-scan-tools .btn { padding-left:8px; padding-right:8px; }
+  .shop-scan-count { width:100%; margin-left:0; }
+}
+
+/* S2648 — P1-1/P1-7/P1-8: reduce vertical scroll in linked panels. */
+#txStockExistingFold { margin:0 0 10px; border:1px solid var(--border2); border-radius:10px; background:var(--surface2); }
+#txStockExistingFold > summary { display:flex; align-items:center; min-height:40px; padding:0 10px; cursor:pointer; font-size:12px; font-weight:700; color:var(--text2); list-style:none; }
+#txStockExistingFold > summary::-webkit-details-marker { display:none; }
+#txStockExistingFold[open] { padding:0 9px 8px; }
+#servisMasterCategoryChips.servis-category-chip-strip { display:flex; flex-wrap:nowrap !important; gap:6px; max-width:100%; overflow-x:auto; overflow-y:hidden; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
+#servisMasterCategoryChips.servis-category-chip-strip > * { flex:0 0 auto; min-height:40px; }
+#servisKm { font-size:16px; }
+#linkTxFiltersFold { margin:4px 0 8px; }
+#linkTxFiltersFold > summary { min-height:40px; }
+#linkTxFiltersFold[open] { padding:0 8px 8px; }
+#linkTxFiltersFold > .fg, #linkTxFiltersFold > div:not(summary) { margin-bottom:8px; }
+#linkTxModal #linkTxSearch { min-height:44px; font-size:16px; }
+
+/* S2649 — P1-3/P1-4/P1-9/P1-10: compact page header and long form sections. */
+#page-shop > .page-settings-btn { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+#page-shop > .page-settings-btn .qs-btn { position:static; flex:0 0 auto; min-height:40px; }
+#page-shop .page-breadcrumb[hidden] { display:none !important; }
+.modal-section-fold { margin:8px 0 10px; }
+.modal-section-fold > summary { min-height:44px; }
+.modal-section-fold[open] { padding:0 10px 8px; }
+#renovItemCategoryHint { margin-top:5px; line-height:1.45; }
+.cn-km-initial-link { display:inline-flex; align-items:center; justify-content:center; min-height:36px; margin-top:4px; padding:4px 9px; border:1px solid var(--accent); border-radius:9px; color:var(--accent); background:var(--accent-soft); font-size:12px; font-weight:700; }
+#page-carnotes .pwa-action-card[hidden], #page-carnotes .cn-summary-link[hidden], #cnCurKm[hidden], #cnKmInitialLink[hidden] { display:none !important; }
+
+/* S2650 — P1-2/P1-5: Renovasi status and common linked-panel presentation. */
+.sheet-renov-project-summary { margin:5px 0 8px; color:var(--text2); font-size:12px; font-weight:700; line-height:1.4; }
+.renov-paid-item, .renov-paid-item * { text-decoration:none !important; }
+.renov-paid-chip { display:inline-flex; align-items:center; min-height:24px; margin:3px 0 3px 6px; padding:2px 8px; border-radius:999px; border:1px solid color-mix(in srgb, #16a34a 45%, var(--border)); background:color-mix(in srgb, #16a34a 12%, var(--surface2)); color:color-mix(in srgb, #16a34a 75%, var(--text)); font-size:11px; font-weight:800; text-decoration:none !important; }
+.renov-overflow-menu { display:inline-flex; position:relative; }
+.renov-overflow-menu > summary { display:inline-flex; align-items:center; justify-content:center; width:40px; min-width:40px; height:40px; border:1px solid var(--border2); border-radius:10px; color:var(--text); cursor:pointer; list-style:none; font-size:22px; }
+.renov-overflow-menu > summary::-webkit-details-marker { display:none; }
+.renov-overflow-menu[open] > .renov-menu-delete { display:block; position:absolute; right:0; top:42px; z-index:5; min-width:150px; padding:9px 12px; border:1px solid var(--border2); border-radius:10px; background:var(--surface); box-shadow:var(--shadow-elevated,var(--shadow-panel-down)); }
+.sheet-linked-panel-body { box-sizing:border-box; min-width:0; max-width:100%; overflow-wrap:anywhere; border-radius:12px; padding:14px; margin-bottom:14px; }
+.sheet-linked-panel-heading { display:flex !important; align-items:center; gap:8px; min-height:44px; line-height:1.4; }
+.sheet-linked-panel-heading input[type="checkbox"] { flex:0 0 auto; width:20px !important; height:20px !important; }
+
+/* S2651 — P1-3/P1-4: two-column Shop KPI strip and two-level Car Notes period navigation. */
+.shop-kpi-strip { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:10px; align-items:stretch; margin:0 0 12px; }
+.shop-kpi-strip > .pwa-domain-hero { grid-column:1; grid-row:1; display:flex; flex-direction:column; justify-content:space-between; min-width:0; min-height:100%; margin:0; padding:14px; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-main h1 { font-size:clamp(18px,2vw,26px); line-height:1.2; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-main p { font-size:12px; line-height:1.45; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-domain-status-row { flex-wrap:wrap; gap:5px; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-actions { display:grid; grid-template-columns:minmax(0,1fr); gap:6px; margin-top:10px; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-action-card { min-height:48px; padding:7px 9px; display:grid; grid-template-columns:24px minmax(0,1fr); column-gap:7px; text-align:left; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-action-card > span { grid-row:1 / span 2; align-self:center; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-action-card b { font-size:12px; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-action-card small { font-size:10px; }
+.shop-kpi-strip > .shop-grid { grid-column:2; grid-row:1; display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(82px,1fr); gap:8px; align-content:stretch; margin:0; }
+.shop-kpi-strip > .shop-grid .shop-stat { min-width:0; min-height:82px; padding:10px; }
+.shop-kpi-strip > .shop-grid #shopModalStokCard { grid-column:1 / -1; min-width:0; height:100%; margin:0 !important; padding:10px; }
+#shopModalStokCard .u-flex { gap:8px; }
+#shopModalStokCard .u-fs18 { font-size:15px; overflow-wrap:anywhere; }
+@media (max-width:650px) {
+  .shop-kpi-strip { grid-template-columns:minmax(0,1fr); }
+  .shop-kpi-strip > .pwa-domain-hero { grid-column:1; grid-row:auto; }
+  .shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-actions { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .shop-kpi-strip > .pwa-domain-hero .pwa-action-card { display:flex; flex-direction:column; align-items:flex-start; gap:3px; min-width:0; }
+  .shop-kpi-strip > .shop-grid { grid-column:1; grid-row:auto; }
+}
+@media (max-width:380px) {
+  .shop-kpi-strip > .pwa-domain-hero { padding:11px; }
+  .shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-actions { grid-template-columns:1fr; }
+  .shop-kpi-strip > .pwa-domain-hero .pwa-action-card { display:grid; grid-template-columns:24px minmax(0,1fr); }
+}
+
+/* S2652 — shared footer and key/value row primitives. */
+.sheet-footer { box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+.kv-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+.kv-row > :first-child { min-width:0; overflow-wrap:anywhere; }
+.kv-row > :last-child { flex:0 0 auto; text-align:right; font-variant-numeric:tabular-nums; }
+
+/* S2653 — P1-21/P1-22: Android-friendly control font sizes. */
+#orderModal #oPriceType, #orderModal #oProductSelect, #orderModal #oAcc,
+#purchaseOrderBatchModal #pobSupplier, #importShopExcelFile { font-size:16px !important; }
+#shopScanPreview.sheet-section { margin:0; padding:6px 10px; }
+#orderItemList.sheet-section, #pobCartList.sheet-section { margin:0 0 10px; padding:8px 10px; }
+.sheet-renov-project-summary.kv-row { flex-wrap:wrap; }

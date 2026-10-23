@@ -148,15 +148,26 @@ saveProject(){
 const name=document.getElementById('renovProjName').value.trim();
 if(!name){toast('⚠️ Masukkan nama proyek');return;}
 const catatan=document.getElementById('renovProjNote').value.trim();
+let savedProjectId=null;
 if(Renov.projEditId){
 const p=D.renovProjects.find(x=>sameId(x.id,Renov.projEditId));
-if(p){p.name=name;p.catatan=catatan;}
+if(p){p.name=name;p.catatan=catatan;savedProjectId=p.id;}
 } else {
-D.renovProjects.push({id:uid(),name,catatan,createdAt:todayStr(),items:[]});
+const project={id:uid(),name,catatan,createdAt:todayStr(),items:[]};
+D.renovProjects.push(project);savedProjectId=project.id;
 }
 Renov.projEditId=null;
 save();closeModal('renovProjectModal');Renov.render();
 if(Renov.curId)Renov.renderDetail();
+// If opened from the transaction form, refresh the existing selector immediately
+// after save (not only on a close-button click) and select the project just saved.
+const txModal=document.getElementById('txModal');
+const txProjectSelect=document.getElementById('txRenovProject');
+if(txModal&&txModal.classList&&typeof txModal.classList.contains==='function'&&txModal.classList.contains('open')&&typeof populateTxRenovSelect==='function'){
+  populateTxRenovSelect();
+  if(txProjectSelect&&savedProjectId!=null){txProjectSelect.value=String(savedProjectId);txProjectSelect.dispatchEvent(new Event('change',{bubbles:true}));}
+  if(typeof window!=='undefined'&&typeof window.__pwaSyncRenovCreateButton==='function')window.__pwaSyncRenovCreateButton();
+}
 toast('✅ Proyek tersimpan');
 },
 editCurrentProject(){ if(Renov.curId)Renov.openProjectModal(Renov.curId); },
@@ -201,7 +212,7 @@ return;
 }
 const renderRow=(it)=>{
 const acc=D.accounts.find(a=>a.id===it.accountId);
-return`<div class="tx-item">
+return`<div class="tx-item" data-renov-item-id="${escapeHtml(String(it.id))}">
         <div class="tx-icon" style="background:${it.paid?'var(--accent3-soft)':'var(--surface3)'};cursor:pointer" data-action="Renov.togglePaid" data-args="${escapeHtml(JSON.stringify([p.id, it.id]))}" title="${it.paid?'Batalkan lunas':'Tandai sudah dibeli'}">${it.paid?'✅':'⬜'}</div>
         <div class="tx-info u-pointer" data-action="Renov.openItemModal" data-args="${escapeHtml(JSON.stringify([p.id, it.id]))}">
           <div class="tx-name" style="${it.paid?'text-decoration:line-through;color:var(--text2)':''}">${escapeHtml(it.name)} ${it.category?`<span class="acc-chip">${escapeHtml(it.category)}</span>`:''}</div>

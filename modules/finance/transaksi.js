@@ -973,12 +973,32 @@ const hasActiveBill=!!txEditLinkedBillId;
 dueWrap.style.display='';
 if(tenor===1&&!hasActiveBill){
 tenor1Hint.style.display='block';
-if(dueLabelEl)dueLabelEl.textContent='Jatuh Tempo (Bayar Bulan Depan)';
+if(dueLabelEl)dueLabelEl.textContent='Jatuh Tempo (bayar nanti)';
 }else{
 tenor1Hint.style.display='none';
-if(!hasActiveBill&&dueLabelEl)dueLabelEl.textContent='Jatuh Tempo Pertama';
+if(!hasActiveBill&&dueLabelEl)dueLabelEl.textContent=CICILAN_DUE_LABEL_N;
 }
+updateCicilanNextPreview();
 }
+// S2638 (rekomendasi P1 label): label lama "Jatuh Tempo Pertama" menyesatkan -- utk tenor>=2
+// cicilan ke-1 langsung tercatat sbg transaksi ini & field tanggal ini jadi dasar jatuh tempo
+// cicilan BERIKUTNYA (+1 bulan, lihat _saveTxInner di transaksi-b.js). Pratinjau menampilkan
+// tanggal itu apa adanya; TIDAK mengubah logika simpan.
+const CICILAN_DUE_LABEL_N='Cicilan ke-1 (dibayar sekarang) · Tanggal';
+function updateCicilanNextPreview(){
+const el=document.getElementById('txCicilanNextPreview');
+if(!el)return;
+const tenorEl=document.getElementById('txCicilanTenor');
+const dueEl=document.getElementById('txCicilanDue');
+const tenor=tenorEl?(parseInt(tenorEl.value)||1):1;
+if(txEditLinkedBillId||tenor<2||!dueEl||!dueEl.value){el.style.display='none';el.textContent='';return;}
+const d=new Date(dueEl.value);
+if(isNaN(d.getTime())){el.style.display='none';el.textContent='';return;}
+if(typeof _amc015==='function')_amc015(d,1);else d.setMonth(d.getMonth()+1);
+el.textContent='➡️ Cicilan ke-2 jatuh tempo '+d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+el.style.display='block';
+}
+
 // onCicilanTenorSelectChange() (s284) -- dipanggil dari onchange dropdown Tenor
 // (modules/shared/modals.js). Kalau user baru pindah ke Tenor 1x (bayar bulan depan) utk
 // transaksi BARU (bukan sedang edit cicilan lama yg py bill aktif) dan field Jatuh Tempo
@@ -1025,7 +1045,7 @@ const scanInsightEl=document.getElementById('txScanInsight'); if(scanInsightEl){
 cicilanLastInput='total';
 cicilanDateLinked=false;
 txEditLinkedBillId=null;
-document.getElementById('txCicilanDueLabel').textContent='Jatuh Tempo Pertama';
+document.getElementById('txCicilanDueLabel').textContent=CICILAN_DUE_LABEL_N;
 document.getElementById('txCicilanDueHint').style.display='none';
 document.getElementById('txCicilanHistoryBtn').style.display='none';
 ['txCicilanNama','txCicilanTotal','txCicilanPerBulan','txCicilanBunga','txLanggananNama'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -1367,7 +1387,7 @@ const lockIds=['pmTunai','pmCicilan','pmLangganan'].filter(x=>x!==(linkedBill.ki
 lockIds.forEach(id=>{const el=document.getElementById(id);if(el){el.style.pointerEvents='none';el.style.opacity='0.4';}});
 } else {
 document.getElementById('txCicilanDue').value=t.date;
-document.getElementById('txCicilanDueLabel').textContent='Jatuh Tempo Pertama';
+document.getElementById('txCicilanDueLabel').textContent=CICILAN_DUE_LABEL_N;
 document.getElementById('txCicilanDueHint').style.display='none';
 document.getElementById('txCicilanHistoryBtn').style.display='none';
 updateCicilanTenorUI();

@@ -381,7 +381,7 @@ function ensureTxServisChecklistPanel(){
 const fields=document.getElementById('txServisFields');
 if(!fields||typeof ServisChecklist==='undefined')return null;
 let box=document.getElementById('txServisChecklistPanel');
-if(!box){box=document.createElement('div');box.id='txServisChecklistPanel';fields.appendChild(box);}
+if(!box){box=document.createElement('div');box.id='txServisChecklistPanel';(document.getElementById('txServisAdvanced')||fields).appendChild(box);}
 return box;
 }
 function getTxServisPackageState(){

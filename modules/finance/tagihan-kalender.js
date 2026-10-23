@@ -1295,7 +1295,7 @@ document.getElementById('billActionsTitle').textContent=`🔔 ${b.name}`;
 // tanpa guard, jadi bisa dipakai bayar 2x utk periode yang sama (sisaTenor kepotong
 // 2x, nextDue maju 2x) — berlaku sama utk cicilan/tagihan/langganan.
 const paidThisPeriod=!lunas&&getBillPaidThisPeriodInfo(b,billFilterBulan,billFilterTahun);
-const payAdvanceRow=paidThisPeriod?'':`<div class="bill-action-row" data-action="billActionPayAdvance" data-args="[${id}]"><span class="bar-icon u-cacc4">📅</span> Bayar Bulan Depan</div>
+const payAdvanceRow=paidThisPeriod?'':`<div class="bill-action-row" data-action="billActionPayAdvance" data-args="[${id}]"><span class="bar-icon u-cacc4">📅</span> Bayar di Muka</div>
      `;
 const rows=lunas?
     `<div class="bill-action-row" data-action="billActionEdit" data-args="[${id}]"><span class="bar-icon u-cacc">✏️</span> Edit</div>

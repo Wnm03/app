@@ -667,7 +667,7 @@ ensureServiceJobTypeUI(selectedJobType){
   if(!wrap){
     wrap=document.createElement('div'); wrap.id='servisJobTypeWrap'; wrap.className='fg';
     wrap.style.cssText='background:var(--surface3);border:1px solid var(--border2);border-radius:12px;padding:10px 12px;margin-bottom:10px';
-    wrap.innerHTML='<label class="fl">Jenis Pekerjaan <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(opsional · satu sesi)</span></label><select class="fs" id="servisJobType" data-onchange="Servis.onServiceJobTypeChange"></select><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Jenis pekerjaan berlaku untuk sesi servis ini. Kategori dan komponen ditentukan langsung dari checklist di bawah.</div>';
+    wrap.innerHTML='<label class="fl">Jenis Pekerjaan <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">(opsional · satu sesi)</span></label><select class="fs" id="servisJobType" aria-label="Jenis pekerjaan servis" data-onchange="Servis.onServiceJobTypeChange"></select><div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5">Jenis pekerjaan berlaku untuk sesi servis ini. Kategori dan komponen ditentukan langsung dari checklist di bawah.</div>';
     panel.insertAdjacentElement('afterbegin',wrap);
   }
   const sel=document.getElementById('servisJobType');

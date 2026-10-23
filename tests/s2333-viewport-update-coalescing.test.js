@@ -27,7 +27,7 @@ test('S2333 coalesces viewport event bursts into one animation-frame update', ()
   const window = {
     innerWidth: 320,
     innerHeight: 640,
-    visualViewport: { height: 640, addEventListener: (name, fn) => { viewportListeners[name] = fn; } },
+    visualViewport: { height: 640, offsetTop: 0, scale: 1, addEventListener: (name, fn) => { (viewportListeners[name] = viewportListeners[name] || []).push(fn); } },
     addEventListener: (name, fn) => { windowListeners[name] = fn; }
   };
   const context = {
@@ -44,10 +44,12 @@ test('S2333 coalesces viewport event bursts into one animation-frame update', ()
   window.innerWidth = 500;
   windowListeners.orientationchange();
   window.visualViewport.height = 300;
-  viewportListeners.resize();
+  viewportListeners.resize.forEach((fn) => fn());
   assert.equal(callbacks.length, 1, 'a burst should schedule only one frame');
   callbacks[0]();
-  assert.deepEqual(writes, [['--pwa-vw', '500px'], ['--pwa-vh', '300px']]);
+  // S2641 P0-7: helper --kb-h (sinkron, baca-saja) ikut mendengar visualViewport; viewport-state tetap satu frame.
+  assert.deepEqual(writes.filter((w) => w[0] !== '--kb-h'), [['--pwa-vw', '500px'], ['--pwa-vh', '300px']]);
+  assert.deepEqual(writes.filter((w) => w[0] === '--kb-h'), [['--kb-h', '340px']]);
   assert.deepEqual(toggles.slice(-2), [['pwa-landscape', false], ['pwa-keyboard-open', true]]);
 });
 

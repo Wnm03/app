@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2595-carnotes-null-interval-guard-2635';
+const MODULE_RENDER_VERSION='s2595-carnotes-null-interval-guard-2651';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -615,7 +615,22 @@ const resetHtml=isFiltering?'<button class="btn btn-ghost btn-sm u-mt10" data-ac
 // bulan yg lagi dibuka -- konsisten dgn "Belum ada transaksi di periode ini" di Daftar Transaksi.
 const navBrowsing=!isFiltering&&billStatNavActive&&billStatMonth!==null;
 const msg=isFiltering?'Tidak ada tagihan yang cocok dengan filter':(navBrowsing?`Belum ada tagihan${billFilterStatus==='lunas'?' lunas':''} di ${MONTHS_FULL[billStatMonth]} ${billStatYear}`:'Belum ada tagihan terjadwal');
-targets.forEach(el=>el.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">${msg}</div>${resetHtml}</div>`);
+// S2638 (rekomendasi P1 empty state): bulan ini kosong tapi ada tagihan terjadwal di bulan
+// depan (mis. cicilan tenor 1x) -> tampilkan ringkasan "Berikutnya" + tombol lompat ke bulan itu.
+let nextHtml='';
+if(navBrowsing&&billFilterStatus!=='lunas'&&billFilterKategori==='all'&&typeof getBillOccurrencesInMonth==='function'){
+for(let step=1;step<=12&&!nextHtml;step++){
+const nd=new Date(billStatYear,billStatMonth+step,1);
+let cnt=0,sum=0;
+for(const bb of (D.bills||[])){const occ=getBillOccurrencesInMonth(bb,nd.getFullYear(),nd.getMonth());cnt+=occ.length;sum+=occ.length*(bb.amount||0);}
+if(cnt){
+const jt=sum>=1000000?(Math.round(sum/100000)/10).toLocaleString('id-ID')+' jt':fmt(sum);
+const nextLbl=`Berikutnya: ${MONTHS_FULL[nd.getMonth()].slice(0,3)} ${nd.getFullYear()} · ${cnt} tagihan · ${jt}`;
+nextHtml=step===1?`<button class="btn btn-ghost btn-sm u-mt10" data-action="changeBillStatMonth" data-args="[1]">${nextLbl} ›</button>`:`<div class="u-fs12 u-t2 u-mt10">${nextLbl}</div>`;
+}
+}
+}
+targets.forEach(el=>el.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><div class="empty-text">${msg}</div>${nextHtml}${resetHtml}</div>`);
 updateBillStatGrid('keuBill');
 return;
 }
@@ -696,7 +711,14 @@ const autoPiutangChip=autoPiutangId?`<span class="acc-chip u-pointer" data-stop=
 const statusBadge=b._paidPeriodOnly?`<span class="bill-due-badge bill-due-ok">✅ Dibayar</span>`:(b._lunas?`<span class="bill-due-badge bill-due-ok">✅ Lunas</span>`:`<span class="bill-due-badge ${urgClass}">${diff<0?'Lewat':diff===0?'Hari ini':diff+' hari'}</span>`);
 const anomaly=isArchived?null:getBillAnomalyInfo(b.id,b.amount);
 const anomalyNote=anomaly?`<div class="u-fs11 u-mt2 u-fw700" style="color:var(--accent4)">⚠️ Naik ${anomaly.pctChange}% dari rata-rata ${anomaly.count}x terakhir (${fmt(anomaly.avgPrev)}) — cek lagi sebelum bayar</div>`:'';
-const hasDetail=!!(cicilanBar||anomalyNote);
+// S2638 (rekomendasi P3 kartu): kartu hanya menampilkan MAKS 2 chip (urutan prioritas: status
+// bayar, sisa tenor, porsi bersama, kategori, subkategori, piutang terkait); sisanya pindah ke
+// area detail (chevron ▾) supaya nama tidak terjepit di layar 390 px. Murni tampilan.
+const chipPool=[paidThisPeriodChip,(!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''),(b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''),(b.category?`<span class="acc-chip">${escapeHtml(String(b.category))}</span>`:''),(b.subcategory?`<span class="acc-chip">${escapeHtml(String(b.subcategory))}</span>`:''),autoPiutangChip].filter(Boolean);
+const chipsVisible=chipPool.slice(0,2).join('');
+const chipsExtra=chipPool.slice(2).join('');
+const extraChipsHtml=chipsExtra?`<div class="bill-chips u-mt4">${chipsExtra}</div>`:'';
+const hasDetail=!!(cicilanBar||anomalyNote||chipsExtra);
 const chevron=hasDetail?`<span class="bill-card-chevron" data-stop="1" data-action="toggleBillCardDetail" data-args='["$el"]' title="Detail" aria-label="Tampilkan detail">▾</span>`:'';
 const actionBtns=isArchived?
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
@@ -714,14 +736,15 @@ const actionBtns=isArchived?
 `<button class="tx-del u-cacc3" data-stop="1" data-action="openBillHistory" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Riwayat Pembayaran" aria-label="Riwayat Pembayaran">📋</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit Pembayaran Bulan Ini" aria-label="Edit Pembayaran Bulan Ini">✏️</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`:
-`<button class="tx-del" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅</button>
+`<button class="tx-del bill-pay-btn" data-stop="1" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Bayar sekarang" aria-label="Bayar sekarang">✅ Bayar</button>
        <button class="tx-del u-bgaccsoft u-cacc" data-stop="1" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" title="Edit" aria-label="Edit">✏️</button>
        <button class="tx-del" data-stop="1" data-action="openBillActionsMenu" data-args="${escapeHtml(JSON.stringify([b.id,false]))}" title="Aksi lainnya" aria-label="Aksi lainnya">⋮</button>`);
 return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="${escapeHtml(JSON.stringify([b.id]))}" style="flex-direction:column;align-items:stretch;gap:8px;${isArchived?'opacity:0.75':''}">
       <div class="u-flex u-aic u-gap10">
         <div class="tx-icon u-bgaccsoft">${icons[b.kind]||'🔔'}</div>
         <div class="tx-info">
-          <div class="tx-name">${escapeHtml(b.name)} ${b.category?`<span class="acc-chip">${b.category}</span>`:''} ${b.subcategory?`<span class="acc-chip">${b.subcategory}</span>`:''} ${b.shared?`<span class="acc-chip">👫 ${b.sharedPct}% dari ${fmt(b.totalAmount)}</span>`:''} ${!isArchived&&b.sisaTenor!=null?`<span class="acc-chip">${b.sisaTenor}x lagi</span>`:''} ${autoPiutangChip} ${paidThisPeriodChip}</div>
+          <div class="tx-name bill-name">${escapeHtml(b.name)}</div>
+          ${chipsVisible?`<div class="bill-chips">${chipsVisible}</div>`:''}
           <div class="tx-meta">${b._paidPeriodOnly?'Sudah dibayar':(b._lunas?'Lunas':'Jatuh tempo')} ${due.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})} · ${b.freq}</div>
         </div>
         <div class="u-flex u-fdcol u-gap4" style="align-items:flex-end">
@@ -730,7 +753,7 @@ return`<div class="bill-item u-pointer" data-action="openBillModal" data-args="$
         </div>
         ${chevron}
       </div>
-      ${hasDetail?`<div class="bill-card-detail">${cicilanBar}${anomalyNote}</div>`:''}
+      ${hasDetail?`<div class="bill-card-detail">${extraChipsHtml}${cicilanBar}${anomalyNote}</div>`:''}
       <div class="u-flex u-gap6 u-fwrap" style="justify-content:flex-end">
         ${actionBtns}
       </div>

@@ -105,6 +105,7 @@ const dueEl=document.getElementById('txCicilanDue');
 if(!dateEl.value&&!dueEl.value)return;
 if(src==='date') dueEl.value=dateEl.value;
 else dateEl.value=dueEl.value;
+if(typeof updateCicilanNextPreview==='function')updateCicilanNextPreview();
 }
 // SESI 2 (migrasi atribut inline txModal panel Cicilan, lanjutan
 // PATCH-SESI1-fix-csp-inline-handlers): wrapper kecil di bawah ini menggantikan
@@ -132,6 +133,7 @@ syncCicilanPreview('sharedNominal');
 function _txCicilanDueOnInput(){
 syncCicilanPreview();
 syncCicilanDate('due');
+if(typeof updateCicilanNextPreview==='function')updateCicilanNextPreview();
 }
 function openCicilanHistoryFromTx(){
 if(!txEditLinkedBillId)return;
