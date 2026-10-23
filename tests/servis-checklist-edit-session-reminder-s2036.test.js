@@ -91,3 +91,62 @@ test('S2036: edit path explicitly reconciles session rows and component-owned re
 });
 
 console.log('S2036 checklist-edit session/reminder regression tests: PASS');
+
+test('S2720: explicit empty component action does not inherit session ganti during checklist edit',()=>{
+  const ctx=loadServis();
+  const s=ctx.D.servisLogs[0];
+  s.actionType='ganti';
+  const result=ctx.ServiceHistoryChecklistEditS2036.reconcile(s,[
+    {...s.checklist[0],actionType:''},
+    {itemId:'injector',itemName:'Injector (bersihkan)',serviceComponentId:'injector',masterCategoryId:'sistem-injeksi-pgmfi',actionType:''}
+  ],'v1','2026-09-24',20237);
+  const injector=ctx.D.servisLogs.find(x=>x.serviceComponentId==='injector');
+  assert.ok(injector);
+  assert.equal(injector.actionType,'');
+  assert.equal(s.actionType,'','explicit action on first checklist component is authoritative');
+});
+
+test('S2721: komponen baru dengan actionType eksplisit kosong tidak mewarisi aksi sesi',()=>{
+  const ctx=loadServis();
+  const s=ctx.D.servisLogs[0];
+  s.actionType='ganti';
+  const payload=[
+    {...s.checklist[0]},
+    {itemId:'injector',itemName:'Injector (bersihkan)',serviceComponentId:'injector',masterCategoryId:'sistem-injeksi-pgmfi',actionType:''}
+  ];
+  const result=ctx.ServiceHistoryChecklistEditS2036.reconcile(s,payload,'v1','2026-09-24',20237);
+  assert.equal(result.added,1);
+  const added=ctx.D.servisLogs.find(x=>x.serviceComponentId==='injector');
+  assert.ok(added);
+  assert.equal(added.actionType,'','aksi komponen eksplisit kosong harus tetap kosong');
+  assert.equal(added.checklist[0].actionType,'');
+  assert.equal(added.nextDueKm,null,'aksi tidak diketahui tidak boleh menghasilkan baseline penggantian baru');
+});
+
+test('S2721: komponen baru tanpa properti actionType boleh memakai fallback aksi sesi',()=>{
+  const ctx=loadServis();
+  const s=ctx.D.servisLogs[0];
+  s.actionType='ganti';
+  const payload=[
+    {...s.checklist[0]},
+    {itemId:'injector',itemName:'Injector (bersihkan)',serviceComponentId:'injector',masterCategoryId:'sistem-injeksi-pgmfi'}
+  ];
+  ctx.ServiceHistoryChecklistEditS2036.reconcile(s,payload,'v1','2026-09-24',20237);
+  const added=ctx.D.servisLogs.find(x=>x.serviceComponentId==='injector');
+  assert.equal(added.actionType,'ganti','fallback sesi hanya berlaku jika properti aksi tidak tersedia');
+  assert.equal(added.nextDueKm,28237);
+});
+
+test('S2723: edit existing component clears stale ganti when checklist action is explicitly blank',()=>{
+  const ctx=loadServis();
+  const s=ctx.D.servisLogs[0];
+  s.actionType='ganti';
+  s.checklist=[{...s.checklist[0],actionType:'ganti'}];
+  const result=ctx.ServiceHistoryChecklistEditS2036.reconcile(s,[
+    {...s.checklist[0],actionType:''}
+  ],'v1','2026-09-24',20237);
+  assert.equal(result.updated,1);
+  assert.equal(s.actionType,'','explicit blank checklist action must clear stale component action');
+  assert.equal(s.checklist[0].actionType,'');
+  assert.equal(s.nextDueKm,null,'blank action must not create a reset snapshot');
+});

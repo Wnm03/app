@@ -254,7 +254,7 @@ openHistoryFromReminder(categoryId,componentId){
   };
   const history=logs.filter(sameTarget).slice().sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0)||String(b.id||'').localeCompare(String(a.id||'')));
   const resetFilter=linkedCat&&typeof resolveResetActionTypeFilter==='function'?resolveResetActionTypeFilter(linkedCat):null;
-  const matchesReset=log=>typeof Servis._matchesActionTypeForReset==='function'?Servis._matchesActionTypeForReset(log,linkedCat,resetFilter,true):(!resetFilter||(log.actionType||'ganti')===resetFilter);
+  const matchesReset=log=>typeof Servis._matchesActionTypeForReset==='function'?Servis._matchesActionTypeForReset(log,linkedCat,resetFilter,true):(!resetFilter||String(log&&log.actionType||'')===resetFilter);
   const target=history.find(matchesReset)||history[0]||null;
   const _periodeBerubah=cnPeriode!=='selamanya';
   if(typeof cnPeriode!=='undefined')cnPeriode='selamanya';

@@ -1,0 +1,22 @@
+{
+  "patch": "S2720",
+  "base_patch": "S2719",
+  "type": "cumulative changed-files-only patch",
+  "build_version": "2682",
+  "finding": "Checklist edit used truthy fallback for actionType, causing an explicitly empty component action to inherit the session action.",
+  "tests": {
+    "focused": "11/11 passed",
+    "source_syntax": "passed",
+    "build": "passed",
+    "bundle_syntax": "passed",
+    "full_suite": "not_run",
+    "browser_webview_e2e": "not_run"
+  },
+  "new_or_updated_files": [
+    "modules/vehicle/service-history-checklist-edit-s2036.js",
+    "tests/servis-checklist-edit-session-reminder-s2036.test.js",
+    "PATCH-S2720-CHECKLIST-EDIT-ACTION-SCOPE.md",
+    "PATCH-S2720-MANIFEST.json"
+  ],
+  "scope_note": "Cumulative S2710–S2719 patch retained; no full-release archive."
+}

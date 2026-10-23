@@ -1,0 +1,32 @@
+{
+  "patch": "S2723",
+  "title": "Checklist action authority on edit",
+  "type": "cumulative changed-files patch",
+  "base_patch": "S2722",
+  "build_version": 2686,
+  "finding": "An explicitly blank actionType on an existing checklist component could fail to clear a stale ganti action because edit reconciliation used truthy fallback.",
+  "changed_or_refreshed_files": [
+    "modules/vehicle/service-history-checklist-edit-s2036.js",
+    "tests/servis-checklist-edit-session-reminder-s2036.test.js",
+    "app-bundle-a.min.js",
+    "app-bundle-b.min.js",
+    "index.html",
+    "app_production.html",
+    "sw.js",
+    "modules/shared/modules-calc.js",
+    "modules/shared/features-helpers-global-security.js",
+    "modules/shared/modals.js",
+    "modules/shared/modules-render.js",
+    "chat-action-handlers.js",
+    "PATCH-S2723-CHECKLIST-ACTION-AUTHORITY.md",
+    "PATCH-S2723-MANIFEST.json"
+  ],
+  "validation": {
+    "targeted_tests_passed": 23,
+    "targeted_tests_failed": 0,
+    "build": "passed",
+    "bundle_syntax": "passed",
+    "full_suite": "not completed in this step",
+    "browser_webview_runtime": "not verified"
+  }
+}

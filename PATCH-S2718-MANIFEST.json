@@ -1,0 +1,16 @@
+{
+  "patch": "S2718",
+  "title": "Checklist action must not inherit generic session action",
+  "base": "app-main (38).zip + cumulative S2710-S2717 patch chain",
+  "type": "cumulative patch-only ZIP; not a full release",
+  "buildVersion": 2680,
+  "finding": "When a matching component checklist row exists but its actionType is missing, componentAction previously fell back to the session root action. In multi-component service sessions this could falsely assign a replacement action to another component and create a false replacement baseline.",
+  "fix": "A matching checklist row is authoritative. Missing action on that row remains unknown; session-level action is used only when no matching component checklist row exists.",
+  "verification": {
+    "focusedTests": "49/49 passed across 9 focused service/reminder test files",
+    "build": "npm run build passed; bundle syntax passed; app/index HTML and service-worker cache synchronized to 2680",
+    "knownWarnings": ["docs/AUDIT_MATRIX.md inventory baseline is stale", "several source files exceed the 1600-line advisory threshold"],
+    "fullSuite": "not run in this step",
+    "browserWebViewRuntime": "not run in this step"
+  }
+}

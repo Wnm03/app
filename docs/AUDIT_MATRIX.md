@@ -14,21 +14,20 @@
 
 ---
 
-# S2428 — Current Coverage Snapshot
+# S2721 — Current Coverage Snapshot
 
-> Snapshot taken from a clean replay of `app-main (53)` with the canonical repair chain through S2427. Counts exclude `backups/`, `node_modules/`, `.git/`, and `.test-checkpoints/`.
+> Snapshot refreshed from the S2721 cumulative patch replay on `app-main (38)`. Counts exclude `backups/`, `node_modules/`, `.git/`, and `.test-checkpoints/`.
 
 | Metric | Current replay |
 |---|---:|
-| Total files | 3768 |
-| JavaScript | 2092 |
-| Tests (`*.test.js`) | 1451 |
-| Markdown | 1398 |
+| Total files | 3789 |
+| JavaScript | 2095 |
+| Tests (`*.test.js`) | 1454 |
+| Markdown | 1407 |
 | HTML | 7 |
-| JSON | 22 |
+| JSON | 31 |
 | CSS | 4 |
 | Top-level module directories | 14 |
-
 ### Release-governance status at S2428
 
 - Bundle-B freshness: **BLOCK** — embedded source fingerprint is stale.
@@ -57,12 +56,12 @@ The canonical tree was recounted after the S2295 regression fixes. Counts exclud
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 3760 |
-| JavaScript | 2091 |
-| Tests | 1450 |
-| Markdown | 1392 |
+| Total files | 3787 |
+| JavaScript | 2095 |
+| Tests | 1454 |
+| Markdown | 1406 |
 | HTML | 7 |
-| JSON | 21 |
+| JSON | 30 |
 | CSS | 4 |
 | Module families | 17 |
 

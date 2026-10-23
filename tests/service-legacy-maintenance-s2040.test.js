@@ -59,3 +59,17 @@ test('S2717 missing action is unknown and cannot reset replacement baseline',()=
  assert.equal(r.states[0].status,'BASELINE_REQUIRED');
  assert.equal(r.states[0].nextDueKm,null);
 });
+
+
+test('S2718 checklist row with missing action must not inherit another component session action',()=>{
+ const c=load();
+ c.D.servisLogs=[{id:'session-mixed',vehicleId:'old-1',actionType:'ganti',km:20000,date:'2026-10-18',checklist:[
+  {serviceComponentId:'oli-mesin',itemId:'oli-mesin',actionType:'ganti'},
+  {serviceComponentId:'busi',itemId:'busi'}
+ ]}];
+ assert.equal(c.ServiceLegacyMaintenance.latestByAction('old-1','oli-mesin','ganti').id,'session-mixed');
+ assert.equal(c.ServiceLegacyMaintenance.latestByAction('old-1','busi','ganti'),null,'komponen tanpa tindakan tidak boleh mewarisi ganti dari root sesi');
+ const r=c.ServiceLegacyMaintenance.evaluateComponent('old-1','busi');
+ assert.equal(r.states[1].status,'BASELINE_REQUIRED');
+ assert.equal(r.states[1].nextDueKm,null);
+});

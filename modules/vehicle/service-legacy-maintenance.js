@@ -48,9 +48,11 @@
   }
   function componentAction(record,componentId){
     const row=componentChecklistRow(record,componentId);
-    // Session-level action may be a generic placeholder while the component row
-    // records the actual performed action.
-    return normalizeAction(str(row&&row.actionType)||record&&record.actionType||'');
+    // Once a component-specific checklist row exists, its action is authoritative.
+    // A missing action on that row is unknown; falling back to the session action
+    // can falsely assign another component's replacement to this component.
+    if(row)return normalizeAction(row.actionType);
+    return normalizeAction(record&&record.actionType||'');
   }
   function history(vehicleId,componentId){
     const d=typeof D!=='undefined'?D:root.D;

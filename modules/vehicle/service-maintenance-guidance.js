@@ -73,7 +73,7 @@ function summarizeServiceHistory(vehicleId,cat){
   const logs=Array.isArray(D.servisLogs)?D.servisLogs.filter(s=>s&&same(s.vehicleId,vehicleId)&&(!cat||typeof servisLogMatchesCat!=='function'||servisLogMatchesCat(s,cat))):[];
   const scoped=cat&&typeof matchesActionTypeForReset==='function';
   const by=(type)=>{
-    const xs=logs.filter(s=>scoped?matchesActionTypeForReset(s,cat,type,false):String(s.actionType||'ganti')===type);
+    const xs=logs.filter(s=>scoped?matchesActionTypeForReset(s,cat,type,false):String(s.actionType||'')===type);
     xs.sort((a,b)=>typeof compareServiceHistoryRecency==='function'?compareServiceHistoryRecency(a,b):String(b.date||'').localeCompare(String(a.date||''))||Number(b.km||0)-Number(a.km||0));
     return xs[0]||null;
   };

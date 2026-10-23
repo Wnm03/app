@@ -58,9 +58,32 @@
     const existingById=new Map();
     sessionRows.forEach(row=>{const ids=Array.isArray(row.checklist)&&row.checklist.length?row.checklist.map(componentIdOf).filter(Boolean):[componentIdOf(row)].filter(Boolean);ids.forEach(id=>{if(!existingById.has(id))existingById.set(id,row);});});
     let added=0,updated=0,removed=0;const createdRows=[];
-    const makeSnapshot=(row,owner)=>{
-      const projection=ensureProjection(row,vid),cat=projection.category,action=row.actionType||owner.actionType||'ganti';
-      const snap=cat&&typeof g.buildServiceNextDueSnapshot==='function'?g.buildServiceNextDueSnapshot({vehicleId:vid,cat,serviceKm,serviceDate,actionType:action}):{nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+    // Snapshot the parent action before component rows mutate a shared parent row.
+    const sessionActionAtStart=s.actionType||'';
+    const makeSnapshot=(row,owner,payload)=>{
+      const projection=ensureProjection(row,vid),cat=projection.category;
+      // S2720: an explicitly present checklist action (including empty) is authoritative.
+      // Do not inherit a session-level replacement action into this component.
+      const hasPayloadAction=!!payload&&Object.prototype.hasOwnProperty.call(payload,'actionType');
+      const action=hasPayloadAction?payload.actionType:(row.actionType||owner.actionType||'');
+      let snap={nextDueKm:null,nextDueDate:null,nextDueAxis:null};
+      // An explicitly blank action is not a service event for baseline purposes.
+      // Leave the snapshot unknown; the reminder resolver can still use older
+      // valid history independently, but this edit must not advance the baseline.
+      const actionEvidenceMissing=!!payload&&Object.prototype.hasOwnProperty.call(payload,'actionType')&&!str(payload.actionType);
+      if(!actionEvidenceMissing&&cat&&typeof g.buildServiceNextDueSnapshot==='function'){
+        // A row being edited must not be selected as its own previous baseline.
+        // Temporarily remove only this row while resolving older component history.
+        const logs=data().servisLogs;
+        const originalLogs=Array.isArray(logs)?logs.slice():null;
+        const excludedSessionId=str(owner&& (owner.sessionId||owner.serviceJobId)||s.sessionId||s.serviceJobId||s.id);
+        if(originalLogs){
+          const eligible=originalLogs.filter(log=>log!==row&&str(log&&log.vehicleId)===vid&&str(log&&(log.sessionId||log.serviceJobId||log.id))!==excludedSessionId);
+          logs.splice(0,logs.length,...eligible);
+        }
+        try{snap=g.buildServiceNextDueSnapshot({vehicleId:vid,cat,serviceKm,serviceDate,actionType:action});}
+        finally{if(originalLogs)logs.splice(0,logs.length,...originalLogs);}
+      }
       row.categoryId=cat&&cat.id||row.categoryId||owner.categoryId||null;
       row.masterCategoryId=projection.masterCategoryId||row.masterCategoryId||owner.masterCategoryId||null;
       row.serviceComponentId=projection.serviceComponentId||row.serviceComponentId||null;
@@ -75,10 +98,15 @@
       let owner=existingById.get(cid)||null;if(!owner&&index===0)owner=s;
       if(!owner){
         const id=typeof g.uid==='function'?g.uid():'servis_'+Date.now()+'_'+index;
-        owner={id,sessionId:s.sessionId||s.serviceJobId||null,serviceJobId:s.serviceJobId||s.sessionId||null,vehicleId:vid,date:serviceDate,item:payload.itemName||cid,categoryId:null,masterCategoryId:payload.masterCategoryId||null,serviceComponentId:cid,serviceComponentNameSnapshot:payload.itemName||cid,serviceJobType:s.serviceJobType||null,serviceJobLabel:s.serviceJobLabel||null,serviceJobEvidence:s.serviceJobEvidence||null,actionType:payload.actionType||s.actionType||'ganti',km:serviceKm,cost:0,note:s.note||'',accountId:s.accountId||null,txLinkId:null,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartRefs:[],catalogPartOemCode:'',catalogPartLinkedStockId:null,foto:[],checklist:[],checklistNotApplicable:Array.isArray(s.checklistNotApplicable)?s.checklistNotApplicable.slice():[],conditionResult:null,conditionNote:'',costBreakdown:{labor:null,parts:null,consumables:null,other:null,total:0,source:'component'},serviceCost:null,source:'CHECKLIST-EDIT'};
+        // S2721: keep the persisted component-row action aligned with the same
+        // explicit-property rule used by its snapshot. Empty is evidence of
+        // unknown action, not permission to inherit a session-level replacement.
+        const hasPayloadAction=Object.prototype.hasOwnProperty.call(payload,'actionType');
+        const componentAction=hasPayloadAction?payload.actionType:sessionActionAtStart;
+        owner={id,sessionId:s.sessionId||s.serviceJobId||null,serviceJobId:s.serviceJobId||s.sessionId||null,vehicleId:vid,date:serviceDate,item:payload.itemName||cid,categoryId:null,masterCategoryId:payload.masterCategoryId||null,serviceComponentId:cid,serviceComponentNameSnapshot:payload.itemName||cid,serviceJobType:s.serviceJobType||null,serviceJobLabel:s.serviceJobLabel||null,serviceJobEvidence:s.serviceJobEvidence||null,actionType:componentAction,km:serviceKm,cost:0,note:s.note||'',accountId:s.accountId||null,txLinkId:null,usedPartId:null,usedPartQty:0,catalogPartId:null,catalogPartQty:0,catalogPartRefs:[],catalogPartOemCode:'',catalogPartLinkedStockId:null,foto:[],checklist:[],checklistNotApplicable:Array.isArray(s.checklistNotApplicable)?s.checklistNotApplicable.slice():[],conditionResult:null,conditionNote:'',costBreakdown:{labor:null,parts:null,consumables:null,other:null,total:0,source:'component'},serviceCost:null,source:'CHECKLIST-EDIT'};
         data().servisLogs.push(owner);existingById.set(cid,owner);createdRows.push(owner);added++;
       }
-      owner.item=payload.itemName||owner.item;owner.actionType=payload.actionType||owner.actionType;owner.masterCategoryId=payload.masterCategoryId||owner.masterCategoryId||null;owner.serviceComponentId=cid;owner.checklist=[payload];owner.conditionResult=payload.conditionResult||null;owner.conditionNote=payload.conditionNote||'';makeSnapshot(owner,s);updated++;
+      owner.item=payload.itemName||owner.item;if(Object.prototype.hasOwnProperty.call(payload,'actionType'))owner.actionType=payload.actionType;else if(!owner.actionType)owner.actionType=sessionActionAtStart;owner.masterCategoryId=payload.masterCategoryId||owner.masterCategoryId||null;owner.serviceComponentId=cid;owner.checklist=[payload];owner.conditionResult=payload.conditionResult||null;owner.conditionNote=payload.conditionNote||'';makeSnapshot(owner,s,payload);updated++;
     });
     s.checklist=checklistPayload.slice();
     const mainId=str(s.id),keepIds=new Set(createdRows.map(r=>str(r.id)));

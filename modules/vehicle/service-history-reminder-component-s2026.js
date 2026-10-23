@@ -16,7 +16,7 @@
   function component(log,cid){const target=str(cid);return target?components(log).find(c=>cidOf(c)===target)||null:null;}
   function projection(log,comp){
     if(!log||!comp)return null;
-    return Object.assign({},log,{serviceComponentId:comp.serviceComponentId||comp.checklistItemId||null,masterCategoryId:comp.masterCategoryId||log.masterCategoryId,item:comp.componentName||log.item,categoryId:comp.categoryId||log.categoryId,actionType:comp.actionType||log.actionType});
+    return Object.assign({},log,{serviceComponentId:comp.serviceComponentId||comp.checklistItemId||null,masterCategoryId:comp.masterCategoryId||log.masterCategoryId,item:comp.componentName||log.item,categoryId:comp.categoryId||log.categoryId,actionType:comp&&Object.prototype.hasOwnProperty.call(comp,'actionType')?comp.actionType:log.actionType});
   }
   function audit(log,cid){
     const s=g.Servis||{}; const c=component(log,cid||s._s2019ComponentFocusId); const issues=[]; const info=[];

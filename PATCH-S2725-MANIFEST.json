@@ -1,0 +1,371 @@
+{
+  "patch": "S2725",
+  "base_patch": "S2724",
+  "build_cache_version": 2690,
+  "delivery": "cumulative patch-only ZIP; includes S2710-S2724 cumulative files plus S2725 changes; not a full release",
+  "findings": [
+    "missing/empty actionType was incorrectly treated as ganti in two history-reader fallbacks",
+    "inventory contract test remained stale versus current repo inventory"
+  ],
+  "verification": {
+    "service_related_tests_passed": 822,
+    "service_related_tests_failed": 0,
+    "targeted_tests_passed": 4,
+    "targeted_tests_failed": 0,
+    "build": "passed",
+    "bundle_syntax": "passed",
+    "bundle_freshness": "passed",
+    "full_suite": "not completed/claimed",
+    "browser_webview_runtime": "not verified"
+  },
+  "inventory_baseline": {
+    "total_files": 3789,
+    "javascript": 2095,
+    "markdown": 1407,
+    "html": 7,
+    "json": 31,
+    "css": 4
+  },
+  "files": [
+    {
+      "path": "PATCH-S2710-REMINDER-ALIAS-DEDUPE.md",
+      "bytes": 1331,
+      "sha256": "3dcd34ce86994b3425ca64e09166d03cee453cee232ca437571a576d3aaa9816"
+    },
+    {
+      "path": "PATCH-S2711-REMINDER-SINGLE-SOT-CHAIN.md",
+      "bytes": 1974,
+      "sha256": "93c81eb77ef378d1e91f8dc1f64071ecb7e57146d9d7ba0efd277293f00a989d"
+    },
+    {
+      "path": "PATCH-S2712-BACKUP-ALIAS-SOT-AUDIT.md",
+      "bytes": 2330,
+      "sha256": "f26ac379b6cfeb15457052b030bea22a8023b5f3edd7046f1f2073c34748eba4"
+    },
+    {
+      "path": "PATCH-S2713-SERVICE-HISTORY-FILTER-PAGINATION-AUDIT.md",
+      "bytes": 4356,
+      "sha256": "ea509068a840484885f40edb61e4b74bd730c019922dab378588d1569a6ddda8"
+    },
+    {
+      "path": "PATCH-S2714-CUMULATIVE-AUDIT.md",
+      "bytes": 2247,
+      "sha256": "e8a2795615f3de82ebbac445c12d2da22a3ed678e847f5f0ecf0dec31faafca8"
+    },
+    {
+      "path": "PATCH-S2715-CHAIN-REPAIR-ACCUMULATION-AUDIT.md",
+      "bytes": 3837,
+      "sha256": "1290968d58c4636f309db60712d1ad202f5abcedc464a413dd9fe55ee6bbeacd"
+    },
+    {
+      "path": "PATCH-S2715-MANIFEST.json",
+      "bytes": 7118,
+      "sha256": "84dce6bc16c633e3902389919c4df5d4c5c37b4cd0464fb100dc7de538d465e6"
+    },
+    {
+      "path": "PATCH-S2716-CHECKLIST-BASELINE-RECONCILIATION.md",
+      "bytes": 2058,
+      "sha256": "d2dd9ff00ee0f627ce16e5a8abd72a15211f8550b3896040aa1647b3fa4be005"
+    },
+    {
+      "path": "PATCH-S2716-MANIFEST.json",
+      "bytes": 4665,
+      "sha256": "1dd39e016a90bc3d52460ec905be55d859c501b95251fe06f89c6cd3375d912b"
+    },
+    {
+      "path": "PATCH-S2717-MANIFEST.json",
+      "bytes": 5172,
+      "sha256": "eb071e0d1c3e5b3c15b38c6f619a19c15680c678c5e14b0db733bf337ca4d1e1"
+    },
+    {
+      "path": "PATCH-S2717-UNKNOWN-ACTION-BASELINE-GUARD.md",
+      "bytes": 1552,
+      "sha256": "b7a11da188e221dbbc3dc00eb8a9c844ec7e6d80e8b50f282079df1c9517ba76"
+    },
+    {
+      "path": "PATCH-S2718-CHECKLIST-ACTION-BASELINE.md",
+      "bytes": 1227,
+      "sha256": "df07ed7bd5443d8962f6a9c06f2d06316de31d671756b912273b18191efecc47"
+    },
+    {
+      "path": "PATCH-S2718-MANIFEST.json",
+      "bytes": 1190,
+      "sha256": "ff2c9039cc0e031814d353fbbaf31ba7a905c74a4901ccd2bd4a66273bd17c93"
+    },
+    {
+      "path": "PATCH-S2719-CHECKLIST-ACTION-SCOPE.md",
+      "bytes": 1467,
+      "sha256": "fe6c586ee53a3cb316ed8de60552ad050154b5fca622f3451c342f919d2d82b7"
+    },
+    {
+      "path": "PATCH-S2719-MANIFEST.json",
+      "bytes": 1153,
+      "sha256": "7e646435a55bc9397a2fd4c480a32efbab993044d240bcd4c67dee738f306ce2"
+    },
+    {
+      "path": "PATCH-S2720-CHECKLIST-EDIT-ACTION-SCOPE.md",
+      "bytes": 1186,
+      "sha256": "8b28d7817416b14b868b2c3c2c097c5bd6e66c511206dfb2e52cc5aa293ef39c"
+    },
+    {
+      "path": "PATCH-S2720-MANIFEST.json",
+      "bytes": 797,
+      "sha256": "cbcccbc45d6c367cf7c220816b643e72e23dadfebff0217a8e152bc0600eaee4"
+    },
+    {
+      "path": "PATCH-S2721-CHECKLIST-EDIT-SNAPSHOT-SELF-BASELINE.md",
+      "bytes": 1768,
+      "sha256": "43434884a3183f1ce22a111dea0747973c41836a6baf10374d0c3c2128a12eec"
+    },
+    {
+      "path": "PATCH-S2721-MANIFEST.json",
+      "bytes": 1279,
+      "sha256": "7896981b60116af58cb4db11fddf90cedadba96a779a79cc9d72be17d9d61a8d"
+    },
+    {
+      "path": "PATCH-S2722-EMPTY-ACTION-RESET-GUARD.md",
+      "bytes": 1046,
+      "sha256": "e9a74f42f37f86f69ebf1ba8eea789bdec499ea0bcaee26c621fc316336b251c"
+    },
+    {
+      "path": "PATCH-S2722-MANIFEST.json",
+      "bytes": 902,
+      "sha256": "e5b8338de21110c8a10a68834bf55dc8941c00e3cf3ffbe2035a64d84fafc6c2"
+    },
+    {
+      "path": "PATCH-S2723-CHECKLIST-ACTION-AUTHORITY.md",
+      "bytes": 1302,
+      "sha256": "f011a28ac87cb97a29894690a7b49a28f51b0975d6a1bac9d95e528f6eda08ab"
+    },
+    {
+      "path": "PATCH-S2723-MANIFEST.json",
+      "bytes": 1135,
+      "sha256": "21f0f852bbe7ebc504f6b6c8350d6c9a88a92d7519810ba41f934648cb2cb069"
+    },
+    {
+      "path": "PATCH-S2724-LEGACY-HISTORY-ACTION-UNKNOWN-GUARD.md",
+      "bytes": 1503,
+      "sha256": "bc464819350d6fe755b22e249327510b07b86b591f24518ec30154022ca97d64"
+    },
+    {
+      "path": "PATCH-S2724-MANIFEST.json",
+      "bytes": 2967,
+      "sha256": "e5d06d87f3cdcc783b317910a7020d1d0dd2a98c914797ff38b0bd183681851b"
+    },
+    {
+      "path": "PATCH-S2725-LEGACY-ACTION-FALLBACK-INVENTORY-REPAIR.md",
+      "bytes": 1741,
+      "sha256": "6483cb8f58dcca20884b893837ab35fa4e5f48c7c6dd6fb8eb1f5c14d959042c"
+    },
+    {
+      "path": "app-bundle-a.min.js",
+      "bytes": 1093690,
+      "sha256": "454d6ffeea7fb81088aee57dec77e4bcc36ffa7a808b78dcb59d298a95437f33"
+    },
+    {
+      "path": "app-bundle-b.min.js",
+      "bytes": 2542914,
+      "sha256": "e31f1ca1475d594a61888203a5ae9441fd671eca9974a0e8c0631398cd6f5981"
+    },
+    {
+      "path": "app_production.html",
+      "bytes": 315856,
+      "sha256": "1f66b267246934a60d764d3ed8dc13abba32a63817f00c8750add9147a95acd7"
+    },
+    {
+      "path": "chat-action-handlers.js",
+      "bytes": 10562,
+      "sha256": "d54f5c2930782be6c75635969dcc213aa106a0347b1616a3dcbac9b58724d196"
+    },
+    {
+      "path": "docs/AUDIT_MATRIX.md",
+      "bytes": 47267,
+      "sha256": "e0e6392ba65225f3e9320b6863a1aae17e0e9efd5affa9b36b93655b0636191e"
+    },
+    {
+      "path": "docs/COVERAGE-PER-MODULE.md",
+      "bytes": 1782,
+      "sha256": "0886affb19f581dc4a54a91de308063659e23d24de3866914ab64c5eadcb579f"
+    },
+    {
+      "path": "docs/FILE-MAP.md",
+      "bytes": 1123727,
+      "sha256": "93c0e8e061e9c927c8e0639e36d6448186fe0c6d3e611ae2d382ca5c28498906"
+    },
+    {
+      "path": "index.html",
+      "bytes": 315663,
+      "sha256": "0e5f577f492e8f556521f8eea3c1937f10e10a4108e32f488c4139052729f0e8"
+    },
+    {
+      "path": "modules/shared/features-helpers-global-security.js",
+      "bytes": 109852,
+      "sha256": "a775a1e2eeaaf6869140b6f91d1a7bdeb7238654e509f337cd47a0d8451af4c9"
+    },
+    {
+      "path": "modules/shared/modals.js",
+      "bytes": 313758,
+      "sha256": "3f54ba03b2f6f6f9d30d443584f63af3afd996fcc9b6b14f40cf0f5647403363"
+    },
+    {
+      "path": "modules/shared/modules-calc.js",
+      "bytes": 72953,
+      "sha256": "3c5e585629083f618c1d8fdbf2b0d325010c17e923a47de728356d7bb890f341"
+    },
+    {
+      "path": "modules/shared/modules-render.js",
+      "bytes": 106821,
+      "sha256": "7fe2abebc3807ae4364a3d14480474e62665d4abe6f4d914c0e13e221affeb0f"
+    },
+    {
+      "path": "modules/vehicle/service-category-sot-reconciliation-s2007.js",
+      "bytes": 10468,
+      "sha256": "15f438b7c02e9ea20b8eff35858139c5dc97bb469462a52bd331fa45ab3e4e37"
+    },
+    {
+      "path": "modules/vehicle/service-history-checklist-edit-s2036.js",
+      "bytes": 11423,
+      "sha256": "3151892659d4cc908d529c915c3beccb7d0e91eecd3ec5cebe4eaf4e1fae9c09"
+    },
+    {
+      "path": "modules/vehicle/service-history-multichecklist-s2019.js",
+      "bytes": 15123,
+      "sha256": "bbb1882e7b5a31932cd620290087236074e3b0940475a6ebdb9253df05a55afa"
+    },
+    {
+      "path": "modules/vehicle/service-history-reminder-component-s2026.js",
+      "bytes": 5562,
+      "sha256": "cf26d630a4eb3cb20d9bb8b47bcf770fba6421041a8788337b77bb85ead68cc2"
+    },
+    {
+      "path": "modules/vehicle/service-legacy-maintenance.js",
+      "bytes": 10706,
+      "sha256": "9b2f696a1c3c676363263c0f3b4dc9f974f83e5bf3768905821be8727d2e311c"
+    },
+    {
+      "path": "modules/vehicle/service-maintenance-guidance.js",
+      "bytes": 8655,
+      "sha256": "36e16220c40dc8e03551d0a9c03d812348b92a68c6197577d51bbeb8f9739dcb"
+    },
+    {
+      "path": "modules/vehicle/service-master-data.generated.js",
+      "bytes": 76239,
+      "sha256": "cb8476d7667b6e234c521e1769fe99f7c6bb7e0f9bcafd7609aa07dc80decbf4"
+    },
+    {
+      "path": "modules/vehicle/servis-b.js",
+      "bytes": 77220,
+      "sha256": "dfb328ee0a985ad684e84cfd0095cb7f8cdd40f79bc3d500d491a157ef4a2623"
+    },
+    {
+      "path": "modules/vehicle/servis.js",
+      "bytes": 184297,
+      "sha256": "e3e454e62bec58de617aa7ffc9ba5183fe5433b7130c66a24431153fe7f33db1"
+    },
+    {
+      "path": "modules/vehicle/sparepart-servis-b.js",
+      "bytes": 51123,
+      "sha256": "a9a3493b72be157978a31325b0f2f1b26e50959076a0e6b2979c5815a152dae5"
+    },
+    {
+      "path": "modules/vehicle/sparepart-servis.js",
+      "bytes": 97104,
+      "sha256": "038c5bb9e40bd47a278c0cc34cf427e9a63f5b1bc437745a38a8ac17d88f8392"
+    },
+    {
+      "path": "modules/vehicle/vehicle-car-notes-sot-s2071.js",
+      "bytes": 30062,
+      "sha256": "4ce1ab9a0afd95db950549f42495edaf0b3f28d9373b0bad449d13a914ca1eec"
+    },
+    {
+      "path": "modules/vehicle/vehicle-notif-bridge.js",
+      "bytes": 3895,
+      "sha256": "e8d96d8a5025e1224f0f1fad067afa99e720fef619f91ea2ca7a56a796871adc"
+    },
+    {
+      "path": "modules/vehicle/vehicle-recommendation-engine.js",
+      "bytes": 5004,
+      "sha256": "11c0e3030d342448f7138586ca5ae99f6af1bba0b261ca31c42a95c41926b0fa"
+    },
+    {
+      "path": "modules/vehicle/vehicle-reminder.js",
+      "bytes": 12600,
+      "sha256": "033bbbc83713e9190f38fe26ac121b9b12b6e491ad78c73c6610cb817acebaca"
+    },
+    {
+      "path": "scripts/build-lints.js",
+      "bytes": 45025,
+      "sha256": "4a72d87d39116cae6ef1696ff25017d22ccf40de3f7c8d217dfaeed59249ba82"
+    },
+    {
+      "path": "sw.js",
+      "bytes": 3631,
+      "sha256": "bdbdd971f4dbc45051a45665f61787608b8ddfc232adec6681e523d572273db2"
+    },
+    {
+      "path": "tests/reminder-baseline-neutral-legacy.test.js",
+      "bytes": 2618,
+      "sha256": "53ec33a3c89bef10c1e2f4238eb9a64d113afa31959eafabfe5ddabbd02c4575"
+    },
+    {
+      "path": "tests/s2714-backup-duplicate-category-sot.test.js",
+      "bytes": 1853,
+      "sha256": "120e75d8a85acac274aba4c51289085cc3e5a248dd3c568345e418f4cce6b63f"
+    },
+    {
+      "path": "tests/s2715-patch-chain-inventory-contract.test.js",
+      "bytes": 1090,
+      "sha256": "9db7cdd328a6eee55a7eb832cdb8956e7bdb4f57640e13e36b17cf45a31a9751"
+    },
+    {
+      "path": "tests/s2719-checklist-action-scope.test.js",
+      "bytes": 2093,
+      "sha256": "101051fef3c14968b4d1d52ced117c345ad38cffbf6c28d00a3c1a63d07a71b9"
+    },
+    {
+      "path": "tests/s2722-empty-action-reset-guard.test.js",
+      "bytes": 918,
+      "sha256": "09be45c7f148521c00a63532f5d5ed83468eefd47e4503bbb595669075e771f7"
+    },
+    {
+      "path": "tests/s2724-history-action-no-fallback.test.js",
+      "bytes": 897,
+      "sha256": "ebe0ebdffe87c70b8e654aa7b0c13c7add82dce7844467782f7804df4e48a844"
+    },
+    {
+      "path": "tests/service-history-session-filter-pagination-s2713.test.js",
+      "bytes": 1254,
+      "sha256": "d947a723e12a5083a8d530d31ba40ae3423e3dcc543f7297edc4adc40b818900"
+    },
+    {
+      "path": "tests/service-legacy-maintenance-s2040.test.js",
+      "bytes": 4923,
+      "sha256": "e505fabb97b972a4460777b9207910ce704b46ac00de7aacf0299b373af81bd4"
+    },
+    {
+      "path": "tests/service-reminder-backup-alias-regression-s2712.test.js",
+      "bytes": 2314,
+      "sha256": "2a2b687c5a7495939bec91e90ff8ebc937eb99f1291effe7610d3afb7437bf5d"
+    },
+    {
+      "path": "tests/service-reminder-normalized-alias-dedupe-s2710.test.js",
+      "bytes": 956,
+      "sha256": "f7941bb37d8563d273737da6d35ff304af4354ac5fe305e65f9e477899b50ef7"
+    },
+    {
+      "path": "tests/service-reminder-single-sot-notification-s2711.test.js",
+      "bytes": 3066,
+      "sha256": "a66c6af5063fa198740afab188fd1ed92bc1d67a1380abee91a6a11c292301a2"
+    },
+    {
+      "path": "tests/servis-checklist-edit-session-reminder-s2036.test.js",
+      "bytes": 7962,
+      "sha256": "7a16a9d3b4e5a107a64d8652e548f72211797834f96f2e154b85b07fcf599a58"
+    },
+    {
+      "path": "tests/servis-history-session-group-contract.test.js",
+      "bytes": 1475,
+      "sha256": "364b8ab9f382c9931891004600c13d482d8db935ca985daa44ffae8785721255"
+    }
+  ]
+}

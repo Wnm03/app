@@ -38,7 +38,7 @@
       const key=c.serviceComponentId||('legacy:'+fallback.toLowerCase()); if(!key||seen.has(key))return; seen.add(key);
       out.push({
         ...c, key, source:'checklist', checklistItemId:str(raw&&raw.itemId)||null,
-        actionType:raw&&raw.actionType||log.actionType||null,
+        actionType:raw&&Object.prototype.hasOwnProperty.call(raw,'actionType')?(raw.actionType==null?'':String(raw.actionType)):((log&&log.actionType)||null),
         conditionResult:raw&&raw.conditionResult||null, conditionNote:raw&&raw.conditionNote||'',
         notApplicable:!!(raw&&raw.notApplicable), categoryId:raw&&raw.categoryId||null,
         historyId:log.id, sessionId:sessionIdOf(log), vehicleId:vehicleIdOf(log), kind:kind||'checklist'
@@ -75,7 +75,7 @@
   }
   function reminderProxy(log,comp){
     if(!log||!comp)return log;
-    return Object.assign({},log,{serviceComponentId:comp.serviceComponentId||comp.checklistItemId||null,masterCategoryId:comp.masterCategoryId||log.masterCategoryId,item:comp.componentName||log.item,categoryId:comp.categoryId||log.categoryId,actionType:comp.actionType||log.actionType});
+    return Object.assign({},log,{serviceComponentId:comp.serviceComponentId||comp.checklistItemId||null,masterCategoryId:comp.masterCategoryId||log.masterCategoryId,item:comp.componentName||log.item,categoryId:comp.categoryId||log.categoryId,actionType:comp&&Object.prototype.hasOwnProperty.call(comp,'actionType')?comp.actionType:log.actionType});
   }
   function reminderState(log,comp){
     const row=reminderProxy(log,comp); const vid=vehicleIdOf(row); const cats=g.D&&Array.isArray(g.D.sparepartCats)?g.D.sparepartCats:[]; const cid=str(comp&&comp.serviceComponentId||row.serviceComponentId);

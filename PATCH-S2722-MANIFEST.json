@@ -1,0 +1,27 @@
+{
+  "patch": "S2722",
+  "title": "Empty action reset guard",
+  "type": "cumulative changed-files patch",
+  "base_patch": "S2721",
+  "build_version": 2684,
+  "finding": "Blank or missing actionType was normalized to ganti in Servis._matchesActionTypeForReset, allowing unknown evidence to count as a replacement baseline.",
+  "changed_or_refreshed_files": [
+    "modules/vehicle/servis-b.js",
+    "tests/s2722-empty-action-reset-guard.test.js",
+    "app-bundle-a.min.js",
+    "app-bundle-b.min.js",
+    "index.html",
+    "app_production.html",
+    "sw.js",
+    "docs/AUDIT_MATRIX.md",
+    "modules/vehicle/service-master-data.generated.js"
+  ],
+  "validation": {
+    "targeted_tests_passed": 38,
+    "targeted_tests_failed": 0,
+    "build": "passed",
+    "bundle_syntax": "passed",
+    "full_suite": "not completed; prior timeout remains unresolved",
+    "browser_webview_runtime": "not verified"
+  }
+}

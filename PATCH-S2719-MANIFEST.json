@@ -1,0 +1,35 @@
+{
+  "patch": "S2719",
+  "base_patch": "S2718",
+  "type": "cumulative changed-files-only patch",
+  "build_version": "2681",
+  "tests": {
+    "focused": "17/17 passed",
+    "bundle_freshness": "passed",
+    "build": "passed",
+    "full_suite": "not_run",
+    "browser_webview_e2e": "not_run"
+  },
+  "finding": "Empty explicit component checklist action still inherited session-level action in two read-only projection paths.",
+  "files_added": [
+    "tests/s2719-checklist-action-scope.test.js",
+    "PATCH-S2719-CHECKLIST-ACTION-SCOPE.md"
+  ],
+  "files_changed": [
+    "modules/vehicle/service-history-multichecklist-s2019.js",
+    "modules/vehicle/service-history-reminder-component-s2026.js",
+    "app-bundle-a.min.js",
+    "app-bundle-b.min.js",
+    "index.html",
+    "app_production.html",
+    "sw.js",
+    "modules/shared/modules-render.js",
+    "modules/shared/modals.js",
+    "modules/shared/modules-calc.js",
+    "chat-action-handlers.js",
+    "modules/shared/features-helpers-global-security.js",
+    "docs/FILE-MAP.md",
+    "docs/COVERAGE-PER-MODULE.md"
+  ],
+  "scope_note": "Cumulative S2710–S2718 files retained; no full-release archive."
+}

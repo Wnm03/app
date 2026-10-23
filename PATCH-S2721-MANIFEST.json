@@ -1,0 +1,29 @@
+{
+  "patch": "S2721",
+  "base_patch": "S2720",
+  "type": "cumulative changed-files-only patch",
+  "build_version": "2683",
+  "finding": "Checklist edit could create a due snapshot using its own in-session row as prior history, and the fallback session action could change as the parent row was mutated during iteration.",
+  "fixes": [
+    "capture session action before checklist iteration",
+    "honor explicit empty component action and suppress a new event snapshot for unknown action",
+    "exclude current session rows while calculating component snapshot, restoring rows in finally",
+    "refresh stale audit inventory counts"
+  ],
+  "tests": {
+    "focused": "13/13 passed",
+    "source_syntax": "passed",
+    "build": "passed",
+    "bundle_syntax": "passed",
+    "full_suite": "timed out at 240 seconds before final summary; not claimed passed",
+    "browser_webview_e2e": "not run"
+  },
+  "new_or_updated_files": [
+    "modules/vehicle/service-history-checklist-edit-s2036.js",
+    "tests/servis-checklist-edit-session-reminder-s2036.test.js",
+    "docs/AUDIT_MATRIX.md",
+    "PATCH-S2721-CHECKLIST-EDIT-SNAPSHOT-SELF-BASELINE.md",
+    "PATCH-S2721-MANIFEST.json"
+  ],
+  "scope_note": "Cumulative S2710–S2720 patch retained; changed files only, not a full release."
+}
