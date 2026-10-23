@@ -1,0 +1,202 @@
+{
+  "patch_id": "S2715",
+  "purpose": "Cumulative CarNotes service-reminder SOT repair and accumulation-chain audit",
+  "baseline_archive": "app-main (38).zip",
+  "baseline_sha256": "54cb7c538bda3c441aa4cedf6d4e3a875f997252eab285a5d9fa3ddb272524f5",
+  "runtime_build_version": 2677,
+  "format": "changed-files-only; paths relative to app-main root; not a full release",
+  "ignored_local_state": [
+    "node_modules/",
+    "backups/",
+    ".git/",
+    ".test-checkpoints/"
+  ],
+  "file_count_excluding_manifest": 37,
+  "files": [
+    {
+      "path": "PATCH-S2710-REMINDER-ALIAS-DEDUPE.md",
+      "status": "added",
+      "sha256": "3dcd34ce86994b3425ca64e09166d03cee453cee232ca437571a576d3aaa9816"
+    },
+    {
+      "path": "PATCH-S2711-REMINDER-SINGLE-SOT-CHAIN.md",
+      "status": "added",
+      "sha256": "93c81eb77ef378d1e91f8dc1f64071ecb7e57146d9d7ba0efd277293f00a989d"
+    },
+    {
+      "path": "PATCH-S2712-BACKUP-ALIAS-SOT-AUDIT.md",
+      "status": "added",
+      "sha256": "f26ac379b6cfeb15457052b030bea22a8023b5f3edd7046f1f2073c34748eba4"
+    },
+    {
+      "path": "PATCH-S2713-SERVICE-HISTORY-FILTER-PAGINATION-AUDIT.md",
+      "status": "added",
+      "sha256": "ea509068a840484885f40edb61e4b74bd730c019922dab378588d1569a6ddda8"
+    },
+    {
+      "path": "PATCH-S2714-CUMULATIVE-AUDIT.md",
+      "status": "added",
+      "sha256": "e8a2795615f3de82ebbac445c12d2da22a3ed678e847f5f0ecf0dec31faafca8"
+    },
+    {
+      "path": "PATCH-S2715-CHAIN-REPAIR-ACCUMULATION-AUDIT.md",
+      "status": "added",
+      "sha256": "1290968d58c4636f309db60712d1ad202f5abcedc464a413dd9fe55ee6bbeacd"
+    },
+    {
+      "path": "app-bundle-a.min.js",
+      "status": "modified",
+      "sha256": "08f7b9db539eeea9571145380e8cf6a9047ca12825b5b5337038a4adddc2189d"
+    },
+    {
+      "path": "app-bundle-b.min.js",
+      "status": "modified",
+      "sha256": "a4fe5e0f1cc524f00cc82a0e77a049b79c792b378ff3cb637354787019451f1b"
+    },
+    {
+      "path": "app_production.html",
+      "status": "modified",
+      "sha256": "69656aba253ed49ad8f21eb9f46766a4bf7e5fa0f46d813ce2a87c7b4a84eb14"
+    },
+    {
+      "path": "chat-action-handlers.js",
+      "status": "modified",
+      "sha256": "9cebfa4bd42e3485e113aec12296bba554a7b94682886cdecf51118f9bbe18b0"
+    },
+    {
+      "path": "docs/AUDIT_MATRIX.md",
+      "status": "modified",
+      "sha256": "9e032b15ab716204135a41f28b058bd0c38db2be88e57e33023502c57be44db8"
+    },
+    {
+      "path": "docs/COVERAGE-PER-MODULE.md",
+      "status": "modified",
+      "sha256": "217cd3a493c05222105e174760e892d584d3f9bdcfee27050059ba9034177bc7"
+    },
+    {
+      "path": "docs/FILE-MAP.md",
+      "status": "modified",
+      "sha256": "d08a42ca64769b6816a3552e63e572f515a357990d5ed2b39a0e27eead89e70a"
+    },
+    {
+      "path": "index.html",
+      "status": "modified",
+      "sha256": "562214df1c16b7908e646a576cb438df2f46811517047be34f1bfbc9d6992c91"
+    },
+    {
+      "path": "modules/shared/features-helpers-global-security.js",
+      "status": "modified",
+      "sha256": "8a5ab21b82d406d7a2ff507407f3455667134ce3c74d7570e7bcb67c8df8c5dd"
+    },
+    {
+      "path": "modules/shared/modals.js",
+      "status": "modified",
+      "sha256": "71b516463f8970e7f86f00debcba8691d17b2910aaac96d6a93debb3acd7a4d8"
+    },
+    {
+      "path": "modules/shared/modules-calc.js",
+      "status": "modified",
+      "sha256": "e39b5832820ce458172dc32263c786c2dd6610dafd6484d06b752c220230565c"
+    },
+    {
+      "path": "modules/shared/modules-render.js",
+      "status": "modified",
+      "sha256": "72d1736e57095e03bf890386905534f828003339bff2743f4859f5a968588de5"
+    },
+    {
+      "path": "modules/vehicle/service-category-sot-reconciliation-s2007.js",
+      "status": "modified",
+      "sha256": "15f438b7c02e9ea20b8eff35858139c5dc97bb469462a52bd331fa45ab3e4e37"
+    },
+    {
+      "path": "modules/vehicle/service-legacy-maintenance.js",
+      "status": "modified",
+      "sha256": "7dc174d89924943dff410d2b8304e2ce9cbfca01c9b1f181d11a21fac64adf46"
+    },
+    {
+      "path": "modules/vehicle/servis-b.js",
+      "status": "modified",
+      "sha256": "485a9090673f190b12a664a150ce4d4da81990a3f835b4cbaa8de01f50285313"
+    },
+    {
+      "path": "modules/vehicle/sparepart-servis-b.js",
+      "status": "modified",
+      "sha256": "a9a3493b72be157978a31325b0f2f1b26e50959076a0e6b2979c5815a152dae5"
+    },
+    {
+      "path": "modules/vehicle/sparepart-servis.js",
+      "status": "modified",
+      "sha256": "038c5bb9e40bd47a278c0cc34cf427e9a63f5b1bc437745a38a8ac17d88f8392"
+    },
+    {
+      "path": "modules/vehicle/vehicle-car-notes-sot-s2071.js",
+      "status": "modified",
+      "sha256": "4ce1ab9a0afd95db950549f42495edaf0b3f28d9373b0bad449d13a914ca1eec"
+    },
+    {
+      "path": "modules/vehicle/vehicle-notif-bridge.js",
+      "status": "modified",
+      "sha256": "e8d96d8a5025e1224f0f1fad067afa99e720fef619f91ea2ca7a56a796871adc"
+    },
+    {
+      "path": "modules/vehicle/vehicle-recommendation-engine.js",
+      "status": "modified",
+      "sha256": "11c0e3030d342448f7138586ca5ae99f6af1bba0b261ca31c42a95c41926b0fa"
+    },
+    {
+      "path": "modules/vehicle/vehicle-reminder.js",
+      "status": "modified",
+      "sha256": "033bbbc83713e9190f38fe26ac121b9b12b6e491ad78c73c6610cb817acebaca"
+    },
+    {
+      "path": "scripts/build-lints.js",
+      "status": "modified",
+      "sha256": "4a72d87d39116cae6ef1696ff25017d22ccf40de3f7c8d217dfaeed59249ba82"
+    },
+    {
+      "path": "sw.js",
+      "status": "modified",
+      "sha256": "5f0a76e7b92d7f8d1af7495fcfc5740e2e758b94d6400437c52afb9c0f6d58f5"
+    },
+    {
+      "path": "tests/reminder-baseline-neutral-legacy.test.js",
+      "status": "added",
+      "sha256": "53ec33a3c89bef10c1e2f4238eb9a64d113afa31959eafabfe5ddabbd02c4575"
+    },
+    {
+      "path": "tests/s2714-backup-duplicate-category-sot.test.js",
+      "status": "added",
+      "sha256": "120e75d8a85acac274aba4c51289085cc3e5a248dd3c568345e418f4cce6b63f"
+    },
+    {
+      "path": "tests/s2715-patch-chain-inventory-contract.test.js",
+      "status": "added",
+      "sha256": "58e7e4d7b99b05361ab0ed9ed0ea71f35f0753281c6e225f5659d2aee9222e99"
+    },
+    {
+      "path": "tests/service-history-session-filter-pagination-s2713.test.js",
+      "status": "added",
+      "sha256": "d947a723e12a5083a8d530d31ba40ae3423e3dcc543f7297edc4adc40b818900"
+    },
+    {
+      "path": "tests/service-reminder-backup-alias-regression-s2712.test.js",
+      "status": "added",
+      "sha256": "2a2b687c5a7495939bec91e90ff8ebc937eb99f1291effe7610d3afb7437bf5d"
+    },
+    {
+      "path": "tests/service-reminder-normalized-alias-dedupe-s2710.test.js",
+      "status": "added",
+      "sha256": "f7941bb37d8563d273737da6d35ff304af4354ac5fe305e65f9e477899b50ef7"
+    },
+    {
+      "path": "tests/service-reminder-single-sot-notification-s2711.test.js",
+      "status": "added",
+      "sha256": "a66c6af5063fa198740afab188fd1ed92bc1d67a1380abee91a6a11c292301a2"
+    },
+    {
+      "path": "tests/servis-history-session-group-contract.test.js",
+      "status": "modified",
+      "sha256": "364b8ab9f382c9931891004600c13d482d8db935ca985daa44ffae8785721255"
+    }
+  ]
+}

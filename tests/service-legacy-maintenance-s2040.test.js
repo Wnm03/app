@@ -39,3 +39,23 @@ test('S2040 no history produces baseline-required, never fake interval',()=>{
  const r=c.ServiceLegacyMaintenance.evaluateComponent('old-2','oli-mesin');
  assert.equal(r.status,'BASELINE_REQUIRED');assert.equal(r.states[0].nextDueKm,null);
 });
+test('S2716 checklist component identity/action overrides generic session root',()=>{
+ const c=load();
+ c.D.servisLogs=[{id:'session-1',vehicleId:'old-1',actionType:'catat',km:20000,date:'2026-10-18',checklist:[
+  {serviceComponentId:'oli-mesin',itemId:'oli-mesin',actionType:'ganti'},
+  {serviceComponentId:'busi',itemId:'busi',actionType:'periksa'}
+ ]}];
+ const greaseLike=c.ServiceLegacyMaintenance.history('old-1','oli-mesin');
+ assert.equal(greaseLike.length,1,'komponen harus ditemukan lewat checklist walau root tidak punya serviceComponentId');
+ assert.equal(c.ServiceLegacyMaintenance.latestByAction('old-1','oli-mesin','ganti').id,'session-1','aksi komponen ganti harus mengalahkan aksi root catat');
+ assert.equal(c.ServiceLegacyMaintenance.latestByAction('old-1','busi','periksa').id,'session-1','aksi komponen periksa harus dicocokkan terpisah');
+});
+
+test('S2717 missing action is unknown and cannot reset replacement baseline',()=>{
+ const c=load();
+ c.D.servisLogs=[{id:'unknown-action',vehicleId:'old-1',serviceComponentId:'oli-mesin',km:20000,date:'2026-10-18'}];
+ assert.equal(c.ServiceLegacyMaintenance.latestByAction('old-1','oli-mesin','ganti'),null,'unknown action must not be assumed to be ganti');
+ const r=c.ServiceLegacyMaintenance.evaluateComponent('old-1','oli-mesin');
+ assert.equal(r.states[0].status,'BASELINE_REQUIRED');
+ assert.equal(r.states[0].nextDueKm,null);
+});

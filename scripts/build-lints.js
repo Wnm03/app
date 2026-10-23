@@ -481,7 +481,7 @@ function lintDocsBaselineCountDrift() {
   const actual = Object.fromEntries(labels.map((l) => [l, 0]));
   const walk = (dir) => {
     for (const name of fs.readdirSync(dir)) {
-      if (name === 'node_modules' || name === '.git' || name === 'backups') continue;
+      if (name === 'node_modules' || name === '.git' || name === 'backups' || name === '.test-checkpoints') continue;
       const full = path.join(dir, name);
       const stat = fs.statSync(full);
       if (stat.isDirectory()) {

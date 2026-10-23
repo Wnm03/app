@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-23T13:05:56.279Z
-Total file source: 489 · Total identifier global: 17771
+Terakhir digenerate: 2026-10-23T14:04:19.356Z
+Total file source: 489 · Total identifier global: 17772
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -458,7 +458,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 435 | `modules/vehicle/vehicle-canonical-writer.js` | 33 | A-S2185: canonical mutation boundary for D.vehicles. Storage schema remains unchanged; this module only centralizes array mutation. |
 | 436 | `modules/vehicle/car-notes-sot.js` | 86 | _(tidak ada komentar header)_ |
 | 437 | `modules/vehicle/stock-command-sot.js` | 200 | _(tidak ada komentar header)_ |
-| 438 | `modules/vehicle/service-legacy-maintenance.js` | 135 | _(tidak ada komentar header)_ |
+| 438 | `modules/vehicle/service-legacy-maintenance.js` | 152 | _(tidak ada komentar header)_ |
 | 439 | `modules/vehicle/part-crud-s2041.js` | 344 | _(tidak ada komentar header)_ |
 | 440 | `modules/vehicle/service-runtime-projection-sot-s2166.js` | 98 | _(tidak ada komentar header)_ |
 | 441 | `modules/finance/finance-allocation-api.js` | 267 | modules/finance/finance-allocation-api.js — Salary Protection & Surplus Allocation S2601: orchestration READ-ONLY di atas API keuangan yang sudah ada. Tidak membuat transaksi, tidak mengubah saldo/schema/storage, tidak … |
@@ -13971,6 +13971,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `row` | `modules/asset/investasi-list-view.js` |
 | `row` | `modules/finance/bill-debt-piutang-canonical-writer.js` |
 | `row` | `modules/vehicle/vehicle-car-notes-sot-s2071.js` |
+| `row` | `modules/vehicle/service-legacy-maintenance.js` |
 | `row` | `modules/vehicle/service-history-multichecklist-s2019.js` |
 | `ROW_CLICK_ACTION` | `modules/asset/aset-misc.js` |
 | `rowActive` | `modules/shared/keamanan-pin.js` |

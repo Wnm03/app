@@ -14,7 +14,9 @@
   const str=v=>String(v==null?'':v).trim();
   const num=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;};
   const normalizeAction=a=>{
-    const raw=str(a||'ganti').toLowerCase().replace(/[ _-]+/g,'');
+    // Missing action is unknown, not an implicit replacement. Otherwise a history
+    // row without an action can falsely reset the component's replacement clock.
+    const raw=str(a).toLowerCase().replace(/[ _-]+/g,'');
     if(['ganti','diganti','replace','replacement'].includes(raw))return 'ganti';
     if(['pasang','pasangbaru','install','installed'].includes(raw))return 'pasang';
     if(['overhaul','perbaiki','perbaikan','repair','rebuild'].includes(raw))return 'overhaul';
@@ -40,16 +42,31 @@
     const v=vehicle(vehicleId);
     return !!(v&&v.serviceMaintenanceProfile&&v.serviceMaintenanceProfile.mode==='legacy');
   }
+  function componentChecklistRow(record,componentId){
+    const rows=Array.isArray(record&&record.checklist)?record.checklist:[];
+    return rows.find(row=>row&&str(row.serviceComponentId||row.itemId||row.checklistItemId||'')===str(componentId))||null;
+  }
+  function componentAction(record,componentId){
+    const row=componentChecklistRow(record,componentId);
+    // Session-level action may be a generic placeholder while the component row
+    // records the actual performed action.
+    return normalizeAction(str(row&&row.actionType)||record&&record.actionType||'');
+  }
   function history(vehicleId,componentId){
     const d=typeof D!=='undefined'?D:root.D;
-    const rows=(d&&Array.isArray(d.servisLogs)?d.servisLogs:[]).filter(r=>r&&str(r.vehicleId)===str(vehicleId)&&str(r.serviceComponentId||r.checklistItemId||'')===str(componentId));
+    const rows=(d&&Array.isArray(d.servisLogs)?d.servisLogs:[]).filter(r=>{
+      if(!r||str(r.vehicleId)!==str(vehicleId))return false;
+      if(str(r.serviceComponentId||r.checklistItemId||'')===str(componentId))return true;
+      // Multi-component sessions can keep canonical identity only on checklist rows.
+      return !!componentChecklistRow(r,componentId);
+    });
     rows.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||((num(b.km)??-1)-(num(a.km)??-1))||String(b.id||'').localeCompare(String(a.id||'')));
     return rows;
   }
   function latestByAction(vehicleId,componentId,action){
     const wanted=normalizeAction(action);
     return history(vehicleId,componentId).find(r=>{
-      const actual=normalizeAction(r.actionType||'ganti');
+      const actual=componentAction(r,componentId);
       // Replacement-age interval is reset by replacement, installation, or overhaul;
       // inspection/cleaning/adjustment must never reset that age.
       return wanted==='ganti'?resetAction(actual):actual===wanted;

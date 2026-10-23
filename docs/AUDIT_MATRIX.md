@@ -20,12 +20,12 @@
 
 | Metric | Current replay |
 |---|---:|
-| Total files | 3198 |
-| JavaScript | 1860 |
-| Tests (`*.test.js`) | 1255 |
-| Markdown | 1134 |
+| Total files | 3768 |
+| JavaScript | 2092 |
+| Tests (`*.test.js`) | 1451 |
+| Markdown | 1398 |
 | HTML | 7 |
-| JSON | 16 |
+| JSON | 22 |
 | CSS | 4 |
 | Top-level module directories | 14 |
 
@@ -57,16 +57,16 @@ The canonical tree was recounted after the S2295 regression fixes. Counts exclud
 
 | Metric | Baseline |
 |---|---:|
-| Total files | 3797 |
+| Total files | 3760 |
 | JavaScript | 2091 |
-| Tests | 1446 |
-| Markdown | 1396 |
+| Tests | 1450 |
+| Markdown | 1392 |
 | HTML | 7 |
-| JSON | 54 |
+| JSON | 21 |
 | CSS | 4 |
 | Module families | 17 |
 
-> **S2714 coverage snapshot (2026-10-23):** refreshed from the canonical build walker after the S2710–S2714 patch accumulation: 3797 files, 2091 JavaScript, 1446 test files, 1396 Markdown, 7 HTML, 54 JSON, 4 CSS, 17 module families. Counts exclude `backups/`, `node_modules/`, and `.git/`; test count is the number of `*.test.js` files and is informational (not part of the generic build-lint labels).
+> **S2715 chain-audit snapshot (2026-10-23):** recounted after overlaying S2714 onto `app-main (38)`: 3768 files, 2092 JavaScript, 1451 test files, 1398 Markdown, 7 HTML, 22 JSON, 4 CSS, 17 module families. `scripts/build-lints.js` now excludes `.test-checkpoints/` consistently with this documented inventory policy; resumable test checkpoint JSON is local state, not app source inventory. Counts exclude `backups/`, `node_modules/`, and `.git/`; test count is the number of `*.test.js` files and is informational (not part of the generic build-lint labels).
 
 > **S2269 baseline refresh:** inventory warning reconciled to the current canonical app tree: 2903 files, 1726 JavaScript, 1150 test files, 980 Markdown, 7 HTML, 31 JSON, 4 CSS. Excludes `backups/` and `node_modules/`; `.test-checkpoints/` is local test state and is not part of the application patch.
 
