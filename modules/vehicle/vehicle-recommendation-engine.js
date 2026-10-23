@@ -34,17 +34,22 @@ const VehicleRecommendationEngine = {
 // teks baru yang dikarang di sini (teks aksi konkret ada di
 // VehicleActionRecommendation, terpisah dari message reminder ini).
 _fromReminders(reminderAll) {
-  return (Array.isArray(reminderAll) ? reminderAll : [])
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(reminderAll) ? reminderAll : [])
     .filter((r) => r.severity === 'overdue' || r.severity === 'due-soon')
-    .map((r) => ({
-      id: `reminder-${r.type}-${r.vehicleId}-${r.categoryName || r.taxKey || 'fuel'}`,
-      source: 'reminder',
-      type: r.type,
-      vehicleId: r.vehicleId,
-      vehicleName: r.vehicleName,
-      severity: r.severity,
-      message: r.message,
-    }));
+    .forEach((r) => {
+      const componentKey = r.type === 'service'
+        ? (r.serviceComponentId
+          ? 'component:' + String(r.serviceComponentId).trim().toLowerCase()
+          : 'name:' + String(r.categoryName || '').normalize('NFKC').toLowerCase().replace(/[（(][^）)]*[）)]/g, ' ').replace(/\b(ngk|denso|iridium|10w\s*[- ]?\s*30|10w\s*[- ]?\s*40|5w\s*[- ]?\s*30|5w\s*[- ]?\s*40)\b.*$/i, '').replace(/[\s_-]+/g, ' ').trim())
+        : (r.categoryName || r.taxKey || 'fuel');
+      const id = `reminder-${r.type}-${r.vehicleId}-${componentKey}`;
+      if (seen.has(id)) return;
+      seen.add(id);
+      out.push({ id, source: 'reminder', type: r.type, vehicleId: r.vehicleId, vehicleName: r.vehicleName, severity: r.severity, message: r.message });
+    });
+  return out;
 },
 
 // _fromInsights(insightsList, vehicleId) — helper internal: ubah insight

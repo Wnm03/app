@@ -686,7 +686,11 @@ return;
 }
 if(Servis.activeHistoryViewMode==='component'&&typeof Servis.renderComponentExplorer==='function'){Servis.renderComponentExplorer(logs,el);const auditToolbar=document.getElementById('servisHistoryAuditToolbar');if(auditToolbar)auditToolbar.style.display='none';return;}
 const visibleCount=Math.min(logs.length,Servis.listPage*TX_PAGE_SIZE);
-const visible=logs.slice(0,visibleCount);
+// Keep a service session intact at pagination boundaries. Otherwise one session
+// can be rendered as multiple cards and its delete action still removes every row.
+const visibleBase=logs.slice(0,visibleCount);
+const visibleSessionIds=new Set(visibleBase.map(s=>s&&s.sessionId).filter(Boolean).map(String));
+const visible=logs.filter((s,i)=>i<visibleCount||(s&&s.sessionId&&visibleSessionIds.has(String(s.sessionId))));
 const selectionScope=Servis._historySelectionVehicleId();
 if(Servis._selectedHistoryVehicleId!==selectionScope){Servis._selectedHistoryIds.clear();Servis._selectedHistoryVehicleId=selectionScope;Servis._historyAuditVisible=false;Servis._historySelectMode=false;}
 const visibleCandidateIds=logs.map(s=>String(s.id));
@@ -746,10 +750,12 @@ if(typeof ServiceSessionSOT!=='undefined'&&typeof ServiceSessionSOT.renderReview
 const renderGroup=g=>{
   if(g.logs.length===1)return renderHistoryItem(g.logs[0]);
   const first=g.logs[0], sessionCost=(first&&first.serviceCost)||(typeof ServiceEventSOT!=='undefined'&&typeof ServiceEventSOT.costForSession==='function'?ServiceEventSOT.costForSession(g.sessionId,curVehicleId):null), total=sessionCost&&Number.isFinite(Number(sessionCost.total))?Number(sessionCost.total):g.logs.reduce((n,x)=>n+(x.cost||0),0);
+  const sessionTotal=g.sessionId?(Array.isArray(D.servisLogs)?D.servisLogs.filter(x=>x&&x.vehicleId===curVehicleId&&String(x.sessionId||'')===String(g.sessionId)).length:0):g.logs.length;
+  const sessionCountLabel=sessionTotal>g.logs.length?`${g.logs.length} tampil · ${sessionTotal} total`:`${g.logs.length} komponen`;
   const names=g.logs.map(x=>x.item).filter(Boolean);
   const summary=names.slice(0,3).join(', ')+(names.length>3?` +${names.length-3}`:'');
   const groupId=`servis-session-${escapeHtml(String(g.sessionId).replace(/[^a-zA-Z0-9_-]/g,'_'))}`;
-  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${g.logs.length} komponen${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${(()=>{const t=sessionCost&&sessionCost.source==='component'?_costChips(sessionCost):'';return t?`<span class="servis-history-badge">💰 ${t}</span>`:'';})()}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session servis-history-icon-btn" data-stop="1" data-action="Servis.openHistorySessionEditor" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Edit Sesi" title="Edit Sesi">✏️</button><button type="button" class="btn btn-ghost btn-sm servis-history-add-session servis-history-icon-btn" data-stop="1" data-action="Servis.addHistorySessionComponent" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Tambah Komponen" title="Tambah Komponen">➕</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
+  return `<details class="servis-history-session" id="${groupId}"><summary class="tx-item servis-history-session-summary"><div class="tx-icon u-bgaccsoft">🔧</div><div class="tx-info servis-history-info"><div class="tx-name servis-history-title">Servis ${escapeHtml(first.date||'')} — ${sessionCountLabel}${first.serviceJobLabel?' · '+escapeHtml(first.serviceJobLabel):''}</div><div class="tx-meta servis-history-primary">${escapeHtml(summary)}</div><div class="servis-history-badges"><span class="servis-history-badge servis-history-batch">🔗 sesi ${escapeHtml(String(g.sessionId).slice(-8))}</span>${(()=>{const t=sessionCost&&sessionCost.source==='component'?_costChips(sessionCost):'';return t?`<span class="servis-history-badge">💰 ${t}</span>`:'';})()}</div></div><div class="tx-amount red servis-history-amount">${fmt(total)}</div><button type="button" class="btn btn-ghost btn-sm servis-history-edit-session servis-history-icon-btn" data-stop="1" data-action="Servis.openHistorySessionEditor" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Edit Sesi" title="Edit Sesi">✏️</button><button type="button" class="btn btn-ghost btn-sm servis-history-add-session servis-history-icon-btn" data-stop="1" data-action="Servis.addHistorySessionComponent" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Tambah Komponen" title="Tambah Komponen">➕</button><button type="button" class="tx-del servis-history-delete" data-stop="1" data-action="Servis.delSession" data-args="${escapeHtml(JSON.stringify([g.sessionId]))}" aria-label="Hapus seluruh sesi servis" title="Hapus semua komponen sesi ini, termasuk yang tersembunyi oleh filter">🗑</button></summary><div class="servis-history-session-body">${g.logs.map(renderHistoryItem).join('')}</div></details>`;
 };
 const _MONTHS_ID=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const _monthKey=g=>{const m=/^(\d{4})-(\d{2})/.exec(String((g.logs[0]&&g.logs[0].date)||''));return m?m[1]+'-'+m[2]:'none';};
@@ -770,9 +776,9 @@ servisMoreWrap.style.cssText='text-align:center;margin-top:10px';
 servisMoreWrap.innerHTML='<button class="btn btn-ghost btn-sm" data-action="loadMoreServisList" aria-label="Tampilkan lebih banyak riwayat servis"></button>';
 el.insertAdjacentElement('afterend',servisMoreWrap);
 }
-if(visibleCount<logs.length){
+if(visible.length<logs.length){
 servisMoreWrap.style.display='block';
-servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banyak (${logs.length-visibleCount} lagi)`;
+servisMoreWrap.querySelector('button').textContent=`⬇️ Tampilkan lebih banyak (${logs.length-visible.length} lagi)`;
 } else servisMoreWrap.style.display='none';
 }
 

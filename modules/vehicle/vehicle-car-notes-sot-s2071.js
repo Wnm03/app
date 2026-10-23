@@ -209,7 +209,26 @@
     // migrated before the canonical taxonomy was available cannot remain a
     // second, non-canonical identity indefinitely.
     const normalized=s.serviceCategories.map(c=>normalizeCategory(c,id));
-    if(JSON.stringify(normalized)!==JSON.stringify(s.serviceCategories))s.serviceCategories=normalized;
+    // S2714: collapse only exact duplicate persisted rows (same category ID,
+    // canonical component and effective interval). Do not auto-merge distinct
+    // category IDs or conflicting intervals: those remain visible for review.
+    const reconciled=[], exactRows=new Map();
+    normalized.forEach(category=>{
+      const rowId=str(category&&category.id), componentId=str(category&&category.serviceComponentId);
+      const key=rowId&&componentId?`${rowId}::${componentId}`:'';
+      const effective=row=>`${Number(row&&row.intervalKm)||0}|${Number(row&&row.intervalBulan)||0}|${row&&row.showInReminder===false?'0':'1'}`;
+      const previous=key?exactRows.get(key):null;
+      if(previous&&effective(previous)===effective(category)){
+        // Keep the first row's stable identity and fill only absent metadata.
+        Object.keys(category||{}).forEach(field=>{
+          if(previous[field]==null||previous[field]==='')previous[field]=category[field];
+        });
+        return;
+      }
+      reconciled.push(category);
+      if(key&&!previous)exactRows.set(key,category);
+    });
+    if(JSON.stringify(reconciled)!==JSON.stringify(s.serviceCategories))s.serviceCategories=reconciled;
     return clone(s.serviceCategories);
   }
   function upsertServiceCategory(id,cat){

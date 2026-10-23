@@ -12,7 +12,7 @@
 (function(root){
   const VERSION='SERVICE-LEGACY-MAINTENANCE-S2040';
   const str=v=>String(v==null?'':v).trim();
-  const num=v=>{const n=Number(v);return Number.isFinite(n)?n:null;};
+  const num=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)?n:null;};
   const normalizeAction=a=>{
     const raw=str(a||'ganti').toLowerCase().replace(/[ _-]+/g,'');
     if(['ganti','diganti','replace','replacement'].includes(raw))return 'ganti';
@@ -92,7 +92,10 @@
     }
     if(!last)return {action,axis:plan.axis||'maintenance',status:'BASELINE_REQUIRED',reason:'belum ada riwayat tindakan ini',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null};
     const kmNow=currentKm(vehicleId,vehicleOverride); const lastKm=num(last.km);
-    const intervalKm=num(plan.intervalKm); const intervalMonths=num(plan.intervalMonths);
+    const rawIntervalKm=num(plan.intervalKm); const rawIntervalMonths=num(plan.intervalMonths);
+    // Zero/negative intervals mean 'not configured', never an immediate due date.
+    const intervalKm=rawIntervalKm!=null&&rawIntervalKm>0?rawIntervalKm:null;
+    const intervalMonths=rawIntervalMonths!=null&&rawIntervalMonths>0?rawIntervalMonths:null;
     const dueKm=intervalKm!=null&&lastKm!=null?lastKm+intervalKm:null;
     const dueDate=intervalMonths!=null&&last.date?addMonthsClamped(last.date,intervalMonths):null;
     const today=new Date(now||new Date());
@@ -100,6 +103,9 @@
     const timeTriggered=!!(dueDate&&today>=dueDate);
     const applicable=intervalKm!=null||intervalMonths!=null;
     if(!applicable)return {action,axis:plan.axis||'maintenance',status:'CONDITION_ONLY',reason:'tidak ada interval tetap; gunakan kondisi/gejala',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null,lastServiceId:last.id||null};
+    const hasKmBaseline=intervalKm!=null&&lastKm!=null;
+    const hasTimeBaseline=intervalMonths!=null&&!!last.date;
+    if(!hasKmBaseline&&!hasTimeBaseline)return {action,axis:plan.axis||'maintenance',status:'BASELINE_REQUIRED',reason:'riwayat tidak memiliki baseline valid untuk interval',nextDueKm:null,nextDueDate:null,remainingKm:null,remainingMonths:null,lastServiceId:last.id||null,lastServiceKm:lastKm,lastServiceDate:last.date||null};
     const triggered=kmTriggered||timeTriggered;
     const remainingKm=dueKm!=null&&kmNow!=null?dueKm-kmNow:null;
     return {action,axis:plan.axis||'maintenance',status:triggered?'DUE':'NOT_DUE',trigger:kmTriggered?'km':(timeTriggered?'time':null),nextDueKm:dueKm,nextDueDate:dueDate?(typeof localISO==='function'?localISO(dueDate):(dueDate.getFullYear()+'-'+String(dueDate.getMonth()+1).padStart(2,'0')+'-'+String(dueDate.getDate()).padStart(2,'0'))):null,remainingKm,remainingMonths:dueDate?Math.max(0,Math.ceil((dueDate-today)/(1000*60*60*24*30.4375))):null,lastServiceId:last.id||null,lastServiceKm:lastKm,lastServiceDate:last.date||null};

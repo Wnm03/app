@@ -6,6 +6,11 @@ if(!cat.vehicleId)return true;
 if(!vehicleId)return true;
 return _spVidEq(cat.vehicleId,vehicleId);
 }
+function _spNormalizeComponentAlias(value){
+  return String(value||'').toLowerCase().replace(/[（(][^）)]*[）)]/g,' ')
+    .replace(/[\s_-]+/g,' ').replace(/\b(ngk|denso|iridium|10w\s*[- ]?\s*30|10w\s*[- ]?\s*40|5w\s*[- ]?\s*30|5w\s*[- ]?\s*40)\b.*$/i,'')
+    .replace(/\s+/g,'').trim();
+}
 function resolveCanonicalServiceComponent(name,preferredId){
   if(typeof ServiceInputCatalog==='undefined')return preferredId||null;
   if(preferredId&&typeof ServiceInputCatalog.itemById==='function'){
@@ -20,7 +25,15 @@ function resolveCanonicalServiceComponent(name,preferredId){
       if(String(it.name||'').trim().toLowerCase()===q)exact.push(it.id);
     }
   }
-  return exact.length===1?exact[0]:null;
+  if(!exact.length){
+    const alias=_spNormalizeComponentAlias(name), candidates=[];
+    if(alias)for(const g of ServiceInputCatalog.groups()||[])for(const it of g.items||[]){
+      if(_spNormalizeComponentAlias(it.name)===alias)candidates.push(it.id);
+    }
+    const unique=[...new Set(candidates)];
+    if(unique.length===1)return unique[0];
+  }
+  return [...new Set(exact)].length===1?[...new Set(exact)][0]:null;
 }
 function serviceComponentIdForCategory(cat){
   if(!cat)return null;
@@ -84,7 +97,7 @@ function dedupeServiceCategoriesForVehicle(categories,vehicleId){
   list.forEach(c=>{
     if(!c)return;
     const cid=serviceComponentIdForCategory(c);
-    const key=cid||('legacy:'+String(c.id||c.name||'').toLowerCase());
+    const alias=_spNormalizeComponentAlias(c.name); const key=cid||('legacy:'+String(c.vehicleId||vehicleId||'')+'::'+(alias||String(c.id||c.name||'').toLowerCase()));
     if(seen.has(key))return;
     seen.add(key); out.push(c);
   });
@@ -776,11 +789,11 @@ if(typeof ServiceLegacyMaintenance!=='undefined'&&ServiceLegacyMaintenance&&type
         const remain=c.remainingKm;
         let status='aman',statusLabel='Aman',severity=0;
         if(c.status==='DUE'){status=remain!=null&&remain<0?'terlewat':'jatuh_tempo';statusLabel=remain!=null&&remain<0?'Terlewat':'Jatuh tempo';severity=remain!=null&&remain<0?4:3;}
-        else if(c.status==='BASELINE_REQUIRED'){status='mendekati';statusLabel='Baseline perlu dilengkapi';severity=1;}
+        else if(c.status==='BASELINE_REQUIRED'){status='unknown';statusLabel='Baseline perlu dilengkapi';severity=0;}
         else if(Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null){const f=remain/intervalKm;if(f<=.15){status='segera';statusLabel='Segera';severity=2;}else if(f<=.30){status='mendekati';statusLabel='Mendekati';severity=1;}}
         const dueDate=c.nextDueDate||null;
         const frac=Number.isFinite(intervalKm)&&intervalKm>0&&remain!=null?remain/intervalKm:null;
-        return {action:c.action,intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,lastKm:c.lastServiceKm??null,sisaKm:remain??null,fracRemainKm:frac,intervalBulan:null,sisaBulan:null,fracRemainBulan:null,intervalHari:null,sisaHari:null,fracRemainHari:null,limitingAxis:c.trigger==='time'?'bulan':'km',score:frac??(c.status==='BASELINE_REQUIRED'?1:0),lastDate:c.lastServiceDate||null,sourceHistoryId:c.lastServiceId||null,status,statusLabel,statusIcon:status==='terlewat'?'⚫':status==='jatuh_tempo'?'🔴':status==='segera'?'🟡':status==='mendekati'?'🔵':'🟢',statusSeverity:severity,estDateISO:dueDate,nextDueKm:c.nextDueKm??null,nextDueDate:dueDate,nextDueAxis:dueDate&&c.nextDueKm!=null?'km_or_date':(c.nextDueKm!=null?'km':(dueDate?'date':'none')),nextAction:c.action,maintenanceType:'legacy',condition:null,baselineRequired:c.status==='BASELINE_REQUIRED'};
+        return {action:c.action,intervalKm:Number.isFinite(intervalKm)&&intervalKm>0?intervalKm:null,lastKm:c.lastServiceKm??null,sisaKm:remain??null,fracRemainKm:frac,intervalBulan:null,sisaBulan:null,fracRemainBulan:null,intervalHari:null,sisaHari:null,fracRemainHari:null,limitingAxis:c.trigger==='time'?'bulan':'km',score:frac??(c.status==='BASELINE_REQUIRED'?null:0),lastDate:c.lastServiceDate||null,sourceHistoryId:c.lastServiceId||null,status,statusLabel,statusIcon:status==='unknown'?'⚪':status==='terlewat'?'⚫':status==='jatuh_tempo'?'🔴':status==='segera'?'🟡':status==='mendekati'?'🔵':'🟢',statusSeverity:severity,estDateISO:dueDate,nextDueKm:c.nextDueKm??null,nextDueDate:dueDate,nextDueAxis:dueDate&&c.nextDueKm!=null?'km_or_date':(c.nextDueKm!=null?'km':(dueDate?'date':'none')),nextAction:c.action,maintenanceType:'legacy',condition:null,baselineRequired:c.status==='BASELINE_REQUIRED'};
       }
     }
   }

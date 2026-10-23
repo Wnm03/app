@@ -44,13 +44,16 @@ items(vehicleId, firedIds) {
   const fired = Array.isArray(firedIds) ? firedIds : [];
   if (typeof VehicleReminder === 'undefined') return [];
   const out = [];
+  const seenServiceKeys = new Set(fired);
 
   const service = (typeof VehicleReminder.serviceReminders === 'function')
     ? VehicleReminder.serviceReminders(vehicleId).filter((r) => r.severity === 'overdue')
     : [];
   service.forEach((r) => {
-    const fireKey = 'vehsvc_' + r.vehicleId + '_' + r.categoryName;
-    if (fired.includes(fireKey)) return;
+    const componentKey = r.serviceComponentId ? 'component:' + String(r.serviceComponentId).trim().toLowerCase() : 'name:' + String(r.categoryName || '').normalize('NFKC').toLowerCase().replace(/[（(][^）)]*[）)]/g, ' ').replace(/\b(ngk|denso|iridium|10w\s*[- ]?\s*30|10w\s*[- ]?\s*40|5w\s*[- ]?\s*30|5w\s*[- ]?\s*40)\b.*$/i, '').replace(/[\s_-]+/g, ' ').trim();
+    const fireKey = 'vehsvc_' + String(r.vehicleId) + '_' + componentKey;
+    if (seenServiceKeys.has(fireKey)) return;
+    seenServiceKeys.add(fireKey);
     out.push({ fireKey, title: '🔧 Servis Lewat Jatuh Tempo', body: r.message });
   });
 

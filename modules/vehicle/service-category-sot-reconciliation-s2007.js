@@ -20,6 +20,14 @@
   });
   const str=v=>v==null?'':String(v).trim();
   const norm=v=>str(v).toLowerCase().replace(/\s+/g,' ');
+  // S2710: tolerate legacy/imported category labels without fuzzy substring matching.
+  // Parenthetical notes and common brand/spec suffixes are presentation metadata.
+  function componentAlias(v){
+    let q=norm(v).replace(/[（(][^）)]*[）)]/g,' ').replace(/[\s_-]+/g,' ').trim();
+    q=q.replace(/\b(ngk|denso|iridium|10w\s*[- ]?\s*30|10w\s*[- ]?\s*40|5w\s*[- ]?\s*30|5w\s*[- ]?\s*40)\b.*$/i,'').replace(/\s+/g,' ').trim();
+    // S2712: compact spaces for alias identity (e.g. "Slidepiece CVT" vs "Slide Piece CVT").
+    return q.replace(/\s+/g,'');
+  }
   const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
 
   // S2702 (perf, TANPA ubah kontrak): sebelumnya setiap catalogById()/
@@ -90,8 +98,18 @@
     const explicit=str(c.serviceComponentId);
     const item=explicit?catalogById(explicit):null;
     if(item)return {componentId:str(item.id),masterCategoryId:str(item.masterCategoryId),item,evidence:'explicit'};
-    const exact=exactNameCandidates(c.name);
-    if(exact.length===1)return {componentId:str(exact[0].id),masterCategoryId:str(exact[0].masterCategoryId),item:exact[0],evidence:'exact-name'};
+    let exact=exactNameCandidates(c.name);
+    let evidence='exact-name';
+    if(!exact.length){
+      const alias=componentAlias(c.name);
+      if(alias){
+        const sn=catalogSnapshot();
+        const candidates=(sn?sn.items:[]).filter(it=>componentAlias(it.name)===alias);
+        const unique=new Map(candidates.map(it=>[str(it.id),it]));
+        exact=Array.from(unique.values()); evidence='normalized-alias';
+      }
+    }
+    if(exact.length===1)return {componentId:str(exact[0].id),masterCategoryId:str(exact[0].masterCategoryId),item:exact[0],evidence};
     if(exact.length>1)return {componentId:null,masterCategoryId:null,item:null,evidence:'ambiguous-name',candidates:exact};
     return {componentId:null,masterCategoryId:str(c.masterCategoryId),item:null,evidence:'none'};
   }
@@ -157,7 +175,7 @@
     const visible=(categories||[]).filter(c=>c&&(!vehicleId||!c.vehicleId||str(c.vehicleId)===str(vehicleId))&&c.showInReminder!==false);
     const out=[],seen=new Set();
     visible.slice().sort((a,b)=>scoreCategory(b,vehicleId)-scoreCategory(a,vehicleId)||str(a.id).localeCompare(str(b.id))).forEach(c=>{
-      const info=classifyCategory(c); const key=info.componentId||'legacy:'+str(c.id);
+      const info=classifyCategory(c); const alias=componentAlias(c.name||''); const key=info.componentId||(alias?'legacy:'+str(c.vehicleId||vehicleId)+'::'+alias:'legacy:'+str(c.id));
       if(seen.has(key))return; seen.add(key); out.push(c);
     });
     return out;

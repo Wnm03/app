@@ -11,7 +11,10 @@ test('Servis Stage 2B: history groups by sessionId and keeps legacy logs as sing
 });
 test('Servis Stage 2B: multi-record session renders one expandable card with component count',()=>{
   assert.match(src,/g\.logs\.length===1\).*return renderHistoryItem/s);
-  assert.match(src,/Servis \$\{escapeHtml\(first\.date\|\|''\)\} — \$\{g\.logs\.length\} komponen/);
+  assert.match(src,/Servis \$\{escapeHtml\(first\.date\|\|''\)\} — \$\{sessionCountLabel\}/);
+  assert.match(src,/const sessionTotal=g\.sessionId\?/);
+  assert.match(src,/sessionTotal>g\.logs\.length\?`\$\{g\.logs\.length\} tampil · \$\{sessionTotal\} total`/);
+  assert.match(src,/title=\"Hapus semua komponen sesi ini, termasuk yang tersembunyi oleh filter\"/);
   assert.match(src,/<details class="servis-history-session"/);
   assert.match(src,/g\.logs\.map\(renderHistoryItem\)\.join\(''\)/);
 });
