@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-23T14:49:55.549Z
-Total file source: 489 · Total identifier global: 17781
+Terakhir digenerate: 2026-10-23T22:52:13.700Z
+Total file source: 489 · Total identifier global: 17787
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -184,7 +184,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 161 | `modules/vehicle/service-history-reminder-reconciliation-sot.js` | 172 | _(tidak ada komentar header)_ |
 | 162 | `modules/vehicle/service-category-sot-reconciliation-s2007.js` | 188 | _(tidak ada komentar header)_ |
 | 163 | `modules/vehicle/service-category-component-history-audit-s2034.js` | 15 | _(tidak ada komentar header)_ |
-| 164 | `modules/vehicle/sparepart-servis.js` | 1480 | _(tidak ada komentar header)_ |
+| 164 | `modules/vehicle/sparepart-servis.js` | 1484 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
 | 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
@@ -223,7 +223,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 200 | `modules/vehicle/shop-katalog-dinamis-api.js` | 182 | modules/vehicle/shop-katalog-dinamis-api.js — Shop Katalog Sparepart Dinamis (per-Kendaraan) API. Batch: "ringan dulu" — cuma layer data (API), TIDAK ada presenter/modal baru di sesi ini (menyusul kalau API ini sudah … |
 | 201 | `modules/vehicle/shop-katalog-dinamis-presenter.js` | 83 | modules/vehicle/shop-katalog-dinamis-presenter.js — Shop Katalog Sparepart Dinamis Presenter. 100% REUSE ShopKatalogDinamisAPI (modules/vehicle/shop-katalog-dinamis-api.js) — TIDAK ada query/hitungan baru di sini, murni … |
 | 202 | `modules/vehicle/torsi-vehicle-api.js` | 138 | modules/vehicle/torsi-vehicle-api.js — Torsi Vehicle Selector API (Sesi 1). Basis: DESIGN_torsi-vehicle-selector_shop-import-export.md, Bagian A. Batch: "ringan dulu" — cuma layer data (API) + migrasi, TIDAK ada … |
-| 203 | `ai-chat.js` | 1192 | Chat AI (RefAI): UI edit aksi chat, kirim pesan ke provider AI (sendChat/ callAIProviderRaw), Advisor (rule-based tips) & AIWidget (widget rekomendasi AI generik dipakai modul lain). Dipisah dari … |
+| 203 | `ai-chat.js` | 1204 | Chat AI (RefAI): UI edit aksi chat, kirim pesan ke provider AI (sendChat/ callAIProviderRaw), Advisor (rule-based tips) & AIWidget (widget rekomendasi AI generik dipakai modul lain). Dipisah dari … |
 | 204 | `reminder-notif.js` | 175 | resetApp (reset total data, disatukan di sini krn tidak ada domain lain yang cocok & cuma 1 fungsi kecil), share ke WhatsApp (phoneToWaId/waShareLink/openWaShare), notifikasi browser … |
 | 205 | `laporan-export.js` | 140 | Ekspor Laporan Keuangan ke PDF (exportLaporanPDF) & gambar (exportLaporanImage), plus builder data laporan (buildLaporanExportData: filter periode, total income/expense, breakdown per kategori). Dipisah dari … |
 | 206 | `gdrive-backup.js` | 312 | Integrasi Google Drive: OAuth connect/disconnect, backup manual/otomatis (uploadBackupToDrive), restore (gdriveDownloadBackup). Dipisah dari features-aiwidget-reminder-gdrive-search.js (Sesi 5 restrukturisasi folder, … |
@@ -2171,6 +2171,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `aiSave` | `modules/ai/ai-core.js` |
 | `AIScenarioWidget` | `ai-chat.js` |
 | `AIService` | `modules/ai/ai-service.js` |
+| `aiServiceIntervalStatusText` | `ai-chat.js` |
 | `AISimulateWidget` | `ai-chat.js` |
 | `AIStatusCard` | `ai-chat.js` |
 | `AIStore` | `modules/ai/ai-core.js` |
@@ -4064,6 +4065,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `cats` | `modules/vehicle/servis.js` |
 | `cats` | `modules/vehicle/service-session-integrity-s2045.js` |
 | `cats` | `modules/vehicle/shop-katalog-dinamis-api.js` |
+| `cats` | `ai-chat.js` |
 | `cats` | `modules/vehicle/vehicle-analytics-presenter.js` |
 | `cats` | `modules/dashboard-hub/dashboard-hub.js` |
 | `cats` | `modules/finance/finance-category-sot.js` |
@@ -4348,6 +4350,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `clean` | `modules/shared/scan-ocr.js` |
 | `clean` | `modules/vehicle/servis-checklist.js` |
 | `clean` | `modules/shared/self-test-cases-a.js` |
+| `cleanAxis` | `modules/vehicle/sparepart-servis.js` |
 | `cleanCatOptText` | `budget.js` |
 | `cleaned` | `modules/asset/aset-emas-impor.js` |
 | `cleaned` | `modules/ai/kategorisasi-ai.js` |
@@ -5952,6 +5955,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `effectiveComponentFilter` | `modules/vehicle/servis.js` |
 | `effectiveDiskon` | `modules/shop/cobek-order.js` |
 | `effectiveDiskon` | `modules/business/kasir.js` |
+| `effectiveFilter` | `modules/vehicle/sparepart-servis.js` |
 | `effectiveIntervalKm` | `modules/vehicle/servis-b.js` |
 | `effectiveKm` | `modules/vehicle/service-history-checklist-edit-s2036.js` |
 | `effectiveLastKm` | `modules/vehicle/servis-b.js` |
@@ -8330,7 +8334,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `intervalKm` | `modules/vehicle/service-session-integrity-s2045.js` |
 | `intervalKm` | `modules/vehicle/servis-b.js` |
 | `intervalKm` | `modules/vehicle/shop-katalog-dinamis-api.js` |
-| `intervalKm` | `ai-chat.js` |
 | `intervalKm` | `modules/vehicle/service-legacy-maintenance.js` |
 | `intervalLabel` | `modules/vehicle/servis.js` |
 | `intervalMonths` | `modules/vehicle/service-legacy-maintenance.js` |
@@ -9044,6 +9047,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `kmPerDay` | `modules/vehicle/vehicle-core.js` |
 | `kmPerDay` | `modules/vehicle/sparepart-servis-b.js` |
 | `kmPerDay` | `modules/vehicle/servis-b.js` |
+| `kmPerDay` | `ai-chat.js` |
 | `kmPerDaySafe` | `modules/vehicle/sparepart-servis.js` |
 | `kmPerLiter` | `modules/vehicle/vehicle-core.js` |
 | `kmPerLiter` | `modules/vehicle/fuel-state-estimator.js` |
@@ -9242,7 +9246,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `lastKm` | `modules/vehicle/service-maintenance-engine.js` |
 | `lastKm` | `modules/vehicle/servis-b.js` |
 | `lastKm` | `modules/vehicle/shop-katalog-dinamis-api.js` |
-| `lastKm` | `ai-chat.js` |
 | `lastMonth` | `modules/vehicle/vehicle-cost-summary.js` |
 | `lastOrder` | `modules/shop/cobek-order.js` |
 | `lastPendingOrder` | `modules/ai/ai-service.js` |
@@ -12317,6 +12320,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `pool` | `modules/finance/piutang-utang.js` |
 | `pool` | `modules/business/payroll-absensi.js` |
 | `pool` | `modules/vehicle/sparepart-servis.js` |
+| `pool` | `ai-chat.js` |
 | `poolCommitment` | `modules/finance/titipan-reconcile.js` |
 | `poolMasukTotal` | `modules/finance/dana-titipan-commitment-return-api.js` |
 | `poolSource` | `modules/vehicle/sparepart-servis.js` |
@@ -15346,6 +15350,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `source` | `modules/vehicle/vehicle-catalog-ui.js` |
 | `source` | `modules/vehicle/service-master-database.js` |
 | `source` | `modules/vehicle/servis-b.js` |
+| `source` | `ai-chat.js` |
 | `source` | `modules/finance/financial-audit-engine.js` |
 | `source` | `modules/finance/bill-debt-piutang-reconciler.js` |
 | `source` | `modules/vehicle/service-runtime-projection-sot-s2166.js` |
@@ -16992,6 +16997,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `u` | `modules/vehicle/servis-checklist.js` |
 | `u` | `modules/vehicle/servis.js` |
 | `u` | `modules/vehicle/servis-b.js` |
+| `u` | `ai-chat.js` |
 | `u` | `modules/dashboard-hub/dashboard-hub.js` |
 | `u` | `modules/business/sewakios.js` |
 | `u` | `modules/shared/smoke-test.js` |
