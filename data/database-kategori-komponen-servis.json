@@ -1903,7 +1903,7 @@
       "sumber": "Katalog Suku Cadang Honda Vario Techno 125 -2 (KZRJ) — Honda Cengkareng",
       "needsReview": false,
       "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
-      "catatanTambahan": "Catalog refs: F-5",
+      "catatanTambahan": "Catalog refs: F-5, F-14 (S2731.3: konsolidasi dengan kabel-rem-belakang-body, kini alias).",
       "catalogRefs": [],
       "vehicleTypeScope": null,
       "bodyTypeScope": null,
@@ -2514,30 +2514,6 @@
     {
       "masterCategoryId": "body-kontrol",
       "masterCategory": "Body & Kontrol",
-      "componentNo": 3,
-      "componentId": "kabel-rem-belakang-body",
-      "componentName": "Kabel Rem Belakang",
-      "linkCat": false,
-      "actionMode": "periksa",
-      "resetType": null,
-      "intervalKm": null,
-      "intervalTimeMonths": null,
-      "gantiResetsInterval": null,
-      "intervalLabel": "Katalog component; interval maintenance mengikuti policy servis yang terverifikasi",
-      "sumber": "Katalog Suku Cadang Honda Vario Techno 125 -2 (KZRJ) — Honda Cengkareng",
-      "needsReview": false,
-      "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
-      "catatanTambahan": "Catalog refs: F-14",
-      "catalogRefs": [],
-      "vehicleTypeScope": null,
-      "bodyTypeScope": null,
-      "modelScope": null,
-      "universal": false,
-      "scopeStatus": "unverified"
-    },
-    {
-      "masterCategoryId": "body-kontrol",
-      "masterCategory": "Body & Kontrol",
       "componentNo": 4,
       "componentId": "kunci-kontak",
       "componentName": "Kunci Kontak / Ignition Switch",
@@ -2660,6 +2636,30 @@
       "scopeStatus": "confirmed"
     },
     {
+      "masterCategoryId": "servis-mesin",
+      "masterCategory": "Servis Mesin",
+      "componentNo": 16,
+      "componentId": "gasket-tutup-head",
+      "componentName": "Gasket Tutup Head (Cylinder Head Cover)",
+      "linkCat": false,
+      "actionMode": "periksa",
+      "resetType": null,
+      "intervalKm": null,
+      "intervalTimeMonths": null,
+      "gantiResetsInterval": null,
+      "intervalLabel": "Katalog component; interval maintenance mengikuti policy servis yang terverifikasi",
+      "sumber": "Katalog Suku Cadang Honda Vario Techno 125 -2 (KZRJ) — Honda Cengkareng; part 12391-KZR-600 (Cylinder Head Cover). Keputusan pemilik data S2731.3.",
+      "needsReview": false,
+      "catatan": "Ditambahkan sebagai maintenance component terkurasi dari struktur parts catalog; bukan seluruh fastener/clip/O-ring dijadikan item master.",
+      "catatanTambahan": "Part katalog: Packing Head / Gasket Cylinder 12391-KZR-600 (subkategori Cylinder Head Cover). Berbeda dari seal-klep (SEAL,VALVE STEM) dan cylinder-gasket (GASKET CYLINDER 12191KZR600). Tanpa interval: belum ada dasar interval berkala.",
+      "catalogRefs": [],
+      "vehicleTypeScope": null,
+      "bodyTypeScope": null,
+      "modelScope": null,
+      "universal": true,
+      "scopeStatus": "confirmed"
+    },
+    {
       "masterCategoryId": "suspensi",
       "masterCategory": "Suspensi",
       "componentNo": 8,
@@ -2701,5 +2701,8 @@
       "purpose": "component completeness audit; no images embedded"
     }
   ],
-  "catalogAudit": "S1864: component master expanded from 50 to 100 curated maintenance components using the KZRJ parts-catalog structure. S1865 adds two clearly distinct catalog-backed maintenance components (oil pump and swingarm bearing), bringing the master to 102. Part-level mappings are maintained separately; blank refs mean mapping remains to be verified."
+  "catalogAudit": "S1864: component master expanded from 50 to 100 curated maintenance components using the KZRJ parts-catalog structure. S1865 adds two clearly distinct catalog-backed maintenance components (oil pump and swingarm bearing), bringing the master to 102. Part-level mappings are maintained separately; blank refs mean mapping remains to be verified. S2731.3: tambah gasket-tutup-head (Servis Mesin) dan konsolidasi kabel-rem-belakang-body ke kabel-rem-belakang (alias kompatibilitas di componentAliases); jumlah komponen tetap 102.",
+  "componentAliases": {
+    "kabel-rem-belakang-body": "kabel-rem-belakang"
+  }
 }

@@ -20,7 +20,8 @@ test('S1864 preserves every legacy component ID',()=>{
 });
 
 test('Cumulative category expansion matches planned counts',()=>{
- const expected={'servis-mesin':15,'servis-cvt':18,'sistem-injeksi-pgmfi':5,'sistem-bahan-bakar':4,'sistem-pendingin':6,'sistem-pengereman':11,'suspensi':8,'sistem-kemudi':3,'kelistrikan':10,'roda':7,'filter-udara':1,'final-gear':7,'body-kontrol':7};
+ // S2731.3: servis-mesin +1 (gasket-tutup-head), body-kontrol -1 (kabel-rem-belakang-body jadi alias); total tetap 102.
+ const expected={'servis-mesin':16,'servis-cvt':18,'sistem-injeksi-pgmfi':5,'sistem-bahan-bakar':4,'sistem-pendingin':6,'sistem-pengereman':11,'suspensi':8,'sistem-kemudi':3,'kelistrikan':10,'roda':7,'filter-udara':1,'final-gear':7,'body-kontrol':6};
  for(const [id,count] of Object.entries(expected)) assert.equal(D.components.filter(x=>x.masterCategoryId===id).length,count,id);
 });
 

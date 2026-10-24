@@ -1,0 +1,83 @@
+DAFTAR PEKERJAAN — PATCH AKUMULASI S2731 + S2732 + S2733
+Baseline : app-main_40 (build 2694)
+Build    : 2697 (kode tidak berubah sejak S2731; S2732 & S2733 hanya DATA)
+Format   : overlay, HANYA file yang berbeda dari baseline atau baru. Tidak ada file dihapus.
+Pasang   : salin isi ZIP ke repo (struktur sama). Restore backup pakai data-fix/...-S2732-S2733.json
+
+== SELESAI ==
+S2731  Nama servis <-> SOT komponen
+  - infer() per kata utuh (bug "Kaki-Kaki" -> Aki, "aki" -> Paking Knalpot)
+  - Data backup diperbaiki (aditif, idempoten): kategori Aki Vario 125, referensi Aki, serviceComponentId,
+    judul grup, snapshot nama SOT (21 log), categoryId log (8 diisi / 3 yatim diperbaiki)
+  - S2731.1/.2: 11 log dipetakan ke komponen SOT; S2731.3: master gasket-tutup-head,
+    kabel-rem-belakang-body jadi alias kabel-rem-belakang
+  - Build 2697 (bundle a/b, index, app_production, sw)
+S2732  Gasket Stator Base x2 -> part katalog 11363KWN900 (catalogPartRefs; partsStock identik)
+S2733  Merge stok kembar (kendaraan + kode part sama)
+  - 293 grup, semuanya tepat 1 baris valid + 1 baris yatim (tanpa kategori, id katalog tidak ada, qty 0, tidak dirujuk)
+  - 293 baris yatim dihapus: partsStock 634 -> 341; total qty identik; bagian data lain identik
+  - Harga beda di 39 pasang, nama beda di 48; nilai baris yang dipertahankan tidak diubah
+  - Baris terhapus tersimpan utuh di data-fix/laporan-perubahan-S2733.json (bisa dipulihkan)
+  - Skrip scripts/merge-duplicate-stock-s2733.js idempoten; checksum backup disegel ulang
+
+== VERIFIKASI ==
+  - Full test (TEST_SHARDS=32): 9282 tes, 9281 lulus, 0 gagal, 1 skip (9274 S2731 + 4 S2732 + 4 S2733)
+  - Tes baru S2733 lulus 4/4
+  - TIDAK diulang kali ini: uji browser nyata (Chromium) dan rebuild bundle (tidak ada perubahan kode)
+
+== BELUM DIKERJAKAN (temuan audit browser sebelumnya, belum diperbaiki) ==
+  1. Catatan kondisi komponen tidak tersimpan: modules/vehicle/servis.js memakai data-oninput-args=[gi,ii]
+     tanpa "$value" -> ServisChecklist._conditionNotes tetap kosong. Perbaikan 1 baris.
+  2. Override interval (mis. 3500) tersimpan di checklist tapi baris log utama tetap 1500 / sumber service-master,
+     nextDueKm tidak memakai override. Dampak ke pengingat belum dicek.
+  3. Biaya sesi menumpuk di baris log pertama (Oli Rp151.000, Kampas Rp0) padahal costBreakdown benar.
+     Dampak ke tampilan riwayat per kategori belum dicek.
+  4. Kampas Rem "Ganti" tidak menghasilkan jadwal berikutnya meski interval 4000 (belum diketahui disengaja atau bukan).
+  5. Klik Riwayat harus menuju riwayat asal; edit harus membuka riwayat sesuai kategori komponen.
+  Item 1-5 perlu audit + persetujuan sebelum kode ditulis.
+
+== KEPUTUSAN DARI S2731 YANG MASIH TERBUKA ==
+  - 7 log tanpa komponen SOT (Seal Magnet ditahan: identitas part belum jelas, dll.)
+  - Stok 43450-KZR-600 belum ditautkan ke komponen (butuh aturan relasi part-komponen)
+  - Pindahkan 16 jadwal reminder dari 7 kategori judul-grup lama ke komponen kanonik
+  - 31 id kategori ganda antar kendaraan (sesi terpisah, remap id + tes)
+  - Kategori kustom ("ban" Grandmax -> pisah Depan/Belakang)
+  - Edge case S2732: menghapus komponen Gasket Stator Base lewat editor sesi menambah +1 stok
+
+== BERKAS (SHA-256) ==
+ba369b5185952332b77be7511d07947ce2fd6d7b31d0794dee316105aa03dd75  PATCH-NOTE-S2732-GASKET-STATOR-PART-LINK.md
+4e53f1b16c6fe81507e3d06d505d5fa8b615d57999924176bb0fe610d0f95c7b  README-S2731.md
+1e0f33d24f57c4ff7f577dc6eac38d8694a34fa3cc3abca16808f895c45d99af  app-bundle-a.min.js
+79d0653b90857c1006515ef297d64cc455c4e63bcaaf749e14e7ded3fc89c932  app-bundle-b.min.js
+6a8394032cfcb4207d24114c04810d13127c9b4c29f3036ce287a167e0f6ed8d  app_production.html
+e416272fa5ef9c73e927a23c25d4de5bc053837e9ecae4b59dfa9419c15e8b99  chat-action-handlers.js
+cff737f65192dbaa48468d1b54232d4372a4bb1ba328e8a2877afecde531dbd1  data-fix/backup-keluarga-W-2026-10-24-CLEAN-S2730-dedup-S2731-FIXED-S2732-S2733.json
+4bfad79e78a9248fe3835d73be0112cd419a05dc1d6a68f745275fcdd672b27c  data-fix/backup-keluarga-W-2026-10-24-CLEAN-S2730-dedup-S2731-FIXED-S2732.json
+21587478bb692a1ca24996c5261ee2b1d2320132e887aee5733ac901a1650310  data-fix/backup-keluarga-W-2026-10-24-CLEAN-S2730-dedup-S2731-FIXED.json
+3a96fb7c7195617eebcb50d496e556e3eaaefe831375966edafdfec980300255  data-fix/laporan-perubahan-S2731.json
+7c04d2d337034883b2335adc1cd430f47fdf645b563f0add12a5f923bd648950  data-fix/laporan-perubahan-S2732.json
+935fda4613eee8b0e9a02175723fc3b325483f0a94fb6b7a187a474e33850caf  data-fix/laporan-perubahan-S2733.json
+45a2c8c83b9c400a68a07d6c60a7c3a299b6f484f2559dcb7aa0235c398d3d21  data/database-kategori-komponen-servis.json
+aa02c1f7722f68374fb2193a600b53670bb6c5d9e3d030ab6d0cb7ab3ef250ff  docs/COVERAGE-PER-MODULE.md
+109a2d8766e4cb3dd5c998b7ee1e6e6ed2dd2b2f2ffeb77b0ab622e6cb427158  docs/FILE-MAP.md
+51063a9a7678cf3af667795ea947a6d8d62a3a69c9b29f0aa345824f43982649  index.html
+f0bb625a2319f2553a1af211cf9437fe237e17f918f4280c6d0b1311389be992  modules/shared/features-helpers-global-security.js
+d8711551cbd2e6ff00f3402edefc6e82a1609bb45316f8412523d206cdd3c7cd  modules/shared/modals.js
+bb034a3b7aab4f38b2f0742721005c93e832d01539ed8b893f97c9b66ca0f046  modules/shared/modules-calc.js
+1ac4acb166ef050343caa8a4fbf7aaeffe2af4d6f8d6e3b20548ee30e720fc77  modules/shared/modules-render.js
+fcf02024358ccfa341f9b607a3498989d1e9b5c8d099082321f73befe3e34bb8  modules/vehicle/service-input-catalog.js
+6e7d089af1a622b19d4d871da1334466506ba1935c18d23fd8d68ea5dbd7fadb  modules/vehicle/service-master-data.generated.js
+a5928ac54d09e703966b7bfcdf6ff9b9a7600944692d55638c8de48127bf3ccc  modules/vehicle/service-taxonomy-sot.js
+594f1242739e93b104a9d3142f78c12cb1216063ca2ab42cc766e16d34d1a1c1  scripts/fix-backup-service-sot-s2731.js
+1b8d2a72bf9b81f5b07f551e43133fc88b66cda8c2f110906bce01ae0e5a99c3  scripts/generate-service-master-data.js
+51b3c614139423a345a65d72282258cb216b68bcd24806848e944f2fa2e81270  scripts/link-gasket-stator-base-part-s2732.js
+cbc431b457684e8384c703b70abb19c2fd4a011fad16576946f60fa91c9739ed  scripts/merge-duplicate-stock-s2733.js
+2635f89f504502fccda8527498370123d1bc46821cea6cef1f1209d89355ad81  sw.js
+ea49cd3dbda3a09ff767dafb8df25f921a48f2b78e1dd77c2d08038e01720f2f  tests/fixtures/s2703-service-input-catalog-original.js
+5d0097405e955ba1127544678e35da9bea171aaa8f86fb9273dda2a66a23a9cd  tests/s2731-3-gasket-tutup-head-kabel-rem-alias.test.js
+073a798082f2e6365e2cc8da859b1a521f63cb8e061661969c2e973bc3859d73  tests/s2731-service-name-infer-wordboundary.test.js
+0b4be7ceb6df9ab36209c4076a06e928c18313e10f3a3a9626549bf3aaa89c01  tests/s2732-gasket-stator-base-part-link-stock-safe.test.js
+8fbfb5bdd05c9af56bdf5327f72a9dd868d7af5796002ea7ceae7607deabd211  tests/s2733-merge-duplicate-stock.test.js
+018bb2e56b0dff5e3f897a4e1d6866f0dde230f88efb85b218771c0aab6fe593  tests/service-master-catalog-expansion-s1864.test.js
+988c59a46c61bf8509b3e5c43bb1bdb068c3e02a31163ef318c41cb0b19f6256  tests/service-master-data-lazy-s2397.test.js
+3fe5aeb30dce2de0a7ddbdf8175e3a7c351cb3b8b767f5fbcdc9bdec692b85a3  tests/servis-component-scope-s24331.test.js

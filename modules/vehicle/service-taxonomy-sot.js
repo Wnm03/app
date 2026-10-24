@@ -50,7 +50,14 @@
     _compMap=new Map();out.forEach(c=>{if(!_compMap.has(c.id))_compMap.set(c.id,c);});
     return _comps;
   }
-  function componentById(id){const k=str(id);components();return _compMap.get(k)||null;}
+  // S2731.3: alias ID komponen (konsolidasi identitas). Alias BUKAN komponen aktif: hanya diresolusikan
+  // ke ID kanonik oleh componentById()/resolve(), sehingga data lama tetap terbaca tanpa kartu ganda.
+  // Sumber utama: data/database-kategori-komponen-servis.json (componentAliases) -> generated global;
+  // konstanta di bawah = cadangan identik bila generated belum dimuat.
+  const ID_ALIASES_FALLBACK={'kabel-rem-belakang-body':'kabel-rem-belakang'};
+  function idAliases(){return Object.assign({},ID_ALIASES_FALLBACK,g.__SERVICE_COMPONENT_ID_ALIASES__||{});}
+  function canonicalComponentId(id){const k=str(id);if(!k)return '';components();if(_compMap.has(k))return k;const a=idAliases()[k];return a&&_compMap.has(a)?a:k;}
+  function componentById(id){const k=str(id);components();return _compMap.get(k)||_compMap.get(canonicalComponentId(k))||null;}
   const ALIASES=Object.freeze({
     'saringan udara':'filter-udara',
     'drive belt (v-belt cvt)':'v-belt-cvt',
@@ -115,7 +122,7 @@
 // const canonicalTargets=st.targets.map
 // ServiceTaxonomySOT.resolve({masterCategoryId:t.masterCategoryId,serviceComponentId:t.serviceComponentId
 // const hasSot=typeof ServiceTaxonomySOT
-  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,invalidate,groups,categories,categoryById,components,componentById,resolve,canonicalTarget,targetKey,assertCanonical,categoriesForComponents};
+  const api={VERSION:'SERVICE-TAXONOMY-SOT-2017',ALIASES,idAliases,canonicalComponentId,invalidate,groups,categories,categoryById,components,componentById,resolve,canonicalTarget,targetKey,assertCanonical,categoriesForComponents};
   g.ServiceTaxonomySOT=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:window);

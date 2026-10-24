@@ -37,7 +37,8 @@ test('S2433.1: master tetap 102 item/id unik; metadata scope lengkap & klasifika
       unverified:it.filter(i=>i.scopeStatus==='unverified').length,
       unverifiedClaimedUniversal:it.filter(i=>i.scopeStatus==='unverified'&&i.universal).length})})()`));
   assert.equal(r.total, 102); assert.equal(r.uniq, 102); assert.equal(r.noStatus, 0);
-  assert.equal(r.universal, 59); assert.equal(r.motor, 12); assert.equal(r.matic, 18); assert.equal(r.unverified, 13);
+  // S2731.3: +1 universal (gasket-tutup-head), -1 unverified (kabel-rem-belakang-body jadi alias, bukan komponen aktif).
+  assert.equal(r.universal, 60); assert.equal(r.motor, 12); assert.equal(r.matic, 18); assert.equal(r.unverified, 12);
   assert.equal(r.unverifiedClaimedUniversal, 0, 'item belum pasti tidak boleh diklaim universal');
 });
 

@@ -1,0 +1,20 @@
+{
+  "inputHashValid": false,
+  "changes": {
+    "kategori Aki veh_1 dibuat (sparepartCats)": 1,
+    "kategori Aki veh_1 dibuat (vehicle.sot.serviceCategories)": 1,
+    "referensi Aki dipindah ke kategori Aki": 7,
+    "Sasis & Kaki-Kaki -> Body & Kontrol": 2,
+    "kategori diberi serviceComponentId": 3,
+    "group basi diselaraskan": 8,
+    "log: serviceComponentNameSnapshot ditambah": 21,
+    "log: categoryId kosong diisi": 8,
+    "log: categoryId yatim diperbaiki": 3,
+    "keputusan: log dipetakan ke komponen SOT": 12,
+    "keputusan: Gasket Stator Base dilepas dari komponen salah": 1
+  },
+  "skipped": {
+    "log tanpa kandidat kategori unik": 7
+  },
+  "outputHashValid": true
+}

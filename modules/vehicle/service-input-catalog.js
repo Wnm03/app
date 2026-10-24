@@ -17,6 +17,23 @@ for(const g of gs)for(const x of (g.items||[])){if(x&&x.id!==undefined&&!_idxMap
 return _idxMap.get(id)||null;
 }
 function normalize(v){return String(v||'').trim().toLowerCase();}
+// S2731: pencocokan nama harus per KATA/frasa utuh, bukan substring mentah.
+// Bug lama: "Sasis & Kaki-Kaki" -> Aki (kaki mengandung "aki") dan "aki" -> Paking Knalpot
+// (paking mengandung "aki"). Sekarang: exact match menang dulu, lalu containment dgn batas
+// kata (karakter di sekitar bukan huruf/angka). Tidak ada fuzzy baru.
+function _wordContains(h,n){
+if(n==='')return true;
+if(!h)return false;
+if(h===n)return true;
+let i=h.indexOf(n);
+while(i!==-1){
+const b=i===0?'':h.charAt(i-1),a=h.charAt(i+n.length);
+if(!/[a-z0-9]/i.test(b)&&!/[a-z0-9]/i.test(a))return true;
+i=h.indexOf(n,i+1);
+}
+return false;
+}
+function _nameHit(q,n){return q===n||_wordContains(q,n)||_wordContains(n,q);}
 // S2703 PERF: infer() dipanggil per (log servis x kategori x kendaraan) lewat servisLogMatchesCat()
 // saat render Insight (13.600x per buka tab pada data besar, ±49 ms) dan tiap panggilan
 // menormalisasi ulang 102 nama item. Indeks nama-ternormalisasi + cache hasil per teks dibangun sekali
@@ -58,7 +75,8 @@ if(!idx)return _inferUncached(q);
 let hit=_infCache.get(q);
 if(hit===undefined){
 hit=null;
-for(let i=0;i<idx.length;i++){const e=idx[i];const n=e.n;if(q===n||q.includes(n)||n.includes(q)){hit={group:e.g,item:e.it};break;}}
+for(let i=0;i<idx.length;i++){const e=idx[i];if(q===e.n){hit={group:e.g,item:e.it};break;}}
+if(!hit){for(let i=0;i<idx.length;i++){const e=idx[i];if(_nameHit(q,e.n)){hit={group:e.g,item:e.it};break;}}}
 if(!hit){const r=_inferByRules(q);hit=r?{group:r.group,item:r.item}:null;}
 if(_infCache.size>=_INF_CACHE_MAX)_infCache.clear();
 _infCache.set(q,hit);
@@ -67,8 +85,10 @@ return hit?{group:hit.group,item:hit.item}:null;
 }
 function _inferUncached(q){
 for(const g of groups())for(const it of (g.items||[])){
-const n=normalize(it.name);
-if(q===n||q.includes(n)||n.includes(q))return {group:g,item:it};
+if(q===normalize(it.name))return {group:g,item:it};
+}
+for(const g of groups())for(const it of (g.items||[])){
+if(_nameHit(q,normalize(it.name)))return {group:g,item:it};
 }
 return _inferByRules(q);
 }

@@ -10,7 +10,8 @@ test('S2397 generated master data preserves exact legacy shape lazily',()=>{
   const gen=require('../modules/vehicle/service-master-data.generated.js');
   assert.deepStrictEqual(gen.SERVICE_MASTER_DATA,src);
   assert.equal(gen.SERVICE_CHECKLIST_GROUPS.length,13);
-  assert.equal(gen.SERVICE_MASTER_CHECKSUM,'44e8bc240b84e5088a4be108078462e54366151d4a63ab01086b1a80f45efb69');
+  // S2731.3: checksum disegel ulang karena master berubah (+gasket-tutup-head, kabel-rem-belakang-body jadi alias).
+  assert.equal(gen.SERVICE_MASTER_CHECKSUM,'45a2c8c83b9c400a68a07d6c60a7c3a299b6f484f2559dcb7aa0235c398d3d21');
 });
 
 test('S2397 generated artifact exposes checklist groups eagerly but master payload lazily',()=>{

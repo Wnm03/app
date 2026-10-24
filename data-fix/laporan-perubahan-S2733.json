@@ -1,0 +1,4999 @@
+{
+  "summary": {
+    "stockBefore": 634,
+    "stockAfter": 341,
+    "groupsMerged": 293,
+    "groupsSkipped": 0,
+    "priceDiffPairs": 39,
+    "nameDiffPairs": 48,
+    "qtyTotalUnchanged": true,
+    "outputHashValid": true
+  },
+  "groupsFound": 293,
+  "removed": [
+    {
+      "key": "veh_1|12310KZR701",
+      "keptId": "st_1792734467135",
+      "row": {
+        "id": "st_1785394924506",
+        "name": "COVER COMP., HEAD",
+        "catId": null,
+        "code": "12310KZR701",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 87000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917172,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12391KZR600",
+      "keptId": "st_1792734467137",
+      "row": {
+        "id": "st_1785394924507",
+        "name": "GASKET, CYLINDER HEAD COVER",
+        "catId": null,
+        "code": "12391KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 55000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917262,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90463ML7000",
+      "keptId": "st_1792734467335",
+      "row": {
+        "id": "st_1785394924507_dup1",
+        "name": "WASHER SEALING 6.5MM",
+        "catId": null,
+        "code": "90463ML7000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917265,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010601400",
+      "keptId": "st_1792734467415",
+      "row": {
+        "id": "st_1785394924507_dup2",
+        "name": "BOLT FLANGE 6X14",
+        "catId": null,
+        "code": "957010601400",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917267,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010602200",
+      "keptId": "st_1792734467417",
+      "row": {
+        "id": "st_1785394924507_dup3",
+        "name": "BOLT FLANGE 6X22",
+        "catId": null,
+        "code": "957010602200",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917269,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010602207",
+      "keptId": "st_1792734467418",
+      "row": {
+        "id": "st_1785394924508",
+        "name": "BOLT FLANGE 6X22",
+        "catId": null,
+        "code": "957010602207",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917271,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1220BKZR600",
+      "keptId": "st_1792734467132",
+      "row": {
+        "id": "st_1785394924508_dup4",
+        "name": "Head Assy Cylinder",
+        "catId": null,
+        "code": "1220BKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 572000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917274,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1220BK60B00",
+      "keptId": "st_1792734467131",
+      "row": {
+        "id": "st_1785394924508_dup5",
+        "name": "Head Assy Cylinder",
+        "catId": null,
+        "code": "1220BK60B00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 599000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917277,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12204KWNP00",
+      "keptId": "st_1792734467123",
+      "row": {
+        "id": "st_1785394924509",
+        "name": "GUIDE,VALVE (OSZ)",
+        "catId": null,
+        "code": "12204KWNP00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 184000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917280,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12251KZR601",
+      "keptId": "st_1792734467133",
+      "row": {
+        "id": "st_1785394924509_dup6",
+        "name": "GASKET, CYLINDER HEAD",
+        "catId": null,
+        "code": "12251KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917282,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12252KWN900",
+      "keptId": "st_1792734467134",
+      "row": {
+        "id": "st_1785394924510",
+        "name": "GASKET,CYLINDER HEAD(OVER SIZ)",
+        "catId": null,
+        "code": "12252KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 151000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917285,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17111KZR600",
+      "keptId": "st_1792734467209",
+      "row": {
+        "id": "st_1785394924510_dup7",
+        "name": "PIPE INLET (tidak ada harga)",
+        "catId": null,
+        "code": "17111KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 0,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917289,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17119KWN900",
+      "keptId": "st_1792734467211",
+      "row": {
+        "id": "st_1785394924510_dup8",
+        "name": "INSULATOR,INLET PIPE",
+        "catId": null,
+        "code": "17119KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917293,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17533KZR600",
+      "keptId": "st_1792734467213",
+      "row": {
+        "id": "st_1785394924510_dup9",
+        "name": "STAY COMP., FUEL HOSE CLAMPER",
+        "catId": null,
+        "code": "17533KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917308,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|31926KRM841",
+      "keptId": "st_1792734467292",
+      "row": {
+        "id": "st_1785394924510_dup10",
+        "name": "SPARK PLUG CPR9EA9 (NGK)",
+        "catId": null,
+        "code": "31926KRM841",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 23000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917311,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|31926KYT901",
+      "keptId": "st_1792734467293",
+      "row": {
+        "id": "st_1785394924511",
+        "name": "SPARK PLUG U27EPR-9 (DS)",
+        "catId": null,
+        "code": "31926KYT901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 23000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917313,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|36532KZR601",
+      "keptId": "st_1792734467303",
+      "row": {
+        "id": "st_1785394924511_dup11",
+        "name": "SENSOR, OXYGEN",
+        "catId": null,
+        "code": "36532KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 310000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917316,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|36533KZR601",
+      "keptId": "st_1792734467304",
+      "row": {
+        "id": "st_1785394924511_dup12",
+        "name": "CORD COMP OXYGEN SENS",
+        "catId": null,
+        "code": "36533KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 324000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917319,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|37870KZR601",
+      "keptId": "st_1792734467308",
+      "row": {
+        "id": "st_1785394924511_dup13",
+        "name": "SENSOR ASSY., WATER TEMP",
+        "catId": null,
+        "code": "37870KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 79500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917322,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90004KGF910",
+      "keptId": "st_1792734467318",
+      "row": {
+        "id": "st_1785394924511_dup14",
+        "name": "BOLT, STUD, 7X17",
+        "catId": null,
+        "code": "90004KGF910",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917325,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90483KWN900",
+      "keptId": "st_1792734467336",
+      "row": {
+        "id": "st_1785394924511_dup15",
+        "name": "WASHER,8MM",
+        "catId": null,
+        "code": "90483KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917329,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91301KRJ901",
+      "keptId": "st_1792734467389",
+      "row": {
+        "id": "st_1785394924511_dup16",
+        "name": "O-RING,29X2",
+        "catId": null,
+        "code": "91301KRJ901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917332,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91307PLC004",
+      "keptId": "st_1792734467394",
+      "row": {
+        "id": "st_1785394924511_dup17",
+        "name": "O-RING, 9.5X1.9",
+        "catId": null,
+        "code": "91307PLC004",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 28500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917335,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|934040601200",
+      "keptId": "st_1792734467398",
+      "row": {
+        "id": "st_1785394924511_dup18",
+        "name": "BOLT WASHER 6X12",
+        "catId": null,
+        "code": "934040601200",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 4500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917339,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9403008280",
+      "keptId": "st_1792734467402",
+      "row": {
+        "id": "st_1785394924511_dup19",
+        "name": "NUT HEX 8MM",
+        "catId": null,
+        "code": "9403008280",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917343,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9430110160",
+      "keptId": "st_1792734467410",
+      "row": {
+        "id": "st_1785394924511_dup20",
+        "name": "DOWEL,PIN,",
+        "catId": null,
+        "code": "9430110160",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917351,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010604000",
+      "keptId": "st_1792734467420",
+      "row": {
+        "id": "st_1785394924512",
+        "name": "BOLT FLANGE 6X40",
+        "catId": null,
+        "code": "957010604000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917355,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010609500",
+      "keptId": "st_1792734467423",
+      "row": {
+        "id": "st_1785394924512_dup21",
+        "name": "BOLT FLANGE 6X95",
+        "catId": null,
+        "code": "957010609500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917357,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17111KZR650",
+      "keptId": "st_1792734467210",
+      "row": {
+        "id": "st_1785394924512_dup22",
+        "name": "PIPE INLET",
+        "catId": null,
+        "code": "17111KZR650",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 135500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917361,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17533KZR650",
+      "keptId": "st_1792734467214",
+      "row": {
+        "id": "st_1785394924512_dup23",
+        "name": "STAY COMP., FUEL HOSE CLAMPER",
+        "catId": null,
+        "code": "17533KZR650",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917366,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12209GB4681",
+      "keptId": "st_1792734467129",
+      "row": {
+        "id": "st_1785394924512_dup24",
+        "name": "SEAL,VALVE STEM",
+        "catId": null,
+        "code": "12209GB4681",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917369,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12209GB4682",
+      "keptId": "st_1792734467130",
+      "row": {
+        "id": "st_1785394924512_dup25",
+        "name": "SEAL,VALVE STEM",
+        "catId": null,
+        "code": "12209GB4682",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917371,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14100KZR600",
+      "keptId": "st_1792734467162",
+      "row": {
+        "id": "st_1785394924512_dup26",
+        "name": "CAMSHAFT COMP.",
+        "catId": null,
+        "code": "14100KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 308500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917374,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14321KWN900",
+      "keptId": "st_1792734467163",
+      "row": {
+        "id": "st_1785394924512_dup27",
+        "name": "SPROCKET, CAM (34T)",
+        "catId": null,
+        "code": "14321KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 31000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917377,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14430KZR600",
+      "keptId": "st_1792734467166",
+      "row": {
+        "id": "st_1785394924512_dup28",
+        "name": "ARM COMP,IN VALVE ROCKER",
+        "catId": null,
+        "code": "14430KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 87500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917379,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14440KZR600",
+      "keptId": "st_1792734467167",
+      "row": {
+        "id": "st_1785394924512_dup29",
+        "name": "ARM COMP,EX VALVE ROCKER",
+        "catId": null,
+        "code": "14440KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 92500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917382,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14451KZR600",
+      "keptId": "st_1792734467168",
+      "row": {
+        "id": "st_1785394924512_dup30",
+        "name": "SHAFT, ROCKER ARM",
+        "catId": null,
+        "code": "14451KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917385,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14711KWN900",
+      "keptId": "st_1792734467177",
+      "row": {
+        "id": "st_1785394924513",
+        "name": "VALVE, INLET",
+        "catId": null,
+        "code": "14711KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 46000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917392,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14721KWN901",
+      "keptId": "st_1792734467179",
+      "row": {
+        "id": "st_1785394924513_dup31",
+        "name": "VALVE, INLET",
+        "catId": null,
+        "code": "14721KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 48500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917396,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14721KWN900",
+      "keptId": "st_1792734467178",
+      "row": {
+        "id": "st_1785394924513_dup32",
+        "name": "Valve Exhaust",
+        "catId": null,
+        "code": "14721KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 102000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917400,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14751KZR601",
+      "keptId": "st_1792734467180",
+      "row": {
+        "id": "st_1785394924516",
+        "name": "SPRING, VALVE",
+        "catId": null,
+        "code": "14751KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917402,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14771KWN900",
+      "keptId": "st_1792734467181",
+      "row": {
+        "id": "st_1785394924516_dup33",
+        "name": "RETAINER,VALVE SPRING",
+        "catId": null,
+        "code": "14771KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 16000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917404,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14771KWN901",
+      "keptId": "st_1792734467182",
+      "row": {
+        "id": "st_1785394924516_dup34",
+        "name": "RETAINER,VALVE SPRING",
+        "catId": null,
+        "code": "14771KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917408,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14775KZR600",
+      "keptId": "st_1792734467183",
+      "row": {
+        "id": "st_1785394924516_dup35",
+        "name": "SEAT, VALVE SPRING",
+        "catId": null,
+        "code": "14775KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917411,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14781MA6000",
+      "keptId": "st_1792734467184",
+      "row": {
+        "id": "st_1785394924516_dup36",
+        "name": "COTTER,VALVE",
+        "catId": null,
+        "code": "14781MA6000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 36000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917414,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90002KWB600",
+      "keptId": "st_1792734467315",
+      "row": {
+        "id": "st_1785394924516_dup37",
+        "name": "BOLT FLANGE 5X12",
+        "catId": null,
+        "code": "90002KWB600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917418,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90012KWB600",
+      "keptId": "st_1792734467320",
+      "row": {
+        "id": "st_1785394924516_dup38",
+        "name": "SCREW,TAPPET ADJUSTING",
+        "catId": null,
+        "code": "90012KWB600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917422,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90083KVB900",
+      "keptId": "st_1792734467324",
+      "row": {
+        "id": "st_1785394924516_dup39",
+        "name": "BOLT SOCKET KNOCK 5MM",
+        "catId": null,
+        "code": "90083KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917425,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90206001000",
+      "keptId": "st_1792734467329",
+      "row": {
+        "id": "st_1785394924516_dup40",
+        "name": "NUT,TAPPET ADJUST",
+        "catId": null,
+        "code": "90206001000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 25500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917428,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14401KSS931",
+      "keptId": "st_1792734467164",
+      "row": {
+        "id": "st_1785394924517",
+        "name": "Chain Camp 92L FS",
+        "catId": null,
+        "code": "14401KSS931",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 188000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917431,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14510KZR600",
+      "keptId": "st_1792734467169",
+      "row": {
+        "id": "st_1785394924517_dup41",
+        "name": "TENSIONER ASSY., CAM CHAIN",
+        "catId": null,
+        "code": "14510KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 22500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917434,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14520K25901",
+      "keptId": "st_1792734467170",
+      "row": {
+        "id": "st_1785394924517_dup42",
+        "name": "LIFTER ASSY TENSIONER",
+        "catId": null,
+        "code": "14520K25901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 62500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917437,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14520K40F01",
+      "keptId": "st_1792734467171",
+      "row": {
+        "id": "st_1785394924517_dup43",
+        "name": "LIFTER ASSY TENSIONER",
+        "catId": null,
+        "code": "14520K40F01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917440,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14531KZR600",
+      "keptId": "st_1792734467173",
+      "row": {
+        "id": "st_1785394924517_dup44",
+        "name": "PIVOT, CAM CHAIN TENSIONER",
+        "catId": null,
+        "code": "14531KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 4500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917442,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14560KZR600",
+      "keptId": "st_1792734467175",
+      "row": {
+        "id": "st_1785394924517_dup45",
+        "name": "GASKET, TENSIONER LIFTER",
+        "catId": null,
+        "code": "14560KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917445,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14560KCW851",
+      "keptId": "st_1792734467174",
+      "row": {
+        "id": "st_1785394924517_dup46",
+        "name": "GASKET, TENSIONER LIFTER",
+        "catId": null,
+        "code": "14560KCW851",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6100,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917449,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|14611KWN900",
+      "keptId": "st_1792734467176",
+      "row": {
+        "id": "st_1785394924517_dup47",
+        "name": "GUIDE,CAM CHAIN",
+        "catId": null,
+        "code": "14611KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917452,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90005KY7000",
+      "keptId": "st_1792734467319",
+      "row": {
+        "id": "st_1785394924517_dup48",
+        "name": "SCREW PAN 6X6",
+        "catId": null,
+        "code": "90005KY7000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917455,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91306MG3000",
+      "keptId": "st_1792734467392",
+      "row": {
+        "id": "st_1785394924517_dup49",
+        "name": "O RING 1.5 X 9.5",
+        "catId": null,
+        "code": "91306MG3000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917459,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1210AKZR600",
+      "keptId": "st_1792734467121",
+      "row": {
+        "id": "st_1785394924518",
+        "name": "CYLINDER COMP",
+        "catId": null,
+        "code": "1210AKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 324500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917462,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12191KZR600",
+      "keptId": "st_1792734467122",
+      "row": {
+        "id": "st_1785394924518_dup50",
+        "name": "GASKET CYLINDER",
+        "catId": null,
+        "code": "12191KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917466,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|30515KZR600",
+      "keptId": "st_1792734467288",
+      "row": {
+        "id": "st_1785394924518_dup51",
+        "name": "STAY COMP., IGNITION COIL",
+        "catId": null,
+        "code": "30515KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917469,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|31210KZR601",
+      "keptId": "st_1792734467289",
+      "row": {
+        "id": "st_1785394924518_dup52",
+        "name": "FLYWHEEL COMP",
+        "catId": null,
+        "code": "31210KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 337500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917473,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|31220KZR601",
+      "keptId": "st_1792734467290",
+      "row": {
+        "id": "st_1785394924518_dup53",
+        "name": "STATOR COMP",
+        "catId": null,
+        "code": "31220KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 950000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917477,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90001KWR000",
+      "keptId": "st_1792734467314",
+      "row": {
+        "id": "st_1785394924518_dup54",
+        "name": "BOLT, SOCKET, 6X18",
+        "catId": null,
+        "code": "90001KWR000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917482,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90439KWZ900",
+      "keptId": "st_1792734467333",
+      "row": {
+        "id": "st_1785394924518_dup55",
+        "name": "WASHER 12X24X2.3",
+        "catId": null,
+        "code": "90439KWZ900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917485,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9405012000",
+      "keptId": "st_1792734467405",
+      "row": {
+        "id": "st_1785394924518_dup56",
+        "name": "NUT,FLANGE 12MM",
+        "catId": null,
+        "code": "9405012000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 29000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917490,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|967000602500",
+      "keptId": "st_1792734467432",
+      "row": {
+        "id": "st_1785394924518_dup57",
+        "name": "SOCKET BOLT 6X25",
+        "catId": null,
+        "code": "967000602500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917494,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15010KWN900",
+      "keptId": "st_1792734467185",
+      "row": {
+        "id": "st_1785394924519",
+        "name": "OIL PUMP SET",
+        "catId": null,
+        "code": "15010KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 34500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917500,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15133KWN900",
+      "keptId": "st_1792734467186",
+      "row": {
+        "id": "st_1785394924519_dup58",
+        "name": "GEAR,OIL PUMP DRIVEN",
+        "catId": null,
+        "code": "15133KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 59000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917503,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90003KWN900",
+      "keptId": "st_1792734467316",
+      "row": {
+        "id": "st_1785394924519_dup59",
+        "name": "BOLT,SPL 6X23.5",
+        "catId": null,
+        "code": "90003KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917507,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9430108100",
+      "keptId": "st_1792734467407",
+      "row": {
+        "id": "st_1785394924520",
+        "name": "PIN DOWEL 8X10",
+        "catId": null,
+        "code": "9430108100",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917511,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11341KZR600",
+      "keptId": "st_1792734467114",
+      "row": {
+        "id": "st_1785394924520_dup60",
+        "name": "COVER,L SIDE",
+        "catId": null,
+        "code": "11341KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 580500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917516,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11342KZR600",
+      "keptId": "st_1792734467115",
+      "row": {
+        "id": "st_1785394924520_dup61",
+        "name": "PLATE, L. COVER",
+        "catId": null,
+        "code": "11342KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917519,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11395KZR600",
+      "keptId": "st_1792734467119",
+      "row": {
+        "id": "st_1785394924520_dup62",
+        "name": "GASKET, L. COVER",
+        "catId": null,
+        "code": "11395KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 31500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917523,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19641KZR600",
+      "keptId": "st_1792734467235",
+      "row": {
+        "id": "st_1785394924524",
+        "name": "DUCT, L. COVER",
+        "catId": null,
+        "code": "19641KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 15500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917528,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19642KZR600",
+      "keptId": "st_1792734467236",
+      "row": {
+        "id": "st_1785394924524_dup63",
+        "name": "CAP, L. COVER",
+        "catId": null,
+        "code": "19642KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917531,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19748KZR600",
+      "keptId": "st_1792734467237",
+      "row": {
+        "id": "st_1785394924524_dup64",
+        "name": "SEAL, DUCT",
+        "catId": null,
+        "code": "19748KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917536,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19749KVY900",
+      "keptId": "st_1792734467238",
+      "row": {
+        "id": "st_1785394924524_dup65",
+        "name": "SEAL L COVER DUCT",
+        "catId": null,
+        "code": "19749KVY900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917541,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90652KVB900",
+      "keptId": "st_1792734467339",
+      "row": {
+        "id": "st_1785394924524_dup66",
+        "name": "CIRCLIP IN.32",
+        "catId": null,
+        "code": "90652KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917545,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91010K1AN80",
+      "keptId": "st_1792734467372",
+      "row": {
+        "id": "st_1785394924524_dup67",
+        "name": "Brg Comp Drive Shaft",
+        "catId": null,
+        "code": "91010K1AN80",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 49000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917549,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91005KVBN50",
+      "keptId": "st_1792734467360",
+      "row": {
+        "id": "st_1785394924524_dup68",
+        "name": "Brg Comp Drive Shaft",
+        "catId": null,
+        "code": "91005KVBN50",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 39900,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917552,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91211PE9003",
+      "keptId": "st_1792734467385",
+      "row": {
+        "id": "st_1785394924524_dup69",
+        "name": "OIL SEAL, 16X26X6",
+        "catId": null,
+        "code": "91211PE9003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917555,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91212K44V01",
+      "keptId": "st_1792734467386",
+      "row": {
+        "id": "st_1785394924524_dup70",
+        "name": "OIL SEAL, 16X26X6",
+        "catId": null,
+        "code": "91212K44V01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917559,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9390334120",
+      "keptId": "st_1792734467400",
+      "row": {
+        "id": "st_1785394924525",
+        "name": "SCREW TAPPING 4X8",
+        "catId": null,
+        "code": "9390334120",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917562,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9390334320",
+      "keptId": "st_1792734467401",
+      "row": {
+        "id": "st_1785394924525_dup71",
+        "name": "SCREW TAPPING 4X12",
+        "catId": null,
+        "code": "9390334320",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917566,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9430108140",
+      "keptId": "st_1792734467408",
+      "row": {
+        "id": "st_1785394924525_dup72",
+        "name": "PIN DOWEL 8X14",
+        "catId": null,
+        "code": "9430108140",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917570,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|960010602800",
+      "keptId": "st_1792734467429",
+      "row": {
+        "id": "st_1785394924525_dup73",
+        "name": "BOLT FLANGE 6X28",
+        "catId": null,
+        "code": "960010602800",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917574,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|960010604000",
+      "keptId": "st_1792734467430",
+      "row": {
+        "id": "st_1785394924525_dup74",
+        "name": "BOLT FLANGE 6X40",
+        "catId": null,
+        "code": "960010604000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917577,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|960010606500",
+      "keptId": "st_1792734467431",
+      "row": {
+        "id": "st_1785394924525_dup75",
+        "name": "BOLT FLANGE 6X65",
+        "catId": null,
+        "code": "960010606500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917581,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12206KZR600",
+      "keptId": "st_1792734467127",
+      "row": {
+        "id": "st_1785394924525_dup76",
+        "name": "Joint Comp Water Hose",
+        "catId": null,
+        "code": "12206KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 27500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917585,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12206K97N00",
+      "keptId": "st_1792734467126",
+      "row": {
+        "id": "st_1785394924525_dup77",
+        "name": "Joint Comp Water Hose",
+        "catId": null,
+        "code": "12206K97N00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 43500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917590,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12207KWN900",
+      "keptId": "st_1792734467128",
+      "row": {
+        "id": "st_1785394924525_dup78",
+        "name": "O-RING,15.4X2",
+        "catId": null,
+        "code": "12207KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917595,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19037KVB902",
+      "keptId": "st_1792734467221",
+      "row": {
+        "id": "st_1785394924525_dup79",
+        "name": "CAP COMP.RAD",
+        "catId": null,
+        "code": "19037KVB902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 135500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917600,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19037KVB901",
+      "keptId": "st_1792734467220",
+      "row": {
+        "id": "st_1785394924525_dup80",
+        "name": "CAP COMP.RAD",
+        "catId": null,
+        "code": "19037KVB901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 49000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917604,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19046KVB902",
+      "keptId": "st_1792734467222",
+      "row": {
+        "id": "st_1785394924526",
+        "name": "LABEL,RAD CAP",
+        "catId": null,
+        "code": "19046KVB902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 22000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917609,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19100KZR600",
+      "keptId": "st_1792734467223",
+      "row": {
+        "id": "st_1785394924526_dup81",
+        "name": "RADIATOR ASSY.",
+        "catId": null,
+        "code": "19100KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 462000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917616,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19100KZR602",
+      "keptId": "st_1792734467224",
+      "row": {
+        "id": "st_1785394924526_dup82",
+        "name": "RADIATOR ASSY.",
+        "catId": null,
+        "code": "19100KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 388000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917620,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19109GET003",
+      "keptId": "st_1792734467225",
+      "row": {
+        "id": "st_1785394924526_dup83",
+        "name": "SEAL RING,DRAIN",
+        "catId": null,
+        "code": "19109GET003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917625,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19150KZR600",
+      "keptId": "st_1792734467226",
+      "row": {
+        "id": "st_1785394924526_dup84",
+        "name": "COVER COMP., RADIATOR",
+        "catId": null,
+        "code": "19150KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917630,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19332KWN900",
+      "keptId": "st_1792734467229",
+      "row": {
+        "id": "st_1785394924526_dup85",
+        "name": "TUBE,AIR BREATHER",
+        "catId": null,
+        "code": "19332KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 16000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917636,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19416KEY900",
+      "keptId": "st_1792734467230",
+      "row": {
+        "id": "st_1785394924526_dup86",
+        "name": "COLLAR",
+        "catId": null,
+        "code": "19416KEY900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917641,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1950BKZR600",
+      "keptId": "st_1792734467232",
+      "row": {
+        "id": "st_1785394924526_dup87",
+        "name": "HOSE A,WATER ASSY",
+        "catId": null,
+        "code": "1950BKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 21000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917645,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1950AKZR600",
+      "keptId": "st_1792734467231",
+      "row": {
+        "id": "st_1785394924526_dup88",
+        "name": "HOSE B,WATER ASSY",
+        "catId": null,
+        "code": "1950AKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 25000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917651,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1950DKZR600",
+      "keptId": "st_1792734467233",
+      "row": {
+        "id": "st_1785394924526_dup89",
+        "name": "HOSE,BYPASS ASSY",
+        "catId": null,
+        "code": "1950DKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 15500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917654,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|19510KZR601",
+      "keptId": "st_1792734467234",
+      "row": {
+        "id": "st_1785394924526_dup90",
+        "name": "FAN COMP COOLING",
+        "catId": null,
+        "code": "19510KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 16500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917658,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|84601HA7670",
+      "keptId": "st_1792734467313",
+      "row": {
+        "id": "st_1785394924527",
+        "name": "NUT FENDER SET",
+        "catId": null,
+        "code": "84601HA7670",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917666,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90004GHB660",
+      "keptId": "st_1792734467317",
+      "row": {
+        "id": "st_1785394924527_dup91",
+        "name": "BOLT,FLANGE,NSHF,6X22",
+        "catId": null,
+        "code": "90004GHB660",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917671,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90103GET003",
+      "keptId": "st_1792734467325",
+      "row": {
+        "id": "st_1785394924527_dup92",
+        "name": "BOLT DRAIN SEAL RING",
+        "catId": null,
+        "code": "90103GET003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 27000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917676,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90678MR1690",
+      "keptId": "st_1792734467340",
+      "row": {
+        "id": "st_1785394924527_dup93",
+        "name": "CLIP A1 HOSE",
+        "catId": null,
+        "code": "90678MR1690",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917680,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90701KWN901",
+      "keptId": "st_1792734467341",
+      "row": {
+        "id": "st_1785394924527_dup94",
+        "name": "CLAMP,24MM WATER HOSE",
+        "catId": null,
+        "code": "90701KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 14500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917688,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90701MF5003",
+      "keptId": "st_1792734467342",
+      "row": {
+        "id": "st_1785394924527_dup95",
+        "name": "CLAMP WATER HOSE 21 MM",
+        "catId": null,
+        "code": "90701MF5003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 4500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917691,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|934010602508",
+      "keptId": "st_1792734467397",
+      "row": {
+        "id": "st_1785394924527_dup96",
+        "name": "BOLT-WASHER, 6X25",
+        "catId": null,
+        "code": "934010602508",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917695,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|950024105008",
+      "keptId": "st_1792734467412",
+      "row": {
+        "id": "st_1785394924527_dup97",
+        "name": "CLIP,TUBE,10.5MM",
+        "catId": null,
+        "code": "950024105008",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917698,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010601600",
+      "keptId": "st_1792734467416",
+      "row": {
+        "id": "st_1785394924527_dup98",
+        "name": "BOLT FLANGE 6X16",
+        "catId": null,
+        "code": "957010601600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917702,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|960010601607",
+      "keptId": "st_1792734467427",
+      "row": {
+        "id": "st_1785394924527_dup99",
+        "name": "BOLT,FLANGE,6X16",
+        "catId": null,
+        "code": "960010601607",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917707,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22132KWN900",
+      "keptId": "st_1792734467254",
+      "row": {
+        "id": "st_1785394924527_dup100",
+        "name": "PIECE,SLIDE",
+        "catId": null,
+        "code": "22132KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917710,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22011KWN900",
+      "keptId": "st_1792734467242",
+      "row": {
+        "id": "st_1785394924527_dup101",
+        "name": "PIECE,SLIDE SET",
+        "catId": null,
+        "code": "22011KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 28000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917714,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22102KZR600",
+      "keptId": "st_1792734467245",
+      "row": {
+        "id": "st_1785394924528",
+        "name": "FACE, DRIVE",
+        "catId": null,
+        "code": "22102KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 55000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917719,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22105KWN900",
+      "keptId": "st_1792734467246",
+      "row": {
+        "id": "st_1785394924528_dup102",
+        "name": "Boss Drive Face",
+        "catId": null,
+        "code": "22105KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 46500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917723,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22109KZL840",
+      "keptId": "st_1792734467247",
+      "row": {
+        "id": "st_1785394924528_dup103",
+        "name": "RATCHET STARTER",
+        "catId": null,
+        "code": "22109KZL840",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 35500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917727,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22110KZR600",
+      "keptId": "st_1792734467249",
+      "row": {
+        "id": "st_1785394924528_dup104",
+        "name": "FACE COMP., MOVABLE DRIVE",
+        "catId": null,
+        "code": "22110KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 84500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917732,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|2212AKWN640",
+      "keptId": "st_1792734467252",
+      "row": {
+        "id": "st_1785394924529",
+        "name": "ROLLER SET, WEIGHT",
+        "catId": null,
+        "code": "2212AKWN640",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 62000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917737,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22123KWN900",
+      "keptId": "st_1792734467250",
+      "row": {
+        "id": "st_1785394924529_dup105",
+        "name": "ROLLER SET, WEIGHT",
+        "catId": null,
+        "code": "22123KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 78000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917742,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|2212AK36T00",
+      "keptId": "st_1792734467251",
+      "row": {
+        "id": "st_1785394924529_dup106",
+        "name": "ROLLER SET, WEIGHT",
+        "catId": null,
+        "code": "2212AK36T00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 62000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917746,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22131KWN900",
+      "keptId": "st_1792734467253",
+      "row": {
+        "id": "st_1785394924529_dup107",
+        "name": "PLATE,RAMP",
+        "catId": null,
+        "code": "22131KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 89000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917751,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28223KZL840",
+      "keptId": "st_1792734467280",
+      "row": {
+        "id": "st_1785394924529_dup108",
+        "name": "SPRING KICK DRIVEN GEAR",
+        "catId": null,
+        "code": "28223KZL840",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917756,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28230KZR600",
+      "keptId": "st_1792734467281",
+      "row": {
+        "id": "st_1785394924529_dup109",
+        "name": "GEAR COMP., KICK DRIVEN(7T)",
+        "catId": null,
+        "code": "28230KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917761,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28250KZR600",
+      "keptId": "st_1792734467282",
+      "row": {
+        "id": "st_1785394924529_dup110",
+        "name": "SPINDLE COMP., KICK STARTER",
+        "catId": null,
+        "code": "28250KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 98500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917766,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28253KVB900",
+      "keptId": "st_1792734467283",
+      "row": {
+        "id": "st_1785394924529_dup111",
+        "name": "BUSH, KICK SPINDLE",
+        "catId": null,
+        "code": "28253KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917771,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28255GS6000",
+      "keptId": "st_1792734467284",
+      "row": {
+        "id": "st_1785394924529_dup112",
+        "name": "COLLAR KICK BOSS",
+        "catId": null,
+        "code": "28255GS6000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917777,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|28281KZLC00",
+      "keptId": "st_1792734467285",
+      "row": {
+        "id": "st_1785394924529_dup113",
+        "name": "SPRING, KICK RETURN",
+        "catId": null,
+        "code": "28281KZLC00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917783,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90412KZL840",
+      "keptId": "st_1792734467330",
+      "row": {
+        "id": "st_1785394924529_dup114",
+        "name": "WASHER THRUST 10MM",
+        "catId": null,
+        "code": "90412KZL840",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917789,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90426KVB900",
+      "keptId": "st_1792734467331",
+      "row": {
+        "id": "st_1785394924529_dup115",
+        "name": "WASHER SPECIAL 14MM",
+        "catId": null,
+        "code": "90426KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917795,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90439443740",
+      "keptId": "st_1792734467332",
+      "row": {
+        "id": "st_1785394924529_dup116",
+        "name": "WASHER",
+        "catId": null,
+        "code": "90439443740",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917802,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9403014200",
+      "keptId": "st_1792734467404",
+      "row": {
+        "id": "st_1785394924530",
+        "name": "NUT HEX 14MM",
+        "catId": null,
+        "code": "9403014200",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917808,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9451116000",
+      "keptId": "st_1792734467411",
+      "row": {
+        "id": "st_1785394924530_dup117",
+        "name": "CIRCLIP EXT 16MM",
+        "catId": null,
+        "code": "9451116000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917816,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22100KWN901",
+      "keptId": "st_1792734467244",
+      "row": {
+        "id": "st_1785394924530_dup118",
+        "name": "OUTER COMP CLUTCH",
+        "catId": null,
+        "code": "22100KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 125000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917824,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22100KWN900",
+      "keptId": "st_1792734467243",
+      "row": {
+        "id": "st_1785394924530_dup119",
+        "name": "OUTER COMP CLUTCH",
+        "catId": null,
+        "code": "22100KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 130000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917829,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22350KVB900",
+      "keptId": "st_1792734467255",
+      "row": {
+        "id": "st_1785394924530_dup120",
+        "name": "PLATE COMP DRIVE",
+        "catId": null,
+        "code": "22350KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 32500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917834,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22361KVB900",
+      "keptId": "st_1792734467256",
+      "row": {
+        "id": "st_1785394924530_dup121",
+        "name": "PLATE CLUTCH SIDE",
+        "catId": null,
+        "code": "22361KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917839,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22401KGF912",
+      "keptId": "st_1792734467257",
+      "row": {
+        "id": "st_1785394924530_dup122",
+        "name": "SPRING, CLUTCH",
+        "catId": null,
+        "code": "22401KGF912",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917843,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22535KWN901",
+      "keptId": "st_1792734467261",
+      "row": {
+        "id": "st_1785394924530_dup123",
+        "name": "WEIGHT SET, CLUTCH",
+        "catId": null,
+        "code": "22535KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 159500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917847,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22535GGC900",
+      "keptId": "st_1792734467260",
+      "row": {
+        "id": "st_1785394924530_dup124",
+        "name": "WEIGHT SET, CLUTCH",
+        "catId": null,
+        "code": "22535GGC900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 175500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917851,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22804148000",
+      "keptId": "st_1792734467262",
+      "row": {
+        "id": "st_1785394924530_dup125",
+        "name": "RUBBER CLUTCH DUMPER",
+        "catId": null,
+        "code": "22804148000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917856,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|22804GB2880",
+      "keptId": "st_1792734467263",
+      "row": {
+        "id": "st_1785394924530_dup126",
+        "name": "RUBBER CLUTCH DUMPER",
+        "catId": null,
+        "code": "22804GB2880",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917861,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23100KZR601",
+      "keptId": "st_1792734467264",
+      "row": {
+        "id": "st_1785394924530_dup127",
+        "name": "BELT, DRIVE",
+        "catId": null,
+        "code": "23100KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 181000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917868,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23205KWN641",
+      "keptId": "st_1792734467266",
+      "row": {
+        "id": "st_1785394924531",
+        "name": "FACE SET DRIVEN",
+        "catId": null,
+        "code": "23205KWN641",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 187500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917872,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23224KZR600",
+      "keptId": "st_1792734467269",
+      "row": {
+        "id": "st_1785394924531_dup128",
+        "name": "FACE SET, MOVABLE DRIVEN",
+        "catId": null,
+        "code": "23224KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 155000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917875,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23225KSY900",
+      "keptId": "st_1792734467270",
+      "row": {
+        "id": "st_1785394924531_dup129",
+        "name": "PIN ROLLER GUIDE",
+        "catId": null,
+        "code": "23225KSY900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917879,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23226KVB900",
+      "keptId": "st_1792734467272",
+      "row": {
+        "id": "st_1785394924531_dup130",
+        "name": "ROLLER GUIDE",
+        "catId": null,
+        "code": "23226KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917884,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23233KZR600",
+      "keptId": "st_1792734467273",
+      "row": {
+        "id": "st_1785394924531_dup131",
+        "name": "SPRING, DRIVEN FACE",
+        "catId": null,
+        "code": "23233KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 45000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917889,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23237KWN901",
+      "keptId": "st_1792734467274",
+      "row": {
+        "id": "st_1785394924531_dup132",
+        "name": "COLLAR, SEAL",
+        "catId": null,
+        "code": "23237KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 37000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917894,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23238KZR600",
+      "keptId": "st_1792734467275",
+      "row": {
+        "id": "st_1785394924531_dup133",
+        "name": "COLLAR, SPRING",
+        "catId": null,
+        "code": "23238KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917898,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90202KN7670",
+      "keptId": "st_1792734467327",
+      "row": {
+        "id": "st_1785394924531_dup134",
+        "name": "NUT SPECIAL 30MM",
+        "catId": null,
+        "code": "90202KN7670",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 15000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917903,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90441GY6940",
+      "keptId": "st_1792734467334",
+      "row": {
+        "id": "st_1785394924531_dup135",
+        "name": "WASHER 12.2X29X2.5",
+        "catId": null,
+        "code": "90441GY6940",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917907,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90605166720",
+      "keptId": "st_1792734467338",
+      "row": {
+        "id": "st_1785394924531_dup136",
+        "name": "CIRCLIP 7MM",
+        "catId": null,
+        "code": "90605166720",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917912,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91109KVY901",
+      "keptId": "st_1792734467376",
+      "row": {
+        "id": "st_1785394924531_dup137",
+        "name": "BRG NEEDLE 20X29X18",
+        "catId": null,
+        "code": "91109KVY901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 48500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917917,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91001KCW003",
+      "keptId": "st_1792734467345",
+      "row": {
+        "id": "st_1785394924531_dup138",
+        "name": "Bearing Needle 20X29X18",
+        "catId": null,
+        "code": "91001KCW003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 33500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917922,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91109GGCG01",
+      "keptId": "st_1792734467373",
+      "row": {
+        "id": "st_1785394924531_dup139",
+        "name": "Bearing Needle 20x29X18",
+        "catId": null,
+        "code": "91109GGCG01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 35000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917926,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91109K2SN01",
+      "keptId": "st_1792734467374",
+      "row": {
+        "id": "st_1785394924532",
+        "name": "Bearing Needle 20x29X18",
+        "catId": null,
+        "code": "91109K2SN01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 26000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917931,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002GA7701",
+      "keptId": "st_1792734467347",
+      "row": {
+        "id": "st_1785394924532_dup140",
+        "name": "BEARING RAD BALL 6902U",
+        "catId": null,
+        "code": "91002GA7701",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 27000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917935,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002GA7702",
+      "keptId": "st_1792734467348",
+      "row": {
+        "id": "st_1785394924532_dup141",
+        "name": "BEARING RAD BALL 6902U",
+        "catId": null,
+        "code": "91002GA7702",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 24500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917939,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91009KVY961",
+      "keptId": "st_1792734467370",
+      "row": {
+        "id": "st_1785394924532_dup142",
+        "name": "BRG BALL RADIAL 6902U",
+        "catId": null,
+        "code": "91009KVY961",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 31500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917944,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91211KN7671",
+      "keptId": "st_1792734467384",
+      "row": {
+        "id": "st_1785394924532_dup143",
+        "name": "SEAL DRIVEN FACE 34X41X4",
+        "catId": null,
+        "code": "91211KN7671",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917949,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91351642000",
+      "keptId": "st_1792734467395",
+      "row": {
+        "id": "st_1785394924532_dup144",
+        "name": "O-RING PINION CAP",
+        "catId": null,
+        "code": "91351642000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917954,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91351GR1000",
+      "keptId": "st_1792734467396",
+      "row": {
+        "id": "st_1785394924532_dup145",
+        "name": "O-RING 38.5X2",
+        "catId": null,
+        "code": "91351GR1000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 4500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917959,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9403012200",
+      "keptId": "st_1792734467403",
+      "row": {
+        "id": "st_1785394924532_dup146",
+        "name": "NUT HEX 12MM",
+        "catId": null,
+        "code": "9403012200",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917964,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23100KZRBA0",
+      "keptId": "st_1792734467265",
+      "row": {
+        "id": "st_1785394924532_dup147",
+        "name": "Van Belt Set",
+        "catId": null,
+        "code": "23100KZRBA0",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 231500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917969,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11204KGF900",
+      "keptId": "st_1792734467111",
+      "row": {
+        "id": "st_1785394924533",
+        "name": "SLEEVE RR BRAKE CAM",
+        "catId": null,
+        "code": "11204KGF900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917973,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11211KZR600",
+      "keptId": "st_1792734467113",
+      "row": {
+        "id": "st_1785394924533_dup148",
+        "name": "TUBE, MISSION BREATHER",
+        "catId": null,
+        "code": "11211KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 4500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917977,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|2120AKZR601",
+      "keptId": "st_1792734467239",
+      "row": {
+        "id": "st_1785394924533_dup149",
+        "name": "CASE COMP,MISSION",
+        "catId": null,
+        "code": "2120AKZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 574500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917981,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|2120BKZR600",
+      "keptId": "st_1792734467240",
+      "row": {
+        "id": "st_1785394924533_dup150",
+        "name": "CASE COMP,MISSION",
+        "catId": null,
+        "code": "2120BKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 252500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917986,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|21395KZR600",
+      "keptId": "st_1792734467241",
+      "row": {
+        "id": "st_1785394924533_dup151",
+        "name": "GASKET, TRANSMISSION CASE",
+        "catId": null,
+        "code": "21395KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917991,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23411KZR600",
+      "keptId": "st_1792734467276",
+      "row": {
+        "id": "st_1785394924533_dup152",
+        "name": "DRIVESHAFT(17T)",
+        "catId": null,
+        "code": "23411KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 184000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394917997,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23421KZR600",
+      "keptId": "st_1792734467277",
+      "row": {
+        "id": "st_1785394924533_dup153",
+        "name": "COUNTERSHAFT(13T)",
+        "catId": null,
+        "code": "23421KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 108500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918004,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23422KWN900",
+      "keptId": "st_1792734467278",
+      "row": {
+        "id": "st_1785394924533_dup154",
+        "name": "GEAR,COUNTER",
+        "catId": null,
+        "code": "23422KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 112000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918009,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|23430KZR600",
+      "keptId": "st_1792734467279",
+      "row": {
+        "id": "st_1785394924533_dup155",
+        "name": "GEAR COMP., FINAL(44T)",
+        "catId": null,
+        "code": "23430KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 345000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918013,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90495MN5000",
+      "keptId": "st_1792734467337",
+      "row": {
+        "id": "st_1785394924533_dup156",
+        "name": "WASHER,SEALING 8MM",
+        "catId": null,
+        "code": "90495MN5000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918019,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91004KZR601",
+      "keptId": "st_1792734467357",
+      "row": {
+        "id": "st_1785394924533_dup157",
+        "name": "BRG,BALL RADIAL",
+        "catId": null,
+        "code": "91004KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6202,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918024,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91004KZR602",
+      "keptId": "st_1792734467358",
+      "row": {
+        "id": "st_1785394924534",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91004KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6202,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918028,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91004K56N01",
+      "keptId": "st_1792734467356",
+      "row": {
+        "id": "st_1785394924534_dup158",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91004K56N01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6202,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918033,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91006KZR601",
+      "keptId": "st_1792734467364",
+      "row": {
+        "id": "st_1785394924534_dup159",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91006KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6201,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918037,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91006KZR602",
+      "keptId": "st_1792734467365",
+      "row": {
+        "id": "st_1785394924534_dup160",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91006KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6201,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918041,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|HB6201",
+      "keptId": "st_1792734467433",
+      "row": {
+        "id": "st_1785394924534_dup161",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "HB6201",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6201,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918047,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|LF6201",
+      "keptId": "st_1792734467434",
+      "row": {
+        "id": "st_1785394924534_dup162",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "LF6201",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6201,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918051,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91009KWN902",
+      "keptId": "st_1792734467371",
+      "row": {
+        "id": "st_1785394924534_dup163",
+        "name": "BRG,BALL RADIAL",
+        "catId": null,
+        "code": "91009KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6205,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918057,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91001KZLA01",
+      "keptId": "st_1792734467346",
+      "row": {
+        "id": "st_1785394924534_dup164",
+        "name": "BRG,BALL RADIAL",
+        "catId": null,
+        "code": "91001KZLA01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6205,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918062,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91006KAB004",
+      "keptId": "st_1792734467363",
+      "row": {
+        "id": "st_1785394924534_dup165",
+        "name": "BEARING, RADIAL BALL, LBL",
+        "catId": null,
+        "code": "91006KAB004",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 79000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918067,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91009K2SN01",
+      "keptId": "st_1792734467368",
+      "row": {
+        "id": "st_1785394924534_dup166",
+        "name": "BRG,BALL RADIAL",
+        "catId": null,
+        "code": "91009K2SN01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6205,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918071,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91201434003",
+      "keptId": "st_1792734467377",
+      "row": {
+        "id": "st_1785394924534_dup167",
+        "name": "OIL SEAL .2",
+        "catId": null,
+        "code": "91201434003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918076,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91204KWN901",
+      "keptId": "st_1792734467383",
+      "row": {
+        "id": "st_1785394924535",
+        "name": "Oil Seal 34 X 52 X 7",
+        "catId": null,
+        "code": "91204KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918081,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9430110120",
+      "keptId": "st_1792734467409",
+      "row": {
+        "id": "st_1785394924535_dup168",
+        "name": "PIN DOWEL",
+        "catId": null,
+        "code": "9430110120",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918085,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9500250000",
+      "keptId": "st_1792734467413",
+      "row": {
+        "id": "st_1785394924535_dup169",
+        "name": "CLIP,TUBE 5.0 MM",
+        "catId": null,
+        "code": "9500250000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918089,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010804500",
+      "keptId": "st_1792734467425",
+      "row": {
+        "id": "st_1785394924536",
+        "name": "BOLT FLANGE 8X45",
+        "catId": null,
+        "code": "957010804500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918095,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010805500",
+      "keptId": "st_1792734467426",
+      "row": {
+        "id": "st_1785394924536_dup170",
+        "name": "BOLT,FLANGE,8X55",
+        "catId": null,
+        "code": "957010805500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10200,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918100,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|1110BKZR600",
+      "keptId": "st_1792734467099",
+      "row": {
+        "id": "st_1785394924536_dup171",
+        "name": "CRANK CASE COMP, RIGHT",
+        "catId": null,
+        "code": "1110BKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 564500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918105,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11103KVB930",
+      "keptId": "st_1792734467098",
+      "row": {
+        "id": "st_1785394924536_dup172",
+        "name": "RUB.BUSH,ENG.HANGER",
+        "catId": null,
+        "code": "11103KVB930",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 19000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918110,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11114KWN900",
+      "keptId": "st_1792734467100",
+      "row": {
+        "id": "st_1785394924536_dup173",
+        "name": "PLUG,BRG PUSH",
+        "catId": null,
+        "code": "11114KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 22000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918115,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11116KZR600",
+      "keptId": "st_1792734467101",
+      "row": {
+        "id": "st_1785394924536_dup174",
+        "name": "SPRING, BEARING PUSH",
+        "catId": null,
+        "code": "11116KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918121,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11117KWN901",
+      "keptId": "st_1792734467107",
+      "row": {
+        "id": "st_1785394924536_dup175",
+        "name": "PLATE,BRG PUSH",
+        "catId": null,
+        "code": "11117KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918126,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11205GBC300",
+      "keptId": "st_1792734467112",
+      "row": {
+        "id": "st_1785394924536_dup176",
+        "name": "BUSH M STAND",
+        "catId": null,
+        "code": "11205GBC300",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918131,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11361KWN901",
+      "keptId": "st_1792734467117",
+      "row": {
+        "id": "st_1785394924536_dup177",
+        "name": "BASE, STATOR",
+        "catId": null,
+        "code": "11361KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 144000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918136,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11363KWN900",
+      "keptId": "st_1792734467118",
+      "row": {
+        "id": "st_1785394924536_dup178",
+        "name": "GASKET,STATOR BASE",
+        "catId": null,
+        "code": "11363KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918140,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15651KZR600",
+      "keptId": "st_1792734467191",
+      "row": {
+        "id": "st_1785394924536_dup179",
+        "name": "GAUGE, OIL LEVEL",
+        "catId": null,
+        "code": "15651KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918145,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|32961KWN900",
+      "keptId": "st_1792734467296",
+      "row": {
+        "id": "st_1785394924537",
+        "name": "CLAMP,ACG CORD",
+        "catId": null,
+        "code": "32961KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918151,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|32962KZR600",
+      "keptId": "st_1792734467297",
+      "row": {
+        "id": "st_1785394924537_dup180",
+        "name": "STAY, ENGINE HARNESS",
+        "catId": null,
+        "code": "32962KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918156,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90031KWN900",
+      "keptId": "st_1792734467321",
+      "row": {
+        "id": "st_1785394924537_dup181",
+        "name": "BOLT A STUD 8X2005",
+        "catId": null,
+        "code": "90031KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 19000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918161,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90036KZR600",
+      "keptId": "st_1792734467323",
+      "row": {
+        "id": "st_1785394924537_dup182",
+        "name": "BOLT, RADIATOR DISTANCE",
+        "catId": null,
+        "code": "90036KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918166,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90131883000",
+      "keptId": "st_1792734467326",
+      "row": {
+        "id": "st_1785394924537_dup183",
+        "name": "BOLT DRAIN PLUG",
+        "catId": null,
+        "code": "90131883000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918171,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90702KWN900",
+      "keptId": "st_1792734467343",
+      "row": {
+        "id": "st_1785394924537_dup184",
+        "name": "DOWEL PIN,SPL 6.3X10X30",
+        "catId": null,
+        "code": "90702KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 5000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918177,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91201KWN902",
+      "keptId": "st_1792734467379",
+      "row": {
+        "id": "st_1785394924537_dup185",
+        "name": "OIL SEAL, 20 8X32X6",
+        "catId": null,
+        "code": "91201KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918182,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91201K35J01",
+      "keptId": "st_1792734467378",
+      "row": {
+        "id": "st_1785394924537_dup186",
+        "name": "OIL SEAL, 20 8X32X6",
+        "catId": null,
+        "code": "91201K35J01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 34000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918187,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91307035000",
+      "keptId": "st_1792734467393",
+      "row": {
+        "id": "st_1785394924537_dup187",
+        "name": "O-RING, 18X3",
+        "catId": null,
+        "code": "91307035000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1600,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918193,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9410912000",
+      "keptId": "st_1792734467406",
+      "row": {
+        "id": "st_1785394924537_dup188",
+        "name": "WASHER, DRAIN PLUG, 12MM",
+        "catId": null,
+        "code": "9410912000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918199,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010602500",
+      "keptId": "st_1792734467419",
+      "row": {
+        "id": "st_1785394924538",
+        "name": "BOLT FLANGE 6X25",
+        "catId": null,
+        "code": "957010602500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918204,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010606500",
+      "keptId": "st_1792734467421",
+      "row": {
+        "id": "st_1785394924538_dup189",
+        "name": "BOLT FLANGE 6X65",
+        "catId": null,
+        "code": "957010606500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918211,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010608000",
+      "keptId": "st_1792734467422",
+      "row": {
+        "id": "st_1785394924538_dup190",
+        "name": "BOLT FLANGE 6X80",
+        "catId": null,
+        "code": "957010608000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918216,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13000K60B00",
+      "keptId": "st_1792734467138",
+      "row": {
+        "id": "st_1785394924538_dup191",
+        "name": "CRANKSHAFT ASSY",
+        "catId": null,
+        "code": "13000K60B00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 584000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918222,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13011KZR600",
+      "keptId": "st_1792734467139",
+      "row": {
+        "id": "st_1785394924538_dup192",
+        "name": "RING SET, PISTON (STD)",
+        "catId": null,
+        "code": "13011KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918227,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13021KWN900",
+      "keptId": "st_1792734467140",
+      "row": {
+        "id": "st_1785394924538_dup193",
+        "name": "RING SET,PISTON OS 0.25",
+        "catId": null,
+        "code": "13021KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 232000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918233,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13021KZR600",
+      "keptId": "st_1792734467141",
+      "row": {
+        "id": "st_1785394924538_dup194",
+        "name": "RING SET, PISTON (0,25)",
+        "catId": null,
+        "code": "13021KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918238,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13031KWN900",
+      "keptId": "st_1792734467142",
+      "row": {
+        "id": "st_1785394924538_dup195",
+        "name": "RING SET,PISTON OS 0.50",
+        "catId": null,
+        "code": "13031KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 232000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918244,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13031KZR600",
+      "keptId": "st_1792734467143",
+      "row": {
+        "id": "st_1785394924538_dup196",
+        "name": "RING SET, PISTON (0,50)",
+        "catId": null,
+        "code": "13031KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918249,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13041KWN900",
+      "keptId": "st_1792734467144",
+      "row": {
+        "id": "st_1785394924539",
+        "name": "RING SET,PISTON OS 0.75",
+        "catId": null,
+        "code": "13041KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 201000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918255,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13041KZR600",
+      "keptId": "st_1792734467145",
+      "row": {
+        "id": "st_1785394924539_dup197",
+        "name": "RING SET, PISTON (0,75)",
+        "catId": null,
+        "code": "13041KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918260,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13051KWN900",
+      "keptId": "st_1792734467146",
+      "row": {
+        "id": "st_1785394924539_dup198",
+        "name": "RING SET,PISTON OS 1.00",
+        "catId": null,
+        "code": "13051KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 232000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918264,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13051KZR600",
+      "keptId": "st_1792734467147",
+      "row": {
+        "id": "st_1785394924539_dup199",
+        "name": "RING SET, PISTON (1,00)",
+        "catId": null,
+        "code": "13051KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 61000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918269,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13101KWN902",
+      "keptId": "st_1792734467148",
+      "row": {
+        "id": "st_1785394924539_dup200",
+        "name": "PISTON (STD)",
+        "catId": null,
+        "code": "13101KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918273,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13102KWN903",
+      "keptId": "st_1792734467150",
+      "row": {
+        "id": "st_1785394924539_dup201",
+        "name": "PISTON (0,25)",
+        "catId": null,
+        "code": "13102KWN903",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918278,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13103KWN903",
+      "keptId": "st_1792734467151",
+      "row": {
+        "id": "st_1785394924539_dup202",
+        "name": "PISTON (0,50)",
+        "catId": null,
+        "code": "13103KWN903",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918283,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13104KWN903",
+      "keptId": "st_1792734467152",
+      "row": {
+        "id": "st_1785394924540",
+        "name": "PISTON (0,75)",
+        "catId": null,
+        "code": "13104KWN903",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918288,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13105KWN903",
+      "keptId": "st_1792734467153",
+      "row": {
+        "id": "st_1785394924540_dup203",
+        "name": "PISTON (1,00)",
+        "catId": null,
+        "code": "13105KWN903",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 72000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918293,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13111KWN900",
+      "keptId": "st_1792734467154",
+      "row": {
+        "id": "st_1785394924540_dup204",
+        "name": "PIN PISTON",
+        "catId": null,
+        "code": "13111KWN900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918298,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13115GN5911",
+      "keptId": "st_1792734467156",
+      "row": {
+        "id": "st_1785394924540_dup205",
+        "name": "Clip Piston Pin 13MM",
+        "catId": null,
+        "code": "13115GN5911",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918302,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|13115GN5910",
+      "keptId": "st_1792734467155",
+      "row": {
+        "id": "st_1785394924540_dup206",
+        "name": "Clip Piston Pin 13MM",
+        "catId": null,
+        "code": "13115GN5910",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918307,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90741003010",
+      "keptId": "st_1792734467344",
+      "row": {
+        "id": "st_1785394924540_dup207",
+        "name": "KEYWOODRUFF 4MM",
+        "catId": null,
+        "code": "90741003010",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 20000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918313,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|06381KZR600",
+      "keptId": "st_1792734467044",
+      "row": {
+        "id": "st_1785394924541",
+        "name": "Rod Kit Connecting",
+        "catId": null,
+        "code": "06381KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 158500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918319,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|131A1KWN902",
+      "keptId": "st_1792734467157",
+      "row": {
+        "id": "st_1785394924541_dup208",
+        "name": "PISTON KIT (STD)",
+        "catId": null,
+        "code": "131A1KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918324,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|131A2KWN902",
+      "keptId": "st_1792734467158",
+      "row": {
+        "id": "st_1785394924541_dup209",
+        "name": "PISTON KIT (0,25)",
+        "catId": null,
+        "code": "131A2KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918329,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|131A3KWN902",
+      "keptId": "st_1792734467159",
+      "row": {
+        "id": "st_1785394924541_dup210",
+        "name": "PISTON KIT (0,50)",
+        "catId": null,
+        "code": "131A3KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918336,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|131A4KWN902",
+      "keptId": "st_1792734467160",
+      "row": {
+        "id": "st_1785394924541_dup211",
+        "name": "PISTON KIT (0,75)",
+        "catId": null,
+        "code": "131A4KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918342,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|131A5KWN902",
+      "keptId": "st_1792734467161",
+      "row": {
+        "id": "st_1785394924541_dup212",
+        "name": "PISTON KIT (1,00)",
+        "catId": null,
+        "code": "131A5KWN902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918348,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11103K0JN21",
+      "keptId": "st_1792734467096",
+      "row": {
+        "id": "st_1785394924541_dup213",
+        "name": "RUB.BUSH,ENG.HANGER",
+        "catId": null,
+        "code": "11103K0JN21",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 18500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918354,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11103K0JN00",
+      "keptId": "st_1792734467095",
+      "row": {
+        "id": "st_1785394924541_dup214",
+        "name": "RUB.BUSH,ENG.HANGER",
+        "catId": null,
+        "code": "11103K0JN00",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 18000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918361,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11200KZR601",
+      "keptId": "st_1792734467108",
+      "row": {
+        "id": "st_1785394924541_dup215",
+        "name": "CRANKCASE COMP LEFT (tidak ada harga)",
+        "catId": null,
+        "code": "11200KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 0,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918366,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11203KVB901",
+      "keptId": "st_1792734467110",
+      "row": {
+        "id": "st_1785394924541_dup216",
+        "name": "UNDER RUBBER BUSH REAR",
+        "catId": null,
+        "code": "11203KVB901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918373,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11203K35J01",
+      "keptId": "st_1792734467109",
+      "row": {
+        "id": "st_1785394924542",
+        "name": "UNDER RUBBER BUSH REAR",
+        "catId": null,
+        "code": "11203K35J01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 15500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918380,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|11343KVG900",
+      "keptId": "st_1792734467116",
+      "row": {
+        "id": "st_1785394924542_dup217",
+        "name": "TUBE,DRAIN",
+        "catId": null,
+        "code": "11343KVG900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918386,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|12361035000",
+      "keptId": "st_1792734467136",
+      "row": {
+        "id": "st_1785394924542_dup218",
+        "name": "CAP TAPPET",
+        "catId": null,
+        "code": "12361035000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918391,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15421107000",
+      "keptId": "st_1792734467188",
+      "row": {
+        "id": "st_1785394924542_dup219",
+        "name": "SCREEN OIL FILTER",
+        "catId": null,
+        "code": "15421107000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 37500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918396,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15421KPL900",
+      "keptId": "st_1792734467189",
+      "row": {
+        "id": "st_1785394924543",
+        "name": "SCREEN,OIL FILTER",
+        "catId": null,
+        "code": "15421KPL900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 136000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918404,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|15426KVB900",
+      "keptId": "st_1792734467190",
+      "row": {
+        "id": "st_1785394924543_dup220",
+        "name": "SPRING OIL FILTER SCREEN",
+        "catId": null,
+        "code": "15426KVB900",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918409,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|3211AKZR600",
+      "keptId": "st_1792734467295",
+      "row": {
+        "id": "st_1785394924543_dup221",
+        "name": "PROTR,SP SENSOR ASSY",
+        "catId": null,
+        "code": "3211AKZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 18500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918413,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|32113KWN901",
+      "keptId": "st_1792734467294",
+      "row": {
+        "id": "st_1785394924543_dup222",
+        "name": "GROMMET,SP SENSOR PROTR",
+        "catId": null,
+        "code": "32113KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918417,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|37700MJED01",
+      "keptId": "st_1792734467307",
+      "row": {
+        "id": "st_1785394924543_dup223",
+        "name": "SENSOR ASSY,SPEED",
+        "catId": null,
+        "code": "37700MJED01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 185000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918421,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|37700HP5601",
+      "keptId": "st_1792734467306",
+      "row": {
+        "id": "st_1785394924543_dup224",
+        "name": "SENSOR ASSY,SPEED",
+        "catId": null,
+        "code": "37700HP5601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 778000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918425,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|90032KWN901",
+      "keptId": "st_1792734467322",
+      "row": {
+        "id": "st_1785394924543_dup225",
+        "name": "BOLT,B STUD 8X206",
+        "catId": null,
+        "code": "90032KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918429,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002KWN901",
+      "keptId": "st_1792734467351",
+      "row": {
+        "id": "st_1785394924543_dup226",
+        "name": "BRG,BALL RADIAL SPL",
+        "catId": null,
+        "code": "91002KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6207,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918434,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002KZLA01",
+      "keptId": "st_1792734467352",
+      "row": {
+        "id": "st_1785394924544",
+        "name": "BRG,BALL RADIAL SPL",
+        "catId": null,
+        "code": "91002KZLA01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6207,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918438,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002K46N21",
+      "keptId": "st_1792734467350",
+      "row": {
+        "id": "st_1785394924544_dup227",
+        "name": "BRG,BALL RADIAL SPL",
+        "catId": null,
+        "code": "91002K46N21",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6207,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918442,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002K44V01",
+      "keptId": "st_1792734467349",
+      "row": {
+        "id": "st_1785394924544_dup228",
+        "name": "BRG,BALL RADIAL SPL",
+        "catId": null,
+        "code": "91002K44V01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6207,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918446,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91002KZR602",
+      "keptId": "st_1792734467353",
+      "row": {
+        "id": "st_1785394924544_dup229",
+        "name": "Bearing Radial Ball Special",
+        "catId": null,
+        "code": "91002KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 130000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918451,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91003KZR601",
+      "keptId": "st_1792734467354",
+      "row": {
+        "id": "st_1785394924544_dup230",
+        "name": "BRG,BALL RADIAL",
+        "catId": null,
+        "code": "91003KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6204,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918456,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91003KZR602",
+      "keptId": "st_1792734467355",
+      "row": {
+        "id": "st_1785394924544_dup231",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91003KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6204,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918462,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91005KZR601",
+      "keptId": "st_1792734467361",
+      "row": {
+        "id": "st_1785394924544_dup232",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91005KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6301,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918468,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91005KZR602",
+      "keptId": "st_1792734467362",
+      "row": {
+        "id": "st_1785394924545",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91005KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6301,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918473,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91008KZR601",
+      "keptId": "st_1792734467366",
+      "row": {
+        "id": "st_1785394924545_dup233",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91008KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6302,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918478,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91008KZR602",
+      "keptId": "st_1792734467367",
+      "row": {
+        "id": "st_1785394924545_dup234",
+        "name": "BEARING RADIAL BALL",
+        "catId": null,
+        "code": "91008KZR602",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 6302,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918484,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91202K97T01",
+      "keptId": "st_1792734467380",
+      "row": {
+        "id": "st_1785394924545_dup235",
+        "name": "Oil Seal 26x45x6",
+        "catId": null,
+        "code": "91202K97T01",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 8500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918489,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91202KWN901",
+      "keptId": "st_1792734467382",
+      "row": {
+        "id": "st_1785394924545_dup236",
+        "name": "Oil Seal, 26X45X6",
+        "catId": null,
+        "code": "91202KWN901",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 10500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918495,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91302001020",
+      "keptId": "st_1792734467390",
+      "row": {
+        "id": "st_1785394924545_dup237",
+        "name": "O-RING 30.8 MM",
+        "catId": null,
+        "code": "91302001020",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 2000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918500,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91303KF0003",
+      "keptId": "st_1792734467391",
+      "row": {
+        "id": "st_1785394924545_dup238",
+        "name": "O-RING,14.8X2.4",
+        "catId": null,
+        "code": "91303KF0003",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 7500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918506,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|9500280000",
+      "keptId": "st_1792734467414",
+      "row": {
+        "id": "st_1785394924545_dup239",
+        "name": "Clip Tube C12",
+        "catId": null,
+        "code": "9500280000",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918511,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|957010801600",
+      "keptId": "st_1792734467424",
+      "row": {
+        "id": "st_1785394924545_dup240",
+        "name": "BOLT, FLANGE 8X16",
+        "catId": null,
+        "code": "957010801600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918516,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16016KVBS51",
+      "keptId": "st_1792734467194",
+      "row": {
+        "id": "st_1785394924546",
+        "name": "SCREW SET",
+        "catId": null,
+        "code": "16016KVBS51",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 64500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918522,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16016K03H11",
+      "keptId": "st_1792734467193",
+      "row": {
+        "id": "st_1785394924546_dup241",
+        "name": "SCREW SET",
+        "catId": null,
+        "code": "16016K03H11",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918527,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16075KZR601",
+      "keptId": "st_1792734467195",
+      "row": {
+        "id": "st_1785394924546_dup242",
+        "name": "O-RING THROTTLE BODY",
+        "catId": null,
+        "code": "16075KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918532,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16081KPH701",
+      "keptId": "st_1792734467196",
+      "row": {
+        "id": "st_1785394924546_dup243",
+        "name": "SCREW, TORX, 5X8.7",
+        "catId": null,
+        "code": "16081KPH701",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 13000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918538,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16081KYJ902",
+      "keptId": "st_1792734467197",
+      "row": {
+        "id": "st_1785394924546_dup244",
+        "name": "SCREW, TORX, 5X8.7",
+        "catId": null,
+        "code": "16081KYJ902",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918543,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16169KZR601",
+      "keptId": "st_1792734467198",
+      "row": {
+        "id": "st_1785394924546_dup245",
+        "name": "STAY WIRE",
+        "catId": null,
+        "code": "16169KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 11500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918548,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16400KZR601",
+      "keptId": "st_1792734467199",
+      "row": {
+        "id": "st_1785394924546_dup246",
+        "name": "THROTTLE BODY ASSY",
+        "catId": null,
+        "code": "16400KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 1014500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918553,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16410KZRB21",
+      "keptId": "st_1792734467201",
+      "row": {
+        "id": "st_1785394924546_dup247",
+        "name": "BODY SET",
+        "catId": null,
+        "code": "16410KZRB21",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 564000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918558,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16410KZR601",
+      "keptId": "st_1792734467200",
+      "row": {
+        "id": "st_1785394924546_dup248",
+        "name": "BODY SET",
+        "catId": null,
+        "code": "16410KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 314000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918564,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16450KZR601",
+      "keptId": "st_1792734467203",
+      "row": {
+        "id": "st_1785394924547",
+        "name": "INJECTOR ASSY FUEL",
+        "catId": null,
+        "code": "16450KZR601",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 210000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918569,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16472KPCD51",
+      "keptId": "st_1792734467204",
+      "row": {
+        "id": "st_1785394924547_dup249",
+        "name": "RING, SEAL",
+        "catId": null,
+        "code": "16472KPCD51",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 12000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918575,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16480KVBS51",
+      "keptId": "st_1792734467205",
+      "row": {
+        "id": "st_1785394924547_dup250",
+        "name": "SOLENOID SET",
+        "catId": null,
+        "code": "16480KVBS51",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 147000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918581,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|16485KVBS51",
+      "keptId": "st_1792734467206",
+      "row": {
+        "id": "st_1785394924547_dup251",
+        "name": "SEAT SET",
+        "catId": null,
+        "code": "16485KVBS51",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 58000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918586,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17565KZR600",
+      "keptId": "st_1792734467215",
+      "row": {
+        "id": "st_1785394924547_dup252",
+        "name": "JOINT COMP INJECTOR",
+        "catId": null,
+        "code": "17565KZR600",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 63500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918592,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|91301GGLJ02",
+      "keptId": "st_1792734467388",
+      "row": {
+        "id": "st_1785394924547_dup253",
+        "name": "O-RING, 6.3X2.2",
+        "catId": null,
+        "code": "91301GGLJ02",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918598,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|938920501218",
+      "keptId": "st_1792734467399",
+      "row": {
+        "id": "st_1785394924547_dup254",
+        "name": "SCREW WASHER 5X12",
+        "catId": null,
+        "code": "938920501218",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 3500,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918604,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|960010602500",
+      "keptId": "st_1792734467428",
+      "row": {
+        "id": "st_1785394924547_dup255",
+        "name": "BOLT FLANGE 6X25",
+        "catId": null,
+        "code": "960010602500",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 9000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918610,
+        "vehicleId": "veh_1"
+      }
+    },
+    {
+      "key": "veh_1|17565KZR650",
+      "keptId": "st_1792734467216",
+      "row": {
+        "id": "st_1785394924547_dup256",
+        "name": "JOINT COMP INJECTOR",
+        "catId": null,
+        "code": "17565KZR650",
+        "qty": 0,
+        "unit": "pcs",
+        "minStock": 1,
+        "price": 59000,
+        "note": "Terhubung dari Katalog Suku Cadang (scan)",
+        "catalogId": 1785394918617,
+        "vehicleId": "veh_1"
+      }
+    }
+  ],
+  "skipped": [],
+  "priceDiffPairs": 39,
+  "nameDiffPairs": 48
+}

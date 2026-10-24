@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-23T22:52:13.700Z
-Total file source: 489 · Total identifier global: 17787
+Terakhir digenerate: 2026-10-24T04:14:42.078Z
+Total file source: 489 · Total identifier global: 17793
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -187,9 +187,9 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 164 | `modules/vehicle/sparepart-servis.js` | 1484 | _(tidak ada komentar header)_ |
 | 165 | `modules/vehicle/sparepart-servis-ui.js` | 1037 | modules/vehicle/sparepart-servis-ui.js — extracted Sparepart UI/mutation methods Oversized-file refactor Sesi 2. Methods below are moved verbatim from modules/vehicle/sparepart-servis.js and attached after the main … |
 | 166 | `modules/engine/database-api.js` | 819 | modules/engine/database-api.js — Database API, Fase 1 (fondasi murni), Sesi 1/N mengikuti RANCANGAN-ENGINE-DATABASE-IMPORT-FINAL-v3.md. LANGKAH INI SAJA (per keputusan eksplisit: "1 langkah dulu"): migrasi data Vehicle … |
-| 167 | `modules/vehicle/service-master-data.generated.js` | 31 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
+| 167 | `modules/vehicle/service-master-data.generated.js` | 33 | GENERATED FILE — source: data/database-kategori-komponen-servis.json DO NOT EDIT MANUALLY. Regenerate with scripts/generate-service-master-data.js. S2397: keep checklist groups as the eager runtime representation; … |
 | 168 | `modules/vehicle/service-master-database.js` | 56 | _(tidak ada komentar header)_ |
-| 169 | `modules/vehicle/service-taxonomy-sot.js` | 122 | _(tidak ada komentar header)_ |
+| 169 | `modules/vehicle/service-taxonomy-sot.js` | 129 | _(tidak ada komentar header)_ |
 | 170 | `modules/vehicle/service-history-context-s2018.js` | 146 | _(tidak ada komentar header)_ |
 | 171 | `modules/vehicle/service-history-sot-normalizer.js` | 163 | _(tidak ada komentar header)_ |
 | 172 | `modules/vehicle/service-history-sot-review.js` | 90 | _(tidak ada komentar header)_ |
@@ -204,7 +204,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 181 | `modules/vehicle/honda-pdf-catalog-auto-import.js` | 43 | _(tidak ada komentar header)_ |
 | 182 | `modules/vehicle/sparepart-servis-b.js` | 848 | modules/vehicle/sparepart-servis-b.js — lanjutan modules/vehicle/sparepart-servis.js (Audit ukuran file, lanjutan sesi split modules-render.js): file sparepart-servis.js dipecah jadi 2 supaya di bawah … |
 | 183 | `modules/vehicle/servis-checklist.js` | 1044 | _(tidak ada komentar header)_ |
-| 184 | `modules/vehicle/service-input-catalog.js` | 137 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
+| 184 | `modules/vehicle/service-input-catalog.js` | 157 | satu SoT UI untuk pilihan Kategori Servis + Komponen Servis. Sumber data: SERVICE_CHECKLIST_GROUPS (13 grup / 30 item). Tidak membuat taxonomy baru. Dipakai oleh form Transaksi Keuangan dan modal Car Notes Servis. |
 | 185 | `modules/vehicle/service-history-component-identity-sot.js` | 62 | _(tidak ada komentar header)_ |
 | 186 | `modules/vehicle/servis.js` | 2054 | P10 FIX: transaksi Finance tertaut bisa hilang lebih dulu |
 | 187 | `modules/vehicle/service-history-checklist-edit-s2036.js` | 128 | _(tidak ada komentar header)_ |
@@ -578,6 +578,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `__s2013Stage` | `modules/shared/backup-restore.js` |
 | `__S2014_ODOMETER_DIAGNOSTIC` | `modules/shared/backup-restore.js` |
 | `__SERVICE_CHECKLIST_GROUPS__` | `modules/vehicle/service-master-data.generated.js` |
+| `__SERVICE_COMPONENT_ID_ALIASES__` | `modules/vehicle/service-master-data.generated.js` |
 | `__SERVICE_HISTORY_CHECKLIST_EDIT_S2036__` | `modules/vehicle/service-history-checklist-edit-s2036.js` |
 | `__SERVICE_HISTORY_CONTEXT_HARDENING_S2020__` | `modules/vehicle/service-history-context-hardening-s2020.js` |
 | `__SERVICE_HISTORY_CONTEXT_S2018__` | `modules/vehicle/service-history-context-s2018.js` |
@@ -1232,6 +1233,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_MONTHS_ID` | `modules/vehicle/servis-b.js` |
 | `_msg` | `modules/shared/features-helpers-global-security.js` |
 | `_msg` | `modules/finance/features-helpers-global-security.js` |
+| `_nameHit` | `modules/vehicle/service-input-catalog.js` |
 | `_navSeq` | `modules/shared/modal-navigasi.js` |
 | `_nC` | `pajak-aset-ui-wrappers.js` |
 | `_newBillIdSesiC` | `modules/finance/tagihan-kalender.js` |
@@ -1794,6 +1796,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_wasServisTx` | `modules/finance/transaksi-b.js` |
 | `_whBorTotalOnBlur` | `modules/shared/modals.js` |
 | `_withMasterCategory` | `modules/vehicle/sparepart-servis.js` |
+| `_wordContains` | `modules/vehicle/service-input-catalog.js` |
 | `_writeLocalSnapshot` | `modules/shared/features-helpers-global-security.js` |
 | `_writeLocalSnapshot` | `modules/asset/features-helpers-global-security.js` |
 | `_writeLocalSnapshot` | `modules/finance/features-helpers-global-security.js` |
@@ -2779,6 +2782,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `b` | `modules/vehicle/honda-pdf-import-ui.js` |
 | `b` | `modules/vehicle/service-event-sot.js` |
 | `b` | `modules/vehicle/servis-checklist.js` |
+| `b` | `modules/vehicle/service-input-catalog.js` |
 | `b` | `modules/vehicle/shop-katalog-dinamis-api.js` |
 | `b` | `ai-chat.js` |
 | `b` | `reminder-notif.js` |
@@ -7887,6 +7891,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `i` | `modules/vehicle/vehicle-catalog-import.js` |
 | `i` | `modules/vehicle/sparepart-servis.js` |
 | `i` | `modules/vehicle/sparepart-servis-ui.js` |
+| `i` | `modules/vehicle/service-input-catalog.js` |
 | `i` | `modules/vehicle/part-crud-s2041.js` |
 | `icon` | `modules/asset/aset.js` |
 | `icon` | `modules/asset/aset-reports.js` |
@@ -7957,6 +7962,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `id` | `modules/vehicle/service-history-evidence-completeness-s2023.js` |
 | `id` | `modules/vehicle/service-history-evidence-provenance-s2024.js` |
 | `id` | `modules/vehicle/service-history-evidence-ux-s2025.js` |
+| `ID_ALIASES_FALLBACK` | `modules/vehicle/service-taxonomy-sot.js` |
 | `idArg` | `modules/shared/owner-registry-settings-ui.js` |
 | `idArg` | `modules/shared/ghost-asset-cleanup-ui.js` |
 | `idArg` | `modules/vehicle/vehicle-catalog-ui.js` |
@@ -10486,7 +10492,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `n` | `modules/vehicle/vehicle-maintenance-template-engine.js` |
 | `n` | `modules/vehicle/sparepart-servis-b.js` |
 | `n` | `modules/vehicle/servis-checklist.js` |
-| `n` | `modules/vehicle/service-input-catalog.js` |
 | `n` | `modules/vehicle/servis.js` |
 | `n` | `modules/vehicle/service-session-mutation-s2047.js` |
 | `n` | `modules/vehicle/servis-b.js` |
@@ -14765,6 +14770,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `SERVICE` | `modules/vehicle/service-history-sot-normalizer.js` |
 | `SERVICE_CHECKLIST_GROUPS` | `modules/vehicle/servis-checklist.js` |
 | `SERVICE_CHECKLIST_GROUPS_GENERATED` | `modules/vehicle/service-master-data.generated.js` |
+| `SERVICE_COMPONENT_ID_ALIASES_GENERATED` | `modules/vehicle/service-master-data.generated.js` |
 | `SERVICE_CONDITION_RESULTS` | `modules/vehicle/service-maintenance-guidance.js` |
 | `SERVICE_MAINTENANCE_RULES` | `car-notes.js` |
 | `SERVICE_MASTER_CHECKSUM_GENERATED` | `modules/vehicle/service-master-data.generated.js` |

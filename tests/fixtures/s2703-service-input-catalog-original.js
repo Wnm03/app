@@ -20,10 +20,10 @@ function normalize(v){return String(v||'').trim().toLowerCase();}
 function infer(text){
 const q=normalize(text);
 if(!q)return null;
-for(const g of groups())for(const it of (g.items||[])){
-const n=normalize(it.name);
-if(q===n||q.includes(n)||n.includes(q))return {group:g,item:it};
-}
+// S2731: acuan dibekukan ulang -- exact match dulu, lalu containment dgn batas kata (bukan substring mentah).
+function wc(h,n){if(n==='')return true;if(!h)return false;if(h===n)return true;let i=h.indexOf(n);while(i!==-1){const b=i===0?'':h.charAt(i-1),a=h.charAt(i+n.length);if(!/[a-z0-9]/i.test(b)&&!/[a-z0-9]/i.test(a))return true;i=h.indexOf(n,i+1);}return false;}
+for(const g of groups())for(const it of (g.items||[])){if(q===normalize(it.name))return {group:g,item:it};}
+for(const g of groups())for(const it of (g.items||[])){const n=normalize(it.name);if(q===n||wc(q,n)||wc(n,q))return {group:g,item:it};}
 // Keyword inference hanya untuk memilih UI, bukan membuat kategori/interval baru.
 const rules=[
 [/\boli\b|filter oli|busi|klep|kompresi|keteng|tensioner/,'servis-mesin'],
