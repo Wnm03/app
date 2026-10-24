@@ -57,8 +57,10 @@ test('S2601: log hanya-master dihitung pengingat; riwayat kini menyertakannya (h
   ];
   const card=logs.filter(l=>S.match(l,cat,{vehicleId:'v1'}).ok).map(l=>l.id);
   const oldHistory=logs.filter(l=>String(I.resolve(l,{componentId:'v-belt-cvt'}).serviceComponentId||'')==='v-belt-cvt').map(l=>l.id);
-  assert.deepEqual(card,['a','b','c'],'kartu menghitung log hanya-master');
-  assert.deepEqual(oldHistory,['a','b'],'perilaku lama riwayat: 2 (sumber selisih 2 vs 3)');
+  // S2728: log hanya-master (tanpa serviceComponentId, teks bebas) TIDAK lagi menjadi bukti kartu
+  // berkomponen; hanya kartu lama tanpa komponen yang boleh cocok lewat induk.
+  assert.deepEqual(card,['a','b'],'kartu berkomponen tidak menghitung log hanya-master (S2728)');
+  assert.deepEqual(oldHistory,['a','b'],'riwayat berbasis identitas komponen: 2');
   const newHistory=logs.filter(l=>String(I.resolve(l,{componentId:'v-belt-cvt'}).serviceComponentId||'')==='v-belt-cvt'||S.match(l,cat,{vehicleId:'v1'}).ok).map(l=>l.id);
   assert.deepEqual(newHistory,card,'riwayat sekarang == pengingat');
   delete global.ServiceInputCatalog;
@@ -78,7 +80,7 @@ test('S2601: ownsLog == servisLogMatchesCat (kartu) untuk setiap bentuk log; ken
     {id:'f',vehicleId:'v1',masterCategoryId:'lain',item:'Oli'}
   ];
   for(const l of logs)assert.equal(S.ownsLog(l,'v-belt-cvt','v1'),!!global.servisLogMatchesCat(l,cat)&&l.vehicleId==='v1',l.id);
-  assert.equal(S.ownsLog(logs[1],'v-belt-cvt','v1'),true);
+  assert.equal(S.ownsLog(logs[1],'v-belt-cvt','v1'),false,'S2728: log hanya-master bukan milik kartu berkomponen');
   assert.equal(S.ownsLog(logs[2],'v-belt-cvt','v1'),false);
   delete global.ServiceInputCatalog;delete global.D;delete global.servisLogMatchesCat;
 });
