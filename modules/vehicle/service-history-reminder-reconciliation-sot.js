@@ -103,7 +103,7 @@
 
     if(targetMaster){
       const masterHit=evidence.find(e=>same(e.masterCategoryId,targetMaster));
-      if(masterHit&&(!targetComp||!evidence.some(e=>e.serviceComponentId)))return {ok:true,code:CODES.MATCH,reason:'master-category-match',evidence,sourceHistoryId:str(l.id),matchedSource:masterHit.source};
+      if(masterHit&&!targetComp)return {ok:true,code:CODES.MATCH,reason:'master-category-match',evidence,sourceHistoryId:str(l.id),matchedSource:masterHit.source};
       if(evidence.some(e=>e.masterCategoryId)&&!masterHit)return {ok:false,code:CODES.MASTER_CATEGORY_MISMATCH,reason:CODES.MASTER_CATEGORY_MISMATCH,evidence,sourceHistoryId:str(l.id)};
     }
 

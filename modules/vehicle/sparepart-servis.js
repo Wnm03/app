@@ -850,7 +850,11 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
     // a part replaced today as overdue (Roller CVT: replaced at 21.311 km, shown
     // "Terlewat 9.311 km"). Components whose policy says replacement does NOT
     // reset (gantiResetsInterval=false) stay excluded by matchesActionTypeForReset.
-    const inspectAxis=normalizeServiceActionType(lastFilter)==='periksa';
+    const inspectAxis=normalizeServiceActionType(action)==='periksa'||normalizeServiceActionType(lastFilter)==='periksa';
+    // Resolve axis from the effective action selected by the maintenance rule,
+    // not lastFilter (which can be null for the 'bersih' mode).
+    const cleanAxis=normalizeServiceActionType(action)==='bersih';
+    const effectiveFilter=cleanAxis?'bersih':lastFilter;
     // A replacement logged above the current odometer is bad data and must not
     // become a baseline (it would yield negative distance travelled).
     const replacementOk=(s)=>currentKm===null||!(s&&s.km!==null&&s.km!==undefined&&s.km!==''&&Number.isFinite(Number(s.km))&&Number(s.km)>currentKm);
@@ -862,11 +866,11 @@ const addCandidate=(action,intervalKm,lastFilter,intervalMonths,intervalDays)=>{
     const poolSource=Array.isArray(historyRows)?historyRows:(Array.isArray(D.servisLogs)?D.servisLogs:null);
     const pool=poolSource?poolSource.filter(s=>s&&_spVidEq(s.vehicleId,vehicleId)&&servisLogMatchesCat(s,cat)):null;
     if(pool){
-      latestHistory=pickLatest(pool.filter(s=>replacementOk(s)&&(matchesActionTypeForReset(s,cat,lastFilter,true)||(inspectAxis&&matchesActionTypeForReset(s,cat,'ganti',true)))));
+      latestHistory=pickLatest(pool.filter(s=>replacementOk(s)&&(matchesActionTypeForReset(s,cat,effectiveFilter,true)||((inspectAxis||cleanAxis)&&matchesActionTypeForReset(s,cat,'ganti',true)))));
     }else if(typeof getLatestServiceLogForCat==='function'){
-      latestHistory=getLatestServiceLogForCat(vehicleId,cat,lastFilter,true);
+      latestHistory=getLatestServiceLogForCat(vehicleId,cat,effectiveFilter,true);
       if(latestHistory&&!replacementOk(latestHistory))latestHistory=null;
-      if(inspectAxis){
+      if(inspectAxis||cleanAxis){
         const replaced=getLatestServiceLogForCat(vehicleId,cat,'ganti',true);
         if(replaced&&replacementOk(replaced)&&(!latestHistory||compareServiceHistoryRecencyLocal(replaced,latestHistory)<0))latestHistory=replaced;
       }
