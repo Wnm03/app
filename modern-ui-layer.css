@@ -1260,8 +1260,13 @@ body.has-open-modal .toast {
 #txStockExistingFold > summary { display:flex; align-items:center; min-height:40px; padding:0 10px; cursor:pointer; font-size:12px; font-weight:700; color:var(--text2); list-style:none; }
 #txStockExistingFold > summary::-webkit-details-marker { display:none; }
 #txStockExistingFold[open] { padding:0 9px 8px; }
-#servisMasterCategoryChips.servis-category-chip-strip { display:flex; flex-wrap:nowrap !important; gap:6px; max-width:100%; overflow-x:auto; overflow-y:hidden; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; scrollbar-width:thin; }
-#servisMasterCategoryChips.servis-category-chip-strip > * { flex:0 0 auto; min-height:40px; }
+/* S2726 — Pilihan kategori servis: wadah #servisMasterCategoryChips berisi 3 anak (label, deretan chip, teks bantuan).
+   Versi lama menjadikan wadah itu satu baris flex nowrap sehingga ketiganya berjejer ke kanan (~2200px, keluar layar).
+   Sekarang wadah blok vertikal; deretan chip membungkus ke bawah di dalam lebar modal. Tanpa scroll horizontal. */
+#servisMasterCategoryChips.servis-category-chip-strip { display:block; max-width:100%; min-width:0; overflow:visible; padding:2px 0 8px; }
+#servisMasterCategoryChips.servis-category-chip-strip > * { min-width:0; max-width:100%; }
+#servisMasterCategoryChips.servis-category-chip-strip > div:nth-child(2) { display:flex; flex-wrap:wrap; gap:6px; }
+#servisMasterCategoryChips.servis-category-chip-strip .chip { min-height:40px; padding:0 10px; font-size:12px; max-width:100%; white-space:normal; text-align:left; overflow-wrap:anywhere; }
 #servisKm { font-size:16px; }
 #linkTxFiltersFold { margin:4px 0 8px; }
 #linkTxFiltersFold > summary { min-height:40px; }

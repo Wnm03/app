@@ -183,6 +183,24 @@ _saveGuards['chat']=false;
 if(btn){btn.disabled=false;btn.style.opacity='';}
 }
 }
+// S2728: status interval AI memakai computeServiceUrgency yang sama dgn kartu Pengingat
+// (1 SOT baseline). Tidak ada lagi baseline sendiri dari getLastServiceKmForCat tanpa filter
+// aksi (yang menganggap log periksa/bersih/tanpa actionType sebagai reset).
+function aiServiceIntervalStatusText(vehicleId,curKm){
+// Pool identik dgn kartu Pengingat (servis-b.js): katalog proyeksi runtime + filter tampil/tidak berlaku/jadwal.
+const source=(typeof ServiceRuntimeProjectionSOT!=='undefined'&&ServiceRuntimeProjectionSOT&&typeof ServiceRuntimeProjectionSOT.reminderCatalog==='function')?(ServiceRuntimeProjectionSOT.reminderCatalog(D,vehicleId)||[]):(D.sparepartCats||[]);
+const pool=source.filter(c=>c&&c.showInReminder!==false&&(typeof catVisibleForVehicle!=='function'||catVisibleForVehicle(c,vehicleId))&&!(typeof isServiceComponentNotApplicable==='function'&&isServiceComponentNotApplicable(vehicleId,c.serviceComponentId||(typeof serviceComponentIdForCategory==='function'?serviceComponentIdForCategory(c):null)))&&((c.intervalKm>0)||(c.intervalBulan>0)||(typeof hasMaintenanceReminderSchedule==='function'&&hasMaintenanceReminderSchedule(vehicleId,c))));
+const cats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(pool,vehicleId):pool;
+const kmPerDay=typeof estimateKmPerDay==='function'?estimateKmPerDay(vehicleId):null;
+return cats.map(cat=>{
+const u=typeof computeServiceUrgency==='function'?computeServiceUrgency({vehicleId,cat,curKm,kmPerDay}):null;
+if(!u||u.status==='unknown')return `${cat.name}: ❔ belum diketahui`;
+const sisa=u.sisaKm;
+if(sisa==null)return `${cat.name}: ${u.statusLabel||u.status}`;
+const status=sisa<=0?`❌ LEWAT ${Math.abs(sisa).toLocaleString('id-ID')}km`:sisa<=500?`⚠️ sisa ${sisa.toLocaleString('id-ID')}km`:`✅ sisa ${sisa.toLocaleString('id-ID')}km`;
+return `${cat.name}: ${status}`;
+}).join(', ');
+}
 async function _sendChatInner(){
 const input=document.getElementById('chatInput');
 const msg=input.value.trim();if(!msg)return;
@@ -232,13 +250,7 @@ const bbmSummary=`BBM: total ${totalLiter.toFixed(1)}L / ${fmtFull(totalBbmCost)
 const servisV=D.servisLogs.filter(s=>s.vehicleId===v.id);
 const totalServisV=servisV.reduce((s,x)=>s+(x.cost||0),0);
 const servisVDetail=[...servisV].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5).map(s=>`${s.item} ${s.date}${s.km?' @'+s.km.toLocaleString('id-ID')+'km':''} (${fmtFull(s.cost)})`).join('; ')||'belum ada';
-const sparepartStatus=D.sparepartCats.map(cat=>{
-const lastKm=getLastServiceKmForCat(v.id,cat);
-const intervalKm=getEffectiveIntervalKm(v.id,cat);
-const sisa=intervalKm-(lastKm===null?curKm:curKm-lastKm);
-const status=sisa<=0?`❌ LEWAT ${Math.abs(sisa).toLocaleString('id-ID')}km`:sisa<=500?`⚠️ sisa ${sisa.toLocaleString('id-ID')}km`:`✅ sisa ${sisa.toLocaleString('id-ID')}km`;
-return `${cat.name}: ${status}`;
-}).join(', ');
+const sparepartStatus=aiServiceIntervalStatusText(v.id,curKm);
 const servisSummary=`Servis: total biaya ${fmtFull(totalServisV)}, 5 terakhir: [${servisVDetail}], status interval: ${sparepartStatus||'belum ada kategori servis'}`;
 const jalanV=D.jalanLogs.filter(j=>j.vehicleId===v.id);
 const totalKmJalan=jalanV.reduce((s,j)=>s+(j.jarak||0),0);
