@@ -22,7 +22,7 @@ function baseD(extra) {
   );
 }
 
-function makeCtx(D) {
+function makeCtx(D, extraGlobals) {
   return loadSource(
     [
       'modules/shared/ownership-engine.js',
@@ -43,9 +43,15 @@ function makeCtx(D) {
       fmt: (n) => 'Rp ' + Math.round(n || 0),
       fmtFull: (n) => 'Rp ' + Math.round(n || 0),
       MONTHS: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'],
+      ...(extraGlobals || {}),
     },
     ['BusinessFlowPresenter', 'ShopBusinessEnginePresenter', 'TripPresenter', 'InventoryEngine', 'OwnershipEngine', 'isCobekOwnershipSelf'],
   );
+}
+
+// S2726: pelunasan piutang Shop kini mencatat pemasukan kas -> fixture butuh akun + SOT transaksi sederhana.
+function payoffGlobals(D) {
+  return { uid: () => 'payoff-tx', todayStr: () => '2026-10-25', FinanceTxSOT: { create: (t) => { D.transactions.push(t); return t; }, findById: (id) => D.transactions.find((t) => t.id === id) || null, removeById: (id) => { const i = D.transactions.findIndex((t) => t.id === id); if (i >= 0) D.transactions.splice(i, 1); } } };
 }
 
 // --- flow() — kalau presenter sumber tidak dimuat -------------------------
@@ -321,16 +327,37 @@ test('markPaymentReceived() — false kalau order tidak punya piutang terhubung'
   assert.equal(ctx.BusinessFlowPresenter.markPaymentReceived('t1').ok, false);
 });
 
-test('markPaymentReceived() — set piutang.lunas=true PERSIS (0 nilai lain berubah)', () => {
+test('markPaymentReceived() — set piutang.lunas=true, nilai tidak berubah, DAN mencatat pemasukan sebesar sisa (S2726)', () => {
   const D = baseD2({
-    cobek: [{ id: 't1', delivered: true, piutangLinkId: 'pi1' }],
+    accounts: [{ id: 'a1', name: 'Kas' }],
+    cobek: [{ id: 't1', delivered: true, piutangLinkId: 'pi1', accountId: 'a1' }],
     piutang: [{ id: 'pi1', name: 'Pembeli', nilai: 5000, lunas: false }],
   });
-  const ctx = makeCtx(D);
+  const ctx = makeCtx(D, payoffGlobals(D));
   const result = ctx.BusinessFlowPresenter.markPaymentReceived('t1');
   assert.equal(result.ok, true);
   assert.equal(D.piutang[0].lunas, true);
   assert.equal(D.piutang[0].nilai, 5000);
+  assert.equal(D.transactions.length, 1);
+  assert.equal(D.transactions[0].type, 'income');
+  assert.equal(D.transactions[0].amount, 5000);
+  assert.equal(D.transactions[0].accountId, 'a1');
+  assert.equal(D.piutang[0].linkedPayoffTxId, D.transactions[0].id);
+  // idempoten: klik ulang tidak menggandakan pemasukan
+  assert.equal(ctx.BusinessFlowPresenter.markPaymentReceived('t1').ok, false);
+  assert.equal(D.transactions.length, 1);
+});
+
+test('markPaymentReceived() — akun order hilang: ditolak, piutang tetap belum lunas, tanpa transaksi (S2726)', () => {
+  const D = baseD2({
+    cobek: [{ id: 't1', delivered: true, piutangLinkId: 'pi1', accountId: 'hilang' }],
+    piutang: [{ id: 'pi1', name: 'Pembeli', nilai: 5000, lunas: false }],
+  });
+  const ctx = makeCtx(D, payoffGlobals(D));
+  const result = ctx.BusinessFlowPresenter.markPaymentReceived('t1');
+  assert.equal(result.ok, false);
+  assert.equal(D.piutang[0].lunas, false);
+  assert.equal(D.transactions.length, 0);
 });
 
 test('processReturn() — null kalau Laporan tidak dimuat, delegasi PERSIS ke Laporan.delete() kalau ada', () => {
@@ -405,10 +432,11 @@ test('recommendation() — array kosong kalau tidak ada sinyal (data kosong)', (
 
 test('markPaymentReceived() — juga memanggil renderKekayaanBersih/hitungZakatMaal/Piutang.renderList (audit fix S213-214)', () => {
   const D = baseD2({
-    cobek: [{ id: 't1', delivered: true, piutangLinkId: 'pi1' }],
+    accounts: [{ id: 'a1', name: 'Kas' }],
+    cobek: [{ id: 't1', delivered: true, piutangLinkId: 'pi1', accountId: 'a1' }],
     piutang: [{ id: 'pi1', name: 'Pembeli', nilai: 5000, lunas: false }],
   });
-  const ctx = makeCtx(D);
+  const ctx = makeCtx(D, payoffGlobals(D));
   let kekayaanCalled = false, zakatCalled = false, piutangListCalled = false;
   ctx.renderKekayaanBersih = () => { kekayaanCalled = true; };
   ctx.hitungZakatMaal = () => { zakatCalled = true; };

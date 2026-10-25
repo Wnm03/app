@@ -21,6 +21,18 @@ function baseD(extra) {
   );
 }
 
+// S2726: pelunasan piutang Shop kini mencatat pemasukan kas -> normalisasi fixture (akun + SOT transaksi sederhana).
+function withPayoffSupport(D) {
+  if (!Array.isArray(D.accounts)) D.accounts = [];
+  if (!D.accounts.some((a) => a.id === 'a1')) D.accounts.push({ id: 'a1', name: 'Kas' });
+  if (!Array.isArray(D.transactions)) D.transactions = [];
+  (D.cobek || []).forEach((c) => { if (c && !c.accountId) c.accountId = 'a1'; });
+  return {
+    uid: () => 'payoff-' + (D.transactions.length + 1), todayStr: () => '2026-10-25',
+    FinanceTxSOT: { create: (t) => { D.transactions.push(t); return t; }, findById: (id) => D.transactions.find((t) => t.id === id) || null, removeById: (id) => { const i = D.transactions.findIndex((t) => t.id === id); if (i >= 0) D.transactions.splice(i, 1); } },
+  };
+}
+
 function makeCtx(D) {
   return loadSource(
     [
@@ -38,6 +50,7 @@ function makeCtx(D) {
     ],
     {
       D,
+      ...withPayoffSupport(D),
       escapeHtml: (s) => String(s),
       fmt: (n) => 'Rp ' + Math.round(n || 0),
       fmtFull: (n) => 'Rp ' + Math.round(n || 0),
