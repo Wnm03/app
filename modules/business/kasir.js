@@ -162,7 +162,7 @@ el.innerHTML=list.length?list.map(p=>{
 const inCart=Kasir.cart.find(i=>i.productId===p.id);
 const habis=(p.stock||0)<=0;
 let harga=(Kasir.priceType==='reseller'&&p.hargaReseller)?p.hargaReseller:p.hargaJual;
-if(p.diskonPersen)harga=harga-(harga*p.diskonPersen/100);
+if(p.diskonPersen)harga=(typeof shopDiscountedPrice==='function')?shopDiscountedPrice(harga,p.diskonPersen):harga-(harga*p.diskonPersen/100);
 // Reko harga (kw194-kasir-order-pricereko): tandai tile produk yg Harga Jual-nya menyimpang
 // jauh dari estimasi PriceRekoWidget (rumus SAMA dgn widget "🤖 Rekomendasi Harga Jual AI" di
 // Etalase) — biar kasir sadar dari layar checkout juga, tanpa harus bolak-balik ke Etalase.
@@ -233,21 +233,23 @@ const lines=Kasir.cart.map(it=>{
 const p=D.products.find(x=>x.id===it.productId);
 if(!p)return null;
 let hargaDefault=(Kasir.priceType==='reseller'&&p.hargaReseller)?p.hargaReseller:p.hargaJual;
-if(p.diskonPersen)hargaDefault=hargaDefault-(hargaDefault*p.diskonPersen/100);
+if(p.diskonPersen)hargaDefault=(typeof shopDiscountedPrice==='function')?shopDiscountedPrice(hargaDefault,p.diskonPersen):hargaDefault-(hargaDefault*p.diskonPersen/100);
 const harga=(it.hargaOverride!=null&&it.hargaOverride>0)?it.hargaOverride:hargaDefault;
 const lineTotal=harga*it.qty;
 subtotal+=lineTotal;modal+=(p.hargaBeli||0)*it.qty;
 return{...it,product:p,harga,hargaDefault,lineTotal};
 }).filter(Boolean);
 const diskon=parseFloat(document.getElementById('kasirDiskon')?.value)||0;
-const ongkir=parseFloat(document.getElementById('kasirOngkir')?.value)||0;
+// S2725 (audit Kasir K1): ongkir negatif/NaN/Infinity tidak boleh memotong total — paritas dgn Order.computeTotals (S2307 B9). Dulu total jadi negatif -> syncShopSalePayment menolak SETELAH stok terpotong.
+const _ongkirN=parseFloat(document.getElementById('kasirOngkir')?.value);const ongkir=Number.isFinite(_ongkirN)?Math.max(0,_ongkirN):0;
 const effectiveDiskon=Math.min(Math.max(0,diskon),Math.max(0,subtotal));
 const total=Math.max(0,subtotal-effectiveDiskon)+ongkir;
 const profit=typeof calculateNetProfit==='function'?calculateNetProfit(subtotal,modal,diskon):Math.max(0,subtotal)-Math.min(Math.max(0,diskon),Math.max(0,subtotal))-modal;
-return{lines,subtotal,modal,diskon,ongkir,total,profit};
+// S2726: `diskon` tetap nilai mentah (kontrak B9, utk audit/UI); `diskonEfektif` (0..subtotal) dipakai saat MENYIMPAN & di struk, supaya record tidak berisi diskon negatif/berlebih.
+return{lines,subtotal,modal,diskon,diskonEfektif:effectiveDiskon,ongkir,total,profit};
 },
 renderCart(){
-const{lines,subtotal,diskon,ongkir,total,profit}=Kasir.computeTotals();
+const{lines,subtotal,diskonEfektif:diskon,ongkir,total,profit}=Kasir.computeTotals();
 const el=document.getElementById('kasirCartList');
 if(el){
 el.innerHTML=lines.length?lines.map((l,i)=>{
@@ -314,7 +316,7 @@ return;
 if(body)body.innerHTML=`<div style="font-size:12.5px;line-height:1.7;white-space:pre-wrap">${escapeHtml(res.text||'Tidak ada saran khusus untuk keranjang ini.')}</div>`;
 },
 buildReceiptText(){
-const{lines,diskon,ongkir,total}=Kasir.computeTotals();
+const{lines,diskonEfektif:diskon,ongkir,total}=Kasir.computeTotals();
 const namaToko=(D.profile&&(D.profile.namaBisnis||D.profile.nama))||'Toko';
 let txt=`🧾 ${namaToko}\n${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}\n\n`;
 lines.forEach(l=>{txt+=`${l.product.name} x${l.qty}  ${fmt(l.lineTotal)}\n`;});
@@ -341,7 +343,7 @@ toast('⚠️ Gagal membuat struk — coba lagi');
 checkout(){return withSaveGuard('kasir','',Kasir._checkoutInner);},
 _checkoutInner(){
 if(!Kasir.cart.length){toast('⚠️ Keranjang masih kosong');return;}
-const{lines,subtotal,diskon,ongkir,total,profit}=Kasir.computeTotals();
+const{lines,subtotal,diskonEfektif:diskon,ongkir,total,profit}=Kasir.computeTotals();
 const items=lines.map(l=>({productId:l.productId,name:l.product.name,qty:l.qty,harga:l.harga,lineTotal:l.lineTotal}));
 const accId=document.getElementById('kasirAcc')?document.getElementById('kasirAcc').value:D.accounts[0]?.id;
 const custName=(document.getElementById('kasirCustName')?.value||'').trim();
@@ -354,6 +356,8 @@ const delivered=document.getElementById('kasirDelivered')?document.getElementByI
 const date=todayStr();
 const note=(document.getElementById('kasirNote')?.value||'').trim();
 const txId=uid();
+// S2725 (K1): preflight — tolak SEBELUM stok/D.cobek disentuh kalau total tidak bisa disinkronkan ke pembayaran.
+if(!Number.isFinite(total)||total<0){toast('⚠️ Total tidak valid — periksa diskon/ongkir. Transaksi tidak disimpan.');return;}
 const result=recordShopSale({
 items,subtotal,diskon,ongkir,total,profit,date,note,customer,priceType:Kasir.priceType,delivered,
 accountId:accId,txId,existingShopId:null
@@ -363,8 +367,20 @@ const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');
 // Kasir dan Order memakai rekonsiliasi pembayaran kanonis yang sama.
 const dpRaw=document.getElementById('kasirDP')?document.getElementById('kasirDP').value.trim():'';
 if(typeof syncShopSalePayment!=='function')throw new Error('SHOP_PAYMENT_RECONCILIATION_REQUIRED');
-const payment=syncShopSalePayment({shopId:result.shopId,txId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});
-if(!payment.ok){toast('⚠️ Pembayaran tidak tersinkron: '+payment.reason);return;}
+// S2725 (K1): recordShopSale sudah memotong stok & membuat baris D.cobek. Kalau sinkron pembayaran gagal
+// (return !ok ATAU throw), batalkan semuanya lewat SSOT yg sama (rollbackShopItems) supaya tidak ada penjualan
+// yatim & stok hilang; keranjang tetap utk dicoba ulang tanpa menggandakan penjualan.
+const _undoNewSale=()=>{
+try{if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&FinanceTxSOT.removeById&&D.transactions.some(t=>t&&t.id===txId))FinanceTxSOT.removeById(txId);}catch(e){void e;}
+const row=D.cobek.find(c=>c.id===result.shopId);
+if(row&&row.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter.removeById){try{BillDebtPiutangCanonicalWriter.removeById('piutang',row.piutangLinkId);}catch(e){void e;}}
+rollbackShopItems(items,1,txId);
+D.cobek=D.cobek.filter(c=>c.id!==result.shopId);
+};
+let payment;
+try{payment=syncShopSalePayment({shopId:result.shopId,txId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});}
+catch(err){_undoNewSale();toast('⚠️ Pembayaran gagal, penjualan dibatalkan: '+(err&&err.message||err));return;}
+if(!payment.ok){_undoNewSale();toast('⚠️ Pembayaran tidak tersinkron ('+payment.reason+'). Penjualan dibatalkan, stok dikembalikan.');return;}
 const dpVal=payment.dp,sisa=payment.sisa;
 save();
 renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();
