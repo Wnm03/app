@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-24T04:14:42.078Z
-Total file source: 489 · Total identifier global: 17793
+Terakhir digenerate: 2026-10-25T08:44:09.753Z
+Total file source: 489 · Total identifier global: 17811
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -29,12 +29,12 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 6 | `modules/shared/modules-calc.js` | 1274 | _(tidak ada komentar header)_ |
 | 7 | `modules/shop/cobek-etalase.js` | 924 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 8 | `modules/shop/cobek-pricing.js` | 897 | Domain Shop bagian rekomendasi harga & ongkir: PriceReko (kalkulator Dipindah ke modules/shop/cobek-pricing.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
-| 9 | `modules/shop/cobek-order.js` | 1020 | Domain Shop bagian order & pelanggan: Produsen (supplier), SiapPulang Dipindah ke modules/shop/cobek-order.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
-| 10 | `modules/shop/cobek-tx-cart.js` | 645 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 9 | `modules/shop/cobek-order.js` | 1074 | Domain Shop bagian order & pelanggan: Produsen (supplier), SiapPulang Dipindah ke modules/shop/cobek-order.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
+| 10 | `modules/shop/cobek-tx-cart.js` | 646 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 11 | `modules/shop/cobek-io.js` | 627 | Domain Shop bagian impor/ekspor: ImportKatalog (impor massal produk+harga Dipindah ke modules/shop/cobek-io.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 12 | `modules/business/shop-data-io-api.js` | 679 | Bagian B (Shop Import/Export: Scan/PDF/CSV/JSON) dari DESIGN_torsi-vehicle-selector_shop-import-export-2.md. Bagian B (Scan, Import PDF, Import CSV, Import/Export JSON) SUDAH SELESAI 4/4. Sesi ini (lanjutan opsional, … |
-| 13 | `modules/business/kasir.js` | 389 | Modul "🧠 Kasir AI" (v127, kw81-kasir-ai-pos): Dipindah ke modules/business/kasir.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). Tab … |
-| 14 | `modules/finance/piutang-utang.js` | 1178 | Domain Piutang & Utang: catatan piutang (uang dipinjamkan), utang (uang dipinjam) beserta status lunas/cicilan, dan DebtStrategy (simulasi strategi pelunasan Avalanche/Snowball). Dipindah ke … |
+| 13 | `modules/business/kasir.js` | 405 | Modul "🧠 Kasir AI" (v127, kw81-kasir-ai-pos): Dipindah ke modules/business/kasir.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). Tab … |
+| 14 | `modules/finance/piutang-utang.js` | 1183 | Domain Piutang & Utang: catatan piutang (uang dipinjamkan), utang (uang dipinjam) beserta status lunas/cicilan, dan DebtStrategy (simulasi strategi pelunasan Avalanche/Snowball). Dipindah ke … |
 | 15 | `modules/finance/pajak-pbb-zakat.js` | 418 | Kalkulator Pajak Bumi & Bangunan (PBB), Zakat (penghasilan, maal, fitrah), Referensi AI (cek harga emas/nisab via AI), Pajak UMKM, dan PPh 21 (Orang Pribadi) Dipindah ke modules/finance/pajak-pbb-zakat.js (Sesi 16 … |
 | 16 | `modules/finance/zakat-reminder.js` | 160 | modules/finance/zakat-reminder.js — Zakat Reminder Foundation (sesi lanjutan, antrian AUDIT-DASHBOARD-INSIGHT-COVERAGE.md §2 "Zakat" — dikonfirmasi user: Penghasilan & Maal masuk sesi ini, Fitrah DITUNDA karena butuh … |
 | 17 | `budget.js` | 622 | Anggaran Budget (batas pengeluaran per kategori, tab List/Rekomendasi, drill-down transaksi). Dipisah dari features-budget-laporan-carnotes-pelanggan.js (Sesi 6 restrukturisasi folder, bagian budget/laporan — lihat … |
@@ -112,7 +112,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 89 | `modules/finance/tx-transfer.js` | 85 | logika modal "⇄ Transfer Antar Akun" (transferModal). Dipindah ke modules/finance/tx-transfer.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 90 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 91 | `modules/finance/tx-target.js` | 152 | domain "Target Tabungan" (modal tambah target, deteksi Dana |
-| 92 | `modules/finance/tx-list-cashflow.js` | 1049 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
+| 92 | `modules/finance/tx-list-cashflow.js` | 1070 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 93 | `modules/finance/transaksi.js` | 1424 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 94 | `modules/finance/transaksi-b.js` | 815 | bagian KEDUA dari modules/finance/transaksi.js (audit ukuran file, sesi lanjutan setelah split modules/vehicle/sparepart-servis.js). Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (sisa deklarasi … |
 | 95 | `modules/shared/profil-pengaturan.js` | 136 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
@@ -418,7 +418,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 395 | `modules/shop/shop-business-engine-presenter.js` | 232 | modules/shop/shop-business-engine-presenter.js — Shop Business Engine Presenter (Sesi 199, Finalisasi Integrasi Shop). Target sesi: audit menemukan PurchaseEngine/TripEngine/InventoryEngine/ProfitEngine (S198, … |
 | 396 | `modules/shop/trip-presenter.js` | 166 | modules/shop/trip-presenter.js — Trip Presenter (Sesi 204-A). Menutup gap yang dicatat eksplisit di shop-business-engine-presenter.js: "TripEngine (S198) tidak dipakai di sini — tidak ada ringkasan 'pengiriman' yang … |
 | 397 | `modules/shop/business-flow-presenter-inventory.js` | 1247 | modules/shop/business-flow-presenter-inventory.js — Business Flow Presenter, bagian Purchase Order / Movement / Inventory Transfer / Modal UI. DIPECAH dari modules/shop/business-flow-presenter.js (S205 dkk, audit ukuran … |
-| 398 | `modules/shop/business-flow-presenter.js` | 1599 | modules/shop/business-flow-presenter.js — Business Flow Presenter (Sesi 205). WIRE ONLY: menyusun 4 tahap alur bisnis Shop — Purchase -> Trip -> Stock -> Sale — dari 2 presenter yang SUDAH ADA: … |
+| 398 | `modules/shop/business-flow-presenter.js` | 1600 | modules/shop/business-flow-presenter.js — Business Flow Presenter (Sesi 205). WIRE ONLY: menyusun 4 tahap alur bisnis Shop — Purchase -> Trip -> Stock -> Sale — dari 2 presenter yang SUDAH ADA: … |
 | 399 | `modules/finance/dana-kelolaan.js` | 287 | Dana Kelolaan / Managed Funds (Sesi 195). TARGET EKSPLISIT USER: "S195 Managed Funds. Reuse OwnershipEngine. Implementasikan Dana Kelolaan... Reuse existing modules. No audit. No refactor. No business logic changes." … |
 | 400 | `modules/finance/dana-kelolaan-presenter.js` | 200 | Dana Kelolaan / Managed Funds Presenter (Sesi 195). Pola SAMA PERSIS PropertyManagementPresenter.render() (modules/asset/property-management-presenter.js, S102/Sesi 132): UI HANYA presenter, 100% reuse … |
 | 401 | `modules/finance/titipan-reconcile.js` | 1262 | _(tidak ada komentar header)_ |
@@ -1264,6 +1264,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_oldTxAccountId` | `modules/vehicle/servis.js` |
 | `_ongkirN` | `modules/shop/cobek-order.js` |
 | `_ongkirN` | `modules/shop/cobek-tx-cart.js` |
+| `_ongkirN` | `modules/business/kasir.js` |
 | `_onTxShopSaleItemChangeInner` | `modules/shop/cobek-tx-cart.js` |
 | `_onTxShopStockItemChangeInner` | `modules/shop/cobek-tx-cart.js` |
 | `_openDialogOverlay` | `modules/shared/modal-navigasi.js` |
@@ -1583,6 +1584,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_shopPdfImportRows` | `modules/business/shop-pdf-import-ui.js` |
 | `_shopPdfImportSetStatus` | `modules/business/shop-pdf-import-ui.js` |
 | `_shopPdfImportTarget` | `modules/business/shop-pdf-import-ui.js` |
+| `_shopReceivableOwner` | `modules/shop/cobek-order.js` |
 | `_shopScanRows` | `modules/business/shop-scan-ui.js` |
 | `_shopScanRun` | `modules/business/shop-scan-ui.js` |
 | `_shopScanSetStatus` | `modules/business/shop-scan-ui.js` |
@@ -1647,6 +1649,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_stockIds` | `modules/vehicle/servis-b.js` |
 | `_stockModal` | `modules/finance/transaksi-b.js` |
 | `_stockNameOnInput` | `modules/shared/modals.js` |
+| `_stockShort` | `modules/finance/tx-list-cashflow.js` |
 | `_stockTx` | `modules/shop/cobek-etalase.js` |
 | `_subCategoryNameExists` | `modules/finance/kategori.js` |
 | `_svc` | `modules/finance/transaksi-b.js` |
@@ -1728,6 +1731,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_txShopSaleCustNameOnBlur` | `modules/shop/cobek-tx-cart.js` |
 | `_txShopSaleCustPhoneOnBlur` | `modules/shop/cobek-tx-cart.js` |
 | `_txSubCatOnBlur` | `modules/finance/transaksi.js` |
+| `_undoNewSale` | `modules/business/kasir.js` |
 | `_universalScanEmoji` | `modules/shared/scan-ocr-b.js` |
 | `_updateContinuityHighWater` | `modules/shared/features-helpers-global-security.js` |
 | `_uploadBackupToDriveInner` | `gdrive-backup.js` |
@@ -1807,6 +1811,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_wrLastStart` | `modules/business/reset-gaji-mingguan.js` |
 | `_wrLastTotal` | `modules/business/reset-gaji-mingguan.js` |
 | `_ym` | `modules/finance/pajak-pbb-zakat.js` |
+| `_zeroNow` | `modules/finance/tx-list-cashflow.js` |
 | `a` | `modules/shared/pwa-production-hardening.js` |
 | `a` | `modules/business/shop-data-io-api.js` |
 | `a` | `modules/finance/pajak-pbb-zakat.js` |
@@ -1916,9 +1921,11 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `accName` | `modules/asset/aset.js` |
 | `accName` | `modules/shared/backup-restore.js` |
 | `accName` | `laporan-export.js` |
+| `accOk` | `modules/shop/cobek-order.js` |
 | `accOptions` | `modules/shared/scan-ocr-b.js` |
 | `accOpts` | `modules/finance/cashflow-projection-presenter.js` |
 | `accountById` | `modules/finance/titipan-reconcile.js` |
+| `accountId` | `modules/shop/cobek-order.js` |
 | `accountId` | `chat-action-handlers.js` |
 | `accountId` | `modules/finance/edukasi-dana.js` |
 | `accountId` | `modules/asset/aset.js` |
@@ -2293,6 +2300,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ambiguous` | `modules/vehicle/sparepart-servis.js` |
 | `AMBIGUOUS` | `modules/vehicle/honda-oem-service-mapping.js` |
 | `amount` | `modules/shared/pwa-ux-performance.js` |
+| `amount` | `modules/shop/cobek-order.js` |
 | `amount` | `chat-action-handlers.js` |
 | `amount` | `modules/asset/aset-owners.js` |
 | `amount` | `modules/business/gaji-calc.js` |
@@ -4251,6 +4259,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `chk` | `modules/finance/tx-stok-sparepart.js` |
 | `chk` | `modules/finance/tx-renov.js` |
 | `chk` | `modules/finance/tx-target.js` |
+| `chk` | `modules/finance/tx-list-cashflow.js` |
 | `chk` | `modules/finance/transaksi.js` |
 | `chkEl` | `modules/shared/scan-ocr.js` |
 | `choiceHtml` | `modules/vehicle/servis-checklist.js` |
@@ -5766,6 +5775,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `dpRaw` | `modules/shop/cobek-order.js` |
 | `dpRaw` | `modules/shop/cobek-tx-cart.js` |
 | `dpRaw` | `modules/business/kasir.js` |
+| `dpTx` | `modules/shop/cobek-order.js` |
 | `dpVal` | `modules/business/kasir.js` |
 | `draft` | `modules/asset/aset-owners.js` |
 | `draft` | `modules/finance/akun.js` |
@@ -6396,6 +6406,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `evidence` | `modules/vehicle/service-history-evidence-lifecycle-s2022.js` |
 | `evidence` | `modules/vehicle/service-history-evidence-provenance-s2024.js` |
 | `evidencePart` | `modules/vehicle/service-history-evidence-s2021.js` |
+| `ex` | `modules/shop/cobek-order.js` |
 | `exact` | `modules/shared/scan-ocr-b.js` |
 | `exact` | `modules/vehicle/vehicle-service-sot.js` |
 | `exact` | `modules/vehicle/service-category-sot-reconciliation-s2007.js` |
@@ -7917,6 +7928,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `iconOf` | `modules/asset/investasi-tx-view.js` |
 | `icons` | `modules/shared/modules-render.js` |
 | `id` | `modules/shared/pwa-ux-performance.js` |
+| `id` | `modules/shop/cobek-order.js` |
 | `id` | `modules/finance/pajak-pbb-zakat.js` |
 | `id` | `modules/asset/aset-owners.js` |
 | `id` | `modules/asset/aset.js` |
@@ -9971,6 +9983,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `marks` | `car-notes.js` |
 | `marks` | `modules/vehicle/sparepart-servis-b.js` |
 | `markShopDelivered` | `modules/shop/cobek-io.js` |
+| `markShopReceivablePaid` | `modules/shop/cobek-order.js` |
 | `markSparepartServiced` | `modules/vehicle/sparepart-servis-b.js` |
 | `markup` | `modules/vehicle/ride-map.js` |
 | `married` | `modules/finance/pajak-pbb-zakat.js` |
@@ -11236,7 +11249,6 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `ong` | `modules/logistics/logistics-engine.js` |
 | `ongkir` | `modules/shop/cobek-pricing.js` |
 | `ongkir` | `modules/shop/cobek-order.js` |
-| `ongkir` | `modules/business/kasir.js` |
 | `ongkir` | `modules/logistics/logistics-engine.js` |
 | `ongkirBiayaEl` | `modules/shop/cobek-etalase.js` |
 | `OngkirCalc` | `modules/shop/cobek-pricing.js` |
@@ -12032,11 +12044,11 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `payload` | `modules/asset/investasi-tx-view.js` |
 | `payloadById` | `modules/vehicle/service-history-checklist-edit-s2036.js` |
 | `payment` | `modules/shop/cobek-order.js` |
-| `payment` | `modules/business/kasir.js` |
 | `PAYMENT_STATUSES` | `modules/shop/business-flow-presenter.js` |
 | `paymentFee` | `modules/shop/profit-engine.js` |
 | `paymentPct` | `modules/shop/profit-engine.js` |
 | `paymentPiutangSynced` | `modules/finance/tagihan-kalender.js` |
+| `payoff` | `modules/shop/business-flow-presenter.js` |
 | `payoffMonth` | `modules/finance/piutang-utang.js` |
 | `payoffPlan` | `modules/finance/debt-optimizer-api.js` |
 | `payoutDeductions` | `modules/shop/profit-engine.js` |
@@ -13242,6 +13254,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `recordedGaji` | `modules/finance/cash-projection.js` |
 | `recordedIds` | `lifeos/adapters/today-adapter.js` |
 | `recordServisLog` | `modules/finance/tx-servis.js` |
+| `recordShopReceivablePayoff` | `modules/shop/cobek-order.js` |
 | `recordShopSale` | `modules/shop/cobek-tx-cart.js` |
 | `recoText` | `ai-chat.js` |
 | `recover` | `modules/vehicle/service-session-recovery-s2050.js` |
@@ -13873,6 +13886,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `revenue` | `modules/shop/cobek-pricing.js` |
 | `revenueNote` | `modules/shop/cobek-order.js` |
 | `reverse` | `modules/shared/backup-restore.js` |
+| `reverseShopReceivablePayoff` | `modules/shop/cobek-order.js` |
 | `revertBillFromDeletedTx` | `modules/finance/tagihan-kalender.js` |
 | `revertedIt` | `modules/shared/self-test-cases-b.js` |
 | `revertStockPurchase` | `modules/finance/tx-stok-sparepart.js` |
@@ -13963,6 +13977,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `route` | `modules/logistics/logistics-engine.js` |
 | `route` | `modules/shop/profit-engine.js` |
 | `row` | `modules/shop/cobek-io.js` |
+| `row` | `modules/business/kasir.js` |
 | `row` | `modules/asset/aset-owners.js` |
 | `row` | `modules/asset/aset.js` |
 | `row` | `modules/asset/aset-emas-impor.js` |
@@ -15046,6 +15061,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `sheetsSaveSpreadsheetId` | `sheets-schema.js` |
 | `sheetsSyncNow` | `sheets-sync.js` |
 | `sheetsTokenClient` | `sheets-sync.js` |
+| `shop` | `modules/shop/cobek-order.js` |
 | `shop` | `modules/asset/aset-keluarga.js` |
 | `shop` | `modules/shop/business-flow-presenter.js` |
 | `SHOP_ENGINE_NAV_TARGETS` | `modules/shop/shop-business-engine-presenter.js` |
@@ -15671,6 +15687,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `stockPanel` | `modules/shared/pwa-ux-performance.js` |
 | `stockPanel` | `modules/finance/transaksi.js` |
 | `stockPanelEl` | `modules/shared/scan-ocr.js` |
+| `stockPurchaseDeleteBlockers` | `modules/finance/tx-list-cashflow.js` |
 | `stockQtyEditEl` | `modules/finance/transaksi.js` |
 | `stockQtyEl` | `modules/finance/transaksi.js` |
 | `stockRef` | `modules/vehicle/servis-checklist.js` |
@@ -18081,6 +18098,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `whenLabel` | `modules/vehicle/servis.js` |
 | `whenText` | `modules/vehicle/servis-b.js` |
 | `whG` | `modules/shared/modules-render-b.js` |
+| `who` | `modules/shop/cobek-order.js` |
 | `who` | `gdrive-backup.js` |
 | `whole` | `modules/vehicle/sparepart-servis.js` |
 | `whPotonganEl` | `modules/business/payroll-absensi.js` |
