@@ -246,11 +246,18 @@ toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
 renderStockList();
 }
 if(t&&t.stockItems&&t.stockItems.length){
+const _stockShort=[];
 t.stockItems.forEach(si=>{
 const p=D.products.find(x=>x.id===si.productId);
+// S2725 (K4): stok < qty pembelian (sebagian sudah terjual) -> pengurangan di-clamp ke 0 & selisih hilang diam-diam. Catat utk peringatan.
+if(p&&(Number(p.stock)||0)<(Number(si.qty)||0))_stockShort.push(p.name+' (kurang '+((Number(si.qty)||0)-(Number(p.stock)||0))+')');
 if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(si.qty||0));else p.stock=Math.max(0,(p.stock||0)-(si.qty||0));}
 });
 toast(`📦 Stok dikurangi (transaksi dihapus)`,2600);
+if(_stockShort.length)toast('⚠️ Sebagian stok sudah terjual, stok diset 0: '+_stockShort.join(', ')+'. Cek ulang stok fisik.',6000);
+// S2726: produk tidak dihapus otomatis (bisa dipakai di tempat lain) — beri tahu bila kini berstok 0.
+const _zeroNow=t.stockItems.map(si=>D.products.find(x=>x.id===si.productId)).filter(p=>p&&(Number(p.stock)||0)===0).map(p=>p.name);
+if(_zeroNow.length)toast('ℹ️ Produk tetap ada di Etalase dengan stok 0: '+[...new Set(_zeroNow)].join(', ')+'. Hapus manual bila tidak dipakai.',6000);
 } else if(t&&t.stockProductId){
 const p=D.products.find(x=>x.id===t.stockProductId);
 if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,-(t.stockQty||0));else p.stock=Math.max(0,(p.stock||0)-(t.stockQty||0));toast(`📦 Stok "${p.name}" dikurangi ${t.stockQty} (transaksi dihapus)`,2600);}
@@ -258,9 +265,11 @@ if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDel
 if(t&&t.cobekLinkId){
 const linkedShop=D.cobek.find(c=>c.id===t.cobekLinkId);
 if(linkedShop&&linkedShop.items){
-linkedShop.items.forEach(it=>{const p=D.products.find(x=>x.id===it.productId);if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,it.qty);else p.stock=(p.stock||0)+it.qty;}});
+if(typeof rollbackShopItems==='function')rollbackShopItems(linkedShop.items,1,t.id);
+else linkedShop.items.forEach(it=>{const p=D.products.find(x=>x.id===it.productId);if(p){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,it.qty);else p.stock=(p.stock||0)+it.qty;}});
 toast(`🪨 Stok dikembalikan, penjualan Shop terkait dihapus`,2600);
 }
+if(linkedShop&&linkedShop.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter.removeById){if(typeof reverseShopReceivablePayoff==='function')reverseShopReceivablePayoff((D.piutang||[]).find(p=>p&&p.id===linkedShop.piutangLinkId));BillDebtPiutangCanonicalWriter.removeById('piutang',linkedShop.piutangLinkId);}
 D.cobek=D.cobek.filter(c=>c.id!==t.cobekLinkId);
 renderShop();renderShopRecent();
 }
@@ -314,6 +323,16 @@ if(typeof FinanceCrossEntityAtomic!=='undefined')FinanceCrossEntityAtomic.emit('
 }
 }
 }
+// S2727: kebijakan hapus pembelian stok — TOLAK bila stok produk kini lebih kecil dari qty pembelian
+// (sebagian sudah terjual). Mengembalikan daftar produk yang menghalangi; kosong = aman dihapus.
+function stockPurchaseDeleteBlockers(t){
+const out=[];
+if(!t)return out;
+const chk=(pid,qty)=>{const p=(D.products||[]).find(x=>x.id===pid);const q=Number(qty)||0;if(p&&(Number(p.stock)||0)<q)out.push({name:p.name,stock:Number(p.stock)||0,qty:q,short:q-(Number(p.stock)||0)});};
+if(t.stockItems&&t.stockItems.length)t.stockItems.forEach(si=>chk(si.productId,si.qty));
+else if(t.stockProductId)chk(t.stockProductId,t.stockQty);
+return out;
+}
 async function delTx(id){
 if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBlockedByStaleState())return;
 // S468b guard (defense in depth, lihat poin bahaya #2 di
@@ -324,6 +343,8 @@ if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBloc
 // "Hapus transaksi?" yang menyesatkan (tidak ada apa pun yang akan
 // terhapus). Guard di baris PERTAMA, sebelum askConfirm() dipanggil.
 if(String(id).startsWith('vbill_')){toast('Tagihan ini belum dibayar');return;}
+{const _t0=D.transactions.find(x=>x.id===id);const _blk=stockPurchaseDeleteBlockers(_t0);
+if(_blk.length){toast('⛔ Pembelian tidak bisa dihapus: stok sudah terjual sebagian — '+_blk.map(b=>b.name+' (stok '+b.stock+', pembelian '+b.qty+')').join(', ')+'. Gunakan retur atau penyesuaian stok.',7000);return;}}
 if(!await askConfirm('Hapus transaksi ini?'))return;
 const t=D.transactions.find(x=>x.id===id);
 // SESI 432 (audit fitur Transfer Antar Akun): transfer_out/transfer_in

@@ -492,8 +492,13 @@ if(becameLunas&&p.linkedTxId&&!linkedPayoffTxId){
 const origTx=D.transactions.find(t=>sameId(t.id,p.linkedTxId));
 if(origTx)linkedPayoffTxId=createPiutangUtangAutoTx('income',nilai,origTx.accountId,'Piutang','Piutang lunas: '+name,todayStr());
 }
+// S2726: piutang berasal dari penjualan Shop -> lunas = pemasukan kas (sama dgn BusinessFlowPresenter.markPaymentReceived); dibuka lagi = pemasukan dibatalkan.
+if(typeof recordShopReceivablePayoff==='function'&&typeof _shopReceivableOwner==='function'&&_shopReceivableOwner(p)){
+if(becameLunas&&!p.linkedTxId){const _r=recordShopReceivablePayoff(p,{amount:nilai});if(!_r.ok){toast(_r.reason==='ACCOUNT_MISSING'?'⚠️ Akun penerimaan order tidak ditemukan. Pelunasan tidak dicatat.':'⚠️ Pelunasan tidak dapat dicatat ('+_r.reason+')');return;}if(_r.txId)linkedPayoffTxId=_r.txId;}
+else if(p.lunas&&!Piutang._lunasState&&p.linkedPayoffTxId){reverseShopReceivablePayoff(p);linkedPayoffTxId=null;}
+}
 const _patch={name,nilai,tanggal,jatuhTempo,catatan,assetId,lunas:Piutang._lunasState};
-if(linkedPayoffTxId)_patch.linkedPayoffTxId=linkedPayoffTxId;
+if(linkedPayoffTxId)_patch.linkedPayoffTxId=linkedPayoffTxId;else if(p.linkedPayoffTxId&&!p.linkedTxId&&!Piutang._lunasState)_patch.linkedPayoffTxId=null;
 BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>Object.assign(p0,_patch));
 _savedPiutangIdSesiC=p.id;
 } else {
