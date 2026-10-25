@@ -462,13 +462,14 @@ if(chk.checked) populateTxShopSaleSelect();
 //     pilih yg stoknya masih cukup (biar tidak minus duluan); saat mengembalikan/menambah, kembalikan
 //     ke kandidat pertama yg cocok). Kalau tidak ada produk dasar/alu-muntu yg cocok, dilewati saja
 //     (TIDAK membatalkan penjualan utama — stok bundle itu sendiri tetap prioritas).
-function applyBundleLinkedStock(product,qty,sign){
+// S2726: refId diteruskan eksplisit (dulu merujuk `opts` di luar scope -> refId riwayat stok selalu kosong).
+function applyBundleLinkedStock(product,qty,sign,refId){
 if(!product)return;
 const addon=Etalase.bundleAddonShape(product);
 if(!addon)return;
 const bracket=Etalase.bracketRange(product);
 const base=(D.products||[]).find(q=>q.id!==product.id&&Etalase.bracketRange(q)===bracket&&!Etalase.bundleAddonShape(q));
-if(base){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(base,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else base.stock=Math.max(0,(base.stock||0)+sign*qty);}
+if(base){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(base,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:refId||'',idempotencyKey:''});else base.stock=Math.max(0,(base.stock||0)+sign*qty);}
 const addonCandidates=(D.products||[]).filter(q=>{
 const parsed=Etalase.parseSizeName(q.name);
 if(addon==='alu')return parsed&&parsed.shape==='alu';
@@ -476,7 +477,7 @@ if(addon==='muntu')return(parsed&&(parsed.shape==='muntu'||parsed.shape==='munth
 return false;
 });
 const addonProduct=sign<0?(addonCandidates.find(q=>(q.stock||0)>=qty)||addonCandidates[0]):addonCandidates[0];
-if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(addonProduct,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else addonProduct.stock=Math.max(0,(addonProduct.stock||0)+sign*qty);}
+if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(addonProduct,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:refId||'',idempotencyKey:''});else addonProduct.stock=Math.max(0,(addonProduct.stock||0)+sign*qty);}
 }
 // rollbackShopItems (kw-sales-mutation-fix, Modul 2) — SATU-SATUNYA implementasi
 // yang boleh mengubah stok produk (+base+addon alu/muntu) utk jalur Sales
@@ -490,15 +491,15 @@ if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mut
 // rollback-on-failure) + 1x lagi TANPA bundle sama sekali di Laporan.delete()
 // (bug: bundle addon tidak ikut balik saat hapus/retur transaksi). Sekarang
 // SEMUA titik itu manggil fungsi yang sama ini — 0 duplikasi, 0 rumus baru.
-function rollbackShopItems(items,sign){
+function rollbackShopItems(items,sign,refId){
 (items||[]).forEach(it=>{
 if(!it||!it.productId)return;
 const q=Number(it.qty);
 if(!Number.isFinite(q)||q<=0)return;
 const p=D.products.find(x=>x.id===it.productId);
 if(!p)return;
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,sign*q,{source:sign<0?'sale':'sale-rollback',reason:sign<0?'sale stock consumption':'sale stock restore',refType:'shopSale',refId:(typeof opts!=='undefined'&&opts&&opts.txId)||'',idempotencyKey:''});else p.stock=Math.max(0,(p.stock||0)+sign*q);
-applyBundleLinkedStock(p,q,sign);
+if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,sign*q,{source:sign<0?'sale':'sale-rollback',reason:sign<0?'sale stock consumption':'sale stock restore',refType:'shopSale',refId:refId||'',idempotencyKey:''});else p.stock=Math.max(0,(p.stock||0)+sign*q);
+applyBundleLinkedStock(p,q,sign,refId);
 });
 }
 function recordShopSale(opts){
@@ -529,7 +530,7 @@ prevShop=D.cobek.find(c=>c.id===opts.existingShopId);
 // tersimpan di prevShop) dulu, baru validasi+apply stok baru di bawah —
 // urutan ini TIDAK berubah dari sebelumnya, cuma implementasinya sekarang
 // lewat rollbackShopItems() (SSOT) supaya base+addon bundle ikut kebawa.
-if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,1);
+if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,1,opts.txId);
 }
 // kw-sales-mutation-fix: akumulasikan qty per productId SEBELUM validasi
 // stok, supaya cart dgn 2+ baris produk yg sama (duplicate cart item) tidak
@@ -542,18 +543,18 @@ for(const it of items)qtyByProduct.set(it.productId,(qtyByProduct.get(it.product
 for(const[productId,qty] of qtyByProduct){
 const p=D.products.find(x=>x.id===productId);
 if(!p){
-if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,-1);
+if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,-1,opts.txId);
 return{ok:false,message:'Produk tidak ditemukan'};
 }
 if(qty>p.stock){
-if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,-1);
+if(prevShop&&prevShop.items)rollbackShopItems(prevShop.items,-1,opts.txId);
 return{ok:false,message:'Stok '+p.name+' tidak cukup (sisa '+p.stock+')'};
 }
 }
 // Total per produk sudah divalidasi <= stok tersedia di atas, jadi aman
 // diterapkan per baris (rollbackShopItems sign=-1 = consume), termasuk
 // base+addon bundle-nya — SSOT yang sama dgn restore di atas.
-rollbackShopItems(items,-1);
+rollbackShopItems(items,-1,opts.txId);
 const customer=opts.customer||{name:'',phone:'',address:''};
 if(prevShop){
 Object.assign(prevShop,{

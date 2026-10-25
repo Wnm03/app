@@ -221,6 +221,57 @@ applyOneCardCollapsePref('siapPulangCard');
 }
 };
 
+// S2726: pelunasan piutang Shop HARUS mencatat pemasukan kas (sebelumnya hanya flag lunas=true -> saldo akun tidak bertambah).
+// recordShopReceivablePayoff: buat 1 transaksi income sebesar sisa piutang ke akun order, idempoten via piutang.linkedPayoffTxId
+// (pola sama Piutang.save()). TIDAK memakai cobekLinkId supaya menghapus transaksi pelunasan tidak ikut menghapus penjualan.
+function _shopReceivableOwner(piutang){return piutang&&piutang.id?(D.cobek||[]).find(c=>c&&c.piutangLinkId===piutang.id)||null:null;}
+function recordShopReceivablePayoff(piutang,opts){
+const o=opts||{};
+if(!piutang||!piutang.id)return {ok:false,reason:'PIUTANG_MISSING'};
+const shop=_shopReceivableOwner(piutang);
+if(!shop)return {ok:true,skipped:true,reason:'NOT_SHOP_RECEIVABLE'};
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+if(piutang.linkedPayoffTxId){
+  const ex=FinanceTxSOT.findById?FinanceTxSOT.findById(piutang.linkedPayoffTxId):(D.transactions||[]).find(t=>t&&t.id===piutang.linkedPayoffTxId);
+  if(ex)return {ok:true,skipped:true,txId:piutang.linkedPayoffTxId,reason:'ALREADY_RECORDED'};
+}
+const amount=Number(o.amount!=null?o.amount:piutang.nilai);
+if(!Number.isFinite(amount)||amount<=0)return {ok:true,skipped:true,reason:'NO_AMOUNT'};
+const dpTx=shop.txLinkId?(D.transactions||[]).find(t=>t&&t.id===shop.txLinkId):null;
+const accOk=id=>id&&(D.accounts||[]).some(a=>a&&a.id===id);
+const accountId=[shop.accountId,dpTx&&dpTx.accountId].find(accOk);
+if(!accountId)return {ok:false,reason:'ACCOUNT_MISSING'};
+const txId=uid();
+const who=(shop.customer&&shop.customer.name)||piutang.name||'Pembeli Shop';
+FinanceTxSOT.create({id:txId,type:'income',amount,category:'Bisnis',subcategory:'Cobek',accountId,payMethod:'tunai',note:'Pelunasan piutang - '+who,date:o.date||(typeof todayStr==='function'?todayStr():new Date().toISOString().slice(0,10)),cobekPayoffId:shop.id});
+return {ok:true,txId,amount,accountId};
+}
+// reverseShopReceivablePayoff: batalkan pemasukan pelunasan (piutang dibuka lagi / order diedit / order dihapus) supaya kas tidak dobel.
+function reverseShopReceivablePayoff(piutang){
+if(!piutang||!piutang.linkedPayoffTxId)return false;
+if(!_shopReceivableOwner(piutang))return false;
+const id=piutang.linkedPayoffTxId;
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT||!FinanceTxSOT.removeById)throw new Error('FINANCE_TX_SOT_REQUIRED');
+if((D.transactions||[]).some(t=>t&&t.id===id))FinanceTxSOT.removeById(id);
+piutang.linkedPayoffTxId=null;
+return true;
+}
+// markShopReceivablePaid: orkestrasi atomik pelunasan piutang Shop (catat pemasukan + flag lunas + simpan; batal total bila gagal).
+function markShopReceivablePaid(piutang){
+if(!piutang)return {ok:false,reason:'PIUTANG_MISSING'};
+if(piutang.lunas)return {ok:false,reason:'ALREADY_PAID',message:'Piutang sudah lunas'};
+let payoff;
+try{payoff=recordShopReceivablePayoff(piutang);}catch(err){return {ok:false,reason:'PAYOFF_FAILED',message:err&&err.message};}
+if(!payoff.ok)return Object.assign({message:payoff.reason==='ACCOUNT_MISSING'?'Akun penerimaan order tidak ditemukan':payoff.reason},payoff);
+piutang.lunas=true;
+if(payoff.txId)piutang.linkedPayoffTxId=payoff.txId;
+if(typeof save==='function'&&save()===false){
+  piutang.lunas=false;
+  if(payoff.txId){piutang.linkedPayoffTxId=null;try{FinanceTxSOT.removeById(payoff.txId);}catch(e){void e;}}
+  return {ok:false,reason:'SAVE_FAILED',message:'State sudah berubah, muat ulang lalu coba lagi'};
+}
+return payoff;
+}
 // Shared DP/piutang reconciliation for Kasir and Order. The helper keeps the
 // existing data contract (D.cobek.piutangLinkId, D.piutang.nilai/lunas and
 // FinanceTxSOT) while removing duplicated payment orchestration. It does not
@@ -253,7 +304,8 @@ if(sisa>0){
   const piutangCatatan='Sisa pembayaran shop: '+(o.itemSummary||'Penjualan Shop');
   if(existingPiutang){
     if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter.updateById)throw new Error('BILL_DEBT_PIUTANG_WRITER_REQUIRED');
-    BillDebtPiutangCanonicalWriter.updateById('piutang',existingPiutang.id,p=>Object.assign(p,{name:piutangName,nilai:sisa,tanggal:o.date,catatan:piutangCatatan,lunas:false}));
+    reverseShopReceivablePayoff(existingPiutang);// S2726: piutang dibuka lagi (lunas:false) -> pemasukan pelunasan lama dibatalkan
+    BillDebtPiutangCanonicalWriter.updateById('piutang',existingPiutang.id,p=>Object.assign(p,{name:piutangName,nilai:sisa,tanggal:o.date,catatan:piutangCatatan,lunas:false,linkedPayoffTxId:null}));
     if(shopRecord)shopRecord.piutangLinkId=existingPiutang.id;
   }else{
     const pid=uid();
@@ -263,6 +315,7 @@ if(sisa>0){
   }
 }else if(existingPiutangId){
   if(typeof BillDebtPiutangCanonicalWriter==='undefined'||!BillDebtPiutangCanonicalWriter.removeById)throw new Error('BILL_DEBT_PIUTANG_WRITER_REQUIRED');
+  reverseShopReceivablePayoff(existingPiutang);// S2726
   BillDebtPiutangCanonicalWriter.removeById('piutang',existingPiutangId);
   if(shopRecord)shopRecord.piutangLinkId=null;
 }
@@ -395,7 +448,8 @@ const _ongkirN=parseFloat(document.getElementById('oOngkir').value);const ongkir
 const effectiveDiskon=Math.min(Math.max(0,diskon),Math.max(0,subtotal));
 const total=Math.max(0,subtotal-effectiveDiskon)+ongkir;
 const profit=typeof calculateNetProfit==='function'?calculateNetProfit(subtotal,modal,diskon):Math.max(0,subtotal)-Math.min(Math.max(0,diskon),Math.max(0,subtotal))-modal;
-return{lines,subtotal,modal,diskon,ongkir,total,profit};
+// S2726: `diskon` tetap nilai mentah (kontrak B9, utk audit/UI); `diskonEfektif` (0..subtotal) dipakai saat MENYIMPAN & di struk, supaya record tidak berisi diskon negatif/berlebih.
+return{lines,subtotal,modal,diskon,diskonEfektif:effectiveDiskon,ongkir,total,profit};
 },
 renderItems(){
 const{lines,total,profit}=Order.computeTotals();
@@ -431,7 +485,7 @@ document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: 
 save(){return withSaveGuard('order','orderModal',Order._saveInner);},
 _saveInner(){
 if(!Order.items.length){toast('⚠️ Keranjang masih kosong');return;}
-const{lines,subtotal,diskon,ongkir,total,profit}=Order.computeTotals();
+const{lines,subtotal,diskonEfektif:diskon,ongkir,total,profit}=Order.computeTotals();
 const items=lines.map(l=>({productId:l.productId,name:l.product.name,qty:l.qty,harga:l.harga,lineTotal:l.lineTotal}));
 const customer={name:document.getElementById('oCustName').value.trim(),phone:document.getElementById('oCustPhone').value.trim(),address:document.getElementById('oCustAddr').value.trim()};
 const accId=document.getElementById('oAcc')?document.getElementById('oAcc').value:D.accounts[0]?.id;
@@ -600,12 +654,12 @@ const t=D.cobek.find(x=>x.id===id);
 // bikin delete() aman dipanggil ulang utk id yg sudah tidak ada (idempotent
 // no-op, tidak mengembalikan stok 2x / tidak crash).
 if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
-if(t.items)rollbackShopItems(t.items,1);
+if(t.items)rollbackShopItems(t.items,1,t.txLinkId||t.id);
 if(t.txLinkId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(t.txLinkId); else throw new Error('FINANCE_TX_SOT_REQUIRED');}
 // S209-210 (Wire Return->Refund): piutang terhubung (sisa tagihan yg belum
 // dibayar dari order ini) ikut dibersihkan saat order-nya diretur, reuse
 // PERSIS pola filter yg sudah ada di Order._saveInner() (bukan rumus baru).
-if(t&&t.piutangLinkId)BillDebtPiutangCanonicalWriter.removeById('piutang',t.piutangLinkId);
+if(t&&t.piutangLinkId){reverseShopReceivablePayoff((D.piutang||[]).find(p=>p&&p.id===t.piutangLinkId));BillDebtPiutangCanonicalWriter.removeById('piutang',t.piutangLinkId);}// S2726: pemasukan pelunasan ikut dibatalkan
 D.cobek=D.cobek.filter(t=>t.id!==id);
 save();this.render();renderShopRecent();renderProductList();
 if(typeof ShopInsight!=='undefined')ShopInsight.render();

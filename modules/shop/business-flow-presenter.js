@@ -820,8 +820,9 @@ const BusinessFlowPresenter = {
   markPaymentReceived(cobekId) {
     const status = this.orderStatus(cobekId);
     if (!status.ok || !status.piutang) return { ok: false };
-    status.piutang.lunas = true;
-    if (typeof save === 'function') save();
+    // S2726: pelunasan mencatat pemasukan kas (atomik, idempoten) — markShopReceivablePaid() di cobek-order.js.
+    const payoff = (typeof markShopReceivablePaid === 'function') ? markShopReceivablePaid(status.piutang) : (status.piutang.lunas = true, typeof save === 'function' && save(), { ok: true });
+    if (!payoff.ok) { if (typeof toast === 'function') toast('⚠️ Pelunasan tidak dicatat: ' + (payoff.message || payoff.reason)); return { ok: false, reason: payoff.reason }; }
     // S213-214 (Audit fix): toggle `lunas` di sini SAMA PERSIS efeknya dgn
     // toggle lewat Piutang.save() (piutang-utang.js) — tapi Piutang.save()
     // JUGA memanggil renderKekayaanBersih()/hitungZakatMaal()/
@@ -836,8 +837,8 @@ const BusinessFlowPresenter = {
     // dihapus/ditambah/urutan guard berubah, cuma dipindah ke 1 tempat.
     if (typeof syncPiutangFinanceViews === 'function') syncPiutangFinanceViews();
     this.renderTab();
-    if (typeof toast === 'function') toast('✅ Pembayaran ditandai lunas');
-    return { ok: true, piutangId: status.piutang.id };
+    if (typeof toast === 'function') toast(payoff.txId ? '✅ Lunas — pemasukan dicatat ke akun' : '✅ Pembayaran ditandai lunas');
+    return { ok: true, piutangId: status.piutang.id, payoffTxId: payoff.txId || null };
   },
 
   // --- Payment Flow (Sesi 241) --------------------------------------------
