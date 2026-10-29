@@ -12,13 +12,14 @@
 //    walau tx-bbm.js ada di GROUP_B (dimuat setelah GROUP_A), karena
 //    pemanggilannya baru terjadi saat user berinteraksi (lazy), bukan saat
 //    file GROUP_A pertama kali di-parse/load.
-function populateTxBbmVehicleSelect(){
+function populateTxBbmVehicleSelect(preferredVehicleId){
 const sel=document.getElementById('txBbmVehicle');
 if(!sel||!D.vehicles)return;
 const cur=sel.value;
 sel.innerHTML=D.vehicles.map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji)} ${escapeHtml(v.name)}</option>`).join('');
 const fallback=(typeof VehicleScopedSOT!=='undefined'&&VehicleScopedSOT.ensureActive)?((VehicleScopedSOT.ensureActive()||{}).id||''):(typeof curVehicleId!=='undefined'&&D.vehicles.find(v=>v.id===curVehicleId)?curVehicleId:'');
-sel.value=cur&&D.vehicles.find(v=>v.id===cur)?cur:fallback;
+// S2729: konteks kategori kendaraan eksplisit mengalahkan kendaraan aktif/stale.
+sel.value=preferredVehicleId&&D.vehicles.some(v=>v.id===preferredVehicleId)?preferredVehicleId:(cur&&D.vehicles.find(v=>v.id===cur)?cur:fallback);
 }
 function toggleTxBbmFields(){
 const chk=document.getElementById('txSyncBbm');

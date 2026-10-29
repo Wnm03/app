@@ -1217,7 +1217,7 @@ const amount=idxJumlah>=0?parseFloat(String(cols[idxJumlah]).replace(/[^\d.-]/g,
 const liter=idxLiter>=0?parseFloat(String(cols[idxLiter]).replace(',','.'))||0:0;
 const km=idxKm>=0?parseFloat(String(cols[idxKm]).replace(/[^\d.]/g,''))||0:0;
 if(!date||isNaN(new Date(date).getTime())){skipCount++;continue;}
-const isBbm=jenis?/bbm/.test(jenis):(liter>0||/bbm|bensin|pertalite|pertamax|solar|spbu|isi.*bensin/.test(ketLower));
+const isBbm=jenis?/bbm/.test(jenis):(liter>0||/bbm|bensin|pertalite|pertamax|dexlite|biosolar|solar|\bfuel\b|spbu|isi.*bensin/.test(ketLower));
 const isServis=jenis?/servis/.test(jenis):/servis|oli|ban|sparepart|ganti|tune|cvt|kampas|aki|busi/.test(ketLower);
 if(isBbm){
 D.bbmLogs.push({id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});

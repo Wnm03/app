@@ -32,6 +32,14 @@ test('S2616: upcoming forecast bill with invalid due date fails closed', () => {
   assert.equal(result.actualCashBlockCode, 'INVALID_UPCOMING_BILL');
 });
 
+// S2730: kunci jam fixture (Sabtu 2026-10-24). Sumber memakai `new Date()` utk "minggu ini";
+// tanpa ini tes dgn nextDue hardcode (2026-10-25/26) lulus/gagal tergantung tanggal eksekusi.
+const FIXED_NOW = new Date(2026, 9, 24, 12, 0, 0).getTime();
+class FixedDate extends Date {
+  constructor(...args) { if (args.length === 0) super(FIXED_NOW); else super(...args); }
+  static now() { return FIXED_NOW; }
+}
+
 function makeApi(overrides = {}) {
   const D = {
     accounts: [
@@ -49,6 +57,7 @@ function makeApi(overrides = {}) {
   };
   const ctx = {
     D,
+    Date: FixedDate,
     OwnershipEngine: { resolve: () => ({ type: 'SELF' }) },
     FinancialForecastAPI: { summary: () => ({ ok: true, cashflowProjection: { projected: 900 } }) },
     totalSaldoAkun: () => state.cash,

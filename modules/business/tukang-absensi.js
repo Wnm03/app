@@ -515,6 +515,7 @@ setTimeout(()=>{
 document.getElementById('txAmt').value=Math.round(total);
 const upahCat=D.categories.expense.find(c=>/tukang|upah|gaji|renovasi/i.test(c.name));
 if(upahCat){ document.getElementById('txCat').value=upahCat.name; updateSubCatOptions(); }
+else if(typeof toast==='function')toast('ℹ️ Kategori upah tidak ditemukan otomatis — pilih kategori pengeluaran secara manual.');
 document.getElementById('txNote').value='Upah borongan '+monthLabel+' — '+detail;
 },60);
 },
@@ -598,6 +599,7 @@ setTimeout(()=>{
 document.getElementById('txAmt').value=Math.round(total);
 const upahCat=D.categories.expense.find(c=>/tukang|upah|gaji|renovasi/i.test(c.name));
 if(upahCat){ document.getElementById('txCat').value=upahCat.name; updateSubCatOptions(); }
+else if(typeof toast==='function')toast('ℹ️ Kategori upah tidak ditemukan otomatis — pilih kategori pengeluaran secara manual.');
 document.getElementById('txNote').value='Upah jam '+monthLabel+' — '+detail;
 },60);
 },
@@ -717,6 +719,7 @@ setTimeout(()=>{
 document.getElementById('txAmt').value=Math.round(r.total);
 const upahCat=D.categories.expense.find(c=>/tukang|upah|gaji|renovasi/i.test(c.name));
 if(upahCat){ document.getElementById('txCat').value=upahCat.name; updateSubCatOptions(); }
+else if(typeof toast==='function')toast('ℹ️ Kategori upah tidak ditemukan otomatis — pilih kategori pengeluaran secara manual.');
 document.getElementById('txNote').value='Upah tukang '+r.from+' s/d '+r.to+(r.detail?' — '+r.detail:'');
 },60);
 },

@@ -575,6 +575,28 @@ note:opts.note||''
 });
 return{ok:true,shopId,isNew:true};
 }
+// S2732: pra-validasi stok Penjualan Shop dari modal Transaksi, dipanggil _saveTxInner()
+// SEBELUM transaksi dipersist. Dulu recordShopSale() baru gagal SETELAH transaksi tersimpan
+// (applyTxShopSaleFromTx hanya toast), sehingga pemasukan yatim tanpa cobekLinkId ikut tersimpan.
+// Aturan stok identik recordShopSale(): qty total per produk <= stok (+ qty lama saat edit).
+function txShopSalePrecheck(existingTx){
+const chk=document.getElementById('txAddShopSale');
+if(!chk||!chk.checked)return{ok:true};
+const panel=document.getElementById('txShopSalePanel');
+if(!panel||panel.style.display==='none')return{ok:true};
+if(!Array.isArray(curTxShopSaleCart)||!curTxShopSaleCart.length)return{ok:true};
+const prev=(existingTx&&existingTx.cobekLinkId)?(D.cobek||[]).find(c=>c.id===existingTx.cobekLinkId):null;
+const want=new Map();
+for(const it of curTxShopSaleCart){const q=Number(it.qty);if(!it||!it.productId||!Number.isFinite(q)||q<=0)return{ok:false,message:'Jumlah tidak valid'};want.set(it.productId,(want.get(it.productId)||0)+q);}
+for(const[pid,qty]of want){
+const p=(D.products||[]).find(x=>x.id===pid);
+if(!p)return{ok:false,message:'Produk tidak ditemukan'};
+const back=prev&&Array.isArray(prev.items)?prev.items.filter(x=>x&&x.productId===pid).reduce((s,x)=>s+(Number(x.qty)||0),0):0;
+const avail=(Number(p.stock)||0)+back;
+if(qty>avail)return{ok:false,message:'Stok '+p.name+' tidak cukup (sisa '+avail+')'};
+}
+return{ok:true};
+}
 function applyTxShopSaleFromTx(txId,date,accId,note,existingTx){
 const chk=document.getElementById('txAddShopSale');
 if(!chk||!chk.checked)return;

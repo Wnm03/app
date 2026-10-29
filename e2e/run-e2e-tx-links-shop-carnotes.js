@@ -1,0 +1,111 @@
+const { chromium } = require('playwright');
+const http=require('http'),fs=require('fs'),path=require('path');
+const ROOT=path.resolve(process.env.E2E_ROOT||path.join(__dirname,'..'));
+const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
+const srv=http.createServer((q,r)=>{const rel=decodeURIComponent(q.url.split('?')[0]).replace(/^\/+/,'')||'index.html';const f=path.resolve(ROOT,rel);if(!f.startsWith(ROOT)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){r.writeHead(404);r.end();return;}r.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'application/octet-stream','Cache-Control':'no-store'});fs.createReadStream(f).pipe(r);});
+const res=[];let cur='';let P;
+const ck=async(n,ok,d)=>{res.push({d:cur,n,ok:!!ok});let extra='';if(!ok){extra=' — '+JSON.stringify(d===undefined?'':d).slice(0,200)+' toast='+JSON.stringify(await P.evaluate(()=>window._t.slice(-2))).slice(0,200);}console.log(`${ok?'✓':'✗'} [${cur}] ${n}${extra}`);};
+(async()=>{
+ await new Promise(r=>srv.listen(0,'127.0.0.1',r));
+ const base=`http://127.0.0.1:${srv.address().port}/index.html`;
+ const br=await chromium.launch({headless:true});
+ const ctx=await br.newContext({viewport:{width:390,height:800},isMobile:true,serviceWorkers:'block'});
+ const p=await ctx.newPage();P=p;const errs=[];p.on('pageerror',e=>errs.push(e.message.slice(0,160)));
+ const ev=(f,a)=>p.evaluate(f,a);const sleep=ms=>p.waitForTimeout(ms);
+ await p.goto(base);await p.waitForFunction(()=>typeof D==='object'&&typeof showPage==='function');
+ await ev(()=>{localStorage.setItem('kw_v4',JSON.stringify(D));localStorage.setItem('kw_setup','1');});
+ await p.goto(base);await p.waitForFunction(()=>getComputedStyle(document.getElementById('mainApp')).display!=='none');
+ await ev(()=>{window._t=[];const o=window.toast;window.toast=function(m){window._t.push(String(m));return o.apply(this,arguments);};window.askConfirm=async()=>true;
+  D.accounts=[{id:'a1',name:'Dompet',emoji:'💵',baseBalance:1000000,balance:1000000,includeInBalance:true,jenis:'tunai',ownership:{type:'SELF'}}];
+  D.transactions=[];D.bbmLogs=[];D.servisLogs=[];D.cobek=[];D.piutang=[];
+  D.vehicles=[{id:'vA',name:'Motor A',emoji:'🏍️'}];curVehicleId='vA';
+  const mk=(id,n,v)=>({id,name:n,emoji:'🏍️',classification:'WAJIB',linkedVehicleId:v,subs:[{id:id+'_b',name:'Bensin',classification:'WAJIB'},{id:id+'_s',name:'Servis & Oli',classification:'WAJIB'}]});D.categories.expense=D.categories.expense.concat([mk('cat_mA','Motor A','vA')]);
+  D.products=[{id:'p1',name:'Cobek Batu',stock:10,kategoriId:null,produsenId:null,hargaBeli:20000,hargaJual:35000,hargaReseller:0,diskonPersen:0}];save();});
+ const bal=()=>ev(()=>recalcAccBalance('a1'));
+ const setCat=async(c,sub)=>{await ev(([c,sub])=>{const a=document.getElementById('txCat'),b=document.getElementById('txSubCat');a.value=c;b.value=sub;a.dispatchEvent(new Event('input',{bubbles:true}));b.dispatchEvent(new Event('input',{bubbles:true}));updateTxVehiclePanels();},[c,sub]);await sleep(300);};
+ const today=new Date().toISOString().slice(0,10);
+ const fill=(o)=>ev(o=>{for(const[k,v]of Object.entries(o)){const e=document.getElementById(k);if(!e)throw new Error('no el '+k);if(e.type==='checkbox'){e.checked=!!v;}else e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}},o);
+ const guard=async(name,fn)=>{cur=name;const b=errs.length;await ev(()=>{D.transactions=[];D.cobek=[];D.bbmLogs=[];D.servisLogs=[];D.piutang=[];D.products[0].stock=10;window._t=[];save();});try{await fn();}catch(e){await ck('skenario tidak melempar exception',false,e.message);}await ck('tanpa pageerror',errs.length===b,errs.slice(b));};
+ await ev(()=>showPage('keuangan'));await sleep(1200);
+
+ await guard('TX→SHOP STOK',async()=>{
+  const b0=await bal();
+  await ev(()=>openTxModal('expense'));await sleep(300);
+  await fill({txAmt:'100000',txAcc:'a1',txDate:today});
+  await setCat('Bisnis','Cobek');await fill({txAddShopStock:true});
+  await ev(()=>toggleTxShopStockFields());await sleep(200);
+  await fill({txShopStockItem:'p1',txShopStockQty:'5',txShopStockHarga:'20000'});
+  await ev(()=>addShopStockCartItem());await sleep(200);
+  await ev(()=>saveTx());await sleep(700);
+  const s=await ev(()=>({stock:D.products[0].stock,tx:D.transactions.length,t:D.transactions[0]&&{id:D.transactions[0].id,type:D.transactions[0].type,link:Object.keys(D.transactions[0]).filter(k=>/shop|stock|link/i.test(k))}}));
+  await ck('stok p1 naik 10→15',s.stock===15,s);
+  await ck('1 transaksi pengeluaran tertaut & saldo turun 100.000',s.tx===1&&(await bal())===b0-100000,[s,await bal()]);
+  if(s.t){await ev(i=>delTx(i),s.t.id);await sleep(700);
+   await ck('hapus tx: stok kembali 10 & saldo pulih',(await ev(()=>D.products[0].stock))===10&&(await bal())===b0,[await ev(()=>D.products[0].stock),await bal()]);}
+ });
+ await guard('TX→SHOP JUAL',async()=>{
+  const b0=await bal();
+  await ev(()=>openTxModal('income'));await sleep(300);
+  await fill({txAcc:'a1',txDate:today});
+  await setCat('Bisnis','Cobek');await fill({txAddShopSale:true});
+  await ev(()=>toggleTxShopSaleFields());await sleep(200);
+  await fill({txShopSaleItem:'p1',txShopSaleQty:'2',txShopSaleHarga:'35000'});
+  await ev(()=>addTxShopSaleCartItem());await sleep(200);
+  await ev(()=>saveTx());await sleep(800);
+  const s=await ev(()=>({stock:D.products[0].stock,cobek:D.cobek.length,tx:D.transactions.map(t=>({id:t.id,type:t.type,amt:t.amount,shop:t.shopId||t.cobekId||t.linkedShopId||null}))}));
+  await ck('stok p1 turun 10→8',s.stock===8,s);
+  await ck('1 record cobek & 1 pemasukan 70.000, saldo naik 70.000',s.cobek===1&&s.tx.length===1&&s.tx[0].amt===70000&&(await bal())===b0+70000,[s,await bal()]);
+  const lnk=await ev(()=>{const t=D.transactions[0],c=D.cobek[0];return {tKeys:Object.keys(t).filter(k=>/shop|cobek|link/i.test(k)),cKeys:Object.keys(c).filter(k=>/tx|link/i.test(k)),tid:t.id,cid:c.id,ctx:c.txId||c.txLinkId||c.transactionId};});
+  await ck('tx dan cobek saling tertaut',(lnk.ctx===lnk.tid)||lnk.tKeys.length>0,lnk);
+  // edit: ubah qty via edit tx? -> hapus dari tx
+  await ev(i=>delTx(i),lnk.tid);await sleep(800);
+  const after=await ev(()=>({stock:D.products[0].stock,cobek:D.cobek.length,tx:D.transactions.length}));
+  await ck('hapus tx penjualan: stok 10, cobek 0, tx 0',after.stock===10&&after.cobek===0&&after.tx===0,after);
+  await ck('saldo pulih',(await bal())===b0,await bal());
+ });
+ await guard('SHOP→TX (Kasir hapus order)',async()=>{
+  const b0=await bal();
+  await ev(()=>{Kasir.reset();Kasir.populateAccSelect&&Kasir.populateAccSelect();Kasir.addToCart('p1');});
+  await fill({kasirAcc:'a1'});
+  await ev(()=>Kasir.checkout());await sleep(800);
+  const s=await ev(()=>({stock:D.products[0].stock,cobekId:D.cobek[0]&&D.cobek[0].id,tx:D.transactions.length}));
+  await ck('kasir: stok 9, 1 tx, saldo naik 35.000',s.stock===9&&s.tx===1&&(await bal())===b0+35000,[s,await bal()]);
+  await ev(i=>Order.openEditModal(i),s.cobekId);await sleep(500);
+  await ev(()=>Order.deleteFromModal());await sleep(900);
+  const a=await ev(()=>({stock:D.products[0].stock,cobek:D.cobek.length,tx:D.transactions.length}));
+  await ck('hapus order (via modal edit): stok pulih 10, cobek 0, tx tertaut ikut terhapus',a.stock===10&&a.cobek===0&&a.tx===0,a);
+  await ck('saldo pulih setelah hapus order',(await bal())===b0,await bal());
+ });
+ await guard('TX→BBM',async()=>{
+  const b0=await bal();
+  await ev(()=>openTxModal('expense'));await sleep(300);
+  await fill({txAmt:'50000',txAcc:'a1',txDate:today});
+  await setCat('Motor A','Bensin');await fill({txSyncBbm:true});
+  await ev(()=>toggleTxBbmFields());await sleep(200);
+  await fill({txBbmVehicle:'vA',txBbmKm:'12000',txBbmLiter:'5',txBbmHargaL:'10000'});
+  await ev(()=>saveTx());await sleep(700);
+  const s=await ev(()=>({logs:D.bbmLogs.map(l=>({v:l.vehicleId,km:l.km,cost:l.cost,tx:l.txLinkId})),tx:D.transactions.map(t=>t.id)}));
+  await ck('BBM log terbuat, tertaut ke tx, saldo turun 50.000',s.logs.length===1&&s.logs[0].tx===s.tx[0]&&(await bal())===b0-50000,[s,await bal()]);
+  await ev(()=>setCnTab&&showPage('carnotes'));await sleep(1200);await ev(()=>setCnTab('bbm',document.querySelector('#page-carnotes .cn-tab')));await sleep(500);
+  await ck('log tampil di daftar BBM Car Notes',(await ev(()=>document.getElementById('bbmList').children.length))>0,await ev(()=>document.getElementById('bbmList').innerHTML.length));
+  await ev(()=>showPage('keuangan'));await sleep(800);
+  await ev(i=>delTx(i),s.tx[0]);await sleep(700);
+  await ck('hapus tx: log BBM ikut hilang & saldo pulih',(await ev(()=>D.bbmLogs.length))===0&&(await bal())===b0,[await ev(()=>D.bbmLogs.length),await bal()]);
+ });
+ await guard('TX→SERVIS',async()=>{
+  const b0=await bal();
+  await ev(()=>openTxModal('expense'));await sleep(300);
+  await fill({txAmt:'80000',txAcc:'a1',txDate:today});
+  await setCat('Motor A','Servis & Oli');await fill({txSyncServis:true});
+  await ev(()=>toggleTxServisFields());await sleep(300);
+  await fill({txServisVehicle:'vA',txServisItem:'Ganti oli',txServisKm:'0'});
+  await ev(()=>saveTx());await sleep(900);
+  const s=await ev(()=>({logs:D.servisLogs.map(l=>({v:l.vehicleId,cost:l.cost,tx:l.txLinkId||l.txId||null})),tx:D.transactions.map(t=>t.id)}));
+  await ck('servis log terbuat tertaut ke tx, saldo turun 80.000',s.logs.length===1&&s.tx.length===1&&(await bal())===b0-80000,[s,await bal()]);
+  if(s.tx[0]){await ev(i=>delTx(i),s.tx[0]);await sleep(900);
+   await ck('hapus tx: log servis ikut hilang & saldo pulih',(await ev(()=>D.servisLogs.length))===0&&(await bal())===b0,[await ev(()=>D.servisLogs.length),await bal()]);}
+ });
+ const f=res.filter(r=>!r.ok).length;
+ console.log(`\nTOTAL ${res.length-f}/${res.length} lulus, ${f} gagal; pageerror total=${errs.length}`);if(errs.length)console.log(errs.slice(0,6));
+ await br.close();srv.close();process.exit(f?1:0);
+})();

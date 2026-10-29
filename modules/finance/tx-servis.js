@@ -51,13 +51,14 @@
 // kategori part yang dibeli/dipakai (D.partsStock[].catId) -- konsisten
 // dgn BUGFIX #1 di atas: SoT (source of truth) kategori & pemakaian stok
 // sekarang sama-sama sinkron dari transaksi yang sama.
-function populateTxServisVehicleSelect(){
+function populateTxServisVehicleSelect(preferredVehicleId){
 const sel=document.getElementById('txServisVehicle');
 if(!sel)return;
 const cur=sel.value;
 sel.innerHTML=(D.vehicles||[]).map(v=>`<option value="${escapeHtml(v.id)}">${escapeHtml(v.emoji||'🏍️')} ${escapeHtml(v.name)}</option>`).join('');
 const active=(typeof curVehicleId!=='undefined'&&curVehicleId&&D.vehicles.some(v=>v.id===curVehicleId))?curVehicleId:'';
-sel.value=cur&&D.vehicles.some(v=>v.id===cur)?cur:active;
+// S2729: konteks kategori kendaraan eksplisit mengalahkan kendaraan aktif/stale.
+sel.value=preferredVehicleId&&D.vehicles.some(v=>v.id===preferredVehicleId)?preferredVehicleId:(cur&&D.vehicles.some(v=>v.id===cur)?cur:active);
 }
 function toggleTxServisFields(){
 const chk=document.getElementById('txSyncServis');
@@ -360,7 +361,7 @@ return servisId;
 function _isFinanceServiceTransaction(){
 const cat=(document.getElementById('txCat')?.value||'').trim();
 const sub=(document.getElementById('txSubCat')?.value||'').trim();
-return (typeof curTxType==='undefined'||curTxType==='expense')&&typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&/servis\s*&\s*oli|servis|service/i.test(sub);
+return (typeof curTxType==='undefined'||curTxType==='expense')&&typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&(typeof isServisSubName==='function'?isServisSubName(sub,cat):/servis\s*&\s*oli|servis|service/i.test(sub));
 }
 function _ensureAutoServisFields(){
 const vehicleEl=document.getElementById('txServisVehicle');

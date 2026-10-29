@@ -30,6 +30,8 @@ _txSaving=false;
 }
 }
 async function _saveTxInner(){
+// S2728: hitung ulang panel tautan dari teks kategori/sub TERKINI (blur 150ms bisa belum jalan).
+if(typeof updateTxVehiclePanels==='function')updateTxVehiclePanels();
 evalAmtExpr('txAmt');
 const amt=parseFloat(document.getElementById('txAmt').value);
 if(!amt||amt<=0){toast('⚠️ Masukkan jumlah valid');return;}
@@ -85,6 +87,8 @@ if(!categoryExists&&!editingLegacyCategory){
   toast('⚠️ Pilih kategori dari daftar atau gunakan Tambah Kategori terlebih dahulu');
   return;
 }
+// S2732: tolak SEBELUM persist bila stok Penjualan Shop tidak cukup (cegah pemasukan yatim tanpa tautan Shop).
+if(typeof txShopSalePrecheck==='function'){const _shopPre=txShopSalePrecheck(txEditId?D.transactions.find(t=>String(t.id)===String(txEditId)):null);if(!_shopPre.ok){toast('⚠️ '+_shopPre.message);return;}}
 // VALIDASI S574-D1 (basis diganti Sesi S578, DL-Next-1 / Audit-3A --
 // lihat DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
 // AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md §3A): akun multi-owner (2+ kandidat
@@ -479,14 +483,17 @@ const keepPayMethod=_txPayMethodTouchedByUser?'tunai':(existingTx.payMethod||'tu
 // `syncTitipanTalanganPiutangOnEdit()` setelahnya).
 const prevTxTitipanLinkId=existingTx.titipanLinkId||null;
 const oldTxAmountForTitipanSync=existingTx.amount;
+const _prevTxCatS2728=existingTx.category,_prevTxSubS2728=existingTx.subcategory||'';
 Object.assign(existingTx,{type:curTxType,amount:amt,category:cat,subcategory:subCat,accountId:accId,payMethod:keepPayMethod,note,date});
 if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
 // S13 SERVICE-EVENT-LIFECYCLE: if an auto-linked service transaction is edited
 // out of the service domain, remove the service event instead of leaving a ghost
 // history/reminder. Manual Service edits remain the SoT and are not touched here.
 const _wasServisTx=!!(existingTx&&existingTx.servisLinkId);
-const _isNowServisTx=typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&/servis\s*&\s*oli|servis|service/i.test(subCat||'');
-if(existingTx&&_wasServisTx&&!_isNowServisTx&&D.servisLogs){
+const _isNowServisTx=typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&(typeof isServisSubName==='function'?isServisSubName(subCat||'',cat):/servis\s*&\s*oli|servis|service/i.test(subCat||''));
+// S2728: kategori+sub tidak berubah = BUKAN perpindahan domain (jangan hapus log servis).
+const _sameTaxonomy=!!(existingTx&&_prevTxCatS2728===cat&&_prevTxSubS2728===(subCat||''));
+if(existingTx&&_wasServisTx&&!_isNowServisTx&&!_sameTaxonomy&&D.servisLogs){
  const _ghost=D.servisLogs.find(s=>s.id===existingTx.servisLinkId);
  if(_ghost){
    if(_ghost.usedPartId&&typeof revertStockUsage==='function')revertStockUsage(_ghost.usedPartId,_ghost.usedPartQty);

@@ -723,14 +723,35 @@ function acSparepartCatCodes(){return recentUniqueStrings(D.sparepartCats,c=>c.c
 function acSpbuNames(){return recentUniqueStrings(D.bbmLogs,b=>b.spbu);}
 function acTxNotes(){return recentUniqueStrings(D.transactions,t=>t.note);}
 function isKendaraanCatName(catName){
-return /kendaraan|transport|motor|vario|beat|grandmax/i.test(catName||'');
+if(/kendaraan|transport|motor|vario|beat|grandmax/i.test(catName||''))return true;
+// S2728: kategori bernama bebas (mis. "Supra X", "Avanza") tetap kendaraan bila bertaut
+// ke kendaraan lewat linkedVehicleId (stabil walau nama kategori/kendaraan diganti).
+const c=_txFindExpenseCatByName(catName);
+return !!(c&&c.linkedVehicleId&&(!Array.isArray(D.vehicles)||D.vehicles.some(v=>v&&v.id===c.linkedVehicleId)));
+}
+// S2728: pencarian kategori/sub pengeluaran berdasar teks input (trim, case-insensitive).
+function _txFindExpenseCatByName(catName){
+const n=String(catName||'').trim().toLowerCase();
+if(!n||typeof D==='undefined'||!D||!D.categories||!Array.isArray(D.categories.expense))return null;
+return D.categories.expense.find(c=>c&&String(c.name||'').trim().toLowerCase()===n)||null;
+}
+function _txFindSubIdByName(catName,subName){
+const n=String(subName||'').trim().toLowerCase();
+if(!n)return '';
+const c=_txFindExpenseCatByName(catName);
+const pool=c?[c]:((typeof D!=='undefined'&&D&&D.categories&&D.categories.expense)||[]);
+for(const cc of pool){const sub=(cc.subs||[]).find(x=>x&&String(x.name||'').trim().toLowerCase()===n);if(sub)return String(sub.id||'');}
+return '';
 }
 // isRenovCatName(catName) -- detektor kategori Renovasi utk panel "🔨 Catat
 // juga ke Proyek Renovasi?" (lihat tx-renov.js). Pola sama persis dgn
 // isKendaraanCatName di atas: cocok kalau nama kategori mengandung "Renov"
 // (mis. "Renovasi"), case-insensitive.
 function isRenovCatName(catName){
-return /renov/i.test(catName||'');
+if(/renov|rehab|bangun(an)?\s*rumah|pugar/i.test(catName||''))return true;
+// S2728: fallback ID kategori (tetap terbaca walau nama tampilan diganti user).
+const c=_txFindExpenseCatByName(catName);
+return !!(c&&/renov/i.test(String(c.id||'')));
 }
 function resolveVehicleTxCategory(vehicle){
 const vehName=vehicle&&vehicle.name?vehicle.name:'';
@@ -751,10 +772,15 @@ if(!cat){
 cat=D.categories.expense.find(c=>c.name.trim().toLowerCase()===vehName.trim().toLowerCase());
 if(cat&&vehId)cat.linkedVehicleId=vehId;
 }
-if(!cat) cat=D.categories.expense.find(c=>/^transport$/i.test(c.name));
+// S2729: kategori Transport adalah kategori generik, bukan identitas kendaraan.
+// Jangan pernah mengembalikannya sebagai kategori kendaraan tertentu. Buat
+// kategori khusus kendaraan bila tidak ada kategori tertaut/nama yang cocok.
 if(!cat){
-cat=typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT.addCategory('expense',{id:'cat_'+slugify('Transport')+'_'+uid(),name:'Transport',emoji:'🏍️'}):{id:'cat_'+slugify('Transport')+'_'+uid(),name:'Transport',emoji:'🏍️',subs:[]};
-if(typeof FinanceCategorySOT==='undefined')throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error('FINANCE_CATEGORY_SOT_REQUIRED');
+cat=FinanceCategorySOT.addCategory('expense',{id:'cat_'+slugify(vehName||'kendaraan')+'_'+uid(),name:vehName||'Kendaraan',emoji:'🏍️'});
+if(!cat)cat=D.categories.expense.find(c=>c.name.trim().toLowerCase()===(vehName||'kendaraan').trim().toLowerCase());
+if(cat&&vehId)cat.linkedVehicleId=vehId;
+if(!cat)throw new Error('VEHICLE_CATEGORY_CREATE_FAILED');
 }
 if(!cat.subs)cat.subs=[];
 ['Bensin','Servis & Oli','Pajak'].forEach(subName=>{
@@ -762,18 +788,46 @@ if(typeof FinanceCategorySOT==='undefined'||!FinanceCategorySOT)throw new Error(
 });
 return cat.name;
 }
-function isBensinSubName(subName){
-return /bensin|bbm|bahan bakar|pertalite|pertamax|solar/i.test(subName||'');
+function isBensinSubName(subName,catName){
+if(/bensin|bbm|bahan\s*bakar|pertalite|pertamax|dexlite|premium|biosolar|solar|\bfuel\b|isi\s*(tangki|bensin)|spbu/i.test(subName||''))return true;
+// S2728: fallback ID sub bawaan (sub_bensin_*) walau nama diganti user.
+return /^sub_bensin(_|$)/i.test(_txFindSubIdByName(catName,subName));
+}
+// S2728: sub bertema servis/perawatan -> panel Servis. Regex diperluas + fallback ID sub_servis_*.
+function isServisSubName(subName,catName){
+if(/servis\s*&\s*oli|servis|service|tune\s*-?\s*up|ganti\s*oli|\boli\b/i.test(subName||''))return true;
+return /^sub_servis(_|$)/i.test(_txFindSubIdByName(catName,subName));
 }
 function isSparepartSubName(catName,subName){
 if(!isKendaraanCatName(catName))return false;
-if(isBensinSubName(subName))return false;
+if(isBensinSubName(subName,catName))return false;
 return true;
 }
 // Catatan: isShopStockCatName (detektor kategori Stok/Penjualan Shop/Shop)
 // dipindah ke tx-cobek.js (lihat CLAUDE.md catatan kerja "split transaksi.js"
 // bagian ke-9) -- tetap fungsi global, tetap dipanggil persis sama dari
 // updateTxVehiclePanels() di bawah ini.
+function resolveTxContextVehicleId(){
+const catName=(document.getElementById('txCat')?.value||'').trim().toLowerCase();
+const cats=(D.categories&&D.categories.expense)||[];
+const cat=cats.find(c=>String(c.name||'').trim().toLowerCase()===catName);
+if(cat&&cat.linkedVehicleId&&(D.vehicles||[]).some(v=>v.id===cat.linkedVehicleId))return cat.linkedVehicleId;
+const byName=(D.vehicles||[]).find(v=>String(v.name||'').trim().toLowerCase()===catName);
+return byName?byName.id:'';
+}
+// S2730: konteks kendaraan dari kategori hanya DITERAPKAN saat konteks berubah (ganti kategori,
+// panel muncul kembali, modal dibuka/edit). updateTxVehiclePanels() juga dipanggil saat blur dan di awal
+// _saveTxInner(); tanpa ini pilihan kendaraan manual / hasil restore edit ditimpa kendaraan kategori.
+let _txVehCtxApplied={bbm:null,servis:null};
+function _txResetVehicleContext(){_txVehCtxApplied={bbm:null,servis:null};}
+function _txApplyVehicleContext(panelKey,selId,populateFn){
+const sel=document.getElementById(selId);
+const prev=sel?sel.value:'';
+const ctx=resolveTxContextVehicleId();
+populateFn(ctx);
+if(sel&&_txVehCtxApplied[panelKey]===ctx&&prev&&(D.vehicles||[]).some(v=>v.id===prev))sel.value=prev;
+_txVehCtxApplied[panelKey]=ctx;
+}
 function updateTxVehiclePanels(){
 const stockPanel=document.getElementById('txStockPanel');
 const bbmPanel=document.getElementById('txBbmPanel');
@@ -784,7 +838,10 @@ if(!stockPanel||!bbmPanel)return;
 const catName=document.getElementById('txCat').value;
 const subName=document.getElementById('txSubCat')?document.getElementById('txSubCat').value:'';
 const isExpense=curTxType==='expense';
-const showBbm=isExpense&&isKendaraanCatName(catName)&&isBensinSubName(subName);
+// S2728: transaksi yang SUDAH tertaut (edit) tetap menampilkan panelnya walau nama kategori/sub
+// kini tak cocok pola -- supaya KM/liter & log servis tidak terkunci/terhapus diam-diam.
+const _editTx=(typeof txEditId!=='undefined'&&txEditId&&Array.isArray(D.transactions))?D.transactions.find(x=>x.id===txEditId):null;
+const showBbm=isExpense&&((isKendaraanCatName(catName)&&isBensinSubName(subName,catName))||!!(_editTx&&_editTx.bbmLinkId));
 const showStock=isExpense&&!showBbm&&isSparepartSubName(catName,subName);
 const showShop=isExpense&&!showBbm&&!showStock&&isShopStockCatName(catName,subName);
 const showShopSale=!isExpense&&isShopStockCatName(catName,subName);
@@ -794,16 +851,19 @@ const showRenov=isExpense&&isRenovCatName(catName);
 // BERSAMAAN dalam 1 transaksi (mis. beli part sekaligus langsung dipasang),
 // lihat catatan applyTxServisFromTx() di tx-servis.js soal efek stok net.
 const showServis=showStock||(typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction());
+// S2728: edit transaksi yg sudah tertaut servis -> panel Servis tetap tampil.
+const showServisPanel=showServis||!!(isExpense&&_editTx&&_editTx.servisLinkId);
 bbmPanel.style.display=showBbm?'block':'none';
 stockPanel.style.display=showStock?'block':'none';
 const servisPanel=document.getElementById('txServisPanel');
-if(servisPanel)servisPanel.style.display=showServis?'block':'none';
+if(servisPanel)servisPanel.style.display=showServisPanel?'block':'none';
 if(shopPanel)shopPanel.style.display=showShop?'block':'none';
 if(shopSalePanel)shopSalePanel.style.display=showShopSale?'block':'none';
 if(renovPanel)renovPanel.style.display=showRenov?'block':'none';
 if(showBbm){
-populateTxBbmVehicleSelect();
+_txApplyVehicleContext('bbm','txBbmVehicle',populateTxBbmVehicleSelect);
 } else {
+_txVehCtxApplied.bbm=null;
 const chk=document.getElementById('txSyncBbm');
 if(chk)chk.checked=false;
 toggleTxBbmFields();
@@ -815,10 +875,11 @@ const chk=document.getElementById('txAddStock');
 if(chk)chk.checked=false;
 toggleTxStockFields();
 }
-if(showServis){
-if(typeof populateTxServisVehicleSelect==='function')populateTxServisVehicleSelect();
+if(showServisPanel){
+if(typeof populateTxServisVehicleSelect==='function')_txApplyVehicleContext('servis','txServisVehicle',populateTxServisVehicleSelect);
 if(typeof renderTxServisSelectors==='function')renderTxServisSelectors();
 } else {
+_txVehCtxApplied.servis=null;
 const servisChk=document.getElementById('txSyncServis');
 if(servisChk)servisChk.checked=false;
 if(typeof toggleTxServisFields==='function')toggleTxServisFields();
@@ -1025,6 +1086,7 @@ updateCicilanTenorUI();
 // (bukan module), tetap dipanggil persis sama dari sini & dari HTML (modals.js).
 function openTxModal(type){
 txEditId=null;
+_txResetVehicleContext();
 if(typeof WorthIt!=='undefined')WorthIt.pendingBuyId=null;
 _txAccManuallySet=false;
 _txAssetManuallySet=false;
@@ -1106,6 +1168,7 @@ const t=D.transactions.find(x=>x.id===id);
 if(!t)return;
 if(t.type==='transfer_in'||t.type==='transfer_out'){toast('⚠️ Transfer antar akun tidak bisa diedit di sini. Hapus & buat ulang kalau salah.');return;}
 txEditId=id;
+_txResetVehicleContext();
 _txPayMethodTouchedByUser=false;
 // _txAssetManuallySet=true kalau transaksi yang diedit sudah punya assetId
 // tersimpan -- pilihan lama itu diperlakukan sama seperti pilihan manual
