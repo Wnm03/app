@@ -18,7 +18,7 @@ if(sheetsTokenClient && _sheetsTokenClientId!==D.googleDrive.clientId){sheetsTok
 if(!sheetsTokenClient){
 sheetsTokenClient=google.accounts.oauth2.initTokenClient({
 client_id:D.googleDrive.clientId,
-scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets '+GDRIVE_EMAIL_SCOPE,
+scope:GDRIVE_ALL_SCOPES,
 callback:(resp)=>{
 if(resp.error){toast('❌ Gagal hubungkan Google Sheets: '+resp.error);sheetsAuthAborted();return;}
 gdriveHandleAuthSuccess(resp,'sheets');
@@ -46,11 +46,31 @@ await ensureGoogleGSI();
 const tc=sheetsInitTokenClient();
 if(!tc){if(onAbort)onAbort();return;}
 sheetsPendingAfterAuth=afterAuth||null; sheetsPendingOnAbort=onAbort||null;
-tc.requestAccessToken();
+tc.requestAccessToken(gdriveTokenRequestOptions());
 }catch(e){
 console.error('sheetsEnsureAuth error:',e);
 toast('❌ Google Sign-In tidak siap: '+(e&&e.message?e.message:String(e)));
 sheetsAuthAborted();
+}
+}
+// S2744: tombol gabungan. Satu "Hubungkan Google" (Drive + Sheets, paket izin S2743) dan satu
+// "Sync Semua Sekarang" = backup ke Drive lalu sync ke Sheets, dengan SATU kali cek login.
+// Restore (Drive) dan Tarik (Sheets) tetap terpisah & eksplisit karena menimpa data lokal.
+function googleConnectAll(){
+if(gdriveAccessToken && gdriveTokenScope==='sheets' && (!gdriveTokenExpiresAt || Date.now()<gdriveTokenExpiresAt)){toast('✅ Sudah terhubung ke Google (Drive + Sheets)');return;}
+sheetsEnsureAuth(()=>toast('✅ Terhubung ke Google (Drive + Sheets)'));
+}
+async function googleSyncAllNow(){
+if(_saveGuards['googleSyncAll'])return;
+if(!D.googleDrive||!D.googleDrive.clientId){toast('⚠️ Isi Google Client ID dulu di kartu Backup Google Drive');return;}
+_saveGuards['googleSyncAll']=true;
+try{
+const ok=await new Promise(res=>{sheetsEnsureAuth(()=>res(true),()=>res(false));});
+if(!ok)return;
+try{await uploadBackupToDrive();}catch(e){console.error('googleSyncAllNow drive error:',e);toast('❌ Backup Drive gagal: '+(e&&e.message?e.message:e));}
+await sheetsSyncNow();
+}finally{
+_saveGuards['googleSyncAll']=false;
 }
 }
 function sheetsConnectOnly(){

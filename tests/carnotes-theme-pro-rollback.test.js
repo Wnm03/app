@@ -46,6 +46,6 @@ test('Car Notes rollback preserves canonical Servis business logic and current p
     .replace(/\/\*[\s\S]*?\*\//g, '');
   assert.equal((servisCode.match(/(?:const|let|var)\s+Servis\s*=/g) || []).length, 1);
   assert.match(renderB, /Servis\.renderReminder\(\)/);
-  assert.match(renderB, /renderServisList\(\)/);
+  assert.match(renderB, /function renderServisList\(opts\)\{return Servis\.renderList\(opts\);\}/);
   assert.match(renderB, /FuelCard\.render\(\)/);
 });

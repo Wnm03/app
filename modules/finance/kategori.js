@@ -31,7 +31,9 @@ function populateCatSelect(id){
 const sel=document.getElementById(id);
 if(!sel)return;
 const cur=sel.value;
-sel.innerHTML='<option value="semua">Semua</option>'+uniqueCatList().map(([name,emoji])=>`<option value="${escapeHtml(name)}">${escapeHtml(emoji)} ${escapeHtml(name)}</option>`).join('');
+const _optHtml='<option value="semua">Semua</option>'+uniqueCatList().map(([name,emoji])=>`<option value="${escapeHtml(name)}">${escapeHtml(emoji)} ${escapeHtml(name)}</option>`).join('');
+// S2741: lewati pengisian ulang bila daftar opsi identik (nilai terpilih tetap dijaga di bawah).
+if(sel.__optHtml!==_optHtml||!sel.options.length){sel.__optHtml=_optHtml;sel.innerHTML=_optHtml;}
 sel.value=[...sel.options].some(o=>o.value===cur)?cur:'semua';
 }
 function populateSubSelect(subId,katId){
@@ -40,7 +42,9 @@ if(!sel)return;
 const katVal=document.getElementById(katId)?.value||'semua';
 const cur=sel.value;
 const subs=subNamesForCat(katVal);
-sel.innerHTML='<option value="semua">Semua</option>'+subs.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+const _optHtml='<option value="semua">Semua</option>'+subs.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+// S2741: lewati pengisian ulang bila daftar opsi identik (nilai terpilih tetap dijaga di bawah).
+if(sel.__optHtml!==_optHtml||!sel.options.length){sel.__optHtml=_optHtml;sel.innerHTML=_optHtml;}
 sel.value=subs.includes(cur)?cur:'semua';
 }
 function openCatModal(idx,type,callback){

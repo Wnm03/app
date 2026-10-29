@@ -98,10 +98,13 @@ function populateServiceFilterSelects(){
   const catEl=document.getElementById('kfServiceCategory'), compEl=document.getElementById('kfServiceComponent');
   if(!catEl||!compEl||typeof ServiceInputCatalog==='undefined')return;
   const cats=ServiceInputCatalog.groups()||[]; const curCat=catEl.value||'semua'; const curComp=compEl.value||'semua';
-  catEl.innerHTML='<option value="semua">Semua Kategori Servis</option>'+cats.map(c=>`<option value="${escapeHtml(c.masterCategoryId)}">${escapeHtml(c.label||c.name||c.masterCategoryId)}</option>`).join('');
+  // S2741: lewati pengisian ulang bila daftar opsi identik (nilai terpilih tetap dijaga di bawah).
+  const catHtml='<option value="semua">Semua Kategori Servis</option>'+cats.map(c=>`<option value="${escapeHtml(c.masterCategoryId)}">${escapeHtml(c.label||c.name||c.masterCategoryId)}</option>`).join('');
+  if(catEl.__optHtml!==catHtml||!catEl.options.length){catEl.__optHtml=catHtml;catEl.innerHTML=catHtml;}
   catEl.value=cats.some(c=>c.masterCategoryId===curCat)?curCat:'semua';
   const comps=catEl.value==='semua'?[]:(ServiceInputCatalog.itemsForCategory?ServiceInputCatalog.itemsForCategory(catEl.value):[]);
-  compEl.innerHTML='<option value="semua">'+(catEl.value==='semua'?'Pilih kategori dulu':'Semua Komponen Servis')+'</option>'+comps.map(c=>`<option value="${escapeHtml(c.id||c.itemId)}">${escapeHtml(c.label||c.name||c.itemId)}</option>`).join('');
+  const compHtml='<option value="semua">'+(catEl.value==='semua'?'Pilih kategori dulu':'Semua Komponen Servis')+'</option>'+comps.map(c=>`<option value="${escapeHtml(c.id||c.itemId)}">${escapeHtml(c.label||c.name||c.itemId)}</option>`).join('');
+  if(compEl.__optHtml!==compHtml||!compEl.options.length){compEl.__optHtml=compHtml;compEl.innerHTML=compHtml;}
   compEl.value=comps.some(c=>(c.id||c.itemId)===curComp)?curComp:'semua';
 }
 function onKfServiceCategoryChange(){ populateServiceFilterSelects(); resetTxPageAndRender(); }

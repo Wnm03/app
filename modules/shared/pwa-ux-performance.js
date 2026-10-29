@@ -572,6 +572,24 @@
             const cards=Array.from(body.querySelectorAll('.findash-card')).slice(0,2).map(function(c){const l=c.querySelector('.findash-card-label'),v=c.querySelector('.findash-card-val');return (l&&v)?(String(l.textContent).trim()+': '+String(v.textContent).trim()):'';}).filter(Boolean);
             setText(peek,cards.join(' · ').slice(0,110));}
         };
+        // S2742 — Laporan: 4 kartu inti tetap tampil; 6 kartu perencanaan dilipat ke satu "Lainnya".
+        // Hanya memindahkan pembungkus yang sudah ada (id, data-action & presenter tidak berubah).
+        const KEU_CORE=['findashWrap','cashflowProjWrap','financialHealthScoreWrap','financialRiskDashboardWrap'];
+        const foldLainnya=function(prefs){
+          const last=byId('financialRiskDashboardWrap');
+          const wraps=Object.keys(KEU_TITLES).filter(function(k){return KEU_CORE.indexOf(k)===-1;}).map(byId).filter(Boolean);
+          if(!last||!last.parentNode||!wraps.length)return;
+          let fold=byId('kbLainnyaFold');
+          if(!fold){
+            fold=make('details','kb-lainnya');fold.id='kbLainnyaFold';
+            const sum=make('summary','');const t=make('b','','Lainnya ('+wraps.length+')');const h=make('span','','Perkiraan, anggaran, target, investasi, utang, pensiun');
+            sum.appendChild(t);sum.appendChild(h);fold.appendChild(sum);
+            fold.open=prefs.kbLainnyaFold===false||wraps.some(function(w){return prefs[w.id]===false;});
+            sum.addEventListener('click',function(){window.requestAnimationFrame(function(){try{const pr=readPrefs();pr.kbLainnyaFold=!fold.open;localStorage.setItem('cardCollapsePrefs',JSON.stringify(pr));}catch(e){void e;}});});
+            last.parentNode.insertBefore(fold,last.nextSibling);
+          }
+          wraps.forEach(function(w){if(w.parentNode!==fold)fold.appendChild(w);});
+        };
         const foldFilters=function(){
           const tab=byId('keuanganTab-laporan');if(!tab||byId('lapFilterFold'))return;
           const sel=['fTipe','fClass','fKat','fSub','fAcc','fMethod'].map(byId);if(sel.some(function(x){return !x;}))return;
@@ -598,7 +616,7 @@
           hits.forEach(function(x){x.nodeValue=x.nodeValue.replace(/\s*\bOwnership\s+(SELF|INVESTOR|CUSTOMER|FAMILY|THIRD_PARTY)\b/g,'');});
         };
         let queued=false;
-        const runAll=function(){queued=false;const prefs=readPrefs();const fw=byId('findashWrap');if(fw&&!byId('kbInsightHead')){const hd=make('div','kb-insight-head');hd.id='kbInsightHead';const hb=make('b','','💡 Kartu Insight');const hs=make('span','','Ketuk kartu untuk melihat detail');hd.appendChild(hb);hd.appendChild(hs);fw.parentNode.insertBefore(hd,fw);}Object.keys(KEU_TITLES).forEach(function(k){decorateInsight(k,prefs);});foldFilters();['keuanganTab-laporan','keuanganTab-utangpiutang','keuanganTab-asetproyek'].forEach(function(id){foldHints(byId(id));});relabelOwnership(byId('keuanganTab-akun'));relabelOwnership(byId('keuanganTab-laporan'));};
+        const runAll=function(){queued=false;const prefs=readPrefs();const fw=byId('findashWrap');if(fw&&!byId('kbInsightHead')){const hd=make('div','kb-insight-head');hd.id='kbInsightHead';const hb=make('b','','💡 Kartu Insight');const hs=make('span','','Ketuk kartu untuk melihat detail');hd.appendChild(hb);hd.appendChild(hs);fw.parentNode.insertBefore(hd,fw);}Object.keys(KEU_TITLES).forEach(function(k){decorateInsight(k,prefs);});foldLainnya(prefs);foldFilters();['keuanganTab-laporan','keuanganTab-utangpiutang','keuanganTab-asetproyek'].forEach(function(id){foldHints(byId(id));});relabelOwnership(byId('keuanganTab-akun'));relabelOwnership(byId('keuanganTab-laporan'));};
         const schedule=function(){if(queued)return;queued=true;window.requestAnimationFrame(runAll);};
         if(typeof MutationObserver==='function'){['keuanganTab-laporan','keuanganTab-utangpiutang','keuanganTab-asetproyek','keuanganTab-akun'].forEach(function(id){const el=byId(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true});});}
         schedule();

@@ -966,7 +966,7 @@ if(typeof applyOneCardCollapsePref==='function')applyOneCardCollapsePref('vehSpe
 
 function renderServisReminder(){return Servis.renderReminder();}
 
-function renderServisList(){return Servis.renderList();}
+function renderServisList(opts){return Servis.renderList(opts);}
 
 function renderStorageUsage(){
 const barEl=document.getElementById('storageOverallBar');
@@ -1179,6 +1179,13 @@ const syncLabel=D.googleSheets.lastSync? 'terakhir sinkron '+new Date(D.googleSh
 stEl.textContent=gdriveConnStatusLabel(true)+' · '+syncLabel;
 }
 const dcBtn=document.getElementById('gsDisconnectBtn'); if(dcBtn) dcBtn.style.display=gdriveAccessToken?'':'none';
+const gcSt=document.getElementById('gcStatus');
+if(gcSt){
+const dSync=D.googleDrive.lastSync?new Date(D.googleDrive.lastSync).toLocaleString('id-ID'):'belum pernah';
+const sSync=D.googleSheets.lastSync?new Date(D.googleSheets.lastSync).toLocaleString('id-ID'):'belum pernah';
+gcSt.textContent=gdriveConnStatusLabel(true)+' · Backup Drive: '+dSync+' · Sheets: '+sSync;
+}
+const gcDc=document.getElementById('gcDisconnectBtn'); if(gcDc) gcDc.style.display=gdriveAccessToken?'':'none';
 const linkEl=document.getElementById('gsLink');
 if(linkEl) linkEl.innerHTML=D.googleSheets.spreadsheetId? `<a class="u-cacc4" href="https://docs.google.com/spreadsheets/d/${escapeHtml(D.googleSheets.spreadsheetId)}" target="_blank">🔗 Buka Spreadsheet</a><br><span class="u-ctext3">🕘 Riwayat versi: di dalam Sheets, buka menu <b>File → Riwayat versi → Lihat riwayat versi</b> (atau tekan Ctrl+Alt+Shift+H)</span>` : '';
 const cntEl=document.getElementById('gsLocalCount');

@@ -1362,3 +1362,52 @@ body.has-open-modal .toast {
 .kb-insight-head b { font-size:15px; }
 .kb-insight-head span { font-size:12px; color:var(--text2); }
 #keuanganTab-laporan .pb-current, #keuanganTab-laporan .titipan-pool-lbl, #keuanganTab-laporan .u-fs10, #keuanganTab-laporan .btn-sm { font-size:12px !important; }
+
+/* S2742 — Laporan Keuangan: kartu perencanaan dilipat ke satu grup "Lainnya". Presentasi saja. */
+#keuanganTab-laporan > .kb-lainnya { order:5; margin:0 0 12px; border:1px solid var(--border2); border-radius:12px; background:var(--surface2); }
+.kb-lainnya > summary { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:44px; padding:6px 12px; cursor:pointer; list-style:none; }
+.kb-lainnya > summary::-webkit-details-marker { display:none; }
+.kb-lainnya > summary b { font-size:14px; }
+.kb-lainnya > summary span { flex:1 1 140px; min-width:0; font-size:12px; color:var(--text2); }
+.kb-lainnya > summary::after { content:"▾"; margin-left:auto; color:var(--text2); }
+.kb-lainnya[open] > summary::after { content:"▴"; }
+.kb-lainnya[open] { padding:0 8px 2px; }
+
+/* S2740 — audit UI mobile: Shop lebih ringkas, target sentuh >=36px, font >=11px.
+   Hanya presentasi; tidak menyentuh data/SOT. */
+#page-shop[data-active-shop-tab="bi"] #shopInsightCard { display:none !important; }
+#cnTab-servis .u-fs10, #cnTab-servis [style*="font-size:10px"], #cnTab-servis [style*="font-size:9px"], #cnTab-servis [style*="font-size:10.5px"], #page-shop .u-fs10 { font-size:11px !important; }
+#sparepartCatList .tx-meta, #cobekKategoriList .tx-meta, #sparepartDashboard .bbm-lbl, #cnTab-servis .bbm-lbl, #cnbTab-ringkasan .bbm-lbl, #vehTaxList span, #keuBillStatGrid .stat-label, .shop-kpi-strip .pwa-action-card b { font-size:11px; }
+.fincoach-dismiss { display:inline-flex; align-items:center; justify-content:center; min-width:36px; min-height:36px; margin:-10px -8px -10px 0; }
+@media (max-width:650px) {
+  /* Shop: insight atas hanya di tab Kasir; KPI tiga kolom satu baris; hero ringkas */
+  #page-shop[data-active-shop-tab]:not([data-active-shop-tab="kasir"]) #shopInsightCard { display:none !important; }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-main > p,
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-domain-status-row { display:none; }
+  .shop-kpi-strip > .shop-grid { grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-rows:auto; gap:6px; }
+  .shop-kpi-strip > .shop-grid .shop-stat { min-height:64px; padding:8px 6px; }
+  .shop-kpi-strip > .shop-grid .shop-stat .shop-val { font-size:12px; overflow-wrap:anywhere; line-height:1.25; }
+  .shop-kpi-strip > .shop-grid .shop-stat .shop-lbl { font-size:11px; }
+  .shop-kpi-strip > .pwa-domain-hero .pwa-action-card small { font-size:11px; }
+  #page-shop > .page-breadcrumb { display:none; }
+  #page-keuangan #keuanganTab-kelola > .page-breadcrumb { display:none; }
+  /* Target sentuh: perluas area tekan tanpa mengubah ukuran visual */
+  .dashhub-fav-star { position:relative; }
+  .dashhub-fav-star::after { content:""; position:absolute; inset:-8px; }
+  #budgetTabAddBtn { min-height:36px; display:inline-flex; align-items:center; }
+}
+
+/* S2741 — audit lanjutan UI (360px): tombol terpotong & target sentuh >=36px. Hanya presentasi. */
+#cobekKategoriAddBtn, #cobekKategoriCancelBtn { flex:0 0 auto; }
+#cobekKategoriNewInput { flex:1 1 0; min-width:0; }
+@media (max-width:650px) {
+  /* L2: baris insight Shop yang bisa diklik (tinggi 18px -> >=36px) */
+  #page-shop .u-fs12.u-lh15.u-pointer { display:flex; align-items:center; min-height:36px; padding:4px 0; box-sizing:border-box; }
+  #page-shop #shopInsightBody.u-pointer { min-height:36px; box-sizing:border-box; }
+  /* L7: chip toggle Kasir, link ringkasan Car Notes, angka ringkasan yang bisa diklik */
+  html body[data-theme] .kasir-view-toggle .chip-btn { min-height:36px; min-width:36px; }
+  html body[data-theme] .cn-summary-link { min-width:36px; }
+  span.stat-val.u-pointer[data-action], #page-keuangan span.u-cacc.u-pointer[data-action], #page-keuangan span.u-fw400.u-pointer[data-action] {
+    display:inline-block; min-height:36px; box-sizing:border-box; padding:8px 4px; margin:-8px -4px; line-height:1.2;
+  }
+}

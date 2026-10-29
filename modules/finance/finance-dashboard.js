@@ -78,6 +78,7 @@ const FinanceDashboard = {
 
     const hook = this.getAIHook();
     if (!hook.ok) {
+      el.__lastGridHtml = null;
       el.innerHTML = '<div class="empty"><div class="empty-text">Data finance intelligence belum tersedia</div></div>';
       return;
     }
@@ -92,7 +93,7 @@ const FinanceDashboard = {
       ...this._sparepartCards(),
     ];
 
-    el.innerHTML = cards.map((c) => `
+    const html = cards.map((c) => `
       <div class="findash-card${c.onClick ? ' u-pointer' : ''}"${c.onClick ? ` data-action="${escapeHtml(c.onClick.action)}" data-args="${escapeHtml(JSON.stringify(c.onClick.args))}"` : ''}>
         <div class="findash-card-icon">${c.icon}</div>
         <div class="findash-card-body">
@@ -102,6 +103,14 @@ const FinanceDashboard = {
         </div>
       </div>
     `).join('');
+
+    // S2741: grid murni tampilan — lewati penulisan ulang bila HTML identik dgn render terakhir.
+
+    if (el.__lastGridHtml === html && el.firstChild) return;
+
+    el.__lastGridHtml = html;
+
+    el.innerHTML = html;
   },
 
   // _allocationCard() — satu presenter untuk Salary Protection & Surplus Allocation.

@@ -33,7 +33,11 @@ if(!card||!box)return;
 if(!hasData){card.classList.add('u-dnone');return;}
 card.classList.remove('u-dnone');
 const safeInsightText=(value)=>{const escaped=escapeHtml(value);return escaped.replace(/&lt;b&gt;/g,'<strong>').replace(/&lt;\/b&gt;/g,'</strong>');};
-box.innerHTML=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${escapeHtml(x.icon)} ${safeInsightText(x.text)}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${safeInsightText(emptyMsg)}</div>`;
+const html=items.length?items.map(x=>`<div class=\"u-fs12 u-lh15 u-mb8\">${escapeHtml(x.icon)} ${safeInsightText(x.text)}</div>`).join(''):`<div class=\"u-fs12 u-t2 u-lh15\">${safeInsightText(emptyMsg)}</div>`;
+// S2740: kartu insight murni tampilan — lewati penulisan ulang bila isinya identik dgn render terakhir.
+if(box.__fiLastHtml===html&&box.firstChild)return;
+box.__fiLastHtml=html;
+box.innerHTML=html;
 }
 };
 

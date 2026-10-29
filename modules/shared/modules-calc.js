@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2723-checklist-action-authority-2713';
+const MODULE_CALC_VERSION='s2723-checklist-action-authority-2719';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){
@@ -529,6 +529,7 @@ if(!el) return;
 const p=D.pensiun||{};
 const acc=p.accId?D.accounts.find(a=>a.id===p.accId):null;
 if(!p.usiaSekarang||!p.usiaPensiun||!acc){
+el.__pensHtml=null;
 el.innerHTML=`<div class="empty"><div class="empty-icon">🏖️</div><div class="empty-text">Belum diatur. Tap "⚙️ Atur" utk isi usia, target, & akun tabungan dana pensiun.</div></div>
         <button class="btn btn-primary btn-full btn-sm u-mt8" data-action="Pensiun.openSettings">⚙️ Atur Dana Pensiun Sekarang</button>`;
 return;
@@ -548,7 +549,8 @@ statusHtml=`<div class="u-fs12 u-cacc3">✅ Proyeksi sudah melampaui target sebe
 } else {
 statusHtml=`<div class="u-fs12 u-cacc2">⚠️ Proyeksi masih kurang ${fmt(target-proyeksi)} dari target dgn kontribusi ${fmtFull(p.kontribusiBulanan||0)}/bln.</div>`;
 }
-el.innerHTML=`
+// S2741: kartu murni tampilan — lewati penulisan ulang bila HTML identik dgn render terakhir.
+const _pensHtml=`
       <div class="grid3 u-mb10">
         <div class="stat-box"><div class="stat-label">Terkumpul</div><div class="stat-val green">${fmt(terkumpul)}</div></div>
         <div class="stat-box"><div class="stat-label">Proyeksi @Pensiun</div><div class="stat-val purple">${fmt(proyeksi)}</div></div>
@@ -567,6 +569,9 @@ el.innerHTML=`
       </div>
       ${(p.riwayatKontribusi&&p.riwayatKontribusi.length)?`<div class="u-fs11 u-ctext3 u-mt4">Riwayat kontribusi tercatat: ${p.riwayatKontribusi.length}x, total ${fmtFull(p.riwayatKontribusi.reduce((s,r)=>s+(r.amount||0),0))}.</div>`:''}
     `;
+if(el.__pensHtml===_pensHtml&&el.firstChild)return;
+el.__pensHtml=_pensHtml;
+el.innerHTML=_pensHtml;
 },
 openSettings(){
 const p=D.pensiun||(D.pensiun={aktif:false,usiaSekarang:null,usiaPensiun:58,targetDana:0,returnTahunan:6,accId:'',kontribusiBulanan:0,rekoPersen:20,rekoBulan:3,riwayatKontribusi:[]});
@@ -909,7 +914,7 @@ const iconHtml=(typeof FeatureIcons!=='undefined')?FeatureIcons.render(x.icon,{s
 return `
       <div class="u-flex u-gap8 u-mb8" style="align-items:flex-start;border-left:3px solid ${colFor[x.level]};padding-left:8px">
         <div class="fi-insight-row u-flex1 u-fs12 u-lh15"><span class="fi-insight-icon">${iconHtml}</span><span>${x.text}${x.action?` <span class="u-cacc u-pointer u-fw700" data-action="FinCoach.openAction" data-args="${escapeHtml(JSON.stringify([x.action]))}">${escapeHtml(x.action.label)} →</span>`:''}</span></div>
-        <span class="u-fs11 u-pointer" style="color:var(--text3)" data-stop="1" data-action="FinCoach.dismiss" data-args="${escapeHtml(JSON.stringify([x.id]))}" title="Sembunyikan" aria-label="Sembunyikan">✕</span>
+        <span class="u-fs11 u-pointer fincoach-dismiss" style="color:var(--text3)" data-stop="1" data-action="FinCoach.dismiss" data-args="${escapeHtml(JSON.stringify([x.id]))}" title="Sembunyikan" aria-label="Sembunyikan">✕</span>
       </div>`;
 }).join('')
 +(insights.length>top.length?`<div class="u-fs12 u-cacc u-tar u-pointer" data-action="FinCoach.showAll">Lihat semua (${insights.length}) →</div>`:'');
@@ -1037,11 +1042,13 @@ const listEl=document.getElementById('wealthSnapshotList');
 if(!listEl)return;
 const list=(D.wealthSnapshots||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
 if(!list.length){
+listEl.__snapHtml=null;
 listEl.innerHTML='<div class="empty"><div class="empty-icon">📸</div><div class="empty-text">Belum ada snapshot kekayaan tercatat</div></div>';
 } else {
 const WEALTH_SNAPSHOT_SHOW_LIMIT=24;
 const visible=list.slice(0,WEALTH_SNAPSHOT_SHOW_LIMIT);
-listEl.innerHTML=visible.map((s,i)=>{
+// S2741: daftar murni tampilan — lewati penulisan ulang bila HTML identik dgn render terakhir.
+const _snapHtml=visible.map((s,i)=>{
 const prev=list[i+1];
 let deltaHtml='';
 if(prev){
@@ -1051,6 +1058,7 @@ deltaHtml=`<div class="tx-meta">${delta>=0?'▲':'▼'} ${fmtFull(Math.abs(delta
 }
 return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">📸</div><div class="tx-info"><div class="tx-name">${s.date}${s.auto?' <span class="u-fs10 u-t2 u-r6 u-ml4" style="border:1px solid var(--border2);padding:1px 5px">Otomatis</span>':''}</div>${deltaHtml}</div><div class="tx-amount">${fmtFull(s.netWorth)}</div><button class="tx-del" data-action="delWealthSnapshot" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('')+(list.length>WEALTH_SNAPSHOT_SHOW_LIMIT?`<div class="u-tac u-fs12 u-t2" style="padding:8px 0">+${list.length-WEALTH_SNAPSHOT_SHOW_LIMIT} snapshot lebih lama (tidak ditampilkan, tapi tetap tersimpan & ikut dihitung ke growth rate)</div>`:'');
+if(listEl.__snapHtml!==_snapHtml||!listEl.firstChild){listEl.__snapHtml=_snapHtml;listEl.innerHTML=_snapHtml;}
 }
 const summaryEl=document.getElementById('wealthGrowthSummary');
 if(!summaryEl)return;

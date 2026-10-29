@@ -4,6 +4,10 @@
 // AUDIT-STRUKTUR-FOLDER.md) murni pengelompokan ulang file, BUKAN perubahan perilaku.
 
 const GDRIVE_EMAIL_SCOPE='https://www.googleapis.com/auth/userinfo.email';
+// S2743: satu paket izin untuk Drive + Sheets, supaya satu kali setuju cukup untuk keduanya
+// (sebelumnya Drive dan Sheets minta izin sendiri-sendiri, lalu "upgrade scope" = login ulang).
+const GDRIVE_ALL_SCOPES='https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets '+GDRIVE_EMAIL_SCOPE;
+const GDRIVE_SESSION_TOKEN_KEY='kw_google_session_token_v1';
 // S2271: Google Drive auth/session state belongs to the eager gdrive-backup
 // owner. It must not live in laporan-export.js because laporan-export is a
 // demand-loaded feature (S2264), while Drive settings/backup consumers are
@@ -16,15 +20,50 @@ let gdriveTokenScope=null;
 let gdriveTokenExpiresAt=null;
 let gdriveUserEmail=null;
 let _gdriveSilentReconnectInProgress=false;
+// S2743: token Google (±1 jam) disimpan di sessionStorage sampai kedaluwarsa, sehingga muat ulang
+// halaman tidak meminta login lagi. Sengaja sessionStorage (hilang saat tab/app ditutup), bukan localStorage.
+function gdriveSessionTokenSave(){
+try{
+if(!gdriveAccessToken||!gdriveTokenExpiresAt)return;
+sessionStorage.setItem(GDRIVE_SESSION_TOKEN_KEY,JSON.stringify({t:gdriveAccessToken,exp:gdriveTokenExpiresAt,scope:gdriveTokenScope,email:gdriveUserEmail||null,cid:(D.googleDrive&&D.googleDrive.clientId)||''}));
+}catch(e){void e;}
+}
+function gdriveSessionTokenClear(){
+try{sessionStorage.removeItem(GDRIVE_SESSION_TOKEN_KEY);}catch(e){void e;}
+}
+function gdriveSessionTokenRestore(){
+if(gdriveAccessToken)return false;
+try{
+const raw=sessionStorage.getItem(GDRIVE_SESSION_TOKEN_KEY);
+if(!raw)return false;
+const o=JSON.parse(raw);
+const sameClient=!o.cid||(D.googleDrive&&D.googleDrive.clientId===o.cid);
+if(!o||typeof o.t!=='string'||!sameClient||!(Number(o.exp)>Date.now()+60000)){gdriveSessionTokenClear();return false;}
+gdriveAccessToken=o.t;gdriveTokenScope=o.scope==='sheets'?'sheets':'drive';gdriveTokenExpiresAt=Number(o.exp);gdriveUserEmail=o.email||null;
+return true;
+}catch(e){gdriveSessionTokenClear();return false;}
+}
+// S2743: ingat email akun terakhir -> dipakai sebagai login_hint supaya Google tidak menampilkan
+// layar "pilih akun" tiap kali. Disimpan di D.googleDrive.accountHint (ikut backup; bukan rahasia).
+function gdriveRememberAccount(email){
+if(!email||!D.googleDrive||D.googleDrive.accountHint===email)return;
+D.googleDrive.accountHint=email;
+try{save();}catch(e){void e;}
+}
+function gdriveTokenRequestOptions(){
+const hint=D.googleDrive&&D.googleDrive.accountHint;
+return hint?{prompt:'',login_hint:hint}:{};
+}
 async function gdriveTrySilentReconnectOnLoad(){
-if(!D.googleDrive||!D.googleDrive.autoSync||!D.googleDrive.clientId||gdriveAccessToken)return;
+if(gdriveSessionTokenRestore()){renderGDriveSettings();renderSheetsSettings();return;}
+if(!D.googleDrive||!(D.googleDrive.autoSync||D.googleDrive.accountHint)||!D.googleDrive.clientId||gdriveAccessToken)return;
 try{
 await ensureGoogleGSI();
 if(gdriveAccessToken)return;
 const tc=gdriveInitTokenClient();
 if(!tc)return;
 _gdriveSilentReconnectInProgress=true;
-tc.requestAccessToken({prompt:''});
+tc.requestAccessToken(Object.assign({prompt:''},gdriveTokenRequestOptions()));
 }catch(e){
 _gdriveSilentReconnectInProgress=false;
 console.warn('Auto-reconnect Google Drive (diam-diam) gagal:',e);
@@ -35,6 +74,10 @@ gdriveAccessToken=resp.access_token;
 gdriveTokenScope=scopeLevel;
 const expiresInSec=Number(resp.expires_in)||3500;
 gdriveTokenExpiresAt=Date.now()+expiresInSec*1000;
+// S2743: paket izin gabungan -> kalau Google melaporkan scope Sheets ikut diberikan, tandai 'sheets'.
+// (Pengguna masih boleh mencabut sebagian izin di dialog Google; maka dibaca dari respons, bukan diasumsikan.)
+if(resp&&typeof resp.scope==='string')gdriveTokenScope=resp.scope.indexOf('/auth/spreadsheets')>=0?'sheets':'drive';
+gdriveSessionTokenSave();
 gdriveFetchUserInfo();
 renderGDriveSettings();
 renderSheetsSettings();
@@ -46,11 +89,14 @@ const res=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{
 if(!res.ok)return;
 const info=await res.json();
 gdriveUserEmail=info.email||null;
+gdriveRememberAccount(gdriveUserEmail);
+gdriveSessionTokenSave();
 }catch(e){void e;}
 renderGDriveSettings();
 renderSheetsSettings();
 }
 function gdriveResetTokenState(){
+gdriveSessionTokenClear();
 gdriveAccessToken=null;
 gdriveTokenScope=null;
 gdriveTokenExpiresAt=null;
@@ -61,6 +107,8 @@ renderGDriveSettings();
 renderSheetsSettings();
 }
 function gdriveDisconnect(){
+// S2743: "Putuskan" juga melupakan akun yang diingat, jadi login berikutnya memang menanyakan akun lagi.
+if(D.googleDrive&&D.googleDrive.accountHint){delete D.googleDrive.accountHint;try{save();}catch(e){void e;}}
 if(!gdriveAccessToken){toast('ℹ️ Belum terhubung ke akun Google manapun');return;}
 const tok=gdriveAccessToken;
 try{
@@ -75,7 +123,7 @@ function gdriveConnStatusLabel(requireSheetsScope){
 if(!gdriveAccessToken)return '⚪ Belum terhubung sesi ini';
 const now=Date.now();
 if(gdriveTokenExpiresAt&&now>=gdriveTokenExpiresAt)return '⏰ Token kadaluarsa — pencet Hubungkan lagi';
-if(requireSheetsScope&&gdriveTokenScope!=='sheets')return '🟡 Terhubung tapi scope belum cukup untuk Sheets — pencet Hubungkan/Sync lagi utk upgrade';
+if(requireSheetsScope&&gdriveTokenScope!=='sheets')return '🟡 Terhubung tapi izin Sheets belum diberikan — pencet Hubungkan Sheets lalu centang izin Sheets';
 const who=gdriveUserEmail?(' sebagai '+gdriveUserEmail):'';
 let expiryLabel='';
 if(gdriveTokenExpiresAt){
@@ -110,7 +158,7 @@ if(gdriveTokenClient && _gdriveTokenClientId!==D.googleDrive.clientId){gdriveTok
 if(!gdriveTokenClient){
 gdriveTokenClient=google.accounts.oauth2.initTokenClient({
 client_id:D.googleDrive.clientId,
-scope:'https://www.googleapis.com/auth/drive.file '+GDRIVE_EMAIL_SCOPE,
+scope:GDRIVE_ALL_SCOPES,
 callback:(resp)=>{
 const wasSilent=_gdriveSilentReconnectInProgress;_gdriveSilentReconnectInProgress=false;
 if(resp.error){
@@ -122,7 +170,7 @@ return;
 gdriveHandleAuthSuccess(resp,'drive');
 const fn=gdrivePendingAfterAuth;gdrivePendingAfterAuth=null;
 if(fn){fn();}
-else if(wasSilent){toast('🔄 Google Drive tersambung otomatis');uploadBackupToDrive(true);}
+else if(wasSilent){toast('🔄 Google Drive tersambung otomatis');if(D.googleDrive&&D.googleDrive.autoSync)uploadBackupToDrive(true);}
 else{toast('✅ Terhubung ke Google Drive');}
 },
 error_callback:(err)=>{
@@ -145,7 +193,7 @@ await ensureGoogleGSI();
 const tc=gdriveInitTokenClient();
 if(!tc)return;
 gdrivePendingAfterAuth=afterAuth||null;
-tc.requestAccessToken();
+tc.requestAccessToken(gdriveTokenRequestOptions());
 }catch(e){
 console.error('gdriveEnsureAuth error:',e);
 gdrivePendingAfterAuth=null;

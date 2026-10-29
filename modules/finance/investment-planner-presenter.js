@@ -55,12 +55,14 @@ const InvestmentPlannerPresenter = {
     if (!el) return; // container belum ada di halaman ini, aman diam2.
 
     if (typeof InvestmentPlannerAPI === 'undefined') {
+      el.__lastGridHtml = null;
       el.innerHTML = '<div class="empty"><div class="empty-text">Data investasi belum tersedia</div></div>';
       return;
     }
 
     const s = InvestmentPlannerAPI.summary();
     if (!s.ok) {
+      el.__lastGridHtml = null;
       el.innerHTML = '<div class="empty"><div class="empty-text">Data investasi belum tersedia</div></div>';
       return;
     }
@@ -77,7 +79,7 @@ const InvestmentPlannerPresenter = {
     // field onClick:{action,args} sendiri (ditempel di masing2 _xxxCard()
     // di bawah), template di sini CUMA mengecek `c.onClick` (0 logic
     // navigasi baru, 0 percabangan per-index, JANGAN openCard(index)).
-    el.innerHTML = cards.map((c) => `
+    const html = cards.map((c) => `
       <div class="findash-card${c.onClick ? ' u-pointer' : ''}"${c.onClick ? ` data-action="${escapeHtml(c.onClick.action)}" data-args="${escapeHtml(JSON.stringify(c.onClick.args))}"` : ''}>
         <div class="findash-card-icon">${c.icon}</div>
         <div class="findash-card-body">
@@ -87,6 +89,10 @@ const InvestmentPlannerPresenter = {
         </div>
       </div>
     `).join('');
+    // S2741: grid murni tampilan — lewati penulisan ulang bila HTML identik dgn render terakhir.
+    if (el.__lastGridHtml === html && el.firstChild) return;
+    el.__lastGridHtml = html;
+    el.innerHTML = html;
   },
 
   // _overviewCard(p) — p = InvestmentPlannerAPI.summary().portfolioOverview,

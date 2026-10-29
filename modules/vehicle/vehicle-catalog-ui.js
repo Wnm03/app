@@ -239,7 +239,7 @@ async function catalogUiOpenForm(id) {
   const wrap = document.getElementById('catalogFormWrap');
   if (!wrap) return;
   wrap.classList.remove('u-dnone');
-  const delBtn = document.getElementById('catDelBtn');
+  const delBtn = document.getElementById('catalogDelBtn');
   let compatibleVehicleIds = [];
   if (_catEditId) {
     const item = await VehicleCatalog.getById(_catEditId);

@@ -233,6 +233,9 @@ function dashHubNavigateToFeature(target) {
       }
       const el = document.getElementById(target.goTo);
       if (el) {
+        // S2742: kartu yang dilipat ke "Lainnya" (Laporan Keuangan) harus terbuka dulu supaya bisa di-scroll.
+        const lipat = typeof el.closest === 'function' ? el.closest('details.kb-lainnya') : null;
+        if (lipat && !lipat.open) lipat.open = true;
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         el.classList.remove('flash-highlight');
         void el.offsetWidth;

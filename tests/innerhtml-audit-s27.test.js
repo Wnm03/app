@@ -26,7 +26,8 @@ test('S27: Business Intelligence escapes insight text in both card and drill-dow
 test('S27: reviewed insight HTML surfaces remain single-render points', () => {
   const feature = fs.readFileSync(path.join(ROOT, 'modules/ai/feature-insights.js'), 'utf8');
   const bi = fs.readFileSync(path.join(ROOT, 'modules/shop/business-intelligence-presenter.js'), 'utf8');
-  assert.ok(feature.includes('box.innerHTML=items.length?'));
+  assert.ok(feature.includes('const html=items.length?'));
+  assert.ok(feature.includes('box.innerHTML=html;'));
   assert.ok(bi.includes('el.innerHTML = items.map((x) =>'));
   assert.ok(bi.includes('const html = items.map((x) =>'));
 });
