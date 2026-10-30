@@ -40,8 +40,9 @@ const LIVE_MODALS_PATH = path.join(ROOT, 'modules', 'shared', 'modals.js');
 const BUILD_SRC = fs.readFileSync(path.join(ROOT, 'scripts', 'build.js'), 'utf8')
   + fs.readFileSync(path.join(ROOT, 'scripts', 'build-core.js'), 'utf8');
 
-test('s1608 guard: modules/modals.js (orphan) masih ada di disk -- dikonfirmasi eksis, bukan sudah dihapus tanpa sepengetahuan', () => {
-  assert.ok(fs.existsSync(ORPHAN_MODALS_PATH), 'Kalau file ini sudah dihapus, HAPUS juga test ini (dan baris terkait di AUDIT-S572-DUPLICATE-SOURCE-STALE-STATE.md) -- jangan biarkan dangling.');
+test('s1608 guard: modules/modals.js (orphan) sudah dihapus (S2720) -- jangan dihidupkan kembali', () => {
+  assert.ok(!fs.existsSync(ORPHAN_MODALS_PATH), 'modules/modals.js orphan sudah dihapus di S2720; sumber live adalah modules/shared/modals.js.');
+  assert.ok(!fs.existsSync(path.join(ROOT, 'modules', 'shop', 'modals.js')), 'modules/shop/modals.js (salinan basi) sudah dihapus di S2720.');
 });
 
 test('s1608 guard: modules/shared/modals.js (LIVE) tetap ada -- ini yang benar-benar dibundel', () => {

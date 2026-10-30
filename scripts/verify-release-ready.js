@@ -448,6 +448,12 @@ function main() {
     blocking.push('bundle-freshness (bundle basi, wajib rebuild — lihat SESSION-NOTE-S756-bundle-staleness-fuel-jenis-sync.md untuk insiden serupa)');
   }
 
+  // Repo hygiene gates: blocking regardless of lint/minifier overrides.
+  for (const [label, script] of [['no-personal-data', 'verify-no-personal-data.js'], ['docs-sync', 'verify-docs-sync.js'], ['no-inline-handlers', 'verify-no-inline-handlers.js']]) {
+    try { execFileSync(process.execPath, [path.join(__dirname, script)], { cwd: ROOT, stdio: 'pipe' }); console.log(`✓ GATE ${label}: PASS`); }
+    catch (e) { console.error(`✗ GATE ${label}: FAIL — ${(e.stderr || e.message || '').toString().trim().slice(0, 1000)}`); blocking.push(`${label} (blocking)`); }
+  }
+
   if (overridden.length) appendAuditLog(overridden);
 
   console.log('');

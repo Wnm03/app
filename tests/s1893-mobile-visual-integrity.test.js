@@ -35,7 +35,7 @@ test('S1893 runtime: viewport state and overlay geometry reset are implemented',
   assert.match(ux,/visualViewport/);
   assert.match(ux,/pwa-keyboard-open/);
   assert.match(ux,/resetOverlayGeometry/);
-  for(const f of ['modules/shared/modal-navigasi.js','modules/asset/modal-navigasi.js']){
+  for(const f of ['modules/shared/modal-navigasi.js']){
     const s=read(f);
     assert.match(s,/resetOverlayGeometry\(el\)/,`${f} missing overlay reset`);
     assert.match(s,/function openQS\(id\)[\s\S]*?resetOverlayGeometry\(el\)/,`${f} missing QS reset`);

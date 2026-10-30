@@ -127,7 +127,10 @@ module.exports = [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'script',
-      globals: { ...browserGlobals, ...appGlobals },
+      // Global OPSIONAL: selalu dipakai lewat guard `typeof x==='function'` + fallback
+      // (kasir.js, e2e). Tidak didefinisikan di mana pun -> bukan bug, jadi didaftarkan
+      // eksplisit agar no-undef tetap aktif untuk sisanya.
+      globals: { ...browserGlobals, ...appGlobals, shopDiscountedPrice: 'readonly', getVehicleOdometer: 'readonly' },
     },
     rules: {
       // --- Bug class nyata yang pernah kejadian di project ini -----------

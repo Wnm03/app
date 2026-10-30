@@ -1,0 +1,345 @@
+/*!
+// Dipindah ke modules/shared/smoke-test.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
+ * smoke-test.js — validasi ringan otomatis (khusus mode dev)
+ * ------------------------------------------------------------
+ * Tujuan: menangkap kesalahan struktural SEBELUM kejadian di pemakaian nyata:
+ *   1) Semua modul (const NamaModul={...}) yang dipakai lewat data-action="Modul.method"
+ *      benar-benar ke-expose ke `window` dan method-nya ada.
+ *   2) Semua elemen yang dirujuk lewat document.getElementById(id) di seluruh
+ *      source (HTML + semua file .js yang dimuat) benar-benar ada di DOM.
+ *
+ * Cara kerja: script ini TIDAK pakai daftar id/modul yang di-hardcode, tapi
+ * memindai ulang source aplikasi (HTML utama + semua <script src> se-origin)
+ * setiap kali dijalankan. Jadi otomatis ikut update kalau ada id/modul baru
+ * ditambahkan/dihapus di kemudian hari -- tidak perlu diubah manual.
+ *
+ * Hanya jalan kalau mode dev terdeteksi (lihat isDevMode()). Di produksi,
+ * script ini langsung keluar tanpa melakukan apa-apa (nyaris tanpa biaya).
+ *
+ * Cara aktifkan manual kalau perlu: buka dengan ?dev=1 di URL, atau jalankan
+ * `localStorage.setItem('kw_dev','1')` lalu refresh.
+ */
+(function () {
+  'use strict';
+
+  function isDevMode() {
+    try {
+      if (new URLSearchParams(location.search).get('dev') === '1') return true;
+      if (localStorage.getItem('kw_dev') === '1') return true;
+      if (location.protocol === 'file:') return true;
+      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return true;
+    } catch (e) { /* abaikan, anggap bukan dev */ }
+    return false;
+  }
+
+  if (!isDevMode()) return;
+
+  var LOG_PREFIX = '[smoke-test]';
+
+  // --- 1. Kumpulkan semua source (HTML utama + script se-origin) ---------
+  function collectSourceUrls() {
+    var urls = [];
+    var seen = {};
+    function add(u) {
+      if (u && !seen[u]) { seen[u] = true; urls.push(u); }
+    }
+    add(location.href.split('#')[0]);
+    var scripts = document.querySelectorAll('script[src]');
+    for (var i = 0; i < scripts.length; i++) {
+      try {
+        var u = new URL(scripts[i].src, location.href);
+        // Jangan ikutkan smoke-test.js sendiri: komentar dokumentasi di file ini
+        // memuat contoh literal "Modul.method" & pola id="..." yang kalau ikut
+        // di-scan akan salah kedeteksi sebagai referensi asli (false positive).
+        if (/(^|\/)smoke-test\.js$/.test(u.pathname)) continue;
+        if (u.origin === location.origin) add(u.href);
+      } catch (e) { /* skip src yang tidak valid */ }
+    }
+    return urls;
+  }
+
+  function fetchAllSources(urls) {
+    return Promise.all(urls.map(function (u) {
+      return fetch(u, { cache: 'no-store' })
+        .then(function (res) { return res.ok ? res.text() : ''; })
+        .catch(function () { return null; }); // null = gagal fetch (beda dari '' = kosong)
+    })).then(function (results) {
+      var okTexts = [];
+      var failedCount = 0;
+      results.forEach(function (r) {
+        if (r === null) failedCount++; else okTexts.push(r);
+      });
+      return { text: okTexts.join('\n'), failedCount: failedCount, totalCount: urls.length };
+    });
+  }
+
+  // --- 2. Ekstraksi referensi dari source ---------------------------------
+  function extractGetElementByIdIds(src) {
+    var re = /getElementById\(\s*(['"])([A-Za-z0-9_-]+)\1\s*\)/g;
+    var ids = {};
+    var m;
+    while ((m = re.exec(src))) ids[m[2]] = true;
+    return Object.keys(ids);
+  }
+
+  // Ambil semua "Modul.method" yang dipakai lewat data-action="Modul.method"
+  // (ini jalur pemanggilan lewat window[...] di dispatcher klik global, jadi
+  // Modul WAJIB ada sebagai properti window, bukan cuma const lokal.)
+  function extractDataActionPaths(src) {
+    var re = /data-action=(['"])([A-Za-z0-9_.]+)\1/g;
+    // BUG NYATA ditemukan saat audit (2026-07-13, pra-existing sejak split
+    // chat-action.js 2026-07-12): komentar dokumentasi gaya
+    // `// ...data-action="..." di modal...` (mis. di aset-emas-impor.js)
+    // ikut ke-match regex di atas krn "." termasuk dlm character class,
+    // menghasilkan path palsu "..." (3 elemen kosong setelah displit "."),
+    // yang lalu dianggap "modul/fungsi tidak ke-expose" (false positive).
+    // Fix: setiap segmen hasil split HARUS berupa identifier JS yang valid
+    // (huruf/underscore/$ di awal), bukan cuma "length>=2".
+    var identifierRe = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+    // BUG NYATA ditemukan saat audit (sesi 357): fix di atas tidak menutup
+    // pola komentar peringatan `// ...data-action="Modul.xxx" gagal diam-diam`
+    // yang dipakai LUAS di banyak modul (Budget/Pensiun/Aset/Payroll/Kasir/dst
+    // -- lihat Object.assign(window,{...}) di masing2 file) -- "Modul.xxx"
+    // ITU SENDIRI berbentuk identifier valid, jadi lolos allValid & salah
+    // dilaporkan "modul tidak ke-expose" walau window.Modul sudah benar ada
+    // (dikonfirmasi test window-expose-audit-s345..348). Fix: skip match
+    // yang muncul setelah "//" di baris yang sama (komentar satu baris).
+    var paths = {};
+    var m;
+    while ((m = re.exec(src))) {
+      var lineStart = src.lastIndexOf('\n', m.index) + 1;
+      if (src.slice(lineStart, m.index).indexOf('//') !== -1) continue; // di dalam komentar, bukan data-action asli
+      var parts = m[2].split('.');
+      var allValid = parts.length >= 2 && parts.every(function (p) { return identifierRe.test(p); });
+      if (allValid) paths[m[2]] = parts; // hanya yang berbentuk Modul.method(.sub)
+    }
+    return paths;
+  }
+
+  // Ambil semua id yang "didefinisikan" di source, baik statis (id="xxx" di HTML/
+  // template string) maupun dinamis (elemen.id='xxx' lewat assignment JS -- pola
+  // umum dipakai buat elemen yang dibuat sekali lalu di-cache/reuse, mis. tombol
+  // "muat lebih banyak" yang baru ada di DOM setelah tab/list terkait dirender).
+  //
+  // BUG NYATA ditemukan saat audit (2026-07-26): pola id="xxx" TANPA `\\?` di
+  // depan tiap kutip tidak match id yang ditulis id=\"xxx\" (backslash-escaped) --
+  // pola ini muncul di modules/shared/modals.js (MODAL_HTML disimpan sbg array
+  // string JS, jadi kutip di dalamnya di-escape). Akibatnya id yang SAH ada &
+  // aktif dipakai (mis. dpProduct/dpAiBox/dst di #deliveryPlanModal) salah
+  // dilaporkan "hilang". Fix: `\\?` opsional sebelum tiap kutip pembuka/penutup,
+  // backward-compatible 100% dgn id="xxx" biasa (0 backslash cocok juga).
+  function extractDefinedIds(src) {
+    var ids = {};
+    var reAttr = /\bid=\\?(['"])([A-Za-z0-9_-]+)\\?\1/g;
+    var reAssign = /\.id\s*=\s*\\?(['"])([A-Za-z0-9_-]+)\\?\1/g;
+    var m;
+    while ((m = reAttr.exec(src))) ids[m[2]] = true;
+    while ((m = reAssign.exec(src))) ids[m[2]] = true;
+    return ids;
+  }
+
+  // --- 3. Jalankan pengecekan ----------------------------------------------
+  // "Hilang" hanya kalau id TIDAK ada di DOM sekarang DAN TIDAK ditemukan
+  // didefinisikan di mana pun di source (HTML statis atau assignment JS).
+  // Ini menghindari false positive utk elemen yang lazy-render (baru dibuat
+  // saat tab/section terkait pertama kali dibuka).
+  function checkDomIds(ids, definedIds) {
+    var missing = [];
+    for (var i = 0; i < ids.length; i++) {
+      if (document.getElementById(ids[i])) continue;
+      if (definedIds[ids[i]]) continue;
+      missing.push(ids[i]);
+    }
+    return missing;
+  }
+
+  // Lazy owners are valid even before their feature scripts have been loaded.
+  // Parse the dispatcher's owner-loader registry from fetched source so dev
+  // smoke-test reports these as deferred checks instead of false missing-methods.
+  function extractLazyOwnerNames(src) {
+    var names = {};
+    // The runtime dispatcher is bundled/minified, so its local variable name
+    // (`lazyOwnerLoaders`) is not a stable marker. The property keys are kept
+    // because they are runtime data-action owners; recognize only entries whose
+    // value references an ensure* lazy loader to avoid classifying arbitrary
+    // object properties as deferred actions.
+    var re = /(?:^|[,\s{])([A-Za-z_$][A-Za-z0-9_$]*)\s*:\s*typeof\s+ensure[A-Za-z0-9_$]*/g;
+    var m;
+    while ((m = re.exec(src))) names[m[1]] = true;
+    return names;
+  }
+
+  function checkDataActionPaths(pathsMap, lazyOwners) {
+    var missing = [];
+    var deferred = [];
+    Object.keys(pathsMap).forEach(function (full) {
+      var parts = pathsMap[full];
+      if (lazyOwners && lazyOwners[parts[0]]) { deferred.push(full); return; }
+      var owner = window, fn = window, ok = true;
+      for (var i = 0; i < parts.length; i++) {
+        owner = fn;
+        fn = fn ? fn[parts[i]] : undefined;
+        if (fn === undefined) { ok = false; break; }
+      }
+      if (!ok || typeof fn !== 'function') missing.push(full);
+    });
+    return { missing: missing, deferred: deferred };
+  }
+
+  // S2288: banner merah hanya utk dev EKSPLISIT (?dev=1 / kw_dev=1). Dev implisit (localhost/file:)
+  // tetap menulis ke console, tapi tidak menutupi UI -- banner itu muncul di layar boot sebagai "error".
+  function explicitDev() {
+    try { return new URLSearchParams(location.search).get('dev') === '1' || localStorage.getItem('kw_dev') === '1'; }
+    catch (e) { return false; }
+  }
+  function showBanner(text) {
+    if (!explicitDev()) return;
+    try {
+      var old = document.querySelector('[data-smoke-test-banner]');
+      if (old) old.remove();
+      var b = document.createElement('div');
+      b.setAttribute('data-smoke-test-banner', '1');
+      // Diagnostic dev-only banner must never cover the application chrome.
+      // Keep it in the non-critical bottom area and give the close affordance
+      // a proper touch target so visual QA itself does not create a usability bug.
+      b.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:99999;' +
+        'background:#c0392b;color:#fff;padding:8px 10px;' +
+        'font:600 12px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;' +
+        'box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px;' +
+        'box-sizing:border-box;max-width:calc(100vw - 24px);';
+      var msg = document.createElement('span');
+      msg.style.cssText = 'min-width:0;flex:1 1 auto;overflow-wrap:anywhere;';
+      msg.textContent = text;
+      b.appendChild(msg);
+      var closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.setAttribute('aria-label', 'Tutup diagnostik developer');
+      closeBtn.textContent = '✕';
+      closeBtn.style.cssText = 'cursor:pointer;flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;padding:0;border:0;background:transparent;color:inherit;font:inherit;font-weight:900;display:inline-flex;align-items:center;justify-content:center;';
+      closeBtn.onclick = function () { b.remove(); };
+      b.appendChild(closeBtn);
+      (document.body || document.documentElement).appendChild(b);
+    } catch (e) { /* jangan sampai banner sendiri bikin crash */ }
+  }
+
+  // --- 3. Reconciliation check Dana Titipan (Rekomendasi #2, S582) -------
+  // Independen dari fetch source di atas (tidak butuh network) -- jalan
+  // langsung tiap smoke-test aktif di dev mode. Deteksi gap sync
+  // (pola BUG-OWN-002: entry point baru lupa panggil _syncOwnerDebts())
+  // otomatis, bukan lewat audit manual tiap sesi.
+  function runTitipanReconcileCheck() {
+    if (typeof TitipanReconcile === 'undefined') return; // belum dimuat / bundle lama
+    try {
+      var res = TitipanReconcile.check();
+      if (res.ok) {
+        console.log('%c✅ ' + LOG_PREFIX + ' TitipanReconcile OK — Dana Titipan sinkron dgn Buku Utang', 'color:#2ecc71;font-weight:700');
+        return;
+      }
+      console.error(
+        '❌ ' + LOG_PREFIX + ' TitipanReconcile: ditemukan ' +
+        (res.missing.length + res.orphan.length + res.mismatch.length) + ' gap sync Dana Titipan:',
+        res
+      );
+      showBanner(
+        '⚠️ [DEV] TitipanReconcile: ' + res.missing.length + ' hilang, ' +
+        res.orphan.length + ' nyangkut, ' + res.mismatch.length +
+        ' beda nilai — buka console untuk detail.'
+      );
+    } catch (e) {
+      console.warn(LOG_PREFIX + ' TitipanReconcile gagal jalan:', e);
+    }
+  }
+
+  function run() {
+    var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+    runTitipanReconcileCheck();
+    var urls = collectSourceUrls();
+
+    fetchAllSources(urls).then(function (src) {
+      var result = { domMissing: [], actionMissing: [], actionDeferred: [], domChecked: 0, actionChecked: 0, skipped: false };
+
+      if (src.failedCount === src.totalCount) {
+        // Semua fetch gagal -- biasanya karena dibuka lewat file:// tanpa server lokal
+        // (fetch file:// diblok CORS di banyak browser). Jangan klaim "OK" palsu.
+        result.skipped = true;
+        console.warn(
+          LOG_PREFIX + ' Tidak bisa membaca ulang source (fetch gagal, ' +
+          'mungkin dibuka via file:// tanpa server lokal). Pengecekan modul/DOM DILEWATI. ' +
+          'Jalankan lewat server lokal kecil (mis. `npx serve` atau Live Server) supaya smoke test aktif penuh.'
+        );
+        return result;
+      }
+      if (src.failedCount > 0) {
+        console.warn(LOG_PREFIX + ' ' + src.failedCount + ' dari ' + src.totalCount + ' file source gagal dibaca ulang; hasil di bawah mungkin tidak lengkap.');
+      }
+
+      var ids = extractGetElementByIdIds(src.text);
+      var definedIds = extractDefinedIds(src.text);
+      var actionPaths = extractDataActionPaths(src.text);
+
+      result.domChecked = ids.length;
+      result.actionChecked = Object.keys(actionPaths).length;
+      result.domMissing = checkDomIds(ids, definedIds);
+      var lazyOwners = extractLazyOwnerNames(src.text);
+      var actionCheck = checkDataActionPaths(actionPaths, lazyOwners);
+      result.actionMissing = actionCheck.missing;
+      result.actionDeferred = actionCheck.deferred;
+
+      return result;
+    }).then(function (result) {
+      var dt = Math.round(((window.performance && performance.now) ? performance.now() : Date.now()) - t0);
+      window.__smokeTestResult = result;
+
+      if (!result || result.skipped) return;
+
+      var problems = result.domMissing.length + result.actionMissing.length;
+
+      if (problems === 0) {
+        console.log(
+          '%c✅ ' + LOG_PREFIX + ' OK — ' + result.domChecked + ' referensi getElementById() & ' +
+          (result.actionChecked - result.actionDeferred.length) + ' data-action runtime diperiksa, ' +
+          result.actionDeferred.length + ' aksi lazy ditunda sampai modul dimuat (' + dt + 'ms)',
+          'color:#2ecc71;font-weight:700'
+        );
+        return;
+      }
+
+      // S2313 U-16: bila hanya ID DOM yang tak ditemukan (bisa ID dinamis/lazy yang sah) dan tidak ada
+      // data-action rusak, log turun ke console.debug agar konsol produksi tidak berisi error palsu.
+      var _logProblem = result.actionMissing.length === 0 ? console.debug : console.error;
+      _logProblem.call(console, (result.actionMissing.length === 0 ? '' : '❌ ') + LOG_PREFIX + ' Ditemukan ' + problems + ' masalah (' + dt + 'ms):');
+      if (result.domMissing.length) {
+        _logProblem.call(console,
+          '  → ID dirujuk getElementById() tapi TIDAK ADA di HTML manapun (' + result.domMissing.length + '):',
+          result.domMissing
+        );
+      }
+      if (result.actionMissing.length) {
+        console.error(
+          '  → data-action merujuk modul/fungsi yang TIDAK ke-expose ke window / tidak ada (' + result.actionMissing.length + '):',
+          result.actionMissing
+        );
+        console.error('    (Tombol dengan data-action ini akan diam/error saat diklik. Cek apakah modulnya sudah masuk Object.assign(window,{...}) di akhir app_production.html.)');
+      }
+      if (result.actionDeferred.length) {
+        console.info(LOG_PREFIX + ' Aksi lazy-load ditunda pemeriksaannya sampai modul terkait dibuka (' + result.actionDeferred.length + '):', result.actionDeferred);
+      }
+
+      showBanner(
+        '⚠️ [DEV] smoke-test: ' +
+        (result.domMissing.length ? result.domMissing.length + ' ID DOM hilang' : '') +
+        (result.domMissing.length && result.actionMissing.length ? ', ' : '') +
+        (result.actionMissing.length ? result.actionMissing.length + ' data-action putus' : '') +
+        ' — buka console untuk detail.'
+      );
+    }).catch(function (e) {
+      console.warn(LOG_PREFIX + ' Gagal jalan:', e);
+    });
+  }
+
+  if (document.readyState === 'complete') {
+    run();
+  } else {
+    window.addEventListener('load', run);
+  }
+})();

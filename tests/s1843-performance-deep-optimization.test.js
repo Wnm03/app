@@ -41,9 +41,6 @@ test('S1843 saveFlush serializes the critical snapshot only once',()=>{
 test('S1843 cumulative saveFlush mirrors do not re-serialize D for localStorage',()=>{
   const files=[
     'modules/shared/features-helpers-global-security.js',
-    'modules/asset/features-helpers-global-security.js',
-    'modules/finance/features-helpers-global-security.js',
-    'modules/shop/features-helpers-global-security.js',
     'app-bundle-b.min.js',
     'docs/app-bundle-b.min.js',
   ];
@@ -55,9 +52,7 @@ test('S1843 cumulative saveFlush mirrors do not re-serialize D for localStorage'
 
 test('S1851 hard-flush mirrors call _saveImmediate exactly once with the same snapshot',()=>{
   const files=[
-    'modules/asset/features-helpers-global-security.js',
-    'modules/finance/features-helpers-global-security.js',
-    'modules/shop/features-helpers-global-security.js',
+    'modules/shared/features-helpers-global-security.js',
     'docs/app-bundle-b.min.js',
   ];
   for(const file of files){

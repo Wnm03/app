@@ -4,10 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('fs');
 
 const files=[
- 'modules/shared/features-helpers-global-security.js',
- 'modules/asset/features-helpers-global-security.js',
- 'modules/finance/features-helpers-global-security.js',
- 'modules/shop/features-helpers-global-security.js'
+ 'modules/shared/features-helpers-global-security.js'
 ];
 
 function body(src,sig){

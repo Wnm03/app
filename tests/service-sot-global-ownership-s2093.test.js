@@ -9,9 +9,6 @@ const root=path.join(__dirname,'..');
 const runtimeFiles=[
   'modules/shared/backup-restore.js',
   'modules/shared/features-helpers-global-security.js',
-  'modules/shop/features-helpers-global-security.js',
-  'modules/finance/features-helpers-global-security.js',
-  'modules/asset/features-helpers-global-security.js',
 ];
 
 test('S2093 no runtime bootstrap/restore path recreates legacy vehicle interval authority',()=>{

@@ -5,8 +5,7 @@ const path=require('path');
 
 const ROOT=path.resolve(__dirname,'..');
 const files=[
-  'modules/shared/modal-navigasi.js',
-  'modules/asset/modal-navigasi.js'
+  'modules/shared/modal-navigasi.js'
 ];
 
 test('V25/S30: enableSwipeToDismiss has per-handle idempotent cleanup guard',()=>{

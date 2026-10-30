@@ -1,6 +1,6 @@
 const fs=require('fs');
 const assert=require('assert');
-for(const file of ['modules/shared/modal-navigasi.js','modules/asset/modal-navigasi.js']){
+for(const file of ['modules/shared/modal-navigasi.js']){
   const s=fs.readFileSync(file,'utf8');
   assert(s.includes("const _swipeDismissCloseTimers=typeof WeakMap==='function'?new WeakMap():null;"), `${file}: timer registry missing`);
   assert(s.includes('function _clearSwipeDismissCloseTimer(overlay)'), `${file}: clear helper missing`);

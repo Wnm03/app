@@ -23,8 +23,8 @@ test('S1909: semua Blob-download helper yang diaudit membersihkan anchor & me-re
   }
 });
 
-test('S1909: closeQS() aman bila target DOM tidak ada pada shared + asset modal implementation', () => {
-  for (const file of ['modules/shared/modal-navigasi.js', 'modules/asset/modal-navigasi.js']) {
+test('S1909: closeQS() aman bila target DOM tidak ada pada modal implementation (shared)', () => {
+  for (const file of ['modules/shared/modal-navigasi.js']) {
     const src = read(file);
     assert.match(src, /function closeQS\(id\)\{const el=document\.getElementById\(id\);if\(!el\|\|!el\.classList\)return false;/, `${file}: closeQS guard missing`);
     assert.match(src, /if\(document\.body&&document\.body\.classList\)document\.body\.classList\.toggle\('has-open-modal'/, `${file}: body guard missing`);

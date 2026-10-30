@@ -57,5 +57,5 @@ test('S256AJ: hooks (install + rAF) and single registration in build.js', () => 
   const b = rd('scripts/build.js'); assert.strictEqual((b.match(/a11y-tabs-worthit\.js/g) || []).length, 1);
 });
 test('S256AJ: markup contract — 3 tab buttons + 3 panels exist in modal HTML', () => {
-  const m = rd('modules/modals.js'); ['wiTabBtnSingle', 'wiTabBtnList', 'wiTabBtnWatch', 'wiTabSingle', 'wiTabList', 'wiTabWatch'].forEach((id) => assert.ok(m.includes(id), id));
+  const m = rd('modules/shared/modals.js'); ['wiTabBtnSingle', 'wiTabBtnList', 'wiTabBtnWatch', 'wiTabSingle', 'wiTabList', 'wiTabWatch'].forEach((id) => assert.ok(m.includes(id), id));
 });

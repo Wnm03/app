@@ -1,6 +1,7 @@
 'use strict';
 // S2731.3 — master Gasket Tutup Head, konsolidasi Kabel Rem Belakang (alias kompatibel), pemetaan log Seal Head.
 const test = require('node:test');
+const synth = require('./_synthetic-data-fix');
 const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
@@ -11,7 +12,7 @@ const master = require(path.join(ROOT, 'modules/vehicle/service-master-data.gene
 globalThis.__SERVICE_CHECKLIST_GROUPS__ = master.SERVICE_CHECKLIST_GROUPS;
 globalThis.__SERVICE_COMPONENT_ID_ALIASES__ = master.SERVICE_COMPONENT_ID_ALIASES;
 const tax = require(path.join(ROOT, 'modules/vehicle/service-taxonomy-sot.js'));
-const FIXED = path.join(ROOT, 'data-fix/backup-keluarga-W-2026-10-24-CLEAN-S2730-dedup-S2731-FIXED.json');
+const FIXED = synth.s2731Fixed(); // data asli bila ada, selain itu sintetis (tanpa data pribadi)
 const all = () => master.SERVICE_CHECKLIST_GROUPS.flatMap(g => g.items.map(i => Object.assign({ cat: g.masterCategoryId }, i)));
 
 test('master Gasket Tutup Head: satu entri, Servis Mesin, tanpa interval', () => {

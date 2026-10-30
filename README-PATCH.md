@@ -1,58 +1,20 @@
-# Patch: Fix loading kelip putih→hitam & tabel Dana Titipan tidak rapi
+# PATCH-REPO-HYGIENE-S2720
 
-Tanggal: 2026-08-17
-File yang diubah: `styles.css` (HANYA file ini, 2 blok tambahan, tidak ada yang dihapus/diubah selain itu)
+Patch kebersihan repo KW. Terapkan pada baseline yang sesuai dengan `app-main (45).zip` dengan menyalin file patch ke root repo, lalu tinjau `DELETE-MANIFEST.txt` sebelum menghapus file yang terdaftar.
 
-## Cara pakai
-1. `dana-titipan-loading-fix.patch` — git patch, apply dengan:
-   ```
-   git apply dana-titipan-loading-fix.patch
-   ```
-   atau `patch -p1 < dana-titipan-loading-fix.patch` dari root project.
-2. Atau langsung timpa `styles.css` di folder project dengan file `styles.css`
-   di zip ini (sudah berisi fix + seluruh isi asli, tidak ada yang hilang).
+Perubahan: `.gitignore`, gate pemindaian data pribadi, gate sinkronisasi `docs/`, utilitas sinkronisasi docs, audit handler inline, laporan ukuran bundle, integrasi gate release/CI, sinkronisasi aset docs, dan pemindahan `regression-evidence/SUMMARY.txt` ke `docs/archive/manifest/`.
 
-## Bug #1 — Loading awal kelip putih lalu hitam
-**Root cause:** `.u-dnone { display:none; }` didefinisikan LEBIH AWAL di
-styles.css daripada `.onboard { display:flex; ... }` dan
-`.pin-screen { display:flex; ... }`. Karena spesifisitas CSS-nya sama
-(1 class), aturan yang datang belakangan di file yang menang — jadi
-`display:flex` milik `.onboard`/`.pin-screen` MENGALAHKAN `display:none`
-dari `.u-dnone`, walau elemen `<div id="onboard" class="onboard u-dnone">`
-punya class `u-dnone`. Efeknya: layar Onboarding/PIN (latar terang, sebelum
-tema gelap diterapkan `applyEffectiveTheme()`) sempat ke-paint TERBUKA di
-layar begitu HTML+CSS selesai dimuat, dan baru disembunyikan setelah JS
-(`init()` di app-bundle-b.min.js) selesai jalan beberapa saat kemudian
-(nunggu `await load()` dkk). Itulah kilatan putih→hitam yang terekam di
-video — bukan murni soal bundle JS besar, tapi soal urutan CSS.
+Tidak ada bundle runtime yang diubah. Tidak ada data backup/keuangan yang disertakan. File duplikat target yang masih direferensikan test/script sengaja tidak dihapus agar tidak mengubah perilaku atau merusak gate.
 
-**Fix:** tambah aturan spesifisitas lebih tinggi
-`.onboard.u-dnone, .pin-screen.u-dnone { display:none; }` supaya SELALU
-menang berapa pun urutan file-nya. Tidak menyentuh HTML/JS sama sekali,
-dan tidak memakai `!important` blanket di `.u-dnone` (dipakai 150+ tempat
-lain di app) supaya risiko regresi seminimal mungkin.
+## Revisi (ULANG-3/4): release gate lulus, fixture sintetis, pengarsipan aman
+- `eslint.config.js`: `shopDiscountedPrice` & `getVehicleOdometer` didaftarkan sebagai global opsional (selalu dipakai dengan guard `typeof ... === 'function'` + fallback). Menghilangkan 3 error `no-undef` yang sudah ada di baseline dan memblokir `verify-release-ready.js`. Source runtime/bundle tidak berubah.
+- `tests/_synthetic-data-fix.js` + 3 tes (S2731-3, S2732, S2733): memakai `data-fix/*.json` asli bila ada; bila tidak ada, input SINTETIS (tanpa data pribadi) dibuat di tmp lalu skrip migrasi yang sebenarnya dijalankan. 15/15 tes lulus di kedua mode, tanpa skip.
+- `archive/root-docs/`: 692 file Markdown/TXT root yang TIDAK dirujuk oleh kode/tes/skrip/workflow/manifest kontrak dipindah (isi tidak diubah). 750 file lain tetap di root. Path lama tercantum di DELETE-MANIFEST.txt (hapus setelah menyalin `archive/`).
+Hasil: lint bersih, full test EXIT=0, `verify-release-ready.js` = RELEASE GATE LOLOS.
 
-**Catatan tambahan (tidak diubah di patch ini, hanya observasi):**
-`app-bundle-a.min.js` (~1.3MB) dan `app-bundle-b.min.js` (~3.6MB) dimuat
-lewat `<script src=...>` biasa (bukan `defer`/`async`), dan `index.html`
-memakai `document.write(MODAL_HTML[n])` ~100 kali yang butuh bundle-a
-sudah tereksekusi SINKRON saat parsing HTML. Ini genuinely bikin proses
-loading "berat" (jaringan+parse besar sebelum app interaktif), tapi
-memperbaikinya butuh refactor loading strategy (mis. ganti pola
-`document.write` modal ke lazy-render), bukan patch CSS satu baris —
-di luar scope patch ini supaya tidak berisiko merusak wiring modal yang
-ada.
-
-## Bug #2 — Tabel Dana Titipan (kartu per-pemilik) tidak rapi
-**Root cause:** baris ringkasan owner (`<summary class="u-flex u-jcb ...">`)
-memuat avatar + nama + blok "Pokok Rp X → Kini Rp Y +Rp Z" dalam SATU baris
-flex tanpa `flex-wrap`. Kalau ruang tidak cukup, browser men-shrink blok
-angka (child terakhir) sampai teksnya terpaksa wrap — dan karena tidak ada
-kontrol wrap, ia patah di TENGAH angka/kata ("...→ Kini" lanjut baris baru
-"Rp X +Rp 0"), persis seperti di screenshot (owner "mas sihab").
-
-**Fix:** izinkan `<summary>` wrap ke 2 baris — baris atas avatar+nama, baris
-bawah blok Pokok→Kini→± turun penuh 1 baris rata kanan, dengan setiap
-potongan teks (`Pokok`, nominal, `Kini`, nominal, ±) tetap sebagai unit utuh
-yang boleh pindah baris tapi tidak pernah terpotong di tengah. Murni CSS,
-0 teks/angka/struktur HTML/JS diubah.
+## Revisi (ULANG-5): koreksi audit handler inline
+Laporan sebelumnya menyebut ratusan "handler inline" (mis. `aset-owners.js` 7, `modals.js` 269). Itu FALSE POSITIVE: regex lama ikut menghitung `data-onclick`/`data-onchange`, yaitu mekanisme dispatcher aman-CSP (tanpa `new Function`/eval) yang memang sudah dipakai app.
+Hasil pemindaian baru: handler inline SUNGGUHAN (`on*="..."`) di sumber runtime = 0; `data-on*` terdelegasi = 543. Migrasi ke `data-action` TIDAK diperlukan.
+- `scripts/inline-handler-scan.js` (pemindai bersama), `scripts/audit-inline-handlers.js` (inventaris benar), `scripts/verify-no-inline-handlers.js` (gate), terdaftar di `verify-release-ready.js` dan CI.
+- `tests/no-inline-handlers-s2720.test.js`: menjaga angka 0 dan menguji pemindai membedakan `data-on*` dari inline sungguhan.
+- Catatan: `modules/shop/modals.js` (di luar build, kandidat hapus) memang masih berisi `on*="..."`; sengaja tidak dipindai karena tidak dimuat runtime.

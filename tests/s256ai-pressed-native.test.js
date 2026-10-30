@@ -102,7 +102,7 @@ test('S256AI: registered once in build.js GROUP_A after a11y-pressed-state.js', 
 // ---- Contract: every chip-btn template must be classified (allowlist cannot silently go stale) ----
 function staticCensus() {
   const sb = {}; vm.createContext(sb);
-  vm.runInContext(rd('modules/modals.js') + ';this.__M=typeof MODAL_HTML!=="undefined"?MODAL_HTML:null', sb);
+  vm.runInContext(rd('modules/shared/modals.js') + ';this.__M=typeof MODAL_HTML!=="undefined"?MODAL_HTML:null', sb);
   const all = rd('index.html') + '\n' + (Array.isArray(sb.__M) ? sb.__M.join('\n') : String(sb.__M || ''));
   const re = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)>/g, vd = new Set(['input', 'br', 'img', 'hr', 'meta', 'link']);
   const stack = [], out = []; let m;

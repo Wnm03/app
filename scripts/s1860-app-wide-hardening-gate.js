@@ -24,10 +24,7 @@ function extractNamedSelfTest(src,name){
 }
 
 const persistenceFiles=[
- 'modules/shared/features-helpers-global-security.js',
- 'modules/asset/features-helpers-global-security.js',
- 'modules/finance/features-helpers-global-security.js',
- 'modules/shop/features-helpers-global-security.js'
+ 'modules/shared/features-helpers-global-security.js'
 ];
 
 check('P0 persistence race / stale-write ordering',()=>{

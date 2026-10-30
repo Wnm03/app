@@ -6,7 +6,6 @@ const path = require('node:path');
 const ROOT = path.resolve(__dirname, '..');
 const sources = [
   'modules/shared/modal-navigasi.js',
-  'modules/asset/modal-navigasi.js',
 ];
 
 test('S30 source swipe lifecycle has cleanup registry and closeModal cleanup hook', () => {

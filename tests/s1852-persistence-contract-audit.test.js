@@ -4,10 +4,7 @@ function read(p){return fs.readFileSync(p,'utf8');}
 function ok(c,m){if(!c)throw new Error(m);}
 const root=process.cwd();
 const files=[
- 'modules/shared/features-helpers-global-security.js',
- 'modules/asset/features-helpers-global-security.js',
- 'modules/finance/features-helpers-global-security.js',
- 'modules/shop/features-helpers-global-security.js'
+ 'modules/shared/features-helpers-global-security.js'
 ];
 for(const f of files){
  const s=read(path.join(root,f));

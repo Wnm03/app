@@ -18,12 +18,8 @@ test('S2308 canonical global-security source is the only build runtime entry', (
   for (const shadow of shadows) assert.doesNotMatch(BUILD, new RegExp(esc(shadow)));
 });
 
-test('S2308 shadow global-security files remain explicitly classified as non-runtime', () => {
+test('S2308 shadow global-security files stay deleted (S2720) -- jangan dihidupkan kembali', () => {
   for (const shadow of shadows) {
-    const full = path.join(ROOT, shadow);
-    assert.ok(fs.existsSync(full), `${shadow} missing unexpectedly`);
-    const text = fs.readFileSync(full, 'utf8');
-    assert.match(text, /Dipindah ke modules\/shared\/features-helpers-global-security\.js/,
-      `${shadow} is not marked as a relocated historical copy`);
+    assert.ok(!fs.existsSync(path.join(ROOT, shadow)), `${shadow} sudah dihapus di S2720; sumber live hanya ${canonical}`);
   }
 });

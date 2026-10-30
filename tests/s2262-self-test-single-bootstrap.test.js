@@ -9,9 +9,6 @@ test('S2262: self-test auto-run has one guarded bootstrap entry point', () => {
   const boot = read('modules/shared/boot-early.js');
   const sources = [
     'modules/shared/features-helpers-global-security.js',
-    'modules/finance/features-helpers-global-security.js',
-    'modules/asset/features-helpers-global-security.js',
-    'modules/shop/features-helpers-global-security.js',
   ].map(read);
   assert.match(boot, /ensureSelfTest\(\)\.then\(\(\)\s*=>\s*\{/);
   assert.match(boot, /typeof autoRunSelfTestIfNeeded===.function./);
