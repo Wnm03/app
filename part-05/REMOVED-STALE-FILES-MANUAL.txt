@@ -1,0 +1,10 @@
+File berikut ada di repo GitHub tapi TIDAK ada di release v1165 s446.
+Tidak dihapus otomatis oleh patch ini - lihat penjelasan di PATCH-INFO.md.
+
+PATCH-INFO.md
+FIX-v1108-to-v1111-s404-lint-overlay-open-reflow-guard.md
+modules/shop/features-helpers-global-security.js
+modules/shop/modals.js
+modules/shop/modules-calc.js
+modules/shop/modules-render.js
+modules/shop/multi-owner-engine.js
