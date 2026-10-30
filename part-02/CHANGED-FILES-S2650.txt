@@ -1,0 +1,57 @@
+S2650 cumulative overlay against app-main (35).zip
+Build version: 2650
+Changed/added files: 47 (41 + 6 file Beranda baseline eksplisit)
+Deleted files: 0
+Beranda dipulihkan ke baseline; perbaikan S2649 dipertahankan.
+Status: gate lolos, full test hijau, browser 390x844+360x640 lulus; Android keyboard BELUM diuji.
+
+ADDED AUDIT-BERANDA-app-main_35.md
+ADDED AUDIT-HOTFIX-STATUS.md
+ADDED AUDIT-KUMULATIF-S2649.md
+ADDED AUDIT-P0-1-3-S2645.md
+ADDED AUDIT-P0-6-9-S2641.md
+ADDED AUDIT-P1-TAHAP2-S2644.md
+ADDED AUDIT-RANTAI-AKUMULASI-S2649-2649.md
+ADDED AUDIT-TAGIHAN-FORM-S2638.md
+ADDED AUDIT-VALIDASI-PEMULIHAN-S2650.md
+ADDED CHANGED-FILES-S2649-FINAL.txt
+ADDED CHANGED-FILES-S2649.txt
+ADDED PERBAIKAN-S2649-TEMUAN-1-5.md
+ADDED tests/s2641-sheet-p0-6-9.test.js
+ADDED tests/s2643-p1-stage2.test.js
+ADDED tests/s2645-p0-1-3.test.js
+ADDED tests/s2646-p1-14-17.test.js
+CHANGED FILE-HASHES-SHA256.txt
+CHANGED app-bundle-a.min.js
+CHANGED app-bundle-b.min.js
+CHANGED app_production.html
+CHANGED chat-action-handlers.js
+CHANGED docs/COVERAGE-PER-MODULE.md
+CHANGED docs/FILE-MAP.md
+CHANGED index.html
+CHANGED modern-ui-layer.css
+CHANGED modules/business/shop-scan-ui.js
+CHANGED modules/finance/cicilan.js
+CHANGED modules/finance/tagihan-kalender.js
+CHANGED modules/finance/transaksi-b.js
+CHANGED modules/finance/transaksi.js
+CHANGED modules/finance/tx-servis.js
+CHANGED modules/home/renovasi.js
+CHANGED modules/shared/features-helpers-global-security.js
+CHANGED modules/shared/modals.js
+CHANGED modules/shared/modules-calc.js
+CHANGED modules/shared/modules-render.js
+CHANGED modules/shared/pwa-ux-performance.js
+CHANGED modules/vehicle/part-crud-s2041.js
+CHANGED modules/vehicle/servis.js
+CHANGED sw.js
+CHANGED tests/s2333-viewport-update-coalescing.test.js
+
+RESTORED-TO-BASELINE (eksplisit, aman ditimpa di atas pohon S2649):
+RESTORED modules/dashboard-hub/dashboard-hub.js
+RESTORED modules/dashboard-hub/dashboard-hub-overview.js
+RESTORED modules/shared/modules-render-b.js
+RESTORED modules/finance/financial-health-score-api.js
+RESTORED tests/dashboard-hub-overview-s2612.test.js
+RESTORED tests/dashboard-hub-ticker-modern-s636.test.js
+Akumulasi: S2649 + S2650 (S2650 menggantikan S2649).

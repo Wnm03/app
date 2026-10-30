@@ -1,0 +1,35 @@
+V33 cumulative additions on top of PATCH-GHOST-FEATURE-REGISTRATION-v1687-VERIFIED
+
+SOURCE FIXES
+- car-notes.js — maintenance registry 30 -> 46; explicit rules for 16 previously missing checklist components
+- modules/vehicle/sparepart-servis-b.js — explicit localStorage catch fallback
+
+TEST FIXES
+- tests/category-sot-05-checklist-canonical.test.js
+- tests/service-category-component-checklist-s16.test.js
+- tests/service-checklist-kzr-2012-complement.test.js
+- tests/service-input-catalog-s15.test.js
+- tests/service-maintenance-condition-projection-v20.test.js
+- tests/service-maintenance-condition-reminder-ui-v21.test.js
+- tests/service-maintenance-coverage-orphan-v14.test.js
+- tests/service-maintenance-coverage-v9.test.js
+- tests/service-maintenance-golden-contract-v18.test.js
+- tests/service-maintenance-reminder-projection-v8.test.js
+- tests/service-maintenance-rule-registry-v15.test.js
+- tests/service-zero-cost-v13.test.js
+- tests/servis-checklist-category-linkage-s14.test.js
+- tests/servis-checklist-state-sesi1b.test.js
+
+REBUILT/SYNCHRONIZED
+- app-bundle-a.min.js
+- app-bundle-b.min.js
+- index.html
+- app_production.html
+- sw.js
+- chat-action-handlers.js
+- modules/shared/features-helpers-global-security.js
+- modules/shared/modals.js
+- modules/shared/modules-calc.js
+- modules/shared/modules-render.js
+- docs/FILE-MAP.md
+- docs/COVERAGE-PER-MODULE.md

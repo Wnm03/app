@@ -1,0 +1,16 @@
+app-bundle-a.min.js
+app-bundle-b.min.js
+index.html
+app_production.html
+sw.js
+chat-action-handlers.js
+modules/shared/modules-render.js
+modules/shared/modals.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modules-calc.js
+modules/vehicle/sparepart-servis.js
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+scripts/s2171-controlled-service-backup-migration.js
+docs/AUDIT-S2177-MULTICOMPONENT-CONDITION-EVIDENCE.md
+tests/s2177-multicomponent-condition-evidence.test.js

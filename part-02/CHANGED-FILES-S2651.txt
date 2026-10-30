@@ -1,0 +1,4 @@
+S2651 cumulative overlay against app-main (35).zip
+Build version: 2651
+Akumulasi S2649 + S2650 + S2651. Beranda dipulihkan ke baseline.
+BARU/UBAH S2651: modules/home/renovasi.js, modules/shared/pwa-ux-performance.js, tests/s2651-renov-detail-fix.test.js, bundle, html, sw.js, hash, docs

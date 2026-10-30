@@ -1,0 +1,36 @@
+Shop net-profit cumulative patch — overlay onto baseline app-main (33).zip
+Baseline SHA-256: 9aacbd66c75f30810573d67eb24059c8a3b0418788dd05e6c41c693d0b5dc774
+
+Production files:
+1. modules/shop/profit-engine.js
+   - Adds stateless ProfitEngine.analyzeSale() for discounted net sales, COGS, delivery, marketplace/payment fees, seller-borne costs, expense tax vs tax withheld, and estimated settlement comparison.
+   - Preserves legacy ProfitEngine.profit()/calculateProfit behavior.
+   - Distinguishes historical unit cost, estimated product-master cost, and missing cost; reports missing inputs/warnings instead of presenting an incomplete estimate as final.
+   - Follow-up hardening: rejects zero/negative quantity, negative/malformed monetary/rate inputs, rates above 100%, excessive seller discount, invalid tax status, and negative settlement input instead of silently clamping them to zero.
+   - Adds resultMode='ESTIMATE' and actualReady=false unless historical unit cost, complete required inputs, and an actual settlement amount are present.
+2. modules/shared/modals.js
+   - Adds optional inputs to the existing Delivery Plan modal for seller discount, marketplace fee %, fixed fee, payment fee %, seller shipping subsidy, other selling costs, tax expense, tax withheld, and tax-treatment status.
+3. modules/shop/delivery-plan-ui.js
+   - Wires those inputs to ProfitEngine.analyzeSale() and renders net profit, margin, cost basis, estimated settlement, and completeness warnings.
+   - Resets simulation fields when opening the modal; optional HPP historis per unit is passed to the engine. If blank, master price remains explicitly marked as estimate. No persistence or data mutation.
+
+Regression tests:
+4. tests/shop-net-profit-analysis.test.js
+   - Includes invalid-input and estimate-vs-actual readiness regression coverage.
+5. tests/shop-net-profit-ui-wiring.test.js
+
+Verification:
+- 476/476 tests passed across Shop/profit/purchase/inventory-related test globs, including historical-unit-cost UI wiring.
+- 56/56 tests passed in the narrower explicit net-profit/profit/realization/purchase/governance selection before the additional hardening tests were added.
+- ESLint on the changed JavaScript files: 0 errors, 1 no-unused-vars warning on the existing global-style ProfitEngine declaration.
+- Full application test suite was not run to completion; do not interpret targeted tests as full-suite certification.
+- No build.js run, no bundle output, no persisted schema/data change. Marketplace rates are user-entered simulation inputs, not fetched or hard-coded official rates. Actual marketplace settlement reconciliation and automatic selection of historical cost from an existing recorded sale remain unfinished; the simulator now accepts a manually supplied historical unit cost.
+
+---
+S2628 (input opsional, kosong != 0) — file tambahan/berubah di atas patch ini:
+- modules/shop/profit-engine.js, modules/shop/delivery-plan-ui.js, modules/shared/modals.js
+- tests/shop-net-profit-analysis.test.js, tests/shop-net-profit-ui-wiring.test.js, tests/shop-net-profit-blank-ui-behavior-s2628.test.js (baru)
+- hasil build v2629: app-bundle-a.min.js, app-bundle-b.min.js, app_production.html, index.html, sw.js, 5 sumber konstanta versi, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md, FILE-HASHES-SHA256.txt
+- VERIFICATION-AKUMULASI-A-PLUS-SHOP-NET-PROFIT-v2628.md (diperbarui)
+
+S2628b (perbaikan ongkir rute 0 = belum diketahui): modules/shop/profit-engine.js, modules/shared/modals.js (placeholder), tests/shop-net-profit-analysis.test.js; build ulang v2630.

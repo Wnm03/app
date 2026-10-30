@@ -1,0 +1,7 @@
+S2031 PATCH — BUILD REQUIRED
+
+Overlay patch ini ke app-main baseline, lalu jalankan:
+  npm run build
+
+Patch tidak membawa app-bundle-a.min.js/app-bundle-b.min.js/index.html/app_production.html/sw.js hasil build agar hanya file perbaikan yang dikirim.
+Build akan menyamakan cache/version dan memasukkan perubahan source ke bundle.

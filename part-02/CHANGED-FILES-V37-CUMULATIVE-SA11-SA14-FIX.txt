@@ -1,0 +1,104 @@
+V37 cumulative SA11–SA14 — accumulated fix-only patch (verified GREEN)
+Base: app-main (2).zip (v1688 lineage), as uploaded to this session.
+
+Ini adalah gabungan bersih dari 3 patch yang diuji berurutan di sesi ini
+(SA11-SA12 -> SA11-SA13 -> SA11-SA14), MINUS semua artefak build/test
+(bundle .min.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md, folder
+backups/). Hanya file source + test yang benar-benar berubah dari
+baseline yang disertakan di sini.
+
+Hasil verifikasi akhir (di sesi ini, sebelum di-zip):
+- node --test tests/*.test.js            : 6682/6682 PASS, 0 fail
+- node scripts/build.js                  : PASS
+- node scripts/verify-bundle-freshness.js: PASS (setelah build ulang)
+- node scripts/verify-window-expose.js   : PASS (81/81)
+- node scripts/service-sot-integrity-gate.js : PASS
+
+CATATAN PENTING SAAT APPLY KE REPO ASLI:
+- chat-action-handlers.js: MODULE_FEATURES_VERSION disamakan manual ke
+  's-v26-scanner-lifecycle-reattach-final-1695' (versi asli dari SA12
+  ketinggalan di '...-1691' karena SA13/SA14 tidak menyertakan ulang
+  file ini). modules/shared/modules-render.js juga disamakan ke versi
+  yang sama. Setelah file di bawah ini di-copy ke repo asli, JALANKAN
+  `node scripts/build.js` — build.js akan bump semua konstanta versi ke
+  angka rilis berikutnya secara otomatis; commit hasil bump itu.
+- Setelah build, upload ULANG app-bundle-a.min.js dan app-bundle-b.min.js
+  (tidak disertakan di patch ini) sebelum deploy.
+
+=== FILE YANG BERUBAH ===
+
+Root:
+  car-notes.js
+  chat-action-handlers.js
+  app_production.html
+  index.html
+  sw.js
+
+modules/finance/:
+  transaksi-b.js
+  tx-servis.js
+
+modules/shared/:
+  backup-restore.js
+  boot-early.js
+  features-helpers-global-security.js
+  modals.js
+  modules-calc.js
+  modules-render.js
+
+modules/vehicle/:
+  fuel-maintenance-engine.js
+  service-event-adapter.js
+  sparepart-servis-b.js
+  sparepart-servis.js
+  vehicle-intelligence.js
+  vehicle-reminder.js
+
+scripts/:
+  build.js
+  service-sot-integrity-gate.js
+
+docs/ (mirror GitHub Pages):
+  app_production.html
+  index.html
+
+tests/ (baru + diperbarui, 43 file + 1 helper):
+  build-version-cache-sync-sa13.test.js
+  csp-script-src-sa10a.test.js
+  finance-servis-auto-sot-sync-s12.test.js
+  fuel-maintenance-engine.test.js
+  security-hardening-sa11-sri.test.js
+  service-atomicity-p16.test.js
+  service-concurrency-p15.test.js
+  service-date-boundary-p20.test.js
+  service-delete-atomicity-p17.test.js
+  service-edit-atomicity-p18.test.js
+  service-edit-delete-reconcile-p10.test.js
+  service-event-lifecycle-edit-delete-v11.test.js
+  service-event-lifecycle-mark-serviced-v10.test.js
+  service-event-lifecycle-s13.test.js
+  service-hardening-v24.test.js .. v36.test.js (13 file)
+  service-history-recency-p21.test.js
+  service-idempotency-p12.test.js
+  service-import-odometer-p23.test.js
+  service-legacy-migration-p13.test.js
+  service-maintenance-rules-v2-action-aware.test.js
+  service-odometer-integrity-p22.test.js
+  service-reminder-state-p19.test.js
+  service-restore-backup-integrity-p11.test.js
+  service-vehicle-isolation-p14.test.js
+  servis-catalog-stock-sync-fix-s273.test.js
+  servis-foto-riwayat-sesi-f1.test.js
+  servis-reminder-history-sync-sesi3d.test.js
+  servis-save-finance-updated-emit-v1644.test.js
+  servis-unified-service-event-sesi3c.test.js
+  sparepart-interval-bulan.test.js
+  vehicle-catalog-servis-snapshot.test.js
+  helpers/loadSource.js
+
+TIDAK disertakan (build artifact, regenerate sendiri):
+  app-bundle-a.min.js
+  app-bundle-b.min.js
+  docs/FILE-MAP.md
+  docs/COVERAGE-PER-MODULE.md
+  backups/*
