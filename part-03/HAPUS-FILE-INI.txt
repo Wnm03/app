@@ -1,0 +1,5 @@
+File-file berikut HARUS DIHAPUS dari repo (dead code, sudah tidak dipakai
+sama sekali, 0 referensi di luar test-nya sendiri):
+
+- modules/vehicle/honda-oem-service-mapping.js
+- tests/honda-oem-service-mapping-s22.test.js
