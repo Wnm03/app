@@ -1,0 +1,67 @@
+SA23 CUMULATIVE PATCH — akumulasi di atas SA22
+Lineage: app-main (upload asli) -> [SA15..SA18c] -> SA19 -> SA20 -> SA21 ->
+         SA18d -> SA18e -> SA18f -> build 1697 (baseline SA22, diupload user)
+         -> AUDIT dashboard-servis-reminder dead-file sync (sesi ini) -> build 1698
+
+Sesi ini MENAMBAHKAN (tidak menggantikan) 2 sesi audit sebelumnya:
+1. FIX-audit-dashboard-servis-reminder-dead-files-sync.md (sesi lalu):
+   `modules/modules-render.js` & `modules/shop/modules-render.js` —
+   `renderDashboardServisReminder()` disamakan dgn versi live
+   (`modules/shared/modules-render.js`, resetFilter + computeServiceUrgency()),
+   supaya file dead ini tidak lagi menyimpan formula pre-Sesi-3D kalau suatu
+   saat tidak sengaja ter-load.
+2. Baseline SA15-SA22 yang diupload user (SA22-FINAL-MANIFEST.txt, build 1697):
+   migrasi atribut inline dinamis SA18d/SA18e/SA18f, outbox dedupe SA19-SA21,
+   service-hardening-v36.
+
+Kedua sesi digabung TANPA saling menghapus: modules/modules-render.js &
+modules/shop/modules-render.js dari sesi audit TIDAK disentuh oleh baseline
+SA15-SA22 (baseline itu tidak menyertakan 2 file itu sama sekali) — jadi
+digabung dgn overlay murni, 0 konflik baris.
+
+## Verifikasi sesi ini (di atas gabungan penuh)
+- `npm test` sebelum digabung dgn audit fix (baseline SA15-SA22 saja): tidak
+  dijalankan ulang terpisah — sudah tercakup di angka gabungan di bawah.
+- `npm test` setelah digabung (baseline SA15-SA22 + audit fix, SEBELUM build
+  ulang): 6695 test, 6695 pass, 0 fail.
+- `node scripts/service-sot-integrity-gate.js`: PASS (7/7 check, termasuk
+  full regression). Catatan: SA22-FINAL-MANIFEST.txt sebelumnya melaporkan
+  gate ini tidak sempat selesai di sandbox mereka (>30s) — di sandbox sesi
+  ini gate selesai & PASS penuh, tidak ada lagi status "tidak diketahui".
+- `node scripts/build.js audit-dashboard-servis-reminder-dead-files-sync-1698`:
+  sukses, versi 1697 -> 1698 (versi lama "1697" dari baseline SA22 tidak
+  cocok pola auto-increment build.js — sengaja dikasih nama versi baru
+  manual sesuai instruksi error build.js, bukan bug baru).
+- `npm test` setelah build ulang (bundle regenerated): 6695 test, 6695 pass,
+  0 fail — identik, 0 regresi dari build.
+- `node scripts/verify-bundle-freshness.js`: kedua bundle segar (hash cocok).
+- esbuild tidak terpasang di sandbox ini juga → bundle valid tapi belum
+  diminify (sama seperti catatan SA22).
+
+## File di zip ini (21 file — overlay penuh, timpa semua)
+- app-bundle-a.min.js, app-bundle-b.min.js (rebuilt, build 1698)
+- app_production.html, index.html (?v=1698)
+- sw.js (CACHE_NAME kw-cache-v1698)
+- chat-action-handlers.js (versi build)
+- docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md (auto-generate ulang)
+- modules/shared/modals.js, modules/shared/modules-calc.js,
+  modules/shared/features-helpers-global-security.js,
+  modules/shared/modules-render.js (baseline SA15-SA22, versi build ikut naik)
+- modules/vehicle/service-event-adapter.js (baseline SA15-SA22)
+- modules/modules-render.js, modules/shop/modules-render.js
+  (sesi audit — reminder sync fix)
+- tests/sa18d-budget-modules-calc-dynamic-inline-attr.test.js
+- tests/sa18e-kategorisasi-ai-goldzakat-dynamic-inline-attr.test.js
+- tests/sa18f-final-dynamic-inline-attr.test.js
+- tests/sa19-outbox-vehicle-action-dedupe.test.js
+- tests/sa21-outbox-clear-persistence.test.js
+- tests/service-hardening-v36.test.js (baseline SA15-SA22, updated)
+
+## Belum dikerjakan (di luar scope, sama seperti dokumen audit sebelumnya)
+- Menghapus total modules/modules-render.js & modules/shop/modules-render.js
+  (masih dead/tidak ikut bundle, sengaja dipertahankan krn beberapa test
+  membaca isinya — lihat FIX-audit-dashboard-servis-reminder-dead-files-sync.md).
+
+## Cara pakai
+Timpa SEMUA 21 file di atas ke project (bukan cuma HTML/sw.js) — source &
+bundle sudah konsisten di build 1698.
