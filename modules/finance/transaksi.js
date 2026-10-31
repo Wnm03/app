@@ -860,6 +860,7 @@ if(servisPanel)servisPanel.style.display=showServisPanel?'block':'none';
 if(shopPanel)shopPanel.style.display=showShop?'block':'none';
 if(shopSalePanel)shopSalePanel.style.display=showShopSale?'block':'none';
 if(renovPanel)renovPanel.style.display=showRenov?'block':'none';
+if(typeof syncTxShopCatHint==='function')syncTxShopCatHint(isExpense,showBbm||showStock,showShop);
 if(showBbm){
 _txApplyVehicleContext('bbm','txBbmVehicle',populateTxBbmVehicleSelect);
 } else {

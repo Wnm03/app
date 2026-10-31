@@ -89,6 +89,8 @@ if(!categoryExists&&!editingLegacyCategory){
 }
 // S2732: tolak SEBELUM persist bila stok Penjualan Shop tidak cukup (cegah pemasukan yatim tanpa tautan Shop).
 if(typeof txShopSalePrecheck==='function'){const _shopPre=txShopSalePrecheck(txEditId?D.transactions.find(t=>String(t.id)===String(txEditId)):null);if(!_shopPre.ok){toast('⚠️ '+_shopPre.message);return;}}
+// S2433-A: tolak SEBELUM persist bila centang Stok Shop aktif tapi daftar produk kosong.
+if(typeof txShopStockPrecheck==='function'){const _stkPre=txShopStockPrecheck();if(!_stkPre.ok){toast('⚠️ '+_stkPre.message);return;}}
 // VALIDASI S574-D1 (basis diganti Sesi S578, DL-Next-1 / Audit-3A --
 // lihat DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
 // AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md §3A): akun multi-owner (2+ kandidat
@@ -418,7 +420,7 @@ const _cicilanNewTx={id:billId+1,type:'expense',amount:perBulanMine,category:cat
 if(deductionOwnerIdVal)_cicilanNewTx.deductionOwnerId=deductionOwnerIdVal;
 if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cicilanNewTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
-applyTxShopStockFromTx(billId+1,nama,null);
+applyTxShopStockFromTx(billId+1,nama,null,existingTx);
 WorthIt.applyBuyLink(billId+1);
 // Sesi 341 lanjutan (gap txCicilanShared): cicilan pertama kali dibuat lewat form
 // Transaksi INI JUGA merupakan 1x pembayaran nyata (perBulanMine langsung tercatat sbg
@@ -457,7 +459,7 @@ const _langgananNewTx={id:billId+1,type:'expense',amount:amt,category:cat,subcat
 if(deductionOwnerIdVal)_langgananNewTx.deductionOwnerId=deductionOwnerIdVal;
 if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_langgananNewTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
 applyTxStockFromTx(nama,billId+1,date,amt,existingTx);
-applyTxShopStockFromTx(billId+1,nama,null);
+applyTxShopStockFromTx(billId+1,nama,null,existingTx);
 WorthIt.applyBuyLink(billId+1);
 txEditId=null;
 rememberLastAccForCat(cat,accId);
