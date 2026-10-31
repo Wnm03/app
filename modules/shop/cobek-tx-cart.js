@@ -208,21 +208,40 @@ if(!chk||!chk.checked)return;
 const cartTotal=curShopStockCart.reduce((s,it)=>s+(it.qty*it.hargaBeli),0);
 if(cartTotal>0)document.getElementById('txAmt').value=Math.round(cartTotal);
 }
-function applyTxShopStockFromTx(txId,note,existingTx){
+// S2433-A: tolak SEBELUM transaksi dipersist bila centang "Tambah ke Stok Shop" aktif tapi
+// daftar produk kosong. Dulu applyTxShopStockFromTx() baru menolak SESUDAH transaksi tersimpan
+// dan toast peringatannya langsung ditimpa toast "Transaksi tersimpan" -> uang keluar, stok tidak naik.
+function txShopStockPrecheck(){
+const chk=document.getElementById('txAddShopStock');
+if(!chk||!chk.checked)return {ok:true};
+const panel=document.getElementById('txShopStockPanel');
+if(!panel||panel.style.display==='none')return {ok:true};
+if(Array.isArray(curShopStockCart)&&curShopStockCart.length)return {ok:true};
+return {ok:false,message:'Belum ada produk di daftar stok. Isi produk lalu klik "Tambahkan Produk ke Daftar" sebelum simpan, atau matikan centang Tambah ke Stok Shop'};
+}
+// S2433-B: revisi stok per transaksi. Key idempotensi ledger dulu sama di tiap simpan, sehingga saat
+// EDIT rollback jalan tapi penambahan ulang dilewati (duplicate) -> stok hilang. Kini key memuat revisi.
+function _txShopStockRev(tx){return (tx&&Number(tx.stockRev)>0?Number(tx.stockRev):0)+1;}
+// S2433-C: `prevTx` (opsional) = transaksi LAMA yang digantikan transaksi baru (jalur edit cicilan/
+// langganan menghapus tx lama & membuat id baru). Dipakai HANYA utk rollback stok tx lama; tx hasil
+// tetap `existingTx||find(txId)`. Tanpa prevTx perilaku identik sebelumnya.
+function applyTxShopStockFromTx(txId,note,existingTx,prevTx){
 const chk=document.getElementById('txAddShopStock');
 if(!chk||!chk.checked)return;
 const panel=document.getElementById('txShopStockPanel');
 if(!panel||panel.style.display==='none')return;
+const _rb=existingTx||prevTx||null;
+const _rev=_txShopStockRev(_rb||(typeof D!=='undefined'&&Array.isArray(D.transactions)?D.transactions.find(t=>t.id===txId):null));
 if(!curShopStockCart.length){toast('⚠️ Belum ada produk di daftar. Isi produk, lalu klik "Tambahkan Produk ke Daftar" dulu sebelum simpan');return;}
-if(existingTx){
-if(existingTx.stockItems&&existingTx.stockItems.length){
-existingTx.stockItems.forEach(si=>{
+if(_rb){
+if(_rb.stockItems&&_rb.stockItems.length){
+_rb.stockItems.forEach(si=>{
 const prevP=D.products.find(p=>p.id===si.productId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0),{source:'sale-edit-rollback',reason:'restore previous sale before edit',refType:'shopSale',refId:existingTx.id,idempotencyKey:'sale-edit-restore:'+existingTx.id+':'+prevP.id});else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0),{source:'sale-edit-rollback',reason:'restore previous sale before edit',refType:'shopSale',refId:_rb.id,idempotencyKey:'sale-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
 });
-} else if(existingTx.stockProductId){
-const prevP=D.products.find(p=>p.id===existingTx.stockProductId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(existingTx.stockQty||0),{source:'sale-edit-rollback',reason:'restore previous transaction stock',refType:'transaction',refId:existingTx.id,idempotencyKey:'tx-edit-restore:'+existingTx.id+':'+prevP.id});else prevP.stock=Math.max(0,(prevP.stock||0)-(existingTx.stockQty||0));}
+} else if(_rb.stockProductId){
+const prevP=D.products.find(p=>p.id===_rb.stockProductId);
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(_rb.stockQty||0),{source:'sale-edit-rollback',reason:'restore previous transaction stock',refType:'transaction',refId:_rb.id,idempotencyKey:'tx-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(_rb.stockQty||0));}
 }
 }
 const resultItems=[];
@@ -281,7 +300,7 @@ if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(produ
 }
 }
 if(!product)return;
-if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty,{source:'stock-receipt',reason:'new stock entered from transaction input',refType:'transaction',refId:txId,idempotencyKey:'tx-stock-receipt:'+txId+':'+product.id});else product.stock=(product.stock||0)+it.qty;
+if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty,{source:'stock-receipt',reason:'new stock entered from transaction input',refType:'transaction',refId:txId,idempotencyKey:'tx-stock-receipt:'+txId+':'+product.id+':r'+_rev});else product.stock=(product.stock||0)+it.qty;
 if(it.hargaBeli>0){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(product,'hargaBeli',it.hargaBeli);else product.hargaBeli=it.hargaBeli;}
 if(it.produsenId){
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(product,'produsenId',it.produsenId);else product.produsenId=it.produsenId;
@@ -295,6 +314,7 @@ totalBelanja+=it.qty*it.hargaBeli;
 });
 const tx=existingTx||D.transactions.find(t=>t.id===txId);
 if(tx){
+tx.stockRev=_rev;
 tx.stockItems=resultItems;
 if(resultItems[0]){
 tx.stockProductId=resultItems[0].productId;
@@ -306,6 +326,32 @@ tx.kategoriId=resultItems[0].kategoriId||'';
 renderProductList();
 const ringkasan=resultItems.map(it=>`${it.name} +${it.qty}`).join(', ');
 toast(`📦 Stok bertambah: ${ringkasan} (total ${fmtFull(totalBelanja)})`);
+}
+// S2433-D: panel Stok Shop hanya muncul utk kategori/sub Shop. Kalau user mengetik nama produk Shop di
+// catatan tapi kategorinya bukan Shop, tampilkan petunjuk (tanpa mengubah aturan tampil panel).
+function txShopCatHintShouldShow(note,isExpense,otherPanelShown,showShop,products){
+if(!isExpense||otherPanelShown||showShop)return false;
+const n=String(note||'').trim().toLowerCase();
+if(n.length<3||!Array.isArray(products))return false;
+return products.some(p=>{const pn=String((p&&p.name)||'').trim().toLowerCase();return pn.length>=3&&(n===pn||n.indexOf(pn)!==-1);});
+}
+function syncTxShopCatHint(isExpense,otherPanelShown,showShop){
+const panel=document.getElementById('txShopStockPanel');
+if(!panel||!panel.insertAdjacentElement)return;
+let el=document.getElementById('txShopCatHint');
+const noteEl=document.getElementById('txNote');
+const show=txShopCatHintShouldShow(noteEl?noteEl.value:'',isExpense,otherPanelShown,showShop,typeof D!=='undefined'?D.products:null);
+if(!el){
+if(!show)return;
+el=document.createElement('div');
+el.id='txShopCatHint';
+el.className='note-hint';
+el.style.cssText='display:none;font-size:12px;color:var(--text-muted,#888);margin:6px 0';
+el.textContent='💡 Nama ini cocok dengan produk Shop. Untuk menambah stok etalase, pilih kategori/sub Shop agar panel Stok Shop muncul.';
+panel.insertAdjacentElement('beforebegin',el);
+if(noteEl&&noteEl.addEventListener&&!noteEl.__shopCatHintBound){noteEl.__shopCatHintBound=true;noteEl.addEventListener('input',function(){if(typeof updateTxVehiclePanels==='function')updateTxVehiclePanels();});}
+}
+el.style.display=show?'block':'none';
 }
 let curTxShopSaleCart=[];
 function resetTxShopSaleCart(){
