@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-10-29T03:48:30.078Z
-Total file source: 489 · Total identifier global: 17870
+Terakhir digenerate: 2026-10-31T06:11:13.255Z
+Total file source: 489 · Total identifier global: 17879
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -30,7 +30,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 7 | `modules/shop/cobek-etalase.js` | 924 | Domain Shop bagian Etalase: katalog produk (tambah/edit/hapus, Dipindah ke modules/shop/cobek-etalase.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 8 | `modules/shop/cobek-pricing.js` | 897 | Domain Shop bagian rekomendasi harga & ongkir: PriceReko (kalkulator Dipindah ke modules/shop/cobek-pricing.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 9 | `modules/shop/cobek-order.js` | 1074 | Domain Shop bagian order & pelanggan: Produsen (supplier), SiapPulang Dipindah ke modules/shop/cobek-order.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
-| 10 | `modules/shop/cobek-tx-cart.js` | 668 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
+| 10 | `modules/shop/cobek-tx-cart.js` | 714 | Domain Shop bagian integrasi form Transaksi: cart Stok Masuk & Penjualan Dipindah ke modules/shop/cobek-tx-cart.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 11 | `modules/shop/cobek-io.js` | 627 | Domain Shop bagian impor/ekspor: ImportKatalog (impor massal produk+harga Dipindah ke modules/shop/cobek-io.js (Sesi 10 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, … |
 | 12 | `modules/business/shop-data-io-api.js` | 679 | Bagian B (Shop Import/Export: Scan/PDF/CSV/JSON) dari DESIGN_torsi-vehicle-selector_shop-import-export-2.md. Bagian B (Scan, Import PDF, Import CSV, Import/Export JSON) SUDAH SELESAI 4/4. Sesi ini (lanjutan opsional, … |
 | 13 | `modules/business/kasir.js` | 405 | Modul "🧠 Kasir AI" (v127, kw81-kasir-ai-pos): Dipindah ke modules/business/kasir.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). Tab … |
@@ -113,8 +113,8 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 90 | `modules/finance/tx-cobek.js` | 30 | domain "Stok/Penjualan Shop (Shop)" pada form Transaksi. Dipindah ke modules/finance/tx-cobek.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
 | 91 | `modules/finance/tx-target.js` | 152 | domain "Target Tabungan" (modal tambah target, deteksi Dana |
 | 92 | `modules/finance/tx-list-cashflow.js` | 1070 | domain "List Transaksi (kartu tx, hapus tx), filter Dipindah ke modules/finance/tx-list-cashflow.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi … |
-| 93 | `modules/finance/transaksi.js` | 1487 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
-| 94 | `modules/finance/transaksi-b.js` | 822 | bagian KEDUA dari modules/finance/transaksi.js (audit ukuran file, sesi lanjutan setelah split modules/vehicle/sparepart-servis.js). Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (sisa deklarasi … |
+| 93 | `modules/finance/transaksi.js` | 1488 | Form Tambah/Edit Transaksi Keuangan: autocomplete kategori/produk, Dipindah ke modules/finance/transaksi.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
+| 94 | `modules/finance/transaksi-b.js` | 824 | bagian KEDUA dari modules/finance/transaksi.js (audit ukuran file, sesi lanjutan setelah split modules/vehicle/sparepart-servis.js). Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (sisa deklarasi … |
 | 95 | `modules/shared/profil-pengaturan.js` | 136 | Profil pengguna di Pengaturan: auto-save profil, status Dipindah ke modules/shared/profil-pengaturan.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 96 | `modules/finance/kategori.js` | 228 | Modal Kategori & Subkategori (tambah/edit/hapus, filter tampilan) Dipindah ke modules/finance/kategori.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma … |
 | 97 | `modules/ai/kategorisasi-ai.js` | 204 | AI Auto-Kategorisasi Transaksi dari Catatan Bebas Dipindah ke modules/ai/kategorisasi-ai.js (Sesi 14 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder). … |
@@ -1361,6 +1361,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_queueDialog` | `modules/shared/modal-navigasi.js` |
 | `_queueDialog` | `modules/asset/modal-navigasi.js` |
 | `_rawSisa` | `modules/vehicle/servis-b.js` |
+| `_rb` | `modules/shop/cobek-tx-cart.js` |
 | `_rcMatHargaOnBlur` | `modules/shared/modals.js` |
 | `_readContinuityHighWater` | `modules/shared/features-helpers-global-security.js` |
 | `_readRuntimeMeta` | `modules/shared/features-helpers-global-security.js` |
@@ -1407,6 +1408,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_restoredVehicleCatalogStore` | `modules/shared/backup-restore.js` |
 | `_restoreEnsureInit` | `modules/shared/backup-restore.js` |
 | `_restoreMarkDomain` | `modules/vehicle/servis.js` |
+| `_rev` | `modules/shop/cobek-tx-cart.js` |
 | `_rippleTrackingDocs` | `modules/shared/ripple-position.js` |
 | `_rollbackAuxEntries` | `modules/shared/backup-restore.js` |
 | `_rollbackCategoryEdit` | `modules/vehicle/sparepart-servis-ui.js` |
@@ -1740,6 +1742,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_txShopSaleCustAddrOnBlur` | `modules/shop/cobek-tx-cart.js` |
 | `_txShopSaleCustNameOnBlur` | `modules/shop/cobek-tx-cart.js` |
 | `_txShopSaleCustPhoneOnBlur` | `modules/shop/cobek-tx-cart.js` |
+| `_txShopStockRev` | `modules/shop/cobek-tx-cart.js` |
 | `_txSubCatOnBlur` | `modules/finance/transaksi.js` |
 | `_txVehCtxApplied` | `modules/finance/transaksi.js` |
 | `_undoNewSale` | `modules/business/kasir.js` |
@@ -6035,6 +6038,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `el` | `modules/shop/cobek-etalase.js` |
 | `el` | `modules/shop/cobek-pricing.js` |
 | `el` | `modules/shop/cobek-order.js` |
+| `el` | `modules/shop/cobek-tx-cart.js` |
 | `el` | `modules/shop/cobek-io.js` |
 | `el` | `modules/business/kasir.js` |
 | `el` | `modules/finance/piutang-utang.js` |
@@ -10515,6 +10519,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `n` | `modules/shared/modules-calc.js` |
 | `n` | `modules/shop/cobek-etalase.js` |
 | `n` | `modules/shop/cobek-pricing.js` |
+| `n` | `modules/shop/cobek-tx-cart.js` |
 | `n` | `modules/business/shop-data-io-api.js` |
 | `n` | `modules/finance/pajak-pbb-zakat.js` |
 | `n` | `car-notes.js` |
@@ -15202,6 +15207,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `shouldRenderDashboardFromSettings` | `modules/dashboard-hub/dashboard-hub-settings.js` |
 | `shouldShowGenericDueField` | `modules/finance/tagihan-kalender.js` |
 | `shouldValidateOdometer` | `modules/vehicle/servis.js` |
+| `show` | `modules/shop/cobek-tx-cart.js` |
 | `show` | `modules/finance/filter-laporan.js` |
 | `show` | `modules/finance/transaksi.js` |
 | `show` | `modules/vehicle/fuel-trend-dashboard.js` |
@@ -16047,6 +16053,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `syncTxBbmAmt` | `modules/finance/tx-bbm.js` |
 | `syncTxEl` | `modules/finance/piutang-utang.js` |
 | `syncTxFilterOptions` | `modules/vehicle/part-crud-s2041.js` |
+| `syncTxShopCatHint` | `modules/shop/cobek-tx-cart.js` |
 | `syncTxShopSaleAmt` | `modules/shop/cobek-tx-cart.js` |
 | `syncTxShopStockAmt` | `modules/shop/cobek-tx-cart.js` |
 | `syncUnlinkedCatalogPartsToStock` | `modules/finance/tx-stok-sparepart.js` |
@@ -17029,7 +17036,9 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `txs` | `modules/vehicle/vehicle-car-notes-sot-s2071.js` |
 | `txsByServis` | `modules/shared/backup-restore.js` |
 | `TxServis` | `modules/finance/tx-servis.js` |
+| `txShopCatHintShouldShow` | `modules/shop/cobek-tx-cart.js` |
 | `txShopSalePrecheck` | `modules/shop/cobek-tx-cart.js` |
+| `txShopStockPrecheck` | `modules/shop/cobek-tx-cart.js` |
 | `txStockScanPart` | `modules/finance/tx-stok-sparepart.js` |
 | `txStockScanPartGallery` | `modules/finance/tx-stok-sparepart.js` |
 | `txStockScanPartVia` | `modules/finance/tx-stok-sparepart.js` |
