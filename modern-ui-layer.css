@@ -1411,3 +1411,46 @@ body.has-open-modal .toast {
     display:inline-block; min-height:36px; box-sizing:border-box; padding:8px 4px; margin:-8px -4px; line-height:1.2;
   }
 }
+
+
+/* S2729–S2730: Shop workspace lebih ringkas tanpa mengubah struktur aksi/data. */
+#page-shop .pwa-workspace-head .pwa-workspace-kicker,
+#page-shop .pwa-workspace-head p { display: none !important; }
+#page-shop .kasir-view-toggle .chip-btn { min-width: 44px !important; min-height: 44px !important; }
+#page-shop .shop-import-export { margin: 8px 0 12px; }
+#page-shop .shop-import-export > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center;
+  justify-content: space-between; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--border); border-radius: 10px; font-weight: 600;
+  background: var(--surface, var(--card));
+}
+#page-shop .shop-import-export > summary::-webkit-details-marker { display: none; }
+#page-shop .shop-import-export-actions {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  padding-top: 8px;
+}
+#page-shop .shop-import-export-actions > button { margin: 0 !important; min-width: 0; }
+@media (max-width: 380px) {
+  #page-shop .shop-import-export-actions { grid-template-columns: 1fr; }
+}
+
+#page-shop .shop-fab-retired { display: none !important; }
+
+/* S2732 — pemadatan blok atas Shop (mobile): hero 1 baris aksi, KPI 3 kolom rapat, Modal Stok 1 baris.
+   Heading hero tetap ada untuk aria-labelledby (disembunyikan secara visual saja). Hanya presentasi. */
+@media (max-width: 650px) {
+  #page-shop .shop-kpi-strip { gap: 6px; margin-bottom: 8px; }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero { padding: 8px; gap: 0; }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-main {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-domain-hero-actions { margin-top: 0; gap: 6px; }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-action-card { min-height: 48px; padding: 6px 8px; gap: 2px; }
+  #page-shop .shop-kpi-strip > .pwa-domain-hero .pwa-action-card small { display: none; }
+  #page-shop .shop-kpi-strip > .shop-grid { gap: 6px; }
+  #page-shop .shop-kpi-strip > .shop-grid .shop-stat { min-height: 56px; padding: 6px 4px; gap: 2px; }
+  #page-shop .shop-kpi-strip > .shop-grid #shopModalStokCard { padding: 6px 10px; }
+}
+/* S2732 — daftar kategori produk berada di dalam kartu yang bisa dilipat (max-height 2000px): beri scroll sendiri. */
+#cobekKategoriList { max-height: 420px; overflow-y: auto; }

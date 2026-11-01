@@ -418,7 +418,7 @@
         // Only move explicitly identified customer fields. Never move a broad
          // heading match: it can be a wrapper containing the entire modal.
          const first=customerNodes[0];
-         if(first&&customerNodes.length){const fold=make('details','sheet-fold hint-fold');fold.id='orderCustomerFold';const summary=make('summary','','ⓘ Pelanggan (opsional)');fold.appendChild(summary);if(first.parentNode)first.parentNode.insertBefore(fold,first);customerNodes.forEach(function(n){if(n&&!fold.contains(n))fold.appendChild(n);});}
+         if(first&&customerNodes.length){const fold=make('details','sheet-fold hint-fold');fold.id='orderCustomerFold';fold.setAttribute('data-fold-auto','');const summary=make('summary','','ⓘ Pelanggan (opsional)');fold.appendChild(summary);if(first.parentNode)first.parentNode.insertBefore(fold,first);customerNodes.forEach(function(n){if(n&&!fold.contains(n))fold.appendChild(n);});}
         const note=byId('oNote'),discount=byId('oDiskon'),dp=byId('oDP'),acc=byId('oAcc');
         const discountGroup=discount&&discount.closest('.u-grid2');
         const payAnchor=discountGroup||dp&&dp.closest('.fg')||acc&&acc.closest('.fg');

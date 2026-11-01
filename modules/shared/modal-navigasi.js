@@ -639,6 +639,18 @@ function _routeShopModal(id){
     if(typeof setShopTab==='function')setShopTab(tab,null);
   }catch(e){ console.warn('[ShopModalRouting] gagal mengarahkan modal',id,e); }
 }
+// S2732: lipat field opsional di modal. <details data-fold-auto> terbuka otomatis
+// bila ada field teks/angka di dalamnya yang terisi (mode edit, preorder->order);
+// reset=true menutup lagi lipatan yang kosong (dipakai saat modal dibuka ulang).
+// Hanya menyentuh atribut open — nilai field & handler tidak berubah.
+function _syncFoldAutoOpen(root,reset){
+if(!root||typeof root.querySelectorAll!=='function')return;
+root.querySelectorAll('details[data-fold-auto]').forEach(d=>{
+let filled=false;
+d.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=hidden]),textarea').forEach(f=>{if(!filled&&String(f.value==null?'':f.value).trim()!=='')filled=true;});
+if(filled)d.open=true;else if(reset)d.open=false;
+});
+}
 function openModal(id){
 _routeShopModal(id);
 const el=document.getElementById(id);
@@ -646,6 +658,7 @@ if(!el){
 console.warn(`Modal #${id} tidak ditemukan di DOM — cek document.write index (lihat modals.js MODAL_HTML[] vs document.write(MODAL_HTML[i]) di index.html/app_production.html, urutan/jumlahnya harus persis sama).`);
 return;
 }
+_syncFoldAutoOpen(el,true);
 // FIX (audit: openModal() langsung dari tombol, mis. openVehicleModal()/
 // VehicleCatalogUI.open(), tanpa lewat showPage() dulu — laporan user "tab
 // Kelola Kendaraan/Katalog Suku Cadang tidak respon, 0 toast"): self-heal
@@ -715,7 +728,7 @@ _focusTrapActivate(el);
 // perilaku). Reuse penuh mekanisme toggleCardCollapse/localStorage yang
 // sudah ada — TIDAK ada storage/mekanisme collapse baru, cuma nilai default
 // saat prefs[key] belum pernah diset.
-const CARD_COLLAPSE_DEFAULT_CLOSED=['vehAnalyticsCard','fuelDashCard','fuelCompareCard','fuelTrendCard'];
+const CARD_COLLAPSE_DEFAULT_CLOSED=['vehAnalyticsCard','fuelDashCard','fuelCompareCard','fuelTrendCard','priceRekoWidgetCard','stockRekoWidgetCard','etalaseKategoriCard'];
 function _cardCollapseShouldBeCollapsed(key,prefs){
 if(Object.prototype.hasOwnProperty.call(prefs,key))return !!prefs[key];
 return CARD_COLLAPSE_DEFAULT_CLOSED.indexOf(key)!==-1;

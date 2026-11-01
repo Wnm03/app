@@ -458,6 +458,8 @@ const profit=typeof calculateNetProfit==='function'?calculateNetProfit(subtotal,
 return{lines,subtotal,modal,diskon,diskonEfektif:effectiveDiskon,ongkir,total,profit};
 },
 renderItems(){
+// S2732: lipatan opsional (info konsumen, diskon/ongkir/catatan) ikut terbuka bila terisi — jalur preorder mengisi field SESUDAH openModal().
+if(typeof _syncFoldAutoOpen==='function')_syncFoldAutoOpen(document.getElementById('orderModal'),false);
 const{lines,total,profit}=Order.computeTotals();
 const el=document.getElementById('orderItemList');
 const _po=Order.preorderId&&typeof Preorder!=='undefined'?(Preorder._list().find(x=>x&&x.id===Order.preorderId)||null):null;
