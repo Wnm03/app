@@ -767,6 +767,16 @@ if(Array.isArray(D.servisLogs)){
 // Guard kategori yang terdaftar untuk Pengingat tetapi tidak lagi terlihat pada
 // kendaraan aktif bukan error data; vehicle visibility memang merupakan aturan
 // runtime. Karena itu Sesi 3E sengaja tidak mengubah/menandai kasus tersebut.
+// Preorder integrity (read-only): orphan product and fulfilled sale links are warnings, not mutations.
+if(Array.isArray(D.preorders)){
+const _preorderProductIds=new Set((D.products||[]).filter(Boolean).map(p=>String(p.id)));
+const _preorderShopIds=new Set((D.cobek||[]).filter(Boolean).map(c=>String(c.id)));
+D.preorders.forEach(po=>{
+if(!po)return;
+if(po.productId&&!_preorderProductIds.has(String(po.productId)))issues.push({level:'warn',title:'Preorder tertaut ke produk yang sudah dihapus',detail:`Preorder "${escapeHtml(po.id||'tanpa ID')}" menunjuk productId "${escapeHtml(po.productId)}" yang tidak ada di Etalase.`});
+if(po.status==='fulfilled'&&po.shopId&&!_preorderShopIds.has(String(po.shopId)))issues.push({level:'warn',title:'Preorder dipenuhi tanpa penjualan terkait',detail:`Preorder "${escapeHtml(po.id||'tanpa ID')}" menyimpan shopId "${escapeHtml(po.shopId)}" yang tidak ditemukan di Riwayat Shop.`});
+});
+}
 openModal('dataHealthModal');
 return issues;
 }

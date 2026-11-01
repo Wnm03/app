@@ -271,6 +271,7 @@ toast(`🪨 Stok dikembalikan, penjualan Shop terkait dihapus`,2600);
 }
 if(linkedShop&&linkedShop.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter.removeById){if(typeof reverseShopReceivablePayoff==='function')reverseShopReceivablePayoff((D.piutang||[]).find(p=>p&&p.id===linkedShop.piutangLinkId));BillDebtPiutangCanonicalWriter.removeById('piutang',linkedShop.piutangLinkId);}
 D.cobek=D.cobek.filter(c=>c.id!==t.cobekLinkId);
+if(typeof Preorder!=='undefined'&&typeof Preorder.onSaleRemoved==='function'&&linkedShop)Preorder.onSaleRemoved(linkedShop.id);
 renderShop();renderShopRecent();
 }
 if(t&&t.servisLinkId&&D.servisLogs){

@@ -325,14 +325,18 @@ return {ok:true,dp,sisa,txNote,piutangId:shopRecord&&shopRecord.piutangLinkId||n
 const Order={
 items:[],
 editId:null,
+preorderId:null,
+_preorderSubmitted:false,
 populateProductSelect(){
 const sel=document.getElementById('oProductSelect');
 if(!sel)return;
-sel.innerHTML=D.products.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.stock})</option>`).join('')||'<option value="">Belum ada produk di etalase</option>';
+sel.innerHTML=D.products.map(p=>{const stock=Number(p&&p.stock);const habis=!Number.isFinite(stock)||stock<=0;const preorder=!!(p&&p.preorder&&p.preorder.aktif);return `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${escapeHtml(p.stock)})${habis?' (habis)':''}${preorder?' (preorder)':''}</option>`;}).join('')||'<option value="">Belum ada produk di etalase</option>';
 },
 openModal(){
 if(!D.products.length){toast('⚠️ Tambah produk di Etalase dulu');return;}
 Order.editId=null;
+Order.preorderId=null;
+Order._preorderSubmitted=false;
 Order.items=[];
 document.getElementById('oDate').value=typeof todayStr==='function'?todayStr():'';
 ['oCustName','oCustPhone','oCustAddr','oNote'].forEach(id=>document.getElementById(id).value='');
@@ -359,7 +363,9 @@ openModal('orderModal');
 // formula/kalkulasi baru). Transaksi Shop lama tanpa field items[] (format "data lama") belum
 // bisa diedit di sini -- hapus & catat ulang.
 openEditModal(id){
+Order._preorderSubmitted=false;
 if(!D.products.length){toast('⚠️ Tambah produk di Etalase dulu');return;}
+Order.preorderId=null;
 const t=D.cobek.find(x=>x.id===id);
 if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
 if(!t.items||!t.items.length){toast('⚠️ Transaksi lama (format lama) belum bisa diedit di sini — hapus & catat ulang kalau perlu koreksi.');return;}
@@ -454,7 +460,11 @@ return{lines,subtotal,modal,diskon,diskonEfektif:effectiveDiskon,ongkir,total,pr
 renderItems(){
 const{lines,total,profit}=Order.computeTotals();
 const el=document.getElementById('orderItemList');
-el.innerHTML=lines.length?lines.map((l,i)=>{
+const _po=Order.preorderId&&typeof Preorder!=='undefined'?(Preorder._list().find(x=>x&&x.id===Order.preorderId)||null):null;
+const _poQty=_po?Order.items.filter(x=>String(x.productId)===String(_po.productId)).reduce((n,x)=>n+(Number(x.qty)||0),0):0;
+const _poMismatch=_po&&_poQty!==Number(_po.qty);
+const _poWarning=_poMismatch?`<div class="u-mb8" role="status" style="padding:10px;border:1px solid var(--accent4);border-radius:10px;background:var(--accent4-soft);font-size:12px;line-height:1.5">⚠️ Qty keranjang (${_poQty}) berbeda dari qty preorder (${_po.qty}). Jika disimpan, pesanan ini tetap ditandai <b>dipenuhi penuh</b>; jumlah yang tercatat pada penjualan mengikuti keranjang. Sesuaikan qty sebelum menyimpan jika tidak disengaja.</div>`:'';
+el.innerHTML=_poWarning+(lines.length?lines.map((l,i)=>{
 // Reko harga (kw194-kasir-order-pricereko): pakai rumus PriceRekoWidget yg sama dgn widget
 // "🤖 Rekomendasi Harga Jual AI" di Etalase, biar kelihatan di titik jual (bukan cuma pas
 // buka Etalase) kalau Harga Jual produk ini sudah menyimpang jauh dari estimasi.
@@ -478,12 +488,13 @@ return`
         </div>
         <button class="tx-del" data-action="removeOrderItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
       </div>`;
-}).join(''):'<div class="empty"><div class="empty-text">Keranjang masih kosong</div></div>';
+}).join(''):'<div class="empty"><div class="empty-text">Keranjang masih kosong</div></div>');
 document.getElementById('oTotalDisplay').textContent=fmtFull(total);
 document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
 },
 save(){return withSaveGuard('order','orderModal',Order._saveInner);},
 _saveInner(){
+if(Order._preorderSubmitted){toast('ℹ️ Preorder ini sudah diproses; tidak dibuat penjualan kedua.');return;}
 if(!Order.items.length){toast('⚠️ Keranjang masih kosong');return;}
 const{lines,subtotal,diskonEfektif:diskon,ongkir,total,profit}=Order.computeTotals();
 const items=lines.map(l=>({productId:l.productId,name:l.product.name,qty:l.qty,harga:l.harga,lineTotal:l.lineTotal}));
@@ -501,6 +512,9 @@ const txId=(existing&&existing.txLinkId)?existing.txLinkId:uid();
 // lunas penuh (perilaku lama, tidak berubah). Sisa (Total-DP) dicatat sbg Piutang (reuse modul
 // Piutang yg sudah ada, D.piutang — bukan ledger/rumus baru), linked via piutangLinkId spy bisa
 // disinkron ulang kalau transaksi ini diedit lagi nanti.
+// Preorder (tahap 1): validasi SEBELUM ada mutasi apa pun.
+const poId=(!isEdit&&Order.preorderId&&typeof Preorder!=='undefined')?Order.preorderId:null;
+if(poId){const chk=Preorder.canFulfil(poId,Order.items);if(!chk.ok){toast('⚠️ '+chk.message);return;}}
 const dpRaw=document.getElementById('oDP')?document.getElementById('oDP').value.trim():'';
 const dpPreflight=dpRaw===''?total:Math.max(0,Math.min(parseFloat(dpRaw)||0,total));
 const existingPiutangIdPreflight=existing&&existing.piutangLinkId;
@@ -516,13 +530,38 @@ accountId:accId,txId,existingShopId:isEdit?Order.editId:null
 });
 if(!result.ok){toast('⚠️ '+result.message);return;}
 const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');
-const payment=syncShopSalePayment({shopId:result.shopId,txId,existingTxId:existing&&existing.txLinkId,existingPiutangId:existing&&existing.piutangLinkId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});
-if(!payment.ok){toast('⚠️ Pembayaran tidak tersinkron: '+payment.reason);return;}
+let payment;
+try{
+payment=syncShopSalePayment({shopId:result.shopId,txId,existingTxId:existing&&existing.txLinkId,existingPiutangId:existing&&existing.piutangLinkId,dpRaw,total,accountId:accId,customerName:customer.name,date,itemSummary});
+}catch(err){
+if(isEdit)throw err;
+if(!isEdit){
+try{if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.removeById==='function')FinanceTxSOT.removeById(txId);}catch(_e){void _e;}
+const failedRow=(D.cobek||[]).find(c=>c&&c.id===result.shopId);
+if(failedRow&&failedRow.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.removeById==='function'){try{BillDebtPiutangCanonicalWriter.removeById('piutang',failedRow.piutangLinkId);}catch(_e){void _e;}}
+if(typeof rollbackShopItems==='function')rollbackShopItems(items,1,txId);
+D.cobek=(D.cobek||[]).filter(c=>c&&c.id!==result.shopId);
+}
+toast('⚠️ Pembayaran gagal'+(!isEdit?', penjualan baru dibatalkan':'')+': '+(err&&err.message||err));return;
+}
+if(!payment||!payment.ok){
+if(!isEdit){
+try{if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.removeById==='function')FinanceTxSOT.removeById(txId);}catch(_e){void _e;}
+const failedRow=(D.cobek||[]).find(c=>c&&c.id===result.shopId);
+if(failedRow&&failedRow.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter&&typeof BillDebtPiutangCanonicalWriter.removeById==='function'){try{BillDebtPiutangCanonicalWriter.removeById('piutang',failedRow.piutangLinkId);}catch(_e){void _e;}}
+if(typeof rollbackShopItems==='function')rollbackShopItems(items,1,txId);
+D.cobek=(D.cobek||[]).filter(c=>c&&c.id!==result.shopId);
+}
+toast('⚠️ Pembayaran tidak tersinkron: '+(payment&&payment.reason||'respons tidak valid')+(!isEdit?' — penjualan baru dibatalkan':''));
+return;
+}
 const dp=payment.dp,sisa=payment.sisa;
+if(poId){const fulfilled=Preorder.markFulfilled(poId,result.shopId);if(!fulfilled||!fulfilled.ok)toast('⚠️ Status preorder gagal diperbarui; transaksi tersimpan sebagai penjualan biasa.');}
 save();
+if(poId)Order._preorderSubmitted=true;
 const marginPct=total>0?(profit/total)*100:0;
 if(typeof AIBus!=="undefined")AIBus.emit("delivery.created",{orderId:txId,total,ongkir,delivered,date,marginPct});
-Order.editId=null;
+Order.editId=null;Order.preorderId=null;
 closeModal('orderModal');renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();
 if(typeof hitungZakatMaal==='function')hitungZakatMaal();
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
@@ -541,20 +580,22 @@ rowHTML(t){
 if(t.items){
 const itemSummary=t.items.map(i=>i.name+' x'+i.qty).join(', ');
 const pendingBadge=t.delivered===false?' <span class="acc-chip u-cacc4" style="background:var(--accent4-soft)">📦 Belum diserahkan</span>':'';
+const _fromPreorder=typeof Preorder!=='undefined'&&Array.isArray(D.preorders)&&(D.preorders||[]).some(po=>po&&po.status==='fulfilled'&&String(po.shopId)===String(t.id));
+const _preorderBadge=_fromPreorder?' <span class="acc-chip u-cacc" style="background:var(--accent-soft)">🧾 dari preorder</span>':'';
 const _linkedReceivable=t.piutangLinkId?(D.piutang||[]).find(p=>p.id===t.piutangLinkId&&!p.lunas):null;
 const _paymentBadge=_linkedReceivable?' <span class="acc-chip u-cacc4" style="background:var(--accent4-soft)">💳 DP / belum lunas</span>':'';
 return`<div class="tx-item u-pointer" data-action="Order.openEditModal" data-args="${escapeHtml(JSON.stringify([t.id]))}">
         <div class="tx-icon u-bgaccsoft">🪨</div>
-        <div class="tx-info"><div class="tx-name">${t.customer&&t.customer.name?escapeHtml(t.customer.name):'Transaksi'} · ${escapeHtml(itemSummary)}${pendingBadge}${_paymentBadge}</div><div class="tx-meta">${t.date}${t.customer&&t.customer.phone?' · '+escapeHtml(t.customer.phone):''} ${t.note?'· '+escapeHtml(t.note):''}</div></div>
+        <div class="tx-info"><div class="tx-name">${t.customer&&t.customer.name?escapeHtml(t.customer.name):'Transaksi'} · ${escapeHtml(itemSummary)}${pendingBadge}${_paymentBadge}${_preorderBadge}</div><div class="tx-meta">${t.date}${t.customer&&t.customer.phone?' · '+escapeHtml(t.customer.phone):''} ${t.note?'· '+escapeHtml(t.note):''}</div></div>
         <div class="tx-amount green">${fmt(t.total)}</div>
-        <button class="tx-del" data-stop="1" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
+        <button class="tx-del" data-stop="1" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Retur/Batalkan transaksi" title="Retur/Batalkan transaksi">↩️</button>
       </div>`;
 }
 return`<div class="tx-item">
       <div class="tx-icon u-bgaccsoft">🪨</div>
       <div class="tx-info"><div class="tx-name">${t.date} · ${t.sets} set (data lama)</div><div class="tx-meta">${escapeHtml(t.note||'Trip Shop')}</div></div>
       <div class="tx-amount ${Number(t.profit)<0?'red':'green'}">${Number(t.profit)<0?'':'+'}${fmtFullSigned(t.profit)}</div>
-      <button class="tx-del" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
+      <button class="tx-del" data-action="delShop" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Retur/Batalkan transaksi" title="Retur/Batalkan transaksi">↩️</button>
     </div>`;
 }
 };
@@ -640,7 +681,7 @@ const el=document.getElementById('shopList');
 if(el)el.innerHTML=sorted.length?sorted.map(t=>shopOrderRowHTML(t)).join(''):'<div class="empty"><div class="empty-icon">🪨</div><div class="empty-text">Belum ada transaksi di periode ini</div></div>';
 },
 async delete(id){
-if(!await askConfirm('Hapus transaksi ini? Stok produk akan dikembalikan & catatan keuangan terkait juga dihapus.'))return;
+if(!await askConfirm('Retur/Batalkan transaksi ini? Stok produk akan dikembalikan, uang masuk/piutang terkait dihapus, dan preorder yang terkait akan kembali berstatus terbuka. Tindakan ini tidak dapat dibatalkan.'))return;
 const t=D.cobek.find(x=>x.id===id);
 // kw-sales-mutation-fix: hapus/retur transaksi (di app ini "retur" = jalur
 // yg sama persis dgn hapus transaksi Shop, lihat catatan "Wire Return->Refund"
@@ -661,6 +702,7 @@ if(t.txLinkId){if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.removeById(t.t
 // PERSIS pola filter yg sudah ada di Order._saveInner() (bukan rumus baru).
 if(t&&t.piutangLinkId){reverseShopReceivablePayoff((D.piutang||[]).find(p=>p&&p.id===t.piutangLinkId));BillDebtPiutangCanonicalWriter.removeById('piutang',t.piutangLinkId);}// S2726: pemasukan pelunasan ikut dibatalkan
 D.cobek=D.cobek.filter(t=>t.id!==id);
+if(typeof Preorder!=='undefined'&&typeof Preorder.onSaleRemoved==='function')Preorder.onSaleRemoved(id);
 save();this.render();renderShopRecent();renderProductList();
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
 if(typeof BusinessFlowPresenter!=='undefined')BusinessFlowPresenter.renderTab();
@@ -675,7 +717,7 @@ if(typeof BusinessFlowPresenter!=='undefined')BusinessFlowPresenter.renderTab();
 // oleh BusinessFlowPresenter.markPaymentReceived(). 0 fungsi dihapus/
 // ditambah, cuma dipindah ke 1 tempat.
 syncPiutangFinanceViews();
-toast('🗑 Dihapus — stok, catatan keuangan & piutang terkait ikut dikembalikan/dibersihkan');
+toast('↩️ Retur/Batalkan transaksi selesai — stok kembali, catatan keuangan/piutang dibersihkan, preorder terkait dibuka kembali');
 },
 // ------ Tab "📊 Laporan" (kw-shop-laporan-tab) ------
 // Analisa terpisah dari tab Riwayat: filter periode SENDIRI (periodeLap, tidak

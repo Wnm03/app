@@ -27,6 +27,14 @@ const InventoryEngine = {
     return { stock, cls, label };
   },
 
+  // Status ketersediaan terpisah dari stockStatus(): tidak mengubah kontrak
+  // historis Menipis/Terbatas/Aman; nilai nol/negatif/non-numerik dipetakan Habis.
+  stockAvailabilityStatus(product) {
+    const raw=product&&product.stock;
+    const stock=Number(raw);
+    return Number.isFinite(stock)&&stock>0?{status:'available',label:'Tersedia'}:{status:'out',label:'Habis'};
+  },
+
   // totalModalStok(products) / totalNilaiJualStok(products) — delegasi
   // PERSIS ke Etalase.totalModalStok()/Etalase.totalNilaiJualStok(), dibuat
   // menerima `products` sbg parameter opsional supaya bisa dites tanpa objek

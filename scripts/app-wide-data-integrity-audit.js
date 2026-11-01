@@ -30,6 +30,7 @@ function scan(){const result={domains:[],duplicateWriteCandidates:[],sourceOfTru
  result.sourceOfTruthSignals.push({store:'D.transaksi',expected:'finance transactions',status:'requires-runtime-validation'});
  result.sourceOfTruthSignals.push({store:'D.products',expected:'shop products',status:'requires-runtime-validation'});
  result.incompleteChecks.push('Runtime snapshots are required to confirm duplicate records.');
+ result.incompleteChecks.push('Preorder runtime integrity: inspect D.preorders productId against D.products and fulfilled shopId against D.cobek; report orphan links as warnings, never auto-repair or fail the static gate.');
  result.incompleteChecks.push('Repeated names/functions are advisory and may be intentional module-local implementations.');
  return result;
 }

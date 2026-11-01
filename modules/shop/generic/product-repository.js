@@ -54,8 +54,13 @@ const ProductRepository = {
   // produk baru (`cobek-etalase.js`, baris pembuatan produk baru). Ditaruh
   // di satu tempat di sini supaya createProduct()/cloneProduct() konsisten
   // tanpa duplikasi literal 'prod_'+Date.now() dua kali.
-  _genId() {
-    return 'prod_' + Date.now();
+  _genId(products) {
+    const rows=Array.isArray(products)?products:((typeof D!=='undefined'&&D&&Array.isArray(D.products))?D.products:[]);
+    const base='prod_'+Date.now();
+    if(!rows.some(p=>p&&String(p.id)===base))return base;
+    let n=1,id=base+'_'+n;
+    while(rows.some(p=>p&&String(p.id)===id)){n++;id=base+'_'+n;}
+    return id;
   },
 
   // _attributeFieldMap() — peta field fisik -> kode atribut, dibaca LANGSUNG
@@ -94,7 +99,10 @@ const ProductRepository = {
     }
     const src = fields || {};
     const defaultOwnership = (typeof OwnershipEngine !== 'undefined') ? OwnershipEngine.resolve({}).type : 'SELF';
-    const newId = this._genId();
+    const requestedId=typeof src.id==='string'?src.id.trim():'';
+    const existing=(typeof D!=='undefined'&&D&&Array.isArray(D.products))?D.products:[];
+    const idIsUnique=!!requestedId&&!existing.some(p=>p&&String(p.id)===requestedId);
+    const newId = idIsUnique?requestedId:this._genId(existing);
     const product = {
       name: '',
       stock: 0,

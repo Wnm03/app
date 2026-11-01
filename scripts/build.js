@@ -28,6 +28,7 @@ const GROUP_A = [
   'modules/shop/cobek-etalase.js',
   'modules/shop/cobek-pricing.js',
   'modules/shop/cobek-order.js',
+  'modules/shop/preorder.js',
   'modules/shop/cobek-tx-cart.js',
   'modules/shop/cobek-io.js',
   'modules/business/shop-data-io-api.js',

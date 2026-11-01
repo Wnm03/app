@@ -55,6 +55,40 @@ tinggi:{el:'pTinggi',field:'tinggi'},
 };
 const Etalase={
 editIdx:null,
+// Filter katalog hanya state UI; tidak pernah ditulis ke D/backup.
+filterState:{search:'',category:'*',stock:'*',sort:'saved',weight:'*'},
+stockFilterStatus(product){if(typeof InventoryEngine!=='undefined'&&InventoryEngine.stockAvailabilityStatus)return InventoryEngine.stockAvailabilityStatus(product).status==='out'?'out':(typeof InventoryEngine.stockStatus==='function'?(InventoryEngine.stockStatus(product).stock<=2?'low':(InventoryEngine.stockStatus(product).stock<=5?'mid':'ok')):'ok');const n=Number(product&&product.stock);return Number.isFinite(n)?(n<=0?'out':(n<=2?'low':(n<=5?'mid':'ok'))):'out';},
+weightMissing(product){const w=(typeof ProductStore!=='undefined')?ProductStore.getWeight(product):product&&product.beratPerUnit;return !w&&(((D.inventoryTransfers||[]).some(t=>(t.items||[]).some(it=>sameId(it.productId,product&&product.id))))||((D.deliveryPlans||[]).some(dp=>(dp.items||[]).some(it=>sameId(it.productId,product&&product.id)))));},
+setSearch(value){this.filterState.search=String(value||'');this.renderList();},
+setCategory(value){this.filterState.category=value||'*';this.renderList();},
+setStock(value){this.filterState.stock=value||'*';this.renderList();},
+setWeight(value){this.filterState.weight=value||'*';this.renderList();},
+setSort(value){this.filterState.sort=value||'saved';this.renderList();},
+resetFilters(){this.filterState={search:'',category:'*',stock:'*',sort:'saved',weight:'*'};const si=document.getElementById('etalaseSearchInput');if(si)si.value='';this.renderList();},
+// Toolbar dipecah dua supaya kolom cari TIDAK ikut dibangun ulang:
+//  - #etalaseFilterSearch : statis, dibangun sekali (fokus/keyboard HP aman saat mengetik)
+//  - #etalaseFilterToolbar: chip/sort/penghitung, boleh dirender ulang tiap perubahan filter
+renderFilterSearch(){
+const host=document.getElementById('etalaseFilterSearch');
+if(!host)return;
+const built=host.getAttribute&&host.getAttribute('data-built')==='1'&&host.innerHTML;
+if(built)return;
+host.innerHTML=`<input class="fi" id="etalaseSearchInput" type="search" aria-label="Cari nama produk" placeholder="Cari nama produk..." value="${escapeHtml(this.filterState.search)}" data-oninput="Etalase.setSearch" data-oninput-args='["$value"]'>`;
+if(host.setAttribute)host.setAttribute('data-built','1');
+},
+renderFilterToolbar(total,shown){
+this.renderFilterSearch();
+const host=document.getElementById('etalaseFilterToolbar');
+if(!host)return;
+const products=D.products||[];
+const cats=[];
+products.forEach(p=>{const id=p&&p.kategoriId;const key=id==null||id===''?'__none':String(id);if(!cats.some(c=>c.id===key))cats.push({id:key,name:key==='__none'?'Tanpa kategori':shopKategoriName(id)||'Tanpa kategori'});});
+if(this.filterState.category!=='*'&&!cats.some(c=>c.id===this.filterState.category))this.filterState.category='*';
+const chip=(label,action,value,active)=>`<button type="button" class="chip-btn${active?' active':''}" data-filter-action="${action}" data-args="${escapeHtml(JSON.stringify([value]))}">${escapeHtml(label)}</button>`;
+const sortOpt=(v,l)=>`<option value="${v}" ${this.filterState.sort===v?'selected':''}>${l}</option>`;
+host.innerHTML=`<div class="filter-scroll u-mb6">${chip('Semua kategori','Etalase.setCategory','*',this.filterState.category==='*')}${cats.map(c=>chip(c.name,'Etalase.setCategory',c.id,this.filterState.category===c.id)).join('')}</div><div class="filter-scroll u-mb6">${[['*','Semua'],['out','Habis'],['low','Menipis'],['mid','Terbatas'],['ok','Aman']].map(x=>chip(x[1],'Etalase.setStock',x[0],this.filterState.stock===x[0])).join('')}</div><div class="filter-scroll u-mb6">${chip('Semua berat','Etalase.setWeight','*',this.filterState.weight==='*')}${chip('Berat belum diisi','Etalase.setWeight','missing',this.filterState.weight==='missing')}</div><div class="u-flex u-gap8 u-mb8"><select class="fs u-flex1" aria-label="Urutkan produk" data-onchange="Etalase.setSort" data-onchange-args='["$value"]'>${sortOpt('saved','Urutan simpan')}${sortOpt('az','Nama A-Z')}${sortOpt('za','Nama Z-A')}${sortOpt('stockAsc','Stok terendah')}${sortOpt('stockDesc','Stok tertinggi')}${sortOpt('priceAsc','Harga jual terendah')}${sortOpt('priceDesc','Harga jual tertinggi')}</select><button type="button" class="btn btn-ghost btn-sm" data-action="Etalase.resetFilters">Reset filter</button></div><div class="u-fs12 u-t2 u-mb8" aria-live="polite">${shown} dari ${total} produk</div>`;
+if(host.querySelectorAll)host.querySelectorAll('[data-filter-action]').forEach(b=>b.setAttribute('data-action',b.getAttribute('data-filter-action')));
+},
 // stockKoreksiState — flag toggle "🔍 Ini Koreksi Stok (Stok Opname)" (checkbox
 // #pStockKoreksiBtn, productModal). Pola PERSIS accIncludeState (akun.js) — state
 // module-level, bukan dibaca langsung dari DOM checkbox biasa krn UI-nya chip-btn
@@ -595,33 +629,46 @@ async delete(i){
 const _productToDelete=D.products[i];
 if(!_productToDelete)return;
 const _linkedRows=(D.cobek||[]).filter(t=>(t.items||[]).some(it=>it.productId===_productToDelete.id || (it.name||it.productName)===_productToDelete.name));
-const _deleteMessage=_linkedRows.length
-?`Produk "${escapeHtml(_productToDelete.name)}" tercatat di ${_linkedRows.length} transaksi. Riwayat transaksi dipertahankan sebagai snapshot; produk akan dihapus hanya dari etalase. Lanjutkan?`
-:`Hapus produk "${escapeHtml(_productToDelete.name)}" dari etalase?`;
+const _openPreorderQty=(typeof Preorder!=='undefined'&&typeof Preorder.openQty==='function')?Preorder.openQty(_productToDelete.id):0;
+const _deleteMessage=(_linkedRows.length?`Produk "${escapeHtml(_productToDelete.name)}" tercatat di ${_linkedRows.length} transaksi. Riwayat transaksi dipertahankan sebagai snapshot. `:'')+(_openPreorderQty>0?`Ada ${_openPreorderQty} unit preorder terbuka. Jika dilanjutkan, seluruh preorder terbuka dibatalkan dengan alasan "produk dihapus". `:'')+`Hapus produk "${escapeHtml(_productToDelete.name)}" dari etalase?`;
 if(!await askConfirm(_deleteMessage,{title:'Hapus Produk',okText:'Hapus produk'}))return;
-// Modul 12 — hapus produk dialihkan lewat ProductRepository.mutateDelete()
-// (GATE BARU sesi ini, tidak ada gate delete produk sebelumnya, pola SAMA
-// PERSIS SupplierStore.mutateDelete()), guard typeof + fallback raw PERSIS
-// literal lama (splice by index). Kalau index sudah basi (produk di index
-// itu sudah tidak ada), fallback ke splice mentah SAMA PERSIS perilaku lama
-// supaya 0 perubahan pada kasus tepi itu.
-const p=D.products[i];
-if(p&&typeof ProductRepository!=='undefined'){
-const r=ProductRepository.mutateDelete(D.products,p.id);
-if(r.ok){if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.replaceSnapshot(r.products);if(!_wr.ok)throw new Error(_wr.reason||'Gagal memperbarui produk');}else D.products=r.products;}
-else if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.removeById(p.id);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menghapus produk');}
-else D.products.splice(i,1);
-}else{
-if(typeof ShopCanonicalWriter!=='undefined'){const _wr=ShopCanonicalWriter.removeById(p.id);if(!_wr.ok)throw new Error(_wr.reason||'Gagal menghapus produk');}else D.products.splice(i,1);
+const p=D.products.find(x=>x&&String(x.id)===String(_productToDelete.id));
+if(!p)return;
+const _productsBefore=D.products.slice();
+const _preordersBefore=Array.isArray(D.preorders)?D.preorders.map(x=>x&&({...x,customer:x.customer&&({...x.customer})})):null;
+const _overrideBefore=D.productMovementOverride?{...D.productMovementOverride}:null;
+const _hasShopWriter=typeof ShopCanonicalWriter!=='undefined'&&ShopCanonicalWriter&&typeof ShopCanonicalWriter.replaceSnapshot==='function'&&typeof ShopCanonicalWriter.removeById==='function';
+const _hasProductRepo=typeof ProductRepository!=='undefined'&&ProductRepository&&typeof ProductRepository.mutateDelete==='function';
+const _rollback=()=>{
+  if(_hasShopWriter)ShopCanonicalWriter.replaceSnapshot(_productsBefore);
+  else D.products=_productsBefore; // compatibility fallback rollback for legacy runtimes without canonical writer
+  if(_preordersBefore!==null)D.preorders=_preordersBefore;
+  if(_overrideBefore!==null)D.productMovementOverride=_overrideBefore;
+};
+try{
+  let _deleteResult;
+  if(_hasShopWriter)_deleteResult=ShopCanonicalWriter.removeById(p.id);
+  else if(_hasProductRepo){
+    _deleteResult=ProductRepository.mutateDelete(D.products,p.id);
+    if(_deleteResult.ok)D.products=_deleteResult.products; // compatibility fallback: ProductRepository pure result before ShopCanonicalWriter exists
+  }else{
+    D.products.splice(i,1); // compatibility fallback: preserve legacy delete when neither canonical writer is loaded
+    _deleteResult={ok:true};
+  }
+  if(!_deleteResult||!_deleteResult.ok)throw new Error((_deleteResult&&(_deleteResult.reason||_deleteResult.message))||'Gagal menghapus produk');
+  if(_openPreorderQty>0&&typeof Preorder!=='undefined'&&typeof Preorder.cancelForProduct==='function'){
+    const _cancelled=Preorder.cancelForProduct(p.id,'produk dihapus',{deferPersist:true});
+    if(!_cancelled.ok)throw new Error(_cancelled.message||'Gagal membatalkan preorder');
+  }
+  if(D.productMovementOverride&&D.productMovementOverride[p.id])delete D.productMovementOverride[p.id];
+  if(save()===false)throw new Error('Gagal menyimpan penghapusan produk dan pembatalan preorder');
+}catch(err){
+  _rollback();
+  toast('⚠️ '+(err&&err.message||'Penghapusan gagal')+' — produk dan preorder dikembalikan');
+  return;
 }
-// Sesi 376 (Inventory Movement manual override): bersihkan override lokasi
-// manual punya produk yg dihapus, kalau ada — cegah D.productMovementOverride
-// nyimpen entry basi mengarah ke productId yg sudah tidak eksis.
-if(p&&D.productMovementOverride&&D.productMovementOverride[p.id]){
-delete D.productMovementOverride[p.id];
-}
-save();this.renderList();toast('🗑 Dihapus');
-if(p&&typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produk",action:"delete",deletedId:p.id,name:p.name});
+this.renderList();toast('🗑 Produk dihapus'+(_openPreorderQty>0?`; ${_openPreorderQty} unit preorder dibatalkan`:''));
+if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produk",action:"delete",deletedId:p.id,name:p.name});
 },
 katEditId:null,
 // editKategori(id) — Fitur Edit Kategori Produk (audit sesi 132: kategori
@@ -746,8 +793,16 @@ renderList(){
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
 const el=document.getElementById('productList');
 if(!el)return;
-if(!D.products.length){el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div>';return;}
-el.innerHTML=D.products.map((p,i)=>{
+if(!D.products.length){this.renderFilterToolbar(0,0);if(typeof Preorder!=='undefined'&&Preorder.render)Preorder.render();el.innerHTML='<div class="empty"><div class="empty-icon">📦</div><div class="empty-text">Belum ada produk</div></div>';return;}
+let entries=D.products.map((p,i)=>({p,i}));
+const f=this.filterState||{};const q=String(f.search||'').trim().toLocaleLowerCase('id');
+entries=entries.filter(({p})=>{const cat=p&&p.kategoriId!=null&&p.kategoriId!==''?String(p.kategoriId):'__none';if(f.category&&f.category!=='*'&&cat!==f.category)return false;if(f.stock&&f.stock!=='*'&&this.stockFilterStatus(p)!==f.stock)return false;if(f.weight==='missing'&&!this.weightMissing(p))return false;if(q&&!String(p&&p.name||'').toLocaleLowerCase('id').includes(q))return false;return true;});
+const num=(v)=>{const n=Number(v);return Number.isFinite(n)?n:0;};
+if(f.sort&&f.sort!=='saved'){const cmpName=(a,b)=>String(a.p&&a.p.name||'').trim().localeCompare(String(b.p&&b.p.name||'').trim(),'id',{sensitivity:'base'});entries=entries.map((x,j)=>({...x,_j:j})).sort((a,b)=>{let c=0;switch(f.sort){case 'az':c=cmpName(a,b);break;case 'za':c=-cmpName(a,b);break;case 'stockAsc':c=num(a.p&&a.p.stock)-num(b.p&&b.p.stock);break;case 'stockDesc':c=num(b.p&&b.p.stock)-num(a.p&&a.p.stock);break;case 'priceAsc':c=num(a.p&&a.p.hargaJual)-num(b.p&&b.p.hargaJual);break;case 'priceDesc':c=num(b.p&&b.p.hargaJual)-num(a.p&&a.p.hargaJual);break;}return c||a._j-b._j;});}
+this.renderFilterToolbar(D.products.length,entries.length);
+if(typeof Preorder!=='undefined'&&Preorder.render)Preorder.render();
+if(!entries.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔎</div><div class="empty-text">Tidak ada produk yang cocok dengan filter.</div></div>';return;}
+el.innerHTML=entries.map(({p,i})=>{
 // BUGFIX (audit pola sama S601 "0 reaksi"): baris ini panggil beberapa service
 // eksternal (PricingService/InventoryService/ProductStore) per-produk TANPA
 // try/catch -- 1 produk error bikin SELURUH .map() throw sebelum el.innerHTML
@@ -772,7 +827,10 @@ const marginPct=p.hargaBeli>0?Math.round((margin/p.hargaBeli)*100):0;
 // dimuat, fallback rumus asli. 0 perubahan hasil.
 const stockStatus=(typeof InventoryService!=='undefined')?InventoryService.stockStatus(p):null;
 const stockCls=stockStatus?stockStatus.cls:(p.stock<=2?'low':(p.stock<=5?'mid':'ok'));
-const stockLbl=stockStatus?stockStatus.label:(p.stock<=2?'Menipis':(p.stock<=5?'Terbatas':'Aman'));
+const stockAvailability=(typeof InventoryEngine!=='undefined'&&InventoryEngine.stockAvailabilityStatus)?InventoryEngine.stockAvailabilityStatus(p):({status:(Number.isFinite(Number(p&&p.stock))&&Number(p.stock)>0)?'available':'out',label:'Habis'});
+const stockOut=stockAvailability.status==='out';
+const stockLbl=stockOut?'Habis':(stockStatus?stockStatus.label:(p.stock<=2?'Menipis':(p.stock<=5?'Terbatas':'Aman')));
+const stockAvailabilityTag=''; // Status "Habis" cukup ditampilkan sekali di pill; stockStatus engine tetap tidak disentuh.
 // Tahap 3 (Generic Shop Engine wiring): ProductStore.getCategory/getSupplier
 // kalau dimuat, fallback ke shopKategoriName()/D.produsen.find() langsung
 // (compat layer) — HASIL SAMA di kedua jalur, murni titik baca dipindah.
@@ -790,6 +848,7 @@ const priceBlock=hasDiskon
 :`<div class="shop-price-final">${fmt(hargaJualDisp)}</div>`;
 const groupCount=p.priceGroupId?this.groupSiblings(p).length+1:0;
 const groupTag=groupCount?`<span class="shop-tag" style="color:var(--accent);font-weight:700">🔗 Gabungan (${groupCount} produk)</span>`:'';
+const ownershipTag=!isProductOwnershipSelf(p)?'<span class="shop-tag" title="Produk bukan milik sendiri">👥 Non-SELF</span>':'';
 // weightMissingTag — reuse persis kondisi rule AI 'product-weight-missing'
 // (cobek-pricing.js): produk dipakai di Transfer/Rencana Pengiriman tapi
 // beratPerUnit kosong. Badge di kartu supaya kelihatan tanpa nunggu AI
@@ -808,10 +867,10 @@ return`<div class="shop-product-card stock-${stockCls}">
               ${kat?`<span class="shop-tag cat">🏷️ ${escapeHtml(kat)}</span>`:''}
               ${prod?`<span class="shop-tag">🏭 ${escapeHtml(prod)}</span>`:''}
               ${groupTag}
-              ${weightMissingTag}
+              ${weightMissingTag}${ownershipTag}${stockAvailabilityTag}
             </div>
           </div>
-          <div class="shop-stock-pill ${stockCls}">${p.stock} pcs · ${stockLbl}</div>
+          <div class="shop-stock-pill ${stockCls}">${stockOut?'Habis':`${p.stock} pcs · ${stockLbl}`}</div>
         </div>
         <div class="shop-product-prices">
           <div>

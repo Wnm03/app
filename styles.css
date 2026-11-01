@@ -3468,3 +3468,25 @@ font-size: 15px; line-height: 1;
 
 /* S2617 — legacy per-page FABs are inert; central navigation FAB remains active. */
 #keuFab, #laporanFab { display: none !important; pointer-events: none !important; }
+
+/* Preorder tiles remain actionable even when physical stock is zero. */
+.kasir-tile-preorder{border-style:dashed;cursor:pointer;opacity:1;}
+
+/* Fix 320px: tombol Penuhi/Batal antrean preorder tidak boleh terpotong ("Penu/hi"). */
+.preorder-act{white-space:nowrap;flex-shrink:0;min-width:max-content}
+#preorderPanel .tx-del.preorder-act{width:auto;min-width:44px;padding:0 10px;white-space:nowrap}
+#preorderPanel .tx-item{gap:8px;align-items:center}
+#preorderPanel .tx-item .u-flex1{min-width:0;overflow-wrap:anywhere}
+
+/* Sesi follow-up preorder/kasir: layout sempit 320px tanpa mengubah alur transaksi. */
+.preorder-config-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:end}
+.preorder-config-fields .fg{min-width:0}
+@media(max-width:360px){
+  #kasirPriceToggle{flex-wrap:wrap;min-width:0}
+  #kasirPriceToggle .chip-btn{flex:1 1 110px;min-width:0}
+  .kasir-kat-chips{flex-wrap:wrap;overflow:visible;white-space:normal}
+  .kasir-kat-chips .chip-btn{flex:0 1 auto;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .preorder-config-fields{grid-template-columns:minmax(0,1fr)}
+  .preorder-config-fields .fi{width:100%;min-width:0}
+  .toast{bottom:calc(148px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 20px)}
+}

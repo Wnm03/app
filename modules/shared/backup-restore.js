@@ -289,6 +289,7 @@ out.simList=D.simList||[];
 }
 if(backupModules.shop){
 out.products=D.products;
+out.preorders=Array.isArray(D.preorders)?D.preorders:[];
 out.produsen=D.produsen;
 out.cobekKategori=D.cobekKategori;
 out.cobek=D.cobek.filter(c=>inRange(c.date,from,to));
@@ -642,7 +643,7 @@ const _shape=_validateRestoreShape(imp);
 if(!_shape.ok){await showAlertModal('File backup ditolak: '+_shape.msg,{icon:'❌',title:'Backup Tidak Valid'});return false;}
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.verifyBackupPayload==='function'){const _integrity=await PWAProductionHardening.verifyBackupPayload(imp);if(!_integrity.ok){await showAlertModal('File backup ditolak: '+_integrity.msg,{icon:'❌',title:'Integritas Backup Gagal'});return false;}}
 __s2013SetStage('backup-shape-known-keys');
-const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios'];
+const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios','preorders'];
 if(!knownKeys.some(k=>imp[k]!==undefined)){await showAlertModal('File ini sepertinya bukan file backup aplikasi ini. Restore dibatalkan.',{icon:'❌',title:'Backup Tidak Valid'});return false;}
 __s2013SetStage('backup-version');
 const backupVersion=imp.schemaVersion||0;
@@ -868,6 +869,8 @@ if(!D.milestones)D.milestones=[false,false,false,false,false];
 if(!D.chatHistory)D.chatHistory=[];
 if(!D.cobek)D.cobek=[];
 if(!D.products)D.products=[];
+// Preorder is additive data: preserve it from newer backups and initialize legacy backups safely.
+if(!Array.isArray(D.preorders))D.preorders=[];
 if(!D.produsen)D.produsen=[];
 if(!D.cobekKategori||!D.cobekKategori.length)D.cobekKategori=JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI));
 D.products.forEach(p=>{if(!p.hargaByProdusen)p.hargaByProdusen={};if(p.kategoriId===undefined)p.kategoriId='';if(p.produsenId===undefined)p.produsenId='';});
@@ -1006,7 +1009,7 @@ return imported.filter(t=>{
 }
 function _validateRestoreShape(imp){
 if(!imp||typeof imp!=='object'||Array.isArray(imp))return{ok:false,msg:'Root backup harus berupa objek JSON.'};
-const arrayKeys=['transactions','accounts','bills','billsArchive','vehicles','bbmLogs','servisLogs','jalanLogs','kmLogs','sparepartCats','partsStock','workDays','targets','eduFunds','reminders','products','produsen','cobek','cobekKategori','chatHistory','wealthSnapshots','wishlist'];
+const arrayKeys=['transactions','accounts','bills','billsArchive','vehicles','bbmLogs','servisLogs','jalanLogs','kmLogs','sparepartCats','partsStock','workDays','targets','eduFunds','reminders','products','produsen','cobek','cobekKategori','chatHistory','wealthSnapshots','wishlist','preorders'];
 for(const k of arrayKeys){if(imp[k]!==undefined&&!Array.isArray(imp[k]))return{ok:false,msg:`Field "${k}" harus berupa array.`};}
 if(imp.categories!==undefined&&(typeof imp.categories!=='object'||Array.isArray(imp.categories)))return{ok:false,msg:'Field "categories" harus berupa objek.'};
 if(imp.profile!==undefined&&(typeof imp.profile!=='object'||Array.isArray(imp.profile)))return{ok:false,msg:'Field "profile" harus berupa objek.'};

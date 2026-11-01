@@ -312,10 +312,10 @@ test('ProductRepository.createProduct() — fields invalid (array/primitif) -> {
   assert.equal(ctx.ProductRepository.createProduct('bukan-object').ok, false);
 });
 
-test('ProductRepository.createProduct() — id TIDAK bisa dioverride via fields (jaga keunikan)', () => {
+test('ProductRepository.createProduct() — menerima ID valid unik dari fields', () => {
   const ctx = makeCtx();
   const r = ctx.ProductRepository.createProduct({ id: 'prod_paksa', name: 'X' });
-  assert.notEqual(r.product.id, 'prod_paksa');
+  assert.equal(r.product.id, 'prod_paksa');
   assert.ok(r.product.id.startsWith('prod_'));
 });
 
