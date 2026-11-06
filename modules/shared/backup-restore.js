@@ -1138,6 +1138,7 @@ const selectedVehId=document.getElementById('carImportVehicle')?document.getElem
 const vehId=(selectedVehId&&D.vehicles.find(v=>v.id===selectedVehId))?selectedVehId:D.vehicles[0].id;
 let bbmCount=0, servisCount=0, skipCount=0, autoDetectCount=0, vehColDetected=false;
 const importedServiceCandidates=[];
+const importedBbmVehicleIds=new Set();
 const importedServiceFingerprints=new Set();
 const existingServiceFingerprints=new Set((Array.isArray(D.servisLogs)?D.servisLogs:[]).map(_serviceImportFingerprint).filter(Boolean));
 function matchVehicleFromText(text){
@@ -1202,6 +1203,7 @@ const idxKet=header.findIndex(h=>/keterangan|note|kategori|category|deskripsi|^i
 const idxJumlah=header.findIndex(h=>/jumlah|amount|total|biaya|harga|cost/.test(h));
 const idxLiter=header.findIndex(h=>/liter|litre/.test(h));
 const idxKm=header.findIndex(h=>/^km$|odometer/.test(h));
+const idxFullTank=header.findIndex(h=>/full.?tank|isi.?penuh|tangki.?penuh/.test(h));
 const idxVeh=header.findIndex(h=>/kendaraan|vehicle|^motor$|^mobil$/.test(h));
 vehColDetected=idxVeh>=0;
 for(let i=1;i<lines.length;i++){
@@ -1223,8 +1225,11 @@ if(!date||isNaN(new Date(date).getTime())){skipCount++;continue;}
 const isBbm=jenis?/bbm/.test(jenis):(liter>0||/bbm|bensin|pertalite|pertamax|dexlite|biosolar|solar|\bfuel\b|spbu|isi.*bensin/.test(ketLower));
 const isServis=jenis?/servis/.test(jenis):/servis|oli|ban|sparepart|ganti|tune|cvt|kampas|aki|busi/.test(ketLower);
 if(isBbm){
-D.bbmLogs.push({id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
+const fullTankValue=idxFullTank>=0?String(cols[idxFullTank]||'').trim().toLowerCase():'';
+const fullTankCsv=idxFullTank>=0?/^(1|true|yes|ya|full|penuh)$/i.test(fullTankValue):/\b(full\s*tank|isi\s*penuh|tangki\s*penuh|full\s*fill)\b/i.test([jenis,ket].join(' '));
+D.bbmLogs.push({id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:fullTankCsv,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
 bbmCount++;
+importedBbmVehicleIds.add(rowVehId);
 } else if(isServis){
 const importServisItem=ket||'Servis (import)';
 const importCatId=typeof canonicalServisCategoryId==='function'
@@ -1245,6 +1250,7 @@ skipCount++;
 }
 const _p23CsvValidation=validateServiceOdometerImportIntegrity(importedServiceCandidates);
 if(!_p23CsvValidation.ok){D.bbmLogs=JSON.parse(_v34CsvDomainSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v34CsvDomainSnapshot.servisLogs);throw new Error('Import CSV servis ditolak karena integritas odometer: '+_p23CsvValidation.invalid.map(x=>x.message||x.code).join('; '));}
+if(typeof reconcileFuelStateFromLogs==='function')importedBbmVehicleIds.forEach(id=>reconcileFuelStateFromLogs(id));
 save();
 if(typeof renderCnTab==='function')renderCnTab();
 const vehName=(D.vehicles.find(v=>v.id===vehId)||{}).name||'kendaraan terpilih';
