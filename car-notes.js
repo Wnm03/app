@@ -398,6 +398,7 @@ if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan diha
 const b=D.bbmLogs.find(x=>x.id===id);
 if(b&&b.txLinkId){if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.removeById(b.txLinkId);}
 D.bbmLogs=D.bbmLogs.filter(b=>b.id!==id);
+if(b&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(b.vehicleId);
 save();renderCnTab();renderDashboard();renderKeuangan();toast('🗑 Catatan BBM dihapus');
 },
 svgCostBar(months,byMonth){

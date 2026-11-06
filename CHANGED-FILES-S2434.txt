@@ -1,0 +1,31 @@
+PATCH FUEL BAR SYNC — S2434
+Baseline: app-main (3).zip
+Build: s2433-shop-stock-prevtx-cathint-2743
+Service worker: kw-cache-v2743
+
+File berubah/baru (path relatif repo):
+sw.js  (106 baris)
+app-bundle-a.min.js  (3512 baris)
+chat-action-handlers.js  (124 baris)
+app-bundle-b.min.js  (1424 baris)
+index.html  (3537 baris)
+car-notes.js  (977 baris)
+app_production.html  (3540 baris)
+docs/COVERAGE-PER-MODULE.md  (38 baris)
+docs/FILE-MAP.md  (18521 baris)
+tests/fuel-state-estimator-sync.test.js  (152 baris)
+tests/fuel-estimation-autoupdate-regression-s420.test.js  (387 baris)
+tests/fuel-bar-sync-reconciliation.test.js  (165 baris)
+modules/finance/tx-list-cashflow.js  (1070 baris)
+modules/finance/tx-bbm.js  (239 baris)
+modules/shared/modules-render.js  (1565 baris)
+modules/shared/modules-calc.js  (1282 baris)
+modules/shared/modals.js  (32 baris)
+modules/shared/features-helpers-global-security.js  (1748 baris)
+modules/shared/backup-restore.js  (1448 baris)
+modules/vehicle/fuel-state-estimator.js  (238 baris)
+modules/vehicle/fuel-intelligence-ui.js  (384 baris)
+
+Tambahan artefak patch:
+CHANGED-FILES-S2434.txt
+AUDIT-FUEL-BAR-SYNC-S2434.md
