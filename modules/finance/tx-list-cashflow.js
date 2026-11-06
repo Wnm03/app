@@ -239,7 +239,7 @@ return`<div class="tx-tbl-wrap"><table class="tx-tbl"><thead><tr><th>Tanggal</th
 // selesai) -- lihat komentar di Renov.deleteItem().
 function runTxDeleteCascades(t,opts){
 opts=opts||{};
-if(t&&t.bbmLinkId&&D.bbmLogs)D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
+if(t&&t.bbmLinkId&&D.bbmLogs){const _bbm=D.bbmLogs.find(b=>b.id===t.bbmLinkId);D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);if(_bbm&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(_bbm.vehicleId);}
 if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
 revertStockPurchase(t.partStockId,t.partStockQty,t.id);
 toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
