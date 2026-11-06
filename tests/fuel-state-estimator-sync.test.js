@@ -26,6 +26,7 @@ function makeCtx({ D, getVehicleKmImpl, fuelEfficiencyImpl } = {}) {
       getVehicleKm: getVehicleKmImpl || (() => null),
       fuelEfficiency: fuelEfficiencyImpl || (() => ({ ok: false })),
     },
+    ['FuelStateEstimator', 'recordBbmLog'],
   );
 }
 
@@ -37,7 +38,7 @@ function baseVehicle(overrides) {
   }, overrides || {});
 }
 
-test('recordBbmLog() — fullTank:false, ada titik acuan & km diketahui -> fuelState ditulis auto-bbm-log', () => {
+test('recordBbmLog() — partial fill tidak menimpa baseline manual; estimator menghitung log parsial', () => {
   const veh = baseVehicle({
     fuelState: { currentFuelLiter: 3, referenceKm: 12000, estimatedSource: 'manual-bar-correction', confidenceScore: 100 },
   });
@@ -50,15 +51,15 @@ test('recordBbmLog() — fullTank:false, ada titik acuan & km diketahui -> fuelS
   });
 
   assert.ok(veh.fuelState);
-  assert.equal(veh.fuelState.estimatedSource, 'auto-bbm-log');
-  assert.equal(veh.fuelState.confidenceScore, 70);
+  assert.equal(veh.fuelState.estimatedSource, 'manual-bar-correction');
+  assert.equal(veh.fuelState.confidenceScore, 100);
   // baseLiter 3 + partial fill 1.5 (kmPerLiter tidak diketahui -> 0 konsumsi) = 4.5, clamp ke kapasitas 4.2.
-  assert.equal(veh.fuelState.currentFuelLiter, 4.2);
-  assert.equal(veh.fuelState.referenceKm, 12100);
-  assert.ok(typeof veh.fuelState.correctedAt === 'string' && veh.fuelState.correctedAt.length > 0);
+  assert.equal(ctx.FuelStateEstimator.estimateCurrentLiter('veh1').liter, 4.2);
+  assert.equal(veh.fuelState.referenceKm, 12000);
+  assert.equal(veh.fuelState.correctedAt, undefined, 'log parsial tidak menimpa titik acuan manual');
 });
 
-test('recordBbmLog() — fullTank:false, referenceKm baru JADI titik acuan (tidak dobel-hitung di panggilan berikutnya)', () => {
+test('recordBbmLog() — baseline tetap; seluruh parsial dihitung ulang tanpa dobel hitung', () => {
   const veh = baseVehicle({
     fuelState: { currentFuelLiter: 2, referenceKm: 12000, estimatedSource: 'manual-bar-correction', confidenceScore: 100 },
   });
@@ -69,19 +70,19 @@ test('recordBbmLog() — fullTank:false, referenceKm baru JADI titik acuan (tida
     vehicleId: 'veh1', date: '2026-08-06', km: 12050, liter: 1, cost: 15000,
     fullTank: false, spbu: '', note: '', accountId: 'acc1', txId: 'tx1',
   });
-  assert.equal(veh.fuelState.currentFuelLiter, 3);
-  assert.equal(veh.fuelState.referenceKm, 12050);
+  assert.equal(ctx.FuelStateEstimator.estimateCurrentLiter('veh1').liter, 3);
+  assert.equal(veh.fuelState.referenceKm, 12000);
 
-  // Panggilan kedua: kalau referenceKm TIDAK diperbarui, log parsial pertama
-  // (liter:1) akan ikut kehitung LAGI di sini -- assert memastikan itu TIDAK
-  // terjadi (cuma log kedua yang baru, liter:0.8, yang ditambahkan).
+  // Panggilan kedua tetap membaca seluruh log sejak baseline yang sama;
+  // setiap log hanya terhitung satu kali karena estimator selalu memproyeksikan
+  // ulang dari daftar ID baseline, bukan membekukan nilai parsial ke baseline.
   const ctx2 = makeCtx({ D, getVehicleKmImpl: () => 12080 });
   ctx2.recordBbmLog({
     vehicleId: 'veh1', date: '2026-08-06', km: 12080, liter: 0.8, cost: 12000,
     fullTank: false, spbu: '', note: '', accountId: 'acc1', txId: 'tx2',
   });
-  assert.equal(veh.fuelState.currentFuelLiter, 3.8);
-  assert.equal(veh.fuelState.referenceKm, 12080);
+  assert.equal(ctx2.FuelStateEstimator.estimateCurrentLiter('veh1').liter, 3.8);
+  assert.equal(veh.fuelState.referenceKm, 12000);
 });
 
 test('recordBbmLog() — fullTank:false, belum ada titik acuan sama sekali -> fuelState TIDAK ditulis (estimator ok:false)', () => {
@@ -132,7 +133,7 @@ test('recordBbmLog() — FuelStateEstimator tidak dimuat -> tidak throw, fuelSta
   assert.equal(veh.fuelState.currentFuelLiter, 3);
 });
 
-test('recordBbmLog() — edit log existing jadi fullTank:false -> estimator dipanggil (bukan syncFuelStateFromFullTankBbm)', () => {
+test('recordBbmLog() — edit log existing jadi fullTank:false -> baseline manual tetap dipertahankan', () => {
   const veh = baseVehicle({
     fuelState: { currentFuelLiter: 2, referenceKm: 11700, estimatedSource: 'manual-bar-correction', confidenceScore: 100 },
   });
@@ -146,6 +147,6 @@ test('recordBbmLog() — edit log existing jadi fullTank:false -> estimator dipa
   });
 
   assert.equal(res.isNew, false);
-  assert.equal(veh.fuelState.estimatedSource, 'auto-bbm-log');
-  assert.equal(veh.fuelState.confidenceScore, 70);
+  assert.equal(veh.fuelState.estimatedSource, 'manual-bar-correction');
+  assert.equal(veh.fuelState.confidenceScore, 100);
 });
