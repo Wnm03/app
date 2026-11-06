@@ -280,6 +280,7 @@ save() {
   const veh = this._vehicle(this.curVehicleId);
   if (!veh || typeof FuelGaugeEngine === 'undefined') return;
   const previousFuelState=veh.fuelState?{...veh.fuelState}:null;
+  const previousManualCorrection=veh.manualFuelCorrection?{...veh.manualFuelCorrection}:null;
   const previousHistory=Array.isArray(D.fuelStateHistory)?D.fuelStateHistory.slice():null;
 
   const literRes = FuelGaugeEngine.calculateFuelLiter(this.curVehicleId, this.selectedBar);
@@ -291,6 +292,17 @@ save() {
   // confidenceScore: 100 — pembacaan manual langsung dari speedometer
   // fisik adalah ground truth (bukan estimasi tidak langsung dari log
   // BBM/rata-rata efisiensi), jadi confidence maksimum.
+  // SESI FUEL-BAR-SYNC: simpan titik koreksi manual terpisah agar rekonsiliasi
+  // log BBM tidak pernah menghapus koreksi fisik yang dibuat pengguna.
+  veh.manualFuelCorrection = {
+    currentFuelBar: this.selectedBar,
+    currentFuelLiter: literRes.liter,
+    correctedAt: new Date().toISOString(),
+    estimatedSource: this.ESTIMATED_SOURCE_MANUAL,
+    confidenceScore: 100,
+    referenceKm: (typeof getVehicleKm === 'function') ? getVehicleKm(this.curVehicleId) : null,
+    appliedBbmIds: (Array.isArray(D.bbmLogs) ? D.bbmLogs : []).filter(x => String(x.vehicleId) === String(this.curVehicleId)).map(x => x.id),
+  };
   veh.fuelState = {
     currentFuelBar: this.selectedBar,
     currentFuelLiter: literRes.liter,
@@ -317,6 +329,7 @@ save() {
     if (typeof save === 'function') save();
   } catch (err) {
     if (previousFuelState) veh.fuelState=previousFuelState; else delete veh.fuelState;
+    if (previousManualCorrection) veh.manualFuelCorrection=previousManualCorrection; else delete veh.manualFuelCorrection;
     if (previousHistory) D.fuelStateHistory=previousHistory; else delete D.fuelStateHistory;
     if (typeof toast === 'function') toast('⚠️ Kalibrasi gagal disimpan: '+(err&&err.message?err.message:'error tidak diketahui'));
     return;

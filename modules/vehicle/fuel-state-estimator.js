@@ -103,20 +103,22 @@ _isValidNumber(n) {
   return typeof n === 'number' && isFinite(n);
 },
 
-// _partialFillsSince(vehicleId, referenceKm) — semua log BBM PARSIAL
-// (fullTank falsy) dgn km > referenceKm (STRIK — kalau referenceKm
-// berasal dari full-tank fill, log full-tank itu sendiri tidak ikut
-// kehitung dobel sbg "partial"). 100% REUSE FuelStorage.logs() (SUDAH
-// ADA). Guard typeof FuelStorage: kalau belum dimuat, balikin array
-// kosong (bukan error) — estimasi tetap jalan, cuma tanpa akumulasi
-// partial fill (sama seperti kalau memang tidak ada log parsial sama
-// sekali).
-_partialFillsSince(vehicleId, referenceKm) {
+// _partialFillsSince(vehicleId, referenceKm, appliedBbmIds) — log parsial
+// pada KM yang sama tetap dihitung selama ID-nya belum diterapkan ke
+// baseline. Daftar ID membuat dua pengisian di odometer sama tidak hilang
+// dan tidak dihitung dua kali. FuelState lama tanpa daftar ID tetap aman:
+// baseline manual menganggap belum ada log yang diterapkan, sedangkan
+// baseline auto lama menganggap log sampai referenceKm sudah dibekukan.
+_partialFillsSince(vehicleId, referenceKm, appliedBbmIds, estimatedSource) {
   if (typeof FuelStorage === 'undefined') return [];
-  return FuelStorage.logs(vehicleId).filter((log) => (
-    !log.fullTank && this._isValidNumber(log.km) && log.km > referenceKm
-    && this._isValidNumber(log.liter) && log.liter > 0
-  ));
+  const applied = new Set(Array.isArray(appliedBbmIds) ? appliedBbmIds.map(String) : []);
+  return FuelStorage.logs(vehicleId).filter((log) => {
+    if (log.fullTank || !this._isValidNumber(log.km) || log.km < referenceKm
+      || !this._isValidNumber(log.liter) || log.liter <= 0) return false;
+    if (applied.has(String(log.id))) return false;
+    if (!Array.isArray(appliedBbmIds) && estimatedSource === 'auto-bbm-log' && log.km <= referenceKm) return false;
+    return true;
+  });
 },
 
 // estimateCurrentLiter(vehicleId) — lihat catatan header file.
@@ -174,7 +176,7 @@ estimateCurrentLiter(vehicleId) {
     kmClamped = rawDelta < 0;
   }
 
-  const partials = referenceKm !== null ? this._partialFillsSince(vehicleId, referenceKm) : [];
+  const partials = referenceKm !== null ? this._partialFillsSince(vehicleId, referenceKm, ref.appliedBbmIds, ref.estimatedSource) : [];
   const addedLiter = partials.reduce((sum, log) => sum + log.liter, 0);
 
   let kmPerLiter = null;
