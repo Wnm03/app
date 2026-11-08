@@ -1,0 +1,8 @@
+PATCH-MANIFEST-FUEL-ACCURACY-2741-2752
+Baseline: app-main (3).zip
+Cumulative build: s2433-shop-stock-prevtx-cathint-2752
+Package: changed files only; no full release; no user backup/data; no build backup artifacts.
+Menggantikan patch kumulatif 2749 dan 2751. Terapkan di atas baseline bersih.
+Tambahan 2751: modules/vehicle/vehicle-core.js, modules/vehicle/fuel-state-estimator.js, modules/finance/tx-bbm.js,
+tests/fuel-canonical-logs-s2750.test.js, PATCH-README-FUEL-ACCURACY-2751.md, PATCH-MANIFEST-FUEL-ACCURACY-2751.txt, serta bundle/versi hasil build.
+Tambahan 2752: modules/vehicle/fuel-card.js, modules/vehicle/fuel-cost-analytics.js, tests/fuel-card-quarantine-notice-s2752.test.js, PATCH-README-FUEL-ACCURACY-2752.md.

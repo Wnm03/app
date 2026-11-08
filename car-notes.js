@@ -316,8 +316,8 @@ document.getElementById('bbmCost').value=Math.round(liter*harga);
 document.getElementById('bbmLiter').value=(cost/harga).toFixed(2);
 }
 },
-save(){return withSaveGuard('bbm','bbmModal',BBM._saveInner);},
-_saveInner(){
+save(){return withSaveGuardAsync('bbm','bbmModal',BBM._saveInner);},
+async _saveInner(){
 const km=parseFloat(document.getElementById('bbmKm').value);
 const liter=parseFloat(document.getElementById('bbmLiter').value);
 let cost=parseFloat(document.getElementById('bbmCost').value);
@@ -343,6 +343,10 @@ const accId=document.getElementById('bbmAcc')?document.getElementById('bbmAcc').
 const veh=D.vehicles.find(v=>v.id===curVehicleId);
 const validation=typeof validateFuelLogInput==='function'?validateFuelLogInput({vehicleId:curVehicleId,date,km,liter,existingBbmId:BBM.editId}):{ok:true};
 if(!validation.ok){toast('⚠️ '+validation.reason);return;}
+if(typeof confirmVehicleOdometerAdvance==='function'){
+ const odo=await confirmVehicleOdometerAdvance({vehicleId:curVehicleId,km,date,excludeId:BBM.editId,source:'catatan BBM'});
+ if(!odo.ok){if(!odo.cancelled)toast('⚠️ '+(odo.reason||'KM tidak valid'));return;}
+}
 const noteFull='BBM'+(veh?' '+veh.name:'')+(spbu?' - '+spbu:'')+(note?' - '+note:'');
 const isEdit=BBM.editId!==null;
 const existing=isEdit?D.bbmLogs.find(x=>x.id===BBM.editId):null;
@@ -398,7 +402,7 @@ if(!await askConfirm('Hapus catatan ini? Catatan keuangan terkait juga akan diha
 const b=D.bbmLogs.find(x=>x.id===id);
 if(b&&b.txLinkId){if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.removeById(b.txLinkId);}
 D.bbmLogs=D.bbmLogs.filter(b=>b.id!==id);
-if(b&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(b.vehicleId);
+if(b&&typeof reconcileFuelStateAfterBbmMutation==='function')reconcileFuelStateAfterBbmMutation(b.vehicleId);
 save();renderCnTab();renderDashboard();renderKeuangan();toast('🗑 Catatan BBM dihapus');
 },
 svgCostBar(months,byMonth){

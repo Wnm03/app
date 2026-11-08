@@ -1,0 +1,66 @@
+PATCH-MANIFEST-FUEL-ACCURACY-2741-2749
+Baseline: app-main (3).zip
+Cumulative build: s2433-shop-stock-prevtx-cathint-2749
+Package: changed files only; no full release; no user backup/data; no build backup artifacts.
+Total files: 45 (44 changed artifacts + this manifest).
+
+Runtime/build files:
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+index.html
+sw.js
+car-notes.js
+chat-action-handlers.js
+modules/finance/transaksi-b.js
+modules/finance/tx-bbm.js
+modules/finance/tx-list-cashflow.js
+modules/shared/backup-restore.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/fuel-card.js
+modules/vehicle/fuel-state-estimator.js
+modules/vehicle/fuel-state-history.js
+modules/vehicle/fuel-tank-profile.js
+modules/vehicle/servis.js
+modules/vehicle/vehicle-core.js
+
+generated documentation:
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+
+tests:
+tests/car-notes-json-roundtrip-s1829.test.js
+tests/fuel-adaptive-calibration-s2748.test.js
+tests/fuel-capacity-idempotency-s2748.test.js
+tests/fuel-estimation-autoupdate-regression-s420.test.js
+tests/fuel-import-csv-integration-s2748.test.js
+tests/fuel-import-odometer-s2748.test.js
+tests/fuel-state-autosync.test.js
+tests/fuel-state-delete-reconciliation-s2746.test.js
+tests/fuel-state-estimator.test.js
+tests/fuel-state-history.test.js
+tests/fuel-tank-profile-legacy-capacity-s2748.test.js
+tests/s2295-behavioral-bbm-category.test.js
+tests/vehicle-odometer-advance-guard-s2742.test.js
+
+documentation:
+PATCH-README-FUEL-ACCURACY-2741.md
+AUDIT-RESULT-FUEL-ACCURACY-2741.md
+AUDIT-RESULT-FUEL-ACCURACY-2744.md
+AUDIT-RESULT-FUEL-ACCURACY-2746.md
+DESIGN-FUEL-ADAPTIVE-CALIBRATION-S2742.md
+PATCH-README-FUEL-ACCURACY-2749.md
+AUDIT-RESULT-FUEL-ACCURACY-2749.md
+PATCH-MANIFEST-FUEL-ACCURACY-2741.txt
+PATCH-MANIFEST-FUEL-ACCURACY-2749.txt
+
+Validation:
+- Targeted fuel/BBM/odometer/import/backup tests: 573/573 PASS.
+- ESLint on touched source/test files: 0 errors, 77 no-unused-vars warnings.
+- Build s2433-shop-stock-prevtx-cathint-2749: PASS.
+- Bundle syntax + freshness: PASS.
+- Window exposure: PASS.
+- Full repository npm test and real Android PWA validation: not claimed.

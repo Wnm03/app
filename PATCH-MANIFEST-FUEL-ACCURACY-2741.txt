@@ -1,0 +1,46 @@
+PATCH-MANIFEST-FUEL-ACCURACY-2741-2746
+Baseline: app-main (3).zip
+Cumulative build: s2433-shop-stock-prevtx-cathint-2746
+Package: changed files only; no full release; no user backup/data included.
+
+Runtime/build files:
+app-bundle-a.min.js
+app-bundle-b.min.js
+app_production.html
+index.html
+sw.js
+car-notes.js
+chat-action-handlers.js
+modules/finance/transaksi-b.js
+modules/finance/tx-bbm.js
+modules/finance/tx-list-cashflow.js
+modules/shared/features-helpers-global-security.js
+modules/shared/modals.js
+modules/shared/modules-calc.js
+modules/shared/modules-render.js
+modules/vehicle/fuel-card.js
+modules/vehicle/fuel-state-estimator.js
+modules/vehicle/fuel-state-history.js
+modules/vehicle/servis.js
+modules/vehicle/vehicle-core.js
+
+generated documentation:
+docs/COVERAGE-PER-MODULE.md
+docs/FILE-MAP.md
+
+tests:
+tests/fuel-estimation-autoupdate-regression-s420.test.js
+tests/fuel-state-autosync.test.js
+tests/fuel-state-delete-reconciliation-s2746.test.js
+tests/fuel-state-estimator.test.js
+tests/fuel-state-history.test.js
+tests/s2295-behavioral-bbm-category.test.js
+tests/vehicle-odometer-advance-guard-s2742.test.js
+
+documentation:
+PATCH-README-FUEL-ACCURACY-2741.md
+AUDIT-RESULT-FUEL-ACCURACY-2741.md
+AUDIT-RESULT-FUEL-ACCURACY-2744.md
+AUDIT-RESULT-FUEL-ACCURACY-2746.md
+DESIGN-FUEL-ADAPTIVE-CALIBRATION-S2742.md
+PATCH-MANIFEST-FUEL-ACCURACY-2741.txt

@@ -1,0 +1,7 @@
+PATCH-MANIFEST-2741-2754
+Baseline: app-main (3).zip
+Cumulative build: s2433-shop-stock-prevtx-cathint-2754
+Package: changed files only; no full release; no user backup/data; no build backup artifacts.
+Menggantikan patch kumulatif 2749, 2751, 2752, 2753. Terapkan di atas baseline bersih, lalu jalankan: node scripts/apply-delete-manifest.js
+Tambahan 2754: modules/shop/cobek-tx-cart.js, modules/shop/cobek-io.js, modules/shared/pwa-ux-performance.js, FILE-HASHES-SHA256.txt,
+tests/shop-cart-edit-price-s2754.test.js, PATCH-README-FUEL-ACCURACY-2754.md, PATCH-MANIFEST-FUEL-ACCURACY-2754.txt, serta bundle/versi hasil build.
