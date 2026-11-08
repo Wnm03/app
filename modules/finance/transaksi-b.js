@@ -600,7 +600,7 @@ if(typeof applyTxServisFromTx==='function'){
 const txObjForServis=existingTx||(D.transactions||[]).find(t=>t.id===savedTxId);
 _serviceCommitMeta=await applyTxServisFromTx(savedTxId,amt,date,accId,note,txObjForServis,existingTx);
 }
-applyTxBbmFromTx(savedTxId,amt,date,accId,note,existingTx);
+if(await applyTxBbmFromTx(savedTxId,amt,date,accId,note,existingTx)===false)throw new Error('TX_BBM_ODOMETER_CANCELLED');
 applyTxShopStockFromTx(savedTxId,note,existingTx);
 applyTxShopSaleFromTx(savedTxId,date,accId,note,existingTx);
 // BUGFIX (s433): dulu applyTxRenovFromTx() cuma dipanggil kalau `!existingTx`
@@ -701,7 +701,7 @@ Object.assign(D,_restored);
 }catch(_rollbackErr){
 console.error('S629: rollback snapshot D gagal, state mungkin tidak konsisten:',_rollbackErr);
 }
-toast('⚠️ Gagal menyimpan transaksi, perubahan dibatalkan. Silakan coba lagi.',3000);
+toast(_txSaveErr&&_txSaveErr.message==='TX_BBM_ODOMETER_CANCELLED'?'ℹ️ Penyimpanan dibatalkan karena konfirmasi KM tidak disetujui.':(_txSaveErr&&String(_txSaveErr.message||'').startsWith('TX_BBM_ODOMETER_INVALID:')?'⚠️ '+_txSaveErr.message.slice('TX_BBM_ODOMETER_INVALID:'.length):'⚠️ Gagal menyimpan transaksi, perubahan dibatalkan. Silakan coba lagi.'),3000);
 }
 throw _txSaveErr;
 }
