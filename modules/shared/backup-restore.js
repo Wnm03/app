@@ -491,6 +491,16 @@ function _serviceImportFingerprint(s){
   return JSON.stringify(normalize(s));
 }
 
+// Kunci identitas BBM untuk dedupe import: kendaraan+tanggal+KM+liter+biaya. Sengaja TIDAK memuat
+// id/accountId/note/spbu supaya import ulang file yang sama tetap terdeteksi walau urutan akun berubah.
+function _bbmImportKey(b){
+  if(!b||typeof b!=='object')return null;
+  const km=Number(b.km),liter=Number(b.liter),cost=Number(b.cost);
+  const date=String(b.date||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(km)||km<=0||!Number.isFinite(liter)||liter<=0)return null;
+  return [String(b.vehicleId||''),date,km,Math.round(liter*100)/100,Math.round(Number.isFinite(cost)?cost:0)].join('|');
+}
+
 function _contentImportFingerprint(value, omitKeys){
   if(!value||typeof value!=='object')return null;
   const omit=new Set(omitKeys||['id','createdAt','updatedAt','importedAt']);
@@ -1180,13 +1190,17 @@ const parsed=JSON.parse(content);
 if(Array.isArray(parsed.bbmLogs)){
 const existingBbmFingerprints=new Set((Array.isArray(D.bbmLogs)?D.bbmLogs:[]).map(b=>_contentImportFingerprint(b)).filter(Boolean));
 const importedBbmFingerprints=new Set();
+const existingBbmKeys=new Set((Array.isArray(D.bbmLogs)?D.bbmLogs:[]).map(b=>_bbmImportKey(b)).filter(Boolean));
+const importedBbmKeys=new Set();
 parsed.bbmLogs.forEach(b=>{
 const importedId=(b&&b.id)||uid();
 if(b&&b.id&&D.bbmLogs.find(x=>x&&x.id===b.id))return;
 const normalized={...b,vehicleId:b&&b.vehicleId||vehId};
 const fp=_contentImportFingerprint(normalized);
-if(fp&&(existingBbmFingerprints.has(fp)||importedBbmFingerprints.has(fp))){skipCount++;return;}
+const bbmKey=_bbmImportKey(normalized);
+if((fp&&(existingBbmFingerprints.has(fp)||importedBbmFingerprints.has(fp)))||(bbmKey&&(existingBbmKeys.has(bbmKey)||importedBbmKeys.has(bbmKey)))){skipCount++;return;}
 if(fp)importedBbmFingerprints.add(fp);
+if(bbmKey)importedBbmKeys.add(bbmKey);
 const importedBbm={...normalized,id:importedId};
 D.bbmLogs.push(importedBbm);
 importedBbmCandidates.push(importedBbm);
@@ -1253,7 +1267,8 @@ const isServis=jenis?/servis/.test(jenis):/servis|oli|ban|sparepart|ganti|tune|c
 if(isBbm){
 const importedBbm={id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null};
 const bbmFp=_contentImportFingerprint(importedBbm);
-if(bbmFp&&((D.bbmLogs||[]).some(b=>_contentImportFingerprint(b)===bbmFp)||importedBbmCandidates.some(b=>_contentImportFingerprint(b)===bbmFp))){skipCount++;continue;}
+const bbmKey=_bbmImportKey(importedBbm);
+if((bbmFp&&((D.bbmLogs||[]).some(b=>_contentImportFingerprint(b)===bbmFp)||importedBbmCandidates.some(b=>_contentImportFingerprint(b)===bbmFp)))||(bbmKey&&((D.bbmLogs||[]).some(b=>_bbmImportKey(b)===bbmKey)||importedBbmCandidates.some(b=>_bbmImportKey(b)===bbmKey)))){skipCount++;continue;}
 D.bbmLogs.push(importedBbm);
 importedBbmCandidates.push(importedBbm);
 bbmCount++;
