@@ -252,7 +252,7 @@ test('estimateCurrentLiter() -- deltaKm sangat besar -> decayedConfidenceScore d
   assert.equal(res.decayedConfidenceScore, ctx.FuelStateEstimator.MIN_CONFIDENCE_SCORE);
 });
 
-test('estimateCurrentLiter() -- estimationLimited:true (tanpa referenceKm, deltaKm tidak diketahui) -> decayedConfidenceScore == confidenceScore dasar (0 tebakan)', () => {
+test('estimateCurrentLiter() -- estimationLimited:true (tanpa referenceKm) -> confidence tidak diklaim karena konsumsi belum dapat dihitung', () => {
   const D = {
     vehicles: [{ id: 'v1', fuelTankProfile: PROFILE, fuelState: { currentFuelLiter: 5, estimatedSource: 'manual-bar-correction', confidenceScore: 100 } }],
     bbmLogs: [],
@@ -261,7 +261,7 @@ test('estimateCurrentLiter() -- estimationLimited:true (tanpa referenceKm, delta
   const res = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
   assert.equal(res.ok, true);
   assert.equal(res.estimationLimited, true);
-  assert.equal(res.decayedConfidenceScore, 100);
+  assert.equal(res.decayedConfidenceScore, null);
 });
 
 test('estimateCurrentLiter() -- confidenceScore dasar tidak ada (bukan angka) -> decayedConfidenceScore null, 0 tebakan', () => {
@@ -274,4 +274,33 @@ test('estimateCurrentLiter() -- confidenceScore dasar tidak ada (bukan angka) ->
   assert.equal(res.ok, true);
   assert.equal(res.confidenceScore, null);
   assert.equal(res.decayedConfidenceScore, null);
+});
+
+
+test('estimateCurrentLiter() -- odometer tertinggi berumur lebih dari 7 hari ditandai stale', () => {
+  const oldDate = new Date(Date.now() - 20 * 86400000).toISOString().slice(0, 10);
+  const D = {
+    vehicles: [{ id: 'v1', fuelTankProfile: PROFILE, fuelState: { currentFuelLiter: 8, referenceKm: 1000, confidenceScore: 90 } }],
+    bbmLogs: [{ vehicleId: 'v1', km: 1100, liter: 3, fullTank: true, date: oldDate }],
+    servisLogs: [], kmLogs: [],
+  };
+  const ctx = makeCtx(D, EFF_OK, () => 1100);
+  const res = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
+  assert.equal(res.odometerStale, true);
+  assert.ok(res.odometerAgeDays >= 19);
+  assert.equal(res.decayedConfidenceScore, null);
+});
+
+test('estimateCurrentLiter() -- odometer baru tidak ditandai stale', () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const D = {
+    vehicles: [{ id: 'v1', fuelTankProfile: PROFILE, fuelState: { currentFuelLiter: 8, referenceKm: 1000, confidenceScore: 90 } }],
+    bbmLogs: [{ vehicleId: 'v1', km: 1100, liter: 3, fullTank: true, date: today }],
+    servisLogs: [], kmLogs: [],
+  };
+  const ctx = makeCtx(D, EFF_OK, () => 1100);
+  const res = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
+  assert.equal(res.odometerStale, false);
+  assert.equal(res.odometerAgeDays, 0);
+  assert.equal(res.decayedConfidenceScore, 84);
 });

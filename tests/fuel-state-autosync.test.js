@@ -213,3 +213,42 @@ test('recordBbmLog() — FuelStateHistory TIDAK dimuat -> tidak throw, fuelState
   assert.ok(veh.fuelState);
   assert.equal(D.fuelStateHistory, undefined);
 });
+
+
+test('recordBbmLog() — correctedAt baseline memakai tanggal log, bukan waktu edit', () => {
+  const veh = baseVehicle();
+  const D = { bbmLogs: [], vehicles: [veh] };
+  const ctx = makeCtxWithHistory({ D });
+  ctx.recordBbmLog({ vehicleId: 'veh1', date: '2026-08-06', km: 12000, liter: 4.2, cost: 63000, fullTank: true, spbu: '', note: '', accountId: 'acc1', txId: 'tx-date' });
+  assert.equal(veh.fuelState.correctedAt, '2026-08-06T23:59:59');
+});
+
+test('recordBbmLog() — full tank lama tidak menimpa koreksi manual yang lebih baru', () => {
+  const veh = baseVehicle({ fuelState: { currentFuelBar: 3, currentFuelLiter: 1.5, correctedAt: '2026-08-10T09:00:00.000Z', estimatedSource: 'manual-bar-correction', confidenceScore: 100, referenceKm: 12100 } });
+  const D = { bbmLogs: [], vehicles: [veh] };
+  const ctx = makeCtxWithHistory({ D });
+  ctx.recordBbmLog({ vehicleId: 'veh1', date: '2026-08-06', km: 12000, liter: 4.2, cost: 63000, fullTank: true, spbu: '', note: '', accountId: 'acc1', txId: 'tx-old' });
+  assert.equal(veh.fuelState.estimatedSource, 'manual-bar-correction');
+  assert.equal(veh.fuelState.currentFuelLiter, 1.5);
+});
+
+test('recordBbmLog() — full tank tanggal sama mengalahkan koreksi manual', () => {
+  const veh = baseVehicle({ fuelState: { currentFuelBar: 3, currentFuelLiter: 1.5, correctedAt: '2026-08-06T09:00:00.000Z', estimatedSource: 'manual-bar-correction', confidenceScore: 100, referenceKm: 12000 } });
+  const D = { bbmLogs: [], vehicles: [veh] };
+  const ctx = makeCtxWithHistory({ D });
+  ctx.recordBbmLog({ vehicleId: 'veh1', date: '2026-08-06', km: 12000, liter: 4.2, cost: 63000, fullTank: true, spbu: '', note: '', accountId: 'acc1', txId: 'tx-same-day' });
+  assert.equal(veh.fuelState.estimatedSource, 'auto-bbm-log-full');
+  assert.equal(veh.fuelState.currentFuelLiter, 4.2);
+});
+
+test('recordBbmLog() — partial fill memakai tanggal log sebagai baseline dan tidak menimpa full tank pada hari sama', () => {
+  const veh = baseVehicle({ fuelState: { currentFuelBar: 8, currentFuelLiter: 4.2, correctedAt: '2026-08-06T23:59:59', estimatedSource: 'auto-bbm-log-full', confidenceScore: 90, referenceKm: 12000 } });
+  const D = { bbmLogs: [{ id: 'full1', vehicleId: 'veh1', date: '2026-08-06', km: 12000, liter: 4.2, fullTank: true }], vehicles: [veh] };
+  const ctx = loadSource(
+    ['modules/vehicle/fuel-storage.js', 'modules/vehicle/fuel-tank-profile.js', 'modules/vehicle/fuel-gauge-engine.js', 'modules/vehicle/fuel-state-estimator.js', 'modules/finance/tx-bbm.js'],
+    { D, getVehicleKm: () => 12100, fuelEfficiency: () => ({ ok: true, kmPerLiter: 40 }), uid: () => 'partial1' },
+  );
+  ctx.recordBbmLog({ vehicleId: 'veh1', date: '2026-08-06', km: 12100, liter: 1, cost: 15000, fullTank: false, spbu: '', note: '', accountId: 'acc1', txId: 'tx-partial-same-day' });
+  assert.equal(veh.fuelState.estimatedSource, 'auto-bbm-log-full');
+  assert.equal(veh.fuelState.currentFuelLiter, 4.2);
+});

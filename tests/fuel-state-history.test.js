@@ -104,3 +104,15 @@ test('record() — guard typeof D belum ada sama sekali -> tidak throw', () => {
   const ctx = loadSource(['modules/vehicle/fuel-state-history.js'], {}, ['FuelStateHistory']);
   assert.doesNotThrow(() => ctx.FuelStateHistory.record('v1', { currentFuelLiter: 3 }));
 });
+
+
+test('record() — baseline identik tidak menambah snapshot duplikat', () => {
+  const D = {};
+  const ctx = makeCtx(D);
+  const state = { currentFuelBar: 5, currentFuelLiter: 3.1, referenceKm: 1200, correctedAt: '2026-08-01T00:00:00.000Z', estimatedSource: 'auto-bbm-log', confidenceScore: 70 };
+  ctx.FuelStateHistory.record('v1', state);
+  ctx.FuelStateHistory.record('v1', { ...state, correctedAt: '2026-08-01T00:00:01.000Z' });
+  assert.equal(ctx.FuelStateHistory.count('v1'), 1);
+  ctx.FuelStateHistory.record('v1', { ...state, currentFuelLiter: 2.9 });
+  assert.equal(ctx.FuelStateHistory.count('v1'), 2);
+});

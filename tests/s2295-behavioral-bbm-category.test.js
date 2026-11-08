@@ -45,52 +45,53 @@ const LOGS = junk => [
     { id: 'bad', vehicleId: 'v1', date: 'garbage', km: 1 },      // undated: must be ignored
   ] : []),
 ];
-function bbmTry(date, km, editId = null, junk = false) {
+async function bbmTry(date, km, editId = null, junk = false) {
   const { sb, BBM } = loadBBM();
   const toasts = [];
   sb.toast = m => toasts.push(String(m));
   sb.D = { bbmLogs: LOGS(junk) };
   sb.curVehicleId = 'v1';
+  sb.confirmVehicleOdometerAdvance = async () => ({ ok: true });
   BBM.editId = editId;
   const f = { bbmKm: km, bbmLiter: 5, bbmCost: 50000, bbmHarga: 10000, bbmSpbu: '', bbmDate: date, bbmFull: 'on' };
   sb.document.getElementById = fields(f, 'bbmNote');
   let passed = false;
-  try { BBM._saveInner(); } catch (e) { if (e.message === PASSED) passed = true; else throw e; }
+  try { await BBM._saveInner(); } catch (e) { if (e.message === PASSED) passed = true; else throw e; }
   return { passed, toasts };
 }
 
-test('S2295 BBM: valid backdated entry between neighbours is accepted (R1)', () => {
-  assert.equal(bbmTry('2026-09-15', 12500).passed, true);
+test('S2295 BBM: valid backdated entry between neighbours is accepted (R1)', async () => {
+  assert.equal((await bbmTry('2026-09-15', 12500)).passed, true);
 });
-test('S2295 BBM: KM equal to a neighbour is accepted', () => {
-  assert.equal(bbmTry('2026-09-15', 12000).passed, true);
-  assert.equal(bbmTry('2026-09-15', 13000).passed, true);
+test('S2295 BBM: KM equal to a neighbour is accepted', async () => {
+  assert.equal((await bbmTry('2026-09-15', 12000)).passed, true);
+  assert.equal((await bbmTry('2026-09-15', 13000)).passed, true);
 });
-test('S2295 BBM: KM below previous or above next neighbour is rejected', () => {
-  const lo = bbmTry('2026-09-15', 11000);
+test('S2295 BBM: KM below previous or above next neighbour is rejected', async () => {
+  const lo = await bbmTry('2026-09-15', 11000);
   assert.equal(lo.passed, false); assert.match(lo.toasts.join('|'), /lebih kecil dari catatan BBM sebelumnya \(12\.000/);
-  const hi = bbmTry('2026-09-15', 13500);
+  const hi = await bbmTry('2026-09-15', 13500);
   assert.equal(hi.passed, false); assert.match(hi.toasts.join('|'), /melebihi catatan BBM setelah tanggal ini \(13\.000/);
 });
-test('S2295 BBM: before-all and after-all entries respect the single neighbour', () => {
-  assert.equal(bbmTry('2026-08-01', 11000).passed, true);
-  assert.equal(bbmTry('2026-08-01', 12500).passed, false);
-  assert.equal(bbmTry('2026-10-06', 13400).passed, true);
-  assert.equal(bbmTry('2026-10-06', 100).passed, false);
+test('S2295 BBM: before-all and after-all entries respect the single neighbour', async () => {
+  assert.equal((await bbmTry('2026-08-01', 11000)).passed, true);
+  assert.equal((await bbmTry('2026-08-01', 12500)).passed, false);
+  assert.equal((await bbmTry('2026-10-06', 13400)).passed, true);
+  assert.equal((await bbmTry('2026-10-06', 100)).passed, false);
 });
-test('S2295 BBM: future date rejected; other-vehicle and undated logs ignored', () => {
-  const r = bbmTry('2099-01-01', 20000);
+test('S2295 BBM: future date rejected; other-vehicle and undated logs ignored', async () => {
+  const r = await bbmTry('2099-01-01', 20000);
   assert.equal(r.passed, false); assert.match(r.toasts.join('|'), /masa depan/);
-  assert.equal(bbmTry('2026-09-15', 12500, null, true).passed, true); // other-vehicle 99999 km and undated log must not block
-  assert.equal(bbmTry('2026-09-15', 11000, null, true).passed, false); // ...but real neighbours still enforced
+  assert.equal((await bbmTry('2026-09-15', 12500, null, true)).passed, true); // other-vehicle 99999 km and undated log must not block
+  assert.equal((await bbmTry('2026-09-15', 11000, null, true)).passed, false); // ...but real neighbours still enforced
 });
-test('S2295 BBM: editing a record excludes itself from neighbour checks', () => {
-  assert.equal(bbmTry('2026-09-01', 12900, 'l1').passed, true);
-  assert.equal(bbmTry('2026-09-01', 13500, 'l1').passed, false);
+test('S2295 BBM: editing a record excludes itself from neighbour checks', async () => {
+  assert.equal((await bbmTry('2026-09-01', 12900, 'l1')).passed, true);
+  assert.equal((await bbmTry('2026-09-01', 13500, 'l1')).passed, false);
 });
-test('S2295 BBM: non-positive or non-numeric input rejected', () => {
-  assert.equal(bbmTry('2026-09-15', 0).passed, false);
-  assert.equal(bbmTry('2026-09-15', 'abc').passed, false);
+test('S2295 BBM: non-positive or non-numeric input rejected', async () => {
+  assert.equal((await bbmTry('2026-09-15', 0)).passed, false);
+  assert.equal((await bbmTry('2026-09-15', 'abc')).passed, false);
 });
 
 // ---------- Transaction category (real _saveTxInner) ----------

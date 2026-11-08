@@ -30,7 +30,7 @@ function runBbmImport(existing,incoming,vehId){
   let gen=0;
   const sandbox={
     D:{bbmLogs:existing.slice()},parsed:{bbmLogs:incoming},vehId,
-    uid:()=>`new-${++gen}`,skipCount:0,bbmCount:0,console
+    importedBbmCandidates:[],uid:()=>`new-${++gen}`,skipCount:0,bbmCount:0,console
   };
   vm.createContext(sandbox);
   vm.runInContext(fpFn+'\n'+bbmBlock,sandbox);
