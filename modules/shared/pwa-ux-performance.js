@@ -290,7 +290,7 @@
       document.addEventListener('change',function(e){if(e.target&&['txAddShopStock','txAddShopSale','txStockItem','txShopStockItem','txShopSaleItem'].includes(e.target.id)){syncWarnings();syncAmountHint();}});
       document.addEventListener('click',function(e){
         const action=e.target&&e.target.closest?e.target.closest('[data-action]'):null;
-        if(action&&['addShopStockCartItem','addTxShopSaleCartItem','removeShopStockCartItem','removeTxShopSaleCartItem'].includes(action.dataset.action))setTimeout(function(){syncWarnings();syncAmountHint();},0);
+        if(action&&['addShopStockCartItem','addTxShopSaleCartItem','removeShopStockCartItem','removeTxShopSaleCartItem','saveShopStockCartItemEdit','saveTxShopSaleCartItemEdit'].includes(action.dataset.action))setTimeout(function(){syncWarnings();syncAmountHint();},0);
         if(action&&action.dataset.action==='closeModal'&&action.dataset.args&&action.dataset.args.indexOf('renovProjectModal')>=0)setTimeout(function(){
           const projectModal=byId('renovProjectModal');
           if(projectModal&&projectModal.classList.contains('open') )return;

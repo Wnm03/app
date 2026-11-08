@@ -1123,6 +1123,31 @@ populateCatFilter();
 };
 r.readAsText(file);
 }
+// Validasi odometer untuk batch import BBM. Tanggal tanpa jam tidak dapat
+// membuktikan urutan kejadian dalam hari yang sama; karena itu kebijakan
+// konservatifnya adalah KM dalam satu hari harus non-menurun menurut urutan
+// baris import, dan tidak boleh lebih rendah dari pembacaan yang sudah ada.
+function validateBbmOdometerImportIntegrity(candidateLogs, existingLogs){
+ const candidates=Array.isArray(candidateLogs)?candidateLogs:[];
+ const rows=[
+  ...(Array.isArray(existingLogs)?existingLogs:[]),
+  ...(Array.isArray(D.kmLogs)?D.kmLogs:[]),
+  ...(Array.isArray(D.servisLogs)?D.servisLogs:[]),
+ ];
+ const accepted=[];const invalid=[];
+ for(const candidate of candidates){
+  if(!candidate||!candidate.vehicleId||!/^\d{4}-\d{2}-\d{2}$/.test(String(candidate.date||''))||!Number.isFinite(Number(candidate.km))||Number(candidate.km)<=0)continue;
+  const history=rows.concat(accepted).filter(r=>r&&String(r.vehicleId)===String(candidate.vehicleId)&&String(r.id||'')!==String(candidate.id||'')&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||''))&&Number.isFinite(Number(r.km))&&Number(r.km)>=0);
+  const prior=history.filter(r=>String(r.date)<=String(candidate.date)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.km)-Number(a.km))[0];
+  const next=history.filter(r=>String(r.date)>String(candidate.date)).sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.km)-Number(b.km))[0];
+  const km=Number(candidate.km);
+  if(prior&&km<Number(prior.km))invalid.push({id:candidate.id||null,code:'BBM_ODOMETER_BACKSTEP',message:'KM import '+km+' lebih rendah dari catatan '+prior.km+' pada '+prior.date});
+  else if(next&&km>Number(next.km))invalid.push({id:candidate.id||null,code:'BBM_ODOMETER_FUTURE_CONFLICT',message:'KM import '+km+' melebihi catatan '+next.km+' pada '+next.date});
+  else accepted.push(candidate);
+ }
+ return{ok:invalid.length===0,checked:candidates.length,invalid};
+}
+
 function importCarData(e){
 const file=e.target.files[0]; if(!file)return;
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json','.csv']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);e.target.value='';return;}}
@@ -1130,7 +1155,7 @@ const resultEl=document.getElementById('carImportResult');
 resultEl.innerHTML='⏳ Memproses file...';
 const reader=new FileReader();
 reader.onload=function(ev){
-const _v26ImportSnapshot={bbmLogs:JSON.stringify(D.bbmLogs||[]),servisLogs:JSON.stringify(D.servisLogs||[]),transactions:JSON.stringify(D.transactions||[]),partsStock:JSON.stringify(D.partsStock||[]),sparepartCats:JSON.stringify(D.sparepartCats||[])};
+const _v26ImportSnapshot={bbmLogs:JSON.stringify(D.bbmLogs||[]),servisLogs:JSON.stringify(D.servisLogs||[]),transactions:JSON.stringify(D.transactions||[]),partsStock:JSON.stringify(D.partsStock||[]),sparepartCats:JSON.stringify(D.sparepartCats||[]),vehicleFuelState:JSON.stringify((D.vehicles||[]).map(v=>({id:v.id,fuelState:v.fuelState,fuelEfficiencyCalibration:v.fuelEfficiencyCalibration,fuelEfficiencyCalibrationPrevious:v.fuelEfficiencyCalibrationPrevious,fuelEfficiencyCalibrationReview:v.fuelEfficiencyCalibrationReview}))),fuelStateHistory:JSON.stringify(D.fuelStateHistory||[])};
 try{
 const content=ev.target.result;
 if(!D.vehicles||!D.vehicles.length) D.vehicles=[{id:'veh_1',name:'Vario 125',emoji:'🏍️'}];
@@ -1138,7 +1163,7 @@ const selectedVehId=document.getElementById('carImportVehicle')?document.getElem
 const vehId=(selectedVehId&&D.vehicles.find(v=>v.id===selectedVehId))?selectedVehId:D.vehicles[0].id;
 let bbmCount=0, servisCount=0, skipCount=0, autoDetectCount=0, vehColDetected=false;
 const importedServiceCandidates=[];
-const importedBbmVehicleIds=new Set();
+const importedBbmCandidates=[];
 const importedServiceFingerprints=new Set();
 const existingServiceFingerprints=new Set((Array.isArray(D.servisLogs)?D.servisLogs:[]).map(_serviceImportFingerprint).filter(Boolean));
 function matchVehicleFromText(text){
@@ -1162,7 +1187,9 @@ const normalized={...b,vehicleId:b&&b.vehicleId||vehId};
 const fp=_contentImportFingerprint(normalized);
 if(fp&&(existingBbmFingerprints.has(fp)||importedBbmFingerprints.has(fp))){skipCount++;return;}
 if(fp)importedBbmFingerprints.add(fp);
-D.bbmLogs.push({...normalized,id:importedId});
+const importedBbm={...normalized,id:importedId};
+D.bbmLogs.push(importedBbm);
+importedBbmCandidates.push(importedBbm);
 bbmCount++;
 });
 }
@@ -1203,7 +1230,6 @@ const idxKet=header.findIndex(h=>/keterangan|note|kategori|category|deskripsi|^i
 const idxJumlah=header.findIndex(h=>/jumlah|amount|total|biaya|harga|cost/.test(h));
 const idxLiter=header.findIndex(h=>/liter|litre/.test(h));
 const idxKm=header.findIndex(h=>/^km$|odometer/.test(h));
-const idxFullTank=header.findIndex(h=>/full.?tank|isi.?penuh|tangki.?penuh/.test(h));
 const idxVeh=header.findIndex(h=>/kendaraan|vehicle|^motor$|^mobil$/.test(h));
 vehColDetected=idxVeh>=0;
 for(let i=1;i<lines.length;i++){
@@ -1225,11 +1251,12 @@ if(!date||isNaN(new Date(date).getTime())){skipCount++;continue;}
 const isBbm=jenis?/bbm/.test(jenis):(liter>0||/bbm|bensin|pertalite|pertamax|dexlite|biosolar|solar|\bfuel\b|spbu|isi.*bensin/.test(ketLower));
 const isServis=jenis?/servis/.test(jenis):/servis|oli|ban|sparepart|ganti|tune|cvt|kampas|aki|busi/.test(ketLower);
 if(isBbm){
-const fullTankValue=idxFullTank>=0?String(cols[idxFullTank]||'').trim().toLowerCase():'';
-const fullTankCsv=idxFullTank>=0?/^(1|true|yes|ya|full|penuh)$/i.test(fullTankValue):/\b(full\s*tank|isi\s*penuh|tangki\s*penuh|full\s*fill)\b/i.test([jenis,ket].join(' '));
-D.bbmLogs.push({id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:fullTankCsv,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null});
+const importedBbm={id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null};
+const bbmFp=_contentImportFingerprint(importedBbm);
+if(bbmFp&&((D.bbmLogs||[]).some(b=>_contentImportFingerprint(b)===bbmFp)||importedBbmCandidates.some(b=>_contentImportFingerprint(b)===bbmFp))){skipCount++;continue;}
+D.bbmLogs.push(importedBbm);
+importedBbmCandidates.push(importedBbm);
 bbmCount++;
-importedBbmVehicleIds.add(rowVehId);
 } else if(isServis){
 const importServisItem=ket||'Servis (import)';
 const importCatId=typeof canonicalServisCategoryId==='function'
@@ -1248,9 +1275,12 @@ skipCount++;
 }
 }
 }
+const _p24BbmValidation=validateBbmOdometerImportIntegrity(importedBbmCandidates,JSON.parse(_v26ImportSnapshot.bbmLogs));
+if(!_p24BbmValidation.ok){D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);throw new Error('Import BBM ditolak karena integritas odometer: '+_p24BbmValidation.invalid.map(x=>x.message||x.code).join('; '));}
 const _p23CsvValidation=validateServiceOdometerImportIntegrity(importedServiceCandidates);
 if(!_p23CsvValidation.ok){D.bbmLogs=JSON.parse(_v34CsvDomainSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v34CsvDomainSnapshot.servisLogs);throw new Error('Import CSV servis ditolak karena integritas odometer: '+_p23CsvValidation.invalid.map(x=>x.message||x.code).join('; '));}
-if(typeof reconcileFuelStateFromLogs==='function')importedBbmVehicleIds.forEach(id=>reconcileFuelStateFromLogs(id));
+const importedVehicleIds=[...new Set(importedBbmCandidates.map(b=>String(b.vehicleId||'')).filter(Boolean))];
+if(typeof reconcileFuelStateAfterBbmMutation==='function')importedVehicleIds.forEach(id=>reconcileFuelStateAfterBbmMutation(id));
 save();
 if(typeof renderCnTab==='function')renderCnTab();
 const vehName=(D.vehicles.find(v=>v.id===vehId)||{}).name||'kendaraan terpilih';
@@ -1258,7 +1288,7 @@ resultEl.innerHTML=`✅ Import selesai untuk <b>${escapeHtml(vehName)}</b> (defa
 toast('✅ Import Car Notes selesai');
 }catch(err){
 // V26 G27: CSV import is atomic across both Car Notes domains.
-try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.transactions));if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback import stok');StockCommandSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.partsStock));D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
+try{D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);D.fuelStateHistory=JSON.parse(_v26ImportSnapshot.fuelStateHistory||'[]');const _fuelSnapshots=JSON.parse(_v26ImportSnapshot.vehicleFuelState||'[]');_fuelSnapshots.forEach(s=>{const v=(D.vehicles||[]).find(x=>String(x.id)===String(s.id));if(!v)return;['fuelState','fuelEfficiencyCalibration','fuelEfficiencyCalibrationPrevious','fuelEfficiencyCalibrationReview'].forEach(k=>{if(s[k]===undefined)delete v[k];else v[k]=s[k];});});if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.transactions));if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback import stok');StockCommandSOT.replaceSnapshot(JSON.parse(_v26ImportSnapshot.partsStock));D.sparepartCats=JSON.parse(_v26ImportSnapshot.sparepartCats);}catch(_rb){console.error('V26: CSV import rollback failed',_rb);}
 resultEl.innerHTML='❌ Gagal import: '+(err&&err.message?err.message:'format file tidak dikenali');
 }
 };
