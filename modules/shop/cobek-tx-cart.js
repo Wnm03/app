@@ -47,8 +47,11 @@ return cat.id;
 }
 function shopKategoriName(id){const c=D.cobekKategori.find(x=>x.id===id);return c?c.name:'';}
 let curShopStockCart=[];
+// S2754: indeks baris keranjang yang sedang diedit (-1 = tidak ada). Hanya state tampilan; tidak ikut disimpan.
+const shopCartEdit={stock:-1,sale:-1};
 function resetShopStockCart(){
 curShopStockCart=[];
+shopCartEdit.stock=-1;
 renderShopStockCartList();
 }
 // BUGFIX (audit lanjutan "input Nama Produk Baru di transaksi tidak respon", pola SAMA
@@ -196,8 +199,36 @@ if(document.getElementById('txShopStockJual'))document.getElementById('txShopSto
 if(document.getElementById('txShopStockNewName'))document.getElementById('txShopStockNewName').value='';
 toast(`➕ "${name}" ditambahkan ke daftar (${qty}x)`);
 }
+// S2754: edit baris keranjang Stok Masuk (pembelian) tanpa hapus-lalu-tambah ulang. Baris yang diedit
+// menampilkan panel kecil (jumlah, harga beli/pcs, harga jual/pcs). Harga beli mengikuti jalur lama saat
+// simpan (mutateSetPrice hargaBeli + hargaByProdusen). Harga jual HANYA menimpa harga jual produk bila
+// pengguna benar-benar mengubahnya di panel ini (hargaJualEdited) -- produk lama tidak disentuh diam-diam.
+function _shopCartNum(id){const el=document.getElementById(id);if(!el)return NaN;const raw=String(el.value==null?'':el.value).trim();return raw===''?NaN:parseFloat(raw.replace(',','.'));}
+function editShopStockCartItem(idx){
+if(!curShopStockCart[idx])return;
+shopCartEdit.stock=(shopCartEdit.stock===idx)?-1:idx;
+renderShopStockCartList();
+}
+function cancelShopStockCartEdit(){shopCartEdit.stock=-1;renderShopStockCartList();}
+function saveShopStockCartItemEdit(idx){
+const it=curShopStockCart[idx];
+if(!it)return;
+const qty=_shopCartNum('txCartEditQty'),hb=_shopCartNum('txCartEditBeli'),hjRaw=_shopCartNum('txCartEditJual');
+if(!(qty>0)){toast('⚠️ Jumlah harus lebih dari 0');return;}
+if(!Number.isFinite(hb)||hb<0){toast('⚠️ Harga beli tidak valid');return;}
+if(Number.isFinite(hjRaw)&&hjRaw<0){toast('⚠️ Harga jual tidak valid');return;}
+const hj=Number.isFinite(hjRaw)?hjRaw:0;
+it.qty=qty;
+it.hargaBeli=hb;
+if(hj!==(Number(it.hargaJual)||0)){it.hargaJual=hj;it.hargaJualEdited=hj>0;}
+shopCartEdit.stock=-1;
+renderShopStockCartList();
+syncTxShopStockAmt();
+toast('✏️ "'+it.name+'" diperbarui');
+}
 function removeShopStockCartItem(idx){
 curShopStockCart.splice(idx,1);
+shopCartEdit.stock=-1;
 renderShopStockCartList();
 syncTxShopStockAmt();
 }
@@ -300,6 +331,7 @@ if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetField(produ
 }
 }
 if(!product)return;
+if(it.hargaJualEdited&&it.hargaJual>0){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(product,'hargaJual',it.hargaJual);else product.hargaJual=it.hargaJual;}
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(product,it.qty,{source:'stock-receipt',reason:'new stock entered from transaction input',refType:'transaction',refId:txId,idempotencyKey:'tx-stock-receipt:'+txId+':'+product.id+':r'+_rev});else product.stock=(product.stock||0)+it.qty;
 if(it.hargaBeli>0){if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(product,'hargaBeli',it.hargaBeli);else product.hargaBeli=it.hargaBeli;}
 if(it.produsenId){
@@ -356,6 +388,7 @@ el.style.display=show?'block':'none';
 let curTxShopSaleCart=[];
 function resetTxShopSaleCart(){
 curTxShopSaleCart=[];
+shopCartEdit.sale=-1;
 renderTxShopSaleCartList();
 }
 // BUGFIX (audit "input Nama Produk Baru di transaksi Pemasukan Shop tidak respon"):
@@ -480,8 +513,33 @@ syncTxShopSaleAmt();
 document.getElementById('txShopSaleQty').value='1';
 toast(`➕ "${escapeHtml(product.name)}" ditambahkan ke daftar (${qty}x)`);
 }
+// S2754: edit baris keranjang Penjualan: jumlah & harga jual/pcs (khusus transaksi ini). Centang opsional
+// "Jadikan harga jual produk" baru menimpa harga jual produk saat transaksi disimpan (lewat gate
+// ProductRepository.mutateSetPrice); tanpa centang, harga produk di Etalase tidak berubah.
+function editTxShopSaleCartItem(idx){
+if(!curTxShopSaleCart[idx])return;
+shopCartEdit.sale=(shopCartEdit.sale===idx)?-1:idx;
+renderTxShopSaleCartList();
+}
+function cancelTxShopSaleCartEdit(){shopCartEdit.sale=-1;renderTxShopSaleCartList();}
+function saveTxShopSaleCartItemEdit(idx){
+const it=curTxShopSaleCart[idx];
+if(!it)return;
+const qty=_shopCartNum('txCartEditQty'),harga=_shopCartNum('txCartEditHarga');
+if(!(qty>0)){toast('⚠️ Jumlah terjual harus lebih dari 0');return;}
+if(!(harga>0)){toast('⚠️ Harga jual harus lebih dari 0');return;}
+const chk=document.getElementById('txCartEditDefault');
+it.qty=qty;
+it.harga=harga;
+it.saveAsDefault=!!(chk&&chk.checked);
+shopCartEdit.sale=-1;
+renderTxShopSaleCartList();
+syncTxShopSaleAmt();
+toast('✏️ "'+it.name+'" diperbarui');
+}
 function removeTxShopSaleCartItem(idx){
 curTxShopSaleCart.splice(idx,1);
+shopCartEdit.sale=-1;
 renderTxShopSaleCartList();
 syncTxShopSaleAmt();
 }
@@ -676,6 +734,8 @@ priceType:'normal',delivered:true,accountId:accId,txId,
 existingShopId:(existingTx&&existingTx.cobekLinkId)?existingTx.cobekLinkId:null
 });
 if(!result.ok){toast('⚠️ '+result.message);return;}
+// S2754: harga jual default produk hanya diperbarui bila pengguna mencentangnya di panel edit baris.
+curTxShopSaleCart.forEach(it=>{if(!it.saveAsDefault||!(it.harga>0))return;const prod=D.products.find(x=>x.id===it.productId);if(!prod)return;if(typeof ProductRepository!=='undefined')ProductRepository.mutateSetPrice(prod,'hargaJual',it.harga);else prod.hargaJual=it.harga;});
 if(tx){tx.cobekLinkId=result.shopId;tx.amount=dp;}
 const shopRecord=D.cobek.find(c=>c.id===result.shopId);
 const itemSummary=items.map(it=>it.name+' x'+it.qty).join(', ');

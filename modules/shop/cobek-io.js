@@ -238,18 +238,40 @@ function delShop(id){return Laporan.delete(id);}
 /* moved to modules-render.js: renderShopGrafik */
 function renderShopLaporan(){return Laporan.renderTab();}
 
+// S2754: tombol ✏️ per baris membuka panel edit (jumlah & harga) -- lihat cobek-tx-cart.js. Tombol hapus
+// (data-action remove...) TETAP ada di setiap baris karena dipakai penanda "keranjang berisi" di PWAUX.
+function _cartEditField(label,id,value,extra){
+return `<div class="fg u-mb0"><label class="fl" for="${id}">${label}</label><input type="number" class="fi" id="${id}" value="${escapeHtml(String(value==null?'':value))}" inputmode="decimal" min="0" step="any"${extra||''}></div>`;
+}
 function renderShopStockCartList(){
 const el=document.getElementById('txShopStockCartList');
 if(!el)return;
 if(!curShopStockCart.length){el.innerHTML='';return;}
-el.innerHTML=curShopStockCart.map((it,i)=>`
-    <div class="u-flex u-aic u-gap8 u-r8 u-mb6" style="background:var(--surface3);padding:8px 10px">
-      <div class="u-flex1 u-minw0">
-        <div class="u-fs12 u-fw700" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.name)}${it.isNew?' <span class="u-cacc u-fw600">(baru)</span>':''}</div>
-        <div class="u-fs12t2">${it.qty} x ${fmtFull(it.hargaBeli)} = ${fmtFull(it.qty*it.hargaBeli)}</div>
+el.innerHTML=curShopStockCart.map((it,i)=>{
+const editing=shopCartEdit.stock===i;
+const jualTxt=it.hargaJual>0?` · jual ${fmtFull(it.hargaJual)}`:'';
+const panel=editing?`
+      <div class="u-flex u-gap8 u-mt2" style="flex-wrap:wrap;width:100%">
+        <div class="u-flex1" style="min-width:90px">${_cartEditField('Jumlah','txCartEditQty',it.qty)}</div>
+        <div class="u-flex1" style="min-width:120px">${_cartEditField('Harga Beli/pcs (Rp)','txCartEditBeli',it.hargaBeli)}</div>
+        <div class="u-flex1" style="min-width:120px">${_cartEditField('Harga Jual/pcs (Rp)','txCartEditJual',it.hargaJual>0?it.hargaJual:'')}</div>
       </div>
-      <button type="button" class="tx-del" data-action="removeShopStockCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
-    </div>`).join('');
+      <div class="u-fs12t2 u-mt2" style="width:100%">Harga jual hanya mengubah produk bila diisi/diubah di sini.</div>
+      <div class="u-flex u-gap8 u-mt2" style="width:100%">
+        <button type="button" class="btn btn-primary btn-sm u-flex1" data-action="saveShopStockCartItemEdit" data-args="${escapeHtml(JSON.stringify([i]))}">Simpan</button>
+        <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="cancelShopStockCartEdit">Batal</button>
+      </div>`:'';
+return `
+    <div class="u-r8 u-mb6" style="background:var(--surface3);padding:8px 10px">
+      <div class="u-flex u-aic u-gap8">
+        <div class="u-flex1 u-minw0">
+          <div class="u-fs12 u-fw700" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(it.name)}${it.isNew?' <span class="u-cacc u-fw600">(baru)</span>':''}</div>
+          <div class="u-fs12t2">${it.qty} x ${fmtFull(it.hargaBeli)} = ${fmtFull(it.qty*it.hargaBeli)}${jualTxt}</div>
+        </div>
+        <button type="button" class="tx-del" data-action="editShopStockCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit harga dan jumlah" aria-expanded="${editing?'true':'false'}">✏️</button>
+        <button type="button" class="tx-del" data-action="removeShopStockCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
+      </div>${panel}
+    </div>`;}).join('');
 }
 
 function renderTxShopSaleCartList(){
@@ -257,14 +279,31 @@ const el=document.getElementById('txShopSaleCartList');
 if(!el)return;
 if(!curTxShopSaleCart.length){el.innerHTML='';return;}
 const{lines,total,profit}=computeTxShopSaleTotals();
-el.innerHTML=lines.map((l,i)=>`
-    <div class="u-flex u-aic u-gap8 u-r8 u-mb6" style="background:var(--surface3);padding:8px 10px">
-      <div class="u-flex1 u-minw0">
-        <div class="u-fs12 u-fw700" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(l.name)}</div>
-        <div class="u-fs12t2">${l.qty} x ${fmtFull(l.harga)} = ${fmtFull(l.lineTotal)}</div>
+el.innerHTML=lines.map((l,i)=>{
+const editing=shopCartEdit.sale===i;
+const prod=(D.products||[]).find(x=>x.id===l.productId);
+const defTxt=prod&&Number(prod.hargaJual)>0?`Harga jual produk saat ini: ${fmtFull(prod.hargaJual)}`:'';
+const panel=editing?`
+      <div class="u-flex u-gap8 u-mt2" style="flex-wrap:wrap;width:100%">
+        <div class="u-flex1" style="min-width:90px">${_cartEditField('Jumlah','txCartEditQty',l.qty)}</div>
+        <div class="u-flex1" style="min-width:120px">${_cartEditField('Harga Jual/pcs (Rp)','txCartEditHarga',l.harga)}</div>
       </div>
-      <button type="button" class="tx-del" data-action="removeTxShopSaleCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
-    </div>`).join('')+`<div class="u-fs12 u-t2 u-mt2 u-tar">Subtotal: ${fmtFull(total)} · Estimasi untung: ${fmtFull(profit)}</div>`;
+      <label class="u-fs12 u-flex u-aic u-gap8 u-mt2" style="width:100%"><input type="checkbox" id="txCartEditDefault"${l.saveAsDefault?' checked':''}> Jadikan harga jual produk${defTxt?' ('+escapeHtml(defTxt)+')':''}</label>
+      <div class="u-flex u-gap8 u-mt2" style="width:100%">
+        <button type="button" class="btn btn-primary btn-sm u-flex1" data-action="saveTxShopSaleCartItemEdit" data-args="${escapeHtml(JSON.stringify([i]))}">Simpan</button>
+        <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="cancelTxShopSaleCartEdit">Batal</button>
+      </div>`:'';
+return `
+    <div class="u-r8 u-mb6" style="background:var(--surface3);padding:8px 10px">
+      <div class="u-flex u-aic u-gap8">
+        <div class="u-flex1 u-minw0">
+          <div class="u-fs12 u-fw700" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(l.name)}${l.saveAsDefault?' <span class="u-cacc u-fw600">(harga default)</span>':''}</div>
+          <div class="u-fs12t2">${l.qty} x ${fmtFull(l.harga)} = ${fmtFull(l.lineTotal)}</div>
+        </div>
+        <button type="button" class="tx-del" data-action="editTxShopSaleCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit harga dan jumlah" aria-expanded="${editing?'true':'false'}">✏️</button>
+        <button type="button" class="tx-del" data-action="removeTxShopSaleCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
+      </div>${panel}
+    </div>`;}).join('')+`<div class="u-fs12 u-t2 u-mt2 u-tar">Subtotal: ${fmtFull(total)} · Estimasi untung: ${fmtFull(profit)}</div>`;
 }
 
 function renderProductList(){Etalase.renderList();Etalase.renderKategoriList();Etalase.renderModalStat();PriceRekoWidget.render();StockRekoWidget.render();}
