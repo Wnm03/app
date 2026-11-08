@@ -43,6 +43,12 @@ get(vehicleId) {
   const veh = this._vehicles().find((v) => v.id === vehicleId);
   if (!veh) return null;
   const merged=Object.assign({}, this.DEFAULTS, veh.fuelTankProfile || {});
+  // Kompatibilitas satu sumber kapasitas: kendaraan lama/vehicle form
+  // menyimpan fuelTankCapacityLiter di root; profil khusus boleh override.
+  if((merged.tankCapacityLiter===null||merged.tankCapacityLiter===undefined)
+    && Number.isFinite(Number(veh.fuelTankCapacityLiter)) && Number(veh.fuelTankCapacityLiter)>0){
+    merged.tankCapacityLiter=Number(veh.fuelTankCapacityLiter);
+  }
   if(!Number.isInteger(merged.fuelBarCount)||merged.fuelBarCount<1)merged.fuelBarCount=this.DEFAULTS.fuelBarCount;
   return merged;
 },
@@ -128,6 +134,12 @@ save(vehicleId, profileData) {
   const result = this.validate(merged);
   if (!result.valid) return { ok: false, errors: result.errors };
   veh.fuelTankProfile = merged;
+  // Root legacy field tetap menjadi mirror kompatibilitas, bukan sumber
+  // kapasitas kedua yang boleh berbeda setelah profil disimpan.
+  if (Object.prototype.hasOwnProperty.call(profileData || {}, 'tankCapacityLiter')) {
+    if (typeof merged.tankCapacityLiter === 'number' && merged.tankCapacityLiter > 0) veh.fuelTankCapacityLiter = merged.tankCapacityLiter;
+    else delete veh.fuelTankCapacityLiter;
+  }
   if (typeof save === 'function') save();
   return { ok: true, profile: Object.assign({}, this.DEFAULTS, merged) };
 },

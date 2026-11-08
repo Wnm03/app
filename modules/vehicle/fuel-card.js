@@ -145,7 +145,7 @@ LOW_CONFIDENCE_THRESHOLD: 50,
 _currentConfidence(vehicleId) {
   if (typeof FuelStateEstimator !== 'undefined' && typeof FuelStateEstimator.estimateCurrentLiter === 'function') {
     const est = FuelStateEstimator.estimateCurrentLiter(vehicleId);
-    if (est && est.ok && typeof est.decayedConfidenceScore === 'number') return est.decayedConfidenceScore;
+    if (est && est.ok && !est.estimationLimited && !est.odometerStale && typeof est.decayedConfidenceScore === 'number') return est.decayedConfidenceScore;
   }
   const vehicles = (typeof D !== 'undefined' && D.vehicles) ? D.vehicles : [];
   const veh = vehicles.find((v) => v.id === vehicleId);
@@ -201,6 +201,32 @@ _partialFillDriftHint(vehicleId) {
   const est = FuelStateEstimator.estimateCurrentLiter(vehicleId);
   if (!est || !est.ok || !est.partialFillDriftRisk) return { ok: false };
   return { ok: true };
+},
+
+// _quarantineNoticeHtml (S2752): beri tahu pengguna bila ada log BBM yang dikecualikan dari estimasi
+// (duplikat lintas impor / isi melebihi kapasitas). Hanya informasi: data asli tidak diubah. Bila ada
+// saran salah-ketik desimal (mis. 40 L -> 4,0 L) tampilkan sebagai petunjuk, tanpa mengoreksi otomatis.
+_quarantineNoticeHtml(vehicleId) {
+  if (typeof getFuelCanonicalLogs !== 'function') return '';
+  const c = getFuelCanonicalLogs(vehicleId);
+  const q = c && Array.isArray(c.quarantined) ? c.quarantined : [];
+  if (!q.length) return '';
+  const dup = q.filter((x) => x.reason === 'duplicate').length;
+  const over = q.filter((x) => x.reason === 'over-capacity');
+  const parts = [];
+  if (dup) parts.push(`${dup} duplikat`);
+  if (over.length) parts.push(`${over.length} isi melebihi kapasitas tangki`);
+  const hint = over.find((x) => x.suggestion);
+  const hintText = hint ? ` Log ${escapeHtml(String(hint.log.date || ''))} (${escapeHtml(String(hint.liter))} L) mungkin seharusnya ${escapeHtml(String(hint.suggestion.liter))} L — koreksi di Riwayat BBM.` : '';
+  return `<div class="u-fs12 u-t2" style="margin:0 0 10px;line-height:1.5">ℹ️ ${q.length} log BBM dikecualikan dari estimasi (${parts.join(', ')}). Data asli tidak diubah.${hintText}</div>`;
+},
+
+// _odometerStaleHint: confidence tidak ditampilkan bila KM sumber sudah
+// basi; minta pembaruan odometer tanpa memblokir penggunaan aplikasi.
+_odometerStaleHint(vehicleId) {
+  if (typeof FuelStateEstimator === 'undefined' || typeof FuelStateEstimator.estimateCurrentLiter !== 'function') return { ok: false };
+  const est = FuelStateEstimator.estimateCurrentLiter(vehicleId);
+  return est && est.ok && est.odometerStale ? { ok: true, days: est.odometerAgeDays } : { ok: false };
 },
 
 // _estimationLimitedHint(vehicleId) — audit S444+ (temuan "fuel bar
@@ -526,6 +552,8 @@ _body(insight) {
   // ketemu reason:'referenceKm' lagi di sini kecuali di render pertama
   // yang sama persis (langsung ke-heal juga). Independen dari 3 hint di
   // atas — bisa tampil bersamaan.
+  const odometerStale = this._odometerStaleHint(insight.vehicleId);
+  const odometerStaleHtml = odometerStale.ok ? `<div class="u-fs12 orange" style="margin:0 0 10px;line-height:1.5">⚠️ KM terakhir ${odometerStale.days} hari lalu. Perbarui KM untuk meningkatkan akurasi fuel bar.</div>` : '';
   const estLimited = this._estimationLimitedHint(insight.vehicleId);
   const estLimitedHtml = (estLimited.ok && estLimited.reason === 'kmPerLiter')
     ? `<div class="u-fs12 orange" style="margin:0 0 10px;line-height:1.5">⚠️ Estimasi belum mengurangi konsumsi km (butuh min. 2x catat "Isi Full Tank" dengan km naik). Liter di atas belum berkurang otomatis sampai data ini cukup.</div>`
@@ -538,7 +566,9 @@ _body(insight) {
     ${kmClampedHtml}
     ${partialFillDriftHtml}
     ${lowConfidenceHtml}
+    ${odometerStaleHtml}
     ${estLimitedHtml}
+    ${this._quarantineNoticeHtml(insight.vehicleId)}
     ${this._briefingHtml(insight.vehicleId)}
     <div class="btn-row3" style="margin:10px 0 0">
       <button class="btn btn-ghost btn-sm" data-action="FuelModal.open" data-args="${escapeHtml(JSON.stringify([insight.vehicleId]))}">📊 Lihat Detail</button>

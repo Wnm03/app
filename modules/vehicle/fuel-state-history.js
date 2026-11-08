@@ -44,15 +44,28 @@ record(vehicleId, fuelState) {
   if (typeof D === 'undefined') return;
   if (!vehicleId || !fuelState || typeof fuelState.currentFuelLiter !== 'number') return;
   if (!Array.isArray(D.fuelStateHistory)) D.fuelStateHistory = [];
-  D.fuelStateHistory.push({
+  // Idempotensi: penyimpanan ulang baseline yang sama (mis. beberapa
+  // rekonsiliasi parsial identik) tidak boleh menghabiskan kuota histori.
+  const previous = this.latest(vehicleId);
+  const sameBaseline = previous
+    && previous.currentFuelBar === (typeof fuelState.currentFuelBar === 'number' ? fuelState.currentFuelBar : null)
+    && previous.currentFuelLiter === fuelState.currentFuelLiter
+    && previous.estimatedSource === (fuelState.estimatedSource || null)
+    && previous.confidenceScore === (typeof fuelState.confidenceScore === 'number' ? fuelState.confidenceScore : null)
+    && previous.referenceKm === (typeof fuelState.referenceKm === 'number' ? fuelState.referenceKm : null);
+  if (sameBaseline) return previous;
+  const snapshot = {
     vehicleId,
     currentFuelBar: typeof fuelState.currentFuelBar === 'number' ? fuelState.currentFuelBar : null,
     currentFuelLiter: fuelState.currentFuelLiter,
     estimatedSource: fuelState.estimatedSource || null,
     confidenceScore: typeof fuelState.confidenceScore === 'number' ? fuelState.confidenceScore : null,
+    referenceKm: typeof fuelState.referenceKm === 'number' ? fuelState.referenceKm : null,
     recordedAt: fuelState.correctedAt || new Date().toISOString(),
-  });
+  };
+  D.fuelStateHistory.push(snapshot);
   this._trim(vehicleId);
+  return snapshot;
 },
 
 // _trim(vehicleId) — buang entry TERLAMA milik vehicleId ini kalau sudah

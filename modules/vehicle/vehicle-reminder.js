@@ -177,7 +177,8 @@ fuelReminders(vehicleId) {
       });
       return;
     }
-    const fullLogs = ((typeof D !== 'undefined' && D.bbmLogs) ? D.bbmLogs : [])
+    // S2753: sumber log kanonis (satu sumber dgn estimator); tanpa SSOT kanonis = perilaku lama.
+    const fullLogs = ((typeof getFuelCanonicalLogs === 'function') ? getFuelCanonicalLogs(v.id).canonical : ((typeof D !== 'undefined' && D.bbmLogs) ? D.bbmLogs : []))
       .filter((b) => b.vehicleId === v.id && b.fullTank && isFinite(b.km) && b.km > 0 && b.liter > 0)
       .sort((a, b) => a.km - b.km);
     if (!fullLogs.length) return; // fuel.ok tapi tanpa log fullTank valid (edge-case) -- tidak cukup dasar utk estimasi range.

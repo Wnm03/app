@@ -75,7 +75,10 @@ _roundCost(n) {
 // kotor (mis. log lama tanpa cost) supaya tidak merusak SUM.
 _validLogs(vehicleId) {
   if (typeof FuelStorage === 'undefined') return null;
-  return FuelStorage.logs(vehicleId).filter((b) => (
+  // S2752: analitik biaya memakai log KANONIS (duplikat lintas impor & isi melebihi kapasitas tidak ikut
+  // dijumlah). Data asli & transaksi keuangan tidak diubah; tanpa SSOT kanonis = perilaku lama.
+  const source = (typeof getFuelCanonicalLogs === 'function' && vehicleId) ? getFuelCanonicalLogs(vehicleId).canonical : FuelStorage.logs(vehicleId);
+  return source.filter((b) => (
     typeof b.date === 'string' && b.date.length >= 7 && b.liter > 0 && b.cost > 0
   ));
 },

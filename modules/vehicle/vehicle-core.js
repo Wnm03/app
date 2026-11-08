@@ -631,6 +631,42 @@ toast('✅ Reminder Tagihan SPT Tahunan dibuat, batas lapor '+fmtDateID(due));
 }
 /* moved to modules-render.js: renderSptLinkStatus */
 /* moved to modules-render.js: renderVehTaxSim */
+// Shared pre-commit odometer guard for BBM, service and transaction-linked BBM.
+// Compare with the latest dated reading before the entry date; backdated edits
+// are not compared with a newer reading. Existing row is excluded on edit.
+function getLatestVehicleOdometerBefore(vehicleId,date,exclude={}){
+const rows=[];
+const add=(arr,kind,idField)=>{(Array.isArray(arr)?arr:[]).forEach(r=>{
+ if(!r||String(r.vehicleId)!==String(vehicleId)||String(r.id||'')===String(exclude.id||''))return;
+ const d=String(r.date||'');const km=Number(r.km);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(km)||km<0||d>String(date||'9999-12-31'))return;
+ rows.push({date:d,km,kind,id:r.id||null});
+});};
+add(D&&D.kmLogs,'manual');add(D&&D.bbmLogs,'bbm');add(D&&D.servisLogs,'servis');
+rows.sort((a,b)=>a.date.localeCompare(b.date)||a.km-b.km);
+return rows.length?rows[rows.length-1]:null;
+}
+function getEarliestVehicleOdometerAfter(vehicleId,date,exclude={}){
+const rows=[];
+[D&&D.kmLogs,D&&D.bbmLogs,D&&D.servisLogs].forEach(arr=>(Array.isArray(arr)?arr:[]).forEach(r=>{
+ if(!r||String(r.vehicleId)!==String(vehicleId)||String(r.id||'')===String(exclude.id||''))return;
+ const d=String(r.date||'');const km=Number(r.km);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!Number.isFinite(km)||km<0||d<=String(date||''))return;
+ rows.push({date:d,km,id:r.id||null});
+}));
+rows.sort((a,b)=>a.date.localeCompare(b.date)||a.km-b.km);
+return rows.length?rows[0]:null;
+}
+async function confirmVehicleOdometerAdvance({vehicleId,km,date,excludeId,source='catatan kendaraan'}={}){
+const n=Number(km);if(!Number.isFinite(n)||n<0)return{ok:false,reason:'KM tidak valid'};
+const prior=getLatestVehicleOdometerBefore(vehicleId,date,{id:excludeId});
+const next=getEarliestVehicleOdometerAfter(vehicleId,date,{id:excludeId});
+if(prior&&n<prior.km)return{ok:false,reason:'KM '+n.toLocaleString('id-ID')+' lebih rendah dari catatan sebelumnya ('+prior.km.toLocaleString('id-ID')+' km pada '+prior.date+').'};
+if(next&&n>next.km)return{ok:false,reason:'KM '+n.toLocaleString('id-ID')+' melebihi catatan sesudahnya ('+next.km.toLocaleString('id-ID')+' km pada '+next.date+').'};
+if(!prior||n-prior.km<=500)return{ok:true,previousKm:prior?prior.km:null,jump:prior?n-prior.km:0};
+const accepted=await askConfirm('Lonjakan KM '+(n-prior.km).toLocaleString('id-ID')+' km pada '+source+' dibanding catatan terakhir ('+prior.km.toLocaleString('id-ID')+' km, '+prior.date+'). Pastikan angka odometer benar. Tetap simpan?',{danger:false,okText:'Ya, Simpan'});
+return{ok:!!accepted,cancelled:!accepted,previousKm:prior.km,jump:n-prior.km};
+}
 function getProactiveReminders(){
 const items=[];
 const now=new Date();
@@ -641,6 +677,9 @@ if(d<0)items.push(`⚠️ ${b.name} (${b.kind||'tagihan'}) sudah LEWAT jatuh tem
 else if(d<=7)items.push(`🔔 ${b.name} (${b.kind||'tagihan'}) jatuh tempo ${d===0?'HARI INI':'H-'+d}, siapin dana ${fmtFull(b.amount)} ya`);
 });
 (D.vehicles||[]).forEach(v=>{
+const odoRows=[];
+[D.kmLogs,D.bbmLogs,D.servisLogs].forEach(arr=>(Array.isArray(arr)?arr:[]).forEach(r=>{if(r&&String(r.vehicleId)===String(v.id)&&/^\d{4}-\d{2}-\d{2}$/.test(String(r.date||''))&&Number.isFinite(Number(r.km))&&Number(r.km)>=0)odoRows.push(r);}));
+if(odoRows.length){odoRows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.km)-Number(a.km));const last=odoRows[0];const age=Math.max(0,Math.floor((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(String(last.date)+'T00:00:00'))/86400000));if(age>=7)items.push(`⏱️ Perbarui KM ${v.name}: catatan terakhir ${age} hari lalu (${Number(last.km).toLocaleString('id-ID')} km). Pengingat ini muncul sampai odometer diperbarui.`);}
 Object.entries(VEHTAX_ITEMS).forEach(([,cfg])=>{
 const d=daysUntilDate(v[cfg.tglKey]);
 if(d===null)return;
@@ -1103,6 +1142,49 @@ if(!kmPerDay||kmPerDay<=0||sisaKm===null||sisaKm===undefined||sisaKm<=0)return n
 const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()+Math.ceil(sisaKm/kmPerDay));
 return dateToISO(d);
 }
+// getFuelCanonicalLogs(vehicleId) — SSOT "log kanonis" untuk ESTIMATOR & kalibrasi (S2750).
+// D.bbmLogs TIDAK PERNAH diubah: log asli (dan transaksi keuangan tertaut) tetap utuh. Fungsi ini
+// hanya memisahkan log yang aman dipakai estimator (canonical) dari log karantina (quarantined):
+//  - 'duplicate': fingerprint (kendaraan|tanggal|km|liter|biaya|fullTank) sama dgn log lain, mis. hasil
+//    impor ganda dari batch berbeda (ID berbeda, isi sama). Yang dipertahankan: log bertaut transaksi
+//    (txLinkId), lalu ID terkecil. Fingerprint sengaja TIDAK memakai spbu/note/id agar lintas batch cocok.
+//  - 'over-capacity': liter > kapasitas tangki x 1.10 (mis. salah ketik 40 L utk tangki 5,5 L).
+// Log karantina bisa kembali otomatis setelah pengguna mengoreksi datanya (fungsi ini murni/read-only).
+const FUEL_OVER_CAPACITY_TOLERANCE=1.10;
+function getFuelCanonicalLogs(vehicleId){
+if(typeof kwScopeMemo==='function'){
+const memo=kwScopeMemo('fuelCanon:'+typeof vehicleId+':'+vehicleId,()=>_getFuelCanonicalLogsRaw(vehicleId));
+return{canonical:memo.canonical.slice(),quarantined:memo.quarantined.slice(),capacityLiter:memo.capacityLiter};
+}
+return _getFuelCanonicalLogsRaw(vehicleId);
+}
+function _getFuelCanonicalLogsRaw(vehicleId){
+const logs=(D.bbmLogs||[]).filter(b=>b&&b.vehicleId===vehicleId);
+let capacity=null;
+try{const prof=typeof FuelTankProfile!=='undefined'&&FuelTankProfile&&typeof FuelTankProfile.get==='function'?FuelTankProfile.get(vehicleId):null;
+if(prof&&Number(prof.tankCapacityLiter)>0)capacity=Number(prof.tankCapacityLiter);}catch(_e){capacity=null;}
+const quarantined=[],reasonOf=new Map();
+if(capacity){
+for(const b of logs){const lit=Number(b.liter);if(Number.isFinite(lit)&&lit>capacity*FUEL_OVER_CAPACITY_TOLERANCE){
+// Saran baca-saja utk salah ketik pergeseran desimal (40 -> 4,0): hanya bila liter/10 masuk akal utk tangki.
+const shifted=lit/10;const cost=Number(b.cost);
+const suggestion=(shifted>0&&shifted<=capacity*FUEL_OVER_CAPACITY_TOLERANCE)?{liter:Math.round(shifted*100)/100,cost:Number.isFinite(cost)&&cost>0?Math.round(cost/10):null}:null;
+reasonOf.set(b,{reason:'over-capacity',liter:lit,capacityLiter:capacity,suggestion});}}
+}
+const order=logs.filter(b=>!reasonOf.has(b)).slice().sort((a,b)=>((b.txLinkId?1:0)-(a.txLinkId?1:0))||((Number(a.id)||0)-(Number(b.id)||0)));
+const kept=new Map();
+for(const b of order){
+const km=Number(b.km),lit=Number(b.liter);
+if(!b.date||!Number.isFinite(km)||km<=0||!Number.isFinite(lit)||lit<=0)continue;
+const key=[b.date,km,lit,Number(b.cost)||0,!!b.fullTank].join('|');
+if(kept.has(key))reasonOf.set(b,{reason:'duplicate',duplicateOf:kept.get(key).id});
+else kept.set(key,b);
+}
+const canonical=[];
+for(const b of logs){const r=reasonOf.get(b);if(r)quarantined.push({log:b,...r});else canonical.push(b);}
+return{canonical,quarantined,capacityLiter:capacity};
+}
+
 // getFuelFullTankSegments(vehicleId) — SSOT segmen konsumsi BBM metode FULL-TO-FULL.
 // Standar pengukuran: titik A harus FULL TANK, titik B harus FULL TANK berikutnya; semua
 // pengisian PARSIAL di antara A dan B ikut dihitung karena total bahan bakar yang ditambahkan
@@ -1121,7 +1203,7 @@ return memo.map(seg=>({...seg}));
 return _getFuelFullTankSegmentsRaw(vehicleId);
 }
 function _getFuelFullTankSegmentsRaw(vehicleId){
-const all=(D.bbmLogs||[]).filter(b=>b.vehicleId===vehicleId&&Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).map(b=>({...b,km:Number(b.km),liter:Number(b.liter),cost:Number(b.cost),harga:Number(b.harga)}));
+const all=(typeof getFuelCanonicalLogs==='function'?getFuelCanonicalLogs(vehicleId).canonical:(D.bbmLogs||[])).filter(b=>b.vehicleId===vehicleId&&Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).map(b=>({...b,km:Number(b.km),liter:Number(b.liter),cost:Number(b.cost),harga:Number(b.harga)}));
 const full=all.filter(b=>b.fullTank).sort((a,b)=>a.km-b.km);
 if(full.length<2)return[];
 const segments=[];
@@ -1140,6 +1222,22 @@ for(const b of fills){
 segments.push({startKm:start.km,endKm:end.km,km,liter:liters,cost,costedLiter,kmPerLiter:km/liters,fillCount:fills.length});
 }
 return segments;
+}
+// Segmen mencurigakan (mis. 94-100 km/L akibat 'full tank' yg sebenarnya belum penuh). Dikembalikan sebagai
+// Set INDEKS terpisah, bukan field pada segmen, agar bentuk keluaran getFuelFullTankSegments() tidak berubah.
+// Total km/total liter TIDAK berubah (galat dua segmen bertetangga saling meniadakan); hasil ini hanya
+// dipakai utk mengarantina segmen dari sampel KALIBRASI. Butuh >=4 segmen utk median yg berarti.
+const FUEL_SEGMENT_SUSPECT_HIGH=1.6,FUEL_SEGMENT_SUSPECT_LOW=0.5;
+function getFuelSuspectSegmentIndexes(segments){
+const out=new Set();
+if(!Array.isArray(segments)||segments.length<4)return out;
+const sortedKpl=segments.map(x=>x&&x.kmPerLiter).filter(Number.isFinite).sort((x,y)=>x-y);
+if(sortedKpl.length<4)return out;
+const mid=Math.floor(sortedKpl.length/2);
+const med=sortedKpl.length%2?sortedKpl[mid]:(sortedKpl[mid-1]+sortedKpl[mid])/2;
+if(!(med>0))return out;
+segments.forEach((seg,i)=>{const r=seg.kmPerLiter/med;if(r>FUEL_SEGMENT_SUSPECT_HIGH||r<FUEL_SEGMENT_SUSPECT_LOW)out.add(i);});
+return out;
 }
 
 // getFuelConsumptionSummary — SSOT untuk semua tampilan konsumsi BBM.
@@ -1201,8 +1299,25 @@ if(eff.length>=4){
  outlierSegmentIndexes=eff.map((v,i)=>(v<lo||v>hi)?i:-1).filter(i=>i>=0);
 }
 const vehicle=(D.vehicles||[]).find(v=>v.id===vehicleId);
-const capacity=(vehicle&&Number.isFinite(Number(vehicle.fuelTankCapacityLiter))&&Number(vehicle.fuelTankCapacityLiter)>0)?Number(vehicle.fuelTankCapacityLiter):null;
+const profileCapacity=typeof FuelTankProfile!=='undefined'&&FuelTankProfile&&typeof FuelTankProfile.get==='function'?FuelTankProfile.get(vehicleId):null;
+const nestedCapacity=vehicle&&vehicle.fuelTankProfile&&Number(vehicle.fuelTankProfile.tankCapacityLiter)>0?Number(vehicle.fuelTankProfile.tankCapacityLiter):null;
+const legacyCapacity=vehicle&&Number.isFinite(Number(vehicle.fuelTankCapacityLiter))&&Number(vehicle.fuelTankCapacityLiter)>0?Number(vehicle.fuelTankCapacityLiter):null;
+const capacity=profileCapacity&&Number(profileCapacity.tankCapacityLiter)>0?Number(profileCapacity.tankCapacityLiter):(legacyCapacity||null);
+const capacityConflict=!!(nestedCapacity&&legacyCapacity&&Math.abs(nestedCapacity-legacyCapacity)/Math.max(nestedCapacity,legacyCapacity)>0.10);
 const overCapacityFillCount=capacity?logs.filter(b=>b.fullTank&&Number.isFinite(Number(b.liter))&&Number(b.liter)>capacity*1.1).length:0;
+const canon=getFuelCanonicalLogs(vehicleId);
+const quarantinedDuplicateCount=canon.quarantined.filter(q=>q.reason==='duplicate').length;
+const quarantinedOverCapacityCount=canon.quarantined.filter(q=>q.reason==='over-capacity').length;
+const suspectSegmentCount=getFuelSuspectSegmentIndexes(segments).size;
+let canonBackstep=0;
+{const ch=canon.canonical.filter(b=>Number.isFinite(Number(b.km))&&Number(b.km)>0&&Number.isFinite(Number(b.liter))&&Number(b.liter)>0).map(b=>({date:b.date,km:Number(b.km)})).sort((a,b)=>{const da=a.date?new Date(a.date).getTime():0,db=b.date?new Date(b.date).getTime():0;return da-db||a.km-b.km;});for(let i=1;i<ch.length;i++)if(ch[i].km<ch[i-1].km)canonBackstep++;}
+// Pemblokir kalibrasi dihitung dari data KANONIS: duplikat & isi melebihi kapasitas sudah dikarantina
+// sehingga tidak lagi memblokir; yang tersisa hanya masalah yang tak bisa disaring otomatis.
+const calibrationBlockers=[];
+if(invalidCount)calibrationBlockers.push('invalid-log');
+if(duplicateIdCount)calibrationBlockers.push('duplicate-id');
+if(canonBackstep)calibrationBlockers.push('odometer-backstep');
+if(capacityConflict)calibrationBlockers.push('tank-capacity-profile-conflict');
 const flags=[];
 if(invalidCount)flags.push('invalid-log');
 if(duplicateIdCount)flags.push('duplicate-id');
@@ -1211,7 +1326,8 @@ if(odometerBackstepCount)flags.push('odometer-backstep');
 if(partialMissingKmCount)flags.push('partial-fill-missing-km');
 if(outlierSegmentIndexes.length)flags.push('segment-outlier');
 if(overCapacityFillCount)flags.push('full-fill-over-capacity');
-return{status:flags.length?'warning':'ok',flags,logCount:logs.length,validLogCount:valid.length,invalidCount,duplicateIdCount,possibleDuplicateCount,odometerBackstepCount,partialMissingKmCount,segmentCount:segments.length,outlierSegmentIndexes,capacityLiter:capacity,overCapacityFillCount,method:segments.length?'full-to-full-total-km-total-liter':null};
+if(capacityConflict)flags.push('tank-capacity-profile-conflict');
+return{status:flags.length?'warning':'ok',flags,logCount:logs.length,validLogCount:valid.length,invalidCount,duplicateIdCount,possibleDuplicateCount,odometerBackstepCount,partialMissingKmCount,segmentCount:segments.length,outlierSegmentIndexes,capacityLiter:capacity,capacityConflict,overCapacityFillCount,canonicalLogCount:canon.canonical.length,quarantinedCount:canon.quarantined.length,quarantinedDuplicateCount,quarantinedOverCapacityCount,suspectSegmentCount,calibrationBlockers,method:segments.length?'full-to-full-total-km-total-liter':null};
 }
 function estimateRpPerKm(vehicleId){
 const segments=getFuelFullTankSegments(vehicleId);
@@ -1321,6 +1437,7 @@ const curKm=getVehicleKm(curVehicleId);
 if(!km||km<=0){ if(raw.trim()!=='')toast('⚠️ Nilai KM tidak valid'); return; }
 if(km===curKm)return;
 if(km<curKm){ if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return; }
+if(km-curKm>500){ if(!await askConfirm('Lonjakan KM lebih dari 500 km dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Pastikan angka odometer benar. Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return; }
 D.kmLogs.push({id:uid(),vehicleId:curVehicleId,date:todayStr(),km,note:''});
 save();renderCnTab();renderDashboardServisReminder();
 toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');

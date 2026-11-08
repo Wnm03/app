@@ -1073,6 +1073,7 @@ const odometerCheck=!shouldValidateOdometer||km===null
   ? {ok:true,skipped:!shouldValidateOdometer?'category-only-edit':undefined}
   : Servis.validateServiceOdometer({vehicleId:curVehicleId,km,date,excludeId:Servis.editId});
 if(!odometerCheck.ok){toast('⚠️ '+odometerCheck.message);return;}
+if(shouldValidateOdometer&&km!==null&&typeof confirmVehicleOdometerAdvance==='function'){const odo=await confirmVehicleOdometerAdvance({vehicleId:curVehicleId,km,date,excludeId:Servis.editId,source:'riwayat servis'});if(!odo.ok){if(!odo.cancelled)toast('⚠️ '+(odo.reason||'KM tidak valid'));return;}}
 const intervalRaw=document.getElementById('servisInterval')?document.getElementById('servisInterval').value:'';
 const intervalKm=intervalRaw?parseFloat(intervalRaw):null;
 const veh=D.vehicles.find(v=>v.id===curVehicleId);

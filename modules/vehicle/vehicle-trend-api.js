@@ -86,7 +86,15 @@ _monthLabel(key) {
 // TANPA filter ownership — permintaan langsung ke 1 kendaraan tetap utuh
 // sama pola recalcAccBalance() per-akun (Sesi 192) yang TIDAK disentuh.
 _costLogs(vehicleId, source) {
-  const arr = (typeof D !== 'undefined' && D[source]) ? D[source] : [];
+  let arr = (typeof D !== 'undefined' && D[source]) ? D[source] : [];
+  // S2753: biaya BBM memakai log KANONIS (duplikat lintas impor & isi melebihi kapasitas tidak ikut
+  // dijumlah). Data asli tidak diubah; tanpa SSOT kanonis = perilaku lama.
+  if (source === 'bbmLogs' && typeof getFuelCanonicalLogs === 'function') {
+    const ids = vehicleId ? [vehicleId] : Array.from(new Set(arr.map((l) => l && l.vehicleId)));
+    const drop = new Set();
+    ids.forEach((id) => { if (id == null) return; getFuelCanonicalLogs(id).quarantined.forEach((q) => drop.add(q.log)); });
+    if (drop.size) arr = arr.filter((l) => !drop.has(l));
+  }
   return arr.filter((l) => (!vehicleId || l.vehicleId === vehicleId)
     && l.cost > 0 && typeof l.date === 'string' && l.date.length >= 7
     && (vehicleId || typeof isVehicleOwnershipSelf !== 'function' || isVehicleOwnershipSelf(l.vehicleId)));
