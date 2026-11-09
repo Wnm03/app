@@ -1861,3 +1861,151 @@ Status: **BY DESIGN**
 - Fix: **DIPERBAIKI Sesi 1993.** Validation now independently reconciles `byComponent` against `total` in addition to checking aggregate fields.
 - Verification: Targeted service regression 9/9 PASS; service-SOT gate PASS after build.
 - Status: **FIXED (Sesi 1993)**
+
+## BUG-027
+
+- Severity: P2 Medium
+- Domain: Finance → Service / Sparepart link
+- Requirement ID: S2777-A
+- File: `modules/finance/tx-servis.js`, `modules/finance/transaksi.js`
+- Function/component: `_isFinanceServiceTransaction()` auto-sync, `updateTxVehiclePanels()`, `applyTxServisFromTx()`
+- Trigger: Transaksi Kendaraan → sub Servis; user ingin menyimpan "Belanja Part saja" (matikan centang Servis), atau membuka-lalu-simpan transaksi belanja-saja yang belum tertaut servis.
+- Actual: `txSyncServis` dipaksa `true` lagi pada setiap `updateTxVehiclePanels()` (blur, awal `_saveTxInner()`) dan `applyTxServisFromTx()` memaksa auto lagi → belanja saja mustahil; edit transaksi belanja-saja membuat log Servis baru.
+- Expected: Auto-centang hanya default; pilihan user (Belanja saja / Servis saja / Keduanya) dihormati sampai konteks kategori/sub/modal berubah; edit transaksi yang belum tertaut servis tidak dipaksa.
+- Fix: **DIPERBAIKI Sesi 2777.** `_txServisAutoActive()` + opt-out via event `change` pada `txSyncServis`, reset saat konteks/modal berganti.
+- Regression test: `tests/s2777-tx-belanja-servis-choice.test.js`.
+- Status: **FIXED (Sesi 2777)**
+
+## BUG-028
+
+- Severity: P2 Medium
+- Domain: Finance → Service / Sparepart link
+- Requirement ID: S2777-B
+- File: `modules/finance/transaksi-b.js`, `modules/finance/tx-servis.js`, `modules/finance/tx-stok-sparepart.js`
+- Function/component: `_saveTxInner()`, `applyTxServisFromTx()`, `applyTxStockFromTx()`
+- Trigger: Servis dan/atau Stok dicentang tetapi data tidak valid (Jenis Servis kosong, KM tidak valid, kendaraan berbeda, qty stok ≤ 0).
+- Actual: Validasi baru terjadi SETELAH transaksi/stok tersimpan; fungsi hanya `toast()+return`, lalu toast sukses menimpa peringatan → sebagian tautan hilang diam-diam (mis. stok masuk tapi servis tidak tercatat).
+- Expected: Simpan dibatalkan utuh sebelum mutasi, dengan pesan yang menunjuk opsi mematikan centang.
+- Fix: **DIPERBAIKI Sesi 2777.** `validateTxServisBeforeSave()` dan `validateTxStockBeforeSave()` dipanggil sebelum mutasi di `_saveTxInner()`.
+- Regression test: `tests/s2777-tx-belanja-servis-choice.test.js`.
+- Status: **FIXED (Sesi 2777)**
+
+## BUG-029
+
+- Severity: P3 Low
+- Domain: Finance → Service link
+- Requirement ID: S2778-O1
+- File: `modules/finance/tx-servis.js`, `modules/finance/transaksi-b.js`
+- Trigger: Edit transaksi yang sudah tertaut Servis, matikan centang Servis, simpan.
+- Actual: Centang diabaikan; log Servis tetap tertaut (tidak ada cara melepas dari Transaksi).
+- Fix: **DIPERBAIKI Sesi 2778.** `txServisUnlinkRequested()` + `unlinkTxServisFromTx()` (konfirmasi dulu; stok pemakaian dikembalikan, log dihapus, event lifecycle ditunda sampai Finance commit).
+- Regression test: `tests/s2778-tx-unlink-vehicle.test.js`.
+- Status: **FIXED (Sesi 2778)**
+
+## BUG-030
+
+- Severity: P2 Medium
+- Domain: Finance → Sparepart stock link
+- Requirement ID: S2778-O2
+- File: `modules/finance/tx-stok-sparepart.js`, `modules/finance/transaksi-b.js`
+- Trigger: Edit transaksi yang sudah menambah stok, matikan centang Stok Sparepart, simpan.
+- Actual: Stok tetap bertambah dan `partStockId` tetap tertaut (revert hanya jika centang aktif).
+- Fix: **DIPERBAIKI Sesi 2778.** `txStockUnlinkRequested()` + `unlinkTxStockFromTx()` (konfirmasi; pemakaian auto-link dilepas dulu; ditolak dgn pesan bila stok sudah terpakai sehingga tak bisa negatif).
+- Regression test: `tests/s2778-tx-unlink-vehicle.test.js`.
+- Status: **FIXED (Sesi 2778)**
+
+## BUG-031
+
+- Severity: P2 Medium
+- Domain: Finance → Sparepart / vehicle isolation
+- Requirement ID: S2778-O3
+- File: `modules/finance/tx-stok-sparepart.js`, `modules/finance/tx-servis.js`
+- Trigger: Belanja part + Servis dicentang untuk kendaraan B saat kendaraan aktif Car Notes = A.
+- Actual: Stok (dan kategori baru) dibuat untuk kendaraan aktif A, servis untuk B.
+- Fix: **DIPERBAIKI Sesi 2778.** `txStockVehicleId()`: panel Servis (jika dicentang) → kendaraan konteks kategori → kendaraan aktif; dropdown stok dimuat ulang saat kendaraan servis diganti.
+- Regression test: `tests/s2778-tx-unlink-vehicle.test.js`.
+- Status: **FIXED (Sesi 2778)**
+
+## BUG-032
+
+- Severity: P2 Medium
+- Domain: Finance → BBM (Catatan Mobil) link
+- Requirement ID: S2779-A1
+- File: `modules/finance/tx-bbm.js`, `modules/finance/transaksi-b.js`
+- Function/component: `applyTxBbmFromTx()`, `_saveTxInner()`
+- Trigger: Panel BBM dicentang tetapi KM atau Liter kosong/0, lalu Simpan (jalur tunai).
+- Actual: `applyTxBbmFromTx()` baru menolak SESUDAH transaksi tersimpan; `toast()` peringatannya langsung ditimpa toast "Transaksi tersimpan" → pengeluaran tercatat tanpa log BBM, tanpa pemberitahuan (pola BUG-028).
+- Expected: Simpan dibatalkan utuh sebelum mutasi, dengan pesan yang menunjuk opsi mematikan centang.
+- Fix: **DIPERBAIKI Sesi 2779.** `validateTxBbmBeforeSave()` dipanggil sebelum mutasi di `_saveTxInner()` (hanya jalur simpan generik: tunai, bukan pembayaran tagihan).
+- Regression test: `tests/s2779-tx-panel-validate-unlink.test.js`.
+- Status: **FIXED (Sesi 2779)**
+
+## BUG-033
+
+- Severity: P2 Medium
+- Domain: Finance → Shop (Penjualan Shop) link
+- Requirement ID: S2779-A2
+- File: `modules/shop/cobek-tx-cart.js`
+- Function/component: `txShopSalePrecheck()`, `applyTxShopSaleFromTx()`
+- Trigger: Panel Penjualan Shop dicentang tetapi daftar produk kosong, lalu Simpan.
+- Actual: `txShopSalePrecheck()` meloloskan daftar kosong (`ok:true`); `applyTxShopSaleFromTx()` baru menolak SESUDAH pemasukan tersimpan dan toast-nya tertimpa → pemasukan tercatat di Keuangan tanpa penjualan/stok di Shop.
+- Expected: Ditolak sebelum persist, setara precheck Stok Shop (S2433-A).
+- Fix: **DIPERBAIKI Sesi 2779.** `txShopSalePrecheck()` menolak daftar kosong. Seluruh alasan gagal `recordShopSale()` lain (produk tidak valid/tidak ditemukan, qty, stok) sudah tercakup precheck sejak S2732, sehingga cabang `!result.ok` kini hanya defensif.
+- Catatan: Stok Shop (`txShopStockPrecheck`, S2433-A) SUDAH menolak daftar kosong sebelum persist; guard di `applyTxShopStockFromTx()` hanya defensif, bukan bug aktif.
+- Regression test: `tests/s2779-tx-panel-validate-unlink.test.js`.
+- Status: **FIXED (Sesi 2779)**
+
+## BUG-034
+
+- Severity: P3 Low
+- Domain: Finance → BBM (Catatan Mobil) link
+- Requirement ID: S2779-B1
+- File: `modules/finance/tx-bbm.js`, `modules/finance/transaksi-b.js`
+- Trigger: Edit transaksi yang sudah tertaut log BBM, matikan centang "Sinkron ke Catatan Mobil", simpan.
+- Actual: Centang diabaikan; log BBM tetap tertaut dan biaya/tanggal/akun tetap ikut tersinkron.
+- Fix: **DIPERBAIKI Sesi 2779.** `txBbmUnlinkRequested()` + `unlinkTxBbmFromTx()` (konfirmasi dulu; log BBM dihapus, fuelState kendaraan direkonsiliasi dari log tersisa seperti cascade `delTx()`; transaksi Keuangan tidak disentuh). Snapshot rollback edit kini memuat `bbmLogs`.
+- Regression test: `tests/s2779-tx-panel-validate-unlink.test.js`.
+- Status: **FIXED (Sesi 2779)**
+
+## BUG-035
+
+- Severity: P3 Low
+- Domain: Finance → Renovasi link
+- Requirement ID: S2779-B2
+- File: `modules/finance/tx-renov.js`, `modules/finance/transaksi-b.js`
+- Trigger: Edit transaksi yang sudah tertaut item Renovasi, matikan centang "Catat juga ke Proyek Renovasi", simpan.
+- Actual: Centang diabaikan; item tetap lunas dan tertaut, `Renov.onLinkedTxEdited()` terus men-sync harga/tanggal.
+- Fix: **DIPERBAIKI Sesi 2779.** `txRenovUnlinkRequested()` + `unlinkTxRenovFromTx()` (konfirmasi dulu). Item proyek TIDAK dihapus: kembali "belum lunas" (`paid=false, txId=null, paidDate=null`), sama dengan perilaku `Renov.onLinkedTxDeleted()`; rincian hitung/absensi tukang aman. Snapshot rollback edit kini memuat `renovProjects`.
+- Regression test: `tests/s2779-tx-panel-validate-unlink.test.js`.
+- Status: **FIXED (Sesi 2779)**
+
+## BUG-036
+
+- Severity: P2 Medium
+- Domain: Finance → Shop (stok produk) link
+- Requirement ID: S2780-B1
+- File: `modules/shop/cobek-tx-cart.js`, `modules/finance/transaksi-b.js`
+- Function/component: `applyTxShopStockFromTx()`, `_saveTxInner()`
+- Trigger: Edit transaksi yang sudah menambah stok produk Shop, matikan centang "Tambah ke Stok Shop", simpan.
+- Actual: Centang diabaikan; stok produk tetap bertambah dan `stockItems`/`stockProductId` tetap tertaut.
+- Fix: **DIPERBAIKI Sesi 2780.** `txShopStockUnlinkRequested()` + `validateTxShopStockUnlink()` + `unlinkTxShopStockFromTx()`: konfirmasi dulu; stok dikurangi lewat `ProductRepository.mutateStockDelta` (key idempotensi per `stockRev`); field stok dilepas, `stockRev` dipertahankan. Ditolak SEBELUM mutasi bila stok produk < qty yang dibatalkan (sebagian sudah terjual) sehingga tidak ada pemotongan yang di-clamp diam-diam.
+- Regression test: `tests/s2780-tx-shop-unlink.test.js`.
+- Status: **FIXED (Sesi 2780)**
+
+## BUG-037
+
+- Severity: P2 Medium
+- Domain: Finance → Shop (Penjualan Shop, piutang) link
+- Requirement ID: S2780-B2
+- File: `modules/shop/cobek-tx-cart.js`, `modules/finance/transaksi-b.js`
+- Function/component: `applyTxShopSaleFromTx()`, `_saveTxInner()`
+- Trigger: Edit transaksi yang sudah tertaut penjualan Shop, matikan centang "Penjualan Shop", simpan.
+- Actual: Centang diabaikan; catatan penjualan (`D.cobek`) dan piutang sisa tetap ada, stok tetap terpotong.
+- Fix: **DIPERBAIKI Sesi 2780.** `txShopSaleUnlinkRequested()` + `validateTxShopSaleUnlink()` + `unlinkTxShopSaleFromTx()`: konfirmasi dulu; stok dikembalikan (`rollbackShopItems`), piutang sisa dihapus, catatan penjualan dihapus, `Preorder.onSaleRemoved` dipanggil (pola cascade `delTx`). Ditolak SEBELUM mutasi bila piutang penjualan sudah lunas (pemasukan pelunasan terpisah sudah tercatat).
+- Regression test: `tests/s2780-tx-shop-unlink.test.js`.
+- Status: **FIXED (Sesi 2780)**
+
+## OPEN (setelah S2780)
+
+- Batas S2779/S2780: validasi/lepas tautan BBM, Renovasi, Stok Shop, Penjualan Shop hanya di jalur simpan generik (`curPayMethod==='tunai'` dan transaksi tidak tertaut tagihan). Cicilan/langganan/tagihan tidak memproses panel-panel ini sejak sebelum S2779.
+- Belum diuji di browser nyata: alur edit → matikan centang → konfirmasi → simpan untuk keenam panel (BBM, Renovasi, Stok Shop, Penjualan Shop, Servis, Stok Sparepart).

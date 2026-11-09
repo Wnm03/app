@@ -14,11 +14,12 @@
 > utk ditinjau, bukan vonis akhir. Kalau file ini kelihatan tidak sinkron,
 > jalankan ulang generatornya, JANGAN diedit tangan.
 
-Terakhir digenerate: 2026-11-09T06:21:41.108Z
-Total file test (`tests/*.test.js`): 1507 · Total module family: 16
+Terakhir digenerate: 2026-11-09T09:56:23.268Z
+Total file test (`tests/*.test.js`): 1511 · Total module family: 17
 
 | Module family | File source (.js) | File test yang menyentuh | Status |
 |---|---:|---:|---|
+| `modules/modals.js` | 1 | 1 |  |
 | `economic-intelligence` | 20 | 2 |  |
 | `modules/self-reward` | 3 | 2 |  |
 | `lifeos` | 30 | 4 |  |
@@ -29,9 +30,9 @@ Total file test (`tests/*.test.js`): 1507 · Total module family: 16
 | `modules/dashboard-hub` | 8 | 24 |  |
 | `modules/ai` | 7 | 26 |  |
 | `modules/business` | 11 | 53 |  |
-| `modules/shop` | 28 | 113 |  |
-| `modules/asset` | 25 | 202 |  |
+| `modules/shop` | 30 | 115 |  |
+| `modules/asset` | 26 | 202 |  |
 | `root` | 22 | 379 |  |
-| `modules/finance` | 68 | 402 |  |
+| `modules/finance` | 69 | 406 |  |
 | `modules/vehicle` | 193 | 430 |  |
 | `modules/shared` | 54 | 545 |  |
