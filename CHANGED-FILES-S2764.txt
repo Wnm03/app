@@ -1,0 +1,6 @@
+S2764 — perubahan dibanding S2763:
+Baru: FASE3B-S2764-REPORT.md, CHANGED-FILES-S2764.txt, tests/fase3b-s2764-hero-copy.test.js
+Berubah: index.html (judul hero)
+Hasil build 2764: app-bundle-a/b.min.js, app_production.html, sw.js (kw-cache-v2764), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt, docs/screenshots-fase1b/ (capture ulang)
+Tidak ada file yang dihapus.

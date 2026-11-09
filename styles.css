@@ -2267,7 +2267,7 @@ transform: translateY(1px);
 cursor: not-allowed;
 opacity: 0.62;
 }
-:where([aria-pressed="true"], [aria-selected="true"], .active) {
+:where([aria-pressed="true"], [aria-selected="true"], .active:not(.page)) {
 box-shadow: inset 0 0 0 1px currentColor;
 }
 @media (prefers-reduced-motion: reduce) {

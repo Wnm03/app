@@ -1,0 +1,6 @@
+S2772 — perubahan dibanding S2771:
+Baru: FASE3D-S2772-REPORT.md, CHANGED-FILES-S2772.txt, tests/fase3d-s2772-keuangan-periode.test.js
+Berubah: modules/shared/pwa-ux-performance.js (lipat chip periode), tokens.css (blok FASE 3D), index.html, app_production.html (?v=2772)
+Hasil build 2772: app-bundle-a/b.min.js, sw.js (kw-cache-v2772), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

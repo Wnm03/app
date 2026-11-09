@@ -1,0 +1,6 @@
+S2771 — perubahan dibanding S2769:
+Baru: FASE5C-S2771-REPORT.md, CHANGED-FILES-S2771.txt, tests/fase5c-s2770-pin-screen.test.js, docs/screenshots-fase5c/ (8 PNG + metrics.json)
+Berubah: modules/shared/keamanan-pin.js, tokens.css (blok FASE 5C), index.html, app_production.html (#pinLockMsg)
+Hasil build 2771: app-bundle-a/b.min.js, sw.js (kw-cache-v2771), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

@@ -1,0 +1,6 @@
+S2763 — perubahan dibanding S2762:
+Baru: FASE3A-S2763-REPORT.md, CHANGED-FILES-S2763.txt, tests/fase3a-s2763-tab-fade.test.js
+Berubah: tokens.css (blok FASE 3A)
+Hasil build 2763: app-bundle-a/b.min.js, app_production.html, index.html, sw.js (kw-cache-v2763), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt, docs/screenshots-fase1b/ (capture ulang)
+Tidak ada file yang dihapus.

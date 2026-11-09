@@ -1,0 +1,6 @@
+S2773 — perubahan dibanding S2772:
+Baru: FASE4B-S2773-REPORT.md, CHANGED-FILES-S2773.txt, tests/fase4b-s2773-wide-tx-table.test.js
+Berubah: modules/finance/tx-list-cashflow.js, modules/shared/modules-render-b.js, modules/finance/filter-laporan.js, tokens.css (blok FASE 4B), index.html, app_production.html (?v=2773)
+Hasil build 2773: app-bundle-a/b.min.js, sw.js (kw-cache-v2773), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

@@ -1,0 +1,6 @@
+S2762 — perubahan dibanding S2761:
+Baru: FASE2B-S2762-REPORT.md, CHANGED-FILES-S2762.txt, tests/fase2b-s2762-static-icons.test.js
+Berubah: index.html (ikon sprite di text node statis)
+Hasil build 2762: app-bundle-a/b.min.js, app_production.html, sw.js (kw-cache-v2762), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt, docs/screenshots-fase1b/ (capture ulang)
+Tidak ada file yang dihapus.

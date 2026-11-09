@@ -1,0 +1,6 @@
+S2769 — perubahan dibanding S2768:
+Baru: FASE5B-S2769-REPORT.md, CHANGED-FILES-S2769.txt, tests/fase5b-s2769-theme-tokens.test.js, tools/capture-fase5b.py, docs/screenshots-fase5b/ (before/after 16 PNG + metrics.json + after-metrics.json bila tool dijalankan)
+Berubah: tokens.css (blok FASE 5B; --density tema; hapus --density .86 lama)
+Hasil build 2769: app-bundle-a/b.min.js, app_production.html, index.html (?v=2769), sw.js (kw-cache-v2769), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

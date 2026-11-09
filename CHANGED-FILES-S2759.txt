@@ -1,0 +1,7 @@
+S2759 — tambahan dibanding patch kumulatif S2758:
+- tools/capture-fase1b-extended.py
+- tests/fase1b-extended-capture-coverage.test.js
+- FASE1B-S2759-REPORT.md
+- PATCH-MANIFEST.md (diperbarui untuk S2759)
+- CHANGED-FILES-S2759.txt (baru)
+- FILE-HASHES-SHA256.txt (diperbarui)

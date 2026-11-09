@@ -1,0 +1,19 @@
+S2760 — perubahan dibanding patch kumulatif S2759:
+Baru:
+- FASE1C-S2760-REPORT.md
+- CHANGED-FILES-S2760.txt
+- tests/fase1c-s2760-floor-touch.test.js
+- docs/screenshots-fase1b/ (60 screenshot + capture-report.json hasil capture nyata)
+Berubah (CSS):
+- tokens.css (blok FASE 1C: lantai 12px)
+- modern-ui-layer.css (blok FASE 1C: target sentuh 44px)
+Berubah (tool):
+- tools/capture-fase1b-extended.py (jalur modal + metrik per screenshot)
+Berubah (hasil build resmi `node scripts/build.js s2433-fase1c-touch-floor-2760`, versi 2760):
+- app-bundle-a.min.js, app-bundle-b.min.js
+- index.html, app_production.html, sw.js (kw-cache-v2760)
+- chat-action-handlers.js, modules/shared/modals.js, modules/shared/modules-render.js,
+  modules/shared/modules-calc.js, modules/shared/features-helpers-global-security.js (hanya konstanta versi)
+- docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md (auto-generate)
+- PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt (diperbarui)
+Tidak ada file yang dihapus.

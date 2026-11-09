@@ -1,0 +1,6 @@
+S2775 — perubahan dibanding S2774:
+Baru: FASE4C-S2775-REPORT.md, CHANGED-FILES-S2775.txt, tests/fase4c-s2775-tablet-grid-detail-panel.test.js
+Berubah: tokens.css (blok FASE 4C), index.html, app_production.html (?v=2775)
+Hasil build 2775: app-bundle-a/b.min.js, sw.js (kw-cache-v2775), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada JS sumber yang diubah; tidak ada file yang dihapus.

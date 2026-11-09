@@ -1,0 +1,9 @@
+S2758 — perubahan baru dibanding patch kumulatif S2757:
+- modern-ui-layer.css
+- tests/fase0-fase1-ui-tokens.test.js
+- docs/FASE1B-IMPORTANT-INVENTORY-S2758.md (baru)
+- docs/FASE1-UI-CAPTURE-GAPS-S2758.md (baru)
+- FASE1B-S2758-REPORT.md (baru)
+- CHANGED-FILES-S2758.txt (baru)
+- PATCH-MANIFEST.md (baru)
+- FILE-HASHES-SHA256.txt (diperbarui)

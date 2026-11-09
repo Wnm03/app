@@ -1,0 +1,202 @@
+/* tokens.css — FASE 1 (RENCANA-UPGRADE-FRONTEND.md). Dimuat PALING AKHIR di <head>.
+   Isi: (1) design token (spacing/radius/font/elevation/density), (2) penerapan skala tipografi
+   5 ukuran 12/14/16/20/28 lewat token lama (--fs-*) supaya semua pemakai var(--fs-*) ikut berubah
+   tanpa menyentuh markup, (3) lantai 12px untuk teks sekunder + tabular-nums untuk angka.
+   Pemetaan tema (diverifikasi di format-tema.js THEME_ALIASES): ocean->dark, stone->light, slate->graphite;
+   tema aktif sebenarnya: dark, light, modern, graphite. Tema = kumpulan token, bukan override per komponen. */
+:root{
+  /* skala tipografi */
+  --fs-xs:12px;--fs-sm:14px;--fs-md:16px;--fs-lg:20px;--fs-xl:28px;
+  /* spacing (4px grid) */
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;
+  /* radius */
+  --radius-sm:8px;--radius-md:12px;--radius-lg:18px;--radius-pill:999px;
+  /* elevasi */
+  --elev-0:none;--elev-1:0 1px 2px rgba(0,0,0,.18);--elev-2:0 6px 18px rgba(0,0,0,.22);
+  /* kepadatan: 1 = lega. Nilai per tema diset di blok tema (5B, S2769) di bagian akhir; ini hanya fallback. */
+  --density:1;
+  --touch-min:44px;
+  /* alias token lama -> skala 5 ukuran */
+  --fs-caption:var(--fs-xs);--fs-label:var(--fs-xs);
+  --fs-body:var(--fs-sm);--fs-body-lg:var(--fs-sm);
+  --fs-title-sm:var(--fs-md);--fs-title:var(--fs-md);
+  --fs-icon:var(--fs-md);--fs-icon-lg:var(--fs-lg);
+  --fs-stat:var(--fs-lg);
+}
+/* angka uang sejajar digit */
+body[data-theme]{font-variant-numeric:tabular-nums}
+/* lantai 12px untuk teks sekunder yang memakai ukuran literal (bukan token); spesifisitas dinaikkan, tanpa pemaksaan prioritas */
+html body[data-theme] .u-fs10,
+html body[data-theme] .nav-item,
+html body[data-theme] .nav-fab-label,
+html body[data-theme] .header-sub,
+html body[data-theme] .kasir-tile-stock,
+html body[data-theme] .kasir-floatbar-count,
+html body[data-theme] .kasir-receipt-profit,
+html body[data-theme] .dashhub-cat-badge,
+html body[data-theme] .dashhub-qa-label,
+html body[data-theme] .cn-summary-metric-label,
+html body[data-theme] .cn-vehicle-summary-label,
+html body[data-theme] .cnb-subtab,
+html body[data-theme] .pb-current,
+html body[data-theme] .page-breadcrumb,
+html body[data-theme] .pwa-domain-eyebrow,
+html body[data-theme] .pwa-workspace-kicker,
+html body[data-theme] .pwa-workspace-head p,
+html body[data-theme] .pwa-action-card b,
+html body[data-theme] .pwa-action-card small,
+html body[data-theme] .shop-lbl,
+html body[data-theme] .bbm-lbl,
+html body[data-theme] .stat-label,
+html body[data-theme] .card-title,
+html body[data-theme] .btn-sm,
+html body[data-theme] small,
+html body[data-theme] .fg>div:not([class]),
+html body[data-theme] .shop-kpi-strip>.shop-grid .shop-stat .shop-lbl,
+html body[data-theme] #page-dashboard-hub .dashhub-qa-btn .dashhub-qa-label,
+html body[data-theme] #page-dashboard-hub .dashhub-qa-label,
+html body[data-theme] .pwa-domain-page .pwa-domain-hero .pwa-domain-eyebrow,
+html body[data-theme] .shop-kpi-strip>.pwa-domain-hero .pwa-action-card b,
+html body[data-theme] .pwa-domain-hero .pwa-action-card b{font-size:var(--fs-xs)}
+html body[data-theme] .stat-val.u-fs14{font-size:var(--fs-sm)}
+/* bottom nav: label 12px tidak boleh membungkus ("Beranda") */
+html body[data-theme] .nav-item{white-space:nowrap;letter-spacing:-.2px;min-width:0}
+html body[data-theme] .nav-item>span,html body[data-theme] .nav-item>.nav-label{white-space:nowrap;letter-spacing:-.2px}
+/* FASE 1C (S2760): lantai 12px untuk sisa teks sekunder hasil capture browser (Shop Etalase, Laporan, daftar transaksi).
+   Penyebab: [data-theme] .tx-meta{10px} dan .bbm-lbl,.tx-meta{11px} di modern-ui-layer.css, serta .shop-stock-pill 10.5px / .shop-price-label 9.5px di styles.css.
+   Spesifisitas dinaikkan (html body[data-theme] ...), tanpa pemaksaan prioritas. */
+html body[data-theme] .tx-meta,
+html body[data-theme] .bbm-lbl,
+html body[data-theme] .shop-stock-pill,
+html body[data-theme] .shop-price-label,
+html body[data-theme] #sparepartCatList .tx-meta,
+html body[data-theme] #cobekKategoriList .tx-meta,
+html body[data-theme] #sparepartDashboard .bbm-lbl,
+html body[data-theme] #cnTab-servis .bbm-lbl{font-size:var(--fs-xs)}
+/* FASE 1C (S2760) lanjutan: kartu statistik Tagihan dan hero domain Shop (aturan ber-ID / .pwa-domain-page mengalahkan lantai umum di atas). */
+html body[data-theme] #keuBillStatGrid .stat-label,
+html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-label,
+html body[data-theme] .pwa-domain-page .pwa-action-card small,
+html body[data-theme] .pwa-domain-page .pwa-status-pill{font-size:var(--fs-xs)}
+
+/* FASE 2A (S2761) — sistem ikon SVG tunggal (sprite di <body>, <use href="#i-*">). Garis 2px, mewarisi currentColor.
+   Emoji hanya dipertahankan untuk konten buatan pengguna. */
+.ico{width:1.15em;height:1.15em;flex:none;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.header-badge{display:inline-flex;align-items:center;justify-content:center;gap:4px}
+.header-badge .ico{width:18px;height:18px;vertical-align:middle}
+.nav-fab-icon .ico{width:22px;height:22px;stroke-width:2.5;vertical-align:middle;color:#fff}
+
+/* FASE 3A (S2762b) — indikator scroll pada baris tab/chip horizontal (Rencana §A#2, §D Fase 3).
+   Fade tepi kiri/kanan MUNCUL hanya saat ada konten tersembunyi di sisi itu (scroll-driven, tanpa JS).
+   Peningkatan progresif: browser tanpa animation-timeline tetap seperti sebelumnya. */
+@property --kw-fade-l{syntax:'<length>';inherits:false;initial-value:0px}
+@property --kw-fade-r{syntax:'<length>';inherits:false;initial-value:0px}
+@keyframes kw-fade-l{from{--kw-fade-l:0px}to{--kw-fade-l:24px}}
+@keyframes kw-fade-r{from{--kw-fade-r:24px}to{--kw-fade-r:0px}}
+@supports (animation-timeline:scroll(self inline)){
+  html body :is(.cn-tabs,.segmented-control,.ai-suggest,.filter-scroll,.trs-chip-row,.kasir-kat-chips),
+  html body :is(#page-keuangan,#page-shop,#page-aset,#page-pajak,#page-settings,#page-carnotes)>.cn-tabs{
+    animation:kw-fade-l linear both,kw-fade-r linear both;
+    animation-timeline:scroll(self inline),scroll(self inline);
+    animation-range:0px 40px,calc(100% - 40px) 100%;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--kw-fade-l),#000 calc(100% - var(--kw-fade-r)),transparent 100%);
+    mask-image:linear-gradient(90deg,transparent 0,#000 var(--kw-fade-l),#000 calc(100% - var(--kw-fade-r)),transparent 100%);
+  }
+}
+@media (prefers-reduced-motion:reduce){html body :is(.cn-tabs,.segmented-control,.ai-suggest,.filter-scroll,.trs-chip-row,.kasir-kat-chips),html body :is(#page-keuangan,#page-shop,#page-aset,#page-pajak,#page-settings,#page-carnotes)>.cn-tabs{animation-duration:1ms}}
+
+/* FASE 3C (S2765) — Mobil maks. 2 baris tab; satu pintu pencarian. */
+html body .cn-periode-chips-folded{display:none}
+html body .cn-periode-select{width:auto;min-width:168px;max-width:100%;min-height:44px;margin:0 0 10px;font-size:14px;font-weight:600}
+/* Tile "Cari Fitur" ganda dihapus dari tampilan: kolom cari fitur ada tepat di bawahnya, pencarian data di ikon header. */
+html body .dashhub-qa-btn[aria-label="Cari Fitur"]{display:none}
+
+/* FASE 4A (S2767) — layar lebar: lebar konten seragam + grid 2 kolom pada ringkasan Aset/Mobil. Mobile/tablet tidak berubah. */
+@media (min-width:1280px){
+  html body #page-dashboard-hub{max-width:1208px}
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone){
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:start;
+  }
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone)>:not(.card):not(.dashhub-wrap),
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone)>[id$="InsightCard"]{grid-column:1/-1}
+}
+/* Sidebar desktop: aksi primer "Tambah" dipisah dari daftar menu. */
+@media (min-width:1024px){
+  html body .nav .nav-fab{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+}
+
+/* FASE 5B (S2769) — tema = kumpulan token (Rencana §A#4, §D Fase 5). Tanpa pemaksaan prioritas, tanpa override komponen baru.
+   Audit S2769 (mobile, Chromium): radius/padding/spasi/--density identik di 4 tema dan --density/--font-num tidak tersambung.
+   Kini: Dark & Light = lega (kartu 14px/radius 14px, density 1, angka Space Grotesk);
+         Graphite & Modern = padat (kartu 10px/radius 10px, density .8, angka monospace).
+   Layar >=900px: kartu +6px padding/+4px radius (lega tetap 20px/18px seperti sebelumnya; padat 16px/14px). */
+:root{
+  --card-pad-up:0px;--card-radius-up:0px;
+  --card-pad:14px;--card-radius:14px;
+  --font-num:"Space Grotesk",sans-serif;
+}
+@media (min-width:900px){:root{--card-pad-up:6px;--card-radius-up:4px}}
+html body[data-theme="dark"],html body[data-theme="light"]{--density:1;--card-pad:14px;--card-radius:14px;--font-num:"Space Grotesk",sans-serif}
+html body[data-theme="graphite"]{--density:.8;--card-pad:10px;--card-radius:10px;--font-num:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+html body[data-theme="modern"]{--density:.8;--card-pad:10px;--card-radius:10px;--font-num:var(--font-mono)}
+/* kartu: padding/radius/jarak bawah hanya dari token. Kartu dalam grup Pengaturan tidak ikut jarak token (aturan lama .stg-group-body-inner tetap berlaku). */
+html body[data-theme] .card{padding:calc(var(--card-pad) + var(--card-pad-up));border-radius:calc(var(--card-radius) + var(--card-radius-up))}
+html body[data-theme] .card:not(.stg-group-body-inner .card){margin-bottom:calc(var(--space-3) * var(--density))}
+/* font angka uang dari satu token (sebelumnya: rule monospace terpisah per tema di styles.css dan modern-ui-layer.css) */
+html body[data-theme] :is(.stat-val,.tx-amount,.shop-price-final,.shop-price-strike,.ldr-days,.money,.card-val){font-family:var(--font-num)}
+/* kontras: --text2 Modern hanya 4.35:1 di atas --surface3 (chip/tombol sekunder); #686868 = 4.55:1 (surface3), 4.98:1 (surface2) */
+html body[data-theme="modern"]{--text2:#686868}
+
+/* FASE 5C (S2770) — layar kunci PIN: token tema, umpan balik salah-PIN, kontras pesan. Tanpa pemaksaan prioritas. */
+html body[data-theme="dark"],html body[data-theme="graphite"]{--pin-error:#f87171}
+html body[data-theme="light"],html body[data-theme="modern"]{--pin-error:#b91c1c}
+html body[data-theme] #pinLockMsg{color:var(--pin-error);text-align:center;margin-bottom:var(--space-3)}
+html body[data-theme] .pin-dots{gap:var(--space-4);margin:var(--space-5) 0 var(--space-3)}
+html body[data-theme] .pin-dot{width:16px;height:16px;transition:background var(--dur-base),border-color var(--dur-base)}
+html body[data-theme] .pin-key{min-height:var(--touch-min);border-radius:calc(var(--card-radius) + 4px);font-family:var(--font-num);font-variant-numeric:tabular-nums;box-shadow:var(--elev-1)}
+@keyframes kw-pin-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+html body[data-theme] .pin-dots.pin-error{animation:kw-pin-shake .4s ease-in-out}
+html body[data-theme] .pin-dots.pin-error .pin-dot{border-color:var(--pin-error)}
+
+
+/* FASE 3D (S2772) — Keuangan maks. 2 baris tab: chip periode Transaksi & Laporan jadi dropdown di dalam konten. */
+html body .kw-chips-folded{display:none}
+html body .kw-periode-select{width:auto;min-width:168px;max-width:100%;min-height:44px;margin:0 0 10px;font-size:14px;font-weight:600}
+
+/* FASE 4B (S2773) — tabel padat transaksi di layar lebar (semua tema): penanda baris yang diarahkan. */
+@media (min-width:1024px) and (hover:hover){html body .tx-tbl-row:hover td{background:var(--surface2)}}
+
+/* FASE 4B2 (S2774) — tabel padat Aset, Dana Titipan, dan produk Shop di layar lebar (semua tema), tanpa penimpaan paksa. */
+html body .tx-tbl-name-btn{background:none;border:0;padding:0;margin:0;color:inherit;font:inherit;text-align:left;text-decoration:underline dotted;cursor:pointer}
+html body .shop-ptbl td{vertical-align:middle}
+html body .shop-ptbl .shop-price-final{font-size:var(--fs-body);margin-top:0}
+html body .shop-ptbl .shop-product-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+html body .shop-ptbl .shop-ptbl-actions{justify-content:flex-end}
+html body .shop-ptbl .shop-stock-pill{display:inline-block}
+
+/* FASE 4C (S2775) — grid tablet + panel detail di kanan (Rencana §C.5, §D Fase 4). CSS saja: tanpa JS baru, tanpa penimpaan paksa.
+   (a) 768–1279px: ringkasan Aset/Mobil 2 kolom (aturan 4A tadinya mulai 1280px).
+   (b) 768–1023px: daftar kartu Aset dan produk Shop 2 kolom (>=1024px sudah tabel padat).
+   (c) >=1280px: form edit Transaksi/Aset/Produk tampil sebagai panel di sisi kanan, bukan bottom-sheet selebar layar. */
+@media (min-width:768px) and (max-width:1279px){
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone){
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:start;
+  }
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone)>:not(.card):not(.dashhub-wrap),
+  html body :is(#asetTab-ringkasan,#cniTab-ringkasan,#cniTab-rekomendasi,#cnbTab-ringkasan):not(.u-dnone)>[id$="InsightCard"]{grid-column:1/-1}
+}
+@media (min-width:768px) and (max-width:1023px){
+  html body :is(#assetList,#productList){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;align-items:start}
+  html body #assetList>:not(.tx-item),html body #productList>:not(.shop-product-card){grid-column:1/-1}
+}
+@media (min-width:1280px){
+  html body :is(#txModal,#assetModal,#productModal).open{justify-content:flex-end;align-items:stretch}
+  html body :is(#txModal,#assetModal,#productModal).open .modal{
+    width:min(480px,40vw);max-width:min(480px,40vw);height:100vh;height:100dvh;max-height:none;
+    border-radius:16px 0 0 16px;border-top:0;border-left:1px solid var(--border);
+  }
+}
+@keyframes kw-drawer-in{from{transform:translateX(32px);opacity:0}to{transform:none;opacity:1}}
+@media (min-width:1280px) and (prefers-reduced-motion:no-preference){
+  html body :is(#txModal,#assetModal,#productModal).open .modal{animation:kw-drawer-in var(--dur-slow) var(--ease-emphasized)}
+}

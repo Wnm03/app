@@ -1,0 +1,6 @@
+S2767 — perubahan dibanding S2765:
+Baru: FASE4A-S2767-REPORT.md, CHANGED-FILES-S2767.txt, tests/fase4a-s2767-wide-layout.test.js
+Berubah: tokens.css, index.html, app_production.html (title ikon pencarian)
+Hasil build 2767: app-bundle-a/b.min.js, sw.js (kw-cache-v2767), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

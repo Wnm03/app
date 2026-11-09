@@ -1,0 +1,6 @@
+S2765 — perubahan dibanding S2764:
+Baru: FASE3C-S2765-REPORT.md, CHANGED-FILES-S2765.txt, tests/fase3c-s2765-nav-search.test.js
+Berubah: modules/shared/pwa-ux-performance.js, tokens.css
+Hasil build 2765: app-bundle-a/b.min.js, app_production.html, index.html (?v=2765), sw.js (kw-cache-v2765), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

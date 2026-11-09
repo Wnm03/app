@@ -1,0 +1,9 @@
+Fase 1B S2757 — files baru/berubah dibanding patch kumulatif S2756:
+- modern-ui-layer.css
+- index.html
+- app_production.html
+- sw.js
+- tests/fase1b-important-reduction.test.js (baru)
+- FASE1B-IMPORTANT-REDUCTION-S2757.md (baru)
+- CHANGED-FILES-FASE1B-S2757.txt (baru)
+- FILE-HASHES-SHA256.txt (diperbarui)

@@ -1,6 +1,6 @@
 // Service Worker - Keluarga W
 // S1818: cache only static app assets; keep navigations fresh when online.
-const CACHE_NAME = 'kw-cache-v2754';
+const CACHE_NAME = 'kw-cache-v2776';
 const CACHE_PREFIX = 'kw-cache-';
 const PRECACHE_URLS = [
   './index.html',
@@ -9,6 +9,7 @@ const PRECACHE_URLS = [
   './modern-ui-layer.css',
   './minimal-ui-theme.css',
   './pwa-ui-layer.css',
+  './tokens.css',
   './app-bundle-a.min.js',
   './app-bundle-b.min.js',
   './modules/shared/smoke-test.js',

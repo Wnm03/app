@@ -1,0 +1,6 @@
+S2768 — perubahan dibanding S2767:
+Baru: FASE5A-S2768-REPORT.md, CHANGED-FILES-S2768.txt, tests/fase5a-s2768-onboarding-themes.test.js
+Berubah: index.html, app_production.html (opsi tema onboarding)
+Hasil build 2768: app-bundle-a/b.min.js, sw.js (kw-cache-v2768), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

@@ -1,0 +1,6 @@
+S2774 — perubahan dibanding S2773:
+Baru: FASE4B2-S2774-REPORT.md, CHANGED-FILES-S2774.txt, tests/fase4b2-s2774-wide-tables-aset-titipan-shop.test.js
+Berubah: modules/asset/aset.js, modules/finance/dana-titipan-portfolio-render.js, modules/shop/cobek-etalase.js, modules/finance/tx-list-cashflow.js (listener breakpoint), tokens.css (blok FASE 4B2), index.html, app_production.html (?v=2774)
+Hasil build 2774: app-bundle-a/b.min.js, sw.js (kw-cache-v2774), chat-action-handlers.js, modules/shared/{modals,modules-render,modules-calc,features-helpers-global-security}.js, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md
+Diperbarui: PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt
+Tidak ada file yang dihapus.

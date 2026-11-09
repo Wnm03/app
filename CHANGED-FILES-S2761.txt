@@ -1,0 +1,16 @@
+S2761 — perubahan dibanding patch kumulatif S2760:
+Baru:
+- FASE2A-S2761-REPORT.md
+- CHANGED-FILES-S2761.txt
+- tests/fase2a-s2761-icons.test.js
+Berubah (source):
+- index.html (sprite SVG, ikon header/FAB), modules/shared/backup-restore.js (badge Backup -> ikon SVG)
+- tokens.css (.ico), modern-ui-layer.css (blok FASE 2A: lantai 12px inline), pwa-ui-layer.css (hapus emoji ::before #backupBadge)
+- tests/fase1c-s2760-floor-touch.test.js (tidak rapuh terhadap versi/blok baru)
+- docs/screenshots-fase1b/ (60 screenshot + capture-report.json, capture ulang pada v2761)
+Berubah (hasil build resmi `node scripts/build.js s2433-fase2a-icons-2761`, versi 2761):
+- app-bundle-a.min.js, app-bundle-b.min.js, app_production.html, sw.js (kw-cache-v2761)
+- chat-action-handlers.js, modules/shared/modals.js, modules/shared/modules-render.js, modules/shared/modules-calc.js, modules/shared/features-helpers-global-security.js (konstanta versi)
+- docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md (auto-generate)
+- PATCH-MANIFEST.md, FILE-HASHES-SHA256.txt (diperbarui)
+Tidak ada file yang dihapus.

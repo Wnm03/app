@@ -1015,7 +1015,7 @@ body[data-theme] #page-dashboard-hub .dashhub-qa-btn .dashhub-qa-label { font-si
 html body[data-theme] #page-dashboard-hub > .page-settings-btn > button.qs-btn { display: none; }
 
 html body[data-theme] #kbPiutang,
-html body[data-theme] #kbInventori { font-size: clamp(10px, 2.8vw, 14px); letter-spacing: -0.25px; white-space: nowrap; }
+html body[data-theme] #kbInventori { font-size: clamp(12px, 3.1vw, 14px); letter-spacing: -0.25px; white-space: nowrap; }
 html body[data-theme] #page-dashboard-hub .dashhub-analytics-card,
 html body[data-theme] #page-dashboard-hub .dashhub-analytics-val { min-width: 0; }
 html body[data-theme] #page-dashboard-hub .dashhub-analytics-val { font-size: clamp(11px, 1.1vw, 15px); }
@@ -1429,12 +1429,12 @@ body.has-open-modal .toast {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
   padding-top: 8px;
 }
-#page-shop .shop-import-export-actions > button { margin: 0 !important; min-width: 0; }
+#page-shop .shop-import-export-actions > button { margin: 0; min-width: 0; }
 @media (max-width: 380px) {
   #page-shop .shop-import-export-actions { grid-template-columns: 1fr; }
 }
 
-#page-shop .shop-fab-retired { display: none !important; }
+#page-shop .shop-fab-retired { display: none; }
 
 /* S2732 — pemadatan blok atas Shop (mobile): hero 1 baris aksi, KPI 3 kolom rapat, Modal Stok 1 baris.
    Heading hero tetap ada untuk aria-labelledby (disembunyikan secara visual saja). Hanya presentasi. */
@@ -1454,3 +1454,50 @@ body.has-open-modal .toast {
 }
 /* S2732 — daftar kategori produk berada di dalam kartu yang bisa dilipat (max-height 2000px): beri scroll sendiri. */
 #cobekKategoriList { max-height: 420px; overflow-y: auto; }
+
+/* ===== FASE 0 (RENCANA-UPGRADE-FRONTEND): quick win — tanpa ubah markup/logic ===== */
+/* 1) Halaman aktif tidak boleh berbingkai (ring inset hanya untuk kontrol). */
+.page.active{box-shadow:none}
+/* 2) Bottom nav: latar hampir solid + blur supaya konten tidak tembus. */
+body[data-theme] .nav{background:color-mix(in srgb,var(--surface) 96%,transparent);-webkit-backdrop-filter:blur(20px) saturate(140%);backdrop-filter:blur(20px) saturate(140%)}
+/* 3) FAB "＋": kontras >=3:1 di semua tema (ikon putih di atas aksen yang digelapkan). */
+body[data-theme] .nav-fab-icon{color:#fff;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 82%,#000),color-mix(in srgb,var(--accent) 64%,#000));text-shadow:0 1px 2px rgba(0,0,0,.35)}
+body[data-theme] .keu-fab-main{color:#fff}
+/* 4) Angka uang tidak terpotong di kartu 3 kolom. */
+.stat-box{min-width:0}
+.stat-box .stat-val{max-width:100%;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@media (max-width:420px){
+  .grid3:has(>.stat-box){grid-template-columns:1fr 1fr}
+  .grid3:has(>.stat-box)>.stat-box:last-child:nth-child(odd){grid-column:1/-1}
+}
+.divider-top.u-flex{align-items:baseline}
+.divider-top.u-flex>.stat-val{text-align:right}
+/* 5) Target sentuh >=44px (mobile/tablet/sentuh); kontrol header & tab >=40px di semua layar. */
+@media (max-width:1024px),(pointer:coarse){
+  body[data-theme] #page-carnotes .cn-summary-link,
+  body[data-theme] #page-carnotes .cn-summary-action,
+  body[data-theme] #cnKmInitialLink,
+  body[data-theme] .vehicle-select button,
+  body[data-theme] #mNet,
+  body[data-theme] .stat-val.u-pointer{min-height:44px;min-width:44px;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center}
+  body[data-theme] .stat-val.u-pointer,body[data-theme] #mNet{justify-content:flex-end;padding:0 4px}
+}
+body[data-theme] .header-badge,body[data-theme] .header button{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+body[data-theme] .cn-tabs button,body[data-theme] .segmented-control button,body[data-theme] .settings-tabs button,body[data-theme] [data-segmented-control] button{min-height:40px}
+
+/* ===== FASE 1C (S2760): target sentuh 44px untuk aksi kartu (hasil capture Etalase & Akun) — tanpa selector [data-action] ===== */
+@media (max-width:1024px),(pointer:coarse){
+  body[data-theme] .shop-product-card .shop-product-actions>button,
+  body[data-theme] .acc-card-edit,
+  body[data-theme] .acc-card-del{width:44px;height:44px;min-width:44px;min-height:44px}
+  body[data-theme] .acc-card-edit{right:56px}
+  body[data-theme] .export-half{min-height:44px}
+}
+
+/* FASE 2A (S2761) */
+/* lantai 12px untuk teks inline (style="font-size:9–11px") yang ditulis renderer JS/markup lama.
+   Satu-satunya !important baru; atribut inline tidak bisa dikalahkan selector biasa. */
+html body [style*="font-size:11px"],html body [style*="font-size: 11px"],
+html body [style*="font-size:10px"],html body [style*="font-size: 10px"],
+html body [style*="font-size:10.5px"],html body [style*="font-size:9.5px"],
+html body [style*="font-size:9px"]{font-size:var(--fs-xs)!important}
