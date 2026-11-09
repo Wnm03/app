@@ -187,6 +187,33 @@ return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHt
 // lintas-akun (gabungan kas+bank+e-wallet dst) tidak bermakna secara
 // finansial, jadi kolom itu sengaja disembunyikan total (bukan ditampilkan
 // "0"/keliru) saat filter Akun = Semua Akun.
+// S2773 (Fase 4B, Rencana §D Fase 4: "Tabel padat untuk riwayat transaksi di >=1024px") — di layar lebar, SEMUA tema memakai jalur
+// tabel padat yang sama (txTableHTML) untuk #allTx dan Riwayat; <1024px & tema non-modern tetap kartu txHTML() apa adanya.
+// Hanya presentasi daftar: data, filter, data-action (editTx/delTx), saldo berjalan tidak berubah.
+function kwWideTxTable(){
+return typeof window!=='undefined'&&typeof window.matchMedia==='function'&&window.matchMedia('(min-width:1024px)').matches;
+}
+// Lintas breakpoint (resize/rotasi) daftar Uang, Aset, Dana Titipan, dan Etalase Shop dirender ulang sekali; tema modern selalu tabel
+// di Uang/Aset/Dana Titipan jadi dilewati, tetapi Etalase Shop tetap dirender ulang.
+(function(){
+if(typeof window==='undefined'||typeof window.matchMedia!=='function'||window.__kwWideTxTableWired)return;
+window.__kwWideTxTableWired=true;
+const mq=window.matchMedia('(min-width:1024px)');
+const onChange=function(){
+const modern=typeof D!=='undefined'&&D.profile&&D.profile.theme==='modern';
+if(!modern){
+const pg=document.getElementById('page-keuangan');
+if(pg&&pg.classList.contains('active')&&typeof renderKeuangan==='function'){try{renderKeuangan();}catch(e){void e;}}
+// S2774: Aset ikut jalur lebar; Dana Titipan ada di halaman Keuangan, jadi sudah dirender ulang oleh renderKeuangan() di atas.
+const pa=document.getElementById('page-aset');
+if(pa&&pa.classList.contains('active')&&typeof Aset!=='undefined'&&typeof Aset.renderList==='function'){try{Aset.renderList();}catch(e){void e;}}
+}
+// S2774: tabel produk Shop hanya ada di >=1024px untuk SEMUA tema (termasuk modern), jadi selalu dirender ulang.
+const ps=document.getElementById('page-shop');
+if(ps&&ps.classList.contains('active')&&typeof Etalase!=='undefined'&&typeof Etalase.renderList==='function'){try{Etalase.renderList();}catch(e){void e;}}
+};
+if(typeof mq.addEventListener==='function')mq.addEventListener('change',onChange);
+})();
 function txTableRowHTML(t,balAfter,renderCtx){
 renderCtx=renderCtx||null;
 const cats=renderCtx&&renderCtx.cats?renderCtx.cats:getAllCats();
@@ -242,7 +269,7 @@ opts=opts||{};
 if(t&&t.bbmLinkId&&D.bbmLogs){
 const linkedBbm=D.bbmLogs.find(b=>b.id===t.bbmLinkId);
 D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
-if(linkedBbm&&typeof reconcileFuelStateAfterBbmMutation==='function')reconcileFuelStateAfterBbmMutation(linkedBbm.vehicleId);
+if(linkedBbm&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(linkedBbm.vehicleId);
 }
 if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
 revertStockPurchase(t.partStockId,t.partStockQty,t.id);

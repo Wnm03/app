@@ -568,7 +568,7 @@ const ftxEmpty='<div class="empty"><div class="empty-icon">💸</div><div class=
 // S1844 PERF: reuse category/account indexes across every visible batch in this render.
 const _ftxCats=typeof getAllCats==='function'?getAllCats():[];
 const _ftxRenderCtx={cats:_ftxCats,catsByName:new Map(_ftxCats.map(c=>[c.name,c])),accounts:new Map((D.accounts||[]).map(a=>[a.id,a]))};
-if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
+if((D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function')||(typeof kwWideTxTable==='function'&&kwWideTxTable()&&typeof txTableHTML==='function')){
 document.getElementById('filterTxList').innerHTML=visible.length?txTableHTML(visible,scope==='account'?accId:null,_ftxRenderCtx):ftxEmpty;
 }else{
 document.getElementById('filterTxList').innerHTML=visible.length?visible.map(t=>txHTML(t,_ftxRenderCtx)).join(''):ftxEmpty;
@@ -592,7 +592,7 @@ const nextBatch=sorted.slice(shown,nextCount);
 // atas -- tabel modern append <tr> lewat txTableRowHTML per item (bukan
 // txTableHTML penuh, supaya tidak nyisipin <table>/<thead> baru di
 // tengah tbody yang sudah ada), kartu lama append txHTML apa adanya.
-if(D.profile&&D.profile.theme==='modern'&&typeof txTableRowHTML==='function'){
+if((D.profile&&D.profile.theme==='modern'&&typeof txTableRowHTML==='function')||(typeof kwWideTxTable==='function'&&document.querySelector('#filterTxList .tx-tbl')&&typeof txTableRowHTML==='function')){
 const balMap=scope==='account'&&typeof computeAccRunningBalances==='function'?computeAccRunningBalances(accId):null;
 const tbody=document.querySelector('#filterTxList .tx-tbl tbody');
 if(tbody)tbody.insertAdjacentHTML('beforeend',nextBatch.map(t=>txTableRowHTML(t,balMap?balMap.get(t.id):undefined)).join(''));

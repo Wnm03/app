@@ -160,8 +160,6 @@ const previousVehicleId=b.vehicleId;
 // Segmen full-to-full dapat berubah saat log diedit; jangan terus memakai
 // kalibrasi yang dibangun dari sampel lama. Data historis tidak diubah.
 if(typeof FuelAdaptiveCalibration!=='undefined'&&FuelAdaptiveCalibration&&typeof FuelAdaptiveCalibration.invalidate==='function')FuelAdaptiveCalibration.invalidate(previousVehicleId,'bbm-log-edited');
-const previousFuelState=(D.vehicles||[]).find(v=>String(v.id)===String(previousVehicleId));
-const previousFuelStateSnapshot=previousFuelState&&previousFuelState.fuelState?{...previousFuelState.fuelState}:null;
 Object.assign(b,{date:opts.date,km:opts.km,liter:opts.liter,harga,cost:opts.cost,spbu:opts.spbu,fullTank:opts.fullTank,note:opts.note,accountId:opts.accountId,vehicleId:opts.vehicleId||b.vehicleId});
 if(previousVehicleId&&opts.vehicleId&&String(previousVehicleId)!==String(opts.vehicleId)&&typeof FuelAdaptiveCalibration!=='undefined'&&FuelAdaptiveCalibration&&typeof FuelAdaptiveCalibration.invalidate==='function')FuelAdaptiveCalibration.invalidate(opts.vehicleId,'bbm-log-moved-in');
 // TASK-jenis-BBM: simpan jenis kalau caller kirim -- JANGAN timpa dgn
@@ -171,19 +169,13 @@ if(opts.jenis!==undefined&&opts.jenis!==null&&opts.jenis!=='')b.jenis=opts.jenis
 if(opts.fullTank){
  syncFuelStateFromFullTankBbm(opts.vehicleId||b.vehicleId,b);
  if(typeof FuelAdaptiveCalibration!=='undefined'&&FuelAdaptiveCalibration&&typeof FuelAdaptiveCalibration.invalidate==='function')FuelAdaptiveCalibration.invalidate(opts.vehicleId||b.vehicleId,'bbm-log-edited');
-}else if(previousFullTank){
- // Jangan biarkan estimator parsial menimpa baseline manual sebelum proses
- // rekonstruksi memilih sumber yang benar. Jika koreksi manual aktif, restore
- // snapshot in-memory; estimator live tetap menghitung log parsial saat render.
- if(previousFuelState&&previousFuelStateSnapshot&&previousFuelStateSnapshot.estimatedSource==='manual-bar-correction'){
-  previousFuelState.fuelState=previousFuelStateSnapshot;
-  // Koreksi manual adalah baseline independen; partial log hasil edit boleh
-  // dihitung di atasnya bila tanggalnya lebih baru dari koreksi tersebut.
-  syncFuelStateFromEstimator(previousVehicleId||opts.vehicleId,b);
- }else reconcileFuelStateAfterBbmMutation(previousVehicleId||opts.vehicleId);
-}else syncFuelStateFromEstimator(opts.vehicleId||b.vehicleId,b);
+}else{
+ // Log parsial TIDAK menulis fuelState: baseline dibangun ulang dari koreksi manual/full-tank
+ // yang tersisa, sedangkan estimator memproyeksikan parsial langsung dari log (S2434 B2-B4).
+ reconcileFuelStateFromLogs(opts.vehicleId||b.vehicleId);
+}
 // Perpindahan kendaraan pada edit BBM memerlukan rekonsiliasi kendaraan asal.
-if(previousVehicleId&&opts.vehicleId&&String(previousVehicleId)!==String(opts.vehicleId))reconcileFuelStateAfterBbmMutation(previousVehicleId);
+if(previousVehicleId&&opts.vehicleId&&String(previousVehicleId)!==String(opts.vehicleId))reconcileFuelStateFromLogs(previousVehicleId);
 return{ok:true,bbmId:b.id,isNew:false,harga};
 }
 }
@@ -193,7 +185,7 @@ if(opts.fullTank){
  const savedLog=D.bbmLogs[D.bbmLogs.length-1];
  syncFuelStateFromFullTankBbm(opts.vehicleId,savedLog);
  if(typeof FuelAdaptiveCalibration!=='undefined'&&FuelAdaptiveCalibration&&typeof FuelAdaptiveCalibration.calibrate==='function')FuelAdaptiveCalibration.calibrate(opts.vehicleId,savedLog);
-}else syncFuelStateFromEstimator(opts.vehicleId,D.bbmLogs[D.bbmLogs.length-1]);
+}else reconcileFuelStateFromLogs(opts.vehicleId);
 return{ok:true,bbmId,isNew:true,harga};
 }
 // syncFuelStateFromEstimator(vehicleId) — SESI 415b (FUEL-AUTOSYNC-05, Sesi 2
@@ -219,7 +211,27 @@ return{ok:true,bbmId,isNew:true,harga};
 // Rekonstruksi baseline ketika log BBM yang membentuk fuelState diubah/dihapus.
 // Tidak mengubah riwayat BBM; hanya membangun ulang state turunan dari sumber
 // tersisa. Koreksi manual yang lebih baru tetap diprioritaskan.
-function reconcileFuelStateAfterBbmMutation(vehicleId){
+function _fuelSnapshotLegacyManual(veh){
+// Koreksi manual lama hanya hidup di fuelState; salin additive ke manualFuelCorrection supaya
+// tidak hilang saat baseline full-tank mengambil alih (S2434 B4).
+if(veh&&veh.fuelState&&veh.fuelState.estimatedSource==='manual-bar-correction'&&!veh.manualFuelCorrection)veh.manualFuelCorrection={...veh.fuelState};
+}
+function _fuelAppliedIdsAtBaseline(vehicleId,referenceKm,anchorLog){
+// ID log milik kendaraan yang sudah tercakup baseline full-tank: KM < acuan, atau KM sama dan
+// tercatat pada/sebelum log acuan (tanggal lebih awal, atau urutan simpan lebih awal pada tanggal sama).
+const logs=Array.isArray(D.bbmLogs)?D.bbmLogs:[];
+const anchorIdx=anchorLog?logs.indexOf(anchorLog):-1;
+const anchorDate=anchorLog&&anchorLog.date?String(anchorLog.date).slice(0,10):'';
+const ids=[];
+logs.forEach((x,i)=>{
+if(!x||String(x.vehicleId)!==String(vehicleId)||x.id===undefined||x.id===null)return;
+const km=Number(x.km);
+if(!Number.isFinite(km)||!Number.isFinite(Number(referenceKm)))return;
+if(km<referenceKm||(km===referenceKm&&(x===anchorLog||String(x.date||'').slice(0,10)<anchorDate||(String(x.date||'').slice(0,10)===anchorDate&&i<=anchorIdx))))ids.push(x.id);
+});
+return ids;
+}
+function reconcileFuelStateFromLogs(vehicleId){
 if(!vehicleId||typeof D==='undefined'||!Array.isArray(D.vehicles))return{ok:false,reason:'vehicle-missing'};
 const veh=D.vehicles.find(v=>String(v.id)===String(vehicleId));
 if(!veh)return{ok:false,reason:'vehicle-missing'};
@@ -233,7 +245,9 @@ const latestFull=fullLogs.length?fullLogs[fullLogs.length-1]:null;
 const manualHistory=typeof FuelStateHistory!=='undefined'&&typeof FuelStateHistory.list==='function'
  ? FuelStateHistory.list(vehicleId).filter(h=>h&&h.estimatedSource==='manual-bar-correction'&&Number.isFinite(Number(h.currentFuelLiter))) : [];
 const currentManual=state&&state.estimatedSource==='manual-bar-correction'?{vehicleId,currentFuelBar:state.currentFuelBar,currentFuelLiter:state.currentFuelLiter,estimatedSource:state.estimatedSource,confidenceScore:state.confidenceScore,referenceKm:state.referenceKm,recordedAt:state.correctedAt}:null;
-const manualCandidates=manualHistory.concat(currentManual?[currentManual]:[]).sort((a,b)=>String(a.recordedAt||'').localeCompare(String(b.recordedAt||'')));
+_fuelSnapshotLegacyManual(veh);
+const savedManual=veh.manualFuelCorrection&&Number.isFinite(Number(veh.manualFuelCorrection.currentFuelLiter))?{vehicleId,currentFuelBar:veh.manualFuelCorrection.currentFuelBar,currentFuelLiter:veh.manualFuelCorrection.currentFuelLiter,estimatedSource:'manual-bar-correction',confidenceScore:veh.manualFuelCorrection.confidenceScore,referenceKm:veh.manualFuelCorrection.referenceKm,appliedBbmIds:veh.manualFuelCorrection.appliedBbmIds,recordedAt:veh.manualFuelCorrection.correctedAt}:null;
+const manualCandidates=manualHistory.concat(savedManual?[savedManual]:[]).concat(currentManual?[currentManual]:[]).sort((a,b)=>String(a.recordedAt||'').localeCompare(String(b.recordedAt||'')));
 const latestManual=manualCandidates.length?manualCandidates[manualCandidates.length-1]:null;
 const fullDate=latestFull?String(latestFull.date):'';
 const manualDate=latestManual?String(latestManual.recordedAt||'').slice(0,10):'';
@@ -241,7 +255,7 @@ const manualDate=latestManual?String(latestManual.recordedAt||'').slice(0,10):''
 // menang bila benar-benar lebih baru dari tanggal full tank yang tersisa.
 if(latestManual&&(!latestFull||manualDate>fullDate)){
  if(currentManual&&String(currentManual.recordedAt||'')===String(latestManual.recordedAt||''))return{ok:true,preserved:'manual'};
- veh.fuelState={currentFuelBar:latestManual.currentFuelBar,currentFuelLiter:latestManual.currentFuelLiter,correctedAt:latestManual.recordedAt||new Date().toISOString(),estimatedSource:'manual-bar-correction',confidenceScore:latestManual.confidenceScore,referenceKm:latestManual.referenceKm};
+ veh.fuelState={currentFuelBar:latestManual.currentFuelBar,currentFuelLiter:latestManual.currentFuelLiter,correctedAt:latestManual.recordedAt||new Date().toISOString(),estimatedSource:'manual-bar-correction',confidenceScore:latestManual.confidenceScore,referenceKm:latestManual.referenceKm,...(Array.isArray(latestManual.appliedBbmIds)?{appliedBbmIds:latestManual.appliedBbmIds.slice()}:{})};
  return{ok:true,restored:'manual-history'};
 }
 if(latestFull){
@@ -250,39 +264,18 @@ if(latestFull){
  syncFuelStateFromFullTankBbm(vehicleId,latestFull,true);
  return{ok:true,restored:'full-tank',bbmId:latestFull.id};
 }
+// fuelState 'auto-bbm-log' lama (parsial yang dulu dibekukan) tidak punya sumber pembanding; biarkan.
+if(state&&state.estimatedSource==='auto-bbm-log')return{ok:true,preserved:'legacy-auto'};
 // Tidak ada lagi sumber baseline yang dapat dipertanggungjawabkan.
 // Hapus state turunan lama agar UI tidak menyajikan fuel bar palsu.
 delete veh.fuelState;
 return{ok:true,cleared:true};
 }
+// Alias kompatibilitas nama lama (S2746); satu-satunya implementasi adalah reconcileFuelStateFromLogs().
+function reconcileFuelStateAfterBbmMutation(vehicleId){return reconcileFuelStateFromLogs(vehicleId);}
 
-function syncFuelStateFromEstimator(vehicleId,bbmLog){
-if(typeof FuelStateEstimator==='undefined')return;
-if(typeof D==='undefined'||!D.vehicles)return;
-const veh=D.vehicles.find(v=>v.id===vehicleId);
-if(!veh)return;
-const est=FuelStateEstimator.estimateCurrentLiter(vehicleId);
-if(!est.ok||typeof est.currentKm!=='number'||!isFinite(est.currentKm))return;
-const logDate=bbmLog&&bbmLog.date?String(bbmLog.date).slice(0,10):new Date().toISOString().slice(0,10);
-const existingDate=veh.fuelState&&veh.fuelState.correctedAt?String(veh.fuelState.correctedAt).slice(0,10):'';
-// Full tank pada tanggal yang sama tetap ground-truth; partial fill yang
-// tercatat pada tanggal lebih lama tidak boleh mengembalikan baseline.
-if(existingDate&&(existingDate>logDate||(existingDate===logDate&&(veh.fuelState.estimatedSource==='auto-bbm-log-full'||veh.fuelState.estimatedSource==='manual-bar-correction'))))return;
-let bar=null;
-if(typeof FuelGaugeEngine!=='undefined'){
-const barRes=FuelGaugeEngine.calculateFuelBar(vehicleId,est.liter);
-if(barRes.ok)bar=barRes.bar;
-}
-veh.fuelState={
-currentFuelBar:bar,
-currentFuelLiter:est.liter,
-correctedAt:logDate+'T23:59:59',
-estimatedSource:'auto-bbm-log',
-confidenceScore:70,
-referenceKm:est.currentKm,
-};
-if(typeof FuelStateHistory!=='undefined')FuelStateHistory.record(vehicleId,veh.fuelState);
-}
+// Wrapper kompatibilitas (S2434): parsial tidak lagi membekukan hasil estimasi ke fuelState.
+function syncFuelStateFromEstimator(vehicleId){return reconcileFuelStateFromLogs(vehicleId);}
 // syncFuelStateFromFullTankBbm(vehicleId) — SESI FUEL-AUTOSYNC-01 (scoped,
 // bagian dari rencana "Fuel Estimation Auto-Update"): kalau BBM log yang
 // barusan disimpan/diedit itu FULL TANK, tulis PERMANEN
@@ -322,6 +315,7 @@ if(!capacity)return;
 const logDate=bbmLog&&bbmLog.date?String(bbmLog.date).slice(0,10):new Date().toISOString().slice(0,10);
 const existingDate=veh.fuelState&&veh.fuelState.correctedAt?String(veh.fuelState.correctedAt).slice(0,10):'';
 if(!forceRebuild&&existingDate&&existingDate>logDate)return;
+_fuelSnapshotLegacyManual(veh);
 const liter=capacity;
 const barRes=FuelGaugeEngine.calculateFuelBar(vehicleId,liter);
 veh.fuelState={
@@ -341,6 +335,7 @@ confidenceScore:90,
 // referenceKm:null, TIDAK PERNAH menggagalkan sync ini gara-gara itu.
 referenceKm:(bbmLog&&typeof bbmLog.km==='number'&&isFinite(bbmLog.km))?bbmLog.km:((typeof getVehicleKm==='function')?getVehicleKm(vehicleId):null),
 };
+if(Number.isFinite(Number(veh.fuelState.referenceKm)))veh.fuelState.appliedBbmIds=_fuelAppliedIdsAtBaseline(vehicleId,Number(veh.fuelState.referenceKm),bbmLog);
 // Histori estimasi (opsional, lanjutan rencana Fuel Estimation Auto-
 // Update): simpan snapshot fuelState yang barusan ditulis di atas.
 // Guard typeof (sama prinsipnya dgn guard FuelTankProfile/FuelGaugeEngine

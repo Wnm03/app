@@ -374,8 +374,29 @@ const DanaTitipanPortfolioPresenter = {
     // kartu owner (pemanggil, baris ~852) TIDAK disentuh sama sekali, sesuai
     // batasan rencana ("perluas isi badan <details>, bukan ganti
     // struktur-nya"). 10 tema lama tetap jalur div/flex lama apa adanya.
-    if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
-      return `
+    // S2774 (Fase 4B lanjutan, Rencana §D Fase 4): layar >=1024px semua tema memakai mini-tabel yang sama;
+    // <1024px & tema non-modern tetap baris flex di bawah. Data/handler hapus tidak berubah.
+    if ((typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') || this._wideTable()) {
+      return this._returnsTableHtml(list);
+    }
+    return `
+          <div class="u-fs11 u-t2 u-ml10 u-mt4">Riwayat pengembalian:</div>
+          ${list.map((r) => `
+            <div class="u-flex u-jcb u-fs11 u-mb2 u-ml10">
+              <span>↩️ ${this._money(r.amount)}${r.returnDate ? ` <span class="u-t2">(${escapeHtml(r.returnDate)})</span>` : ''}${r.notes ? ` <span class="u-t2">— ${escapeHtml(r.notes)}</span>` : ''}</span>
+              <button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${escapeHtml(r.id)}"]' aria-label="Hapus riwayat pengembalian">🗑️</button>
+            </div>
+          `).join('')}`;
+  },
+
+  // _wideTable() — S2774: true di layar >=1024px (helper kwWideTxTable() dari tx-list-cashflow.js); aman bila belum dimuat.
+  _wideTable() {
+    return typeof kwWideTxTable === 'function' && kwWideTxTable();
+  },
+
+  // _returnsTableHtml(list) — markup mini-tabel riwayat pengembalian (dipindah apa adanya dari gate modern S642).
+  _returnsTableHtml(list) {
+    return `
           <div class="u-fs11 u-t2 u-ml10 u-mt4">Riwayat pengembalian:</div>
           <div class="tx-tbl-wrap u-ml10"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Catatan</th><th class="num">Nominal</th><th></th></tr></thead><tbody>
           ${list.map((r) => `
@@ -387,15 +408,6 @@ const DanaTitipanPortfolioPresenter = {
             </tr>
           `).join('')}
           </tbody></table></div>`;
-    }
-    return `
-          <div class="u-fs11 u-t2 u-ml10 u-mt4">Riwayat pengembalian:</div>
-          ${list.map((r) => `
-            <div class="u-flex u-jcb u-fs11 u-mb2 u-ml10">
-              <span>↩️ ${this._money(r.amount)}${r.returnDate ? ` <span class="u-t2">(${escapeHtml(r.returnDate)})</span>` : ''}${r.notes ? ` <span class="u-t2">— ${escapeHtml(r.notes)}</span>` : ''}</span>
-              <button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${escapeHtml(r.id)}"]' aria-label="Hapus riwayat pengembalian">🗑️</button>
-            </div>
-          `).join('')}`;
   },
 
   // _assetOptionsHtml() — SESI 515 (Owner -> Nominal -> Asset -> Kuota ->
@@ -626,6 +638,10 @@ const DanaTitipanPortfolioPresenter = {
     // BARU 100% ADDITIF, dipanggil HANYA saat D.profile.theme==='modern'.
     // Tema lain 0 disentuh — tetap _holdingRowHtml()/<details> grup
     // kustodian apa adanya di bawah.
+    // S2774 (Fase 4B lanjutan): layar >=1024px semua tema memakai tabel padat yang sama.
+    if (this._wideTable()) {
+      return this._holdingsTableHtmlModern(holdings);
+    }
     if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
       return this._holdingsTableHtmlModern(holdings);
     }
@@ -801,6 +817,10 @@ const DanaTitipanPortfolioPresenter = {
   // masih flat/div, belum ikut jadi tabel spt mockup Ledger Pro). 10 tema
   // lama TETAP `_ownerCardHtml()` apa adanya, flat join, 0 perubahan.
   _ownerListHtml(owners) {
+    // S2774 (Fase 4B lanjutan): layar >=1024px semua tema memakai pembungkus tabel yang sama.
+    if (this._wideTable()) {
+      return this._ownerListHtmlModern(owners);
+    }
     if (typeof D !== 'undefined' && D.profile && D.profile.theme === 'modern') {
       return this._ownerListHtmlModern(owners);
     }
