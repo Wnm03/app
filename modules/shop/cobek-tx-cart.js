@@ -250,6 +250,50 @@ if(!panel||panel.style.display==='none')return {ok:true};
 if(Array.isArray(curShopStockCart)&&curShopStockCart.length)return {ok:true};
 return {ok:false,message:'Belum ada produk di daftar stok. Isi produk lalu klik "Tambahkan Produk ke Daftar" sebelum simpan, atau matikan centang Tambah ke Stok Shop'};
 }
+// S2780 (Pola B): centang "Tambah ke Stok Shop" dimatikan pada transaksi yang SUDAH menambah stok produk
+// = permintaan membatalkan belanja (form edit mencentang ulang panel tertaut, jadi mematikannya disengaja).
+function _txShopStockLinkedItems(tx){
+if(!tx)return[];
+if(Array.isArray(tx.stockItems)&&tx.stockItems.length)return tx.stockItems.filter(si=>si&&si.productId&&Number(si.qty)>0).map(si=>({productId:si.productId,qty:Number(si.qty)}));
+if(tx.stockProductId&&Number(tx.stockQty)>0)return[{productId:tx.stockProductId,qty:Number(tx.stockQty)}];
+return[];
+}
+function txShopStockUnlinkRequested(existingTx){
+if(!_txShopStockLinkedItems(existingTx).length)return false;
+const chk=document.getElementById('txAddShopStock');
+const panel=document.getElementById('txShopStockPanel');
+return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
+}
+// null = boleh lanjut | string = pesan (simpan dibatalkan SEBELUM mutasi). Stok tidak boleh dipotong sampai
+// negatif/di-clamp diam-diam: bila sebagian sudah terjual, pembatalan ditolak.
+function validateTxShopStockUnlink(existingTx){
+if(!txShopStockUnlinkRequested(existingTx))return null;
+const want=new Map();
+_txShopStockLinkedItems(existingTx).forEach(it=>want.set(it.productId,(want.get(it.productId)||0)+it.qty));
+for(const[pid,qty]of want){
+const p=(D.products||[]).find(x=>x&&x.id===pid);
+if(!p)continue;
+const stock=Number(p.stock)||0;
+if(stock<qty)return'Stok "'+p.name+'" tinggal '+stock+', tidak cukup untuk membatalkan penambahan +'+qty+' (sebagian sudah terjual). Biarkan centang Tambah ke Stok Shop menyala';
+}
+return null;
+}
+function unlinkTxShopStockFromTx(existingTx){
+const rev=Number(existingTx.stockRev)||0;
+const want=new Map();
+_txShopStockLinkedItems(existingTx).forEach(it=>want.set(it.productId,(want.get(it.productId)||0)+it.qty));
+want.forEach((qty,pid)=>{
+const p=(D.products||[]).find(x=>x&&x.id===pid);
+if(!p)return;
+if(typeof ProductRepository!=='undefined'){
+const r=ProductRepository.mutateStockDelta(p,-qty,{source:'stock-receipt-unlink',reason:'stock addition cancelled from transaction edit',refType:'transaction',refId:existingTx.id,idempotencyKey:'tx-stock-unlink:'+existingTx.id+':'+pid+':r'+rev});
+if(r&&r.ok===false)throw new Error('SHOP_STOCK_UNLINK_FAILED');
+}else p.stock=Math.max(0,(Number(p.stock)||0)-qty);
+});
+// stockRev sengaja dipertahankan: key idempotensi penambahan berikutnya memakai stockRev+1.
+delete existingTx.stockItems;delete existingTx.stockProductId;delete existingTx.stockQty;delete existingTx.produsenId;delete existingTx.kategoriId;
+if(typeof renderProductList==='function')renderProductList();
+}
 // S2433-B: revisi stok per transaksi. Key idempotensi ledger dulu sama di tiap simpan, sehingga saat
 // EDIT rollback jalan tapi penambahan ulang dilewati (duplicate) -> stok hilang. Kini key memuat revisi.
 function _txShopStockRev(tx){return (tx&&Number(tx.stockRev)>0?Number(tx.stockRev):0)+1;}
@@ -258,6 +302,7 @@ function _txShopStockRev(tx){return (tx&&Number(tx.stockRev)>0?Number(tx.stockRe
 // tetap `existingTx||find(txId)`. Tanpa prevTx perilaku identik sebelumnya.
 function applyTxShopStockFromTx(txId,note,existingTx,prevTx){
 const chk=document.getElementById('txAddShopStock');
+if(txShopStockUnlinkRequested(existingTx)){unlinkTxShopStockFromTx(existingTx);toast('📦 Penambahan stok Shop dibatalkan');return;}
 if(!chk||!chk.checked)return;
 const panel=document.getElementById('txShopStockPanel');
 if(!panel||panel.style.display==='none')return;
@@ -688,7 +733,9 @@ const chk=document.getElementById('txAddShopSale');
 if(!chk||!chk.checked)return{ok:true};
 const panel=document.getElementById('txShopSalePanel');
 if(!panel||panel.style.display==='none')return{ok:true};
-if(!Array.isArray(curTxShopSaleCart)||!curTxShopSaleCart.length)return{ok:true};
+// S2779 (Pola A): daftar kosong dulu dianggap lolos -> applyTxShopSaleFromTx() baru menolak SESUDAH transaksi tersimpan
+// (toast tertimpa, pemasukan tercatat tanpa penjualan Shop). Sekarang ditolak di awal, setara precheck Stok Shop.
+if(!Array.isArray(curTxShopSaleCart)||!curTxShopSaleCart.length)return{ok:false,message:'Belum ada produk di daftar penjualan shop. Tambahkan produk dulu, atau matikan centang Penjualan Shop'};
 const prev=(existingTx&&existingTx.cobekLinkId)?(D.cobek||[]).find(c=>c.id===existingTx.cobekLinkId):null;
 const want=new Map();
 for(const it of curTxShopSaleCart){const q=Number(it.qty);if(!it||!it.productId||!Number.isFinite(q)||q<=0)return{ok:false,message:'Jumlah tidak valid'};want.set(it.productId,(want.get(it.productId)||0)+q);}
@@ -701,8 +748,40 @@ if(qty>avail)return{ok:false,message:'Stok '+p.name+' tidak cukup (sisa '+avail+
 }
 return{ok:true};
 }
+// S2780 (Pola B): centang "Penjualan Shop" dimatikan pada transaksi yang SUDAH tertaut penjualan = permintaan melepas.
+function _txShopSaleLinked(existingTx){return existingTx&&existingTx.cobekLinkId?(D.cobek||[]).find(c=>c&&c.id===existingTx.cobekLinkId)||null:null;}
+function txShopSaleUnlinkRequested(existingTx){
+if(!_txShopSaleLinked(existingTx))return false;
+const chk=document.getElementById('txAddShopSale');
+const panel=document.getElementById('txShopSalePanel');
+return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
+}
+// Ditolak bila piutang penjualan sudah lunas (uang pelunasan sudah tercatat sebagai pemasukan terpisah).
+function validateTxShopSaleUnlink(existingTx){
+if(!txShopSaleUnlinkRequested(existingTx))return null;
+const shop=_txShopSaleLinked(existingTx);
+const pi=shop.piutangLinkId?(D.piutang||[]).find(p=>p&&p.id===shop.piutangLinkId):null;
+if(pi&&pi.lunas)return'Piutang penjualan ini sudah lunas, jadi penjualan Shop tidak bisa dilepas dari sini. Batalkan pelunasannya di Piutang dulu, atau biarkan centang Penjualan Shop menyala';
+return null;
+}
+// Pola sama dgn cascade delTx(): stok dikembalikan, piutang tertaut dihapus, catatan penjualan dihapus. Transaksi tetap.
+function unlinkTxShopSaleFromTx(existingTx){
+const shop=_txShopSaleLinked(existingTx);
+if(shop){
+if(shop.items)rollbackShopItems(shop.items,1,existingTx.id);
+if(shop.piutangLinkId&&typeof BillDebtPiutangCanonicalWriter!=='undefined'&&BillDebtPiutangCanonicalWriter.removeById)BillDebtPiutangCanonicalWriter.removeById('piutang',shop.piutangLinkId);
+D.cobek=D.cobek.filter(c=>c.id!==shop.id);
+if(typeof Preorder!=='undefined'&&typeof Preorder.onSaleRemoved==='function')Preorder.onSaleRemoved(shop.id);
+}
+delete existingTx.cobekLinkId;
+if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
+if(typeof renderProductList==='function')renderProductList();
+if(typeof renderShop==='function')renderShop();
+if(typeof renderShopRecent==='function')renderShopRecent();
+}
 function applyTxShopSaleFromTx(txId,date,accId,note,existingTx){
 const chk=document.getElementById('txAddShopSale');
+if(txShopSaleUnlinkRequested(existingTx)){unlinkTxShopSaleFromTx(existingTx);toast('🪨 Penjualan Shop dilepas, stok dikembalikan');return;}
 if(!chk||!chk.checked)return;
 const panel=document.getElementById('txShopSalePanel');
 if(!panel||panel.style.display==='none')return;
