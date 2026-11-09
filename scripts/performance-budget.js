@@ -16,6 +16,7 @@ const budgets = {
   'modern-ui-layer.css': 35_000,
   'minimal-ui-theme.css': 8_000,
   'pwa-ui-layer.css': 15_000,
+  'tokens.css': 4_000,
   'app-bundle-a.min.js': 1_600_000,
   'app-bundle-b.min.js': 5_000_000,
 };
