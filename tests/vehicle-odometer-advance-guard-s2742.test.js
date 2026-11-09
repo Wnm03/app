@@ -4,6 +4,13 @@ const assert = require('node:assert/strict');
 const { loadSource } = require('./helpers/loadSource');
 
 function makeCtx({ askConfirm = async () => true, today = '2026-11-08' } = {}) {
+  // Bekukan jam sandbox: getProactiveReminders() memakai `new Date()` lokal, jadi tes
+  // tidak boleh bergantung pada tanggal nyata saat dijalankan.
+  const fixedMs = new Date(today + 'T12:00:00').getTime();
+  const FrozenDate = class extends Date {
+    constructor(...args) { if (args.length) super(...args); else super(fixedMs); }
+    static now() { return fixedMs; }
+  };
   const D = {
     vehicles: [{ id: 'v1', name: 'Vario 125' }],
     kmLogs: [{ id: 'k1', vehicleId: 'v1', date: '2026-11-01', km: 1000 }],
@@ -12,7 +19,7 @@ function makeCtx({ askConfirm = async () => true, today = '2026-11-08' } = {}) {
     bills: [], simList: [], eduFunds: [], transactions: [], assets: [],
   };
   const ctx = loadSource(['modules/vehicle/vehicle-core.js'], {
-    D, askConfirm, VEHTAX_ITEMS: {}, now: new Date(today + 'T12:00:00'),
+    D, askConfirm, VEHTAX_ITEMS: {}, Date: FrozenDate, now: new Date(today + 'T12:00:00'),
     daysUntilDate: () => null, fmtFull: String, dateToISO: d => d.toISOString().slice(0, 10),
     totalSaldoAkun: () => 0, totalDebtValue: () => 0, totalCicilanOutstanding: () => 0,
     curVehicleId: 'v1',

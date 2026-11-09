@@ -19,10 +19,9 @@
 //      ini yang menangkapnya.
 //   2. Konsistensi decayedConfidenceScore lintas FuelCard/_currentConfidence,
 //      FuelPredictionEngine/_confidence, FuelCostAnalytics/_confidenceScore.
-//   3. Rebasing referenceKm (s416): setelah syncFuelStateFromEstimator()
-//      menulis titik acuan baru, panggilan estimateCurrentLiter()
-//      BERIKUTNYA tidak boleh menghitung dobel akumulasi partial fill lama
-//      (partialFillsCounted harus 0 utk log yang sudah "dibekukan").
+//   3. Baseline tetap (S2434): log parsial TIDAK menulis/menggeser fuelState;
+//      estimateCurrentLiter() memproyeksikan ulang seluruh parsial sejak baseline
+//      langsung dari log, sehingga panggilan berulang tidak menghitung dobel.
 //   4. Full-tank fill TETAP ground truth: menimpa drift akumulasi/decay
 //      apa pun dari partial fill & km sebelumnya (reset referenceKm,
 //      confidence balik ke 90).
@@ -159,7 +158,7 @@ test('REGRESI lintas-sesi -- setelah jalan 200km TANPA BBM log baru, SEMUA konsu
   assert.equal(proj.confidenceScore, 77);
 });
 
-test('REGRESI lintas-sesi -- partial fill (Sesi 2) REBASE referenceKm, panggilan berikutnya TIDAK dobel-hitung log yang sudah dibekukan', () => {
+test('REGRESI lintas-sesi -- partial fill TIDAK menggeser baseline; estimator memproyeksikan ulang dari log tanpa dobel-hitung', () => {
   const { ctx, D, state } = makeWorld();
   driveTo(state, 1000);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-01', km: 1000, liter: 10, cost: 100000, fullTank: true });
@@ -167,49 +166,46 @@ test('REGRESI lintas-sesi -- partial fill (Sesi 2) REBASE referenceKm, panggilan
   driveTo(state, 1250);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-05', km: 1250, liter: 2, cost: 20000, fullTank: false });
 
-  // syncFuelStateFromEstimator: baseLiter 10, deltaKm 250 (konsumsi 6.25L),
-  // partial fill YANG BARUSAN masuk (km 1250 > referenceKm lama 1000) ikut
-  // dihitung sbg addedLiter -> liter = 10 + 2 - 6.25 = 5.75.
+  // S2434: log parsial tidak menulis fuelState -- baseline full-tank tetap utuh.
   const fs1 = D.vehicles[0].fuelState;
-  assert.equal(fs1.currentFuelLiter, 5.75);
-  assert.equal(fs1.confidenceScore, 70);
-  assert.equal(fs1.estimatedSource, 'auto-bbm-log');
-  // REBASE -- titik acuan baru HARUS jadi km SAAT sync ini terjadi, bukan
-  // tetap 1000 (kalau tetap 1000, log partial di atas akan kehitung LAGI
-  // di estimateCurrentLiter() berikutnya -- double counting).
-  assert.equal(fs1.referenceKm, 1250);
+  assert.equal(fs1.currentFuelLiter, 10);
+  assert.equal(fs1.confidenceScore, 90);
+  assert.equal(fs1.estimatedSource, 'auto-bbm-log-full');
+  assert.equal(fs1.referenceKm, 1000);
 
-  // Panggil estimator lagi TANPA jalan/BBM baru sama sekali (km tetap 1250):
-  // partialFillsCounted HARUS 0 (log km=1250 sekarang == referenceKm baru,
-  // filter strict > menolaknya -- rebase bekerja).
+  // Estimator: baseLiter 10 + parsial 2 - konsumsi 250/40 = 5.75, dihitung dari log.
   const est = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
-  assert.equal(est.partialFillsCounted, 0);
-  assert.equal(est.liter, 5.75); // TIDAK dobel-tambah 2L lagi
-  assert.equal(est.deltaKm, 0);
+  assert.equal(est.partialFillsCounted, 1);
+  assert.equal(est.liter, 5.75);
+  assert.equal(est.deltaKm, 250);
+
+  // Panggilan kedua tanpa data baru: hasil identik (tidak dobel-tambah 2L).
+  const est2 = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
+  assert.equal(est2.partialFillsCounted, 1);
+  assert.equal(est2.liter, 5.75);
 });
 
-test('REGRESI lintas-sesi -- decay confidence berlanjut dari baseline BARU (bukan dari full-tank lama) setelah rebase partial fill', () => {
+test('REGRESI lintas-sesi -- decay confidence dihitung dari baseline full-tank (parsial tidak me-rebase)', () => {
   const { ctx, D, state } = makeWorld();
   driveTo(state, 1000);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-01', km: 1000, liter: 10, cost: 100000, fullTank: true });
   driveTo(state, 1250);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-05', km: 1250, liter: 2, cost: 20000, fullTank: false });
 
-  driveTo(state, 1400); // deltaKm 150 dari referenceKm BARU (1250), bukan dari 1000
+  driveTo(state, 1400); // deltaKm 400 dari referenceKm baseline (1000)
   const est = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
-  assert.equal(est.deltaKm, 150);
-  assert.equal(est.partialFillsCounted, 0);
-  // consumedLiter = 150/40 = 3.75 -> liter = 5.75 - 3.75 = 2
+  assert.equal(est.deltaKm, 400);
+  assert.equal(est.partialFillsCounted, 1);
+  // consumedLiter = 400/40 = 10 -> liter = 10 + 2 - 10 = 2
   assert.equal(est.liter, 2);
-  // base confidence SEKARANG 70 (dari sync partial fill, bukan 90 full-tank
-  // lama) -- floor(150/15)=10 -> decayed = 70-10 = 60.
-  assert.equal(est.decayedConfidenceScore, 60);
+  // base confidence tetap 90 (full-tank) -- floor(400/15)=26 -> decayed = 90-26 = 64.
+  assert.equal(est.decayedConfidenceScore, 64);
 
   const fuelState = D.vehicles[0].fuelState;
-  assert.equal(ctx.FuelCard._currentConfidence('v1'), 60);
-  assert.equal(ctx.FuelPredictionEngine._confidence('v1', fuelState), 60);
-  assert.equal(ctx.FuelCostAnalytics._confidenceScore('v1'), 60);
-  // 60 masih >= LOW_CONFIDENCE_THRESHOLD (50) -> hint BELUM muncul.
+  assert.equal(ctx.FuelCard._currentConfidence('v1'), 64);
+  assert.equal(ctx.FuelPredictionEngine._confidence('v1', fuelState), 64);
+  assert.equal(ctx.FuelCostAnalytics._confidenceScore('v1'), 64);
+  // 64 masih >= LOW_CONFIDENCE_THRESHOLD (50) -> hint BELUM muncul.
   assert.equal(ctx.FuelCard._lowConfidenceHint('v1').ok, false);
 });
 
@@ -220,13 +216,13 @@ test('REGRESI lintas-sesi -- decay cukup jauh memicu low-confidence hint (Sesi 5
   driveTo(state, 1250);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-05', km: 1250, liter: 2, cost: 20000, fullTank: false });
 
-  driveTo(state, 1750); // deltaKm 500 dari referenceKm 1250 -> floor(500/15)=33 -> 70-33=37 (< 50)
+  driveTo(state, 1750); // deltaKm 750 dari referenceKm 1000 -> floor(750/15)=50 -> 90-50=40 (< 50)
   const est = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
-  assert.equal(est.decayedConfidenceScore, 37);
-  assert.equal(ctx.FuelCard._currentConfidence('v1'), 37);
+  assert.equal(est.decayedConfidenceScore, 40);
+  assert.equal(ctx.FuelCard._currentConfidence('v1'), 40);
   assert.equal(ctx.FuelCard._lowConfidenceHint('v1').ok, true);
 
-  // Liter juga clamp ke 0 (konsumsi 500/40=12.5L > sisa 5.75L) & gauge tetap
+  // Liter juga clamp ke 0 (konsumsi 750/40=18.75L > 12L) & gauge tetap
   // render (bukan blank) walau sudah 0.
   assert.equal(est.liter, 0);
   assert.equal(est.clamped, true);
@@ -254,7 +250,7 @@ test('REGRESI lintas-sesi -- full-tank fill BERIKUTNYA adalah ground truth: meni
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-01', km: 1000, liter: 10, cost: 100000, fullTank: true });
   driveTo(state, 1250);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-05', km: 1250, liter: 2, cost: 20000, fullTank: false });
-  driveTo(state, 1750); // confidence sudah decay ke 37 (lihat test di atas)
+  driveTo(state, 1750); // confidence sudah decay ke 40 (lihat test di atas)
 
   // User isi FULL TANK lagi -- reset total.
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-10', km: 1750, liter: 10, cost: 100000, fullTank: true });
@@ -265,7 +261,7 @@ test('REGRESI lintas-sesi -- full-tank fill BERIKUTNYA adalah ground truth: meni
   assert.equal(fs.estimatedSource, 'auto-bbm-log-full');
 
   // Estimator berikutnya, TANPA jalan, HARUS balik ke baseline baru (bukan
-  // melanjutkan decay 37 dari sebelumnya).
+  // melanjutkan decay 40 dari sebelumnya).
   const est = ctx.FuelStateEstimator.estimateCurrentLiter('v1');
   assert.equal(est.liter, 10);
   assert.equal(est.decayedConfidenceScore, null);
@@ -275,14 +271,13 @@ test('REGRESI lintas-sesi -- full-tank fill BERIKUTNYA adalah ground truth: meni
 
 test('REGRESI lintas-sesi -- odometer reset (km mundur) TIDAK memicu decay/konsumsi palsu di manapun', () => {
   const { ctx, D, state } = makeWorld();
-  // Baseline dulu (full-tank) -- syncFuelStateFromEstimator (partial fill)
-  // butuh titik acuan yg SUDAH ada, tidak bisa jadi titik acuan pertama.
+  // Baseline dulu (full-tank) -- estimator butuh titik acuan yg SUDAH ada.
   driveTo(state, 4900);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-07-30', km: 4900, liter: 10, cost: 100000, fullTank: true });
   driveTo(state, 5000);
   ctx.recordBbmLog({ vehicleId: 'v1', date: '2026-08-01', km: 5000, liter: 8, cost: 80000, fullTank: false });
   const fsAfterSync = D.vehicles[0].fuelState;
-  assert.equal(fsAfterSync.referenceKm, 5000);
+  assert.equal(fsAfterSync.referenceKm, 4900); // parsial tidak menggeser baseline (S2434)
 
   driveTo(state, 100); // odometer "mundur" (reset/ganti unit/salah input)
   const est = ctx.FuelStateEstimator.estimateCurrentLiter('v1');

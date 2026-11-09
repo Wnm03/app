@@ -26,6 +26,7 @@ function extractFunction(text,name){
 // --- BBM JSON import: run the real block ---
 const bbmBlock=sliceBetween(src,"if(Array.isArray(parsed.bbmLogs)){","if(Array.isArray(parsed.servisLogs)){");
 const fpFn=extractFunction(src,'_contentImportFingerprint');
+const bbmKeyFn=extractFunction(src,'_bbmImportKey');
 function runBbmImport(existing,incoming,vehId){
   let gen=0;
   const sandbox={
@@ -33,7 +34,7 @@ function runBbmImport(existing,incoming,vehId){
     importedBbmCandidates:[],uid:()=>`new-${++gen}`,skipCount:0,bbmCount:0,console
   };
   vm.createContext(sandbox);
-  vm.runInContext(fpFn+'\n'+bbmBlock,sandbox);
+  vm.runInContext(fpFn+'\n'+bbmKeyFn+'\n'+bbmBlock,sandbox);
   return {bbm:sandbox.D.bbmLogs,skipCount:sandbox.skipCount,bbmCount:sandbox.bbmCount};
 }
 
