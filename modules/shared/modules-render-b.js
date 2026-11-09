@@ -388,7 +388,7 @@ const txRenderCtx={
   accounts:(typeof _getPerfAccountIndex==='function'?_getPerfAccountIndex():new Map((D.accounts||[]).map(a=>[a.id,a])))
 };
 const allTxEmpty=`<div class="empty"><div class="empty-icon">💸</div><div class="empty-text">${hasFilter?'Tidak ada transaksi yang cocok dengan filter':'Belum ada transaksi di periode ini'}</div></div>`;
-if(D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function'){
+if((D.profile&&D.profile.theme==='modern'&&typeof txTableHTML==='function')||(typeof kwWideTxTable==='function'&&kwWideTxTable()&&typeof txTableHTML==='function')){
 const singleAccId=(kf.acc&&kf.acc!=='semua')?kf.acc:null;
 allTxEl.innerHTML=visible.length?txTableHTML(visible,singleAccId,txRenderCtx):allTxEmpty;
 }else{

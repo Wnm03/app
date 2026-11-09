@@ -203,8 +203,15 @@ if(msg)msg.textContent='🔒 Terlalu banyak PIN salah. Coba lagi dalam '+_format
 tick();
 _pinLockTimer=setInterval(tick,1000);
 }
+// S2770 (Fase 5C): umpan balik visual PIN salah (titik merah + getar singkat + pesan inline); getar mati otomatis oleh prefers-reduced-motion.
+function _pinWrongFeedback(fails){
+const dots=document.querySelector('#pinScreen .pin-dots');const msg=document.getElementById('pinLockMsg');
+if(msg)msg.textContent='PIN salah ('+fails+'/'+PIN_MAX_ATTEMPTS+')';
+if(dots){dots.classList.remove('pin-error');void dots.offsetWidth;dots.classList.add('pin-error');setTimeout(()=>dots.classList.remove('pin-error'),500);}
+}
 function pinPress(k){
 if(_pinLockRemainingMs()>0)return;
+if(pinBuffer.length===0){const m=document.getElementById('pinLockMsg');if(m)m.textContent='';}
 if(pinBuffer.length>=4)return;pinBuffer+=k;updatePinDots();if(pinBuffer.length===4)setTimeout(checkPin,120);
 }
 function pinBack(){if(_pinLockRemainingMs()>0)return;pinBuffer=pinBuffer.slice(0,-1);updatePinDots();}
@@ -246,6 +253,7 @@ updatePinLockUI();
 localStorage.setItem('kw_pin_fails',String(fails));
 _invalidatePinLockStateCache();
 toast('❌ PIN salah ('+fails+'/'+PIN_MAX_ATTEMPTS+' sebelum terkunci sementara)');
+_pinWrongFeedback(fails);
 }
 }
 }

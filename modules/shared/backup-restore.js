@@ -140,7 +140,7 @@ return false;
 }
 D.lastBackup=new Date().toISOString();
 const _lastBackupEl=document.getElementById('lastBackup');if(_lastBackupEl)_lastBackupEl.textContent=new Date().toLocaleDateString('id-ID');
-const _backupBadgeEl=document.getElementById('backupBadge');if(_backupBadgeEl)_backupBadgeEl.textContent='💾 Backup';
+const _backupBadgeEl=document.getElementById('backupBadge');if(_backupBadgeEl)_backupBadgeEl.innerHTML='<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-backup"/></svg> Backup';
 document.getElementById('backupBanner')?.classList.add('hidden');
 if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'local',status:'success',done:['File lokal (JSON)']});
 save();
@@ -227,7 +227,7 @@ save();
 _saveGuards['fullBackup']=false;
 if(btn){
 _scanBtnIdle(btn);
-btn.textContent=done.includes('File lokal (JSON)')?'💾 Backup':(btnOriginal||'⚠️ Backup');
+btn.innerHTML=done.includes('File lokal (JSON)')?'<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-backup"/></svg> Backup':(btnOriginal||'<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> Backup');
 }
 }
 }
@@ -464,7 +464,7 @@ if(!_downloadBackupBlob(blob,'backup-W-'+dateTag+'.csv')){toast('❌ Browser tid
 }
 D.lastBackup=new Date().toISOString();
 const lb=document.getElementById('lastBackup');if(lb)lb.textContent=new Date().toLocaleDateString('id-ID');
-document.getElementById('backupBadge').textContent='💾 Backup';
+document.getElementById('backupBadge').innerHTML='<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-backup"/></svg> Backup';
 document.getElementById('backupBanner')?.classList.add('hidden');
 if(typeof BackupHistoryAPI!=='undefined')BackupHistoryAPI.recordEntry({type:'custom',status:'success',done:['Backup custom ('+format+')']});
 save();
@@ -967,9 +967,9 @@ toast('📦 Backup otomatis dijalankan (sudah lewat 7 hari)',4000);
 },900);
 }
 function checkBackup(){
-if(!D.lastBackup){document.getElementById('backupBanner')?.classList.remove('hidden');document.getElementById('backupBadge').textContent='⚠️ Backup';_autoBackupIfOverdue();return;}
+if(!D.lastBackup){document.getElementById('backupBanner')?.classList.remove('hidden');document.getElementById('backupBadge').innerHTML='<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> Backup';_autoBackupIfOverdue();return;}
 const days=Math.floor((new Date()-new Date(D.lastBackup))/(1000*60*60*24));
-if(days>=7){document.getElementById('backupBanner')?.classList.remove('hidden');const lbd=document.getElementById('lastBackupDate');if(lbd)lbd.textContent=new Date(D.lastBackup).toLocaleDateString('id-ID');document.getElementById('backupBadge').textContent='⚠️ Backup';_autoBackupIfOverdue();}
+if(days>=7){document.getElementById('backupBanner')?.classList.remove('hidden');const lbd=document.getElementById('lastBackupDate');if(lbd)lbd.textContent=new Date(D.lastBackup).toLocaleDateString('id-ID');document.getElementById('backupBadge').innerHTML='<svg class="ico" aria-hidden="true" focusable="false"><use href="#i-alert"/></svg> Backup';_autoBackupIfOverdue();}
 if(D.lastBackup)document.getElementById('lastBackup').textContent=new Date(D.lastBackup).toLocaleDateString('id-ID');
 }
 function setImportType(type,el){
@@ -1245,6 +1245,7 @@ const idxJumlah=header.findIndex(h=>/jumlah|amount|total|biaya|harga|cost/.test(
 const idxLiter=header.findIndex(h=>/liter|litre/.test(h));
 const idxKm=header.findIndex(h=>/^km$|odometer/.test(h));
 const idxVeh=header.findIndex(h=>/kendaraan|vehicle|^motor$|^mobil$/.test(h));
+const idxFullTank=header.findIndex(h=>/full\s*tank|isi\s*penuh|tangki\s*penuh/.test(h));
 vehColDetected=idxVeh>=0;
 for(let i=1;i<lines.length;i++){
 const cols=splitCSVLine(lines[i]);
@@ -1265,7 +1266,10 @@ if(!date||isNaN(new Date(date).getTime())){skipCount++;continue;}
 const isBbm=jenis?/bbm/.test(jenis):(liter>0||/bbm|bensin|pertalite|pertamax|dexlite|biosolar|solar|\bfuel\b|spbu|isi.*bensin/.test(ketLower));
 const isServis=jenis?/servis/.test(jenis):/servis|oli|ban|sparepart|ganti|tune|cvt|kampas|aki|busi/.test(ketLower);
 if(isBbm){
-const importedBbm={id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:true,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null};
+// S2434 B5: JANGAN menganggap semua baris isi penuh. Kolom eksplisit -> hanya nilai 1/true/yes/ya/full/penuh;
+// tanpa kolom -> teks baris harus memuat frasa eksplisit; selain itu diimpor sebagai parsial.
+const fullTankCsv=idxFullTank>=0?/^(1|true|yes|ya|y|full|penuh)$/.test(String(cols[idxFullTank]==null?'':cols[idxFullTank]).trim().toLowerCase()):/full\s*tank|isi\s*penuh|tangki\s*penuh/.test(String(lines[i]).toLowerCase());
+const importedBbm={id:uid(),vehicleId:rowVehId,date,km:km||null,liter,harga:liter?Math.round(amount/liter):0,cost:amount,spbu:ket,fullTank:fullTankCsv,note:'Import: '+ket,accountId:D.accounts[0]?.id,txLinkId:null};
 const bbmFp=_contentImportFingerprint(importedBbm);
 const bbmKey=_bbmImportKey(importedBbm);
 if((bbmFp&&((D.bbmLogs||[]).some(b=>_contentImportFingerprint(b)===bbmFp)||importedBbmCandidates.some(b=>_contentImportFingerprint(b)===bbmFp)))||(bbmKey&&((D.bbmLogs||[]).some(b=>_bbmImportKey(b)===bbmKey)||importedBbmCandidates.some(b=>_bbmImportKey(b)===bbmKey)))){skipCount++;continue;}
@@ -1294,8 +1298,8 @@ const _p24BbmValidation=validateBbmOdometerImportIntegrity(importedBbmCandidates
 if(!_p24BbmValidation.ok){D.bbmLogs=JSON.parse(_v26ImportSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v26ImportSnapshot.servisLogs);throw new Error('Import BBM ditolak karena integritas odometer: '+_p24BbmValidation.invalid.map(x=>x.message||x.code).join('; '));}
 const _p23CsvValidation=validateServiceOdometerImportIntegrity(importedServiceCandidates);
 if(!_p23CsvValidation.ok){D.bbmLogs=JSON.parse(_v34CsvDomainSnapshot.bbmLogs);D.servisLogs=JSON.parse(_v34CsvDomainSnapshot.servisLogs);throw new Error('Import CSV servis ditolak karena integritas odometer: '+_p23CsvValidation.invalid.map(x=>x.message||x.code).join('; '));}
-const importedVehicleIds=[...new Set(importedBbmCandidates.map(b=>String(b.vehicleId||'')).filter(Boolean))];
-if(typeof reconcileFuelStateAfterBbmMutation==='function')importedVehicleIds.forEach(id=>reconcileFuelStateAfterBbmMutation(id));
+const importedBbmVehicleIds=[...new Set(importedBbmCandidates.map(b=>String(b.vehicleId||'')).filter(Boolean))];
+if(typeof reconcileFuelStateFromLogs==='function')importedBbmVehicleIds.forEach(id=>reconcileFuelStateFromLogs(id));
 save();
 if(typeof renderCnTab==='function')renderCnTab();
 const vehName=(D.vehicles.find(v=>v.id===vehId)||{}).name||'kendaraan terpilih';

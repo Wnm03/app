@@ -555,6 +555,65 @@
       // Move period chips into the BBM Ringkasan sub-tab, and into Servis when Servis is active.
       const periodWrap=byId('cnPeriodeWrap'),bbmTab=byId('cnTab-bbm'),servisTab=byId('cnTab-servis'),bbmSummary=byId('cnbTab-ringkasan');
       if(periodWrap&&bbmTab&&servisTab&&bbmSummary){const movePeriodWrap=function(){if(!bbmTab.classList.contains('u-dnone')){if(periodWrap.parentElement!==bbmSummary)bbmSummary.insertBefore(periodWrap,bbmSummary.firstChild);}else if(!servisTab.classList.contains('u-dnone')){const head=servisTab.querySelector('.pwa-workspace-head');const target=head&&head.parentNode;if(target&&periodWrap.parentElement!==target){head.insertAdjacentElement('afterend',periodWrap);}}};movePeriodWrap();if(typeof MutationObserver==='function'){new MutationObserver(movePeriodWrap).observe(bbmTab,{attributes:true,attributeFilter:['class']});new MutationObserver(movePeriodWrap).observe(servisTab,{attributes:true,attributeFilter:['class']});}}
+      // S2765 (Fase 3C, Rencana §A#2) — periode BBM/Servis: baris chip (tingkat 3) jadi satu dropdown di dalam konten,
+      // sehingga Mobil maksimal 2 baris tab (tab utama + sub-tab). Chip asli tetap di DOM (disembunyikan) dan tetap
+      // menjadi sumber kebenaran: dropdown hanya meneruskan klik ke chip, jadi setCnPeriode()/cnPeriodeByTab tidak berubah.
+      (function(){
+        const chips=byId('cnPeriodeChips');
+        if(!chips||byId('cnPeriodeSelect')||typeof document.createElement!=='function')return;
+        const btns=Array.prototype.slice.call(chips.querySelectorAll('.chip-btn'));
+        if(!btns.length||!chips.parentNode)return;
+        const sel=document.createElement('select');
+        sel.id='cnPeriodeSelect';sel.className='fs cn-periode-select';sel.setAttribute('aria-label','Periode');
+        btns.forEach(function(b,i){const o=document.createElement('option');o.value=String(i);o.textContent='Periode: '+String(b.textContent||'').trim();sel.appendChild(o);});
+        const sync=function(){const i=btns.findIndex(function(b){return b.classList.contains('active');});if(i>=0&&sel.value!==String(i))sel.value=String(i);};
+        sel.addEventListener('change',function(){const b=btns[Number(sel.value)];if(b)b.click();});
+        chips.parentNode.insertBefore(sel,chips);
+        chips.classList.add('cn-periode-chips-folded');
+        sync();
+        if(typeof MutationObserver==='function'){const mo=new MutationObserver(sync);btns.forEach(function(b){mo.observe(b,{attributes:true,attributeFilter:['class']});});}
+      })();
+      // S2772 (Fase 3D, Rencana §A#2) — Keuangan maks. 2 baris tab: chip periode Kelola > Transaksi (#txListPeriodeChips) dan
+      // Laporan (#periodeChips) jadi satu dropdown "Periode" di dalam konten (pola sama dgn Fase 3C). Chip asli tetap di DOM
+      // (disembunyikan) dan tetap menjadi sumber kebenaran: dropdown hanya meneruskan klik ke chip, jadi setTxListPeriode()/
+      // setPeriode()/qsLaporanBulanIni() dan status aktif chip tidak berubah. Opsi "Custom" tetap memunculkan rentang tanggal.
+      (function(){
+        const fold=function(chipsId,selId){
+          const chips=byId(chipsId);
+          if(!chips||byId(selId)||typeof document.createElement!=='function')return;
+          const btns=Array.prototype.slice.call(chips.querySelectorAll('.chip-btn'));
+          if(!btns.length||!chips.parentNode)return;
+          const sel=document.createElement('select');
+          sel.id=selId;sel.className='fs kw-periode-select';sel.setAttribute('aria-label','Periode');
+          btns.forEach(function(b,i){const o=document.createElement('option');o.value=String(i);o.textContent='Periode: '+String(b.textContent||'').trim();sel.appendChild(o);});
+          const sync=function(){const i=btns.findIndex(function(b){return b.classList.contains('active');});if(i>=0&&sel.value!==String(i))sel.value=String(i);};
+          sel.addEventListener('change',function(){const b=btns[Number(sel.value)];if(b)b.click();});
+          chips.parentNode.insertBefore(sel,chips);
+          chips.classList.add('kw-chips-folded');
+          sync();
+          if(typeof MutationObserver==='function'){const mo=new MutationObserver(sync);btns.forEach(function(b){mo.observe(b,{attributes:true,attributeFilter:['class']});});}
+        };
+        fold('txListPeriodeChips','txListPeriodeSelect');
+        fold('periodeChips','laporanPeriodeSelect');
+      })();
+      // S2765 (Fase 3C, Rencana §A#8) — satu pintu pencarian: "/" dan Ctrl/⌘+K membuka pencarian yang sama dengan ikon header.
+      // Tidak aktif saat mengetik di input/textarea/select/contenteditable atau saat modal lain terbuka.
+      (function(){
+        if(window.__kwSearchShortcut||typeof document.addEventListener!=='function')return;
+        window.__kwSearchShortcut=true;
+        document.addEventListener('keydown',function(e){
+          if(e.defaultPrevented||e.altKey)return;
+          const k=String(e.key||'').toLowerCase();
+          const combo=(k==='k'&&(e.ctrlKey||e.metaKey))||(k==='/'&&!e.ctrlKey&&!e.metaKey);
+          if(!combo)return;
+          const t=e.target,tag=t&&t.tagName?String(t.tagName).toLowerCase():'';
+          if(k==='/'&&(tag==='input'||tag==='textarea'||tag==='select'||(t&&t.isContentEditable)))return;
+          if(document.querySelector('.modal-overlay.open,.modal.open,.overlay.open'))return;
+          if(typeof openGlobalSearch!=='function')return;
+          e.preventDefault();openGlobalSearch();
+        });
+      })();
+
       // S2652 — Keuangan (Laporan, Akun, Utang & Piutang, Aset): tampilan ringkas. Presentasi saja: hanya mengubah teks/kelas/pembungkus, id & data-action tetap.
       (function(){
         const KEU_TITLES={findashWrap:'Dasbor Keuangan',forecastWrap:'Perkiraan Keuangan',budgetRecoWrap:'Saran Anggaran',cashflowProjWrap:'Proyeksi Arus Kas',financialGoalWrap:'Target Keuangan',investPlannerWrap:'Rencana Investasi',debtOptimizerWrap:'Strategi Pelunasan Utang',retirementPlannerWrap:'Rencana Pensiun',financialHealthScoreWrap:'Skor Kesehatan Keuangan',financialRiskDashboardWrap:'Risiko Keuangan'};
