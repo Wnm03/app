@@ -268,11 +268,18 @@ _isValidNumber(n) {
 // kosong (bukan error) — estimasi tetap jalan, cuma tanpa akumulasi
 // partial fill (sama seperti kalau memang tidak ada log parsial sama
 // sekali).
-_partialFillsSince(vehicleId, referenceKm) {
+// S2434 (B3): bila `ref` (fuelState titik acuan) membawa `appliedBbmIds`, log parsial
+// dengan km >= referenceKm tetap dihitung KECUALI id-nya sudah termasuk baseline —
+// sehingga beberapa parsial pada KM yang sama masing-masing terhitung tepat satu kali.
+// Tanpa appliedBbmIds (fuelState lama / pemanggil lama) berlaku aturan lama: km > referenceKm
+// (parsial pada KM acuan dianggap sudah "dibekukan" ke baseline).
+_partialFillsSince(vehicleId, referenceKm, ref) {
   if (typeof FuelStorage === 'undefined') return [];
   const source = (typeof getFuelCanonicalLogs === 'function') ? getFuelCanonicalLogs(vehicleId).canonical : FuelStorage.logs(vehicleId);
+  const applied = (ref && Array.isArray(ref.appliedBbmIds)) ? new Set(ref.appliedBbmIds.map(String)) : null;
   return source.filter((log) => (
-    !log.fullTank && this._isValidNumber(log.km) && log.km > referenceKm
+    !log.fullTank && this._isValidNumber(log.km)
+    && (applied ? (log.km >= referenceKm && !applied.has(String(log.id))) : log.km > referenceKm)
     && this._isValidNumber(log.liter) && log.liter > 0
   ));
 },
@@ -356,7 +363,7 @@ estimateCurrentLiter(vehicleId) {
   const odometerAgeDays = kmEvidence ? Math.max(0, Math.floor((Date.now() - kmEvidence.timestamp) / 86400000)) : null;
   const odometerStale = odometerAgeDays !== null && odometerAgeDays > this.MAX_ODOMETER_AGE_DAYS;
 
-  const partials = referenceKm !== null ? this._partialFillsSince(vehicleId, referenceKm) : [];
+  const partials = referenceKm !== null ? this._partialFillsSince(vehicleId, referenceKm, ref) : [];
   const addedLiter = partials.reduce((sum, log) => sum + log.liter, 0);
 
   let kmPerLiter = null;
