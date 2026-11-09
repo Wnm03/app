@@ -789,6 +789,60 @@ toggleKategoriDetail(id){
 this.expandedKatId=(this.expandedKatId===id)?null:id;
 this.renderKategoriList();
 },
+// S2774 (Fase 4B lanjutan, Rencana §D Fase 4: "Tabel padat untuk riwayat transaksi/produk di >=1024px") — tabel produk Etalase di layar
+// lebar, SEMUA tema. Hanya presentasi: angka diambil dari sumber yang sama dgn kartu (PricingService/InventoryService/ProductStore,
+// rumus markup tidak diubah); aksi edit/duplikat/hapus/lepas-grup memakai data-action yang sama. <1024px tetap kartu (renderList).
+productTableRowHTML(p,i){
+const idx=escapeHtml(JSON.stringify([i]));
+try{
+const hargaJualDisp=(typeof PricingService!=='undefined')?PricingService.getRetail(p):p.hargaJual;
+const hargaBeliDisp=(typeof PricingService!=='undefined')?PricingService.getCost(p):p.hargaBeli;
+const hargaResellerDisp=(typeof PricingService!=='undefined')?PricingService.getReseller(p):p.hargaReseller;
+const margin=p.hargaJual-p.hargaBeli;
+const marginPct=p.hargaBeli>0?Math.round((margin/p.hargaBeli)*100):0;
+const stockStatus=(typeof InventoryService!=='undefined')?InventoryService.stockStatus(p):null;
+const stockCls=stockStatus?stockStatus.cls:(p.stock<=2?'low':(p.stock<=5?'mid':'ok'));
+const stockAvailability=(typeof InventoryEngine!=='undefined'&&InventoryEngine.stockAvailabilityStatus)?InventoryEngine.stockAvailabilityStatus(p):({status:(Number.isFinite(Number(p&&p.stock))&&Number(p.stock)>0)?'available':'out',label:'Habis'});
+const stockOut=stockAvailability.status==='out';
+const stockLbl=stockOut?'Habis':(stockStatus?stockStatus.label:(p.stock<=2?'Menipis':(p.stock<=5?'Terbatas':'Aman')));
+const katObj=(typeof ProductStore!=='undefined')?ProductStore.getCategory(p):null;
+const kat=katObj?katObj.name:shopKategoriName(p.kategoriId);
+const prodObj=(typeof ProductStore!=='undefined')?ProductStore.getSupplier(p):null;
+const prod=prodObj?prodObj.name:(p.produsenId?(D.produsen.find(pr=>pr.id===p.produsenId)||{}).name:'');
+const hasDiskon=p.diskonPersen>0;
+const finalHarga=hasDiskon?Math.round(p.hargaJual*(1-p.diskonPersen/100)):p.hargaJual;
+const priceBlock=hasDiskon
+?`<div class="shop-price-strike">${fmt(hargaJualDisp)}</div><div class="shop-price-final discounted">${fmt(finalHarga)}<span class="shop-diskon-badge">-${p.diskonPersen}%</span></div>`
+:`<div class="shop-price-final">${fmt(hargaJualDisp)}</div>`;
+const groupCount=p.priceGroupId?this.groupSiblings(p).length+1:0;
+const groupTag=groupCount?`<span class="shop-tag" style="color:var(--accent);font-weight:700">🔗 Gabungan (${groupCount} produk)</span>`:'';
+const ownershipTag=!isProductOwnershipSelf(p)?'<span class="shop-tag" title="Produk bukan milik sendiri">👥 Non-SELF</span>':'';
+const beratPU=(typeof ProductStore!=='undefined')?ProductStore.getWeight(p):p.beratPerUnit;
+const usedInLogistics=!beratPU&&(
+(D.inventoryTransfers||[]).some(t=>(t.items||[]).some(it=>it.productId===p.id))
+||(D.deliveryPlans||[]).some(dp=>(dp.items||[]).some(it=>it.productId===p.id))
+);
+const weightMissingTag=usedInLogistics?'<span class="shop-tag" style="color:var(--warning,#c77700);font-weight:700">⚠️ Berat belum diisi</span>':'';
+const tags=`${kat?`<span class="shop-tag cat">🏷️ ${escapeHtml(kat)}</span>`:''}${prod?`<span class="shop-tag">🏭 ${escapeHtml(prod)}</span>`:''}${groupTag}${weightMissingTag}${ownershipTag}`;
+return`<tr class="tx-tbl-row u-pointer shop-ptbl-row stock-${stockCls}" data-action="openProductModal" data-args="${idx}">
+<td class="tx-tbl-desc"><div class="tx-name">${escapeHtml(p.name)}</div><div class="tx-meta shop-product-tags">${tags}</div></td>
+<td class="num"><span class="shop-stock-pill ${stockCls}">${stockOut?'Habis':`${p.stock} pcs · ${stockLbl}`}</span></td>
+<td class="num">${priceBlock}<div class="shop-price-sub">Modal ${fmt(hargaBeliDisp)}${p.hargaReseller?' · Reseller '+fmt(hargaResellerDisp):''}</div></td>
+<td class="num"><span class="shop-margin-badge" title="Markup terhadap harga beli">+${fmt(margin)} · ${marginPct}%</span></td>
+<td class="tx-tbl-del"><div class="shop-product-actions shop-ptbl-actions">
+${p.priceGroupId?`<button data-stop="1" data-action="Etalase.unlinkFromGroup" data-args="${idx}" aria-label="Lepas dari grup harga" title="Lepas dari grup harga gabungan">🔓</button>`:''}
+<button data-stop="1" data-action="openProductModal" data-args="${idx}" aria-label="Edit/Buka">✏️</button>
+${(typeof ProductRepository!=='undefined')?`<button data-stop="1" data-action="Etalase.duplicateProduct" data-args="${idx}" aria-label="Duplikat produk" title="Duplikat produk (stok 0)">📋</button>`:''}
+<button data-stop="1" data-action="delProduct" data-args="${idx}" aria-label="Hapus">🗑</button>
+</div></td></tr>`;
+}catch(err){
+if(typeof console!=='undefined'&&console.error)console.error('[Etalase.productTableRowHTML] gagal render produk',p&&p.id,err);
+return`<tr class="tx-tbl-row shop-ptbl-row"><td class="tx-tbl-desc" colspan="4"><div class="tx-name">${escapeHtml(p&&p.name||'(tanpa nama)')} <span class="u-fs10 u-r6 u-ml4" style="border:1px solid var(--accent4);color:var(--accent4);padding:1px 5px" title="Gagal menampilkan produk ini — tap Edit untuk cek datanya">⚠️</span></div></td><td class="tx-tbl-del"><div class="shop-product-actions shop-ptbl-actions"><button data-stop="1" data-action="openProductModal" data-args="${idx}" aria-label="Edit/Buka">✏️</button><button data-stop="1" data-action="delProduct" data-args="${idx}" aria-label="Hapus">🗑</button></div></td></tr>`;
+}
+},
+productTableHTML(entries){
+return`<div class="tx-tbl-wrap shop-ptbl-wrap"><table class="tx-tbl shop-ptbl"><thead><tr><th>Produk</th><th class="num">Stok</th><th class="num">Harga Jual</th><th class="num">Markup</th><th aria-label="Aksi"></th></tr></thead><tbody>${entries.map(({p,i})=>this.productTableRowHTML(p,i)).join('')}</tbody></table></div>`;
+},
 renderList(){
 if(typeof ShopInsight!=='undefined')ShopInsight.render();
 const el=document.getElementById('productList');
@@ -802,6 +856,8 @@ if(f.sort&&f.sort!=='saved'){const cmpName=(a,b)=>String(a.p&&a.p.name||'').trim
 this.renderFilterToolbar(D.products.length,entries.length);
 if(typeof Preorder!=='undefined'&&Preorder.render)Preorder.render();
 if(!entries.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔎</div><div class="empty-text">Tidak ada produk yang cocok dengan filter.</div></div>';return;}
+// S2774: >=1024px semua tema = tabel padat; jalur kartu di bawah tidak diubah.
+if(typeof kwWideTxTable==='function'&&kwWideTxTable()){el.innerHTML=this.productTableHTML(entries);return;}
 el.innerHTML=entries.map(({p,i})=>{
 // BUGFIX (audit pola sama S601 "0 reaksi"): baris ini panggil beberapa service
 // eksternal (PricingService/InventoryService/ProductStore) per-produk TANPA
