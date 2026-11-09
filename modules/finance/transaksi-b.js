@@ -140,6 +140,42 @@ if(!ok)return;
 const editingId=txEditId;
 const existingTx=editingId?D.transactions.find(t=>t.id===editingId):null;
 const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===existingTx.billLinkId):null;
+// S2777: validasi tautan Servis/Belanja Part SEBELUM mutasi apa pun -- simpan dibatalkan utuh
+// (bukan separuh: stok masuk tapi servis hilang diam-diam). Pesan menunjuk jalan keluar "belanja saja".
+if(typeof validateTxServisBeforeSave==='function'){
+const _svcMsg=validateTxServisBeforeSave(date,existingTx);
+if(_svcMsg){toast('⚠️ '+_svcMsg+' — atau matikan centang Servis untuk simpan belanja part saja.',4500);return;}
+}
+if(typeof validateTxStockBeforeSave==='function'){
+const _stkMsg=validateTxStockBeforeSave(existingTx);
+if(_stkMsg){toast('⚠️ '+_stkMsg,4500);return;}
+}
+// S2779 (Pola A/B): BBM & Renovasi hanya diproses di jalur simpan generik (tunai, bukan pembayaran tagihan).
+const _txGenericLinkPath=curPayMethod==='tunai'&&!existingBill;
+if(_txGenericLinkPath&&typeof validateTxBbmBeforeSave==='function'){
+const _bbmMsg=validateTxBbmBeforeSave();
+if(_bbmMsg){toast('⚠️ '+_bbmMsg,4500);return;}
+}
+if(_txGenericLinkPath){
+// S2780: pembatalan tautan Shop ditolak SEBELUM mutasi bila stok sudah terjual / piutang sudah lunas.
+const _shopUnlinkMsg=(typeof validateTxShopStockUnlink==='function'&&validateTxShopStockUnlink(existingTx))||(typeof validateTxShopSaleUnlink==='function'&&validateTxShopSaleUnlink(existingTx))||null;
+if(_shopUnlinkMsg){toast('⚠️ '+_shopUnlinkMsg,5000);return;}
+}
+const _txShopStockUnlink=_txGenericLinkPath&&typeof txShopStockUnlinkRequested==='function'&&txShopStockUnlinkRequested(existingTx);
+const _txShopSaleUnlink=_txGenericLinkPath&&typeof txShopSaleUnlinkRequested==='function'&&txShopSaleUnlinkRequested(existingTx);
+const _txBbmUnlink=_txGenericLinkPath&&typeof txBbmUnlinkRequested==='function'&&txBbmUnlinkRequested(existingTx);
+const _txRenovUnlink=_txGenericLinkPath&&typeof txRenovUnlinkRequested==='function'&&txRenovUnlinkRequested(existingTx);
+// S2778 (O-1/O-2): mematikan centang pada transaksi yang sudah tertaut = melepas tautan -> minta konfirmasi.
+{
+const _undo=[];
+if(typeof txServisUnlinkRequested==='function'&&txServisUnlinkRequested(existingTx))_undo.push('Catatan Servis tertaut akan dihapus dari Riwayat Servis');
+if(typeof txStockUnlinkRequested==='function'&&txStockUnlinkRequested(existingTx))_undo.push('Penambahan stok part akan dibatalkan (stok dikurangi kembali)');
+if(_txBbmUnlink)_undo.push('Catatan BBM tertaut akan dihapus dari Catatan Mobil');
+if(_txRenovUnlink)_undo.push('Item Renovasi tertaut tidak lagi lunas (kembali ke daftar belanja proyek)');
+if(_txShopStockUnlink)_undo.push('Penambahan stok produk Shop akan dibatalkan (stok dikurangi kembali)');
+if(_txShopSaleUnlink)_undo.push('Penjualan Shop tertaut akan dihapus (stok dikembalikan, piutang sisa ikut dihapus)');
+if(_undo.length&&!await askConfirm('Centang dimatikan pada transaksi yang sudah tertaut:\n• '+_undo.join('\n• ')+'\n\nLanjutkan?',{okText:'Ya, lepas tautan'}))return;
+}
 // S629 (Bug B, audit s628 AUDIT-s628-bugB-atomicity-transaksi.md, Strategi A):
 // snapshot+rollback SELURUH D utk jalur CREATE generik (existingTx null,
 // curPayMethod 'tunai'), pola sama persis dgn applyRestoredData()
@@ -152,7 +188,10 @@ const existingBill=existingTx&&existingTx.billLinkId?D.bills.find(b=>b.id===exis
 let _txCreateSnapshot=null;
 let _txAtomicMutationStarted=false;
 let _serviceCommitMeta=null;
-const _serviceEditSnapshot={servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null};
+let _txUnlinkNote='';
+if(_txShopStockUnlink)_txUnlinkNote+='stok Shop dibatalkan';
+if(_txShopSaleUnlink)_txUnlinkNote+=(_txUnlinkNote?'; ':'')+'penjualan Shop dilepas';
+const _serviceEditSnapshot={bbmLogs:_txBbmUnlink&&Array.isArray(D.bbmLogs)?JSON.stringify(D.bbmLogs):null,renovProjects:_txRenovUnlink&&Array.isArray(D.renovProjects)?JSON.stringify(D.renovProjects):null,bbmVehicleId:_txBbmUnlink?((D.bbmLogs||[]).find(b=>b&&existingTx&&b.id===existingTx.bbmLinkId)||{}).vehicleId:null,servisLogs:Array.isArray(D.servisLogs)?JSON.stringify(D.servisLogs):null,transactions:Array.isArray(D.transactions)?JSON.stringify(D.transactions):null,partsStock:Array.isArray(D.partsStock)?JSON.stringify(D.partsStock):null,sparepartCats:Array.isArray(D.sparepartCats)?JSON.stringify(D.sparepartCats):null};
 try{
 if(existingTx&&(existingTx.stockProductId||(existingTx.stockItems&&existingTx.stockItems.length))){
 const stillChecked=document.getElementById('txAddShopStock')&&document.getElementById('txAddShopStock').checked;
@@ -491,6 +530,10 @@ if(txAssetIdVal)existingTx.assetId=txAssetIdVal;else delete existingTx.assetId;
 // S13 SERVICE-EVENT-LIFECYCLE: if an auto-linked service transaction is edited
 // out of the service domain, remove the service event instead of leaving a ghost
 // history/reminder. Manual Service edits remain the SoT and are not touched here.
+if(typeof txServisUnlinkRequested==='function'&&txServisUnlinkRequested(existingTx)&&typeof unlinkTxServisFromTx==='function')unlinkTxServisFromTx(existingTx);
+// S2779 (Pola B): lepas BBM/Renovasi SEBELUM sinkron dasar di bawah (bbmLinkId/renovItemLinkId yang masih ada akan men-sync ulang).
+if(_txBbmUnlink&&typeof unlinkTxBbmFromTx==='function'){unlinkTxBbmFromTx(existingTx);_txUnlinkNote+=(_txUnlinkNote?'; ':'')+'catatan BBM dilepas';}
+if(_txRenovUnlink&&typeof unlinkTxRenovFromTx==='function'){unlinkTxRenovFromTx(existingTx);_txUnlinkNote+=(_txUnlinkNote?'; ':'')+'item Renovasi dilepas';}
 const _wasServisTx=!!(existingTx&&existingTx.servisLinkId);
 const _isNowServisTx=typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&(typeof isServisSubName==='function'?isServisSubName(subCat||'',cat):/servis\s*&\s*oli|servis|service/i.test(subCat||''));
 // S2728: kategori+sub tidak berubah = BUKAN perpindahan domain (jangan hapus log servis).
@@ -675,19 +718,21 @@ const txAssetSplitMsg='';
 // menimpa (lihat komentar txRenovMsg di atas) -- durasi dipanjangkan jadi
 // 4000ms krn pesan gabungan lebih panjang dari toast biasa (pola sama dgn
 // toast pesan panjang lain, mis. error-handler.js/features-helpers.js).
-toast((existingTx?'✅ Transaksi diperbarui':'✅ Transaksi tersimpan')+txAssetSplitMsg+(txRenovMsg?' — '+txRenovMsg:''),txRenovMsg?4000:2200);
+toast((existingTx?'✅ Transaksi diperbarui':'✅ Transaksi tersimpan')+txAssetSplitMsg+(txRenovMsg?' — '+txRenovMsg:'')+(_txUnlinkNote?' ('+_txUnlinkNote+')':''),(txRenovMsg||_txUnlinkNote)?4000:2200);
 } catch(_txSaveErr){
 // ERROR path: once a Finance side-effect has started, restore the pre-save
 // cross-domain snapshot on both CREATE and EDIT. S2455 extends the old
 // service-only rollback so a failed Sparepart mutation cannot leave a half-
 // edited Finance row (or a reverted old stock purchase) behind.
-const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.servisLinkId));
+const _serviceMutationTouched=!!(_serviceCommitMeta||(existingTx&&existingTx.servisLinkId)||_txBbmUnlink||_txRenovUnlink);
 if(_txAtomicMutationStarted||_serviceMutationTouched){
   try{
     if(_serviceEditSnapshot.servisLogs!==null)D.servisLogs=JSON.parse(_serviceEditSnapshot.servisLogs);
     if(_serviceEditSnapshot.transactions!==null){const _rows=JSON.parse(_serviceEditSnapshot.transactions);if(typeof FinanceTxSOT==='undefined')throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(_rows);}
     if(_serviceEditSnapshot.partsStock!==null){const _stockSnap=JSON.parse(_serviceEditSnapshot.partsStock);if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback snapshot stok transaksi servis');StockCommandSOT.replaceSnapshot(_stockSnap);}
     if(_serviceEditSnapshot.sparepartCats!==null)D.sparepartCats=JSON.parse(_serviceEditSnapshot.sparepartCats);
+    if(_serviceEditSnapshot.bbmLogs!==null){D.bbmLogs=JSON.parse(_serviceEditSnapshot.bbmLogs);if(_serviceEditSnapshot.bbmVehicleId&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(_serviceEditSnapshot.bbmVehicleId);}
+    if(_serviceEditSnapshot.renovProjects!==null)D.renovProjects=JSON.parse(_serviceEditSnapshot.renovProjects);
   }catch(_serviceRollbackErr){console.error('V25: Finance->Service rollback failed',_serviceRollbackErr);}
 }
 if(_txCreateSnapshot){

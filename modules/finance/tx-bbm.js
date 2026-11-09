@@ -343,6 +343,39 @@ if(Number.isFinite(Number(veh.fuelState.referenceKm)))veh.fuelState.appliedBbmId
 // recordBbmLog() gara-gara histori opsional ini.
 if(typeof FuelStateHistory!=='undefined')FuelStateHistory.record(vehicleId,veh.fuelState);
 }
+// S2779 (Pola A): validasi KM & Liter SEBELUM mutasi apa pun di _saveTxInner. Dulu applyTxBbmFromTx()
+// baru menolak SESUDAH transaksi tersimpan, dan toast peringatannya langsung ditimpa toast "Transaksi tersimpan"
+// -> pengeluaran tercatat, log BBM tidak ada, tanpa pemberitahuan. null = boleh lanjut.
+function validateTxBbmBeforeSave(){
+const chk=document.getElementById('txSyncBbm');
+if(!chk||!chk.checked)return null;
+const panel=document.getElementById('txBbmPanel');
+if(!panel||panel.style.display==='none')return null;
+const km=parseFloat((document.getElementById('txBbmKm')||{}).value);
+const liter=parseFloat((document.getElementById('txBbmLiter')||{}).value);
+if(!(km>0)||!(liter>0))return 'Isi KM & Liter BBM dulu, atau hilangkan centang sinkron BBM';
+return null;
+}
+// S2779 (Pola B): centang "Sinkron ke Catatan Mobil" dimatikan pada transaksi yang SUDAH tertaut log BBM
+// = permintaan melepas log BBM. Form edit mencentang ulang panel tertaut, jadi mematikannya pasti disengaja.
+function txBbmUnlinkRequested(existingTx){
+if(!existingTx||!existingTx.bbmLinkId)return false;
+if(!(D.bbmLogs||[]).some(b=>b&&b.id===existingTx.bbmLinkId))return false;
+const chk=document.getElementById('txSyncBbm');
+const panel=document.getElementById('txBbmPanel');
+return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
+}
+// Pola sama dgn cascade delTx() (runTxDeleteCascades): log dihapus, fuelState kendaraan direkonsiliasi dari log tersisa.
+// Transaksi Keuangan TIDAK disentuh (hanya tautannya yang lepas).
+function unlinkTxBbmFromTx(existingTx){
+const log=(D.bbmLogs||[]).find(b=>b&&b.id===existingTx.bbmLinkId);
+if(log){
+D.bbmLogs=D.bbmLogs.filter(b=>b.id!==log.id);
+if(typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(log.vehicleId);
+}
+delete existingTx.bbmLinkId;
+return log||null;
+}
 async function applyTxBbmFromTx(txId,amt,date,accId,note,existingTx){
 const chk=document.getElementById('txSyncBbm');
 if(!chk||!chk.checked)return;

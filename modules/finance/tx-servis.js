@@ -363,6 +363,79 @@ const cat=(document.getElementById('txCat')?.value||'').trim();
 const sub=(document.getElementById('txSubCat')?.value||'').trim();
 return (typeof curTxType==='undefined'||curTxType==='expense')&&typeof isKendaraanCatName==='function'&&isKendaraanCatName(cat)&&(typeof isServisSubName==='function'?isServisSubName(sub,cat):/servis\s*&\s*oli|servis|service/i.test(sub));
 }
+// S2777 — pilihan simpan eksplisit: Belanja saja / Servis saja / Keduanya.
+// Sub-kategori servis dulu MEMAKSA txSyncServis=true (updateTxVehiclePanels dipanggil ulang saat blur &
+// di awal _saveTxInner, applyTxServisFromTx juga memaksa lagi) sehingga user tak bisa menyimpan "belanja
+// saja", dan membuka-lalu-simpan transaksi belanja-saja membuat log servis baru. Sekarang auto-centang
+// hanya DEFAULT: begitu user mematikan centang, pilihannya dihormati sampai konteks (kategori/sub/modal)
+// berganti; edit transaksi yang BELUM tertaut servis tidak lagi dipaksa.
+let _txServisAutoOptOut=false;
+let _txServisAutoCtxKey=null;
+function _txServisResetAutoChoice(){_txServisAutoOptOut=false;_txServisAutoCtxKey=null;}
+function _txServisSyncContext(key){if(_txServisAutoCtxKey!==key){_txServisAutoCtxKey=key;_txServisAutoOptOut=false;}}
+function _txServisAutoActive(){
+if(!_isFinanceServiceTransaction())return false;
+if(_txServisAutoOptOut)return false;
+const editId=(typeof txEditId!=='undefined')?txEditId:null;
+if(editId){const t=(D.transactions||[]).find(x=>x&&x.id===editId);if(!t||!t.servisLinkId)return false;}
+return true;
+}
+if(typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){
+document.addEventListener('change',function(e){
+const el=e&&e.target;
+if(!el||el.id!=='txSyncServis')return;
+if(_isFinanceServiceTransaction())_txServisAutoOptOut=!el.checked;
+});
+}
+// validateTxServisBeforeSave(date,existingTx) -> null (boleh lanjut) | string (pesan, simpan dibatalkan).
+// Dipanggil SEBELUM mutasi apa pun di _saveTxInner supaya stok/transaksi tidak tersimpan separuh
+// ketika Servis diminta tapi datanya tidak valid (dulu applyTxServisFromTx cuma toast+return null,
+// lalu toast sukses menimpa peringatan dan servis hilang diam-diam).
+function validateTxServisBeforeSave(date,existingTx){
+const chk=document.getElementById('txSyncServis');
+const auto=_txServisAutoActive();
+if(!auto&&(!chk||!chk.checked))return null;
+const panel=document.getElementById('txServisPanel');
+if(!panel||panel.style.display==='none')return null;
+const vehicleId=(document.getElementById('txServisVehicle')||{}).value||'';
+if(!vehicleId)return 'Pilih kendaraan dulu untuk Catatan Servis';
+const txVehicleId=existingTx&&existingTx.vehicleId!=null?existingTx.vehicleId:null;
+if(txVehicleId&&String(txVehicleId)!==String(vehicleId))return 'Kendaraan transaksi berbeda dengan kendaraan servis';
+const existingServisId=existingTx&&existingTx.servisLinkId?existingTx.servisLinkId:null;
+const existingServis=existingServisId?(D.servisLogs||[]).find(s=>s&&s.id===existingServisId):null;
+if(existingServis&&existingServis.vehicleId&&String(existingServis.vehicleId)!==String(vehicleId))return 'Catatan Servis sudah dimiliki kendaraan lain';
+if(!auto){
+const item=((document.getElementById('txServisItem')||{}).value||'').trim();
+if(!item)return 'Isi Jenis Servis/Item dulu';
+}
+const kmRaw=((document.getElementById('txServisKm')||{}).value||'').trim();
+const km=kmRaw===''?null:Number(kmRaw);
+if(km!==null&&typeof Servis!=='undefined'&&typeof Servis.validateServiceOdometer==='function'){
+const r=Servis.validateServiceOdometer({vehicleId,km,date,excludeId:existingServisId||null});
+if(!r.ok)return r.message||'KM servis tidak valid';
+}
+return null;
+}
+// S2778 (O-1): centang Servis dimatikan pada transaksi yang SUDAH tertaut servis = permintaan melepas servis.
+function txServisUnlinkRequested(existingTx){
+if(!existingTx||!existingTx.servisLinkId)return false;
+if(!(D.servisLogs||[]).some(x=>x&&x.id===existingTx.servisLinkId))return false;
+const chk=document.getElementById('txSyncServis');
+const panel=document.getElementById('txServisPanel');
+if(!chk||chk.checked||!panel||panel.style.display==='none')return false;
+return !_txServisAutoActive();
+}
+// Pola sama dgn pelepasan "ghost" saat transaksi pindah domain: stok pemakaian dikembalikan, log dihapus,
+// event lifecycle ditunda sampai Finance commit (lihat flush _pendingServiceLifecycleRemove di _saveTxInner).
+function unlinkTxServisFromTx(existingTx){
+const log=(D.servisLogs||[]).find(x=>x&&x.id===existingTx.servisLinkId);
+if(log){
+if(log.usedPartId&&typeof revertStockUsage==='function')revertStockUsage(log.usedPartId,log.usedPartQty);
+D.servisLogs=D.servisLogs.filter(x=>x.id!==log.id);
+existingTx._pendingServiceLifecycleRemove={service:log,options:{reason:'finance-unlink-service',source:'finance'}};
+}
+delete existingTx.servisLinkId;
+}
 function _ensureAutoServisFields(){
 const vehicleEl=document.getElementById('txServisVehicle');
 const itemEl=document.getElementById('txServisItem');
@@ -444,11 +517,11 @@ TxServis.toggleChecklist=function(groupIdx,itemIdx){if(typeof ServisChecklist===
 TxServis.setChecklistAction=function(groupIdx,itemIdx,type){if(typeof ServisChecklist==='undefined')return;ServisChecklist.setActionType(Number(groupIdx),Number(itemIdx),type);renderTxServisChecklist();};
 TxServis.applyReminderPackage=function(packageId){applyTxServisReminderPackage(packageId);};
 TxServis.clearReminderPackage=function(){clearTxServisReminderPackage();};
-TxServis.onVehicleChange=function(){if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages();if(typeof clearTxServisReminderPackage==='function')clearTxServisReminderPackage();};
+TxServis.onVehicleChange=function(){if(typeof populateTxStockSelect==='function')populateTxStockSelect();if(typeof populateTxServisReminderPackages==='function')populateTxServisReminderPackages();if(typeof clearTxServisReminderPackage==='function')clearTxServisReminderPackage();};
 async function applyTxServisFromTx(txId,amt,date,accId,note,tx,existingTx){
 const run=async()=>{
 const chk=document.getElementById('txSyncServis');
-const autoService=_isFinanceServiceTransaction();
+const autoService=_txServisAutoActive();
 if(!autoService&&(!chk||!chk.checked))return null;
 const panel=document.getElementById('txServisPanel');
 if(!panel||panel.style.display==='none')return null;

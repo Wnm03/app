@@ -819,7 +819,7 @@ return byName?byName.id:'';
 // panel muncul kembali, modal dibuka/edit). updateTxVehiclePanels() juga dipanggil saat blur dan di awal
 // _saveTxInner(); tanpa ini pilihan kendaraan manual / hasil restore edit ditimpa kendaraan kategori.
 let _txVehCtxApplied={bbm:null,servis:null};
-function _txResetVehicleContext(){_txVehCtxApplied={bbm:null,servis:null};}
+function _txResetVehicleContext(){_txVehCtxApplied={bbm:null,servis:null};if(typeof _txServisResetAutoChoice==='function')_txServisResetAutoChoice();}
 function _txApplyVehicleContext(panelKey,selId,populateFn){
 const sel=document.getElementById(selId);
 const prev=sel?sel.value:'';
@@ -850,6 +850,7 @@ const showRenov=isExpense&&isRenovCatName(catName);
 // bareng kondisi panel Stok Sparepart (showStock) -- keduanya boleh aktif
 // BERSAMAAN dalam 1 transaksi (mis. beli part sekaligus langsung dipasang),
 // lihat catatan applyTxServisFromTx() di tx-servis.js soal efek stok net.
+if(typeof _txServisSyncContext==='function')_txServisSyncContext((typeof txEditId!=='undefined'&&txEditId?txEditId:'new')+'|'+catName+'|'+subName);
 const showServis=showStock||(typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction());
 // S2728: edit transaksi yg sudah tertaut servis -> panel Servis tetap tampil.
 const showServisPanel=showServis||!!(isExpense&&_editTx&&_editTx.servisLinkId);
@@ -885,7 +886,7 @@ const servisChk=document.getElementById('txSyncServis');
 if(servisChk)servisChk.checked=false;
 if(typeof toggleTxServisFields==='function')toggleTxServisFields();
 }
-if(showServis&&typeof _isFinanceServiceTransaction==='function'&&_isFinanceServiceTransaction()){
+if(showServis&&typeof _txServisAutoActive==='function'&&_txServisAutoActive()){
   const servisChk=document.getElementById('txSyncServis');
   if(servisChk)servisChk.checked=true;
   if(typeof toggleTxServisFields==='function')toggleTxServisFields();

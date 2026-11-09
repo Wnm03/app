@@ -71,6 +71,34 @@ populateTxRenovSelect();
 setTxRenovStatus(_txRenovStatus);
 }
 }
+// S2779 (Pola B): centang "Catat juga ke Proyek Renovasi" dimatikan pada transaksi yang SUDAH tertaut item
+// proyek = permintaan melepas tautan (form edit mencentang ulang panel tertaut, jadi mematikannya disengaja).
+function _txRenovLinkedItem(existingTx){
+if(!existingTx||!existingTx.renovProjectLinkId||!existingTx.renovItemLinkId||!Array.isArray(D.renovProjects))return null;
+const p=D.renovProjects.find(x=>sameId(x.id,existingTx.renovProjectLinkId));
+const it=p&&Array.isArray(p.items)?p.items.find(x=>sameId(x.id,existingTx.renovItemLinkId)):null;
+return it?{project:p,item:it}:null;
+}
+function txRenovUnlinkRequested(existingTx){
+if(!_txRenovLinkedItem(existingTx))return false;
+const chk=document.getElementById('txAddRenov');
+const panel=document.getElementById('txRenovPanel');
+return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
+}
+// Item proyek TIDAK dihapus (bisa sudah diedit di Renovasi: rincian hitung, absensi tukang) -- ia kembali ke
+// "Perlu Dibeli" persis seperti saat transaksinya dihapus (Renov.onLinkedTxDeleted). Transaksi Keuangan tetap ada.
+function unlinkTxRenovFromTx(existingTx){
+const link=_txRenovLinkedItem(existingTx);
+if(link){
+link.item.paid=false;link.item.txId=null;link.item.paidDate=null;
+if(typeof Renov!=='undefined'){
+Renov.render();
+if(sameId(Renov.curId,link.project.id))Renov.renderDetail();
+}
+}
+delete existingTx.renovProjectLinkId;delete existingTx.renovItemLinkId;
+return link;
+}
 // applyTxRenovFromTx(note,txId,date,amt,cat,accId) -- dipanggil SETELAH
 // transaksi Keuangan tersimpan (persis titik yg sama dgn applyTxStockFromTx
 // dkk di _saveTxInner), khusus utk status "✅ Sudah Dibeli". Kalau status

@@ -287,7 +287,7 @@ const cur=sel.value;
 // dulu tampil SEMUA D.partsStock tanpa pandang kendaraan aktif -- reuse
 // Sparepart.isPartForVehicle() (sama dipakai Stok Sparepart & dropdown
 // servis), di-scope ke curVehicleId (kendaraan aktif Car Notes saat ini).
-const vid=typeof curVehicleId!=='undefined'?curVehicleId:null;
+const vid=txStockVehicleId();
 const list=txPartsStockRead().filter(p=>p.id===cur||Sparepart.isPartForVehicle(p,vid));
 sel.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
 sel.value=cur&&list.find(p=>p.id===cur)?cur:'__new__';
@@ -333,8 +333,60 @@ if(chk.checked) populateTxStockSelect();
 // yg diedit sebelumnya sudah pernah nambah stok (existingTx.partStockId),
 // rollback dulu qty lama sebelum apply yg baru, supaya edit TIDAK dobel
 // nambah stok (single source of truth D.partsStock tetap akurat).
+// S2778 (O-3): kendaraan pemilik stok yang dibeli lewat Transaksi. Dulu selalu curVehicleId (kendaraan aktif
+// Car Notes) sehingga part bisa masuk ke kendaraan lain daripada servis yang dicentang di transaksi yang sama.
+// Urutan: kendaraan panel Servis (bila Servis dicentang) -> kendaraan konteks kategori -> kendaraan aktif.
+function txStockVehicleId(){
+const find=id=>(id!=null&&id!==''&&Array.isArray(D.vehicles))?D.vehicles.find(v=>v&&String(v.id)===String(id)):null;
+const chk=document.getElementById('txSyncServis');
+const sel=document.getElementById('txServisVehicle');
+if(chk&&chk.checked&&sel){const v=find(sel.value);if(v)return v.id;}
+if(typeof resolveTxContextVehicleId==='function'){const v=find(resolveTxContextVehicleId());if(v)return v.id;}
+return (typeof curVehicleId!=='undefined')?curVehicleId:null;
+}
+// S2778 (O-2): centang Stok dimatikan pada transaksi yang SUDAH menambah stok = permintaan membatalkan belanja.
+function txStockUnlinkRequested(existingTx){
+if(!existingTx||!existingTx.partStockId||!(Number(existingTx.partStockQty)>0))return false;
+const chk=document.getElementById('txAddStock');
+const panel=document.getElementById('txStockPanel');
+return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
+}
+function unlinkTxStockFromTx(existingTx){
+// Lepas dulu pemakaian auto-link di log Servis (stok dipotong saat "beli & langsung dipasang"), kalau tidak
+// revert pembelian membuat stok negatif.
+const log=existingTx.servisLinkId?(D.servisLogs||[]).find(x=>x&&x.id===existingTx.servisLinkId):null;
+if(log&&log.autoLinkedPartStock&&String(log.usedPartId)===String(existingTx.partStockId)&&typeof _syncServisUsedPartFromPurchase==='function')_syncServisUsedPartFromPurchase(log,null,0);
+if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchaseForTransaction!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
+const rr=StockCommandSOT.revertPurchaseForTransaction(existingTx.id,{saveNow:false});
+if(!rr||rr.ok===false)throw new Error((rr&&rr.code)||'STOCK_PURCHASE_REVERT_FAILED');
+delete existingTx.partStockId;delete existingTx.partStockQty;delete existingTx.partStockUnit;delete existingTx.partStockApplied;
+if(typeof renderStockList==='function')renderStockList();
+}
+// S2777: validasi qty SEBELUM mutasi (dulu applyTxStockFromTx cuma toast+return setelah transaksi/servis
+// sudah tersimpan -> belanja hilang diam-diam). null = boleh lanjut.
+function validateTxStockBeforeSave(existingTx){
+if(txStockUnlinkRequested(existingTx)){
+const part=(D.partsStock||[]).find(p=>p&&String(p.id)===String(existingTx.partStockId));
+if(!part)return null;
+const log=existingTx.servisLinkId?(D.servisLogs||[]).find(x=>x&&x.id===existingTx.servisLinkId):null;
+const svcUnlinking=typeof txServisUnlinkRequested==='function'&&txServisUnlinkRequested(existingTx);
+const sameUsed=!!(log&&log.usedPartId&&String(log.usedPartId)===String(part.id));
+const released=sameUsed&&(log.autoLinkedPartStock||svcUnlinking)?(Number(log.usedPartQty)||0):0;
+const avail=(Number(part.qty)||0)+released;
+if(avail<Number(existingTx.partStockQty))return 'Stok "'+(part.name||'part')+'" tinggal '+avail+', tidak cukup untuk membatalkan belanja +'+existingTx.partStockQty+' (sebagian sudah terpakai)';
+return null;
+}
+const chk=document.getElementById('txAddStock');
+if(!chk||!chk.checked)return null;
+const panel=document.getElementById('txStockPanel');
+if(!panel||panel.style.display==='none')return null;
+const qty=parseFloat((document.getElementById('txStockQty')||{}).value)||0;
+if(qty<=0)return 'Jumlah stok yang ditambah harus lebih dari 0';
+return null;
+}
 function applyTxStockFromTx(note,txId,date,priceBasis,existingTx){
 const chk=document.getElementById('txAddStock');
+if(txStockUnlinkRequested(existingTx)){unlinkTxStockFromTx(existingTx);toast('📦 Penambahan stok dibatalkan');return;}
 if(!chk||!chk.checked)return;
 const panel=document.getElementById('txStockPanel');
 if(!panel||panel.style.display==='none')return;
@@ -357,7 +409,7 @@ const name=(document.getElementById('txStockNewName').value.trim())||note||'Spar
 // di atas, lookup kategori jalur ini juga GLOBAL by-name tanpa peduli
 // kendaraan -- reuse resolveServisCatForVehicle() (SoT, sparepart-servis.js)
 // kalau tersedia, fallback ke lookup lama kalau belum dimuat.
-const vidNewCat=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vidNewCat=txStockVehicleId();
 let cat=(typeof resolveServisCatForVehicle==='function')
 ?resolveServisCatForVehicle(name,vidNewCat)
 :D.sparepartCats.find(c=>c.name.toLowerCase()===name.toLowerCase());
@@ -384,7 +436,7 @@ targetPart=existing;
 // AUDIT SOT (permintaan user, lanjutan fix syncPartsStockFromCatalog di
 // atas): jalur "__new__" ketik manual di panel Transaksi Keuangan JUGA
 // tidak pernah menyetel vehicleId -- gap SAMA PERSIS, fix pola SAMA PERSIS.
-const vidNew=(typeof curVehicleId!=='undefined')?curVehicleId:null;
+const vidNew=txStockVehicleId();
 const vehicleIdNew=(vidNew&&Array.isArray(D.vehicles)&&D.vehicles.some(v=>v.id===vidNew))?vidNew:null;
 const np={id:'st_'+_genId(),name,catId:cat.id,code,qty:0,unit,minStock:1,price:0,note:'Otomatis dari transaksi keuangan',vehicleId:vehicleIdNew};
 if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.create!=='function'||typeof StockCommandSOT.applyPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk mutasi D.partsStock');
