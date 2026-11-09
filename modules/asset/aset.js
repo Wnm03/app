@@ -752,7 +752,8 @@ if(!filteredList.length){el.innerHTML=ownerFilterBar+migratedBanner+'<div class=
 // di bawah. Jalur kartu (list.map(...) di bawah) 0 disentuh -- tetap dipakai
 // apa adanya utk 10 tema lama. 0 kolom saldo berjalan (konsep itu spesifik
 // transaksi kronologis, tidak berlaku utk daftar aset).
-if(D.profile&&D.profile.theme==='modern'&&typeof assetTableHTML==='function'){
+// S2774 (Fase 4B lanjutan): di layar >=1024px semua tema ikut tabel padat; kondisi modern lama dipertahankan persis.
+if((D.profile&&D.profile.theme==='modern'&&typeof assetTableHTML==='function')||(typeof kwWideTxTable==='function'&&kwWideTxTable()&&typeof assetTableHTML==='function')){
 el.innerHTML=ownerFilterBar+migratedBanner+assetTableHTML(filteredList);
 Aset.renderDashboard();Aset.renderInvestasi();Aset._safeRenderReports();AssetInsight.render();
 return;
