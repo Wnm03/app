@@ -367,6 +367,37 @@ const _removed=before-D.debts.length;
 if(_removed>0&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"delete",auto:true,source:"titipan-pinjam-removed",deletedTxId:txId});
 return D.debts.length<before;
 }
+// FIX B1 (audit browser 2026-11-11): piutang/utang yang dibuat lewat toggle
+// "Catat juga sebagai transaksi arus kas" (§5.1) punya `linkedTxId`. Dulu
+// delTx() tidak menyentuhnya -> rekaman yatim dgn linkedTxId menggantung, dan
+// guard hapus ("hapus dari transaksinya dulu") jadi jalan buntu.
+// _bdpLinkedTxAlive(rec): true hanya kalau transaksi tertaut MASIH ada. Guard
+// hapus & ikon 🔒 memakai ini, jadi rekaman yatim lama (data yg sudah terlanjur
+// nyangkut) otomatis bisa dihapus lagi tanpa migrasi.
+function _bdpLinkedTxAlive(rec){
+return !!(rec&&rec.linkedTxId!=null&&(D.transactions||[]).some(t=>t&&sameId(t.id,rec.linkedTxId)));
+}
+// removeLinkedPiutangUtangForTx(txId): dipanggil delTx(). Belum lunas -> rekaman
+// ikut dihapus (utang juga menghapus tagihan cicilan-nya, pola Debt.delete()).
+// Sudah lunas -> dipertahankan sbg riwayat, hanya `linkedTxId` dilepas supaya
+// tidak yatim & bisa dihapus manual. Return {removedPiutang,removedUtang,detached}.
+function removeLinkedPiutangUtangForTx(txId){
+const out={removedPiutang:0,removedUtang:0,detached:0};
+if(txId==null)return out;
+BillDebtPiutangCanonicalWriter.ensure();
+(D.piutang||[]).filter(p=>p&&p.linkedTxId!=null&&sameId(p.linkedTxId,txId)).forEach(p=>{
+if(!p.lunas){BillDebtPiutangCanonicalWriter.removeById('piutang',p.id);out.removedPiutang++;}
+else{BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{p0.linkedTxId=null;});out.detached++;}
+});
+(D.debts||[]).filter(d=>d&&d.linkedTxId!=null&&sameId(d.linkedTxId,txId)).forEach(d=>{
+if(!d.lunas){
+if(d.billId!=null)BillDebtPiutangCanonicalWriter.removeById('bills',d.billId);
+BillDebtPiutangCanonicalWriter.removeById('debts',d.id);out.removedUtang++;
+}else{BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.linkedTxId=null;});out.detached++;}
+});
+if((out.removedPiutang||out.removedUtang)&&typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:out.removedUtang?"utang":"piutang",action:"delete",auto:true,source:"linked-tx-removed",deletedTxId:txId});
+return out;
+}
 // populateSyncTxAccSelect(selId) — AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.1:
 // isi <select> Akun di piutangModal/debtModal, pola SAMA PERSIS billAcc
 // (tagihan-kalender.js) -- 1 fungsi dipakai kedua modal (0 duplikasi).
@@ -540,7 +571,7 @@ const p=D.piutang.find(x=>sameId(x.id,id));
 // yang punya `linkedTxId` (dibuat lewat toggle §5.1) juga tidak bisa
 // dihapus langsung dari sini, biar transaksi arus kas terkait tidak jadi
 // yatim tanpa piutang sumbernya.
-if(p&&(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||p.linkedTxId)){
+if(p&&(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||_bdpLinkedTxAlive(p))){
 if(typeof toast==='function')toast('Piutang ini tercatat otomatis dari transaksi/pembayaran tagihan terkait, tidak bisa dihapus langsung. Batalkan/edit dari transaksi atau tagihan sumbernya (tombol 🧾 di atas) supaya piutangnya ikut disesuaikan.',3600);
 return;
 }
@@ -638,7 +669,7 @@ const badge=p.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span
 // (autoBillId/autoTxId/autoTitipanOwnerId), pola SAMA PERSIS Debt.renderList()
 // -- ganti ikon 🔒 kecil ber-tooltip, defense in depth thd guard di
 // Piutang.delete() (yang sudah tolak hapusnya lebih dulu).
-const isAutoPiutang=!!(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||p.linkedTxId);
+const isAutoPiutang=!!(p.autoBillId||p.autoTxId||p.autoTitipanOwnerId||_bdpLinkedTxAlive(p));
 const delBtnHtml=isAutoPiutang
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi/pembayaran tagihan terkait — batalkan/edit dari sana untuk menghapus baris ini">🔒</span>'
 :`<button class="tx-del" data-stop="1" data-action="delPiutang" data-args="${escapeHtml(JSON.stringify([p.id]))}" aria-label="Hapus">🗑</button>`;
@@ -846,7 +877,7 @@ return;
 // semantik beda) utk utang yang punya transaksi arus kas terkait
 // (`linkedTxId`, dibuat lewat toggle §5.1) -- biar transaksinya tidak
 // jadi yatim tanpa utang sumbernya.
-if(d&&d.linkedTxId){
+if(d&&_bdpLinkedTxAlive(d)){
 if(typeof toast==='function')toast('Utang ini tercatat otomatis ke transaksi arus kas terkait, tidak bisa dihapus langsung. Hapus/edit dari transaksinya di Keuangan terlebih dulu.',3600);
 return;
 }
@@ -952,8 +983,8 @@ const isTitipanLinked=!!(d.linkedAssetId||d.linkedInvestmentId||d.linkedAccountI
 if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
 // AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.4: badge terpisah (semantik beda
 // dari titipan di atas) utk utang yang tercatat lewat toggle §5.1.
-if(d.linkedTxId&&!isTitipanLinked)metaParts.push('🔒 Tercatat otomatis dari transaksi arus kas');
-const isTxLinked=!!d.linkedTxId;
+if(_bdpLinkedTxAlive(d)&&!isTitipanLinked)metaParts.push('🔒 Tercatat otomatis dari transaksi arus kas');
+const isTxLinked=_bdpLinkedTxAlive(d);
 // FIX (BUG-DEL-TITIPAN): sembunyikan tombol 🗑 utk baris titipan auto-sync,
 // konsisten dengan baris "Cicilan Barang" (billRowsHtml) yang memang sudah
 // read-only -- ganti jadi ikon 🔒 kecil ber-tooltip, biar user tidak

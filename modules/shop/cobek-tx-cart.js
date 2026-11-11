@@ -242,13 +242,33 @@ if(cartTotal>0)document.getElementById('txAmt').value=Math.round(cartTotal);
 // S2433-A: tolak SEBELUM transaksi dipersist bila centang "Tambah ke Stok Shop" aktif tapi
 // daftar produk kosong. Dulu applyTxShopStockFromTx() baru menolak SESUDAH transaksi tersimpan
 // dan toast peringatannya langsung ditimpa toast "Transaksi tersimpan" -> uang keluar, stok tidak naik.
-function txShopStockPrecheck(){
+function txShopStockPrecheck(existingTx){
 const chk=document.getElementById('txAddShopStock');
 if(!chk||!chk.checked)return {ok:true};
 const panel=document.getElementById('txShopStockPanel');
 if(!panel||panel.style.display==='none')return {ok:true};
-if(Array.isArray(curShopStockCart)&&curShopStockCart.length)return {ok:true};
-return {ok:false,message:'Belum ada produk di daftar stok. Isi produk lalu klik "Tambahkan Produk ke Daftar" sebelum simpan, atau matikan centang Tambah ke Stok Shop'};
+if(!(Array.isArray(curShopStockCart)&&curShopStockCart.length))return {ok:false,message:'Belum ada produk di daftar stok. Isi produk lalu klik "Tambahkan Produk ke Daftar" sebelum simpan, atau matikan centang Tambah ke Stok Shop'};
+// AUDIT-BROWSER B4 (sinkron stok Shop<->Keuangan): EDIT pembelian stok yang sebagian barangnya sudah
+// terjual. applyTxShopStockFromTx() membatalkan qty lama (-qtyLama) lalu menambah qty baru; mutateStockDelta()
+// meng-clamp stok ke >=0, jadi bila stok < qtyLama selisih yang hilang tidak bisa dipulihkan -> stok
+// MENGGELEMBUNG (mis. beli 10, jual 15 -> stok 5; edit beli jadi 12 -> stok 12, seharusnya 7). Jalur hapus
+// (stockPurchaseDeleteBlockers) & lepas-centang (validateTxShopStockUnlink) sudah menolak kasus yang sama;
+// jalur edit belum. Tolak SEBELUM persist bila stok akhir (stok - qtyLama + qtyBaru) < 0, per produk.
+if(existingTx){
+const old=new Map(),nw=new Map();
+_txShopStockLinkedItems(existingTx).forEach(it=>old.set(it.productId,(old.get(it.productId)||0)+it.qty));
+curShopStockCart.forEach(it=>{if(it&&it.productId&&!it.isNew){const q=Number(it.qty)||0;nw.set(it.productId,(nw.get(it.productId)||0)+q);}});
+for(const[pid,oldQty]of old){
+const p=(D.products||[]).find(x=>x&&x.id===pid);
+if(!p)continue;
+const stock=Number(p.stock)||0;
+const newQty=nw.get(pid)||0;
+if(stock-oldQty+newQty<0){
+return {ok:false,message:'Stok "'+p.name+'" tinggal '+stock+' (pembelian lama +'+oldQty+', sebagian sudah terjual), jadi perubahan ini membuat stok negatif. Jumlah baru minimal '+(oldQty-stock)+'. Untuk koreksi lebih besar gunakan retur/penyesuaian stok'};
+}
+}
+}
+return {ok:true};
 }
 // S2780 (Pola B): centang "Tambah ke Stok Shop" dimatikan pada transaksi yang SUDAH menambah stok produk
 // = permintaan membatalkan belanja (form edit mencentang ulang panel tertaut, jadi mematikannya disengaja).
@@ -309,17 +329,6 @@ if(!panel||panel.style.display==='none')return;
 const _rb=existingTx||prevTx||null;
 const _rev=_txShopStockRev(_rb||(typeof D!=='undefined'&&Array.isArray(D.transactions)?D.transactions.find(t=>t.id===txId):null));
 if(!curShopStockCart.length){toast('⚠️ Belum ada produk di daftar. Isi produk, lalu klik "Tambahkan Produk ke Daftar" dulu sebelum simpan');return;}
-if(_rb){
-if(_rb.stockItems&&_rb.stockItems.length){
-_rb.stockItems.forEach(si=>{
-const prevP=D.products.find(p=>p.id===si.productId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0),{source:'sale-edit-rollback',reason:'restore previous sale before edit',refType:'shopSale',refId:_rb.id,idempotencyKey:'sale-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
-});
-} else if(_rb.stockProductId){
-const prevP=D.products.find(p=>p.id===_rb.stockProductId);
-if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(_rb.stockQty||0),{source:'sale-edit-rollback',reason:'restore previous transaction stock',refType:'transaction',refId:_rb.id,idempotencyKey:'tx-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(_rb.stockQty||0));}
-}
-}
 const resultItems=[];
 let totalBelanja=0;
 curShopStockCart.forEach(it=>{
@@ -389,6 +398,21 @@ else{if(!product.hargaByProdusen)product.hargaByProdusen={};product.hargaByProdu
 resultItems.push({productId:product.id,name:product.name,qty:it.qty,hargaBeli:it.hargaBeli,produsenId:it.produsenId||'',kategoriId:product.kategoriId||''});
 totalBelanja+=it.qty*it.hargaBeli;
 });
+// AUDIT-BROWSER B4: rollback qty LAMA sengaja dijalankan SESUDAH qty baru ditambah (dulu sebelum). Urutan lama
+// men-clamp stok ke 0 saat stok < qty lama (sebagian sudah terjual) lalu menambah qty baru penuh -> stok
+// menggelembung (beli 10, jual 15 => stok 5; edit jadi 12 => 12, seharusnya 7). Tambah-dulu-baru-kurangi
+// menghasilkan selisih bersih yang benar; hasil akhir negatif sudah ditolak lebih awal oleh txShopStockPrecheck().
+if(_rb){
+if(_rb.stockItems&&_rb.stockItems.length){
+_rb.stockItems.forEach(si=>{
+const prevP=D.products.find(p=>p.id===si.productId);
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(si.qty||0),{source:'sale-edit-rollback',reason:'restore previous sale before edit',refType:'shopSale',refId:_rb.id,idempotencyKey:'sale-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(si.qty||0));}
+});
+} else if(_rb.stockProductId){
+const prevP=D.products.find(p=>p.id===_rb.stockProductId);
+if(prevP){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(prevP,-(_rb.stockQty||0),{source:'sale-edit-rollback',reason:'restore previous transaction stock',refType:'transaction',refId:_rb.id,idempotencyKey:'tx-edit-restore:'+_rb.id+':'+prevP.id+':r'+_rev});else prevP.stock=Math.max(0,(prevP.stock||0)-(_rb.stockQty||0));}
+}
+}
 const tx=existingTx||D.transactions.find(t=>t.id===txId);
 if(tx){
 tx.stockRev=_rev;
@@ -541,6 +565,7 @@ const qty=parseFloat(document.getElementById('txShopSaleQty').value)||0;
 const harga=parseFloat(document.getElementById('txShopSaleHarga').value)||0;
 if(qty<=0){toast('⚠️ Jumlah terjual harus lebih dari 0');return;}
 if(harga<=0){toast('⚠️ Harga jual harus lebih dari 0');return;}
+if(typeof ShopCartAdvice!=='undefined'&&!ShopCartAdvice.parsePrice(harga).ok){toast('⚠️ '+ShopCartAdvice.priceErrorText(ShopCartAdvice.parsePrice(harga).reason));return;}
 // kw-sales-mutation-fix: samakan perilaku dgn Order.addItem() (cobek-order.js)
 // -- produk yg sama ditambah lagi ke cart harus DIGABUNG (qty ditambahkan ke
 // baris yg sudah ada), bukan bikin baris duplikat baru. Sebelumnya cart ini
@@ -573,6 +598,8 @@ if(!it)return;
 const qty=_shopCartNum('txCartEditQty'),harga=_shopCartNum('txCartEditHarga');
 if(!(qty>0)){toast('⚠️ Jumlah terjual harus lebih dari 0');return;}
 if(!(harga>0)){toast('⚠️ Harga jual harus lebih dari 0');return;}
+// S2795: Infinity/angka raksasa ('1e999') lolos `harga>0` dan merusak total -> tolak lewat ShopCartAdvice.parsePrice bila dimuat.
+if(typeof ShopCartAdvice!=='undefined'&&!ShopCartAdvice.parsePrice(harga).ok){toast('⚠️ '+ShopCartAdvice.priceErrorText(ShopCartAdvice.parsePrice(harga).reason));return;}
 const chk=document.getElementById('txCartEditDefault');
 it.qty=qty;
 it.harga=harga;
@@ -612,21 +639,39 @@ if(chk.checked) populateTxShopSaleSelect();
 //     ke kandidat pertama yg cocok). Kalau tidak ada produk dasar/alu-muntu yg cocok, dilewati saja
 //     (TIDAK membatalkan penjualan utama — stok bundle itu sendiri tetap prioritas).
 // S2726: refId diteruskan eksplisit (dulu merujuk `opts` di luar scope -> refId riwayat stok selalu kosong).
-function applyBundleLinkedStock(product,qty,sign,refId){
-if(!product)return;
+// AUDIT-BROWSER B5 (sinkron stok bundle): consume komponen (produk dasar + alu/muntu) di-clamp ke >=0 oleh
+// mutateStockDelta, sedangkan restore dulu menambah qty PENUH -> stok komponen MENGGELEMBUNG bila stoknya < qty
+// saat dijual (bundle 3, stok dasar 1 -> 0; hapus/edit penjualan -> dasar 3, seharusnya 1). Perbaikan tanpa
+// memblokir penjualan (kebijakan lama dipertahankan): consume mencatat jumlah yang BENAR-BENAR terpotong per
+// komponen (return array {productId,qty}, disimpan di item penjualan sbg `linked`), restore mengembalikan persis
+// jumlah itu ke produk yang sama (sekaligus memperbaiki add-on yg dulu dipotong dari kandidat A tapi dikembalikan
+// ke kandidat pertama). Data lama tanpa `linked` memakai perilaku lama (fallback).
+function _bundleMutate(p,delta,sign,refId){
+if(!p||!delta)return 0;
+const before=Number(p.stock)||0;
+if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,delta,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:refId||'',idempotencyKey:''});else p.stock=Math.max(0,before+delta);
+return Math.abs((Number(p.stock)||0)-before);
+}
+function applyBundleLinkedStock(product,qty,sign,refId,linked){
+if(!product)return[];
+if(sign>0&&Array.isArray(linked)){
+linked.forEach(l=>{const p=l&&(D.products||[]).find(x=>x.id===l.productId);const q=Number(l&&l.qty);if(p&&Number.isFinite(q)&&q>0)_bundleMutate(p,q,1,refId);});
+return linked;
+}
+const out=[];
 const addon=Etalase.bundleAddonShape(product);
-if(!addon)return;
+if(!addon)return out;
 const bracket=Etalase.bracketRange(product);
 const base=(D.products||[]).find(q=>q.id!==product.id&&Etalase.bracketRange(q)===bracket&&!Etalase.bundleAddonShape(q));
-if(base){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(base,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:refId||'',idempotencyKey:''});else base.stock=Math.max(0,(base.stock||0)+sign*qty);}
+if(base){const ap=_bundleMutate(base,sign*qty,sign,refId);if(sign<0)out.push({productId:base.id,qty:ap});}
 const addonCandidates=(D.products||[]).filter(q=>{
 const parsed=Etalase.parseSizeName(q.name);
 if(addon==='alu')return parsed&&parsed.shape==='alu';
-if(addon==='muntu')return(parsed&&(parsed.shape==='muntu'||parsed.shape==='munthu'))||/^muntu/i.test((q.name||'').trim());
-return false;
+return(parsed&&(parsed.shape==='muntu'||parsed.shape==='munthu'))||/^muntu/i.test((q.name||'').trim());
 });
 const addonProduct=sign<0?(addonCandidates.find(q=>(q.stock||0)>=qty)||addonCandidates[0]):addonCandidates[0];
-if(addonProduct){if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(addonProduct,sign*qty,{source:sign<0?'sale-bundle-consume':'sale-bundle-restore',reason:'linked bundle component',refType:'shopSale',refId:refId||'',idempotencyKey:''});else addonProduct.stock=Math.max(0,(addonProduct.stock||0)+sign*qty);}
+if(addonProduct){const ap=_bundleMutate(addonProduct,sign*qty,sign,refId);if(sign<0)out.push({productId:addonProduct.id,qty:ap});}
+return out;
 }
 // rollbackShopItems (kw-sales-mutation-fix, Modul 2) — SATU-SATUNYA implementasi
 // yang boleh mengubah stok produk (+base+addon alu/muntu) utk jalur Sales
@@ -648,7 +693,7 @@ if(!Number.isFinite(q)||q<=0)return;
 const p=D.products.find(x=>x.id===it.productId);
 if(!p)return;
 if(typeof ProductRepository!=='undefined')ProductRepository.mutateStockDelta(p,sign*q,{source:sign<0?'sale':'sale-rollback',reason:sign<0?'sale stock consumption':'sale stock restore',refType:'shopSale',refId:refId||'',idempotencyKey:''});else p.stock=Math.max(0,(p.stock||0)+sign*q);
-applyBundleLinkedStock(p,q,sign,refId);
+if(sign<0)it.linked=applyBundleLinkedStock(p,q,-1,refId);else applyBundleLinkedStock(p,q,1,refId,it.linked);
 });
 }
 function recordShopSale(opts){
@@ -704,6 +749,8 @@ return{ok:false,message:'Stok '+p.name+' tidak cukup (sisa '+p.stock+')'};
 // diterapkan per baris (rollbackShopItems sign=-1 = consume), termasuk
 // base+addon bundle-nya — SSOT yang sama dgn restore di atas.
 rollbackShopItems(items,-1,opts.txId);
+// B5: salin catatan komponen terpotong ke item input caller supaya rollback-on-failure (kasir/order) simetris.
+if(rawItems.length===items.length)items.forEach((it,i)=>{if(rawItems[i]&&Array.isArray(it.linked))rawItems[i].linked=it.linked;});
 const customer=opts.customer||{name:'',phone:'',address:''};
 if(prevShop){
 Object.assign(prevShop,{

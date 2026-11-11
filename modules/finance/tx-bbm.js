@@ -125,14 +125,15 @@ if(o.vehicleId){
  if(capacity&&liter>capacity*1.1)return{ok:false,reason:'Isi BBM '+liter.toLocaleString('id-ID')+' L melebihi kapasitas tangki '+capacity.toLocaleString('id-ID')+' L (toleransi 10%). Periksa liter atau profil kendaraan.'};
 }
 if(o.date&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.date))&&o.vehicleId){
- const sourceRows=typeof D!=='undefined'?[...(Array.isArray(D.kmLogs)?D.kmLogs:[]),...(Array.isArray(D.bbmLogs)?D.bbmLogs:[]),...(Array.isArray(D.servisLogs)?D.servisLogs:[])]:[];
+ const _tag=(arr,l)=>(Array.isArray(arr)?arr:[]).map(r=>r?Object.assign({},r,{_srcLabel:l}):r);
+ const sourceRows=typeof D!=='undefined'?[..._tag(D.kmLogs,'KM manual'),..._tag(D.bbmLogs,'catatan BBM'),..._tag(D.servisLogs,'catatan servis')]:[];
  const logs=sourceRows.filter(x=>x&&String(x.vehicleId)===String(o.vehicleId)&&(!o.existingBbmId||String(x.id)!==String(o.existingBbmId))&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.date||''))&&Number.isFinite(Number(x.km))&&Number(x.km)>=0);
  // Tanpa timestamp, semua pembacaan pada tanggal sama diperlakukan sebagai
  // batas KM terakhir hari itu; tidak boleh memasukkan nilai yang lebih rendah.
  const prior=logs.filter(x=>String(x.date)<=String(o.date)).sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.km)-Number(a.km))[0];
  const next=logs.filter(x=>String(x.date)>String(o.date)).sort((a,b)=>String(a.date).localeCompare(String(b.date))||Number(a.km)-Number(b.km))[0];
- if(prior&&km<Number(prior.km))return{ok:false,reason:'KM lebih kecil dari catatan BBM sebelumnya ('+Number(prior.km).toLocaleString('id-ID')+' km)'};
- if(next&&km>Number(next.km))return{ok:false,reason:'KM melebihi catatan BBM setelah tanggal ini ('+Number(next.km).toLocaleString('id-ID')+' km)'};
+ if(prior&&km<Number(prior.km))return{ok:false,reason:'KM lebih kecil dari '+prior._srcLabel+' sebelumnya ('+Number(prior.km).toLocaleString('id-ID')+' km)'};
+ if(next&&km>Number(next.km))return{ok:false,reason:'KM melebihi '+next._srcLabel+' setelah tanggal ini ('+Number(next.km).toLocaleString('id-ID')+' km)'};
 }
 return{ok:true,km,liter};
 }

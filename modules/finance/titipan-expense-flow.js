@@ -210,6 +210,14 @@ const TitipanExpenseFlow = {
       // ada transaksi yatim / linkage setengah jadi. Commit dilakukan SETELAH
       // persistence sukses; event berada di luar transaction boundary karena
       // kegagalan event tidak boleh membatalkan state yang sudah tersimpan.
+      // FIX B3 (audit browser 2026-11-11): kategori 'Dana Titipan' sebelumnya hanya
+      // dibuat saat restore legacy, jadi pada instalasi bersih FinanceTxSOT menolak
+      // transaksi (FINANCE_CATEGORY_UNRESOLVED). Pastikan ada sebelum commit;
+      // hanya utk nama persis 'Dana Titipan' (tidak membuat kategori sembarang dari input).
+      if (String(input.category || '').trim().toLowerCase() === 'dana titipan'
+        && typeof FinanceCategorySOT !== 'undefined' && typeof FinanceCategorySOT.ensureCategory === 'function') {
+        FinanceCategorySOT.ensureCategory('expense', { name: 'Dana Titipan', emoji: '📦', classification: 'NON_BELANJA' });
+      }
       const _atomic = typeof FinanceCrossEntityAtomic !== 'undefined'
         ? FinanceCrossEntityAtomic.begin(['transactions', 'debts', 'piutang'])
         : null;

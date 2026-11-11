@@ -414,9 +414,6 @@
     if(typeof root.Servis!=='undefined'&&root.Servis&&typeof root.Servis.renderReminder==='function'){
       try{root.Servis.renderReminder();}catch(e){console.error('[S2015] reminder refresh failed',e);}
     }
-    if(typeof root.renderDashboardServisReminder==='function'){
-      try{root.renderDashboardServisReminder();}catch(e){console.error('[S2015] dashboard reminder refresh failed',e);}
-    }
     return cleanup;
   }
 

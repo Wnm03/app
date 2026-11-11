@@ -560,10 +560,10 @@ let dashServisVehFilter='semua';
 function setDashServisVehFilter(vehId){
 dashServisVehFilter=vehId;
 safeSetItem('kw_dashServisVehFilter',vehId);
-renderDashboardServisReminder();
+
 }
 /* moved to modules-render.js: renderDashServisVehChips */
-/* moved to modules-render.js: renderDashboardServisReminder */
+/* B13: renderDashboardServisReminder dihapus (kode mati) */
 function goToServisFromDash(vehicleId){
 if(vehicleId&&D.vehicles.find(v=>v.id===vehicleId)){curVehicleId=vehicleId;renderVehicleSelect();}
 goToList('servisReminderCard','carnotes',4,null,'servis');

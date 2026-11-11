@@ -3,7 +3,7 @@
 // Isi: MODULE_FEATURES_VERSION (konstanta versi, dicek sinkron oleh diagnostik-versi.js) + CHAT_ACTION_LABELS (label tombol usul per tipe aksi) + CHAT_ACTION_HANDLERS (eksekusi nyata tiap tipe aksi ke D.*, dipanggil dari chat-action.js via chatActionInnerHTML/extractChatAction) + CHAT_ACTION_EDIT_FIELDS (skema field utk form edit usulan sebelum dieksekusi).
 // PENTING: dimuat di GROUP_A build.js, tepat di posisi lama features-budget-laporan-carnotes-pelanggan.js (setelah car-notes.js, sebelum edukasi-dana.js) — urutan load antar file GROUP_A jangan diubah sembarangan.
 
-const MODULE_FEATURES_VERSION='s2433-fix-15-failures-2780';
+const MODULE_FEATURES_VERSION='s2786-b12-km-manual-paket-pengingat-2795';
 const CHAT_ACTION_LABELS={add_transaksi:'💸 Usul: Tambah Transaksi',add_tagihan:'🧾 Usul: Tambah Tagihan/Cicilan',add_servis:'🔧 Usul: Catat Servis Kendaraan',add_target:'🎯 Usul: Tambah Target Tabungan',add_catatan_anak:'👶 Usul: Catat soal Anak',add_wishlist:'📋 Usul: Tambah ke Prioritas Belanja'};
 const CHAT_ACTION_HANDLERS={
 add_transaksi(data){
@@ -51,7 +51,7 @@ save();
 try{if(typeof ServiceEventLifecycle!=='undefined'&&typeof ServiceEventLifecycle.create==='function')ServiceEventLifecycle.create(_chatServiceLog);}catch(err){if(typeof ServiceEventOutbox!=='undefined'&&!ServiceEventOutbox.enqueue({type:'service.create',payload:_chatServiceLog}))console.error('V37: service.create outbox persistence failed',err);}
 const _chatFinancePayload={txId:txId,category:resolveVehicleTxCategory(veh),type:'expense',amount:cost,kind:'servis'};
 try{if(typeof AIBus!=='undefined')AIBus.emit('finance.updated',_chatFinancePayload);}catch(_chatFinanceErr){if(typeof ServiceEventOutbox!=='undefined'&&!ServiceEventOutbox.enqueue({type:'finance.updated',payload:_chatFinancePayload}))console.error('V37: finance.updated outbox persistence failed',_chatFinanceErr);}
-refreshCurrentPage();renderDashboardServisReminder();
+refreshCurrentPage();
 return `Servis "${servisItem}" untuk ${veh.name} ${fmtFull(cost)} tersimpan`;
 }catch(err){try{D.servisLogs=JSON.parse(_snap.servisLogs);if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');FinanceTxSOT.replaceSnapshot(JSON.parse(_snap.transactions));if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.replaceSnapshot!=='function')throw new Error('StockCommandSOT wajib tersedia untuk rollback stok chat');StockCommandSOT.replaceSnapshot(JSON.parse(_snap.partsStock));}catch(_){ /* best-effort cleanup; primary action already completed */ }throw err;}};
 return typeof withServiceMutationLock==='function'?withServiceMutationLock(_run):_run();

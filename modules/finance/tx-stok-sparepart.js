@@ -382,6 +382,18 @@ const panel=document.getElementById('txStockPanel');
 if(!panel||panel.style.display==='none')return null;
 const qty=parseFloat((document.getElementById('txStockQty')||{}).value)||0;
 if(qty<=0)return 'Jumlah stok yang ditambah harus lebih dari 0';
+// AUDIT-BROWSER B7 (sejajar B4 Shop): EDIT belanja part yang sebagian sudah terpakai. applyTxStockFromTx() membatalkan pembelian lama
+// (butuh stok >= qty lama) SEBELUM menambah qty baru, jadi tolak di awal dgn pesan jelas (bukan exception + rollback).
+// Pemakaian auto-link servis dihitung "dilepas" bila servis akan memasang ulang pada simpan ini.
+if(existingTx&&existingTx.partStockId&&Number(existingTx.partStockQty)>0){
+const oldPart=(D.partsStock||[]).find(p=>p&&String(p.id)===String(existingTx.partStockId));
+if(oldPart){
+const lg=existingTx.servisLinkId?(D.servisLogs||[]).find(x=>x&&x.id===existingTx.servisLinkId):null;
+const rel=lg&&lg.autoLinkedPartStock&&String(lg.usedPartId)===String(oldPart.id)&&typeof _txServisWillRelink==='function'&&_txServisWillRelink()?(Number(lg.usedPartQty)||0):0;
+const have=(Number(oldPart.qty)||0)+rel,oldQty=Number(existingTx.partStockQty);
+if(have<oldQty)return 'Stok \"'+(oldPart.name||'part')+'\" tinggal '+have+', belanja lama +'+oldQty+' sebagian sudah terpakai, sehingga belanja ini tidak bisa diubah/diganti. Untuk koreksi gunakan penyesuaian stok di Sparepart';
+}
+}
 return null;
 }
 function applyTxStockFromTx(note,txId,date,priceBasis,existingTx){
@@ -395,6 +407,12 @@ const qty=parseFloat(document.getElementById('txStockQty').value)||0;
 const unit=document.getElementById('txStockUnit').value.trim()||'pcs';
 if(qty<=0){toast('⚠️ Jumlah stok yang ditambah harus lebih dari 0');return;}
 if(existingTx&&existingTx.partStockId){
+// AUDIT-BROWSER B7: transaksi "beli part + langsung dipasang" (auto-link servis) -- stok pembelian lama SUDAH terpotong oleh
+// pemakaian auto-link, sedangkan applyTxServisFromTx() baru melepas/memasangnya SESUDAH langkah ini. Tanpa pelepasan lebih dulu,
+// revert pembelian di bawah gagal INSUFFICIENT_STOCK_FOR_PURCHASE_REVERT (stok sudah habis terpakai) dan SETIAP edit transaksi
+// ditolak (rollback). Lepas auto-link lama dulu (stok kembali), servis memasang ulang dgn qty baru sesudahnya.
+{const _lg=existingTx.servisLinkId?(D.servisLogs||[]).find(x=>x&&x.id===existingTx.servisLinkId):null;
+if(_lg&&_lg.autoLinkedPartStock&&String(_lg.usedPartId)===String(existingTx.partStockId)&&typeof _txServisWillRelink==='function'&&_txServisWillRelink()&&typeof _syncServisUsedPartFromPurchase==='function')_syncServisUsedPartFromPurchase(_lg,null,0);}
 let rr=null;
 if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.revertPurchaseForTransaction==='function')rr=StockCommandSOT.revertPurchaseForTransaction(existingTx.id,{saveNow:false});
 else rr={ok:!!revertStockPurchase(existingTx.partStockId,existingTx.partStockQty,existingTx.id)};

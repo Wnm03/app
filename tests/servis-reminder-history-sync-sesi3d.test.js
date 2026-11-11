@@ -24,13 +24,6 @@ test('Sesi 3D: interval bulan yang membatasi tidak dilabeli sebagai lewat KM',()
   assert.match(reminderUI,/const estDateISO=\(monthLimited\|\|!hasFiniteKmRemaining\)\?null:/);
 });
 
-test('Sesi 3D: Dashboard tidak lagi menghitung reminder pure-KM sendiri',()=>{
-  assert.match(dash,/getLastServiceKmForCat\(veh\.id,cat,resetFilter,true\)/);
-  assert.match(dash,/computeServiceUrgency\(\{vehicleId:veh\.id,cat,curKm,kmPerDay\}\)/);
-  assert.match(dash,/const status=u\?u\.status:/);
-  assert.match(dash,/monthLimited\?`⚠️ Lewat/);
-});
-
 test('Sesi 3D: predictService mengekspos lastKm dari baseline reset yang sama',()=>{
   assert.match(servisB,/const resetFilter=\(typeof resolveResetActionTypeFilter==='function'\)\?resolveResetActionTypeFilter\(cat\):null;/);
   assert.match(servisB,/getLastServiceKmForCat\(vehicleId,cat,resetFilter,true\)/);

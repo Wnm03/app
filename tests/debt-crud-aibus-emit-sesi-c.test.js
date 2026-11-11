@@ -228,7 +228,9 @@ test('Debt.delete(): baris titipan (linkedAssetId) DITOLAK guard -> 0 emit, 0 mu
 
 test('Debt.delete(): utang bertaut transaksi arus kas (linkedTxId, §5.4) DITOLAK guard -> 0 emit', async () => {
   const aibusEvents = [];
-  const D = { debts: [{ id: 'd1', name: 'Bank X', nilai: 1000000, lunas: false, linkedTxId: 'tx1' }], bills: [] };
+  // transaksi tertaut HARUS masih ada: guard hanya berlaku bila tx sumbernya hidup (FIX B1, audit browser 2026-11-11;
+  // linkedTxId menggantung = data yatim, boleh dihapus -- lihat tests/audit-browser-b1-b3-sinkron-antar-domain.test.js)
+  const D = { debts: [{ id: 'd1', name: 'Bank X', nilai: 1000000, lunas: false, linkedTxId: 'tx1' }], bills: [], transactions: [{ id: 'tx1' }] };
   const ctx = makeDeleteCtx({ D, AIBus: { emit(name, payload) { aibusEvents.push({ name, payload }); } } });
 
   await ctx.Debt.delete('d1');

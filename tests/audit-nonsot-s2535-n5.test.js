@@ -41,9 +41,13 @@ test('N5: legacy dashboard renderers with no live target/caller are retired',()=
   }
 });
 
+test('B13: renderDashboardServisReminder (kode mati) sudah dihapus dari modules-render.js',()=>{
+  const def=fs.readFileSync(path.join(ROOT,'modules/shared/modules-render.js'),'utf8');
+  assert.doesNotMatch(def,/function renderDashboardServisReminder\s*\(/);
+});
+
 test('N5: renderers with live callers are retained rather than deleted speculatively',()=>{
   const names={
-    renderDashboardServisReminder:['car-notes.js','modules/vehicle/sparepart-servis.js'],
     renderDashboardSewaKiosReminder:['modules/business/sewakios.js'],
     renderDashAccList:['modules/finance/akun.js','modules/shared/scan-ocr-b.js','modules/asset/aset.js','modules/asset/aset-owners.js'],
   };

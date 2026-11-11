@@ -37,16 +37,6 @@ test('S2058 main Reminder projection dedupes canonical components per vehicle',(
   assert.match(dedupe,/function dedupeServiceCategoriesForVehicle\(categories,vehicleId\)/);
 });
 
-test('S2058 dashboard Reminder projection also dedupes canonical components per vehicle',()=>{
-  assert.match(dashboard,/const remindableCatsRaw=remindableCatsAll\.filter/);
-  assert.match(dashboard,/const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'\?dedupeServiceCategoriesForVehicle\(remindableCatsRaw,veh\.id\):remindableCatsRaw/);
-});
-
-test('S2058 dashboard displays canonical category/component names',()=>{
-  assert.match(dashboard,/dashComponentName=dashComponentMeta&&dashComponentMeta\.item\?dashComponentMeta\.item\.name/);
-  assert.match(dashboard,/dashCategoryName=dashComponentMeta&&dashComponentMeta\.group\?dashComponentMeta\.group\.group/);
-});
-
 test('S2059 Reminder navigation remains component-scoped and canonical',()=>{
   assert.match(servis,/openHistoryFromReminder\(categoryId,componentId\)/);
   assert.match(servis,/serviceHistoryComponentFilter=String\(componentId\|\|''\)/);

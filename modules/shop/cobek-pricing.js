@@ -894,3 +894,79 @@ function registerDeliveryAIRules() {
   _deliveryAIRulesRegistered = true;
   return true;
 }
+
+// S2795 — ShopCartAdvice: validasi harga baris keranjang + saran rekomendasi TANPA AI (murni hitung lokal,
+// jalan offline & tanpa API key). Dipakai bersama oleh Kasir AI (kasir.js), Order/Transaksi Manual
+// (cobek-order.js) dan keranjang Penjualan di modal Transaksi (cobek-io.js) supaya aturannya SATU.
+// Tidak mengubah data apa pun (read-only): hanya memeriksa baris keranjang {product,harga,hargaDefault,qty}.
+const ShopCartAdvice={
+MAX_PRICE:1e10,
+MARGIN_TIPIS_PCT:10,
+DISKON_BESAR_PCT:20,
+STOK_TIPIS:3,
+MAX_ITEMS:5,
+// parsePrice(raw) — satu pintu validasi input harga per pcs: kosong/NaN/Infinity/<=0/terlalu besar ditolak
+// (parseFloat('1e999') = Infinity dulu lolos 'h>0' dan merusak total); hasil dibulatkan ke rupiah utuh.
+parsePrice(raw){
+const s=String(raw==null?'':raw).trim().replace(',','.');
+if(s==='')return{ok:false,reason:'empty'};
+const n=Number(s);
+if(!Number.isFinite(n))return{ok:false,reason:'invalid'};
+if(n>this.MAX_PRICE)return{ok:false,reason:'toolarge'};
+const v=Math.round(n);
+if(!(v>0))return{ok:false,reason:'nonpositive'};
+return{ok:true,value:v};
+},
+priceErrorText(reason){
+if(reason==='toolarge')return 'Harga terlalu besar (maks Rp 10 miliar per pcs)';
+if(reason==='nonpositive')return 'Harga harus lebih dari 0';
+return 'Isi harga per pcs dengan angka yang valid';
+},
+unitCost(l){
+const c=Number(l&&l.modalUnit!=null?l.modalUnit:(l&&l.product?l.product.hargaBeli:0));
+return Number.isFinite(c)&&c>0?c:0;
+},
+isBelowCost(l){
+const c=this.unitCost(l),h=Number(l&&l.harga);
+return c>0&&Number.isFinite(h)&&h<c;
+},
+analyze(lines,opts){
+opts=opts||{};
+const f=(typeof fmtFull==='function')?fmtFull:(n=>'Rp '+Math.round(Number(n)||0));
+const out=[];
+(lines||[]).forEach(l=>{
+if(!l||!l.product)return;
+const name=l.product.name||'Produk',h=Number(l.harga),def=Number(l.hargaDefault),c=this.unitCost(l),pid=l.productId||l.product.id;
+if(!Number.isFinite(h))return;
+const edited=l.hargaOverride!=null&&Number(l.hargaOverride)>0&&Number.isFinite(def)&&def>0&&Math.round(h)!==Math.round(def);
+if(c>0&&h<c){
+out.push({level:'warn',pid,text:name+': harga '+f(h)+'/pcs di bawah modal '+f(c)+' — rugi '+f(c-h)+' per pcs.'});
+}else if(c>0&&h>0){
+const m=((h-c)/h)*100;
+if(m<this.MARGIN_TIPIS_PCT)out.push({level:'info',pid,text:name+': margin tipis ('+Math.round(m*10)/10+'%). Naikkan sedikit harganya atau jangan beri potongan lagi.'});
+}
+if(edited&&def>0&&h<def){
+const pct=((def-h)/def)*100;
+if(pct>=this.DISKON_BESAR_PCT&&!(c>0&&h<c))out.push({level:'info',pid,text:name+': harga diturunkan '+Math.round(pct)+'% dari harga normal ('+f(def)+'). Pertimbangkan tawarkan paket/bundling daripada potong harga.'});
+}
+if(edited&&typeof PriceRekoWidget!=='undefined'&&PriceRekoWidget&&typeof PriceRekoWidget.recommend==='function'&&c>0&&!(h<c)){
+let reko=0;try{reko=Number(PriceRekoWidget.recommend(l.product))||0;}catch(e){reko=0;}
+if(reko>0&&h<reko*0.9)out.push({level:'info',pid,text:name+': di bawah rekomendasi harga Etalase ('+f(reko)+').'});
+}
+const stock=Number(l.product.stock);
+if(Number.isFinite(stock)&&l.qty>0){
+const sisa=stock-Number(l.qty);
+if(sisa<=0)out.push({level:'info',pid,text:name+': stok habis setelah transaksi ini — pertimbangkan restok.'});
+else if(sisa<=this.STOK_TIPIS)out.push({level:'info',pid,text:name+': stok tinggal '+sisa+' setelah transaksi — pertimbangkan restok.'});
+}
+});
+if(Number.isFinite(opts.profit)&&opts.profit<0)out.unshift({level:'warn',pid:'',text:'Transaksi ini rugi '+f(-opts.profit)+' secara keseluruhan (setelah diskon). Periksa harga dan diskon sebelum menyimpan.'});
+return out.sort((a,b)=>(a.level==='warn'?0:1)-(b.level==='warn'?0:1)).slice(0,this.MAX_ITEMS);
+},
+renderHtml(items){
+if(!items||!items.length)return '';
+const esc=(typeof escapeHtml==='function')?escapeHtml:(s=>String(s));
+return '<div class="u-fs11 u-fw700 u-t2 u-mb4">💡 Saran cepat</div>'+items.map(a=>'<div class="u-mb4" role="status" style="font-size:12px;line-height:1.5;padding:6px 8px;border-radius:8px;background:'+(a.level==='warn'?'var(--accent2-soft)':'var(--accent4-soft)')+';color:var(--text)">'+(a.level==='warn'?'⚠️ ':'• ')+esc(a.text)+'</div>').join('');
+}
+};
+if (typeof window !== 'undefined') window.ShopCartAdvice = ShopCartAdvice;

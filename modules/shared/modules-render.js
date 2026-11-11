@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2433-fix-15-failures-2780';
+const MODULE_RENDER_VERSION='s2786-b12-km-manual-paket-pengingat-2795';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -864,98 +864,7 @@ return `<div class="u-flex u-gap6 u-mb10" style="overflow-x:auto;padding-bottom:
 +`</div>`;
 }
 
-function renderDashboardServisReminder(){
-const card=document.getElementById('dashServisReminderCard');
-if(!card)return;
-const selfVehicles=_dashServisSelfVehicles();
-// Sesi 295: sama seperti Servis.renderReminder() (car-notes.js) -- filter ke
-// kategori dgn interval valid & tidak disembunyikan, biar kategori sampah
-// hasil scan Katalog Suku Cadang (intervalKm:0, showInReminder:false) tidak
-// numpuk juga di widget Beranda ini.
-// BUGFIX (audit lanjutan S622/S629, gap yang sama dgn resolveServisCatForVehicle()):
-// filter ini dulu TIDAK ikut catVisibleForVehicle(), beda dgn
-// Servis.renderReminder() (car-notes.js) yang sudah benar. Widget Beranda ini
-// bisa menampilkan BEBERAPA kendaraan sekaligus, jadi filter-nya tidak bisa
-// dilakukan 1x di luar (1 vehicleId) -- harus per-kendaraan DI DALAM loop di
-// bawah. Tanpa ini, kategori PRIVAT milik kendaraan lain ikut nyasar tampil
-// di kartu Pengingat kendaraan yang sedang difilter.
-const remindableCatsAll=D.sparepartCats.filter(c=>c.showInReminder!==false&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(undefined,c))));
-if(!selfVehicles.length||!remindableCatsAll.length){card.style.display='none';return;}
-const vehChipsHTML=renderDashServisVehChips();
-const vehicles=dashServisVehFilter==='semua'?selfVehicles:selfVehicles.filter(v=>v.id===dashServisVehFilter);
-const rows=[];
-vehicles.forEach(veh=>{
-const curKm=getVehicleKm(veh.id);
-const kmPerDay=estimateKmPerDay(veh.id);
-const remindableCatsRaw=remindableCatsAll.filter(c=>catVisibleForVehicle(c,veh.id)&&((c.intervalKm>0)||(c.intervalBulan>0)||((typeof hasMaintenanceReminderSchedule==='function')&&hasMaintenanceReminderSchedule(veh.id,c))));
-const remindableCats=typeof dedupeServiceCategoriesForVehicle==='function'?dedupeServiceCategoriesForVehicle(remindableCatsRaw,veh.id):remindableCatsRaw;
-remindableCats.forEach(cat=>{
-// Sesi 3D — Dashboard wajib memakai SoT urgency yang sama dgn kartu
-// Pengingat Servis utama. Dulu widget ini menghitung ulang pure-KM sendiri,
-// sehingga intervalBulan/actionType reset bisa berbeda dari Riwayat.
-const resetFilter=(typeof resolveResetActionTypeFilter==='function')?resolveResetActionTypeFilter(cat):null;
-const lastKm=getLastServiceKmForCat(veh.id,cat,resetFilter,true);
-const u=(typeof computeServiceUrgency==='function')?computeServiceUrgency({vehicleId:veh.id,cat,curKm,kmPerDay}):null;
-const intervalKm=u?u.intervalKm:getEffectiveIntervalKm(veh.id,cat);
-const jarakTempuh=lastKm===null?curKm:curKm-lastKm;
-// A canonical unknown projection must remain unknown; never rebuild a fake countdown from current KM.
-const sisa=u?(u.sisaKm!=null?u.sisaKm:null):(intervalKm>0?(intervalKm-jarakTempuh):null);
-const monthLimited=!!(u&&u.intervalBulan&&u.limitingAxis==='bulan'&&u.sisaBulan!=null);
-const dayLimited=!!(u&&u.intervalHari&&u.limitingAxis==='hari'&&u.sisaHari!=null);
-const pct=intervalKm>0&&sisa!=null?Math.min(100,Math.max(0,Math.round(((intervalKm-sisa)/intervalKm)*100))):(u&&u.score!=null?Math.min(100,Math.max(0,Math.round((1-u.score)*100))):0);
-const status=u?u.status:(sisa==null?'aman':(sisa<=0?'lewat':(sisa<=intervalKm*0.15?'segera':'aman')));
-let col=null;
-if(status==='terlewat'||status==='jatuh_tempo')col='red';
-else if(status==='segera'||status==='mendekati')col='orange';
-if(status==='unknown'){col='u-t2';}
-if(!col)return;
-const msg=status==='unknown'?'⚪ Baseline servis belum diketahui':status==='terlewat'
-?(dayLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaHari))} hari`:monthLimited?`⚠️ Lewat ${Math.abs(Math.round(u.sisaBulan))} bln`:`⚠️ Lewat ${Math.abs(sisa).toLocaleString('id-ID')} km`)
-:(status==='jatuh_tempo'?(dayLimited?'🔴 Jatuh tempo hari ini':monthLimited?'🔴 Jatuh tempo bulan ini':'🔴 Jatuh tempo servis'):(status==='mendekati'?(dayLimited?`🔵 Mendekati · ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔵 Mendekati · ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔵 Mendekati · ${sisa.toLocaleString('id-ID')} km`):(dayLimited?`🔔 Sisa ${Math.max(0,Math.round(u.sisaHari))} hari`:monthLimited?`🔔 Sisa ~${Math.max(0,Math.round(u.sisaBulan))} bln`:`🔔 Sisa ${sisa.toLocaleString('id-ID')} km`)));
-const estDateISO=monthLimited?null:(u&&u.estDateISO!==undefined?u.estDateISO:estimateServiceDateISO(sisa,kmPerDay));
-const estLabel=estDateISO?` · ~${fmtDateID(estDateISO)}`:'';
-rows.push({veh,cat,sisa,pct,col,msg:msg+estLabel});
-});
-});
-if(!rows.length){
-if(dashServisVehFilter!=='semua'&&vehChipsHTML){
-card.classList.remove('u-dnone');card.style.display='block';
-card.innerHTML=`<div class="card-title">🔧 Pengingat Servis <span class="card-collapse-toggle" id="dashServisReminderCard-chev" data-action="toggleCardCollapse" data-args='["dashServisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="dashServisReminderCard-cbody">`+vehChipsHTML+`<div class="u-fs12 u-t2 u-tac" style="padding:10px 0">✅ Aman, belum ada servis mendesak untuk kendaraan ini.</div></div>`;
-applyOneCardCollapsePref('dashServisReminderCard');
-}else{
-card.style.display='none';
-}
-return;
-}
-rows.sort((a,b)=>(a.sisa==null?Number.POSITIVE_INFINITY:a.sisa)-(b.sisa==null?Number.POSITIVE_INFINITY:b.sisa));
-const top=rows.slice(0,3);
-card.classList.remove('u-dnone');card.style.display='block';
-card.innerHTML=`<div class="card-title">🔧 Pengingat Servis <span class="acc-chip u-cacc2" style="border-color:var(--accent2)">${rows.length}</span> <span class="card-collapse-toggle" id="dashServisReminderCard-chev" data-action="toggleCardCollapse" data-args='["dashServisReminderCard","$event"]' aria-label="Buka/tutup bagian">▾</span></div><div class="card-collapse-body" id="dashServisReminderCard-cbody">`
-+vehChipsHTML
-+top.map(r=>{
-// Sesi D-lanjutan1: badge kategori master (13 kategori terkunci) di
-// samping nama kategori -- '' kalau 0 match (lihat komentar
-// dashReminderMasterCatBadgeHTML di sparepart-servis.js), badge langsung
-// nempel di span nama kategori (bukan div terpisah) supaya 0 elemen
-// kosong nambah tinggi kartu saat badge '' (kasus paling umum sebelum
-// user isi lebih banyak kategori item lewat classifier).
-const mcBadge=(typeof Sparepart!=='undefined'&&typeof Sparepart.dashReminderMasterCatBadgeHTML==='function')?Sparepart.dashReminderMasterCatBadgeHTML(r.cat,r.veh.id):'';
-const dashComponentMeta=(typeof ServiceInputCatalog!=='undefined'&&r.cat.serviceComponentId&&typeof ServiceInputCatalog.itemById==='function')?ServiceInputCatalog.itemById(r.cat.serviceComponentId):null;
-const dashComponentName=dashComponentMeta&&dashComponentMeta.item?dashComponentMeta.item.name:(r.cat.componentName||r.cat.name||'');
-const dashCategoryName=dashComponentMeta&&dashComponentMeta.group?dashComponentMeta.group.group:(r.cat.group||r.cat.categoryName||'');
-return`
-    <div class="u-mb10 u-pointer" data-action="goToServisFromDash" data-args="${escapeHtml(JSON.stringify([r.veh.id]))}">
-      <div class="u-flex u-jcb u-aic u-fs12 u-mb4">
-        <span class="u-fw700">${escapeHtml(r.veh.emoji||'🏍️')} ${escapeHtml(r.veh.name)} · ${escapeHtml(dashCategoryName||'Kategori Servis')} · ${escapeHtml(dashComponentName)}${mcBadge}</span>
-        <span class="${r.col} u-fw700">${r.msg}</span>
-      </div>
-      <div class="prog-bar"><div class="prog-fill ${r.col}" style="width:${r.pct}%"></div></div>
-    </div>`;}).join('')
-+(rows.length>top.length?`<div class="u-fs12 u-cacc u-tar u-pointer" data-action="goToServisFromDash">Lihat semua (${rows.length}) →</div>`:'')
-+`</div>`;
-applyOneCardCollapsePref('dashServisReminderCard');
-}
-
+// B13: renderDashboardServisReminder() DIHAPUS (kode mati: #dashServisReminderCard tidak ada di HTML; Beranda memakai VehicleReminder.summary()).
 function renderDashboardSewaKiosReminder(){
 const card=document.getElementById('dashSewaKiosReminderCard');
 if(!card)return;

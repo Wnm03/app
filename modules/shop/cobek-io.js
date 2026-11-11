@@ -283,6 +283,7 @@ el.innerHTML=lines.map((l,i)=>{
 const editing=shopCartEdit.sale===i;
 const prod=(D.products||[]).find(x=>x.id===l.productId);
 const defTxt=prod&&Number(prod.hargaJual)>0?`Harga jual produk saat ini: ${fmtFull(prod.hargaJual)}`:'';
+const _belowCost=prod&&typeof ShopCartAdvice!=='undefined'&&ShopCartAdvice.isBelowCost({product:prod,harga:l.harga});
 const panel=editing?`
       <div class="u-flex u-gap8 u-mt2" style="flex-wrap:wrap;width:100%">
         <div class="u-flex1" style="min-width:90px">${_cartEditField('Jumlah','txCartEditQty',l.qty)}</div>
@@ -299,11 +300,19 @@ return `
         <div class="u-flex1 u-minw0">
           <div class="u-fs12 u-fw700" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(l.name)}${l.saveAsDefault?' <span class="u-cacc u-fw600">(harga default)</span>':''}</div>
           <div class="u-fs12t2">${l.qty} x ${fmtFull(l.harga)} = ${fmtFull(l.lineTotal)}</div>
+          ${_belowCost?`<div style="font-size:10.5px;color:var(--accent2);font-weight:700">⚠️ Di bawah modal (${fmtFull(prod.hargaBeli)})</div>`:''}
         </div>
         <button type="button" class="tx-del" data-action="editTxShopSaleCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit harga dan jumlah" aria-expanded="${editing?'true':'false'}">✏️</button>
         <button type="button" class="tx-del" data-action="removeTxShopSaleCartItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
       </div>${panel}
-    </div>`;}).join('')+`<div class="u-fs12 u-t2 u-mt2 u-tar">Subtotal: ${fmtFull(total)} · Estimasi untung: ${fmtFull(profit)}</div>`;
+    </div>`;}).join('')+`<div class="u-fs12 u-t2 u-mt2 u-tar">Subtotal: ${fmtFull(total)} · Estimasi untung: ${fmtFull(profit)}</div>`+_txShopSaleAdviceHtml(lines,profit);
+}
+// S2795: saran cepat lokal untuk keranjang Penjualan di modal Transaksi (aturan sama dgn Kasir/Order: ShopCartAdvice).
+function _txShopSaleAdviceHtml(lines,profit){
+if(typeof ShopCartAdvice==='undefined')return '';
+const adv=lines.map(l=>{const prod=(D.products||[]).find(x=>x.id===l.productId);if(!prod)return null;const def=Number(prod.hargaJual)||0;return{...l,product:prod,hargaDefault:def,hargaOverride:(def>0&&Math.round(l.harga)!==Math.round(def))?l.harga:null};}).filter(Boolean);
+const html=ShopCartAdvice.renderHtml(ShopCartAdvice.analyze(adv,{profit}));
+return html?'<div class="u-mt6">'+html+'</div>':'';
 }
 
 function renderProductList(){Etalase.renderList();Etalase.renderKategoriList();Etalase.renderModalStat();PriceRekoWidget.render();StockRekoWidget.render();}

@@ -588,12 +588,21 @@ const Investment = {
     };
     if (accountId && (type === 'beli' || type === 'jual') && typeof D !== 'undefined' && D.accounts && D.accounts.some((a) => String(a.id) === String(accountId))) {
       D.transactions = D.transactions || [];
+      // FIX B2 (audit browser 2026-11-11): kategori "Investasi" HARUS ada utk tipe
+      // transaksi yang dibuat (beli = expense, jual = income; kategori income
+      // "Investasi" tidak ada di default). Pastikan ada dulu, lalu subkategori
+      // dikosongkan -- dulu diisi nama holding, yang tidak pernah ada sbg subkategori
+      // "Investasi" sehingga FinanceTxSOT menolak (FINANCE_CATEGORY_UNRESOLVED) dan
+      // beli/jual dengan akun gagal total. Nama holding sudah ada di `note`.
+      if (typeof FinanceCategorySOT !== 'undefined' && typeof FinanceCategorySOT.ensureCategory === 'function') {
+        FinanceCategorySOT.ensureCategory(type === 'beli' ? 'expense' : 'income', { name: 'Investasi', emoji: '📈' });
+      }
       const linked = {
         id: _invUid(),
         type: type === 'beli' ? 'expense' : 'income',
         amount: (qty * (price || 0)) + (type === 'beli' ? txFee : -txFee),
         category: 'Investasi',
-        subcategory: h.name,
+        subcategory: '',
         accountId,
         payMethod: 'tunai',
         note: (type === 'beli' ? 'Beli Investasi: ' : 'Jual Investasi: ') + h.name + (notes ? ' (' + notes + ')' : ''),

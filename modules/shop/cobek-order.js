@@ -415,11 +415,34 @@ if(existing)existing.qty+=1;
 else Order.items.push({productId:pid,qty:1,hargaOverride:null});
 Order.renderItems();
 },
+// S2795: validasi input harga lewat ShopCartAdvice.parsePrice — dulu parseFloat('1e999')=Infinity lolos `h>0` dan merusak
+// total; kini kosong = kembali ke harga default, angka tidak valid/<=0/terlalu besar DIABAIKAN (harga lama dipertahankan)
+// dengan pesan di baris, bukan diam-diam kembali ke default.
+_lineTagHtml(l){
+const edited=l.hargaOverride!=null&&l.hargaOverride>0&&l.hargaOverride!==l.hargaDefault;
+return edited?' <span class="u-cacc4">(diedit, default '+fmt(l.hargaDefault)+')</span>':'';
+},
+renderAdvice(lines,profit){
+const list=document.getElementById('orderItemList');
+let advEl=document.getElementById('orderCartAdvice');
+if(!advEl&&list&&list.parentNode&&typeof document.createElement==='function'){advEl=document.createElement('div');advEl.id='orderCartAdvice';advEl.className='u-mb8';advEl.setAttribute('aria-live','polite');list.parentNode.insertBefore(advEl,list.nextSibling);}
+if(advEl)advEl.innerHTML=(typeof ShopCartAdvice!=='undefined')?ShopCartAdvice.renderHtml(ShopCartAdvice.analyze(lines,{profit})):'';
+},
 updateItemHarga(idx,val){
-const h=parseFloat(val);
 if(!Order.items[idx])return;
-Order.items[idx].hargaOverride=(h>0)?h:null;
-const{total,profit}=Order.computeTotals();
+const raw=String(val==null?'':val).trim();
+let errMsg='';
+if(raw==='')Order.items[idx].hargaOverride=null;
+else if(typeof ShopCartAdvice!=='undefined'){
+const r=ShopCartAdvice.parsePrice(raw);
+if(r.ok)Order.items[idx].hargaOverride=r.value;else errMsg=ShopCartAdvice.priceErrorText(r.reason);
+}else{const h=parseFloat(raw);Order.items[idx].hargaOverride=(h>0&&isFinite(h))?h:null;}
+const{lines,total,profit}=Order.computeTotals();
+const _tag=document.getElementById('orderLineTag'+idx),_ln=lines[idx];
+if(_tag&&_ln)_tag.innerHTML=Order._lineTagHtml(_ln);
+const _hint=document.getElementById('orderLineHint'+idx);
+if(_hint)_hint.textContent=errMsg?('⚠️ '+errMsg+' — dipakai '+fmt(_ln?_ln.harga:0)):((_ln&&typeof ShopCartAdvice!=='undefined'&&ShopCartAdvice.isBelowCost(_ln))?('⚠️ Di bawah modal ('+fmt(ShopCartAdvice.unitCost(_ln))+')'):'');
+Order.renderAdvice(lines,profit);
 document.getElementById('oTotalDisplay').textContent=fmtFull(total);
 document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
 },
@@ -447,7 +470,7 @@ if(p.diskonPersen)hargaDefault=hargaDefault-(hargaDefault*p.diskonPersen/100);
 const harga=(it.hargaOverride!=null&&it.hargaOverride>0)?it.hargaOverride:hargaDefault;
 const lineTotal=harga*it.qty;
 subtotal+=lineTotal;modal+=hargaBeliP*it.qty;
-return{...it,product:p,harga,hargaDefault,lineTotal};
+return{...it,product:p,harga,hargaDefault,lineTotal,modalUnit:hargaBeliP};
 }).filter(Boolean);
 const diskon=parseFloat(document.getElementById('oDiskon').value)||0;
 const _ongkirN=parseFloat(document.getElementById('oOngkir').value);const ongkir=Number.isFinite(_ongkirN)?Math.max(0,_ongkirN):0; // S2307 (B9): ongkir negatif/Infinity tidak boleh memotong total
@@ -479,8 +502,9 @@ return`
           <div class="tx-name">${escapeHtml(l.product.name)}</div>
           <div class="tx-meta u-flex u-aic u-gap4" style="margin-top:3px">
             <input type="number" class="fi u-fs12" value="${l.harga}" data-oninput="updateOrderItemHarga" data-oninput-args='[${i},"$value"]' placeholder="${l.hargaDefault}" inputmode="numeric" style="width:90px;padding:5px 7px" title="Harga bisa diedit manual per transaksi (mis. nego/diskon)">
-            <span>x ${l.qty}${l.hargaOverride!=null&&l.hargaOverride>0&&l.hargaOverride!==l.hargaDefault?' <span class="u-cacc4">(diedit, default '+fmt(l.hargaDefault)+')</span>':''}</span>
+            <span>x ${l.qty}<span id="orderLineTag${i}">${Order._lineTagHtml(l)}</span></span>
           </div>
+          <div id="orderLineHint${i}" class="u-mt2" style="font-size:10.5px;color:var(--accent2);font-weight:700">${(typeof ShopCartAdvice!=='undefined'&&ShopCartAdvice.isBelowCost(l))?'⚠️ Di bawah modal ('+fmt(ShopCartAdvice.unitCost(l))+')':''}</div>
           ${priceHint}
         </div>
         <div class="u-flex u-aic u-gap6">
@@ -493,6 +517,7 @@ return`
 }).join(''):'<div class="empty"><div class="empty-text">Keranjang masih kosong</div></div>');
 document.getElementById('oTotalDisplay').textContent=fmtFull(total);
 document.getElementById('oProfitDisplay').textContent=(profit<0?'Estimasi rugi: ':'Estimasi untung: ')+(typeof fmtFullSigned==='function'?fmtFullSigned(profit):(profit<0?'-':'')+fmtFull(Math.abs(profit)));
+Order.renderAdvice(lines,profit);
 },
 save(){return withSaveGuard('order','orderModal',Order._saveInner);},
 _saveInner(){

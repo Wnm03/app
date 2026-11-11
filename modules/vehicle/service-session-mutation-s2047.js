@@ -184,7 +184,6 @@
     }
     if(typeof g.Servis==='object'&&g.Servis){
       try{if(typeof g.Servis.renderReminder==='function')g.Servis.renderReminder();}catch(_reminderErr){void _reminderErr;}
-      try{if(typeof g.renderDashboardServisReminder==='function')g.renderDashboardServisReminder();}catch(_dashboardReminderErr){void _dashboardReminderErr;}
     }
     // S2052: remove only generated compatibility reminder projections that no
     // longer have a component anywhere in this vehicle's service history.

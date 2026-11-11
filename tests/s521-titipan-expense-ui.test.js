@@ -458,7 +458,10 @@ test('7. save(): single owner -> TitipanExpenseFlow.submit() dipanggil, 1 transa
   // Transaksi Akun" di dashboard Dana Titipan (resolveTxOwnerAssignment(),
   // filter-laporan.js) tidak jatuh ke fallback owner pertama.
   assert.equal(D.transactions[0].deductionOwnerId, 'budi');
-  assert.equal(D.transactions[0].category, 'Beli galon');
+  // FIX B3 (audit browser 2026-11-11): kategori SELALU 'Dana Titipan'; teks catatan masuk ke `note`
+  // (dulu dipakai sbg kategori -> ditolak FinanceTxSOT di app sungguhan).
+  assert.equal(D.transactions[0].category, 'Dana Titipan');
+  assert.equal(D.transactions[0].note, 'Beli galon');
   assert.deepEqual(ctx._closeModalCalls, ['titipanExpenseModal']);
   assert.equal(ctx._renderCalls.presenter, 1);
   assert.equal(ctx._renderCalls.keuangan, 1);

@@ -4,6 +4,7 @@
  */
 (function(g){
   function emit(action,s,extra,meta){
+    if(action==='delete')_reopenPackage(s); // B12: sebelum cek AIBus supaya tetap jalan tanpa bus
     if(typeof AIBus==='undefined'||!AIBus)return;
     const payload=Object.assign({kind:'servis',action,servisId:s&&s.id||null,vehicleId:s&&s.vehicleId||null,txId:s&&s.txLinkId||null},extra||{});
     const deliveryMeta=(meta&&typeof meta==='object')?meta:null;
@@ -23,6 +24,7 @@
     return true;
   }
   async function emitAsync(action,s,extra,meta){
+    if(action==='delete')_reopenPackage(s);
     if(typeof AIBus==='undefined'||!AIBus)return;
     const payload=Object.assign({kind:'servis',action,servisId:s&&s.id||null,vehicleId:s&&s.vehicleId||null,txId:s&&s.txLinkId||null},extra||{});
     const deliveryMeta=(meta&&typeof meta==='object')?meta:null;
@@ -38,6 +40,7 @@
     if(typeof g.ServiceEventSOT!=='undefined'&&s){const r=g.ServiceEventSOT.normalize(s,{persist:false});if(r&&r.ok&&r.changed&&typeof g.save==='function')g.save({domain:'servis',financeMutation:false});}
   }
   function metaFrom(extra){return extra&&extra.eventId?{eventId:String(extra.eventId),source:'service-event-outbox'}:null;}
+  function _reopenPackage(s){try{if(s&&s.reminderPackageId&&g.ServiceReminderPackageSOT&&typeof g.ServiceReminderPackageSOT.reopenIfOrphaned==='function')g.ServiceReminderPackageSOT.reopenIfOrphaned(s);}catch(e){if(typeof console!=='undefined')console.error('B12: reopen paket pengingat gagal',e);}}
   g.ServiceEventLifecycle={
     emit, emitAsync,
     create:(s,extra)=>{normalizeAndPersist(s);emit('create',s,extra,metaFrom(extra));},

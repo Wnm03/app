@@ -551,7 +551,6 @@ function refreshServiceReminderState(){
   // service mutation, refresh the projection explicitly so Edit/Delete and
   // direct modal flows cannot leave a stale reminder card.
   try{ if(typeof Servis!=='undefined'&&Servis&&typeof Servis.renderReminder==='function')Servis.renderReminder(); }catch(err){ console.error('P19: reminder refresh failed',err); }
-  try{ if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder(); }catch(err){ console.error('P19: dashboard reminder refresh failed',err); }
 }
 
 // Servis canonical source: modules/vehicle/servis.js (GROUP_B).

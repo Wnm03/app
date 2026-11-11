@@ -602,6 +602,12 @@ if(typeof AIBus!=="undefined")AIBus.emit("product.updated",{kind:"produk",action
 // tiap buka modal (lihat openModal()), jadi default-nya SELALU nonaktif kecuali
 // user sengaja mencentang untuk sesi simpan ini saja.
 const isKoreksi=!!this.stockKoreksiState;
+// AUDIT-BROWSER B6 (ledger stok Shop): simpan produk dari Etalase (koreksi stok / tambah stok / edit / produk baru dgn stok awal)
+// menulis product.stock lewat updateProduct()/createProduct() (PURE) + Object.assign, jadi TIDAK lewat mutateStockDelta -> tidak ada
+// entri ShopInventoryLedger dan rekonsiliasi MISMATCH (mis. Lumpang 21-22cm: stok 0, ledger terakhir 1). Catat 1 entri ledger
+// dgn selisih stok yang BENAR-BENAR tersimpan (setelah clamp) sbg source 'stock-correction' / 'etalase-restock' / 'etalase-edit'.
+{const _after=Number(product.stock)||0,_dl=_after-prevStock;
+if(_dl!==0&&typeof ShopInventoryLedger!=='undefined')ShopInventoryLedger.record({productId:product.id,before:prevStock,after:_after,delta:_dl,source:isKoreksi?'stock-correction':(delta>0&&hargaBeli>0?'etalase-restock':'etalase-edit'),reason:isKoreksi?'koreksi stok manual (Etalase)':'simpan produk dari Etalase',refType:isKoreksi?'productStockCorrection':'product',refId:product.id});}
 if(isKoreksi&&delta!==0){
 if(!D.productStockCorrections)D.productStockCorrections=[];
 D.productStockCorrections.push({id:uid(),productId:product.id,from:prevStock,to:stock,delta,ts:new Date().toISOString(),note:`Koreksi stok ${name}${kategoriLabel}`});

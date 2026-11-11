@@ -90,7 +90,7 @@ if(!categoryExists&&!editingLegacyCategory){
 // S2732: tolak SEBELUM persist bila stok Penjualan Shop tidak cukup (cegah pemasukan yatim tanpa tautan Shop).
 if(typeof txShopSalePrecheck==='function'){const _shopPre=txShopSalePrecheck(txEditId?D.transactions.find(t=>String(t.id)===String(txEditId)):null);if(!_shopPre.ok){toast('⚠️ '+_shopPre.message);return;}}
 // S2433-A: tolak SEBELUM persist bila centang Stok Shop aktif tapi daftar produk kosong.
-if(typeof txShopStockPrecheck==='function'){const _stkPre=txShopStockPrecheck();if(!_stkPre.ok){toast('⚠️ '+_stkPre.message);return;}}
+if(typeof txShopStockPrecheck==='function'){const _stkPre=txShopStockPrecheck(txEditId?D.transactions.find(t=>String(t.id)===String(txEditId)):null);if(!_stkPre.ok){toast('⚠️ '+_stkPre.message);return;}}
 // VALIDASI S574-D1 (basis diganti Sesi S578, DL-Next-1 / Audit-3A --
 // lihat DESIGN-LOCK-OWNER-RESOLVER-AUDIT-3-6-FOLLOWUP.md &
 // AUDIT-1-7-OWNER-RESOLVER-LANJUTAN.md §3A): akun multi-owner (2+ kandidat

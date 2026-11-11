@@ -120,6 +120,16 @@ const next=(Number(p.qty)||0)+Number(deltaQty);
 const r=StockCommandSOT.setQty(partId,next,{reason:'service-purchase-auto-link',source:'tx-servis',journal:false,saveNow:false});
 if(!r.ok)throw new Error(r.code||'STOCK_AUTO_LINK_MUTATION_FAILED');
 }
+// AUDIT-BROWSER B7: apakah applyTxServisFromTx() AKAN memasang ulang auto-link part pada simpan ini (centang Sinkron Servis
+// aktif & panel servis tampil)? Dipakai applyTxStockFromTx()/validateTxStockBeforeSave() utk melepas auto-link LAMA lebih dulu
+// bila akan dipasang ulang; bila servis tidak diproses, auto-link lama dibiarkan apa adanya.
+function _txServisWillRelink(){
+const chk=document.getElementById('txSyncServis');
+const autoService=typeof _txServisAutoActive==='function'&&_txServisAutoActive();
+if(!autoService&&(!chk||!chk.checked))return false;
+const panel=document.getElementById('txServisPanel');
+return !!(panel&&panel.style.display!=='none');
+}
 // _syncServisUsedPartFromPurchase(log,purchasedPartId,purchasedPartQty) —
 // satu titik tunggal yang menjaga usedPartId/usedPartQty 1 baris D.servisLogs
 // tetap konsisten dengan part yang dibeli (tx.partStockId/tx.partStockQty)
@@ -273,6 +283,7 @@ Object.assign(s,{
   reminderPackageId:opts.reminderPackageId||s.reminderPackageId||null
 });
 if(catIdForLog)s.categoryId=catIdForLog;
+if(opts.actionType&&!s.actionType)s.actionType=opts.actionType;
 const _catForSnapshot=(()=>{
   const vid=String(vehicleId||'');
   if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&vid&&typeof VehicleCarNotesSOT.getServiceCategories==='function'){
@@ -326,7 +337,8 @@ const log={
   catalogPartQty:0,
   catalogPartOemCode:'',
   catalogPartLinkedStockId:null,
-  autoLinkedPartStock:false
+  autoLinkedPartStock:false,
+  actionType:opts.actionType||null // AUDIT-BROWSER B10: tanpa ini servis dari Keuangan tidak me-reset Pengingat (reset hanya utk ganti/pasang/overhaul)
 };
 const _catForSnapshotNew=(()=>{
   const vid=String(vehicleId||'');
@@ -486,7 +498,8 @@ function populateTxServisReminderPackages(selectedId){
 const sel=document.getElementById('txServisReminderPackage'); if(!sel)return;
 const vehicle=document.getElementById('txServisVehicle')?.value||'';
 const list=typeof ServiceReminderPackageSOT!=='undefined'&&typeof ServiceReminderPackageSOT.get==='function'?ServiceReminderPackageSOT.get(vehicle):[];
-const active=list.filter(p=>p&&p.status!=='DISMISSED');
+// B13: paket COMPLETED tidak ditawarkan lagi utk servis baru (kecuali yg sedang terpilih/diedit); DISMISSED tetap disembunyikan.
+const active=list.filter(p=>p&&p.status!=='DISMISSED'&&(p.status!=='COMPLETED'||(selectedId&&String(p.id)===String(selectedId))));
 sel.innerHTML='<option value="">— Tanpa Paket Pengingat —</option>'+active.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.title||'Paket Servis')} · ${p.targets?.length||0} komponen${p.dueMode==='RECOMMENDED_REVIEW'?' · review':''}</option>`).join('');
 sel.value=selectedId&&active.some(p=>String(p.id)===String(selectedId))?selectedId:'';
 }
@@ -564,7 +577,7 @@ const pkgState=getTxServisPackageState();
 if(pkgState.id&&pkgState.targets.length){
   checklist=pkgState.targets.map(t=>({itemId:t.serviceComponentId||null,itemName:t.componentName||t.categoryName||item,group:t.categoryName||null,masterCategoryId:t.masterCategoryId||null,categoryId:t.categoryId||null,serviceComponentId:t.serviceComponentId||null,actionType:'periksa',conditionResult:null,conditionNote:'',notApplicable:false,targetKey:[t.categoryId||'',t.masterCategoryId||'',t.serviceComponentId||'',t.catalogPartId||''].join('|'),reminderPackageId:pkgState.id}));
 }
-const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist,reminderPackageId:pkgState.id});
+const servisId=recordServisLog({existingServisId,vehicleId,date,item,km,cost:amt,note,accountId:accId,txId,idempotencyKey:`tx:${txId}`,actionType:(!existingServisId&&!pkgState.id)?'ganti':null,purchasedPartId,purchasedPartQty,masterCategoryId,componentId,checklist,reminderPackageId:pkgState.id});
 if(tx){tx.servisLinkId=servisId;tx.vehicleId=vehicleId;}
 if(pkgState.id&&typeof ServiceReminderPackageSOT!=='undefined'&&typeof ServiceReminderPackageSOT.completeFromHistory==='function'){
   const completed=ServiceReminderPackageSOT.completeFromHistory(pkgState.id,[servisId]);

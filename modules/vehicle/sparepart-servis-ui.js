@@ -178,6 +178,12 @@ delete editCat.groupIcon;
 // groupSelEl null (elemen tidak ada sama sekali di DOM): nameChanged/
 // vehChanged sudah false di sini -- tidak ada branch lain yg cocok, group
 // existing dibiarkan apa adanya, IDENTIK perilaku v1641 sebelum Sesi ini.
+// B13: dibuka dari kartu pengingat kendaraan tertentu + interval diubah + kategori
+// berlaku semua kendaraan -> simpan sebagai override MANUAL kendaraan itu saja
+// (VehicleCarNotesSOT), kategori global & kendaraan lain TIDAK disentuh.
+const _ctxVid=(Sparepart._contextVehicleId&&!vehicleId&&intervalChanged&&D.vehicles.some(v=>String(v.id)===String(Sparepart._contextVehicleId)))?String(Sparepart._contextVehicleId):null;
+const _intervalVid=vehicleId||_ctxVid;
+const _prevCatKm=editCat.intervalKm,_prevCatBulan=editCat.intervalBulan;
 editCat.name=name;
 editCat.code=code;
 editCat.intervalKm=intervalKm;
@@ -193,22 +199,23 @@ if(vehChanged&&oldVehicleId&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCar
 let result=null;
 if(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT){
   if(intervalSource==='ai-rekomendasi'&&typeof ServiceIntervalSOT.setAiRecommendation==='function'){
-    result=ServiceIntervalSOT.setAiRecommendation(editCat,vehicleId,intervalKm,intervalBulan,{from:'category-edit'});
+    result=ServiceIntervalSOT.setAiRecommendation(editCat,_intervalVid,intervalKm,intervalBulan,{from:'category-edit'});
   }else if(intervalSource==='manual'&&typeof ServiceIntervalSOT.setManual==='function'){
-    result=ServiceIntervalSOT.setManual(editCat,vehicleId,intervalKm,intervalBulan);
+    result=ServiceIntervalSOT.setManual(editCat,_intervalVid,intervalKm,intervalBulan);
   }else if(typeof ServiceIntervalSOT.setGuideline==='function'){
-    result=ServiceIntervalSOT.setGuideline(editCat,vehicleId,intervalKm,intervalBulan,{from:'category-edit'});
+    result=ServiceIntervalSOT.setGuideline(editCat,_intervalVid,intervalKm,intervalBulan,{from:'category-edit'});
   }
 }else if(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.syncCategoryRule==='function'){
   // Isolated early-load compatibility: VehicleServiceSOT itself delegates to
   // VehicleCarNotesSOT and does not own interval state.
-  result=VehicleServiceSOT.syncCategoryRule(editCat,vehicleId,{source:intervalSource});
+  result=VehicleServiceSOT.syncCategoryRule(editCat,_intervalVid,{source:intervalSource});
 }
 const resolved=(typeof ServiceIntervalSOT!=='undefined'&&ServiceIntervalSOT&&typeof ServiceIntervalSOT.active==='function')
-  ?ServiceIntervalSOT.active(editCat,vehicleId)
+  ?ServiceIntervalSOT.active(editCat,_intervalVid)
   :(typeof VehicleServiceSOT!=='undefined'&&VehicleServiceSOT&&typeof VehicleServiceSOT.resolveReminderRule==='function'
-    ?VehicleServiceSOT.resolveReminderRule(editCat,vehicleId):null);
-if(result&&result.ok&&resolved){editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;}
+    ?VehicleServiceSOT.resolveReminderRule(editCat,_intervalVid):null);
+if(_ctxVid){editCat.intervalKm=_prevCatKm;editCat.intervalBulan=_prevCatBulan;}
+else if(result&&result.ok&&resolved){editCat.intervalKm=resolved.intervalKm||0;editCat.intervalBulan=resolved.intervalBulan||0;editCat._serviceIntervalSource=resolved.source;}
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function'){
   const _editSotResult=VehicleCarNotesSOT.syncLegacyCategoryProjection(editCat,'manual-edit');
   if(!_editSotResult||!_editSotResult.ok){_rollbackCategoryEdit();throw new Error((_editSotResult&&_editSotResult.code)||'CATEGORY_SOT_UPDATE_FAILED');}
@@ -227,7 +234,7 @@ const _newCat={id:_spCatId(),name,code,intervalKm,intervalBulan,masterCategoryId
 }
 const _categoryEditSaveResult=save();
 if(editMode&&_categoryEditSaveResult===false){_rollbackCategoryEdit();throw new Error('CATEGORY_EDIT_SAVE_FAILED');}
-closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();toast('✅ Kategori sparepart disimpan');
+closeModal('sparepartModal');Sparepart.renderCatList();renderServisList();toast('✅ Kategori sparepart disimpan');
 },
 async delCat(i){
 // S2459: resolve by stable categoryId + vehicleId after confirmation; never
@@ -282,7 +289,7 @@ try{
   const _projectionVehicle=targetVehicleId;
   D.sparepartCats=D.sparepartCats.filter(c=>!(c&&String(c.id||'')===targetId&&String(c.vehicleId||'')===_projectionVehicle));
   const _saveResult=save(); if(_saveResult===false)throw new Error('CATEGORY_DELETE_SAVE_FAILED');
-  Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();renderDashboardServisReminder();
+  Sparepart.renderCatList();Sparepart.renderStockList();renderServisList();
   toast(linkedStock.length||linkedVeh.length?'🗑 Dihapus, referensi terkait sudah dibersihkan':'🗑 Dihapus');
 }catch(_delErr){
   try{D.sparepartCats=JSON.parse(_sparepartCatsBefore);if(typeof StockCommandSOT!=='undefined'&&StockCommandSOT&&typeof StockCommandSOT.replaceSnapshot==='function')StockCommandSOT.replaceSnapshot(JSON.parse(_partsStockBefore));const _v=Array.isArray(D.vehicles)?D.vehicles.find(v=>v&&String(v.id)===targetVehicleId):null;if(_v&&_sotBefore!==null&&typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.restoreSnapshot==='function')VehicleCarNotesSOT.restoreSnapshot(_v.id,JSON.parse(_sotBefore));}catch(_rbErr){console.error('S2459 category delete rollback failed',_rbErr);}
@@ -825,7 +832,6 @@ save();
 Sparepart.renderCatList();
 Sparepart.renderStockList();
 if(typeof renderServisList==='function')renderServisList();
-if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();
 // BUGFIX (laporan user): data sudah benar tersimpan & innerHTML #sparepartCatList/
 // #sparepartDashboard sudah di-update di atas, TAPI di beberapa WebView Android
 // repaint-nya baru kelihatan setelah ada interaksi UI lain (mis. ketik di search

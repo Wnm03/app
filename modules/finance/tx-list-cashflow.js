@@ -272,7 +272,12 @@ D.bbmLogs=D.bbmLogs.filter(b=>b.id!==t.bbmLinkId);
 if(linkedBbm&&typeof reconcileFuelStateFromLogs==='function')reconcileFuelStateFromLogs(linkedBbm.vehicleId);
 }
 if(t&&t.partStockId&&typeof revertStockPurchase==='function'){
-revertStockPurchase(t.partStockId,t.partStockQty,t.id);
+// AUDIT-BROWSER B8: transaksi "beli part + langsung dipasang" -- stok pembelian SUDAH terpotong pemakaian servis tertaut. Dulu revert
+// pembelian jalan lebih dulu: stok < qty -> revertStockPurchase() gagal DIAM-DIAM (return false), lalu blok servis di bawah
+// mengembalikan pemakaian -> stok hantu (+qty) padahal transaksi & servis sudah terhapus. Lepas pemakaian servis tertaut lebih dulu.
+{const _lgPart=t.servisLinkId&&D.servisLogs?D.servisLogs.find(s=>s&&s.id===t.servisLinkId):null;
+if(_lgPart&&_lgPart.usedPartId&&String(_lgPart.usedPartId)===String(t.partStockId)&&typeof revertStockUsage==='function'){revertStockUsage(_lgPart.usedPartId,_lgPart.usedPartQty);_lgPart.usedPartId=null;_lgPart.usedPartQty=0;_lgPart.autoLinkedPartStock=false;}}
+if(revertStockPurchase(t.partStockId,t.partStockQty,t.id)===false)throw new Error('STOCK_PURCHASE_REVERT_FAILED');
 toast(`📦 Stok sparepart dikurangi (transaksi dihapus)`,2600);
 renderStockList();
 }
@@ -363,6 +368,17 @@ if(!t)return out;
 const chk=(pid,qty)=>{const p=(D.products||[]).find(x=>x.id===pid);const q=Number(qty)||0;if(p&&(Number(p.stock)||0)<q)out.push({name:p.name,stock:Number(p.stock)||0,qty:q,short:q-(Number(p.stock)||0)});};
 if(t.stockItems&&t.stockItems.length)t.stockItems.forEach(si=>chk(si.productId,si.qty));
 else if(t.stockProductId)chk(t.stockProductId,t.stockQty);
+// AUDIT-BROWSER B8: belanja Sparepart (partStockId) -- tolak bila stok part < qty belanja (sebagian sudah terpakai servis lain).
+// Pemakaian servis yang tertaut ke transaksi ini sendiri ikut dihapus, jadi dihitung kembali ke stok.
+if(t.partStockId&&Number(t.partStockQty)>0){
+const part=(D.partsStock||[]).find(x=>x&&String(x.id)===String(t.partStockId));
+if(part){
+const lg=t.servisLinkId?(D.servisLogs||[]).find(s=>s&&s.id===t.servisLinkId):null;
+const rel=lg&&lg.usedPartId&&String(lg.usedPartId)===String(part.id)?(Number(lg.usedPartQty)||0):0;
+const have=(Number(part.qty)||0)+rel,q=Number(t.partStockQty);
+if(have<q)out.push({name:part.name||'part',stock:have,qty:q,short:q-have});
+}
+}
 return out;
 }
 async function delTx(id){
@@ -376,7 +392,7 @@ if(typeof _financeMutationBlockedByStaleState==='function'&&_financeMutationBloc
 // terhapus). Guard di baris PERTAMA, sebelum askConfirm() dipanggil.
 if(String(id).startsWith('vbill_')){toast('Tagihan ini belum dibayar');return;}
 {const _t0=D.transactions.find(x=>x.id===id);const _blk=stockPurchaseDeleteBlockers(_t0);
-if(_blk.length){toast('⛔ Pembelian tidak bisa dihapus: stok sudah terjual sebagian — '+_blk.map(b=>b.name+' (stok '+b.stock+', pembelian '+b.qty+')').join(', ')+'. Gunakan retur atau penyesuaian stok.',7000);return;}}
+if(_blk.length){toast('⛔ Pembelian tidak bisa dihapus: stok sudah terjual/terpakai sebagian — '+_blk.map(b=>b.name+' (stok '+b.stock+', pembelian '+b.qty+')').join(', ')+'. Gunakan retur atau penyesuaian stok.',7000);return;}}
 if(!await askConfirm('Hapus transaksi ini?'))return;
 const t=D.transactions.find(x=>x.id===id);
 // SESI 432 (audit fitur Transfer Antar Akun): transfer_out/transfer_in
@@ -448,6 +464,18 @@ removeUnpaidTitipanTalanganPiutangForTx(t.id);
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanPinjamUtangForTx==='function'){
 removeUnpaidTitipanPinjamUtangForTx(t.id);
 }
+// FIX B1 (audit browser 2026-11-11): utang/piutang yang dibuat lewat toggle
+// "Catat juga sebagai transaksi arus kas" menyimpan `linkedTxId`. Hapus
+// transaksi sumbernya sekarang ikut membereskan rekaman tertaut (belum lunas ->
+// dihapus; sudah lunas -> hanya dilepas), jadi tidak ada yatim yang tak bisa
+// dihapus. Di dalam boundary atomic (debts/piutang/bills sudah ter-snapshot).
+let linkedPU=null;
+if(t&&typeof removeLinkedPiutangUtangForTx==='function'){
+linkedPU=removeLinkedPiutangUtangForTx(t.id);
+if(linkedPU.removedPiutang&&typeof Piutang!=='undefined')Piutang.renderList();
+if(linkedPU.removedUtang){if(typeof Debt!=='undefined')Debt.renderList();if(typeof renderBillList==='function')renderBillList();if(typeof checkBills==='function')checkBills();}
+if(linkedPU.removedPiutang||linkedPU.removedUtang){if(typeof renderKekayaanBersih==='function')renderKekayaanBersih();if(typeof hitungZakatMaal==='function')hitungZakatMaal();}
+}
 // FIX (audit lanjutan "tablist sync Dana Titipan", bug sekelas ke-5):
 // titipanLinkId adalah SATU-SATUNYA cascade *LinkId di fungsi ini yang
 // TIDAK memanggil render modulnya sendiri (bandingkan cobekLinkId ->
@@ -514,7 +542,7 @@ save();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboa
 // 0 cascade baru ditulis di sini -- murni penambahan 1 baris emit.
 if(typeof FinanceCrossEntityAtomic!=='undefined')FinanceCrossEntityAtomic.emit('finance.updated',{kind:'transaksi',action:'delete',deletedId:id,category:t&&t.category,type:t&&t.type});
 if(pairedTx)toast('🗑 Transfer dihapus (2 sisi sekaligus, saldo kedua akun ikut disesuaikan)');
-else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
+else if(!t||(!t.stockProductId&&!t.cobekLinkId&&!t.servisLinkId&&!t.partStockId&&!(t.stockItems&&t.stockItems.length)))toast('🗑 Dihapus'+(linkedPU&&linkedPU.removedPiutang?' (piutang tertaut ikut dihapus)':linkedPU&&linkedPU.removedUtang?' (utang tertaut ikut dihapus)':t&&t.renovItemLinkId?' (status lunas di Proyek Renovasi dibatalkan)':(t&&t.wishlistLinkId?' (barang dikembalikan ke Prioritas Belanja)':(t&&t.tukangPaymentEntryIds&&t.tukangPaymentEntryIds.length?' (absensi tukang terkait dibuka kembali)':billRevertMsg))));
 }catch(_deleteErr){
   if(_deleteAtomic){if(_deleteAtomicCommitted&&typeof _deleteAtomic.rollbackAfterCommit==='function')_deleteAtomic.rollbackAfterCommit();else _deleteAtomic.rollback();}
   console.error('S2198: atomic transaction delete rollback',_deleteErr);

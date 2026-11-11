@@ -11,14 +11,14 @@ function doc(els){return{getElementById:id=>els[id]||null};}
 
 test('S1905: reminder edit memakai canonical openCatModalById dan menutup servisModal',()=>{
  const s=fs.readFileSync(path.join(root,'modules/vehicle/servis-b.js'),'utf8');
- assert.match(s,/editSparepartFromReminder\(catId\)\{[\s\S]*openCatModalById\(catId\)/);
- assert.match(s,/openCatModalById\(catId\)/);
+ assert.match(s,/editSparepartFromReminder\(catId\)\{[\s\S]*openCatModalById\(catId[,)]/);
+ assert.match(s,/openCatModalById\(catId[,)]/);
  assert.match(s,/closeModal\('servisModal',\{instant:true\}\)/);
 });
 
 test('S1905: Sparepart editor membersihkan autocomplete transient state saat dibuka',()=>{
  const s=fs.readFileSync(path.join(root,'modules/vehicle/sparepart-servis.js'),'utf8');
- assert.match(s,/openCatModalById\(catId\)\{[\s\S]*staleSuggestIds=\['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'\]/);
+ assert.match(s,/openCatModalById\(catId(,opts)?\)\{[\s\S]*staleSuggestIds=\['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'\]/);
  assert.match(s,/hideSuggestBox\('sparepartNameBox'\)[\s\S]*hideSuggestBox\('sparepartCodeBox'\)/);
 });
 

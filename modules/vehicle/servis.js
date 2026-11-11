@@ -1174,7 +1174,6 @@ if(_isChecklistSessionEdit&&typeof ServiceSessionMutationS2047!=='undefined'&&Se
   if(typeof refreshCarNotesAfterMutation==='function')refreshCarNotesAfterMutation({stock:true});
   if(typeof Servis.renderList==='function')Servis.renderList();
   if(typeof Servis.renderReminder==='function')Servis.renderReminder();
-  if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();
   toast(_s2060Payload.length?'✅ Checklist servis disinkronkan: Pengingat & Riwayat diperbarui':'✅ Semua checklist dilepas: sesi riwayat & pengingat terkait dihapus');
   return;
 }
@@ -1658,6 +1657,7 @@ const _runDeleteSession=async()=>{
   const beforeTx=(Array.isArray(D.transactions)?D.transactions:[]).filter(tx=>tx&&txIds.has(tx.id)).map(x=>_cloneSession(x));
   const _sessionStockIds=new Set();
   logs.forEach(x=>{[x.usedPartId,x.catalogPartLinkedStockId,x.autoGantiStockId].filter(Boolean).forEach(id=>_sessionStockIds.add(id));});
+  beforeTx.forEach(x=>{if(x&&x.partStockId)_sessionStockIds.add(x.partStockId);}); // B9: part belanja tx tertaut ikut di-snapshot utk rollback
   const beforeStock=new Map();
   const _sessionStockRows=Array.isArray(D.partsStock)?D.partsStock:[];
   const _sessionStockById=new Map();
@@ -1669,6 +1669,13 @@ const _runDeleteSession=async()=>{
       if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
       if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
       if(s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
+    });
+    // AUDIT-BROWSER B9 (sama dgn Servis.del): batalkan belanja part transaksi tertaut yang ikut dihapus, SESUDAH pemakaian dikembalikan.
+    beforeTx.forEach(tx=>{
+      if(!(tx&&tx.partStockId&&Number(tx.partStockQty)>0))return;
+      if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk membatalkan belanja part');
+      const _pr=StockCommandSOT.revertPurchase(tx.partStockId,tx.partStockQty,tx.id,{saveNow:false,emitEvent:false});
+      if(!_pr||_pr.ok===false)throw new Error((_pr&&_pr.code)||'STOCK_PURCHASE_REVERT_FAILED');
     });
     D.servisLogs=D.servisLogs.filter(x=>!x||_sessionKey(x)!==String(sessionId)); // legacy contract: filter(x=>x&&x.sessionId===sessionId) is represented by the session-key matcher. // legacy contract: D.servisLogs=D.servisLogs.filter(x=>!x||x.sessionId!==sessionId)
     const _deleteSessionAccountIds=[...new Set(beforeTx.map(x=>x&&x.accountId).filter(Boolean))];
@@ -1713,7 +1720,7 @@ const deletedTxId=s.txLinkId||null;
 const _cloneDelete=(v)=>{try{if(typeof structuredClone==='function')return structuredClone(v);}catch(_e){/* structuredClone tidak tersedia/gagal; fallback JSON di bawah. */} try{return JSON.parse(JSON.stringify(v));}catch(_e){return v;}};
 const beforeService=_cloneDelete(s);
 const beforeTxRow=deletedTxId&&Array.isArray(D.transactions)?_cloneDelete(D.transactions.find(t=>t&&t.id===deletedTxId)):null;
-const _deleteStockIds=[s.usedPartId,s.catalogPartLinkedStockId,s.autoGantiStockId].filter(Boolean);
+const _deleteStockIds=[s.usedPartId,s.catalogPartLinkedStockId,s.autoGantiStockId,beforeTxRow&&beforeTxRow.partStockId].filter(Boolean);
 const beforeStock=new Map();
 for(const sid of _deleteStockIds){const row=(D.partsStock||[]).find(x=>x&&x.id===sid);if(row)beforeStock.set(sid,Number(row.qty)||0);}
 try{
@@ -1721,6 +1728,15 @@ try{
   if(s.usedPartId)Servis.revertStockUsage(s.usedPartId,s.usedPartQty);
   if(s.catalogPartLinkedStockId)Servis.revertStockUsage(s.catalogPartLinkedStockId,s.catalogPartQty);
   if(s.autoGantiStockId)Servis.revertStockUsage(s.autoGantiStockId,1);
+  // AUDIT-BROWSER B9: transaksi tertaut yang ikut dihapus bisa membawa BELANJA part (partStockId, "beli + langsung dipasang").
+  // FinanceTxSOT.removeById() tidak menyentuh stok, jadi dulu pemakaian dikembalikan tetapi belanja tidak dibatalkan -> stok hantu
+  // (+qty) padahal pengeluaran sudah terhapus. Batalkan belanja SESUDAH pemakaian dikembalikan; gagal (part terpakai di tempat lain)
+  // -> throw -> rollback penghapusan seperti jalur ini biasa.
+  if(beforeTxRow&&beforeTxRow.partStockId&&Number(beforeTxRow.partStockQty)>0){
+    if(typeof StockCommandSOT==='undefined'||!StockCommandSOT||typeof StockCommandSOT.revertPurchase!=='function')throw new Error('StockCommandSOT wajib tersedia untuk membatalkan belanja part');
+    const _pr=StockCommandSOT.revertPurchase(beforeTxRow.partStockId,beforeTxRow.partStockQty,beforeTxRow.id,{saveNow:false,emitEvent:false});
+    if(!_pr||_pr.ok===false)throw new Error((_pr&&_pr.code)||'STOCK_PURCHASE_REVERT_FAILED');
+  }
   D.servisLogs=D.servisLogs.filter(x=>x.id!==id);
   const _deletedAccountId=beforeTxRow&&beforeTxRow.accountId!=null?beforeTxRow.accountId:null;
   save({domain:'servis',financeMutation:!!deletedTxId,accountIds:_deletedAccountId?[_deletedAccountId]:[]});

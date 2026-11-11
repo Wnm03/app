@@ -40,7 +40,7 @@ test('S2048 stock diff compares aggregate quantities independent of row order',a
  assert.equal(calls,0);
 });
 test('S2048 reconcile is idempotent for the same session payload',async()=>{const ctx=load(),ctx0=seed(ctx);const api=ctx.ServiceSessionMutationS2047;const p=[c('B',200)];const a=await api.reconcileAfterSave(ctx0,p);const before=JSON.stringify(ctx.D);const b=await api.reconcileAfterSave(ctx0,p);assert.equal(b.idempotent,true);assert.equal(JSON.stringify(ctx.D),before);assert.equal(a.ok,true);});
-test('S2048 refreshes reminder projections after session mutation',async()=>{const ctx=load(),ctx0=seed(ctx);let reminder=0,dashboard=0;ctx.Servis.renderReminder=()=>{reminder++;};ctx.renderDashboardServisReminder=()=>{dashboard++;};await ctx.ServiceSessionMutationS2047.reconcileAfterSave(ctx0,[c('B',200)]);assert.equal(reminder,1);assert.equal(dashboard,1);});
+test('S2048 refreshes reminder projections after session mutation',async()=>{const ctx=load(),ctx0=seed(ctx);let reminder=0;ctx.Servis.renderReminder=()=>{reminder++;};await ctx.ServiceSessionMutationS2047.reconcileAfterSave(ctx0,[c('B',200)]);assert.equal(reminder,1);});
 test('S2048 build includes the session mutation SOT',()=>{const build=fs.readFileSync(path.join(root,'scripts/build.js'),'utf8');assert.match(build,/modules\/vehicle\/service-session-mutation-s2047\.js/);});
 
 

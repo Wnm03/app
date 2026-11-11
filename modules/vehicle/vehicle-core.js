@@ -460,7 +460,7 @@ save();
 const _vehicleEditEvent={kind:"vehicle",action:"edit",vehicleId:v.id};
 try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleEditEvent);}
 catch(_vehicleEditEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleEditEvent});}
-renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();renderServisList();toast('✅ Kendaraan diperbarui');
+renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderServisList();toast('✅ Kendaraan diperbarui');
 return;
 }
 const kmAwalEl=document.getElementById('vehKmAwal');
@@ -499,7 +499,7 @@ save();
 const _vehicleCreateEvent={kind:"vehicle",action:"create",vehicleId:newId};
 try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleCreateEvent);}
 catch(_vehicleCreateEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleCreateEvent});}
-renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();renderDashboardServisReminder();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';const vehTplWrap=document.getElementById('vehMaintenanceTemplateWrap');if(vehTplWrap){vehTplWrap.innerHTML='';vehTplWrap.dataset.templateJson='';}toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
+renderVehicleManageList();renderVehicleSelect();renderCarImportVehicleSelect();document.getElementById('vehName').value='';if(kmAwalEl)kmAwalEl.value='';const vehNilaiEl2=document.getElementById('vehNilai');if(vehNilaiEl2)vehNilaiEl2.value='';const vehTplWrap=document.getElementById('vehMaintenanceTemplateWrap');if(vehTplWrap){vehTplWrap.innerHTML='';vehTplWrap.dataset.templateJson='';}toast('✅ Kendaraan ditambahkan'+(!isNaN(kmAwal)&&kmAwal>0?' (KM awal: '+kmAwal.toLocaleString('id-ID')+' km)':'')+(newVeh.assetId&&!linkedAsset?' — otomatis tercatat di Buku Aset':''));
 }
 // Teks ringkasan servis per kendaraan di daftar Kelola Kendaraan — beda per jenis (KW-165).
 // PURE function (tidak sentuh DOM/D), dipanggil dari renderVehicleManageList() di modules-render.js.
@@ -548,13 +548,52 @@ function onKmVehicleChange(){
 const sel=document.getElementById('kmVehicle');
 if(!sel)return;
 document.getElementById('kmVal').value=getVehicleKm(sel.value)||'';
+_kmEditId=null;renderKmHistory();
 }
 function openKmModal(){
 document.getElementById('kmDate').value=typeof todayStr==='function'?todayStr():(()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');})();
 document.getElementById('kmNote').value='';
+_kmEditId=null;
 populateKmVehicleSelect();
 document.getElementById('kmVal').value=getVehicleKm(curVehicleId)||'';
+renderKmHistory();
 openModal('kmModal');
+}
+// B11: KM manual (D.kmLogs) bisa diedit/dihapus. Sebelumnya typo (mis. 999.999) mengunci input BBM/servis berikutnya
+// dan membuat pengingat "terlewat" palsu karena getVehicleKm memakai KM tertinggi dari semua sumber.
+let _kmEditId=null;
+function renderKmHistory(){
+const box=document.getElementById('kmHistoryList');if(!box)return;
+const sel=document.getElementById('kmVehicle');
+const vid=(sel&&sel.value)||curVehicleId;
+const rows=(Array.isArray(D.kmLogs)?D.kmLogs:[]).filter(k=>k&&String(k.vehicleId)===String(vid)).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))||(Number(b.km)||0)-(Number(a.km)||0)).slice(0,8);
+if(!rows.length){box.innerHTML='<div class="fl">Belum ada KM manual.</div>';return;}
+box.innerHTML=rows.map(k=>{const id=escapeHtml(String(k.id));return '<div class="u-flex-between" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border,#eee)">'
++'<div style="flex:1;min-width:0"><b>'+(Number(k.km)||0).toLocaleString('id-ID')+' km</b> <span class="fl">'+escapeHtml(String(k.date||''))+(k.note?' · '+escapeHtml(String(k.note)):'')+'</span></div>'
++'<button type="button" class="btn btn-ghost btn-sm" data-action="editKmLog" data-args=\'["'+id+'"]\' aria-label="Edit KM">✏️</button>'
++'<button type="button" class="btn btn-ghost btn-sm" data-action="delKmLog" data-args=\'["'+id+'"]\' aria-label="Hapus KM">🗑</button></div>';}).join('');
+}
+function editKmLog(id){
+const k=(D.kmLogs||[]).find(x=>String(x.id)===String(id));if(!k)return;
+_kmEditId=k.id;
+const set=(i,v)=>{const el=document.getElementById(i);if(el)el.value=v;};
+set('kmDate',k.date||'');set('kmVal',k.km);set('kmNote',k.note||'');
+const b=document.getElementById('kmSaveBtn');if(b)b.textContent='Simpan Perubahan';
+}
+async function delKmLog(id){
+const idx=(D.kmLogs||[]).findIndex(x=>String(x.id)===String(id));if(idx<0)return;
+const k=D.kmLogs[idx];
+if(!await askConfirm('Hapus catatan KM manual '+(Number(k.km)||0).toLocaleString('id-ID')+' km ('+(k.date||'-')+')? KM kendaraan dan pengingat akan dihitung ulang dari catatan lain.',{danger:true,okText:'Ya, Hapus'}))return;
+const vehicleId=k.vehicleId;
+D.kmLogs.splice(idx,1);
+if(String(_kmEditId)===String(id))_kmEditId=null;
+save();
+const ev={kind:"km",vehicleId};
+try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",ev);}
+catch(_e){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:ev});}
+renderKmHistory();
+const vk=document.getElementById('kmVal');if(vk&&_kmEditId===null)vk.value=getVehicleKm(vehicleId)||'';
+renderCnTab();toast('🗑 KM manual dihapus');
 }
 async function saveKm(){
 const vehSel=document.getElementById('kmVehicle');
@@ -562,15 +601,18 @@ const vehicleId=(vehSel&&vehSel.value&&D.vehicles.find(v=>v.id===vehSel.value))?
 const km=parseFloat(document.getElementById('kmVal').value);
 if(!km){toast('⚠️ Isi nilai KM');return;}
 const curKm=getVehicleKm(vehicleId);
-if(km<curKm){if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return;}
-D.kmLogs.push({id:uid(),vehicleId,date:document.getElementById('kmDate').value,km,note:document.getElementById('kmNote').value});
+const _editing=_kmEditId!==null?D.kmLogs.find(x=>String(x.id)===String(_kmEditId)):null;
+if(!_editing&&km<curKm){if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return;}
+if(_editing){_editing.km=km;_editing.date=document.getElementById('kmDate').value;_editing.note=document.getElementById('kmNote').value;_kmEditId=null;}
+else D.kmLogs.push({id:uid(),vehicleId,date:document.getElementById('kmDate').value,km,note:document.getElementById('kmNote').value});
 if(vehicleId!==curVehicleId){curVehicleId=vehicleId;renderVehicleSelect();}
 save();
 // S2471: KM update is post-commit; retain event if a consumer throws.
 const _vehicleKmEvent={kind:"km",vehicleId};
 try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleKmEvent);}
 catch(_vehicleKmEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleKmEvent});}
-closeModal('kmModal');renderCnTab();renderDashboardServisReminder();toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
+{const b=document.getElementById('kmSaveBtn');if(b)b.textContent='Simpan';}
+closeModal('kmModal');renderCnTab();toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
 }
 async function delVehicle(i){
 if(D.vehicles.length<=1){toast('⚠️ Minimal 1 kendaraan');return;}
@@ -582,7 +624,7 @@ VehicleCanonicalWriter.removeAt(i);save();
 const _vehicleDeleteEvent={kind:"vehicle",action:"delete",deletedId};
 try{if(typeof AIBus!=="undefined"&&AIBus&&typeof AIBus.emit==='function')AIBus.emit("vehicle.updated",_vehicleDeleteEvent);}
 catch(_vehicleDeleteEventErr){if(typeof ServiceEventOutbox!=="undefined")ServiceEventOutbox.enqueue({type:'vehicle.updated',payload:_vehicleDeleteEvent});}
-renderVehicleManageList();renderVehicleSelect();renderCnTab();renderDashboardServisReminder();toast('🗑 Dihapus');
+renderVehicleManageList();renderVehicleSelect();renderCnTab();toast('🗑 Dihapus');
 }
 function daysUntilDate(dateStr){
 if(!dateStr)return null;
@@ -1439,7 +1481,7 @@ if(km===curKm)return;
 if(km<curKm){ if(!await askConfirm('KM yang diisi lebih kecil dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return; }
 if(km-curKm>500){ if(!await askConfirm('Lonjakan KM lebih dari 500 km dari catatan terakhir ('+curKm.toLocaleString('id-ID')+' km). Pastikan angka odometer benar. Tetap simpan?',{danger:false,okText:'Ya, Simpan'}))return; }
 D.kmLogs.push({id:uid(),vehicleId:curVehicleId,date:todayStr(),km,note:''});
-save();renderCnTab();renderDashboardServisReminder();
+save();renderCnTab();
 toast('✅ KM diperbarui: '+km.toLocaleString('id-ID')+' km');
 }
 function openBbmModal(editId){return BBM.openModal(editId);}

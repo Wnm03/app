@@ -377,7 +377,9 @@ const TitipanExpenseUI = {
       const input = {
         nominal,
         owners: ownersInput,
-        category: note || 'Dana Titipan',
+        // FIX B3 (audit browser 2026-11-11): kategori SELALU 'Dana Titipan'; teks catatan
+        // dulu dipakai sbg kategori (`note || 'Dana Titipan'`) -> ditolak SOT kalau catatan diisi.
+        category: 'Dana Titipan',
         subcategory: '',
         accountId,
         date,

@@ -1006,7 +1006,7 @@ if(result&&result.ok){
   else {cat.intervalKm=resolved.intervalKm||0;cat.intervalBulan=resolved.intervalBulan||0;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'interval-sot-projection');}
   Sparepart._recoCache=null;
   Sparepart._catalogNameCache=[];
-  save();Servis.renderReminder();renderDashboardServisReminder();
+  save();Servis.renderReminder();
 }
 }
 function getLastServiceKm(vehicleId){
@@ -1331,7 +1331,6 @@ save();
 Sparepart.closeRecommendBox();
 Sparepart.renderCatList();
 if(typeof renderServisList==='function')renderServisList();
-if(typeof renderDashboardServisReminder==='function')renderDashboardServisReminder();
 toast('✅ '+added+' kategori rekomendasi ditambahkan');
 },
 toggleShowInReminder(catId){
@@ -1345,7 +1344,7 @@ return;
 const _show=cat.showInReminder===false?true:false;
 if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.updateServiceCategory==='function'){VehicleCarNotesSOT.updateServiceCategory(curVehicleId,cat.id,{showInReminder:_show});cat.showInReminder=_show;}
 else {cat.showInReminder=_show;if(typeof VehicleCarNotesSOT!=='undefined'&&VehicleCarNotesSOT&&typeof VehicleCarNotesSOT.syncLegacyCategoryProjection==='function')VehicleCarNotesSOT.syncLegacyCategoryProjection(cat,'reminder-toggle');}
-Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();Sparepart.renderCatList();renderServisList();renderDashboardServisReminder();
+Sparepart._recoCache=null;Sparepart._catalogNameCache=[];save();Sparepart.renderCatList();renderServisList();
 toast(cat.showInReminder===false?'🙈 "'+cat.name+'" disembunyikan dari Pengingat Servis':'🔔 "'+cat.name+'" ditampilkan lagi di Pengingat Servis');
 },
 populateVehicleSelect(elId,currentValue,isEdit){
@@ -1406,7 +1405,8 @@ if(typeof idx==='number'&&idx>=0&&idx<D.sparepartCats.length){
 }
 return Sparepart.openCatModalById(null);
 },
-openCatModalById(catId){
+openCatModalById(catId,opts){
+Sparepart._contextVehicleId=(opts&&opts.contextVehicleId)?String(opts.contextVehicleId):null;
 const staleSuggestIds=['sparepartNameBox','sparepartCodeBox','sparepartAiSuggestBox'];
 staleSuggestIds.forEach(id=>{const el=document.getElementById(id);if(el){el.innerHTML='';if(id==='sparepartAiSuggestBox')el.classList.add('u-dnone');}});
 if(typeof hideSuggestBox==='function'){hideSuggestBox('sparepartNameBox');hideSuggestBox('sparepartCodeBox');}

@@ -30,7 +30,7 @@ function makeCtx(){
 }
 {
  const src=fs.readFileSync(base+'/modules/vehicle/servis-b.js','utf8');
- assert(src.includes('Sparepart.openCatModalById(catId)'));
+ assert(src.includes('Sparepart.openCatModalById(catId,{contextVehicleId:'));
  assert(src.includes("closeModal('servisModal',{instant:true})"));
  const wrap=fs.readFileSync(base+'/modules/vehicle/sparepart-servis-b.js','utf8');
  assert(wrap.includes('function openSparepartModalById(catId)'));

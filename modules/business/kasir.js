@@ -18,6 +18,8 @@
 // tersinkron ke Keuangan + stok Etalase seperti sebelumnya.
 const Kasir={
 cart:[], // {productId, qty, hargaOverride}
+priceEditIdx:-1, // S2795: indeks baris keranjang yang panel edit harganya terbuka (-1 = tertutup)
+_priceDraft:'', // S2795: isi input harga yang sedang diketik (bertahan saat renderCart dipanggil ulang dari input Diskon/Ongkir)
 search:'',
 lastReceipt:null,
 _preorderFormKey:null,
@@ -40,7 +42,7 @@ const items=this.cart.map(it=>({productId:String(it.productId),qty:Number(it.qty
 if(!items.length){toast('⚠️ Isi keranjang tidak valid');return;}
 rows.push({id,createdAt:Date.now(),items});
 if(!this.writeHeldCarts(rows)){toast('⚠️ Keranjang tidak dapat ditahan di perangkat ini');return;}
-this.cart=[];this.renderGrid();this.renderCart();toast('⏸ Keranjang ditahan di perangkat ini');
+this.cart=[];this.priceEditIdx=-1;this._priceDraft='';this.renderGrid();this.renderCart();toast('⏸ Keranjang ditahan di perangkat ini');
 },
 restoreHeldCart(id){
 const rows=this.readHeldCarts(),held=rows.find(x=>String(x.id)===String(id));if(!held)return;
@@ -114,6 +116,7 @@ Kasir.renderDailyRecap();
 },
 reset(){
 Kasir.cart=[];
+Kasir.priceEditIdx=-1;Kasir._priceDraft='';
 Kasir.search='';
 Kasir.priceType='jual';
 Kasir.categoryFilter='';
@@ -323,12 +326,13 @@ if(!it)return;
 const p=D.products.find(x=>x.id===it.productId);
 if(delta>0&&p&&it.qty+1>(p.stock||0)){toast('⚠️ Stok tidak cukup (sisa '+p.stock+')');return;}
 it.qty+=delta;
-if(it.qty<=0)Kasir.cart.splice(idx,1);
+if(it.qty<=0){Kasir.cart.splice(idx,1);Kasir.priceEditIdx=-1;Kasir._priceDraft='';}
 Kasir.renderGrid();
 Kasir.renderCart();
 },
 removeItem(idx){
 Kasir.cart.splice(idx,1);
+Kasir.priceEditIdx=-1;Kasir._priceDraft='';
 Kasir.renderGrid();
 Kasir.renderCart();
 },
@@ -341,8 +345,9 @@ let hargaDefault=(Kasir.priceType==='reseller'&&p.hargaReseller)?p.hargaReseller
 if(p.diskonPersen)hargaDefault=(typeof shopDiscountedPrice==='function')?shopDiscountedPrice(hargaDefault,p.diskonPersen):hargaDefault-(hargaDefault*p.diskonPersen/100);
 const harga=(it.hargaOverride!=null&&it.hargaOverride>0)?it.hargaOverride:hargaDefault;
 const lineTotal=harga*it.qty;
-subtotal+=lineTotal;modal+=(p.hargaBeli||0)*it.qty;
-return{...it,product:p,harga,hargaDefault,lineTotal};
+const hargaBeliP=(typeof PricingService!=='undefined'&&PricingService&&typeof PricingService.getCost==='function')?(Number(PricingService.getCost(p))||0):(p.hargaBeli||0); // S2796: sumber modal sama dgn Order
+subtotal+=lineTotal;modal+=hargaBeliP*it.qty;
+return{...it,product:p,harga,hargaDefault,lineTotal,modalUnit:hargaBeliP};
 }).filter(Boolean);
 const diskon=parseFloat(document.getElementById('kasirDiskon')?.value)||0;
 // S2725 (audit Kasir K1): ongkir negatif/NaN/Infinity tidak boleh memotong total — paritas dgn Order.computeTotals (S2307 B9). Dulu total jadi negatif -> syncShopSalePayment menolak SETELAH stok terpotong.
@@ -360,13 +365,18 @@ Kasir.renderHeldCarts();
 if(el){
 el.innerHTML=lines.length?lines.map((l,i)=>{
 const priceChk=(typeof PriceRekoWidget!=='undefined')?PriceRekoWidget.checkOne(l.product):null;
+const editing=Kasir.priceEditIdx===i;
+const edited=l.hargaOverride!=null&&l.hargaOverride>0&&Math.round(l.harga)!==Math.round(l.hargaDefault);
+const belowCost=(typeof ShopCartAdvice!=='undefined')&&ShopCartAdvice.isBelowCost(l);
 const priceHint=priceChk?`<div class="u-mt2" style="font-size:10.5px;color:${priceChk.diffPct<0?'var(--accent2)':'var(--accent4)'};font-weight:600">${priceChk.diffPct<0?'⬇️':'⬆️'} Reko Etalase: ${fmt(priceChk.reko)}</div>`:'';
 return`
+      <div class="kasir-cart-item-wrap">
       <div class="tx-item kasir-cart-item">
         <div class="tx-icon u-bgaccsoft">🛒</div>
         <div class="tx-info">
           <div class="tx-name">${escapeHtml(l.product.name)}</div>
-          <div class="tx-meta">${fmt(l.harga)} × ${l.qty} = <b class="u-ctext">${fmt(l.lineTotal)}</b></div>
+          <div class="tx-meta">${fmt(l.harga)} × ${l.qty} = <b class="u-ctext">${fmt(l.lineTotal)}</b>${edited?' <span class="u-cacc4">(diedit, normal '+fmt(l.hargaDefault)+')</span>':''}${edited&&l.saveAsDefault?' <span class="u-cacc u-fw600">(jadi harga produk)</span>':''}</div>
+          ${belowCost?'<div class="u-mt2" style="font-size:10.5px;color:var(--accent2);font-weight:700">⚠️ Di bawah modal ('+fmt(ShopCartAdvice.unitCost(l))+')</div>':''}
           ${priceHint}
         </div>
         <div class="kasir-qty-pill">
@@ -374,10 +384,16 @@ return`
           <span>${l.qty}</span>
           <button data-action="Kasir.changeQty" data-args="${escapeHtml(JSON.stringify([i,1]))}" aria-label="Tambah jumlah">+</button>
         </div>
+        <button type="button" class="tx-del" data-action="Kasir.editPrice" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Edit harga" aria-expanded="${editing?'true':'false'}">✏️</button>
         <button class="tx-del" data-action="Kasir.removeItem" data-args="${escapeHtml(JSON.stringify([i]))}" aria-label="Hapus">🗑</button>
+      </div>${editing?Kasir._priceEditPanelHtml(l,i):''}
       </div>`;
 }).join(''):'<div class="empty"><div class="empty-icon">🛒</div><div class="empty-text">Keranjang kosong — tap produk di atas ⤴️</div></div>';
 }
+// S2795: saran cepat lokal (tanpa AI/API key) — harga di bawah modal, margin tipis, diskon besar, stok tipis.
+let advEl=document.getElementById('kasirSaranBox');
+if(!advEl&&el&&el.parentNode&&typeof document.createElement==='function'){advEl=document.createElement('div');advEl.id='kasirSaranBox';advEl.className='u-mb10';advEl.setAttribute('aria-live','polite');el.parentNode.insertBefore(advEl,el.nextSibling);}
+if(advEl)advEl.innerHTML=(typeof ShopCartAdvice!=='undefined')?ShopCartAdvice.renderHtml(ShopCartAdvice.analyze(lines,{profit})):'';
 const subEl=document.getElementById('kasirSubDisplay');if(subEl)subEl.textContent=fmtFull(subtotal);
 const diskonRow=document.getElementById('kasirDiskonRow');
 if(diskonRow){diskonRow.style.display=diskon>0?'flex':'none';const dEl=document.getElementById('kasirDiskonDisplay');if(dEl)dEl.textContent='− '+fmtFull(diskon);}
@@ -400,6 +416,83 @@ const cEl=document.getElementById('kasirFloatCount');if(cEl)cEl.textContent=line
 const tEl=document.getElementById('kasirFloatTotal');if(tEl)tEl.textContent=fmtFull(total);
 }
 },
+// ---- S2795: edit harga per baris keranjang (khusus transaksi ini; harga produk di Etalase TIDAK berubah) ----
+_editingLine(){
+const it=Kasir.cart[Kasir.priceEditIdx];if(!it)return null;
+return Kasir.computeTotals().lines.find(x=>x.productId===it.productId)||null;
+},
+_priceHintText(l,raw){
+const r=ShopCartAdvice.parsePrice(raw);
+if(!r.ok)return '⚠️ '+ShopCartAdvice.priceErrorText(r.reason);
+const c=ShopCartAdvice.unitCost(l),h=r.value;
+if(c>0&&h<c)return '⚠️ Di bawah modal '+fmtFull(c)+' — rugi '+fmtFull(c-h)+' per pcs ('+fmtFull((c-h)*l.qty)+' untuk '+l.qty+' pcs).';
+const base='Total baris: '+fmtFull(h*l.qty);
+return c>0?base+' · untung '+fmtFull((h-c)*l.qty)+' (margin '+(Math.round(((h-c)/h)*1000)/10)+'%)':base;
+},
+_priceEditPanelHtml(l,i){
+const draft=Kasir._priceDraft!==''?Kasir._priceDraft:String(Math.round(l.harga));
+let reko=0;
+if(typeof PriceRekoWidget!=='undefined'&&PriceRekoWidget&&typeof PriceRekoWidget.recommend==='function'&&ShopCartAdvice.unitCost(l)>0){try{reko=Math.round(Number(PriceRekoWidget.recommend(l.product))||0);}catch(e){reko=0;}}
+return`<div class="kasir-price-edit" style="padding:2px 0 10px 0">
+        <label class="fl" for="kasirPriceEdit">Harga jual per pcs (Rp) — hanya untuk transaksi ini</label>
+        <input type="number" class="fi" id="kasirPriceEdit" value="${escapeHtml(draft)}" min="1" step="1" inputmode="numeric" data-oninput="Kasir.onPriceInput" data-oninput-args='["$value"]'>
+        <div id="kasirPriceEditHint" class="u-fs12 u-t2 u-mt2" role="status">${escapeHtml(Kasir._priceHintText(l,draft))}</div>
+        <label class="u-fs12 u-flex u-aic u-gap8 u-mt2"><input type="checkbox" id="kasirPriceEditDefault"${l.saveAsDefault?' checked':''}> Jadikan harga ${Kasir.priceType==='reseller'?'reseller':'jual'} produk setelah transaksi tersimpan (Etalase ikut berubah)</label>
+        <div class="u-flex u-gap6 u-mt2" style="flex-wrap:wrap">
+          <button type="button" class="btn btn-ghost btn-sm" data-action="Kasir.setPricePreset" data-args='["default"]'>Harga normal ${escapeHtml(fmt(Math.round(l.hargaDefault)))}</button>${reko>0?`
+          <button type="button" class="btn btn-ghost btn-sm" data-action="Kasir.setPricePreset" data-args='["reko"]'>Reko Etalase ${escapeHtml(fmt(reko))}</button>`:''}
+        </div>
+        <div class="u-flex u-gap8 u-mt2">
+          <button type="button" class="btn btn-primary btn-sm u-flex1" data-action="Kasir.savePrice" data-args="${escapeHtml(JSON.stringify([i]))}">Simpan harga</button>
+          <button type="button" class="btn btn-ghost btn-sm u-flex1" data-action="Kasir.cancelPriceEdit">Batal</button>
+        </div>
+      </div>`;
+},
+editPrice(idx){
+if(!Kasir.cart[idx])return;
+if(Kasir.priceEditIdx===idx){Kasir.cancelPriceEdit();return;}
+Kasir.priceEditIdx=idx;Kasir._priceDraft='';
+Kasir.renderCart();
+const inp=document.getElementById('kasirPriceEdit');if(inp&&typeof inp.focus==='function'){try{inp.focus();if(typeof inp.select==='function')inp.select();}catch(e){void e;}}
+},
+cancelPriceEdit(){Kasir.priceEditIdx=-1;Kasir._priceDraft='';Kasir.renderCart();},
+onPriceInput(val){
+Kasir._priceDraft=String(val==null?'':val);
+const l=Kasir._editingLine();const hint=document.getElementById('kasirPriceEditHint');
+if(l&&hint)hint.textContent=Kasir._priceHintText(l,Kasir._priceDraft);
+},
+setPricePreset(kind){
+const l=Kasir._editingLine();if(!l)return;
+let v=0;
+if(kind==='default')v=Math.round(l.hargaDefault);
+else if(kind==='reko'&&typeof PriceRekoWidget!=='undefined'&&PriceRekoWidget&&typeof PriceRekoWidget.recommend==='function'){try{v=Math.round(Number(PriceRekoWidget.recommend(l.product))||0);}catch(e){v=0;}}
+if(!(v>0)){toast('⚠️ Harga acuan belum tersedia untuk produk ini');return;}
+Kasir._priceDraft=String(v);
+const inp=document.getElementById('kasirPriceEdit');if(inp)inp.value=String(v);
+const hint=document.getElementById('kasirPriceEditHint');if(hint)hint.textContent=Kasir._priceHintText(l,Kasir._priceDraft);
+},
+async savePrice(idx){
+const it=Kasir.cart[idx];
+if(!it){Kasir.cancelPriceEdit();return;}
+const inp=document.getElementById('kasirPriceEdit');
+const raw=inp?inp.value:Kasir._priceDraft;
+const r=ShopCartAdvice.parsePrice(raw);
+if(!r.ok){toast('⚠️ '+ShopCartAdvice.priceErrorText(r.reason));return;}
+const line=Kasir.computeTotals().lines.find(x=>x.productId===it.productId);
+if(!line){Kasir.cancelPriceEdit();return;}
+const cost=ShopCartAdvice.unitCost(line);
+if(cost>0&&r.value<cost&&typeof askConfirm==='function'){
+const ok=await askConfirm('Harga '+fmtFull(r.value)+' di bawah modal '+fmtFull(cost)+' (rugi '+fmtFull(cost-r.value)+' per pcs). Tetap pakai harga ini?',{title:'Harga di bawah modal',okText:'Ya, tetap pakai',cancelText:'Ubah lagi'});
+if(!ok)return;
+if(Kasir.cart[idx]!==it)return; // keranjang berubah selagi dialog terbuka
+}
+it.hargaOverride=(r.value===Math.round(line.hargaDefault))?null:r.value;
+const _chk=document.getElementById('kasirPriceEditDefault');
+it.saveAsDefault=!!(_chk&&_chk.checked)&&it.hargaOverride!=null;
+Kasir.priceEditIdx=-1;Kasir._priceDraft='';
+Kasir.renderCart();
+toast('✏️ Harga "'+line.product.name+'" diperbarui untuk transaksi ini');
+},
 scrollToCheckout(){
 const sec=document.getElementById('kasirCheckoutSection');
 if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});
@@ -416,9 +509,9 @@ const body=document.getElementById('kasirAiBody');
 if(card)card.style.display='block';
 if(body)body.innerHTML='<div class="empty"><div class="empty-icon">🤖</div><div class="empty-text">Menyiapkan...</div></div>';
 const{lines,total}=Kasir.computeTotals();
-const cartSummary=lines.map(l=>`${l.product.name} x${l.qty} (sisa stok setelah ini: ${Math.max(0,l.product.stock-l.qty)})`).join(', ');
+const cartSummary=lines.map(l=>{const ed=l.hargaOverride!=null&&l.hargaOverride>0&&Math.round(l.harga)!==Math.round(l.hargaDefault);return `${l.product.name} x${l.qty} @${l.harga}${ed?' (harga diedit kasir, normal '+Math.round(l.hargaDefault)+')':''}${l.product.hargaBeli>0?' (modal '+l.product.hargaBeli+'/pcs)':''} (sisa stok setelah ini: ${Math.max(0,l.product.stock-l.qty)})`;}).join(', ');
 const catalog=D.products.map(p=>`${p.name} (stok ${p.stock}, harga jual ${p.hargaJual})`).join('; ')||'Tidak ada produk lain';
-const systemPrompt=`Kamu asisten kasir toko kecil di Indonesia. Dari isi keranjang & katalog produk yang diberikan, beri 1-3 saran SINGKAT (maks 2 kalimat tiap saran): produk lain di katalog yang cocok ditawarkan sbg bundling/upsell ke pembeli ini, DAN/ATAU peringatan kalau ada produk di keranjang yang stoknya bakal hampir/benar-benar habis setelah transaksi ini selesai. JANGAN mengarang produk yang tidak ada di katalog. Kalau memang tidak ada saran relevan, jawab singkat saja: "Tidak ada saran khusus untuk keranjang ini." Format jawaban: bullet pendek pakai •, bahasa santai tapi sopan, TANPA kalimat pembuka/basa-basi.`;
+const systemPrompt=`Kamu asisten kasir toko kecil di Indonesia. Dari isi keranjang & katalog produk yang diberikan, beri 1-4 saran SINGKAT (maks 2 kalimat tiap saran): produk lain di katalog yang cocok ditawarkan sbg bundling/upsell ke pembeli ini, DAN/ATAU peringatan kalau ada produk di keranjang yang stoknya bakal hampir/benar-benar habis setelah transaksi ini selesai, DAN/ATAU peringatan kalau harga jual per pcs di keranjang (terutama yang diedit kasir) di bawah atau terlalu dekat dengan modal, disertai usulan harga minimum atau tawaran bundling yang masih untung. JANGAN mengarang produk yang tidak ada di katalog. Kalau memang tidak ada saran relevan, jawab singkat saja: "Tidak ada saran khusus untuk keranjang ini." Format jawaban: bullet pendek pakai •, bahasa santai tapi sopan, TANPA kalimat pembuka/basa-basi.`;
 const messages=[{role:'user',content:`Isi keranjang saat ini (total ${fmtFull(total)}): ${cartSummary}\n\nKatalog seluruh produk yang ada di etalase: ${catalog}`}];
 const res=await callAIProviderRaw(systemPrompt,messages,{maxTokens:400});
 if(!res.ok){
@@ -440,7 +533,7 @@ const received=saved?saved.dp:Math.min(cashReceived,total);
 const change=saved?saved.change:Math.max(0,cashReceived-total);
 let txt=`🧾 ${namaToko}\n${saved?'No. transaksi: '+saved.txId:'DRAFT — belum disimpan'}\nKasir: ${kasir}\nTanggal: ${saved?saved.date:new Date().toLocaleDateString('id-ID')}\nPelanggan: ${(saved&&saved.customerName)||'Umum'}\n`;
 txt+=`Metode bayar: Tunai · Akun: ${(acc&&acc.name)||'akun kasir'}\n\n`;
-lines.forEach(l=>{const name=l.product?l.product.name:(l.name||'Produk');txt+=`${name} x${l.qty}  ${fmt(l.lineTotal)}\n`;});
+lines.forEach(l=>{const name=l.product?l.product.name:(l.name||'Produk');txt+=`${name} x${l.qty}${(l.edited||(l.hargaOverride!=null&&l.hargaOverride>0&&Math.round(l.harga)!==Math.round(l.hargaDefault)))?' @'+fmt(l.harga):''}  ${fmt(l.lineTotal)}\n`;});
 if(diskon>0)txt+=`Diskon: -${fmt(diskon)}\n`;
 if(ongkir>0)txt+=`Ongkir: +${fmt(ongkir)}\n`;
 txt+=`\nTOTAL: ${fmt(total)}\nUang diterima: ${fmt(cashReceived)}\nPembayaran tercatat (DP): ${fmt(received)}\nSisa piutang: ${fmt(saved?saved.sisa:Math.max(0,total-received))}\nKembalian: ${fmt(change)}\n\nTerima kasih! 🙏`;
@@ -503,7 +596,9 @@ try{payment=syncShopSalePayment({shopId:result.shopId,txId,dpRaw,total,accountId
 catch(err){_undoNewSale();toast('⚠️ Pembayaran gagal, penjualan dibatalkan: '+(err&&err.message||err));return;}
 if(!payment.ok){_undoNewSale();toast('⚠️ Pembayaran tidak tersinkron ('+payment.reason+'). Penjualan dibatalkan, stok dikembalikan.');return;}
 const dpVal=payment.dp,sisa=payment.sisa;
-Kasir.lastReceipt={txId,shopId:result.shopId,date,customerName:customer.name,accountId:accId,lines:lines.map(l=>({name:l.product.name,qty:l.qty,lineTotal:l.lineTotal})),diskon,ongkir,total,dp:dpVal,sisa,cashReceived:dpRaw===''?total:Math.max(0,Number.parseFloat(dpRaw)||0),change:Math.max(0,(Number.parseFloat(dpRaw)||0)-total)};
+// S2796: harga edit yang dicentang "Jadikan harga produk" menimpa Etalase HANYA setelah penjualan & pembayaran sukses (lewat gate ProductRepository.mutateSetPrice, sama dgn modal Transaksi).
+lines.forEach(l=>{if(!l.saveAsDefault||!(l.hargaOverride>0))return;const prod=D.products.find(x=>x.id===l.productId);if(!prod)return;const fld=(Kasir.priceType==='reseller'&&prod.hargaReseller)?'hargaReseller':'hargaJual';if(typeof ProductRepository!=='undefined'&&ProductRepository.mutateSetPrice)ProductRepository.mutateSetPrice(prod,fld,l.hargaOverride);else prod[fld]=l.hargaOverride;});
+Kasir.lastReceipt={txId,shopId:result.shopId,date,customerName:customer.name,accountId:accId,lines:lines.map(l=>({name:l.product.name,qty:l.qty,lineTotal:l.lineTotal,harga:l.harga,edited:l.hargaOverride!=null&&l.hargaOverride>0&&Math.round(l.harga)!==Math.round(l.hargaDefault)})),diskon,ongkir,total,dp:dpVal,sisa,cashReceived:dpRaw===''?total:Math.max(0,Number.parseFloat(dpRaw)||0),change:Math.max(0,(Number.parseFloat(dpRaw)||0)-total)};
 save();
 renderProductList();renderShop();Order.renderRecent();if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});renderSiapPulang();
 if(typeof Piutang!=='undefined'&&Piutang.renderList)Piutang.renderList();
