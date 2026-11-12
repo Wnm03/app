@@ -1,0 +1,4 @@
+# S2803 (di atas S2800; isi baru = S2801)
+modules/vehicle/vehicle-catalog-import.js  parser harga bearing
+tests/s2801-import-bearing-price.test.js (BARU)
+Hasil build 2803: bundle, html, sw.js, hash, docs

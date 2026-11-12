@@ -1,6 +1,6 @@
 
 // Dipindah ke modules/shared/modules-calc.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
-const MODULE_CALC_VERSION='s2786-b12-km-manual-paket-pengingat-2795';
+const MODULE_CALC_VERSION='s2433-dana-titipan-akumulatif-2803';
 // S1845 PERF: reuse the shared transaction-date cache when available. Keep a local
 // fallback so this file remains independently loadable in focused tests/legacy builds.
 function _calcTxDateMs(t){

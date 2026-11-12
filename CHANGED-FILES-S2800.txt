@@ -1,0 +1,5 @@
+# S2800 (di atas S2799) — relatif terhadap app-main_8 + zip ini menggantikan S2799
+modules/finance/tx-stok-sparepart.js   optgroup Stok tersedia / Katalog (stok 0)
+modules/vehicle/part-crud-s2041.js     optgroup di PartPicker.refreshSelect
+tests/s2800-txstock-grouped-dropdown.test.js (BARU)
+Hasil build 2800: bundle, html, sw.js, hash, docs

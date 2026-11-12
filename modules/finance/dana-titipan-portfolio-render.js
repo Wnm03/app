@@ -356,6 +356,24 @@ const DanaTitipanPortfolioPresenter = {
     return { total, accountNames };
   },
 
+  // _ownerLedgerHtml(ownerId) — riwayat terpadu baca-saja per pemilik.
+  // Menggunakan API turunan dari transaksi + pengembalian; utang otomatis
+  // tidak ditampilkan lagi sebagai arus terpisah agar tidak double count.
+  _ownerLedgerHtml(ownerId) {
+    if (typeof DanaTitipanPortfolioAPI === 'undefined' || typeof DanaTitipanPortfolioAPI.getOwnerLedger !== 'function') return '';
+    const rows = DanaTitipanPortfolioAPI.getOwnerLedger(ownerId) || [];
+    if (!rows.length) return '';
+    const money = (n) => this._money(n);
+    const rowHtml = rows.map((r) => {
+      const isReturn = r.source === 'return';
+      const sign = r.direction === 'in' ? '+' : '−';
+      const amountClass = r.direction === 'in' ? 'green' : '';
+      const deleteAction = isReturn ? `<button type="button" class="card-setting-btn" data-action="DanaTitipanReturnUI.deleteEntry" data-args='["${escapeHtml(r.id)}"]' aria-label="Hapus riwayat pengembalian">🗑️</button>` : '';
+      return `<tr class="tx-tbl-row"><td class="tx-tbl-date">${r.date ? escapeHtml(r.date) : '—'}</td><td>${escapeHtml(r.kind)}${r.label ? ` <span class="u-t2">· ${escapeHtml(r.label)}</span>` : ''}${r.notes ? `<div class="u-t2">${escapeHtml(r.notes)}</div>` : ''}</td><td class="num tx-amount money ${amountClass}">${sign}${money(r.amount)}</td><td class="tx-tbl-del">${deleteAction}</td></tr>`;
+    }).join('');
+    return `<details class="titipan-ledger-toggle u-ml10 u-mb6"><summary class="u-fs11 u-t2 u-pointer">Riwayat transaksi (${rows.length})</summary><div class="tx-tbl-wrap u-mt4"><table class="tx-tbl"><thead><tr><th>Tanggal</th><th>Aktivitas</th><th class="num">Nominal</th><th></th></tr></thead><tbody>${rowHtml}</tbody></table></div><div class="u-fs10 u-t2 u-mt2">Riwayat baca-saja dari transaksi sumber. Utang otomatis tidak dihitung dua kali.</div></details>`;
+  },
+
   // _returnsHistoryHtml(ownerId) — Sesi 486 (Case F). Riwayat baris
   // pengembalian per owner, 100% konsumsi
   // `DanaTitipanPortfolioAPI.getReturns(ownerId)` (0 agregasi baru di
@@ -801,7 +819,7 @@ const DanaTitipanPortfolioPresenter = {
               <button type="button" class="btn btn-ghost btn-sm" data-action="DanaTitipanCommitmentUI.openAssetPorsi" data-args='["$el"]'>⚖️ Atur Porsi Aset</button>
             </div>
           </details>
-          ${this._returnsHistoryHtml(o.ownerId)}
+          ${this._ownerLedgerHtml(o.ownerId)}
           <div id="titipanHoldingsList_${oi}">
           ${!o.holdings.length ? `
             <div class="u-fs11 u-t2 u-ml10 titipan-holding-row">Belum ada instrumen terhubung ke owner ini — pilih aset dari dropdown di atas lalu atur porsinya.</div>

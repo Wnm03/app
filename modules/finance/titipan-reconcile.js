@@ -810,6 +810,35 @@ checkSyncInvariants() {
 // ke-11 (checkOwnerIdConflicts() di atas) -- pola SAMA PERSIS pendingOwnerReview
 // di atas (informasional, masuk `ok` keseluruhan di sini utk warnIfNotOk(),
 // dikecualikan dari coreOk di self-test.js).
+// checkPinjamUtangLinkage() — rekonsiliasi baca-saja transaksi expense
+// Dana Titipan bertanda pinjam dengan Buku Utang autoTxId. Tidak melakukan
+// repair otomatis: nilai historis/utang lunas harus ditinjau sebelum diubah.
+checkPinjamUtangLinkage() {
+  const txs = (typeof D !== 'undefined' && Array.isArray(D.transactions)) ? D.transactions : [];
+  const debts = (typeof D !== 'undefined' && Array.isArray(D.debts)) ? D.debts : [];
+  const flagged = txs.filter(t => t && t.type === 'expense' && t.titipanPinjamUtang === true && t.titipanLinkId != null && t.titipanTalangan !== true);
+  const missingDebt = [], duplicateDebt = [], orphanDebt = [], ownerMismatch = [], amountMismatch = [];
+  flagged.forEach(tx => {
+    const matches = debts.filter(d => d && d.autoTxId != null && String(d.autoTxId) === String(tx.id));
+    if (!matches.length) missingDebt.push({ txId: tx.id, ownerId: tx.titipanLinkId, amount: tx.amount });
+    if (matches.length > 1) duplicateDebt.push({ txId: tx.id, debtIds: matches.map(d => d.id) });
+    matches.forEach(d => {
+      if (d.autoTitipanOwnerId == null || String(d.autoTitipanOwnerId) !== String(tx.titipanLinkId)) ownerMismatch.push({ txId: tx.id, debtId: d.id, transactionOwnerId: tx.titipanLinkId, debtOwnerId: d.autoTitipanOwnerId });
+      // Utang lunas dipertahankan sebagai histori; nominalnya tidak lagi
+      // mengikuti transaksi yang mungkin diedit setelah pelunasan.
+      if (!d.lunas && Number.isFinite(Number(tx.amount)) && Number.isFinite(Number(d.nilai)) && Math.abs(Number(d.nilai) - Number(tx.amount)) > 0.01) amountMismatch.push({ txId: tx.id, debtId: d.id, transactionAmount: Number(tx.amount), debtAmount: Number(d.nilai), difference: Number(d.nilai) - Number(tx.amount) });
+    });
+  });
+  debts.filter(d => d && d.autoTxId != null).forEach(d => {
+    const source = txs.find(t => t && String(t.id) === String(d.autoTxId));
+    if (!source) orphanDebt.push({ debtId: d.id, txId: d.autoTxId, ownerId: d.autoTitipanOwnerId });
+    else if (!(source.type === 'expense' && source.titipanPinjamUtang === true && source.titipanTalangan !== true)) orphanDebt.push({ debtId: d.id, txId: d.autoTxId, reason: 'source-not-pinjam-expense' });
+    else if (d.autoTitipanOwnerId == null) ownerMismatch.push({ txId: source.id, debtId: d.id, transactionOwnerId: source.titipanLinkId, debtOwnerId: null });
+  });
+  const ok = !missingDebt.length && !duplicateDebt.length && !orphanDebt.length && !ownerMismatch.length && !amountMismatch.length;
+  return { ok, missingDebt, duplicateDebt, orphanDebt, ownerMismatch, amountMismatch };
+},
+
 checkAll() {
   const sync = this.check();
   const ownerIdConsistency = this.checkOwnerIdConsistency();
@@ -823,8 +852,9 @@ checkAll() {
   const pendingOwnerReview = this.checkPendingOwnerReview();
   const ownerIdConflicts = this.checkOwnerIdConflicts();
   const syncInvariants = this.checkSyncInvariants();
+  const pinjamUtangLinkage = this.checkPinjamUtangLinkage();
   return {
-    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok && poolCommitment.ok && returnVsLiability.ok && returnVsAccountLiability.ok && pendingOwnerReview.ok && ownerIdConflicts.ok && syncInvariants.ok,
+    ok: sync.ok && ownerIdConsistency.ok && debtNameStaleness.ok && accountSync.ok && transactionOwnerRefs.ok && ownershipDualSource.ok && poolCommitment.ok && returnVsLiability.ok && returnVsAccountLiability.ok && pendingOwnerReview.ok && ownerIdConflicts.ok && syncInvariants.ok && pinjamUtangLinkage.ok,
     sync,
     ownerIdConsistency,
     debtNameStaleness,
@@ -837,6 +867,7 @@ checkAll() {
     pendingOwnerReview,
     ownerIdConflicts,
     syncInvariants,
+    pinjamUtangLinkage,
   };
 },
 

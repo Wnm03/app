@@ -200,3 +200,66 @@ html body .shop-ptbl .shop-stock-pill{display:inline-block}
 @media (min-width:1280px) and (prefers-reduced-motion:no-preference){
   html body :is(#txModal,#assetModal,#productModal).open .modal{animation:kw-drawer-in var(--dur-slow) var(--ease-emphasized)}
 }
+
+/* FASE 6 (S2796) — nominal, nama, dan tombol hapus di daftar uang tidak boleh terpotong/keluar layar.
+   Akar masalah: `.tx-item > *{min-width:0}` + `.tx-info{flex:1 1 auto}` membuat pembungkus nominal+hapus menyusut
+   (23px) sementara isinya nowrap, lalu dipotong `overflow:hidden` kartu. Tanpa penimpaan paksa (spesifisitas via #page-keuangan).
+   (a) semua lebar: kolom nominal/aksi tidak menyusut; kolom info yang mengalah. Angka uang tidak lagi di-ellipsis.
+   (b) <=599px: baris boleh membungkus; nominal turun ke baris berikutnya (rata kanan) bila nama terlalu sempit.
+   (c) nama boleh sampai 3 baris (sebelumnya 1 baris + ellipsis di Piutang/Utang/Tagihan). */
+html body #page-keuangan .tx-item>.tx-info{flex:1 1 0;min-width:0}
+html body #page-keuangan .tx-item>.tx-icon{flex-shrink:0}
+html body #page-keuangan .tx-item>.tx-amount,
+html body #page-keuangan .tx-item>.u-flex{flex:0 0 auto;min-width:max-content;max-width:none}
+html body #page-keuangan :is(#allTx,#filterTxList) .tx-amount{max-width:none;overflow:visible;text-overflow:clip}
+html body #page-keuangan .tx-item .tx-del{flex:0 0 auto}
+html body #page-keuangan .tx-name{
+  white-space:normal;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere;line-height:1.3;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;
+}
+@media (max-width:599px){
+  html body #page-keuangan .tx-item{flex-wrap:wrap}
+  html body #page-keuangan .tx-item>.tx-info{flex:1 1 120px}
+  html body #page-keuangan .tx-item>.tx-amount,
+  html body #page-keuangan .tx-item>.u-flex{margin-left:auto}
+}
+/* (d) tile angka 3 kolom (Tagihan, Kekayaan Bersih): angka panjang membungkus, tidak keluar tile. */
+html body #page-keuangan :is(#keuBillStatGrid .stat-val,#kbPiutang,#kbInventori){max-width:100%;overflow-wrap:anywhere;white-space:normal}
+html body #pzKekayaanCard-cbody>.u-flex{flex-wrap:wrap;column-gap:8px}
+html body #pzKekayaanCard-cbody>.u-flex>.stat-val{margin-inline:0;margin-left:auto;text-align:right}
+/* (e) tombol aksi di judul kartu (Filter / Atur) tidak boleh pecah di tengah kata. */
+html body #page-keuangan .card-title .card-setting-btn{white-space:nowrap;flex:0 0 auto}
+html body #page-keuangan .card-title:has(.card-setting-btn){flex-wrap:wrap;row-gap:6px}
+html body #page-keuangan #pzKekayaanCard-cbody>.u-flex>.stat-val.u-pointer{min-width:var(--touch-min,44px);display:inline-flex;align-items:center;justify-content:flex-end}
+
+/* FASE 7 (S2797) — daftar BBM, Aset, Shop: nama panjang tidak di-ellipsis 1 baris, badge km/L tidak pecah per huruf,
+   nominal BBM tidak menyusut/terpotong. Pola sama dengan FASE 6 tetapi dibatasi ke halaman Car Notes/Aset/Shop.
+   Riwayat Servis (.servis-history-title) sengaja tidak disentuh: sudah punya clamp 2 baris sendiri (styles.css). */
+html body :is(#page-carnotes,#page-aset,#page-shop) .tx-name:not(.servis-history-title){
+  white-space:normal;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere;line-height:1.3;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;
+}
+html body #page-carnotes .kmL-badge{white-space:nowrap;flex:0 0 auto}
+html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.tx-icon{flex-shrink:0}
+html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.tx-info{flex:1 1 0;min-width:0}
+html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.u-flex{flex:0 0 auto;min-width:max-content;max-width:none}
+html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount) .tx-amount{max-width:none;overflow:visible;text-overflow:clip}
+html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount) .tx-del{flex:0 0 auto}
+@media (max-width:599px){
+  html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount){flex-wrap:wrap}
+  html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.tx-info{flex:1 1 120px}
+  html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.u-flex{margin-left:auto}
+  html body #page-carnotes .tx-item:has(>.u-flex>.tx-amount)>.tx-del{margin-left:auto}
+}
+
+/* S2799 — Select Search: panel pencarian untuk semua <select> (modules/shared/select-search.js) */
+.ss-panel{position:fixed;z-index:100000;display:flex;flex-direction:column;background:var(--surface2,#1c1c1c);border:1px solid var(--border2,#444);border-radius:var(--r-md,12px);box-shadow:0 12px 32px rgba(0,0,0,.35);overflow:hidden}
+.ss-input{flex:0 0 auto;width:100%;box-sizing:border-box;padding:12px 14px;border:0;border-bottom:1px solid var(--border2,#444);background:var(--surface3,#262626);color:var(--text,#fff);font:inherit;font-size:var(--fs-body-lg,15px);outline:none}
+.ss-input:focus{box-shadow:inset 0 0 0 2px var(--accent-soft,rgba(120,120,255,.3))}
+.ss-list{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px}
+.ss-group{padding:8px 10px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text2,#aaa)}
+.ss-opt{padding:11px 12px;border-radius:8px;color:var(--text,#fff);font-size:var(--fs-body-lg,15px);line-height:1.35;cursor:pointer;overflow-wrap:anywhere}
+.ss-opt.is-active{background:var(--accent-soft,rgba(120,120,255,.2))}
+.ss-opt.is-selected{font-weight:700;color:var(--accent,#8c8cff)}
+.ss-opt.is-disabled{opacity:.45;cursor:not-allowed}
+.ss-empty{padding:16px 12px;text-align:center;color:var(--text2,#aaa);font-size:13px}

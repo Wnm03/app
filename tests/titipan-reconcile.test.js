@@ -2,6 +2,8 @@
 // Pola sama dgn tests/*.test.js lain: node:test + assert, mock D/MultiOwnerEngine minimal.
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 const TitipanReconcile = require('../modules/finance/titipan-reconcile.js');
 
 function setupGlobals({ assets = [], debts = [], ownersByAsset = {}, investments = [], ownersByHolding = {}, costByHolding = {}, ownerRegistry }) {
@@ -1022,4 +1024,60 @@ test('checkAll() menyertakan ownerIdConflicts sbg sub-check (informasional)', ()
   assert.strictEqual(res.ownerIdConflicts.ok, false);
   assert.strictEqual(res.ownerIdConflicts.conflicts.length, 1);
   assert.strictEqual(res.ok, false, 'ownerIdConflicts ikut AND ke checkAll().ok (dipakai warnIfNotOk(), non-blocking di jalur lain)');
+});
+
+// --- Dana Titipan pinjam ↔ Buku Utang (S714 linkage hardening) ---
+test('checkPinjamUtangLinkage() lolos untuk pasangan transaksi dan utang yang sinkron', () => {
+  global.D = {
+    transactions: [{ id: 'tx1', type: 'expense', amount: 75000, titipanLinkId: 'o1', titipanPinjamUtang: true }],
+    debts: [{ id: 'd1', autoTxId: 'tx1', autoTitipanOwnerId: 'o1', nilai: 75000, lunas: false }],
+  };
+  const before = JSON.stringify(global.D);
+  const r = TitipanReconcile.checkPinjamUtangLinkage();
+  assert.equal(r.ok, true);
+  assert.deepStrictEqual(r.missingDebt, []);
+  assert.deepStrictEqual(r.amountMismatch, []);
+  assert.equal(JSON.stringify(global.D), before, 'audit harus 0 mutasi');
+});
+
+test('checkPinjamUtangLinkage() mendeteksi transaksi tanpa utang, nominal/owner mismatch, duplikat, dan utang yatim', () => {
+  global.D = {
+    transactions: [
+      { id: 'tx1', type: 'expense', amount: 100, titipanLinkId: 'o1', titipanPinjamUtang: true },
+      { id: 'tx2', type: 'expense', amount: 200, titipanLinkId: 'o2', titipanPinjamUtang: true },
+    ],
+    debts: [
+      { id: 'd1', autoTxId: 'tx1', autoTitipanOwnerId: 'wrong', nilai: 125, lunas: false },
+      { id: 'd2', autoTxId: 'tx1', autoTitipanOwnerId: 'o1', nilai: 100, lunas: false },
+      { id: 'd3', autoTxId: 'gone', autoTitipanOwnerId: 'o3', nilai: 50, lunas: false },
+    ],
+  };
+  const r = TitipanReconcile.checkPinjamUtangLinkage();
+  assert.equal(r.ok, false);
+  assert.equal(r.missingDebt.length, 1);
+  assert.equal(r.duplicateDebt.length, 1);
+  assert.equal(r.ownerMismatch.length, 1);
+  assert.equal(r.amountMismatch.length, 1);
+  assert.equal(r.orphanDebt.length, 1);
+});
+
+test('checkPinjamUtangLinkage() tidak menganggap nominal utang lunas sebagai mismatch aktif', () => {
+  global.D = {
+    transactions: [{ id: 'tx1', type: 'expense', amount: 200, titipanLinkId: 'o1', titipanPinjamUtang: true }],
+    debts: [{ id: 'd1', autoTxId: 'tx1', autoTitipanOwnerId: 'o1', nilai: 100, lunas: true }],
+  };
+  assert.equal(TitipanReconcile.checkPinjamUtangLinkage().ok, true);
+});
+
+test('checkAll() menyertakan pinjamUtangLinkage', () => {
+  global.D = { assets: [], debts: [], investments: [], transactions: [] };
+  const r = TitipanReconcile.checkAll();
+  assert.equal(r.pinjamUtangLinkage.ok, true);
+});
+
+
+test('self-test: diagnostik pinjam Dana Titipan ditampilkan tanpa mengubah coreOk', () => {
+  const src = fs.readFileSync(path.join(__dirname, 'self-test.js'), 'utf8');
+  assert.match(src, /pinjamUtangLinkage\.ok=/);
+  assert.match(src, /amountMismatch:\'\+r\.pinjamUtangLinkage\.amountMismatch\.length/);
 });

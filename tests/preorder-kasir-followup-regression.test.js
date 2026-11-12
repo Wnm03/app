@@ -193,7 +193,7 @@ test('P3.a: nilai kasirDP dikirim utuh ke syncShopSalePayment walau UI menampilk
     D,document,window:{},escapeHtml:s=>String(s??''),fmt:n=>'Rp'+n,fmtFull:n=>'Rp'+n,fmtFullSigned:n=>'Rp'+n,
     uid:()=> 'tx1',todayStr:()=> '2026-11-01',toast(){},recordShopSale:o=>{D.cobek.push({id:'shop1',items:o.items,total:o.total});return{ok:true,shopId:'shop1'};},
     syncShopSalePayment:o=>{sent=o;return{ok:true,dp:100,sisa:0};},save(){return true;},
-    renderProductList(){},renderShop(){},Order:{renderRecent(){}},renderSiapPulang(){},refreshAfterMutation(){},renderSiapPulang(){},
+    renderProductList(){},renderShop(){},Order:{renderRecent(){}},renderSiapPulang(){},refreshAfterMutation(){},
   },['Kasir']);
   ctx.Kasir.cart=[{productId:'p1',qty:1,hargaOverride:null}];
   ctx.Kasir.reset=()=>{};

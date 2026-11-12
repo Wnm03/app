@@ -166,6 +166,12 @@ function _vehicleImportParsePrice(line) {
 // kolom paling akhir.
 const VEHICLE_IMPORT_PRICE_PLAIN_RE = /(?:^|\s)(\d{1,3}(?:[.,]\d{3})+|\d{4,9})(?=\s|$)/g;
 
+const VEHICLE_IMPORT_BEARING_WORD_RE = /\b(bearing|bering|brg|ball|roller|needle|klaker|laher)\b/i;
+const VEHICLE_IMPORT_BEARING_TYPE_RE = /^(?:16|60|62|63|68|69)\d{2}$/;
+function _vehicleImportIsBearingTypeToken(line, token) {
+  return VEHICLE_IMPORT_BEARING_TYPE_RE.test(String(token)) && VEHICLE_IMPORT_BEARING_WORD_RE.test(String(line));
+}
+
 function _vehicleImportParsePricePlain(line, excludeTokens) {
   const raw = (line || '').toString();
   const exclude = new Set((excludeTokens || []).filter(Boolean).map((s) => String(s)));
@@ -177,6 +183,8 @@ function _vehicleImportParsePricePlain(line, excludeTokens) {
     if (exclude.has(token)) continue; // sama persis dgn oemCode/barcode terdeteksi -> bukan harga
     const num = parseInt(token.replace(/[.,]/g, ''), 10);
     if (isNaN(num) || num < 500) continue; // di bawah 500 dianggap bukan harga wajar (kemungkinan qty/nomor lain)
+    // S2801: nomor tipe bearing (mis. 6201/6205/6302) pada baris bearing BUKAN harga; tetap jadi bagian nama part.
+    if (_vehicleImportIsBearingTypeToken(raw, token)) continue;
     best = num; // simpan kandidat PALING KANAN (loop maju, selalu ditimpa yg lebih akhir)
   }
   return best;

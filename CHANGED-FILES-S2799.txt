@@ -1,0 +1,12 @@
+# S2799 (di atas akumulasi S2798) — file BARU/BERUBAH relatif terhadap app-main_8 + PATCH-S2798
+modules/shared/select-search.js            (BARU)  panel pencarian untuk semua <select>
+tests/s2799-select-search-and-category-projection.test.js (BARU)
+scripts/build.js                           daftar select-search.js di GROUP_A
+build.js                                   daftar select-search.js di GROUP_A (salinan root)
+tokens.css                                 gaya .ss-panel (styles.css tidak disentuh: anggaran 180000 B)
+modules/vehicle/part-crud-s2041.js         proyeksi kategori satu-sumber, filter id setara, label baris stok kembar
+modules/vehicle/sparepart-servis-ui.js     populateStockCatSelect memakai proyeksi
+modules/finance/tx-stok-sparepart.js       populateTxStockSelect: label baris stok kembar dibedakan
+Hasil build (versi 2799): app-bundle-a.min.js, app-bundle-b.min.js, index.html, app_production.html, sw.js,
+  chat-action-handlers.js, modules/shared/{modals,modules-calc,modules-render,features-helpers-global-security}.js,
+  FILE-HASHES-SHA256.txt, docs/FILE-MAP.md, docs/COVERAGE-PER-MODULE.md

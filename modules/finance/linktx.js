@@ -124,7 +124,7 @@ return`<div class="tx-item u-pointer" data-action="LinkTx.toggleSelectAndRender"
           <div class="tx-icon" style="background:var(--accent2-soft)">💸</div>
           <div class="tx-info">
             <div class="tx-name">${escapeHtml(t.note||t.category||'Transaksi')}</div>
-            <div class="tx-meta">${escapeHtml(t.date||'')} ${acc?'· '+escapeHtml(acc.name):''} ${t.subcategory?'· '+escapeHtml(t.subcategory):''}</div>
+            <div class="tx-meta">${typeof fmtTxDateDisplay==='function'?fmtTxDateDisplay(t.date||''):escapeHtml(t.date||'')} ${acc?'· '+escapeHtml(acc.name):''} ${t.subcategory?'· '+escapeHtml(t.subcategory):''}</div>
           </div>
           <div class="tx-amount red">${fmt(t.amount)}</div>
         </div>`;

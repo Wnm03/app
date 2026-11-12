@@ -342,7 +342,12 @@ const sel=document.getElementById('stockCatId');
 if(!sel)return;
 const cur=selectedId||sel.value||'';
 const vid=(typeof curVehicleId!=='undefined')?curVehicleId:null;
-const visible=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+const visibleAll=D.sparepartCats.filter(c=>catVisibleForVehicle(c,vid));
+// S2799: satu opsi per grup kategori setara (global + salinan per-kendaraan dilebur lewat proyeksi
+// satu-sumber PartCrudS2041.stockCategoryGroups). Kategori yang sedang terpilih tetap mewakili grupnya,
+// jadi catId tersimpan tidak berubah diam-diam. Tanpa proyeksi (harness terisolasi) -> perilaku lama.
+const _grp=(typeof window!=='undefined'&&window.PartCrudS2041&&typeof window.PartCrudS2041.stockCategoryGroups==='function')?window.PartCrudS2041.stockCategoryGroups(vid):null;
+const visible=_grp?visibleAll.filter(c=>{const g=_grp.find(x=>x.members.includes(c));return !g||(g.members.find(m=>String(m.id)===String(cur))||g.rep)===c;}):visibleAll;
 // Saat edit stok universal, kategori bisa saja scoped ke kendaraan lain.
 // Kategori lama itu TETAP dimunculkan sebagai opsi terpilih agar membuka+
 // menyimpan ulang stok tidak diam-diam memutus catId. Namun kategori private

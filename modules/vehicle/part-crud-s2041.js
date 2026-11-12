@@ -24,6 +24,77 @@ function currentCategory(){
   return d('stockCatId')?.value || d('serviceChecklistIdentityCategory')?.value || d('serviceHistoryBulkCategory')?.value || '';
 }
 function txCategory(){ return d('txStockCategoryFilter')?.value || ''; }
+// S2799 — Proyeksi kategori stok SATU-SUMBER untuk dropdown.
+// Masalah: kategori bawaan global (mis. sp_oli_mesin) dan salinan per-kendaraan (sp_<ts>_oli-mesin)
+// tampil bersamaan dengan nama sama. Kategori yang menunjuk komponen kanonik yang sama (atau, tanpa
+// taksonomi, bernama sama dengan satu global + salinan per-kendaraan) dilebur jadi SATU grup.
+// Tidak ada data yang diubah: stok tetap menyimpan catId aslinya; pencocokan filter memakai SEMUA id grup.
+function normName(v){return String(v==null?'':v).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
+function catCanonicalKey(c){
+  let comp=c.serviceComponentId||null, master=c.masterCategoryId||null;
+  if(typeof ServiceTaxonomySOT!=='undefined'&&ServiceTaxonomySOT&&typeof ServiceTaxonomySOT.canonicalTarget==='function'){
+    const t=ServiceTaxonomySOT.canonicalTarget(c);
+    if(t&&t.serviceComponentId){comp=t.serviceComponentId;master=t.masterCategoryId||master;}
+  }
+  return comp?('c|'+(master||'')+'|'+comp):null;
+}
+function catScoped(c,vid){
+  if(!c||c.isArchived)return false;
+  if(!vid)return true;
+  if(typeof catVisibleForVehicle==='function')return !!catVisibleForVehicle(c,vid);
+  return !c.vehicleId||String(c.vehicleId)===String(vid);
+}
+function stockCategoryGroups(vid){
+  const pool=(D.sparepartCats||[]).filter(c=>c&&c.id&&catScoped(c,vid));
+  let projected=new Set();
+  if(vid&&typeof getReminderCategoriesForVehicle==='function'){
+    const rows=getReminderCategoriesForVehicle(vid);
+    (Array.isArray(rows)?rows:[]).forEach(r=>{if(r&&r.id!=null)projected.add(String(r.id));});
+  }
+  const buckets=new Map(); const order=[];
+  pool.forEach(c=>{
+    const ck=catCanonicalKey(c);
+    const key=ck||('n|'+normName(c.name));
+    if(!buckets.has(key)){buckets.set(key,{key,canonical:!!ck,members:[]});order.push(key);}
+    buckets.get(key).members.push(c);
+  });
+  // Lintas-bucket: salinan tanpa komponen kanonik (n|nama) dan kategori ber-komponen (c|...) yang senama
+  // dilebur bila gabungannya = satu global + salinan per-kendaraan dan paling banyak SATU bucket kanonik
+  // (dua komponen kanonik berbeda tidak pernah dilebur).
+  const nameIdx=new Map();
+  order.forEach(k=>buckets.get(k).members.forEach(m=>{const n=normName(m.name);if(!nameIdx.has(n))nameIdx.set(n,new Set());nameIdx.get(n).add(k);}));
+  nameIdx.forEach((keySet,n)=>{
+    const keys=[...keySet].filter(k=>buckets.has(k)); if(keys.length<2)return;
+    const bs=keys.map(k=>buckets.get(k));
+    const named=bs.flatMap(b=>b.members.filter(m=>normName(m.name)===n));
+    if(bs.filter(b=>b.canonical).length>1)return;
+    if(!(named.some(m=>!m.vehicleId)&&named.some(m=>m.vehicleId)))return;
+    const target=bs.find(b=>b.canonical)||bs[0];
+    bs.forEach(b=>{if(b===target)return;target.members.push(...b.members);buckets.delete(b.key);});
+  });
+  const groups=[];
+  order.filter(k=>buckets.has(k)).forEach(key=>{
+    const b=buckets.get(key);
+    // Fallback tanpa komponen kanonik: lebur HANYA pola "global + salinan per-kendaraan".
+    const collapsible=b.canonical||(b.members.some(m=>!m.vehicleId)&&b.members.some(m=>m.vehicleId));
+    const sets=collapsible?[b.members]:b.members.map(m=>[m]);
+    sets.forEach(members=>{
+      const rank=m=>(projected.has(String(m.id))?100:0)+(m.vehicleId?10:0);
+      const rep=members.slice().sort((a,b2)=>rank(b2)-rank(a))[0];
+      groups.push({rep,members,ids:members.map(m=>String(m.id))});
+    });
+  });
+  return groups;
+}
+function equivalentCategoryIds(categoryId,vid){
+  const id=String(categoryId==null?'':categoryId);
+  if(!id)return [];
+  const g=stockCategoryGroups(vid).find(x=>x.ids.includes(id));
+  return g?g.ids:[id];
+}
+api.stockCategoryGroups=stockCategoryGroups;
+api.equivalentCategoryIds=equivalentCategoryIds;
+
 function txComponent(){ return d('txStockComponentFilter')?.value || ''; }
 function partRows(context={}){
   const vid=context.vehicleId||vehicleId();
@@ -31,6 +102,7 @@ function partRows(context={}){
   const categoryId=context.categoryId||'';
   const onlyAvailable=!!context.onlyAvailable;
   const includeUnclassified=!!context.includeUnclassified;
+  const catIds=categoryId?equivalentCategoryIds(categoryId,vid):[];
   const vehicleMatch=(p)=>{
     if(!vid)return true;
     if(Array.isArray(p.vehicleIds)&&p.vehicleIds.length)return p.vehicleIds.includes(vid);
@@ -39,7 +111,7 @@ function partRows(context={}){
   };
   return partsStockRead().filter(p=>p&&!p.isArchived)
     .filter(vehicleMatch)
-    .filter(p=>!categoryId||(p.catId===categoryId)||(includeUnclassified&&!p.catId))
+    .filter(p=>!categoryId||catIds.includes(String(p.catId))||(includeUnclassified&&!p.catId))
     .filter(p=>!componentId||(p.serviceComponentId===componentId)||(includeUnclassified&&!p.serviceComponentId))
     .filter(p=>!onlyAvailable||(Number(p.qty)||0)>0);
 }
@@ -57,6 +129,12 @@ function partLabel(p){
   const code=p.oemCode||p.catalogOemCode||p.code||'';
   const qty=Number(p.qty)||0;
   return `${p.name||p.partName||'Part'}${code?' · '+code:''}${Number.isFinite(qty)?' · stok '+qty:''}`;
+}
+// S2799: baris stok BERBEDA (id berbeda) yang labelnya persis sama tidak dilebur/disembunyikan (itu data,
+// bukan tampilan); cukup dibedakan dengan akhiran id pendek supaya bisa dipilih dengan benar.
+function labelsFor(rows){
+  const count=new Map(); rows.forEach(p=>{const l=partLabel(p);count.set(l,(count.get(l)||0)+1);});
+  return rows.map(p=>{const l=partLabel(p);return count.get(l)>1?l+' · #'+String(p.id).slice(-4):l;});
 }
 function partById(id){return partsStockRead().find(p=>p&&p.id===id)||null}
 function refreshSelect(selectId,context={}){
@@ -76,7 +154,16 @@ function refreshSelect(selectId,context={}){
   const opts=[];
   sentinels.forEach(o=>opts.push('<option value="'+esc(o.value)+'">'+esc(o.textContent)+'</option>'));
   if(hasEmptyFirst||!sentinels.length)opts.push('<option value="">'+esc(hasEmptyFirst?first.textContent:'— Pilih Part —')+'</option>');
-  rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'id')).forEach(p=>opts.push(`<option value="${esc(p.id)}">${esc(partLabel(p))}</option>`));
+  rows.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'id'));
+  const rowLabels=labelsFor(rows);
+  // S2800: kelompokkan "Stok tersedia" (qty>0) dan "Katalog (stok 0)" bila keduanya ada; baris stok 0 tetap dapat dipilih.
+  const rowOpt=(p,i)=>`<option value="${esc(p.id)}">${esc(rowLabels[i])}</option>`;
+  const isAvail=p=>(Number(p.qty)||0)>0;
+  const nAvail=rows.filter(isAvail).length;
+  if(nAvail&&nAvail<rows.length){
+    opts.push('<optgroup label="Stok tersedia">');rows.forEach((p,i)=>{if(isAvail(p))opts.push(rowOpt(p,i));});opts.push('</optgroup>');
+    opts.push('<optgroup label="Katalog (stok 0)">');rows.forEach((p,i)=>{if(!isAvail(p))opts.push(rowOpt(p,i));});opts.push('</optgroup>');
+  } else rows.forEach((p,i)=>opts.push(rowOpt(p,i)));
   // S2041.1 (C1): the currently selected part must survive filters (qty 0 / archived / other filter) so editing
   // an old service or purchase never drops its part reference.
   let keep=false;
@@ -86,9 +173,11 @@ function refreshSelect(selectId,context={}){
     else{const o=oldOpts.find(x=>x.value===selected);if(o){opts.push('<option value="'+esc(o.value)+'">'+esc(o.textContent)+'</option>');keep=true;}}
   }
   const nextHtml=opts.join('');
-  const currentHtml=oldOpts.map(o=>`<option value="${esc(o.value)}">${esc(o.textContent)}</option>`).join('');
+  // S2800: <optgroup> tidak muncul di sel.options; buang tag grup dari pembanding supaya cek no-op tetap benar (hindari loop mutasi S2041.2).
+  const nextSig=nextHtml.replace(/<\/?optgroup[^>]*>/g,'');
+  const currentSig=oldOpts.map(o=>`<option value="${esc(o.value)}">${esc(o.textContent)}</option>`).join('');
   const canKeep=keep||sentinels.some(o=>o.value===selected)||rows.some(p=>p.id===selected);
-  if(nextHtml!==currentHtml){
+  if(nextSig!==currentSig){
     sel.innerHTML=nextHtml;
     if(selected&&canKeep)sel.value=selected;
   } else if(selected&&canKeep&&sel.value!==selected){ sel.value=selected; }
@@ -140,7 +229,9 @@ function injectTxFilters(){
   }
   const catSel=d('txStockCategoryFilter'); const compSel=d('txStockComponentFilter');
   const oldCat=catSel.value, oldComp=compSel.value;
-  const cats=(D.sparepartCats||[]).filter(c=>c&&!c.isArchived).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'id'));
+  // S2799: satu opsi per grup kategori setara (bukan tiap salinan global/per-kendaraan).
+  const groups=stockCategoryGroups(vehicleId()).sort((a,b)=>String(a.rep.name||'').localeCompare(String(b.rep.name||''),'id'));
+  const cats=groups.map(g=>{const keep=g.members.find(m=>String(m.id)===String(oldCat));return keep||g.rep;});
   const catHtml='<option value="">Semua kategori</option>'+cats.map(c=>`<option value="${esc(c.id)}">${esc(c.name||'Kategori')}</option>`).join('');
   const catCurrent=Array.from(catSel.options||[]).map(o=>`<option value="${esc(o.value)}">${esc(o.textContent)}</option>`).join('');
   if(catHtml!==catCurrent)catSel.innerHTML=catHtml;
@@ -151,7 +242,8 @@ function syncTxFilterOptions(preferred){
   const cat=d('txStockCategoryFilter'), comp=d('txStockComponentFilter'); if(!cat||!comp)return;
   const old=preferred!==undefined?preferred:comp.value;
   const c=(D.sparepartCats||[]).find(x=>x&&x.id===cat.value);
-  const mid=c?.masterCategoryId||null;
+  const eq=c?stockCategoryGroups(vehicleId()).find(g=>g.ids.includes(String(c.id))):null;
+  const mid=c?.masterCategoryId||(eq&&eq.members.map(m=>m.masterCategoryId).find(Boolean))||null;
   const group=mid&&typeof ServiceInputCatalog!=='undefined'&&ServiceInputCatalog.groupById?ServiceInputCatalog.groupById(mid):null;
   const items=group?(group.items||[]):[];
   const compHtml='<option value="">Semua komponen</option>'+items.map(it=>`<option value="${esc(it.id)}">${esc(it.name)}</option>`).join('');

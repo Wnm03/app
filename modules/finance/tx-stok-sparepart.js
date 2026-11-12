@@ -279,6 +279,21 @@ if(added&&typeof save==='function')save();
 return added;
 }catch(e){return false;}
 }
+// S2799: baris stok berbeda (id berbeda) dengan label persis sama TIDAK dilebur; dibedakan dengan kode part (bila ada), lalu akhiran id pendek.
+function txStockOptionsHtml(list){
+const label=p=>`${p.name} (stok ${p.qty}${p.unit?' '+p.unit:''})`;
+const withCode=p=>label(p)+(p.code?' · '+p.code:'');
+const c1=new Map();list.forEach(p=>{const l=label(p);c1.set(l,(c1.get(l)||0)+1);});
+const c2=new Map();list.forEach(p=>{const l=c1.get(label(p))>1?withCode(p):label(p);c2.set(l,(c2.get(l)||0)+1);});
+const opt=p=>{let t=c1.get(label(p))>1?withCode(p):label(p);if(c2.get(t)>1)t+=' · #'+String(p.id).slice(-4);return `<option value="${escapeHtml(p.id)}">${escapeHtml(t)}</option>`;};
+// S2800: daftar panjang dikelompokkan -- "Stok tersedia" (qty>0) di atas, "Katalog (stok 0)" di bawah. Baris stok 0 TETAP
+// bisa dipilih (alur beli part). Hanya dikelompokkan bila kedua grup berisi; jumlah & urutan baris tidak berubah.
+const avail=list.filter(p=>(Number(p.qty)||0)>0), zero=list.filter(p=>!((Number(p.qty)||0)>0));
+const body=(avail.length&&zero.length)
+?'<optgroup label="Stok tersedia">'+avail.map(opt).join('')+'</optgroup><optgroup label="Katalog (stok 0)">'+zero.map(opt).join('')+'</optgroup>'
+:list.map(opt).join('');
+return '<option value="__new__">➕ Sparepart Baru</option>'+body;
+}
 function populateTxStockSelect(){
 const sel=document.getElementById('txStockItem');
 if(!sel)return;
@@ -289,7 +304,7 @@ const cur=sel.value;
 // servis), di-scope ke curVehicleId (kendaraan aktif Car Notes saat ini).
 const vid=txStockVehicleId();
 const list=txPartsStockRead().filter(p=>p.id===cur||Sparepart.isPartForVehicle(p,vid));
-sel.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
+sel.innerHTML=txStockOptionsHtml(list);
 sel.value=cur&&list.find(p=>p.id===cur)?cur:'__new__';
 onTxStockItemChange();
 // Best-effort: kalau ada part di Katalog Suku Cadang yang belum tertaut
@@ -301,7 +316,7 @@ const sel2=document.getElementById('txStockItem');
 if(!sel2)return; // modal sudah ditutup / elemen sudah tidak ada
 const cur2=sel2.value;
 const list2=txPartsStockRead().filter(p=>p.id===cur2||Sparepart.isPartForVehicle(p,vid));
-sel2.innerHTML='<option value="__new__">➕ Sparepart Baru</option>'+list2.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)} (stok ${p.qty}${p.unit?' '+p.unit:''})</option>`).join('');
+sel2.innerHTML=txStockOptionsHtml(list2);
 sel2.value=cur2&&list2.find(p=>p.id===cur2)?cur2:cur2;
 onTxStockItemChange();
 });

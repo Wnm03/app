@@ -1105,6 +1105,54 @@ majorisRenovReconciliation(owners, principalAmountTotal) {
 //   `Investment.getHoldings()`, sama persis S485a), lalu entri
 //   `OwnerRegistry.listAll()` yang BELUM ada di union holding (mengikuti
 //   urutan `D.ownerRegistry`, TIDAK di-sort ulang).
+// getOwnerLedger(ownerId) — buku riwayat baca-saja per pemilik.
+// Dibangun dari sumber transaksi + riwayat pengembalian yang sudah ada;
+// tidak membuat counter/persistent field baru dan tidak menghitung utang
+// otomatis sebagai arus kedua (utang adalah pasangan dari transaksi pinjam).
+// Transaksi langsung Dana Titipan dan transaksi akun tertaut yang secara
+// eksplisit ditugaskan ke owner disatukan, dedup berdasarkan tx.id.
+getOwnerLedger(ownerId) {
+  if (ownerId == null || String(ownerId).trim() === '') return [];
+  const key = String(ownerId);
+  const rows = [];
+  const data = (typeof D !== 'undefined' && D) ? D : {};
+  const toDate = (value, fallback) => {
+    if (value) return String(value).slice(0, 10);
+    if (!fallback) return '';
+    const stamp = Number(fallback);
+    if (!Number.isFinite(stamp)) return '';
+    try { return new Date(stamp).toISOString().slice(0, 10); } catch (_) { return ''; }
+  };
+  const txList = Array.isArray(data.transactions) ? data.transactions : [];
+  const seenTx = new Set();
+  txList.forEach((tx) => {
+    if (!tx || tx.type !== 'expense') return;
+    const direct = tx.titipanLinkId != null && String(tx.titipanLinkId) === key;
+    let assigned = false;
+    // Pengeluaran akun tertaut hanya masuk bila resolver SOT owner akun
+    // mengonfirmasi owner ini, sama seperti _linkedExpenseTotalForOwner().
+    if (!direct && tx.accountId && typeof resolveTxOwnerSplitForAccount === 'function' && typeof resolveTxOwnerAssignment === 'function') {
+      const resolved = resolveTxOwnerSplitForAccount(tx.accountId);
+      assigned = !!(resolved && Array.isArray(resolved.owners) && resolved.owners.some((o) => o && String(o.ownerId) === key) && resolveTxOwnerAssignment(tx, resolved.owners) === ownerId);
+    }
+    if (!direct && !assigned) return;
+    const id = tx.id == null ? null : String(tx.id);
+    if (id != null && seenTx.has(id)) return;
+    if (id != null) seenTx.add(id);
+    const kind = tx.titipanPinjamUtang === true ? 'Pinjam (Utang)' : (tx.titipanTalangan === true ? 'Talangan (Piutang)' : (direct ? 'Pengeluaran Titipan' : 'Pengeluaran Akun Tertaut'));
+    const date = toDate(tx.date, tx.timestamp);
+    rows.push({ id: tx.id, source: 'transaction', date, kind, label: tx.category || tx.subcategory || 'Transaksi', notes: tx.note || tx.description || '', amount: Math.abs(Number(tx.amount) || 0), direction: 'out' });
+  });
+  const returns = Array.isArray(data.titipanReturns) ? data.titipanReturns : [];
+  returns.forEach((r) => {
+    if (!r || String(r.ownerId) !== key) return;
+    const date = toDate(r.returnDate, r.createdAt);
+    rows.push({ id: r.id, source: 'return', date, kind: 'Pengembalian', label: 'Pengembalian Dana Titipan', notes: r.notes || '', amount: Math.abs(Number(r.amount) || 0), direction: 'in' });
+  });
+  rows.sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.id || '').localeCompare(String(b.id || '')));
+  return rows;
+},
+
 listExistingOwners() {
   const seen = new Set();
   const result = [];

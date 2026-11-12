@@ -84,6 +84,7 @@ const GROUP_A = [
   // di-mixin balik ke modules-render.js.
   'modules/shared/modules-render-b.js',
   'modules/shared/modals.js',
+  'modules/shared/select-search.js',
   'modules/shared/modules-calc.js',
   'modules/shop/cobek-etalase.js',
   'modules/shop/cobek-pricing.js',

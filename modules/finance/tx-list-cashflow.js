@@ -40,6 +40,15 @@
 // bungkus SELURUH badan txHTML() di 1 try/catch di sini -- otomatis melindungi
 // semua titik panggil sekaligus tanpa menyentuh 10 call site itu satu-satu.
 // Fallback: baris aman ber-badge ⚠️, tetap bisa di-tap (editTx) utk cek/benerin data.
+// S2797: tanggal daftar transaksi tampil "11 Nov 2026" (bukan ISO "2026-11-11"). Murni tampilan:
+// data t.date tetap ISO; input non-ISO/kosong dikembalikan apa adanya (ter-escape) supaya aman.
+function fmtTxDateDisplay(ds){
+const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(ds==null?'':ds));
+if(!m)return escapeHtml(ds);
+const mi=parseInt(m[2],10)-1;
+if(mi<0||mi>11)return escapeHtml(ds);
+return parseInt(m[3],10)+' '+['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][mi]+' '+m[1];
+}
 function _txPerfDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime();}
 function txHTML(t,renderCtx){
 try{
@@ -77,7 +86,7 @@ const icon=cat?cat.emoji:'⏳';
 // baru ter-billLinkId utk periode ini, majukan nextDue, & toast yang jujur sesuai hasil.
 return`<div class="tx-item u-pointer" data-action="markBillPaid" data-args="${escapeHtml(JSON.stringify([t.billId]))}">
     <div class="tx-icon" style="background:var(--accent-soft)">${escapeHtml(icon)}</div>
-    <div class="tx-info"><div class="tx-name">${escapeHtml(t.name)} <span class="acc-chip">⏳ Terjadwal</span></div><div class="tx-meta">${t.date}</div></div>
+    <div class="tx-info"><div class="tx-name">${escapeHtml(t.name)} <span class="acc-chip">⏳ Terjadwal</span></div><div class="tx-meta">${fmtTxDateDisplay(t.date)}</div></div>
     <div class="u-flex u-aic u-gap6">
       <div class="tx-amount red">-${fmt(t.amount)}</div>
     </div>
@@ -165,7 +174,7 @@ if(ownerName)deductionOwnerLine=`<div class="tx-meta">👤 Ditanggung: ${escapeH
 }
 return`<div class="tx-item u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
     <div class="tx-icon" style="background:${bg}">${escapeHtml(icon)}</div>
-    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}${hitungKasBadge}</div><div class="tx-meta">${t.date}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${escapeHtml(acc.emoji)} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
+    <div class="tx-info"><div class="tx-name">${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}${hitungKasBadge}</div><div class="tx-meta">${fmtTxDateDisplay(t.date)}${t.note?' · '+escapeHtml(t.note):''}${acc?` <span class="acc-chip">${escapeHtml(acc.emoji)} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div>${ownerSplitLine}${deductionOwnerLine}</div>
     <div class="u-flex u-aic u-gap6">
       <div class="tx-amount ${cls}">${sign}${fmt(t.amount)}</div>
       <button class="tx-del" data-stop="1" data-action="delTx" data-args="${escapeHtml(JSON.stringify([t.id]))}" aria-label="Hapus">🗑</button>
@@ -231,7 +240,7 @@ const assetSplit=(t.assetId&&typeof resolveTxAssetSplit==='function')?resolveTxA
 const ownerBadge=(assetSplit&&assetSplit.ok)?` <span class="acc-chip">👥 ${assetSplit.splits.length} pemilik</span>`:'';
 const saldoCell=(balAfter!==undefined&&balAfter!==null)?`<td class="tx-amount tx-tbl-saldo num">${fmt(balAfter)}</td>`:'';
 return`<tr class="tx-tbl-row u-pointer" data-action="editTx" data-args="${escapeHtml(JSON.stringify([t.id]))}">
-    <td class="tx-tbl-date">${t.date}</td>
+    <td class="tx-tbl-date" title="${escapeHtml(t.date)}">${fmtTxDateDisplay(t.date)}</td>
     <td class="tx-tbl-desc"><div class="tx-name">${escapeHtml(icon)} ${escapeHtml(t.category)}${escapeHtml(subText)}${ownerBadge}</div><div class="tx-meta">${t.note?escapeHtml(t.note)+' · ':''}${acc?`<span class="acc-chip">${escapeHtml(acc.emoji)} ${escapeHtml(acc.name)}</span>`:''}${pmBadge}</div></td>
     <td class="tx-amount ${cls} num">${sign}${fmt(t.amount)}</td>
     ${saldoCell}

@@ -377,6 +377,11 @@ return D.debts.length<before;
 function _bdpLinkedTxAlive(rec){
 return !!(rec&&rec.linkedTxId!=null&&(D.transactions||[]).some(t=>t&&sameId(t.id,rec.linkedTxId)));
 }
+// Dana Titipan pinjam: autoTxId + autoTitipanOwnerId adalah tautan sumber
+// yang berbeda dari linkedTxId (yang dipakai utang arus-kas §5.1).
+function _bdpTitipanPinjamTxAlive(rec){
+return !!(rec&&rec.autoTxId!=null&&rec.autoTitipanOwnerId!=null&&(D.transactions||[]).some(t=>t&&sameId(t.id,rec.autoTxId)&&t.type==='expense'&&t.titipanPinjamUtang===true&&t.titipanLinkId===rec.autoTitipanOwnerId));
+}
 // removeLinkedPiutangUtangForTx(txId): dipanggil delTx(). Belum lunas -> rekaman
 // ikut dihapus (utang juga menghapus tagihan cicilan-nya, pola Debt.delete()).
 // Sudah lunas -> dipertahankan sbg riwayat, hanya `linkedTxId` dilepas supaya
@@ -795,6 +800,18 @@ let d;
 if(Debt.editId){
 d=D.debts.find(x=>sameId(x.id,Debt.editId));
 if(!d){toast('⚠️ Utang tidak ditemukan, coba tutup dan buka lagi');return;}
+// S714 guard: pokok/nama/identitas utang pinjam Dana Titipan bersumber dari
+// transaksi. Jangan izinkan form utang mengubahnya secara independen; hanya
+// status lunas yang boleh diubah di sini. Perubahan nominal harus lewat edit
+// transaksi sumber agar sinkronisasi delta tetap berjalan.
+if(_bdpTitipanPinjamTxAlive(d)){
+BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.lunas=Debt._lunasState;});
+const _pinjamPersist=save();
+if(_pinjamPersist===false){_bdpAtomicRestore(_snap);toast('⚠️ Status utang tidak disimpan karena state sudah berubah. Muat ulang lalu coba lagi.');return false;}
+closeModal('debtModal');Debt.renderList();renderKekayaanBersih();hitungZakatMaal();renderBillList();checkBills();
+if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"edit-status",debtId:d.id,auto:true,source:"titipan-pinjam"});
+toast('✅ Status lunas tersimpan. Pokok utang tetap mengikuti transaksi Dana Titipan.');return true;
+}
 // AUDIT-SYNC-PIUTANG-UTANG-ARUS-KAS §5.2: transisi Belum Lunas -> Lunas
 // pada utang yang PUNYA linkedTxId otomatis mencatat 1 transaksi
 // pelunasan (expense, ke akun sama dgn transaksi awal). Idempotent via
@@ -880,6 +897,13 @@ return;
 if(d&&_bdpLinkedTxAlive(d)){
 if(typeof toast==='function')toast('Utang ini tercatat otomatis ke transaksi arus kas terkait, tidak bisa dihapus langsung. Hapus/edit dari transaksinya di Keuangan terlebih dulu.',3600);
 return;
+}
+// S714 guard: utang pinjam Dana Titipan tidak boleh dihapus terpisah dari
+// transaksi sumbernya. Jika transaksi sumber sudah tidak ada/tidak lagi
+// bertanda pinjam, record yatim tetap bisa dibersihkan manual.
+if(d&&_bdpTitipanPinjamTxAlive(d)){
+if(typeof toast==='function')toast('Utang Pinjam Dana Titipan terhubung ke transaksi sumber. Edit atau hapus transaksi tersebut dari Keuangan agar tautan dan utangnya diproses bersama.',3600);
+return false;
 }
 if(!await askConfirm('Hapus catatan utang ini?',{okText:'Ya, Hapus'}))return;
 const _snap=_bdpAtomicSnapshot(['debts','bills','piutang']);
@@ -985,6 +1009,8 @@ if(isTitipanLinked)metaParts.push('🔒 Titipan — bukan kewajiban dibayar');
 // dari titipan di atas) utk utang yang tercatat lewat toggle §5.1.
 if(_bdpLinkedTxAlive(d)&&!isTitipanLinked)metaParts.push('🔒 Tercatat otomatis dari transaksi arus kas');
 const isTxLinked=_bdpLinkedTxAlive(d);
+const isTitipanPinjamTxLinked=_bdpTitipanPinjamTxAlive(d);
+if(isTitipanPinjamTxLinked&&!isTitipanLinked&&!isTxLinked)metaParts.push('🔒 Pinjam Dana Titipan — pokok mengikuti transaksi sumber');
 // FIX (BUG-DEL-TITIPAN): sembunyikan tombol 🗑 utk baris titipan auto-sync,
 // konsisten dengan baris "Cicilan Barang" (billRowsHtml) yang memang sudah
 // read-only -- ganti jadi ikon 🔒 kecil ber-tooltip, biar user tidak
@@ -993,8 +1019,8 @@ const isTxLinked=_bdpLinkedTxAlive(d);
 // depth) kalau tombol ini terpanggil lewat jalur lain.
 const delBtnHtml=isTitipanLinked
 ?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tersinkron otomatis dari porsi kepemilikan Aset/Akun/Investasi patungan — ubah porsinya ke 0% atau lepas tautannya di sana untuk menghapus baris ini">🔒</span>'
-:(isTxLinked
-?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Tercatat otomatis dari transaksi arus kas terkait — hapus/edit dari transaksinya di Keuangan untuk menghapus baris ini">🔒</span>'
+:(isTxLinked||isTitipanPinjamTxLinked
+?'<span class="tx-del" data-stop="1" style="cursor:default;opacity:.55" title="Terhubung ke transaksi sumber — edit atau hapus dari transaksi tersebut">🔒</span>'
 :`<button class="tx-del" data-stop="1" data-action="delDebt" data-args="${escapeHtml(JSON.stringify([d.id]))}" aria-label="Hapus">🗑</button>`);
 return `<div class="tx-item u-pointer" data-action="openDebtModal" data-args="${escapeHtml(JSON.stringify([d.id]))}"><div class="tx-icon" style="background:var(--accent2-soft)">📕</div><div class="tx-info"><div class="tx-name">${escapeHtml(d.name)}${d.lunas?' <span class="bill-due-badge bill-due-ok u-ml4">Lunas</span>':(overdue?' <span class="bill-due-badge bill-due-urgent u-ml4">Jatuh Tempo</span>':'')}${staleDebtIds.has(String(d.id))?' <span class="bill-due-badge bill-due-urgent u-ml4" title="Nama pemilik sudah diubah lewat Pengaturan Pemilik, entri ini masih pakai nama lama">⚠️ nama belum sinkron</span>':''}</div><div class="tx-meta">${metaParts.join(' · ')}</div></div><div class="tx-amount${d.lunas?'':' red'}">${fmt(d.nilai)}</div>${delBtnHtml}</div>`;
 }catch(err){

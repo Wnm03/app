@@ -33,7 +33,7 @@ const scrollTo = async (p, y) => { await p.evaluate(y => { document.getElementBy
     const m = await p.evaluate(() => {
       const pg = document.getElementById('page-shop'); let small = 0, tot = 0; const ex = [];
       pg.querySelectorAll('button,select,input,[data-action]').forEach(e => { const r = e.getBoundingClientRect(); if (!e.offsetParent || !r.width || !r.height) return; tot++; if (r.height < 40 || r.width < 40) { small++; if (ex.length < 5) ex.push((e.textContent || e.id).trim().slice(0, 16)); } });
-      return { vw: innerWidth, hscroll: document.documentElement.scrollWidth > innerWidth, smallTap: small, totalTap: tot, smallEx: ex };
+      return { vw: window.innerWidth, hscroll: document.documentElement.scrollWidth > window.innerWidth, smallTap: small, totalTap: tot, smallEx: ex };
     });
     m.consoleErrors = p.__errs.length; res.viewports.push(m);
     if (m.hscroll) res.fails.push('hscroll @' + vw);

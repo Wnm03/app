@@ -150,3 +150,46 @@ test('Debt.renderList() — badge 🔒 Titipan JUGA tampil utk linkedAccountId (
   const delBtnCount = (html.match(/data-action="delDebt"/g) || []).length;
   assert.equal(delBtnCount, 1, 'hanya utang manual yang boleh punya tombol hapus');
 });
+
+test('Debt.delete() — utang pinjam Dana Titipan dengan transaksi sumber aktif DITOLAK', async () => {
+  const D = makeD();
+  D.transactions = [{ id: 'tx-pinjam', type: 'expense', titipanLinkId: 'o1', titipanPinjamUtang: true }];
+  D.debts.push({ id: 'pinjam1', name: 'Pinjam Dana Titipan: O1', nilai: 100000, autoTxId: 'tx-pinjam', autoTitipanOwnerId: 'o1', lunas: false });
+  let confirmCalled = false;
+  const toastCalls = [];
+  const ctx = loadSource(['modules/finance/piutang-utang.js'], {
+    D, escapeHtml: String, fmt: String, fmtFull: String, save: () => {},
+    sameId: (a, b) => String(a) === String(b),
+    askConfirm: async () => { confirmCalled = true; return true; },
+    toast: msg => toastCalls.push(msg),
+  }, ['Debt']);
+  const result = await ctx.Debt.delete('pinjam1');
+  assert.equal(result, false);
+  assert.equal(D.debts.some(d => d.id === 'pinjam1'), true);
+  assert.equal(confirmCalled, false);
+  assert.match(toastCalls[0], /transaksi sumber/i);
+});
+
+test('Debt.delete() — auto pinjam tanpa transaksi sumber dapat dibersihkan sebagai orphan', async () => {
+  const D = makeD();
+  D.transactions = [];
+  D.debts.push({ id: 'pinjam-orphan', nilai: 100000, autoTxId: 'tx-gone', autoTitipanOwnerId: 'o1' });
+  const ctx = makeCtx(D);
+  await ctx.Debt.delete('pinjam-orphan');
+  assert.equal(D.debts.some(d => d.id === 'pinjam-orphan'), false);
+});
+
+test('Debt.renderList() — auto pinjam Dana Titipan aktif menampilkan kunci, bukan tombol hapus', () => {
+  const D = makeD();
+  D.transactions = [{ id: 'tx-pinjam', type: 'expense', titipanLinkId: 'o1', titipanPinjamUtang: true }];
+  D.debts.push({ id: 'pinjam1', name: 'Pinjam Dana Titipan: O1', nilai: 100000, autoTxId: 'tx-pinjam', autoTitipanOwnerId: 'o1', lunas: false });
+  const elMap = { debtList: { innerHTML: '' }, debtTotalVal: { textContent: '' }, debtCicilanVal: { textContent: '' } };
+  const ctx = loadSource(['modules/finance/piutang-utang.js'], {
+    D, escapeHtml: String, fmt: String, fmtFull: String, save: () => {},
+    sameId: (a, b) => String(a) === String(b), resolveEntryAssetSelfPorsi: () => 100,
+    isDebtOwnershipSelf: () => true, document: { getElementById: id => elMap[id] || null },
+  }, ['Debt']);
+  ctx.Debt.renderList();
+  assert.match(elMap.debtList.innerHTML, /Pinjam Dana Titipan — pokok mengikuti transaksi sumber/);
+  assert.equal((elMap.debtList.innerHTML.match(/data-action="delDebt"/g) || []).length, 1);
+});
