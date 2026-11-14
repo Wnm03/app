@@ -95,6 +95,8 @@
     if(!tx || !patch || typeof patch!=='object') return tx;
     const before={...tx};
     Object.assign(tx,patch);
+    // S2766: nilai undefined pada patch = hapus field (mis. melepas tautan/owner) lewat gateway ini.
+    Object.keys(patch).forEach(k=>{ if(patch[k]===undefined) delete tx[k]; });
     try{
       canonicalizeFinanceTx(tx,{
         category:Object.prototype.hasOwnProperty.call(patch,'category'),
@@ -107,6 +109,18 @@
       Object.assign(tx,before);
       throw err;
     }
+    return tx;
+  }
+  // S2766: gateway khusus METADATA tautan (renovProjectLinkId, sewaKiosLinkId, billLinkId,
+  // tukangPaymentEntryIds, dst). Menolak field finansial/taksonomi supaya patch tautan tidak
+  // pernah memicu kanonikalisasi kategori; nilai undefined = hapus field.
+  const META_FORBIDDEN=['id','type','amount','date','accountId','category','categoryId','subcategory','subcategoryId'];
+  function patchMetaById(id,patch){
+    const tx=findById(id);
+    if(!tx || !patch || typeof patch!=='object') return tx;
+    const bad=Object.keys(patch).filter(k=>META_FORBIDDEN.indexOf(k)>=0);
+    if(bad.length) throw new Error('FINANCE_TX_META_FIELD_FORBIDDEN:'+bad.join(','));
+    Object.keys(patch).forEach(k=>{ if(patch[k]===undefined) delete tx[k]; else tx[k]=patch[k]; });
     return tx;
   }
   function removeById(id){
@@ -141,6 +155,6 @@
     return d.transactions;
   }
   function snapshot(){ return getD().transactions.slice(); }
-  const api={create,createMany,findById,updateById,removeById,removeWhere,replaceSnapshot,snapshot};
+  const api={create,createMany,findById,updateById,patchMetaById,removeById,removeWhere,replaceSnapshot,snapshot};
   g.FinanceTxSOT=Object.freeze(api);
 })(typeof globalThis!=='undefined'?globalThis:window);

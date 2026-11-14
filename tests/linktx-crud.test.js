@@ -46,7 +46,7 @@ function makeD(overrides = {}) {
 
 function makeCtx({ document, D, calls, askConfirmResult = true }) {
   return loadSource(
-    ['modules/finance/linktx.js'],
+    ['modules/finance/finance-tx-sot.js', 'modules/finance/linktx.js'],
     {
       document, D,
       uid: (() => { let n = 1; return () => 'link' + (n++); })(),
@@ -233,6 +233,7 @@ test('_createFromTx() ctx renov -> item renovasi baru masuk p.items, tx ditandai
   const { LinkTx } = makeCtx({ document: makeDoc(), D, calls });
   LinkTx.ctx = 'renov'; LinkTx.targetId = 'p1';
   const t = { id: 't1', note: 'Cat tembok', amount: 100000, date: '2026-01-01', category: 'Rumah', accountId: 'a1' };
+  D.transactions.push(t); // S2766: tx harus ada di D.transactions (tulis tautan lewat FinanceTxSOT)
   const entry = LinkTx._createFromTx(t);
   assert.equal(D.renovProjects[0].items.length, 1);
   assert.equal(D.renovProjects[0].items[0].paid, true);
@@ -247,6 +248,7 @@ test('_createFromTx() ctx wishlist -> barang baru masuk D.wishlist berstatus sud
   const { LinkTx } = makeCtx({ document: makeDoc(), D, calls });
   LinkTx.ctx = 'wishlist'; LinkTx.targetId = null;
   const t = { id: 't1', note: 'Kipas Angin', amount: 250000, date: '2026-01-01' };
+  D.transactions.push(t); // S2766: tx harus ada di D.transactions (tulis tautan lewat FinanceTxSOT)
   const entry = LinkTx._createFromTx(t);
   assert.equal(D.wishlist.length, 1);
   assert.equal(D.wishlist[0].bought, true);
@@ -260,6 +262,7 @@ test('_createFromTx() ctx bill -> tx ditandai billLinkId, TIDAK bikin transaksi 
   const { LinkTx } = makeCtx({ document: makeDoc(), D, calls });
   LinkTx.ctx = 'bill'; LinkTx.targetId = 'b1';
   const t = { id: 't1', note: 'Bayar listrik', amount: 150000, date: '2026-01-01' };
+  D.transactions.push(t); // S2766: tx harus ada di D.transactions (tulis tautan lewat FinanceTxSOT)
   const entry = LinkTx._createFromTx(t);
   assert.equal(t.billLinkId, 'b1');
   assert.equal(entry.kind, 'bill');

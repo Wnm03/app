@@ -42,7 +42,7 @@ test('S2227 — every non-bundled FinanceTxSOT consumer is explicitly lazy-loade
     const s=fs.readFileSync(abs,'utf8');
     if(/FinanceTxSOT/.test(s) && !files.has(rel)) consumers.push(rel);
   }
-  const lazyAllowed=new Set(['modules/home/renovasi.js']);
+  const lazyAllowed=new Set(['modules/home/renovasi.js','modules/business/sewakios.js']); // S2766: sewakios lazy-load setelah bundle (FinanceTxSOT sudah ada)
   const unexpected=consumers.filter(x=>!lazyAllowed.has(x));
   assert.deepEqual(unexpected,[],`FinanceTxSOT consumers outside production bundle/lazy contract: ${unexpected.join(', ')}`);
   const render=src('modules/shared/modules-render.js');

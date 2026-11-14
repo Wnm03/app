@@ -332,6 +332,7 @@ renderStockList();
 if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'&&!opts.skipRenovCascade){
 Renov.onLinkedTxDeleted(t);
 }
+if(t&&t.renovDpProjectId&&typeof Renov!=='undefined'&&typeof Renov.onDpTxDeleted==='function')Renov.onDpTxDeleted(t);
 if(t&&t.wishlistLinkId){
 WorthIt.onLinkedTxDeleted(t);
 }

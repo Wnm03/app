@@ -82,3 +82,16 @@ test('runDataHealthCheck: D.renovProjects kosong/tidak ada -> tidak crash, 0 iss
   const issues = run({});
   assert.equal(issues.filter((i) => i.title === ACC_TITLE || i.title === TX_TITLE).length, 0);
 });
+
+test('S2767: Data Health mendeteksi cicilan yatim, duplikat, dan kelebihan bayar tanpa auto-repair',()=>{
+  const payment={id:'pay1',txId:'missing',amount:150};
+  const issues=run({
+    transactions:[{id:'tx-orphan',type:'expense',renovPaymentId:'p-orphan',renovProjectLinkId:'p1',renovItemLinkId:'it1'}],
+    renovProjects:[{id:'p1',name:'Renov',items:[{id:'it1',name:'Cat',harga:100,paid:true,payments:[payment,{id:'pay2',txId:'missing',amount:60}]}]}],
+  });
+  assert.ok(issues.some(i=>i.title==='Pembayaran cicilan Renovasi kehilangan transaksi'));
+  assert.ok(issues.some(i=>i.title==='Transaksi pembayaran Renovasi duplikat'));
+  assert.ok(issues.some(i=>i.title==='Item Renovasi kelebihan bayar'));
+  assert.ok(issues.some(i=>i.title==='Transaksi Renovasi tanpa baris pembayaran'));
+  assert.equal(payment.amount,150,'pemeriksaan hanya baca dan tidak memperbaiki data otomatis');
+});

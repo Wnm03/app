@@ -177,26 +177,27 @@ if(accField)accField.value=u.accountId;
 applyPaymentLink(txId){
 if(!SewaKios.pendingUnitId)return;
 const u=D.sewaKios.units.find(x=>sameId(x.id,SewaKios.pendingUnitId));
-const t=D.transactions.find(x=>x.id===txId);
+const t=D.transactions.find(x=>sameId(x.id,txId));
 if(u&&t){
 if(!u.riwayat)u.riwayat=[];
-u.riwayat.push({id:uid(),tanggal:t.date,jumlah:t.amount,txId});
-t.sewaKiosLinkId=u.id;
+u.riwayat.push({id:uid(),tanggal:t.date,jumlah:t.amount,txId:t.id});
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+FinanceTxSOT.patchMetaById(t.id,{sewaKiosLinkId:u.id});
 }
 SewaKios.pendingUnitId=null;
 renderDashboardSewaKiosReminder();
 },
 onLinkedTxEdited(t){
-const u=D.sewaKios.units.find(x=>x.id===t.sewaKiosLinkId);
+const u=D.sewaKios.units.find(x=>sameId(x.id,t.sewaKiosLinkId));
 if(!u||!u.riwayat)return;
-const r=u.riwayat.find(x=>x.txId===t.id);
+const r=u.riwayat.find(x=>sameId(x.txId,t.id));
 if(r){r.jumlah=t.amount;r.tanggal=t.date;}
 SewaKios.render();renderDashboardSewaKiosReminder();
 },
 onLinkedTxDeleted(t){
-const u=D.sewaKios.units.find(x=>x.id===t.sewaKiosLinkId);
+const u=D.sewaKios.units.find(x=>sameId(x.id,t.sewaKiosLinkId));
 if(!u||!u.riwayat)return;
-u.riwayat=u.riwayat.filter(r=>r.txId!==t.id);
+u.riwayat=u.riwayat.filter(r=>!sameId(r.txId,t.id));
 SewaKios.render();renderDashboardSewaKiosReminder();
 },
 exportPDF(){

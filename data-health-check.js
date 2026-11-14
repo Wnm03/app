@@ -656,15 +656,46 @@ issues.push({level:'warn',title:'DSR (Rasio Cicilan) di zona merah',detail:`Rasi
 // spt bills/wishlist, tapi belum pernah dicek orphan di sini. Pola & level
 // disamakan persis dgn cek bills (accountId) & wishlist (txId) di atas.
 // Murni baca, 0 perubahan ke cek lain.
+const _renovKnownPaymentTxIds=new Set();
+const _renovMoney=typeof fmtFull==='function'?fmtFull:(n=>'Rp '+Math.round(Number(n)||0).toLocaleString('id-ID'));
+const _renovSame=(a,b)=>String(a)===String(b);
+const _renovFindTx=id=>(D.transactions||[]).find(tx=>tx&&_renovSame(tx.id,id));
+const _renovProjectExists=id=>(D.renovProjects||[]).some(project=>project&&_renovSame(project.id,id));
+const _renovItemExists=(projectId,itemId)=>(D.renovProjects||[]).some(project=>project&&_renovSame(project.id,projectId)&&(project.items||[]).some(item=>item&&_renovSame(item.id,itemId)));
 (D.renovProjects||[]).forEach(p=>{
 (p.items||[]).forEach(it=>{
-if(it.accountId && !accIds.has(it.accountId)){
+if(it.accountId && !(D.accounts||[]).some(a=>_renovSame(a.id,it.accountId))){
 issues.push({level:'warn',title:'Item Renovasi dengan akun tidak valid',detail:`"${escapeHtml(it.name||'?')}" (proyek "${escapeHtml(p.name||'?')}") menunjuk ke akun yang sudah dihapus.`});
 }
-if(it.txId && !txIds.has(it.txId)){
+if(it.txId && !_renovFindTx(it.txId)){
 issues.push({level:'warn',title:'Item Renovasi kehilangan transaksi tertaut',detail:`"${escapeHtml(it.name||'?')}" (proyek "${escapeHtml(p.name||'?')}") ditandai sudah dibayar & tertaut ke transaksi keuangan, tapi transaksinya tidak ditemukan.`});
 }
+if(Array.isArray(it.payments)){
+const localTxIds=new Set(),localPaymentIds=new Set();let paymentTotal=0;
+it.payments.forEach(pay=>{
+if(!pay||!pay.txId){issues.push({level:'error',title:'Pembayaran cicilan Renovasi tanpa ID transaksi',detail:`Pembayaran pada item "${escapeHtml(it.name||'?')}" tidak memiliki txId.`});return;}
+const key=String(pay.txId);paymentTotal+=Math.max(0,Number(pay.amount)||0);
+if(pay.id&&localPaymentIds.has(String(pay.id)))issues.push({level:'error',title:'ID pembayaran Renovasi duplikat',detail:`Item "${escapeHtml(it.name||'?')}" memiliki ID pembayaran ${escapeHtml(pay.id)} lebih dari sekali.`});if(pay.id)localPaymentIds.add(String(pay.id));
+if(localTxIds.has(key)||_renovKnownPaymentTxIds.has(key))issues.push({level:'error',title:'Transaksi pembayaran Renovasi duplikat',detail:`Item "${escapeHtml(it.name||'?')}" memiliki lebih dari satu baris pembayaran dengan txId ${escapeHtml(key)}.`});
+localTxIds.add(key);_renovKnownPaymentTxIds.add(key);
+const tx=_renovFindTx(pay.txId);
+if(!tx)issues.push({level:'error',title:'Pembayaran cicilan Renovasi kehilangan transaksi',detail:`Pembayaran ${escapeHtml(key)} untuk item "${escapeHtml(it.name||'?')}" tidak memiliki transaksi Keuangan.`});
+else {
+if(!_renovSame(tx.renovProjectLinkId,p.id)||!_renovSame(tx.renovItemLinkId,it.id)||!_renovSame(tx.renovPaymentId,pay.id))issues.push({level:'warn',title:'Tautan transaksi cicilan Renovasi tidak konsisten',detail:`Transaksi ${escapeHtml(key)} tidak cocok dengan proyek/item/pembayaran yang menyimpannya.`});
+if(Number(pay.amount)!==Number(tx.amount)||String(pay.date||'')!==String(tx.date||'')||!_renovSame(pay.accountId,tx.accountId))issues.push({level:'warn',title:'Nilai pembayaran Renovasi berbeda dari transaksi',detail:`Pembayaran ${escapeHtml(key)} pada item "${escapeHtml(it.name||'?')}" berbeda nominal/tanggal/akun dari transaksi Keuangan. Periksa sinkronisasi tanpa mengubah harga rencana.`});
+}
 });
+if(paymentTotal>(Number(it.harga)||0))issues.push({level:'warn',title:'Item Renovasi kelebihan bayar',detail:`"${escapeHtml(it.name||'?')}" dibayar ${_renovMoney(paymentTotal)} melebihi harga rencana ${_renovMoney(it.harga||0)}. Periksa perubahan transaksi; harga rencana tidak diubah otomatis.`});
+}
+});
+});
+(D.transactions||[]).forEach(tx=>{
+if(tx&&tx.renovDpProjectId&&!_renovProjectExists(tx.renovDpProjectId))issues.push({level:'warn',title:'Income DP/Termin Renovasi tanpa proyek',detail:`Transaksi income ${escapeHtml(tx.id)} menunjuk ke proyek renovasi yang tidak ditemukan.`});
+if(tx&&tx.renovDpProjectId&&tx.type!=='income')issues.push({level:'warn',title:'Tautan DP/Termin Renovasi bukan transaksi income',detail:`Transaksi ${escapeHtml(tx.id)} memiliki renovDpProjectId tetapi tipenya bukan income.`});
+if(tx&&tx.renovDpProjectId&&!['dp','termin'].includes(tx.renovDpKind))issues.push({level:'warn',title:'Jenis DP/Termin Renovasi tidak valid',detail:`Transaksi ${escapeHtml(tx.id)} memiliki renovDpKind yang kosong/tidak dikenal.`});
+if(tx&&tx.renovPaymentId&&!_renovKnownPaymentTxIds.has(String(tx.id)))issues.push({level:'warn',title:'Transaksi Renovasi tanpa baris pembayaran',detail:`Transaksi ${escapeHtml(tx.id)} memiliki renovPaymentId tetapi tidak ditemukan dalam payments[] item mana pun.`});
+if(tx&&tx.renovProjectLinkId&&!_renovProjectExists(tx.renovProjectLinkId))issues.push({level:'warn',title:'Transaksi Renovasi dengan tautan proyek tidak valid',detail:`Transaksi ${escapeHtml(tx.id)} masih tertaut ke proyek yang tidak ditemukan.`});
+if(tx&&tx.renovItemLinkId&&!_renovItemExists(tx.renovProjectLinkId,tx.renovItemLinkId))issues.push({level:'warn',title:'Transaksi Renovasi dengan tautan item tidak valid',detail:`Transaksi ${escapeHtml(tx.id)} masih tertaut ke item yang tidak ditemukan pada proyek yang sama.`});
 });
 const catNames=new Set([...D.categories.income,...D.categories.expense].flatMap(c=>[c.id,c.name,...(c.subs||[]).map(s=>s.id)]));
 (D.budgets||[]).forEach(b=>{

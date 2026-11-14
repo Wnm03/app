@@ -96,7 +96,9 @@ Renov.render();
 if(sameId(Renov.curId,link.project.id))Renov.renderDetail();
 }
 }
-delete existingTx.renovProjectLinkId;delete existingTx.renovItemLinkId;
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+const detached=FinanceTxSOT.patchMetaById(existingTx.id,{renovProjectLinkId:undefined,renovItemLinkId:undefined});
+if(!detached)throw new Error('FINANCE_TX_META_UNLINK_FAILED');
 return link;
 }
 // applyTxRenovFromTx(note,txId,date,amt,cat,accId) -- dipanggil SETELAH
@@ -147,8 +149,7 @@ if(!p)return '⚠️ Pilih dulu Proyek Renovasi-nya (item tidak dicatat ke Renov
 const itemName=(note||cat||'Item Renovasi').trim()||'Item Renovasi';
 const it={id:uid(),name:itemName,ukuran:'',harga:amt,hargaTotal:null,category:cat,accountId:accId,note:'',tglBayar:date,calcDetail:null,paid:true,txId:txId,paidDate:date};
 p.items.push(it);
-const t=D.transactions.find(x=>x.id===txId);
-if(t){t.renovProjectLinkId=p.id;t.renovItemLinkId=it.id;}
+if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&FinanceTxSOT.findById(txId))FinanceTxSOT.patchMetaById(txId,{renovProjectLinkId:p.id,renovItemLinkId:it.id});
 save();
 if(typeof Renov!=='undefined'){
 Renov.render();

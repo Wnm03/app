@@ -15,10 +15,11 @@ function env({ bbmChecked = true, renovChecked = false, km = '', liter = '', bbm
   el('txSyncBbm', { checked: bbmChecked }); el('txBbmPanel'); el('txBbmKm', { value: km }); el('txBbmLiter', { value: liter });
   el('txAddRenov', { checked: renovChecked }); el('txRenovPanel');
   const document = { getElementById: (id) => els[id] || null };
-  const D = { bbmLogs, renovProjects, vehicles: [] };
+  const D = { bbmLogs, renovProjects, vehicles: [], transactions: [] };
+  const FinanceTxSOT = { patchMetaById(id, patch) { const tx = D.transactions.find((t) => String(t.id) === String(id)); if (!tx) return undefined; Object.keys(patch).forEach((key) => patch[key] === undefined ? delete tx[key] : tx[key] = patch[key]); return tx; } };
   const reconciled = [];
   const ctx = loadSource(['modules/finance/tx-bbm.js', 'modules/finance/tx-renov.js'],
-    { D, document, toast() {}, sameId: (a, b) => String(a) === String(b), Renov: undefined },
+    { D, document, FinanceTxSOT, toast() {}, sameId: (a, b) => String(a) === String(b), Renov: undefined },
     ['validateTxBbmBeforeSave', 'txBbmUnlinkRequested', 'unlinkTxBbmFromTx', 'txRenovUnlinkRequested', 'unlinkTxRenovFromTx', 'reconcileFuelStateFromLogs']);
   // tx-bbm.js mendefinisikan reconcileFuelStateFromLogs sendiri; pasang mata-mata SETELAH load (dipanggil via global).
   ctx.reconcileFuelStateFromLogs = (v) => reconciled.push(v);
@@ -61,6 +62,7 @@ test('S2779 B: Renovasi tertaut + centang dimatikan -> permintaan lepas; item ke
   assert.equal(env({ renovChecked: true, renovProjects: projects() }).ctx.txRenovUnlinkRequested(mk()), false);
   assert.equal(env({ renovChecked: false, renovProjects: [] }).ctx.txRenovUnlinkRequested(mk()), false, 'proyek hilang');
   const tx = mk();
+  off.D.transactions.push(tx);
   off.ctx.unlinkTxRenovFromTx(tx);
   const it = off.D.renovProjects[0].items[0];
   assert.equal(off.D.renovProjects[0].items.length, 1);

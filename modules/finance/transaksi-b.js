@@ -582,6 +582,7 @@ if(linkedBbm)Object.assign(linkedBbm,{cost:amt,date,accountId:accId});
 if(existingTx.renovItemLinkId&&typeof Renov!=='undefined'){
 Renov.onLinkedTxEdited(existingTx);
 }
+if(existingTx.renovDpProjectId&&typeof Renov!=='undefined'&&typeof Renov.onDpTxEdited==='function')Renov.onDpTxEdited(existingTx);
 if(existingTx.wishlistLinkId){
 WorthIt.onLinkedTxEdited(existingTx);
 }

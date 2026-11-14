@@ -730,8 +730,8 @@ ids.forEach(id=>{
 const a=D.tukangAbsensi.find(x=>sameId(x.id,id));
 if(a)a.paidTxId=txId;
 });
-const t=D.transactions.find(x=>x.id===txId);
-if(t)t.tukangPaymentEntryIds=ids;
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+FinanceTxSOT.patchMetaById(txId,{tukangPaymentEntryIds:ids});
 Tukang._pendingPaymentEntryIds=null;
 Tukang._pendingPaymentRange=null;
 },

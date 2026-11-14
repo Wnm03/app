@@ -154,19 +154,20 @@ const p=D.renovProjects.find(x=>sameId(x.id,LinkTx.targetId));
 if(!p)return null;
 const it={id:uid(),name:t.note||t.category||'Item Renovasi',note:'',paid:true,txId:t.id,paidDate:t.date,harga:t.amount,category:t.category,accountId:t.accountId,tglBayar:t.date};
 p.items.push(it);
-t.renovProjectLinkId=p.id;t.renovItemLinkId=it.id;
+if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
+FinanceTxSOT.patchMetaById(t.id,{renovProjectLinkId:p.id,renovItemLinkId:it.id});
 return{kind:'renov',projectId:p.id,itemId:it.id,txId:t.id,amount:t.amount};
 }
 if(LinkTx.ctx==='wishlist'){
 const it={id:uid(),name:t.note||t.category||'Barang',price:t.amount,isDiskon:false,hargaNormal:0,cat:'kebutuhan',urgensi:'mendesak',sudahPunya:false,sudahPunyaAlasan:'',createdAt:t.date?new Date(t.date).toISOString():new Date().toISOString(),bought:true,boughtDate:t.date,txId:t.id};
 D.wishlist.push(it);
-t.wishlistLinkId=it.id;
+FinanceTxSOT.patchMetaById(t.id,{wishlistLinkId:it.id});
 return{kind:'wishlist',itemId:it.id,txId:t.id,amount:t.amount};
 }
 if(LinkTx.ctx==='bill'){
 const b=D.bills.find(x=>sameId(x.id,LinkTx.targetId))||(D.billsArchive||[]).find(x=>sameId(x.id,LinkTx.targetId));
 if(!b)return null;
-t.billLinkId=b.id;
+FinanceTxSOT.patchMetaById(t.id,{billLinkId:b.id});
 return{kind:'bill',billId:b.id,txId:t.id,amount:t.amount};
 }
 return null;
@@ -176,12 +177,12 @@ const t=D.transactions.find(x=>sameId(x.id,e.txId));
 if(e.kind==='renov'){
 const p=D.renovProjects.find(x=>sameId(x.id,e.projectId));
 if(p)p.items=p.items.filter(i=>!sameId(i.id,e.itemId));
-if(t){delete t.renovProjectLinkId;delete t.renovItemLinkId;}
+if(t)FinanceTxSOT.patchMetaById(t.id,{renovProjectLinkId:undefined,renovItemLinkId:undefined});
 } else if(e.kind==='wishlist'){
 D.wishlist=D.wishlist.filter(x=>!sameId(x.id,e.itemId));
-if(t)delete t.wishlistLinkId;
+if(t)FinanceTxSOT.patchMetaById(t.id,{wishlistLinkId:undefined});
 } else if(e.kind==='bill'){
-if(t)delete t.billLinkId;
+if(t)FinanceTxSOT.patchMetaById(t.id,{billLinkId:undefined});
 }
 },
 _refreshCtxUI(){

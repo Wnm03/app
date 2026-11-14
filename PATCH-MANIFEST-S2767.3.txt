@@ -1,0 +1,41 @@
+PATCH S2767.3 — KUMULATIF (S2766 + S2767 + FIX1 + S2767.2 + S2767.3)
+Status: P0-P3 terimplementasi; Chromium nyata lulus (kecuali jsPDF asli); regresi penuh: 3 kegagalan baseline sama (S1780, s1608, S2308); kandidat rilis, BELUM FINAL produksi
+Baseline: app-main_9.zip  SHA-256 24efe7387d9ff2fe40afdacb2d6906c4eafbbf7b008350d6a50c744b685e79d9
+S2766: patch-s2766-renov-sot-sameid.zip  SHA-256 54f28fe15fab7d225b9318f3dd5a244b4850e877e29fb3a529d9a72777987c79
+Versi build: akumulatif-2811 (rantai 2803 -> 2805 -> 2808 -> 2810 -> 2811)
+Changed files (excluding this manifest): 31
+Terapkan langsung di atas baseline app-main_9 (tanpa S2766 terpisah); S2766 sudah termasuk.
+
+SHA-256 per file:
+7ac39f4e5839bbc161c7721149f4e4ca55b65ec9952730631928d8abef8c62bc  FILE-HASHES-SHA256.txt
+28b9db7332a5630f7ff7fcc09acd3fb745a6b3aec17951fe49d21795dafe92d4  PATCH-MANIFEST-S2767.3.txt
+3415a914d2ba338e0663e5ea1eaf6672929cc341deb01dfd3c97829e5b609ac8  app-bundle-a.min.js
+cebd301797014e60ecccc427184c5a798712852dc27010a0445a231da244384d  app-bundle-b.min.js
+2b1753e95795212d0476e945c4d8ee08c74214a175b4d6e2b66541a9c6aff77e  app_production.html
+32f66e6fda634ddd0e56b2bafffd9fdf1e8c94bfcb894c6ff192a24e40b65ed3  chat-action-handlers.js
+2cb9e876efcc789690986f8cfa3b181dbd86dc89c99b4a641c00c08fdac47530  data-health-check.js
+0ac474dfd98a63264f8fbe8cd27506067165282137f870f5f437cf80f67722ba  docs/COVERAGE-PER-MODULE.md
+c3ac68ebe8d5bcb81f12d0232248262bc4affeef1107db91909bb01267ae1718  docs/FILE-MAP.md
+8b5a2e09183be2a61319e91d3698cf444e58c0b727d108ac9ed2977fca7bcc7b  index.html
+fa52ecf782c1bc940d17ee60dfcaa7a30f1bc9b92c3827a8265ef044ce978802  modules/business/sewakios.js
+ecec019f4e190303207f6bcec3dc77a40d1dbe7704ba260f647df70681695920  modules/business/tukang-absensi.js
+1027b99e725ee30ff8212ca94005e2a72531769dd1af2cf69c166be729092e7f  modules/finance/finance-tx-sot.js
+f7713065cb3512059d6ff9758151538a81f363d70c9a052cbc1fc2fe800b5950  modules/finance/linktx.js
+5833de71a87b33b46b7a71436659187f49eb1b7ec73f8c34f01e82cd02c8e194  modules/finance/transaksi-b.js
+94fc52f909ffb89d4d35f2ab67bc38f9b7dbee5f95b16e87108c040511ac5e3b  modules/finance/tx-list-cashflow.js
+712d6b952ce262d614471f2c8a939a9d8e9e5a3641164bceafb6690e52c1b8f6  modules/finance/tx-renov.js
+8166b1992958e1693c4532456a580e3f5b50b100cb77e28553d117ad937ca043  modules/home/renovasi.js
+2233e6a8f6c6d7040d731a5bbb59373bd17663761e48dec735c0cf4b2db4069a  modules/shared/backup-restore.js
+6500868989a6661bee99a0f30d1281c03bcfb57f5a91365aa20360ae00b4f2bb  modules/shared/features-helpers-global-security.js
+549ea7a923f3c4d94443baf57b9dd2d4de1a177ff4d825d4f39c10649a8448b7  modules/shared/modals.js
+e1eb2cec42edb043e3958fd5e1199a536fd1d0e6aff89b43531cf13c5dc6039f  modules/shared/modules-calc.js
+ed47b7f0732262ed9410d43d8d0f435381bffcecc00c4e3235fe7e533b3fc4e2  modules/shared/modules-render.js
+cd839f8d92396f1433a6d2492deb4165dc6c37cbbf424d05c5f99be05d338d6f  sw.js
+ffb09efe21687be48c4d2811b4334c80fc4d6bcb3e2d6f66e777123ffaf5fd8c  tests/data-health-check-renov-orphan-s283.test.js
+30001985ad0fa54d7521460ae4da06deff1c04d97e43aa110b725e4c5f65ee04  tests/linktx-crud.test.js
+3092b3a3154b0f741923460fb5611d9595c3c642ca994877de3631d16483442d  tests/s2227-finance-sot-production-wiring.test.js
+8a2552edc6e8dd97f018bb9c62f0b86494792c689018512eed46ba4c0d0412d5  tests/s2766-finance-tx-sot-patch-meta.test.js
+01ff6d5f307364bdd65d541f19c63c797ed97e0d09ce1d52cfed0ef6b5a9ccf8  tests/s2766-sewakios-sameid-linked-tx.test.js
+2e3a6f1ce9134599b57e1a6471735393fd06626c8e62bccfbcf5d5a4f697614d  tests/s2767-dp-delete-live-refresh.test.js
+05318693b45baa70688721aa3f85723b755a755b1919dfc4a94fa0bf1f7f15e8  tests/s2767-renov-core.test.js
+2abb17dca993e3b84d43c1c817c06527b1d640e4af47185c88535d39d8227f00  tests/s2779-tx-panel-validate-unlink.test.js

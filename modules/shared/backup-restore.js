@@ -421,8 +421,8 @@ csvParts.push('');
 }
 if(out.renovProjects){
 csvParts.push('=== PROYEK RENOVASI ===');
-csvParts.push(toCSVRow(['Nama Proyek','Item','Ukuran/Kebutuhan','Harga','Sudah Dibeli','Tanggal Bayar','Catatan']));
-out.renovProjects.forEach(p=>(p.items||[]).forEach(it=>csvParts.push(toCSVRow([p.name,it.name,it.ukuran||'',it.harga||0,it.paid?'Ya':'Belum',it.paidDate||'',it.note||'']))));
+csvParts.push(toCSVRow(['Nama Proyek','Item','Ukuran/Kebutuhan','Harga','Sudah Dibeli','Tanggal Bayar','Catatan','Terbayar','DP Masuk']));
+out.renovProjects.forEach(p=>{const dp=(out.transactions||[]).filter(t=>t&&t.type==='income'&&String(t.renovDpProjectId)===String(p.id)).reduce((sum,t)=>sum+(Number(t.amount)||0),0);(p.items||[]).forEach(it=>{const paid=Array.isArray(it.payments)?it.payments.reduce((sum,x)=>sum+(Number(x.amount)||0),0):(it.paid?(Number(it.harga)||0):0);csvParts.push(toCSVRow([p.name,it.name,it.ukuran||'',it.harga||0,it.paid?'Ya':'Belum',it.paidDate||'',it.note||'',paid,dp]));});});
 csvParts.push('');
 }
 if(out.pensiun||out.pajakZakat){
