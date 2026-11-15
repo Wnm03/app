@@ -495,6 +495,8 @@ const hargaBeli=typeof parseMoneyID==='function'?parseMoneyID(_hargaBeliRaw):par
 const jumlahUnit=parseDecStr(document.getElementById('assetJumlahUnit').value);
 const tanggal=document.getElementById('assetTanggal').value||'';
 let accountId=document.getElementById('assetAccId').value||null;
+// Langkah 5 (U-10): akun berisi dana proyek klien tidak boleh ditautkan ke aset (akun tertaut keluar dari saldo pribadi, dana tertahan tetap dikurangkan). Tautan lama yang tidak diubah tetap boleh disimpan.
+if(accountId&&accountId!=='__new__'&&typeof akunPunyaAliranKlienSafe==='function'){const _cur=Aset.editId?D.assets.find(x=>sameId(x.id,Aset.editId)):null;if(!(_cur&&_cur.accountId&&sameId(_cur.accountId,accountId))&&akunPunyaAliranKlienSafe(accountId)){toast('⚠️ Akun ini memuat dana proyek klien (DP/termin/belanja). Pilih akun lain supaya dana klien tidak tercampur dengan aset.');return;}}
 // linkedAccNilai -- SESI C (tahap terakhir migrasi Dana Titipan -> Multi-Owner
 // Engine) awalnya nulis cuma porsi SELF ke sini (bukan nilai penuh instrumen),
 // SUPAYA Total Saldo Akun tidak dobel-hitung dgn Aset.totalValue(). SESI 449

@@ -148,7 +148,7 @@ test('deleteProject() — dikonfirmasi -> proyek terhapus dari D.renovProjects, 
   assert.match(calls.join(','), /toast:.*dihapus/);
 });
 
-test('deleteProject() — transaksi (txId) milik item yang sudah lunas TIDAK ikut terhapus, cuma link-nya dilepas', async () => {
+test('deleteProject() — proyek dengan transaksi item diarsipkan dan tautan tetap dipertahankan', async () => {
   const calls = [];
   const D = makeD({
     renovProjects: [{ id: 'p1', name: 'Renov Dapur', items: [{ id: 'i1', name: 'Keramik', paid: true, txId: 't1' }] }],
@@ -157,7 +157,9 @@ test('deleteProject() — transaksi (txId) milik item yang sudah lunas TIDAK iku
   const { Renov } = makeCtx({ document: makeDoc(), D, calls, confirmResult: true });
   await Renov.deleteProject('p1');
   assert.equal(D.transactions.length, 1, 'transaksi di Keuangan tetap ada');
-  assert.equal(D.transactions[0].renovProjectLinkId, undefined);
+  assert.equal(D.renovProjects.length, 1, 'proyek tetap ada sebagai arsip');
+  assert.equal(D.renovProjects[0].status, 'arsip');
+  assert.equal(D.transactions[0].renovProjectLinkId, 'p1');
 });
 
 // ===== Buka Detail Proyek (openDetail — daftar/"riwayat" item biaya) =====

@@ -86,11 +86,11 @@ penghasilanReminder() {
   if (typeof D === 'undefined' || !Array.isArray(D.transactions) || !D.pajakZakat) return [];
   const now = new Date();
   const incomeBulan = D.transactions
-    .filter((t) => t && t.type === 'income' && (() => {
+    .filter((t) => t && t.type === 'income' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)) && (() => {
       const d = new Date(t.date);
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     })())
-    .reduce((s, t) => s + (t.amount || 0), 0);
+    .reduce((s, t) => s + (t.amount || 0), 0) + (typeof pencairanKlienBulanSafe === 'function' ? pencairanKlienBulanSafe(now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')) : 0);
   const nisab = D.pajakZakat.nisabPenghasilanBulan;
   const wajib = incomeBulan >= nisab;
   if (!wajib || this._paidThisMonth('penghasilan')) return [];
@@ -110,7 +110,7 @@ penghasilanReminder() {
 maalReminder() {
   if (typeof D === 'undefined' || !D.pajakZakat) return [];
   const pz = D.pajakZakat;
-  const saldoAkun = (typeof totalSaldoAkun === 'function') ? totalSaldoAkun() : 0;
+  const saldoAkun = ((typeof saldoPribadiSafe==='function'||typeof totalSaldoAkun==='function')?(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun()):0);
   const asetZakatable = (D.assets || [])
     .filter((a) => a && a.zakatable && !a._migratedToInvestmentId && !a.investmentId)
     .reduce((s, a) => s + (typeof MultiOwnerEngine !== 'undefined'

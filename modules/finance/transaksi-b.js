@@ -697,6 +697,8 @@ for(const _txPost of (D.transactions||[])){
     catch(_pendingErr){if(typeof ServiceEventOutbox!=='undefined')ServiceEventOutbox.enqueue({type:'service.remove',payload:{..._pendingRemove.service,...(_pendingRemove.options||{})}});else console.error('V28: deferred service removal failed',_pendingErr);}
   }
 }
+// Recompute client-project fund state only after transaction persistence.
+if(existingTx&&(existingTx.renovDpProjectId!=null||existingTx.renovRefundProjectId!=null)&&typeof Renov!=='undefined'&&typeof Renov.onClientTxEdited==='function')Renov.onClientTxEdited(existingTx);
 // V24 G3/G9: Finance is now committed. Only after that point may the
 // deferred Service lifecycle and vehicle event be published.
 if(_serviceCommitMeta&&typeof ServiceEventLifecycle!=='undefined'){

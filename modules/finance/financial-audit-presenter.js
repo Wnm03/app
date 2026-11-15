@@ -122,7 +122,9 @@ const FinancialAuditPresenter = {
       <div class="card u-mb12"><div class="u-hint10">Periode audit</div><div class="u-fw700">${_financialAuditEscape(_financialAuditDate(range.from))} – ${_financialAuditEscape(_financialAuditDate(range.to))}</div>
         <div class="u-hint10 u-mt4">Waktu audit: ${_financialAuditEscape(auditDuration)}</div>
         <div class="u-mt8">Pengeluaran <b>${_financialAuditEscape(_financialAuditMoney(audit.summary.expense))}</b> dari ${audit.summary.txCount} transaksi yang tercatat dan memenuhi aturan audit.</div>
-        <div class="u-hint10 u-mt4">Pemasukan ${_financialAuditEscape(_financialAuditMoney(audit.summary.income))} · Selisih ${_financialAuditEscape(_financialAuditMoney(audit.summary.net))}</div></div>
+        <div class="u-hint10 u-mt4">Pemasukan ${_financialAuditEscape(_financialAuditMoney(audit.summary.income))} · Selisih ${_financialAuditEscape(_financialAuditMoney(audit.summary.net))}</div>
+        <div class="u-hint10 u-mt4">Basis: arus kas fisik (semua pergerakan uang di rekening).</div>${audit.summary.pribadi && audit.summary.pribadi.berbeda ? `
+        <div class="u-hint10 u-mt4">Basis pribadi (tanpa dana proyek klien, termasuk pencairan laba ${_financialAuditEscape(_financialAuditMoney(audit.summary.pribadi.pencairan))}): Pengeluaran ${_financialAuditEscape(_financialAuditMoney(audit.summary.pribadi.expense))} · Pemasukan ${_financialAuditEscape(_financialAuditMoney(audit.summary.pribadi.income))} · Selisih ${_financialAuditEscape(_financialAuditMoney(audit.summary.pribadi.net))}</div>` : ''}</div>
       ${warningHtml}
       ${duplicateHtml}
       ${groupHtml}

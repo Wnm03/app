@@ -38,6 +38,8 @@
 function isGajiTransaction(t){
 if(!t||t.type!=='income')return false;
 if(t.cobekLinkId)return false;
+// Dana Proyek Klien: DP/termin klien bukan gaji (basis pribadi).
+if((typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))return false;
 const p=/gaji/i;
 return p.test(t.category||'')||p.test(t.subcategory||'')||p.test(t.note||'');
 }
@@ -268,7 +270,11 @@ const proyeksiKas=proyeksiGaji-sisaKewajiban-(includeKiriman?kirimanEstimate:0);
 // app -- 0 rumus baru, 0 field baru soal kas). Guard typeof (aman kalau akun.js
 // belum dimuat bareng, pola sama fungsi lain di file ini) -- fallback null (BUKAN 0)
 // supaya presenter/kartu UI bisa bedakan "belum bisa dihitung" vs "kosong beneran".
-const saldoKasSekarang=(typeof totalSaldoAkun==='function')?totalSaldoAkun():null;
+// Basis PRIBADI (keputusan U-user-6): saldo awal = saldoPribadi() (saldo fisik - dana klien tertahan). Saldo fisik tetap
+// diekspos sbg info pembanding (saldoFisikSekarang), BUKAN dasar proyeksi. Tanpa proyek klien nilainya identik dgn fisik.
+const saldoFisikSekarang=(typeof totalSaldoAkun==='function')?totalSaldoAkun():null;
+const saldoKasSekarang=(typeof saldoPribadiSafe==='function')?saldoPribadiSafe():saldoFisikSekarang;
+const danaKlienTertahan=(saldoFisikSekarang!=null&&saldoKasSekarang!=null)?(saldoFisikSekarang-saldoKasSekarang):0;
 // S2835: tagihan yang sudah DIBAYAR tapi transaksinya bertanggal setelah hari ini (mis. "Bayar Bulan Depan"
 // dicatat di tanggal jatuh tempo) sudah keluar dari sisaKewajiban, sedangkan saldoKasSekarang (saldo AKTUAL,
 // S2830) belum terpotong -> proyeksi akhir bulan terlalu besar. Kurangkan pembayaran tagihan bertanggal masa depan
@@ -301,7 +307,7 @@ proyeksiGaji,recordedGaji,pendingGajiEstimate,includePendingGaji,
 sisaKewajiban,billMonthTotal,billPaidThisPeriod,
 titipanPinjamUnscheduledTotal,kewajibanItems,topKewajiban,
 weeksInMonth,kirimanPerMinggu,kirimanEstimate,includeKiriman,
-proyeksiKas,saldoKasSekarang,proyeksiSaldoAkhirBulan,billPaidFutureTotal,
+proyeksiKas,saldoKasSekarang,saldoFisikSekarang,danaKlienTertahan,proyeksiSaldoAkhirBulan,billPaidFutureTotal,
 piutangJatuhTempoBulanIni,
 // Alias kompat Sesi P2 (kartu UI ditulis melawan penamaan draft P1 yang lain --
 // gajiProjected/kewajibanSisa/gajiTercatat/gajiPending/kewajibanTerjadwal --
@@ -400,8 +406,9 @@ return entry;
 function getCashProjectionCalibration(month,year){
 const snap=(D.cashProjSnapshots||[]).find(s=>s&&s.month===month&&s.year===year);
 if(!snap)return{available:false,month,year};
-const txM=(D.transactions||[]).filter(t=>t&&t.hitungKas!==false&&_cpInMonth(t.date,year,month));
-const incRealized=txM.filter(t=>t.type==='income').reduce((s,t)=>s+(t.amount||0),0);
+const txM=(D.transactions||[]).filter(t=>t&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&_cpInMonth(t.date,year,month));
+// T-A: pencairan laba klien bulan itu = income pribadi (konsisten dgn saldoKasSekarang basis pribadi). Bukan 'gaji'.
+const incRealized=txM.filter(t=>t.type==='income').reduce((s,t)=>s+(t.amount||0),0)+((typeof pencairanKlienBulanSafe==='function')?pencairanKlienBulanSafe(year+'-'+String(month+1).padStart(2,'0')):0);
 const expRealized=txM.filter(t=>t.type==='expense').reduce((s,t)=>s+(t.amount||0),0);
 const realisasiKas=incRealized-expRealized;
 const selisih=realisasiKas-snap.proyeksiKas;

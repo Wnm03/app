@@ -59,7 +59,7 @@ if(chips[idx])chips[idx].classList.add('active');
 }
 if(danaEl){
 const savedDana=D.assetAllocation&&D.assetAllocation.dana;
-danaEl.value=(savedDana!=null&&savedDana!=='')?savedDana:(totalSaldoAkun()||'');
+danaEl.value=(savedDana!=null&&savedDana!=='')?savedDana:((typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun())||'');
 }
 if(!risk){box.innerHTML='<div class="u-fs12t2">Pilih dulu salah satu profil risiko di atas ya.</div>';return;}
 const preset=ALOKASI_PRESETS[risk];
@@ -352,7 +352,7 @@ if(typeof Kekayaan!=='undefined'){
 const cagrResult=Kekayaan.actualCAGR();
 if(cagrResult&&!cagrResult.reason){
 const pct=cagrResult.cagr*100;
-insights.push(`${pct>=0?'🚀':'🔻'} Kekayaan Bersih tumbuh <b>${pct>=0?'+':''}${pct.toFixed(1)}%/tahun</b> (growth rate aktual dari snapshot, bukan asumsi).`);
+insights.push(`${pct>=0?'🚀':'🔻'} Kekayaan Bersih tumbuh <b>${pct>=0?'+':''}${pct.toFixed(1)}%/tahun</b> (growth rate aktual dari snapshot, bukan asumsi).${cagrResult.basisCampur?' ⚠️ Basis snapshot berubah (dana klien tertahan tak lagi dihitung), angka ini bisa menyesatkan.':''}`);
 }
 }
 return insights;

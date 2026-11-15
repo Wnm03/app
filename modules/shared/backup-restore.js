@@ -647,6 +647,11 @@ function _restoreRenovRelationIssues(){
 if(typeof renovMarkerAudit!=='function')return[];
 try{return renovMarkerAudit().filter(x=>x&&(x.kind==='payment-yatim'||x.kind==='proyek-hilang'));}catch(_e){return[];}
 }
+// Fase 5: pemeriksaan ledger laba proyek klien pasca-restore (hanya melapor, tidak menolak/mengubah).
+function _restoreRenovLedgerIssues(){
+if(typeof renovLedgerIssues!=='function')return[];
+try{return (D.renovProjects||[]).filter(p=>p&&Array.isArray(p.labaLedger)&&p.labaLedger.length).map(p=>({id:p.id,nama:p.name,masalah:renovLedgerIssues(p)})).filter(x=>x.masalah.length);}catch(_e){return[];}
+}
 // S2833 (audit R-04): tandai restore aktif (dibaca pembaruan harian akun) dan SELALU dilepas, apa pun jalur keluarnya.
 async function applyRestoredData(imp){
 const _prevActive=(typeof window!=='undefined'&&window)?window.__kwRestoreActive:undefined;
@@ -876,6 +881,8 @@ await _restoreEnsureInit();
 try{
 const _renovIssues=_restoreRenovRelationIssues();
 if(_renovIssues.length&&typeof showAlertModal==='function')await showAlertModal('Restore selesai, tetapi '+_renovIssues.length+' relasi Renovasi↔transaksi tidak cocok (pembayaran tanpa transaksi atau proyek hilang). Data TIDAK diubah. Buka proyek terkait di Renovasi untuk memeriksanya.',{icon:'⚠️',title:'Periksa Relasi Renovasi'});
+const _ledgerIssues=_restoreRenovLedgerIssues();
+if(_ledgerIssues.length&&typeof showAlertModal==='function')await showAlertModal('Restore selesai, tetapi ledger laba '+_ledgerIssues.length+' proyek perlu diperiksa ('+_ledgerIssues.map(x=>String(x.nama||x.id)).join(', ')+'). Data TIDAK diubah; pengakuan/pencairan baru diblokir bila status dana tidak HIJAU.',{icon:'⚠️',title:'Periksa Ledger Laba Proyek'});
 }catch(_renovReportErr){console.warn('Restore: laporan relasi Renovasi gagal',_renovReportErr);}
 return true;
 }catch(e){

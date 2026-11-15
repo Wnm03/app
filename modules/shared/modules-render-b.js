@@ -62,8 +62,8 @@ fn();
 // laporan sekunder lain (modules-calc.js, filter-laporan.js, cashflow/forecast presenter dst) ADA
 // query masing2 yg beda & BELUM disentuh sesi ini, dicicil terpisah di Sesi T4+ per RENCANA KERJA.
 function _dashMonthlyIncExp(txM){
-const inc=txM.filter(t=>t.type==='income'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
-const exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false).reduce((s,t)=>s+t.amount,0);
+const inc=txM.filter(t=>t.type==='income'&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0);
+const exp=txM.filter(t=>t.type==='expense'&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0);
 return{inc,exp};
 }
 function renderDashboard(){
@@ -100,12 +100,13 @@ for(const t of D.transactions){
   const d=new Date(dms);
   if(d.getMonth()!==m||d.getFullYear()!==y)continue;
   txM.push(t);
-  if(t.type==='income'){const n=t.amount||0;inc+=n;if(t.hitungKas!==false)dashInc+=n;}
-  else if(t.type==='expense'){const n=t.amount||0;exp+=n;if(t.hitungKas!==false)dashExp+=n;}
+  if(t.type==='income'){const n=t.amount||0;inc+=n;if(t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))dashInc+=n;}
+  else if(t.type==='expense'){const n=t.amount||0;exp+=n;if(t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))dashExp+=n;}
   else if(t.type==='transfer_in')inc+=t.amount||0;
   else if(t.type==='transfer_out')exp+=t.amount||0;
 }
 const billStatsShared=(typeof getBillStats==='function')?getBillStats():null;
+dashInc+=(typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0')):0);
 const dashCtx={now,m,y,txM,inc:dashInc,exp:dashExp,billStats:billStatsShared};
 if(typeof FinCoach!=='undefined')FinCoach.renderDash(dashCtx);
 if(typeof AIRecommendCard!=='undefined')AIRecommendCard.render();
@@ -465,6 +466,29 @@ billEl.innerHTML='';
 }
 }
 
+// Langkah 3: toggle basis + keterangan di Laporan. Elemen dibuat dinamis (pola lapProyeksiNote); tersembunyi bila tidak ada proyek klien.
+function renderLapBasisUi(res){
+if(typeof document==='undefined'||typeof document.createElement!=='function')return;
+const anchor=document.getElementById('lapNetBox')||document.getElementById('lapNet');
+if(!anchor||!anchor.parentNode)return;
+let box=document.getElementById('lapBasisBox');
+const ada=(typeof adaProyekKlienSafe==='function')&&adaProyekKlienSafe();
+if(!ada||!res){if(box)box.style.display='none';return;}
+if(!box){
+box=document.createElement('div');box.id='lapBasisBox';box.className='u-mt6';
+box.innerHTML='<div class="u-flex u-gap8"><button type="button" class="cn-tab" data-lap-basis="pribadi">Pribadi</button><button type="button" class="cn-tab" data-lap-basis="fisik">Arus fisik</button></div><div id="lapBasisNote" class="u-fs11 u-t2 u-mt6"></div>';
+anchor.parentNode.insertBefore(box,anchor.nextSibling);
+box.querySelectorAll('[data-lap-basis]').forEach(b=>b.addEventListener('click',()=>{if(typeof setLapBasis==='function')setLapBasis(b.getAttribute('data-lap-basis'));renderLaporan();}));
+}
+box.style.display='';
+const pil=res.basisDipilih;
+box.querySelectorAll('[data-lap-basis]').forEach(b=>b.classList.toggle('active',b.getAttribute('data-lap-basis')===pil));
+const note=document.getElementById('lapBasisNote');if(!note)return;
+const klien='dana klien (DP/termin, pengembalian, belanja dana proyek): masuk '+fmt(res.klienMasuk)+' · keluar '+fmt(res.klienKeluar);
+if(res.basisEfektif==='pribadi')note.textContent='👤 Basis pribadi: tidak termasuk '+klien+(res.pencairan>0?'; termasuk pencairan laba '+fmt(res.pencairan):'')+'. Pilih "Arus fisik" untuk semua pergerakan uang.';
+else if(res.alasan)note.textContent='🏦 '+res.alasan+' aktif, jadi total memakai basis fisik (semua pergerakan uang, termasuk '+klien+'). Pencairan laba tidak tampil karena bukan pergerakan fisik.';
+else note.textContent='🏦 Arus fisik: semua pergerakan uang di rekening, termasuk '+klien+'. Pencairan laba tidak tampil karena bukan pergerakan fisik.';
+}
 function renderLaporan(){
 // lapMonthLabel (Fix "slide bulan sebelum/sesudah di filter Laporan", S695)
 // — label ‹ bulan › di panel filter Laporan, pola sama txListMonthLabel
@@ -504,11 +528,15 @@ if(t.type==='transfer_in'||t.type==='transfer_out')return false;
 if(!txMatchesFilters(t,f))return false;
 return true;
 });
-const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+// Langkah 3: total Laporan per basis (default pribadi; toggle Pribadi/Fisik hanya muncul bila ada proyek klien). Tanpa proyek klien = angka lama.
+const _lapT=(typeof laporanTotalsSafe==='function')?laporanTotalsSafe(txs,f,from,to,(typeof getLapBasis==='function')?getLapBasis():'pribadi'):null;
+const inc=_lapT?_lapT.inc:txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+const exp=_lapT?_lapT.exp:txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 const net=inc-exp;
+const _lapIncExpAvg=_lapT?(_lapT.incFisik+_lapT.expFisik):(inc+exp);
+if(typeof renderLapBasisUi==='function')renderLapBasisUi(_lapT);
 // S2830: Laporan membedakan realisasi (<= hari ini) dan proyeksi (> hari ini); total di atas tetap memuat keduanya.
-{const _sp=(typeof splitTxRealisasiProyeksi==='function')?splitTxRealisasiProyeksi(txs):null;
+{const _sp=(typeof splitTxRealisasiProyeksi==='function')?splitTxRealisasiProyeksi(_lapT?_lapT.txsDipakai:txs):null;
 const _anchor=document.getElementById('lapNetBox')||document.getElementById('lapNet');
 if(_anchor&&_anchor.parentNode){
 let _noteEl=document.getElementById('lapProyeksiNote');
@@ -538,7 +566,7 @@ document.getElementById('lapIncExpBarExp').style.width=Math.round((exp/lapTotal)
 }
 }
 document.getElementById('lapCount').textContent=txs.length;
-document.getElementById('lapAvg').textContent=txs.length?fmt((inc+exp)/txs.length):'Rp 0';
+document.getElementById('lapAvg').textContent=txs.length?fmt(_lapIncExpAvg/txs.length):'Rp 0';
 document.getElementById('lapTxN').textContent='('+txs.length+')';
 const nActive=Object.values(f).filter(v=>v&&v!=='semua').length;
 const cntEl=document.getElementById('lapFilterCount');
@@ -617,7 +645,10 @@ const now=new Date();const bars=[];
 for(let i=5;i>=0;i--){
 const m=(now.getMonth()-i+12)%12,y=now.getFullYear()+(now.getMonth()-i<0?-1:0);
 const txM=D.transactions.filter(t=>{const d=new Date((typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(t&&t.date).getTime()));return d.getMonth()===m&&d.getFullYear()===y;});
-bars.push({label:MONTHS[m],inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0),exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0)});
+// Langkah 3: grafik 6 bulan ikut basis Laporan (pribadi: tanpa aliran klien + pencairan bulan itu). Tanpa proyek klien atau basis fisik = angka lama.
+const _gPr=(typeof getLapBasis==='function'&&getLapBasis()==='pribadi'&&typeof adaProyekKlienSafe==='function'&&adaProyekKlienSafe());
+const _gKl=(t)=>_gPr&&typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t);
+bars.push({label:MONTHS[m],inc:txM.filter(t=>t.type==='income'&&!_gKl(t)).reduce((s,t)=>s+t.amount,0)+(_gPr&&typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0')):0),exp:txM.filter(t=>t.type==='expense'&&!_gKl(t)).reduce((s,t)=>s+t.amount,0)});
 }
 const maxV=Math.max(...bars.map(b=>Math.max(b.inc,b.exp)),1);
 document.getElementById('grafikBars').innerHTML=bars.map(b=>`<div class="grafik-col"><div class="grafik-bar-group"><div class="grafik-bar" style="background:var(--accent3);opacity:0.85;height:${Math.max(4,(b.inc/maxV)*100)}%"></div><div class="grafik-bar" style="background:var(--accent2);opacity:0.85;height:${Math.max(4,(b.exp/maxV)*100)}%"></div></div><div class="grafik-lbl">${b.label}</div></div>`).join('');

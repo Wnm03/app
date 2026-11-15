@@ -399,6 +399,50 @@ const total=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(
 _totalSaldoCache=total;
 return total;
 }
+// Dana Proyek Klien (Fase 2): saldo pribadi = saldo fisik - dana klien tertahan (proyek berklasifikasi 'klien'). totalSaldoAkun() TIDAK diubah (I-01).
+function saldoPribadiSafe(){return (typeof saldoPribadi==='function')?saldoPribadi():totalSaldoAkun();}
+// Predikat satu-pintu aliran klien (DP/termin, pengembalian, belanja dana proyek). TIDAK memakai hitungKas.
+function isAliranKlienSafe(t){return (typeof isAliranKlien==='function')&&isAliranKlien(t);}
+// Langkah 5 (U-10): akun yang memuat aliran dana klien (DP/termin, pengembalian, belanja dana proyek) tidak boleh ditautkan ke aset/holding: akun tertaut keluar dari saldo pribadi, sementara dana tertahan tetap dikurangkan.
+function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienSafe(t));}
+// Fase 5: income pribadi dari pencairan laba proyek klien (entri ledger, bukan transaksi). ym='YYYY-MM'. Tanpa proyek klien -> 0.
+function pencairanKlienBulanSafe(ym){try{return (typeof renovPencairanBulan==='function')?renovPencairanBulan(ym):0;}catch(e){return 0;}}
+// Langkah 1 (T-A): pencairan laba klien pada rentang tanggal 'YYYY-MM-DD' (inklusif). Dipakai rata-rata income (worthit, forecast). Tanpa proyek klien -> 0.
+function pencairanKlienRentangSafe(fromYmd,toYmd){try{return (typeof renovPencairanIncome==='function')?renovPencairanIncome(fromYmd,toYmd):0;}catch(e){return 0;}}
+function _ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// Langkah 3 (§7.3/§9.2): basis Laporan. 'pribadi' (default) = tanpa aliran klien (DP/termin, pengembalian, belanja dana proyek) + pencairan laba; 'fisik' = semua pergerakan uang. Hanya tampilan, tanpa persistensi.
+let _lapBasis='pribadi';
+function getLapBasis(){return _lapBasis;}
+function setLapBasis(b){_lapBasis=(b==='fisik')?'fisik':'pribadi';return _lapBasis;}
+function adaProyekKlienSafe(){return Array.isArray(D.renovProjects)&&D.renovProjects.some(p=>p&&p.dana==='klien');}
+// txs = transaksi Laporan yang sudah lolos filter; f = getLaporanFilters(); from/to = Date. Tanpa proyek klien -> pribadi == fisik (angka identik).
+function laporanTotalsSafe(txs,f,from,to,basis){
+const list=Array.isArray(txs)?txs:[],flt=f||{},pick=(basis==='fisik')?'fisik':'pribadi';
+const on=(v)=>!!(v&&v!=='semua');
+let incF=0,expF=0,incP=0,expP=0,kIn=0,kOut=0;
+const pribadiTx=[];
+list.forEach(t=>{
+const klien=isAliranKlienSafe(t);
+if(t.type==='income'){incF+=t.amount;if(klien)kIn+=t.amount;else incP+=t.amount;}
+else if(t.type==='expense'){expF+=t.amount;if(klien)kOut+=t.amount;else expP+=t.amount;}
+if(!klien)pribadiTx.push(t);
+});
+let efektif=pick,alasan='';
+if(pick==='pribadi'){
+if(on(flt.proyek)&&flt.proyek!=='__none')alasan='filter Proyek';
+else if(on(flt.sumber))alasan='filter Sumber Dana';
+else if(on(flt.acc))alasan='filter Akun';
+if(alasan)efektif='fisik';
+}
+let pencairan=0;
+if(efektif==='pribadi'){
+const sempit=on(flt.kat)||on(flt.sub)||on(flt.method)||on(flt.classification)||on(flt.serviceCategory)||on(flt.serviceComponent)||flt.proyek==='__none'||(on(flt.tipe)&&flt.tipe!=='income');
+if(!sempit&&from&&to&&typeof from.getTime==='function'&&typeof to.getTime==='function'&&!Number.isNaN(from.getTime())&&!Number.isNaN(to.getTime()))pencairan=pencairanKlienRentangSafe(_ymdLocal(from),_ymdLocal(to));
+}
+const pr=efektif==='pribadi';
+return{inc:pr?incP+pencairan:incF,exp:pr?expP:expF,incFisik:incF,expFisik:expF,pencairan,klienMasuk:kIn,klienKeluar:kOut,basisDipilih:pick,basisEfektif:efektif,alasan,txsDipakai:pr?pribadiTx:list};
+}
+function _ymOf(y,m0){return y+'-'+String(m0+1).padStart(2,'0');}
 // S2830: total saldo PROYEKSI (aktual + transaksi bertanggal setelah hari ini), filter akun sama persis dgn totalSaldoAkun().
 function totalSaldoProyeksi(){
 _accEnsureDay();

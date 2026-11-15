@@ -783,6 +783,14 @@ const InvestmentListUI = {
     // updateHolding()/patch di bawah).
     const accIdEl = document.getElementById('investAccId');
     const accountId = accIdEl ? accIdEl.value : '';
+    // Langkah 5 (U-10): akun yang memuat dana proyek klien tidak boleh ditautkan ke holding; tautan lama yang tidak diubah tetap boleh disimpan.
+    if (accountId && typeof akunPunyaAliranKlienSafe === 'function') {
+      const _cur = InvestmentListUI.editId ? Investment.getHolding(InvestmentListUI.editId) : null;
+      if (!(_cur && _cur.accountId && String(_cur.accountId) === String(accountId)) && akunPunyaAliranKlienSafe(accountId)) {
+        toast('⚠️ Akun ini memuat dana proyek klien (DP/termin/belanja). Pilih akun lain supaya dana klien tidak tercampur dengan investasi.');
+        return;
+      }
+    }
     let h;
     try {
       if (InvestmentListUI.editId) {

@@ -293,9 +293,10 @@ function _dashHubMonthTxShared() {
     if (t && t.hitungKas === false) continue;
     const d = new Date(t && t.date);
     if (d.getMonth() !== m || d.getFullYear() !== y) continue;
-    if (t.type === 'income') { inc += Number(t.amount) || 0; count++; }
-    else if (t.type === 'expense') { exp += Number(t.amount) || 0; count++; }
+    if (t.type === 'income' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) { inc += Number(t.amount) || 0; count++; }
+    else if (t.type === 'expense' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) { exp += Number(t.amount) || 0; count++; }
   }
+  inc += (typeof pencairanKlienBulanSafe === 'function' ? pencairanKlienBulanSafe(y + '-' + String(m + 1).padStart(2, '0')) : 0);
   const value = { inc, exp, count };
   if (version !== null) _dashHubMonthTxCache = { version, src: D.transactions, month: m, year: y, value };
   return value;
@@ -367,7 +368,7 @@ const DashboardHubHero = {
     dateEl.textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
     const money = (n) => (typeof fmt === 'function') ? fmt(n) : ('Rp ' + Math.round(n || 0));
-    const saldo = (typeof totalSaldoAkun === 'function') ? totalSaldoAkun() : null;
+    const saldo = ((typeof saldoPribadiSafe==='function'||typeof totalSaldoAkun==='function')?(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun()):null);
     saldoEl.textContent = saldo === null ? '—' : (saldo < 0 ? '-' : '') + money(Math.abs(saldo));
     saldoEl.className = 'dashhub-hero-balance-val' + (saldo !== null && saldo < 0 ? ' red' : '');
 

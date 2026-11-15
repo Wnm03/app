@@ -223,7 +223,7 @@ const FinanceDashboard = {
       || typeof totalSaldoAkun !== 'function' || typeof totalDebtValue !== 'function') {
       return { icon: '💰', label: 'Kekayaan Bersih', value: '—', cls: '', onClick };
     }
-    const saldo = totalSaldoAkun();
+    const saldo = (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
     const debt = totalDebtValue();
     const net = Kekayaan.currentNetWorth();
     return {

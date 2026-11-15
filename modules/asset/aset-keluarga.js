@@ -28,7 +28,7 @@ const AsetKeluarga={
 // (1) Modul Keuangan: saldo akun aktif dikurangi utang manual + utang buku +
 // sisa cicilan/tagihan (definisi SAMA dgn Kekayaan.renderBersih()).
 keuangan(){
-const saldoAkun=(typeof totalSaldoAkun==='function')?totalSaldoAkun():0;
+const saldoAkun=((typeof saldoPribadiSafe==='function'||typeof totalSaldoAkun==='function')?(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun()):0);
 const utangManual=(D.pajakZakat&&D.pajakZakat.utangJT)||0;
 const utangBuku=(typeof totalDebtValue==='function')?totalDebtValue():0;
 const cicilan=(typeof totalCicilanOutstanding==='function')?totalCicilanOutstanding():0;

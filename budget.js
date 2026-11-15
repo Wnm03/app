@@ -50,6 +50,7 @@ return null;
 },
 matchesTx(budget, t){
 if(t.type!=='expense') return false;
+if(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)) return false;
 const ids=budget.catIds||(budget.catId?[budget.catId]:[]);
 if(ids.includes('__total__')) return true;
 return ids.some(catId=>{
@@ -108,7 +109,7 @@ const date=_budgetTxDate(t);
 if(!Budget._matchesPeriodContext(budget,t,date,context))continue;
 // Preserve matchesTx's early type check and avoid resolving categories at all
 // when no in-period expense needs matching.
-if(t.type!=='expense')continue;
+if(t.type!=='expense'||(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))continue;
 if(!matchesBudget)matchesBudget=Budget._buildTxMatcher(budget);
 if(matchesBudget(t))total+=t.amount;
 }
@@ -125,7 +126,7 @@ let matchesBudget=null;
 for(const t of (Array.isArray(D.transactions)?D.transactions:[])){
 if(!t)continue;
 const d=_budgetTxDate(t);
-if(d.getMonth()!==pm||d.getFullYear()!==py||t.type!=='expense')continue;
+if(d.getMonth()!==pm||d.getFullYear()!==py||t.type!=='expense'||(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))continue;
 // S2358: avoid resolving category metadata for transactions outside the
 // previous-month rollover window; reuse one matcher for eligible expenses.
 if(!matchesBudget)matchesBudget=Budget._buildTxMatcher(budget);

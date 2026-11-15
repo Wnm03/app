@@ -100,7 +100,9 @@ const months=FI.effectiveMonths();
 const now=new Date();
 const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 const txs=D.transactions.filter(t=>{const ms=typeof getCachedTxDateMs==='function'?getCachedTxDateMs(t):new Date(String(t.date||'')+'T00:00:00').getTime();const d=new Date(ms);return d>=from&&d<=now;});
-return txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0)/months;
+// T-A: pencairan laba proyek klien (entri ledger, bukan transaksi) ikut income pribadi pada jendela yang sama.
+const cair=(typeof pencairanKlienRentangSafe==='function'&&typeof _ymdLocal==='function')?pencairanKlienRentangSafe(_ymdLocal(from),_ymdLocal(now)):0;
+return (txs.filter(t=>t.type==='income'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0)+cair)/months;
 },
 hitung(){
 const name=document.getElementById('wiName').value.trim()||'Barang ini';
@@ -124,7 +126,7 @@ const hargaNormal=isDiskon?parsePzNum(document.getElementById('wiHargaNormal').v
 const diskonValid=isDiskon&&hargaNormal>price;
 const hematRp=diskonValid?(hargaNormal-price):0;
 const hematPersen=diskonValid?(hematRp/hargaNormal)*100:0;
-const saldo=totalSaldoAkun();
+const saldo=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 const surplus=FI.monthlySurplus();
 const incAvg=WorthIt.incomeAvg();
 const dd=(D.targets||[]).find(t=>t.isDanaDarurat);
@@ -389,7 +391,7 @@ if(hematPersen>=30)reasons.push({level:it.sudahPunya?'orange':'green',text:'🏷
 else if(hematPersen>=10)reasons.push({level:'orange',text:'🏷️ Diskon lumayan: hemat '+fmtFull(hematRp)+' ('+hematPersen.toFixed(0)+'%), tapi bukan alasan utama kalau belum butuh.'});
 else reasons.push({level:'red',text:'🏷️ Diskon tipis, cuma '+hematPersen.toFixed(0)+'% — hati-hati taktik "diskon palsu".'});
 }
-const saldo=totalSaldoAkun();
+const saldo=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 const pctSaldo=(saldo>0)?(price/saldo)*100:0;
 if(pctSaldo>50){score-=15;reasons.push({level:'red',text:'💸 Harganya bakal menguras >50% saldo kamu sekarang.'});}
 else if(pctSaldo>25){score-=7;reasons.push({level:'orange',text:'💸 Harganya cukup besar, ~'+pctSaldo.toFixed(0)+'% dari saldo sekarang.'});}
@@ -431,7 +433,7 @@ return{it,score:0,reasons:[{level:'red',text:'Gagal menghitung skor item ini'}]}
 countEl.textContent=items.length+' barang';
 if(totalEl){
 const totalHarga=items.reduce((sum,it)=>sum+(Number(it.price)||0),0);
-const saldo=totalSaldoAkun();
+const saldo=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 const pct=saldo>0?(totalHarga/saldo*100):0;
 let warnTxt='';
 if(saldo>0&&pct>100)warnTxt=' ⚠️ totalnya lebih besar dari saldo kamu sekarang.';

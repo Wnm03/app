@@ -55,8 +55,8 @@ const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
 // (modules-calc.js) -- difilter di titik konstruksi txM, supaya inc/exp di bawah &
 // sinyal defisit/anggaran otomatis ikut bersih dari transaksi "Catatan saja".
 const txM=(ctx&&ctx.txM)||(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
-const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0)+(typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0')):0);
+const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0);
 // (1) Defisit bulan berjalan (pengeluaran > pemasukan bulan ini)
 if(inc>0&&exp>inc){
 out.push({id:'defisit',level:'danger',icon:'🔴',text:`Bulan ini pengeluaran (${fmtFull(exp)}) sudah melebihi pemasukan (${fmtFull(inc)}) — defisit ${fmtFull(exp-inc)}.`,action:{label:'Cek Laporan',page:'keuangan',navIdx:1,tab:'laporan'}});
@@ -100,7 +100,7 @@ if(!pz)return out;
 const now=new Date();
 // (1) Zakat Penghasilan bulan ini sudah wajib (>= nisab) tapi belum dicatat dibayar bulan ini.
 try{
-const incomeBulan=(D.transactions||[]).filter(t=>t.type==='income'&&(()=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();})()).reduce((s,t)=>s+(t.amount||0),0);
+const incomeBulan=(D.transactions||[]).filter(t=>t.type==='income'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&(()=>{const d=new Date(t.date);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();})()).reduce((s,t)=>s+(t.amount||0),0)+(typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')):0);
 const nisabBulan=pz.nisabPenghasilanBulan||0;
 if(incomeBulan>0&&nisabBulan>0&&incomeBulan>=nisabBulan){
 const sudahBayar=(pz.zakatLog||[]).some(l=>l.jenis==='penghasilan'&&(()=>{const d=new Date(l.tanggal);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();})());

@@ -97,6 +97,7 @@ incomeVsExpense(range) {
     const d = new Date(t.date);
     if (!(d >= from && d <= to && this._isTxAccountSelf(t, accountMap, ownershipCache))) continue;
     txCount++;
+    if ((typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) continue;
     if (t.type === 'income') income += t.amount;
     else if (t.type === 'expense') expense += t.amount;
   }
@@ -190,7 +191,7 @@ healthScore() {
   // beban utang kalau user punya cicilan aktif. Sekarang reuse
   // FI.totalDebt() (0 rumus baru) supaya konsisten dgn engine lain.
   if (typeof totalSaldoAkun === 'function' && typeof FI !== 'undefined' && typeof FI.totalDebt === 'function') {
-    const saldo = totalSaldoAkun();
+    const saldo = (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
     const debt = FI.totalDebt();
     const debtRatio = saldo > 0 ? Math.min(1, debt / saldo) : (debt > 0 ? 1 : 0);
     parts.push({ key: 'debt', weight: 25, score: Math.max(0, 1 - debtRatio) * 25 });

@@ -107,7 +107,7 @@ const Zakat={
 hitungPenghasilan(){
 const now=new Date();
 const _ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-const incomeBulan=D.transactions.filter(t=>t.type==='income'&&String(t.date||'').slice(0,7)===_ym).reduce((s,t)=>s+(t.amount||0),0);
+const incomeBulan=D.transactions.filter(t=>t.type==='income'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&String(t.date||'').slice(0,7)===_ym).reduce((s,t)=>s+(t.amount||0),0)+(typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(_ym):0);
 const nisab=D.pajakZakat.nisabPenghasilanBulan;
 document.getElementById('zpIncomeBulan').textContent=fmtFull(incomeBulan);
 document.getElementById('zpNisabBulan').textContent=fmtFull(nisab);
@@ -120,7 +120,7 @@ document.getElementById('zpJumlah').textContent=fmtFull(zakat);
 },
 hitungMaal(){
 const pz=D.pajakZakat;
-const saldoAkun=totalSaldoAkun();
+const saldoAkun=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 // SESI 393: porsi milik SENDIRI saja yang dihitung ke Zakat Maal -- 100%
 // reuse MultiOwnerEngine.selfOwnedValue() (S390/393), TIDAK import Aset
 // (modul ini berdiri sendiri, sama pola dgn totalPiutangValue()/totalDebtValue()

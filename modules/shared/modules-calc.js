@@ -25,7 +25,7 @@ if((fi.assetScope||'zakatable')==='semua') return totalAssetValue();
 // `!a._migratedToInvestmentId`.
 return (D.assets||[]).filter(a=>a.zakatable&&!a._migratedToInvestmentId&&!a.investmentId).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0)+(typeof Investment!=='undefined'?Investment.zakatableValue():0);
 },
-assetFund(){ return totalSaldoAkun()+FI.investmentAssetValue()+totalPiutangValue(); },
+assetFund(){ return (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun())+FI.investmentAssetValue()+totalPiutangValue(); },
 totalDebt(){
 const utangJT=(D.pajakZakat&&D.pajakZakat.utangJT)||0;
 const sisaCicilan=(typeof totalCicilanOutstanding==='function'?totalCicilanOutstanding():0)||0;
@@ -69,7 +69,7 @@ const pseudoBudget={catIds};
 const fromMs=from.getTime(),nowMs=now.getTime();
 const total=D.transactions.filter(t=>{
 const ms=_calcTxDateMs(t);
-return ms>=fromMs&&ms<=nowMs&&t.hitungKas!==false&&budgetMatchesTx(pseudoBudget,t);
+return ms>=fromMs&&ms<=nowMs&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&budgetMatchesTx(pseudoBudget,t);
 }).reduce((s,t)=>s+t.amount,0);
 return (total/months)*12;
 },
@@ -93,7 +93,7 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 let inc=0,exp=0;
 D.transactions.forEach(t=>{
 const d=new Date(_calcTxDateMs(t));
-if(d<from||d>now||t.hitungKas===false)return;
+if(d<from||d>now||t.hitungKas===false||(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))return;
 if(t.type==='income')inc+=Number(t.amount)||0;
 else if(t.type==='expense')exp+=Number(t.amount)||0;
 });
@@ -486,7 +486,7 @@ const from=new Date(now.getFullYear(),now.getMonth()-months+1,1);
 let inc=0,exp=0;
 (D.transactions||[]).forEach(t=>{
 const d=new Date(_calcTxDateMs(t));
-if(d<from||d>now)return;
+if(d<from||d>now||(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))return;
 if(t.type==='income')inc+=Number(t.amount)||0;
 else if(t.type==='expense')exp+=Number(t.amount)||0;
 });
@@ -731,8 +731,8 @@ const y=(ctx&&ctx.y!=null)?ctx.y:now.getFullYear();
 // dioper ke KeuanganInsight.compute()) otomatis ikut bersih -- 1 titik guard, bukan
 // disebar ulang tiap tempat txM dipakai.
 const txM=(ctx&&ctx.txM)||D.transactions.filter(t=>{const d=new Date(_calcTxDateMs(t));return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false;});
-const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+const inc=(ctx&&ctx.inc!=null)?ctx.inc:txM.filter(t=>t.type==='income'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0)+(typeof pencairanKlienBulanSafe==='function'?pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0')):0);
+const exp=(ctx&&ctx.exp!=null)?ctx.exp:txM.filter(t=>t.type==='expense'&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))).reduce((s,t)=>s+t.amount,0);
 // 1-2. Defisit bulan berjalan & anggaran ketat/jebol — logic SEKARANG hidup satu-satunya di
 // KeuanganInsight.compute() (feature-insights.js, kartu "💡 Insight Keuangan" paling atas nav
 // Keuangan), dipanggil langsung di sini (bukan ditulis ulang) supaya kartu di nav Keuangan &
@@ -990,7 +990,7 @@ currentNetWorth(){
 // (Investment.portfolioSummary().totalValue) terpisah di
 // portfolioComposition() -- kalau ditambah di Aset.totalValue() juga,
 // jadi dobel-hitung di kartu Portfolio itu.
-return totalSaldoAkun()+totalAssetValue()+(typeof Investment!=='undefined'?Investment.selfOwnedTotalValue():0)+totalInventoriBisnisValue()+totalPiutangValue()-FI.totalDebt();
+return (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun())+totalAssetValue()+(typeof Investment!=='undefined'?Investment.selfOwnedTotalValue():0)+totalInventoriBisnisValue()+totalPiutangValue()-FI.totalDebt();
 },
 saveSnapshot(manual){
 const today=todayStr();
@@ -998,10 +998,10 @@ const nw=Kekayaan.currentNetWorth();
 if(!D.wealthSnapshots)D.wealthSnapshots=[];
 const existing=D.wealthSnapshots.find(s=>s.date===today);
 if(existing){
-existing.netWorth=nw;
+existing.netWorth=nw;existing.basis='pribadi-v1';
 if(manual)existing.auto=false;
 } else {
-D.wealthSnapshots.push({id:uid(),date:today,netWorth:nw,auto:!manual});
+D.wealthSnapshots.push({id:uid(),date:today,netWorth:nw,auto:!manual,basis:'pribadi-v1'});
 }
 D.wealthSnapshots.sort((a,b)=>a.date.localeCompare(b.date));
 save();
@@ -1025,6 +1025,9 @@ Kekayaan.renderSnapshots();
 renderFinancialFreedom();
 if(typeof AssetInsight!=='undefined')AssetInsight.render();
 },
+// Langkah 4 (T-14/D-05): snapshot lama (tanpa basis) = fisik; baru = 'pribadi-v1'. Pergantian basis hanya bermakna bila ada proyek klien (dana tertahan). Snapshot lama tidak pernah diubah.
+snapshotBasis(s){return (s&&s.basis)||'fisik';},
+basisBeda(a,b){return !!(a&&b)&&Kekayaan.snapshotBasis(a)!==Kekayaan.snapshotBasis(b)&&Array.isArray(D.renovProjects)&&D.renovProjects.some(p=>p&&p.dana==='klien');},
 actualCAGR(){
 const list=(D.wealthSnapshots||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
 if(list.length<2)return null;
@@ -1032,10 +1035,11 @@ const first=list[0],last=list[list.length-1];
 const days=(new Date(last.date)-new Date(first.date))/86400000;
 if(days<25)return null;
 const years=days/365;
-if(first.netWorth<=0)return {cagr:null,first,last,years,reason:'baseline-negative'};
-if(last.netWorth<=0)return {cagr:null,first,last,years,reason:'latest-negative'};
+const basisCampur=Kekayaan.basisBeda(first,last);
+if(first.netWorth<=0)return {cagr:null,first,last,years,reason:'baseline-negative',basisCampur};
+if(last.netWorth<=0)return {cagr:null,first,last,years,reason:'latest-negative',basisCampur};
 const cagr=Math.pow(last.netWorth/first.netWorth,1/years)-1;
-return {cagr,first,last,years,reason:null};
+return {cagr,first,last,years,reason:null,basisCampur};
 },
 renderSnapshots(){
 const listEl=document.getElementById('wealthSnapshotList');
@@ -1054,7 +1058,7 @@ let deltaHtml='';
 if(prev){
 const delta=s.netWorth-prev.netWorth;
 const pct=prev.netWorth!==0?(delta/Math.abs(prev.netWorth)*100):0;
-deltaHtml=`<div class="tx-meta">${delta>=0?'▲':'▼'} ${fmtFull(Math.abs(delta))} (${delta>=0?'+':'-'}${Math.abs(pct).toFixed(1)}%) vs snapshot sebelumnya</div>`;
+deltaHtml=`<div class="tx-meta">${delta>=0?'▲':'▼'} ${fmtFull(Math.abs(delta))} (${delta>=0?'+':'-'}${Math.abs(pct).toFixed(1)}%) vs snapshot sebelumnya</div>${Kekayaan.basisBeda(s,prev)?'<div class="tx-meta">⚠️ Basis berbeda: snapshot sebelumnya masih menghitung dana klien tertahan, jadi selisih ini tidak sebanding.</div>':''}`;
 }
 return `<div class="tx-item"><div class="tx-icon u-bgaccsoft">📸</div><div class="tx-info"><div class="tx-name">${s.date}${s.auto?' <span class="u-fs10 u-t2 u-r6 u-ml4" style="border:1px solid var(--border2);padding:1px 5px">Otomatis</span>':''}</div>${deltaHtml}</div><div class="tx-amount">${fmtFull(s.netWorth)}</div><button class="tx-del" data-action="delWealthSnapshot" data-args="${escapeHtml(JSON.stringify([s.id]))}" aria-label="Hapus">🗑</button></div>`;
 }).join('')+(list.length>WEALTH_SNAPSHOT_SHOW_LIMIT?`<div class="u-tac u-fs12 u-t2" style="padding:8px 0">+${list.length-WEALTH_SNAPSHOT_SHOW_LIMIT} snapshot lebih lama (tidak ditampilkan, tapi tetap tersimpan & ikut dihitung ke growth rate)</div>`:'');
@@ -1080,11 +1084,11 @@ const pct=result.cagr*100;
 const cagrEl=document.getElementById('wealthCAGR');
 cagrEl.textContent=(pct>=0?'+':'')+pct.toFixed(1)+'%/tahun';
 cagrEl.className='stat-val '+(pct>=0?'purple':'red');
-document.getElementById('wealthCAGRNote').textContent=`Dihitung dari snapshot ${result.first.date} (${fmtFull(result.first.netWorth)}) → ${result.last.date} (${fmtFull(result.last.netWorth)}), ≈${result.years.toFixed(1)} tahun. Bandingkan dgn Asumsi Return di ⚙️ Atur Asumsi FI — kalau jauh beda, sesuaikan asumsinya.`;
+document.getElementById('wealthCAGRNote').textContent=`Dihitung dari snapshot ${result.first.date} (${fmtFull(result.first.netWorth)}) → ${result.last.date} (${fmtFull(result.last.netWorth)}), ≈${result.years.toFixed(1)} tahun. Bandingkan dgn Asumsi Return di ⚙️ Atur Asumsi FI — kalau jauh beda, sesuaikan asumsinya.`+(result.basisCampur?' ⚠️ Snapshot awal memakai basis lama (dana klien tertahan ikut terhitung), snapshot terakhir basis pribadi, jadi angka ini bisa menyesatkan.':'');
 }
 },
 renderBersih(){
-const saldoAkun=totalSaldoAkun();
+const saldoAkun=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 // s476a (Blocker A): sama seperti currentNetWorth() di atas -- tambah
 // Investment.selfOwnedTotalValue() supaya Kekayaan Bersih di Dashboard
 // (elemen ini) tetap SAMA PERSIS dgn SSOT currentNetWorth().

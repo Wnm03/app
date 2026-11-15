@@ -59,9 +59,10 @@ const DashboardHubOverview = {
       if (!t || t.hitungKas === false) continue;
       const d = new Date(t.date);
       if (d.getMonth() !== m || d.getFullYear() !== y) continue;
-      if (t.type === 'income') { inc += Number(t.amount) || 0; count++; }
-      else if (t.type === 'expense') { exp += Number(t.amount) || 0; count++; }
+      if (t.type === 'income' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) { inc += Number(t.amount) || 0; count++; }
+      else if (t.type === 'expense' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) { exp += Number(t.amount) || 0; count++; }
     }
+    inc += (typeof pencairanKlienBulanSafe === 'function' ? pencairanKlienBulanSafe(y + '-' + String(m + 1).padStart(2, '0')) : 0);
     return { inc, exp, count };
   },
 
@@ -301,9 +302,10 @@ const DashboardHubOverview = {
       const d = new Date(t.date); const i = idx[d.getFullYear() + '-' + d.getMonth()];
       if (i === undefined) return;
       const a = Number(t.amount) || 0;
-      if (t.type === 'income') months[i].inc += a;
-      else if (t.type === 'expense') { months[i].exp += a; const c = t.category || 'Lainnya'; months[i].cats[c] = (months[i].cats[c] || 0) + a; }
+      if (t.type === 'income' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) months[i].inc += a;
+      else if (t.type === 'expense' && !(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))) { months[i].exp += a; const c = t.category || 'Lainnya'; months[i].cats[c] = (months[i].cats[c] || 0) + a; }
     });
+    months.forEach((mo) => { if (typeof pencairanKlienBulanSafe === 'function') mo.inc += pencairanKlienBulanSafe(mo.y + '-' + String(mo.m + 1).padStart(2, '0')); });
     if (!months.some((x) => x.inc || x.exp)) return null;
     return months;
   },

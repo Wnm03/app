@@ -135,7 +135,7 @@ const FinanceAllocationAPI = {
     try {
       cashForecast = computeCashflowForecast();
       monthlyProjection = getMonthlyCashProjection();
-      currentCash = totalSaldoAkun();
+      currentCash = (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
       reserveBalance = recalcAccBalance(reserveAccount.id);
     } catch (e) {
       return blocked('CANONICAL_RECONCILIATION_FAILED', 'Sumber kanonis gagal direkonsiliasi.');

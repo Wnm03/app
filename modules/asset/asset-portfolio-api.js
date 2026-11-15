@@ -38,7 +38,7 @@ const AssetPortfolioAPI = {
     }
     let value;
     try {
-      value = totalSaldoAkun();
+      value = (typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
     } catch (e) {
       return { ok: false, reason: 'totalSaldoAkun gagal dipanggil' };
     }

@@ -49,7 +49,7 @@ test('S2767 A: hapus transaksi cicilan menghapus payment terkait saja',()=>{
   assert.equal(it.paid,false);
 });
 
-test('S2767 D: hapus proyek melepas tautan DP dan pembayaran tanpa menghapus transaksi',async()=>{
+test('S2767 D: proyek dengan transaksi diarsipkan; tag DP dan pembayaran tetap tertaut',async()=>{
   const p={id:1,name:'Renov',items:[{id:'i1',harga:100,paid:false,payments:[{id:'p1',txId:'t1',amount:100}]}]};
   const D={renovProjects:[p],transactions:[
     {id:'t1',type:'expense',renovProjectLinkId:1,renovItemLinkId:'i1',renovPaymentId:'p1'},
@@ -59,9 +59,11 @@ test('S2767 D: hapus proyek melepas tautan DP dan pembayaran tanpa menghapus tra
   const ctx=loadSource(['modules/home/renovasi.js'],{D,FinanceTxSOT:sot,sameId:(a,b)=>String(a)===String(b),escapeHtml:s=>String(s),fmt:n=>String(n),fmtFull:n=>String(n),toast:()=>{},save:()=>true,closeModal:()=>{},openModal:()=>{},askConfirm:async()=>true,Tukang:{releaseEntries:()=>{}}},['Renov']);
   await ctx.Renov.deleteProject(1);
   assert.equal(D.transactions.length,2);
-  assert.equal(D.transactions[0].renovItemLinkId,undefined);
-  assert.equal(D.transactions[0].renovPaymentId,undefined);
-  assert.equal(D.transactions[1].renovDpProjectId,undefined);
+  assert.equal(D.renovProjects.length,1);
+  assert.equal(D.renovProjects[0].status,'arsip');
+  assert.equal(D.transactions[0].renovItemLinkId,'i1');
+  assert.equal(D.transactions[0].renovPaymentId,'p1');
+  assert.equal(D.transactions[1].renovDpProjectId,1);
 });
 
 test('S2767 B: cicil membuat satu transaksi SOT dan satu payment',async()=>{

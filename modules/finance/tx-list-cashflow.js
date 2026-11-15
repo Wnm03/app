@@ -333,6 +333,7 @@ if(t&&t.renovItemLinkId&&typeof Renov!=='undefined'&&!opts.skipRenovCascade){
 Renov.onLinkedTxDeleted(t);
 }
 if(t&&t.renovDpProjectId&&typeof Renov!=='undefined'&&typeof Renov.onDpTxDeleted==='function')Renov.onDpTxDeleted(t);
+if(t&&t.renovRefundProjectId&&typeof Renov!=='undefined'&&typeof Renov.onRefundTxDeleted==='function')Renov.onRefundTxDeleted(t);
 if(t&&t.wishlistLinkId){
 WorthIt.onLinkedTxDeleted(t);
 }
@@ -468,6 +469,7 @@ runTxDeleteCascades(t);
 // build()) otomatis turun sendiri begitu `t` hilang dari
 // `D.transactions` di baris filter di bawah -- TIDAK ada counter manual
 // yang perlu di-decrement di sini (Hard Invariant #21/#22).
+if(t&&t.renovPaymentId!=null&&typeof Renov!=='undefined'&&Renov&&typeof Renov.onTalanganTxDeleted==='function'){Renov.onTalanganTxDeleted(t);}
 if(t&&t.titipanLinkId&&typeof removeUnpaidTitipanTalanganPiutangForTx==='function'){
 removeUnpaidTitipanTalanganPiutangForTx(t.id);
 }
@@ -742,14 +744,20 @@ const accFiltered=accountId&&accountId!=='semua';
 let incTotal=0,expTotal=0;
 for(const t of (D.transactions||[])){
 const d=new Date(_txPerfDateMs(t));
-if(!(d>=from&&d<=now&&t.hitungKas!==false))continue;
+if(!(d>=from&&d<=now&&t.hitungKas!==false)||(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)))continue;
 if(accFiltered&&t.accountId!==accountId)continue;
 if(t.type==='income')incTotal+=t.amount;
 else if(t.type==='expense')expTotal+=t.amount;
 }
+// T-A: pencairan laba klien bukan transaksi akun -> hanya masuk forecast total (tanpa filter akun).
+if(!accFiltered&&typeof pencairanKlienRentangSafe==='function'&&typeof _ymdLocal==='function')incTotal+=pencairanKlienRentangSafe(_ymdLocal(from),_ymdLocal(now));
 const incAvg=incTotal/months;
 const expAvg=expTotal/months;
-const saldoNow=(accFiltered&&typeof recalcAccBalance==='function')?recalcAccBalance(accountId):totalSaldoAkun();
+// Langkah 2 (U-user-6): forecast total memakai saldo PRIBADI (fisik - dana klien tertahan), sama dgn incAvg yg sudah basis pribadi.
+// Filter per akun tetap FISIK (mutasi akun, I-01). saldoFisik/danaKlienTertahan = info pembanding (aditif).
+const saldoFisik=(accFiltered&&typeof recalcAccBalance==='function')?recalcAccBalance(accountId):totalSaldoAkun();
+const saldoNow=(accFiltered||typeof saldoPribadiSafe!=='function')?saldoFisik:saldoPribadiSafe();
+const danaKlienTertahan=saldoFisik-saldoNow;
 // Mode jendela tagihan (cfg.billWindowMode): '30hari' (default, PERSIS
 // perilaku lama) | 'kalender' (sisa bulan kalender berjalan, now s.d.
 // akhir bulan) | 'siklus' (billingCycleRange() di atas, cycleStartDay
@@ -771,7 +779,7 @@ let upcoming=(D.bills||[]).filter(b=>{const d=new Date(b.nextDue);return d>=now&
 if(accFiltered)upcoming=upcoming.filter(b=>!b.accountId||b.accountId===accountId);
 const billsDue=upcoming.reduce((s,b)=>s+b.amount,0);
 const projected=saldoNow+incAvg-expAvg-billsDue;
-const result={incAvg,expAvg,saldoNow,billsDue,upcoming,projected,months,avail};
+const result={incAvg,expAvg,saldoNow,saldoFisik,danaKlienTertahan,billsDue,upcoming,projected,months,avail};
 if(opts===undefined)_cashflowForecastCache=result;
 return result;
 }
@@ -1091,7 +1099,7 @@ function _financeLowBalanceCheck(){
 if(typeof totalSaldoAkun!=='function'||typeof computeCashflowForecast!=='function')return{trigger:false};
 const cf=computeCashflowForecast();
 if(!cf.expAvg||cf.expAvg<=0)return{trigger:false};
-const saldo=totalSaldoAkun();
+const saldo=(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun());
 const multiplier=getAIFinanceLowBalanceMultiplier();
 return{trigger:saldo<cf.expAvg*multiplier,saldo,expAvg:cf.expAvg,multiplier};
 }

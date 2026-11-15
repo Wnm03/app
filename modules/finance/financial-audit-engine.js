@@ -103,6 +103,31 @@ const FinancialAuditEngine = {
     return { rows, range: { from, to }, stats };
   },
 
+  // Langkah 3: ringkasan basis pribadi. Tanpa proyek klien / helper tidak ada -> sama dengan fisik (berbeda:false).
+  _pribadiBasis(q, income, expense) {
+    const isKlien = (typeof isAliranKlienSafe === 'function') ? isAliranKlienSafe : null;
+    let klienIn = 0;
+    let klienOut = 0;
+    if (isKlien) {
+      q.rows.forEach(({ tx }) => {
+        const amount = Number(tx.amount);
+        if (!Number.isFinite(amount) || !isKlien(tx)) return;
+        if (tx.type === 'income') klienIn += amount;
+        else klienOut += amount;
+      });
+    }
+    let pencairan = 0;
+    if (typeof pencairanKlienRentangSafe === 'function') {
+      const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const f = q.range && q.range.from;
+      const t = q.range && q.range.to;
+      if (f && t && typeof f.getTime === 'function' && typeof t.getTime === 'function' && !Number.isNaN(f.getTime()) && !Number.isNaN(t.getTime())) pencairan = Number(pencairanKlienRentangSafe(ymd(f), ymd(t))) || 0;
+    }
+    const inc = income - klienIn + pencairan;
+    const exp = expense - klienOut;
+    return { income: inc, expense: exp, net: inc - exp, klienIncome: klienIn, klienExpense: klienOut, pencairan, berbeda: klienIn !== 0 || klienOut !== 0 || pencairan !== 0 };
+  },
+
   summary(range, options) {
     const opts = options || {};
     const q = opts._eligible || this._eligibleTransactions(range);
@@ -114,12 +139,16 @@ const FinancialAuditEngine = {
       if (tx.type === 'income') income += amount;
       else expense += amount;
     });
+    // Langkah 3: income/expense di atas tetap basis FISIK (kompatibel). Field aditif `pribadi` = tanpa aliran klien + pencairan laba (audit boleh menampilkan keduanya).
+    const pribadi = this._pribadiBasis(q, income, expense);
     return {
       from: q.range.from,
       to: q.range.to,
       income,
       expense,
       net: income - expense,
+      basis: 'fisik',
+      pribadi,
       txCount: q.rows.length,
       dataQuality: opts._dataQuality || (opts.skipDataQuality ? null : this.dataQuality(range, { _eligible: q })),
     };

@@ -757,7 +757,7 @@ if(incM>=pz.nisabPenghasilanBulan){
 items.push(`💰 Zakat penghasilan bulan ini sudah WAJIB (≈${fmtFull(Math.round(incM*0.025))}), pemasukan udah lewat nisab`);
 }
 const asetZakatable=(D.assets||[]).filter(a=>a.zakatable).reduce((s,a)=>s+(typeof MultiOwnerEngine!=='undefined'?MultiOwnerEngine.selfOwnedValue(a,a.nilai||0):(a.nilai||0)),0);
-const totalHartaZakat=Math.max(0,totalSaldoAkun()+asetZakatable-(pz.utangJT||0)-totalDebtValue()-totalCicilanOutstanding());
+const totalHartaZakat=Math.max(0,(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun())+asetZakatable-(pz.utangJT||0)-totalDebtValue()-totalCicilanOutstanding());
 const nisabMaal=85*pz.hargaEmasPerGram;
 if(totalHartaZakat>=nisabMaal&&pz.haulMaalMulai){
 const hari=Math.floor((now-new Date(pz.haulMaalMulai))/86400000);

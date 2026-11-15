@@ -1,0 +1,67 @@
+PATCH AKUMULATIF — DANA PROYEK KLIEN FASE 1-5 + LANGKAH 1-6 (income avg, saldo pribadi, laporan basis pribadi/fisik, penanda basis snapshot, guard + detektor tautan akun-aset)
+Baseline: Keluarga-W 0.85.10 (app-main). Terapkan HANYA ZIP INI; pengganti semua zip patch sebelumnya
+(Fase 1-3, Fase 1-3 akumulatif, Fase 1-5 akumulatif, Langkah 1-2, dan zip akumulatif Fase 1-5 + Langkah 1-2 / 1-3 / 1-4 / 1-5).
+Isi: hanya file yang berbeda dari baseline. Tanpa bundle, tanpa kenaikan versi, tanpa migrasi data.
+Setelah menerapkan: npm run apply-delete-manifest, chmod +x node_modules/@esbuild/linux-x64/bin/esbuild, lalu npm run build.
+
+===== BAGIAN A: FASE 1-5 =====
+Isi: hanya file yang berbeda dari baseline. Tanpa bundle, tanpa kenaikan versi, tanpa migrasi data.
+Setelah menerapkan: npm run apply-delete-manifest, chmod +x node_modules/@esbuild/linux-x64/bin/esbuild, lalu npm run build.
+
+===== BAGIAN A: FASE 1-5 =====
+
+===== BAGIAN B: LANGKAH 1-2 =====
+
+LANGKAH 1 (T-A): pencairan laba klien masuk rata-rata income
+- akun.js: pencairanKlienRentangSafe(from,to), _ymdLocal(d).
+- worthit.js incomeAvg; tx-list-cashflow.js forecast incAvg (hanya tanpa filter akun); cash-projection.js realisasi kalibrasi.
+LANGKAH 2 (U-user-6): saldo awal forecast basis PRIBADI
+- computeCashflowForecast: saldoNow = saldoPribadiSafe() untuk forecast total; filter per akun tetap fisik (I-01).
+- Field aditif di hasil: saldoFisik, danaKlienTertahan (pembanding). projected = saldoNow+incAvg-expAvg-billsDue.
+- Saldo pribadi bisa negatif bila dana tertahan > saldo fisik; TIDAK di-clamp (diuji).
+- Konsumen saldoNow (AI low-balance, financial-forecast-api, presenter, prediksi 6 bulan) otomatis ikut basis pribadi; kode mereka tidak diubah. Tampilan fisik/tertahan belum ditambahkan ke UI.
+Tanpa proyek klien: semua angka identik dengan sebelumnya.
+
+Tes: tests/pencairan-income-average.test.js (10 tes). 50 tes terkait lulus. ESLint 0 error.
+Suite penuh: 9.933 tes, 33 gagal = 33 yang sama di baseline (prasyarat apply-delete-manifest/build); 0 kegagalan baru.
+Belum diuji di browser/perangkat nyata.
+
+CATATAN: pada Langkah 1-2 file akun.js, worthit.js, cash-projection.js, tx-list-cashflow.js menimpa versi Fase 1-5 (sudah memuat Fase 1-5).
+Baris di bagian A "Belum disentuh: worthit.js incomeAvg, cash-projection rata-rata income, forecast tx-list-cashflow.js" kini SUDAH ditangani Langkah 1-2.
+
+FILE-HASHES-SHA256.txt: entri modules/shared/modules-calc.js sudah tidak cocok dengan baseline maupun patch (ketidakcocokan lama, bukan dari patch ini).
+
+===== BAGIAN C: LANGKAH 3 (laporan basis pribadi/fisik + label audit engine) =====
+- akun.js: getLapBasis/setLapBasis, adaProyekKlienSafe, laporanTotalsSafe. Basis pribadi (default) = tanpa aliran klien (DP/termin, pengembalian, belanja dana proyek) + pencairan laba; basis fisik = semua pergerakan uang. Hanya tampilan, tanpa persistensi.
+- Filter Proyek / Sumber Dana / Akun aktif memaksa basis fisik (alasan ditampilkan). Pencairan tidak ikut bila filter kategori, sub, metode, klasifikasi, servis, tipe pengeluaran, atau "tanpa proyek" aktif.
+- modules-render-b.js: renderLaporan memakai laporanTotalsSafe; toggle "Pribadi / Arus fisik" + keterangan dibuat dinamis (hanya muncul bila ada proyek klien); grafik 6 bulan ikut basis. Rata-rata per transaksi tetap dari total fisik.
+- financial-audit-engine.js: income/expense tetap FISIK; field aditif basis:'fisik' dan pribadi{income,expense,net,klienIncome,klienExpense,pencairan,berbeda}.
+- financial-audit-presenter.js: label "Basis: arus kas fisik" + baris basis pribadi bila berbeda.
+- Tanpa proyek klien: semua angka identik dengan sebelumnya.
+- Tes baru: tests/laporan-basis-pribadi.test.js (9 tes). Suite penuh: 9.942 tes, 33 gagal; sebelum Langkah 3: 9.933 tes, 33 gagal, nama kegagalan sama persis (tes bundle/freshness, karena bundle belum dibangun ulang).
+- Belum diuji di browser. Belum disentuh: filter-laporan.js (tidak perlu diubah).
+
+===== BAGIAN D: LANGKAH 4 (penanda diskontinuitas basis snapshot, T-14/D-05) =====
+- Penulisan basis:'pribadi-v1' pada snapshot baru sudah ada sejak Fase 2; snapshot lama tidak pernah diubah (tanpa field basis = 'fisik').
+- modules-calc.js (Kekayaan): snapshotBasis(), basisBeda() (hanya bermakna bila ada proyek klien), actualCAGR() membawa field aditif basisCampur (angka CAGR tidak berubah).
+- Daftar snapshot: baris peringatan bila basis snapshot berbeda dari snapshot sebelumnya. Catatan CAGR (panel Kekayaan Bersih) dan insight aset-misc.js: peringatan bila snapshot awal dan akhir beda basis.
+- Tanpa proyek klien: tidak ada tampilan/angka yang berubah.
+- Tes baru: tests/snapshot-basis-diskontinuitas.test.js (5 tes). Suite penuh: 9.947 tes, 33 gagal, nama kegagalan sama persis dengan sebelum Langkah 4 (tes bundle/freshness, bundle belum dibangun ulang).
+- Tidak disentuh: proyeksi pertumbuhan di aset-misc.js yang memakai CAGR sebagai angka (hanya teks insight yang diberi peringatan); cabang actualWealthCAGR di modules-calc.js:138 (fungsinya tidak terdefinisi di mana pun, bawaan).
+- Belum diuji di browser.
+
+===== BAGIAN E: LANGKAH 5 (U-10: sewa/rental & laporan aset) =====
+Temuan: rental-management-api.js dan aset-reports.js (LaporanAset.riwayatTransaksi) menjumlah income/expense per AKUN TERTAUT ASET. Itu pandangan fisik per akun (akun tertaut aset sudah keluar dari totalSaldoAkun), jadi angkanya TIDAK diubah. DP klien tidak bisa dicatat ke akun tertaut aset (renovClientAccountEligible), tetapi arah sebaliknya tidak dijaga: akun yang sudah memuat dana klien masih bisa ditautkan ke aset/holding belakangan. Akibatnya akun itu keluar dari saldo pribadi sementara dana tertahan tetap dikurangkan (saldo pribadi terlalu rendah) dan riwayat sewa/aset memuat dana klien.
+Perbaikan:
+- akun.js: akunPunyaAliranKlienSafe(accId).
+- aset.js (_saveInner): blokir penautan akun yang memuat aliran klien, sebelum mutasi apa pun. Tautan lama yang tidak diubah tetap boleh disimpan.
+- investasi-list-view.js: guard yang sama untuk form Holding.
+- Tidak disentuh: investasi.js updateHolding (jalur programatik) dan data lama; akun yang SUDAH tertaut sekaligus memuat dana klien (kasus lama) tidak dimigrasi dan tidak ada peringatan baru.
+- Tes baru: tests/akun-aliran-klien-link-guard.test.js (3 tes). Suite penuh: 9.950 tes, 33 gagal, nama kegagalan sama persis dengan sebelumnya (tes bundle/freshness).
+- Belum diuji di browser.
+
+===== BAGIAN F: LANGKAH 6 (detektor read-only akun tertaut aset berisi dana klien) =====
+- renovasi.js: renovAkunTertautBerisiKlien(projectId?) melaporkan akun yang tertaut aset/holding dan memuat aliran klien (DP/termin, pengembalian, belanja dana proyek). Hanya membaca; tidak ada migrasi dan tidak ada penulisan.
+- Panel "Arus Dana Proyek" (proyek klien saja) menampilkan peringatan merah dengan nama akunnya bila ada. Tanpa kasus itu, tampilan identik.
+- Tes baru: tests/renov-akun-tertaut-klien-detektor.test.js (4 tes). Suite penuh: 9.954 tes, 33 gagal, nama kegagalan sama persis dengan sebelumnya (tes bundle/freshness).
+- Belum diuji di browser. Peringatan tidak menyelesaikan kasusnya: pengguna harus memindahkan dana atau melepas tautan akun secara manual.
