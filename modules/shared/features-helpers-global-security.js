@@ -120,8 +120,8 @@ if(location.hostname==='localhost'||location.hostname==='127.0.0.1')return true;
 }catch(e){ /* anggap bukan dev mode kalau gagal deteksi */ }
 return false;
 }
-const APP_BUILD_VERSION = 's2433-dana-titipan-akumulatif-2832';
-const PRODUCTION_BUILD_SYNCED_VERSION = 's2433-dana-titipan-akumulatif-2832';
+const APP_BUILD_VERSION = 's2433-dana-titipan-akumulatif-2853';
+const PRODUCTION_BUILD_SYNCED_VERSION = 's2433-dana-titipan-akumulatif-2853';
 let D = {
 schemaVersion:SCHEMA_VERSION,
 transactions:[],cobek:[],products:[],produsen:[],cobekKategori:JSON.parse(JSON.stringify(DEFAULT_COBEK_KATEGORI)),targets:[],eduFunds:[],reminders:[],bills:[],billsArchive:[],inventoryTransfers:[],productMovementOverride:{},purchaseOrders:[],productStockCorrections:[],
@@ -914,6 +914,7 @@ const lazyOwnerLoaders={
   SewaKios: typeof ensureSewaKios==='function'?ensureSewaKios:null, RenovCalc: typeof ensureRenov==='function'?ensureRenov:null, VehicleCatalogImportUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, VehicleCatalogWebImportUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, SparepartScannerUI: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, SparepartOcrCatalogAdd: typeof ensureVehicleCatalogFeatureScripts==='function'?ensureVehicleCatalogFeatureScripts:null, // S2288 B4: loader modal lazy (klik diam)
   runSelfTest: typeof ensureSelfTest==='function'?ensureSelfTest:null,
   copySelfTestResults: typeof ensureSelfTest==='function'?ensureSelfTest:null,
+  runNavSmokeTest: typeof ensureSelfTest==='function'?ensureSelfTest:null, runModalSweep: typeof ensureSelfTest==='function'?ensureSelfTest:null, copyNavSmokeResults: typeof ensureSelfTest==='function'?ensureSelfTest:null, copyModalSweepResults: typeof ensureSelfTest==='function'?ensureSelfTest:null, repairTitipanOrphans: typeof ensureSelfTest==='function'?ensureSelfTest:null, // S2821: 5 aksi self-test.js ini dulu tak ada di peta -> klik pertama sesi segar = toast "belum berfungsi"
   HondaPdfImportUI: typeof ensureHondaPdfImportScripts==='function'?ensureHondaPdfImportScripts:null,
   runDataHealthCheck: typeof ensureDataHealthScripts==='function'?ensureDataHealthScripts:null,
   DataHealth: typeof ensureDataHealthScripts==='function'?ensureDataHealthScripts:null,

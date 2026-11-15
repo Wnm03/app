@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2433-dana-titipan-akumulatif-2832';
+const MODULE_RENDER_VERSION='s2433-dana-titipan-akumulatif-2853';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -314,7 +314,7 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       ${standalonePorsiLine}
       ${linkedTxHint}
       ${titipanGapLine}
-      <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>
+      <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>${(()=>{const pb=(typeof recalcAccProjectedBalance==='function')?recalcAccProjectedBalance(a.id):bal;return pb!==bal?`<div class="u-fs11 u-t2">📅 Proyeksi ${pb<0?'-':''}${fmt(Math.abs(pb))} (termasuk transaksi bertanggal setelah hari ini)</div>`:'';})()}
     </div>`;
 }).join('');
 }

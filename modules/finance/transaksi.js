@@ -999,6 +999,7 @@ if(map[m]) document.getElementById(map[m]).classList.add('active');
 document.getElementById('txCicilanPanel').style.display = m==='cicilan'?'block':'none';
 document.getElementById('txLanggananPanel').style.display = m==='langganan'?'block':'none';
 if(m==='cicilan'){syncCicilanDate('date');syncCicilanPreview();updateCicilanTenorUI();}
+if(typeof updateTxRenovItemOptions==='function')updateTxRenovItemOptions();
 // Sesi toggle hitungKas: field ini hanya berlaku utk transaksi Tunai biasa (scope
 // disepakati di AUDIT-hitung-kas-toggle-dan-ringkasan-tagihan.md §1.2 -- cicilan/
 // langganan/utang/tagihan punya efek samping lain di D.debts/D.bills yg belum tentu
@@ -1426,6 +1427,7 @@ txEditLinkedBillId=linkedBill?linkedBill.id:null;
 if(linkedBill&&(linkedBill.kind==='cicilan'||linkedBill.kind==='langganan')){
 setPayMethod(linkedBill.kind,false);
 if(linkedBill.kind==='cicilan'){
+if(typeof updateTxRenovItemOptions==='function')updateTxRenovItemOptions(linkedBill.renovItemLinkId); // S2827: preselect item RAB tertaut bill
 cicilanLastInput='total';
 document.getElementById('txCicilanNama').value=linkedBill.name;
 document.getElementById('txCicilanTotal').value=linkedBill.totalHarga||t.amount;

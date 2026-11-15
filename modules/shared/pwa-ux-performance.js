@@ -655,12 +655,12 @@
         const foldFilters=function(){
           const tab=byId('keuanganTab-laporan');if(!tab||byId('lapFilterFold'))return;
           const sel=['fTipe','fClass','fKat','fSub','fAcc','fMethod'].map(byId);if(sel.some(function(x){return !x;}))return;
-          const g1=sel[0].closest('.u-grid2-nogap'),g2=sel[3].closest('.u-grid2-nogap'),fm=sel[5].closest('.fg'),cnt=byId('lapFilterCount'),rs=cnt&&cnt.closest('.u-flex');
+          const g1=sel[0].closest('.u-grid2-nogap'),g2=sel[3].closest('.u-grid2-nogap'),fm=sel[5].closest('.fg'),cnt=byId('lapFilterCount'),rs=cnt&&cnt.closest('.u-flex');const gx=byId('fProyek')?byId('fProyek').closest('.u-grid2-nogap'):null,selx=['fProyek','fSumber'].map(byId).filter(Boolean);
           if(!g1||!g2||!fm||!rs||g1.parentNode!==g2.parentNode||g1.parentNode!==fm.parentNode||g1.parentNode!==rs.parentNode)return;
           const fold=make('details','lap-filter-fold');fold.id='lapFilterFold';const sum=make('summary','');const sumLbl=make('span','','Filter');const sumCnt=make('span','lap-filter-fold-count','');sum.appendChild(sumLbl);sum.appendChild(sumCnt);fold.appendChild(sum);
-          g1.parentNode.insertBefore(fold,g1);[g1,g2,fm,rs].forEach(function(n){fold.appendChild(n);});
-          const upd=function(){const n=sel.filter(function(x){return x.selectedIndex>0;}).length;setText(sumCnt,n?' ('+n+')':'');};
-          fold.addEventListener('change',upd);fold.addEventListener('click',function(){window.requestAnimationFrame(upd);});upd();if(sel.some(function(x){return x.selectedIndex>0;}))fold.open=true;
+          g1.parentNode.insertBefore(fold,g1);[g1,g2,fm,gx&&gx.parentNode===g1.parentNode?gx:null,rs].forEach(function(n){if(n)fold.appendChild(n);});
+          const upd=function(){const n=sel.concat(selx).filter(function(x){return x.selectedIndex>0;}).length;setText(sumCnt,n?' ('+n+')':'');};
+          fold.addEventListener('change',upd);fold.addEventListener('click',function(){window.requestAnimationFrame(upd);});upd();if(sel.concat(selx).some(function(x){return x.selectedIndex>0;}))fold.open=true;
         };
         const foldHints=function(root){
           if(!root)return;

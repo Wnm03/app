@@ -39,7 +39,7 @@ test('rollback preserves D object identity and collection identity',()=>{
 
 const tagihan=fs.readFileSync('modules/finance/tagihan-kalender.js','utf8');
 test('bill payment mutation uses atomic boundary and FinanceTxSOT',()=>{
- assert.ok(tagihan.includes("FinanceCrossEntityAtomic.begin(['transactions','bills','billsArchive','debts','piutang'])"));
+ assert.ok(tagihan.includes("FinanceCrossEntityAtomic.begin(['transactions','bills','billsArchive','debts','piutang','renovProjects'])"));
  assert.ok(tagihan.includes('FinanceTxSOT.create({id:_payTxId'));
  assert.ok(tagihan.includes("console.error('S2196: atomic bill payment rollback'"));
 });

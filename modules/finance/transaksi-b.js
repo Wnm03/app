@@ -38,8 +38,12 @@ async function _saveTxInner(){
 // S2728: hitung ulang panel tautan dari teks kategori/sub TERKINI (blur 150ms bisa belum jalan).
 if(typeof updateTxVehiclePanels==='function')updateTxVehiclePanels();
 evalAmtExpr('txAmt');
-const amt=parseFloat(document.getElementById('txAmt').value);
-if(!amt||amt<=0){toast('⚠️ Masukkan jumlah valid');return;}
+// S2821: parser strik + bulatkan ke rupiah utuh (selaras S2819). Input bukan angka/ekspresi valid DITOLAK,
+// bukan dipotong diam-diam oleh parseFloat. Fallback parseFloat hanya untuk sandbox tes yang tak memuat kalkulator-input.js.
+const _amtRaw=document.getElementById('txAmt').value;
+const _amtParsed=typeof parseAmtStrict==='function'?parseAmtStrict(_amtRaw):parseFloat(_amtRaw);
+const amt=Math.round(_amtParsed);
+if(!Number.isFinite(amt)||amt<=0){toast('⚠️ Nominal tidak valid — isi angka saja (boleh titik ribuan, koma desimal, atau hitungan + - * /)');return;}
 const MAX_AMOUNT=999000000000;
 if(amt>MAX_AMOUNT){toast('⚠️ Jumlah terlalu besar (maks Rp 999.000.000.000)');return;}
 const subCat=document.getElementById('txSubCat')?document.getElementById('txSubCat').value:'';
@@ -341,6 +345,7 @@ const cicilanSharedAutoPiutang=!!(cicilanShared&&txCicilanSharedAutoPiutangSaveE
 // (renderBillItemHtml) & dialog markBillPaid() ikut salah nunjukin total harga, bukan total/bulan.
 const oldTxAmountForPiutangSync=existingTx.amount;
 Object.assign(existingBill,{name:nama,amount:perBulanMine,nextDue:due,category:cat,accountId:accId,note,totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr,sharedOtherName:cicilanSharedOtherName,sharedAutoPiutang:cicilanSharedAutoPiutang});
+if(typeof applyTxRenovBillItemChange==='function')applyTxRenovBillItemChange(existingBill); // S2827: ganti item RAB untuk pembayaran berikutnya
 Object.assign(existingTx,{amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,date,note:nama+(note?' - '+note:'')});
 // S574-D1: persist deductionOwnerId di cabang cicilan (isLatest, Object.assign 3/7).
 if(deductionOwnerIdVal)existingTx.deductionOwnerId=deductionOwnerIdVal;else delete existingTx.deductionOwnerId;
@@ -416,6 +421,11 @@ const sh=getCicilanSharedMine(perBulan);
 const cicilanShared=sh.shared;
 const cicilanSharedPct=sh.pct;
 const perBulanMine=sh.mine;
+// S2822: cicilan yang dicatat dari kategori Renovasi + panel proyek dicentang -> bill & tiap pembayarannya tertaut ke proyek.
+const _txRenovBillLink=typeof getTxRenovPanelProject==='function'?getTxRenovPanelProject():null;
+const _txRenovItemSelEl=document.getElementById('txRenovItem');
+const _txRenovItemPick=(_txRenovBillLink&&_txRenovItemSelEl&&_txRenovItemSelEl.value&&(_txRenovBillLink.items||[]).some(x=>x&&sameId(x.id,_txRenovItemSelEl.value)))?_txRenovItemSelEl.value:'';
+const _txRenovBillMeta=_txRenovBillLink?{renovProjectLinkId:_txRenovBillLink.id,...(_txRenovItemPick?{renovItemLinkId:_txRenovItemPick}:{}),...(deductionOwnerIdVal?{deductionOwnerId:deductionOwnerIdVal}:{})}:{};
 if(tenor===1){
 // FIX s284 -- Tenor 1x = "Bayar Bulan Depan": transaksi BELUM dibayar, dijadwalkan sbg
 // tagihan cicilan (sisaTenor:1) jatuh tempo ke tanggal `due` (field Jatuh Tempo, sudah
@@ -435,7 +445,7 @@ const txCicilanSharedOtherNameNewEl=document.getElementById('txCicilanSharedOthe
 const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAutoPiutang');
 const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
 const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
-BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan',sisaTenor:1,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue:due,freq:'bulanan',sisaTenor:1,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew,..._txRenovBillMeta});
 txEditId=null;
 rememberLastAccForCat(cat,accId);
 if(_txCatLearnSource){learnCatFromItemName(_txCatLearnSource,cat);_txCatLearnSource=null;}
@@ -458,12 +468,13 @@ const txCicilanSharedAutoPiutangNewEl=document.getElementById('txCicilanSharedAu
 const cicilanSharedOtherNameNew=cicilanShared&&txCicilanSharedOtherNameNewEl?txCicilanSharedOtherNameNewEl.value.trim():'';
 const cicilanSharedAutoPiutangNew=!!(cicilanShared&&txCicilanSharedAutoPiutangNewEl&&txCicilanSharedAutoPiutangNewEl.checked);
 // BUGFIX: sama seperti cabang edit di atas -- totalAmount = perBulan (total/periode), bukan total harga.
-BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew});
+BillDebtPiutangCanonicalWriter.add('bills',{id:billId,name:nama,amount:perBulanMine,nextDue,freq:'bulanan',sisaTenor,category:cat,subcategory:subCat,accountId:accId,note:note,kind:'cicilan',totalHarga:total,tenor,bunga,shared:cicilanShared,sharedPct:cicilanSharedPct,totalAmount:cicilanShared?perBulan:null,isKpr:isKprNew,sharedOtherName:cicilanSharedOtherNameNew,sharedAutoPiutang:cicilanSharedAutoPiutangNew,..._txRenovBillMeta});
 }
 const _cicilanNewTx={id:billId+1,type:'expense',amount:perBulanMine,category:cat,subcategory:subCat,accountId:accId,payMethod:'cicilan',billLinkId:sisaTenor>0?billId:null,note:nama+(note?' - '+note:''),date};
 // S574-D1: persist deductionOwnerId di jalur CREATE cicilan (1/3).
 if(deductionOwnerIdVal)_cicilanNewTx.deductionOwnerId=deductionOwnerIdVal;
 if(typeof FinanceTxSOT!=='undefined') FinanceTxSOT.create(_cicilanNewTx); else throw new Error('FINANCE_TX_SOT_REQUIRED');
+if(_txRenovBillLink&&typeof applyRenovBillPayment==='function')applyRenovBillPayment({id:billId,name:nama,amount:perBulanMine,kind:'cicilan',tenor,category:cat,..._txRenovBillMeta},{id:_cicilanNewTx.id,amount:perBulanMine,date,accountId:accId,label:'Cicilan ke-1 dari '+tenor+'x'});
 applyTxStockFromTx(nama,billId+1,date,total,existingTx);
 applyTxShopStockFromTx(billId+1,nama,null,existingTx);
 WorthIt.applyBuyLink(billId+1);

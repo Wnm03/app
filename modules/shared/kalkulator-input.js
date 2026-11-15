@@ -85,6 +85,21 @@ el.value=String(Math.round(r*100)/100);
 el.dispatchEvent(new Event('input',{bubbles:true}));
 }
 }
+// S2821 — parser nominal STRIK untuk simpan transaksi. Kenapa: saveTx dulu memakai parseFloat() mentah sehingga
+// '12abc34'->12, '1500,50'->1500, '1.500,50'->1,5, '1.5jt'->1,5 tersimpan DIAM-DIAM (evalAmtExpr hanya jalan kalau
+// ada operator/titik, dan safeCalc menolak koma). Di sini: koma = desimal gaya Indonesia (hanya angka tunggal,
+// titik ribuan opsional), sisanya wajib lolos safeCalc (angka/ekspresi + - * / saja). Gagal -> NaN, TIDAK menebak.
+function parseAmtStrict(raw){
+if(typeof raw!=='string')return NaN;
+let s=raw.trim();
+if(!s)return NaN;
+if(s.indexOf(',')!==-1){
+if(!/^(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d+)?$/.test(s))return NaN;
+s=s.replace(/\./g,'').replace(',','.');
+}
+const v=safeCalc(s);
+return Number.isFinite(v)?v:NaN;
+}
 let calcTargetId=null, calcExpr='';
 function openCalc(targetId){
 calcTargetId=targetId;

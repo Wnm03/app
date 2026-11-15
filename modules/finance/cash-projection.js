@@ -269,7 +269,19 @@ const proyeksiKas=proyeksiGaji-sisaKewajiban-(includeKiriman?kirimanEstimate:0);
 // belum dimuat bareng, pola sama fungsi lain di file ini) -- fallback null (BUKAN 0)
 // supaya presenter/kartu UI bisa bedakan "belum bisa dihitung" vs "kosong beneran".
 const saldoKasSekarang=(typeof totalSaldoAkun==='function')?totalSaldoAkun():null;
-const proyeksiSaldoAkhirBulan=(saldoKasSekarang!=null)?(saldoKasSekarang+proyeksiKas):null;
+// S2835: tagihan yang sudah DIBAYAR tapi transaksinya bertanggal setelah hari ini (mis. "Bayar Bulan Depan"
+// dicatat di tanggal jatuh tempo) sudah keluar dari sisaKewajiban, sedangkan saldoKasSekarang (saldo AKTUAL,
+// S2830) belum terpotong -> proyeksi akhir bulan terlalu besar. Kurangkan pembayaran tagihan bertanggal masa depan
+// sampai akhir jendela proyeksi (hanya yang bertanda billLinkId, supaya gaji/transaksi lain tidak terhitung dobel).
+const _cpIso=(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const _cpTodayIso=(typeof todayStr==='function')?todayStr():_cpIso(new Date());
+const _cpEndIso=_cpIso(useSiklus?cycleRange.to:new Date(y,m+1,0));
+const _cpLinkedAcc=(typeof linkedAssetAccountIds==='function')?linkedAssetAccountIds():new Set();
+const _cpCountedAcc=new Set((D.accounts||[]).filter(a=>a&&a.includeInBalance!==false&&!_cpLinkedAcc.has(String(a.id))&&(typeof isAccOwnershipSelf!=='function'||isAccOwnershipSelf(a))).map(a=>String(a.id)));
+const billPaidFutureTotal=(D.transactions||[])
+.filter(t=>t&&t.type==='expense'&&t.billLinkId!=null&&t.hitungKas!==false&&_cpCountedAcc.has(String(t.accountId))&&/^\d{4}-\d{2}-\d{2}/.test(String(t.date||''))&&String(t.date).slice(0,10)>_cpTodayIso&&String(t.date).slice(0,10)<=_cpEndIso)
+.reduce((s,t)=>s+(t.amount||0),0);
+const proyeksiSaldoAkhirBulan=(saldoKasSekarang!=null)?(saldoKasSekarang+proyeksiKas-billPaidFutureTotal):null;
 
 // 6) piutangJatuhTempoBulanIni (medium win, audit-kartu-proyeksi-kas-insight) — piutang
 // (D.piutang) yang BELUM lunas & `jatuhTempo` jatuh di bulan target, DIJUMLAH murni sbg
@@ -289,7 +301,7 @@ proyeksiGaji,recordedGaji,pendingGajiEstimate,includePendingGaji,
 sisaKewajiban,billMonthTotal,billPaidThisPeriod,
 titipanPinjamUnscheduledTotal,kewajibanItems,topKewajiban,
 weeksInMonth,kirimanPerMinggu,kirimanEstimate,includeKiriman,
-proyeksiKas,saldoKasSekarang,proyeksiSaldoAkhirBulan,
+proyeksiKas,saldoKasSekarang,proyeksiSaldoAkhirBulan,billPaidFutureTotal,
 piutangJatuhTempoBulanIni,
 // Alias kompat Sesi P2 (kartu UI ditulis melawan penamaan draft P1 yang lain --
 // gajiProjected/kewajibanSisa/gajiTercatat/gajiPending/kewajibanTerjadwal --

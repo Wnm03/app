@@ -104,10 +104,11 @@ if(!it)return 0;
 if(Array.isArray(it.payments))return it.payments.reduce((sum,p)=>sum+Math.max(0,Number(p&&p.amount)||0),0);
 return it.paid?Math.max(0,Number(it.harga)||0):0;
 }
-function _renovSetStat(id,n){const el=document.getElementById(id);if(!el)return;const v=Math.round(Number(n)||0),a=Math.abs(v);const full=fmtFull(v);let txt=full;if(a>=1e7){const u=a>=1e12?1e12:(a>=1e9?1e9:1e6),suf=a>=1e12?' T':(a>=1e9?' M':' jt');txt=(v<0?'-':'')+'Rp '+(a/u).toFixed(2).replace(/\.?0+$/,'').replace('.',',')+suf;}el.textContent=txt;if(typeof el.setAttribute==='function'){if(txt!==full){el.setAttribute('title',full);el.setAttribute('aria-label',full);}else if(typeof el.removeAttribute==='function'){el.removeAttribute('title');el.removeAttribute('aria-label');}}}
 function _renovStatMoney(n){const v=Math.round(Number(n)||0),a=Math.abs(v);if(a>=1e9){const u=a>=1e12?1e12:1e9,x=(v/u).toFixed(2).replace(/\.?0+$/,'').replace('.',',');return 'Rp '+x+(u===1e12?' T':' M');}return fmtFull(v);}
 function _renovSetStat(id,n){const el=document.getElementById(id);if(!el)return;el.textContent=_renovStatMoney(n);el.title=fmtFull(n);}
 function _renovSameId(a,b){return typeof sameId==='function'?sameId(a,b):String(a)===String(b);}
+// S2823: Dana Proyek = DP/Termin masuk - belanja yang keluar dari REKENING PROYEK (bukan semua pembayaran dari akun mana pun). Tanpa helper sumber dana -> perilaku lama.
+function _renovFundCalc(p,incoming,paid){if(typeof renovProjectFund==='function'){try{return renovProjectFund(p,incoming);}catch(e){console.warn('[Renov] sumber dana gagal',e);}}return{fund:incoming-paid,breakdown:null};}
 const Renov={
 _paymentInFlight:false,
 curId:null,
@@ -232,14 +233,25 @@ const paid=items.reduce((sum,it)=>sum+_renovItemPaidAmount(it),0);
 const dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId(tx.renovDpProjectId,p.id)&&!(Renov._ignoreTxIds&&Renov._ignoreTxIds.has(String(tx.id))));
 const dp=dpTxs.filter(tx=>tx.renovDpKind!=='termin').reduce((sum,tx)=>sum+(Number(tx.amount)||0),0);
 const termin=dpTxs.filter(tx=>tx.renovDpKind==='termin').reduce((sum,tx)=>sum+(Number(tx.amount)||0),0);
-const incoming=dp+termin,fund=incoming-paid,rab=Math.max(0,Number(p.rab)||0);
+const incoming=dp+termin,fc=_renovFundCalc(p,incoming,paid),fund=fc.fund,bd=fc.breakdown,rab=Math.max(0,Number(p.rab)||0);
 const categories={};items.forEach(it=>{const key=it.grup||it.category||'Tanpa kategori';if(!categories[key])categories[key]={plan:0,paid:0};categories[key].plan+=Math.max(0,Number(it.harga)||0);categories[key].paid+=_renovItemPaidAmount(it);});
 const categoryRows=Object.entries(categories).map(([name,v])=>`<div class="renov-cat-row u-fs12"><div class="u-fw700">${escapeHtml(name)}</div><div class="u-t2">Rencana ${fmt(v.plan)} · Realisasi ${fmt(v.paid)} · Selisih ${fmt(v.plan-v.paid)}</div></div>`).join('');
 const incomeRows=dpTxs.map(tx=>`<div class="u-flex u-jcsb u-aic u-fs12 u-py4"><span>${escapeHtml(tx.renovDpLabel|| (tx.renovDpKind==='termin'?'Termin':'DP'))} · ${escapeHtml(tx.date||'-')}</span><span>${fmt(tx.amount)} <button class="tx-del" data-action="Renov.deleteDpIncome" data-args="${escapeHtml(JSON.stringify([p.id,tx.id]))}" aria-label="Hapus pemasukan">🗑</button></span></div>`).join('');
 const pct=plan>0?Math.min(100,Math.round(paid/plan*100)):0;
-panel.innerHTML=`<div class="u-fw700 u-mb6">💰 Arus Dana Proyek</div><div class="u-fs12 u-t2">${escapeHtml(p.name)}${p.klien?' · Klien: '+escapeHtml(p.klien):''}</div><div class="u-grid u-grid2 u-gap8 u-mt10"><div><div class="u-fs11 u-t2">Nilai Kontrak / RAB</div><div class="u-fw700">${fmt(rab)}</div></div><div><div class="u-fs11 u-t2">Rencana Item</div><div class="u-fw700">${fmt(plan)}</div></div><div><div class="u-fs11 u-t2">Selisih RAB</div><div class="u-fw700">${fmt(rab-plan)}</div></div><div><div class="u-fs11 u-t2">DP Masuk</div><div class="u-fw700">${fmt(dp)}</div></div><div><div class="u-fs11 u-t2">Termin Masuk</div><div class="u-fw700">${fmt(termin)}</div></div><div><div class="u-fs11 u-t2">Total Pemasukan</div><div class="u-fw700">${fmt(incoming)}</div></div><div><div class="u-fs11 u-t2">Terbayar Item</div><div class="u-fw700">${fmt(paid)}</div></div><div><div class="u-fs11 u-t2">Dana Proyek</div><div class="u-fw700" style="color:${fund<0?'var(--danger)':'var(--text)'}">${fmt(fund)} ${fund<0?'· Nombok':''}</div></div><div><div class="u-fs11 u-t2">Sisa Tagihan Klien</div><div class="u-fw700">${fmt(Math.max(0,rab-incoming))}</div></div><div><div class="u-fs11 u-t2">Sisa Belanja</div><div class="u-fw700">${fmt(Math.max(0,plan-paid))}</div></div>${Number(p.profit)>0?`<div><div class="u-fs11 u-t2">Profit/Margin (RAB)</div><div class="u-fw700">${fmt(p.profit)}</div></div>`:''}</div><div class="u-fs11 u-t2 u-mt8">Realisasi pembayaran item: ${pct}%${paid>plan?' · Kelebihan bayar '+fmt(paid-plan):''}${fund<0?' · Nombok pribadi '+fmt(Math.max(0,-fund)):''}</div><div class="prog-bar u-mt6"><div class="prog-fill purple" style="width:${pct}%"></div></div><div class="u-fw700 u-fs12 u-mt12">Rencana / realisasi per kategori</div>${categoryRows||'<div class="u-t2 u-fs12">Belum ada item.</div>'}<div class="u-flex u-aic u-jcsb u-mt12"><div class="u-fw700 u-fs12">Daftar DP / Termin</div><button class="btn btn-ghost" data-action="Renov.toggleDpList">Daftar pemasukan</button></div><div id="renovDpListWrap" style="display:none">${incomeRows||'<div class="u-t2 u-fs12">Belum ada pemasukan proyek.</div>'}</div><div class="renov-fund-actions u-mt12"><button class="btn btn-primary" data-action="Renov.openDpModal" data-args="${escapeHtml(JSON.stringify([p.id]))}">＋ Catat DP / Termin</button><button class="btn btn-ghost" data-action="Renov.exportCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export CSV</button><button class="btn btn-ghost" data-action="Renov.importCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import CSV</button><button class="btn btn-ghost" data-action="Renov.exportXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export Excel</button><button class="btn btn-ghost" data-action="Renov.importXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import Excel</button><button class="btn btn-ghost" data-action="Renov.exportPDF" data-args="${escapeHtml(JSON.stringify([p.id]))}">Laporan PDF</button></div>`;
+const _srcRow=(l,v)=>`<div class="u-flex u-jcsb u-fs12 u-py4"><span>${l}</span><span class="u-fw700">${fmt(v)}</span></div>`;
+const srcRows=bd&&paid>0?[bd.proyek>0?_srcRow('🏦 Rekening proyek',bd.proyek):'',bd.talangan>0?_srcRow('👤 Talangan pribadi',bd.talangan):'',...Object.entries(bd.titipanOwners).map(([n,v])=>_srcRow('💰 Titipan · '+escapeHtml(n),v)),bd.tanpa>0?_srcRow('❔ Tanpa catatan transaksi',bd.tanpa):''].join(''):'';
+const mk=typeof renovMarkerAudit==='function'?renovMarkerAudit(p.id):[];
+panel.innerHTML=`<div class="u-fw700 u-mb6">💰 Arus Dana Proyek</div><div class="u-fs12 u-t2">${escapeHtml(p.name)}${p.klien?' · Klien: '+escapeHtml(p.klien):''}</div><div class="u-grid u-grid2 u-gap8 u-mt10"><div><div class="u-fs11 u-t2">Nilai Kontrak / RAB</div><div class="u-fw700">${fmt(rab)}</div></div><div><div class="u-fs11 u-t2">Rencana Item</div><div class="u-fw700">${fmt(plan)}</div></div><div><div class="u-fs11 u-t2">Selisih RAB</div><div class="u-fw700">${fmt(rab-plan)}</div></div><div><div class="u-fs11 u-t2">DP Masuk</div><div class="u-fw700">${fmt(dp)}</div></div><div><div class="u-fs11 u-t2">Termin Masuk</div><div class="u-fw700">${fmt(termin)}</div></div><div><div class="u-fs11 u-t2">Total Pemasukan</div><div class="u-fw700">${fmt(incoming)}</div></div><div><div class="u-fs11 u-t2">Terbayar Item</div><div class="u-fw700">${fmt(paid)}</div></div><div><div class="u-fs11 u-t2">Dana Proyek</div><div class="u-fw700" style="color:${fund<0?'var(--danger)':'var(--text)'}">${fmt(fund)} ${fund<0?'· Nombok':''}</div></div><div><div class="u-fs11 u-t2">Sisa Tagihan Klien</div><div class="u-fw700">${fmt(Math.max(0,rab-incoming))}</div></div><div><div class="u-fs11 u-t2">Sisa Belanja</div><div class="u-fw700">${fmt(Math.max(0,plan-paid))}</div></div>${Number(p.profit)>0?`<div><div class="u-fs11 u-t2">Profit/Margin (RAB)</div><div class="u-fw700">${fmt(p.profit)}</div></div>`:''}</div><div class="u-fs11 u-t2 u-mt8">Realisasi pembayaran item: ${pct}%${paid>plan?' · Kelebihan bayar '+fmt(paid-plan):''}${bd?(bd.talangan>0?' · Talangan pribadi '+fmt(bd.talangan):''):(fund<0?' · Nombok pribadi '+fmt(Math.max(0,-fund)):'')}</div>${srcRows?`<div class="u-fw700 u-fs12 u-mt12">Sumber dana pembayaran item</div>${srcRows}`:''}${mk.length?`<div class="u-fs12 u-mt8" style="color:var(--danger)">⚠️ ${mk.length} transaksi tak sinkron (proyek / penanggung / payment) <button class="btn btn-ghost" data-action="Renov.repairMarkers" data-args="${escapeHtml(JSON.stringify([p.id]))}">Periksa &amp; Rapikan</button></div>`:''}<div class="prog-bar u-mt6"><div class="prog-fill purple" style="width:${pct}%"></div></div><div class="u-fw700 u-fs12 u-mt12">Rencana / realisasi per kategori</div>${categoryRows||'<div class="u-t2 u-fs12">Belum ada item.</div>'}<div class="u-flex u-aic u-jcsb u-mt12"><div class="u-fw700 u-fs12">Daftar DP / Termin</div><button class="btn btn-ghost" data-action="Renov.toggleDpList">Daftar pemasukan</button></div><div id="renovDpListWrap" style="display:none">${incomeRows||'<div class="u-t2 u-fs12">Belum ada pemasukan proyek.</div>'}</div><div class="renov-fund-actions u-mt12"><button class="btn btn-primary" data-action="Renov.openDpModal" data-args="${escapeHtml(JSON.stringify([p.id]))}">＋ Catat DP / Termin</button><button class="btn btn-ghost" data-action="Renov.exportCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export CSV</button><button class="btn btn-ghost" data-action="Renov.importCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import CSV</button><button class="btn btn-ghost" data-action="Renov.exportXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export Excel</button><button class="btn btn-ghost" data-action="Renov.importXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import Excel</button><button class="btn btn-ghost" data-action="Renov.exportPDF" data-args="${escapeHtml(JSON.stringify([p.id]))}">Laporan PDF</button></div>`;
 },
 toggleDpList(){const el=document.getElementById('renovDpListWrap');if(el)el.style.display=el.style.display==='none'?'block':'none';},
+repairMarkers(pid){
+if(typeof renovRepairMarkers!=='function')return;
+let r;try{r=renovRepairMarkers(pid);}catch(e){console.error('[Renov] rapikan penanda gagal',e);toast('⚠️ Gagal merapikan penanda');return;}
+if(r.fixed&&save()===false){(r.ids||[]).forEach(id=>{try{FinanceTxSOT.patchMetaById(id,{deductionOwnerId:undefined});}catch(e){console.error('[Renov] rollback penanda gagal',e);}});toast('⚠️ Gagal menyimpan perbaikan');return;}
+if(r.fixed){if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});}
+Renov.render();if(sameId(Renov.curId,pid))Renov.renderDetail();
+toast(r.fixed?'✅ '+r.fixed+' penanggung diisi otomatis'+(r.remaining?' · '+r.remaining+' perlu dicek manual':''):(r.remaining?'⚠️ '+r.remaining+' perlu dicek manual (pilih penanggung / hubungkan transaksi)':'✅ Semua penanda sinkron'));
+},
 _ensureDpModal(){let el=document.getElementById('renovDpModal');if(!el){el=document.createElement('div');el.id='renovDpModal';el.className='overlay';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el);}return el;},
 openDpModal(projectId){
 const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Proyek tidak ditemukan');return;}
@@ -264,7 +276,7 @@ const cats=typeof getCatsByType==='function'?getCatsByType('income'):[];if(!Arra
 const category=(cats.find(c=>/proyek|bisnis|jasa/i.test(c.name||''))||cats[0]).name;if(!category){toast('⚠️ Kategori income tidak valid');return;}
 const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accountId).owners||[]):[];const ownerEl=document.getElementById('renovDpOwner');const deductionOwnerId=owners.length?(ownerEl?.value||(owners.length===1?owners[0].ownerId:'')):'';if(owners.length>1&&!deductionOwnerId){toast('⚠️ Pilih pemilik/penanggung akun');return;}
 if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');Renov._dpInFlight=true;let tx=null,committed=false;
-try{tx=FinanceTxSOT.create({id:uid(),type:'income',amount,accountId,date,category,subcategory:'',note:`Renovasi: ${p.name} - ${label|| (kind==='dp'?'DP':'Termin')}${note?' ('+note+')':''}`,payMethod:'transfer',renovDpProjectId:p.id,renovDpLabel:label|| (kind==='dp'?'DP':'Termin'),renovDpKind:kind,...(deductionOwnerId?{deductionOwnerId}:{})});
+try{tx=FinanceTxSOT.create({id:uid(),type:'income',amount,accountId,date,category,subcategory:'',note:`Renovasi: ${p.name} - ${label|| (kind==='dp'?'DP':'Termin')}${note?' ('+note+')':''}`,payMethod:'tunai',renovDpProjectId:p.id,renovDpLabel:label|| (kind==='dp'?'DP':'Termin'),renovDpKind:kind,...(deductionOwnerId?{deductionOwnerId}:{})});
 const saved=save();if(saved===false)throw new Error('Penyimpanan gagal');committed=true;
 try{if(typeof refreshAfterMutation==='function')refreshAfterMutation({dashboard:true,finance:true});}catch(e){console.warn('[Renov] refresh DP gagal',e);}try{if(typeof FinanceEventOutbox!=='undefined'&&FinanceEventOutbox&&typeof FinanceEventOutbox.emitOrEnqueue==='function')FinanceEventOutbox.emitOrEnqueue('finance.updated',{kind:'renov',action:'dp-income',projectId:p.id,txId:tx.id,amount});}catch(e){console.warn('[Renov] outbox DP gagal',e);}
 try{closeModal('renovDpModal');Renov.render();if(sameId(Renov.curId,p.id))Renov.renderDetail();}catch(e){console.warn('[Renov] render DP gagal',e);}toast('✅ DP / Termin tercatat sebagai income Keuangan');
@@ -298,7 +310,7 @@ const items=Array.isArray(p.items)?p.items:[],dpTxs=(D.transactions||[]).filter(
 const rows=[];const add=(r)=>rows.push(Renov._csvRow(r));
 add(['=== IDENTITAS PROYEK ===']);add(['Nama Proyek','Klien','Nilai Kontrak/RAB','Catatan']);add([p.name,p.klien||'',p.rab||0,p.catatan||'']);rows.push('');
 const plan=items.reduce((s,it)=>s+(Number(it.harga)||0),0),paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+(Number(tx.amount)||0),0);
-add(['=== RINGKASAN ===']);add(['RAB','Rencana Item','Terbayar','Sisa Belanja','DP+Termin Masuk','Dana Proyek','Sisa Tagihan Klien']);add([p.rab||0,plan,paid,Math.max(0,plan-paid),incoming,incoming-paid,Math.max(0,(Number(p.rab)||0)-incoming)]);rows.push('');
+add(['=== RINGKASAN ===']);add(['RAB','Rencana Item','Terbayar','Sisa Belanja','DP+Termin Masuk','Dana Proyek','Sisa Tagihan Klien']);add([p.rab||0,plan,paid,Math.max(0,plan-paid),incoming,_renovFundCalc(p,incoming,paid).fund,Math.max(0,(Number(p.rab)||0)-incoming)]);rows.push('');
 add(['=== DP / TERMIN ===']);add(['Label','Jenis','Tanggal','Akun','Nominal','Catatan','ID Transaksi']);dpTxs.forEach(tx=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,tx.accountId));add([tx.renovDpLabel||'',tx.renovDpKind||'dp',tx.date||'',acc?acc.name:tx.accountId,tx.amount,tx.note||'',tx.id]);});rows.push('');
 add(['=== DAFTAR ITEM ===']);add(['Item','Kategori','Ukuran','Harga Rencana','Terbayar','Sisa','Status','Akun','Tanggal']);items.forEach(it=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,it.accountId)),amount=_renovItemPaidAmount(it);add([it.name,it.grup||it.category||'',it.ukuran||'',it.harga,amount,Math.max(0,(Number(it.harga)||0)-amount),amount>=(Number(it.harga)||0)?'Lunas':amount>0?'Sebagian':'Belum dibayar',acc?acc.name:it.accountId||'',it.paidDate||it.tglBayar||'']);});rows.push('');
 add(['=== RIWAYAT CICILAN ===']);add(['Item','ID Pembayaran','Tanggal','Akun','Label','Nominal','ID Transaksi']);items.forEach(it=>(it.payments||[]).forEach(pay=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,pay.accountId));add([it.name,pay.id,pay.date||'',acc?acc.name:pay.accountId||'',pay.label||'',pay.amount,pay.txId]);}));
@@ -311,6 +323,33 @@ if(comma>=0&&dot>=0){if(comma>dot)value=value.replace(/\./g,'').replace(',','.')
 else if(comma>=0){const decimals=value.length-comma-1;value=decimals>0&&decimals<=2?value.replace(',','.'):value.replace(/,/g,'');}
 else if(dot>=0){const decimals=value.length-dot-1;if(decimals>2)value=value.replace(/\./g,'');}
 return Number(value);
+},
+_csvItemSection(all){
+// S2824: CSV hasil Export CSV proyek berisi beberapa seksi (=== ... ===). Import hanya butuh seksi DAFTAR ITEM.
+// CSV polos (header Item/Harga di baris pertama) tetap diproses persis seperti sebelumnya.
+const norm=v=>String(v==null?'':v).trim().toLowerCase().replace(/[\s_/-]+/g,'');
+const hasHdr=r=>Array.isArray(r)&&r.some(c=>['item','nama','namaitem','namabarang'].includes(norm(c)))&&r.some(c=>['harga','hargarencana','nominal','price'].includes(norm(c)));
+const isSect=r=>Array.isArray(r)&&r.length>0&&/^'?={3}/.test(String(r[0]||'').trim());
+const blank=r=>!Array.isArray(r)||r.every(c=>String(c==null?'':c).trim()==='');
+if(!Array.isArray(all)||!all.length||hasHdr(all[0])||!all.some(isSect))return {rows:all||[],offset:0};
+let at=all.findIndex(r=>isSect(r)&&/daftar\s*item/i.test(String(r[0]||'')));
+let h=at>=0?at+1:all.findIndex(hasHdr);
+if(h<0||!hasHdr(all[h]))return {rows:all,offset:0};
+let end=h+1;while(end<all.length&&!blank(all[end])&&!isSect(all[end]))end++;
+return {rows:all.slice(h,end),offset:h};
+},
+_csvSkippedSections(all){
+// S2828: hitung baris pada seksi DP / TERMIN dan RIWAYAT CICILAN yang TIDAK diimpor (hanya item rencana yang dibawa).
+const out={dp:0,cicilan:0};if(!Array.isArray(all))return out;
+const isSect=r=>Array.isArray(r)&&r.length>0&&/^'?={3}/.test(String(r[0]||'').trim());
+let cur=null,hdr=false;
+for(const r of all){
+if(isSect(r)){const t=String(r[0]||'');cur=/dp\s*\/?\s*termin/i.test(t)?'dp':/riwayat\s*cicilan/i.test(t)?'cicilan':null;hdr=false;continue;}
+if(!cur)continue;
+if(!hdr){hdr=true;continue;}
+if(Array.isArray(r)&&r.some(c=>String(c==null?'':c).trim()!==''))out[cur]++;
+}
+return out;
 },
 _parseCSV(text){
 const sample=String(text||'').slice(0,8192);let commas=0,semis=0,quoted=false;for(let i=0;i<sample.length;i++){const c=sample[i];if(c==='"'){if(quoted&&sample[i+1]==='"'){i++;continue;}quoted=!quoted;}else if(!quoted&&c===',')commas++;else if(!quoted&&c===';')semis++;}
@@ -325,15 +364,16 @@ input.addEventListener('cancel',()=>input.remove(),{once:true});
 input.addEventListener('change',async()=>{try{
 const file=input.files&&input.files[0];if(!file)return;if(file.size>2*1024*1024)throw new Error('Ukuran CSV maksimal 2 MB');if(!file.size)throw new Error('File CSV kosong');
 let raw=await file.text();raw=raw.replace(/^\uFEFF/,'');if(!raw.trim())throw new Error('File CSV kosong');if(raw.includes('\uFFFD'))throw new Error('Encoding CSV rusak/tidak terbaca');
-const parsed=Renov._parseCSV(raw),rows=parsed.rows;if(rows.length<2)throw new Error('CSV harus memiliki header dan minimal satu baris data');
+const parsed=Renov._parseCSV(raw),sect=Renov._csvItemSection(parsed.rows),rows=sect.rows,off=sect.offset;if(rows.length<2)throw new Error('CSV harus memiliki header dan minimal satu baris data');
 const header=rows[0].map(v=>String(v||'').trim().toLowerCase().replace(/[\s_/-]+/g,''));const find=(names)=>header.findIndex(h=>names.includes(h));
 const nameIdx=find(['item','nama','namaitem','namabarang']);const catIdx=find(['kategori','category']);const sizeIdx=find(['ukuran','ukurankebutuhan','size']);const priceIdx=find(['harga','hargarencana','nominal','price']);
 if(nameIdx<0||priceIdx<0)throw new Error('Header wajib: Item/Nama dan Harga');
 const keyOf=(name,cat,size,price)=>[name,cat,size,price].map(v=>String(v||'').trim().toLowerCase().replace(/\s+/g,' ')).join('|');
 const seen=new Set((p.items||[]).map(it=>keyOf(it.name,it.category,it.ukuran,it.harga)));const valid=[],invalid=[];
-rows.slice(1).forEach((r,i)=>{const name=String(r[nameIdx]||'').trim(),category=catIdx>=0?String(r[catIdx]||'').trim():'',size=sizeIdx>=0?String(r[sizeIdx]||'').trim():'';const priceRaw=String(r[priceIdx]||'').trim();const price=Renov._renovParsePrice(priceRaw);if(!name){invalid.push({line:i+2,reason:'Nama item kosong'});return;}if(!priceRaw||!Number.isFinite(price)||price<=0){invalid.push({line:i+2,reason:'Harga harus angka lebih dari 0'});return;}const key=keyOf(name,category,size,price);if(seen.has(key)){invalid.push({line:i+2,reason:'Duplikat item (sudah ada / berulang)'});return;}seen.add(key);valid.push({id:uid(),name,category,ukuran:size,harga:price,paid:false,txId:null,paidDate:null,tglBayar:'',accountId:'',note:'',payments:undefined});});
+rows.slice(1).forEach((r,i)=>{const name=String(r[nameIdx]||'').trim(),category=catIdx>=0?String(r[catIdx]||'').trim():'',size=sizeIdx>=0?String(r[sizeIdx]||'').trim():'';const priceRaw=String(r[priceIdx]||'').trim();const price=Renov._renovParsePrice(priceRaw);if(!name){invalid.push({line:i+2+off,reason:'Nama item kosong'});return;}if(!priceRaw||!Number.isFinite(price)||price<=0){invalid.push({line:i+2+off,reason:'Harga harus angka lebih dari 0'});return;}const key=keyOf(name,category,size,price);if(seen.has(key)){invalid.push({line:i+2+off,reason:'Duplikat item (sudah ada / berulang)'});return;}seen.add(key);valid.push({id:uid(),name,category,ukuran:size,harga:price,paid:false,txId:null,paidDate:null,tglBayar:'',accountId:'',note:'',payments:undefined});});
 if(!valid.length){toast(`⚠️ Tidak ada baris valid. ${invalid.length} baris dilewati.`);return;}
-const preview=`Preview import ${p.name}: ${valid.length} item valid, ${invalid.length} baris tidak valid.\n\n${invalid.slice(0,8).map(x=>`Baris ${x.line}: ${x.reason}`).join('\n')}`;
+const skipped=Renov._csvSkippedSections(parsed.rows),skipNote=(skipped.dp||skipped.cicilan)?`\n\nCatatan: ${skipped.dp} baris DP/Termin dan ${skipped.cicilan} baris Riwayat Cicilan tidak ikut diimpor (hanya item rencana).`:'';
+const preview=`Preview import ${p.name}: ${valid.length} item valid, ${invalid.length} baris tidak valid.\n\n${invalid.slice(0,8).map(x=>`Baris ${x.line}: ${x.reason}`).join('\n')}${skipNote}`;
 if(!await askConfirm(preview,{title:'Konfirmasi Import CSV',okText:`Import ${valid.length} item`}))return;
 p.items=p.items||[];const start=p.items.length;p.items.push(...valid);if(save()===false){p.items.splice(start,valid.length);toast('⚠️ Import dibatalkan karena penyimpanan gagal');return;}
 Renov.render();if(sameId(Renov.curId,p.id))Renov.renderDetail();toast(`✅ ${valid.length} item rencana berhasil diimpor; ${invalid.length} baris dilewati`);
@@ -343,9 +383,9 @@ async exportPDF(projectId){
 const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Proyek tidak ditemukan');return false;}
 try{if(typeof ensureJsPDF==='function')await ensureJsPDF();const JsPDF=typeof window!=='undefined'&&window.jspdf&&window.jspdf.jsPDF;if(!JsPDF){toast('⚠️ Library PDF tidak tersedia. Periksa koneksi internet lalu coba lagi.');return false;}
 const doc=new JsPDF({unit:'pt',format:'a4'});const left=42,right=553;let y=48;const page=()=>{doc.addPage();y=48;};const ensureSpace=(height=18)=>{if(y+height>680)page();};const section=title=>{ensureSpace(28);doc.setFontSize(12);doc.text(title,left,y);y+=18;};const line=(label,value)=>{ensureSpace(16);doc.setFontSize(9);doc.text(String(label),left,y);doc.text(String(value),right,y,{align:'right'});y+=16;};const money=n=>'Rp '+Math.round(Number(n)||0).toLocaleString('id-ID');
-const items=p.items||[],dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId(tx.renovDpProjectId,p.id));const plan=items.reduce((s,it)=>s+(Number(it.harga)||0),0),paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+(Number(tx.amount)||0),0),fund=incoming-paid;
+const items=p.items||[],dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId(tx.renovDpProjectId,p.id));const plan=items.reduce((s,it)=>s+(Number(it.harga)||0),0),paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+(Number(tx.amount)||0),0),fc=_renovFundCalc(p,incoming,paid),fund=fc.fund,bd=fc.breakdown;
 const categories=new Map();items.forEach(it=>{const key=String(it.grup||it.category||'Tanpa kategori');const row=categories.get(key)||{plan:0,paid:0};row.plan+=Math.max(0,Number(it.harga)||0);row.paid+=_renovItemPaidAmount(it);categories.set(key,row);});
-doc.setFontSize(16);doc.text('Laporan Proyek Renovasi',left,y);y+=24;ensureSpace(20);doc.setFontSize(11);doc.text(String(p.name||''),left,y);y+=18;line('Klien',p.klien||'-');line('Nilai Kontrak / RAB',money(p.rab));line('Rencana Item',money(plan));line('Terbayar',money(paid));line('DP + Termin Masuk',money(incoming));line('Dana Proyek',money(fund));if(fund<0)line('STATUS DANA','NOMBOK — dana pribadi '+money(Math.abs(fund)));line('Sisa Tagihan Klien',money(Math.max(0,(Number(p.rab)||0)-incoming)));line('Sisa Belanja',money(Math.max(0,plan-paid)));if(paid>plan)line('Status realisasi','KELEBIHAN BAYAR '+money(paid-plan));
+doc.setFontSize(16);doc.text('Laporan Proyek Renovasi',left,y);y+=24;ensureSpace(20);doc.setFontSize(11);doc.text(String(p.name||''),left,y);y+=18;line('Klien',p.klien||'-');line('Nilai Kontrak / RAB',money(p.rab));line('Rencana Item',money(plan));line('Terbayar',money(paid));line('DP + Termin Masuk',money(incoming));line('Dana Proyek',money(fund));if(bd&&bd.talangan>0)line('Talangan pribadi',money(bd.talangan));if(bd&&bd.titipan>0)line('Dibayar dari titipan',money(bd.titipan));if(fund<0)line('STATUS DANA','NOMBOK — dana pribadi '+money(Math.abs(fund)));line('Sisa Tagihan Klien',money(Math.max(0,(Number(p.rab)||0)-incoming)));line('Sisa Belanja',money(Math.max(0,plan-paid)));if(paid>plan)line('Status realisasi','KELEBIHAN BAYAR '+money(paid-plan));
 section('DP / Termin');dpTxs.forEach(tx=>line(`${tx.renovDpLabel||tx.renovDpKind||'DP'} · ${tx.date||'-'} · ${tx.note||''}`,money(tx.amount)));
 section('Daftar Item Biaya');items.forEach(it=>{line(it.name,`${money(it.harga)} · Dibayar ${money(_renovItemPaidAmount(it))}`);(it.payments||[]).forEach(pay=>line('  '+(pay.label||'Cicilan')+' · '+(pay.date||'-'),money(pay.amount)));});
 section('Rencana vs Realisasi per Kategori');categories.forEach((row,name)=>{line(name,`Rencana ${money(row.plan)} · Realisasi ${money(row.paid)} · Selisih ${money(row.plan-row.paid)}`);});
@@ -382,7 +422,7 @@ rek.push(['','','','','JUMLAH','',f(`SUM(G${first}:G${last})`,sub)]);subRows.pus
 });
 rek.push(['','','','','TOTAL JMLH','',subRows.length?f(subRows.map(x=>'G'+x.r).join('+'),grand):0]);
 const plan=grand,paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+num(tx.amount),0);
-const sum=[['RINGKASAN PROYEK'],['Nama Proyek',p.name||''],['Klien',p.klien||''],['Lokasi',p.lokasi||''],['Nilai Kontrak/RAB',num(p.rab)],['Rencana Item',plan],['Terbayar',paid],['Sisa Belanja',Math.max(0,plan-paid)],['DP + Termin Masuk',incoming],['Dana Proyek',incoming-paid],['Sisa Tagihan Klien',Math.max(0,num(p.rab)-incoming)],['Catatan',p.catatan||'']];
+const sum=[['RINGKASAN PROYEK'],['Nama Proyek',p.name||''],['Klien',p.klien||''],['Lokasi',p.lokasi||''],['Nilai Kontrak/RAB',num(p.rab)],['Rencana Item',plan],['Terbayar',paid],['Sisa Belanja',Math.max(0,plan-paid)],['DP + Termin Masuk',incoming],['Dana Proyek',_renovFundCalc(p,incoming,paid).fund],['Sisa Tagihan Klien',Math.max(0,num(p.rab)-incoming)],['Catatan',p.catatan||'']];
 const dp=[['Label','Jenis','Tanggal','Akun','Nominal','Catatan','ID Transaksi']];
 dpTxs.forEach(tx=>dp.push([tx.renovDpLabel||'',tx.renovDpKind||'dp',tx.date||'',accName(tx.accountId),num(tx.amount),tx.note||'',tx.id]));
 const cic=[['Item','ID Pembayaran','Tanggal','Akun','Label','Nominal','ID Transaksi']];
@@ -596,7 +636,7 @@ let tx=null,payment=null,legacyBefore=null,committed=false;const hadPayments=Arr
 try{
 const txId=uid(),paymentId=uid();
 const legacyCash=mode==='cash'&&!Array.isArray(it.payments)&&paid===0;
-const txData={id:txId,type:'expense',amount,accountId,date,category:Renov._renovExpenseCategory(it.category),subcategory:'',payMethod:'tunai',note:`Renovasi: ${p.name} - ${it.name} (${label})`,renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})};
+const txData={id:txId,type:'expense',amount,accountId,date,category:Renov._renovExpenseCategory(it.category),subcategory:'',payMethod:(mode==='installment'?'cicilan':'tunai'),note:`Renovasi: ${p.name} - ${it.name} (${label})`,renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})};
 if(deductionOwnerId)txData.deductionOwnerId=deductionOwnerId;else if(it.deductionOwnerId&&owners.length===0)txData.deductionOwnerId=it.deductionOwnerId;
 tx=FinanceTxSOT.create(txData);
 const linked=FinanceTxSOT.patchMetaById(txId,{renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})});if(!linked)throw new Error('Gagal menautkan transaksi pembayaran ke item Renovasi');
@@ -836,10 +876,12 @@ const p=D.renovProjects.find(x=>sameId(x.id,t.renovProjectLinkId));
 if(!p)return;
 const it=p.items.find(x=>sameId(x.id,t.renovItemLinkId));
 if(!it)return;
-if(t.renovPaymentId&&Array.isArray(it.payments)){
-it.payments=it.payments.filter(pay=>!sameId(pay.id,t.renovPaymentId)&&!sameId(pay.txId,t.id));
+if(Array.isArray(it.payments)){
+// S2831: item lama (lunas via txId) yang dimigrasi ke payments[] punya baris payment bertaut txId TANPA renovPaymentId di transaksinya -> cocokkan juga lewat txId, jangan tinggalkan payment yatim.
+it.payments=it.payments.filter(pay=>!(t.renovPaymentId!=null&&sameId(pay.id,t.renovPaymentId))&&!sameId(pay.txId,t.id));
+if(it.txId!=null&&sameId(it.txId,t.id)){it.txId=null;it.paidDate=null;}
 it.paid=_renovItemPaidAmount(it)>=(Number(it.harga)||0);
-} else if(!Array.isArray(it.payments)){
+} else {
 it.paid=false;it.txId=null;it.paidDate=null;
 }
 Renov.render();
@@ -850,11 +892,11 @@ const p=D.renovProjects.find(x=>sameId(x.id,t.renovProjectLinkId));
 if(!p)return;
 const it=p.items.find(x=>sameId(x.id,t.renovItemLinkId));
 if(!it)return;
-if(t.renovPaymentId&&Array.isArray(it.payments)){
-const pay=it.payments.find(x=>sameId(x.id,t.renovPaymentId)||sameId(x.txId,t.id));
+if(Array.isArray(it.payments)){
+const pay=it.payments.find(x=>(t.renovPaymentId!=null&&sameId(x.id,t.renovPaymentId))||sameId(x.txId,t.id));
 if(pay){pay.amount=Math.max(0,Number(t.amount)||0);pay.date=t.date;pay.accountId=t.accountId;}
 it.paid=_renovItemPaidAmount(it)>=(Number(it.harga)||0);
-} else if(!Array.isArray(it.payments)){
+} else {
 it.harga=t.amount;it.category=t.category;it.accountId=t.accountId;it.paidDate=t.date;it.tglBayar=t.date;
 }
 Renov.render();

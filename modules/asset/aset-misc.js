@@ -277,7 +277,8 @@ return true;
 function syncLinkedAssetNilaiFromAkun(opts){
 opts=opts||{};
 const _accountFilter=Array.isArray(opts.accountIds)&&opts.accountIds.length?new Set(opts.accountIds.map(String)):null;
-if(!Array.isArray(D.assets)||typeof recalcAccBalance!=='function')return;
+if(!Array.isArray(D.assets)||typeof recalcAccBalance!=='function')return 0;
+let changed=0; // S2830: jumlah aset yang nilainya berubah (dipakai pembaruan harian)
 D.assets.forEach((a)=>{
 if(!a.accountId)return;
 if(_accountFilter&&!_accountFilter.has(String(a.accountId)))return;
@@ -285,10 +286,11 @@ const acc=(D.accounts||[]).find(x=>sameId(x.id,a.accountId));
 if(!acc)return;
 const nilaiBaru=recalcAccBalance(acc.id);
 if(nilaiBaru!==a.nilai){
-a.nilai=nilaiBaru;
+a.nilai=nilaiBaru;changed++;
 if(typeof TitipanSync!=='undefined'&&typeof TitipanSync.reconcile==='function'){TitipanSync.reconcile(a);}else if(typeof Aset!=='undefined'&&typeof Aset._syncOwnerDebts==='function'){Aset._syncOwnerDebts(a);}
 }
 });
+return changed;
 }
 // AssetInsight — kartu "💡 Insight Aset" di paling atas halaman Aset (page-aset).
 // Tujuan: kasih ringkasan cepat yg butuh perhatian, TANPA user perlu buka semua

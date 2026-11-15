@@ -32,11 +32,32 @@ let _accBalCache=null;
 let _totalSaldoCache=undefined;
 function invalidateAccBalCache(){
 _accBalCache=null;
+_accProjBalCache=null;
 _totalSaldoCache=undefined;
+_totalProyeksiCache=undefined;
 _txByAccIndex=null;
 }
-function recalcAccBalance(accId){
-if(_accBalCache&&_accBalCache.has(accId))return _accBalCache.get(accId);
+// S2830 — Saldo AKTUAL vs saldo PROYEKSI (tanpa flag/migrasi data baru; murni berdasar tanggal transaksi).
+//   Aktual   = baseBalance + transaksi bertanggal <= HARI INI (tanpa tanggal = dianggap sudah terjadi, kompatibel data lama).
+//   Proyeksi = aktual + transaksi bertanggal setelah hari ini.
+// Cache saldo dikunci ke tanggal hari ini: bila hari berganti, cache lama dibuang otomatis (tanpa muat ulang aplikasi).
+let _accProjBalCache=null;
+let _totalProyeksiCache=undefined;
+let _accBalDayKey=null;
+function _accTodayKey(){
+if(typeof todayStr==='function')return todayStr();
+const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+function _accTxIsFuture(t,today){
+const d=String(t&&t.date!=null?t.date:'');
+return /^\d{4}-\d{2}-\d{2}/.test(d)&&d.slice(0,10)>today;
+}
+function _accEnsureDay(){
+const k=_accTodayKey();
+if(_accBalDayKey!==k){_accBalDayKey=k;_accBalCache=null;_accProjBalCache=null;_totalSaldoCache=undefined;_totalProyeksiCache=undefined;}
+return k;
+}
+function _accCalcBalance(accId,projected,today){
 const acc=D.accounts.find(a=>a.id===accId);
 let bal=0;
 if(acc){
@@ -47,15 +68,42 @@ list.forEach(t=>{
 // transaksi bertanda hitungKas:false ("Catatan saja") sengaja SKIP dari saldo akun --
 // absen/undefined tetap dihitung (backward-compatible, 0 migrasi data lama).
 if(t.hitungKas===false)return;
+if(!projected&&_accTxIsFuture(t,today))return;
 if(t.type==='income')bal+=t.amount;
 else if(t.type==='expense')bal-=t.amount;
 else if(t.type==='transfer_out')bal-=t.amount;
 else if(t.type==='transfer_in')bal+=t.amount;
 });
 }
+return bal;
+}
+function recalcAccBalance(accId){
+const today=_accEnsureDay();
+if(_accBalCache&&_accBalCache.has(accId))return _accBalCache.get(accId);
+const bal=_accCalcBalance(accId,false,today);
 if(!_accBalCache)_accBalCache=new Map();
 _accBalCache.set(accId,bal);
 return bal;
+}
+function recalcAccProjectedBalance(accId){
+const today=_accEnsureDay();
+if(_accProjBalCache&&_accProjBalCache.has(accId))return _accProjBalCache.get(accId);
+const bal=_accCalcBalance(accId,true,today);
+if(!_accProjBalCache)_accProjBalCache=new Map();
+_accProjBalCache.set(accId,bal);
+return bal;
+}
+// Pisahkan pemasukan/pengeluaran (income/expense saja, sama dgn total Laporan) menjadi realisasi (<= hari ini) dan proyeksi (> hari ini).
+function splitTxRealisasiProyeksi(txs,today){
+const day=today||_accTodayKey();
+const out={realisasi:{inc:0,exp:0,count:0},proyeksi:{inc:0,exp:0,count:0}};
+(txs||[]).forEach(t=>{
+if(!t||(t.type!=='income'&&t.type!=='expense'))return;
+const b=_accTxIsFuture(t,day)?out.proyeksi:out.realisasi;
+if(t.type==='income')b.inc+=t.amount||0;else b.exp+=t.amount||0;
+b.count++;
+});
+return out;
 }
 // computeAccRunningBalances(accId) — S637 (RENCANA-MODERNISASI-UI.md, tema
 // "modern"/Ledger Pro, kolom "saldo berjalan" di tabel transaksi #allTx).
@@ -80,7 +128,8 @@ const result=new Map();
 const acc=D.accounts.find(a=>a.id===accId);
 if(!acc)return result;
 let bal=acc.baseBalance!==undefined?acc.baseBalance:(acc.balance||0);
-const list=[...(_getTxByAccIndex().get(accId)||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+const _dk=t=>String(t&&t.date!=null?t.date:'').slice(0,10);
+const list=[...(_getTxByAccIndex().get(accId)||[])].sort((a,b)=>{const x=_dk(a),y=_dk(b);return x<y?-1:x>y?1:0;}); // S2830: urut tanggal (stabil untuk tanggal sama)
 list.forEach(t=>{
 if(t.hitungKas===false)return;
 if(t.type==='income')bal+=t.amount;
@@ -343,11 +392,68 @@ return linkedAssetAccountIds().has(String(accId));
 // PENUH dari Total Saldo Akun apa pun status single/multi-owner-nya --
 // representasi porsi SELF-nya SEPENUHNYA jadi tanggung jawab Aset.totalValue().
 function totalSaldoAkun(){
+_accEnsureDay();
 if(_totalSaldoCache!==undefined)return _totalSaldoCache;
 const linked=linkedAssetAccountIds();
 const total=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(a.id))&&isAccOwnershipSelf(a)).reduce((s,a)=>s+recalcAccBalance(a.id),0);
 _totalSaldoCache=total;
 return total;
+}
+// S2830: total saldo PROYEKSI (aktual + transaksi bertanggal setelah hari ini), filter akun sama persis dgn totalSaldoAkun().
+function totalSaldoProyeksi(){
+_accEnsureDay();
+if(_totalProyeksiCache!==undefined)return _totalProyeksiCache;
+const linked=linkedAssetAccountIds();
+const total=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(a.id))&&isAccOwnershipSelf(a)).reduce((s,a)=>s+recalcAccProjectedBalance(a.id),0);
+_totalProyeksiCache=total;
+return total;
+}
+// S2830: hari berganti (tengah malam / app kembali ke foreground) -> buang cache, sinkron nilai aset tertaut, segarkan halaman aktif.
+let _accWatchDay=null,_accDayWatchInstalled=false;
+function _accHandleDayChange(){
+// S2833 (audit R-04): jangan menyentuh data/save() saat restore backup sedang berjalan; _accWatchDay tidak diperbarui sehingga dicoba lagi pada pemicu berikutnya.
+if(typeof window!=='undefined'&&window&&window.__kwRestoreActive===true)return false;
+const now=_accTodayKey();
+if(now===_accWatchDay)return false;
+_accWatchDay=now;
+invalidateAccBalCache();
+// S2835: saldo aktual berubah saat transaksi masa depan jatuh tempo -> baris "Dana Titipan Akun" (turunan saldo) ikut disegarkan,
+// disimpan hanya bila ada perubahan nyata (bukan save() tiap hari).
+try{
+const _debtsBefore=(typeof TitipanSync!=='undefined'&&Array.isArray(D.debts))?JSON.stringify(D.debts):null;
+if(_debtsBefore!==null&&typeof TitipanSync.reconcileAccounts==='function')TitipanSync.reconcileAccounts();
+const _debtsChanged=_debtsBefore!==null&&JSON.stringify(D.debts)!==_debtsBefore;
+const _assetsChanged=typeof syncLinkedAssetNilaiFromAkun==='function'&&syncLinkedAssetNilaiFromAkun()>0;
+if((_debtsChanged||_assetsChanged)&&typeof save==='function')save();
+}catch(_e){/* sinkron gagal: nilai akan menyusul di save() berikutnya */}
+try{
+const pg=(typeof document!=='undefined'&&document&&typeof document.querySelector==='function')?document.querySelector('.page.active'):null;
+if(pg&&pg.id&&typeof renderPageContent==='function')renderPageContent(String(pg.id).replace(/^page-/,''));
+else if(typeof refreshAfterMutation==='function')refreshAfterMutation({domain:'finance',dashboard:true,bills:false});
+}catch(_e){/* render gagal tidak boleh mengganggu aplikasi */}
+return true;
+}
+function installAccDayRollover(){
+if(_accDayWatchInstalled)return;
+_accDayWatchInstalled=true;
+_accWatchDay=_accTodayKey();
+const schedule=function(){
+const n=new Date(),next=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,2);
+const t=setTimeout(function(){_accHandleDayChange();schedule();},Math.max(1000,next-n));
+if(t&&typeof t.unref==='function')t.unref();
+};
+schedule();
+if(typeof document!=='undefined'&&document&&typeof document.addEventListener==='function'){
+document.addEventListener('visibilitychange',function(){if(document.visibilityState!=='hidden')_accHandleDayChange();});
+}
+// S2833 (audit R-02): PWA yang dipulihkan dari bfcache / jendela kembali fokus tanpa visibilitychange tetap mengecek pergantian hari (murah & idempoten).
+if(typeof window!=='undefined'&&window&&typeof window.addEventListener==='function'){
+window.addEventListener('pageshow',function(){_accHandleDayChange();});
+window.addEventListener('focus',function(){_accHandleDayChange();});
+}
+}
+if(typeof window!=='undefined'&&typeof document!=='undefined'&&typeof setTimeout==='function'&&window.__KW_NO_DAY_ROLLOVER!==true){
+try{installAccDayRollover();}catch(_e){/* opsional */}
 }
 /* moved to modules-render.js: renderDashAccList */
 /* moved to modules-render.js: renderLapAccList */
@@ -529,6 +635,8 @@ const hasLinkedData=D.transactions.some(t=>t.accountId===acc.id)
 ||(D.assets||[]).some(a=>a.accountId===acc.id)
 ||(D.investments||[]).some(h=>h.accountId===acc.id)
 ||(D.debts||[]).some(d=>d&&d.linkedAccountId===acc.id)
+||(D.eduFunds||[]).some(f=>f&&f.accountId===acc.id)
+||((D.sewaKios&&D.sewaKios.units)||[]).some(u=>u&&u.accountId===acc.id)
 ||(D.renovProjects||[]).some(p=>p&&(p.items||[]).some(it=>it&&(it.accountId===acc.id||(Array.isArray(it.payments)&&it.payments.some(x=>x&&x.accountId===acc.id)))));
 // FIX (delacc-linked-titipan-debt-audit): baris Buku Utang "Dana titipan akun"
 // (D.debts[].linkedAccountId, ditulis TitipanSync.reconcileAccounts() -- lihat
@@ -575,7 +683,9 @@ const _accountDeleteSnapshot={
   assets:JSON.stringify(D.assets||[]),
   investments:JSON.stringify(D.investments||[]),
   cobek:JSON.stringify(D.cobek||[]),
-  renovProjects:JSON.stringify(D.renovProjects||[])
+  renovProjects:JSON.stringify(D.renovProjects||[]),
+  eduFunds:JSON.stringify(D.eduFunds||[]),
+  sewaKiosUnits:JSON.stringify((D.sewaKios&&D.sewaKios.units)||[])
 };
 try{
   D.accounts.splice(i,1);
@@ -590,6 +700,9 @@ try{
   (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
   (D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
   (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
+  // S2835: Dana Edukasi & Sewa Kios menyimpan accountId -> ikut dipindah (Dana Edukasi tertaut akun menghitung terkumpul dari saldo akun).
+  (D.eduFunds||[]).forEach(f=>{if(f&&f.accountId===acc.id)f.accountId=target.id;});
+  ((D.sewaKios&&D.sewaKios.units)||[]).forEach(u=>{if(u&&u.accountId===acc.id)u.accountId=target.id;});
   // Proyek Renovasi: item.accountId & payments[].accountId menyalin accountId transaksi tertaut -> ikut dipindah (1 SOT dgn tx).
   (D.renovProjects||[]).forEach(p=>(p&&p.items||[]).forEach(it=>{if(it.accountId===acc.id)it.accountId=target.id;(Array.isArray(it.payments)?it.payments:[]).forEach(pay=>{if(pay&&pay.accountId===acc.id)pay.accountId=target.id;});}));
   const _saved=save();
@@ -605,6 +718,8 @@ try{
   D.investments=JSON.parse(_accountDeleteSnapshot.investments);
   D.cobek=JSON.parse(_accountDeleteSnapshot.cobek);
   D.renovProjects=JSON.parse(_accountDeleteSnapshot.renovProjects);
+  D.eduFunds=JSON.parse(_accountDeleteSnapshot.eduFunds);
+  if(D.sewaKios)D.sewaKios.units=JSON.parse(_accountDeleteSnapshot.sewaKiosUnits);
   console.error('Hapus akun dibatalkan dan di-rollback:',_accountDeleteErr);
   toast('❌ Penghapusan akun dibatalkan: data dikembalikan');
   return false;

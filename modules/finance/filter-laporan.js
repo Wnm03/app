@@ -5,6 +5,13 @@ function _lapTxDateMs(t){return typeof getCachedTxDateMs==='function'?getCachedT
 // Dipindah ke modules/finance/filter-laporan.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK berubah, cuma lokasi folder).
 // PENTING: file ini HARUS dimuat sesuai urutan build.js (GROUP_A/GROUP_B) karena beberapa modul saling referensi. Urutan grup ini: data-default.js, features-helpers-global-security.js, diagnostik-versi.js, format-tema.js, error-handler.js, helper-teks.js, keamanan-pin.js, modal-navigasi.js, reset-gaji-mingguan.js, debug-console.js, pengaturan-search.js, onboarding.js, kalkulator-input.js, scan-ocr.js, filter-laporan.js, akun.js, gaji-calc.js, transaksi.js, profil-pengaturan.js, kategori.js, tagihan-kalender.js, backup-restore.js, payroll-absensi.js, tukang-absensi.js
 
+// S2822: 'transfer' (payMethod lama DP/Termin Renovasi, bukan opsi dropdown Metode) dihitung 'tunai' agar tidak lolos dari semua filter Metode.
+function _txPayMethodForFilter(t){const m=t&&t.payMethod;return(!m||m==='transfer')?'tunai':m;}
+// S2823: filter Proyek (tx pembayaran/DP yang tertaut proyek) & Sumber Dana (rekening proyek / talangan pribadi / titipan, hanya utk pengeluaran proyek).
+// Memo rekening-proyek hidup 1 putaran sinkron (dibersihkan via microtask) supaya filter ribuan transaksi tidak O(n²).
+let _lapProjAccMemo=null;
+function _lapProjAccFor(pid){if(!_lapProjAccMemo){_lapProjAccMemo=new Map();Promise.resolve().then(()=>{_lapProjAccMemo=null;});}const k=String(pid);if(!_lapProjAccMemo.has(k))_lapProjAccMemo.set(k,typeof renovProjectAccountIds==='function'?renovProjectAccountIds(pid):new Set());return _lapProjAccMemo.get(k);}
+function _txProjectIdForFilter(t){const a=t&&t.renovProjectLinkId,b=t&&t.renovDpProjectId;return(a!=null&&a!=='')?String(a):((b!=null&&b!=='')?String(b):'');}
 function txMatchesFilters(t,f){
 if(f.tipe&&f.tipe!=='semua'){
 if(f.tipe==='transfer'){if(t.type!=='transfer_in'&&t.type!=='transfer_out')return false;}
@@ -13,7 +20,12 @@ else if(t.type!==f.tipe)return false;
 if(f.kat&&f.kat!=='semua'&&t.category!==f.kat)return false;
 if(f.sub&&f.sub!=='semua'&&(t.subcategory||'')!==f.sub)return false;
 if(f.acc&&f.acc!=='semua'&&t.accountId!==f.acc)return false;
-if(f.method&&f.method!=='semua'&&(t.payMethod||'tunai')!==f.method)return false;
+if(f.method&&f.method!=='semua'&&_txPayMethodForFilter(t)!==f.method)return false;
+if(f.proyek&&f.proyek!=='semua'){const pid=_txProjectIdForFilter(t);if(f.proyek==='__none'){if(pid)return false;}else if(pid!==String(f.proyek))return false;}
+if(f.sumber&&f.sumber!=='semua'){
+if(!t.renovProjectLinkId||t.type!=='expense'||typeof renovFundSource!=='function')return false;
+if(renovFundSource(t,_lapProjAccFor(t.renovProjectLinkId)).kind!==f.sumber)return false;
+}
 if(f.classification&&f.classification!=='semua'){
  const sot=typeof FinanceCategorySOT!=='undefined'?FinanceCategorySOT:null;
  if(!sot||typeof sot.resolveSeven!=='function')return false;
@@ -33,16 +45,23 @@ if(_serviceComponentActive&&(!Array.isArray(_serviceLog.checklist)||!_serviceLog
 }
 return true;
 }
+// S2823: isi dropdown Proyek (Laporan 'fProyek' & Keuangan 'kfProyek'); nilai terpilih dijaga kalau proyeknya masih ada.
+function populateProyekFilters(){
+const projs=(typeof D!=='undefined'&&Array.isArray(D.renovProjects))?D.renovProjects:[];
+const html='<option value="semua">Semua Proyek</option><option value="__none">Tanpa proyek</option>'+projs.map(p=>`<option value="${escapeHtml(String(p.id))}">🔨 ${escapeHtml(p.name||'Proyek')}</option>`).join('');
+['fProyek','kfProyek'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const cur=el.value;if(el.__optHtml!==html||!el.options.length){el.__optHtml=html;el.innerHTML=html;}el.value=[...el.options].some(o=>o.value===cur)?cur:'semua';});
+}
 function populateCatFilter(){
 populateCatSelect('fKat');
 populateSubSelect('fSub','fKat');
+populateProyekFilters();
 }
 function onFKatChange(){
 populateSubSelect('fSub','fKat');
 renderLaporan();
 }
 function resetLaporanFilter(){
-['fTipe','fClass','fKat','fSub','fAcc','fMethod'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
+['fTipe','fClass','fKat','fSub','fAcc','fMethod','fProyek','fSumber'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 populateSubSelect('fSub','fKat');
 renderLaporan();
 toast('↺ Filter laporan direset');
@@ -54,12 +73,15 @@ kat:document.getElementById('fKat')?.value||'semua',
 sub:document.getElementById('fSub')?.value||'semua',
 acc:document.getElementById('fAcc')?.value||'semua',
 method:document.getElementById('fMethod')?.value||'semua',
+proyek:document.getElementById('fProyek')?.value||'semua',
+sumber:document.getElementById('fSumber')?.value||'semua',
 classification:document.getElementById('fClass')?.value||'semua'
 };
 }
 function populateKeuFilters(){
 populateCatSelect('kfKat');
 populateSubSelect('kfSub','kfKat');
+populateProyekFilters();
 populateServiceFilterSelects();
 const opts=D.accounts.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.emoji)} ${escapeHtml(a.name)}</option>`).join('');
 const kfAcc=document.getElementById('kfAcc');
@@ -87,7 +109,7 @@ if(show)populateKeuFilters();
 updateKfBadge();
 }
 function resetKeuFilter(){
-['kfTipe','kfClass','kfKat','kfSub','kfAcc','kfMethod','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
+['kfTipe','kfClass','kfKat','kfSub','kfAcc','kfMethod','kfProyek','kfSumber','kfServiceCategory','kfServiceComponent'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='semua';});
 const s=document.getElementById('kfSearch');if(s)s.value='';
 populateSubSelect('kfSub','kfKat');
 saveKeuFilterPrefs();
@@ -115,6 +137,8 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+proyek:document.getElementById('kfProyek')?.value||'semua',
+sumber:document.getElementById('kfSumber')?.value||'semua',
 classification:document.getElementById('kfClass')?.value||'semua',
 serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
 serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
@@ -155,6 +179,8 @@ kat:document.getElementById('kfKat')?.value||'semua',
 sub:document.getElementById('kfSub')?.value||'semua',
 acc:document.getElementById('kfAcc')?.value||'semua',
 method:document.getElementById('kfMethod')?.value||'semua',
+proyek:document.getElementById('kfProyek')?.value||'semua',
+sumber:document.getElementById('kfSumber')?.value||'semua',
 classification:document.getElementById('kfClass')?.value||'semua',
 serviceCategory:document.getElementById('kfServiceCategory')?.value||'semua',
 serviceComponent:document.getElementById('kfServiceComponent')?.value||'semua',
@@ -179,6 +205,9 @@ populateSubSelect('kfSub','kfKat');
 if(document.getElementById('kfSub'))document.getElementById('kfSub').value=prefs.sub||'semua';
 if(document.getElementById('kfAcc'))document.getElementById('kfAcc').value=prefs.acc||'semua';
 if(document.getElementById('kfMethod'))document.getElementById('kfMethod').value=prefs.method||'semua';
+populateProyekFilters();
+if(document.getElementById('kfProyek'))document.getElementById('kfProyek').value=prefs.proyek||'semua';
+if(document.getElementById('kfSumber'))document.getElementById('kfSumber').value=prefs.sumber||'semua';
 if(document.getElementById('kfClass'))document.getElementById('kfClass').value=prefs.classification||'semua';
 populateServiceFilterSelects();
 if(document.getElementById('kfServiceCategory'))document.getElementById('kfServiceCategory').value=prefs.serviceCategory||'semua';

@@ -507,6 +507,16 @@ return true;
 const inc=txs.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
 const exp=txs.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
 const net=inc-exp;
+// S2830: Laporan membedakan realisasi (<= hari ini) dan proyeksi (> hari ini); total di atas tetap memuat keduanya.
+{const _sp=(typeof splitTxRealisasiProyeksi==='function')?splitTxRealisasiProyeksi(txs):null;
+const _anchor=document.getElementById('lapNetBox')||document.getElementById('lapNet');
+if(_anchor&&_anchor.parentNode){
+let _noteEl=document.getElementById('lapProyeksiNote');
+if(!_noteEl&&typeof document.createElement==='function'){_noteEl=document.createElement('div');_noteEl.id='lapProyeksiNote';_noteEl.className='u-fs11 u-t2 u-mt6';_anchor.parentNode.appendChild(_noteEl);}
+if(_noteEl){
+if(_sp&&_sp.proyeksi.count>0)_noteEl.textContent='📅 Termasuk proyeksi (bertanggal setelah hari ini): masuk '+fmt(_sp.proyeksi.inc)+' · keluar '+fmt(_sp.proyeksi.exp)+' · '+_sp.proyeksi.count+' transaksi. Realisasi: masuk '+fmt(_sp.realisasi.inc)+' · keluar '+fmt(_sp.realisasi.exp)+'.';
+else _noteEl.textContent='';
+}}}
 document.getElementById('lapIn').textContent=fmt(inc);
 document.getElementById('lapOut').textContent=fmt(exp);
 const nEl=document.getElementById('lapNet');nEl.textContent=(net<0?'-':'')+fmt(Math.abs(net));nEl.className='stat-val '+(net>=0?'green':'red');

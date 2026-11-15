@@ -11,7 +11,12 @@ test('S2606: account balance remains owned by canonical recalcAccBalance and hon
   const start = source.indexOf('function recalcAccBalance(');
   const end = source.indexOf('\n}', start) + 2;
   assert.ok(start >= 0 && end > start, 'canonical recalcAccBalance must exist');
-  const fn = source.slice(start, end);
+  // S2830: rumus saldo kini ada di _accCalcBalance (dipakai bersama oleh saldo aktual & proyeksi); recalcAccBalance tetap pemilik kanonik aktual.
+  const calcStart = source.indexOf('function _accCalcBalance(');
+  const calcEnd = source.indexOf('\n}', calcStart) + 2;
+  assert.ok(calcStart >= 0 && calcEnd > calcStart, '_accCalcBalance must exist');
+  assert.match(source.slice(start, end), /_accCalcBalance\(accId,false/);
+  const fn = source.slice(calcStart, calcEnd);
   assert.match(fn, /t\.hitungKas===false/);
   assert.match(fn, /transfer_out/);
   assert.match(fn, /transfer_in/);

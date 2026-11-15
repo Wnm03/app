@@ -632,7 +632,29 @@ if(!cats&&!txs&&!svc)return '';
 const parts=[cats?cats+' kategori ganda':'',txs?txs+' transaksi':'',svc?svc+' referensi servis':''].filter(Boolean).join(', ');
 return ' ℹ️ ID kategori dirapikan ('+parts+'); nominal tidak berubah.';
 }
+// S2832 (audit R-05): backup PARSIAL (hanya transaksi ATAU hanya Renovasi) di-merge dangkal -> sisi yang tidak ada di backup memakai data SAAT INI,
+// tautan Renovasi<->transaksi bisa tidak cocok. True = restore perlu konfirmasi pengguna dulu.
+function _restoreRenovPartialRisk(imp,cur){
+if(!imp||!cur)return false;
+const impTx=Array.isArray(imp.transactions),impRenov=Array.isArray(imp.renovProjects);
+if(impTx===impRenov)return false;
+if(impTx&&!impRenov)return Array.isArray(cur.renovProjects)&&cur.renovProjects.length>0;
+return Array.isArray(cur.transactions)&&cur.transactions.length>0;
+}
+// S2832 (audit R-06): relasi Renovasi<->transaksi pasca-restore (pembayaran tanpa transaksi / proyek hilang). Hanya LAPOR, tidak mengubah data
+// (backup lama bisa sudah memuat yatim; menolak restore justru mengunci pemulihan).
+function _restoreRenovRelationIssues(){
+if(typeof renovMarkerAudit!=='function')return[];
+try{return renovMarkerAudit().filter(x=>x&&(x.kind==='payment-yatim'||x.kind==='proyek-hilang'));}catch(_e){return[];}
+}
+// S2833 (audit R-04): tandai restore aktif (dibaca pembaruan harian akun) dan SELALU dilepas, apa pun jalur keluarnya.
 async function applyRestoredData(imp){
+const _prevActive=(typeof window!=='undefined'&&window)?window.__kwRestoreActive:undefined;
+try{if(typeof window!=='undefined'&&window)window.__kwRestoreActive=true;}catch(_e){void _e;}
+try{return await _applyRestoredDataCore(imp);}
+finally{try{if(typeof window!=='undefined'&&window)window.__kwRestoreActive=_prevActive===true;}catch(_e){void _e;}}
+}
+async function _applyRestoredDataCore(imp){
 // init() belongs to the lazily-loaded diagnostic harness; load it explicitly before use.
 async function _restoreEnsureInit(){
   if(typeof init==='function')return init();
@@ -670,6 +692,11 @@ if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof P
 __s2013SetStage('backup-shape-known-keys');
 const knownKeys=['transactions','accounts','categories','bills','vehicles','products','cobek','catatan','workDays','profile','targets','eduFunds','sewaKios','preorders'];
 if(!knownKeys.some(k=>imp[k]!==undefined)){await showAlertModal('File ini sepertinya bukan file backup aplikasi ini. Restore dibatalkan.',{icon:'❌',title:'Backup Tidak Valid'});return false;}
+__s2013SetStage('partial-renov-check');
+if(_restoreRenovPartialRisk(imp,D)){
+const _lanjutParsial=await askConfirm('⚠️ Backup ini hanya memuat salah satu dari Transaksi atau Proyek Renovasi. Bagian yang tidak ada di backup dipertahankan dari data SAAT INI, sehingga tautan Renovasi ke transaksi bisa tidak cocok.\n\nTetap lanjutkan restore?',{title:'Backup Tidak Lengkap',okText:'Ya, Tetap Restore'});
+if(!_lanjutParsial)return false;
+}
 __s2013SetStage('backup-version');
 const backupVersion=imp.schemaVersion||0;
 if(backupVersion>SCHEMA_VERSION){
@@ -846,6 +873,10 @@ if(typeof vehicleCatalogInvalidateCache==='function'&&_restoredVehicleCatalogSto
 if(typeof hondaPdfImportInvalidateCache==='function'&&_restoredHondaPdfImportStore!==undefined)hondaPdfImportInvalidateCache();
 if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 await _restoreEnsureInit();
+try{
+const _renovIssues=_restoreRenovRelationIssues();
+if(_renovIssues.length&&typeof showAlertModal==='function')await showAlertModal('Restore selesai, tetapi '+_renovIssues.length+' relasi Renovasi↔transaksi tidak cocok (pembayaran tanpa transaksi atau proyek hilang). Data TIDAK diubah. Buka proyek terkait di Renovasi untuk memeriksanya.',{icon:'⚠️',title:'Periksa Relasi Renovasi'});
+}catch(_renovReportErr){console.warn('Restore: laporan relasi Renovasi gagal',_renovReportErr);}
 return true;
 }catch(e){
 const __s2013Detail=__s2013Fail(e);
@@ -1044,6 +1075,15 @@ if(imp.categories!==undefined&&(typeof imp.categories!=='object'||Array.isArray(
 if(imp.profile!==undefined&&(typeof imp.profile!=='object'||Array.isArray(imp.profile)))return{ok:false,msg:'Field "profile" harus berupa objek.'};
 return{ok:true};
 }
+// S2834 (audit R-03 sisa): jalur import (JSON/CSV/Cashew) tidak lewat saveTx -> tanggal tak wajar (>1 th ke depan / <2000) bisa masuk diam-diam
+// dan transaksi masa depan tidak dihitung ke saldo aktual. Hanya PERINGATAN pada konfirmasi (data tidak diubah/dibuang).
+function _importImplausibleDateNote(rows){
+if(typeof isTxDateImplausible!=='function'||!Array.isArray(rows))return '';
+const bad=rows.filter(r=>r&&typeof r==='object'&&isTxDateImplausible(String(r.date==null?'':r.date).slice(0,10)));
+if(!bad.length)return '';
+const sample=[...new Set(bad.map(r=>String(r.date).slice(0,10)))].slice(0,3).join(', ');
+return `\n\n⚠️ ${bad.length} transaksi bertanggal tidak wajar (lebih dari 1 tahun ke depan atau sebelum 2000), contoh: ${sample}. Tanggal masa depan tidak dihitung ke saldo aktual. Periksa tahunnya di file sebelum lanjut.`;
+}
 function handleImport(e){
 const file=e.target.files[0];if(!file)return;
 if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.validateImportFile==='function'){const _fileCheck=PWAProductionHardening.validateImportFile(file,{extensions:['.json','.csv']});if(!_fileCheck.ok){toast('❌ '+_fileCheck.msg);e.target.value='';return;}}
@@ -1108,6 +1148,7 @@ confirmMsg+=`\n\nSetiap transaksi otomatis dicatat ke akun & kategori aslinya da
 const defAccName=D.accounts[0]?.name||'akun pertama';
 confirmMsg+=` Akan dicatat ke akun "${defAccName}" (bisa dipindah manual nanti). Import sekarang?`;
 }
+confirmMsg+=_importImplausibleDateNote(imported);
 const confirmed=await askConfirm(confirmMsg,{danger:false,okText:'Ya, Import',icon:'📥'});
 if(!confirmed){
 _restoreCashewTaxonomySnapshot();
