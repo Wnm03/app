@@ -13,6 +13,7 @@ const editBox=document.getElementById('assetOwnersEditControls');
 const hint=document.getElementById('assetOwnersReadOnlyHint');
 const readOnly=!!Aset._ownersReadOnly;
 if(editBox)editBox.classList.toggle('u-dnone',readOnly);
+if(editBox&&typeof editBox.querySelector==='function'){const addBtn=editBox.querySelector('[data-action="Aset.addOwnerRow"]');if(addBtn){addBtn.disabled=!Aset._ownersModalAsset;addBtn.title=Aset._ownersModalAsset?'':'Simpan aset ini dulu';}}
 if(hint){
 hint.classList.toggle('u-dnone',!readOnly);
 if(readOnly)hint.textContent='🔗 Aset ini terhubung ke Holding Investasi -- porsi kepemilikan diatur & disimpan di sana (bukan di sini). Lepas tautannya di form Aset (🔗 Hubungkan ke Holding Investasi) kalau mau atur porsi manual lagi di Buku Aset.';

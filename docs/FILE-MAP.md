@@ -11,8 +11,8 @@
 > file tapi lupa `node build.js`), jalankan ulang generatornya, JANGAN diedit
 > tangan — editan manual bakal ketimpa lagi di build berikutnya.
 
-Terakhir digenerate: 2026-11-15T08:09:27.506Z
-Total file source: 491 · Total identifier global: 18684
+Terakhir digenerate: 2026-11-15T08:54:18.857Z
+Total file source: 491 · Total identifier global: 18686
 
 ## 1. Urutan load & ringkasan tiap file
 
@@ -44,7 +44,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 21 | `modules/finance/edukasi-dana.js` | 190 | Dana Pendidikan (EduFund): kalkulator target biaya sekolah/kuliah & nabung/bulan Dipindah ke modules/finance/edukasi-dana.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 22 | `modules/home/hidup-seimbang.js` | 228 | Domain Skor Hidup Seimbang: skor gabungan dari Dana Darurat, DSR cicilan, No-Spend 30 hari, & keseimbangan kerja-istirahat, plus riwayat snapshot bulanan. Dipindah ke modules/home/hidup-seimbang.js (Sesi 13 … |
 | 23 | `modules/finance/linktx.js` | 265 | Transaksi tertaut (LinkTx): hubungkan transaksi lama di Keuangan ke Renov/Wishlist/Bill Dipindah ke modules/finance/linktx.js (Sesi 16 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
-| 24 | `modules/asset/aset-owners.js` | 838 | _(tidak ada komentar header)_ |
+| 24 | `modules/asset/aset-owners.js` | 839 | _(tidak ada komentar header)_ |
 | 25 | `modules/asset/aset.js` | 1471 | Domain Aset & Kekayaan (INTI): const Aset={} — Buku Aset, form/modal, CRUD, dashboard, bridge Investasi, export/import Excel, owners split-modal (multi-owner porsi kepemilikan). S589: file ini dipecah dari 1 file 3175 … |
 | 26 | `modules/asset/aset-reports.js` | 510 | Domain Aset & Kekayaan (LAPORAN): Penyusutan (estimasi nilai buku aset yg menurun: Garis Lurus/Saldo Menurun/Manual), PajakAset (estimasi PBB properti & Zakat Maal per aset zakatable), LaporanAset (Laporan Aset … |
 | 27 | `modules/asset/aset-misc.js` | 970 | Domain Aset & Kekayaan (LAIN-LAIN): ALOKASI_PRESETS/AlokasiAset (rekomendasi alokasi dana), isAssetOwnershipSelf & helper migrasi Investasi, AssetInsight (insight kepemilikan aset), … |
@@ -79,7 +79,7 @@ bundler menggabungkan semua file jadi `app-bundle-a.min.js`/`app-bundle-b.min.js
 | 56 | `modules/shared/helper-teks.js` | 26 | Domain Helper Teks & Kalender: escape karakter HTML berbahaya biar aman Dipindah ke modules/shared/helper-teks.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
 | 57 | `modules/shared/keamanan-pin.js` | 480 | Domain Keamanan: layar PIN (showPinScreen/checkPin/pinPress/pinBack/updatePinDots), Dipindah ke modules/shared/keamanan-pin.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 58 | `modules/home/refleksi-selfcare.js` | 346 | Domain Refleksi & Self-Care: Jurnal Syukur, Checklist Self-Care harian Dipindah ke modules/home/refleksi-selfcare.js (Sesi 13 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file TIDAK … |
-| 59 | `modules/shared/modal-navigasi.js` | 972 | Domain Modal Generik & Navigasi Halaman: modal konfirmasi/prompt/pilihan/info/pin Dipindah ke modules/shared/modal-navigasi.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
+| 59 | `modules/shared/modal-navigasi.js` | 988 | Domain Modal Generik & Navigasi Halaman: modal konfirmasi/prompt/pilihan/info/pin Dipindah ke modules/shared/modal-navigasi.js (Sesi 17-18 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama … |
 | 60 | `modules/shared/scanner-session.js` | 360 | modules/shared/scanner-session.js — ScannerSession (Tahap 5, docs/ PRODUCT_DECISIONS.md § "Scanner — Exclusive Scanner Mode via ScannerSession (FINAL — Sesi 316, PD-007)"). PD-007 — Scanner WAJIB berjalan lewat … |
 | 61 | `modules/business/reset-gaji-mingguan.js` | 170 | Domain Reset Gaji Mingguan: hitung rentang minggu berjalan (getWeekRange), Dipindah ke modules/business/reset-gaji-mingguan.js (Sesi 15 restrukturisasi folder — lihat docs/FILE-MAP.md & RENCANA-SESI.md; isi & nama file … |
 | 62 | `modules/shared/debug-console.js` | 51 | explicit opt-in developer console. Production does not initialize Eruda merely because this module is loaded. The only activation path in this module is the explicit Settings toggle. |
@@ -1816,6 +1816,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `_toastShowNext` | `modules/shared/format-tema.js` |
 | `_toastShowNext` | `modules/asset/format-tema.js` |
 | `_toastSuppressed` | `modules/shared/format-tema.js` |
+| `_topZ` | `modules/shared/modal-navigasi.js` |
 | `_totalProyeksiCache` | `modules/finance/akun.js` |
 | `_totalSaldoCache` | `modules/finance/akun.js` |
 | `_toVehicleModelRecord` | `modules/engine/database-api.js` |
@@ -19183,6 +19184,7 @@ bisa dipanggil sebagai "global" dari file manapun lewat bundel gabungan.
 | `yrs` | `modules/asset/aset-misc.js` |
 | `z` | `modules/asset/aset-reports.js` |
 | `z` | `modules/asset/aset-misc.js` |
+| `z` | `modules/shared/modal-navigasi.js` |
 | `z` | `self-test.js` |
 | `z` | `modules/dashboard-hub/dashboard-hub-overview.js` |
 | `zakat` | `modules/finance/pajak-pbb-zakat.js` |

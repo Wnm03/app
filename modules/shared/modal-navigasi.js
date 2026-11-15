@@ -697,6 +697,21 @@ window._modalEpoch=(window._modalEpoch||0)+1;
 const _stacked=!!document.querySelector('.overlay.open');
 const _modalInner=(typeof el.querySelector==='function')?el.querySelector('.modal'):null;
 if(_modalInner)_modalInner.classList.toggle('no-anim',_stacked);
+// FIX (S2833, laporan user "Tambah Pemilik tidak bisa diklik" dari Proyek Renovasi): modal yang dibuka
+// bertumpuk (mis. accountOwnersModal dari dalam renovItemModal) sama-sama z-index --z-overlay dan bersaudara
+// di DOM, sehingga yang lebih belakang di DOM menutupi yang baru dibuka. Naikkan z-index inline modal baru
+// satu tingkat di atas overlay terbuka lain (maks. di bawah --z-overlay-qs=300); dilepas saat ditutup.
+if(_stacked){
+let _topZ=0;
+document.querySelectorAll('.overlay.open').forEach(function(o){
+if(o===el)return;
+const z=parseInt((typeof getComputedStyle==='function'?getComputedStyle(o).zIndex:o.style&&o.style.zIndex),10)||0;
+if(z>_topZ)_topZ=z;
+});
+if(_topZ>0&&_topZ<299&&el.style)el.style.zIndex=String(_topZ+1);
+}else if(el.style){
+el.style.zIndex='';
+}
 el.classList.remove('closing');
 _modalHistoryPush(id);
 el.classList.add('open');
@@ -793,6 +808,7 @@ if(el.removeEventListener)el.removeEventListener('animationend',onAnimEnd);
 if(el.classList.contains('closing')){
 el.classList.remove('open');
 el.classList.remove('closing');
+if(el.style)el.style.zIndex='';
 _syncNavVisibilityForModals();
 }
 }
