@@ -241,7 +241,56 @@ return true;
 // Sekarang bill boleh membawa `renovProjectLinkId` (+ `deductionOwnerId`); tiap pembayarannya (transaksi) ikut
 // ditautkan sebagai PEMBAYARAN pada 1 item proyek per bill (it.billLinkId) -- memakai model item.payments yang
 // sudah ada, sehingga hapus/edit transaksi ikut menyinkronkan lewat Renov.onLinkedTxDeleted/onLinkedTxEdited.
-function _renovBillOwners(accId){
+// S2830 — Dropdown pemilik/penanggung Proyek Renovasi: opsi "➕ Tambah / kelola pemilik akun…".
+// Kenapa: dulu semua dropdown pemilik Renovasi (item RAB, DP/Termin, bayar item, form Tagihan) HANYA berisi pemilik akun terpilih
+// & disembunyikan total bila akun belum punya pemilik -> tidak ada jalan menambah pemilik / memilih orang lain dari sini.
+// Sumber kebenaran pemilik tetap acc.owners (porsi 100%, AccOwners/setAccOwners) -- opsi ini hanya MEMBUKA modal "Porsi
+// Kepemilikan" akun yang dipilih (AccOwners.open(accId,onSaved)); sesudah Simpan, dropdown di-refresh. Nilai penanda
+// '__manage_owners__' TIDAK PERNAH dibiarkan terpilih/tersimpan (handler langsung mengembalikan ke pilihan sebelumnya).
+const RENOV_OWNER_MANAGE_VALUE='__manage_owners__';
+function renovOwnerOptionsHtml(owners,placeholder){
+return '<option value="">'+escapeHtml(placeholder)+'</option>'+(owners||[]).map(o=>'<option value="'+escapeHtml(o.ownerId)+'">'+escapeHtml(o.ownerName||o.ownerId)+'</option>').join('')+'<option value="'+RENOV_OWNER_MANAGE_VALUE+'">➕ Tambah / kelola pemilik akun…</option>';
+}
+// Isi <select> pemilik + pasang handler delegasi data-onchange (dispatcher global, tanpa addEventListener baru).
+function renovFillOwnerSelect(sel,owners,accElId,refreshPath,withOwnersLabel){
+if(!sel)return;
+sel.innerHTML=renovOwnerOptionsHtml(owners,(owners&&owners.length)?(withOwnersLabel||'— Pilih pemilik —'):'— Tanpa pemilik (dana pribadi) —');
+sel.setAttribute('data-onchange','renovOwnerSelectChange');
+sel.setAttribute('data-onchange-args',JSON.stringify([sel.id,'$value',accElId,refreshPath]));
+sel.setAttribute('data-prev-owner','');
+}
+function renovOpenAccountOwners(accId,onSaved){
+if(typeof AccOwners==='undefined'||!AccOwners||typeof AccOwners.open!=='function'){toast('⚠️ Pengaturan pemilik akun belum siap dimuat');return false;}
+AccOwners.open(accId,onSaved);
+return true;
+}
+function renovOwnerSelectChange(selId,value,accElId,refreshPath){
+const sel=document.getElementById(selId);if(!sel)return;
+if(value!==RENOV_OWNER_MANAGE_VALUE){sel.setAttribute('data-prev-owner',value||'');return;}
+const prev=sel.getAttribute('data-prev-owner')||'';
+sel.value=prev;
+const accEl=document.getElementById(accElId);const accId=accEl?accEl.value:'';
+if(!accId){toast('⚠️ Pilih akun dulu sebelum mengatur pemilik');return;}
+// S2832: refresh disimpan sbg "pending" -- akun tertaut Holding dialihkan AccOwners.open() ke modal Holding (tanpa onSaved);
+// InvestmentUI.saveOwners() memanggil renovFlushOwnerRefresh() sehingga dropdown tetap ter-refresh utk jalur itu juga.
+_renovPendingOwnerRefresh=()=>{
+let fn=window;String(refreshPath||'').split('.').forEach(k=>{fn=fn?fn[k]:undefined;});
+if(typeof fn==='function'){const ctx=String(refreshPath).indexOf('.')>0?window[String(refreshPath).split('.')[0]]:window;fn.call(ctx,prev);}
+};
+renovOpenAccountOwners(accId,renovFlushOwnerRefresh);
+}
+let _renovPendingOwnerRefresh=null;
+function renovFlushOwnerRefresh(){
+const f=_renovPendingOwnerRefresh;_renovPendingOwnerRefresh=null;
+if(typeof f==='function'){try{f();}catch(e){console.warn('[Renov] refresh dropdown pemilik gagal',e);}}
+}
+// S2831 — 1 SOT pemilik/penanggung Renovasi: SEMUA dropdown, validasi simpan, resolve saat bayar, audit & perbaikan penanda
+// membaca pemilik akun lewat SATU fungsi ini (resolveOwnerDefaultForAccount: Holding -> Aset tertaut -> acc.owners/ownership),
+// SAMA dengan dropdown "Pemilik Sumber Potongan" transaksi biasa (#txDeductionOwner). Dulu dropdown item/DP/bayar di renovasi.js
+// membaca getAccOwnersRaw (acc.owners mentah) -> beda dgn form Tagihan & transaksi utk akun tertaut Holding/Aset. Jangan baca
+// getAccOwnersRaw langsung di modul Renovasi; pakai renovAccountOwners(). _renovBillOwners dipertahankan sbg alias kompatibilitas.
+function _renovBillOwners(accId){return renovAccountOwners(accId);}
+function renovAccountOwners(accId){
 if(!accId)return[];
 let owners=[];
 if(typeof resolveOwnerDefaultForAccount==='function'){
@@ -257,12 +306,15 @@ return owners.filter(o=>o&&o.ownerId);
 // resolveRenovBillOwner(bill, accId) -> '' (akun tanpa pemilik), ownerId, atau null (user batal memilih).
 // Urutan: pilihan tersimpan di bill (kalau masih pemilik akun) -> pemilik tunggal otomatis -> tanya user.
 async function resolveRenovBillOwner(bill,accId){
-const owners=_renovBillOwners(accId);
+const owners=renovAccountOwners(accId);
 if(!owners.length)return '';
 if(bill&&bill.deductionOwnerId&&owners.some(o=>o.ownerId===bill.deductionOwnerId))return bill.deductionOwnerId;
 if(owners.length===1)return owners[0].ownerId;
 if(typeof showChoiceModal!=='function')return null;
-const idx=await showChoiceModal({title:'Pemilik / Penanggung',message:'Akun ini punya lebih dari 1 pemilik. Siapa yang menanggung pembayaran "'+((bill&&bill.name)||'tagihan')+'" untuk proyek renovasi?',choices:owners.map(o=>({label:o.ownerName||o.ownerId}))});
+resolveRenovBillOwner._managing=false;
+const idx=await showChoiceModal({title:'Pemilik / Penanggung',message:'Akun ini punya lebih dari 1 pemilik. Siapa yang menanggung pembayaran "'+((bill&&bill.name)||'tagihan')+'" untuk proyek renovasi?',choices:owners.map(o=>({label:o.ownerName||o.ownerId})).concat([{label:'➕ Tambah / kelola pemilik akun…'}])});
+// S2830: pilihan terakhir = atur pemilik akun dulu (pembayaran ditunda, user tekan Bayar lagi setelah menyimpan porsi).
+if(idx===owners.length){resolveRenovBillOwner._managing=true;renovOpenAccountOwners(accId);return null;}
 return (idx===null||idx===undefined||!owners[idx])?null:owners[idx].ownerId;
 }
 // applyRenovBillPayment(bill, tx) -- tx: {id,amount,date,accountId,label}. Dipanggil SETELAH transaksi pembayaran dibuat.
@@ -351,11 +403,13 @@ function updateBillRenovOwnerVisibility(keepOwnerId){
 const wrap=document.getElementById('billRenovOwnerWrap'),sel=document.getElementById('billRenovOwner');if(!wrap||!sel)return;
 const prev=(typeof keepOwnerId==='string')?keepOwnerId:sel.value;
 const accId=document.getElementById('billAcc')?document.getElementById('billAcc').value:'';
-const owners=typeof _renovBillOwners==='function'?_renovBillOwners(accId):[];
-if(!owners.length){wrap.style.display='none';sel.innerHTML='';return;}
+const owners=renovAccountOwners(accId);
+if(!accId){wrap.style.display='none';sel.innerHTML='';return;}
+wrap.classList.remove('u-dnone');
 wrap.style.display='block';
-sel.innerHTML='<option value="">— Pilih saat bayar —</option>'+owners.map(o=>`<option value="${escapeHtml(o.ownerId)}">${escapeHtml(o.ownerName||o.ownerId)}</option>`).join('');
+renovFillOwnerSelect(sel,owners,'billAcc','updateBillRenovOwnerVisibility','— Pilih saat bayar —');
 sel.value=owners.some(o=>o.ownerId===prev)?prev:(owners.length===1?owners[0].ownerId:'');
+sel.setAttribute('data-prev-owner',sel.value||'');
 }
 
 // ===== S2823 — SUMBER DANA pembayaran Proyek Renovasi (audit #3-#5) =====
@@ -371,7 +425,7 @@ return s;
 }
 function renovFundSource(tx,projAccIds){
 if(!tx)return{kind:'tanpa',ownerId:'',ownerName:''};
-const owners=_renovBillOwners(tx.accountId),ownerId=tx.deductionOwnerId||'';
+const owners=renovAccountOwners(tx.accountId),ownerId=tx.deductionOwnerId||'';
 const nameOf=id=>{const o=owners.find(x=>x.ownerId===id);return(o&&(o.ownerName||o.ownerId))||id||'';};
 if(ownerId)return{kind:'titipan',ownerId,ownerName:nameOf(ownerId)};
 if(projAccIds&&projAccIds.has(String(tx.accountId)))return{kind:'proyek',ownerId:'',ownerName:''};
@@ -402,6 +456,21 @@ return r;
 }
 // Dana Proyek = DP/Termin masuk - belanja yang benar-benar keluar dari rekening proyek (+ yang tak punya catatan transaksi).
 function renovProjectFund(p,incoming){const b=renovFundBreakdown(p);return{fund:incoming-b.proyek-b.tanpa,breakdown:b};}
+// S2831 — nama pemilik utk sebuah ownerId (registry -> baris owners akun/aset/investasi/komitmen titipan). '' bila tak ketemu.
+function renovOwnerNameById(ownerId){
+const id=String(ownerId==null?'':ownerId);if(!id)return '';
+if(typeof OwnerRegistry!=='undefined'&&OwnerRegistry&&typeof OwnerRegistry.listAll==='function'){const r=OwnerRegistry.listAll().find(x=>x&&String(x.id)===id);if(r&&r.name)return String(r.name);}
+const pools=[D.accounts,D.assets,D.investments,D.titipanCommitments];
+for(const pool of pools){for(const e of (Array.isArray(pool)?pool:[])){for(const o of ((e&&Array.isArray(e.owners))?e.owners:[])){if(o&&String(o.ownerId)===id&&o.ownerName)return String(o.ownerName);}}}
+return '';
+}
+// Penanggung "asing" yang sebenarnya orang yang SAMA (ownerId beda krn data lama, nama sama) -> petakan ke pemilik akun.
+// Aman HANYA bila tepat 1 pemilik akun bernama sama (trim, tanpa beda huruf besar/kecil); selain itu tetap manual.
+function renovMatchOwnerByName(foreignOwnerId,accOwners){
+const nm=renovOwnerNameById(foreignOwnerId).trim().toLowerCase();if(!nm)return null;
+const hit=(accOwners||[]).filter(o=>o&&String(o.ownerName||'').trim().toLowerCase()===nm);
+return hit.length===1?hit[0]:null;
+}
 // renovMarkerAudit(projectId?) -> daftar transaksi yang 3 penandanya (proyek, penanggung, tautan payment) tidak sinkron.
 // kind: 'tanpa-penanggung' (akun berpemilik, tx proyek tanpa deductionOwnerId; fixable bila 1 pemilik),
 //       'penanggung-asing' (penanggung bukan pemilik akun), 'tanpa-proyek' (kategori Renovasi + penanggung, tanpa tautan proyek),
@@ -413,12 +482,12 @@ const hasProj=id=>projs.some(p=>sameId(p.id,id));
 const inScope=id=>projectId==null||(id!=null&&String(id)===String(projectId));
 txs.forEach(t=>{
 if(!t||t.type!=='expense')return;
-const owners=_renovBillOwners(t.accountId);
+const owners=renovAccountOwners(t.accountId);
 if(t.renovProjectLinkId){
 if(!hasProj(t.renovProjectLinkId)){if(projectId==null)out.push({kind:'proyek-hilang',txId:t.id,fixable:false});return;}
 if(!inScope(t.renovProjectLinkId))return;
 if(owners.length&&!t.deductionOwnerId)out.push({kind:'tanpa-penanggung',txId:t.id,projectId:t.renovProjectLinkId,fixable:owners.length===1,ownerId:owners.length===1?owners[0].ownerId:''});
-else if(owners.length&&t.deductionOwnerId&&!owners.some(o=>o.ownerId===t.deductionOwnerId))out.push({kind:'penanggung-asing',txId:t.id,projectId:t.renovProjectLinkId,fixable:false});
+else if(owners.length&&t.deductionOwnerId&&!owners.some(o=>o.ownerId===t.deductionOwnerId)){const _m=renovMatchOwnerByName(t.deductionOwnerId,owners);out.push({kind:'penanggung-asing',txId:t.id,projectId:t.renovProjectLinkId,fixable:!!_m,ownerId:_m?_m.ownerId:''});}
 if(t.renovItemLinkId){
 const p=projs.find(x=>sameId(x.id,t.renovProjectLinkId)),it=p&&(p.items||[]).find(x=>sameId(x.id,t.renovItemLinkId));
 const ok=it&&(Array.isArray(it.payments)?it.payments.some(x=>sameId(x.txId,t.id)):sameId(it.txId,t.id));
@@ -437,9 +506,9 @@ ids.forEach(id=>{if(id!=null&&id!==''&&!txs.some(t=>t&&sameId(t.id,id)))out.push
 });
 return out;
 }
-// renovRepairMarkers(projectId?) -> perbaiki yang AMAN saja (akun tepat 1 pemilik -> isi penanggung). Sisanya hanya dilaporkan.
+// renovRepairMarkers(projectId?) -> perbaiki yang AMAN saja (akun tepat 1 pemilik -> isi penanggung; penanggung asing yang namanya sama dgn tepat 1 pemilik akun -> dipetakan). Sisanya hanya dilaporkan.
 function renovRepairMarkers(projectId){
 const before=renovMarkerAudit(projectId),ids=[];
-before.forEach(m=>{if(m.kind==='tanpa-penanggung'&&m.fixable&&m.ownerId&&typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT){FinanceTxSOT.patchMetaById(m.txId,{deductionOwnerId:m.ownerId});ids.push(m.txId);}});
+before.forEach(m=>{if((m.kind==='tanpa-penanggung'||m.kind==='penanggung-asing')&&m.fixable&&m.ownerId&&typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT){FinanceTxSOT.patchMetaById(m.txId,{deductionOwnerId:m.ownerId});ids.push(m.txId);}});
 return{fixed:ids.length,ids,remaining:before.length-ids.length,total:before.length};
 }

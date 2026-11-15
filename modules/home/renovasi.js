@@ -263,9 +263,9 @@ const accEl=document.getElementById('renovDpAccount');if(accEl)accEl.value='';Re
 },
 updateDpOwnerVisibility(){
 const accId=document.getElementById('renovDpAccount')?.value;const wrap=document.getElementById('renovDpOwnerWrap'),sel=document.getElementById('renovDpOwner');if(!wrap||!sel)return;
-const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accId).owners||[]):[];
-if(!owners.length){wrap.style.display='none';sel.innerHTML='';return;}
-wrap.style.display='block';sel.innerHTML='<option value="">— Pilih pemilik —</option>'+owners.map(o=>`<option value="${escapeHtml(o.ownerId)}">${escapeHtml(o.ownerName||o.ownerId)}</option>`).join('');if(owners.length===1)sel.value=owners[0].ownerId;
+const owners=typeof renovAccountOwners==='function'?renovAccountOwners(accId):[];
+if(!accId){wrap.style.display='none';sel.innerHTML='';return;}
+wrap.style.display='block';renovFillOwnerSelect(sel,owners,'renovDpAccount','Renov.updateDpOwnerVisibility');if(owners.length===1)sel.value=owners[0].ownerId;sel.setAttribute('data-prev-owner',sel.value||'');
 },
 async submitDpIncome(){
 if(Renov._dpInFlight)return;
@@ -274,7 +274,7 @@ const label=(document.getElementById('renovDpLabel')?.value||'').trim();const ki
 if(!(amount>0)||!Number.isFinite(amount)){toast('⚠️ Jumlah pemasukan harus lebih dari 0');return;}if(!accountId){toast('⚠️ Pilih akun tujuan');return;}
 const cats=typeof getCatsByType==='function'?getCatsByType('income'):[];if(!Array.isArray(cats)||!cats.length){toast('⚠️ Kategori income kosong; transaksi tidak dibuat');return;}
 const category=(cats.find(c=>/proyek|bisnis|jasa/i.test(c.name||''))||cats[0]).name;if(!category){toast('⚠️ Kategori income tidak valid');return;}
-const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accountId).owners||[]):[];const ownerEl=document.getElementById('renovDpOwner');const deductionOwnerId=owners.length?(ownerEl?.value||(owners.length===1?owners[0].ownerId:'')):'';if(owners.length>1&&!deductionOwnerId){toast('⚠️ Pilih pemilik/penanggung akun');return;}
+const owners=typeof renovAccountOwners==='function'?renovAccountOwners(accountId):[];const ownerEl=document.getElementById('renovDpOwner');const deductionOwnerId=owners.length?(ownerEl?.value||(owners.length===1?owners[0].ownerId:'')):'';if(owners.length>1&&!deductionOwnerId){toast('⚠️ Pilih pemilik/penanggung akun');return;}
 if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');Renov._dpInFlight=true;let tx=null,committed=false;
 try{tx=FinanceTxSOT.create({id:uid(),type:'income',amount,accountId,date,category,subcategory:'',note:`Renovasi: ${p.name} - ${label|| (kind==='dp'?'DP':'Termin')}${note?' ('+note+')':''}`,payMethod:'tunai',renovDpProjectId:p.id,renovDpLabel:label|| (kind==='dp'?'DP':'Termin'),renovDpKind:kind,...(deductionOwnerId?{deductionOwnerId}:{})});
 const saved=save();if(saved===false)throw new Error('Penyimpanan gagal');committed=true;
@@ -606,9 +606,9 @@ Renov.updatePayOwnerVisibility();
 },
 updatePayOwnerVisibility(){
 const accId=document.getElementById('renovPayAccount')?.value,wrap=document.getElementById('renovPayOwnerWrap'),sel=document.getElementById('renovPayOwner');if(!wrap||!sel)return;
-const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accId).owners||[]):[];if(!owners.length){wrap.style.display='none';sel.innerHTML='';return;}
-wrap.style.display='block';sel.innerHTML='<option value="">— Pilih pemilik —</option>'+owners.map(o=>`<option value="${escapeHtml(o.ownerId)}">${escapeHtml(o.ownerName||o.ownerId)}</option>`).join('');
-const p=D.renovProjects.find(x=>sameId(x.id,Renov._payProjectId)),it=p&&(p.items||[]).find(x=>sameId(x.id,Renov._payItemId));if(it&&it.deductionOwnerId&&owners.some(o=>o.ownerId===it.deductionOwnerId))sel.value=it.deductionOwnerId;else if(owners.length===1)sel.value=owners[0].ownerId;
+const owners=typeof renovAccountOwners==='function'?renovAccountOwners(accId):[];if(!accId){wrap.style.display='none';sel.innerHTML='';return;}
+wrap.style.display='block';renovFillOwnerSelect(sel,owners,'renovPayAccount','Renov.updatePayOwnerVisibility');
+const p=D.renovProjects.find(x=>sameId(x.id,Renov._payProjectId)),it=p&&(p.items||[]).find(x=>sameId(x.id,Renov._payItemId));if(it&&it.deductionOwnerId&&owners.some(o=>o.ownerId===it.deductionOwnerId))sel.value=it.deductionOwnerId;else if(owners.length===1)sel.value=owners[0].ownerId;sel.setAttribute('data-prev-owner',sel.value||'');
 },
 setPayMode(mode){
 if(mode!=='cash'&&mode!=='installment')return;
@@ -624,7 +624,7 @@ const mode=Renov._payMode||'cash';
 const amount=Math.round(mode==='cash'?remaining:Number(document.getElementById('renovPayAmount')?.value));
 const date=document.getElementById('renovPayDate')?.value||todayStr();
 const accountId=document.getElementById('renovPayAccount')?.value||'';
-const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accountId).owners||[]):[];const ownerEl=document.getElementById('renovPayOwner');const deductionOwnerId=owners.length?(ownerEl?.value||''):'';
+const owners=typeof renovAccountOwners==='function'?renovAccountOwners(accountId):[];const ownerEl=document.getElementById('renovPayOwner');const deductionOwnerId=owners.length?(ownerEl?.value||''):'';
 const label=(document.getElementById('renovPayLabel')?.value||'').trim()||(mode==='cash'?'Pelunasan':'Cicilan');
 if(!(amount>0)||!Number.isFinite(amount)||amount>Math.ceil(remaining)){toast('⚠️ Nominal harus lebih dari 0 dan tidak melebihi sisa pembayaran');return;}
 if(!accountId){toast('⚠️ Pilih akun pembayaran');return;}
@@ -732,7 +732,7 @@ openModal('renovItemModal');
 // multi-owner -- transaksi hasilnya lolos TANPA `deductionOwnerId`, jadi
 // resolveTxOwnerAssignment() (filter-laporan.js) fallback ke owners[0] (owner
 // pertama), bukan owner yang sebenarnya menanggung. Fix: reuse PENUH pola
-// #txDeductionOwner (transaksi.js/modals.js) -- getAccOwnersRaw(accId) (akun.js,
+// #txDeductionOwner (transaksi.js/modals.js) -- renovAccountOwners(accId) (tx-renov.js, 1 SOT = resolveOwnerDefaultForAccount; dulu getAccOwnersRaw) (akun.js,
 // 0 rumus baru) sbg sumber owners akun terpilih. 0 owner asli -> wrap
 // disembunyikan (akun lama/single-owner, 0 regresi). >=1 owner -> wrap
 // ditampilkan, dropdown diisi ulang dari nol tiap dipanggil (opsi owner akun
@@ -745,16 +745,17 @@ const accId=document.getElementById('renovItemAcc').value;
 const wrap=document.getElementById('renovItemDeductionOwnerWrap');
 const sel=document.getElementById('renovItemDeductionOwner');
 if(!wrap||!sel)return;
-const owners=(typeof getAccOwnersRaw==='function'?getAccOwnersRaw(accId):{ok:true,owners:[]}).owners||[];
-if(!owners.length){wrap.style.display='none';sel.innerHTML='';return;}
+const owners=typeof renovAccountOwners==='function'?renovAccountOwners(accId):[];
+if(!accId){wrap.style.display='none';sel.innerHTML='';return;}
 wrap.classList.remove('u-dnone');
 wrap.style.display='block';
-sel.innerHTML='<option value="">— Pilih pemilik —</option>'+owners.map(o=>`<option value="${escapeHtml(o.ownerId)}">${escapeHtml(o.ownerName||o.ownerId)}</option>`).join('');
+renovFillOwnerSelect(sel,owners,'renovItemAcc','Renov.updateDeductionOwnerVisibility');
 if(presetOwnerId&&owners.some(o=>o.ownerId===presetOwnerId)){
 sel.value=presetOwnerId;
 } else if(owners.length===1){
 sel.value=owners[0].ownerId;
 }
+sel.setAttribute('data-prev-owner',sel.value||'');
 },
 toggleHargaTotalFields(){
 const on=document.getElementById('renovItemHargaTotalToggle').checked;
@@ -794,6 +795,11 @@ const note=document.getElementById('renovItemNote').value.trim();
 const deductionOwnerSel=document.getElementById('renovItemDeductionOwner');
 const deductionOwnerWrapEl=document.getElementById('renovItemDeductionOwnerWrap');
 const deductionOwnerId=(deductionOwnerSel&&deductionOwnerWrapEl&&deductionOwnerWrapEl.style.display!=='none')?(deductionOwnerSel.value||''):'';
+// S2832: item lunas lama (1 transaksi tertaut) di akun multi-pemilik WAJIB punya penanggung -- kosong akan menghapus deductionOwnerId transaksinya.
+if(Renov.editItemId&&!deductionOwnerId&&typeof renovAccountOwners==='function'&&renovAccountOwners(accountId).length>1){
+const _eit=p.items.find(x=>sameId(x.id,Renov.editItemId));
+if(_eit&&_eit.paid&&_eit.txId&&!Array.isArray(_eit.payments)){toast('⚠️ Pilih pemilik/penanggung akun');return;}
+}
 let calcDetail=null;
 if(RenovCalc._pendingDetail&&Math.round(RenovCalc._pendingDetail.total)===Math.round(harga)){
 calcDetail=RenovCalc._pendingDetail;

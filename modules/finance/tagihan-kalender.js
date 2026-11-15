@@ -1039,7 +1039,7 @@ const _renovBillProject=(b.renovProjectLinkId&&Array.isArray(D.renovProjects))?D
 let _renovBillOwnerId='';
 if(_renovBillProject&&typeof resolveRenovBillOwner==='function'){
 const _o=await resolveRenovBillOwner(b,b.accountId||D.accounts[0]?.id||'');
-if(_o===null){toast('⚠️ Pembayaran dibatalkan — pilih pemilik/penanggung akun dulu');return;}
+if(_o===null){toast(resolveRenovBillOwner._managing?'ℹ️ Atur pemilik akun dulu, lalu tekan Bayar lagi':'⚠️ Pembayaran dibatalkan — pilih pemilik/penanggung akun dulu');return;}
 _renovBillOwnerId=_o;
 }
 const _payTxId=uid();

@@ -861,6 +861,8 @@ const InvestmentUI = {
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined') DanaTitipanPortfolioPresenter.render();
     if (typeof DanaTitipanPortfolioPresenter !== 'undefined' && typeof DanaTitipanPortfolioPresenter.renderInto === 'function') DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
     toast('✅ Porsi kepemilikan tersimpan');
+    // S2832: dropdown pemilik Proyek Renovasi yang membuka modal ini lewat "➕ Tambah / kelola pemilik akun" ikut di-refresh.
+    if (typeof renovFlushOwnerRefresh === 'function') renovFlushOwnerRefresh();
   },
 
   // resetOwners() — buang perubahan draft yang belum disimpan, muat ulang InvestmentUI._ownersDraft

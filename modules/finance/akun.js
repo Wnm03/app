@@ -764,9 +764,15 @@ _rebalancePending: null,
 // modal accountOwnersModal ini TIDAK dibuka sama sekali utk akun tertaut Holding (user langsung
 // edit di sumber kebenarannya). Guard typeof InvestmentUI: kalau module investasi-view.js belum
 // dimuat, fallback ke toast penjelasan (bukan diam-diam buka modal yang menyesatkan).
-open(){
-if(editAccIdx<0||!D.accounts[editAccIdx]){toast('⚠️ Simpan akun ini dulu sebelum mengatur porsi kepemilikan');return;}
-const acc=D.accounts[editAccIdx];
+// S2830: open(accId?, onSaved?) -- accId OPSIONAL (string/angka id akun) supaya modal ini bisa dibuka dari luar modal Akun
+// (mis. dropdown pemilik Proyek Renovasi: opsi "➕ Tambah / kelola pemilik akun…"). Tanpa accId = perilaku lama (akun yang
+// sedang diedit, editAccIdx). onSaved(owners) dipanggil SETELAH Simpan Porsi sukses, lalu modal ditutup otomatis.
+open(accId,onSaved){
+const _byId=(typeof accId==='string'||typeof accId==='number')&&accId!==''?D.accounts.findIndex(a=>a&&sameId(a.id,accId)):-1;
+const _ext=_byId>=0;
+if(!_ext&&(editAccIdx<0||!D.accounts[editAccIdx])){toast('⚠️ Simpan akun ini dulu sebelum mengatur porsi kepemilikan');return;}
+const acc=_ext?D.accounts[_byId]:D.accounts[editAccIdx];
+AccOwners._onSaved=null;
 // S638 (perbaikan kasus 2+ holding tertaut ke 1 akun yang sama): dulu cuma cek
 // findLinkedHoldingForAccount() (singular) lalu langsung buka openOwnersModal()
 // holding PERTAMA -- kalau akun ini ternyata ditautkan 2+ holding, user diam-diam
@@ -790,6 +796,7 @@ toast('🔗 Porsi akun ini gabungan dari '+linkedHoldings.length+' Holding Inves
 return;
 }
 AccOwners._accId=acc.id;
+AccOwners._onSaved=(_ext&&typeof onSaved==='function')?onSaved:null;
 document.getElementById('accountOwnersAccName').textContent='🏦 '+(acc.emoji||'💰')+' '+acc.name;
 const res=getAccOwners(acc.id);
 AccOwners._draft=(res&&res.ok?res.owners:[]).map((o)=>({ownerId:o.ownerId,ownerName:o.ownerName,porsi:o.porsi,isSelf:!!o.isSelf}));
@@ -1001,6 +1008,8 @@ if(typeof TitipanReconcile!=='undefined')TitipanReconcile.warnIfNotOk('AccOwners
 if(typeof DanaTitipanPortfolioPresenter!=='undefined')DanaTitipanPortfolioPresenter.render();
 if(typeof DanaTitipanPortfolioPresenter!=='undefined'&&typeof DanaTitipanPortfolioPresenter.renderInto==='function')DanaTitipanPortfolioPresenter.renderInto('danaTitipanTabList');
 toast('✅ Porsi kepemilikan akun tersimpan');
+// S2830: dibuka dari luar modal Akun (open(accId,onSaved)) -> beri tahu pemanggil (refresh dropdown pemilik) & tutup modal.
+if(typeof AccOwners._onSaved==='function'){const _cb=AccOwners._onSaved;AccOwners._onSaved=null;try{_cb(res.owners);}catch(e){console.warn('[AccOwners] onSaved gagal',e);}if(typeof closeModal==='function')closeModal('accountOwnersModal');}
 },
 // resetDraft() — buang perubahan draft yang belum disimpan, muat ulang dari data TERSIMPAN di
 // D.accounts (via getAccOwners(), sama logic openOwnersModal()). Dipakai kalau user salah edit &
