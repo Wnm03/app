@@ -791,7 +791,7 @@ const nonSelfOwners=owners.filter(o=>!o.isSelf&&o.porsi>0&&Aset.getOwnerSettleme
 const existingLinked=D.debts.filter(d=>d.linkedAssetId===a.id);
 const keepIds=new Set();
 nonSelfOwners.forEach(o=>{
-const amount=nilai*(o.porsi/100);
+const amount=Math.round(nilai*(o.porsi/100)); // S2819: utang titipan dalam rupiah utuh
 const catatan='Dana titipan aset: '+a.name;
 let debt=existingLinked.find(d=>d.linkedOwnerId===o.ownerId);
 if(debt){

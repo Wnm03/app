@@ -1,3 +1,8 @@
+// S2816 (B4): batas kewajaran tanggal transaksi. Tahun salah ketik (mis. 2026 -> 2070) dulu diterima tanpa peringatan
+// dan masuk laporan tahunan/rata-rata/proyeksi. Batas: maksimal 1 tahun ke depan, minimal 1 Jan 2000.
+function txDatePlausibleMax(){const n=new Date();n.setFullYear(n.getFullYear()+1);return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function txDatePlausibleMin(){return '2000-01-01';}
+function isTxDateImplausible(ds){try{if(typeof ds!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(ds))return false;return ds>txDatePlausibleMax()||ds<txDatePlausibleMin();}catch(_e){void _e;return false;}}
 // transaksi-b.js — bagian KEDUA dari modules/finance/transaksi.js (audit ukuran
 // file, sesi lanjutan setelah split modules/vehicle/sparepart-servis.js).
 // Titik potong bersih: TEPAT SEBELUM `async function saveTx(){` (sisa
@@ -39,6 +44,7 @@ const MAX_AMOUNT=999000000000;
 if(amt>MAX_AMOUNT){toast('⚠️ Jumlah terlalu besar (maks Rp 999.000.000.000)');return;}
 const subCat=document.getElementById('txSubCat')?document.getElementById('txSubCat').value:'';
 const date=document.getElementById('txDate').value;
+if(typeof isTxDateImplausible==='function'&&isTxDateImplausible(date)){toast('⚠️ Tanggal '+date+' tidak wajar (lebih dari 1 tahun ke depan atau sebelum tahun 2000). Periksa tahunnya.');return;}
 const note=document.getElementById('txNote').value;
 const cat=document.getElementById('txCat').value;
 const accId=document.getElementById('txAcc').value;
@@ -582,7 +588,6 @@ if(linkedBbm)Object.assign(linkedBbm,{cost:amt,date,accountId:accId});
 if(existingTx.renovItemLinkId&&typeof Renov!=='undefined'){
 Renov.onLinkedTxEdited(existingTx);
 }
-if(existingTx.renovDpProjectId&&typeof Renov!=='undefined'&&typeof Renov.onDpTxEdited==='function')Renov.onDpTxEdited(existingTx);
 if(existingTx.wishlistLinkId){
 WorthIt.onLinkedTxEdited(existingTx);
 }
@@ -602,6 +607,9 @@ SewaKios.onLinkedTxEdited(existingTx);
 applyTxTitipanLinkageOnSave(existingTx,prevTxTitipanLinkId);
 if((prevTxTitipanLinkId||null)===(existingTx.titipanLinkId||null)&&existingTx.titipanLinkId&&typeof syncTitipanTalanganPiutangOnEdit==='function'){
 syncTitipanTalanganPiutangOnEdit(existingTx.id,oldTxAmountForTitipanSync,amt);
+}
+if((prevTxTitipanLinkId||null)===(existingTx.titipanLinkId||null)&&existingTx.titipanLinkId&&existingTx.titipanPinjamUtang===true&&typeof syncTitipanPinjamUtangOnEdit==='function'){
+syncTitipanPinjamUtangOnEdit(existingTx.id,oldTxAmountForTitipanSync,amt);
 }
 savedTxId=existingTx.id;
 } else {

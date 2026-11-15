@@ -1100,6 +1100,7 @@ if(servisEditBtnNew)servisEditBtnNew.style.display='none';
 resetPayMethodLock();
 curTxType=type;
 document.getElementById('txDate').value=typeof todayStr==='function'?todayStr():'';
+{const _txDateEl=document.getElementById('txDate');if(_txDateEl&&typeof txDatePlausibleMax==='function'){_txDateEl.max=txDatePlausibleMax();_txDateEl.min=txDatePlausibleMin();}}
 document.getElementById('txAmt').value='';
 document.getElementById('txCat').value='';
 document.getElementById('txSubCat').value='';
@@ -1215,6 +1216,7 @@ document.getElementById('txAcc').value=t.accountId;
 document.getElementById('txAmt').value=t.amount;
 document.getElementById('txNote').value=t.note||'';
 document.getElementById('txDate').value=t.date;
+{const _txDateEl2=document.getElementById('txDate');if(_txDateEl2&&typeof txDatePlausibleMax==='function'){_txDateEl2.max=txDatePlausibleMax();_txDateEl2.min=txDatePlausibleMin();}}
 const txAssetIdEditEl=document.getElementById('txAssetId');if(txAssetIdEditEl)txAssetIdEditEl.value=t.assetId||'';
 updateTxAssetWrapVisibility();
 updateTxDeductionOwnerVisibility();

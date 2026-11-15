@@ -180,7 +180,7 @@ reconcileAccounts(opts) {
     const existingLinked = linkedDebtsByAccount.get(String(acc.id)) || [];
     const keepIds = new Set();
     nonSelfOwners.forEach((o) => {
-      const amount = balance * (o.porsi / 100);
+      const amount = Math.round(balance * (o.porsi / 100)); // S2819: rupiah utuh
       const catatan = 'Dana titipan akun: ' + (acc.name || '');
       let debt = existingLinked.find((d) => String(d.linkedOwnerId) === String(o.ownerId));
       if (debt) {

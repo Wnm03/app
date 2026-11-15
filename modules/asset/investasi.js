@@ -373,7 +373,7 @@ const Investment = {
     const keepIds = new Set();
     owners.forEach((o) => {
       const ownerId = o.ownerId || 'titipan_investor';
-      const amount = cost * (o.porsi / 100);
+      const amount = Math.round(cost * (o.porsi / 100)); // S2819: rupiah utuh
       let debt = existingLinked.find((d) => (d.linkedOwnerId || 'titipan_investor') === ownerId);
       if (debt) {
         BillDebtPiutangCanonicalWriter.updateById('debts',debt.id,d0=>Object.assign(d0,{name:o.ownerName,nilai:amount,catatan,lunas:amount<=0,linkedInvestmentId:h.id,linkedOwnerId:ownerId}));

@@ -78,6 +78,11 @@ for(let _attempt=0;_attempt<_maxBackupSnapshotAttempts;_attempt++){
   try{
     backupD={...D,chatHistory:[]};
     if(backupD.profile){backupD.profile={...backupD.profile};delete backupD.profile.apiKey;}
+    // S2819 (F10): `balance` di file backup bisa basi (restore memakai baseBalance + transaksi). Hitung ulang di SALINAN backup saja,
+    // jadi D asli dan baseBalance tidak berubah; file yang dibaca manual menampilkan saldo yang benar.
+    if(Array.isArray(backupD.accounts)&&typeof recalcAccBalance==='function'){
+      try{backupD.accounts=backupD.accounts.map(a=>(a&&a.id!=null&&a.baseBalance!==undefined)?{...a,balance:recalcAccBalance(a.id)}:a);}catch(_balErr){/* saldo basi tetap aman: restore memakai baseBalance */}
+    }
   }catch(e){throw new Error('Backup gagal menyiapkan snapshot state: '+(e&&e.message?e.message:String(e)));
   }
   let _aux;
@@ -421,8 +426,8 @@ csvParts.push('');
 }
 if(out.renovProjects){
 csvParts.push('=== PROYEK RENOVASI ===');
-csvParts.push(toCSVRow(['Nama Proyek','Item','Ukuran/Kebutuhan','Harga','Sudah Dibeli','Tanggal Bayar','Catatan','Terbayar','DP Masuk']));
-out.renovProjects.forEach(p=>{const dp=(out.transactions||[]).filter(t=>t&&t.type==='income'&&String(t.renovDpProjectId)===String(p.id)).reduce((sum,t)=>sum+(Number(t.amount)||0),0);(p.items||[]).forEach(it=>{const paid=Array.isArray(it.payments)?it.payments.reduce((sum,x)=>sum+(Number(x.amount)||0),0):(it.paid?(Number(it.harga)||0):0);csvParts.push(toCSVRow([p.name,it.name,it.ukuran||'',it.harga||0,it.paid?'Ya':'Belum',it.paidDate||'',it.note||'',paid,dp]));});});
+csvParts.push(toCSVRow(['Nama Proyek','Item','Ukuran/Kebutuhan','Harga','Sudah Dibeli','Tanggal Bayar','Catatan']));
+out.renovProjects.forEach(p=>(p.items||[]).forEach(it=>csvParts.push(toCSVRow([p.name,it.name,it.ukuran||'',it.harga||0,it.paid?'Ya':'Belum',it.paidDate||'',it.note||'']))));
 csvParts.push('');
 }
 if(out.pensiun||out.pajakZakat){
@@ -618,6 +623,15 @@ function downloadS2013RestoreDiagnostic(){
   if(typeof PWAProductionHardening!=='undefined'&&PWAProductionHardening&&typeof PWAProductionHardening.downloadBlob==='function')return PWAProductionHardening.downloadBlob(blob,'restore-diagnostic.json');
   try{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='restore-diagnostic.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);return true;}catch(_e){return false;}
 }
+// S2816 (B5): perapian ID kategori saat restore tidak boleh senyap. Hanya ID/referensi yang berubah, nominal tidak.
+function _restoreIdTidyNote(){
+let cats=0,txs=0,svc=0;
+try{if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.takeMergeStats==='function'){const st=FinanceCategorySOT.takeMergeStats();cats=st.categories||0;txs=st.transactions||0;}}catch(_e){void _e;}
+try{svc=Number(window.__kwRestoreSvcRefRemap)||0;window.__kwRestoreSvcRefRemap=0;}catch(_e){void _e;}
+if(!cats&&!txs&&!svc)return '';
+const parts=[cats?cats+' kategori ganda':'',txs?txs+' transaksi':'',svc?svc+' referensi servis':''].filter(Boolean).join(', ');
+return ' ℹ️ ID kategori dirapikan ('+parts+'); nominal tidak berubah.';
+}
 async function applyRestoredData(imp){
 // init() belongs to the lazily-loaded diagnostic harness; load it explicitly before use.
 async function _restoreEnsureInit(){
@@ -631,6 +645,7 @@ async function _restoreEnsureInit(){
 try{localStorage.removeItem('kw_restore_diagnostic_s2013');}catch(_e){void _e;}
 let __s2013Stage='start';
 clearS2013RestoreDiagnostic();
+try{if(typeof FinanceCategorySOT!=='undefined'&&FinanceCategorySOT&&typeof FinanceCategorySOT.takeMergeStats==='function')FinanceCategorySOT.takeMergeStats();window.__kwRestoreSvcRefRemap=0;}catch(_e){void _e;}
 const __s2013Diag={startedAt:new Date().toISOString(),stage:__s2013Stage};
 const __s2013SetStage=(stage)=>{__s2013Stage=stage;__s2013Diag.stage=stage;__s2013Diag.updatedAt=new Date().toISOString();};
 const __s2013SerializeError=(e)=>({
@@ -744,6 +759,7 @@ __s2013SetStage('category-component-sot-reconciliation');
 if(typeof ServiceCategoryRestoreReconcilerS2451!=='undefined'&&ServiceCategoryRestoreReconcilerS2451&&typeof ServiceCategoryRestoreReconcilerS2451.reconcile==='function'){
   const _catRestore=ServiceCategoryRestoreReconcilerS2451.reconcile(D);
   __s2013Diag.categoryComponentReconciliation=_catRestore;
+  try{window.__kwRestoreSvcRefRemap=(_catRestore.changed||[]).length;}catch(_e){void _e;}
   if(!_catRestore.ok){
     const _catCodes=[...new Set((_catRestore.issues||[]).map(x=>x&&x.code).filter(Boolean))].slice(0,8).join(', ');
     throw new Error('Restore dibatalkan: integritas kategori/komponen Car Notes tidak konsisten ('+(_catRestore.issues||[]).length+' issue'+(_catCodes?'; '+_catCodes:'')+').');
@@ -800,6 +816,8 @@ if(Array.isArray(D.transactions)){
   }
   FinanceTxSOT.replaceSnapshot(D.transactions);
 }
+// S2816 (B8): cache saldo akun/total saldo tidak ikut diinvalidasi saat restore -> header Proyeksi Kas sempat "Rp 0" dan saldo mesin != kartu.
+if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 // Rekonsiliasi taksonomi di atas memutasi D setelah invalidasi pertama -> invalidasi lagi sebelum persist atomik.
 if(typeof _saveStateVersion!=='undefined'){_saveStateVersion++;_saveSnapshotVersion=-1;_saveSnapshotJson=null;}
 __s2013SetStage('atomic-restore-persist');
@@ -826,6 +844,7 @@ if(typeof lifeOSInvalidateCache==='function'&&_restoredLifeosStore!==undefined)l
 if(typeof eieInvalidateCache==='function'&&_restoredEieStore!==undefined)eieInvalidateCache();
 if(typeof vehicleCatalogInvalidateCache==='function'&&_restoredVehicleCatalogStore!==undefined)vehicleCatalogInvalidateCache();
 if(typeof hondaPdfImportInvalidateCache==='function'&&_restoredHondaPdfImportStore!==undefined)hondaPdfImportInvalidateCache();
+if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();
 await _restoreEnsureInit();
 return true;
 }catch(e){
@@ -929,7 +948,7 @@ return;
 }
 try{
 const ok=await applyRestoredData(imp);
-if(ok)toast('✅ Data di-restore! (semua tab: keuangan, kendaraan, bisnis shop, dll)');
+if(ok){const _tn=typeof _restoreIdTidyNote==='function'?_restoreIdTidyNote():'';toast('✅ Data di-restore! (semua tab: keuangan, kendaraan, bisnis shop, dll)'+_tn,_tn?6000:undefined);}
 }catch(err){
 console.error('Restore file gagal:',err);
 toast('❌ Restore gagal: '+_sanitizeBackupError(err));

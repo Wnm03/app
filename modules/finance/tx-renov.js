@@ -89,15 +89,22 @@ return !!(chk&&!chk.checked&&panel&&panel.style.display!=='none');
 // "Perlu Dibeli" persis seperti saat transaksinya dihapus (Renov.onLinkedTxDeleted). Transaksi Keuangan tetap ada.
 function unlinkTxRenovFromTx(existingTx){
 const link=_txRenovLinkedItem(existingTx);
+const payId=existingTx.renovPaymentId;
 if(link){
+if(payId&&Array.isArray(link.item.payments)){
+// Cicilan: buang baris payment milik tx ini (1 SOT: tx yang terlepas tidak boleh tetap dihitung), item tetap punya sisa cicilan lain.
+link.item.payments=link.item.payments.filter(x=>!(sameId(x.id,payId)||sameId(x.txId,existingTx.id)));
+link.item.paid=link.item.payments.reduce((sum,x)=>sum+Math.max(0,Number(x&&x.amount)||0),0)>=(Number(link.item.harga)||0)&&(Number(link.item.harga)||0)>0;
+}else{
 link.item.paid=false;link.item.txId=null;link.item.paidDate=null;
+}
 if(typeof Renov!=='undefined'){
 Renov.render();
 if(sameId(Renov.curId,link.project.id))Renov.renderDetail();
 }
 }
 if(typeof FinanceTxSOT==='undefined'||!FinanceTxSOT)throw new Error('FINANCE_TX_SOT_REQUIRED');
-const detached=FinanceTxSOT.patchMetaById(existingTx.id,{renovProjectLinkId:undefined,renovItemLinkId:undefined});
+const detached=FinanceTxSOT.patchMetaById(existingTx.id,{renovProjectLinkId:undefined,renovItemLinkId:undefined,renovPaymentId:undefined});
 if(!detached)throw new Error('FINANCE_TX_META_UNLINK_FAILED');
 return link;
 }

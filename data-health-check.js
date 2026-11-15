@@ -771,11 +771,41 @@ listEl.innerHTML=issues.map(i=>`<div style="padding:10px;border-radius:10px;marg
 // tautan Riwayat Servis yang bisa membuat Pengingat membaca kategori/interval
 // yang salah. Canonical relation tetap categoryId -> D.sparepartCats, dengan
 // resolveServisCatForVehicle() hanya sebagai fallback legacy untuk log lama.
+// S2818 F4/F8/F9: temuan yang punya tombol perbaikan (konfirmasi dulu, transaksi = sumber kebenaran).
+try{
+  if(typeof TitipanReconcile!=='undefined'&&TitipanReconcile&&typeof TitipanReconcile.checkPinjamUtangLinkage==='function'){
+    const _pl=TitipanReconcile.checkPinjamUtangLinkage();
+    const _n=(_pl.amountMismatch||[]).length+(_pl.missingDebt||[]).length;
+    if(_n>0)issues.push({level:'warn',title:'Utang "Pinjam Dana Titipan" tidak sinkron dengan transaksi',detail:`${(_pl.amountMismatch||[]).length} utang berbeda nominal dari transaksinya, ${(_pl.missingDebt||[]).length} transaksi pinjam belum punya utang. Perbaiki menyamakan utang belum lunas dengan nominal transaksi.`,actions:[{label:'🔧 Sinkronkan utang',action:'DataHealth.repairPinjamUtang',args:[]}]});
+  }
+  const _ri=(typeof Renov!=='undefined'&&Renov&&typeof Renov.reconcileItemAccounts==='function')?Renov.reconcileItemAccounts(true):0;
+  if(_ri>0)issues.push({level:'warn',title:'Item Renovasi memakai akun yang tidak valid',detail:`${_ri} item menyimpan akun yang sudah tidak ada, sementara transaksinya punya akun sendiri. Perbaiki menyamakan akun item dengan akun transaksi.`,actions:[{label:'🔧 Samakan akun item',action:'DataHealth.repairRenovItemAccounts',args:[]}]});
+  const _yr=new Date().getFullYear();
+  (D.transactions||[]).forEach(t=>{
+    if(!t||!/^\d{4}-/.test(String(t.date||'')))return;
+    if(Number(String(t.date).slice(0,4))<_yr+5)return;
+    const ms=Number(t.id);
+    if(!(ms>1e12&&ms<4e12))return;
+    issues.push({level:'warn',title:'Transaksi bertanggal jauh di masa depan',detail:`Transaksi "${t.note||t.category||'?'}" bertanggal ${t.date}, padahal dibuat ${new Date(ms).toISOString().slice(0,10)}. Kemungkinan salah ketik tahun.`,actions:[{label:'📅 Pakai tanggal pembuatan',action:'DataHealth.fixFutureTxDate',args:[String(t.id)]}]});
+  });
+  // S2819: nominal pecahan (bukan rupiah utuh) pada transaksi, utang, dan piutang.
+  // Nilai unit/harga satuan aset & investasi memang boleh pecahan -> tidak dicek di sini.
+  // S2820 (F6): log BBM/servis yang punya biaya tapi belum tertaut ke transaksi. Yang cocok tanggal+nominal+akun+kategori kendaraan
+  // bisa ditautkan aman. Sisanya TIDAK dibuat transaksi otomatis (akan menambah pengeluaran & menurunkan saldo): putuskan per log.
+  const _vl=DataHealth._collectUnlinkedVehicleLogs();
+  if(_vl.matched.length>0)issues.push({level:'warn',title:'Log kendaraan bisa ditautkan ke transaksi yang sudah ada',detail:`${_vl.matched.length} log BBM/servis (Rp${Math.round(_vl.matched.reduce((a,m)=>a+m.log.cost,0)).toLocaleString('id-ID')}) punya transaksi dengan tanggal, nominal, akun, dan kendaraan yang sama tetapi belum tertaut. Menautkan tidak mengubah nominal atau saldo.`,actions:[{label:`🔗 Tautkan ${_vl.matched.length} log`,action:'DataHealth.linkVehicleLogs',args:[]}]});
+  if(_vl.rest.length>0)issues.push({level:'warn',title:'Log kendaraan berbiaya tanpa transaksi',detail:`${_vl.rest.length} log (Rp${Math.round(_vl.rest.reduce((a,r)=>a+r.log.cost,0)).toLocaleString('id-ID')}) belum punya transaksi. Tidak dibuat otomatis karena akan menurunkan saldo akun. Contoh: ${_vl.rest.slice(0,4).map(r=>`${r.kind==='bbm'?'BBM':'Servis'} ${r.log.date} Rp${Math.round(r.log.cost).toLocaleString('id-ID')}`).join('; ')}. Catat transaksinya dari log yang memang dibayar, atau tandai abaikan.`,actions:[{label:'🙈 Abaikan sisa log',action:'DataHealth.ignoreVehicleLogsWithoutTx',args:[]}]});
+  const _fr=DataHealth._collectFractionalAmounts();
+  const _frN=_fr.tx.length+_fr.debts.length+_fr.piutang.length;
+  if(_frN>0)issues.push({level:'warn',title:'Nominal pecahan (bukan rupiah utuh)',detail:`${_fr.tx.length} transaksi, ${_fr.debts.length} utang, ${_fr.piutang.length} piutang memakai nominal bersen/desimal (mis. 9.145.761,35). Rupiah tidak punya pecahan, jadi saldo dan total bisa tampak janggal. Pembulatan mengubah tiap nominal paling banyak Rp0,5; backup dulu sebelum menekan tombol.`,actions:[{label:'🔢 Bulatkan nominal',action:'DataHealth.roundFractionalAmounts',args:[]}]});
+}catch(_e){if(typeof console!=='undefined'&&console.warn)console.warn('[DataHealth] cek perbaikan S2818/S2819 dilewati:',_e&&_e.message);}
 if(Array.isArray(D.servisLogs)){
   D.servisLogs.forEach(s=>{
     if(!s||!s.item)return;
     const vehicleId=s.vehicleId||null;
-    const linked=s.categoryId?(D.sparepartCats||[]).find(c=>c&&c.id===s.categoryId):null;
+    const _sameId=s.categoryId?(D.sparepartCats||[]).filter(c=>c&&c.id===s.categoryId):[];
+    // S2818 F7: ID kategori yang sama boleh ada di beberapa kendaraan -> utamakan yang cocok dgn kendaraan log.
+    const linked=_sameId.find(c=>!c.vehicleId||!vehicleId||c.vehicleId===vehicleId)||_sameId[0]||null;
     if(s.categoryId&&!linked){
       issues.push({level:'warn',title:'Riwayat servis memiliki categoryId orphan',detail:`"${s.item}" (${s.date||'?'}) menyimpan categoryId "${s.categoryId}" tetapi kategori tersebut sudah tidak ada. Catatan ini tidak boleh dipakai untuk mereset Pengingat Servis.`});
       return;
@@ -823,6 +853,86 @@ const DataHealth={
 // lalu simpan & refresh ulang modal Hasil Pemindaian Data supaya kartu warning
 // terkait langsung hilang. idx = index asli di D.partsStock (lihat cek
 // "Stok sparepart tertaut ke part katalog yang sudah dihapus" di atas).
+async repairPinjamUtang(){
+if(typeof TitipanReconcile==='undefined'||!TitipanReconcile||typeof TitipanReconcile.repairPinjamUtangLinkage!=='function'){toast('⚠️ Modul rekonsiliasi Titipan tidak tersedia');return;}
+if(typeof askConfirm==='function'&&!await askConfirm('Samakan nominal utang "Pinjam Dana Titipan" (yang belum lunas) dengan nominal transaksinya, dan buat utang untuk transaksi pinjam yang belum punya? Utang yang sudah lunas tidak diubah.',{title:'Sinkronkan utang titipan',okText:'Ya, sinkronkan'}))return;
+const r=TitipanReconcile.repairPinjamUtangLinkage();
+toast(`🔧 ${r.fixed} utang disamakan, ${r.created} utang dibuat`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
+_collectUnlinkedVehicleLogs(){
+const txs=D.transactions||[],veh=D.vehicles||[];
+const used=new Set();
+[D.bbmLogs,D.servisLogs].forEach(L=>(L||[]).forEach(l=>{if(l&&l.txLinkId!=null&&l.txLinkId!=='')used.add(String(l.txLinkId));}));
+const taken=new Set();
+const matched=[],rest=[];
+[['bbm',D.bbmLogs,'bbmLinkId'],['servis',D.servisLogs,'servisLinkId']].forEach(([kind,list,linkKey])=>(list||[]).forEach(l=>{
+if(!l||!(Number(l.cost)>0)||(l.txLinkId!=null&&l.txLinkId!=='')||l.txSkip===true)return;
+const vName=String((veh.find(v=>v&&String(v.id)===String(l.vehicleId))||{}).name||'').trim().toLowerCase();
+const c=txs.filter(t=>t&&t.type==='expense'&&t.date===l.date&&Math.abs(Number(t.amount)-Number(l.cost))<1&&!used.has(String(t.id))&&!taken.has(String(t.id))&&!t.bbmLinkId&&!t.servisLinkId&&(!l.accountId||t.accountId===l.accountId)&&vName&&String(t.category||'').trim().toLowerCase()===vName);
+if(c.length===1){taken.add(String(c[0].id));matched.push({kind,linkKey,log:l,tx:c[0]});}else rest.push({kind,log:l});
+}));
+return{matched,rest};
+},
+async linkVehicleLogs(){
+const r=DataHealth._collectUnlinkedVehicleLogs();
+if(!r.matched.length){toast('✅ Tidak ada log yang bisa ditautkan');return;}
+if(typeof askConfirm==='function'&&!await askConfirm(`Tautkan ${r.matched.length} log BBM/servis ke transaksi yang cocok (tanggal, nominal, akun, kendaraan sama)? Nominal dan saldo tidak berubah.`,{title:'Tautkan log kendaraan',okText:'Ya, tautkan'}))return;
+r.matched.forEach(m=>{
+m.log.txLinkId=m.tx.id;
+const patch={};patch[m.linkKey]=m.log.id;
+if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.patchMetaById==='function')FinanceTxSOT.patchMetaById(m.tx.id,patch);else m.tx[m.linkKey]=m.log.id;
+});
+if(typeof save==='function')save();
+toast(`🔗 ${r.matched.length} log ditautkan ke transaksi`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
+async ignoreVehicleLogsWithoutTx(){
+const r=DataHealth._collectUnlinkedVehicleLogs();
+if(!r.rest.length){toast('✅ Tidak ada log tersisa');return;}
+if(typeof askConfirm==='function'&&!await askConfirm(`Tandai ${r.rest.length} log berbiaya tanpa transaksi sebagai "abaikan"? Tidak ada transaksi dibuat dan data log tetap utuh; temuan ini hanya berhenti muncul untuk log tersebut.`,{title:'Abaikan sisa log',okText:'Ya, abaikan'}))return;
+r.rest.forEach(x=>{x.log.txSkip=true;});
+if(typeof save==='function')save();
+toast(`🙈 ${r.rest.length} log ditandai abaikan`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
+_collectFractionalAmounts(){
+const isFrac=v=>typeof v==='number'&&isFinite(v)&&Math.abs(v-Math.round(v))>1e-6;
+return{
+tx:(D.transactions||[]).filter(t=>t&&isFrac(t.amount)),
+debts:(D.debts||[]).filter(d=>d&&isFrac(d.nilai)),
+piutang:(D.piutang||[]).filter(p=>p&&isFrac(p.nilai))
+};
+},
+async roundFractionalAmounts(){
+const f=DataHealth._collectFractionalAmounts();
+const n=f.tx.length+f.debts.length+f.piutang.length;
+if(!n){toast('✅ Tidak ada nominal pecahan');return;}
+if(typeof askConfirm==='function'&&!await askConfirm(`Bulatkan ${f.tx.length} transaksi, ${f.debts.length} utang, ${f.piutang.length} piutang ke rupiah terdekat? Tiap nominal berubah paling banyak Rp0,5. Disarankan backup dulu.`,{title:'Bulatkan nominal',okText:'Ya, bulatkan'}))return;
+f.tx.forEach(t=>{const v=Math.round(t.amount);if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.updateById==='function')FinanceTxSOT.updateById(t.id,{amount:v});else t.amount=v;});
+const W=(typeof BillDebtPiutangCanonicalWriter!=='undefined')?BillDebtPiutangCanonicalWriter:null;
+const fix=(key,list)=>list.forEach(x=>{const v=Math.round(x.nilai);if(W&&typeof W.updateById==='function')W.updateById(key,x.id,d0=>Object.assign(d0,{nilai:v}));else x.nilai=v;});
+fix('debts',f.debts);fix('piutang',f.piutang);
+if(typeof save==='function')save();
+toast(`🔢 ${n} nominal dibulatkan ke rupiah utuh`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
+async repairRenovItemAccounts(){
+if(typeof Renov==='undefined'||!Renov||typeof Renov.reconcileItemAccounts!=='function'){toast('⚠️ Modul Renovasi tidak tersedia');return;}
+const n=Renov.reconcileItemAccounts(false);
+toast(`🔧 ${n} item Renovasi disamakan akunnya dengan transaksi`);
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
+async fixFutureTxDate(txId){
+const t=(D.transactions||[]).find(x=>x&&String(x.id)===String(txId));
+if(!t){toast('⚠️ Transaksi tidak ditemukan');return;}
+const d=new Date(Number(t.id)).toISOString().slice(0,10);
+if(typeof askConfirm==='function'&&!await askConfirm(`Ubah tanggal transaksi dari ${t.date} menjadi ${d} (tanggal pembuatan)?`,{title:'Koreksi tanggal',okText:'Ya, ubah'}))return;
+if(typeof FinanceTxSOT!=='undefined'&&FinanceTxSOT&&typeof FinanceTxSOT.updateById==='function')FinanceTxSOT.updateById(t.id,{date:d});else t.date=d;
+if(typeof save==='function')save();
+toast('📅 Tanggal transaksi dikoreksi');
+if(typeof runDataHealthCheck==='function')runDataHealthCheck();
+},
 unlinkStockCatalog(idx){
 const p=(D.partsStock||[])[idx];
 if(!p){toast('⚠️ Item stok tidak ditemukan (mungkin sudah berubah urutannya, coba pindai ulang).');return;}

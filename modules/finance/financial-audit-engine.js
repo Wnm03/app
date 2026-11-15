@@ -411,6 +411,13 @@ const FinancialAuditEngine = {
     return { range: normalized, summary, topCategories: top, expenseGroups, smallLeakages: leak, comparison, recurringCandidates: recurring, duplicates, dataQuality };
   },
 
+  implausibleDateTransactions() {
+    const all = Array.isArray(D.transactions) ? D.transactions : [];
+    const max = new Date(); max.setFullYear(max.getFullYear() + 1);
+    const maxStr = max.getFullYear() + '-' + String(max.getMonth() + 1).padStart(2, '0') + '-' + String(max.getDate()).padStart(2, '0');
+    return all.filter((t) => t && typeof t.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.date) && (t.date > maxStr || t.date < '2000-01-01'));
+  },
+
   dataQuality(range, options) {
     const opts = options || {};
     const q = opts._eligible || this._eligibleTransactions(range);
@@ -418,6 +425,9 @@ const FinancialAuditEngine = {
       tx.type === 'expense' && !String(tx.category || '').trim()
     ).length;
     const duplicates = opts._duplicates || this.duplicateDiagnostics(range, { _eligible: q });
+    // S2816 (B4): pindai SEMUA transaksi (bukan hanya rentang audit) -- tanggal salah ketik jauh di luar rentang
+    // tidak boleh luput dari audit kualitas data.
+    const implausible = this.implausibleDateTransactions();
     const warning = [];
     if (q.stats.totalRecords === 0) warning.push('Belum ada transaksi tercatat.');
     if (q.stats.invalidDateCount > 0) warning.push(`${q.stats.invalidDateCount} transaksi memiliki tanggal tidak valid dan tidak dihitung.`);
@@ -425,8 +435,13 @@ const FinancialAuditEngine = {
     if (q.stats.nonCashCount > 0) warning.push(`${q.stats.nonCashCount} transaksi bertanda "Catatan saja" tidak dihitung ke arus kas.`);
     if (q.stats.nonSelfOwnedCount > 0) warning.push(`${q.stats.nonSelfOwnedCount} transaksi akun non-SELF tidak dimasukkan ke total audit.`);
     warning.push(...duplicates.warnings);
+    if (implausible.length > 0) {
+      const first = implausible[0];
+      warning.push(`${implausible.length} transaksi bertanggal tidak wajar (lebih dari 1 tahun ke depan atau sebelum 2000), mis. ${first.date}${first.note ? ' "' + String(first.note).slice(0, 24) + '"' : ''}. Periksa tahunnya di Riwayat Transaksi.`);
+    }
     return {
       ...q.stats,
+      implausibleDateCount: implausible.length,
       uncategorizedCount,
       duplicateIdCount: duplicates.exactIdDuplicateCount,
       duplicateBusinessCount: duplicates.exactBusinessDuplicateCount,

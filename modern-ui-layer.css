@@ -272,7 +272,7 @@ a:focus-visible {
 [data-theme="graphite"] .page { padding: 10px 12px 88px; animation: none; }
 [data-theme="graphite"] .page-settings-btn { margin-bottom: 9px; }
 [data-theme="graphite"] .page-title { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 17px; letter-spacing: -.2px; }
-[data-theme="graphite"] .page-breadcrumb { margin: -2px 0 8px; font-size: 10px; }
+[data-theme="graphite"] .page-breadcrumb { margin: -2px 0 8px; font-size:11px; }
 
 
 [data-theme="graphite"] .card,
@@ -296,7 +296,7 @@ a:focus-visible {
   margin-bottom: 10px;
   color: var(--text);
 }
-[data-theme="graphite"] .card-title .card-setting-btn { font-size: 10px; }
+[data-theme="graphite"] .card-title .card-setting-btn { font-size:11px; }
 
 /* Archetype 1 — HERO metric: one dominant value. */
 [data-theme="graphite"] .dashhub-hero,
@@ -308,7 +308,7 @@ a:focus-visible {
 }
 [data-theme="graphite"] .dashhub-hero-greet { font-family: inherit; font-size: 16px; }
 [data-theme="graphite"] .dashhub-hero-balance { margin-top: 14px; }
-[data-theme="graphite"] .dashhub-hero-balance-label { font-size: 10px; letter-spacing: .04em; }
+[data-theme="graphite"] .dashhub-hero-balance-label { font-size:11px; letter-spacing: .04em; }
 [data-theme="graphite"] .dashhub-hero-balance-val {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 27px;
@@ -330,7 +330,7 @@ a:focus-visible {
   padding: 11px 10px;
 }
 [data-theme="graphite"] .stat-label,
-[data-theme="graphite"] .shop-label { font-size: 10px; color: var(--text2); }
+[data-theme="graphite"] .shop-label { font-size:11px; color: var(--text2); }
 [data-theme="graphite"] .stat-val,
 [data-theme="graphite"] .shop-val,
 [data-theme="graphite"] .money,
@@ -361,7 +361,7 @@ a:focus-visible {
 [data-theme="graphite"] .tx-item { gap: 9px; padding: 9px 2px; border-bottom-color: var(--ui-divider); }
 [data-theme="graphite"] .tx-icon { width: 30px; height: 30px; border-radius: 9px; font-size: 14px; background: var(--surface2) !important; }
 [data-theme="graphite"] .tx-name { font-size: 12px; font-weight: 650; }
-[data-theme="graphite"] .tx-meta { font-size: 9.5px; color: var(--text3); }
+[data-theme="graphite"] .tx-meta { font-size:11px; color: var(--text3); }
 [data-theme="graphite"] .tx-amount { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-weight: 650; }
 [data-theme="graphite"] .shop-product-card { border-radius: 12px; padding: 10px 11px 10px 13px; }
 [data-theme="graphite"] .shop-product-card::before { width: 2px; background: var(--border2); }
@@ -392,12 +392,12 @@ a:focus-visible {
   border-radius: var(--ui-control-radius);
   box-shadow: none;
 }
-[data-theme="graphite"] .chip-btn { padding: 8px 11px; font-size: 10px; background: var(--surface2); border-color: var(--border); }
+[data-theme="graphite"] .chip-btn { padding: 8px 11px; font-size:11px; background: var(--surface2); border-color: var(--border); }
 [data-theme="graphite"] .chip-btn.active,
 [data-theme="graphite"] .kel-subtab.active,
 [data-theme="graphite"] .lap-subtab.active { background: var(--surface4); color: var(--text); border-color: var(--border2); box-shadow: none; }
 [data-theme="graphite"] .kel-subtab,
-[data-theme="graphite"] .lap-subtab { min-height: 34px; padding: 7px 11px; font-size: 10.5px; }
+[data-theme="graphite"] .lap-subtab { min-height: 34px; padding: 7px 11px; font-size:11px; }
 
 
 [data-theme="graphite"] .btn-primary {
@@ -458,10 +458,10 @@ a:focus-visible {
 [data-theme="graphite"] .nav-fab-icon { width: 36px; height: 36px; margin-top: -17px; background: var(--surface4); color: var(--text); border: 2px solid var(--surface); box-shadow: 0 5px 14px rgba(0,0,0,.28); }
 
 
-[data-theme="graphite"] .tx-tbl { font-size: 10px; }
-[data-theme="graphite"] .tx-tbl th { padding: 6px; font-size: 9px; color: var(--text3); }
+[data-theme="graphite"] .tx-tbl { font-size:11px; }
+[data-theme="graphite"] .tx-tbl th { padding: 6px; font-size:11px; color: var(--text3); }
 [data-theme="graphite"] .tx-tbl td { padding: 7px 6px; border-bottom-color: var(--ui-divider); }
-[data-theme="graphite"] .tx-tbl .tx-amount { font-size: 10px; }
+[data-theme="graphite"] .tx-tbl .tx-amount { font-size:11px; }
 
 
 @media (min-width: 900px) {
@@ -619,7 +619,7 @@ a:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 [data-theme] .tx-name { font-size: 12px; font-weight: 700; }
-[data-theme] .tx-meta { font-size: 10px; }
+[data-theme] .tx-meta { font-size:11px; }
 [data-theme] .tx-amount { font-size: 12px; font-variant-numeric: tabular-nums; }
 [data-theme] .tx-icon { width: 32px; height: 32px; border-radius: 10px; }
 
@@ -1031,7 +1031,7 @@ html body[data-theme] .card-collapse-toggle { flex: 0 0 44px; }
 .dhb-tr-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
 .dhb-tr-bars{flex:1;width:100%;display:flex;gap:3px;align-items:flex-end}
 .dhb-tr-bars i{flex:1;min-height:2px;border-radius:3px 3px 0 0}
-.dhb-tr-col span{font-size:10px;color:var(--text2)}
+.dhb-tr-col span{font-size:11px;color:var(--text2)}
 .dhb-tr-bars .in{background:var(--money-pos)}
 .dhb-tr-bars .out{background:var(--money-neg)}
 #financialAuditInsightWrap button{white-space:nowrap}
@@ -1077,7 +1077,7 @@ html body[data-theme] #keuanganTab-tagihan .card-setting-btn{white-space:nowrap;
   html body[data-theme] #keuanganTab-tagihan .card-title > .u-flex{margin-left:auto;flex-wrap:nowrap}
   html body[data-theme] #keuBillStatGrid.bill-stat-pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible}
   html body[data-theme] #keuBillStatGrid .bill-stat-pill{flex-direction:column;align-items:flex-start;gap:2px;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:var(--r-md);background:var(--surface2)}
-  html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-label{font-size:10px;white-space:nowrap}
+  html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-label{font-size:11px;white-space:nowrap}
   html body[data-theme] #keuBillStatGrid .bill-stat-pill .stat-val{font-size:13px;white-space:nowrap}
 }
 html body[data-theme] .bill-item .tx-info{min-width:0}
@@ -1307,7 +1307,7 @@ body.has-open-modal .toast {
 .shop-kpi-strip > .pwa-domain-hero .pwa-action-card { min-height:48px; padding:7px 9px; display:grid; grid-template-columns:24px minmax(0,1fr); column-gap:7px; text-align:left; }
 .shop-kpi-strip > .pwa-domain-hero .pwa-action-card > span { grid-row:1 / span 2; align-self:center; }
 .shop-kpi-strip > .pwa-domain-hero .pwa-action-card b { font-size:12px; }
-.shop-kpi-strip > .pwa-domain-hero .pwa-action-card small { font-size:10px; }
+.shop-kpi-strip > .pwa-domain-hero .pwa-action-card small { font-size:11px; }
 .shop-kpi-strip > .shop-grid { grid-column:2; grid-row:1; display:grid !important; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(82px,1fr); gap:8px; align-content:stretch; margin:0; }
 .shop-kpi-strip > .shop-grid .shop-stat { min-width:0; min-height:82px; padding:10px; }
 .shop-kpi-strip > .shop-grid #shopModalStokCard { grid-column:1 / -1; min-width:0; height:100%; margin:0 !important; padding:10px; }
@@ -1501,3 +1501,97 @@ html body [style*="font-size:11px"],html body [style*="font-size: 11px"],
 html body [style*="font-size:10px"],html body [style*="font-size: 10px"],
 html body [style*="font-size:10.5px"],html body [style*="font-size:9.5px"],
 html body [style*="font-size:9px"]{font-size:var(--fs-xs)!important}
+
+/* S2813 — Audit UI Proyek Renovasi (390x844 / 360x640): kartu, judul, panel dana, area sentuh, kontras tema terang. */
+html body #page-keuangan #renovList .tx-item > .renov-card-row { flex:1 1 auto; min-width:0; max-width:100%; width:100%; margin-left:0; }
+#renovList .renov-card-row .tx-info { flex:1 1 0; min-width:0; }
+.renov-overflow-menu > summary { width:44px; min-width:44px; height:44px; }
+.renov-overflow-menu[open] > .renov-menu-delete { white-space:nowrap; min-width:180px; }
+#renovDetailModal .modal-title { align-items:flex-start; gap:8px; }
+#renovDetailTitle { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-clamp:2; overflow:hidden; overflow-wrap:anywhere; min-width:0; }
+#renovDetailModal .budget-sum-val { white-space:nowrap; font-size:clamp(11px,3.1vw,16px); }
+.renov-fund-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.renov-fund-actions > .btn { min-height:44px; padding-left:6px; padding-right:6px; white-space:normal; word-break:normal; overflow-wrap:normal; hyphens:none; }
+.renov-fund-actions > .btn-primary { grid-column:1 / -1; }
+.renov-cat-row { padding:6px 0; border-top:1px solid var(--border2); }
+.renov-cat-row:first-of-type { border-top:0; }
+#renovItemList .tx-item { min-height:48px; }
+#renovItemList .tx-icon { position:relative; }
+#renovItemList .tx-icon::after { content:""; position:absolute; inset:-8px; }
+#keuRenovCard-cbody .hint-fold > summary, #txRenovPanel .pm-btn { min-height:44px; display:flex; align-items:center; }
+#renovPayModal .modal, #renovDpModal .modal, #renovProjectModal .modal { overscroll-behavior:contain; }
+body[data-theme="light"], body[data-theme="modern"] {
+  --renov-ok:#047857; --renov-bad:#be185d; --renov-acc:#4338ca;
+}
+:is(body[data-theme="light"],body[data-theme="modern"]) :is(#renovDetailModal,#renovPayModal,#renovDpModal,#renovItemModal,#keuRenovCard-cbody,#txRenovPanel) :is(.green,.budget-sum-val.green) { color:var(--renov-ok) !important; }
+:is(body[data-theme="light"],body[data-theme="modern"]) :is(#renovDetailModal,#renovPayModal,#renovDpModal,#renovItemModal,#keuRenovCard-cbody,#txRenovPanel) :is(.red,.budget-sum-val.red) { color:var(--renov-bad) !important; }
+:is(body[data-theme="light"],body[data-theme="modern"]) :is(#renovDetailModal,#renovPayModal,#renovDpModal,#renovItemModal,#keuRenovCard-cbody) :is(.purple,.card-setting-btn,.calc-trigger,.budget-sum-val.purple) { color:var(--renov-acc) !important; }
+:is(body[data-theme="light"],body[data-theme="modern"]) #txRenovPanel :is(.sheet-linked-panel-heading,.pm-btn.active) { color:var(--renov-acc) !important; }
+#renovItemModal .modal span[data-action] { display:inline-flex; align-items:center; min-height:44px; }
+#renovItemList .tx-info { min-height:44px; display:flex; flex-direction:column; justify-content:center; }
+#renovList .renov-menu-delete { width:auto; height:auto; min-height:44px; white-space:nowrap; }
+#renovList .renov-menu-delete::after { content:" Hapus proyek"; font-size:13px; font-weight:700; }
+
+/* S2813 — Audit UI Proyek Renovasi (390x844 & 360x640). */
+html body #page-keuangan #renovList .tx-item>.renov-card-row{flex:1 1 auto;min-width:0;max-width:100%;margin-left:0}
+#renovList .renov-card-row .tx-info{flex:1 1 0;min-width:0}
+#renovList .renov-overflow-menu{flex:0 0 auto}
+.renov-overflow-menu>summary{width:44px;min-width:44px;height:44px}
+.renov-overflow-menu[open]>.renov-menu-delete{white-space:nowrap;min-width:180px}
+#renovDetailTitle{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-width:0;overflow-wrap:anywhere}
+#renovDetailModal .modal-title>span:first-child{min-width:0;flex:1 1 0}
+#renovDetailModal .budget-sum-val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.renov-fund-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.renov-fund-actions>.btn{min-height:44px;padding:8px 6px;white-space:normal;word-break:normal;overflow-wrap:normal;hyphens:none;font-size:12px}
+.renov-fund-actions>.btn-primary{grid-column:1/-1;font-size:14px}
+.renov-cat-row{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:1px solid var(--border2)}
+.renov-cat-row:last-child{border-bottom:0}
+.renov-cat-name{font-weight:700}
+#renovItemList .tx-item{min-height:56px}
+#renovItemList .tx-icon{position:relative}
+#renovItemList .tx-icon::after{content:"";position:absolute;inset:-6px}
+#keuRenovCard-cbody .hint-fold>summary,#renovDetailModal .hint-fold>summary{min-height:44px;display:flex;align-items:center}
+#txRenovPanel .pm-btn{min-height:44px;display:flex;align-items:center;justify-content:center}
+html body[data-theme="light"] :is(#renovDetailModal,#renovList,#renovPayModal) :is(.budget-sum-val.green,.tx-amount.green){color:var(--renov-ok)}
+html body[data-theme="light"] :is(#renovDetailModal,#renovList) .budget-sum-val.red{color:var(--renov-bad)}
+html body[data-theme="light"] :is(#renovDetailModal,#renovItemModal,#keuRenovCard-cbody) :is(.budget-sum-val.purple,.card-setting-btn,.calc-trigger){color:var(--renov-acc)}
+html body[data-theme="light"] #renovItemModal span[data-action^="Renov."],html body[data-theme="light"] #renovItemModal span[data-action^="renovCalc"],html body[data-theme="light"] #renovItemModal span[data-action^="Tukang"]{color:var(--renov-acc)}
+html body[data-theme="dark"] :is(#renovDetailModal,#txRenovPanel) .fl{color:var(--text)}
+
+/* S2814 — modal Produk: toggle "Nonaktif" tidak boleh menyusut (sebelumnya terpotong jadi "Nonakti" di 360px);
+   baris Harga Beli/Jual rata bawah supaya label 2 baris tidak menggeser input. */
+#productModal #pStockKoreksiBtn { flex: 0 0 auto; min-width: max-content; margin-left: 10px; }
+#productModal .u-grid2 { align-items: end; }
+
+/* S2815 — link eksternal di dalam teks petunjuk: area sentuh 44px lewat ::after (tampilan teks tidak berubah). */
+.hint-ext-link { position: relative; display: inline-block; }
+.hint-ext-link::after { content: ""; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); }
+
+/* S2815 — utilitas yang dipakai di markup tetapi belum punya CSS (hasil pemindaian statis Tahap 1). */
+.u-ml10 { margin-left:10px; }
+.u-flex-between { justify-content:space-between; }
+.u-jcsb { justify-content:space-between; }
+.u-grid { display:grid; }
+.u-grid3 { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.u-t3 { color:var(--text3); }
+.u-pt10 { padding-top:10px; }
+.u-mt14 { margin-top:14px; }
+.u-py4 { padding-top:4px; padding-bottom:4px; }
+.u-my12 { margin-top:12px; margin-bottom:12px; }
+.u-flex-1 { flex:1; min-width:0; }
+.u-fs20 { font-size:20px; }
+.u-fs9 { font-size:var(--fs-caption); } /* nama lama "9" tetap dipakai di markup; lantai keterbacaan 11px */
+
+/* S2816 B1/B2 — strip ringkasan Beranda (tema modern): label tidak boleh <11px; di layar <400px
+   strip menjadi grid 2x2 supaya nilai negatif (mis. "-Rp 381.295") dan pill "Transaksi" tidak keluar layar. */
+html body[data-theme="modern"] #dashHubTickerModern .bill-stat-pill .stat-label { font-size: var(--fs-caption); }
+@media (max-width: 399px) {
+  html body[data-theme] #dashHubTickerModern.bill-stat-pills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 0; overflow: visible; }
+  html body[data-theme] #dashHubTickerModern .bill-stat-pill { min-width: 0; padding: 0 12px; border-right: 1px solid var(--border); }
+  html body[data-theme] #dashHubTickerModern .bill-stat-pill:nth-child(2n) { border-right: none; }
+  html body[data-theme] #dashHubTickerModern .bill-stat-pill .stat-val { font-size: var(--fs-body-lg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+}
+
+/* S2816 B6 — teks panjang boleh membungkus/terpotong anggun, bukan meluap beberapa piksel. */
+.dashhub-feature-name { overflow-wrap: anywhere; min-width: 0; }
+#page-carnotes .bbm-val { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

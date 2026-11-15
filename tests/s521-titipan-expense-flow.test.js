@@ -332,11 +332,11 @@ test('13. edit/delta-sync: edit nominal salah satu tx hasil S521 -> piutang tala
   assert.equal(synced, true);
   const p = D.piutang.find((x) => x.autoTxId === txId);
   // Pola delta SAMA PERSIS S519 (syncTitipanTalanganPiutangOnEdit): nilai
-  // baru = nilai lama + oldAmount - newAmount (bukan ditimpa newAmount
+  // baru = nilai lama + newAmount - oldAmount (S2818: arah dibenahi; bukan ditimpa newAmount
   // begitu saja) -- lihat tests/s519-...test.js #8. S521 tidak mengubah
   // formula ini, cuma memverifikasi tx hasil S521 kompatibel dgn primitive
   // S519 existing.
-  assert.equal(p.nilai, pBefore + oldAmount - 80000);
+  assert.equal(p.nilai, pBefore + 80000 - oldAmount);
 });
 
 // ============================================================

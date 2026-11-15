@@ -200,7 +200,7 @@ test('8. syncTitipanTalanganPiutangOnEdit(): sisa piutang disesuaikan pakai delt
   const before = D.piutang[0].nilai;
   const ok = ctx.syncTitipanTalanganPiutangOnEdit('tx1', 100000, 130000);
   assert.equal(ok, true);
-  assert.equal(D.piutang[0].nilai, before - 30000);
+  assert.equal(D.piutang[0].nilai, before + 30000);
 });
 
 test('8b. syncTitipanTalanganPiutangOnEdit(): tidak pernah negatif', () => {
@@ -208,7 +208,7 @@ test('8b. syncTitipanTalanganPiutangOnEdit(): tidak pernah negatif', () => {
   const ctx = makeCtx(D);
   const tx = { id: 'tx1', type: 'expense', amount: 100000, titipanLinkId: 'budi', titipanTalangan: true };
   ctx.maybeCreateTitipanTalanganPiutang(tx);
-  ctx.syncTitipanTalanganPiutangOnEdit('tx1', 100000, 999999999);
+  ctx.syncTitipanTalanganPiutangOnEdit('tx1', 999999999, 100000);
   assert.equal(D.piutang[0].nilai, 0);
 });
 

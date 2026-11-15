@@ -119,7 +119,7 @@ test('4. syncTitipanPinjamUtangOnEdit(): sisa utang disesuaikan pakai delta, buk
   const before = D.debts[0].nilai;
   const ok = ctx.syncTitipanPinjamUtangOnEdit('tx1', 100000, 130000);
   assert.equal(ok, true);
-  assert.equal(D.debts[0].nilai, before - 30000);
+  assert.equal(D.debts[0].nilai, before + 30000);
 });
 
 test('4b. syncTitipanPinjamUtangOnEdit(): tidak pernah negatif', () => {
@@ -127,7 +127,7 @@ test('4b. syncTitipanPinjamUtangOnEdit(): tidak pernah negatif', () => {
   const ctx = makeCtx(D);
   const tx = { id: 'tx1', type: 'expense', amount: 100000, titipanLinkId: 'budi', titipanPinjamUtang: true };
   ctx.maybeCreateTitipanPinjamUtang(tx);
-  ctx.syncTitipanPinjamUtangOnEdit('tx1', 100000, 999999999);
+  ctx.syncTitipanPinjamUtangOnEdit('tx1', 999999999, 100000);
   assert.equal(D.debts[0].nilai, 0);
 });
 

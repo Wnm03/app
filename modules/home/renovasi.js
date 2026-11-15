@@ -104,6 +104,9 @@ if(!it)return 0;
 if(Array.isArray(it.payments))return it.payments.reduce((sum,p)=>sum+Math.max(0,Number(p&&p.amount)||0),0);
 return it.paid?Math.max(0,Number(it.harga)||0):0;
 }
+function _renovSetStat(id,n){const el=document.getElementById(id);if(!el)return;const v=Math.round(Number(n)||0),a=Math.abs(v);const full=fmtFull(v);let txt=full;if(a>=1e7){const u=a>=1e12?1e12:(a>=1e9?1e9:1e6),suf=a>=1e12?' T':(a>=1e9?' M':' jt');txt=(v<0?'-':'')+'Rp '+(a/u).toFixed(2).replace(/\.?0+$/,'').replace('.',',')+suf;}el.textContent=txt;if(typeof el.setAttribute==='function'){if(txt!==full){el.setAttribute('title',full);el.setAttribute('aria-label',full);}else if(typeof el.removeAttribute==='function'){el.removeAttribute('title');el.removeAttribute('aria-label');}}}
+function _renovStatMoney(n){const v=Math.round(Number(n)||0),a=Math.abs(v);if(a>=1e9){const u=a>=1e12?1e12:1e9,x=(v/u).toFixed(2).replace(/\.?0+$/,'').replace('.',',');return 'Rp '+x+(u===1e12?' T':' M');}return fmtFull(v);}
+function _renovSetStat(id,n){const el=document.getElementById(id);if(!el)return;el.textContent=_renovStatMoney(n);el.title=fmtFull(n);}
 function _renovSameId(a,b){return typeof sameId==='function'?sameId(a,b):String(a)===String(b);}
 const Renov={
 _paymentInFlight:false,
@@ -132,7 +135,7 @@ el.innerHTML=D.renovProjects.map(p=>{
 const t=Renov.totals(p);
 const pct=t.total>0?Math.min(100,Math.round((t.paid/t.total)*100)):0;
 return`<div class="tx-item u-pointer u-fdcol u-gap6" style="align-items:stretch" data-action="Renov.openDetail" data-args="${escapeHtml(JSON.stringify([p.id]))}">
-        <div class="u-flex u-aic u-gap10">
+        <div class="u-flex u-aic u-gap10 renov-card-row">
           <div class="tx-icon u-bgaccsoft">🛠️</div>
           <div class="tx-info">
             <div class="tx-name">${escapeHtml(p.name)} ${t.count?`<span class="acc-chip">${t.paidCount}/${t.count} item</span>`:''}</div>
@@ -153,7 +156,9 @@ document.getElementById('renovProjNote').value=p?(p.catatan||''):'';
 const noteEl=document.getElementById('renovProjNote');
 if(noteEl&&noteEl.parentElement){
 let extra=document.getElementById('renovProjMetaFields');
-if(!extra){extra=document.createElement('div');extra.id='renovProjMetaFields';extra.className='u-mb10';extra.innerHTML='<label class="field-label" for="renovProjClient">Nama Klien (opsional)</label><input id="renovProjClient" class="input" maxlength="120" placeholder="Nama klien"><label class="field-label u-mt8" for="renovProjRab">Nilai Kontrak / RAB (Rp)</label><input id="renovProjRab" class="input" inputmode="numeric" type="number" min="0" step="1" placeholder="0">';noteEl.parentElement.insertBefore(extra,noteEl);}
+if(!extra){extra=document.createElement('div');extra.id='renovProjMetaFields';extra.innerHTML='<div class="fg"><label class="fl" for="renovProjClient">Nama Klien (opsional)</label><input id="renovProjClient" class="fi" maxlength="120" placeholder="Nama klien"></div><div class="fg"><label class="fl" for="renovProjRab">Nilai Kontrak / RAB (Rp)</label><input id="renovProjRab" class="fi" inputmode="numeric" type="number" min="0" step="1" placeholder="0"></div>';const noteGroup=noteEl.closest('.fg')||noteEl.parentElement;noteGroup.parentElement.insertBefore(extra,noteGroup);}
+if(!document.getElementById('renovProjLokasi')){const cg=document.getElementById('renovProjClient'),host=cg&&cg.closest('.fg');if(host){const lg=document.createElement('div');lg.className='fg';lg.innerHTML='<label class="fl" for="renovProjLokasi">Lokasi (opsional)</label><input id="renovProjLokasi" class="fi" maxlength="120" placeholder="Contoh: Magelang">';host.parentElement.insertBefore(lg,host.nextSibling);}}
+const lokEl=document.getElementById('renovProjLokasi');if(lokEl)lokEl.value=p?(p.lokasi||''):'';
 const clientEl=document.getElementById('renovProjClient'),rabEl=document.getElementById('renovProjRab');
 if(clientEl)clientEl.value=p?(p.klien||''):'';
 if(rabEl)rabEl.value=p&&p.rab!=null?String(p.rab):'';
@@ -166,15 +171,16 @@ if(!name){toast('⚠️ Masukkan nama proyek');return;}
 const catatan=document.getElementById('renovProjNote').value.trim();
 const klienEl=document.getElementById('renovProjClient'),rabEl=document.getElementById('renovProjRab');
 const klien=String(klienEl&&klienEl.value||'').trim();
+const lokasiEl=document.getElementById('renovProjLokasi');const lokasi=String(lokasiEl&&lokasiEl.value||'').trim();
 const rabRaw=String(rabEl&&rabEl.value||'').trim();
 const rab=rabRaw===''?0:Number(rabRaw);
 if(!Number.isFinite(rab)||rab<0){toast('⚠️ Nilai RAB harus angka nol atau lebih');return;}
 let savedProjectId=null;
 if(Renov.projEditId){
 const p=D.renovProjects.find(x=>sameId(x.id,Renov.projEditId));
-if(p){p.name=name;p.catatan=catatan;p.klien=klien;p.rab=rab;savedProjectId=p.id;}
+if(p){p.name=name;p.catatan=catatan;p.klien=klien;p.rab=rab;if(lokasiEl)p.lokasi=lokasi;savedProjectId=p.id;}
 } else {
-const project={id:uid(),name,catatan,klien,rab,createdAt:todayStr(),items:[]};
+const project={id:uid(),name,catatan,klien,rab,createdAt:todayStr(),items:[]};if(lokasi)project.lokasi=lokasi;
 D.renovProjects.push(project);savedProjectId=project.id;
 }
 Renov.projEditId=null;
@@ -227,11 +233,11 @@ const dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId
 const dp=dpTxs.filter(tx=>tx.renovDpKind!=='termin').reduce((sum,tx)=>sum+(Number(tx.amount)||0),0);
 const termin=dpTxs.filter(tx=>tx.renovDpKind==='termin').reduce((sum,tx)=>sum+(Number(tx.amount)||0),0);
 const incoming=dp+termin,fund=incoming-paid,rab=Math.max(0,Number(p.rab)||0);
-const categories={};items.forEach(it=>{const key=it.category||'Tanpa kategori';if(!categories[key])categories[key]={plan:0,paid:0};categories[key].plan+=Math.max(0,Number(it.harga)||0);categories[key].paid+=_renovItemPaidAmount(it);});
-const categoryRows=Object.entries(categories).map(([name,v])=>`<div class="u-flex u-jcsb u-fs12 u-py4"><span>${escapeHtml(name)}</span><span>Rencana ${fmt(v.plan)} · Realisasi ${fmt(v.paid)} · Selisih ${fmt(v.plan-v.paid)}</span></div>`).join('');
+const categories={};items.forEach(it=>{const key=it.grup||it.category||'Tanpa kategori';if(!categories[key])categories[key]={plan:0,paid:0};categories[key].plan+=Math.max(0,Number(it.harga)||0);categories[key].paid+=_renovItemPaidAmount(it);});
+const categoryRows=Object.entries(categories).map(([name,v])=>`<div class="renov-cat-row u-fs12"><div class="u-fw700">${escapeHtml(name)}</div><div class="u-t2">Rencana ${fmt(v.plan)} · Realisasi ${fmt(v.paid)} · Selisih ${fmt(v.plan-v.paid)}</div></div>`).join('');
 const incomeRows=dpTxs.map(tx=>`<div class="u-flex u-jcsb u-aic u-fs12 u-py4"><span>${escapeHtml(tx.renovDpLabel|| (tx.renovDpKind==='termin'?'Termin':'DP'))} · ${escapeHtml(tx.date||'-')}</span><span>${fmt(tx.amount)} <button class="tx-del" data-action="Renov.deleteDpIncome" data-args="${escapeHtml(JSON.stringify([p.id,tx.id]))}" aria-label="Hapus pemasukan">🗑</button></span></div>`).join('');
 const pct=plan>0?Math.min(100,Math.round(paid/plan*100)):0;
-panel.innerHTML=`<div class="u-fw700 u-mb6">💰 Arus Dana Proyek</div><div class="u-fs12 u-t2">${escapeHtml(p.name)}${p.klien?' · Klien: '+escapeHtml(p.klien):''}</div><div class="u-grid u-grid2 u-gap8 u-mt10"><div><div class="u-fs11 u-t2">Nilai Kontrak / RAB</div><div class="u-fw700">${fmt(rab)}</div></div><div><div class="u-fs11 u-t2">Rencana Item</div><div class="u-fw700">${fmt(plan)}</div></div><div><div class="u-fs11 u-t2">Selisih RAB</div><div class="u-fw700">${fmt(rab-plan)}</div></div><div><div class="u-fs11 u-t2">DP Masuk</div><div class="u-fw700">${fmt(dp)}</div></div><div><div class="u-fs11 u-t2">Termin Masuk</div><div class="u-fw700">${fmt(termin)}</div></div><div><div class="u-fs11 u-t2">Total Pemasukan</div><div class="u-fw700">${fmt(incoming)}</div></div><div><div class="u-fs11 u-t2">Terbayar Item</div><div class="u-fw700">${fmt(paid)}</div></div><div><div class="u-fs11 u-t2">Dana Proyek</div><div class="u-fw700" style="color:${fund<0?'var(--danger)':'var(--text)'}">${fmt(fund)} ${fund<0?'· Nombok':''}</div></div><div><div class="u-fs11 u-t2">Sisa Tagihan Klien</div><div class="u-fw700">${fmt(Math.max(0,rab-incoming))}</div></div><div><div class="u-fs11 u-t2">Sisa Belanja</div><div class="u-fw700">${fmt(Math.max(0,plan-paid))}</div></div></div><div class="u-fs11 u-t2 u-mt8">Realisasi pembayaran item: ${pct}%${paid>plan?' · Kelebihan bayar '+fmt(paid-plan):''}${fund<0?' · Nombok pribadi '+fmt(Math.max(0,-fund)):''}</div><div class="prog-bar u-mt6"><div class="prog-fill purple" style="width:${pct}%"></div></div><div class="u-fw700 u-fs12 u-mt12">Rencana / realisasi per kategori</div>${categoryRows||'<div class="u-t2 u-fs12">Belum ada item.</div>'}<div class="u-flex u-aic u-jcsb u-mt12"><div class="u-fw700 u-fs12">Daftar DP / Termin</div><button class="btn btn-ghost" data-action="Renov.toggleDpList">Daftar pemasukan</button></div><div id="renovDpListWrap" style="display:none">${incomeRows||'<div class="u-t2 u-fs12">Belum ada pemasukan proyek.</div>'}</div><div class="u-flex u-flex-wrap u-gap6 u-mt12"><button class="btn btn-primary" data-action="Renov.openDpModal" data-args="${escapeHtml(JSON.stringify([p.id]))}">＋ Catat DP / Termin</button><button class="btn btn-ghost" data-action="Renov.exportCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export CSV</button><button class="btn btn-ghost" data-action="Renov.importCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import CSV</button><button class="btn btn-ghost" data-action="Renov.exportPDF" data-args="${escapeHtml(JSON.stringify([p.id]))}">Laporan PDF</button></div>`;
+panel.innerHTML=`<div class="u-fw700 u-mb6">💰 Arus Dana Proyek</div><div class="u-fs12 u-t2">${escapeHtml(p.name)}${p.klien?' · Klien: '+escapeHtml(p.klien):''}</div><div class="u-grid u-grid2 u-gap8 u-mt10"><div><div class="u-fs11 u-t2">Nilai Kontrak / RAB</div><div class="u-fw700">${fmt(rab)}</div></div><div><div class="u-fs11 u-t2">Rencana Item</div><div class="u-fw700">${fmt(plan)}</div></div><div><div class="u-fs11 u-t2">Selisih RAB</div><div class="u-fw700">${fmt(rab-plan)}</div></div><div><div class="u-fs11 u-t2">DP Masuk</div><div class="u-fw700">${fmt(dp)}</div></div><div><div class="u-fs11 u-t2">Termin Masuk</div><div class="u-fw700">${fmt(termin)}</div></div><div><div class="u-fs11 u-t2">Total Pemasukan</div><div class="u-fw700">${fmt(incoming)}</div></div><div><div class="u-fs11 u-t2">Terbayar Item</div><div class="u-fw700">${fmt(paid)}</div></div><div><div class="u-fs11 u-t2">Dana Proyek</div><div class="u-fw700" style="color:${fund<0?'var(--danger)':'var(--text)'}">${fmt(fund)} ${fund<0?'· Nombok':''}</div></div><div><div class="u-fs11 u-t2">Sisa Tagihan Klien</div><div class="u-fw700">${fmt(Math.max(0,rab-incoming))}</div></div><div><div class="u-fs11 u-t2">Sisa Belanja</div><div class="u-fw700">${fmt(Math.max(0,plan-paid))}</div></div>${Number(p.profit)>0?`<div><div class="u-fs11 u-t2">Profit/Margin (RAB)</div><div class="u-fw700">${fmt(p.profit)}</div></div>`:''}</div><div class="u-fs11 u-t2 u-mt8">Realisasi pembayaran item: ${pct}%${paid>plan?' · Kelebihan bayar '+fmt(paid-plan):''}${fund<0?' · Nombok pribadi '+fmt(Math.max(0,-fund)):''}</div><div class="prog-bar u-mt6"><div class="prog-fill purple" style="width:${pct}%"></div></div><div class="u-fw700 u-fs12 u-mt12">Rencana / realisasi per kategori</div>${categoryRows||'<div class="u-t2 u-fs12">Belum ada item.</div>'}<div class="u-flex u-aic u-jcsb u-mt12"><div class="u-fw700 u-fs12">Daftar DP / Termin</div><button class="btn btn-ghost" data-action="Renov.toggleDpList">Daftar pemasukan</button></div><div id="renovDpListWrap" style="display:none">${incomeRows||'<div class="u-t2 u-fs12">Belum ada pemasukan proyek.</div>'}</div><div class="renov-fund-actions u-mt12"><button class="btn btn-primary" data-action="Renov.openDpModal" data-args="${escapeHtml(JSON.stringify([p.id]))}">＋ Catat DP / Termin</button><button class="btn btn-ghost" data-action="Renov.exportCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export CSV</button><button class="btn btn-ghost" data-action="Renov.importCSV" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import CSV</button><button class="btn btn-ghost" data-action="Renov.exportXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Export Excel</button><button class="btn btn-ghost" data-action="Renov.importXLSX" data-args="${escapeHtml(JSON.stringify([p.id]))}">Import Excel</button><button class="btn btn-ghost" data-action="Renov.exportPDF" data-args="${escapeHtml(JSON.stringify([p.id]))}">Laporan PDF</button></div>`;
 },
 toggleDpList(){const el=document.getElementById('renovDpListWrap');if(el)el.style.display=el.style.display==='none'?'block':'none';},
 _ensureDpModal(){let el=document.getElementById('renovDpModal');if(!el){el=document.createElement('div');el.id='renovDpModal';el.className='overlay';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');document.body.appendChild(el);}return el;},
@@ -240,7 +246,7 @@ const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Pro
 Renov._dpProjectId=p.id;const cats=typeof getCatsByType==='function'?getCatsByType('income'):[];
 if(!Array.isArray(cats)||!cats.length){toast('⚠️ Kategori income belum tersedia; pemasukan DP tidak dibuat');return;}
 const accounts=D.accounts||[];if(!accounts.length){toast('⚠️ Belum ada akun tujuan');return;}
-const el=Renov._ensureDpModal();el.innerHTML=`<div class="modal" style="max-height:90vh;overflow:auto"><div class="modal-handle"></div><div class="modal-title"><span>Catat DP / Termin Klien</span><button class="modal-close" data-action="closeModal" data-args='["renovDpModal"]'>✕</button></div><div style="overflow:auto;max-height:calc(90vh - 90px)"><label class="field-label">Label</label><input id="renovDpLabel" class="input" maxlength="120" placeholder="DP awal / Termin 1"><label class="field-label u-mt8">Jenis</label><select id="renovDpKind" class="input"><option value="dp">DP</option><option value="termin">Termin</option></select><label class="field-label u-mt8">Jumlah (Rp)</label><input id="renovDpAmount" class="input" type="number" min="1" step="1"><label class="field-label u-mt8">Tanggal</label><input id="renovDpDate" class="input" type="date" value="${todayStr()}"><label class="field-label u-mt8">Akun Tujuan</label><select id="renovDpAccount" class="input" data-onchange="Renov.updateDpOwnerVisibility"><option value="">Pilih akun tujuan</option>${accounts.map(a=>`<option value="${escapeHtml(String(a.id))}">${escapeHtml(a.emoji||'')} ${escapeHtml(a.name||'Akun')}</option>`).join('')}</select><div id="renovDpOwnerWrap" class="u-mt8" style="display:none"><label class="field-label">Pemilik / Penanggung</label><select id="renovDpOwner" class="input"></select></div><label class="field-label u-mt8">Catatan</label><input id="renovDpNote" class="input" maxlength="240"><div class="u-flex u-gap8 u-mt14"><button class="btn btn-primary" data-action="Renov.submitDpIncome">Simpan Pemasukan</button><button class="btn btn-ghost" data-action="closeModal" data-args='["renovDpModal"]'>Batal</button></div></div></div>`;
+const el=Renov._ensureDpModal();el.innerHTML=`<div class="modal" style="max-height:90vh;overflow:auto"><div class="modal-handle"></div><div class="modal-title"><span>Catat DP / Termin Klien</span><button class="modal-close" data-action="closeModal" data-args='["renovDpModal"]'>✕</button></div><div style="overflow:auto;max-height:calc(90vh - 90px)"><div class="fg"><label class="fl" for="renovDpLabel">Label</label><input id="renovDpLabel" class="fi" maxlength="120" placeholder="DP awal / Termin 1"></div><div class="fg"><label class="fl" for="renovDpKind">Jenis</label><select id="renovDpKind" class="fi"><option value="dp">DP</option><option value="termin">Termin</option></select></div><div class="fg"><label class="fl" for="renovDpAmount">Jumlah (Rp)</label><input id="renovDpAmount" class="fi" type="number" min="1" step="1"></div><div class="fg"><label class="fl" for="renovDpDate">Tanggal</label><input id="renovDpDate" class="fi" type="date" value="${todayStr()}"></div><div class="fg"><label class="fl" for="renovDpAccount">Akun Tujuan</label><select id="renovDpAccount" class="fi" data-onchange="Renov.updateDpOwnerVisibility"><option value="">Pilih akun tujuan</option>${accounts.map(a=>`<option value="${escapeHtml(String(a.id))}">${escapeHtml(a.emoji||'')} ${escapeHtml(a.name||'Akun')}</option>`).join('')}</select></div><div id="renovDpOwnerWrap" class="u-mt8" style="display:none"><div class="fg"><label class="fl" for="renovDpOwner">Pemilik / Penanggung</label><select id="renovDpOwner" class="fi"></select></div></div><div class="fg"><label class="fl" for="renovDpNote">Catatan</label><input id="renovDpNote" class="fi" maxlength="240"></div><div class="u-flex u-gap8 u-mt14"><button class="btn btn-primary u-flex1 u-p14" data-action="Renov.submitDpIncome">Simpan Pemasukan</button><button class="btn btn-ghost" data-action="closeModal" data-args='["renovDpModal"]'>Batal</button></div></div></div>`;
 const accEl=document.getElementById('renovDpAccount');if(accEl)accEl.value='';Renov.updateDpOwnerVisibility();openModal('renovDpModal');
 },
 updateDpOwnerVisibility(){
@@ -294,7 +300,7 @@ add(['=== IDENTITAS PROYEK ===']);add(['Nama Proyek','Klien','Nilai Kontrak/RAB'
 const plan=items.reduce((s,it)=>s+(Number(it.harga)||0),0),paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+(Number(tx.amount)||0),0);
 add(['=== RINGKASAN ===']);add(['RAB','Rencana Item','Terbayar','Sisa Belanja','DP+Termin Masuk','Dana Proyek','Sisa Tagihan Klien']);add([p.rab||0,plan,paid,Math.max(0,plan-paid),incoming,incoming-paid,Math.max(0,(Number(p.rab)||0)-incoming)]);rows.push('');
 add(['=== DP / TERMIN ===']);add(['Label','Jenis','Tanggal','Akun','Nominal','Catatan','ID Transaksi']);dpTxs.forEach(tx=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,tx.accountId));add([tx.renovDpLabel||'',tx.renovDpKind||'dp',tx.date||'',acc?acc.name:tx.accountId,tx.amount,tx.note||'',tx.id]);});rows.push('');
-add(['=== DAFTAR ITEM ===']);add(['Item','Kategori','Ukuran','Harga Rencana','Terbayar','Sisa','Status','Akun','Tanggal']);items.forEach(it=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,it.accountId)),amount=_renovItemPaidAmount(it);add([it.name,it.category||'',it.ukuran||'',it.harga,amount,Math.max(0,(Number(it.harga)||0)-amount),amount>=(Number(it.harga)||0)?'Lunas':amount>0?'Sebagian':'Belum dibayar',acc?acc.name:it.accountId||'',it.paidDate||it.tglBayar||'']);});rows.push('');
+add(['=== DAFTAR ITEM ===']);add(['Item','Kategori','Ukuran','Harga Rencana','Terbayar','Sisa','Status','Akun','Tanggal']);items.forEach(it=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,it.accountId)),amount=_renovItemPaidAmount(it);add([it.name,it.grup||it.category||'',it.ukuran||'',it.harga,amount,Math.max(0,(Number(it.harga)||0)-amount),amount>=(Number(it.harga)||0)?'Lunas':amount>0?'Sebagian':'Belum dibayar',acc?acc.name:it.accountId||'',it.paidDate||it.tglBayar||'']);});rows.push('');
 add(['=== RIWAYAT CICILAN ===']);add(['Item','ID Pembayaran','Tanggal','Akun','Label','Nominal','ID Transaksi']);items.forEach(it=>(it.payments||[]).forEach(pay=>{const acc=(D.accounts||[]).find(a=>sameId(a.id,pay.accountId));add([it.name,pay.id,pay.date||'',acc?acc.name:pay.accountId||'',pay.label||'',pay.amount,pay.txId]);}));
 const csv='\uFEFF'+rows.join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=('renovasi-'+String(p.name||'proyek').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'.csv');document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast('✅ CSV proyek berhasil disiapkan');return csv;
 },
@@ -338,7 +344,7 @@ const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Pro
 try{if(typeof ensureJsPDF==='function')await ensureJsPDF();const JsPDF=typeof window!=='undefined'&&window.jspdf&&window.jspdf.jsPDF;if(!JsPDF){toast('⚠️ Library PDF tidak tersedia. Periksa koneksi internet lalu coba lagi.');return false;}
 const doc=new JsPDF({unit:'pt',format:'a4'});const left=42,right=553;let y=48;const page=()=>{doc.addPage();y=48;};const ensureSpace=(height=18)=>{if(y+height>680)page();};const section=title=>{ensureSpace(28);doc.setFontSize(12);doc.text(title,left,y);y+=18;};const line=(label,value)=>{ensureSpace(16);doc.setFontSize(9);doc.text(String(label),left,y);doc.text(String(value),right,y,{align:'right'});y+=16;};const money=n=>'Rp '+Math.round(Number(n)||0).toLocaleString('id-ID');
 const items=p.items||[],dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId(tx.renovDpProjectId,p.id));const plan=items.reduce((s,it)=>s+(Number(it.harga)||0),0),paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+(Number(tx.amount)||0),0),fund=incoming-paid;
-const categories=new Map();items.forEach(it=>{const key=String(it.category||'Tanpa kategori');const row=categories.get(key)||{plan:0,paid:0};row.plan+=Math.max(0,Number(it.harga)||0);row.paid+=_renovItemPaidAmount(it);categories.set(key,row);});
+const categories=new Map();items.forEach(it=>{const key=String(it.grup||it.category||'Tanpa kategori');const row=categories.get(key)||{plan:0,paid:0};row.plan+=Math.max(0,Number(it.harga)||0);row.paid+=_renovItemPaidAmount(it);categories.set(key,row);});
 doc.setFontSize(16);doc.text('Laporan Proyek Renovasi',left,y);y+=24;ensureSpace(20);doc.setFontSize(11);doc.text(String(p.name||''),left,y);y+=18;line('Klien',p.klien||'-');line('Nilai Kontrak / RAB',money(p.rab));line('Rencana Item',money(plan));line('Terbayar',money(paid));line('DP + Termin Masuk',money(incoming));line('Dana Proyek',money(fund));if(fund<0)line('STATUS DANA','NOMBOK — dana pribadi '+money(Math.abs(fund)));line('Sisa Tagihan Klien',money(Math.max(0,(Number(p.rab)||0)-incoming)));line('Sisa Belanja',money(Math.max(0,plan-paid)));if(paid>plan)line('Status realisasi','KELEBIHAN BAYAR '+money(paid-plan));
 section('DP / Termin');dpTxs.forEach(tx=>line(`${tx.renovDpLabel||tx.renovDpKind||'DP'} · ${tx.date||'-'} · ${tx.note||''}`,money(tx.amount)));
 section('Daftar Item Biaya');items.forEach(it=>{line(it.name,`${money(it.harga)} · Dibayar ${money(_renovItemPaidAmount(it))}`);(it.payments||[]).forEach(pay=>line('  '+(pay.label||'Cicilan')+' · '+(pay.date||'-'),money(pay.amount)));});
@@ -346,15 +352,160 @@ section('Rencana vs Realisasi per Kategori');categories.forEach((row,name)=>{lin
 const filename='laporan-renovasi-'+String(p.name||'proyek').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.pdf';doc.save(filename);toast('✅ Laporan PDF berhasil dibuat');return true;
 }catch(err){console.error('[Renov] export PDF gagal',err);toast('⚠️ PDF gagal dibuat: '+(err&&err.message||'library tidak tersedia'));return false;}
 },
+// S2817: Export/Import Excel proyek (.xlsx), layout mengikuti sheet REKAP pada RAB_*.xlsx
+// (NO | TANGGAL | ITEM | JUMLAH | HARGA SATUAN | ONGKIR | JUMLAH HARGA, dikelompokkan per kategori).
+// Fungsi _xlsxBuild()/_xlsxParse() murni (tanpa DOM/XLSX) supaya bisa diuji tanpa pustaka SheetJS.
+_xlsxSlug(name){return String(name||'proyek').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'proyek';},
+_xlsxNorm(v){return String(v==null?'':v).trim().toLowerCase().replace(/[\s_/.-]+/g,'');},
+_xlsxDate(v){
+if(v instanceof Date&&Number.isFinite(v.getTime()))return v.toISOString().slice(0,10);
+if(typeof v==='number'&&v>20000&&v<80000)return new Date(Math.round((v-25569)*86400000)).toISOString().slice(0,10);
+const s=String(v==null?'':v).trim();return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10):'';
+},
+_xlsxBuild(p){
+const items=Array.isArray(p.items)?p.items:[];
+const dpTxs=(D.transactions||[]).filter(tx=>tx&&tx.type==='income'&&_renovSameId(tx.renovDpProjectId,p.id));
+const accName=(id)=>{const a=(D.accounts||[]).find(x=>_renovSameId(x.id,id));return a?a.name:(id||'');};
+const num=(v)=>Number(v)||0;
+const f=(formula,value)=>({t:'n',f:formula,v:value});
+const rek=[['REKAP'],['KEGIATAN','',p.name||''],['PEKERJAAN','',p.name||''],['KLIEN','',p.klien||''],['LOKASI','',p.lokasi||''],['TAHUN ANGGARAN','',String(p.createdAt||'').slice(0,4)||new Date().getFullYear()],[],
+['NO','TANGGAL','ITEM','JUMLAH','HARGA SATUAN','ONGKIR','JUMLAH HARGA'],[]];
+const groups=new Map();items.forEach(it=>{const k=String(it.grup||it.category||'Tanpa kategori');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(it);});
+let no=0,grand=0;const subRows=[];
+groups.forEach((list,cat)=>{
+rek.push(['',cat.toUpperCase()]);const first=rek.length+1;
+list.forEach(it=>{no++;const r=rek.length+1,hasQty=Number(it.qty)>0&&Number(it.hargaSatuan)>=0&&it.hargaSatuan!=null;
+const qty=hasQty?Number(it.qty):1,unit=hasQty?Number(it.hargaSatuan):num(it.harga)-num(it.ongkir),ong=num(it.ongkir),total=num(it.harga);
+rek.push([no,it.paidDate||it.tglBayar||'',it.name||'',qty,unit,ong||'',f(`(D${r}*E${r})+F${r}`,total)]);});
+const last=rek.length;const sub=list.reduce((s,it)=>s+num(it.harga),0);grand+=sub;
+rek.push(['','','','','JUMLAH','',f(`SUM(G${first}:G${last})`,sub)]);subRows.push({r:rek.length,v:sub});rek.push([]);
+});
+rek.push(['','','','','TOTAL JMLH','',subRows.length?f(subRows.map(x=>'G'+x.r).join('+'),grand):0]);
+const plan=grand,paid=items.reduce((s,it)=>s+_renovItemPaidAmount(it),0),incoming=dpTxs.reduce((s,tx)=>s+num(tx.amount),0);
+const sum=[['RINGKASAN PROYEK'],['Nama Proyek',p.name||''],['Klien',p.klien||''],['Lokasi',p.lokasi||''],['Nilai Kontrak/RAB',num(p.rab)],['Rencana Item',plan],['Terbayar',paid],['Sisa Belanja',Math.max(0,plan-paid)],['DP + Termin Masuk',incoming],['Dana Proyek',incoming-paid],['Sisa Tagihan Klien',Math.max(0,num(p.rab)-incoming)],['Catatan',p.catatan||'']];
+const dp=[['Label','Jenis','Tanggal','Akun','Nominal','Catatan','ID Transaksi']];
+dpTxs.forEach(tx=>dp.push([tx.renovDpLabel||'',tx.renovDpKind||'dp',tx.date||'',accName(tx.accountId),num(tx.amount),tx.note||'',tx.id]));
+const cic=[['Item','ID Pembayaran','Tanggal','Akun','Label','Nominal','ID Transaksi']];
+items.forEach(it=>(it.payments||[]).forEach(pay=>cic.push([it.name||'',pay.id,pay.date||'',accName(pay.accountId),pay.label||'',num(pay.amount),pay.txId])));
+return [{name:'REKAP',rows:rek},{name:'Ringkasan',rows:sum},{name:'DP-Termin',rows:dp},{name:'Cicilan',rows:cic}];
+},
+reconcileItemAccounts(dryRun){
+// S2818 F8: akun item Renovasi mengikuti akun transaksi (transaksi = sumber kebenaran). dryRun=true hanya menghitung.
+const accs=(typeof D!=='undefined'&&D&&Array.isArray(D.accounts))?D.accounts:[];
+const txs=(typeof D!=='undefined'&&D&&Array.isArray(D.transactions))?D.transactions:[];
+let n=0;
+((typeof D!=='undefined'&&D&&D.renovProjects)||[]).forEach(p=>(p&&p.items||[]).forEach(it=>{
+if(!it||!it.txId||!it.accountId)return;
+if(accs.some(a=>sameId(a.id,it.accountId)))return;
+const t=txs.find(x=>x&&sameId(x.id,it.txId));
+if(!t||!t.accountId||!accs.some(a=>sameId(a.id,t.accountId)))return;
+n++;if(!dryRun)it.accountId=t.accountId;
+}));
+if(!dryRun&&n>0&&typeof save==='function')save();
+return n;
+},
+_renovExpenseCategory(raw){
+const cats=(typeof D!=='undefined'&&D&&D.categories&&Array.isArray(D.categories.expense))?D.categories.expense:[];
+const nm=c=>String((c&&c.name)||c||'').trim();
+const want=String(raw||'').trim().toLowerCase();
+if(want){const hit=cats.find(c=>nm(c).toLowerCase()===want);if(hit)return nm(hit);}
+const reno=cats.find(c=>/^reno?v/i.test(nm(c)));
+return reno?nm(reno):'Renovasi';
+},
+_xlsxParse(aoa,existingItems){
+const rows=Array.isArray(aoa)?aoa:[];const N=Renov._xlsxNorm;
+let h=-1,cols=null;
+for(let i=0;i<Math.min(rows.length,60)&&h<0;i++){
+const n=(rows[i]||[]).map(N);
+const item=n.findIndex(x=>x==='item'||x==='nama'||x==='namaitem'||x==='namabarang');
+const tot=n.findIndex(x=>x==='jumlahharga'||x==='hargarencana'||x==='harga'||x==='total');
+if(item>=0&&tot>=0){h=i;cols={item,tot,qty:n.indexOf('jumlah'),unit:n.findIndex(x=>x==='hargasatuan'),ong:n.indexOf('ongkir'),tgl:n.indexOf('tanggal'),cat:n.findIndex(x=>x==='kategori'||x==='category'),size:n.findIndex(x=>x==='ukuran'||x==='ukurankebutuhan')};}
+}
+if(h<0)return {ok:false,error:'Header tidak ditemukan. Wajib ada kolom ITEM dan JUMLAH HARGA (atau Item dan Harga).',valid:[],invalid:[],zero:0};
+const val=(x)=>typeof x==='number'?x:Renov._renovParsePrice(x);
+const keyOf=(name,cat,price)=>[name,cat,price].map(v=>String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ')).join('|');
+const seen=new Set((existingItems||[]).map(it=>keyOf(it.name,it.grup||it.category,Math.round(Number(it.harga)||0))));
+const valid=[],invalid=[];let zero=0,group='',profit=0;
+const STOP=/^(totaljmlh|hjk|dividen|sisakas)/;
+for(let i=h+1;i<rows.length;i++){
+const r=rows[i]||[];const line=i+1;
+const lead=r.slice(0,Math.max(cols.item,1)+1).map(N);
+if(r.some(c=>STOP.test(N(c)))&&!String(r[cols.item]||'').trim().length)break;
+if(STOP.test(N(r[cols.item]))||lead.some(x=>/^(totaljmlh|hjk\(|dividen)/.test(x)))break;
+const name=String(r[cols.item]==null?'':r[cols.item]).trim();
+if(/^(profit|margin|keuntungan|laba)\b/i.test(name)){const pv=val(r[cols.tot]);if(Number.isFinite(pv)&&pv>0)profit+=pv;continue;}
+const label=cols.cat>=0?String(r[cols.cat]||'').trim():'';
+if(cols.cat<0&&cols.item>=1){const g=String(r[cols.item-1]==null?'':r[cols.item-1]).trim();if(g&&!/^\d+$/.test(g)&&!/^\d{4}-/.test(g))group=g;}
+if(!name)continue;
+const total0=val(r[cols.tot]),total=Number.isFinite(total0)?Math.round(total0):total0;
+const category=(label||group||'').trim();
+if(!Number.isFinite(total)||total<=0){if(!Number.isFinite(total)||total===0){zero++;}else invalid.push({line,reason:'Harga tidak boleh negatif'});continue;}
+const key=keyOf(name,category,total);
+if(seen.has(key)){invalid.push({line,reason:'Duplikat item (sudah ada / berulang)'});continue;}
+seen.add(key);
+const it={id:typeof uid==='function'?uid():String(Date.now())+i,name,category:Renov._renovExpenseCategory(''),grup:category,ukuran:cols.size>=0?String(r[cols.size]||'').trim():'',harga:total,paid:false,txId:null,paidDate:null,tglBayar:'',accountId:'',note:'',payments:undefined};
+const q=cols.qty>=0?val(r[cols.qty]):NaN,u=cols.unit>=0?val(r[cols.unit]):NaN,o=cols.ong>=0?val(r[cols.ong]):NaN;
+if(Number.isFinite(q)&&q>0&&Number.isFinite(u)&&u>=0){it.qty=q;it.hargaSatuan=u;if(Number.isFinite(o)&&o>0)it.ongkir=o;}
+valid.push(it);
+}
+let hjk=0,lokasi='';
+for(let i=0;i<rows.length;i++){const r=rows[i]||[];const n=r.map(N);
+const hi=n.findIndex(x=>/^hjk/.test(x));if(hi>=0&&!hjk){const nums=r.slice(hi+1).map(x=>typeof x==='number'?x:NaN).filter(Number.isFinite);if(nums.length&&nums[nums.length-1]>0)hjk=nums[nums.length-1];}
+if(!lokasi&&n[0]==='lokasi'){const t=r.slice(1).find(x=>String(x||'').trim());if(t)lokasi=String(t).trim();}}
+return {ok:true,valid,invalid,zero,meta:{hjk:Math.round(hjk),lokasi,profit:Math.round(profit)}};
+},
+async _xlsxEnsure(){
+if(typeof XLSX!=='undefined')return true;
+try{await ensureXLSX();}catch(e){toast('⚠️ Gagal memuat pustaka Excel, cek koneksi internet');return false;}
+if(typeof XLSX==='undefined'){toast('⚠️ Pustaka Excel tidak tersedia');return false;}
+return true;
+},
+async exportXLSX(projectId){
+const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Proyek tidak ditemukan');return false;}
+if(!await Renov._xlsxEnsure())return false;
+try{
+const wb=XLSX.utils.book_new();
+Renov._xlsxBuild(p).forEach(s=>{const ws=XLSX.utils.aoa_to_sheet(s.rows);if(s.name==='REKAP')ws['!cols']=[{wch:5},{wch:12},{wch:48},{wch:9},{wch:14},{wch:10},{wch:16}];XLSX.utils.book_append_sheet(wb,ws,s.name);});
+XLSX.writeFile(wb,'renovasi-'+Renov._xlsxSlug(p.name)+'.xlsx');
+toast('✅ File Excel proyek berhasil diunduh');return true;
+}catch(err){console.error('[Renov] export XLSX gagal',err);toast('⚠️ Export Excel gagal: '+(err&&err.message||'tidak diketahui'));return false;}
+},
+async importXLSX(projectId){
+const p=D.renovProjects.find(x=>sameId(x.id,projectId));if(!p){toast('⚠️ Proyek tidak ditemukan');return;}
+const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.style.display='none';document.body.appendChild(input);
+input.addEventListener('cancel',()=>input.remove(),{once:true});
+input.addEventListener('change',async()=>{try{
+const file=input.files&&input.files[0];if(!file)return;
+if(file.size>5*1024*1024)throw new Error('Ukuran file maksimal 5 MB');if(!file.size)throw new Error('File Excel kosong');
+if(!await Renov._xlsxEnsure())return;
+const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+const names=(wb.SheetNames||[]).slice().sort((a,b)=>(/^rekap$/i.test(String(b).trim())?1:0)-(/^rekap$/i.test(String(a).trim())?1:0));
+if(!names.length)throw new Error('File tidak memiliki sheet');
+let pick='',res=null,firstErr='';
+for(const nm of names){const aoa=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,defval:'',raw:true});const r0=Renov._xlsxParse(aoa,p.items);if(r0.ok){pick=nm;res=r0;break;}if(!firstErr)firstErr=r0.error;}
+if(!res)throw new Error(firstErr||'Format sheet tidak dikenali');
+if(!res.valid.length){toast(`⚠️ Tidak ada baris valid di sheet "${pick}". ${res.invalid.length+res.zero} baris dilewati.`);return;}
+const sumNew=res.valid.reduce((s,it)=>s+it.harga,0);
+const setRab=!(Number(p.rab)>0)&&res.meta&&res.meta.hjk>0;
+const setLok=!String(p.lokasi||'').trim()&&res.meta&&res.meta.lokasi;
+const setProfit=!!(res.meta&&res.meta.profit>0);
+const preview=`Preview import Excel ke ${p.name} (sheet "${pick}"): ${res.valid.length} item valid, total ${fmtFull(sumNew)}; ${res.zero} baris harga 0/kosong dilewati, ${res.invalid.length} baris tidak valid.${setRab?`\nNilai Kontrak/RAB proyek (masih kosong) akan diisi HJK ${fmtFull(res.meta.hjk)}.`:''}${setLok?`\nLokasi proyek (masih kosong) akan diisi "${res.meta.lokasi}".`:''}${setProfit?`\nBaris PROFIT ${fmtFull(res.meta.profit)} bukan biaya: tidak diimpor sebagai item, disimpan sebagai margin proyek.`:''}\n\n${res.invalid.slice(0,8).map(x=>`Baris ${x.line}: ${x.reason}`).join('\n')}`;
+if(!await askConfirm(preview,{title:'Konfirmasi Import Excel',okText:`Import ${res.valid.length} item`}))return;
+p.items=p.items||[];const start=p.items.length,oldRab=p.rab,oldLok=p.lokasi,oldProfit=p.profit;p.items.push(...res.valid);if(setProfit)p.profit=res.meta.profit;if(setRab)p.rab=res.meta.hjk;if(setLok)p.lokasi=res.meta.lokasi;
+if(save()===false){p.items.splice(start,res.valid.length);if(setProfit){if(oldProfit===undefined)delete p.profit;else p.profit=oldProfit;}if(setRab)p.rab=oldRab;if(setLok){if(oldLok===undefined)delete p.lokasi;else p.lokasi=oldLok;}toast('⚠️ Import dibatalkan karena penyimpanan gagal');return;}
+Renov.render();if(sameId(Renov.curId,p.id))Renov.renderDetail();
+toast(`✅ ${res.valid.length} item rencana berhasil diimpor dari Excel`+(setRab?` (RAB diisi ${fmtFull(res.meta.hjk)})`:''));
+}catch(err){toast('⚠️ Import Excel gagal: '+(err&&err.message||'format tidak valid'));}finally{input.remove();}},{once:true});input.click();
+},
 renderDetail(){
 const p=D.renovProjects.find(x=>sameId(x.id,Renov.curId));
 if(!p){closeModal('renovDetailModal');return;}
 document.getElementById('renovDetailTitle').textContent=p.name;
 document.getElementById('renovDetailNote').textContent=p.catatan||'';
 const t=Renov.totals(p);
-document.getElementById('renovDetTotal').textContent=fmtFull(t.total);
-document.getElementById('renovDetPaid').textContent=fmtFull(t.paid);
-document.getElementById('renovDetSisa').textContent=fmtFull(t.sisa);
+_renovSetStat('renovDetTotal',t.total);
+_renovSetStat('renovDetPaid',t.paid);
+_renovSetStat('renovDetSisa',t.sisa);
 const pct=t.total>0?Math.min(100,Math.round((t.paid/t.total)*100)):0;
 document.getElementById('renovDetBar').style.width=pct+'%';
 document.getElementById('renovDetPct').textContent=pct+'% selesai';
@@ -371,7 +522,7 @@ const itemPaid=_renovItemPaidAmount(it),itemSettled=(Number(it.harga)||0)>0&&ite
 return`<div class="tx-item" data-renov-item-id="${escapeHtml(String(it.id))}">
         <div class="tx-icon" style="background:${itemSettled?'var(--accent3-soft)':'var(--surface3)'};cursor:pointer" data-action="Renov.openPayModal" data-args="${escapeHtml(JSON.stringify([p.id, it.id]))}" title="${itemSettled?'Lihat pembayaran':'Catat pembayaran'}">${itemSettled?'✅':(itemPaid>0?'🟡':'⬜')}</div>
         <div class="tx-info u-pointer" data-action="Renov.openItemModal" data-args="${escapeHtml(JSON.stringify([p.id, it.id]))}">
-          <div class="tx-name" style="${itemSettled?'text-decoration:line-through;color:var(--text2)':''}">${escapeHtml(it.name)} ${it.category?`<span class="acc-chip">${escapeHtml(it.category)}</span>`:''}</div>
+          <div class="tx-name" style="${itemSettled?'text-decoration:line-through;color:var(--text2)':''}">${escapeHtml(it.name)} ${(it.grup||it.category)?`<span class="acc-chip">${escapeHtml(it.grup||it.category)}</span>`:''}</div>
           <div class="tx-meta">${it.ukuran?('📏 '+escapeHtml(it.ukuran)+' · '):''}${it.hargaTotal?('💰 Total '+fmt(it.hargaTotal)+' · '):''}${itemOverpaid?'Kelebihan bayar · ':itemSettled?'Lunas · ':itemPaid>0?'Terbayar '+fmt(itemPaid)+' · ':''}${acc?acc.emoji+' '+escapeHtml(acc.name):'Belum pilih akun'}${it.calcDetail?(' · 🧮'+(Math.round(it.calcDetail.total||0)!==Math.round(it.harga||0)?' ⚠️':'')):''}</div>
         </div>
         <div class="tx-amount ${itemSettled?'green':''}">${fmt(it.harga)}</div>
@@ -410,7 +561,7 @@ return `<div class="tx-item u-aic"><div class="tx-info"><div class="tx-name">${e
 }).join('');
 const accounts=(D.accounts||[]).map(a=>`<option value="${escapeHtml(String(a.id))}" ${sameId(a.id,it.accountId)?'selected':''}>${escapeHtml(a.emoji||'')} ${escapeHtml(a.name||'Akun')}</option>`).join('');
 const mode=Renov._payMode||'cash';
-el.innerHTML=`<div class="modal" style="max-height:90vh;overflow:auto"><div class="modal-handle"></div><div class="modal-title"><span>Pembayaran Item Renovasi</span><button class="modal-close" data-action="closeModal" data-args='["renovPayModal"]'>✕</button></div><div style="overflow:auto;max-height:calc(90vh - 90px)"><div class="u-fw700">${escapeHtml(it.name)}</div><div class="u-t2 u-fs12 u-mt4">Harga item: ${fmtFull(it.harga)} · Terbayar: ${fmtFull(paid)} · Sisa: ${fmtFull(remaining)}</div><div class="u-mt12 u-fw700">Riwayat pembayaran</div>${history||'<div class="u-t2 u-fs12 u-mt6">Belum ada riwayat cicilan.</div>'}<div class="divider u-my12"></div><div class="u-fw700 u-mb8">Catat pembayaran</div><div class="u-flex u-gap8"><button class="btn ${mode==='cash'?'btn-primary':'btn-ghost'}" data-action="Renov.setPayMode" data-args='["cash"]'>Cash / Lunas</button><button class="btn ${mode==='installment'?'btn-primary':'btn-ghost'}" data-action="Renov.setPayMode" data-args='["installment"]'>Cicil</button></div><label class="field-label u-mt10">Nominal (Rp)</label><input id="renovPayAmount" class="input" type="number" min="1" step="1" value="${mode==='cash'?remaining:''}" ${mode==='cash'?'readonly':''} placeholder="Nominal pembayaran"><label class="field-label u-mt8">Tanggal</label><input id="renovPayDate" class="input" type="date" value="${todayStr()}"><label class="field-label u-mt8">Akun sumber dana</label><select id="renovPayAccount" class="input" data-onchange="Renov.updatePayOwnerVisibility">${accounts}</select><div id="renovPayOwnerWrap" class="u-mt8" style="display:none"><label class="field-label">Pemilik / Penanggung</label><select id="renovPayOwner" class="input"></select></div><label class="field-label u-mt8">Keterangan</label><input id="renovPayLabel" class="input" maxlength="120" placeholder="${mode==='cash'?'Pelunasan':'Termin pembayaran'}"><div class="u-flex u-gap8 u-mt14"><button class="btn btn-primary" data-action="Renov.submitItemPayment">Simpan Pembayaran</button><button class="btn btn-ghost" data-action="closeModal" data-args='["renovPayModal"]'>Tutup</button></div></div></div>`;
+el.innerHTML=`<div class="modal" style="max-height:90vh;overflow:auto"><div class="modal-handle"></div><div class="modal-title"><span>Pembayaran Item Renovasi</span><button class="modal-close" data-action="closeModal" data-args='["renovPayModal"]'>✕</button></div><div style="overflow:auto;max-height:calc(90vh - 90px)"><div class="u-fw700">${escapeHtml(it.name)}</div><div class="u-t2 u-fs12 u-mt4">Harga item: ${fmtFull(it.harga)} · Terbayar: ${fmtFull(paid)} · Sisa: ${fmtFull(remaining)}</div><div class="u-mt12 u-fw700">Riwayat pembayaran</div>${history||'<div class="u-t2 u-fs12 u-mt6">Belum ada riwayat cicilan.</div>'}<div class="divider u-my12"></div><div class="u-fw700 u-mb8">Catat pembayaran</div><div class="u-flex u-gap8"><button class="btn u-flex1 ${mode==='cash'?'btn-primary':'btn-ghost'}" data-action="Renov.setPayMode" data-args='["cash"]'>Cash / Lunas</button><button class="btn u-flex1 ${mode==='installment'?'btn-primary':'btn-ghost'}" data-action="Renov.setPayMode" data-args='["installment"]'>Cicil</button></div><div class="fg"><label class="fl" for="renovPayAmount">Nominal (Rp)</label><input id="renovPayAmount" class="fi" type="number" min="1" step="1" value="${mode==='cash'?remaining:''}" ${mode==='cash'?'readonly':''} placeholder="Nominal pembayaran"></div><div class="fg"><label class="fl" for="renovPayDate">Tanggal</label><input id="renovPayDate" class="fi" type="date" value="${todayStr()}"></div><div class="fg"><label class="fl" for="renovPayAccount">Akun sumber dana</label><select id="renovPayAccount" class="fi" data-onchange="Renov.updatePayOwnerVisibility">${accounts}</select></div><div id="renovPayOwnerWrap" class="u-mt8" style="display:none"><div class="fg"><label class="fl" for="renovPayOwner">Pemilik / Penanggung</label><select id="renovPayOwner" class="fi"></select></div></div><div class="fg"><label class="fl" for="renovPayLabel">Keterangan</label><input id="renovPayLabel" class="fi" maxlength="120" placeholder="${mode==='cash'?'Pelunasan':'Termin pembayaran'}"></div><div class="u-flex u-gap8 u-mt14"><button class="btn btn-primary u-flex1 u-p14" data-action="Renov.submitItemPayment">Simpan Pembayaran</button><button class="btn btn-ghost" data-action="closeModal" data-args='["renovPayModal"]'>Tutup</button></div></div></div>`;
 Renov.updatePayOwnerVisibility();
 },
 updatePayOwnerVisibility(){
@@ -430,12 +581,12 @@ const it=p&&(p.items||[]).find(x=>sameId(x.id,Renov._payItemId));
 if(!p||!it){toast('⚠️ Item/proyek tidak ditemukan');return;}
 const paid=_renovItemPaidAmount(it),remaining=Math.max(0,(Number(it.harga)||0)-paid);
 const mode=Renov._payMode||'cash';
-const amount=mode==='cash'?remaining:Number(document.getElementById('renovPayAmount')?.value);
+const amount=Math.round(mode==='cash'?remaining:Number(document.getElementById('renovPayAmount')?.value));
 const date=document.getElementById('renovPayDate')?.value||todayStr();
 const accountId=document.getElementById('renovPayAccount')?.value||'';
 const owners=typeof getAccOwnersRaw==='function'?(getAccOwnersRaw(accountId).owners||[]):[];const ownerEl=document.getElementById('renovPayOwner');const deductionOwnerId=owners.length?(ownerEl?.value||''):'';
 const label=(document.getElementById('renovPayLabel')?.value||'').trim()||(mode==='cash'?'Pelunasan':'Cicilan');
-if(!(amount>0)||!Number.isFinite(amount)||amount>remaining){toast('⚠️ Nominal harus lebih dari 0 dan tidak melebihi sisa pembayaran');return;}
+if(!(amount>0)||!Number.isFinite(amount)||amount>Math.ceil(remaining)){toast('⚠️ Nominal harus lebih dari 0 dan tidak melebihi sisa pembayaran');return;}
 if(!accountId){toast('⚠️ Pilih akun pembayaran');return;}
 if(owners.length>1&&!deductionOwnerId){toast('⚠️ Pilih pemilik/penanggung akun');return;}
 if(!date){toast('⚠️ Tanggal pembayaran wajib diisi');return;}
@@ -445,7 +596,7 @@ let tx=null,payment=null,legacyBefore=null,committed=false;const hadPayments=Arr
 try{
 const txId=uid(),paymentId=uid();
 const legacyCash=mode==='cash'&&!Array.isArray(it.payments)&&paid===0;
-const txData={id:txId,type:'expense',amount,accountId,date,category:it.category||'Renovasi',subcategory:'',payMethod:'tunai',note:`Renovasi: ${p.name} - ${it.name} (${label})`,renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})};
+const txData={id:txId,type:'expense',amount,accountId,date,category:Renov._renovExpenseCategory(it.category),subcategory:'',payMethod:'tunai',note:`Renovasi: ${p.name} - ${it.name} (${label})`,renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})};
 if(deductionOwnerId)txData.deductionOwnerId=deductionOwnerId;else if(it.deductionOwnerId&&owners.length===0)txData.deductionOwnerId=it.deductionOwnerId;
 tx=FinanceTxSOT.create(txData);
 const linked=FinanceTxSOT.patchMetaById(txId,{renovProjectLinkId:p.id,renovItemLinkId:it.id,...(!legacyCash?{renovPaymentId:paymentId}:{})});if(!linked)throw new Error('Gagal menautkan transaksi pembayaran ke item Renovasi');

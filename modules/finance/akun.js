@@ -528,7 +528,8 @@ const hasLinkedData=D.transactions.some(t=>t.accountId===acc.id)
 ||(D.targets||[]).some(t=>t.accountId===acc.id)
 ||(D.assets||[]).some(a=>a.accountId===acc.id)
 ||(D.investments||[]).some(h=>h.accountId===acc.id)
-||(D.debts||[]).some(d=>d&&d.linkedAccountId===acc.id);
+||(D.debts||[]).some(d=>d&&d.linkedAccountId===acc.id)
+||(D.renovProjects||[]).some(p=>p&&(p.items||[]).some(it=>it&&(it.accountId===acc.id||(Array.isArray(it.payments)&&it.payments.some(x=>x&&x.accountId===acc.id)))));
 // FIX (delacc-linked-titipan-debt-audit): baris Buku Utang "Dana titipan akun"
 // (D.debts[].linkedAccountId, ditulis TitipanSync.reconcileAccounts() -- lihat
 // modules/finance/titipan-sync.js) TIDAK PERNAH dicek/dimigrasikan di sini,
@@ -573,7 +574,8 @@ const _accountDeleteSnapshot={
   targets:JSON.stringify(D.targets||[]),
   assets:JSON.stringify(D.assets||[]),
   investments:JSON.stringify(D.investments||[]),
-  cobek:JSON.stringify(D.cobek||[])
+  cobek:JSON.stringify(D.cobek||[]),
+  renovProjects:JSON.stringify(D.renovProjects||[])
 };
 try{
   D.accounts.splice(i,1);
@@ -588,6 +590,8 @@ try{
   (D.assets||[]).forEach(a=>{if(a.accountId===acc.id)a.accountId=target.id;});
   (D.investments||[]).forEach(h=>{if(h.accountId===acc.id)h.accountId=target.id;});
   (D.cobek||[]).forEach(c=>{if(c.accountId===acc.id)c.accountId=target.id;});
+  // Proyek Renovasi: item.accountId & payments[].accountId menyalin accountId transaksi tertaut -> ikut dipindah (1 SOT dgn tx).
+  (D.renovProjects||[]).forEach(p=>(p&&p.items||[]).forEach(it=>{if(it.accountId===acc.id)it.accountId=target.id;(Array.isArray(it.payments)?it.payments:[]).forEach(pay=>{if(pay&&pay.accountId===acc.id)pay.accountId=target.id;});}));
   const _saved=save();
   if(_saved===false)throw new Error('save() menolak penghapusan akun');
 }catch(_accountDeleteErr){
@@ -600,6 +604,7 @@ try{
   D.assets=JSON.parse(_accountDeleteSnapshot.assets);
   D.investments=JSON.parse(_accountDeleteSnapshot.investments);
   D.cobek=JSON.parse(_accountDeleteSnapshot.cobek);
+  D.renovProjects=JSON.parse(_accountDeleteSnapshot.renovProjects);
   console.error('Hapus akun dibatalkan dan di-rollback:',_accountDeleteErr);
   toast('❌ Penghapusan akun dibatalkan: data dikembalikan');
   return false;

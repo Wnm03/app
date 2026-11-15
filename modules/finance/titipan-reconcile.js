@@ -62,7 +62,7 @@ _expectedFromAssets() {
     const owners = (res && res.ok) ? res.owners : [];
     const nilai = typeof a.nilai === 'number' && isFinite(a.nilai) ? a.nilai : 0;
     owners.filter((o) => !o.isSelf && o.porsi > 0 && settlementOf(a, o.ownerId) !== 'milik').forEach((o) => {
-      out[a.id + '::' + o.ownerId] = nilai * (o.porsi / 100);
+      out[a.id + '::' + o.ownerId] = Math.round(nilai * (o.porsi / 100)); // S2819: sama dgn penulis utang
     });
   });
   return out;
@@ -104,7 +104,7 @@ _expectedFromInvestments() {
     const cost = Investment.holdingCost(h);
     owners.forEach((o) => {
       const ownerId = o.ownerId || 'titipan_investor';
-      out['inv::' + h.id + '::' + ownerId] = cost * (o.porsi / 100);
+      out['inv::' + h.id + '::' + ownerId] = Math.round(cost * (o.porsi / 100)); // S2819
     });
   });
   return out;
@@ -837,6 +837,31 @@ checkPinjamUtangLinkage() {
   });
   const ok = !missingDebt.length && !duplicateDebt.length && !orphanDebt.length && !ownerMismatch.length && !amountMismatch.length;
   return { ok, missingDebt, duplicateDebt, orphanDebt, ownerMismatch, amountMismatch };
+},
+
+// repairPinjamUtangLinkage() — S2818 (F4). Perbaikan data lama atas hasil
+// checkPinjamUtangLinkage(): utang BELUM lunas disamakan dgn nominal transaksi
+// (transaksi = sumber kebenaran), transaksi pinjam tanpa utang dibuatkan
+// utangnya. Utang yang sudah lunas TIDAK disentuh. Wajib dipanggil setelah
+// konfirmasi pemilik data (lihat DataHealth.repairPinjamUtang).
+repairPinjamUtangLinkage() {
+  const res = { fixed: 0, created: 0 };
+  const chk = this.checkPinjamUtangLinkage();
+  const writer = (typeof BillDebtPiutangCanonicalWriter !== 'undefined') ? BillDebtPiutangCanonicalWriter : null;
+  (chk.amountMismatch || []).forEach(m => {
+    const tx = (D.transactions || []).find(t => t && String(t.id) === String(m.txId));
+    if (!tx || !writer) return;
+    const amt = Math.round(Number(tx.amount));
+    if (!Number.isFinite(amt) || amt < 0) return;
+    writer.updateById('debts', m.debtId, d0 => { d0.nilai = amt; });
+    res.fixed++;
+  });
+  (chk.missingDebt || []).forEach(m => {
+    const tx = (D.transactions || []).find(t => t && String(t.id) === String(m.txId));
+    if (tx && typeof maybeCreateTitipanPinjamUtang === 'function' && maybeCreateTitipanPinjamUtang(tx) !== false) res.created++;
+  });
+  if ((res.fixed || res.created) && typeof save === 'function') save();
+  return res;
 },
 
 checkAll() {

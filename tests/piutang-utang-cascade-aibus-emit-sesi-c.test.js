@@ -232,12 +232,12 @@ test('syncTitipanTalanganPiutangOnEdit(): piutang belum lunas ditemukan -> emit 
   const res = ctx.syncTitipanTalanganPiutangOnEdit('tx1', 150000, 200000);
 
   assert.equal(res, true);
-  assert.equal(D.piutang[0].nilai, 100000);
+  assert.equal(D.piutang[0].nilai, 200000);
   const ev = findEmit(ctx);
   assert.ok(ev);
   assert.equal(ev.payload.action, 'edit');
   assert.equal(ev.payload.piutangId, 'p1');
-  assert.equal(ev.payload.amount, 100000);
+  assert.equal(ev.payload.amount, 200000);
   assert.equal(ev.payload.source, 'titipan-talangan-edit');
 });
 
@@ -312,13 +312,13 @@ test('syncTitipanPinjamUtangOnEdit(): utang belum lunas ditemukan -> emit {kind:
   const res = ctx.syncTitipanPinjamUtangOnEdit('tx1', 300000, 250000);
 
   assert.equal(res, true);
-  assert.equal(D.debts[0].nilai, 350000);
+  assert.equal(D.debts[0].nilai, 250000);
   const ev = findEmit(ctx);
   assert.ok(ev);
   assert.equal(ev.payload.kind, 'utang');
   assert.equal(ev.payload.action, 'edit');
   assert.equal(ev.payload.debtId, 'd1');
-  assert.equal(ev.payload.amount, 350000);
+  assert.equal(ev.payload.amount, 250000);
   assert.equal(ev.payload.source, 'titipan-pinjam-edit');
 });
 

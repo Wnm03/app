@@ -127,9 +127,9 @@ const keyEl=document.getElementById('sApiKey');
 if(!hint||!keyEl)return;
 if(provider==='gemini'){
 keyEl.placeholder='AIza...';
-hint.innerHTML='Buat API key gratis di <a class="u-cacc" href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a>. Key disimpan terenkripsi di HP ini (PIN sebagai kunci), tidak dikirim ke mana pun selain ke Google, & tidak ikut ke file backup.';
+hint.innerHTML='Buat API key gratis di <a class="u-cacc hint-ext-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com/apikey</a>. Key disimpan terenkripsi di HP ini (PIN sebagai kunci), tidak dikirim ke mana pun selain ke Google, & tidak ikut ke file backup.';
 } else {
 keyEl.placeholder='sk-ant-...';
-hint.innerHTML='Buat API key di <a class="u-cacc" href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>. Key disimpan terenkripsi di HP ini (PIN sebagai kunci), tidak dikirim ke mana pun selain ke Anthropic, & tidak ikut ke file backup.';
+hint.innerHTML='Buat API key di <a class="u-cacc hint-ext-link" href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>. Key disimpan terenkripsi di HP ini (PIN sebagai kunci), tidak dikirim ke mana pun selain ke Anthropic, & tidak ikut ke file backup.';
 }
 }

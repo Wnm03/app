@@ -208,15 +208,20 @@ function removeSubcategory(type,catId,subId){
 }
 function ensureCategory(type,data){normalizeMetadata();const c=findByName(type,data&&data.name);if(c){if(data&&data.linkedVehicleId&&!c.linkedVehicleId)c.linkedVehicleId=data.linkedVehicleId;return c;}return addCategory(type,data);}
 function ensureSubcategory(type,catId,data){const c=findById(type,catId);if(!c)throw new Error('CATEGORY_NOT_FOUND');const s=findSub(c,data&&data.name);if(s)return s;return addSubcategory(type,catId,data);}
+let _mergeStats={categories:0,transactions:0};
+function takeMergeStats(){const o=_mergeStats;_mergeStats={categories:0,transactions:0};return o;}
 function _remapTaxonomyReferences(type,catMap,subMap){
- const d=typeof D!=='undefined'?D:null; if(!d)return;
+ const d=typeof D!=='undefined'?D:null; if(!d)return 0;
+ let remapped=0;
  const txs=Array.isArray(d.transactions)?d.transactions:[];
  txs.forEach(tx=>{
    if(!tx||tx.type!==type)return;
    const cid=tx.categoryId==null?'':String(tx.categoryId);
    const sid=tx.subcategoryId==null?'':String(tx.subcategoryId);
-   if(cid&&catMap.has(cid))tx.categoryId=catMap.get(cid);
-   if(sid&&subMap.has(sid))tx.subcategoryId=subMap.get(sid);
+   let _moved=false;
+   if(cid&&catMap.has(cid)){tx.categoryId=catMap.get(cid);_moved=true;}
+   if(sid&&subMap.has(sid)){tx.subcategoryId=subMap.get(sid);_moved=true;}
+   if(_moved)remapped++;
    const canonicalCat=tx.categoryId?findById(type,tx.categoryId):null;
    if(canonicalCat){tx.category=canonicalCat.name;const canonicalSub=tx.subcategoryId?findSub(canonicalCat,tx.subcategoryId):null;if(canonicalSub)tx.subcategory=canonicalSub.name;}
  });
@@ -226,6 +231,7 @@ function _remapTaxonomyReferences(type,catMap,subMap){
    if(Array.isArray(b.catIds))b.catIds=[...new Set(b.catIds.map(raw=>catMap.get(String(raw))||subMap.get(String(raw))||raw))];
    if(b.catId!=null)b.catId=catMap.get(String(b.catId))||subMap.get(String(b.catId))||b.catId;
  });
+ return remapped;
 }
 function mergeDuplicates(type){
  if(!validType(type))throw new Error('INVALID_CATEGORY_TYPE');
@@ -245,7 +251,8 @@ function mergeDuplicates(type){
    });
    if((!validClass(prior.classification)||prior.classification==='PERLU_DITINJAU')&&validClass(c.classification))prior.classification=c.classification;
  });
- _remapTaxonomyReferences(type,catMap,subMap);
+ const _remapped=_remapTaxonomyReferences(type,catMap,subMap);
+ _mergeStats.categories+=catMap.size;_mergeStats.transactions+=_remapped;
  D.categories[type]=out;
  return {categories:out,categoryRemap:Object.fromEntries(catMap),subcategoryRemap:Object.fromEntries(subMap)};
 }
@@ -274,7 +281,7 @@ function replaceSnapshot(snapshot){
  D.categories={income:Array.isArray(next.income)?next.income:[],expense:Array.isArray(next.expense)?next.expense:[]};
  normalizeMetadata(); return clone(D.categories);
 }
-const api={VERSION,TYPE,CLASSES,SEVEN_CLASSES,normalizeMetadata,mergeDuplicates,reconcileBudgetReferences,reconcileLegacyTransactionTaxonomy,list,findById,findByName,findSub,resolve,resolveSeven,classify,matches,addCategory,updateCategory,removeCategory,addSubcategory,updateSubcategory,removeSubcategory,ensureCategory,ensureSubcategory,replaceSnapshot};
+const api={VERSION,TYPE,CLASSES,SEVEN_CLASSES,normalizeMetadata,mergeDuplicates,takeMergeStats,reconcileBudgetReferences,reconcileLegacyTransactionTaxonomy,list,findById,findByName,findSub,resolve,resolveSeven,classify,matches,addCategory,updateCategory,removeCategory,addSubcategory,updateSubcategory,removeSubcategory,ensureCategory,ensureSubcategory,replaceSnapshot};
 g.FinanceCategorySOT=api;
 if(typeof window!=='undefined')window.FinanceCategorySOT=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

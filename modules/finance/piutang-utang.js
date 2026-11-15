@@ -284,7 +284,7 @@ function syncTitipanTalanganPiutangOnEdit(txId,oldAmount,newAmount){
 if(!txId||!D.piutang||!D.piutang.length)return false;
 const p=D.piutang.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!p)return false;
-BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{p0.nilai=Math.max(0,(p0.nilai||0)+(oldAmount||0)-(newAmount||0));});
+BillDebtPiutangCanonicalWriter.updateById('piutang',p.id,p0=>{p0.nilai=Math.max(0,(p0.nilai||0)+(newAmount||0)-(oldAmount||0));});
 if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"piutang",action:"edit",piutangId:p.id,amount:p.nilai,auto:true,source:"titipan-talangan-edit"});
 return true;
 }
@@ -349,7 +349,7 @@ function syncTitipanPinjamUtangOnEdit(txId,oldAmount,newAmount){
 if(!txId||!D.debts||!D.debts.length)return false;
 const d=D.debts.find(x=>x.autoTxId===txId&&!x.lunas);
 if(!d)return false;
-BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.nilai=Math.max(0,(d0.nilai||0)+(oldAmount||0)-(newAmount||0));});
+BillDebtPiutangCanonicalWriter.updateById('debts',d.id,d0=>{d0.nilai=Math.max(0,(d0.nilai||0)+(newAmount||0)-(oldAmount||0));});
 if(typeof AIBus!=="undefined")FinanceEventOutbox.emitOrEnqueue("finance.updated",{kind:"utang",action:"edit",debtId:d.id,amount:d.nilai,auto:true,source:"titipan-pinjam-edit"});
 return true;
 }
