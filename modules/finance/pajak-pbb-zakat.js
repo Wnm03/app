@@ -379,10 +379,13 @@ return{pajak:Math.round(pajak),detail};
 isiDariTransaksi(){
 const now=new Date();
 const y=now.getFullYear();
-const incomeYear=D.transactions.filter(t=>t.type==='income'&&String(t.date||'').slice(0,4)===String(y));
-if(!incomeYear.length){toast('⚠️ Belum ada data pemasukan tahun ini');return;}
+// Audit dana proyek: DP klien bukan gaji; pencairan laba proyek klien (ledger) ikut sbg pemasukan pada bulan pencairannya.
+const incomeYear=D.transactions.filter(t=>t.type==='income'&&String(t.date||'').slice(0,4)===String(y)&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t)));
+const pencairanYear=(typeof pencairanKlienRentangSafe==='function')?pencairanKlienRentangSafe(y+'-01-01',y+'-12-31'):0;
+if(!incomeYear.length&&!(pencairanYear>0)){toast('⚠️ Belum ada data pemasukan tahun ini');return;}
 const monthsSet=new Set(incomeYear.map(t=>String(t.date).slice(5,7)));
-const totalYear=incomeYear.reduce((s,t)=>s+(t.amount||0),0);
+if(pencairanYear>0)for(let mm=1;mm<=12;mm++){const k=String(mm).padStart(2,'0');if(typeof pencairanKlienRentangSafe==='function'&&pencairanKlienRentangSafe(y+'-'+k+'-01',y+'-'+k+'-31')>0)monthsSet.add(k);}
+const totalYear=incomeYear.reduce((s,t)=>s+(t.amount||0),0)+pencairanYear;
 const avgBulan=Math.round(totalYear/Math.max(1,monthsSet.size));
 document.getElementById('pphBruto').value=avgBulan;
 PPh21.hitung();

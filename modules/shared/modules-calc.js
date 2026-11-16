@@ -1121,6 +1121,8 @@ const netWorth=saldoAkun+totalAset+totalInventori+totalPiutang-utang;
 // statis "Rp 0" di HTML. Sekarang semua elemen di-guard sama rata, pola
 // sama dgn showDashCardEl() di modules-render.js.
 const saldoEl=document.getElementById('kbSaldoAkun');if(saldoEl)saldoEl.textContent=(typeof fmtFullSigned==='function'?fmtFullSigned(saldoAkun):(saldoAkun<0?'-':'')+fmtFull(Math.abs(saldoAkun)));
+// Audit dana proyek: nilai kartu ini = saldo PRIBADI; beri keterangan hanya bila ada dana klien tertahan.
+if(saldoEl){const _lbl=saldoEl.previousElementSibling;const _r=(typeof saldoKlienRingkasSafe==='function')?saldoKlienRingkasSafe():null;const _tt=_r&&_r.tertahan>0;if(_lbl&&_lbl.classList&&_lbl.classList.contains('stat-label'))_lbl.textContent=_tt?'Saldo Akun (pribadi)':'Saldo Akun';let _n=document.getElementById('kbSaldoAkunNote');if(_tt){if(!_n&&saldoEl.parentNode){_n=document.createElement('div');_n.id='kbSaldoAkunNote';_n.className='u-fs10 u-t2';saldoEl.parentNode.appendChild(_n);}if(_n)_n.textContent='belum termasuk '+fmtFull(_r.tertahan)+' dana klien';}else if(_n&&_n.parentNode)_n.remove();}
 const asetEl=document.getElementById('kbTotalAset');if(asetEl)asetEl.textContent=fmtFull(totalAset);
 const invEl=document.getElementById('kbInventori');
 if(invEl)invEl.textContent=fmtFull(totalInventori);

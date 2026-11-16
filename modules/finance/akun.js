@@ -400,15 +400,31 @@ _totalSaldoCache=total;
 return total;
 }
 // Dana Proyek Klien (Fase 2): saldo pribadi = saldo fisik - dana klien tertahan (proyek berklasifikasi 'klien'). totalSaldoAkun() TIDAK diubah (I-01).
-function saldoPribadiSafe(){return (typeof saldoPribadi==='function')?saldoPribadi():totalSaldoAkun();}
+// Temuan uji browser: mesin dana klien ada di renovasi.js yang LAZY-LOAD (bukan di bundle). Sebelum modul itu dimuat, semua wrapper *Safe
+// jatuh ke angka fisik. Bila ada proyek klien dan mesin belum ada, muat sekali (ensureRenov), lalu buang cache saldo & render ulang halaman aktif.
+let _klienEnginePending=false;
+function ensureKlienEngineSafe(){if(_klienEnginePending)return _klienEnginePending;if(typeof saldoPribadi==='function'||typeof ensureRenov!=='function'||!adaProyekKlienSafe())return null;try{_klienEnginePending=ensureRenov().then(function(){_klienEnginePending=false;try{if(typeof invalidateAccBalCache==='function')invalidateAccBalCache();const pg=(typeof document!=='undefined'&&document&&typeof document.querySelector==='function')?document.querySelector('.page.active'):null;const ma=(typeof document!=='undefined'&&document&&typeof document.getElementById==='function')?document.getElementById('mainApp'):null;const tampil=!ma||(!(ma.classList&&ma.classList.contains('u-dnone'))&&!(ma.style&&ma.style.display==='none'));if(tampil&&pg&&pg.id&&typeof renderPageContent==='function')renderPageContent(String(pg.id).replace(/^page-/,''));}catch(_e){/* render ulang gagal tidak boleh mengganggu aplikasi */}return true;}).catch(function(){_klienEnginePending=false;return false;});return _klienEnginePending;}catch(_e){_klienEnginePending=false;return null;/* pemuatan mesin gagal: tetap angka fisik */}}
+// Muat mesin lebih awal (dipanggil dari boot setelah load()): resolve true bila siap/tak diperlukan, false bila lewat batas waktu/gagal. Tidak pernah reject. Render ulang setelah muat hanya bila aplikasi sudah tampil.
+function siapkanMesinKlienSafe(maxMs){try{if(typeof saldoPribadi==='function'||!adaProyekKlienSafe())return Promise.resolve(true);const p=ensureKlienEngineSafe();if(!p)return Promise.resolve(false);const lim=Number(maxMs)>0?Number(maxMs):1500;return new Promise(function(res){const t=setTimeout(function(){res(false);},lim);p.then(function(ok){clearTimeout(t);res(ok===true);},function(){clearTimeout(t);res(false);});});}catch(_e){return Promise.resolve(false);}}
+function saldoPribadiSafe(){if(typeof saldoPribadi!=='function')ensureKlienEngineSafe();return (typeof saldoPribadi==='function')?saldoPribadi():totalSaldoAkun();}
 // Predikat satu-pintu aliran klien (DP/termin, pengembalian, belanja dana proyek). TIDAK memakai hitungKas.
-function isAliranKlienSafe(t){return (typeof isAliranKlien==='function')&&isAliranKlien(t);}
+function isAliranKlienSafe(t){if(typeof isAliranKlien!=='function'){ensureKlienEngineSafe();return false;}return isAliranKlien(t);}
 // Langkah 5 (U-10): akun yang memuat aliran dana klien (DP/termin, pengembalian, belanja dana proyek) tidak boleh ditautkan ke aset/holding: akun tertaut keluar dari saldo pribadi, sementara dana tertahan tetap dikurangkan.
 function akunPunyaAliranKlienSafe(accId){if(accId==null||accId==='')return false;return (D.transactions||[]).some(t=>t&&sameId(t.accountId,accId)&&isAliranKlienSafe(t));}
+// Tampilan saldo (audit dana proyek): rincian fisik / dana klien tertahan / pribadi. null bila tak ada proyek klien. Hanya BACA; tidak mengubah totalSaldoAkun().
+function saldoKlienRingkasSafe(){if(!adaProyekKlienSafe())return null;try{const fisik=totalSaldoAkun(),pribadi=saldoPribadiSafe();return{fisik,pribadi,tertahan:fisik-pribadi};}catch(e){return null;}}
+// Catatan kecil di bawah total saldo. Dibuat/diperbarui/dihapus dinamis (tanpa ubah HTML). luarInduk=true: sisipkan setelah induk anchor (anchor ada di baris flex).
+// Hub: saldo hero = saldo PRIBADI; catatan kecil bila ada dana klien tertahan (> 0). Dibuat sekali, diperbarui, dihapus bila 0. Baca-saja.
+function catatanHubSaldoKlienSafe(anchor){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById('dashHubHeroKlien');if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id='dashHubHeroKlien';n.style.cssText='font-size:11px;opacity:.8;margin-top:2px';anchor.parentNode.appendChild(n);}n.textContent='Belum termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo fisik '+fmtFull(r.fisik);}
+function catatanSaldoKlienSafe(anchor,id,luarInduk){if(!anchor||!anchor.parentNode||typeof document==='undefined')return;const r=saldoKlienRingkasSafe();let n=document.getElementById(id);if(!r||!(r.tertahan>0)){if(n&&n.parentNode)n.remove();return;}if(!n){n=document.createElement('div');n.id=id;n.className='u-fs11 u-t2';n.style.marginTop='4px';if(luarInduk&&anchor.parentNode.parentNode&&typeof anchor.parentNode.parentNode.insertBefore==='function')anchor.parentNode.parentNode.insertBefore(n,anchor.parentNode.nextSibling);else anchor.parentNode.appendChild(n);}n.textContent='Termasuk dana klien tertahan '+fmtFull(r.tertahan)+' · Saldo pribadi '+fmtFull(r.pribadi);}
+// Set id akun (string) yang memuat aliran dana klien; satu pass.
+function akunAliranKlienSetSafe(){const s=new Set();if(!adaProyekKlienSafe())return s;(D.transactions||[]).forEach(t=>{if(t&&t.accountId!=null&&t.accountId!==''&&isAliranKlienSafe(t))s.add(String(t.accountId));});return s;}
+// Akun tertaut aset/holding yang memuat dana klien (kasus data lama). Hanya BACA.
+function akunTertautBerisiKlienSafe(){const s=akunAliranKlienSetSafe();if(!s.size||typeof isAccLinkedToAsset!=='function')return[];return(D.accounts||[]).filter(a=>a&&s.has(String(a.id))&&isAccLinkedToAsset(a.id)).map(a=>({accountId:a.id,nama:a.name}));}
 // Fase 5: income pribadi dari pencairan laba proyek klien (entri ledger, bukan transaksi). ym='YYYY-MM'. Tanpa proyek klien -> 0.
-function pencairanKlienBulanSafe(ym){try{return (typeof renovPencairanBulan==='function')?renovPencairanBulan(ym):0;}catch(e){return 0;}}
+function pencairanKlienBulanSafe(ym){try{if(typeof renovPencairanBulan!=='function'){ensureKlienEngineSafe();return 0;}return renovPencairanBulan(ym);}catch(e){return 0;}}
 // Langkah 1 (T-A): pencairan laba klien pada rentang tanggal 'YYYY-MM-DD' (inklusif). Dipakai rata-rata income (worthit, forecast). Tanpa proyek klien -> 0.
-function pencairanKlienRentangSafe(fromYmd,toYmd){try{return (typeof renovPencairanIncome==='function')?renovPencairanIncome(fromYmd,toYmd):0;}catch(e){return 0;}}
+function pencairanKlienRentangSafe(fromYmd,toYmd){try{if(typeof renovPencairanIncome!=='function'){ensureKlienEngineSafe();return 0;}return renovPencairanIncome(fromYmd,toYmd);}catch(e){return 0;}}
 function _ymdLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 // Langkah 3 (§7.3/§9.2): basis Laporan. 'pribadi' (default) = tanpa aliran klien (DP/termin, pengembalian, belanja dana proyek) + pencairan laba; 'fisik' = semua pergerakan uang. Hanya tampilan, tanpa persistensi.
 let _lapBasis='pribadi';

@@ -371,6 +371,7 @@ const DashboardHubHero = {
     const saldo = ((typeof saldoPribadiSafe==='function'||typeof totalSaldoAkun==='function')?(typeof saldoPribadiSafe==='function'?saldoPribadiSafe():totalSaldoAkun()):null);
     saldoEl.textContent = saldo === null ? '—' : (saldo < 0 ? '-' : '') + money(Math.abs(saldo));
     saldoEl.className = 'dashhub-hero-balance-val' + (saldo !== null && saldo < 0 ? ' red' : '');
+    if (typeof catatanHubSaldoKlienSafe === 'function') catatanHubSaldoKlienSafe(saldoEl);
 
     const { inc, exp } = _dashHubHeroMonthTx();
     incEl.textContent = money(inc);

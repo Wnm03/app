@@ -10,7 +10,7 @@
 // semua isinya fungsi global (function foo(){...}) yang otomatis nempel ke scope global
 // begitu file-nya di-load -- urutan load modules-render.js lalu modules-render-b.js
 // (lihat scripts/build.js GROUP_A) cukup supaya semuanya tetap saling bisa panggil.
-const MODULE_RENDER_VERSION='s2433-dana-titipan-akumulatif-2859';
+const MODULE_RENDER_VERSION='s2433-dana-titipan-akumulatif-2861';
 
 function renderAsetCore(){
 // Shared UI renderer for Ringkasan/Buku/Analisis. Aset.renderList() remains the existing
@@ -149,6 +149,9 @@ if(totalSubEl){
 const linked=linkedAssetAccountIds();
 const counted=D.accounts.filter(a=>a.includeInBalance!==false&&!linked.has(String(a.id))).length;
 totalSubEl.textContent=counted+' dari '+D.accounts.length+' akun dihitung';
+if(typeof catatanSaldoKlienSafe==='function')catatanSaldoKlienSafe(totalSubEl,'accGridTotalKlien');
+// Peringatan akun tertaut aset yang memuat dana klien (data lama): hanya info + langkah manual, tanpa migrasi.
+if(typeof akunTertautBerisiKlienSafe==='function'){const _tl=akunTertautBerisiKlienSafe();let _w=document.getElementById('accGridTautKlienWarn');if(_tl.length){if(!_w){_w=document.createElement('div');_w.id='accGridTautKlienWarn';_w.className='u-fs11';_w.style.cssText='margin-top:4px;color:var(--danger)';totalSubEl.parentNode.appendChild(_w);}_w.textContent='⚠️ Akun tertaut aset memuat dana klien: '+_tl.map(x=>x.nama).join(', ')+'. Pindahkan dana klien atau lepas tautan akun secara manual.';}else if(_w&&_w.parentNode)_w.remove();}
 }
 // Ownership Filter UI (S235) — reuse OwnershipEngine.filterByType() apa adanya, TIDAK ada
 // filter/logic baru. HANYA memfilter daftar yang DIRENDER di grid; accGridTotal/
@@ -193,6 +196,9 @@ const res=TitipanReconcile.checkAccounts();
 }
 return s;
 })();
+// Lencana kartu akun hanya bila masih ada dana klien tertahan (> 0); setelah laba dicairkan penuh lencana hilang.
+const _klienRingkas=(typeof saldoKlienRingkasSafe==='function')?saldoKlienRingkasSafe():null;
+const _klienAccIds=(_klienRingkas&&_klienRingkas.tertahan>0&&typeof akunAliranKlienSetSafe==='function')?akunAliranKlienSetSafe():new Set();
 el.innerHTML=accGridList.map((a)=>{
 const i=D.accounts.indexOf(a);
 const bal=recalcAccBalance(a.id);
@@ -302,6 +308,7 @@ const linkedTxHint=linked?'<div class="u-fs10 u-t2" style="margin-top:2px">📜 
 // tombol/aksi baru, 0 mutasi ke D. Hanya tampil utk akun berdiri-sendiri
 // (bukan `linked` ke Aset -- itu sudah otomatis sync via cabang lain,
 // lihat komentar _expectedFromAccounts()) yang ada di titipanGapAccIds.
+const klienLine=(_klienAccIds.has(String(a.id)))?'<div class="u-fs11 u-t2" style="margin-top:2px">🏗️ Memuat dana klien (tidak termasuk saldo pribadi)</div>':'';
 const titipanGapLine=(!linked&&titipanGapAccIds.has(String(a.id)))?'<div class="u-fs11" style="margin-top:2px;color:var(--accent4)">⚠️ Porsi titipan belum sinkron ke Dana Titipan</div>':'';
 return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAccTxHistory" data-args="${escapeHtml(JSON.stringify([a.id]))}">
       <button class="acc-card-edit" data-stop="1" data-action="openAccModal" data-args="${escapeHtml(JSON.stringify([i]))}" title="Edit" aria-label="Edit">✏️</button>
@@ -314,6 +321,7 @@ return`<div class="acc-card" style="${off?'opacity:.55':''}" data-action="openAc
       ${standalonePorsiLine}
       ${linkedTxHint}
       ${titipanGapLine}
+      ${klienLine}
       <div class="acc-card-bal ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div>${(()=>{const pb=(typeof recalcAccProjectedBalance==='function')?recalcAccProjectedBalance(a.id):bal;return pb!==bal?`<div class="u-fs11 u-t2">📅 Proyeksi ${pb<0?'-':''}${fmt(Math.abs(pb))} (termasuk transaksi bertanggal setelah hari ini)</div>`:'';})()}
     </div>`;
 }).join('');
@@ -329,7 +337,7 @@ const bal=recalcAccBalance(a.id);
 return`<div class="aset-item"><div class="tx-icon u-bgaccsoft">${escapeHtml(a.emoji)}</div><div class="tx-info"><div class="tx-name">${escapeHtml(a.name)}</div></div><div class="tx-amount ${bal<0?'red':'green'}">${bal<0?'-':''}${fmt(Math.abs(bal))}</div></div>`;
 }).join('');
 const tEl=document.getElementById('dashAccTotal');
-if(tEl){const t=totalSaldoAkun();tEl.textContent=(t<0?'-':'')+fmt(Math.abs(t));tEl.className='stat-val '+(t<0?'red':'green');}
+if(tEl){const t=totalSaldoAkun();tEl.textContent=(t<0?'-':'')+fmt(Math.abs(t));tEl.className='stat-val '+(t<0?'red':'green');if(typeof catatanSaldoKlienSafe==='function')catatanSaldoKlienSafe(tEl,'dashAccTotalKlien',true);}
 }
 
 function renderLapAccList(){
@@ -348,7 +356,7 @@ return`<div class="aset-item" style="${off?'opacity:.5':''};cursor:pointer" data
     </div>`;
 }).join('');
 const tEl=document.getElementById('lapAccTotal');
-if(tEl){const t=totalSaldoAkun();tEl.textContent=(t<0?'-':'')+fmt(Math.abs(t));tEl.className='stat-val '+(t<0?'red':'green');}
+if(tEl){const t=totalSaldoAkun();tEl.textContent=(t<0?'-':'')+fmt(Math.abs(t));tEl.className='stat-val '+(t<0?'red':'green');if(typeof catatanSaldoKlienSafe==='function')catatanSaldoKlienSafe(tEl,'lapAccTotalKlien',true);}
 }
 
 function renderReceiptInsight(amt,catName,guessedCat){
@@ -1341,7 +1349,9 @@ const m=(ctx&&ctx.m!=null)?ctx.m:now.getMonth();
 const txList=D.transactions||[];inc=0;exp=0;
 for(const t of txList){const d=new Date(t.date);
 if(d.getMonth()!==m||d.getFullYear()!==y||t.hitungKas===false)continue;
+if(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))continue;
 if(t.type==='income')inc+=t.amount;else if(t.type==='expense')exp+=t.amount;}
+if(typeof pencairanKlienBulanSafe==='function')inc+=pencairanKlienBulanSafe(y+'-'+String(m+1).padStart(2,'0'));
 }
 let surplusHtml='';
 if(typeof fiMonthlySurplus==='function'){

@@ -304,11 +304,15 @@ for(const t of D.transactions){
   const d=new Date(dms);
   if(d.getMonth()!==curMonth||d.getFullYear()!==curYear)continue;
   txM.push(t);
-  if(t.type==='income'){const n=t.amount||0;inc+=n;incReal+=n;}
-  else if(t.type==='expense'){const n=t.amount||0;exp+=n;expReal+=n;}
+  // Audit dana proyek: DP/termin/pengembalian/belanja dana proyek klien bukan pemasukan/pengeluaran pribadi (txM tetap utuh utk daftar).
+  const _kl=(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t));
+  if(t.type==='income'){const n=t.amount||0;if(!_kl){inc+=n;incReal+=n;}}
+  else if(t.type==='expense'){const n=t.amount||0;if(!_kl){exp+=n;expReal+=n;}}
   else if(t.type==='transfer_in')inc+=t.amount||0;
   else if(t.type==='transfer_out')exp+=t.amount||0;
 }
+// Pencairan laba proyek klien (final, dari ledger) = income pribadi bulan ini.
+{const _pc=(typeof pencairanKlienBulanSafe==='function')?pencairanKlienBulanSafe(curYear+'-'+String(curMonth+1).padStart(2,'0')):0;if(_pc>0){inc+=_pc;incReal+=_pc;}}
 const net=incReal-expReal;
 // PERF: KeuanganInsight.compute() dipanggil SETELAH txM/inc/exp di atas dihitung, supaya bisa
 // dioper sbg ctx (0 scan ulang D.transactions) -- TAPI cuma kalau curMonth/curYear yg lagi

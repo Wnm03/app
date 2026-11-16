@@ -21,6 +21,13 @@
 // diaudit di rantai Owner Resolver. Detail lihat blok
 // `resolveOwnerDefaultForAccount` di bawah.
 
+// Tampilan bertahap: grup PERINGATAN dgn kartu > DH_COLLAPSE_MIN diciutkan (semua kartu TETAP ada di DOM, hanya `hidden`).
+// State buka/tutup di luar render supaya bertahan saat aksi perbaikan memanggil ulang runDataHealthCheck(); direset saat modal belum terbuka.
+const DH_COLLAPSE_MIN=5;
+// Batas kartu yg DIRENDER per grup PERINGATAN (hanya tampilan; nilai kembalian & hitungan ringkasan tetap lengkap). Error tidak pernah dibatasi.
+const DH_GROUP_CAP=100;
+let _dhOpenGroups=new Set();
+let _dhGroupTitles=[];
 function runDataHealthCheck(){
 const issues=[];
 const accIds=new Set(D.accounts.map(a=>a.id));
@@ -732,40 +739,21 @@ const wlDupNames=[...wlDupCheck.entries()].filter(([,c])=>c>1).map(([n])=>n);
 if(wlDupNames.length){
 issues.push({level:'warn',title:'Barang Prioritas Belanja kemungkinan duplikat',detail:`Nama barang yang sama muncul lebih dari 1x di list aktif: ${wlDupNames.slice(0,5).join(', ')}${wlDupNames.length>5?'...':''}. Cek apakah memang 2 barang berbeda atau kepencet tambah dobel.`});
 }
-const errCount=issues.filter(i=>i.level==='error').length;
-const warnCount=issues.filter(i=>i.level==='warn').length;
-const summaryEl=typeof document!=='undefined'?document.getElementById('dataHealthSummary'):null;
-const listEl=typeof document!=='undefined'?document.getElementById('dataHealthList'):null;
-if(!summaryEl||!listEl){
-// DOM tidak tersedia (mis. harness tes / dipanggil headless): cukup kembalikan issues.
-} else if(!issues.length){
-summaryEl.innerHTML='✅ Tidak ditemukan masalah. Data terlihat sehat!';
-listEl.innerHTML='';
-} else {
-summaryEl.innerHTML=`Ditemukan <b>${errCount} error</b> & <b>${warnCount} peringatan</b> dari ${D.transactions.length} transaksi, ${D.bbmLogs.length+D.servisLogs.length} catatan kendaraan, ${(D.cobek||[]).length} transaksi Shop, ${(D.workDays||[]).length} catatan absensi, ${(D.wealthSnapshots||[]).length} snapshot kekayaan, ${(D.piutang||[]).length} piutang, ${(D.debts||[]).length} utang, ${(D.budgets||[]).length} anggaran, ${(D.lifeBalanceSnapshots||[]).length} snapshot Skor Hidup Seimbang & ${(D.wishlist||[]).length} barang Prioritas Belanja.`;
-// PERUBAHAN SESI B11 (QoL #5 dari rencana B1-B10): kalau issue punya
-// `assetId` (baru ditambahkan di 2 cek Aset<->Investasi B4/B6/B8 di atas),
-// render 1 tombol "Buka Aset" yang reuse dispatcher data-action=
-// "openAssetModal" data-args="[assetId]" yang SUDAH ADA (pola sama persis
-// baris list Aset di aset.js, lihat FIX-B11 md) -- 0 dispatcher baru, 0
-// logic buka-modal baru di sini. Issue lain (tanpa assetId) tampilannya
-// tidak berubah sama sekali.
-// PERUBAHAN SESI INI (rekomendasi perbaikan data-health, lihat catatan di 2 cek
-// di atas): render generik tombol `i.actions[]` (kalau ada) di samping tombol
-// "📦 Buka Aset" lama (dipertahankan apa adanya utk issue berbasis assetId).
-// Setiap actions[] item = {label, action, args} -- dipetakan langsung ke
-// data-action/data-args dispatcher yang SUDAH ADA di seluruh app (pola sama
-// persis tombol "📦 Buka Aset" di bawah), jadi 0 dispatcher baru yang perlu
-// didaftarkan secara khusus di sini.
-listEl.innerHTML=issues.map(i=>`<div style="padding:10px;border-radius:10px;margin-bottom:8px;background:${i.level==='error'?'var(--accent2-soft)':'var(--accent4-soft)'}">
-      <div style="font-weight:700;font-size:13px;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}">${i.level==='error'?'❌':'⚠️'} ${escapeHtml(i.title)}</div>
-      <div class="u-fs12 u-t2 u-mt2">${escapeHtml(i.detail)}</div>
-      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-      ${i.assetId?`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid var(--accent4);background:transparent;color:var(--accent4)" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([i.assetId]))}">📦 Buka Aset</button>`:''}
-      ${(i.actions||[]).map(a=>`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid ${i.level==='error'?'var(--accent2)':'var(--accent4)'};background:transparent;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}" data-action="${escapeHtml(a.action)}" data-args="${escapeHtml(JSON.stringify(a.args||[]))}">${escapeHtml(a.label)}</button>`).join('')}
-      </div>
-    </div>`).join('');
+// Dana Proyek Klien (audit konsumen): akun tertaut aset/holding yang memuat dana klien. Akun tertaut keluar dari saldo pribadi
+// sementara dana tertahan tetap dikurangkan, jadi angka bisa janggal. HANYA info + langkah manual (tanpa migrasi otomatis).
+try{
+if(typeof adaProyekKlienSafe==='function'&&typeof saldoPribadi!=='function'&&typeof ensureKlienEngineSafe==='function'&&adaProyekKlienSafe()){
+// Mesin dana klien (renovasi.js) lazy-load: tanpa itu aliran klien tidak terdeteksi. Muat, lalu pindai ulang bila modal masih terbuka.
+const _kp=ensureKlienEngineSafe();
+if(_kp&&typeof _kp.then==='function')_kp.then(function(){const m=typeof document!=='undefined'?document.getElementById('dataHealthModal'):null;if(m&&m.classList&&m.classList.contains('open'))runDataHealthCheck();}).catch(function(e){void e;});
 }
+if(typeof akunTertautBerisiKlienSafe==='function'){
+akunTertautBerisiKlienSafe().forEach(x=>{
+const _ai=(D.accounts||[]).findIndex(a=>a&&String(a.id)===String(x.accountId));
+issues.push({level:'warn',title:'Akun tertaut aset memuat dana klien',detail:`Akun \"${x.nama||'?'}\" tertaut ke aset/holding dan memuat dana proyek klien. Saldo akun tertaut tidak masuk saldo pribadi, sementara dana klien tertahan tetap dikurangkan, sehingga angka bisa janggal. Pindahkan dana klien ke akun lain atau lepas tautan akun secara manual; tidak ada data yang diubah otomatis.`,actions:_ai>=0?[{label:'✏️ Buka Akun',action:'openAccModal',args:[_ai]}]:[]});
+});
+}
+}catch(_e){if(typeof console!=='undefined'&&console.warn)console.warn('[DataHealth] cek akun tertaut dana klien dilewati:',_e&&_e.message);}
 // SESI 3E — Service ↔ Reminder Integrity Guard.
 // Read-only: tidak memperbaiki/menulis data. Tujuan utamanya mendeteksi
 // tautan Riwayat Servis yang bisa membuat Pengingat membaca kategori/interval
@@ -838,6 +826,57 @@ if(po.productId&&!_preorderProductIds.has(String(po.productId)))issues.push({lev
 if(po.status==='fulfilled'&&po.shopId&&!_preorderShopIds.has(String(po.shopId)))issues.push({level:'warn',title:'Preorder dipenuhi tanpa penjualan terkait',detail:`Preorder "${escapeHtml(po.id||'tanpa ID')}" menyimpan shopId "${escapeHtml(po.shopId)}" yang tidak ditemukan di Riwayat Shop.`});
 });
 }
+// Render SETELAH semua cek selesai: issue yang di-push di blok mana pun kini ikut tampil di ringkasan & daftar modal.
+function _renderDataHealth(issues){
+const _mEl=typeof document!=='undefined'?document.getElementById('dataHealthModal'):null;
+if(!(_mEl&&_mEl.classList&&_mEl.classList.contains('open')))_dhOpenGroups=new Set();
+const _first={},_cnt={};
+issues.forEach((i,ix)=>{if(!(i.title in _first))_first[i.title]=ix;if(i.level!=='error')_cnt[i.title]=(_cnt[i.title]||0)+1;});
+const _sorted=issues.slice().sort((x,y)=>{const rx=x.level==='error'?0:1,ry=y.level==='error'?0:1;if(rx!==ry)return rx-ry;return rx===1?_first[x.title]-_first[y.title]:0;});
+_dhGroupTitles=[];const _gIdx={};
+_sorted.forEach(i=>{if(i.level!=='error'&&_cnt[i.title]>DH_COLLAPSE_MIN&&!(i.title in _gIdx)){_gIdx[i.title]=_dhGroupTitles.length;_dhGroupTitles.push(i.title);}});
+const _seenHead={};
+const _seenN={};
+const errCount=issues.filter(i=>i.level==='error').length;
+const warnCount=issues.filter(i=>i.level==='warn').length;
+const summaryEl=typeof document!=='undefined'?document.getElementById('dataHealthSummary'):null;
+const listEl=typeof document!=='undefined'?document.getElementById('dataHealthList'):null;
+if(!summaryEl||!listEl){
+// DOM tidak tersedia (mis. harness tes / dipanggil headless): cukup kembalikan issues.
+} else if(!issues.length){
+summaryEl.innerHTML='✅ Tidak ditemukan masalah. Data terlihat sehat!';
+listEl.innerHTML='';
+} else {
+summaryEl.innerHTML=`Ditemukan <b>${errCount} error</b> & <b>${warnCount} peringatan</b> dari ${D.transactions.length} transaksi, ${D.bbmLogs.length+D.servisLogs.length} catatan kendaraan, ${(D.cobek||[]).length} transaksi Shop, ${(D.workDays||[]).length} catatan absensi, ${(D.wealthSnapshots||[]).length} snapshot kekayaan, ${(D.piutang||[]).length} piutang, ${(D.debts||[]).length} utang, ${(D.budgets||[]).length} anggaran, ${(D.lifeBalanceSnapshots||[]).length} snapshot Skor Hidup Seimbang & ${(D.wishlist||[]).length} barang Prioritas Belanja.`;
+// PERUBAHAN SESI B11 (QoL #5 dari rencana B1-B10): kalau issue punya
+// `assetId` (baru ditambahkan di 2 cek Aset<->Investasi B4/B6/B8 di atas),
+// render 1 tombol "Buka Aset" yang reuse dispatcher data-action=
+// "openAssetModal" data-args="[assetId]" yang SUDAH ADA (pola sama persis
+// baris list Aset di aset.js, lihat FIX-B11 md) -- 0 dispatcher baru, 0
+// logic buka-modal baru di sini. Issue lain (tanpa assetId) tampilannya
+// tidak berubah sama sekali.
+// PERUBAHAN SESI INI (rekomendasi perbaikan data-health, lihat catatan di 2 cek
+// di atas): render generik tombol `i.actions[]` (kalau ada) di samping tombol
+// "📦 Buka Aset" lama (dipertahankan apa adanya utk issue berbasis assetId).
+// Setiap actions[] item = {label, action, args} -- dipetakan langsung ke
+// data-action/data-args dispatcher yang SUDAH ADA di seluruh app (pola sama
+// persis tombol "📦 Buka Aset" di bawah), jadi 0 dispatcher baru yang perlu
+// didaftarkan secara khusus di sini.
+{const _g={};issues.forEach(i=>{_g[i.title]=(_g[i.title]||0)+1;});const _k=Object.keys(_g);
+if(_k.length>=2)summaryEl.innerHTML+='<div class="u-fs11 u-t2 u-mt2">Rincian: '+_k.sort((x,y)=>_g[y]-_g[x]).slice(0,8).map(k=>escapeHtml(k)+' ('+_g[k]+')').join(' · ')+(_k.length>8?' · …':'')+'</div>';}
+listEl.innerHTML=_sorted.map(i=>{const _capOn=i.level!=='error'&&_cnt[i.title]>DH_GROUP_CAP;const _n=(_seenN[i.title]=(_seenN[i.title]||0)+1);if(_capOn&&_n>DH_GROUP_CAP)return '';const _g=_gIdx[i.title];const _isG=_g!==undefined;const _open=_isG&&_dhOpenGroups.has(i.title);let _head='';
+if(_isG&&!_seenHead[_g]){_seenHead[_g]=1;_head=`<button class="u-fs12 u-r6" style="width:100%;text-align:left;padding:8px 10px;margin-bottom:8px;border:1px dashed var(--accent4);background:transparent;color:var(--accent4);font-weight:700" data-action="DataHealth.toggleGroup" data-args="${escapeHtml(JSON.stringify([_g]))}" data-dh-head="${_g}" aria-expanded="${_open?'true':'false'}">⚠️ ${escapeHtml(i.title)} · ${_cnt[i.title]} temuan — <span data-dh-lbl>${_open?'Sembunyikan':'Lihat detail'}</span></button>`;}
+return _head+`<div${_isG?` data-dh-grp="${_g}"${_open?'':' hidden'}`:''} style="padding:10px;border-radius:10px;margin-bottom:8px;background:${i.level==='error'?'var(--accent2-soft)':'var(--accent4-soft)'}">
+      <div style="font-weight:700;font-size:13px;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}">${i.level==='error'?'❌':'⚠️'} ${escapeHtml(i.title)}</div>
+      <div class="u-fs12 u-t2 u-mt2">${escapeHtml(i.detail)}</div>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+      ${i.assetId?`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid var(--accent4);background:transparent;color:var(--accent4)" data-action="openAssetModal" data-args="${escapeHtml(JSON.stringify([i.assetId]))}">📦 Buka Aset</button>`:''}
+      ${(i.actions||[]).map(a=>`<button class="u-fs11 u-r6" style="padding:4px 10px;border:1px solid ${i.level==='error'?'var(--accent2)':'var(--accent4)'};background:transparent;color:${i.level==='error'?'var(--accent2)':'var(--accent4)'}" data-action="${escapeHtml(a.action)}" data-args="${escapeHtml(JSON.stringify(a.args||[]))}">${escapeHtml(a.label)}</button>`).join('')}
+      </div>
+    </div>${_capOn&&_n===DH_GROUP_CAP?`<div data-dh-note="${_g}" data-dh-grp="${_g}"${_open?'':' hidden'} class="u-fs12 u-t2" style="margin:0 0 8px;padding:6px 10px">Menampilkan ${DH_GROUP_CAP} dari ${_cnt[i.title]} temuan jenis ini. Perbaiki yang tampil lalu pindai ulang untuk melihat sisanya.</div>`:''}`;}).join('');
+}
+}
+_renderDataHealth(issues);
 openModal('dataHealthModal');
 return issues;
 }
@@ -849,6 +888,14 @@ return issues;
 // nambah fungsi global baru satu-satu) supaya aksi data-health berikutnya bisa
 // ditambah di sini tanpa mengotori namespace global lain.
 const DataHealth={
+// Buka/tutup 1 grup peringatan yang diciutkan. Murni DOM + state: TIDAK memindai ulang data & tidak membuka modal.
+toggleGroup(idx){
+const n=Number(idx);const t=_dhGroupTitles[n];if(t===undefined)return;
+const open=!_dhOpenGroups.has(t);if(open)_dhOpenGroups.add(t);else _dhOpenGroups.delete(t);
+if(typeof document==='undefined'||typeof document.querySelectorAll!=='function')return;
+document.querySelectorAll('[data-dh-grp="'+n+'"]').forEach(el=>{el.hidden=!open;});
+document.querySelectorAll('[data-dh-head="'+n+'"]').forEach(el=>{el.setAttribute('aria-expanded',open?'true':'false');const l=el.querySelector?el.querySelector('[data-dh-lbl]'):null;if(l)l.textContent=open?'Sembunyikan':'Lihat detail';});
+},
 // Lepas tautan p.catalogId (BUKAN hapus stoknya) utk 1 baris D.partsStock,
 // lalu simpan & refresh ulang modal Hasil Pemindaian Data supaya kartu warning
 // terkait langsung hilang. idx = index asli di D.partsStock (lihat cek

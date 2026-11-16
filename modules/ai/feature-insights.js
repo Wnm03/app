@@ -69,7 +69,7 @@ const rows=D.budgets.map(b=>{
 // LANGSUNG (bukan lewat txM di atas), jadi butuh guard terpisah -- temuan tambahan
 // saat audit, transaksi "Catatan saja" tidak boleh ikut menghitung persentase
 // pemakaian anggaran (bisa membuat anggaran kelihatan jebol padahal cuma catatan).
-const used=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false&&budgetMatchesTx(b,t);}).reduce((s,t)=>s+t.amount,0);
+const used=(D.transactions||[]).filter(t=>{const d=new Date(t.date);return d.getMonth()===m&&d.getFullYear()===y&&t.hitungKas!==false&&!(typeof isAliranKlienSafe==='function'&&isAliranKlienSafe(t))&&budgetMatchesTx(b,t);}).reduce((s,t)=>s+t.amount,0);
 const pct=b.limit>0?Math.round(used/b.limit*100):0;
 return{b,pct};
 }).filter(r=>r.pct>=80).sort((a,b)=>b.pct-a.pct);
